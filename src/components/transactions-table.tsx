@@ -17,6 +17,10 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
   DropdownMenuSeparator,
+  DropdownMenuSub,
+  DropdownMenuSubTrigger,
+  DropdownMenuSubContent,
+  DropdownMenuPortal
 } from '@/components/ui/dropdown-menu';
 import {
   Dialog,
@@ -40,6 +44,13 @@ import {
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import {
   MoreHorizontal,
   FileCheck,
   FileWarning,
@@ -50,8 +61,9 @@ import {
   ChevronDown,
   Trash2,
   Edit,
+  UserPlus,
 } from 'lucide-react';
-import type { Transaction, Category } from '@/lib/data';
+import type { Transaction, Category, Contact } from '@/lib/data';
 import { categorizeTransaction } from '@/ai/flows/categorize-transactions';
 import { useToast } from '@/hooks/use-toast';
 
@@ -59,20 +71,29 @@ export function TransactionsTable({
   transactions,
   setTransactions,
   availableCategories,
+  availableContacts,
 }: {
   transactions: Transaction[];
   setTransactions: React.Dispatch<React.SetStateAction<Transaction[]>>;
   availableCategories: Category[];
+  availableContacts: Contact[];
 }) {
   const [loadingStates, setLoadingStates] = React.useState<Record<string, boolean>>({});
   const { toast } = useToast();
   
   const [isEditDialogOpen, setIsEditDialogOpen] = React.useState(false);
   const [editingTransaction, setEditingTransaction] = React.useState<Transaction | null>(null);
-  const [formData, setFormData] = React.useState({ description: '', amount: '' });
+  const [formData, setFormData] = React.useState({ description: '', amount: '', contactId: '' });
   
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = React.useState(false);
   const [transactionToDelete, setTransactionToDelete] = React.useState<Transaction | null>(null);
+
+  const contactMap = React.useMemo(() => 
+    availableContacts.reduce((acc, contact) => {
+      acc[contact.id] = contact.name;
+      return acc;
+    }, {} as Record<string, string>), 
+  [availableContacts]);
 
   const handleCategorize = async (txId: string) => {
     const transaction = transactions.find((tx) => tx.id === txId);
@@ -114,9 +135,15 @@ export function TransactionsTable({
     );
   };
   
+  const handleSetContact = (txId: string, newContactId: string | null) => {
+    setTransactions((prev) =>
+      prev.map((tx) => (tx.id === txId ? { ...tx, contactId: newContactId } : tx))
+    );
+  };
+  
   const handleEditRequest = (tx: Transaction) => {
     setEditingTransaction(tx);
-    setFormData({ description: tx.description, amount: String(tx.amount) });
+    setFormData({ description: tx.description, amount: String(tx.amount), contactId: tx.contactId || '' });
     setIsEditDialogOpen(true);
   };
   
@@ -130,7 +157,7 @@ export function TransactionsTable({
 
       setTransactions(prev => prev.map(tx => 
         tx.id === editingTransaction.id 
-          ? { ...tx, description: formData.description, amount: updatedAmount } 
+          ? { ...tx, description: formData.description, amount: updatedAmount, contactId: formData.contactId || null } 
           : tx
       ));
       toast({ title: 'Transacción Actualizada', description: 'El movimiento ha sido actualizado.' });
@@ -172,7 +199,6 @@ export function TransactionsTable({
     try {
       const date = new Date(dateString);
       if (isNaN(date.getTime())) {
-        // Invalid date
         return dateString;
       }
       return date.toLocaleDateString('es-ES', {
@@ -206,6 +232,7 @@ export function TransactionsTable({
               <TableHead>Concepto</TableHead>
               <TableHead className="text-right">Importe</TableHead>
               <TableHead>Categoría</TableHead>
+              <TableHead>Contacto</TableHead>
               <TableHead className="text-center">Comprovant</TableHead>
               <TableHead>
                 <span className="sr-only">Acciones</span>
@@ -233,14 +260,14 @@ export function TransactionsTable({
                     {tx.category ? (
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" className="h-auto p-0 text-left font-normal">
+                           <Button variant="ghost" className="h-auto p-0 text-left font-normal flex items-center gap-1">
                             <Badge
                               variant={tx.amount > 0 ? 'success' : 'destructive'}
                               className="cursor-pointer"
                             >
                               {tx.category}
-                              <ChevronDown className="ml-1 h-3 w-3" />
                             </Badge>
+                             <ChevronDown className="h-3 w-3 text-muted-foreground" />
                           </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="start">
@@ -269,6 +296,34 @@ export function TransactionsTable({
                         Clasificar
                       </Button>
                     )}
+                  </TableCell>
+                   <TableCell>
+                    <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                           {tx.contactId ? (
+                                <Button variant="ghost" className="h-auto p-0 text-left font-normal flex items-center gap-1">
+                                    <span className="text-sm">{contactMap[tx.contactId]}</span>
+                                    <ChevronDown className="h-3 w-3 text-muted-foreground" />
+                                </Button>
+                           ) : (
+                               <Button variant="ghost" size="sm">
+                                   <UserPlus className="mr-2 h-4 w-4"/>
+                                   Asignar
+                               </Button>
+                           )}
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="start">
+                            <DropdownMenuItem onClick={() => handleSetContact(tx.id, null)}>
+                                (Desvincular)
+                            </DropdownMenuItem>
+                             <DropdownMenuSeparator />
+                            {availableContacts.map((contact) => (
+                                <DropdownMenuItem key={contact.id} onClick={() => handleSetContact(tx.id, contact.id)}>
+                                    {contact.name}
+                                </DropdownMenuItem>
+                            ))}
+                        </DropdownMenuContent>
+                    </DropdownMenu>
                   </TableCell>
                   <TableCell className="text-center">{getDocumentStatusIcon(tx.document)}</TableCell>
                   <TableCell>
@@ -335,6 +390,22 @@ export function TransactionsTable({
                 onChange={(e) => setFormData({ ...formData, amount: e.target.value })}
                 className="col-span-3"
               />
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="contact" className="text-right">
+                    Contacto
+                </Label>
+                <Select value={formData.contactId} onValueChange={(value) => setFormData({...formData, contactId: value})}>
+                    <SelectTrigger className="col-span-3">
+                        <SelectValue placeholder="Selecciona un contacto" />
+                    </SelectTrigger>
+                    <SelectContent>
+                        <SelectItem value="null">(Ninguno)</SelectItem>
+                        {availableContacts.map(contact => (
+                            <SelectItem key={contact.id} value={contact.id}>{contact.name}</SelectItem>
+                        ))}
+                    </SelectContent>
+                </Select>
             </div>
           </div>
           <DialogFooter>

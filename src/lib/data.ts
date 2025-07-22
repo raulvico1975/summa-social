@@ -5,6 +5,7 @@ export type Transaction = {
   amount: number;
   category: string | null;
   document: '✅' | '⚠️ Falta' | 'N/A';
+  contactId?: string | null;
 };
 
 export type Category = {
@@ -29,6 +30,7 @@ export const transactions: Transaction[] = [
     amount: 1500.0,
     category: 'Donaciones',
     document: '✅',
+    contactId: 'cont_1',
   },
   {
     id: 'txn_2',
@@ -37,6 +39,7 @@ export const transactions: Transaction[] = [
     amount: -75.5,
     category: 'Suministros de Oficina',
     document: '✅',
+    contactId: 'cont_2',
   },
   {
     id: 'txn_3',
@@ -45,6 +48,7 @@ export const transactions: Transaction[] = [
     amount: -800.0,
     category: 'Alquiler',
     document: '⚠️ Falta',
+    contactId: null,
   },
   {
     id: 'txn_4',
@@ -53,6 +57,7 @@ export const transactions: Transaction[] = [
     amount: 5000.0,
     category: 'Subvenciones',
     document: '✅',
+    contactId: 'cont_4',
   },
   {
     id: 'txn_5',
@@ -61,6 +66,7 @@ export const transactions: Transaction[] = [
     amount: -120.0,
     category: 'Servicios Públicos',
     document: '⚠️ Falta',
+    contactId: null,
   },
   {
     id: 'txn_6',
@@ -69,6 +75,7 @@ export const transactions: Transaction[] = [
     amount: 250.0,
     category: null,
     document: 'N/A',
+    contactId: null,
   },
   {
     id: 'txn_7',
@@ -77,6 +84,7 @@ export const transactions: Transaction[] = [
     amount: -300.0,
     category: null,
     document: '⚠️ Falta',
+    contactId: null,
   },
   {
     id: 'txn_8',
@@ -85,6 +93,7 @@ export const transactions: Transaction[] = [
     amount: -55.25,
     category: 'Viajes',
     document: '✅',
+    contactId: 'cont_3',
   },
 ];
 

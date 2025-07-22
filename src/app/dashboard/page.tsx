@@ -5,16 +5,18 @@ import * as React from 'react';
 import { Button } from "@/components/ui/button";
 import { TransactionsTable } from "@/components/transactions-table";
 import { Download } from "lucide-react";
-import { transactions as initialTransactions, categories as initialCategories } from "@/lib/data";
+import { transactions as initialTransactions, categories as initialCategories, contacts as initialContacts } from "@/lib/data";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { TransactionImporter } from '@/components/transaction-importer';
-import type { Transaction, Category } from '@/lib/data';
+import type { Transaction, Category, Contact } from '@/lib/data';
 
 const CATEGORIES_STORAGE_KEY = 'summa-social-categories';
+const CONTACTS_STORAGE_KEY = 'summa-social-contacts';
 
 export default function DashboardPage() {
   const [transactions, setTransactions] = React.useState<Transaction[]>(initialTransactions);
   const [categories, setCategories] = React.useState<Category[]>(initialCategories);
+  const [contacts, setContacts] = React.useState<Contact[]>(initialContacts);
 
   React.useEffect(() => {
     try {
@@ -22,8 +24,12 @@ export default function DashboardPage() {
       if (storedCategories) {
         setCategories(JSON.parse(storedCategories));
       }
+      const storedContacts = localStorage.getItem(CONTACTS_STORAGE_KEY);
+      if (storedContacts) {
+        setContacts(JSON.parse(storedContacts));
+      }
     } catch (error) {
-       console.error("Failed to parse categories from localStorage", error);
+       console.error("Failed to parse data from localStorage", error);
     }
   }, []);
 
@@ -56,6 +62,7 @@ export default function DashboardPage() {
             transactions={transactions} 
             setTransactions={setTransactions} 
             availableCategories={categories} 
+            availableContacts={contacts}
           />
         </CardContent>
       </Card>
