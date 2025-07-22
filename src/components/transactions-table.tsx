@@ -147,28 +147,8 @@ export function TransactionsTable({
     }
   };
   
-  const getTypeBadgeVariant = (type: Transaction['type']) => {
-    switch (type) {
-        case 'Donació':
-        case 'Altres Ingressos':
-        case 'Transferència RD':
-            return 'success';
-        case 'Despesa':
-            return 'destructive'
-        default:
-            return 'secondary'
-    }
-  }
-
   return (
     <>
-      <style>{`
-        .badge-success {
-          background-color: hsl(var(--accent));
-          color: hsl(var(--accent-foreground));
-          border-color: transparent;
-        }
-      `}</style>
       <div className="rounded-md border">
         <Table>
           <TableHeader>
@@ -176,8 +156,7 @@ export function TransactionsTable({
               <TableHead>Fecha</TableHead>
               <TableHead>Concepto</TableHead>
               <TableHead className="text-right">Importe</TableHead>
-              <TableHead>Tipo Movimiento</TableHead>
-              <TableHead>Partida Comptable</TableHead>
+              <TableHead>Categoría</TableHead>
               <TableHead className="text-center">Comprovant</TableHead>
               <TableHead>
                 <span className="sr-only">Acciones</span>
@@ -193,11 +172,8 @@ export function TransactionsTable({
                   {formatCurrency(tx.amount)}
                 </TableCell>
                 <TableCell>
-                  <Badge className={getTypeBadgeVariant(tx.type)}>{tx.type}</Badge>
-                </TableCell>
-                <TableCell>
                   {tx.category ? (
-                    <Badge variant="secondary">{tx.category}</Badge>
+                    <Badge variant={tx.amount > 0 ? 'success' : 'destructive'}>{tx.category}</Badge>
                   ) : (
                     <Button
                       variant="outline"
