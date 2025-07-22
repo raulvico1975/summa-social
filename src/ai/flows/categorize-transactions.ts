@@ -19,7 +19,7 @@ const CategorizeTransactionInputSchema = z.object({
 export type CategorizeTransactionInput = z.infer<typeof CategorizeTransactionInputSchema>;
 
 const CategorizeTransactionOutputSchema = z.object({
-  category: z.string().describe('The predicted category of the transaction.'),
+  category: z.string().describe('The predicted category of the transaction. If unsure, return "Revisar".'),
   confidence: z.number().describe('The confidence level of the categorization (0-1).'),
 });
 export type CategorizeTransactionOutput = z.infer<typeof CategorizeTransactionOutputSchema>;
@@ -32,10 +32,13 @@ const prompt = ai.definePrompt({
   name: 'categorizeTransactionPrompt',
   input: {schema: CategorizeTransactionInputSchema},
   output: {schema: CategorizeTransactionOutputSchema},
-  prompt: `You are an expert financial categorizer.
-  Given the transaction description, amount, and keywords, determine the most appropriate category for the transaction.
-  Your response should be in Spanish.
+  prompt: `You are an expert financial categorizer for a social organization.
+  Given the transaction description, amount, and keywords, determine the most appropriate accounting item (partida comptable) for the transaction.
+  The available accounting items are: Recursos Humans, Viatges, Serveis tècnics, Funcionament, Donaciones, Subvenciones, Suministros de Oficina, Servicios Públicos, Alquiler.
+  If you cannot confidently determine the category, you MUST return "Revisar".
+  Your response must be in Spanish.
 
+  Transaction Details:
   Description: {{{description}}}
   Amount: {{{amount}}}
   Keywords: {{#each keywords}}{{{this}}}{{#unless @last}}, {{/unless}}{{/each}}
@@ -55,4 +58,3 @@ const categorizeTransactionFlow = ai.defineFlow(
     return output!;
   }
 );
-

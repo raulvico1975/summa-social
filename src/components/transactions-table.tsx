@@ -36,6 +36,7 @@ import {
   Loader2,
   Paperclip,
   Lightbulb,
+  FileQuestion,
 } from 'lucide-react';
 import type { Transaction } from '@/lib/data';
 import { categorizeTransaction } from '@/ai/flows/categorize-transactions';
@@ -106,7 +107,7 @@ export function TransactionsTable({ initialTransactions }: { initialTransactions
 
   const handleAttachDocument = (txId: string) => {
     setTransactions((prev) =>
-      prev.map((tx) => (tx.id === txId ? { ...tx, document: 'present' } : tx))
+      prev.map((tx) => (tx.id === txId ? { ...tx, document: '✅' } : tx))
     );
     toast({
         title: 'Documento Adjuntado',
@@ -128,26 +129,47 @@ export function TransactionsTable({ initialTransactions }: { initialTransactions
 
   const getDocumentStatusIcon = (status: Transaction['document']) => {
     switch (status) {
-      case 'present':
+      case '✅':
         return <FileCheck className="h-5 w-5 text-green-600" />;
-      case 'missing':
+      case '⚠️ Falta':
         return <FileWarning className="h-5 w-5 text-amber-600" />;
       default:
-        return <FileUp className="h-5 w-5 text-muted-foreground" />;
+        return <FileQuestion className="h-5 w-5 text-muted-foreground" />;
     }
   };
+  
+  const getTypeBadgeVariant = (type: Transaction['type']) => {
+    switch (type) {
+        case 'Donació':
+        case 'Altres Ingressos':
+        case 'Transferència RD':
+            return 'success';
+        case 'Despesa':
+            return 'destructive'
+        default:
+            return 'secondary'
+    }
+  }
 
   return (
     <>
+      <style>{`
+        .badge-success {
+          background-color: hsl(var(--accent));
+          color: hsl(var(--accent-foreground));
+          border-color: transparent;
+        }
+      `}</style>
       <div className="rounded-md border">
         <Table>
           <TableHeader>
             <TableRow>
               <TableHead>Fecha</TableHead>
-              <TableHead>Descripción</TableHead>
+              <TableHead>Concepto</TableHead>
               <TableHead className="text-right">Importe</TableHead>
-              <TableHead>Categoría</TableHead>
-              <TableHead className="text-center">Documento</TableHead>
+              <TableHead>Tipo Movimiento</TableHead>
+              <TableHead>Partida Comptable</TableHead>
+              <TableHead className="text-center">Comprovant</TableHead>
               <TableHead>
                 <span className="sr-only">Acciones</span>
               </TableHead>
@@ -158,15 +180,18 @@ export function TransactionsTable({ initialTransactions }: { initialTransactions
               <TableRow key={tx.id}>
                 <TableCell>{formatDate(tx.date)}</TableCell>
                 <TableCell className="font-medium">{tx.description}</TableCell>
-                <TableCell className={`text-right ${tx.type === 'income' ? 'text-green-600' : 'text-red-600'}`}>
+                <TableCell className={`text-right font-mono ${tx.amount > 0 ? 'text-green-600' : 'text-red-600'}`}>
                   {formatCurrency(tx.amount)}
+                </TableCell>
+                <TableCell>
+                  <Badge className={getTypeBadgeVariant(tx.type)}>{tx.type}</Badge>
                 </TableCell>
                 <TableCell>
                   {tx.category ? (
                     <Badge variant="secondary">{tx.category}</Badge>
                   ) : (
                     <Button
-                      variant="ghost"
+                      variant="outline"
                       size="sm"
                       onClick={() => handleCategorize(tx.id)}
                       disabled={loadingStates[tx.id]}
@@ -176,7 +201,7 @@ export function TransactionsTable({ initialTransactions }: { initialTransactions
                       ) : (
                         <Sparkles className="mr-2 h-4 w-4 text-primary" />
                       )}
-                      Auto-categorizar
+                      Clasificar
                     </Button>
                   )}
                 </TableCell>
@@ -192,7 +217,7 @@ export function TransactionsTable({ initialTransactions }: { initialTransactions
                     <DropdownMenuContent align="end">
                       <DropdownMenuItem onClick={() => handleAttachDocument(tx.id)}>
                         <Paperclip className="mr-2 h-4 w-4" />
-                        Asociar documento
+                        Adjuntar Comprovant
                       </DropdownMenuItem>
                       <DropdownMenuItem onClick={() => handleSuggestDocs(tx)}>
                          {loadingStates[`suggest_${tx.id}`] ? (
