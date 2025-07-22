@@ -12,7 +12,7 @@ import {
   SidebarMenuButton,
   SidebarFooter,
 } from '@/components/ui/sidebar';
-import { LayoutDashboard, BarChart3, Settings, LogOut } from 'lucide-react';
+import { LayoutDashboard, BarChart3, Settings, LogOut, Users } from 'lucide-react';
 import { Logo } from '@/components/logo';
 
 export function DashboardSidebarContent() {
@@ -28,6 +28,11 @@ export function DashboardSidebarContent() {
       href: '/dashboard/informes',
       label: 'Informes',
       icon: BarChart3,
+    },
+    {
+      href: '/dashboard/contactos',
+      label: 'Contactos',
+      icon: Users,
     },
     {
       href: '/dashboard/configuracion',
@@ -50,7 +55,7 @@ export function DashboardSidebarContent() {
             <SidebarMenuItem key={item.href}>
               <SidebarMenuButton
                 asChild
-                isActive={pathname === item.href}
+                isActive={pathname.startsWith(item.href) && (item.href !== '/dashboard' || pathname === '/dashboard')}
                 tooltip={{ children: item.label }}
               >
                 <Link href={item.href}>
