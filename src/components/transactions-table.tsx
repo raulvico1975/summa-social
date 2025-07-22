@@ -16,18 +16,8 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-  DropdownMenuSeparator,
 } from '@/components/ui/dropdown-menu';
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from '@/components/ui/alert-dialog';
+
 import {
   MoreHorizontal,
   FileCheck,
@@ -35,19 +25,12 @@ import {
   Sparkles,
   Loader2,
   Paperclip,
-  Lightbulb,
   FileQuestion,
   ChevronDown,
 } from 'lucide-react';
 import type { Transaction, Category } from '@/lib/data';
 import { categorizeTransaction } from '@/ai/flows/categorize-transactions';
-import { suggestMissingDocuments } from '@/ai/flows/suggest-missing-documents';
 import { useToast } from '@/hooks/use-toast';
-
-type SuggestedDocs = {
-  suggestedDocuments: string[];
-  reasoning: string;
-};
 
 const CATEGORIES_STORAGE_KEY = 'summa-social-categories';
 
@@ -62,8 +45,6 @@ export function TransactionsTable({
   const [transactions, setTransactions] = React.useState<Transaction[]>(initialTransactions);
   const [availableCategories, setAvailableCategories] = React.useState<Category[]>(initialAvailableCategories);
   const [loadingStates, setLoadingStates] = React.useState<Record<string, boolean>>({});
-  const [suggestedDocs, setSuggestedDocs] = React.useState<SuggestedDocs | null>(null);
-  const [isAlertOpen, setIsAlertOpen] = React.useState(false);
   const { toast } = useToast();
 
   React.useEffect(() => {
@@ -111,26 +92,6 @@ export function TransactionsTable({
     }
   };
   
-  const handleSuggestDocs = async (transaction: Transaction) => {
-     setLoadingStates((prev) => ({ ...prev, [`suggest_${transaction.id}`]: true }));
-     try {
-       const result = await suggestMissingDocuments({
-         transactionDetails: `Fecha: ${transaction.date}, Descripción: ${transaction.description}, Importe: ${transaction.amount}`,
-       });
-       setSuggestedDocs(result);
-       setIsAlertOpen(true);
-     } catch (error) {
-       console.error('Error suggesting documents:', error);
-       toast({
-         variant: 'destructive',
-         title: 'Error de IA',
-         description: 'No se pudieron sugerir documentos.',
-       });
-     } finally {
-       setLoadingStates((prev) => ({ ...prev, [`suggest_${transaction.id}`]: false }));
-     }
-  };
-
   const handleAttachDocument = (txId: string) => {
     setTransactions((prev) =>
       prev.map((tx) => (tx.id === txId ? { ...tx, document: '✅' } : tx))
@@ -248,14 +209,6 @@ export function TransactionsTable({
                         <Paperclip className="mr-2 h-4 w-4" />
                         Adjuntar Comprovant
                       </DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => handleSuggestDocs(tx)}>
-                         {loadingStates[`suggest_${tx.id}`] ? (
-                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                          ) : (
-                            <Lightbulb className="mr-2 h-4 w-4" />
-                          )}
-                        Sugerir documentos
-                      </DropdownMenuItem>
                     </DropdownMenuContent>
                   </DropdownMenu>
                 </TableCell>
@@ -264,28 +217,6 @@ export function TransactionsTable({
           </TableBody>
         </Table>
       </div>
-
-       <AlertDialog open={isAlertOpen} onOpenChange={setIsAlertOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Sugerencia de Documentos Faltantes</AlertDialogTitle>
-            <AlertDialogDescription>
-              {suggestedDocs?.reasoning}
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <div>
-            <h4 className="font-semibold mb-2">Documentos sugeridos:</h4>
-            <ul className="list-disc pl-5 space-y-1">
-              {suggestedDocs?.suggestedDocuments.map((doc, index) => (
-                <li key={index} className="text-sm text-muted-foreground">{doc}</li>
-              ))}
-            </ul>
-          </div>
-          <AlertDialogFooter>
-            <AlertDialogAction onClick={() => setIsAlertOpen(false)}>Entendido</AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
     </>
   );
 }
