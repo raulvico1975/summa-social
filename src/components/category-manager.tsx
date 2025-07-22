@@ -14,12 +14,23 @@ import {
 import {
   Dialog,
   DialogContent,
-  DialogDescription,
   DialogFooter,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
+  DialogClose,
 } from '@/components/ui/dialog';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
+
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import {
@@ -32,6 +43,7 @@ import {
 import { PlusCircle, Edit, Trash2 } from 'lucide-react';
 import type { Category } from '@/lib/data';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { useToast } from '@/hooks/use-toast';
 
 function CategoryTable({
   categories,
@@ -86,38 +98,87 @@ function CategoryTable({
 export function CategoryManager({ initialCategories }: { initialCategories: Category[] }) {
   const [categories, setCategories] = React.useState<Category[]>(initialCategories);
   const [isDialogOpen, setIsDialogOpen] = React.useState(false);
+  const [isAlertOpen, setIsAlertOpen] = React.useState(false);
   const [editingCategory, setEditingCategory] = React.useState<Category | null>(null);
+  const [categoryToDelete, setCategoryToDelete] = React.useState<Category | null>(null);
+  const [formData, setFormData] = React.useState<{ name: string; type: Category['type'] }>({ name: '', type: 'expense' });
+  const { toast } = useToast();
 
   const incomeCategories = categories.filter((c) => c.type === 'income');
   const expenseCategories = categories.filter((c) => c.type === 'expense');
 
   const handleEdit = (category: Category) => {
     setEditingCategory(category);
+    setFormData({ name: category.name, type: category.type });
     setIsDialogOpen(true);
   };
+  
+  const handleDeleteRequest = (category: Category) => {
+    setCategoryToDelete(category);
+    setIsAlertOpen(true);
+  }
 
-  const handleDelete = (category: Category) => {
-    // Implement delete logic here
-    console.log('Deleting', category);
+  const handleDeleteConfirm = () => {
+    if (categoryToDelete) {
+      setCategories(categories.filter((c) => c.id !== categoryToDelete.id));
+      toast({
+        title: 'Categoría Eliminada',
+        description: `La categoría "${categoryToDelete.name}" ha sido eliminada.`,
+      });
+    }
+    setIsAlertOpen(false);
+    setCategoryToDelete(null);
   };
   
   const handleOpenChange = (open: boolean) => {
     setIsDialogOpen(open);
     if (!open) {
       setEditingCategory(null);
+      setFormData({ name: '', type: 'expense' });
     }
   }
   
   const handleAddNew = () => {
     setEditingCategory(null);
+    setFormData({ name: '', type: 'expense' });
     setIsDialogOpen(true);
+  }
+
+  const handleFormChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setFormData({ ...formData, [e.target.id]: e.target.value });
+  }
+
+  const handleSelectChange = (value: Category['type']) => {
+    setFormData({ ...formData, type: value });
+  }
+  
+  const handleSave = () => {
+    if (!formData.name) {
+       toast({ variant: 'destructive', title: 'Error', description: 'El nombre de la categoría no puede estar vacío.' });
+       return;
+    }
+
+    if (editingCategory) {
+      // Update
+      setCategories(categories.map((c) => c.id === editingCategory.id ? { ...c, ...formData } : c));
+      toast({ title: 'Categoría Actualizada', description: `La categoría "${formData.name}" ha sido actualizada.` });
+    } else {
+      // Create
+      const newCategory: Category = {
+        id: `cat_${new Date().getTime()}`,
+        ...formData
+      };
+      setCategories([...categories, newCategory]);
+      toast({ title: 'Categoría Creada', description: `La categoría "${formData.name}" ha sido creada.` });
+    }
+    handleOpenChange(false);
   }
 
   const dialogTitle = editingCategory ? 'Editar Categoría' : 'Añadir Nueva Categoría';
   const dialogDescription = editingCategory ? 'Edita los detalles de tu categoría.' : 'Crea una nueva categoría para organizar tus transacciones.';
 
-
   return (
+    <>
     <Dialog open={isDialogOpen} onOpenChange={handleOpenChange}>
       <Card>
         <CardHeader className="flex flex-row items-center justify-between">
@@ -142,14 +203,14 @@ export function CategoryManager({ initialCategories }: { initialCategories: Cate
               <CategoryTable
                 categories={expenseCategories}
                 onEdit={handleEdit}
-                onDelete={handleDelete}
+                onDelete={handleDeleteRequest}
               />
             </TabsContent>
             <TabsContent value="income" className="mt-4">
               <CategoryTable
                 categories={incomeCategories}
                 onEdit={handleEdit}
-                onDelete={handleDelete}
+                onDelete={handleDeleteRequest}
               />
             </TabsContent>
           </Tabs>
@@ -166,13 +227,13 @@ export function CategoryManager({ initialCategories }: { initialCategories: Cate
             <Label htmlFor="name" className="text-right">
               Nombre
             </Label>
-            <Input id="name" defaultValue={editingCategory?.name} className="col-span-3" />
+            <Input id="name" value={formData.name} onChange={handleFormChange} className="col-span-3" />
           </div>
           <div className="grid grid-cols-4 items-center gap-4">
             <Label htmlFor="type" className="text-right">
               Tipo
             </Label>
-            <Select defaultValue={editingCategory?.type}>
+            <Select value={formData.type} onValueChange={handleSelectChange}>
               <SelectTrigger className="col-span-3">
                 <SelectValue placeholder="Selecciona un tipo" />
               </SelectTrigger>
@@ -185,9 +246,31 @@ export function CategoryManager({ initialCategories }: { initialCategories: Cate
           </div>
         </div>
         <DialogFooter>
-          <Button type="submit">Guardar Categoría</Button>
+          <DialogClose asChild>
+             <Button variant="outline">Cancelar</Button>
+          </DialogClose>
+          <Button onClick={handleSave}>Guardar Categoría</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
+
+    <AlertDialog open={isAlertOpen} onOpenChange={setIsAlertOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>¿Estás seguro?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Esta acción no se puede deshacer. Se eliminará la categoría
+              permanentemente.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => setCategoryToDelete(null)}>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDeleteConfirm}>
+              Eliminar
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
   );
 }
