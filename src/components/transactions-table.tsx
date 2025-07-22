@@ -29,7 +29,6 @@ import {
 } from '@/components/ui/alert-dialog';
 import {
   MoreHorizontal,
-  FileUp,
   FileCheck,
   FileWarning,
   Sparkles,
@@ -38,7 +37,8 @@ import {
   Lightbulb,
   FileQuestion,
 } from 'lucide-react';
-import type { Transaction } from '@/lib/data';
+import type { Transaction, Category } from '@/lib/data';
+import { categories } from '@/lib/data';
 import { categorizeTransaction } from '@/ai/flows/categorize-transactions';
 import { suggestMissingDocuments } from '@/ai/flows/suggest-missing-documents';
 import { useToast } from '@/hooks/use-toast';
@@ -54,6 +54,9 @@ export function TransactionsTable({ initialTransactions }: { initialTransactions
   const [suggestedDocs, setSuggestedDocs] = React.useState<SuggestedDocs | null>(null);
   const [isAlertOpen, setIsAlertOpen] = React.useState(false);
   const { toast } = useToast();
+  
+  // In a real app, this would come from a context or API call
+  const availableCategories: Category[] = categories; 
 
   const handleCategorize = async (txId: string) => {
     const transaction = transactions.find((tx) => tx.id === txId);
@@ -61,10 +64,14 @@ export function TransactionsTable({ initialTransactions }: { initialTransactions
 
     setLoadingStates((prev) => ({ ...prev, [txId]: true }));
     try {
+      const expenseCategories = availableCategories.filter(c => c.type === 'expense').map(c => c.name);
+      const incomeCategories = availableCategories.filter(c => c.type === 'income').map(c => c.name);
+      
       const result = await categorizeTransaction({
         description: transaction.description,
         amount: transaction.amount,
-        keywords: transaction.description.split(' '),
+        expenseCategories,
+        incomeCategories,
       });
       setTransactions((prev) =>
         prev.map((tx) => (tx.id === txId ? { ...tx, category: result.category } : tx))

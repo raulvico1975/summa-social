@@ -10,12 +10,12 @@
 
 import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
-import { categories } from '@/lib/data';
 
 const CategorizeTransactionInputSchema = z.object({
   description: z.string().describe('The description of the transaction.'),
   amount: z.number().describe('The amount of the transaction. Positive for income, negative for expenses.'),
-  keywords: z.array(z.string()).describe('Keywords associated with the transaction.'),
+  expenseCategories: z.array(z.string()).describe('List of available expense categories.'),
+  incomeCategories: z.array(z.string()).describe('List of available income categories.'),
 });
 export type CategorizeTransactionInput = z.infer<typeof CategorizeTransactionInputSchema>;
 
@@ -29,27 +29,23 @@ export async function categorizeTransaction(input: CategorizeTransactionInput): 
   return categorizeTransactionFlow(input);
 }
 
-const expenseCategories = categories.filter(c => c.type === 'expense').map(c => c.name).join(', ');
-const incomeCategories = categories.filter(c => c.type === 'income').map(c => c.name).join(', ');
-
 
 const prompt = ai.definePrompt({
   name: 'categorizeTransactionPrompt',
   input: {schema: CategorizeTransactionInputSchema},
   output: {schema: CategorizeTransactionOutputSchema},
   prompt: `You are an expert financial categorizer for a social organization.
-  Given the transaction description, amount, and keywords, determine the most appropriate accounting item (partida comptable) for the transaction.
+  Given the transaction description and amount, determine the most appropriate accounting item (partida comptable) for the transaction from the provided lists.
   Your response must be in Spanish.
 
   Transaction Details:
   Description: {{{description}}}
   Amount: {{{amount}}}
-  Keywords: {{#each keywords}}{{{this}}}{{#unless @last}}, {{/unless}}{{/each}}
   
-  If the amount is negative, it's an expense. Choose one of the following expense categories: ${expenseCategories}.
-  If the amount is positive, it's an income. Choose one of the following income categories: ${incomeCategories}.
+  If the amount is negative, it's an expense. You MUST choose one of the following expense categories: {{#each expenseCategories}}{{{this}}}{{#unless @last}}, {{/unless}}{{/each}}.
+  If the amount is positive, it's an income. You MUST choose one of the following income categories: {{#each incomeCategories}}{{{this}}}{{#unless @last}}, {{/unless}}{{/each}}.
 
-  If you cannot confidently determine the category, you MUST return "Revisar".
+  If you cannot confidently determine the category from the provided lists, you MUST return "Revisar".
 
   Please provide the category and a confidence level (0-1) for your categorization.
   `,
