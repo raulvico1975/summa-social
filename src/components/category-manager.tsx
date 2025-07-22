@@ -46,6 +46,8 @@ import type { Category } from '@/lib/data';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
 
+const CATEGORIES_STORAGE_KEY = 'summa-social-categories';
+
 function CategoryTable({
   categories,
   onEdit,
@@ -104,6 +106,26 @@ export function CategoryManager({ initialCategories }: { initialCategories: Cate
   const [categoryToDelete, setCategoryToDelete] = React.useState<Category | null>(null);
   const [formData, setFormData] = React.useState<{ name: string; type: Category['type'] }>({ name: '', type: 'expense' });
   const { toast } = useToast();
+  
+  React.useEffect(() => {
+    try {
+      const storedCategories = localStorage.getItem(CATEGORIES_STORAGE_KEY);
+      if (storedCategories) {
+        setCategories(JSON.parse(storedCategories));
+      }
+    } catch (error) {
+      console.error("Failed to parse categories from localStorage", error);
+    }
+  }, []);
+
+  const updateCategories = (newCategories: Category[]) => {
+    setCategories(newCategories);
+    try {
+      localStorage.setItem(CATEGORIES_STORAGE_KEY, JSON.stringify(newCategories));
+    } catch (error) {
+      console.error("Failed to save categories to localStorage", error);
+    }
+  };
 
   const incomeCategories = categories.filter((c) => c.type === 'income');
   const expenseCategories = categories.filter((c) => c.type === 'expense');
@@ -121,7 +143,7 @@ export function CategoryManager({ initialCategories }: { initialCategories: Cate
 
   const handleDeleteConfirm = () => {
     if (categoryToDelete) {
-      setCategories(categories.filter((c) => c.id !== categoryToDelete.id));
+      updateCategories(categories.filter((c) => c.id !== categoryToDelete.id));
       toast({
         title: 'Categoría Eliminada',
         description: `La categoría "${categoryToDelete.name}" ha sido eliminada.`,
@@ -161,7 +183,7 @@ export function CategoryManager({ initialCategories }: { initialCategories: Cate
 
     if (editingCategory) {
       // Update
-      setCategories(categories.map((c) => c.id === editingCategory.id ? { ...c, ...formData } : c));
+      updateCategories(categories.map((c) => c.id === editingCategory.id ? { ...c, ...formData } : c));
       toast({ title: 'Categoría Actualizada', description: `La categoría "${formData.name}" ha sido actualizada.` });
     } else {
       // Create
@@ -169,7 +191,7 @@ export function CategoryManager({ initialCategories }: { initialCategories: Cate
         id: `cat_${new Date().getTime()}`,
         ...formData
       };
-      setCategories([...categories, newCategory]);
+      updateCategories([...categories, newCategory]);
       toast({ title: 'Categoría Creada', description: `La categoría "${formData.name}" ha sido creada.` });
     }
     handleOpenChange(false);

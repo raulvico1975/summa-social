@@ -47,18 +47,33 @@ type SuggestedDocs = {
   reasoning: string;
 };
 
+const CATEGORIES_STORAGE_KEY = 'summa-social-categories';
+
+
 export function TransactionsTable({ 
   initialTransactions,
-  availableCategories 
+  availableCategories: initialAvailableCategories
 }: { 
   initialTransactions: Transaction[],
   availableCategories: Category[]
 }) {
   const [transactions, setTransactions] = React.useState<Transaction[]>(initialTransactions);
+  const [availableCategories, setAvailableCategories] = React.useState<Category[]>(initialAvailableCategories);
   const [loadingStates, setLoadingStates] = React.useState<Record<string, boolean>>({});
   const [suggestedDocs, setSuggestedDocs] = React.useState<SuggestedDocs | null>(null);
   const [isAlertOpen, setIsAlertOpen] = React.useState(false);
   const { toast } = useToast();
+
+  React.useEffect(() => {
+    try {
+      const storedCategories = localStorage.getItem(CATEGORIES_STORAGE_KEY);
+      if (storedCategories) {
+        setAvailableCategories(JSON.parse(storedCategories));
+      }
+    } catch (error) {
+       console.error("Failed to parse categories from localStorage", error);
+    }
+  }, []);
 
   const handleCategorize = async (txId: string) => {
     const transaction = transactions.find((tx) => tx.id === txId);
