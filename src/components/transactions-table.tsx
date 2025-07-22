@@ -16,6 +16,7 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
+  DropdownMenuSeparator,
 } from '@/components/ui/dropdown-menu';
 import {
   AlertDialog,
@@ -36,6 +37,7 @@ import {
   Paperclip,
   Lightbulb,
   FileQuestion,
+  ChevronDown,
 } from 'lucide-react';
 import type { Transaction, Category } from '@/lib/data';
 import { categorizeTransaction } from '@/ai/flows/categorize-transactions';
@@ -139,6 +141,14 @@ export function TransactionsTable({
     });
   };
 
+  const handleSetCategory = (txId: string, newCategory: string) => {
+    setTransactions((prev) =>
+      prev.map((tx) =>
+        tx.id === txId ? { ...tx, category: newCategory } : tx
+      )
+    );
+  };
+
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('es-ES', { style: 'currency', currency: 'EUR' }).format(amount);
   };
@@ -179,7 +189,10 @@ export function TransactionsTable({
             </TableRow>
           </TableHeader>
           <TableBody>
-            {transactions.map((tx) => (
+            {transactions.map((tx) => {
+              const relevantCategories = availableCategories.filter(c => c.type === (tx.amount > 0 ? 'income' : 'expense'));
+              
+              return (
               <TableRow key={tx.id}>
                 <TableCell>{formatDate(tx.date)}</TableCell>
                 <TableCell className="font-medium">{tx.description}</TableCell>
@@ -188,7 +201,23 @@ export function TransactionsTable({
                 </TableCell>
                 <TableCell>
                   {tx.category ? (
-                    <Badge variant={tx.amount > 0 ? 'success' : 'destructive'}>{tx.category}</Badge>
+                     <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" className="h-auto p-0 text-left font-normal" >
+                           <Badge variant={tx.amount > 0 ? 'success' : 'destructive'} className="cursor-pointer">
+                              {tx.category}
+                              <ChevronDown className="ml-1 h-3 w-3" />
+                            </Badge>
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="start">
+                        {relevantCategories.map((cat) => (
+                           <DropdownMenuItem key={cat.id} onClick={() => handleSetCategory(tx.id, cat.name)}>
+                            {cat.name}
+                           </DropdownMenuItem>
+                        ))}
+                      </DropdownMenuContent>
+                    </DropdownMenu>
                   ) : (
                     <Button
                       variant="outline"
@@ -231,7 +260,7 @@ export function TransactionsTable({
                   </DropdownMenu>
                 </TableCell>
               </TableRow>
-            ))}
+            )})}
           </TableBody>
         </Table>
       </div>
