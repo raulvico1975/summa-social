@@ -241,7 +241,6 @@ export function CategoryManager({ initialCategories }: { initialCategories: Cate
               <SelectContent>
                 <SelectItem value="expense">Gasto</SelectItem>
                 <SelectItem value="income">Ingreso</SelectItem>
-                <SelectItem value="transfer">Transferencia</SelectItem>
               </SelectContent>
             </Select>
           </div>

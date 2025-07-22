@@ -38,7 +38,6 @@ import {
   FileQuestion,
 } from 'lucide-react';
 import type { Transaction, Category } from '@/lib/data';
-import { categories } from '@/lib/data';
 import { categorizeTransaction } from '@/ai/flows/categorize-transactions';
 import { suggestMissingDocuments } from '@/ai/flows/suggest-missing-documents';
 import { useToast } from '@/hooks/use-toast';
@@ -48,15 +47,18 @@ type SuggestedDocs = {
   reasoning: string;
 };
 
-export function TransactionsTable({ initialTransactions }: { initialTransactions: Transaction[] }) {
+export function TransactionsTable({ 
+  initialTransactions,
+  availableCategories 
+}: { 
+  initialTransactions: Transaction[],
+  availableCategories: Category[]
+}) {
   const [transactions, setTransactions] = React.useState<Transaction[]>(initialTransactions);
   const [loadingStates, setLoadingStates] = React.useState<Record<string, boolean>>({});
   const [suggestedDocs, setSuggestedDocs] = React.useState<SuggestedDocs | null>(null);
   const [isAlertOpen, setIsAlertOpen] = React.useState(false);
   const { toast } = useToast();
-  
-  // In a real app, this would come from a context or API call
-  const availableCategories: Category[] = categories; 
 
   const handleCategorize = async (txId: string) => {
     const transaction = transactions.find((tx) => tx.id === txId);

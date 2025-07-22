@@ -1,7 +1,7 @@
 import { Button } from "@/components/ui/button";
 import { TransactionsTable } from "@/components/transactions-table";
 import { FileUp, Download } from "lucide-react";
-import { transactions } from "@/lib/data";
+import { transactions, categories } from "@/lib/data";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 export default function DashboardPage() {
@@ -29,7 +29,7 @@ export default function DashboardPage() {
           <CardTitle>Transacciones Recientes</CardTitle>
         </CardHeader>
         <CardContent>
-          <TransactionsTable initialTransactions={transactions} />
+          <TransactionsTable initialTransactions={transactions} availableCategories={categories} />
         </CardContent>
       </Card>
     </div>
