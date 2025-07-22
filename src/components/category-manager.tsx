@@ -29,7 +29,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Badge } from '@/components/ui/badge';
 import { PlusCircle, Edit, Trash2 } from 'lucide-react';
 import type { Category } from '@/lib/data';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -109,12 +108,17 @@ export function CategoryManager({ initialCategories }: { initialCategories: Cate
     }
   }
   
+  const handleAddNew = () => {
+    setEditingCategory(null);
+    setIsDialogOpen(true);
+  }
+
   const dialogTitle = editingCategory ? 'Editar Categoría' : 'Añadir Nueva Categoría';
   const dialogDescription = editingCategory ? 'Edita los detalles de tu categoría.' : 'Crea una nueva categoría para organizar tus transacciones.';
 
 
   return (
-    <>
+    <Dialog open={isDialogOpen} onOpenChange={handleOpenChange}>
       <Card>
         <CardHeader className="flex flex-row items-center justify-between">
           <div>
@@ -122,7 +126,7 @@ export function CategoryManager({ initialCategories }: { initialCategories: Cate
             <CardDescription>Añade, edita o elimina tus categorías financieras.</CardDescription>
           </div>
           <DialogTrigger asChild>
-            <Button size="sm" onClick={() => setIsDialogOpen(true)}>
+            <Button size="sm" onClick={handleAddNew}>
               <PlusCircle className="mr-2 h-4 w-4" />
               Añadir Categoría
             </Button>
@@ -152,40 +156,38 @@ export function CategoryManager({ initialCategories }: { initialCategories: Cate
         </CardContent>
       </Card>
       
-      <Dialog open={isDialogOpen} onOpenChange={handleOpenChange}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>{dialogTitle}</DialogTitle>
-            <DialogDescription>{dialogDescription}</DialogDescription>
-          </DialogHeader>
-          <div className="grid gap-4 py-4">
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="name" className="text-right">
-                Nombre
-              </Label>
-              <Input id="name" defaultValue={editingCategory?.name} className="col-span-3" />
-            </div>
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="type" className="text-right">
-                Tipo
-              </Label>
-              <Select defaultValue={editingCategory?.type}>
-                <SelectTrigger className="col-span-3">
-                  <SelectValue placeholder="Selecciona un tipo" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="expense">Gasto</SelectItem>
-                  <SelectItem value="income">Ingreso</SelectItem>
-                  <SelectItem value="transfer">Transferencia</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>{dialogTitle}</DialogTitle>
+          <DialogDescription>{dialogDescription}</DialogDescription>
+        </DialogHeader>
+        <div className="grid gap-4 py-4">
+          <div className="grid grid-cols-4 items-center gap-4">
+            <Label htmlFor="name" className="text-right">
+              Nombre
+            </Label>
+            <Input id="name" defaultValue={editingCategory?.name} className="col-span-3" />
           </div>
-          <DialogFooter>
-            <Button type="submit">Guardar Categoría</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-    </>
+          <div className="grid grid-cols-4 items-center gap-4">
+            <Label htmlFor="type" className="text-right">
+              Tipo
+            </Label>
+            <Select defaultValue={editingCategory?.type}>
+              <SelectTrigger className="col-span-3">
+                <SelectValue placeholder="Selecciona un tipo" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="expense">Gasto</SelectItem>
+                <SelectItem value="income">Ingreso</SelectItem>
+                <SelectItem value="transfer">Transferencia</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+        <DialogFooter>
+          <Button type="submit">Guardar Categoría</Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }
