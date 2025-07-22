@@ -32,31 +32,18 @@ import type { Transaction, Category } from '@/lib/data';
 import { categorizeTransaction } from '@/ai/flows/categorize-transactions';
 import { useToast } from '@/hooks/use-toast';
 
-const CATEGORIES_STORAGE_KEY = 'summa-social-categories';
-
 
 export function TransactionsTable({ 
-  initialTransactions,
-  availableCategories: initialAvailableCategories
+  transactions,
+  setTransactions,
+  availableCategories,
 }: { 
-  initialTransactions: Transaction[],
+  transactions: Transaction[],
+  setTransactions: React.Dispatch<React.SetStateAction<Transaction[]>>,
   availableCategories: Category[]
 }) {
-  const [transactions, setTransactions] = React.useState<Transaction[]>(initialTransactions);
-  const [availableCategories, setAvailableCategories] = React.useState<Category[]>(initialAvailableCategories);
   const [loadingStates, setLoadingStates] = React.useState<Record<string, boolean>>({});
   const { toast } = useToast();
-
-  React.useEffect(() => {
-    try {
-      const storedCategories = localStorage.getItem(CATEGORIES_STORAGE_KEY);
-      if (storedCategories) {
-        setAvailableCategories(JSON.parse(storedCategories));
-      }
-    } catch (error) {
-       console.error("Failed to parse categories from localStorage", error);
-    }
-  }, []);
 
   const handleCategorize = async (txId: string) => {
     const transaction = transactions.find((tx) => tx.id === txId);
@@ -115,11 +102,19 @@ export function TransactionsTable({
   };
   
   const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('es-ES', {
-      day: '2-digit',
-      month: '2-digit',
-      year: 'numeric',
-    });
+    try {
+      const date = new Date(dateString);
+      if (isNaN(date.getTime())) { // Invalid date
+        return dateString;
+      }
+      return date.toLocaleDateString('es-ES', {
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric',
+      });
+    } catch (e) {
+      return dateString;
+    }
   }
 
   const getDocumentStatusIcon = (status: Transaction['document']) => {
