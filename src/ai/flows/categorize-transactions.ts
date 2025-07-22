@@ -10,10 +10,11 @@
 
 import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
+import { categories } from '@/lib/data';
 
 const CategorizeTransactionInputSchema = z.object({
   description: z.string().describe('The description of the transaction.'),
-  amount: z.number().describe('The amount of the transaction.'),
+  amount: z.number().describe('The amount of the transaction. Positive for income, negative for expenses.'),
   keywords: z.array(z.string()).describe('Keywords associated with the transaction.'),
 });
 export type CategorizeTransactionInput = z.infer<typeof CategorizeTransactionInputSchema>;
@@ -28,20 +29,27 @@ export async function categorizeTransaction(input: CategorizeTransactionInput): 
   return categorizeTransactionFlow(input);
 }
 
+const expenseCategories = categories.filter(c => c.type === 'expense').map(c => c.name).join(', ');
+const incomeCategories = categories.filter(c => c.type === 'income').map(c => c.name).join(', ');
+
+
 const prompt = ai.definePrompt({
   name: 'categorizeTransactionPrompt',
   input: {schema: CategorizeTransactionInputSchema},
   output: {schema: CategorizeTransactionOutputSchema},
   prompt: `You are an expert financial categorizer for a social organization.
   Given the transaction description, amount, and keywords, determine the most appropriate accounting item (partida comptable) for the transaction.
-  The available accounting items are: Recursos Humans, Viatges, Serveis tècnics, Funcionament, Donaciones, Subvenciones, Suministros de Oficina, Servicios Públicos, Alquiler.
-  If you cannot confidently determine the category, you MUST return "Revisar".
   Your response must be in Spanish.
 
   Transaction Details:
   Description: {{{description}}}
   Amount: {{{amount}}}
   Keywords: {{#each keywords}}{{{this}}}{{#unless @last}}, {{/unless}}{{/each}}
+  
+  If the amount is negative, it's an expense. Choose one of the following expense categories: ${expenseCategories}.
+  If the amount is positive, it's an income. Choose one of the following income categories: ${incomeCategories}.
+
+  If you cannot confidently determine the category, you MUST return "Revisar".
 
   Please provide the category and a confidence level (0-1) for your categorization.
   `,
