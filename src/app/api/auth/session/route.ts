@@ -28,6 +28,7 @@ export async function GET(request: NextRequest) {
     const user = await verifySessionCookie(token);
     return NextResponse.json({ user });
   } catch (error) {
+    // On error, return a plain JSON object with a 401 status
     return NextResponse.json({ user: null }, { status: 401 });
   }
 }
