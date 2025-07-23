@@ -20,28 +20,18 @@ const AuthContext = createContext<AuthContextType>({
   loading: true,
 });
 
-export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
-  const [user, setUser] = useState<User | null>(null);
-  const [loading, setLoading] = useState(true);
+// Mock user for development when login is disabled
+const MOCK_USER: User = {
+  name: 'Usuario de Desarrollo',
+  email: 'dev@example.com',
+  picture: null,
+  email_verified: true,
+};
 
-  useEffect(() => {
-    const fetchSession = async () => {
-      try {
-        const response = await fetch('/api/auth/session');
-        if (response.ok) {
-          const { user: sessionUser } = await response.json();
-          setUser(sessionUser);
-        } else {
-          setUser(null);
-        }
-      } catch (error) {
-        setUser(null);
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchSession();
-  }, []);
+export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
+  // We provide a mock user directly to bypass the real authentication flow.
+  const [user] = useState<User | null>(MOCK_USER);
+  const [loading] = useState(false); // Set loading to false as we are not fetching anything.
 
   return (
     <AuthContext.Provider value={{ user, loading }}>
