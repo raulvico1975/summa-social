@@ -15,6 +15,7 @@ const { verifySessionCookie } = getFirebaseAuth({
         maxAge: 12 * 60 * 60 * 24, // 12 days
     },
     serviceAccount: {},
+    authDomain: "summa-social.firebaseapp.com",
 });
 
 export async function GET(request: NextRequest) {

@@ -3,8 +3,6 @@
 
 import { cookies } from 'next/headers';
 import { getFirebaseAuth } from 'next-firebase-auth-edge';
-import { signInWithEmailAndPassword as firebaseSignIn } from 'firebase/auth';
-import { auth } from '@/lib/firebase';
 
 const {createSessionCookie, verifySessionCookie} = getFirebaseAuth({
     apiKey: "AIzaSyAi_dEPmqHpbEdZH04pCnRRS85AlJ9Pe5g",
@@ -18,6 +16,7 @@ const {createSessionCookie, verifySessionCookie} = getFirebaseAuth({
         maxAge: 12 * 60 * 60 * 24, // 12 days
     },
     serviceAccount: {},
+    authDomain: "summa-social.firebaseapp.com",
 });
 
 export async function createSession(idToken: string): Promise<{ success: boolean; error?: string }> {
