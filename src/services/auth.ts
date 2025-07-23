@@ -11,7 +11,7 @@ const {createSessionCookie, verifySessionCookie} = getFirebaseAuth({
     cookieSerializeOptions: {
         path: '/',
         httpOnly: true,
-        secure: process.env.NODE_ENV === 'production',
+        secure: true, // Always use secure cookies
         sameSite: 'lax',
         maxAge: 12 * 60 * 60 * 24, // 12 days in seconds
     },
@@ -24,7 +24,7 @@ export async function createSession(idToken: string): Promise<{ success: boolean
         cookies().set('auth-token', session, {
             path: '/',
             httpOnly: true,
-            secure: process.env.NODE_ENV === 'production',
+            secure: true, // Always use secure cookies
             sameSite: 'lax',
             maxAge: 12 * 60 * 60 * 24, // 12 days in seconds
         });
