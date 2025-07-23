@@ -6,7 +6,8 @@ export async function middleware(request: NextRequest) {
 
   const publicPaths = ['/'];
 
-  if (publicPaths.includes(pathname) || pathname.startsWith('/api')) {
+  // This check is to prevent the middleware from running on static assets and API routes.
+  if (publicPaths.includes(pathname) || pathname.startsWith('/_next') || pathname.startsWith('/api') || pathname.endsWith('.ico') || pathname.endsWith('.png')) {
     return NextResponse.next();
   }
 
@@ -34,7 +35,3 @@ export async function middleware(request: NextRequest) {
 
   return NextResponse.next();
 }
-
-export const config = {
-  matcher: ['/dashboard/:path*', '/'],
-};
