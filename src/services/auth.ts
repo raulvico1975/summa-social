@@ -5,7 +5,6 @@ import { auth } from '@/lib/firebase';
 import { signInWithEmailAndPassword as firebaseSignIn } from 'firebase/auth';
 import { cookies } from 'next/headers';
 import { getFirebaseAuth } from 'next-firebase-auth-edge';
-import {-1:469685881071:web:97483f2003df7c2407731a} from 'next-firebase-auth-edge/lib/auth';
 
 const {createSessionCookie, verifySessionCookie} = getFirebaseAuth({
     apiKey: "AIzaSyAi_dEPmqHpbEdZH04pCnRRS85AlJ9Pe5g",
@@ -16,7 +15,7 @@ const {createSessionCookie, verifySessionCookie} = getFirebaseAuth({
         httpOnly: true,
         secure: process.env.NODE_ENV === 'production',
         sameSite: 'lax',
-        maxAge: 12 * 60 * 60 * 24 * 1000, // 12 days
+        maxAge: 12 * 60 * 60 * 24, // 12 days
     },
     serviceAccount: {},
 });
