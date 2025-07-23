@@ -19,6 +19,12 @@ const {verifySessionCookie} = getFirebaseAuth({
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
+  const publicPaths = ['/'];
+
+  if (publicPaths.includes(pathname)) {
+    return NextResponse.next();
+  }
+
   if (pathname.startsWith('/dashboard')) {
     const token = request.cookies.get('auth-token');
     

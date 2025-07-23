@@ -25,19 +25,14 @@ export async function signInWithEmailAndPassword(email: string, password: string
   try {
     const userCredential = await firebaseSignIn(auth, email, password);
     const idToken = await userCredential.user.getIdToken();
-    const session = await createSessionCookie(idToken, {
-      claims: {
-        email: userCredential.user.email,
-        name: userCredential.user.displayName,
-      }
-    });
+    const session = await createSessionCookie(idToken, {});
 
     cookies().set('auth-token', session, {
       path: '/',
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
       sameSite: 'lax',
-      maxAge: 12 * 60 * 60 * 24, // 12 days
+      maxAge: 12 * 60 * 60 * 24 * 1000, // 12 days in milliseconds
     });
 
     return { success: true };
