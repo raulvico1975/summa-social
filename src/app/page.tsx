@@ -2,16 +2,19 @@
 'use client';
 
 import * as React from 'react';
-import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+import { useToast } from '@/hooks/use-toast';
+import { Loader2 } from 'lucide-react';
+
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Logo } from '@/components/logo';
-import { signInWithEmailAndPassword } from '@/services/auth';
-import { useRouter } from 'next/navigation';
-import { useToast } from '@/hooks/use-toast';
-import { Loader2 } from 'lucide-react';
+import { createSession } from '@/services/auth';
+import { auth } from '@/lib/firebase';
+import { signInWithEmailAndPassword } from 'firebase/auth';
+
 
 export default function LoginPage() {
   const [email, setEmail] = React.useState('');
@@ -24,11 +27,21 @@ export default function LoginPage() {
     e.preventDefault();
     setIsLoading(true);
 
-    const { success, error } = await signInWithEmailAndPassword(email, password);
+    try {
+      // 1. Sign in on the client with Firebase Auth
+      const userCredential = await signInWithEmailAndPassword(auth, email, password);
+      const idToken = await userCredential.user.getIdToken();
 
-    if (success) {
-      router.push('/dashboard');
-    } else {
+      // 2. Call server action to create session cookie
+      const { success, error } = await createSession(idToken);
+      
+      if (success) {
+        router.push('/dashboard');
+      } else {
+        throw new Error(error || 'Failed to create session.');
+      }
+
+    } catch (error: any) {
       toast({
         variant: 'destructive',
         title: 'Error de autenticación',
