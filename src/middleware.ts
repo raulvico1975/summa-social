@@ -1,5 +1,4 @@
 import {NextRequest, NextResponse} from 'next/server';
-import { verifySessionCookie } from './services/auth';
 
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
@@ -10,26 +9,15 @@ export async function middleware(request: NextRequest) {
   if (publicPaths.includes(pathname) || pathname.startsWith('/_next') || pathname.startsWith('/api') || pathname.endsWith('.ico') || pathname.endsWith('.png')) {
     return NextResponse.next();
   }
-
+  
+  // In the middleware, we just check if the cookie exists.
+  // The actual validation of the cookie will be done in server components or API routes
+  // where the Node.js environment is available.
   if (pathname.startsWith('/dashboard')) {
-    const sessionCookie = request.cookies.get('auth-token')?.value;
+    const sessionCookie = request.cookies.get('auth-token');
     
     if (!sessionCookie) {
       return NextResponse.redirect(new URL('/', request.url));
-    }
-    
-    try {
-      const decodedClaims = await verifySessionCookie(sessionCookie);
-      if (!decodedClaims) {
-          throw new Error("Invalid session cookie");
-      }
-      return NextResponse.next();
-    } catch (error) {
-      console.error("Middleware error:", error);
-      const response = NextResponse.redirect(new URL('/', request.url));
-      // Clear the invalid cookie
-      response.cookies.delete('auth-token');
-      return response;
     }
   }
 
