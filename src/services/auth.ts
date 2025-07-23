@@ -13,7 +13,7 @@ const {createSessionCookie, verifySessionCookie} = getFirebaseAuth({
         httpOnly: true,
         secure: process.env.NODE_ENV === 'production',
         sameSite: 'lax',
-        maxAge: 12 * 60 * 60 * 24, // 12 days
+        maxAge: 12 * 60 * 60 * 24, // 12 days in seconds
     },
     serviceAccount: {},
 });
@@ -26,7 +26,7 @@ export async function createSession(idToken: string): Promise<{ success: boolean
             httpOnly: true,
             secure: process.env.NODE_ENV === 'production',
             sameSite: 'lax',
-            maxAge: 12 * 60 * 60 * 24 * 1000, // 12 days in milliseconds
+            maxAge: 12 * 60 * 60 * 24, // 12 days in seconds
         });
         return { success: true };
     } catch (error: any) {

@@ -11,7 +11,7 @@ const {verifySessionCookie} = getFirebaseAuth({
         httpOnly: true,
         secure: process.env.NODE_ENV === 'production',
         sameSite: 'lax',
-        maxAge: 12 * 60 * 60 * 24 * 1000,
+        maxAge: 12 * 60 * 60 * 24, // 12 days in seconds
     },
     serviceAccount: {},
 });
