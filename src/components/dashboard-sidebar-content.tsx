@@ -1,8 +1,9 @@
+
 'use client';
 
 import * as React from 'react';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import {
   SidebarContent,
@@ -14,9 +15,22 @@ import {
 } from '@/components/ui/sidebar';
 import { LayoutDashboard, BarChart3, Settings, LogOut, Users } from 'lucide-react';
 import { Logo } from '@/components/logo';
+import { signOut } from '@/services/auth';
+import { useToast } from '@/hooks/use-toast';
+import { useAuth } from '@/hooks/use-auth';
 
 export function DashboardSidebarContent() {
   const pathname = usePathname();
+  const router = useRouter();
+  const { toast } = useToast();
+  const { user } = useAuth();
+  
+  const handleSignOut = async (e: React.MouseEvent<HTMLAnchorElement>) => {
+    e.preventDefault();
+    await signOut();
+    toast({ title: 'Sesión Cerrada', description: 'Has cerrado sesión correctamente.' });
+    router.push('/');
+  };
 
   const menuItems = [
     {
@@ -40,6 +54,15 @@ export function DashboardSidebarContent() {
       icon: Settings,
     },
   ];
+
+  const getInitials = (name: string | null | undefined) => {
+    if (!name) return '??';
+    const parts = name.split(' ');
+    if (parts.length > 1) {
+      return `${parts[0][0]}${parts[1][0]}`.toUpperCase();
+    }
+    return name.substring(0, 2).toUpperCase();
+  }
 
   return (
     <>
@@ -71,18 +94,18 @@ export function DashboardSidebarContent() {
         <SidebarMenu>
           <SidebarMenuItem>
             <SidebarMenuButton asChild>
-              <Link href="/">
+              <Link href="#">
                 <Avatar className="h-7 w-7">
-                  <AvatarImage src="https://placehold.co/40x40.png" alt="User Avatar" data-ai-hint="user avatar" />
-                  <AvatarFallback>AD</AvatarFallback>
+                  <AvatarImage src={user?.picture} alt="User Avatar" data-ai-hint="user avatar" />
+                  <AvatarFallback>{getInitials(user?.name)}</AvatarFallback>
                 </Avatar>
-                <span>Ana Diaz</span>
+                <span>{user?.name || 'Usuario'}</span>
               </Link>
             </SidebarMenuButton>
           </SidebarMenuItem>
           <SidebarMenuItem>
              <SidebarMenuButton asChild tooltip={{children: "Cerrar Sesión"}}>
-                <Link href="/">
+                <Link href="/" onClick={handleSignOut}>
                   <LogOut />
                   <span>Cerrar Sesión</span>
                 </Link>
