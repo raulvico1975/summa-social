@@ -10,7 +10,7 @@ const { verifySessionCookie } = getFirebaseAuth({
     cookieSerializeOptions: {
         path: '/',
         httpOnly: true,
-        secure: true, 
+        secure: process.env.NODE_ENV === 'production', 
         sameSite: 'lax',
         maxAge: 12 * 60 * 60 * 24, // 12 days
     },
