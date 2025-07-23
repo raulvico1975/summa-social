@@ -30,7 +30,8 @@ export async function createSession(idToken: string): Promise<{ success: boolean
         });
         return { success: true };
     } catch (error: any) {
-        return { success: false, error: error.message };
+        console.error("Session creation failed:", error);
+        return { success: false, error: 'Failed to create session.' };
     }
 }
 
