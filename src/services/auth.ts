@@ -21,7 +21,7 @@ const {createSessionCookie, verifySessionCookie} = getFirebaseAuth({
 });
 
 
-export async function signInWithEmailAndPassword(email: string, password: string): Promise<{ success: boolean; error?: any }> {
+export async function signInWithEmailAndPassword(email: string, password: string): Promise<{ success: boolean; error?: string }> {
   try {
     const userCredential = await firebaseSignIn(auth, email, password);
     const idToken = await userCredential.user.getIdToken();
@@ -41,8 +41,8 @@ export async function signInWithEmailAndPassword(email: string, password: string
     });
 
     return { success: true };
-  } catch (error) {
-    return { success: false, error: error };
+  } catch (error: any) {
+    return { success: false, error: error.message };
   }
 }
 
