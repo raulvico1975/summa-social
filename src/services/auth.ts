@@ -3,6 +3,8 @@
 
 import { cookies } from 'next/headers';
 import { getFirebaseAuth } from 'next-firebase-auth-edge';
+import { signInWithEmailAndPassword as firebaseSignIn } from 'firebase/auth';
+import { auth } from '@/lib/firebase';
 
 const {createSessionCookie, verifySessionCookie} = getFirebaseAuth({
     apiKey: "AIzaSyAi_dEPmqHpbEdZH04pCnRRS85AlJ9Pe5g",
@@ -11,9 +13,9 @@ const {createSessionCookie, verifySessionCookie} = getFirebaseAuth({
     cookieSerializeOptions: {
         path: '/',
         httpOnly: true,
-        secure: true, // Always use secure cookies
+        secure: true, 
         sameSite: 'lax',
-        maxAge: 12 * 60 * 60 * 24, // 12 days in seconds
+        maxAge: 12 * 60 * 60 * 24, // 12 days
     },
     serviceAccount: {},
 });
@@ -24,9 +26,9 @@ export async function createSession(idToken: string): Promise<{ success: boolean
         cookies().set('auth-token', session, {
             path: '/',
             httpOnly: true,
-            secure: true, // Always use secure cookies
+            secure: true,
             sameSite: 'lax',
-            maxAge: 12 * 60 * 60 * 24, // 12 days in seconds
+            maxAge: 12 * 60 * 60 * 24, // 12 days
         });
         return { success: true };
     } catch (error: any) {
