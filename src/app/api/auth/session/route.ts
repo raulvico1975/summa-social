@@ -14,7 +14,6 @@ const { verifySessionCookie } = getFirebaseAuth({
         sameSite: 'lax',
         maxAge: 12 * 60 * 60 * 24, // 12 days
     },
-    serviceAccount: {},
     authDomain: "summa-social.firebaseapp.com",
 });
 

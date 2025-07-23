@@ -13,7 +13,6 @@ const {verifySessionCookie} = getFirebaseAuth({
         sameSite: 'lax',
         maxAge: 12 * 60 * 60 * 24, // 12 days in seconds
     },
-    serviceAccount: {},
     authDomain: "summa-social.firebaseapp.com",
 });
 
@@ -37,6 +36,7 @@ export async function middleware(request: NextRequest) {
       await verifySessionCookie(token.value);
       return NextResponse.next();
     } catch (error) {
+      console.error(error);
       return NextResponse.redirect(new URL('/', request.url));
     }
   }
