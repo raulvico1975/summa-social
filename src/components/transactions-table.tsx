@@ -17,6 +17,7 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import {
@@ -52,6 +53,10 @@ import {
   Loader2,
   ChevronDown,
   UserPlus,
+  FileUp,
+  Link as LinkIcon,
+  Trash2,
+  MoreVertical,
 } from 'lucide-react';
 import type { Transaction, Category, Contact } from '@/lib/data';
 import { categorizeTransaction } from '@/ai/flows/categorize-transactions';
@@ -77,7 +82,7 @@ export function TransactionsTable({
   
   const [isEditDialogOpen, setIsEditDialogOpen] = React.useState(false);
   const [editingTransaction, setEditingTransaction] = React.useState<Transaction | null>(null);
-  const [formData, setFormData] = React.useState({ description: '', amount: '', contactId: '' });
+  const [formData, setFormData] = React.useState<{ description: string; amount: string; contactId: string | null }>({ description: '', amount: '', contactId: null });
   
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = React.useState(false);
   const [transactionToDelete, setTransactionToDelete] = React.useState<Transaction | null>(null);
@@ -134,6 +139,52 @@ export function TransactionsTable({
       prev.map((tx) => (tx.id === txId ? { ...tx, contactId: newContactId } : tx))
     );
   };
+
+  const handleAttachDocument = (transactionId: string) => {
+    if (!user?.uid) {
+        toast({ variant: 'destructive', title: 'Error', description: 'No se ha podido identificar al usuario.' });
+        return;
+    }
+
+    const fileInput = document.createElement('input');
+    fileInput.type = 'file';
+    fileInput.accept = "application/pdf,image/*,.doc,.docx,.xls,.xlsx";
+    fileInput.style.display = 'none';
+
+    fileInput.onchange = async (e) => {
+        const target = e.target as HTMLInputElement;
+        const file = target.files?.[0];
+        if (!file) return;
+
+        setLoadingStates(prev => ({ ...prev, [`doc_${transactionId}`]: true }));
+        toast({ title: 'Subiendo documento...', description: `Adjuntando "${file.name}"...` });
+
+        try {
+            const storageRef = ref(storage, `documents/${user.uid}/${transactionId}/${file.name}`);
+            const uploadResult = await uploadBytes(storageRef, file);
+            const downloadURL = await getDownloadURL(uploadResult.ref);
+
+            setTransactions(prev => prev.map(tx => 
+                tx.id === transactionId ? { ...tx, document: downloadURL } : tx
+            ));
+
+            toast({ title: '¡Éxito!', description: 'El documento se ha subido y vinculado correctamente.' });
+        } catch (error: any) {
+            console.error("Error al subir el documento:", error);
+            let description = 'Ocurrió un error inesperado al subir el documento.';
+            if (error.code === 'storage/unauthorized') {
+                description = 'Acceso denegado por las reglas de seguridad. Asegúrate de que las reglas de Firebase Storage permiten la escritura para usuarios autenticados.';
+            }
+            toast({ variant: 'destructive', title: 'Error de subida', description });
+        } finally {
+            setLoadingStates(prev => ({ ...prev, [`doc_${transactionId}`]: false }));
+            document.body.removeChild(fileInput);
+        }
+    };
+
+    document.body.appendChild(fileInput);
+    fileInput.click();
+};
   
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('es-ES', { style: 'currency', currency: 'EUR' }).format(amount);
@@ -155,6 +206,45 @@ export function TransactionsTable({
     }
   };
 
+  const handleEditClick = (transaction: Transaction) => {
+    setEditingTransaction(transaction);
+    setFormData({ 
+        description: transaction.description, 
+        amount: String(transaction.amount),
+        contactId: transaction.contactId || null
+    });
+    setIsEditDialogOpen(true);
+  }
+
+  const handleSaveEdit = () => {
+    if (!editingTransaction) return;
+
+    setTransactions(prev => prev.map(tx => 
+        tx.id === editingTransaction.id 
+            ? { ...tx, description: formData.description, amount: parseFloat(formData.amount), contactId: formData.contactId } 
+            : tx
+    ));
+
+    toast({ title: 'Transacción actualizada' });
+    setIsEditDialogOpen(false);
+    setEditingTransaction(null);
+  }
+
+  const handleDeleteClick = (transaction: Transaction) => {
+    setTransactionToDelete(transaction);
+    setIsDeleteDialogOpen(true);
+  }
+
+  const handleDeleteConfirm = () => {
+    if (transactionToDelete) {
+        setTransactions(prev => prev.filter(tx => tx.id !== transactionToDelete.id));
+        toast({ title: 'Transacción eliminada' });
+    }
+    setIsDeleteDialogOpen(false);
+    setTransactionToDelete(null);
+  }
+
+
   return (
     <>
       <div className="rounded-md border">
@@ -163,9 +253,11 @@ export function TransactionsTable({
             <TableRow>
               <TableHead>Fecha</TableHead>
               <TableHead>Concepto</TableHead>
-              <TableHead className="text-right">Importe</TableHead>
-              <TableHead>Categoría</TableHead>
               <TableHead>Tercero</TableHead>
+              <TableHead>Categoría</TableHead>
+              <TableHead>Comprovant</TableHead>
+              <TableHead className="text-right">Importe</TableHead>
+              <TableHead><span className="sr-only">Acciones</span></TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -173,17 +265,39 @@ export function TransactionsTable({
               const relevantCategories = availableCategories.filter(
                 (c) => c.type === (tx.amount > 0 ? 'income' : 'expense')
               );
+              const isDocumentLoading = loadingStates[`doc_${tx.id}`];
 
               return (
                 <TableRow key={tx.id}>
                   <TableCell>{formatDate(tx.date)}</TableCell>
                   <TableCell className="font-medium">{tx.description}</TableCell>
-                  <TableCell
-                    className={`text-right font-mono ${
-                      tx.amount > 0 ? 'text-green-600' : 'text-red-600'
-                    }`}
-                  >
-                    {formatCurrency(tx.amount)}
+                   <TableCell>
+                    <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                           {tx.contactId ? (
+                                <Button variant="ghost" className="h-auto p-0 text-left font-normal flex items-center gap-1">
+                                    <span className="text-sm">{contactMap[tx.contactId]}</span>
+                                    <ChevronDown className="h-3 w-3 text-muted-foreground" />
+                                </Button>
+                           ) : (
+                               <Button variant="ghost" size="sm">
+                                   <UserPlus className="mr-2 h-4 w-4"/>
+                                   Asignar
+                               </Button>
+                           )}
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="start">
+                            <DropdownMenuItem onClick={() => handleSetContact(tx.id, null)}>
+                                (Desvincular)
+                            </DropdownMenuItem>
+                             <DropdownMenuSeparator />
+                            {availableContacts.map((contact) => (
+                                <DropdownMenuItem key={contact.id} onClick={() => handleSetContact(tx.id, contact.id)}>
+                                    {contact.name}
+                                </DropdownMenuItem>
+                            ))}
+                        </DropdownMenuContent>
+                    </DropdownMenu>
                   </TableCell>
                   <TableCell>
                     {tx.category ? (
@@ -226,37 +340,57 @@ export function TransactionsTable({
                       </Button>
                     )}
                   </TableCell>
-                   <TableCell>
-                    <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                           {tx.contactId ? (
-                                <Button variant="ghost" className="h-auto p-0 text-left font-normal flex items-center gap-1">
-                                    <span className="text-sm">{contactMap[tx.contactId]}</span>
-                                    <ChevronDown className="h-3 w-3 text-muted-foreground" />
-                                </Button>
-                           ) : (
-                               <Button variant="ghost" size="sm">
-                                   <UserPlus className="mr-2 h-4 w-4"/>
-                                   Asignar
-                               </Button>
-                           )}
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="start">
-                            <DropdownMenuItem onClick={() => handleSetContact(tx.id, null)}>
-                                (Desvincular)
-                            </DropdownMenuItem>
-                             <DropdownMenuSeparator />
-                            {availableContacts.map((contact) => (
-                                <DropdownMenuItem key={contact.id} onClick={() => handleSetContact(tx.id, contact.id)}>
-                                    {contact.name}
-                                </DropdownMenuItem>
-                            ))}
-                        </DropdownMenuContent>
-                    </DropdownMenu>
+                  <TableCell>
+                      {isDocumentLoading ? (
+                          <Button variant="outline" size="icon" disabled>
+                              <Loader2 className="h-4 w-4 animate-spin" />
+                          </Button>
+                      ) : tx.document ? (
+                          <Button asChild variant="outline" size="icon">
+                              <a href={tx.document} target="_blank" rel="noopener noreferrer">
+                                  <LinkIcon className="h-4 w-4" />
+                              </a>
+                          </Button>
+                      ) : (
+                          <Button variant="outline" size="icon" onClick={() => handleAttachDocument(tx.id)}>
+                              <FileUp className="h-4 w-4" />
+                          </Button>
+                      )}
                   </TableCell>
+                  <TableCell
+                    className={`text-right font-mono ${
+                      tx.amount > 0 ? 'text-green-600' : 'text-red-600'
+                    }`}
+                  >
+                    {formatCurrency(tx.amount)}
+                  </TableCell>
+                   <TableCell className="text-right">
+                        <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                                <Button variant="ghost" size="icon">
+                                    <MoreVertical className="h-4 w-4" />
+                                </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                                <DropdownMenuItem onClick={() => handleEditClick(tx)}>
+                                    Editar
+                                </DropdownMenuItem>
+                                <DropdownMenuItem className="text-red-500" onClick={() => handleDeleteClick(tx)}>
+                                    Eliminar
+                                </DropdownMenuItem>
+                            </DropdownMenuContent>
+                        </DropdownMenu>
+                   </TableCell>
                 </TableRow>
               );
             })}
+             {transactions.length === 0 && (
+                <TableRow>
+                    <TableCell colSpan={7} className="h-24 text-center">
+                        No hay transacciones. Empieza importando un extracto bancario.
+                    </TableCell>
+                </TableRow>
+             )}
           </TableBody>
         </Table>
       </div>
@@ -298,7 +432,7 @@ export function TransactionsTable({
                 <Label htmlFor="contact" className="text-right">
                     Contacto
                 </Label>
-                <Select value={formData.contactId} onValueChange={(value) => setFormData({...formData, contactId: value === 'null' ? '' : value})}>
+                <Select value={formData.contactId || ''} onValueChange={(value) => setFormData({...formData, contactId: value === 'null' ? null : value})}>
                     <SelectTrigger className="col-span-3">
                         <SelectValue placeholder="Selecciona un contacto" />
                     </SelectTrigger>
@@ -315,6 +449,7 @@ export function TransactionsTable({
             <DialogClose asChild>
               <Button variant="outline">Cancelar</Button>
             </DialogClose>
+            <Button onClick={handleSaveEdit}>Guardar Cambios</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -331,7 +466,7 @@ export function TransactionsTable({
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel onClick={() => setTransactionToDelete(null)}>Cancelar</AlertDialogCancel>
-            <AlertDialogAction>
+            <AlertDialogAction onClick={handleDeleteConfirm}>
               Eliminar
             </AlertDialogAction>
           </AlertDialogFooter>
@@ -341,3 +476,4 @@ export function TransactionsTable({
   );
 }
     
+
