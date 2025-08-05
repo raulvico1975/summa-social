@@ -18,11 +18,6 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-  DropdownMenuSeparator,
-  DropdownMenuSub,
-  DropdownMenuSubTrigger,
-  DropdownMenuSubContent,
-  DropdownMenuPortal
 } from '@/components/ui/dropdown-menu';
 import {
   Dialog,
@@ -53,15 +48,10 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import {
-  MoreHorizontal,
   Sparkles,
   Loader2,
-  Paperclip,
   ChevronDown,
-  Trash2,
-  Edit,
   UserPlus,
-  ExternalLink,
 } from 'lucide-react';
 import type { Transaction, Category, Contact } from '@/lib/data';
 import { categorizeTransaction } from '@/ai/flows/categorize-transactions';
@@ -145,103 +135,6 @@ export function TransactionsTable({
     );
   };
   
-  const handleEditRequest = (tx: Transaction) => {
-    setEditingTransaction(tx);
-    setFormData({ description: tx.description, amount: String(tx.amount), contactId: tx.contactId || '' });
-    setIsEditDialogOpen(true);
-  };
-  
-  const handleEditSave = () => {
-    if (editingTransaction) {
-      const updatedAmount = parseFloat(formData.amount);
-      if (isNaN(updatedAmount)) {
-        toast({ variant: 'destructive', title: 'Error', description: 'El importe debe ser un número válido.' });
-        return;
-      }
-
-      setTransactions(prev => prev.map(tx => 
-        tx.id === editingTransaction.id 
-          ? { ...tx, description: formData.description, amount: updatedAmount, contactId: formData.contactId || null } 
-          : tx
-      ));
-      toast({ title: 'Transacción Actualizada', description: 'El movimiento ha sido actualizado.' });
-      setIsEditDialogOpen(false);
-      setEditingTransaction(null);
-    }
-  };
-
-  const handleDeleteRequest = (tx: Transaction) => {
-    setTransactionToDelete(tx);
-    setIsDeleteDialogOpen(true);
-  };
-  
-  const handleDeleteConfirm = () => {
-    if (transactionToDelete) {
-      setTransactions(prev => prev.filter(tx => tx.id !== transactionToDelete.id));
-      toast({ title: 'Transacción Eliminada', description: 'El movimiento ha sido eliminado.' });
-    }
-    setIsDeleteDialogOpen(false);
-    setTransactionToDelete(null);
-  };
-
-  const handleAttachDocumentClick = (transactionId: string) => {
-    const input = document.createElement('input');
-    input.type = 'file';
-    input.accept = "application/pdf,image/*,.doc,.docx,.xls,.xlsx";
-    
-    input.onchange = async (e) => {
-      const target = e.target as HTMLInputElement;
-      const file = target.files?.[0];
-      
-      if (!file || !user?.uid) {
-        if(!user?.uid) {
-             toast({
-              variant: 'destructive',
-              title: 'Error de Autenticación',
-              description: 'No se pudo identificar al usuario. Por favor, recarga la página.',
-            });
-        }
-        return;
-      }
-
-      setLoadingStates(prev => ({ ...prev, [transactionId]: true }));
-      toast({ title: 'Subiendo archivo...', description: 'Por favor, espera.' });
-
-      try {
-        const storagePath = `documents/${user.uid}/${transactionId}/${file.name}`;
-        const storageRef = ref(storage, storagePath);
-        
-        const snapshot = await uploadBytes(storageRef, file);
-        const downloadURL = await getDownloadURL(snapshot.ref);
-
-        setTransactions(prev => prev.map(tx => 
-          tx.id === transactionId ? { ...tx, document: downloadURL } : tx
-        ));
-
-        toast({
-          title: '¡Subida Completa!',
-          description: 'El documento se ha adjuntado correctamente.',
-        });
-
-      } catch (error: any) {
-        console.error("Error uploading file:", error);
-        let description = 'No se pudo subir el archivo. Revisa la consola para más detalles.';
-        if (error.code === 'storage/unauthorized' || error.code === 'storage/object-not-found') {
-            description = "Acceso denegado por las reglas de seguridad. Asegúrate de que las reglas de Firebase Storage permiten la escritura para usuarios autenticados.";
-        }
-        toast({
-          variant: 'destructive',
-          title: 'Error de Subida',
-          description: description,
-        });
-      } finally {
-        setLoadingStates(prev => ({ ...prev, [transactionId]: false }));
-      }
-    };
-    
-    input.click();
-  };
-
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('es-ES', { style: 'currency', currency: 'EUR' }).format(amount);
   };
@@ -272,11 +165,7 @@ export function TransactionsTable({
               <TableHead>Concepto</TableHead>
               <TableHead className="text-right">Importe</TableHead>
               <TableHead>Categoría</TableHead>
-              <TableHead>Contacto</TableHead>
-              <TableHead className="text-center">Comprovant</TableHead>
-              <TableHead>
-                <span className="sr-only">Acciones</span>
-              </TableHead>
+              <TableHead>Tercero</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -365,50 +254,6 @@ export function TransactionsTable({
                         </DropdownMenuContent>
                     </DropdownMenu>
                   </TableCell>
-                  <TableCell className="text-center">
-                    {loadingStates[tx.id] ? (
-                      <Loader2 className="h-5 w-5 animate-spin mx-auto" />
-                    ) : tx.document ? (
-                      <Button asChild variant="ghost" size="icon">
-                        <a href={tx.document} target="_blank" rel="noopener noreferrer" title="Ver documento adjunto">
-                          <ExternalLink className="h-5 w-5 text-blue-600" />
-                        </a>
-                      </Button>
-                    ) : (
-                       <Button variant="ghost" size="icon" onClick={() => handleAttachDocumentClick(tx.id)} title="Adjuntar documento">
-                          <Paperclip className="h-5 w-5" />
-                       </Button>
-                    )}
-                  </TableCell>
-                  <TableCell>
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button aria-haspopup="true" size="icon" variant="ghost">
-                          <MoreHorizontal className="h-4 w-4" />
-                          <span className="sr-only">Toggle menu</span>
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuItem onClick={() => handleEditRequest(tx)}>
-                          <Edit className="mr-2 h-4 w-4" />
-                          Editar
-                        </DropdownMenuItem>
-                         <DropdownMenuItem onClick={() => handleAttachDocumentClick(tx.id)} disabled={loadingStates[tx.id]}>
-                          {loadingStates[tx.id] ? (
-                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                          ) : (
-                            <Paperclip className="mr-2 h-4 w-4" />
-                          )}
-                          Adjuntar Comprovant
-                        </DropdownMenuItem>
-                        <DropdownMenuSeparator />
-                        <DropdownMenuItem onClick={() => handleDeleteRequest(tx)} className="text-red-600">
-                          <Trash2 className="mr-2 h-4 w-4" />
-                          Eliminar
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </TableCell>
                 </TableRow>
               );
             })}
@@ -470,7 +315,6 @@ export function TransactionsTable({
             <DialogClose asChild>
               <Button variant="outline">Cancelar</Button>
             </DialogClose>
-            <Button onClick={handleEditSave}>Guardar Cambios</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -487,7 +331,7 @@ export function TransactionsTable({
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel onClick={() => setTransactionToDelete(null)}>Cancelar</AlertDialogCancel>
-            <AlertDialogAction onClick={handleDeleteConfirm}>
+            <AlertDialogAction>
               Eliminar
             </AlertDialogAction>
           </AlertDialogFooter>

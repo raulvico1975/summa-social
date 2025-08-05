@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import { useState, useEffect, createContext, useContext } from 'react';
@@ -23,9 +24,9 @@ const AuthContext = createContext<AuthContextType>({
 
 // Mock user for development when login is disabled
 const MOCK_USER: User = {
-  uid: 'dev-org-id', // Unique ID for the development organization
-  name: 'Usuario de Desarrollo',
-  email: 'dev@example.com',
+  uid: 'dev-nuria-id', // Unique ID for the development organization
+  name: 'Nuria',
+  email: 'nuria@example.com',
   picture: null,
   email_verified: true,
 };

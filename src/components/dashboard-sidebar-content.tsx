@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import * as React from 'react';
@@ -13,7 +14,7 @@ import {
   SidebarMenuButton,
   SidebarFooter,
 } from '@/components/ui/sidebar';
-import { LayoutDashboard, BarChart3, Settings, LogOut, Users } from 'lucide-react';
+import { LayoutDashboard, Settings, LogOut, Users } from 'lucide-react';
 import { Logo } from '@/components/logo';
 import { signOut } from '@/services/auth';
 import { useToast } from '@/hooks/use-toast';
@@ -37,11 +38,6 @@ export function DashboardSidebarContent() {
       href: '/dashboard',
       label: 'Panel de Control',
       icon: LayoutDashboard,
-    },
-    {
-      href: '/dashboard/informes',
-      label: 'Informes',
-      icon: BarChart3,
     },
     {
       href: '/dashboard/contactos',
