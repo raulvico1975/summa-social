@@ -88,9 +88,6 @@ export function TransactionsTable({
   const [loadingStates, setLoadingStates] = React.useState<Record<string, boolean>>({});
   const { toast } = useToast();
   const { user } = useAuth();
-  const fileInputRef = React.useRef<HTMLInputElement>(null);
-  const [uploadingTransactionId, setUploadingTransactionId] = React.useState<string | null>(null);
-
   
   const [isEditDialogOpen, setIsEditDialogOpen] = React.useState(false);
   const [editingTransaction, setEditingTransaction] = React.useState<Transaction | null>(null);
@@ -191,60 +188,54 @@ export function TransactionsTable({
     setTransactionToDelete(null);
   };
 
-
-  const handleAttachDocumentClick = (txId: string) => {
-    setUploadingTransactionId(txId);
-    fileInputRef.current?.click();
-  };
-
-  const handleFileSelected = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    const currentUploadingId = uploadingTransactionId;
-    if (!file || !currentUploadingId || !user?.uid) {
-      return;
-    }
-  
-    setLoadingStates(prev => ({ ...prev, [currentUploadingId]: true }));
-    toast({ title: 'Subiendo archivo...', description: 'Por favor, espera.' });
-  
-    try {
-      const storagePath = `documents/${user.uid}/${currentUploadingId}/${file.name}`;
-      const storageRef = ref(storage, storagePath);
+  const handleAttachDocumentClick = (transactionId: string) => {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = "application/pdf,image/*,.doc,.docx,.xls,.xlsx";
+    input.onchange = async (e) => {
+      const target = e.target as HTMLInputElement;
+      const file = target.files?.[0];
       
-      const snapshot = await uploadBytes(storageRef, file);
-      const downloadURL = await getDownloadURL(snapshot.ref);
-  
-      setTransactions(prev => prev.map(tx => 
-        tx.id === currentUploadingId ? { ...tx, document: downloadURL } : tx
-      ));
-  
-      toast({
-        title: '¡Subida Completa!',
-        description: 'El documento se ha adjuntado correctamente.',
-      });
-  
-    } catch (error: any) {
-      console.error("Error uploading file:", error);
-      let description = 'No se pudo subir el archivo. Revisa la consola para más detalles.';
-      if (error.code === 'storage/unauthorized' || error.code === 'storage/object-not-found') {
-          description = "Acceso denegado por las reglas de seguridad. Asegúrate de que las reglas de Firebase Storage permiten la escritura para usuarios autenticados.";
+      if (!file || !user?.uid) {
+        return;
       }
-      toast({
-        variant: 'destructive',
-        title: 'Error de Subida',
-        description: description,
-      });
-    } finally {
-        if (currentUploadingId) {
-          setLoadingStates(prev => ({ ...prev, [currentUploadingId]: false }));
-        }
-        setUploadingTransactionId(null);
-        if (fileInputRef.current) {
-            fileInputRef.current.value = '';
-        }
-    }
-  };
 
+      setLoadingStates(prev => ({ ...prev, [transactionId]: true }));
+      toast({ title: 'Subiendo archivo...', description: 'Por favor, espera.' });
+
+      try {
+        const storagePath = `documents/${user.uid}/${transactionId}/${file.name}`;
+        const storageRef = ref(storage, storagePath);
+        
+        const snapshot = await uploadBytes(storageRef, file);
+        const downloadURL = await getDownloadURL(snapshot.ref);
+
+        setTransactions(prev => prev.map(tx => 
+          tx.id === transactionId ? { ...tx, document: downloadURL } : tx
+        ));
+
+        toast({
+          title: '¡Subida Completa!',
+          description: 'El documento se ha adjuntado correctamente.',
+        });
+
+      } catch (error: any) {
+        console.error("Error uploading file:", error);
+        let description = 'No se pudo subir el archivo. Revisa la consola para más detalles.';
+        if (error.code === 'storage/unauthorized' || error.code === 'storage/object-not-found') {
+            description = "Acceso denegado por las reglas de seguridad. Asegúrate de que las reglas de Firebase Storage permiten la escritura para usuarios autenticados.";
+        }
+        toast({
+          variant: 'destructive',
+          title: 'Error de Subida',
+          description: description,
+        });
+      } finally {
+        setLoadingStates(prev => ({ ...prev, [transactionId]: false }));
+      }
+    };
+    input.click();
+  };
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('es-ES', { style: 'currency', currency: 'EUR' }).format(amount);
@@ -296,13 +287,6 @@ export function TransactionsTable({
 
   return (
     <>
-      <input 
-        type="file" 
-        ref={fileInputRef} 
-        onChange={handleFileSelected} 
-        className="hidden" 
-        accept="application/pdf,image/*,.doc,.docx,.xls,.xlsx"
-      />
       <div className="rounded-md border">
         <Table>
           <TableHeader>
@@ -419,7 +403,7 @@ export function TransactionsTable({
                           Editar
                         </DropdownMenuItem>
                          <DropdownMenuItem onClick={() => handleAttachDocumentClick(tx.id)} disabled={loadingStates[tx.id]}>
-                          {loadingStates[tx.id] && tx.id === uploadingTransactionId ? (
+                          {loadingStates[tx.id] ? (
                             <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                           ) : (
                             <Paperclip className="mr-2 h-4 w-4" />
@@ -521,3 +505,5 @@ export function TransactionsTable({
     </>
   );
 }
+
+    
