@@ -1,13 +1,16 @@
+
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
 
-// This function can be marked `async` if using `await` inside
+// This middleware is temporarily disabled to allow access to the dashboard
+// without a real login flow. The development login process is handled
+// by a button on the homepage. Re-enable or adjust this middleware
+// once a full authentication flow is implemented.
 export function middleware(request: NextRequest) {
-  // Middleware is currently disabled to prevent redirect loops during development.
   return NextResponse.next()
 }
 
-// See "Matching Paths" below to learn more
 export const config = {
-  matcher: ['/', '/dashboard/:path*'],
+  // By not specifying a matcher, the middleware will not run on any path.
+  // matcher: ['/dashboard/:path*'],
 }
