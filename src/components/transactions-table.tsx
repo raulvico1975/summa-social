@@ -65,6 +65,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/use-auth';
 import { storage } from '@/lib/firebase';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+import { useAppLog } from '@/hooks/use-app-log';
 
 export function TransactionsTable({
   transactions,
@@ -80,6 +81,7 @@ export function TransactionsTable({
   const [loadingStates, setLoadingStates] = React.useState<Record<string, boolean>>({});
   const { toast } = useToast();
   const { user } = useAuth();
+  const { log } = useAppLog();
   
   const [isEditDialogOpen, setIsEditDialogOpen] = React.useState(false);
   const [editingTransaction, setEditingTransaction] = React.useState<Transaction | null>(null);
@@ -142,10 +144,14 @@ export function TransactionsTable({
   };
 
   const handleAttachDocument = (transactionId: string) => {
+    log(`[${transactionId}] Iniciando la subida de documento.`);
     if (!user?.uid) {
-      toast({ variant: 'destructive', title: 'Error', description: 'No se ha podido identificar al usuario para la subida.' });
+      const errorMsg = 'Error: No se ha podido identificar al usuario para la subida (user.uid is null).';
+      log(errorMsg);
+      toast({ variant: 'destructive', title: 'Error de Autenticación', description: errorMsg });
       return;
     }
+    log(`Usuario autenticado: ${user.uid}`);
 
     const fileInput = document.createElement('input');
     fileInput.type = 'file';
@@ -156,30 +162,45 @@ export function TransactionsTable({
       const target = e.target as HTMLInputElement;
       const file = target.files?.[0];
       if (!file) {
+        log(`[${transactionId}] Selección de archivo cancelada.`);
+        if (fileInput.parentElement) {
+            fileInput.parentElement.removeChild(fileInput);
+        }
         return;
       }
+      log(`[${transactionId}] Archivo seleccionado: ${file.name} (Tamaño: ${file.size} bytes)`);
 
       setLoadingStates(prev => ({ ...prev, [`doc_${transactionId}`]: true }));
       toast({ title: 'Subiendo documento...', description: `Adjuntando "${file.name}"...` });
+      
+      const storagePath = `documents/${user.uid}/${transactionId}/${file.name}`;
+      log(`[${transactionId}] Ruta de subida en Storage: ${storagePath}`);
+      const storageRef = ref(storage, storagePath);
 
       try {
-        const storageRef = ref(storage, `documents/${user.uid}/${transactionId}/${file.name}`);
+        log(`[${transactionId}] Iniciando 'uploadBytes'...`);
         const uploadResult = await uploadBytes(storageRef, file);
+        log(`[${transactionId}] 'uploadBytes' completado con éxito.`);
         const downloadURL = await getDownloadURL(uploadResult.ref);
+        log(`[${transactionId}] URL de descarga obtenida: ${downloadURL}`);
 
         setTransactions(prev => prev.map(tx =>
           tx.id === transactionId ? { ...tx, document: downloadURL } : tx
         ));
 
         toast({ title: '¡Éxito!', description: 'El documento se ha subido y vinculado correctamente.' });
+        log(`[${transactionId}] ¡Subida completada con éxito!`);
       } catch (error: any) {
         console.error("Error al subir el documento:", error);
+        log(`[${transactionId}] ERROR en la subida: ${error.code} - ${error.message}`);
+        
         let description = 'Ocurrió un error inesperado al subir el documento.';
         if (error.code === 'storage/unauthorized' || error.code === 'storage/object-not-found') {
           description = 'Acceso denegado. Revisa las reglas de seguridad de Firebase Storage.';
         }
         toast({ variant: 'destructive', title: 'Error de subida', description, duration: 9000 });
       } finally {
+        log(`[${transactionId}] Finalizando proceso de subida.`);
         setLoadingStates(prev => ({ ...prev, [`doc_${transactionId}`]: false }));
         // Crucially, remove the input from the DOM only after the upload attempt is complete.
         if (fileInput.parentElement) {

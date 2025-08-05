@@ -5,6 +5,8 @@ import * as React from 'react';
 import { Sidebar, SidebarProvider, SidebarInset } from '@/components/ui/sidebar';
 import { DashboardSidebarContent } from '@/components/dashboard-sidebar-content';
 import { DashboardHeader } from '@/components/dashboard-header';
+import { LogPanel } from '@/components/log-panel';
+import { AppLogProvider } from '@/hooks/use-app-log';
 
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
@@ -24,6 +26,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   }, []);
 
   return (
+    <AppLogProvider>
       <SidebarProvider defaultOpen={open} onOpenChange={setOpen}>
         <div className="flex min-h-screen">
           <Sidebar>
@@ -35,5 +38,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           </SidebarInset>
         </div>
       </SidebarProvider>
+      <LogPanel />
+    </AppLogProvider>
   );
 }
