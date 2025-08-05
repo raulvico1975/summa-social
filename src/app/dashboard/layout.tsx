@@ -5,7 +5,7 @@ import * as React from 'react';
 import { Sidebar, SidebarProvider, SidebarInset } from '@/components/ui/sidebar';
 import { DashboardSidebarContent } from '@/components/dashboard-sidebar-content';
 import { DashboardHeader } from '@/components/dashboard-header';
-import { AuthProvider } from '@/hooks/use-auth';
+
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   // We need to get the initial state of the sidebar from the cookie.
@@ -24,7 +24,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   }, []);
 
   return (
-    <AuthProvider>
       <SidebarProvider defaultOpen={open} onOpenChange={setOpen}>
         <div className="flex min-h-screen">
           <Sidebar>
@@ -36,6 +35,5 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           </SidebarInset>
         </div>
       </SidebarProvider>
-    </AuthProvider>
   );
 }
