@@ -14,7 +14,7 @@ import {
   SidebarMenuButton,
   SidebarFooter,
 } from '@/components/ui/sidebar';
-import { LayoutDashboard, Settings, LogOut, Users } from 'lucide-react';
+import { LayoutDashboard, Settings, LogOut, Users, FileText } from 'lucide-react';
 import { Logo } from '@/components/logo';
 import { signOut } from '@/services/auth';
 import { useToast } from '@/hooks/use-toast';
@@ -38,6 +38,11 @@ export function DashboardSidebarContent() {
       href: '/dashboard',
       label: 'Panel de Control',
       icon: LayoutDashboard,
+    },
+    {
+      href: '/dashboard/movimientos',
+      label: 'Movimientos',
+      icon: FileText,
     },
     {
       href: '/dashboard/contactos',

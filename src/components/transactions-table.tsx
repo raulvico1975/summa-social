@@ -252,11 +252,11 @@ export function TransactionsTable({
           <TableHeader>
             <TableRow>
               <TableHead>Fecha</TableHead>
+              <TableHead className="text-right">Importe</TableHead>
               <TableHead>Concepto</TableHead>
               <TableHead>Tercero</TableHead>
               <TableHead>Categoría</TableHead>
               <TableHead>Comprovant</TableHead>
-              <TableHead className="text-right">Importe</TableHead>
               <TableHead><span className="sr-only">Acciones</span></TableHead>
             </TableRow>
           </TableHeader>
@@ -270,6 +270,13 @@ export function TransactionsTable({
               return (
                 <TableRow key={tx.id}>
                   <TableCell>{formatDate(tx.date)}</TableCell>
+                  <TableCell
+                    className={`text-right font-mono ${
+                      tx.amount > 0 ? 'text-green-600' : 'text-red-600'
+                    }`}
+                  >
+                    {formatCurrency(tx.amount)}
+                  </TableCell>
                   <TableCell className="font-medium">{tx.description}</TableCell>
                    <TableCell>
                     <DropdownMenu>
@@ -356,13 +363,6 @@ export function TransactionsTable({
                               <FileUp className="h-4 w-4" />
                           </Button>
                       )}
-                  </TableCell>
-                  <TableCell
-                    className={`text-right font-mono ${
-                      tx.amount > 0 ? 'text-green-600' : 'text-red-600'
-                    }`}
-                  >
-                    {formatCurrency(tx.amount)}
                   </TableCell>
                    <TableCell className="text-right">
                         <DropdownMenu>
@@ -476,4 +476,3 @@ export function TransactionsTable({
   );
 }
     
-
