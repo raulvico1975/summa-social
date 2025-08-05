@@ -143,8 +143,8 @@ export function TransactionsTable({
 
   const handleAttachDocument = (transactionId: string) => {
     if (!user?.uid) {
-        toast({ variant: 'destructive', title: 'Error', description: 'No se ha podido identificar al usuario para la subida.' });
-        return;
+      toast({ variant: 'destructive', title: 'Error', description: 'No se ha podido identificar al usuario para la subida.' });
+      return;
     }
 
     const fileInput = document.createElement('input');
@@ -153,42 +153,44 @@ export function TransactionsTable({
     fileInput.style.display = 'none';
 
     fileInput.onchange = async (e) => {
-        const target = e.target as HTMLInputElement;
-        const file = target.files?.[0];
-        if (!file) {
-            document.body.removeChild(fileInput);
-            return;
+      const target = e.target as HTMLInputElement;
+      const file = target.files?.[0];
+      if (!file) {
+        return;
+      }
+
+      setLoadingStates(prev => ({ ...prev, [`doc_${transactionId}`]: true }));
+      toast({ title: 'Subiendo documento...', description: `Adjuntando "${file.name}"...` });
+
+      try {
+        const storageRef = ref(storage, `documents/${user.uid}/${transactionId}/${file.name}`);
+        const uploadResult = await uploadBytes(storageRef, file);
+        const downloadURL = await getDownloadURL(uploadResult.ref);
+
+        setTransactions(prev => prev.map(tx =>
+          tx.id === transactionId ? { ...tx, document: downloadURL } : tx
+        ));
+
+        toast({ title: '¡Éxito!', description: 'El documento se ha subido y vinculado correctamente.' });
+      } catch (error: any) {
+        console.error("Error al subir el documento:", error);
+        let description = 'Ocurrió un error inesperado al subir el documento.';
+        if (error.code === 'storage/unauthorized' || error.code === 'storage/object-not-found') {
+          description = 'Acceso denegado. Revisa las reglas de seguridad de Firebase Storage.';
         }
-
-        setLoadingStates(prev => ({ ...prev, [`doc_${transactionId}`]: true }));
-        toast({ title: 'Subiendo documento...', description: `Adjuntando "${file.name}"...` });
-
-        try {
-            const storageRef = ref(storage, `documents/${user.uid}/${transactionId}/${file.name}`);
-            const uploadResult = await uploadBytes(storageRef, file);
-            const downloadURL = await getDownloadURL(uploadResult.ref);
-
-            setTransactions(prev => prev.map(tx => 
-                tx.id === transactionId ? { ...tx, document: downloadURL } : tx
-            ));
-
-            toast({ title: '¡Éxito!', description: 'El documento se ha subido y vinculado correctamente.' });
-        } catch (error: any) {
-            console.error("Error al subir el documento:", error);
-            let description = 'Ocurrió un error inesperado al subir el documento.';
-            if (error.code === 'storage/unauthorized' || error.code === 'storage/object-not-found') {
-                description = 'Acceso denegado. Revisa las reglas de seguridad de Firebase Storage para permitir la escritura a usuarios autenticados.';
-            }
-            toast({ variant: 'destructive', title: 'Error de subida', description, duration: 9000 });
-        } finally {
-            setLoadingStates(prev => ({ ...prev, [`doc_${transactionId}`]: false }));
-            document.body.removeChild(fileInput);
+        toast({ variant: 'destructive', title: 'Error de subida', description, duration: 9000 });
+      } finally {
+        setLoadingStates(prev => ({ ...prev, [`doc_${transactionId}`]: false }));
+        // Crucially, remove the input from the DOM only after the upload attempt is complete.
+        if (fileInput.parentElement) {
+            fileInput.parentElement.removeChild(fileInput);
         }
+      }
     };
 
     document.body.appendChild(fileInput);
     fileInput.click();
-};
+  };
   
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('es-ES', { style: 'currency', currency: 'EUR' }).format(amount);
