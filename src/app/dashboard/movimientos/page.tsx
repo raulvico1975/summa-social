@@ -10,16 +10,20 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { TransactionImporter } from '@/components/transaction-importer';
 import type { Transaction, Category, Contact } from '@/lib/data';
 
+const TRANSACTIONS_STORAGE_KEY = 'summa-social-transactions';
 const CATEGORIES_STORAGE_KEY = 'summa-social-categories';
 const CONTACTS_STORAGE_KEY = 'summa-social-contacts';
 
 export default function MovementsPage() {
-  const [transactions, setTransactions] = React.useState<Transaction[]>(initialTransactions);
+  const [transactions, setTransactions] = React.useState<Transaction[]>([]);
   const [categories, setCategories] = React.useState<Category[]>(initialCategories);
   const [contacts, setContacts] = React.useState<Contact[]>(initialContacts);
 
   React.useEffect(() => {
     try {
+      const storedTransactions = localStorage.getItem(TRANSACTIONS_STORAGE_KEY);
+      setTransactions(storedTransactions ? JSON.parse(storedTransactions) : initialTransactions);
+
       const storedCategories = localStorage.getItem(CATEGORIES_STORAGE_KEY);
       if (storedCategories) {
         setCategories(JSON.parse(storedCategories));
@@ -30,11 +34,23 @@ export default function MovementsPage() {
       }
     } catch (error) {
        console.error("Failed to parse data from localStorage", error);
+       // Fallback to initial data if localStorage is corrupt
+       setTransactions(initialTransactions);
     }
   }, []);
 
+  const updateTransactions = (newTransactions: Transaction[]) => {
+    setTransactions(newTransactions);
+    try {
+        localStorage.setItem(TRANSACTIONS_STORAGE_KEY, JSON.stringify(newTransactions));
+    } catch (error) {
+        console.error("Failed to save transactions to localStorage", error);
+    }
+  };
+
+
   const handleTransactionsImported = (newTransactions: Transaction[]) => {
-    setTransactions(prevTransactions => [...newTransactions, ...prevTransactions]);
+    updateTransactions([...newTransactions, ...transactions]);
   };
 
   return (
@@ -45,7 +61,10 @@ export default function MovementsPage() {
           <p className="text-muted-foreground">Gestiona todas tus transacciones bancarias.</p>
         </div>
         <div className="flex gap-2">
-          <TransactionImporter onTransactionsImported={handleTransactionsImported} />
+          <TransactionImporter 
+            existingTransactions={transactions}
+            onTransactionsImported={handleTransactionsImported} 
+          />
           <Button variant="outline">
             <Download className="mr-2 h-4 w-4" />
             Exportar
@@ -60,7 +79,7 @@ export default function MovementsPage() {
         <CardContent>
           <TransactionsTable 
             transactions={transactions} 
-            setTransactions={setTransactions} 
+            setTransactions={updateTransactions} 
             availableCategories={categories} 
             availableContacts={contacts}
           />

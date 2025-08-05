@@ -9,10 +9,18 @@ import type { Transaction } from '@/lib/data';
 import Papa from 'papaparse';
 
 interface TransactionImporterProps {
+  existingTransactions: Transaction[];
   onTransactionsImported: (transactions: Transaction[]) => void;
 }
 
-export function TransactionImporter({ onTransactionsImported }: TransactionImporterProps) {
+// Function to create a unique key for a transaction to detect duplicates
+const createTransactionKey = (tx: { date: string, description: string, amount: number }): string => {
+  const date = new Date(tx.date).toISOString().split('T')[0]; // Normalize date to YYYY-MM-DD
+  return `${date}|${tx.description.trim()}|${tx.amount.toFixed(2)}`;
+};
+
+
+export function TransactionImporter({ existingTransactions, onTransactionsImported }: TransactionImporterProps) {
   const fileInputRef = React.useRef<HTMLInputElement>(null);
   const { toast } = useToast();
 
@@ -26,57 +34,66 @@ export function TransactionImporter({ onTransactionsImported }: TransactionImpor
   };
 
   const parseCsv = (file: File) => {
+    // Create a set of keys for existing transactions for efficient lookup
+    const existingTransactionKeys = new Set(existingTransactions.map(createTransactionKey));
+
     Papa.parse(file, {
       header: true,
       skipEmptyLines: true,
       complete: (results) => {
         try {
-          const newTransactions = results.data
-          .map((row: any, index: number) => {
-            const amount = parseFloat(String(row.Importe || '0').replace(',', '.'));
-            if (!row.Fecha || !row.Concepto || isNaN(amount)) {
-                console.warn(`Skipping invalid row ${index + 2}:`, row);
-                return null;
-            }
+          const allParsedRows = results.data
+            .map((row: any, index: number) => {
+                const amount = parseFloat(String(row.Importe || '0').replace(',', '.'));
+                if (!row.Fecha || !row.Concepto || isNaN(amount)) {
+                    console.warn(`Skipping invalid row ${index + 2}:`, row);
+                    return null;
+                }
 
-            // Attempt to create a valid date
-            let date;
-            const dateParts = String(row.Fecha).split(/[-/.]/);
-            if (dateParts.length === 3) {
-              // Assuming DD/MM/YYYY or DD-MM-YYYY
-              date = new Date(`${dateParts[2]}-${dateParts[1]}-${dateParts[0]}`);
-            } else {
-              date = new Date(String(row.Fecha));
-            }
+                let date;
+                const dateParts = String(row.Fecha).split(/[-/.]/);
+                if (dateParts.length === 3) {
+                  // Assuming DD/MM/YYYY or DD-MM-YYYY
+                  date = new Date(`${dateParts[2]}-${dateParts[1]}-${dateParts[0]}`);
+                } else {
+                  date = new Date(String(row.Fecha));
+                }
 
-            if (isNaN(date.getTime())) {
-                console.warn(`Skipping row with invalid date ${index + 2}:`, row);
-                return null;
-            }
+                if (isNaN(date.getTime())) {
+                    console.warn(`Skipping row with invalid date ${index + 2}:`, row);
+                    return null;
+                }
 
-            return {
-              id: `imported_${new Date().getTime()}_${index}`,
-              date: date.toISOString(),
-              description: row.Concepto,
-              amount: amount,
-              category: null,
-              document: 'N/A',
-            } as Transaction;
-          })
-          .filter((tx): tx is Transaction => tx !== null);
+                return {
+                  id: `imported_${new Date().getTime()}_${index}`,
+                  date: date.toISOString(),
+                  description: row.Concepto,
+                  amount: amount,
+                  category: null,
+                  document: null,
+                } as Transaction;
+            })
+            .filter((tx): tx is Transaction => tx !== null);
+          
+          // Filter out duplicates
+          const newUniqueTransactions = allParsedRows.filter(tx => {
+            const key = createTransactionKey(tx);
+            return !existingTransactionKeys.has(key);
+          });
 
+          const duplicatesFound = allParsedRows.length - newUniqueTransactions.length;
 
-          if (newTransactions.length > 0) {
-            onTransactionsImported(newTransactions);
+          if (newUniqueTransactions.length > 0) {
+            onTransactionsImported(newUniqueTransactions);
             toast({
               title: 'Importación Exitosa',
-              description: `Se han importado ${newTransactions.length} nuevas transacciones.`,
+              description: `Se han importado ${newUniqueTransactions.length} nuevas transacciones. Se omitieron ${duplicatesFound} duplicados.`,
             });
           } else {
              toast({
-              variant: 'destructive',
-              title: 'Error de Importación',
-              description: 'No se encontraron transacciones válidas en el archivo. Asegúrate de que las columnas son "Fecha", "Concepto", e "Importe".',
+              variant: duplicatesFound > 0 ? 'default' : 'destructive',
+              title: duplicatesFound > 0 ? 'No hay transacciones nuevas' : 'Error de Importación',
+              description: duplicatesFound > 0 ? `Se encontraron y omitieron ${duplicatesFound} transacciones duplicadas.` : 'No se encontraron transacciones válidas en el archivo o ya existen todas. Asegúrate de que las columnas son "Fecha", "Concepto", e "Importe".',
             });
           }
         } catch (error) {

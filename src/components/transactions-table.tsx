@@ -1,5 +1,4 @@
 
-
 'use client';
 
 import * as React from 'react';
@@ -74,7 +73,7 @@ export function TransactionsTable({
   availableContacts,
 }: {
   transactions: Transaction[];
-  setTransactions: React.Dispatch<React.SetStateAction<Transaction[]>>;
+  setTransactions: (transactions: Transaction[]) => void;
   availableCategories: Category[];
   availableContacts: Contact[];
 }) {
@@ -112,8 +111,8 @@ export function TransactionsTable({
         expenseCategories,
         incomeCategories,
       });
-      setTransactions((prev) =>
-        prev.map((tx) => (tx.id === txId ? { ...tx, category: result.category } : tx))
+      setTransactions(
+        transactions.map((tx) => (tx.id === txId ? { ...tx, category: result.category } : tx))
       );
       toast({
         title: 'Categorización Automática',
@@ -132,14 +131,14 @@ export function TransactionsTable({
   };
 
   const handleSetCategory = (txId: string, newCategory: string) => {
-    setTransactions((prev) =>
-      prev.map((tx) => (tx.id === txId ? { ...tx, category: newCategory } : tx))
+    setTransactions(
+      transactions.map((tx) => (tx.id === txId ? { ...tx, category: newCategory } : tx))
     );
   };
   
   const handleSetContact = (txId: string, newContactId: string | null) => {
-    setTransactions((prev) =>
-      prev.map((tx) => (tx.id === txId ? { ...tx, contactId: newContactId } : tx))
+    setTransactions(
+      transactions.map((tx) => (tx.id === txId ? { ...tx, contactId: newContactId } : tx))
     );
   };
 
@@ -183,7 +182,7 @@ export function TransactionsTable({
           const downloadURL = await getDownloadURL(uploadResult.ref);
           log(`[${transactionId}] URL de descarga obtenida: ${downloadURL}`);
 
-          setTransactions(prev => prev.map(tx =>
+          setTransactions(transactions.map(tx =>
             tx.id === transactionId ? { ...tx, document: downloadURL } : tx
           ));
 
@@ -251,7 +250,7 @@ export function TransactionsTable({
   const handleSaveEdit = () => {
     if (!editingTransaction) return;
 
-    setTransactions(prev => prev.map(tx => 
+    setTransactions(transactions.map(tx => 
         tx.id === editingTransaction.id 
             ? { ...tx, description: formData.description, amount: parseFloat(formData.amount), contactId: formData.contactId } 
             : tx
@@ -269,7 +268,7 @@ export function TransactionsTable({
 
   const handleDeleteConfirm = () => {
     if (transactionToDelete) {
-        setTransactions(prev => prev.filter(tx => tx.id !== transactionToDelete.id));
+        setTransactions(transactions.filter(tx => tx.id !== transactionToDelete.id));
         toast({ title: 'Transacción eliminada' });
     }
     setIsDeleteDialogOpen(false);
@@ -428,8 +427,7 @@ export function TransactionsTable({
           </TableBody>
         </Table>
       </div>
-      
-      {/* Edit Dialog */}
+
       <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
         <DialogContent>
           <DialogHeader>
@@ -488,7 +486,6 @@ export function TransactionsTable({
         </DialogContent>
       </Dialog>
       
-      {/* Delete Confirmation Dialog */}
       <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
@@ -509,8 +506,3 @@ export function TransactionsTable({
     </>
   );
 }
-    
-
-    
-
-
