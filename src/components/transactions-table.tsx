@@ -298,7 +298,7 @@ export function TransactionsTable({
     <>
       <input 
         type="file" 
-        ref={fileInputref} 
+        ref={fileInputRef} 
         onChange={handleFileSelected} 
         className="hidden" 
         accept="application/pdf,image/*,.doc,.docx,.xls,.xlsx"
@@ -521,4 +521,3 @@ export function TransactionsTable({
     </>
   );
 }
-
