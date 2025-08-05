@@ -146,7 +146,7 @@ export function TransactionsTable({
   const handleAttachDocument = (transactionId: string) => {
     log(`[${transactionId}] Iniciando la subida de documento.`);
     if (!user?.uid) {
-      const errorMsg = 'Error: No se ha podido identificar al usuario para la subida (user.uid is null).';
+      const errorMsg = 'ERROR: No se ha podido identificar al usuario para la subida (user.uid is null).';
       log(errorMsg);
       toast({ variant: 'destructive', title: 'Error de Autenticación', description: errorMsg });
       return;
@@ -158,14 +158,12 @@ export function TransactionsTable({
     fileInput.accept = "application/pdf,image/*,.doc,.docx,.xls,.xlsx";
     fileInput.style.display = 'none';
 
-    fileInput.onchange = async (e) => {
+    fileInput.onchange = (e) => {
       const target = e.target as HTMLInputElement;
       const file = target.files?.[0];
       if (!file) {
         log(`[${transactionId}] Selección de archivo cancelada.`);
-        if (fileInput.parentElement) {
-            fileInput.parentElement.removeChild(fileInput);
-        }
+        document.body.removeChild(fileInput);
         return;
       }
       log(`[${transactionId}] Archivo seleccionado: ${file.name} (Tamaño: ${file.size} bytes)`);
@@ -176,37 +174,51 @@ export function TransactionsTable({
       const storagePath = `documents/${user.uid}/${transactionId}/${file.name}`;
       log(`[${transactionId}] Ruta de subida en Storage: ${storagePath}`);
       const storageRef = ref(storage, storagePath);
+      
+      const uploadTimeout = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('La operación de subida ha superado el tiempo de espera (15 segundos).')), 15000)
+      );
 
-      try {
-        log(`[${transactionId}] Iniciando 'uploadBytes'...`);
-        const uploadResult = await uploadBytes(storageRef, file);
-        log(`[${transactionId}] 'uploadBytes' completado con éxito.`);
-        const downloadURL = await getDownloadURL(uploadResult.ref);
-        log(`[${transactionId}] URL de descarga obtenida: ${downloadURL}`);
+      (async () => {
+        try {
+            log(`[${transactionId}] Iniciando 'uploadBytes'...`);
+            const uploadPromise = uploadBytes(storageRef, file);
+            const uploadResult = await Promise.race([uploadPromise, uploadTimeout]) as Awaited<typeof uploadPromise>;
 
-        setTransactions(prev => prev.map(tx =>
-          tx.id === transactionId ? { ...tx, document: downloadURL } : tx
-        ));
+            log(`[${transactionId}] 'uploadBytes' completado con éxito.`);
+            const downloadURL = await getDownloadURL(uploadResult.ref);
+            log(`[${transactionId}] URL de descarga obtenida: ${downloadURL}`);
 
-        toast({ title: '¡Éxito!', description: 'El documento se ha subido y vinculado correctamente.' });
-        log(`[${transactionId}] ¡Subida completada con éxito!`);
-      } catch (error: any) {
-        console.error("Error al subir el documento:", error);
-        log(`[${transactionId}] ERROR en la subida: ${error.code} - ${error.message}`);
-        
-        let description = 'Ocurrió un error inesperado al subir el documento.';
-        if (error.code === 'storage/unauthorized' || error.code === 'storage/object-not-found') {
-          description = 'Acceso denegado. Revisa las reglas de seguridad de Firebase Storage.';
+            setTransactions(prev => prev.map(tx =>
+              tx.id === transactionId ? { ...tx, document: downloadURL } : tx
+            ));
+
+            toast({ title: '¡Éxito!', description: 'El documento se ha subido y vinculado correctamente.' });
+            log(`[${transactionId}] ¡Éxito! Subida completada.`);
+
+        } catch (error: any) {
+            console.error('FIREBASE_UPLOAD_ERROR_DIAGNOSTIC', error);
+            const errorCode = error.code || 'UNKNOWN_CODE';
+            const errorMessage = error.message || 'Error desconocido.';
+            log(`[${transactionId}] ERROR en la subida: ${errorCode} - ${errorMessage}`);
+            
+            let description = `Ocurrió un error inesperado al subir el documento. Código: ${errorCode}`;
+            if (errorCode === 'storage/unauthorized' || errorCode === 'storage/object-not-found') {
+              description = 'Acceso denegado. Revisa las reglas de seguridad de Firebase Storage.';
+            } else if (errorCode === 'storage/canceled') {
+              description = 'La subida ha sido cancelada por el usuario.';
+            } else if (error.message.includes('timeout')) {
+              description = 'La subida ha tardat massa. Revisa la connexió a internet o la configuració de Firebase.'
+            }
+            toast({ variant: 'destructive', title: 'Error de subida', description, duration: 9000 });
+        } finally {
+            log(`[${transactionId}] Finalizando proceso de subida.`);
+            setLoadingStates(prev => ({ ...prev, [`doc_${transactionId}`]: false }));
+            if (fileInput.parentElement) {
+                document.body.removeChild(fileInput);
+            }
         }
-        toast({ variant: 'destructive', title: 'Error de subida', description, duration: 9000 });
-      } finally {
-        log(`[${transactionId}] Finalizando proceso de subida.`);
-        setLoadingStates(prev => ({ ...prev, [`doc_${transactionId}`]: false }));
-        // Crucially, remove the input from the DOM only after the upload attempt is complete.
-        if (fileInput.parentElement) {
-            fileInput.parentElement.removeChild(fileInput);
-        }
-      }
+      })();
     };
 
     document.body.appendChild(fileInput);
@@ -507,3 +519,4 @@ export function TransactionsTable({
     
 
     
+
