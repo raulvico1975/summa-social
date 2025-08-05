@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import * as React from 'react';
@@ -198,7 +199,7 @@ export function TransactionsTable({
 
   const handleFileSelected = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
-    const currentUploadingId = uploadingTransactionId; // Capture the ID at the start
+    const currentUploadingId = uploadingTransactionId;
     if (!file || !currentUploadingId || !user?.uid) {
       return;
     }
@@ -222,19 +223,22 @@ export function TransactionsTable({
         description: 'El documento se ha adjuntado correctamente.',
       });
   
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error uploading file:", error);
+      let description = 'No se pudo subir el archivo. Revisa la consola para más detalles.';
+      if (error.code === 'storage/unauthorized' || error.code === 'storage/object-not-found') {
+          description = "Acceso denegado por las reglas de seguridad. Asegúrate de que las reglas de Firebase Storage permiten la escritura para usuarios autenticados.";
+      }
       toast({
         variant: 'destructive',
         title: 'Error de Subida',
-        description: 'No se pudo subir el archivo. Revisa las reglas de seguridad de Firebase Storage.',
+        description: description,
       });
     } finally {
         if (currentUploadingId) {
           setLoadingStates(prev => ({ ...prev, [currentUploadingId]: false }));
         }
         setUploadingTransactionId(null);
-        // Reset file input
         if (fileInputRef.current) {
             fileInputRef.current.value = '';
         }
@@ -294,7 +298,7 @@ export function TransactionsTable({
     <>
       <input 
         type="file" 
-        ref={fileInputRef} 
+        ref={fileInputref} 
         onChange={handleFileSelected} 
         className="hidden" 
         accept="application/pdf,image/*,.doc,.docx,.xls,.xlsx"
@@ -517,3 +521,4 @@ export function TransactionsTable({
     </>
   );
 }
+
