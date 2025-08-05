@@ -4,7 +4,7 @@ export type Transaction = {
   description: string;
   amount: number;
   category: string | null;
-  document: '✅' | '⚠️ Falta' | 'N/A';
+  document: '✅' | '⚠️ Falta' | 'N/A' | string; // Can be a status or a URL
   contactId?: string | null;
 };
 

@@ -1,3 +1,4 @@
+
 'use client';
 
 import * as React from 'react';
@@ -62,10 +63,15 @@ import {
   Trash2,
   Edit,
   UserPlus,
+  ExternalLink,
+  UploadCloud
 } from 'lucide-react';
 import type { Transaction, Category, Contact } from '@/lib/data';
 import { categorizeTransaction } from '@/ai/flows/categorize-transactions';
 import { useToast } from '@/hooks/use-toast';
+import { useAuth } from '@/hooks/use-auth';
+import { storage } from '@/lib/firebase';
+import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 
 export function TransactionsTable({
   transactions,
@@ -80,6 +86,10 @@ export function TransactionsTable({
 }) {
   const [loadingStates, setLoadingStates] = React.useState<Record<string, boolean>>({});
   const { toast } = useToast();
+  const { user } = useAuth();
+  const fileInputRef = React.useRef<HTMLInputElement>(null);
+  const [uploadingTransactionId, setUploadingTransactionId] = React.useState<string | null>(null);
+
   
   const [isEditDialogOpen, setIsEditDialogOpen] = React.useState(false);
   const [editingTransaction, setEditingTransaction] = React.useState<Transaction | null>(null);
@@ -181,15 +191,53 @@ export function TransactionsTable({
   };
 
 
-  const handleAttachDocument = (txId: string) => {
-    setTransactions((prev) =>
-      prev.map((tx) => (tx.id === txId ? { ...tx, document: '✅' } : tx))
-    );
-    toast({
-      title: 'Documento Adjuntado',
-      description: 'Se ha asociado un documento a la transacción.',
-    });
+  const handleAttachDocumentClick = (txId: string) => {
+    setUploadingTransactionId(txId);
+    fileInputRef.current?.click();
   };
+
+  const handleFileSelected = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file || !uploadingTransactionId || !user?.uid) {
+      return;
+    }
+
+    setLoadingStates(prev => ({ ...prev, [uploadingTransactionId]: true }));
+    toast({ title: 'Subiendo archivo...', description: 'Por favor, espera.' });
+
+    try {
+      const storagePath = `documents/${user.uid}/${uploadingTransactionId}/${file.name}`;
+      const storageRef = ref(storage, storagePath);
+      
+      const snapshot = await uploadBytes(storageRef, file);
+      const downloadURL = await getDownloadURL(snapshot.ref);
+
+      setTransactions(prev => prev.map(tx => 
+        tx.id === uploadingTransactionId ? { ...tx, document: downloadURL } : tx
+      ));
+
+      toast({
+        title: '¡Subida Completa!',
+        description: 'El documento se ha adjuntado correctamente.',
+      });
+
+    } catch (error) {
+      console.error("Error uploading file:", error);
+      toast({
+        variant: 'destructive',
+        title: 'Error de Subida',
+        description: 'No se pudo subir el archivo.',
+      });
+    } finally {
+        setLoadingStates(prev => ({ ...prev, [uploadingTransactionId]: false }));
+        setUploadingTransactionId(null);
+        // Reset file input
+        if (fileInputRef.current) {
+            fileInputRef.current.value = '';
+        }
+    }
+  };
+
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('es-ES', { style: 'currency', currency: 'EUR' }).format(amount);
@@ -211,7 +259,24 @@ export function TransactionsTable({
     }
   };
 
-  const getDocumentStatusIcon = (status: Transaction['document']) => {
+  const getDocumentStatusIcon = (tx: Transaction) => {
+    const status = tx.document;
+    const isLoading = loadingStates[tx.id];
+
+    if (isLoading) {
+        return <Loader2 className="h-5 w-5 animate-spin" />;
+    }
+
+    if (status && status.startsWith('http')) {
+        return (
+            <Button asChild variant="ghost" size="icon">
+                <a href={status} target="_blank" rel="noopener noreferrer">
+                    <ExternalLink className="h-5 w-5 text-blue-600" />
+                </a>
+            </Button>
+        )
+    }
+
     switch (status) {
       case '✅':
         return <FileCheck className="h-5 w-5 text-green-600" />;
@@ -224,6 +289,13 @@ export function TransactionsTable({
 
   return (
     <>
+      <input 
+        type="file" 
+        ref={fileInputRef} 
+        onChange={handleFileSelected} 
+        className="hidden" 
+        accept="application/pdf,image/*,.doc,.docx,.xls,.xlsx"
+      />
       <div className="rounded-md border">
         <Table>
           <TableHeader>
@@ -325,7 +397,7 @@ export function TransactionsTable({
                         </DropdownMenuContent>
                     </DropdownMenu>
                   </TableCell>
-                  <TableCell className="text-center">{getDocumentStatusIcon(tx.document)}</TableCell>
+                  <TableCell className="text-center">{getDocumentStatusIcon(tx)}</TableCell>
                   <TableCell>
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
@@ -339,8 +411,12 @@ export function TransactionsTable({
                           <Edit className="mr-2 h-4 w-4" />
                           Editar
                         </DropdownMenuItem>
-                         <DropdownMenuItem onClick={() => handleAttachDocument(tx.id)}>
-                          <Paperclip className="mr-2 h-4 w-4" />
+                         <DropdownMenuItem onClick={() => handleAttachDocumentClick(tx.id)} disabled={loadingStates[tx.id]}>
+                          {loadingStates[tx.id] && tx.id === uploadingTransactionId ? (
+                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          ) : (
+                            <Paperclip className="mr-2 h-4 w-4" />
+                          )}
                           Adjuntar Comprovant
                         </DropdownMenuItem>
                         <DropdownMenuSeparator />

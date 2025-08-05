@@ -4,6 +4,7 @@
 import { useState, useEffect, createContext, useContext } from 'react';
 
 interface User {
+  uid: string;
   name?: string | null;
   email?: string | null;
   picture?: string | null;
@@ -22,6 +23,7 @@ const AuthContext = createContext<AuthContextType>({
 
 // Mock user for development when login is disabled
 const MOCK_USER: User = {
+  uid: 'dev-org-id', // Unique ID for the development organization
   name: 'Usuario de Desarrollo',
   email: 'dev@example.com',
   picture: null,
