@@ -65,7 +65,7 @@ export function LogPanel() {
                   <p className="flex-1 break-words">
                   {log.message.includes('ERROR') ? (
                     <Badge variant="destructive" className="mr-2">ERROR</Badge>
-                  ) : log.message.includes('Éxito') ? (
+                  ) : log.message.includes('¡Éxito!') ? (
                      <Badge variant="success" className="mr-2">ÉXITO</Badge>
                   ) : null}
                   {log.message.replace(/ERROR:? ?/, '').replace(/¡Éxito! ?/, '')}

@@ -6,16 +6,35 @@ import { Sidebar, SidebarProvider, SidebarInset } from '@/components/ui/sidebar'
 import { DashboardSidebarContent } from '@/components/dashboard-sidebar-content';
 import { DashboardHeader } from '@/components/dashboard-header';
 import { LogPanel } from '@/components/log-panel';
-import { AppLogProvider } from '@/hooks/use-app-log';
+import { AppLogContext } from '@/hooks/use-app-log';
+import type { LogMessage } from '@/hooks/use-app-log';
 
+let logCounter = 0;
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
-  // We need to get the initial state of the sidebar from the cookie.
-  // This is a client component because it uses hooks and browser APIs.
   const [open, setOpen] = React.useState(true);
+  const [logs, setLogs] = React.useState<LogMessage[]>([]);
+
+  const log = React.useCallback((message: string) => {
+    const timestamp = new Date().toLocaleTimeString('es-ES', {
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
+    });
+    const newLog: LogMessage = {
+      id: logCounter++,
+      timestamp,
+      message,
+    };
+    setLogs((prevLogs) => [...prevLogs, newLog]);
+  }, []);
+
+  const clearLogs = React.useCallback(() => {
+    setLogs([]);
+  }, []);
+
 
   React.useEffect(() => {
-    // We can't access document on the server.
     const sidebarState = document.cookie
       .split('; ')
       .find((row) => row.startsWith('sidebar_state='))
@@ -26,7 +45,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   }, []);
 
   return (
-    <AppLogProvider>
+    <AppLogContext.Provider value={{ logs, log, clearLogs }}>
       <SidebarProvider defaultOpen={open} onOpenChange={setOpen}>
         <div className="flex min-h-screen">
           <Sidebar>
@@ -39,6 +58,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         </div>
       </SidebarProvider>
       <LogPanel />
-    </AppLogProvider>
+    </AppLogContext.Provider>
   );
 }
