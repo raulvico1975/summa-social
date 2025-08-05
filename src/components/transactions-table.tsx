@@ -197,6 +197,13 @@ export function TransactionsTable({
       const file = target.files?.[0];
       
       if (!file || !user?.uid) {
+        if(!user?.uid) {
+             toast({
+              variant: 'destructive',
+              title: 'Error de Autenticación',
+              description: 'No se pudo identificar al usuario. Por favor, recarga la página.',
+            });
+        }
         return;
       }
 
@@ -268,20 +275,21 @@ export function TransactionsTable({
     if (status && status.startsWith('http')) {
         return (
             <Button asChild variant="ghost" size="icon">
-                <a href={status} target="_blank" rel="noopener noreferrer">
+                <a href={status} target="_blank" rel="noopener noreferrer" title="Ver documento adjunto">
                     <ExternalLink className="h-5 w-5 text-blue-600" />
                 </a>
             </Button>
         )
     }
 
+    // This handles the old statuses before we implemented URL uploads
     switch (status) {
       case '✅':
         return <FileCheck className="h-5 w-5 text-green-600" />;
       case '⚠️ Falta':
         return <FileWarning className="h-5 w-5 text-amber-600" />;
       default:
-        return <FileQuestion className="h-5 w-5 text-muted-foreground" />;
+         return <FileQuestion className="h-5 w-5 text-muted-foreground" />;
     }
   };
 
