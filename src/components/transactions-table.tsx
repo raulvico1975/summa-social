@@ -198,38 +198,41 @@ export function TransactionsTable({
 
   const handleFileSelected = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
-    if (!file || !uploadingTransactionId || !user?.uid) {
+    const currentUploadingId = uploadingTransactionId; // Capture the ID at the start
+    if (!file || !currentUploadingId || !user?.uid) {
       return;
     }
-
-    setLoadingStates(prev => ({ ...prev, [uploadingTransactionId]: true }));
+  
+    setLoadingStates(prev => ({ ...prev, [currentUploadingId]: true }));
     toast({ title: 'Subiendo archivo...', description: 'Por favor, espera.' });
-
+  
     try {
-      const storagePath = `documents/${user.uid}/${uploadingTransactionId}/${file.name}`;
+      const storagePath = `documents/${user.uid}/${currentUploadingId}/${file.name}`;
       const storageRef = ref(storage, storagePath);
       
       const snapshot = await uploadBytes(storageRef, file);
       const downloadURL = await getDownloadURL(snapshot.ref);
-
+  
       setTransactions(prev => prev.map(tx => 
-        tx.id === uploadingTransactionId ? { ...tx, document: downloadURL } : tx
+        tx.id === currentUploadingId ? { ...tx, document: downloadURL } : tx
       ));
-
+  
       toast({
         title: '¡Subida Completa!',
         description: 'El documento se ha adjuntado correctamente.',
       });
-
+  
     } catch (error) {
       console.error("Error uploading file:", error);
       toast({
         variant: 'destructive',
         title: 'Error de Subida',
-        description: 'No se pudo subir el archivo.',
+        description: 'No se pudo subir el archivo. Revisa las reglas de seguridad de Firebase Storage.',
       });
     } finally {
-        setLoadingStates(prev => ({ ...prev, [uploadingTransactionId]: false }));
+        if (currentUploadingId) {
+          setLoadingStates(prev => ({ ...prev, [currentUploadingId]: false }));
+        }
         setUploadingTransactionId(null);
         // Reset file input
         if (fileInputRef.current) {
