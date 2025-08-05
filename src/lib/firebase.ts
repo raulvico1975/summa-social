@@ -6,7 +6,7 @@ import { getStorage } from 'firebase/storage';
 const firebaseConfig = {
   "projectId": "summa-social",
   "appId": "1:469685881071:web:97483f2003df7c2407731a",
-  "storageBucket": "summa-social.appspot.com",
+  "storageBucket": "summa-social.firebasestorage.app",
   "apiKey": "AIzaSyAi_dEPmqHpbEdZH04pCnRRS85AlJ9Pe5g",
   "authDomain": "summa-social.firebaseapp.com",
   "messagingSenderId": "469685881071"
