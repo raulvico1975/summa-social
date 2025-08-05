@@ -54,18 +54,14 @@ import {
 } from '@/components/ui/select';
 import {
   MoreHorizontal,
-  FileCheck,
-  FileWarning,
   Sparkles,
   Loader2,
   Paperclip,
-  FileQuestion,
   ChevronDown,
   Trash2,
   Edit,
   UserPlus,
   ExternalLink,
-  UploadCloud
 } from 'lucide-react';
 import type { Transaction, Category, Contact } from '@/lib/data';
 import { categorizeTransaction } from '@/ai/flows/categorize-transactions';
@@ -192,6 +188,7 @@ export function TransactionsTable({
     const input = document.createElement('input');
     input.type = 'file';
     input.accept = "application/pdf,image/*,.doc,.docx,.xls,.xlsx";
+    
     input.onchange = async (e) => {
       const target = e.target as HTMLInputElement;
       const file = target.files?.[0];
@@ -241,6 +238,7 @@ export function TransactionsTable({
         setLoadingStates(prev => ({ ...prev, [transactionId]: false }));
       }
     };
+    
     input.click();
   };
 
@@ -261,35 +259,6 @@ export function TransactionsTable({
       });
     } catch (e) {
       return dateString;
-    }
-  };
-
-  const getDocumentStatusIcon = (tx: Transaction) => {
-    const status = tx.document;
-    const isLoading = loadingStates[tx.id];
-
-    if (isLoading) {
-        return <Loader2 className="h-5 w-5 animate-spin" />;
-    }
-
-    if (status && status.startsWith('http')) {
-        return (
-            <Button asChild variant="ghost" size="icon">
-                <a href={status} target="_blank" rel="noopener noreferrer" title="Ver documento adjunto">
-                    <ExternalLink className="h-5 w-5 text-blue-600" />
-                </a>
-            </Button>
-        )
-    }
-
-    // This handles the old statuses before we implemented URL uploads
-    switch (status) {
-      case '✅':
-        return <FileCheck className="h-5 w-5 text-green-600" />;
-      case '⚠️ Falta':
-        return <FileWarning className="h-5 w-5 text-amber-600" />;
-      default:
-         return <FileQuestion className="h-5 w-5 text-muted-foreground" />;
     }
   };
 
@@ -396,7 +365,21 @@ export function TransactionsTable({
                         </DropdownMenuContent>
                     </DropdownMenu>
                   </TableCell>
-                  <TableCell className="text-center">{getDocumentStatusIcon(tx)}</TableCell>
+                  <TableCell className="text-center">
+                    {loadingStates[tx.id] ? (
+                      <Loader2 className="h-5 w-5 animate-spin mx-auto" />
+                    ) : tx.document ? (
+                      <Button asChild variant="ghost" size="icon">
+                        <a href={tx.document} target="_blank" rel="noopener noreferrer" title="Ver documento adjunto">
+                          <ExternalLink className="h-5 w-5 text-blue-600" />
+                        </a>
+                      </Button>
+                    ) : (
+                       <Button variant="ghost" size="icon" onClick={() => handleAttachDocumentClick(tx.id)} title="Adjuntar documento">
+                          <Paperclip className="h-5 w-5" />
+                       </Button>
+                    )}
+                  </TableCell>
                   <TableCell>
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
@@ -470,7 +453,7 @@ export function TransactionsTable({
                 <Label htmlFor="contact" className="text-right">
                     Contacto
                 </Label>
-                <Select value={formData.contactId} onValueChange={(value) => setFormData({...formData, contactId: value})}>
+                <Select value={formData.contactId} onValueChange={(value) => setFormData({...formData, contactId: value === 'null' ? '' : value})}>
                     <SelectTrigger className="col-span-3">
                         <SelectValue placeholder="Selecciona un contacto" />
                     </SelectTrigger>
@@ -513,5 +496,4 @@ export function TransactionsTable({
     </>
   );
 }
-
     

@@ -4,7 +4,7 @@ export type Transaction = {
   description: string;
   amount: number;
   category: string | null;
-  document: '✅' | '⚠️ Falta' | 'N/A' | string; // Can be a status or a URL
+  document: string | null; // URL to the document or null
   contactId?: string | null;
 };
 
@@ -29,7 +29,7 @@ export const transactions: Transaction[] = [
     description: 'Donación de GlobalGiving',
     amount: 1500.0,
     category: 'Donaciones',
-    document: '✅',
+    document: null,
     contactId: 'cont_1',
   },
   {
@@ -38,7 +38,7 @@ export const transactions: Transaction[] = [
     description: 'Compra de material de oficina',
     amount: -75.5,
     category: 'Suministros de Oficina',
-    document: '✅',
+    document: null,
     contactId: 'cont_2',
   },
   {
@@ -47,7 +47,7 @@ export const transactions: Transaction[] = [
     description: 'Pago de alquiler de local',
     amount: -800.0,
     category: 'Alquiler',
-    document: '⚠️ Falta',
+    document: null,
     contactId: null,
   },
   {
@@ -56,7 +56,7 @@ export const transactions: Transaction[] = [
     description: 'Subvención del Ayuntamiento',
     amount: 5000.0,
     category: 'Subvenciones',
-    document: '✅',
+    document: null,
     contactId: 'cont_4',
   },
   {
@@ -65,7 +65,7 @@ export const transactions: Transaction[] = [
     description: 'Factura de luz - Iberdrola',
     amount: -120.0,
     category: 'Servicios Públicos',
-    document: '⚠️ Falta',
+    document: null,
     contactId: null,
   },
   {
@@ -74,7 +74,7 @@ export const transactions: Transaction[] = [
     description: 'Venta de merchandising',
     amount: 250.0,
     category: null,
-    document: 'N/A',
+    document: null,
     contactId: null,
   },
   {
@@ -83,7 +83,7 @@ export const transactions: Transaction[] = [
     description: 'Pago a proveedor - Imprenta rápida',
     amount: -300.0,
     category: null,
-    document: '⚠️ Falta',
+    document: null,
     contactId: null,
   },
   {
@@ -92,7 +92,7 @@ export const transactions: Transaction[] = [
     description: 'Reembolso de gastos de viaje',
     amount: -55.25,
     category: 'Viajes',
-    document: '✅',
+    document: null,
     contactId: 'cont_3',
   },
 ];
