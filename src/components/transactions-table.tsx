@@ -57,6 +57,7 @@ import {
   Link as LinkIcon,
   Trash2,
   MoreVertical,
+  Edit,
 } from 'lucide-react';
 import type { Transaction, Category, Contact } from '@/lib/data';
 import { categorizeTransaction } from '@/ai/flows/categorize-transactions';
@@ -142,7 +143,7 @@ export function TransactionsTable({
 
   const handleAttachDocument = (transactionId: string) => {
     if (!user?.uid) {
-        toast({ variant: 'destructive', title: 'Error', description: 'No se ha podido identificar al usuario.' });
+        toast({ variant: 'destructive', title: 'Error', description: 'No se ha podido identificar al usuario para la subida.' });
         return;
     }
 
@@ -154,7 +155,10 @@ export function TransactionsTable({
     fileInput.onchange = async (e) => {
         const target = e.target as HTMLInputElement;
         const file = target.files?.[0];
-        if (!file) return;
+        if (!file) {
+            document.body.removeChild(fileInput);
+            return;
+        }
 
         setLoadingStates(prev => ({ ...prev, [`doc_${transactionId}`]: true }));
         toast({ title: 'Subiendo documento...', description: `Adjuntando "${file.name}"...` });
@@ -172,10 +176,10 @@ export function TransactionsTable({
         } catch (error: any) {
             console.error("Error al subir el documento:", error);
             let description = 'Ocurrió un error inesperado al subir el documento.';
-            if (error.code === 'storage/unauthorized') {
-                description = 'Acceso denegado por las reglas de seguridad. Asegúrate de que las reglas de Firebase Storage permiten la escritura para usuarios autenticados.';
+            if (error.code === 'storage/unauthorized' || error.code === 'storage/object-not-found') {
+                description = 'Acceso denegado. Revisa las reglas de seguridad de Firebase Storage para permitir la escritura a usuarios autenticados.';
             }
-            toast({ variant: 'destructive', title: 'Error de subida', description });
+            toast({ variant: 'destructive', title: 'Error de subida', description, duration: 9000 });
         } finally {
             setLoadingStates(prev => ({ ...prev, [`doc_${transactionId}`]: false }));
             document.body.removeChild(fileInput);
@@ -373,9 +377,11 @@ export function TransactionsTable({
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end">
                                 <DropdownMenuItem onClick={() => handleEditClick(tx)}>
+                                    <Edit className="mr-2 h-4 w-4" />
                                     Editar
                                 </DropdownMenuItem>
                                 <DropdownMenuItem className="text-red-500" onClick={() => handleDeleteClick(tx)}>
+                                    <Trash2 className="mr-2 h-4 w-4" />
                                     Eliminar
                                 </DropdownMenuItem>
                             </DropdownMenuContent>
@@ -475,4 +481,6 @@ export function TransactionsTable({
     </>
   );
 }
+    
+
     
