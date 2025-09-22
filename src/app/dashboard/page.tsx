@@ -1,9 +1,65 @@
+
+'use client';
+
+import * as React from 'react';
 import { StatCard } from '@/components/stat-card';
 import { ExpensesChart } from '@/components/expenses-chart';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { DollarSign, TrendingUp, TrendingDown } from 'lucide-react';
+import type { Transaction } from '@/lib/data';
+import { transactions as initialTransactions } from '@/lib/data';
+
+const TRANSACTIONS_STORAGE_KEY = 'summa-social-transactions';
+
+const formatCurrency = (amount: number) => {
+    return new Intl.NumberFormat('es-ES', { style: 'currency', currency: 'EUR' }).format(amount);
+};
 
 export default function DashboardPage() {
+  const [transactions, setTransactions] = React.useState<Transaction[]>([]);
+
+  React.useEffect(() => {
+    try {
+      const storedTransactions = localStorage.getItem(TRANSACTIONS_STORAGE_KEY);
+      setTransactions(storedTransactions ? JSON.parse(storedTransactions) : initialTransactions);
+    } catch (error) {
+       console.error("Failed to parse data from localStorage", error);
+       setTransactions(initialTransactions);
+    }
+
+    const handleStorageChange = (event: StorageEvent) => {
+        if (event.key === TRANSACTIONS_STORAGE_KEY) {
+            try {
+                setTransactions(event.newValue ? JSON.parse(event.newValue) : initialTransactions);
+            } catch (error) {
+                console.error("Failed to parse data from localStorage on change", error);
+                setTransactions(initialTransactions);
+            }
+        }
+    };
+    
+    window.addEventListener('storage', handleStorageChange);
+
+    return () => {
+        window.removeEventListener('storage', handleStorageChange);
+    };
+
+  }, []);
+
+  const { totalIncome, totalExpenses, netBalance } = React.useMemo(() => {
+    return transactions.reduce((acc, tx) => {
+      if (tx.amount > 0) {
+        acc.totalIncome += tx.amount;
+      } else {
+        acc.totalExpenses += tx.amount;
+      }
+      acc.netBalance = acc.totalIncome + acc.totalExpenses;
+      return acc;
+    }, { totalIncome: 0, totalExpenses: 0, netBalance: 0 });
+  }, [transactions]);
+  
+  const expenseTransactions = React.useMemo(() => transactions.filter(tx => tx.amount < 0), [transactions]);
+
   return (
     <div className="flex flex-col gap-6">
        <div>
@@ -13,20 +69,20 @@ export default function DashboardPage() {
       
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
         <StatCard 
-          title="Ingresos Totales (Últimos 30d)"
-          value="€6,750.00"
+          title="Ingresos Totales"
+          value={formatCurrency(totalIncome)}
           icon={TrendingUp}
-          description="+20.1% desde el mes pasado"
+          description="Suma de todos los ingresos"
         />
         <StatCard 
-          title="Gastos Totales (Últimos 30d)"
-          value="-€1,350.75"
+          title="Gastos Totales"
+          value={formatCurrency(totalExpenses)}
           icon={TrendingDown}
-          description="-5.2% desde el mes pasado"
+          description="Suma de todos los gastos"
         />
         <StatCard 
           title="Balance Neto"
-          value="€5,399.25"
+          value={formatCurrency(netBalance)}
           icon={DollarSign}
           description="Balance total de ingresos y gastos"
         />
@@ -37,7 +93,7 @@ export default function DashboardPage() {
           <CardTitle>Gastos por Categoría</CardTitle>
         </CardHeader>
         <CardContent>
-          <ExpensesChart />
+          <ExpensesChart transactions={expenseTransactions} />
         </CardContent>
       </Card>
     </div>
