@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import * as React from 'react';
@@ -285,7 +286,7 @@ export function TransactionsTable({
               <TableHead>Fecha</TableHead>
               <TableHead className="text-right">Importe</TableHead>
               <TableHead>Concepto</TableHead>
-              <TableHead>Tercero</TableHead>
+              <TableHead>Emisor</TableHead>
               <TableHead>Categoría</TableHead>
               <TableHead>Comprovant</TableHead>
               <TableHead><span className="sr-only">Acciones</span></TableHead>

@@ -1,3 +1,4 @@
+
 'use server';
 
 /**
@@ -47,9 +48,12 @@ Available Contacts:
 - ID: {{this.id}}, Name: {{this.name}}
 {{/each}}
 
-Analyze the transaction description and determine if any of the contact names are present or clearly referenced in the text. The name might not be an exact match, but it should be very similar (e.g., "Masmovil" in the description should match a contact named "Grupo Masmovil").
+Analyze the transaction description and determine the most plausible contact. The name might not be an exact match, but a substring or a close variation (e.g., "Masmovil" in the description should match a contact named "Grupo Masmovil").
 
-If you find a clear match, return the corresponding contact ID. If there is no clear match, or if you are unsure, you MUST return null. Only return the ID of one contact.
+If the description looks like a transfer between individuals (e.g., "Transferencia de Alejandro Romero") and there is no matching contact, you should return null.
+For business-related transactions (e.g., receipts, purchases), be more proactive in finding a match.
+
+If you find a plausible match, return the corresponding contact ID. If there is no reasonable match, or if you are unsure, return null. Only return the ID of one contact.
 `,
 });
 
