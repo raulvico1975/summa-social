@@ -10,6 +10,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { TransactionImporter } from '@/components/transaction-importer';
 import type { Transaction, Category, Contact } from '@/lib/data';
 
+type ImportMode = 'append' | 'replace';
 const TRANSACTIONS_STORAGE_KEY = 'summa-social-transactions';
 const CATEGORIES_STORAGE_KEY = 'summa-social-categories';
 const CONTACTS_STORAGE_KEY = 'summa-social-contacts';
@@ -55,8 +56,12 @@ export default function MovementsPage() {
   };
 
 
-  const handleTransactionsImported = (newTransactions: Transaction[]) => {
-    updateTransactions([...transactions, ...newTransactions]);
+  const handleTransactionsImported = (newTransactions: Transaction[], mode: ImportMode) => {
+    if (mode === 'replace') {
+        updateTransactions(newTransactions);
+    } else {
+        updateTransactions([...transactions, ...newTransactions]);
+    }
   };
 
   return (

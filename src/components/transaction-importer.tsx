@@ -3,17 +3,36 @@
 
 import * as React from 'react';
 import { Button } from '@/components/ui/button';
-import { FileUp, Loader2 } from 'lucide-react';
+import { FileUp, Loader2, ChevronDown, Trash2, ListPlus } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import type { Transaction, Contact } from '@/lib/data';
 import Papa from 'papaparse';
 import * as XLSX from 'xlsx';
 import { inferContact } from '@/ai/flows/infer-contact';
 import { useAppLog } from '@/hooks/use-app-log';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
+
+
+type ImportMode = 'append' | 'replace';
 
 interface TransactionImporterProps {
   existingTransactions: Transaction[];
-  onTransactionsImported: (transactions: Transaction[]) => void;
+  onTransactionsImported: (transactions: Transaction[], mode: ImportMode) => void;
   availableContacts: Contact[];
 }
 
@@ -34,31 +53,52 @@ const findColumnIndex = (header: string[], potentialNames: string[]): number => 
 export function TransactionImporter({ existingTransactions, onTransactionsImported, availableContacts }: TransactionImporterProps) {
   const fileInputRef = React.useRef<HTMLInputElement>(null);
   const [isImporting, setIsImporting] = React.useState(false);
+  const [importMode, setImportMode] = React.useState<ImportMode>('append');
+  const [isAlertOpen, setIsAlertOpen] = React.useState(false);
+  const [pendingFile, setPendingFile] = React.useState<File | null>(null);
   const { toast } = useToast();
   const { log } = useAppLog();
 
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
-        setIsImporting(true);
-        if (file.name.endsWith('.csv')) {
-            parseCsv(file);
-        } else if (file.name.endsWith('.xlsx')) {
-            parseXlsx(file);
+        if (importMode === 'replace') {
+            setPendingFile(file);
+            setIsAlertOpen(true);
         } else {
-            toast({
-                variant: 'destructive',
-                title: 'Formato no soportado',
-                description: 'Por favor, sube un archivo .csv o .xlsx',
-            });
-            setIsImporting(false);
+            startImportProcess(file, 'append');
         }
     }
     // Reset file input to allow re-uploading the same file
     event.target.value = '';
   };
+
+  const handleConfirmReplace = () => {
+    setIsAlertOpen(false);
+    if (pendingFile) {
+        startImportProcess(pendingFile, 'replace');
+        setPendingFile(null);
+    }
+  }
   
-  const parseXlsx = (file: File) => {
+  const startImportProcess = (file: File, mode: ImportMode) => {
+    setIsImporting(true);
+    log(`Iniciando importación en modo: ${mode}`);
+    if (file.name.endsWith('.csv')) {
+        parseCsv(file, mode);
+    } else if (file.name.endsWith('.xlsx')) {
+        parseXlsx(file, mode);
+    } else {
+        toast({
+            variant: 'destructive',
+            title: 'Formato no soportado',
+            description: 'Por favor, sube un archivo .csv o .xlsx',
+        });
+        setIsImporting(false);
+    }
+  }
+  
+  const parseXlsx = (file: File, mode: ImportMode) => {
     const reader = new FileReader();
     reader.onload = (e) => {
       try {
@@ -94,7 +134,7 @@ export function TransactionImporter({ existingTransactions, onTransactionsImport
             Importe: row[amountIndex]
         }));
 
-        processParsedData(parsedData);
+        processParsedData(parsedData, mode);
       } catch (error: any) {
         console.error("Error processing XLSX data:", error);
         toast({
@@ -117,12 +157,12 @@ export function TransactionImporter({ existingTransactions, onTransactionsImport
     reader.readAsBinaryString(file);
   }
 
-  const parseCsv = (file: File) => {
+  const parseCsv = (file: File, mode: ImportMode) => {
     Papa.parse(file, {
       header: true,
       skipEmptyLines: true,
       complete: (results) => {
-        processParsedData(results.data);
+        processParsedData(results.data, mode);
       },
       error: (error) => {
         console.error("PapaParse error:", error);
@@ -136,7 +176,7 @@ export function TransactionImporter({ existingTransactions, onTransactionsImport
     });
   };
 
-  const processParsedData = async (data: any[]) => {
+  const processParsedData = async (data: any[], mode: ImportMode) => {
      // Create a set of keys for existing transactions for efficient lookup
     const existingTransactionKeys = new Set(existingTransactions.map(createTransactionKey));
     log(`Iniciando procesamiento de ${data.length} filas.`);
@@ -196,23 +236,27 @@ export function TransactionImporter({ existingTransactions, onTransactionsImport
         })
         .filter((tx): tx is Transaction => tx !== null);
         
-        // Filter out duplicates
-        const newUniqueTransactions = allParsedRows.filter(tx => {
-            const key = createTransactionKey(tx);
-            const isDuplicate = existingTransactionKeys.has(key);
-            if (isDuplicate) {
-                log(`Transacción duplicada encontrada y omitida: ${key}`);
-            }
-            return !isDuplicate;
-        });
+        let transactionsToProcess = allParsedRows;
+        let duplicatesFound = 0;
 
-        const duplicatesFound = allParsedRows.length - newUniqueTransactions.length;
-        log(`${newUniqueTransactions.length} transacciones únicas encontradas. ${duplicatesFound} duplicados omitidos.`);
+        if (mode === 'append') {
+            transactionsToProcess = allParsedRows.filter(tx => {
+                const key = createTransactionKey(tx);
+                const isDuplicate = existingTransactionKeys.has(key);
+                if (isDuplicate) {
+                    log(`Transacción duplicada encontrada y omitida: ${key}`);
+                }
+                return !isDuplicate;
+            });
+            duplicatesFound = allParsedRows.length - transactionsToProcess.length;
+            log(`${transactionsToProcess.length} transacciones únicas encontradas. ${duplicatesFound} duplicados omitidos.`);
+        }
 
-        if (newUniqueTransactions.length > 0) {
+
+        if (transactionsToProcess.length > 0) {
             log('Iniciando inferencia de contactos con IA...');
             const contactsForAI = availableContacts.map(c => ({ id: c.id, name: c.name }));
-            const transactionsWithContacts = await Promise.all(newUniqueTransactions.map(async (tx, index) => {
+            const transactionsWithContacts = await Promise.all(transactionsToProcess.map(async (tx, index) => {
                 try {
                     const result = await inferContact({ description: tx.description, contacts: contactsForAI });
                     if (result.contactId) {
@@ -226,17 +270,17 @@ export function TransactionImporter({ existingTransactions, onTransactionsImport
                 return tx;
             }));
 
-            onTransactionsImported(transactionsWithContacts);
+            onTransactionsImported(transactionsWithContacts, mode);
             toast({
                 title: 'Importación Exitosa',
-                description: `Se han importado ${newUniqueTransactions.length} nuevas transacciones. Se omitieron ${duplicatesFound} duplicados.`,
+                description: `Se han importado ${transactionsToProcess.length} transacciones. ${mode === 'append' ? `Se omitieron ${duplicatesFound} duplicados.` : ''}`,
             });
             log('¡Éxito! Importación completada.');
 
         } else {
              toast({
-                title: duplicatesFound > 0 ? 'No hay transacciones nuevas' : 'No se encontraron transacciones',
-                description: duplicatesFound > 0 
+                title: mode === 'append' && duplicatesFound > 0 ? 'No hay transacciones nuevas' : 'No se encontraron transacciones',
+                description: mode === 'append' && duplicatesFound > 0 
                     ? `Se encontraron y omitieron ${duplicatesFound} transacciones duplicadas.` 
                     : 'No se encontraron transacciones válidas en el archivo o ya existen todas.',
              });
@@ -256,7 +300,8 @@ export function TransactionImporter({ existingTransactions, onTransactionsImport
   }
 
 
-  const handleButtonClick = () => {
+  const handleMenuClick = (mode: ImportMode) => {
+    setImportMode(mode);
     fileInputRef.current?.click();
   };
 
@@ -270,14 +315,49 @@ export function TransactionImporter({ existingTransactions, onTransactionsImport
         className="hidden"
         disabled={isImporting}
       />
-      <Button onClick={handleButtonClick} disabled={isImporting}>
-        {isImporting ? (
-            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-        ) : (
-            <FileUp className="mr-2 h-4 w-4" />
-        )}
-        Importar Extracto
-      </Button>
+      <div className="flex items-center rounded-md">
+        <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+                 <Button disabled={isImporting} className="rounded-r-none">
+                    {isImporting ? (
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    ) : (
+                        <FileUp className="mr-2 h-4 w-4" />
+                    )}
+                    Importar
+                    <ChevronDown className="ml-2 h-4 w-4" />
+                </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+                <DropdownMenuItem onClick={() => handleMenuClick('append')}>
+                    <ListPlus className="mr-2 h-4 w-4" />
+                    <span>Afegir moviments</span>
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => handleMenuClick('replace')} className="text-red-500">
+                     <Trash2 className="mr-2 h-4 w-4" />
+                    <span>Reemplaçar tot</span>
+                </DropdownMenuItem>
+            </DropdownMenuContent>
+        </DropdownMenu>
+      </div>
+
+       <AlertDialog open={isAlertOpen} onOpenChange={setIsAlertOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>¿Estás a punto de reemplazar todo?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Aquesta acció esborrarà permanentment tots els moviments actuals i els substituirà
+              pels del nou arxiu. Aquesta operació no es pot desfer.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => setPendingFile(null)}>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={handleConfirmReplace}>
+              Sí, reemplaçar-ho tot
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </>
   );
 }
