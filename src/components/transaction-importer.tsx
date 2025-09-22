@@ -20,6 +20,13 @@ const createTransactionKey = (tx: { date: string, description: string, amount: n
   return `${date}|${tx.description.trim()}|${tx.amount.toFixed(2)}`;
 };
 
+const findColumnIndex = (header: string[], potentialNames: string[]): number => {
+    for (const name of potentialNames) {
+        const index = header.findIndex(h => h.toLowerCase().includes(name.toLowerCase()));
+        if (index !== -1) return index;
+    }
+    return -1;
+}
 
 export function TransactionImporter({ existingTransactions, onTransactionsImported }: TransactionImporterProps) {
   const fileInputRef = React.useRef<HTMLInputElement>(null);
@@ -54,14 +61,23 @@ export function TransactionImporter({ existingTransactions, onTransactionsImport
         const worksheet = workbook.Sheets[sheetName];
         const json = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
         
-        // Find header row to map columns dynamically
+        if (!json || json.length === 0) {
+            throw new Error("El archivo XLSX está vacío o no tiene un formato válido.");
+        }
+        
         const header = (json[0] as string[]).map(h => String(h || '').trim());
-        const dateIndex = header.findIndex(h => h.toLowerCase() === 'fecha');
-        const conceptIndex = header.findIndex(h => h.toLowerCase() === 'concepto');
-        const amountIndex = header.findIndex(h => h.toLowerCase() === 'importe');
+        
+        const dateIndex = findColumnIndex(header, ['fecha', 'data']);
+        const conceptIndex = findColumnIndex(header, ['concepto', 'descripció', 'description']);
+        const amountIndex = findColumnIndex(header, ['importe', 'import', 'amount', 'quantitat']);
 
         if (dateIndex === -1 || conceptIndex === -1 || amountIndex === -1) {
-            throw new Error('Columnas requeridas no encontradas: "Fecha", "Concepto", "Importe"');
+            const missing = [
+                ...(dateIndex === -1 ? ['Fecha'] : []),
+                ...(conceptIndex === -1 ? ['Concepto'] : []),
+                ...(amountIndex === -1 ? ['Importe'] : [])
+            ].join(', ');
+            throw new Error(`Columnas requeridas no encontradas: ${missing}. Cabeceras encontradas: ${header.join(', ')}`);
         }
 
         const dataRows = json.slice(1);
@@ -72,12 +88,13 @@ export function TransactionImporter({ existingTransactions, onTransactionsImport
         }));
 
         processParsedData(parsedData);
-      } catch (error) {
+      } catch (error: any) {
         console.error("Error processing XLSX data:", error);
         toast({
           variant: 'destructive',
           title: 'Error de Importación',
-          description: 'No se pudo procesar el archivo XLSX. Revisa que las columnas sean "Fecha", "Concepto", e "Importe".',
+          description: error.message || 'No se pudo procesar el archivo XLSX.',
+          duration: 9000,
         });
       }
     };
@@ -125,7 +142,9 @@ export function TransactionImporter({ existingTransactions, onTransactionsImport
                 dateValue = new Date(jsDate.getTime() + (jsDate.getTimezoneOffset() * 60 * 1000));
             }
 
-            const amount = parseFloat(String(row.Importe || '0').replace(',', '.'));
+            const amountString = String(row.Importe || '0').replace(',', '.');
+            const amount = parseFloat(amountString);
+            
             if (!dateValue || !row.Concepto || isNaN(amount)) {
                 console.warn(`Skipping invalid row ${index + 2}:`, row);
                 return null;
@@ -135,12 +154,16 @@ export function TransactionImporter({ existingTransactions, onTransactionsImport
             if (dateValue instanceof Date) {
                 date = dateValue;
             } else {
-                const dateParts = String(dateValue).split(/[-/.]/);
-                if (dateParts.length === 3) {
-                // Assuming DD/MM/YYYY or DD-MM-YYYY
-                date = new Date(`${dateParts[2]}-${dateParts[1]}-${dateParts[0]}`);
+                const dateString = String(dateValue);
+                const partsDMY = dateString.match(/^(\d{2})[/-](\d{2})[/-](\d{4})$/); // DD/MM/YYYY
+                const partsYMD = dateString.match(/^(\d{4})[/-](\d{2})[/-](\d{2})$/); // YYYY-MM-DD
+                
+                if (partsDMY) {
+                    date = new Date(`${partsDMY[3]}-${partsDMY[2]}-${partsDMY[1]}`);
+                } else if (partsYMD) {
+                    date = new Date(dateString);
                 } else {
-                date = new Date(String(dateValue));
+                    date = new Date(dateString); // Fallback for other formats
                 }
             }
 
@@ -176,18 +199,19 @@ export function TransactionImporter({ existingTransactions, onTransactionsImport
             description: `Se han importado ${newUniqueTransactions.length} nuevas transacciones. Se omitieron ${duplicatesFound} duplicados.`,
         });
         } else {
-            toast({
-            variant: duplicatesFound > 0 ? 'default' : 'destructive',
-            title: duplicatesFound > 0 ? 'No hay transacciones nuevas' : 'Error de Importación',
-            description: duplicatesFound > 0 ? `Se encontraron y omitieron ${duplicatesFound} transacciones duplicadas.` : 'No se encontraron transacciones válidas en el archivo o ya existen todas. Asegúrate de que las columnas son "Fecha", "Concepto", e "Importe".',
-        });
+             toast({
+                title: duplicatesFound > 0 ? 'No hay transacciones nuevas' : 'No se encontraron transacciones',
+                description: duplicatesFound > 0 
+                    ? `Se encontraron y omitieron ${duplicatesFound} transacciones duplicadas.` 
+                    : 'No se encontraron transacciones válidas en el archivo o ya existen todas.',
+             });
         }
-    } catch (error) {
-        console.error("Error processing CSV data:", error);
+    } catch (error: any) {
+        console.error("Error processing parsed data:", error);
         toast({
         variant: 'destructive',
-        title: 'Error de Importación',
-        description: 'No se pudo procesar el archivo. Revisa el formato y el contenido.',
+        title: 'Error de Procesamiento',
+        description: error.message || 'No se pudo procesar el contenido del archivo. Revisa el formato y los datos.',
         });
     }
   }
