@@ -18,6 +18,8 @@ export default function MovementsPage() {
   const [transactions, setTransactions] = React.useState<Transaction[]>([]);
   const [categories, setCategories] = React.useState<Category[]>(initialCategories);
   const [contacts, setContacts] = React.useState<Contact[]>(initialContacts);
+  const [isDataLoaded, setIsDataLoaded] = React.useState(false);
+
 
   React.useEffect(() => {
     try {
@@ -36,6 +38,10 @@ export default function MovementsPage() {
        console.error("Failed to parse data from localStorage", error);
        // Fallback to initial data if localStorage is corrupt
        setTransactions(initialTransactions);
+       setCategories(initialCategories);
+       setContacts(initialContacts);
+    } finally {
+      setIsDataLoaded(true);
     }
   }, []);
 
@@ -50,7 +56,7 @@ export default function MovementsPage() {
 
 
   const handleTransactionsImported = (newTransactions: Transaction[]) => {
-    updateTransactions([...newTransactions, ...transactions]);
+    updateTransactions([...transactions, ...newTransactions]);
   };
 
   return (
@@ -61,10 +67,13 @@ export default function MovementsPage() {
           <p className="text-muted-foreground">Gestiona todas tus transacciones bancarias.</p>
         </div>
         <div className="flex gap-2">
-          <TransactionImporter 
-            existingTransactions={transactions}
-            onTransactionsImported={handleTransactionsImported} 
-          />
+           {isDataLoaded && (
+             <TransactionImporter 
+                existingTransactions={transactions}
+                onTransactionsImported={handleTransactionsImported} 
+                availableContacts={contacts}
+              />
+           )}
           <Button variant="outline">
             <Download className="mr-2 h-4 w-4" />
             Exportar

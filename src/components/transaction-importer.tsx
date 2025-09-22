@@ -3,15 +3,18 @@
 
 import * as React from 'react';
 import { Button } from '@/components/ui/button';
-import { FileUp } from 'lucide-react';
+import { FileUp, Loader2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import type { Transaction } from '@/lib/data';
+import type { Transaction, Contact } from '@/lib/data';
 import Papa from 'papaparse';
 import * as XLSX from 'xlsx';
+import { inferContact } from '@/ai/flows/infer-contact';
+import { useAppLog } from '@/hooks/use-app-log';
 
 interface TransactionImporterProps {
   existingTransactions: Transaction[];
   onTransactionsImported: (transactions: Transaction[]) => void;
+  availableContacts: Contact[];
 }
 
 // Function to create a unique key for a transaction to detect duplicates
@@ -28,13 +31,16 @@ const findColumnIndex = (header: string[], potentialNames: string[]): number => 
     return -1;
 }
 
-export function TransactionImporter({ existingTransactions, onTransactionsImported }: TransactionImporterProps) {
+export function TransactionImporter({ existingTransactions, onTransactionsImported, availableContacts }: TransactionImporterProps) {
   const fileInputRef = React.useRef<HTMLInputElement>(null);
+  const [isImporting, setIsImporting] = React.useState(false);
   const { toast } = useToast();
+  const { log } = useAppLog();
 
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
+        setIsImporting(true);
         if (file.name.endsWith('.csv')) {
             parseCsv(file);
         } else if (file.name.endsWith('.xlsx')) {
@@ -45,6 +51,7 @@ export function TransactionImporter({ existingTransactions, onTransactionsImport
                 title: 'Formato no soportado',
                 description: 'Por favor, sube un archivo .csv o .xlsx',
             });
+            setIsImporting(false);
         }
     }
     // Reset file input to allow re-uploading the same file
@@ -96,6 +103,7 @@ export function TransactionImporter({ existingTransactions, onTransactionsImport
           description: error.message || 'No se pudo procesar el archivo XLSX.',
           duration: 9000,
         });
+        setIsImporting(false);
       }
     };
     reader.onerror = () => {
@@ -104,6 +112,7 @@ export function TransactionImporter({ existingTransactions, onTransactionsImport
           title: 'Error de Lectura',
           description: 'No se pudo leer el archivo.',
         });
+        setIsImporting(false);
     }
     reader.readAsBinaryString(file);
   }
@@ -122,13 +131,15 @@ export function TransactionImporter({ existingTransactions, onTransactionsImport
           title: 'Error de Importación',
           description: 'No se pudo leer el archivo CSV.',
         });
+        setIsImporting(false);
       }
     });
   };
 
-  const processParsedData = (data: any[]) => {
+  const processParsedData = async (data: any[]) => {
      // Create a set of keys for existing transactions for efficient lookup
     const existingTransactionKeys = new Set(existingTransactions.map(createTransactionKey));
+    log(`Iniciando procesamiento de ${data.length} filas.`);
 
     try {
         const allParsedRows = data
@@ -146,7 +157,7 @@ export function TransactionImporter({ existingTransactions, onTransactionsImport
             const amount = parseFloat(amountString);
             
             if (!dateValue || !row.Concepto || isNaN(amount)) {
-                console.warn(`Skipping invalid row ${index + 2}:`, row);
+                log(`Fila ${index + 2} inválida, saltando: ${JSON.stringify(row)}`);
                 return null;
             }
 
@@ -169,7 +180,7 @@ export function TransactionImporter({ existingTransactions, onTransactionsImport
 
 
             if (isNaN(date.getTime())) {
-                console.warn(`Skipping row with invalid date ${index + 2}:`, row);
+                log(`Fila ${index + 2} con fecha inválida, saltando: ${JSON.stringify(row)}`);
                 return null;
             }
 
@@ -180,24 +191,48 @@ export function TransactionImporter({ existingTransactions, onTransactionsImport
                 amount: amount,
                 category: null,
                 document: null,
+                contactId: null, // Initially null
             } as Transaction;
         })
         .filter((tx): tx is Transaction => tx !== null);
         
         // Filter out duplicates
         const newUniqueTransactions = allParsedRows.filter(tx => {
-        const key = createTransactionKey(tx);
-        return !existingTransactionKeys.has(key);
+            const key = createTransactionKey(tx);
+            const isDuplicate = existingTransactionKeys.has(key);
+            if (isDuplicate) {
+                log(`Transacción duplicada encontrada y omitida: ${key}`);
+            }
+            return !isDuplicate;
         });
 
         const duplicatesFound = allParsedRows.length - newUniqueTransactions.length;
+        log(`${newUniqueTransactions.length} transacciones únicas encontradas. ${duplicatesFound} duplicados omitidos.`);
 
         if (newUniqueTransactions.length > 0) {
-        onTransactionsImported(newUniqueTransactions);
-        toast({
-            title: 'Importación Exitosa',
-            description: `Se han importado ${newUniqueTransactions.length} nuevas transacciones. Se omitieron ${duplicatesFound} duplicados.`,
-        });
+            log('Iniciando inferencia de contactos con IA...');
+            const contactsForAI = availableContacts.map(c => ({ id: c.id, name: c.name }));
+            const transactionsWithContacts = await Promise.all(newUniqueTransactions.map(async (tx, index) => {
+                try {
+                    const result = await inferContact({ description: tx.description, contacts: contactsForAI });
+                    if (result.contactId) {
+                       log(`[Fila ${index + 1}] Contacto inferido: ${result.contactId} para "${tx.description.substring(0,30)}..."`);
+                       return { ...tx, contactId: result.contactId };
+                    }
+                } catch (error) {
+                    console.error("Error inferring contact for a transaction:", error);
+                    log(`ERROR en inferencia de contacto para fila ${index + 1}: ${error}`);
+                }
+                return tx;
+            }));
+
+            onTransactionsImported(transactionsWithContacts);
+            toast({
+                title: 'Importación Exitosa',
+                description: `Se han importado ${newUniqueTransactions.length} nuevas transacciones. Se omitieron ${duplicatesFound} duplicados.`,
+            });
+            log('¡Éxito! Importación completada.');
+
         } else {
              toast({
                 title: duplicatesFound > 0 ? 'No hay transacciones nuevas' : 'No se encontraron transacciones',
@@ -205,6 +240,7 @@ export function TransactionImporter({ existingTransactions, onTransactionsImport
                     ? `Se encontraron y omitieron ${duplicatesFound} transacciones duplicadas.` 
                     : 'No se encontraron transacciones válidas en el archivo o ya existen todas.',
              });
+             log('No se encontraron transacciones nuevas para importar.');
         }
     } catch (error: any) {
         console.error("Error processing parsed data:", error);
@@ -213,6 +249,9 @@ export function TransactionImporter({ existingTransactions, onTransactionsImport
         title: 'Error de Procesamiento',
         description: error.message || 'No se pudo procesar el contenido del archivo. Revisa el formato y los datos.',
         });
+        log(`ERROR: ${error.message}`);
+    } finally {
+      setIsImporting(false);
     }
   }
 
@@ -229,9 +268,14 @@ export function TransactionImporter({ existingTransactions, onTransactionsImport
         onChange={handleFileChange}
         accept=".csv, .xlsx"
         className="hidden"
+        disabled={isImporting}
       />
-      <Button onClick={handleButtonClick}>
-        <FileUp className="mr-2 h-4 w-4" />
+      <Button onClick={handleButtonClick} disabled={isImporting}>
+        {isImporting ? (
+            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+        ) : (
+            <FileUp className="mr-2 h-4 w-4" />
+        )}
         Importar Extracto
       </Button>
     </>
