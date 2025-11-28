@@ -153,13 +153,34 @@ export function TransactionsTable({
     toast({ title: 'Iniciando clasificación masiva...', description: `Clasificando ${transactionsToCategorize.length} moviments.`});
 
     let successCount = 0;
-    for (let i = 0; i < transactionsToCategorize.length; i++) {
-        const tx = transactionsToCategorize[i];
-        log(`Clasificando movimiento ${i + 1}/${transactionsToCategorize.length}: "${tx.description.substring(0, 30)}..."`);
-        await handleCategorize(tx.id);
-        successCount++;
-    }
+    const updatedTransactions = [...transactions];
 
+    for (const tx of transactionsToCategorize) {
+      log(`Clasificando movimiento ${successCount + 1}/${transactionsToCategorize.length}: "${tx.description.substring(0, 30)}..."`);
+      try {
+        const expenseCategories = availableCategories.filter((c) => c.type === 'expense').map((c) => c.name);
+        const incomeCategories = availableCategories.filter((c) => c.type === 'income').map((c) => c.name);
+
+        const result = await categorizeTransaction({
+          description: tx.description,
+          amount: tx.amount,
+          expenseCategories,
+          incomeCategories,
+        });
+
+        const txIndex = updatedTransactions.findIndex(t => t.id === tx.id);
+        if (txIndex !== -1) {
+          updatedTransactions[txIndex] = { ...updatedTransactions[txIndex], category: result.category };
+        }
+        successCount++;
+        log(`¡Éxito! Movimiento ${tx.id} clasificado como "${result.category}".`);
+      } catch (error) {
+        console.error('Error categorizing transaction:', error);
+        log(`ERROR categorizando ${tx.id}: ${error}`);
+      }
+    }
+    
+    setTransactions(updatedTransactions);
     setIsBatchCategorizing(false);
     log(`¡Éxito! Clasificación masiva completada. ${successCount} moviments clasificados.`);
     toast({ title: 'Clasificación masiva completada', description: `Se han clasificado ${successCount} moviments.`});
