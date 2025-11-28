@@ -34,7 +34,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { PlusCircle, Edit, Trash2, TrendingUp, TrendingDown, DollarSign } from 'lucide-react';
+import { PlusCircle, Edit, Trash2, TrendingUp, TrendingDown, DollarSign, Briefcase } from 'lucide-react';
 import type { Project, Emisor, Transaction } from '@/lib/data';
 import { useToast } from '@/hooks/use-toast';
 import { StatCard } from './stat-card';
@@ -85,16 +85,20 @@ export function ProjectManager({ initialProjects, initialEmissors, initialTransa
   [emissors]);
 
   const projectBalances = React.useMemo(() => {
-    const balances: Record<string, { funded: number; sent: number }> = {};
+    const balances: Record<string, { funded: number; sent: number; expenses: number }> = {};
     projects.forEach(p => {
-        balances[p.id] = { funded: 0, sent: 0 };
+        balances[p.id] = { funded: 0, sent: 0, expenses: 0 };
     });
     transactions.forEach(tx => {
         if (tx.projectId) {
             if (tx.amount > 0) {
                 balances[tx.projectId].funded += tx.amount;
-            } else if (tx.category === 'Transferencias a terreno o socias') {
-                balances[tx.projectId].sent += Math.abs(tx.amount);
+            } else {
+                 if (tx.category === 'Transferencias a terreno o socias') {
+                    balances[tx.projectId].sent += Math.abs(tx.amount);
+                } else {
+                    balances[tx.projectId].expenses += Math.abs(tx.amount);
+                }
             }
         }
     });
@@ -208,8 +212,8 @@ export function ProjectManager({ initialProjects, initialEmissors, initialTransa
         ) : (
             <div className="grid gap-6">
                 {projects.map(project => {
-                    const balance = projectBalances[project.id] || { funded: 0, sent: 0 };
-                    const remaining = balance.funded - balance.sent;
+                    const balance = projectBalances[project.id] || { funded: 0, sent: 0, expenses: 0 };
+                    const remaining = balance.funded - balance.sent - balance.expenses;
                     
                     return (
                         <Card key={project.id}>
@@ -237,7 +241,7 @@ export function ProjectManager({ initialProjects, initialEmissors, initialTransa
                                 </div>
                             </CardHeader>
                             <CardContent>
-                                <div className="grid gap-4 md:grid-cols-3">
+                                <div className="grid gap-4 md:grid-cols-4">
                                     <StatCard 
                                         title="Total Finançat"
                                         value={formatCurrency(balance.funded)}
@@ -247,6 +251,11 @@ export function ProjectManager({ initialProjects, initialEmissors, initialTransa
                                         title="Total Enviat a Terreny"
                                         value={formatCurrency(balance.sent)}
                                         icon={TrendingDown}
+                                        />
+                                    <StatCard 
+                                        title="Despeses de Gestió"
+                                        value={formatCurrency(balance.expenses)}
+                                        icon={Briefcase}
                                         />
                                     <StatCard 
                                         title="Saldo Pendent"
