@@ -80,7 +80,8 @@ export function RemittanceSplitter({
         try {
             const { newTransactions, newEmissors, totalAmount } = processCsvData(data);
             
-            if (Math.abs(totalAmount - transaction.amount) > 0.01) {
+            // Allow a small tolerance for floating point inaccuracies
+            if (Math.abs(transaction.amount - totalAmount) > 0.01) {
                 throw new Error(`El importe total del archivo (${totalAmount.toFixed(2)} €) no coincide con el importe de la transacción (${transaction.amount.toFixed(2)} €).`);
             }
 
@@ -132,9 +133,10 @@ export function RemittanceSplitter({
 
         // 1. Find by Tax ID (most reliable)
         if (taxId) {
-            const foundByTaxId = emissors.find(e => e.taxId.trim() === taxId.trim());
+            const normalizedTaxId = normalizeString(taxId);
+            const foundByTaxId = emissors.find(e => normalizeString(e.taxId) === normalizedTaxId);
             if (foundByTaxId) {
-                log(`[Splitter] Emisor encontrado por DNI/CIF: "${name}" -> ${foundByTaxId.name} (${foundByTaxId.taxId})`);
+                log(`[Splitter] Emisor encontrado por DNI/CIF: "${name || taxId}" -> ${foundByTaxId.name} (${foundByTaxId.taxId})`);
                 return foundByTaxId;
             }
         }
@@ -143,6 +145,7 @@ export function RemittanceSplitter({
         if (normalizedCsvName) {
              const potentialMatches = emissors.filter(e => {
                 const normalizedEmisorName = normalizeString(e.name);
+                if (!normalizedEmisorName) return false;
                 const emisorNameTokens = normalizedEmisorName.split(' ').filter(Boolean);
                 // Check if all tokens from the CSV name are present in the emisor's name
                 return [...csvNameTokens].every(token => emisorNameTokens.includes(token));
@@ -177,18 +180,18 @@ export function RemittanceSplitter({
     const taxIdHeader = findHeader(firstRow, ['dni', 'cif', 'nif', 'dni/cif']);
     const amountHeader = findHeader(firstRow, ['import', 'importe', 'cuantía']);
 
-    if (!nameHeader || !amountHeader) {
-        throw new Error("El archivo CSV debe contener columnas para 'Nombre' e 'Importe'.");
+    if ((!nameHeader && !taxIdHeader) || !amountHeader) {
+        throw new Error("El archivo CSV debe contener columnas para 'Importe' y, al menos, 'Nombre' o 'DNI/CIF'.");
     }
 
     data.forEach((row, index) => {
-      const name = row[nameHeader] || '';
-      const amountStr = row[amountHeader] || '0';
+      const name = nameHeader ? row[nameHeader] || '' : '';
       const taxId = taxIdHeader ? row[taxIdHeader] || '' : '';
+      const amountStr = row[amountHeader] || '0';
       
       const amount = parseFloat(amountStr.replace(/[^0-9,-]+/g, '').replace(',', '.'));
 
-      if (!name || isNaN(amount)) {
+      if ((!name && !taxId) || isNaN(amount)) {
         log(`[Splitter] Fila ${index + 2} inválida, se omite: ${JSON.stringify(row)}`);
         return;
       }
@@ -198,13 +201,13 @@ export function RemittanceSplitter({
       const emisor = findEmisor(name, taxId, existingEmissors);
       
       if (!emisor) {
-          log(`[Splitter] AVISO: No se ha podido encontrar un emisor para la fila ${index + 2} ("${name}"). El movimiento necesitará asignación manual.`);
+          log(`[Splitter] AVISO: No se ha podido encontrar un emisor para la fila ${index + 2} ("${name || taxId}"). El movimiento necesitará asignación manual.`);
       }
 
       const newTransaction: Transaction = {
         id: `split_${transaction.id}_${index}`,
         date: transaction.date,
-        description: `Donación socio/a: ${name}`,
+        description: `Donación socio/a: ${name || taxId}`,
         amount: amount,
         category: 'Donaciones', // Default category for remittances
         document: null,
@@ -231,13 +234,12 @@ export function RemittanceSplitter({
           <Info className="h-4 w-4" />
           <AlertTitle>Formato del archivo CSV</AlertTitle>
           <AlertDescription>
-            El archivo debe contener cabeceras y al menos las columnas:
+            El archivo debe contener cabeceras y, como mínimo, las columnas de <b>Importe</b> y <b>Nombre</b> (o <b>DNI/CIF</b>).
             <ul className="list-disc pl-5 mt-2 text-xs">
-                <li><b>Nom/Nombre/Deudor</b></li>
+                <li><b>Nom/Nombre/Deudor</b> (o DNI/CIF/NIF)</li>
                 <li><b>Import/Importe</b></li>
-                <li>(Opcional pero recomendado) <b>DNI/CIF/NIF</b></li>
             </ul>
-             <p className="mt-2 text-xs">El sistema buscará coincidencias por DNI/CIF y, si no, por nombre (ignorando mayúsculas/minúsculas y acentos).</p>
+             <p className="mt-2 text-xs">El sistema buscará coincidencias per DNI/CIF y, si no, per nom (ignorant majúscules/minúscules i accents).</p>
           </AlertDescription>
         </Alert>
 
