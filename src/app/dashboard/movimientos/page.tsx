@@ -4,11 +4,23 @@
 import * as React from 'react';
 import { Button } from "@/components/ui/button";
 import { TransactionsTable } from "@/components/transactions-table";
-import { Download } from "lucide-react";
+import { Download, Trash2 } from "lucide-react";
 import { transactions as initialTransactions, categories as initialCategories, contacts as initialContacts } from "@/lib/data";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { TransactionImporter } from '@/components/transaction-importer';
 import type { Transaction, Category, Contact } from '@/lib/data';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
+import { useToast } from '@/hooks/use-toast';
+
 
 type ImportMode = 'append' | 'replace';
 const TRANSACTIONS_STORAGE_KEY = 'summa-social-transactions';
@@ -20,6 +32,8 @@ export default function MovementsPage() {
   const [categories, setCategories] = React.useState<Category[]>(initialCategories);
   const [contacts, setContacts] = React.useState<Contact[]>(initialContacts);
   const [isDataLoaded, setIsDataLoaded] = React.useState(false);
+  const [isDeleteAlertOpen, setIsDeleteAlertOpen] = React.useState(false);
+  const { toast } = useToast();
 
 
   React.useEffect(() => {
@@ -64,7 +78,17 @@ export default function MovementsPage() {
     }
   };
 
+  const handleDeleteAll = () => {
+    updateTransactions([]);
+    toast({
+        title: 'Transacciones eliminadas',
+        description: 'Se han eliminado todas las transacciones.',
+    });
+    setIsDeleteAlertOpen(false);
+  };
+
   return (
+    <>
     <div className="flex flex-col gap-6">
       <div className="flex flex-col items-start justify-between gap-4 sm:flex-row sm:items-center">
         <div>
@@ -83,6 +107,10 @@ export default function MovementsPage() {
             <Download className="mr-2 h-4 w-4" />
             Exportar
           </Button>
+           <Button variant="destructive" onClick={() => setIsDeleteAlertOpen(true)}>
+                <Trash2 className="mr-2 h-4 w-4" />
+                Eliminar todo
+            </Button>
         </div>
       </div>
       
@@ -100,5 +128,23 @@ export default function MovementsPage() {
         </CardContent>
       </Card>
     </div>
+    <AlertDialog open={isDeleteAlertOpen} onOpenChange={setIsDeleteAlertOpen}>
+        <AlertDialogContent>
+            <AlertDialogHeader>
+                <AlertDialogTitle>¿Estás seguro?</AlertDialogTitle>
+                <AlertDialogDescription>
+                    Esta acción no se puede deshacer. Se eliminarán permanentemente
+                    todas las transacciones.
+                </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+                <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                <AlertDialogAction onClick={handleDeleteAll}>
+                    Sí, eliminar todo
+                </AlertDialogAction>
+            </AlertDialogFooter>
+        </AlertDialogContent>
+    </AlertDialog>
+    </>
   );
 }
