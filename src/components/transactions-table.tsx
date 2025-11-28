@@ -58,8 +58,9 @@ import {
   Trash2,
   MoreVertical,
   Edit,
+  FolderKanban,
 } from 'lucide-react';
-import type { Transaction, Category, Emisor } from '@/lib/data';
+import type { Transaction, Category, Emisor, Project } from '@/lib/data';
 import { categorizeTransaction } from '@/ai/flows/categorize-transactions';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/use-auth';
@@ -73,12 +74,14 @@ export function TransactionsTable({
   availableCategories,
   availableEmissors,
   setAvailableEmissors,
+  availableProjects,
 }: {
   transactions: Transaction[];
   setTransactions: (transactions: Transaction[]) => void;
   availableCategories: Category[];
   availableEmissors: Emisor[];
   setAvailableEmissors: (emissors: Emisor[]) => void;
+  availableProjects: Project[];
 }) {
   const [loadingStates, setLoadingStates] = React.useState<Record<string, boolean>>({});
   const { toast } = useToast();
@@ -87,7 +90,7 @@ export function TransactionsTable({
   
   const [isEditDialogOpen, setIsEditDialogOpen] = React.useState(false);
   const [editingTransaction, setEditingTransaction] = React.useState<Transaction | null>(null);
-  const [formData, setFormData] = React.useState<{ description: string; amount: string; emisorId: string | null }>({ description: '', amount: '', emisorId: null });
+  const [formData, setFormData] = React.useState<{ description: string; amount: string; emisorId: string | null; projectId: string | null; }>({ description: '', amount: '', emisorId: null, projectId: null });
   
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = React.useState(false);
   const [transactionToDelete, setTransactionToDelete] = React.useState<Transaction | null>(null);
@@ -103,6 +106,13 @@ export function TransactionsTable({
       return acc;
     }, {} as Record<string, string>), 
   [availableEmissors]);
+
+  const projectMap = React.useMemo(() =>
+    availableProjects.reduce((acc, project) => {
+        acc[project.id] = project.name;
+        return acc;
+    }, {} as Record<string, string>),
+  [availableProjects]);
 
   const handleCategorize = async (txId: string) => {
     const transaction = transactions.find((tx) => tx.id === txId);
@@ -197,6 +207,13 @@ export function TransactionsTable({
       transactions.map((tx) => (tx.id === txId ? { ...tx, emisorId: newEmisorId } : tx))
     );
   };
+  
+  const handleSetProject = (txId: string, newProjectId: string | null) => {
+    setTransactions(
+        transactions.map((tx) => (tx.id === txId ? { ...tx, projectId: newProjectId } : tx))
+    );
+  };
+
 
   const handleAttachDocument = (transactionId: string) => {
     log(`[${transactionId}] Iniciando la subida de documento.`);
@@ -298,7 +315,8 @@ export function TransactionsTable({
     setFormData({ 
         description: transaction.description, 
         amount: String(transaction.amount),
-        emisorId: transaction.emisorId || null
+        emisorId: transaction.emisorId || null,
+        projectId: transaction.projectId || null,
     });
     setIsEditDialogOpen(true);
   }
@@ -308,7 +326,7 @@ export function TransactionsTable({
 
     setTransactions(transactions.map(tx => 
         tx.id === editingTransaction.id 
-            ? { ...tx, description: formData.description, amount: parseFloat(formData.amount), emisorId: formData.emisorId } 
+            ? { ...tx, description: formData.description, amount: parseFloat(formData.amount), emisorId: formData.emisorId, projectId: formData.projectId } 
             : tx
     ));
 
@@ -384,6 +402,7 @@ export function TransactionsTable({
               <TableHead>Concepto</TableHead>
               <TableHead>Emisor</TableHead>
               <TableHead>Categoría</TableHead>
+              <TableHead>Projecte</TableHead>
               <TableHead>Comprovant</TableHead>
               <TableHead><span className="sr-only">Acciones</span></TableHead>
             </TableRow>
@@ -480,6 +499,34 @@ export function TransactionsTable({
                     )}
                   </TableCell>
                   <TableCell>
+                    <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                           {tx.projectId && projectMap[tx.projectId] ? (
+                                <Button variant="ghost" className="h-auto p-0 text-left font-normal flex items-center gap-1">
+                                    <span className="text-sm">{projectMap[tx.projectId]}</span>
+                                    <ChevronDown className="h-3 w-3 text-muted-foreground" />
+                                </Button>
+                           ) : (
+                               <Button variant="ghost" size="sm">
+                                   <FolderKanban className="mr-2 h-4 w-4"/>
+                                   Assignar
+                               </Button>
+                           )}
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="start">
+                            <DropdownMenuItem onClick={() => handleSetProject(tx.id, null)}>
+                                (Desvincular)
+                            </DropdownMenuItem>
+                             <DropdownMenuSeparator />
+                            {availableProjects.map((project) => (
+                                <DropdownMenuItem key={project.id} onClick={() => handleSetProject(tx.id, project.id)}>
+                                    {project.name}
+                                </DropdownMenuItem>
+                            ))}
+                        </DropdownMenuContent>
+                    </DropdownMenu>
+                  </TableCell>
+                  <TableCell>
                       {isDocumentLoading ? (
                           <Button variant="outline" size="icon" disabled>
                               <Loader2 className="h-4 w-4 animate-spin" />
@@ -520,7 +567,7 @@ export function TransactionsTable({
             })}
              {transactions.length === 0 && (
                 <TableRow>
-                    <TableCell colSpan={7} className="h-24 text-center">
+                    <TableCell colSpan={8} className="h-24 text-center">
                         No hay transacciones. Empieza importando un extracto bancario.
                     </TableCell>
                 </TableRow>
@@ -574,6 +621,22 @@ export function TransactionsTable({
                         <SelectItem value="null">(Ninguno)</SelectItem>
                         {availableEmissors.map(emisor => (
                             <SelectItem key={emisor.id} value={emisor.id}>{emisor.name}</SelectItem>
+                        ))}
+                    </SelectContent>
+                </Select>
+            </div>
+             <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="project" className="text-right">
+                    Projecte
+                </Label>
+                <Select value={formData.projectId || ''} onValueChange={(value) => setFormData({...formData, projectId: value === 'null' ? null : value})}>
+                    <SelectTrigger className="col-span-3">
+                        <SelectValue placeholder="Selecciona un projecte" />
+                    </SelectTrigger>
+                    <SelectContent>
+                        <SelectItem value="null">(Cap)</SelectItem>
+                        {availableProjects.map(project => (
+                            <SelectItem key={project.id} value={project.id}>{project.name}</SelectItem>
                         ))}
                     </SelectContent>
                 </Select>

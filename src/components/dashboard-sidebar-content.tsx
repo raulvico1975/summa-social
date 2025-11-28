@@ -14,7 +14,7 @@ import {
   SidebarMenuButton,
   SidebarFooter,
 } from '@/components/ui/sidebar';
-import { LayoutDashboard, Settings, LogOut, Users, FileText } from 'lucide-react';
+import { LayoutDashboard, Settings, LogOut, Users, FileText, FolderKanban } from 'lucide-react';
 import { Logo } from '@/components/logo';
 import { signOut } from '@/services/auth';
 import { useToast } from '@/hooks/use-toast';
@@ -43,6 +43,11 @@ export function DashboardSidebarContent() {
       href: '/dashboard/movimientos',
       label: 'Movimientos',
       icon: FileText,
+    },
+     {
+      href: '/dashboard/projectes',
+      label: 'Projectes',
+      icon: FolderKanban,
     },
     {
       href: '/dashboard/emissors',

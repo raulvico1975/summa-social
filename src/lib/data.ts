@@ -1,4 +1,5 @@
 
+
 export type Transaction = {
   id: string;
   date: string;
@@ -7,6 +8,7 @@ export type Transaction = {
   category: string | null;
   document: string | null; // URL to the document or null
   emisorId?: string | null;
+  projectId?: string | null; // NEW: Link to a project
 };
 
 export type Category = {
@@ -22,6 +24,14 @@ export type Emisor = {
   zipCode: string;
   type: 'donor' | 'supplier' | 'volunteer';
 };
+
+// NEW: Project Type Definition
+export type Project = {
+  id: string;
+  name: string;
+  funderId: string | null; // Emisor ID of the funder
+};
+
 
 export const transactions: Transaction[] = [
   {
@@ -115,4 +125,10 @@ export const emissors: Emisor[] = [
     { id: 'cont_2', name: 'OfiMaterial S.L.', taxId: 'B87654321', zipCode: '08001', type: 'supplier' },
     { id: 'cont_3', name: 'Ana García', taxId: '45678901Z', zipCode: '41001', type: 'volunteer' },
     { id: 'cont_4', name: 'Ayuntamiento de la Ciudad', taxId: 'P98765432', zipCode: '28014', type: 'donor' },
+];
+
+// NEW: Initial project data
+export const projects: Project[] = [
+    { id: 'proj_1', name: 'Projecte Educatiu a Haití', funderId: 'cont_4' },
+    { id: 'proj_2', name: 'Construcció Hospital al Senegal', funderId: 'cont_1' },
 ];

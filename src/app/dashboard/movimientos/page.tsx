@@ -5,10 +5,10 @@ import * as React from 'react';
 import { Button } from "@/components/ui/button";
 import { TransactionsTable } from "@/components/transactions-table";
 import { Download, Trash2 } from "lucide-react";
-import { transactions as initialTransactions, categories as initialCategories, emissors as initialEmissors } from "@/lib/data";
+import { transactions as initialTransactions, categories as initialCategories, emissors as initialEmissors, projects as initialProjects } from "@/lib/data";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { TransactionImporter } from '@/components/transaction-importer';
-import type { Transaction, Category, Emisor } from '@/lib/data';
+import type { Transaction, Category, Emisor, Project } from '@/lib/data';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -26,11 +26,14 @@ type ImportMode = 'append' | 'replace';
 const TRANSACTIONS_STORAGE_KEY = 'summa-social-transactions';
 const CATEGORIES_STORAGE_KEY = 'summa-social-categories';
 const EMISORS_STORAGE_KEY = 'summa-social-emissors';
+const PROJECTS_STORAGE_KEY = 'summa-social-projects';
 
 export default function MovementsPage() {
   const [transactions, setTransactions] = React.useState<Transaction[]>([]);
   const [categories, setCategories] = React.useState<Category[]>(initialCategories);
   const [emissors, setEmissors] = React.useState<Emisor[]>(initialEmissors);
+  const [projects, setProjects] = React.useState<Project[]>(initialProjects);
+
   const [isDataLoaded, setIsDataLoaded] = React.useState(false);
   const [isDeleteAlertOpen, setIsDeleteAlertOpen] = React.useState(false);
   const { toast } = useToast();
@@ -42,19 +45,21 @@ export default function MovementsPage() {
       setTransactions(storedTransactions ? JSON.parse(storedTransactions) : initialTransactions);
 
       const storedCategories = localStorage.getItem(CATEGORIES_STORAGE_KEY);
-      if (storedCategories) {
-        setCategories(JSON.parse(storedCategories));
-      }
+      if (storedCategories) setCategories(JSON.parse(storedCategories));
+      
       const storedEmissors = localStorage.getItem(EMISORS_STORAGE_KEY);
-      if (storedEmissors) {
-        setEmissors(JSON.parse(storedEmissors));
-      }
+      if (storedEmissors) setEmissors(JSON.parse(storedEmissors));
+      
+      const storedProjects = localStorage.getItem(PROJECTS_STORAGE_KEY);
+      if (storedProjects) setProjects(JSON.parse(storedProjects));
+
     } catch (error) {
        console.error("Failed to parse data from localStorage", error);
        // Fallback to initial data if localStorage is corrupt
        setTransactions(initialTransactions);
        setCategories(initialCategories);
        setEmissors(initialEmissors);
+       setProjects(initialProjects);
     } finally {
       setIsDataLoaded(true);
     }
@@ -134,6 +139,7 @@ export default function MovementsPage() {
             availableCategories={categories} 
             availableEmissors={emissors}
             setAvailableEmissors={updateEmissors}
+            availableProjects={projects}
           />
         </CardContent>
       </Card>
