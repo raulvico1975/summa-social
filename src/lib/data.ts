@@ -5,7 +5,7 @@ export type Transaction = {
   amount: number;
   category: string | null;
   document: string | null; // URL to the document or null
-  contactId?: string | null;
+  emisorId?: string | null;
 };
 
 export type Category = {
@@ -14,7 +14,7 @@ export type Category = {
   type: 'income' | 'expense';
 };
 
-export type Contact = {
+export type Emisor = {
   id: string;
   name: string;
   taxId: string; // DNI/CIF
@@ -30,7 +30,7 @@ export const transactions: Transaction[] = [
     amount: 1500.0,
     category: 'Donaciones',
     document: null,
-    contactId: 'cont_1',
+    emisorId: 'cont_1',
   },
   {
     id: 'txn_2',
@@ -39,7 +39,7 @@ export const transactions: Transaction[] = [
     amount: -75.5,
     category: 'Suministros de Oficina',
     document: null,
-    contactId: 'cont_2',
+    emisorId: 'cont_2',
   },
   {
     id: 'txn_3',
@@ -48,7 +48,7 @@ export const transactions: Transaction[] = [
     amount: -800.0,
     category: 'Alquiler',
     document: null,
-    contactId: null,
+    emisorId: null,
   },
   {
     id: 'txn_4',
@@ -57,7 +57,7 @@ export const transactions: Transaction[] = [
     amount: 5000.0,
     category: 'Subvenciones',
     document: null,
-    contactId: 'cont_4',
+    emisorId: 'cont_4',
   },
   {
     id: 'txn_5',
@@ -66,7 +66,7 @@ export const transactions: Transaction[] = [
     amount: -120.0,
     category: 'Servicios Públicos',
     document: null,
-    contactId: null,
+    emisorId: null,
   },
   {
     id: 'txn_6',
@@ -75,7 +75,7 @@ export const transactions: Transaction[] = [
     amount: 250.0,
     category: null,
     document: null,
-    contactId: null,
+    emisorId: null,
   },
   {
     id: 'txn_7',
@@ -84,7 +84,7 @@ export const transactions: Transaction[] = [
     amount: -300.0,
     category: null,
     document: null,
-    contactId: null,
+    emisorId: null,
   },
   {
     id: 'txn_8',
@@ -93,7 +93,7 @@ export const transactions: Transaction[] = [
     amount: -55.25,
     category: 'Viajes',
     document: null,
-    contactId: 'cont_3',
+    emisorId: 'cont_3',
   },
 ];
 
@@ -108,7 +108,7 @@ export const categories: Category[] = [
   { id: 'cat_7', name: 'Salarios', type: 'expense' },
 ];
 
-export const contacts: Contact[] = [
+export const emissors: Emisor[] = [
     { id: 'cont_1', name: 'GlobalGiving Foundation', taxId: 'G12345678', zipCode: '28010', type: 'donor' },
     { id: 'cont_2', name: 'OfiMaterial S.L.', taxId: 'B87654321', zipCode: '08001', type: 'supplier' },
     { id: 'cont_3', name: 'Ana García', taxId: '45678901Z', zipCode: '41001', type: 'volunteer' },

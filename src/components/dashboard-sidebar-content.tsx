@@ -45,8 +45,8 @@ export function DashboardSidebarContent() {
       icon: FileText,
     },
     {
-      href: '/dashboard/contactos',
-      label: 'Contactos',
+      href: '/dashboard/emissors',
+      label: 'Emissors',
       icon: Users,
     },
     {

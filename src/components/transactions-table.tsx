@@ -59,7 +59,7 @@ import {
   MoreVertical,
   Edit,
 } from 'lucide-react';
-import type { Transaction, Category, Contact } from '@/lib/data';
+import type { Transaction, Category, Emisor } from '@/lib/data';
 import { categorizeTransaction } from '@/ai/flows/categorize-transactions';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/use-auth';
@@ -71,12 +71,14 @@ export function TransactionsTable({
   transactions,
   setTransactions,
   availableCategories,
-  availableContacts,
+  availableEmissors,
+  setAvailableEmissors,
 }: {
   transactions: Transaction[];
   setTransactions: (transactions: Transaction[]) => void;
   availableCategories: Category[];
-  availableContacts: Contact[];
+  availableEmissors: Emisor[];
+  setAvailableEmissors: (emissors: Emisor[]) => void;
 }) {
   const [loadingStates, setLoadingStates] = React.useState<Record<string, boolean>>({});
   const { toast } = useToast();
@@ -85,17 +87,22 @@ export function TransactionsTable({
   
   const [isEditDialogOpen, setIsEditDialogOpen] = React.useState(false);
   const [editingTransaction, setEditingTransaction] = React.useState<Transaction | null>(null);
-  const [formData, setFormData] = React.useState<{ description: string; amount: string; contactId: string | null }>({ description: '', amount: '', contactId: null });
+  const [formData, setFormData] = React.useState<{ description: string; amount: string; emisorId: string | null }>({ description: '', amount: '', emisorId: null });
   
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = React.useState(false);
   const [transactionToDelete, setTransactionToDelete] = React.useState<Transaction | null>(null);
 
-  const contactMap = React.useMemo(() => 
-    availableContacts.reduce((acc, contact) => {
-      acc[contact.id] = contact.name;
+  const [isNewEmisorDialogOpen, setIsNewEmisorDialogOpen] = React.useState(false);
+  const [newEmisorFormData, setNewEmisorFormData] = React.useState({ name: '', taxId: '', zipCode: '' });
+  const [newEmisorTransactionId, setNewEmisorTransactionId] = React.useState<string | null>(null);
+  const [isBatchCategorizing, setIsBatchCategorizing] = React.useState(false);
+
+  const emisorMap = React.useMemo(() => 
+    availableEmissors.reduce((acc, emisor) => {
+      acc[emisor.id] = emisor.name;
       return acc;
     }, {} as Record<string, string>), 
-  [availableContacts]);
+  [availableEmissors]);
 
   const handleCategorize = async (txId: string) => {
     const transaction = transactions.find((tx) => tx.id === txId);
@@ -103,6 +110,7 @@ export function TransactionsTable({
 
     setLoadingStates((prev) => ({ ...prev, [txId]: true }));
     try {
+      log(`Iniciando categorización para la transacción: ${txId}`);
       const expenseCategories = availableCategories.filter((c) => c.type === 'expense').map((c) => c.name);
       const incomeCategories = availableCategories.filter((c) => c.type === 'income').map((c) => c.name);
 
@@ -119,6 +127,7 @@ export function TransactionsTable({
         title: 'Categorización Automática',
         description: `Transacción clasificada como "${result.category}" con una confianza del ${(result.confidence * 100).toFixed(0)}%.`,
       });
+      log(`¡Éxito! Transacción ${txId} clasificada como "${result.category}".`);
     } catch (error) {
       console.error('Error categorizing transaction:', error);
       toast({
@@ -126,9 +135,34 @@ export function TransactionsTable({
         title: 'Error de IA',
         description: 'No se pudo categorizar la transacción.',
       });
+       log(`ERROR categorizando ${txId}: ${error}`);
     } finally {
       setLoadingStates((prev) => ({ ...prev, [txId]: false }));
     }
+  };
+
+  const handleBatchCategorize = async () => {
+    const transactionsToCategorize = transactions.filter(tx => !tx.category);
+    if (transactionsToCategorize.length === 0) {
+      toast({ title: 'No hay nada que clasificar', description: 'Todas las transacciones ya tienen una categoría.'});
+      return;
+    }
+
+    setIsBatchCategorizing(true);
+    log(`Iniciando clasificación masiva de ${transactionsToCategorize.length} moviments.`);
+    toast({ title: 'Iniciando clasificación masiva...', description: `Clasificando ${transactionsToCategorize.length} moviments.`});
+
+    let successCount = 0;
+    for (let i = 0; i < transactionsToCategorize.length; i++) {
+        const tx = transactionsToCategorize[i];
+        log(`Clasificando movimiento ${i + 1}/${transactionsToCategorize.length}: "${tx.description.substring(0, 30)}..."`);
+        await handleCategorize(tx.id);
+        successCount++;
+    }
+
+    setIsBatchCategorizing(false);
+    log(`¡Éxito! Clasificación masiva completada. ${successCount} moviments clasificados.`);
+    toast({ title: 'Clasificación masiva completada', description: `Se han clasificado ${successCount} moviments.`});
   };
 
   const handleSetCategory = (txId: string, newCategory: string) => {
@@ -137,9 +171,9 @@ export function TransactionsTable({
     );
   };
   
-  const handleSetContact = (txId: string, newContactId: string | null) => {
+  const handleSetEmisor = (txId: string, newEmisorId: string | null) => {
     setTransactions(
-      transactions.map((tx) => (tx.id === txId ? { ...tx, contactId: newContactId } : tx))
+      transactions.map((tx) => (tx.id === txId ? { ...tx, emisorId: newEmisorId } : tx))
     );
   };
 
@@ -243,7 +277,7 @@ export function TransactionsTable({
     setFormData({ 
         description: transaction.description, 
         amount: String(transaction.amount),
-        contactId: transaction.contactId || null
+        emisorId: transaction.emisorId || null
     });
     setIsEditDialogOpen(true);
   }
@@ -253,7 +287,7 @@ export function TransactionsTable({
 
     setTransactions(transactions.map(tx => 
         tx.id === editingTransaction.id 
-            ? { ...tx, description: formData.description, amount: parseFloat(formData.amount), contactId: formData.contactId } 
+            ? { ...tx, description: formData.description, amount: parseFloat(formData.amount), emisorId: formData.emisorId } 
             : tx
     ));
 
@@ -276,9 +310,50 @@ export function TransactionsTable({
     setTransactionToDelete(null);
   }
 
+  const handleOpenNewEmisorDialog = (txId: string) => {
+    setNewEmisorTransactionId(txId);
+    setNewEmisorFormData({ name: '', taxId: '', zipCode: '' });
+    setIsNewEmisorDialogOpen(true);
+  };
+
+  const handleSaveNewEmisor = () => {
+    if (!newEmisorFormData.name || !newEmisorFormData.taxId || !newEmisorFormData.zipCode) {
+      toast({ variant: 'destructive', title: 'Error', description: 'Todos los campos del nuevo emisor son obligatorios.' });
+      return;
+    }
+    const newEmisor: Emisor = {
+      id: `cont_${new Date().getTime()}`,
+      type: 'supplier', // Default type, can be changed later in emisor manager
+      ...newEmisorFormData,
+    };
+
+    const updatedEmissors = [...availableEmissors, newEmisor];
+    setAvailableEmissors(updatedEmissors);
+    
+    if (newEmisorTransactionId) {
+      handleSetEmisor(newEmisorTransactionId, newEmisor.id);
+    }
+    
+    toast({ title: 'Emisor Creado', description: `El emissor "${newEmisor.name}" ha sido creado y asignado.` });
+    setIsNewEmisorDialogOpen(false);
+    setNewEmisorTransactionId(null);
+  };
+  
+  const hasUncategorized = React.useMemo(() => transactions.some(tx => !tx.category), [transactions]);
+
 
   return (
     <>
+      <div className="flex justify-end mb-4">
+        <Button onClick={handleBatchCategorize} disabled={!hasUncategorized || isBatchCategorizing}>
+          {isBatchCategorizing ? (
+            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+          ) : (
+            <Sparkles className="mr-2 h-4 w-4 text-primary" />
+          )}
+          Clasificar Pendientes
+        </Button>
+      </div>
       <div className="rounded-md border">
         <Table>
           <TableHeader>
@@ -313,9 +388,9 @@ export function TransactionsTable({
                    <TableCell>
                     <DropdownMenu>
                         <DropdownMenuTrigger asChild>
-                           {tx.contactId ? (
+                           {tx.emisorId && emisorMap[tx.emisorId] ? (
                                 <Button variant="ghost" className="h-auto p-0 text-left font-normal flex items-center gap-1">
-                                    <span className="text-sm">{contactMap[tx.contactId]}</span>
+                                    <span className="text-sm">{emisorMap[tx.emisorId]}</span>
                                     <ChevronDown className="h-3 w-3 text-muted-foreground" />
                                 </Button>
                            ) : (
@@ -326,13 +401,17 @@ export function TransactionsTable({
                            )}
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="start">
-                            <DropdownMenuItem onClick={() => handleSetContact(tx.id, null)}>
+                            <DropdownMenuItem onClick={() => handleOpenNewEmisorDialog(tx.id)}>
+                                <UserPlus className="mr-2 h-4 w-4" />
+                                Crear nuevo emisor...
+                            </DropdownMenuItem>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem onClick={() => handleSetEmisor(tx.id, null)}>
                                 (Desvincular)
                             </DropdownMenuItem>
-                             <DropdownMenuSeparator />
-                            {availableContacts.map((contact) => (
-                                <DropdownMenuItem key={contact.id} onClick={() => handleSetContact(tx.id, contact.id)}>
-                                    {contact.name}
+                            {availableEmissors.map((emisor) => (
+                                <DropdownMenuItem key={emisor.id} onClick={() => handleSetEmisor(tx.id, emisor.id)}>
+                                    {emisor.name}
                                 </DropdownMenuItem>
                             ))}
                         </DropdownMenuContent>
@@ -429,6 +508,7 @@ export function TransactionsTable({
         </Table>
       </div>
 
+      {/* Edit Transaction Dialog */}
       <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
         <DialogContent>
           <DialogHeader>
@@ -462,17 +542,17 @@ export function TransactionsTable({
               />
             </div>
             <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="contact" className="text-right">
-                    Contacto
+                <Label htmlFor="emisor" className="text-right">
+                    Emisor
                 </Label>
-                <Select value={formData.contactId || ''} onValueChange={(value) => setFormData({...formData, contactId: value === 'null' ? null : value})}>
+                <Select value={formData.emisorId || ''} onValueChange={(value) => setFormData({...formData, emisorId: value === 'null' ? null : value})}>
                     <SelectTrigger className="col-span-3">
-                        <SelectValue placeholder="Selecciona un contacto" />
+                        <SelectValue placeholder="Selecciona un emisor" />
                     </SelectTrigger>
                     <SelectContent>
                         <SelectItem value="null">(Ninguno)</SelectItem>
-                        {availableContacts.map(contact => (
-                            <SelectItem key={contact.id} value={contact.id}>{contact.name}</SelectItem>
+                        {availableEmissors.map(emisor => (
+                            <SelectItem key={emisor.id} value={emisor.id}>{emisor.name}</SelectItem>
                         ))}
                     </SelectContent>
                 </Select>
@@ -486,7 +566,36 @@ export function TransactionsTable({
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+       {/* New Emisor Dialog */}
+      <Dialog open={isNewEmisorDialogOpen} onOpenChange={setIsNewEmisorDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Crear Nuevo Emisor</DialogTitle>
+            <DialogDescription>Añade un nuevo emisor a tu lista y asígnalo a esta transacción.</DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="new-emisor-name" className="text-right">Nombre</Label>
+              <Input id="new-emisor-name" value={newEmisorFormData.name} onChange={(e) => setNewEmisorFormData({...newEmisorFormData, name: e.target.value })} className="col-span-3" />
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="new-emisor-taxId" className="text-right">DNI/CIF</Label>
+              <Input id="new-emisor-taxId" value={newEmisorFormData.taxId} onChange={(e) => setNewEmisorFormData({...newEmisorFormData, taxId: e.target.value })} className="col-span-3" />
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="new-emisor-zipCode" className="text-right">C. Postal</Label>
+              <Input id="new-emisor-zipCode" value={newEmisorFormData.zipCode} onChange={(e) => setNewEmisorFormData({...newEmisorFormData, zipCode: e.target.value })} className="col-span-3" />
+            </div>
+          </div>
+          <DialogFooter>
+            <DialogClose asChild><Button variant="outline">Cancelar</Button></DialogClose>
+            <Button onClick={handleSaveNewEmisor}>Guardar Emisor</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
       
+      {/* Delete Transaction Dialog */}
       <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>

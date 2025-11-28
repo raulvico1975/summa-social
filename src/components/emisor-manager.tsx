@@ -42,80 +42,80 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { PlusCircle, Edit, Trash2 } from 'lucide-react';
-import type { Contact } from '@/lib/data';
+import type { Emisor } from '@/lib/data';
 import { useToast } from '@/hooks/use-toast';
 import { Badge } from '@/components/ui/badge';
 
-const CONTACTS_STORAGE_KEY = 'summa-social-contacts';
+const EMISORS_STORAGE_KEY = 'summa-social-emissors';
 
-const contactTypeMap: Record<Contact['type'], string> = {
-    donor: 'Donante',
-    supplier: 'Proveedor',
-    volunteer: 'Voluntario'
+const emisorTypeMap: Record<Emisor['type'], string> = {
+    donor: 'Donant',
+    supplier: 'Proveïdor',
+    volunteer: 'Voluntari'
 };
 
-export function ContactManager({ initialContacts }: { initialContacts: Contact[] }) {
-  const [contacts, setContacts] = React.useState<Contact[]>(initialContacts);
+export function EmisorManager({ initialEmissors }: { initialEmissors: Emisor[] }) {
+  const [emissors, setEmissors] = React.useState<Emisor[]>(initialEmissors);
   const [isDialogOpen, setIsDialogOpen] = React.useState(false);
   const [isAlertOpen, setIsAlertOpen] = React.useState(false);
-  const [editingContact, setEditingContact] = React.useState<Contact | null>(null);
-  const [contactToDelete, setContactToDelete] = React.useState<Contact | null>(null);
-  const [formData, setFormData] = React.useState<Omit<Contact, 'id'>>({ name: '', taxId: '', zipCode: '', type: 'supplier' });
+  const [editingEmisor, setEditingEmisor] = React.useState<Emisor | null>(null);
+  const [emisorToDelete, setEmisorToDelete] = React.useState<Emisor | null>(null);
+  const [formData, setFormData] = React.useState<Omit<Emisor, 'id'>>({ name: '', taxId: '', zipCode: '', type: 'supplier' });
   const { toast } = useToast();
   
   React.useEffect(() => {
     try {
-      const storedContacts = localStorage.getItem(CONTACTS_STORAGE_KEY);
-      if (storedContacts) {
-        setContacts(JSON.parse(storedContacts));
+      const storedEmissors = localStorage.getItem(EMISORS_STORAGE_KEY);
+      if (storedEmissors) {
+        setEmissors(JSON.parse(storedEmissors));
       }
     } catch (error) {
-      console.error("Failed to parse contacts from localStorage", error);
+      console.error("Failed to parse emissors from localStorage", error);
     }
   }, []);
 
-  const updateContacts = (newContacts: Contact[]) => {
-    setContacts(newContacts);
+  const updateEmissors = (newEmissors: Emisor[]) => {
+    setEmissors(newEmissors);
     try {
-      localStorage.setItem(CONTACTS_STORAGE_KEY, JSON.stringify(newContacts));
+      localStorage.setItem(EMISORS_STORAGE_KEY, JSON.stringify(newEmissors));
     } catch (error) {
-      console.error("Failed to save contacts to localStorage", error);
+      console.error("Failed to save emissors to localStorage", error);
     }
   };
 
-  const handleEdit = (contact: Contact) => {
-    setEditingContact(contact);
-    setFormData({ name: contact.name, taxId: contact.taxId, zipCode: contact.zipCode, type: contact.type });
+  const handleEdit = (emisor: Emisor) => {
+    setEditingEmisor(emisor);
+    setFormData({ name: emisor.name, taxId: emisor.taxId, zipCode: emisor.zipCode, type: emisor.type });
     setIsDialogOpen(true);
   };
   
-  const handleDeleteRequest = (contact: Contact) => {
-    setContactToDelete(contact);
+  const handleDeleteRequest = (emisor: Emisor) => {
+    setEmisorToDelete(emisor);
     setIsAlertOpen(true);
   }
 
   const handleDeleteConfirm = () => {
-    if (contactToDelete) {
-      updateContacts(contacts.filter((c) => c.id !== contactToDelete.id));
+    if (emisorToDelete) {
+      updateEmissors(emissors.filter((c) => c.id !== emisorToDelete.id));
       toast({
-        title: 'Contacto Eliminado',
-        description: `El contacto "${contactToDelete.name}" ha sido eliminado.`,
+        title: 'Emissor Eliminat',
+        description: `L'emissor "${emisorToDelete.name}" ha estat eliminat.`,
       });
     }
     setIsAlertOpen(false);
-    setContactToDelete(null);
+    setEmisorToDelete(null);
   };
   
   const handleOpenChange = (open: boolean) => {
     setIsDialogOpen(open);
     if (!open) {
-      setEditingContact(null);
+      setEditingEmisor(null);
       setFormData({ name: '', taxId: '', zipCode: '', type: 'supplier' });
     }
   }
   
   const handleAddNew = () => {
-    setEditingContact(null);
+    setEditingEmisor(null);
     setFormData({ name: '', taxId: '', zipCode: '', type: 'supplier' });
     setIsDialogOpen(true);
   }
@@ -124,34 +124,34 @@ export function ContactManager({ initialContacts }: { initialContacts: Contact[]
     setFormData({ ...formData, [e.target.id]: e.target.value });
   }
 
-  const handleSelectChange = (value: Contact['type']) => {
+  const handleSelectChange = (value: Emisor['type']) => {
     setFormData({ ...formData, type: value });
   }
   
   const handleSave = () => {
     if (!formData.name || !formData.taxId || !formData.zipCode) {
-       toast({ variant: 'destructive', title: 'Error', description: 'Todos los campos son obligatorios.' });
+       toast({ variant: 'destructive', title: 'Error', description: 'Tots els camps són obligatoris.' });
        return;
     }
 
-    if (editingContact) {
+    if (editingEmisor) {
       // Update
-      updateContacts(contacts.map((c) => c.id === editingContact.id ? { ...c, ...formData } : c));
-      toast({ title: 'Contacto Actualizado', description: `El contacto "${formData.name}" ha sido actualizado.` });
+      updateEmissors(emissors.map((c) => c.id === editingEmisor.id ? { ...c, ...formData } : c));
+      toast({ title: 'Emissor Actualitzat', description: `L'emissor "${formData.name}" ha estat actualitzat.` });
     } else {
       // Create
-      const newContact: Contact = {
+      const newEmisor: Emisor = {
         id: `cont_${new Date().getTime()}`,
         ...formData
       };
-      updateContacts([...contacts, newContact]);
-      toast({ title: 'Contacto Creado', description: `El contacto "${formData.name}" ha sido creado.` });
+      updateEmissors([...emissors, newEmisor]);
+      toast({ title: 'Emissor Creat', description: `L'emissor "${formData.name}" ha estat creat.` });
     }
     handleOpenChange(false);
   }
 
-  const dialogTitle = editingContact ? 'Editar Contacto' : 'Añadir Nuevo Contacto';
-  const dialogDescription = editingContact ? 'Edita los detalles de tu contacto.' : 'Crea un nuevo contacto para tu organización.';
+  const dialogTitle = editingEmisor ? 'Editar Emissor' : 'Añadir Nuevo Emissor';
+  const dialogDescription = editingEmisor ? 'Edita los detalles de tu emissor.' : 'Crea un nuevo emissor para tu organización.';
 
   return (
     <>
@@ -159,13 +159,13 @@ export function ContactManager({ initialContacts }: { initialContacts: Contact[]
       <Card>
         <CardHeader className="flex flex-row items-center justify-between">
           <div>
-            <CardTitle>Gestionar Contactos</CardTitle>
-            <CardDescription>Añade, edita o elimina los contactos de tu organización.</CardDescription>
+            <CardTitle>Gestionar Emissors</CardTitle>
+            <CardDescription>Añade, edita o elimina los emissors de tu organización.</CardDescription>
           </div>
           <DialogTrigger asChild>
             <Button size="sm" onClick={handleAddNew}>
               <PlusCircle className="mr-2 h-4 w-4" />
-              Añadir Contacto
+              Añadir Emissor
             </Button>
           </DialogTrigger>
         </CardHeader>
@@ -182,33 +182,33 @@ export function ContactManager({ initialContacts }: { initialContacts: Contact[]
                 </TableRow>
                 </TableHeader>
                 <TableBody>
-                {contacts.map((contact) => (
-                    <TableRow key={contact.id}>
-                    <TableCell className="font-medium">{contact.name}</TableCell>
-                    <TableCell>{contact.taxId}</TableCell>
-                    <TableCell>{contact.zipCode}</TableCell>
+                {emissors.map((emisor) => (
+                    <TableRow key={emisor.id}>
+                    <TableCell className="font-medium">{emisor.name}</TableCell>
+                    <TableCell>{emisor.taxId}</TableCell>
+                    <TableCell>{emisor.zipCode}</TableCell>
                     <TableCell>
-                        <Badge variant="secondary">{contactTypeMap[contact.type]}</Badge>
+                        <Badge variant="secondary">{emisorTypeMap[emisor.type]}</Badge>
                     </TableCell>
                     <TableCell className="text-right">
-                        <Button variant="ghost" size="icon" onClick={() => handleEdit(contact)}>
+                        <Button variant="ghost" size="icon" onClick={() => handleEdit(emisor)}>
                         <Edit className="h-4 w-4" />
                         </Button>
                         <Button
                         variant="ghost"
                         size="icon"
                         className="text-red-500 hover:text-red-600"
-                        onClick={() => handleDeleteRequest(contact)}
+                        onClick={() => handleDeleteRequest(emisor)}
                         >
                         <Trash2 className="h-4 w-4" />
                         </Button>
                     </TableCell>
                     </TableRow>
                 ))}
-                {contacts.length === 0 && (
+                {emissors.length === 0 && (
                     <TableRow>
                         <TableCell colSpan={5} className="text-center text-muted-foreground">
-                            No hay contactos.
+                            No hay emissors.
                         </TableCell>
                     </TableRow>
                 )}
@@ -262,7 +262,7 @@ export function ContactManager({ initialContacts }: { initialContacts: Contact[]
           <DialogClose asChild>
              <Button variant="outline">Cancelar</Button>
           </DialogClose>
-          <Button onClick={handleSave}>Guardar Contacto</Button>
+          <Button onClick={handleSave}>Guardar Emissor</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
@@ -272,12 +272,12 @@ export function ContactManager({ initialContacts }: { initialContacts: Contact[]
           <AlertDialogHeader>
             <AlertDialogTitle>¿Estás seguro?</AlertDialogTitle>
             <AlertDialogDescription>
-              Esta acción no se puede deshacer. Se eliminará el contacto
+              Esta acción no se puede deshacer. Se eliminará el emissor
               permanentemente.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel onClick={() => setContactToDelete(null)}>Cancelar</AlertDialogCancel>
+            <AlertDialogCancel onClick={() => setEmisorToDelete(null)}>Cancelar</AlertDialogCancel>
             <AlertDialogAction onClick={handleDeleteConfirm}>
               Eliminar
             </AlertDialogAction>

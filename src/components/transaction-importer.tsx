@@ -5,7 +5,7 @@ import * as React from 'react';
 import { Button } from '@/components/ui/button';
 import { FileUp, Loader2, ChevronDown, Trash2, ListPlus } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import type { Transaction, Contact } from '@/lib/data';
+import type { Transaction, Emisor } from '@/lib/data';
 import Papa from 'papaparse';
 import * as XLSX from 'xlsx';
 import { inferContact } from '@/ai/flows/infer-contact';
@@ -33,7 +33,7 @@ type ImportMode = 'append' | 'replace';
 interface TransactionImporterProps {
   existingTransactions: Transaction[];
   onTransactionsImported: (transactions: Transaction[], mode: ImportMode) => void;
-  availableContacts: Contact[];
+  availableEmissors: Emisor[];
 }
 
 // Function to create a unique key for a transaction to detect duplicates
@@ -61,7 +61,7 @@ const isHeaderRow = (row: any[]): boolean => {
 };
 
 
-export function TransactionImporter({ existingTransactions, onTransactionsImported, availableContacts }: TransactionImporterProps) {
+export function TransactionImporter({ existingTransactions, onTransactionsImported, availableEmissors }: TransactionImporterProps) {
   const fileInputRef = React.useRef<HTMLInputElement>(null);
   const [isImporting, setIsImporting] = React.useState(false);
   const [importMode, setImportMode] = React.useState<ImportMode>('append');
@@ -258,7 +258,7 @@ export function TransactionImporter({ existingTransactions, onTransactionsImport
                 amount: amount,
                 category: null,
                 document: null,
-                contactId: null, // Initially null
+                emisorId: null, // Initially null
             } as Transaction;
         })
         .filter((tx): tx is Transaction => tx !== null);
@@ -281,18 +281,18 @@ export function TransactionImporter({ existingTransactions, onTransactionsImport
 
 
         if (transactionsToProcess.length > 0) {
-            log('Iniciando inferencia de contactos con IA...');
-            const contactsForAI = availableContacts.map(c => ({ id: c.id, name: c.name }));
+            log('Iniciando inferencia de emissors con IA...');
+            const emissorsForAI = availableEmissors.map(c => ({ id: c.id, name: c.name }));
             const transactionsWithContacts = await Promise.all(transactionsToProcess.map(async (tx, index) => {
                 try {
-                    const result = await inferContact({ description: tx.description, contacts: contactsForAI });
+                    const result = await inferContact({ description: tx.description, contacts: emissorsForAI });
                     if (result.contactId) {
-                       log(`[Fila ${index + 1}] Contacto inferido: ${result.contactId} para "${tx.description.substring(0,30)}..."`);
-                       return { ...tx, contactId: result.contactId };
+                       log(`[Fila ${index + 1}] Emissor inferido: ${result.contactId} para "${tx.description.substring(0,30)}..."`);
+                       return { ...tx, emisorId: result.contactId };
                     }
                 } catch (error) {
-                    console.error("Error inferring contact for a transaction:", error);
-                    log(`ERROR en inferencia de contacto para fila ${index + 1}: ${error}`);
+                    console.error("Error inferring emisor for a transaction:", error);
+                    log(`ERROR en inferencia de emissor para fila ${index + 1}: ${error}`);
                 }
                 return tx;
             }));
