@@ -5,7 +5,7 @@ import * as React from 'react';
 import { StatCard } from '@/components/stat-card';
 import { ExpensesChart } from '@/components/expenses-chart';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { DollarSign, TrendingUp, TrendingDown } from 'lucide-react';
+import { DollarSign, TrendingUp, TrendingDown, Rocket } from 'lucide-react';
 import type { Transaction } from '@/lib/data';
 import { transactions as initialTransactions } from '@/lib/data';
 
@@ -48,25 +48,26 @@ export default function DashboardPage() {
 
   }, []);
 
-  const { totalIncome, totalExpenses, netBalance } = React.useMemo(() => {
+  const { totalIncome, totalExpenses, operationalBalance, totalMissionTransfers } = React.useMemo(() => {
     return transactions.reduce((acc, tx) => {
       if (tx.amount > 0) {
         acc.totalIncome += tx.amount;
       } else {
-        // Exclude mission transfers from operational expenses
-        if (tx.category !== MISSION_TRANSFER_CATEGORY) {
+        if (tx.category === MISSION_TRANSFER_CATEGORY) {
+            acc.totalMissionTransfers += tx.amount;
+        } else {
             acc.totalExpenses += tx.amount;
         }
       }
-      // Net balance still considers all movements
-      acc.netBalance = (acc.netBalance || 0) + tx.amount;
       return acc;
-    }, { totalIncome: 0, totalExpenses: 0, netBalance: 0 });
+    }, { totalIncome: 0, totalExpenses: 0, totalMissionTransfers: 0, operationalBalance: 0 });
   }, [transactions]);
   
   const expenseTransactions = React.useMemo(() => 
     transactions.filter(tx => tx.amount < 0 && tx.category !== MISSION_TRANSFER_CATEGORY), 
   [transactions]);
+  
+  const netBalance = totalIncome + totalExpenses;
 
   return (
     <div className="flex flex-col gap-6">
@@ -75,7 +76,7 @@ export default function DashboardPage() {
         <p className="text-muted-foreground">Analiza tus datos financieros con resúmenes y gráficos.</p>
       </div>
       
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <StatCard 
           title="Ingresos Totales"
           value={formatCurrency(totalIncome)}
@@ -88,11 +89,17 @@ export default function DashboardPage() {
           icon={TrendingDown}
           description="Suma de gastos sin incluir transferencias de misión"
         />
-        <StatCard 
-          title="Balance Neto"
+         <StatCard 
+          title="Balance Operativo"
           value={formatCurrency(netBalance)}
           icon={DollarSign}
-          description="Balance total de ingresos y gastos"
+          description="Balance de ingresos y gastos operativos"
+        />
+        <StatCard 
+          title="Transferencias a Terreno"
+          value={formatCurrency(totalMissionTransfers)}
+          icon={Rocket}
+          description="Suma de las transferencias de misión"
         />
       </div>
 
