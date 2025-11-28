@@ -35,7 +35,7 @@ export const transactions: Transaction[] = [
   },
   {
     id: 'txn_2',
-    date: '2024-05-03',
+    date: '2024-0-03',
     description: 'Compra de material de oficina',
     amount: -75.5,
     category: 'Suministros de Oficina',
