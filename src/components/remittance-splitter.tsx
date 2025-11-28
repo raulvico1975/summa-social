@@ -31,6 +31,16 @@ interface CsvRow {
   [key: string]: string | undefined;
 }
 
+// Normalization function to compare names robustly
+const normalizeString = (str: string): string => {
+    if (!str) return '';
+    return str
+        .toLowerCase()
+        .normalize("NFD") // Decompose accented characters
+        .replace(/[\u0300-\u036f]/g, "") // Remove diacritical marks
+        .trim();
+};
+
 export function RemittanceSplitter({
   open,
   onOpenChange,
@@ -110,15 +120,51 @@ export function RemittanceSplitter({
   const findHeader = (row: CsvRow, potentialNames: string[]): string | undefined => {
       const headers = Object.keys(row);
       for (const name of potentialNames) {
-          const foundHeader = headers.find(h => h.toLowerCase().trim() === name.toLowerCase());
+          const foundHeader = headers.find(h => normalizeString(h) === normalizeString(name));
           if (foundHeader) return foundHeader;
       }
       return undefined;
   }
+  
+    const findEmisor = (name: string, taxId: string, emissors: Emisor[]): Emisor | undefined => {
+        const normalizedCsvName = normalizeString(name);
+        const csvNameTokens = new Set(normalizedCsvName.split(' ').filter(Boolean));
+
+        // 1. Find by Tax ID (most reliable)
+        if (taxId) {
+            const foundByTaxId = emissors.find(e => e.taxId.trim() === taxId.trim());
+            if (foundByTaxId) {
+                log(`[Splitter] Emisor encontrado por DNI/CIF: "${name}" -> ${foundByTaxId.name} (${foundByTaxId.taxId})`);
+                return foundByTaxId;
+            }
+        }
+        
+        // 2. If not found by Tax ID, find by flexible name matching
+        if (normalizedCsvName) {
+             const potentialMatches = emissors.filter(e => {
+                const normalizedEmisorName = normalizeString(e.name);
+                const emisorNameTokens = normalizedEmisorName.split(' ').filter(Boolean);
+                // Check if all tokens from the CSV name are present in the emisor's name
+                return [...csvNameTokens].every(token => emisorNameTokens.includes(token));
+            });
+            
+            if (potentialMatches.length === 1) {
+                log(`[Splitter] Emisor encontrado por coincidencia de nombre: "${name}" -> ${potentialMatches[0].name}`);
+                return potentialMatches[0];
+            }
+
+            if (potentialMatches.length > 1) {
+                log(`[Splitter] AVISO: Múltiples coincidencias para "${name}". Se requiere asignación manual.`);
+            }
+        }
+
+        return undefined;
+    }
+
 
   const processCsvData = (data: CsvRow[]) => {
     const newTransactions: Transaction[] = [];
-    let newEmissors: Emisor[] = [];
+    const newEmissors: Emisor[] = []; // This will remain empty as we are not creating new emissors
     let totalAmount = 0;
 
     if (data.length === 0) {
@@ -129,22 +175,16 @@ export function RemittanceSplitter({
     const firstRow = data[0];
     const nameHeader = findHeader(firstRow, ['nom', 'nombre', 'deudor']);
     const taxIdHeader = findHeader(firstRow, ['dni', 'cif', 'nif', 'dni/cif']);
-    const zipCodeHeader = findHeader(firstRow, ['cp', 'codi postal', 'código postal']);
     const amountHeader = findHeader(firstRow, ['import', 'importe', 'cuantía']);
 
     if (!nameHeader || !amountHeader) {
         throw new Error("El archivo CSV debe contener columnas para 'Nombre' e 'Importe'.");
     }
 
-    const emisorMapByTaxId = new Map(existingEmissors.map(e => [e.taxId, e]));
-    const emisorMapByName = new Map(existingEmissors.map(e => [e.name.toLowerCase().trim(), e]));
-    const newEmissorsMapByTaxId = new Map<string, Emisor>();
-
     data.forEach((row, index) => {
       const name = row[nameHeader] || '';
       const amountStr = row[amountHeader] || '0';
       const taxId = taxIdHeader ? row[taxIdHeader] || '' : '';
-      const zipCode = zipCodeHeader ? row[zipCodeHeader] || '00000' : '00000';
       
       const amount = parseFloat(amountStr.replace(/[^0-9,-]+/g, '').replace(',', '.'));
 
@@ -154,38 +194,11 @@ export function RemittanceSplitter({
       }
       
       totalAmount += amount;
-      let emisor: Emisor | undefined;
-
-      // 1. Find by Tax ID (most reliable)
-      if (taxId) {
-          emisor = emisorMapByTaxId.get(taxId) || newEmissorsMapByTaxId.get(taxId);
-      }
-
-      // 2. If not found by Tax ID, find by Name
-      if (!emisor) {
-        emisor = emisorMapByName.get(name.toLowerCase().trim());
-        if (emisor) {
-            log(`[Splitter] Emisor encontrado por nombre: "${name}" -> ${emisor.name} (${emisor.taxId})`);
-        }
-      }
-
-      // 3. If still not found and we have enough data, create a new one
-      if (!emisor && name && taxId) {
-        const newEmisor: Emisor = {
-          id: `cont_${new Date().getTime()}_${index}`,
-          name: name.trim(),
-          taxId: taxId.trim(),
-          zipCode: zipCode.trim(),
-          type: 'donor',
-        };
-        newEmissors.push(newEmisor);
-        newEmissorsMapByTaxId.set(newEmisor.taxId, newEmisor); // Add to map for this session
-        emisor = newEmisor;
-        log(`[Splitter] Nuevo emisor creado y añadido a la cola: ${name} (${taxId})`);
-      }
+      
+      const emisor = findEmisor(name, taxId, existingEmissors);
       
       if (!emisor) {
-          log(`[Splitter] AVISO: No se ha podido encontrar o crear un emisor para la fila ${index + 2} ("${name}"). El movimiento se creará sin emisor.`);
+          log(`[Splitter] AVISO: No se ha podido encontrar un emisor para la fila ${index + 2} ("${name}"). El movimiento necesitará asignación manual.`);
       }
 
       const newTransaction: Transaction = {
@@ -222,9 +235,9 @@ export function RemittanceSplitter({
             <ul className="list-disc pl-5 mt-2 text-xs">
                 <li><b>Nom/Nombre/Deudor</b></li>
                 <li><b>Import/Importe</b></li>
-                <li>(Opcional) <b>DNI/CIF/NIF</b>, <b>CP/Codi Postal</b></li>
+                <li>(Opcional pero recomendado) <b>DNI/CIF/NIF</b></li>
             </ul>
-             <p className="mt-2 text-xs">El sistema intentará hacer coincidir las filas con los emisores existentes por DNI/CIF, y si no, por nombre.</p>
+             <p className="mt-2 text-xs">El sistema buscará coincidencias por DNI/CIF y, si no, por nombre (ignorando mayúsculas/minúsculas y acentos).</p>
           </AlertDescription>
         </Alert>
 
