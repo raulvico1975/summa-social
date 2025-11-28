@@ -253,7 +253,7 @@ export function ProjectManager({ initialProjects, initialEmissors, initialTransa
                                         icon={TrendingDown}
                                         />
                                     <StatCard 
-                                        title="Despeses de Gestió"
+                                        title="Despeses a Espanya"
                                         value={formatCurrency(balance.expenses)}
                                         icon={Briefcase}
                                         />
@@ -327,3 +327,5 @@ export function ProjectManager({ initialProjects, initialEmissors, initialTransa
     </>
   );
 }
+
+    
