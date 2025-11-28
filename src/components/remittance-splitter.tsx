@@ -28,16 +28,7 @@ interface RemittanceSplitterProps {
 }
 
 interface CsvRow {
-  Nom?: string;
-  Nombre?: string;
-  DNI?: string;
-  CIF?: string;
-  'DNI/CIF'?: string;
-  Import?: string;
-  Importe?: string;
-  'Codi Postal'?: string;
-  'Código Postal'?: string;
-  CP?: string;
+  [key: string]: string | undefined;
 }
 
 export function RemittanceSplitter({
@@ -115,42 +106,86 @@ export function RemittanceSplitter({
       },
     });
   };
+  
+  const findHeader = (row: CsvRow, potentialNames: string[]): string | undefined => {
+      const headers = Object.keys(row);
+      for (const name of potentialNames) {
+          const foundHeader = headers.find(h => h.toLowerCase().trim() === name.toLowerCase());
+          if (foundHeader) return foundHeader;
+      }
+      return undefined;
+  }
 
   const processCsvData = (data: CsvRow[]) => {
     const newTransactions: Transaction[] = [];
-    const newEmissors: Emisor[] = [];
+    let newEmissors: Emisor[] = [];
     let totalAmount = 0;
 
+    if (data.length === 0) {
+      throw new Error("El archivo CSV está vacío o no tiene datos.");
+    }
+    
+    // Dynamically find header names
+    const firstRow = data[0];
+    const nameHeader = findHeader(firstRow, ['nom', 'nombre', 'deudor']);
+    const taxIdHeader = findHeader(firstRow, ['dni', 'cif', 'nif', 'dni/cif']);
+    const zipCodeHeader = findHeader(firstRow, ['cp', 'codi postal', 'código postal']);
+    const amountHeader = findHeader(firstRow, ['import', 'importe', 'cuantía']);
+
+    if (!nameHeader || !amountHeader) {
+        throw new Error("El archivo CSV debe contener columnas para 'Nombre' e 'Importe'.");
+    }
+
     const emisorMapByTaxId = new Map(existingEmissors.map(e => [e.taxId, e]));
+    const emisorMapByName = new Map(existingEmissors.map(e => [e.name.toLowerCase().trim(), e]));
+    const newEmissorsMapByTaxId = new Map<string, Emisor>();
 
     data.forEach((row, index) => {
-      const name = row.Nom || row.Nombre || '';
-      const taxId = row.DNI || row.CIF || row['DNI/CIF'] || '';
-      const zipCode = row['Codi Postal'] || row['Código Postal'] || row.CP || '00000';
-      const amountStr = row.Import || row.Importe || '0';
-      const amount = parseFloat(amountStr.replace(',', '.'));
+      const name = row[nameHeader] || '';
+      const amountStr = row[amountHeader] || '0';
+      const taxId = taxIdHeader ? row[taxIdHeader] || '' : '';
+      const zipCode = zipCodeHeader ? row[zipCodeHeader] || '00000' : '00000';
+      
+      const amount = parseFloat(amountStr.replace(/[^0-9,-]+/g, '').replace(',', '.'));
 
-      if (!name || !taxId || isNaN(amount)) {
-        log(`[Splitter] Fila ${index + 1} inválida, se omite: ${JSON.stringify(row)}`);
+      if (!name || isNaN(amount)) {
+        log(`[Splitter] Fila ${index + 2} inválida, se omite: ${JSON.stringify(row)}`);
         return;
       }
       
       totalAmount += amount;
-      let emisor = emisorMapByTaxId.get(taxId);
+      let emisor: Emisor | undefined;
 
+      // 1. Find by Tax ID (most reliable)
+      if (taxId) {
+          emisor = emisorMapByTaxId.get(taxId) || newEmissorsMapByTaxId.get(taxId);
+      }
+
+      // 2. If not found by Tax ID, find by Name
       if (!emisor) {
-        // Create new emisor if it doesn't exist
+        emisor = emisorMapByName.get(name.toLowerCase().trim());
+        if (emisor) {
+            log(`[Splitter] Emisor encontrado por nombre: "${name}" -> ${emisor.name} (${emisor.taxId})`);
+        }
+      }
+
+      // 3. If still not found and we have enough data, create a new one
+      if (!emisor && name && taxId) {
         const newEmisor: Emisor = {
           id: `cont_${new Date().getTime()}_${index}`,
-          name,
-          taxId,
-          zipCode,
+          name: name.trim(),
+          taxId: taxId.trim(),
+          zipCode: zipCode.trim(),
           type: 'donor',
         };
         newEmissors.push(newEmisor);
-        emisorMapByTaxId.set(taxId, newEmisor); // Add to map to avoid duplicates in the same file
+        newEmissorsMapByTaxId.set(newEmisor.taxId, newEmisor); // Add to map for this session
         emisor = newEmisor;
         log(`[Splitter] Nuevo emisor creado y añadido a la cola: ${name} (${taxId})`);
+      }
+      
+      if (!emisor) {
+          log(`[Splitter] AVISO: No se ha podido encontrar o crear un emisor para la fila ${index + 2} ("${name}"). El movimiento se creará sin emisor.`);
       }
 
       const newTransaction: Transaction = {
@@ -160,7 +195,7 @@ export function RemittanceSplitter({
         amount: amount,
         category: 'Donaciones', // Default category for remittances
         document: null,
-        emisorId: emisor.id,
+        emisorId: emisor ? emisor.id : null,
         projectId: transaction.projectId, // Inherit project from original transaction
       };
       newTransactions.push(newTransaction);
@@ -185,11 +220,11 @@ export function RemittanceSplitter({
           <AlertDescription>
             El archivo debe contener cabeceras y al menos las columnas:
             <ul className="list-disc pl-5 mt-2 text-xs">
-                <li><b>Nom</b> o <b>Nombre</b></li>
-                <li><b>DNI</b>, <b>CIF</b> o <b>DNI/CIF</b></li>
-                <li><b>Import</b> o <b>Importe</b></li>
-                <li>(Opcional) <b>CP</b>, <b>Codi Postal</b> o <b>Código Postal</b></li>
+                <li><b>Nom/Nombre/Deudor</b></li>
+                <li><b>Import/Importe</b></li>
+                <li>(Opcional) <b>DNI/CIF/NIF</b>, <b>CP/Codi Postal</b></li>
             </ul>
+             <p className="mt-2 text-xs">El sistema intentará hacer coincidir las filas con los emisores existentes por DNI/CIF, y si no, por nombre.</p>
           </AlertDescription>
         </Alert>
 
