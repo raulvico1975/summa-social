@@ -50,6 +50,17 @@ const findColumnIndex = (header: string[], potentialNames: string[]): number => 
     return -1;
 }
 
+// Keywords to identify the header row
+const headerKeywords = ['fecha', 'concepto', 'importe', 'descrip', 'amount'];
+
+const isHeaderRow = (row: any[]): boolean => {
+    const rowString = row.join(' ').toLowerCase();
+    // A row is considered a header if it contains at least a few of the keywords
+    const matches = headerKeywords.filter(keyword => rowString.includes(keyword)).length;
+    return matches >= 2;
+};
+
+
 export function TransactionImporter({ existingTransactions, onTransactionsImported, availableContacts }: TransactionImporterProps) {
   const fileInputRef = React.useRef<HTMLInputElement>(null);
   const [isImporting, setIsImporting] = React.useState(false);
@@ -103,18 +114,31 @@ export function TransactionImporter({ existingTransactions, onTransactionsImport
     reader.onload = (e) => {
       try {
         const data = e.target?.result;
-        const workbook = XLSX.read(data, { type: 'binary' });
+        const workbook = XLSX.read(data, { type: 'binary', cellDates: true });
         const sheetName = workbook.SheetNames[0];
         const worksheet = workbook.Sheets[sheetName];
-        const json = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
+        const json = XLSX.utils.sheet_to_json(worksheet, { header: 1, defval: "" });
         
         if (!json || json.length === 0) {
             throw new Error("El archivo XLSX está vacío o no tiene un formato válido.");
         }
         
-        const header = (json[0] as string[]).map(h => String(h || '').trim());
+        let headerRowIndex = -1;
+        for(let i = 0; i < json.length; i++) {
+            if (isHeaderRow(json[i] as any[])) {
+                headerRowIndex = i;
+                break;
+            }
+        }
+
+        if (headerRowIndex === -1) {
+             throw new Error(`No se ha podido encontrar la fila de cabecera. Asegúrate de que el archivo contiene columnas como 'Fecha', 'Concepto' e 'Importe'.`);
+        }
         
-        const dateIndex = findColumnIndex(header, ['fecha', 'data']);
+        const header = (json[headerRowIndex] as string[]).map(h => String(h || '').trim());
+        log(`Cabecera encontrada en la fila ${headerRowIndex + 1}: ${header.join(', ')}`);
+        
+        const dateIndex = findColumnIndex(header, ['fecha operación', 'fecha', 'data']);
         const conceptIndex = findColumnIndex(header, ['concepto', 'descripció', 'description']);
         const amountIndex = findColumnIndex(header, ['importe', 'import', 'amount', 'quantitat']);
 
@@ -127,7 +151,7 @@ export function TransactionImporter({ existingTransactions, onTransactionsImport
             throw new Error(`Columnas requeridas no encontradas: ${missing}. Cabeceras encontradas: ${header.join(', ')}`);
         }
 
-        const dataRows = json.slice(1);
+        const dataRows = json.slice(headerRowIndex + 1);
         const parsedData = dataRows.map((row: any) => ({
             Fecha: row[dateIndex],
             Concepto: row[conceptIndex],
@@ -154,7 +178,7 @@ export function TransactionImporter({ existingTransactions, onTransactionsImport
         });
         setIsImporting(false);
     }
-    reader.readAsBinaryString(file);
+    reader.readAsArrayBuffer(file);
   }
 
   const parseCsv = (file: File, mode: ImportMode) => {
@@ -184,37 +208,40 @@ export function TransactionImporter({ existingTransactions, onTransactionsImport
     try {
         const allParsedRows = data
         .map((row: any, index: number) => {
-            // Handle XLSX date serial numbers
-            let dateValue = row.Fecha;
-            if (typeof dateValue === 'number') {
-                const excelEpoch = new Date(1899, 11, 30);
-                const jsDate = new Date(excelEpoch.getTime() + dateValue * 24 * 60 * 60 * 1000);
-                // Adjust for timezone offset to get the correct date
-                dateValue = new Date(jsDate.getTime() + (jsDate.getTimezoneOffset() * 60 * 1000));
-            }
+            const dateValue = row.Fecha || row.fecha || row['Fecha Operación'] || row['fecha operación'];
+            const descriptionValue = row.Concepto || row.concepto || row.description || row.descripción;
+            let amountValue = row.Importe || row.importe || row.amount;
 
-            const amountString = String(row.Importe || '0').replace(',', '.');
-            const amount = parseFloat(amountString);
+            if (typeof amountValue === 'string') {
+                amountValue = amountValue.replace('.', '').replace(',', '.'); // Handle thousand separators and decimal commas
+            }
+            const amount = parseFloat(amountValue);
             
-            if (!dateValue || !row.Concepto || isNaN(amount)) {
-                log(`Fila ${index + 2} inválida, saltando: ${JSON.stringify(row)}`);
+            if (!dateValue || !descriptionValue || isNaN(amount)) {
+                log(`Fila ${index + 2} inválida o vacía, saltando: ${JSON.stringify(row)}`);
                 return null;
             }
 
             let date;
-            if (dateValue instanceof Date) {
+             if (dateValue instanceof Date) {
                 date = dateValue;
             } else {
                 const dateString = String(dateValue);
-                const partsDMY = dateString.match(/^(\d{2})[/-](\d{2})[/-](\d{4})$/); // DD/MM/YYYY
-                const partsYMD = dateString.match(/^(\d{4})[/-](\d{2})[/-](\d{2})$/); // YYYY-MM-DD
-                
-                if (partsDMY) {
-                    date = new Date(`${partsDMY[3]}-${partsDMY[2]}-${partsDMY[1]}`);
-                } else if (partsYMD) {
-                    date = new Date(dateString);
+                 // Handle DD/MM/YYYY, DD-MM-YYYY, YYYY/MM/DD, YYYY-MM-DD
+                const parts = dateString.match(/(\d{1,2})[/-](\d{1,2})[/-](\d{2,4})/);
+                if (parts) {
+                    const day = parseInt(parts[1], 10);
+                    const month = parseInt(parts[2], 10);
+                    let year = parseInt(parts[3], 10);
+                    if (year < 100) year += 2000; // Handle 2-digit years
+
+                    if (month > 12 && day <= 12) { // Likely MM/DD/YYYY
+                         date = new Date(year, month - 1, day);
+                    } else { // Assume DD/MM/YYYY
+                         date = new Date(year, month - 1, day);
+                    }
                 } else {
-                    date = new Date(dateString); // Fallback for other formats
+                    date = new Date(dateString); // Fallback for ISO strings or other formats
                 }
             }
 
@@ -227,7 +254,7 @@ export function TransactionImporter({ existingTransactions, onTransactionsImport
             return {
                 id: `imported_${new Date().getTime()}_${index}`,
                 date: date.toISOString(),
-                description: row.Concepto,
+                description: descriptionValue,
                 amount: amount,
                 category: null,
                 document: null,
@@ -311,7 +338,7 @@ export function TransactionImporter({ existingTransactions, onTransactionsImport
         type="file"
         ref={fileInputRef}
         onChange={handleFileChange}
-        accept=".csv, .xlsx"
+        accept=".csv, application/vnd.openxmlformats-officedocument.spreadsheetml.sheet, application/vnd.ms-excel"
         className="hidden"
         disabled={isImporting}
       />
