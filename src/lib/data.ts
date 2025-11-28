@@ -106,6 +106,7 @@ export const categories: Category[] = [
   { id: 'cat_5', name: 'Servicios Públicos', type: 'expense' },
   { id: 'cat_6', name: 'Viajes', type: 'expense' },
   { id: 'cat_7', name: 'Salarios', type: 'expense' },
+  { id: 'cat_8', name: 'Transferències de Missió', type: 'expense' },
 ];
 
 export const emissors: Emisor[] = [

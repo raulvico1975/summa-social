@@ -10,6 +10,8 @@ import type { Transaction } from '@/lib/data';
 import { transactions as initialTransactions } from '@/lib/data';
 
 const TRANSACTIONS_STORAGE_KEY = 'summa-social-transactions';
+const MISSION_TRANSFER_CATEGORY = 'Transferències de Missió';
+
 
 const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('es-ES', { style: 'currency', currency: 'EUR' }).format(amount);
@@ -51,14 +53,20 @@ export default function DashboardPage() {
       if (tx.amount > 0) {
         acc.totalIncome += tx.amount;
       } else {
-        acc.totalExpenses += tx.amount;
+        // Exclude mission transfers from operational expenses
+        if (tx.category !== MISSION_TRANSFER_CATEGORY) {
+            acc.totalExpenses += tx.amount;
+        }
       }
-      acc.netBalance = acc.totalIncome + acc.totalExpenses;
+      // Net balance still considers all movements
+      acc.netBalance = (acc.netBalance || 0) + tx.amount;
       return acc;
     }, { totalIncome: 0, totalExpenses: 0, netBalance: 0 });
   }, [transactions]);
   
-  const expenseTransactions = React.useMemo(() => transactions.filter(tx => tx.amount < 0), [transactions]);
+  const expenseTransactions = React.useMemo(() => 
+    transactions.filter(tx => tx.amount < 0 && tx.category !== MISSION_TRANSFER_CATEGORY), 
+  [transactions]);
 
   return (
     <div className="flex flex-col gap-6">
@@ -75,10 +83,10 @@ export default function DashboardPage() {
           description="Suma de todos los ingresos"
         />
         <StatCard 
-          title="Gastos Totales"
+          title="Gastos Operativos"
           value={formatCurrency(totalExpenses)}
           icon={TrendingDown}
-          description="Suma de todos los gastos"
+          description="Suma de gastos sin incluir transferencias de misión"
         />
         <StatCard 
           title="Balance Neto"
