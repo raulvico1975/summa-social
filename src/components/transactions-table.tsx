@@ -59,6 +59,7 @@ import {
   MoreVertical,
   Edit,
   FolderKanban,
+  GitMerge,
 } from 'lucide-react';
 import type { Transaction, Category, Emisor, Project } from '@/lib/data';
 import { categorizeTransaction } from '@/ai/flows/categorize-transactions';
@@ -67,6 +68,7 @@ import { useAuth } from '@/hooks/use-auth';
 import { storage } from '@/lib/firebase';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { useAppLog } from '@/hooks/use-app-log';
+import { RemittanceSplitter } from '@/components/remittance-splitter';
 
 export function TransactionsTable({
   transactions,
@@ -99,6 +101,9 @@ export function TransactionsTable({
   const [newEmisorFormData, setNewEmisorFormData] = React.useState({ name: '', taxId: '', zipCode: '' });
   const [newEmisorTransactionId, setNewEmisorTransactionId] = React.useState<string | null>(null);
   const [isBatchCategorizing, setIsBatchCategorizing] = React.useState(false);
+
+  const [isSplitterOpen, setIsSplitterOpen] = React.useState(false);
+  const [transactionToSplit, setTransactionToSplit] = React.useState<Transaction | null>(null);
 
   const emisorMap = React.useMemo(() => 
     availableEmissors.reduce((acc, emisor) => {
@@ -362,7 +367,7 @@ export function TransactionsTable({
     }
     const newEmisor: Emisor = {
       id: `cont_${new Date().getTime()}`,
-      type: 'supplier', // Default type, can be changed later in emisor manager
+      type: 'donor', // When created from here, default to donor
       ...newEmisorFormData,
     };
 
@@ -378,6 +383,29 @@ export function TransactionsTable({
     setNewEmisorTransactionId(null);
   };
   
+  const handleSplitRemittance = (transaction: Transaction) => {
+    setTransactionToSplit(transaction);
+    setIsSplitterOpen(true);
+  };
+
+  const handleOnSplitDone = (newTransactions: Transaction[], newEmissors: Emisor[]) => {
+    if (!transactionToSplit) return;
+
+    // Remove the original remittance transaction
+    const remainingTransactions = transactions.filter(tx => tx.id !== transactionToSplit.id);
+    
+    // Add the new individual transactions
+    setTransactions([...remainingTransactions, ...newTransactions]);
+
+    // Add any new emissors that were created
+    if (newEmissors.length > 0) {
+      setAvailableEmissors([...availableEmissors, ...newEmissors]);
+    }
+    
+    setIsSplitterOpen(false);
+    setTransactionToSplit(null);
+  };
+
   const hasUncategorized = React.useMemo(() => transactions.some(tx => !tx.category), [transactions]);
 
 
@@ -555,6 +583,13 @@ export function TransactionsTable({
                                     <Edit className="mr-2 h-4 w-4" />
                                     Editar
                                 </DropdownMenuItem>
+                                {tx.amount > 0 && (
+                                  <DropdownMenuItem onClick={() => handleSplitRemittance(tx)}>
+                                    <GitMerge className="mr-2 h-4 w-4" />
+                                    Dividir Remesa
+                                  </DropdownMenuItem>
+                                )}
+                                <DropdownMenuSeparator />
                                 <DropdownMenuItem className="text-red-500" onClick={() => handleDeleteClick(tx)}>
                                     <Trash2 className="mr-2 h-4 w-4" />
                                     Eliminar
@@ -697,6 +732,17 @@ export function TransactionsTable({
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Remittance Splitter Dialog */}
+      {transactionToSplit && (
+        <RemittanceSplitter
+          open={isSplitterOpen}
+          onOpenChange={setIsSplitterOpen}
+          transaction={transactionToSplit}
+          existingEmissors={availableEmissors}
+          onSplitDone={handleOnSplitDone}
+        />
+      )}
     </>
   );
 }
