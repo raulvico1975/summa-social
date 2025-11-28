@@ -10,7 +10,7 @@ import type { Transaction } from '@/lib/data';
 import { transactions as initialTransactions } from '@/lib/data';
 
 const TRANSACTIONS_STORAGE_KEY = 'summa-social-transactions';
-const MISSION_TRANSFER_CATEGORY = 'Transferències de Missió';
+const MISSION_TRANSFER_CATEGORY = 'Transferencias a terreno o socias';
 
 
 const formatCurrency = (amount: number) => {
