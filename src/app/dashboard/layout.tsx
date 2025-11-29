@@ -1,4 +1,3 @@
-
 'use client';
 
 import * as React from 'react';
@@ -8,10 +7,14 @@ import { DashboardHeader } from '@/components/dashboard-header';
 import { LogPanel } from '@/components/log-panel';
 import { AppLogContext } from '@/hooks/use-app-log';
 import type { LogMessage } from '@/hooks/use-app-log';
+import { useInitializeUserData } from '@/hooks/use-initialize-user-data';
 
 let logCounter = 0;
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
+  // Hook para inicializar los datos del usuario si es nuevo
+  useInitializeUserData();
+  
   const [open, setOpen] = React.useState(true);
   const [logs, setLogs] = React.useState<LogMessage[]>([]);
 
