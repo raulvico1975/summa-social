@@ -1,0 +1,269 @@
+{
+  "entities": {
+    "Transaction": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Transaction",
+      "type": "object",
+      "description": "Represents a financial transaction.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the transaction."
+        },
+        "date": {
+          "type": "string",
+          "description": "Date of the transaction.",
+          "format": "date-time"
+        },
+        "description": {
+          "type": "string",
+          "description": "Description of the transaction."
+        },
+        "amount": {
+          "type": "number",
+          "description": "Amount of the transaction."
+        },
+        "categoryId": {
+          "type": "string",
+          "description": "Reference to Category. (Relationship: Category 1:N Transaction)"
+        },
+        "emitterId": {
+          "type": "string",
+          "description": "Reference to Emitter. (Relationship: Emitter 1:N Transaction)"
+        },
+        "documentIds": {
+          "type": "array",
+          "description": "References to Documents. (Relationship: Document N:N Transaction)",
+          "items": {
+            "type": "string"
+          }
+        },
+        "projectId": {
+          "type": "string",
+          "description": "Reference to Project. (Relationship: Project 1:N Transaction)"
+        }
+      },
+      "required": [
+        "id",
+        "date",
+        "description",
+        "amount",
+        "categoryId",
+        "emitterId",
+        "projectId"
+      ]
+    },
+    "Category": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Category",
+      "type": "object",
+      "description": "Represents a category for classifying transactions.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the category."
+        },
+        "name": {
+          "type": "string",
+          "description": "Name of the category."
+        },
+        "description": {
+          "type": "string",
+          "description": "Description of the category."
+        }
+      },
+      "required": [
+        "id",
+        "name",
+        "description"
+      ]
+    },
+    "Emitter": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Emitter",
+      "type": "object",
+      "description": "Represents the emitter of a transaction (e.g., a bank, a merchant).",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the emitter."
+        },
+        "name": {
+          "type": "string",
+          "description": "Name of the emitter."
+        },
+        "description": {
+          "type": "string",
+          "description": "Description of the emitter."
+        }
+      },
+      "required": [
+        "id",
+        "name",
+        "description"
+      ]
+    },
+    "Document": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Document",
+      "type": "object",
+      "description": "Represents a document associated with a transaction (e.g., a receipt, an invoice).",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the document."
+        },
+        "name": {
+          "type": "string",
+          "description": "Name of the document."
+        },
+        "url": {
+          "type": "string",
+          "description": "URL of the document.",
+          "format": "uri"
+        }
+      },
+      "required": [
+        "id",
+        "name",
+        "url"
+      ]
+    },
+    "Project": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Project",
+      "type": "object",
+      "description": "Represents a project to which transactions can be assigned.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the project."
+        },
+        "name": {
+          "type": "string",
+          "description": "Name of the project."
+        },
+        "description": {
+          "type": "string",
+          "description": "Description of the project."
+        }
+      },
+      "required": [
+        "id",
+        "name",
+        "description"
+      ]
+    }
+  },
+  "auth": {
+    "providers": [
+      "password",
+      "anonymous"
+    ]
+  },
+  "firestore": {
+    "structure": [
+      {
+        "path": "/users/{userId}/transactions/{transactionId}",
+        "definition": {
+          "entityName": "Transaction",
+          "schema": {
+            "$ref": "#/backend/entities/Transaction"
+          },
+          "description": "Stores financial transactions for each user. Only the authenticated user can access their own transactions.",
+          "params": [
+            {
+              "name": "userId",
+              "description": "The ID of the user who owns the transaction."
+            },
+            {
+              "name": "transactionId",
+              "description": "The ID of the transaction."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/users/{userId}/categories/{categoryId}",
+        "definition": {
+          "entityName": "Category",
+          "schema": {
+            "$ref": "#/backend/entities/Category"
+          },
+          "description": "Stores categories for classifying transactions. Each user manages their own categories.",
+          "params": [
+            {
+              "name": "userId",
+              "description": "The ID of the user who owns the category."
+            },
+            {
+              "name": "categoryId",
+              "description": "The ID of the category."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/users/{userId}/emitters/{emitterId}",
+        "definition": {
+          "entityName": "Emitter",
+          "schema": {
+            "$ref": "#/backend/entities/Emitter"
+          },
+          "description": "Stores transaction emitters (e.g., banks, merchants).  Each user manages their own emitters.",
+          "params": [
+            {
+              "name": "userId",
+              "description": "The ID of the user who owns the emitter."
+            },
+            {
+              "name": "emitterId",
+              "description": "The ID of the emitter."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/users/{userId}/documents/{documentId}",
+        "definition": {
+          "entityName": "Document",
+          "schema": {
+            "$ref": "#/backend/entities/Document"
+          },
+          "description": "Stores documents associated with transactions. Each user manages their own documents.",
+          "params": [
+            {
+              "name": "userId",
+              "description": "The ID of the user who owns the document."
+            },
+            {
+              "name": "documentId",
+              "description": "The ID of the document."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/users/{userId}/projects/{projectId}",
+        "definition": {
+          "entityName": "Project",
+          "schema": {
+            "$ref": "#/backend/entities/Project"
+          },
+          "description": "Stores projects to which transactions can be assigned. Each user manages their own projects.",
+          "params": [
+            {
+              "name": "userId",
+              "description": "The ID of the user who owns the project."
+            },
+            {
+              "name": "projectId",
+              "description": "The ID of the project."
+            }
+          ]
+        }
+      }
+    ],
+    "reasoning": "The Firestore structure is designed to ensure data isolation and access control for each user. Each user has their own dedicated space for managing transactions, categories, emitters, documents, and projects. This approach eliminates the need for complex security rules involving `get()` calls, as data access is primarily path-based, focusing on the current `request.auth.uid`. \n\n- **Transactions:** Stored under `/users/{userId}/transactions/{transactionId}`.  This structure ensures that each user can only access their own transactions. Security rules will check that `request.auth.uid == userId`.\n- **Categories, Emitters, Projects:** Stored similarly under `/users/{userId}/categories/{categoryId}`, `/users/{userId}/emitters/{emitterId}`, and `/users/{userId}/projects/{projectId}`, enabling user-specific management and isolation.  This ensures that each user can manage their own data.\n- **Documents:** Stored under `/users/{userId}/documents/{documentId}`. Documents are owned by the user and can be associated with transactions.  This allows users to upload and manage documents related to their transactions.\n\n**Authorization Independence (CRITICAL):** This design achieves Authorization Independence by avoiding hierarchical authorization dependencies.  Each collection is secured based on the `userId` derived from the path and compared to `request.auth.uid`. No `get()` calls are needed to check parent document attributes.\n\n**QAPs (Rules are not Filters):** This structure supports secure `list` operations.  Listing transactions, categories, emitters, projects, or documents under a specific user is secure because the security rules only allow access to the data belonging to the authenticated user (`request.auth.uid`). Thus, the rules do not act as filters, because you cannot list entities not belonging to the user."
+  }
+}
