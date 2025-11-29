@@ -63,7 +63,6 @@ import {
 import type { Transaction, Category, Emisor, Project } from '@/lib/data';
 import { categorizeTransaction } from '@/ai/flows/categorize-transactions';
 import { useToast } from '@/hooks/use-toast';
-import { storage } from '@/lib/firebase';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { useAppLog } from '@/hooks/use-app-log';
 import { RemittanceSplitter } from '@/components/remittance-splitter';
@@ -71,7 +70,7 @@ import { useCollection, useFirebase, useMemoFirebase, addDocumentNonBlocking, de
 import { collection, doc } from 'firebase/firestore';
 
 export function TransactionsTable() {
-  const { firestore, user } = useFirebase();
+  const { firestore, user, storage } = useFirebase();
 
   const transactionsCollection = useMemoFirebase(
     () => user ? collection(firestore, 'users', user.uid, 'transactions') : null,
