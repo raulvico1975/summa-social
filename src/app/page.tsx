@@ -7,22 +7,40 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Logo } from '@/components/logo';
+import { useFirebase, initiateAnonymousSignIn } from '@/firebase';
+import { useToast } from '@/hooks/use-toast';
 
 // Contraseña simple para el acceso en desarrollo
 const DEV_PASSWORD = 'summa';
 
 export default function LoginPage() {
   const router = useRouter();
+  const { auth, user, isUserLoading } = useFirebase();
+  const { toast } = useToast();
   const [password, setPassword] = React.useState('');
   const [error, setError] = React.useState('');
+  const [isLoggingIn, setIsLoggingIn] = React.useState(false);
 
   const handleLogin = () => {
     if (password === DEV_PASSWORD) {
-      router.push('/dashboard');
+      setError('');
+      setIsLoggingIn(true);
+      toast({ title: 'Contraseña correcta', description: 'Iniciando sesión en Firebase...' });
+      initiateAnonymousSignIn(auth);
+      // The onAuthStateChanged listener in FirebaseProvider will handle the redirect
     } else {
       setError('Contrasenya incorrecta.');
+      setIsLoggingIn(false);
     }
   };
+
+  React.useEffect(() => {
+    // If there's a user and the login process has started, redirect to dashboard
+    if (user && isLoggingIn) {
+      router.push('/dashboard');
+    }
+  }, [user, isLoggingIn, router]);
+
 
   const handleKeyPress = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter') {
@@ -53,12 +71,13 @@ export default function LoginPage() {
             }}
             onKeyPress={handleKeyPress}
             placeholder="••••••••"
+            disabled={isLoggingIn || isUserLoading}
           />
           {error && <p className="text-sm text-red-500">{error}</p>}
         </div>
 
-        <Button onClick={handleLogin} className="w-full">
-          Acceder al Panel de Control
+        <Button onClick={handleLogin} className="w-full" disabled={isLoggingIn || isUserLoading}>
+          {isLoggingIn || isUserLoading ? 'Accediendo...' : 'Acceder al Panel de Control'}
         </Button>
       </div>
     </main>
