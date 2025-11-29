@@ -27,7 +27,7 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { useCollection, useFirebase, useMemoFirebase } from '@/firebase';
-import { collection, writeBatch } from 'firebase/firestore';
+import { collection, writeBatch, doc } from 'firebase/firestore';
 
 
 type ImportMode = 'append' | 'replace';
@@ -309,17 +309,17 @@ export function TransactionImporter({ existingTransactions }: TransactionImporte
                 return tx;
             }));
 
-            const transactionsCollection = collection(firestore, 'users', user.uid, 'transactions');
+            const transactionsCollectionRef = collection(firestore, 'users', user.uid, 'transactions');
             const batch = writeBatch(firestore);
 
             if (mode === 'replace') {
                 existingTransactions.forEach(tx => {
-                    batch.delete(transactionsCollection.doc(tx.id));
+                    batch.delete(doc(transactionsCollectionRef, tx.id));
                 })
             }
             
             transactionsWithContacts.forEach(tx => {
-                const newDocRef = transactionsCollection.doc();
+                const newDocRef = doc(transactionsCollectionRef);
                 batch.set(newDocRef, tx);
             });
 

@@ -20,7 +20,7 @@ import {
 } from '@/components/ui/alert-dialog';
 import { useToast } from '@/hooks/use-toast';
 import { useCollection, useFirebase, useMemoFirebase } from '@/firebase';
-import { collection, writeBatch } from 'firebase/firestore';
+import { collection, writeBatch, doc } from 'firebase/firestore';
 
 export default function MovementsPage() {
   const { firestore, user } = useFirebase();
@@ -34,10 +34,11 @@ export default function MovementsPage() {
   const { data: transactions, isLoading: isLoadingTransactions } = useCollection<Transaction>(transactionsQuery);
 
   const handleDeleteAll = async () => {
-    if (!transactionsQuery || !transactions) return;
+    if (!firestore || !user || !transactions) return;
     const batch = writeBatch(firestore);
     transactions.forEach(tx => {
-      batch.delete(transactionsQuery.doc(tx.id));
+      const docRef = doc(firestore, 'users', user.uid, 'transactions', tx.id);
+      batch.delete(docRef);
     });
     try {
       await batch.commit();

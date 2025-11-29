@@ -19,7 +19,7 @@ import Papa from 'papaparse';
 import { FileUp, Loader2, Info } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { addDocumentNonBlocking, useFirebase } from '@/firebase';
-import { collection, writeBatch } from 'firebase/firestore';
+import { collection, writeBatch, doc } from 'firebase/firestore';
 
 interface RemittanceSplitterProps {
   open: boolean;
@@ -92,14 +92,15 @@ export function RemittanceSplitter({
                 throw new Error(`El importe total del archivo (${totalAmount.toFixed(2)} €) no coincide con el importe de la transacción (${transaction.amount.toFixed(2)} €).`);
             }
 
-            const transactionsCollection = collection(firestore, 'users', user.uid, 'transactions');
+            const transactionsCollectionRef = collection(firestore, 'users', user.uid, 'transactions');
             const batch = writeBatch(firestore);
 
             // Delete original transaction
-            batch.delete(transactionsCollection.doc(transaction.id));
+            batch.delete(doc(transactionsCollectionRef, transaction.id));
+
             // Add new transactions
             newTransactions.forEach(tx => {
-              const newDocRef = transactionsCollection.doc(); // Firestore will generate an ID
+              const newDocRef = doc(transactionsCollectionRef); // Firestore will generate an ID
               batch.set(newDocRef, { ...tx, id: newDocRef.id });
             });
             
@@ -199,8 +200,8 @@ export function RemittanceSplitter({
     const taxIdHeader = findHeader(firstRow, ['dni', 'cif', 'nif', 'dni/cif']);
     const amountHeader = findHeader(firstRow, ['import', 'importe', 'cuantía']);
 
-    if ((!nameHeader && !taxIdHeader) || !amountHeader) {
-        throw new Error("El archivo CSV debe contener columnas para 'Importe' y, al menos, 'Nombre' o 'DNI/CIF'.");
+    if (!amountHeader || (!nameHeader && !taxIdHeader)) {
+        throw new Error("El archivo CSV debe contener una columna para 'Importe' y, al menos, una para 'Nombre' o 'DNI/CIF'.");
     }
 
     data.forEach((row, index) => {
