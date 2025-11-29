@@ -25,7 +25,7 @@ export default function LoginPage() {
     if (password === DEV_PASSWORD) {
       setError('');
       setIsLoggingIn(true);
-      toast({ title: 'Contraseña correcta', description: 'Iniciando sesión en Firebase...' });
+      toast({ title: 'Contraseña correcta', description: 'Iniciando sesión anónima en Firebase...' });
       initiateAnonymousSignIn(auth);
       // The onAuthStateChanged listener in FirebaseProvider will handle the redirect
     } else {
@@ -55,7 +55,7 @@ export default function LoginPage() {
         <div>
           <h1 className="text-3xl font-bold tracking-tight font-headline">Bienvenido a Summa Social</h1>
           <p className="text-muted-foreground mt-2">
-            Introduce la contraseña de acceso para continuar.
+            Introduce la contraseña de acceso para continuar. (v1.1 - Firestore activado)
           </p>
         </div>
         
