@@ -3,6 +3,8 @@
 'use client';
 
 import { useState, useEffect, createContext, useContext } from 'react';
+import { useUser as useFirebaseUser } from '@/firebase'; // Using the new hook
+import type { User as FirebaseUser } from 'firebase/auth';
 
 interface User {
   uid: string;
@@ -22,22 +24,38 @@ const AuthContext = createContext<AuthContextType>({
   loading: true,
 });
 
-// Mock user for development when login is disabled
-const MOCK_USER: User = {
-  uid: 'dev-nuria-id', // Unique ID for the development organization
-  name: 'Nuria',
-  email: 'nuria@example.com',
-  picture: null,
-  email_verified: true,
-};
+const MOCK_USER_ID_FOR_DEV = 'dev-nuria-id';
 
 export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
-  // We provide a mock user directly to bypass the real authentication flow.
-  const [user] = useState<User | null>(MOCK_USER);
-  const [loading] = useState(false); // Set loading to false as we are not fetching anything.
+  const { user: firebaseUser, isUserLoading } = useFirebaseUser();
+  const [user, setUser] = useState<User | null>(null);
+
+  useEffect(() => {
+    if (!isUserLoading) {
+      if (firebaseUser) {
+        // If a real user is logged in, use their data
+        setUser({
+          uid: firebaseUser.uid,
+          name: firebaseUser.displayName,
+          email: firebaseUser.email,
+          picture: firebaseUser.photoURL,
+          email_verified: firebaseUser.emailVerified,
+        });
+      } else {
+        // For development, we use a consistent mock user ID to ensure
+        // Firestore data is always written to the same path (`users/dev-nuria-id/...`)
+        // This simulates a single, consistent user across reloads.
+        setUser({
+          uid: MOCK_USER_ID_FOR_DEV,
+          name: 'Nuria (Dev)',
+          email: 'nuria@example.dev',
+        });
+      }
+    }
+  }, [firebaseUser, isUserLoading]);
 
   return (
-    <AuthContext.Provider value={{ user, loading }}>
+    <AuthContext.Provider value={{ user, loading: isUserLoading }}>
       {children}
     </AuthContext.Provider>
   );

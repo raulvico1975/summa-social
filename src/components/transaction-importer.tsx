@@ -26,14 +26,14 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
+import { useCollection, useFirebase, useMemoFirebase } from '@/firebase';
+import { collection, writeBatch } from 'firebase/firestore';
 
 
 type ImportMode = 'append' | 'replace';
 
 interface TransactionImporterProps {
   existingTransactions: Transaction[];
-  onTransactionsImported: (transactions: Transaction[], mode: ImportMode) => void;
-  availableEmissors: Emisor[];
 }
 
 // Function to create a unique key for a transaction to detect duplicates
@@ -61,7 +61,7 @@ const isHeaderRow = (row: any[]): boolean => {
 };
 
 
-export function TransactionImporter({ existingTransactions, onTransactionsImported, availableEmissors }: TransactionImporterProps) {
+export function TransactionImporter({ existingTransactions }: TransactionImporterProps) {
   const fileInputRef = React.useRef<HTMLInputElement>(null);
   const [isImporting, setIsImporting] = React.useState(false);
   const [importMode, setImportMode] = React.useState<ImportMode>('append');
@@ -69,6 +69,13 @@ export function TransactionImporter({ existingTransactions, onTransactionsImport
   const [pendingFile, setPendingFile] = React.useState<File | null>(null);
   const { toast } = useToast();
   const { log } = useAppLog();
+  const { firestore, user } = useFirebase();
+
+  const emissorsQuery = useMemoFirebase(
+    () => user ? collection(firestore, 'users', user.uid, 'emissors') : null,
+    [firestore, user]
+  );
+  const { data: availableEmissors } = useCollection<Emisor>(emissorsQuery);
 
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -201,6 +208,11 @@ export function TransactionImporter({ existingTransactions, onTransactionsImport
   };
 
   const processParsedData = async (data: any[], mode: ImportMode) => {
+     if (!user) {
+        toast({ variant: 'destructive', title: 'Error de autenticación'});
+        setIsImporting(false);
+        return;
+     }
      // Create a set of keys for existing transactions for efficient lookup
     const existingTransactionKeys = new Set(existingTransactions.map(createTransactionKey));
     log(`Iniciando procesamiento de ${data.length} filas.`);
@@ -252,23 +264,23 @@ export function TransactionImporter({ existingTransactions, onTransactionsImport
             }
 
             return {
-                id: `imported_${new Date().getTime()}_${index}`,
+                id: '', // Will be set by firestore
                 date: date.toISOString(),
                 description: descriptionValue,
                 amount: amount,
                 category: null,
                 document: null,
                 emisorId: null, // Initially null
-            } as Transaction;
+            } as Omit<Transaction, 'id'>;
         })
-        .filter((tx): tx is Transaction => tx !== null);
+        .filter((tx): tx is Omit<Transaction, 'id'> => tx !== null);
         
         let transactionsToProcess = allParsedRows;
         let duplicatesFound = 0;
 
         if (mode === 'append') {
             transactionsToProcess = allParsedRows.filter(tx => {
-                const key = createTransactionKey(tx);
+                const key = createTransactionKey(tx as Transaction);
                 const isDuplicate = existingTransactionKeys.has(key);
                 if (isDuplicate) {
                     log(`Transacción duplicada encontrada y omitida: ${key}`);
@@ -282,7 +294,7 @@ export function TransactionImporter({ existingTransactions, onTransactionsImport
 
         if (transactionsToProcess.length > 0) {
             log('Iniciando inferencia de emissors con IA...');
-            const emissorsForAI = availableEmissors.map(c => ({ id: c.id, name: c.name }));
+            const emissorsForAI = availableEmissors?.map(c => ({ id: c.id, name: c.name })) || [];
             const transactionsWithContacts = await Promise.all(transactionsToProcess.map(async (tx, index) => {
                 try {
                     const result = await inferContact({ description: tx.description, contacts: emissorsForAI });
@@ -297,7 +309,22 @@ export function TransactionImporter({ existingTransactions, onTransactionsImport
                 return tx;
             }));
 
-            onTransactionsImported(transactionsWithContacts, mode);
+            const transactionsCollection = collection(firestore, 'users', user.uid, 'transactions');
+            const batch = writeBatch(firestore);
+
+            if (mode === 'replace') {
+                existingTransactions.forEach(tx => {
+                    batch.delete(transactionsCollection.doc(tx.id));
+                })
+            }
+            
+            transactionsWithContacts.forEach(tx => {
+                const newDocRef = transactionsCollection.doc();
+                batch.set(newDocRef, tx);
+            });
+
+            await batch.commit();
+
             toast({
                 title: 'Importación Exitosa',
                 description: `Se han importado ${transactionsToProcess.length} transacciones. ${mode === 'append' ? `Se omitieron ${duplicatesFound} duplicados.` : ''}`,

@@ -1,5 +1,4 @@
 import { EmisorManager } from '@/components/emisor-manager';
-import { emissors } from '@/lib/data';
 
 export default function EmissorsPage() {
   return (
@@ -8,7 +7,7 @@ export default function EmissorsPage() {
         <h1 className="text-2xl font-bold tracking-tight font-headline">Emissors</h1>
         <p className="text-muted-foreground">Gestiona els emissors de la teva organització (proveïdors, donants, etc.).</p>
       </div>
-      <EmisorManager initialEmissors={emissors} />
+      <EmisorManager />
     </div>
   );
 }

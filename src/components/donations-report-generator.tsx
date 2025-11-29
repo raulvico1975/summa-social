@@ -23,9 +23,8 @@ import { Download, Loader2 } from 'lucide-react';
 import type { Emisor, Transaction } from '@/lib/data';
 import { useToast } from '@/hooks/use-toast';
 import Papa from 'papaparse';
-
-const TRANSACTIONS_STORAGE_KEY = 'summa-social-transactions';
-const EMISORS_STORAGE_KEY = 'summa-social-emissors';
+import { useCollection, useFirebase, useMemoFirebase } from '@/firebase';
+import { collection } from 'firebase/firestore';
 
 interface DonationReportRow {
   donorName: string;
@@ -35,32 +34,37 @@ interface DonationReportRow {
 }
 
 export function DonationsReportGenerator() {
-  const [transactions, setTransactions] = React.useState<Transaction[]>([]);
-  const [emissors, setEmissors] = React.useState<Emisor[]>([]);
+  const { firestore, user } = useFirebase();
+  const transactionsQuery = useMemoFirebase(
+    () => user ? collection(firestore, 'users', user.uid, 'transactions') : null,
+    [firestore, user]
+  );
+  const emissorsQuery = useMemoFirebase(
+    () => user ? collection(firestore, 'users', user.uid, 'emissors') : null,
+    [firestore, user]
+  );
+  const { data: transactions } = useCollection<Transaction>(transactionsQuery);
+  const { data: emissors } = useCollection<Emisor>(emissorsQuery);
+
   const [reportData, setReportData] = React.useState<DonationReportRow[]>([]);
   const [selectedYear, setSelectedYear] = React.useState<string>(String(new Date().getFullYear()));
   const [isLoading, setIsLoading] = React.useState(false);
   const { toast } = useToast();
 
-  React.useEffect(() => {
-    try {
-      const storedTransactions = localStorage.getItem(TRANSACTIONS_STORAGE_KEY);
-      if (storedTransactions) setTransactions(JSON.parse(storedTransactions));
-      
-      const storedEmissors = localStorage.getItem(EMISORS_STORAGE_KEY);
-      if (storedEmissors) setEmissors(JSON.parse(storedEmissors));
-    } catch (error) {
-      console.error("Failed to parse data from localStorage", error);
-    }
-  }, []);
-
   const availableYears = React.useMemo(() => {
+    if (!transactions) return [];
     const years = new Set(transactions.map(tx => new Date(tx.date).getFullYear()));
     return Array.from(years).sort((a, b) => b - a);
   }, [transactions]);
   
   const handleGenerateReport = () => {
     setIsLoading(true);
+
+    if (!transactions || !emissors) {
+      toast({ variant: 'destructive', title: "Datos no disponibles", description: "No se pudieron cargar las transacciones o los emisores." });
+      setIsLoading(false);
+      return;
+    }
 
     const year = parseInt(selectedYear, 10);
     const donors = emissors.filter(e => e.type === 'donor');

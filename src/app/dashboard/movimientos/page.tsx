@@ -5,10 +5,9 @@ import * as React from 'react';
 import { Button } from "@/components/ui/button";
 import { TransactionsTable } from "@/components/transactions-table";
 import { Download, Trash2 } from "lucide-react";
-import { transactions as initialTransactions, categories as initialCategories, emissors as initialEmissors, projects as initialProjects } from "@/lib/data";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { TransactionImporter } from '@/components/transaction-importer';
-import type { Transaction, Category, Emisor, Project } from '@/lib/data';
+import type { Transaction } from '@/lib/data';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -20,86 +19,44 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { useToast } from '@/hooks/use-toast';
-
-
-type ImportMode = 'append' | 'replace';
-const TRANSACTIONS_STORAGE_KEY = 'summa-social-transactions';
-const CATEGORIES_STORAGE_KEY = 'summa-social-categories';
-const EMISORS_STORAGE_KEY = 'summa-social-emissors';
-const PROJECTS_STORAGE_KEY = 'summa-social-projects';
+import { useCollection, useFirebase, useMemoFirebase } from '@/firebase';
+import { collection, writeBatch } from 'firebase/firestore';
 
 export default function MovementsPage() {
-  const [transactions, setTransactions] = React.useState<Transaction[]>([]);
-  const [categories, setCategories] = React.useState<Category[]>(initialCategories);
-  const [emissors, setEmissors] = React.useState<Emisor[]>(initialEmissors);
-  const [projects, setProjects] = React.useState<Project[]>(initialProjects);
-
-  const [isDataLoaded, setIsDataLoaded] = React.useState(false);
+  const { firestore, user } = useFirebase();
   const [isDeleteAlertOpen, setIsDeleteAlertOpen] = React.useState(false);
   const { toast } = useToast();
 
+  const transactionsQuery = useMemoFirebase(
+    () => user ? collection(firestore, 'users', user.uid, 'transactions') : null,
+    [firestore, user]
+  );
+  const { data: transactions, isLoading: isLoadingTransactions } = useCollection<Transaction>(transactionsQuery);
 
-  React.useEffect(() => {
-    try {
-      const storedTransactions = localStorage.getItem(TRANSACTIONS_STORAGE_KEY);
-      setTransactions(storedTransactions ? JSON.parse(storedTransactions) : initialTransactions);
-
-      const storedCategories = localStorage.getItem(CATEGORIES_STORAGE_KEY);
-      if (storedCategories) setCategories(JSON.parse(storedCategories));
-      
-      const storedEmissors = localStorage.getItem(EMISORS_STORAGE_KEY);
-      if (storedEmissors) setEmissors(JSON.parse(storedEmissors));
-      
-      const storedProjects = localStorage.getItem(PROJECTS_STORAGE_KEY);
-      if (storedProjects) setProjects(JSON.parse(storedProjects));
-
-    } catch (error) {
-       console.error("Failed to parse data from localStorage", error);
-       // Fallback to initial data if localStorage is corrupt
-       setTransactions(initialTransactions);
-       setCategories(initialCategories);
-       setEmissors(initialEmissors);
-       setProjects(initialProjects);
-    } finally {
-      setIsDataLoaded(true);
-    }
-  }, []);
-
-  const updateTransactions = (newTransactions: Transaction[]) => {
-    setTransactions(newTransactions);
-    try {
-        localStorage.setItem(TRANSACTIONS_STORAGE_KEY, JSON.stringify(newTransactions));
-    } catch (error) {
-        console.error("Failed to save transactions to localStorage", error);
-    }
-  };
-  
-  const updateEmissors = (newEmissors: Emisor[]) => {
-    setEmissors(newEmissors);
-    try {
-        localStorage.setItem(EMISORS_STORAGE_KEY, JSON.stringify(newEmissors));
-    } catch (error) {
-        console.error("Failed to save emissors to localStorage", error);
-    }
-  };
-
-
-  const handleTransactionsImported = (newTransactions: Transaction[], mode: ImportMode) => {
-    if (mode === 'replace') {
-        updateTransactions(newTransactions);
-    } else {
-        updateTransactions([...transactions, ...newTransactions]);
-    }
-  };
-
-  const handleDeleteAll = () => {
-    updateTransactions([]);
-    toast({
-        title: 'Transacciones eliminadas',
-        description: 'Se han eliminado todas las transacciones.',
+  const handleDeleteAll = async () => {
+    if (!transactionsQuery || !transactions) return;
+    const batch = writeBatch(firestore);
+    transactions.forEach(tx => {
+      batch.delete(transactionsQuery.doc(tx.id));
     });
+    try {
+      await batch.commit();
+      toast({
+          title: 'Transacciones eliminadas',
+          description: 'Se han eliminado todas las transacciones.',
+      });
+    } catch (error) {
+      console.error('Error deleting all transactions: ', error);
+      toast({
+        variant: 'destructive',
+        title: 'Error al eliminar',
+        description: 'No se pudieron eliminar todas las transacciones.',
+      })
+    }
     setIsDeleteAlertOpen(false);
   };
+
+  const isDataLoaded = !isLoadingTransactions;
 
   return (
     <>
@@ -112,16 +69,14 @@ export default function MovementsPage() {
         <div className="flex gap-2">
            {isDataLoaded && (
              <TransactionImporter 
-                existingTransactions={transactions}
-                onTransactionsImported={handleTransactionsImported} 
-                availableEmissors={emissors}
+                existingTransactions={transactions || []}
               />
            )}
           <Button variant="outline">
             <Download className="mr-2 h-4 w-4" />
             Exportar
           </Button>
-           <Button variant="destructive" onClick={() => setIsDeleteAlertOpen(true)}>
+           <Button variant="destructive" onClick={() => setIsDeleteAlertOpen(true)} disabled={(transactions?.length || 0) === 0}>
                 <Trash2 className="mr-2 h-4 w-4" />
                 Eliminar todo
             </Button>
@@ -133,14 +88,7 @@ export default function MovementsPage() {
           <CardTitle>Transacciones Recientes</CardTitle>
         </CardHeader>
         <CardContent>
-          <TransactionsTable 
-            transactions={transactions} 
-            setTransactions={updateTransactions} 
-            availableCategories={categories} 
-            availableEmissors={emissors}
-            setAvailableEmissors={updateEmissors}
-            availableProjects={projects}
-          />
+          <TransactionsTable />
         </CardContent>
       </Card>
     </div>

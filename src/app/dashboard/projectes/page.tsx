@@ -1,6 +1,5 @@
 
 import { ProjectManager } from '@/components/project-manager';
-import { projects, emissors, transactions } from '@/lib/data';
 
 export default function ProjectsPage() {
   return (
@@ -9,7 +8,7 @@ export default function ProjectsPage() {
         <h1 className="text-2xl font-bold tracking-tight font-headline">Projectes</h1>
         <p className="text-muted-foreground">Gestiona els teus projectes amb fons finalistes i fes seguiment dels seus balanços.</p>
       </div>
-      <ProjectManager initialProjects={projects} initialEmissors={emissors} initialTransactions={transactions} />
+      <ProjectManager />
     </div>
   );
 }

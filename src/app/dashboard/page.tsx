@@ -7,9 +7,9 @@ import { ExpensesChart } from '@/components/expenses-chart';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { DollarSign, TrendingUp, TrendingDown, Rocket } from 'lucide-react';
 import type { Transaction } from '@/lib/data';
-import { transactions as initialTransactions } from '@/lib/data';
+import { useCollection, useFirebase, useMemoFirebase } from '@/firebase';
+import { collection } from 'firebase/firestore';
 
-const TRANSACTIONS_STORAGE_KEY = 'summa-social-transactions';
 const MISSION_TRANSFER_CATEGORY = 'Transferencias a terreno o socias';
 
 
@@ -18,37 +18,15 @@ const formatCurrency = (amount: number) => {
 };
 
 export default function DashboardPage() {
-  const [transactions, setTransactions] = React.useState<Transaction[]>([]);
+  const { firestore, user } = useFirebase();
+  const transactionsQuery = useMemoFirebase(
+    () => user ? collection(firestore, 'users', user.uid, 'transactions') : null,
+    [firestore, user]
+  );
+  const { data: transactions } = useCollection<Transaction>(transactionsQuery);
 
-  React.useEffect(() => {
-    try {
-      const storedTransactions = localStorage.getItem(TRANSACTIONS_STORAGE_KEY);
-      setTransactions(storedTransactions ? JSON.parse(storedTransactions) : initialTransactions);
-    } catch (error) {
-       console.error("Failed to parse data from localStorage", error);
-       setTransactions(initialTransactions);
-    }
-
-    const handleStorageChange = (event: StorageEvent) => {
-        if (event.key === TRANSACTIONS_STORAGE_KEY) {
-            try {
-                setTransactions(event.newValue ? JSON.parse(event.newValue) : initialTransactions);
-            } catch (error) {
-                console.error("Failed to parse data from localStorage on change", error);
-                setTransactions(initialTransactions);
-            }
-        }
-    };
-    
-    window.addEventListener('storage', handleStorageChange);
-
-    return () => {
-        window.removeEventListener('storage', handleStorageChange);
-    };
-
-  }, []);
-
-  const { totalIncome, totalExpenses, operationalBalance, totalMissionTransfers } = React.useMemo(() => {
+  const { totalIncome, totalExpenses, totalMissionTransfers } = React.useMemo(() => {
+    if (!transactions) return { totalIncome: 0, totalExpenses: 0, totalMissionTransfers: 0 };
     return transactions.reduce((acc, tx) => {
       if (tx.amount > 0) {
         acc.totalIncome += tx.amount;
@@ -60,11 +38,11 @@ export default function DashboardPage() {
         }
       }
       return acc;
-    }, { totalIncome: 0, totalExpenses: 0, totalMissionTransfers: 0, operationalBalance: 0 });
+    }, { totalIncome: 0, totalExpenses: 0, totalMissionTransfers: 0 });
   }, [transactions]);
   
   const expenseTransactions = React.useMemo(() => 
-    transactions.filter(tx => tx.amount < 0 && tx.category !== MISSION_TRANSFER_CATEGORY), 
+    transactions?.filter(tx => tx.amount < 0 && tx.category !== MISSION_TRANSFER_CATEGORY) || [],
   [transactions]);
   
   const netBalance = totalIncome + totalExpenses;

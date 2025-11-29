@@ -31,7 +31,6 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import {
@@ -45,8 +44,8 @@ import { PlusCircle, Edit, Trash2 } from 'lucide-react';
 import type { Category } from '@/lib/data';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
-
-const CATEGORIES_STORAGE_KEY = 'summa-social-categories';
+import { useCollection, useFirebase, useMemoFirebase, addDocumentNonBlocking, deleteDocumentNonBlocking, setDocumentNonBlocking } from '@/firebase';
+import { collection, doc } from 'firebase/firestore';
 
 function CategoryTable({
   categories,
@@ -98,37 +97,23 @@ function CategoryTable({
   );
 }
 
-export function CategoryManager({ initialCategories }: { initialCategories: Category[] }) {
-  const [categories, setCategories] = React.useState<Category[]>(initialCategories);
+export function CategoryManager() {
+  const { firestore, user } = useFirebase();
+  const categoriesCollection = useMemoFirebase(
+    () => user ? collection(firestore, 'users', user.uid, 'categories') : null,
+    [firestore, user]
+  );
+  const { data: categories } = useCollection<Category>(categoriesCollection);
+
   const [isDialogOpen, setIsDialogOpen] = React.useState(false);
   const [isAlertOpen, setIsAlertOpen] = React.useState(false);
   const [editingCategory, setEditingCategory] = React.useState<Category | null>(null);
   const [categoryToDelete, setCategoryToDelete] = React.useState<Category | null>(null);
   const [formData, setFormData] = React.useState<{ name: string; type: Category['type'] }>({ name: '', type: 'expense' });
   const { toast } = useToast();
-  
-  React.useEffect(() => {
-    try {
-      const storedCategories = localStorage.getItem(CATEGORIES_STORAGE_KEY);
-      if (storedCategories) {
-        setCategories(JSON.parse(storedCategories));
-      }
-    } catch (error) {
-      console.error("Failed to parse categories from localStorage", error);
-    }
-  }, []);
 
-  const updateCategories = (newCategories: Category[]) => {
-    setCategories(newCategories);
-    try {
-      localStorage.setItem(CATEGORIES_STORAGE_KEY, JSON.stringify(newCategories));
-    } catch (error) {
-      console.error("Failed to save categories to localStorage", error);
-    }
-  };
-
-  const incomeCategories = categories.filter((c) => c.type === 'income');
-  const expenseCategories = categories.filter((c) => c.type === 'expense');
+  const incomeCategories = React.useMemo(() => categories?.filter((c) => c.type === 'income') || [], [categories]);
+  const expenseCategories = React.useMemo(() => categories?.filter((c) => c.type === 'expense') || [], [categories]);
 
   const handleEdit = (category: Category) => {
     setEditingCategory(category);
@@ -142,8 +127,8 @@ export function CategoryManager({ initialCategories }: { initialCategories: Cate
   }
 
   const handleDeleteConfirm = () => {
-    if (categoryToDelete) {
-      updateCategories(categories.filter((c) => c.id !== categoryToDelete.id));
+    if (categoryToDelete && categoriesCollection) {
+      deleteDocumentNonBlocking(doc(categoriesCollection, categoryToDelete.id));
       toast({
         title: 'Categoría Eliminada',
         description: `La categoría "${categoryToDelete.name}" ha sido eliminada.`,
@@ -181,17 +166,18 @@ export function CategoryManager({ initialCategories }: { initialCategories: Cate
        return;
     }
 
+    if (!categoriesCollection) {
+      toast({ variant: 'destructive', title: 'Error', description: 'No se ha podido conectar a la base de datos.' });
+      return;
+    }
+
     if (editingCategory) {
       // Update
-      updateCategories(categories.map((c) => c.id === editingCategory.id ? { ...c, ...formData } : c));
+      setDocumentNonBlocking(doc(categoriesCollection, editingCategory.id), formData, { merge: true });
       toast({ title: 'Categoría Actualizada', description: `La categoría "${formData.name}" ha sido actualizada.` });
     } else {
       // Create
-      const newCategory: Category = {
-        id: `cat_${new Date().getTime()}`,
-        ...formData
-      };
-      updateCategories([...categories, newCategory]);
+      addDocumentNonBlocking(categoriesCollection, formData);
       toast({ title: 'Categoría Creada', description: `La categoría "${formData.name}" ha sido creada.` });
     }
     handleOpenChange(false);

@@ -45,8 +45,9 @@ import { PlusCircle, Edit, Trash2 } from 'lucide-react';
 import type { Emisor } from '@/lib/data';
 import { useToast } from '@/hooks/use-toast';
 import { Badge } from '@/components/ui/badge';
+import { useCollection, useFirebase, useMemoFirebase, addDocumentNonBlocking, deleteDocumentNonBlocking, setDocumentNonBlocking } from '@/firebase';
+import { collection, doc } from 'firebase/firestore';
 
-const EMISORS_STORAGE_KEY = 'summa-social-emissors';
 
 const emisorTypeMap: Record<Emisor['type'], string> = {
     donor: 'Donant',
@@ -54,8 +55,14 @@ const emisorTypeMap: Record<Emisor['type'], string> = {
     volunteer: 'Voluntari'
 };
 
-export function EmisorManager({ initialEmissors }: { initialEmissors: Emisor[] }) {
-  const [emissors, setEmissors] = React.useState<Emisor[]>(initialEmissors);
+export function EmisorManager() {
+  const { firestore, user } = useFirebase();
+  const emissorsCollection = useMemoFirebase(
+    () => user ? collection(firestore, 'users', user.uid, 'emissors') : null,
+    [firestore, user]
+  );
+  const { data: emissors } = useCollection<Emisor>(emissorsCollection);
+
   const [isDialogOpen, setIsDialogOpen] = React.useState(false);
   const [isAlertOpen, setIsAlertOpen] = React.useState(false);
   const [editingEmisor, setEditingEmisor] = React.useState<Emisor | null>(null);
@@ -63,26 +70,6 @@ export function EmisorManager({ initialEmissors }: { initialEmissors: Emisor[] }
   const [formData, setFormData] = React.useState<Omit<Emisor, 'id'>>({ name: '', taxId: '', zipCode: '', type: 'supplier' });
   const { toast } = useToast();
   
-  React.useEffect(() => {
-    try {
-      const storedEmissors = localStorage.getItem(EMISORS_STORAGE_KEY);
-      if (storedEmissors) {
-        setEmissors(JSON.parse(storedEmissors));
-      }
-    } catch (error) {
-      console.error("Failed to parse emissors from localStorage", error);
-    }
-  }, []);
-
-  const updateEmissors = (newEmissors: Emisor[]) => {
-    setEmissors(newEmissors);
-    try {
-      localStorage.setItem(EMISORS_STORAGE_KEY, JSON.stringify(newEmissors));
-    } catch (error) {
-      console.error("Failed to save emissors to localStorage", error);
-    }
-  };
-
   const handleEdit = (emisor: Emisor) => {
     setEditingEmisor(emisor);
     setFormData({ name: emisor.name, taxId: emisor.taxId, zipCode: emisor.zipCode, type: emisor.type });
@@ -95,8 +82,8 @@ export function EmisorManager({ initialEmissors }: { initialEmissors: Emisor[] }
   }
 
   const handleDeleteConfirm = () => {
-    if (emisorToDelete) {
-      updateEmissors(emissors.filter((c) => c.id !== emisorToDelete.id));
+    if (emisorToDelete && emissorsCollection) {
+      deleteDocumentNonBlocking(doc(emissorsCollection, emisorToDelete.id));
       toast({
         title: 'Emissor Eliminat',
         description: `L'emissor "${emisorToDelete.name}" ha estat eliminat.`,
@@ -134,17 +121,18 @@ export function EmisorManager({ initialEmissors }: { initialEmissors: Emisor[] }
        return;
     }
 
+    if (!emissorsCollection) {
+      toast({ variant: 'destructive', title: 'Error', description: 'No se ha podido conectar a la base de datos.' });
+      return;
+    }
+
     if (editingEmisor) {
       // Update
-      updateEmissors(emissors.map((c) => c.id === editingEmisor.id ? { ...c, ...formData } : c));
+      setDocumentNonBlocking(doc(emissorsCollection, editingEmisor.id), formData, { merge: true });
       toast({ title: 'Emissor Actualitzat', description: `L'emissor "${formData.name}" ha estat actualitzat.` });
     } else {
       // Create
-      const newEmisor: Emisor = {
-        id: `cont_${new Date().getTime()}`,
-        ...formData
-      };
-      updateEmissors([...emissors, newEmisor]);
+      addDocumentNonBlocking(emissorsCollection, formData);
       toast({ title: 'Emissor Creat', description: `L'emissor "${formData.name}" ha estat creat.` });
     }
     handleOpenChange(false);
@@ -182,7 +170,7 @@ export function EmisorManager({ initialEmissors }: { initialEmissors: Emisor[] }
                 </TableRow>
                 </TableHeader>
                 <TableBody>
-                {emissors.map((emisor) => (
+                {emissors && emissors.map((emisor) => (
                     <TableRow key={emisor.id}>
                     <TableCell className="font-medium">{emisor.name}</TableCell>
                     <TableCell>{emisor.taxId}</TableCell>
@@ -205,7 +193,7 @@ export function EmisorManager({ initialEmissors }: { initialEmissors: Emisor[] }
                     </TableCell>
                     </TableRow>
                 ))}
-                {emissors.length === 0 && (
+                {(!emissors || emissors.length === 0) && (
                     <TableRow>
                         <TableCell colSpan={5} className="text-center text-muted-foreground">
                             No hay emissors.

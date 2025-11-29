@@ -1,5 +1,4 @@
 
-
 'use client';
 
 import * as React from 'react';
@@ -64,30 +63,40 @@ import {
 import type { Transaction, Category, Emisor, Project } from '@/lib/data';
 import { categorizeTransaction } from '@/ai/flows/categorize-transactions';
 import { useToast } from '@/hooks/use-toast';
-import { useAuth } from '@/hooks/use-auth';
 import { storage } from '@/lib/firebase';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { useAppLog } from '@/hooks/use-app-log';
 import { RemittanceSplitter } from '@/components/remittance-splitter';
+import { useCollection, useFirebase, useMemoFirebase, addDocumentNonBlocking, deleteDocumentNonBlocking, setDocumentNonBlocking, updateDocumentNonBlocking } from '@/firebase';
+import { collection, doc } from 'firebase/firestore';
 
-export function TransactionsTable({
-  transactions,
-  setTransactions,
-  availableCategories,
-  availableEmissors,
-  setAvailableEmissors,
-  availableProjects,
-}: {
-  transactions: Transaction[];
-  setTransactions: (transactions: Transaction[]) => void;
-  availableCategories: Category[];
-  availableEmissors: Emisor[];
-  setAvailableEmissors: (emissors: Emisor[]) => void;
-  availableProjects: Project[];
-}) {
+export function TransactionsTable() {
+  const { firestore, user } = useFirebase();
+
+  const transactionsCollection = useMemoFirebase(
+    () => user ? collection(firestore, 'users', user.uid, 'transactions') : null,
+    [firestore, user]
+  );
+  const categoriesCollection = useMemoFirebase(
+    () => user ? collection(firestore, 'users', user.uid, 'categories') : null,
+    [firestore, user]
+  );
+  const emissorsCollection = useMemoFirebase(
+    () => user ? collection(firestore, 'users', user.uid, 'emissors') : null,
+    [firestore, user]
+  );
+  const projectsCollection = useMemoFirebase(
+    () => user ? collection(firestore, 'users', user.uid, 'projects') : null,
+    [firestore, user]
+  );
+  
+  const { data: transactions } = useCollection<Transaction>(transactionsCollection);
+  const { data: availableCategories } = useCollection<Category>(categoriesCollection);
+  const { data: availableEmissors } = useCollection<Emisor>(emissorsCollection);
+  const { data: availableProjects } = useCollection<Project>(projectsCollection);
+
   const [loadingStates, setLoadingStates] = React.useState<Record<string, boolean>>({});
   const { toast } = useToast();
-  const { user } = useAuth();
   const { log } = useAppLog();
   
   const [isEditDialogOpen, setIsEditDialogOpen] = React.useState(false);
@@ -106,22 +115,23 @@ export function TransactionsTable({
   const [transactionToSplit, setTransactionToSplit] = React.useState<Transaction | null>(null);
 
   const emisorMap = React.useMemo(() => 
-    availableEmissors.reduce((acc, emisor) => {
+    availableEmissors?.reduce((acc, emisor) => {
       acc[emisor.id] = emisor.name;
       return acc;
-    }, {} as Record<string, string>), 
+    }, {} as Record<string, string>) || {}, 
   [availableEmissors]);
 
   const projectMap = React.useMemo(() =>
-    availableProjects.reduce((acc, project) => {
+    availableProjects?.reduce((acc, project) => {
         acc[project.id] = project.name;
         return acc;
-    }, {} as Record<string, string>),
+    }, {} as Record<string, string>) || {},
   [availableProjects]);
 
   const handleCategorize = async (txId: string) => {
+    if (!transactions) return;
     const transaction = transactions.find((tx) => tx.id === txId);
-    if (!transaction) return;
+    if (!transaction || !availableCategories || !transactionsCollection) return;
 
     setLoadingStates((prev) => ({ ...prev, [txId]: true }));
     try {
@@ -135,9 +145,9 @@ export function TransactionsTable({
         expenseCategories,
         incomeCategories,
       });
-      setTransactions(
-        transactions.map((tx) => (tx.id === txId ? { ...tx, category: result.category } : tx))
-      );
+      
+      updateDocumentNonBlocking(doc(transactionsCollection, txId), { category: result.category });
+      
       toast({
         title: 'Categorización Automática',
         description: `Transacción clasificada como "${result.category}" con una confianza del ${(result.confidence * 100).toFixed(0)}%.`,
@@ -157,6 +167,10 @@ export function TransactionsTable({
   };
 
   const handleBatchCategorize = async () => {
+    if (!transactions || !availableCategories || !transactionsCollection) {
+      toast({ title: 'Datos no disponibles', description: 'No se pudieron cargar las transacciones o categorías.'});
+      return;
+    }
     const transactionsToCategorize = transactions.filter(tx => !tx.category);
     if (transactionsToCategorize.length === 0) {
       toast({ title: 'No hay nada que clasificar', description: 'Todas las transacciones ya tienen una categoría.'});
@@ -168,7 +182,6 @@ export function TransactionsTable({
     toast({ title: 'Iniciando clasificación masiva...', description: `Clasificando ${transactionsToCategorize.length} moviments.`});
 
     let successCount = 0;
-    const updatedTransactions = [...transactions];
 
     for (const tx of transactionsToCategorize) {
       log(`Clasificando movimiento ${successCount + 1}/${transactionsToCategorize.length}: "${tx.description.substring(0, 30)}..."`);
@@ -183,10 +196,7 @@ export function TransactionsTable({
           incomeCategories,
         });
 
-        const txIndex = updatedTransactions.findIndex(t => t.id === tx.id);
-        if (txIndex !== -1) {
-          updatedTransactions[txIndex] = { ...updatedTransactions[txIndex], category: result.category };
-        }
+        updateDocumentNonBlocking(doc(transactionsCollection, tx.id), { category: result.category });
         successCount++;
         log(`¡Éxito! Movimiento ${tx.id} clasificado como "${result.category}".`);
       } catch (error) {
@@ -195,34 +205,30 @@ export function TransactionsTable({
       }
     }
     
-    setTransactions(updatedTransactions);
     setIsBatchCategorizing(false);
     log(`¡Éxito! Clasificación masiva completada. ${successCount} moviments clasificados.`);
     toast({ title: 'Clasificación masiva completada', description: `Se han clasificado ${successCount} moviments.`});
   };
 
   const handleSetCategory = (txId: string, newCategory: string) => {
-    setTransactions(
-      transactions.map((tx) => (tx.id === txId ? { ...tx, category: newCategory } : tx))
-    );
+    if (!transactionsCollection) return;
+    updateDocumentNonBlocking(doc(transactionsCollection, txId), { category: newCategory });
   };
   
   const handleSetEmisor = (txId: string, newEmisorId: string | null) => {
-    setTransactions(
-      transactions.map((tx) => (tx.id === txId ? { ...tx, emisorId: newEmisorId } : tx))
-    );
+    if (!transactionsCollection) return;
+    updateDocumentNonBlocking(doc(transactionsCollection, txId), { emisorId: newEmisorId });
   };
   
   const handleSetProject = (txId: string, newProjectId: string | null) => {
-    setTransactions(
-        transactions.map((tx) => (tx.id === txId ? { ...tx, projectId: newProjectId } : tx))
-    );
+    if (!transactionsCollection) return;
+    updateDocumentNonBlocking(doc(transactionsCollection, txId), { projectId: newProjectId });
   };
 
 
   const handleAttachDocument = (transactionId: string) => {
     log(`[${transactionId}] Iniciando la subida de documento.`);
-    if (!user?.uid) {
+    if (!user?.uid || !transactionsCollection) {
       const errorMsg = 'ERROR: No se ha podido identificar al usuario para la subida (user.uid is null).';
       log(errorMsg);
       toast({ variant: 'destructive', title: 'Error de Autenticación', description: errorMsg });
@@ -260,9 +266,7 @@ export function TransactionsTable({
           const downloadURL = await getDownloadURL(uploadResult.ref);
           log(`[${transactionId}] URL de descarga obtenida: ${downloadURL}`);
 
-          setTransactions(transactions.map(tx =>
-            tx.id === transactionId ? { ...tx, document: downloadURL } : tx
-          ));
+          updateDocumentNonBlocking(doc(transactionsCollection, transactionId), { document: downloadURL });
 
           toast({ title: '¡Éxito!', description: 'El documento se ha subido y vinculado correctamente.' });
           log(`[${transactionId}] ¡Éxito! Subida completada.`);
@@ -327,13 +331,14 @@ export function TransactionsTable({
   }
 
   const handleSaveEdit = () => {
-    if (!editingTransaction) return;
+    if (!editingTransaction || !transactionsCollection) return;
 
-    setTransactions(transactions.map(tx => 
-        tx.id === editingTransaction.id 
-            ? { ...tx, description: formData.description, amount: parseFloat(formData.amount), emisorId: formData.emisorId, projectId: formData.projectId } 
-            : tx
-    ));
+    updateDocumentNonBlocking(doc(transactionsCollection, editingTransaction.id), {
+      description: formData.description,
+      amount: parseFloat(formData.amount),
+      emisorId: formData.emisorId,
+      projectId: formData.projectId
+    });
 
     toast({ title: 'Transacción actualizada' });
     setIsEditDialogOpen(false);
@@ -346,8 +351,8 @@ export function TransactionsTable({
   }
 
   const handleDeleteConfirm = () => {
-    if (transactionToDelete) {
-        setTransactions(transactions.filter(tx => tx.id !== transactionToDelete.id));
+    if (transactionToDelete && transactionsCollection) {
+        deleteDocumentNonBlocking(doc(transactionsCollection, transactionToDelete.id));
         toast({ title: 'Transacción eliminada' });
     }
     setIsDeleteDialogOpen(false);
@@ -365,20 +370,21 @@ export function TransactionsTable({
       toast({ variant: 'destructive', title: 'Error', description: 'Todos los campos del nuevo emisor son obligatorios.' });
       return;
     }
-    const newEmisor: Emisor = {
-      id: `cont_${new Date().getTime()}`,
+    if (!emissorsCollection || !transactionsCollection) return;
+
+    const newEmisorData = {
       type: 'donor', // When created from here, default to donor
       ...newEmisorFormData,
     };
-
-    const updatedEmissors = [...availableEmissors, newEmisor];
-    setAvailableEmissors(updatedEmissors);
     
-    if (newEmisorTransactionId) {
-      handleSetEmisor(newEmisorTransactionId, newEmisor.id);
-    }
+    addDocumentNonBlocking(emissorsCollection, newEmisorData)
+      .then(docRef => {
+        if (newEmisorTransactionId) {
+          handleSetEmisor(newEmisorTransactionId, docRef.id);
+        }
+      });
     
-    toast({ title: 'Emisor Creado', description: `El emissor "${newEmisor.name}" ha sido creado y asignado.` });
+    toast({ title: 'Emisor Creado', description: `El emissor "${newEmisorFormData.name}" ha sido creado y asignado.` });
     setIsNewEmisorDialogOpen(false);
     setNewEmisorTransactionId(null);
   };
@@ -388,25 +394,12 @@ export function TransactionsTable({
     setIsSplitterOpen(true);
   };
 
-  const handleOnSplitDone = (newTransactions: Transaction[], newEmissors: Emisor[]) => {
-    if (!transactionToSplit) return;
-
-    // Remove the original remittance transaction
-    const remainingTransactions = transactions.filter(tx => tx.id !== transactionToSplit.id);
-    
-    // Add the new individual transactions
-    setTransactions([...remainingTransactions, ...newTransactions]);
-
-    // Add any new emissors that were created
-    if (newEmissors.length > 0) {
-      setAvailableEmissors([...availableEmissors, ...newEmissors]);
-    }
-    
+  const handleOnSplitDone = () => {
     setIsSplitterOpen(false);
     setTransactionToSplit(null);
   };
 
-  const hasUncategorized = React.useMemo(() => transactions.some(tx => !tx.category), [transactions]);
+  const hasUncategorized = React.useMemo(() => transactions?.some(tx => !tx.category), [transactions]);
 
 
   return (
@@ -436,10 +429,10 @@ export function TransactionsTable({
             </TableRow>
           </TableHeader>
           <TableBody>
-            {transactions.map((tx) => {
-              const relevantCategories = availableCategories.filter(
+            {transactions && transactions.map((tx) => {
+              const relevantCategories = availableCategories?.filter(
                 (c) => c.type === (tx.amount > 0 ? 'income' : 'expense')
-              );
+              ) || [];
               const isDocumentLoading = loadingStates[`doc_${tx.id}`];
 
               return (
@@ -477,7 +470,7 @@ export function TransactionsTable({
                             <DropdownMenuItem onClick={() => handleSetEmisor(tx.id, null)}>
                                 (Desvincular)
                             </DropdownMenuItem>
-                            {availableEmissors.map((emisor) => (
+                            {availableEmissors?.map((emisor) => (
                                 <DropdownMenuItem key={emisor.id} onClick={() => handleSetEmisor(tx.id, emisor.id)}>
                                     {emisor.name}
                                 </DropdownMenuItem>
@@ -546,7 +539,7 @@ export function TransactionsTable({
                                 (Desvincular)
                             </DropdownMenuItem>
                              <DropdownMenuSeparator />
-                            {availableProjects.map((project) => (
+                            {availableProjects?.map((project) => (
                                 <DropdownMenuItem key={project.id} onClick={() => handleSetProject(tx.id, project.id)}>
                                     {project.name}
                                 </DropdownMenuItem>
@@ -600,7 +593,7 @@ export function TransactionsTable({
                 </TableRow>
               );
             })}
-             {transactions.length === 0 && (
+             {(!transactions || transactions.length === 0) && (
                 <TableRow>
                     <TableCell colSpan={8} className="h-24 text-center">
                         No hay transacciones. Empieza importando un extracto bancario.
@@ -654,7 +647,7 @@ export function TransactionsTable({
                     </SelectTrigger>
                     <SelectContent>
                         <SelectItem value="null">(Ninguno)</SelectItem>
-                        {availableEmissors.map(emisor => (
+                        {availableEmissors?.map(emisor => (
                             <SelectItem key={emisor.id} value={emisor.id}>{emisor.name}</SelectItem>
                         ))}
                     </SelectContent>
@@ -670,7 +663,7 @@ export function TransactionsTable({
                     </SelectTrigger>
                     <SelectContent>
                         <SelectItem value="null">(Cap)</SelectItem>
-                        {availableProjects.map(project => (
+                        {availableProjects?.map(project => (
                             <SelectItem key={project.id} value={project.id}>{project.name}</SelectItem>
                         ))}
                     </SelectContent>
@@ -734,7 +727,7 @@ export function TransactionsTable({
       </AlertDialog>
 
       {/* Remittance Splitter Dialog */}
-      {transactionToSplit && (
+      {transactionToSplit && availableEmissors && (
         <RemittanceSplitter
           open={isSplitterOpen}
           onOpenChange={setIsSplitterOpen}

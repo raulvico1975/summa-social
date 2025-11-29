@@ -1,5 +1,4 @@
 import { CategoryManager } from '@/components/category-manager';
-import { categories } from '@/lib/data';
 
 export default function SettingsPage() {
   return (
@@ -8,7 +7,7 @@ export default function SettingsPage() {
         <h1 className="text-2xl font-bold tracking-tight font-headline">Configuración</h1>
         <p className="text-muted-foreground">Gestiona las categorías y otros ajustes de la aplicación.</p>
       </div>
-      <CategoryManager initialCategories={categories} />
+      <CategoryManager />
     </div>
   );
 }

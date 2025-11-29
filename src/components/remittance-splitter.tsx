@@ -18,13 +18,15 @@ import type { Transaction, Emisor } from '@/lib/data';
 import Papa from 'papaparse';
 import { FileUp, Loader2, Info } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { addDocumentNonBlocking, useFirebase } from '@/firebase';
+import { collection, writeBatch } from 'firebase/firestore';
 
 interface RemittanceSplitterProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   transaction: Transaction;
   existingEmissors: Emisor[];
-  onSplitDone: (newTransactions: Transaction[], newEmissors: Emisor[]) => void;
+  onSplitDone: () => void;
 }
 
 interface CsvRow {
@@ -52,6 +54,7 @@ export function RemittanceSplitter({
   const fileInputRef = React.useRef<HTMLInputElement>(null);
   const { toast } = useToast();
   const { log } = useAppLog();
+  const { firestore, user } = useFirebase();
 
   const handleFileClick = () => {
     fileInputRef.current?.click();
@@ -67,30 +70,47 @@ export function RemittanceSplitter({
   };
 
   const processFile = (file: File) => {
+    if (!user) {
+      toast({ variant: 'destructive', title: 'Error de autenticación' });
+      return;
+    }
     setIsProcessing(true);
     log(`[Splitter] Iniciando procesado de remesa desde el archivo: ${file.name}`);
 
     Papa.parse(file, {
       header: true,
       skipEmptyLines: true,
-      complete: (results) => {
+      complete: async (results) => {
         const data = results.data as CsvRow[];
         log(`[Splitter] Archivo CSV parseado. ${data.length} filas encontradas.`);
         
         try {
-            const { newTransactions, newEmissors, totalAmount } = processCsvData(data);
+            const { newTransactions, totalAmount } = processCsvData(data);
             
             // Allow a small tolerance for floating point inaccuracies
             if (Math.abs(transaction.amount - totalAmount) > 0.01) {
                 throw new Error(`El importe total del archivo (${totalAmount.toFixed(2)} €) no coincide con el importe de la transacción (${transaction.amount.toFixed(2)} €).`);
             }
 
-            log(`[Splitter] Procesamiento completado. ${newTransactions.length} transacciones creadas, ${newEmissors.length} nuevos emisores.`);
+            const transactionsCollection = collection(firestore, 'users', user.uid, 'transactions');
+            const batch = writeBatch(firestore);
+
+            // Delete original transaction
+            batch.delete(transactionsCollection.doc(transaction.id));
+            // Add new transactions
+            newTransactions.forEach(tx => {
+              const newDocRef = transactionsCollection.doc(); // Firestore will generate an ID
+              batch.set(newDocRef, { ...tx, id: newDocRef.id });
+            });
+            
+            await batch.commit();
+
+            log(`[Splitter] Procesamiento completado. ${newTransactions.length} transacciones creadas.`);
             toast({
                 title: "Remesa dividida con éxito",
                 description: `Se han generado ${newTransactions.length} transacciones individuales.`,
             });
-            onSplitDone(newTransactions, newEmissors);
+            onSplitDone();
 
         } catch (error: any) {
             console.error("Error processing remittance file:", error);
@@ -166,8 +186,7 @@ export function RemittanceSplitter({
 
 
   const processCsvData = (data: CsvRow[]) => {
-    const newTransactions: Transaction[] = [];
-    const newEmissors: Emisor[] = []; // This will remain empty as we are not creating new emissors
+    const newTransactions: Omit<Transaction, 'id'>[] = [];
     let totalAmount = 0;
 
     if (data.length === 0) {
@@ -204,8 +223,7 @@ export function RemittanceSplitter({
           log(`[Splitter] AVISO: No se ha podido encontrar un emisor para la fila ${index + 2} ("${name || taxId}"). El movimiento necesitará asignación manual.`);
       }
 
-      const newTransaction: Transaction = {
-        id: `split_${transaction.id}_${index}`,
+      const newTransaction: Omit<Transaction, 'id'> = {
         date: transaction.date,
         description: `Donación socio/a: ${name || taxId}`,
         amount: amount,
@@ -217,7 +235,7 @@ export function RemittanceSplitter({
       newTransactions.push(newTransaction);
     });
 
-    return { newTransactions, newEmissors, totalAmount };
+    return { newTransactions, totalAmount };
   };
 
   return (

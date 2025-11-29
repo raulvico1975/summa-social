@@ -38,21 +38,34 @@ import { PlusCircle, Edit, Trash2, TrendingUp, TrendingDown, DollarSign, Briefca
 import type { Project, Emisor, Transaction } from '@/lib/data';
 import { useToast } from '@/hooks/use-toast';
 import { StatCard } from './stat-card';
+import { useCollection, useFirebase, useMemoFirebase, addDocumentNonBlocking, deleteDocumentNonBlocking, setDocumentNonBlocking } from '@/firebase';
+import { collection, doc } from 'firebase/firestore';
 
-
-const PROJECTS_STORAGE_KEY = 'summa-social-projects';
-const EMISORS_STORAGE_KEY = 'summa-social-emissors';
-const TRANSACTIONS_STORAGE_KEY = 'summa-social-transactions';
 
 const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('es-ES', { style: 'currency', currency: 'EUR' }).format(amount);
 };
 
 
-export function ProjectManager({ initialProjects, initialEmissors, initialTransactions }: { initialProjects: Project[], initialEmissors: Emisor[], initialTransactions: Transaction[] }) {
-  const [projects, setProjects] = React.useState<Project[]>(initialProjects);
-  const [emissors, setEmissors] = React.useState<Emisor[]>(initialEmissors);
-  const [transactions, setTransactions] = React.useState<Transaction[]>(initialTransactions);
+export function ProjectManager() {
+  const { firestore, user } = useFirebase();
+
+  const projectsCollection = useMemoFirebase(
+    () => user ? collection(firestore, 'users', user.uid, 'projects') : null,
+    [firestore, user]
+  );
+  const emissorsCollection = useMemoFirebase(
+    () => user ? collection(firestore, 'users', user.uid, 'emissors') : null,
+    [firestore, user]
+  );
+  const transactionsCollection = useMemoFirebase(
+    () => user ? collection(firestore, 'users', user.uid, 'transactions') : null,
+    [firestore, user]
+  );
+
+  const { data: projects } = useCollection<Project>(projectsCollection);
+  const { data: emissors } = useCollection<Emisor>(emissorsCollection);
+  const { data: transactions } = useCollection<Transaction>(transactionsCollection);
 
   const [isDialogOpen, setIsDialogOpen] = React.useState(false);
   const [isAlertOpen, setIsAlertOpen] = React.useState(false);
@@ -61,36 +74,21 @@ export function ProjectManager({ initialProjects, initialEmissors, initialTransa
   const [formData, setFormData] = React.useState<Omit<Project, 'id'>>({ name: '', funderId: null });
   const { toast } = useToast();
   
-  React.useEffect(() => {
-    try {
-      const storedProjects = localStorage.getItem(PROJECTS_STORAGE_KEY);
-      if (storedProjects) setProjects(JSON.parse(storedProjects));
-      
-      const storedEmissors = localStorage.getItem(EMISORS_STORAGE_KEY);
-      if (storedEmissors) setEmissors(JSON.parse(storedEmissors));
-
-      const storedTransactions = localStorage.getItem(TRANSACTIONS_STORAGE_KEY);
-      if (storedTransactions) setTransactions(JSON.parse(storedTransactions));
-
-    } catch (error) {
-      console.error("Failed to parse data from localStorage", error);
-    }
-  }, []);
-
   const emisorMap = React.useMemo(() => 
-    emissors.reduce((acc, emisor) => {
+    emissors?.reduce((acc, emisor) => {
       acc[emisor.id] = emisor.name;
       return acc;
-    }, {} as Record<string, string>), 
+    }, {} as Record<string, string>) || {}, 
   [emissors]);
 
   const projectBalances = React.useMemo(() => {
+    if (!projects || !transactions) return {};
     const balances: Record<string, { funded: number; sent: number; expenses: number }> = {};
     projects.forEach(p => {
         balances[p.id] = { funded: 0, sent: 0, expenses: 0 };
     });
     transactions.forEach(tx => {
-        if (tx.projectId) {
+        if (tx.projectId && balances[tx.projectId]) {
             if (tx.amount > 0) {
                 balances[tx.projectId].funded += tx.amount;
             } else {
@@ -105,15 +103,6 @@ export function ProjectManager({ initialProjects, initialEmissors, initialTransa
     return balances;
   }, [projects, transactions]);
 
-  const updateProjects = (newProjects: Project[]) => {
-    setProjects(newProjects);
-    try {
-      localStorage.setItem(PROJECTS_STORAGE_KEY, JSON.stringify(newProjects));
-    } catch (error) {
-      console.error("Failed to save projects to localStorage", error);
-    }
-  };
-
   const handleEdit = (project: Project) => {
     setEditingProject(project);
     setFormData({ name: project.name, funderId: project.funderId });
@@ -126,8 +115,8 @@ export function ProjectManager({ initialProjects, initialEmissors, initialTransa
   }
 
   const handleDeleteConfirm = () => {
-    if (projectToDelete) {
-      updateProjects(projects.filter((p) => p.id !== projectToDelete.id));
+    if (projectToDelete && projectsCollection) {
+      deleteDocumentNonBlocking(doc(projectsCollection, projectToDelete.id));
       toast({
         title: 'Projecte Eliminat',
         description: `El projecte "${projectToDelete.name}" ha estat eliminat.`,
@@ -165,17 +154,18 @@ export function ProjectManager({ initialProjects, initialEmissors, initialTransa
        return;
     }
 
+    if (!projectsCollection) {
+      toast({ variant: 'destructive', title: 'Error', description: 'No se ha podido conectar a la base de datos.' });
+      return;
+    }
+
     if (editingProject) {
       // Update
-      updateProjects(projects.map((p) => p.id === editingProject.id ? { ...p, ...formData } : p));
+      setDocumentNonBlocking(doc(projectsCollection, editingProject.id), formData, { merge: true });
       toast({ title: 'Projecte Actualitzat', description: `El projecte "${formData.name}" ha estat actualitzat.` });
     } else {
       // Create
-      const newProject: Project = {
-        id: `proj_${new Date().getTime()}`,
-        ...formData
-      };
-      updateProjects([...projects, newProject]);
+      addDocumentNonBlocking(projectsCollection, formData);
       toast({ title: 'Projecte Creat', description: `El projecte "${formData.name}" ha estat creat.` });
     }
     handleOpenChange(false);
@@ -196,7 +186,7 @@ export function ProjectManager({ initialProjects, initialEmissors, initialTransa
             </DialogTrigger>
         </div>
         
-        {projects.length === 0 ? (
+        {(!projects || projects.length === 0) ? (
             <Card>
                 <CardHeader>
                     <CardTitle>No hi ha projectes</CardTitle>
@@ -292,7 +282,7 @@ export function ProjectManager({ initialProjects, initialEmissors, initialTransa
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="null">(Cap)</SelectItem>
-                {emissors.filter(e => e.type === 'donor').map(e => (
+                {emissors?.filter(e => e.type === 'donor').map(e => (
                   <SelectItem key={e.id} value={e.id}>{e.name}</SelectItem>
                 ))}
               </SelectContent>
@@ -327,5 +317,3 @@ export function ProjectManager({ initialProjects, initialEmissors, initialTransa
     </>
   );
 }
-
-    
