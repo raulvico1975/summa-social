@@ -1,4 +1,3 @@
-
 'use client';
 
 import * as React from 'react';
@@ -66,30 +65,35 @@ import { useToast } from '@/hooks/use-toast';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { useAppLog } from '@/hooks/use-app-log';
 import { RemittanceSplitter } from '@/components/remittance-splitter';
-import { useCollection, useFirebase, useMemoFirebase, addDocumentNonBlocking, deleteDocumentNonBlocking, setDocumentNonBlocking, updateDocumentNonBlocking } from '@/firebase';
+import { useCollection, useFirebase, useMemoFirebase, addDocumentNonBlocking, deleteDocumentNonBlocking, updateDocumentNonBlocking } from '@/firebase';
 import { collection, doc } from 'firebase/firestore';
 import { useTranslations } from '@/i18n';
+import { useCurrentOrganization } from '@/hooks/organization-provider';
 
 export function TransactionsTable() {
   const { firestore, user, storage } = useFirebase();
+  const { organizationId } = useCurrentOrganization();
   const { t } = useTranslations();
   const categoryTranslations = t.categories as Record<string, string>;
 
+  // ═══════════════════════════════════════════════════════════════════════════
+  // CANVI PRINCIPAL: Ara les col·leccions apunten a organizations/{orgId}/...
+  // ═══════════════════════════════════════════════════════════════════════════
   const transactionsCollection = useMemoFirebase(
-    () => user ? collection(firestore, 'users', user.uid, 'transactions') : null,
-    [firestore, user]
+    () => organizationId ? collection(firestore, 'organizations', organizationId, 'transactions') : null,
+    [firestore, organizationId]
   );
   const categoriesCollection = useMemoFirebase(
-    () => user ? collection(firestore, 'users', user.uid, 'categories') : null,
-    [firestore, user]
+    () => organizationId ? collection(firestore, 'organizations', organizationId, 'categories') : null,
+    [firestore, organizationId]
   );
   const emissorsCollection = useMemoFirebase(
-    () => user ? collection(firestore, 'users', user.uid, 'emissors') : null,
-    [firestore, user]
+    () => organizationId ? collection(firestore, 'organizations', organizationId, 'emissors') : null,
+    [firestore, organizationId]
   );
   const projectsCollection = useMemoFirebase(
-    () => user ? collection(firestore, 'users', user.uid, 'projects') : null,
-    [firestore, user]
+    () => organizationId ? collection(firestore, 'organizations', organizationId, 'projects') : null,
+    [firestore, organizationId]
   );
   
   const { data: transactions } = useCollection<Transaction>(transactionsCollection);
@@ -232,13 +236,14 @@ export function TransactionsTable() {
 
   const handleAttachDocument = (transactionId: string) => {
     log(`[${transactionId}] Iniciando la subida de documento.`);
-    if (!user?.uid || !transactionsCollection) {
-      const errorMsg = 'ERROR: No se ha podido identificar al usuario para la subida (user.uid is null).';
+    // CANVI: Ara usem organizationId per la ruta de Storage
+    if (!organizationId || !transactionsCollection) {
+      const errorMsg = 'ERROR: No se ha podido identificar la organización para la subida.';
       log(errorMsg);
-      toast({ variant: 'destructive', title: 'Error de Autenticación', description: errorMsg });
+      toast({ variant: 'destructive', title: 'Error', description: errorMsg });
       return;
     }
-    log(`Usuario autenticado: ${user.uid}`);
+    log(`Organització identificada: ${organizationId}`);
 
     const fileInput = document.createElement('input');
     fileInput.type = 'file';
@@ -258,7 +263,8 @@ export function TransactionsTable() {
       setLoadingStates(prev => ({ ...prev, [`doc_${transactionId}`]: true }));
       toast({ title: 'Subiendo documento...', description: `Adjuntando "${file.name}"...` });
       
-      const storagePath = `documents/${user.uid}/${transactionId}/${file.name}`;
+      // CANVI: Ruta de Storage ara usa organizationId
+      const storagePath = `organizations/${organizationId}/documents/${transactionId}/${file.name}`;
       log(`[${transactionId}] Ruta de subida en Storage: ${storagePath}`);
       const storageRef = ref(storage, storagePath);
       
