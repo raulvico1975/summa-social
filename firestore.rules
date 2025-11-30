@@ -3,8 +3,13 @@ service cloud.firestore {
   match /databases/{database}/documents {
 
     // ═══════════════════════════════════════════════════════════════════════
-    // FUNCIONS AUXILIARS
+    // CONSTANTS I FUNCIONS AUXILIARS
     // ═══════════════════════════════════════════════════════════════════════
+    
+    // UID de l'administrador global de la plataforma
+    function isSuperAdmin() {
+      return request.auth.uid == 'f2AHJqjXiOZkYajwkOnZ8RY6h2k2';
+    }
 
     // Comprova si l'usuari està autenticat
     function isSignedIn() {
@@ -36,9 +41,11 @@ service cloud.firestore {
     // REGLES PER A USUARIS
     // ═══════════════════════════════════════════════════════════════════════
 
-    // Perfil d'usuari - cada usuari només pot accedir al seu propi perfil
     match /users/{userId} {
-      allow read, write: if isSignedIn() && request.auth.uid == userId;
+      // El Super Admin pot llegir qualsevol perfil d'usuari.
+      // Un usuari només pot accedir al seu propi perfil.
+      allow read: if isSuperAdmin() || (isSignedIn() && request.auth.uid == userId);
+      allow write: if isSignedIn() && request.auth.uid == userId;
     }
 
     // ═══════════════════════════════════════════════════════════════════════
@@ -46,12 +53,13 @@ service cloud.firestore {
     // ═══════════════════════════════════════════════════════════════════════
 
     match /organizations/{orgId} {
-      // CANVI CLAU: Qualsevol usuari autenticat pot CREAR una organització
-      // Nota: Això es restringirà a la lògica de l'aplicació (només SuperAdmin)
+      // Qualsevol usuari autenticat pot CREAR una organització.
+      // La lògica de l'aplicació ho restringeix només al Super Admin.
       allow create: if isSignedIn();
       
-      // Només membres poden llegir l'organització
-      allow read: if isMemberOf(orgId);
+      // El Super Admin pot llegir qualsevol organització.
+      // Els membres només poden llegir la seva pròpia organització.
+      allow list, read: if isSuperAdmin() || isMemberOf(orgId);
       
       // Només admins poden actualitzar o eliminar l'organització
       allow update, delete: if isAdminOf(orgId);
@@ -61,12 +69,12 @@ service cloud.firestore {
       // ─────────────────────────────────────────────────────────────────────
       
       match /members/{memberId} {
-        // CANVI CLAU: Permetre a un usuari crear el seu propi registre de membre.
-        // Això és crucial per al creador de l'organització.
+        // Permetre a un usuari crear el seu propi registre de membre.
+        // Crucial per al creador de l'organització.
         allow create: if isSignedIn() && request.auth.uid == memberId;
         
-        // Membres poden llegir altres membres
-        allow read: if isMemberOf(orgId);
+        // Super Admin i membres poden llegir altres membres de la mateixa org.
+        allow read: if isSuperAdmin() || isMemberOf(orgId);
         
         // Només admins poden eliminar membres (excepte a si mateixos)
         allow delete: if isAdminOf(orgId) && request.auth.uid != memberId;
@@ -83,22 +91,22 @@ service cloud.firestore {
       // ─────────────────────────────────────────────────────────────────────
 
       match /transactions/{docId} {
-        allow read: if isMemberOf(orgId);
+        allow read: if isSuperAdmin() || isMemberOf(orgId);
         allow create, update, delete: if canEditFinances(orgId);
       }
 
       match /categories/{docId} {
-        allow read: if isMemberOf(orgId);
+        allow read: if isSuperAdmin() || isMemberOf(orgId);
         allow create, update, delete: if canEditFinances(orgId);
       }
 
       match /emissors/{docId} {
-        allow read: if isMemberOf(orgId);
+        allow read: if isSuperAdmin() || isMemberOf(orgId);
         allow create, update, delete: if canEditFinances(orgId);
       }
 
       match /projects/{docId} {
-        allow read: if isMemberOf(orgId);
+        allow read: if isSuperAdmin() || isMemberOf(orgId);
         allow create, update, delete: if canEditFinances(orgId);
       }
     }
