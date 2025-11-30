@@ -1,4 +1,3 @@
-
 'use client';
 
 import { Bar, BarChart, CartesianGrid, XAxis, YAxis } from 'recharts';
@@ -10,15 +9,17 @@ import {
 } from '@/components/ui/chart';
 import type { Transaction } from '@/lib/data';
 import * as React from 'react';
-
-const chartConfig = {
-  expenses: {
-    label: 'Gastos',
-    color: 'hsl(var(--primary))',
-  },
-} satisfies ChartConfig;
+import { useTranslations } from '@/i18n';
 
 export function ExpensesChart({ transactions }: { transactions: Transaction[] }) {
+  const { t } = useTranslations();
+
+  const chartConfig = {
+    expenses: {
+      label: t.dashboard.expensesByCategory,
+      color: 'hsl(var(--primary))',
+    },
+  } satisfies ChartConfig;
 
   const chartData = React.useMemo(() => {
     if (!transactions || transactions.length === 0) {
@@ -26,7 +27,7 @@ export function ExpensesChart({ transactions }: { transactions: Transaction[] })
     }
 
     const expensesByCategory = transactions.reduce((acc, tx) => {
-      const category = tx.category || 'Sin Categoría';
+      const category = tx.category || t.common.uncategorized;
       if (!acc[category]) {
         acc[category] = 0;
       }
@@ -40,13 +41,13 @@ export function ExpensesChart({ transactions }: { transactions: Transaction[] })
       expenses: parseFloat(expenses.toFixed(2)),
     })).sort((a, b) => b.expenses - a.expenses); // Sort descending
 
-  }, [transactions]);
+  }, [transactions, t]);
 
 
   if (chartData.length === 0) {
     return (
         <div className="flex items-center justify-center h-[200px] w-full text-muted-foreground">
-            No hay datos de gastos para mostrar.
+            {t.dashboard.noExpenseData}
         </div>
     )
   }

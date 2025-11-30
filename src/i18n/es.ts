@@ -1,4 +1,3 @@
-
 export const es = {
   dashboard: {
     title: "Panel de Control",
@@ -121,10 +120,11 @@ export const es = {
     addCategory: "Añadir Categoría",
     expenses: "Gastos",
     income: "Ingresos",
+    expense: "Gasto",
     name: "Nombre",
     actions: "Acciones",
     noCategories: "No hay categorías.",
-    edit: "Editar Categoría",
+    editTitle: "Editar Categoría",
     addTitle: "Añadir Nueva Categoría",
     editDescription: "Edita los detalles de tu categoría.",
     addDescription: "Crea una nueva categoría para organizar tus transacciones.",
@@ -137,7 +137,14 @@ export const es = {
     languageSelector: "Elige un idioma",
     catalan: "Catalán",
     spanish: "Español",
-    saveSettings: "Guardar Configuración"
+    saveSettings: "Guardar Configuración",
+    categoryDeletedToast: "Categoría Eliminada",
+    categoryDeletedToastDescription: (name: string) => `La categoría "${name}" ha sido eliminada.`,
+    categoryUpdatedToast: "Categoría Actualizada",
+    categoryUpdatedToastDescription: (name: string) => `La categoría "${name}" ha sido actualizada.`,
+    categoryCreatedToast: "Categoría Creada",
+    categoryCreatedToastDescription: (name: string) => `La categoría "${name}" ha sido creada.`,
+    errorNameEmpty: "El nombre de la categoría no puede estar vacío.",
   },
   sidebar: {
     dashboard: "Panel de Control",
@@ -165,6 +172,9 @@ export const es = {
       edit: "Editar",
       add: "Añadir",
       none: "(Ninguno)",
-      noSelection: "Selecciona una opción"
+      noSelection: "Selecciona una opción",
+      uncategorized: "Sin Categoría",
+      error: "Error",
+      dbConnectionError: "No se ha podido conectar a la base de datos.",
   }
 };

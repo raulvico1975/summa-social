@@ -1,4 +1,3 @@
-
 export const ca = {
   dashboard: {
     title: "Panell de Control",
@@ -121,10 +120,11 @@ export const ca = {
     addCategory: "Afegir Categoria",
     expenses: "Despeses",
     income: "Ingressos",
+    expense: "Despesa",
     name: "Nom",
     actions: "Accions",
     noCategories: "No hi ha categories.",
-    edit: "Editar Categoria",
+    editTitle: "Editar Categoria",
     addTitle: "Afegir Nova Categoria",
     editDescription: "Edita els detalls de la teva categoria.",
     addDescription: "Crea una nova categoria per organitzar les teves transaccions.",
@@ -137,7 +137,14 @@ export const ca = {
     languageSelector: "Tria un idioma",
     catalan: "Català",
     spanish: "Espanyol",
-    saveSettings: "Guardar Configuració"
+    saveSettings: "Guardar Configuració",
+    categoryDeletedToast: "Categoria Eliminada",
+    categoryDeletedToastDescription: (name: string) => `La categoria "${name}" ha estat eliminada.`,
+    categoryUpdatedToast: "Categoria Actualitzada",
+    categoryUpdatedToastDescription: (name: string) => `La categoria "${name}" ha estat actualitzada.`,
+    categoryCreatedToast: "Categoria Creada",
+    categoryCreatedToastDescription: (name: string) => `La categoria "${name}" ha estat creada.`,
+    errorNameEmpty: "El nom de la categoria no pot estar buit.",
   },
   sidebar: {
     dashboard: "Panell de Control",
@@ -165,6 +172,9 @@ export const ca = {
       edit: "Editar",
       add: "Afegir",
       none: "(Cap)",
-      noSelection: "Selecciona una opció"
+      noSelection: "Selecciona una opció",
+      uncategorized: "Sense Categoria",
+      error: "Error",
+      dbConnectionError: "No s'ha pogut connectar a la base de dades.",
   }
 };

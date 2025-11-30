@@ -1,4 +1,3 @@
-
 'use client';
 
 import * as React from 'react';
@@ -68,9 +67,11 @@ import { useAppLog } from '@/hooks/use-app-log';
 import { RemittanceSplitter } from '@/components/remittance-splitter';
 import { useCollection, useFirebase, useMemoFirebase, addDocumentNonBlocking, deleteDocumentNonBlocking, setDocumentNonBlocking, updateDocumentNonBlocking } from '@/firebase';
 import { collection, doc } from 'firebase/firestore';
+import { useTranslations } from '@/i18n';
 
 export function TransactionsTable() {
   const { firestore, user, storage } = useFirebase();
+  const { t } = useTranslations();
 
   const transactionsCollection = useMemoFirebase(
     () => user ? collection(firestore, 'users', user.uid, 'transactions') : null,
@@ -410,21 +411,21 @@ export function TransactionsTable() {
           ) : (
             <Sparkles className="mr-2 h-4 w-4 text-primary" />
           )}
-          Clasificar Pendientes
+          {t.movements.table.categorizeAll}
         </Button>
       </div>
       <div className="rounded-md border">
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>Fecha</TableHead>
-              <TableHead className="text-right">Importe</TableHead>
-              <TableHead>Concepto</TableHead>
-              <TableHead>Emisor</TableHead>
-              <TableHead>Categoría</TableHead>
-              <TableHead>Projecte</TableHead>
-              <TableHead>Comprovant</TableHead>
-              <TableHead><span className="sr-only">Acciones</span></TableHead>
+              <TableHead>{t.movements.table.date}</TableHead>
+              <TableHead className="text-right">{t.movements.table.amount}</TableHead>
+              <TableHead>{t.movements.table.description}</TableHead>
+              <TableHead>{t.movements.table.emisor}</TableHead>
+              <TableHead>{t.movements.table.category}</TableHead>
+              <TableHead>{t.movements.table.project}</TableHead>
+              <TableHead>{t.movements.table.proof}</TableHead>
+              <TableHead><span className="sr-only">{t.movements.table.actions}</span></TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -456,7 +457,7 @@ export function TransactionsTable() {
                            ) : (
                                <Button variant="ghost" size="sm">
                                    <UserPlus className="mr-2 h-4 w-4"/>
-                                   Asignar
+                                   {t.movements.table.assign}
                                </Button>
                            )}
                         </DropdownMenuTrigger>
@@ -514,7 +515,7 @@ export function TransactionsTable() {
                         ) : (
                           <Sparkles className="mr-2 h-4 w-4 text-primary" />
                         )}
-                        Clasificar
+                        {t.movements.table.categorize}
                       </Button>
                     )}
                   </TableCell>
@@ -529,7 +530,7 @@ export function TransactionsTable() {
                            ) : (
                                <Button variant="ghost" size="sm">
                                    <FolderKanban className="mr-2 h-4 w-4"/>
-                                   Assignar
+                                   {t.movements.table.assign}
                                </Button>
                            )}
                         </DropdownMenuTrigger>
@@ -573,18 +574,18 @@ export function TransactionsTable() {
                             <DropdownMenuContent align="end">
                                 <DropdownMenuItem onClick={() => handleEditClick(tx)}>
                                     <Edit className="mr-2 h-4 w-4" />
-                                    Editar
+                                    {t.movements.table.edit}
                                 </DropdownMenuItem>
                                 {tx.amount > 0 && (
                                   <DropdownMenuItem onClick={() => handleSplitRemittance(tx)}>
                                     <GitMerge className="mr-2 h-4 w-4" />
-                                    Dividir Remesa
+                                    {t.movements.table.splitRemittance}
                                   </DropdownMenuItem>
                                 )}
                                 <DropdownMenuSeparator />
                                 <DropdownMenuItem className="text-red-500" onClick={() => handleDeleteClick(tx)}>
                                     <Trash2 className="mr-2 h-4 w-4" />
-                                    Eliminar
+                                    {t.movements.table.delete}
                                 </DropdownMenuItem>
                             </DropdownMenuContent>
                         </DropdownMenu>
@@ -595,7 +596,7 @@ export function TransactionsTable() {
              {(!transactions || transactions.length === 0) && (
                 <TableRow>
                     <TableCell colSpan={8} className="h-24 text-center">
-                        No hay transacciones. Empieza importando un extracto bancario.
+                        {t.movements.table.noTransactions}
                     </TableCell>
                 </TableRow>
              )}

@@ -1,4 +1,3 @@
-
 'use client';
 
 import * as React from 'react';
@@ -47,6 +46,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
 import { useCollection, useFirebase, useMemoFirebase, addDocumentNonBlocking, deleteDocumentNonBlocking, setDocumentNonBlocking } from '@/firebase';
 import { collection, doc } from 'firebase/firestore';
+import { useTranslations } from '@/i18n';
 
 function CategoryTable({
   categories,
@@ -57,13 +57,14 @@ function CategoryTable({
   onEdit: (category: Category) => void;
   onDelete: (category: Category) => void;
 }) {
+  const { t } = useTranslations();
   return (
     <div className="rounded-md border">
       <Table>
         <TableHeader>
           <TableRow>
-            <TableHead>Nombre</TableHead>
-            <TableHead className="text-right">Acciones</TableHead>
+            <TableHead>{t.settings.name}</TableHead>
+            <TableHead className="text-right">{t.settings.actions}</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -88,7 +89,7 @@ function CategoryTable({
           {categories.length === 0 && (
              <TableRow>
                 <TableCell colSpan={2} className="text-center text-muted-foreground">
-                    No hay categorías.
+                    {t.settings.noCategories}
                 </TableCell>
              </TableRow>
           )}
@@ -100,6 +101,7 @@ function CategoryTable({
 
 export function CategoryManager() {
   const { firestore, user } = useFirebase();
+  const { t } = useTranslations();
   const categoriesCollection = useMemoFirebase(
     () => user ? collection(firestore, 'users', user.uid, 'categories') : null,
     [firestore, user]
@@ -131,8 +133,8 @@ export function CategoryManager() {
     if (categoryToDelete && categoriesCollection) {
       deleteDocumentNonBlocking(doc(categoriesCollection, categoryToDelete.id));
       toast({
-        title: 'Categoría Eliminada',
-        description: `La categoría "${categoryToDelete.name}" ha sido eliminada.`,
+        title: t.settings.categoryDeletedToast,
+        description: t.settings.categoryDeletedToastDescription(categoryToDelete.name),
       });
     }
     setIsAlertOpen(false);
@@ -163,29 +165,29 @@ export function CategoryManager() {
   
   const handleSave = () => {
     if (!formData.name) {
-       toast({ variant: 'destructive', title: 'Error', description: 'El nombre de la categoría no puede estar vacío.' });
+       toast({ variant: 'destructive', title: t.common.error, description: t.settings.errorNameEmpty });
        return;
     }
 
     if (!categoriesCollection) {
-      toast({ variant: 'destructive', title: 'Error', description: 'No se ha podido conectar a la base de datos.' });
+      toast({ variant: 'destructive', title: t.common.error, description: t.common.dbConnectionError });
       return;
     }
 
     if (editingCategory) {
       // Update
       setDocumentNonBlocking(doc(categoriesCollection, editingCategory.id), formData, { merge: true });
-      toast({ title: 'Categoría Actualizada', description: `La categoría "${formData.name}" ha sido actualizada.` });
+      toast({ title: t.settings.categoryUpdatedToast, description: t.settings.categoryUpdatedToastDescription(formData.name) });
     } else {
       // Create
       addDocumentNonBlocking(categoriesCollection, formData);
-      toast({ title: 'Categoría Creada', description: `La categoría "${formData.name}" ha sido creada.` });
+      toast({ title: t.settings.categoryCreatedToast, description: t.settings.categoryCreatedToastDescription(formData.name) });
     }
     handleOpenChange(false);
   }
 
-  const dialogTitle = editingCategory ? 'Editar Categoría' : 'Añadir Nueva Categoría';
-  const dialogDescription = editingCategory ? 'Edita los detalles de tu categoría.' : 'Crea una nueva categoría para organizar tus transacciones.';
+  const dialogTitle = editingCategory ? t.settings.editTitle : t.settings.addTitle;
+  const dialogDescription = editingCategory ? t.settings.editDescription : t.settings.addDescription;
 
   return (
     <>
@@ -193,21 +195,21 @@ export function CategoryManager() {
       <Card>
         <CardHeader className="flex flex-row items-center justify-between">
           <div>
-            <CardTitle>Gestionar Categorías</CardTitle>
-            <CardDescription>Añade, edita o elimina tus categorías financieras.</CardDescription>
+            <CardTitle>{t.settings.manageCategories}</CardTitle>
+            <CardDescription>{t.settings.manageCategoriesDescription}</CardDescription>
           </div>
           <DialogTrigger asChild>
             <Button size="sm" onClick={handleAddNew}>
               <PlusCircle className="mr-2 h-4 w-4" />
-              Añadir Categoría
+              {t.settings.addCategory}
             </Button>
           </DialogTrigger>
         </CardHeader>
         <CardContent>
           <Tabs defaultValue="expenses">
             <TabsList className="grid w-full grid-cols-2">
-              <TabsTrigger value="expenses">Gastos</TabsTrigger>
-              <TabsTrigger value="income">Ingresos</TabsTrigger>
+              <TabsTrigger value="expenses">{t.settings.expenses}</TabsTrigger>
+              <TabsTrigger value="income">{t.settings.income}</TabsTrigger>
             </TabsList>
             <TabsContent value="expenses" className="mt-4">
               <CategoryTable
@@ -235,30 +237,30 @@ export function CategoryManager() {
         <div className="grid gap-4 py-4">
           <div className="grid grid-cols-4 items-center gap-4">
             <Label htmlFor="name" className="text-right">
-              Nombre
+              {t.settings.name}
             </Label>
             <Input id="name" value={formData.name} onChange={handleFormChange} className="col-span-3" />
           </div>
           <div className="grid grid-cols-4 items-center gap-4">
             <Label htmlFor="type" className="text-right">
-              Tipo
+              {t.settings.type}
             </Label>
             <Select value={formData.type} onValueChange={handleSelectChange}>
               <SelectTrigger className="col-span-3">
-                <SelectValue placeholder="Selecciona un tipo" />
+                <SelectValue placeholder={t.common.noSelection} />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="expense">Gasto</SelectItem>
-                <SelectItem value="income">Ingreso</SelectItem>
+                <SelectItem value="expense">{t.settings.expense}</SelectItem>
+                <SelectItem value="income">{t.settings.income}</SelectItem>
               </SelectContent>
             </Select>
           </div>
         </div>
         <DialogFooter>
           <DialogClose asChild>
-             <Button variant="outline">Cancelar</Button>
+             <Button variant="outline">{t.common.cancel}</Button>
           </DialogClose>
-          <Button onClick={handleSave}>Guardar Categoría</Button>
+          <Button onClick={handleSave}>{t.settings.save}</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
@@ -266,16 +268,15 @@ export function CategoryManager() {
     <AlertDialog open={isAlertOpen} onOpenChange={setIsAlertOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>¿Estás seguro?</AlertDialogTitle>
+            <AlertDialogTitle>{t.settings.confirmDeleteTitle}</AlertDialogTitle>
             <AlertDialogDescription>
-              Esta acción no se puede deshacer. Se eliminará la categoría
-              permanentemente.
+              {t.settings.confirmDeleteDescription}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel onClick={() => setCategoryToDelete(null)}>Cancelar</AlertDialogCancel>
+            <AlertDialogCancel onClick={() => setCategoryToDelete(null)}>{t.common.cancel}</AlertDialogCancel>
             <AlertDialogAction onClick={handleDeleteConfirm}>
-              Eliminar
+              {t.common.delete}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
