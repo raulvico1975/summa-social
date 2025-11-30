@@ -9,20 +9,26 @@ import type { Transaction } from '@/lib/data';
 import { useCollection, useFirebase, useMemoFirebase } from '@/firebase';
 import { collection } from 'firebase/firestore';
 import { useTranslations } from '@/i18n';
+import { useCurrentOrganization } from '@/hooks/organization-provider';
 
-const MISSION_TRANSFER_CATEGORY = 'Transferencias a terreno o socias';
+// CANVI: Ara usem la clau de traducció en lloc del nom complet
+const MISSION_TRANSFER_CATEGORY_KEY = 'missionTransfers';
 
 const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('es-ES', { style: 'currency', currency: 'EUR' }).format(amount);
 };
 
 export default function DashboardPage() {
-  const { firestore, user } = useFirebase();
+  const { firestore } = useFirebase();
+  const { organizationId } = useCurrentOrganization();
   const { t } = useTranslations();
   
+  // ═══════════════════════════════════════════════════════════════════════════
+  // CANVI: Ara la col·lecció apunta a organizations/{orgId}/transactions
+  // ═══════════════════════════════════════════════════════════════════════════
   const transactionsQuery = useMemoFirebase(
-    () => user ? collection(firestore, 'users', user.uid, 'transactions') : null,
-    [firestore, user]
+    () => organizationId ? collection(firestore, 'organizations', organizationId, 'transactions') : null,
+    [firestore, organizationId]
   );
   const { data: transactions } = useCollection<Transaction>(transactionsQuery);
 
@@ -32,7 +38,7 @@ export default function DashboardPage() {
       if (tx.amount > 0) {
         acc.totalIncome += tx.amount;
       } else {
-        if (tx.category === MISSION_TRANSFER_CATEGORY) {
+        if (tx.category === MISSION_TRANSFER_CATEGORY_KEY) {
             acc.totalMissionTransfers += tx.amount;
         } else {
             acc.totalExpenses += tx.amount;
@@ -43,7 +49,7 @@ export default function DashboardPage() {
   }, [transactions]);
   
   const expenseTransactions = React.useMemo(() => 
-    transactions?.filter(tx => tx.amount < 0 && tx.category !== MISSION_TRANSFER_CATEGORY) || [],
+    transactions?.filter(tx => tx.amount < 0 && tx.category !== MISSION_TRANSFER_CATEGORY_KEY) || [],
   [transactions]);
   
   const netBalance = totalIncome + totalExpenses;
