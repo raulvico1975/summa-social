@@ -32,19 +32,28 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const isLoading = isFirebaseUserLoading || isOrgLoading;
 
   useEffect(() => {
-    if (!isLoading) {
-      if (firebaseUser) {
-        setUser({
-          uid: firebaseUser.uid,
-          name: userProfile?.displayName || firebaseUser.displayName || 'Usuari',
-          email: firebaseUser.email,
-          picture: firebaseUser.photoURL,
-          email_verified: firebaseUser.emailVerified,
-          isAnonymous: firebaseUser.isAnonymous,
-        });
-      } else {
-        setUser(null);
-      }
+    // Aquesta funció s'executarà cada cop que firebaseUser, userProfile o isLoading canviïn.
+    if (isLoading) {
+      setUser(null); // Mentre carrega, no tenim usuari.
+      return;
+    }
+
+    if (firebaseUser) {
+      // Un cop les dades han carregat, construïm l'objecte usuari definitiu.
+      // El nom del perfil té prioritat.
+      const displayName = userProfile?.displayName || firebaseUser.displayName || 'Usuari';
+      
+      setUser({
+        uid: firebaseUser.uid,
+        name: displayName,
+        email: firebaseUser.email,
+        picture: firebaseUser.photoURL,
+        email_verified: firebaseUser.emailVerified,
+        isAnonymous: firebaseUser.isAnonymous,
+      });
+    } else {
+      // Si no hi ha usuari de Firebase, no hi ha usuari a l'app.
+      setUser(null);
     }
   }, [firebaseUser, userProfile, isLoading]);
 
