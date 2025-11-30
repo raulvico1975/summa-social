@@ -11,7 +11,7 @@ import { Badge } from '@/components/ui/badge';
 
 export function LogPanel() {
   const { logs, clearLogs } = useAppLog();
-  const [isOpen, setIsOpen] = React.useState(true);
+  const [isOpen, setIsOpen] = React.useState(false);
   const scrollAreaRef = React.useRef<HTMLDivElement>(null);
 
   React.useEffect(() => {
