@@ -1,8 +1,6 @@
 import 'dotenv/config';
 import admin from 'firebase-admin';
 
-const PROJECT_ID = 'summa-social';
-
 /**
  * Funció per inicialitzar de manera segura l'SDK d'administració de Firebase.
  * Comprova si ja hi ha una aplicació inicialitzada per evitar errors.
