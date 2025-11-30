@@ -22,8 +22,8 @@ function LanguageSelector() {
   const handleSave = () => {
     setLanguage(selectedLanguage);
     toast({
-      title: "Idioma guardat",
-      description: `L'idioma de l'aplicació s'ha canviat a ${selectedLanguage === 'ca' ? 'Català' : 'Español'}.`
+      title: "Idioma canviat",
+      description: `L'idioma de l'aplicació ara és ${selectedLanguage === 'ca' ? 'Català' : 'Español'}. El canvi és per a la sessió actual.`
     });
   };
 
