@@ -46,7 +46,8 @@ service cloud.firestore {
     // ═══════════════════════════════════════════════════════════════════════
 
     match /organizations/{orgId} {
-      // Qualsevol usuari autenticat pot crear una organització
+      // CANVI: Qualsevol usuari autenticat pot crear una organització.
+      // Un cop creada, només es podrà llegir si ets membre i només l'admin la podrà modificar.
       allow create: if isSignedIn();
       
       // Només membres poden llegir l'organització
