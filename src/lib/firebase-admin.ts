@@ -6,8 +6,8 @@ const PROJECT_ID = 'summa-social';
 /**
  * Funció per inicialitzar de manera segura l'SDK d'administració de Firebase.
  * Comprova si ja hi ha una aplicació inicialitzada per evitar errors.
- * Si no n'hi ha, intenta la inicialització automàtica (per a producció)
- * i fa un fallback a la manual (per a local).
+ * Si no n'hi ha, intenta la inicialització automàtica, que és el mètode
+ * recomanat per a entorns com Firebase App Hosting.
  */
 function initializeAdminApp() {
   if (admin.apps.length > 0) {
@@ -16,23 +16,15 @@ function initializeAdminApp() {
 
   try {
     // Aquest mètode funciona bé en producció a Firebase App Hosting
+    // i en entorns que tenen les credencials configurades a nivell de sistema.
     console.log("Intentant inicialització automàtica de l'Admin SDK...");
     return admin.initializeApp();
   } catch (error: any) {
-    console.warn(
-      'La inicialització automàtica ha fallat. Intentant inicialització manual (esperat en local).',
-      error.message
-    );
-    try {
-      // Aquest mètode és el fallback per a entorns locals
-      return admin.initializeApp({
-        projectId: PROJECT_ID,
-      });
-    } catch (manualError: any) {
+      // Si la inicialització automàtica falla, és un error crític de configuració
+      // de l'entorn que no podem resoldre amb un fallback.
       throw new Error(
-        `Error crític: No s'ha pogut inicialitzar l'Admin SDK ni automàticament ni manualment. Missatge: ${manualError.message}`
+        `Error crític: La inicialització automàtica de l'Admin SDK ha fallat. Assegura't que les credencials estan ben configurades a l'entorn. Missatge: ${error.message}`
       );
-    }
   }
 }
 
