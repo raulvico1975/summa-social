@@ -2,39 +2,50 @@
 
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { collection, getDocs, writeBatch, doc } from 'firebase/firestore';
 import { useFirebase } from '@/firebase';
+import { useCurrentOrganization } from '@/hooks/organization-provider';
 import { ALL_DEFAULT_CATEGORIES } from '@/lib/default-data';
 import { useToast } from '@/hooks/use-toast';
 
 /**
- * Hook que inicialitza les dades per defecte per a usuaris nous.
- * Detecta automàticament si l'usuari no té categories i les crea.
+ * Hook que inicialitza les dades per defecte per a organitzacions noves.
+ * Detecta automàticament si l'organització no té categories i les crea.
  */
-export function useInitializeUserData() {
-  const { firestore, user, isUserLoading } = useFirebase();
+export function useInitializeOrganizationData() {
+  const { firestore } = useFirebase();
+  const { organizationId, isLoading: isOrgLoading } = useCurrentOrganization();
   const { toast } = useToast();
+  
   const [isInitializing, setIsInitializing] = useState(false);
-  const [isInitialized, setIsInitialized] = useState(false);
+  
+  // Track which organization we've initialized for
+  const initializedForOrgRef = useRef<string | null>(null);
 
   useEffect(() => {
     const initializeIfNeeded = async () => {
-      // Esperar a tenir usuari
-      if (isUserLoading || !user || isInitializing || isInitialized) {
+      // Esperar a tenir organització
+      if (isOrgLoading || !organizationId || isInitializing) {
+        return;
+      }
+
+      // Si ja hem inicialitzat per aquesta organització, no fer res
+      if (initializedForOrgRef.current === organizationId) {
         return;
       }
 
       setIsInitializing(true);
+      console.log(`🔍 Comprovant dades per a l'organització: ${organizationId}`);
 
       try {
-        // Comprovar si l'usuari ja té categories
-        const categoriesRef = collection(firestore, 'users', user.uid, 'categories');
+        // Comprovar si l'organització ja té categories
+        const categoriesRef = collection(firestore, 'organizations', organizationId, 'categories');
         const snapshot = await getDocs(categoriesRef);
 
         if (snapshot.empty) {
-          // Usuari nou! Crear categories per defecte
-          console.log('Nou usuari detectat. Creant categories per defecte...');
+          // Organització nova! Crear categories per defecte
+          console.log('🆕 Organització sense categories. Creant categories per defecte...');
           
           const batch = writeBatch(firestore);
           
@@ -48,20 +59,22 @@ export function useInitializeUserData() {
           console.log(`✅ ${ALL_DEFAULT_CATEGORIES.length} categories creades correctament.`);
           
           toast({
-            title: '¡Bienvenido a Summa Social!',
-            description: `Hemos configurado ${ALL_DEFAULT_CATEGORIES.length} categorías contables para tu organización.`,
+            title: 'Configuració completada!',
+            description: `Hem configurat ${ALL_DEFAULT_CATEGORIES.length} categories comptables per a la teva organització.`,
           });
         } else {
-          console.log(`Usuari existent amb ${snapshot.size} categories.`);
+          console.log(`✅ Organització existent amb ${snapshot.size} categories.`);
         }
 
-        setIsInitialized(true);
+        // Marcar com a inicialitzat per aquesta organització
+        initializedForOrgRef.current = organizationId;
+
       } catch (error) {
-        console.error('Error inicialitzant dades d\'usuari:', error);
+        console.error('❌ Error inicialitzant dades d\'organització:', error);
         toast({
           variant: 'destructive',
-          title: 'Error de inicialización',
-          description: 'No se pudieron crear las categorías por defecto. Inténtalo de nuevo.',
+          title: 'Error d\'inicialització',
+          description: 'No s\'han pogut crear les categories per defecte.',
         });
       } finally {
         setIsInitializing(false);
@@ -69,7 +82,10 @@ export function useInitializeUserData() {
     };
 
     initializeIfNeeded();
-  }, [user, isUserLoading, firestore, isInitializing, isInitialized, toast]);
+  }, [organizationId, isOrgLoading, firestore, isInitializing, toast]);
 
-  return { isInitializing, isInitialized };
+  return { isInitializing };
 }
+
+// Mantenir el nom antic per compatibilitat (però ara és un alias)
+export const useInitializeUserData = useInitializeOrganizationData;
