@@ -28,10 +28,6 @@ interface UseOrganizationResult {
 
 /**
  * Hook principal per gestionar l'organització de l'usuari actual.
- * 
- * - Si l'usuari és Super Admin i no té organització: en crea una
- * - Si l'usuari normal no té organització: mostra error
- * - Si l'usuari té organització: la carrega
  */
 export function useOrganization(): UseOrganizationResult {
   const { firestore, user, isUserLoading } = useFirebase();
@@ -42,22 +38,38 @@ export function useOrganization(): UseOrganizationResult {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
 
+  // DEBUG: Logging per diagnosticar
   const isSuperAdmin = user?.uid === SUPER_ADMIN_UID;
+  
+  useEffect(() => {
+    // DEBUG: Mostrar informació de l'usuari
+    console.log('🔍 DEBUG useOrganization:');
+    console.log('   - user:', user);
+    console.log('   - user?.uid:', user?.uid);
+    console.log('   - SUPER_ADMIN_UID:', SUPER_ADMIN_UID);
+    console.log('   - isSuperAdmin:', user?.uid === SUPER_ADMIN_UID);
+    console.log('   - isUserLoading:', isUserLoading);
+  }, [user, isUserLoading]);
 
   useEffect(() => {
     const loadOrCreateOrganization = async () => {
       // Esperar que l'usuari estigui carregat
       if (isUserLoading) {
+        console.log('⏳ Esperant que l\'usuari es carregui...');
         return;
       }
 
       // Si no hi ha usuari, no podem fer res
       if (!user) {
+        console.log('❌ No hi ha usuari autenticat');
         setIsLoading(false);
         setOrganization(null);
         setUserRole(null);
         return;
       }
+
+      console.log('👤 Usuari autenticat:', user.uid);
+      console.log('🔑 És Super Admin?', isSuperAdmin);
 
       setIsLoading(true);
       setError(null);
@@ -69,16 +81,20 @@ export function useOrganization(): UseOrganizationResult {
 
         if (userProfileSnap.exists()) {
           const userProfile = userProfileSnap.data() as UserProfile;
+          console.log('📄 Perfil d\'usuari trobat:', userProfile);
           
           if (userProfile.organizationId) {
             // L'usuari ja té organització - carregar-la
+            console.log('🏢 Carregant organització:', userProfile.organizationId);
             await loadExistingOrganization(userProfile.organizationId, userProfile.role);
           } else {
             // L'usuari existeix però no té organització
+            console.log('⚠️ Usuari sense organizationId al perfil');
             await handleNoOrganization();
           }
         } else {
           // Usuari completament nou
+          console.log('🆕 Usuari nou (sense perfil a Firestore)');
           await handleNoOrganization();
         }
       } catch (err) {
@@ -102,7 +118,6 @@ export function useOrganization(): UseOrganizationResult {
         setUserRole(role);
         console.log('✅ Organització carregada:', orgData.name);
       } else {
-        // L'organització referenciada no existeix
         console.error('❌ Organització referenciada no trobada:', orgId);
         setError(new Error('L\'organització assignada no existeix. Contacta amb l\'administrador.'));
       }
@@ -112,13 +127,17 @@ export function useOrganization(): UseOrganizationResult {
      * Gestiona el cas quan l'usuari no té organització
      */
     const handleNoOrganization = async () => {
+      console.log('🔍 handleNoOrganization - isSuperAdmin:', isSuperAdmin);
+      console.log('🔍 handleNoOrganization - user?.uid:', user?.uid);
+      console.log('🔍 handleNoOrganization - SUPER_ADMIN_UID:', SUPER_ADMIN_UID);
+      
       if (isSuperAdmin) {
         // Super Admin: crear organització automàticament
-        console.log('🆕 Super Admin sense organització. Creant-ne una...');
+        console.log('🆕 Super Admin detectat! Creant organització...');
         await createNewOrganization();
       } else {
         // Usuari normal: no pot crear organització
-        console.log('⚠️ Usuari sense organització assignada.');
+        console.log('⚠️ Usuari sense organització assignada. UID:', user?.uid);
         setError(new Error('No tens cap organització assignada. Contacta amb l\'administrador per obtenir accés.'));
         toast({
           variant: 'destructive',
@@ -134,9 +153,9 @@ export function useOrganization(): UseOrganizationResult {
     const createNewOrganization = async () => {
       if (!user) return;
 
+      console.log('🏗️ Creant nova organització per:', user.uid);
+
       const now = new Date().toISOString();
-      
-      // Generar un slug únic basat en el timestamp
       const slug = `org-${Date.now()}`;
 
       // 1. Crear l'organització
@@ -147,41 +166,51 @@ export function useOrganization(): UseOrganizationResult {
         createdAt: now,
       };
 
-      const orgsCollection = collection(firestore, 'organizations');
-      const orgDocRef = await addDoc(orgsCollection, newOrg);
-      const orgId = orgDocRef.id;
+      console.log('📝 Dades de l\'organització:', newOrg);
 
-      // 2. Afegir l'usuari com a membre admin
-      const memberData: OrganizationMember = {
-        userId: user.uid,
-        email: user.email || '',
-        displayName: user.displayName || 'Super Admin',
-        role: 'admin',
-        joinedAt: now,
-      };
+      try {
+        const orgsCollection = collection(firestore, 'organizations');
+        const orgDocRef = await addDoc(orgsCollection, newOrg);
+        const orgId = orgDocRef.id;
+        console.log('✅ Organització creada amb ID:', orgId);
 
-      const memberRef = doc(firestore, 'organizations', orgId, 'members', user.uid);
-      await setDoc(memberRef, memberData);
+        // 2. Afegir l'usuari com a membre admin
+        const memberData: OrganizationMember = {
+          userId: user.uid,
+          email: user.email || '',
+          displayName: user.displayName || 'Super Admin',
+          role: 'admin',
+          joinedAt: now,
+        };
 
-      // 3. Crear/actualitzar el perfil de l'usuari
-      const userProfile: UserProfile = {
-        organizationId: orgId,
-        role: 'admin',
-      };
+        const memberRef = doc(firestore, 'organizations', orgId, 'members', user.uid);
+        await setDoc(memberRef, memberData);
+        console.log('✅ Membre creat');
 
-      const userProfileRef = doc(firestore, 'users', user.uid);
-      await setDoc(userProfileRef, userProfile, { merge: true });
+        // 3. Crear/actualitzar el perfil de l'usuari
+        const userProfile: UserProfile = {
+          organizationId: orgId,
+          role: 'admin',
+        };
 
-      // 4. Actualitzar l'estat local
-      setOrganization({ id: orgId, ...newOrg });
-      setUserRole('admin');
+        const userProfileRef = doc(firestore, 'users', user.uid);
+        await setDoc(userProfileRef, userProfile, { merge: true });
+        console.log('✅ Perfil d\'usuari actualitzat');
 
-      console.log('✅ Nova organització creada:', orgId);
-      
-      toast({
-        title: 'Benvingut a Summa Social!',
-        description: 'Hem creat la teva organització. Pots personalitzar-la a Configuració.',
-      });
+        // 4. Actualitzar l'estat local
+        setOrganization({ id: orgId, ...newOrg });
+        setUserRole('admin');
+
+        console.log('🎉 Tot completat! Organització:', orgId);
+        
+        toast({
+          title: 'Benvingut a Summa Social!',
+          description: 'Hem creat la teva organització. Pots personalitzar-la a Configuració.',
+        });
+      } catch (err) {
+        console.error('❌ Error creant organització:', err);
+        throw err;
+      }
     };
 
     loadOrCreateOrganization();
