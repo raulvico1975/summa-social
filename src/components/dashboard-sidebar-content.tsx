@@ -15,7 +15,7 @@ import {
 import { LayoutDashboard, Settings, LogOut, Users, FileText, FolderKanban, AreaChart } from 'lucide-react';
 import { Logo } from '@/components/logo';
 import { signOut as signOutServer } from '@/services/auth';
-import { useFirebase } from '@/firebase';
+import { useFirebase, useAuth as useFirebaseAuth } from '@/firebase';
 import { useToast } from '@/hooks/use-toast';
 import { useTranslations } from '@/i18n';
 import { signOut as signOutClient } from 'firebase/auth';
@@ -26,7 +26,7 @@ export function DashboardSidebarContent() {
   const { auth } = useFirebase();
   const { t } = useTranslations();
   const { toast } = useToast();
-  const { user } = useAuth();
+  const { user } = useFirebaseAuth();
   
   const handleSignOut = async (e: React.MouseEvent<HTMLAnchorElement>) => {
     e.preventDefault();
