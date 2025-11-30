@@ -1,4 +1,3 @@
-
 'use client';
 
 import * as React from 'react';
@@ -15,23 +14,39 @@ import {
 } from '@/components/ui/sidebar';
 import { LayoutDashboard, Settings, LogOut, Users, FileText, FolderKanban, AreaChart } from 'lucide-react';
 import { Logo } from '@/components/logo';
-import { signOut } from '@/services/auth';
+import { signOut as signOutServer } from '@/services/auth';
+import { useFirebase } from '@/firebase';
 import { useToast } from '@/hooks/use-toast';
-import { useAuth } from '@/hooks/use-auth';
 import { useTranslations } from '@/i18n';
+import { signOut as signOutClient } from 'firebase/auth';
 
 export function DashboardSidebarContent() {
   const pathname = usePathname();
   const router = useRouter();
+  const { auth } = useFirebase();
   const { t } = useTranslations();
   const { toast } = useToast();
   const { user } = useAuth();
   
   const handleSignOut = async (e: React.MouseEvent<HTMLAnchorElement>) => {
     e.preventDefault();
-    await signOut();
-    toast({ title: t.sidebar.logoutToastTitle, description: t.sidebar.logoutToastDescription });
-    router.push('/');
+    try {
+      // First, sign out from the client-side
+      await signOutClient(auth);
+      // Then, clear the server session cookie
+      await signOutServer();
+      
+      toast({ title: t.sidebar.logoutToastTitle, description: t.sidebar.logoutToastDescription });
+      
+      // The user state will become null, and the app will redirect automatically.
+      // Forcing a hard reload can also help clear any stale state.
+      router.push('/');
+      router.refresh();
+
+    } catch (error) {
+       console.error("Error signing out: ", error);
+       toast({ variant: 'destructive', title: "Error", description: "No s'ha pogut tancar la sessió." });
+    }
   };
 
   const menuItems = [
