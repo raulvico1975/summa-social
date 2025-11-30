@@ -1,5 +1,4 @@
 import admin from 'firebase-admin';
-import 'dotenv/config';
 
 /**
  * Funció per inicialitzar de manera segura l'SDK d'administració de Firebase.
@@ -11,11 +10,13 @@ function initializeAdminApp() {
   }
   
   try {
-    // La configuració amb variables d'entorn (GOOGLE_APPLICATION_CREDENTIALS)
-    // és la forma estàndard per a entorns de servidor com Firebase App Hosting.
+    // La configuració amb variables d'entorn és la forma estàndard
+    // per a entorns de servidor com Firebase App Hosting.
     return admin.initializeApp();
   } catch (error: any) {
     console.error("FIREBASE_ADMIN_INIT_ERROR:", error);
+    // Si la inicialització automàtica falla, és un error crític de configuració
+    // de l'entorn que no podem resoldre amb un fallback dins el codi.
     throw new Error(
       `Error crític: La inicialització automàtica de l'Admin SDK ha fallat. Assegura't que les credencials estan ben configurades a l'entorn. Missatge: ${error.message}`
     );
