@@ -10,6 +10,8 @@ import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import type { Language } from '@/i18n';
 import { PasswordChangeForm } from '@/components/password-change-form';
+import { useCurrentOrganization } from '@/hooks/organization-provider';
+import { Separator } from '@/components/ui/separator';
 
 function LanguageSelector() {
   const { t, language, setLanguage } = useTranslations();
@@ -55,15 +57,42 @@ function LanguageSelector() {
 
 export default function SettingsPage() {
   const { t } = useTranslations();
+  const { userRole } = useCurrentOrganization();
+  const canManageOrganization = userRole === 'admin' || userRole === 'treasurer';
+
   return (
-    <div className="flex flex-col gap-6">
+    <div className="flex flex-col gap-8">
       <div>
         <h1 className="text-2xl font-bold tracking-tight font-headline">{t.settings.title}</h1>
         <p className="text-muted-foreground">{t.settings.description}</p>
       </div>
-      <PasswordChangeForm />
-      <LanguageSelector />
-      <CategoryManager />
+
+      {/* User Settings Section */}
+      <div className="flex flex-col gap-6">
+         <h2 className="text-xl font-semibold tracking-tight">{t.settings.userSettingsTitle}</h2>
+         <PasswordChangeForm />
+         <LanguageSelector />
+      </div>
+
+      <Separator />
+
+      {/* Organization Settings Section */}
+      <div className="flex flex-col gap-6">
+          <h2 className="text-xl font-semibold tracking-tight">{t.settings.organizationSettingsTitle}</h2>
+           {canManageOrganization ? (
+                <CategoryManager />
+            ) : (
+                <Card>
+                    <CardHeader>
+                        <CardTitle>{t.settings.manageCategories}</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                        <p className="text-muted-foreground">{t.settings.permissionDenied}</p>
+                    </CardContent>
+                </Card>
+            )}
+      </div>
+
     </div>
   );
 }

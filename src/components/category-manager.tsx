@@ -53,10 +53,12 @@ function CategoryTable({
   categories,
   onEdit,
   onDelete,
+  canEdit
 }: {
   categories: Category[];
   onEdit: (category: Category) => void;
   onDelete: (category: Category) => void;
+  canEdit: boolean;
 }) {
   const { t } = useTranslations();
   const categoryTranslations = t.categories as Record<string, string>;
@@ -67,31 +69,33 @@ function CategoryTable({
         <TableHeader>
           <TableRow>
             <TableHead>{t.settings.name}</TableHead>
-            <TableHead className="text-right">{t.settings.actions}</TableHead>
+            {canEdit && <TableHead className="text-right">{t.settings.actions}</TableHead>}
           </TableRow>
         </TableHeader>
         <TableBody>
           {categories.map((category) => (
             <TableRow key={category.id}>
               <TableCell className="font-medium">{categoryTranslations[category.name] || category.name}</TableCell>
-              <TableCell className="text-right">
-                <Button variant="ghost" size="icon" onClick={() => onEdit(category)}>
-                  <Edit className="h-4 w-4" />
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="text-red-500 hover:text-red-600"
-                  onClick={() => onDelete(category)}
-                >
-                  <Trash2 className="h-4 w-4" />
-                </Button>
-              </TableCell>
+              {canEdit && (
+                <TableCell className="text-right">
+                  <Button variant="ghost" size="icon" onClick={() => onEdit(category)}>
+                    <Edit className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="text-red-500 hover:text-red-600"
+                    onClick={() => onDelete(category)}
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                </TableCell>
+              )}
             </TableRow>
           ))}
           {categories.length === 0 && (
              <TableRow>
-                <TableCell colSpan={2} className="text-center text-muted-foreground">
+                <TableCell colSpan={canEdit ? 2 : 1} className="text-center text-muted-foreground">
                     {t.settings.noCategories}
                 </TableCell>
              </TableRow>
@@ -104,13 +108,12 @@ function CategoryTable({
 
 export function CategoryManager() {
   const { firestore } = useFirebase();
-  const { organizationId } = useCurrentOrganization();
+  const { organizationId, userRole } = useCurrentOrganization();
   const { t } = useTranslations();
   const categoryTranslations = t.categories as Record<string, string>;
   
-  // ═══════════════════════════════════════════════════════════════════════════
-  // CANVI: Ara la col·lecció apunta a organizations/{orgId}/categories
-  // ═══════════════════════════════════════════════════════════════════════════
+  const canEdit = userRole === 'admin' || userRole === 'treasurer';
+
   const categoriesCollection = useMemoFirebase(
     () => organizationId ? collection(firestore, 'organizations', organizationId, 'categories') : null,
     [firestore, organizationId]
@@ -128,17 +131,20 @@ export function CategoryManager() {
   const expenseCategories = React.useMemo(() => categories?.filter((c) => c.type === 'expense') || [], [categories]);
 
   const handleEdit = (category: Category) => {
+    if (!canEdit) return;
     setEditingCategory(category);
     setFormData({ name: category.name, type: category.type });
     setIsDialogOpen(true);
   };
   
   const handleDeleteRequest = (category: Category) => {
+    if (!canEdit) return;
     setCategoryToDelete(category);
     setIsAlertOpen(true);
   }
 
   const handleDeleteConfirm = () => {
+    if (!canEdit) return;
     if (categoryToDelete && categoriesCollection) {
       deleteDocumentNonBlocking(doc(categoriesCollection, categoryToDelete.id));
       const categoryName = categoryTranslations[categoryToDelete.name] || categoryToDelete.name;
@@ -160,6 +166,7 @@ export function CategoryManager() {
   }
   
   const handleAddNew = () => {
+    if (!canEdit) return;
     setEditingCategory(null);
     setFormData({ name: '', type: 'expense' });
     setIsDialogOpen(true);
@@ -174,6 +181,8 @@ export function CategoryManager() {
   }
   
   const handleSave = () => {
+    if (!canEdit) return;
+
     if (!formData.name) {
        toast({ variant: 'destructive', title: t.common.error, description: t.settings.errorNameEmpty });
        return;
@@ -205,7 +214,6 @@ export function CategoryManager() {
   const dialogDescription = editingCategory ? t.settings.editDescription : t.settings.addDescription;
   const dialogFormDataName = editingCategory ? (categoryTranslations[formData.name] || formData.name) : formData.name;
 
-
   return (
     <>
     <Dialog open={isDialogOpen} onOpenChange={handleOpenChange}>
@@ -215,12 +223,14 @@ export function CategoryManager() {
             <CardTitle>{t.settings.manageCategories}</CardTitle>
             <CardDescription>{t.settings.manageCategoriesDescription}</CardDescription>
           </div>
-          <DialogTrigger asChild>
-            <Button size="sm" onClick={handleAddNew}>
-              <PlusCircle className="mr-2 h-4 w-4" />
-              {t.settings.addCategory}
-            </Button>
-          </DialogTrigger>
+          {canEdit && (
+            <DialogTrigger asChild>
+                <Button size="sm" onClick={handleAddNew}>
+                <PlusCircle className="mr-2 h-4 w-4" />
+                {t.settings.addCategory}
+                </Button>
+            </DialogTrigger>
+           )}
         </CardHeader>
         <CardContent>
           <Tabs defaultValue="expenses">
@@ -233,6 +243,7 @@ export function CategoryManager() {
                 categories={expenseCategories}
                 onEdit={handleEdit}
                 onDelete={handleDeleteRequest}
+                canEdit={canEdit}
               />
             </TabsContent>
             <TabsContent value="income" className="mt-4">
@@ -240,64 +251,69 @@ export function CategoryManager() {
                 categories={incomeCategories}
                 onEdit={handleEdit}
                 onDelete={handleDeleteRequest}
+                canEdit={canEdit}
               />
             </TabsContent>
           </Tabs>
         </CardContent>
       </Card>
       
-      <DialogContent>
-        <DialogHeader>
-          <DialogTitle>{dialogTitle}</DialogTitle>
-          <DialogDescription>{dialogDescription}</DialogDescription>
-        </DialogHeader>
-        <div className="grid gap-4 py-4">
-          <div className="grid grid-cols-4 items-center gap-4">
-            <Label htmlFor="name" className="text-right">
-              {t.settings.name}
-            </Label>
-            <Input id="name" value={dialogFormDataName} onChange={handleFormChange} className="col-span-3" />
-          </div>
-          <div className="grid grid-cols-4 items-center gap-4">
-            <Label htmlFor="type" className="text-right">
-              {t.settings.type}
-            </Label>
-            <Select value={formData.type} onValueChange={handleSelectChange}>
-              <SelectTrigger className="col-span-3">
-                <SelectValue placeholder={t.common.noSelection} />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="expense">{t.settings.expense}</SelectItem>
-                <SelectItem value="income">{t.settings.income}</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-        </div>
-        <DialogFooter>
-          <DialogClose asChild>
-             <Button variant="outline">{t.common.cancel}</Button>
-          </DialogClose>
-          <Button onClick={handleSave}>{t.settings.save}</Button>
-        </DialogFooter>
-      </DialogContent>
+      {canEdit && (
+        <DialogContent>
+            <DialogHeader>
+            <DialogTitle>{dialogTitle}</DialogTitle>
+            <DialogDescription>{dialogDescription}</DialogDescription>
+            </DialogHeader>
+            <div className="grid gap-4 py-4">
+            <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="name" className="text-right">
+                {t.settings.name}
+                </Label>
+                <Input id="name" value={dialogFormDataName} onChange={handleFormChange} className="col-span-3" />
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="type" className="text-right">
+                {t.settings.type}
+                </Label>
+                <Select value={formData.type} onValueChange={handleSelectChange}>
+                <SelectTrigger className="col-span-3">
+                    <SelectValue placeholder={t.common.noSelection} />
+                </SelectTrigger>
+                <SelectContent>
+                    <SelectItem value="expense">{t.settings.expense}</SelectItem>
+                    <SelectItem value="income">{t.settings.income}</SelectItem>
+                </SelectContent>
+                </Select>
+            </div>
+            </div>
+            <DialogFooter>
+            <DialogClose asChild>
+                <Button variant="outline">{t.common.cancel}</Button>
+            </DialogClose>
+            <Button onClick={handleSave}>{t.settings.save}</Button>
+            </DialogFooter>
+        </DialogContent>
+      )}
     </Dialog>
 
-    <AlertDialog open={isAlertOpen} onOpenChange={setIsAlertOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>{t.settings.confirmDeleteTitle}</AlertDialogTitle>
-            <AlertDialogDescription>
-              {t.settings.confirmDeleteDescription}
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel onClick={() => setCategoryToDelete(null)}>{t.common.cancel}</AlertDialogCancel>
-            <AlertDialogAction onClick={handleDeleteConfirm}>
-              {t.common.delete}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+    {canEdit && (
+        <AlertDialog open={isAlertOpen} onOpenChange={setIsAlertOpen}>
+            <AlertDialogContent>
+            <AlertDialogHeader>
+                <AlertDialogTitle>{t.settings.confirmDeleteTitle}</AlertDialogTitle>
+                <AlertDialogDescription>
+                {t.settings.confirmDeleteDescription}
+                </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+                <AlertDialogCancel onClick={() => setCategoryToDelete(null)}>{t.common.cancel}</AlertDialogCancel>
+                <AlertDialogAction onClick={handleDeleteConfirm}>
+                {t.common.delete}
+                </AlertDialogAction>
+            </AlertDialogFooter>
+            </AlertDialogContent>
+        </AlertDialog>
+    )}
     </>
   );
 }

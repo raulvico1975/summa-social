@@ -161,7 +161,10 @@ export const es = {
   },
   settings: {
     title: "Configuración",
-    description: "Gestiona las categorías y otros ajustes de la aplicación.",
+    description: "Gestiona tus preferencias personales y los parámetros de la organización.",
+    userSettingsTitle: "Configuración de Usuario",
+    organizationSettingsTitle: "Configuración de la Organización",
+    permissionDenied: "No tienes permisos para gestionar esta configuración. Contacta con un administrador.",
     manageCategories: "Gestionar Categorías",
     manageCategoriesDescription: "Añade, edita o elimina tus categorías financieras.",
     addCategory: "Añadir Categoría",
