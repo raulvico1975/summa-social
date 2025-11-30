@@ -1,4 +1,3 @@
-
 'use client';
 
 import * as React from 'react';
@@ -49,15 +48,20 @@ import { Badge } from '@/components/ui/badge';
 import { useCollection, useFirebase, useMemoFirebase, addDocumentNonBlocking, deleteDocumentNonBlocking, setDocumentNonBlocking } from '@/firebase';
 import { collection, doc } from 'firebase/firestore';
 import { useTranslations } from '@/i18n';
+import { useCurrentOrganization } from '@/hooks/organization-provider';
 
 
 export function EmisorManager() {
-  const { firestore, user } = useFirebase();
+  const { firestore } = useFirebase();
+  const { organizationId } = useCurrentOrganization();
   const { t } = useTranslations();
 
+  // ═══════════════════════════════════════════════════════════════════════════
+  // CANVI: Ara la col·lecció apunta a organizations/{orgId}/emissors
+  // ═══════════════════════════════════════════════════════════════════════════
   const emissorsCollection = useMemoFirebase(
-    () => user ? collection(firestore, 'users', user.uid, 'emissors') : null,
-    [firestore, user]
+    () => organizationId ? collection(firestore, 'organizations', organizationId, 'emissors') : null,
+    [firestore, organizationId]
   );
   const { data: emissors } = useCollection<Emisor>(emissorsCollection);
 
