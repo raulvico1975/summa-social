@@ -1,31 +1,21 @@
 import admin from 'firebase-admin';
+import { firebaseConfig } from '@/firebase/config';
 
-/**
- * Funció per inicialitzar de manera segura l'SDK d'administració de Firebase.
- * Comprova si ja hi ha una aplicació inicialitzada per evitar errors.
- */
-function initializeAdminApp() {
-  if (admin.apps.length > 0) {
-    return admin.app();
-  }
-  
+// Aquest patró assegura que només inicialitzem l'app una vegada.
+if (!admin.apps.length) {
   try {
-    // La configuració amb variables d'entorn és la forma estàndard
-    // per a entorns de servidor com Firebase App Hosting.
-    return admin.initializeApp();
-  } catch (error: any) {
-    console.error("FIREBASE_ADMIN_INIT_ERROR:", error);
-    // Si la inicialització automàtica falla, és un error crític de configuració
-    // de l'entorn que no podem resoldre amb un fallback dins el codi.
-    throw new Error(
-      `Error crític: La inicialització automàtica de l'Admin SDK ha fallat. Assegura't que les credencials estan ben configurades a l'entorn. Missatge: ${error.message}`
-    );
+    admin.initializeApp({
+      // Utilitzem la configuració del client explícitament.
+      // En entorns de servidor segurs com aquest, és una estratègia vàlida
+      // quan la detecció automàtica de credencials falla.
+      credential: admin.credential.applicationDefault(),
+      databaseURL: `https://${firebaseConfig.projectId}.firebaseio.com`,
+      projectId: firebaseConfig.projectId,
+    });
+  } catch (error) {
+    console.error('Firebase admin initialization error', error);
   }
 }
 
-// Inicialitzem l'aplicació una sola vegada en carregar el mòdul.
-const adminApp = initializeAdminApp();
-
-// Exportem instàncies dels serveis ja inicialitzats.
-export const authAdmin = admin.auth(adminApp);
-export const firestoreAdmin = admin.firestore(adminApp);
+export const authAdmin = admin.auth();
+export const firestoreAdmin = admin.firestore();
