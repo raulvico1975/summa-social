@@ -13,7 +13,7 @@ function initializeAdminApp() {
 
   try {
     // Aquest mètode funciona en entorns que tenen les credencials configurades
-    // automàticament, com Firebase App Hosting.
+    // automàticament, com Firebase App Hosting. No s'ha d'afegir cap paràmetre.
     return admin.initializeApp();
   } catch (error: any) {
     // Si la inicialització automàtica falla, és un error crític de configuració
