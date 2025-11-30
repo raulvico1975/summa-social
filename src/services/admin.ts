@@ -1,6 +1,6 @@
 'use server';
 
-import { firestoreAdmin, authAdmin } from '@/lib/firebase-admin';
+import { authAdmin, firestoreAdmin } from '@/lib/firebase-admin';
 import { nanoid } from 'nanoid';
 import type { Organization, UserProfile, OrganizationRole, OrganizationMember } from '@/lib/data';
 
