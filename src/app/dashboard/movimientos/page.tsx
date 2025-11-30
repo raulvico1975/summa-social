@@ -21,9 +21,11 @@ import {
 import { useToast } from '@/hooks/use-toast';
 import { useCollection, useFirebase, useMemoFirebase } from '@/firebase';
 import { collection, writeBatch, doc } from 'firebase/firestore';
+import { useTranslations } from '@/i18n';
 
 export default function MovementsPage() {
   const { firestore, user } = useFirebase();
+  const { t } = useTranslations();
   const [isDeleteAlertOpen, setIsDeleteAlertOpen] = React.useState(false);
   const { toast } = useToast();
 
@@ -64,8 +66,8 @@ export default function MovementsPage() {
     <div className="flex flex-col gap-6">
       <div className="flex flex-col items-start justify-between gap-4 sm:flex-row sm:items-center">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight font-headline">Movimientos</h1>
-          <p className="text-muted-foreground">Gestiona todas tus transacciones bancarias.</p>
+          <h1 className="text-2xl font-bold tracking-tight font-headline">{t.movements.title}</h1>
+          <p className="text-muted-foreground">{t.movements.description}</p>
         </div>
         <div className="flex gap-2">
            {isDataLoaded && (
@@ -75,18 +77,18 @@ export default function MovementsPage() {
            )}
           <Button variant="outline">
             <Download className="mr-2 h-4 w-4" />
-            Exportar
+            {t.movements.export}
           </Button>
            <Button variant="destructive" onClick={() => setIsDeleteAlertOpen(true)} disabled={(transactions?.length || 0) === 0}>
                 <Trash2 className="mr-2 h-4 w-4" />
-                Eliminar todo
+                {t.movements.deleteAll}
             </Button>
         </div>
       </div>
       
       <Card>
         <CardHeader>
-          <CardTitle>Transacciones Recientes</CardTitle>
+          <CardTitle>{t.movements.recentTransactions}</CardTitle>
         </CardHeader>
         <CardContent>
           <TransactionsTable />
@@ -96,16 +98,15 @@ export default function MovementsPage() {
     <AlertDialog open={isDeleteAlertOpen} onOpenChange={setIsDeleteAlertOpen}>
         <AlertDialogContent>
             <AlertDialogHeader>
-                <AlertDialogTitle>¿Estás seguro?</AlertDialogTitle>
+                <AlertDialogTitle>{t.movements.confirmDeleteAllTitle}</AlertDialogTitle>
                 <AlertDialogDescription>
-                    Esta acción no se puede deshacer. Se eliminarán permanentemente
-                    todas las transacciones.
+                    {t.movements.confirmDeleteAllDescription}
                 </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
-                <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                <AlertDialogCancel>{t.movements.cancel}</AlertDialogCancel>
                 <AlertDialogAction onClick={handleDeleteAll}>
-                    Sí, eliminar todo
+                    {t.movements.confirm}
                 </AlertDialogAction>
             </AlertDialogFooter>
         </AlertDialogContent>

@@ -1,5 +1,4 @@
 
-
 'use client';
 
 import * as React from 'react';
@@ -19,10 +18,12 @@ import { Logo } from '@/components/logo';
 import { signOut } from '@/services/auth';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/use-auth';
+import { useTranslations } from '@/i18n';
 
 export function DashboardSidebarContent() {
   const pathname = usePathname();
   const router = useRouter();
+  const { t } = useTranslations();
   const { toast } = useToast();
   const { user } = useAuth();
   
@@ -36,32 +37,32 @@ export function DashboardSidebarContent() {
   const menuItems = [
     {
       href: '/dashboard',
-      label: 'Panel de Control',
+      label: t.sidebar.dashboard,
       icon: LayoutDashboard,
     },
     {
       href: '/dashboard/movimientos',
-      label: 'Movimientos',
+      label: t.sidebar.movements,
       icon: FileText,
     },
      {
       href: '/dashboard/projectes',
-      label: 'Projectes',
+      label: t.sidebar.projects,
       icon: FolderKanban,
     },
     {
       href: '/dashboard/emissors',
-      label: 'Emissors',
+      label: t.sidebar.emissors,
       icon: Users,
     },
     {
       href: '/dashboard/informes',
-      label: 'Informes',
+      label: t.sidebar.reports,
       icon: AreaChart,
     },
     {
       href: '/dashboard/configuracion',
-      label: 'Configuración',
+      label: t.sidebar.settings,
       icon: Settings,
     },
   ];
@@ -110,15 +111,15 @@ export function DashboardSidebarContent() {
                   <AvatarImage src={user?.picture} alt="User Avatar" data-ai-hint="user avatar" />
                   <AvatarFallback>{getInitials(user?.name)}</AvatarFallback>
                 </Avatar>
-                <span>{user?.name || 'Usuario'}</span>
+                <span>{user?.name || t.sidebar.anonymousUser}</span>
               </Link>
             </SidebarMenuButton>
           </SidebarMenuItem>
           <SidebarMenuItem>
-             <SidebarMenuButton asChild tooltip={{children: "Cerrar Sesión"}}>
+             <SidebarMenuButton asChild tooltip={{children: t.sidebar.logout}}>
                 <Link href="/" onClick={handleSignOut}>
                   <LogOut />
-                  <span>Cerrar Sesión</span>
+                  <span>{t.sidebar.logout}</span>
                 </Link>
             </SidebarMenuButton>
           </SidebarMenuItem>

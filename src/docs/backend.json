@@ -1,0 +1,172 @@
+
+{
+  "entities": {
+    "Transaction": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Transaction",
+      "type": "object",
+      "description": "Represents a financial transaction.",
+      "properties": {
+        "date": {
+          "type": "string",
+          "description": "Date of the transaction.",
+          "format": "date-time"
+        },
+        "description": {
+          "type": "string",
+          "description": "Description of the transaction."
+        },
+        "amount": {
+          "type": "number",
+          "description": "Amount of the transaction."
+        },
+        "category": {
+          "type": "string",
+          "description": "The assigned category name."
+        },
+        "emisorId": {
+          "type": "string",
+          "description": "Reference to an Emisor document."
+        },
+        "document": {
+          "type": "string",
+          "description": "URL of an associated document (e.g., a receipt)."
+        },
+        "projectId": {
+          "type": "string",
+          "description": "Reference to a Project document."
+        }
+      },
+      "required": [
+        "date",
+        "description",
+        "amount"
+      ]
+    },
+    "Category": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Category",
+      "type": "object",
+      "description": "Represents a category for classifying transactions.",
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "Name of the category."
+        },
+        "type": {
+          "type": "string",
+          "description": "Type of category (income or expense).",
+          "enum": ["income", "expense"]
+        }
+      },
+      "required": [
+        "name",
+        "type"
+      ]
+    },
+    "Emisor": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Emisor",
+      "type": "object",
+      "description": "Represents the emitter of a transaction (e.g., a donor, supplier).",
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "Name of the emitter."
+        },
+        "taxId": {
+          "type": "string",
+          "description": "Tax ID (DNI/CIF) of the emitter."
+        },
+        "zipCode": {
+          "type": "string",
+          "description": "Zip code of the emitter."
+        },
+        "type": {
+            "type": "string",
+            "description": "Type of emisor.",
+            "enum": ["donor", "supplier", "volunteer"]
+        }
+      },
+      "required": [
+        "name",
+        "taxId",
+        "zipCode",
+        "type"
+      ]
+    },
+    "Project": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Project",
+      "type": "object",
+      "description": "Represents a project to which transactions can be assigned.",
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "Name of the project."
+        },
+        "funderId": {
+          "type": "string",
+          "description": "Reference to the Emisor document of the funder."
+        }
+      },
+      "required": [
+        "name"
+      ]
+    },
+    "Settings": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Settings",
+      "type": "object",
+      "description": "Stores user-specific application settings.",
+      "properties": {
+        "language": {
+          "type": "string",
+          "description": "The preferred language for the user interface.",
+          "enum": ["ca", "es"]
+        }
+      },
+      "required": [
+        "language"
+      ]
+    }
+  },
+  "auth": {
+    "providers": [
+      "password",
+      "anonymous"
+    ]
+  },
+  "firestore": {
+    "/users/{userId}/transactions/{transactionId}": {
+      "schema": {
+        "$ref": "#/entities/Transaction"
+      },
+      "description": "Stores financial transactions for each user."
+    },
+    "/users/{userId}/categories/{categoryId}": {
+      "schema": {
+        "$ref": "#/entities/Category"
+      },
+      "description": "Stores transaction categories for each user."
+    },
+    "/users/{userId}/emissors/{emissorId}": {
+      "schema": {
+        "$ref": "#/entities/Emisor"
+      },
+      "description": "Stores transaction emissors (donors, suppliers, etc.) for each user."
+    },
+    "/users/{userId}/projects/{projectId}": {
+      "schema": {
+        "$ref": "#/entities/Project"
+      },
+      "description": "Stores projects for each user."
+    },
+    "/users/{userId}/settings/{settingsId}": {
+      "schema": {
+        "$ref": "#/entities/Settings"
+      },
+      "description": "Stores user-specific settings documents. Expects a single document with id 'app'."
+    }
+  }
+}

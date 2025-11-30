@@ -1,4 +1,3 @@
-
 'use client';
 
 import * as React from 'react';
@@ -9,9 +8,9 @@ import { DollarSign, TrendingUp, TrendingDown, Rocket } from 'lucide-react';
 import type { Transaction } from '@/lib/data';
 import { useCollection, useFirebase, useMemoFirebase } from '@/firebase';
 import { collection } from 'firebase/firestore';
+import { useTranslations } from '@/i18n';
 
 const MISSION_TRANSFER_CATEGORY = 'Transferencias a terreno o socias';
-
 
 const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('es-ES', { style: 'currency', currency: 'EUR' }).format(amount);
@@ -19,6 +18,8 @@ const formatCurrency = (amount: number) => {
 
 export default function DashboardPage() {
   const { firestore, user } = useFirebase();
+  const { t } = useTranslations();
+  
   const transactionsQuery = useMemoFirebase(
     () => user ? collection(firestore, 'users', user.uid, 'transactions') : null,
     [firestore, user]
@@ -50,40 +51,40 @@ export default function DashboardPage() {
   return (
     <div className="flex flex-col gap-6">
        <div>
-        <h1 className="text-2xl font-bold tracking-tight font-headline">Panel de Control</h1>
-        <p className="text-muted-foreground">Analiza tus datos financieros con resúmenes y gráficos.</p>
+        <h1 className="text-2xl font-bold tracking-tight font-headline">{t.dashboard.title}</h1>
+        <p className="text-muted-foreground">{t.dashboard.description}</p>
       </div>
       
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <StatCard 
-          title="Ingresos Totales"
+          title={t.dashboard.totalIncome}
           value={formatCurrency(totalIncome)}
           icon={TrendingUp}
-          description="Suma de todos los ingresos"
+          description={t.dashboard.totalIncomeDescription}
         />
         <StatCard 
-          title="Gastos Operativos"
+          title={t.dashboard.operatingExpenses}
           value={formatCurrency(totalExpenses)}
           icon={TrendingDown}
-          description="Suma de gastos sin incluir transferencias de misión"
+          description={t.dashboard.operatingExpensesDescription}
         />
          <StatCard 
-          title="Balance Operativo"
+          title={t.dashboard.operatingBalance}
           value={formatCurrency(netBalance)}
           icon={DollarSign}
-          description="Balance de ingresos y gastos operativos"
+          description={t.dashboard.operatingBalanceDescription}
         />
         <StatCard 
-          title="Transferencias a Terreno"
+          title={t.dashboard.missionTransfers}
           value={formatCurrency(totalMissionTransfers)}
           icon={Rocket}
-          description="Suma de las transferencias de misión"
+          description={t.dashboard.missionTransfersDescription}
         />
       </div>
 
       <Card>
         <CardHeader>
-          <CardTitle>Gastos por Categoría</CardTitle>
+          <CardTitle>{t.dashboard.expensesByCategory}</CardTitle>
         </CardHeader>
         <CardContent>
           <ExpensesChart transactions={expenseTransactions} />
