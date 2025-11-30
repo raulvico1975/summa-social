@@ -17,10 +17,18 @@ if (serviceAccountString) {
     }
 }
 
+// Define the configuration object
+const firebaseAdminConfig = {
+    // If a service account is available, use it for credentials.
+    ...(serviceAccount && { credential: admin.credential.cert(serviceAccount) }),
+    // Explicitly set the projectId to ensure alignment with the client.
+    projectId: 'summa-social',
+};
+
+
 if (!admin.apps.length) {
-    admin.initializeApp(
-        serviceAccount ? { credential: admin.credential.cert(serviceAccount) } : undefined
-    );
+    // Initialize with the unified configuration object.
+    admin.initializeApp(firebaseAdminConfig);
 }
 
 export const authAdmin = admin.auth();
