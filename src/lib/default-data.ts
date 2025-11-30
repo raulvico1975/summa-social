@@ -1,40 +1,68 @@
 // src/lib/default-data.ts
 
-import type { Category } from '@/lib/data';
+type DefaultCategory = {
+    nameKey: string;
+    type: 'income' | 'expense';
+}
 
 /**
  * Categories per defecte per a entitats socials espanyoles.
- * Basades en el Pla General de Comptabilitat per a Entitats Sense Fins Lucratius.
+ * Utilitzem claus de traducció (nameKey) en lloc de noms directes per a la internacionalització.
  */
 
-export const DEFAULT_INCOME_CATEGORIES: Omit<Category, 'id'>[] = [
-  { name: 'Donaciones', type: 'income' },
-  { name: 'Subvenciones', type: 'income' },
-  { name: 'Cuotas de socios', type: 'income' },
-  { name: 'Patrocinios', type: 'income' },
-  { name: 'Venta de productos/servicios', type: 'income' },
-  { name: 'Herencias y legados', type: 'income' },
-  { name: 'Eventos y campañas', type: 'income' },
-  { name: 'Otros ingresos', type: 'income' },
+export const DEFAULT_INCOME_CATEGORIES: DefaultCategory[] = [
+  { nameKey: 'donations', type: 'income' },
+  { nameKey: 'subsidies', type: 'income' },
+  { nameKey: 'memberFees', type: 'income' },
+  { nameKey: 'sponsorships', type: 'income' },
+  { nameKey: 'productSales', type: 'income' },
+  { nameKey: 'inheritances', type: 'income' },
+  { nameKey: 'events', type: 'income' },
+  { nameKey: 'otherIncome', type: 'income' },
 ];
 
-export const DEFAULT_EXPENSE_CATEGORIES: Omit<Category, 'id'>[] = [
-  { name: 'Alquiler', type: 'expense' },
-  { name: 'Suministros de oficina', type: 'expense' },
-  { name: 'Servicios públicos', type: 'expense' },
-  { name: 'Salarios y seguridad social', type: 'expense' },
-  { name: 'Viajes y dietas', type: 'expense' },
-  { name: 'Comunicación y marketing', type: 'expense' },
-  { name: 'Servicios profesionales', type: 'expense' },
-  { name: 'Seguros', type: 'expense' },
-  { name: 'Material de proyectos', type: 'expense' },
-  { name: 'Formación', type: 'expense' },
-  { name: 'Gastos bancarios', type: 'expense' },
-  { name: 'Transferencias a terreno o socias', type: 'expense' },
-  { name: 'Otros gastos', type: 'expense' },
+export const DEFAULT_EXPENSE_CATEGORIES: DefaultCategory[] = [
+  { nameKey: 'rent', type: 'expense' },
+  { nameKey: 'officeSupplies', type: 'expense' },
+  { nameKey: 'utilities', type: 'expense' },
+  { nameKey: 'salaries', type: 'expense' },
+  { nameKey: 'travel', type: 'expense' },
+  { nameKey: 'marketing', type: 'expense' },
+  { nameKey: 'professionalServices', type: 'expense' },
+  { nameKey: 'insurance', type: 'expense' },
+  { nameKey: 'projectMaterials', type: 'expense' },
+  { nameKey: 'training', type: 'expense' },
+  { nameKey: 'bankFees', type: 'expense' },
+  { nameKey: 'missionTransfers', type: 'expense' },
+  { nameKey: 'otherExpenses', type: 'expense' },
 ];
 
 export const ALL_DEFAULT_CATEGORIES = [
   ...DEFAULT_INCOME_CATEGORIES,
   ...DEFAULT_EXPENSE_CATEGORIES,
-];
+].map(c => ({ name: c.nameKey, type: c.type })); // Adapt for the initialization hook
+
+// We keep the mapping for translation files
+export const CATEGORY_TRANSLATION_KEYS = {
+    donations: "Donacions",
+    subsidies: "Subvencions",
+    memberFees: "Quotes de socis",
+    sponsorships: "Patrocinis",
+    productSales: "Venda de productes/serveis",
+    inheritances: "Herències i llegats",
+    events: "Esdeveniments i campanyes",
+    otherIncome: "Altres ingressos",
+    rent: "Lloguer",
+    officeSupplies: "Subministraments d'oficina",
+    utilities: "Serveis públics",
+    salaries: "Salaris i seguretat social",
+    travel: "Viatges i dietes",
+    marketing: "Comunicació i màrqueting",
+    professionalServices: "Serveis professionals",
+    insurance: "Assegurances",
+    projectMaterials: "Material de projectes",
+    training: "Formació",
+    bankFees: "Despeses bancàries",
+    missionTransfers: "Transferències a terreny o sòcies",
+    otherExpenses: "Altres despeses",
+};

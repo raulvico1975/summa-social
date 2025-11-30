@@ -58,6 +58,8 @@ function CategoryTable({
   onDelete: (category: Category) => void;
 }) {
   const { t } = useTranslations();
+  const categoryTranslations = t.categories as Record<string, string>;
+
   return (
     <div className="rounded-md border">
       <Table>
@@ -70,7 +72,7 @@ function CategoryTable({
         <TableBody>
           {categories.map((category) => (
             <TableRow key={category.id}>
-              <TableCell className="font-medium">{category.name}</TableCell>
+              <TableCell className="font-medium">{categoryTranslations[category.name] || category.name}</TableCell>
               <TableCell className="text-right">
                 <Button variant="ghost" size="icon" onClick={() => onEdit(category)}>
                   <Edit className="h-4 w-4" />
@@ -102,6 +104,8 @@ function CategoryTable({
 export function CategoryManager() {
   const { firestore, user } = useFirebase();
   const { t } = useTranslations();
+  const categoryTranslations = t.categories as Record<string, string>;
+  
   const categoriesCollection = useMemoFirebase(
     () => user ? collection(firestore, 'users', user.uid, 'categories') : null,
     [firestore, user]
@@ -132,9 +136,10 @@ export function CategoryManager() {
   const handleDeleteConfirm = () => {
     if (categoryToDelete && categoriesCollection) {
       deleteDocumentNonBlocking(doc(categoriesCollection, categoryToDelete.id));
+      const categoryName = categoryTranslations[categoryToDelete.name] || categoryToDelete.name;
       toast({
         title: t.settings.categoryDeletedToast,
-        description: t.settings.categoryDeletedToastDescription(categoryToDelete.name),
+        description: t.settings.categoryDeletedToastDescription(categoryName),
       });
     }
     setIsAlertOpen(false);
@@ -173,14 +178,19 @@ export function CategoryManager() {
       toast({ variant: 'destructive', title: t.common.error, description: t.common.dbConnectionError });
       return;
     }
+    
+    // For new categories, we treat the name as a key if it doesn't have spaces
+    const nameKey = editingCategory ? formData.name : formData.name.trim().replace(/\s+/g, '-').toLowerCase();
+    const finalData = { ...formData, name: nameKey };
+
 
     if (editingCategory) {
       // Update
-      setDocumentNonBlocking(doc(categoriesCollection, editingCategory.id), formData, { merge: true });
+      setDocumentNonBlocking(doc(categoriesCollection, editingCategory.id), finalData, { merge: true });
       toast({ title: t.settings.categoryUpdatedToast, description: t.settings.categoryUpdatedToastDescription(formData.name) });
     } else {
       // Create
-      addDocumentNonBlocking(categoriesCollection, formData);
+      addDocumentNonBlocking(categoriesCollection, finalData);
       toast({ title: t.settings.categoryCreatedToast, description: t.settings.categoryCreatedToastDescription(formData.name) });
     }
     handleOpenChange(false);
@@ -188,6 +198,8 @@ export function CategoryManager() {
 
   const dialogTitle = editingCategory ? t.settings.editTitle : t.settings.addTitle;
   const dialogDescription = editingCategory ? t.settings.editDescription : t.settings.addDescription;
+  const dialogFormDataName = editingCategory ? (categoryTranslations[formData.name] || formData.name) : formData.name;
+
 
   return (
     <>
@@ -239,7 +251,7 @@ export function CategoryManager() {
             <Label htmlFor="name" className="text-right">
               {t.settings.name}
             </Label>
-            <Input id="name" value={formData.name} onChange={handleFormChange} className="col-span-3" />
+            <Input id="name" value={dialogFormDataName} onChange={handleFormChange} className="col-span-3" />
           </div>
           <div className="grid grid-cols-4 items-center gap-4">
             <Label htmlFor="type" className="text-right">

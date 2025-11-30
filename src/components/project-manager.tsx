@@ -51,6 +51,7 @@ const formatCurrency = (amount: number) => {
 export function ProjectManager() {
   const { firestore, user } = useFirebase();
   const { t } = useTranslations();
+  const MISSION_TRANSFER_CATEGORY_KEY = 'missionTransfers';
 
   const projectsCollection = useMemoFirebase(
     () => user ? collection(firestore, 'users', user.uid, 'projects') : null,
@@ -94,7 +95,7 @@ export function ProjectManager() {
             if (tx.amount > 0) {
                 balances[tx.projectId].funded += tx.amount;
             } else {
-                 if (tx.category === 'Transferencias a terreno o socias') {
+                 if (tx.category === MISSION_TRANSFER_CATEGORY_KEY) {
                     balances[tx.projectId].sent += Math.abs(tx.amount);
                 } else {
                     balances[tx.projectId].expenses += Math.abs(tx.amount);
@@ -103,7 +104,7 @@ export function ProjectManager() {
         }
     });
     return balances;
-  }, [projects, transactions]);
+  }, [projects, transactions, MISSION_TRANSFER_CATEGORY_KEY]);
 
   const handleEdit = (project: Project) => {
     setEditingProject(project);

@@ -13,6 +13,7 @@ import { useTranslations } from '@/i18n';
 
 export function ExpensesChart({ transactions }: { transactions: Transaction[] }) {
   const { t } = useTranslations();
+  const categoryTranslations = t.categories as Record<string, string>;
 
   const chartConfig = {
     expenses: {
@@ -27,21 +28,21 @@ export function ExpensesChart({ transactions }: { transactions: Transaction[] })
     }
 
     const expensesByCategory = transactions.reduce((acc, tx) => {
-      const category = tx.category || t.common.uncategorized;
-      if (!acc[category]) {
-        acc[category] = 0;
+      const categoryKey = tx.category || 'uncategorized';
+      if (!acc[categoryKey]) {
+        acc[categoryKey] = 0;
       }
       // We sum the absolute value of the expenses
-      acc[category] += Math.abs(tx.amount);
+      acc[categoryKey] += Math.abs(tx.amount);
       return acc;
     }, {} as Record<string, number>);
 
-    return Object.entries(expensesByCategory).map(([category, expenses]) => ({
-      category,
+    return Object.entries(expensesByCategory).map(([categoryKey, expenses]) => ({
+      category: categoryTranslations[categoryKey] || categoryKey,
       expenses: parseFloat(expenses.toFixed(2)),
     })).sort((a, b) => b.expenses - a.expenses); // Sort descending
 
-  }, [transactions, t]);
+  }, [transactions, t, categoryTranslations]);
 
 
   if (chartData.length === 0) {

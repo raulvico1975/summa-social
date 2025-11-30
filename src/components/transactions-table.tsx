@@ -73,6 +73,7 @@ import { useTranslations } from '@/i18n';
 export function TransactionsTable() {
   const { firestore, user, storage } = useFirebase();
   const { t } = useTranslations();
+  const categoryTranslations = t.categories as Record<string, string>;
 
   const transactionsCollection = useMemoFirebase(
     () => user ? collection(firestore, 'users', user.uid, 'transactions') : null,
@@ -149,11 +150,12 @@ export function TransactionsTable() {
       
       updateDocumentNonBlocking(doc(transactionsCollection, txId), { category: result.category });
       
+      const categoryName = categoryTranslations[result.category] || result.category;
       toast({
         title: 'Categorización Automática',
-        description: `Transacción clasificada como "${result.category}" con una confianza del ${(result.confidence * 100).toFixed(0)}%.`,
+        description: `Transacción clasificada como "${categoryName}" con una confianza del ${(result.confidence * 100).toFixed(0)}%.`,
       });
-      log(`¡Éxito! Transacción ${txId} clasificada como "${result.category}".`);
+      log(`¡Éxito! Transacción ${txId} clasificada como "${categoryName}".`);
     } catch (error) {
       console.error('Error categorizing transaction:', error);
       toast({
@@ -199,7 +201,8 @@ export function TransactionsTable() {
 
         updateDocumentNonBlocking(doc(transactionsCollection, tx.id), { category: result.category });
         successCount++;
-        log(`¡Éxito! Movimiento ${tx.id} clasificado como "${result.category}".`);
+        const categoryName = categoryTranslations[result.category] || result.category;
+        log(`¡Éxito! Movimiento ${tx.id} clasificado como "${categoryName}".`);
       } catch (error) {
         console.error('Error categorizing transaction:', error);
         log(`ERROR categorizando ${tx.id}: ${error}`);
@@ -435,6 +438,7 @@ export function TransactionsTable() {
                 (c) => c.type === (tx.amount > 0 ? 'income' : 'expense')
               ) || [];
               const isDocumentLoading = loadingStates[`doc_${tx.id}`];
+              const translatedCategory = tx.category ? categoryTranslations[tx.category] || tx.category : null;
 
               return (
                 <TableRow key={tx.id}>
@@ -480,7 +484,7 @@ export function TransactionsTable() {
                     </DropdownMenu>
                   </TableCell>
                   <TableCell>
-                    {tx.category ? (
+                    {translatedCategory ? (
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
                            <Button variant="ghost" className="h-auto p-0 text-left font-normal flex items-center gap-1">
@@ -488,7 +492,7 @@ export function TransactionsTable() {
                               variant={tx.amount > 0 ? 'success' : 'destructive'}
                               className="cursor-pointer"
                             >
-                              {tx.category}
+                              {translatedCategory}
                             </Badge>
                              <ChevronDown className="h-3 w-3 text-muted-foreground" />
                           </Button>
@@ -499,7 +503,7 @@ export function TransactionsTable() {
                               key={cat.id}
                               onClick={() => handleSetCategory(tx.id, cat.name)}
                             >
-                              {cat.name}
+                              {categoryTranslations[cat.name] || cat.name}
                             </DropdownMenuItem>
                           ))}
                         </DropdownMenuContent>

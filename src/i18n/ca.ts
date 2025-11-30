@@ -230,5 +230,28 @@ export const ca = {
       error: "Error",
       dbConnectionError: "No s'ha pogut connectar a la base de dades.",
       authError: "Error d'autenticació"
+  },
+  categories: {
+    donations: "Donacions",
+    subsidies: "Subvencions",
+    memberFees: "Quotes de socis",
+    sponsorships: "Patrocinis",
+    productSales: "Venda de productes/serveis",
+    inheritances: "Herències i llegats",
+    events: "Esdeveniments i campanyes",
+    otherIncome: "Altres ingressos",
+    rent: "Lloguer",
+    officeSupplies: "Subministraments d'oficina",
+    utilities: "Serveis públics",
+    salaries: "Salaris i seguretat social",
+    travel: "Viatges i dietes",
+    marketing: "Comunicació i màrqueting",
+    professionalServices: "Serveis professionals",
+    insurance: "Assegurances",
+    projectMaterials: "Material de projectes",
+    training: "Formació",
+    bankFees: "Despeses bancàries",
+    missionTransfers: "Transferències a terreny o sòcies",
+    otherExpenses: "Altres despeses",
   }
 };
