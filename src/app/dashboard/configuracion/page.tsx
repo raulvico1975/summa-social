@@ -9,6 +9,7 @@ import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import type { Language } from '@/i18n';
+import { PasswordChangeForm } from '@/components/password-change-form';
 
 function LanguageSelector() {
   const { t, language, setLanguage } = useTranslations();
@@ -22,8 +23,8 @@ function LanguageSelector() {
   const handleSave = () => {
     setLanguage(selectedLanguage);
     toast({
-      title: "Idioma canviat",
-      description: `L'idioma de l'aplicació ara és ${selectedLanguage === 'ca' ? 'Català' : 'Español'}. El canvi és per a la sessió actual.`
+      title: t.settings.languageSaved,
+      description: t.settings.languageSavedDescription(selectedLanguage === 'ca' ? 'Català' : 'Español')
     });
   };
 
@@ -46,7 +47,7 @@ function LanguageSelector() {
             </SelectContent>
           </Select>
         </div>
-        <Button onClick={handleSave}>{t.settings.saveSettings}</Button>
+        <Button onClick={handleSave}>{t.settings.save}</Button>
       </CardContent>
     </Card>
   );
@@ -60,6 +61,7 @@ export default function SettingsPage() {
         <h1 className="text-2xl font-bold tracking-tight font-headline">{t.settings.title}</h1>
         <p className="text-muted-foreground">{t.settings.description}</p>
       </div>
+      <PasswordChangeForm />
       <LanguageSelector />
       <CategoryManager />
     </div>

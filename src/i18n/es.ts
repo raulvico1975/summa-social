@@ -194,6 +194,22 @@ export const es = {
     categoryCreatedToast: "Categoría Creada",
     categoryCreatedToastDescription: (name: string) => `La categoría "${name}" ha sido creada.`,
     errorNameEmpty: "El nombre de la categoría no puede estar vacío.",
+    password: {
+      title: "Cambiar Contraseña",
+      description: "Actualiza tu contraseña de acceso.",
+      currentPassword: "Contraseña Actual",
+      newPassword: "Nueva Contraseña",
+      confirmPassword: "Confirma la Nueva Contraseña",
+      saveButton: "Guardar Nueva Contraseña",
+      successTitle: "Contraseña Actualizada",
+      successDescription: "Tu contraseña se ha cambiado correctamente.",
+      errorRequired: "El campo es obligatorio.",
+      errorMinLength: (count: number) => `La nueva contraseña debe tener al menos ${count} caracteres.`,
+      errorMismatch: "Las contraseñas no coinciden.",
+      errorWrongCurrent: "La contraseña actual es incorrecta.",
+      errorWeak: "La nueva contraseña es demasiado débil.",
+      errorGeneric: "No se pudo cambiar la contraseña."
+    }
   },
   sidebar: {
     dashboard: "Panel de Control",

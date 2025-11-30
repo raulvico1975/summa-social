@@ -194,6 +194,22 @@ export const ca = {
     categoryCreatedToast: "Categoria Creada",
     categoryCreatedToastDescription: (name: string) => `La categoria "${name}" ha estat creada.`,
     errorNameEmpty: "El nom de la categoria no pot estar buit.",
+    password: {
+      title: "Canviar Contrasenya",
+      description: "Actualitza la teva contrasenya d'accés.",
+      currentPassword: "Contrasenya Actual",
+      newPassword: "Nova Contrasenya",
+      confirmPassword: "Confirma la Nova Contrasenya",
+      saveButton: "Guardar Nova Contrasenya",
+      successTitle: "Contrasenya Actualitzada",
+      successDescription: "La teva contrasenya s'ha canviat correctament.",
+      errorRequired: "El camp és obligatori.",
+      errorMinLength: (count: number) => `La nova contrasenya ha de tenir almenys ${count} caràcters.`,
+      errorMismatch: "Les contrasenyes no coincideixen.",
+      errorWrongCurrent: "La contrasenya actual és incorrecta.",
+      errorWeak: "La nova contrasenya és massa feble.",
+      errorGeneric: "No s'ha pogut canviar la contrasenya."
+    }
   },
   sidebar: {
     dashboard: "Panell de Control",
