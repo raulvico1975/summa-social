@@ -109,6 +109,7 @@ export function useOrganization(): UseOrganizationResult {
 
       const now = new Date().toISOString();
       const slug = `org-${Date.now()}`;
+      // CANVI CLAU: Assegurar un nom per defecte si no existeix a Firebase Auth
       const userDisplayName = user.displayName || user.email?.split('@')[0] || 'Super Admin';
 
       const newOrgData: Omit<Organization, 'id'> = {
@@ -125,7 +126,7 @@ export function useOrganization(): UseOrganizationResult {
       const memberData: OrganizationMember = {
         userId: user.uid,
         email: user.email || '',
-        displayName: userDisplayName,
+        displayName: userDisplayName, // Assegurar que aquest camp es desa
         role: 'admin',
         joinedAt: now,
       };
@@ -133,10 +134,11 @@ export function useOrganization(): UseOrganizationResult {
       const memberRef = doc(firestore, 'organizations', orgId, 'members', user.uid);
       await setDoc(memberRef, memberData);
 
+      // CANVI CLAU: Guardar també el displayName al perfil de l'usuari
       const newUserProfile: UserProfile = {
         organizationId: orgId,
         role: 'admin',
-        displayName: userDisplayName,
+        displayName: userDisplayName, 
       };
 
       const userProfileRef = doc(firestore, 'users', user.uid);
@@ -157,7 +159,7 @@ export function useOrganization(): UseOrganizationResult {
   return {
     organization,
     organizationId: organization?.id || null,
-    userProfile,
+    userProfile, // Assegurar que es retorna el perfil complet
     userRole: userProfile?.role || null,
     isLoading,
     error,
