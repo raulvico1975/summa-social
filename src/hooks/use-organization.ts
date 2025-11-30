@@ -4,15 +4,16 @@
 
 import { useEffect, useState } from 'react';
 import { 
-  collection, 
   doc, 
   getDoc,
 } from 'firebase/firestore';
 import { useFirebase } from '@/firebase';
 import { useToast } from '@/hooks/use-toast';
 import type { Organization, UserProfile, OrganizationRole } from '@/lib/data';
+import type { User } from 'firebase/auth';
 
 interface UseOrganizationResult {
+  firebaseUser: User | null;
   organization: Organization | null;
   organizationId: string | null;
   userProfile: UserProfile | null;
@@ -26,7 +27,7 @@ interface UseOrganizationResult {
  * It assumes the user and organization have been created on login.
  */
 export function useOrganization(): UseOrganizationResult {
-  const { firestore, user, isUserLoading } = useFirebase();
+  const { firestore, user: firebaseUser, isUserLoading } = useFirebase();
   const { toast } = useToast();
   
   const [organization, setOrganization] = useState<Organization | null>(null);
@@ -37,11 +38,10 @@ export function useOrganization(): UseOrganizationResult {
   useEffect(() => {
     const loadOrganization = async () => {
       if (isUserLoading) {
-        setIsLoading(true);
         return;
       }
 
-      if (!user) {
+      if (!firebaseUser) {
         setIsLoading(false);
         setOrganization(null);
         setUserProfile(null);
@@ -52,7 +52,7 @@ export function useOrganization(): UseOrganizationResult {
       setError(null);
 
       try {
-        const userProfileRef = doc(firestore, 'users', user.uid);
+        const userProfileRef = doc(firestore, 'users', firebaseUser.uid);
         const userProfileSnap = await getDoc(userProfileRef);
         
         if (userProfileSnap.exists()) {
@@ -87,9 +87,10 @@ export function useOrganization(): UseOrganizationResult {
     };
     
     loadOrganization();
-  }, [user, isUserLoading, firestore, toast]);
+  }, [firebaseUser, isUserLoading, firestore, toast]);
 
   return {
+    firebaseUser,
     organization,
     organizationId: organization?.id || null,
     userProfile,

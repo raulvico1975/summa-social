@@ -11,21 +11,12 @@ import { AppLogContext } from '@/hooks/use-app-log';
 import type { LogMessage } from '@/hooks/use-app-log';
 import { OrganizationProvider } from '@/hooks/organization-provider';
 import { useInitializeOrganizationData } from '@/hooks/use-initialize-user-data';
-import { AuthProvider } from '@/hooks/use-auth';
 
 let logCounter = 0;
 
-/**
- * Component intern que inicialitza les dades de l'organització.
- * Ha d'estar dins de l'OrganizationProvider per tenir accés a l'organizationId.
- */
-function OrganizationInitializer({ children }: { children: React.ReactNode }) {
-  // Inicialitzar categories per defecte si l'organització és nova
+function OrganizationDependentLayout({ children }: { children: React.ReactNode }) {
   useInitializeOrganizationData();
-  return <>{children}</>;
-}
-
-export default function DashboardLayout({ children }: { children: React.ReactNode }) {
+  
   const [open, setOpen] = React.useState(true);
   const [logs, setLogs] = React.useState<LogMessage[]>([]);
 
@@ -43,7 +34,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     setLogs((prevLogs) => [...prevLogs, newLog]);
   }, []);
 
-  const clearLogs = React. useCallback(() => {
+  const clearLogs = React.useCallback(() => {
     setLogs([]);
   }, []);
 
@@ -58,25 +49,30 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   }, []);
 
   return (
+    <AppLogContext.Provider value={{ logs, log, clearLogs }}>
+      <SidebarProvider defaultOpen={open} onOpenChange={setOpen}>
+        <div className="flex min-h-screen">
+          <Sidebar>
+            <DashboardSidebarContent />
+          </Sidebar>
+          <SidebarInset className="flex flex-1 flex-col transition-all duration-300 ease-in-out">
+            <DashboardHeader />
+            <main className="flex-1 overflow-y-auto p-4 md:p-6">{children}</main>
+          </SidebarInset>
+        </div>
+      </SidebarProvider>
+      <LogPanel />
+    </AppLogContext.Provider>
+  );
+}
+
+
+export default function DashboardLayout({ children }: { children: React.ReactNode }) {
+  return (
     <OrganizationProvider>
-      <OrganizationInitializer>
-        <AuthProvider>
-          <AppLogContext.Provider value={{ logs, log, clearLogs }}>
-            <SidebarProvider defaultOpen={open} onOpenChange={setOpen}>
-              <div className="flex min-h-screen">
-                <Sidebar>
-                  <DashboardSidebarContent />
-                </Sidebar>
-                <SidebarInset className="flex flex-1 flex-col transition-all duration-300 ease-in-out">
-                  <DashboardHeader />
-                  <main className="flex-1 overflow-y-auto p-4 md:p-6">{children}</main>
-                </SidebarInset>
-              </div>
-            </SidebarProvider>
-            <LogPanel />
-          </AppLogContext.Provider>
-        </AuthProvider>
-      </OrganizationInitializer>
+      <OrganizationDependentLayout>
+        {children}
+      </OrganizationDependentLayout>
     </OrganizationProvider>
   );
 }

@@ -1,59 +1,32 @@
+// This file is no longer needed with the new architecture
+// and can be deleted or left empty.
+// To avoid breaking imports, we'll leave it with a basic hook.
+
 'use client';
 
-import { useState, useEffect, createContext, useContext, useMemo } from 'react';
-import { useUser as useFirebaseUser } from '@/firebase';
-import { useCurrentOrganization } from './organization-provider';
-import type { UserProfile } from '@/lib/data';
+import { useContext } from 'react';
+import { OrganizationContext } from './organization-provider';
 
-interface User {
-  uid: string;
-  name: string | null;
-  email: string | null;
-  picture?: string | null;
-  email_verified?: boolean;
-  isAnonymous: boolean;
-}
-
-interface AuthContextType {
-  user: User | null;
-  loading: boolean;
-}
-
-const AuthContext = createContext<AuthContextType>({
-  user: null,
-  loading: true,
-});
-
-export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
-  const { user: firebaseUser, isUserLoading: isFirebaseUserLoading } = useFirebaseUser();
-  const { userProfile, isLoading: isOrgLoading } = useCurrentOrganization();
-
-  const isLoading = isFirebaseUserLoading || isOrgLoading;
-
-  const user = useMemo<User | null>(() => {
-    if (isLoading || !firebaseUser) {
-      return null;
+export const useAuth = () => {
+    const context = useContext(OrganizationContext);
+    if (context === undefined) {
+        throw new Error('useAuth must be used within an OrganizationProvider');
     }
-
-    // The user's profile name from the database is the source of truth.
-    const displayName = userProfile?.displayName || firebaseUser.displayName || 'Usuari';
     
+    // This hook will now be a proxy to the organization context
+    // The actual user object construction happens in the sidebar directly
     return {
-      uid: firebaseUser.uid,
-      name: displayName,
-      email: firebaseUser.email,
-      picture: firebaseUser.photoURL,
-      email_verified: firebaseUser.emailVerified,
-      isAnonymous: firebaseUser.isAnonymous,
-    };
-  }, [firebaseUser, userProfile, isLoading]);
-
-
-  return (
-    <AuthContext.Provider value={{ user, loading: isLoading }}>
-      {children}
-    </AuthContext.Provider>
-  );
+        user: {
+            uid: context.firebaseUser?.uid,
+            name: context.userProfile?.displayName || context.firebaseUser?.displayName,
+            email: context.firebaseUser?.email,
+            picture: context.firebaseUser?.photoURL,
+        },
+        loading: context.isLoading,
+    }
 };
 
-export const useAuth = () => useContext(AuthContext);
+// The AuthProvider component is no longer needed
+export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
+    return <>{children}</>;
+};

@@ -18,7 +18,7 @@ import { useFirebase } from '@/firebase';
 import { useToast } from '@/hooks/use-toast';
 import { useTranslations } from '@/i18n';
 import { signOut as firebaseSignOut } from 'firebase/auth';
-import { useAuth } from '@/hooks/use-auth';
+import { useCurrentOrganization } from '@/hooks/organization-provider';
 import { signOut as serverSignOut } from '@/services/auth';
 
 export function DashboardSidebarContent() {
@@ -27,21 +27,17 @@ export function DashboardSidebarContent() {
   const { auth: firebaseAuth } = useFirebase();
   const { t } = useTranslations();
   const { toast } = useToast();
-  // Use the new useAuth hook to get the final user object
-  const { user } = useAuth();
+  // Get all user data from the single source of truth for the dashboard
+  const { userProfile, firebaseUser } = useCurrentOrganization();
   
   const handleSignOut = async (e: React.MouseEvent<HTMLAnchorElement>) => {
     e.preventDefault();
     try {
-      // First, sign out from the client-side Firebase instance
       await firebaseSignOut(firebaseAuth);
-
-      // Then, call the server action to clear the session cookie
       await serverSignOut();
       
       toast({ title: t.sidebar.logoutToastTitle, description: t.sidebar.logoutToastDescription });
       
-      // Redirect to login page and refresh to clear all states
       router.push('/');
       router.refresh(); 
 
@@ -96,7 +92,7 @@ export function DashboardSidebarContent() {
     return name.substring(0, 2).toUpperCase();
   }
   
-  const userName = user?.name || t.sidebar.anonymousUser;
+  const userName = userProfile?.displayName || firebaseUser?.displayName || t.sidebar.anonymousUser;
   const userInitials = getInitials(userName);
 
   return (
@@ -131,7 +127,7 @@ export function DashboardSidebarContent() {
             <SidebarMenuButton asChild>
               <Link href="#">
                 <Avatar className="h-7 w-7">
-                  <AvatarImage src={user?.picture} alt="User Avatar" data-ai-hint="user avatar" />
+                  <AvatarImage src={firebaseUser?.photoURL ?? undefined} alt="User Avatar" data-ai-hint="user avatar" />
                   <AvatarFallback>{userInitials}</AvatarFallback>
                 </Avatar>
                 <span>{userName}</span>
