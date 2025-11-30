@@ -12,13 +12,16 @@ import {
   SidebarMenuButton,
   SidebarFooter,
 } from '@/components/ui/sidebar';
-import { LayoutDashboard, Settings, LogOut, Users, FileText, FolderKanban, AreaChart } from 'lucide-react';
+import { LayoutDashboard, Settings, LogOut, Users, FileText, FolderKanban, AreaChart, Shield } from 'lucide-react';
 import { Logo } from '@/components/logo';
 import { useFirebase } from '@/firebase';
 import { useToast } from '@/hooks/use-toast';
 import { useTranslations } from '@/i18n';
 import { signOut as firebaseSignOut } from 'firebase/auth';
 import { useCurrentOrganization } from '@/hooks/organization-provider';
+
+const SUPER_ADMIN_UID = 'f2AHJqjXiOZkYajwkOnZ8RY6h2k2';
+
 
 export function DashboardSidebarContent() {
   const pathname = usePathname();
@@ -29,6 +32,8 @@ export function DashboardSidebarContent() {
   // Get all user data from the single source of truth for the dashboard
   const { userProfile, firebaseUser } = useCurrentOrganization();
   
+  const isSuperAdmin = firebaseUser?.uid === SUPER_ADMIN_UID;
+
   const handleSignOut = async (e: React.MouseEvent<HTMLAnchorElement>) => {
     e.preventDefault();
     try {
@@ -77,6 +82,14 @@ export function DashboardSidebarContent() {
       icon: Settings,
     },
   ];
+
+  if (isSuperAdmin) {
+    menuItems.push({
+        href: '/dashboard/super-admin',
+        label: t.sidebar.superAdmin,
+        icon: Shield,
+    });
+  }
 
   const getInitials = (name: string | null | undefined): string => {
     if (!name) return '??';

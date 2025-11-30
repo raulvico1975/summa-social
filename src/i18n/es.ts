@@ -225,7 +225,8 @@ export const es = {
     user: "Usuario",
     anonymousUser: "Usuario Anónimo",
     logoutToastTitle: "Sesión Cerrada",
-    logoutToastDescription: "Has cerrado sesión correctamente."
+    logoutToastDescription: "Has cerrado sesión correctamente.",
+    superAdmin: "Super Admin",
   },
   login: {
     welcome: "Bienvenido a Summa Social",
@@ -236,7 +237,7 @@ export const es = {
     invalidEmail: "El formato del correo no es válido",
     userNotFound: "No existe ninguna cuenta con este correo",
     wrongPassword: "La contraseña es incorrecta",
-tooManyRequests: "Demasiados intentos. Inténtalo de nuevo más tarde.",
+    tooManyRequests: "Demasiados intentos. Inténtalo de nuevo más tarde.",
     genericError: "Error de autenticación. Vuelve a intentarlo.",
     access: "Acceder al Panel de Control",
     accessing: "Accediendo...",
@@ -278,5 +279,26 @@ tooManyRequests: "Demasiados intentos. Inténtalo de nuevo más tarde.",
     bankFees: "Gastos bancarios",
     missionTransfers: "Transferencias a terreno o socias",
     otherExpenses: "Otros gastos",
+  },
+  superAdmin: {
+    title: "Panel de Super Administrador",
+    description: "Visión global de todas las organizaciones y usuarios de la plataforma.",
+    organizationsTitle: "Todas las Organizaciones",
+    organizationsDescription: "Lista de todas las organizaciones registradas.",
+    orgName: "Nombre de la Organización",
+    orgTaxId: "CIF",
+    orgCreatedAt: "Fecha de Creación",
+    orgMembers: "Miembros",
+    usersTitle: "Todos los Usuarios",
+    usersDescription: "Lista de todos los usuarios registrados y sus roles.",
+    userName: "Nombre de Usuario",
+    userOrganization: "Organización",
+    userRole: "Rol",
+    roles: {
+      admin: "Administrador",
+      treasurer: "Tesorero",
+      viewer: "Observador"
+    },
+    loading: "Cargando datos de super-admin...",
   }
 };

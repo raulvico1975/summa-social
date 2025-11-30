@@ -225,7 +225,8 @@ export const ca = {
     user: "Usuari",
     anonymousUser: "Usuari Anònim",
     logoutToastTitle: "Sessió Tancada",
-    logoutToastDescription: "Has tancat sessió correctament."
+    logoutToastDescription: "Has tancat sessió correctament.",
+    superAdmin: "Super Admin",
   },
   login: {
     welcome: "Benvingut a Summa Social",
@@ -278,5 +279,26 @@ export const ca = {
     bankFees: "Despeses bancàries",
     missionTransfers: "Transferències a terreny o sòcies",
     otherExpenses: "Altres despeses",
+  },
+  superAdmin: {
+    title: "Panell de Super Administrador",
+    description: "Visió global de totes les organitzacions i usuaris de la plataforma.",
+    organizationsTitle: "Totes les Organitzacions",
+    organizationsDescription: "Llista de totes les organitzacions registrades.",
+    orgName: "Nom de l'Organització",
+    orgTaxId: "CIF",
+    orgCreatedAt: "Data de Creació",
+    orgMembers: "Membres",
+    usersTitle: "Tots els Usuaris",
+    usersDescription: "Llista de tots els usuaris registrats i els seus rols.",
+    userName: "Nom d'Usuari",
+    userOrganization: "Organització",
+    userRole: "Rol",
+    roles: {
+      admin: "Administrador",
+      treasurer: "Tresorer",
+      viewer: "Observador"
+    },
+    loading: "Carregant dades de super-admin...",
   }
 };
