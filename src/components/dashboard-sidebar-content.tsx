@@ -19,6 +19,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useTranslations } from '@/i18n';
 import { signOut as firebaseSignOut } from 'firebase/auth';
 import { useAuth } from '@/hooks/use-auth';
+import { signOut as serverSignOut } from '@/services/auth';
 
 export function DashboardSidebarContent() {
   const pathname = usePathname();
@@ -32,16 +33,17 @@ export function DashboardSidebarContent() {
   const handleSignOut = async (e: React.MouseEvent<HTMLAnchorElement>) => {
     e.preventDefault();
     try {
+      // First, sign out from the client-side Firebase instance
       await firebaseSignOut(firebaseAuth);
-      
-      // Clear session cookie by calling server action if you have one
-      // For now, redirecting is enough as the auth state will change
+
+      // Then, call the server action to clear the session cookie
+      await serverSignOut();
       
       toast({ title: t.sidebar.logoutToastTitle, description: t.sidebar.logoutToastDescription });
       
-      // Redirect to login page
+      // Redirect to login page and refresh to clear all states
       router.push('/');
-      router.refresh(); // Force a full refresh to clear all states
+      router.refresh(); 
 
     } catch (error) {
        console.error("Error signing out: ", error);
@@ -87,6 +89,9 @@ export function DashboardSidebarContent() {
     const parts = name.split(' ');
     if (parts.length > 1 && parts[0] && parts[1]) {
       return `${parts[0][0]}${parts[1][0]}`.toUpperCase();
+    }
+    if (parts[0] && parts[0].length > 1) {
+      return parts[0].substring(0, 2).toUpperCase();
     }
     return name.substring(0, 2).toUpperCase();
   }
