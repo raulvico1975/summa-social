@@ -17,7 +17,7 @@ import { Logo } from '@/components/logo';
 import { useFirebase } from '@/firebase';
 import { useToast } from '@/hooks/use-toast';
 import { useTranslations } from '@/i18n';
-import { signOut } from 'firebase/auth';
+import { signOut as firebaseSignOut } from 'firebase/auth';
 import { useAuth } from '@/hooks/use-auth';
 
 export function DashboardSidebarContent() {
@@ -26,17 +26,22 @@ export function DashboardSidebarContent() {
   const { auth: firebaseAuth } = useFirebase();
   const { t } = useTranslations();
   const { toast } = useToast();
+  // Use the new useAuth hook to get the final user object
   const { user } = useAuth();
   
   const handleSignOut = async (e: React.MouseEvent<HTMLAnchorElement>) => {
     e.preventDefault();
     try {
-      await signOut(firebaseAuth);
+      await firebaseSignOut(firebaseAuth);
+      
+      // Clear session cookie by calling server action if you have one
+      // For now, redirecting is enough as the auth state will change
       
       toast({ title: t.sidebar.logoutToastTitle, description: t.sidebar.logoutToastDescription });
       
+      // Redirect to login page
       router.push('/');
-      router.refresh();
+      router.refresh(); // Force a full refresh to clear all states
 
     } catch (error) {
        console.error("Error signing out: ", error);
@@ -77,14 +82,17 @@ export function DashboardSidebarContent() {
     },
   ];
 
-  const getInitials = (name: string | null | undefined) => {
+  const getInitials = (name: string | null | undefined): string => {
     if (!name) return '??';
     const parts = name.split(' ');
-    if (parts.length > 1) {
+    if (parts.length > 1 && parts[0] && parts[1]) {
       return `${parts[0][0]}${parts[1][0]}`.toUpperCase();
     }
     return name.substring(0, 2).toUpperCase();
   }
+  
+  const userName = user?.name || t.sidebar.anonymousUser;
+  const userInitials = getInitials(userName);
 
   return (
     <>
@@ -119,9 +127,9 @@ export function DashboardSidebarContent() {
               <Link href="#">
                 <Avatar className="h-7 w-7">
                   <AvatarImage src={user?.picture} alt="User Avatar" data-ai-hint="user avatar" />
-                  <AvatarFallback>{getInitials(user?.name)}</AvatarFallback>
+                  <AvatarFallback>{userInitials}</AvatarFallback>
                 </Avatar>
-                <span>{user?.name || t.sidebar.anonymousUser}</span>
+                <span>{userName}</span>
               </Link>
             </SidebarMenuButton>
           </SidebarMenuItem>
