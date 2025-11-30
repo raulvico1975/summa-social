@@ -19,7 +19,6 @@ import { useToast } from '@/hooks/use-toast';
 import { useTranslations } from '@/i18n';
 import { signOut as firebaseSignOut } from 'firebase/auth';
 import { useCurrentOrganization } from '@/hooks/organization-provider';
-import { signOut as serverSignOut } from '@/services/auth';
 
 export function DashboardSidebarContent() {
   const pathname = usePathname();

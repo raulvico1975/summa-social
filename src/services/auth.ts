@@ -1,28 +1,11 @@
 'use server';
 
-// This file is kept for future use if server-side session management is needed again.
-// For now, all authentication logic is handled on the client.
-// The functions here are no longer called by the application.
+// This file is kept for possible future use but is currently not active.
+// All session management is handled by the Firebase Client SDK's persistence.
 
 import { cookies } from 'next/headers';
-import { authAdmin } from '@/lib/firebase-admin';
-import type { DecodedIdToken } from 'firebase-admin/auth';
-
-const SESSION_COOKIE_NAME = 'auth-token';
 
 export async function signOut() {
-    cookies().delete(SESSION_COOKIE_NAME);
-}
-
-export async function getSession(): Promise<DecodedIdToken | null> {
-  const cookie = cookies().get(SESSION_COOKIE_NAME);
-  if (cookie) {
-    try {
-      const claims = await authAdmin.verifySessionCookie(cookie.value, true);
-      return claims;
-    } catch (error) {
-      return null;
-    }
-  }
-  return null;
+    // This could be used to clear server-side cookies if they were implemented.
+    console.log("Server-side signOut called, but no session cookie is being used.");
 }

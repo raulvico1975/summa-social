@@ -40,7 +40,7 @@ export default function LoginPage() {
         title: t.login.loginSuccess, 
         description: t.login.loginDescription 
       });
-      router.push('/dashboard');
+      // La redirecció es gestiona automàticament per l'efecte de sota
     } catch (err: any) {
       console.error('Error de login:', err);
       setIsLoggingIn(false);
