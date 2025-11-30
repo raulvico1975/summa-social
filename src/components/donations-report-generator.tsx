@@ -1,4 +1,3 @@
-
 'use client';
 
 import * as React from 'react';
@@ -26,6 +25,7 @@ import Papa from 'papaparse';
 import { useCollection, useFirebase, useMemoFirebase } from '@/firebase';
 import { collection } from 'firebase/firestore';
 import { useTranslations } from '@/i18n';
+import { useCurrentOrganization } from '@/hooks/organization-provider';
 
 interface DonationReportRow {
   donorName: string;
@@ -35,16 +35,20 @@ interface DonationReportRow {
 }
 
 export function DonationsReportGenerator() {
-  const { firestore, user } = useFirebase();
+  const { firestore } = useFirebase();
+  const { organizationId } = useCurrentOrganization();
   const { t } = useTranslations();
 
+  // ═══════════════════════════════════════════════════════════════════════════
+  // CANVI: Ara les col·leccions apunten a organizations/{orgId}/...
+  // ═══════════════════════════════════════════════════════════════════════════
   const transactionsQuery = useMemoFirebase(
-    () => user ? collection(firestore, 'users', user.uid, 'transactions') : null,
-    [firestore, user]
+    () => organizationId ? collection(firestore, 'organizations', organizationId, 'transactions') : null,
+    [firestore, organizationId]
   );
   const emissorsQuery = useMemoFirebase(
-    () => user ? collection(firestore, 'users', user.uid, 'emissors') : null,
-    [firestore, user]
+    () => organizationId ? collection(firestore, 'organizations', organizationId, 'emissors') : null,
+    [firestore, organizationId]
   );
   const { data: transactions } = useCollection<Transaction>(transactionsQuery);
   const { data: emissors } = useCollection<Emisor>(emissorsQuery);
