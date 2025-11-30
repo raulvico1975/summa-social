@@ -43,7 +43,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     setLogs((prevLogs) => [...prevLogs, newLog]);
   }, []);
 
-  const clearLogs = React.useCallback(() => {
+  const clearLogs = React. useCallback(() => {
     setLogs([]);
   }, []);
 
@@ -59,8 +59,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
   return (
     <OrganizationProvider>
-      <AuthProvider>
-        <OrganizationInitializer>
+      <OrganizationInitializer>
+        <AuthProvider>
           <AppLogContext.Provider value={{ logs, log, clearLogs }}>
             <SidebarProvider defaultOpen={open} onOpenChange={setOpen}>
               <div className="flex min-h-screen">
@@ -75,8 +75,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             </SidebarProvider>
             <LogPanel />
           </AppLogContext.Provider>
-        </OrganizationInitializer>
-      </AuthProvider>
+        </AuthProvider>
+      </OrganizationInitializer>
     </OrganizationProvider>
   );
 }
