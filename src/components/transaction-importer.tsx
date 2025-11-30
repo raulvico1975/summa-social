@@ -1,4 +1,3 @@
-
 'use client';
 
 import * as React from 'react';
@@ -28,6 +27,7 @@ import {
 } from '@/components/ui/alert-dialog';
 import { useCollection, useFirebase, useMemoFirebase } from '@/firebase';
 import { collection, writeBatch, doc } from 'firebase/firestore';
+import { useCurrentOrganization } from '@/hooks/organization-provider';
 
 
 type ImportMode = 'append' | 'replace';
@@ -69,11 +69,15 @@ export function TransactionImporter({ existingTransactions }: TransactionImporte
   const [pendingFile, setPendingFile] = React.useState<File | null>(null);
   const { toast } = useToast();
   const { log } = useAppLog();
-  const { firestore, user } = useFirebase();
+  const { firestore } = useFirebase();
+  const { organizationId } = useCurrentOrganization();
 
+  // ═══════════════════════════════════════════════════════════════════════════
+  // CANVI: Ara les col·leccions apunten a organizations/{orgId}/...
+  // ═══════════════════════════════════════════════════════════════════════════
   const emissorsQuery = useMemoFirebase(
-    () => user ? collection(firestore, 'users', user.uid, 'emissors') : null,
-    [firestore, user]
+    () => organizationId ? collection(firestore, 'organizations', organizationId, 'emissors') : null,
+    [firestore, organizationId]
   );
   const { data: availableEmissors } = useCollection<Emisor>(emissorsQuery);
 
@@ -208,8 +212,9 @@ export function TransactionImporter({ existingTransactions }: TransactionImporte
   };
 
   const processParsedData = async (data: any[], mode: ImportMode) => {
-     if (!user) {
-        toast({ variant: 'destructive', title: 'Error de autenticación'});
+     // CANVI: Ara comprovem organizationId en lloc de user
+     if (!organizationId) {
+        toast({ variant: 'destructive', title: 'Error', description: 'No s\'ha pogut identificar l\'organització.' });
         setIsImporting(false);
         return;
      }
@@ -309,7 +314,8 @@ export function TransactionImporter({ existingTransactions }: TransactionImporte
                 return tx;
             }));
 
-            const transactionsCollectionRef = collection(firestore, 'users', user.uid, 'transactions');
+            // CANVI: Ara la col·lecció apunta a organizations/{orgId}/transactions
+            const transactionsCollectionRef = collection(firestore, 'organizations', organizationId, 'transactions');
             const batch = writeBatch(firestore);
 
             if (mode === 'replace') {
