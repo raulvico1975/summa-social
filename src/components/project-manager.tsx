@@ -1,4 +1,3 @@
-
 'use client';
 
 import * as React from 'react';
@@ -41,6 +40,7 @@ import { StatCard } from './stat-card';
 import { useCollection, useFirebase, useMemoFirebase, addDocumentNonBlocking, deleteDocumentNonBlocking, setDocumentNonBlocking } from '@/firebase';
 import { collection, doc } from 'firebase/firestore';
 import { useTranslations } from '@/i18n';
+import { useCurrentOrganization } from '@/hooks/organization-provider';
 
 
 const formatCurrency = (amount: number) => {
@@ -49,21 +49,25 @@ const formatCurrency = (amount: number) => {
 
 
 export function ProjectManager() {
-  const { firestore, user } = useFirebase();
+  const { firestore } = useFirebase();
+  const { organizationId } = useCurrentOrganization();
   const { t } = useTranslations();
   const MISSION_TRANSFER_CATEGORY_KEY = 'missionTransfers';
 
+  // ═══════════════════════════════════════════════════════════════════════════
+  // CANVI: Ara les col·leccions apunten a organizations/{orgId}/...
+  // ═══════════════════════════════════════════════════════════════════════════
   const projectsCollection = useMemoFirebase(
-    () => user ? collection(firestore, 'users', user.uid, 'projects') : null,
-    [firestore, user]
+    () => organizationId ? collection(firestore, 'organizations', organizationId, 'projects') : null,
+    [firestore, organizationId]
   );
   const emissorsCollection = useMemoFirebase(
-    () => user ? collection(firestore, 'users', user.uid, 'emissors') : null,
-    [firestore, user]
+    () => organizationId ? collection(firestore, 'organizations', organizationId, 'emissors') : null,
+    [firestore, organizationId]
   );
   const transactionsCollection = useMemoFirebase(
-    () => user ? collection(firestore, 'users', user.uid, 'transactions') : null,
-    [firestore, user]
+    () => organizationId ? collection(firestore, 'organizations', organizationId, 'transactions') : null,
+    [firestore, organizationId]
   );
 
   const { data: projects } = useCollection<Project>(projectsCollection);
