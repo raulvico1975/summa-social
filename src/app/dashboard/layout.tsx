@@ -10,8 +10,19 @@ import { LogPanel } from '@/components/log-panel';
 import { AppLogContext } from '@/hooks/use-app-log';
 import type { LogMessage } from '@/hooks/use-app-log';
 import { OrganizationProvider } from '@/hooks/organization-provider';
+import { useInitializeOrganizationData } from '@/hooks/use-initialize-user-data';
 
 let logCounter = 0;
+
+/**
+ * Component intern que inicialitza les dades de l'organització.
+ * Ha d'estar dins de l'OrganizationProvider per tenir accés a l'organizationId.
+ */
+function OrganizationInitializer({ children }: { children: React.ReactNode }) {
+  // Inicialitzar categories per defecte si l'organització és nova
+  useInitializeOrganizationData();
+  return <>{children}</>;
+}
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const [open, setOpen] = React.useState(true);
@@ -47,20 +58,22 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
   return (
     <OrganizationProvider>
-      <AppLogContext.Provider value={{ logs, log, clearLogs }}>
-        <SidebarProvider defaultOpen={open} onOpenChange={setOpen}>
-          <div className="flex min-h-screen">
-            <Sidebar>
-              <DashboardSidebarContent />
-            </Sidebar>
-            <SidebarInset className="flex flex-1 flex-col transition-all duration-300 ease-in-out">
-              <DashboardHeader />
-              <main className="flex-1 overflow-y-auto p-4 md:p-6">{children}</main>
-            </SidebarInset>
-          </div>
-        </SidebarProvider>
-        <LogPanel />
-      </AppLogContext.Provider>
+      <OrganizationInitializer>
+        <AppLogContext.Provider value={{ logs, log, clearLogs }}>
+          <SidebarProvider defaultOpen={open} onOpenChange={setOpen}>
+            <div className="flex min-h-screen">
+              <Sidebar>
+                <DashboardSidebarContent />
+              </Sidebar>
+              <SidebarInset className="flex flex-1 flex-col transition-all duration-300 ease-in-out">
+                <DashboardHeader />
+                <main className="flex-1 overflow-y-auto p-4 md:p-6">{children}</main>
+              </SidebarInset>
+            </div>
+          </SidebarProvider>
+          <LogPanel />
+        </AppLogContext.Provider>
+      </OrganizationInitializer>
     </OrganizationProvider>
   );
 }
