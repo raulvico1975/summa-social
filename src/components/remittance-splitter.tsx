@@ -1,4 +1,3 @@
-
 'use client';
 
 import * as React from 'react';
@@ -18,9 +17,10 @@ import type { Transaction, Emisor } from '@/lib/data';
 import Papa from 'papaparse';
 import { FileUp, Loader2, Info } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { addDocumentNonBlocking, useFirebase } from '@/firebase';
+import { useFirebase } from '@/firebase';
 import { collection, writeBatch, doc } from 'firebase/firestore';
 import { useTranslations } from '@/i18n';
+import { useCurrentOrganization } from '@/hooks/organization-provider';
 
 interface RemittanceSplitterProps {
   open: boolean;
@@ -55,7 +55,8 @@ export function RemittanceSplitter({
   const fileInputRef = React.useRef<HTMLInputElement>(null);
   const { toast } = useToast();
   const { log } = useAppLog();
-  const { firestore, user } = useFirebase();
+  const { firestore } = useFirebase();
+  const { organizationId } = useCurrentOrganization();
   const { t } = useTranslations();
 
   const handleFileClick = () => {
@@ -72,8 +73,9 @@ export function RemittanceSplitter({
   };
 
   const processFile = (file: File) => {
-    if (!user) {
-      toast({ variant: 'destructive', title: t.common.authError });
+    // CANVI: Ara comprovem organizationId en lloc de user
+    if (!organizationId) {
+      toast({ variant: 'destructive', title: t.common.error, description: 'No s\'ha pogut identificar l\'organització.' });
       return;
     }
     setIsProcessing(true);
@@ -94,7 +96,8 @@ export function RemittanceSplitter({
                 throw new Error(t.movements.splitter.errorAmountMismatch(totalAmount.toFixed(2), transaction.amount.toFixed(2)));
             }
 
-            const transactionsCollectionRef = collection(firestore, 'users', user.uid, 'transactions');
+            // CANVI: Ara la col·lecció apunta a organizations/{orgId}/transactions
+            const transactionsCollectionRef = collection(firestore, 'organizations', organizationId, 'transactions');
             const batch = writeBatch(firestore);
 
             // Delete original transaction
@@ -230,7 +233,7 @@ export function RemittanceSplitter({
         date: transaction.date,
         description: `Donación socio/a: ${name || taxId}`,
         amount: amount,
-        category: 'Donaciones', // Default category for remittances
+        category: 'donations', // Default category key for remittances
         document: null,
         emisorId: emisor ? emisor.id : null,
         projectId: transaction.projectId, // Inherit project from original transaction
