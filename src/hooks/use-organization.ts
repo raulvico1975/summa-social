@@ -20,7 +20,7 @@ const SUPER_ADMIN_UID = 'f2AHJqjXiOZkYajwkOnZ8RY6h2k2';
 interface UseOrganizationResult {
   organization: Organization | null;
   organizationId: string | null;
-  userProfile: UserProfile | null; // <-- Canvi clau: exponer el perfil complet
+  userProfile: UserProfile | null;
   userRole: OrganizationRole | null;
   isLoading: boolean;
   error: Error | null;
@@ -35,7 +35,7 @@ export function useOrganization(): UseOrganizationResult {
   const { toast } = useToast();
   
   const [organization, setOrganization] = useState<Organization | null>(null);
-  const [userProfile, setUserProfile] = useState<UserProfile | null>(null); // <-- Canvi clau
+  const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
 
@@ -157,8 +157,8 @@ export function useOrganization(): UseOrganizationResult {
   return {
     organization,
     organizationId: organization?.id || null,
-    userProfile, // <-- Canvi clau
-    userRole: userProfile?.role || null, // <-- Canvi clau
+    userProfile,
+    userRole: userProfile?.role || null,
     isLoading,
     error,
     isSuperAdmin,

@@ -14,32 +14,27 @@ import {
 } from '@/components/ui/sidebar';
 import { LayoutDashboard, Settings, LogOut, Users, FileText, FolderKanban, AreaChart } from 'lucide-react';
 import { Logo } from '@/components/logo';
-import { signOut as signOutServer } from '@/services/auth';
-import { useFirebase, useAuth as useFirebaseAuth } from '@/firebase';
+import { useFirebase } from '@/firebase';
 import { useToast } from '@/hooks/use-toast';
 import { useTranslations } from '@/i18n';
-import { signOut as signOutClient } from 'firebase/auth';
+import { signOut } from 'firebase/auth';
+import { useAuth } from '@/hooks/use-auth';
 
 export function DashboardSidebarContent() {
   const pathname = usePathname();
   const router = useRouter();
-  const { auth } = useFirebase();
+  const { auth: firebaseAuth } = useFirebase();
   const { t } = useTranslations();
   const { toast } = useToast();
-  const { user } = useFirebaseAuth();
+  const { user } = useAuth();
   
   const handleSignOut = async (e: React.MouseEvent<HTMLAnchorElement>) => {
     e.preventDefault();
     try {
-      // First, sign out from the client-side
-      await signOutClient(auth);
-      // Then, clear the server session cookie
-      await signOutServer();
+      await signOut(firebaseAuth);
       
       toast({ title: t.sidebar.logoutToastTitle, description: t.sidebar.logoutToastDescription });
       
-      // The user state will become null, and the app will redirect automatically.
-      // Forcing a hard reload can also help clear any stale state.
       router.push('/');
       router.refresh();
 

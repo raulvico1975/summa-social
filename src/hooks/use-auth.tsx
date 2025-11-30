@@ -6,8 +6,8 @@ import { useCurrentOrganization } from './organization-provider';
 
 interface User {
   uid: string;
-  name?: string | null;
-  email?: string | null;
+  name: string | null;
+  email: string | null;
   picture?: string | null;
   email_verified?: boolean;
   isAnonymous: boolean;
