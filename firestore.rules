@@ -46,8 +46,7 @@ service cloud.firestore {
     // ═══════════════════════════════════════════════════════════════════════
 
     match /organizations/{orgId} {
-      // CANVI: Qualsevol usuari autenticat pot crear una organització.
-      // Un cop creada, només es podrà llegir si ets membre i només l'admin la podrà modificar.
+      // CANVI CLAU: Qualsevol usuari autenticat pot CREAR una organització
       allow create: if isSignedIn();
       
       // Només membres poden llegir l'organització
@@ -61,11 +60,15 @@ service cloud.firestore {
       // ─────────────────────────────────────────────────────────────────────
       
       match /members/{memberId} {
+        // CANVI CLAU: Permetre crear el primer membre (el creador de l'org)
+        // Un usuari pot crear el seu propi registre de membre
+        allow create: if isSignedIn() && request.auth.uid == memberId;
+        
         // Membres poden llegir altres membres
         allow read: if isMemberOf(orgId);
         
-        // Només admins poden afegir o eliminar membres
-        allow create, delete: if isAdminOf(orgId);
+        // Només admins poden eliminar membres (excepte a si mateixos)
+        allow delete: if isAdminOf(orgId) && request.auth.uid != memberId;
         
         // Admins poden actualitzar qualsevol membre
         // Usuaris poden actualitzar el seu propi perfil (excepte el rol)
