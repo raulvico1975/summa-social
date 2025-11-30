@@ -3,6 +3,7 @@ import './globals.css';
 import { Toaster } from '@/components/ui/toaster';
 import { AuthProvider } from '@/hooks/use-auth';
 import { FirebaseClientProvider } from '@/firebase';
+import { TranslationsProvider } from '@/i18n/provider';
 
 export const metadata: Metadata = {
   title: 'Summa Social',
@@ -24,7 +25,9 @@ export default function RootLayout({
       <body className="font-body antialiased">
         <FirebaseClientProvider>
           <AuthProvider>
-            {children}
+            <TranslationsProvider>
+              {children}
+            </TranslationsProvider>
           </AuthProvider>
         </FirebaseClientProvider>
         <Toaster />

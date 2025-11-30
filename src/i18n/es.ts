@@ -28,7 +28,7 @@ export const es = {
       button: "Importar",
       add: "Añadir movimientos",
       replace: "Reemplazar todo",
-      confirmReplaceTitle: "¿Estás a punto de reemplazar todo?",
+      confirmReplaceTitle: "¿Estás a punto de reemplazarlo todo?",
       confirmReplaceDescription: "Esta acción borrará permanentemente todos los movimientos actuales y los reemplazará por los del nuevo archivo. Esta operación no se puede deshacer.",
       confirm: "Sí, reemplazarlo todo",
     },
@@ -48,6 +48,30 @@ export const es = {
       edit: "Editar",
       splitRemittance: "Dividir Remesa",
       delete: "Eliminar",
+      createNewEmisor: "Crear nuevo emisor...",
+      unlink: "(Desvincular)",
+      editTransaction: "Editar Transacción",
+      editTransactionDescription: "Modifica los detalles del movimiento.",
+      saveChanges: "Guardar Cambios"
+    },
+     splitter: {
+        title: "Dividir Remesa",
+        description: "Selecciona un archivo CSV con el detalle de la remesa para dividir la transacción agrupada en movimientos individuales.",
+        formatInfo: "Formato del archivo CSV",
+        formatDescription: "El archivo debe contener cabeceras y, como mínimo, las columnas de Importe y Nombre (o DNI/CIF).",
+        formatColumns: {
+            name: "Nom/Nombre/Deudor (o DNI/CIF/NIF)",
+            amount: "Import/Importe"
+        },
+        formatNote: "El sistema buscará coincidencias por DNI/CIF y, si no, por nombre (ignorando mayúsculas/minúsculas y acentos).",
+        uploadButton: "Subir archivo CSV",
+        processing: "Procesando...",
+        close: "Cerrar",
+        successToast: "Remesa dividida con éxito",
+        successToastDescription: (count: number) => `Se han generado ${count} transacciones individuales.`,
+        errorAmountMismatch: (csvAmount: string, txAmount: string) => `El importe total del archivo (${csvAmount}) no coincide con el importe de la transacción (${txAmount}).`,
+        errorInvalidHeaders: "El archivo CSV debe contener una columna para 'Importe' y, al menos, una para 'Nombre' o 'DNI/CIF'.",
+        errorEmptyFile: "El archivo CSV está vacío o no tiene datos.",
     }
   },
   projects: {
@@ -71,13 +95,21 @@ export const es = {
     save: "Guardar Proyecto",
     confirmDeleteTitle: "¿Estás seguro?",
     confirmDeleteDescription: "Esta acción no se puede deshacer. Se eliminará el proyecto permanentemente. Los movimientos asociados no serán eliminados, pero perderán la asociación.",
+    selectFunder: "Selecciona un financiador",
+    projectCreated: "Proyecto Creado",
+    projectCreatedDescription: (name: string) => `El proyecto "${name}" ha sido creado.`,
+    projectUpdated: "Proyecto Actualizado",
+    projectUpdatedDescription: (name: string) => `El proyecto "${name}" ha sido actualizado.`,
+    projectDeleted: "Proyecto Eliminado",
+    projectDeletedDescription: (name: string) => `El proyecto "${name}" ha sido eliminado.`,
+    errorNameEmpty: "El nombre del proyecto no puede estar vacío.",
   },
   emissors: {
     title: "Emisores",
-    description: "Gestiona los emisores de tu organización (proveedores, donantes, etc.).",
+    description: "Gestiona los contactos de tu organización (proveedores, donantes, etc.).",
     add: "Añadir Emisor",
     manage: "Gestionar Emisores",
-    manageDescription: "Añade, edita o elimina los emisores de tu organización.",
+    manageDescription: "Añade, edita o elimina los contactos de tu organización.",
     name: "Nombre",
     taxId: "DNI/CIF",
     zipCode: "Código Postal",
@@ -86,16 +118,24 @@ export const es = {
     noEmissors: "No hay emisores.",
     edit: "Editar Emisor",
     addTitle: "Añadir Nuevo Emisor",
-    editDescription: "Edita los detalles de tu emisor.",
-    addDescription: "Crea un nuevo emisor para tu organización.",
+    editDescription: "Edita los detalles de tu contacto.",
+    addDescription: "Crea un nuevo contacto para tu organización.",
     save: "Guardar Emisor",
     confirmDeleteTitle: "¿Estás seguro?",
-    confirmDeleteDescription: "Esta acción no se puede deshacer. Se eliminará el emisor permanentemente.",
+    confirmDeleteDescription: "Esta acción no se puede deshacer. Se eliminará el contacto permanentemente.",
     types: {
         donor: "Donante",
         supplier: "Proveedor",
         volunteer: "Voluntario"
-    }
+    },
+    selectType: "Selecciona un tipo",
+    errorAllFields: "Todos los campos son obligatorios.",
+    emissorCreated: "Emisor Creado",
+    emissorCreatedDescription: (name: string) => `El emisor "${name}" ha sido creado.`,
+    emissorUpdated: "Emisor Actualizado",
+    emissorUpdatedDescription: (name: string) => `El emisor "${name}" ha sido actualizado.`,
+    emissorDeleted: "Emisor Eliminado",
+    emissorDeletedDescription: (name: string) => `El emisor "${name}" ha sido eliminado.`,
   },
   reports: {
     title: "Informes",
@@ -110,7 +150,14 @@ export const es = {
     donorZipCode: "Código Postal",
     totalAmount: "Importe Total Anual",
     generating: "Generando informe...",
-    noData: "Selecciona un año y genera el informe para ver los datos."
+    noData: "Selecciona un año y genera el informe para ver los datos.",
+    noDataToExport: "No hay datos para exportar. Genera primero el informe.",
+    dataNotAvailable: "Datos no disponibles",
+    dataNotAvailableDescription: "No se pudieron cargar las transacciones o los emisores.",
+    reportGenerated: "Informe Generado",
+    reportGeneratedDescription: (year: string, count: number) => `Se ha generado el informe para el año ${year} con ${count} donantes.`,
+    exportComplete: "Exportación Completada",
+    exportCompleteDescription: "El informe de donaciones se ha descargado como archivo CSV.",
   },
   settings: {
     title: "Configuración",
@@ -129,7 +176,7 @@ export const es = {
     editDescription: "Edita los detalles de tu categoría.",
     addDescription: "Crea una nueva categoría para organizar tus transacciones.",
     type: "Tipo",
-    save: "Guardar Categoría",
+    save: "Guardar",
     confirmDeleteTitle: "¿Estás seguro?",
     confirmDeleteDescription: "Esta acción no se puede deshacer. Se eliminará la categoría permanentemente.",
     language: "Idioma de la Aplicación",
@@ -137,7 +184,9 @@ export const es = {
     languageSelector: "Elige un idioma",
     catalan: "Catalán",
     spanish: "Español",
-    saveSettings: "Guardar Configuración",
+    saveSettings: "Guardar",
+    languageSaved: "Idioma guardado",
+    languageSavedDescription: (lang: string) => `El idioma de la aplicación se ha cambiado a ${lang}.`,
     categoryDeletedToast: "Categoría Eliminada",
     categoryDeletedToastDescription: (name: string) => `La categoría "${name}" ha sido eliminada.`,
     categoryUpdatedToast: "Categoría Actualizada",
@@ -155,7 +204,9 @@ export const es = {
     settings: "Configuración",
     logout: "Cerrar Sesión",
     user: "Usuario",
-    anonymousUser: "Usuario Anónimo"
+    anonymousUser: "Usuario Anónimo",
+    logoutToastTitle: "Sesión Cerrada",
+    logoutToastDescription: "Has cerrado sesión correctamente."
   },
   login: {
     welcome: "Bienvenido a Summa Social",
@@ -163,7 +214,9 @@ export const es = {
     password: "Contraseña",
     passwordIncorrect: "Contraseña incorrecta.",
     access: "Acceder al Panel de Control",
-    accessing: "Accediendo..."
+    accessing: "Accediendo...",
+    loginSuccess: "Contraseña correcta",
+    loginDescription: "Iniciando sesión anónima en Firebase..."
   },
   common: {
       cancel: "Cancelar",
@@ -176,5 +229,6 @@ export const es = {
       uncategorized: "Sin Categoría",
       error: "Error",
       dbConnectionError: "No se ha podido conectar a la base de datos.",
+      authError: "Error de autenticación"
   }
 };

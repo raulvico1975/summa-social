@@ -40,6 +40,7 @@ import { useToast } from '@/hooks/use-toast';
 import { StatCard } from './stat-card';
 import { useCollection, useFirebase, useMemoFirebase, addDocumentNonBlocking, deleteDocumentNonBlocking, setDocumentNonBlocking } from '@/firebase';
 import { collection, doc } from 'firebase/firestore';
+import { useTranslations } from '@/i18n';
 
 
 const formatCurrency = (amount: number) => {
@@ -49,6 +50,7 @@ const formatCurrency = (amount: number) => {
 
 export function ProjectManager() {
   const { firestore, user } = useFirebase();
+  const { t } = useTranslations();
 
   const projectsCollection = useMemoFirebase(
     () => user ? collection(firestore, 'users', user.uid, 'projects') : null,
@@ -118,8 +120,8 @@ export function ProjectManager() {
     if (projectToDelete && projectsCollection) {
       deleteDocumentNonBlocking(doc(projectsCollection, projectToDelete.id));
       toast({
-        title: 'Projecte Eliminat',
-        description: `El projecte "${projectToDelete.name}" ha estat eliminat.`,
+        title: t.projects.projectDeleted,
+        description: t.projects.projectDeletedDescription(projectToDelete.name),
       });
     }
     setIsAlertOpen(false);
@@ -150,29 +152,29 @@ export function ProjectManager() {
   
   const handleSave = () => {
     if (!formData.name) {
-       toast({ variant: 'destructive', title: 'Error', description: 'El nom del projecte no pot estar buit.' });
+       toast({ variant: 'destructive', title: t.common.error, description: t.projects.errorNameEmpty });
        return;
     }
 
     if (!projectsCollection) {
-      toast({ variant: 'destructive', title: 'Error', description: 'No se ha podido conectar a la base de datos.' });
+      toast({ variant: 'destructive', title: t.common.error, description: t.common.dbConnectionError });
       return;
     }
 
     if (editingProject) {
       // Update
       setDocumentNonBlocking(doc(projectsCollection, editingProject.id), formData, { merge: true });
-      toast({ title: 'Projecte Actualitzat', description: `El projecte "${formData.name}" ha estat actualitzat.` });
+      toast({ title: t.projects.projectUpdated, description: t.projects.projectUpdatedDescription(formData.name) });
     } else {
       // Create
       addDocumentNonBlocking(projectsCollection, formData);
-      toast({ title: 'Projecte Creat', description: `El projecte "${formData.name}" ha estat creat.` });
+      toast({ title: t.projects.projectCreated, description: t.projects.projectCreatedDescription(formData.name) });
     }
     handleOpenChange(false);
   }
 
-  const dialogTitle = editingProject ? 'Editar Projecte' : 'Añadir Nuevo Projecte';
-  const dialogDescription = editingProject ? 'Edita los detalles del teu projecte.' : 'Crea un nuevo projecte per fer el seguiment dels fons.';
+  const dialogTitle = editingProject ? t.projects.edit : t.projects.addTitle;
+  const dialogDescription = editingProject ? t.projects.editDescription : t.projects.addDescription;
 
   return (
     <>
@@ -181,7 +183,7 @@ export function ProjectManager() {
             <DialogTrigger asChild>
                 <Button size="sm" onClick={handleAddNew}>
                 <PlusCircle className="mr-2 h-4 w-4" />
-                Añadir Projecte
+                {t.projects.add}
                 </Button>
             </DialogTrigger>
         </div>
@@ -189,13 +191,13 @@ export function ProjectManager() {
         {(!projects || projects.length === 0) ? (
             <Card>
                 <CardHeader>
-                    <CardTitle>No hi ha projectes</CardTitle>
-                    <CardDescription>Crea el teu primer projecte per començar a fer el seguiment de fons finalistes.</CardDescription>
+                    <CardTitle>{t.projects.noProjectsTitle}</CardTitle>
+                    <CardDescription>{t.projects.noProjectsDescription}</CardDescription>
                 </CardHeader>
                  <CardContent>
                     <Button onClick={handleAddNew}>
                         <PlusCircle className="mr-2 h-4 w-4" />
-                        Crear el teu Primer Projecte
+                        {t.projects.createFirst}
                     </Button>
                 </CardContent>
             </Card>
@@ -212,7 +214,7 @@ export function ProjectManager() {
                                     <div>
                                         <CardTitle>{project.name}</CardTitle>
                                         <CardDescription>
-                                            Finançador: {project.funderId && emisorMap[project.funderId] ? emisorMap[project.funderId] : 'No assignat'}
+                                            {t.projects.funder}: {project.funderId && emisorMap[project.funderId] ? emisorMap[project.funderId] : t.projects.notAssigned}
                                         </CardDescription>
                                     </div>
                                     <div>
@@ -233,22 +235,22 @@ export function ProjectManager() {
                             <CardContent>
                                 <div className="grid gap-4 md:grid-cols-4">
                                     <StatCard 
-                                        title="Total Finançat"
+                                        title={t.projects.totalFunded}
                                         value={formatCurrency(balance.funded)}
                                         icon={TrendingUp}
                                         />
                                     <StatCard 
-                                        title="Total Enviat a Terreny"
+                                        title={t.projects.totalSent}
                                         value={formatCurrency(balance.sent)}
                                         icon={TrendingDown}
                                         />
                                     <StatCard 
-                                        title="Despeses a Espanya"
+                                        title={t.projects.expensesInSpain}
                                         value={formatCurrency(balance.expenses)}
                                         icon={Briefcase}
                                         />
                                     <StatCard 
-                                        title="Saldo Pendent"
+                                        title={t.projects.pendingBalance}
                                         value={formatCurrency(remaining)}
                                         icon={DollarSign}
                                         />
@@ -268,20 +270,20 @@ export function ProjectManager() {
         <div className="grid gap-4 py-4">
           <div className="grid grid-cols-4 items-center gap-4">
             <Label htmlFor="name" className="text-right">
-              Nom
+              {t.projects.name}
             </Label>
             <Input id="name" value={formData.name} onChange={handleFormChange} className="col-span-3" />
           </div>
           <div className="grid grid-cols-4 items-center gap-4">
             <Label htmlFor="type" className="text-right">
-              Finançador
+              {t.projects.funder}
             </Label>
             <Select value={formData.funderId || ''} onValueChange={(value) => handleSelectChange(value === 'null' ? null : value)}>
               <SelectTrigger className="col-span-3">
-                <SelectValue placeholder="Selecciona un finançador" />
+                <SelectValue placeholder={t.projects.selectFunder} />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="null">(Cap)</SelectItem>
+                <SelectItem value="null">{t.common.none}</SelectItem>
                 {emissors?.filter(e => e.type === 'donor').map(e => (
                   <SelectItem key={e.id} value={e.id}>{e.name}</SelectItem>
                 ))}
@@ -291,9 +293,9 @@ export function ProjectManager() {
         </div>
         <DialogFooter>
           <DialogClose asChild>
-             <Button variant="outline">Cancelar</Button>
+             <Button variant="outline">{t.common.cancel}</Button>
           </DialogClose>
-          <Button onClick={handleSave}>Guardar Projecte</Button>
+          <Button onClick={handleSave}>{t.projects.save}</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
@@ -301,15 +303,15 @@ export function ProjectManager() {
     <AlertDialog open={isAlertOpen} onOpenChange={setIsAlertOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>¿Estás seguro?</AlertDialogTitle>
+            <AlertDialogTitle>{t.projects.confirmDeleteTitle}</AlertDialogTitle>
             <AlertDialogDescription>
-              Esta acción no se puede deshacer. Se eliminará el projecte permanentemente. Los moviments associats no seran eliminats, però perdran l'associació.
+              {t.projects.confirmDeleteDescription}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel onClick={() => setProjectToDelete(null)}>Cancelar</AlertDialogCancel>
+            <AlertDialogCancel onClick={() => setProjectToDelete(null)}>{t.common.cancel}</AlertDialogCancel>
             <AlertDialogAction onClick={handleDeleteConfirm}>
-              Eliminar
+              {t.common.delete}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

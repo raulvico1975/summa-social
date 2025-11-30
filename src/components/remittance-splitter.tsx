@@ -20,6 +20,7 @@ import { FileUp, Loader2, Info } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { addDocumentNonBlocking, useFirebase } from '@/firebase';
 import { collection, writeBatch, doc } from 'firebase/firestore';
+import { useTranslations } from '@/i18n';
 
 interface RemittanceSplitterProps {
   open: boolean;
@@ -55,6 +56,7 @@ export function RemittanceSplitter({
   const { toast } = useToast();
   const { log } = useAppLog();
   const { firestore, user } = useFirebase();
+  const { t } = useTranslations();
 
   const handleFileClick = () => {
     fileInputRef.current?.click();
@@ -71,7 +73,7 @@ export function RemittanceSplitter({
 
   const processFile = (file: File) => {
     if (!user) {
-      toast({ variant: 'destructive', title: 'Error de autenticación' });
+      toast({ variant: 'destructive', title: t.common.authError });
       return;
     }
     setIsProcessing(true);
@@ -89,7 +91,7 @@ export function RemittanceSplitter({
             
             // Allow a small tolerance for floating point inaccuracies
             if (Math.abs(transaction.amount - totalAmount) > 0.01) {
-                throw new Error(`El importe total del archivo (${totalAmount.toFixed(2)} €) no coincide con el importe de la transacción (${transaction.amount.toFixed(2)} €).`);
+                throw new Error(t.movements.splitter.errorAmountMismatch(totalAmount.toFixed(2), transaction.amount.toFixed(2)));
             }
 
             const transactionsCollectionRef = collection(firestore, 'users', user.uid, 'transactions');
@@ -108,8 +110,8 @@ export function RemittanceSplitter({
 
             log(`[Splitter] Procesamiento completado. ${newTransactions.length} transacciones creadas.`);
             toast({
-                title: "Remesa dividida con éxito",
-                description: `Se han generado ${newTransactions.length} transacciones individuales.`,
+                title: t.movements.splitter.successToast,
+                description: t.movements.splitter.successToastDescription(newTransactions.length),
             });
             onSplitDone();
 
@@ -118,7 +120,7 @@ export function RemittanceSplitter({
             log(`[Splitter] ERROR: ${error.message}`);
             toast({
                 variant: 'destructive',
-                title: 'Error al procesar el archivo',
+                title: t.common.error,
                 description: error.message,
                 duration: 9000,
             });
@@ -131,8 +133,8 @@ export function RemittanceSplitter({
         log(`[Splitter] ERROR de PapaParse: ${error.message}`);
         toast({
           variant: 'destructive',
-          title: 'Error de Importación',
-          description: 'No se pudo leer el archivo CSV.',
+          title: t.common.error,
+          description: error.message,
         });
         setIsProcessing(false);
       },
@@ -191,7 +193,7 @@ export function RemittanceSplitter({
     let totalAmount = 0;
 
     if (data.length === 0) {
-      throw new Error("El archivo CSV está vacío o no tiene datos.");
+      throw new Error(t.movements.splitter.errorEmptyFile);
     }
     
     // Dynamically find header names
@@ -201,7 +203,7 @@ export function RemittanceSplitter({
     const amountHeader = findHeader(firstRow, ['import', 'importe', 'cuantía']);
 
     if (!amountHeader || (!nameHeader && !taxIdHeader)) {
-        throw new Error("El archivo CSV debe contener una columna para 'Importe' y, al menos, una para 'Nombre' o 'DNI/CIF'.");
+        throw new Error(t.movements.splitter.errorInvalidHeaders);
     }
 
     data.forEach((row, index) => {
@@ -243,22 +245,22 @@ export function RemittanceSplitter({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>Dividir Remesa</DialogTitle>
+          <DialogTitle>{t.movements.splitter.title}</DialogTitle>
           <DialogDescription>
-            Selecciona un archivo CSV con el detalle de la remesa para dividir la transacción agrupada en movimientos individuales.
+            {t.movements.splitter.description}
           </DialogDescription>
         </DialogHeader>
 
         <Alert>
           <Info className="h-4 w-4" />
-          <AlertTitle>Formato del archivo CSV</AlertTitle>
+          <AlertTitle>{t.movements.splitter.formatInfo}</AlertTitle>
           <AlertDescription>
-            El archivo debe contener cabeceras y, como mínimo, las columnas de <b>Importe</b> y <b>Nombre</b> (o <b>DNI/CIF</b>).
+            {t.movements.splitter.formatDescription}
             <ul className="list-disc pl-5 mt-2 text-xs">
-                <li><b>Nom/Nombre/Deudor</b> (o DNI/CIF/NIF)</li>
-                <li><b>Import/Importe</b></li>
+                <li><b>{t.movements.splitter.formatColumns.name}</b></li>
+                <li><b>{t.movements.splitter.formatColumns.amount}</b></li>
             </ul>
-             <p className="mt-2 text-xs">El sistema buscará coincidencias per DNI/CIF y, si no, per nom (ignorant majúscules/minúscules i accents).</p>
+             <p className="mt-2 text-xs">{t.movements.splitter.formatNote}</p>
           </AlertDescription>
         </Alert>
 
@@ -277,13 +279,13 @@ export function RemittanceSplitter({
           ) : (
             <FileUp className="mr-2 h-4 w-4" />
           )}
-          {isProcessing ? 'Procesando...' : 'Pujar arxiu CSV'}
+          {isProcessing ? t.movements.splitter.processing : t.movements.splitter.uploadButton}
         </Button>
 
         <DialogFooter>
           <DialogClose asChild>
             <Button type="button" variant="secondary">
-              Tancar
+              {t.movements.splitter.close}
             </Button>
           </DialogClose>
         </DialogFooter>

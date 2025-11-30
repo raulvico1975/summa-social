@@ -1,3 +1,4 @@
+
 'use client';
 
 import * as React from 'react';
@@ -367,7 +368,7 @@ export function TransactionsTable() {
 
   const handleSaveNewEmisor = () => {
     if (!newEmisorFormData.name || !newEmisorFormData.taxId || !newEmisorFormData.zipCode) {
-      toast({ variant: 'destructive', title: 'Error', description: 'Todos los campos del nuevo emisor son obligatorios.' });
+      toast({ variant: 'destructive', title: t.common.error, description: t.emissors.errorAllFields });
       return;
     }
     if (!emissorsCollection || !transactionsCollection) return;
@@ -384,7 +385,7 @@ export function TransactionsTable() {
         }
       });
     
-    toast({ title: 'Emisor Creado', description: `El emissor "${newEmisorFormData.name}" ha sido creado y asignado.` });
+    toast({ title: t.emissors.emissorCreated, description: t.emissors.emissorCreatedDescription(newEmisorFormData.name) });
     setIsNewEmisorDialogOpen(false);
     setNewEmisorTransactionId(null);
   };
@@ -464,11 +465,11 @@ export function TransactionsTable() {
                         <DropdownMenuContent align="start">
                             <DropdownMenuItem onClick={() => handleOpenNewEmisorDialog(tx.id)}>
                                 <UserPlus className="mr-2 h-4 w-4" />
-                                Crear nuevo emisor...
+                                {t.movements.table.createNewEmisor}
                             </DropdownMenuItem>
                             <DropdownMenuSeparator />
                             <DropdownMenuItem onClick={() => handleSetEmisor(tx.id, null)}>
-                                (Desvincular)
+                                {t.movements.table.unlink}
                             </DropdownMenuItem>
                             {availableEmissors?.map((emisor) => (
                                 <DropdownMenuItem key={emisor.id} onClick={() => handleSetEmisor(tx.id, emisor.id)}>
@@ -536,7 +537,7 @@ export function TransactionsTable() {
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="start">
                             <DropdownMenuItem onClick={() => handleSetProject(tx.id, null)}>
-                                (Desvincular)
+                                {t.movements.table.unlink}
                             </DropdownMenuItem>
                              <DropdownMenuSeparator />
                             {availableProjects?.map((project) => (
@@ -608,15 +609,15 @@ export function TransactionsTable() {
       <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Editar Transacción</DialogTitle>
+            <DialogTitle>{t.movements.table.editTransaction}</DialogTitle>
             <DialogDescription>
-              Modifica los detalles del movimiento.
+              {t.movements.table.editTransactionDescription}
             </DialogDescription>
           </DialogHeader>
           <div className="grid gap-4 py-4">
             <div className="grid grid-cols-4 items-center gap-4">
               <Label htmlFor="description" className="text-right">
-                Concepto
+                {t.movements.table.description}
               </Label>
               <Input
                 id="description"
@@ -627,7 +628,7 @@ export function TransactionsTable() {
             </div>
             <div className="grid grid-cols-4 items-center gap-4">
               <Label htmlFor="amount" className="text-right">
-                Importe
+                {t.movements.table.amount}
               </Label>
               <Input
                 id="amount"
@@ -639,14 +640,14 @@ export function TransactionsTable() {
             </div>
             <div className="grid grid-cols-4 items-center gap-4">
                 <Label htmlFor="emisor" className="text-right">
-                    Emisor
+                    {t.movements.table.emisor}
                 </Label>
                 <Select value={formData.emisorId || ''} onValueChange={(value) => setFormData({...formData, emisorId: value === 'null' ? null : value})}>
                     <SelectTrigger className="col-span-3">
-                        <SelectValue placeholder="Selecciona un emisor" />
+                        <SelectValue placeholder={t.emissors.selectType} />
                     </SelectTrigger>
                     <SelectContent>
-                        <SelectItem value="null">(Ninguno)</SelectItem>
+                        <SelectItem value="null">{t.common.none}</SelectItem>
                         {availableEmissors?.map(emisor => (
                             <SelectItem key={emisor.id} value={emisor.id}>{emisor.name}</SelectItem>
                         ))}
@@ -655,14 +656,14 @@ export function TransactionsTable() {
             </div>
              <div className="grid grid-cols-4 items-center gap-4">
                 <Label htmlFor="project" className="text-right">
-                    Projecte
+                    {t.movements.table.project}
                 </Label>
                 <Select value={formData.projectId || ''} onValueChange={(value) => setFormData({...formData, projectId: value === 'null' ? null : value})}>
                     <SelectTrigger className="col-span-3">
-                        <SelectValue placeholder="Selecciona un projecte" />
+                        <SelectValue placeholder={t.projects.selectFunder} />
                     </SelectTrigger>
                     <SelectContent>
-                        <SelectItem value="null">(Cap)</SelectItem>
+                        <SelectItem value="null">{t.common.none}</SelectItem>
                         {availableProjects?.map(project => (
                             <SelectItem key={project.id} value={project.id}>{project.name}</SelectItem>
                         ))}
@@ -672,9 +673,9 @@ export function TransactionsTable() {
           </div>
           <DialogFooter>
             <DialogClose asChild>
-              <Button variant="outline">Cancelar</Button>
+              <Button variant="outline">{t.common.cancel}</Button>
             </DialogClose>
-            <Button onClick={handleSaveEdit}>Guardar Cambios</Button>
+            <Button onClick={handleSaveEdit}>{t.movements.table.saveChanges}</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -683,26 +684,26 @@ export function TransactionsTable() {
       <Dialog open={isNewEmisorDialogOpen} onOpenChange={setIsNewEmisorDialogOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Crear Nuevo Emisor</DialogTitle>
-            <DialogDescription>Añade un nuevo emisor a tu lista y asígnalo a esta transacción.</DialogDescription>
+            <DialogTitle>{t.emissors.addTitle}</DialogTitle>
+            <DialogDescription>{t.emissors.addDescription}</DialogDescription>
           </DialogHeader>
           <div className="grid gap-4 py-4">
             <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="new-emisor-name" className="text-right">Nombre</Label>
+              <Label htmlFor="new-emisor-name" className="text-right">{t.emissors.name}</Label>
               <Input id="new-emisor-name" value={newEmisorFormData.name} onChange={(e) => setNewEmisorFormData({...newEmisorFormData, name: e.target.value })} className="col-span-3" />
             </div>
             <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="new-emisor-taxId" className="text-right">DNI/CIF</Label>
+              <Label htmlFor="new-emisor-taxId" className="text-right">{t.emissors.taxId}</Label>
               <Input id="new-emisor-taxId" value={newEmisorFormData.taxId} onChange={(e) => setNewEmisorFormData({...newEmisorFormData, taxId: e.target.value })} className="col-span-3" />
             </div>
             <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="new-emisor-zipCode" className="text-right">C. Postal</Label>
+              <Label htmlFor="new-emisor-zipCode" className="text-right">{t.emissors.zipCode}</Label>
               <Input id="new-emisor-zipCode" value={newEmisorFormData.zipCode} onChange={(e) => setNewEmisorFormData({...newEmisorFormData, zipCode: e.target.value })} className="col-span-3" />
             </div>
           </div>
           <DialogFooter>
-            <DialogClose asChild><Button variant="outline">Cancelar</Button></DialogClose>
-            <Button onClick={handleSaveNewEmisor}>Guardar Emisor</Button>
+            <DialogClose asChild><Button variant="outline">{t.common.cancel}</Button></DialogClose>
+            <Button onClick={handleSaveNewEmisor}>{t.emissors.save}</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -711,16 +712,15 @@ export function TransactionsTable() {
       <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>¿Estás seguro?</AlertDialogTitle>
+            <AlertDialogTitle>{t.settings.confirmDeleteTitle}</AlertDialogTitle>
             <AlertDialogDescription>
-              Esta acción no se puede deshacer. Se eliminará la transacción
-              permanentemente.
+              {t.settings.confirmDeleteDescription}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel onClick={() => setTransactionToDelete(null)}>Cancelar</AlertDialogCancel>
+            <AlertDialogCancel onClick={() => setTransactionToDelete(null)}>{t.common.cancel}</AlertDialogCancel>
             <AlertDialogAction onClick={handleDeleteConfirm}>
-              Eliminar
+              {t.common.delete}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

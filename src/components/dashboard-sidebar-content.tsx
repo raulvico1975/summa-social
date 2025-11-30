@@ -30,7 +30,7 @@ export function DashboardSidebarContent() {
   const handleSignOut = async (e: React.MouseEvent<HTMLAnchorElement>) => {
     e.preventDefault();
     await signOut();
-    toast({ title: 'Sesión Cerrada', description: 'Has cerrado sesión correctamente.' });
+    toast({ title: t.sidebar.logoutToastTitle, description: t.sidebar.logoutToastDescription });
     router.push('/');
   };
 

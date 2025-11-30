@@ -25,6 +25,7 @@ import { useToast } from '@/hooks/use-toast';
 import Papa from 'papaparse';
 import { useCollection, useFirebase, useMemoFirebase } from '@/firebase';
 import { collection } from 'firebase/firestore';
+import { useTranslations } from '@/i18n';
 
 interface DonationReportRow {
   donorName: string;
@@ -35,6 +36,8 @@ interface DonationReportRow {
 
 export function DonationsReportGenerator() {
   const { firestore, user } = useFirebase();
+  const { t } = useTranslations();
+
   const transactionsQuery = useMemoFirebase(
     () => user ? collection(firestore, 'users', user.uid, 'transactions') : null,
     [firestore, user]
@@ -61,7 +64,7 @@ export function DonationsReportGenerator() {
     setIsLoading(true);
 
     if (!transactions || !emissors) {
-      toast({ variant: 'destructive', title: "Datos no disponibles", description: "No se pudieron cargar las transacciones o los emisores." });
+      toast({ variant: 'destructive', title: t.reports.dataNotAvailable, description: t.reports.dataNotAvailableDescription });
       setIsLoading(false);
       return;
     }
@@ -91,12 +94,12 @@ export function DonationsReportGenerator() {
     
     setReportData(generatedReportData);
     setIsLoading(false);
-    toast({ title: "Informe Generat", description: `S'ha generat l'informe per a l'any ${selectedYear} amb ${generatedReportData.length} donants.` });
+    toast({ title: t.reports.reportGenerated, description: t.reports.reportGeneratedDescription(selectedYear, generatedReportData.length) });
   };
 
   const handleExportCSV = () => {
     if (reportData.length === 0) {
-      toast({ variant: 'destructive', title: "Cap dada per exportar", description: "Genera primer l'informe abans d'exportar." });
+      toast({ variant: 'destructive', title: t.reports.noDataToExport, description: "Genera primer l'informe abans d'exportar." });
       return;
     }
 
@@ -118,7 +121,7 @@ export function DonationsReportGenerator() {
     link.click();
     document.body.removeChild(link);
     
-    toast({ title: "Exportació Completada", description: "L'informe de donacions s'ha descarregat com a arxiu CSV." });
+    toast({ title: t.reports.exportComplete, description: t.reports.exportCompleteDescription });
   };
   
   const formatCurrency = (amount: number) => {
@@ -130,13 +133,13 @@ export function DonationsReportGenerator() {
         <CardHeader>
           <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
               <div>
-                <CardTitle>Generador d'Informe de Donacions (Model 182)</CardTitle>
-                <CardDescription>Genera el llistat de donacions anuals per a la declaració a Hisenda.</CardDescription>
+                <CardTitle>{t.reports.donationsReportTitle}</CardTitle>
+                <CardDescription>{t.reports.donationsReportDescription}</CardDescription>
               </div>
               <div className="flex gap-2">
                 <Select value={selectedYear} onValueChange={setSelectedYear}>
                     <SelectTrigger className="w-[180px]">
-                        <SelectValue placeholder="Selecciona un any" />
+                        <SelectValue placeholder={t.reports.selectYear} />
                     </SelectTrigger>
                     <SelectContent>
                         {availableYears.map(year => (
@@ -146,11 +149,11 @@ export function DonationsReportGenerator() {
                 </Select>
                 <Button onClick={handleGenerateReport} disabled={isLoading}>
                     {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                    Generar Informe
+                    {t.reports.generate}
                 </Button>
                 <Button variant="outline" onClick={handleExportCSV} disabled={reportData.length === 0}>
                     <Download className="mr-2 h-4 w-4" />
-                    Exportar a CSV
+                    {t.reports.exportCsv}
                 </Button>
               </div>
           </div>
@@ -160,10 +163,10 @@ export function DonationsReportGenerator() {
             <Table>
                 <TableHeader>
                 <TableRow>
-                    <TableHead>Nom del Donant</TableHead>
-                    <TableHead>DNI/CIF</TableHead>
-                    <TableHead>Codi Postal</TableHead>
-                    <TableHead className="text-right">Import Total Anual</TableHead>
+                    <TableHead>{t.reports.donorName}</TableHead>
+                    <TableHead>{t.reports.donorTaxId}</TableHead>
+                    <TableHead>{t.reports.donorZipCode}</TableHead>
+                    <TableHead className="text-right">{t.reports.totalAmount}</TableHead>
                 </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -178,7 +181,7 @@ export function DonationsReportGenerator() {
                 {reportData.length === 0 && (
                     <TableRow>
                         <TableCell colSpan={4} className="text-center text-muted-foreground h-24">
-                           {isLoading ? "Generant informe..." : "Selecciona un any i genera l'informe per veure les dades."}
+                           {isLoading ? t.reports.generating : t.reports.noData}
                         </TableCell>
                     </TableRow>
                 )}

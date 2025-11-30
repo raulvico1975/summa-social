@@ -48,16 +48,13 @@ import { useToast } from '@/hooks/use-toast';
 import { Badge } from '@/components/ui/badge';
 import { useCollection, useFirebase, useMemoFirebase, addDocumentNonBlocking, deleteDocumentNonBlocking, setDocumentNonBlocking } from '@/firebase';
 import { collection, doc } from 'firebase/firestore';
+import { useTranslations } from '@/i18n';
 
-
-const emisorTypeMap: Record<Emisor['type'], string> = {
-    donor: 'Donant',
-    supplier: 'Proveïdor',
-    volunteer: 'Voluntari'
-};
 
 export function EmisorManager() {
   const { firestore, user } = useFirebase();
+  const { t } = useTranslations();
+
   const emissorsCollection = useMemoFirebase(
     () => user ? collection(firestore, 'users', user.uid, 'emissors') : null,
     [firestore, user]
@@ -86,8 +83,8 @@ export function EmisorManager() {
     if (emisorToDelete && emissorsCollection) {
       deleteDocumentNonBlocking(doc(emissorsCollection, emisorToDelete.id));
       toast({
-        title: 'Emissor Eliminat',
-        description: `L'emissor "${emisorToDelete.name}" ha estat eliminat.`,
+        title: t.emissors.emissorDeleted,
+        description: t.emissors.emissorDeletedDescription(emisorToDelete.name),
       });
     }
     setIsAlertOpen(false);
@@ -118,29 +115,31 @@ export function EmisorManager() {
   
   const handleSave = () => {
     if (!formData.name || !formData.taxId || !formData.zipCode) {
-       toast({ variant: 'destructive', title: 'Error', description: 'Tots els camps són obligatoris.' });
+       toast({ variant: 'destructive', title: t.common.error, description: t.emissors.errorAllFields });
        return;
     }
 
     if (!emissorsCollection) {
-      toast({ variant: 'destructive', title: 'Error', description: 'No se ha podido conectar a la base de datos.' });
+      toast({ variant: 'destructive', title: t.common.error, description: t.common.dbConnectionError });
       return;
     }
 
     if (editingEmisor) {
       // Update
       setDocumentNonBlocking(doc(emissorsCollection, editingEmisor.id), formData, { merge: true });
-      toast({ title: 'Emissor Actualitzat', description: `L'emissor "${formData.name}" ha estat actualitzat.` });
+      toast({ title: t.emissors.emissorUpdated, description: t.emissors.emissorUpdatedDescription(formData.name) });
     } else {
       // Create
       addDocumentNonBlocking(emissorsCollection, formData);
-      toast({ title: 'Emissor Creat', description: `L'emissor "${formData.name}" ha estat creat.` });
+      toast({ title: t.emissors.emissorCreated, description: t.emissors.emissorCreatedDescription(formData.name) });
     }
     handleOpenChange(false);
   }
 
-  const dialogTitle = editingEmisor ? 'Editar Emissor' : 'Añadir Nuevo Emissor';
-  const dialogDescription = editingEmisor ? 'Edita los detalles de tu emissor.' : 'Crea un nuevo emissor para tu organización.';
+  const dialogTitle = editingEmisor ? t.emissors.edit : t.emissors.addTitle;
+  const dialogDescription = editingEmisor ? t.emissors.editDescription : t.emissors.addDescription;
+  
+  const emisorTypeMap: Record<Emisor['type'], string> = t.emissors.types;
 
   return (
     <>
@@ -148,13 +147,13 @@ export function EmisorManager() {
       <Card>
         <CardHeader className="flex flex-row items-center justify-between">
           <div>
-            <CardTitle>Gestionar Emissors</CardTitle>
-            <CardDescription>Añade, edita o elimina los emissors de tu organización.</CardDescription>
+            <CardTitle>{t.emissors.manage}</CardTitle>
+            <CardDescription>{t.emissors.manageDescription}</CardDescription>
           </div>
           <DialogTrigger asChild>
             <Button size="sm" onClick={handleAddNew}>
               <PlusCircle className="mr-2 h-4 w-4" />
-              Añadir Emissor
+              {t.emissors.add}
             </Button>
           </DialogTrigger>
         </CardHeader>
@@ -163,11 +162,11 @@ export function EmisorManager() {
             <Table>
                 <TableHeader>
                 <TableRow>
-                    <TableHead>Nombre</TableHead>
-                    <TableHead>DNI/CIF</TableHead>
-                    <TableHead>Código Postal</TableHead>
-                    <TableHead>Tipo</TableHead>
-                    <TableHead className="text-right">Acciones</TableHead>
+                    <TableHead>{t.emissors.name}</TableHead>
+                    <TableHead>{t.emissors.taxId}</TableHead>
+                    <TableHead>{t.emissors.zipCode}</TableHead>
+                    <TableHead>{t.emissors.type}</TableHead>
+                    <TableHead className="text-right">{t.emissors.actions}</TableHead>
                 </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -197,7 +196,7 @@ export function EmisorManager() {
                 {(!emissors || emissors.length === 0) && (
                     <TableRow>
                         <TableCell colSpan={5} className="text-center text-muted-foreground">
-                            No hay emissors.
+                            {t.emissors.noEmissors}
                         </TableCell>
                     </TableRow>
                 )}
@@ -215,43 +214,43 @@ export function EmisorManager() {
         <div className="grid gap-4 py-4">
           <div className="grid grid-cols-4 items-center gap-4">
             <Label htmlFor="name" className="text-right">
-              Nombre
+              {t.emissors.name}
             </Label>
             <Input id="name" value={formData.name} onChange={handleFormChange} className="col-span-3" />
           </div>
           <div className="grid grid-cols-4 items-center gap-4">
             <Label htmlFor="taxId" className="text-right">
-              DNI/CIF
+              {t.emissors.taxId}
             </Label>
             <Input id="taxId" value={formData.taxId} onChange={handleFormChange} className="col-span-3" />
           </div>
           <div className="grid grid-cols-4 items-center gap-4">
             <Label htmlFor="zipCode" className="text-right">
-              C. Postal
+              {t.emissors.zipCode}
             </Label>
             <Input id="zipCode" value={formData.zipCode} onChange={handleFormChange} className="col-span-3" />
           </div>
           <div className="grid grid-cols-4 items-center gap-4">
             <Label htmlFor="type" className="text-right">
-              Tipo
+              {t.emissors.type}
             </Label>
             <Select value={formData.type} onValueChange={handleSelectChange}>
               <SelectTrigger className="col-span-3">
-                <SelectValue placeholder="Selecciona un tipo" />
+                <SelectValue placeholder={t.emissors.selectType} />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="donor">Donante</SelectItem>
-                <SelectItem value="supplier">Proveedor</SelectItem>
-                <SelectItem value="volunteer">Voluntario</SelectItem>
+                <SelectItem value="donor">{t.emissors.types.donor}</SelectItem>
+                <SelectItem value="supplier">{t.emissors.types.supplier}</SelectItem>
+                <SelectItem value="volunteer">{t.emissors.types.volunteer}</SelectItem>
               </SelectContent>
             </Select>
           </div>
         </div>
         <DialogFooter>
           <DialogClose asChild>
-             <Button variant="outline">Cancelar</Button>
+             <Button variant="outline">{t.common.cancel}</Button>
           </DialogClose>
-          <Button onClick={handleSave}>Guardar Emissor</Button>
+          <Button onClick={handleSave}>{t.emissors.save}</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
@@ -259,16 +258,15 @@ export function EmisorManager() {
     <AlertDialog open={isAlertOpen} onOpenChange={setIsAlertOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>¿Estás seguro?</AlertDialogTitle>
+            <AlertDialogTitle>{t.emissors.confirmDeleteTitle}</AlertDialogTitle>
             <AlertDialogDescription>
-              Esta acción no se puede deshacer. Se eliminará el emissor
-              permanentemente.
+              {t.emissors.confirmDeleteDescription}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel onClick={() => setEmisorToDelete(null)}>Cancelar</AlertDialogCancel>
+            <AlertDialogCancel onClick={() => setEmisorToDelete(null)}>{t.common.cancel}</AlertDialogCancel>
             <AlertDialogAction onClick={handleDeleteConfirm}>
-              Eliminar
+              {t.common.delete}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

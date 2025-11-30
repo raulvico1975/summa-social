@@ -9,6 +9,7 @@ import { Label } from '@/components/ui/label';
 import { Logo } from '@/components/logo';
 import { useFirebase, initiateAnonymousSignIn } from '@/firebase';
 import { useToast } from '@/hooks/use-toast';
+import { useTranslations } from '@/i18n';
 
 // Contraseña simple para el acceso en desarrollo
 const DEV_PASSWORD = 'summa';
@@ -16,6 +17,7 @@ const DEV_PASSWORD = 'summa';
 export default function LoginPage() {
   const router = useRouter();
   const { auth, user, isUserLoading } = useFirebase();
+  const { t } = useTranslations();
   const { toast } = useToast();
   const [password, setPassword] = React.useState('');
   const [error, setError] = React.useState('');
@@ -25,11 +27,11 @@ export default function LoginPage() {
     if (password === DEV_PASSWORD) {
       setError('');
       setIsLoggingIn(true);
-      toast({ title: 'Contraseña correcta', description: 'Iniciando sesión anónima en Firebase...' });
+      toast({ title: t.login.loginSuccess, description: t.login.loginDescription });
       initiateAnonymousSignIn(auth);
       // The onAuthStateChanged listener in FirebaseProvider will handle the redirect
     } else {
-      setError('Contrasenya incorrecta.');
+      setError(t.login.passwordIncorrect);
       setIsLoggingIn(false);
     }
   };
@@ -53,14 +55,14 @@ export default function LoginPage() {
       <div className="w-full max-w-sm flex flex-col items-center gap-6 text-center">
         <Logo className="h-16 w-16 text-primary" />
         <div>
-          <h1 className="text-3xl font-bold tracking-tight font-headline">Bienvenido a Summa Social</h1>
+          <h1 className="text-3xl font-bold tracking-tight font-headline">{t.login.welcome}</h1>
           <p className="text-muted-foreground mt-2">
-            Introduce la contraseña de acceso para continuar. (v1.1 - Firestore activado)
+            {t.login.prompt}
           </p>
         </div>
         
         <div className="w-full space-y-2 text-left">
-          <Label htmlFor="password">Contraseña</Label>
+          <Label htmlFor="password">{t.login.password}</Label>
           <Input 
             type="password" 
             id="password" 
@@ -77,7 +79,7 @@ export default function LoginPage() {
         </div>
 
         <Button onClick={handleLogin} className="w-full" disabled={isLoggingIn || isUserLoading}>
-          {isLoggingIn || isUserLoading ? 'Accediendo...' : 'Acceder al Panel de Control'}
+          {isLoggingIn || isUserLoading ? t.login.accessing : t.login.access}
         </Button>
       </div>
     </main>
