@@ -1,4 +1,3 @@
-import 'dotenv/config';
 import admin from 'firebase-admin';
 
 /**
@@ -13,16 +12,16 @@ function initializeAdminApp() {
   }
 
   try {
-    // Aquest mètode funciona bé en producció a Firebase App Hosting
-    // i en entorns que tenen les credencials configurades a nivell de sistema.
-    console.log("Intentant inicialització automàtica de l'Admin SDK...");
+    // Aquest mètode funciona en entorns que tenen les credencials configurades
+    // automàticament, com Firebase App Hosting.
     return admin.initializeApp();
   } catch (error: any) {
-      // Si la inicialització automàtica falla, és un error crític de configuració
-      // de l'entorn que no podem resoldre amb un fallback.
-      throw new Error(
-        `Error crític: La inicialització automàtica de l'Admin SDK ha fallat. Assegura't que les credencials estan ben configurades a l'entorn. Missatge: ${error.message}`
-      );
+    // Si la inicialització automàtica falla, és un error crític de configuració
+    // de l'entorn que no podem resoldre amb un fallback dins el codi.
+    console.error("FIREBASE_ADMIN_INIT_ERROR:", error);
+    throw new Error(
+      `Error crític: La inicialització automàtica de l'Admin SDK ha fallat. Assegura't que les credencials estan ben configurades a l'entorn. Missatge: ${error.message}`
+    );
   }
 }
 
