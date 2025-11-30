@@ -9,9 +9,9 @@ import { Logo } from '@/components/logo';
 import { useFirebase } from '@/firebase';
 import { useToast } from '@/hooks/use-toast';
 import { useTranslations } from '@/i18n';
-import { signInWithEmailAndPassword, getIdToken } from 'firebase/auth';
+import { signInWithEmailAndPassword } from 'firebase/auth';
 import { Loader2 } from 'lucide-react';
-import { ensureUserHasOrganization } from '@/services/auth';
+
 
 export default function LoginPage() {
   const router = useRouter();
@@ -34,15 +34,7 @@ export default function LoginPage() {
     setIsLoggingIn(true);
 
     try {
-      const userCredential = await signInWithEmailAndPassword(auth, email, password);
-      const idToken = await getIdToken(userCredential.user);
-      
-      // CRITICAL STEP: Ensure organization exists and create session cookie
-      const result = await ensureUserHasOrganization(idToken);
-
-      if (!result.success) {
-        throw new Error(result.error || t.login.genericError);
-      }
+      await signInWithEmailAndPassword(auth, email, password);
       
       toast({ 
         title: t.login.loginSuccess, 

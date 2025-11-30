@@ -34,7 +34,6 @@ export function DashboardSidebarContent() {
     e.preventDefault();
     try {
       await firebaseSignOut(firebaseAuth);
-      await serverSignOut();
       
       toast({ title: t.sidebar.logoutToastTitle, description: t.sidebar.logoutToastDescription });
       

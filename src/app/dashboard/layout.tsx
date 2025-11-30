@@ -15,6 +15,7 @@ import { useInitializeOrganizationData } from '@/hooks/use-initialize-user-data'
 let logCounter = 0;
 
 function OrganizationDependentLayout({ children }: { children: React.ReactNode }) {
+  // Aquest hook s'assegura que les dades per defecte (com categories) existeixin.
   useInitializeOrganizationData();
   
   const [open, setOpen] = React.useState(true);

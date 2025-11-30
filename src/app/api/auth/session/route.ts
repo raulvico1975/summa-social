@@ -1,12 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getSession } from '@/services/auth';
 
 export async function GET(request: NextRequest) {
-  const user = await getSession();
-
-  if (!user) {
-    return NextResponse.json({ user: null }, { status: 401 });
-  }
-
-  return NextResponse.json({ user });
+  // This endpoint is no longer used in the new auth architecture.
+  // Returning a 404 to indicate it's not available.
+  return new NextResponse('Not Found', { status: 404 });
 }
