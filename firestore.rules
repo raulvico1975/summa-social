@@ -1,99 +1,101 @@
-/**
- * Core Philosophy: This ruleset enforces a strict user-ownership model where all
- * data is private and isolated to the authenticated user who created it. Access
- * control is based on the user's unique ID (`uid`).
- *
- * Data Structure: All application data (transactions, categories, projects, etc.)
- * is nested within a top-level `users` collection. Each user's data resides
- * under a document path corresponding to their user ID, for example:
- * `/users/{userId}/transactions/{transactionId}`.
- *
- * Key Security Decisions:
- * - Data Isolation: Users can only access data within their own document tree
- *   (`/users/{their_own_uid}/...`). They cannot read, write, or even know about
- *   data belonging to other users.
- * - User Listing Disabled: The top-level `/users` collection cannot be listed,
- *   preventing malicious actors from scraping a list of all application users.
- * - Ownership is Path-Based: Security is determined by matching the `userId` in
- *   the document path with the authenticated user's `uid`. This is highly
- *   performant as it avoids extra database reads (`get()` calls) for authorization.
- * - Prototyping Flexibility: While authorization is strict, these rules do not
- *   validate the specific shape or data types of documents. This allows for
- *   rapid frontend development and iteration on the data model without needing
- *   to update security rules for every schema change.
- */
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // -------------------------------------------------------------------------
-    // Helper Functions
-    // -------------------------------------------------------------------------
+    // ═══════════════════════════════════════════════════════════════════════
+    // FUNCIONS AUXILIARS
+    // ═══════════════════════════════════════════════════════════════════════
 
-    /**
-     * Checks if the user is authenticated.
-     */
+    // Comprova si l'usuari està autenticat
     function isSignedIn() {
       return request.auth != null;
     }
 
-    /**
-     * Checks if the authenticated user's ID matches the owner ID from the path.
-     * This is the primary function for enforcing the user-ownership model.
-     */
-    function isOwner(userId) {
-      return isSignedIn() && request.auth.uid == userId;
+    // Comprova si l'usuari és membre de l'organització
+    function isMemberOf(orgId) {
+      return isSignedIn() && 
+        exists(/databases/$(database)/documents/organizations/$(orgId)/members/$(request.auth.uid));
     }
 
-    /**
-     * Ensures an operation is performed by the document owner and that the
-     * document already exists. This is critical for preventing writes to
-     * non-existent paths on update/delete operations.
-     */
-    function isExistingOwner(userId) {
-      return isOwner(userId) && resource != null;
+    // Obté el rol de l'usuari dins l'organització
+    function getMemberRole(orgId) {
+      return get(/databases/$(database)/documents/organizations/$(orgId)/members/$(request.auth.uid)).data.role;
     }
 
-    // -------------------------------------------------------------------------
-    // User Profile Rules
-    // -------------------------------------------------------------------------
+    // Comprova si l'usuari és admin de l'organització
+    function isAdminOf(orgId) {
+      return isMemberOf(orgId) && getMemberRole(orgId) == 'admin';
+    }
 
-    /**
-     * @description Controls access to a user's root document (profile).
-     * @path /users/{userId}
-     * @allow (create) An authenticated user creating their own profile document. `auth.uid: 'user_abc'`, `path: /users/user_abc`
-     * @allow (get) An authenticated user reading their own profile. `auth.uid: 'user_abc'`, `path: /users/user_abc`
-     * @deny (list) Any user attempting to list all user profiles. `path: /users`
-     * @deny (get) An authenticated user trying to read another user's profile. `auth.uid: 'user_abc'`, `path: /users/user_xyz`
-     * @principle Restricts access to a user's own data tree and prevents user enumeration.
-     */
+    // Comprova si l'usuari és admin o treasurer de l'organització
+    function canEditFinances(orgId) {
+      return isMemberOf(orgId) && getMemberRole(orgId) in ['admin', 'treasurer'];
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // REGLES PER A USUARIS
+    // ═══════════════════════════════════════════════════════════════════════
+
+    // Perfil d'usuari - cada usuari només pot accedir al seu propi perfil
     match /users/{userId} {
-      allow get: if isOwner(userId);
-      allow list: if false;
-      allow create: if isOwner(userId);
-      allow update: if isExistingOwner(userId);
-      allow delete: if isExistingOwner(userId);
+      allow read, write: if isSignedIn() && request.auth.uid == userId;
     }
 
-    // -------------------------------------------------------------------------
-    // User-Owned Sub-collection Rules
-    // -------------------------------------------------------------------------
+    // ═══════════════════════════════════════════════════════════════════════
+    // REGLES PER A ORGANITZACIONS
+    // ═══════════════════════════════════════════════════════════════════════
 
-    /**
-     * @description Secures all user-owned data collections (transactions, categories, etc.).
-     * @path /users/{userId}/{collection}/{docId} - e.g., /users/user_abc/transactions/txn_123
-     * @allow (create) An authenticated user creating a transaction in their own space. `auth.uid: 'user_abc'`, `path: /users/user_abc/transactions/new_txn`
-     * @allow (list) An authenticated user listing their own projects. `auth.uid: 'user_abc'`, `path: /users/user_abc/projects`
-     * @deny (update) An authenticated user trying to modify data in another user's space. `auth.uid: 'user_abc'`, `path: /users/user_xyz/categories/cat_456`
-     * @deny (get) An unauthenticated user trying to read any data. `auth: null`, `path: /users/user_abc/documents/doc_789`
-     * @principle Enforces strict data isolation, ensuring a user can only manage documents within their own designated path.
-     */
-    match /users/{userId}/{collection}/{docId} {
-      allow get: if isOwner(userId);
-      allow list: if isOwner(userId);
-      allow create: if isOwner(userId);
-      allow update: if isExistingOwner(userId);
-      allow delete: if isExistingOwner(userId);
+    match /organizations/{orgId} {
+      // Qualsevol usuari autenticat pot crear una organització
+      allow create: if isSignedIn();
+      
+      // Només membres poden llegir l'organització
+      allow read: if isMemberOf(orgId);
+      
+      // Només admins poden actualitzar o eliminar l'organització
+      allow update, delete: if isAdminOf(orgId);
+
+      // ─────────────────────────────────────────────────────────────────────
+      // MEMBRES DE L'ORGANITZACIÓ
+      // ─────────────────────────────────────────────────────────────────────
+      
+      match /members/{memberId} {
+        // Membres poden llegir altres membres
+        allow read: if isMemberOf(orgId);
+        
+        // Només admins poden afegir o eliminar membres
+        allow create, delete: if isAdminOf(orgId);
+        
+        // Admins poden actualitzar qualsevol membre
+        // Usuaris poden actualitzar el seu propi perfil (excepte el rol)
+        allow update: if isAdminOf(orgId) || 
+          (isSignedIn() && request.auth.uid == memberId && 
+           request.resource.data.role == resource.data.role);
+      }
+
+      // ─────────────────────────────────────────────────────────────────────
+      // DADES FINANCERES (transactions, categories, emissors, projects)
+      // ─────────────────────────────────────────────────────────────────────
+
+      match /transactions/{docId} {
+        allow read: if isMemberOf(orgId);
+        allow create, update, delete: if canEditFinances(orgId);
+      }
+
+      match /categories/{docId} {
+        allow read: if isMemberOf(orgId);
+        allow create, update, delete: if canEditFinances(orgId);
+      }
+
+      match /emissors/{docId} {
+        allow read: if isMemberOf(orgId);
+        allow create, update, delete: if canEditFinances(orgId);
+      }
+
+      match /projects/{docId} {
+        allow read: if isMemberOf(orgId);
+        allow create, update, delete: if canEditFinances(orgId);
+      }
     }
   }
 }
