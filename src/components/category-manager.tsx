@@ -47,6 +47,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useCollection, useFirebase, useMemoFirebase, addDocumentNonBlocking, deleteDocumentNonBlocking, setDocumentNonBlocking } from '@/firebase';
 import { collection, doc } from 'firebase/firestore';
 import { useTranslations } from '@/i18n';
+import { useCurrentOrganization } from '@/hooks/organization-provider';
 
 function CategoryTable({
   categories,
@@ -102,13 +103,17 @@ function CategoryTable({
 }
 
 export function CategoryManager() {
-  const { firestore, user } = useFirebase();
+  const { firestore } = useFirebase();
+  const { organizationId } = useCurrentOrganization();
   const { t } = useTranslations();
   const categoryTranslations = t.categories as Record<string, string>;
   
+  // ═══════════════════════════════════════════════════════════════════════════
+  // CANVI: Ara la col·lecció apunta a organizations/{orgId}/categories
+  // ═══════════════════════════════════════════════════════════════════════════
   const categoriesCollection = useMemoFirebase(
-    () => user ? collection(firestore, 'users', user.uid, 'categories') : null,
-    [firestore, user]
+    () => organizationId ? collection(firestore, 'organizations', organizationId, 'categories') : null,
+    [firestore, organizationId]
   );
   const { data: categories } = useCollection<Category>(categoriesCollection);
 
