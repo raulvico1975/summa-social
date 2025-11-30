@@ -43,13 +43,11 @@ export function useOrganization(): UseOrganizationResult {
   
   useEffect(() => {
     const loadOrCreateOrganization = async () => {
-      // 1. Esperar a que la càrrega inicial de l'usuari de Firebase acabi.
       if (isUserLoading) {
         setIsLoading(true);
         return;
       }
 
-      // 2. Si no hi ha usuari, no hi ha res a fer.
       if (!user) {
         setIsLoading(false);
         setOrganization(null);
@@ -57,7 +55,6 @@ export function useOrganization(): UseOrganizationResult {
         return;
       }
       
-      // 3. Comença el procés de càrrega
       setIsLoading(true);
       setError(null);
 
@@ -66,19 +63,15 @@ export function useOrganization(): UseOrganizationResult {
         let userProfileSnap = await getDoc(userProfileRef);
         let profileData = userProfileSnap.data() as UserProfile | undefined;
 
-        // 4. Si el perfil no existeix, potser és la primera vegada que l'usuari entra.
         if (!userProfileSnap.exists()) {
           if (isSuperAdmin) {
-            // Si és el Super Admin, creem la seva organització i el seu perfil.
             const { newOrg, newProfile } = await createNewOrganization();
             setOrganization(newOrg);
             setUserProfile(newProfile);
           } else {
-            // Si no és Super Admin i no té perfil, no té accés.
             throw new Error('No tens cap organització assignada. Contacta amb l\'administrador.');
           }
         } else if (profileData?.organizationId) {
-          // 5. Si el perfil existeix i té un ID d'organització, el carreguem.
           const orgRef = doc(firestore, 'organizations', profileData.organizationId);
           const orgSnap = await getDoc(orgRef);
 
@@ -89,7 +82,6 @@ export function useOrganization(): UseOrganizationResult {
             throw new Error(`L'organització amb ID ${profileData.organizationId} no s'ha trobat.`);
           }
         } else {
-          // 6. Si el perfil existeix però no té ID d'organització, és un estat inesperat.
           throw new Error('El teu perfil d\'usuari no està assignat a cap organització.');
         }
 
@@ -107,13 +99,11 @@ export function useOrganization(): UseOrganizationResult {
       }
     };
     
-    // Funció refactoritzada per crear l'organització i retornar les dades creades
     const createNewOrganization = async () => {
         if (!user) throw new Error("Usuari no trobat en crear organització");
 
         const now = new Date().toISOString();
         const slug = `org-${Date.now()}`;
-        // Assegurem un nom per defecte robust.
         const userDisplayName = user.displayName || user.email?.split('@')[0] || 'Super Admin';
 
         const newOrgData: Omit<Organization, 'id'> = {
@@ -145,7 +135,6 @@ export function useOrganization(): UseOrganizationResult {
             description: 'Hem creat la teva organització. Pots personalitzar-la a Configuració.',
         });
         
-        // Retornem l'organització i el perfil creats
         return { 
           newOrg: { id: orgDocRef.id, ...newOrgData }, 
           newProfile: newUserProfile 

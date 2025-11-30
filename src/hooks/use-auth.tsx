@@ -26,9 +26,7 @@ const AuthContext = createContext<AuthContextType>({
 
 export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const { user: firebaseUser, isUserLoading: isFirebaseUserLoading } = useFirebaseUser();
-  // IMPORTANT: We get the whole organization context now
-  const orgContext = useCurrentOrganization();
-  const { userProfile, isLoading: isOrgLoading } = orgContext;
+  const { userProfile, isLoading: isOrgLoading } = useCurrentOrganization();
 
   const isLoading = isFirebaseUserLoading || isOrgLoading;
 
