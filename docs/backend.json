@@ -113,12 +113,27 @@
       "required": [
         "name"
       ]
+    },
+    "Settings": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Settings",
+      "type": "object",
+      "description": "Stores user-specific application settings.",
+      "properties": {
+        "language": {
+          "type": "string",
+          "description": "The preferred language for the user interface.",
+          "enum": ["ca", "es"]
+        }
+      },
+      "required": [
+        "language"
+      ]
     }
   },
   "auth": {
     "providers": [
-      "password",
-      "anonymous"
+      "password"
     ]
   },
   "firestore": {
@@ -145,6 +160,12 @@
         "$ref": "#/entities/Project"
       },
       "description": "Stores projects for each user."
+    },
+    "/users/{userId}/settings/{settingsId}": {
+      "schema": {
+        "$ref": "#/entities/Settings"
+      },
+      "description": "Stores user-specific settings documents. Expects a single document with id 'app'."
     }
   }
 }
