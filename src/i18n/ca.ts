@@ -1,6 +1,7 @@
+
 export const ca = {
   dashboard: {
-    title: "Panel de Control",
+    title: "Panell de Control",
     description: "Analitza les teves dades financeres amb resums i gràfics.",
     totalIncome: "Ingressos Totals",
     totalIncomeDescription: "Suma de tots els ingressos",
@@ -9,7 +10,7 @@ export const ca = {
     operatingBalance: "Balanç Operatiu",
     operatingBalanceDescription: "Balanç d'ingressos i despeses operatives",
     missionTransfers: "Transferències a Terreny",
-    missionTransfersDescription: "Suma de les transferències de missió",
+    missionTransfersDescription: "Suma de les transferències a terreny o a sòcies locals",
     expensesByCategory: "Despeses per Categoria",
     noExpenseData: "No hi ha dades de despeses per mostrar."
   },
@@ -23,14 +24,14 @@ export const ca = {
     confirmDeleteAllTitle: "Estàs segur?",
     confirmDeleteAllDescription: "Aquesta acció no es pot desfer. S'eliminaran permanentment totes les transaccions.",
     cancel: "Cancel·lar",
-    confirm: "Sí, eliminar tot",
+    confirm: "Sí, elimina-ho tot",
     importer: {
       button: "Importar",
       add: "Afegir moviments",
       replace: "Reemplaçar tot",
-      confirmReplaceTitle: "¿Estás a punto de reemplazar todo?",
+      confirmReplaceTitle: "Estàs a punt de reemplaçar-ho tot?",
       confirmReplaceDescription: "Aquesta acció esborrarà permanentment tots els moviments actuals i els substituirà pels del nou arxiu. Aquesta operació no es pot desfer.",
-      confirm: "Sí, reemplaçar-ho tot",
+      confirm: "Sí, reemplaça-ho tot",
     },
     table: {
       date: "Data",
@@ -139,7 +140,7 @@ export const ca = {
     saveSettings: "Guardar Configuració"
   },
   sidebar: {
-    dashboard: "Panel de Control",
+    dashboard: "Panell de Control",
     movements: "Moviments",
     projects: "Projectes",
     emissors: "Emissors",
@@ -150,11 +151,11 @@ export const ca = {
     anonymousUser: "Usuari Anònim"
   },
   login: {
-    welcome: "Bienvenido a Summa Social",
-    prompt: "Introduce la contraseña de acceso para continuar. (v1.1 - Firestore activado)",
+    welcome: "Benvingut a Summa Social",
+    prompt: "Introdueix la contrasenya d'accés per continuar. (v1.1 - Firestore activat)",
     password: "Contrasenya",
     passwordIncorrect: "Contrasenya incorrecta.",
-    access: "Acceder al Panel de Control",
+    access: "Accedir al Panell de Control",
     accessing: "Accedint..."
   },
   common: {

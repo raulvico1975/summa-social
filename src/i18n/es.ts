@@ -1,3 +1,4 @@
+
 export const es = {
   dashboard: {
     title: "Panel de Control",
@@ -9,7 +10,7 @@ export const es = {
     operatingBalance: "Balance Operativo",
     operatingBalanceDescription: "Balance de ingresos y gastos operativos",
     missionTransfers: "Transferencias a Terreno",
-    missionTransfersDescription: "Suma de las transferencias de misión",
+    missionTransfersDescription: "Suma de las transferencias a terreno o a socias locales",
     expensesByCategory: "Gastos por Categoría",
     noExpenseData: "No hay datos de gastos para mostrar."
   },
