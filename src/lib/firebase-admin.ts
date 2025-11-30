@@ -24,3 +24,4 @@ if (!admin.apps.length) {
 }
 
 export const authAdmin = admin.auth();
+export const firestoreAdmin = admin.firestore();

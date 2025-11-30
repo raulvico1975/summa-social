@@ -6,16 +6,11 @@ import { useEffect, useState } from 'react';
 import { 
   collection, 
   doc, 
-  getDoc, 
-  setDoc, 
-  addDoc,
+  getDoc,
 } from 'firebase/firestore';
 import { useFirebase } from '@/firebase';
 import { useToast } from '@/hooks/use-toast';
-import type { Organization, OrganizationMember, UserProfile, OrganizationRole } from '@/lib/data';
-
-// El teu UID - només tu pots crear organitzacions
-const SUPER_ADMIN_UID = 'f2AHJqjXiOZkYajwkOnZ8RY6h2k2';
+import type { Organization, UserProfile, OrganizationRole } from '@/lib/data';
 
 interface UseOrganizationResult {
   organization: Organization | null;
@@ -24,11 +19,11 @@ interface UseOrganizationResult {
   userRole: OrganizationRole | null;
   isLoading: boolean;
   error: Error | null;
-  isSuperAdmin: boolean;
 }
 
 /**
- * Hook principal per gestionar l'organització de l'usuari actual.
+ * Hook to load the organization for the current user.
+ * It assumes the user and organization have been created on login.
  */
 export function useOrganization(): UseOrganizationResult {
   const { firestore, user, isUserLoading } = useFirebase();
@@ -38,11 +33,9 @@ export function useOrganization(): UseOrganizationResult {
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
-
-  const isSuperAdmin = user?.uid === SUPER_ADMIN_UID;
   
   useEffect(() => {
-    const loadOrCreateOrganization = async () => {
+    const loadOrganization = async () => {
       if (isUserLoading) {
         setIsLoading(true);
         return;
@@ -60,33 +53,27 @@ export function useOrganization(): UseOrganizationResult {
 
       try {
         const userProfileRef = doc(firestore, 'users', user.uid);
-        let userProfileSnap = await getDoc(userProfileRef);
-        let profileData = userProfileSnap.data() as UserProfile | undefined;
+        const userProfileSnap = await getDoc(userProfileRef);
+        
+        if (userProfileSnap.exists()) {
+          const profileData = userProfileSnap.data() as UserProfile;
+          setUserProfile(profileData);
 
-        if (!userProfileSnap.exists()) {
-          if (isSuperAdmin) {
-            const { newOrg, newProfile } = await createNewOrganization();
-            setOrganization(newOrg);
-            setUserProfile(newProfile);
-          } else {
-            throw new Error('No tens cap organització assignada. Contacta amb l\'administrador.');
-          }
-        } else if (profileData?.organizationId) {
           const orgRef = doc(firestore, 'organizations', profileData.organizationId);
           const orgSnap = await getDoc(orgRef);
 
           if (orgSnap.exists()) {
             setOrganization({ id: orgSnap.id, ...(orgSnap.data() as Omit<Organization, 'id'>) });
-            setUserProfile(profileData);
           } else {
             throw new Error(`L'organització amb ID ${profileData.organizationId} no s'ha trobat.`);
           }
         } else {
-          throw new Error('El teu perfil d\'usuari no està assignat a cap organització.');
+          // This should not happen if the login flow works correctly
+          throw new Error('El teu perfil d\'usuari no existeix. Torna a iniciar sessió.');
         }
 
       } catch (err) {
-        console.error('❌ Error carregant o creant l\'organització:', err);
+        console.error('❌ Error carregant l\'organització:', err);
         const anError = err instanceof Error ? err : new Error('Error desconegut durant la càrrega.');
         setError(anError);
         toast({
@@ -99,51 +86,8 @@ export function useOrganization(): UseOrganizationResult {
       }
     };
     
-    const createNewOrganization = async () => {
-        if (!user) throw new Error("Usuari no trobat en crear organització");
-
-        const now = new Date().toISOString();
-        const slug = `org-${Date.now()}`;
-        const userDisplayName = user.displayName || user.email?.split('@')[0] || 'Super Admin';
-
-        const newOrgData: Omit<Organization, 'id'> = {
-            slug: slug,
-            name: `Org. de ${userDisplayName}`,
-            taxId: '',
-            createdAt: now,
-        };
-        const orgDocRef = await addDoc(collection(firestore, 'organizations'), newOrgData);
-        
-        const memberData: OrganizationMember = {
-            userId: user.uid,
-            email: user.email || '',
-            displayName: userDisplayName,
-            role: 'admin',
-            joinedAt: now,
-        };
-        await setDoc(doc(firestore, 'organizations', orgDocRef.id, 'members', user.uid), memberData);
-
-        const newUserProfile: UserProfile = {
-            organizationId: orgDocRef.id,
-            role: 'admin',
-            displayName: userDisplayName,
-        };
-        await setDoc(doc(firestore, 'users', user.uid), newUserProfile, { merge: true });
-
-        toast({
-            title: 'Benvingut a Summa Social!',
-            description: 'Hem creat la teva organització. Pots personalitzar-la a Configuració.',
-        });
-        
-        return { 
-          newOrg: { id: orgDocRef.id, ...newOrgData }, 
-          newProfile: newUserProfile 
-        };
-    };
-
-
-    loadOrCreateOrganization();
-  }, [user, isUserLoading, firestore, isSuperAdmin, toast]);
+    loadOrganization();
+  }, [user, isUserLoading, firestore, toast]);
 
   return {
     organization,
@@ -152,6 +96,5 @@ export function useOrganization(): UseOrganizationResult {
     userRole: userProfile?.role || null,
     isLoading,
     error,
-    isSuperAdmin,
   };
 }

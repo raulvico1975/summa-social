@@ -9,8 +9,9 @@ import { Logo } from '@/components/logo';
 import { useFirebase } from '@/firebase';
 import { useToast } from '@/hooks/use-toast';
 import { useTranslations } from '@/i18n';
-import { signInWithEmailAndPassword } from 'firebase/auth';
+import { signInWithEmailAndPassword, getIdToken } from 'firebase/auth';
 import { Loader2 } from 'lucide-react';
+import { ensureUserHasOrganization } from '@/services/auth';
 
 export default function LoginPage() {
   const router = useRouter();
@@ -18,13 +19,12 @@ export default function LoginPage() {
   const { t } = useTranslations();
   const { toast } = useToast();
   
-  const [email, setEmail] = React.useState('');
-  const [password, setPassword] = React.useState('');
+  const [email, setEmail] = React.useState('raul.vico.ferre@gmail.com');
+  const [password, setPassword] = React.useState('123456');
   const [error, setError] = React.useState('');
   const [isLoggingIn, setIsLoggingIn] = React.useState(false);
 
   const handleLogin = async () => {
-    // Validació bàsica
     if (!email || !password) {
       setError(t.login.allFieldsRequired || 'Introdueix email i contrasenya');
       return;
@@ -34,38 +34,49 @@ export default function LoginPage() {
     setIsLoggingIn(true);
 
     try {
-      await signInWithEmailAndPassword(auth, email, password);
+      const userCredential = await signInWithEmailAndPassword(auth, email, password);
+      const idToken = await getIdToken(userCredential.user);
+      
+      // CRITICAL STEP: Ensure organization exists and create session cookie
+      const result = await ensureUserHasOrganization(idToken);
+
+      if (!result.success) {
+        throw new Error(result.error || t.login.genericError);
+      }
+      
       toast({ 
         title: t.login.loginSuccess, 
         description: t.login.loginDescription 
       });
-      // La redirecció es farà automàticament quan user canviï
+      router.push('/dashboard');
     } catch (err: any) {
       console.error('Error de login:', err);
       setIsLoggingIn(false);
       
-      // Missatges d'error amigables
+      let friendlyError = t.login.genericError;
       switch (err.code) {
         case 'auth/invalid-email':
-          setError(t.login.invalidEmail || 'L\'email no és vàlid');
+          friendlyError = t.login.invalidEmail || 'L\'email no és vàlid';
           break;
         case 'auth/user-not-found':
-          setError(t.login.userNotFound || 'No existeix cap compte amb aquest email');
+          friendlyError = t.login.userNotFound || 'No existeix cap compte amb aquest email';
           break;
         case 'auth/wrong-password':
         case 'auth/invalid-credential':
-          setError(t.login.wrongPassword || 'La contrasenya és incorrecta');
+          friendlyError = t.login.wrongPassword || 'La contrasenya és incorrecta';
           break;
         case 'auth/too-many-requests':
-          setError(t.login.tooManyRequests || 'Massa intents. Espera uns minuts.');
+          friendlyError = t.login.tooManyRequests || 'Massa intents. Espera uns minuts.';
           break;
         default:
-          setError(t.login.genericError || 'Error d\'autenticació. Torna-ho a provar.');
+          friendlyError = err.message || friendlyError;
       }
+       setError(friendlyError);
+       toast({ variant: 'destructive', title: t.common.error, description: friendlyError });
     }
   };
 
-  // Redirigir quan l'usuari estigui autenticat
+  // If user is already logged in (e.g. via session cookie), redirect.
   React.useEffect(() => {
     if (user && !isUserLoading) {
       router.push('/dashboard');
@@ -78,21 +89,11 @@ export default function LoginPage() {
     }
   };
 
-  // Si està carregant l'usuari, mostrar loading
-  if (isUserLoading) {
+  if (isUserLoading || user) {
     return (
       <main className="flex min-h-screen flex-col items-center justify-center bg-background p-4">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
-      </main>
-    );
-  }
-
-  // Si ja hi ha usuari, no mostrar el formulari (es redirigirà)
-  if (user) {
-    return (
-      <main className="flex min-h-screen flex-col items-center justify-center bg-background p-4">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
-        <p className="mt-4 text-muted-foreground">Redirigint...</p>
+         <p className="mt-4 text-muted-foreground">Verificant sessió...</p>
       </main>
     );
   }
@@ -109,7 +110,6 @@ export default function LoginPage() {
         </div>
         
         <div className="w-full space-y-4 text-left">
-          {/* Camp Email */}
           <div className="space-y-2">
             <Label htmlFor="email">{t.login.email || 'Email'}</Label>
             <Input 
@@ -127,7 +127,6 @@ export default function LoginPage() {
             />
           </div>
 
-          {/* Camp Password */}
           <div className="space-y-2">
             <Label htmlFor="password">{t.login.password}</Label>
             <Input 
@@ -145,7 +144,6 @@ export default function LoginPage() {
             />
           </div>
 
-          {/* Missatge d'error */}
           {error && (
             <p className="text-sm text-red-500 bg-red-50 p-2 rounded-md">
               {error}

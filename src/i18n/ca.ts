@@ -210,13 +210,19 @@ export const ca = {
   },
   login: {
     welcome: "Benvingut a Summa Social",
-    prompt: "Introdueix la contrasenya d'accés per continuar. (v1.1 - Firestore activat)",
+    prompt: "Introdueix les teves credencials per accedir.",
     password: "Contrasenya",
-    passwordIncorrect: "Contrasenya incorrecta.",
+    email: "Correu electrònic",
+    allFieldsRequired: "Introdueix email i contrasenya",
+    invalidEmail: "El format del correu no és vàlid",
+    userNotFound: "No existeix cap compte amb aquest correu",
+    wrongPassword: "La contrasenya és incorrecta",
+    tooManyRequests: "Massa intents. Prova-ho de nou més tard.",
+    genericError: "Error d'autenticació. Torna-ho a provar.",
     access: "Accedir al Panell de Control",
     accessing: "Accedint...",
-    loginSuccess: "Contrasenya correcta",
-    loginDescription: "Iniciant sessió anònima a Firebase..."
+    loginSuccess: "Sessió iniciada",
+    loginDescription: "Benvingut de nou!"
   },
   common: {
       cancel: "Cancel·lar",
