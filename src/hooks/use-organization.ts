@@ -15,7 +15,7 @@ import { useToast } from '@/hooks/use-toast';
 import type { Organization, OrganizationMember, UserProfile, OrganizationRole } from '@/lib/data';
 
 // El teu UID - només tu pots crear organitzacions
-const SUPER_ADMIN_UID = 'hMUjWyfqeeSTmnI8eR5NN6IXR4t1';
+const SUPER_ADMIN_UID = 'f2AHJqjXiOZkYajwkOnZ8RY6h2k2';
 
 interface UseOrganizationResult {
   organization: Organization | null;
