@@ -1,4 +1,3 @@
-
 'use client';
 
 import * as React from 'react';
@@ -22,26 +21,32 @@ import { useToast } from '@/hooks/use-toast';
 import { useCollection, useFirebase, useMemoFirebase } from '@/firebase';
 import { collection, writeBatch, doc } from 'firebase/firestore';
 import { useTranslations } from '@/i18n';
+import { useCurrentOrganization } from '@/hooks/organization-provider';
 
 export default function MovementsPage() {
-  const { firestore, user } = useFirebase();
+  const { firestore } = useFirebase();
+  const { organizationId } = useCurrentOrganization();
   const { t } = useTranslations();
   const [isDeleteAlertOpen, setIsDeleteAlertOpen] = React.useState(false);
   const { toast } = useToast();
 
   const transactionsQuery = useMemoFirebase(
-    () => user ? collection(firestore, 'users', user.uid, 'transactions') : null,
-    [firestore, user]
+    () => organizationId ? collection(firestore, 'organizations', organizationId, 'transactions') : null,
+    [firestore, organizationId]
   );
   const { data: transactions, isLoading: isLoadingTransactions } = useCollection<Transaction>(transactionsQuery);
 
   const handleDeleteAll = async () => {
-    if (!firestore || !user || !transactions) return;
+    if (!firestore || !organizationId || !transactions) return;
+    
+    const transactionsCollectionRef = collection(firestore, 'organizations', organizationId, 'transactions');
     const batch = writeBatch(firestore);
+    
     transactions.forEach(tx => {
-      const docRef = doc(firestore, 'users', user.uid, 'transactions', tx.id);
+      const docRef = doc(transactionsCollectionRef, tx.id);
       batch.delete(docRef);
     });
+
     try {
       await batch.commit();
       toast({
