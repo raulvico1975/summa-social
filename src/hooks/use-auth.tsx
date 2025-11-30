@@ -2,6 +2,7 @@
 
 import { useState, useEffect, createContext, useContext } from 'react';
 import { useUser as useFirebaseUser } from '@/firebase';
+import { useCurrentOrganization } from './organization-provider';
 
 interface User {
   uid: string;
@@ -23,29 +24,32 @@ const AuthContext = createContext<AuthContextType>({
 });
 
 export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
-  const { user: firebaseUser, isUserLoading } = useFirebaseUser();
+  const { user: firebaseUser, isUserLoading: isFirebaseUserLoading } = useFirebaseUser();
+  const { userProfile, isLoading: isOrgLoading } = useCurrentOrganization();
+  
   const [user, setUser] = useState<User | null>(null);
 
+  const isLoading = isFirebaseUserLoading || isOrgLoading;
+
   useEffect(() => {
-    if (!isUserLoading) {
+    if (!isLoading) {
       if (firebaseUser) {
         setUser({
           uid: firebaseUser.uid,
-          name: firebaseUser.displayName || 'Usuari Anònim',
+          name: userProfile?.displayName || firebaseUser.displayName || 'Usuari',
           email: firebaseUser.email,
           picture: firebaseUser.photoURL,
           email_verified: firebaseUser.emailVerified,
           isAnonymous: firebaseUser.isAnonymous,
         });
       } else {
-        // If no firebase user, our user is also null
         setUser(null);
       }
     }
-  }, [firebaseUser, isUserLoading]);
+  }, [firebaseUser, userProfile, isLoading]);
 
   return (
-    <AuthContext.Provider value={{ user, loading: isUserLoading }}>
+    <AuthContext.Provider value={{ user, loading: isLoading }}>
       {children}
     </AuthContext.Provider>
   );

@@ -78,4 +78,5 @@ export type OrganizationRole = 'admin' | 'treasurer' | 'viewer';
 export type UserProfile = {
   organizationId: string;          // ID de l'organització a la que pertany
   role: OrganizationRole;          // Rol de l'usuari en aquesta organització
+  displayName: string;             // Nom de l'usuari per mostrar a la UI
 };

@@ -4,12 +4,13 @@
 
 import React, { createContext, useContext, ReactNode } from 'react';
 import { useOrganization } from '@/hooks/use-organization';
-import type { Organization, OrganizationRole } from '@/lib/data';
+import type { Organization, OrganizationRole, UserProfile } from '@/lib/data';
 import { Loader2 } from 'lucide-react';
 
 interface OrganizationContextType {
   organization: Organization | null;
   organizationId: string | null;
+  userProfile: UserProfile | null;
   userRole: OrganizationRole | null;
   isLoading: boolean;
   error: Error | null;
@@ -47,11 +48,18 @@ export function OrganizationProvider({ children }: OrganizationProviderProps) {
         <div className="flex flex-col items-center gap-4 text-center p-4">
           <p className="text-destructive font-semibold">Error carregant l'organització</p>
           <p className="text-muted-foreground text-sm">
-            Si us plau, recarrega la pàgina o torna a iniciar sessió.
+            {organizationData.error.message}
           </p>
         </div>
       </div>
     );
+  }
+  
+  // Si no hi ha organització després de carregar (i no hi ha error), pot ser que l'usuari no estigui logat.
+  // En aquest cas, els fills (pàgines protegides) haurien de gestionar la redirecció.
+  // No mostrem res per evitar un flaix de contingut.
+  if (!organizationData.organization) {
+    return null;
   }
 
   return (
@@ -66,7 +74,7 @@ export function OrganizationProvider({ children }: OrganizationProviderProps) {
  * 
  * Ús:
  * ```typescript
- * const { organizationId, userRole } = useCurrentOrganization();
+ * const { organizationId, userRole, userProfile } = useCurrentOrganization();
  * ```
  */
 export function useCurrentOrganization(): OrganizationContextType {
