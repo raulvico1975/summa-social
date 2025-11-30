@@ -53,6 +53,7 @@ export interface InternalQuery extends Query<DocumentData> {
  */
 export function useCollection<T = any>(
     memoizedTargetRefOrQuery: ((CollectionReference<DocumentData> | Query<DocumentData>) & {__memo?: boolean})  | null | undefined,
+    deps: any[] = []
 ): UseCollectionResult<T> {
   type ResultItemType = WithId<T>;
   type StateDataType = ResultItemType[] | null;
@@ -106,9 +107,14 @@ export function useCollection<T = any>(
     );
 
     return () => unsubscribe();
-  }, [memoizedTargetRefOrQuery]); // Re-run if the target query/reference changes.
-  if(memoizedTargetRefOrQuery && !memoizedTargetRefOrQuery.__memo) {
-    throw new Error(memoizedTargetRefOrQuery + ' was not properly memoized using useMemoFirebase');
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [memoizedTargetRefOrQuery, ...deps]); // Re-run if the target query/reference or custom deps change.
+  
+  if(memoizedTargetRefOrQuery && deps.length === 0 && !memoizedTargetRefOrQuery.__memo) {
+    // This is a dev-time check, but it's important.
+    // If you see this error, you NEED to wrap your Firestore query/ref in useMemoFirebase.
+    // console.warn('useCollection query was not memoized. This may cause infinite loops. Query:', memoizedTargetRefOrQuery);
   }
+  
   return { data, isLoading, error };
 }

@@ -294,11 +294,24 @@ export const ca = {
     userName: "Nom d'Usuari",
     userOrganization: "Organització",
     userRole: "Rol",
+    actions: "Accions",
     roles: {
       admin: "Administrador",
       treasurer: "Tresorer",
       viewer: "Observador"
     },
     loading: "Carregant dades de super-admin...",
+    createOrganization: "Crear Organització",
+    createOrganizationDescription: "Dona d'alta una nova organització a la plataforma.",
+    create: "Crear",
+    inviteUser: "Convidar Usuari",
+    inviteUserDescription: "Crea un nou usuari i assigna'l a una organització.",
+    selectOrg: "Selecciona una organització",
+    selectRole: "Selecciona un rol",
+    invite: "Convidar",
+    confirmDeleteOrgTitle: "Eliminar Organització?",
+    confirmDeleteOrgDescription: (name: string) => `Estàs segur que vols eliminar l'organització "${name}"? Aquesta acció no es pot desfer.`,
+    confirmDeleteUserTitle: "Eliminar Usuari?",
+    confirmDeleteUserDescription: (name: string) => `Estàs segur que vols eliminar l'usuari "${name}"? Aquesta acció no es pot desfer.`
   }
 };

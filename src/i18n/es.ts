@@ -294,11 +294,24 @@ export const es = {
     userName: "Nombre de Usuario",
     userOrganization: "Organización",
     userRole: "Rol",
+    actions: "Acciones",
     roles: {
       admin: "Administrador",
       treasurer: "Tesorero",
       viewer: "Observador"
     },
     loading: "Cargando datos de super-admin...",
+    createOrganization: "Crear Organización",
+    createOrganizationDescription: "Da de alta una nueva organización en la plataforma.",
+    create: "Crear",
+    inviteUser: "Invitar Usuario",
+    inviteUserDescription: "Crea un nuevo usuario y asígnalo a una organización.",
+    selectOrg: "Selecciona una organización",
+    selectRole: "Selecciona un rol",
+    invite: "Invitar",
+    confirmDeleteOrgTitle: "¿Eliminar Organización?",
+    confirmDeleteOrgDescription: (name: string) => `¿Estás seguro de que quieres eliminar la organización "${name}"? Esta acción no se puede deshacer.`,
+    confirmDeleteUserTitle: "¿Eliminar Usuario?",
+    confirmDeleteUserDescription: (name: string) => `¿Estás seguro de que quieres eliminar al usuario "${name}"? Esta acción no se puede deshacer.`
   }
 };

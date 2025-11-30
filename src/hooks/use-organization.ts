@@ -7,7 +7,6 @@ import {
   doc, 
   getDoc,
   writeBatch,
-  getDocs,
   collection
 } from 'firebase/firestore';
 import { useFirebase } from '@/firebase';
@@ -87,11 +86,11 @@ export function useOrganization(): UseOrganizationResult {
             
             // 1. Create Organization
             const orgCollectionRef = collection(firestore, 'organizations');
-            const newOrgRef = doc(orgCollectionRef); // Create a new doc with a generated ID
+            const newOrgRef = doc(orgCollectionRef, 'baruma'); // Use a specific ID like 'baruma'
             const newOrgData: Omit<Organization, 'id'> = {
-                slug: `org-${now.getTime()}`,
-                name: `Org. de ${userName}`,
-                taxId: '',
+                slug: 'baruma',
+                name: 'Baruma', // Use a default, more realistic name
+                taxId: 'G12345678', // Example Tax ID
                 createdAt: now.toISOString(),
             };
             batch.set(newOrgRef, newOrgData);
@@ -128,7 +127,7 @@ export function useOrganization(): UseOrganizationResult {
             
             toast({
               title: "Benvingut!",
-              description: `S'ha creat una nova organització per a tu.`
+              description: `S'ha creat l'organització d'exemple "Baruma" per a tu.`
             });
           } else {
               throw new Error("No tens cap organització assignada. Contacta amb l'administrador.");
