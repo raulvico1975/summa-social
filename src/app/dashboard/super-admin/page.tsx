@@ -3,7 +3,7 @@
 import * as React from 'react';
 import { useFirebase, useCollection, useMemoFirebase, addDocumentNonBlocking, deleteDocumentNonBlocking } from '@/firebase';
 import { useCurrentOrganization } from '@/hooks/organization-provider';
-import { collection, doc, addDoc } from 'firebase/firestore';
+import { collection, doc, addDoc, setDoc } from 'firebase/firestore';
 import type { Organization, UserProfile, Invitation, OrganizationRole } from '@/lib/data';
 import { useTranslations } from '@/i18n';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -76,20 +76,30 @@ const formatDate = (dateString?: string) => {
 };
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// DIÀLEG CREAR ORGANITZACIÓ
+// DIÀLEG CREAR ORGANITZACIÓ (AMB INVITACIÓ AUTOMÀTICA)
 // ═══════════════════════════════════════════════════════════════════════════════
 
 function CreateOrganizationDialog({ onOrganizationCreated }: { onOrganizationCreated: () => void }) {
   const { t } = useTranslations();
-  const { firestore } = useFirebase();
+  const { firestore, user } = useFirebase();
+  const { toast } = useToast();
+  
   const [open, setOpen] = React.useState(false);
+  
+  // Dades organització
   const [name, setName] = React.useState('');
   const [taxId, setTaxId] = React.useState('');
+  
+  // Dades primer admin
+  const [adminEmail, setAdminEmail] = React.useState('');
+  
+  // Estat
   const [isCreating, setIsCreating] = React.useState(false);
-  const { toast } = useToast();
+  const [generatedLink, setGeneratedLink] = React.useState<string | null>(null);
+  const [copied, setCopied] = React.useState(false);
 
   const handleCreate = async () => {
-    if (!firestore) {
+    if (!firestore || !user) {
       toast({ variant: 'destructive', title: 'Error', description: 'Firestore no està disponible.' });
       return;
     }
@@ -97,62 +107,212 @@ function CreateOrganizationDialog({ onOrganizationCreated }: { onOrganizationCre
       toast({ variant: 'destructive', title: t.common.error, description: "El nom i el CIF són obligatoris." });
       return;
     }
+    if (!adminEmail) {
+      toast({ variant: 'destructive', title: t.common.error, description: "L'email de l'administrador és obligatori." });
+      return;
+    }
 
     setIsCreating(true);
     try {
+      // 1. Crear l'organització
       const orgsCollection = collection(firestore, 'organizations');
       const slug = name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+      const now = new Date().toISOString();
+      
       const newOrgData: Omit<Organization, 'id'> = {
         slug,
         name,
-        taxId,
-        createdAt: new Date().toISOString()
+        taxId: taxId.toUpperCase(),
+        createdAt: now,
+        status: 'active',
+        createdBy: user.uid,
       };
 
-      await addDocumentNonBlocking(orgsCollection, newOrgData);
+      const orgRef = doc(orgsCollection);
+      await setDoc(orgRef, { ...newOrgData, id: orgRef.id });
 
-      toast({ title: "Organització creada", description: `L'organització "${name}" s'ha creat correctament.` });
+      // 2. Crear la invitació automàticament
+      const token = generateToken();
+      const expiresAt = new Date();
+      expiresAt.setDate(expiresAt.getDate() + 7); // Expira en 7 dies
+
+      const invitationData: Omit<Invitation, 'id'> = {
+        token,
+        organizationId: orgRef.id,
+        organizationName: name,
+        role: 'admin' as OrganizationRole,
+        email: adminEmail.toLowerCase(),
+        createdAt: now,
+        expiresAt: expiresAt.toISOString(),
+        createdBy: user.uid,
+      };
+
+      const invitationsCollection = collection(firestore, 'invitations');
+      await addDoc(invitationsCollection, invitationData);
+
+      // 3. Generar l'enllaç
+      const baseUrl = window.location.origin;
+      const link = `${baseUrl}/registre?token=${token}`;
+      setGeneratedLink(link);
+
+      toast({ title: "Organització creada", description: `L'organització "${name}" s'ha creat amb la invitació.` });
       onOrganizationCreated();
-      setOpen(false);
-      setName('');
-      setTaxId('');
+      
     } catch (error: any) {
+      console.error('Error creant organització:', error);
       toast({ variant: 'destructive', title: 'Error', description: error.message });
     } finally {
       setIsCreating(false);
     }
   };
 
+  const handleCopy = async () => {
+    if (generatedLink) {
+      await navigator.clipboard.writeText(generatedLink);
+      setCopied(true);
+      toast({ title: 'Copiat!', description: 'L\'enllaç s\'ha copiat al portapapers.' });
+      setTimeout(() => setCopied(false), 2000);
+    }
+  };
+
+  const handleClose = () => {
+    setOpen(false);
+    // Reset form after closing
+    setTimeout(() => {
+      setName('');
+      setTaxId('');
+      setAdminEmail('');
+      setGeneratedLink(null);
+      setCopied(false);
+    }, 200);
+  };
+
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
+    <Dialog open={open} onOpenChange={(isOpen) => isOpen ? setOpen(true) : handleClose()}>
       <DialogTrigger asChild>
         <Button>
           <PlusCircle className="mr-2 h-4 w-4" />
           {t.superAdmin.createOrganization}
         </Button>
       </DialogTrigger>
-      <DialogContent>
+      <DialogContent className="sm:max-w-lg">
         <DialogHeader>
-          <DialogTitle>{t.superAdmin.createOrganization}</DialogTitle>
-          <DialogDescription>{t.superAdmin.createOrganizationDescription}</DialogDescription>
+          <DialogTitle>
+            {generatedLink ? '✅ Organització creada!' : t.superAdmin.createOrganization}
+          </DialogTitle>
+          <DialogDescription>
+            {generatedLink 
+              ? 'Envia aquest enllaç a l\'administrador perquè creï el seu compte.'
+              : t.superAdmin.createOrganizationDescription
+            }
+          </DialogDescription>
         </DialogHeader>
-        <div className="grid gap-4 py-4">
-          <div className="grid grid-cols-4 items-center gap-4">
-            <Label htmlFor="org-name" className="text-right">{t.superAdmin.orgName}</Label>
-            <Input id="org-name" value={name} onChange={(e) => setName(e.target.value)} className="col-span-3" />
-          </div>
-          <div className="grid grid-cols-4 items-center gap-4">
-            <Label htmlFor="org-taxid" className="text-right">{t.superAdmin.orgTaxId}</Label>
-            <Input id="org-taxid" value={taxId} onChange={(e) => setTaxId(e.target.value)} className="col-span-3" />
-          </div>
-        </div>
-        <DialogFooter>
-          <DialogClose asChild><Button variant="outline">{t.common.cancel}</Button></DialogClose>
-          <Button onClick={handleCreate} disabled={isCreating || !name || !taxId}>
-            {isCreating && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-            {t.superAdmin.create}
-          </Button>
-        </DialogFooter>
+
+        {!generatedLink ? (
+          <>
+            <div className="grid gap-4 py-4">
+              {/* Dades organització */}
+              <div className="space-y-4">
+                <h4 className="text-sm font-medium text-muted-foreground">Dades de l'organització</h4>
+                
+                <div className="grid grid-cols-4 items-center gap-4">
+                  <Label htmlFor="org-name" className="text-right">{t.superAdmin.orgName}</Label>
+                  <Input 
+                    id="org-name" 
+                    value={name} 
+                    onChange={(e) => setName(e.target.value)} 
+                    className="col-span-3"
+                    placeholder="Fundació Exemple"
+                    disabled={isCreating}
+                  />
+                </div>
+                
+                <div className="grid grid-cols-4 items-center gap-4">
+                  <Label htmlFor="org-taxid" className="text-right">{t.superAdmin.orgTaxId}</Label>
+                  <Input 
+                    id="org-taxid" 
+                    value={taxId} 
+                    onChange={(e) => setTaxId(e.target.value.toUpperCase())} 
+                    className="col-span-3"
+                    placeholder="G12345678"
+                    disabled={isCreating}
+                  />
+                </div>
+              </div>
+
+              {/* Dades primer admin */}
+              <div className="space-y-4 pt-4 border-t">
+                <h4 className="text-sm font-medium text-muted-foreground">Primer administrador</h4>
+                
+                <div className="grid grid-cols-4 items-center gap-4">
+                  <Label htmlFor="admin-email" className="text-right">Email</Label>
+                  <div className="col-span-3">
+                    <Input 
+                      id="admin-email" 
+                      type="email"
+                      value={adminEmail} 
+                      onChange={(e) => setAdminEmail(e.target.value)} 
+                      placeholder="admin@fundacio.org"
+                      disabled={isCreating}
+                    />
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Rebrà l'enllaç per crear el seu compte d'administrador.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <DialogFooter>
+              <DialogClose asChild>
+                <Button variant="outline" disabled={isCreating}>
+                  {t.common.cancel}
+                </Button>
+              </DialogClose>
+              <Button onClick={handleCreate} disabled={isCreating || !name || !taxId || !adminEmail}>
+                {isCreating && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                Crear i generar invitació
+              </Button>
+            </DialogFooter>
+          </>
+        ) : (
+          <>
+            <div className="py-4 space-y-4">
+              <div className="rounded-lg bg-green-50 border border-green-200 p-4">
+                <div className="flex items-center gap-2 text-green-700 mb-2">
+                  <Check className="h-5 w-5" />
+                  <span className="font-medium">Tot llest!</span>
+                </div>
+                <p className="text-sm text-green-600">
+                  Envia aquest enllaç a <strong>{adminEmail}</strong> perquè creï el seu compte.
+                </p>
+              </div>
+
+              <div className="space-y-2">
+                <Label>Enllaç d'invitació</Label>
+                <div className="flex gap-2">
+                  <Input value={generatedLink} readOnly className="font-mono text-xs" />
+                  <Button onClick={handleCopy} variant="outline" size="icon">
+                    {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
+                  </Button>
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  L'enllaç expira en 7 dies.
+                </p>
+              </div>
+
+              <div className="rounded-lg bg-muted p-3 text-sm space-y-1">
+                <p><strong>Organització:</strong> {name}</p>
+                <p><strong>CIF:</strong> {taxId}</p>
+                <p><strong>Admin:</strong> {adminEmail}</p>
+              </div>
+            </div>
+
+            <DialogFooter>
+              <Button onClick={handleClose}>Tancar</Button>
+            </DialogFooter>
+          </>
+        )}
       </DialogContent>
     </Dialog>
   );
