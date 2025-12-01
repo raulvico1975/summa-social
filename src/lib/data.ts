@@ -118,7 +118,7 @@ export type Emisor = {
 // ═══════════════════════════════════════════════════════════════════════════════
 
 /**
- * Estat d'una organització
+ * Estats possibles d'una organització
  */
 export type OrganizationStatus = 'active' | 'suspended' | 'pending';
 
@@ -128,11 +128,21 @@ export type OrganizationStatus = 'active' | 'suspended' | 'pending';
  */
 export type Organization = {
   id: string;
-  name: string;
-  slug: string;
-  taxId: string;
-  status: OrganizationStatus;
+  name: string;                    // Nom complet de l'entitat
+  slug: string;                    // URL-friendly identifier
+  taxId: string;                   // CIF
+  // Estat i control
+  status: OrganizationStatus;      // Estat de l'organització
   createdAt: string;
+  createdBy: string;               // UID del Super Admin que la va crear
+  // Dades opcionals
+  address?: string;
+  city?: string;
+  zipCode?: string;
+  phone?: string;
+  email?: string;
+  website?: string;
+  // Metadata
   updatedAt?: string;
   suspendedAt?: string;
   suspendedReason?: string;
@@ -148,29 +158,44 @@ export type OrganizationMember = {
   displayName: string;
   role: OrganizationRole;
   joinedAt: string;
+  invitedBy?: string;              // UID de qui el va convidar
 };
 
 /**
  * Rols disponibles dins una organització.
- * - super_admin: Pot gestionar tota la plataforma (només 1 usuari)
- * - admin: Control total de la seva organització
- * - treasurer: Gestió financera (pot convidar altres tresorers o membres)
- * - member: Pot veure i editar moviments
+ * - admin: Control total de l'organització
+ * - user: Gestió financera (transaccions, contactes, informes)
+ * - viewer: Només lectura
  */
-export type OrganizationRole = 'admin' | 'treasurer' | 'member';
+export type OrganizationRole = 'admin' | 'user' | 'viewer';
 
 /**
- * Perfil d'usuari global, conté informació bàsica i organitzacions a les que pertany.
- * S'emmagatzema a: users/{userId}
+ * Etiquetes dels rols per mostrar a la UI
  */
-export type UserProfile = {
-  displayName: string;
-  email: string;
-  organizations: Record<string, OrganizationRole>; // Mapa d'ID d'organització -> Rol
-  activeOrganizationId: string;
-  isSuperAdmin: boolean;
+export const ROLE_LABELS: Record<OrganizationRole, string> = {
+  admin: 'Administrador',
+  user: 'Usuari',
+  viewer: 'Només lectura',
 };
 
+/**
+ * Perfil d'usuari global.
+ * S'emmagatzema a: users/{userId}
+ * Conté la referència a l'organització principal (per login directe)
+ */
+export type UserProfile = {
+  organizationId: string;          // Organització principal/per defecte
+  role: OrganizationRole;
+  displayName: string;
+  email?: string;
+  // Per usuaris amb múltiples organitzacions
+  organizations?: string[];        // Array d'IDs d'organitzacions
+};
+
+/**
+ * UID del Super Admin (pot accedir a tot)
+ */
+export const SUPER_ADMIN_UID = 'f2AHJqjXiOZkYajwkOnZ8RY6h2k2';
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // TIPUS PER SISTEMA D'INVITACIONS
@@ -178,7 +203,6 @@ export type UserProfile = {
 
 /**
  * Representa una invitació per unir-se a una organització.
- * S'emmagatzema a: invitations/{invitationId}
  */
 export type Invitation = {
   id: string;
