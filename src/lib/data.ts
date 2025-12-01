@@ -1,7 +1,7 @@
 // All data is now managed in Firestore. This file only contains type definitions.
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// TIPUS EXISTENTS (sense canvis)
+// TIPUS BASE
 // ═══════════════════════════════════════════════════════════════════════════════
 
 export type Transaction = {
@@ -9,30 +9,108 @@ export type Transaction = {
   date: string;
   description: string;
   amount: number;
-  category: string | null; // This is a key, not a name
+  category: string | null;
   document: string | null;
-  emisorId?: string | null;
+  contactId?: string | null;      // CANVI: emisorId -> contactId (més genèric)
+  contactType?: ContactType;       // NOU: tipus de contacte per facilitar filtres
   projectId?: string | null;
 };
 
 export type Category = {
   id: string;
-  name: string; // This is a key, e.g., 'rent', 'donations'
-  type: 'income' | 'expense';
-};
-
-export type Emisor = {
-  id: string;
   name: string;
-  taxId: string; // DNI/CIF
-  zipCode: string;
-  type: 'donor' | 'supplier' | 'volunteer';
+  type: 'income' | 'expense';
 };
 
 export type Project = {
   id: string;
   name: string;
-  funderId: string | null; // Emisor ID of the funder
+  funderId: string | null;
+};
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// SISTEMA DE CONTACTES (Donants + Proveïdors)
+// ═══════════════════════════════════════════════════════════════════════════════
+
+/**
+ * Tipus de contacte
+ */
+export type ContactType = 'donor' | 'supplier';
+
+/**
+ * Model base comú per tots els contactes
+ * S'emmagatzema a: organizations/{orgId}/contacts/{contactId}
+ */
+export type Contact = {
+  id: string;
+  type: ContactType;
+  name: string;
+  taxId: string;                   // DNI/CIF
+  zipCode: string;                 // Codi postal
+  createdAt: string;
+  updatedAt?: string;
+};
+
+/**
+ * Donant - Persona o entitat que fa donacions
+ * Camps específics per a la gestió de donants i Model 182
+ */
+export type Donor = Contact & {
+  type: 'donor';
+  // Classificació
+  donorType: 'individual' | 'company';       // Persona física o jurídica
+  // Tipus de donació
+  membershipType: 'one-time' | 'recurring';  // Puntual o recurrent (soci)
+  // Dades per socis recurrents
+  monthlyAmount?: number;                    // Import mensual/periòdic
+  memberSince?: string;                      // Data d'alta com a soci
+  // Dades bancàries (per domiciliacions)
+  iban?: string;
+  // Contacte
+  email?: string;
+  phone?: string;
+  // Notes
+  notes?: string;
+};
+
+/**
+ * Proveïdor - Empresa o professional que presta serveis o ven productes
+ */
+export type Supplier = Contact & {
+  type: 'supplier';
+  // Classificació
+  category?: string;                         // Serveis, materials, subministraments...
+  // Dades fiscals i de contacte
+  address?: string;                          // Adreça completa
+  email?: string;
+  phone?: string;
+  // Dades bancàries (per fer pagaments)
+  iban?: string;
+  // Condicions
+  paymentTerms?: string;                     // Ex: "30 dies", "Al comptat"
+  // Notes
+  notes?: string;
+};
+
+/**
+ * Tipus unió per quan necessitem treballar amb qualsevol tipus de contacte
+ */
+export type AnyContact = Donor | Supplier;
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// TIPUS LEGACY (per compatibilitat - DEPRECAT)
+// ═══════════════════════════════════════════════════════════════════════════════
+
+/**
+ * @deprecated Usar Donor o Supplier en lloc d'Emisor
+ * Mantingut temporalment per compatibilitat amb codi existent
+ */
+export type Emisor = {
+  id: string;
+  name: string;
+  taxId: string;
+  zipCode: string;
+  type: 'donor' | 'supplier' | 'volunteer';
 };
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -41,44 +119,41 @@ export type Project = {
 
 /**
  * Representa una organització (ONG/entitat social).
- * Cada organització té les seves pròpies dades (transaccions, categories, etc.)
  */
 export type Organization = {
   id: string;
-  slug: string;                    // URL-friendly: "creu-roja" → /creu-roja/dashboard
-  name: string;                    // Nom complet: "Creu Roja Barcelona"
-  taxId: string;                   // CIF de l'entitat (ex: "G12345678")
-  createdAt: string;               // Data de creació (format ISO)
+  slug: string;
+  name: string;
+  taxId: string;
+  createdAt: string;
 };
 
 /**
  * Representa un membre d'una organització.
- * Cada usuari pot tenir un rol diferent dins l'organització.
  */
 export type OrganizationMember = {
-  userId: string;                  // UID de Firebase Auth
-  email: string;                   // Email de l'usuari
-  displayName: string;             // Nom visible
-  role: OrganizationRole;          // Rol dins l'organització
-  joinedAt: string;                // Data d'incorporació (format ISO)
+  userId: string;
+  email: string;
+  displayName: string;
+  role: OrganizationRole;
+  joinedAt: string;
 };
 
 /**
  * Rols disponibles dins una organització.
- * - admin: Control total (pot gestionar membres, configuració, tot)
- * - user: Gestió financera (moviments, informes, categories)
- * - viewer: Només lectura (pot veure però no modificar)
+ * - admin: Control total
+ * - user: Gestió financera
+ * - viewer: Només lectura
  */
 export type OrganizationRole = 'admin' | 'user' | 'viewer';
 
 /**
- * Informació bàsica de l'organització de l'usuari actual.
- * S'utilitza per accedir ràpidament a l'organització sense consultes addicionals.
+ * Perfil d'usuari amb la seva organització assignada.
  */
 export type UserProfile = {
-  organizationId: string;          // ID de l'organització a la que pertany
-  role: OrganizationRole;          // Rol de l'usuari en aquesta organització
-  displayName: string;             // Nom de l'usuari per mostrar a la UI
+  organizationId: string;
+  role: OrganizationRole;
+  displayName: string;
 };
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -87,25 +162,44 @@ export type UserProfile = {
 
 /**
  * Representa una invitació per unir-se a una organització.
- * Les invitacions es guarden a: invitations/{invitationId}
  */
 export type Invitation = {
   id: string;
-  token: string;                   // Token únic per l'enllaç (generat aleatòriament)
-  organizationId: string;          // ID de l'organització (per facilitar consultes)
-  organizationName: string;        // Nom de l'org (per mostrar al formulari de registre)
-  role: OrganizationRole;          // Rol que tindrà l'usuari quan s'uneixi
-  createdAt: string;               // Data de creació (format ISO)
-  expiresAt: string;               // Data d'expiració (format ISO)
-  createdBy: string;               // UID de qui ha creat la invitació
-  // Camps opcionals
-  email?: string;                  // Si s'especifica, només aquest email pot usar la invitació
-  // Camps que s'omplen quan s'usa la invitació
-  usedAt?: string;                 // Data quan s'ha usat (null si no s'ha usat)
-  usedBy?: string;                 // UID de l'usuari que l'ha usat
+  token: string;
+  organizationId: string;
+  organizationName: string;
+  role: OrganizationRole;
+  createdAt: string;
+  expiresAt: string;
+  createdBy: string;
+  email?: string;
+  usedAt?: string;
+  usedBy?: string;
 };
 
 /**
  * Estat d'una invitació
  */
 export type InvitationStatus = 'pending' | 'used' | 'expired';
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// CONSTANTS I HELPERS
+// ═══════════════════════════════════════════════════════════════════════════════
+
+/**
+ * Categories predefinides per proveïdors
+ */
+export const SUPPLIER_CATEGORIES = [
+  'services',      // Serveis professionals
+  'utilities',     // Subministraments (llum, aigua, gas)
+  'materials',     // Materials i equipament
+  'rent',          // Lloguer
+  'insurance',     // Assegurances
+  'banking',       // Serveis bancaris
+  'communications', // Telecomunicacions
+  'transport',     // Transport i missatgeria
+  'maintenance',   // Manteniment
+  'other',         // Altres
+] as const;
+
+export type SupplierCategory = typeof SUPPLIER_CATEGORIES[number];
