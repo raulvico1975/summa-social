@@ -12,7 +12,7 @@ import {
   SidebarMenuButton,
   SidebarFooter,
 } from '@/components/ui/sidebar';
-import { LayoutDashboard, Settings, LogOut, Users, FileText, FolderKanban, AreaChart, Shield } from 'lucide-react';
+import { LayoutDashboard, Settings, LogOut, FileText, FolderKanban, AreaChart, Shield, Heart, Building2 } from 'lucide-react';
 import { Logo } from '@/components/logo';
 import { useFirebase } from '@/firebase';
 import { useToast } from '@/hooks/use-toast';
@@ -61,15 +61,23 @@ export function DashboardSidebarContent() {
       label: t.sidebar.movements,
       icon: FileText,
     },
-     {
+    {
       href: '/dashboard/projectes',
       label: t.sidebar.projects,
       icon: FolderKanban,
     },
+    // ═══════════════════════════════════════════════════════════════════════
+    // CANVI: Substituïm "Emissors" per "Donants" i "Proveïdors"
+    // ═══════════════════════════════════════════════════════════════════════
     {
-      href: '/dashboard/emissors',
-      label: t.sidebar.emissors,
-      icon: Users,
+      href: '/dashboard/donants',
+      label: t.sidebar.donors || 'Donants',
+      icon: Heart,
+    },
+    {
+      href: '/dashboard/proveidors',
+      label: t.sidebar.suppliers || 'Proveïdors',
+      icon: Building2,
     },
     {
       href: '/dashboard/informes',
