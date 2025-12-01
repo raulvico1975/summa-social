@@ -18,8 +18,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Download, Loader2 } from 'lucide-react';
-import type { Emisor, Transaction } from '@/lib/data';
+import { Download, Loader2, Heart } from 'lucide-react';
+import type { Donor, Transaction, AnyContact } from '@/lib/data';
 import { useToast } from '@/hooks/use-toast';
 import Papa from 'papaparse';
 import { useCollection, useFirebase, useMemoFirebase } from '@/firebase';
@@ -40,18 +40,23 @@ export function DonationsReportGenerator() {
   const { t } = useTranslations();
 
   // ═══════════════════════════════════════════════════════════════════════════
-  // CANVI: Ara les col·leccions apunten a organizations/{orgId}/...
+  // CANVI: emissors -> contacts
   // ═══════════════════════════════════════════════════════════════════════════
   const transactionsQuery = useMemoFirebase(
     () => organizationId ? collection(firestore, 'organizations', organizationId, 'transactions') : null,
     [firestore, organizationId]
   );
-  const emissorsQuery = useMemoFirebase(
-    () => organizationId ? collection(firestore, 'organizations', organizationId, 'emissors') : null,
+  const contactsQuery = useMemoFirebase(
+    () => organizationId ? collection(firestore, 'organizations', organizationId, 'contacts') : null,
     [firestore, organizationId]
   );
   const { data: transactions } = useCollection<Transaction>(transactionsQuery);
-  const { data: emissors } = useCollection<Emisor>(emissorsQuery);
+  const { data: contacts } = useCollection<AnyContact>(contactsQuery);
+
+  // Filtrar només els donants
+  const donors = React.useMemo(() => 
+    (contacts?.filter(c => c.type === 'donor') as Donor[]) || [],
+  [contacts]);
 
   const [reportData, setReportData] = React.useState<DonationReportRow[]>([]);
   const [selectedYear, setSelectedYear] = React.useState<string>(String(new Date().getFullYear()));
@@ -67,25 +72,28 @@ export function DonationsReportGenerator() {
   const handleGenerateReport = () => {
     setIsLoading(true);
 
-    if (!transactions || !emissors) {
+    if (!transactions || !contacts) {
       toast({ variant: 'destructive', title: t.reports.dataNotAvailable, description: t.reports.dataNotAvailableDescription });
       setIsLoading(false);
       return;
     }
 
     const year = parseInt(selectedYear, 10);
-    const donors = emissors.filter(e => e.type === 'donor');
+    
+    // Crear mapa de donants per ID
     const donorMap = new Map(donors.map(d => [d.id, d]));
 
-    const donationsByDonor: Record<string, { donor: Emisor, total: number }> = {};
+    const donationsByDonor: Record<string, { donor: Donor, total: number }> = {};
 
     transactions.forEach(tx => {
       const txYear = new Date(tx.date).getFullYear();
-      if (txYear === year && tx.emisorId && tx.amount > 0 && donorMap.has(tx.emisorId)) {
-        if (!donationsByDonor[tx.emisorId]) {
-          donationsByDonor[tx.emisorId] = { donor: donorMap.get(tx.emisorId)!, total: 0 };
+      // CANVI: emisorId -> contactId
+      // També verificar que el contactType és 'donor' o que el contactId existeix al mapa de donants
+      if (txYear === year && tx.contactId && tx.amount > 0 && donorMap.has(tx.contactId)) {
+        if (!donationsByDonor[tx.contactId]) {
+          donationsByDonor[tx.contactId] = { donor: donorMap.get(tx.contactId)!, total: 0 };
         }
-        donationsByDonor[tx.emisorId].total += tx.amount;
+        donationsByDonor[tx.contactId].total += tx.amount;
       }
     });
 
@@ -137,7 +145,10 @@ export function DonationsReportGenerator() {
         <CardHeader>
           <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
               <div>
-                <CardTitle>{t.reports.donationsReportTitle}</CardTitle>
+                <CardTitle className="flex items-center gap-2">
+                  <Heart className="h-5 w-5 text-red-500" />
+                  {t.reports.donationsReportTitle}
+                </CardTitle>
                 <CardDescription>{t.reports.donationsReportDescription}</CardDescription>
               </div>
               <div className="flex gap-2">
