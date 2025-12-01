@@ -66,10 +66,10 @@ export type OrganizationMember = {
 /**
  * Rols disponibles dins una organització.
  * - admin: Control total (pot gestionar membres, configuració, tot)
- * - treasurer: Gestió financera (moviments, informes, categories)
+ * - user: Gestió financera (moviments, informes, categories)
  * - viewer: Només lectura (pot veure però no modificar)
  */
-export type OrganizationRole = 'admin' | 'treasurer' | 'viewer';
+export type OrganizationRole = 'admin' | 'user' | 'viewer';
 
 /**
  * Informació bàsica de l'organització de l'usuari actual.
@@ -87,7 +87,7 @@ export type UserProfile = {
 
 /**
  * Representa una invitació per unir-se a una organització.
- * Les invitacions es guarden a: organizations/{orgId}/invitations/{invitationId}
+ * Les invitacions es guarden a: invitations/{invitationId}
  */
 export type Invitation = {
   id: string;
