@@ -880,7 +880,7 @@ export function TransactionsTable() {
           open={isSplitterOpen}
           onOpenChange={setIsSplitterOpen}
           transaction={transactionToSplit}
-          existingEmissors={availableContacts.filter(c => c.type === 'donor') as any}
+          existingDonors={donors}
           onSplitDone={handleOnSplitDone}
         />
       )}

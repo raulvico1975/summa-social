@@ -13,7 +13,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import { useAppLog } from '@/hooks/use-app-log';
-import type { Transaction, Emisor } from '@/lib/data';
+import type { Transaction, Donor } from '@/lib/data';
 import Papa from 'papaparse';
 import { FileUp, Loader2, Info } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -26,7 +26,8 @@ interface RemittanceSplitterProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   transaction: Transaction;
-  existingEmissors: Emisor[];
+  // CANVI: Emisor[] -> Donor[]
+  existingDonors: Donor[];
   onSplitDone: () => void;
 }
 
@@ -48,7 +49,8 @@ export function RemittanceSplitter({
   open,
   onOpenChange,
   transaction,
-  existingEmissors,
+  // CANVI: existingEmissors -> existingDonors
+  existingDonors,
   onSplitDone,
 }: RemittanceSplitterProps) {
   const [isProcessing, setIsProcessing] = React.useState(false);
@@ -73,7 +75,6 @@ export function RemittanceSplitter({
   };
 
   const processFile = (file: File) => {
-    // CANVI: Ara comprovem organizationId en lloc de user
     if (!organizationId) {
       toast({ variant: 'destructive', title: t.common.error, description: 'No s\'ha pogut identificar l\'organització.' });
       return;
@@ -96,7 +97,6 @@ export function RemittanceSplitter({
                 throw new Error(t.movements.splitter.errorAmountMismatch(totalAmount.toFixed(2), transaction.amount.toFixed(2)));
             }
 
-            // CANVI: Ara la col·lecció apunta a organizations/{orgId}/transactions
             const transactionsCollectionRef = collection(firestore, 'organizations', organizationId, 'transactions');
             const batch = writeBatch(firestore);
 
@@ -153,42 +153,43 @@ export function RemittanceSplitter({
       return undefined;
   }
   
-    const findEmisor = (name: string, taxId: string, emissors: Emisor[]): Emisor | undefined => {
-        const normalizedCsvName = normalizeString(name);
-        const csvNameTokens = new Set(normalizedCsvName.split(' ').filter(Boolean));
+  // CANVI: findEmisor -> findDonor
+  const findDonor = (name: string, taxId: string, donors: Donor[]): Donor | undefined => {
+      const normalizedCsvName = normalizeString(name);
+      const csvNameTokens = new Set(normalizedCsvName.split(' ').filter(Boolean));
 
-        // 1. Find by Tax ID (most reliable)
-        if (taxId) {
-            const normalizedTaxId = normalizeString(taxId);
-            const foundByTaxId = emissors.find(e => normalizeString(e.taxId) === normalizedTaxId);
-            if (foundByTaxId) {
-                log(`[Splitter] Emisor encontrado por DNI/CIF: "${name || taxId}" -> ${foundByTaxId.name} (${foundByTaxId.taxId})`);
-                return foundByTaxId;
-            }
-        }
-        
-        // 2. If not found by Tax ID, find by flexible name matching
-        if (normalizedCsvName) {
-             const potentialMatches = emissors.filter(e => {
-                const normalizedEmisorName = normalizeString(e.name);
-                if (!normalizedEmisorName) return false;
-                const emisorNameTokens = normalizedEmisorName.split(' ').filter(Boolean);
-                // Check if all tokens from the CSV name are present in the emisor's name
-                return [...csvNameTokens].every(token => emisorNameTokens.includes(token));
-            });
-            
-            if (potentialMatches.length === 1) {
-                log(`[Splitter] Emisor encontrado por coincidencia de nombre: "${name}" -> ${potentialMatches[0].name}`);
-                return potentialMatches[0];
-            }
+      // 1. Find by Tax ID (most reliable)
+      if (taxId) {
+          const normalizedTaxId = normalizeString(taxId);
+          const foundByTaxId = donors.find(d => normalizeString(d.taxId) === normalizedTaxId);
+          if (foundByTaxId) {
+              log(`[Splitter] Donant trobat per DNI/CIF: "${name || taxId}" -> ${foundByTaxId.name} (${foundByTaxId.taxId})`);
+              return foundByTaxId;
+          }
+      }
+      
+      // 2. If not found by Tax ID, find by flexible name matching
+      if (normalizedCsvName) {
+           const potentialMatches = donors.filter(d => {
+              const normalizedDonorName = normalizeString(d.name);
+              if (!normalizedDonorName) return false;
+              const donorNameTokens = normalizedDonorName.split(' ').filter(Boolean);
+              // Check if all tokens from the CSV name are present in the donor's name
+              return [...csvNameTokens].every(token => donorNameTokens.includes(token));
+          });
+          
+          if (potentialMatches.length === 1) {
+              log(`[Splitter] Donant trobat per coincidència de nom: "${name}" -> ${potentialMatches[0].name}`);
+              return potentialMatches[0];
+          }
 
-            if (potentialMatches.length > 1) {
-                log(`[Splitter] AVISO: Múltiples coincidencias para "${name}". Se requiere asignación manual.`);
-            }
-        }
+          if (potentialMatches.length > 1) {
+              log(`[Splitter] AVÍS: Múltiples coincidències per "${name}". Es requereix assignació manual.`);
+          }
+      }
 
-        return undefined;
-    }
+      return undefined;
+  }
 
 
   const processCsvData = (data: CsvRow[]) => {
@@ -217,25 +218,28 @@ export function RemittanceSplitter({
       const amount = parseFloat(amountStr.replace(/[^0-9,-]+/g, '').replace(',', '.'));
 
       if ((!name && !taxId) || isNaN(amount)) {
-        log(`[Splitter] Fila ${index + 2} inválida, se omite: ${JSON.stringify(row)}`);
+        log(`[Splitter] Fila ${index + 2} invàlida, s'omet: ${JSON.stringify(row)}`);
         return;
       }
       
       totalAmount += amount;
       
-      const emisor = findEmisor(name, taxId, existingEmissors);
+      // CANVI: findEmisor -> findDonor
+      const donor = findDonor(name, taxId, existingDonors);
       
-      if (!emisor) {
-          log(`[Splitter] AVISO: No se ha podido encontrar un emisor para la fila ${index + 2} ("${name || taxId}"). El movimiento necesitará asignación manual.`);
+      if (!donor) {
+          log(`[Splitter] AVÍS: No s'ha pogut trobar un donant per la fila ${index + 2} ("${name || taxId}"). El moviment necessitarà assignació manual.`);
       }
 
+      // CANVI: emisorId -> contactId + contactType
       const newTransaction: Omit<Transaction, 'id'> = {
         date: transaction.date,
-        description: `Donación socio/a: ${name || taxId}`,
+        description: `Donació soci/a: ${name || taxId}`,
         amount: amount,
         category: 'donations', // Default category key for remittances
         document: null,
-        emisorId: emisor ? emisor.id : null,
+        contactId: donor ? donor.id : null,
+        contactType: donor ? 'donor' : undefined,
         projectId: transaction.projectId, // Inherit project from original transaction
       };
       newTransactions.push(newTransaction);
