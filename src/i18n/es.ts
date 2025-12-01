@@ -297,7 +297,7 @@ export const es = {
     actions: "Acciones",
     roles: {
       admin: "Administrador",
-      treasurer: "Tesorero",
+      user: "Usuario",
       viewer: "Observador"
     },
     loading: "Cargando datos de super-admin...",
@@ -315,3 +315,5 @@ export const es = {
     confirmDeleteUserDescription: (name: string) => `¿Estás seguro de que quieres eliminar al usuario "${name}"? Esta acción no se puede deshacer.`
   }
 };
+
+    

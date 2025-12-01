@@ -297,8 +297,8 @@ export const ca = {
     actions: "Accions",
     roles: {
       admin: "Administrador",
-      treasurer: "Tresorer",
-      viewer: "Observador"
+      user: "Usuari",
+      viewer: "Visualitzador"
     },
     loading: "Carregant dades de super-admin...",
     createOrganization: "Crear Organització",
@@ -315,3 +315,5 @@ export const ca = {
     confirmDeleteUserDescription: (name: string) => `Estàs segur que vols eliminar l'usuari "${name}"? Aquesta acció no es pot desfer.`
   }
 };
+
+    
