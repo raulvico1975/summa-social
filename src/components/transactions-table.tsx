@@ -17,6 +17,7 @@ import {
   DropdownMenuItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
+  DropdownMenuLabel,
 } from '@/components/ui/dropdown-menu';
 import {
   Dialog,
@@ -58,8 +59,10 @@ import {
   Edit,
   FolderKanban,
   GitMerge,
+  Heart,
+  Building2,
 } from 'lucide-react';
-import type { Transaction, Category, Emisor, Project } from '@/lib/data';
+import type { Transaction, Category, Project, AnyContact, Donor, Supplier } from '@/lib/data';
 import { categorizeTransaction } from '@/ai/flows/categorize-transactions';
 import { useToast } from '@/hooks/use-toast';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
@@ -77,7 +80,7 @@ export function TransactionsTable() {
   const categoryTranslations = t.categories as Record<string, string>;
 
   // ═══════════════════════════════════════════════════════════════════════════
-  // CANVI PRINCIPAL: Ara les col·leccions apunten a organizations/{orgId}/...
+  // COL·LECCIONS - Ara usem 'contacts' en lloc de 'emissors'
   // ═══════════════════════════════════════════════════════════════════════════
   const transactionsCollection = useMemoFirebase(
     () => organizationId ? collection(firestore, 'organizations', organizationId, 'transactions') : null,
@@ -87,8 +90,9 @@ export function TransactionsTable() {
     () => organizationId ? collection(firestore, 'organizations', organizationId, 'categories') : null,
     [firestore, organizationId]
   );
-  const emissorsCollection = useMemoFirebase(
-    () => organizationId ? collection(firestore, 'organizations', organizationId, 'emissors') : null,
+  // CANVI: emissors -> contacts
+  const contactsCollection = useMemoFirebase(
+    () => organizationId ? collection(firestore, 'organizations', organizationId, 'contacts') : null,
     [firestore, organizationId]
   );
   const projectsCollection = useMemoFirebase(
@@ -98,7 +102,8 @@ export function TransactionsTable() {
   
   const { data: transactions } = useCollection<Transaction>(transactionsCollection);
   const { data: availableCategories } = useCollection<Category>(categoriesCollection);
-  const { data: availableEmissors } = useCollection<Emisor>(emissorsCollection);
+  // CANVI: availableEmissors -> availableContacts
+  const { data: availableContacts } = useCollection<AnyContact>(contactsCollection);
   const { data: availableProjects } = useCollection<Project>(projectsCollection);
 
   const [loadingStates, setLoadingStates] = React.useState<Record<string, boolean>>({});
@@ -107,25 +112,36 @@ export function TransactionsTable() {
   
   const [isEditDialogOpen, setIsEditDialogOpen] = React.useState(false);
   const [editingTransaction, setEditingTransaction] = React.useState<Transaction | null>(null);
-  const [formData, setFormData] = React.useState<{ description: string; amount: string; emisorId: string | null; projectId: string | null; }>({ description: '', amount: '', emisorId: null, projectId: null });
+  const [formData, setFormData] = React.useState<{ description: string; amount: string; contactId: string | null; projectId: string | null; }>({ description: '', amount: '', contactId: null, projectId: null });
   
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = React.useState(false);
   const [transactionToDelete, setTransactionToDelete] = React.useState<Transaction | null>(null);
 
-  const [isNewEmisorDialogOpen, setIsNewEmisorDialogOpen] = React.useState(false);
-  const [newEmisorFormData, setNewEmisorFormData] = React.useState({ name: '', taxId: '', zipCode: '' });
-  const [newEmisorTransactionId, setNewEmisorTransactionId] = React.useState<string | null>(null);
+  const [isNewContactDialogOpen, setIsNewContactDialogOpen] = React.useState(false);
+  const [newContactType, setNewContactType] = React.useState<'donor' | 'supplier'>('donor');
+  const [newContactFormData, setNewContactFormData] = React.useState({ name: '', taxId: '', zipCode: '' });
+  const [newContactTransactionId, setNewContactTransactionId] = React.useState<string | null>(null);
   const [isBatchCategorizing, setIsBatchCategorizing] = React.useState(false);
 
   const [isSplitterOpen, setIsSplitterOpen] = React.useState(false);
   const [transactionToSplit, setTransactionToSplit] = React.useState<Transaction | null>(null);
 
-  const emisorMap = React.useMemo(() => 
-    availableEmissors?.reduce((acc, emisor) => {
-      acc[emisor.id] = emisor.name;
+  // CANVI: emisorMap -> contactMap (amb tipus)
+  const contactMap = React.useMemo(() => 
+    availableContacts?.reduce((acc, contact) => {
+      acc[contact.id] = { name: contact.name, type: contact.type };
       return acc;
-    }, {} as Record<string, string>) || {}, 
-  [availableEmissors]);
+    }, {} as Record<string, { name: string; type: 'donor' | 'supplier' }>) || {}, 
+  [availableContacts]);
+
+  // Separar donants i proveïdors per al dropdown
+  const donors = React.useMemo(() => 
+    availableContacts?.filter(c => c.type === 'donor') as Donor[] || [], 
+  [availableContacts]);
+  
+  const suppliers = React.useMemo(() => 
+    availableContacts?.filter(c => c.type === 'supplier') as Supplier[] || [], 
+  [availableContacts]);
 
   const projectMap = React.useMemo(() =>
     availableProjects?.reduce((acc, project) => {
@@ -223,9 +239,13 @@ export function TransactionsTable() {
     updateDocumentNonBlocking(doc(transactionsCollection, txId), { category: newCategory });
   };
   
-  const handleSetEmisor = (txId: string, newEmisorId: string | null) => {
+  // CANVI: handleSetEmisor -> handleSetContact
+  const handleSetContact = (txId: string, newContactId: string | null, contactType?: 'donor' | 'supplier') => {
     if (!transactionsCollection) return;
-    updateDocumentNonBlocking(doc(transactionsCollection, txId), { emisorId: newEmisorId });
+    updateDocumentNonBlocking(doc(transactionsCollection, txId), { 
+      contactId: newContactId,
+      contactType: newContactId ? contactType : null,
+    });
   };
   
   const handleSetProject = (txId: string, newProjectId: string | null) => {
@@ -236,7 +256,6 @@ export function TransactionsTable() {
 
   const handleAttachDocument = (transactionId: string) => {
     log(`[${transactionId}] Iniciando la subida de documento.`);
-    // CANVI: Ara usem organizationId per la ruta de Storage
     if (!organizationId || !transactionsCollection) {
       const errorMsg = 'ERROR: No se ha podido identificar la organización para la subida.';
       log(errorMsg);
@@ -263,7 +282,6 @@ export function TransactionsTable() {
       setLoadingStates(prev => ({ ...prev, [`doc_${transactionId}`]: true }));
       toast({ title: 'Subiendo documento...', description: `Adjuntando "${file.name}"...` });
       
-      // CANVI: Ruta de Storage ara usa organizationId
       const storagePath = `organizations/${organizationId}/documents/${transactionId}/${file.name}`;
       log(`[${transactionId}] Ruta de subida en Storage: ${storagePath}`);
       const storageRef = ref(storage, storagePath);
@@ -334,7 +352,8 @@ export function TransactionsTable() {
     setFormData({ 
         description: transaction.description, 
         amount: String(transaction.amount),
-        emisorId: transaction.emisorId || null,
+        // CANVI: emisorId -> contactId
+        contactId: transaction.contactId || null,
         projectId: transaction.projectId || null,
     });
     setIsEditDialogOpen(true);
@@ -342,11 +361,15 @@ export function TransactionsTable() {
 
   const handleSaveEdit = () => {
     if (!editingTransaction || !transactionsCollection) return;
+    
+    // Trobar el tipus de contacte si s'ha seleccionat un
+    const selectedContact = formData.contactId ? availableContacts?.find(c => c.id === formData.contactId) : null;
 
     updateDocumentNonBlocking(doc(transactionsCollection, editingTransaction.id), {
       description: formData.description,
       amount: parseFloat(formData.amount),
-      emisorId: formData.emisorId,
+      contactId: formData.contactId,
+      contactType: selectedContact?.type || null,
       projectId: formData.projectId
     });
 
@@ -369,34 +392,47 @@ export function TransactionsTable() {
     setTransactionToDelete(null);
   }
 
-  const handleOpenNewEmisorDialog = (txId: string) => {
-    setNewEmisorTransactionId(txId);
-    setNewEmisorFormData({ name: '', taxId: '', zipCode: '' });
-    setIsNewEmisorDialogOpen(true);
+  // CANVI: handleOpenNewEmisorDialog -> handleOpenNewContactDialog
+  const handleOpenNewContactDialog = (txId: string, type: 'donor' | 'supplier') => {
+    setNewContactTransactionId(txId);
+    setNewContactType(type);
+    setNewContactFormData({ name: '', taxId: '', zipCode: '' });
+    setIsNewContactDialogOpen(true);
   };
 
-  const handleSaveNewEmisor = () => {
-    if (!newEmisorFormData.name || !newEmisorFormData.taxId || !newEmisorFormData.zipCode) {
-      toast({ variant: 'destructive', title: t.common.error, description: t.emissors.errorAllFields });
+  // CANVI: handleSaveNewEmisor -> handleSaveNewContact
+  const handleSaveNewContact = () => {
+    if (!newContactFormData.name || !newContactFormData.taxId || !newContactFormData.zipCode) {
+      toast({ variant: 'destructive', title: t.common.error, description: 'Tots els camps són obligatoris.' });
       return;
     }
-    if (!emissorsCollection || !transactionsCollection) return;
+    if (!contactsCollection || !transactionsCollection) return;
 
-    const newEmisorData = {
-      type: 'donor', // When created from here, default to donor
-      ...newEmisorFormData,
+    const now = new Date().toISOString();
+    const newContactData = {
+      type: newContactType,
+      name: newContactFormData.name,
+      taxId: newContactFormData.taxId,
+      zipCode: newContactFormData.zipCode,
+      createdAt: now,
+      // Camps específics segons tipus
+      ...(newContactType === 'donor' && {
+        donorType: 'individual',
+        membershipType: 'one-time',
+      }),
     };
     
-    addDocumentNonBlocking(emissorsCollection, newEmisorData)
+    addDocumentNonBlocking(contactsCollection, newContactData)
       .then(docRef => {
-        if (newEmisorTransactionId) {
-          handleSetEmisor(newEmisorTransactionId, docRef.id);
+        if (newContactTransactionId) {
+          handleSetContact(newContactTransactionId, docRef.id, newContactType);
         }
       });
     
-    toast({ title: t.emissors.emissorCreated, description: t.emissors.emissorCreatedDescription(newEmisorFormData.name) });
-    setIsNewEmisorDialogOpen(false);
-    setNewEmisorTransactionId(null);
+    const typeLabel = newContactType === 'donor' ? 'Donant' : 'Proveïdor';
+    toast({ title: `${typeLabel} creat`, description: `S'ha creat "${newContactFormData.name}" correctament.` });
+    setIsNewContactDialogOpen(false);
+    setNewContactTransactionId(null);
   };
   
   const handleSplitRemittance = (transaction: Transaction) => {
@@ -411,6 +447,21 @@ export function TransactionsTable() {
 
   const hasUncategorized = React.useMemo(() => transactions?.some(tx => !tx.category), [transactions]);
 
+  // Helper per renderitzar el contacte amb icona
+  const renderContactBadge = (contactId: string | null | undefined) => {
+    if (!contactId || !contactMap[contactId]) return null;
+    const contact = contactMap[contactId];
+    return (
+      <span className="flex items-center gap-1">
+        {contact.type === 'donor' ? (
+          <Heart className="h-3 w-3 text-red-500" />
+        ) : (
+          <Building2 className="h-3 w-3 text-blue-500" />
+        )}
+        <span className="text-sm">{contact.name}</span>
+      </span>
+    );
+  };
 
   return (
     <>
@@ -431,7 +482,7 @@ export function TransactionsTable() {
               <TableHead>{t.movements.table.date}</TableHead>
               <TableHead className="text-right">{t.movements.table.amount}</TableHead>
               <TableHead>{t.movements.table.description}</TableHead>
-              <TableHead>{t.movements.table.emisor}</TableHead>
+              <TableHead>{t.sidebar.donors || 'Contacte'}</TableHead>
               <TableHead>{t.movements.table.category}</TableHead>
               <TableHead>{t.movements.table.project}</TableHead>
               <TableHead>{t.movements.table.proof}</TableHead>
@@ -457,12 +508,15 @@ export function TransactionsTable() {
                     {formatCurrency(tx.amount)}
                   </TableCell>
                   <TableCell className="font-medium">{tx.description}</TableCell>
-                   <TableCell>
+                  {/* ═══════════════════════════════════════════════════════════════════════
+                      CANVI PRINCIPAL: Columna de contacte amb donants i proveïdors separats
+                      ═══════════════════════════════════════════════════════════════════════ */}
+                  <TableCell>
                     <DropdownMenu>
                         <DropdownMenuTrigger asChild>
-                           {tx.emisorId && emisorMap[tx.emisorId] ? (
+                           {tx.contactId && contactMap[tx.contactId] ? (
                                 <Button variant="ghost" className="h-auto p-0 text-left font-normal flex items-center gap-1">
-                                    <span className="text-sm">{emisorMap[tx.emisorId]}</span>
+                                    {renderContactBadge(tx.contactId)}
                                     <ChevronDown className="h-3 w-3 text-muted-foreground" />
                                 </Button>
                            ) : (
@@ -472,20 +526,57 @@ export function TransactionsTable() {
                                </Button>
                            )}
                         </DropdownMenuTrigger>
-                        <DropdownMenuContent align="start">
-                            <DropdownMenuItem onClick={() => handleOpenNewEmisorDialog(tx.id)}>
-                                <UserPlus className="mr-2 h-4 w-4" />
-                                {t.movements.table.createNewEmisor}
+                        <DropdownMenuContent align="start" className="w-56">
+                            {/* Opcions per crear nou */}
+                            <DropdownMenuLabel className="text-xs text-muted-foreground">Crear nou</DropdownMenuLabel>
+                            <DropdownMenuItem onClick={() => handleOpenNewContactDialog(tx.id, 'donor')}>
+                                <Heart className="mr-2 h-4 w-4 text-red-500" />
+                                Nou donant...
                             </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => handleOpenNewContactDialog(tx.id, 'supplier')}>
+                                <Building2 className="mr-2 h-4 w-4 text-blue-500" />
+                                Nou proveïdor...
+                            </DropdownMenuItem>
+                            
                             <DropdownMenuSeparator />
-                            <DropdownMenuItem onClick={() => handleSetEmisor(tx.id, null)}>
+                            
+                            {/* Opció per desvincular */}
+                            <DropdownMenuItem onClick={() => handleSetContact(tx.id, null)}>
                                 {t.movements.table.unlink}
                             </DropdownMenuItem>
-                            {availableEmissors?.map((emisor) => (
-                                <DropdownMenuItem key={emisor.id} onClick={() => handleSetEmisor(tx.id, emisor.id)}>
-                                    {emisor.name}
-                                </DropdownMenuItem>
-                            ))}
+                            
+                            <DropdownMenuSeparator />
+                            
+                            {/* Llistat de donants */}
+                            {donors.length > 0 && (
+                              <>
+                                <DropdownMenuLabel className="text-xs text-muted-foreground flex items-center gap-1">
+                                  <Heart className="h-3 w-3 text-red-500" />
+                                  Donants
+                                </DropdownMenuLabel>
+                                {donors.map((donor) => (
+                                    <DropdownMenuItem key={donor.id} onClick={() => handleSetContact(tx.id, donor.id, 'donor')}>
+                                        {donor.name}
+                                    </DropdownMenuItem>
+                                ))}
+                                <DropdownMenuSeparator />
+                              </>
+                            )}
+                            
+                            {/* Llistat de proveïdors */}
+                            {suppliers.length > 0 && (
+                              <>
+                                <DropdownMenuLabel className="text-xs text-muted-foreground flex items-center gap-1">
+                                  <Building2 className="h-3 w-3 text-blue-500" />
+                                  Proveïdors
+                                </DropdownMenuLabel>
+                                {suppliers.map((supplier) => (
+                                    <DropdownMenuItem key={supplier.id} onClick={() => handleSetContact(tx.id, supplier.id, 'supplier')}>
+                                        {supplier.name}
+                                    </DropdownMenuItem>
+                                ))}
+                              </>
+                            )}
                         </DropdownMenuContent>
                     </DropdownMenu>
                   </TableCell>
@@ -648,19 +739,47 @@ export function TransactionsTable() {
                 className="col-span-3"
               />
             </div>
+            {/* CANVI: emisor -> contacte */}
             <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="emisor" className="text-right">
-                    {t.movements.table.emisor}
+                <Label htmlFor="contact" className="text-right">
+                    Contacte
                 </Label>
-                <Select value={formData.emisorId || ''} onValueChange={(value) => setFormData({...formData, emisorId: value === 'null' ? null : value})}>
+                <Select value={formData.contactId || ''} onValueChange={(value) => setFormData({...formData, contactId: value === 'null' ? null : value})}>
                     <SelectTrigger className="col-span-3">
-                        <SelectValue placeholder={t.emissors.selectType} />
+                        <SelectValue placeholder="Selecciona un contacte" />
                     </SelectTrigger>
                     <SelectContent>
                         <SelectItem value="null">{t.common.none}</SelectItem>
-                        {availableEmissors?.map(emisor => (
-                            <SelectItem key={emisor.id} value={emisor.id}>{emisor.name}</SelectItem>
-                        ))}
+                        {donors.length > 0 && (
+                          <>
+                            <SelectItem value="__donors_label__" disabled className="text-xs text-muted-foreground">
+                              ── Donants ──
+                            </SelectItem>
+                            {donors.map(donor => (
+                                <SelectItem key={donor.id} value={donor.id}>
+                                  <span className="flex items-center gap-2">
+                                    <Heart className="h-3 w-3 text-red-500" />
+                                    {donor.name}
+                                  </span>
+                                </SelectItem>
+                            ))}
+                          </>
+                        )}
+                        {suppliers.length > 0 && (
+                          <>
+                            <SelectItem value="__suppliers_label__" disabled className="text-xs text-muted-foreground">
+                              ── Proveïdors ──
+                            </SelectItem>
+                            {suppliers.map(supplier => (
+                                <SelectItem key={supplier.id} value={supplier.id}>
+                                  <span className="flex items-center gap-2">
+                                    <Building2 className="h-3 w-3 text-blue-500" />
+                                    {supplier.name}
+                                  </span>
+                                </SelectItem>
+                            ))}
+                          </>
+                        )}
                     </SelectContent>
                 </Select>
             </div>
@@ -690,30 +809,49 @@ export function TransactionsTable() {
         </DialogContent>
       </Dialog>
 
-       {/* New Emisor Dialog */}
-      <Dialog open={isNewEmisorDialogOpen} onOpenChange={setIsNewEmisorDialogOpen}>
+       {/* CANVI: New Contact Dialog (abans era New Emisor) */}
+      <Dialog open={isNewContactDialogOpen} onOpenChange={setIsNewContactDialogOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>{t.emissors.addTitle}</DialogTitle>
-            <DialogDescription>{t.emissors.addDescription}</DialogDescription>
+            <DialogTitle className="flex items-center gap-2">
+              {newContactType === 'donor' ? (
+                <>
+                  <Heart className="h-5 w-5 text-red-500" />
+                  Nou Donant
+                </>
+              ) : (
+                <>
+                  <Building2 className="h-5 w-5 text-blue-500" />
+                  Nou Proveïdor
+                </>
+              )}
+            </DialogTitle>
+            <DialogDescription>
+              {newContactType === 'donor' 
+                ? 'Afegeix un nou donant i assigna\'l a aquesta transacció.'
+                : 'Afegeix un nou proveïdor i assigna\'l a aquesta transacció.'
+              }
+            </DialogDescription>
           </DialogHeader>
           <div className="grid gap-4 py-4">
             <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="new-emisor-name" className="text-right">{t.emissors.name}</Label>
-              <Input id="new-emisor-name" value={newEmisorFormData.name} onChange={(e) => setNewEmisorFormData({...newEmisorFormData, name: e.target.value })} className="col-span-3" />
+              <Label htmlFor="new-contact-name" className="text-right">Nom *</Label>
+              <Input id="new-contact-name" value={newContactFormData.name} onChange={(e) => setNewContactFormData({...newContactFormData, name: e.target.value })} className="col-span-3" />
             </div>
             <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="new-emisor-taxId" className="text-right">{t.emissors.taxId}</Label>
-              <Input id="new-emisor-taxId" value={newEmisorFormData.taxId} onChange={(e) => setNewEmisorFormData({...newEmisorFormData, taxId: e.target.value })} className="col-span-3" />
+              <Label htmlFor="new-contact-taxId" className="text-right">DNI/CIF *</Label>
+              <Input id="new-contact-taxId" value={newContactFormData.taxId} onChange={(e) => setNewContactFormData({...newContactFormData, taxId: e.target.value })} className="col-span-3" />
             </div>
             <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="new-emisor-zipCode" className="text-right">{t.emissors.zipCode}</Label>
-              <Input id="new-emisor-zipCode" value={newEmisorFormData.zipCode} onChange={(e) => setNewEmisorFormData({...newEmisorFormData, zipCode: e.target.value })} className="col-span-3" />
+              <Label htmlFor="new-contact-zipCode" className="text-right">Codi Postal *</Label>
+              <Input id="new-contact-zipCode" value={newContactFormData.zipCode} onChange={(e) => setNewContactFormData({...newContactFormData, zipCode: e.target.value })} className="col-span-3" />
             </div>
           </div>
           <DialogFooter>
             <DialogClose asChild><Button variant="outline">{t.common.cancel}</Button></DialogClose>
-            <Button onClick={handleSaveNewEmisor}>{t.emissors.save}</Button>
+            <Button onClick={handleSaveNewContact}>
+              {newContactType === 'donor' ? 'Crear donant' : 'Crear proveïdor'}
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -736,13 +874,13 @@ export function TransactionsTable() {
         </AlertDialogContent>
       </AlertDialog>
 
-      {/* Remittance Splitter Dialog */}
-      {transactionToSplit && availableEmissors && (
+      {/* Remittance Splitter Dialog - NOTA: Aquest component també necessitarà actualització */}
+      {transactionToSplit && availableContacts && (
         <RemittanceSplitter
           open={isSplitterOpen}
           onOpenChange={setIsSplitterOpen}
           transaction={transactionToSplit}
-          existingEmissors={availableEmissors}
+          existingEmissors={availableContacts.filter(c => c.type === 'donor') as any}
           onSplitDone={handleOnSplitDone}
         />
       )}
