@@ -482,7 +482,7 @@ export function TransactionsTable() {
               <TableHead>{t.movements.table.date}</TableHead>
               <TableHead className="text-right">{t.movements.table.amount}</TableHead>
               <TableHead>{t.movements.table.description}</TableHead>
-              <TableHead>{t.sidebar.donors || 'Contacte'}</TableHead>
+              <TableHead>Contacte</TableHead>
               <TableHead>{t.movements.table.category}</TableHead>
               <TableHead>{t.movements.table.project}</TableHead>
               <TableHead>{t.movements.table.proof}</TableHead>
