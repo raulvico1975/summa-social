@@ -2,113 +2,51 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // ═══════════════════════════════════════════════════════════════════════
-    // CONSTANTS I FUNCIONS AUXILIARS
-    // ═══════════════════════════════════════════════════════════════════════
-    
-    // UID de l'administrador global de la plataforma
     function isSuperAdmin() {
-      return request.auth.uid == 'f2AHJqjXiOZkYajwkOnZ8RY6h2k2';
+      return request.auth != null && request.auth.uid == 'f2AHJqjXiOZkYajwkOnZ8RY6h2k2';
     }
 
-    // Comprova si l'usuari està autenticat
     function isSignedIn() {
       return request.auth != null;
     }
 
-    // Comprova si l'usuari és membre de l'organització
     function isMemberOf(orgId) {
       return isSignedIn() && 
         exists(/databases/$(database)/documents/organizations/$(orgId)/members/$(request.auth.uid));
     }
 
-    // Obté el rol de l'usuari dins l'organització
     function getMemberRole(orgId) {
       return get(/databases/$(database)/documents/organizations/$(orgId)/members/$(request.auth.uid)).data.role;
     }
 
-    // Comprova si l'usuari és admin de l'organització
     function isAdminOf(orgId) {
       return isMemberOf(orgId) && getMemberRole(orgId) == 'admin';
     }
 
-    // Comprova si l'usuari és admin o treasurer de l'organització
     function canEditFinances(orgId) {
       return isMemberOf(orgId) && getMemberRole(orgId) in ['admin', 'treasurer'];
     }
 
     // ═══════════════════════════════════════════════════════════════════════
-    // REGLES PER A USUARIS
+    // USUARIS
     // ═══════════════════════════════════════════════════════════════════════
 
     match /users/{userId} {
-      // El Super Admin pot llegir qualsevol perfil d'usuari.
-      // Un usuari només pot accedir al seu propi perfil.
-      allow read: if isSuperAdmin() || (isSignedIn() && request.auth.uid == userId);
-      allow write: if isSignedIn() && request.auth.uid == userId;
+      allow read, write: if isSignedIn() && request.auth.uid == userId;
+      // Super Admin pot llegir tots els usuaris
+      allow read: if isSuperAdmin();
     }
 
     // ═══════════════════════════════════════════════════════════════════════
-    // REGLES PER A ORGANITZACIONS
+    // INVITACIONS (col·lecció global per facilitar consultes per token)
     // ═══════════════════════════════════════════════════════════════════════
 
-    match /organizations/{orgId} {
-      // Qualsevol usuari autenticat pot CREAR una organització.
-      // La lògica de l'aplicació ho restringeix només al Super Admin.
-      allow create: if isSignedIn();
+    match /invitations/{invitationId} {
+      // Qualsevol pot llegir una invitació (necessari per validar el token)
+      allow read: if true;
       
-      // El Super Admin pot llegir qualsevol organització.
-      // Els membres només poden llegir la seva pròpia organització.
-      allow list, read: if isSuperAdmin() || isMemberOf(orgId);
+      // Només Super Admin pot crear invitacions
+      allow create: if isSuperAdmin();
       
-      // Només admins poden actualitzar o eliminar l'organització
-      allow update, delete: if isAdminOf(orgId);
-
-      // ─────────────────────────────────────────────────────────────────────
-      // MEMBRES DE L'ORGANITZACIÓ
-      // ─────────────────────────────────────────────────────────────────────
-      
-      match /members/{memberId} {
-        // Permetre a un usuari crear el seu propi registre de membre.
-        // Crucial per al creador de l'organització.
-        allow create: if isSignedIn() && request.auth.uid == memberId;
-        
-        // Super Admin i membres poden llegir altres membres de la mateixa org.
-        allow read: if isSuperAdmin() || isMemberOf(orgId);
-        
-        // Només admins poden eliminar membres (excepte a si mateixos)
-        allow delete: if isAdminOf(orgId) && request.auth.uid != memberId;
-        
-        // Admins poden actualitzar qualsevol membre.
-        // Usuaris poden actualitzar el seu propi perfil (excepte el rol).
-        allow update: if isAdminOf(orgId) || 
-          (isSignedIn() && request.auth.uid == memberId && 
-           request.resource.data.role == resource.data.role);
-      }
-
-      // ─────────────────────────────────────────────────────────────────────
-      // DADES FINANCERES (transactions, categories, emissors, projects)
-      // ─────────────────────────────────────────────────────────────────────
-
-      match /transactions/{docId} {
-        allow read: if isSuperAdmin() || isMemberOf(orgId);
-        allow create, update, delete: if canEditFinances(orgId);
-      }
-
-      match /categories/{docId} {
-        allow read: if isSuperAdmin() || isMemberOf(orgId);
-        allow create, update, delete: if canEditFinances(orgId);
-      }
-
-      match /emissors/{docId} {
-        allow read: if isSuperAdmin() || isMemberOf(orgId);
-        allow create, update, delete: if canEditFinances(orgId);
-      }
-
-      match /projects/{docId} {
-        allow read: if isSuperAdmin() || isMemberOf(orgId);
-        allow create, update, delete: if canEditFinances(orgId);
-      }
-    }
-  }
-}
+      // Només Super Admin pot eliminar invitacions
+      allow delete: if isSuperA
