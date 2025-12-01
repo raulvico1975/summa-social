@@ -317,7 +317,7 @@ function GenerateInvitationDialog({
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="admin">Administrador</SelectItem>
-                    <SelectItem value="treasurer">Tresorer</SelectItem>
+                    <SelectItem value="user">Usuari</SelectItem>
                     <SelectItem value="viewer">Visualitzador</SelectItem>
                   </SelectContent>
                 </Select>
