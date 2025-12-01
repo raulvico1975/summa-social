@@ -1,3 +1,4 @@
+
 'use client';
 
 import * as React from 'react';
@@ -47,6 +48,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { Card, CardContent } from '@/components/ui/card';
+import { Progress } from '@/components/ui/progress';
 import {
   Sparkles,
   Loader2,
@@ -61,6 +64,10 @@ import {
   GitMerge,
   Heart,
   Building2,
+  FileWarning,
+  CheckCircle2,
+  AlertTriangle,
+  Filter,
 } from 'lucide-react';
 import type { Transaction, Category, Project, AnyContact, Donor, Supplier } from '@/lib/data';
 import { categorizeTransaction } from '@/ai/flows/categorize-transactions';
@@ -73,15 +80,27 @@ import { collection, doc } from 'firebase/firestore';
 import { useTranslations } from '@/i18n';
 import { useCurrentOrganization } from '@/hooks/organization-provider';
 
+// Tipus de filtre per documents
+type DocumentFilter = 'all' | 'missing' | 'urgent' | 'complete';
+
+// Calcula els dies des d'una data
+const daysSince = (dateString: string): number => {
+  const date = new Date(dateString);
+  const now = new Date();
+  const diffTime = Math.abs(now.getTime() - date.getTime());
+  return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+};
+
 export function TransactionsTable() {
   const { firestore, user, storage } = useFirebase();
   const { organizationId } = useCurrentOrganization();
   const { t } = useTranslations();
   const categoryTranslations = t.categories as Record<string, string>;
 
-  // ═══════════════════════════════════════════════════════════════════════════
-  // COL·LECCIONS - Ara usem 'contacts' en lloc de 'emissors'
-  // ═══════════════════════════════════════════════════════════════════════════
+  // Filtre de documents
+  const [documentFilter, setDocumentFilter] = React.useState<DocumentFilter>('all');
+
+  // Col·leccions
   const transactionsCollection = useMemoFirebase(
     () => organizationId ? collection(firestore, 'organizations', organizationId, 'transactions') : null,
     [firestore, organizationId]
@@ -90,7 +109,6 @@ export function TransactionsTable() {
     () => organizationId ? collection(firestore, 'organizations', organizationId, 'categories') : null,
     [firestore, organizationId]
   );
-  // CANVI: emissors -> contacts
   const contactsCollection = useMemoFirebase(
     () => organizationId ? collection(firestore, 'organizations', organizationId, 'contacts') : null,
     [firestore, organizationId]
@@ -102,7 +120,6 @@ export function TransactionsTable() {
   
   const { data: transactions } = useCollection<Transaction>(transactionsCollection);
   const { data: availableCategories } = useCollection<Category>(categoriesCollection);
-  // CANVI: availableEmissors -> availableContacts
   const { data: availableContacts } = useCollection<AnyContact>(contactsCollection);
   const { data: availableProjects } = useCollection<Project>(projectsCollection);
 
@@ -126,7 +143,7 @@ export function TransactionsTable() {
   const [isSplitterOpen, setIsSplitterOpen] = React.useState(false);
   const [transactionToSplit, setTransactionToSplit] = React.useState<Transaction | null>(null);
 
-  // CANVI: emisorMap -> contactMap (amb tipus)
+  // Maps per noms
   const contactMap = React.useMemo(() => 
     availableContacts?.reduce((acc, contact) => {
       acc[contact.id] = { name: contact.name, type: contact.type };
@@ -134,7 +151,6 @@ export function TransactionsTable() {
     }, {} as Record<string, { name: string; type: 'donor' | 'supplier' }>) || {}, 
   [availableContacts]);
 
-  // Separar donants i proveïdors per al dropdown
   const donors = React.useMemo(() => 
     availableContacts?.filter(c => c.type === 'donor') as Donor[] || [], 
   [availableContacts]);
@@ -150,6 +166,46 @@ export function TransactionsTable() {
     }, {} as Record<string, string>) || {},
   [availableProjects]);
 
+  // ═══════════════════════════════════════════════════════════════════════════
+  // ESTADÍSTIQUES DE DOCUMENTS
+  // ═══════════════════════════════════════════════════════════════════════════
+  const documentStats = React.useMemo(() => {
+    if (!transactions) return { total: 0, withDoc: 0, withoutDoc: 0, urgent: 0, expenses: 0, expensesWithDoc: 0 };
+    
+    const expenses = transactions.filter(tx => tx.amount < 0);
+    const expensesWithDoc = expenses.filter(tx => tx.document);
+    const expensesWithoutDoc = expenses.filter(tx => !tx.document);
+    const urgentExpenses = expensesWithoutDoc.filter(tx => daysSince(tx.date) > 30);
+    
+    return {
+      total: transactions.length,
+      withDoc: transactions.filter(tx => tx.document).length,
+      withoutDoc: transactions.filter(tx => !tx.document).length,
+      urgent: urgentExpenses.length,
+      expenses: expenses.length,
+      expensesWithDoc: expensesWithDoc.length,
+      expensesWithoutDocCount: expensesWithoutDoc.length,
+      percentage: expenses.length > 0 ? Math.round((expensesWithDoc.length / expenses.length) * 100) : 100,
+    };
+  }, [transactions]);
+
+  // Transaccions filtrades
+  const filteredTransactions = React.useMemo(() => {
+    if (!transactions) return [];
+    
+    switch (documentFilter) {
+      case 'missing':
+        return transactions.filter(tx => !tx.document && tx.amount < 0);
+      case 'urgent':
+        return transactions.filter(tx => !tx.document && tx.amount < 0 && daysSince(tx.date) > 30);
+      case 'complete':
+        return transactions.filter(tx => tx.document);
+      default:
+        return transactions;
+    }
+  }, [transactions, documentFilter]);
+
+  // Funcions existents...
   const handleCategorize = async (txId: string) => {
     if (!transactions) return;
     const transaction = transactions.find((tx) => tx.id === txId);
@@ -172,8 +228,8 @@ export function TransactionsTable() {
       
       const categoryName = categoryTranslations[result.category] || result.category;
       toast({
-        title: 'Categorización Automática',
-        description: `Transacción clasificada como "${categoryName}" con una confianza del ${(result.confidence * 100).toFixed(0)}%.`,
+        title: 'Categorització Automàtica',
+        description: `Transacció classificada com "${categoryName}" amb una confiança del ${(result.confidence * 100).toFixed(0)}%.`,
       });
       log(`¡Éxito! Transacción ${txId} clasificada como "${categoryName}".`);
     } catch (error) {
@@ -181,7 +237,7 @@ export function TransactionsTable() {
       toast({
         variant: 'destructive',
         title: 'Error de IA',
-        description: 'No se pudo categorizar la transacción.',
+        description: 'No s\'ha pogut categoritzar la transacció.',
       });
        log(`ERROR categorizando ${txId}: ${error}`);
     } finally {
@@ -191,18 +247,18 @@ export function TransactionsTable() {
 
   const handleBatchCategorize = async () => {
     if (!transactions || !availableCategories || !transactionsCollection) {
-      toast({ title: 'Datos no disponibles', description: 'No se pudieron cargar las transacciones o categorías.'});
+      toast({ title: 'Dades no disponibles', description: 'No s\'han pogut carregar les transaccions o categories.'});
       return;
     }
     const transactionsToCategorize = transactions.filter(tx => !tx.category);
     if (transactionsToCategorize.length === 0) {
-      toast({ title: 'No hay nada que clasificar', description: 'Todas las transacciones ya tienen una categoría.'});
+      toast({ title: 'No hi ha res a classificar', description: 'Totes les transaccions ja tenen una categoria.'});
       return;
     }
 
     setIsBatchCategorizing(true);
     log(`Iniciando clasificación masiva de ${transactionsToCategorize.length} moviments.`);
-    toast({ title: 'Iniciando clasificación masiva...', description: `Clasificando ${transactionsToCategorize.length} moviments.`});
+    toast({ title: 'Iniciant classificació massiva...', description: `Classificant ${transactionsToCategorize.length} moviments.`});
 
     let successCount = 0;
 
@@ -231,7 +287,7 @@ export function TransactionsTable() {
     
     setIsBatchCategorizing(false);
     log(`¡Éxito! Clasificación masiva completada. ${successCount} moviments clasificados.`);
-    toast({ title: 'Clasificación masiva completada', description: `Se han clasificado ${successCount} moviments.`});
+    toast({ title: 'Classificació massiva completada', description: `S'han classificat ${successCount} moviments.`});
   };
 
   const handleSetCategory = (txId: string, newCategory: string) => {
@@ -239,7 +295,6 @@ export function TransactionsTable() {
     updateDocumentNonBlocking(doc(transactionsCollection, txId), { category: newCategory });
   };
   
-  // CANVI: handleSetEmisor -> handleSetContact
   const handleSetContact = (txId: string, newContactId: string | null, contactType?: 'donor' | 'supplier') => {
     if (!transactionsCollection) return;
     updateDocumentNonBlocking(doc(transactionsCollection, txId), { 
@@ -253,11 +308,10 @@ export function TransactionsTable() {
     updateDocumentNonBlocking(doc(transactionsCollection, txId), { projectId: newProjectId });
   };
 
-
   const handleAttachDocument = (transactionId: string) => {
     log(`[${transactionId}] Iniciando la subida de documento.`);
     if (!organizationId || !transactionsCollection) {
-      const errorMsg = 'ERROR: No se ha podido identificar la organización para la subida.';
+      const errorMsg = 'ERROR: No s\'ha pogut identificar l\'organització per a la pujada.';
       log(errorMsg);
       toast({ variant: 'destructive', title: 'Error', description: errorMsg });
       return;
@@ -280,7 +334,7 @@ export function TransactionsTable() {
       log(`[${transactionId}] Archivo seleccionado: ${file.name} (Tamaño: ${file.size} bytes)`);
 
       setLoadingStates(prev => ({ ...prev, [`doc_${transactionId}`]: true }));
-      toast({ title: 'Subiendo documento...', description: `Adjuntando "${file.name}"...` });
+      toast({ title: 'Pujant document...', description: `Adjuntant "${file.name}"...` });
       
       const storagePath = `organizations/${organizationId}/documents/${transactionId}/${file.name}`;
       log(`[${transactionId}] Ruta de subida en Storage: ${storagePath}`);
@@ -296,7 +350,7 @@ export function TransactionsTable() {
 
           updateDocumentNonBlocking(doc(transactionsCollection, transactionId), { document: downloadURL });
 
-          toast({ title: '¡Éxito!', description: 'El documento se ha subido y vinculado correctamente.' });
+          toast({ title: '✅ Èxit!', description: 'El document s\'ha pujat i vinculat correctament.' });
           log(`[${transactionId}] ¡Éxito! Subida completada.`);
 
       } catch (error: any) {
@@ -305,15 +359,13 @@ export function TransactionsTable() {
           const errorMessage = error.message || 'Error desconocido.';
           log(`[${transactionId}] ERROR en la subida: ${errorCode} - ${errorMessage}`);
           
-          let description = `Ocurrió un error inesperado al subir el documento. Código: ${errorCode}`;
+          let description = `S'ha produït un error inesperat. Codi: ${errorCode}`;
           if (errorCode === 'storage/unauthorized' || errorCode === 'storage/object-not-found') {
-            description = 'Acceso denegado. Revisa las reglas de seguridad de Firebase Storage.';
+            description = 'Accés denegat. Revisa les regles de seguretat de Firebase Storage.';
           } else if (errorCode === 'storage/canceled') {
-            description = 'La subida ha sido cancelada por el usuario.';
-          } else if(errorCode === 'auth/invalid-api-key') {
-             description = 'La clave de API de Firebase no es válida. Revisa la configuración.'
+            description = 'La pujada ha estat cancel·lada.';
           }
-          toast({ variant: 'destructive', title: 'Error de subida', description, duration: 9000 });
+          toast({ variant: 'destructive', title: 'Error de pujada', description, duration: 9000 });
       } finally {
           log(`[${transactionId}] Finalizando proceso de subida.`);
           setLoadingStates(prev => ({ ...prev, [`doc_${transactionId}`]: false }));
@@ -328,7 +380,7 @@ export function TransactionsTable() {
   };
   
   const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('es-ES', { style: 'currency', currency: 'EUR' }).format(amount);
+    return new Intl.NumberFormat('ca-ES', { style: 'currency', currency: 'EUR' }).format(amount);
   };
 
   const formatDate = (dateString: string) => {
@@ -337,7 +389,7 @@ export function TransactionsTable() {
       if (isNaN(date.getTime())) {
         return dateString;
       }
-      return date.toLocaleDateString('es-ES', {
+      return date.toLocaleDateString('ca-ES', {
         day: '2-digit',
         month: '2-digit',
         year: 'numeric',
@@ -352,7 +404,6 @@ export function TransactionsTable() {
     setFormData({ 
         description: transaction.description, 
         amount: String(transaction.amount),
-        // CANVI: emisorId -> contactId
         contactId: transaction.contactId || null,
         projectId: transaction.projectId || null,
     });
@@ -362,7 +413,6 @@ export function TransactionsTable() {
   const handleSaveEdit = () => {
     if (!editingTransaction || !transactionsCollection) return;
     
-    // Trobar el tipus de contacte si s'ha seleccionat un
     const selectedContact = formData.contactId ? availableContacts?.find(c => c.id === formData.contactId) : null;
 
     updateDocumentNonBlocking(doc(transactionsCollection, editingTransaction.id), {
@@ -373,7 +423,7 @@ export function TransactionsTable() {
       projectId: formData.projectId
     });
 
-    toast({ title: 'Transacción actualizada' });
+    toast({ title: 'Transacció actualitzada' });
     setIsEditDialogOpen(false);
     setEditingTransaction(null);
   }
@@ -386,13 +436,12 @@ export function TransactionsTable() {
   const handleDeleteConfirm = () => {
     if (transactionToDelete && transactionsCollection) {
         deleteDocumentNonBlocking(doc(transactionsCollection, transactionToDelete.id));
-        toast({ title: 'Transacción eliminada' });
+        toast({ title: 'Transacció eliminada' });
     }
     setIsDeleteDialogOpen(false);
     setTransactionToDelete(null);
   }
 
-  // CANVI: handleOpenNewEmisorDialog -> handleOpenNewContactDialog
   const handleOpenNewContactDialog = (txId: string, type: 'donor' | 'supplier') => {
     setNewContactTransactionId(txId);
     setNewContactType(type);
@@ -400,7 +449,6 @@ export function TransactionsTable() {
     setIsNewContactDialogOpen(true);
   };
 
-  // CANVI: handleSaveNewEmisor -> handleSaveNewContact
   const handleSaveNewContact = () => {
     if (!newContactFormData.name || !newContactFormData.taxId || !newContactFormData.zipCode) {
       toast({ variant: 'destructive', title: t.common.error, description: 'Tots els camps són obligatoris.' });
@@ -415,7 +463,6 @@ export function TransactionsTable() {
       taxId: newContactFormData.taxId,
       zipCode: newContactFormData.zipCode,
       createdAt: now,
-      // Camps específics segons tipus
       ...(newContactType === 'donor' && {
         donorType: 'individual',
         membershipType: 'one-time',
@@ -463,9 +510,139 @@ export function TransactionsTable() {
     );
   };
 
+  // ═══════════════════════════════════════════════════════════════════════════
+  // HELPER: Indicador visual de document
+  // ═══════════════════════════════════════════════════════════════════════════
+  const getDocumentIndicator = (tx: Transaction) => {
+    const isExpense = tx.amount < 0;
+    const days = daysSince(tx.date);
+    
+    if (tx.document) {
+      return {
+        icon: <CheckCircle2 className="h-4 w-4 text-green-500" />,
+        className: '',
+        tooltip: 'Document adjuntat',
+      };
+    }
+    
+    if (!isExpense) {
+      // Els ingressos no necessiten justificant obligatòriament
+      return {
+        icon: <FileUp className="h-4 w-4 text-muted-foreground" />,
+        className: '',
+        tooltip: 'Sense document',
+      };
+    }
+    
+    // Despeses sense document
+    if (days > 30) {
+      return {
+        icon: <AlertTriangle className="h-4 w-4 text-red-500" />,
+        className: 'bg-red-50',
+        tooltip: `⚠️ ${days} dies sense justificant!`,
+      };
+    }
+    
+    return {
+      icon: <FileWarning className="h-4 w-4 text-orange-500" />,
+      className: 'bg-orange-50',
+      tooltip: 'Pendent de justificant',
+    };
+  };
+
   return (
     <>
-      <div className="flex justify-end mb-4">
+      {/* ═══════════════════════════════════════════════════════════════════════
+          SECCIÓ: Widget de salut documental (només per despeses)
+          ═══════════════════════════════════════════════════════════════════════ */}
+      {documentStats.expenses > 0 && (
+        <Card className="mb-6">
+          <CardContent className="pt-6">
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-3">
+                <div className={`p-2 rounded-full ${documentStats.percentage === 100 ? 'bg-green-100' : documentStats.percentage >= 70 ? 'bg-orange-100' : 'bg-red-100'}`}>
+                  {documentStats.percentage === 100 ? (
+                    <CheckCircle2 className="h-5 w-5 text-green-600" />
+                  ) : documentStats.urgent > 0 ? (
+                    <AlertTriangle className="h-5 w-5 text-red-600" />
+                  ) : (
+                    <FileWarning className="h-5 w-5 text-orange-600" />
+                  )}
+                </div>
+                <div>
+                  <h3 className="font-medium">Justificants de despeses</h3>
+                  <p className="text-sm text-muted-foreground">
+                    {documentStats.percentage === 100 
+                      ? '🎉 Totes les despeses estan justificades!' 
+                      : `${documentStats.expensesWithoutDocCount} despeses sense justificant`
+                    }
+                  </p>
+                </div>
+              </div>
+              <div className="text-right">
+                <span className="text-2xl font-bold">{documentStats.percentage}%</span>
+                <p className="text-xs text-muted-foreground">completat</p>
+              </div>
+            </div>
+            <Progress value={documentStats.percentage} className="h-2" />
+            <div className="flex gap-4 mt-4 text-sm">
+              <div className="flex items-center gap-1">
+                <CheckCircle2 className="h-4 w-4 text-green-500" />
+                <span>{documentStats.expensesWithDoc} amb document</span>
+              </div>
+              {documentStats.expensesWithoutDocCount > 0 && (
+                <div className="flex items-center gap-1">
+                  <FileWarning className="h-4 w-4 text-orange-500" />
+                  <span>{documentStats.expensesWithoutDocCount} pendents</span>
+                </div>
+              )}
+              {documentStats.urgent > 0 && (
+                <div className="flex items-center gap-1 text-red-600 font-medium">
+                  <AlertTriangle className="h-4 w-4" />
+                  <span>{documentStats.urgent} urgents (&gt;30 dies)</span>
+                </div>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* ═══════════════════════════════════════════════════════════════════════
+          SECCIÓ: Filtres i accions
+          ═══════════════════════════════════════════════════════════════════════ */}
+      <div className="flex justify-between items-center mb-4 flex-wrap gap-4">
+        {/* Filtres de documents */}
+        <div className="flex gap-2">
+          <Button
+            variant={documentFilter === 'all' ? 'default' : 'outline'}
+            size="sm"
+            onClick={() => setDocumentFilter('all')}
+          >
+            Tots ({transactions?.length || 0})
+          </Button>
+          <Button
+            variant={documentFilter === 'missing' ? 'default' : 'outline'}
+            size="sm"
+            onClick={() => setDocumentFilter('missing')}
+            className={documentStats.expensesWithoutDocCount > 0 ? 'border-orange-300' : ''}
+          >
+            <FileWarning className="mr-1 h-4 w-4 text-orange-500" />
+            Sense doc ({documentStats.expensesWithoutDocCount})
+          </Button>
+          {documentStats.urgent > 0 && (
+            <Button
+              variant={documentFilter === 'urgent' ? 'destructive' : 'outline'}
+              size="sm"
+              onClick={() => setDocumentFilter('urgent')}
+              className="border-red-300"
+            >
+              <AlertTriangle className="mr-1 h-4 w-4" />
+              Urgents ({documentStats.urgent})
+            </Button>
+          )}
+        </div>
+
+        {/* Botó categoritzar */}
         <Button onClick={handleBatchCategorize} disabled={!hasUncategorized || isBatchCategorizing}>
           {isBatchCategorizing ? (
             <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -475,6 +652,10 @@ export function TransactionsTable() {
           {t.movements.table.categorizeAll}
         </Button>
       </div>
+
+      {/* ═══════════════════════════════════════════════════════════════════════
+          TAULA DE TRANSACCIONS
+          ═══════════════════════════════════════════════════════════════════════ */}
       <div className="rounded-md border">
         <Table>
           <TableHeader>
@@ -490,15 +671,16 @@ export function TransactionsTable() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {transactions && transactions.map((tx) => {
+            {filteredTransactions.map((tx) => {
               const relevantCategories = availableCategories?.filter(
                 (c) => c.type === (tx.amount > 0 ? 'income' : 'expense')
               ) || [];
               const isDocumentLoading = loadingStates[`doc_${tx.id}`];
               const translatedCategory = tx.category ? categoryTranslations[tx.category] || tx.category : null;
+              const docIndicator = getDocumentIndicator(tx);
 
               return (
-                <TableRow key={tx.id}>
+                <TableRow key={tx.id} className={docIndicator.className}>
                   <TableCell>{formatDate(tx.date)}</TableCell>
                   <TableCell
                     className={`text-right font-mono ${
@@ -507,10 +689,10 @@ export function TransactionsTable() {
                   >
                     {formatCurrency(tx.amount)}
                   </TableCell>
-                  <TableCell className="font-medium">{tx.description}</TableCell>
-                  {/* ═══════════════════════════════════════════════════════════════════════
-                      CANVI PRINCIPAL: Columna de contacte amb donants i proveïdors separats
-                      ═══════════════════════════════════════════════════════════════════════ */}
+                  <TableCell className="font-medium max-w-xs truncate" title={tx.description}>
+                    {tx.description}
+                  </TableCell>
+                  {/* Columna Contacte */}
                   <TableCell>
                     <DropdownMenu>
                         <DropdownMenuTrigger asChild>
@@ -527,7 +709,6 @@ export function TransactionsTable() {
                            )}
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="start" className="w-56">
-                            {/* Opcions per crear nou */}
                             <DropdownMenuLabel className="text-xs text-muted-foreground">Crear nou</DropdownMenuLabel>
                             <DropdownMenuItem onClick={() => handleOpenNewContactDialog(tx.id, 'donor')}>
                                 <Heart className="mr-2 h-4 w-4 text-red-500" />
@@ -540,14 +721,12 @@ export function TransactionsTable() {
                             
                             <DropdownMenuSeparator />
                             
-                            {/* Opció per desvincular */}
                             <DropdownMenuItem onClick={() => handleSetContact(tx.id, null)}>
                                 {t.movements.table.unlink}
                             </DropdownMenuItem>
                             
                             <DropdownMenuSeparator />
                             
-                            {/* Llistat de donants */}
                             {donors.length > 0 && (
                               <>
                                 <DropdownMenuLabel className="text-xs text-muted-foreground flex items-center gap-1">
@@ -563,7 +742,6 @@ export function TransactionsTable() {
                               </>
                             )}
                             
-                            {/* Llistat de proveïdors */}
                             {suppliers.length > 0 && (
                               <>
                                 <DropdownMenuLabel className="text-xs text-muted-foreground flex items-center gap-1">
@@ -580,6 +758,7 @@ export function TransactionsTable() {
                         </DropdownMenuContent>
                     </DropdownMenu>
                   </TableCell>
+                  {/* Columna Categoria */}
                   <TableCell>
                     {translatedCategory ? (
                       <DropdownMenu>
@@ -621,6 +800,7 @@ export function TransactionsTable() {
                       </Button>
                     )}
                   </TableCell>
+                  {/* Columna Projecte */}
                   <TableCell>
                     <DropdownMenu>
                         <DropdownMenuTrigger asChild>
@@ -649,23 +829,31 @@ export function TransactionsTable() {
                         </DropdownMenuContent>
                     </DropdownMenu>
                   </TableCell>
+                  {/* Columna Document - AMB INDICADORS VISUALS */}
                   <TableCell>
                       {isDocumentLoading ? (
                           <Button variant="outline" size="icon" disabled>
                               <Loader2 className="h-4 w-4 animate-spin" />
                           </Button>
                       ) : tx.document ? (
-                          <Button asChild variant="outline" size="icon">
-                              <a href={tx.document} target="_blank" rel="noopener noreferrer">
-                                  <LinkIcon className="h-4 w-4" />
+                          <Button asChild variant="outline" size="icon" className="border-green-300 hover:bg-green-50">
+                              <a href={tx.document} target="_blank" rel="noopener noreferrer" title="Veure document">
+                                  <CheckCircle2 className="h-4 w-4 text-green-500" />
                               </a>
                           </Button>
                       ) : (
-                          <Button variant="outline" size="icon" onClick={() => handleAttachDocument(tx.id)}>
-                              <FileUp className="h-4 w-4" />
+                          <Button 
+                            variant="outline" 
+                            size="icon" 
+                            onClick={() => handleAttachDocument(tx.id)}
+                            className={tx.amount < 0 && daysSince(tx.date) > 30 ? 'border-red-300 hover:bg-red-50' : tx.amount < 0 ? 'border-orange-300 hover:bg-orange-50' : ''}
+                            title={docIndicator.tooltip}
+                          >
+                              {docIndicator.icon}
                           </Button>
                       )}
                   </TableCell>
+                  {/* Accions */}
                    <TableCell className="text-right">
                         <DropdownMenu>
                             <DropdownMenuTrigger asChild>
@@ -695,16 +883,23 @@ export function TransactionsTable() {
                 </TableRow>
               );
             })}
-             {(!transactions || transactions.length === 0) && (
+             {filteredTransactions.length === 0 && (
                 <TableRow>
                     <TableCell colSpan={8} className="h-24 text-center">
-                        {t.movements.table.noTransactions}
+                        {documentFilter !== 'all' 
+                          ? '🎉 Cap moviment coincideix amb el filtre seleccionat'
+                          : t.movements.table.noTransactions
+                        }
                     </TableCell>
                 </TableRow>
              )}
           </TableBody>
         </Table>
       </div>
+
+      {/* ═══════════════════════════════════════════════════════════════════════
+          DIÀLEGS (sense canvis)
+          ═══════════════════════════════════════════════════════════════════════ */}
 
       {/* Edit Transaction Dialog */}
       <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
@@ -739,7 +934,6 @@ export function TransactionsTable() {
                 className="col-span-3"
               />
             </div>
-            {/* CANVI: emisor -> contacte */}
             <div className="grid grid-cols-4 items-center gap-4">
                 <Label htmlFor="contact" className="text-right">
                     Contacte
@@ -809,7 +1003,7 @@ export function TransactionsTable() {
         </DialogContent>
       </Dialog>
 
-       {/* CANVI: New Contact Dialog (abans era New Emisor) */}
+      {/* New Contact Dialog */}
       <Dialog open={isNewContactDialogOpen} onOpenChange={setIsNewContactDialogOpen}>
         <DialogContent>
           <DialogHeader>
@@ -874,7 +1068,7 @@ export function TransactionsTable() {
         </AlertDialogContent>
       </AlertDialog>
 
-      {/* Remittance Splitter Dialog - NOTA: Aquest component també necessitarà actualització */}
+      {/* Remittance Splitter Dialog */}
       {transactionToSplit && availableContacts && (
         <RemittanceSplitter
           open={isSplitterOpen}
