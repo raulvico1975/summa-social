@@ -1,4 +1,3 @@
-
 'use client';
 
 import * as React from 'react';
@@ -15,10 +14,11 @@ import { doc, getDoc, setDoc, collection, query, where, getDocs, updateDoc } fro
 import { Loader2, AlertCircle, CheckCircle2 } from 'lucide-react';
 import type { Invitation, UserProfile, OrganizationMember } from '@/lib/data';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { Suspense } from 'react';
 
 type PageState = 'loading' | 'invalid' | 'expired' | 'used' | 'ready' | 'registering' | 'success';
 
-export default function RegistrePage() {
+function RegistreContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const token = searchParams.get('token');
@@ -404,4 +404,16 @@ export default function RegistrePage() {
       </div>
     </main>
   );
+}
+
+export default function RegistrePage() {
+    return (
+      <Suspense fallback={
+        <div className="flex items-center justify-center min-h-screen">
+          <Loader2 className="h-8 w-8 animate-spin" />
+        </div>
+      }>
+        <RegistreContent />
+      </Suspense>
+    );
 }
