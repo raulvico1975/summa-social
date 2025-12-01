@@ -7,12 +7,13 @@
 export type Transaction = {
   id: string;
   date: string;
-  description: string;
+  description: string;             // Concepte original del banc (no editable)
+  note?: string | null;            // NOU: Nota/descripció editable per l'usuari
   amount: number;
   category: string | null;
   document: string | null;
-  contactId?: string | null;      // CANVI: emisorId -> contactId (més genèric)
-  contactType?: ContactType;       // NOU: tipus de contacte per facilitar filtres
+  contactId?: string | null;
+  contactType?: ContactType;
   projectId?: string | null;
 };
 
