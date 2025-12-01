@@ -36,7 +36,7 @@ export type Project = {
 };
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// NOUS TIPUS PER MULTI-ORGANITZACIÓ
+// TIPUS PER MULTI-ORGANITZACIÓ
 // ═══════════════════════════════════════════════════════════════════════════════
 
 /**
@@ -80,3 +80,32 @@ export type UserProfile = {
   role: OrganizationRole;          // Rol de l'usuari en aquesta organització
   displayName: string;             // Nom de l'usuari per mostrar a la UI
 };
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// TIPUS PER SISTEMA D'INVITACIONS
+// ═══════════════════════════════════════════════════════════════════════════════
+
+/**
+ * Representa una invitació per unir-se a una organització.
+ * Les invitacions es guarden a: organizations/{orgId}/invitations/{invitationId}
+ */
+export type Invitation = {
+  id: string;
+  token: string;                   // Token únic per l'enllaç (generat aleatòriament)
+  organizationId: string;          // ID de l'organització (per facilitar consultes)
+  organizationName: string;        // Nom de l'org (per mostrar al formulari de registre)
+  role: OrganizationRole;          // Rol que tindrà l'usuari quan s'uneixi
+  createdAt: string;               // Data de creació (format ISO)
+  expiresAt: string;               // Data d'expiració (format ISO)
+  createdBy: string;               // UID de qui ha creat la invitació
+  // Camps opcionals
+  email?: string;                  // Si s'especifica, només aquest email pot usar la invitació
+  // Camps que s'omplen quan s'usa la invitació
+  usedAt?: string;                 // Data quan s'ha usat (null si no s'ha usat)
+  usedBy?: string;                 // UID de l'usuari que l'ha usat
+};
+
+/**
+ * Estat d'una invitació
+ */
+export type InvitationStatus = 'pending' | 'used' | 'expired';
