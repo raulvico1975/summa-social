@@ -2,54 +2,139 @@
 @tailwind components;
 @tailwind utilities;
 
-body {
-  font-family: Arial, Helvetica, sans-serif;
-}
+/* ═══════════════════════════════════════════════════════════════════════════
+   SUMMA SOCIAL - Design System
+   Inspirat en Apple Human Interface Guidelines
+   ═══════════════════════════════════════════════════════════════════════════ */
 
 @layer base {
   :root {
-    --background: 0 0% 94%; /* #F0F0F0 */
-    --foreground: 240 10% 3.9%;
-    --card: 0 0% 100%;
-    --card-foreground: 240 10% 3.9%;
+    /* ─────────────────────────────────────────────────────────────────────
+       COLORS BASE
+       ───────────────────────────────────────────────────────────────────── */
+    --background: 0 0% 98%;           /* #FAFAFA - Blanc trencat, més suau */
+    --foreground: 240 10% 10%;        /* Gris molt fosc per text */
+    
+    --card: 0 0% 100%;                /* Blanc pur per targetes */
+    --card-foreground: 240 10% 10%;
+    
     --popover: 0 0% 100%;
-    --popover-foreground: 240 10% 3.9%;
-    --primary: 195 73% 63%; /* A slightly darker sky blue for better contrast */
-    --primary-foreground: 240 10% 3.9%; /* Dark text on light blue */
-    --secondary: 240 4.8% 95.9%;
-    --secondary-foreground: 240 5.9% 10%;
-    --muted: 240 4.8% 95.9%;
-    --muted-foreground: 240 3.8% 46.1%;
-    --accent: 120 60% 75%; /* #90EE90 - Muted */
-    --accent-foreground: 240 5.9% 10%; /* Dark text on light green */
-    --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 0 0% 98%;
-    --border: 240 5.9% 90%;
-    --input: 240 5.9% 90%;
-    --ring: 195 73% 63%;
-    --radius: 0.5rem;
+    --popover-foreground: 240 10% 10%;
+    
+    /* ─────────────────────────────────────────────────────────────────────
+       COLOR PRIMARI - Blau cel Summa Social
+       ───────────────────────────────────────────────────────────────────── */
+    --primary: 199 89% 48%;           /* #0EA5E9 - Sky-500 */
+    --primary-foreground: 0 0% 100%;  /* Blanc sobre primari */
+    
+    /* ─────────────────────────────────────────────────────────────────────
+       COLORS SECUNDARIS I ACCENTS
+       ───────────────────────────────────────────────────────────────────── */
+    --secondary: 220 14% 96%;         /* Gris molt clar */
+    --secondary-foreground: 220 9% 46%;
+    
+    --muted: 220 14% 96%;
+    --muted-foreground: 220 9% 46%;
+    
+    --accent: 199 89% 96%;            /* Blau molt clar per hovers */
+    --accent-foreground: 199 89% 32%;
+    
+    /* ─────────────────────────────────────────────────────────────────────
+       COLORS SEMÀNTICS
+       ───────────────────────────────────────────────────────────────────── */
+    --destructive: 0 84% 60%;         /* Vermell per errors */
+    --destructive-foreground: 0 0% 100%;
+    
+    --success: 142 71% 45%;           /* Verd per èxit */
+    --success-foreground: 0 0% 100%;
+    
+    --warning: 38 92% 50%;            /* Taronja per avisos */
+    --warning-foreground: 0 0% 100%;
+    
+    --info: 199 89% 48%;              /* Blau per informació */
+    --info-foreground: 0 0% 100%;
+    
+    /* ─────────────────────────────────────────────────────────────────────
+       COLORS SUBTILS (per fons de files, alertes, etc.)
+       ───────────────────────────────────────────────────────────────────── */
+    --success-subtle: 142 76% 97%;    /* Verd molt clar */
+    --warning-subtle: 48 96% 97%;     /* Taronja molt clar */
+    --destructive-subtle: 0 86% 97%;  /* Vermell molt clar */
+    --info-subtle: 199 89% 97%;       /* Blau molt clar */
+    
+    /* ─────────────────────────────────────────────────────────────────────
+       INTERFÍCIE
+       ───────────────────────────────────────────────────────────────────── */
+    --border: 220 13% 91%;            /* Vores subtils */
+    --input: 220 13% 91%;
+    --ring: 199 89% 48%;              /* Focus ring */
+    
+    --radius: 0.5rem;                 /* Border radius consistent */
+    
+    /* ─────────────────────────────────────────────────────────────────────
+       SIDEBAR
+       ───────────────────────────────────────────────────────────────────── */
+    --sidebar-background: 0 0% 100%;
+    --sidebar-foreground: 240 10% 10%;
+    --sidebar-primary: 199 89% 48%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 199 89% 96%;
+    --sidebar-accent-foreground: 199 89% 32%;
+    --sidebar-border: 220 13% 91%;
+    --sidebar-ring: 199 89% 48%;
   }
- 
+
+  /* ═══════════════════════════════════════════════════════════════════════
+     MODE FOSC
+     ═══════════════════════════════════════════════════════════════════════ */
   .dark {
-    --background: 240 10% 3.9%;
-    --foreground: 0 0% 98%;
-    --card: 240 10% 3.9%;
-    --card-foreground: 0 0% 98%;
-    --popover: 240 10% 3.9%;
-    --popover-foreground: 0 0% 98%;
-    --primary: 195 73% 73%;
-    --primary-foreground: 240 10% 3.9%;
-    --secondary: 240 3.7% 15.9%;
-    --secondary-foreground: 0 0% 98%;
-    --muted: 240 3.7% 15.9%;
-    --muted-foreground: 240 5% 64.9%;
-    --accent: 120 73% 25%;
-    --accent-foreground: 0 0% 98%;
-    --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 0 0% 98%;
-    --border: 240 3.7% 15.9%;
-    --input: 240 3.7% 15.9%;
-    --ring: 195 73% 73%;
+    --background: 224 71% 4%;
+    --foreground: 213 31% 91%;
+    
+    --card: 224 71% 6%;
+    --card-foreground: 213 31% 91%;
+    
+    --popover: 224 71% 6%;
+    --popover-foreground: 213 31% 91%;
+    
+    --primary: 199 89% 48%;
+    --primary-foreground: 0 0% 100%;
+    
+    --secondary: 215 28% 17%;
+    --secondary-foreground: 213 31% 91%;
+    
+    --muted: 215 28% 17%;
+    --muted-foreground: 215 20% 65%;
+    
+    --accent: 215 28% 17%;
+    --accent-foreground: 213 31% 91%;
+    
+    --destructive: 0 63% 31%;
+    --destructive-foreground: 0 0% 100%;
+    
+    --success: 142 71% 35%;
+    --success-foreground: 0 0% 100%;
+    
+    --warning: 38 92% 40%;
+    --warning-foreground: 0 0% 100%;
+    
+    --success-subtle: 142 50% 10%;
+    --warning-subtle: 38 50% 10%;
+    --destructive-subtle: 0 50% 10%;
+    --info-subtle: 199 50% 10%;
+    
+    --border: 215 28% 17%;
+    --input: 215 28% 17%;
+    --ring: 199 89% 48%;
+    
+    --sidebar-background: 224 71% 6%;
+    --sidebar-foreground: 213 31% 91%;
+    --sidebar-primary: 199 89% 48%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 215 28% 17%;
+    --sidebar-accent-foreground: 213 31% 91%;
+    --sidebar-border: 215 28% 17%;
+    --sidebar-ring: 199 89% 48%;
   }
 }
 
@@ -57,7 +142,123 @@ body {
   * {
     @apply border-border;
   }
+  
+  html {
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+  
   body {
     @apply bg-background text-foreground;
+    font-feature-settings: "rlig" 1, "calt" 1;
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   UTILITATS PERSONALITZADES
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+@layer utilities {
+  /* Fons subtils per a files de taula amb estats */
+  .bg-success-subtle {
+    background-color: hsl(var(--success-subtle));
+  }
+  
+  .bg-warning-subtle {
+    background-color: hsl(var(--warning-subtle));
+  }
+  
+  .bg-destructive-subtle {
+    background-color: hsl(var(--destructive-subtle));
+  }
+  
+  .bg-info-subtle {
+    background-color: hsl(var(--info-subtle));
+  }
+  
+  /* Text amb colors semàntics */
+  .text-success {
+    color: hsl(var(--success));
+  }
+  
+  .text-warning {
+    color: hsl(var(--warning));
+  }
+  
+  /* Transicions suaus per hover states */
+  .transition-subtle {
+    @apply transition-all duration-200 ease-out;
+  }
+  
+  /* Ombra subtil per targetes elevades */
+  .shadow-subtle {
+    box-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.05), 0 1px 2px -1px rgb(0 0 0 / 0.05);
+  }
+  
+  /* Focus visible millorat */
+  .focus-ring {
+    @apply focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2;
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   ANIMACIONS
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+@layer utilities {
+  @keyframes fade-in {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+  
+  @keyframes slide-up {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  
+  @keyframes pulse-subtle {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.7; }
+  }
+  
+  .animate-fade-in {
+    animation: fade-in 0.2s ease-out;
+  }
+  
+  .animate-slide-up {
+    animation: slide-up 0.3s ease-out;
+  }
+  
+  .animate-pulse-subtle {
+    animation: pulse-subtle 2s ease-in-out infinite;
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   SCROLLBAR PERSONALITZADA (opcional, per a navegadors Webkit)
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+@layer utilities {
+  .scrollbar-thin {
+    scrollbar-width: thin;
+    scrollbar-color: hsl(var(--border)) transparent;
+  }
+  
+  .scrollbar-thin::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+  
+  .scrollbar-thin::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  
+  .scrollbar-thin::-webkit-scrollbar-thumb {
+    background-color: hsl(var(--border));
+    border-radius: 3px;
+  }
+  
+  .scrollbar-thin::-webkit-scrollbar-thumb:hover {
+    background-color: hsl(var(--muted-foreground));
   }
 }
