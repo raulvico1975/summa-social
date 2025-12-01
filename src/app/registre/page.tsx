@@ -1,6 +1,7 @@
 'use client';
 
 import * as React from 'react';
+import { Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -14,7 +15,9 @@ import { doc, getDoc, setDoc, collection, query, where, getDocs, updateDoc } fro
 import { Loader2, AlertCircle, CheckCircle2 } from 'lucide-react';
 import type { Invitation, UserProfile, OrganizationMember } from '@/lib/data';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { Suspense } from 'react';
+
+// 👇 AFEGIR AIXÒ per evitar el prerendering estàtic
+export const dynamic = 'force-dynamic';
 
 type PageState = 'loading' | 'invalid' | 'expired' | 'used' | 'ready' | 'registering' | 'success';
 
