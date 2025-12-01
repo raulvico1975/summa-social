@@ -2,9 +2,9 @@
 'use client';
 
 import * as React from 'react';
-import { useFirebase, useCollection, useMemoFirebase } from '@/firebase';
+import { useFirebase, useCollection, useMemoFirebase, addDocumentNonBlocking, deleteDocumentNonBlocking, setDocumentNonBlocking } from '@/firebase';
 import { useCurrentOrganization } from '@/hooks/organization-provider';
-import { collection, doc, getDocs } from 'firebase/firestore';
+import { collection, doc, getDocs, writeBatch } from 'firebase/firestore';
 import type { Organization, UserProfile, OrganizationRole } from '@/lib/data';
 import { useTranslations } from '@/i18n';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -18,7 +18,7 @@ import {
 } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { useRouter } from 'next/navigation';
-import { Loader2, PlusCircle, Edit, Trash2, MoreVertical } from 'lucide-react';
+import { Loader2, PlusCircle, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -31,12 +31,6 @@ import {
   DialogClose
 } from '@/components/ui/dialog';
 import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
-import {
   AlertDialog,
   AlertDialogAction,
   AlertDialogCancel,
@@ -48,14 +42,6 @@ import {
 } from '@/components/ui/alert-dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
-import { createOrganization, inviteUser, deleteUser, deleteOrganization } from '@/services/admin';
 import { useToast } from '@/hooks/use-toast';
 
 const SUPER_ADMIN_UID = 'f2AHJqjXiOZkYajwkOnZ8RY6h2k2';
@@ -71,8 +57,11 @@ const formatDate = (dateString?: string) => {
     }
 };
 
+// ** NEW COMPONENT **
+// Client-side dialog to create an organization.
 function CreateOrganizationDialog({ onOrganizationCreated }: { onOrganizationCreated: () => void }) {
     const { t } = useTranslations();
+    const { firestore } = useFirebase();
     const [open, setOpen] = React.useState(false);
     const [name, setName] = React.useState('');
     const [taxId, setTaxId] = React.useState('');
@@ -80,9 +69,23 @@ function CreateOrganizationDialog({ onOrganizationCreated }: { onOrganizationCre
     const { toast } = useToast();
 
     const handleCreate = async () => {
+        if (!name || !taxId) {
+            toast({ variant: 'destructive', title: t.common.error, description: "El nom i el CIF són obligatoris." });
+            return;
+        }
+
         setIsCreating(true);
         try {
-            await createOrganization({ name, taxId });
+            const orgsCollection = collection(firestore, 'organizations');
+            const slug = name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+            const newOrgData: Omit<Organization, 'id'> = {
+                slug,
+                name,
+                taxId,
+                createdAt: new Date().toISOString()
+            };
+            await addDocumentNonBlocking(orgsCollection, newOrgData);
+            
             toast({ title: "Organització creada", description: `L'organització "${name}" s'ha creat correctament.` });
             onOrganizationCreated();
             setOpen(false);
@@ -140,6 +143,7 @@ function OrganizationsTable({
     onDataChanged: () => void 
 }) {
     const { t } = useTranslations();
+    const { firestore } = useFirebase();
     const [isAlertOpen, setIsAlertOpen] = React.useState(false);
     const [orgToDelete, setOrgToDelete] = React.useState<Organization | null>(null);
     const { toast } = useToast();
@@ -161,7 +165,11 @@ function OrganizationsTable({
     const handleDeleteConfirm = async () => {
         if (orgToDelete) {
             try {
-                await deleteOrganization({ orgId: orgToDelete.id });
+                // This is a simplified deletion. A robust solution would use a Cloud Function
+                // to recursively delete subcollections and handle users.
+                const orgRef = doc(firestore, 'organizations', orgToDelete.id);
+                await deleteDocumentNonBlocking(orgRef);
+                
                 toast({ title: "Organització eliminada", description: `L'organització "${orgToDelete.name}" s'ha eliminat.` });
                 onDataChanged();
             } catch (error: any) {
@@ -232,91 +240,6 @@ function OrganizationsTable({
     );
 }
 
-function InviteUserDialog({ onUserInvited, organizations }: { onUserInvited: () => void, organizations: Organization[] }) {
-    const { t } = useTranslations();
-    const [open, setOpen] = React.useState(false);
-    const [email, setEmail] = React.useState('');
-    const [displayName, setDisplayName] = React.useState('');
-    const [role, setRole] = React.useState<OrganizationRole>('viewer');
-    const [organizationId, setOrganizationId] = React.useState('');
-    const [isInviting, setIsInviting] = React.useState(false);
-    const { toast } = useToast();
-
-    const handleInvite = async () => {
-        setIsInviting(true);
-        try {
-            const result = await inviteUser({ email, displayName, role, organizationId });
-            toast({
-                title: "Usuari Convidat",
-                description: `S'ha enviat un correu a ${email} amb la contrasenya temporal: ${result.password}`,
-                duration: 9000
-            });
-            onUserInvited();
-            setOpen(false);
-            setEmail('');
-            setDisplayName('');
-            setRole('viewer');
-            setOrganizationId('');
-        } catch (error: any) {
-            toast({ variant: 'destructive', title: 'Error', description: error.message });
-        } finally {
-            setIsInviting(false);
-        }
-    };
-
-    return (
-        <Dialog open={open} onOpenChange={setOpen}>
-            <DialogTrigger asChild>
-                <Button>
-                    <PlusCircle className="mr-2" />
-                    {t.superAdmin.inviteUser}
-                </Button>
-            </DialogTrigger>
-            <DialogContent>
-                <DialogHeader>
-                    <DialogTitle>{t.superAdmin.inviteUser}</DialogTitle>
-                    <DialogDescription>{t.superAdmin.inviteUserDescription}</DialogDescription>
-                </DialogHeader>
-                <div className="grid gap-4 py-4">
-                    <div className="grid grid-cols-4 items-center gap-4">
-                        <Label htmlFor="user-email" className="text-right">Email</Label>
-                        <Input id="user-email" value={email} onChange={(e) => setEmail(e.target.value)} className="col-span-3" />
-                    </div>
-                    <div className="grid grid-cols-4 items-center gap-4">
-                        <Label htmlFor="user-name" className="text-right">{t.superAdmin.userName}</Label>
-                        <Input id="user-name" value={displayName} onChange={(e) => setDisplayName(e.target.value)} className="col-span-3" />
-                    </div>
-                    <div className="grid grid-cols-4 items-center gap-4">
-                        <Label htmlFor="user-org" className="text-right">{t.superAdmin.userOrganization}</Label>
-                        <Select value={organizationId} onValueChange={setOrganizationId}>
-                            <SelectTrigger className="col-span-3"><SelectValue placeholder={t.superAdmin.selectOrg} /></SelectTrigger>
-                            <SelectContent>
-                                {organizations.map(org => <SelectItem key={org.id} value={org.id}>{org.name}</SelectItem>)}
-                            </SelectContent>
-                        </Select>
-                    </div>
-                    <div className="grid grid-cols-4 items-center gap-4">
-                        <Label htmlFor="user-role" className="text-right">{t.superAdmin.userRole}</Label>
-                        <Select value={role} onValueChange={(value) => setRole(value as OrganizationRole)}>
-                            <SelectTrigger className="col-span-3"><SelectValue placeholder={t.superAdmin.selectRole} /></SelectTrigger>
-                            <SelectContent>
-                                {Object.entries(t.superAdmin.roles).map(([key, value]) => <SelectItem key={key} value={key}>{value}</SelectItem>)}
-                            </SelectContent>
-                        </Select>
-                    </div>
-                </div>
-                <DialogFooter>
-                    <DialogClose asChild><Button variant="outline">{t.common.cancel}</Button></DialogClose>
-                    <Button onClick={handleInvite} disabled={isInviting || !email || !displayName || !organizationId || !role}>
-                        {isInviting && <Loader2 className="mr-2 animate-spin" />}
-                        {t.superAdmin.invite}
-                    </Button>
-                </DialogFooter>
-            </DialogContent>
-        </Dialog>
-    );
-}
-
 function UsersTable({ 
     users, 
     organizations, 
@@ -327,6 +250,7 @@ function UsersTable({
     onDataChanged: () => void 
 }) {
     const { t } = useTranslations();
+    const { firestore } = useFirebase();
     const [isAlertOpen, setIsAlertOpen] = React.useState(false);
     const [userToDelete, setUserToDelete] = React.useState<(UserProfile & { id: string }) | null>(null);
     const { toast } = useToast();
@@ -348,8 +272,12 @@ function UsersTable({
     const handleDeleteConfirm = async () => {
         if (userToDelete) {
             try {
-                await deleteUser({ userId: userToDelete.id, orgId: userToDelete.organizationId });
-                toast({ title: "Usuari eliminat", description: `L'usuari "${userToDelete.displayName}" s'ha eliminat.` });
+                // This is a simplified deletion. A robust solution would use a Cloud Function
+                // to handle user deletion from Auth as well.
+                const userRef = doc(firestore, 'users', userToDelete.id);
+                await deleteDocumentNonBlocking(userRef);
+
+                toast({ title: "Perfil d'usuari eliminat", description: `El perfil de "${userToDelete.displayName}" s'ha eliminat.` });
                 onDataChanged();
             } catch (error: any) {
                 toast({ variant: 'destructive', title: 'Error', description: error.message });
@@ -369,7 +297,7 @@ function UsersTable({
                         <CardTitle>{t.superAdmin.usersTitle}</CardTitle>
                         <CardDescription>{t.superAdmin.usersDescription}</CardDescription>
                     </div>
-                    <InviteUserDialog onUserInvited={onDataChanged} organizations={organizations} />
+                     {/* The "Invite User" button is removed as we pivot away from Admin SDK */}
                 </CardHeader>
                 <CardContent>
                     <div className="rounded-md border">
