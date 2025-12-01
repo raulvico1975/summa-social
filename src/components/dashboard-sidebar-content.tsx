@@ -12,7 +12,17 @@ import {
   SidebarMenuButton,
   SidebarFooter,
 } from '@/components/ui/sidebar';
-import { LayoutDashboard, Settings, LogOut, FileText, FolderKanban, AreaChart, Shield, Heart, Building2 } from 'lucide-react';
+import { 
+  LayoutDashboard, 
+  Settings, 
+  LogOut, 
+  FileText, 
+  FolderKanban, 
+  AreaChart, 
+  Shield,
+  Heart,
+  Building2
+} from 'lucide-react';
 import { Logo } from '@/components/logo';
 import { useFirebase } from '@/firebase';
 import { useToast } from '@/hooks/use-toast';
@@ -21,7 +31,6 @@ import { signOut as firebaseSignOut } from 'firebase/auth';
 import { useCurrentOrganization } from '@/hooks/organization-provider';
 
 const SUPER_ADMIN_UID = 'f2AHJqjXiOZkYajwkOnZ8RY6h2k2';
-
 
 export function DashboardSidebarContent() {
   const pathname = usePathname();
@@ -37,6 +46,9 @@ export function DashboardSidebarContent() {
   const handleSignOut = async (e: React.MouseEvent<HTMLAnchorElement>) => {
     e.preventDefault();
     try {
+      // Netejar sessionStorage si el Super Admin estava veient una altra org
+      sessionStorage.removeItem('adminViewingOrgId');
+      
       await firebaseSignOut(firebaseAuth);
       
       toast({ title: t.sidebar.logoutToastTitle, description: t.sidebar.logoutToastDescription });
@@ -66,18 +78,17 @@ export function DashboardSidebarContent() {
       label: t.sidebar.projects,
       icon: FolderKanban,
     },
-    // ═══════════════════════════════════════════════════════════════════════
-    // CANVI: Substituïm "Emissors" per "Donants" i "Proveïdors"
-    // ═══════════════════════════════════════════════════════════════════════
     {
       href: '/dashboard/donants',
       label: t.sidebar.donors || 'Donants',
       icon: Heart,
+      className: 'text-red-500',
     },
     {
       href: '/dashboard/proveidors',
       label: t.sidebar.suppliers || 'Proveïdors',
       icon: Building2,
+      className: 'text-blue-500',
     },
     {
       href: '/dashboard/informes',
@@ -91,17 +102,19 @@ export function DashboardSidebarContent() {
     },
   ];
 
+  // Afegir opció Super Admin si l'usuari ho és
   if (isSuperAdmin) {
     menuItems.push({
-        href: '/dashboard/super-admin',
-        label: t.sidebar.superAdmin,
-        icon: Shield,
+      href: '/dashboard/super-admin',
+      label: 'Super Admin',
+      icon: Shield,
+      className: 'text-purple-500',
     });
   }
 
   const getInitials = (name: string | null | undefined): string => {
-    if (!name) return '??';
-    const parts = name.split(' ');
+    if (!name || name === t.sidebar.anonymousUser) return 'U';
+    const parts = name.trim().split(' ');
     if (parts.length > 1 && parts[0] && parts[1]) {
       return `${parts[0][0]}${parts[1][0]}`.toUpperCase();
     }
@@ -109,9 +122,23 @@ export function DashboardSidebarContent() {
       return parts[0].substring(0, 2).toUpperCase();
     }
     return name.substring(0, 2).toUpperCase();
-  }
+  };
   
-  const userName = userProfile?.displayName || firebaseUser?.displayName || t.sidebar.anonymousUser;
+  // Obtenir el nom de l'usuari - prioritzar el perfil de Firestore
+  const userName = React.useMemo(() => {
+    if (userProfile?.displayName) {
+      return userProfile.displayName;
+    }
+    if (firebaseUser?.displayName) {
+      return firebaseUser.displayName;
+    }
+    if (firebaseUser?.email) {
+      // Si no té displayName, mostrar la part abans de l'@
+      return firebaseUser.email.split('@')[0];
+    }
+    return t.sidebar.anonymousUser;
+  }, [userProfile, firebaseUser, t.sidebar.anonymousUser]);
+
   const userInitials = getInitials(userName);
 
   return (
@@ -132,7 +159,7 @@ export function DashboardSidebarContent() {
                 tooltip={{ children: item.label }}
               >
                 <Link href={item.href}>
-                  <item.icon />
+                  <item.icon className={item.className} />
                   <span>{item.label}</span>
                 </Link>
               </SidebarMenuButton>
