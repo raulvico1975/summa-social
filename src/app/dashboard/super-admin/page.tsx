@@ -1,11 +1,10 @@
-
 'use client';
 
 import * as React from 'react';
-import { useFirebase, useCollection, useMemoFirebase, addDocumentNonBlocking, deleteDocumentNonBlocking, setDocumentNonBlocking } from '@/firebase';
+import { useFirebase, useCollection, useMemoFirebase, addDocumentNonBlocking, deleteDocumentNonBlocking } from '@/firebase';
 import { useCurrentOrganization } from '@/hooks/organization-provider';
-import { collection, doc, getDocs, writeBatch } from 'firebase/firestore';
-import type { Organization, UserProfile, OrganizationRole } from '@/lib/data';
+import { collection, doc } from 'firebase/firestore';
+import type { Organization, UserProfile } from '@/lib/data';
 import { useTranslations } from '@/i18n';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import {
@@ -69,6 +68,10 @@ function CreateOrganizationDialog({ onOrganizationCreated }: { onOrganizationCre
     const { toast } = useToast();
 
     const handleCreate = async () => {
+        if (!firestore) {
+            toast({ variant: 'destructive', title: 'Error', description: 'Firestore no està disponible.' });
+            return;
+        }
         if (!name || !taxId) {
             toast({ variant: 'destructive', title: t.common.error, description: "El nom i el CIF són obligatoris." });
             return;
@@ -84,6 +87,8 @@ function CreateOrganizationDialog({ onOrganizationCreated }: { onOrganizationCre
                 taxId,
                 createdAt: new Date().toISOString()
             };
+            
+            // Use the non-blocking fire-and-forget function
             await addDocumentNonBlocking(orgsCollection, newOrgData);
             
             toast({ title: "Organització creada", description: `L'organització "${name}" s'ha creat correctament.` });
@@ -163,12 +168,12 @@ function OrganizationsTable({
     };
 
     const handleDeleteConfirm = async () => {
-        if (orgToDelete) {
+        if (orgToDelete && firestore) {
             try {
                 // This is a simplified deletion. A robust solution would use a Cloud Function
                 // to recursively delete subcollections and handle users.
                 const orgRef = doc(firestore, 'organizations', orgToDelete.id);
-                await deleteDocumentNonBlocking(orgRef);
+                deleteDocumentNonBlocking(orgRef);
                 
                 toast({ title: "Organització eliminada", description: `L'organització "${orgToDelete.name}" s'ha eliminat.` });
                 onDataChanged();
@@ -270,12 +275,12 @@ function UsersTable({
     };
 
     const handleDeleteConfirm = async () => {
-        if (userToDelete) {
+        if (userToDelete && firestore) {
             try {
                 // This is a simplified deletion. A robust solution would use a Cloud Function
                 // to handle user deletion from Auth as well.
                 const userRef = doc(firestore, 'users', userToDelete.id);
-                await deleteDocumentNonBlocking(userRef);
+                deleteDocumentNonBlocking(userRef);
 
                 toast({ title: "Perfil d'usuari eliminat", description: `El perfil de "${userToDelete.displayName}" s'ha eliminat.` });
                 onDataChanged();
@@ -359,8 +364,8 @@ export default function SuperAdminPage() {
     const [key, setKey] = React.useState(0);
     const forceRerender = () => setKey(prev => prev + 1);
 
-    const organizationsQuery = useMemoFirebase(() => collection(firestore, 'organizations'), [firestore]);
-    const usersQuery = useMemoFirebase(() => collection(firestore, 'users'), [firestore]);
+    const organizationsQuery = useMemoFirebase(() => firestore ? collection(firestore, 'organizations') : null, [firestore]);
+    const usersQuery = useMemoFirebase(() => firestore ? collection(firestore, 'users') : null, [firestore]);
 
     const { data: organizations, isLoading: isOrgsLoading } = useCollection<Organization>(organizationsQuery, [key]);
     const { data: users, isLoading: isUsersLoading } = useCollection<UserProfile & {id: string}>(usersQuery, [key]);
