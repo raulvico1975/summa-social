@@ -1,3 +1,4 @@
+
 'use client';
 
 import * as React from 'react';
@@ -29,7 +30,7 @@ const generateSlug = (name: string): string => {
   return name
     .toLowerCase()
     .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')    // Elimina accents
+    .replace(/[\u0300-\u036f]/g, '') // Elimina accents
     .replace(/[^a-z0-9\s-]/g, '')    // Elimina caràcters especials
     .replace(/\s+/g, '-')            // Espais a guions
     .replace(/-+/g, '-')             // Múltiples guions a un

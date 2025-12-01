@@ -197,6 +197,7 @@ export type UserProfile = {
  */
 export const SUPER_ADMIN_UID = 'f2AHJqjXiOZkYajwkOnZ8RY6h2k2';
 
+
 // ═══════════════════════════════════════════════════════════════════════════════
 // TIPUS PER SISTEMA D'INVITACIONS
 // ═══════════════════════════════════════════════════════════════════════════════
