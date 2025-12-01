@@ -1,4 +1,3 @@
-
 'use client';
 
 import * as React from 'react';
@@ -39,6 +38,12 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import {
@@ -48,15 +53,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Card, CardContent } from '@/components/ui/card';
-import { Progress } from '@/components/ui/progress';
 import {
   Sparkles,
   Loader2,
   ChevronDown,
   UserPlus,
   FileUp,
-  Link as LinkIcon,
   Trash2,
   MoreVertical,
   Edit,
@@ -64,10 +66,11 @@ import {
   GitMerge,
   Heart,
   Building2,
-  FileWarning,
-  CheckCircle2,
-  AlertTriangle,
-  Filter,
+  Download,
+  Circle,
+  Pencil,
+  X,
+  Check,
 } from 'lucide-react';
 import type { Transaction, Category, Project, AnyContact, Donor, Supplier } from '@/lib/data';
 import { categorizeTransaction } from '@/ai/flows/categorize-transactions';
@@ -81,15 +84,7 @@ import { useTranslations } from '@/i18n';
 import { useCurrentOrganization } from '@/hooks/organization-provider';
 
 // Tipus de filtre per documents
-type DocumentFilter = 'all' | 'missing' | 'urgent' | 'complete';
-
-// Calcula els dies des d'una data
-const daysSince = (dateString: string): number => {
-  const date = new Date(dateString);
-  const now = new Date();
-  const diffTime = Math.abs(now.getTime() - date.getTime());
-  return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-};
+type DocumentFilter = 'all' | 'missing';
 
 export function TransactionsTable() {
   const { firestore, user, storage } = useFirebase();
@@ -99,6 +94,10 @@ export function TransactionsTable() {
 
   // Filtre de documents
   const [documentFilter, setDocumentFilter] = React.useState<DocumentFilter>('all');
+
+  // Estat per editar notes inline
+  const [editingNoteId, setEditingNoteId] = React.useState<string | null>(null);
+  const [editingNoteValue, setEditingNoteValue] = React.useState('');
 
   // Col·leccions
   const transactionsCollection = useMemoFirebase(
@@ -129,7 +128,7 @@ export function TransactionsTable() {
   
   const [isEditDialogOpen, setIsEditDialogOpen] = React.useState(false);
   const [editingTransaction, setEditingTransaction] = React.useState<Transaction | null>(null);
-  const [formData, setFormData] = React.useState<{ description: string; amount: string; contactId: string | null; projectId: string | null; }>({ description: '', amount: '', contactId: null, projectId: null });
+  const [formData, setFormData] = React.useState<{ description: string; amount: string; note: string; contactId: string | null; projectId: string | null; }>({ description: '', amount: '', note: '', contactId: null, projectId: null });
   
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = React.useState(false);
   const [transactionToDelete, setTransactionToDelete] = React.useState<Transaction | null>(null);
@@ -167,43 +166,85 @@ export function TransactionsTable() {
   [availableProjects]);
 
   // ═══════════════════════════════════════════════════════════════════════════
-  // ESTADÍSTIQUES DE DOCUMENTS
+  // ESTADÍSTIQUES SIMPLES
   // ═══════════════════════════════════════════════════════════════════════════
-  const documentStats = React.useMemo(() => {
-    if (!transactions) return { total: 0, withDoc: 0, withoutDoc: 0, urgent: 0, expenses: 0, expensesWithDoc: 0 };
-    
-    const expenses = transactions.filter(tx => tx.amount < 0);
-    const expensesWithDoc = expenses.filter(tx => tx.document);
-    const expensesWithoutDoc = expenses.filter(tx => !tx.document);
-    const urgentExpenses = expensesWithoutDoc.filter(tx => daysSince(tx.date) > 30);
-    
-    return {
-      total: transactions.length,
-      withDoc: transactions.filter(tx => tx.document).length,
-      withoutDoc: transactions.filter(tx => !tx.document).length,
-      urgent: urgentExpenses.length,
-      expenses: expenses.length,
-      expensesWithDoc: expensesWithDoc.length,
-      expensesWithoutDocCount: expensesWithoutDoc.length,
-      percentage: expenses.length > 0 ? Math.round((expensesWithDoc.length / expenses.length) * 100) : 100,
-    };
+  const expensesWithoutDoc = React.useMemo(() => {
+    if (!transactions) return [];
+    return transactions.filter(tx => tx.amount < 0 && !tx.document);
   }, [transactions]);
 
   // Transaccions filtrades
   const filteredTransactions = React.useMemo(() => {
     if (!transactions) return [];
     
-    switch (documentFilter) {
-      case 'missing':
-        return transactions.filter(tx => !tx.document && tx.amount < 0);
-      case 'urgent':
-        return transactions.filter(tx => !tx.document && tx.amount < 0 && daysSince(tx.date) > 30);
-      case 'complete':
-        return transactions.filter(tx => tx.document);
-      default:
-        return transactions;
+    if (documentFilter === 'missing') {
+      return expensesWithoutDoc;
     }
-  }, [transactions, documentFilter]);
+    return transactions;
+  }, [transactions, documentFilter, expensesWithoutDoc]);
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // EXPORTAR EXCEL
+  // ═══════════════════════════════════════════════════════════════════════════
+  const handleExportExpensesWithoutDoc = () => {
+    if (expensesWithoutDoc.length === 0) {
+      toast({ title: 'No hi ha despeses sense document', description: 'Totes les despeses tenen justificant.' });
+      return;
+    }
+
+    // Crear CSV
+    const headers = ['Data', 'Import', 'Concepte bancari', 'Nota', 'Contacte', 'Categoria', 'Projecte'];
+    const rows = expensesWithoutDoc.map(tx => [
+      formatDate(tx.date),
+      tx.amount.toString().replace('.', ','),
+      `"${tx.description.replace(/"/g, '""')}"`,
+      `"${(tx.note || '').replace(/"/g, '""')}"`,
+      tx.contactId && contactMap[tx.contactId] ? contactMap[tx.contactId].name : '',
+      tx.category ? (categoryTranslations[tx.category] || tx.category) : '',
+      tx.projectId && projectMap[tx.projectId] ? projectMap[tx.projectId] : '',
+    ]);
+
+    const csvContent = [
+      headers.join(';'),
+      ...rows.map(row => row.join(';'))
+    ].join('\n');
+
+    // Descarregar
+    const blob = new Blob(['\ufeff' + csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `despeses-sense-justificant-${new Date().toISOString().split('T')[0]}.csv`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+
+    toast({ 
+      title: 'Excel exportat', 
+      description: `S'han exportat ${expensesWithoutDoc.length} despeses sense justificant.` 
+    });
+  };
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // GESTIÓ DE NOTES INLINE
+  // ═══════════════════════════════════════════════════════════════════════════
+  const handleStartEditNote = (tx: Transaction) => {
+    setEditingNoteId(tx.id);
+    setEditingNoteValue(tx.note || '');
+  };
+
+  const handleSaveNote = (txId: string) => {
+    if (!transactionsCollection) return;
+    updateDocumentNonBlocking(doc(transactionsCollection, txId), { note: editingNoteValue || null });
+    setEditingNoteId(null);
+    setEditingNoteValue('');
+  };
+
+  const handleCancelEditNote = () => {
+    setEditingNoteId(null);
+    setEditingNoteValue('');
+  };
 
   // Funcions existents...
   const handleCategorize = async (txId: string) => {
@@ -404,6 +445,7 @@ export function TransactionsTable() {
     setFormData({ 
         description: transaction.description, 
         amount: String(transaction.amount),
+        note: transaction.note || '',
         contactId: transaction.contactId || null,
         projectId: transaction.projectId || null,
     });
@@ -418,6 +460,7 @@ export function TransactionsTable() {
     updateDocumentNonBlocking(doc(transactionsCollection, editingTransaction.id), {
       description: formData.description,
       amount: parseFloat(formData.amount),
+      note: formData.note || null,
       contactId: formData.contactId,
       contactType: selectedContact?.type || null,
       projectId: formData.projectId
@@ -510,109 +553,14 @@ export function TransactionsTable() {
     );
   };
 
-  // ═══════════════════════════════════════════════════════════════════════════
-  // HELPER: Indicador visual de document
-  // ═══════════════════════════════════════════════════════════════════════════
-  const getDocumentIndicator = (tx: Transaction) => {
-    const isExpense = tx.amount < 0;
-    const days = daysSince(tx.date);
-    
-    if (tx.document) {
-      return {
-        icon: <CheckCircle2 className="h-4 w-4 text-green-500" />,
-        className: '',
-        tooltip: 'Document adjuntat',
-      };
-    }
-    
-    if (!isExpense) {
-      // Els ingressos no necessiten justificant obligatòriament
-      return {
-        icon: <FileUp className="h-4 w-4 text-muted-foreground" />,
-        className: '',
-        tooltip: 'Sense document',
-      };
-    }
-    
-    // Despeses sense document
-    if (days > 30) {
-      return {
-        icon: <AlertTriangle className="h-4 w-4 text-red-500" />,
-        className: 'bg-red-50',
-        tooltip: `⚠️ ${days} dies sense justificant!`,
-      };
-    }
-    
-    return {
-      icon: <FileWarning className="h-4 w-4 text-orange-500" />,
-      className: 'bg-orange-50',
-      tooltip: 'Pendent de justificant',
-    };
-  };
-
   return (
-    <>
+    <TooltipProvider>
       {/* ═══════════════════════════════════════════════════════════════════════
-          SECCIÓ: Widget de salut documental (només per despeses)
-          ═══════════════════════════════════════════════════════════════════════ */}
-      {documentStats.expenses > 0 && (
-        <Card className="mb-6">
-          <CardContent className="pt-6">
-            <div className="flex items-center justify-between mb-4">
-              <div className="flex items-center gap-3">
-                <div className={`p-2 rounded-full ${documentStats.percentage === 100 ? 'bg-green-100' : documentStats.percentage >= 70 ? 'bg-orange-100' : 'bg-red-100'}`}>
-                  {documentStats.percentage === 100 ? (
-                    <CheckCircle2 className="h-5 w-5 text-green-600" />
-                  ) : documentStats.urgent > 0 ? (
-                    <AlertTriangle className="h-5 w-5 text-red-600" />
-                  ) : (
-                    <FileWarning className="h-5 w-5 text-orange-600" />
-                  )}
-                </div>
-                <div>
-                  <h3 className="font-medium">Justificants de despeses</h3>
-                  <p className="text-sm text-muted-foreground">
-                    {documentStats.percentage === 100 
-                      ? '🎉 Totes les despeses estan justificades!' 
-                      : `${documentStats.expensesWithoutDocCount} despeses sense justificant`
-                    }
-                  </p>
-                </div>
-              </div>
-              <div className="text-right">
-                <span className="text-2xl font-bold">{documentStats.percentage}%</span>
-                <p className="text-xs text-muted-foreground">completat</p>
-              </div>
-            </div>
-            <Progress value={documentStats.percentage} className="h-2" />
-            <div className="flex gap-4 mt-4 text-sm">
-              <div className="flex items-center gap-1">
-                <CheckCircle2 className="h-4 w-4 text-green-500" />
-                <span>{documentStats.expensesWithDoc} amb document</span>
-              </div>
-              {documentStats.expensesWithoutDocCount > 0 && (
-                <div className="flex items-center gap-1">
-                  <FileWarning className="h-4 w-4 text-orange-500" />
-                  <span>{documentStats.expensesWithoutDocCount} pendents</span>
-                </div>
-              )}
-              {documentStats.urgent > 0 && (
-                <div className="flex items-center gap-1 text-red-600 font-medium">
-                  <AlertTriangle className="h-4 w-4" />
-                  <span>{documentStats.urgent} urgents (&gt;30 dies)</span>
-                </div>
-              )}
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* ═══════════════════════════════════════════════════════════════════════
-          SECCIÓ: Filtres i accions
+          SECCIÓ: Filtres i accions - SIMPLIFICAT
           ═══════════════════════════════════════════════════════════════════════ */}
       <div className="flex justify-between items-center mb-4 flex-wrap gap-4">
-        {/* Filtres de documents */}
-        <div className="flex gap-2">
+        {/* Filtres de documents - SIMPLIFICAT */}
+        <div className="flex gap-2 items-center">
           <Button
             variant={documentFilter === 'all' ? 'default' : 'outline'}
             size="sm"
@@ -620,25 +568,32 @@ export function TransactionsTable() {
           >
             Tots ({transactions?.length || 0})
           </Button>
-          <Button
-            variant={documentFilter === 'missing' ? 'default' : 'outline'}
-            size="sm"
-            onClick={() => setDocumentFilter('missing')}
-            className={documentStats.expensesWithoutDocCount > 0 ? 'border-orange-300' : ''}
-          >
-            <FileWarning className="mr-1 h-4 w-4 text-orange-500" />
-            Sense doc ({documentStats.expensesWithoutDocCount})
-          </Button>
-          {documentStats.urgent > 0 && (
+          {expensesWithoutDoc.length > 0 && (
             <Button
-              variant={documentFilter === 'urgent' ? 'destructive' : 'outline'}
+              variant={documentFilter === 'missing' ? 'default' : 'outline'}
               size="sm"
-              onClick={() => setDocumentFilter('urgent')}
-              className="border-red-300"
+              onClick={() => setDocumentFilter('missing')}
             >
-              <AlertTriangle className="mr-1 h-4 w-4" />
-              Urgents ({documentStats.urgent})
+              <Circle className="mr-1.5 h-2 w-2 fill-muted-foreground text-muted-foreground" />
+              Sense document ({expensesWithoutDoc.length})
             </Button>
+          )}
+          {/* Botó exportar */}
+          {expensesWithoutDoc.length > 0 && (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleExportExpensesWithoutDoc}
+                >
+                  <Download className="h-4 w-4" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>
+                Exportar despeses sense justificant (CSV)
+              </TooltipContent>
+            </Tooltip>
           )}
         </div>
 
@@ -647,27 +602,27 @@ export function TransactionsTable() {
           {isBatchCategorizing ? (
             <Loader2 className="mr-2 h-4 w-4 animate-spin" />
           ) : (
-            <Sparkles className="mr-2 h-4 w-4 text-primary" />
+            <Sparkles className="mr-2 h-4 w-4" />
           )}
           {t.movements.table.categorizeAll}
         </Button>
       </div>
 
       {/* ═══════════════════════════════════════════════════════════════════════
-          TAULA DE TRANSACCIONS
+          TAULA DE TRANSACCIONS - DISSENY NET
           ═══════════════════════════════════════════════════════════════════════ */}
       <div className="rounded-md border">
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>{t.movements.table.date}</TableHead>
-              <TableHead className="text-right">{t.movements.table.amount}</TableHead>
-              <TableHead>{t.movements.table.description}</TableHead>
-              <TableHead>Contacte</TableHead>
-              <TableHead>{t.movements.table.category}</TableHead>
-              <TableHead>{t.movements.table.project}</TableHead>
-              <TableHead>{t.movements.table.proof}</TableHead>
-              <TableHead><span className="sr-only">{t.movements.table.actions}</span></TableHead>
+              <TableHead className="w-[100px]">{t.movements.table.date}</TableHead>
+              <TableHead className="text-right w-[120px]">{t.movements.table.amount}</TableHead>
+              <TableHead>Concepte</TableHead>
+              <TableHead className="w-[150px]">Contacte</TableHead>
+              <TableHead className="w-[140px]">{t.movements.table.category}</TableHead>
+              <TableHead className="w-[140px]">{t.movements.table.project}</TableHead>
+              <TableHead className="w-[50px] text-center">Doc</TableHead>
+              <TableHead className="w-[50px]"><span className="sr-only">{t.movements.table.actions}</span></TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -677,20 +632,66 @@ export function TransactionsTable() {
               ) || [];
               const isDocumentLoading = loadingStates[`doc_${tx.id}`];
               const translatedCategory = tx.category ? categoryTranslations[tx.category] || tx.category : null;
-              const docIndicator = getDocumentIndicator(tx);
+              const isExpense = tx.amount < 0;
+              const hasDocument = !!tx.document;
+              const isEditingNote = editingNoteId === tx.id;
 
               return (
-                <TableRow key={tx.id} className={docIndicator.className}>
-                  <TableCell>{formatDate(tx.date)}</TableCell>
+                <TableRow key={tx.id}>
+                  <TableCell className="text-muted-foreground">{formatDate(tx.date)}</TableCell>
                   <TableCell
-                    className={`text-right font-mono ${
-                      tx.amount > 0 ? 'text-green-600' : 'text-red-600'
+                    className={`text-right font-mono font-medium ${
+                      tx.amount > 0 ? 'text-green-600' : 'text-foreground'
                     }`}
                   >
                     {formatCurrency(tx.amount)}
                   </TableCell>
-                  <TableCell className="font-medium max-w-xs truncate" title={tx.description}>
-                    {tx.description}
+                  {/* Columna Concepte + Nota */}
+                  <TableCell>
+                    <div className="space-y-1">
+                      {/* Concepte bancari original */}
+                      <p className="text-sm truncate max-w-[300px]" title={tx.description}>
+                        {tx.description}
+                      </p>
+                      {/* Nota editable */}
+                      {isEditingNote ? (
+                        <div className="flex items-center gap-1">
+                          <Input
+                            value={editingNoteValue}
+                            onChange={(e) => setEditingNoteValue(e.target.value)}
+                            placeholder="Afegeix una nota..."
+                            className="h-7 text-sm"
+                            autoFocus
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter') handleSaveNote(tx.id);
+                              if (e.key === 'Escape') handleCancelEditNote();
+                            }}
+                          />
+                          <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => handleSaveNote(tx.id)}>
+                            <Check className="h-3.5 w-3.5 text-green-600" />
+                          </Button>
+                          <Button variant="ghost" size="icon" className="h-7 w-7" onClick={handleCancelEditNote}>
+                            <X className="h-3.5 w-3.5 text-muted-foreground" />
+                          </Button>
+                        </div>
+                      ) : tx.note ? (
+                        <button
+                          onClick={() => handleStartEditNote(tx)}
+                          className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors group"
+                        >
+                          <span className="italic">"{tx.note}"</span>
+                          <Pencil className="h-3 w-3 opacity-0 group-hover:opacity-100 transition-opacity" />
+                        </button>
+                      ) : (
+                        <button
+                          onClick={() => handleStartEditNote(tx)}
+                          className="flex items-center gap-1 text-xs text-muted-foreground/50 hover:text-muted-foreground transition-colors"
+                        >
+                          <Pencil className="h-3 w-3" />
+                          <span>Afegir nota</span>
+                        </button>
+                      )}
+                    </div>
                   </TableCell>
                   {/* Columna Contacte */}
                   <TableCell>
@@ -702,7 +703,7 @@ export function TransactionsTable() {
                                     <ChevronDown className="h-3 w-3 text-muted-foreground" />
                                 </Button>
                            ) : (
-                               <Button variant="ghost" size="sm">
+                               <Button variant="ghost" size="sm" className="text-muted-foreground">
                                    <UserPlus className="mr-2 h-4 w-4"/>
                                    {t.movements.table.assign}
                                </Button>
@@ -794,7 +795,7 @@ export function TransactionsTable() {
                         {loadingStates[tx.id] ? (
                           <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                         ) : (
-                          <Sparkles className="mr-2 h-4 w-4 text-primary" />
+                          <Sparkles className="mr-2 h-4 w-4" />
                         )}
                         {t.movements.table.categorize}
                       </Button>
@@ -810,7 +811,7 @@ export function TransactionsTable() {
                                     <ChevronDown className="h-3 w-3 text-muted-foreground" />
                                 </Button>
                            ) : (
-                               <Button variant="ghost" size="sm">
+                               <Button variant="ghost" size="sm" className="text-muted-foreground">
                                    <FolderKanban className="mr-2 h-4 w-4"/>
                                    {t.movements.table.assign}
                                </Button>
@@ -829,28 +830,38 @@ export function TransactionsTable() {
                         </DropdownMenuContent>
                     </DropdownMenu>
                   </TableCell>
-                  {/* Columna Document - AMB INDICADORS VISUALS */}
-                  <TableCell>
+                  {/* Columna Document - INDICADOR SIMPLE AMB PUNTS */}
+                  <TableCell className="text-center">
                       {isDocumentLoading ? (
-                          <Button variant="outline" size="icon" disabled>
-                              <Loader2 className="h-4 w-4 animate-spin" />
-                          </Button>
-                      ) : tx.document ? (
-                          <Button asChild variant="outline" size="icon" className="border-green-300 hover:bg-green-50">
-                              <a href={tx.document} target="_blank" rel="noopener noreferrer" title="Veure document">
-                                  <CheckCircle2 className="h-4 w-4 text-green-500" />
+                          <Loader2 className="h-4 w-4 animate-spin mx-auto text-muted-foreground" />
+                      ) : hasDocument ? (
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <a 
+                                href={tx.document!} 
+                                target="_blank" 
+                                rel="noopener noreferrer"
+                                className="inline-flex"
+                              >
+                                <Circle className="h-3 w-3 fill-green-500 text-green-500" />
                               </a>
-                          </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>Veure document</TooltipContent>
+                          </Tooltip>
                       ) : (
-                          <Button 
-                            variant="outline" 
-                            size="icon" 
-                            onClick={() => handleAttachDocument(tx.id)}
-                            className={tx.amount < 0 && daysSince(tx.date) > 30 ? 'border-red-300 hover:bg-red-50' : tx.amount < 0 ? 'border-orange-300 hover:bg-orange-50' : ''}
-                            title={docIndicator.tooltip}
-                          >
-                              {docIndicator.icon}
-                          </Button>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <button 
+                                onClick={() => handleAttachDocument(tx.id)}
+                                className="inline-flex hover:scale-110 transition-transform"
+                              >
+                                <Circle className={`h-3 w-3 ${isExpense ? 'text-muted-foreground' : 'text-muted-foreground/30'}`} />
+                              </button>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              {isExpense ? 'Adjuntar justificant' : 'Adjuntar document'}
+                            </TooltipContent>
+                          </Tooltip>
                       )}
                   </TableCell>
                   {/* Accions */}
@@ -866,6 +877,12 @@ export function TransactionsTable() {
                                     <Edit className="mr-2 h-4 w-4" />
                                     {t.movements.table.edit}
                                 </DropdownMenuItem>
+                                {!hasDocument && (
+                                  <DropdownMenuItem onClick={() => handleAttachDocument(tx.id)}>
+                                    <FileUp className="mr-2 h-4 w-4" />
+                                    Adjuntar document
+                                  </DropdownMenuItem>
+                                )}
                                 {tx.amount > 0 && (
                                   <DropdownMenuItem onClick={() => handleSplitRemittance(tx)}>
                                     <GitMerge className="mr-2 h-4 w-4" />
@@ -885,9 +902,9 @@ export function TransactionsTable() {
             })}
              {filteredTransactions.length === 0 && (
                 <TableRow>
-                    <TableCell colSpan={8} className="h-24 text-center">
-                        {documentFilter !== 'all' 
-                          ? '🎉 Cap moviment coincideix amb el filtre seleccionat'
+                    <TableCell colSpan={8} className="h-24 text-center text-muted-foreground">
+                        {documentFilter === 'missing' 
+                          ? '🎉 Totes les despeses tenen justificant!'
                           : t.movements.table.noTransactions
                         }
                     </TableCell>
@@ -898,7 +915,7 @@ export function TransactionsTable() {
       </div>
 
       {/* ═══════════════════════════════════════════════════════════════════════
-          DIÀLEGS (sense canvis)
+          DIÀLEGS
           ═══════════════════════════════════════════════════════════════════════ */}
 
       {/* Edit Transaction Dialog */}
@@ -913,13 +930,25 @@ export function TransactionsTable() {
           <div className="grid gap-4 py-4">
             <div className="grid grid-cols-4 items-center gap-4">
               <Label htmlFor="description" className="text-right">
-                {t.movements.table.description}
+                Concepte bancari
               </Label>
               <Input
                 id="description"
                 value={formData.description}
                 onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                 className="col-span-3"
+              />
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="note" className="text-right">
+                Nota
+              </Label>
+              <Input
+                id="note"
+                value={formData.note}
+                onChange={(e) => setFormData({ ...formData, note: e.target.value })}
+                className="col-span-3"
+                placeholder="Descripció clara del moviment..."
               />
             </div>
             <div className="grid grid-cols-4 items-center gap-4">
@@ -1078,6 +1107,6 @@ export function TransactionsTable() {
           onSplitDone={handleOnSplitDone}
         />
       )}
-    </>
+    </TooltipProvider>
   );
 }
