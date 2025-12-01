@@ -118,18 +118,29 @@ export type Emisor = {
 // ═══════════════════════════════════════════════════════════════════════════════
 
 /**
+ * Estat d'una organització
+ */
+export type OrganizationStatus = 'active' | 'suspended' | 'pending';
+
+/**
  * Representa una organització (ONG/entitat social).
+ * S'emmagatzema a: organizations/{orgId}
  */
 export type Organization = {
   id: string;
-  slug: string;
   name: string;
+  slug: string;
   taxId: string;
+  status: OrganizationStatus;
   createdAt: string;
+  updatedAt?: string;
+  suspendedAt?: string;
+  suspendedReason?: string;
 };
 
 /**
  * Representa un membre d'una organització.
+ * S'emmagatzema a: organizations/{orgId}/members/{userId}
  */
 export type OrganizationMember = {
   userId: string;
@@ -141,20 +152,25 @@ export type OrganizationMember = {
 
 /**
  * Rols disponibles dins una organització.
- * - admin: Control total
- * - user: Gestió financera
- * - viewer: Només lectura
+ * - super_admin: Pot gestionar tota la plataforma (només 1 usuari)
+ * - admin: Control total de la seva organització
+ * - treasurer: Gestió financera (pot convidar altres tresorers o membres)
+ * - member: Pot veure i editar moviments
  */
-export type OrganizationRole = 'admin' | 'user' | 'viewer';
+export type OrganizationRole = 'admin' | 'treasurer' | 'member';
 
 /**
- * Perfil d'usuari amb la seva organització assignada.
+ * Perfil d'usuari global, conté informació bàsica i organitzacions a les que pertany.
+ * S'emmagatzema a: users/{userId}
  */
 export type UserProfile = {
-  organizationId: string;
-  role: OrganizationRole;
   displayName: string;
+  email: string;
+  organizations: Record<string, OrganizationRole>; // Mapa d'ID d'organització -> Rol
+  activeOrganizationId: string;
+  isSuperAdmin: boolean;
 };
+
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // TIPUS PER SISTEMA D'INVITACIONS
@@ -162,6 +178,7 @@ export type UserProfile = {
 
 /**
  * Representa una invitació per unir-se a una organització.
+ * S'emmagatzema a: invitations/{invitationId}
  */
 export type Invitation = {
   id: string;
