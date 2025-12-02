@@ -116,6 +116,23 @@ function normalizeText(text: string): string {
     .replace(/[^a-z0-9]/g, '');
 }
 
+function toTitleCase(text: string): string {
+  if (!text) return '';
+  return text
+    .toLowerCase()
+    .split(' ')
+    .map(word => {
+      if (word.length === 0) return '';
+      // Mantenir preposicions en minúscula (de, del, la, los, etc.)
+      const prepositions = ['de', 'del', 'la', 'las', 'los', 'el', 'y', 'e', 'i'];
+      if (prepositions.includes(word)) return word;
+      return word.charAt(0).toUpperCase() + word.slice(1);
+    })
+    .join(' ')
+    .trim()
+    .replace(/\s+/g, ' '); // Eliminar espais duplicats
+}
+
 function autoDetectColumn(header: string): keyof ColumnMapping | null {
   const normalized = normalizeText(header);
   
@@ -300,7 +317,7 @@ export function DonorImporter({
     const rows: ImportRow[] = rawData.map((row, index) => {
       const parsed: Partial<Donor> = {
         type: 'donor',
-        name: mapping.name ? String(row[mapping.name] || '').trim() : '',
+        name: mapping.name ? toTitleCase(String(row[mapping.name] || '')) : '',
         taxId: mapping.taxId ? cleanTaxId(row[mapping.taxId]) : '',
         zipCode: mapping.zipCode ? String(row[mapping.zipCode] || '').trim() : '',
         donorType: mapping.donorType ? parseDonorType(row[mapping.donorType]) : 'individual',
