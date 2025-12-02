@@ -12,6 +12,7 @@ import type { Language } from '@/i18n';
 import { PasswordChangeForm } from '@/components/password-change-form';
 import { useCurrentOrganization } from '@/hooks/organization-provider';
 import { Separator } from '@/components/ui/separator';
+import { OrganizationSettings } from '@/components/organization-settings';
 
 function LanguageSelector() {
   const { t, language, setLanguage } = useTranslations();
@@ -67,32 +68,37 @@ export default function SettingsPage() {
         <p className="text-muted-foreground">{t.settings.description}</p>
       </div>
 
-      {/* User Settings Section */}
+      {/* Organization Settings Section - PRIMER */}
       <div className="flex flex-col gap-6">
-         <h2 className="text-xl font-semibold tracking-tight">{t.settings.userSettingsTitle}</h2>
-         <PasswordChangeForm />
-         <LanguageSelector />
+        <h2 className="text-xl font-semibold tracking-tight">{t.settings.organizationSettingsTitle}</h2>
+        {canManageOrganization ? (
+          <>
+            {/* NOU: Dades de l'Organització */}
+            <OrganizationSettings />
+            
+            {/* Categories */}
+            <CategoryManager />
+          </>
+        ) : (
+          <Card>
+            <CardHeader>
+              <CardTitle>{t.settings.manageCategories}</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-muted-foreground">{t.settings.permissionDenied}</p>
+            </CardContent>
+          </Card>
+        )}
       </div>
 
       <Separator />
 
-      {/* Organization Settings Section */}
+      {/* User Settings Section - DESPRÉS */}
       <div className="flex flex-col gap-6">
-          <h2 className="text-xl font-semibold tracking-tight">{t.settings.organizationSettingsTitle}</h2>
-           {canManageOrganization ? (
-                <CategoryManager />
-            ) : (
-                <Card>
-                    <CardHeader>
-                        <CardTitle>{t.settings.manageCategories}</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                        <p className="text-muted-foreground">{t.settings.permissionDenied}</p>
-                    </CardContent>
-                </Card>
-            )}
+        <h2 className="text-xl font-semibold tracking-tight">{t.settings.userSettingsTitle}</h2>
+        <PasswordChangeForm />
+        <LanguageSelector />
       </div>
-
     </div>
   );
 }
