@@ -41,26 +41,18 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
-import { PlusCircle, Edit, Trash2, User, Building2, RefreshCw, Heart } from 'lucide-react';
+import { PlusCircle, Edit, Trash2, User, Building2, RefreshCw, Heart, Upload } from 'lucide-react';
 import type { Donor } from '@/lib/data';
 import { useToast } from '@/hooks/use-toast';
 import { Badge } from '@/components/ui/badge';
 import { useCollection, useFirebase, useMemoFirebase, addDocumentNonBlocking, deleteDocumentNonBlocking, setDocumentNonBlocking } from '@/firebase';
 import { collection, doc, query, where } from 'firebase/firestore';
 import { useCurrentOrganization } from '@/hooks/organization-provider';
+import { DonorImporter } from './donor-importer';
 
 const formatCurrency = (amount?: number) => {
   if (!amount) return '-';
   return new Intl.NumberFormat('ca-ES', { style: 'currency', currency: 'EUR' }).format(amount);
-};
-
-const formatDate = (dateString?: string) => {
-  if (!dateString) return '-';
-  try {
-    return new Date(dateString).toLocaleDateString('ca-ES');
-  } catch {
-    return dateString;
-  }
 };
 
 type DonorFormData = Omit<Donor, 'id' | 'createdAt' | 'updatedAt'>;
@@ -85,7 +77,6 @@ export function DonorManager() {
   const { organizationId } = useCurrentOrganization();
   const { toast } = useToast();
 
-  // Query només per donants (type === 'donor')
   const contactsCollection = useMemoFirebase(
     () => organizationId ? collection(firestore, 'organizations', organizationId, 'contacts') : null,
     [firestore, organizationId]
@@ -100,6 +91,7 @@ export function DonorManager() {
 
   const [isDialogOpen, setIsDialogOpen] = React.useState(false);
   const [isAlertOpen, setIsAlertOpen] = React.useState(false);
+  const [isImportOpen, setIsImportOpen] = React.useState(false);
   const [editingDonor, setEditingDonor] = React.useState<Donor | null>(null);
   const [donorToDelete, setDonorToDelete] = React.useState<Donor | null>(null);
   const [formData, setFormData] = React.useState<DonorFormData>(emptyFormData);
@@ -176,7 +168,6 @@ export function DonorManager() {
     const now = new Date().toISOString();
     const dataToSave = {
       ...formData,
-      // Netejar camps buits
       monthlyAmount: formData.monthlyAmount || null,
       memberSince: formData.memberSince || null,
       iban: formData.iban || null,
@@ -187,15 +178,17 @@ export function DonorManager() {
     };
 
     if (editingDonor) {
-      // Actualitzar
       setDocumentNonBlocking(doc(contactsCollection, editingDonor.id), dataToSave, { merge: true });
       toast({ title: 'Donant actualitzat', description: `S'ha actualitzat "${formData.name}" correctament.` });
     } else {
-      // Crear
       addDocumentNonBlocking(contactsCollection, { ...dataToSave, createdAt: now });
       toast({ title: 'Donant creat', description: `S'ha creat "${formData.name}" correctament.` });
     }
     handleOpenChange(false);
+  };
+
+  const handleImportComplete = (count: number) => {
+    // El toast ja es mostra dins del DonorImporter
   };
 
   const dialogTitle = editingDonor ? 'Editar Donant' : 'Nou Donant';
@@ -217,12 +210,18 @@ export function DonorManager() {
                 Administra els donants i socis de l'organització
               </CardDescription>
             </div>
-            <DialogTrigger asChild>
-              <Button onClick={handleAddNew}>
-                <PlusCircle className="mr-2 h-4 w-4" />
-                Afegir Donant
+            <div className="flex gap-2">
+              <Button variant="outline" onClick={() => setIsImportOpen(true)}>
+                <Upload className="mr-2 h-4 w-4" />
+                Importar
               </Button>
-            </DialogTrigger>
+              <DialogTrigger asChild>
+                <Button onClick={handleAddNew}>
+                  <PlusCircle className="mr-2 h-4 w-4" />
+                  Afegir Donant
+                </Button>
+              </DialogTrigger>
+            </div>
           </CardHeader>
           <CardContent>
             <div className="rounded-md border">
@@ -290,7 +289,7 @@ export function DonorManager() {
                   {(!donors || donors.length === 0) && (
                     <TableRow>
                       <TableCell colSpan={6} className="text-center text-muted-foreground h-24">
-                        No hi ha donants registrats. Afegeix el primer!
+                        No hi ha donants registrats. Afegeix el primer o importa'ls des d'Excel!
                       </TableCell>
                     </TableRow>
                   )}
@@ -307,7 +306,6 @@ export function DonorManager() {
           </DialogHeader>
           
           <div className="grid gap-4 py-4">
-            {/* Secció: Dades bàsiques */}
             <div className="space-y-4">
               <h4 className="text-sm font-medium text-muted-foreground">Dades bàsiques</h4>
               
@@ -361,7 +359,6 @@ export function DonorManager() {
               </div>
             </div>
 
-            {/* Secció: Tipus de donació */}
             <div className="space-y-4 pt-4 border-t">
               <h4 className="text-sm font-medium text-muted-foreground">Tipus de donació</h4>
 
@@ -421,7 +418,6 @@ export function DonorManager() {
               )}
             </div>
 
-            {/* Secció: Contacte */}
             <div className="space-y-4 pt-4 border-t">
               <h4 className="text-sm font-medium text-muted-foreground">Contacte (opcional)</h4>
 
@@ -449,7 +445,6 @@ export function DonorManager() {
               </div>
             </div>
 
-            {/* Secció: Notes */}
             <div className="space-y-4 pt-4 border-t">
               <h4 className="text-sm font-medium text-muted-foreground">Notes</h4>
 
@@ -493,6 +488,12 @@ export function DonorManager() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <DonorImporter 
+        open={isImportOpen} 
+        onOpenChange={setIsImportOpen}
+        onImportComplete={handleImportComplete}
+      />
     </>
   );
 }
