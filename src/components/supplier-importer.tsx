@@ -741,7 +741,6 @@ export function SupplierImporter({
     </Dialog>
   );
 }
-
 Pas 2: Actualitzar el supplier-manager
 
 Obre: src/components/supplier-manager.tsx
@@ -946,7 +945,7 @@ export function SupplierManager() {
     handleOpenChange(false);
   };
 
-  const handleImportComplete = () => {
+  const handleImportComplete = (count: number) => {
     // Es pot afegir lògica addicional aquí si cal
   };
 
@@ -1055,7 +1054,6 @@ export function SupplierManager() {
           </DialogHeader>
           
           <div className="grid gap-4 py-4">
-            {/* Secció: Dades bàsiques */}
             <div className="space-y-4">
               <h4 className="text-sm font-medium text-muted-foreground">Dades bàsiques</h4>
               
@@ -1101,7 +1099,6 @@ export function SupplierManager() {
               </div>
             </div>
 
-            {/* Secció: Adreça */}
             <div className="space-y-4 pt-4 border-t">
               <h4 className="text-sm font-medium text-muted-foreground">Adreça</h4>
 
@@ -1128,7 +1125,6 @@ export function SupplierManager() {
               </div>
             </div>
 
-            {/* Secció: Contacte */}
             <div className="space-y-4 pt-4 border-t">
               <h4 className="text-sm font-medium text-muted-foreground">Contacte</h4>
 
@@ -1156,7 +1152,6 @@ export function SupplierManager() {
               </div>
             </div>
 
-            {/* Secció: Dades bancàries i pagament */}
             <div className="space-y-4 pt-4 border-t">
               <h4 className="text-sm font-medium text-muted-foreground">Dades de pagament</h4>
 
@@ -1183,7 +1178,6 @@ export function SupplierManager() {
               </div>
             </div>
 
-            {/* Secció: Notes */}
             <div className="space-y-4 pt-4 border-t">
               <h4 className="text-sm font-medium text-muted-foreground">Notes</h4>
 
@@ -1228,8 +1222,8 @@ export function SupplierManager() {
         </AlertDialogContent>
       </AlertDialog>
 
-      <SupplierImporter
-        open={isImportOpen}
+      <SupplierImporter 
+        open={isImportOpen} 
         onOpenChange={setIsImportOpen}
         onImportComplete={handleImportComplete}
       />
