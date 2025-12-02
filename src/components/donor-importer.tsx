@@ -348,60 +348,75 @@ export function DonorImporter({
     setStep('preview');
   };
 
-  const executeImport = async () => {
-    if (!organizationId || !firestore) return;
+const executeImport = async () => {
+  if (!organizationId || !firestore) return;
 
-    setStep('importing');
-    setImportProgress(0);
+  setStep('importing');
+  setImportProgress(0);
 
-    const validRows = importRows.filter(r => r.status === 'valid');
-    const contactsRef = collection(firestore, 'organizations', organizationId, 'contacts');
-    const now = new Date().toISOString();
-    
-    let imported = 0;
-    const batchSize = 50;
-    const batches = Math.ceil(validRows.length / batchSize);
+  const validRows = importRows.filter(r => r.status === 'valid');
+  const contactsRef = collection(firestore, 'organizations', organizationId, 'contacts');
+  const now = new Date().toISOString();
+  
+  let imported = 0;
+  const batchSize = 50;
+  const batches = Math.ceil(validRows.length / batchSize);
 
-    try {
-      for (let i = 0; i < batches; i++) {
-        const batch = writeBatch(firestore);
-        const start = i * batchSize;
-        const end = Math.min(start + batchSize, validRows.length);
+  try {
+    for (let i = 0; i < batches; i++) {
+      const batch = writeBatch(firestore);
+      const start = i * batchSize;
+      const end = Math.min(start + batchSize, validRows.length);
+      
+      for (let j = start; j < end; j++) {
+        const row = validRows[j];
+        const newDocRef = doc(contactsRef);
         
-        for (let j = start; j < end; j++) {
-          const row = validRows[j];
-          const newDocRef = doc(contactsRef);
-          batch.set(newDocRef, {
-            ...row.parsed,
-            id: newDocRef.id,
-            createdAt: now,
-            updatedAt: now,
-          });
-          imported++;
-        }
+        // Netejar undefined abans de guardar (Firestore no accepta undefined)
+        const cleanData: Record<string, any> = {
+          id: newDocRef.id,
+          type: 'donor',
+          name: row.parsed.name || '',
+          taxId: row.parsed.taxId || '',
+          zipCode: row.parsed.zipCode || '',
+          donorType: row.parsed.donorType || 'individual',
+          membershipType: row.parsed.membershipType || 'one-time',
+          createdAt: now,
+          updatedAt: now,
+        };
 
-        await batch.commit();
-        setImportProgress(Math.round((imported / validRows.length) * 100));
+        // Afegir camps opcionals només si tenen valor
+        if (row.parsed.monthlyAmount) cleanData.monthlyAmount = row.parsed.monthlyAmount;
+        if (row.parsed.iban) cleanData.iban = row.parsed.iban;
+        if (row.parsed.email) cleanData.email = row.parsed.email;
+        if (row.parsed.phone) cleanData.phone = row.parsed.phone;
+
+        batch.set(newDocRef, cleanData);
+        imported++;
       }
 
-      setImportedCount(imported);
-      setStep('complete');
-      onImportComplete?.(imported);
-      
-      toast({
-        title: 'Importació completada',
-        description: `S'han importat ${imported} donants correctament.`,
-      });
-    } catch (error) {
-      console.error('Error important:', error);
-      toast({
-        variant: 'destructive',
-        title: 'Error',
-        description: 'Hi ha hagut un error durant la importació.',
-      });
-      setStep('preview');
+      await batch.commit();
+      setImportProgress(Math.round((imported / validRows.length) * 100));
     }
-  };
+
+    setImportedCount(imported);
+    setStep('complete');
+    onImportComplete?.(imported);
+    
+    toast({
+      title: 'Importació completada',
+      description: `S'han importat ${imported} donants correctament.`,
+    });
+  } catch (error) {
+    console.error('Error important:', error);
+    toast({
+      variant: 'destructive',
+      title: 'Error',
+      description: 'Hi ha hagut un error durant la importació.',
+    });
+    setStep('preview');
+  }
+};
 
   const downloadTemplate = () => {
     const template = [
