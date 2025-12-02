@@ -3,7 +3,7 @@
 import * as React from 'react';
 import { useFirebase, useCollection, useMemoFirebase } from '@/firebase';
 import { useCurrentOrganization } from '@/hooks/organization-provider';
-import { collection, query, where, getDocs } from 'firebase/firestore';
+import { collection, query, where, getDocs, doc, getDoc } from 'firebase/firestore';
 import type { Transaction, Donor, Organization } from '@/lib/data';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -60,6 +60,11 @@ interface DonorSummary {
   hasEmail: boolean;
 }
 
+// Tipus ampliat per organització amb logo
+interface OrganizationWithLogo extends Organization {
+  logoUrl?: string;
+}
+
 // Formatejador de moneda
 const formatCurrency = (amount: number) => {
   return new Intl.NumberFormat('ca-ES', { style: 'currency', currency: 'EUR' }).format(amount);
@@ -72,6 +77,11 @@ const formatDate = (dateString: string) => {
     month: '2-digit',
     year: 'numeric',
   });
+};
+
+// Netejar nom (treure espais extra)
+const cleanName = (name: string): string => {
+  return name.trim().replace(/\s+/g, ' ');
 };
 
 // Convertir número a text (per imports)
@@ -131,6 +141,33 @@ const numberToWords = (num: number): string => {
   return result.trim();
 };
 
+// Carregar imatge com a base64
+const loadImageAsBase64 = (url: string): Promise<string | null> => {
+  return new Promise((resolve) => {
+    const img = new Image();
+    img.crossOrigin = 'anonymous';
+    img.onload = () => {
+      try {
+        const canvas = document.createElement('canvas');
+        canvas.width = img.width;
+        canvas.height = img.height;
+        const ctx = canvas.getContext('2d');
+        if (ctx) {
+          ctx.drawImage(img, 0, 0);
+          resolve(canvas.toDataURL('image/png'));
+        } else {
+          resolve(null);
+        }
+      } catch (e) {
+        console.error('Error converting image:', e);
+        resolve(null);
+      }
+    };
+    img.onerror = () => resolve(null);
+    img.src = url;
+  });
+};
+
 export function DonationCertificateGenerator() {
   const { firestore } = useFirebase();
   const { organizationId, organization } = useCurrentOrganization();
@@ -145,12 +182,40 @@ export function DonationCertificateGenerator() {
   const [generationProgress, setGenerationProgress] = React.useState(0);
   const [previewDonor, setPreviewDonor] = React.useState<DonorSummary | null>(null);
   const [isPreviewOpen, setIsPreviewOpen] = React.useState(false);
+  const [orgData, setOrgData] = React.useState<OrganizationWithLogo | null>(null);
+  const [logoBase64, setLogoBase64] = React.useState<string | null>(null);
 
   // Anys disponibles (últims 5 anys)
   const availableYears = React.useMemo(() => {
     const currentYear = new Date().getFullYear();
     return Array.from({ length: 5 }, (_, i) => String(currentYear - i));
   }, []);
+
+  // Carregar dades de l'organització (incloent logo)
+  React.useEffect(() => {
+    if (!firestore || !organizationId) return;
+
+    const loadOrgData = async () => {
+      try {
+        const orgRef = doc(firestore, 'organizations', organizationId);
+        const orgSnap = await getDoc(orgRef);
+        if (orgSnap.exists()) {
+          const data = { id: orgSnap.id, ...orgSnap.data() } as OrganizationWithLogo;
+          setOrgData(data);
+          
+          // Carregar logo si existeix
+          if (data.logoUrl) {
+            const base64 = await loadImageAsBase64(data.logoUrl);
+            setLogoBase64(base64);
+          }
+        }
+      } catch (error) {
+        console.error('Error loading org data:', error);
+      }
+    };
+
+    loadOrgData();
+  }, [firestore, organizationId]);
 
   // Carregar dades quan canvia l'any
   const loadDonations = React.useCallback(async () => {
@@ -250,31 +315,82 @@ export function DonationCertificateGenerator() {
     }
   };
 
+  // Construir adreça completa
+  const buildFullAddress = (): string => {
+    const parts: string[] = [];
+    if (orgData?.address) parts.push(orgData.address);
+    if (orgData?.zipCode || orgData?.city) {
+      const cityPart = [orgData.zipCode, orgData.city].filter(Boolean).join(' ');
+      parts.push(cityPart);
+    }
+    return parts.join(', ');
+  };
+
   // Generar PDF per un donant
   const generatePDF = (summary: DonorSummary): jsPDF => {
     const doc = new jsPDF();
     const pageWidth = doc.internal.pageSize.getWidth();
+    const pageHeight = doc.internal.pageSize.getHeight();
     const margin = 20;
     let y = margin;
 
-    // Capçalera - Nom de l'organització
+    // ═══════════════════════════════════════════════════════════════
+    // CAPÇALERA AMB LOGO
+    // ═══════════════════════════════════════════════════════════════
+    
+    if (logoBase64) {
+      try {
+        // Afegir logo centrat (màxim 30px d'alçada)
+        const logoHeight = 25;
+        const logoWidth = 25; // Assumim quadrat, jsPDF ajustarà
+        doc.addImage(logoBase64, 'PNG', (pageWidth - logoWidth) / 2, y, logoWidth, logoHeight);
+        y += logoHeight + 5;
+      } catch (e) {
+        console.error('Error adding logo to PDF:', e);
+      }
+    }
+
+    // Nom de l'organització
     doc.setFontSize(18);
     doc.setFont('helvetica', 'bold');
-    doc.text(organization?.name || 'Organització', pageWidth / 2, y, { align: 'center' });
-    y += 8;
+    doc.text(orgData?.name || organization?.name || 'Organització', pageWidth / 2, y, { align: 'center' });
+    y += 7;
 
     // CIF
     doc.setFontSize(10);
     doc.setFont('helvetica', 'normal');
-    doc.text(`CIF: ${organization?.taxId || 'N/A'}`, pageWidth / 2, y, { align: 'center' });
-    y += 15;
+    doc.text(`CIF: ${orgData?.taxId || organization?.taxId || 'N/A'}`, pageWidth / 2, y, { align: 'center' });
+    y += 5;
+
+    // Adreça completa
+    const fullAddress = buildFullAddress();
+    if (fullAddress) {
+      doc.setFontSize(9);
+      doc.text(fullAddress, pageWidth / 2, y, { align: 'center' });
+      y += 5;
+    }
+
+    // Contacte (telèfon i/o email)
+    const contactParts: string[] = [];
+    if (orgData?.phone) contactParts.push(`Tel: ${orgData.phone}`);
+    if (orgData?.email) contactParts.push(orgData.email);
+    if (contactParts.length > 0) {
+      doc.setFontSize(9);
+      doc.text(contactParts.join(' | '), pageWidth / 2, y, { align: 'center' });
+      y += 5;
+    }
+
+    y += 5;
 
     // Línia separadora
     doc.setDrawColor(200);
     doc.line(margin, y, pageWidth - margin, y);
     y += 15;
 
-    // Títol del certificat
+    // ═══════════════════════════════════════════════════════════════
+    // TÍTOL DEL CERTIFICAT
+    // ═══════════════════════════════════════════════════════════════
+
     doc.setFontSize(16);
     doc.setFont('helvetica', 'bold');
     doc.text('CERTIFICAT DE DONACIÓ', pageWidth / 2, y, { align: 'center' });
@@ -284,12 +400,20 @@ export function DonationCertificateGenerator() {
     doc.text(`Any fiscal ${selectedYear}`, pageWidth / 2, y, { align: 'center' });
     y += 20;
 
-    // Cos del certificat
+    // ═══════════════════════════════════════════════════════════════
+    // COS DEL CERTIFICAT
+    // ═══════════════════════════════════════════════════════════════
+
     doc.setFontSize(11);
     const lineHeight = 7;
+    const orgName = orgData?.name || organization?.name || 'Aquesta entitat';
+    const orgTaxId = orgData?.taxId || organization?.taxId || 'N/A';
+
+    // Netejar nom del donant (treure espais extra)
+    const donorName = cleanName(summary.donor.name);
 
     // Text del certificat
-    doc.text(`${organization?.name || 'Aquesta entitat'}, amb CIF ${organization?.taxId || 'N/A'},`, margin, y);
+    doc.text(`${orgName}, amb CIF ${orgTaxId},`, margin, y);
     y += lineHeight;
     doc.text('entitat sense ànim de lucre,', margin, y);
     y += lineHeight * 2;
@@ -299,7 +423,7 @@ export function DonationCertificateGenerator() {
     y += lineHeight * 2;
 
     doc.setFont('helvetica', 'normal');
-    doc.text(`Que ${summary.donor.name}, amb DNI/CIF ${summary.donor.taxId},`, margin, y);
+    doc.text(`Que ${donorName}, amb DNI/CIF ${summary.donor.taxId},`, margin, y);
     y += lineHeight;
     doc.text(`ha realitzat donacions a aquesta entitat durant l'any ${selectedYear}`, margin, y);
     y += lineHeight;
@@ -329,7 +453,7 @@ export function DonationCertificateGenerator() {
       y += lineHeight;
       
       // Nova pàgina si cal
-      if (y > 260) {
+      if (y > 240) {
         doc.addPage();
         y = margin;
       }
@@ -346,7 +470,8 @@ export function DonationCertificateGenerator() {
 
     // Data i lloc
     const today = new Date();
-    const dateText = `${organization?.city || 'Lleida'}, ${today.getDate()} de ${today.toLocaleDateString('ca-ES', { month: 'long' })} de ${today.getFullYear()}`;
+    const city = orgData?.city || organization?.city || 'Lleida';
+    const dateText = `${city}, ${today.getDate()} de ${today.toLocaleDateString('ca-ES', { month: 'long' })} de ${today.getFullYear()}`;
     doc.setFontSize(11);
     doc.setFont('helvetica', 'normal');
     doc.text(dateText, margin, y);
@@ -356,6 +481,32 @@ export function DonationCertificateGenerator() {
     doc.text('Signatura i segell:', margin, y);
     y += lineHeight * 4;
     doc.line(margin, y, margin + 60, y);
+
+    // ═══════════════════════════════════════════════════════════════
+    // PEU DE PÀGINA
+    // ═══════════════════════════════════════════════════════════════
+
+    const footerY = pageHeight - 15;
+    doc.setFontSize(8);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(128);
+
+    // Línia separadora del peu
+    doc.setDrawColor(200);
+    doc.line(margin, footerY - 5, pageWidth - margin, footerY - 5);
+
+    // Contingut del peu
+    const footerParts: string[] = [];
+    if (orgData?.name || organization?.name) footerParts.push(orgData?.name || organization?.name || '');
+    if (orgData?.website) footerParts.push(orgData.website);
+    if (orgData?.email) footerParts.push(orgData.email);
+
+    if (footerParts.length > 0) {
+      doc.text(footerParts.join(' · '), pageWidth / 2, footerY, { align: 'center' });
+    }
+
+    // Restaurar color
+    doc.setTextColor(0);
 
     return doc;
   };
@@ -369,7 +520,7 @@ export function DonationCertificateGenerator() {
   // Descarregar un certificat
   const handleDownloadOne = (summary: DonorSummary) => {
     const doc = generatePDF(summary);
-    const fileName = `Certificat_${selectedYear}_${summary.donor.name.replace(/\s+/g, '_')}.pdf`;
+    const fileName = `Certificat_${selectedYear}_${cleanName(summary.donor.name).replace(/\s+/g, '_')}.pdf`;
     doc.save(fileName);
     toast({ title: 'Certificat generat', description: `S'ha descarregat ${fileName}` });
   };
@@ -389,7 +540,7 @@ export function DonationCertificateGenerator() {
       for (let i = 0; i < selected.length; i++) {
         const summary = selected[i];
         const doc = generatePDF(summary);
-        const fileName = `Certificat_${selectedYear}_${summary.donor.name.replace(/\s+/g, '_')}.pdf`;
+        const fileName = `Certificat_${selectedYear}_${cleanName(summary.donor.name).replace(/\s+/g, '_')}.pdf`;
         doc.save(fileName);
         
         setGenerationProgress(((i + 1) / selected.length) * 100);
@@ -410,6 +561,10 @@ export function DonationCertificateGenerator() {
       setGenerationProgress(0);
     }
   };
+
+  // Construir adreça per a la previsualització
+  const previewAddress = buildFullAddress();
+  const previewContact = [orgData?.phone ? `Tel: ${orgData.phone}` : null, orgData?.email].filter(Boolean).join(' | ');
 
   return (
     <div className="space-y-6">
@@ -461,7 +616,7 @@ export function DonationCertificateGenerator() {
           <CardContent>
             <div className="text-2xl font-bold">{formatCurrency(stats.totalAmount)}</div>
             <p className="text-xs text-muted-foreground">
-              Any ${selectedYear}
+              Any {selectedYear}
             </p>
           </CardContent>
         </Card>
@@ -487,7 +642,7 @@ export function DonationCertificateGenerator() {
         <CardHeader>
           <div className="flex items-center justify-between">
             <div>
-              <CardTitle>Donants amb donacions el ${selectedYear}</CardTitle>
+              <CardTitle>Donants amb donacions el {selectedYear}</CardTitle>
               <CardDescription>
                 Selecciona els donants per generar els certificats
               </CardDescription>
@@ -506,7 +661,7 @@ export function DonationCertificateGenerator() {
                 ) : (
                   <>
                     <Download className="mr-2 h-4 w-4" />
-                    Descarregar seleccionats (${stats.selectedDonors})
+                    Descarregar seleccionats ({stats.selectedDonors})
                   </>
                 )}
               </Button>
@@ -524,7 +679,7 @@ export function DonationCertificateGenerator() {
           ) : donorSummaries.length === 0 ? (
             <div className="flex flex-col items-center justify-center h-40 text-muted-foreground">
               <AlertCircle className="h-8 w-8 mb-2" />
-              <p>No hi ha donacions registrades per l'any ${selectedYear}</p>
+              <p>No hi ha donacions registrades per l'any {selectedYear}</p>
               <p className="text-sm">Assegura't que les transaccions tinguin un donant assignat.</p>
             </div>
           ) : (
@@ -555,7 +710,7 @@ export function DonationCertificateGenerator() {
                           onCheckedChange={() => toggleDonor(summary.donor.id)}
                         />
                       </TableCell>
-                      <TableCell className="font-medium">{summary.donor.name}</TableCell>
+                      <TableCell className="font-medium">{cleanName(summary.donor.name)}</TableCell>
                       <TableCell className="font-mono text-sm">{summary.donor.taxId}</TableCell>
                       <TableCell className="text-center">
                         <Badge variant="secondary">{summary.donationCount}</Badge>
@@ -608,16 +763,29 @@ export function DonationCertificateGenerator() {
               Previsualització del certificat
             </DialogTitle>
             <DialogDescription>
-              Certificat de donació per a ${previewDonor?.donor.name}
+              Certificat de donació per a {previewDonor ? cleanName(previewDonor.donor.name) : ''}
             </DialogDescription>
           </DialogHeader>
           
           {previewDonor && (
             <div className="border rounded-lg p-8 bg-white text-black">
-              {/* Capçalera */}
-              <div className="text-center mb-6">
-                <h2 className="text-xl font-bold">${organization?.name}</h2>
-                <p className="text-sm text-gray-600">CIF: ${organization?.taxId || 'N/A'}</p>
+              {/* Capçalera amb logo */}
+              <div className="text-center mb-4">
+                {orgData?.logoUrl && (
+                  <img 
+                    src={orgData.logoUrl} 
+                    alt="Logo" 
+                    className="h-16 mx-auto mb-2 object-contain"
+                  />
+                )}
+                <h2 className="text-xl font-bold">{orgData?.name || organization?.name}</h2>
+                <p className="text-sm text-gray-600">CIF: {orgData?.taxId || organization?.taxId || 'N/A'}</p>
+                {previewAddress && (
+                  <p className="text-sm text-gray-500">{previewAddress}</p>
+                )}
+                {previewContact && (
+                  <p className="text-sm text-gray-500">{previewContact}</p>
+                )}
               </div>
 
               <hr className="my-4" />
@@ -625,21 +793,21 @@ export function DonationCertificateGenerator() {
               {/* Títol */}
               <div className="text-center mb-6">
                 <h3 className="text-lg font-bold">CERTIFICAT DE DONACIÓ</h3>
-                <p className="text-gray-600">Any fiscal ${selectedYear}</p>
+                <p className="text-gray-600">Any fiscal {selectedYear}</p>
               </div>
 
               {/* Cos */}
               <div className="space-y-4 text-sm">
                 <p>
-                  ${organization?.name || 'Aquesta entitat'}, amb CIF ${organization?.taxId || 'N/A'},
+                  {orgData?.name || organization?.name || 'Aquesta entitat'}, amb CIF {orgData?.taxId || organization?.taxId || 'N/A'},
                   entitat sense ànim de lucre,
                 </p>
                 
                 <p className="font-bold">CERTIFICA:</p>
                 
                 <p>
-                  Que <strong>${previewDonor.donor.name}</strong>, amb DNI/CIF <strong>${previewDonor.donor.taxId}</strong>,
-                  ha realitzat donacions a aquesta entitat durant l'any ${selectedYear} per un import total de:
+                  Que <strong>{cleanName(previewDonor.donor.name)}</strong>, amb DNI/CIF <strong>{previewDonor.donor.taxId}</strong>,
+                  ha realitzat donacions a aquesta entitat durant l'any {selectedYear} per un import total de:
                 </p>
 
                 <div className="text-center py-4">
@@ -647,7 +815,7 @@ export function DonationCertificateGenerator() {
                     {formatCurrency(previewDonor.totalAmount)}
                   </p>
                   <p className="text-gray-500 italic">
-                    (${numberToWords(previewDonor.totalAmount)})
+                    ({numberToWords(previewDonor.totalAmount)})
                   </p>
                 </div>
 
@@ -669,12 +837,17 @@ export function DonationCertificateGenerator() {
                 </p>
 
                 <div className="mt-8">
-                  <p>${organization?.city || 'Lleida'}, ${new Date().toLocaleDateString('ca-ES', { day: 'numeric', month: 'long', year: 'numeric' })}</p>
+                  <p>{orgData?.city || organization?.city || 'Lleida'}, {new Date().toLocaleDateString('ca-ES', { day: 'numeric', month: 'long', year: 'numeric' })}</p>
                   <div className="mt-8">
                     <p>Signatura i segell:</p>
                     <div className="border-b border-gray-400 w-48 mt-8"></div>
                   </div>
                 </div>
+              </div>
+
+              {/* Peu de pàgina */}
+              <div className="mt-8 pt-4 border-t text-center text-xs text-gray-400">
+                {[orgData?.name, orgData?.website, orgData?.email].filter(Boolean).join(' · ')}
               </div>
             </div>
           )}
