@@ -41,7 +41,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
-import { PlusCircle, Edit, Trash2, Building2 } from 'lucide-react';
+import { PlusCircle, Edit, Trash2, Building2, Upload } from 'lucide-react';
 import type { Supplier, SupplierCategory } from '@/lib/data';
 import { SUPPLIER_CATEGORIES } from '@/lib/data';
 import { useToast } from '@/hooks/use-toast';
@@ -49,6 +49,7 @@ import { Badge } from '@/components/ui/badge';
 import { useCollection, useFirebase, useMemoFirebase, addDocumentNonBlocking, deleteDocumentNonBlocking, setDocumentNonBlocking } from '@/firebase';
 import { collection, doc, query, where } from 'firebase/firestore';
 import { useCurrentOrganization } from '@/hooks/organization-provider';
+import { SupplierImporter } from './supplier-importer';
 
 // Traduccions de categories
 const CATEGORY_LABELS: Record<SupplierCategory, string> = {
@@ -85,7 +86,6 @@ export function SupplierManager() {
   const { organizationId } = useCurrentOrganization();
   const { toast } = useToast();
 
-  // Query només per proveïdors (type === 'supplier')
   const contactsCollection = useMemoFirebase(
     () => organizationId ? collection(firestore, 'organizations', organizationId, 'contacts') : null,
     [firestore, organizationId]
@@ -100,6 +100,7 @@ export function SupplierManager() {
 
   const [isDialogOpen, setIsDialogOpen] = React.useState(false);
   const [isAlertOpen, setIsAlertOpen] = React.useState(false);
+  const [isImportOpen, setIsImportOpen] = React.useState(false);
   const [editingSupplier, setEditingSupplier] = React.useState<Supplier | null>(null);
   const [supplierToDelete, setSupplierToDelete] = React.useState<Supplier | null>(null);
   const [formData, setFormData] = React.useState<SupplierFormData>(emptyFormData);
@@ -175,7 +176,6 @@ export function SupplierManager() {
     const now = new Date().toISOString();
     const dataToSave = {
       ...formData,
-      // Netejar camps buits
       category: formData.category || null,
       address: formData.address || null,
       email: formData.email || null,
@@ -188,15 +188,17 @@ export function SupplierManager() {
     };
 
     if (editingSupplier) {
-      // Actualitzar
       setDocumentNonBlocking(doc(contactsCollection, editingSupplier.id), dataToSave, { merge: true });
       toast({ title: 'Proveïdor actualitzat', description: `S'ha actualitzat "${formData.name}" correctament.` });
     } else {
-      // Crear
       addDocumentNonBlocking(contactsCollection, { ...dataToSave, createdAt: now });
       toast({ title: 'Proveïdor creat', description: `S'ha creat "${formData.name}" correctament.` });
     }
     handleOpenChange(false);
+  };
+
+  const handleImportComplete = (count: number) => {
+    // El toast ja es mostra dins del SupplierImporter
   };
 
   const dialogTitle = editingSupplier ? 'Editar Proveïdor' : 'Nou Proveïdor';
@@ -218,12 +220,18 @@ export function SupplierManager() {
                 Administra els proveïdors i empreses col·laboradores
               </CardDescription>
             </div>
-            <DialogTrigger asChild>
-              <Button onClick={handleAddNew}>
-                <PlusCircle className="mr-2 h-4 w-4" />
-                Afegir Proveïdor
+            <div className="flex gap-2">
+              <Button variant="outline" onClick={() => setIsImportOpen(true)}>
+                <Upload className="mr-2 h-4 w-4" />
+                Importar
               </Button>
-            </DialogTrigger>
+              <DialogTrigger asChild>
+                <Button onClick={handleAddNew}>
+                  <PlusCircle className="mr-2 h-4 w-4" />
+                  Afegir Proveïdor
+                </Button>
+              </DialogTrigger>
+            </div>
           </CardHeader>
           <CardContent>
             <div className="rounded-md border">
@@ -281,7 +289,7 @@ export function SupplierManager() {
                   {(!suppliers || suppliers.length === 0) && (
                     <TableRow>
                       <TableCell colSpan={5} className="text-center text-muted-foreground h-24">
-                        No hi ha proveïdors registrats. Afegeix el primer!
+                        No hi ha proveïdors registrats. Afegeix el primer o importa'ls des d'Excel!
                       </TableCell>
                     </TableRow>
                   )}
@@ -298,7 +306,6 @@ export function SupplierManager() {
           </DialogHeader>
           
           <div className="grid gap-4 py-4">
-            {/* Secció: Dades bàsiques */}
             <div className="space-y-4">
               <h4 className="text-sm font-medium text-muted-foreground">Dades bàsiques</h4>
               
@@ -344,7 +351,6 @@ export function SupplierManager() {
               </div>
             </div>
 
-            {/* Secció: Adreça */}
             <div className="space-y-4 pt-4 border-t">
               <h4 className="text-sm font-medium text-muted-foreground">Adreça</h4>
 
@@ -371,7 +377,6 @@ export function SupplierManager() {
               </div>
             </div>
 
-            {/* Secció: Contacte */}
             <div className="space-y-4 pt-4 border-t">
               <h4 className="text-sm font-medium text-muted-foreground">Contacte</h4>
 
@@ -399,7 +404,6 @@ export function SupplierManager() {
               </div>
             </div>
 
-            {/* Secció: Dades bancàries i pagament */}
             <div className="space-y-4 pt-4 border-t">
               <h4 className="text-sm font-medium text-muted-foreground">Dades de pagament</h4>
 
@@ -426,7 +430,6 @@ export function SupplierManager() {
               </div>
             </div>
 
-            {/* Secció: Notes */}
             <div className="space-y-4 pt-4 border-t">
               <h4 className="text-sm font-medium text-muted-foreground">Notes</h4>
 
@@ -470,6 +473,12 @@ export function SupplierManager() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <SupplierImporter 
+        open={isImportOpen} 
+        onOpenChange={setIsImportOpen}
+        onImportComplete={handleImportComplete}
+      />
     </>
   );
 }
