@@ -74,7 +74,7 @@ interface PendingTask {
 
 export default function DashboardPage() {
   const { firestore } = useFirebase();
-  const { organizationId } = useCurrentOrganization();
+  const { organization, organizationId } = useCurrentOrganization();
   const { t } = useTranslations();
   const categoryTranslations = t.categories as Record<string, string>;
   
@@ -206,6 +206,8 @@ export default function DashboardPage() {
       return 'critical';
     };
 
+    const orgSlug = organization?.slug;
+
     return [
       {
         title: 'Tresoreria',
@@ -224,7 +226,7 @@ export default function DashboardPage() {
           ? `${healthStats.expensesWithoutDoc} despeses pendents`
           : 'Tot documentat',
         icon: FileCheck,
-        href: '/dashboard/movimientos',
+        href: `/${orgSlug}/dashboard/movimientos`,
       },
       {
         title: 'Donants',
@@ -234,7 +236,7 @@ export default function DashboardPage() {
           ? `${healthStats.donorsWithoutTaxId} sense DNI/CIF`
           : 'Tots amb dades fiscals',
         icon: Users,
-        href: '/dashboard/donants',
+        href: `/${orgSlug}/dashboard/donants`,
       },
       {
         title: 'Classificació',
@@ -244,10 +246,10 @@ export default function DashboardPage() {
           ? `${healthStats.transactionsWithoutCategory} sense categoria`
           : 'Tot classificat',
         icon: FolderKanban,
-        href: '/dashboard/movimientos',
+        href: `/${orgSlug}/dashboard/movimientos`,
       },
     ];
-  }, [financials, healthStats]);
+  }, [financials, healthStats, organization]);
 
   // ═══════════════════════════════════════════════════════════════════════════
   // TASQUES PENDENTS
@@ -255,6 +257,8 @@ export default function DashboardPage() {
   const pendingTasks: PendingTask[] = React.useMemo(() => {
     const tasks: PendingTask[] = [];
     const currentMonth = getCurrentMonth();
+    const orgSlug = organization?.slug;
+    if (!orgSlug) return [];
 
     // 1. Despeses sense justificant
     if (healthStats.expensesWithoutDoc > 0) {
@@ -265,7 +269,7 @@ export default function DashboardPage() {
         title: 'Despeses sense justificant',
         description: `${healthStats.expensesWithoutDoc} despeses necessiten documentació`,
         count: healthStats.expensesWithoutDoc,
-        href: '/dashboard/movimientos',
+        href: `/${orgSlug}/dashboard/movimientos`,
         actionLabel: 'Revisar',
       });
     }
@@ -279,7 +283,7 @@ export default function DashboardPage() {
         title: 'Donants sense DNI/CIF',
         description: `${healthStats.donorsWithoutTaxId} donants no podran rebre certificat fiscal`,
         count: healthStats.donorsWithoutTaxId,
-        href: '/dashboard/donants',
+        href: `/${orgSlug}/dashboard/donants`,
         actionLabel: 'Completar',
       });
     }
@@ -293,7 +297,7 @@ export default function DashboardPage() {
         title: 'Moviments sense classificar',
         description: `${healthStats.transactionsWithoutCategory} moviments pendents de categoria`,
         count: healthStats.transactionsWithoutCategory,
-        href: '/dashboard/movimientos',
+        href: `/${orgSlug}/dashboard/movimientos`,
         actionLabel: 'Classificar',
       });
     }
@@ -307,7 +311,7 @@ export default function DashboardPage() {
         priority: 'high',
         title: 'Model 182 - Gener',
         description: 'És moment de preparar la declaració de donatius',
-        href: '/dashboard/informes',
+        href: `/${orgSlug}/dashboard/informes`,
         actionLabel: 'Preparar',
       });
     }
@@ -320,7 +324,7 @@ export default function DashboardPage() {
         priority: 'medium',
         title: 'Certificats de donació',
         description: 'Prepara els certificats fiscals pels donants',
-        href: '/dashboard/informes/certificats',
+        href: `/${orgSlug}/dashboard/informes/certificats`,
         actionLabel: 'Generar',
       });
     }
@@ -328,7 +332,7 @@ export default function DashboardPage() {
     // Ordenar per prioritat
     const priorityOrder = { high: 0, medium: 1, low: 2 };
     return tasks.sort((a, b) => priorityOrder[a.priority] - priorityOrder[b.priority]);
-  }, [healthStats]);
+  }, [healthStats, organization]);
 
   // ═══════════════════════════════════════════════════════════════════════════
   // HELPERS DE RENDER
@@ -549,7 +553,7 @@ export default function DashboardPage() {
 
             {/* Enllaç a moviments */}
             <div className="pt-2">
-              <Link href="/dashboard/movimientos">
+              <Link href={`/${organization?.slug}/dashboard/movimientos`}>
                 <Button variant="outline" size="sm" className="w-full">
                   <Receipt className="mr-2 h-4 w-4" />
                   Veure moviments
@@ -569,31 +573,31 @@ export default function DashboardPage() {
         </CardHeader>
         <CardContent>
           <div className="flex flex-wrap gap-2">
-            <Link href="/dashboard/movimientos">
+            <Link href={`/${organization?.slug}/dashboard/movimientos`}>
               <Button variant="outline" size="sm">
                 <Receipt className="mr-2 h-4 w-4" />
                 Importar extracte
               </Button>
             </Link>
-            <Link href="/dashboard/donants">
+            <Link href={`/${organization?.slug}/dashboard/donants`}>
               <Button variant="outline" size="sm">
                 <Users className="mr-2 h-4 w-4" />
                 Afegir donant
               </Button>
             </Link>
-            <Link href="/dashboard/projectes">
+            <Link href={`/${organization?.slug}/dashboard/projectes`}>
               <Button variant="outline" size="sm">
                 <FolderKanban className="mr-2 h-4 w-4" />
                 Nou projecte
               </Button>
             </Link>
-            <Link href="/dashboard/informes">
+            <Link href={`/${organization?.slug}/dashboard/informes`}>
               <Button variant="outline" size="sm">
                 <FileText className="mr-2 h-4 w-4" />
                 Generar informe
               </Button>
             </Link>
-            <Link href="/dashboard/informes/certificats">
+            <Link href={`/${organization?.slug}/dashboard/informes/certificats`}>
               <Button variant="outline" size="sm">
                 <FileCheck className="mr-2 h-4 w-4" />
                 Certificats donació
