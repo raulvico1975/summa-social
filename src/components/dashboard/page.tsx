@@ -9,20 +9,35 @@ import type { Transaction } from '@/lib/data';
 import { useCollection, useFirebase, useMemoFirebase } from '@/firebase';
 import { collection } from 'firebase/firestore';
 import { useTranslations } from '@/i18n';
+import { useCurrentOrganization } from '@/hooks/organization-provider';
 
 const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('es-ES', { style: 'currency', currency: 'EUR' }).format(amount);
 };
 
 export default function DashboardPage() {
-  const { firestore, user } = useFirebase();
+  const { firestore } = useFirebase();
+  const { organizationId } = useCurrentOrganization();
   const { t } = useTranslations();
   
   const transactionsQuery = useMemoFirebase(
-    () => user ? collection(firestore, 'users', user.uid, 'transactions') : null,
-    [firestore, user]
+    () => organizationId ? collection(firestore, 'organizations', organizationId, 'transactions') : null,
+    [firestore, organizationId]
   );
   const { data: transactions } = useCollection<Transaction>(transactionsQuery);
+
+  // ═══════════════════════════════════════════════════════════════
+  // AFEGIR AIXÒ TEMPORALMENT PER DEBUGAR
+  // ═══════════════════════════════════════════════════════════════
+  React.useEffect(() => {
+    console.log('=== DEBUG DASHBOARD ===');
+    console.log('organizationId:', organizationId);
+    console.log('transactionsQuery:', transactionsQuery);
+    console.log('transactions:', transactions);
+    console.log('transactions length:', transactions?.length);
+    console.log('========================');
+  }, [organizationId, transactionsQuery, transactions]);
+  // ═══════════════════════════════════════════════════════════════
 
   const MISSION_TRANSFER_CATEGORY_KEY = 'missionTransfers';
 
