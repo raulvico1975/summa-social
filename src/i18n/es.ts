@@ -53,6 +53,9 @@ export const es = {
       editTransaction: "Editar Transacción",
       editTransactionDescription: "Modifica los detalles del movimiento.",
       saveChanges: "Guardar Cambios",
+      // ═══════════════════════════════════════════════════════════════
+      // NUEVO: Devoluciones
+      // ═══════════════════════════════════════════════════════════════
       returnBadge: "Devolución",
       commissionBadge: "Comisión",
       assignAffectedDonor: "Asignar donante afectado",
@@ -69,8 +72,8 @@ export const es = {
         formatInfo: "Formato del archivo CSV",
         formatDescription: "El archivo debe contener cabeceras y, como mínimo, las columnas de Importe y Nombre (o DNI/CIF).",
         formatColumns: {
-            name: "Nom/Nombre/Deudor (o DNI/CIF/NIF)",
-            amount: "Import/Importe"
+            name: "Nombre/Deudor (o DNI/CIF/NIF)",
+            amount: "Importe"
         },
         formatNote: "El sistema buscará coincidencias por DNI/CIF y, si no, por nombre (ignorando mayúsculas/minúsculas y acentos).",
         uploadButton: "Subir archivo CSV",
@@ -190,12 +193,13 @@ export const es = {
       preview: "Previsualización",
       confirmImport: "Importar",
       successToast: "Donantes importados",
-      successToastDescription: (count: number, duplicates: number) => `Se han importado ${count} donantes.${duplicates > 0 ? ` ${duplicates} duplicados omitidos.` : ''}`,
+      successToastDescription: (count: number, duplicates: number) => 
+        `Se han importado ${count} donantes.${duplicates > 0 ? ` ${duplicates} duplicados omitidos.` : ''}`,
       errorInvalidFormat: "Formato de archivo no válido. Usa .xlsx, .xls o .csv.",
       errorMissingColumns: (columns: string) => `Faltan columnas obligatorias: ${columns}`,
       errorEmptyFile: "El archivo está vacío o no tiene datos válidos.",
       duplicatesFound: (count: number) => `Se han encontrado ${count} donantes duplicados (por DNI/CIF).`,
-      rowsToImport: (count: number) => `${count} donantes nuevos por importar`,
+      rowsToImport: (count: number) => `${count} donantes nuevos para importar`,
     }
   },
   suppliers: {
@@ -237,12 +241,13 @@ export const es = {
       preview: "Previsualización",
       confirmImport: "Importar",
       successToast: "Proveedores importados",
-      successToastDescription: (count: number, duplicates: number) => `Se han importado ${count} proveedores.${duplicates > 0 ? ` ${duplicates} duplicados omitidos.` : ''}`,
+      successToastDescription: (count: number, duplicates: number) => 
+        `Se han importado ${count} proveedores.${duplicates > 0 ? ` ${duplicates} duplicados omitidos.` : ''}`,
       errorInvalidFormat: "Formato de archivo no válido. Usa .xlsx, .xls o .csv.",
       errorMissingColumns: (columns: string) => `Faltan columnas obligatorias: ${columns}`,
       errorEmptyFile: "El archivo está vacío o no tiene datos válidos.",
       duplicatesFound: (count: number) => `Se han encontrado ${count} proveedores duplicados (por CIF/NIF).`,
-      rowsToImport: (count: number) => `${count} proveedores nuevos por importar`,
+      rowsToImport: (count: number) => `${count} proveedores nuevos para importar`,
     }
   },
   reports: {
@@ -267,8 +272,10 @@ export const es = {
     exportComplete: "Exportación Completada",
     exportCompleteDescription: "El informe de donaciones se ha descargado como archivo CSV.",
     returnsDiscountedTitle: "Devoluciones descontadas",
-    returnsDiscountedDescription: (count: number, amount: string) => `Se han descontado ${count} devolución${count > 1 ? 'es' : ''} por un total de ${amount} del total de donaciones. El Modelo 182 refleja las donaciones netas efectivamente recibidas.`,
-    returnsDiscountedToast: (count: number, amount: string) => `Se han descontado ${count} devolución${count > 1 ? 'es' : ''} (${amount})`,
+    returnsDiscountedDescription: (count: number, amount: string) => 
+      `Se han descontado ${count} devolución${count > 1 ? 'es' : ''} por un total de ${amount} del total de donaciones. El Modelo 182 refleja las donaciones netas efectivamente recibidas.`,
+    returnsDiscountedToast: (count: number, amount: string) => 
+      `Se han descontado ${count} devolución${count > 1 ? 'es' : ''} (${amount})`,
     columnDiscounted: "Descontado",
     returns: "Devoluciones",
     discountedAmount: "Importe descontado",
@@ -309,19 +316,24 @@ export const es = {
       orgIntro: (orgName: string, taxId: string) => `${orgName}, con CIF ${taxId},`,
       nonProfit: "entidad sin ánimo de lucro,",
       certifies: "CERTIFICA:",
-      donorIntro: (donorName: string, taxId: string) => `Que ${donorName}, con DNI/CIF ${taxId},`,
-      hasDonated: (year: string) => `ha realizado donaciones a esta entidad durante el año ${year}`,
+      donorIntro: (donorName: string, taxId: string) => 
+        `Que ${donorName}, con DNI/CIF ${taxId},`,
+      hasDonated: (year: string) => 
+        `ha realizado donaciones a esta entidad durante el año ${year}`,
       totalAmountIntro: "por un importe total de:",
       donationDetails: "Detalle de las donaciones:",
       returnsDiscounted: "Devoluciones descontadas:",
       legalNote: "Este certificado se emite a efectos de la deducción prevista en el artículo 68.3 de la Ley 35/2006, del Impuesto sobre la Renta de las Personas Físicas, y en el artículo 20 de la Ley 49/2002, de Régimen fiscal de las entidades sin fines lucrativos.",
-      dateLocation: (city: string, day: number, month: string, year: number) => `${city}, a ${day} de ${month} de ${year}`,
+      dateLocation: (city: string, day: number, month: string, year: number) => 
+        `${city}, a ${day} de ${month} de ${year}`,
       signature: "Firma y sello:",
     },
     returnsDetected: "Devoluciones detectadas",
-    returnsDetectedDescription: (count: number) => `Se han descontado ${count} devolución${count > 1 ? 'es' : ''} de los totales.`,
+    returnsDetectedDescription: (count: number) => 
+      `Se han descontado ${count} devolución${count > 1 ? 'es' : ''} de los totales.`,
     returnsDiscountedAlert: "Devoluciones descontadas",
-    returnsDiscountedAlertDescription: (count: number, amount: string) => `Se han descontado ${count} devolución${count > 1 ? 'es' : ''} por un total de ${amount}. Los certificados reflejan las donaciones netas efectivamente recibidas.`,
+    returnsDiscountedAlertDescription: (count: number, amount: string) => 
+      `Se han descontado ${count} devolución${count > 1 ? 'es' : ''} por un total de ${amount}. Los certificados reflejan las donaciones netas efectivamente recibidas.`,
   },
   settings: {
     title: "Configuración",
