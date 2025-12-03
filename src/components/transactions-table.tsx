@@ -71,20 +71,24 @@ import {
   Pencil,
   X,
   Check,
+  AlertTriangle,
+  Undo2,
+  Link,
+  Ban,
 } from 'lucide-react';
-import type { Transaction, Category, Project, AnyContact, Donor, Supplier } from '@/lib/data';
+import type { Transaction, Category, Project, AnyContact, Donor, Supplier, TransactionType } from '@/lib/data';
 import { categorizeTransaction } from '@/ai/flows/categorize-transactions';
 import { useToast } from '@/hooks/use-toast';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { useAppLog } from '@/hooks/use-app-log';
 import { RemittanceSplitter } from '@/components/remittance-splitter';
 import { useCollection, useFirebase, useMemoFirebase, addDocumentNonBlocking, deleteDocumentNonBlocking, updateDocumentNonBlocking } from '@/firebase';
-import { collection, doc } from 'firebase/firestore';
+import { collection, doc, query, where, getDocs } from 'firebase/firestore';
 import { useTranslations } from '@/i18n';
 import { useCurrentOrganization } from '@/hooks/organization-provider';
 
-// Tipus de filtre per documents
-type DocumentFilter = 'all' | 'missing';
+// Tipus de filtre
+type TableFilter = 'all' | 'missing' | 'returns';
 
 export function TransactionsTable() {
   const { firestore, user, storage } = useFirebase();
@@ -92,12 +96,20 @@ export function TransactionsTable() {
   const { t } = useTranslations();
   const categoryTranslations = t.categories as Record<string, string>;
 
-  // Filtre de documents
-  const [documentFilter, setDocumentFilter] = React.useState<DocumentFilter>('all');
+  // Filtre actiu
+  const [tableFilter, setTableFilter] = React.useState<TableFilter>('all');
 
   // Estat per editar notes inline
   const [editingNoteId, setEditingNoteId] = React.useState<string | null>(null);
   const [editingNoteValue, setEditingNoteValue] = React.useState('');
+
+  // Estat per diàleg de devolució
+  const [isReturnDialogOpen, setIsReturnDialogOpen] = React.useState(false);
+  const [returnTransaction, setReturnTransaction] = React.useState<Transaction | null>(null);
+  const [returnDonorId, setReturnDonorId] = React.useState<string | null>(null);
+  const [returnLinkedTxId, setReturnLinkedTxId] = React.useState<string | null>(null);
+  const [donorDonations, setDonorDonations] = React.useState<Transaction[]>([]);
+  const [isLoadingDonations, setIsLoadingDonations] = React.useState(false);
 
   // Col·leccions
   const transactionsCollection = useMemoFirebase(
@@ -166,22 +178,143 @@ export function TransactionsTable() {
   [availableProjects]);
 
   // ═══════════════════════════════════════════════════════════════════════════
-  // ESTADÍSTIQUES SIMPLES
+  // ESTADÍSTIQUES
   // ═══════════════════════════════════════════════════════════════════════════
   const expensesWithoutDoc = React.useMemo(() => {
     if (!transactions) return [];
     return transactions.filter(tx => tx.amount < 0 && !tx.document);
   }, [transactions]);
 
+  // Devolucions (return + return_fee)
+  const returnTransactions = React.useMemo(() => {
+    if (!transactions) return [];
+    return transactions.filter(tx => 
+      tx.transactionType === 'return' || tx.transactionType === 'return_fee'
+    );
+  }, [transactions]);
+
+  // Devolucions pendents d'assignar
+  const pendingReturns = React.useMemo(() => {
+    return returnTransactions.filter(tx => 
+      tx.transactionType === 'return' && !tx.contactId
+    );
+  }, [returnTransactions]);
+
   // Transaccions filtrades
   const filteredTransactions = React.useMemo(() => {
     if (!transactions) return [];
     
-    if (documentFilter === 'missing') {
-      return expensesWithoutDoc;
+    switch (tableFilter) {
+      case 'missing':
+        return expensesWithoutDoc;
+      case 'returns':
+        return returnTransactions;
+      default:
+        return transactions;
     }
-    return transactions;
-  }, [transactions, documentFilter, expensesWithoutDoc]);
+  }, [transactions, tableFilter, expensesWithoutDoc, returnTransactions]);
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // GESTIÓ DE DEVOLUCIONS
+  // ═══════════════════════════════════════════════════════════════════════════
+  
+  const handleOpenReturnDialog = (tx: Transaction) => {
+    setReturnTransaction(tx);
+    setReturnDonorId(tx.contactId || null);
+    setReturnLinkedTxId(tx.linkedTransactionId || null);
+    setDonorDonations([]);
+    setIsReturnDialogOpen(true);
+  };
+
+  // Carregar donacions del donant seleccionat
+  React.useEffect(() => {
+    if (!returnDonorId || !transactionsCollection || !firestore) {
+      setDonorDonations([]);
+      return;
+    }
+
+    const loadDonorDonations = async () => {
+      setIsLoadingDonations(true);
+      try {
+        // Buscar donacions d'aquest donant
+        const q = query(
+          transactionsCollection,
+          where('contactId', '==', returnDonorId),
+          where('amount', '>', 0)
+        );
+        const snapshot = await getDocs(q);
+        const donations = snapshot.docs
+          .map(doc => ({ id: doc.id, ...doc.data() } as Transaction))
+          .filter(tx => tx.donationStatus !== 'returned') // Excloure ja retornades
+          .sort((a, b) => b.date.localeCompare(a.date)); // Més recents primer
+        
+        setDonorDonations(donations);
+      } catch (error) {
+        console.error('Error loading donor donations:', error);
+      } finally {
+        setIsLoadingDonations(false);
+      }
+    };
+
+    loadDonorDonations();
+  }, [returnDonorId, transactionsCollection, firestore]);
+
+  const handleSaveReturn = async () => {
+    if (!returnTransaction || !transactionsCollection) return;
+
+    try {
+      // 1. Actualitzar la devolució amb el donant
+      const returnUpdate: Record<string, any> = {
+        contactId: returnDonorId,
+        contactType: returnDonorId ? 'donor' : null,
+      };
+      
+      if (returnLinkedTxId) {
+        returnUpdate.linkedTransactionId = returnLinkedTxId;
+      }
+
+      updateDocumentNonBlocking(doc(transactionsCollection, returnTransaction.id), returnUpdate);
+
+      // 2. Si s'ha vinculat a una donació, marcar-la com "retornada"
+      if (returnLinkedTxId) {
+        updateDocumentNonBlocking(doc(transactionsCollection, returnLinkedTxId), {
+          donationStatus: 'returned',
+          linkedTransactionId: returnTransaction.id,
+        });
+
+        // 3. Actualitzar comptador de devolucions del donant
+        if (returnDonorId && contactsCollection) {
+          const donor = donors.find(d => d.id === returnDonorId);
+          if (donor) {
+            updateDocumentNonBlocking(doc(contactsCollection, returnDonorId), {
+              returnCount: (donor.returnCount || 0) + 1,
+              lastReturnDate: new Date().toISOString(),
+              status: 'pending_return',
+            });
+          }
+        }
+      }
+
+      toast({
+        title: 'Devolució assignada',
+        description: returnLinkedTxId 
+          ? 'La devolució s\'ha vinculat a la donació original. Aquesta donació no comptarà al Model 182.'
+          : 'S\'ha assignat el donant a la devolució.',
+      });
+
+      setIsReturnDialogOpen(false);
+      setReturnTransaction(null);
+      setReturnDonorId(null);
+      setReturnLinkedTxId(null);
+    } catch (error) {
+      console.error('Error saving return:', error);
+      toast({
+        variant: 'destructive',
+        title: 'Error',
+        description: 'No s\'ha pogut guardar la devolució.',
+      });
+    }
+  };
 
   // ═══════════════════════════════════════════════════════════════════════════
   // EXPORTAR EXCEL
@@ -192,7 +325,6 @@ export function TransactionsTable() {
       return;
     }
 
-    // Crear CSV
     const headers = ['Data', 'Import', 'Concepte bancari', 'Nota', 'Contacte', 'Categoria', 'Projecte'];
     const rows = expensesWithoutDoc.map(tx => [
       formatDate(tx.date),
@@ -209,7 +341,6 @@ export function TransactionsTable() {
       ...rows.map(row => row.join(';'))
     ].join('\n');
 
-    // Descarregar
     const blob = new Blob(['\ufeff' + csvContent], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
@@ -553,31 +684,101 @@ export function TransactionsTable() {
     );
   };
 
+  // Helper per renderitzar badge de tipus de transacció
+  const renderTransactionTypeBadge = (tx: Transaction) => {
+    if (tx.transactionType === 'return') {
+      return (
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Badge variant="destructive" className="gap-1 text-xs">
+              <Undo2 className="h-3 w-3" />
+              Devolució
+            </Badge>
+          </TooltipTrigger>
+          <TooltipContent>
+            {tx.contactId ? 'Devolució assignada' : 'Pendent d\'assignar donant'}
+          </TooltipContent>
+        </Tooltip>
+      );
+    }
+    if (tx.transactionType === 'return_fee') {
+      return (
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Badge variant="outline" className="gap-1 text-xs text-orange-600 border-orange-300">
+              <Ban className="h-3 w-3" />
+              Comissió
+            </Badge>
+          </TooltipTrigger>
+          <TooltipContent>
+            Comissió bancària per devolució
+          </TooltipContent>
+        </Tooltip>
+      );
+    }
+    if (tx.donationStatus === 'returned') {
+      return (
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Badge variant="outline" className="gap-1 text-xs text-gray-500 line-through">
+              Retornada
+            </Badge>
+          </TooltipTrigger>
+          <TooltipContent>
+            Aquesta donació ha estat retornada i no compta al Model 182
+          </TooltipContent>
+        </Tooltip>
+      );
+    }
+    return null;
+  };
+
   return (
     <TooltipProvider>
       {/* ═══════════════════════════════════════════════════════════════════════
-          SECCIÓ: Filtres i accions - SIMPLIFICAT
+          SECCIÓ: Filtres i accions
           ═══════════════════════════════════════════════════════════════════════ */}
       <div className="flex justify-between items-center mb-4 flex-wrap gap-4">
-        {/* Filtres de documents - SIMPLIFICAT */}
-        <div className="flex gap-2 items-center">
+        {/* Filtres */}
+        <div className="flex gap-2 items-center flex-wrap">
           <Button
-            variant={documentFilter === 'all' ? 'default' : 'outline'}
+            variant={tableFilter === 'all' ? 'default' : 'outline'}
             size="sm"
-            onClick={() => setDocumentFilter('all')}
+            onClick={() => setTableFilter('all')}
           >
             Tots ({transactions?.length || 0})
           </Button>
+          
+          {/* Filtre devolucions */}
+          {returnTransactions.length > 0 && (
+            <Button
+              variant={tableFilter === 'returns' ? 'default' : 'outline'}
+              size="sm"
+              onClick={() => setTableFilter('returns')}
+              className={tableFilter !== 'returns' && pendingReturns.length > 0 ? 'border-red-300 text-red-600' : ''}
+            >
+              <Undo2 className="mr-1.5 h-3 w-3" />
+              Devolucions ({returnTransactions.length})
+              {pendingReturns.length > 0 && (
+                <Badge variant="destructive" className="ml-2 h-5 px-1.5">
+                  {pendingReturns.length}
+                </Badge>
+              )}
+            </Button>
+          )}
+          
+          {/* Filtre sense document */}
           {expensesWithoutDoc.length > 0 && (
             <Button
-              variant={documentFilter === 'missing' ? 'default' : 'outline'}
+              variant={tableFilter === 'missing' ? 'default' : 'outline'}
               size="sm"
-              onClick={() => setDocumentFilter('missing')}
+              onClick={() => setTableFilter('missing')}
             >
               <Circle className="mr-1.5 h-2 w-2 fill-muted-foreground text-muted-foreground" />
               Sense document ({expensesWithoutDoc.length})
             </Button>
           )}
+          
           {/* Botó exportar */}
           {expensesWithoutDoc.length > 0 && (
             <Tooltip>
@@ -608,8 +809,31 @@ export function TransactionsTable() {
         </Button>
       </div>
 
+      {/* Avís devolucions pendents */}
+      {pendingReturns.length > 0 && tableFilter !== 'returns' && (
+        <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg flex items-center gap-3">
+          <AlertTriangle className="h-5 w-5 text-red-500 flex-shrink-0" />
+          <div className="flex-1">
+            <p className="text-sm font-medium text-red-800">
+              {pendingReturns.length} devolució{pendingReturns.length > 1 ? 'ns' : ''} pendent{pendingReturns.length > 1 ? 's' : ''} d'assignar
+            </p>
+            <p className="text-xs text-red-600">
+              Assigna el donant afectat per excloure la donació del Model 182.
+            </p>
+          </div>
+          <Button 
+            variant="outline" 
+            size="sm" 
+            onClick={() => setTableFilter('returns')}
+            className="border-red-300 text-red-700 hover:bg-red-100"
+          >
+            Revisar
+          </Button>
+        </div>
+      )}
+
       {/* ═══════════════════════════════════════════════════════════════════════
-          TAULA DE TRANSACCIONS - DISSENY NET
+          TAULA DE TRANSACCIONS
           ═══════════════════════════════════════════════════════════════════════ */}
       <div className="rounded-md border">
         <Table>
@@ -635,22 +859,36 @@ export function TransactionsTable() {
               const isExpense = tx.amount < 0;
               const hasDocument = !!tx.document;
               const isEditingNote = editingNoteId === tx.id;
+              const isReturn = tx.transactionType === 'return';
+              const isReturnFee = tx.transactionType === 'return_fee';
+              const isReturnedDonation = tx.donationStatus === 'returned';
 
               return (
-                <TableRow key={tx.id}>
+                <TableRow 
+                  key={tx.id}
+                  className={
+                    isReturn ? 'bg-red-50/50' : 
+                    isReturnFee ? 'bg-orange-50/50' :
+                    isReturnedDonation ? 'bg-gray-50/50' : ''
+                  }
+                >
                   <TableCell className="text-muted-foreground">{formatDate(tx.date)}</TableCell>
                   <TableCell
                     className={`text-right font-mono font-medium ${
+                      isReturnedDonation ? 'text-gray-400 line-through' :
                       tx.amount > 0 ? 'text-green-600' : 'text-foreground'
                     }`}
                   >
                     {formatCurrency(tx.amount)}
                   </TableCell>
-                  {/* Columna Concepte + Nota */}
+                  {/* Columna Concepte + Nota + Badge devolució */}
                   <TableCell>
                     <div className="space-y-1">
+                      {/* Badge de tipus */}
+                      {renderTransactionTypeBadge(tx)}
+                      
                       {/* Concepte bancari original */}
-                      <p className="text-sm truncate max-w-[300px]" title={tx.description}>
+                      <p className={`text-sm truncate max-w-[300px] ${isReturnedDonation ? 'text-gray-400' : ''}`} title={tx.description}>
                         {tx.description}
                       </p>
                       {/* Nota editable */}
@@ -695,69 +933,93 @@ export function TransactionsTable() {
                   </TableCell>
                   {/* Columna Contacte */}
                   <TableCell>
-                    <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                           {tx.contactId && contactMap[tx.contactId] ? (
-                                <Button variant="ghost" className="h-auto p-0 text-left font-normal flex items-center gap-1">
-                                    {renderContactBadge(tx.contactId)}
-                                    <ChevronDown className="h-3 w-3 text-muted-foreground" />
-                                </Button>
-                           ) : (
-                               <Button variant="ghost" size="sm" className="text-muted-foreground">
-                                   <UserPlus className="mr-2 h-4 w-4"/>
-                                   {t.movements.table.assign}
-                               </Button>
-                           )}
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="start" className="w-56">
-                            <DropdownMenuLabel className="text-xs text-muted-foreground">Crear nou</DropdownMenuLabel>
-                            <DropdownMenuItem onClick={() => handleOpenNewContactDialog(tx.id, 'donor')}>
-                                <Heart className="mr-2 h-4 w-4 text-red-500" />
-                                Nou donant...
-                            </DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => handleOpenNewContactDialog(tx.id, 'supplier')}>
-                                <Building2 className="mr-2 h-4 w-4 text-blue-500" />
-                                Nou proveïdor...
-                            </DropdownMenuItem>
-                            
-                            <DropdownMenuSeparator />
-                            
-                            <DropdownMenuItem onClick={() => handleSetContact(tx.id, null)}>
-                                {t.movements.table.unlink}
-                            </DropdownMenuItem>
-                            
-                            <DropdownMenuSeparator />
-                            
-                            {donors.length > 0 && (
-                              <>
-                                <DropdownMenuLabel className="text-xs text-muted-foreground flex items-center gap-1">
-                                  <Heart className="h-3 w-3 text-red-500" />
-                                  Donants
-                                </DropdownMenuLabel>
-                                {donors.map((donor) => (
-                                    <DropdownMenuItem key={donor.id} onClick={() => handleSetContact(tx.id, donor.id, 'donor')}>
-                                        {donor.name}
-                                    </DropdownMenuItem>
-                                ))}
-                                <DropdownMenuSeparator />
-                              </>
-                            )}
-                            
-                            {suppliers.length > 0 && (
-                              <>
-                                <DropdownMenuLabel className="text-xs text-muted-foreground flex items-center gap-1">
-                                  <Building2 className="h-3 w-3 text-blue-500" />
-                                  Proveïdors
-                                </DropdownMenuLabel>
-                                {suppliers.map((supplier) => (
-                                    <DropdownMenuItem key={supplier.id} onClick={() => handleSetContact(tx.id, supplier.id, 'supplier')}>
-                                        {supplier.name}
-                                    </DropdownMenuItem>
-                                ))}
-                              </>
-                            )}
-                        </DropdownMenuContent>
-                    </DropdownMenu>
+                    {/* Si és una devolució sense assignar, mostrar botó especial */}
+                    {isReturn && !tx.contactId ? (
+                      <Button 
+                        variant="outline" 
+                        size="sm" 
+                        onClick={() => handleOpenReturnDialog(tx)}
+                        className="text-red-600 border-red-300 hover:bg-red-50"
+                      >
+                        <AlertTriangle className="mr-1.5 h-3 w-3" />
+                        Assignar
+                      </Button>
+                    ) : (
+                      <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                             {tx.contactId && contactMap[tx.contactId] ? (
+                                  <Button variant="ghost" className="h-auto p-0 text-left font-normal flex items-center gap-1">
+                                      {renderContactBadge(tx.contactId)}
+                                      <ChevronDown className="h-3 w-3 text-muted-foreground" />
+                                  </Button>
+                             ) : (
+                                 <Button variant="ghost" size="sm" className="text-muted-foreground">
+                                     <UserPlus className="mr-2 h-4 w-4"/>
+                                     {t.movements.table.assign}
+                                 </Button>
+                             )}
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="start" className="w-56">
+                              {/* Si és una devolució, opció especial */}
+                              {isReturn && (
+                                <>
+                                  <DropdownMenuItem onClick={() => handleOpenReturnDialog(tx)}>
+                                    <Link className="mr-2 h-4 w-4 text-red-500" />
+                                    Gestionar devolució...
+                                  </DropdownMenuItem>
+                                  <DropdownMenuSeparator />
+                                </>
+                              )}
+                              
+                              <DropdownMenuLabel className="text-xs text-muted-foreground">Crear nou</DropdownMenuLabel>
+                              <DropdownMenuItem onClick={() => handleOpenNewContactDialog(tx.id, 'donor')}>
+                                  <Heart className="mr-2 h-4 w-4 text-red-500" />
+                                  Nou donant...
+                              </DropdownMenuItem>
+                              <DropdownMenuItem onClick={() => handleOpenNewContactDialog(tx.id, 'supplier')}>
+                                  <Building2 className="mr-2 h-4 w-4 text-blue-500" />
+                                  Nou proveïdor...
+                              </DropdownMenuItem>
+                              
+                              <DropdownMenuSeparator />
+                              
+                              <DropdownMenuItem onClick={() => handleSetContact(tx.id, null)}>
+                                  {t.movements.table.unlink}
+                              </DropdownMenuItem>
+                              
+                              <DropdownMenuSeparator />
+                              
+                              {donors.length > 0 && (
+                                <>
+                                  <DropdownMenuLabel className="text-xs text-muted-foreground flex items-center gap-1">
+                                    <Heart className="h-3 w-3 text-red-500" />
+                                    Donants
+                                  </DropdownMenuLabel>
+                                  {donors.map((donor) => (
+                                      <DropdownMenuItem key={donor.id} onClick={() => handleSetContact(tx.id, donor.id, 'donor')}>
+                                          {donor.name}
+                                      </DropdownMenuItem>
+                                  ))}
+                                  <DropdownMenuSeparator />
+                                </>
+                              )}
+                              
+                              {suppliers.length > 0 && (
+                                <>
+                                  <DropdownMenuLabel className="text-xs text-muted-foreground flex items-center gap-1">
+                                    <Building2 className="h-3 w-3 text-blue-500" />
+                                    Proveïdors
+                                  </DropdownMenuLabel>
+                                  {suppliers.map((supplier) => (
+                                      <DropdownMenuItem key={supplier.id} onClick={() => handleSetContact(tx.id, supplier.id, 'supplier')}>
+                                          {supplier.name}
+                                      </DropdownMenuItem>
+                                  ))}
+                                </>
+                              )}
+                          </DropdownMenuContent>
+                      </DropdownMenu>
+                    )}
                   </TableCell>
                   {/* Columna Categoria */}
                   <TableCell>
@@ -767,7 +1029,7 @@ export function TransactionsTable() {
                            <Button variant="ghost" className="h-auto p-0 text-left font-normal flex items-center gap-1">
                             <Badge
                               variant={tx.amount > 0 ? 'success' : 'destructive'}
-                              className="cursor-pointer"
+                              className={`cursor-pointer ${isReturnedDonation ? 'opacity-50' : ''}`}
                             >
                               {translatedCategory}
                             </Badge>
@@ -807,7 +1069,7 @@ export function TransactionsTable() {
                         <DropdownMenuTrigger asChild>
                            {tx.projectId && projectMap[tx.projectId] ? (
                                 <Button variant="ghost" className="h-auto p-0 text-left font-normal flex items-center gap-1">
-                                    <span className="text-sm">{projectMap[tx.projectId]}</span>
+                                    <span className={`text-sm ${isReturnedDonation ? 'text-gray-400' : ''}`}>{projectMap[tx.projectId]}</span>
                                     <ChevronDown className="h-3 w-3 text-muted-foreground" />
                                 </Button>
                            ) : (
@@ -830,7 +1092,7 @@ export function TransactionsTable() {
                         </DropdownMenuContent>
                     </DropdownMenu>
                   </TableCell>
-                  {/* Columna Document - INDICADOR SIMPLE AMB PUNTS */}
+                  {/* Columna Document */}
                   <TableCell className="text-center">
                       {isDocumentLoading ? (
                           <Loader2 className="h-4 w-4 animate-spin mx-auto text-muted-foreground" />
@@ -873,6 +1135,17 @@ export function TransactionsTable() {
                                 </Button>
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end">
+                                {/* Opció especial per devolucions */}
+                                {isReturn && (
+                                  <>
+                                    <DropdownMenuItem onClick={() => handleOpenReturnDialog(tx)}>
+                                      <Link className="mr-2 h-4 w-4 text-red-500" />
+                                      Gestionar devolució
+                                    </DropdownMenuItem>
+                                    <DropdownMenuSeparator />
+                                  </>
+                                )}
+                                
                                 <DropdownMenuItem onClick={() => handleEditClick(tx)}>
                                     <Edit className="mr-2 h-4 w-4" />
                                     {t.movements.table.edit}
@@ -883,7 +1156,7 @@ export function TransactionsTable() {
                                     Adjuntar document
                                   </DropdownMenuItem>
                                 )}
-                                {tx.amount > 0 && (
+                                {tx.amount > 0 && !isReturn && !isReturnFee && (
                                   <DropdownMenuItem onClick={() => handleSplitRemittance(tx)}>
                                     <GitMerge className="mr-2 h-4 w-4" />
                                     {t.movements.table.splitRemittance}
@@ -903,8 +1176,10 @@ export function TransactionsTable() {
              {filteredTransactions.length === 0 && (
                 <TableRow>
                     <TableCell colSpan={8} className="h-24 text-center text-muted-foreground">
-                        {documentFilter === 'missing' 
+                        {tableFilter === 'missing' 
                           ? '🎉 Totes les despeses tenen justificant!'
+                          : tableFilter === 'returns'
+                          ? '✅ No hi ha devolucions'
                           : t.movements.table.noTransactions
                         }
                     </TableCell>
@@ -917,6 +1192,113 @@ export function TransactionsTable() {
       {/* ═══════════════════════════════════════════════════════════════════════
           DIÀLEGS
           ═══════════════════════════════════════════════════════════════════════ */}
+
+      {/* Return Assignment Dialog */}
+      <Dialog open={isReturnDialogOpen} onOpenChange={setIsReturnDialogOpen}>
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-red-600">
+              <Undo2 className="h-5 w-5" />
+              Gestionar Devolució
+            </DialogTitle>
+            <DialogDescription>
+              Assigna el donant afectat i vincula la devolució amb la donació original per excloure-la del Model 182.
+            </DialogDescription>
+          </DialogHeader>
+          
+          {returnTransaction && (
+            <div className="space-y-4 py-4">
+              {/* Info de la devolució */}
+              <div className="bg-red-50 border border-red-200 rounded-lg p-3">
+                <p className="text-sm font-medium text-red-800">Devolució</p>
+                <p className="text-sm text-red-600 truncate">{returnTransaction.description}</p>
+                <p className="text-lg font-bold text-red-700 mt-1">
+                  {formatCurrency(returnTransaction.amount)}
+                </p>
+                <p className="text-xs text-red-500">{formatDate(returnTransaction.date)}</p>
+              </div>
+
+              {/* Selector de donant */}
+              <div className="space-y-2">
+                <Label>Donant afectat</Label>
+                <Select 
+                  value={returnDonorId || ''} 
+                  onValueChange={(v) => {
+                    setReturnDonorId(v || null);
+                    setReturnLinkedTxId(null); // Reset linked tx when donor changes
+                  }}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecciona el donant" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {donors.map(donor => (
+                      <SelectItem key={donor.id} value={donor.id}>
+                        <span className="flex items-center gap-2">
+                          <Heart className="h-3 w-3 text-red-500" />
+                          {donor.name}
+                        </span>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Selector de donació original */}
+              {returnDonorId && (
+                <div className="space-y-2">
+                  <Label>Donació original (opcional)</Label>
+                  {isLoadingDonations ? (
+                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      Carregant donacions...
+                    </div>
+                  ) : donorDonations.length === 0 ? (
+                    <p className="text-sm text-muted-foreground">
+                      No s'han trobat donacions d'aquest donant.
+                    </p>
+                  ) : (
+                    <Select 
+                      value={returnLinkedTxId || ''} 
+                      onValueChange={(v) => setReturnLinkedTxId(v || null)}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Vincular a una donació..." />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="">No vincular</SelectItem>
+                        {donorDonations.map(donation => (
+                          <SelectItem key={donation.id} value={donation.id}>
+                            {formatDate(donation.date)} - {formatCurrency(donation.amount)}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  )}
+                  {returnLinkedTxId && (
+                    <p className="text-xs text-green-600 flex items-center gap-1">
+                      <Check className="h-3 w-3" />
+                      La donació vinculada serà marcada com "Retornada" i exclosa del Model 182.
+                    </p>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
+
+          <DialogFooter>
+            <DialogClose asChild>
+              <Button variant="outline">Cancel·lar</Button>
+            </DialogClose>
+            <Button 
+              onClick={handleSaveReturn}
+              disabled={!returnDonorId}
+            >
+              Guardar
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Edit Transaction Dialog */}
       <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
