@@ -55,6 +55,7 @@ import {
   Undo2,
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { useTranslations } from '@/i18n';
 import { jsPDF } from 'jspdf';
 
 // Tipus per al resum de donacions per donant
@@ -75,80 +76,9 @@ interface OrganizationWithLogo extends Organization {
   logoUrl?: string;
 }
 
-// Formatejador de moneda
-const formatCurrency = (amount: number) => {
-  return new Intl.NumberFormat('ca-ES', { style: 'currency', currency: 'EUR' }).format(amount);
-};
-
-// Formatejador de data
-const formatDate = (dateString: string) => {
-  return new Date(dateString).toLocaleDateString('ca-ES', {
-    day: '2-digit',
-    month: '2-digit',
-    year: 'numeric',
-  });
-};
-
 // Netejar nom (treure espais extra)
 const cleanName = (name: string): string => {
   return name.trim().replace(/\s+/g, ' ');
-};
-
-// Convertir número a text (per imports)
-const numberToWords = (num: number): string => {
-  const units = ['', 'un', 'dos', 'tres', 'quatre', 'cinc', 'sis', 'set', 'vuit', 'nou'];
-  const tens = ['', 'deu', 'vint', 'trenta', 'quaranta', 'cinquanta', 'seixanta', 'setanta', 'vuitanta', 'noranta'];
-  const teens = ['deu', 'onze', 'dotze', 'tretze', 'catorze', 'quinze', 'setze', 'disset', 'divuit', 'dinou'];
-  
-  if (num === 0) return 'zero';
-  if (num < 0) return 'menys ' + numberToWords(-num);
-  
-  const euros = Math.floor(num);
-  const cents = Math.round((num - euros) * 100);
-  
-  let result = '';
-  
-  if (euros >= 1000) {
-    const thousands = Math.floor(euros / 1000);
-    if (thousands === 1) {
-      result += 'mil ';
-    } else {
-      result += numberToWords(thousands) + ' mil ';
-    }
-  }
-  
-  const remainder = euros % 1000;
-  if (remainder >= 100) {
-    const hundreds = Math.floor(remainder / 100);
-    if (hundreds === 1) {
-      result += 'cent ';
-    } else {
-      result += units[hundreds] + '-cents ';
-    }
-  }
-  
-  const tensUnits = remainder % 100;
-  if (tensUnits >= 10 && tensUnits < 20) {
-    result += teens[tensUnits - 10] + ' ';
-  } else {
-    if (tensUnits >= 20) {
-      result += tens[Math.floor(tensUnits / 10)];
-      if (tensUnits % 10 !== 0) {
-        result += '-' + units[tensUnits % 10];
-      }
-      result += ' ';
-    } else if (tensUnits > 0) {
-      result += units[tensUnits] + ' ';
-    }
-  }
-  
-  result += 'euros';
-  
-  if (cents > 0) {
-    result += ' amb ' + cents + ' cèntims';
-  }
-  
-  return result.trim();
 };
 
 // Carregar imatge com a base64
@@ -169,7 +99,6 @@ const loadImageAsBase64 = (url: string): Promise<string | null> => {
           resolve(null);
         }
       } catch (e) {
-        console.error('Error converting image:', e);
         resolve(null);
       }
     };
@@ -182,8 +111,8 @@ export function DonationCertificateGenerator() {
   const { firestore } = useFirebase();
   const { organizationId, organization } = useCurrentOrganization();
   const { toast } = useToast();
+  const { t, language } = useTranslations();
 
-  // Estat
   const [selectedYear, setSelectedYear] = React.useState<string>(String(new Date().getFullYear() - 1));
   const [isLoading, setIsLoading] = React.useState(false);
   const [donorSummaries, setDonorSummaries] = React.useState<DonorSummary[]>([]);
@@ -196,13 +125,96 @@ export function DonationCertificateGenerator() {
   const [logoBase64, setLogoBase64] = React.useState<string | null>(null);
   const [totalReturns, setTotalReturns] = React.useState(0);
 
-  // Anys disponibles (últims 5 anys)
   const availableYears = React.useMemo(() => {
     const currentYear = new Date().getFullYear();
     return Array.from({ length: 5 }, (_, i) => String(currentYear - i));
   }, []);
 
-  // Carregar dades de l'organització (incloent logo)
+  const formatCurrency = (amount: number) => {
+    return new Intl.NumberFormat(language === 'ca' ? 'ca-ES' : 'es-ES', { 
+      style: 'currency', 
+      currency: 'EUR' 
+    }).format(amount);
+  };
+
+  const formatDate = (dateString: string) => {
+    return new Date(dateString).toLocaleDateString(language === 'ca' ? 'ca-ES' : 'es-ES', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+    });
+  };
+
+  // Convertir número a text segons idioma
+  const numberToWords = (num: number): string => {
+    const units = language === 'ca' 
+      ? ['', 'un', 'dos', 'tres', 'quatre', 'cinc', 'sis', 'set', 'vuit', 'nou']
+      : ['', 'uno', 'dos', 'tres', 'cuatro', 'cinco', 'seis', 'siete', 'ocho', 'nueve'];
+    const tens = language === 'ca'
+      ? ['', 'deu', 'vint', 'trenta', 'quaranta', 'cinquanta', 'seixanta', 'setanta', 'vuitanta', 'noranta']
+      : ['', 'diez', 'veinte', 'treinta', 'cuarenta', 'cincuenta', 'sesenta', 'setenta', 'ochenta', 'noventa'];
+    const teens = language === 'ca'
+      ? ['deu', 'onze', 'dotze', 'tretze', 'catorze', 'quinze', 'setze', 'disset', 'divuit', 'dinou']
+      : ['diez', 'once', 'doce', 'trece', 'catorce', 'quince', 'dieciséis', 'diecisiete', 'dieciocho', 'diecinueve'];
+    
+    if (num === 0) return 'zero';
+    if (num < 0) return (language === 'ca' ? 'menys ' : 'menos ') + numberToWords(-num);
+    
+    const euros = Math.floor(num);
+    const cents = Math.round((num - euros) * 100);
+    
+    let result = '';
+    
+    if (euros >= 1000) {
+      const thousands = Math.floor(euros / 1000);
+      if (thousands === 1) {
+        result += t.numbers.thousand + ' ';
+      } else {
+        result += numberToWords(thousands) + ' ' + t.numbers.thousand + ' ';
+      }
+    }
+    
+    const remainder = euros % 1000;
+    if (remainder >= 100) {
+      const hundreds = Math.floor(remainder / 100);
+      if (hundreds === 1) {
+        result += t.numbers.hundred + ' ';
+      } else {
+        result += units[hundreds] + '-' + t.numbers.hundreds + ' ';
+      }
+    }
+    
+    const tensUnits = remainder % 100;
+    if (tensUnits >= 10 && tensUnits < 20) {
+      result += teens[tensUnits - 10] + ' ';
+    } else {
+      if (tensUnits >= 20) {
+        result += tens[Math.floor(tensUnits / 10)];
+        if (tensUnits % 10 !== 0) {
+          result += (language === 'ca' ? '-' : ' y ') + units[tensUnits % 10];
+        }
+        result += ' ';
+      } else if (tensUnits > 0) {
+        result += units[tensUnits] + ' ';
+      }
+    }
+    
+    result += t.numbers.euros;
+    
+    if (cents > 0) {
+      result += ' ' + t.numbers.withCents(cents);
+    }
+    
+    return result.trim();
+  };
+
+  // Obtenir nom del mes
+  const getMonthName = (monthIndex: number): string => {
+    const monthKeys = ['january', 'february', 'march', 'april', 'may', 'june', 
+                       'july', 'august', 'september', 'october', 'november', 'december'];
+    return t.months[monthKeys[monthIndex] as keyof typeof t.months];
+  };
+
   React.useEffect(() => {
     if (!firestore || !organizationId) return;
 
@@ -227,19 +239,16 @@ export function DonationCertificateGenerator() {
     loadOrgData();
   }, [firestore, organizationId]);
 
-  // Carregar dades quan canvia l'any
   const loadDonations = React.useCallback(async () => {
     if (!firestore || !organizationId) return;
 
     setIsLoading(true);
     try {
-      // Obtenir tots els donants
       const contactsRef = collection(firestore, 'organizations', organizationId, 'contacts');
       const donorsQuery = query(contactsRef, where('type', '==', 'donor'));
       const donorsSnapshot = await getDocs(donorsQuery);
       const donors: Donor[] = donorsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Donor));
 
-      // Obtenir totes les transaccions de l'any
       const transactionsRef = collection(firestore, 'organizations', organizationId, 'transactions');
       const transactionsSnapshot = await getDocs(transactionsRef);
       const allTransactions: Transaction[] = transactionsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Transaction));
@@ -247,9 +256,6 @@ export function DonationCertificateGenerator() {
       const yearStart = `${selectedYear}-01-01`;
       const yearEnd = `${selectedYear}-12-31`;
       
-      // ═══════════════════════════════════════════════════════════════════════════
-      // DONACIONS: imports positius assignats a donants (excloent retornades)
-      // ═══════════════════════════════════════════════════════════════════════════
       const yearDonations = allTransactions.filter(tx => {
         const txDate = tx.date.substring(0, 10);
         return tx.amount > 0 && 
@@ -260,9 +266,6 @@ export function DonationCertificateGenerator() {
                txDate <= yearEnd;
       });
 
-      // ═══════════════════════════════════════════════════════════════════════════
-      // DEVOLUCIONS: imports negatius amb transactionType === 'return'
-      // ═══════════════════════════════════════════════════════════════════════════
       const yearReturns = allTransactions.filter(tx => {
         const txDate = tx.date.substring(0, 10);
         return tx.amount < 0 && 
@@ -273,7 +276,6 @@ export function DonationCertificateGenerator() {
                txDate <= yearEnd;
       });
 
-      // Agrupar per donant
       const summaries: DonorSummary[] = [];
       let globalReturnsCount = 0;
       
@@ -281,12 +283,10 @@ export function DonationCertificateGenerator() {
         const donorDonations = yearDonations.filter(tx => tx.contactId === donor.id);
         const donorReturns = yearReturns.filter(tx => tx.contactId === donor.id);
         
-        // Calcular imports
         const grossAmount = donorDonations.reduce((sum, tx) => sum + tx.amount, 0);
         const returnedAmount = donorReturns.reduce((sum, tx) => sum + Math.abs(tx.amount), 0);
         const netAmount = Math.max(0, grossAmount - returnedAmount);
         
-        // Només incloure donants amb total net positiu
         if (netAmount > 0) {
           globalReturnsCount += donorReturns.length;
           
@@ -312,25 +312,24 @@ export function DonationCertificateGenerator() {
       
       if (globalReturnsCount > 0) {
         toast({
-          title: 'Devolucions detectades',
-          description: `S'han descomptat ${globalReturnsCount} devolució${globalReturnsCount > 1 ? 'ns' : ''} dels totals.`,
+          title: t.certificates.returnsDetected,
+          description: t.certificates.returnsDetectedDescription(globalReturnsCount),
           duration: 5000,
         });
       }
       
     } catch (error) {
       console.error('Error loading donations:', error);
-      toast({ variant: 'destructive', title: 'Error', description: 'No s\'han pogut carregar les donacions.' });
+      toast({ variant: 'destructive', title: t.common.error, description: t.reports.dataNotAvailableDescription });
     } finally {
       setIsLoading(false);
     }
-  }, [firestore, organizationId, selectedYear, toast]);
+  }, [firestore, organizationId, selectedYear, toast, t]);
 
   React.useEffect(() => {
     loadDonations();
   }, [loadDonations]);
 
-  // Estadístiques
   const stats = React.useMemo(() => {
     const selected = donorSummaries.filter(s => selectedDonors.has(s.donor.id));
     return {
@@ -372,7 +371,6 @@ export function DonationCertificateGenerator() {
     return parts.join(', ');
   };
 
-  // Generar PDF per un donant
   const generatePDF = (summary: DonorSummary): jsPDF => {
     const doc = new jsPDF();
     const pageWidth = doc.internal.pageSize.getWidth();
@@ -393,7 +391,7 @@ export function DonationCertificateGenerator() {
 
     doc.setFontSize(18);
     doc.setFont('helvetica', 'bold');
-    doc.text(orgData?.name || organization?.name || 'Organització', pageWidth / 2, y, { align: 'center' });
+    doc.text(orgData?.name || organization?.name || '', pageWidth / 2, y, { align: 'center' });
     y += 7;
 
     doc.setFontSize(10);
@@ -424,34 +422,34 @@ export function DonationCertificateGenerator() {
 
     doc.setFontSize(16);
     doc.setFont('helvetica', 'bold');
-    doc.text('CERTIFICAT DE DONACIÓ', pageWidth / 2, y, { align: 'center' });
+    doc.text(t.certificates.pdf.title, pageWidth / 2, y, { align: 'center' });
     y += 8;
     doc.setFontSize(12);
     doc.setFont('helvetica', 'normal');
-    doc.text(`Any fiscal ${selectedYear}`, pageWidth / 2, y, { align: 'center' });
+    doc.text(t.certificates.pdf.fiscalYear(selectedYear), pageWidth / 2, y, { align: 'center' });
     y += 20;
 
     doc.setFontSize(11);
     const lineHeight = 7;
-    const orgName = orgData?.name || organization?.name || 'Aquesta entitat';
+    const orgName = orgData?.name || organization?.name || '';
     const orgTaxId = orgData?.taxId || organization?.taxId || 'N/A';
     const donorName = cleanName(summary.donor.name);
 
-    doc.text(`${orgName}, amb CIF ${orgTaxId},`, margin, y);
+    doc.text(t.certificates.pdf.orgIntro(orgName, orgTaxId), margin, y);
     y += lineHeight;
-    doc.text('entitat sense ànim de lucre,', margin, y);
+    doc.text(t.certificates.pdf.nonProfit, margin, y);
     y += lineHeight * 2;
 
     doc.setFont('helvetica', 'bold');
-    doc.text('CERTIFICA:', margin, y);
+    doc.text(t.certificates.pdf.certifies, margin, y);
     y += lineHeight * 2;
 
     doc.setFont('helvetica', 'normal');
-    doc.text(`Que ${donorName}, amb DNI/CIF ${summary.donor.taxId},`, margin, y);
+    doc.text(t.certificates.pdf.donorIntro(donorName, summary.donor.taxId), margin, y);
     y += lineHeight;
-    doc.text(`ha realitzat donacions a aquesta entitat durant l'any ${selectedYear}`, margin, y);
+    doc.text(t.certificates.pdf.hasDonated(selectedYear), margin, y);
     y += lineHeight;
-    doc.text('per un import total de:', margin, y);
+    doc.text(t.certificates.pdf.totalAmountIntro, margin, y);
     y += lineHeight * 2;
 
     doc.setFontSize(14);
@@ -465,7 +463,7 @@ export function DonationCertificateGenerator() {
 
     doc.setFontSize(11);
     doc.setFont('helvetica', 'bold');
-    doc.text('Detall de les donacions:', margin, y);
+    doc.text(t.certificates.pdf.donationDetails, margin, y);
     y += lineHeight;
 
     doc.setFont('helvetica', 'normal');
@@ -480,12 +478,11 @@ export function DonationCertificateGenerator() {
       }
     }
 
-    // Devolucions (si n'hi ha)
     if (summary.returns.length > 0) {
       y += lineHeight;
       doc.setFont('helvetica', 'bold');
       doc.setTextColor(180, 100, 0);
-      doc.text('Devolucions descomptades:', margin, y);
+      doc.text(t.certificates.pdf.returnsDiscounted, margin, y);
       y += lineHeight;
 
       doc.setFont('helvetica', 'normal');
@@ -506,20 +503,19 @@ export function DonationCertificateGenerator() {
 
     doc.setFontSize(9);
     doc.setFont('helvetica', 'italic');
-    const notaText = 'Aquest certificat s\'emet a efectes de la deducció prevista a l\'article 68.3 de la Llei 35/2006, de l\'Impost sobre la Renda de les Persones Físiques, i a l\'article 20 de la Llei 49/2002, de Règim fiscal de les entitats sense fins lucratius.';
-    const notaLines = doc.splitTextToSize(notaText, pageWidth - margin * 2);
+    const notaLines = doc.splitTextToSize(t.certificates.pdf.legalNote, pageWidth - margin * 2);
     doc.text(notaLines, margin, y);
     y += notaLines.length * 5 + 15;
 
     const today = new Date();
     const city = orgData?.city || organization?.city || 'Lleida';
-    const dateText = `${city}, ${today.getDate()} de ${today.toLocaleDateString('ca-ES', { month: 'long' })} de ${today.getFullYear()}`;
+    const dateText = t.certificates.pdf.dateLocation(city, today.getDate(), getMonthName(today.getMonth()), today.getFullYear());
     doc.setFontSize(11);
     doc.setFont('helvetica', 'normal');
     doc.text(dateText, margin, y);
     y += lineHeight * 3;
 
-    doc.text('Signatura i segell:', margin, y);
+    doc.text(t.certificates.pdf.signature, margin, y);
     y += lineHeight * 4;
     doc.line(margin, y, margin + 60, y);
 
@@ -552,13 +548,13 @@ export function DonationCertificateGenerator() {
     const doc = generatePDF(summary);
     const fileName = `Certificat_${selectedYear}_${cleanName(summary.donor.name).replace(/\s+/g, '_')}.pdf`;
     doc.save(fileName);
-    toast({ title: 'Certificat generat', description: `S'ha descarregat ${fileName}` });
+    toast({ title: t.certificates.certificateGenerated, description: t.certificates.certificateGeneratedDescription(fileName) });
   };
 
   const handleDownloadAll = async () => {
     const selected = donorSummaries.filter(s => selectedDonors.has(s.donor.id));
     if (selected.length === 0) {
-      toast({ variant: 'destructive', title: 'Error', description: 'Selecciona almenys un donant.' });
+      toast({ variant: 'destructive', title: t.common.error, description: t.certificates.errorNoDonorSelected });
       return;
     }
 
@@ -577,12 +573,12 @@ export function DonationCertificateGenerator() {
       }
 
       toast({ 
-        title: '✅ Certificats generats', 
-        description: `S'han descarregat ${selected.length} certificats.` 
+        title: t.certificates.allCertificatesGenerated, 
+        description: t.certificates.allCertificatesGeneratedDescription(selected.length) 
       });
     } catch (error) {
       console.error('Error generating certificates:', error);
-      toast({ variant: 'destructive', title: 'Error', description: 'Error generant els certificats.' });
+      toast({ variant: 'destructive', title: t.common.error, description: t.common.error });
     } finally {
       setIsGenerating(false);
       setGenerationProgress(0);
@@ -599,7 +595,7 @@ export function DonationCertificateGenerator() {
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium flex items-center gap-2">
               <Calendar className="h-4 w-4" />
-              Any fiscal
+              {t.certificates.fiscalYear}
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -620,13 +616,13 @@ export function DonationCertificateGenerator() {
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium flex items-center gap-2">
               <Users className="h-4 w-4" />
-              Donants
+              {t.certificates.donors}
             </CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{stats.totalDonors}</div>
             <p className="text-xs text-muted-foreground">
-              {stats.selectedDonors} seleccionats
+              {stats.selectedDonors} {t.certificates.selected}
             </p>
           </CardContent>
         </Card>
@@ -635,13 +631,13 @@ export function DonationCertificateGenerator() {
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium flex items-center gap-2">
               <Euro className="h-4 w-4" />
-              Total donat
+              {t.certificates.totalDonated}
             </CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{formatCurrency(stats.totalAmount)}</div>
             <p className="text-xs text-muted-foreground">
-              Any {selectedYear}
+              {selectedYear}
             </p>
           </CardContent>
         </Card>
@@ -650,13 +646,13 @@ export function DonationCertificateGenerator() {
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium flex items-center gap-2">
               <Mail className="h-4 w-4" />
-              Amb email
+              {t.certificates.withEmail}
             </CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{stats.withEmail}</div>
             <p className="text-xs text-muted-foreground">
-              Poden rebre per correu
+              {t.certificates.canReceiveByEmail}
             </p>
           </CardContent>
         </Card>
@@ -665,10 +661,9 @@ export function DonationCertificateGenerator() {
       {totalReturns > 0 && (
         <Alert className="border-orange-200 bg-orange-50">
           <Undo2 className="h-4 w-4 text-orange-600" />
-          <AlertTitle className="text-orange-800">Devolucions descomptades</AlertTitle>
+          <AlertTitle className="text-orange-800">{t.certificates.returnsDiscountedAlert}</AlertTitle>
           <AlertDescription className="text-orange-700">
-            S'han descomptat <strong>{totalReturns}</strong> devolució{totalReturns > 1 ? 'ns' : ''} per un total de <strong>{formatCurrency(stats.totalReturned)}</strong>. 
-            Els certificats reflecteixen les donacions netes efectivament rebudes.
+            {t.certificates.returnsDiscountedAlertDescription(totalReturns, formatCurrency(stats.totalReturned))}
           </AlertDescription>
         </Alert>
       )}
@@ -677,9 +672,9 @@ export function DonationCertificateGenerator() {
         <CardHeader>
           <div className="flex items-center justify-between">
             <div>
-              <CardTitle>Donants amb donacions el {selectedYear}</CardTitle>
+              <CardTitle>{t.certificates.donorsWithDonations(selectedYear)}</CardTitle>
               <CardDescription>
-                Selecciona els donants per generar els certificats
+                {t.certificates.selectDonorsDescription}
               </CardDescription>
             </div>
             <div className="flex gap-2">
@@ -691,12 +686,12 @@ export function DonationCertificateGenerator() {
                 {isGenerating ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Generant...
+                    {t.certificates.generating}
                   </>
                 ) : (
                   <>
                     <Download className="mr-2 h-4 w-4" />
-                    Descarregar seleccionats ({stats.selectedDonors})
+                    {t.certificates.downloadSelected(stats.selectedDonors)}
                   </>
                 )}
               </Button>
@@ -714,8 +709,8 @@ export function DonationCertificateGenerator() {
           ) : donorSummaries.length === 0 ? (
             <div className="flex flex-col items-center justify-center h-40 text-muted-foreground">
               <AlertCircle className="h-8 w-8 mb-2" />
-              <p>No hi ha donacions registrades per l'any {selectedYear}</p>
-              <p className="text-sm">Assegura't que les transaccions tinguin un donant assignat.</p>
+              <p>{t.certificates.noDonations(selectedYear)}</p>
+              <p className="text-sm">{t.certificates.noDonationsHint}</p>
             </div>
           ) : (
             <div className="rounded-md border">
@@ -728,15 +723,15 @@ export function DonationCertificateGenerator() {
                         onCheckedChange={toggleAll}
                       />
                     </TableHead>
-                    <TableHead>Donant</TableHead>
-                    <TableHead>DNI/CIF</TableHead>
-                    <TableHead className="text-center">Donacions</TableHead>
-                    <TableHead className="text-right">Total</TableHead>
+                    <TableHead>{t.donors.name}</TableHead>
+                    <TableHead>{t.donors.taxId}</TableHead>
+                    <TableHead className="text-center">{t.certificates.donations}</TableHead>
+                    <TableHead className="text-right">{t.certificates.total}</TableHead>
                     {totalReturns > 0 && (
-                      <TableHead className="text-right text-orange-600">Descomptat</TableHead>
+                      <TableHead className="text-right text-orange-600">{t.reports.columnDiscounted}</TableHead>
                     )}
-                    <TableHead className="text-center">Email</TableHead>
-                    <TableHead className="text-right">Accions</TableHead>
+                    <TableHead className="text-center">{t.certificates.email}</TableHead>
+                    <TableHead className="text-right">{t.certificates.actions}</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -781,7 +776,7 @@ export function DonationCertificateGenerator() {
                             variant="ghost"
                             size="icon"
                             onClick={() => handlePreview(summary)}
-                            title="Previsualitzar"
+                            title={t.certificates.preview}
                           >
                             <Eye className="h-4 w-4" />
                           </Button>
@@ -789,7 +784,7 @@ export function DonationCertificateGenerator() {
                             variant="ghost"
                             size="icon"
                             onClick={() => handleDownloadOne(summary)}
-                            title="Descarregar PDF"
+                            title={t.certificates.download}
                           >
                             <Download className="h-4 w-4" />
                           </Button>
@@ -809,10 +804,10 @@ export function DonationCertificateGenerator() {
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <FileText className="h-5 w-5" />
-              Previsualització del certificat
+              {t.certificates.previewTitle}
             </DialogTitle>
             <DialogDescription>
-              Certificat de donació per a {previewDonor ? cleanName(previewDonor.donor.name) : ''}
+              {previewDonor ? t.certificates.previewDescription(cleanName(previewDonor.donor.name)) : ''}
             </DialogDescription>
           </DialogHeader>
           
@@ -839,21 +834,22 @@ export function DonationCertificateGenerator() {
               <hr className="my-4" />
 
               <div className="text-center mb-6">
-                <h3 className="text-lg font-bold">CERTIFICAT DE DONACIÓ</h3>
-                <p className="text-gray-600">Any fiscal {selectedYear}</p>
+                <h3 className="text-lg font-bold">{t.certificates.pdf.title}</h3>
+                <p className="text-gray-600">{t.certificates.pdf.fiscalYear(selectedYear)}</p>
               </div>
 
               <div className="space-y-4 text-sm">
                 <p>
-                  {orgData?.name || organization?.name || 'Aquesta entitat'}, amb CIF {orgData?.taxId || organization?.taxId || 'N/A'},
-                  entitat sense ànim de lucre,
+                  {t.certificates.pdf.orgIntro(orgData?.name || organization?.name || '', orgData?.taxId || organization?.taxId || 'N/A')}
+                  {' '}{t.certificates.pdf.nonProfit}
                 </p>
                 
-                <p className="font-bold">CERTIFICA:</p>
+                <p className="font-bold">{t.certificates.pdf.certifies}</p>
                 
                 <p>
-                  Que <strong>{cleanName(previewDonor.donor.name)}</strong>, amb DNI/CIF <strong>{previewDonor.donor.taxId}</strong>,
-                  ha realitzat donacions a aquesta entitat durant l'any {selectedYear} per un import total de:
+                  {t.certificates.pdf.donorIntro(cleanName(previewDonor.donor.name), previewDonor.donor.taxId)}
+                  {' '}{t.certificates.pdf.hasDonated(selectedYear)}
+                  {' '}{t.certificates.pdf.totalAmountIntro}
                 </p>
 
                 <div className="text-center py-4">
@@ -866,7 +862,7 @@ export function DonationCertificateGenerator() {
                 </div>
 
                 <div>
-                  <p className="font-bold mb-2">Detall de les donacions:</p>
+                  <p className="font-bold mb-2">{t.certificates.pdf.donationDetails}</p>
                   <ul className="list-disc list-inside space-y-1">
                     {previewDonor.donations.map((donation, idx) => (
                       <li key={idx}>
@@ -878,7 +874,7 @@ export function DonationCertificateGenerator() {
 
                 {previewDonor.returns.length > 0 && (
                   <div className="mt-4">
-                    <p className="font-bold mb-2 text-orange-600">Devolucions descomptades:</p>
+                    <p className="font-bold mb-2 text-orange-600">{t.certificates.pdf.returnsDiscounted}</p>
                     <ul className="list-disc list-inside space-y-1 text-orange-600">
                       {previewDonor.returns.map((ret, idx) => (
                         <li key={idx}>
@@ -890,15 +886,18 @@ export function DonationCertificateGenerator() {
                 )}
 
                 <p className="text-xs italic text-gray-500 mt-6">
-                  Aquest certificat s'emet a efectes de la deducció prevista a l'article 68.3 de la Llei 35/2006, 
-                  de l'Impost sobre la Renda de les Persones Físiques, i a l'article 20 de la Llei 49/2002, 
-                  de Règim fiscal de les entitats sense fins lucratius.
+                  {t.certificates.pdf.legalNote}
                 </p>
 
                 <div className="mt-8">
-                  <p>{orgData?.city || organization?.city || 'Lleida'}, {new Date().toLocaleDateString('ca-ES', { day: 'numeric', month: 'long', year: 'numeric' })}</p>
+                  <p>{t.certificates.pdf.dateLocation(
+                    orgData?.city || organization?.city || 'Lleida',
+                    new Date().getDate(),
+                    getMonthName(new Date().getMonth()),
+                    new Date().getFullYear()
+                  )}</p>
                   <div className="mt-8">
-                    <p>Signatura i segell:</p>
+                    <p>{t.certificates.pdf.signature}</p>
                     <div className="border-b border-gray-400 w-48 mt-8"></div>
                   </div>
                 </div>
@@ -912,12 +911,12 @@ export function DonationCertificateGenerator() {
 
           <div className="flex justify-end gap-2 mt-4">
             <Button variant="outline" onClick={() => setIsPreviewOpen(false)}>
-              Tancar
+              {t.certificates.close}
             </Button>
             {previewDonor && (
               <Button onClick={() => handleDownloadOne(previewDonor)}>
                 <Download className="mr-2 h-4 w-4" />
-                Descarregar PDF
+                {t.certificates.download}
               </Button>
             )}
           </div>
@@ -926,4 +925,3 @@ export function DonationCertificateGenerator() {
     </div>
   );
 }
-```
