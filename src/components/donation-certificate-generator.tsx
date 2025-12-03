@@ -36,6 +36,11 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import {
+  Alert,
+  AlertDescription,
+  AlertTitle,
+} from '@/components/ui/alert';
+import {
   FileText,
   Download,
   Mail,
@@ -47,6 +52,7 @@ import {
   Euro,
   Calendar,
   Building2,
+  Undo2,
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { jsPDF } from 'jspdf';
@@ -55,8 +61,12 @@ import { jsPDF } from 'jspdf';
 interface DonorSummary {
   donor: Donor;
   donations: Transaction[];
+  returns: Transaction[];
   totalAmount: number;
+  grossAmount: number;
+  returnedAmount: number;
   donationCount: number;
+  returnCount: number;
   hasEmail: boolean;
 }
 
@@ -184,6 +194,7 @@ export function DonationCertificateGenerator() {
   const [isPreviewOpen, setIsPreviewOpen] = React.useState(false);
   const [orgData, setOrgData] = React.useState<OrganizationWithLogo | null>(null);
   const [logoBase64, setLogoBase64] = React.useState<string | null>(null);
+  const [totalReturns, setTotalReturns] = React.useState(0);
 
   // Anys disponibles (últims 5 anys)
   const availableYears = React.useMemo(() => {
@@ -203,7 +214,6 @@ export function DonationCertificateGenerator() {
           const data = { id: orgSnap.id, ...orgSnap.data() } as OrganizationWithLogo;
           setOrgData(data);
           
-          // Carregar logo si existeix
           if (data.logoUrl) {
             const base64 = await loadImageAsBase64(data.logoUrl);
             setLogoBase64(base64);
@@ -234,13 +244,29 @@ export function DonationCertificateGenerator() {
       const transactionsSnapshot = await getDocs(transactionsRef);
       const allTransactions: Transaction[] = transactionsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Transaction));
 
-      // Filtrar transaccions de l'any seleccionat que siguin ingressos i tinguin contactId
       const yearStart = `${selectedYear}-01-01`;
       const yearEnd = `${selectedYear}-12-31`;
       
+      // ═══════════════════════════════════════════════════════════════════════════
+      // DONACIONS: imports positius assignats a donants (excloent retornades)
+      // ═══════════════════════════════════════════════════════════════════════════
       const yearDonations = allTransactions.filter(tx => {
         const txDate = tx.date.substring(0, 10);
         return tx.amount > 0 && 
+               tx.contactId && 
+               tx.contactType === 'donor' &&
+               tx.donationStatus !== 'returned' &&
+               txDate >= yearStart && 
+               txDate <= yearEnd;
+      });
+
+      // ═══════════════════════════════════════════════════════════════════════════
+      // DEVOLUCIONS: imports negatius amb transactionType === 'return'
+      // ═══════════════════════════════════════════════════════════════════════════
+      const yearReturns = allTransactions.filter(tx => {
+        const txDate = tx.date.substring(0, 10);
+        return tx.amount < 0 && 
+               tx.transactionType === 'return' &&
                tx.contactId && 
                tx.contactType === 'donor' &&
                txDate >= yearStart && 
@@ -249,26 +275,48 @@ export function DonationCertificateGenerator() {
 
       // Agrupar per donant
       const summaries: DonorSummary[] = [];
+      let globalReturnsCount = 0;
       
       for (const donor of donors) {
         const donorDonations = yearDonations.filter(tx => tx.contactId === donor.id);
-        if (donorDonations.length > 0) {
-          const totalAmount = donorDonations.reduce((sum, tx) => sum + tx.amount, 0);
+        const donorReturns = yearReturns.filter(tx => tx.contactId === donor.id);
+        
+        // Calcular imports
+        const grossAmount = donorDonations.reduce((sum, tx) => sum + tx.amount, 0);
+        const returnedAmount = donorReturns.reduce((sum, tx) => sum + Math.abs(tx.amount), 0);
+        const netAmount = Math.max(0, grossAmount - returnedAmount);
+        
+        // Només incloure donants amb total net positiu
+        if (netAmount > 0) {
+          globalReturnsCount += donorReturns.length;
+          
           summaries.push({
             donor,
             donations: donorDonations.sort((a, b) => a.date.localeCompare(b.date)),
-            totalAmount,
+            returns: donorReturns.sort((a, b) => a.date.localeCompare(b.date)),
+            totalAmount: netAmount,
+            grossAmount,
+            returnedAmount,
             donationCount: donorDonations.length,
+            returnCount: donorReturns.length,
             hasEmail: !!donor.email,
           });
         }
       }
 
-      // Ordenar per import total (de major a menor)
       summaries.sort((a, b) => b.totalAmount - a.totalAmount);
       
       setDonorSummaries(summaries);
       setSelectedDonors(new Set(summaries.map(s => s.donor.id)));
+      setTotalReturns(globalReturnsCount);
+      
+      if (globalReturnsCount > 0) {
+        toast({
+          title: 'Devolucions detectades',
+          description: `S'han descomptat ${globalReturnsCount} devolució${globalReturnsCount > 1 ? 'ns' : ''} dels totals.`,
+          duration: 5000,
+        });
+      }
       
     } catch (error) {
       console.error('Error loading donations:', error);
@@ -292,10 +340,10 @@ export function DonationCertificateGenerator() {
       selectedAmount: selected.reduce((sum, s) => sum + s.totalAmount, 0),
       withEmail: donorSummaries.filter(s => s.hasEmail).length,
       selectedWithEmail: selected.filter(s => s.hasEmail).length,
+      totalReturned: donorSummaries.reduce((sum, s) => sum + s.returnedAmount, 0),
     };
   }, [donorSummaries, selectedDonors]);
 
-  // Toggle selecció donant
   const toggleDonor = (donorId: string) => {
     const newSelected = new Set(selectedDonors);
     if (newSelected.has(donorId)) {
@@ -306,7 +354,6 @@ export function DonationCertificateGenerator() {
     setSelectedDonors(newSelected);
   };
 
-  // Seleccionar/deseleccionar tots
   const toggleAll = () => {
     if (selectedDonors.size === donorSummaries.length) {
       setSelectedDonors(new Set());
@@ -315,7 +362,6 @@ export function DonationCertificateGenerator() {
     }
   };
 
-  // Construir adreça completa
   const buildFullAddress = (): string => {
     const parts: string[] = [];
     if (orgData?.address) parts.push(orgData.address);
@@ -334,15 +380,10 @@ export function DonationCertificateGenerator() {
     const margin = 20;
     let y = margin;
 
-    // ═══════════════════════════════════════════════════════════════
-    // CAPÇALERA AMB LOGO
-    // ═══════════════════════════════════════════════════════════════
-    
     if (logoBase64) {
       try {
-        // Afegir logo centrat (màxim 30px d'alçada)
         const logoHeight = 25;
-        const logoWidth = 25; // Assumim quadrat, jsPDF ajustarà
+        const logoWidth = 25;
         doc.addImage(logoBase64, 'PNG', (pageWidth - logoWidth) / 2, y, logoWidth, logoHeight);
         y += logoHeight + 5;
       } catch (e) {
@@ -350,19 +391,16 @@ export function DonationCertificateGenerator() {
       }
     }
 
-    // Nom de l'organització
     doc.setFontSize(18);
     doc.setFont('helvetica', 'bold');
     doc.text(orgData?.name || organization?.name || 'Organització', pageWidth / 2, y, { align: 'center' });
     y += 7;
 
-    // CIF
     doc.setFontSize(10);
     doc.setFont('helvetica', 'normal');
     doc.text(`CIF: ${orgData?.taxId || organization?.taxId || 'N/A'}`, pageWidth / 2, y, { align: 'center' });
     y += 5;
 
-    // Adreça completa
     const fullAddress = buildFullAddress();
     if (fullAddress) {
       doc.setFontSize(9);
@@ -370,7 +408,6 @@ export function DonationCertificateGenerator() {
       y += 5;
     }
 
-    // Contacte (telèfon i/o email)
     const contactParts: string[] = [];
     if (orgData?.phone) contactParts.push(`Tel: ${orgData.phone}`);
     if (orgData?.email) contactParts.push(orgData.email);
@@ -381,15 +418,9 @@ export function DonationCertificateGenerator() {
     }
 
     y += 5;
-
-    // Línia separadora
     doc.setDrawColor(200);
     doc.line(margin, y, pageWidth - margin, y);
     y += 15;
-
-    // ═══════════════════════════════════════════════════════════════
-    // TÍTOL DEL CERTIFICAT
-    // ═══════════════════════════════════════════════════════════════
 
     doc.setFontSize(16);
     doc.setFont('helvetica', 'bold');
@@ -400,19 +431,12 @@ export function DonationCertificateGenerator() {
     doc.text(`Any fiscal ${selectedYear}`, pageWidth / 2, y, { align: 'center' });
     y += 20;
 
-    // ═══════════════════════════════════════════════════════════════
-    // COS DEL CERTIFICAT
-    // ═══════════════════════════════════════════════════════════════
-
     doc.setFontSize(11);
     const lineHeight = 7;
     const orgName = orgData?.name || organization?.name || 'Aquesta entitat';
     const orgTaxId = orgData?.taxId || organization?.taxId || 'N/A';
-
-    // Netejar nom del donant (treure espais extra)
     const donorName = cleanName(summary.donor.name);
 
-    // Text del certificat
     doc.text(`${orgName}, amb CIF ${orgTaxId},`, margin, y);
     y += lineHeight;
     doc.text('entitat sense ànim de lucre,', margin, y);
@@ -430,7 +454,6 @@ export function DonationCertificateGenerator() {
     doc.text('per un import total de:', margin, y);
     y += lineHeight * 2;
 
-    // Import destacat
     doc.setFontSize(14);
     doc.setFont('helvetica', 'bold');
     doc.text(formatCurrency(summary.totalAmount), pageWidth / 2, y, { align: 'center' });
@@ -440,7 +463,6 @@ export function DonationCertificateGenerator() {
     doc.text(`(${numberToWords(summary.totalAmount)})`, pageWidth / 2, y, { align: 'center' });
     y += lineHeight * 2;
 
-    // Detall de donacions
     doc.setFontSize(11);
     doc.setFont('helvetica', 'bold');
     doc.text('Detall de les donacions:', margin, y);
@@ -452,15 +474,36 @@ export function DonationCertificateGenerator() {
       doc.text(line, margin + 5, y);
       y += lineHeight;
       
-      // Nova pàgina si cal
       if (y > 240) {
         doc.addPage();
         y = margin;
       }
     }
+
+    // Devolucions (si n'hi ha)
+    if (summary.returns.length > 0) {
+      y += lineHeight;
+      doc.setFont('helvetica', 'bold');
+      doc.setTextColor(180, 100, 0);
+      doc.text('Devolucions descomptades:', margin, y);
+      y += lineHeight;
+
+      doc.setFont('helvetica', 'normal');
+      for (const ret of summary.returns) {
+        const line = `• ${formatDate(ret.date)}: -${formatCurrency(Math.abs(ret.amount))}`;
+        doc.text(line, margin + 5, y);
+        y += lineHeight;
+        
+        if (y > 240) {
+          doc.addPage();
+          y = margin;
+        }
+      }
+      doc.setTextColor(0);
+    }
+
     y += lineHeight;
 
-    // Nota sobre deducció fiscal
     doc.setFontSize(9);
     doc.setFont('helvetica', 'italic');
     const notaText = 'Aquest certificat s\'emet a efectes de la deducció prevista a l\'article 68.3 de la Llei 35/2006, de l\'Impost sobre la Renda de les Persones Físiques, i a l\'article 20 de la Llei 49/2002, de Règim fiscal de les entitats sense fins lucratius.';
@@ -468,7 +511,6 @@ export function DonationCertificateGenerator() {
     doc.text(notaLines, margin, y);
     y += notaLines.length * 5 + 15;
 
-    // Data i lloc
     const today = new Date();
     const city = orgData?.city || organization?.city || 'Lleida';
     const dateText = `${city}, ${today.getDate()} de ${today.toLocaleDateString('ca-ES', { month: 'long' })} de ${today.getFullYear()}`;
@@ -477,25 +519,17 @@ export function DonationCertificateGenerator() {
     doc.text(dateText, margin, y);
     y += lineHeight * 3;
 
-    // Espai per signatura
     doc.text('Signatura i segell:', margin, y);
     y += lineHeight * 4;
     doc.line(margin, y, margin + 60, y);
-
-    // ═══════════════════════════════════════════════════════════════
-    // PEU DE PÀGINA
-    // ═══════════════════════════════════════════════════════════════
 
     const footerY = pageHeight - 15;
     doc.setFontSize(8);
     doc.setFont('helvetica', 'normal');
     doc.setTextColor(128);
-
-    // Línia separadora del peu
     doc.setDrawColor(200);
     doc.line(margin, footerY - 5, pageWidth - margin, footerY - 5);
 
-    // Contingut del peu
     const footerParts: string[] = [];
     if (orgData?.name || organization?.name) footerParts.push(orgData?.name || organization?.name || '');
     if (orgData?.website) footerParts.push(orgData.website);
@@ -505,19 +539,15 @@ export function DonationCertificateGenerator() {
       doc.text(footerParts.join(' · '), pageWidth / 2, footerY, { align: 'center' });
     }
 
-    // Restaurar color
     doc.setTextColor(0);
-
     return doc;
   };
 
-  // Previsualitzar certificat
   const handlePreview = (summary: DonorSummary) => {
     setPreviewDonor(summary);
     setIsPreviewOpen(true);
   };
 
-  // Descarregar un certificat
   const handleDownloadOne = (summary: DonorSummary) => {
     const doc = generatePDF(summary);
     const fileName = `Certificat_${selectedYear}_${cleanName(summary.donor.name).replace(/\s+/g, '_')}.pdf`;
@@ -525,7 +555,6 @@ export function DonationCertificateGenerator() {
     toast({ title: 'Certificat generat', description: `S'ha descarregat ${fileName}` });
   };
 
-  // Descarregar tots els seleccionats
   const handleDownloadAll = async () => {
     const selected = donorSummaries.filter(s => selectedDonors.has(s.donor.id));
     if (selected.length === 0) {
@@ -544,8 +573,6 @@ export function DonationCertificateGenerator() {
         doc.save(fileName);
         
         setGenerationProgress(((i + 1) / selected.length) * 100);
-        
-        // Petita pausa per evitar bloquejar el navegador
         await new Promise(resolve => setTimeout(resolve, 100));
       }
 
@@ -562,13 +589,11 @@ export function DonationCertificateGenerator() {
     }
   };
 
-  // Construir adreça per a la previsualització
   const previewAddress = buildFullAddress();
   const previewContact = [orgData?.phone ? `Tel: ${orgData.phone}` : null, orgData?.email].filter(Boolean).join(' | ');
 
   return (
     <div className="space-y-6">
-      {/* Selector d'any i estadístiques */}
       <div className="grid gap-4 md:grid-cols-4">
         <Card>
           <CardHeader className="pb-2">
@@ -637,7 +662,17 @@ export function DonationCertificateGenerator() {
         </Card>
       </div>
 
-      {/* Accions */}
+      {totalReturns > 0 && (
+        <Alert className="border-orange-200 bg-orange-50">
+          <Undo2 className="h-4 w-4 text-orange-600" />
+          <AlertTitle className="text-orange-800">Devolucions descomptades</AlertTitle>
+          <AlertDescription className="text-orange-700">
+            S'han descomptat <strong>{totalReturns}</strong> devolució{totalReturns > 1 ? 'ns' : ''} per un total de <strong>{formatCurrency(stats.totalReturned)}</strong>. 
+            Els certificats reflecteixen les donacions netes efectivament rebudes.
+          </AlertDescription>
+        </Alert>
+      )}
+
       <Card>
         <CardHeader>
           <div className="flex items-center justify-between">
@@ -697,6 +732,9 @@ export function DonationCertificateGenerator() {
                     <TableHead>DNI/CIF</TableHead>
                     <TableHead className="text-center">Donacions</TableHead>
                     <TableHead className="text-right">Total</TableHead>
+                    {totalReturns > 0 && (
+                      <TableHead className="text-right text-orange-600">Descomptat</TableHead>
+                    )}
                     <TableHead className="text-center">Email</TableHead>
                     <TableHead className="text-right">Accions</TableHead>
                   </TableRow>
@@ -718,6 +756,18 @@ export function DonationCertificateGenerator() {
                       <TableCell className="text-right font-mono font-medium text-green-600">
                         {formatCurrency(summary.totalAmount)}
                       </TableCell>
+                      {totalReturns > 0 && (
+                        <TableCell className="text-right font-mono text-orange-500">
+                          {summary.returnedAmount > 0 ? (
+                            <span className="flex items-center justify-end gap-1">
+                              <Undo2 className="h-3 w-3" />
+                              -{formatCurrency(summary.returnedAmount)}
+                            </span>
+                          ) : (
+                            <span className="text-muted-foreground">—</span>
+                          )}
+                        </TableCell>
+                      )}
                       <TableCell className="text-center">
                         {summary.hasEmail ? (
                           <CheckCircle2 className="h-4 w-4 text-green-500 mx-auto" />
@@ -754,7 +804,6 @@ export function DonationCertificateGenerator() {
         </CardContent>
       </Card>
 
-      {/* Diàleg de previsualització */}
       <Dialog open={isPreviewOpen} onOpenChange={setIsPreviewOpen}>
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-auto">
           <DialogHeader>
@@ -769,7 +818,6 @@ export function DonationCertificateGenerator() {
           
           {previewDonor && (
             <div className="border rounded-lg p-8 bg-white text-black">
-              {/* Capçalera amb logo */}
               <div className="text-center mb-4">
                 {orgData?.logoUrl && (
                   <img 
@@ -790,13 +838,11 @@ export function DonationCertificateGenerator() {
 
               <hr className="my-4" />
 
-              {/* Títol */}
               <div className="text-center mb-6">
                 <h3 className="text-lg font-bold">CERTIFICAT DE DONACIÓ</h3>
                 <p className="text-gray-600">Any fiscal {selectedYear}</p>
               </div>
 
-              {/* Cos */}
               <div className="space-y-4 text-sm">
                 <p>
                   {orgData?.name || organization?.name || 'Aquesta entitat'}, amb CIF {orgData?.taxId || organization?.taxId || 'N/A'},
@@ -830,6 +876,19 @@ export function DonationCertificateGenerator() {
                   </ul>
                 </div>
 
+                {previewDonor.returns.length > 0 && (
+                  <div className="mt-4">
+                    <p className="font-bold mb-2 text-orange-600">Devolucions descomptades:</p>
+                    <ul className="list-disc list-inside space-y-1 text-orange-600">
+                      {previewDonor.returns.map((ret, idx) => (
+                        <li key={idx}>
+                          {formatDate(ret.date)}: -{formatCurrency(Math.abs(ret.amount))}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+
                 <p className="text-xs italic text-gray-500 mt-6">
                   Aquest certificat s'emet a efectes de la deducció prevista a l'article 68.3 de la Llei 35/2006, 
                   de l'Impost sobre la Renda de les Persones Físiques, i a l'article 20 de la Llei 49/2002, 
@@ -845,7 +904,6 @@ export function DonationCertificateGenerator() {
                 </div>
               </div>
 
-              {/* Peu de pàgina */}
               <div className="mt-8 pt-4 border-t text-center text-xs text-gray-400">
                 {[orgData?.name, orgData?.website, orgData?.email].filter(Boolean).join(' · ')}
               </div>
@@ -868,3 +926,4 @@ export function DonationCertificateGenerator() {
     </div>
   );
 }
+```
