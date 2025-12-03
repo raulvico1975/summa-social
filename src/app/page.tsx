@@ -1,163 +1,28 @@
 'use client';
 
-import * as React from 'react';
+import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Logo } from '@/components/logo';
 import { useFirebase } from '@/firebase';
-import { useToast } from '@/hooks/use-toast';
-import { useTranslations } from '@/i18n';
-import { signInWithEmailAndPassword } from 'firebase/auth';
 import { Loader2 } from 'lucide-react';
 
-
-export default function LoginPage() {
+export default function HomePage() {
   const router = useRouter();
-  const { auth, user, isUserLoading } = useFirebase();
-  const { t } = useTranslations();
-  const { toast } = useToast();
-  
-  const [email, setEmail] = React.useState('raul.vico.ferre@gmail.com');
-  const [password, setPassword] = React.useState('123456');
-  const [error, setError] = React.useState('');
-  const [isLoggingIn, setIsLoggingIn] = React.useState(false);
+  const { user, isUserLoading } = useFirebase();
 
-  const handleLogin = async () => {
-    if (!email || !password) {
-      setError(t.login.allFieldsRequired || 'Introdueix email i contrasenya');
-      return;
-    }
-
-    setError('');
-    setIsLoggingIn(true);
-
-    try {
-      await signInWithEmailAndPassword(auth, email, password);
-      
-      toast({ 
-        title: t.login.loginSuccess, 
-        description: t.login.loginDescription 
-      });
-      // La redirecció es gestiona automàticament per l'efecte de sota
-    } catch (err: any) {
-      console.error('Error de login:', err);
-      setIsLoggingIn(false);
-      
-      let friendlyError = t.login.genericError;
-      switch (err.code) {
-        case 'auth/invalid-email':
-          friendlyError = t.login.invalidEmail || 'L\'email no és vàlid';
-          break;
-        case 'auth/user-not-found':
-          friendlyError = t.login.userNotFound || 'No existeix cap compte amb aquest email';
-          break;
-        case 'auth/wrong-password':
-        case 'auth/invalid-credential':
-          friendlyError = t.login.wrongPassword || 'La contrasenya és incorrecta';
-          break;
-        case 'auth/too-many-requests':
-          friendlyError = t.login.tooManyRequests || 'Massa intents. Espera uns minuts.';
-          break;
-        default:
-          friendlyError = err.message || friendlyError;
+  useEffect(() => {
+    if (!isUserLoading) {
+      if (user) {
+        router.replace('/dashboard');
+      } else {
+        router.replace('/login');
       }
-       setError(friendlyError);
-       toast({ variant: 'destructive', title: t.common.error, description: friendlyError });
-    }
-  };
-
-  // If user is already logged in (e.g. via session cookie), redirect.
-  React.useEffect(() => {
-    if (user && !isUserLoading) {
-      router.push('/dashboard');
     }
   }, [user, isUserLoading, router]);
 
-  const handleKeyPress = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === 'Enter') {
-      handleLogin();
-    }
-  };
-
-  if (isUserLoading || user) {
-    return (
-      <main className="flex min-h-screen flex-col items-center justify-center bg-background p-4">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
-         <p className="mt-4 text-muted-foreground">Verificant sessió...</p>
-      </main>
-    );
-  }
-
   return (
     <main className="flex min-h-screen flex-col items-center justify-center bg-background p-4">
-      <div className="w-full max-w-sm flex flex-col items-center gap-6 text-center">
-        <Logo className="h-16 w-16 text-primary" />
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight font-headline">{t.login.welcome}</h1>
-          <p className="text-muted-foreground mt-2">
-            {t.login.prompt}
-          </p>
-        </div>
-        
-        <div className="w-full space-y-4 text-left">
-          <div className="space-y-2">
-            <Label htmlFor="email">{t.login.email || 'Email'}</Label>
-            <Input 
-              type="email" 
-              id="email" 
-              value={email}
-              onChange={(e) => {
-                setEmail(e.target.value);
-                setError('');
-              }}
-              onKeyPress={handleKeyPress}
-              placeholder="nom@exemple.com"
-              disabled={isLoggingIn}
-              autoComplete="email"
-            />
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="password">{t.login.password}</Label>
-            <Input 
-              type="password" 
-              id="password" 
-              value={password}
-              onChange={(e) => {
-                setPassword(e.target.value);
-                setError('');
-              }}
-              onKeyPress={handleKeyPress}
-              placeholder="••••••••"
-              disabled={isLoggingIn}
-              autoComplete="current-password"
-            />
-          </div>
-
-          {error && (
-            <p className="text-sm text-red-500 bg-red-50 p-2 rounded-md">
-              {error}
-            </p>
-          )}
-        </div>
-
-        <Button 
-          onClick={handleLogin} 
-          className="w-full" 
-          disabled={isLoggingIn}
-        >
-          {isLoggingIn ? (
-            <>
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              {t.login.accessing}
-            </>
-          ) : (
-            t.login.access
-          )}
-        </Button>
-      </div>
+      <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      <p className="mt-4 text-muted-foreground">Carregant...</p>
     </main>
   );
 }
