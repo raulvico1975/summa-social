@@ -11,18 +11,65 @@ import { useToast } from '@/hooks/use-toast';
 import { useTranslations } from '@/i18n';
 import { signInWithEmailAndPassword } from 'firebase/auth';
 import { Loader2 } from 'lucide-react';
-
+import { doc, getDoc, collection, getDocs, query, where } from 'firebase/firestore';
 
 export default function LoginPage() {
   const router = useRouter();
-  const { auth, user, isUserLoading } = useFirebase();
+  const { auth, firestore, user, isUserLoading } = useFirebase();
   const { t } = useTranslations();
   const { toast } = useToast();
   
-  const [email, setEmail] = React.useState('raul.vico.ferre@gmail.com');
-  const [password, setPassword] = React.useState('123456');
+  const [email, setEmail] = React.useState('');
+  const [password, setPassword] = React.useState('');
   const [error, setError] = React.useState('');
   const [isLoggingIn, setIsLoggingIn] = React.useState(false);
+
+  const findUserOrganizationSlug = async (userId: string): Promise<string | null> => {
+    try {
+      // Primer, buscar si l'usuari té una organització per defecte
+      const userProfileRef = doc(firestore, 'users', userId);
+      const userProfileSnap = await getDoc(userProfileRef);
+      
+      let orgId: string | null = null;
+      
+      if (userProfileSnap.exists()) {
+        const profileData = userProfileSnap.data();
+        if (profileData.defaultOrganizationId) {
+          orgId = profileData.defaultOrganizationId;
+        }
+      }
+
+      // Si no té organització per defecte, buscar la primera on és membre
+      if (!orgId) {
+        const orgsRef = collection(firestore, 'organizations');
+        const orgsSnapshot = await getDocs(orgsRef);
+        
+        for (const orgDocSnap of orgsSnapshot.docs) {
+          const memberRef = doc(firestore, 'organizations', orgDocSnap.id, 'members', userId);
+          const memberSnap = await getDoc(memberRef);
+          if (memberSnap.exists()) {
+            orgId = orgDocSnap.id;
+            break;
+          }
+        }
+      }
+
+      // Obtenir el slug de l'organització
+      if (orgId) {
+        const orgRef = doc(firestore, 'organizations', orgId);
+        const orgSnap = await getDoc(orgRef);
+        if (orgSnap.exists()) {
+          const orgData = orgSnap.data();
+          return orgData.slug || null;
+        }
+      }
+
+      return null;
+    } catch (error) {
+      console.error('Error finding organization:', error);
+      return null;
+    }
+  };
 
   const handleLogin = async () => {
     if (!email || !password) {
@@ -34,13 +81,22 @@ export default function LoginPage() {
     setIsLoggingIn(true);
 
     try {
-      await signInWithEmailAndPassword(auth, email, password);
+      const userCredential = await signInWithEmailAndPassword(auth, email, password);
       
       toast({ 
         title: t.login.loginSuccess, 
         description: t.login.loginDescription 
       });
-      // La redirecció es gestiona automàticament per l'efecte de sota
+
+      // Buscar l'organització de l'usuari i redirigir
+      const orgSlug = await findUserOrganizationSlug(userCredential.user.uid);
+      
+      if (orgSlug) {
+        router.push(`/${orgSlug}/dashboard`);
+      } else {
+        // Si no té organització, redirigir al dashboard genèric
+        router.push('/dashboard');
+      }
     } catch (err: any) {
       console.error('Error de login:', err);
       setIsLoggingIn(false);
@@ -63,17 +119,26 @@ export default function LoginPage() {
         default:
           friendlyError = err.message || friendlyError;
       }
-       setError(friendlyError);
-       toast({ variant: 'destructive', title: t.common.error, description: friendlyError });
+      setError(friendlyError);
+      toast({ variant: 'destructive', title: t.common.error, description: friendlyError });
     }
   };
 
-  // If user is already logged in (e.g. via session cookie), redirect.
+  // If user is already logged in, redirect to their organization
   React.useEffect(() => {
-    if (user && !isUserLoading) {
-      router.push('/dashboard');
-    }
-  }, [user, isUserLoading, router]);
+    const redirectIfLoggedIn = async () => {
+      if (user && !isUserLoading) {
+        const orgSlug = await findUserOrganizationSlug(user.uid);
+        if (orgSlug) {
+          router.push(`/${orgSlug}/dashboard`);
+        } else {
+          router.push('/dashboard');
+        }
+      }
+    };
+    
+    redirectIfLoggedIn();
+  }, [user, isUserLoading, router, firestore]);
 
   const handleKeyPress = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter') {
@@ -81,11 +146,11 @@ export default function LoginPage() {
     }
   };
 
-  if (isUserLoading || user) {
+  if (isUserLoading) {
     return (
       <main className="flex min-h-screen flex-col items-center justify-center bg-background p-4">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
-         <p className="mt-4 text-muted-foreground">Verificant sessió...</p>
+        <p className="mt-4 text-muted-foreground">Verificant sessió...</p>
       </main>
     );
   }
