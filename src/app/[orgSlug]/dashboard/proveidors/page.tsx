@@ -1,1 +1,7 @@
-export { default } from '@/app/dashboard/proveidors/page';
+'use client';
+
+import { SupplierManager } from '@/components/supplier-manager';
+
+export default function SuppliersPage() {
+  return <SupplierManager />;
+}
