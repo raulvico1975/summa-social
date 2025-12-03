@@ -296,10 +296,8 @@ export function TransactionsTable() {
       }
 
       toast({
-        title: 'Devolució assignada',
-        description: returnLinkedTxId 
-          ? 'La devolució s\'ha vinculat a la donació original. Aquesta donació no comptarà al Model 182.'
-          : 'S\'ha assignat el donant a la devolució.',
+        title: t.movements.table.returnAssigned,
+        description: t.movements.table.returnAssignedDescription(contactMap[returnDonorId as string]?.name || ''),
       });
 
       setIsReturnDialogOpen(false);
@@ -310,7 +308,7 @@ export function TransactionsTable() {
       console.error('Error saving return:', error);
       toast({
         variant: 'destructive',
-        title: 'Error',
+        title: t.common.error,
         description: 'No s\'ha pogut guardar la devolució.',
       });
     }
@@ -485,7 +483,7 @@ export function TransactionsTable() {
     if (!organizationId || !transactionsCollection) {
       const errorMsg = 'ERROR: No s\'ha pogut identificar l\'organització per a la pujada.';
       log(errorMsg);
-      toast({ variant: 'destructive', title: 'Error', description: errorMsg });
+      toast({ variant: 'destructive', title: t.common.error, description: errorMsg });
       return;
     }
     log(`Organització identificada: ${organizationId}`);
@@ -692,7 +690,7 @@ export function TransactionsTable() {
           <TooltipTrigger asChild>
             <Badge variant="destructive" className="gap-1 text-xs">
               <Undo2 className="h-3 w-3" />
-              Devolució
+              {t.movements.table.returnBadge}
             </Badge>
           </TooltipTrigger>
           <TooltipContent>
@@ -707,7 +705,7 @@ export function TransactionsTable() {
           <TooltipTrigger asChild>
             <Badge variant="outline" className="gap-1 text-xs text-orange-600 border-orange-300">
               <Ban className="h-3 w-3" />
-              Comissió
+              {t.movements.table.commissionBadge}
             </Badge>
           </TooltipTrigger>
           <TooltipContent>
@@ -897,7 +895,7 @@ export function TransactionsTable() {
                           <Input
                             value={editingNoteValue}
                             onChange={(e) => setEditingNoteValue(e.target.value)}
-                            placeholder="Afegeix una nota..."
+                            placeholder={t.movements.table.addNote}
                             className="h-7 text-sm"
                             autoFocus
                             onKeyDown={(e) => {
@@ -926,7 +924,7 @@ export function TransactionsTable() {
                           className="flex items-center gap-1 text-xs text-muted-foreground/50 hover:text-muted-foreground transition-colors"
                         >
                           <Pencil className="h-3 w-3" />
-                          <span>Afegir nota</span>
+                          <span>{t.movements.table.addNote}</span>
                         </button>
                       )}
                     </div>
@@ -1199,10 +1197,10 @@ export function TransactionsTable() {
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 text-red-600">
               <Undo2 className="h-5 w-5" />
-              Gestionar Devolució
+              {t.movements.table.assignAffectedDonor}
             </DialogTitle>
             <DialogDescription>
-              Assigna el donant afectat i vincula la devolució amb la donació original per excloure-la del Model 182.
+              {t.movements.table.assignAffectedDonorDescription}
             </DialogDescription>
           </DialogHeader>
           
@@ -1220,7 +1218,7 @@ export function TransactionsTable() {
 
               {/* Selector de donant */}
               <div className="space-y-2">
-                <Label>Donant afectat</Label>
+                <Label>{t.movements.table.affectedDonor}</Label>
                 <Select 
                   value={returnDonorId || ''} 
                   onValueChange={(v) => {
@@ -1229,7 +1227,7 @@ export function TransactionsTable() {
                   }}
                 >
                   <SelectTrigger>
-                    <SelectValue placeholder="Selecciona el donant" />
+                    <SelectValue placeholder={t.movements.table.selectDonor} />
                   </SelectTrigger>
                   <SelectContent>
                     {donors.map(donor => (
@@ -1288,13 +1286,13 @@ export function TransactionsTable() {
 
           <DialogFooter>
             <DialogClose asChild>
-              <Button variant="outline">Cancel·lar</Button>
+              <Button variant="outline">{t.common.cancel}</Button>
             </DialogClose>
             <Button 
               onClick={handleSaveReturn}
               disabled={!returnDonorId}
             >
-              Guardar
+              {t.common.save}
             </Button>
           </DialogFooter>
         </DialogContent>
