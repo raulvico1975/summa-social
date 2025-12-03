@@ -9,24 +9,18 @@ import { doc, getDoc, collection, getDocs } from 'firebase/firestore';
 export default function HomePage() {
   const router = useRouter();
   const { firestore, user, isUserLoading } = useFirebase();
-  const [isRedirecting, setIsRedirecting] = React.useState(true);
 
   React.useEffect(() => {
     const redirect = async () => {
-      // Esperar a que es carregui l'estat d'autenticació
-      if (isUserLoading) {
-        return;
-      }
+      if (isUserLoading) return;
 
-      // Si no hi ha usuari, redirigir al login
       if (!user) {
         router.push('/login');
         return;
       }
 
-      // Si hi ha usuari, buscar la seva organització
       try {
-        // Primer, buscar si l'usuari té una organització per defecte
+        // Buscar organització de l'usuari
         const userProfileRef = doc(firestore, 'users', user.uid);
         const userProfileSnap = await getDoc(userProfileRef);
         
@@ -39,7 +33,6 @@ export default function HomePage() {
           }
         }
 
-        // Si no té organització per defecte, buscar la primera on és membre
         if (!orgId) {
           const orgsRef = collection(firestore, 'organizations');
           const orgsSnapshot = await getDocs(orgsRef);
@@ -54,7 +47,6 @@ export default function HomePage() {
           }
         }
 
-        // Obtenir el slug de l'organització i redirigir
         if (orgId) {
           const orgRef = doc(firestore, 'organizations', orgId);
           const orgSnap = await getDoc(orgRef);
@@ -67,10 +59,9 @@ export default function HomePage() {
           }
         }
 
-        // Fallback: redirigir al dashboard genèric
         router.push('/dashboard');
       } catch (error) {
-        console.error('Error finding organization:', error);
+        console.error('Error:', error);
         router.push('/login');
       }
     };
