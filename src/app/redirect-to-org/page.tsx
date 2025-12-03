@@ -1,120 +1,107 @@
+// src/app/redirect-to-org/page.tsx
+
 'use client';
 
-import * as React from 'react';
+import { Suspense } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useFirebase } from '@/firebase';
 import { collection, query, where, getDocs, doc, getDoc } from 'firebase/firestore';
 import { Loader2 } from 'lucide-react';
 
-/**
- * Pàgina de redirecció que:
- * 1. Determina l'organització de l'usuari actual
- * 2. Redirigeix a la URL amb el slug de l'organització
- * 
- * Exemple:
- * - Usuari accedeix a /dashboard/movimientos
- * - Middleware redirigeix a /redirect-to-org?next=/dashboard/movimientos
- * - Aquesta pàgina determina que l'usuari pertany a "flores-kiskeya"
- * - Redirigeix a /flores-kiskeya/dashboard/movimientos
- */
-export default function RedirectToOrgPage() {
+// Component intern que usa useSearchParams
+function RedirectContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { firestore, user, isUserLoading } = useFirebase();
-  
-  const [error, setError] = React.useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
-  React.useEffect(() => {
-    // Esperar que es carregui l'usuari
-    if (isUserLoading) {
-      return;
-    }
+  const nextPath = searchParams.get('next') || '/dashboard';
 
-    // Si no hi ha usuari, redirigir a login
-    if (!user) {
-      router.push('/login');
-      return;
-    }
+  useEffect(() => {
+    async function determineOrgAndRedirect() {
+      if (isUserLoading) return;
+      
+      if (!user) {
+        router.push('/login');
+        return;
+      }
 
-    const findUserOrganization = async () => {
       try {
-        // 1. Comprovar si l'usuari té una organització per defecte al seu perfil
+        // 1. Buscar el perfil de l'usuari per obtenir defaultOrganizationId
         const userProfileRef = doc(firestore, 'users', user.uid);
         const userProfileSnap = await getDoc(userProfileRef);
         
-        let orgSlug: string | null = null;
         let orgId: string | null = null;
-
+        
         if (userProfileSnap.exists()) {
-          const profileData = userProfileSnap.data();
-          if (profileData.defaultOrganizationId) {
-            orgId = profileData.defaultOrganizationId;
-            
-            // Obtenir el slug d'aquesta organització
-            const orgRef = doc(firestore, 'organizations', orgId);
-            const orgSnap = await getDoc(orgRef);
-            if (orgSnap.exists()) {
-              orgSlug = orgSnap.data().slug;
-            }
+          const profile = userProfileSnap.data();
+          if (profile.defaultOrganizationId) {
+            orgId = profile.defaultOrganizationId;
           }
         }
 
-        // 2. Si no té organització per defecte, buscar la primera on és membre
-        if (!orgSlug) {
+        // 2. Si no té defaultOrganizationId, buscar la primera org on és membre
+        if (!orgId) {
           const orgsRef = collection(firestore, 'organizations');
-          const orgsSnapshot = await getDocs(orgsRef);
+          const orgsSnap = await getDocs(orgsRef);
           
-          for (const orgDoc of orgsSnapshot.docs) {
+          for (const orgDoc of orgsSnap.docs) {
             const memberRef = doc(firestore, 'organizations', orgDoc.id, 'members', user.uid);
             const memberSnap = await getDoc(memberRef);
             
             if (memberSnap.exists()) {
-              orgSlug = orgDoc.data().slug;
               orgId = orgDoc.id;
               break;
             }
           }
         }
 
-        // 3. Si encara no té organització, redirigir a la pàgina de crear/seleccionar
-        if (!orgSlug) {
-          // Potser l'usuari és nou i no té organització
-          router.push('/onboarding');
+        if (!orgId) {
+          setError('No tens accés a cap organització');
           return;
         }
 
-        // 4. Construir la URL final i redirigir
-        const nextPath = searchParams.get('next') || '/dashboard';
+        // 3. Obtenir el slug de l'organització
+        const orgRef = doc(firestore, 'organizations', orgId);
+        const orgSnap = await getDoc(orgRef);
         
-        // Substituir /dashboard per /{orgSlug}/dashboard
-        let finalPath: string;
-        if (nextPath.startsWith('/dashboard')) {
-          finalPath = `/${orgSlug}${nextPath}`;
-        } else {
-          finalPath = `/${orgSlug}/dashboard${nextPath}`;
+        if (!orgSnap.exists()) {
+          setError('Organització no trobada');
+          return;
         }
 
-        // Redirigir a la URL final
-        router.replace(finalPath);
+        const orgData = orgSnap.data();
+        const slug = orgData.slug;
+
+        if (!slug) {
+          setError('L\'organització no té slug configurat');
+          return;
+        }
+
+        // 4. Redirigir a la URL amb slug
+        // nextPath pot ser "/dashboard" o "/dashboard/movimientos"
+        // Hem de convertir-lo a "/{slug}/dashboard" o "/{slug}/dashboard/movimientos"
+        const newPath = `/${slug}${nextPath}`;
+        router.replace(newPath);
 
       } catch (err) {
-        console.error('Error finding user organization:', err);
-        setError('No s\'ha pogut determinar la teva organització. Torna-ho a provar.');
+        console.error('Error determinant organització:', err);
+        setError('Error carregant l\'organització');
       }
-    };
+    }
 
-    findUserOrganization();
-  }, [firestore, user, isUserLoading, router, searchParams]);
+    determineOrgAndRedirect();
+  }, [user, isUserLoading, firestore, router, nextPath]);
 
-  // Mostrar error si n'hi ha
   if (error) {
     return (
       <div className="flex min-h-screen items-center justify-center">
-        <div className="flex flex-col items-center gap-4 text-center p-4">
-          <p className="text-destructive font-semibold">{error}</p>
+        <div className="text-center">
+          <p className="text-destructive mb-4">{error}</p>
           <button 
-            onClick={() => router.push('/')}
-            className="px-4 py-2 bg-primary text-primary-foreground rounded-md hover:bg-primary/90"
+            onClick={() => router.push('/login')}
+            className="text-primary underline"
           >
             Tornar a l'inici
           </button>
@@ -123,13 +110,30 @@ export default function RedirectToOrgPage() {
     );
   }
 
-  // Mostrar spinner mentre es carrega
   return (
     <div className="flex min-h-screen items-center justify-center">
-      <div className="flex flex-col items-center gap-4">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
-        <p className="text-muted-foreground">Redirigint al teu espai...</p>
+      <div className="text-center">
+        <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4" />
+        <p className="text-muted-foreground">Carregant organització...</p>
       </div>
     </div>
+  );
+}
+
+// Component principal amb Suspense
+export default function RedirectToOrgPage() {
+  return (
+    <Suspense 
+      fallback={
+        <div className="flex min-h-screen items-center justify-center">
+          <div className="text-center">
+            <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4" />
+            <p className="text-muted-foreground">Carregant...</p>
+          </div>
+        </div>
+      }
+    >
+      <RedirectContent />
+    </Suspense>
   );
 }
