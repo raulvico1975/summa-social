@@ -146,7 +146,7 @@ export default function LoginPage() {
     }
   };
 
-  if (isUserLoading) {
+  if (isUserLoading || user) {
     return (
       <main className="flex min-h-screen flex-col items-center justify-center bg-background p-4">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
