@@ -28,7 +28,7 @@ import { useFirebase } from '@/firebase';
 import { useToast } from '@/hooks/use-toast';
 import { useTranslations } from '@/i18n';
 import { signOut as firebaseSignOut } from 'firebase/auth';
-import { useCurrentOrganization } from '@/hooks/organization-provider';
+import { useCurrentOrganization, useOrgUrl } from '@/hooks/organization-provider';
 
 const SUPER_ADMIN_UID = 'f2AHJqjXiOZkYajwkOnZ8RY6h2k2';
 
@@ -38,8 +38,10 @@ export function DashboardSidebarContent() {
   const { auth: firebaseAuth } = useFirebase();
   const { t } = useTranslations();
   const { toast } = useToast();
-  // Get all user data from the single source of truth for the dashboard
-  const { userProfile, firebaseUser } = useCurrentOrganization();
+  
+  // Obtenir dades de l'organització i el helper per construir URLs
+  const { userProfile, firebaseUser, organization, orgSlug } = useCurrentOrganization();
+  const { buildUrl } = useOrgUrl();
   
   const isSuperAdmin = firebaseUser?.uid === SUPER_ADMIN_UID;
 
@@ -62,55 +64,82 @@ export function DashboardSidebarContent() {
     }
   };
 
-  const menuItems = [
-    {
-      href: '/dashboard',
-      label: t.sidebar.dashboard,
-      icon: LayoutDashboard,
-    },
-    {
-      href: '/dashboard/movimientos',
-      label: t.sidebar.movements,
-      icon: FileText,
-    },
-    {
-      href: '/dashboard/projectes',
-      label: t.sidebar.projects,
-      icon: FolderKanban,
-    },
-    {
-      href: '/dashboard/donants',
-      label: t.sidebar.donors || 'Donants',
-      icon: Heart,
-      className: 'text-red-500',
-    },
-    {
-      href: '/dashboard/proveidors',
-      label: t.sidebar.suppliers || 'Proveïdors',
-      icon: Building2,
-      className: 'text-blue-500',
-    },
-    {
-      href: '/dashboard/informes',
-      label: t.sidebar.reports,
-      icon: AreaChart,
-    },
-    {
-      href: '/dashboard/configuracion',
-      label: t.sidebar.settings,
-      icon: Settings,
-    },
-  ];
+  // ═══════════════════════════════════════════════════════════════════════════
+  // CANVI PRINCIPAL: Construir URLs amb el slug de l'organització
+  // ═══════════════════════════════════════════════════════════════════════════
+  const menuItems = React.useMemo(() => {
+    const baseItems = [
+      {
+        path: '/dashboard',
+        label: t.sidebar.dashboard,
+        icon: LayoutDashboard,
+      },
+      {
+        path: '/dashboard/movimientos',
+        label: t.sidebar.movements,
+        icon: FileText,
+      },
+      {
+        path: '/dashboard/projectes',
+        label: t.sidebar.projects,
+        icon: FolderKanban,
+      },
+      {
+        path: '/dashboard/donants',
+        label: t.sidebar.donors || 'Donants',
+        icon: Heart,
+        className: 'text-red-500',
+      },
+      {
+        path: '/dashboard/proveidors',
+        label: t.sidebar.suppliers || 'Proveïdors',
+        icon: Building2,
+        className: 'text-blue-500',
+      },
+      {
+        path: '/dashboard/informes',
+        label: t.sidebar.reports,
+        icon: AreaChart,
+      },
+      {
+        path: '/dashboard/configuracion',
+        label: t.sidebar.settings,
+        icon: Settings,
+      },
+    ];
 
-  // Afegir opció Super Admin si l'usuari ho és
-  if (isSuperAdmin) {
-    menuItems.push({
-      href: '/dashboard/super-admin',
-      label: 'Super Admin',
-      icon: Shield,
-      className: 'text-purple-500',
-    });
-  }
+    // Afegir opció Super Admin si l'usuari ho és
+    if (isSuperAdmin) {
+      baseItems.push({
+        path: '/dashboard/super-admin',
+        label: 'Super Admin',
+        icon: Shield,
+        className: 'text-purple-500',
+      });
+    }
+
+    // Construir URLs amb el slug
+    return baseItems.map(item => ({
+      ...item,
+      href: buildUrl(item.path),
+    }));
+  }, [t, isSuperAdmin, buildUrl]);
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // Helper per comprovar si una ruta està activa
+  // Ara funciona amb URLs que inclouen el slug
+  // ═══════════════════════════════════════════════════════════════════════════
+  const isActive = React.useCallback((href: string, path: string) => {
+    // Si estem a la pàgina principal del dashboard
+    if (path === '/dashboard') {
+      // Comprovar si el pathname acaba amb /dashboard (amb o sense slug)
+      return pathname.endsWith('/dashboard') && !pathname.includes('/dashboard/');
+    }
+    
+    // Per altres pàgines, comprovar si el pathname conté el path
+    const pathSuffix = path.replace('/dashboard', '');
+    return pathname.includes(pathSuffix) && pathSuffix !== '';
+  }, [pathname]);
 
   const getInitials = (name: string | null | undefined): string => {
     if (!name || name === t.sidebar.anonymousUser) return 'U';
@@ -124,7 +153,7 @@ export function DashboardSidebarContent() {
     return name.substring(0, 2).toUpperCase();
   };
   
-  // Obtenir el nom de l'usuari - prioritzar el perfil de Firestore
+  // Obtenir el nom de l'usuari
   const userName = React.useMemo(() => {
     if (userProfile?.displayName) {
       return userProfile.displayName;
@@ -133,7 +162,6 @@ export function DashboardSidebarContent() {
       return firebaseUser.displayName;
     }
     if (firebaseUser?.email) {
-      // Si no té displayName, mostrar la part abans de l'@
       return firebaseUser.email.split('@')[0];
     }
     return t.sidebar.anonymousUser;
@@ -146,7 +174,17 @@ export function DashboardSidebarContent() {
       <SidebarHeader className="border-b">
         <div className="flex items-center gap-2 p-2">
           <Logo className="h-8 w-8 text-primary" />
-          <span className="text-lg font-semibold font-headline">Summa Social</span>
+          <div className="flex flex-col">
+            <span className="text-lg font-semibold font-headline">Summa Social</span>
+            {/* ═══════════════════════════════════════════════════════════════
+                NOU: Mostrar el nom de l'organització actual
+                ═══════════════════════════════════════════════════════════════ */}
+            {organization && (
+              <span className="text-xs text-muted-foreground truncate max-w-[150px]">
+                {organization.name}
+              </span>
+            )}
+          </div>
         </div>
       </SidebarHeader>
       <SidebarContent className="flex-1 p-2">
@@ -155,7 +193,7 @@ export function DashboardSidebarContent() {
             <SidebarMenuItem key={item.href}>
               <SidebarMenuButton
                 asChild
-                isActive={pathname.startsWith(item.href) && (item.href !== '/dashboard' || pathname === '/dashboard')}
+                isActive={isActive(item.href, item.path)}
                 tooltip={{ children: item.label }}
               >
                 <Link href={item.href}>

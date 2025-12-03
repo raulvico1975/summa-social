@@ -1,23 +1,47 @@
+import { NextResponse } from 'next/server';
+import type { NextRequest } from 'next/server';
 
-import { NextResponse } from 'next/server'
-import type { NextRequest } from 'next/server'
-
-// This middleware protects the dashboard routes.
-// It's a temporary solution until a full authentication flow is implemented.
+/**
+ * Middleware per gestionar les redireccions d'URLs d'organització.
+ * 
+ * Lògica:
+ * 1. /dashboard/* → Redirigir a /{orgSlug}/dashboard/* (si l'usuari té org)
+ * 2. /{orgSlug}/dashboard/* → Permetre accés (validació al component)
+ * 3. Altres rutes → Permetre accés normal
+ */
 export function middleware(request: NextRequest) {
-  const authToken = request.cookies.get('auth-token');
+  const { pathname } = request.nextUrl;
 
-  // For the purpose of this simple password protection, we just check
-  // for the existence of the cookie. In a real app, we'd verify it.
-  // The login page is client-side only and doesn't set a real cookie,
-  // so direct access to dashboard pages will be blocked, which is what we want.
-  // Access is granted by navigating from the client-side login page.
+  // ═══════════════════════════════════════════════════════════════════════════
+  // Rutes que requereixen redirecció a URLs amb slug
+  // ═══════════════════════════════════════════════════════════════════════════
+  
+  // Si l'usuari accedeix a /dashboard sense slug, redirigir a la pàgina de selecció
+  // Aquesta pàgina determinarà l'organització de l'usuari i redirigirà
+  if (pathname === '/dashboard' || pathname.startsWith('/dashboard/')) {
+    // Comprovar si ja té un slug (evitar bucle infinit)
+    const segments = pathname.split('/').filter(Boolean);
+    
+    // Si el primer segment és "dashboard", cal redirigir
+    if (segments[0] === 'dashboard') {
+      // Redirigir a una pàgina que determini l'organització
+      const url = request.nextUrl.clone();
+      url.pathname = '/redirect-to-org';
+      url.searchParams.set('next', pathname);
+      return NextResponse.redirect(url);
+    }
+  }
 
-  // Let's allow access for now to avoid loops, the client-side guard is enough for now.
-  // We will re-enable a proper middleware when auth is fully implemented.
+  // Permetre totes les altres rutes
   return NextResponse.next();
 }
 
+// Configurar quines rutes processa el middleware
 export const config = {
-   // matcher: ['/dashboard/:path*'],
-}
+  matcher: [
+    // Processar rutes de dashboard
+    '/dashboard/:path*',
+    // No processar rutes estàtiques ni API
+    '/((?!api|_next/static|_next/image|favicon.ico).*)',
+  ],
+};
