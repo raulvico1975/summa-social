@@ -273,7 +273,7 @@ export function TransactionImporter({ existingTransactions }: TransactionImporte
                 category: null,
                 document: null,
                 contactId: null,
-                contactType: undefined,
+                contactType: null,
                 transactionType,
             } as Omit<Transaction, 'id'>;
         })
@@ -305,7 +305,7 @@ export function TransactionImporter({ existingTransactions }: TransactionImporte
                     if (result.contactId) {
                        const contact = availableContacts?.find(c => c.id === result.contactId);
                        log(`[Fila ${index + 1}] Contacto inferido: ${contact?.name} para "${tx.description.substring(0,30)}..."`);
-                       return { ...tx, contactId: result.contactId, contactType: contact?.type };
+                       return { ...tx, contactId: result.contactId, contactType: contact?.type || null };
                     }
                 } catch (error) {
                     console.error("Error inferring contact for a transaction:", error);
