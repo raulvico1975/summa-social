@@ -52,7 +52,19 @@ export const ca = {
       unlink: "(Desvincular)",
       editTransaction: "Editar Transacció",
       editTransactionDescription: "Modifica els detalls del moviment.",
-      saveChanges: "Desar Canvis"
+      saveChanges: "Desar Canvis",
+      // ═══════════════════════════════════════════════════════════════
+      // NOU: Devolucions
+      // ═══════════════════════════════════════════════════════════════
+      returnBadge: "Devolució",
+      commissionBadge: "Comissió",
+      assignAffectedDonor: "Assignar donant afectat",
+      assignAffectedDonorDescription: "Selecciona el donant al qual pertanyia la donació retornada. Això permetrà descomptar l'import del seu total de donacions.",
+      affectedDonor: "Donant afectat",
+      selectDonor: "Selecciona un donant",
+      returnAssigned: "Devolució assignada",
+      returnAssignedDescription: (donorName: string) => `La devolució s'ha vinculat a ${donorName}.`,
+      addNote: "Afegir nota",
     },
     splitter: {
         title: "Dividir Remesa",
@@ -137,6 +149,113 @@ export const ca = {
     emissorDeleted: "Emissor Eliminat",
     emissorDeletedDescription: (name: string) => `L'emissor "${name}" ha estat eliminat.`,
   },
+  // ═══════════════════════════════════════════════════════════════════════════
+  // NOU: Donants (secció separada d'emissors)
+  // ═══════════════════════════════════════════════════════════════════════════
+  donors: {
+    title: "Donants",
+    description: "Gestiona els donants de la teva organització.",
+    add: "Afegir Donant",
+    import: "Importar Donants",
+    noData: "No hi ha donants registrats.",
+    name: "Nom",
+    taxId: "DNI/CIF",
+    zipCode: "Codi Postal",
+    email: "Email",
+    phone: "Telèfon",
+    address: "Adreça",
+    status: "Estat",
+    actions: "Accions",
+    statuses: {
+      active: "Actiu",
+      inactive: "Inactiu",
+      returned: "Amb devolucions"
+    },
+    addTitle: "Afegir Nou Donant",
+    addDescription: "Crea un nou donant per a la teva organització.",
+    editTitle: "Editar Donant",
+    editDescription: "Modifica les dades del donant.",
+    save: "Guardar Donant",
+    confirmDeleteTitle: "Eliminar donant?",
+    confirmDeleteDescription: "Aquesta acció no es pot desfer. S'eliminarà el donant permanentment.",
+    donorCreated: "Donant Creat",
+    donorCreatedDescription: (name: string) => `El donant "${name}" ha estat creat.`,
+    donorUpdated: "Donant Actualitzat",
+    donorUpdatedDescription: (name: string) => `El donant "${name}" ha estat actualitzat.`,
+    donorDeleted: "Donant Eliminat",
+    donorDeletedDescription: (name: string) => `El donant "${name}" ha estat eliminat.`,
+    importer: {
+      title: "Importar Donants",
+      description: "Importa donants des d'un arxiu Excel o CSV.",
+      formatInfo: "Format de l'arxiu",
+      formatDescription: "L'arxiu ha de contenir les columnes: Nom, DNI/CIF, Codi Postal. Opcionalment: Email, Telèfon, Adreça.",
+      requiredColumns: "Columnes obligatòries",
+      optionalColumns: "Columnes opcionals",
+      uploadButton: "Seleccionar arxiu",
+      processing: "Processant...",
+      preview: "Previsualització",
+      confirmImport: "Importar",
+      successToast: "Donants importats",
+      successToastDescription: (count: number, duplicates: number) => 
+        `S'han importat ${count} donants.${duplicates > 0 ? ` ${duplicates} duplicats omesos.` : ''}`,
+      errorInvalidFormat: "Format d'arxiu no vàlid. Usa .xlsx, .xls o .csv.",
+      errorMissingColumns: (columns: string) => `Falten columnes obligatòries: ${columns}`,
+      errorEmptyFile: "L'arxiu està buit o no té dades vàlides.",
+      duplicatesFound: (count: number) => `S'han trobat ${count} donants duplicats (per DNI/CIF).`,
+      rowsToImport: (count: number) => `${count} donants nous per importar`,
+    }
+  },
+  // ═══════════════════════════════════════════════════════════════════════════
+  // NOU: Proveïdors (secció separada d'emissors)
+  // ═══════════════════════════════════════════════════════════════════════════
+  suppliers: {
+    title: "Proveïdors",
+    description: "Gestiona els proveïdors de la teva organització.",
+    add: "Afegir Proveïdor",
+    import: "Importar Proveïdors",
+    noData: "No hi ha proveïdors registrats.",
+    name: "Nom / Raó Social",
+    taxId: "CIF/NIF",
+    zipCode: "Codi Postal",
+    email: "Email",
+    phone: "Telèfon",
+    address: "Adreça",
+    category: "Categoria",
+    actions: "Accions",
+    addTitle: "Afegir Nou Proveïdor",
+    addDescription: "Crea un nou proveïdor per a la teva organització.",
+    editTitle: "Editar Proveïdor",
+    editDescription: "Modifica les dades del proveïdor.",
+    save: "Guardar Proveïdor",
+    confirmDeleteTitle: "Eliminar proveïdor?",
+    confirmDeleteDescription: "Aquesta acció no es pot desfer. S'eliminarà el proveïdor permanentment.",
+    supplierCreated: "Proveïdor Creat",
+    supplierCreatedDescription: (name: string) => `El proveïdor "${name}" ha estat creat.`,
+    supplierUpdated: "Proveïdor Actualitzat",
+    supplierUpdatedDescription: (name: string) => `El proveïdor "${name}" ha estat actualitzat.`,
+    supplierDeleted: "Proveïdor Eliminat",
+    supplierDeletedDescription: (name: string) => `El proveïdor "${name}" ha estat eliminat.`,
+    importer: {
+      title: "Importar Proveïdors",
+      description: "Importa proveïdors des d'un arxiu Excel o CSV.",
+      formatInfo: "Format de l'arxiu",
+      formatDescription: "L'arxiu ha de contenir les columnes: Nom, CIF/NIF, Codi Postal. Opcionalment: Email, Telèfon, Adreça, Categoria.",
+      requiredColumns: "Columnes obligatòries",
+      optionalColumns: "Columnes opcionals",
+      uploadButton: "Seleccionar arxiu",
+      processing: "Processant...",
+      preview: "Previsualització",
+      confirmImport: "Importar",
+      successToast: "Proveïdors importats",
+      successToastDescription: (count: number, duplicates: number) => 
+        `S'han importat ${count} proveïdors.${duplicates > 0 ? ` ${duplicates} duplicats omesos.` : ''}`,
+      errorInvalidFormat: "Format d'arxiu no vàlid. Usa .xlsx, .xls o .csv.",
+      errorMissingColumns: (columns: string) => `Falten columnes obligatòries: ${columns}`,
+      errorEmptyFile: "L'arxiu està buit o no té dades vàlides.",
+      duplicatesFound: (count: number) => `S'han trobat ${count} proveïdors duplicats (per CIF/NIF).`,
+      rowsToImport: (count: number) => `${count} proveïdors nous per importar`,
+    }
+  },
   reports: {
     title: "Informes",
     description: "Genera informes personalitzats per a la teva organització.",
@@ -158,6 +277,77 @@ export const ca = {
     reportGeneratedDescription: (year: string, count: number) => `S'ha generat l'informe per a l'any ${year} amb ${count} donants.`,
     exportComplete: "Exportació Completada",
     exportCompleteDescription: "L'informe de donacions s'ha descarregat com a arxiu CSV.",
+    // ═══════════════════════════════════════════════════════════════════════════
+    // NOU: Devolucions al Model 182
+    // ═══════════════════════════════════════════════════════════════════════════
+    returnsDiscountedTitle: "Devolucions descomptades",
+    returnsDiscountedDescription: (count: number, amount: string) => 
+      `S'han descomptat ${count} devolució${count > 1 ? 'ns' : ''} per un total de ${amount} del total de donacions. El Model 182 reflecteix les donacions netes efectivament rebudes.`,
+    returnsDiscountedToast: (count: number, amount: string) => 
+      `S'han descomptat ${count} devolució${count > 1 ? 'ns' : ''} (${amount})`,
+    columnDiscounted: "Descomptat",
+    returns: "Devolucions",
+    discountedAmount: "Import descomptat",
+    netDonationsNote: "Aquest informe mostra les donacions netes (donacions - devolucions) per cada donant. Les devolucions vinculades a un donant es resten automàticament del seu total, d'acord amb la normativa fiscal del Model 182.",
+  },
+  // ═══════════════════════════════════════════════════════════════════════════
+  // NOU: Certificats de donació
+  // ═══════════════════════════════════════════════════════════════════════════
+  certificates: {
+    title: "Certificats de Donació",
+    description: "Genera certificats de donació per als teus donants.",
+    fiscalYear: "Any fiscal",
+    donors: "Donants",
+    totalDonated: "Total donat",
+    withEmail: "Amb email",
+    canReceiveByEmail: "Poden rebre per correu",
+    selected: "seleccionats",
+    donorsWithDonations: (year: string) => `Donants amb donacions el ${year}`,
+    selectDonorsDescription: "Selecciona els donants per generar els certificats",
+    downloadSelected: (count: number) => `Descarregar seleccionats (${count})`,
+    generating: "Generant...",
+    preview: "Previsualitzar",
+    download: "Descarregar PDF",
+    donations: "Donacions",
+    total: "Total",
+    email: "Email",
+    actions: "Accions",
+    noDonations: (year: string) => `No hi ha donacions registrades per l'any ${year}`,
+    noDonationsHint: "Assegura't que les transaccions tinguin un donant assignat.",
+    previewTitle: "Previsualització del certificat",
+    previewDescription: (name: string) => `Certificat de donació per a ${name}`,
+    close: "Tancar",
+    certificateGenerated: "Certificat generat",
+    certificateGeneratedDescription: (fileName: string) => `S'ha descarregat ${fileName}`,
+    allCertificatesGenerated: "Certificats generats",
+    allCertificatesGeneratedDescription: (count: number) => `S'han descarregat ${count} certificats.`,
+    errorNoDonorSelected: "Selecciona almenys un donant.",
+    // Textos del PDF
+    pdf: {
+      title: "CERTIFICAT DE DONACIÓ",
+      fiscalYear: (year: string) => `Any fiscal ${year}`,
+      orgIntro: (orgName: string, taxId: string) => `${orgName}, amb CIF ${taxId},`,
+      nonProfit: "entitat sense ànim de lucre,",
+      certifies: "CERTIFICA:",
+      donorIntro: (donorName: string, taxId: string) => 
+        `Que ${donorName}, amb DNI/CIF ${taxId},`,
+      hasDonated: (year: string) => 
+        `ha realitzat donacions a aquesta entitat durant l'any ${year}`,
+      totalAmountIntro: "per un import total de:",
+      donationDetails: "Detall de les donacions:",
+      returnsDiscounted: "Devolucions descomptades:",
+      legalNote: "Aquest certificat s'emet a efectes de la deducció prevista a l'article 68.3 de la Llei 35/2006, de l'Impost sobre la Renda de les Persones Físiques, i a l'article 20 de la Llei 49/2002, de Règim fiscal de les entitats sense fins lucratius.",
+      dateLocation: (city: string, day: number, month: string, year: number) => 
+        `${city}, ${day} de ${month} de ${year}`,
+      signature: "Signatura i segell:",
+    },
+    // Devolucions als certificats
+    returnsDetected: "Devolucions detectades",
+    returnsDetectedDescription: (count: number) => 
+      `S'han descomptat ${count} devolució${count > 1 ? 'ns' : ''} dels totals.`,
+    returnsDiscountedAlert: "Devolucions descomptades",
+    returnsDiscountedAlertDescription: (count: number, amount: string) => 
+      `S'han descomptat ${count} devolució${count > 1 ? 'ns' : ''} per un total de ${amount}. Els certificats reflecteixen les donacions netes efectivament rebudes.`,
   },
   settings: {
     title: "Configuració",
@@ -212,6 +402,27 @@ export const ca = {
       errorWrongCurrent: "La contrasenya actual és incorrecta.",
       errorWeak: "La nova contrasenya és massa feble.",
       errorGeneric: "No s'ha pogut canviar la contrasenya."
+    },
+    // ═══════════════════════════════════════════════════════════════════════════
+    // NOU: Configuració de l'organització
+    // ═══════════════════════════════════════════════════════════════════════════
+    organization: {
+      title: "Dades de l'Organització",
+      description: "Configura les dades que apareixeran als documents i certificats.",
+      name: "Nom de l'organització",
+      taxId: "CIF",
+      address: "Adreça",
+      zipCode: "Codi Postal",
+      city: "Ciutat",
+      phone: "Telèfon",
+      email: "Email",
+      website: "Pàgina web",
+      logo: "Logo",
+      uploadLogo: "Pujar logo",
+      removeLogo: "Eliminar logo",
+      logoHint: "Format recomanat: PNG o JPG, màxim 2MB",
+      saved: "Dades guardades",
+      savedDescription: "Les dades de l'organització s'han actualitzat correctament.",
     }
   },
   sidebar: {
@@ -256,7 +467,22 @@ export const ca = {
       uncategorized: "Sense Categoria",
       error: "Error",
       dbConnectionError: "No s'ha pogut connectar a la base de dades.",
-      authError: "Error d'autenticació"
+      authError: "Error d'autenticació",
+      loading: "Carregant...",
+      noResults: "No s'han trobat resultats",
+      search: "Cercar",
+      filter: "Filtrar",
+      export: "Exportar",
+      import: "Importar",
+      yes: "Sí",
+      no: "No",
+      close: "Tancar",
+      back: "Tornar",
+      next: "Següent",
+      previous: "Anterior",
+      all: "Tots",
+      selectAll: "Seleccionar tots",
+      deselectAll: "Deseleccionar tots",
   },
   categories: {
     donations: "Donacions",
@@ -314,7 +540,32 @@ export const ca = {
     confirmDeleteOrgDescription: (name: string) => `Estàs segur que vols eliminar l'organització "${name}"? Aquesta acció no es pot desfer.`,
     confirmDeleteUserTitle: "Eliminar Usuari?",
     confirmDeleteUserDescription: (name: string) => `Estàs segur que vols eliminar l'usuari "${name}"? Aquesta acció no es pot desfer.`
+  },
+  // ═══════════════════════════════════════════════════════════════════════════
+  // NOU: Mesos (per als certificats)
+  // ═══════════════════════════════════════════════════════════════════════════
+  months: {
+    january: "gener",
+    february: "febrer",
+    march: "març",
+    april: "abril",
+    may: "maig",
+    june: "juny",
+    july: "juliol",
+    august: "agost",
+    september: "setembre",
+    october: "octubre",
+    november: "novembre",
+    december: "desembre",
+  },
+  // ═══════════════════════════════════════════════════════════════════════════
+  // NOU: Números en text (per als certificats)
+  // ═══════════════════════════════════════════════════════════════════════════
+  numbers: {
+    euros: "euros",
+    withCents: (cents: number) => `amb ${cents} cèntims`,
+    thousand: "mil",
+    hundred: "cent",
+    hundreds: "cents",
   }
 };
-
-    
