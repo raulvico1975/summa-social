@@ -4,17 +4,70 @@
 // TIPUS BASE
 // ═══════════════════════════════════════════════════════════════════════════════
 
+/**
+ * Tipus de transacció per identificar devolucions
+ */
+export type TransactionType = 'normal' | 'return' | 'return_fee';
+
+/**
+ * Estat d'una donació
+ */
+export type DonationStatus = 'completed' | 'returned' | 'partial';
+
 export type Transaction = {
   id: string;
   date: string;
   description: string;             // Concepte original del banc (no editable)
-  note?: string | null;            // NOU: Nota/descripció editable per l'usuari
+  note?: string | null;            // Nota/descripció editable per l'usuari
   amount: number;
   category: string | null;
   document: string | null;
   contactId?: string | null;
   contactType?: ContactType;
   projectId?: string | null;
+  
+  // ═══════════════════════════════════════════════════════════════════════════
+  // CAMPS PER GESTIÓ DE DEVOLUCIONS
+  // ═══════════════════════════════════════════════════════════════════════════
+  
+  /**
+   * Tipus de transacció
+   * - normal: Transacció normal (ingrés o despesa)
+   * - return: Devolució de rebut/donació
+   * - return_fee: Comissió bancària per devolució
+   */
+  transactionType?: TransactionType;
+  
+  /**
+   * Estat de la donació (només per ingressos de donants)
+   * - completed: Donació cobrada correctament
+   * - returned: Donació retornada (rebut devolt)
+   * - partial: Parcialment retornada (casos excepcionals)
+   */
+  donationStatus?: DonationStatus;
+  
+  /**
+   * ID de la transacció original (per devolucions)
+   * Permet vincular una devolució amb la donació original
+   */
+  linkedTransactionId?: string | null;
+  
+  /**
+   * IDs de transaccions vinculades (per devolucions agrupades)
+   * Quan un apunt bancari agrupa múltiples devolucions
+   */
+  linkedTransactionIds?: string[];
+  
+  /**
+   * Indica si aquesta transacció s'ha dividit en múltiples
+   * Similar a les remeses dividides
+   */
+  isSplit?: boolean;
+  
+  /**
+   * ID de la transacció pare (si és fruit d'una divisió)
+   */
+  parentTransactionId?: string | null;
 };
 
 export type Category = {
@@ -53,6 +106,11 @@ export type Contact = {
 };
 
 /**
+ * Estat d'un donant/soci
+ */
+export type DonorStatus = 'active' | 'pending_return' | 'inactive';
+
+/**
  * Donant - Persona o entitat que fa donacions
  * Camps específics per a la gestió de donants i Model 182
  */
@@ -72,6 +130,29 @@ export type Donor = Contact & {
   phone?: string;
   // Notes
   notes?: string;
+  
+  // ═══════════════════════════════════════════════════════════════════════════
+  // CAMPS PER GESTIÓ DE DEVOLUCIONS
+  // ═══════════════════════════════════════════════════════════════════════════
+  
+  /**
+   * Estat del donant
+   * - active: Tot correcte
+   * - pending_return: Té devolucions pendents de resoldre
+   * - inactive: Donat de baixa o massa devolucions
+   */
+  status?: DonorStatus;
+  
+  /**
+   * Comptador de devolucions
+   * Per generar alertes quan supera un llindar
+   */
+  returnCount?: number;
+  
+  /**
+   * Data de l'última devolució
+   */
+  lastReturnDate?: string;
 };
 
 /**
@@ -246,3 +327,53 @@ export const SUPPLIER_CATEGORIES = [
 ] as const;
 
 export type SupplierCategory = typeof SUPPLIER_CATEGORIES[number];
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// PATRONS DE DETECCIÓ DE DEVOLUCIONS PER BANC
+// ═══════════════════════════════════════════════════════════════════════════════
+
+/**
+ * Patrons per detectar devolucions als extractes bancaris
+ * Cada banc té el seu format específic
+ */
+export const RETURN_PATTERNS = {
+  // Devolucions
+  return: [
+    /devolucion\s*(de)?\s*recibo/i,                    // Santander: "Devolucion De Recibo"
+    /adeudo\s*devolucion\s*recibos/i,                  // Triodos: "ADEUDO DEVOLUCION RECIBOS"
+    /dev\.?\s*recibo/i,                                // CaixaBank: "DEV.RECIBO ADEUDO SEPA"
+    /recibo\s*devuelto/i,                              // Genèric
+    /devolución/i,                                     // Genèric amb accent
+  ],
+  // Comissions per devolució
+  returnFee: [
+    /comision\s*devol/i,                               // Triodos: "COMISION DEVOL. RECIBOS"
+    /gastos?\s*devolucion/i,                           // Santander: "Gastos Devoluciones De Recibos"
+    /comision.*devolucion/i,                           // Genèric
+    /gastos?.*devol/i,                                 // Genèric
+  ],
+} as const;
+
+/**
+ * Detecta si una descripció correspon a una devolució
+ * @returns 'return' | 'return_fee' | null
+ */
+export function detectReturnType(description: string): TransactionType | null {
+  const normalized = description.toLowerCase();
+  
+  // Primer comprovar si és una comissió (més específic)
+  for (const pattern of RETURN_PATTERNS.returnFee) {
+    if (pattern.test(normalized)) {
+      return 'return_fee';
+    }
+  }
+  
+  // Després comprovar si és una devolució
+  for (const pattern of RETURN_PATTERNS.return) {
+    if (pattern.test(normalized)) {
+      return 'return';
+    }
+  }
+  
+  return null;
+}
