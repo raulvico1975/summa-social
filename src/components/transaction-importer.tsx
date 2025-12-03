@@ -4,7 +4,8 @@ import * as React from 'react';
 import { Button } from '@/components/ui/button';
 import { FileUp, Loader2, ChevronDown, Trash2, ListPlus } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import type { Transaction, Emisor } from '@/lib/data';
+import type { Transaction, AnyContact } from '@/lib/data';
+import { detectReturnType } from '@/lib/data';
 import Papa from 'papaparse';
 import * as XLSX from 'xlsx';
 import { inferContact } from '@/ai/flows/infer-contact';
@@ -72,14 +73,11 @@ export function TransactionImporter({ existingTransactions }: TransactionImporte
   const { firestore } = useFirebase();
   const { organizationId } = useCurrentOrganization();
 
-  // ═══════════════════════════════════════════════════════════════════════════
-  // CANVI: Ara les col·leccions apunten a organizations/{orgId}/...
-  // ═══════════════════════════════════════════════════════════════════════════
-  const emissorsQuery = useMemoFirebase(
-    () => organizationId ? collection(firestore, 'organizations', organizationId, 'emissors') : null,
+  const contactsQuery = useMemoFirebase(
+    () => organizationId ? collection(firestore, 'organizations', organizationId, 'contacts') : null,
     [firestore, organizationId]
   );
-  const { data: availableEmissors } = useCollection<Emisor>(emissorsQuery);
+  const { data: availableContacts } = useCollection<AnyContact>(contactsQuery);
 
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -212,13 +210,11 @@ export function TransactionImporter({ existingTransactions }: TransactionImporte
   };
 
   const processParsedData = async (data: any[], mode: ImportMode) => {
-     // CANVI: Ara comprovem organizationId en lloc de user
      if (!organizationId) {
         toast({ variant: 'destructive', title: 'Error', description: 'No s\'ha pogut identificar l\'organització.' });
         setIsImporting(false);
         return;
      }
-     // Create a set of keys for existing transactions for efficient lookup
     const existingTransactionKeys = new Set(existingTransactions.map(createTransactionKey));
     log(`Iniciando procesamiento de ${data.length} filas.`);
 
@@ -244,13 +240,12 @@ export function TransactionImporter({ existingTransactions }: TransactionImporte
                 date = dateValue;
             } else {
                 const dateString = String(dateValue);
-                 // Handle DD/MM/YYYY, DD-MM-YYYY, YYYY/MM/DD, YYYY-MM-DD
                 const parts = dateString.match(/(\d{1,2})[/-](\d{1,2})[/-](\d{2,4})/);
                 if (parts) {
                     const day = parseInt(parts[1], 10);
                     const month = parseInt(parts[2], 10);
                     let year = parseInt(parts[3], 10);
-                    if (year < 100) year += 2000; // Handle 2-digit years
+                    if (year < 100) year += 2000; 
 
                     if (month > 12 && day <= 12) { // Likely MM/DD/YYYY
                          date = new Date(year, month - 1, day);
@@ -268,6 +263,8 @@ export function TransactionImporter({ existingTransactions }: TransactionImporte
                 return null;
             }
 
+            const transactionType = detectReturnType(descriptionValue) || 'normal';
+
             return {
                 id: '', // Will be set by firestore
                 date: date.toISOString(),
@@ -275,7 +272,9 @@ export function TransactionImporter({ existingTransactions }: TransactionImporte
                 amount: amount,
                 category: null,
                 document: null,
-                emisorId: null, // Initially null
+                contactId: null,
+                contactType: undefined,
+                transactionType,
             } as Omit<Transaction, 'id'>;
         })
         .filter((tx): tx is Omit<Transaction, 'id'> => tx !== null);
@@ -298,23 +297,23 @@ export function TransactionImporter({ existingTransactions }: TransactionImporte
 
 
         if (transactionsToProcess.length > 0) {
-            log('Iniciando inferencia de emissors con IA...');
-            const emissorsForAI = availableEmissors?.map(c => ({ id: c.id, name: c.name })) || [];
+            log('Iniciando inferencia de contactos con IA...');
+            const contactsForAI = availableContacts?.map(c => ({ id: c.id, name: c.name })) || [];
             const transactionsWithContacts = await Promise.all(transactionsToProcess.map(async (tx, index) => {
                 try {
-                    const result = await inferContact({ description: tx.description, contacts: emissorsForAI });
+                    const result = await inferContact({ description: tx.description, contacts: contactsForAI });
                     if (result.contactId) {
-                       log(`[Fila ${index + 1}] Emissor inferido: ${result.contactId} para "${tx.description.substring(0,30)}..."`);
-                       return { ...tx, emisorId: result.contactId };
+                       const contact = availableContacts?.find(c => c.id === result.contactId);
+                       log(`[Fila ${index + 1}] Contacto inferido: ${contact?.name} para "${tx.description.substring(0,30)}..."`);
+                       return { ...tx, contactId: result.contactId, contactType: contact?.type };
                     }
                 } catch (error) {
-                    console.error("Error inferring emisor for a transaction:", error);
-                    log(`ERROR en inferencia de emissor para fila ${index + 1}: ${error}`);
+                    console.error("Error inferring contact for a transaction:", error);
+                    log(`ERROR en inferencia de contacto para fila ${index + 1}: ${error}`);
                 }
                 return tx;
             }));
 
-            // CANVI: Ara la col·lecció apunta a organizations/{orgId}/transactions
             const transactionsCollectionRef = collection(firestore, 'organizations', organizationId, 'transactions');
             const batch = writeBatch(firestore);
 
