@@ -37,7 +37,7 @@ interface DonationReportRow {
   donorTaxId: string;
   donorZipCode: string;
   totalAmount: number;
-  returnedAmount: number; // Import de donacions retornades (excloses)
+  returnedAmount: number;
 }
 
 interface ReportStats {
@@ -104,11 +104,14 @@ export function DonationsReportGenerator() {
     let excludedReturns = 0;
     let excludedAmount = 0;
 
+    // ═══════════════════════════════════════════════════════════════════════════
+    // PROCESSAR TOTES LES TRANSACCIONS
+    // ═══════════════════════════════════════════════════════════════════════════
     transactions.forEach(tx => {
       const txYear = new Date(tx.date).getFullYear();
       
-      // Només processar transaccions de l'any seleccionat, positives i amb donant
-      if (txYear === year && tx.contactId && tx.amount > 0 && donorMap.has(tx.contactId)) {
+      // Només processar transaccions de l'any seleccionat amb donant assignat
+      if (txYear === year && tx.contactId && donorMap.has(tx.contactId)) {
         
         // Inicialitzar si no existeix
         if (!donationsByDonor[tx.contactId]) {
@@ -120,30 +123,49 @@ export function DonationsReportGenerator() {
         }
         
         // ═══════════════════════════════════════════════════════════════════════
-        // CANVI PRINCIPAL: Excloure donacions amb donationStatus === 'returned'
+        // LÒGICA DE CÀLCUL:
+        // 1. Devolucions (transactionType === 'return', import negatiu) → comptabilitzar
+        // 2. Donacions marcades com retornades → excloure
+        // 3. Donacions normals → sumar
         // ═══════════════════════════════════════════════════════════════════════
-        if (tx.donationStatus === 'returned') {
-          // Comptabilitzar com a exclosa
-          donationsByDonor[tx.contactId].returned += tx.amount;
+        
+        if (tx.transactionType === 'return' && tx.amount < 0) {
+          // És una DEVOLUCIÓ vinculada a aquest donant
+          // L'import és negatiu, així que agafem el valor absolut per comptabilitzar
+          const returnedAmount = Math.abs(tx.amount);
+          donationsByDonor[tx.contactId].returned += returnedAmount;
           excludedReturns++;
-          excludedAmount += tx.amount;
-        } else {
-          // Sumar al total
-          donationsByDonor[tx.contactId].total += tx.amount;
+          excludedAmount += returnedAmount;
+          
+        } else if (tx.amount > 0) {
+          // És una donació positiva
+          if (tx.donationStatus === 'returned') {
+            // Donació marcada com a retornada (manualment) → excloure
+            donationsByDonor[tx.contactId].returned += tx.amount;
+            excludedReturns++;
+            excludedAmount += tx.amount;
+          } else {
+            // Donació normal → sumar al total
+            donationsByDonor[tx.contactId].total += tx.amount;
+          }
         }
       }
     });
 
+    // ═══════════════════════════════════════════════════════════════════════════
+    // CALCULAR TOTAL NET: donacions - devolucions per cada donant
+    // ═══════════════════════════════════════════════════════════════════════════
     const generatedReportData: DonationReportRow[] = Object.values(donationsByDonor)
-      // Només incloure donants amb donacions vàlides (no retornades)
-      .filter(({ total }) => total > 0)
       .map(({ donor, total, returned }) => ({
         donorName: donor.name,
         donorTaxId: donor.taxId,
         donorZipCode: donor.zipCode,
-        totalAmount: total,
+        // Total net = donacions - devolucions (mínim 0)
+        totalAmount: Math.max(0, total - returned),
         returnedAmount: returned,
       }))
+      // Només incloure donants amb total positiu
+      .filter(({ totalAmount }) => totalAmount > 0)
       .sort((a, b) => b.totalAmount - a.totalAmount);
     
     // Calcular estadístiques
@@ -166,7 +188,7 @@ export function DonationsReportGenerator() {
           <div>
             <p>{t.reports.reportGeneratedDescription(selectedYear, generatedReportData.length)}</p>
             <p className="text-orange-600 mt-1">
-              ⚠️ S'han exclòs {excludedReturns} donació{excludedReturns > 1 ? 'ns' : ''} retornada{excludedReturns > 1 ? 'es' : ''} ({formatCurrency(excludedAmount)})
+              ⚠️ S'han descomptat {excludedReturns} devolució{excludedReturns > 1 ? 'ns' : ''} ({formatCurrency(excludedAmount)})
             </p>
           </div>
         ),
@@ -246,14 +268,15 @@ export function DonationsReportGenerator() {
         </CardHeader>
         <CardContent className="space-y-4">
             {/* ═══════════════════════════════════════════════════════════════════
-                AVÍS DE DEVOLUCIONS EXCLOSES
+                AVÍS DE DEVOLUCIONS DESCOMPTADES
                 ═══════════════════════════════════════════════════════════════════ */}
             {reportStats && reportStats.excludedReturns > 0 && (
-              <Alert variant="warning" className="border-orange-200 bg-orange-50">
+              <Alert className="border-orange-200 bg-orange-50">
                 <Undo2 className="h-4 w-4 text-orange-600" />
-                <AlertTitle className="text-orange-800">Donacions retornades excloses</AlertTitle>
+                <AlertTitle className="text-orange-800">Devolucions descomptades</AlertTitle>
                 <AlertDescription className="text-orange-700">
-                  S'han exclòs <strong>{reportStats.excludedReturns}</strong> donació{reportStats.excludedReturns > 1 ? 'ns' : ''} per un total de <strong>{formatCurrency(reportStats.excludedAmount)}</strong> que van ser retornades i per tant no computen al Model 182.
+                  S'han descomptat <strong>{reportStats.excludedReturns}</strong> devolució{reportStats.excludedReturns > 1 ? 'ns' : ''} per un total de <strong>{formatCurrency(reportStats.excludedAmount)}</strong> del total de donacions. 
+                  El Model 182 reflecteix les donacions netes efectivament rebudes.
                 </AlertDescription>
               </Alert>
             )}
@@ -274,11 +297,11 @@ export function DonationsReportGenerator() {
                 {reportStats.excludedReturns > 0 && (
                   <>
                     <div className="bg-orange-50 border border-orange-200 rounded-lg p-3">
-                      <p className="text-xs text-orange-600 font-medium">Devolucions excloses</p>
+                      <p className="text-xs text-orange-600 font-medium">Devolucions</p>
                       <p className="text-2xl font-bold text-orange-700">{reportStats.excludedReturns}</p>
                     </div>
                     <div className="bg-orange-50 border border-orange-200 rounded-lg p-3">
-                      <p className="text-xs text-orange-600 font-medium">Import exclòs</p>
+                      <p className="text-xs text-orange-600 font-medium">Import descomptat</p>
                       <p className="text-2xl font-bold text-orange-700">{formatCurrency(reportStats.excludedAmount)}</p>
                     </div>
                   </>
@@ -298,7 +321,7 @@ export function DonationsReportGenerator() {
                     <TableHead>{t.reports.donorZipCode}</TableHead>
                     <TableHead className="text-right">{t.reports.totalAmount}</TableHead>
                     {reportStats?.excludedReturns ? (
-                      <TableHead className="text-right text-orange-600">Exclòs</TableHead>
+                      <TableHead className="text-right text-orange-600">Descomptat</TableHead>
                     ) : null}
                 </TableRow>
                 </TableHeader>
@@ -316,7 +339,7 @@ export function DonationsReportGenerator() {
                           {row.returnedAmount > 0 ? (
                             <span className="flex items-center justify-end gap-1">
                               <Undo2 className="h-3 w-3" />
-                              {formatCurrency(row.returnedAmount)}
+                              -{formatCurrency(row.returnedAmount)}
                             </span>
                           ) : (
                             <span className="text-muted-foreground">—</span>
@@ -341,8 +364,8 @@ export function DonationsReportGenerator() {
                 ═══════════════════════════════════════════════════════════════════ */}
             {reportData.length > 0 && (
               <p className="text-xs text-muted-foreground">
-                ℹ️ Aquest informe només inclou donacions efectivament cobrades. Les donacions amb rebuts retornats 
-                s'exclouen automàticament del càlcul per al Model 182, d'acord amb la normativa fiscal.
+                ℹ️ Aquest informe mostra les donacions netes (donacions - devolucions) per cada donant. 
+                Les devolucions vinculades a un donant es resten automàticament del seu total, d'acord amb la normativa fiscal del Model 182.
               </p>
             )}
         </CardContent>
