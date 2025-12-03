@@ -18,7 +18,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Download, Loader2, Heart } from 'lucide-react';
+import {
+  Alert,
+  AlertDescription,
+  AlertTitle,
+} from '@/components/ui/alert';
+import { Download, Loader2, Heart, AlertTriangle, Undo2 } from 'lucide-react';
 import type { Donor, Transaction, AnyContact } from '@/lib/data';
 import { useToast } from '@/hooks/use-toast';
 import Papa from 'papaparse';
@@ -32,6 +37,14 @@ interface DonationReportRow {
   donorTaxId: string;
   donorZipCode: string;
   totalAmount: number;
+  returnedAmount: number; // Import de donacions retornades (excloses)
+}
+
+interface ReportStats {
+  totalDonors: number;
+  totalAmount: number;
+  excludedReturns: number;
+  excludedAmount: number;
 }
 
 export function DonationsReportGenerator() {
@@ -39,9 +52,6 @@ export function DonationsReportGenerator() {
   const { organizationId } = useCurrentOrganization();
   const { t } = useTranslations();
 
-  // ═══════════════════════════════════════════════════════════════════════════
-  // CANVI: emissors -> contacts
-  // ═══════════════════════════════════════════════════════════════════════════
   const transactionsQuery = useMemoFirebase(
     () => organizationId ? collection(firestore, 'organizations', organizationId, 'transactions') : null,
     [firestore, organizationId]
@@ -59,6 +69,7 @@ export function DonationsReportGenerator() {
   [contacts]);
 
   const [reportData, setReportData] = React.useState<DonationReportRow[]>([]);
+  const [reportStats, setReportStats] = React.useState<ReportStats | null>(null);
   const [selectedYear, setSelectedYear] = React.useState<string>(String(new Date().getFullYear()));
   const [isLoading, setIsLoading] = React.useState(false);
   const { toast } = useToast();
@@ -83,30 +94,90 @@ export function DonationsReportGenerator() {
     // Crear mapa de donants per ID
     const donorMap = new Map(donors.map(d => [d.id, d]));
 
-    const donationsByDonor: Record<string, { donor: Donor, total: number }> = {};
+    const donationsByDonor: Record<string, { 
+      donor: Donor, 
+      total: number, 
+      returned: number 
+    }> = {};
+
+    // Estadístiques globals
+    let excludedReturns = 0;
+    let excludedAmount = 0;
 
     transactions.forEach(tx => {
       const txYear = new Date(tx.date).getFullYear();
-      // CANVI: emisorId -> contactId
-      // També verificar que el contactType és 'donor' o que el contactId existeix al mapa de donants
+      
+      // Només processar transaccions de l'any seleccionat, positives i amb donant
       if (txYear === year && tx.contactId && tx.amount > 0 && donorMap.has(tx.contactId)) {
+        
+        // Inicialitzar si no existeix
         if (!donationsByDonor[tx.contactId]) {
-          donationsByDonor[tx.contactId] = { donor: donorMap.get(tx.contactId)!, total: 0 };
+          donationsByDonor[tx.contactId] = { 
+            donor: donorMap.get(tx.contactId)!, 
+            total: 0,
+            returned: 0 
+          };
         }
-        donationsByDonor[tx.contactId].total += tx.amount;
+        
+        // ═══════════════════════════════════════════════════════════════════════
+        // CANVI PRINCIPAL: Excloure donacions amb donationStatus === 'returned'
+        // ═══════════════════════════════════════════════════════════════════════
+        if (tx.donationStatus === 'returned') {
+          // Comptabilitzar com a exclosa
+          donationsByDonor[tx.contactId].returned += tx.amount;
+          excludedReturns++;
+          excludedAmount += tx.amount;
+        } else {
+          // Sumar al total
+          donationsByDonor[tx.contactId].total += tx.amount;
+        }
       }
     });
 
-    const generatedReportData: DonationReportRow[] = Object.values(donationsByDonor).map(({ donor, total }) => ({
-      donorName: donor.name,
-      donorTaxId: donor.taxId,
-      donorZipCode: donor.zipCode,
-      totalAmount: total,
-    })).sort((a,b) => b.totalAmount - a.totalAmount);
+    const generatedReportData: DonationReportRow[] = Object.values(donationsByDonor)
+      // Només incloure donants amb donacions vàlides (no retornades)
+      .filter(({ total }) => total > 0)
+      .map(({ donor, total, returned }) => ({
+        donorName: donor.name,
+        donorTaxId: donor.taxId,
+        donorZipCode: donor.zipCode,
+        totalAmount: total,
+        returnedAmount: returned,
+      }))
+      .sort((a, b) => b.totalAmount - a.totalAmount);
     
+    // Calcular estadístiques
+    const stats: ReportStats = {
+      totalDonors: generatedReportData.length,
+      totalAmount: generatedReportData.reduce((sum, row) => sum + row.totalAmount, 0),
+      excludedReturns,
+      excludedAmount,
+    };
+
     setReportData(generatedReportData);
+    setReportStats(stats);
     setIsLoading(false);
-    toast({ title: t.reports.reportGenerated, description: t.reports.reportGeneratedDescription(selectedYear, generatedReportData.length) });
+    
+    // Toast amb informació de devolucions si n'hi ha
+    if (excludedReturns > 0) {
+      toast({ 
+        title: t.reports.reportGenerated, 
+        description: (
+          <div>
+            <p>{t.reports.reportGeneratedDescription(selectedYear, generatedReportData.length)}</p>
+            <p className="text-orange-600 mt-1">
+              ⚠️ S'han exclòs {excludedReturns} donació{excludedReturns > 1 ? 'ns' : ''} retornada{excludedReturns > 1 ? 'es' : ''} ({formatCurrency(excludedAmount)})
+            </p>
+          </div>
+        ),
+        duration: 6000,
+      });
+    } else {
+      toast({ 
+        title: t.reports.reportGenerated, 
+        description: t.reports.reportGeneratedDescription(selectedYear, generatedReportData.length) 
+      });
+    }
   };
 
   const handleExportCSV = () => {
@@ -127,7 +198,7 @@ export function DonationsReportGenerator() {
     const link = document.createElement('a');
     const url = URL.createObjectURL(blob);
     link.setAttribute('href', url);
-    link.setAttribute('download', `informe_donacions_${selectedYear}.csv`);
+    link.setAttribute('download', `informe_donacions_model182_${selectedYear}.csv`);
     link.style.visibility = 'hidden';
     document.body.appendChild(link);
     link.click();
@@ -173,7 +244,51 @@ export function DonationsReportGenerator() {
               </div>
           </div>
         </CardHeader>
-        <CardContent>
+        <CardContent className="space-y-4">
+            {/* ═══════════════════════════════════════════════════════════════════
+                AVÍS DE DEVOLUCIONS EXCLOSES
+                ═══════════════════════════════════════════════════════════════════ */}
+            {reportStats && reportStats.excludedReturns > 0 && (
+              <Alert variant="warning" className="border-orange-200 bg-orange-50">
+                <Undo2 className="h-4 w-4 text-orange-600" />
+                <AlertTitle className="text-orange-800">Donacions retornades excloses</AlertTitle>
+                <AlertDescription className="text-orange-700">
+                  S'han exclòs <strong>{reportStats.excludedReturns}</strong> donació{reportStats.excludedReturns > 1 ? 'ns' : ''} per un total de <strong>{formatCurrency(reportStats.excludedAmount)}</strong> que van ser retornades i per tant no computen al Model 182.
+                </AlertDescription>
+              </Alert>
+            )}
+
+            {/* ═══════════════════════════════════════════════════════════════════
+                RESUM D'ESTADÍSTIQUES
+                ═══════════════════════════════════════════════════════════════════ */}
+            {reportStats && reportData.length > 0 && (
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div className="bg-green-50 border border-green-200 rounded-lg p-3">
+                  <p className="text-xs text-green-600 font-medium">Donants</p>
+                  <p className="text-2xl font-bold text-green-700">{reportStats.totalDonors}</p>
+                </div>
+                <div className="bg-green-50 border border-green-200 rounded-lg p-3">
+                  <p className="text-xs text-green-600 font-medium">Total donacions</p>
+                  <p className="text-2xl font-bold text-green-700">{formatCurrency(reportStats.totalAmount)}</p>
+                </div>
+                {reportStats.excludedReturns > 0 && (
+                  <>
+                    <div className="bg-orange-50 border border-orange-200 rounded-lg p-3">
+                      <p className="text-xs text-orange-600 font-medium">Devolucions excloses</p>
+                      <p className="text-2xl font-bold text-orange-700">{reportStats.excludedReturns}</p>
+                    </div>
+                    <div className="bg-orange-50 border border-orange-200 rounded-lg p-3">
+                      <p className="text-xs text-orange-600 font-medium">Import exclòs</p>
+                      <p className="text-2xl font-bold text-orange-700">{formatCurrency(reportStats.excludedAmount)}</p>
+                    </div>
+                  </>
+                )}
+              </div>
+            )}
+
+            {/* ═══════════════════════════════════════════════════════════════════
+                TAULA DE DONANTS
+                ═══════════════════════════════════════════════════════════════════ */}
             <div className="rounded-md border">
             <Table>
                 <TableHeader>
@@ -182,20 +297,37 @@ export function DonationsReportGenerator() {
                     <TableHead>{t.reports.donorTaxId}</TableHead>
                     <TableHead>{t.reports.donorZipCode}</TableHead>
                     <TableHead className="text-right">{t.reports.totalAmount}</TableHead>
+                    {reportStats?.excludedReturns ? (
+                      <TableHead className="text-right text-orange-600">Exclòs</TableHead>
+                    ) : null}
                 </TableRow>
                 </TableHeader>
                 <TableBody>
                 {reportData.map((row) => (
                     <TableRow key={row.donorTaxId}>
-                    <TableCell className="font-medium">{row.donorName}</TableCell>
-                    <TableCell>{row.donorTaxId}</TableCell>
-                    <TableCell>{row.donorZipCode}</TableCell>
-                    <TableCell className="text-right font-mono">{formatCurrency(row.totalAmount)}</TableCell>
+                      <TableCell className="font-medium">{row.donorName}</TableCell>
+                      <TableCell>{row.donorTaxId}</TableCell>
+                      <TableCell>{row.donorZipCode}</TableCell>
+                      <TableCell className="text-right font-mono text-green-600 font-medium">
+                        {formatCurrency(row.totalAmount)}
+                      </TableCell>
+                      {reportStats?.excludedReturns ? (
+                        <TableCell className="text-right font-mono text-orange-500">
+                          {row.returnedAmount > 0 ? (
+                            <span className="flex items-center justify-end gap-1">
+                              <Undo2 className="h-3 w-3" />
+                              {formatCurrency(row.returnedAmount)}
+                            </span>
+                          ) : (
+                            <span className="text-muted-foreground">—</span>
+                          )}
+                        </TableCell>
+                      ) : null}
                     </TableRow>
                 ))}
                 {reportData.length === 0 && (
                     <TableRow>
-                        <TableCell colSpan={4} className="text-center text-muted-foreground h-24">
+                        <TableCell colSpan={reportStats?.excludedReturns ? 5 : 4} className="text-center text-muted-foreground h-24">
                            {isLoading ? t.reports.generating : t.reports.noData}
                         </TableCell>
                     </TableRow>
@@ -203,6 +335,16 @@ export function DonationsReportGenerator() {
                 </TableBody>
             </Table>
             </div>
+
+            {/* ═══════════════════════════════════════════════════════════════════
+                NOTA LEGAL
+                ═══════════════════════════════════════════════════════════════════ */}
+            {reportData.length > 0 && (
+              <p className="text-xs text-muted-foreground">
+                ℹ️ Aquest informe només inclou donacions efectivament cobrades. Les donacions amb rebuts retornats 
+                s'exclouen automàticament del càlcul per al Model 182, d'acord amb la normativa fiscal.
+              </p>
+            )}
         </CardContent>
       </Card>
   );
