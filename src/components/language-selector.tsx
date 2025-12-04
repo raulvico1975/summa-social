@@ -49,14 +49,10 @@ export function LanguageSelector() {
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="ca">
-                <span className="flex items-center gap-2">
-                  🇪🇸 {t.settings.catalan}
-                </span>
+                {t.settings.catalan}
               </SelectItem>
               <SelectItem value="es">
-                <span className="flex items-center gap-2">
-                  🇪🇸 {t.settings.spanish}
-                </span>
+                {t.settings.spanish}
               </SelectItem>
             </SelectContent>
           </Select>
