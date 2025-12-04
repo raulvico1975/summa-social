@@ -153,6 +153,7 @@ export const ca = {
     import: "Importar Donants",
     noData: "No hi ha donants registrats.",
     name: "Nom",
+    namePlaceholder: "Nom i cognoms",
     taxId: "DNI/CIF",
     zipCode: "Codi Postal",
     email: "Email",
@@ -197,7 +198,30 @@ export const ca = {
       errorEmptyFile: "L'arxiu està buit o no té dades vàlides.",
       duplicatesFound: (count: number) => `S'han trobat ${count} donants duplicats (per DNI/CIF).`,
       rowsToImport: (count: number) => `${count} donants nous per importar`,
-    }
+    },
+    basicData: "Dades bàsiques",
+    donationType: "Tipus de donació",
+    contactOptional: "Contacte (opcional)",
+    notes: "Notes",
+    notesPlaceholder: "Afegeix qualsevol informació rellevant...",
+    donorType: "Tipus de donant",
+    types: {
+      individual: "Particular",
+      individual_long: "Persona física",
+      company: "Empresa",
+      company_long: "Persona jurídica",
+    },
+    membershipType: "Modalitat",
+    membership: {
+      oneTime: "Puntual",
+      recurring: "Soci/a",
+    },
+    amount: "Import",
+    amountMonth: "Import mensual",
+    perMonth: "mes",
+    memberSince: "Soci des de",
+    iban: "IBAN",
+    errorRequiredFields: "Els camps Nom, DNI/CIF i Codi Postal són obligatoris."
   },
   suppliers: {
     title: "Proveïdors",
@@ -206,12 +230,15 @@ export const ca = {
     import: "Importar Proveïdors",
     noData: "No hi ha proveïdors registrats.",
     name: "Nom / Raó Social",
+    namePlaceholder: "Nom de l'empresa o professional",
     taxId: "CIF/NIF",
     zipCode: "Codi Postal",
     email: "Email",
     phone: "Telèfon",
     address: "Adreça",
+    addressPlaceholder: "Carrer, número, pis, porta...",
     category: "Categoria",
+    selectCategory: "Selecciona una categoria...",
     actions: "Accions",
     addTitle: "Afegir Nou Proveïdor",
     addDescription: "Crea un nou proveïdor per a la teva organització.",
@@ -245,6 +272,28 @@ export const ca = {
       errorEmptyFile: "El archivo está vacío o no tiene datos válidos.",
       duplicatesFound: (count: number) => `Se han encontrado ${count} proveedores duplicados (por CIF/NIF).`,
       rowsToImport: (count: number) => `${count} proveedores nuevos para importar`,
+    },
+    errorRequiredFields: "Els camps Nom i CIF són obligatoris.",
+    basicData: "Dades bàsiques",
+    addressInfo: "Informació d'adreça",
+    contactInfo: "Informació de contacte",
+    paymentData: "Dades de pagament",
+    iban: "IBAN",
+    paymentTerms: "Condicions de pagament",
+    paymentTermsPlaceholder: "Ex: 30 dies, a la recepció...",
+    notes: "Notes",
+    notesPlaceholder: "Afegeix qualsevol informació rellevant...",
+    categories: {
+      services: 'Serveis professionals',
+      utilities: 'Subministraments',
+      materials: 'Materials i equipament',
+      rent: 'Lloguer',
+      insurance: 'Assegurances',
+      banking: 'Serveis bancaris',
+      communications: 'Telecomunicacions',
+      transport: 'Transport',
+      maintenance: 'Manteniment',
+      other: 'Altres',
     }
   },
   reports: {
@@ -543,5 +592,7 @@ export const ca = {
     hundreds: "cents",
   }
 };
+
+    
 
     
