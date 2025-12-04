@@ -4,6 +4,7 @@ import { CategoryManager } from '@/components/category-manager';
 import { PasswordChangeForm } from '@/components/password-change-form';
 import { OrganizationSettings } from '@/components/organization-settings';
 import { LanguageSelector } from '@/components/language-selector';
+import { MembersManager } from '@/components/members-manager';
 import { useCurrentOrganization } from '@/hooks/organization-provider';
 import { useTranslations } from '@/i18n';
 
@@ -11,33 +12,50 @@ export default function SettingsPage() {
   const { userRole } = useCurrentOrganization();
   const { t } = useTranslations();
 
-  // Només admins i tresorers poden veure la configuració de l'organització
+  // Només admins poden gestionar l'organització, categories i membres
   const canManageOrganization = userRole === 'admin';
-  const canManageCategories = userRole === 'admin' || userRole === 'treasurer';
+  const canManageCategories = userRole === 'admin';
+  const canManageMembers = userRole === 'admin';
 
   return (
     <div className="space-y-6">
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="lg:col-span-2 space-y-6">
-          {canManageOrganization ? (
-            <OrganizationSettings />
-          ) : (
-             <div className="p-4 bg-muted/50 rounded-lg text-sm text-muted-foreground">
-                {t.settings.permissionDenied}
-             </div>
-          )}
-        </div>
-        <div className="space-y-6">
-          <PasswordChangeForm />
+      {/* Títol de la pàgina */}
+      <div>
+        <h1 className="text-2xl font-bold tracking-tight font-headline">{t.settings.title}</h1>
+        <p className="text-muted-foreground">{t.settings.description}</p>
+      </div>
+
+      {/* Configuració d'usuari: Idioma i Contrasenya */}
+      <div>
+        <h2 className="text-lg font-semibold mb-4">{t.settings.userSettingsTitle}</h2>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <LanguageSelector />
+          <PasswordChangeForm />
         </div>
       </div>
-       {canManageCategories ? (
+
+      {/* Gestió de membres (només admins) */}
+      {canManageMembers && <MembersManager />}
+
+      {/* Configuració de l'organització */}
+      <div>
+        <h2 className="text-lg font-semibold mb-4">{t.settings.organizationSettingsTitle}</h2>
+        {canManageOrganization ? (
+          <OrganizationSettings />
+        ) : (
+          <div className="p-4 bg-muted/50 rounded-lg text-sm text-muted-foreground">
+            {t.settings.permissionDenied}
+          </div>
+        )}
+      </div>
+
+      {/* Gestió de categories */}
+      {canManageCategories ? (
         <CategoryManager />
       ) : (
-         <div className="p-4 bg-muted/50 rounded-lg text-sm text-muted-foreground">
-            {t.settings.permissionDenied}
-         </div>
+        <div className="p-4 bg-muted/50 rounded-lg text-sm text-muted-foreground">
+          {t.settings.permissionDenied}
+        </div>
       )}
     </div>
   );
