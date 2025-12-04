@@ -60,6 +60,9 @@ export function InviteMemberDialog({ open, onOpenChange, onInviteCreated }: Invi
   const [copied, setCopied] = React.useState(false);
   const [error, setError] = React.useState('');
 
+  // Ref per seleccionar l'input
+  const inputRef = React.useRef<HTMLInputElement>(null);
+
   // Reset quan es tanca
   React.useEffect(() => {
     if (!open) {
@@ -70,6 +73,15 @@ export function InviteMemberDialog({ open, onOpenChange, onInviteCreated }: Invi
       setCopied(false);
     }
   }, [open]);
+
+  // Seleccionar l'enllaç quan es crea
+  React.useEffect(() => {
+    if (createdInviteUrl && inputRef.current) {
+      setTimeout(() => {
+        inputRef.current?.select();
+      }, 100);
+    }
+  }, [createdInviteUrl]);
 
   const handleCreate = async () => {
     // Validacions
@@ -132,26 +144,30 @@ export function InviteMemberDialog({ open, onOpenChange, onInviteCreated }: Invi
     }
   };
 
-  const handleCopyUrl = () => {
+  const handleCopyUrl = async () => {
     if (createdInviteUrl) {
-      navigator.clipboard.writeText(createdInviteUrl);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-      toast({ title: t.members.linkCopied });
+      try {
+        await navigator.clipboard.writeText(createdInviteUrl);
+        setCopied(true);
+        setTimeout(() => setCopied(false), 2000);
+        toast({ title: t.members.linkCopied });
+      } catch (err) {
+        // Si falla el clipboard API, seleccionem el text per copiar manualment
+        inputRef.current?.select();
+        toast({ 
+          title: t.members.selectAndCopy || 'Selecciona i copia',
+          description: t.members.selectAndCopyDescription || 'Prem Cmd+C (Mac) o Ctrl+C (Windows) per copiar',
+        });
+      }
     }
+  };
+
+  const handleSelectAll = () => {
+    inputRef.current?.select();
   };
 
   const handleClose = () => {
     onOpenChange(false);
-  };
-
-  const getRoleLabel = (r: OrganizationRole): string => {
-    switch (r) {
-      case 'admin': return t.members.roleAdmin;
-      case 'user': return t.members.roleUser;
-      case 'viewer': return t.members.roleViewer;
-      default: return r;
-    }
   };
 
   const getRoleDescription = (r: OrganizationRole): string => {
@@ -193,16 +209,18 @@ export function InviteMemberDialog({ open, onOpenChange, onInviteCreated }: Invi
               <Label>{t.members.invitationLink}</Label>
               <div className="flex gap-2">
                 <Input 
+                  ref={inputRef}
                   value={createdInviteUrl} 
                   readOnly 
                   className="font-mono text-xs"
+                  onClick={handleSelectAll}
                 />
                 <Button variant="outline" size="icon" onClick={handleCopyUrl}>
                   {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
                 </Button>
               </div>
               <p className="text-xs text-muted-foreground">
-                {t.members.linkExpires}
+                {t.members.linkExpires} • Clica l'enllaç per seleccionar-lo i copia amb Cmd+C
               </p>
             </div>
 

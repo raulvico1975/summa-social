@@ -222,7 +222,7 @@ export function MembersManager() {
                 <TableBody>
                   {members && members.length > 0 ? (
                     members.map((member) => (
-                      <TableRow key={member.userId}>
+                      <TableRow key={member.id || member.userId}>
                         <TableCell>
                           <div>
                             <div className="font-medium">{member.displayName || t.members.noName}</div>
