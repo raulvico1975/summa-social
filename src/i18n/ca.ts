@@ -150,9 +150,6 @@ export const ca = {
     emissorDeleted: "Emissor Eliminat",
     emissorDeletedDescription: (name: string) => `L'emissor "${name}" ha estat eliminat.`,
   },
-  // ═══════════════════════════════════════════════════════════════════════════
-  // NOU: Donants (secció separada d'emissors)
-  // ═══════════════════════════════════════════════════════════════════════════
   donors: {
     title: "Donants",
     description: "Gestiona els donants de la teva organització.",
@@ -230,9 +227,6 @@ export const ca = {
     iban: "IBAN",
     errorRequiredFields: "Els camps Nom, DNI/CIF i Codi Postal són obligatoris."
   },
-  // ═══════════════════════════════════════════════════════════════════════════
-  // NOU: Proveïdors (secció separada d'emissors)
-  // ═══════════════════════════════════════════════════════════════════════════
   suppliers: {
     title: "Proveïdors",
     description: "Gestiona els proveïdors de la teva organització.",
@@ -260,7 +254,6 @@ export const ca = {
     supplierUpdatedDescription: (name: string) => `El proveïdor "${name}" ha estat actualitzat.`,
     supplierDeleted: "Proveïdor Eliminat",
     supplierDeletedDescription: (name: string) => `El proveïdor "${name}" ha estat eliminat.`,
-    // Categories de proveïdors
     categories: {
       services: "Serveis professionals",
       utilities: "Subministraments",
@@ -273,7 +266,6 @@ export const ca = {
       maintenance: "Manteniment",
       other: "Altres",
     },
-    // Camps del formulari
     selectCategory: "Selecciona una categoria",
     basicData: "Dades bàsiques",
     addressInfo: "Adreça",
@@ -329,9 +321,6 @@ export const ca = {
     reportGeneratedDescription: (year: string, count: number) => `S'ha generat l'informe per a l'any ${year} amb ${count} donants.`,
     exportComplete: "Exportació Completada",
     exportCompleteDescription: "L'informe de donacions s'ha descarregat com a arxiu CSV.",
-    // ═══════════════════════════════════════════════════════════════════════════
-    // NOU: Devolucions al Model 182
-    // ═══════════════════════════════════════════════════════════════════════════
     returnsDiscountedTitle: "Devolucions descomptades",
     returnsDiscountedDescription: (count: number, amount: string) => 
       `S'han descomptat ${count} devolució${count > 1 ? 'ns' : ''} per un total de ${amount} del total de donacions. El Model 182 reflecteix les donacions netes efectivament rebudes.`,
@@ -342,9 +331,6 @@ export const ca = {
     discountedAmount: "Import descomptat",
     netDonationsNote: "Aquest informe mostra les donacions netes (donacions - devolucions) per cada donant. Les devolucions vinculades a un donant es resten automàticament del seu total, d'acord amb la normativa fiscal del Model 182.",
   },
-  // ═══════════════════════════════════════════════════════════════════════════
-  // NOU: Certificats de donació
-  // ═══════════════════════════════════════════════════════════════════════════
   certificates: {
     title: "Certificats de Donació",
     description: "Genera certificats de donació per als teus donants.",
@@ -374,7 +360,6 @@ export const ca = {
     allCertificatesGenerated: "Certificats generats",
     allCertificatesGeneratedDescription: (count: number) => `S'han descarregat ${count} certificats.`,
     errorNoDonorSelected: "Selecciona almenys un donant.",
-    // Textos del PDF
     pdf: {
       title: "CERTIFICAT DE DONACIÓ",
       fiscalYear: (year: string) => `Any fiscal ${year}`,
@@ -393,7 +378,6 @@ export const ca = {
         `${city}, ${day} de ${month} de ${year}`,
       signature: "Signatura i segell:",
     },
-    // Devolucions als certificats
     returnsDetected: "Devolucions detectades",
     returnsDetectedDescription: (count: number) => 
       `S'han descomptat ${count} devolució${count > 1 ? 'ns' : ''} dels totals.`,
@@ -428,7 +412,7 @@ export const ca = {
     languageDescription: "Tria l'idioma en què es mostrarà la interfície.",
     languageSelector: "Tria un idioma",
     catalan: "Català",
-    spanish: "Espanyol",
+    spanish: "Español",
     saveSettings: "Guardar",
     languageSaved: "Idioma guardat",
     languageSavedDescription: (lang: string) => `L'idioma de l'aplicació s'ha canviat a ${lang}.`,
@@ -455,9 +439,6 @@ export const ca = {
       errorWeak: "La nova contrasenya és massa feble.",
       errorGeneric: "No s'ha pogut canviar la contrasenya."
     },
-    // ═══════════════════════════════════════════════════════════════════════════
-    // NOU: Configuració de l'organització
-    // ═══════════════════════════════════════════════════════════════════════════
     organization: {
       title: "Dades de l'Organització",
       description: "Configura les dades que apareixeran als documents i certificats.",
@@ -593,9 +574,6 @@ export const ca = {
     confirmDeleteUserTitle: "Eliminar Usuari?",
     confirmDeleteUserDescription: (name: string) => `Estàs segur que vols eliminar l'usuari "${name}"? Aquesta acció no es pot desfer.`
   },
-  // ═══════════════════════════════════════════════════════════════════════════
-  // NOU: Mesos (per als certificats)
-  // ═══════════════════════════════════════════════════════════════════════════
   months: {
     january: "gener",
     february: "febrer",
@@ -610,9 +588,6 @@ export const ca = {
     november: "novembre",
     december: "desembre",
   },
-  // ═══════════════════════════════════════════════════════════════════════════
-  // NOU: Números en text (per als certificats)
-  // ═══════════════════════════════════════════════════════════════════════════
   numbers: {
     euros: "euros",
     withCents: (cents: number) => `amb ${cents} cèntims`,
@@ -621,5 +596,6 @@ export const ca = {
     hundreds: "cents",
   }
 };
+    
 
     

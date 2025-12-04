@@ -54,6 +54,9 @@ export const es = {
       editTransaction: "Editar Transacción",
       editTransactionDescription: "Modifica los detalles del movimiento.",
       saveChanges: "Guardar Cambios",
+      // ═══════════════════════════════════════════════════════════════
+      // NUEVO: Devoluciones
+      // ═══════════════════════════════════════════════════════════════
       returnBadge: "Devolución",
       commissionBadge: "Comisión",
       assignAffectedDonor: "Asignar donante afectado",
@@ -64,14 +67,14 @@ export const es = {
       returnAssignedDescription: (donorName: string) => `La devolución se ha vinculado a ${donorName}.`,
       addNote: "Añadir nota",
     },
-    splitter: {
+     splitter: {
         title: "Dividir Remesa",
         description: "Selecciona un archivo CSV con el detalle de la remesa para dividir la transacción agrupada en movimientos individuales.",
         formatInfo: "Formato del archivo CSV",
         formatDescription: "El archivo debe contener cabeceras y, como mínimo, las columnas de Importe y Nombre (o DNI/CIF).",
         formatColumns: {
-            name: "Nombre/Deudor (o DNI/CIF/NIF)",
-            amount: "Importe"
+            name: "Nom/Nombre/Deudor (o DNI/CIF/NIF)",
+            amount: "Import/Importe"
         },
         formatNote: "El sistema buscará coincidencias por DNI/CIF y, si no, por nombre (ignorando mayúsculas/minúsculas y acentos).",
         uploadButton: "Subir archivo CSV",
@@ -154,6 +157,7 @@ export const es = {
     import: "Importar Donantes",
     noData: "No hay donantes registrados.",
     name: "Nombre",
+    namePlaceholder: "Nombre y apellidos",
     taxId: "DNI/CIF",
     zipCode: "Código Postal",
     email: "Email",
@@ -198,7 +202,30 @@ export const es = {
       errorEmptyFile: "El archivo está vacío o no tiene datos válidos.",
       duplicatesFound: (count: number) => `Se han encontrado ${count} donantes duplicados (por DNI/CIF).`,
       rowsToImport: (count: number) => `${count} donantes nuevos para importar`,
-    }
+    },
+    basicData: "Datos básicos",
+    donationType: "Tipo de donación",
+    contactOptional: "Contacto (opcional)",
+    notes: "Notas",
+    notesPlaceholder: "Añade cualquier información relevante...",
+    donorType: "Tipo de donante",
+    types: {
+      individual: "Particular",
+      individual_long: "Persona física",
+      company: "Empresa",
+      company_long: "Persona jurídica",
+    },
+    membershipType: "Modalidad",
+    membership: {
+      oneTime: "Puntual",
+      recurring: "Socio/a",
+    },
+    amount: "Importe",
+    amountMonth: "Importe mensual",
+    perMonth: "mes",
+    memberSince: "Socio desde",
+    iban: "IBAN",
+    errorRequiredFields: "Los campos Nombre, DNI/CIF y Código Postal son obligatorios."
   },
   suppliers: {
     title: "Proveedores",
@@ -227,6 +254,31 @@ export const es = {
     supplierUpdatedDescription: (name: string) => `El proveedor "${name}" ha sido actualizado.`,
     supplierDeleted: "Proveedor Eliminado",
     supplierDeletedDescription: (name: string) => `El proveedor "${name}" ha sido eliminado.`,
+    categories: {
+      services: "Servicios profesionales",
+      utilities: "Suministros",
+      materials: "Materiales y equipamiento",
+      rent: "Alquiler",
+      insurance: "Seguros",
+      banking: "Servicios bancarios",
+      communications: "Telecomunicaciones",
+      transport: "Transporte y mensajería",
+      maintenance: "Mantenimiento",
+      other: "Otros",
+    },
+    selectCategory: "Selecciona una categoría",
+    basicData: "Datos básicos",
+    addressInfo: "Dirección",
+    contactInfo: "Contacto",
+    paymentData: "Datos de pago",
+    iban: "IBAN",
+    paymentTerms: "Condiciones de pago",
+    notes: "Notas",
+    namePlaceholder: "Nombre de la empresa o autónomo",
+    addressPlaceholder: "Calle, número, piso...",
+    paymentTermsPlaceholder: "Ej: 30 días, transferencia",
+    notesPlaceholder: "Notas internas sobre el proveedor...",
+    errorRequiredFields: "El nombre y el CIF/NIF son obligatorios.",
     importer: {
       title: "Importar Proveedores",
       description: "Importa proveedores desde un archivo Excel o CSV.",
@@ -246,18 +298,6 @@ export const es = {
       errorEmptyFile: "El archivo está vacío o no tiene datos válidos.",
       duplicatesFound: (count: number) => `Se han encontrado ${count} proveedores duplicados (por CIF/NIF).`,
       rowsToImport: (count: number) => `${count} proveedores nuevos para importar`,
-    },
-    categories: {
-      services: 'Servicios profesionales',
-      utilities: 'Suministros',
-      materials: 'Materiales y equipamiento',
-      rent: 'Alquiler',
-      insurance: 'Seguros',
-      banking: 'Servicios bancarios',
-      communications: 'Telecomunicaciones',
-      transport: 'Transporte',
-      maintenance: 'Mantenimiento',
-      other: 'Otros',
     }
   },
   reports: {
