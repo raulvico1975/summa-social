@@ -166,9 +166,9 @@ function RegistreContent() {
         description: `Benvingut/da a ${invitation.organizationName}`,
       });
 
-      // Redirigir al dashboard després de 2 segons
+      // Redirigir a l'inici, que ja gestiona la redirecció a l'organització
       setTimeout(() => {
-        router.push('/dashboard');
+        router.push('/');
       }, 2000);
 
     } catch (err: any) {

@@ -23,8 +23,9 @@ service cloud.firestore {
       return isMemberOf(orgId) && getMemberRole(orgId) == 'admin';
     }
 
-    function canEditFinances(orgId) {
-      return isMemberOf(orgId) && getMemberRole(orgId) in ['admin', 'treasurer'];
+    function hasOrgInProfile(orgId) {
+      return isSignedIn() && 
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.organizationId == orgId;
     }
 
     // ═══════════════════════════════════════════════════════════════════════
@@ -33,20 +34,100 @@ service cloud.firestore {
 
     match /users/{userId} {
       allow read, write: if isSignedIn() && request.auth.uid == userId;
-      // Super Admin pot llegir tots els usuaris
       allow read: if isSuperAdmin();
     }
 
     // ═══════════════════════════════════════════════════════════════════════
-    // INVITACIONS (col·lecció global per facilitar consultes per token)
+    // INVITACIONS
     // ═══════════════════════════════════════════════════════════════════════
 
     match /invitations/{invitationId} {
-      // Qualsevol pot llegir una invitació (necessari per validar el token)
       allow read: if true;
+      allow create: if isSignedIn();
+      allow update: if isSignedIn();
+      allow delete: if isSuperAdmin() || (isSignedIn() && resource.data.createdBy == request.auth.uid);
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // ORGANITZACIONS
+    // ═══════════════════════════════════════════════════════════════════════
+
+    match /organizations/{orgId} {
+      // Llegir: membres o usuaris amb l'org al perfil
+      allow read: if isMemberOf(orgId) || hasOrgInProfile(orgId) || isSuperAdmin();
       
-      // Només Super Admin pot crear invitacions
+      // Crear: només Super Admin
       allow create: if isSuperAdmin();
       
-      // Només Super Admin pot eliminar invitacions
-      allow delete: if isSuperA
+      // Actualitzar: admins de l'org o Super Admin
+      allow update: if isAdminOf(orgId) || isSuperAdmin();
+      
+      // Eliminar: només Super Admin
+      allow delete: if isSuperAdmin();
+
+      // ─────────────────────────────────────────────────────────────────────
+      // MEMBRES de l'organització
+      // ─────────────────────────────────────────────────────────────────────
+
+      match /members/{memberId} {
+        allow read: if isMemberOf(orgId) || hasOrgInProfile(orgId) || isSuperAdmin();
+        allow create: if isSignedIn() && (request.auth.uid == memberId || isAdminOf(orgId) || isSuperAdmin());
+        allow update, delete: if isAdminOf(orgId) || isSuperAdmin();
+      }
+
+      // ─────────────────────────────────────────────────────────────────────
+      // TRANSACCIONS
+      // ─────────────────────────────────────────────────────────────────────
+
+      match /transactions/{transactionId} {
+        allow read: if isMemberOf(orgId) || isSuperAdmin();
+        allow create, update, delete: if isMemberOf(orgId) && getMemberRole(orgId) in ['admin', 'user'] || isSuperAdmin();
+      }
+
+      // ─────────────────────────────────────────────────────────────────────
+      // CATEGORIES
+      // ─────────────────────────────────────────────────────────────────────
+
+      match /categories/{categoryId} {
+        allow read: if isMemberOf(orgId) || isSuperAdmin();
+        allow create, update, delete: if isAdminOf(orgId) || isSuperAdmin();
+      }
+
+      // ─────────────────────────────────────────────────────────────────────
+      // PROJECTES
+      // ─────────────────────────────────────────────────────────────────────
+
+      match /projects/{projectId} {
+        allow read: if isMemberOf(orgId) || isSuperAdmin();
+        allow create, update, delete: if isMemberOf(orgId) && getMemberRole(orgId) in ['admin', 'user'] || isSuperAdmin();
+      }
+
+      // ─────────────────────────────────────────────────────────────────────
+      // DONANTS
+      // ─────────────────────────────────────────────────────────────────────
+
+      match /donors/{donorId} {
+        allow read: if isMemberOf(orgId) || isSuperAdmin();
+        allow create, update, delete: if isMemberOf(orgId) && getMemberRole(orgId) in ['admin', 'user'] || isSuperAdmin();
+      }
+
+      // ─────────────────────────────────────────────────────────────────────
+      // PROVEÏDORS
+      // ─────────────────────────────────────────────────────────────────────
+
+      match /suppliers/{supplierId} {
+        allow read: if isMemberOf(orgId) || isSuperAdmin();
+        allow create, update, delete: if isMemberOf(orgId) && getMemberRole(orgId) in ['admin', 'user'] || isSuperAdmin();
+      }
+
+      // ─────────────────────────────────────────────────────────────────────
+      // EMISSORS (legacy)
+      // ─────────────────────────────────────────────────────────────────────
+
+      match /emissors/{emissorId} {
+        allow read: if isMemberOf(orgId) || isSuperAdmin();
+        allow create, update, delete: if isMemberOf(orgId) && getMemberRole(orgId) in ['admin', 'user'] || isSuperAdmin();
+      }
+    }
+  }
+}

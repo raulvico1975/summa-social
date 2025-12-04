@@ -11,7 +11,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useTranslations } from '@/i18n';
 import { signInWithEmailAndPassword } from 'firebase/auth';
 import { Loader2 } from 'lucide-react';
-import { doc, getDoc, collection, getDocs, query, where } from 'firebase/firestore';
+import { doc, getDoc } from 'firebase/firestore';
 
 export default function LoginPage() {
   const router = useRouter();
@@ -26,42 +26,28 @@ export default function LoginPage() {
 
   const findUserOrganizationSlug = async (userId: string): Promise<string | null> => {
     try {
-      // Primer, buscar si l'usuari té una organització per defecte
+      // Buscar el perfil de l'usuari
       const userProfileRef = doc(firestore, 'users', userId);
       const userProfileSnap = await getDoc(userProfileRef);
       
-      let orgId: string | null = null;
-      
-      if (userProfileSnap.exists()) {
-        const profileData = userProfileSnap.data();
-        if (profileData.defaultOrganizationId) {
-          orgId = profileData.defaultOrganizationId;
-        }
+      if (!userProfileSnap.exists()) {
+        return null;
       }
 
-      // Si no té organització per defecte, buscar la primera on és membre
+      const profileData = userProfileSnap.data();
+      const orgId = profileData.organizationId || profileData.defaultOrganizationId;
+
       if (!orgId) {
-        const orgsRef = collection(firestore, 'organizations');
-        const orgsSnapshot = await getDocs(orgsRef);
-        
-        for (const orgDocSnap of orgsSnapshot.docs) {
-          const memberRef = doc(firestore, 'organizations', orgDocSnap.id, 'members', userId);
-          const memberSnap = await getDoc(memberRef);
-          if (memberSnap.exists()) {
-            orgId = orgDocSnap.id;
-            break;
-          }
-        }
+        return null;
       }
 
       // Obtenir el slug de l'organització
-      if (orgId) {
-        const orgRef = doc(firestore, 'organizations', orgId);
-        const orgSnap = await getDoc(orgRef);
-        if (orgSnap.exists()) {
-          const orgData = orgSnap.data();
-          return orgData.slug || null;
-        }
+      const orgRef = doc(firestore, 'organizations', orgId);
+      const orgSnap = await getDoc(orgRef);
+      
+      if (orgSnap.exists()) {
+        const orgData = orgSnap.data();
+        return orgData.slug || null;
       }
 
       return null;
@@ -94,8 +80,9 @@ export default function LoginPage() {
       if (orgSlug) {
         router.push(`/${orgSlug}/dashboard`);
       } else {
-        // Si no té organització, redirigir al dashboard genèric
-        router.push('/dashboard');
+        // Si no té organització, mostrar error
+        setError('No tens cap organització assignada. Contacta amb l\'administrador.');
+        setIsLoggingIn(false);
       }
     } catch (err: any) {
       console.error('Error de login:', err);
@@ -131,8 +118,6 @@ export default function LoginPage() {
         const orgSlug = await findUserOrganizationSlug(user.uid);
         if (orgSlug) {
           router.push(`/${orgSlug}/dashboard`);
-        } else {
-          router.push('/dashboard');
         }
       }
     };
