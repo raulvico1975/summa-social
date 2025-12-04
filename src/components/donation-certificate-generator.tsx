@@ -1,3 +1,4 @@
+
 'use client';
 
 import * as React from 'react';
@@ -878,7 +879,7 @@ export function DonationCertificateGenerator() {
                     <ul className="list-disc list-inside space-y-1 text-orange-600">
                       {previewDonor.returns.map((ret, idx) => (
                         <li key={idx}>
-                          {formatDate(ret.date)}: -{formatCurrency(Math.abs(ret.amount))}
+                          -{formatCurrency(Math.abs(ret.amount))} ({formatDate(ret.date)})
                         </li>
                       ))}
                     </ul>
@@ -925,3 +926,5 @@ export function DonationCertificateGenerator() {
     </div>
   );
 }
+
+    

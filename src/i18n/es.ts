@@ -1,3 +1,4 @@
+
 export const es = {
   dashboard: {
     title: "Panel de Control",
@@ -53,9 +54,6 @@ export const es = {
       editTransaction: "Editar Transacción",
       editTransactionDescription: "Modifica los detalles del movimiento.",
       saveChanges: "Guardar Cambios",
-      // ═══════════════════════════════════════════════════════════════
-      // NUEVO: Devoluciones
-      // ═══════════════════════════════════════════════════════════════
       returnBadge: "Devolución",
       commissionBadge: "Comisión",
       assignAffectedDonor: "Asignar donante afectado",
@@ -546,3 +544,5 @@ export const es = {
     hundreds: "cientos",
   }
 };
+
+    

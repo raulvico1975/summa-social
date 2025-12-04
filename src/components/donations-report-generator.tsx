@@ -1,3 +1,4 @@
+
 'use client';
 
 import * as React from 'react';
@@ -188,7 +189,7 @@ export function DonationsReportGenerator() {
           <div>
             <p>{t.reports.reportGeneratedDescription(selectedYear, generatedReportData.length)}</p>
             <p className="text-orange-600 mt-1">
-              ⚠️ S'han descomptat {excludedReturns} devolució{excludedReturns > 1 ? 'ns' : ''} ({formatCurrency(excludedAmount)})
+              ⚠️ {t.reports.returnsDiscountedToast(excludedReturns, formatCurrency(excludedAmount))}
             </p>
           </div>
         ),
@@ -273,10 +274,9 @@ export function DonationsReportGenerator() {
             {reportStats && reportStats.excludedReturns > 0 && (
               <Alert className="border-orange-200 bg-orange-50">
                 <Undo2 className="h-4 w-4 text-orange-600" />
-                <AlertTitle className="text-orange-800">Devolucions descomptades</AlertTitle>
+                <AlertTitle className="text-orange-800">{t.reports.returnsDiscountedTitle}</AlertTitle>
                 <AlertDescription className="text-orange-700">
-                  S'han descomptat <strong>{reportStats.excludedReturns}</strong> devolució{reportStats.excludedReturns > 1 ? 'ns' : ''} per un total de <strong>{formatCurrency(reportStats.excludedAmount)}</strong> del total de donacions. 
-                  El Model 182 reflecteix les donacions netes efectivament rebudes.
+                  {t.reports.returnsDiscountedDescription(reportStats.excludedReturns, formatCurrency(reportStats.excludedAmount))}
                 </AlertDescription>
               </Alert>
             )}
@@ -287,21 +287,21 @@ export function DonationsReportGenerator() {
             {reportStats && reportData.length > 0 && (
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                 <div className="bg-green-50 border border-green-200 rounded-lg p-3">
-                  <p className="text-xs text-green-600 font-medium">Donants</p>
+                  <p className="text-xs text-green-600 font-medium">{t.donors.title}</p>
                   <p className="text-2xl font-bold text-green-700">{reportStats.totalDonors}</p>
                 </div>
                 <div className="bg-green-50 border border-green-200 rounded-lg p-3">
-                  <p className="text-xs text-green-600 font-medium">Total donacions</p>
+                  <p className="text-xs text-green-600 font-medium">{t.certificates.totalDonated}</p>
                   <p className="text-2xl font-bold text-green-700">{formatCurrency(reportStats.totalAmount)}</p>
                 </div>
                 {reportStats.excludedReturns > 0 && (
                   <>
                     <div className="bg-orange-50 border border-orange-200 rounded-lg p-3">
-                      <p className="text-xs text-orange-600 font-medium">Devolucions</p>
+                      <p className="text-xs text-orange-600 font-medium">{t.reports.returns}</p>
                       <p className="text-2xl font-bold text-orange-700">{reportStats.excludedReturns}</p>
                     </div>
                     <div className="bg-orange-50 border border-orange-200 rounded-lg p-3">
-                      <p className="text-xs text-orange-600 font-medium">Import descomptat</p>
+                      <p className="text-xs text-orange-600 font-medium">{t.reports.discountedAmount}</p>
                       <p className="text-2xl font-bold text-orange-700">{formatCurrency(reportStats.excludedAmount)}</p>
                     </div>
                   </>
@@ -321,7 +321,7 @@ export function DonationsReportGenerator() {
                     <TableHead>{t.reports.donorZipCode}</TableHead>
                     <TableHead className="text-right">{t.reports.totalAmount}</TableHead>
                     {reportStats?.excludedReturns ? (
-                      <TableHead className="text-right text-orange-600">Descomptat</TableHead>
+                      <TableHead className="text-right text-orange-600">{t.reports.columnDiscounted}</TableHead>
                     ) : null}
                 </TableRow>
                 </TableHeader>
@@ -364,11 +364,12 @@ export function DonationsReportGenerator() {
                 ═══════════════════════════════════════════════════════════════════ */}
             {reportData.length > 0 && (
               <p className="text-xs text-muted-foreground">
-                ℹ️ Aquest informe mostra les donacions netes (donacions - devolucions) per cada donant. 
-                Les devolucions vinculades a un donant es resten automàticament del seu total, d'acord amb la normativa fiscal del Model 182.
+                ℹ️ {t.reports.netDonationsNote}
               </p>
             )}
         </CardContent>
       </Card>
   );
 }
+
+    
