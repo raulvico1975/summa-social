@@ -3,6 +3,7 @@
 import { CategoryManager } from '@/components/category-manager';
 import { PasswordChangeForm } from '@/components/password-change-form';
 import { OrganizationSettings } from '@/components/organization-settings';
+import { LanguageSelector } from '@/components/language-selector';
 import { useCurrentOrganization } from '@/hooks/organization-provider';
 
 export default function SettingsPage() {
@@ -26,6 +27,7 @@ export default function SettingsPage() {
         </div>
         <div className="space-y-6">
           <PasswordChangeForm />
+          <LanguageSelector />
         </div>
       </div>
        {canManageCategories ? (
