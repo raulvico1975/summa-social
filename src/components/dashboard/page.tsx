@@ -26,19 +26,6 @@ export default function DashboardPage() {
   );
   const { data: transactions } = useCollection<Transaction>(transactionsQuery);
 
-  // ═══════════════════════════════════════════════════════════════
-  // AFEGIR AIXÒ TEMPORALMENT PER DEBUGAR
-  // ═══════════════════════════════════════════════════════════════
-  React.useEffect(() => {
-    console.log('=== DEBUG DASHBOARD ===');
-    console.log('organizationId:', organizationId);
-    console.log('transactionsQuery:', transactionsQuery);
-    console.log('transactions:', transactions);
-    console.log('transactions length:', transactions?.length);
-    console.log('========================');
-  }, [organizationId, transactionsQuery, transactions]);
-  // ═══════════════════════════════════════════════════════════════
-
   const MISSION_TRANSFER_CATEGORY_KEY = 'missionTransfers';
 
   const { totalIncome, totalExpenses, totalMissionTransfers } = React.useMemo(() => {
