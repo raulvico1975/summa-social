@@ -12,11 +12,13 @@ import { doc, getDoc, updateDoc } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { Building2, Save, Upload, Loader2, Image as ImageIcon } from 'lucide-react';
 import type { Organization } from '@/lib/data';
+import { useTranslations } from '@/i18n';
 
 export function OrganizationSettings() {
   const { firestore, storage } = useFirebase();
   const { organizationId } = useCurrentOrganization();
   const { toast } = useToast();
+  const { t } = useTranslations();
 
   const [loading, setLoading] = React.useState(true);
   const [saving, setSaving] = React.useState(false);
@@ -102,8 +104,8 @@ export function OrganizationSettings() {
       await updateDoc(orgRef, dataToSave);
 
       toast({
-        title: 'Dades guardades',
-        description: 'Les dades de l\'organització s\'han actualitzat correctament.',
+        title: t.settings.organization.saved,
+        description: t.settings.organization.savedDescription,
       });
     } catch (error) {
       console.error('Error guardant:', error);
@@ -149,7 +151,7 @@ export function OrganizationSettings() {
       setFormData(prev => ({ ...prev, logoUrl: downloadUrl }));
       
       toast({
-        title: 'Logo pujat',
+        title: t.settings.organization.uploadLogo,
         description: 'El logo s\'ha pujat correctament. Recorda guardar els canvis.',
       });
     } catch (error) {
@@ -179,16 +181,16 @@ export function OrganizationSettings() {
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <Building2 className="h-5 w-5" />
-          Dades de l'Organització
+          {t.settings.organization.title}
         </CardTitle>
         <CardDescription>
-          Informació que apareixerà als certificats, informes i documents oficials.
+          {t.settings.organization.description}
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">
         {/* Logo */}
         <div className="space-y-3">
-          <Label>Logo de l'organització</Label>
+          <Label>{t.settings.organization.logo}</Label>
           <div className="flex items-center gap-4">
             <div className="h-20 w-20 rounded-lg border-2 border-dashed flex items-center justify-center bg-muted/50 overflow-hidden">
               {formData.logoUrl ? (
@@ -213,7 +215,7 @@ export function OrganizationSettings() {
                 ) : (
                   <Upload className="mr-2 h-4 w-4" />
                 )}
-                {formData.logoUrl ? 'Canviar logo' : 'Pujar logo'}
+                {formData.logoUrl ? t.settings.organization.uploadLogo : t.settings.organization.uploadLogo}
               </Button>
               <input
                 id="logo-input"
@@ -222,7 +224,7 @@ export function OrganizationSettings() {
                 className="hidden"
                 onChange={handleLogoUpload}
               />
-              <p className="text-xs text-muted-foreground">PNG, JPG o SVG. Màxim 2MB.</p>
+              <p className="text-xs text-muted-foreground">{t.settings.organization.logoHint}</p>
             </div>
           </div>
         </div>
@@ -230,7 +232,7 @@ export function OrganizationSettings() {
         {/* Dades bàsiques */}
         <div className="grid gap-4 sm:grid-cols-2">
           <div className="space-y-2">
-            <Label htmlFor="name">Nom de l'organització *</Label>
+            <Label htmlFor="name">{t.settings.organization.name} *</Label>
             <Input
               id="name"
               value={formData.name}
@@ -239,7 +241,7 @@ export function OrganizationSettings() {
             />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="taxId">CIF *</Label>
+            <Label htmlFor="taxId">{t.settings.organization.taxId} *</Label>
             <Input
               id="taxId"
               value={formData.taxId}
@@ -251,9 +253,9 @@ export function OrganizationSettings() {
 
         {/* Adreça */}
         <div className="space-y-4">
-          <h4 className="text-sm font-medium text-muted-foreground">Adreça</h4>
+          <h4 className="text-sm font-medium text-muted-foreground">{t.settings.organization.address}</h4>
           <div className="space-y-2">
-            <Label htmlFor="address">Adreça</Label>
+            <Label htmlFor="address">{t.settings.organization.address}</Label>
             <Input
               id="address"
               value={formData.address}
@@ -263,7 +265,7 @@ export function OrganizationSettings() {
           </div>
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="space-y-2">
-              <Label htmlFor="city">Ciutat</Label>
+              <Label htmlFor="city">{t.settings.organization.city}</Label>
               <Input
                 id="city"
                 value={formData.city}
@@ -272,7 +274,7 @@ export function OrganizationSettings() {
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="zipCode">Codi Postal</Label>
+              <Label htmlFor="zipCode">{t.settings.organization.zipCode}</Label>
               <Input
                 id="zipCode"
                 value={formData.zipCode}
@@ -288,7 +290,7 @@ export function OrganizationSettings() {
           <h4 className="text-sm font-medium text-muted-foreground">Contacte</h4>
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="space-y-2">
-              <Label htmlFor="phone">Telèfon</Label>
+              <Label htmlFor="phone">{t.settings.organization.phone}</Label>
               <Input
                 id="phone"
                 value={formData.phone}
@@ -297,7 +299,7 @@ export function OrganizationSettings() {
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
+              <Label htmlFor="email">{t.settings.organization.email}</Label>
               <Input
                 id="email"
                 type="email"
@@ -308,7 +310,7 @@ export function OrganizationSettings() {
             </div>
           </div>
           <div className="space-y-2">
-            <Label htmlFor="website">Pàgina web</Label>
+            <Label htmlFor="website">{t.settings.organization.website}</Label>
             <Input
               id="website"
               value={formData.website}
