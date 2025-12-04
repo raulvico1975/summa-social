@@ -59,6 +59,9 @@ export const ca = {
       assignAffectedDonor: "Assignar donant afectat",
       assignAffectedDonorDescription: (donorName: string) => `La devolució s'ha vinculat a ${donorName}.`,
       addNote: "Afegir nota",
+      affectedDonor: "Donant afectat",
+      selectDonor: "Selecciona un donant",
+      returnAssigned: "Devolució assignada",
     },
     splitter: {
         title: "Dividir Remesa",

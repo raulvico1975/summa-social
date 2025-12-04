@@ -48,12 +48,8 @@ export function LanguageSelector() {
               <SelectValue placeholder={t.settings.languageSelector} />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="ca">
-                {t.settings.catalan}
-              </SelectItem>
-              <SelectItem value="es">
-                {t.settings.spanish}
-              </SelectItem>
+              <SelectItem value="ca">{t.settings.catalan}</SelectItem>
+              <SelectItem value="es">{t.settings.spanish}</SelectItem>
             </SelectContent>
           </Select>
         </div>
