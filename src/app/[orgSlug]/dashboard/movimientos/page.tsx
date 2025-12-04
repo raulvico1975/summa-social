@@ -31,7 +31,7 @@ export default function MovimientosPage() {
       </div>
       
       {isLoading ? (
-        <p>Carregant moviments...</p>
+        <p>{t.common.loading}</p>
       ) : (
         <TransactionsTable />
       )}

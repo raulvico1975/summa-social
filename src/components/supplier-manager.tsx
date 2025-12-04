@@ -52,33 +52,6 @@ import { useCurrentOrganization } from '@/hooks/organization-provider';
 import { SupplierImporter } from './supplier-importer';
 import { useTranslations } from '@/i18n';
 
-// Traduccions de categories
-const CATEGORY_LABELS_CA: Record<SupplierCategory, string> = {
-  services: 'Serveis professionals',
-  utilities: 'Subministraments',
-  materials: 'Materials i equipament',
-  rent: 'Lloguer',
-  insurance: 'Assegurances',
-  banking: 'Serveis bancaris',
-  communications: 'Telecomunicacions',
-  transport: 'Transport',
-  maintenance: 'Manteniment',
-  other: 'Altres',
-};
-
-const CATEGORY_LABELS_ES: Record<SupplierCategory, string> = {
-  services: 'Servicios profesionales',
-  utilities: 'Suministros',
-  materials: 'Materiales y equipamiento',
-  rent: 'Alquiler',
-  insurance: 'Seguros',
-  banking: 'Servicios bancarios',
-  communications: 'Telecomunicaciones',
-  transport: 'Transporte',
-  maintenance: 'Mantenimiento',
-  other: 'Otros',
-};
-
 type SupplierFormData = Omit<Supplier, 'id' | 'createdAt' | 'updatedAt'>;
 
 const emptyFormData: SupplierFormData = {
@@ -99,9 +72,9 @@ export function SupplierManager() {
   const { firestore } = useFirebase();
   const { organizationId } = useCurrentOrganization();
   const { toast } = useToast();
-  const { t, language } = useTranslations();
+  const { t } = useTranslations();
 
-  const categoryLabels = language === 'ca' ? CATEGORY_LABELS_CA : CATEGORY_LABELS_ES;
+  const categoryLabels = t.suppliers.categories as Record<SupplierCategory, string>;
 
   const contactsCollection = useMemoFirebase(
     () => organizationId ? collection(firestore, 'organizations', organizationId, 'contacts') : null,
@@ -180,7 +153,7 @@ export function SupplierManager() {
       toast({ 
         variant: 'destructive', 
         title: t.common.error,
-        description: 'El nom i el CIF són obligatoris.' 
+        description: t.suppliers.errorRequiredFields
       });
       return;
     }
@@ -258,7 +231,7 @@ export function SupplierManager() {
                     <TableHead>{t.suppliers.name}</TableHead>
                     <TableHead>{t.suppliers.taxId}</TableHead>
                     <TableHead>{t.suppliers.category}</TableHead>
-                    <TableHead>Contacte</TableHead>
+                    <TableHead>{t.suppliers.contactInfo}</TableHead>
                     <TableHead className="text-right">{t.suppliers.actions}</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -324,7 +297,7 @@ export function SupplierManager() {
           
           <div className="grid gap-4 py-4">
             <div className="space-y-4">
-              <h4 className="text-sm font-medium text-muted-foreground">Dades bàsiques</h4>
+              <h4 className="text-sm font-medium text-muted-foreground">{t.suppliers.basicData}</h4>
               
               <div className="grid grid-cols-4 items-center gap-4">
                 <Label htmlFor="name" className="text-right">{t.suppliers.name} *</Label>
@@ -333,7 +306,7 @@ export function SupplierManager() {
                   value={formData.name}
                   onChange={(e) => handleFormChange('name', e.target.value)}
                   className="col-span-3"
-                  placeholder="Nom de l'empresa"
+                  placeholder={t.suppliers.namePlaceholder}
                 />
               </div>
 
@@ -355,7 +328,7 @@ export function SupplierManager() {
                   onValueChange={(v) => handleFormChange('category', v || undefined)}
                 >
                   <SelectTrigger className="col-span-3">
-                    <SelectValue placeholder="Selecciona una categoria" />
+                    <SelectValue placeholder={t.suppliers.selectCategory} />
                   </SelectTrigger>
                   <SelectContent>
                     {SUPPLIER_CATEGORIES.map(cat => (
@@ -369,7 +342,7 @@ export function SupplierManager() {
             </div>
 
             <div className="space-y-4 pt-4 border-t">
-              <h4 className="text-sm font-medium text-muted-foreground">{t.suppliers.address}</h4>
+              <h4 className="text-sm font-medium text-muted-foreground">{t.suppliers.addressInfo}</h4>
 
               <div className="grid grid-cols-4 items-center gap-4">
                 <Label htmlFor="address" className="text-right">{t.suppliers.address}</Label>
@@ -378,7 +351,7 @@ export function SupplierManager() {
                   value={formData.address || ''}
                   onChange={(e) => handleFormChange('address', e.target.value)}
                   className="col-span-3"
-                  placeholder="Carrer, número, pis..."
+                  placeholder={t.suppliers.addressPlaceholder}
                 />
               </div>
 
@@ -395,7 +368,7 @@ export function SupplierManager() {
             </div>
 
             <div className="space-y-4 pt-4 border-t">
-              <h4 className="text-sm font-medium text-muted-foreground">Contacte</h4>
+              <h4 className="text-sm font-medium text-muted-foreground">{t.suppliers.contactInfo}</h4>
 
               <div className="grid grid-cols-4 items-center gap-4">
                 <Label htmlFor="email" className="text-right">{t.suppliers.email}</Label>
@@ -422,10 +395,10 @@ export function SupplierManager() {
             </div>
 
             <div className="space-y-4 pt-4 border-t">
-              <h4 className="text-sm font-medium text-muted-foreground">Dades de pagament</h4>
+              <h4 className="text-sm font-medium text-muted-foreground">{t.suppliers.paymentData}</h4>
 
               <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="iban" className="text-right">IBAN</Label>
+                <Label htmlFor="iban" className="text-right">{t.suppliers.iban}</Label>
                 <Input
                   id="iban"
                   value={formData.iban || ''}
@@ -436,28 +409,28 @@ export function SupplierManager() {
               </div>
 
               <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="paymentTerms" className="text-right">Condicions</Label>
+                <Label htmlFor="paymentTerms" className="text-right">{t.suppliers.paymentTerms}</Label>
                 <Input
                   id="paymentTerms"
                   value={formData.paymentTerms || ''}
                   onChange={(e) => handleFormChange('paymentTerms', e.target.value)}
                   className="col-span-3"
-                  placeholder="Ex: 30 dies, al comptat..."
+                  placeholder={t.suppliers.paymentTermsPlaceholder}
                 />
               </div>
             </div>
 
             <div className="space-y-4 pt-4 border-t">
-              <h4 className="text-sm font-medium text-muted-foreground">Notes</h4>
+              <h4 className="text-sm font-medium text-muted-foreground">{t.suppliers.notes}</h4>
 
               <div className="grid grid-cols-4 items-start gap-4">
-                <Label htmlFor="notes" className="text-right pt-2">Notes</Label>
+                <Label htmlFor="notes" className="text-right pt-2">{t.suppliers.notes}</Label>
                 <Textarea
                   id="notes"
                   value={formData.notes || ''}
                   onChange={(e) => handleFormChange('notes', e.target.value)}
                   className="col-span-3"
-                  placeholder="Observacions internes..."
+                  placeholder={t.suppliers.notesPlaceholder}
                   rows={3}
                 />
               </div>

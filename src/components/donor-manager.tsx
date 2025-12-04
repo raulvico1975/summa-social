@@ -157,7 +157,7 @@ export function DonorManager() {
       toast({ 
         variant: 'destructive', 
         title: t.common.error, 
-        description: 'El nom, DNI/CIF i codi postal són obligatoris.' 
+        description: t.donors.errorRequiredFields
       });
       return;
     }
@@ -232,9 +232,9 @@ export function DonorManager() {
                   <TableRow>
                     <TableHead>{t.donors.name}</TableHead>
                     <TableHead>{t.donors.taxId}</TableHead>
-                    <TableHead>Tipus</TableHead>
-                    <TableHead>Modalitat</TableHead>
-                    <TableHead>Import</TableHead>
+                    <TableHead>{t.donors.donorType}</TableHead>
+                    <TableHead>{t.donors.membershipType}</TableHead>
+                    <TableHead>{t.donors.amount}</TableHead>
                     <TableHead className="text-right">{t.donors.actions}</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -254,22 +254,22 @@ export function DonorManager() {
                       <TableCell>{donor.taxId}</TableCell>
                       <TableCell>
                         <Badge variant="outline">
-                          {donor.donorType === 'individual' ? 'Particular' : 'Empresa'}
+                          {donor.donorType === 'individual' ? t.donors.types.individual : t.donors.types.company}
                         </Badge>
                       </TableCell>
                       <TableCell>
                         {donor.membershipType === 'recurring' ? (
                           <Badge className="bg-green-100 text-green-800">
                             <RefreshCw className="mr-1 h-3 w-3" />
-                            Soci
+                            {t.donors.membership.recurring}
                           </Badge>
                         ) : (
-                          <Badge variant="secondary">Puntual</Badge>
+                          <Badge variant="secondary">{t.donors.membership.oneTime}</Badge>
                         )}
                       </TableCell>
                       <TableCell>
                         {donor.membershipType === 'recurring' 
-                          ? formatCurrency(donor.monthlyAmount) + '/mes'
+                          ? formatCurrency(donor.monthlyAmount) + `/${t.donors.perMonth}`
                           : '-'
                         }
                       </TableCell>
@@ -309,7 +309,7 @@ export function DonorManager() {
           
           <div className="grid gap-4 py-4">
             <div className="space-y-4">
-              <h4 className="text-sm font-medium text-muted-foreground">Dades bàsiques</h4>
+              <h4 className="text-sm font-medium text-muted-foreground">{t.donors.basicData}</h4>
               
               <div className="grid grid-cols-4 items-center gap-4">
                 <Label htmlFor="name" className="text-right">{t.donors.name} *</Label>
@@ -318,7 +318,7 @@ export function DonorManager() {
                   value={formData.name}
                   onChange={(e) => handleFormChange('name', e.target.value)}
                   className="col-span-3"
-                  placeholder="Nom complet o raó social"
+                  placeholder={t.donors.namePlaceholder}
                 />
               </div>
 
@@ -345,7 +345,7 @@ export function DonorManager() {
               </div>
 
               <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="donorType" className="text-right">Tipus</Label>
+                <Label htmlFor="donorType" className="text-right">{t.donors.donorType}</Label>
                 <Select
                   value={formData.donorType}
                   onValueChange={(v) => handleFormChange('donorType', v)}
@@ -354,18 +354,18 @@ export function DonorManager() {
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="individual">Particular (Persona física)</SelectItem>
-                    <SelectItem value="company">Empresa (Persona jurídica)</SelectItem>
+                    <SelectItem value="individual">{t.donors.types.individual_long}</SelectItem>
+                    <SelectItem value="company">{t.donors.types.company_long}</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
             </div>
 
             <div className="space-y-4 pt-4 border-t">
-              <h4 className="text-sm font-medium text-muted-foreground">Tipus de donació</h4>
+              <h4 className="text-sm font-medium text-muted-foreground">{t.donors.donationType}</h4>
 
               <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="membershipType" className="text-right">Modalitat</Label>
+                <Label htmlFor="membershipType" className="text-right">{t.donors.membershipType}</Label>
                 <Select
                   value={formData.membershipType}
                   onValueChange={(v) => handleFormChange('membershipType', v)}
@@ -374,8 +374,8 @@ export function DonorManager() {
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="one-time">Donació puntual</SelectItem>
-                    <SelectItem value="recurring">Soci/a (donació recurrent)</SelectItem>
+                    <SelectItem value="one-time">{t.donors.membership.oneTime}</SelectItem>
+                    <SelectItem value="recurring">{t.donors.membership.recurring}</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -383,7 +383,7 @@ export function DonorManager() {
               {formData.membershipType === 'recurring' && (
                 <>
                   <div className="grid grid-cols-4 items-center gap-4">
-                    <Label htmlFor="monthlyAmount" className="text-right">Import mensual</Label>
+                    <Label htmlFor="monthlyAmount" className="text-right">{t.donors.amountMonth}</Label>
                     <Input
                       id="monthlyAmount"
                       type="number"
@@ -396,7 +396,7 @@ export function DonorManager() {
                   </div>
 
                   <div className="grid grid-cols-4 items-center gap-4">
-                    <Label htmlFor="memberSince" className="text-right">Soci des de</Label>
+                    <Label htmlFor="memberSince" className="text-right">{t.donors.memberSince}</Label>
                     <Input
                       id="memberSince"
                       type="date"
@@ -407,7 +407,7 @@ export function DonorManager() {
                   </div>
 
                   <div className="grid grid-cols-4 items-center gap-4">
-                    <Label htmlFor="iban" className="text-right">IBAN</Label>
+                    <Label htmlFor="iban" className="text-right">{t.donors.iban}</Label>
                     <Input
                       id="iban"
                       value={formData.iban || ''}
@@ -421,7 +421,7 @@ export function DonorManager() {
             </div>
 
             <div className="space-y-4 pt-4 border-t">
-              <h4 className="text-sm font-medium text-muted-foreground">Contacte (opcional)</h4>
+              <h4 className="text-sm font-medium text-muted-foreground">{t.donors.contactOptional}</h4>
 
               <div className="grid grid-cols-4 items-center gap-4">
                 <Label htmlFor="email" className="text-right">{t.donors.email}</Label>
@@ -448,16 +448,16 @@ export function DonorManager() {
             </div>
 
             <div className="space-y-4 pt-4 border-t">
-              <h4 className="text-sm font-medium text-muted-foreground">Notes</h4>
+              <h4 className="text-sm font-medium text-muted-foreground">{t.donors.notes}</h4>
 
               <div className="grid grid-cols-4 items-start gap-4">
-                <Label htmlFor="notes" className="text-right pt-2">Notes</Label>
+                <Label htmlFor="notes" className="text-right pt-2">{t.donors.notes}</Label>
                 <Textarea
                   id="notes"
                   value={formData.notes || ''}
                   onChange={(e) => handleFormChange('notes', e.target.value)}
                   className="col-span-3"
-                  placeholder="Observacions internes..."
+                  placeholder={t.donors.notesPlaceholder}
                   rows={3}
                 />
               </div>
