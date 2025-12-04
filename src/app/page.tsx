@@ -59,7 +59,7 @@ export default function HomePage() {
           }
         }
 
-        router.push('/dashboard');
+        router.push('/login');
       } catch (error) {
         console.error('Error:', error);
         router.push('/login');
