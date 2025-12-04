@@ -592,7 +592,3 @@ export const ca = {
     hundreds: "cents",
   }
 };
-
-    
-
-    

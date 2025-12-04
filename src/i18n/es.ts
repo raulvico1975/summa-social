@@ -246,6 +246,18 @@ export const es = {
       errorEmptyFile: "El archivo está vacío o no tiene datos válidos.",
       duplicatesFound: (count: number) => `Se han encontrado ${count} proveedores duplicados (por CIF/NIF).`,
       rowsToImport: (count: number) => `${count} proveedores nuevos para importar`,
+    },
+    categories: {
+      services: 'Servicios profesionales',
+      utilities: 'Suministros',
+      materials: 'Materiales y equipamiento',
+      rent: 'Alquiler',
+      insurance: 'Seguros',
+      banking: 'Servicios bancarios',
+      communications: 'Telecomunicaciones',
+      transport: 'Transporte',
+      maintenance: 'Mantenimiento',
+      other: 'Otros',
     }
   },
   reports: {
@@ -544,5 +556,3 @@ export const es = {
     hundreds: "cientos",
   }
 };
-
-    
