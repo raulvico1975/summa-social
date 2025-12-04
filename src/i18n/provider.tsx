@@ -21,7 +21,7 @@ export const TranslationsProvider = ({ children }: TranslationsProviderProps) =>
   const [language, setLanguage] = useState<Language>(() => getInitialLanguage());
 
   useEffect(() => {
-    // Aquest efecte s'executa només al client per sincronitzar l'estat inicial
+    // This effect runs only on the client to sync the initial state
     setLanguage(getInitialLanguage());
   }, []);
 

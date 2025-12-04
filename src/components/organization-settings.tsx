@@ -85,21 +85,18 @@ export function OrganizationSettings() {
     try {
       const orgRef = doc(firestore, 'organizations', organizationId);
       
-      // Preparar dades per guardar (sense undefined)
       const dataToSave: Record<string, any> = {
         name: formData.name,
         taxId: formData.taxId,
         updatedAt: new Date().toISOString(),
+        address: formData.address || null,
+        city: formData.city || null,
+        zipCode: formData.zipCode || null,
+        phone: formData.phone || null,
+        email: formData.email || null,
+        website: formData.website || null,
+        logoUrl: formData.logoUrl || null,
       };
-
-      // Afegir camps opcionals només si tenen valor
-      if (formData.address) dataToSave.address = formData.address;
-      if (formData.city) dataToSave.city = formData.city;
-      if (formData.zipCode) dataToSave.zipCode = formData.zipCode;
-      if (formData.phone) dataToSave.phone = formData.phone;
-      if (formData.email) dataToSave.email = formData.email;
-      if (formData.website) dataToSave.website = formData.website;
-      if (formData.logoUrl) dataToSave.logoUrl = formData.logoUrl;
 
       await updateDoc(orgRef, dataToSave);
 
@@ -123,22 +120,13 @@ export function OrganizationSettings() {
     const file = e.target.files?.[0];
     if (!file || !organizationId || !storage) return;
 
-    // Validar tipus i mida
     if (!file.type.startsWith('image/')) {
-      toast({
-        variant: 'destructive',
-        title: 'Error',
-        description: 'El fitxer ha de ser una imatge.',
-      });
+      toast({ variant: 'destructive', title: 'Error', description: 'El fitxer ha de ser una imatge.' });
       return;
     }
 
     if (file.size > 2 * 1024 * 1024) { // 2MB
-      toast({
-        variant: 'destructive',
-        title: 'Error',
-        description: 'La imatge no pot superar els 2MB.',
-      });
+      toast({ variant: 'destructive', title: 'Error', description: 'La imatge no pot superar els 2MB.' });
       return;
     }
 
@@ -156,11 +144,7 @@ export function OrganizationSettings() {
       });
     } catch (error) {
       console.error('Error pujant logo:', error);
-      toast({
-        variant: 'destructive',
-        title: 'Error',
-        description: 'No s\'ha pogut pujar el logo.',
-      });
+      toast({ variant: 'destructive', title: 'Error', description: 'No s\'ha pogut pujar el logo.' });
     } finally {
       setUploadingLogo(false);
     }
@@ -188,7 +172,6 @@ export function OrganizationSettings() {
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">
-        {/* Logo */}
         <div className="space-y-3">
           <Label>{t.settings.organization.logo}</Label>
           <div className="flex items-center gap-4">
@@ -215,7 +198,7 @@ export function OrganizationSettings() {
                 ) : (
                   <Upload className="mr-2 h-4 w-4" />
                 )}
-                {formData.logoUrl ? t.settings.organization.uploadLogo : t.settings.organization.uploadLogo}
+                {t.settings.organization.uploadLogo}
               </Button>
               <input
                 id="logo-input"
@@ -229,7 +212,6 @@ export function OrganizationSettings() {
           </div>
         </div>
 
-        {/* Dades bàsiques */}
         <div className="grid gap-4 sm:grid-cols-2">
           <div className="space-y-2">
             <Label htmlFor="name">{t.settings.organization.name} *</Label>
@@ -251,76 +233,67 @@ export function OrganizationSettings() {
           </div>
         </div>
 
-        {/* Adreça */}
-        <div className="space-y-4">
-          <h4 className="text-sm font-medium text-muted-foreground">{t.settings.organization.address}</h4>
+        <div className="space-y-2">
+          <Label htmlFor="address">{t.settings.organization.address}</Label>
+          <Input
+            id="address"
+            value={formData.address}
+            onChange={(e) => handleChange('address', e.target.value)}
+            placeholder="Carrer Exemple, 123"
+          />
+        </div>
+        <div className="grid gap-4 sm:grid-cols-2">
           <div className="space-y-2">
-            <Label htmlFor="address">{t.settings.organization.address}</Label>
+            <Label htmlFor="city">{t.settings.organization.city}</Label>
             <Input
-              id="address"
-              value={formData.address}
-              onChange={(e) => handleChange('address', e.target.value)}
-              placeholder="Carrer Exemple, 123"
+              id="city"
+              value={formData.city}
+              onChange={(e) => handleChange('city', e.target.value)}
+              placeholder="Barcelona"
             />
           </div>
-          <div className="grid gap-4 sm:grid-cols-2">
-            <div className="space-y-2">
-              <Label htmlFor="city">{t.settings.organization.city}</Label>
-              <Input
-                id="city"
-                value={formData.city}
-                onChange={(e) => handleChange('city', e.target.value)}
-                placeholder="Barcelona"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="zipCode">{t.settings.organization.zipCode}</Label>
-              <Input
-                id="zipCode"
-                value={formData.zipCode}
-                onChange={(e) => handleChange('zipCode', e.target.value)}
-                placeholder="08001"
-              />
-            </div>
-          </div>
-        </div>
-
-        {/* Contacte */}
-        <div className="space-y-4">
-          <h4 className="text-sm font-medium text-muted-foreground">Contacte</h4>
-          <div className="grid gap-4 sm:grid-cols-2">
-            <div className="space-y-2">
-              <Label htmlFor="phone">{t.settings.organization.phone}</Label>
-              <Input
-                id="phone"
-                value={formData.phone}
-                onChange={(e) => handleChange('phone', e.target.value)}
-                placeholder="93 123 45 67"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="email">{t.settings.organization.email}</Label>
-              <Input
-                id="email"
-                type="email"
-                value={formData.email}
-                onChange={(e) => handleChange('email', e.target.value)}
-                placeholder="info@exemple.org"
-              />
-            </div>
-          </div>
           <div className="space-y-2">
-            <Label htmlFor="website">{t.settings.organization.website}</Label>
+            <Label htmlFor="zipCode">{t.settings.organization.zipCode}</Label>
             <Input
-              id="website"
-              value={formData.website}
-              onChange={(e) => handleChange('website', e.target.value)}
-              placeholder="https://www.exemple.org"
+              id="zipCode"
+              value={formData.zipCode}
+              onChange={(e) => handleChange('zipCode', e.target.value)}
+              placeholder="08001"
             />
           </div>
         </div>
 
-        {/* Botó guardar */}
+        <div className="grid gap-4 sm:grid-cols-2">
+          <div className="space-y-2">
+            <Label htmlFor="phone">{t.settings.organization.phone}</Label>
+            <Input
+              id="phone"
+              value={formData.phone}
+              onChange={(e) => handleChange('phone', e.target.value)}
+              placeholder="93 123 45 67"
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="email">{t.settings.organization.email}</Label>
+            <Input
+              id="email"
+              type="email"
+              value={formData.email}
+              onChange={(e) => handleChange('email', e.target.value)}
+              placeholder="info@exemple.org"
+            />
+          </div>
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor="website">{t.settings.organization.website}</Label>
+          <Input
+            id="website"
+            value={formData.website}
+            onChange={(e) => handleChange('website', e.target.value)}
+            placeholder="https://www.exemple.org"
+          />
+        </div>
+
         <div className="flex justify-end pt-4 border-t">
           <Button onClick={handleSave} disabled={saving}>
             {saving ? (
@@ -328,7 +301,7 @@ export function OrganizationSettings() {
             ) : (
               <Save className="mr-2 h-4 w-4" />
             )}
-            Guardar canvis
+            {t.common.save}
           </Button>
         </div>
       </CardContent>

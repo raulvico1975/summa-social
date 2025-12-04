@@ -1,4 +1,3 @@
-
 export const ca = {
   dashboard: {
     title: "Panell de Control",
@@ -54,9 +53,6 @@ export const ca = {
       editTransaction: "Editar Transacció",
       editTransactionDescription: "Modifica els detalls del moviment.",
       saveChanges: "Desar Canvis",
-      // ═══════════════════════════════════════════════════════════════
-      // NOU: Devolucions
-      // ═══════════════════════════════════════════════════════════════
       returnBadge: "Devolució",
       commissionBadge: "Comissió",
       assignAffectedDonor: "Assignar donant afectat",
@@ -596,6 +592,3 @@ export const ca = {
     hundreds: "cents",
   }
 };
-    
-
-    

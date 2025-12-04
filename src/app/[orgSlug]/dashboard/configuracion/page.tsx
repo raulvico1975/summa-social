@@ -5,13 +5,15 @@ import { PasswordChangeForm } from '@/components/password-change-form';
 import { OrganizationSettings } from '@/components/organization-settings';
 import { LanguageSelector } from '@/components/language-selector';
 import { useCurrentOrganization } from '@/hooks/organization-provider';
+import { useTranslations } from '@/i18n';
 
 export default function SettingsPage() {
   const { userRole } = useCurrentOrganization();
+  const { t } = useTranslations();
 
   // Només admins i tresorers poden veure la configuració de l'organització
   const canManageOrganization = userRole === 'admin';
-  const canManageCategories = userRole === 'admin';
+  const canManageCategories = userRole === 'admin' || userRole === 'treasurer';
 
   return (
     <div className="space-y-6">
@@ -21,7 +23,7 @@ export default function SettingsPage() {
             <OrganizationSettings />
           ) : (
              <div className="p-4 bg-muted/50 rounded-lg text-sm text-muted-foreground">
-                No tens permisos per editar la configuració de l'organització.
+                {t.settings.permissionDenied}
              </div>
           )}
         </div>
@@ -34,7 +36,7 @@ export default function SettingsPage() {
         <CategoryManager />
       ) : (
          <div className="p-4 bg-muted/50 rounded-lg text-sm text-muted-foreground">
-            No tens permisos per gestionar les categories.
+            {t.settings.permissionDenied}
          </div>
       )}
     </div>
