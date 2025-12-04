@@ -246,7 +246,7 @@ export function SupplierManager() {
                       </TableCell>
                       <TableCell>{supplier.taxId}</TableCell>
                       <TableCell>
-                        {supplier.category ? (
+                        {supplier.category && categoryLabels ? (
                           <Badge variant="outline">
                             {categoryLabels[supplier.category as SupplierCategory] || supplier.category}
                           </Badge>
@@ -333,7 +333,7 @@ export function SupplierManager() {
                   <SelectContent>
                     {SUPPLIER_CATEGORIES.map(cat => (
                       <SelectItem key={cat} value={cat}>
-                        {categoryLabels[cat]}
+                        {categoryLabels?.[cat] || cat}
                       </SelectItem>
                     ))}
                   </SelectContent>
