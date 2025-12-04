@@ -49,6 +49,7 @@ import { useCollection, useFirebase, useMemoFirebase, addDocumentNonBlocking, de
 import { collection, doc, query, where } from 'firebase/firestore';
 import { useCurrentOrganization } from '@/hooks/organization-provider';
 import { DonorImporter } from './donor-importer';
+import { useTranslations } from '@/i18n';
 
 const formatCurrency = (amount?: number) => {
   if (!amount) return '-';
@@ -76,6 +77,7 @@ export function DonorManager() {
   const { firestore } = useFirebase();
   const { organizationId } = useCurrentOrganization();
   const { toast } = useToast();
+  const { t } = useTranslations();
 
   const contactsCollection = useMemoFirebase(
     () => organizationId ? collection(firestore, 'organizations', organizationId, 'contacts') : null,
@@ -124,8 +126,8 @@ export function DonorManager() {
     if (donorToDelete && contactsCollection) {
       deleteDocumentNonBlocking(doc(contactsCollection, donorToDelete.id));
       toast({
-        title: 'Donant eliminat',
-        description: `S'ha eliminat "${donorToDelete.name}" correctament.`,
+        title: t.donors.donorDeleted,
+        description: t.donors.donorDeletedDescription(donorToDelete.name),
       });
     }
     setIsAlertOpen(false);
@@ -154,14 +156,14 @@ export function DonorManager() {
     if (!formData.name || !formData.taxId || !formData.zipCode) {
       toast({ 
         variant: 'destructive', 
-        title: 'Error', 
+        title: t.common.error, 
         description: 'El nom, DNI/CIF i codi postal són obligatoris.' 
       });
       return;
     }
 
     if (!contactsCollection) {
-      toast({ variant: 'destructive', title: 'Error', description: 'No s\'ha pogut connectar amb la base de dades.' });
+      toast({ variant: 'destructive', title: t.common.error, description: t.common.dbConnectionError });
       return;
     }
 
@@ -179,10 +181,10 @@ export function DonorManager() {
 
     if (editingDonor) {
       setDocumentNonBlocking(doc(contactsCollection, editingDonor.id), dataToSave, { merge: true });
-      toast({ title: 'Donant actualitzat', description: `S'ha actualitzat "${formData.name}" correctament.` });
+      toast({ title: t.donors.donorUpdated, description: t.donors.donorUpdatedDescription(formData.name) });
     } else {
       addDocumentNonBlocking(contactsCollection, { ...dataToSave, createdAt: now });
-      toast({ title: 'Donant creat', description: `S'ha creat "${formData.name}" correctament.` });
+      toast({ title: t.donors.donorCreated, description: t.donors.donorCreatedDescription(formData.name) });
     }
     handleOpenChange(false);
   };
@@ -191,10 +193,10 @@ export function DonorManager() {
     // El toast ja es mostra dins del DonorImporter
   };
 
-  const dialogTitle = editingDonor ? 'Editar Donant' : 'Nou Donant';
+  const dialogTitle = editingDonor ? t.donors.editTitle : t.donors.addTitle;
   const dialogDescription = editingDonor 
-    ? 'Modifica les dades del donant.' 
-    : 'Afegeix un nou donant o soci a l\'organització.';
+    ? t.donors.editDescription 
+    : t.donors.addDescription;
 
   return (
     <>
@@ -204,21 +206,21 @@ export function DonorManager() {
             <div>
               <CardTitle className="flex items-center gap-2">
                 <Heart className="h-5 w-5 text-red-500" />
-                Gestió de Donants
+                {t.donors.title}
               </CardTitle>
               <CardDescription>
-                Administra els donants i socis de l'organització
+                {t.donors.description}
               </CardDescription>
             </div>
             <div className="flex gap-2">
               <Button variant="outline" onClick={() => setIsImportOpen(true)}>
                 <Upload className="mr-2 h-4 w-4" />
-                Importar
+                {t.donors.import}
               </Button>
               <DialogTrigger asChild>
                 <Button onClick={handleAddNew}>
                   <PlusCircle className="mr-2 h-4 w-4" />
-                  Afegir Donant
+                  {t.donors.add}
                 </Button>
               </DialogTrigger>
             </div>
@@ -228,12 +230,12 @@ export function DonorManager() {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Nom</TableHead>
-                    <TableHead>DNI/CIF</TableHead>
+                    <TableHead>{t.donors.name}</TableHead>
+                    <TableHead>{t.donors.taxId}</TableHead>
                     <TableHead>Tipus</TableHead>
                     <TableHead>Modalitat</TableHead>
                     <TableHead>Import</TableHead>
-                    <TableHead className="text-right">Accions</TableHead>
+                    <TableHead className="text-right">{t.donors.actions}</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -289,7 +291,7 @@ export function DonorManager() {
                   {(!donors || donors.length === 0) && (
                     <TableRow>
                       <TableCell colSpan={6} className="text-center text-muted-foreground h-24">
-                        No hi ha donants registrats. Afegeix el primer o importa'ls des d'Excel!
+                        {t.donors.noData}
                       </TableCell>
                     </TableRow>
                   )}
@@ -310,7 +312,7 @@ export function DonorManager() {
               <h4 className="text-sm font-medium text-muted-foreground">Dades bàsiques</h4>
               
               <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="name" className="text-right">Nom *</Label>
+                <Label htmlFor="name" className="text-right">{t.donors.name} *</Label>
                 <Input
                   id="name"
                   value={formData.name}
@@ -321,7 +323,7 @@ export function DonorManager() {
               </div>
 
               <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="taxId" className="text-right">DNI/CIF *</Label>
+                <Label htmlFor="taxId" className="text-right">{t.donors.taxId} *</Label>
                 <Input
                   id="taxId"
                   value={formData.taxId}
@@ -332,7 +334,7 @@ export function DonorManager() {
               </div>
 
               <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="zipCode" className="text-right">Codi Postal *</Label>
+                <Label htmlFor="zipCode" className="text-right">{t.donors.zipCode} *</Label>
                 <Input
                   id="zipCode"
                   value={formData.zipCode}
@@ -422,7 +424,7 @@ export function DonorManager() {
               <h4 className="text-sm font-medium text-muted-foreground">Contacte (opcional)</h4>
 
               <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="email" className="text-right">Email</Label>
+                <Label htmlFor="email" className="text-right">{t.donors.email}</Label>
                 <Input
                   id="email"
                   type="email"
@@ -434,7 +436,7 @@ export function DonorManager() {
               </div>
 
               <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="phone" className="text-right">Telèfon</Label>
+                <Label htmlFor="phone" className="text-right">{t.donors.phone}</Label>
                 <Input
                   id="phone"
                   value={formData.phone || ''}
@@ -464,10 +466,10 @@ export function DonorManager() {
 
           <DialogFooter>
             <DialogClose asChild>
-              <Button variant="outline">Cancel·lar</Button>
+              <Button variant="outline">{t.common.cancel}</Button>
             </DialogClose>
             <Button onClick={handleSave}>
-              {editingDonor ? 'Guardar canvis' : 'Crear donant'}
+              {editingDonor ? t.donors.save : t.donors.add}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -476,15 +478,14 @@ export function DonorManager() {
       <AlertDialog open={isAlertOpen} onOpenChange={setIsAlertOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Eliminar donant?</AlertDialogTitle>
+            <AlertDialogTitle>{t.donors.confirmDeleteTitle}</AlertDialogTitle>
             <AlertDialogDescription>
-              Estàs segur que vols eliminar "{donorToDelete?.name}"? 
-              Aquesta acció no es pot desfer.
+              {t.donors.confirmDeleteDescription}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel onClick={() => setDonorToDelete(null)}>Cancel·lar</AlertDialogCancel>
-            <AlertDialogAction onClick={handleDeleteConfirm}>Eliminar</AlertDialogAction>
+            <AlertDialogCancel onClick={() => setDonorToDelete(null)}>{t.common.cancel}</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDeleteConfirm}>{t.common.delete}</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>

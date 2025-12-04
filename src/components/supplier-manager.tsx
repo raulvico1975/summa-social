@@ -50,9 +50,10 @@ import { useCollection, useFirebase, useMemoFirebase, addDocumentNonBlocking, de
 import { collection, doc, query, where } from 'firebase/firestore';
 import { useCurrentOrganization } from '@/hooks/organization-provider';
 import { SupplierImporter } from './supplier-importer';
+import { useTranslations } from '@/i18n';
 
 // Traduccions de categories
-const CATEGORY_LABELS: Record<SupplierCategory, string> = {
+const CATEGORY_LABELS_CA: Record<SupplierCategory, string> = {
   services: 'Serveis professionals',
   utilities: 'Subministraments',
   materials: 'Materials i equipament',
@@ -63,6 +64,19 @@ const CATEGORY_LABELS: Record<SupplierCategory, string> = {
   transport: 'Transport',
   maintenance: 'Manteniment',
   other: 'Altres',
+};
+
+const CATEGORY_LABELS_ES: Record<SupplierCategory, string> = {
+  services: 'Servicios profesionales',
+  utilities: 'Suministros',
+  materials: 'Materiales y equipamiento',
+  rent: 'Alquiler',
+  insurance: 'Seguros',
+  banking: 'Servicios bancarios',
+  communications: 'Telecomunicaciones',
+  transport: 'Transporte',
+  maintenance: 'Mantenimiento',
+  other: 'Otros',
 };
 
 type SupplierFormData = Omit<Supplier, 'id' | 'createdAt' | 'updatedAt'>;
@@ -85,6 +99,9 @@ export function SupplierManager() {
   const { firestore } = useFirebase();
   const { organizationId } = useCurrentOrganization();
   const { toast } = useToast();
+  const { t, language } = useTranslations();
+
+  const categoryLabels = language === 'ca' ? CATEGORY_LABELS_CA : CATEGORY_LABELS_ES;
 
   const contactsCollection = useMemoFirebase(
     () => organizationId ? collection(firestore, 'organizations', organizationId, 'contacts') : null,
@@ -132,8 +149,8 @@ export function SupplierManager() {
     if (supplierToDelete && contactsCollection) {
       deleteDocumentNonBlocking(doc(contactsCollection, supplierToDelete.id));
       toast({
-        title: 'Proveïdor eliminat',
-        description: `S'ha eliminat "${supplierToDelete.name}" correctament.`,
+        title: t.suppliers.supplierDeleted,
+        description: t.suppliers.supplierDeletedDescription(supplierToDelete.name),
       });
     }
     setIsAlertOpen(false);
@@ -162,14 +179,14 @@ export function SupplierManager() {
     if (!formData.name || !formData.taxId) {
       toast({ 
         variant: 'destructive', 
-        title: 'Error', 
+        title: t.common.error,
         description: 'El nom i el CIF són obligatoris.' 
       });
       return;
     }
 
     if (!contactsCollection) {
-      toast({ variant: 'destructive', title: 'Error', description: 'No s\'ha pogut connectar amb la base de dades.' });
+      toast({ variant: 'destructive', title: t.common.error, description: t.common.dbConnectionError });
       return;
     }
 
@@ -189,10 +206,10 @@ export function SupplierManager() {
 
     if (editingSupplier) {
       setDocumentNonBlocking(doc(contactsCollection, editingSupplier.id), dataToSave, { merge: true });
-      toast({ title: 'Proveïdor actualitzat', description: `S'ha actualitzat "${formData.name}" correctament.` });
+      toast({ title: t.suppliers.supplierUpdated, description: t.suppliers.supplierUpdatedDescription(formData.name) });
     } else {
       addDocumentNonBlocking(contactsCollection, { ...dataToSave, createdAt: now });
-      toast({ title: 'Proveïdor creat', description: `S'ha creat "${formData.name}" correctament.` });
+      toast({ title: t.suppliers.supplierCreated, description: t.suppliers.supplierCreatedDescription(formData.name) });
     }
     handleOpenChange(false);
   };
@@ -201,10 +218,10 @@ export function SupplierManager() {
     // El toast ja es mostra dins del SupplierImporter
   };
 
-  const dialogTitle = editingSupplier ? 'Editar Proveïdor' : 'Nou Proveïdor';
+  const dialogTitle = editingSupplier ? t.suppliers.editTitle : t.suppliers.addTitle;
   const dialogDescription = editingSupplier 
-    ? 'Modifica les dades del proveïdor.' 
-    : 'Afegeix un nou proveïdor o empresa col·laboradora.';
+    ? t.suppliers.editDescription 
+    : t.suppliers.addDescription;
 
   return (
     <>
@@ -214,21 +231,21 @@ export function SupplierManager() {
             <div>
               <CardTitle className="flex items-center gap-2">
                 <Building2 className="h-5 w-5 text-blue-500" />
-                Gestió de Proveïdors
+                {t.suppliers.title}
               </CardTitle>
               <CardDescription>
-                Administra els proveïdors i empreses col·laboradores
+                {t.suppliers.description}
               </CardDescription>
             </div>
             <div className="flex gap-2">
               <Button variant="outline" onClick={() => setIsImportOpen(true)}>
                 <Upload className="mr-2 h-4 w-4" />
-                Importar
+                {t.suppliers.import}
               </Button>
               <DialogTrigger asChild>
                 <Button onClick={handleAddNew}>
                   <PlusCircle className="mr-2 h-4 w-4" />
-                  Afegir Proveïdor
+                  {t.suppliers.add}
                 </Button>
               </DialogTrigger>
             </div>
@@ -238,11 +255,11 @@ export function SupplierManager() {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Nom</TableHead>
-                    <TableHead>CIF</TableHead>
-                    <TableHead>Categoria</TableHead>
+                    <TableHead>{t.suppliers.name}</TableHead>
+                    <TableHead>{t.suppliers.taxId}</TableHead>
+                    <TableHead>{t.suppliers.category}</TableHead>
                     <TableHead>Contacte</TableHead>
-                    <TableHead className="text-right">Accions</TableHead>
+                    <TableHead className="text-right">{t.suppliers.actions}</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -258,7 +275,7 @@ export function SupplierManager() {
                       <TableCell>
                         {supplier.category ? (
                           <Badge variant="outline">
-                            {CATEGORY_LABELS[supplier.category as SupplierCategory] || supplier.category}
+                            {categoryLabels[supplier.category as SupplierCategory] || supplier.category}
                           </Badge>
                         ) : (
                           <span className="text-muted-foreground">-</span>
@@ -289,7 +306,7 @@ export function SupplierManager() {
                   {(!suppliers || suppliers.length === 0) && (
                     <TableRow>
                       <TableCell colSpan={5} className="text-center text-muted-foreground h-24">
-                        No hi ha proveïdors registrats. Afegeix el primer o importa'ls des d'Excel!
+                        {t.suppliers.noData}
                       </TableCell>
                     </TableRow>
                   )}
@@ -310,7 +327,7 @@ export function SupplierManager() {
               <h4 className="text-sm font-medium text-muted-foreground">Dades bàsiques</h4>
               
               <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="name" className="text-right">Nom *</Label>
+                <Label htmlFor="name" className="text-right">{t.suppliers.name} *</Label>
                 <Input
                   id="name"
                   value={formData.name}
@@ -321,7 +338,7 @@ export function SupplierManager() {
               </div>
 
               <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="taxId" className="text-right">CIF *</Label>
+                <Label htmlFor="taxId" className="text-right">{t.suppliers.taxId} *</Label>
                 <Input
                   id="taxId"
                   value={formData.taxId}
@@ -332,7 +349,7 @@ export function SupplierManager() {
               </div>
 
               <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="category" className="text-right">Categoria</Label>
+                <Label htmlFor="category" className="text-right">{t.suppliers.category}</Label>
                 <Select
                   value={formData.category || ''}
                   onValueChange={(v) => handleFormChange('category', v || undefined)}
@@ -343,7 +360,7 @@ export function SupplierManager() {
                   <SelectContent>
                     {SUPPLIER_CATEGORIES.map(cat => (
                       <SelectItem key={cat} value={cat}>
-                        {CATEGORY_LABELS[cat]}
+                        {categoryLabels[cat]}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -352,10 +369,10 @@ export function SupplierManager() {
             </div>
 
             <div className="space-y-4 pt-4 border-t">
-              <h4 className="text-sm font-medium text-muted-foreground">Adreça</h4>
+              <h4 className="text-sm font-medium text-muted-foreground">{t.suppliers.address}</h4>
 
               <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="address" className="text-right">Adreça</Label>
+                <Label htmlFor="address" className="text-right">{t.suppliers.address}</Label>
                 <Input
                   id="address"
                   value={formData.address || ''}
@@ -366,7 +383,7 @@ export function SupplierManager() {
               </div>
 
               <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="zipCode" className="text-right">Codi Postal</Label>
+                <Label htmlFor="zipCode" className="text-right">{t.suppliers.zipCode}</Label>
                 <Input
                   id="zipCode"
                   value={formData.zipCode}
@@ -381,7 +398,7 @@ export function SupplierManager() {
               <h4 className="text-sm font-medium text-muted-foreground">Contacte</h4>
 
               <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="email" className="text-right">Email</Label>
+                <Label htmlFor="email" className="text-right">{t.suppliers.email}</Label>
                 <Input
                   id="email"
                   type="email"
@@ -393,7 +410,7 @@ export function SupplierManager() {
               </div>
 
               <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="phone" className="text-right">Telèfon</Label>
+                <Label htmlFor="phone" className="text-right">{t.suppliers.phone}</Label>
                 <Input
                   id="phone"
                   value={formData.phone || ''}
@@ -449,10 +466,10 @@ export function SupplierManager() {
 
           <DialogFooter>
             <DialogClose asChild>
-              <Button variant="outline">Cancel·lar</Button>
+              <Button variant="outline">{t.common.cancel}</Button>
             </DialogClose>
             <Button onClick={handleSave}>
-              {editingSupplier ? 'Guardar canvis' : 'Crear proveïdor'}
+              {editingSupplier ? t.suppliers.save : t.suppliers.add}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -461,15 +478,14 @@ export function SupplierManager() {
       <AlertDialog open={isAlertOpen} onOpenChange={setIsAlertOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Eliminar proveïdor?</AlertDialogTitle>
+            <AlertDialogTitle>{t.suppliers.confirmDeleteTitle}</AlertDialogTitle>
             <AlertDialogDescription>
-              Estàs segur que vols eliminar "{supplierToDelete?.name}"? 
-              Aquesta acció no es pot desfer.
+              {t.suppliers.confirmDeleteDescription}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel onClick={() => setSupplierToDelete(null)}>Cancel·lar</AlertDialogCancel>
-            <AlertDialogAction onClick={handleDeleteConfirm}>Eliminar</AlertDialogAction>
+            <AlertDialogCancel onClick={() => setSupplierToDelete(null)}>{t.common.cancel}</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDeleteConfirm}>{t.common.delete}</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
