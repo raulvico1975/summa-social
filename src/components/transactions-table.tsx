@@ -11,6 +11,7 @@ import {
 } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { ContactCombobox } from '@/components/contact-combobox';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -102,6 +103,9 @@ export function TransactionsTable() {
   // Filtre actiu
   const [tableFilter, setTableFilter] = React.useState<TableFilter>('all');
   const [sortDateAsc, setSortDateAsc] = React.useState(false); // false = més recents primer
+
+  // Columna Projecte col·lapsable
+  const [showProjectColumn, setShowProjectColumn] = React.useState(false);
 
   // Estat per editar notes inline
   const [editingNoteId, setEditingNoteId] = React.useState<string | null>(null);
@@ -712,11 +716,11 @@ export function TransactionsTable() {
     return (
       <span className="flex items-center gap-1">
         {contact.type === 'donor' ? (
-          <Heart className="h-3 w-3 text-red-500" />
+          <Heart className="h-3 w-3 text-red-500 shrink-0" />
         ) : (
-          <Building2 className="h-3 w-3 text-blue-500" />
+          <Building2 className="h-3 w-3 text-blue-500 shrink-0" />
         )}
-        <span className="text-sm">{contact.name}</span>
+        <span className="text-sm truncate max-w-[90px]" title={contact.name}>{contact.name}</span>
       </span>
     );
   };
@@ -778,6 +782,23 @@ export function TransactionsTable() {
       <div className="flex justify-between items-center mb-4 flex-wrap gap-4">
         {/* Filtres */}
         <div className="flex gap-2 items-center flex-wrap">
+          {/* Botó categoritzar - MOU AL PRINCIPI PER MÉS VISIBILITAT */}
+          <Button
+            onClick={handleBatchCategorize}
+            disabled={!hasUncategorized || isBatchCategorizing}
+            variant="default"
+            size="sm"
+          >
+            {isBatchCategorizing ? (
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+            ) : (
+              <Sparkles className="mr-2 h-4 w-4" />
+            )}
+            {t.movements.table.categorizeAll}
+          </Button>
+
+          <div className="h-4 w-px bg-border" /> {/* Separador visual */}
+
           <Button
             variant={tableFilter === 'all' ? 'default' : 'outline'}
             size="sm"
@@ -785,7 +806,7 @@ export function TransactionsTable() {
           >
             Tots ({transactions?.length || 0})
           </Button>
-          
+
           {/* Filtre devolucions */}
           {returnTransactions.length > 0 && (
             <Button
@@ -803,7 +824,7 @@ export function TransactionsTable() {
               )}
             </Button>
           )}
-          
+
           {/* Filtre sense document */}
           {expensesWithoutDoc.length > 0 && (
             <Button
@@ -815,7 +836,7 @@ export function TransactionsTable() {
               Sense document ({expensesWithoutDoc.length})
             </Button>
           )}
-          
+
           {/* Botó exportar */}
           {expensesWithoutDoc.length > 0 && (
             <Tooltip>
@@ -834,16 +855,6 @@ export function TransactionsTable() {
             </Tooltip>
           )}
         </div>
-
-        {/* Botó categoritzar */}
-        <Button onClick={handleBatchCategorize} disabled={!hasUncategorized || isBatchCategorizing}>
-          {isBatchCategorizing ? (
-            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-          ) : (
-            <Sparkles className="mr-2 h-4 w-4" />
-          )}
-          {t.movements.table.categorizeAll}
-        </Button>
       </div>
 
       {/* Avís devolucions pendents */}
@@ -876,8 +887,8 @@ export function TransactionsTable() {
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead className="w-[100px]">
-  <button 
+              <TableHead className="w-[90px]">
+  <button
     onClick={() => setSortDateAsc(!sortDateAsc)}
     className="flex items-center gap-1 hover:text-foreground transition-colors"
   >
@@ -889,11 +900,38 @@ export function TransactionsTable() {
     )}
   </button>
 </TableHead>
-              <TableHead className="text-right w-[120px]">{t.movements.table.amount}</TableHead>
-              <TableHead>Concepte</TableHead>
-              <TableHead className="w-[150px]">Contacte</TableHead>
-              <TableHead className="w-[140px]">{t.movements.table.category}</TableHead>
-              <TableHead className="w-[140px]">{t.movements.table.project}</TableHead>
+              <TableHead className="text-right w-[100px]">{t.movements.table.amount}</TableHead>
+              <TableHead className="max-w-[280px]">Concepte</TableHead>
+              <TableHead className="w-[130px]">Contacte</TableHead>
+              <TableHead className="w-[120px]">{t.movements.table.category}</TableHead>
+              {showProjectColumn ? (
+                <TableHead className="w-[120px]">
+                  <div className="flex items-center gap-1">
+                    {t.movements.table.project}
+                    <button
+                      onClick={() => setShowProjectColumn(false)}
+                      className="p-0.5 hover:bg-accent rounded transition-colors"
+                      title="Amagar columna de projectes"
+                    >
+                      <ChevronUp className="h-3.5 w-3.5 text-muted-foreground" />
+                    </button>
+                  </div>
+                </TableHead>
+              ) : (
+                <TableHead className="w-[50px]">
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <button
+                        onClick={() => setShowProjectColumn(true)}
+                        className="flex items-center justify-center w-full px-1 py-1 hover:bg-accent rounded transition-colors text-muted-foreground"
+                      >
+                        <FolderKanban className="h-3.5 w-3.5" />
+                      </button>
+                    </TooltipTrigger>
+                    <TooltipContent>Projectes</TooltipContent>
+                  </Tooltip>
+                </TableHead>
+              )}
               <TableHead className="w-[50px] text-center">Doc</TableHead>
               <TableHead className="w-[50px]"><span className="sr-only">{t.movements.table.actions}</span></TableHead>
             </TableRow>
@@ -937,7 +975,7 @@ export function TransactionsTable() {
                       {renderTransactionTypeBadge(tx)}
                       
                       {/* Concepte bancari original */}
-                      <p className={`text-sm truncate max-w-[300px] ${isReturnedDonation ? 'text-gray-400' : ''}`} title={tx.description}>
+                      <p className={`text-sm truncate max-w-[280px] ${isReturnedDonation ? 'text-gray-400' : ''}`} title={tx.description}>
                         {tx.description}
                       </p>
                       {/* Nota editable */}
@@ -984,9 +1022,9 @@ export function TransactionsTable() {
                   <TableCell>
                     {/* Si és una devolució sense assignar, mostrar botó especial */}
                     {isReturn && !tx.contactId ? (
-                      <Button 
-                        variant="outline" 
-                        size="sm" 
+                      <Button
+                        variant="outline"
+                        size="sm"
                         onClick={() => handleOpenReturnDialog(tx)}
                         className="text-red-600 border-red-300 hover:bg-red-50"
                       >
@@ -994,80 +1032,29 @@ export function TransactionsTable() {
                         Assignar
                       </Button>
                     ) : (
-                      <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                             {tx.contactId && contactMap[tx.contactId] ? (
-                                  <Button variant="ghost" className="h-auto p-0 text-left font-normal flex items-center gap-1">
-                                      {renderContactBadge(tx.contactId)}
-                                      <ChevronDown className="h-3 w-3 text-muted-foreground" />
-                                  </Button>
-                             ) : (
-                                 <Button variant="ghost" size="sm" className="text-muted-foreground">
-                                     <UserPlus className="mr-2 h-4 w-4"/>
-                                     {t.movements.table.assign}
-                                 </Button>
-                             )}
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="start" className="w-56">
-                              {/* Si és una devolució, opció especial */}
-                              {isReturn && (
-                                <>
-                                  <DropdownMenuItem onClick={() => handleOpenReturnDialog(tx)}>
-                                    <Link className="mr-2 h-4 w-4 text-red-500" />
-                                    Gestionar devolució...
-                                  </DropdownMenuItem>
-                                  <DropdownMenuSeparator />
-                                </>
-                              )}
-                              
-                              <DropdownMenuLabel className="text-xs text-muted-foreground">Crear nou</DropdownMenuLabel>
-                              <DropdownMenuItem onClick={() => handleOpenNewContactDialog(tx.id, 'donor')}>
-                                  <Heart className="mr-2 h-4 w-4 text-red-500" />
-                                  Nou donant...
-                              </DropdownMenuItem>
-                              <DropdownMenuItem onClick={() => handleOpenNewContactDialog(tx.id, 'supplier')}>
-                                  <Building2 className="mr-2 h-4 w-4 text-blue-500" />
-                                  Nou proveïdor...
-                              </DropdownMenuItem>
-                              
-                              <DropdownMenuSeparator />
-                              
-                              <DropdownMenuItem onClick={() => handleSetContact(tx.id, null)}>
-                                  {t.movements.table.unlink}
-                              </DropdownMenuItem>
-                              
-                              <DropdownMenuSeparator />
-                              
-                              {donors.length > 0 && (
-                                <>
-                                  <DropdownMenuLabel className="text-xs text-muted-foreground flex items-center gap-1">
-                                    <Heart className="h-3 w-3 text-red-500" />
-                                    Donants
-                                  </DropdownMenuLabel>
-                                  {donors.map((donor) => (
-                                      <DropdownMenuItem key={donor.id} onClick={() => handleSetContact(tx.id, donor.id, 'donor')}>
-                                          {donor.name}
-                                      </DropdownMenuItem>
-                                  ))}
-                                  <DropdownMenuSeparator />
-                                </>
-                              )}
-                              
-                              {suppliers.length > 0 && (
-                                <>
-                                  <DropdownMenuLabel className="text-xs text-muted-foreground flex items-center gap-1">
-                                    <Building2 className="h-3 w-3 text-blue-500" />
-                                    Proveïdors
-                                  </DropdownMenuLabel>
-                                  {suppliers.map((supplier) => (
-                                      <DropdownMenuItem key={supplier.id} onClick={() => handleSetContact(tx.id, supplier.id, 'supplier')}>
-                                          {supplier.name}
-                                      </DropdownMenuItem>
-                                  ))}
-                                </>
-                              )}
-                          </DropdownMenuContent>
-                      </DropdownMenu>
+                      <ContactCombobox
+                        contacts={availableContacts?.map(c => ({
+                          id: c.id,
+                          name: c.name,
+                          type: c.type
+                        })) || []}
+                        value={tx.contactId}
+                        onSelect={(contactId) => {
+                          if (contactId) {
+                            const contact = availableContacts?.find(c => c.id === contactId);
+                            handleSetContact(tx.id, contactId, contact?.type);
+                          } else {
+                            handleSetContact(tx.id, null);
+                          }
+                        }}
+                        onCreateNew={(type) => handleOpenNewContactDialog(tx.id, type)}
+                        placeholder={t.movements.table.assign}
+                        emptyText="Cap contacte trobat"
+                        createDonorText="Nou donant..."
+                        createSupplierText="Nou proveïdor..."
+                        unlinkText={t.movements.table.unlink}
+                        searchPlaceholder="Cercar per nom..."
+                      />
                     )}
                   </TableCell>
                   {/* Columna Categoria */}
@@ -1112,35 +1099,48 @@ export function TransactionsTable() {
                       </Button>
                     )}
                   </TableCell>
-                  {/* Columna Projecte */}
-                  <TableCell>
-                    <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                           {tx.projectId && projectMap[tx.projectId] ? (
-                                <Button variant="ghost" className="h-auto p-0 text-left font-normal flex items-center gap-1">
-                                    <span className={`text-sm ${isReturnedDonation ? 'text-gray-400' : ''}`}>{projectMap[tx.projectId]}</span>
-                                    <ChevronDown className="h-3 w-3 text-muted-foreground" />
-                                </Button>
-                           ) : (
-                               <Button variant="ghost" size="sm" className="text-muted-foreground">
-                                   <FolderKanban className="mr-2 h-4 w-4"/>
-                                   {t.movements.table.assign}
-                               </Button>
-                           )}
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="start">
-                            <DropdownMenuItem onClick={() => handleSetProject(tx.id, null)}>
-                                {t.movements.table.unlink}
-                            </DropdownMenuItem>
-                             <DropdownMenuSeparator />
-                            {availableProjects?.map((project) => (
-                                <DropdownMenuItem key={project.id} onClick={() => handleSetProject(tx.id, project.id)}>
-                                    {project.name}
-                                </DropdownMenuItem>
-                            ))}
-                        </DropdownMenuContent>
-                    </DropdownMenu>
-                  </TableCell>
+                  {/* Columna Projecte - col·lapsable */}
+                  {showProjectColumn ? (
+                    <TableCell>
+                      <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                             {tx.projectId && projectMap[tx.projectId] ? (
+                                  <Button variant="ghost" className="h-auto p-0 text-left font-normal flex items-center gap-1">
+                                      <span className={`text-sm truncate max-w-[100px] ${isReturnedDonation ? 'text-gray-400' : ''}`}>{projectMap[tx.projectId]}</span>
+                                      <ChevronDown className="h-3 w-3 text-muted-foreground" />
+                                  </Button>
+                             ) : (
+                                 <Button variant="ghost" size="sm" className="text-muted-foreground">
+                                     <FolderKanban className="mr-2 h-4 w-4"/>
+                                     {t.movements.table.assign}
+                                 </Button>
+                             )}
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="start">
+                              <DropdownMenuItem onClick={() => handleSetProject(tx.id, null)}>
+                                  {t.movements.table.unlink}
+                              </DropdownMenuItem>
+                               <DropdownMenuSeparator />
+                              {availableProjects?.map((project) => (
+                                  <DropdownMenuItem key={project.id} onClick={() => handleSetProject(tx.id, project.id)}>
+                                      {project.name}
+                                  </DropdownMenuItem>
+                              ))}
+                          </DropdownMenuContent>
+                      </DropdownMenu>
+                    </TableCell>
+                  ) : (
+                    <TableCell className="text-center">
+                      {tx.projectId && projectMap[tx.projectId] && (
+                        <Tooltip>
+                          <TooltipTrigger>
+                            <Circle className="h-2 w-2 fill-blue-500 text-blue-500 mx-auto" />
+                          </TooltipTrigger>
+                          <TooltipContent>{projectMap[tx.projectId]}</TooltipContent>
+                        </Tooltip>
+                      )}
+                    </TableCell>
+                  )}
                   {/* Columna Document */}
                   <TableCell className="text-center">
                       {isDocumentLoading ? (

@@ -22,14 +22,16 @@ export default function MovimientosPage() {
 
   return (
     <div className="flex flex-col gap-6">
-      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+      <div className="flex flex-col gap-4">
         <div>
           <h1 className="text-2xl font-bold tracking-tight font-headline">{t.movements.title}</h1>
           <p className="text-muted-foreground">{t.movements.description}</p>
         </div>
-        <TransactionImporter existingTransactions={transactions || []} />
+        <div className="flex flex-wrap items-center gap-2">
+          <TransactionImporter existingTransactions={transactions || []} />
+        </div>
       </div>
-      
+
       {isLoading ? (
         <p>{t.common.loading}</p>
       ) : (

@@ -1,0 +1,230 @@
+'use client';
+
+import * as React from 'react';
+import { Check, ChevronsUpDown, Heart, Building2, UserPlus, Users } from 'lucide-react';
+import { cn } from '@/lib/utils';
+import { Button } from '@/components/ui/button';
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+  CommandSeparator,
+} from '@/components/ui/command';
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from '@/components/ui/popover';
+
+export interface Contact {
+  id: string;
+  name: string;
+  type: 'donor' | 'supplier' | 'employee';
+}
+
+interface ContactComboboxProps {
+  contacts: Contact[];
+  value: string | null;
+  onSelect: (contactId: string | null) => void;
+  onCreateNew: (type: 'donor' | 'supplier') => void;
+  placeholder?: string;
+  emptyText?: string;
+  createDonorText?: string;
+  createSupplierText?: string;
+  unlinkText?: string;
+  searchPlaceholder?: string;
+}
+
+export function ContactCombobox({
+  contacts,
+  value,
+  onSelect,
+  onCreateNew,
+  placeholder = "Seleccionar contacte...",
+  emptyText = "Cap contacte trobat",
+  createDonorText = "Nou donant...",
+  createSupplierText = "Nou proveïdor...",
+  unlinkText = "Desvincular",
+  searchPlaceholder = "Cercar contacte...",
+}: ContactComboboxProps) {
+  const [open, setOpen] = React.useState(false);
+  const [search, setSearch] = React.useState('');
+
+  const selectedContact = contacts.find((contact) => contact.id === value);
+
+  const donors = contacts.filter((c) => c.type === 'donor');
+  const suppliers = contacts.filter((c) => c.type === 'supplier');
+  const workers = contacts.filter((c) => c.type === 'employee');
+
+  const filteredDonors = donors.filter((donor) =>
+    donor.name.toLowerCase().includes(search.toLowerCase())
+  );
+  const filteredSuppliers = suppliers.filter((supplier) =>
+    supplier.name.toLowerCase().includes(search.toLowerCase())
+  );
+  const filteredWorkers = workers.filter((worker) =>
+    worker.name.toLowerCase().includes(search.toLowerCase())
+  );
+
+  const hasResults = filteredDonors.length > 0 || filteredSuppliers.length > 0 || filteredWorkers.length > 0;
+
+  const handleSelect = (contactId: string) => {
+    onSelect(contactId === value ? null : contactId);
+    setOpen(false);
+    setSearch('');
+  };
+
+  const handleUnlink = () => {
+    onSelect(null);
+    setOpen(false);
+    setSearch('');
+  };
+
+  const handleCreateNew = (type: 'donor' | 'supplier') => {
+    setOpen(false);
+    setSearch('');
+    onCreateNew(type);
+  };
+
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        {selectedContact ? (
+          <Button
+            variant="ghost"
+            className="h-auto p-0 text-left font-normal flex items-center gap-1"
+          >
+            {selectedContact.type === 'donor' ? (
+              <Heart className="h-3 w-3 text-red-500 shrink-0" />
+            ) : selectedContact.type === 'employee' ? (
+              <Users className="h-3 w-3 text-green-600 shrink-0" />
+            ) : (
+              <Building2 className="h-3 w-3 text-blue-500 shrink-0" />
+            )}
+            <span className="text-sm truncate max-w-[90px]" title={selectedContact.name}>
+              {selectedContact.name}
+            </span>
+            <ChevronsUpDown className="h-3 w-3 text-muted-foreground ml-1" />
+          </Button>
+        ) : (
+          <Button variant="ghost" size="sm" className="text-muted-foreground">
+            <UserPlus className="mr-2 h-4 w-4" />
+            Assignar
+          </Button>
+        )}
+      </PopoverTrigger>
+      <PopoverContent className="w-[300px] p-0" align="start">
+        <Command shouldFilter={false}>
+          <CommandInput
+            placeholder={searchPlaceholder}
+            value={search}
+            onValueChange={setSearch}
+          />
+          <CommandList>
+            <CommandEmpty>{emptyText}</CommandEmpty>
+
+            {/* Donors */}
+            {filteredDonors.length > 0 && (
+              <CommandGroup heading="Donants">
+                {filteredDonors.map((donor) => (
+                  <CommandItem
+                    key={donor.id}
+                    value={donor.id}
+                    onSelect={() => handleSelect(donor.id)}
+                  >
+                    <Check
+                      className={cn(
+                        'mr-2 h-4 w-4',
+                        value === donor.id ? 'opacity-100' : 'opacity-0'
+                      )}
+                    />
+                    <Heart className="mr-2 h-3 w-3 text-red-500" />
+                    {donor.name}
+                  </CommandItem>
+                ))}
+              </CommandGroup>
+            )}
+
+            {/* Suppliers */}
+            {filteredSuppliers.length > 0 && (
+              <>
+                {filteredDonors.length > 0 && <CommandSeparator />}
+                <CommandGroup heading="Proveïdors">
+                  {filteredSuppliers.map((supplier) => (
+                    <CommandItem
+                      key={supplier.id}
+                      value={supplier.id}
+                      onSelect={() => handleSelect(supplier.id)}
+                    >
+                      <Check
+                        className={cn(
+                          'mr-2 h-4 w-4',
+                          value === supplier.id ? 'opacity-100' : 'opacity-0'
+                        )}
+                      />
+                      <Building2 className="mr-2 h-3 w-3 text-blue-500" />
+                      {supplier.name}
+                    </CommandItem>
+                  ))}
+                </CommandGroup>
+              </>
+            )}
+
+            {/* Workers */}
+            {filteredWorkers.length > 0 && (
+              <>
+                {(filteredDonors.length > 0 || filteredSuppliers.length > 0) && <CommandSeparator />}
+                <CommandGroup heading="Treballadors">
+                  {filteredWorkers.map((worker) => (
+                    <CommandItem
+                      key={worker.id}
+                      value={worker.id}
+                      onSelect={() => handleSelect(worker.id)}
+                    >
+                      <Check
+                        className={cn(
+                          'mr-2 h-4 w-4',
+                          value === worker.id ? 'opacity-100' : 'opacity-0'
+                        )}
+                      />
+                      <Users className="mr-2 h-3 w-3 text-green-600" />
+                      {worker.name}
+                    </CommandItem>
+                  ))}
+                </CommandGroup>
+              </>
+            )}
+
+            {/* Create new options - only shown after results */}
+            {hasResults && <CommandSeparator />}
+            <CommandGroup heading="Crear nou">
+              <CommandItem onSelect={() => handleCreateNew('donor')}>
+                <Heart className="mr-2 h-4 w-4 text-red-500" />
+                {createDonorText}
+              </CommandItem>
+              <CommandItem onSelect={() => handleCreateNew('supplier')}>
+                <Building2 className="mr-2 h-4 w-4 text-blue-500" />
+                {createSupplierText}
+              </CommandItem>
+            </CommandGroup>
+
+            {/* Unlink option */}
+            {value && (
+              <>
+                <CommandSeparator />
+                <CommandGroup>
+                  <CommandItem onSelect={handleUnlink}>
+                    {unlinkText}
+                  </CommandItem>
+                </CommandGroup>
+              </>
+            )}
+          </CommandList>
+        </Command>
+      </PopoverContent>
+    </Popover>
+  );
+}
