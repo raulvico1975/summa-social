@@ -53,7 +53,7 @@ function OrganizationDependentLayout({ children }: { children: React.ReactNode }
     <AppLogContext.Provider value={{ logs, log, clearLogs }}>
       <SidebarProvider defaultOpen={open} onOpenChange={setOpen}>
         <div className="flex min-h-screen">
-          <Sidebar>
+          <Sidebar collapsible="icon">
             <DashboardSidebarContent />
           </Sidebar>
           <SidebarInset className="flex flex-1 flex-col transition-all duration-300 ease-in-out">
