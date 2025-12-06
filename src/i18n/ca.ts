@@ -24,7 +24,7 @@ export const ca = {
     activeDonors: "Donants actius",
     memberFees: "Quotes socis",
     alerts: "Atenció",
-    uncategorizedMovements: "Moviments pendents de revisar",
+    uncategorizedMovements: "Moviments sense categoritzar",
     incompleteDonors: "Donants amb dades incompletes",
     movementsWithoutContact: "Moviments sense contacte assignat",
     allClear: "Tot al dia!"
@@ -83,6 +83,9 @@ export const ca = {
       all: "Tots",
       returns: "Devolucions",
       withoutDocument: "Sense document",
+      uncategorized: "Sense categoritzar",
+      noContact: "Sense contacte",
+      showAll: "Veure tots",
       attachProof: "Adjuntar justificant",
       attachDocument: "Adjuntar document",
       bankConcept: "Concepte bancari",
@@ -466,6 +469,9 @@ export const ca = {
     incompleteDataWarning: "⚠️ Dades incompletes",
     incompleteDataWarningDescription: "No es podrà incloure al Model 182 sense DNI/CIF i Codi Postal.",
     incompleteDataTooltip: "Falten dades pel Model 182",
+    all: "Tots",
+    incomplete: "Dades incompletes",
+    showAll: "Veure tots",
     errorNameRequired: "El nom és obligatori.",
     importer: {
       title: "Importar Donants",

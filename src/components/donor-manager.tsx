@@ -101,6 +101,45 @@ export function DonorManager() {
   const [donorToDelete, setDonorToDelete] = React.useState<Donor | null>(null);
   const [formData, setFormData] = React.useState<DonorFormData>(emptyFormData);
 
+  // Filtre de donants incomplets
+  const [showIncompleteOnly, setShowIncompleteOnly] = React.useState(false);
+  const [hasUrlFilter, setHasUrlFilter] = React.useState(false);
+
+  // Llegir paràmetre de filtre de la URL
+  React.useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search);
+      const filter = params.get('filter');
+      if (filter === 'incomplete') {
+        setShowIncompleteOnly(true);
+        setHasUrlFilter(true);
+      }
+    }
+  }, []);
+
+  // Funció per netejar el filtre i actualitzar la URL
+  const clearFilter = () => {
+    setShowIncompleteOnly(false);
+    setHasUrlFilter(false);
+    if (typeof window !== 'undefined') {
+      const url = new URL(window.location.href);
+      url.searchParams.delete('filter');
+      window.history.replaceState({}, '', url.toString());
+    }
+  };
+
+  // Filtrar donants incomplets
+  const filteredDonors = React.useMemo(() => {
+    if (!donors) return [];
+    if (!showIncompleteOnly) return donors;
+    return donors.filter(donor => !donor.taxId || !donor.zipCode);
+  }, [donors, showIncompleteOnly]);
+
+  const incompleteDonorsCount = React.useMemo(() => {
+    if (!donors) return 0;
+    return donors.filter(donor => !donor.taxId || !donor.zipCode).length;
+  }, [donors]);
+
   const handleEdit = (donor: Donor) => {
     setEditingDonor(donor);
     setFormData({
@@ -253,6 +292,51 @@ export function DonorManager() {
             </div>
           </CardHeader>
           <CardContent>
+            {/* Botons de filtre */}
+            <div className="mb-4 flex flex-wrap items-center gap-2">
+              <Button
+                variant={!showIncompleteOnly ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => setShowIncompleteOnly(false)}
+              >
+                {t.donors.all} ({donors?.length || 0})
+              </Button>
+              {incompleteDonorsCount > 0 && (
+                <Button
+                  variant={showIncompleteOnly ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => setShowIncompleteOnly(true)}
+                  className={!showIncompleteOnly ? 'border-amber-300 text-amber-600' : ''}
+                >
+                  <AlertTriangle className="mr-1.5 h-3 w-3" />
+                  {t.donors.incomplete} ({incompleteDonorsCount})
+                </Button>
+              )}
+            </div>
+
+            {/* Avís de filtre actiu des de dashboard */}
+            {hasUrlFilter && showIncompleteOnly && (
+              <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg flex items-center gap-3">
+                <AlertTriangle className="h-5 w-5 text-blue-500 flex-shrink-0" />
+                <div className="flex-1">
+                  <p className="text-sm font-medium text-blue-800">
+                    Filtrant: {t.donors.incomplete}
+                  </p>
+                  <p className="text-xs text-blue-600">
+                    Mostrant només {filteredDonors.length} donants amb dades incompletes
+                  </p>
+                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={clearFilter}
+                  className="border-blue-300 text-blue-700 hover:bg-blue-100"
+                >
+                  {t.donors.showAll}
+                </Button>
+              </div>
+            )}
+
             <div className="rounded-md border">
               <Table>
                 <TableHeader>
@@ -266,7 +350,7 @@ export function DonorManager() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {donors && donors.map((donor) => (
+                  {filteredDonors && filteredDonors.map((donor) => (
                     <TableRow key={donor.id}>
                       <TableCell className="font-medium">
                         <div className="flex items-center gap-2">
@@ -325,10 +409,12 @@ export function DonorManager() {
                       </TableCell>
                     </TableRow>
                   ))}
-                  {(!donors || donors.length === 0) && (
+                  {(!filteredDonors || filteredDonors.length === 0) && (
                     <TableRow>
                       <TableCell colSpan={6} className="text-center text-muted-foreground h-24">
-                        {t.donors.noData}
+                        {showIncompleteOnly
+                          ? "No hi ha donants amb dades incompletes"
+                          : t.donors.noData}
                       </TableCell>
                     </TableRow>
                   )}

@@ -92,7 +92,7 @@ import { useTranslations } from '@/i18n';
 import { useCurrentOrganization } from '@/hooks/organization-provider';
 
 // Tipus de filtre
-type TableFilter = 'all' | 'missing' | 'returns';
+type TableFilter = 'all' | 'missing' | 'returns' | 'uncategorized' | 'noContact';
 
 export function TransactionsTable() {
   const { firestore, user, storage } = useFirebase();
@@ -102,6 +102,31 @@ export function TransactionsTable() {
 
   // Filtre actiu
   const [tableFilter, setTableFilter] = React.useState<TableFilter>('all');
+
+  // Llegir paràmetre de filtre de la URL
+  const [hasUrlFilter, setHasUrlFilter] = React.useState(false);
+
+  React.useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search);
+      const filter = params.get('filter');
+      if (filter === 'uncategorized' || filter === 'noContact') {
+        setTableFilter(filter);
+        setHasUrlFilter(true);
+      }
+    }
+  }, []);
+
+  // Funció per netejar el filtre i actualitzar la URL
+  const clearFilter = () => {
+    setTableFilter('all');
+    setHasUrlFilter(false);
+    if (typeof window !== 'undefined') {
+      const url = new URL(window.location.href);
+      url.searchParams.delete('filter');
+      window.history.replaceState({}, '', url.toString());
+    }
+  };
   const [sortDateAsc, setSortDateAsc] = React.useState(false); // false = més recents primer
 
   // Columna Projecte col·lapsable
@@ -203,15 +228,27 @@ export function TransactionsTable() {
 
   // Devolucions pendents d'assignar
   const pendingReturns = React.useMemo(() => {
-    return returnTransactions.filter(tx => 
+    return returnTransactions.filter(tx =>
       tx.transactionType === 'return' && !tx.contactId
     );
   }, [returnTransactions]);
 
+  // Moviments sense categoritzar
+  const uncategorizedTransactions = React.useMemo(() => {
+    if (!transactions) return [];
+    return transactions.filter(tx => tx.category === null || tx.category === 'Revisar');
+  }, [transactions]);
+
+  // Moviments sense contacte assignat (amount > 50€)
+  const noContactTransactions = React.useMemo(() => {
+    if (!transactions) return [];
+    return transactions.filter(tx => !tx.contactId && Math.abs(tx.amount) > 50);
+  }, [transactions]);
+
   // // Transaccions filtrades i ordenades per data (més recents primer)
   const filteredTransactions = React.useMemo(() => {
     if (!transactions) return [];
-    
+
     let result: Transaction[];
     switch (tableFilter) {
       case 'missing':
@@ -220,17 +257,23 @@ export function TransactionsTable() {
       case 'returns':
         result = returnTransactions;
         break;
+      case 'uncategorized':
+        result = uncategorizedTransactions;
+        break;
+      case 'noContact':
+        result = noContactTransactions;
+        break;
       default:
         result = transactions;
     }
-    
+
     // Ordenar per data descendent (més recents primer)
     return [...result].sort((a, b) => {
   const dateA = new Date(a.date).getTime();
   const dateB = new Date(b.date).getTime();
   return sortDateAsc ? dateA - dateB : dateB - dateA;
 });
-  }, [transactions, tableFilter, expensesWithoutDoc, returnTransactions, sortDateAsc]);
+  }, [transactions, tableFilter, expensesWithoutDoc, returnTransactions, uncategorizedTransactions, noContactTransactions, sortDateAsc]);
 
   // ═══════════════════════════════════════════════════════════════════════════
   // GESTIÓ DE DEVOLUCIONS
@@ -837,6 +880,31 @@ export function TransactionsTable() {
             </Button>
           )}
 
+          {/* Filtre sense categoritzar */}
+          {uncategorizedTransactions.length > 0 && (
+            <Button
+              variant={tableFilter === 'uncategorized' ? 'default' : 'outline'}
+              size="sm"
+              onClick={() => setTableFilter('uncategorized')}
+              className={tableFilter !== 'uncategorized' ? 'border-orange-300 text-orange-600' : ''}
+            >
+              <AlertTriangle className="mr-1.5 h-3 w-3" />
+              {t.movements.table.uncategorized} ({uncategorizedTransactions.length})
+            </Button>
+          )}
+
+          {/* Filtre sense contacte */}
+          {noContactTransactions.length > 0 && (
+            <Button
+              variant={tableFilter === 'noContact' ? 'default' : 'outline'}
+              size="sm"
+              onClick={() => setTableFilter('noContact')}
+            >
+              <Circle className="mr-1.5 h-2 w-2 fill-muted-foreground text-muted-foreground" />
+              {t.movements.table.noContact} ({noContactTransactions.length})
+            </Button>
+          )}
+
           {/* Botó exportar */}
           {expensesWithoutDoc.length > 0 && (
             <Tooltip>
@@ -876,6 +944,29 @@ export function TransactionsTable() {
             className="border-red-300 text-red-700 hover:bg-red-100"
           >
             {t.movements.table.reviewReturns}
+          </Button>
+        </div>
+      )}
+
+      {/* Avís de filtre actiu des de dashboard */}
+      {hasUrlFilter && (tableFilter === 'uncategorized' || tableFilter === 'noContact') && (
+        <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg flex items-center gap-3">
+          <AlertTriangle className="h-5 w-5 text-blue-500 flex-shrink-0" />
+          <div className="flex-1">
+            <p className="text-sm font-medium text-blue-800">
+              Filtrant: {tableFilter === 'uncategorized' ? t.movements.table.uncategorized : t.movements.table.noContact}
+            </p>
+            <p className="text-xs text-blue-600">
+              Mostrant només {filteredTransactions.length} moviments filtrats
+            </p>
+          </div>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={clearFilter}
+            className="border-blue-300 text-blue-700 hover:bg-blue-100"
+          >
+            {t.movements.table.showAll}
           </Button>
         </div>
       )}

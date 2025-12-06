@@ -24,7 +24,7 @@ export const es = {
     activeDonors: "Donantes activos",
     memberFees: "Cuotas socios",
     alerts: "Atención",
-    uncategorizedMovements: "Movimientos pendientes de revisar",
+    uncategorizedMovements: "Movimientos sin categorizar",
     incompleteDonors: "Donantes con datos incompletos",
     movementsWithoutContact: "Movimientos sin contacto asignado",
     allClear: "¡Todo al día!"
@@ -83,6 +83,9 @@ export const es = {
       all: "Todos",
       returns: "Devoluciones",
       withoutDocument: "Sin documento",
+      uncategorized: "Sin categorizar",
+      noContact: "Sin contacto",
+      showAll: "Ver todos",
       attachProof: "Adjuntar justificante",
       attachDocument: "Adjuntar documento",
       bankConcept: "Concepto bancario",
@@ -499,6 +502,9 @@ export const es = {
     incompleteDataWarning: "⚠️ Datos incompletos",
     incompleteDataWarningDescription: "No se podrá incluir en el Modelo 182 sin DNI/CIF y Código Postal.",
     incompleteDataTooltip: "Faltan datos para el Modelo 182",
+    all: "Todos",
+    incomplete: "Datos incompletos",
+    showAll: "Ver todos",
     errorNameRequired: "El nombre es obligatorio.",
     importer: {
       title: "Importar Donantes",

@@ -108,7 +108,7 @@ export default function DashboardPage() {
         count: uncategorizedCount,
         label: t.dashboard.uncategorizedMovements,
         variant: 'destructive' as const,
-        href: buildUrl('/dashboard/movimientos'),
+        href: buildUrl('/dashboard/movimientos') + '?filter=uncategorized',
       });
     }
 
@@ -123,7 +123,7 @@ export default function DashboardPage() {
         count: incompleteDonorsCount,
         label: t.dashboard.incompleteDonors,
         variant: 'default' as const,
-        href: buildUrl('/dashboard/donants'),
+        href: buildUrl('/dashboard/donants') + '?filter=incomplete',
       });
     }
 
@@ -138,7 +138,7 @@ export default function DashboardPage() {
         count: noContactCount,
         label: t.dashboard.movementsWithoutContact,
         variant: 'secondary' as const,
-        href: buildUrl('/dashboard/movimientos'),
+        href: buildUrl('/dashboard/movimientos') + '?filter=noContact',
       });
     }
 
