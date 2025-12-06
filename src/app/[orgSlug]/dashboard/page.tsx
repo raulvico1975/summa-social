@@ -4,9 +4,13 @@ import { StatCard } from '@/components/stat-card';
 import { ExpensesChart } from '@/components/expenses-chart';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Progress } from '@/components/ui/progress';
+import { Button } from '@/components/ui/button';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { Textarea } from '@/components/ui/textarea';
 import Link from 'next/link';
-import { DollarSign, TrendingUp, TrendingDown, Rocket, Heart, AlertTriangle } from 'lucide-react';
-import type { Transaction, Contact } from '@/lib/data';
+import { DollarSign, TrendingUp, TrendingDown, Rocket, Heart, AlertTriangle, FolderKanban, CalendarClock, Share2, Copy, Mail, PartyPopper } from 'lucide-react';
+import type { Transaction, Contact, Project } from '@/lib/data';
 import { useCollection, useFirebase, useMemoFirebase } from '@/firebase';
 import { collection } from 'firebase/firestore';
 import { useTranslations } from '@/i18n';
@@ -15,9 +19,31 @@ import { formatCurrencyEU } from '@/lib/normalize';
 import { DateFilter, type DateFilterValue } from '@/components/date-filter';
 import { useTransactionFilters } from '@/hooks/use-transaction-filters';
 
+interface TaxObligation {
+  id: string;
+  nameKey: string;
+  month: number;
+  day: number;
+  reportPath: string;
+}
+
+const TAX_OBLIGATIONS: TaxObligation[] = [
+  { id: 'model182', nameKey: 'model182', month: 1, day: 31, reportPath: '/dashboard/informes' },
+  { id: 'model347', nameKey: 'model347', month: 2, day: 28, reportPath: '/dashboard/informes' },
+  { id: 'annualReport', nameKey: 'annualReport', month: 6, day: 30, reportPath: '/dashboard/informes' }
+];
+
+interface Celebration {
+  id: string;
+  emoji: string;
+  messageKey: string;
+  messageParams?: Record<string, any>;
+  priority: number;
+}
+
 export default function DashboardPage() {
   const { firestore } = useFirebase();
-  const { organizationId } = useCurrentOrganization();
+  const { organizationId, organization } = useCurrentOrganization();
   const { t } = useTranslations();
   const { buildUrl } = useOrgUrl();
 
@@ -33,10 +59,82 @@ export default function DashboardPage() {
   );
   const { data: contacts } = useCollection<Contact>(contactsQuery);
 
+  const projectsQuery = useMemoFirebase(
+    () => organizationId ? collection(firestore, 'organizations', organizationId, 'projects') : null,
+    [firestore, organizationId]
+  );
+  const { data: projects } = useCollection<Project>(projectsQuery);
+
   const [dateFilter, setDateFilter] = React.useState<DateFilterValue>({ type: 'all' });
   const filteredTransactions = useTransactionFilters(transactions || undefined, dateFilter);
 
   const MISSION_TRANSFER_CATEGORY_KEY = 'missionTransfers';
+
+  // Estat per compartir resum
+  const [shareDialogOpen, setShareDialogOpen] = React.useState(false);
+  const [summaryText, setSummaryText] = React.useState('');
+  const [copySuccess, setCopySuccess] = React.useState(false);
+
+  // Funció per formatejar el període del filtre
+  const formatPeriodLabel = (filter: DateFilterValue): string => {
+    if (filter.type === 'all') return t.dashboard.allPeriods;
+    if (filter.type === 'year' && filter.year) return `${t.dashboard.filterYear} ${filter.year}`;
+    if (filter.type === 'month' && filter.year && filter.month) {
+      const monthNames = ['Gener', 'Febrer', 'Març', 'Abril', 'Maig', 'Juny', 'Juliol', 'Agost', 'Setembre', 'Octubre', 'Novembre', 'Desembre'];
+      return `${monthNames[filter.month - 1]} ${filter.year}`;
+    }
+    if (filter.type === 'quarter' && filter.year && filter.quarter) {
+      return `T${filter.quarter} ${filter.year}`;
+    }
+    if (filter.type === 'custom' && filter.customRange?.from && filter.customRange?.to) {
+      const start = filter.customRange.from.toLocaleDateString();
+      const end = filter.customRange.to.toLocaleDateString();
+      return `${start} - ${end}`;
+    }
+    return t.dashboard.allPeriods;
+  };
+
+  // Funció per generar el text de resum
+  const generateSummaryText = (): string => {
+    const orgName = organization?.name || 'Organització';
+    const period = formatPeriodLabel(dateFilter);
+
+    return `📊 Resum ${orgName} - ${period}
+
+💰 ${t.dashboard.totalIncome}: ${formatCurrencyEU(totalIncome)}
+💸 ${t.dashboard.operatingExpenses}: ${formatCurrencyEU(Math.abs(totalExpenses))}
+📈 ${t.dashboard.operatingBalance}: ${formatCurrencyEU(netBalance)}
+
+❤️ ${t.dashboard.activeDonors}: ${uniqueDonors}
+🎁 ${t.dashboard.donations}: ${formatCurrencyEU(totalDonations)}
+
+${t.dashboard.generatedWith}`;
+  };
+
+  // Funció per copiar al portapapers
+  const handleCopy = async () => {
+    try {
+      await navigator.clipboard.writeText(summaryText);
+      setCopySuccess(true);
+      setTimeout(() => setCopySuccess(false), 2000);
+    } catch (err) {
+      console.error('Error copying to clipboard:', err);
+    }
+  };
+
+  // Funció per enviar per email
+  const handleEmailShare = () => {
+    const subject = encodeURIComponent(`Resum ${organization?.name || 'Organització'}`);
+    const body = encodeURIComponent(summaryText);
+    window.location.href = `mailto:?subject=${subject}&body=${body}`;
+  };
+
+  // Funció per obrir el diàleg
+  const handleShareClick = () => {
+    const text = generateSummaryText();
+    setSummaryText(text);
+    setShareDialogOpen(true);
+  };
 
   const { totalIncome, totalExpenses, totalMissionTransfers } = React.useMemo(() => {
     if (!filteredTransactions) return { totalIncome: 0, totalExpenses: 0, totalMissionTransfers: 0 };
@@ -93,6 +191,51 @@ export default function DashboardPage() {
 
   const netBalance = totalIncome + totalExpenses;
 
+  // Càlcul de despeses per projecte
+  const expensesByProject = React.useMemo(() => {
+    if (!filteredTransactions) return [];
+
+    // Crear mapa de projectes per ID
+    const projectMap = new Map<string | null, { name: string; total: number }>();
+
+    // Procesar totes les despeses (excloses transferències de missió)
+    filteredTransactions.forEach(tx => {
+      if (tx.amount < 0 && tx.category !== MISSION_TRANSFER_CATEGORY_KEY) {
+        const projectId = tx.projectId || null;
+        const current = projectMap.get(projectId) || { name: '', total: 0 };
+        current.total += Math.abs(tx.amount);
+        projectMap.set(projectId, current);
+      }
+    });
+
+    // Assignar noms de projectes
+    projectMap.forEach((value, key) => {
+      if (key === null) {
+        value.name = t.dashboard.unassigned;
+      } else {
+        const project = projects?.find(p => p.id === key);
+        value.name = project?.name || t.dashboard.unassigned;
+      }
+    });
+
+    // Calcular total i percentatges
+    const total = Array.from(projectMap.values()).reduce((sum, p) => sum + p.total, 0);
+
+    const result = Array.from(projectMap.entries()).map(([projectId, data]) => ({
+      projectId,
+      projectName: data.name,
+      totalExpense: data.total,
+      percentage: total > 0 ? (data.total / total) * 100 : 0,
+    }));
+
+    // Ordenar per import descendent
+    return result.sort((a, b) => b.totalExpense - a.totalExpense);
+  }, [filteredTransactions, projects, t.dashboard.unassigned]);
+
+  const totalProjectExpenses = React.useMemo(() => {
+    return expensesByProject.reduce((sum, p) => sum + p.totalExpense, 0);
+  }, [expensesByProject]);
+
   // Càlcul d'alertes
   const alerts = React.useMemo(() => {
     const result = [];
@@ -145,6 +288,115 @@ export default function DashboardPage() {
     return result;
   }, [filteredTransactions, contacts, t, buildUrl]);
 
+  // Càlcul d'obligacions fiscals
+  const taxObligations = React.useMemo(() => {
+    const today = new Date();
+    const currentYear = today.getFullYear();
+
+    return TAX_OBLIGATIONS.map(obligation => {
+      // Crear data límit per aquest any
+      let deadline = new Date(currentYear, obligation.month - 1, obligation.day);
+
+      // Si ja ha passat, usar l'any següent
+      if (deadline < today) {
+        deadline = new Date(currentYear + 1, obligation.month - 1, obligation.day);
+      }
+
+      // Calcular dies restants
+      const daysRemaining = Math.ceil((deadline.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+
+      // Determinar estat visual
+      let status: 'success' | 'warning' | 'destructive';
+      if (daysRemaining > 60) status = 'success';
+      else if (daysRemaining >= 30) status = 'warning';
+      else status = 'destructive';
+
+      return {
+        ...obligation,
+        deadline,
+        daysRemaining,
+        status
+      };
+    }).sort((a, b) => a.daysRemaining - b.daysRemaining);
+  }, []);
+
+  // Càlcul de celebracions
+  const celebrations = React.useMemo(() => {
+    const result: Celebration[] = [];
+
+    // 1. Totes les transaccions categoritzades
+    const uncategorizedCount = filteredTransactions?.filter(tx =>
+      tx.category === null || tx.category === 'Revisar'
+    ).length || 0;
+
+    if (uncategorizedCount === 0 && filteredTransactions && filteredTransactions.length > 0) {
+      result.push({
+        id: 'all-categorized',
+        emoji: '✅',
+        messageKey: 'allCategorized',
+        priority: 3
+      });
+    }
+
+    // 2. Balanç positiu
+    if (netBalance > 0) {
+      result.push({
+        id: 'positive-balance',
+        emoji: '📈',
+        messageKey: 'positiveBalance',
+        priority: 2
+      });
+    }
+
+    // 3. Més de 5 donants
+    if (uniqueDonors > 5) {
+      result.push({
+        id: 'many-donors',
+        emoji: '❤️',
+        messageKey: 'manyDonors',
+        messageParams: { count: uniqueDonors },
+        priority: 1
+      });
+    }
+
+    // 4. No hi ha alertes
+    if (alerts.length === 0 && filteredTransactions && filteredTransactions.length > 0) {
+      result.push({
+        id: 'no-alerts',
+        emoji: '🎯',
+        messageKey: 'noAlerts',
+        priority: 4
+      });
+    }
+
+    // 5. Primera donació del mes (si el filtre inclou el mes actual)
+    if (dateFilter.type === 'month' || dateFilter.type === 'all') {
+      const today = new Date();
+      const currentMonth = today.getMonth() + 1;
+      const currentYear = today.getFullYear();
+
+      const donationsThisMonth = filteredTransactions?.filter(tx => {
+        const txDate = new Date(tx.date);
+        return tx.amount > 0 &&
+          tx.contactType === 'donor' &&
+          txDate.getMonth() + 1 === currentMonth &&
+          txDate.getFullYear() === currentYear;
+      }).length || 0;
+
+      if (donationsThisMonth > 0 && dateFilter.type === 'all') {
+        result.push({
+          id: 'first-donation-month',
+          emoji: '🎁',
+          messageKey: 'firstDonationMonth',
+          priority: 2
+        });
+      }
+    }
+
+    // Ordenar per prioritat
+    return result.sort((a, b) => a.priority - b.priority);
+  }, [filteredTransactions, netBalance, uniqueDonors, alerts, dateFilter]);
+
   return (
     <div className="flex flex-col gap-6">
        <div>
@@ -152,7 +404,45 @@ export default function DashboardPage() {
         <p className="text-muted-foreground">{t.dashboard.description}</p>
       </div>
 
-      <DateFilter value={dateFilter} onChange={setDateFilter} />
+      <div className="flex items-center justify-between gap-4">
+        <DateFilter value={dateFilter} onChange={setDateFilter} />
+        <Button variant="outline" onClick={handleShareClick}>
+          <Share2 className="h-4 w-4 mr-2" />
+          <span className="hidden sm:inline">{t.dashboard.shareSummary}</span>
+        </Button>
+      </div>
+
+      {celebrations.length > 0 && (
+        <Card className="border-green-200 bg-gradient-to-r from-green-50 to-emerald-50">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <PartyPopper className="h-5 w-5 text-green-600" />
+              {t.dashboard.celebrations}
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="flex flex-wrap gap-2">
+              {celebrations.map((celebration) => {
+                const message = t.dashboard[celebration.messageKey as keyof typeof t.dashboard];
+                const displayMessage = celebration.messageParams && typeof message === 'function'
+                  ? message(celebration.messageParams as { count: number })
+                  : message as string;
+
+                return (
+                  <Badge
+                    key={celebration.id}
+                    variant="success"
+                    className="text-sm py-1.5 px-3"
+                  >
+                    <span className="mr-1">{celebration.emoji}</span>
+                    {displayMessage}
+                  </Badge>
+                );
+              })}
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <StatCard
@@ -209,6 +499,76 @@ export default function DashboardPage() {
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
+            <FolderKanban className="h-5 w-5 text-blue-500" />
+            {t.dashboard.expensesByProject}
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          {expensesByProject.length === 0 ? (
+            <p className="text-muted-foreground text-sm">{t.dashboard.noExpenses}</p>
+          ) : (
+            <div className="space-y-4">
+              {expensesByProject.map((project) => (
+                <div key={project.projectId || 'unassigned'} className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm font-medium">{project.projectName}</span>
+                    <span className="text-sm font-semibold">{formatCurrencyEU(project.totalExpense)}</span>
+                  </div>
+                  <Progress value={project.percentage} className="h-2" />
+                </div>
+              ))}
+              <div className="pt-3 mt-3 border-t">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-bold">{t.dashboard.totalExpensesProject}</span>
+                  <span className="text-sm font-bold">{formatCurrencyEU(totalProjectExpenses)}</span>
+                </div>
+              </div>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <CalendarClock className="h-5 w-5 text-amber-500" />
+            {t.dashboard.taxObligations}
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="flex flex-col gap-3">
+            {taxObligations.map((obligation) => (
+              <div
+                key={obligation.id}
+                className="flex items-center justify-between p-3 rounded-lg border"
+              >
+                <div className="flex items-center gap-3">
+                  <Badge variant={obligation.status === 'warning' ? 'default' : obligation.status}>
+                    {obligation.status === 'success' && '🟢'}
+                    {obligation.status === 'warning' && '🟡'}
+                    {obligation.status === 'destructive' && '🔴'}
+                  </Badge>
+                  <div>
+                    <p className="font-medium text-sm">{t.dashboard[obligation.nameKey as keyof typeof t.dashboard]}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {obligation.daysRemaining} {t.dashboard.daysRemaining}
+                    </p>
+                  </div>
+                </div>
+                <Link href={buildUrl(obligation.reportPath)}>
+                  <Button variant="outline" size="sm">
+                    {t.dashboard.prepare}
+                  </Button>
+                </Link>
+              </div>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
             <AlertTriangle className="h-5 w-5 text-orange-500" />
             {t.dashboard.alerts}
           </CardTitle>
@@ -244,6 +604,33 @@ export default function DashboardPage() {
           <ExpensesChart transactions={expenseTransactions} />
         </CardContent>
       </Card>
+
+      <Dialog open={shareDialogOpen} onOpenChange={setShareDialogOpen}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>{t.dashboard.shareSummary}</DialogTitle>
+            <DialogDescription>{t.dashboard.shareSummaryDescription}</DialogDescription>
+          </DialogHeader>
+
+          <Textarea
+            value={summaryText}
+            onChange={(e) => setSummaryText(e.target.value)}
+            rows={12}
+            className="font-mono text-sm"
+          />
+
+          <DialogFooter className="gap-2">
+            <Button variant="outline" onClick={handleCopy}>
+              <Copy className="h-4 w-4 mr-2" />
+              {copySuccess ? t.dashboard.copied : t.dashboard.copy}
+            </Button>
+            <Button variant="default" onClick={handleEmailShare}>
+              <Mail className="h-4 w-4 mr-2" />
+              {t.dashboard.sendByEmail}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
