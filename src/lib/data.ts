@@ -89,7 +89,7 @@ export type Project = {
 /**
  * Tipus de contacte
  */
-export type ContactType = 'donor' | 'supplier';
+export type ContactType = 'donor' | 'supplier' | 'employee';
 
 /**
  * Model base comú per tots els contactes
@@ -179,7 +179,22 @@ export type Supplier = Contact & {
 /**
  * Tipus unió per quan necessitem treballar amb qualsevol tipus de contacte
  */
-export type AnyContact = Donor | Supplier;
+/**
+ * Treballador - Persona contractada per l'entitat
+ */
+export type Employee = Contact & {
+  type: 'employee';
+  // Dades bancàries (per pagar nòmines)
+  iban?: string;
+  // Data d'alta
+  startDate?: string;
+  // Contacte
+  email?: string;
+  phone?: string;
+  // Notes
+  notes?: string;
+};
+export type AnyContact = Donor | Supplier | Employee;
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // TIPUS LEGACY (per compatibilitat - DEPRECAT)

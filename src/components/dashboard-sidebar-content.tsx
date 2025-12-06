@@ -21,7 +21,8 @@ import {
   AreaChart, 
   Shield,
   Heart,
-  Building2
+  Building2,
+  UserCog
 } from 'lucide-react';
 import { Logo } from '@/components/logo';
 import { useFirebase } from '@/firebase';
@@ -90,11 +91,17 @@ export function DashboardSidebarContent() {
         icon: Heart,
         className: 'text-red-500',
       },
-      {
+     {
         path: '/dashboard/proveidors',
         label: t.sidebar.suppliers || 'Proveïdors',
         icon: Building2,
         className: 'text-blue-500',
+      },
+      {
+        path: '/dashboard/treballadors',
+        label: t.sidebar.employees || 'Treballadors',
+        icon: UserCog,
+        className: 'text-purple-500',
       },
       {
         path: '/dashboard/informes',

@@ -56,6 +56,7 @@ import { collection, doc, query, where } from 'firebase/firestore';
 import { useCurrentOrganization } from '@/hooks/organization-provider';
 import { DonorImporter } from './donor-importer';
 import { useTranslations } from '@/i18n';
+import { normalizeContact } from '@/lib/normalize';
 
 const formatCurrency = (amount?: number) => {
   if (!amount) return '-';
@@ -160,23 +161,14 @@ export function DonorManager() {
     setFormData(prev => ({ ...prev, [field]: value }));
   };
 
-  const handleSave = () => {
-    // Només el nom és obligatori
-    if (!formData.name) {
+  cconst handleSave = () => {
+    if (!formData.name.trim()) {
       toast({ 
         variant: 'destructive', 
         title: t.common.error, 
-        description: t.donors.errorNameRequired || 'El nom és obligatori.'
+        description: t.donors?.errorNameRequired || 'El nom és obligatori.'
       });
       return;
-    }
-
-    // Avís si falten dades pel Model 182 (però deixem guardar)
-    if (!formData.taxId || !formData.zipCode) {
-      toast({ 
-        title: '⚠️ ' + (t.donors.incompleteDataTitle || 'Dades incompletes'),
-        description: t.donors.incompleteDataDescription || 'Falta DNI/CIF o Codi Postal. No es podrà incloure al Model 182.',
-      });
     }
 
     if (!contactsCollection) {
@@ -184,25 +176,44 @@ export function DonorManager() {
       return;
     }
 
+    // ═══════════════════════════════════════════════════════════════════════
+    // NORMALITZACIÓ: Aplicar format consistent abans de guardar
+    // ═══════════════════════════════════════════════════════════════════════
+    const normalized = normalizeContact(formData);
+
+    // Avís si falten dades pel Model 182
+    if (!normalized.taxId || !normalized.zipCode) {
+      toast({
+        title: '⚠️ Dades incompletes',
+        description: 'No es podrà incloure al Model 182 sense DNI/CIF i Codi Postal.',
+        duration: 5000,
+      });
+    }
+
     const now = new Date().toISOString();
     const dataToSave = {
-      ...formData,
-      address: formData.address || null,
-      monthlyAmount: formData.monthlyAmount || null,
-      memberSince: formData.memberSince || null,
-      iban: formData.iban || null,
-      email: formData.email || null,
-      phone: formData.phone || null,
-      notes: formData.notes || null,
+      ...normalized,
+      taxId: normalized.taxId || null,
+      zipCode: normalized.zipCode || null,
+      address: normalized.address || null,
+      email: normalized.email || null,
+      phone: normalized.phone || null,
+      notes: normalized.notes || null,
       updatedAt: now,
     };
 
     if (editingDonor) {
       setDocumentNonBlocking(doc(contactsCollection, editingDonor.id), dataToSave, { merge: true });
-      toast({ title: t.donors.donorUpdated, description: t.donors.donorUpdatedDescription(formData.name) });
+      toast({ 
+        title: t.donors?.donorUpdated || 'Donant actualitzat', 
+        description: t.donors?.donorUpdatedDescription?.(normalized.name) || `S'ha actualitzat "${normalized.name}".`
+      });
     } else {
       addDocumentNonBlocking(contactsCollection, { ...dataToSave, createdAt: now });
-      toast({ title: t.donors.donorCreated, description: t.donors.donorCreatedDescription(formData.name) });
+      toast({ 
+        title: t.donors?.donorCreated || 'Donant creat', 
+        description: t.donors?.donorCreatedDescription?.(normalized.name) || `S'ha creat "${normalized.name}".`
+      });
     }
     handleOpenChange(false);
   };
