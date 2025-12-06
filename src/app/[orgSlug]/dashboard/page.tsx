@@ -10,23 +10,28 @@ import { collection } from 'firebase/firestore';
 import { useTranslations } from '@/i18n';
 import { useCurrentOrganization } from '@/hooks/organization-provider';
 import { formatCurrencyEU } from '@/lib/normalize';
+import { DateFilter, type DateFilterValue } from '@/components/date-filter';
+import { useTransactionFilters } from '@/hooks/use-transaction-filters';
 
 export default function DashboardPage() {
   const { firestore } = useFirebase();
   const { organizationId } = useCurrentOrganization();
   const { t } = useTranslations();
-  
+
   const transactionsQuery = useMemoFirebase(
     () => organizationId ? collection(firestore, 'organizations', organizationId, 'transactions') : null,
     [firestore, organizationId]
   );
   const { data: transactions } = useCollection<Transaction>(transactionsQuery);
 
+  const [dateFilter, setDateFilter] = React.useState<DateFilterValue>({ type: 'all' });
+  const filteredTransactions = useTransactionFilters(transactions || undefined, dateFilter);
+
   const MISSION_TRANSFER_CATEGORY_KEY = 'missionTransfers';
 
   const { totalIncome, totalExpenses, totalMissionTransfers } = React.useMemo(() => {
-    if (!transactions) return { totalIncome: 0, totalExpenses: 0, totalMissionTransfers: 0 };
-    return transactions.reduce((acc, tx) => {
+    if (!filteredTransactions) return { totalIncome: 0, totalExpenses: 0, totalMissionTransfers: 0 };
+    return filteredTransactions.reduce((acc, tx) => {
       if (tx.amount > 0) {
         acc.totalIncome += tx.amount;
       } else {
@@ -38,11 +43,11 @@ export default function DashboardPage() {
       }
       return acc;
     }, { totalIncome: 0, totalExpenses: 0, totalMissionTransfers: 0 });
-  }, [transactions]);
-  
-  const expenseTransactions = React.useMemo(() => 
-    transactions?.filter(tx => tx.amount < 0 && tx.category !== MISSION_TRANSFER_CATEGORY_KEY) || [],
-  [transactions]);
+  }, [filteredTransactions]);
+
+  const expenseTransactions = React.useMemo(() =>
+    filteredTransactions?.filter(tx => tx.amount < 0 && tx.category !== MISSION_TRANSFER_CATEGORY_KEY) || [],
+  [filteredTransactions]);
   
   const netBalance = totalIncome + totalExpenses;
 
@@ -52,7 +57,9 @@ export default function DashboardPage() {
         <h1 className="text-2xl font-bold tracking-tight font-headline">{t.dashboard.title}</h1>
         <p className="text-muted-foreground">{t.dashboard.description}</p>
       </div>
-      
+
+      <DateFilter value={dateFilter} onChange={setDateFilter} />
+
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <StatCard
           title={t.dashboard.totalIncome}

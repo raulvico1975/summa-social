@@ -11,7 +11,14 @@ export const es = {
     missionTransfers: "Transferencias a Terreno",
     missionTransfersDescription: "Suma de las transferencias a terreno o a socias locales",
     expensesByCategory: "Gastos por Categoría",
-    noExpenseData: "No hay datos de gastos para mostrar."
+    noExpenseData: "No hay datos de gastos para mostrar.",
+    filterAll: "Todos los períodos",
+    filterYear: "Año",
+    filterQuarter: "Trimestre",
+    filterMonth: "Mes",
+    filterCustom: "Personalizado",
+    filterFrom: "Desde",
+    filterTo: "Hasta"
   },
   movements: {
     title: "Movimientos",

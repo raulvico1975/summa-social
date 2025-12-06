@@ -11,7 +11,14 @@ export const ca = {
     missionTransfers: "Transferències a Terreny",
     missionTransfersDescription: "Suma de les transferències a terreny o a sòcies locals",
     expensesByCategory: "Despeses per Categoria",
-    noExpenseData: "No hi ha dades de despeses per mostrar."
+    noExpenseData: "No hi ha dades de despeses per mostrar.",
+    filterAll: "Tots els períodes",
+    filterYear: "Any",
+    filterQuarter: "Trimestre",
+    filterMonth: "Mes",
+    filterCustom: "Personalitzat",
+    filterFrom: "Des de",
+    filterTo: "Fins a"
   },
   movements: {
     title: "Moviments",
