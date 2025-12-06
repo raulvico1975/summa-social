@@ -29,11 +29,11 @@ import {
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
-import { 
-  Upload, 
-  FileSpreadsheet, 
-  AlertCircle, 
-  CheckCircle2, 
+import {
+  Upload,
+  FileSpreadsheet,
+  AlertCircle,
+  CheckCircle2,
   AlertTriangle,
   Download,
   ArrowRight,
@@ -46,6 +46,7 @@ import type { Donor } from '@/lib/data';
 import { collection, query, where, getDocs, writeBatch, doc } from 'firebase/firestore';
 import { useFirebase } from '@/firebase';
 import { useCurrentOrganization } from '@/hooks/organization-provider';
+import { useTranslations } from '@/i18n';
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // TIPUS
@@ -78,18 +79,6 @@ type ImportStep = 'upload' | 'mapping' | 'preview' | 'importing' | 'complete';
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const REQUIRED_FIELDS = ['name', 'taxId', 'zipCode'] as const;
-
-const FIELD_LABELS: Record<keyof ColumnMapping, string> = {
-  name: 'Nom *',
-  taxId: 'DNI/CIF *',
-  zipCode: 'Codi Postal *',
-  donorType: 'Tipus (Particular/Empresa)',
-  membershipType: 'Modalitat (Puntual/Soci)',
-  monthlyAmount: 'Import mensual',
-  iban: 'IBAN',
-  email: 'Email',
-  phone: 'Telèfon',
-};
 
 const emptyMapping: ColumnMapping = {
   name: null,
@@ -202,15 +191,28 @@ interface DonorImporterProps {
   existingTaxIds?: string[];
 }
 
-export function DonorImporter({ 
-  open, 
-  onOpenChange, 
+export function DonorImporter({
+  open,
+  onOpenChange,
   onImportComplete,
   existingTaxIds = []
 }: DonorImporterProps) {
   const { firestore } = useFirebase();
   const { organizationId } = useCurrentOrganization();
   const { toast } = useToast();
+  const { t } = useTranslations();
+
+  const FIELD_LABELS: Record<keyof ColumnMapping, string> = {
+    name: t.importers.donor.fields.name,
+    taxId: t.importers.donor.fields.taxId,
+    zipCode: t.importers.donor.fields.zipCode,
+    donorType: t.importers.donor.fields.type,
+    membershipType: t.importers.donor.fields.modality,
+    monthlyAmount: t.importers.donor.fields.monthlyAmount,
+    iban: t.importers.donor.fields.iban,
+    email: t.importers.donor.fields.email,
+    phone: t.importers.donor.fields.phone,
+  };
 
   // Estat del procés
   const [step, setStep] = React.useState<ImportStep>('upload');
@@ -282,7 +284,7 @@ export function DonorImporter({
       const jsonData = XLSX.utils.sheet_to_json<Record<string, any>>(firstSheet, { defval: '' });
 
       if (jsonData.length === 0) {
-        toast({ variant: 'destructive', title: 'Error', description: 'El fitxer està buit.' });
+        toast({ variant: 'destructive', title: 'Error', description: t.importers.common.emptyFile });
         return;
       }
 
@@ -305,7 +307,7 @@ export function DonorImporter({
       setStep('mapping');
     } catch (error) {
       console.error('Error llegint fitxer:', error);
-      toast({ variant: 'destructive', title: 'Error', description: 'No s\'ha pogut llegir el fitxer.' });
+      toast({ variant: 'destructive', title: 'Error', description: t.importers.common.cannotReadFile });
     }
   };
 
@@ -333,16 +335,16 @@ export function DonorImporter({
 
       if (!parsed.name) {
         status = 'invalid';
-        error = 'Falta el nom';
+        error = t.importers.donor.errors.missingName;
       } else if (!parsed.taxId) {
         status = 'invalid';
-        error = 'Falta el DNI/CIF';
+        error = t.importers.donor.errors.missingTaxId;
       } else if (!parsed.zipCode) {
         status = 'invalid';
-        error = 'Falta el codi postal';
+        error = t.importers.donor.errors.missingZipCode;
       } else if (existingIds.has(parsed.taxId)) {
         status = 'duplicate';
-        error = 'Ja existeix';
+        error = t.importers.common.alreadyExists;
       }
 
       return { rowIndex: index + 2, data: row, parsed, status, error };
@@ -354,7 +356,7 @@ export function DonorImporter({
       if (row.status === 'valid' && row.parsed.taxId) {
         if (seenTaxIds.has(row.parsed.taxId)) {
           row.status = 'duplicate';
-          row.error = 'Duplicat al fitxer';
+          row.error = t.importers.common.duplicateInFile;
         } else {
           seenTaxIds.add(row.parsed.taxId);
         }
@@ -419,17 +421,17 @@ const executeImport = async () => {
     setImportedCount(imported);
     setStep('complete');
     onImportComplete?.(imported);
-    
+
     toast({
-      title: 'Importació completada',
-      description: `S'han importat ${imported} donants correctament.`,
+      title: t.importers.donor.importSuccess,
+      description: t.importers.donor.importSuccessDescription(imported),
     });
   } catch (error) {
     console.error('Error important:', error);
     toast({
       variant: 'destructive',
       title: 'Error',
-      description: 'Hi ha hagut un error durant la importació.',
+      description: t.importers.common.importError,
     });
     setStep('preview');
   }
@@ -437,21 +439,31 @@ const executeImport = async () => {
 
   const downloadTemplate = () => {
     const template = [
-      ['Nom', 'DNI/CIF', 'Codi Postal', 'Tipus', 'Modalitat', 'Import Mensual', 'IBAN', 'Email', 'Telèfon'],
-      ['Maria García López', '12345678A', '28001', 'Particular', 'Soci', '10', 'ES1234567890123456789012', 'maria@exemple.com', '612345678'],
-      ['Joan Pérez Martí', '87654321B', '08001', 'Particular', 'Puntual', '', '', 'joan@exemple.com', ''],
-      ['Empresa SL', 'B12345678', '25001', 'Empresa', 'Soci', '50', 'ES0987654321098765432109', 'info@empresa.com', '973123456'],
+      [
+        t.importers.donor.fields.name,
+        t.importers.donor.fields.taxId,
+        t.importers.donor.fields.zipCode,
+        t.importers.donor.fields.type,
+        t.importers.donor.fields.modality,
+        t.importers.donor.fields.monthlyAmount,
+        t.importers.donor.fields.iban,
+        t.importers.donor.fields.email,
+        t.importers.donor.fields.phone
+      ],
+      ['Maria García López', '12345678A', '28001', 'Particular', t.importers.donor.modality.member, '10', 'ES1234567890123456789012', 'maria@exemple.com', '612345678'],
+      ['Joan Pérez Martí', '87654321B', '08001', 'Particular', t.importers.donor.modality.oneTime, '', '', 'joan@exemple.com', ''],
+      ['Empresa SL', 'B12345678', '25001', 'Empresa', t.importers.donor.modality.member, '50', 'ES0987654321098765432109', 'info@empresa.com', '973123456'],
     ];
 
     const ws = XLSX.utils.aoa_to_sheet(template);
     const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, 'Donants');
+    XLSX.utils.book_append_sheet(wb, ws, t.importers.donor.worksheetName);
     ws['!cols'] = [
-      { wch: 25 }, { wch: 12 }, { wch: 12 }, { wch: 12 }, 
+      { wch: 25 }, { wch: 12 }, { wch: 12 }, { wch: 12 },
       { wch: 12 }, { wch: 14 }, { wch: 26 }, { wch: 25 }, { wch: 12 }
     ];
 
-    XLSX.writeFile(wb, 'plantilla_donants.xlsx');
+    XLSX.writeFile(wb, t.importers.donor.templateName);
   };
 
   // ═══════════════════════════════════════════════════════════════════════════
@@ -468,27 +480,27 @@ const executeImport = async () => {
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <FileSpreadsheet className="h-5 w-5" />
-            Importar Donants
+            {t.importers.donor.title}
           </DialogTitle>
           <DialogDescription>
-            {step === 'upload' && 'Selecciona un fitxer Excel (.xlsx) o CSV amb les dades dels donants.'}
-            {step === 'mapping' && 'Indica quina columna del fitxer correspon a cada camp.'}
-            {step === 'preview' && 'Revisa les dades abans d\'importar.'}
-            {step === 'importing' && 'Important dades...'}
-            {step === 'complete' && 'Importació completada!'}
+            {step === 'upload' && t.importers.donor.uploadDescription}
+            {step === 'mapping' && t.importers.donor.mappingDescription}
+            {step === 'preview' && t.importers.donor.previewDescription}
+            {step === 'importing' && t.importers.donor.importingDescription}
+            {step === 'complete' && t.importers.donor.completeDescription}
           </DialogDescription>
         </DialogHeader>
 
         {/* STEP: UPLOAD */}
         {step === 'upload' && (
           <div className="py-6 space-y-6">
-            <div 
+            <div
               className="border-2 border-dashed rounded-lg p-8 text-center hover:border-primary/50 transition-colors cursor-pointer"
               onClick={() => document.getElementById('file-input')?.click()}
             >
               <Upload className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-              <p className="text-lg font-medium mb-1">Arrossega o clica per seleccionar</p>
-              <p className="text-sm text-muted-foreground">Formats acceptats: .xlsx, .xls, .csv</p>
+              <p className="text-lg font-medium mb-1">{t.importers.common.dragOrClick}</p>
+              <p className="text-sm text-muted-foreground">{t.importers.common.acceptedFormats}</p>
               <input
                 id="file-input"
                 type="file"
@@ -501,16 +513,16 @@ const executeImport = async () => {
             <div className="flex items-center justify-center gap-2">
               <Button variant="outline" size="sm" onClick={downloadTemplate}>
                 <Download className="h-4 w-4 mr-2" />
-                Descarregar plantilla Excel
+                {t.importers.common.downloadTemplate}
               </Button>
             </div>
 
             <div className="bg-muted/50 rounded-lg p-4 text-sm">
-              <p className="font-medium mb-2">Format recomanat:</p>
+              <p className="font-medium mb-2">{t.importers.common.recommendedFormat}</p>
               <ul className="list-disc list-inside space-y-1 text-muted-foreground">
-                <li><strong>Columnes obligatòries:</strong> Nom, DNI/CIF, Codi Postal</li>
-                <li><strong>Columnes opcionals:</strong> Tipus, Modalitat, Import, IBAN, Email, Telèfon</li>
-                <li>La primera fila ha de contenir els noms de les columnes</li>
+                <li><strong>{t.importers.common.requiredColumns}</strong> {t.importers.donor.requiredColumnsText}</li>
+                <li><strong>{t.importers.common.optionalColumns}</strong> {t.importers.donor.optionalColumnsText}</li>
+                <li>{t.importers.common.firstRowHeaders}</li>
               </ul>
             </div>
           </div>
@@ -523,7 +535,7 @@ const executeImport = async () => {
               <div className="flex items-center gap-2 text-sm bg-muted/50 rounded p-2">
                 <FileSpreadsheet className="h-4 w-4" />
                 <span className="font-medium">{file.name}</span>
-                <span className="text-muted-foreground">({rawData.length} files)</span>
+                <span className="text-muted-foreground">({rawData.length} {t.importers.common.rows})</span>
               </div>
             )}
 
@@ -541,10 +553,10 @@ const executeImport = async () => {
                     onValueChange={(v) => handleMappingChange(field, v)}
                   >
                     <SelectTrigger className="col-span-3">
-                      <SelectValue placeholder="-- No importar --" />
+                      <SelectValue placeholder={t.importers.common.doNotImport} />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="__none__">-- No importar --</SelectItem>
+                      <SelectItem value="__none__">{t.importers.common.doNotImport}</SelectItem>
                       {headers.map((header) => (
                         <SelectItem key={header} value={header}>
                           {header}
@@ -559,13 +571,13 @@ const executeImport = async () => {
             <DialogFooter className="pt-4">
               <Button variant="outline" onClick={() => setStep('upload')}>
                 <ArrowLeft className="h-4 w-4 mr-2" />
-                Enrere
+                {t.importers.common.back}
               </Button>
-              <Button 
+              <Button
                 onClick={processData}
                 disabled={!mapping.name || !mapping.taxId || !mapping.zipCode}
               >
-                Continuar
+                {t.importers.common.continue}
                 <ArrowRight className="h-4 w-4 ml-2" />
               </Button>
             </DialogFooter>
@@ -579,21 +591,21 @@ const executeImport = async () => {
               <div className="bg-green-50 border border-green-200 rounded-lg p-3 text-center">
                 <div className="flex items-center justify-center gap-2 text-green-700 mb-1">
                   <CheckCircle2 className="h-4 w-4" />
-                  <span className="font-medium">Vàlids</span>
+                  <span className="font-medium">{t.importers.common.valid}</span>
                 </div>
                 <p className="text-2xl font-bold text-green-700">{validCount}</p>
               </div>
               <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 text-center">
                 <div className="flex items-center justify-center gap-2 text-yellow-700 mb-1">
                   <AlertTriangle className="h-4 w-4" />
-                  <span className="font-medium">Duplicats</span>
+                  <span className="font-medium">{t.importers.common.duplicates}</span>
                 </div>
                 <p className="text-2xl font-bold text-yellow-700">{duplicateCount}</p>
               </div>
               <div className="bg-red-50 border border-red-200 rounded-lg p-3 text-center">
                 <div className="flex items-center justify-center gap-2 text-red-700 mb-1">
                   <AlertCircle className="h-4 w-4" />
-                  <span className="font-medium">Invàlids</span>
+                  <span className="font-medium">{t.importers.common.invalid}</span>
                 </div>
                 <p className="text-2xl font-bold text-red-700">{invalidCount}</p>
               </div>
@@ -603,12 +615,12 @@ const executeImport = async () => {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead className="w-16">Fila</TableHead>
-                    <TableHead>Nom</TableHead>
-                    <TableHead>DNI/CIF</TableHead>
-                    <TableHead>CP</TableHead>
-                    <TableHead>Modalitat</TableHead>
-                    <TableHead className="w-24">Estat</TableHead>
+                    <TableHead className="w-16">{t.importers.common.row}</TableHead>
+                    <TableHead>{t.importers.common.name}</TableHead>
+                    <TableHead>{t.importers.donor.fields.taxId}</TableHead>
+                    <TableHead>{t.importers.donor.tableHeaders.zipCode}</TableHead>
+                    <TableHead>{t.importers.donor.tableHeaders.modality}</TableHead>
+                    <TableHead className="w-24">{t.importers.common.status}</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -626,9 +638,9 @@ const executeImport = async () => {
                       <TableCell>{row.parsed.zipCode || '-'}</TableCell>
                       <TableCell>
                         {row.parsed.membershipType === 'recurring' ? (
-                          <Badge variant="outline" className="text-green-700">Soci</Badge>
+                          <Badge variant="outline" className="text-green-700">{t.importers.donor.modality.member}</Badge>
                         ) : (
-                          <Badge variant="secondary">Puntual</Badge>
+                          <Badge variant="secondary">{t.importers.donor.modality.oneTime}</Badge>
                         )}
                       </TableCell>
                       <TableCell>
@@ -641,7 +653,7 @@ const executeImport = async () => {
                         {row.status === 'duplicate' && (
                           <Badge className="bg-yellow-100 text-yellow-800">
                             <AlertTriangle className="h-3 w-3 mr-1" />
-                            Duplicat
+                            {t.importers.common.duplicate}
                           </Badge>
                         )}
                         {row.status === 'invalid' && (
@@ -657,7 +669,7 @@ const executeImport = async () => {
               </Table>
               {importRows.length > 50 && (
                 <div className="p-2 text-center text-sm text-muted-foreground bg-muted/50">
-                  Mostrant 50 de {importRows.length} files
+                  {t.importers.common.showing(50, importRows.length)}
                 </div>
               )}
             </div>
@@ -665,20 +677,20 @@ const executeImport = async () => {
             {duplicateCount > 0 && (
               <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 text-sm text-yellow-800">
                 <AlertTriangle className="h-4 w-4 inline mr-2" />
-                Els {duplicateCount} registres duplicats <strong>no s'importaran</strong>.
+                {t.importers.common.duplicatesWillNotImport(duplicateCount)}
               </div>
             )}
 
             <DialogFooter>
               <Button variant="outline" onClick={() => setStep('mapping')}>
                 <ArrowLeft className="h-4 w-4 mr-2" />
-                Enrere
+                {t.importers.common.back}
               </Button>
-              <Button 
+              <Button
                 onClick={executeImport}
                 disabled={validCount === 0}
               >
-                Importar {validCount} donants
+                {t.importers.donor.importButton(validCount)}
                 <ArrowRight className="h-4 w-4 ml-2" />
               </Button>
             </DialogFooter>
@@ -690,11 +702,11 @@ const executeImport = async () => {
           <div className="py-8 space-y-6">
             <div className="flex flex-col items-center gap-4">
               <Loader2 className="h-12 w-12 animate-spin text-primary" />
-              <p className="text-lg font-medium">Important donants...</p>
+              <p className="text-lg font-medium">{t.importers.common.importing}</p>
             </div>
             <Progress value={importProgress} className="h-2" />
             <p className="text-center text-muted-foreground">
-              {importProgress}% completat
+              {t.importers.common.percentComplete(importProgress)}
             </p>
           </div>
         )}
@@ -707,15 +719,15 @@ const executeImport = async () => {
                 <CheckCircle2 className="h-8 w-8 text-green-600" />
               </div>
               <div className="text-center">
-                <p className="text-xl font-bold">Importació completada!</p>
+                <p className="text-xl font-bold">{t.importers.common.importComplete}</p>
                 <p className="text-muted-foreground mt-1">
-                  S'han importat <strong>{importedCount}</strong> donants correctament.
+                  {t.importers.donor.importedCount(importedCount)}
                 </p>
               </div>
             </div>
             <DialogFooter className="justify-center">
               <Button onClick={() => onOpenChange(false)}>
-                Tancar
+                {t.importers.common.close}
               </Button>
             </DialogFooter>
           </div>
