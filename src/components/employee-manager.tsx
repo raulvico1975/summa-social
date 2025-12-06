@@ -106,8 +106,8 @@ export function EmployeeManager() {
     if (employeeToDelete && contactsCollection) {
       deleteDocumentNonBlocking(doc(contactsCollection, employeeToDelete.id));
       toast({
-        title: t.employees?.employeeDeleted || 'Treballador eliminat',
-        description: t.employees?.employeeDeletedDescription?.(employeeToDelete.name) || `S'ha eliminat "${employeeToDelete.name}".`,
+        title: t.employees.employeeDeleted,
+        description: t.employees.employeeDeletedDescription(employeeToDelete.name),
       });
     }
     setIsAlertOpen(false);
@@ -134,10 +134,10 @@ export function EmployeeManager() {
 
   const handleSave = () => {
     if (!formData.name.trim()) {
-      toast({ 
-        variant: 'destructive', 
-        title: t.common.error, 
-        description: t.employees?.errorNameRequired || 'El nom és obligatori.'
+      toast({
+        variant: 'destructive',
+        title: t.common.error,
+        description: t.employees.errorNameRequired
       });
       return;
     }
@@ -168,15 +168,15 @@ export function EmployeeManager() {
 
     if (editingEmployee) {
       setDocumentNonBlocking(doc(contactsCollection, editingEmployee.id), dataToSave, { merge: true });
-      toast({ 
-        title: t.employees?.employeeUpdated || 'Treballador actualitzat', 
-        description: t.employees?.employeeUpdatedDescription?.(normalized.name) || `S'ha actualitzat "${normalized.name}".`
+      toast({
+        title: t.employees.employeeUpdated,
+        description: t.employees.employeeUpdatedDescription(normalized.name)
       });
     } else {
       addDocumentNonBlocking(contactsCollection, { ...dataToSave, createdAt: now });
-      toast({ 
-        title: t.employees?.employeeCreated || 'Treballador creat', 
-        description: t.employees?.employeeCreatedDescription?.(normalized.name) || `S'ha creat "${normalized.name}".`
+      toast({
+        title: t.employees.employeeCreated,
+        description: t.employees.employeeCreatedDescription(normalized.name)
       });
     }
     handleOpenChange(false);
@@ -191,12 +191,12 @@ export function EmployeeManager() {
     }
   };
 
-  const dialogTitle = editingEmployee 
-    ? (t.employees?.editTitle || 'Editar treballador')
-    : (t.employees?.addTitle || 'Nou treballador');
-  const dialogDescription = editingEmployee 
-    ? (t.employees?.editDescription || 'Modifica les dades del treballador.')
-    : (t.employees?.addDescription || 'Afegeix un nou treballador a l\'entitat.');
+  const dialogTitle = editingEmployee
+    ? t.employees.editTitle
+    : t.employees.addTitle;
+  const dialogDescription = editingEmployee
+    ? t.employees.editDescription
+    : t.employees.addDescription;
 
   return (
     <>
@@ -206,16 +206,16 @@ export function EmployeeManager() {
             <div>
               <CardTitle className="flex items-center gap-2">
                 <UserCog className="h-5 w-5 text-purple-500" />
-                {t.employees?.title || 'Treballadors'}
+                {t.employees.title}
               </CardTitle>
               <CardDescription>
-                {t.employees?.description || 'Gestiona els treballadors de l\'entitat per assignar nòmines.'}
+                {t.employees.description}
               </CardDescription>
             </div>
             <DialogTrigger asChild>
               <Button onClick={handleAddNew}>
                 <PlusCircle className="mr-2 h-4 w-4" />
-                {t.employees?.add || 'Afegir treballador'}
+                {t.employees.add}
               </Button>
             </DialogTrigger>
           </CardHeader>
@@ -224,11 +224,11 @@ export function EmployeeManager() {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>{t.employees?.name || 'Nom'}</TableHead>
-                    <TableHead>{t.employees?.taxId || 'DNI'}</TableHead>
-                    <TableHead>{t.employees?.startDate || 'Data alta'}</TableHead>
-                    <TableHead>{t.employees?.contact || 'Contacte'}</TableHead>
-                    <TableHead className="text-right">{t.employees?.actions || 'Accions'}</TableHead>
+                    <TableHead>{t.employees.name}</TableHead>
+                    <TableHead>{t.employees.taxId}</TableHead>
+                    <TableHead>{t.employees.startDate}</TableHead>
+                    <TableHead>{t.employees.contact}</TableHead>
+                    <TableHead className="text-right">{t.employees.actions}</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -267,7 +267,7 @@ export function EmployeeManager() {
                   {(!employees || employees.length === 0) && (
                     <TableRow>
                       <TableCell colSpan={5} className="text-center text-muted-foreground h-24">
-                        {t.employees?.noData || 'No hi ha treballadors. Afegeix-ne un!'}
+                        {t.employees.noData}
                       </TableCell>
                     </TableRow>
                   )}
@@ -286,12 +286,12 @@ export function EmployeeManager() {
           <div className="grid gap-4 py-4">
             <div className="space-y-4">
               <h4 className="text-sm font-medium text-muted-foreground">
-                {t.employees?.basicData || 'Dades bàsiques'}
+                {t.employees.basicData}
               </h4>
-              
+
               <div className="grid grid-cols-4 items-center gap-4">
                 <Label htmlFor="name" className="text-right">
-                  {t.employees?.name || 'Nom'} *
+                  {t.employees.name} *
                 </Label>
                 <Input
                   id="name"
@@ -304,7 +304,7 @@ export function EmployeeManager() {
 
               <div className="grid grid-cols-4 items-center gap-4">
                 <Label htmlFor="taxId" className="text-right">
-                  {t.employees?.taxId || 'DNI'}
+                  {t.employees.taxId}
                 </Label>
                 <Input
                   id="taxId"
@@ -317,7 +317,7 @@ export function EmployeeManager() {
 
               <div className="grid grid-cols-4 items-center gap-4">
                 <Label htmlFor="startDate" className="text-right">
-                  {t.employees?.startDate || 'Data alta'}
+                  {t.employees.startDate}
                 </Label>
                 <Input
                   id="startDate"
@@ -331,12 +331,12 @@ export function EmployeeManager() {
 
             <div className="space-y-4 pt-4 border-t">
               <h4 className="text-sm font-medium text-muted-foreground">
-                {t.employees?.paymentData || 'Dades de pagament'}
+                {t.employees.paymentData}
               </h4>
 
               <div className="grid grid-cols-4 items-center gap-4">
                 <Label htmlFor="iban" className="text-right">
-                  {t.employees?.iban || 'IBAN'}
+                  {t.employees.iban}
                 </Label>
                 <Input
                   id="iban"
@@ -350,12 +350,12 @@ export function EmployeeManager() {
 
             <div className="space-y-4 pt-4 border-t">
               <h4 className="text-sm font-medium text-muted-foreground">
-                {t.employees?.contactInfo || 'Contacte (opcional)'}
+                {t.employees.contactInfo}
               </h4>
 
               <div className="grid grid-cols-4 items-center gap-4">
                 <Label htmlFor="email" className="text-right">
-                  {t.employees?.email || 'Email'}
+                  {t.employees.email}
                 </Label>
                 <Input
                   id="email"
@@ -369,7 +369,7 @@ export function EmployeeManager() {
 
               <div className="grid grid-cols-4 items-center gap-4">
                 <Label htmlFor="phone" className="text-right">
-                  {t.employees?.phone || 'Telèfon'}
+                  {t.employees.phone}
                 </Label>
                 <Input
                   id="phone"
@@ -383,12 +383,12 @@ export function EmployeeManager() {
 
             <div className="space-y-4 pt-4 border-t">
               <h4 className="text-sm font-medium text-muted-foreground">
-                {t.employees?.notes || 'Notes'}
+                {t.employees.notes}
               </h4>
 
               <div className="grid grid-cols-4 items-start gap-4">
                 <Label htmlFor="notes" className="text-right pt-2">
-                  {t.employees?.notes || 'Notes'}
+                  {t.employees.notes}
                 </Label>
                 <Textarea
                   id="notes"
@@ -407,7 +407,7 @@ export function EmployeeManager() {
               <Button variant="outline">{t.common.cancel}</Button>
             </DialogClose>
             <Button onClick={handleSave}>
-              {editingEmployee ? (t.employees?.save || 'Guardar') : (t.employees?.add || 'Afegir')}
+              {editingEmployee ? t.employees.save : t.employees.add}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -417,10 +417,10 @@ export function EmployeeManager() {
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>
-              {t.employees?.confirmDeleteTitle || 'Eliminar treballador?'}
+              {t.employees.confirmDeleteTitle}
             </AlertDialogTitle>
             <AlertDialogDescription>
-              {t.employees?.confirmDeleteDescription || 'Aquesta acció no es pot desfer. S\'eliminaran totes les dades del treballador.'}
+              {t.employees.confirmDeleteDescription}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
