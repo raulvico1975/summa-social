@@ -258,11 +258,17 @@ export function normalizeCategory<T extends Record<string, any>>(data: T): T {
  * Normalitza dades d'un projecte
  */
 export function normalizeProject<T extends Record<string, any>>(data: T): T {
-  return {
+  const normalized: any = {
     ...data,
     name: data.name ? toSentenceCase(data.name) : data.name,
-    description: data.description ? normalizeSentences(data.description) : data.description,
   };
+
+  // Only add description if it exists (avoid undefined values in Firestore)
+  if (data.description !== undefined) {
+    normalized.description = data.description ? normalizeSentences(data.description) : data.description;
+  }
+
+  return normalized;
 }
 
 /**
