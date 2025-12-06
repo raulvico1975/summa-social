@@ -200,18 +200,24 @@ export function TransactionsTable() {
     );
   }, [returnTransactions]);
 
-  // Transaccions filtrades
+  // // Transaccions filtrades i ordenades per data (més recents primer)
   const filteredTransactions = React.useMemo(() => {
     if (!transactions) return [];
     
+    let result: Transaction[];
     switch (tableFilter) {
       case 'missing':
-        return expensesWithoutDoc;
+        result = expensesWithoutDoc;
+        break;
       case 'returns':
-        return returnTransactions;
+        result = returnTransactions;
+        break;
       default:
-        return transactions;
+        result = transactions;
     }
+    
+    // Ordenar per data descendent (més recents primer)
+    return [...result].sort((a, b) => b.date.localeCompare(a.date));
   }, [transactions, tableFilter, expensesWithoutDoc, returnTransactions]);
 
   // ═══════════════════════════════════════════════════════════════════════════
