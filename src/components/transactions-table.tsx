@@ -327,7 +327,7 @@ export function TransactionsTable() {
       toast({
         variant: 'destructive',
         title: t.common.error,
-        description: 'No s\'ha pogut guardar la devolució.',
+        description: t.movements.table.returnSaveError,
       });
     }
   };
@@ -337,11 +337,11 @@ export function TransactionsTable() {
   // ═══════════════════════════════════════════════════════════════════════════
   const handleExportExpensesWithoutDoc = () => {
     if (expensesWithoutDoc.length === 0) {
-      toast({ title: 'No hi ha despeses sense document', description: 'Totes les despeses tenen justificant.' });
+      toast({ title: t.movements.table.noExpensesWithoutDocument, description: t.movements.table.allExpensesHaveProof });
       return;
     }
 
-    const headers = ['Data', 'Import', 'Concepte bancari', 'Nota', 'Contacte', 'Categoria', 'Projecte'];
+    const headers = [t.movements.table.date, t.movements.table.amount, t.movements.table.bankConcept, t.movements.table.noteLabel, t.movements.table.contact, t.movements.table.category, t.movements.table.project];
     const rows = expensesWithoutDoc.map(tx => [
       formatDate(tx.date),
       tx.amount.toString().replace('.', ','),
@@ -425,7 +425,7 @@ export function TransactionsTable() {
       toast({
         variant: 'destructive',
         title: 'Error de IA',
-        description: 'No s\'ha pogut categoritzar la transacció.',
+        description: t.movements.table.categorizationError,
       });
        log(`❌ ERROR categorizando: ${error}`);
     } finally {
@@ -435,18 +435,18 @@ export function TransactionsTable() {
 
   const handleBatchCategorize = async () => {
     if (!transactions || !availableCategories || !transactionsCollection) {
-      toast({ title: 'Dades no disponibles', description: 'No s\'han pogut carregar les transaccions o categories.'});
+      toast({ title: t.movements.table.dataUnavailable, description: t.movements.table.dataLoadError});
       return;
     }
     const transactionsToCategorize = transactions.filter(tx => !tx.category);
     if (transactionsToCategorize.length === 0) {
-      toast({ title: 'No hi ha res a classificar', description: 'Totes les transaccions ja tenen una categoria.'});
+      toast({ title: t.movements.table.nothingToCategorize, description: t.movements.table.allAlreadyCategorized});
       return;
     }
 
     setIsBatchCategorizing(true);
     log(`📊 Iniciando clasificación masiva de ${transactionsToCategorize.length} moviments.`);
-    toast({ title: 'Iniciant classificació massiva...', description: `Classificant ${transactionsToCategorize.length} moviments.`});
+    toast({ title: t.movements.table.startingBatchCategorization, description: `Classificant ${transactionsToCategorize.length} moviments.`});
 
     let successCount = 0;
 
@@ -498,7 +498,7 @@ export function TransactionsTable() {
 
     setIsBatchCategorizing(false);
     log(`✅ Clasificación masiva completada. ${successCount} moviments clasificados.`);
-    toast({ title: 'Classificació massiva completada', description: `S'han classificat ${successCount} moviments.`});
+    toast({ title: t.movements.table.batchCategorizationComplete, description: t.movements.table.itemsCategorized(successCount)});
   };
 
   const handleSetCategory = (txId: string, newCategory: string) => {
@@ -522,7 +522,7 @@ export function TransactionsTable() {
   const handleAttachDocument = (transactionId: string) => {
     log(`[${transactionId}] Iniciando la subida de documento.`);
     if (!organizationId || !transactionsCollection) {
-      const errorMsg = 'ERROR: No s\'ha pogut identificar l\'organització per a la pujada.';
+      const errorMsg = t.movements.table.organizationNotIdentified;
       log(errorMsg);
       toast({ variant: 'destructive', title: t.common.error, description: errorMsg });
       return;
@@ -545,12 +545,12 @@ export function TransactionsTable() {
       log(`[${transactionId}] Archivo seleccionado: ${file.name} (Tamaño: ${file.size} bytes)`);
 
       setLoadingStates(prev => ({ ...prev, [`doc_${transactionId}`]: true }));
-      toast({ title: 'Pujant document...', description: `Adjuntant "${file.name}"...` });
-      
+      toast({ title: t.movements.table.uploadingDocument, description: `Adjuntant "${file.name}"...` });
+
       const storagePath = `organizations/${organizationId}/documents/${transactionId}/${file.name}`;
       log(`[${transactionId}] Ruta de subida en Storage: ${storagePath}`);
       const storageRef = ref(storage, storagePath);
-      
+
       try {
           log(`[${transactionId}] Iniciando 'uploadBytes'...`);
           const uploadResult = await uploadBytes(storageRef, file);
@@ -561,7 +561,7 @@ export function TransactionsTable() {
 
           updateDocumentNonBlocking(doc(transactionsCollection, transactionId), { document: downloadURL });
 
-          toast({ title: '✅ Èxit!', description: 'El document s\'ha pujat i vinculat correctament.' });
+          toast({ title: t.movements.table.uploadSuccess, description: t.movements.table.documentUploadedSuccessfully });
           log(`[${transactionId}] ¡Éxito! Subida completada.`);
 
       } catch (error: any) {
@@ -569,14 +569,14 @@ export function TransactionsTable() {
           const errorCode = error.code || 'UNKNOWN_CODE';
           const errorMessage = error.message || 'Error desconocido.';
           log(`[${transactionId}] ERROR en la subida: ${errorCode} - ${errorMessage}`);
-          
-          let description = `S'ha produït un error inesperat. Codi: ${errorCode}`;
+
+          let description = t.movements.table.unexpectedError(errorCode);
           if (errorCode === 'storage/unauthorized' || errorCode === 'storage/object-not-found') {
-            description = 'Accés denegat. Revisa les regles de seguretat de Firebase Storage.';
+            description = t.movements.table.firebasePermissionDenied;
           } else if (errorCode === 'storage/canceled') {
-            description = 'La pujada ha estat cancel·lada.';
+            description = t.movements.table.uploadCancelled;
           }
-          toast({ variant: 'destructive', title: 'Error de pujada', description, duration: 9000 });
+          toast({ variant: 'destructive', title: t.movements.table.uploadError, description, duration: 9000 });
       } finally {
           log(`[${transactionId}] Finalizando proceso de subida.`);
           setLoadingStates(prev => ({ ...prev, [`doc_${transactionId}`]: false }));
@@ -633,7 +633,7 @@ export function TransactionsTable() {
       projectId: formData.projectId
     });
 
-    toast({ title: 'Transacció actualitzada' });
+    toast({ title: t.movements.table.transactionUpdated });
     setIsEditDialogOpen(false);
     setEditingTransaction(null);
   }
@@ -646,7 +646,7 @@ export function TransactionsTable() {
   const handleDeleteConfirm = () => {
     if (transactionToDelete && transactionsCollection) {
         deleteDocumentNonBlocking(doc(transactionsCollection, transactionToDelete.id));
-        toast({ title: 'Transacció eliminada' });
+        toast({ title: t.movements.table.transactionDeleted });
     }
     setIsDeleteDialogOpen(false);
     setTransactionToDelete(null);
@@ -662,11 +662,11 @@ export function TransactionsTable() {
   const handleSaveNewContact = () => {
   // Donants necessiten zipCode pel Model 182, proveïdors no
   if (!newContactFormData.name || !newContactFormData.taxId) {
-    toast({ variant: 'destructive', title: t.common.error, description: 'Nom i DNI/CIF són obligatoris.' });
+    toast({ variant: 'destructive', title: t.common.error, description: t.movements.table.nameAndTaxIdRequired });
     return;
   }
   if (newContactType === 'donor' && !newContactFormData.zipCode) {
-    toast({ variant: 'destructive', title: t.common.error, description: 'El codi postal és obligatori pels donants (Model 182).' });
+    toast({ variant: 'destructive', title: t.common.error, description: t.movements.table.zipCodeRequiredForDonors });
     return;
   }
     if (!contactsCollection || !transactionsCollection) return;
@@ -683,16 +683,16 @@ export function TransactionsTable() {
         membershipType: 'one-time',
       }),
     };
-    
+
     addDocumentNonBlocking(contactsCollection, newContactData)
       .then(docRef => {
         if (newContactTransactionId) {
           handleSetContact(newContactTransactionId, docRef.id, newContactType);
         }
       });
-    
-    const typeLabel = newContactType === 'donor' ? 'Donant' : 'Proveïdor';
-    toast({ title: `${typeLabel} creat`, description: `S'ha creat "${newContactFormData.name}" correctament.` });
+
+    const typeLabel = newContactType === 'donor' ? t.donors.title.slice(0, -1) : t.suppliers.title.slice(0, -1);
+    toast({ title: t.movements.table.contactCreatedSuccess(typeLabel, newContactFormData.name).split('.')[0] });
     setIsNewContactDialogOpen(false);
     setNewContactTransactionId(null);
   };
@@ -737,7 +737,7 @@ export function TransactionsTable() {
             </Badge>
           </TooltipTrigger>
           <TooltipContent>
-            {tx.contactId ? 'Devolució assignada' : 'Pendent d\'assignar donant'}
+            {tx.contactId ? t.movements.table.returnAssignedTooltip : t.movements.table.pendingDonorAssignment}
           </TooltipContent>
         </Tooltip>
       );
@@ -752,7 +752,7 @@ export function TransactionsTable() {
             </Badge>
           </TooltipTrigger>
           <TooltipContent>
-            Comissió bancària per devolució
+            {t.movements.table.bankCommissionReturn}
           </TooltipContent>
         </Tooltip>
       );
@@ -762,11 +762,11 @@ export function TransactionsTable() {
         <Tooltip>
           <TooltipTrigger asChild>
             <Badge variant="outline" className="gap-1 text-xs text-gray-500 line-through">
-              Retornada
+              {t.movements.table.returnedDonation}
             </Badge>
           </TooltipTrigger>
           <TooltipContent>
-            Aquesta donació ha estat retornada i no compta al Model 182
+            {t.movements.table.returnedDonationInfo}
           </TooltipContent>
         </Tooltip>
       );
@@ -850,7 +850,7 @@ export function TransactionsTable() {
                 </Button>
               </TooltipTrigger>
               <TooltipContent>
-                Exportar despeses sense justificant (CSV)
+                {t.movements.table.exportTooltip}
               </TooltipContent>
             </Tooltip>
           )}
@@ -863,19 +863,19 @@ export function TransactionsTable() {
           <AlertTriangle className="h-5 w-5 text-red-500 flex-shrink-0" />
           <div className="flex-1">
             <p className="text-sm font-medium text-red-800">
-              {pendingReturns.length} devolució{pendingReturns.length > 1 ? 'ns' : ''} pendent{pendingReturns.length > 1 ? 's' : ''} d'assignar
+              {t.movements.table.pendingReturnsWarning(pendingReturns.length)}
             </p>
             <p className="text-xs text-red-600">
-              Assigna el donant afectat per excloure la donació del Model 182.
+              {t.movements.table.pendingReturnsWarningDescription}
             </p>
           </div>
-          <Button 
-            variant="outline" 
-            size="sm" 
+          <Button
+            variant="outline"
+            size="sm"
             onClick={() => setTableFilter('returns')}
             className="border-red-300 text-red-700 hover:bg-red-100"
           >
-            Revisar
+            {t.movements.table.reviewReturns}
           </Button>
         </div>
       )}
@@ -911,7 +911,7 @@ export function TransactionsTable() {
                     <button
                       onClick={() => setShowProjectColumn(false)}
                       className="p-0.5 hover:bg-accent rounded transition-colors"
-                      title="Amagar columna de projectes"
+                      title={t.movements.table.hideProjectColumn}
                     >
                       <ChevronUp className="h-3.5 w-3.5 text-muted-foreground" />
                     </button>
@@ -928,7 +928,7 @@ export function TransactionsTable() {
                         <FolderKanban className="h-3.5 w-3.5" />
                       </button>
                     </TooltipTrigger>
-                    <TooltipContent>Projectes</TooltipContent>
+                    <TooltipContent>{t.movements.table.projects}</TooltipContent>
                   </Tooltip>
                 </TableHead>
               )}
@@ -1151,12 +1151,12 @@ export function TransactionsTable() {
                                 <Circle className="h-3 w-3 fill-green-500 text-green-500" />
                               </a>
                             </TooltipTrigger>
-                            <TooltipContent>Veure document</TooltipContent>
+                            <TooltipContent>{t.movements.table.viewDocument}</TooltipContent>
                           </Tooltip>
                       ) : (
                           <Tooltip>
                             <TooltipTrigger asChild>
-                              <button 
+                              <button
                                 onClick={() => handleAttachDocument(tx.id)}
                                 className="inline-flex hover:scale-110 transition-transform"
                               >
@@ -1183,7 +1183,7 @@ export function TransactionsTable() {
                                   <>
                                     <DropdownMenuItem onClick={() => handleOpenReturnDialog(tx)}>
                                       <Link className="mr-2 h-4 w-4 text-red-500" />
-                                      Gestionar devolució
+                                      {t.movements.table.manageReturn}
                                     </DropdownMenuItem>
                                     <DropdownMenuSeparator />
                                   </>
@@ -1219,10 +1219,10 @@ export function TransactionsTable() {
              {filteredTransactions.length === 0 && (
                 <TableRow>
                     <TableCell colSpan={8} className="h-24 text-center text-muted-foreground">
-                        {tableFilter === 'missing' 
-                          ? '🎉 Totes les despeses tenen justificant!'
+                        {tableFilter === 'missing'
+                          ? t.movements.table.allExpensesHaveProofEmpty
                           : tableFilter === 'returns'
-                          ? '✅ No hi ha devolucions'
+                          ? t.movements.table.noReturns
                           : t.movements.table.noTransactions
                         }
                     </TableCell>
@@ -1253,7 +1253,7 @@ export function TransactionsTable() {
             <div className="space-y-4 py-4">
               {/* Info de la devolució */}
               <div className="bg-red-50 border border-red-200 rounded-lg p-3">
-                <p className="text-sm font-medium text-red-800">Devolució</p>
+                <p className="text-sm font-medium text-red-800">{t.movements.table.returnInfo}</p>
                 <p className="text-sm text-red-600 truncate">{returnTransaction.description}</p>
                 <p className="text-lg font-bold text-red-700 mt-1">
                   {formatCurrencyEU(returnTransaction.amount)}
@@ -1264,8 +1264,8 @@ export function TransactionsTable() {
               {/* Selector de donant */}
               <div className="space-y-2">
                 <Label>{t.movements.table.affectedDonor}</Label>
-                <Select 
-                  value={returnDonorId || ''} 
+                <Select
+                  value={returnDonorId || ''}
                   onValueChange={(v) => {
                     setReturnDonorId(v || null);
                     setReturnLinkedTxId(null); // Reset linked tx when donor changes
@@ -1290,26 +1290,26 @@ export function TransactionsTable() {
               {/* Selector de donació original */}
               {returnDonorId && (
                 <div className="space-y-2">
-                  <Label>Donació original (opcional)</Label>
+                  <Label>{t.movements.table.originalDonation}</Label>
                   {isLoadingDonations ? (
                     <div className="flex items-center gap-2 text-sm text-muted-foreground">
                       <Loader2 className="h-4 w-4 animate-spin" />
-                      Carregant donacions...
+                      {t.movements.table.loadingDonations}
                     </div>
                   ) : donorDonations.length === 0 ? (
                     <p className="text-sm text-muted-foreground">
-                      No s'han trobat donacions d'aquest donant.
+                      {t.movements.table.noDonationsFound}
                     </p>
                   ) : (
-                    <Select 
-                      value={returnLinkedTxId || ''} 
+                    <Select
+                      value={returnLinkedTxId || ''}
                       onValueChange={(v) => setReturnLinkedTxId(v || null)}
                     >
                       <SelectTrigger>
-                        <SelectValue placeholder="Vincular a una donació..." />
+                        <SelectValue placeholder={t.movements.table.linkToDonation} />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="">No vincular</SelectItem>
+                        <SelectItem value="">{t.movements.table.noLink}</SelectItem>
                         {donorDonations.map(donation => (
                           <SelectItem key={donation.id} value={donation.id}>
                             {formatDate(donation.date)} - {formatCurrencyEU(donation.amount)}
@@ -1321,7 +1321,7 @@ export function TransactionsTable() {
                   {returnLinkedTxId && (
                     <p className="text-xs text-green-600 flex items-center gap-1">
                       <Check className="h-3 w-3" />
-                      La donació vinculada serà marcada com "Retornada" i exclosa del Model 182.
+                      {t.movements.table.linkedDonationInfo}
                     </p>
                   )}
                 </div>
@@ -1366,14 +1366,14 @@ export function TransactionsTable() {
             </div>
             <div className="grid grid-cols-4 items-center gap-4">
               <Label htmlFor="note" className="text-right">
-                Nota
+                {t.movements.table.noteLabel}
               </Label>
               <Input
                 id="note"
                 value={formData.note}
                 onChange={(e) => setFormData({ ...formData, note: e.target.value })}
                 className="col-span-3"
-                placeholder="Descripció clara del moviment..."
+                placeholder={t.movements.table.descriptionPlaceholder}
               />
             </div>
             <div className="grid grid-cols-4 items-center gap-4">
@@ -1394,14 +1394,14 @@ export function TransactionsTable() {
                 </Label>
                 <Select value={formData.contactId || ''} onValueChange={(value) => setFormData({...formData, contactId: value === 'null' ? null : value})}>
                     <SelectTrigger className="col-span-3">
-                        <SelectValue placeholder="Selecciona un contacte" />
+                        <SelectValue placeholder={t.movements.table.selectContact} />
                     </SelectTrigger>
                     <SelectContent>
                         <SelectItem value="null">{t.common.none}</SelectItem>
                         {donors.length > 0 && (
                           <>
                             <SelectItem value="__donors_label__" disabled className="text-xs text-muted-foreground">
-                              ── Donants ──
+                              {t.movements.table.donorsSection}
                             </SelectItem>
                             {donors.map(donor => (
                                 <SelectItem key={donor.id} value={donor.id}>
@@ -1416,7 +1416,7 @@ export function TransactionsTable() {
                         {suppliers.length > 0 && (
                           <>
                             <SelectItem value="__suppliers_label__" disabled className="text-xs text-muted-foreground">
-                              ── Proveïdors ──
+                              {t.movements.table.suppliersSection}
                             </SelectItem>
                             {suppliers.map(supplier => (
                                 <SelectItem key={supplier.id} value={supplier.id}>
@@ -1465,42 +1465,42 @@ export function TransactionsTable() {
               {newContactType === 'donor' ? (
                 <>
                   <Heart className="h-5 w-5 text-red-500" />
-                  Nou Donant
+                  {t.movements.table.newDonor}
                 </>
               ) : (
                 <>
                   <Building2 className="h-5 w-5 text-blue-500" />
-                  Nou Proveïdor
+                  {t.movements.table.newSupplier}
                 </>
               )}
             </DialogTitle>
             <DialogDescription>
-              {newContactType === 'donor' 
-                ? 'Afegeix un nou donant i assigna\'l a aquesta transacció.'
-                : 'Afegeix un nou proveïdor i assigna\'l a aquesta transacció.'
+              {newContactType === 'donor'
+                ? t.movements.table.addNewDonorDescription
+                : t.movements.table.addNewSupplierDescription
               }
             </DialogDescription>
           </DialogHeader>
           <div className="grid gap-4 py-4">
             <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="new-contact-name" className="text-right">Nom *</Label>
+              <Label htmlFor="new-contact-name" className="text-right">{t.movements.table.nameRequired}</Label>
               <Input id="new-contact-name" value={newContactFormData.name} onChange={(e) => setNewContactFormData({...newContactFormData, name: e.target.value })} className="col-span-3" />
             </div>
             <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="new-contact-taxId" className="text-right">DNI/CIF *</Label>
+              <Label htmlFor="new-contact-taxId" className="text-right">{t.movements.table.taxIdRequired}</Label>
               <Input id="new-contact-taxId" value={newContactFormData.taxId} onChange={(e) => setNewContactFormData({...newContactFormData, taxId: e.target.value })} className="col-span-3" />
             </div>
             <div className="grid grid-cols-4 items-center gap-4">
               <Label htmlFor="new-contact-zipCode" className="text-right">
-  Codi Postal {newContactType === 'donor' && '*'}
-</Label>
+                {newContactType === 'donor' ? t.movements.table.zipCodeRequired : t.movements.table.zipCodeLabel}
+              </Label>
               <Input id="new-contact-zipCode" value={newContactFormData.zipCode} onChange={(e) => setNewContactFormData({...newContactFormData, zipCode: e.target.value })} className="col-span-3" />
             </div>
           </div>
           <DialogFooter>
             <DialogClose asChild><Button variant="outline">{t.common.cancel}</Button></DialogClose>
             <Button onClick={handleSaveNewContact}>
-              {newContactType === 'donor' ? 'Crear donant' : 'Crear proveïdor'}
+              {newContactType === 'donor' ? t.movements.table.createDonor : t.movements.table.createSupplier}
             </Button>
           </DialogFooter>
         </DialogContent>
