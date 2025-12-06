@@ -17,8 +17,7 @@ let logCounter = 0;
 
 function OrganizationDependentLayout({ children }: { children: React.ReactNode }) {
   useInitializeOrganizationData();
-  
-  const [open, setOpen] = React.useState(true);
+
   const [logs, setLogs] = React.useState<LogMessage[]>([]);
 
   const log = React.useCallback((message: string) => {
@@ -39,19 +38,9 @@ function OrganizationDependentLayout({ children }: { children: React.ReactNode }
     setLogs([]);
   }, []);
 
-  React.useEffect(() => {
-    const sidebarState = document.cookie
-      .split('; ')
-      .find((row) => row.startsWith('sidebar_state='))
-      ?.split('=')[1];
-    if (sidebarState) {
-      setOpen(sidebarState === 'true');
-    }
-  }, []);
-
   return (
     <AppLogContext.Provider value={{ logs, log, clearLogs }}>
-      <SidebarProvider defaultOpen={open} onOpenChange={setOpen}>
+      <SidebarProvider defaultOpen={true}>
         <div className="flex min-h-screen">
           <Sidebar collapsible="icon">
             <DashboardSidebarContent />

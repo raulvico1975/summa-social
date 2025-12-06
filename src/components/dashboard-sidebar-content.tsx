@@ -179,9 +179,9 @@ export function DashboardSidebarContent() {
   return (
     <>
       <SidebarHeader className="border-b">
-        <div className="flex items-center gap-2 p-2">
+        <div className="flex items-center gap-2 p-2 group-data-[collapsible=icon]:justify-center">
           <Logo className="h-8 w-8 text-primary" />
-          <div className="flex flex-col">
+          <div className="flex flex-col group-data-[collapsible=icon]:hidden">
             <span className="text-lg font-semibold font-headline">Summa Social</span>
             {/* ═══════════════════════════════════════════════════════════════
                 NOU: Mostrar el nom de l'organització actual
