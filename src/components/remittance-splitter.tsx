@@ -932,15 +932,15 @@ export function RemittanceSplitter({
               </div>
               <div className="rounded-lg border p-3 text-center">
                 <div className="text-2xl font-bold text-green-600">{stats.found}</div>
-                <div className="text-xs text-muted-foreground">Trobats</div>
+                <div className="text-xs text-muted-foreground">{t.movements.splitter.found}</div>
               </div>
               <div className="rounded-lg border p-3 text-center">
                 <div className="text-2xl font-bold text-blue-600">{stats.newWithTaxId}</div>
-                <div className="text-xs text-muted-foreground">Nous (amb DNI)</div>
+                <div className="text-xs text-muted-foreground">{t.movements.splitter.newWithTaxId}</div>
               </div>
               <div className="rounded-lg border p-3 text-center">
                 <div className="text-2xl font-bold text-orange-600">{stats.newWithoutTaxId}</div>
-                <div className="text-xs text-muted-foreground">Nous (sense DNI)</div>
+                <div className="text-xs text-muted-foreground">{t.movements.splitter.newWithoutTaxId}</div>
               </div>
             </div>
 
@@ -955,21 +955,21 @@ export function RemittanceSplitter({
 
             {/* Opcions per crear donants */}
             <div className="space-y-3 rounded-lg border p-4">
-              <h4 className="font-medium text-sm">Opcions per a nous donants</h4>
-              
+              <h4 className="font-medium text-sm">{t.movements.splitter.newDonorOptions}</h4>
+
               <div className="flex items-center gap-4">
                 <Label htmlFor="defaultZipCode" className="text-sm whitespace-nowrap">
-                  Codi postal per defecte:
+                  {t.movements.splitter.defaultZipCode}
                 </Label>
                 <Input
                   id="defaultZipCode"
                   value={defaultZipCode}
                   onChange={(e) => setDefaultZipCode(e.target.value)}
                   className="w-24"
-                  placeholder="08001"
+                  placeholder={t.movements.splitter.zipCodePlaceholder}
                 />
                 <Button variant="outline" size="sm" onClick={handleApplyDefaultZipCode}>
-                  Aplicar a tots
+                  {t.movements.splitter.applyToAll}
                 </Button>
               </div>
 
@@ -982,7 +982,7 @@ export function RemittanceSplitter({
                       onCheckedChange={(checked) => handleToggleAllNewWithTaxId(checked as boolean)}
                     />
                     <label htmlFor="createAllWithTaxId" className="text-sm">
-                      Crear tots els {stats.newWithTaxId} nous amb DNI
+                      {t.movements.splitter.createAllWithTaxId(stats.newWithTaxId)}
                     </label>
                   </div>
                 )}
@@ -994,7 +994,7 @@ export function RemittanceSplitter({
                       onCheckedChange={(checked) => handleToggleAllNewWithoutTaxId(checked as boolean)}
                     />
                     <label htmlFor="createAllWithoutTaxId" className="text-sm text-orange-600">
-                      Crear tots els {stats.newWithoutTaxId} nous sense DNI
+                      {t.movements.splitter.createAllWithoutTaxId(stats.newWithoutTaxId)}
                     </label>
                   </div>
                 )}
@@ -1006,13 +1006,13 @@ export function RemittanceSplitter({
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead className="w-[50px]">Crear</TableHead>
-                    <TableHead>Nom</TableHead>
-                    <TableHead>DNI</TableHead>
-                    <TableHead className="text-right">Import</TableHead>
-                    <TableHead>Estat</TableHead>
-                    <TableHead>A la BBDD</TableHead>
-                    <TableHead className="w-[100px]">CP</TableHead>
+                    <TableHead className="w-[50px]">{t.movements.splitter.create}</TableHead>
+                    <TableHead>{t.movements.splitter.name}</TableHead>
+                    <TableHead>{t.movements.splitter.taxId}</TableHead>
+                    <TableHead className="text-right">{t.movements.splitter.amount}</TableHead>
+                    <TableHead>{t.movements.splitter.status}</TableHead>
+                    <TableHead>{t.movements.splitter.inDatabase}</TableHead>
+                    <TableHead className="w-[100px]">{t.movements.splitter.zipCode}</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -1035,19 +1035,19 @@ export function RemittanceSplitter({
                         {donation.status === 'found' && (
                           <Badge variant="outline" className="bg-green-100 text-green-800 border-green-300">
                             <CheckCircle2 className="mr-1 h-3 w-3" />
-                            Trobat
+                            {t.movements.splitter.foundBadge}
                           </Badge>
                         )}
                         {donation.status === 'new_with_taxid' && (
                           <Badge variant="outline" className="bg-blue-100 text-blue-800 border-blue-300">
                             <UserPlus className="mr-1 h-3 w-3" />
-                            Nou
+                            {t.movements.splitter.newBadge}
                           </Badge>
                         )}
                         {donation.status === 'new_without_taxid' && (
                           <Badge variant="outline" className="bg-orange-100 text-orange-800 border-orange-300">
                             <AlertCircle className="mr-1 h-3 w-3" />
-                            Sense DNI
+                            {t.movements.splitter.withoutTaxIdBadge}
                           </Badge>
                         )}
                       </TableCell>
@@ -1055,9 +1055,9 @@ export function RemittanceSplitter({
                         {donation.matchedDonor ? (
                           <span className="text-green-700">{donation.matchedDonor.name}</span>
                         ) : donation.shouldCreate ? (
-                          <span className="text-blue-600 italic">Es crearà</span>
+                          <span className="text-blue-600 italic">{t.movements.splitter.willBeCreated}</span>
                         ) : (
-                          <span className="text-muted-foreground">Assignació manual</span>
+                          <span className="text-muted-foreground">{t.movements.splitter.manualAssignment}</span>
                         )}
                       </TableCell>
                       <TableCell>
@@ -1066,7 +1066,7 @@ export function RemittanceSplitter({
                             value={donation.zipCode}
                             onChange={(e) => handleZipCodeChange(index, e.target.value)}
                             className="w-20 h-8 text-xs"
-                            placeholder="CP"
+                            placeholder={t.movements.splitter.zipCode}
                           />
                         )}
                       </TableCell>
@@ -1079,23 +1079,20 @@ export function RemittanceSplitter({
             {/* Resum final */}
             <div className="rounded-lg bg-muted p-3 text-sm">
               <p>
-                <strong>Acció:</strong> Es crearan{' '}
-                <span className="text-blue-600 font-medium">{stats.toCreate} donants nous</span>{' '}
-                i <span className="font-medium">{parsedDonations.length} transaccions</span>.
-                La transacció original s'eliminarà.
+                {t.movements.splitter.actionSummary(stats.toCreate, parsedDonations.length)}
               </p>
             </div>
 
             <DialogFooter className="gap-2 sm:gap-0">
               <Button variant="outline" onClick={() => setStep('mapping')}>
                 <ArrowLeft className="mr-2 h-4 w-4" />
-                Tornar al Mapejat
+                {t.movements.splitter.backToMapping}
               </Button>
               <Button onClick={handleProcess} disabled={isProcessing}>
                 {isProcessing ? (
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                 ) : null}
-                Processar {parsedDonations.length} donacions
+                {t.movements.splitter.processDonations(parsedDonations.length)}
               </Button>
             </DialogFooter>
           </>
@@ -1107,9 +1104,9 @@ export function RemittanceSplitter({
         {step === 'processing' && (
           <div className="flex flex-col items-center justify-center py-8">
             <Loader2 className="h-12 w-12 animate-spin text-primary mb-4" />
-            <p className="text-lg font-medium">Processant remesa...</p>
+            <p className="text-lg font-medium">{t.movements.splitter.processingRemittance}</p>
             <p className="text-sm text-muted-foreground">
-              Creant {stats.toCreate} donants i {parsedDonations.length} transaccions
+              {t.movements.splitter.creatingDonorsAndTransactions(stats.toCreate, parsedDonations.length)}
             </p>
           </div>
         )}
