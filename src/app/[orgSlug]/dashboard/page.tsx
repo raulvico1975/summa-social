@@ -9,7 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Textarea } from '@/components/ui/textarea';
 import Link from 'next/link';
-import { DollarSign, TrendingUp, TrendingDown, Rocket, Heart, AlertTriangle, FolderKanban, CalendarClock, Share2, Copy, Mail, PartyPopper } from 'lucide-react';
+import { DollarSign, TrendingUp, TrendingDown, Rocket, Heart, AlertTriangle, FolderKanban, CalendarClock, Share2, Copy, Mail, PartyPopper, Info } from 'lucide-react';
 import type { Transaction, Contact, Project } from '@/lib/data';
 import { useCollection, useFirebase, useMemoFirebase } from '@/firebase';
 import { collection } from 'firebase/firestore';
@@ -236,6 +236,11 @@ ${t.dashboard.generatedWith}`;
     return expensesByProject.reduce((sum, p) => sum + p.totalExpense, 0);
   }, [expensesByProject]);
 
+  // Detectar si totes les despeses estan sense assignar
+  const allExpensesUnassigned = React.useMemo(() => {
+    return expensesByProject.length === 1 && expensesByProject[0]?.projectId === null;
+  }, [expensesByProject]);
+
   // Càlcul d'alertes
   const alerts = React.useMemo(() => {
     const result = [];
@@ -270,9 +275,10 @@ ${t.dashboard.generatedWith}`;
       });
     }
 
-    // 🟡 Moviments sense contacte assignat (amount > 50€)
+    // 🟡 Moviments sense contacte assignat
+    const threshold = organization?.contactAlertThreshold ?? 50;
     const noContactCount = filteredTransactions?.filter(tx =>
-      !tx.contactId && Math.abs(tx.amount) > 50
+      !tx.contactId && Math.abs(tx.amount) > threshold
     ).length || 0;
 
     if (noContactCount > 0) {
@@ -282,11 +288,12 @@ ${t.dashboard.generatedWith}`;
         label: t.dashboard.movementsWithoutContact,
         variant: 'secondary' as const,
         href: buildUrl('/dashboard/movimientos') + '?filter=noContact',
+        info: threshold > 0 ? t.dashboard.onlyMovementsAbove({ amount: threshold }) : undefined,
       });
     }
 
     return result;
-  }, [filteredTransactions, contacts, t, buildUrl]);
+  }, [filteredTransactions, contacts, t, buildUrl, organization]);
 
   // Càlcul d'obligacions fiscals
   const taxObligations = React.useMemo(() => {
@@ -506,6 +513,26 @@ ${t.dashboard.generatedWith}`;
         <CardContent>
           {expensesByProject.length === 0 ? (
             <p className="text-muted-foreground text-sm">{t.dashboard.noExpenses}</p>
+          ) : allExpensesUnassigned ? (
+            <div className="space-y-4">
+              <div className="flex items-start gap-3 p-4 rounded-lg bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-900">
+                <Info className="h-5 w-5 text-blue-500 mt-0.5 flex-shrink-0" />
+                <div className="flex-1 space-y-3">
+                  <p className="text-sm text-blue-900 dark:text-blue-100">
+                    {t.dashboard.noProjectsAssigned}
+                  </p>
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm font-medium text-blue-900 dark:text-blue-100">{t.dashboard.totalExpensesProject}</span>
+                    <span className="text-sm font-semibold text-blue-900 dark:text-blue-100">{formatCurrencyEU(totalProjectExpenses)}</span>
+                  </div>
+                  <Link href={buildUrl('/dashboard/movimientos')}>
+                    <Button variant="outline" size="sm" className="w-full">
+                      {t.dashboard.assignProjectsToTransactions}
+                    </Button>
+                  </Link>
+                </div>
+              </div>
+            </div>
           ) : (
             <div className="space-y-4">
               {expensesByProject.map((project) => (
@@ -582,14 +609,18 @@ ${t.dashboard.generatedWith}`;
           ) : (
             <div className="flex flex-col gap-3">
               {alerts.map((alert) => (
-                <Link
-                  key={alert.type}
-                  href={alert.href}
-                  className="flex items-center justify-between p-3 rounded-lg border hover:bg-accent transition-colors"
-                >
-                  <span className="text-sm">{alert.label}</span>
-                  <Badge variant={alert.variant}>{alert.count}</Badge>
-                </Link>
+                <div key={alert.type}>
+                  <Link
+                    href={alert.href}
+                    className="flex items-center justify-between p-3 rounded-lg border hover:bg-accent transition-colors"
+                  >
+                    <span className="text-sm">{alert.label}</span>
+                    <Badge variant={alert.variant}>{alert.count}</Badge>
+                  </Link>
+                  {(alert as any).info && (
+                    <p className="text-xs text-muted-foreground mt-1 ml-3">{(alert as any).info}</p>
+                  )}
+                </div>
               ))}
             </div>
           )}

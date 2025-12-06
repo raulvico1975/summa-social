@@ -27,6 +27,7 @@ export const ca = {
     uncategorizedMovements: "Moviments sense categoritzar",
     incompleteDonors: "Donants amb dades incompletes",
     movementsWithoutContact: "Moviments sense contacte assignat",
+    onlyMovementsAbove: (params: { amount: number }) => `Només moviments superiors a ${params.amount} €`,
     allClear: "Tot al dia!",
     expensesByProject: "Despesa per Eix d'actuació",
     unassigned: "Sense assignar",
@@ -50,7 +51,9 @@ export const ca = {
     positiveBalance: "Balanç positiu aquest període!",
     manyDonors: (params: { count: number }) => `${params.count} donants han contribuït!`,
     noAlerts: "Tot al dia, bona feina!",
-    firstDonationMonth: "Primera donació del mes rebuda!"
+    firstDonationMonth: "Primera donació del mes rebuda!",
+    noProjectsAssigned: "Encara no has assignat despeses a cap eix d'actuació",
+    assignProjectsToTransactions: "Assignar eixos als moviments"
   },
   movements: {
     title: "Moviments",
@@ -804,6 +807,9 @@ export const ca = {
       uploadLogo: "Pujar logo",
       removeLogo: "Eliminar logo",
       logoHint: "Format recomanat: PNG o JPG, màxim 2MB",
+      contactAlertThreshold: "Llindar mínim per alertes",
+      contactAlertThresholdDescription: "Només s'alerten moviments sense contacte superiors a aquest import",
+      allMovements: "Tots els moviments",
       saved: "Dades guardades",
       savedDescription: "Les dades de l'organització s'han actualitzat correctament.",
       errorLoading: "Error carregant organització",

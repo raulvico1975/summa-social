@@ -27,6 +27,7 @@ export const es = {
     uncategorizedMovements: "Movimientos sin categorizar",
     incompleteDonors: "Donantes con datos incompletos",
     movementsWithoutContact: "Movimientos sin contacto asignado",
+    onlyMovementsAbove: (params: { amount: number }) => `Solo movimientos superiores a ${params.amount} €`,
     allClear: "¡Todo al día!",
     expensesByProject: "Gasto por Eje de actuación",
     unassigned: "Sin asignar",
@@ -50,7 +51,9 @@ export const es = {
     positiveBalance: "¡Balance positivo este período!",
     manyDonors: (params: { count: number }) => `¡${params.count} donantes han contribuido!`,
     noAlerts: "¡Todo al día, buen trabajo!",
-    firstDonationMonth: "¡Primera donación del mes recibida!"
+    firstDonationMonth: "¡Primera donación del mes recibida!",
+    noProjectsAssigned: "Aún no has asignado gastos a ningún eje de actuación",
+    assignProjectsToTransactions: "Asignar ejes a los movimientos"
   },
   movements: {
     title: "Movimientos",
@@ -837,6 +840,9 @@ export const es = {
       uploadLogo: "Subir logo",
       removeLogo: "Eliminar logo",
       logoHint: "Formato recomendado: PNG o JPG, máximo 2MB",
+      contactAlertThreshold: "Umbral mínimo para alertas",
+      contactAlertThresholdDescription: "Solo se alertan movimientos sin contacto superiores a este importe",
+      allMovements: "Todos los movimientos",
       saved: "Datos guardados",
       savedDescription: "Los datos de la organización se han actualizado correctamente.",
       errorLoading: "Error cargando organización",

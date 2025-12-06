@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
 import { useFirebase } from '@/firebase';
 import { useCurrentOrganization } from '@/hooks/organization-provider';
@@ -34,6 +35,7 @@ export function OrganizationSettings() {
     email: '',
     website: '',
     logoUrl: '',
+    contactAlertThreshold: 50,
   });
 
   // Carregar dades de l'organització
@@ -57,6 +59,7 @@ export function OrganizationSettings() {
             email: data.email || '',
             website: data.website || '',
             logoUrl: (data as any).logoUrl || '',
+            contactAlertThreshold: data.contactAlertThreshold ?? 50,
           });
         }
       } catch (error) {
@@ -75,7 +78,10 @@ export function OrganizationSettings() {
   }, [organizationId, firestore, toast]);
 
   const handleChange = (field: keyof typeof formData, value: string) => {
-    setFormData(prev => ({ ...prev, [field]: value }));
+    setFormData(prev => ({
+      ...prev,
+      [field]: field === 'contactAlertThreshold' ? parseInt(value, 10) : value
+    }));
   };
 
   const handleSave = async () => {
@@ -96,6 +102,7 @@ export function OrganizationSettings() {
         email: formData.email || null,
         website: formData.website || null,
         logoUrl: formData.logoUrl || null,
+        contactAlertThreshold: formData.contactAlertThreshold,
       };
 
       await updateDoc(orgRef, dataToSave);
@@ -292,6 +299,25 @@ export function OrganizationSettings() {
             onChange={(e) => handleChange('website', e.target.value)}
             placeholder="https://www.exemple.org"
           />
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="contactAlertThreshold">{t.settings.organization.contactAlertThreshold}</Label>
+          <Select
+            value={formData.contactAlertThreshold.toString()}
+            onValueChange={(value) => handleChange('contactAlertThreshold', value)}
+          >
+            <SelectTrigger>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="0">{t.settings.organization.allMovements} (0 €)</SelectItem>
+              <SelectItem value="50">50 €</SelectItem>
+              <SelectItem value="100">100 €</SelectItem>
+              <SelectItem value="500">500 €</SelectItem>
+            </SelectContent>
+          </Select>
+          <p className="text-xs text-muted-foreground">{t.settings.organization.contactAlertThresholdDescription}</p>
         </div>
 
         <div className="flex justify-end pt-4 border-t">

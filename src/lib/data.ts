@@ -241,6 +241,8 @@ export type Organization = {
   phone?: string;
   email?: string;
   website?: string;
+  // Configuració d'alertes
+  contactAlertThreshold?: number;  // Llindar mínim (€) per alertes de moviments sense contacte (default: 50)
   // Metadata
   updatedAt?: string;
   suspendedAt?: string;
