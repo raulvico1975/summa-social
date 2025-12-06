@@ -19,6 +19,7 @@ import { collection, doc, setDoc, query, where, getDocs } from 'firebase/firesto
 import { Loader2, Building2, Mail, User, Copy, Check } from 'lucide-react';
 import type { Organization, Invitation, OrganizationRole } from '@/lib/data';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { useTranslations } from '@/i18n';
 
 interface CreateOrganizationDialogProps {
   open: boolean;
@@ -51,6 +52,7 @@ const generateToken = (): string => {
 export function CreateOrganizationDialog({ open, onOpenChange }: CreateOrganizationDialogProps) {
   const { firestore, user } = useFirebase();
   const { toast } = useToast();
+  const { t } = useTranslations();
 
   // Formulari
   const [name, setName] = React.useState('');
@@ -94,19 +96,19 @@ export function CreateOrganizationDialog({ open, onOpenChange }: CreateOrganizat
   const handleCreate = async () => {
     // Validacions
     if (!name.trim()) {
-      setError('El nom és obligatori');
+      setError(t.superAdmin.createOrganizationDialog.errors.nameRequired);
       return;
     }
     if (!taxId.trim()) {
-      setError('El CIF és obligatori');
+      setError(t.superAdmin.createOrganizationDialog.errors.taxIdRequired);
       return;
     }
     if (!slug.trim()) {
-      setError('El slug és obligatori');
+      setError(t.superAdmin.createOrganizationDialog.errors.slugRequired);
       return;
     }
     if (!adminEmail.trim()) {
-      setError('L\'email de l\'administrador és obligatori');
+      setError(t.superAdmin.createOrganizationDialog.errors.adminEmailRequired);
       return;
     }
 
@@ -118,7 +120,7 @@ export function CreateOrganizationDialog({ open, onOpenChange }: CreateOrganizat
       const slugQuery = query(collection(firestore, 'organizations'), where('slug', '==', slug));
       const slugSnapshot = await getDocs(slugQuery);
       if (!slugSnapshot.empty) {
-        setError('Aquest slug ja existeix. Prova amb un altre.');
+        setError(t.superAdmin.createOrganizationDialog.errors.slugExists);
         setIsCreating(false);
         return;
       }
@@ -163,13 +165,13 @@ export function CreateOrganizationDialog({ open, onOpenChange }: CreateOrganizat
       setCreatedInviteUrl(inviteUrl);
 
       toast({
-        title: 'Organització creada!',
-        description: `${name} s'ha creat correctament.`,
+        title: t.superAdmin.createOrganizationDialog.titleSuccess,
+        description: t.superAdmin.createOrganizationDialog.successToast(name),
       });
 
     } catch (err: any) {
       console.error('Error creating organization:', err);
-      setError('Error creant l\'organització. Torna-ho a provar.');
+      setError(t.superAdmin.createOrganizationDialog.errors.createError);
     } finally {
       setIsCreating(false);
     }
@@ -180,7 +182,7 @@ export function CreateOrganizationDialog({ open, onOpenChange }: CreateOrganizat
       navigator.clipboard.writeText(createdInviteUrl);
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
-      toast({ title: 'Enllaç copiat!' });
+      toast({ title: t.superAdmin.createOrganizationDialog.linkCopied });
     }
   };
 
@@ -194,12 +196,12 @@ export function CreateOrganizationDialog({ open, onOpenChange }: CreateOrganizat
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Building2 className="h-5 w-5" />
-            {createdInviteUrl ? 'Organització creada!' : 'Crear nova organització'}
+            {createdInviteUrl ? t.superAdmin.createOrganizationDialog.titleSuccess : t.superAdmin.createOrganizationDialog.title}
           </DialogTitle>
           <DialogDescription>
-            {createdInviteUrl 
-              ? 'Envia aquest enllaç a l\'administrador de l\'organització perquè creï el seu compte.'
-              : 'Introdueix les dades de la nova organització i de qui serà el seu primer administrador.'
+            {createdInviteUrl
+              ? t.superAdmin.createOrganizationDialog.descriptionSuccess
+              : t.superAdmin.createOrganizationDialog.description
             }
           </DialogDescription>
         </DialogHeader>
@@ -209,17 +211,15 @@ export function CreateOrganizationDialog({ open, onOpenChange }: CreateOrganizat
           <div className="space-y-4 py-4">
             <Alert>
               <Mail className="h-4 w-4" />
-              <AlertDescription>
-                Envia aquest enllaç a <strong>{adminEmail}</strong> perquè creï el seu compte d'administrador.
-              </AlertDescription>
+              <AlertDescription dangerouslySetInnerHTML={{ __html: t.superAdmin.createOrganizationDialog.inviteLinkAlert(adminEmail) }} />
             </Alert>
 
             <div className="space-y-2">
-              <Label>Enllaç d'invitació</Label>
+              <Label>{t.superAdmin.createOrganizationDialog.inviteLinkLabel}</Label>
               <div className="flex gap-2">
-                <Input 
-                  value={createdInviteUrl} 
-                  readOnly 
+                <Input
+                  value={createdInviteUrl}
+                  readOnly
                   className="font-mono text-xs"
                 />
                 <Button variant="outline" size="icon" onClick={handleCopyUrl}>
@@ -227,13 +227,13 @@ export function CreateOrganizationDialog({ open, onOpenChange }: CreateOrganizat
                 </Button>
               </div>
               <p className="text-xs text-muted-foreground">
-                L'enllaç expira en 7 dies.
+                {t.superAdmin.createOrganizationDialog.inviteLinkExpires}
               </p>
             </div>
 
             <DialogFooter>
               <Button onClick={handleClose}>
-                Tancar
+                {t.superAdmin.createOrganizationDialog.close}
               </Button>
             </DialogFooter>
           </div>
@@ -244,39 +244,39 @@ export function CreateOrganizationDialog({ open, onOpenChange }: CreateOrganizat
             <div className="space-y-4">
               <h3 className="text-sm font-medium flex items-center gap-2">
                 <Building2 className="h-4 w-4" />
-                Dades de l'organització
+                {t.superAdmin.createOrganizationDialog.organizationDataTitle}
               </h3>
-              
+
               <div className="grid grid-cols-2 gap-4">
                 <div className="col-span-2 space-y-2">
-                  <Label htmlFor="name">Nom de l'entitat *</Label>
+                  <Label htmlFor="name">{t.superAdmin.createOrganizationDialog.nameLabel}</Label>
                   <Input
                     id="name"
                     value={name}
                     onChange={(e) => setName(e.target.value)}
-                    placeholder="Fundació Flors de Kiskeya"
+                    placeholder={t.superAdmin.createOrganizationDialog.namePlaceholder}
                     disabled={isCreating}
                   />
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="taxId">CIF *</Label>
+                  <Label htmlFor="taxId">{t.superAdmin.createOrganizationDialog.taxIdLabel}</Label>
                   <Input
                     id="taxId"
                     value={taxId}
                     onChange={(e) => setTaxId(e.target.value.toUpperCase())}
-                    placeholder="G12345678"
+                    placeholder={t.superAdmin.createOrganizationDialog.taxIdPlaceholder}
                     disabled={isCreating}
                   />
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="slug">Slug (URL)</Label>
+                  <Label htmlFor="slug">{t.superAdmin.createOrganizationDialog.slugLabel}</Label>
                   <Input
                     id="slug"
                     value={slug}
                     onChange={(e) => handleSlugChange(e.target.value)}
-                    placeholder="fundacio-flors"
+                    placeholder={t.superAdmin.createOrganizationDialog.slugPlaceholder}
                     disabled={isCreating}
                   />
                 </div>
@@ -287,29 +287,29 @@ export function CreateOrganizationDialog({ open, onOpenChange }: CreateOrganizat
             <div className="space-y-4 pt-4 border-t">
               <h3 className="text-sm font-medium flex items-center gap-2">
                 <User className="h-4 w-4" />
-                Primer administrador
+                {t.superAdmin.createOrganizationDialog.firstAdminTitle}
               </h3>
-              
+
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="adminEmail">Email *</Label>
+                  <Label htmlFor="adminEmail">{t.superAdmin.createOrganizationDialog.adminEmailLabel}</Label>
                   <Input
                     id="adminEmail"
                     type="email"
                     value={adminEmail}
                     onChange={(e) => setAdminEmail(e.target.value)}
-                    placeholder="admin@fundacio.org"
+                    placeholder={t.superAdmin.createOrganizationDialog.adminEmailPlaceholder}
                     disabled={isCreating}
                   />
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="adminName">Nom (opcional)</Label>
+                  <Label htmlFor="adminName">{t.superAdmin.createOrganizationDialog.adminNameLabel}</Label>
                   <Input
                     id="adminName"
                     value={adminName}
                     onChange={(e) => setAdminName(e.target.value)}
-                    placeholder="Maria Garcia"
+                    placeholder={t.superAdmin.createOrganizationDialog.adminNamePlaceholder}
                     disabled={isCreating}
                   />
                 </div>
@@ -325,11 +325,11 @@ export function CreateOrganizationDialog({ open, onOpenChange }: CreateOrganizat
 
             <DialogFooter>
               <Button variant="outline" onClick={handleClose} disabled={isCreating}>
-                Cancel·lar
+                {t.superAdmin.createOrganizationDialog.cancel}
               </Button>
               <Button onClick={handleCreate} disabled={isCreating}>
                 {isCreating && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                Crear i generar invitació
+                {t.superAdmin.createOrganizationDialog.create}
               </Button>
             </DialogFooter>
           </div>
