@@ -8,9 +8,11 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { useAppLog } from '@/hooks/use-app-log';
 import { X, Bot, Trash2 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
+import { useTranslations } from '@/i18n';
 
 export function LogPanel() {
   const { logs, clearLogs } = useAppLog();
+  const { t } = useTranslations();
   const [isOpen, setIsOpen] = React.useState(false);
   const scrollAreaRef = React.useRef<HTMLDivElement>(null);
 
@@ -40,7 +42,7 @@ export function LogPanel() {
       <CardHeader className="flex flex-row items-center justify-between p-4">
         <div className="flex items-center gap-2">
             <Bot className="h-5 w-5" />
-            <CardTitle className="text-lg">Log de Diagnóstico</CardTitle>
+            <CardTitle className="text-lg">{t.logPanel.title}</CardTitle>
         </div>
         <div className="flex items-center gap-2">
             <Button variant="ghost" size="icon" onClick={clearLogs} className="h-8 w-8">
@@ -55,7 +57,7 @@ export function LogPanel() {
         <ScrollArea className="h-64 p-4 pt-0" ref={scrollAreaRef}>
           {logs.length === 0 ? (
             <div className="flex items-center justify-center h-full text-muted-foreground">
-              Esperando acciones...
+              {t.logPanel.waiting}
             </div>
           ) : (
             <div className="space-y-2 text-sm font-mono">
@@ -64,11 +66,11 @@ export function LogPanel() {
                   <span className="font-sans text-muted-foreground">{log.timestamp}</span>
                   <div className="flex-1 break-words">
                   {log.message.includes('ERROR') ? (
-                    <Badge variant="destructive" className="mr-2">ERROR</Badge>
-                  ) : log.message.includes('¡Éxito!') ? (
-                     <Badge variant="success" className="mr-2">ÉXITO</Badge>
+                    <Badge variant="destructive" className="mr-2">{t.logPanel.errorBadge}</Badge>
+                  ) : log.message.includes('¡Éxito!') || log.message.includes('Èxit') ? (
+                     <Badge variant="success" className="mr-2">{t.logPanel.successBadge}</Badge>
                   ) : null}
-                  {log.message.replace(/ERROR:? ?/, '').replace(/¡Éxito! ?/, '')}
+                  {log.message.replace(/ERROR:? ?/, '').replace(/¡Éxito! ?/, '').replace(/Èxit:? ?/, '')}
                   </div>
                 </div>
               ))}

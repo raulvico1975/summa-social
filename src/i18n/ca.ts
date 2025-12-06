@@ -831,6 +831,12 @@ export const ca = {
       selectAll: "Seleccionar tots",
       deselectAll: "Deseleccionar tots",
   },
+  logPanel: {
+    title: "Log de Diagnòstic",
+    waiting: "Esperant accions...",
+    errorBadge: "ERROR",
+    successBadge: "ÈXIT",
+  },
   categories: {
     donations: "Donacions",
     subsidies: "Subvencions",

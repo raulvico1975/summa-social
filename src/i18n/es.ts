@@ -858,6 +858,12 @@ export const es = {
       selectAll: "Seleccionar todos",
       deselectAll: "Deseleccionar todos",
   },
+  logPanel: {
+    title: "Log de Diagnóstico",
+    waiting: "Esperando acciones...",
+    errorBadge: "ERROR",
+    successBadge: "ÉXITO",
+  },
   categories: {
     donations: "Donaciones",
     subsidies: "Subvenciones",
