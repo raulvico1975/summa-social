@@ -61,7 +61,7 @@ export function DashboardSidebarContent() {
 
     } catch (error) {
        console.error("Error signing out: ", error);
-       toast({ variant: 'destructive', title: "Error", description: "No s'ha pogut tancar la sessió." });
+       toast({ variant: 'destructive', title: t.common.error, description: t.sidebar.logoutError });
     }
   };
 
@@ -87,19 +87,19 @@ export function DashboardSidebarContent() {
       },
       {
         path: '/dashboard/donants',
-        label: t.sidebar.donors || 'Donants',
+        label: t.sidebar.donors,
         icon: Heart,
         className: 'text-red-500',
       },
      {
         path: '/dashboard/proveidors',
-        label: t.sidebar.suppliers || 'Proveïdors',
+        label: t.sidebar.suppliers,
         icon: Building2,
         className: 'text-blue-500',
       },
       {
         path: '/dashboard/treballadors',
-        label: t.sidebar.employees || 'Treballadors',
+        label: t.sidebar.employees,
         icon: UserCog,
         className: 'text-purple-500',
       },
@@ -119,7 +119,7 @@ export function DashboardSidebarContent() {
     if (isSuperAdmin) {
       baseItems.push({
         path: '/dashboard/super-admin',
-        label: 'Super Admin',
+        label: t.sidebar.superAdmin,
         icon: Shield,
         className: 'text-purple-500',
       });

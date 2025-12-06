@@ -809,6 +809,7 @@ export const es = {
     projects: "Proyectos",
     donors: "Donantes",
     suppliers: "Proveedores",
+    employees: "Trabajadores",
     reports: "Informes",
     settings: "Configuración",
     logout: "Cerrar Sesión",
@@ -816,6 +817,7 @@ export const es = {
     anonymousUser: "Usuario Anónimo",
     logoutToastTitle: "Sesión Cerrada",
     logoutToastDescription: "Has cerrado sesión correctamente.",
+    logoutError: "No se ha podido cerrar la sesión.",
     superAdmin: "Super Admin",
   },
   login: {

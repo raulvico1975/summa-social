@@ -782,6 +782,7 @@ export const ca = {
     projects: "Projectes",
     donors: "Donants",
     suppliers: "Proveïdors",
+    employees: "Treballadors",
     reports: "Informes",
     settings: "Configuració",
     logout: "Tancar Sessió",
@@ -789,6 +790,7 @@ export const ca = {
     anonymousUser: "Usuari Anònim",
     logoutToastTitle: "Sessió Tancada",
     logoutToastDescription: "Has tancat sessió correctament.",
+    logoutError: "No s'ha pogut tancar la sessió.",
     superAdmin: "Super Admin",
   },
   login: {
