@@ -41,12 +41,7 @@ import { useCollection, useFirebase, useMemoFirebase, addDocumentNonBlocking, de
 import { collection, doc } from 'firebase/firestore';
 import { useTranslations } from '@/i18n';
 import { useCurrentOrganization } from '@/hooks/organization-provider';
-import { normalizeProject } from '@/lib/normalize';
-
-
-const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('es-ES', { style: 'currency', currency: 'EUR' }).format(amount);
-};
+import { normalizeProject, formatCurrencyEU } from '@/lib/normalize';
 
 
 export function ProjectManager() {
@@ -245,24 +240,24 @@ export function ProjectManager() {
                             </CardHeader>
                             <CardContent>
                                 <div className="grid gap-4 md:grid-cols-4">
-                                    <StatCard 
+                                    <StatCard
                                         title={t.projects.totalFunded}
-                                        value={formatCurrency(balance.funded)}
+                                        value={formatCurrencyEU(balance.funded)}
                                         icon={TrendingUp}
                                         />
-                                    <StatCard 
+                                    <StatCard
                                         title={t.projects.totalSent}
-                                        value={formatCurrency(balance.sent)}
+                                        value={formatCurrencyEU(balance.sent)}
                                         icon={TrendingDown}
                                         />
-                                    <StatCard 
+                                    <StatCard
                                         title={t.projects.expensesInSpain}
-                                        value={formatCurrency(balance.expenses)}
+                                        value={formatCurrencyEU(balance.expenses)}
                                         icon={Briefcase}
                                         />
-                                    <StatCard 
+                                    <StatCard
                                         title={t.projects.pendingBalance}
-                                        value={formatCurrency(remaining)}
+                                        value={formatCurrencyEU(remaining)}
                                         icon={DollarSign}
                                         />
                                 </div>

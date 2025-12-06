@@ -5,6 +5,7 @@ import { useFirebase, useCollection, useMemoFirebase } from '@/firebase';
 import { useCurrentOrganization } from '@/hooks/organization-provider';
 import { collection, query, where, getDocs, doc, getDoc } from 'firebase/firestore';
 import type { Transaction, Donor, Organization } from '@/lib/data';
+import { formatCurrencyEU } from '@/lib/normalize';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -126,12 +127,6 @@ export function DonationCertificateGenerator() {
     return Array.from({ length: 5 }, (_, i) => String(currentYear - i));
   }, []);
 
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat(language === 'ca' ? 'ca-ES' : 'es-ES', { 
-      style: 'currency', 
-      currency: 'EUR' 
-    }).format(amount);
-  };
 
   // Convertir número a text segons idioma
   const numberToWords = (num: number): string => {
@@ -451,7 +446,7 @@ export function DonationCertificateGenerator() {
     // Import total (en gran)
     doc.setFontSize(14);
     doc.setFont('helvetica', 'bold');
-    doc.text(formatCurrency(summary.totalAmount), pageWidth / 2, y, { align: 'center' });
+    doc.text(formatCurrencyEU(summary.totalAmount), pageWidth / 2, y, { align: 'center' });
     y += lineHeight;
     doc.setFontSize(10);
     doc.setFont('helvetica', 'italic');
@@ -597,7 +592,7 @@ export function DonationCertificateGenerator() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{formatCurrency(stats.totalAmount)}</div>
+            <div className="text-2xl font-bold">{formatCurrencyEU(stats.totalAmount)}</div>
             <p className="text-xs text-muted-foreground">
               {selectedYear}
             </p>
@@ -626,7 +621,7 @@ export function DonationCertificateGenerator() {
           <Undo2 className="h-4 w-4 text-orange-600" />
           <AlertTitle className="text-orange-800">{t.certificates.returnsDiscountedAlert}</AlertTitle>
           <AlertDescription className="text-orange-700">
-            {t.certificates.returnsDiscountedAlertDescription(totalReturns, formatCurrency(stats.totalReturned))}
+            {t.certificates.returnsDiscountedAlertDescription(totalReturns, formatCurrencyEU(stats.totalReturned))}
           </AlertDescription>
         </Alert>
       )}
@@ -713,14 +708,14 @@ export function DonationCertificateGenerator() {
                         <Badge variant="secondary">{summary.donationCount}</Badge>
                       </TableCell>
                       <TableCell className="text-right font-mono font-medium text-green-600">
-                        {formatCurrency(summary.totalAmount)}
+                        {formatCurrencyEU(summary.totalAmount)}
                       </TableCell>
                       {totalReturns > 0 && (
                         <TableCell className="text-right font-mono text-orange-500">
                           {summary.returnedAmount > 0 ? (
                             <span className="flex items-center justify-end gap-1">
                               <Undo2 className="h-3 w-3" />
-                              -{formatCurrency(summary.returnedAmount)}
+                              -{formatCurrencyEU(summary.returnedAmount)}
                             </span>
                           ) : (
                             <span className="text-muted-foreground">—</span>
@@ -823,7 +818,7 @@ export function DonationCertificateGenerator() {
                 {/* Import total */}
                 <div className="text-center py-6">
                   <p className="text-2xl font-bold text-green-600">
-                    {formatCurrency(previewDonor.totalAmount)}
+                    {formatCurrencyEU(previewDonor.totalAmount)}
                   </p>
                   <p className="text-gray-500 italic">
                     ({numberToWords(previewDonor.totalAmount)})

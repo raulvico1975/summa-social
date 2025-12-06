@@ -9,10 +9,7 @@ import { useCollection, useFirebase, useMemoFirebase } from '@/firebase';
 import { collection } from 'firebase/firestore';
 import { useTranslations } from '@/i18n';
 import { useCurrentOrganization } from '@/hooks/organization-provider';
-
-const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('es-ES', { style: 'currency', currency: 'EUR' }).format(amount);
-};
+import { formatCurrencyEU } from '@/lib/normalize';
 
 export default function DashboardPage() {
   const { firestore } = useFirebase();
@@ -57,27 +54,27 @@ export default function DashboardPage() {
       </div>
       
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <StatCard 
+        <StatCard
           title={t.dashboard.totalIncome}
-          value={formatCurrency(totalIncome)}
+          value={formatCurrencyEU(totalIncome)}
           icon={TrendingUp}
           description={t.dashboard.totalIncomeDescription}
         />
-        <StatCard 
+        <StatCard
           title={t.dashboard.operatingExpenses}
-          value={formatCurrency(totalExpenses)}
+          value={formatCurrencyEU(totalExpenses)}
           icon={TrendingDown}
           description={t.dashboard.operatingExpensesDescription}
         />
-         <StatCard 
+         <StatCard
           title={t.dashboard.operatingBalance}
-          value={formatCurrency(netBalance)}
+          value={formatCurrencyEU(netBalance)}
           icon={DollarSign}
           description={t.dashboard.operatingBalanceDescription}
         />
-        <StatCard 
+        <StatCard
           title={t.dashboard.missionTransfers}
-          value={formatCurrency(totalMissionTransfers)}
+          value={formatCurrencyEU(totalMissionTransfers)}
           icon={Rocket}
           description={t.dashboard.missionTransfersDescription}
         />

@@ -34,6 +34,7 @@ import {
 import { useToast } from '@/hooks/use-toast';
 import { useAppLog } from '@/hooks/use-app-log';
 import type { Transaction, Donor } from '@/lib/data';
+import { formatCurrencyEU } from '@/lib/normalize';
 import { 
   FileUp, 
   Loader2, 
@@ -616,9 +617,6 @@ export function RemittanceSplitter({
     }
   };
 
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('ca-ES', { style: 'currency', currency: 'EUR' }).format(amount);
-  };
 
   // ═══════════════════════════════════════════════════════════════════════════
   // RENDERITZACIÓ
@@ -951,9 +949,9 @@ export function RemittanceSplitter({
             {/* Import total */}
             <Alert variant={Math.abs(transaction.amount - totalAmount) < 0.01 ? "default" : "destructive"}>
               <CheckCircle2 className="h-4 w-4" />
-              <AlertTitle>Import total: {formatCurrency(totalAmount)}</AlertTitle>
+              <AlertTitle>Import total: {formatCurrencyEU(totalAmount)}</AlertTitle>
               <AlertDescription>
-                Coincideix amb la transacció original ({formatCurrency(transaction.amount)}) ✓
+                Coincideix amb la transacció original ({formatCurrencyEU(transaction.amount)}) ✓
               </AlertDescription>
             </Alert>
 
@@ -1033,7 +1031,7 @@ export function RemittanceSplitter({
                       <TableCell className="font-medium">{donation.name || '-'}</TableCell>
                       <TableCell className="font-mono text-xs">{donation.taxId || '-'}</TableCell>
                       <TableCell className="text-right font-mono">
-                        {formatCurrency(donation.amount)}
+                        {formatCurrencyEU(donation.amount)}
                       </TableCell>
                       <TableCell>
                         {donation.status === 'found' && (

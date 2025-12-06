@@ -26,6 +26,7 @@ import {
 } from '@/components/ui/alert';
 import { Download, Loader2, Heart, AlertTriangle, Undo2 } from 'lucide-react';
 import type { Donor, Transaction, AnyContact } from '@/lib/data';
+import { formatCurrencyEU } from '@/lib/normalize';
 import { useToast } from '@/hooks/use-toast';
 import Papa from 'papaparse';
 import { useCollection, useFirebase, useMemoFirebase } from '@/firebase';
@@ -189,7 +190,7 @@ export function DonationsReportGenerator() {
           <div>
             <p>{t.reports.reportGeneratedDescription(selectedYear, generatedReportData.length)}</p>
             <p className="text-orange-600 mt-1">
-              ⚠️ {t.reports.returnsDiscountedToast(excludedReturns, formatCurrency(excludedAmount))}
+              ⚠️ {t.reports.returnsDiscountedToast(excludedReturns, formatCurrencyEU(excludedAmount))}
             </p>
           </div>
         ),
@@ -230,9 +231,6 @@ export function DonationsReportGenerator() {
     toast({ title: t.reports.exportComplete, description: t.reports.exportCompleteDescription });
   };
   
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('es-ES', { style: 'currency', currency: 'EUR' }).format(amount);
-  };
 
   return (
       <Card>
@@ -276,7 +274,7 @@ export function DonationsReportGenerator() {
                 <Undo2 className="h-4 w-4 text-orange-600" />
                 <AlertTitle className="text-orange-800">{t.reports.returnsDiscountedTitle}</AlertTitle>
                 <AlertDescription className="text-orange-700">
-                  {t.reports.returnsDiscountedDescription(reportStats.excludedReturns, formatCurrency(reportStats.excludedAmount))}
+                  {t.reports.returnsDiscountedDescription(reportStats.excludedReturns, formatCurrencyEU(reportStats.excludedAmount))}
                 </AlertDescription>
               </Alert>
             )}
@@ -292,7 +290,7 @@ export function DonationsReportGenerator() {
                 </div>
                 <div className="bg-green-50 border border-green-200 rounded-lg p-3">
                   <p className="text-xs text-green-600 font-medium">{t.certificates.totalDonated}</p>
-                  <p className="text-2xl font-bold text-green-700">{formatCurrency(reportStats.totalAmount)}</p>
+                  <p className="text-2xl font-bold text-green-700">{formatCurrencyEU(reportStats.totalAmount)}</p>
                 </div>
                 {reportStats.excludedReturns > 0 && (
                   <>
@@ -302,7 +300,7 @@ export function DonationsReportGenerator() {
                     </div>
                     <div className="bg-orange-50 border border-orange-200 rounded-lg p-3">
                       <p className="text-xs text-orange-600 font-medium">{t.reports.discountedAmount}</p>
-                      <p className="text-2xl font-bold text-orange-700">{formatCurrency(reportStats.excludedAmount)}</p>
+                      <p className="text-2xl font-bold text-orange-700">{formatCurrencyEU(reportStats.excludedAmount)}</p>
                     </div>
                   </>
                 )}
@@ -332,14 +330,14 @@ export function DonationsReportGenerator() {
                       <TableCell>{row.donorTaxId}</TableCell>
                       <TableCell>{row.donorZipCode}</TableCell>
                       <TableCell className="text-right font-mono text-green-600 font-medium">
-                        {formatCurrency(row.totalAmount)}
+                        {formatCurrencyEU(row.totalAmount)}
                       </TableCell>
                       {reportStats?.excludedReturns ? (
                         <TableCell className="text-right font-mono text-orange-500">
                           {row.returnedAmount > 0 ? (
                             <span className="flex items-center justify-end gap-1">
                               <Undo2 className="h-3 w-3" />
-                              -{formatCurrency(row.returnedAmount)}
+                              -{formatCurrencyEU(row.returnedAmount)}
                             </span>
                           ) : (
                             <span className="text-muted-foreground">—</span>

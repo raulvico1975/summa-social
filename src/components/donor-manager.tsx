@@ -56,12 +56,7 @@ import { collection, doc, query, where } from 'firebase/firestore';
 import { useCurrentOrganization } from '@/hooks/organization-provider';
 import { DonorImporter } from './donor-importer';
 import { useTranslations } from '@/i18n';
-import { normalizeContact } from '@/lib/normalize';
-
-const formatCurrency = (amount?: number) => {
-  if (!amount) return '-';
-  return new Intl.NumberFormat('ca-ES', { style: 'currency', currency: 'EUR' }).format(amount);
-};
+import { normalizeContact, formatCurrencyEU } from '@/lib/normalize';
 
 type DonorFormData = Omit<Donor, 'id' | 'createdAt' | 'updatedAt'>;
 
@@ -310,8 +305,8 @@ export function DonorManager() {
                         )}
                       </TableCell>
                       <TableCell>
-                        {donor.membershipType === 'recurring' 
-                          ? formatCurrency(donor.monthlyAmount) + `/${t.donors.perMonth}`
+                        {donor.membershipType === 'recurring' && donor.monthlyAmount
+                          ? formatCurrencyEU(donor.monthlyAmount) + `/${t.donors.perMonth}`
                           : '-'
                         }
                       </TableCell>
