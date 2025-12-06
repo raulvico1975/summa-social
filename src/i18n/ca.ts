@@ -441,6 +441,10 @@ export const ca = {
     donorUpdatedDescription: (name: string) => `El donant "${name}" ha estat actualitzat.`,
     donorDeleted: "Donant Eliminat",
     donorDeletedDescription: (name: string) => `El donant "${name}" ha estat eliminat.`,
+    incompleteDataWarning: "⚠️ Dades incompletes",
+    incompleteDataWarningDescription: "No es podrà incloure al Model 182 sense DNI/CIF i Codi Postal.",
+    incompleteDataTooltip: "Falten dades pel Model 182",
+    errorNameRequired: "El nom és obligatori.",
     importer: {
       title: "Importar Donants",
       description: "Importa donants des d'un arxiu Excel o CSV.",

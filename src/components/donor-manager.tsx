@@ -158,10 +158,10 @@ export function DonorManager() {
 
   const handleSave = () => {
     if (!formData.name.trim()) {
-      toast({ 
-        variant: 'destructive', 
-        title: t.common.error, 
-        description: t.donors?.errorNameRequired || 'El nom és obligatori.'
+      toast({
+        variant: 'destructive',
+        title: t.common.error,
+        description: t.donors.errorNameRequired
       });
       return;
     }
@@ -179,8 +179,8 @@ export function DonorManager() {
     // Avís si falten dades pel Model 182
     if (!normalized.taxId || !normalized.zipCode) {
       toast({
-        title: '⚠️ Dades incompletes',
-        description: 'No es podrà incloure al Model 182 sense DNI/CIF i Codi Postal.',
+        title: t.donors.incompleteDataWarning,
+        description: t.donors.incompleteDataWarningDescription,
         duration: 5000,
       });
     }
@@ -199,15 +199,15 @@ export function DonorManager() {
 
     if (editingDonor) {
       setDocumentNonBlocking(doc(contactsCollection, editingDonor.id), dataToSave, { merge: true });
-      toast({ 
-        title: t.donors?.donorUpdated || 'Donant actualitzat', 
-        description: t.donors?.donorUpdatedDescription?.(normalized.name) || `S'ha actualitzat "${normalized.name}".`
+      toast({
+        title: t.donors.donorUpdated,
+        description: t.donors.donorUpdatedDescription(normalized.name)
       });
     } else {
       addDocumentNonBlocking(contactsCollection, { ...dataToSave, createdAt: now });
-      toast({ 
-        title: t.donors?.donorCreated || 'Donant creat', 
-        description: t.donors?.donorCreatedDescription?.(normalized.name) || `S'ha creat "${normalized.name}".`
+      toast({
+        title: t.donors.donorCreated,
+        description: t.donors.donorCreatedDescription(normalized.name)
       });
     }
     handleOpenChange(false);
@@ -282,7 +282,7 @@ export function DonorManager() {
                                 <AlertTriangle className="h-4 w-4 text-amber-500" />
                               </TooltipTrigger>
                               <TooltipContent>
-                                {t.donors.incompleteDataTooltip || 'Falten dades pel Model 182'}
+                                {t.donors.incompleteDataTooltip}
                               </TooltipContent>
                             </Tooltip>
                           )}
@@ -388,7 +388,7 @@ export function DonorManager() {
               </div>
 
               <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="address" className="text-right">{t.donors.address || 'Adreça'}</Label>
+                <Label htmlFor="address" className="text-right">{t.donors.address}</Label>
                 <Input
                   id="address"
                   value={formData.address || ''}

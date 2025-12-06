@@ -474,6 +474,10 @@ export const es = {
     donorUpdatedDescription: (name: string) => `El donante "${name}" ha sido actualizado.`,
     donorDeleted: "Donante Eliminado",
     donorDeletedDescription: (name: string) => `El donante "${name}" ha sido eliminado.`,
+    incompleteDataWarning: "⚠️ Datos incompletos",
+    incompleteDataWarningDescription: "No se podrá incluir en el Modelo 182 sin DNI/CIF y Código Postal.",
+    incompleteDataTooltip: "Faltan datos para el Modelo 182",
+    errorNameRequired: "El nombre es obligatorio.",
     importer: {
       title: "Importar Donantes",
       description: "Importa donantes desde un archivo Excel o CSV.",
