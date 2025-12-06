@@ -359,7 +359,7 @@ export function RemittanceSplitter({
       setAllRows(rows);
     }
 
-    toast({ title: 'Configuració aplicada', description: `S'ha aplicat la configuració "${mapping.name}"` });
+    toast({ title: t.movements.splitter.configurationApplied, description: t.movements.splitter.configurationAppliedDescription(mapping.name) });
   };
 
   const handleSaveMapping = async () => {
@@ -379,10 +379,10 @@ export function RemittanceSplitter({
       };
       await setDoc(mappingRef, mapping);
       setNewMappingName('');
-      toast({ title: 'Configuració guardada', description: `S'ha guardat com "${mapping.name}"` });
+      toast({ title: t.movements.splitter.configurationSaved, description: t.movements.splitter.configurationSavedDescription(mapping.name) });
     } catch (error) {
       console.error('Error saving mapping:', error);
-      toast({ variant: 'destructive', title: 'Error', description: 'No s\'ha pogut guardar la configuració' });
+      toast({ variant: 'destructive', title: t.movements.splitter.error, description: t.movements.splitter.errorSavingConfiguration });
     }
   };
 
@@ -390,7 +390,7 @@ export function RemittanceSplitter({
     if (!organizationId) return;
     try {
       await deleteDoc(doc(firestore, 'organizations', organizationId, 'remittanceMappings', mappingId));
-      toast({ title: 'Configuració eliminada' });
+      toast({ title: t.movements.splitter.configurationDeleted });
     } catch (error) {
       console.error('Error deleting mapping:', error);
     }
@@ -423,10 +423,10 @@ export function RemittanceSplitter({
 
   const handleContinueToPreview = () => {
     if (nameColumn === null && taxIdColumn === null) {
-      toast({ 
-        variant: 'destructive', 
-        title: 'Falta informació', 
-        description: 'Cal seleccionar almenys una columna de Nom o DNI/CIF' 
+      toast({
+        variant: 'destructive',
+        title: t.movements.splitter.missingInfo,
+        description: t.movements.splitter.missingInfoDescription
       });
       return;
     }
@@ -481,8 +481,8 @@ export function RemittanceSplitter({
       if (Math.abs(transaction.amount - total) > 0.01) {
         toast({
           variant: 'destructive',
-          title: 'Import no coincideix',
-          description: `L'import total del CSV (${total.toFixed(2)} €) no coincideix amb la transacció (${transaction.amount.toFixed(2)} €).`,
+          title: t.movements.splitter.amountMismatch,
+          description: t.movements.splitter.amountMismatchDescription(`${total.toFixed(2)} €`, `${transaction.amount.toFixed(2)} €`),
           duration: 9000,
         });
         setIsProcessing(false);
@@ -496,7 +496,7 @@ export function RemittanceSplitter({
 
     } catch (error: any) {
       console.error('Error processing data:', error);
-      toast({ variant: 'destructive', title: 'Error', description: error.message });
+      toast({ variant: 'destructive', title: t.movements.splitter.error, description: error.message });
     } finally {
       setIsProcessing(false);
     }
@@ -601,8 +601,8 @@ export function RemittanceSplitter({
 
       log(`[Splitter] ✅ Processament completat!`);
       toast({
-        title: 'Remesa processada correctament!',
-        description: `S'han creat ${parsedDonations.length} donacions${donorsToCreate.length > 0 ? ` i ${donorsToCreate.length} nous donants` : ''}.`,
+        title: t.movements.splitter.remittanceProcessed,
+        description: t.movements.splitter.remittanceProcessedDescription(parsedDonations.length, donorsToCreate.length),
       });
 
       onSplitDone();
@@ -610,7 +610,7 @@ export function RemittanceSplitter({
     } catch (error: any) {
       console.error("Error processing remittance:", error);
       log(`[Splitter] ERROR: ${error.message}`);
-      toast({ variant: 'destructive', title: 'Error', description: error.message, duration: 9000 });
+      toast({ variant: 'destructive', title: t.movements.splitter.error, description: error.message, duration: 9000 });
       setStep('preview');
     } finally {
       setIsProcessing(false);
@@ -638,17 +638,15 @@ export function RemittanceSplitter({
             <DialogHeader>
               <DialogTitle>{t.movements.splitter.title}</DialogTitle>
               <DialogDescription>
-                Puja l'arxiu CSV del teu banc amb el detall de la remesa.
-                L'assistent detectarà automàticament el format.
+                {t.movements.splitter.uploadDescription}
               </DialogDescription>
             </DialogHeader>
 
             <Alert>
               <Info className="h-4 w-4" />
-              <AlertTitle>Compatible amb qualsevol banc</AlertTitle>
+              <AlertTitle>{t.movements.splitter.compatibleBanks}</AlertTitle>
               <AlertDescription>
-                L'assistent s'adapta al format del teu banc. Després de pujar l'arxiu,
-                podràs revisar i ajustar el mapejat de columnes si cal.
+                {t.movements.splitter.compatibleBanksDescription}
               </AlertDescription>
             </Alert>
 
@@ -667,13 +665,13 @@ export function RemittanceSplitter({
               ) : (
                 <FileUp className="mr-2 h-4 w-4" />
               )}
-              Seleccionar arxiu CSV
+              {t.movements.splitter.selectCsvFile}
             </Button>
 
             <DialogFooter>
               <DialogClose asChild>
                 <Button type="button" variant="secondary">
-                  Cancel·lar
+                  {t.movements.splitter.cancel}
                 </Button>
               </DialogClose>
             </DialogFooter>
@@ -688,17 +686,17 @@ export function RemittanceSplitter({
             <DialogHeader>
               <DialogTitle className="flex items-center gap-2">
                 <Settings2 className="h-5 w-5" />
-                Configuració del mapejat
+                {t.movements.splitter.configureMappingTitle}
               </DialogTitle>
               <DialogDescription>
-                Revisa la previsualització i indica quina columna correspon a cada camp.
+                {t.movements.splitter.configureMappingDescription}
               </DialogDescription>
             </DialogHeader>
 
             {/* Configuracions guardades */}
             {savedMappings && savedMappings.length > 0 && (
               <div className="rounded-lg border p-3 bg-muted/50">
-                <Label className="text-sm font-medium">Configuracions guardades</Label>
+                <Label className="text-sm font-medium">{t.movements.splitter.savedConfigurations}</Label>
                 <div className="flex flex-wrap gap-2 mt-2">
                   {savedMappings.map(mapping => (
                     <div key={mapping.id} className="flex items-center gap-1">
@@ -726,7 +724,7 @@ export function RemittanceSplitter({
             {/* Configuració de parsing */}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
               <div className="space-y-1">
-                <Label className="text-xs">Delimitador</Label>
+                <Label className="text-xs">{t.movements.splitter.delimiter}</Label>
                 <Select value={delimiter} onValueChange={(v) => {
                   setDelimiter(v);
                   const lines = rawText.split('\n').filter(line => line.trim());
@@ -737,17 +735,17 @@ export function RemittanceSplitter({
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value=";">Punt i coma (;)</SelectItem>
-                    <SelectItem value=",">Coma (,)</SelectItem>
-                    <SelectItem value={"\t"}>Tabulador</SelectItem>
+                    <SelectItem value=";">{t.movements.splitter.semicolon}</SelectItem>
+                    <SelectItem value=",">{t.movements.splitter.comma}</SelectItem>
+                    <SelectItem value={"\t"}>{t.movements.splitter.tab}</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
               <div className="space-y-1">
-                <Label className="text-xs">Fila inicial de dades</Label>
-                <Input 
-                  type="number" 
-                  min={0} 
+                <Label className="text-xs">{t.movements.splitter.startRow}</Label>
+                <Input
+                  type="number"
+                  min={0}
                   max={allRows.length - 1}
                   value={startRow}
                   onChange={(e) => setStartRow(parseInt(e.target.value) || 0)}
@@ -755,9 +753,9 @@ export function RemittanceSplitter({
                 />
               </div>
               <div className="col-span-2 space-y-1">
-                <Label className="text-xs">Files totals detectades</Label>
+                <Label className="text-xs">{t.movements.splitter.totalRows}</Label>
                 <div className="h-8 flex items-center text-sm text-muted-foreground">
-                  {allRows.length} files ({allRows.length - startRow} de dades)
+                  {t.movements.splitter.totalRowsCount(allRows.length, allRows.length - startRow)}
                 </div>
               </div>
             </div>
@@ -766,7 +764,7 @@ export function RemittanceSplitter({
             <div className="space-y-2">
               <Label className="flex items-center gap-2">
                 <Eye className="h-4 w-4" />
-                Previsualització (primeres {previewRows.length} files de dades)
+                {t.movements.splitter.preview(previewRows.length)}
               </Label>
               <ScrollArea className="h-[180px] rounded-md border">
                 <Table>
@@ -775,7 +773,7 @@ export function RemittanceSplitter({
                       <TableHead className="w-12 text-xs">#</TableHead>
                       {Array.from({ length: numColumns }, (_, i) => (
                         <TableHead key={i} className="text-xs min-w-[100px]">
-                          Col. {i}
+                          {t.movements.splitter.columnPrefix(i)}
                         </TableHead>
                       ))}
                     </TableRow>
@@ -808,15 +806,15 @@ export function RemittanceSplitter({
 
             {/* Mapejat de columnes */}
             <div className="space-y-3 rounded-lg border p-4">
-              <Label className="font-medium">Mapejat de camps</Label>
+              <Label className="font-medium">{t.movements.splitter.fieldMapping}</Label>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div className="space-y-1">
                   <Label className="text-xs flex items-center gap-1">
                     <span className="w-3 h-3 rounded bg-green-500"></span>
-                    💰 Import (obligatori)
+                    {t.movements.splitter.amountMandatory}
                   </Label>
-                  <Select 
-                    value={String(amountColumn)} 
+                  <Select
+                    value={String(amountColumn)}
                     onValueChange={(v) => setAmountColumn(parseInt(v))}
                   >
                     <SelectTrigger className="h-8">
@@ -834,17 +832,17 @@ export function RemittanceSplitter({
                 <div className="space-y-1">
                   <Label className="text-xs flex items-center gap-1">
                     <span className="w-3 h-3 rounded bg-blue-500"></span>
-                    👤 Nom
+                    {t.movements.splitter.name}
                   </Label>
-                  <Select 
-                    value={nameColumn !== null ? String(nameColumn) : 'none'} 
+                  <Select
+                    value={nameColumn !== null ? String(nameColumn) : 'none'}
                     onValueChange={(v) => setNameColumn(v === 'none' ? null : parseInt(v))}
                   >
                     <SelectTrigger className="h-8">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="none">No disponible</SelectItem>
+                      <SelectItem value="none">{t.movements.splitter.notAvailable}</SelectItem>
                       {Array.from({ length: numColumns }, (_, i) => (
                         <SelectItem key={i} value={String(i)}>
                           Columna {i}: {previewRows[0]?.[i]?.substring(0, 20) || '-'}
@@ -856,17 +854,17 @@ export function RemittanceSplitter({
                 <div className="space-y-1">
                   <Label className="text-xs flex items-center gap-1">
                     <span className="w-3 h-3 rounded bg-purple-500"></span>
-                    🆔 DNI/CIF
+                    {t.movements.splitter.taxId}
                   </Label>
-                  <Select 
-                    value={taxIdColumn !== null ? String(taxIdColumn) : 'none'} 
+                  <Select
+                    value={taxIdColumn !== null ? String(taxIdColumn) : 'none'}
                     onValueChange={(v) => setTaxIdColumn(v === 'none' ? null : parseInt(v))}
                   >
                     <SelectTrigger className="h-8">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="none">No disponible</SelectItem>
+                      <SelectItem value="none">{t.movements.splitter.notAvailable}</SelectItem>
                       {Array.from({ length: numColumns }, (_, i) => (
                         <SelectItem key={i} value={String(i)}>
                           Columna {i}: {previewRows[0]?.[i]?.substring(0, 20) || '-'}
@@ -881,26 +879,26 @@ export function RemittanceSplitter({
             {/* Guardar configuració */}
             <div className="flex items-center gap-2">
               <Input
-                placeholder="Nom de la configuració (ex: Santander CORE)"
+                placeholder={t.movements.splitter.configName}
                 value={newMappingName}
                 onChange={(e) => setNewMappingName(e.target.value)}
                 className="flex-1 h-8"
               />
-              <Button 
-                variant="outline" 
+              <Button
+                variant="outline"
                 size="sm"
                 onClick={handleSaveMapping}
                 disabled={!newMappingName.trim()}
               >
                 <Save className="mr-1 h-3 w-3" />
-                Guardar
+                {t.movements.splitter.save}
               </Button>
             </div>
 
             <DialogFooter className="gap-2 sm:gap-0">
               <Button variant="outline" onClick={() => setStep('upload')}>
                 <ArrowLeft className="mr-2 h-4 w-4" />
-                Tornar
+                {t.movements.splitter.back}
               </Button>
               <Button onClick={handleContinueToPreview} disabled={isProcessing}>
                 {isProcessing ? (
@@ -908,7 +906,7 @@ export function RemittanceSplitter({
                 ) : (
                   <ArrowRight className="mr-2 h-4 w-4" />
                 )}
-                Continuar
+                {t.movements.splitter.continue}
               </Button>
             </DialogFooter>
           </>
@@ -920,9 +918,9 @@ export function RemittanceSplitter({
         {step === 'preview' && (
           <>
             <DialogHeader>
-              <DialogTitle>📊 Revisió de la Remesa</DialogTitle>
+              <DialogTitle>{t.movements.splitter.reviewTitle}</DialogTitle>
               <DialogDescription>
-                Revisa les donacions abans de processar. Pots decidir quins donants nous crear.
+                {t.movements.splitter.reviewDescription}
               </DialogDescription>
             </DialogHeader>
 
@@ -930,7 +928,7 @@ export function RemittanceSplitter({
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
               <div className="rounded-lg border p-3 text-center">
                 <div className="text-2xl font-bold">{parsedDonations.length}</div>
-                <div className="text-xs text-muted-foreground">Donacions</div>
+                <div className="text-xs text-muted-foreground">{t.movements.splitter.donations}</div>
               </div>
               <div className="rounded-lg border p-3 text-center">
                 <div className="text-2xl font-bold text-green-600">{stats.found}</div>
