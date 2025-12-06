@@ -274,7 +274,7 @@ export function TransactionImporter({ existingTransactions }: TransactionImporte
                 category: null,
                 document: null,
                 contactId: null,
-                contactType: null,
+                contactType: undefined,
                 transactionType,
             } as Omit<Transaction, 'id'>;
         })
@@ -298,22 +298,66 @@ export function TransactionImporter({ existingTransactions }: TransactionImporte
 
 
         if (transactionsToProcess.length > 0) {
-            log('Iniciando inferencia de contactos con IA...');
-            const contactsForAI = availableContacts?.map(c => ({ id: c.id, name: c.name })) || [];
-            const transactionsWithContacts = await Promise.all(transactionsToProcess.map(async (tx, index) => {
-                try {
-                    const result = await inferContact({ description: tx.description, contacts: contactsForAI });
-                    if (result.contactId) {
-                       const contact = availableContacts?.find(c => c.id === result.contactId);
-                       log(`[Fila ${index + 1}] Contacto inferido: ${contact?.name} para "${tx.description.substring(0,30)}..."`);
-                       return { ...tx, contactId: result.contactId, contactType: contact?.type || null };
+            // Desactivar auto-match amb IA si hi ha més de 50 transaccions (triga massa)
+            const SKIP_AI_THRESHOLD = 50;
+            const useAI = transactionsToProcess.length <= SKIP_AI_THRESHOLD;
+
+            let transactionsWithContacts: any[] = [];
+
+            log(`📊 Transacciones a procesar: ${transactionsToProcess.length}`);
+            log(`👥 Contactos disponibles: ${availableContacts?.length || 0}`);
+            log(`🤖 Auto-match con IA: ${useAI ? 'ACTIVADO' : 'DESACTIVADO'} (threshold: ${SKIP_AI_THRESHOLD})`);
+
+            if (useAI) {
+                log('🔍 Iniciando inferencia de contactos con IA...');
+                const contactsForAI = availableContacts?.map(c => ({ id: c.id, name: c.name })) || [];
+                log(`Contactos para IA: ${JSON.stringify(contactsForAI.slice(0, 5))}...`);
+
+                // Processar en lots per evitar superar la quota de l'API
+                // Quota gratuïta: 15 peticions/minut → processa 10 cada minut
+                const BATCH_SIZE = 10;  // Processar 10 transaccions per minut
+                const DELAY_MS = 60000; // Esperar 60 segons entre lots (1 minut)
+
+                for (let i = 0; i < transactionsToProcess.length; i += BATCH_SIZE) {
+                    const batch = transactionsToProcess.slice(i, i + BATCH_SIZE);
+                    log(`Procesando lote ${Math.floor(i / BATCH_SIZE) + 1}/${Math.ceil(transactionsToProcess.length / BATCH_SIZE)} (${batch.length} transacciones)...`);
+
+                    const batchResults = await Promise.all(batch.map(async (tx, batchIndex) => {
+                        const index = i + batchIndex;
+                        try {
+                            const result = await inferContact({ description: tx.description, contacts: contactsForAI });
+                            if (result.contactId) {
+                               const contact = availableContacts?.find(c => c.id === result.contactId);
+                               if (contact) {
+                                   log(`✅ [Fila ${index + 1}] Match: ${contact.name} (${contact.type}) - "${tx.description.substring(0,30)}..."`);
+                                   return { ...tx, contactId: result.contactId, contactType: contact.type };
+                               } else {
+                                   log(`⚠️ [Fila ${index + 1}] ID no trobat: ${result.contactId} - "${tx.description.substring(0,30)}..."`);
+                                   return { ...tx, contactId: result.contactId, contactType: undefined };
+                               }
+                            } else {
+                               log(`⚠️ [Fila ${index + 1}] IA no troba match - "${tx.description.substring(0,40)}..."`);
+                            }
+                        } catch (error) {
+                            console.error("Error inferring contact for a transaction:", error);
+                            log(`❌ ERROR en inferencia de contacto para fila ${index + 1}: ${error}`);
+                        }
+                        return tx;
+                    }));
+
+                    transactionsWithContacts.push(...batchResults);
+
+                    // Esperar entre lots (excepte l'últim)
+                    if (i + BATCH_SIZE < transactionsToProcess.length) {
+                        log(`Esperando ${DELAY_MS / 1000}s antes del siguiente lote...`);
+                        await new Promise(resolve => setTimeout(resolve, DELAY_MS));
                     }
-                } catch (error) {
-                    console.error("Error inferring contact for a transaction:", error);
-                    log(`ERROR en inferencia de contacto para fila ${index + 1}: ${error}`);
                 }
-                return tx;
-            }));
+            } else {
+                // Més de 50 transaccions: importar sense auto-match (massa lent amb la quota gratuïta)
+                log(`Se omite la inferencia de contactos con IA (${transactionsToProcess.length} > ${SKIP_AI_THRESHOLD} transacciones)`);
+                transactionsWithContacts = transactionsToProcess;
+            }
 
             const transactionsCollectionRef = collection(firestore, 'organizations', organizationId, 'transactions');
             const batch = writeBatch(firestore);

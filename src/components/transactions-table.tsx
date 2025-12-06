@@ -79,6 +79,7 @@ import {
   Ban,
 } from 'lucide-react';
 import type { Transaction, Category, Project, AnyContact, Donor, Supplier, TransactionType } from '@/lib/data';
+import { formatCurrencyEU } from '@/lib/normalize';
 import { categorizeTransaction } from '@/ai/flows/categorize-transactions';
 import { useToast } from '@/hooks/use-toast';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
@@ -396,7 +397,7 @@ export function TransactionsTable() {
 
     setLoadingStates((prev) => ({ ...prev, [txId]: true }));
     try {
-      log(`Iniciando categorización para la transacción: ${txId}`);
+      log(`🤖 Iniciando categorización para: "${transaction.description.substring(0, 40)}..."`);
       const expenseCategories = availableCategories.filter((c) => c.type === 'expense').map((c) => c.name);
       const incomeCategories = availableCategories.filter((c) => c.type === 'income').map((c) => c.name);
 
@@ -406,15 +407,15 @@ export function TransactionsTable() {
         expenseCategories,
         incomeCategories,
       });
-      
+
       updateDocumentNonBlocking(doc(transactionsCollection, txId), { category: result.category });
-      
+
       const categoryName = categoryTranslations[result.category] || result.category;
       toast({
         title: 'Categorització Automàtica',
         description: `Transacció classificada com "${categoryName}" amb una confiança del ${(result.confidence * 100).toFixed(0)}%.`,
       });
-      log(`¡Éxito! Transacción ${txId} clasificada como "${categoryName}".`);
+      log(`✅ Transacció classificada com "${categoryName}" (confiança: ${(result.confidence * 100).toFixed(0)}%).`);
     } catch (error) {
       console.error('Error categorizing transaction:', error);
       toast({
@@ -422,7 +423,7 @@ export function TransactionsTable() {
         title: 'Error de IA',
         description: 'No s\'ha pogut categoritzar la transacció.',
       });
-       log(`ERROR categorizando ${txId}: ${error}`);
+       log(`❌ ERROR categorizando: ${error}`);
     } finally {
       setLoadingStates((prev) => ({ ...prev, [txId]: false }));
     }
@@ -440,36 +441,59 @@ export function TransactionsTable() {
     }
 
     setIsBatchCategorizing(true);
-    log(`Iniciando clasificación masiva de ${transactionsToCategorize.length} moviments.`);
+    log(`📊 Iniciando clasificación masiva de ${transactionsToCategorize.length} moviments.`);
     toast({ title: 'Iniciant classificació massiva...', description: `Classificant ${transactionsToCategorize.length} moviments.`});
 
     let successCount = 0;
 
-    for (const tx of transactionsToCategorize) {
-      log(`Clasificando movimiento ${successCount + 1}/${transactionsToCategorize.length}: "${tx.description.substring(0, 30)}..."`);
-      try {
-        const expenseCategories = availableCategories.filter((c) => c.type === 'expense').map((c) => c.name);
-        const incomeCategories = availableCategories.filter((c) => c.type === 'income').map((c) => c.name);
+    // Processar en lots per evitar superar la quota de l'API
+    // Quota gratuïta: 15 peticions/minut → processa 10 cada minut
+    const BATCH_SIZE = 10;
+    const DELAY_MS = 60000; // 60 segons entre lots
 
-        const result = await categorizeTransaction({
-          description: tx.description,
-          amount: tx.amount,
-          expenseCategories,
-          incomeCategories,
-        });
+    const expenseCategories = availableCategories.filter((c) => c.type === 'expense').map((c) => c.name);
+    const incomeCategories = availableCategories.filter((c) => c.type === 'income').map((c) => c.name);
 
-        updateDocumentNonBlocking(doc(transactionsCollection, tx.id), { category: result.category });
-        successCount++;
-        const categoryName = categoryTranslations[result.category] || result.category;
-        log(`¡Éxito! Movimiento ${tx.id} clasificado como "${categoryName}".`);
-      } catch (error) {
-        console.error('Error categorizing transaction:', error);
-        log(`ERROR categorizando ${tx.id}: ${error}`);
+    for (let i = 0; i < transactionsToCategorize.length; i += BATCH_SIZE) {
+      const batch = transactionsToCategorize.slice(i, i + BATCH_SIZE);
+      const batchNumber = Math.floor(i / BATCH_SIZE) + 1;
+      const totalBatches = Math.ceil(transactionsToCategorize.length / BATCH_SIZE);
+
+      log(`🔄 Procesando lote ${batchNumber}/${totalBatches} (${batch.length} transacciones)...`);
+
+      const batchResults = await Promise.all(batch.map(async (tx, batchIndex) => {
+        const index = i + batchIndex;
+        log(`Clasificando movimiento ${index + 1}/${transactionsToCategorize.length}: "${tx.description.substring(0, 30)}..."`);
+        try {
+          const result = await categorizeTransaction({
+            description: tx.description,
+            amount: tx.amount,
+            expenseCategories,
+            incomeCategories,
+          });
+
+          updateDocumentNonBlocking(doc(transactionsCollection, tx.id), { category: result.category });
+          const categoryName = categoryTranslations[result.category] || result.category;
+          log(`✅ Movimiento ${tx.id} clasificado como "${categoryName}".`);
+          return { success: true };
+        } catch (error) {
+          console.error('Error categorizing transaction:', error);
+          log(`❌ ERROR categorizando ${tx.id}: ${error}`);
+          return { success: false };
+        }
+      }));
+
+      successCount += batchResults.filter(r => r.success).length;
+
+      // Esperar entre lots (excepte l'últim)
+      if (i + BATCH_SIZE < transactionsToCategorize.length) {
+        log(`⏳ Esperando ${DELAY_MS / 1000}s antes del siguiente lote...`);
+        await new Promise(resolve => setTimeout(resolve, DELAY_MS));
       }
     }
-    
+
     setIsBatchCategorizing(false);
-    log(`¡Éxito! Clasificación masiva completada. ${successCount} moviments clasificados.`);
+    log(`✅ Clasificación masiva completada. ${successCount} moviments clasificados.`);
     toast({ title: 'Classificació massiva completada', description: `S'han classificat ${successCount} moviments.`});
   };
 
@@ -562,9 +586,6 @@ export function TransactionsTable() {
     fileInput.click();
   };
   
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('ca-ES', { style: 'currency', currency: 'EUR' }).format(amount);
-  };
 
   const formatDate = (dateString: string) => {
     try {
@@ -907,7 +928,7 @@ export function TransactionsTable() {
                       tx.amount > 0 ? 'text-green-600' : 'text-foreground'
                     }`}
                   >
-                    {formatCurrency(tx.amount)}
+                    {formatCurrencyEU(tx.amount)}
                   </TableCell>
                   {/* Columna Concepte + Nota + Badge devolució */}
                   <TableCell>
@@ -1241,7 +1262,7 @@ export function TransactionsTable() {
                 <p className="text-sm font-medium text-red-800">Devolució</p>
                 <p className="text-sm text-red-600 truncate">{returnTransaction.description}</p>
                 <p className="text-lg font-bold text-red-700 mt-1">
-                  {formatCurrency(returnTransaction.amount)}
+                  {formatCurrencyEU(returnTransaction.amount)}
                 </p>
                 <p className="text-xs text-red-500">{formatDate(returnTransaction.date)}</p>
               </div>
@@ -1297,7 +1318,7 @@ export function TransactionsTable() {
                         <SelectItem value="">No vincular</SelectItem>
                         {donorDonations.map(donation => (
                           <SelectItem key={donation.id} value={donation.id}>
-                            {formatDate(donation.date)} - {formatCurrency(donation.amount)}
+                            {formatDate(donation.date)} - {formatCurrencyEU(donation.amount)}
                           </SelectItem>
                         ))}
                       </SelectContent>
