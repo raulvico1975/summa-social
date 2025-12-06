@@ -22,7 +22,12 @@ export const ca = {
     donationsAndMembers: "Donacions i Socis",
     donations: "Donacions",
     activeDonors: "Donants actius",
-    memberFees: "Quotes socis"
+    memberFees: "Quotes socis",
+    alerts: "Atenció",
+    uncategorizedMovements: "Moviments pendents de revisar",
+    incompleteDonors: "Donants amb dades incompletes",
+    movementsWithoutContact: "Moviments sense contacte assignat",
+    allClear: "Tot al dia!"
   },
   movements: {
     title: "Moviments",

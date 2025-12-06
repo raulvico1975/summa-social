@@ -22,7 +22,12 @@ export const es = {
     donationsAndMembers: "Donaciones y Socios",
     donations: "Donaciones",
     activeDonors: "Donantes activos",
-    memberFees: "Cuotas socios"
+    memberFees: "Cuotas socios",
+    alerts: "Atención",
+    uncategorizedMovements: "Movimientos pendientes de revisar",
+    incompleteDonors: "Donantes con datos incompletos",
+    movementsWithoutContact: "Movimientos sin contacto asignado",
+    allClear: "¡Todo al día!"
   },
   movements: {
     title: "Movimientos",
