@@ -30,6 +30,7 @@ import {
 import { useCollection, useFirebase, useMemoFirebase } from '@/firebase';
 import { collection, writeBatch, doc } from 'firebase/firestore';
 import { useCurrentOrganization } from '@/hooks/organization-provider';
+import { useTranslations } from '@/i18n';
 
 
 type ImportMode = 'append' | 'replace';
@@ -73,6 +74,7 @@ export function TransactionImporter({ existingTransactions }: TransactionImporte
   const { log } = useAppLog();
   const { firestore } = useFirebase();
   const { organizationId } = useCurrentOrganization();
+  const { t } = useTranslations();
 
   const contactsQuery = useMemoFirebase(
     () => organizationId ? collection(firestore, 'organizations', organizationId, 'contacts') : null,
@@ -112,8 +114,8 @@ export function TransactionImporter({ existingTransactions }: TransactionImporte
     } else {
         toast({
             variant: 'destructive',
-            title: 'Formato no soportado',
-            description: 'Por favor, sube un archivo .csv o .xlsx',
+            title: t.importers.transaction.errors.unsupportedFormat,
+            description: t.importers.transaction.errors.unsupportedFormatDescription,
         });
         setIsImporting(false);
     }
@@ -130,7 +132,7 @@ export function TransactionImporter({ existingTransactions }: TransactionImporte
         const json = XLSX.utils.sheet_to_json(worksheet, { header: 1, defval: "" });
         
         if (!json || json.length === 0) {
-            throw new Error("El archivo XLSX está vacío o no tiene un formato válido.");
+            throw new Error(t.importers.transaction.errors.emptyXlsx);
         }
         
         let headerRowIndex = -1;
@@ -142,7 +144,7 @@ export function TransactionImporter({ existingTransactions }: TransactionImporte
         }
 
         if (headerRowIndex === -1) {
-             throw new Error(`No se ha podido encontrar la fila de cabecera. Asegúrate de que el archivo contiene columnas como 'Fecha', 'Concepto' e 'Importe'.`);
+             throw new Error(t.importers.transaction.errors.headerNotFound);
         }
         
         const header = (json[headerRowIndex] as string[]).map(h => String(h || '').trim());
@@ -158,7 +160,7 @@ export function TransactionImporter({ existingTransactions }: TransactionImporte
                 ...(conceptIndex === -1 ? ['Concepto'] : []),
                 ...(amountIndex === -1 ? ['Importe'] : [])
             ].join(', ');
-            throw new Error(`Columnas requeridas no encontradas: ${missing}. Cabeceras encontradas: ${header.join(', ')}`);
+            throw new Error(t.importers.transaction.errors.requiredColumnsNotFound(missing));
         }
 
         const dataRows = json.slice(headerRowIndex + 1);
@@ -173,8 +175,8 @@ export function TransactionImporter({ existingTransactions }: TransactionImporte
         console.error("Error processing XLSX data:", error);
         toast({
           variant: 'destructive',
-          title: 'Error de Importación',
-          description: error.message || 'No se pudo procesar el archivo XLSX.',
+          title: t.importers.transaction.errors.importError,
+          description: error.message || t.importers.transaction.errors.cannotProcessXlsx,
           duration: 9000,
         });
         setIsImporting(false);
@@ -183,8 +185,8 @@ export function TransactionImporter({ existingTransactions }: TransactionImporte
     reader.onerror = () => {
          toast({
           variant: 'destructive',
-          title: 'Error de Lectura',
-          description: 'No se pudo leer el archivo.',
+          title: t.importers.transaction.errors.readError,
+          description: t.importers.transaction.errors.cannotReadFile,
         });
         setIsImporting(false);
     }
@@ -202,8 +204,8 @@ export function TransactionImporter({ existingTransactions }: TransactionImporte
         console.error("PapaParse error:", error);
         toast({
           variant: 'destructive',
-          title: 'Error de Importación',
-          description: 'No se pudo leer el archivo CSV.',
+          title: t.importers.transaction.errors.importError,
+          description: t.importers.transaction.errors.cannotReadCsv,
         });
         setIsImporting(false);
       }
@@ -212,7 +214,7 @@ export function TransactionImporter({ existingTransactions }: TransactionImporte
 
   const processParsedData = async (data: any[], mode: ImportMode) => {
      if (!organizationId) {
-        toast({ variant: 'destructive', title: 'Error', description: 'No s\'ha pogut identificar l\'organització.' });
+        toast({ variant: 'destructive', title: t.importers.transaction.errors.processingError, description: t.importers.transaction.errors.cannotIdentifyOrg });
         setIsImporting(false);
         return;
      }
@@ -377,17 +379,17 @@ export function TransactionImporter({ existingTransactions }: TransactionImporte
             await batch.commit();
 
             toast({
-                title: 'Importación Exitosa',
-                description: `Se han importado ${transactionsToProcess.length} transacciones. ${mode === 'append' ? `Se omitieron ${duplicatesFound} duplicados.` : ''}`,
+                title: t.importers.transaction.importSuccess,
+                description: t.importers.transaction.importSuccessDescription(transactionsToProcess.length, mode, duplicatesFound),
             });
             log('¡Éxito! Importación completada.');
 
         } else {
              toast({
-                title: mode === 'append' && duplicatesFound > 0 ? 'No hay transacciones nuevas' : 'No se encontraron transacciones',
-                description: mode === 'append' && duplicatesFound > 0 
-                    ? `Se encontraron y omitieron ${duplicatesFound} transacciones duplicadas.` 
-                    : 'No se encontraron transacciones válidas en el archivo o ya existen todas.',
+                title: mode === 'append' && duplicatesFound > 0 ? t.importers.transaction.noNewTransactions : t.importers.transaction.noTransactionsFound,
+                description: mode === 'append' && duplicatesFound > 0
+                    ? t.importers.transaction.duplicatesOmitted(duplicatesFound)
+                    : t.importers.transaction.noValidTransactions,
              });
              log('No se encontraron transacciones nuevas para importar.');
         }
@@ -395,8 +397,8 @@ export function TransactionImporter({ existingTransactions }: TransactionImporte
         console.error("Error processing parsed data:", error);
         toast({
         variant: 'destructive',
-        title: 'Error de Procesamiento',
-        description: error.message || 'No se pudo procesar el contenido del archivo. Revisa el formato y los datos.',
+        title: t.importers.transaction.errors.processingError,
+        description: error.message || t.importers.transaction.errors.cannotProcessContent,
         });
         log(`ERROR: ${error.message}`);
     } finally {
@@ -429,18 +431,18 @@ export function TransactionImporter({ existingTransactions }: TransactionImporte
                     ) : (
                         <FileUp className="mr-2 h-4 w-4" />
                     )}
-                    Importar
+                    {t.importers.transaction.title}
                     <ChevronDown className="ml-2 h-4 w-4" />
                 </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
                 <DropdownMenuItem onClick={() => handleMenuClick('append')}>
                     <ListPlus className="mr-2 h-4 w-4" />
-                    <span>Afegir moviments</span>
+                    <span>{t.importers.transaction.addMovements}</span>
                 </DropdownMenuItem>
                 <DropdownMenuItem onClick={() => handleMenuClick('replace')} className="text-red-500">
                      <Trash2 className="mr-2 h-4 w-4" />
-                    <span>Reemplaçar tot</span>
+                    <span>{t.importers.transaction.replaceAll}</span>
                 </DropdownMenuItem>
             </DropdownMenuContent>
         </DropdownMenu>
@@ -449,16 +451,15 @@ export function TransactionImporter({ existingTransactions }: TransactionImporte
        <AlertDialog open={isAlertOpen} onOpenChange={setIsAlertOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>¿Estás a punto de reemplazar todo?</AlertDialogTitle>
+            <AlertDialogTitle>{t.importers.transaction.replaceAllWarning}</AlertDialogTitle>
             <AlertDialogDescription>
-              Aquesta acció esborrarà permanentment tots els moviments actuals i els substituirà
-              pels del nou arxiu. Aquesta operació no es pot desfer.
+              {t.importers.transaction.replaceAllDescription}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel onClick={() => setPendingFile(null)}>Cancelar</AlertDialogCancel>
+            <AlertDialogCancel onClick={() => setPendingFile(null)}>{t.importers.transaction.cancel}</AlertDialogCancel>
             <AlertDialogAction onClick={handleConfirmReplace}>
-              Sí, reemplaçar-ho tot
+              {t.importers.transaction.confirmReplace}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
