@@ -206,7 +206,7 @@ export function ProjectManager() {
     setFormData({ ...formData, funderId: docRef.id });
 
     toast({
-      description: `S'ha creat el finançador "${newFunderName.trim()}".`,
+      description: t.projects.funderCreated(newFunderName.trim()),
     });
 
     setNewFunderName('');
@@ -338,7 +338,7 @@ export function ProjectManager() {
                 onClick={() => setIsFunderDialogOpen(true)}
               >
                 <PlusCircle className="mr-2 h-4 w-4" />
-                Crear finançador nou
+                {t.projects.createFunder}
               </Button>
             </div>
           </div>
@@ -372,19 +372,19 @@ export function ProjectManager() {
       <Dialog open={isFunderDialogOpen} onOpenChange={setIsFunderDialogOpen}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle>Crear finançador nou</DialogTitle>
+            <DialogTitle>{t.projects.createFunderDialogTitle}</DialogTitle>
             <DialogDescription>
-              Introdueix el nom del finançador que vols afegir a la llista.
+              {t.projects.createFunderDialogDescription}
             </DialogDescription>
           </DialogHeader>
           <div className="grid gap-4 py-4">
             <div className="grid gap-2">
-              <Label htmlFor="funder-name">Nom del finançador *</Label>
+              <Label htmlFor="funder-name">{t.projects.funderNameLabel}</Label>
               <Input
                 id="funder-name"
                 value={newFunderName}
                 onChange={(e) => setNewFunderName(e.target.value)}
-                placeholder="Fundació Example..."
+                placeholder={t.projects.funderNamePlaceholder}
                 onKeyDown={(e) => {
                   if (e.key === 'Enter') {
                     e.preventDefault();
@@ -400,7 +400,7 @@ export function ProjectManager() {
             </DialogClose>
             <Button onClick={handleCreateFunder}>
               <PlusCircle className="mr-2 h-4 w-4" />
-              Crear
+              {t.common.add}
             </Button>
           </DialogFooter>
         </DialogContent>
