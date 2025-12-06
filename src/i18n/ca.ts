@@ -18,7 +18,11 @@ export const ca = {
     filterMonth: "Mes",
     filterCustom: "Personalitzat",
     filterFrom: "Des de",
-    filterTo: "Fins a"
+    filterTo: "Fins a",
+    donationsAndMembers: "Donacions i Socis",
+    donations: "Donacions",
+    activeDonors: "Donants actius",
+    memberFees: "Quotes socis"
   },
   movements: {
     title: "Moviments",

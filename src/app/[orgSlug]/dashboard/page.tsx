@@ -3,7 +3,7 @@ import * as React from 'react';
 import { StatCard } from '@/components/stat-card';
 import { ExpensesChart } from '@/components/expenses-chart';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { DollarSign, TrendingUp, TrendingDown, Rocket } from 'lucide-react';
+import { DollarSign, TrendingUp, TrendingDown, Rocket, Heart } from 'lucide-react';
 import type { Transaction } from '@/lib/data';
 import { useCollection, useFirebase, useMemoFirebase } from '@/firebase';
 import { collection } from 'firebase/firestore';
@@ -48,7 +48,40 @@ export default function DashboardPage() {
   const expenseTransactions = React.useMemo(() =>
     filteredTransactions?.filter(tx => tx.amount < 0 && tx.category !== MISSION_TRANSFER_CATEGORY_KEY) || [],
   [filteredTransactions]);
-  
+
+  const { totalDonations, uniqueDonors, memberFees } = React.useMemo(() => {
+    if (!filteredTransactions) return { totalDonations: 0, uniqueDonors: 0, memberFees: 0 };
+
+    const donorIds = new Set<string>();
+    let donations = 0;
+    let fees = 0;
+
+    filteredTransactions.forEach(tx => {
+      // Només ingressos (amount > 0)
+      if (tx.amount > 0) {
+        // Donacions: contactType === 'donor'
+        if (tx.contactType === 'donor') {
+          donations += tx.amount;
+          if (tx.contactId) {
+            donorIds.add(tx.contactId);
+          }
+        }
+
+        // Quotes socis: categoria conté "quota" o "soci"
+        if (tx.category?.toLowerCase().includes('quota') ||
+            tx.category?.toLowerCase().includes('soci')) {
+          fees += tx.amount;
+        }
+      }
+    });
+
+    return {
+      totalDonations: donations,
+      uniqueDonors: donorIds.size,
+      memberFees: fees
+    };
+  }, [filteredTransactions]);
+
   const netBalance = totalIncome + totalExpenses;
 
   return (
@@ -86,6 +119,31 @@ export default function DashboardPage() {
           description={t.dashboard.missionTransfersDescription}
         />
       </div>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Heart className="h-5 w-5 text-pink-500" />
+            {t.dashboard.donationsAndMembers}
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid gap-4 md:grid-cols-3">
+            <div>
+              <p className="text-sm text-muted-foreground">{t.dashboard.donations}</p>
+              <p className="text-2xl font-bold">{formatCurrencyEU(totalDonations)}</p>
+            </div>
+            <div>
+              <p className="text-sm text-muted-foreground">{t.dashboard.activeDonors}</p>
+              <p className="text-2xl font-bold">{uniqueDonors}</p>
+            </div>
+            <div>
+              <p className="text-sm text-muted-foreground">{t.dashboard.memberFees}</p>
+              <p className="text-2xl font-bold">{formatCurrencyEU(memberFees)}</p>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
 
       <Card>
         <CardHeader>

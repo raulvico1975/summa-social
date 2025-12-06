@@ -18,7 +18,11 @@ export const es = {
     filterMonth: "Mes",
     filterCustom: "Personalizado",
     filterFrom: "Desde",
-    filterTo: "Hasta"
+    filterTo: "Hasta",
+    donationsAndMembers: "Donaciones y Socios",
+    donations: "Donaciones",
+    activeDonors: "Donantes activos",
+    memberFees: "Cuotas socios"
   },
   movements: {
     title: "Movimientos",
