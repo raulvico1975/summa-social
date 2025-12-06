@@ -63,8 +63,8 @@ export function OrganizationSettings() {
         console.error('Error carregant organització:', error);
         toast({
           variant: 'destructive',
-          title: 'Error',
-          description: 'No s\'han pogut carregar les dades de l\'organització.',
+          title: t.settings.organization.errorLoading,
+          description: t.settings.organization.errorLoadingDescription,
         });
       } finally {
         setLoading(false);
@@ -108,8 +108,8 @@ export function OrganizationSettings() {
       console.error('Error guardant:', error);
       toast({
         variant: 'destructive',
-        title: 'Error',
-        description: 'No s\'han pogut guardar les dades.',
+        title: t.common.error,
+        description: t.settings.organization.errorSaving,
       });
     } finally {
       setSaving(false);
@@ -121,12 +121,12 @@ export function OrganizationSettings() {
     if (!file || !organizationId || !storage) return;
 
     if (!file.type.startsWith('image/')) {
-      toast({ variant: 'destructive', title: 'Error', description: 'El fitxer ha de ser una imatge.' });
+      toast({ variant: 'destructive', title: t.common.error, description: t.settings.organization.errorInvalidImage });
       return;
     }
 
     if (file.size > 2 * 1024 * 1024) { // 2MB
-      toast({ variant: 'destructive', title: 'Error', description: 'La imatge no pot superar els 2MB.' });
+      toast({ variant: 'destructive', title: t.common.error, description: t.settings.organization.errorImageTooLarge });
       return;
     }
 
@@ -137,14 +137,14 @@ export function OrganizationSettings() {
       const downloadUrl = await getDownloadURL(logoRef);
       
       setFormData(prev => ({ ...prev, logoUrl: downloadUrl }));
-      
+
       toast({
         title: t.settings.organization.uploadLogo,
-        description: 'El logo s\'ha pujat correctament. Recorda guardar els canvis.',
+        description: t.settings.organization.logoUploadedSuccess,
       });
     } catch (error) {
       console.error('Error pujant logo:', error);
-      toast({ variant: 'destructive', title: 'Error', description: 'No s\'ha pogut pujar el logo.' });
+      toast({ variant: 'destructive', title: t.common.error, description: t.settings.organization.errorUploadingLogo });
     } finally {
       setUploadingLogo(false);
     }

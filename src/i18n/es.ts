@@ -609,7 +609,8 @@ export const es = {
     totalAmount: "Importe Total Anual",
     generating: "Generando informe...",
     noData: "Selecciona un año y genera el informe para ver los datos.",
-    noDataToExport: "No hay datos para exportar. Genera primero el informe.",
+    noDataToExport: "No hay datos para exportar.",
+    noDataToExportDescription: "Genera primero el informe antes de exportar.",
     dataNotAvailable: "Datos no disponibles",
     dataNotAvailableDescription: "No se pudieron cargar las transacciones o los emisores.",
     reportGenerated: "Informe Generado",
@@ -617,14 +618,18 @@ export const es = {
     exportComplete: "Exportación Completada",
     exportCompleteDescription: "El informe de donaciones se ha descargado como archivo CSV.",
     returnsDiscountedTitle: "Devoluciones descontadas",
-    returnsDiscountedDescription: (count: number, amount: string) => 
+    returnsDiscountedDescription: (count: number, amount: string) =>
       `Se han descontado ${count} devolución${count > 1 ? 'es' : ''} por un total de ${amount} del total de donaciones. El Modelo 182 refleja las donaciones netas efectivamente recibidas.`,
-    returnsDiscountedToast: (count: number, amount: string) => 
+    returnsDiscountedToast: (count: number, amount: string) =>
       `Se han descontado ${count} devolución${count > 1 ? 'es' : ''} (${amount})`,
     columnDiscounted: "Descontado",
     returns: "Devoluciones",
     discountedAmount: "Importe descontado",
     netDonationsNote: "Este informe muestra las donaciones netas (donaciones - devoluciones) por cada donante. Las devoluciones vinculadas a un donante se restan automáticamente de su total, de acuerdo con la normativa fiscal del Modelo 182.",
+    csvHeaderFullName: "Nombre Completo",
+    csvHeaderTaxId: "DNI/CIF",
+    csvHeaderZipCode: "Código Postal",
+    csvHeaderAmount: "Importe Donado",
   },
   certificates: {
     title: "Certificados de Donación",
@@ -751,6 +756,13 @@ export const es = {
       logoHint: "Formato recomendado: PNG o JPG, máximo 2MB",
       saved: "Datos guardados",
       savedDescription: "Los datos de la organización se han actualizado correctamente.",
+      errorLoading: "Error cargando organización",
+      errorLoadingDescription: "No se han podido cargar los datos de la organización.",
+      errorSaving: "No se han podido guardar los datos.",
+      errorInvalidImage: "El archivo debe ser una imagen.",
+      errorImageTooLarge: "La imagen no puede superar los 2MB.",
+      logoUploadedSuccess: "El logo se ha subido correctamente. Recuerda guardar los cambios.",
+      errorUploadingLogo: "No se ha podido subir el logo.",
     }
   },
   members: {
@@ -786,6 +798,8 @@ export const es = {
     invitationLink: "Enlace de invitación",
     linkCopied: "¡Enlace copiado!",
     linkExpires: "El enlace expira en 7 días.",
+    selectAndCopy: "Selecciona y copia",
+    selectAndCopyDescription: "Pulsa Cmd+C (Mac) o Ctrl+C (Windows) para copiar",
     confirmRemoveTitle: "¿Eliminar miembro?",
     confirmRemoveDescription: (name: string) => `¿Estás seguro de que quieres eliminar a ${name} de la organización? Perderá el acceso inmediatamente.`,
     confirmCancelInvitationTitle: "¿Cancelar invitación?",
@@ -834,7 +848,9 @@ export const es = {
     access: "Acceder al Panel de Control",
     accessing: "Accediendo...",
     loginSuccess: "Sesión iniciada",
-    loginDescription: "¡Bienvenido de nuevo!"
+    loginDescription: "¡Bienvenido de nuevo!",
+    noOrganization: "No tienes ninguna organización asignada. Contacta con el administrador.",
+    verifyingSession: "Verificando sesión...",
   },
   common: {
       cancel: "Cancelar",

@@ -154,9 +154,9 @@ export function InviteMemberDialog({ open, onOpenChange, onInviteCreated }: Invi
       } catch (err) {
         // Si falla el clipboard API, seleccionem el text per copiar manualment
         inputRef.current?.select();
-        toast({ 
-          title: t.members.selectAndCopy || 'Selecciona i copia',
-          description: t.members.selectAndCopyDescription || 'Prem Cmd+C (Mac) o Ctrl+C (Windows) per copiar',
+        toast({
+          title: t.members.selectAndCopy,
+          description: t.members.selectAndCopyDescription,
         });
       }
     }

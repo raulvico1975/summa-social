@@ -206,15 +206,15 @@ export function DonationsReportGenerator() {
 
   const handleExportCSV = () => {
     if (reportData.length === 0) {
-      toast({ variant: 'destructive', title: t.reports.noDataToExport, description: "Genera primer l'informe abans d'exportar." });
+      toast({ variant: 'destructive', title: t.reports.noDataToExport, description: t.reports.noDataToExportDescription });
       return;
     }
 
     const csvData = reportData.map(row => ({
-      'Nom Complert': row.donorName,
-      'DNI/CIF': row.donorTaxId,
-      'Codi Postal': row.donorZipCode,
-      'Import Donat': row.totalAmount.toFixed(2),
+      [t.reports.csvHeaderFullName]: row.donorName,
+      [t.reports.csvHeaderTaxId]: row.donorTaxId,
+      [t.reports.csvHeaderZipCode]: row.donorZipCode,
+      [t.reports.csvHeaderAmount]: row.totalAmount.toFixed(2),
     }));
 
     const csv = Papa.unparse(csvData);

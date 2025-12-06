@@ -576,7 +576,8 @@ export const ca = {
     totalAmount: "Import Total Anual",
     generating: "Generant informe...",
     noData: "Selecciona un any i genera el informe per veure les dades.",
-    noDataToExport: "No hi ha dades per exportar. Genera primer l'informe.",
+    noDataToExport: "No hi ha dades per exportar.",
+    noDataToExportDescription: "Genera primer l'informe abans d'exportar.",
     dataNotAvailable: "Dades no disponibles",
     dataNotAvailableDescription: "No s'han pogut carregar les transaccions o els emissors.",
     reportGenerated: "Informe Generat",
@@ -584,14 +585,18 @@ export const ca = {
     exportComplete: "Exportació Completada",
     exportCompleteDescription: "L'informe de donacions s'ha descarregat com a arxiu CSV.",
     returnsDiscountedTitle: "Devolucions descomptades",
-    returnsDiscountedDescription: (count: number, amount: string) => 
+    returnsDiscountedDescription: (count: number, amount: string) =>
       `S'han descomptat ${count} devolució${count > 1 ? 'ns' : ''} per un total de ${amount} del total de donacions. El Model 182 reflecteix les donacions netes efectivament rebudes.`,
-    returnsDiscountedToast: (count: number, amount: string) => 
+    returnsDiscountedToast: (count: number, amount: string) =>
       `S'han descomptat ${count} devolució${count > 1 ? 'ns' : ''} (${amount})`,
     columnDiscounted: "Descomptat",
     returns: "Devolucions",
     discountedAmount: "Import descomptat",
     netDonationsNote: "Aquest informe mostra les donacions netes (donacions - devolucions) per cada donant. Les devolucions vinculades a un donant es resten automàticament del seu total, d'acord amb la normativa fiscal del Model 182.",
+    csvHeaderFullName: "Nom Complert",
+    csvHeaderTaxId: "DNI/CIF",
+    csvHeaderZipCode: "Codi Postal",
+    csvHeaderAmount: "Import Donat",
   },
   certificates: {
     title: "Certificats de Donació",
@@ -718,6 +723,13 @@ export const ca = {
       logoHint: "Format recomanat: PNG o JPG, màxim 2MB",
       saved: "Dades guardades",
       savedDescription: "Les dades de l'organització s'han actualitzat correctament.",
+      errorLoading: "Error carregant organització",
+      errorLoadingDescription: "No s'han pogut carregar les dades de l'organització.",
+      errorSaving: "No s'han pogut guardar les dades.",
+      errorInvalidImage: "El fitxer ha de ser una imatge.",
+      errorImageTooLarge: "La imatge no pot superar els 2MB.",
+      logoUploadedSuccess: "El logo s'ha pujat correctament. Recorda guardar els canvis.",
+      errorUploadingLogo: "No s'ha pogut pujar el logo.",
     }
   },
   members: {
@@ -756,6 +768,8 @@ export const ca = {
     invitationLink: "Enllaç d'invitació",
     linkCopied: "Enllaç copiat!",
     linkExpires: "L'enllaç expira en 7 dies.",
+    selectAndCopy: "Selecciona i copia",
+    selectAndCopyDescription: "Prem Cmd+C (Mac) o Ctrl+C (Windows) per copiar",
     // Confirmacions
     confirmRemoveTitle: "Eliminar membre?",
     confirmRemoveDescription: (name: string) => `Estàs segur que vols eliminar ${name} de l'organització? Perdrà l'accés immediatament.`,
@@ -807,7 +821,9 @@ export const ca = {
     access: "Accedir al Panell de Control",
     accessing: "Accedint...",
     loginSuccess: "Sessió iniciada",
-    loginDescription: "Benvingut de nou!"
+    loginDescription: "Benvingut de nou!",
+    noOrganization: "No tens cap organització assignada. Contacta amb l'administrador.",
+    verifyingSession: "Verificant sessió...",
   },
   common: {
       cancel: "Cancel·lar",

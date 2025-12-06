@@ -59,7 +59,7 @@ export default function LoginPage() {
 
   const handleLogin = async () => {
     if (!email || !password) {
-      setError(t.login.allFieldsRequired || 'Introdueix email i contrasenya');
+      setError(t.login.allFieldsRequired);
       return;
     }
 
@@ -81,7 +81,7 @@ export default function LoginPage() {
         router.push(`/${orgSlug}/dashboard`);
       } else {
         // Si no té organització, mostrar error
-        setError('No tens cap organització assignada. Contacta amb l\'administrador.');
+        setError(t.login.noOrganization);
         setIsLoggingIn(false);
       }
     } catch (err: any) {
@@ -91,17 +91,17 @@ export default function LoginPage() {
       let friendlyError = t.login.genericError;
       switch (err.code) {
         case 'auth/invalid-email':
-          friendlyError = t.login.invalidEmail || 'L\'email no és vàlid';
+          friendlyError = t.login.invalidEmail;
           break;
         case 'auth/user-not-found':
-          friendlyError = t.login.userNotFound || 'No existeix cap compte amb aquest email';
+          friendlyError = t.login.userNotFound;
           break;
         case 'auth/wrong-password':
         case 'auth/invalid-credential':
-          friendlyError = t.login.wrongPassword || 'La contrasenya és incorrecta';
+          friendlyError = t.login.wrongPassword;
           break;
         case 'auth/too-many-requests':
-          friendlyError = t.login.tooManyRequests || 'Massa intents. Espera uns minuts.';
+          friendlyError = t.login.tooManyRequests;
           break;
         default:
           friendlyError = err.message || friendlyError;
@@ -135,7 +135,7 @@ export default function LoginPage() {
     return (
       <main className="flex min-h-screen flex-col items-center justify-center bg-background p-4">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
-        <p className="mt-4 text-muted-foreground">Verificant sessió...</p>
+        <p className="mt-4 text-muted-foreground">{t.login.verifyingSession}</p>
       </main>
     );
   }
@@ -153,7 +153,7 @@ export default function LoginPage() {
         
         <div className="w-full space-y-4 text-left">
           <div className="space-y-2">
-            <Label htmlFor="email">{t.login.email || 'Email'}</Label>
+            <Label htmlFor="email">{t.login.email}</Label>
             <Input 
               type="email" 
               id="email" 
