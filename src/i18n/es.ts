@@ -36,6 +36,8 @@ export const es = {
       date: "Fecha",
       amount: "Importe",
       description: "Concepto",
+      concept: "Concepto",
+      contact: "Contacto",
       emisor: "Emisor",
       category: "Categoría",
       project: "Proyecto",
@@ -62,6 +64,12 @@ export const es = {
       returnAssigned: "Devolución asignada",
       returnAssignedDescription: (donorName: string) => `La devolución se ha vinculado a ${donorName}.`,
       addNote: "Añadir nota",
+      all: "Todos",
+      returns: "Devoluciones",
+      withoutDocument: "Sin documento",
+      attachProof: "Adjuntar justificante",
+      attachDocument: "Adjuntar documento",
+      bankConcept: "Concepto bancario",
     },
      splitter: {
         title: "Dividir Remesa",
@@ -619,6 +627,17 @@ export const es = {
     confirmDeleteOrgDescription: (name: string) => `¿Estás seguro de que quieres eliminar la organización "${name}"? Esta acción no se puede deshacer.`,
     confirmDeleteUserTitle: "¿Eliminar Usuario?",
     confirmDeleteUserDescription: (name: string) => `¿Estás seguro de que quieres eliminar al usuario "${name}"? Esta acción no se puede deshacer.`
+  },
+  contactCombobox: {
+    searchPlaceholder: "Buscar contacto...",
+    emptyText: "No se encontraron contactos",
+    donors: "Donantes",
+    suppliers: "Proveedores",
+    employees: "Trabajadores",
+    createNew: "Crear nuevo",
+    newDonor: "Nuevo donante...",
+    newSupplier: "Nuevo proveedor...",
+    unlink: "Desvincular"
   },
   months: {
     january: "enero",

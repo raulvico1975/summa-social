@@ -804,7 +804,7 @@ export function TransactionsTable() {
             size="sm"
             onClick={() => setTableFilter('all')}
           >
-            Tots ({transactions?.length || 0})
+            {t.movements.table.all} ({transactions?.length || 0})
           </Button>
 
           {/* Filtre devolucions */}
@@ -816,7 +816,7 @@ export function TransactionsTable() {
               className={tableFilter !== 'returns' && pendingReturns.length > 0 ? 'border-red-300 text-red-600' : ''}
             >
               <Undo2 className="mr-1.5 h-3 w-3" />
-              Devolucions ({returnTransactions.length})
+              {t.movements.table.returns} ({returnTransactions.length})
               {pendingReturns.length > 0 && (
                 <Badge variant="destructive" className="ml-2 h-5 px-1.5">
                   {pendingReturns.length}
@@ -833,7 +833,7 @@ export function TransactionsTable() {
               onClick={() => setTableFilter('missing')}
             >
               <Circle className="mr-1.5 h-2 w-2 fill-muted-foreground text-muted-foreground" />
-              Sense document ({expensesWithoutDoc.length})
+              {t.movements.table.withoutDocument} ({expensesWithoutDoc.length})
             </Button>
           )}
 
@@ -901,8 +901,8 @@ export function TransactionsTable() {
   </button>
 </TableHead>
               <TableHead className="text-right w-[100px]">{t.movements.table.amount}</TableHead>
-              <TableHead className="max-w-[280px]">Concepte</TableHead>
-              <TableHead className="w-[130px]">Contacte</TableHead>
+              <TableHead className="max-w-[280px]">{t.movements.table.concept}</TableHead>
+              <TableHead className="w-[130px]">{t.movements.table.contact}</TableHead>
               <TableHead className="w-[120px]">{t.movements.table.category}</TableHead>
               {showProjectColumn ? (
                 <TableHead className="w-[120px]">
@@ -1029,7 +1029,7 @@ export function TransactionsTable() {
                         className="text-red-600 border-red-300 hover:bg-red-50"
                       >
                         <AlertTriangle className="mr-1.5 h-3 w-3" />
-                        Assignar
+                        {t.movements.table.assign}
                       </Button>
                     ) : (
                       <ContactCombobox
@@ -1048,12 +1048,6 @@ export function TransactionsTable() {
                           }
                         }}
                         onCreateNew={(type) => handleOpenNewContactDialog(tx.id, type)}
-                        placeholder={t.movements.table.assign}
-                        emptyText="Cap contacte trobat"
-                        createDonorText="Nou donant..."
-                        createSupplierText="Nou proveïdor..."
-                        unlinkText={t.movements.table.unlink}
-                        searchPlaceholder="Cercar per nom..."
                       />
                     )}
                   </TableCell>
@@ -1170,7 +1164,7 @@ export function TransactionsTable() {
                               </button>
                             </TooltipTrigger>
                             <TooltipContent>
-                              {isExpense ? 'Adjuntar justificant' : 'Adjuntar document'}
+                              {isExpense ? t.movements.table.attachProof : t.movements.table.attachDocument}
                             </TooltipContent>
                           </Tooltip>
                       )}
@@ -1202,7 +1196,7 @@ export function TransactionsTable() {
                                 {!hasDocument && (
                                   <DropdownMenuItem onClick={() => handleAttachDocument(tx.id)}>
                                     <FileUp className="mr-2 h-4 w-4" />
-                                    Adjuntar document
+                                    {t.movements.table.attachDocument}
                                   </DropdownMenuItem>
                                 )}
                                 {tx.amount > 0 && !isReturn && !isReturnFee && (
@@ -1361,7 +1355,7 @@ export function TransactionsTable() {
           <div className="grid gap-4 py-4">
             <div className="grid grid-cols-4 items-center gap-4">
               <Label htmlFor="description" className="text-right">
-                Concepte bancari
+                {t.movements.table.bankConcept}
               </Label>
               <Input
                 id="description"
@@ -1396,7 +1390,7 @@ export function TransactionsTable() {
             </div>
             <div className="grid grid-cols-4 items-center gap-4">
                 <Label htmlFor="contact" className="text-right">
-                    Contacte
+                    {t.movements.table.contact}
                 </Label>
                 <Select value={formData.contactId || ''} onValueChange={(value) => setFormData({...formData, contactId: value === 'null' ? null : value})}>
                     <SelectTrigger className="col-span-3">

@@ -4,6 +4,7 @@ import * as React from 'react';
 import { Check, ChevronsUpDown, Heart, Building2, UserPlus, Users } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
+import { useTranslations } from '@/i18n';
 import {
   Command,
   CommandEmpty,
@@ -43,15 +44,24 @@ export function ContactCombobox({
   value,
   onSelect,
   onCreateNew,
-  placeholder = "Seleccionar contacte...",
-  emptyText = "Cap contacte trobat",
-  createDonorText = "Nou donant...",
-  createSupplierText = "Nou proveïdor...",
-  unlinkText = "Desvincular",
-  searchPlaceholder = "Cercar contacte...",
+  placeholder,
+  emptyText,
+  createDonorText,
+  createSupplierText,
+  unlinkText,
+  searchPlaceholder,
 }: ContactComboboxProps) {
+  const { t } = useTranslations();
   const [open, setOpen] = React.useState(false);
   const [search, setSearch] = React.useState('');
+
+  // Use translations with fallback to prop values
+  const placeholderText = placeholder || t.movements.table.assign;
+  const emptyTextValue = emptyText || t.contactCombobox.emptyText;
+  const createDonorTextValue = createDonorText || t.contactCombobox.newDonor;
+  const createSupplierTextValue = createSupplierText || t.contactCombobox.newSupplier;
+  const unlinkTextValue = unlinkText || t.contactCombobox.unlink;
+  const searchPlaceholderValue = searchPlaceholder || t.contactCombobox.searchPlaceholder;
 
   const selectedContact = contacts.find((contact) => contact.id === value);
 
@@ -119,16 +129,16 @@ export function ContactCombobox({
       <PopoverContent className="w-[300px] p-0" align="start">
         <Command shouldFilter={false}>
           <CommandInput
-            placeholder={searchPlaceholder}
+            placeholder={searchPlaceholderValue}
             value={search}
             onValueChange={setSearch}
           />
           <CommandList>
-            <CommandEmpty>{emptyText}</CommandEmpty>
+            <CommandEmpty>{emptyTextValue}</CommandEmpty>
 
             {/* Donors */}
             {filteredDonors.length > 0 && (
-              <CommandGroup heading="Donants">
+              <CommandGroup heading={t.contactCombobox.donors}>
                 {filteredDonors.map((donor) => (
                   <CommandItem
                     key={donor.id}
@@ -152,7 +162,7 @@ export function ContactCombobox({
             {filteredSuppliers.length > 0 && (
               <>
                 {filteredDonors.length > 0 && <CommandSeparator />}
-                <CommandGroup heading="Proveïdors">
+                <CommandGroup heading={t.contactCombobox.suppliers}>
                   {filteredSuppliers.map((supplier) => (
                     <CommandItem
                       key={supplier.id}
@@ -177,7 +187,7 @@ export function ContactCombobox({
             {filteredWorkers.length > 0 && (
               <>
                 {(filteredDonors.length > 0 || filteredSuppliers.length > 0) && <CommandSeparator />}
-                <CommandGroup heading="Treballadors">
+                <CommandGroup heading={t.contactCombobox.employees}>
                   {filteredWorkers.map((worker) => (
                     <CommandItem
                       key={worker.id}
@@ -200,14 +210,14 @@ export function ContactCombobox({
 
             {/* Create new options - only shown after results */}
             {hasResults && <CommandSeparator />}
-            <CommandGroup heading="Crear nou">
+            <CommandGroup heading={t.contactCombobox.createNew}>
               <CommandItem onSelect={() => handleCreateNew('donor')}>
                 <Heart className="mr-2 h-4 w-4 text-red-500" />
-                {createDonorText}
+                {createDonorTextValue}
               </CommandItem>
               <CommandItem onSelect={() => handleCreateNew('supplier')}>
                 <Building2 className="mr-2 h-4 w-4 text-blue-500" />
-                {createSupplierText}
+                {createSupplierTextValue}
               </CommandItem>
             </CommandGroup>
 
@@ -217,7 +227,7 @@ export function ContactCombobox({
                 <CommandSeparator />
                 <CommandGroup>
                   <CommandItem onSelect={handleUnlink}>
-                    {unlinkText}
+                    {unlinkTextValue}
                   </CommandItem>
                 </CommandGroup>
               </>

@@ -36,6 +36,8 @@ export const ca = {
       date: "Data",
       amount: "Import",
       description: "Concepte",
+      concept: "Concepte",
+      contact: "Contacte",
       emisor: "Emissor",
       category: "Categoria",
       project: "Projecte",
@@ -62,6 +64,12 @@ export const ca = {
       returnAssigned: "Devolució assignada",
       returnAssignedDescription: (donorName: string) => `La devolució s'ha vinculat a ${donorName}.`,
       addNote: "Afegir nota",
+      all: "Tots",
+      returns: "Devolucions",
+      withoutDocument: "Sense document",
+      attachProof: "Adjuntar justificant",
+      attachDocument: "Adjuntar document",
+      bankConcept: "Concepte bancari",
     },
     splitter: {
         title: "Dividir Remesa",
@@ -592,6 +600,17 @@ export const ca = {
     confirmDeleteOrgDescription: (name: string) => `Estàs segur que vols eliminar l'organització "${name}"? Aquesta acció no es pot desfer.`,
     confirmDeleteUserTitle: "Eliminar Usuari?",
     confirmDeleteUserDescription: (name: string) => `Estàs segur que vols eliminar l'usuari "${name}"? Aquesta acció no es pot desfer.`
+  },
+  contactCombobox: {
+    searchPlaceholder: "Cercar contacte...",
+    emptyText: "Cap contacte trobat",
+    donors: "Donants",
+    suppliers: "Proveïdors",
+    employees: "Treballadors",
+    createNew: "Crear nou",
+    newDonor: "Nou donant...",
+    newSupplier: "Nou proveïdor...",
+    unlink: "Desvincular"
   },
   months: {
     january: "gener",
