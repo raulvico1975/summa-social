@@ -122,7 +122,7 @@ export function ContactCombobox({
         ) : (
           <Button variant="ghost" size="sm" className="text-muted-foreground">
             <UserPlus className="mr-2 h-4 w-4" />
-            Assignar
+            {placeholderText}
           </Button>
         )}
       </PopoverTrigger>
