@@ -161,7 +161,7 @@ export function DonorManager() {
     setFormData(prev => ({ ...prev, [field]: value }));
   };
 
-  cconst handleSave = () => {
+  const handleSave = () => {
     if (!formData.name.trim()) {
       toast({ 
         variant: 'destructive', 

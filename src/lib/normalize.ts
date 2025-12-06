@@ -295,6 +295,8 @@ export function normalizeTransaction<T extends Record<string, any>>(data: T): T 
     ...data,
     description: data.description ? normalizeBankDescription(data.description) : data.description,
   };
+}
+
 // ═══════════════════════════════════════════════════════════════════════════════
 // FORMAT NUMÈRIC EUROPEU
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -409,8 +411,7 @@ export function formatPercentageEU(
   decimals: number = 1
 ): string {
   if (value === null || value === undefined) return '';
-  
+
   const percent = value * 100;
   return `${formatNumberEU(percent, decimals)}%`;
-}
 }

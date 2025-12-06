@@ -154,7 +154,8 @@ export function EmployeeManager() {
 
     const now = new Date().toISOString();
     const dataToSave = {
-      ...normalized,
+      type: normalized.type,
+      name: normalized.name,
       taxId: normalized.taxId || null,
       zipCode: normalized.zipCode || null,
       iban: normalized.iban || null,

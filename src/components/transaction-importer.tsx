@@ -10,6 +10,7 @@ import Papa from 'papaparse';
 import * as XLSX from 'xlsx';
 import { inferContact } from '@/ai/flows/infer-contact';
 import { useAppLog } from '@/hooks/use-app-log';
+import { normalizeTransaction } from '@/lib/normalize';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -325,7 +326,8 @@ export function TransactionImporter({ existingTransactions }: TransactionImporte
             
             transactionsWithContacts.forEach(tx => {
                 const newDocRef = doc(transactionsCollectionRef);
-                batch.set(newDocRef, tx);
+                const normalizedTx = normalizeTransaction(tx);
+                batch.set(newDocRef, normalizedTx);
             });
 
             await batch.commit();

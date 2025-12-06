@@ -41,6 +41,7 @@ import { useCollection, useFirebase, useMemoFirebase, addDocumentNonBlocking, de
 import { collection, doc } from 'firebase/firestore';
 import { useTranslations } from '@/i18n';
 import { useCurrentOrganization } from '@/hooks/organization-provider';
+import { normalizeProject } from '@/lib/normalize';
 
 
 const formatCurrency = (amount: number) => {
@@ -155,8 +156,8 @@ export function ProjectManager() {
     setFormData({ ...formData, funderId: value });
   }
   
-  const handleSave = () => {
-    if (!formData.name) {
+ const handleSave = () => {
+    if (!formData.name.trim()) {
        toast({ variant: 'destructive', title: t.common.error, description: t.projects.errorNameEmpty });
        return;
     }
@@ -166,14 +167,19 @@ export function ProjectManager() {
       return;
     }
 
+    // ═══════════════════════════════════════════════════════════════════════
+    // NORMALITZACIÓ: Aplicar format consistent abans de guardar
+    // ═══════════════════════════════════════════════════════════════════════
+    const normalized = normalizeProject(formData);
+
     if (editingProject) {
       // Update
-      setDocumentNonBlocking(doc(projectsCollection, editingProject.id), formData, { merge: true });
-      toast({ title: t.projects.projectUpdated, description: t.projects.projectUpdatedDescription(formData.name) });
+      setDocumentNonBlocking(doc(projectsCollection, editingProject.id), normalized, { merge: true });
+      toast({ title: t.projects.projectUpdated, description: t.projects.projectUpdatedDescription(normalized.name) });
     } else {
       // Create
-      addDocumentNonBlocking(projectsCollection, formData);
-      toast({ title: t.projects.projectCreated, description: t.projects.projectCreatedDescription(formData.name) });
+      addDocumentNonBlocking(projectsCollection, normalized);
+      toast({ title: t.projects.projectCreated, description: t.projects.projectCreatedDescription(normalized.name) });
     }
     handleOpenChange(false);
   }
