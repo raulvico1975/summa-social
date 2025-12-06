@@ -703,16 +703,16 @@ export function TransactionsTable() {
   };
 
   const handleSaveNewContact = () => {
-  // Donants necessiten zipCode pel Model 182, proveïdors no
-  if (!newContactFormData.name || !newContactFormData.taxId) {
-    toast({ variant: 'destructive', title: t.common.error, description: t.movements.table.nameAndTaxIdRequired });
-    return;
-  }
-  if (newContactType === 'donor' && !newContactFormData.zipCode) {
-    toast({ variant: 'destructive', title: t.common.error, description: t.movements.table.zipCodeRequiredForDonors });
-    return;
-  }
+    // Només el nom és obligatori
+    if (!newContactFormData.name) {
+      toast({ variant: 'destructive', title: t.common.error, description: t.donors.errorNameRequired });
+      return;
+    }
+
     if (!contactsCollection || !transactionsCollection) return;
+
+    // Avís si falta DNI o CP per als donants
+    const hasIncompleteData = newContactType === 'donor' && (!newContactFormData.taxId || !newContactFormData.zipCode);
 
     const now = new Date().toISOString();
     const newContactData = {
@@ -735,7 +735,20 @@ export function TransactionsTable() {
       });
 
     const typeLabel = newContactType === 'donor' ? t.donors.title.slice(0, -1) : t.suppliers.title.slice(0, -1);
+
+    // Mostrar toast de creació
     toast({ title: t.movements.table.contactCreatedSuccess(typeLabel, newContactFormData.name).split('.')[0] });
+
+    // Mostrar avís si falta DNI o CP
+    if (hasIncompleteData) {
+      setTimeout(() => {
+        toast({
+          title: t.donors.incompleteDataWarning,
+          description: t.donors.incompleteDataWarningDescription,
+        });
+      }, 500);
+    }
+
     setIsNewContactDialogOpen(false);
     setNewContactTransactionId(null);
   };
@@ -1578,15 +1591,22 @@ export function TransactionsTable() {
               <Input id="new-contact-name" value={newContactFormData.name} onChange={(e) => setNewContactFormData({...newContactFormData, name: e.target.value })} className="col-span-3" />
             </div>
             <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="new-contact-taxId" className="text-right">{t.movements.table.taxIdRequired}</Label>
-              <Input id="new-contact-taxId" value={newContactFormData.taxId} onChange={(e) => setNewContactFormData({...newContactFormData, taxId: e.target.value })} className="col-span-3" />
+              <Label htmlFor="new-contact-taxId" className="text-right">{t.donors.taxId}</Label>
+              <Input id="new-contact-taxId" value={newContactFormData.taxId} onChange={(e) => setNewContactFormData({...newContactFormData, taxId: e.target.value })} className="col-span-3" placeholder="Opcional" />
             </div>
             <div className="grid grid-cols-4 items-center gap-4">
               <Label htmlFor="new-contact-zipCode" className="text-right">
-                {newContactType === 'donor' ? t.movements.table.zipCodeRequired : t.movements.table.zipCodeLabel}
+                {t.donors.zipCode}
               </Label>
-              <Input id="new-contact-zipCode" value={newContactFormData.zipCode} onChange={(e) => setNewContactFormData({...newContactFormData, zipCode: e.target.value })} className="col-span-3" />
+              <Input id="new-contact-zipCode" value={newContactFormData.zipCode} onChange={(e) => setNewContactFormData({...newContactFormData, zipCode: e.target.value })} className="col-span-3" placeholder="Opcional" />
             </div>
+            {newContactType === 'donor' && (
+              <div className="col-span-4 p-3 bg-amber-50 border border-amber-200 rounded-lg">
+                <p className="text-xs text-amber-800">
+                  ℹ️ {t.donors.incompleteDataWarningDescription}
+                </p>
+              </div>
+            )}
           </div>
           <DialogFooter>
             <DialogClose asChild><Button variant="outline">{t.common.cancel}</Button></DialogClose>
