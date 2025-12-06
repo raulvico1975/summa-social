@@ -72,9 +72,11 @@ export function ProjectManager() {
 
   const [isDialogOpen, setIsDialogOpen] = React.useState(false);
   const [isAlertOpen, setIsAlertOpen] = React.useState(false);
+  const [isFunderDialogOpen, setIsFunderDialogOpen] = React.useState(false);
   const [editingProject, setEditingProject] = React.useState<Project | null>(null);
   const [projectToDelete, setProjectToDelete] = React.useState<Project | null>(null);
   const [formData, setFormData] = React.useState<Omit<Project, 'id'>>({ name: '', funderId: null });
+  const [newFunderName, setNewFunderName] = React.useState('');
   const { toast } = useToast();
   
   const emisorMap = React.useMemo(() => 
@@ -177,6 +179,38 @@ export function ProjectManager() {
       toast({ title: t.projects.projectCreated, description: t.projects.projectCreatedDescription(normalized.name) });
     }
     handleOpenChange(false);
+  }
+
+  const handleCreateFunder = () => {
+    if (!newFunderName.trim()) {
+      toast({ variant: 'destructive', title: t.common.error, description: t.common.error });
+      return;
+    }
+
+    if (!emissorsCollection) {
+      toast({ variant: 'destructive', title: t.common.error, description: t.common.dbConnectionError });
+      return;
+    }
+
+    const newFunder: Omit<Emisor, 'id'> = {
+      name: newFunderName.trim(),
+      taxId: '',
+      zipCode: '',
+      type: 'donor',
+    };
+
+    const docRef = doc(emissorsCollection);
+    addDocumentNonBlocking(emissorsCollection, { ...newFunder, id: docRef.id });
+
+    // Assignar automàticament el nou finançador al projecte
+    setFormData({ ...formData, funderId: docRef.id });
+
+    toast({
+      description: `S'ha creat el finançador "${newFunderName.trim()}".`,
+    });
+
+    setNewFunderName('');
+    setIsFunderDialogOpen(false);
   }
 
   const dialogTitle = editingProject ? t.projects.edit : t.projects.addTitle;
@@ -284,17 +318,29 @@ export function ProjectManager() {
             <Label htmlFor="type" className="text-right">
               {t.projects.funder}
             </Label>
-            <Select value={formData.funderId || ''} onValueChange={(value) => handleSelectChange(value === 'null' ? null : value)}>
-              <SelectTrigger className="col-span-3">
-                <SelectValue placeholder={t.projects.selectFunder} />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="null">{t.common.none}</SelectItem>
-                {emissors?.filter(e => e.type === 'donor').map(e => (
-                  <SelectItem key={e.id} value={e.id}>{e.name}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <div className="col-span-3 space-y-2">
+              <Select value={formData.funderId || ''} onValueChange={(value) => handleSelectChange(value === 'null' ? null : value)}>
+                <SelectTrigger>
+                  <SelectValue placeholder={t.projects.selectFunder} />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="null">{t.common.none}</SelectItem>
+                  {emissors?.filter(e => e.type === 'donor').map(e => (
+                    <SelectItem key={e.id} value={e.id}>{e.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="w-full"
+                onClick={() => setIsFunderDialogOpen(true)}
+              >
+                <PlusCircle className="mr-2 h-4 w-4" />
+                Crear finançador nou
+              </Button>
+            </div>
           </div>
         </div>
         <DialogFooter>
@@ -322,6 +368,43 @@ export function ProjectManager() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <Dialog open={isFunderDialogOpen} onOpenChange={setIsFunderDialogOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Crear finançador nou</DialogTitle>
+            <DialogDescription>
+              Introdueix el nom del finançador que vols afegir a la llista.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="grid gap-2">
+              <Label htmlFor="funder-name">Nom del finançador *</Label>
+              <Input
+                id="funder-name"
+                value={newFunderName}
+                onChange={(e) => setNewFunderName(e.target.value)}
+                placeholder="Fundació Example..."
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault();
+                    handleCreateFunder();
+                  }
+                }}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <DialogClose asChild>
+              <Button variant="outline">{t.common.cancel}</Button>
+            </DialogClose>
+            <Button onClick={handleCreateFunder}>
+              <PlusCircle className="mr-2 h-4 w-4" />
+              Crear
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </>
   );
 }
