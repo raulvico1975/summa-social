@@ -121,6 +121,8 @@ export type Donor = Contact & {
   // Tipus de donació
   membershipType: 'one-time' | 'recurring';  // Puntual o recurrent (soci)
   // Dades per socis recurrents
+  // Adreça completa (per certificats de donació)
+  address?: string;
   monthlyAmount?: number;                    // Import mensual/periòdic
   memberSince?: string;                      // Data d'alta com a soci
   // Dades bancàries (per domiciliacions)

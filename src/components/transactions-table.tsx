@@ -57,6 +57,8 @@ import {
   Sparkles,
   Loader2,
   ChevronDown,
+  ChevronUp,
+  ArrowUpDown,
   UserPlus,
   FileUp,
   Trash2,
@@ -98,6 +100,7 @@ export function TransactionsTable() {
 
   // Filtre actiu
   const [tableFilter, setTableFilter] = React.useState<TableFilter>('all');
+  const [sortDateAsc, setSortDateAsc] = React.useState(false); // false = més recents primer
 
   // Estat per editar notes inline
   const [editingNoteId, setEditingNoteId] = React.useState<string | null>(null);
@@ -217,8 +220,12 @@ export function TransactionsTable() {
     }
     
     // Ordenar per data descendent (més recents primer)
-    return [...result].sort((a, b) => b.date.localeCompare(a.date));
-  }, [transactions, tableFilter, expensesWithoutDoc, returnTransactions]);
+    return [...result].sort((a, b) => {
+  const dateA = new Date(a.date).getTime();
+  const dateB = new Date(b.date).getTime();
+  return sortDateAsc ? dateA - dateB : dateB - dateA;
+});
+  }, [transactions, tableFilter, expensesWithoutDoc, returnTransactions, sortDateAsc]);
 
   // ═══════════════════════════════════════════════════════════════════════════
   // GESTIÓ DE DEVOLUCIONS
@@ -628,10 +635,15 @@ export function TransactionsTable() {
   };
 
   const handleSaveNewContact = () => {
-    if (!newContactFormData.name || !newContactFormData.taxId || !newContactFormData.zipCode) {
-      toast({ variant: 'destructive', title: t.common.error, description: 'Tots els camps són obligatoris.' });
-      return;
-    }
+  // Donants necessiten zipCode pel Model 182, proveïdors no
+  if (!newContactFormData.name || !newContactFormData.taxId) {
+    toast({ variant: 'destructive', title: t.common.error, description: 'Nom i DNI/CIF són obligatoris.' });
+    return;
+  }
+  if (newContactType === 'donor' && !newContactFormData.zipCode) {
+    toast({ variant: 'destructive', title: t.common.error, description: 'El codi postal és obligatori pels donants (Model 182).' });
+    return;
+  }
     if (!contactsCollection || !transactionsCollection) return;
 
     const now = new Date().toISOString();
@@ -843,7 +855,19 @@ export function TransactionsTable() {
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead className="w-[100px]">{t.movements.table.date}</TableHead>
+              <TableHead className="w-[100px]">
+  <button 
+    onClick={() => setSortDateAsc(!sortDateAsc)}
+    className="flex items-center gap-1 hover:text-foreground transition-colors"
+  >
+    {t.movements.table.date}
+    {sortDateAsc ? (
+      <ChevronUp className="h-4 w-4" />
+    ) : (
+      <ChevronDown className="h-4 w-4" />
+    )}
+  </button>
+</TableHead>
               <TableHead className="text-right w-[120px]">{t.movements.table.amount}</TableHead>
               <TableHead>Concepte</TableHead>
               <TableHead className="w-[150px]">Contacte</TableHead>
@@ -1452,7 +1476,9 @@ export function TransactionsTable() {
               <Input id="new-contact-taxId" value={newContactFormData.taxId} onChange={(e) => setNewContactFormData({...newContactFormData, taxId: e.target.value })} className="col-span-3" />
             </div>
             <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="new-contact-zipCode" className="text-right">Codi Postal *</Label>
+              <Label htmlFor="new-contact-zipCode" className="text-right">
+  Codi Postal {newContactType === 'donor' && '*'}
+</Label>
               <Input id="new-contact-zipCode" value={newContactFormData.zipCode} onChange={(e) => setNewContactFormData({...newContactFormData, zipCode: e.target.value })} className="col-span-3" />
             </div>
           </div>

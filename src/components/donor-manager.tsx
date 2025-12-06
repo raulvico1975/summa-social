@@ -31,6 +31,12 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import {
@@ -41,7 +47,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
-import { PlusCircle, Edit, Trash2, User, Building2, RefreshCw, Heart, Upload } from 'lucide-react';
+import { PlusCircle, Edit, Trash2, User, Building2, RefreshCw, Heart, Upload, AlertTriangle } from 'lucide-react';
 import type { Donor } from '@/lib/data';
 import { useToast } from '@/hooks/use-toast';
 import { Badge } from '@/components/ui/badge';
@@ -63,6 +69,7 @@ const emptyFormData: DonorFormData = {
   name: '',
   taxId: '',
   zipCode: '',
+  address: '',
   donorType: 'individual',
   membershipType: 'one-time',
   monthlyAmount: undefined,
@@ -105,6 +112,7 @@ export function DonorManager() {
       name: donor.name,
       taxId: donor.taxId,
       zipCode: donor.zipCode,
+      address: donor.address || '',
       donorType: donor.donorType,
       membershipType: donor.membershipType,
       monthlyAmount: donor.monthlyAmount,
@@ -153,13 +161,22 @@ export function DonorManager() {
   };
 
   const handleSave = () => {
-    if (!formData.name || !formData.taxId || !formData.zipCode) {
+    // Només el nom és obligatori
+    if (!formData.name) {
       toast({ 
         variant: 'destructive', 
         title: t.common.error, 
-        description: t.donors.errorRequiredFields
+        description: t.donors.errorNameRequired || 'El nom és obligatori.'
       });
       return;
+    }
+
+    // Avís si falten dades pel Model 182 (però deixem guardar)
+    if (!formData.taxId || !formData.zipCode) {
+      toast({ 
+        title: '⚠️ ' + (t.donors.incompleteDataTitle || 'Dades incompletes'),
+        description: t.donors.incompleteDataDescription || 'Falta DNI/CIF o Codi Postal. No es podrà incloure al Model 182.',
+      });
     }
 
     if (!contactsCollection) {
@@ -170,6 +187,7 @@ export function DonorManager() {
     const now = new Date().toISOString();
     const dataToSave = {
       ...formData,
+      address: formData.address || null,
       monthlyAmount: formData.monthlyAmount || null,
       memberSince: formData.memberSince || null,
       iban: formData.iban || null,
@@ -198,8 +216,11 @@ export function DonorManager() {
     ? t.donors.editDescription 
     : t.donors.addDescription;
 
+  // Helper per detectar dades incompletes
+  const hasIncompleteData = (donor: Donor) => !donor.taxId || !donor.zipCode;
+
   return (
-    <>
+    <TooltipProvider>
       <Dialog open={isDialogOpen} onOpenChange={handleOpenChange}>
         <Card>
           <CardHeader className="flex flex-row items-center justify-between">
@@ -249,9 +270,19 @@ export function DonorManager() {
                             <Building2 className="h-4 w-4 text-muted-foreground" />
                           )}
                           {donor.name}
+                          {hasIncompleteData(donor) && (
+                            <Tooltip>
+                              <TooltipTrigger>
+                                <AlertTriangle className="h-4 w-4 text-amber-500" />
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                {t.donors.incompleteDataTooltip || 'Falten dades pel Model 182'}
+                              </TooltipContent>
+                            </Tooltip>
+                          )}
                         </div>
                       </TableCell>
-                      <TableCell>{donor.taxId}</TableCell>
+                      <TableCell>{donor.taxId || <span className="text-amber-500">-</span>}</TableCell>
                       <TableCell>
                         <Badge variant="outline">
                           {donor.donorType === 'individual' ? t.donors.types.individual : t.donors.types.company}
@@ -323,7 +354,10 @@ export function DonorManager() {
               </div>
 
               <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="taxId" className="text-right">{t.donors.taxId} *</Label>
+                <Label htmlFor="taxId" className="text-right">
+                  <span>{t.donors.taxId}</span>
+                  <span className="block text-xs font-normal text-amber-600">Model 182</span>
+                </Label>
                 <Input
                   id="taxId"
                   value={formData.taxId}
@@ -334,13 +368,27 @@ export function DonorManager() {
               </div>
 
               <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="zipCode" className="text-right">{t.donors.zipCode} *</Label>
+                <Label htmlFor="zipCode" className="text-right">
+                  <span>{t.donors.zipCode}</span>
+                  <span className="block text-xs font-normal text-amber-600">Model 182</span>
+                </Label>
                 <Input
                   id="zipCode"
                   value={formData.zipCode}
                   onChange={(e) => handleFormChange('zipCode', e.target.value)}
                   className="col-span-3"
                   placeholder="08001"
+                />
+              </div>
+
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="address" className="text-right">{t.donors.address || 'Adreça'}</Label>
+                <Input
+                  id="address"
+                  value={formData.address || ''}
+                  onChange={(e) => handleFormChange('address', e.target.value)}
+                  className="col-span-3"
+                  placeholder="Carrer Major, 15, 2n 1a"
                 />
               </div>
 
@@ -495,6 +543,6 @@ export function DonorManager() {
         onOpenChange={setIsImportOpen}
         onImportComplete={handleImportComplete}
       />
-    </>
+    </TooltipProvider>
   );
 }
