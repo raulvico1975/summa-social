@@ -19,15 +19,32 @@ export function LogPanel() {
   const [copied, setCopied] = React.useState(false);
   const scrollAreaRef = React.useRef<HTMLDivElement>(null);
 
+  // Ref per gestionar timeout i evitar memory leaks
+  const copyTimeoutRef = React.useRef<NodeJS.Timeout | null>(null);
+
+  // Cleanup timeout quan component es desmunta
+  React.useEffect(() => {
+    return () => {
+      if (copyTimeoutRef.current) {
+        clearTimeout(copyTimeoutRef.current);
+      }
+    };
+  }, []);
+
   const handleCopyLogs = async () => {
     const logText = logs.map(log => `[${log.timestamp}] ${log.message}`).join('\n');
     try {
       await navigator.clipboard.writeText(logText);
       setCopied(true);
       toast({ title: t.dashboard.copied });
-      setTimeout(() => setCopied(false), 2000);
+      // Netejar timeout anterior si existeix
+      if (copyTimeoutRef.current) {
+        clearTimeout(copyTimeoutRef.current);
+      }
+      copyTimeoutRef.current = setTimeout(() => setCopied(false), 2000);
     } catch (err) {
       console.error('Error copying logs:', err);
+      toast({ variant: 'destructive', title: t.common?.error || 'Error' });
     }
   };
 

@@ -102,7 +102,7 @@ import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { useAppLog } from '@/hooks/use-app-log';
 import { RemittanceSplitter } from '@/components/remittance-splitter';
 import { useCollection, useFirebase, useMemoFirebase, addDocumentNonBlocking, deleteDocumentNonBlocking, updateDocumentNonBlocking } from '@/firebase';
-import { collection, doc, query, where, getDocs } from 'firebase/firestore';
+import { collection, doc, query, where, getDocs, limit } from 'firebase/firestore';
 import { useTranslations } from '@/i18n';
 import { useCurrentOrganization } from '@/hooks/organization-provider';
 
@@ -113,7 +113,11 @@ export function TransactionsTable() {
   const { firestore, user, storage } = useFirebase();
   const { organizationId } = useCurrentOrganization();
   const { t } = useTranslations();
-  const categoryTranslations = t.categories as Record<string, string>;
+  // Memoitzar categoryTranslations per evitar re-renders innecessaris
+  const categoryTranslations = React.useMemo(
+    () => t.categories as Record<string, string>,
+    [t.categories]
+  );
 
   // Filtre actiu
   const [tableFilter, setTableFilter] = React.useState<TableFilter>('all');
@@ -323,30 +327,43 @@ export function TransactionsTable() {
       return;
     }
 
+    // Flag per evitar setState després d'unmount
+    let isMounted = true;
+
     const loadDonorDonations = async () => {
       setIsLoadingDonations(true);
       try {
-        // Buscar donacions d'aquest donant
+        // Buscar donacions d'aquest donant (limit per rendiment)
         const q = query(
           transactionsCollection,
           where('contactId', '==', returnDonorId),
-          where('amount', '>', 0)
+          where('amount', '>', 0),
+          limit(100)
         );
         const snapshot = await getDocs(q);
+
+        if (!isMounted) return; // Evitar setState si component desmuntat
+
         const donations = snapshot.docs
           .map(doc => ({ id: doc.id, ...doc.data() } as Transaction))
           .filter(tx => tx.donationStatus !== 'returned') // Excloure ja retornades
           .sort((a, b) => b.date.localeCompare(a.date)); // Més recents primer
-        
+
         setDonorDonations(donations);
       } catch (error) {
         console.error('Error loading donor donations:', error);
       } finally {
-        setIsLoadingDonations(false);
+        if (isMounted) {
+          setIsLoadingDonations(false);
+        }
       }
     };
 
     loadDonorDonations();
+
+    return () => {
+      isMounted = false;
+    };
   }, [returnDonorId, transactionsCollection, firestore]);
 
   const handleSaveReturn = async () => {

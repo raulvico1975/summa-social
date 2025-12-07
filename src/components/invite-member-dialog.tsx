@@ -63,6 +63,18 @@ export function InviteMemberDialog({ open, onOpenChange, onInviteCreated }: Invi
   // Ref per seleccionar l'input
   const inputRef = React.useRef<HTMLInputElement>(null);
 
+  // Refs per gestionar timeouts i evitar memory leaks
+  const selectTimeoutRef = React.useRef<NodeJS.Timeout | null>(null);
+  const copyTimeoutRef = React.useRef<NodeJS.Timeout | null>(null);
+
+  // Cleanup timeouts quan component es desmunta
+  React.useEffect(() => {
+    return () => {
+      if (selectTimeoutRef.current) clearTimeout(selectTimeoutRef.current);
+      if (copyTimeoutRef.current) clearTimeout(copyTimeoutRef.current);
+    };
+  }, []);
+
   // Reset quan es tanca
   React.useEffect(() => {
     if (!open) {
@@ -77,7 +89,8 @@ export function InviteMemberDialog({ open, onOpenChange, onInviteCreated }: Invi
   // Seleccionar l'enllaç quan es crea
   React.useEffect(() => {
     if (createdInviteUrl && inputRef.current) {
-      setTimeout(() => {
+      if (selectTimeoutRef.current) clearTimeout(selectTimeoutRef.current);
+      selectTimeoutRef.current = setTimeout(() => {
         inputRef.current?.select();
       }, 100);
     }
@@ -149,7 +162,8 @@ export function InviteMemberDialog({ open, onOpenChange, onInviteCreated }: Invi
       try {
         await navigator.clipboard.writeText(createdInviteUrl);
         setCopied(true);
-        setTimeout(() => setCopied(false), 2000);
+        if (copyTimeoutRef.current) clearTimeout(copyTimeoutRef.current);
+        copyTimeoutRef.current = setTimeout(() => setCopied(false), 2000);
         toast({ title: t.members.linkCopied });
       } catch (err) {
         // Si falla el clipboard API, seleccionem el text per copiar manualment

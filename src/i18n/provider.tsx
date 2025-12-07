@@ -36,11 +36,12 @@ export const TranslationsProvider = ({ children }: TranslationsProviderProps) =>
 
   const t = useMemo(() => translations[language] || translations.ca, [language]);
 
-  const value = {
+  // Memoitzar value per evitar re-renders massius a tota l'app
+  const value = useMemo(() => ({
     language,
     setLanguage: handleSetLanguage,
     t,
-  };
+  }), [language, handleSetLanguage, t]);
 
   return (
     <TranslationsContext.Provider value={value}>

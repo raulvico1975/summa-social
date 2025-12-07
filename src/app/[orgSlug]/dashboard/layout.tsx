@@ -13,12 +13,12 @@ import type { LogMessage } from '@/hooks/use-app-log';
 import { OrganizationProvider } from '@/hooks/organization-provider';
 import { useInitializeOrganizationData } from '@/hooks/use-initialize-user-data';
 
-let logCounter = 0;
-
 function OrganizationDependentLayout({ children }: { children: React.ReactNode }) {
   useInitializeOrganizationData();
 
   const [logs, setLogs] = React.useState<LogMessage[]>([]);
+  // Usar useRef per evitar problemes amb variable global i SSR
+  const logCounterRef = React.useRef(0);
 
   const log = React.useCallback((message: string) => {
     const timestamp = new Date().toLocaleTimeString('es-ES', {
@@ -27,7 +27,7 @@ function OrganizationDependentLayout({ children }: { children: React.ReactNode }
       second: '2-digit',
     });
     const newLog: LogMessage = {
-      id: logCounter++,
+      id: logCounterRef.current++,
       timestamp,
       message,
     };
@@ -38,8 +38,11 @@ function OrganizationDependentLayout({ children }: { children: React.ReactNode }
     setLogs([]);
   }, []);
 
+  // Memoitzar context value per evitar re-renders innecessaris
+  const appLogValue = React.useMemo(() => ({ logs, log, clearLogs }), [logs, log, clearLogs]);
+
   return (
-    <AppLogContext.Provider value={{ logs, log, clearLogs }}>
+    <AppLogContext.Provider value={appLogValue}>
       <SidebarProvider defaultOpen={true}>
         <div className="flex min-h-screen">
           <Sidebar collapsible="icon">
