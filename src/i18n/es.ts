@@ -419,6 +419,8 @@ export const es = {
         cannotIdentifyOrg: "No se ha podido identificar la organización.",
         processingError: "Error de Procesamiento",
         cannotProcessContent: "No se pudo procesar el contenido del archivo.",
+        aiQuotaExceeded: "Límite de IA excedido",
+        aiQuotaExceededDescription: "Se ha superado el límite de peticiones a la IA. La importación continuará sin asignación automática de contactos. Deberás categorizar manualmente. Contacta con el administrador si este problema persiste.",
       },
       importSuccess: "Importación Exitosa",
       importSuccessDescription: (imported: number, mode: string, duplicates: number) =>

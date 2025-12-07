@@ -320,11 +320,25 @@ export function TransactionImporter({ existingTransactions }: TransactionImporte
                 const BATCH_SIZE = 10;  // Processar 10 transaccions per minut
                 const DELAY_MS = 60000; // Esperar 60 segons entre lots (1 minut)
 
+                // Flag per detectar si s'ha excedit la quota i saltar la IA
+                let quotaExceeded = false;
+
                 for (let i = 0; i < transactionsToProcess.length; i += BATCH_SIZE) {
+                    // Si la quota s'ha excedit, afegir les transaccions sense processar amb IA
+                    if (quotaExceeded) {
+                        transactionsWithContacts.push(...transactionsToProcess.slice(i));
+                        break;
+                    }
+
                     const batch = transactionsToProcess.slice(i, i + BATCH_SIZE);
                     log(`Procesando lote ${Math.floor(i / BATCH_SIZE) + 1}/${Math.ceil(transactionsToProcess.length / BATCH_SIZE)} (${batch.length} transacciones)...`);
 
                     const batchResults = await Promise.all(batch.map(async (tx, batchIndex) => {
+                        // Si ja s'ha detectat quota exceeded, no fer més crides
+                        if (quotaExceeded) {
+                            return tx;
+                        }
+
                         const index = i + batchIndex;
                         try {
                             const result = await inferContact({ description: tx.description, contacts: contactsForAI });
@@ -340,17 +354,32 @@ export function TransactionImporter({ existingTransactions }: TransactionImporte
                             } else {
                                log(`⚠️ [Fila ${index + 1}] IA no troba match - "${tx.description.substring(0,40)}..."`);
                             }
-                        } catch (error) {
+                        } catch (error: any) {
                             console.error("Error inferring contact for a transaction:", error);
                             log(`❌ ERROR en inferencia de contacto para fila ${index + 1}: ${error}`);
+
+                            // Detectar error 429 (quota exceeded) - només mostrar toast un cop
+                            const errorMsg = error?.message || error?.toString() || '';
+                            if (!quotaExceeded && (errorMsg.includes('429') || errorMsg.toLowerCase().includes('quota') || errorMsg.toLowerCase().includes('rate limit'))) {
+                                log('⚠️ QUOTA EXCEDIDA - Desactivando IA para el resto de la importación');
+                                quotaExceeded = true;
+
+                                // Mostrar toast d'avís a l'usuari (només un cop)
+                                toast({
+                                    variant: 'destructive',
+                                    title: t.importers.transaction.errors.aiQuotaExceeded,
+                                    description: t.importers.transaction.errors.aiQuotaExceededDescription,
+                                    duration: 10000,
+                                });
+                            }
                         }
                         return tx;
                     }));
 
                     transactionsWithContacts.push(...batchResults);
 
-                    // Esperar entre lots (excepte l'últim)
-                    if (i + BATCH_SIZE < transactionsToProcess.length) {
+                    // Esperar entre lots (excepte l'últim) i si no s'ha excedit la quota
+                    if (!quotaExceeded && i + BATCH_SIZE < transactionsToProcess.length) {
                         log(`Esperando ${DELAY_MS / 1000}s antes del siguiente lote...`);
                         await new Promise(resolve => setTimeout(resolve, DELAY_MS));
                     }

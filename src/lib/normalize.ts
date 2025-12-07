@@ -295,12 +295,22 @@ export function normalizeUser<T extends Record<string, any>>(data: T): T {
 
 /**
  * Normalitza una transacció importada
+ * Elimina camps undefined (Firestore no els accepta)
  */
 export function normalizeTransaction<T extends Record<string, any>>(data: T): T {
-  return {
+  const normalized = {
     ...data,
     description: data.description ? normalizeBankDescription(data.description) : data.description,
   };
+
+  // Eliminar camps undefined (Firestore no accepta undefined)
+  Object.keys(normalized).forEach(key => {
+    if (normalized[key] === undefined) {
+      delete normalized[key];
+    }
+  });
+
+  return normalized as T;
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
