@@ -567,10 +567,22 @@ export function TransactionsTable() {
   
   const handleSetContact = (txId: string, newContactId: string | null, contactType?: 'donor' | 'supplier') => {
     if (!transactionsCollection) return;
-    updateDocumentNonBlocking(doc(transactionsCollection, txId), { 
+
+    const updates: Record<string, any> = {
       contactId: newContactId,
       contactType: newContactId ? contactType : null,
-    });
+    };
+
+    // Auto-assignar categoria per defecte si el contacte en té i la transacció no
+    if (newContactId) {
+      const contact = availableContacts?.find(c => c.id === newContactId);
+      const tx = transactions?.find(t => t.id === txId);
+      if (contact?.defaultCategoryId && !tx?.category) {
+        updates.category = contact.defaultCategoryId;
+      }
+    }
+
+    updateDocumentNonBlocking(doc(transactionsCollection, txId), updates);
   };
   
   const handleSetProject = (txId: string, newProjectId: string | null) => {

@@ -48,7 +48,7 @@ import {
 } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { PlusCircle, Edit, Trash2, User, Building2, RefreshCw, Heart, Upload, AlertTriangle } from 'lucide-react';
-import type { Donor } from '@/lib/data';
+import type { Donor, Category } from '@/lib/data';
 import { useToast } from '@/hooks/use-toast';
 import { Badge } from '@/components/ui/badge';
 import { useCollection, useFirebase, useMemoFirebase, addDocumentNonBlocking, deleteDocumentNonBlocking, setDocumentNonBlocking } from '@/firebase';
@@ -74,6 +74,7 @@ const emptyFormData: DonorFormData = {
   email: '',
   phone: '',
   notes: '',
+  defaultCategoryId: undefined,
 };
 
 export function DonorManager() {
@@ -93,6 +94,17 @@ export function DonorManager() {
   );
 
   const { data: donors } = useCollection<Donor>(donorsQuery);
+
+  // Categories d'ingrés per al selector de categoria per defecte
+  const categoriesCollection = useMemoFirebase(
+    () => organizationId ? collection(firestore, 'organizations', organizationId, 'categories') : null,
+    [firestore, organizationId]
+  );
+  const { data: allCategories } = useCollection<Category>(categoriesCollection);
+  const incomeCategories = React.useMemo(
+    () => allCategories?.filter(c => c.type === 'income') || [],
+    [allCategories]
+  );
 
   const [isDialogOpen, setIsDialogOpen] = React.useState(false);
   const [isAlertOpen, setIsAlertOpen] = React.useState(false);
@@ -156,6 +168,7 @@ export function DonorManager() {
       email: donor.email || '',
       phone: donor.phone || '',
       notes: donor.notes || '',
+      defaultCategoryId: donor.defaultCategoryId,
     });
     setIsDialogOpen(true);
   };
@@ -233,6 +246,7 @@ export function DonorManager() {
       email: normalized.email || null,
       phone: normalized.phone || null,
       notes: normalized.notes || null,
+      defaultCategoryId: formData.defaultCategoryId || null,
       updatedAt: now,
     };
 
@@ -558,6 +572,27 @@ export function DonorManager() {
                   </div>
                 </>
               )}
+
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="defaultCategoryId" className="text-right">
+                  <span>{t.contacts.defaultCategory}</span>
+                  <span className="block text-xs font-normal text-muted-foreground">{t.contacts.defaultCategoryHint}</span>
+                </Label>
+                <Select
+                  value={formData.defaultCategoryId || ''}
+                  onValueChange={(v) => handleFormChange('defaultCategoryId', v || undefined)}
+                >
+                  <SelectTrigger className="col-span-3">
+                    <SelectValue placeholder={t.contacts.selectDefaultCategory} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="">{t.contacts.noDefaultCategory}</SelectItem>
+                    {incomeCategories.map(cat => (
+                      <SelectItem key={cat.id} value={cat.id}>{cat.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
 
             <div className="space-y-4 pt-4 border-t">

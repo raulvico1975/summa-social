@@ -103,6 +103,7 @@ export type Contact = {
   zipCode: string;                 // Codi postal
   createdAt: string;
   updatedAt?: string;
+  defaultCategoryId?: string;      // Categoria per defecte per auto-assignar a transaccions
 };
 
 /**

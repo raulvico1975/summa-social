@@ -35,7 +35,14 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { PlusCircle, Edit, Trash2, UserCog } from 'lucide-react';
-import type { Employee } from '@/lib/data';
+import type { Employee, Category } from '@/lib/data';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
 import { useCollection, useFirebase, useMemoFirebase, addDocumentNonBlocking, deleteDocumentNonBlocking, setDocumentNonBlocking } from '@/firebase';
 import { collection, doc, query, where } from 'firebase/firestore';
@@ -55,6 +62,7 @@ const emptyFormData: EmployeeFormData = {
   email: '',
   phone: '',
   notes: '',
+  defaultCategoryId: undefined,
 };
 
 export function EmployeeManager() {
@@ -75,6 +83,17 @@ export function EmployeeManager() {
 
   const { data: employees } = useCollection<Employee>(employeesQuery);
 
+  // Categories de despesa per al selector de categoria per defecte
+  const categoriesCollection = useMemoFirebase(
+    () => organizationId ? collection(firestore, 'organizations', organizationId, 'categories') : null,
+    [firestore, organizationId]
+  );
+  const { data: allCategories } = useCollection<Category>(categoriesCollection);
+  const expenseCategories = React.useMemo(
+    () => allCategories?.filter(c => c.type === 'expense') || [],
+    [allCategories]
+  );
+
   const [isDialogOpen, setIsDialogOpen] = React.useState(false);
   const [isAlertOpen, setIsAlertOpen] = React.useState(false);
   const [editingEmployee, setEditingEmployee] = React.useState<Employee | null>(null);
@@ -93,6 +112,7 @@ export function EmployeeManager() {
       email: employee.email || '',
       phone: employee.phone || '',
       notes: employee.notes || '',
+      defaultCategoryId: employee.defaultCategoryId,
     });
     setIsDialogOpen(true);
   };
@@ -163,6 +183,7 @@ export function EmployeeManager() {
       email: normalized.email || null,
       phone: normalized.phone || null,
       notes: normalized.notes || null,
+      defaultCategoryId: formData.defaultCategoryId || null,
       updatedAt: now,
     };
 
@@ -345,6 +366,27 @@ export function EmployeeManager() {
                   className="col-span-3"
                   placeholder="ES00 0000 0000 0000 0000 0000"
                 />
+              </div>
+
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="defaultCategoryId" className="text-right">
+                  <span>{t.contacts.defaultCategory}</span>
+                  <span className="block text-xs font-normal text-muted-foreground">{t.contacts.defaultCategoryHint}</span>
+                </Label>
+                <Select
+                  value={formData.defaultCategoryId || ''}
+                  onValueChange={(v) => handleFormChange('defaultCategoryId', v || undefined)}
+                >
+                  <SelectTrigger className="col-span-3">
+                    <SelectValue placeholder={t.contacts.selectDefaultCategory} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="">{t.contacts.noDefaultCategory}</SelectItem>
+                    {expenseCategories.map(cat => (
+                      <SelectItem key={cat.id} value={cat.id}>{cat.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
             </div>
 

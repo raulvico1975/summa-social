@@ -42,7 +42,7 @@ import {
 } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { PlusCircle, Edit, Trash2, Building2, Upload } from 'lucide-react';
-import type { Supplier, SupplierCategory } from '@/lib/data';
+import type { Supplier, SupplierCategory, Category } from '@/lib/data';
 import { SUPPLIER_CATEGORIES } from '@/lib/data';
 import { useToast } from '@/hooks/use-toast';
 import { Badge } from '@/components/ui/badge';
@@ -66,6 +66,7 @@ const emptyFormData: SupplierFormData = {
   iban: '',
   paymentTerms: '',
   notes: '',
+  defaultCategoryId: undefined,
 };
 
 export function SupplierManager() {
@@ -88,6 +89,17 @@ export function SupplierManager() {
 
   const { data: suppliers } = useCollection<Supplier>(suppliersQuery);
 
+  // Categories de despesa per al selector de categoria per defecte
+  const categoriesCollection = useMemoFirebase(
+    () => organizationId ? collection(firestore, 'organizations', organizationId, 'categories') : null,
+    [firestore, organizationId]
+  );
+  const { data: allCategories } = useCollection<Category>(categoriesCollection);
+  const expenseCategories = React.useMemo(
+    () => allCategories?.filter(c => c.type === 'expense') || [],
+    [allCategories]
+  );
+
   const [isDialogOpen, setIsDialogOpen] = React.useState(false);
   const [isAlertOpen, setIsAlertOpen] = React.useState(false);
   const [isImportOpen, setIsImportOpen] = React.useState(false);
@@ -109,6 +121,7 @@ export function SupplierManager() {
       iban: supplier.iban || '',
       paymentTerms: supplier.paymentTerms || '',
       notes: supplier.notes || '',
+      defaultCategoryId: supplier.defaultCategoryId,
     });
     setIsDialogOpen(true);
   };
@@ -174,6 +187,7 @@ export function SupplierManager() {
       paymentTerms: formData.paymentTerms || null,
       notes: formData.notes || null,
       zipCode: formData.zipCode || '',
+      defaultCategoryId: formData.defaultCategoryId || null,
       updatedAt: now,
     };
 
@@ -335,6 +349,27 @@ export function SupplierManager() {
                       <SelectItem key={cat} value={cat}>
                         {categoryLabels?.[cat] || cat}
                       </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="defaultCategoryId" className="text-right">
+                  <span>{t.contacts.defaultCategory}</span>
+                  <span className="block text-xs font-normal text-muted-foreground">{t.contacts.defaultCategoryHint}</span>
+                </Label>
+                <Select
+                  value={formData.defaultCategoryId || ''}
+                  onValueChange={(v) => handleFormChange('defaultCategoryId', v || undefined)}
+                >
+                  <SelectTrigger className="col-span-3">
+                    <SelectValue placeholder={t.contacts.selectDefaultCategory} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="">{t.contacts.noDefaultCategory}</SelectItem>
+                    {expenseCategories.map(cat => (
+                      <SelectItem key={cat.id} value={cat.id}>{cat.name}</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>

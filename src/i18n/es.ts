@@ -1102,6 +1102,12 @@ export const es = {
     newSupplier: "Nuevo proveedor...",
     unlink: "Desvincular"
   },
+  contacts: {
+    defaultCategory: "Categoría por defecto",
+    defaultCategoryHint: "Se asignará automáticamente",
+    selectDefaultCategory: "Seleccionar categoría",
+    noDefaultCategory: "Ninguna (asignar manualmente)",
+  },
   months: {
     january: "enero",
     february: "febrero",

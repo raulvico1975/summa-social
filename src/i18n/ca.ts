@@ -1075,6 +1075,12 @@ export const ca = {
     newSupplier: "Nou proveïdor...",
     unlink: "Desvincular"
   },
+  contacts: {
+    defaultCategory: "Categoria per defecte",
+    defaultCategoryHint: "S'assignarà automàticament",
+    selectDefaultCategory: "Selecciona categoria",
+    noDefaultCategory: "Cap (assignar manualment)",
+  },
   months: {
     january: "gener",
     february: "febrer",
