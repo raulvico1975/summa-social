@@ -734,6 +734,11 @@ export const es = {
     noSuppliersAboveThreshold: "No hay proveedores con operaciones superiores a 3.005,06€ este año.",
     missingTaxId: "Sin NIF",
     model347Note: "El Modelo 347 declara las operaciones con terceros (proveedores) que superen los 3.005,06€ anuales (IVA incluido). Asegúrate de que todos los proveedores tengan el NIF correcto.",
+    include: "Incluir",
+    includedSuppliers: "Proveedores incluidos",
+    excludedSuppliers: "Excluidos manualmente",
+    includeSupplier: "Incluir proveedor",
+    excludeSupplier: "Excluir proveedor",
   },
   certificates: {
     title: "Certificados de Donación",

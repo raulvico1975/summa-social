@@ -3,6 +3,7 @@
 import * as React from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { Checkbox } from '@/components/ui/checkbox';
 import {
   Table,
   TableBody,
@@ -23,7 +24,7 @@ import {
   AlertDescription,
   AlertTitle,
 } from '@/components/ui/alert';
-import { Download, Loader2, Building2, AlertTriangle } from 'lucide-react';
+import { Download, Loader2, Building2, AlertTriangle, Ban } from 'lucide-react';
 import type { Supplier, Transaction, AnyContact } from '@/lib/data';
 import { formatCurrencyEU } from '@/lib/normalize';
 import { useToast } from '@/hooks/use-toast';
@@ -74,7 +75,37 @@ export function SuppliersReportGenerator() {
   const [suppliersWithoutTaxId, setSuppliersWithoutTaxId] = React.useState<string[]>([]);
   const [selectedYear, setSelectedYear] = React.useState<string>(String(new Date().getFullYear() - 1));
   const [isLoading, setIsLoading] = React.useState(false);
+  const [excludedSuppliers, setExcludedSuppliers] = React.useState<Set<string>>(new Set());
   const { toast } = useToast();
+
+  // Proveïdors inclosos (no exclosos manualment)
+  const includedReportData = React.useMemo(() =>
+    reportData.filter(row => !excludedSuppliers.has(row.supplierName)),
+    [reportData, excludedSuppliers]
+  );
+
+  // Estadístiques actualitzades basades en proveïdors inclosos
+  const effectiveStats = React.useMemo(() => {
+    if (!reportStats || includedReportData.length === 0) return null;
+    return {
+      totalSuppliers: includedReportData.length,
+      totalAmount: includedReportData.reduce((sum, row) => sum + row.totalAmount, 0),
+      suppliersWithoutTaxId: includedReportData.filter(row => !row.supplierTaxId).length,
+      excludedCount: excludedSuppliers.size,
+    };
+  }, [reportStats, includedReportData, excludedSuppliers]);
+
+  const toggleSupplierExclusion = (supplierName: string) => {
+    setExcludedSuppliers(prev => {
+      const next = new Set(prev);
+      if (next.has(supplierName)) {
+        next.delete(supplierName);
+      } else {
+        next.add(supplierName);
+      }
+      return next;
+    });
+  };
 
   const availableYears = React.useMemo(() => {
     if (!transactions) return [];
@@ -155,12 +186,12 @@ export function SuppliersReportGenerator() {
   };
 
   const handleExportCSV = () => {
-    if (reportData.length === 0) {
+    if (includedReportData.length === 0) {
       toast({ variant: 'destructive', title: t.reports.noDataToExport, description: t.reports.noDataToExportDescription });
       return;
     }
 
-    const csvData = reportData
+    const csvData = includedReportData
       .filter(row => row.supplierTaxId) // Només exportar els que tenen NIF
       .map(row => ({
         [t.reports.supplierTaxId]: row.supplierTaxId,
@@ -209,7 +240,7 @@ export function SuppliersReportGenerator() {
                     {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                     {t.reports.generate}
                 </Button>
-                <Button variant="outline" onClick={handleExportCSV} disabled={reportData.length === 0}>
+                <Button variant="outline" onClick={handleExportCSV} disabled={includedReportData.length === 0}>
                     <Download className="mr-2 h-4 w-4" />
                     {t.reports.exportCsv}
                 </Button>
@@ -234,16 +265,22 @@ export function SuppliersReportGenerator() {
             )}
 
             {/* Resum d'estadístiques */}
-            {reportStats && reportData.length > 0 && (
-              <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+            {effectiveStats && (
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                 <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
-                  <p className="text-xs text-blue-600 font-medium">{t.suppliers.title}</p>
-                  <p className="text-2xl font-bold text-blue-700">{reportStats.totalSuppliers}</p>
+                  <p className="text-xs text-blue-600 font-medium">{t.reports.includedSuppliers}</p>
+                  <p className="text-2xl font-bold text-blue-700">{effectiveStats.totalSuppliers}</p>
                 </div>
                 <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
                   <p className="text-xs text-blue-600 font-medium">{t.reports.totalAmount}</p>
-                  <p className="text-2xl font-bold text-blue-700">{formatCurrencyEU(reportStats.totalAmount)}</p>
+                  <p className="text-2xl font-bold text-blue-700">{formatCurrencyEU(effectiveStats.totalAmount)}</p>
                 </div>
+                {effectiveStats.excludedCount > 0 && (
+                  <div className="bg-orange-50 border border-orange-200 rounded-lg p-3">
+                    <p className="text-xs text-orange-600 font-medium">{t.reports.excludedSuppliers}</p>
+                    <p className="text-2xl font-bold text-orange-700">{effectiveStats.excludedCount}</p>
+                  </div>
+                )}
                 <div className="bg-gray-50 border border-gray-200 rounded-lg p-3">
                   <p className="text-xs text-gray-600 font-medium">{t.reports.threshold347}</p>
                   <p className="text-2xl font-bold text-gray-700">{formatCurrencyEU(THRESHOLD_347)}</p>
@@ -256,26 +293,40 @@ export function SuppliersReportGenerator() {
             <Table>
                 <TableHeader>
                 <TableRow>
+                    <TableHead className="w-[50px]">{t.reports.include}</TableHead>
                     <TableHead>{t.reports.supplierTaxId}</TableHead>
                     <TableHead>{t.reports.supplierName}</TableHead>
                     <TableHead className="text-right">{t.reports.totalAmount}</TableHead>
                 </TableRow>
                 </TableHeader>
                 <TableBody>
-                {reportData.map((row) => (
-                    <TableRow key={row.supplierName}>
+                {reportData.map((row) => {
+                    const isExcluded = excludedSuppliers.has(row.supplierName);
+                    return (
+                    <TableRow key={row.supplierName} className={isExcluded ? 'opacity-50 bg-muted/30' : ''}>
+                      <TableCell>
+                        <Checkbox
+                          checked={!isExcluded}
+                          onCheckedChange={() => toggleSupplierExclusion(row.supplierName)}
+                          aria-label={isExcluded ? t.reports.includeSupplier : t.reports.excludeSupplier}
+                        />
+                      </TableCell>
                       <TableCell className={!row.supplierTaxId ? 'text-red-500' : ''}>
                         {row.supplierTaxId || <span className="flex items-center gap-1"><AlertTriangle className="h-3 w-3" /> {t.reports.missingTaxId}</span>}
                       </TableCell>
-                      <TableCell className="font-medium">{row.supplierName}</TableCell>
-                      <TableCell className="text-right font-mono text-blue-600 font-medium">
+                      <TableCell className="font-medium">
+                        {row.supplierName}
+                        {isExcluded && <Ban className="inline ml-2 h-3 w-3 text-orange-500" />}
+                      </TableCell>
+                      <TableCell className={`text-right font-mono font-medium ${isExcluded ? 'text-muted-foreground line-through' : 'text-blue-600'}`}>
                         {formatCurrencyEU(row.totalAmount)}
                       </TableCell>
                     </TableRow>
-                ))}
+                    );
+                })}
                 {reportData.length === 0 && (
                     <TableRow>
-                        <TableCell colSpan={3} className="text-center text-muted-foreground h-24">
+                        <TableCell colSpan={4} className="text-center text-muted-foreground h-24">
                            {isLoading ? t.reports.generating : t.reports.noSuppliersAboveThreshold}
                         </TableCell>
                     </TableRow>

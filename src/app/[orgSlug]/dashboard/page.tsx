@@ -330,8 +330,14 @@ ${t.dashboard.generatedWith}`;
       percentage: total > 0 ? (data.total / total) * 100 : 0,
     }));
 
-    // Ordenar per import descendent
-    return result.sort((a, b) => b.totalExpense - a.totalExpense);
+    // Ordenar: primer per import descendent, però "Sense assignar" sempre al final
+    return result.sort((a, b) => {
+      // "Sense assignar" (projectId === null) sempre al final
+      if (a.projectId === null && b.projectId !== null) return 1;
+      if (a.projectId !== null && b.projectId === null) return -1;
+      // La resta ordenats per import descendent
+      return b.totalExpense - a.totalExpense;
+    });
   }, [filteredTransactions, projects, t.dashboard.unassigned]);
 
   const totalProjectExpenses = React.useMemo(() => {
@@ -672,20 +678,35 @@ ${t.dashboard.generatedWith}`;
               </div>
             </div>
           ) : (
-            <div className="space-y-4">
-              {expensesByProject.map((project) => (
-                <div key={project.projectId || 'unassigned'} className="space-y-2">
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm font-medium">{project.projectName}</span>
-                    <span className="text-sm font-semibold">{formatCurrencyEU(project.totalExpense)}</span>
+            <div className="space-y-3">
+              {expensesByProject.map((project) => {
+                const isUnassigned = project.projectId === null;
+                return (
+                  <div key={project.projectId || 'unassigned'} className="space-y-1.5">
+                    <div className="flex items-center justify-between">
+                      <span className={`text-sm font-medium ${isUnassigned ? 'text-muted-foreground italic' : ''}`}>
+                        {project.projectName}
+                      </span>
+                      <span className="text-sm font-semibold tabular-nums">
+                        {formatCurrencyEU(project.totalExpense)}
+                        <span className="ml-2 text-xs text-muted-foreground font-normal">
+                          ({Math.round(project.percentage)}%)
+                        </span>
+                      </span>
+                    </div>
+                    <div className="h-3 w-full bg-muted rounded-full overflow-hidden">
+                      <div
+                        className={`h-full rounded-full transition-all ${isUnassigned ? 'bg-gray-400' : 'bg-blue-500'}`}
+                        style={{ width: `${project.percentage}%` }}
+                      />
+                    </div>
                   </div>
-                  <Progress value={project.percentage} className="h-2" />
-                </div>
-              ))}
-              <div className="pt-3 mt-3 border-t">
+                );
+              })}
+              <div className="pt-4 mt-4 border-t">
                 <div className="flex items-center justify-between">
                   <span className="text-sm font-bold">{t.dashboard.totalExpensesProject}</span>
-                  <span className="text-sm font-bold">{formatCurrencyEU(totalProjectExpenses)}</span>
+                  <span className="text-sm font-bold tabular-nums">{formatCurrencyEU(totalProjectExpenses)}</span>
                 </div>
               </div>
             </div>

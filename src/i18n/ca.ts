@@ -701,6 +701,11 @@ export const ca = {
     noSuppliersAboveThreshold: "No hi ha proveïdors amb operacions superiors a 3.005,06€ aquest any.",
     missingTaxId: "Sense NIF",
     model347Note: "El Model 347 declara les operacions amb tercers (proveïdors) que superin els 3.005,06€ anuals (IVA inclòs). Assegura't que tots els proveïdors tinguin el NIF correcte.",
+    include: "Incloure",
+    includedSuppliers: "Proveïdors inclosos",
+    excludedSuppliers: "Exclosos manualment",
+    includeSupplier: "Incloure proveïdor",
+    excludeSupplier: "Excloure proveïdor",
   },
   certificates: {
     title: "Certificats de Donació",
