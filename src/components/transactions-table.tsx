@@ -12,6 +12,7 @@ import {
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { ContactCombobox } from '@/components/contact-combobox';
+import { DonorSearchCombobox } from '@/components/donor-search-combobox';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -1426,30 +1427,17 @@ export function TransactionsTable() {
                 <p className="text-xs text-red-500">{formatDate(returnTransaction.date)}</p>
               </div>
 
-              {/* Selector de donant */}
+              {/* Selector de donant amb cerca */}
               <div className="space-y-2">
                 <Label>{t.movements.table.affectedDonor}</Label>
-                <Select
-                  value={returnDonorId || ''}
-                  onValueChange={(v) => {
-                    setReturnDonorId(v || null);
+                <DonorSearchCombobox
+                  donors={donors}
+                  value={returnDonorId}
+                  onSelect={(donorId) => {
+                    setReturnDonorId(donorId);
                     setReturnLinkedTxId(null); // Reset linked tx when donor changes
                   }}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder={t.movements.table.selectDonor} />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {donors.map(donor => (
-                      <SelectItem key={donor.id} value={donor.id}>
-                        <span className="flex items-center gap-2">
-                          <Heart className="h-3 w-3 text-red-500" />
-                          {donor.name}
-                        </span>
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                />
               </div>
 
               {/* Selector de donació original */}

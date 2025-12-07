@@ -1177,5 +1177,11 @@ export const ca = {
     deleteErrorDescription: "Hi ha hagut un error en esborrar les dades. Torna-ho a intentar.",
     noDataToDelete: "No hi ha dades",
     noDataToDeleteDescription: "No s'han trobat registres per esborrar.",
+  },
+  donorSearchCombobox: {
+    searchPlaceholder: "Cerca per nom o DNI...",
+    noResults: "No s'han trobat donants",
+    donors: "Donants",
+    showingFirst50: "Mostra els primers 50 resultats. Refina la cerca per veure'n més.",
   }
 };

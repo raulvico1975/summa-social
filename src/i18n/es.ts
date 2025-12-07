@@ -1171,5 +1171,11 @@ export const es = {
     deleteErrorDescription: "Ha habido un error al borrar los datos. Inténtalo de nuevo.",
     noDataToDelete: "No hay datos",
     noDataToDeleteDescription: "No se han encontrado registros para borrar.",
+  },
+  donorSearchCombobox: {
+    searchPlaceholder: "Buscar por nombre o DNI...",
+    noResults: "No se han encontrado donantes",
+    donors: "Donantes",
+    showingFirst50: "Mostrando los primeros 50 resultados. Refina la búsqueda para ver más.",
   }
 };
