@@ -176,6 +176,10 @@ export const es = {
       viewDocument: "Ver documento",
       allExpensesHaveProofEmpty: "🎉 ¡Todos los gastos tienen justificante!",
       noReturns: "✅ No hay devoluciones",
+      selectCategory: "Selecciona categoría",
+      suggestWithAI: "Sugerir con IA",
+      searchCategory: "Buscar categoría...",
+      noResults: "Sin resultados",
     },
      splitter: {
         title: "Dividir Remesa",

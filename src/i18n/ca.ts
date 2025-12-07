@@ -176,6 +176,10 @@ export const ca = {
       viewDocument: "Veure document",
       allExpensesHaveProofEmpty: "🎉 Totes les despeses tenen justificant!",
       noReturns: "✅ No hi ha devolucions",
+      selectCategory: "Selecciona categoria",
+      suggestWithAI: "Suggerir amb IA",
+      searchCategory: "Cerca categoria...",
+      noResults: "Cap resultat",
     },
     splitter: {
         title: "Dividir Remesa",

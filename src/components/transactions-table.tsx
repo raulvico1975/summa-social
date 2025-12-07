@@ -55,6 +55,19 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from '@/components/ui/popover';
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from '@/components/ui/command';
+import {
   Sparkles,
   Loader2,
   ChevronDown,
@@ -78,6 +91,7 @@ import {
   Undo2,
   Link,
   Ban,
+  Search,
 } from 'lucide-react';
 import type { Transaction, Category, Project, AnyContact, Donor, Supplier, TransactionType } from '@/lib/data';
 import { formatCurrencyEU } from '@/lib/normalize';
@@ -186,6 +200,7 @@ export function TransactionsTable() {
 
   const [isSplitterOpen, setIsSplitterOpen] = React.useState(false);
   const [transactionToSplit, setTransactionToSplit] = React.useState<Transaction | null>(null);
+
 
   // Maps per noms
   const contactMap = React.useMemo(() => 
@@ -1046,7 +1061,6 @@ export function TransactionsTable() {
                 (c) => c.type === (tx.amount > 0 ? 'income' : 'expense')
               ) || [];
               const isDocumentLoading = loadingStates[`doc_${tx.id}`];
-              const translatedCategory = tx.category ? categoryTranslations[tx.category] || tx.category : null;
               const isExpense = tx.amount < 0;
               const hasDocument = !!tx.document;
               const isEditingNote = editingNoteId === tx.id;
@@ -1157,45 +1171,65 @@ export function TransactionsTable() {
                   </TableCell>
                   {/* Columna Categoria */}
                   <TableCell>
-                    {translatedCategory ? (
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                           <Button variant="ghost" className="h-auto p-0 text-left font-normal flex items-center gap-1">
-                            <Badge
-                              variant={tx.amount > 0 ? 'success' : 'destructive'}
-                              className={`cursor-pointer ${isReturnedDonation ? 'opacity-50' : ''}`}
-                            >
-                              {translatedCategory}
-                            </Badge>
-                             <ChevronDown className="h-3 w-3 text-muted-foreground" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="start">
-                          {relevantCategories.map((cat) => (
-                            <DropdownMenuItem
-                              key={cat.id}
-                              onClick={() => handleSetCategory(tx.id, cat.name)}
-                            >
-                              {categoryTranslations[cat.name] || cat.name}
-                            </DropdownMenuItem>
-                          ))}
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    ) : (
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handleCategorize(tx.id)}
-                        disabled={loadingStates[tx.id]}
-                      >
-                        {loadingStates[tx.id] ? (
-                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        ) : (
-                          <Sparkles className="mr-2 h-4 w-4" />
-                        )}
-                        {t.movements.table.categorize}
-                      </Button>
-                    )}
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <Button
+                          variant="ghost"
+                          role="combobox"
+                          disabled={loadingStates[tx.id]}
+                          className={`justify-start rounded-full border-0 px-3 py-1 text-xs font-semibold h-auto min-w-0 w-auto gap-1 ${
+                            tx.amount > 0
+                              ? 'bg-green-600 text-white hover:bg-green-600/80 hover:text-white'
+                              : 'bg-red-500 text-white hover:bg-red-500/80 hover:text-white'
+                          } ${isReturnedDonation ? 'opacity-50' : ''}`}
+                        >
+                          {loadingStates[tx.id] ? (
+                            <span className="flex items-center gap-1">
+                              <Loader2 className="h-3 w-3 animate-spin" />
+                              <span>{t.movements.table.categorize}...</span>
+                            </span>
+                          ) : (
+                            <span className="truncate">
+                              {tx.category ? (categoryTranslations[tx.category] || tx.category) : t.movements.table.uncategorized}
+                            </span>
+                          )}
+                          <ChevronDown className="ml-1 h-3 w-3 shrink-0 opacity-70" />
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-[200px] p-0" align="start">
+                        <Command>
+                          <CommandInput placeholder={t.movements.table.searchCategory} />
+                          <CommandList>
+                            <CommandEmpty>{t.movements.table.noResults}</CommandEmpty>
+                            <CommandGroup>
+                              {relevantCategories.map((cat) => (
+                                <CommandItem
+                                  key={cat.id}
+                                  value={categoryTranslations[cat.name] || cat.name}
+                                  onSelect={() => {
+                                    handleSetCategory(tx.id, cat.name);
+                                  }}
+                                >
+                                  {categoryTranslations[cat.name] || cat.name}
+                                </CommandItem>
+                              ))}
+                            </CommandGroup>
+                            <CommandGroup>
+                              <CommandItem
+                                value={t.movements.table.suggestWithAI}
+                                onSelect={() => {
+                                  handleCategorize(tx.id);
+                                }}
+                                className="text-primary"
+                              >
+                                <Sparkles className="mr-2 h-3 w-3" />
+                                {t.movements.table.suggestWithAI}
+                              </CommandItem>
+                            </CommandGroup>
+                          </CommandList>
+                        </Command>
+                      </PopoverContent>
+                    </Popover>
                   </TableCell>
                   {/* Columna Projecte - col·lapsable */}
                   {showProjectColumn ? (
