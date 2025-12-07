@@ -722,6 +722,18 @@ export const es = {
     csvHeaderTaxId: "DNI/CIF",
     csvHeaderZipCode: "Código Postal",
     csvHeaderAmount: "Importe Donado",
+    // Modelo 347 - Proveedores
+    suppliersReportTitle: "Generador de Informe de Proveedores (Modelo 347)",
+    suppliersReportDescription: "Genera el listado de proveedores con operaciones superiores a 3.005,06€ para la declaración a Hacienda.",
+    suppliersReportGeneratedDescription: (year: string, count: number) => `Se ha generado el informe para el año ${year} con ${count} proveedores.`,
+    supplierName: "Nombre del Proveedor",
+    supplierTaxId: "NIF/CIF",
+    suppliersWithoutTaxId: "Proveedores sin NIF",
+    suppliersWithoutTaxIdDescription: "Los siguientes proveedores no tienen NIF y no se podrán incluir correctamente en el Modelo 347:",
+    threshold347: "Umbral: 3.005,06€",
+    noSuppliersAboveThreshold: "No hay proveedores con operaciones superiores a 3.005,06€ este año.",
+    missingTaxId: "Sin NIF",
+    model347Note: "El Modelo 347 declara las operaciones con terceros (proveedores) que superen los 3.005,06€ anuales (IVA incluido). Asegúrate de que todos los proveedores tengan el NIF correcto.",
   },
   certificates: {
     title: "Certificados de Donación",

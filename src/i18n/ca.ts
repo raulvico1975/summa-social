@@ -689,6 +689,18 @@ export const ca = {
     csvHeaderTaxId: "DNI/CIF",
     csvHeaderZipCode: "Codi Postal",
     csvHeaderAmount: "Import Donat",
+    // Model 347 - Proveïdors
+    suppliersReportTitle: "Generador d'Informe de Proveïdors (Model 347)",
+    suppliersReportDescription: "Genera el llistat de proveïdors amb operacions superiors a 3.005,06€ per a la declaració a Hisenda.",
+    suppliersReportGeneratedDescription: (year: string, count: number) => `S'ha generat l'informe per a l'any ${year} amb ${count} proveïdors.`,
+    supplierName: "Nom del Proveïdor",
+    supplierTaxId: "NIF/CIF",
+    suppliersWithoutTaxId: "Proveïdors sense NIF",
+    suppliersWithoutTaxIdDescription: "Els següents proveïdors no tenen NIF i no es podran incloure correctament al Model 347:",
+    threshold347: "Llindar: 3.005,06€",
+    noSuppliersAboveThreshold: "No hi ha proveïdors amb operacions superiors a 3.005,06€ aquest any.",
+    missingTaxId: "Sense NIF",
+    model347Note: "El Model 347 declara les operacions amb tercers (proveïdors) que superin els 3.005,06€ anuals (IVA inclòs). Assegura't que tots els proveïdors tinguin el NIF correcte.",
   },
   certificates: {
     title: "Certificats de Donació",

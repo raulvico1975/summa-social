@@ -30,7 +30,6 @@ interface TaxObligation {
 const TAX_OBLIGATIONS: TaxObligation[] = [
   { id: 'model182', nameKey: 'model182', month: 1, day: 31, reportPath: '/dashboard/informes' },
   { id: 'model347', nameKey: 'model347', month: 2, day: 28, reportPath: '/dashboard/informes' },
-  { id: 'annualReport', nameKey: 'annualReport', month: 6, day: 30, reportPath: '/dashboard/informes' }
 ];
 
 interface Celebration {

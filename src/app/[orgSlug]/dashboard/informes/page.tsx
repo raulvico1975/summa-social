@@ -1,6 +1,7 @@
 'use client';
 
 import { DonationsReportGenerator } from '@/components/donations-report-generator';
+import { SuppliersReportGenerator } from '@/components/suppliers-report-generator';
 import { DonationCertificateGenerator } from '@/components/donation-certificate-generator';
 import { useTranslations } from '@/i18n';
 
@@ -13,6 +14,7 @@ export default function ReportsPage() {
         <p className="text-muted-foreground">{t.reports.description}</p>
       </div>
       <DonationsReportGenerator />
+      <SuppliersReportGenerator />
       <DonationCertificateGenerator />
     </div>
   );
