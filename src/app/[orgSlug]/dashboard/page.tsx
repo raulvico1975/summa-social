@@ -540,7 +540,7 @@ ${t.dashboard.generatedWith}`;
               {celebrations.map((celebration) => {
                 const message = t.dashboard[celebration.messageKey as keyof typeof t.dashboard];
                 const displayMessage = celebration.messageParams && typeof message === 'function'
-                  ? message(celebration.messageParams as { count: number })
+                  ? message(celebration.messageParams as any)
                   : message as string;
 
                 return (
@@ -735,7 +735,7 @@ ${t.dashboard.generatedWith}`;
                     {obligation.status === 'destructive' && '🔴'}
                   </Badge>
                   <div>
-                    <p className="font-medium text-sm">{t.dashboard[obligation.nameKey as keyof typeof t.dashboard]}</p>
+                    <p className="font-medium text-sm">{t.dashboard[obligation.nameKey as keyof typeof t.dashboard] as string}</p>
                     <p className="text-xs text-muted-foreground">
                       {obligation.daysRemaining} {t.dashboard.daysRemaining}
                     </p>

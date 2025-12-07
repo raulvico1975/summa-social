@@ -71,7 +71,7 @@ interface OrganizationContextType {
   error: Error | null;
 }
 
-const OrganizationContext = createContext<OrganizationContextType | undefined>(undefined);
+export const OrganizationContext = createContext<OrganizationContextType | undefined>(undefined);
 
 interface OrganizationProviderProps {
   children: ReactNode;
@@ -218,7 +218,14 @@ function useOrganizationBySlug(orgSlug?: string) {
         const profileRef = doc(firestore, 'organizations', orgId, 'members', user.uid);
         const profileSnap = await getDoc(profileRef);
         if (profileSnap.exists()) {
-          setUserProfile({ id: user.uid, ...profileSnap.data() } as UserProfile);
+          const profileData = profileSnap.data();
+          setUserProfile({
+            organizationId: profileData.organizationId ?? orgId,
+            role: profileData.role ?? 'viewer',
+            displayName: profileData.displayName ?? user.displayName ?? '',
+            email: profileData.email ?? user.email ?? undefined,
+            organizations: profileData.organizations,
+          });
         }
 
       } catch (err) {

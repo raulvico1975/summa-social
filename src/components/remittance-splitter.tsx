@@ -471,7 +471,7 @@ export function RemittanceSplitter({
           taxId,
           amount,
           status,
-          matchedDonor,
+          matchedDonor: matchedDonor ?? null,
           shouldCreate: status !== 'found',
           zipCode: defaultZipCode,
         });

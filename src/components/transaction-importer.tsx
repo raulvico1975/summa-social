@@ -325,13 +325,14 @@ export function TransactionImporter({ existingTransactions }: TransactionImporte
                     // Obtenir el contacte complet per accedir a defaultCategoryId
                     const contact = availableContacts.find(c => c.id === match.contactId);
                     const defaultCategory = contact?.defaultCategoryId;
-                    log(`✅ [Fila ${index + 1}] Match per nom: "${match.contactName}" (${match.contactType})${defaultCategory ? ' + categoria' : ''} - confiança ${Math.round(match.confidence * 100)}% - "${tx.description.substring(0, 40)}..."`);
+                    const willAssignCategory = defaultCategory && !tx.category;
+                    log(`✅ [Fila ${index + 1}] Match per nom: "${match.contactName}" (${match.contactType})${willAssignCategory ? ` → categoria: ${defaultCategory}` : defaultCategory ? ' (ja té categoria)' : ' (sense cat. defecte)'} - confiança ${Math.round(match.confidence * 100)}% - "${tx.description.substring(0, 40)}..."`);
                     return {
                         ...tx,
                         contactId: match.contactId,
                         contactType: match.contactType,
                         // Auto-assignar categoria si el contacte en té i la transacció no
-                        ...(defaultCategory && !tx.category ? { category: defaultCategory } : {}),
+                        ...(willAssignCategory ? { category: defaultCategory } : {}),
                     };
                 } else {
                     unmatchedTransactions.push({ tx, index });
@@ -378,13 +379,14 @@ export function TransactionImporter({ existingTransactions }: TransactionImporte
                                 if (contact) {
                                     aiMatchedCount++;
                                     const defaultCategory = contact.defaultCategoryId;
-                                    log(`✅ [Fila ${index + 1}] Match IA: ${contact.name} (${contact.type})${defaultCategory ? ' + categoria' : ''} - "${tx.description.substring(0, 30)}..."`);
+                                    const willAssignCategory = defaultCategory && !tx.category;
+                                    log(`✅ [Fila ${index + 1}] Match IA: ${contact.name} (${contact.type})${willAssignCategory ? ` → categoria: ${defaultCategory}` : defaultCategory ? ' (ja té categoria)' : ' (sense cat. defecte)'} - "${tx.description.substring(0, 30)}..."`);
                                     transactionsWithContacts[index] = {
                                         ...tx,
                                         contactId: result.contactId,
                                         contactType: contact.type,
                                         // Auto-assignar categoria si el contacte en té i la transacció no
-                                        ...(defaultCategory && !tx.category ? { category: defaultCategory } : {}),
+                                        ...(willAssignCategory ? { category: defaultCategory } : {}),
                                     };
                                 }
                             } else {

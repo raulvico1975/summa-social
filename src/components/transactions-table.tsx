@@ -93,7 +93,7 @@ import {
   Ban,
   Search,
 } from 'lucide-react';
-import type { Transaction, Category, Project, AnyContact, Donor, Supplier, TransactionType } from '@/lib/data';
+import type { Transaction, Category, Project, AnyContact, Donor, Supplier, TransactionType, ContactType } from '@/lib/data';
 import { formatCurrencyEU } from '@/lib/normalize';
 import { categorizeTransaction } from '@/ai/flows/categorize-transactions';
 import { useToast } from '@/hooks/use-toast';
@@ -181,6 +181,18 @@ export function TransactionsTable() {
   const { data: availableContacts } = useCollection<AnyContact>(contactsCollection);
   const { data: availableProjects } = useCollection<Project>(projectsCollection);
 
+  // Helper per obtenir el nom traduït d'una categoria (pot ser ID o nom clau)
+  const getCategoryDisplayName = React.useCallback((categoryValue: string | null | undefined): string => {
+    if (!categoryValue) return '';
+    // Primer buscar per ID (defaultCategoryId guarda IDs)
+    const categoryById = availableCategories?.find(c => c.id === categoryValue);
+    if (categoryById) {
+      return categoryTranslations[categoryById.name] || categoryById.name;
+    }
+    // Si no és ID, és un nom clau - buscar traducció directament
+    return categoryTranslations[categoryValue] || categoryValue;
+  }, [availableCategories, categoryTranslations]);
+
   const [loadingStates, setLoadingStates] = React.useState<Record<string, boolean>>({});
   const { toast } = useToast();
   const { log } = useAppLog();
@@ -204,11 +216,11 @@ export function TransactionsTable() {
 
 
   // Maps per noms
-  const contactMap = React.useMemo(() => 
+  const contactMap = React.useMemo(() =>
     availableContacts?.reduce((acc, contact) => {
       acc[contact.id] = { name: contact.name, type: contact.type };
       return acc;
-    }, {} as Record<string, { name: string; type: 'donor' | 'supplier' }>) || {}, 
+    }, {} as Record<string, { name: string; type: ContactType }>) || {},
   [availableContacts]);
 
   const donors = React.useMemo(() => 
@@ -407,7 +419,7 @@ export function TransactionsTable() {
       `"${tx.description.replace(/"/g, '""')}"`,
       `"${(tx.note || '').replace(/"/g, '""')}"`,
       tx.contactId && contactMap[tx.contactId] ? contactMap[tx.contactId].name : '',
-      tx.category ? (categoryTranslations[tx.category] || tx.category) : '',
+      tx.category ? getCategoryDisplayName(tx.category) : '',
       tx.projectId && projectMap[tx.projectId] ? projectMap[tx.projectId] : '',
     ]);
 
@@ -473,7 +485,7 @@ export function TransactionsTable() {
 
       updateDocumentNonBlocking(doc(transactionsCollection, txId), { category: result.category });
 
-      const categoryName = categoryTranslations[result.category] || result.category;
+      const categoryName = getCategoryDisplayName(result.category);
       toast({
         title: 'Categorització Automàtica',
         description: `Transacció classificada com "${categoryName}" amb una confiança del ${(result.confidence * 100).toFixed(0)}%.`,
@@ -536,7 +548,7 @@ export function TransactionsTable() {
           });
 
           updateDocumentNonBlocking(doc(transactionsCollection, tx.id), { category: result.category });
-          const categoryName = categoryTranslations[result.category] || result.category;
+          const categoryName = getCategoryDisplayName(result.category);
           log(`✅ Movimiento ${tx.id} clasificado como "${categoryName}".`);
           return { success: true };
         } catch (error) {
@@ -565,7 +577,7 @@ export function TransactionsTable() {
     updateDocumentNonBlocking(doc(transactionsCollection, txId), { category: newCategory });
   };
   
-  const handleSetContact = (txId: string, newContactId: string | null, contactType?: 'donor' | 'supplier') => {
+  const handleSetContact = (txId: string, newContactId: string | null, contactType?: ContactType) => {
     if (!transactionsCollection) return;
 
     const updates: Record<string, any> = {
@@ -757,7 +769,7 @@ export function TransactionsTable() {
 
     addDocumentNonBlocking(contactsCollection, newContactData)
       .then(docRef => {
-        if (newContactTransactionId) {
+        if (docRef && newContactTransactionId) {
           handleSetContact(newContactTransactionId, docRef.id, newContactType);
         }
       });
@@ -1169,7 +1181,7 @@ export function TransactionsTable() {
                           name: c.name,
                           type: c.type
                         })) || []}
-                        value={tx.contactId}
+                        value={tx.contactId ?? null}
                         onSelect={(contactId) => {
                           if (contactId) {
                             const contact = availableContacts?.find(c => c.id === contactId);
@@ -1203,7 +1215,7 @@ export function TransactionsTable() {
                             </span>
                           ) : (
                             <span className="truncate">
-                              {tx.category ? (categoryTranslations[tx.category] || tx.category) : t.movements.table.uncategorized}
+                              {tx.category ? getCategoryDisplayName(tx.category) : t.movements.table.uncategorized}
                             </span>
                           )}
                           <ChevronDown className="ml-1 h-3 w-3 shrink-0 opacity-70" />

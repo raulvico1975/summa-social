@@ -112,7 +112,7 @@ export function CategoryManager() {
   const { t } = useTranslations();
   const categoryTranslations = t.categories as Record<string, string>;
   
-  const canEdit = userRole === 'admin' || userRole === 'treasurer';
+  const canEdit = userRole === 'admin' || userRole === 'user';
 
   const categoriesCollection = useMemoFirebase(
     () => organizationId ? collection(firestore, 'organizations', organizationId, 'categories') : null,

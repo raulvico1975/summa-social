@@ -43,7 +43,7 @@ function countMatchingTokens(nameTokens: string[], descriptionNormalized: string
  */
 export interface MatchResult {
   contactId: string;
-  contactType: 'donor' | 'supplier';
+  contactType: 'donor' | 'supplier' | 'employee';
   contactName: string;
   confidence: number;      // 0-1, percentatge de tokens que coincideixen
   matchedTokens: string[]; // Tokens que han coincidit
@@ -102,7 +102,7 @@ export function findMatchingContact(
       bestScore = score;
       bestMatch = {
         contactId: contact.id,
-        contactType: contact.type as 'donor' | 'supplier',
+        contactType: contact.type as 'donor' | 'supplier' | 'employee',
         contactName: contact.name,
         confidence,
         matchedTokens,

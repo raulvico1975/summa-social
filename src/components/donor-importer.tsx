@@ -42,9 +42,9 @@ import {
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
-import type { Donor } from '@/lib/data';
+import type { Donor, Category } from '@/lib/data';
 import { collection, query, where, getDocs, writeBatch, doc } from 'firebase/firestore';
-import { useFirebase } from '@/firebase';
+import { useFirebase, useCollection, useMemoFirebase } from '@/firebase';
 import { useCurrentOrganization } from '@/hooks/organization-provider';
 import { useTranslations } from '@/i18n';
 
@@ -62,6 +62,7 @@ type ColumnMapping = {
   iban: string | null;
   email: string | null;
   phone: string | null;
+  defaultCategory: string | null;
 };
 
 type ImportRow = {
@@ -90,6 +91,7 @@ const emptyMapping: ColumnMapping = {
   iban: null,
   email: null,
   phone: null,
+  defaultCategory: null,
 };
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -135,6 +137,7 @@ function autoDetectColumn(header: string): keyof ColumnMapping | null {
     iban: ['iban', 'compte', 'cuenta', 'banc', 'banco'],
     email: ['email', 'correu', 'correo', 'mail'],
     phone: ['telefon', 'telefono', 'phone', 'mobil', 'movil'],
+    defaultCategory: ['categoria', 'category', 'categoría'],
   };
 
   for (const [field, keywords] of Object.entries(patterns)) {
@@ -212,7 +215,23 @@ export function DonorImporter({
     iban: t.importers.donor.fields.iban,
     email: t.importers.donor.fields.email,
     phone: t.importers.donor.fields.phone,
+    defaultCategory: t.importers.donor.fields.defaultCategory,
   };
+
+  // Carregar categories d'ingrés
+  const categoriesQuery = useMemoFirebase(
+    () => organizationId ? collection(firestore, 'organizations', organizationId, 'categories') : null,
+    [firestore, organizationId]
+  );
+  const { data: allCategories } = useCollection<Category>(categoriesQuery);
+  const incomeCategories = React.useMemo(
+    () => allCategories?.filter(c => c.type === 'income') || [],
+    [allCategories]
+  );
+  const categoryTranslations = t.categories as Record<string, string>;
+
+  // Selector global de categoria per defecte: '__auto__' = automàtic segons tipus
+  const [globalDefaultCategory, setGlobalDefaultCategory] = React.useState<string>('__auto__');
 
   // Estat del procés
   const [step, setStep] = React.useState<ImportStep>('upload');
@@ -237,9 +256,44 @@ export function DonorImporter({
         setImportRows([]);
         setImportProgress(0);
         setImportedCount(0);
+        setGlobalDefaultCategory('__auto__');
       }, 300);
     }
   }, [open]);
+
+  // Funció per determinar la categoria segons membershipType
+  const getCategoryIdForMembershipType = React.useCallback((membershipType: 'one-time' | 'recurring'): string | null => {
+    if (!incomeCategories || incomeCategories.length === 0) return null;
+
+    if (membershipType === 'recurring') {
+      // Buscar categoria de quotes socis
+      const memberFeesCategory = incomeCategories.find(c =>
+        c.name.toLowerCase().includes('quota') ||
+        c.name.toLowerCase().includes('soci') ||
+        c.name === 'memberFees'
+      );
+      return memberFeesCategory?.id || null;
+    } else {
+      // Buscar categoria de donacions
+      const donationsCategory = incomeCategories.find(c =>
+        c.name.toLowerCase().includes('donaci') ||
+        c.name === 'donations'
+      );
+      return donationsCategory?.id || null;
+    }
+  }, [incomeCategories]);
+
+  // Funció per buscar categoria per nom (del CSV)
+  const getCategoryIdByName = React.useCallback((categoryName: string): string | null => {
+    if (!categoryName || !incomeCategories || incomeCategories.length === 0) return null;
+
+    const normalized = categoryName.toLowerCase().trim();
+    const category = incomeCategories.find(c =>
+      c.name.toLowerCase() === normalized ||
+      (categoryTranslations[c.name] || '').toLowerCase() === normalized
+    );
+    return category?.id || null;
+  }, [incomeCategories, categoryTranslations]);
 
   // Carregar DNIs existents quan s'obre
   React.useEffect(() => {
@@ -410,6 +464,29 @@ const executeImport = async () => {
         if (row.parsed.email) cleanData.email = row.parsed.email;
         if (row.parsed.phone) cleanData.phone = row.parsed.phone;
 
+        // Determinar defaultCategoryId
+        let defaultCategoryId: string | null = null;
+
+        // 1. Prioritat: categoria del CSV (si s'ha mapejat la columna)
+        if (mapping.defaultCategory && row.data[mapping.defaultCategory]) {
+          defaultCategoryId = getCategoryIdByName(String(row.data[mapping.defaultCategory]));
+        }
+
+        // 2. Si no hi ha del CSV, usar selector global
+        if (!defaultCategoryId) {
+          if (globalDefaultCategory === '__auto__') {
+            // Automàtic segons membershipType
+            defaultCategoryId = getCategoryIdForMembershipType(row.parsed.membershipType || 'one-time');
+          } else if (globalDefaultCategory !== '__none__') {
+            // Categoria específica seleccionada
+            defaultCategoryId = globalDefaultCategory;
+          }
+        }
+
+        if (defaultCategoryId) {
+          cleanData.defaultCategoryId = defaultCategoryId;
+        }
+
         batch.set(newDocRef, cleanData);
         imported++;
       }
@@ -438,6 +515,10 @@ const executeImport = async () => {
 };
 
   const downloadTemplate = () => {
+    // Obtenir noms de categories traduïts per l'exemple
+    const memberFeesName = categoryTranslations['memberFees'] || 'Quotes socis';
+    const donationsName = categoryTranslations['donations'] || 'Donacions';
+
     const template = [
       [
         t.importers.donor.fields.name,
@@ -448,19 +529,20 @@ const executeImport = async () => {
         t.importers.donor.fields.monthlyAmount,
         t.importers.donor.fields.iban,
         t.importers.donor.fields.email,
-        t.importers.donor.fields.phone
+        t.importers.donor.fields.phone,
+        t.importers.donor.fields.defaultCategory
       ],
-      ['Maria García López', '12345678A', '28001', 'Particular', t.importers.donor.modality.member, '10', 'ES1234567890123456789012', 'maria@exemple.com', '612345678'],
-      ['Joan Pérez Martí', '87654321B', '08001', 'Particular', t.importers.donor.modality.oneTime, '', '', 'joan@exemple.com', ''],
-      ['Empresa SL', 'B12345678', '25001', 'Empresa', t.importers.donor.modality.member, '50', 'ES0987654321098765432109', 'info@empresa.com', '973123456'],
+      ['Maria García López', '12345678A', '28001', 'Particular', t.importers.donor.modality.member, '10', 'ES1234567890123456789012', 'maria@exemple.com', '612345678', memberFeesName],
+      ['Joan Pérez Martí', '87654321B', '08001', 'Particular', t.importers.donor.modality.oneTime, '', '', 'joan@exemple.com', '', donationsName],
+      ['Empresa S.L.', 'B12345678', '25001', 'Empresa', t.importers.donor.modality.member, '50', 'ES0987654321098765432109', 'info@empresa.com', '973123456', memberFeesName],
     ];
 
     const ws = XLSX.utils.aoa_to_sheet(template);
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, t.importers.donor.worksheetName);
     ws['!cols'] = [
-      { wch: 25 }, { wch: 12 }, { wch: 12 }, { wch: 12 },
-      { wch: 12 }, { wch: 14 }, { wch: 26 }, { wch: 25 }, { wch: 12 }
+      { wch: 25 }, { wch: 12 }, { wch: 12 }, { wch: 18 },
+      { wch: 18 }, { wch: 14 }, { wch: 26 }, { wch: 25 }, { wch: 12 }, { wch: 18 }
     ];
 
     XLSX.writeFile(wb, t.importers.donor.templateName);
@@ -517,13 +599,16 @@ const executeImport = async () => {
               </Button>
             </div>
 
-            <div className="bg-muted/50 rounded-lg p-4 text-sm">
-              <p className="font-medium mb-2">{t.importers.common.recommendedFormat}</p>
-              <ul className="list-disc list-inside space-y-1 text-muted-foreground">
-                <li><strong>{t.importers.common.requiredColumns}</strong> {t.importers.donor.requiredColumnsText}</li>
-                <li><strong>{t.importers.common.optionalColumns}</strong> {t.importers.donor.optionalColumnsText}</li>
-                <li>{t.importers.common.firstRowHeaders}</li>
-              </ul>
+            <div className="bg-muted/50 rounded-lg p-4 text-sm space-y-3">
+              <p className="font-medium">{t.importers.donor.templateTip}</p>
+              <div className="space-y-1 text-muted-foreground">
+                <p><strong>{t.importers.common.requiredColumns}</strong> {t.importers.donor.requiredColumnsText}</p>
+                <p><strong>{t.importers.common.optionalColumns}</strong> {t.importers.donor.optionalColumnsText}</p>
+              </div>
+              <div className="pt-2 border-t border-muted space-y-1 text-muted-foreground">
+                <p>💡 {t.importers.donor.modalityTip}</p>
+                <p>📁 {t.importers.donor.categoryTip}</p>
+              </div>
             </div>
           </div>
         )}
@@ -680,6 +765,33 @@ const executeImport = async () => {
                 {t.importers.common.duplicatesWillNotImport(duplicateCount)}
               </div>
             )}
+
+            {/* Selector de categoria per defecte */}
+            <div className="bg-muted/50 rounded-lg p-4 space-y-2">
+              <Label className="text-sm font-medium">{t.importers.donor.defaultCategoryLabel}</Label>
+              <Select
+                value={globalDefaultCategory}
+                onValueChange={setGlobalDefaultCategory}
+              >
+                <SelectTrigger className="w-full">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="__auto__">
+                    <div className="flex flex-col">
+                      <span>{t.importers.donor.defaultCategoryAuto}</span>
+                      <span className="text-xs text-muted-foreground">{t.importers.donor.defaultCategoryAutoDescription}</span>
+                    </div>
+                  </SelectItem>
+                  <SelectItem value="__none__">{t.importers.common.doNotImport}</SelectItem>
+                  {incomeCategories.map(cat => (
+                    <SelectItem key={cat.id} value={cat.id}>
+                      {categoryTranslations[cat.name] || cat.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
 
             <DialogFooter>
               <Button variant="outline" onClick={() => setStep('mapping')}>

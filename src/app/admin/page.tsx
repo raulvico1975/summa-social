@@ -5,7 +5,8 @@ import * as React from 'react';
 import { useRouter } from 'next/navigation';
 import { useFirebase, useCollection, useMemoFirebase } from '@/firebase';
 import { collection, query, orderBy, doc, updateDoc, getCountFromServer } from 'firebase/firestore';
-import type { Organization, SUPER_ADMIN_UID } from '@/lib/data';
+import type { Organization } from '@/lib/data';
+import { SUPER_ADMIN_UID } from '@/lib/data';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -49,8 +50,6 @@ import {
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { CreateOrganizationDialog } from '@/components/admin/create-organization-dialog';
-
-const SUPER_ADMIN_UID = 'f2AHJqjXiOZkYajwkOnZ8RY6h2k2';
 
 export default function AdminPage() {
   const router = useRouter();

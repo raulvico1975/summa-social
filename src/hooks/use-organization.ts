@@ -91,7 +91,9 @@ export function useOrganization(): UseOrganizationResult {
                 slug: 'baruma',
                 name: 'Baruma', // Use a default, more realistic name
                 taxId: 'G12345678', // Example Tax ID
+                status: 'active',
                 createdAt: now.toISOString(),
+                createdBy: firebaseUser.uid,
             };
             batch.set(newOrgRef, newOrgData);
             console.log(`[use-organization] Staged organization creation with ID: ${newOrgRef.id}`);

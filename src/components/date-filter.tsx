@@ -42,8 +42,8 @@ type DateFilterProps = {
 };
 
 export function DateFilter({ value, onChange }: DateFilterProps) {
-  const { t, locale } = useTranslations();
-  const dateLocale = locale === 'ca' ? ca : es;
+  const { t, language } = useTranslations();
+  const dateLocale = language === 'ca' ? ca : es;
 
   const currentYear = new Date().getFullYear();
   const years = Array.from({ length: 10 }, (_, i) => currentYear - i);

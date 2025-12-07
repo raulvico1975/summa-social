@@ -8,18 +8,57 @@
  * Title Case: Primera lletra de cada paraula en majúscula
  * Usos: Noms de persones, adreces, noms d'organitzacions
  * Exemple: "maria garcía lópez" → "Maria García López"
+ * Exemple: "empresa ejemplo s.l." → "Empresa Ejemplo S.L."
  */
 export function toTitleCase(text: string | null | undefined): string {
   if (!text) return '';
-  
+
   // Paraules que es mantenen en minúscula (excepte si són la primera)
   const minorWords = ['de', 'del', 'la', 'las', 'el', 'los', 'i', 'y', 'a', 'en', 'amb', 'per', 'the', 'of', 'and'];
-  
+
+  // Sigles empresarials que es mantenen en majúscules
+  // Normalitzem variants com "s.l", "sl", "s.l." a la forma canònica
+  const businessAcronyms: Record<string, string> = {
+    'sa': 'S.A.',
+    's.a': 'S.A.',
+    's.a.': 'S.A.',
+    'sl': 'S.L.',
+    's.l': 'S.L.',
+    's.l.': 'S.L.',
+    'slu': 'S.L.U.',
+    's.l.u': 'S.L.U.',
+    's.l.u.': 'S.L.U.',
+    'sll': 'S.L.L.',
+    's.l.l': 'S.L.L.',
+    's.l.l.': 'S.L.L.',
+    'sc': 'S.C.',
+    's.c': 'S.C.',
+    's.c.': 'S.C.',
+    'scp': 'S.C.P.',
+    's.c.p': 'S.C.P.',
+    's.c.p.': 'S.C.P.',
+    'scoop': 'S.COOP.',
+    's.coop': 'S.COOP.',
+    's.coop.': 'S.COOP.',
+    'cb': 'C.B.',
+    'c.b': 'C.B.',
+    'c.b.': 'C.B.',
+    'sau': 'S.A.U.',
+    's.a.u': 'S.A.U.',
+    's.a.u.': 'S.A.U.',
+  };
+
   return text
     .trim()
     .toLowerCase()
     .split(/\s+/)
     .map((word, index) => {
+      // Comprovar si és una sigla empresarial
+      const acronym = businessAcronyms[word];
+      if (acronym) {
+        return acronym;
+      }
+
       if (index > 0 && minorWords.includes(word)) {
         return word;
       }

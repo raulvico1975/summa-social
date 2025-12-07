@@ -42,8 +42,7 @@ import {
 } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { PlusCircle, Edit, Trash2, Building2, Upload } from 'lucide-react';
-import type { Supplier, SupplierCategory, Category } from '@/lib/data';
-import { SUPPLIER_CATEGORIES } from '@/lib/data';
+import type { Supplier, Category } from '@/lib/data';
 import { useToast } from '@/hooks/use-toast';
 import { Badge } from '@/components/ui/badge';
 import { useCollection, useFirebase, useMemoFirebase, addDocumentNonBlocking, deleteDocumentNonBlocking, setDocumentNonBlocking } from '@/firebase';
@@ -75,8 +74,6 @@ export function SupplierManager() {
   const { toast } = useToast();
   const { t } = useTranslations();
 
-  const categoryLabels = t.suppliers.categories as Record<SupplierCategory, string>;
-
   const contactsCollection = useMemoFirebase(
     () => organizationId ? collection(firestore, 'organizations', organizationId, 'contacts') : null,
     [firestore, organizationId]
@@ -99,6 +96,7 @@ export function SupplierManager() {
     () => allCategories?.filter(c => c.type === 'expense') || [],
     [allCategories]
   );
+  const categoryTranslations = t.categories as Record<string, string>;
 
   const [isDialogOpen, setIsDialogOpen] = React.useState(false);
   const [isAlertOpen, setIsAlertOpen] = React.useState(false);
@@ -244,7 +242,7 @@ export function SupplierManager() {
                   <TableRow>
                     <TableHead>{t.suppliers.name}</TableHead>
                     <TableHead>{t.suppliers.taxId}</TableHead>
-                    <TableHead>{t.suppliers.category}</TableHead>
+                    <TableHead>{t.contacts.defaultCategory}</TableHead>
                     <TableHead>{t.suppliers.contactInfo}</TableHead>
                     <TableHead className="text-right">{t.suppliers.actions}</TableHead>
                   </TableRow>
@@ -260,9 +258,12 @@ export function SupplierManager() {
                       </TableCell>
                       <TableCell>{supplier.taxId}</TableCell>
                       <TableCell>
-                        {supplier.category && categoryLabels ? (
+                        {supplier.defaultCategoryId ? (
                           <Badge variant="outline">
-                            {categoryLabels[supplier.category as SupplierCategory] || supplier.category}
+                            {(() => {
+                              const cat = expenseCategories.find(c => c.id === supplier.defaultCategoryId);
+                              return cat ? (categoryTranslations[cat.name] || cat.name) : '-';
+                            })()}
                           </Badge>
                         ) : (
                           <span className="text-muted-foreground">-</span>
@@ -336,40 +337,21 @@ export function SupplierManager() {
               </div>
 
               <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="category" className="text-right">{t.suppliers.category}</Label>
-                <Select
-                  value={formData.category || ''}
-                  onValueChange={(v) => handleFormChange('category', v || undefined)}
-                >
-                  <SelectTrigger className="col-span-3">
-                    <SelectValue placeholder={t.suppliers.selectCategory} />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {SUPPLIER_CATEGORIES.map(cat => (
-                      <SelectItem key={cat} value={cat}>
-                        {categoryLabels?.[cat] || cat}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="grid grid-cols-4 items-center gap-4">
                 <Label htmlFor="defaultCategoryId" className="text-right">
                   <span>{t.contacts.defaultCategory}</span>
                   <span className="block text-xs font-normal text-muted-foreground">{t.contacts.defaultCategoryHint}</span>
                 </Label>
                 <Select
-                  value={formData.defaultCategoryId || ''}
-                  onValueChange={(v) => handleFormChange('defaultCategoryId', v || undefined)}
+                  value={formData.defaultCategoryId || '__none__'}
+                  onValueChange={(v) => handleFormChange('defaultCategoryId', v === '__none__' ? undefined : v)}
                 >
                   <SelectTrigger className="col-span-3">
                     <SelectValue placeholder={t.contacts.selectDefaultCategory} />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">{t.contacts.noDefaultCategory}</SelectItem>
+                    <SelectItem value="__none__">{t.contacts.noDefaultCategory}</SelectItem>
                     {expenseCategories.map(cat => (
-                      <SelectItem key={cat.id} value={cat.id}>{cat.name}</SelectItem>
+                      <SelectItem key={cat.id} value={cat.id}>{categoryTranslations[cat.name] || cat.name}</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>

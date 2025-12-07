@@ -93,6 +93,7 @@ export function EmployeeManager() {
     () => allCategories?.filter(c => c.type === 'expense') || [],
     [allCategories]
   );
+  const categoryTranslations = t.categories as Record<string, string>;
 
   const [isDialogOpen, setIsDialogOpen] = React.useState(false);
   const [isAlertOpen, setIsAlertOpen] = React.useState(false);
@@ -374,16 +375,16 @@ export function EmployeeManager() {
                   <span className="block text-xs font-normal text-muted-foreground">{t.contacts.defaultCategoryHint}</span>
                 </Label>
                 <Select
-                  value={formData.defaultCategoryId || ''}
-                  onValueChange={(v) => handleFormChange('defaultCategoryId', v || undefined)}
+                  value={formData.defaultCategoryId || '__none__'}
+                  onValueChange={(v) => handleFormChange('defaultCategoryId', v === '__none__' ? undefined : v)}
                 >
                   <SelectTrigger className="col-span-3">
                     <SelectValue placeholder={t.contacts.selectDefaultCategory} />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">{t.contacts.noDefaultCategory}</SelectItem>
+                    <SelectItem value="__none__">{t.contacts.noDefaultCategory}</SelectItem>
                     {expenseCategories.map(cat => (
-                      <SelectItem key={cat.id} value={cat.id}>{cat.name}</SelectItem>
+                      <SelectItem key={cat.id} value={cat.id}>{categoryTranslations[cat.name] || cat.name}</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>

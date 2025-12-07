@@ -6,15 +6,30 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useAppLog } from '@/hooks/use-app-log';
-import { X, Bot, Trash2 } from 'lucide-react';
+import { X, Bot, Trash2, Copy, Check } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { useTranslations } from '@/i18n';
+import { useToast } from '@/hooks/use-toast';
 
 export function LogPanel() {
   const { logs, clearLogs } = useAppLog();
   const { t } = useTranslations();
+  const { toast } = useToast();
   const [isOpen, setIsOpen] = React.useState(false);
+  const [copied, setCopied] = React.useState(false);
   const scrollAreaRef = React.useRef<HTMLDivElement>(null);
+
+  const handleCopyLogs = async () => {
+    const logText = logs.map(log => `[${log.timestamp}] ${log.message}`).join('\n');
+    try {
+      await navigator.clipboard.writeText(logText);
+      setCopied(true);
+      toast({ title: t.dashboard.copied });
+      setTimeout(() => setCopied(false), 2000);
+    } catch (err) {
+      console.error('Error copying logs:', err);
+    }
+  };
 
   React.useEffect(() => {
     // Auto-scroll to bottom when new logs are added
@@ -45,6 +60,9 @@ export function LogPanel() {
             <CardTitle className="text-lg">{t.logPanel.title}</CardTitle>
         </div>
         <div className="flex items-center gap-2">
+            <Button variant="ghost" size="icon" onClick={handleCopyLogs} className="h-8 w-8" disabled={logs.length === 0}>
+              {copied ? <Check className="h-4 w-4 text-green-500" /> : <Copy className="h-4 w-4" />}
+            </Button>
             <Button variant="ghost" size="icon" onClick={clearLogs} className="h-8 w-8">
               <Trash2 className="h-4 w-4" />
             </Button>
