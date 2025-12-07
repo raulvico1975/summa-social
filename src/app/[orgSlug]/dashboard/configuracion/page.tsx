@@ -5,17 +5,24 @@ import { PasswordChangeForm } from '@/components/password-change-form';
 import { OrganizationSettings } from '@/components/organization-settings';
 import { LanguageSelector } from '@/components/language-selector';
 import { MembersManager } from '@/components/members-manager';
+import { DangerZone } from '@/components/danger-zone';
 import { useCurrentOrganization } from '@/hooks/organization-provider';
 import { useTranslations } from '@/i18n';
+import { useFirebase } from '@/firebase';
+import { SUPER_ADMIN_UID } from '@/lib/data';
 
 export default function SettingsPage() {
   const { userRole } = useCurrentOrganization();
   const { t } = useTranslations();
+  const { user } = useFirebase();
 
   // Només admins poden gestionar l'organització, categories i membres
   const canManageOrganization = userRole === 'admin';
   const canManageCategories = userRole === 'admin';
   const canManageMembers = userRole === 'admin';
+
+  // Només SuperAdmin pot veure la Zona de Perill
+  const isSuperAdmin = user?.uid === SUPER_ADMIN_UID;
 
   return (
     <div className="space-y-6">
@@ -57,6 +64,9 @@ export default function SettingsPage() {
           {t.settings.permissionDenied}
         </div>
       )}
+
+      {/* Zona de Perill - només SuperAdmin */}
+      {isSuperAdmin && <DangerZone />}
     </div>
   );
 }

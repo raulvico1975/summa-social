@@ -77,6 +77,7 @@ interface SavedMapping {
   amountColumn: number;
   nameColumn: number | null;
   taxIdColumn: number | null;
+  ibanColumn: number | null;
   createdAt: string;
 }
 
@@ -85,6 +86,7 @@ interface ParsedDonation {
   rowIndex: number;
   name: string;
   taxId: string;
+  iban: string;
   amount: number;
   status: 'found' | 'new_with_taxid' | 'new_without_taxid';
   matchedDonor: Donor | null;
@@ -157,21 +159,22 @@ const detectStartRow = (rows: string[][]): number => {
 };
 
 // Detecta automàticament les columnes
-const detectColumns = (rows: string[][], startRow: number): { amount: number, name: number | null, taxId: number | null } => {
+const detectColumns = (rows: string[][], startRow: number): { amount: number, name: number | null, taxId: number | null, iban: number | null } => {
   const sampleRows = rows.slice(startRow, startRow + 10);
   let amountCol = -1;
   let nameCol: number | null = null;
   let taxIdCol: number | null = null;
+  let ibanCol: number | null = null;
 
   if (sampleRows.length === 0 || sampleRows[0].length === 0) {
-    return { amount: 0, name: null, taxId: null };
+    return { amount: 0, name: null, taxId: null, iban: null };
   }
 
   const numCols = sampleRows[0].length;
 
   for (let col = 0; col < numCols; col++) {
     const values = sampleRows.map(row => row[col] || '');
-    
+
     // Detecta columna d'import (números amb format monetari)
     const amountScores = values.filter(v => {
       const amount = parseAmount(v);
@@ -182,8 +185,19 @@ const detectColumns = (rows: string[][], startRow: number): { amount: number, na
       continue;
     }
 
+    // Detecta columna d'IBAN (format ES + 22 dígits o similar)
+    const ibanScores = values.filter(v => {
+      const cleaned = v.trim().replace(/\s/g, '').toUpperCase();
+      // IBAN espanyol: ES + 22 dígits, o altres països: 2 lletres + fins a 32 caràcters
+      return /^[A-Z]{2}[0-9]{2}[A-Z0-9]{10,30}$/.test(cleaned);
+    }).length;
+    if (ibanScores > sampleRows.length * 0.5 && ibanCol === null) {
+      ibanCol = col;
+      continue;
+    }
+
     // Detecta columna de DNI/CIF (8-9 dígits + lletra, o CIF)
-    const taxIdScores = values.filter(v => 
+    const taxIdScores = values.filter(v =>
       /^[0-9]{7,8}[A-Za-z]$/.test(v.trim()) || // DNI
       /^[A-Za-z][0-9]{7,8}$/.test(v.trim()) || // CIF
       /^[XYZ][0-9]{7}[A-Za-z]$/.test(v.trim()) // NIE
@@ -196,22 +210,22 @@ const detectColumns = (rows: string[][], startRow: number): { amount: number, na
     // Detecta columna de nom (text amb espais, sense números)
     const nameScores = values.filter(v => {
       const cleaned = v.trim();
-      return cleaned.length > 5 && 
+      return cleaned.length > 5 &&
              /[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]{5,}/.test(cleaned) &&
              !/^[0-9]+$/.test(cleaned) &&
              !cleaned.includes('EUR') &&
-             !cleaned.startsWith('ES') && // No és IBAN
-             !cleaned.startsWith('IBAN');
+             !/^[A-Z]{2}[0-9]{2}/.test(cleaned); // No és IBAN
     }).length;
     if (nameScores > sampleRows.length * 0.5 && nameCol === null) {
       nameCol = col;
     }
   }
 
-  return { 
-    amount: amountCol >= 0 ? amountCol : 0, 
-    name: nameCol, 
-    taxId: taxIdCol 
+  return {
+    amount: amountCol >= 0 ? amountCol : 0,
+    name: nameCol,
+    taxId: taxIdCol,
+    iban: ibanCol
   };
 };
 
@@ -240,6 +254,7 @@ export function RemittanceSplitter({
   const [amountColumn, setAmountColumn] = React.useState<number>(0);
   const [nameColumn, setNameColumn] = React.useState<number | null>(null);
   const [taxIdColumn, setTaxIdColumn] = React.useState<number | null>(null);
+  const [ibanColumn, setIbanColumn] = React.useState<number | null>(null);
   const [newMappingName, setNewMappingName] = React.useState('');
 
   // Estats de preview
@@ -336,9 +351,10 @@ export function RemittanceSplitter({
     setAmountColumn(detected.amount);
     setNameColumn(detected.name);
     setTaxIdColumn(detected.taxId);
+    setIbanColumn(detected.iban);
 
     log(`[Splitter] Arxiu carregat: ${rows.length} files, delimitador: "${detectedDelimiter}"`);
-    log(`[Splitter] Detecció automàtica - Fila inicial: ${detectedStartRow}, Import: col ${detected.amount}, Nom: col ${detected.name}, DNI: col ${detected.taxId}`);
+    log(`[Splitter] Detecció automàtica - Fila inicial: ${detectedStartRow}, Import: col ${detected.amount}, Nom: col ${detected.name}, DNI: col ${detected.taxId}, IBAN: col ${detected.iban}`);
 
     setStep('mapping');
   };
@@ -349,11 +365,12 @@ export function RemittanceSplitter({
     setAmountColumn(mapping.amountColumn);
     setNameColumn(mapping.nameColumn);
     setTaxIdColumn(mapping.taxIdColumn);
-    
+    setIbanColumn(mapping.ibanColumn ?? null);
+
     // Re-parseja amb el nou delimitador si cal
     if (mapping.delimiter !== delimiter) {
       const lines = rawText.split('\n').filter(line => line.trim());
-      const rows = lines.map(line => 
+      const rows = lines.map(line =>
         line.split(mapping.delimiter).map(cell => cell.trim())
       );
       setAllRows(rows);
@@ -375,6 +392,7 @@ export function RemittanceSplitter({
         amountColumn,
         nameColumn,
         taxIdColumn,
+        ibanColumn,
         createdAt: new Date().toISOString(),
       };
       await setDoc(mappingRef, mapping);
@@ -396,18 +414,31 @@ export function RemittanceSplitter({
     }
   };
 
-  const findDonor = (name: string, taxId: string, donors: Donor[]): Donor | undefined => {
+  // Normalitza IBAN eliminant espais i passant a majúscules
+  const normalizeIban = (iban: string): string => {
+    if (!iban) return '';
+    return iban.replace(/\s/g, '').toUpperCase();
+  };
+
+  const findDonor = (name: string, taxId: string, iban: string, donors: Donor[]): Donor | undefined => {
     const normalizedCsvName = normalizeString(name);
     const csvNameTokens = new Set(normalizedCsvName.split(' ').filter(Boolean));
 
-    // 1. Buscar per DNI/CIF
+    // 1. Buscar per DNI/CIF (màxima prioritat)
     if (taxId) {
       const normalizedTaxId = normalizeString(taxId);
       const foundByTaxId = donors.find(d => normalizeString(d.taxId) === normalizedTaxId);
       if (foundByTaxId) return foundByTaxId;
     }
 
-    // 2. Buscar per nom
+    // 2. Buscar per IBAN (molt fiable si coincideix)
+    if (iban) {
+      const normalizedCsvIban = normalizeIban(iban);
+      const foundByIban = donors.find(d => d.iban && normalizeIban(d.iban) === normalizedCsvIban);
+      if (foundByIban) return foundByIban;
+    }
+
+    // 3. Buscar per nom (menys fiable)
     if (normalizedCsvName) {
       const potentialMatches = donors.filter(d => {
         const normalizedDonorName = normalizeString(d.name);
@@ -422,7 +453,8 @@ export function RemittanceSplitter({
   };
 
   const handleContinueToPreview = () => {
-    if (nameColumn === null && taxIdColumn === null) {
+    // Permetre matching si hi ha almenys una columna d'identificació (nom, DNI o IBAN)
+    if (nameColumn === null && taxIdColumn === null && ibanColumn === null) {
       toast({
         variant: 'destructive',
         title: t.movements.splitter.missingInfo,
@@ -432,7 +464,7 @@ export function RemittanceSplitter({
     }
 
     setIsProcessing(true);
-    
+
     try {
       const donations: ParsedDonation[] = [];
       let total = 0;
@@ -441,20 +473,21 @@ export function RemittanceSplitter({
 
       for (let i = 0; i < dataRows.length; i++) {
         const row = dataRows[i];
-        
+
         const amount = parseAmount(row[amountColumn] || '');
         const name = nameColumn !== null ? (row[nameColumn] || '').trim() : '';
         const taxId = taxIdColumn !== null ? (row[taxIdColumn] || '').trim().toUpperCase() : '';
+        const iban = ibanColumn !== null ? (row[ibanColumn] || '').trim().toUpperCase().replace(/\s/g, '') : '';
 
         // Saltar files sense import o sense identificació
-        if (amount <= 0 || (!name && !taxId)) continue;
+        if (amount <= 0 || (!name && !taxId && !iban)) continue;
 
         // Saltar files que semblen subtotals
         if (name.toLowerCase().includes('subtotal') || name.toLowerCase().includes('total')) continue;
 
         total += amount;
 
-        const matchedDonor = findDonor(name, taxId, existingDonors);
+        const matchedDonor = findDonor(name, taxId, iban, existingDonors);
 
         let status: ParsedDonation['status'];
         if (matchedDonor) {
@@ -469,6 +502,7 @@ export function RemittanceSplitter({
           rowIndex: startRow + i + 1,
           name,
           taxId,
+          iban,
           amount,
           status,
           matchedDonor: matchedDonor ?? null,
@@ -785,12 +819,13 @@ export function RemittanceSplitter({
                           {startRow + rowIdx + 1}
                         </TableCell>
                         {Array.from({ length: numColumns }, (_, colIdx) => (
-                          <TableCell 
-                            key={colIdx} 
+                          <TableCell
+                            key={colIdx}
                             className={`text-xs truncate max-w-[150px] ${
                               colIdx === amountColumn ? 'bg-green-100 dark:bg-green-900/30' :
                               colIdx === nameColumn ? 'bg-blue-100 dark:bg-blue-900/30' :
                               colIdx === taxIdColumn ? 'bg-purple-100 dark:bg-purple-900/30' :
+                              colIdx === ibanColumn ? 'bg-cyan-100 dark:bg-cyan-900/30' :
                               ''
                             }`}
                           >
@@ -859,6 +894,28 @@ export function RemittanceSplitter({
                   <Select
                     value={taxIdColumn !== null ? String(taxIdColumn) : 'none'}
                     onValueChange={(v) => setTaxIdColumn(v === 'none' ? null : parseInt(v))}
+                  >
+                    <SelectTrigger className="h-8">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">{t.movements.splitter.notAvailable}</SelectItem>
+                      {Array.from({ length: numColumns }, (_, i) => (
+                        <SelectItem key={i} value={String(i)}>
+                          Columna {i}: {previewRows[0]?.[i]?.substring(0, 20) || '-'}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-1">
+                  <Label className="text-xs flex items-center gap-1">
+                    <span className="w-3 h-3 rounded bg-cyan-500"></span>
+                    {t.movements.splitter.iban}
+                  </Label>
+                  <Select
+                    value={ibanColumn !== null ? String(ibanColumn) : 'none'}
+                    onValueChange={(v) => setIbanColumn(v === 'none' ? null : parseInt(v))}
                   >
                     <SelectTrigger className="h-8">
                       <SelectValue />
