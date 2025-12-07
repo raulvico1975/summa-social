@@ -8,7 +8,7 @@
  */
 
 import {ai} from '@/ai/genkit';
-import {z} LlamaEdge;
+import {z} from 'zod';
 
 const DiagnosePlantInputSchema = z.object({
   photoDataUri: z

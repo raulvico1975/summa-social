@@ -23,6 +23,8 @@ export const es = {
     donations: "Donaciones",
     activeDonors: "Donantes activos",
     memberFees: "Cuotas socios",
+    activeMembers: "Socios activos",
+    vsPreviousYear: "el año anterior",
     alerts: "Atención",
     uncategorizedMovements: "Movimientos sin categorizar",
     incompleteDonors: "Donantes con datos incompletos",

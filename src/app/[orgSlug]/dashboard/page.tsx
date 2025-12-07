@@ -10,7 +10,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { Textarea } from '@/components/ui/textarea';
 import Link from 'next/link';
 import { DollarSign, TrendingUp, TrendingDown, Rocket, Heart, AlertTriangle, FolderKanban, CalendarClock, Share2, Copy, Mail, PartyPopper, Info } from 'lucide-react';
-import type { Transaction, Contact, Project } from '@/lib/data';
+import type { Transaction, Contact, Project, Donor } from '@/lib/data';
 import { useCollection, useFirebase, useMemoFirebase } from '@/firebase';
 import { collection } from 'firebase/firestore';
 import { useTranslations } from '@/i18n';
@@ -39,6 +39,40 @@ interface Celebration {
   messageKey: string;
   messageParams?: Record<string, any>;
   priority: number;
+}
+
+// Component per mostrar comparativa amb any anterior
+function ComparisonBadge({
+  current,
+  previous,
+  previousYear,
+  isCurrency = false,
+  formatFn
+}: {
+  current: number;
+  previous: number;
+  previousYear: number;
+  isCurrency?: boolean;
+  formatFn?: (value: number) => string;
+}) {
+  const diff = current - previous;
+
+  if (diff === 0) {
+    return <span className="text-xs text-muted-foreground">(= vs {previousYear})</span>;
+  }
+
+  const isPositive = diff > 0;
+  const Icon = isPositive ? TrendingUp : TrendingDown;
+  const color = isPositive ? 'text-green-600' : 'text-red-600';
+  const prefix = isPositive ? '+' : '-';
+  const displayDiff = formatFn ? formatFn(Math.abs(diff)) : Math.abs(diff);
+
+  return (
+    <span className={`text-xs flex items-center gap-0.5 ${color}`}>
+      <Icon className="h-3 w-3" />
+      ({prefix}{displayDiff} vs {previousYear})
+    </span>
+  );
 }
 
 export default function DashboardPage() {
@@ -99,14 +133,30 @@ export default function DashboardPage() {
     const orgName = organization?.name || 'Organització';
     const period = formatPeriodLabel(dateFilter);
 
+    // Comparativa amb any anterior
+    const donorsComparison = canShowComparison
+      ? ` (${prevUniqueDonors} ${t.dashboard.vsPreviousYear})`
+      : '';
+    const donationsComparison = canShowComparison
+      ? ` (${formatCurrencyEU(prevTotalDonations)} ${t.dashboard.vsPreviousYear})`
+      : '';
+    const membersComparison = canShowComparison
+      ? ` (${prevActiveMembers} ${t.dashboard.vsPreviousYear})`
+      : '';
+    const feesComparison = canShowComparison
+      ? ` (${formatCurrencyEU(prevMemberFees)} ${t.dashboard.vsPreviousYear})`
+      : '';
+
     return `📊 Resum ${orgName} - ${period}
 
 💰 ${t.dashboard.totalIncome}: ${formatCurrencyEU(totalIncome)}
 💸 ${t.dashboard.operatingExpenses}: ${formatCurrencyEU(Math.abs(totalExpenses))}
 📈 ${t.dashboard.operatingBalance}: ${formatCurrencyEU(netBalance)}
 
-❤️ ${t.dashboard.activeDonors}: ${uniqueDonors}
-🎁 ${t.dashboard.donations}: ${formatCurrencyEU(totalDonations)}
+❤️ ${t.dashboard.activeDonors}: ${uniqueDonors}${donorsComparison}
+🎁 ${t.dashboard.donations}: ${formatCurrencyEU(totalDonations)}${donationsComparison}
+👥 ${t.dashboard.activeMembers}: ${activeMembers}${membersComparison}
+💳 ${t.dashboard.memberFees}: ${formatCurrencyEU(memberFees)}${feesComparison}
 
 ${t.dashboard.generatedWith}`;
   };
@@ -156,28 +206,60 @@ ${t.dashboard.generatedWith}`;
     filteredTransactions?.filter(tx => tx.amount < 0 && tx.category !== MISSION_TRANSFER_CATEGORY_KEY) || [],
   [filteredTransactions]);
 
-  const { totalDonations, uniqueDonors, memberFees } = React.useMemo(() => {
-    if (!filteredTransactions) return { totalDonations: 0, uniqueDonors: 0, memberFees: 0 };
+  // Map de contactes per ID amb el seu membershipType
+  const contactMembershipMap = React.useMemo(() => {
+    if (!contacts) return new Map<string, 'one-time' | 'recurring'>();
+    return new Map(
+      contacts
+        .filter((c): c is Donor => c.type === 'donor')
+        .map(c => [c.id, c.membershipType || 'one-time'])
+    );
+  }, [contacts]);
 
+  // Determinar si es pot mostrar comparativa amb any anterior
+  const canShowComparison = dateFilter.type === 'year' || dateFilter.type === 'quarter' || dateFilter.type === 'month';
+  const previousYear = (dateFilter.year || new Date().getFullYear()) - 1;
+
+  // Funció per obtenir transaccions del període anterior
+  const getPreviousPeriodTransactions = React.useCallback(() => {
+    if (!transactions || !canShowComparison) return [];
+    return transactions.filter(tx => {
+      const txDate = new Date(tx.date);
+      const txYear = txDate.getFullYear();
+
+      if (dateFilter.type === 'year') {
+        return txYear === previousYear;
+      }
+      if (dateFilter.type === 'quarter' && dateFilter.quarter) {
+        const txMonth = txDate.getMonth() + 1;
+        const qStart = (dateFilter.quarter - 1) * 3 + 1;
+        const qEnd = dateFilter.quarter * 3;
+        return txYear === previousYear && txMonth >= qStart && txMonth <= qEnd;
+      }
+      if (dateFilter.type === 'month' && dateFilter.month) {
+        return txYear === previousYear && txDate.getMonth() + 1 === dateFilter.month;
+      }
+      return false;
+    });
+  }, [transactions, canShowComparison, dateFilter, previousYear]);
+
+  // Funció per calcular mètriques de donants i socis
+  const calculateDonorMetrics = React.useCallback((txs: Transaction[]) => {
     const donorIds = new Set<string>();
+    const memberIds = new Set<string>();
     let donations = 0;
-    let fees = 0;
+    let memberFees = 0;
 
-    filteredTransactions.forEach(tx => {
-      // Només ingressos (amount > 0)
-      if (tx.amount > 0) {
-        // Donacions: contactType === 'donor'
-        if (tx.contactType === 'donor') {
+    txs.forEach(tx => {
+      if (tx.amount > 0 && tx.contactType === 'donor' && tx.contactId) {
+        const membershipType = contactMembershipMap.get(tx.contactId) || 'one-time';
+
+        if (membershipType === 'recurring') {
+          memberIds.add(tx.contactId);
+          memberFees += tx.amount;
+        } else {
+          donorIds.add(tx.contactId);
           donations += tx.amount;
-          if (tx.contactId) {
-            donorIds.add(tx.contactId);
-          }
-        }
-
-        // Quotes socis: categoria conté "quota" o "soci"
-        if (tx.category?.toLowerCase().includes('quota') ||
-            tx.category?.toLowerCase().includes('soci')) {
-          fees += tx.amount;
         }
       }
     });
@@ -185,9 +267,30 @@ ${t.dashboard.generatedWith}`;
     return {
       totalDonations: donations,
       uniqueDonors: donorIds.size,
-      memberFees: fees
+      memberFees,
+      activeMembers: memberIds.size
     };
-  }, [filteredTransactions]);
+  }, [contactMembershipMap]);
+
+  // Mètriques del període actual
+  const currentMetrics = React.useMemo(() => {
+    if (!filteredTransactions) return { totalDonations: 0, uniqueDonors: 0, memberFees: 0, activeMembers: 0 };
+    return calculateDonorMetrics(filteredTransactions);
+  }, [filteredTransactions, calculateDonorMetrics]);
+
+  // Mètriques del període anterior (per comparativa)
+  const previousMetrics = React.useMemo(() => {
+    if (!canShowComparison) return { totalDonations: 0, uniqueDonors: 0, memberFees: 0, activeMembers: 0 };
+    return calculateDonorMetrics(getPreviousPeriodTransactions());
+  }, [canShowComparison, getPreviousPeriodTransactions, calculateDonorMetrics]);
+
+  const { totalDonations, uniqueDonors, memberFees, activeMembers } = currentMetrics;
+  const {
+    totalDonations: prevTotalDonations,
+    uniqueDonors: prevUniqueDonors,
+    memberFees: prevMemberFees,
+    activeMembers: prevActiveMembers
+  } = previousMetrics;
 
   const netBalance = totalIncome + totalExpenses;
 
@@ -486,18 +589,54 @@ ${t.dashboard.generatedWith}`;
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="grid gap-4 md:grid-cols-3">
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
             <div>
               <p className="text-sm text-muted-foreground">{t.dashboard.donations}</p>
               <p className="text-2xl font-bold">{formatCurrencyEU(totalDonations)}</p>
+              {canShowComparison && (
+                <ComparisonBadge
+                  current={totalDonations}
+                  previous={prevTotalDonations}
+                  previousYear={previousYear}
+                  isCurrency
+                  formatFn={formatCurrencyEU}
+                />
+              )}
             </div>
             <div>
               <p className="text-sm text-muted-foreground">{t.dashboard.activeDonors}</p>
               <p className="text-2xl font-bold">{uniqueDonors}</p>
+              {canShowComparison && (
+                <ComparisonBadge
+                  current={uniqueDonors}
+                  previous={prevUniqueDonors}
+                  previousYear={previousYear}
+                />
+              )}
+            </div>
+            <div>
+              <p className="text-sm text-muted-foreground">{t.dashboard.activeMembers}</p>
+              <p className="text-2xl font-bold">{activeMembers}</p>
+              {canShowComparison && (
+                <ComparisonBadge
+                  current={activeMembers}
+                  previous={prevActiveMembers}
+                  previousYear={previousYear}
+                />
+              )}
             </div>
             <div>
               <p className="text-sm text-muted-foreground">{t.dashboard.memberFees}</p>
               <p className="text-2xl font-bold">{formatCurrencyEU(memberFees)}</p>
+              {canShowComparison && (
+                <ComparisonBadge
+                  current={memberFees}
+                  previous={prevMemberFees}
+                  previousYear={previousYear}
+                  isCurrency
+                  formatFn={formatCurrencyEU}
+                />
+              )}
             </div>
           </div>
         </CardContent>

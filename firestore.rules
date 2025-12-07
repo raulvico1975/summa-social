@@ -103,7 +103,16 @@ service cloud.firestore {
       }
 
       // ─────────────────────────────────────────────────────────────────────
-      // DONANTS
+      // CONTACTES (unificat: donants + proveïdors)
+      // ─────────────────────────────────────────────────────────────────────
+
+      match /contacts/{contactId} {
+        allow read: if isMemberOf(orgId) || isSuperAdmin();
+        allow create, update, delete: if isMemberOf(orgId) && getMemberRole(orgId) in ['admin', 'user'] || isSuperAdmin();
+      }
+
+      // ─────────────────────────────────────────────────────────────────────
+      // DONANTS (legacy - mantenir per compatibilitat)
       // ─────────────────────────────────────────────────────────────────────
 
       match /donors/{donorId} {
@@ -112,7 +121,7 @@ service cloud.firestore {
       }
 
       // ─────────────────────────────────────────────────────────────────────
-      // PROVEÏDORS
+      // PROVEÏDORS (legacy - mantenir per compatibilitat)
       // ─────────────────────────────────────────────────────────────────────
 
       match /suppliers/{supplierId} {
@@ -121,10 +130,19 @@ service cloud.firestore {
       }
 
       // ─────────────────────────────────────────────────────────────────────
-      // EMISSORS (legacy)
+      // EMISSORS (legacy - mantenir per compatibilitat)
       // ─────────────────────────────────────────────────────────────────────
 
       match /emissors/{emissorId} {
+        allow read: if isMemberOf(orgId) || isSuperAdmin();
+        allow create, update, delete: if isMemberOf(orgId) && getMemberRole(orgId) in ['admin', 'user'] || isSuperAdmin();
+      }
+
+      // ─────────────────────────────────────────────────────────────────────
+      // CONFIGURACIONS DE REMESES
+      // ─────────────────────────────────────────────────────────────────────
+
+      match /remittanceMappings/{mappingId} {
         allow read: if isMemberOf(orgId) || isSuperAdmin();
         allow create, update, delete: if isMemberOf(orgId) && getMemberRole(orgId) in ['admin', 'user'] || isSuperAdmin();
       }
