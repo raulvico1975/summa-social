@@ -9,6 +9,7 @@ import { detectReturnType } from '@/lib/data';
 import Papa from 'papaparse';
 import * as XLSX from 'xlsx';
 import { inferContact } from '@/ai/flows/infer-contact';
+import { findMatchingContact } from '@/lib/auto-match';
 import { useAppLog } from '@/hooks/use-app-log';
 import { normalizeTransaction } from '@/lib/normalize';
 import {
@@ -300,71 +301,95 @@ export function TransactionImporter({ existingTransactions }: TransactionImporte
 
 
         if (transactionsToProcess.length > 0) {
-            // Desactivar auto-match amb IA si hi ha més de 50 transaccions (triga massa)
-            const SKIP_AI_THRESHOLD = 50;
-            const useAI = transactionsToProcess.length <= SKIP_AI_THRESHOLD;
-
-            let transactionsWithContacts: any[] = [];
-
             log(`📊 Transacciones a procesar: ${transactionsToProcess.length}`);
             log(`👥 Contactos disponibles: ${availableContacts?.length || 0}`);
-            log(`🤖 Auto-match con IA: ${useAI ? 'ACTIVADO' : 'DESACTIVADO'} (threshold: ${SKIP_AI_THRESHOLD})`);
 
-            if (useAI) {
-                log('🔍 Iniciando inferencia de contactos con IA...');
+            // ═══════════════════════════════════════════════════════════════════
+            // FASE 1: MATCHING PER NOM (instantani, sense IA)
+            // ═══════════════════════════════════════════════════════════════════
+            log('🔍 FASE 1: Matching per nom de contacte...');
+
+            let matchedCount = 0;
+            let unmatchedTransactions: Array<{ tx: any; index: number }> = [];
+
+            const transactionsAfterNameMatch = transactionsToProcess.map((tx, index) => {
+                if (!availableContacts || availableContacts.length === 0) {
+                    unmatchedTransactions.push({ tx, index });
+                    return tx;
+                }
+
+                const match = findMatchingContact(tx.description, availableContacts);
+
+                if (match) {
+                    matchedCount++;
+                    log(`✅ [Fila ${index + 1}] Match per nom: "${match.contactName}" (${match.contactType}) - confiança ${Math.round(match.confidence * 100)}% - "${tx.description.substring(0, 40)}..."`);
+                    return {
+                        ...tx,
+                        contactId: match.contactId,
+                        contactType: match.contactType,
+                    };
+                } else {
+                    unmatchedTransactions.push({ tx, index });
+                    return tx;
+                }
+            });
+
+            const matchPercentage = Math.round((matchedCount / transactionsToProcess.length) * 100);
+            log(`📈 Resultat FASE 1: ${matchedCount}/${transactionsToProcess.length} (${matchPercentage}%) transaccions amb match per nom`);
+
+            // ═══════════════════════════════════════════════════════════════════
+            // FASE 2: IA com a fallback (només per les no matchejades, si són poques)
+            // ═══════════════════════════════════════════════════════════════════
+            const AI_THRESHOLD = 20; // Només usar IA si queden menys de 20 sense match
+            const useAI = unmatchedTransactions.length > 0 && unmatchedTransactions.length <= AI_THRESHOLD;
+
+            log(`🤖 FASE 2 (IA): ${useAI ? `ACTIVADA per ${unmatchedTransactions.length} transaccions sense match` : `DESACTIVADA (${unmatchedTransactions.length} > ${AI_THRESHOLD} o ja totes matchejades)`}`);
+
+            let transactionsWithContacts = [...transactionsAfterNameMatch];
+
+            if (useAI && unmatchedTransactions.length > 0) {
+                log('🔍 Iniciando inferencia con IA para transacciones sin match...');
                 const contactsForAI = availableContacts?.map(c => ({ id: c.id, name: c.name })) || [];
-                log(`Contactos para IA: ${JSON.stringify(contactsForAI.slice(0, 5))}...`);
 
                 // Processar en lots per evitar superar la quota de l'API
-                // Quota gratuïta: 15 peticions/minut → processa 10 cada minut
-                const BATCH_SIZE = 10;  // Processar 10 transaccions per minut
-                const DELAY_MS = 60000; // Esperar 60 segons entre lots (1 minut)
-
-                // Flag per detectar si s'ha excedit la quota i saltar la IA
+                const BATCH_SIZE = 10;
+                const DELAY_MS = 60000;
                 let quotaExceeded = false;
+                let aiMatchedCount = 0;
 
-                for (let i = 0; i < transactionsToProcess.length; i += BATCH_SIZE) {
-                    // Si la quota s'ha excedit, afegir les transaccions sense processar amb IA
-                    if (quotaExceeded) {
-                        transactionsWithContacts.push(...transactionsToProcess.slice(i));
-                        break;
-                    }
+                for (let i = 0; i < unmatchedTransactions.length; i += BATCH_SIZE) {
+                    if (quotaExceeded) break;
 
-                    const batch = transactionsToProcess.slice(i, i + BATCH_SIZE);
-                    log(`Procesando lote ${Math.floor(i / BATCH_SIZE) + 1}/${Math.ceil(transactionsToProcess.length / BATCH_SIZE)} (${batch.length} transacciones)...`);
+                    const batch = unmatchedTransactions.slice(i, i + BATCH_SIZE);
+                    log(`Procesando lote IA ${Math.floor(i / BATCH_SIZE) + 1}/${Math.ceil(unmatchedTransactions.length / BATCH_SIZE)} (${batch.length} transacciones)...`);
 
-                    const batchResults = await Promise.all(batch.map(async (tx, batchIndex) => {
-                        // Si ja s'ha detectat quota exceeded, no fer més crides
-                        if (quotaExceeded) {
-                            return tx;
-                        }
+                    await Promise.all(batch.map(async ({ tx, index }) => {
+                        if (quotaExceeded) return;
 
-                        const index = i + batchIndex;
                         try {
                             const result = await inferContact({ description: tx.description, contacts: contactsForAI });
                             if (result.contactId) {
-                               const contact = availableContacts?.find(c => c.id === result.contactId);
-                               if (contact) {
-                                   log(`✅ [Fila ${index + 1}] Match: ${contact.name} (${contact.type}) - "${tx.description.substring(0,30)}..."`);
-                                   return { ...tx, contactId: result.contactId, contactType: contact.type };
-                               } else {
-                                   log(`⚠️ [Fila ${index + 1}] ID no trobat: ${result.contactId} - "${tx.description.substring(0,30)}..."`);
-                                   return { ...tx, contactId: result.contactId, contactType: undefined };
-                               }
+                                const contact = availableContacts?.find(c => c.id === result.contactId);
+                                if (contact) {
+                                    aiMatchedCount++;
+                                    log(`✅ [Fila ${index + 1}] Match IA: ${contact.name} (${contact.type}) - "${tx.description.substring(0, 30)}..."`);
+                                    transactionsWithContacts[index] = {
+                                        ...tx,
+                                        contactId: result.contactId,
+                                        contactType: contact.type,
+                                    };
+                                }
                             } else {
-                               log(`⚠️ [Fila ${index + 1}] IA no troba match - "${tx.description.substring(0,40)}..."`);
+                                log(`⚠️ [Fila ${index + 1}] IA no troba match - "${tx.description.substring(0, 40)}..."`);
                             }
                         } catch (error: any) {
-                            console.error("Error inferring contact for a transaction:", error);
-                            log(`❌ ERROR en inferencia de contacto para fila ${index + 1}: ${error}`);
+                            console.error("Error inferring contact:", error);
+                            log(`❌ ERROR IA fila ${index + 1}: ${error}`);
 
-                            // Detectar error 429 (quota exceeded) - només mostrar toast un cop
                             const errorMsg = error?.message || error?.toString() || '';
                             if (!quotaExceeded && (errorMsg.includes('429') || errorMsg.toLowerCase().includes('quota') || errorMsg.toLowerCase().includes('rate limit'))) {
-                                log('⚠️ QUOTA EXCEDIDA - Desactivando IA para el resto de la importación');
+                                log('⚠️ QUOTA EXCEDIDA - Desactivando IA');
                                 quotaExceeded = true;
-
-                                // Mostrar toast d'avís a l'usuari (només un cop)
                                 toast({
                                     variant: 'destructive',
                                     title: t.importers.transaction.errors.aiQuotaExceeded,
@@ -373,22 +398,24 @@ export function TransactionImporter({ existingTransactions }: TransactionImporte
                                 });
                             }
                         }
-                        return tx;
                     }));
 
-                    transactionsWithContacts.push(...batchResults);
-
-                    // Esperar entre lots (excepte l'últim) i si no s'ha excedit la quota
-                    if (!quotaExceeded && i + BATCH_SIZE < transactionsToProcess.length) {
+                    // Esperar entre lots (excepte l'últim) si no s'ha excedit la quota
+                    if (!quotaExceeded && i + BATCH_SIZE < unmatchedTransactions.length) {
                         log(`Esperando ${DELAY_MS / 1000}s antes del siguiente lote...`);
                         await new Promise(resolve => setTimeout(resolve, DELAY_MS));
                     }
                 }
-            } else {
-                // Més de 50 transaccions: importar sense auto-match (massa lent amb la quota gratuïta)
-                log(`Se omite la inferencia de contactos con IA (${transactionsToProcess.length} > ${SKIP_AI_THRESHOLD} transacciones)`);
-                transactionsWithContacts = transactionsToProcess;
+
+                log(`📈 Resultat FASE 2 (IA): ${aiMatchedCount} transaccions addicionals amb match`);
             }
+
+            // ═══════════════════════════════════════════════════════════════════
+            // RESUM FINAL
+            // ═══════════════════════════════════════════════════════════════════
+            const finalMatched = transactionsWithContacts.filter(tx => tx.contactId).length;
+            const finalPercentage = Math.round((finalMatched / transactionsToProcess.length) * 100);
+            log(`🎯 RESUM FINAL: ${finalMatched}/${transactionsToProcess.length} (${finalPercentage}%) transaccions amb contacte assignat`)
 
             const transactionsCollectionRef = collection(firestore, 'organizations', organizationId, 'transactions');
             const batch = writeBatch(firestore);

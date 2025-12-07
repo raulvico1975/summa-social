@@ -200,6 +200,7 @@ export function TransactionsTable() {
 
   const [isSplitterOpen, setIsSplitterOpen] = React.useState(false);
   const [transactionToSplit, setTransactionToSplit] = React.useState<Transaction | null>(null);
+  const [openCategoryPopover, setOpenCategoryPopover] = React.useState<string | null>(null);
 
 
   // Maps per noms
@@ -1171,7 +1172,7 @@ export function TransactionsTable() {
                   </TableCell>
                   {/* Columna Categoria */}
                   <TableCell>
-                    <Popover>
+                    <Popover open={openCategoryPopover === tx.id} onOpenChange={(open) => setOpenCategoryPopover(open ? tx.id : null)}>
                       <PopoverTrigger asChild>
                         <Button
                           variant="ghost"
@@ -1208,6 +1209,7 @@ export function TransactionsTable() {
                                   value={categoryTranslations[cat.name] || cat.name}
                                   onSelect={() => {
                                     handleSetCategory(tx.id, cat.name);
+                                    setOpenCategoryPopover(null);
                                   }}
                                 >
                                   {categoryTranslations[cat.name] || cat.name}
@@ -1219,6 +1221,7 @@ export function TransactionsTable() {
                                 value={t.movements.table.suggestWithAI}
                                 onSelect={() => {
                                   handleCategorize(tx.id);
+                                  setOpenCategoryPopover(null);
                                 }}
                                 className="text-primary"
                               >
