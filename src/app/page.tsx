@@ -4,7 +4,7 @@ import * as React from 'react';
 import { useRouter } from 'next/navigation';
 import { useFirebase } from '@/firebase';
 import { Loader2 } from 'lucide-react';
-import { doc, getDoc, collection, getDocs } from 'firebase/firestore';
+import { doc, getDoc, collectionGroup, query, where, getDocs, limit } from 'firebase/firestore';
 
 export default function HomePage() {
   const router = useRouter();
@@ -34,16 +34,19 @@ export default function HomePage() {
         }
 
         if (!orgId) {
-          const orgsRef = collection(firestore, 'organizations');
-          const orgsSnapshot = await getDocs(orgsRef);
-          
-          for (const orgDocSnap of orgsSnapshot.docs) {
-            const memberRef = doc(firestore, 'organizations', orgDocSnap.id, 'members', user.uid);
-            const memberSnap = await getDoc(memberRef);
-            if (memberSnap.exists()) {
-              orgId = orgDocSnap.id;
-              break;
-            }
+          // Usar collectionGroup per evitar N+1 queries
+          const membersQuery = query(
+            collectionGroup(firestore, 'members'),
+            where('__name__', '==', user.uid),
+            limit(1)
+          );
+          const membersSnapshot = await getDocs(membersQuery);
+
+          if (!membersSnapshot.empty) {
+            const memberDoc = membersSnapshot.docs[0];
+            // Path format: organizations/{orgId}/members/{userId}
+            const pathParts = memberDoc.ref.path.split('/');
+            orgId = pathParts[1];
           }
         }
 

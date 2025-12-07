@@ -5,7 +5,7 @@
 import React, { createContext, useContext, ReactNode, useMemo } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { useFirebase, useCollection, useMemoFirebase } from '@/firebase';
-import { collection, query, where, getDocs, doc, getDoc, updateDoc } from 'firebase/firestore';
+import { collection, collectionGroup, query, where, getDocs, doc, getDoc, updateDoc, limit } from 'firebase/firestore';
 import type { Organization, OrganizationRole, UserProfile } from '@/lib/data';
 import { Loader2, AlertCircle } from 'lucide-react';
 import { User } from 'firebase/auth';
@@ -150,12 +150,11 @@ function useOrganizationBySlug(orgSlug?: string) {
           // ═══════════════════════════════════════════════════════════════════
           // CARREGA PER USUARI (comportament antic - per compatibilitat)
           // ═══════════════════════════════════════════════════════════════════
-          
-          // Buscar la primera organització on l'usuari és membre
-          // Això és una query de grup de col·leccions
+
+          // 1. Primer intentar carregar organització per defecte del perfil
           const userProfileRef = doc(firestore, 'users', user.uid);
           const userProfileSnap = await getDoc(userProfileRef);
-          
+
           if (userProfileSnap.exists()) {
             const profileData = userProfileSnap.data();
             if (profileData.defaultOrganizationId) {
@@ -163,24 +162,28 @@ function useOrganizationBySlug(orgSlug?: string) {
             }
           }
 
-          // Si no té organització per defecte, buscar la primera
+          // 2. Si no té organització per defecte, usar collectionGroup query
+          // Això és molt més eficient que iterar per totes les organitzacions
           if (!orgId) {
-            // Buscar totes les organitzacions on l'usuari és membre
-            const orgsRef = collection(firestore, 'organizations');
-            const orgsSnapshot = await getDocs(orgsRef);
-            
-            for (const orgDocSnap of orgsSnapshot.docs) {
-              const memberRef = doc(firestore, 'organizations', orgDocSnap.id, 'members', user.uid);
-              const memberSnap = await getDoc(memberRef);
-              if (memberSnap.exists()) {
-                orgId = orgDocSnap.id;
-                const memberData = memberSnap.data();
-                setUserRole(memberData.role as OrganizationRole);
-                break;
-              }
+            // Query directa a totes les subcol·leccions "members" on l'usuari és membre
+            const membersQuery = query(
+              collectionGroup(firestore, 'members'),
+              where('__name__', '==', user.uid),
+              limit(1)
+            );
+            const membersSnapshot = await getDocs(membersQuery);
+
+            if (!membersSnapshot.empty) {
+              const memberDoc = membersSnapshot.docs[0];
+              const memberData = memberDoc.data();
+              // Extreure l'orgId del path: organizations/{orgId}/members/{userId}
+              const pathParts = memberDoc.ref.path.split('/');
+              orgId = pathParts[1]; // organizations/{orgId}/members/{userId}
+              setUserRole(memberData.role as OrganizationRole);
             }
           }
 
+          // 3. Carregar les dades de l'organització
           if (orgId) {
             const orgRef = doc(firestore, 'organizations', orgId);
             const orgSnap = await getDoc(orgRef);
