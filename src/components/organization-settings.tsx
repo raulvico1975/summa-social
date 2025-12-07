@@ -42,11 +42,16 @@ export function OrganizationSettings() {
   React.useEffect(() => {
     if (!organizationId || !firestore) return;
 
+    // Flag per evitar setState després d'unmount
+    let isMounted = true;
+
     const loadOrganization = async () => {
       try {
         const orgRef = doc(firestore, 'organizations', organizationId);
         const orgSnap = await getDoc(orgRef);
-        
+
+        if (!isMounted) return;
+
         if (orgSnap.exists()) {
           const data = orgSnap.data() as Organization;
           setFormData({
@@ -64,18 +69,26 @@ export function OrganizationSettings() {
         }
       } catch (error) {
         console.error('Error carregant organització:', error);
-        toast({
-          variant: 'destructive',
-          title: t.settings.organization.errorLoading,
-          description: t.settings.organization.errorLoadingDescription,
-        });
+        if (isMounted) {
+          toast({
+            variant: 'destructive',
+            title: t.settings.organization.errorLoading,
+            description: t.settings.organization.errorLoadingDescription,
+          });
+        }
       } finally {
-        setLoading(false);
+        if (isMounted) {
+          setLoading(false);
+        }
       }
     };
 
     loadOrganization();
-  }, [organizationId, firestore, toast]);
+
+    return () => {
+      isMounted = false;
+    };
+  }, [organizationId, firestore, toast, t.settings.organization.errorLoading, t.settings.organization.errorLoadingDescription]);
 
   const handleChange = (field: keyof typeof formData, value: string) => {
     setFormData(prev => ({

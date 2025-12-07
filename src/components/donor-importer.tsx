@@ -43,7 +43,7 @@ import {
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import type { Donor, Category } from '@/lib/data';
-import { collection, query, where, getDocs, writeBatch, doc } from 'firebase/firestore';
+import { collection, query, where, getDocs, writeBatch, doc, limit } from 'firebase/firestore';
 import { useFirebase, useCollection, useMemoFirebase } from '@/firebase';
 import { useCurrentOrganization } from '@/hooks/organization-provider';
 import { useTranslations } from '@/i18n';
@@ -306,7 +306,8 @@ export function DonorImporter({
     if (!organizationId || !firestore) return;
     try {
       const contactsRef = collection(firestore, 'organizations', organizationId, 'contacts');
-      const q = query(contactsRef, where('type', '==', 'donor'));
+      // Limitar a 5000 per rendiment - suficient per detectar duplicats
+      const q = query(contactsRef, where('type', '==', 'donor'), limit(5000));
       const snapshot = await getDocs(q);
       const ids = new Set<string>();
       snapshot.forEach(doc => {
@@ -318,6 +319,7 @@ export function DonorImporter({
       setExistingIds(ids);
     } catch (error) {
       console.error('Error carregant DNIs existents:', error);
+      toast({ variant: 'destructive', title: t.common?.error || 'Error' });
     }
   };
 

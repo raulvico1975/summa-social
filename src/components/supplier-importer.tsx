@@ -44,7 +44,7 @@ import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import type { Supplier, SupplierCategory } from '@/lib/data';
 import { SUPPLIER_CATEGORIES } from '@/lib/data';
-import { collection, query, where, getDocs, writeBatch, doc } from 'firebase/firestore';
+import { collection, query, where, getDocs, writeBatch, doc, limit } from 'firebase/firestore';
 import { useFirebase } from '@/firebase';
 import { useCurrentOrganization } from '@/hooks/organization-provider';
 import { useTranslations } from '@/i18n';
@@ -282,7 +282,8 @@ export function SupplierImporter({
     if (!organizationId || !firestore) return;
     try {
       const contactsRef = collection(firestore, 'organizations', organizationId, 'contacts');
-      const q = query(contactsRef, where('type', '==', 'supplier'));
+      // Limitar a 5000 per rendiment - suficient per detectar duplicats
+      const q = query(contactsRef, where('type', '==', 'supplier'), limit(5000));
       const snapshot = await getDocs(q);
       const ids = new Set<string>();
       snapshot.forEach(doc => {
@@ -294,6 +295,7 @@ export function SupplierImporter({
       setExistingIds(ids);
     } catch (error) {
       console.error('Error carregant CIFs existents:', error);
+      toast({ variant: 'destructive', title: t.common?.error || 'Error' });
     }
   };
 

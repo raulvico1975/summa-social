@@ -105,7 +105,11 @@ export function DonorManager() {
     () => allCategories?.filter(c => c.type === 'income') || [],
     [allCategories]
   );
-  const categoryTranslations = t.categories as Record<string, string>;
+  // Memoitzar per evitar re-renders innecessaris
+  const categoryTranslations = React.useMemo(
+    () => t.categories as Record<string, string>,
+    [t.categories]
+  );
 
   const [isDialogOpen, setIsDialogOpen] = React.useState(false);
   const [isAlertOpen, setIsAlertOpen] = React.useState(false);

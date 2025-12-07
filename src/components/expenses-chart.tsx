@@ -13,7 +13,11 @@ import { useTranslations } from '@/i18n';
 
 export function ExpensesChart({ transactions }: { transactions: Transaction[] }) {
   const { t } = useTranslations();
-  const categoryTranslations = t.categories as Record<string, string>;
+  // Memoitzar per evitar re-renders innecessaris
+  const categoryTranslations = React.useMemo(
+    () => t.categories as Record<string, string>,
+    [t.categories]
+  );
 
   const chartConfig = {
     expenses: {
