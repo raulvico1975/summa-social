@@ -108,6 +108,18 @@ export default function DashboardPage() {
   const [summaryText, setSummaryText] = React.useState('');
   const [copySuccess, setCopySuccess] = React.useState(false);
 
+  // Ref per gestionar timeout i evitar memory leaks
+  const copyTimeoutRef = React.useRef<NodeJS.Timeout | null>(null);
+
+  // Cleanup timeout quan component es desmunta
+  React.useEffect(() => {
+    return () => {
+      if (copyTimeoutRef.current) {
+        clearTimeout(copyTimeoutRef.current);
+      }
+    };
+  }, []);
+
   // Funció per formatejar el període del filtre
   const formatPeriodLabel = (filter: DateFilterValue): string => {
     if (filter.type === 'all') return t.dashboard.allPeriods;
@@ -165,7 +177,11 @@ ${t.dashboard.generatedWith}`;
     try {
       await navigator.clipboard.writeText(summaryText);
       setCopySuccess(true);
-      setTimeout(() => setCopySuccess(false), 2000);
+      // Netejar timeout anterior si existeix
+      if (copyTimeoutRef.current) {
+        clearTimeout(copyTimeoutRef.current);
+      }
+      copyTimeoutRef.current = setTimeout(() => setCopySuccess(false), 2000);
     } catch (err) {
       console.error('Error copying to clipboard:', err);
     }

@@ -24,17 +24,20 @@ export function useInitializeOrganizationData() {
   const initializedForOrgRef = useRef<string | null>(null);
 
   useEffect(() => {
+    // Esperar a tenir organització
+    if (isOrgLoading || !organizationId) {
+      return;
+    }
+
+    // Si ja hem inicialitzat per aquesta organització, no fer res
+    if (initializedForOrgRef.current === organizationId) {
+      return;
+    }
+
+    // Marcar que estem inicialitzant ABANS de l'async per evitar múltiples execucions
+    initializedForOrgRef.current = organizationId;
+
     const initializeIfNeeded = async () => {
-      // Esperar a tenir organització
-      if (isOrgLoading || !organizationId || isInitializing) {
-        return;
-      }
-
-      // Si ja hem inicialitzat per aquesta organització, no fer res
-      if (initializedForOrgRef.current === organizationId) {
-        return;
-      }
-
       setIsInitializing(true);
       console.log(`🔍 Comprovant dades per a l'organització: ${organizationId}`);
 
@@ -46,9 +49,9 @@ export function useInitializeOrganizationData() {
         if (snapshot.empty) {
           // Organització nova! Crear categories per defecte
           console.log('🆕 Organització sense categories. Creant categories per defecte...');
-          
+
           const batch = writeBatch(firestore);
-          
+
           ALL_DEFAULT_CATEGORIES.forEach((category) => {
             const newDocRef = doc(categoriesRef);
             batch.set(newDocRef, category);
@@ -57,7 +60,7 @@ export function useInitializeOrganizationData() {
           await batch.commit();
 
           console.log(`✅ ${ALL_DEFAULT_CATEGORIES.length} categories creades correctament.`);
-          
+
           toast({
             title: 'Configuració completada!',
             description: `Hem configurat ${ALL_DEFAULT_CATEGORIES.length} categories comptables per a la teva organització.`,
@@ -66,11 +69,10 @@ export function useInitializeOrganizationData() {
           console.log(`✅ Organització existent amb ${snapshot.size} categories.`);
         }
 
-        // Marcar com a inicialitzat per aquesta organització
-        initializedForOrgRef.current = organizationId;
-
       } catch (error) {
         console.error('❌ Error inicialitzant dades d\'organització:', error);
+        // Revertir el ref perquè es pugui tornar a intentar
+        initializedForOrgRef.current = null;
         toast({
           variant: 'destructive',
           title: 'Error d\'inicialització',
@@ -82,7 +84,7 @@ export function useInitializeOrganizationData() {
     };
 
     initializeIfNeeded();
-  }, [organizationId, isOrgLoading, firestore, isInitializing, toast]);
+  }, [organizationId, isOrgLoading, firestore, toast]);
 
   return { isInitializing };
 }

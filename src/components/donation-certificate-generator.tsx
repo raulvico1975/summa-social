@@ -78,12 +78,32 @@ const cleanName = (name: string): string => {
   return name.trim().replace(/\s+/g, ' ');
 };
 
-// Carregar imatge com a base64
-const loadImageAsBase64 = (url: string): Promise<string | null> => {
+// Carregar imatge com a base64 amb suport per cancel·lació
+const loadImageAsBase64 = (url: string, signal?: AbortSignal): Promise<string | null> => {
   return new Promise((resolve) => {
-    const img = new Image();
+    const img = new window.Image();
     img.crossOrigin = 'anonymous';
+
+    // Cleanup si s'aborta
+    const cleanup = () => {
+      img.onload = null;
+      img.onerror = null;
+      img.src = '';
+    };
+
+    if (signal) {
+      signal.addEventListener('abort', () => {
+        cleanup();
+        resolve(null);
+      });
+    }
+
     img.onload = () => {
+      if (signal?.aborted) {
+        cleanup();
+        resolve(null);
+        return;
+      }
       try {
         const canvas = document.createElement('canvas');
         canvas.width = img.width;
@@ -201,25 +221,38 @@ export function DonationCertificateGenerator() {
   React.useEffect(() => {
     if (!firestore || !organizationId) return;
 
+    const abortController = new AbortController();
+
     const loadOrgData = async () => {
       try {
         const orgRef = doc(firestore, 'organizations', organizationId);
         const orgSnap = await getDoc(orgRef);
+
+        if (abortController.signal.aborted) return;
+
         if (orgSnap.exists()) {
           const data = { id: orgSnap.id, ...orgSnap.data() } as OrganizationWithLogo;
           setOrgData(data);
-          
+
           if (data.logoUrl) {
-            const base64 = await loadImageAsBase64(data.logoUrl);
-            setLogoBase64(base64);
+            const base64 = await loadImageAsBase64(data.logoUrl, abortController.signal);
+            if (!abortController.signal.aborted) {
+              setLogoBase64(base64);
+            }
           }
         }
       } catch (error) {
-        console.error('Error loading org data:', error);
+        if (!abortController.signal.aborted) {
+          console.error('Error loading org data:', error);
+        }
       }
     };
 
     loadOrgData();
+
+    return () => {
+      abortController.abort();
+    };
   }, [firestore, organizationId]);
 
   const loadDonations = React.useCallback(async () => {
