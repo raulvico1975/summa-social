@@ -47,7 +47,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
-import { PlusCircle, Edit, Trash2, User, Building2, RefreshCw, Heart, Upload, AlertTriangle } from 'lucide-react';
+import { PlusCircle, Edit, Trash2, User, Building2, RefreshCw, Heart, Upload, AlertTriangle, Eye } from 'lucide-react';
 import type { Donor, Category } from '@/lib/data';
 import { useToast } from '@/hooks/use-toast';
 import { Badge } from '@/components/ui/badge';
@@ -55,6 +55,7 @@ import { useCollection, useFirebase, useMemoFirebase, addDocumentNonBlocking, de
 import { collection, doc, query, where } from 'firebase/firestore';
 import { useCurrentOrganization } from '@/hooks/organization-provider';
 import { DonorImporter } from './donor-importer';
+import { DonorDetailDrawer } from './donor-detail-drawer';
 import { useTranslations } from '@/i18n';
 import { normalizeContact, formatCurrencyEU } from '@/lib/normalize';
 
@@ -114,6 +115,8 @@ export function DonorManager() {
   const [isDialogOpen, setIsDialogOpen] = React.useState(false);
   const [isAlertOpen, setIsAlertOpen] = React.useState(false);
   const [isImportOpen, setIsImportOpen] = React.useState(false);
+  const [isDetailOpen, setIsDetailOpen] = React.useState(false);
+  const [selectedDonor, setSelectedDonor] = React.useState<Donor | null>(null);
   const [editingDonor, setEditingDonor] = React.useState<Donor | null>(null);
   const [donorToDelete, setDonorToDelete] = React.useState<Donor | null>(null);
   const [formData, setFormData] = React.useState<DonorFormData>(emptyFormData);
@@ -275,6 +278,16 @@ export function DonorManager() {
     // El toast ja es mostra dins del DonorImporter
   };
 
+  const handleViewDetail = (donor: Donor) => {
+    setSelectedDonor(donor);
+    setIsDetailOpen(true);
+  };
+
+  const handleEditFromDrawer = (donor: Donor) => {
+    setIsDetailOpen(false);
+    handleEdit(donor);
+  };
+
   const dialogTitle = editingDonor ? t.donors.editTitle : t.donors.addTitle;
   const dialogDescription = editingDonor 
     ? t.donors.editDescription 
@@ -378,7 +391,13 @@ export function DonorManager() {
                           ) : (
                             <Building2 className="h-4 w-4 text-muted-foreground" />
                           )}
-                          {donor.name}
+                          <button
+                            type="button"
+                            onClick={() => handleViewDetail(donor)}
+                            className="text-blue-600 hover:text-blue-800 hover:underline text-left font-medium cursor-pointer"
+                          >
+                            {donor.name}
+                          </button>
                           {hasIncompleteData(donor) && (
                             <Tooltip>
                               <TooltipTrigger>
@@ -670,10 +689,17 @@ export function DonorManager() {
         </AlertDialogContent>
       </AlertDialog>
 
-      <DonorImporter 
-        open={isImportOpen} 
+      <DonorImporter
+        open={isImportOpen}
         onOpenChange={setIsImportOpen}
         onImportComplete={handleImportComplete}
+      />
+
+      <DonorDetailDrawer
+        donor={selectedDonor}
+        open={isDetailOpen}
+        onOpenChange={setIsDetailOpen}
+        onEdit={handleEditFromDrawer}
       />
     </TooltipProvider>
   );

@@ -11,7 +11,7 @@ import { useFirebase } from '@/firebase';
 import { useCurrentOrganization } from '@/hooks/organization-provider';
 import { doc, getDoc, updateDoc } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
-import { Building2, Save, Upload, Loader2, Image as ImageIcon } from 'lucide-react';
+import { Building2, Save, Upload, Loader2, Image as ImageIcon, PenTool, Trash2 } from 'lucide-react';
 import type { Organization } from '@/lib/data';
 import { useTranslations } from '@/i18n';
 
@@ -24,7 +24,8 @@ export function OrganizationSettings() {
   const [loading, setLoading] = React.useState(true);
   const [saving, setSaving] = React.useState(false);
   const [uploadingLogo, setUploadingLogo] = React.useState(false);
-  
+  const [uploadingSignature, setUploadingSignature] = React.useState(false);
+
   const [formData, setFormData] = React.useState({
     name: '',
     taxId: '',
@@ -35,6 +36,9 @@ export function OrganizationSettings() {
     email: '',
     website: '',
     logoUrl: '',
+    signatureUrl: '',
+    signatoryName: '',
+    signatoryRole: '',
     contactAlertThreshold: 50,
   });
 
@@ -63,7 +67,10 @@ export function OrganizationSettings() {
             phone: data.phone || '',
             email: data.email || '',
             website: data.website || '',
-            logoUrl: (data as any).logoUrl || '',
+            logoUrl: data.logoUrl || '',
+            signatureUrl: data.signatureUrl || '',
+            signatoryName: data.signatoryName || '',
+            signatoryRole: data.signatoryRole || '',
             contactAlertThreshold: data.contactAlertThreshold ?? 50,
           });
         }
@@ -115,6 +122,9 @@ export function OrganizationSettings() {
         email: formData.email || null,
         website: formData.website || null,
         logoUrl: formData.logoUrl || null,
+        signatureUrl: formData.signatureUrl || null,
+        signatoryName: formData.signatoryName || null,
+        signatoryRole: formData.signatoryRole || null,
         contactAlertThreshold: formData.contactAlertThreshold,
       };
 
@@ -155,7 +165,7 @@ export function OrganizationSettings() {
       const logoRef = ref(storage, `organizations/${organizationId}/logo`);
       await uploadBytes(logoRef, file);
       const downloadUrl = await getDownloadURL(logoRef);
-      
+
       setFormData(prev => ({ ...prev, logoUrl: downloadUrl }));
 
       toast({
@@ -168,6 +178,44 @@ export function OrganizationSettings() {
     } finally {
       setUploadingLogo(false);
     }
+  };
+
+  const handleSignatureUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !organizationId || !storage) return;
+
+    if (!file.type.startsWith('image/')) {
+      toast({ variant: 'destructive', title: t.common.error, description: t.settings.organization.errorInvalidImage });
+      return;
+    }
+
+    if (file.size > 1 * 1024 * 1024) { // 1MB
+      toast({ variant: 'destructive', title: t.common.error, description: t.settings.organization.errorImageTooLarge });
+      return;
+    }
+
+    setUploadingSignature(true);
+    try {
+      const signatureRef = ref(storage, `organizations/${organizationId}/signature`);
+      await uploadBytes(signatureRef, file);
+      const downloadUrl = await getDownloadURL(signatureRef);
+
+      setFormData(prev => ({ ...prev, signatureUrl: downloadUrl }));
+
+      toast({
+        title: t.settings.organization.signatureUploaded,
+        description: t.settings.organization.signatureUploadedSuccess,
+      });
+    } catch (error) {
+      console.error('Error pujant firma:', error);
+      toast({ variant: 'destructive', title: t.common.error, description: t.settings.organization.errorUploadingSignature });
+    } finally {
+      setUploadingSignature(false);
+    }
+  };
+
+  const handleRemoveSignature = () => {
+    setFormData(prev => ({ ...prev, signatureUrl: '' }));
   };
 
   if (loading) {
@@ -331,6 +379,91 @@ export function OrganizationSettings() {
             </SelectContent>
           </Select>
           <p className="text-xs text-muted-foreground">{t.settings.organization.contactAlertThresholdDescription}</p>
+        </div>
+
+        {/* Secció Certificats */}
+        <div className="pt-4 border-t">
+          <h3 className="text-base font-semibold mb-4 flex items-center gap-2">
+            <PenTool className="h-4 w-4" />
+            {t.settings.organization.certificatesSection}
+          </h3>
+          <p className="text-sm text-muted-foreground mb-4">
+            {t.settings.organization.certificatesSectionDescription}
+          </p>
+
+          {/* Firma digitalitzada */}
+          <div className="space-y-3 mb-4">
+            <Label>{t.settings.organization.signature}</Label>
+            <div className="flex items-center gap-4">
+              <div className="h-16 w-32 rounded-lg border-2 border-dashed flex items-center justify-center bg-muted/50 overflow-hidden">
+                {formData.signatureUrl ? (
+                  <img
+                    src={formData.signatureUrl}
+                    alt="Firma"
+                    className="h-full w-full object-contain"
+                  />
+                ) : (
+                  <PenTool className="h-6 w-6 text-muted-foreground" />
+                )}
+              </div>
+              <div className="flex flex-col gap-2">
+                <div className="flex gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    disabled={uploadingSignature}
+                    onClick={() => document.getElementById('signature-input')?.click()}
+                  >
+                    {uploadingSignature ? (
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    ) : (
+                      <Upload className="mr-2 h-4 w-4" />
+                    )}
+                    {t.settings.organization.uploadSignature}
+                  </Button>
+                  {formData.signatureUrl && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={handleRemoveSignature}
+                    >
+                      <Trash2 className="h-4 w-4 text-destructive" />
+                    </Button>
+                  )}
+                </div>
+                <input
+                  id="signature-input"
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={handleSignatureUpload}
+                />
+                <p className="text-xs text-muted-foreground">{t.settings.organization.signatureHint}</p>
+              </div>
+            </div>
+          </div>
+
+          {/* Nom i càrrec del signant */}
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div className="space-y-2">
+              <Label htmlFor="signatoryName">{t.settings.organization.signatoryName}</Label>
+              <Input
+                id="signatoryName"
+                value={formData.signatoryName}
+                onChange={(e) => handleChange('signatoryName', e.target.value)}
+                placeholder="Maria Garcia López"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="signatoryRole">{t.settings.organization.signatoryRole}</Label>
+              <Input
+                id="signatoryRole"
+                value={formData.signatoryRole}
+                onChange={(e) => handleChange('signatoryRole', e.target.value)}
+                placeholder="Presidenta"
+              />
+            </div>
+          </div>
         </div>
 
         <div className="flex justify-end pt-4 border-t">

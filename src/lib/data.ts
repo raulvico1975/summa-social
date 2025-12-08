@@ -242,6 +242,11 @@ export type Organization = {
   phone?: string;
   email?: string;
   website?: string;
+  // Branding i certificats
+  logoUrl?: string;                // URL del logo (Firebase Storage)
+  signatureUrl?: string;           // URL de la firma digitalitzada (Firebase Storage)
+  signatoryName?: string;          // Nom del signant (ex: "Maria Garcia López")
+  signatoryRole?: string;          // Càrrec del signant (ex: "Presidenta")
   // Configuració d'alertes
   contactAlertThreshold?: number;  // Llindar mínim (€) per alertes de moviments sense contacte (default: 50)
   // Metadata
