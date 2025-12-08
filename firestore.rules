@@ -146,6 +146,19 @@ service cloud.firestore {
         allow read: if isMemberOf(orgId) || isSuperAdmin();
         allow create, update, delete: if isMemberOf(orgId) && getMemberRole(orgId) in ['admin', 'user'] || isSuperAdmin();
       }
+
+      // ─────────────────────────────────────────────────────────────────────
+      // AUDIT LOGS (només Super Admin)
+      // ─────────────────────────────────────────────────────────────────────
+
+      match /audit_logs/{logId} {
+        // Llegir: només Super Admin
+        allow read: if isSuperAdmin();
+        // Crear: qualsevol membre autenticat (el sistema crea logs)
+        allow create: if isMemberOf(orgId) || isSuperAdmin();
+        // Actualitzar/Eliminar: només Super Admin
+        allow update, delete: if isSuperAdmin();
+      }
     }
   }
 }

@@ -225,6 +225,20 @@ export function DashboardSidebarContent() {
               </Link>
             </SidebarMenuButton>
           </SidebarMenuItem>
+          {isSuperAdmin && (
+            <SidebarMenuItem>
+              <SidebarMenuButton
+                asChild
+                isActive={pathname === '/admin'}
+                tooltip={{children: t.sidebar.adminPanel}}
+              >
+                <Link href="/admin">
+                  <Shield className="text-amber-500" />
+                  <span>{t.sidebar.adminPanel}</span>
+                </Link>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+          )}
           <SidebarMenuItem>
              <SidebarMenuButton asChild tooltip={{children: t.sidebar.logout}}>
                 <Link href="/" onClick={handleSignOut}>
