@@ -82,6 +82,9 @@ export function TransactionsTable() {
   // Filtre actiu
   const [tableFilter, setTableFilter] = React.useState<TableFilter>('all');
 
+  // Cercador intel·ligent
+  const [searchQuery, setSearchQuery] = React.useState('');
+
   // Llegir paràmetre de filtre de la URL
   const [hasUrlFilter, setHasUrlFilter] = React.useState(false);
 
@@ -292,7 +295,7 @@ export function TransactionsTable() {
     return transactions.filter(tx => !tx.contactId && Math.abs(tx.amount) > 50);
   }, [transactions]);
 
-  // // Transaccions filtrades i ordenades per data (més recents primer)
+  // Transaccions filtrades i ordenades per data (més recents primer)
   const filteredTransactions = React.useMemo(() => {
     if (!transactions) return [];
 
@@ -314,13 +317,54 @@ export function TransactionsTable() {
         result = transactions;
     }
 
+    // Filtre de cerca intel·ligent
+    if (searchQuery.trim()) {
+      const query = searchQuery.toLowerCase().trim();
+      result = result.filter(tx => {
+        // Camps de text de la transacció
+        const txFields = [
+          tx.description,
+          tx.note,
+        ].filter(Boolean).map(f => f!.toLowerCase());
+
+        // Nom del contacte
+        const contactName = tx.contactId && contactMap[tx.contactId]
+          ? contactMap[tx.contactId].name.toLowerCase()
+          : '';
+
+        // Nom del projecte
+        const projectName = tx.projectId && projectMap[tx.projectId]
+          ? projectMap[tx.projectId].toLowerCase()
+          : '';
+
+        // Nom de la categoria traduït
+        const categoryName = tx.category
+          ? getCategoryDisplayName(tx.category).toLowerCase()
+          : '';
+
+        // Import (cerca per número)
+        const amountStr = Math.abs(tx.amount).toString();
+        const amountFormatted = formatCurrencyEU(tx.amount).toLowerCase();
+
+        // Comprovar si coincideix amb algun camp
+        return (
+          txFields.some(field => field.includes(query)) ||
+          contactName.includes(query) ||
+          projectName.includes(query) ||
+          categoryName.includes(query) ||
+          amountStr.includes(query.replace(',', '.').replace('.', '')) ||
+          amountFormatted.includes(query)
+        );
+      });
+    }
+
     // Ordenar per data descendent (més recents primer)
     return [...result].sort((a, b) => {
-  const dateA = new Date(a.date).getTime();
-  const dateB = new Date(b.date).getTime();
-  return sortDateAsc ? dateA - dateB : dateB - dateA;
-});
-  }, [transactions, tableFilter, expensesWithoutDoc, returnTransactions, uncategorizedTransactions, noContactTransactions, sortDateAsc]);
+      const dateA = new Date(a.date).getTime();
+      const dateB = new Date(b.date).getTime();
+      return sortDateAsc ? dateA - dateB : dateB - dateA;
+    });
+  }, [transactions, tableFilter, expensesWithoutDoc, returnTransactions, uncategorizedTransactions, noContactTransactions, sortDateAsc, searchQuery, contactMap, projectMap, getCategoryDisplayName]);
 
   // ═══════════════════════════════════════════════════════════════════════════
   // EXPORTAR EXCEL
@@ -433,6 +477,7 @@ export function TransactionsTable() {
     uncategorized: t.movements.table.uncategorized,
     noContact: t.movements.table.noContact,
     exportTooltip: t.movements.table.exportTooltip,
+    searchPlaceholder: t.movements.table.searchPlaceholder,
   }), [t]);
 
   return (
@@ -444,6 +489,8 @@ export function TransactionsTable() {
         <TransactionsFilters
           currentFilter={tableFilter}
           onFilterChange={setTableFilter}
+          searchQuery={searchQuery}
+          onSearchChange={setSearchQuery}
           totalCount={transactions?.length || 0}
           returnsCount={returnTransactions.length}
           pendingReturnsCount={pendingReturns.length}

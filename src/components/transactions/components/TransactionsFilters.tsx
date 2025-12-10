@@ -15,7 +15,10 @@ import {
   AlertTriangle,
   Undo2,
   Download,
+  Search,
+  X,
 } from 'lucide-react';
+import { Input } from '@/components/ui/input';
 
 // =============================================================================
 // TYPES
@@ -26,6 +29,8 @@ export type TableFilter = 'all' | 'missing' | 'returns' | 'uncategorized' | 'noC
 interface TransactionsFiltersProps {
   currentFilter: TableFilter;
   onFilterChange: (filter: TableFilter) => void;
+  searchQuery: string;
+  onSearchChange: (query: string) => void;
   totalCount: number;
   returnsCount: number;
   pendingReturnsCount: number;
@@ -44,6 +49,7 @@ interface TransactionsFiltersProps {
     uncategorized: string;
     noContact: string;
     exportTooltip: string;
+    searchPlaceholder: string;
   };
 }
 
@@ -54,6 +60,8 @@ interface TransactionsFiltersProps {
 export const TransactionsFilters = React.memo(function TransactionsFilters({
   currentFilter,
   onFilterChange,
+  searchQuery,
+  onSearchChange,
   totalCount,
   returnsCount,
   pendingReturnsCount,
@@ -67,7 +75,29 @@ export const TransactionsFilters = React.memo(function TransactionsFilters({
   t,
 }: TransactionsFiltersProps) {
   return (
-    <div className="flex gap-2 items-center flex-wrap">
+    <div className="flex flex-col gap-3 w-full">
+      {/* Cercador intel·ligent */}
+      <div className="relative max-w-md">
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+        <Input
+          placeholder={t.searchPlaceholder}
+          value={searchQuery}
+          onChange={(e) => onSearchChange(e.target.value)}
+          className="pl-9 pr-9"
+        />
+        {searchQuery && (
+          <button
+            type="button"
+            onClick={() => onSearchChange('')}
+            className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+          >
+            <X className="h-4 w-4" />
+          </button>
+        )}
+      </div>
+
+      {/* Filtres i accions */}
+      <div className="flex gap-2 items-center flex-wrap">
       {/* Categorize All button */}
       <Button
         onClick={onBatchCategorize}
@@ -166,6 +196,7 @@ export const TransactionsFilters = React.memo(function TransactionsFilters({
           </TooltipContent>
         </Tooltip>
       )}
+      </div>
     </div>
   );
 });

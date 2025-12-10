@@ -47,7 +47,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
-import { PlusCircle, Edit, Trash2, User, Building2, RefreshCw, Heart, Upload, AlertTriangle, Eye } from 'lucide-react';
+import { PlusCircle, Edit, Trash2, User, Building2, RefreshCw, Heart, Upload, AlertTriangle, Eye, Search, X } from 'lucide-react';
 import type { Donor, Category } from '@/lib/data';
 import { useToast } from '@/hooks/use-toast';
 import { Badge } from '@/components/ui/badge';
@@ -127,6 +127,9 @@ export function DonorManager() {
   const [showIncompleteOnly, setShowIncompleteOnly] = React.useState(false);
   const [hasUrlFilter, setHasUrlFilter] = React.useState(false);
 
+  // Cercador intel·ligent
+  const [searchQuery, setSearchQuery] = React.useState('');
+
   // Llegir paràmetre de filtre de la URL
   React.useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -150,12 +153,38 @@ export function DonorManager() {
     }
   };
 
-  // Filtrar donants incomplets
+  // Filtrar donants (cerca + incomplets)
   const filteredDonors = React.useMemo(() => {
     if (!donors) return [];
-    if (!showIncompleteOnly) return donors;
-    return donors.filter(donor => !donor.taxId || !donor.zipCode);
-  }, [donors, showIncompleteOnly]);
+
+    let result = donors;
+
+    // Filtre de cerca intel·ligent
+    if (searchQuery.trim()) {
+      const query = searchQuery.toLowerCase().trim();
+      result = result.filter(donor => {
+        const searchFields = [
+          donor.name,
+          donor.taxId,
+          donor.email,
+          donor.phone,
+          donor.city,
+          donor.province,
+          donor.zipCode,
+          donor.address,
+        ].filter(Boolean).map(f => f!.toLowerCase());
+
+        return searchFields.some(field => field.includes(query));
+      });
+    }
+
+    // Filtre de donants incomplets
+    if (showIncompleteOnly) {
+      result = result.filter(donor => !donor.taxId || !donor.zipCode);
+    }
+
+    return result;
+  }, [donors, showIncompleteOnly, searchQuery]);
 
   const incompleteDonorsCount = React.useMemo(() => {
     if (!donors) return 0;
@@ -333,26 +362,49 @@ export function DonorManager() {
             </div>
           </CardHeader>
           <CardContent>
-            {/* Botons de filtre */}
-            <div className="mb-4 flex flex-wrap items-center gap-2">
-              <Button
-                variant={!showIncompleteOnly ? 'default' : 'outline'}
-                size="sm"
-                onClick={() => setShowIncompleteOnly(false)}
-              >
-                {t.donors.all} ({donors?.length || 0})
-              </Button>
-              {incompleteDonorsCount > 0 && (
+            {/* Cercador i botons de filtre */}
+            <div className="mb-4 flex flex-col sm:flex-row sm:items-center gap-3">
+              {/* Cercador intel·ligent */}
+              <div className="relative flex-1 max-w-md">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder={t.donors.searchPlaceholder}
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="pl-9 pr-9"
+                />
+                {searchQuery && (
+                  <button
+                    type="button"
+                    onClick={() => setSearchQuery('')}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
+                )}
+              </div>
+
+              {/* Botons de filtre */}
+              <div className="flex flex-wrap items-center gap-2">
                 <Button
-                  variant={showIncompleteOnly ? 'default' : 'outline'}
+                  variant={!showIncompleteOnly ? 'default' : 'outline'}
                   size="sm"
-                  onClick={() => setShowIncompleteOnly(true)}
-                  className={!showIncompleteOnly ? 'border-amber-300 text-amber-600' : ''}
+                  onClick={() => setShowIncompleteOnly(false)}
                 >
-                  <AlertTriangle className="mr-1.5 h-3 w-3" />
-                  {t.donors.incomplete} ({incompleteDonorsCount})
+                  {t.donors.all} ({donors?.length || 0})
                 </Button>
-              )}
+                {incompleteDonorsCount > 0 && (
+                  <Button
+                    variant={showIncompleteOnly ? 'default' : 'outline'}
+                    size="sm"
+                    onClick={() => setShowIncompleteOnly(true)}
+                    className={!showIncompleteOnly ? 'border-amber-300 text-amber-600' : ''}
+                  >
+                    <AlertTriangle className="mr-1.5 h-3 w-3" />
+                    {t.donors.incomplete} ({incompleteDonorsCount})
+                  </Button>
+                )}
+              </div>
             </div>
 
             {/* Avís de filtre actiu des de dashboard */}
@@ -459,9 +511,11 @@ export function DonorManager() {
                   {(!filteredDonors || filteredDonors.length === 0) && (
                     <TableRow>
                       <TableCell colSpan={6} className="text-center text-muted-foreground h-24">
-                        {showIncompleteOnly
-                          ? "No hi ha donants amb dades incompletes"
-                          : t.donors.noData}
+                        {searchQuery
+                          ? t.donors.noSearchResults
+                          : showIncompleteOnly
+                            ? "No hi ha donants amb dades incompletes"
+                            : t.donors.noData}
                       </TableCell>
                     </TableRow>
                   )}

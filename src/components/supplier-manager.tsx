@@ -41,7 +41,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
-import { PlusCircle, Edit, Trash2, Building2, Upload } from 'lucide-react';
+import { PlusCircle, Edit, Trash2, Building2, Upload, Search, X } from 'lucide-react';
 import type { Supplier, Category } from '@/lib/data';
 import { useToast } from '@/hooks/use-toast';
 import { Badge } from '@/components/ui/badge';
@@ -104,6 +104,29 @@ export function SupplierManager() {
   const [editingSupplier, setEditingSupplier] = React.useState<Supplier | null>(null);
   const [supplierToDelete, setSupplierToDelete] = React.useState<Supplier | null>(null);
   const [formData, setFormData] = React.useState<SupplierFormData>(emptyFormData);
+
+  // Cercador intel·ligent
+  const [searchQuery, setSearchQuery] = React.useState('');
+
+  // Filtrar proveïdors per cerca
+  const filteredSuppliers = React.useMemo(() => {
+    if (!suppliers) return [];
+    if (!searchQuery.trim()) return suppliers;
+
+    const query = searchQuery.toLowerCase().trim();
+    return suppliers.filter(supplier => {
+      const searchFields = [
+        supplier.name,
+        supplier.taxId,
+        supplier.email,
+        supplier.phone,
+        supplier.zipCode,
+        supplier.address,
+      ].filter(Boolean).map(f => f!.toLowerCase());
+
+      return searchFields.some(field => field.includes(query));
+    });
+  }, [suppliers, searchQuery]);
 
   const handleEdit = (supplier: Supplier) => {
     setEditingSupplier(supplier);
@@ -236,6 +259,28 @@ export function SupplierManager() {
             </div>
           </CardHeader>
           <CardContent>
+            {/* Cercador intel·ligent */}
+            <div className="mb-4">
+              <div className="relative max-w-md">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder={t.suppliers.searchPlaceholder}
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="pl-9 pr-9"
+                />
+                {searchQuery && (
+                  <button
+                    type="button"
+                    onClick={() => setSearchQuery('')}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
+                )}
+              </div>
+            </div>
+
             <div className="rounded-md border">
               <Table>
                 <TableHeader>
@@ -248,7 +293,7 @@ export function SupplierManager() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {suppliers && suppliers.map((supplier) => (
+                  {filteredSuppliers.map((supplier) => (
                     <TableRow key={supplier.id}>
                       <TableCell className="font-medium">
                         <div className="flex items-center gap-2">
@@ -291,10 +336,10 @@ export function SupplierManager() {
                       </TableCell>
                     </TableRow>
                   ))}
-                  {(!suppliers || suppliers.length === 0) && (
+                  {filteredSuppliers.length === 0 && (
                     <TableRow>
                       <TableCell colSpan={5} className="text-center text-muted-foreground h-24">
-                        {t.suppliers.noData}
+                        {searchQuery ? t.suppliers.noSearchResults : t.suppliers.noData}
                       </TableCell>
                     </TableRow>
                   )}
