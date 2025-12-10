@@ -26,6 +26,7 @@ interface NewContactFormData {
   taxId: string;
   zipCode: string;
   city: string;
+  province: string;
 }
 
 interface UseTransactionActionsParams {
@@ -329,6 +330,7 @@ export function useTransactionActions({
       taxId: formData.taxId || null,
       zipCode: formData.zipCode || null,
       city: formData.city || null,
+      province: formData.province || null,
       createdAt: now,
       ...(newContactType === 'donor' && {
         donorType: 'individual',

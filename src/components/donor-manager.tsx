@@ -66,6 +66,8 @@ const emptyFormData: DonorFormData = {
   name: '',
   taxId: '',
   zipCode: '',
+  city: '',
+  province: '',
   address: '',
   donorType: 'individual',
   membershipType: 'one-time',
@@ -167,6 +169,8 @@ export function DonorManager() {
       name: donor.name,
       taxId: donor.taxId,
       zipCode: donor.zipCode,
+      city: donor.city || '',
+      province: donor.province || '',
       address: donor.address || '',
       donorType: donor.donorType,
       membershipType: donor.membershipType,
@@ -250,6 +254,8 @@ export function DonorManager() {
       ...normalized,
       taxId: normalized.taxId || null,
       zipCode: normalized.zipCode || null,
+      city: normalized.city || null,
+      province: normalized.province || null,
       address: normalized.address || null,
       email: normalized.email || null,
       phone: normalized.phone || null,
@@ -511,6 +517,28 @@ export function DonorManager() {
                   onChange={(e) => handleFormChange('zipCode', e.target.value)}
                   className="col-span-3"
                   placeholder="08001"
+                />
+              </div>
+
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="city" className="text-right">{t.donors.city}</Label>
+                <Input
+                  id="city"
+                  value={formData.city || ''}
+                  onChange={(e) => handleFormChange('city', e.target.value)}
+                  className="col-span-3"
+                  placeholder="Barcelona"
+                />
+              </div>
+
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="province" className="text-right">{t.donors.province}</Label>
+                <Input
+                  id="province"
+                  value={formData.province || ''}
+                  onChange={(e) => handleFormChange('province', e.target.value)}
+                  className="col-span-3"
+                  placeholder="Barcelona"
                 />
               </div>
 

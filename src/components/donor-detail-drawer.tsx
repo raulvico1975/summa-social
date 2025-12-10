@@ -323,7 +323,7 @@ export function DonorDetailDrawer({ donor, open, onOpenChange, onEdit }: DonorDe
       const buildOrgFullAddress = (): string => {
         const parts: string[] = [];
         if (organization.address) parts.push(organization.address);
-        const locationPart = [organization.zipCode, organization.city].filter(Boolean).join(' ');
+        const locationPart = [organization.zipCode, organization.city, organization.province].filter(Boolean).join(' ');
         if (locationPart) parts.push(locationPart);
         return parts.join(', ');
       };
@@ -426,7 +426,7 @@ export function DonorDetailDrawer({ donor, open, onOpenChange, onEdit }: DonorDe
       // Construir adreça completa del donant (adreça + CP + ciutat)
       const donorAddressParts: string[] = [];
       if (donor.address) donorAddressParts.push(donor.address);
-      const donorLocationPart = [donor.zipCode, donor.city].filter(Boolean).join(' ');
+      const donorLocationPart = [donor.zipCode, donor.city, donor.province].filter(Boolean).join(' ');
       if (donorLocationPart) donorAddressParts.push(donorLocationPart);
       const donorAddress = donorAddressParts.length > 0 ? donorAddressParts.join(', ') : '[Domicili no informat]';
       const paragraph1 = `${t.donorDetail.certificate.thatDonor} ${donor.name} ${t.donorDetail.certificate.withNifCif} ${donor.taxId} ${t.donorDetail.certificate.andDomicile} ${donorAddress}, ${t.donorDetail.certificate.donatedAmount} ${formatCurrencyEU(tx.amount)} ${t.donorDetail.certificate.onDate} ${formatDate(tx.date)} ${t.donorDetail.certificate.toTheEntity}`;
@@ -545,7 +545,7 @@ export function DonorDetailDrawer({ donor, open, onOpenChange, onEdit }: DonorDe
       const buildOrgFullAddress = (): string => {
         const parts: string[] = [];
         if (organization.address) parts.push(organization.address);
-        const locationPart = [organization.zipCode, organization.city].filter(Boolean).join(' ');
+        const locationPart = [organization.zipCode, organization.city, organization.province].filter(Boolean).join(' ');
         if (locationPart) parts.push(locationPart);
         return parts.join(', ');
       };
@@ -652,7 +652,7 @@ export function DonorDetailDrawer({ donor, open, onOpenChange, onEdit }: DonorDe
       // Construir adreça completa del donant (adreça + CP + ciutat)
       const donorAddressParts: string[] = [];
       if (donor.address) donorAddressParts.push(donor.address);
-      const donorLocationPart = [donor.zipCode, donor.city].filter(Boolean).join(' ');
+      const donorLocationPart = [donor.zipCode, donor.city, donor.province].filter(Boolean).join(' ');
       if (donorLocationPart) donorAddressParts.push(donorLocationPart);
       const donorAddress = donorAddressParts.length > 0 ? donorAddressParts.join(', ') : '[Domicili no informat]';
       const donationsText = yearDonations.length === 1 ? t.donorDetail.donation : t.donorDetail.donations;

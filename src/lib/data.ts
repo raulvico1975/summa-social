@@ -102,6 +102,7 @@ export type Contact = {
   taxId: string;                   // DNI/CIF
   zipCode: string;                 // Codi postal
   city?: string;                   // Ciutat
+  province?: string;               // Província
   createdAt: string;
   updatedAt?: string;
   defaultCategoryId?: string;      // Categoria per defecte per auto-assignar a transaccions
@@ -239,6 +240,7 @@ export type Organization = {
   // Dades opcionals
   address?: string;
   city?: string;
+  province?: string;
   zipCode?: string;
   phone?: string;
   email?: string;

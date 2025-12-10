@@ -31,6 +31,7 @@ export function OrganizationSettings() {
     taxId: '',
     address: '',
     city: '',
+    province: '',
     zipCode: '',
     phone: '',
     email: '',
@@ -63,6 +64,7 @@ export function OrganizationSettings() {
             taxId: data.taxId || '',
             address: data.address || '',
             city: data.city || '',
+            province: data.province || '',
             zipCode: data.zipCode || '',
             phone: data.phone || '',
             email: data.email || '',
@@ -117,6 +119,7 @@ export function OrganizationSettings() {
         updatedAt: new Date().toISOString(),
         address: formData.address || null,
         city: formData.city || null,
+        province: formData.province || null,
         zipCode: formData.zipCode || null,
         phone: formData.phone || null,
         email: formData.email || null,
@@ -310,7 +313,16 @@ export function OrganizationSettings() {
             placeholder="Carrer Exemple, 123"
           />
         </div>
-        <div className="grid gap-4 sm:grid-cols-2">
+        <div className="grid gap-4 sm:grid-cols-3">
+          <div className="space-y-2">
+            <Label htmlFor="zipCode">{t.settings.organization.zipCode}</Label>
+            <Input
+              id="zipCode"
+              value={formData.zipCode}
+              onChange={(e) => handleChange('zipCode', e.target.value)}
+              placeholder="08001"
+            />
+          </div>
           <div className="space-y-2">
             <Label htmlFor="city">{t.settings.organization.city}</Label>
             <Input
@@ -321,12 +333,12 @@ export function OrganizationSettings() {
             />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="zipCode">{t.settings.organization.zipCode}</Label>
+            <Label htmlFor="province">{t.settings.organization.province}</Label>
             <Input
-              id="zipCode"
-              value={formData.zipCode}
-              onChange={(e) => handleChange('zipCode', e.target.value)}
-              placeholder="08001"
+              id="province"
+              value={formData.province}
+              onChange={(e) => handleChange('province', e.target.value)}
+              placeholder="Barcelona"
             />
           </div>
         </div>

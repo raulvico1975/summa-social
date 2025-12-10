@@ -21,6 +21,7 @@ interface NewContactFormData {
   taxId: string;
   zipCode: string;
   city: string;
+  province: string;
 }
 
 interface NewContactDialogProps {
@@ -44,12 +45,13 @@ export const NewContactDialog = React.memo(function NewContactDialog({
     taxId: '',
     zipCode: '',
     city: '',
+    province: '',
   });
 
   // Reset form when dialog opens
   React.useEffect(() => {
     if (open) {
-      setFormData({ name: '', taxId: '', zipCode: '', city: '' });
+      setFormData({ name: '', taxId: '', zipCode: '', city: '', province: '' });
     }
   }, [open]);
 
@@ -111,7 +113,7 @@ export const NewContactDialog = React.memo(function NewContactDialog({
               placeholder="12345678A"
             />
           </div>
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-3 gap-4">
             <div className="space-y-2">
               <Label htmlFor="new-contact-zipCode">
                 {t.donors.zipCode} <span className="text-muted-foreground text-xs">({t.common.optional})</span>
@@ -131,6 +133,17 @@ export const NewContactDialog = React.memo(function NewContactDialog({
                 id="new-contact-city"
                 value={formData.city}
                 onChange={(e) => setFormData(prev => ({ ...prev, city: e.target.value }))}
+                placeholder="Barcelona"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="new-contact-province">
+                {t.donors.province} <span className="text-muted-foreground text-xs">({t.common.optional})</span>
+              </Label>
+              <Input
+                id="new-contact-province"
+                value={formData.province}
+                onChange={(e) => setFormData(prev => ({ ...prev, province: e.target.value }))}
                 placeholder="Barcelona"
               />
             </div>

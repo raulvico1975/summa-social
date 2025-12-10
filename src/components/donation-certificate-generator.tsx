@@ -380,8 +380,8 @@ export function DonationCertificateGenerator() {
   const buildFullAddress = (): string => {
     const parts: string[] = [];
     if (orgData?.address) parts.push(orgData.address);
-    if (orgData?.zipCode || orgData?.city) {
-      const cityPart = [orgData.zipCode, orgData.city].filter(Boolean).join(' ');
+    if (orgData?.zipCode || orgData?.city || orgData?.province) {
+      const cityPart = [orgData.zipCode, orgData.city, orgData.province].filter(Boolean).join(' ');
       parts.push(cityPart);
     }
     return parts.join(', ');
@@ -425,10 +425,10 @@ export function DonationCertificateGenerator() {
       doc.text(fullAddress, pageWidth / 2, y, { align: 'center' });
       y += 5;
     }
-    // Si no hi ha adreça però sí CP i/o ciutat, mostrar-los
-    if (!fullAddress && (orgData?.zipCode || orgData?.city)) {
+    // Si no hi ha adreça però sí CP i/o ciutat/província, mostrar-los
+    if (!fullAddress && (orgData?.zipCode || orgData?.city || orgData?.province)) {
       doc.setFontSize(9);
-      const locationText = [orgData.zipCode, orgData.city].filter(Boolean).join(' ');
+      const locationText = [orgData.zipCode, orgData.city, orgData.province].filter(Boolean).join(' ');
       doc.text(locationText, pageWidth / 2, y, { align: 'center' });
       y += 5;
     }
@@ -476,8 +476,8 @@ export function DonationCertificateGenerator() {
     y += lineHeight * 2;
 
     doc.setFont('helvetica', 'normal');
-    // Construir adreça completa del donant (CP + ciutat)
-    const donorLocationParts = [summary.donor.zipCode, summary.donor.city].filter(Boolean);
+    // Construir adreça completa del donant (CP + ciutat + província)
+    const donorLocationParts = [summary.donor.zipCode, summary.donor.city, summary.donor.province].filter(Boolean);
     const donorLocation = donorLocationParts.length > 0 ? donorLocationParts.join(' ') : '';
     const donorIntroText = donorLocation
       ? t.certificates.pdf.donorIntroWithAddress(donorName, summary.donor.taxId, donorLocation)
@@ -858,7 +858,7 @@ export function DonationCertificateGenerator() {
                 <p>
                   {(() => {
                     const donorName = cleanName(previewDonor.donor.name);
-                    const donorLocationParts = [previewDonor.donor.zipCode, previewDonor.donor.city].filter(Boolean);
+                    const donorLocationParts = [previewDonor.donor.zipCode, previewDonor.donor.city, previewDonor.donor.province].filter(Boolean);
                     const donorLocation = donorLocationParts.length > 0 ? donorLocationParts.join(' ') : '';
                     return donorLocation
                       ? t.certificates.pdf.donorIntroWithAddress(donorName, previewDonor.donor.taxId, donorLocation)
