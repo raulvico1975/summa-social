@@ -418,11 +418,18 @@ export function DonationCertificateGenerator() {
     doc.text(`CIF: ${orgData?.taxId || organization?.taxId || 'N/A'}`, pageWidth / 2, y, { align: 'center' });
     y += 5;
 
-    // Adreça
+    // Adreça completa (adreça + CP + ciutat)
     const fullAddress = buildFullAddress();
     if (fullAddress) {
       doc.setFontSize(9);
       doc.text(fullAddress, pageWidth / 2, y, { align: 'center' });
+      y += 5;
+    }
+    // Si no hi ha adreça però sí CP i/o ciutat, mostrar-los
+    if (!fullAddress && (orgData?.zipCode || orgData?.city)) {
+      doc.setFontSize(9);
+      const locationText = [orgData.zipCode, orgData.city].filter(Boolean).join(' ');
+      doc.text(locationText, pageWidth / 2, y, { align: 'center' });
       y += 5;
     }
 
@@ -469,7 +476,13 @@ export function DonationCertificateGenerator() {
     y += lineHeight * 2;
 
     doc.setFont('helvetica', 'normal');
-    doc.text(t.certificates.pdf.donorIntro(donorName, summary.donor.taxId), margin, y);
+    // Construir adreça completa del donant (CP + ciutat)
+    const donorLocationParts = [summary.donor.zipCode, summary.donor.city].filter(Boolean);
+    const donorLocation = donorLocationParts.length > 0 ? donorLocationParts.join(' ') : '';
+    const donorIntroText = donorLocation
+      ? t.certificates.pdf.donorIntroWithAddress(donorName, summary.donor.taxId, donorLocation)
+      : t.certificates.pdf.donorIntro(donorName, summary.donor.taxId);
+    doc.text(donorIntroText, margin, y);
     y += lineHeight;
     doc.text(t.certificates.pdf.hasDonated(selectedYear), margin, y);
     y += lineHeight;
@@ -843,7 +856,14 @@ export function DonationCertificateGenerator() {
                 <p className="font-bold">{t.certificates.pdf.certifies}</p>
                 
                 <p>
-                  {t.certificates.pdf.donorIntro(cleanName(previewDonor.donor.name), previewDonor.donor.taxId)}
+                  {(() => {
+                    const donorName = cleanName(previewDonor.donor.name);
+                    const donorLocationParts = [previewDonor.donor.zipCode, previewDonor.donor.city].filter(Boolean);
+                    const donorLocation = donorLocationParts.length > 0 ? donorLocationParts.join(' ') : '';
+                    return donorLocation
+                      ? t.certificates.pdf.donorIntroWithAddress(donorName, previewDonor.donor.taxId, donorLocation)
+                      : t.certificates.pdf.donorIntro(donorName, previewDonor.donor.taxId);
+                  })()}
                   {' '}{t.certificates.pdf.hasDonated(selectedYear)}
                   {' '}{t.certificates.pdf.totalAmountIntro}
                 </p>

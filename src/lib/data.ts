@@ -101,6 +101,7 @@ export type Contact = {
   name: string;
   taxId: string;                   // DNI/CIF
   zipCode: string;                 // Codi postal
+  city?: string;                   // Ciutat
   createdAt: string;
   updatedAt?: string;
   defaultCategoryId?: string;      // Categoria per defecte per auto-assignar a transaccions

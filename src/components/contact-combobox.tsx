@@ -39,7 +39,7 @@ interface ContactComboboxProps {
   searchPlaceholder?: string;
 }
 
-export function ContactCombobox({
+export const ContactCombobox = React.memo(function ContactCombobox({
   contacts,
   value,
   onSelect,
@@ -237,4 +237,4 @@ export function ContactCombobox({
       </PopoverContent>
     </Popover>
   );
-}
+});

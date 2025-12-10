@@ -254,7 +254,10 @@ export function DonorManager() {
       email: normalized.email || null,
       phone: normalized.phone || null,
       notes: normalized.notes || null,
-      defaultCategoryId: formData.defaultCategoryId || null,
+      defaultCategoryId: formData.defaultCategoryId ?? null,
+      monthlyAmount: normalized.monthlyAmount ?? null,
+      memberSince: normalized.memberSince ?? null,
+      iban: normalized.iban || null,
       updatedAt: now,
     };
 

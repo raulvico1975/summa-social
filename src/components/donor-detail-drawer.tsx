@@ -319,6 +319,17 @@ export function DonorDetailDrawer({ donor, open, onOpenChange, onEdit }: DonorDe
       // CAPÇALERA AMB LOGO
       // ═══════════════════════════════════════════════════════════════════════
 
+      // Helper per construir l'adreça completa de l'organització
+      const buildOrgFullAddress = (): string => {
+        const parts: string[] = [];
+        if (organization.address) parts.push(organization.address);
+        const locationPart = [organization.zipCode, organization.city].filter(Boolean).join(' ');
+        if (locationPart) parts.push(locationPart);
+        return parts.join(', ');
+      };
+
+      const orgFullAddress = buildOrgFullAddress();
+
       if (organization.logoUrl) {
         const logoBase64 = await loadImageAsBase64(organization.logoUrl);
         if (logoBase64) {
@@ -329,9 +340,9 @@ export function DonorDetailDrawer({ donor, open, onOpenChange, onEdit }: DonorDe
           doc.setFontSize(10);
           doc.setFont('helvetica', 'normal');
           doc.text(`CIF: ${organization.taxId || 'N/A'}`, margin + 35, y + 16);
-          if (organization.address) {
+          if (orgFullAddress) {
             doc.setFontSize(9);
-            const headerAddress = doc.splitTextToSize(organization.address, contentWidth - 35);
+            const headerAddress = doc.splitTextToSize(orgFullAddress, contentWidth - 35);
             doc.text(headerAddress, margin + 35, y + 22);
           }
           y += 38;
@@ -343,7 +354,13 @@ export function DonorDetailDrawer({ donor, open, onOpenChange, onEdit }: DonorDe
           doc.setFontSize(10);
           doc.setFont('helvetica', 'normal');
           doc.text(`CIF: ${organization.taxId || 'N/A'}`, pageWidth / 2, y, { align: 'center' });
-          y += 15;
+          y += 5;
+          if (orgFullAddress) {
+            doc.setFontSize(9);
+            doc.text(orgFullAddress, pageWidth / 2, y, { align: 'center' });
+            y += 5;
+          }
+          y += 5;
         }
       } else {
         doc.setFontSize(14);
@@ -353,7 +370,13 @@ export function DonorDetailDrawer({ donor, open, onOpenChange, onEdit }: DonorDe
         doc.setFontSize(10);
         doc.setFont('helvetica', 'normal');
         doc.text(`CIF: ${organization.taxId || 'N/A'}`, pageWidth / 2, y, { align: 'center' });
-        y += 15;
+        y += 5;
+        if (orgFullAddress) {
+          doc.setFontSize(9);
+          doc.text(orgFullAddress, pageWidth / 2, y, { align: 'center' });
+          y += 5;
+        }
+        y += 5;
       }
 
       // Línia separadora
@@ -385,8 +408,8 @@ export function DonorDetailDrawer({ donor, open, onOpenChange, onEdit }: DonorDe
       doc.text(line1Wrapped, margin, y);
       y += line1Wrapped.length * lineHeight;
 
-      // Línia 2: con CIF [CIF], domicilio en [Adreça],
-      const line2 = `${t.donorDetail.certificate.withCif} ${organization.taxId}, ${t.donorDetail.certificate.domiciledAt} ${organization.address || organization.city || '[Adreça]'},`;
+      // Línia 2: con CIF [CIF], domicilio en [Adreça completa],
+      const line2 = `${t.donorDetail.certificate.withCif} ${organization.taxId}, ${t.donorDetail.certificate.domiciledAt} ${orgFullAddress || '[Adreça]'},`;
       const line2Wrapped = doc.splitTextToSize(line2, contentWidth);
       doc.text(line2Wrapped, margin, y);
       y += line2Wrapped.length * lineHeight + 8;
@@ -400,7 +423,12 @@ export function DonorDetailDrawer({ donor, open, onOpenChange, onEdit }: DonorDe
       // Primer paràgraf: Que [Donant] con DNI/CIF [NIF] y domicilio en [Adreça], donó...
       doc.setFontSize(11);
       doc.setFont('helvetica', 'normal');
-      const donorAddress = donor.address || donor.zipCode || '[Domicili no informat]';
+      // Construir adreça completa del donant (adreça + CP + ciutat)
+      const donorAddressParts: string[] = [];
+      if (donor.address) donorAddressParts.push(donor.address);
+      const donorLocationPart = [donor.zipCode, donor.city].filter(Boolean).join(' ');
+      if (donorLocationPart) donorAddressParts.push(donorLocationPart);
+      const donorAddress = donorAddressParts.length > 0 ? donorAddressParts.join(', ') : '[Domicili no informat]';
       const paragraph1 = `${t.donorDetail.certificate.thatDonor} ${donor.name} ${t.donorDetail.certificate.withNifCif} ${donor.taxId} ${t.donorDetail.certificate.andDomicile} ${donorAddress}, ${t.donorDetail.certificate.donatedAmount} ${formatCurrencyEU(tx.amount)} ${t.donorDetail.certificate.onDate} ${formatDate(tx.date)} ${t.donorDetail.certificate.toTheEntity}`;
       const paragraph1Wrapped = doc.splitTextToSize(paragraph1, contentWidth);
       doc.text(paragraph1Wrapped, margin, y);
@@ -513,6 +541,17 @@ export function DonorDetailDrawer({ donor, open, onOpenChange, onEdit }: DonorDe
       // CAPÇALERA AMB LOGO
       // ═══════════════════════════════════════════════════════════════════════
 
+      // Helper per construir l'adreça completa de l'organització
+      const buildOrgFullAddress = (): string => {
+        const parts: string[] = [];
+        if (organization.address) parts.push(organization.address);
+        const locationPart = [organization.zipCode, organization.city].filter(Boolean).join(' ');
+        if (locationPart) parts.push(locationPart);
+        return parts.join(', ');
+      };
+
+      const orgFullAddress = buildOrgFullAddress();
+
       if (organization.logoUrl) {
         const logoBase64 = await loadImageAsBase64(organization.logoUrl);
         if (logoBase64) {
@@ -523,9 +562,9 @@ export function DonorDetailDrawer({ donor, open, onOpenChange, onEdit }: DonorDe
           doc.setFontSize(10);
           doc.setFont('helvetica', 'normal');
           doc.text(`CIF: ${organization.taxId || 'N/A'}`, margin + 35, y + 16);
-          if (organization.address) {
+          if (orgFullAddress) {
             doc.setFontSize(9);
-            const headerAddress = doc.splitTextToSize(organization.address, contentWidth - 35);
+            const headerAddress = doc.splitTextToSize(orgFullAddress, contentWidth - 35);
             doc.text(headerAddress, margin + 35, y + 22);
           }
           y += 38;
@@ -537,7 +576,13 @@ export function DonorDetailDrawer({ donor, open, onOpenChange, onEdit }: DonorDe
           doc.setFontSize(10);
           doc.setFont('helvetica', 'normal');
           doc.text(`CIF: ${organization.taxId || 'N/A'}`, pageWidth / 2, y, { align: 'center' });
-          y += 15;
+          y += 5;
+          if (orgFullAddress) {
+            doc.setFontSize(9);
+            doc.text(orgFullAddress, pageWidth / 2, y, { align: 'center' });
+            y += 5;
+          }
+          y += 5;
         }
       } else {
         doc.setFontSize(14);
@@ -547,7 +592,13 @@ export function DonorDetailDrawer({ donor, open, onOpenChange, onEdit }: DonorDe
         doc.setFontSize(10);
         doc.setFont('helvetica', 'normal');
         doc.text(`CIF: ${organization.taxId || 'N/A'}`, pageWidth / 2, y, { align: 'center' });
-        y += 15;
+        y += 5;
+        if (orgFullAddress) {
+          doc.setFontSize(9);
+          doc.text(orgFullAddress, pageWidth / 2, y, { align: 'center' });
+          y += 5;
+        }
+        y += 5;
       }
 
       // Línia separadora
@@ -583,8 +634,8 @@ export function DonorDetailDrawer({ donor, open, onOpenChange, onEdit }: DonorDe
       doc.text(line1Wrapped, margin, y);
       y += line1Wrapped.length * lineHeight;
 
-      // Línia 2: con CIF [CIF], domicilio en [Adreça],
-      const line2 = `${t.donorDetail.certificate.withCif} ${organization.taxId}, ${t.donorDetail.certificate.domiciledAt} ${organization.address || organization.city || '[Adreça]'},`;
+      // Línia 2: con CIF [CIF], domicilio en [Adreça completa],
+      const line2 = `${t.donorDetail.certificate.withCif} ${organization.taxId}, ${t.donorDetail.certificate.domiciledAt} ${orgFullAddress || '[Adreça]'},`;
       const line2Wrapped = doc.splitTextToSize(line2, contentWidth);
       doc.text(line2Wrapped, margin, y);
       y += line2Wrapped.length * lineHeight + 8;
@@ -598,7 +649,12 @@ export function DonorDetailDrawer({ donor, open, onOpenChange, onEdit }: DonorDe
       // Primer paràgraf: Que [Donant] con DNI/CIF [NIF] y domicilio en [Adreça], donó...
       doc.setFontSize(11);
       doc.setFont('helvetica', 'normal');
-      const donorAddress = donor.address || donor.zipCode || '[Domicili no informat]';
+      // Construir adreça completa del donant (adreça + CP + ciutat)
+      const donorAddressParts: string[] = [];
+      if (donor.address) donorAddressParts.push(donor.address);
+      const donorLocationPart = [donor.zipCode, donor.city].filter(Boolean).join(' ');
+      if (donorLocationPart) donorAddressParts.push(donorLocationPart);
+      const donorAddress = donorAddressParts.length > 0 ? donorAddressParts.join(', ') : '[Domicili no informat]';
       const donationsText = yearDonations.length === 1 ? t.donorDetail.donation : t.donorDetail.donations;
       const paragraph1 = `${t.donorDetail.certificate.thatDonor} ${donor.name} ${t.donorDetail.certificate.withNifCif} ${donor.taxId} ${t.donorDetail.certificate.andDomicile} ${donorAddress}, ${t.donorDetail.certificate.donatedAmount} ${formatCurrencyEU(totalAmount)} (${yearDonations.length} ${donationsText}) ${t.donorDetail.certificate.hasDonatedYear} ${year} ${t.donorDetail.certificate.toTheEntity}`;
       const paragraph1Wrapped = doc.splitTextToSize(paragraph1, contentWidth);

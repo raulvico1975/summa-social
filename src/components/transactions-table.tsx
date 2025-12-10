@@ -9,18 +9,8 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { ContactCombobox } from '@/components/contact-combobox';
 import { DonorSearchCombobox } from '@/components/donor-search-combobox';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-  DropdownMenuLabel,
-} from '@/components/ui/dropdown-menu';
 import {
   Dialog,
   DialogContent,
@@ -46,7 +36,6 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/tooltip';
-import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import {
   Select,
@@ -56,58 +45,29 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from '@/components/ui/popover';
-import {
-  Command,
-  CommandEmpty,
-  CommandGroup,
-  CommandInput,
-  CommandItem,
-  CommandList,
-} from '@/components/ui/command';
-import {
-  Sparkles,
   Loader2,
   ChevronDown,
   ChevronUp,
-  ArrowUpDown,
-  UserPlus,
-  FileUp,
-  Trash2,
-  MoreVertical,
-  Edit,
   FolderKanban,
-  GitMerge,
-  Heart,
-  Building2,
-  Download,
-  Circle,
-  Pencil,
-  X,
   Check,
   AlertTriangle,
   Undo2,
-  Link,
-  Ban,
-  Search,
 } from 'lucide-react';
-import type { Transaction, Category, Project, AnyContact, Donor, Supplier, TransactionType, ContactType } from '@/lib/data';
+import type { Transaction, Category, Project, AnyContact, Donor, Supplier, ContactType } from '@/lib/data';
 import { formatCurrencyEU } from '@/lib/normalize';
-import { categorizeTransaction } from '@/ai/flows/categorize-transactions';
 import { useToast } from '@/hooks/use-toast';
-import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
-import { useAppLog } from '@/hooks/use-app-log';
 import { RemittanceSplitter } from '@/components/remittance-splitter';
-import { useCollection, useFirebase, useMemoFirebase, addDocumentNonBlocking, deleteDocumentNonBlocking, updateDocumentNonBlocking } from '@/firebase';
-import { collection, doc, query, where, getDocs, limit } from 'firebase/firestore';
+import { useCollection, useFirebase, useMemoFirebase } from '@/firebase';
+import { collection } from 'firebase/firestore';
 import { useTranslations } from '@/i18n';
 import { useCurrentOrganization } from '@/hooks/organization-provider';
-
-// Tipus de filtre
-type TableFilter = 'all' | 'missing' | 'returns' | 'uncategorized' | 'noContact';
+import { useReturnManagement } from '@/components/transactions/hooks/useReturnManagement';
+import { useTransactionCategorization } from '@/components/transactions/hooks/useTransactionCategorization';
+import { useTransactionActions } from '@/components/transactions/hooks/useTransactionActions';
+import { EditTransactionDialog } from '@/components/transactions/EditTransactionDialog';
+import { NewContactDialog } from '@/components/transactions/NewContactDialog';
+import { TransactionRow } from '@/components/transactions/components/TransactionRow';
+import { TransactionsFilters, TableFilter } from '@/components/transactions/components/TransactionsFilters';
 
 export function TransactionsTable() {
   const { firestore, user, storage } = useFirebase();
@@ -151,17 +111,6 @@ export function TransactionsTable() {
   // Columna Projecte col·lapsable
   const [showProjectColumn, setShowProjectColumn] = React.useState(false);
 
-  // Estat per editar notes inline
-  const [editingNoteId, setEditingNoteId] = React.useState<string | null>(null);
-  const [editingNoteValue, setEditingNoteValue] = React.useState('');
-
-  // Estat per diàleg de devolució
-  const [isReturnDialogOpen, setIsReturnDialogOpen] = React.useState(false);
-  const [returnTransaction, setReturnTransaction] = React.useState<Transaction | null>(null);
-  const [returnDonorId, setReturnDonorId] = React.useState<string | null>(null);
-  const [returnLinkedTxId, setReturnLinkedTxId] = React.useState<string | null>(null);
-  const [donorDonations, setDonorDonations] = React.useState<Transaction[]>([]);
-  const [isLoadingDonations, setIsLoadingDonations] = React.useState(false);
 
   // Col·leccions
   const transactionsCollection = useMemoFirebase(
@@ -198,27 +147,10 @@ export function TransactionsTable() {
     return categoryTranslations[categoryValue] || categoryValue;
   }, [availableCategories, categoryTranslations]);
 
-  const [loadingStates, setLoadingStates] = React.useState<Record<string, boolean>>({});
   const { toast } = useToast();
-  const { log } = useAppLog();
-  
-  const [isEditDialogOpen, setIsEditDialogOpen] = React.useState(false);
-  const [editingTransaction, setEditingTransaction] = React.useState<Transaction | null>(null);
-  const [formData, setFormData] = React.useState<{ description: string; amount: string; note: string; contactId: string | null; projectId: string | null; }>({ description: '', amount: '', note: '', contactId: null, projectId: null });
-  
-  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = React.useState(false);
-  const [transactionToDelete, setTransactionToDelete] = React.useState<Transaction | null>(null);
-
-  const [isNewContactDialogOpen, setIsNewContactDialogOpen] = React.useState(false);
-  const [newContactType, setNewContactType] = React.useState<'donor' | 'supplier'>('donor');
-  const [newContactFormData, setNewContactFormData] = React.useState({ name: '', taxId: '', zipCode: '' });
-  const [newContactTransactionId, setNewContactTransactionId] = React.useState<string | null>(null);
-  const [isBatchCategorizing, setIsBatchCategorizing] = React.useState(false);
 
   const [isSplitterOpen, setIsSplitterOpen] = React.useState(false);
   const [transactionToSplit, setTransactionToSplit] = React.useState<Transaction | null>(null);
-  const [openCategoryPopover, setOpenCategoryPopover] = React.useState<string | null>(null);
-
 
   // Maps per noms
   const contactMap = React.useMemo(() =>
@@ -232,8 +164,13 @@ export function TransactionsTable() {
     availableContacts?.filter(c => c.type === 'donor') as Donor[] || [], 
   [availableContacts]);
   
-  const suppliers = React.useMemo(() => 
-    availableContacts?.filter(c => c.type === 'supplier') as Supplier[] || [], 
+  const suppliers = React.useMemo(() =>
+    availableContacts?.filter(c => c.type === 'supplier') as Supplier[] || [],
+  [availableContacts]);
+
+  // Memoized contacts for ContactCombobox to prevent re-renders
+  const comboboxContacts = React.useMemo(() =>
+    availableContacts?.map(c => ({ id: c.id, name: c.name, type: c.type })) || [],
   [availableContacts]);
 
   const projectMap = React.useMemo(() =>
@@ -242,6 +179,83 @@ export function TransactionsTable() {
         return acc;
     }, {} as Record<string, string>) || {},
   [availableProjects]);
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // GESTIÓ DE DEVOLUCIONS (HOOK EXTERN)
+  // ═══════════════════════════════════════════════════════════════════════════
+  const {
+    isReturnDialogOpen,
+    handleCloseReturnDialog,
+    returnTransaction,
+    returnDonorId,
+    setReturnDonorId,
+    returnLinkedTxId,
+    setReturnLinkedTxId,
+    donorDonations,
+    isLoadingDonations,
+    handleOpenReturnDialog,
+    handleSaveReturn,
+  } = useReturnManagement({
+    transactionsCollection,
+    contactsCollection,
+    donors,
+    contactMap,
+  });
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // CATEGORITZACIÓ IA (HOOK EXTERN)
+  // ═══════════════════════════════════════════════════════════════════════════
+  const {
+    loadingStates,
+    isBatchCategorizing,
+    handleCategorize,
+    handleBatchCategorize,
+  } = useTransactionCategorization({
+    transactionsCollection,
+    transactions,
+    availableCategories,
+    getCategoryDisplayName,
+  });
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // ACCIONS DE TRANSACCIONS (HOOK EXTERN)
+  // ═══════════════════════════════════════════════════════════════════════════
+  const {
+    // Note Setter
+    handleSetNote,
+    // Property Setters
+    handleSetCategory,
+    handleSetContact,
+    handleSetProject,
+    // Document Upload
+    docLoadingStates,
+    handleAttachDocument,
+    // Edit Dialog
+    isEditDialogOpen,
+    editingTransaction,
+    handleEditClick,
+    handleSaveEdit,
+    handleCloseEditDialog,
+    // Delete Dialog
+    isDeleteDialogOpen,
+    transactionToDelete,
+    handleDeleteClick,
+    handleDeleteConfirm,
+    handleCloseDeleteDialog,
+    // New Contact Dialog
+    isNewContactDialogOpen,
+    newContactType,
+    handleOpenNewContactDialog,
+    handleSaveNewContact,
+    handleCloseNewContactDialog,
+  } = useTransactionActions({
+    transactionsCollection,
+    contactsCollection,
+    organizationId,
+    storage,
+    transactions,
+    availableContacts,
+  });
 
   // ═══════════════════════════════════════════════════════════════════════════
   // ESTADÍSTIQUES
@@ -309,119 +323,6 @@ export function TransactionsTable() {
   }, [transactions, tableFilter, expensesWithoutDoc, returnTransactions, uncategorizedTransactions, noContactTransactions, sortDateAsc]);
 
   // ═══════════════════════════════════════════════════════════════════════════
-  // GESTIÓ DE DEVOLUCIONS
-  // ═══════════════════════════════════════════════════════════════════════════
-  
-  const handleOpenReturnDialog = (tx: Transaction) => {
-    setReturnTransaction(tx);
-    setReturnDonorId(tx.contactId || null);
-    setReturnLinkedTxId(tx.linkedTransactionId || null);
-    setDonorDonations([]);
-    setIsReturnDialogOpen(true);
-  };
-
-  // Carregar donacions del donant seleccionat
-  React.useEffect(() => {
-    if (!returnDonorId || !transactionsCollection || !firestore) {
-      setDonorDonations([]);
-      return;
-    }
-
-    // Flag per evitar setState després d'unmount
-    let isMounted = true;
-
-    const loadDonorDonations = async () => {
-      setIsLoadingDonations(true);
-      try {
-        // Buscar donacions d'aquest donant (limit per rendiment)
-        const q = query(
-          transactionsCollection,
-          where('contactId', '==', returnDonorId),
-          where('amount', '>', 0),
-          limit(100)
-        );
-        const snapshot = await getDocs(q);
-
-        if (!isMounted) return; // Evitar setState si component desmuntat
-
-        const donations = snapshot.docs
-          .map(doc => ({ id: doc.id, ...doc.data() } as Transaction))
-          .filter(tx => tx.donationStatus !== 'returned') // Excloure ja retornades
-          .sort((a, b) => b.date.localeCompare(a.date)); // Més recents primer
-
-        setDonorDonations(donations);
-      } catch (error) {
-        console.error('Error loading donor donations:', error);
-      } finally {
-        if (isMounted) {
-          setIsLoadingDonations(false);
-        }
-      }
-    };
-
-    loadDonorDonations();
-
-    return () => {
-      isMounted = false;
-    };
-  }, [returnDonorId, transactionsCollection, firestore]);
-
-  const handleSaveReturn = async () => {
-    if (!returnTransaction || !transactionsCollection) return;
-
-    try {
-      // 1. Actualitzar la devolució amb el donant
-      const returnUpdate: Record<string, any> = {
-        contactId: returnDonorId,
-        contactType: returnDonorId ? 'donor' : null,
-      };
-      
-      if (returnLinkedTxId) {
-        returnUpdate.linkedTransactionId = returnLinkedTxId;
-      }
-
-      updateDocumentNonBlocking(doc(transactionsCollection, returnTransaction.id), returnUpdate);
-
-      // 2. Si s'ha vinculat a una donació, marcar-la com "retornada"
-      if (returnLinkedTxId) {
-        updateDocumentNonBlocking(doc(transactionsCollection, returnLinkedTxId), {
-          donationStatus: 'returned',
-          linkedTransactionId: returnTransaction.id,
-        });
-
-        // 3. Actualitzar comptador de devolucions del donant
-        if (returnDonorId && contactsCollection) {
-          const donor = donors.find(d => d.id === returnDonorId);
-          if (donor) {
-            updateDocumentNonBlocking(doc(contactsCollection, returnDonorId), {
-              returnCount: (donor.returnCount || 0) + 1,
-              lastReturnDate: new Date().toISOString(),
-              status: 'pending_return',
-            });
-          }
-        }
-      }
-
-      toast({
-        title: t.movements.table.returnAssigned,
-        description: t.movements.table.returnAssignedDescription(contactMap[returnDonorId as string]?.name || ''),
-      });
-
-      setIsReturnDialogOpen(false);
-      setReturnTransaction(null);
-      setReturnDonorId(null);
-      setReturnLinkedTxId(null);
-    } catch (error) {
-      console.error('Error saving return:', error);
-      toast({
-        variant: 'destructive',
-        title: t.common.error,
-        description: t.movements.table.returnSaveError,
-      });
-    }
-  };
-
-  // ═══════════════════════════════════════════════════════════════════════════
   // EXPORTAR EXCEL
   // ═══════════════════════════════════════════════════════════════════════════
   const handleExportExpensesWithoutDoc = () => {
@@ -462,236 +363,6 @@ export function TransactionsTable() {
     });
   };
 
-  // ═══════════════════════════════════════════════════════════════════════════
-  // GESTIÓ DE NOTES INLINE
-  // ═══════════════════════════════════════════════════════════════════════════
-  const handleStartEditNote = (tx: Transaction) => {
-    setEditingNoteId(tx.id);
-    setEditingNoteValue(tx.note || '');
-  };
-
-  const handleSaveNote = (txId: string) => {
-    if (!transactionsCollection) return;
-    updateDocumentNonBlocking(doc(transactionsCollection, txId), { note: editingNoteValue || null });
-    setEditingNoteId(null);
-    setEditingNoteValue('');
-  };
-
-  const handleCancelEditNote = () => {
-    setEditingNoteId(null);
-    setEditingNoteValue('');
-  };
-
-  // Funcions existents...
-  const handleCategorize = async (txId: string) => {
-    if (!transactions) return;
-    const transaction = transactions.find((tx) => tx.id === txId);
-    if (!transaction || !availableCategories || !transactionsCollection) return;
-
-    setLoadingStates((prev) => ({ ...prev, [txId]: true }));
-    try {
-      log(`🤖 Iniciando categorización para: "${transaction.description.substring(0, 40)}..."`);
-      const expenseCategories = availableCategories.filter((c) => c.type === 'expense').map((c) => c.name);
-      const incomeCategories = availableCategories.filter((c) => c.type === 'income').map((c) => c.name);
-
-      const result = await categorizeTransaction({
-        description: transaction.description,
-        amount: transaction.amount,
-        expenseCategories,
-        incomeCategories,
-      });
-
-      updateDocumentNonBlocking(doc(transactionsCollection, txId), { category: result.category });
-
-      const categoryName = getCategoryDisplayName(result.category);
-      toast({
-        title: 'Categorització Automàtica',
-        description: `Transacció classificada com "${categoryName}" amb una confiança del ${(result.confidence * 100).toFixed(0)}%.`,
-      });
-      log(`✅ Transacció classificada com "${categoryName}" (confiança: ${(result.confidence * 100).toFixed(0)}%).`);
-    } catch (error) {
-      console.error('Error categorizing transaction:', error);
-      toast({
-        variant: 'destructive',
-        title: 'Error de IA',
-        description: t.movements.table.categorizationError,
-      });
-       log(`❌ ERROR categorizando: ${error}`);
-    } finally {
-      setLoadingStates((prev) => ({ ...prev, [txId]: false }));
-    }
-  };
-
-  const handleBatchCategorize = async () => {
-    if (!transactions || !availableCategories || !transactionsCollection) {
-      toast({ title: t.movements.table.dataUnavailable, description: t.movements.table.dataLoadError});
-      return;
-    }
-    const transactionsToCategorize = transactions.filter(tx => !tx.category);
-    if (transactionsToCategorize.length === 0) {
-      toast({ title: t.movements.table.nothingToCategorize, description: t.movements.table.allAlreadyCategorized});
-      return;
-    }
-
-    setIsBatchCategorizing(true);
-    log(`📊 Iniciando clasificación masiva de ${transactionsToCategorize.length} moviments.`);
-    toast({ title: t.movements.table.startingBatchCategorization, description: `Classificant ${transactionsToCategorize.length} moviments.`});
-
-    let successCount = 0;
-
-    // Processar en lots per evitar superar la quota de l'API
-    // Quota gratuïta: 15 peticions/minut → processa 10 cada minut
-    const BATCH_SIZE = 10;
-    const DELAY_MS = 60000; // 60 segons entre lots
-
-    const expenseCategories = availableCategories.filter((c) => c.type === 'expense').map((c) => c.name);
-    const incomeCategories = availableCategories.filter((c) => c.type === 'income').map((c) => c.name);
-
-    for (let i = 0; i < transactionsToCategorize.length; i += BATCH_SIZE) {
-      const batch = transactionsToCategorize.slice(i, i + BATCH_SIZE);
-      const batchNumber = Math.floor(i / BATCH_SIZE) + 1;
-      const totalBatches = Math.ceil(transactionsToCategorize.length / BATCH_SIZE);
-
-      log(`🔄 Procesando lote ${batchNumber}/${totalBatches} (${batch.length} transacciones)...`);
-
-      const batchResults = await Promise.all(batch.map(async (tx, batchIndex) => {
-        const index = i + batchIndex;
-        log(`Clasificando movimiento ${index + 1}/${transactionsToCategorize.length}: "${tx.description.substring(0, 30)}..."`);
-        try {
-          const result = await categorizeTransaction({
-            description: tx.description,
-            amount: tx.amount,
-            expenseCategories,
-            incomeCategories,
-          });
-
-          updateDocumentNonBlocking(doc(transactionsCollection, tx.id), { category: result.category });
-          const categoryName = getCategoryDisplayName(result.category);
-          log(`✅ Movimiento ${tx.id} clasificado como "${categoryName}".`);
-          return { success: true };
-        } catch (error) {
-          console.error('Error categorizing transaction:', error);
-          log(`❌ ERROR categorizando ${tx.id}: ${error}`);
-          return { success: false };
-        }
-      }));
-
-      successCount += batchResults.filter(r => r.success).length;
-
-      // Esperar entre lots (excepte l'últim)
-      if (i + BATCH_SIZE < transactionsToCategorize.length) {
-        log(`⏳ Esperando ${DELAY_MS / 1000}s antes del siguiente lote...`);
-        await new Promise(resolve => setTimeout(resolve, DELAY_MS));
-      }
-    }
-
-    setIsBatchCategorizing(false);
-    log(`✅ Clasificación masiva completada. ${successCount} moviments clasificados.`);
-    toast({ title: t.movements.table.batchCategorizationComplete, description: t.movements.table.itemsCategorized(successCount)});
-  };
-
-  const handleSetCategory = (txId: string, newCategory: string) => {
-    if (!transactionsCollection) return;
-    updateDocumentNonBlocking(doc(transactionsCollection, txId), { category: newCategory });
-  };
-  
-  const handleSetContact = (txId: string, newContactId: string | null, contactType?: ContactType) => {
-    if (!transactionsCollection) return;
-
-    const updates: Record<string, any> = {
-      contactId: newContactId,
-      contactType: newContactId ? contactType : null,
-    };
-
-    // Auto-assignar categoria per defecte si el contacte en té i la transacció no
-    if (newContactId) {
-      const contact = availableContacts?.find(c => c.id === newContactId);
-      const tx = transactions?.find(t => t.id === txId);
-      if (contact?.defaultCategoryId && !tx?.category) {
-        updates.category = contact.defaultCategoryId;
-      }
-    }
-
-    updateDocumentNonBlocking(doc(transactionsCollection, txId), updates);
-  };
-  
-  const handleSetProject = (txId: string, newProjectId: string | null) => {
-    if (!transactionsCollection) return;
-    updateDocumentNonBlocking(doc(transactionsCollection, txId), { projectId: newProjectId });
-  };
-
-  const handleAttachDocument = (transactionId: string) => {
-    log(`[${transactionId}] Iniciando la subida de documento.`);
-    if (!organizationId || !transactionsCollection) {
-      const errorMsg = t.movements.table.organizationNotIdentified;
-      log(errorMsg);
-      toast({ variant: 'destructive', title: t.common.error, description: errorMsg });
-      return;
-    }
-    log(`Organització identificada: ${organizationId}`);
-
-    const fileInput = document.createElement('input');
-    fileInput.type = 'file';
-    fileInput.accept = "application/pdf,image/*,.doc,.docx,.xls,.xlsx";
-    fileInput.style.display = 'none';
-
-    fileInput.onchange = async (e) => {
-      const target = e.target as HTMLInputElement;
-      const file = target.files?.[0];
-      if (!file) {
-        log(`[${transactionId}] Selección de archivo cancelada.`);
-        document.body.removeChild(fileInput);
-        return;
-      }
-      log(`[${transactionId}] Archivo seleccionado: ${file.name} (Tamaño: ${file.size} bytes)`);
-
-      setLoadingStates(prev => ({ ...prev, [`doc_${transactionId}`]: true }));
-      toast({ title: t.movements.table.uploadingDocument, description: `Adjuntant "${file.name}"...` });
-
-      const storagePath = `organizations/${organizationId}/documents/${transactionId}/${file.name}`;
-      log(`[${transactionId}] Ruta de subida en Storage: ${storagePath}`);
-      const storageRef = ref(storage, storagePath);
-
-      try {
-          log(`[${transactionId}] Iniciando 'uploadBytes'...`);
-          const uploadResult = await uploadBytes(storageRef, file);
-
-          log(`[${transactionId}] 'uploadBytes' completado con éxito.`);
-          const downloadURL = await getDownloadURL(uploadResult.ref);
-          log(`[${transactionId}] URL de descarga obtenida: ${downloadURL}`);
-
-          updateDocumentNonBlocking(doc(transactionsCollection, transactionId), { document: downloadURL });
-
-          toast({ title: t.movements.table.uploadSuccess, description: t.movements.table.documentUploadedSuccessfully });
-          log(`[${transactionId}] ¡Éxito! Subida completada.`);
-
-      } catch (error: any) {
-          console.error('FIREBASE_UPLOAD_ERROR_DIAGNOSTIC', error);
-          const errorCode = error.code || 'UNKNOWN_CODE';
-          const errorMessage = error.message || 'Error desconocido.';
-          log(`[${transactionId}] ERROR en la subida: ${errorCode} - ${errorMessage}`);
-
-          let description = t.movements.table.unexpectedError(errorCode);
-          if (errorCode === 'storage/unauthorized' || errorCode === 'storage/object-not-found') {
-            description = t.movements.table.firebasePermissionDenied;
-          } else if (errorCode === 'storage/canceled') {
-            description = t.movements.table.uploadCancelled;
-          }
-          toast({ variant: 'destructive', title: t.movements.table.uploadError, description, duration: 9000 });
-      } finally {
-          log(`[${transactionId}] Finalizando proceso de subida.`);
-          setLoadingStates(prev => ({ ...prev, [`doc_${transactionId}`]: false }));
-          if (fileInput.parentElement) {
-              document.body.removeChild(fileInput);
-          }
-      }
-    };
-
-    document.body.appendChild(fileInput);
-    fileInput.click();
-  };
-  
-
   const formatDate = (dateString: string) => {
     try {
       const date = new Date(dateString);
@@ -708,109 +379,6 @@ export function TransactionsTable() {
     }
   };
 
-  const handleEditClick = (transaction: Transaction) => {
-    setEditingTransaction(transaction);
-    setFormData({ 
-        description: transaction.description, 
-        amount: String(transaction.amount),
-        note: transaction.note || '',
-        contactId: transaction.contactId || null,
-        projectId: transaction.projectId || null,
-    });
-    setIsEditDialogOpen(true);
-  }
-
-  const handleSaveEdit = () => {
-    if (!editingTransaction || !transactionsCollection) return;
-    
-    const selectedContact = formData.contactId ? availableContacts?.find(c => c.id === formData.contactId) : null;
-
-    updateDocumentNonBlocking(doc(transactionsCollection, editingTransaction.id), {
-      description: formData.description,
-      amount: parseFloat(formData.amount),
-      note: formData.note || null,
-      contactId: formData.contactId,
-      contactType: selectedContact?.type || null,
-      projectId: formData.projectId
-    });
-
-    toast({ title: t.movements.table.transactionUpdated });
-    setIsEditDialogOpen(false);
-    setEditingTransaction(null);
-  }
-
-  const handleDeleteClick = (transaction: Transaction) => {
-    setTransactionToDelete(transaction);
-    setIsDeleteDialogOpen(true);
-  }
-
-  const handleDeleteConfirm = () => {
-    if (transactionToDelete && transactionsCollection) {
-        deleteDocumentNonBlocking(doc(transactionsCollection, transactionToDelete.id));
-        toast({ title: t.movements.table.transactionDeleted });
-    }
-    setIsDeleteDialogOpen(false);
-    setTransactionToDelete(null);
-  }
-
-  const handleOpenNewContactDialog = (txId: string, type: 'donor' | 'supplier') => {
-    setNewContactTransactionId(txId);
-    setNewContactType(type);
-    setNewContactFormData({ name: '', taxId: '', zipCode: '' });
-    setIsNewContactDialogOpen(true);
-  };
-
-  const handleSaveNewContact = () => {
-    // Només el nom és obligatori
-    if (!newContactFormData.name) {
-      toast({ variant: 'destructive', title: t.common.error, description: t.donors.errorNameRequired });
-      return;
-    }
-
-    if (!contactsCollection || !transactionsCollection) return;
-
-    // Avís si falta DNI o CP per als donants
-    const hasIncompleteData = newContactType === 'donor' && (!newContactFormData.taxId || !newContactFormData.zipCode);
-
-    const now = new Date().toISOString();
-    const newContactData = {
-      type: newContactType,
-      name: newContactFormData.name,
-      taxId: newContactFormData.taxId,
-      zipCode: newContactFormData.zipCode,
-      createdAt: now,
-      ...(newContactType === 'donor' && {
-        donorType: 'individual',
-        membershipType: 'one-time',
-      }),
-    };
-
-    addDocumentNonBlocking(contactsCollection, newContactData)
-      .then(docRef => {
-        if (docRef && newContactTransactionId) {
-          handleSetContact(newContactTransactionId, docRef.id, newContactType);
-        }
-      });
-
-    const typeLabel = newContactType === 'donor' ? t.donors.title.slice(0, -1) : t.suppliers.title.slice(0, -1);
-
-    // Mostrar toast de creació
-    toast({ title: t.movements.table.contactCreatedSuccess(typeLabel, newContactFormData.name).split('.')[0] });
-
-    // Mostrar avís si falta DNI o CP
-    if (hasIncompleteData) {
-      setTimeout(() => {
-        toast({
-          title: t.donors.incompleteDataWarning,
-          description: t.donors.incompleteDataWarningDescription,
-        });
-      }, 500);
-    }
-
-    setIsNewContactDialogOpen(false);
-    setNewContactTransactionId(null);
-  };
-  
   const handleSplitRemittance = (transaction: Transaction) => {
     setTransactionToSplit(transaction);
     setIsSplitterOpen(true);
@@ -823,70 +391,49 @@ export function TransactionsTable() {
 
   const hasUncategorized = React.useMemo(() => transactions?.some(tx => !tx.category), [transactions]);
 
-  // Helper per renderitzar el contacte amb icona
-  const renderContactBadge = (contactId: string | null | undefined) => {
-    if (!contactId || !contactMap[contactId]) return null;
-    const contact = contactMap[contactId];
-    return (
-      <span className="flex items-center gap-1">
-        {contact.type === 'donor' ? (
-          <Heart className="h-3 w-3 text-red-500 shrink-0" />
-        ) : (
-          <Building2 className="h-3 w-3 text-blue-500 shrink-0" />
-        )}
-        <span className="text-sm truncate max-w-[90px]" title={contact.name}>{contact.name}</span>
-      </span>
-    );
-  };
+  // Memoized categories map per tipus
+  const categoriesByType = React.useMemo(() => ({
+    income: availableCategories?.filter(c => c.type === 'income') || [],
+    expense: availableCategories?.filter(c => c.type === 'expense') || [],
+  }), [availableCategories]);
 
-  // Helper per renderitzar badge de tipus de transacció
-  const renderTransactionTypeBadge = (tx: Transaction) => {
-    if (tx.transactionType === 'return') {
-      return (
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <Badge variant="destructive" className="gap-1 text-xs">
-              <Undo2 className="h-3 w-3" />
-              {t.movements.table.returnBadge}
-            </Badge>
-          </TooltipTrigger>
-          <TooltipContent>
-            {tx.contactId ? t.movements.table.returnAssignedTooltip : t.movements.table.pendingDonorAssignment}
-          </TooltipContent>
-        </Tooltip>
-      );
-    }
-    if (tx.transactionType === 'return_fee') {
-      return (
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <Badge variant="outline" className="gap-1 text-xs text-orange-600 border-orange-300">
-              <Ban className="h-3 w-3" />
-              {t.movements.table.commissionBadge}
-            </Badge>
-          </TooltipTrigger>
-          <TooltipContent>
-            {t.movements.table.bankCommissionReturn}
-          </TooltipContent>
-        </Tooltip>
-      );
-    }
-    if (tx.donationStatus === 'returned') {
-      return (
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <Badge variant="outline" className="gap-1 text-xs text-gray-500 line-through">
-              {t.movements.table.returnedDonation}
-            </Badge>
-          </TooltipTrigger>
-          <TooltipContent>
-            {t.movements.table.returnedDonationInfo}
-          </TooltipContent>
-        </Tooltip>
-      );
-    }
-    return null;
-  };
+  // Memoized translations object for TransactionRow
+  const rowTranslations = React.useMemo(() => ({
+    date: t.movements.table.date,
+    amount: t.movements.table.amount,
+    returnBadge: t.movements.table.returnBadge,
+    returnAssignedTooltip: t.movements.table.returnAssignedTooltip,
+    pendingDonorAssignment: t.movements.table.pendingDonorAssignment,
+    commissionBadge: t.movements.table.commissionBadge,
+    bankCommissionReturn: t.movements.table.bankCommissionReturn,
+    returnedDonation: t.movements.table.returnedDonation,
+    returnedDonationInfo: t.movements.table.returnedDonationInfo,
+    assign: t.movements.table.assign,
+    unlink: t.movements.table.unlink,
+    searchCategory: t.movements.table.searchCategory,
+    noResults: t.movements.table.noResults,
+    suggestWithAI: t.movements.table.suggestWithAI,
+    categorize: t.movements.table.categorize,
+    uncategorized: t.movements.table.uncategorized,
+    viewDocument: t.movements.table.viewDocument,
+    attachProof: t.movements.table.attachProof,
+    attachDocument: t.movements.table.attachDocument,
+    manageReturn: t.movements.table.manageReturn,
+    edit: t.movements.table.edit,
+    splitRemittance: t.movements.table.splitRemittance,
+    delete: t.movements.table.delete,
+  }), [t]);
+
+  // Memoized filter translations
+  const filterTranslations = React.useMemo(() => ({
+    categorizeAll: t.movements.table.categorizeAll,
+    all: t.movements.table.all,
+    returns: t.movements.table.returns,
+    withoutDocument: t.movements.table.withoutDocument,
+    uncategorized: t.movements.table.uncategorized,
+    noContact: t.movements.table.noContact,
+    exportTooltip: t.movements.table.exportTooltip,
+  }), [t]);
 
   return (
     <TooltipProvider>
@@ -894,106 +441,21 @@ export function TransactionsTable() {
           SECCIÓ: Filtres i accions
           ═══════════════════════════════════════════════════════════════════════ */}
       <div className="flex justify-between items-center mb-4 flex-wrap gap-4">
-        {/* Filtres */}
-        <div className="flex gap-2 items-center flex-wrap">
-          {/* Botó categoritzar - MOU AL PRINCIPI PER MÉS VISIBILITAT */}
-          <Button
-            onClick={handleBatchCategorize}
-            disabled={!hasUncategorized || isBatchCategorizing}
-            variant="default"
-            size="sm"
-          >
-            {isBatchCategorizing ? (
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-            ) : (
-              <Sparkles className="mr-2 h-4 w-4" />
-            )}
-            {t.movements.table.categorizeAll}
-          </Button>
-
-          <div className="h-4 w-px bg-border" /> {/* Separador visual */}
-
-          <Button
-            variant={tableFilter === 'all' ? 'default' : 'outline'}
-            size="sm"
-            onClick={() => setTableFilter('all')}
-          >
-            {t.movements.table.all} ({transactions?.length || 0})
-          </Button>
-
-          {/* Filtre devolucions */}
-          {returnTransactions.length > 0 && (
-            <Button
-              variant={tableFilter === 'returns' ? 'default' : 'outline'}
-              size="sm"
-              onClick={() => setTableFilter('returns')}
-              className={tableFilter !== 'returns' && pendingReturns.length > 0 ? 'border-red-300 text-red-600' : ''}
-            >
-              <Undo2 className="mr-1.5 h-3 w-3" />
-              {t.movements.table.returns} ({returnTransactions.length})
-              {pendingReturns.length > 0 && (
-                <Badge variant="destructive" className="ml-2 h-5 px-1.5">
-                  {pendingReturns.length}
-                </Badge>
-              )}
-            </Button>
-          )}
-
-          {/* Filtre sense document */}
-          {expensesWithoutDoc.length > 0 && (
-            <Button
-              variant={tableFilter === 'missing' ? 'default' : 'outline'}
-              size="sm"
-              onClick={() => setTableFilter('missing')}
-            >
-              <Circle className="mr-1.5 h-2 w-2 fill-muted-foreground text-muted-foreground" />
-              {t.movements.table.withoutDocument} ({expensesWithoutDoc.length})
-            </Button>
-          )}
-
-          {/* Filtre sense categoritzar */}
-          {uncategorizedTransactions.length > 0 && (
-            <Button
-              variant={tableFilter === 'uncategorized' ? 'default' : 'outline'}
-              size="sm"
-              onClick={() => setTableFilter('uncategorized')}
-              className={tableFilter !== 'uncategorized' ? 'border-orange-300 text-orange-600' : ''}
-            >
-              <AlertTriangle className="mr-1.5 h-3 w-3" />
-              {t.movements.table.uncategorized} ({uncategorizedTransactions.length})
-            </Button>
-          )}
-
-          {/* Filtre sense contacte */}
-          {noContactTransactions.length > 0 && (
-            <Button
-              variant={tableFilter === 'noContact' ? 'default' : 'outline'}
-              size="sm"
-              onClick={() => setTableFilter('noContact')}
-            >
-              <Circle className="mr-1.5 h-2 w-2 fill-muted-foreground text-muted-foreground" />
-              {t.movements.table.noContact} ({noContactTransactions.length})
-            </Button>
-          )}
-
-          {/* Botó exportar */}
-          {expensesWithoutDoc.length > 0 && (
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={handleExportExpensesWithoutDoc}
-                >
-                  <Download className="h-4 w-4" />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>
-                {t.movements.table.exportTooltip}
-              </TooltipContent>
-            </Tooltip>
-          )}
-        </div>
+        <TransactionsFilters
+          currentFilter={tableFilter}
+          onFilterChange={setTableFilter}
+          totalCount={transactions?.length || 0}
+          returnsCount={returnTransactions.length}
+          pendingReturnsCount={pendingReturns.length}
+          expensesWithoutDocCount={expensesWithoutDoc.length}
+          uncategorizedCount={uncategorizedTransactions.length}
+          noContactCount={noContactTransactions.length}
+          hasUncategorized={hasUncategorized ?? false}
+          isBatchCategorizing={isBatchCategorizing}
+          onBatchCategorize={handleBatchCategorize}
+          onExportExpensesWithoutDoc={handleExportExpensesWithoutDoc}
+          t={filterTranslations}
+        />
       </div>
 
       {/* Avís devolucions pendents */}
@@ -1099,307 +561,36 @@ export function TransactionsTable() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {filteredTransactions.map((tx) => {
-              const relevantCategories = availableCategories?.filter(
-                (c) => c.type === (tx.amount > 0 ? 'income' : 'expense')
-              ) || [];
-              const isDocumentLoading = loadingStates[`doc_${tx.id}`];
-              const isExpense = tx.amount < 0;
-              const hasDocument = !!tx.document;
-              const isEditingNote = editingNoteId === tx.id;
-              const isReturn = tx.transactionType === 'return';
-              const isReturnFee = tx.transactionType === 'return_fee';
-              const isReturnedDonation = tx.donationStatus === 'returned';
-
-              return (
-                <TableRow 
-                  key={tx.id}
-                  className={
-                    isReturn ? 'bg-red-50/50' : 
-                    isReturnFee ? 'bg-orange-50/50' :
-                    isReturnedDonation ? 'bg-gray-50/50' : ''
-                  }
-                >
-                  <TableCell className="text-muted-foreground">{formatDate(tx.date)}</TableCell>
-                  <TableCell
-                    className={`text-right font-mono font-medium ${
-                      isReturnedDonation ? 'text-gray-400 line-through' :
-                      tx.amount > 0 ? 'text-green-600' : 'text-foreground'
-                    }`}
-                  >
-                    {formatCurrencyEU(tx.amount)}
-                  </TableCell>
-                  {/* Columna Concepte + Nota + Badge devolució */}
-                  <TableCell>
-                    <div className="space-y-1">
-                      {/* Badge de tipus */}
-                      {renderTransactionTypeBadge(tx)}
-                      
-                      {/* Concepte bancari original */}
-                      <p className={`text-sm truncate max-w-[280px] ${isReturnedDonation ? 'text-gray-400' : ''}`} title={tx.description}>
-                        {tx.description}
-                      </p>
-                      {/* Nota editable */}
-                      {isEditingNote ? (
-                        <div className="flex items-center gap-1">
-                          <Input
-                            value={editingNoteValue}
-                            onChange={(e) => setEditingNoteValue(e.target.value)}
-                            placeholder={t.movements.table.addNote}
-                            className="h-7 text-sm"
-                            autoFocus
-                            onKeyDown={(e) => {
-                              if (e.key === 'Enter') handleSaveNote(tx.id);
-                              if (e.key === 'Escape') handleCancelEditNote();
-                            }}
-                          />
-                          <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => handleSaveNote(tx.id)}>
-                            <Check className="h-3.5 w-3.5 text-green-600" />
-                          </Button>
-                          <Button variant="ghost" size="icon" className="h-7 w-7" onClick={handleCancelEditNote}>
-                            <X className="h-3.5 w-3.5 text-muted-foreground" />
-                          </Button>
-                        </div>
-                      ) : tx.note ? (
-                        <button
-                          onClick={() => handleStartEditNote(tx)}
-                          className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors group"
-                        >
-                          <span className="italic">"{tx.note}"</span>
-                          <Pencil className="h-3 w-3 opacity-0 group-hover:opacity-100 transition-opacity" />
-                        </button>
-                      ) : (
-                        <button
-                          onClick={() => handleStartEditNote(tx)}
-                          className="flex items-center gap-1 text-xs text-muted-foreground/50 hover:text-muted-foreground transition-colors"
-                        >
-                          <Pencil className="h-3 w-3" />
-                          <span>{t.movements.table.addNote}</span>
-                        </button>
-                      )}
-                    </div>
-                  </TableCell>
-                  {/* Columna Contacte */}
-                  <TableCell>
-                    {/* Si és una devolució sense assignar, mostrar botó especial */}
-                    {isReturn && !tx.contactId ? (
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handleOpenReturnDialog(tx)}
-                        className="text-red-600 border-red-300 hover:bg-red-50"
-                      >
-                        <AlertTriangle className="mr-1.5 h-3 w-3" />
-                        {t.movements.table.assign}
-                      </Button>
-                    ) : (
-                      <ContactCombobox
-                        contacts={availableContacts?.map(c => ({
-                          id: c.id,
-                          name: c.name,
-                          type: c.type
-                        })) || []}
-                        value={tx.contactId ?? null}
-                        onSelect={(contactId) => {
-                          if (contactId) {
-                            const contact = availableContacts?.find(c => c.id === contactId);
-                            handleSetContact(tx.id, contactId, contact?.type);
-                          } else {
-                            handleSetContact(tx.id, null);
-                          }
-                        }}
-                        onCreateNew={(type) => handleOpenNewContactDialog(tx.id, type)}
-                      />
-                    )}
-                  </TableCell>
-                  {/* Columna Categoria */}
-                  <TableCell>
-                    <Popover open={openCategoryPopover === tx.id} onOpenChange={(open) => setOpenCategoryPopover(open ? tx.id : null)}>
-                      <PopoverTrigger asChild>
-                        <Button
-                          variant="ghost"
-                          role="combobox"
-                          disabled={loadingStates[tx.id]}
-                          className={`justify-start rounded-full border-0 px-3 py-1 text-xs font-semibold h-auto min-w-0 w-auto gap-1 ${
-                            tx.amount > 0
-                              ? 'bg-green-600 text-white hover:bg-green-600/80 hover:text-white'
-                              : 'bg-red-500 text-white hover:bg-red-500/80 hover:text-white'
-                          } ${isReturnedDonation ? 'opacity-50' : ''}`}
-                        >
-                          {loadingStates[tx.id] ? (
-                            <span className="flex items-center gap-1">
-                              <Loader2 className="h-3 w-3 animate-spin" />
-                              <span>{t.movements.table.categorize}...</span>
-                            </span>
-                          ) : (
-                            <span className="truncate">
-                              {tx.category ? getCategoryDisplayName(tx.category) : t.movements.table.uncategorized}
-                            </span>
-                          )}
-                          <ChevronDown className="ml-1 h-3 w-3 shrink-0 opacity-70" />
-                        </Button>
-                      </PopoverTrigger>
-                      <PopoverContent className="w-[200px] p-0" align="start">
-                        <Command>
-                          <CommandInput placeholder={t.movements.table.searchCategory} />
-                          <CommandList>
-                            <CommandEmpty>{t.movements.table.noResults}</CommandEmpty>
-                            <CommandGroup>
-                              {relevantCategories.map((cat) => (
-                                <CommandItem
-                                  key={cat.id}
-                                  value={categoryTranslations[cat.name] || cat.name}
-                                  onSelect={() => {
-                                    handleSetCategory(tx.id, cat.name);
-                                    setOpenCategoryPopover(null);
-                                  }}
-                                >
-                                  {categoryTranslations[cat.name] || cat.name}
-                                </CommandItem>
-                              ))}
-                            </CommandGroup>
-                            <CommandGroup>
-                              <CommandItem
-                                value={t.movements.table.suggestWithAI}
-                                onSelect={() => {
-                                  handleCategorize(tx.id);
-                                  setOpenCategoryPopover(null);
-                                }}
-                                className="text-primary"
-                              >
-                                <Sparkles className="mr-2 h-3 w-3" />
-                                {t.movements.table.suggestWithAI}
-                              </CommandItem>
-                            </CommandGroup>
-                          </CommandList>
-                        </Command>
-                      </PopoverContent>
-                    </Popover>
-                  </TableCell>
-                  {/* Columna Projecte - col·lapsable */}
-                  {showProjectColumn ? (
-                    <TableCell>
-                      <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                             {tx.projectId && projectMap[tx.projectId] ? (
-                                  <Button variant="ghost" className="h-auto p-0 text-left font-normal flex items-center gap-1">
-                                      <span className={`text-sm truncate max-w-[100px] ${isReturnedDonation ? 'text-gray-400' : ''}`}>{projectMap[tx.projectId]}</span>
-                                      <ChevronDown className="h-3 w-3 text-muted-foreground" />
-                                  </Button>
-                             ) : (
-                                 <Button variant="ghost" size="sm" className="text-muted-foreground">
-                                     <FolderKanban className="mr-2 h-4 w-4"/>
-                                     {t.movements.table.assign}
-                                 </Button>
-                             )}
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="start">
-                              <DropdownMenuItem onClick={() => handleSetProject(tx.id, null)}>
-                                  {t.movements.table.unlink}
-                              </DropdownMenuItem>
-                               <DropdownMenuSeparator />
-                              {availableProjects?.map((project) => (
-                                  <DropdownMenuItem key={project.id} onClick={() => handleSetProject(tx.id, project.id)}>
-                                      {project.name}
-                                  </DropdownMenuItem>
-                              ))}
-                          </DropdownMenuContent>
-                      </DropdownMenu>
-                    </TableCell>
-                  ) : (
-                    <TableCell className="text-center">
-                      {tx.projectId && projectMap[tx.projectId] && (
-                        <Tooltip>
-                          <TooltipTrigger>
-                            <Circle className="h-2 w-2 fill-blue-500 text-blue-500 mx-auto" />
-                          </TooltipTrigger>
-                          <TooltipContent>{projectMap[tx.projectId]}</TooltipContent>
-                        </Tooltip>
-                      )}
-                    </TableCell>
-                  )}
-                  {/* Columna Document */}
-                  <TableCell className="text-center">
-                      {isDocumentLoading ? (
-                          <Loader2 className="h-4 w-4 animate-spin mx-auto text-muted-foreground" />
-                      ) : hasDocument ? (
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <a 
-                                href={tx.document!} 
-                                target="_blank" 
-                                rel="noopener noreferrer"
-                                className="inline-flex"
-                              >
-                                <Circle className="h-3 w-3 fill-green-500 text-green-500" />
-                              </a>
-                            </TooltipTrigger>
-                            <TooltipContent>{t.movements.table.viewDocument}</TooltipContent>
-                          </Tooltip>
-                      ) : (
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <button
-                                onClick={() => handleAttachDocument(tx.id)}
-                                className="inline-flex hover:scale-110 transition-transform"
-                              >
-                                <Circle className={`h-3 w-3 ${isExpense ? 'text-muted-foreground' : 'text-muted-foreground/30'}`} />
-                              </button>
-                            </TooltipTrigger>
-                            <TooltipContent>
-                              {isExpense ? t.movements.table.attachProof : t.movements.table.attachDocument}
-                            </TooltipContent>
-                          </Tooltip>
-                      )}
-                  </TableCell>
-                  {/* Accions */}
-                   <TableCell className="text-right">
-                        <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                                <Button variant="ghost" size="icon">
-                                    <MoreVertical className="h-4 w-4" />
-                                </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end">
-                                {/* Opció especial per devolucions */}
-                                {isReturn && (
-                                  <>
-                                    <DropdownMenuItem onClick={() => handleOpenReturnDialog(tx)}>
-                                      <Link className="mr-2 h-4 w-4 text-red-500" />
-                                      {t.movements.table.manageReturn}
-                                    </DropdownMenuItem>
-                                    <DropdownMenuSeparator />
-                                  </>
-                                )}
-                                
-                                <DropdownMenuItem onClick={() => handleEditClick(tx)}>
-                                    <Edit className="mr-2 h-4 w-4" />
-                                    {t.movements.table.edit}
-                                </DropdownMenuItem>
-                                {!hasDocument && (
-                                  <DropdownMenuItem onClick={() => handleAttachDocument(tx.id)}>
-                                    <FileUp className="mr-2 h-4 w-4" />
-                                    {t.movements.table.attachDocument}
-                                  </DropdownMenuItem>
-                                )}
-                                {tx.amount > 0 && !isReturn && !isReturnFee && (
-                                  <DropdownMenuItem onClick={() => handleSplitRemittance(tx)}>
-                                    <GitMerge className="mr-2 h-4 w-4" />
-                                    {t.movements.table.splitRemittance}
-                                  </DropdownMenuItem>
-                                )}
-                                <DropdownMenuSeparator />
-                                <DropdownMenuItem className="text-red-500" onClick={() => handleDeleteClick(tx)}>
-                                    <Trash2 className="mr-2 h-4 w-4" />
-                                    {t.movements.table.delete}
-                                </DropdownMenuItem>
-                            </DropdownMenuContent>
-                        </DropdownMenu>
-                   </TableCell>
-                </TableRow>
-              );
-            })}
-             {filteredTransactions.length === 0 && (
+            {filteredTransactions.map((tx) => (
+              <TransactionRow
+                key={tx.id}
+                transaction={tx}
+                contactName={tx.contactId ? contactMap[tx.contactId]?.name || null : null}
+                contactType={tx.contactId ? contactMap[tx.contactId]?.type || null : null}
+                projectName={tx.projectId ? projectMap[tx.projectId] || null : null}
+                relevantCategories={tx.amount > 0 ? categoriesByType.income : categoriesByType.expense}
+                categoryTranslations={categoryTranslations}
+                comboboxContacts={comboboxContacts}
+                availableProjects={availableProjects}
+                showProjectColumn={showProjectColumn}
+                isDocumentLoading={docLoadingStates[tx.id] || false}
+                isCategoryLoading={loadingStates[tx.id] || false}
+                onSetNote={handleSetNote}
+                onSetCategory={handleSetCategory}
+                onSetContact={handleSetContact}
+                onSetProject={handleSetProject}
+                onAttachDocument={handleAttachDocument}
+                onCategorize={handleCategorize}
+                onEdit={handleEditClick}
+                onDelete={handleDeleteClick}
+                onOpenReturnDialog={handleOpenReturnDialog}
+                onSplitRemittance={handleSplitRemittance}
+                onCreateNewContact={handleOpenNewContactDialog}
+                t={rowTranslations}
+                getCategoryDisplayName={getCategoryDisplayName}
+              />
+            ))}
+            {filteredTransactions.length === 0 && (
                 <TableRow>
                     <TableCell colSpan={8} className="h-24 text-center text-muted-foreground">
                         {tableFilter === 'missing'
@@ -1420,7 +611,7 @@ export function TransactionsTable() {
           ═══════════════════════════════════════════════════════════════════════ */}
 
       {/* Return Assignment Dialog */}
-      <Dialog open={isReturnDialogOpen} onOpenChange={setIsReturnDialogOpen}>
+      <Dialog open={isReturnDialogOpen} onOpenChange={(open) => !open && handleCloseReturnDialog()}>
         <DialogContent className="sm:max-w-lg">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 text-red-600">
@@ -1472,15 +663,15 @@ export function TransactionsTable() {
                     </p>
                   ) : (
                     <Select
-                      value={returnLinkedTxId || ''}
-                      onValueChange={(v) => setReturnLinkedTxId(v || null)}
+                      value={returnLinkedTxId || 'none'}
+                      onValueChange={(v) => setReturnLinkedTxId(v === 'none' ? null : v)}
                     >
                       <SelectTrigger>
                         <SelectValue placeholder={t.movements.table.linkToDonation} />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="">{t.movements.table.noLink}</SelectItem>
-                        {donorDonations.map(donation => (
+                        <SelectItem value="none">{t.movements.table.noLink}</SelectItem>
+                        {donorDonations.filter(d => d.id).map(donation => (
                           <SelectItem key={donation.id} value={donation.id}>
                             {formatDate(donation.date)} - {formatCurrencyEU(donation.amount)}
                           </SelectItem>
@@ -1514,177 +705,27 @@ export function TransactionsTable() {
       </Dialog>
 
       {/* Edit Transaction Dialog */}
-      <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>{t.movements.table.editTransaction}</DialogTitle>
-            <DialogDescription>
-              {t.movements.table.editTransactionDescription}
-            </DialogDescription>
-          </DialogHeader>
-          <div className="grid gap-4 py-4">
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="description" className="text-right">
-                {t.movements.table.bankConcept}
-              </Label>
-              <Input
-                id="description"
-                value={formData.description}
-                onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                className="col-span-3"
-              />
-            </div>
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="note" className="text-right">
-                {t.movements.table.noteLabel}
-              </Label>
-              <Input
-                id="note"
-                value={formData.note}
-                onChange={(e) => setFormData({ ...formData, note: e.target.value })}
-                className="col-span-3"
-                placeholder={t.movements.table.descriptionPlaceholder}
-              />
-            </div>
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="amount" className="text-right">
-                {t.movements.table.amount}
-              </Label>
-              <Input
-                id="amount"
-                type="number"
-                value={formData.amount}
-                onChange={(e) => setFormData({ ...formData, amount: e.target.value })}
-                className="col-span-3"
-              />
-            </div>
-            <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="contact" className="text-right">
-                    {t.movements.table.contact}
-                </Label>
-                <Select value={formData.contactId || ''} onValueChange={(value) => setFormData({...formData, contactId: value === 'null' ? null : value})}>
-                    <SelectTrigger className="col-span-3">
-                        <SelectValue placeholder={t.movements.table.selectContact} />
-                    </SelectTrigger>
-                    <SelectContent>
-                        <SelectItem value="null">{t.common.none}</SelectItem>
-                        {donors.length > 0 && (
-                          <>
-                            <SelectItem value="__donors_label__" disabled className="text-xs text-muted-foreground">
-                              {t.movements.table.donorsSection}
-                            </SelectItem>
-                            {donors.map(donor => (
-                                <SelectItem key={donor.id} value={donor.id}>
-                                  <span className="flex items-center gap-2">
-                                    <Heart className="h-3 w-3 text-red-500" />
-                                    {donor.name}
-                                  </span>
-                                </SelectItem>
-                            ))}
-                          </>
-                        )}
-                        {suppliers.length > 0 && (
-                          <>
-                            <SelectItem value="__suppliers_label__" disabled className="text-xs text-muted-foreground">
-                              {t.movements.table.suppliersSection}
-                            </SelectItem>
-                            {suppliers.map(supplier => (
-                                <SelectItem key={supplier.id} value={supplier.id}>
-                                  <span className="flex items-center gap-2">
-                                    <Building2 className="h-3 w-3 text-blue-500" />
-                                    {supplier.name}
-                                  </span>
-                                </SelectItem>
-                            ))}
-                          </>
-                        )}
-                    </SelectContent>
-                </Select>
-            </div>
-             <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="project" className="text-right">
-                    {t.movements.table.project}
-                </Label>
-                <Select value={formData.projectId || ''} onValueChange={(value) => setFormData({...formData, projectId: value === 'null' ? null : value})}>
-                    <SelectTrigger className="col-span-3">
-                        <SelectValue placeholder={t.projects.selectFunder} />
-                    </SelectTrigger>
-                    <SelectContent>
-                        <SelectItem value="null">{t.common.none}</SelectItem>
-                        {availableProjects?.map(project => (
-                            <SelectItem key={project.id} value={project.id}>{project.name}</SelectItem>
-                        ))}
-                    </SelectContent>
-                </Select>
-            </div>
-          </div>
-          <DialogFooter>
-            <DialogClose asChild>
-              <Button variant="outline">{t.common.cancel}</Button>
-            </DialogClose>
-            <Button onClick={handleSaveEdit}>{t.movements.table.saveChanges}</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <EditTransactionDialog
+        open={isEditDialogOpen}
+        transaction={editingTransaction}
+        donors={donors}
+        suppliers={suppliers}
+        projects={availableProjects}
+        availableContacts={availableContacts}
+        onSave={handleSaveEdit}
+        onClose={handleCloseEditDialog}
+      />
 
       {/* New Contact Dialog */}
-      <Dialog open={isNewContactDialogOpen} onOpenChange={setIsNewContactDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              {newContactType === 'donor' ? (
-                <>
-                  <Heart className="h-5 w-5 text-red-500" />
-                  {t.movements.table.newDonor}
-                </>
-              ) : (
-                <>
-                  <Building2 className="h-5 w-5 text-blue-500" />
-                  {t.movements.table.newSupplier}
-                </>
-              )}
-            </DialogTitle>
-            <DialogDescription>
-              {newContactType === 'donor'
-                ? t.movements.table.addNewDonorDescription
-                : t.movements.table.addNewSupplierDescription
-              }
-            </DialogDescription>
-          </DialogHeader>
-          <div className="grid gap-4 py-4">
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="new-contact-name" className="text-right">{t.movements.table.nameRequired}</Label>
-              <Input id="new-contact-name" value={newContactFormData.name} onChange={(e) => setNewContactFormData({...newContactFormData, name: e.target.value })} className="col-span-3" />
-            </div>
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="new-contact-taxId" className="text-right">{t.donors.taxId}</Label>
-              <Input id="new-contact-taxId" value={newContactFormData.taxId} onChange={(e) => setNewContactFormData({...newContactFormData, taxId: e.target.value })} className="col-span-3" placeholder="Opcional" />
-            </div>
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="new-contact-zipCode" className="text-right">
-                {t.donors.zipCode}
-              </Label>
-              <Input id="new-contact-zipCode" value={newContactFormData.zipCode} onChange={(e) => setNewContactFormData({...newContactFormData, zipCode: e.target.value })} className="col-span-3" placeholder="Opcional" />
-            </div>
-            {newContactType === 'donor' && (
-              <div className="col-span-4 p-3 bg-amber-50 border border-amber-200 rounded-lg">
-                <p className="text-xs text-amber-800">
-                  ℹ️ {t.donors.incompleteDataWarningDescription}
-                </p>
-              </div>
-            )}
-          </div>
-          <DialogFooter>
-            <DialogClose asChild><Button variant="outline">{t.common.cancel}</Button></DialogClose>
-            <Button onClick={handleSaveNewContact}>
-              {newContactType === 'donor' ? t.movements.table.createDonor : t.movements.table.createSupplier}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <NewContactDialog
+        open={isNewContactDialogOpen}
+        contactType={newContactType}
+        onSave={handleSaveNewContact}
+        onClose={handleCloseNewContactDialog}
+      />
       
       {/* Delete Transaction Dialog */}
-      <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+      <AlertDialog open={isDeleteDialogOpen} onOpenChange={(open) => !open && handleCloseDeleteDialog()}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>{t.settings.confirmDeleteTitle}</AlertDialogTitle>
@@ -1693,7 +734,7 @@ export function TransactionsTable() {
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel onClick={() => setTransactionToDelete(null)}>{t.common.cancel}</AlertDialogCancel>
+            <AlertDialogCancel onClick={handleCloseDeleteDialog}>{t.common.cancel}</AlertDialogCancel>
             <AlertDialogAction onClick={handleDeleteConfirm}>
               {t.common.delete}
             </AlertDialogAction>

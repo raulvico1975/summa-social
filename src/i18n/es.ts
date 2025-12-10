@@ -521,6 +521,7 @@ export const es = {
     namePlaceholder: "Nombre y apellidos",
     taxId: "DNI/CIF",
     zipCode: "Código Postal",
+    city: "Ciudad",
     email: "Email",
     phone: "Teléfono",
     address: "Dirección",
@@ -843,8 +844,10 @@ export const es = {
       orgIntro: (orgName: string, taxId: string) => `${orgName}, con CIF ${taxId},`,
       nonProfit: "entidad sin ánimo de lucro,",
       certifies: "CERTIFICA:",
-      donorIntro: (donorName: string, taxId: string) => 
+      donorIntro: (donorName: string, taxId: string) =>
         `Que ${donorName}, con DNI/CIF ${taxId},`,
+      donorIntroWithAddress: (donorName: string, taxId: string, location: string) =>
+        `Que ${donorName}, con DNI/CIF ${taxId}, domiciliado/a en ${location},`,
       hasDonated: (year: string) => 
         `ha realizado donaciones a esta entidad durante el año ${year}`,
       totalAmountIntro: "por un importe total de:",
@@ -1071,6 +1074,7 @@ export const es = {
       all: "Todos",
       selectAll: "Seleccionar todos",
       deselectAll: "Deseleccionar todos",
+      optional: "opcional",
   },
   logPanel: {
     title: "Log de Diagnóstico",

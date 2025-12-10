@@ -488,6 +488,7 @@ export const ca = {
     namePlaceholder: "Nom i cognoms",
     taxId: "DNI/CIF",
     zipCode: "Codi Postal",
+    city: "Ciutat",
     email: "Email",
     phone: "Telèfon",
     address: "Adreça",
@@ -810,8 +811,10 @@ export const ca = {
       orgIntro: (orgName: string, taxId: string) => `${orgName}, amb CIF ${taxId},`,
       nonProfit: "entitat sense ànim de lucre,",
       certifies: "CERTIFICA:",
-      donorIntro: (donorName: string, taxId: string) => 
+      donorIntro: (donorName: string, taxId: string) =>
         `Que ${donorName}, amb DNI/CIF ${taxId},`,
+      donorIntroWithAddress: (donorName: string, taxId: string, location: string) =>
+        `Que ${donorName}, amb DNI/CIF ${taxId}, domiciliat/da a ${location},`,
       hasDonated: (year: string) => 
         `ha realitzat donacions a aquesta entitat durant l'any ${year}`,
       totalAmountIntro: "per un import total de:",
@@ -1044,6 +1047,7 @@ export const ca = {
       all: "Tots",
       selectAll: "Seleccionar tots",
       deselectAll: "Deseleccionar tots",
+      optional: "opcional",
   },
   logPanel: {
     title: "Log de Diagnòstic",
