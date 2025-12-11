@@ -40,7 +40,7 @@ export default function OrgLoginPage() {
 
         if (slugSnap.exists()) {
           const slugData = slugSnap.data();
-          const orgRef = doc(firestore, 'organizations', slugData.organizationId);
+          const orgRef = doc(firestore, 'organizations', slugData.orgId);
           const orgSnap = await getDoc(orgRef);
 
           if (orgSnap.exists()) {
