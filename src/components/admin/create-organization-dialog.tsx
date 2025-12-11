@@ -15,7 +15,8 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { useFirebase } from '@/firebase';
-import { collection, doc, setDoc, query, where, getDocs } from 'firebase/firestore';
+import { collection, doc, setDoc } from 'firebase/firestore';
+import { generateSlug, isSlugAvailable, reserveSlug, isValidSlug } from '@/lib/slugs';
 import { Loader2, Building2, Mail, User, Copy, Check } from 'lucide-react';
 import type { Organization, Invitation, OrganizationRole } from '@/lib/data';
 import { Alert, AlertDescription } from '@/components/ui/alert';
@@ -25,19 +26,6 @@ interface CreateOrganizationDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }
-
-// Genera un slug a partir del nom
-const generateSlug = (name: string): string => {
-  return name
-    .toLowerCase()
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '') // Elimina accents
-    .replace(/[^a-z0-9\s-]/g, '')    // Elimina caràcters especials
-    .replace(/\s+/g, '-')            // Espais a guions
-    .replace(/-+/g, '-')             // Múltiples guions a un
-    .substring(0, 50)                // Màxim 50 caràcters
-    .replace(/^-|-$/g, '');          // Elimina guions inicials/finals
-};
 
 // Genera un token únic
 const generateToken = (): string => {
@@ -112,20 +100,25 @@ export function CreateOrganizationDialog({ open, onOpenChange }: CreateOrganizat
       return;
     }
 
+    // Validar format del slug
+    if (!isValidSlug(slug.trim())) {
+      setError('El slug ha de tenir entre 3 i 50 caràcters, només lletres minúscules, números i guions.');
+      return;
+    }
+
     setError('');
     setIsCreating(true);
 
     try {
-      // 1. Comprovar que el slug no existeix
-      const slugQuery = query(collection(firestore, 'organizations'), where('slug', '==', slug));
-      const slugSnapshot = await getDocs(slugQuery);
-      if (!slugSnapshot.empty) {
+      // 1. Comprovar que el slug està disponible
+      const available = await isSlugAvailable(firestore, slug.trim());
+      if (!available) {
         setError(t.superAdmin.createOrganizationDialog.errors.slugExists);
         setIsCreating(false);
         return;
       }
 
-      // 2. Crear l'organització
+      // 2. Crear l'organització (sense slug encara)
       const orgRef = doc(collection(firestore, 'organizations'));
       const now = new Date().toISOString();
 
@@ -140,7 +133,10 @@ export function CreateOrganizationDialog({ open, onOpenChange }: CreateOrganizat
 
       await setDoc(orgRef, { ...orgData, id: orgRef.id });
 
-      // 3. Crear la invitació per al primer admin
+      // 3. Reservar el slug a la col·lecció /slugs
+      await reserveSlug(firestore, orgRef.id, slug.trim());
+
+      // 4. Crear la invitació per al primer admin
       const invitationRef = doc(collection(firestore, 'invitations'));
       const token = generateToken();
       const expiresAt = new Date();
@@ -159,7 +155,7 @@ export function CreateOrganizationDialog({ open, onOpenChange }: CreateOrganizat
 
       await setDoc(invitationRef, { ...invitationData, id: invitationRef.id });
 
-      // 4. Generar URL d'invitació
+      // 5. Generar URL d'invitació
       const baseUrl = window.location.origin;
       const inviteUrl = `${baseUrl}/registre?token=${token}`;
       setCreatedInviteUrl(inviteUrl);

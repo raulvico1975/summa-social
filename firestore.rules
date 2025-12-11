@@ -29,6 +29,17 @@ service cloud.firestore {
     }
 
     // ═══════════════════════════════════════════════════════════════════════
+    // SLUGS (índex d'unicitat per URLs d'organitzacions)
+    // ═══════════════════════════════════════════════════════════════════════
+
+    match /slugs/{slug} {
+      // Llegir: qualsevol usuari autenticat (per comprovar disponibilitat)
+      allow read: if isSignedIn();
+      // Crear/Actualitzar/Eliminar: només Super Admin
+      allow create, update, delete: if isSuperAdmin();
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
     // USUARIS
     // ═══════════════════════════════════════════════════════════════════════
 

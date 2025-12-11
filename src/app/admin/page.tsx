@@ -50,6 +50,7 @@ import {
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { CreateOrganizationDialog } from '@/components/admin/create-organization-dialog';
+import { migrateExistingSlugs } from '@/lib/slugs';
 
 export default function AdminPage() {
   const router = useRouter();
@@ -59,6 +60,7 @@ export default function AdminPage() {
   const [isCreateDialogOpen, setIsCreateDialogOpen] = React.useState(false);
   const [suspendDialogOrg, setSuspendDialogOrg] = React.useState<Organization | null>(null);
   const [isProcessing, setIsProcessing] = React.useState(false);
+  const [isMigrating, setIsMigrating] = React.useState(false);
 
   // Verificar que és Super Admin
   const isSuperAdmin = user?.uid === SUPER_ADMIN_UID;
@@ -112,6 +114,29 @@ export default function AdminPage() {
     } finally {
       setIsProcessing(false);
       setSuspendDialogOrg(null);
+    }
+  };
+
+  const handleMigrateSlugs = async () => {
+    setIsMigrating(true);
+    try {
+      const result = await migrateExistingSlugs(firestore);
+      toast({
+        title: 'Migració completada',
+        description: `${result.migrated} organitzacions migrades. ${result.errors.length > 0 ? `Errors: ${result.errors.length}` : ''}`,
+      });
+      if (result.errors.length > 0) {
+        console.error('Errors de migració:', result.errors);
+      }
+    } catch (error) {
+      console.error('Error durant la migració:', error);
+      toast({
+        variant: 'destructive',
+        title: 'Error',
+        description: 'No s\'ha pogut completar la migració.',
+      });
+    } finally {
+      setIsMigrating(false);
     }
   };
 
@@ -173,10 +198,16 @@ export default function AdminPage() {
                 <p className="text-sm text-muted-foreground">Gestió de Summa Social</p>
               </div>
             </div>
-            <Button onClick={() => setIsCreateDialogOpen(true)}>
-              <Plus className="mr-2 h-4 w-4" />
-              Nova organització
-            </Button>
+            <div className="flex gap-2">
+              <Button variant="outline" onClick={handleMigrateSlugs} disabled={isMigrating}>
+                {isMigrating && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                Migrar slugs
+              </Button>
+              <Button onClick={() => setIsCreateDialogOpen(true)}>
+                <Plus className="mr-2 h-4 w-4" />
+                Nova organització
+              </Button>
+            </div>
           </div>
         </div>
       </header>

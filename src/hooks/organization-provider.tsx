@@ -5,60 +5,11 @@
 import React, { createContext, useContext, ReactNode, useMemo } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { useFirebase, useCollection, useMemoFirebase } from '@/firebase';
-import { collection, collectionGroup, query, where, getDocs, doc, getDoc, updateDoc, limit } from 'firebase/firestore';
+import { collection, collectionGroup, query, where, getDocs, doc, getDoc, limit } from 'firebase/firestore';
+import { generateUniqueSlug, reserveSlug } from '@/lib/slugs';
 import type { Organization, OrganizationRole, UserProfile } from '@/lib/data';
 import { Loader2, AlertCircle } from 'lucide-react';
 import { User } from 'firebase/auth';
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// GENERACIÓ AUTOMÀTICA DE SLUGS
-// ═══════════════════════════════════════════════════════════════════════════════
-
-/**
- * Genera un slug a partir d'un nom.
- * "Fundació Flores de Kiskeya" → "fundacio-flores-de-kiskeya"
- */
-function generateSlug(name: string): string {
-  return name
-    .toLowerCase()
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '') // Eliminar accents
-    .replace(/[^a-z0-9\s-]/g, '')    // Eliminar caràcters especials
-    .replace(/\s+/g, '-')            // Espais a guions
-    .replace(/-+/g, '-')             // Múltiples guions a un
-    .replace(/^-|-$/g, '')           // Eliminar guions al principi/final
-    .substring(0, 50);               // Limitar longitud
-}
-
-/**
- * Genera un slug únic verificant que no existeixi a Firestore.
- * Si existeix, afegeix un sufix numèric.
- */
-async function generateUniqueSlug(
-  firestore: any, 
-  baseName: string, 
-  excludeOrgId?: string
-): Promise<string> {
-  let slug = generateSlug(baseName);
-  let suffix = 0;
-  let isUnique = false;
-
-  while (!isUnique) {
-    const candidateSlug = suffix === 0 ? slug : `${slug}-${suffix}`;
-    const q = query(collection(firestore, 'organizations'), where('slug', '==', candidateSlug));
-    const snapshot = await getDocs(q);
-    
-    // És únic si no existeix o si l'únic resultat és la mateixa organització
-    if (snapshot.empty || (snapshot.docs.length === 1 && snapshot.docs[0].id === excludeOrgId)) {
-      slug = candidateSlug;
-      isUnique = true;
-    } else {
-      suffix++;
-    }
-  }
-
-  return slug;
-}
 
 interface OrganizationContextType {
   organization: Organization | null;
@@ -200,19 +151,18 @@ function useOrganizationBySlug(orgSlug?: string) {
 
         // ═══════════════════════════════════════════════════════════════════
         // GENERACIÓ AUTOMÀTICA DE SLUG
-        // Si l'organització no té slug, el generem i guardem
+        // Si l'organització no té slug, el generem i reservem
         // ═══════════════════════════════════════════════════════════════════
         if (!orgDoc.slug) {
           console.log(`Organització "${orgDoc.name}" no té slug, generant...`);
           const newSlug = await generateUniqueSlug(firestore, orgDoc.name, orgId);
-          
-          // Guardar el slug a Firestore
-          const orgRef = doc(firestore, 'organizations', orgId);
-          await updateDoc(orgRef, { slug: newSlug });
-          
+
+          // Reservar el slug (crea a /slugs i actualitza l'organització)
+          await reserveSlug(firestore, orgId, newSlug);
+
           // Actualitzar l'objecte local
           orgDoc = { ...orgDoc, slug: newSlug };
-          console.log(`Slug generat i guardat: "${newSlug}"`);
+          console.log(`Slug generat i reservat: "${newSlug}"`);
         }
 
         setOrganization(orgDoc);
