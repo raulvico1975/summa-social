@@ -166,9 +166,10 @@ function useOrganizationBySlug(orgSlug?: string) {
           // Això és molt més eficient que iterar per totes les organitzacions
           if (!orgId) {
             // Query directa a totes les subcol·leccions "members" on l'usuari és membre
+            // Nota: No podem usar __name__ amb collectionGroup, cal usar el camp userId
             const membersQuery = query(
               collectionGroup(firestore, 'members'),
-              where('__name__', '==', user.uid),
+              where('userId', '==', user.uid),
               limit(1)
             );
             const membersSnapshot = await getDocs(membersQuery);

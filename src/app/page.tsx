@@ -35,9 +35,10 @@ export default function HomePage() {
 
         if (!orgId) {
           // Usar collectionGroup per evitar N+1 queries
+          // Nota: No podem usar __name__ amb collectionGroup, cal usar el camp userId
           const membersQuery = query(
             collectionGroup(firestore, 'members'),
-            where('__name__', '==', user.uid),
+            where('userId', '==', user.uid),
             limit(1)
           );
           const membersSnapshot = await getDocs(membersQuery);
