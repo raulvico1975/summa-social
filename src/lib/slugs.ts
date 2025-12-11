@@ -102,6 +102,7 @@ export async function generateUniqueSlug(
  * @param firestore Instància de Firestore
  * @param orgId ID de l'organització
  * @param newSlug Nou slug a reservar
+ * @param orgName Nom de l'organització (per mostrar a la pàgina de login)
  * @param oldSlug Slug anterior (si s'està canviant)
  * @throws Error si el slug ja està ocupat
  */
@@ -109,6 +110,7 @@ export async function reserveSlug(
   firestore: Firestore,
   orgId: string,
   newSlug: string,
+  orgName: string,
   oldSlug?: string
 ): Promise<void> {
   if (!isValidSlug(newSlug)) {
@@ -141,6 +143,7 @@ export async function reserveSlug(
     // Reservar el nou slug
     transaction.set(newSlugRef, {
       orgId: orgId,
+      orgName: orgName,
       createdAt: new Date().toISOString()
     });
 
@@ -212,6 +215,7 @@ export async function migrateExistingSlugs(
           // Crear el document a /slugs
           await setDoc(slugRef, {
             orgId: orgId,
+            orgName: orgData.name || '',
             createdAt: new Date().toISOString(),
             migratedAt: new Date().toISOString()
           });

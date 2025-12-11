@@ -9,9 +9,14 @@ import { Logo } from '@/components/logo';
 import { useFirebase } from '@/firebase';
 import { useToast } from '@/hooks/use-toast';
 import { signInWithEmailAndPassword } from 'firebase/auth';
-import { doc, getDoc, collection, query, where, getDocs, limit } from 'firebase/firestore';
+import { doc, getDoc } from 'firebase/firestore';
 import { Loader2, Building2, AlertCircle } from 'lucide-react';
-import type { Organization } from '@/lib/data';
+
+interface OrgInfo {
+  id: string;
+  name: string;
+  slug: string;
+}
 
 export default function OrgLoginPage() {
   const router = useRouter();
@@ -24,7 +29,7 @@ export default function OrgLoginPage() {
   const [password, setPassword] = React.useState('');
   const [error, setError] = React.useState('');
   const [isLoggingIn, setIsLoggingIn] = React.useState(false);
-  const [organization, setOrganization] = React.useState<Organization | null>(null);
+  const [organization, setOrganization] = React.useState<OrgInfo | null>(null);
   const [isLoadingOrg, setIsLoadingOrg] = React.useState(true);
   const [orgNotFound, setOrgNotFound] = React.useState(false);
 
@@ -34,33 +39,16 @@ export default function OrgLoginPage() {
       if (!orgSlug) return;
 
       try {
-        // Primer, buscar a la col·lecció /slugs
         const slugRef = doc(firestore, 'slugs', orgSlug);
         const slugSnap = await getDoc(slugRef);
 
         if (slugSnap.exists()) {
           const slugData = slugSnap.data();
-          const orgRef = doc(firestore, 'organizations', slugData.orgId);
-          const orgSnap = await getDoc(orgRef);
-
-          if (orgSnap.exists()) {
-            setOrganization({ id: orgSnap.id, ...orgSnap.data() } as Organization);
-            setIsLoadingOrg(false);
-            return;
-          }
-        }
-
-        // Fallback: buscar directament per slug a organizations
-        const orgsQuery = query(
-          collection(firestore, 'organizations'),
-          where('slug', '==', orgSlug),
-          limit(1)
-        );
-        const orgsSnap = await getDocs(orgsQuery);
-
-        if (!orgsSnap.empty) {
-          const orgDoc = orgsSnap.docs[0];
-          setOrganization({ id: orgDoc.id, ...orgDoc.data() } as Organization);
+          setOrganization({
+            id: slugData.orgId,
+            name: slugData.orgName || 'Organización',
+            slug: orgSlug
+          });
         } else {
           setOrgNotFound(true);
         }

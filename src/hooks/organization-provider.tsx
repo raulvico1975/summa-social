@@ -158,7 +158,7 @@ function useOrganizationBySlug(orgSlug?: string) {
           const newSlug = await generateUniqueSlug(firestore, orgDoc.name, orgId);
 
           // Reservar el slug (crea a /slugs i actualitza l'organització)
-          await reserveSlug(firestore, orgId, newSlug);
+          await reserveSlug(firestore, orgId, newSlug, orgDoc.name);
 
           // Actualitzar l'objecte local
           orgDoc = { ...orgDoc, slug: newSlug };

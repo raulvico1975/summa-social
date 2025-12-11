@@ -134,7 +134,7 @@ export function CreateOrganizationDialog({ open, onOpenChange }: CreateOrganizat
       await setDoc(orgRef, { ...orgData, id: orgRef.id });
 
       // 3. Reservar el slug a la col·lecció /slugs
-      await reserveSlug(firestore, orgRef.id, slug.trim());
+      await reserveSlug(firestore, orgRef.id, slug.trim(), name.trim());
 
       // 4. Crear la invitació per al primer admin
       const invitationRef = doc(collection(firestore, 'invitations'));
