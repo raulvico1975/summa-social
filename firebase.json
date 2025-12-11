@@ -4,5 +4,21 @@
     "location": "us-central1",
     "rules": "firestore.rules",
     "indexes": "firestore.indexes.json"
+  },
+  "hosting": {
+    "public": "public",
+    "ignore": ["firebase.json", "**/.*", "**/node_modules/**"],
+    "redirects": [
+      {
+        "source": "/",
+        "destination": "https://studio--summa-social.us-central1.hosted.app/",
+        "type": 301
+      },
+      {
+        "source": "/:path*",
+        "destination": "https://studio--summa-social.us-central1.hosted.app/:path*",
+        "type": 302
+      }
+    ]
   }
 }
