@@ -225,6 +225,11 @@ export type Emisor = {
 export type OrganizationStatus = 'active' | 'suspended' | 'pending';
 
 /**
+ * Idiomes suportats per l'organització (certificats, emails, etc.)
+ */
+export type OrganizationLanguage = 'ca' | 'es';
+
+/**
  * Representa una organització (ONG/entitat social).
  * S'emmagatzema a: organizations/{orgId}
  */
@@ -252,6 +257,8 @@ export type Organization = {
   signatoryRole?: string;          // Càrrec del signant (ex: "Presidenta")
   // Configuració d'alertes
   contactAlertThreshold?: number;  // Llindar mínim (€) per alertes de moviments sense contacte (default: 50)
+  // Configuració d'idioma
+  language?: OrganizationLanguage; // Idioma per certificats i emails (default: 'es')
   // Metadata
   updatedAt?: string;
   suspendedAt?: string;

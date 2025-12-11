@@ -621,6 +621,7 @@ export const ca = {
       irrevocableClause: "Que aquesta quantitat va ser lliurada amb caràcter irrevocable i va ser emprada per l'Entitat per al compliment dels seus fins socials.",
       issuedIn: "I perquè així consti, expedeixo el present certificat a",
       issuedOn: "a",
+      downloadPdf: "Descarregar PDF",
     },
   },
   employees: {
@@ -800,7 +801,7 @@ export const ca = {
     download: "Descarregar PDF",
     donations: "Donacions",
     total: "Total",
-    email: "Email",
+    emailColumn: "Email",
     actions: "Accions",
     noDonations: (year: string) => `No hi ha donacions registrades per l'any ${year}`,
     noDonationsHint: "Assegura't que les transaccions tinguin un donant assignat.",
@@ -836,8 +837,38 @@ export const ca = {
     returnsDetectedDescription: (count: number) => 
       `S'han descomptat ${count} devolució${count > 1 ? 'ns' : ''} dels totals.`,
     returnsDiscountedAlert: "Devolucions descomptades",
-    returnsDiscountedAlertDescription: (count: number, amount: string) => 
+    returnsDiscountedAlertDescription: (count: number, amount: string) =>
       `S'han descomptat ${count} devolució${count > 1 ? 'ns' : ''} per un total de ${amount}. Els certificats reflecteixen les donacions netes efectivament rebudes.`,
+    // Email
+    email: {
+      // Certificat anual
+      subject: (orgName: string, year: string) => `Certificat de donacions ${year} - ${orgName}`,
+      body: (year: string) => `Us fem arribar el certificat de les vostres donacions corresponent a l'any ${year}, a efectes fiscals.`,
+      // Certificat individual (donació puntual)
+      subjectSingle: (orgName: string, date: string) => `Certificat de donació - ${orgName}`,
+      bodySingle: (date: string, amount: string) => `Us fem arribar el certificat de la vostra donació de ${amount} realitzada el ${date}, a efectes fiscals.`,
+      // Comuns
+      greetingWithName: (donorName: string) => `Benvolgut/da ${donorName},`,
+      greetingGeneric: "Benvolgut/da,",
+      attachmentNote: "Trobareu el document adjunt en format PDF.",
+      thanks: "Gràcies per la vostra col·laboració.",
+      regards: "Cordialment,",
+      footer: "Enviat des de Summa Social",
+      sendOne: "Enviar per email",
+      sendSelected: (count: number) => `Enviar per email (${count})`,
+      sending: "Enviant...",
+      confirmTitle: "Enviar certificats per email",
+      confirmDescription: (toSend: number, noEmail: number) =>
+        `S'enviaran certificats a ${toSend} donants.${noEmail > 0 ? `\n${noEmail} donants seleccionats no tenen email i no rebran cap correu.` : ''}`,
+      confirmButton: "Enviar",
+      successOne: "Certificat enviat",
+      successOneDescription: (name: string) => `S'ha enviat el certificat a ${name}.`,
+      successMany: "Certificats enviats",
+      successManyDescription: (sent: number, skipped: number) =>
+        `S'han enviat ${sent} certificats.${skipped > 0 ? ` ${skipped} ignorats per no tenir email.` : ''}`,
+      errorNoEmail: "Aquest donant no té email configurat.",
+      errorSending: "Error enviant el certificat.",
+    },
   },
   settings: {
     title: "Configuració",
@@ -932,6 +963,8 @@ export const ca = {
       errorUploadingSignature: "No s'ha pogut pujar la firma.",
       signatoryName: "Nom del signant",
       signatoryRole: "Càrrec del signant",
+      certificateLanguage: "Idioma dels certificats",
+      certificateLanguageDescription: "Idioma dels certificats fiscals i els emails als donants.",
     }
   },
   members: {

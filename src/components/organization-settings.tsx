@@ -41,6 +41,7 @@ export function OrganizationSettings() {
     signatoryName: '',
     signatoryRole: '',
     contactAlertThreshold: 50,
+    language: 'es' as 'ca' | 'es',
   });
 
   // Carregar dades de l'organització
@@ -74,6 +75,7 @@ export function OrganizationSettings() {
             signatoryName: data.signatoryName || '',
             signatoryRole: data.signatoryRole || '',
             contactAlertThreshold: data.contactAlertThreshold ?? 50,
+            language: data.language ?? 'es',
           });
         }
       } catch (error) {
@@ -129,6 +131,7 @@ export function OrganizationSettings() {
         signatoryName: formData.signatoryName || null,
         signatoryRole: formData.signatoryRole || null,
         contactAlertThreshold: formData.contactAlertThreshold,
+        language: formData.language,
       };
 
       await updateDoc(orgRef, dataToSave);
@@ -402,6 +405,24 @@ export function OrganizationSettings() {
           <p className="text-sm text-muted-foreground mb-4">
             {t.settings.organization.certificatesSectionDescription}
           </p>
+
+          {/* Idioma dels certificats */}
+          <div className="space-y-2 mb-4">
+            <Label htmlFor="language">{t.settings.organization.certificateLanguage}</Label>
+            <Select
+              value={formData.language}
+              onValueChange={(value: 'ca' | 'es') => handleChange('language', value)}
+            >
+              <SelectTrigger className="w-[200px]">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="es">Castellano</SelectItem>
+                <SelectItem value="ca">Català</SelectItem>
+              </SelectContent>
+            </Select>
+            <p className="text-xs text-muted-foreground">{t.settings.organization.certificateLanguageDescription}</p>
+          </div>
 
           {/* Firma digitalitzada */}
           <div className="space-y-3 mb-4">

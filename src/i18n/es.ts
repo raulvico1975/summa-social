@@ -654,6 +654,7 @@ export const es = {
       irrevocableClause: "Que dicha cantidad fue entregada con carácter irrevocable y fue empleada por la Entidad para el cumplimiento de sus fines sociales.",
       issuedIn: "Y para que así conste, expido el presente certificado en",
       issuedOn: "a",
+      downloadPdf: "Descargar PDF",
     },
   },
   employees: {
@@ -833,7 +834,7 @@ export const es = {
     download: "Descargar PDF",
     donations: "Donaciones",
     total: "Total",
-    email: "Email",
+    emailColumn: "Email",
     actions: "Acciones",
     noDonations: (year: string) => `No hay donaciones registradas para el año ${year}`,
     noDonationsHint: "Asegúrate de que las transacciones tengan un donante asignado.",
@@ -869,8 +870,38 @@ export const es = {
     returnsDetectedDescription: (count: number) => 
       `Se han descontado ${count} devolución${count > 1 ? 'es' : ''} de los totales.`,
     returnsDiscountedAlert: "Devoluciones descontadas",
-    returnsDiscountedAlertDescription: (count: number, amount: string) => 
+    returnsDiscountedAlertDescription: (count: number, amount: string) =>
       `Se han descontado ${count} devolución${count > 1 ? 'es' : ''} por un total de ${amount}. Los certificados reflejan las donaciones netas efectivamente recibidas.`,
+    // Email
+    email: {
+      // Certificado anual
+      subject: (orgName: string, year: string) => `Certificado de donaciones ${year} - ${orgName}`,
+      body: (year: string) => `Le hacemos llegar el certificado de sus donaciones correspondiente al año ${year}, a efectos fiscales.`,
+      // Certificado individual (donación puntual)
+      subjectSingle: (orgName: string, date: string) => `Certificado de donación - ${orgName}`,
+      bodySingle: (date: string, amount: string) => `Le hacemos llegar el certificado de su donación de ${amount} realizada el ${date}, a efectos fiscales.`,
+      // Comunes
+      greetingWithName: (donorName: string) => `Estimado/a ${donorName},`,
+      greetingGeneric: "Estimado/a,",
+      attachmentNote: "Encontrará el documento adjunto en formato PDF.",
+      thanks: "Gracias por su colaboración.",
+      regards: "Cordialmente,",
+      footer: "Enviado desde Summa Social",
+      sendOne: "Enviar por email",
+      sendSelected: (count: number) => `Enviar por email (${count})`,
+      sending: "Enviando...",
+      confirmTitle: "Enviar certificados por email",
+      confirmDescription: (toSend: number, noEmail: number) =>
+        `Se enviarán certificados a ${toSend} donantes.${noEmail > 0 ? `\n${noEmail} donantes seleccionados no tienen email y no recibirán ningún correo.` : ''}`,
+      confirmButton: "Enviar",
+      successOne: "Certificado enviado",
+      successOneDescription: (name: string) => `Se ha enviado el certificado a ${name}.`,
+      successMany: "Certificados enviados",
+      successManyDescription: (sent: number, skipped: number) =>
+        `Se han enviado ${sent} certificados.${skipped > 0 ? ` ${skipped} ignorados por no tener email.` : ''}`,
+      errorNoEmail: "Este donante no tiene email configurado.",
+      errorSending: "Error enviando el certificado.",
+    },
   },
   settings: {
     title: "Configuración",
@@ -965,6 +996,8 @@ export const es = {
       errorUploadingSignature: "No se ha podido subir la firma.",
       signatoryName: "Nombre del firmante",
       signatoryRole: "Cargo del firmante",
+      certificateLanguage: "Idioma de los certificados",
+      certificateLanguageDescription: "Idioma de los certificados fiscales y los emails a los donantes.",
     }
   },
   members: {

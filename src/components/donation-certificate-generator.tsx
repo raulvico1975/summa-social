@@ -39,6 +39,16 @@ import {
   AlertTitle,
 } from '@/components/ui/alert';
 import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
+import {
   FileText,
   Download,
   Mail,
@@ -50,6 +60,7 @@ import {
   Euro,
   Calendar,
   Undo2,
+  Send,
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useTranslations } from '@/i18n';
@@ -141,6 +152,10 @@ export function DonationCertificateGenerator() {
   const [orgData, setOrgData] = React.useState<OrganizationWithLogo | null>(null);
   const [logoBase64, setLogoBase64] = React.useState<string | null>(null);
   const [totalReturns, setTotalReturns] = React.useState(0);
+  // Estats per enviament d'emails
+  const [isSendingEmails, setIsSendingEmails] = React.useState(false);
+  const [emailConfirmOpen, setEmailConfirmOpen] = React.useState(false);
+  const [emailTargetDonor, setEmailTargetDonor] = React.useState<DonorSummary | null>(null);
 
   const availableYears = React.useMemo(() => {
     const currentYear = new Date().getFullYear();
@@ -550,6 +565,157 @@ export function DonationCertificateGenerator() {
     return doc;
   };
 
+  // Genera el PDF i retorna el base64 (sense el prefix data:)
+  const generatePDFBase64 = (summary: DonorSummary): string => {
+    const doc = generatePDF(summary);
+    const pdfOutput = doc.output('datauristring');
+    // Treure el prefix "data:application/pdf;filename=generated.pdf;base64,"
+    const base64 = pdfOutput.split(',')[1];
+    return base64;
+  };
+
+  // Enviar email a un sol donant
+  const handleSendEmailOne = async (summary: DonorSummary) => {
+    if (!summary.donor.email) {
+      toast({ variant: 'destructive', title: t.common.error, description: t.certificates.email.errorNoEmail });
+      return;
+    }
+
+    setIsSendingEmails(true);
+    try {
+      const pdfBase64 = generatePDFBase64(summary);
+
+      const response = await fetch('/api/certificates/send-email', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          organizationId,
+          organizationName: orgData?.name || organization?.name || '',
+          organizationEmail: orgData?.email,
+          organizationLanguage: orgData?.language ?? 'es',
+          donors: [{
+            id: summary.donor.id,
+            name: cleanName(summary.donor.name),
+            email: summary.donor.email,
+            pdfBase64,
+          }],
+          year: selectedYear,
+        }),
+      });
+
+      const result = await response.json();
+
+      if (response.ok && result.sent > 0) {
+        toast({
+          title: t.certificates.email.successOne,
+          description: t.certificates.email.successOneDescription(cleanName(summary.donor.name)),
+        });
+      } else {
+        toast({ variant: 'destructive', title: t.common.error, description: t.certificates.email.errorSending });
+      }
+    } catch (error) {
+      console.error('Error sending email:', error);
+      toast({ variant: 'destructive', title: t.common.error, description: t.certificates.email.errorSending });
+    } finally {
+      setIsSendingEmails(false);
+    }
+  };
+
+  // Enviar emails als seleccionats (amb confirmació prèvia)
+  const handleSendEmailSelected = async () => {
+    const selected = donorSummaries.filter(s => selectedDonors.has(s.donor.id));
+    const withEmail = selected.filter(s => s.hasEmail);
+    const withoutEmail = selected.filter(s => !s.hasEmail);
+
+    if (withEmail.length === 0) {
+      toast({ variant: 'destructive', title: t.common.error, description: t.certificates.email.errorNoEmail });
+      return;
+    }
+
+    setIsSendingEmails(true);
+    try {
+      const donorsData = withEmail.map(summary => ({
+        id: summary.donor.id,
+        name: cleanName(summary.donor.name),
+        email: summary.donor.email!,
+        pdfBase64: generatePDFBase64(summary),
+      }));
+
+      const response = await fetch('/api/certificates/send-email', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          organizationId,
+          organizationName: orgData?.name || organization?.name || '',
+          organizationEmail: orgData?.email,
+          organizationLanguage: orgData?.language ?? 'es',
+          donors: donorsData,
+          year: selectedYear,
+        }),
+      });
+
+      const result = await response.json();
+
+      if (response.ok) {
+        toast({
+          title: t.certificates.email.successMany,
+          description: t.certificates.email.successManyDescription(result.sent, withoutEmail.length),
+        });
+      } else {
+        toast({ variant: 'destructive', title: t.common.error, description: t.certificates.email.errorSending });
+      }
+    } catch (error) {
+      console.error('Error sending emails:', error);
+      toast({ variant: 'destructive', title: t.common.error, description: t.certificates.email.errorSending });
+    } finally {
+      setIsSendingEmails(false);
+      setEmailConfirmOpen(false);
+    }
+  };
+
+  // Obrir confirmació per enviar email individual
+  const openEmailConfirmOne = (summary: DonorSummary) => {
+    if (!summary.donor.email) {
+      toast({ variant: 'destructive', title: t.common.error, description: t.certificates.email.errorNoEmail });
+      return;
+    }
+    setEmailTargetDonor(summary);
+    setEmailConfirmOpen(true);
+  };
+
+  // Obrir confirmació per enviar emails massius
+  const openEmailConfirmSelected = () => {
+    const selected = donorSummaries.filter(s => selectedDonors.has(s.donor.id));
+    const withEmail = selected.filter(s => s.hasEmail);
+
+    if (withEmail.length === 0) {
+      toast({ variant: 'destructive', title: t.common.error, description: t.certificates.email.errorNoEmail });
+      return;
+    }
+    setEmailTargetDonor(null); // null indica enviament massiu
+    setEmailConfirmOpen(true);
+  };
+
+  // Confirmar enviament
+  const confirmSendEmail = () => {
+    if (emailTargetDonor) {
+      handleSendEmailOne(emailTargetDonor);
+    } else {
+      handleSendEmailSelected();
+    }
+  };
+
+  // Calcular estadístiques per al diàleg de confirmació
+  const getEmailConfirmStats = () => {
+    if (emailTargetDonor) {
+      return { toSend: 1, noEmail: 0 };
+    }
+    const selected = donorSummaries.filter(s => selectedDonors.has(s.donor.id));
+    const withEmail = selected.filter(s => s.hasEmail);
+    const withoutEmail = selected.filter(s => !s.hasEmail);
+    return { toSend: withEmail.length, noEmail: withoutEmail.length };
+  };
+
   const handlePreview = (summary: DonorSummary) => {
     setPreviewDonor(summary);
     setIsPreviewOpen(true);
@@ -694,6 +860,23 @@ export function DonationCertificateGenerator() {
             <div className="flex gap-2">
               <Button
                 variant="outline"
+                onClick={openEmailConfirmSelected}
+                disabled={isLoading || isSendingEmails || stats.selectedWithEmail === 0}
+              >
+                {isSendingEmails ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    {t.certificates.email.sending}
+                  </>
+                ) : (
+                  <>
+                    <Send className="mr-2 h-4 w-4" />
+                    {t.certificates.email.sendSelected(stats.selectedWithEmail)}
+                  </>
+                )}
+              </Button>
+              <Button
+                variant="outline"
                 onClick={handleDownloadAll}
                 disabled={isLoading || isGenerating || selectedDonors.size === 0}
               >
@@ -744,7 +927,7 @@ export function DonationCertificateGenerator() {
                     {totalReturns > 0 && (
                       <TableHead className="text-right text-orange-600">{t.reports.columnDiscounted}</TableHead>
                     )}
-                    <TableHead className="text-center">{t.certificates.email}</TableHead>
+                    <TableHead className="text-center">{t.certificates.emailColumn}</TableHead>
                     <TableHead className="text-right">{t.certificates.actions}</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -801,6 +984,15 @@ export function DonationCertificateGenerator() {
                             title={t.certificates.download}
                           >
                             <Download className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => openEmailConfirmOne(summary)}
+                            disabled={!summary.hasEmail || isSendingEmails}
+                            title={summary.hasEmail ? t.certificates.email.sendOne : t.certificates.email.errorNoEmail}
+                          >
+                            <Mail className={`h-4 w-4 ${!summary.hasEmail ? 'text-muted-foreground' : ''}`} />
                           </Button>
                         </div>
                       </TableCell>
@@ -926,6 +1118,45 @@ export function DonationCertificateGenerator() {
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Diàleg de confirmació d'enviament d'emails */}
+      <AlertDialog open={emailConfirmOpen} onOpenChange={setEmailConfirmOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2">
+              <Mail className="h-5 w-5" />
+              {t.certificates.email.confirmTitle}
+            </AlertDialogTitle>
+            <AlertDialogDescription className="whitespace-pre-line">
+              {(() => {
+                const stats = getEmailConfirmStats();
+                return t.certificates.email.confirmDescription(stats.toSend, stats.noEmail);
+              })()}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isSendingEmails}>
+              {t.common.cancel}
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={confirmSendEmail}
+              disabled={isSendingEmails}
+            >
+              {isSendingEmails ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  {t.certificates.email.sending}
+                </>
+              ) : (
+                <>
+                  <Send className="mr-2 h-4 w-4" />
+                  {t.certificates.email.confirmButton}
+                </>
+              )}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

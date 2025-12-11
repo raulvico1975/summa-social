@@ -69,6 +69,8 @@ import {
   Download,
   RefreshCw,
   Loader2,
+  Mail,
+  Send,
 } from 'lucide-react';
 
 // ════════════════════════════════════════════════════════════════════════════
@@ -110,6 +112,7 @@ export function DonorDetailDrawer({ donor, open, onOpenChange, onEdit }: DonorDe
   const [isHistoryOpen, setIsHistoryOpen] = React.useState(false);
   const [currentPage, setCurrentPage] = React.useState(1);
   const [isGeneratingPdf, setIsGeneratingPdf] = React.useState(false);
+  const [isSendingEmail, setIsSendingEmail] = React.useState(false);
   const itemsPerPage = 10;
 
   // Transaccions del donant - usar onSnapshot per gestionar errors de permisos
@@ -733,11 +736,474 @@ export function DonorDetailDrawer({ donor, open, onOpenChange, onEdit }: DonorDe
     }
   };
 
+  // ════════════════════════════════════════════════════════════════════════════
+  // ENVIAMENT PER EMAIL
+  // ════════════════════════════════════════════════════════════════════════════
+
+  // Genera el PDF i retorna el base64 (sense el prefix data:)
+  const generatePDFBase64 = (doc: jsPDF): string => {
+    const pdfOutput = doc.output('datauristring');
+    // Treure el prefix "data:application/pdf;filename=generated.pdf;base64,"
+    const base64 = pdfOutput.split(',')[1];
+    return base64;
+  };
+
+  // Enviar certificat individual per email
+  const sendCertificateByEmail = async (tx: Transaction) => {
+    if (!donor || !organization) return;
+
+    if (!donor.email) {
+      toast({
+        variant: 'destructive',
+        title: t.common.error,
+        description: t.certificates.email.errorNoEmail,
+      });
+      return;
+    }
+
+    setIsSendingEmail(true);
+    try {
+      // Generar el PDF primer (reutilitzem la lògica de generateCertificate)
+      const doc = new jsPDF();
+      const pageWidth = doc.internal.pageSize.getWidth();
+      const margin = 20;
+      const contentWidth = pageWidth - margin * 2;
+      let y = margin;
+      const lineHeight = 7;
+
+      // Helper per construir l'adreça completa de l'organització
+      const buildOrgFullAddress = (): string => {
+        const parts: string[] = [];
+        if (organization.address) parts.push(organization.address);
+        const locationPart = [organization.zipCode, organization.city, organization.province].filter(Boolean).join(' ');
+        if (locationPart) parts.push(locationPart);
+        return parts.join(', ');
+      };
+
+      const orgFullAddress = buildOrgFullAddress();
+
+      // Capçalera amb logo
+      if (organization.logoUrl) {
+        const logoBase64 = await loadImageAsBase64(organization.logoUrl);
+        if (logoBase64) {
+          doc.addImage(logoBase64, 'PNG', margin, y, 30, 30);
+          doc.setFontSize(14);
+          doc.setFont('helvetica', 'bold');
+          doc.text(organization.name || '', margin + 35, y + 10);
+          doc.setFontSize(10);
+          doc.setFont('helvetica', 'normal');
+          doc.text(`CIF: ${organization.taxId || 'N/A'}`, margin + 35, y + 16);
+          if (orgFullAddress) {
+            doc.setFontSize(9);
+            const headerAddress = doc.splitTextToSize(orgFullAddress, contentWidth - 35);
+            doc.text(headerAddress, margin + 35, y + 22);
+          }
+          y += 38;
+        } else {
+          doc.setFontSize(14);
+          doc.setFont('helvetica', 'bold');
+          doc.text(organization.name || '', pageWidth / 2, y, { align: 'center' });
+          y += 6;
+          doc.setFontSize(10);
+          doc.setFont('helvetica', 'normal');
+          doc.text(`CIF: ${organization.taxId || 'N/A'}`, pageWidth / 2, y, { align: 'center' });
+          y += 5;
+          if (orgFullAddress) {
+            doc.setFontSize(9);
+            doc.text(orgFullAddress, pageWidth / 2, y, { align: 'center' });
+            y += 5;
+          }
+          y += 5;
+        }
+      } else {
+        doc.setFontSize(14);
+        doc.setFont('helvetica', 'bold');
+        doc.text(organization.name || '', pageWidth / 2, y, { align: 'center' });
+        y += 6;
+        doc.setFontSize(10);
+        doc.setFont('helvetica', 'normal');
+        doc.text(`CIF: ${organization.taxId || 'N/A'}`, pageWidth / 2, y, { align: 'center' });
+        y += 5;
+        if (orgFullAddress) {
+          doc.setFontSize(9);
+          doc.text(orgFullAddress, pageWidth / 2, y, { align: 'center' });
+          y += 5;
+        }
+        y += 5;
+      }
+
+      // Línia separadora
+      doc.setDrawColor(180);
+      doc.line(margin, y, pageWidth - margin, y);
+      y += 15;
+
+      // Títol del certificat
+      doc.setFontSize(16);
+      doc.setFont('helvetica', 'bold');
+      doc.text(t.donorDetail.certificate.title, pageWidth / 2, y, { align: 'center' });
+      y += 18;
+
+      // Cos del certificat
+      doc.setFontSize(11);
+      doc.setFont('helvetica', 'normal');
+
+      const signatoryPrefix = donor.donorType === 'company' ? '' : 'D./Dª ';
+      const signatoryName = organization.signatoryName || '[Representant]';
+      const line1 = `${signatoryPrefix}${signatoryName}, ${t.donorDetail.certificate.inRepresentationOf} ${organization.name},`;
+      const line1Wrapped = doc.splitTextToSize(line1, contentWidth);
+      doc.text(line1Wrapped, margin, y);
+      y += line1Wrapped.length * lineHeight;
+
+      const line2 = `${t.donorDetail.certificate.withCif} ${organization.taxId}, ${t.donorDetail.certificate.domiciledAt} ${orgFullAddress || '[Adreça]'},`;
+      const line2Wrapped = doc.splitTextToSize(line2, contentWidth);
+      doc.text(line2Wrapped, margin, y);
+      y += line2Wrapped.length * lineHeight + 8;
+
+      doc.setFontSize(14);
+      doc.setFont('helvetica', 'bold');
+      doc.text(t.donorDetail.certificate.certifies, pageWidth / 2, y, { align: 'center' });
+      y += 12;
+
+      doc.setFontSize(11);
+      doc.setFont('helvetica', 'normal');
+      const donorAddressParts: string[] = [];
+      if (donor.address) donorAddressParts.push(donor.address);
+      const donorLocationPart = [donor.zipCode, donor.city, donor.province].filter(Boolean).join(' ');
+      if (donorLocationPart) donorAddressParts.push(donorLocationPart);
+      const donorAddress = donorAddressParts.length > 0 ? donorAddressParts.join(', ') : '[Domicili no informat]';
+      const paragraph1 = `${t.donorDetail.certificate.thatDonor} ${donor.name} ${t.donorDetail.certificate.withNifCif} ${donor.taxId} ${t.donorDetail.certificate.andDomicile} ${donorAddress}, ${t.donorDetail.certificate.donatedAmount} ${formatCurrencyEU(tx.amount)} ${t.donorDetail.certificate.onDate} ${formatDate(tx.date)} ${t.donorDetail.certificate.toTheEntity}`;
+      const paragraph1Wrapped = doc.splitTextToSize(paragraph1, contentWidth);
+      doc.text(paragraph1Wrapped, margin, y);
+      y += paragraph1Wrapped.length * lineHeight + 6;
+
+      const paragraph2 = t.donorDetail.certificate.irrevocableClause;
+      const paragraph2Wrapped = doc.splitTextToSize(paragraph2, contentWidth);
+      doc.text(paragraph2Wrapped, margin, y);
+      y += paragraph2Wrapped.length * lineHeight + 6;
+
+      const today = new Date();
+      const monthNames = Object.keys(t.months);
+      const monthName = t.months[monthNames[today.getMonth()] as keyof typeof t.months];
+      const cityName = organization.city || '[Ciutat]';
+      const paragraph3 = `${t.donorDetail.certificate.issuedIn} ${cityName} ${t.donorDetail.certificate.issuedOn} ${today.getDate()} de ${monthName} de ${today.getFullYear()}.`;
+      const paragraph3Wrapped = doc.splitTextToSize(paragraph3, contentWidth);
+      doc.text(paragraph3Wrapped, margin, y);
+      y += paragraph3Wrapped.length * lineHeight + 15;
+
+      doc.setFontSize(9);
+      doc.setFont('helvetica', 'italic');
+      const legalText = t.donorDetail.certificate.legalNote;
+      const legalLines = doc.splitTextToSize(legalText, contentWidth);
+      doc.text(legalLines, margin, y);
+      y += legalLines.length * 4 + 15;
+
+      const signatureX = pageWidth - margin - 60;
+      if (organization.signatureUrl) {
+        const signatureBase64 = await loadImageAsBase64(organization.signatureUrl);
+        if (signatureBase64) {
+          doc.addImage(signatureBase64, 'PNG', signatureX, y, 50, 25);
+          y += 28;
+        }
+      }
+      if (organization.signatoryName) {
+        doc.setFontSize(10);
+        doc.setFont('helvetica', 'bold');
+        doc.text(organization.signatoryName, signatureX + 25, y, { align: 'center' });
+        y += 5;
+      }
+      if (organization.signatoryRole) {
+        doc.setFont('helvetica', 'normal');
+        doc.text(organization.signatoryRole, signatureX + 25, y, { align: 'center' });
+      }
+
+      // Obtenir base64 del PDF
+      const pdfBase64 = generatePDFBase64(doc);
+      const txYear = tx.date.substring(0, 4);
+
+      // Enviar via API (amb informació de donació individual)
+      const response = await fetch('/api/certificates/send-email', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          organizationId,
+          organizationName: organization.name || '',
+          organizationEmail: organization.email,
+          organizationLanguage: (organization as any).language ?? 'es',
+          donors: [{
+            id: donor.id,
+            name: donor.name,
+            email: donor.email,
+            pdfBase64,
+            singleDonation: {
+              date: formatDate(tx.date),
+              amount: formatCurrencyEU(tx.amount),
+            },
+          }],
+          year: txYear,
+        }),
+      });
+
+      const result = await response.json();
+
+      if (response.ok && result.sent > 0) {
+        toast({
+          title: t.certificates.email.successOne,
+          description: t.certificates.email.successOneDescription(donor.name),
+        });
+      } else {
+        toast({ variant: 'destructive', title: t.common.error, description: t.certificates.email.errorSending });
+      }
+    } catch (error) {
+      console.error('Error sending certificate by email:', error);
+      toast({
+        variant: 'destructive',
+        title: t.common.error,
+        description: t.certificates.email.errorSending,
+      });
+    } finally {
+      setIsSendingEmail(false);
+    }
+  };
+
+  // Enviar certificat anual per email
+  const sendAnnualCertificateByEmail = async (year: string) => {
+    if (!donor || !organization) return;
+
+    if (!donor.email) {
+      toast({
+        variant: 'destructive',
+        title: t.common.error,
+        description: t.certificates.email.errorNoEmail,
+      });
+      return;
+    }
+
+    // Calcular total de l'any
+    const yearDonations = transactions?.filter(tx =>
+      tx.date.startsWith(year) &&
+      tx.amount > 0 &&
+      tx.donationStatus !== 'returned'
+    ) || [];
+
+    const totalAmount = yearDonations.reduce((sum, tx) => sum + tx.amount, 0);
+
+    if (totalAmount === 0) {
+      toast({
+        variant: 'destructive',
+        title: t.common.error,
+        description: t.donorDetail.certificate.noDonationsYear,
+      });
+      return;
+    }
+
+    setIsSendingEmail(true);
+    try {
+      const doc = new jsPDF();
+      const pageWidth = doc.internal.pageSize.getWidth();
+      const margin = 20;
+      const contentWidth = pageWidth - margin * 2;
+      let y = margin;
+      const lineHeight = 7;
+
+      // Helper per construir l'adreça completa de l'organització
+      const buildOrgFullAddress = (): string => {
+        const parts: string[] = [];
+        if (organization.address) parts.push(organization.address);
+        const locationPart = [organization.zipCode, organization.city, organization.province].filter(Boolean).join(' ');
+        if (locationPart) parts.push(locationPart);
+        return parts.join(', ');
+      };
+
+      const orgFullAddress = buildOrgFullAddress();
+
+      // Capçalera amb logo
+      if (organization.logoUrl) {
+        const logoBase64 = await loadImageAsBase64(organization.logoUrl);
+        if (logoBase64) {
+          doc.addImage(logoBase64, 'PNG', margin, y, 30, 30);
+          doc.setFontSize(14);
+          doc.setFont('helvetica', 'bold');
+          doc.text(organization.name || '', margin + 35, y + 10);
+          doc.setFontSize(10);
+          doc.setFont('helvetica', 'normal');
+          doc.text(`CIF: ${organization.taxId || 'N/A'}`, margin + 35, y + 16);
+          if (orgFullAddress) {
+            doc.setFontSize(9);
+            const headerAddress = doc.splitTextToSize(orgFullAddress, contentWidth - 35);
+            doc.text(headerAddress, margin + 35, y + 22);
+          }
+          y += 38;
+        } else {
+          doc.setFontSize(14);
+          doc.setFont('helvetica', 'bold');
+          doc.text(organization.name || '', pageWidth / 2, y, { align: 'center' });
+          y += 6;
+          doc.setFontSize(10);
+          doc.setFont('helvetica', 'normal');
+          doc.text(`CIF: ${organization.taxId || 'N/A'}`, pageWidth / 2, y, { align: 'center' });
+          y += 5;
+          if (orgFullAddress) {
+            doc.setFontSize(9);
+            doc.text(orgFullAddress, pageWidth / 2, y, { align: 'center' });
+            y += 5;
+          }
+          y += 5;
+        }
+      } else {
+        doc.setFontSize(14);
+        doc.setFont('helvetica', 'bold');
+        doc.text(organization.name || '', pageWidth / 2, y, { align: 'center' });
+        y += 6;
+        doc.setFontSize(10);
+        doc.setFont('helvetica', 'normal');
+        doc.text(`CIF: ${organization.taxId || 'N/A'}`, pageWidth / 2, y, { align: 'center' });
+        y += 5;
+        if (orgFullAddress) {
+          doc.setFontSize(9);
+          doc.text(orgFullAddress, pageWidth / 2, y, { align: 'center' });
+          y += 5;
+        }
+        y += 5;
+      }
+
+      // Línia separadora
+      doc.setDrawColor(180);
+      doc.line(margin, y, pageWidth - margin, y);
+      y += 15;
+
+      // Títol del certificat
+      doc.setFontSize(16);
+      doc.setFont('helvetica', 'bold');
+      doc.text(t.donorDetail.certificate.annualTitle, pageWidth / 2, y, { align: 'center' });
+      y += 7;
+      doc.setFontSize(12);
+      doc.setFont('helvetica', 'normal');
+      doc.text(t.certificates.pdf.fiscalYear(year), pageWidth / 2, y, { align: 'center' });
+      y += 18;
+
+      // Cos del certificat
+      doc.setFontSize(11);
+      doc.setFont('helvetica', 'normal');
+
+      const signatoryPrefix = donor.donorType === 'company' ? '' : 'D./Dª ';
+      const signatoryName = organization.signatoryName || '[Representant]';
+      const line1 = `${signatoryPrefix}${signatoryName}, ${t.donorDetail.certificate.inRepresentationOf} ${organization.name},`;
+      const line1Wrapped = doc.splitTextToSize(line1, contentWidth);
+      doc.text(line1Wrapped, margin, y);
+      y += line1Wrapped.length * lineHeight;
+
+      const line2 = `${t.donorDetail.certificate.withCif} ${organization.taxId}, ${t.donorDetail.certificate.domiciledAt} ${orgFullAddress || '[Adreça]'},`;
+      const line2Wrapped = doc.splitTextToSize(line2, contentWidth);
+      doc.text(line2Wrapped, margin, y);
+      y += line2Wrapped.length * lineHeight + 8;
+
+      doc.setFontSize(14);
+      doc.setFont('helvetica', 'bold');
+      doc.text(t.donorDetail.certificate.certifies, pageWidth / 2, y, { align: 'center' });
+      y += 12;
+
+      doc.setFontSize(11);
+      doc.setFont('helvetica', 'normal');
+      const donorAddressParts: string[] = [];
+      if (donor.address) donorAddressParts.push(donor.address);
+      const donorLocationPart = [donor.zipCode, donor.city, donor.province].filter(Boolean).join(' ');
+      if (donorLocationPart) donorAddressParts.push(donorLocationPart);
+      const donorAddress = donorAddressParts.length > 0 ? donorAddressParts.join(', ') : '[Domicili no informat]';
+      const donationsText = yearDonations.length === 1 ? t.donorDetail.donation : t.donorDetail.donations;
+      const paragraph1 = `${t.donorDetail.certificate.thatDonor} ${donor.name} ${t.donorDetail.certificate.withNifCif} ${donor.taxId} ${t.donorDetail.certificate.andDomicile} ${donorAddress}, ${t.donorDetail.certificate.donatedAmount} ${formatCurrencyEU(totalAmount)} (${yearDonations.length} ${donationsText}) ${t.donorDetail.certificate.hasDonatedYear} ${year} ${t.donorDetail.certificate.toTheEntity}`;
+      const paragraph1Wrapped = doc.splitTextToSize(paragraph1, contentWidth);
+      doc.text(paragraph1Wrapped, margin, y);
+      y += paragraph1Wrapped.length * lineHeight + 6;
+
+      const paragraph2 = t.donorDetail.certificate.irrevocableClause;
+      const paragraph2Wrapped = doc.splitTextToSize(paragraph2, contentWidth);
+      doc.text(paragraph2Wrapped, margin, y);
+      y += paragraph2Wrapped.length * lineHeight + 6;
+
+      const today = new Date();
+      const monthNames = Object.keys(t.months);
+      const monthName = t.months[monthNames[today.getMonth()] as keyof typeof t.months];
+      const cityName = organization.city || '[Ciutat]';
+      const paragraph3 = `${t.donorDetail.certificate.issuedIn} ${cityName} ${t.donorDetail.certificate.issuedOn} ${today.getDate()} de ${monthName} de ${today.getFullYear()}.`;
+      const paragraph3Wrapped = doc.splitTextToSize(paragraph3, contentWidth);
+      doc.text(paragraph3Wrapped, margin, y);
+      y += paragraph3Wrapped.length * lineHeight + 15;
+
+      doc.setFontSize(9);
+      doc.setFont('helvetica', 'italic');
+      const legalText = t.donorDetail.certificate.legalNote;
+      const legalLines = doc.splitTextToSize(legalText, contentWidth);
+      doc.text(legalLines, margin, y);
+      y += legalLines.length * 4 + 15;
+
+      const signatureX = pageWidth - margin - 60;
+      if (organization.signatureUrl) {
+        const signatureBase64 = await loadImageAsBase64(organization.signatureUrl);
+        if (signatureBase64) {
+          doc.addImage(signatureBase64, 'PNG', signatureX, y, 50, 25);
+          y += 28;
+        }
+      }
+      if (organization.signatoryName) {
+        doc.setFontSize(10);
+        doc.setFont('helvetica', 'bold');
+        doc.text(organization.signatoryName, signatureX + 25, y, { align: 'center' });
+        y += 5;
+      }
+      if (organization.signatoryRole) {
+        doc.setFont('helvetica', 'normal');
+        doc.text(organization.signatoryRole, signatureX + 25, y, { align: 'center' });
+      }
+
+      // Obtenir base64 del PDF
+      const pdfBase64 = generatePDFBase64(doc);
+
+      // Enviar via API
+      const response = await fetch('/api/certificates/send-email', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          organizationId,
+          organizationName: organization.name || '',
+          organizationEmail: organization.email,
+          organizationLanguage: (organization as any).language ?? 'es',
+          donors: [{
+            id: donor.id,
+            name: donor.name,
+            email: donor.email,
+            pdfBase64,
+          }],
+          year,
+        }),
+      });
+
+      const result = await response.json();
+
+      if (response.ok && result.sent > 0) {
+        toast({
+          title: t.certificates.email.successOne,
+          description: t.certificates.email.successOneDescription(donor.name),
+        });
+      } else {
+        toast({ variant: 'destructive', title: t.common.error, description: t.certificates.email.errorSending });
+      }
+    } catch (error) {
+      console.error('Error sending annual certificate by email:', error);
+      toast({
+        variant: 'destructive',
+        title: t.common.error,
+        description: t.certificates.email.errorSending,
+      });
+    } finally {
+      setIsSendingEmail(false);
+    }
+  };
+
   if (!donor) return null;
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent className="w-full sm:max-w-xl overflow-y-auto">
+      <SheetContent className="w-full sm:max-w-2xl overflow-y-auto">
         <SheetHeader className="pb-4 border-b">
           <div className="flex items-start justify-between">
             <div className="flex items-center gap-3">
@@ -894,24 +1360,55 @@ export function DonorDetailDrawer({ donor, open, onOpenChange, onEdit }: DonorDe
               </CollapsibleTrigger>
 
               {isHistoryOpen && (
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="outline" size="sm" disabled={!donor.taxId}>
-                      <FileText className="h-4 w-4 mr-1" />
-                      {t.donorDetail.annualCertificate}
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end">
-                    {availableYears.map(year => (
-                      <DropdownMenuItem
-                        key={year}
-                        onClick={() => generateAnnualCertificate(year)}
+                <div className="flex gap-2">
+                  {/* Descarregar certificat anual */}
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="outline" size="sm" disabled={!donor.taxId || isGeneratingPdf}>
+                        <Download className="h-4 w-4 mr-1" />
+                        {t.donorDetail.annualCertificate}
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      {availableYears.map(year => (
+                        <DropdownMenuItem
+                          key={year}
+                          onClick={() => generateAnnualCertificate(year)}
+                        >
+                          {year}
+                        </DropdownMenuItem>
+                      ))}
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                  {/* Enviar certificat anual per email */}
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        disabled={!donor.taxId || !donor.email || isSendingEmail}
+                        title={!donor.email ? t.certificates.email.errorNoEmail : undefined}
                       >
-                        {year}
-                      </DropdownMenuItem>
-                    ))}
-                  </DropdownMenuContent>
-                </DropdownMenu>
+                        {isSendingEmail ? (
+                          <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+                        ) : (
+                          <Mail className="h-4 w-4 mr-1" />
+                        )}
+                        {t.certificates.email.sendOne}
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      {availableYears.map(year => (
+                        <DropdownMenuItem
+                          key={year}
+                          onClick={() => sendAnnualCertificateByEmail(year)}
+                        >
+                          {year}
+                        </DropdownMenuItem>
+                      ))}
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </div>
               )}
             </div>
 
@@ -997,37 +1494,86 @@ export function DonorDetailDrawer({ donor, open, onOpenChange, onEdit }: DonorDe
                               </TableCell>
                               <TableCell className="text-right">
                                 {!isReturn && !isReturned && (
-                                  donor.taxId ? (
-                                    <Button
-                                      variant="ghost"
-                                      size="icon"
-                                      onClick={() => generateCertificate(tx)}
-                                      disabled={isGeneratingPdf}
-                                    >
-                                      {isGeneratingPdf ? (
-                                        <Loader2 className="h-4 w-4 animate-spin" />
-                                      ) : (
-                                        <FileText className="h-4 w-4" />
-                                      )}
-                                    </Button>
-                                  ) : (
-                                    <Tooltip>
-                                      <TooltipTrigger asChild>
-                                        <span>
+                                  <div className="flex justify-end gap-1">
+                                    {/* Descarregar certificat individual */}
+                                    {donor.taxId ? (
+                                      <Tooltip>
+                                        <TooltipTrigger asChild>
                                           <Button
                                             variant="ghost"
                                             size="icon"
-                                            disabled
+                                            onClick={() => generateCertificate(tx)}
+                                            disabled={isGeneratingPdf}
                                           >
-                                            <FileText className="h-4 w-4 text-muted-foreground" />
+                                            {isGeneratingPdf ? (
+                                              <Loader2 className="h-4 w-4 animate-spin" />
+                                            ) : (
+                                              <Download className="h-4 w-4" />
+                                            )}
                                           </Button>
-                                        </span>
-                                      </TooltipTrigger>
-                                      <TooltipContent>
-                                        {t.donorDetail.certificate.needsTaxId}
-                                      </TooltipContent>
-                                    </Tooltip>
-                                  )
+                                        </TooltipTrigger>
+                                        <TooltipContent>
+                                          {t.donorDetail.certificate.downloadPdf}
+                                        </TooltipContent>
+                                      </Tooltip>
+                                    ) : (
+                                      <Tooltip>
+                                        <TooltipTrigger asChild>
+                                          <span>
+                                            <Button
+                                              variant="ghost"
+                                              size="icon"
+                                              disabled
+                                            >
+                                              <Download className="h-4 w-4 text-muted-foreground" />
+                                            </Button>
+                                          </span>
+                                        </TooltipTrigger>
+                                        <TooltipContent>
+                                          {t.donorDetail.certificate.needsTaxId}
+                                        </TooltipContent>
+                                      </Tooltip>
+                                    )}
+                                    {/* Enviar certificat individual per email */}
+                                    {donor.taxId && donor.email ? (
+                                      <Tooltip>
+                                        <TooltipTrigger asChild>
+                                          <Button
+                                            variant="ghost"
+                                            size="icon"
+                                            onClick={() => sendCertificateByEmail(tx)}
+                                            disabled={isSendingEmail}
+                                          >
+                                            {isSendingEmail ? (
+                                              <Loader2 className="h-4 w-4 animate-spin" />
+                                            ) : (
+                                              <Mail className="h-4 w-4" />
+                                            )}
+                                          </Button>
+                                        </TooltipTrigger>
+                                        <TooltipContent>
+                                          {t.certificates.email.sendOne}
+                                        </TooltipContent>
+                                      </Tooltip>
+                                    ) : donor.taxId ? (
+                                      <Tooltip>
+                                        <TooltipTrigger asChild>
+                                          <span>
+                                            <Button
+                                              variant="ghost"
+                                              size="icon"
+                                              disabled
+                                            >
+                                              <Mail className="h-4 w-4 text-muted-foreground" />
+                                            </Button>
+                                          </span>
+                                        </TooltipTrigger>
+                                        <TooltipContent>
+                                          {t.certificates.email.errorNoEmail}
+                                        </TooltipContent>
+                                      </Tooltip>
+                                    ) : null}
+                                  </div>
                                 )}
                               </TableCell>
                             </TableRow>
