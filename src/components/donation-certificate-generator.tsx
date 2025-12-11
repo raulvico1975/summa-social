@@ -377,13 +377,23 @@ export function DonationCertificateGenerator() {
     }
   };
 
+  // Construeix una localització sense duplicats (ex: evita "Madrid Madrid")
+  const buildLocationString = (zipCode?: string, city?: string, province?: string): string => {
+    const parts: string[] = [];
+    if (zipCode) parts.push(zipCode);
+    if (city) parts.push(city);
+    // Només afegim província si és diferent de la ciutat (case insensitive)
+    if (province && province.toLowerCase() !== city?.toLowerCase()) {
+      parts.push(province);
+    }
+    return parts.join(' ');
+  };
+
   const buildFullAddress = (): string => {
     const parts: string[] = [];
     if (orgData?.address) parts.push(orgData.address);
-    if (orgData?.zipCode || orgData?.city || orgData?.province) {
-      const cityPart = [orgData.zipCode, orgData.city, orgData.province].filter(Boolean).join(' ');
-      parts.push(cityPart);
-    }
+    const locationPart = buildLocationString(orgData?.zipCode, orgData?.city, orgData?.province);
+    if (locationPart) parts.push(locationPart);
     return parts.join(', ');
   };
 
@@ -428,7 +438,7 @@ export function DonationCertificateGenerator() {
     // Si no hi ha adreça però sí CP i/o ciutat/província, mostrar-los
     if (!fullAddress && (orgData?.zipCode || orgData?.city || orgData?.province)) {
       doc.setFontSize(9);
-      const locationText = [orgData.zipCode, orgData.city, orgData.province].filter(Boolean).join(' ');
+      const locationText = buildLocationString(orgData?.zipCode, orgData?.city, orgData?.province);
       doc.text(locationText, pageWidth / 2, y, { align: 'center' });
       y += 5;
     }
@@ -476,9 +486,8 @@ export function DonationCertificateGenerator() {
     y += lineHeight * 2;
 
     doc.setFont('helvetica', 'normal');
-    // Construir adreça completa del donant (CP + ciutat + província)
-    const donorLocationParts = [summary.donor.zipCode, summary.donor.city, summary.donor.province].filter(Boolean);
-    const donorLocation = donorLocationParts.length > 0 ? donorLocationParts.join(' ') : '';
+    // Construir adreça completa del donant (CP + ciutat + província, sense duplicats)
+    const donorLocation = buildLocationString(summary.donor.zipCode, summary.donor.city, summary.donor.province);
     const donorIntroText = donorLocation
       ? t.certificates.pdf.donorIntroWithAddress(donorName, summary.donor.taxId, donorLocation)
       : t.certificates.pdf.donorIntro(donorName, summary.donor.taxId);
@@ -858,8 +867,7 @@ export function DonationCertificateGenerator() {
                 <p>
                   {(() => {
                     const donorName = cleanName(previewDonor.donor.name);
-                    const donorLocationParts = [previewDonor.donor.zipCode, previewDonor.donor.city, previewDonor.donor.province].filter(Boolean);
-                    const donorLocation = donorLocationParts.length > 0 ? donorLocationParts.join(' ') : '';
+                    const donorLocation = buildLocationString(previewDonor.donor.zipCode, previewDonor.donor.city, previewDonor.donor.province);
                     return donorLocation
                       ? t.certificates.pdf.donorIntroWithAddress(donorName, previewDonor.donor.taxId, donorLocation)
                       : t.certificates.pdf.donorIntro(donorName, previewDonor.donor.taxId);
