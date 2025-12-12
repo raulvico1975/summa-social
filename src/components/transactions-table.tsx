@@ -71,6 +71,8 @@ import { EditTransactionDialog } from '@/components/transactions/EditTransaction
 import { NewContactDialog } from '@/components/transactions/NewContactDialog';
 import { TransactionRow } from '@/components/transactions/components/TransactionRow';
 import { TransactionsFilters, TableFilter } from '@/components/transactions/components/TransactionsFilters';
+import { DateFilter, type DateFilterValue } from '@/components/date-filter';
+import { useTransactionFilters } from '@/hooks/use-transaction-filters';
 
 export function TransactionsTable() {
   const { firestore, user, storage } = useFirebase();
@@ -84,6 +86,9 @@ export function TransactionsTable() {
 
   // Filtre actiu
   const [tableFilter, setTableFilter] = React.useState<TableFilter>('all');
+
+  // Filtre de dates
+  const [dateFilter, setDateFilter] = React.useState<DateFilterValue>({ type: 'all' });
 
   // Cercador intel·ligent
   const [searchQuery, setSearchQuery] = React.useState('');
@@ -136,10 +141,13 @@ export function TransactionsTable() {
     [firestore, organizationId]
   );
   
-  const { data: transactions } = useCollection<Transaction>(transactionsCollection);
+  const { data: allTransactions } = useCollection<Transaction>(transactionsCollection);
   const { data: availableCategories } = useCollection<Category>(categoriesCollection);
   const { data: availableContacts } = useCollection<AnyContact>(contactsCollection);
   const { data: availableProjects } = useCollection<Project>(projectsCollection);
+
+  // Aplicar filtre de dates primer
+  const transactions = useTransactionFilters(allTransactions ?? undefined, dateFilter);
 
   // Helper per obtenir el nom traduït d'una categoria (pot ser ID o nom clau)
   const getCategoryDisplayName = React.useCallback((categoryValue: string | null | undefined): string => {
@@ -377,22 +385,23 @@ export function TransactionsTable() {
   // ═══════════════════════════════════════════════════════════════════════════
   // RESUM FILTRAT
   // ═══════════════════════════════════════════════════════════════════════════
-  const hasActiveFilter = tableFilter !== 'all' || searchQuery.trim() !== '';
+  const hasActiveFilter = tableFilter !== 'all' || searchQuery.trim() !== '' || dateFilter.type !== 'all';
 
   const filteredSummary = React.useMemo(() => {
-    if (!hasActiveFilter || !transactions) return null;
+    if (!hasActiveFilter || !allTransactions) return null;
     const visible = filteredTransactions;
     return {
       showing: visible.length,
-      total: transactions.length,
+      total: allTransactions.length,
       income: visible.filter(tx => tx.amount > 0).reduce((sum, tx) => sum + tx.amount, 0),
       expenses: visible.filter(tx => tx.amount < 0).reduce((sum, tx) => sum + tx.amount, 0),
     };
-  }, [filteredTransactions, transactions, hasActiveFilter]);
+  }, [filteredTransactions, allTransactions, hasActiveFilter]);
 
   const clearAllFilters = React.useCallback(() => {
     setTableFilter('all');
     setSearchQuery('');
+    setDateFilter({ type: 'all' });
     setHasUrlFilter(false);
     if (typeof window !== 'undefined') {
       const url = new URL(window.location.href);
@@ -556,6 +565,13 @@ export function TransactionsTable() {
 
   return (
     <TooltipProvider>
+      {/* ═══════════════════════════════════════════════════════════════════════
+          SECCIÓ: Filtre de dates
+          ═══════════════════════════════════════════════════════════════════════ */}
+      <div className="mb-4">
+        <DateFilter value={dateFilter} onChange={setDateFilter} />
+      </div>
+
       {/* ═══════════════════════════════════════════════════════════════════════
           SECCIÓ: Filtres i accions
           ═══════════════════════════════════════════════════════════════════════ */}
