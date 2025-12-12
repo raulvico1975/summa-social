@@ -56,6 +56,7 @@ type ColumnMapping = {
   name: string | null;
   taxId: string | null;
   zipCode: string | null;
+  address: string | null;
   donorType: string | null;
   membershipType: string | null;
   monthlyAmount: string | null;
@@ -85,6 +86,7 @@ const emptyMapping: ColumnMapping = {
   name: null,
   taxId: null,
   zipCode: null,
+  address: null,
   donorType: null,
   membershipType: null,
   monthlyAmount: null,
@@ -131,6 +133,7 @@ function autoDetectColumn(header: string): keyof ColumnMapping | null {
     name: ['nom', 'nombre', 'name', 'raosocial', 'denominacio'],
     taxId: ['dni', 'nif', 'cif', 'taxid', 'documento', 'identificacio'],
     zipCode: ['cp', 'codipostal', 'codigopostal', 'zipcode', 'postal'],
+    address: ['direccion', 'adreça', 'address', 'domicilio', 'calle', 'via', 'carrer'],
     donorType: ['tipus', 'tipo', 'type', 'persona'],
     membershipType: ['modalitat', 'modalidad', 'membership', 'soci', 'socio'],
     monthlyAmount: ['import', 'importe', 'quota', 'cuota', 'amount', 'mensual'],
@@ -209,6 +212,7 @@ export function DonorImporter({
     name: t.importers.donor.fields.name,
     taxId: t.importers.donor.fields.taxId,
     zipCode: t.importers.donor.fields.zipCode,
+    address: t.importers.donor.fields.address,
     donorType: t.importers.donor.fields.type,
     membershipType: t.importers.donor.fields.modality,
     monthlyAmount: t.importers.donor.fields.monthlyAmount,
@@ -378,6 +382,7 @@ export function DonorImporter({
         name: mapping.name ? toTitleCase(String(row[mapping.name] || '')) : '',
         taxId: mapping.taxId ? cleanTaxId(row[mapping.taxId]) : '',
         zipCode: mapping.zipCode ? String(row[mapping.zipCode] || '').trim() : '',
+        address: mapping.address ? String(row[mapping.address] || '').trim() : undefined,
         donorType: mapping.donorType ? parseDonorType(row[mapping.donorType]) : 'individual',
         membershipType: mapping.membershipType ? parseMembershipType(row[mapping.membershipType]) : 'one-time',
         monthlyAmount: mapping.monthlyAmount ? parseAmount(row[mapping.monthlyAmount]) : undefined,
@@ -461,6 +466,7 @@ const executeImport = async () => {
         };
 
         // Afegir camps opcionals només si tenen valor
+        if (row.parsed.address) cleanData.address = row.parsed.address;
         if (row.parsed.monthlyAmount) cleanData.monthlyAmount = row.parsed.monthlyAmount;
         if (row.parsed.iban) cleanData.iban = row.parsed.iban;
         if (row.parsed.email) cleanData.email = row.parsed.email;

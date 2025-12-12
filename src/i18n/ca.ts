@@ -327,6 +327,7 @@ export const ca = {
         name: "Nom *",
         taxId: "DNI/CIF *",
         zipCode: "Codi Postal *",
+        address: "Adreça",
         type: "Tipus (Particular/Empresa)",
         modality: "Modalitat (Puntual/Soci)",
         monthlyAmount: "Import mensual",

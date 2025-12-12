@@ -327,6 +327,7 @@ export const es = {
         name: "Nombre *",
         taxId: "DNI/CIF *",
         zipCode: "Código Postal *",
+        address: "Dirección",
         type: "Tipo (Particular/Empresa)",
         modality: "Modalidad (Puntual/Socio)",
         monthlyAmount: "Importe mensual",
