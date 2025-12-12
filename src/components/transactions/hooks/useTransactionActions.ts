@@ -2,7 +2,7 @@
 
 import * as React from 'react';
 import { doc, CollectionReference } from 'firebase/firestore';
-import { ref, uploadBytes, getDownloadURL, FirebaseStorage } from 'firebase/storage';
+import { ref, uploadBytes, getDownloadURL, deleteObject, FirebaseStorage } from 'firebase/storage';
 import { updateDocumentNonBlocking, deleteDocumentNonBlocking, addDocumentNonBlocking } from '@/firebase';
 import { useToast } from '@/hooks/use-toast';
 import { useTranslations } from '@/i18n';
@@ -52,10 +52,16 @@ interface UseTransactionActionsReturn {
   handleSetProject: (txId: string, newProjectId: string | null) => void;
 
   // ─────────────────────────────────────────────────────────────────────────
-  // DOCUMENT UPLOAD
+  // DOCUMENT UPLOAD / DELETE
   // ─────────────────────────────────────────────────────────────────────────
   docLoadingStates: Record<string, boolean>;
   handleAttachDocument: (transactionId: string) => void;
+  handleDeleteDocument: (transactionId: string) => void;
+  isDeleteDocDialogOpen: boolean;
+  transactionToDeleteDoc: Transaction | null;
+  handleDeleteDocClick: (transaction: Transaction) => void;
+  handleDeleteDocConfirm: () => void;
+  handleCloseDeleteDocDialog: () => void;
 
   // ─────────────────────────────────────────────────────────────────────────
   // EDIT DIALOG (state managed by EditTransactionDialog component)
@@ -102,9 +108,11 @@ export function useTransactionActions({
   const { log } = useAppLog();
 
   // ─────────────────────────────────────────────────────────────────────────
-  // STATE: Document Upload
+  // STATE: Document Upload / Delete
   // ─────────────────────────────────────────────────────────────────────────
   const [docLoadingStates, setDocLoadingStates] = React.useState<Record<string, boolean>>({});
+  const [isDeleteDocDialogOpen, setIsDeleteDocDialogOpen] = React.useState(false);
+  const [transactionToDeleteDoc, setTransactionToDeleteDoc] = React.useState<Transaction | null>(null);
 
   // ─────────────────────────────────────────────────────────────────────────
   // STATE: Edit Dialog
@@ -182,66 +190,146 @@ export function useTransactionActions({
     }
     log(`Organització identificada: ${organizationId}`);
 
-    const fileInput = document.createElement('input');
-    fileInput.type = 'file';
-    fileInput.accept = 'application/pdf,image/*,.doc,.docx,.xls,.xlsx';
-    fileInput.style.display = 'none';
+    // Delay per permetre que el dropdown menu es tanqui correctament abans d'obrir el file picker.
+    // Sense aquest delay, el DropdownMenu de Radix UI pot quedar en un estat inconsistent
+    // que bloqueja tota la interfície.
+    setTimeout(() => {
+      const fileInput = document.createElement('input');
+      fileInput.type = 'file';
+      fileInput.accept = 'application/pdf,image/*,.doc,.docx,.xls,.xlsx';
+      fileInput.style.display = 'none';
 
-    fileInput.onchange = async (e) => {
-      const target = e.target as HTMLInputElement;
-      const file = target.files?.[0];
-      if (!file) {
-        log(`[${transactionId}] Selección de archivo cancelada.`);
-        document.body.removeChild(fileInput);
-        return;
-      }
-      log(`[${transactionId}] Archivo seleccionado: ${file.name} (Tamaño: ${file.size} bytes)`);
-
-      setDocLoadingStates(prev => ({ ...prev, [transactionId]: true }));
-      toast({ title: t.movements.table.uploadingDocument, description: `Adjuntant "${file.name}"...` });
-
-      const storagePath = `organizations/${organizationId}/documents/${transactionId}/${file.name}`;
-      log(`[${transactionId}] Ruta de subida en Storage: ${storagePath}`);
-      const storageRef = ref(storage, storagePath);
-
-      try {
-        log(`[${transactionId}] Iniciando 'uploadBytes'...`);
-        const uploadResult = await uploadBytes(storageRef, file);
-
-        log(`[${transactionId}] 'uploadBytes' completado con éxito.`);
-        const downloadURL = await getDownloadURL(uploadResult.ref);
-        log(`[${transactionId}] URL de descarga obtenida: ${downloadURL}`);
-
-        updateDocumentNonBlocking(doc(transactionsCollection, transactionId), { document: downloadURL });
-
-        toast({ title: t.movements.table.uploadSuccess, description: t.movements.table.documentUploadedSuccessfully });
-        log(`[${transactionId}] ¡Éxito! Subida completada.`);
-      } catch (error: unknown) {
-        console.error('FIREBASE_UPLOAD_ERROR_DIAGNOSTIC', error);
-        const firebaseError = error as { code?: string; message?: string };
-        const errorCode = firebaseError.code || 'UNKNOWN_CODE';
-        const errorMessage = firebaseError.message || 'Error desconocido.';
-        log(`[${transactionId}] ERROR en la subida: ${errorCode} - ${errorMessage}`);
-
-        let description = t.movements.table.unexpectedError(errorCode);
-        if (errorCode === 'storage/unauthorized' || errorCode === 'storage/object-not-found') {
-          description = t.movements.table.firebasePermissionDenied;
-        } else if (errorCode === 'storage/canceled') {
-          description = t.movements.table.uploadCancelled;
+      fileInput.onchange = async (e) => {
+        const target = e.target as HTMLInputElement;
+        const file = target.files?.[0];
+        if (!file) {
+          log(`[${transactionId}] Selección de archivo cancelada.`);
+          if (fileInput.parentElement) {
+            document.body.removeChild(fileInput);
+          }
+          return;
         }
-        toast({ variant: 'destructive', title: t.movements.table.uploadError, description, duration: 9000 });
-      } finally {
-        log(`[${transactionId}] Finalizando proceso de subida.`);
-        setDocLoadingStates(prev => ({ ...prev, [transactionId]: false }));
-        if (fileInput.parentElement) {
-          document.body.removeChild(fileInput);
-        }
-      }
-    };
+        log(`[${transactionId}] Archivo seleccionado: ${file.name} (Tamaño: ${file.size} bytes)`);
 
-    document.body.appendChild(fileInput);
-    fileInput.click();
+        setDocLoadingStates(prev => ({ ...prev, [transactionId]: true }));
+        toast({ title: t.movements.table.uploadingDocument, description: `Adjuntant "${file.name}"...` });
+
+        const storagePath = `organizations/${organizationId}/documents/${transactionId}/${file.name}`;
+        log(`[${transactionId}] Ruta de subida en Storage: ${storagePath}`);
+        const storageRef = ref(storage, storagePath);
+
+        try {
+          log(`[${transactionId}] Iniciando 'uploadBytes'...`);
+          const uploadResult = await uploadBytes(storageRef, file);
+
+          log(`[${transactionId}] 'uploadBytes' completado con éxito.`);
+          const downloadURL = await getDownloadURL(uploadResult.ref);
+          log(`[${transactionId}] URL de descarga obtenida: ${downloadURL}`);
+
+          updateDocumentNonBlocking(doc(transactionsCollection, transactionId), { document: downloadURL });
+
+          toast({ title: t.movements.table.uploadSuccess, description: t.movements.table.documentUploadedSuccessfully });
+          log(`[${transactionId}] ¡Éxito! Subida completada.`);
+        } catch (error: unknown) {
+          console.error('FIREBASE_UPLOAD_ERROR_DIAGNOSTIC', error);
+          const firebaseError = error as { code?: string; message?: string };
+          const errorCode = firebaseError.code || 'UNKNOWN_CODE';
+          const errorMessage = firebaseError.message || 'Error desconocido.';
+          log(`[${transactionId}] ERROR en la subida: ${errorCode} - ${errorMessage}`);
+
+          let description = t.movements.table.unexpectedError(errorCode);
+          if (errorCode === 'storage/unauthorized' || errorCode === 'storage/object-not-found') {
+            description = t.movements.table.firebasePermissionDenied;
+          } else if (errorCode === 'storage/canceled') {
+            description = t.movements.table.uploadCancelled;
+          }
+          toast({ variant: 'destructive', title: t.movements.table.uploadError, description, duration: 9000 });
+        } finally {
+          log(`[${transactionId}] Finalizando proceso de subida.`);
+          setDocLoadingStates(prev => ({ ...prev, [transactionId]: false }));
+          if (fileInput.parentElement) {
+            document.body.removeChild(fileInput);
+          }
+        }
+      };
+
+      document.body.appendChild(fileInput);
+      fileInput.click();
+    }, 100);
   }, [organizationId, transactionsCollection, storage, toast, t, log]);
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // DOCUMENT DELETE
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  const handleDeleteDocClick = React.useCallback((transaction: Transaction) => {
+    setTransactionToDeleteDoc(transaction);
+    setIsDeleteDocDialogOpen(true);
+  }, []);
+
+  const handleDeleteDocConfirm = React.useCallback(async () => {
+    if (!transactionToDeleteDoc || !transactionsCollection || !organizationId) {
+      setIsDeleteDocDialogOpen(false);
+      setTransactionToDeleteDoc(null);
+      return;
+    }
+
+    const transactionId = transactionToDeleteDoc.id;
+    const documentUrl = transactionToDeleteDoc.document;
+
+    setDocLoadingStates(prev => ({ ...prev, [transactionId]: true }));
+    log(`[${transactionId}] Iniciant eliminació de document...`);
+
+    try {
+      // Intentar eliminar el fitxer de Storage si tenim la URL
+      if (documentUrl) {
+        try {
+          // Extreure el path del Storage des de la URL de download
+          const storageRef = ref(storage, documentUrl);
+          await deleteObject(storageRef);
+          log(`[${transactionId}] Fitxer eliminat de Storage.`);
+        } catch (storageError: unknown) {
+          // Si el fitxer no existeix o hi ha error, continuem igualment
+          const firebaseError = storageError as { code?: string };
+          if (firebaseError.code !== 'storage/object-not-found') {
+            console.warn('Error eliminant fitxer de Storage:', storageError);
+            log(`[${transactionId}] Avís: No s'ha pogut eliminar el fitxer de Storage.`);
+          }
+        }
+      }
+
+      // Actualitzar Firestore per treure la referència al document
+      updateDocumentNonBlocking(doc(transactionsCollection, transactionId), { document: null });
+
+      toast({ title: t.movements.table.documentDeleted });
+      log(`[${transactionId}] Document eliminat correctament.`);
+    } catch (error: unknown) {
+      console.error('Error eliminant document:', error);
+      const firebaseError = error as { message?: string };
+      toast({
+        variant: 'destructive',
+        title: t.movements.table.uploadError,
+        description: firebaseError.message || t.common.error,
+      });
+      log(`[${transactionId}] ERROR eliminant document.`);
+    } finally {
+      setDocLoadingStates(prev => ({ ...prev, [transactionId]: false }));
+      setIsDeleteDocDialogOpen(false);
+      setTransactionToDeleteDoc(null);
+    }
+  }, [transactionToDeleteDoc, transactionsCollection, organizationId, storage, toast, t, log]);
+
+  const handleCloseDeleteDocDialog = React.useCallback(() => {
+    setIsDeleteDocDialogOpen(false);
+    setTransactionToDeleteDoc(null);
+  }, []);
+
+  const handleDeleteDocument = React.useCallback((transactionId: string) => {
+    const transaction = transactions?.find(tx => tx.id === transactionId);
+    if (transaction) {
+      handleDeleteDocClick(transaction);
+    }
+  }, [transactions, handleDeleteDocClick]);
 
   // ═══════════════════════════════════════════════════════════════════════════
   // EDIT DIALOG
@@ -390,9 +478,15 @@ export function useTransactionActions({
     handleSetContact,
     handleSetProject,
 
-    // Document Upload
+    // Document Upload / Delete
     docLoadingStates,
     handleAttachDocument,
+    handleDeleteDocument,
+    isDeleteDocDialogOpen,
+    transactionToDeleteDoc,
+    handleDeleteDocClick,
+    handleDeleteDocConfirm,
+    handleCloseDeleteDocDialog,
 
     // Edit Dialog
     isEditDialogOpen,

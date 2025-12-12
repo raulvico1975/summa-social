@@ -75,6 +75,7 @@ interface TransactionRowProps {
   onSetContact: (txId: string, contactId: string | null, contactType?: ContactType) => void;
   onSetProject: (txId: string, projectId: string | null) => void;
   onAttachDocument: (txId: string) => void;
+  onDeleteDocument: (txId: string) => void;
   onCategorize: (txId: string) => void;
   onEdit: (tx: Transaction) => void;
   onDelete: (tx: Transaction) => void;
@@ -102,6 +103,7 @@ interface TransactionRowProps {
     viewDocument: string;
     attachProof: string;
     attachDocument: string;
+    deleteDocument: string;
     manageReturn: string;
     edit: string;
     splitRemittance: string;
@@ -151,6 +153,7 @@ export const TransactionRow = React.memo(function TransactionRow({
   onSetContact,
   onSetProject,
   onAttachDocument,
+  onDeleteDocument,
   onCategorize,
   onEdit,
   onDelete,
@@ -204,6 +207,10 @@ export const TransactionRow = React.memo(function TransactionRow({
   const handleAttachDocument = React.useCallback(() => {
     onAttachDocument(tx.id);
   }, [tx.id, onAttachDocument]);
+
+  const handleDeleteDocument = React.useCallback(() => {
+    onDeleteDocument(tx.id);
+  }, [tx.id, onDeleteDocument]);
 
   const handleEdit = React.useCallback(() => {
     onEdit(tx);
@@ -434,19 +441,32 @@ export const TransactionRow = React.memo(function TransactionRow({
         {isDocumentLoading ? (
           <Loader2 className="h-4 w-4 animate-spin mx-auto text-muted-foreground" />
         ) : hasDocument ? (
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <a
-                href={tx.document!}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex"
-              >
-                <Circle className="h-3 w-3 fill-green-500 text-green-500" />
-              </a>
-            </TooltipTrigger>
-            <TooltipContent>{t.viewDocument}</TooltipContent>
-          </Tooltip>
+          <div className="inline-flex items-center gap-1">
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <a
+                  href={tx.document!}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex"
+                >
+                  <Circle className="h-3 w-3 fill-green-500 text-green-500" />
+                </a>
+              </TooltipTrigger>
+              <TooltipContent>{t.viewDocument}</TooltipContent>
+            </Tooltip>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <button
+                  onClick={handleDeleteDocument}
+                  className="inline-flex text-muted-foreground hover:text-destructive transition-colors"
+                >
+                  <Trash2 className="h-3 w-3" />
+                </button>
+              </TooltipTrigger>
+              <TooltipContent>{t.deleteDocument}</TooltipContent>
+            </Tooltip>
+          </div>
         ) : (
           <Tooltip>
             <TooltipTrigger asChild>

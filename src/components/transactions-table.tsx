@@ -230,9 +230,14 @@ export function TransactionsTable() {
     handleSetCategory,
     handleSetContact,
     handleSetProject,
-    // Document Upload
+    // Document Upload / Delete
     docLoadingStates,
     handleAttachDocument,
+    handleDeleteDocument,
+    isDeleteDocDialogOpen,
+    transactionToDeleteDoc,
+    handleDeleteDocConfirm,
+    handleCloseDeleteDocDialog,
     // Edit Dialog
     isEditDialogOpen,
     editingTransaction,
@@ -462,6 +467,7 @@ export function TransactionsTable() {
     viewDocument: t.movements.table.viewDocument,
     attachProof: t.movements.table.attachProof,
     attachDocument: t.movements.table.attachDocument,
+    deleteDocument: t.movements.table.deleteDocument,
     manageReturn: t.movements.table.manageReturn,
     edit: t.movements.table.edit,
     splitRemittance: t.movements.table.splitRemittance,
@@ -627,6 +633,7 @@ export function TransactionsTable() {
                 onSetContact={handleSetContact}
                 onSetProject={handleSetProject}
                 onAttachDocument={handleAttachDocument}
+                onDeleteDocument={handleDeleteDocument}
                 onCategorize={handleCategorize}
                 onEdit={handleEditClick}
                 onDelete={handleDeleteClick}
@@ -783,6 +790,24 @@ export function TransactionsTable() {
           <AlertDialogFooter>
             <AlertDialogCancel onClick={handleCloseDeleteDialog}>{t.common.cancel}</AlertDialogCancel>
             <AlertDialogAction onClick={handleDeleteConfirm}>
+              {t.common.delete}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Delete Document Dialog */}
+      <AlertDialog open={isDeleteDocDialogOpen} onOpenChange={(open) => !open && handleCloseDeleteDocDialog()}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{t.movements.table.confirmDeleteDocument}</AlertDialogTitle>
+            <AlertDialogDescription>
+              {t.movements.table.confirmDeleteDocumentDescription}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={handleCloseDeleteDocDialog}>{t.common.cancel}</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDeleteDocConfirm}>
               {t.common.delete}
             </AlertDialogAction>
           </AlertDialogFooter>
