@@ -141,14 +141,43 @@ const parseAmount = (value: string): number => {
 };
 
 // Detecta automàticament la fila on comencen les dades
+// Busca primer una fila capçalera amb paraules clau, i després la primera fila de dades
 const detectStartRow = (rows: string[][]): number => {
+  // Paraules clau que indiquen capçalera (en minúscules per comparació)
+  const headerKeywords = [
+    'importe', 'import', 'amount', 'cantidad',
+    'iban', 'cuenta', 'account',
+    'nombre', 'name', 'titular',
+    'referencia', 'reference', 'dni', 'nif', 'cif',
+    'estado', 'status', 'recibo'
+  ];
+
+  let headerRowIndex = -1;
+
+  // Primer busca una fila que sembli capçalera (conté paraules clau)
+  for (let i = 0; i < Math.min(rows.length, 30); i++) { // Busca a les primeres 30 files
+    const row = rows[i];
+    const rowText = row.join(' ').toLowerCase();
+    const matchCount = headerKeywords.filter(kw => rowText.includes(kw)).length;
+
+    if (matchCount >= 2) { // Si té almenys 2 paraules clau, és probablement la capçalera
+      headerRowIndex = i;
+      break;
+    }
+  }
+
+  // Si hem trobat capçalera, les dades comencen a la següent fila
+  if (headerRowIndex >= 0) {
+    return headerRowIndex + 1;
+  }
+
+  // Fallback: busca la primera fila amb dades vàlides (import + text)
   for (let i = 0; i < rows.length; i++) {
     const row = rows[i];
-    // Busca una fila amb almenys 2 columnes i que contingui un número que sembli import
     if (row.length >= 2) {
       const hasAmount = row.some(cell => {
         const amount = parseAmount(cell);
-        return amount > 0 && amount < 100000; // Import raonable
+        return amount > 0 && amount < 100000;
       });
       const hasText = row.some(cell => /[a-zA-ZáéíóúÁÉÍÓÚñÑ]{3,}/.test(cell));
       if (hasAmount && hasText) {
@@ -187,8 +216,10 @@ const detectColumns = (rows: string[][], startRow: number): { amount: number, na
     }
 
     // Detecta columna d'IBAN (format ES + 22 dígits o similar)
+    // Suporta formats: "ES1234567890123456789012", "IBAN ES12 3456 7890...", "ES12 3456 7890..."
     const ibanScores = values.filter(v => {
-      const cleaned = v.trim().replace(/\s/g, '').toUpperCase();
+      // Elimina prefix "IBAN " i espais per normalitzar
+      const cleaned = v.trim().replace(/^IBAN\s*/i, '').replace(/\s/g, '').toUpperCase();
       // IBAN espanyol: ES + 22 dígits, o altres països: 2 lletres + fins a 32 caràcters
       return /^[A-Z]{2}[0-9]{2}[A-Z0-9]{10,30}$/.test(cleaned);
     }).length;
@@ -478,10 +509,13 @@ export function RemittanceSplitter({
     }
   };
 
-  // Normalitza IBAN eliminant espais i passant a majúscules
+  // Normalitza IBAN eliminant prefix "IBAN ", espais i passant a majúscules
   const normalizeIban = (iban: string): string => {
     if (!iban) return '';
-    return iban.replace(/\s/g, '').toUpperCase();
+    return iban
+      .replace(/^IBAN\s*/i, '') // Elimina prefix "IBAN " (Santander i altres)
+      .replace(/\s/g, '')       // Elimina tots els espais
+      .toUpperCase();
   };
 
   const findDonor = (name: string, taxId: string, iban: string, donors: Donor[]): Donor | undefined => {
@@ -540,8 +574,27 @@ export function RemittanceSplitter({
 
         const amount = parseAmount(row[amountColumn] || '');
         const name = nameColumn !== null ? (row[nameColumn] || '').trim() : '';
-        const taxId = taxIdColumn !== null ? (row[taxIdColumn] || '').trim().toUpperCase() : '';
-        const iban = ibanColumn !== null ? (row[ibanColumn] || '').trim().toUpperCase().replace(/\s/g, '') : '';
+
+        // Obtenir taxId - pot venir de la columna taxId o ser detectat a "Referencia externa"
+        let taxId = taxIdColumn !== null ? (row[taxIdColumn] || '').trim().toUpperCase() : '';
+
+        // Si no tenim taxId directament, mirar si algun altre camp conté un DNI
+        // Format Santander: la columna "Referencia externa" pot contenir el DNI
+        if (!taxId) {
+          for (let col = 0; col < row.length; col++) {
+            if (col === amountColumn || col === nameColumn || col === ibanColumn) continue;
+            const cellValue = (row[col] || '').trim().toUpperCase();
+            // Detecta format DNI: 7-8 dígits + lletra, o NIE: XYZ + 7 dígits + lletra
+            if (/^[0-9]{7,8}[A-Z]$/.test(cellValue) || /^[XYZ][0-9]{7}[A-Z]$/.test(cellValue)) {
+              taxId = cellValue;
+              break;
+            }
+          }
+        }
+
+        // Normalitzar IBAN (elimina prefix "IBAN " i espais)
+        const rawIban = ibanColumn !== null ? (row[ibanColumn] || '').trim() : '';
+        const iban = rawIban.replace(/^IBAN\s*/i, '').replace(/\s/g, '').toUpperCase();
 
         // Saltar files sense import o sense identificació
         if (amount <= 0 || (!name && !taxId && !iban)) continue;
