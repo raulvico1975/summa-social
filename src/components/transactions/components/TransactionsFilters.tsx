@@ -9,6 +9,12 @@ import {
   TooltipTrigger,
 } from '@/components/ui/tooltip';
 import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import {
   Sparkles,
   Loader2,
   Circle,
@@ -17,6 +23,8 @@ import {
   Download,
   Search,
   X,
+  ChevronDown,
+  User,
 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 
@@ -48,6 +56,7 @@ interface TransactionsFiltersProps {
     withoutDocument: string;
     uncategorized: string;
     noContact: string;
+    pendingFilters: string;
     exportTooltip: string;
     searchPlaceholder: string;
   };
@@ -74,6 +83,28 @@ export const TransactionsFilters = React.memo(function TransactionsFilters({
   onExportExpensesWithoutDoc,
   t,
 }: TransactionsFiltersProps) {
+  // Calcular quants tipus de pendents tenen elements
+  const pendingTypesCount = [
+    returnsCount > 0,
+    expensesWithoutDocCount > 0,
+    uncategorizedCount > 0,
+    noContactCount > 0,
+  ].filter(Boolean).length;
+
+  // Comprovar si un filtre de pendents està actiu
+  const isPendingFilterActive = ['returns', 'missing', 'uncategorized', 'noContact'].includes(currentFilter);
+
+  // Obtenir el nom del filtre actiu per mostrar al botó
+  const getActiveFilterLabel = (): string => {
+    switch (currentFilter) {
+      case 'returns': return t.returns;
+      case 'missing': return t.withoutDocument;
+      case 'uncategorized': return t.uncategorized;
+      case 'noContact': return t.noContact;
+      default: return t.pendingFilters;
+    }
+  };
+
   return (
     <div className="flex flex-col gap-3 w-full">
       {/* Cercador intel·ligent */}
@@ -98,104 +129,115 @@ export const TransactionsFilters = React.memo(function TransactionsFilters({
 
       {/* Filtres i accions */}
       <div className="flex gap-2 items-center flex-wrap">
-      {/* Categorize All button */}
-      <Button
-        onClick={onBatchCategorize}
-        disabled={!hasUncategorized || isBatchCategorizing}
-        variant="default"
-        size="sm"
-      >
-        {isBatchCategorizing ? (
-          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-        ) : (
-          <Sparkles className="mr-2 h-4 w-4" />
-        )}
-        {t.categorizeAll}
-      </Button>
-
-      <div className="h-4 w-px bg-border" />
-
-      {/* All filter */}
-      <Button
-        variant={currentFilter === 'all' ? 'default' : 'outline'}
-        size="sm"
-        onClick={() => onFilterChange('all')}
-      >
-        {t.all} ({totalCount})
-      </Button>
-
-      {/* Returns filter */}
-      {returnsCount > 0 && (
+        {/* Categorize All button */}
         <Button
-          variant={currentFilter === 'returns' ? 'default' : 'outline'}
+          onClick={onBatchCategorize}
+          disabled={!hasUncategorized || isBatchCategorizing}
+          variant="default"
           size="sm"
-          onClick={() => onFilterChange('returns')}
-          className={currentFilter !== 'returns' && pendingReturnsCount > 0 ? 'border-red-300 text-red-600' : ''}
         >
-          <Undo2 className="mr-1.5 h-3 w-3" />
-          {t.returns} ({returnsCount})
-          {pendingReturnsCount > 0 && (
-            <Badge variant="destructive" className="ml-2 h-5 px-1.5">
-              {pendingReturnsCount}
-            </Badge>
+          {isBatchCategorizing ? (
+            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+          ) : (
+            <Sparkles className="mr-2 h-4 w-4" />
           )}
+          {t.categorizeAll}
         </Button>
-      )}
 
-      {/* Without document filter */}
-      {expensesWithoutDocCount > 0 && (
+        <div className="h-4 w-px bg-border" />
+
+        {/* All filter */}
         <Button
-          variant={currentFilter === 'missing' ? 'default' : 'outline'}
+          variant={currentFilter === 'all' ? 'default' : 'outline'}
           size="sm"
-          onClick={() => onFilterChange('missing')}
+          onClick={() => onFilterChange('all')}
         >
-          <Circle className="mr-1.5 h-2 w-2 fill-muted-foreground text-muted-foreground" />
-          {t.withoutDocument} ({expensesWithoutDocCount})
+          {t.all} ({totalCount})
         </Button>
-      )}
 
-      {/* Uncategorized filter */}
-      {uncategorizedCount > 0 && (
-        <Button
-          variant={currentFilter === 'uncategorized' ? 'default' : 'outline'}
-          size="sm"
-          onClick={() => onFilterChange('uncategorized')}
-          className={currentFilter !== 'uncategorized' ? 'border-orange-300 text-orange-600' : ''}
-        >
-          <AlertTriangle className="mr-1.5 h-3 w-3" />
-          {t.uncategorized} ({uncategorizedCount})
-        </Button>
-      )}
+        {/* Pending filters dropdown */}
+        {pendingTypesCount > 0 && (
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                variant={isPendingFilterActive ? 'default' : 'outline'}
+                size="sm"
+                className={!isPendingFilterActive && pendingReturnsCount > 0 ? 'border-red-300 text-red-600' : ''}
+              >
+                {isPendingFilterActive ? getActiveFilterLabel() : t.pendingFilters} ({pendingTypesCount})
+                <ChevronDown className="ml-1.5 h-3 w-3" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="start">
+              {/* Returns filter */}
+              {returnsCount > 0 && (
+                <DropdownMenuItem
+                  onClick={() => onFilterChange('returns')}
+                  className={currentFilter === 'returns' ? 'bg-accent' : ''}
+                >
+                  <Undo2 className="mr-2 h-4 w-4" />
+                  {t.returns} ({returnsCount})
+                  {pendingReturnsCount > 0 && (
+                    <Badge variant="destructive" className="ml-auto h-5 px-1.5">
+                      {pendingReturnsCount}
+                    </Badge>
+                  )}
+                </DropdownMenuItem>
+              )}
 
-      {/* No contact filter */}
-      {noContactCount > 0 && (
-        <Button
-          variant={currentFilter === 'noContact' ? 'default' : 'outline'}
-          size="sm"
-          onClick={() => onFilterChange('noContact')}
-        >
-          <Circle className="mr-1.5 h-2 w-2 fill-muted-foreground text-muted-foreground" />
-          {t.noContact} ({noContactCount})
-        </Button>
-      )}
+              {/* Without document filter */}
+              {expensesWithoutDocCount > 0 && (
+                <DropdownMenuItem
+                  onClick={() => onFilterChange('missing')}
+                  className={currentFilter === 'missing' ? 'bg-accent' : ''}
+                >
+                  <Circle className="mr-2 h-4 w-4 fill-muted-foreground text-muted-foreground" />
+                  {t.withoutDocument} ({expensesWithoutDocCount})
+                </DropdownMenuItem>
+              )}
 
-      {/* Export button */}
-      {expensesWithoutDocCount > 0 && (
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={onExportExpensesWithoutDoc}
-            >
-              <Download className="h-4 w-4" />
-            </Button>
-          </TooltipTrigger>
-          <TooltipContent>
-            {t.exportTooltip}
-          </TooltipContent>
-        </Tooltip>
-      )}
+              {/* Uncategorized filter */}
+              {uncategorizedCount > 0 && (
+                <DropdownMenuItem
+                  onClick={() => onFilterChange('uncategorized')}
+                  className={currentFilter === 'uncategorized' ? 'bg-accent' : ''}
+                >
+                  <AlertTriangle className="mr-2 h-4 w-4 text-orange-500" />
+                  {t.uncategorized} ({uncategorizedCount})
+                </DropdownMenuItem>
+              )}
+
+              {/* No contact filter */}
+              {noContactCount > 0 && (
+                <DropdownMenuItem
+                  onClick={() => onFilterChange('noContact')}
+                  className={currentFilter === 'noContact' ? 'bg-accent' : ''}
+                >
+                  <User className="mr-2 h-4 w-4 text-muted-foreground" />
+                  {t.noContact} ({noContactCount})
+                </DropdownMenuItem>
+              )}
+            </DropdownMenuContent>
+          </DropdownMenu>
+        )}
+
+        {/* Export button */}
+        {expensesWithoutDocCount > 0 && (
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={onExportExpensesWithoutDoc}
+              >
+                <Download className="h-4 w-4" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>
+              {t.exportTooltip}
+            </TooltipContent>
+          </Tooltip>
+        )}
       </div>
     </div>
   );

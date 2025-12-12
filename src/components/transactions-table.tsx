@@ -559,6 +559,7 @@ export function TransactionsTable() {
     withoutDocument: t.movements.table.withoutDocument,
     uncategorized: t.movements.table.uncategorized,
     noContact: t.movements.table.noContact,
+    pendingFilters: t.movements.table.pendingFilters,
     exportTooltip: t.movements.table.exportTooltip,
     searchPlaceholder: t.movements.table.searchPlaceholder,
   }), [t]);

@@ -115,6 +115,7 @@ export const ca = {
       withoutDocument: "Sense document",
       uncategorized: "Sense categoritzar",
       noContact: "Sense contacte",
+      pendingFilters: "Pendents",
       showAll: "Veure tots",
       attachProof: "Adjuntar justificant",
       attachDocument: "Adjuntar document",

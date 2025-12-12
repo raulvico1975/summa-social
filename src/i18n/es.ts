@@ -115,6 +115,7 @@ export const es = {
       withoutDocument: "Sin documento",
       uncategorized: "Sin categorizar",
       noContact: "Sin contacto",
+      pendingFilters: "Pendientes",
       showAll: "Ver todos",
       attachProof: "Adjuntar justificante",
       attachDocument: "Adjuntar documento",
