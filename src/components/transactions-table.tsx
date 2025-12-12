@@ -52,7 +52,10 @@ import {
   Check,
   AlertTriangle,
   Undo2,
+  Download,
+  X,
 } from 'lucide-react';
+import * as XLSX from 'xlsx';
 import type { Transaction, Category, Project, AnyContact, Donor, Supplier, ContactType } from '@/lib/data';
 import { formatCurrencyEU } from '@/lib/normalize';
 import { useToast } from '@/hooks/use-toast';
@@ -372,8 +375,73 @@ export function TransactionsTable() {
   }, [transactions, tableFilter, expensesWithoutDoc, returnTransactions, uncategorizedTransactions, noContactTransactions, sortDateAsc, searchQuery, contactMap, projectMap, getCategoryDisplayName]);
 
   // ═══════════════════════════════════════════════════════════════════════════
+  // RESUM FILTRAT
+  // ═══════════════════════════════════════════════════════════════════════════
+  const hasActiveFilter = tableFilter !== 'all' || searchQuery.trim() !== '';
+
+  const filteredSummary = React.useMemo(() => {
+    if (!hasActiveFilter || !transactions) return null;
+    const visible = filteredTransactions;
+    return {
+      showing: visible.length,
+      total: transactions.length,
+      income: visible.filter(tx => tx.amount > 0).reduce((sum, tx) => sum + tx.amount, 0),
+      expenses: visible.filter(tx => tx.amount < 0).reduce((sum, tx) => sum + tx.amount, 0),
+    };
+  }, [filteredTransactions, transactions, hasActiveFilter]);
+
+  const clearAllFilters = React.useCallback(() => {
+    setTableFilter('all');
+    setSearchQuery('');
+    setHasUrlFilter(false);
+    if (typeof window !== 'undefined') {
+      const url = new URL(window.location.href);
+      url.searchParams.delete('filter');
+      window.history.replaceState({}, '', url.toString());
+    }
+  }, []);
+
+  // ═══════════════════════════════════════════════════════════════════════════
   // EXPORTAR EXCEL
   // ═══════════════════════════════════════════════════════════════════════════
+
+  const handleExportFilteredTransactions = () => {
+    if (filteredTransactions.length === 0) {
+      toast({ title: t.movements.table.noTransactions });
+      return;
+    }
+
+    const excelData = filteredTransactions.map(tx => ({
+      [t.movements.table.date]: formatDate(tx.date),
+      [t.movements.table.amount]: tx.amount,
+      [t.movements.table.concept]: tx.description,
+      [t.movements.table.contact]: tx.contactId && contactMap[tx.contactId] ? contactMap[tx.contactId].name : '',
+      [t.movements.table.category]: tx.category ? getCategoryDisplayName(tx.category) : '',
+    }));
+
+    const worksheet = XLSX.utils.json_to_sheet(excelData);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, 'Moviments');
+
+    // Ajustar amplada de columnes
+    const colWidths = [
+      { wch: 12 }, // Data
+      { wch: 12 }, // Import
+      { wch: 40 }, // Concepte
+      { wch: 25 }, // Contacte
+      { wch: 20 }, // Categoria
+    ];
+    worksheet['!cols'] = colWidths;
+
+    const fileName = `Moviments_filtrats_${new Date().toISOString().split('T')[0]}.xlsx`;
+    XLSX.writeFile(workbook, fileName);
+
+    toast({
+      title: t.movements.table.exportSuccess,
+      description: t.movements.table.exportedCount(filteredTransactions.length),
+    });
+  };
+
   const handleExportExpensesWithoutDoc = () => {
     if (expensesWithoutDoc.length === 0) {
       toast({ title: t.movements.table.noExpensesWithoutDocument, description: t.movements.table.allExpensesHaveProof });
@@ -534,26 +602,50 @@ export function TransactionsTable() {
         </div>
       )}
 
-      {/* Avís de filtre actiu des de dashboard */}
-      {hasUrlFilter && (tableFilter === 'uncategorized' || tableFilter === 'noContact') && (
-        <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg flex items-center gap-3">
-          <AlertTriangle className="h-5 w-5 text-blue-500 flex-shrink-0" />
-          <div className="flex-1">
-            <p className="text-sm font-medium text-blue-800">
-              Filtrant: {tableFilter === 'uncategorized' ? t.movements.table.uncategorized : t.movements.table.noContact}
-            </p>
-            <p className="text-xs text-blue-600">
-              Mostrant només {filteredTransactions.length} moviments filtrats
-            </p>
+      {/* Barra de resum quan hi ha filtre actiu */}
+      {filteredSummary && (
+        <div className="mb-4 px-4 py-2 bg-muted/50 border rounded-lg flex items-center justify-between gap-4">
+          <div className="flex items-center gap-4 text-sm text-muted-foreground">
+            <span>
+              {t.movements.table.showingOf(filteredSummary.showing, filteredSummary.total)}
+            </span>
+            <span className="text-muted-foreground/50">·</span>
+            <span>
+              {t.movements.table.income}: <span className="text-green-600 font-medium">{formatCurrencyEU(filteredSummary.income)}</span>
+            </span>
+            <span className="text-muted-foreground/50">·</span>
+            <span>
+              {t.movements.table.expenses}: <span className="text-red-600 font-medium">{formatCurrencyEU(filteredSummary.expenses)}</span>
+            </span>
           </div>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={clearFilter}
-            className="border-blue-300 text-blue-700 hover:bg-blue-100"
-          >
-            {t.movements.table.showAll}
-          </Button>
+          <div className="flex items-center gap-2">
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8"
+                  onClick={handleExportFilteredTransactions}
+                >
+                  <Download className="h-4 w-4" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>{t.movements.table.exportFiltered}</TooltipContent>
+            </Tooltip>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8"
+                  onClick={clearAllFilters}
+                >
+                  <X className="h-4 w-4" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>{t.movements.table.clearFilters}</TooltipContent>
+            </Tooltip>
+          </div>
         </div>
       )}
 
