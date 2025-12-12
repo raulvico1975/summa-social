@@ -57,6 +57,8 @@ type ColumnMapping = {
   taxId: string | null;
   zipCode: string | null;
   address: string | null;
+  city: string | null;
+  province: string | null;
   donorType: string | null;
   membershipType: string | null;
   monthlyAmount: string | null;
@@ -87,6 +89,8 @@ const emptyMapping: ColumnMapping = {
   taxId: null,
   zipCode: null,
   address: null,
+  city: null,
+  province: null,
   donorType: null,
   membershipType: null,
   monthlyAmount: null,
@@ -134,6 +138,8 @@ function autoDetectColumn(header: string): keyof ColumnMapping | null {
     taxId: ['dni', 'nif', 'cif', 'taxid', 'documento', 'identificacio'],
     zipCode: ['cp', 'codipostal', 'codigopostal', 'zipcode', 'postal'],
     address: ['direccion', 'adreça', 'address', 'domicilio', 'calle', 'via', 'carrer'],
+    city: ['ciudad', 'ciutat', 'city', 'localidad', 'poblacion', 'municipio'],
+    province: ['provincia', 'province', 'comunidad', 'region', 'estado'],
     donorType: ['tipus', 'tipo', 'type', 'persona'],
     membershipType: ['modalitat', 'modalidad', 'membership', 'soci', 'socio'],
     monthlyAmount: ['import', 'importe', 'quota', 'cuota', 'amount', 'mensual'],
@@ -213,6 +219,8 @@ export function DonorImporter({
     taxId: t.importers.donor.fields.taxId,
     zipCode: t.importers.donor.fields.zipCode,
     address: t.importers.donor.fields.address,
+    city: t.importers.donor.fields.city,
+    province: t.importers.donor.fields.province,
     donorType: t.importers.donor.fields.type,
     membershipType: t.importers.donor.fields.modality,
     monthlyAmount: t.importers.donor.fields.monthlyAmount,
@@ -383,6 +391,8 @@ export function DonorImporter({
         taxId: mapping.taxId ? cleanTaxId(row[mapping.taxId]) : '',
         zipCode: mapping.zipCode ? String(row[mapping.zipCode] || '').trim() : '',
         address: mapping.address ? String(row[mapping.address] || '').trim() : undefined,
+        city: mapping.city ? String(row[mapping.city] || '').trim() : undefined,
+        province: mapping.province ? String(row[mapping.province] || '').trim() : undefined,
         donorType: mapping.donorType ? parseDonorType(row[mapping.donorType]) : 'individual',
         membershipType: mapping.membershipType ? parseMembershipType(row[mapping.membershipType]) : 'one-time',
         monthlyAmount: mapping.monthlyAmount ? parseAmount(row[mapping.monthlyAmount]) : undefined,
@@ -467,6 +477,8 @@ const executeImport = async () => {
 
         // Afegir camps opcionals només si tenen valor
         if (row.parsed.address) cleanData.address = row.parsed.address;
+        if (row.parsed.city) cleanData.city = row.parsed.city;
+        if (row.parsed.province) cleanData.province = row.parsed.province;
         if (row.parsed.monthlyAmount) cleanData.monthlyAmount = row.parsed.monthlyAmount;
         if (row.parsed.iban) cleanData.iban = row.parsed.iban;
         if (row.parsed.email) cleanData.email = row.parsed.email;

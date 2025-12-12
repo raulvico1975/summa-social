@@ -328,6 +328,8 @@ export const ca = {
         taxId: "DNI/CIF *",
         zipCode: "Codi Postal *",
         address: "Adreça",
+        city: "Ciutat",
+        province: "Província",
         type: "Tipus (Particular/Empresa)",
         modality: "Modalitat (Puntual/Soci)",
         monthlyAmount: "Import mensual",
