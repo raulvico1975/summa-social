@@ -1,6 +1,7 @@
 'use client';
 
 import * as React from 'react';
+import * as XLSX from 'xlsx';
 import {
   Dialog,
   DialogContent,
@@ -319,14 +320,77 @@ export function RemittanceSplitter({
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        const text = e.target?.result as string;
-        processRawText(text);
-      };
-      reader.readAsText(file, 'UTF-8');
+      const fileName = file.name.toLowerCase();
+      const isExcel = fileName.endsWith('.xlsx') || fileName.endsWith('.xls');
+
+      if (isExcel) {
+        parseExcelFile(file);
+      } else {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          const text = e.target?.result as string;
+          processRawText(text);
+        };
+        reader.readAsText(file, 'UTF-8');
+      }
     }
     event.target.value = '';
+  };
+
+  const parseExcelFile = (file: File) => {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      try {
+        const data = e.target?.result;
+        const workbook = XLSX.read(data, { type: 'array' });
+
+        // Agafa la primera fulla
+        const firstSheetName = workbook.SheetNames[0];
+        const worksheet = workbook.Sheets[firstSheetName];
+
+        // Converteix a matriu de files (totes les cel·les com a string)
+        const rows: string[][] = XLSX.utils.sheet_to_json(worksheet, {
+          header: 1,
+          defval: '',
+          raw: false
+        });
+
+        // Filtra files completament buides
+        const filteredRows = rows.filter(row =>
+          row.some(cell => cell !== null && cell !== undefined && String(cell).trim() !== '')
+        ).map(row =>
+          row.map(cell => String(cell ?? '').trim())
+        );
+
+        if (filteredRows.length === 0) {
+          toast({ variant: 'destructive', title: t.movements.splitter.error, description: 'El fitxer Excel està buit' });
+          return;
+        }
+
+        setAllRows(filteredRows);
+        setRawText(''); // No tenim text raw per Excel
+        setDelimiter(''); // No aplica per Excel
+
+        // Detecta fila inicial i columnes
+        const detectedStartRow = detectStartRow(filteredRows);
+        setStartRow(detectedStartRow);
+
+        const detected = detectColumns(filteredRows, detectedStartRow);
+        setAmountColumn(detected.amount);
+        setNameColumn(detected.name);
+        setTaxIdColumn(detected.taxId);
+        setIbanColumn(detected.iban);
+
+        log(`[Splitter] Excel carregat: ${filteredRows.length} files`);
+        log(`[Splitter] Detecció automàtica - Fila inicial: ${detectedStartRow}, Import: col ${detected.amount}, Nom: col ${detected.name}, DNI: col ${detected.taxId}, IBAN: col ${detected.iban}`);
+
+        setStep('mapping');
+      } catch (error: any) {
+        console.error('Error parsing Excel:', error);
+        toast({ variant: 'destructive', title: t.movements.splitter.error, description: `Error llegint Excel: ${error.message}` });
+      }
+    };
+    reader.readAsArrayBuffer(file);
   };
 
   const processRawText = (text: string) => {
@@ -688,7 +752,7 @@ export function RemittanceSplitter({
               type="file"
               ref={fileInputRef}
               onChange={handleFileChange}
-              accept=".csv,.txt"
+              accept=".csv,.txt,.xlsx,.xls"
               className="hidden"
               disabled={isProcessing}
             />
@@ -757,24 +821,27 @@ export function RemittanceSplitter({
 
             {/* Configuració de parsing */}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              <div className="space-y-1">
-                <Label className="text-xs">{t.movements.splitter.delimiter}</Label>
-                <Select value={delimiter} onValueChange={(v) => {
-                  setDelimiter(v);
-                  const lines = rawText.split('\n').filter(line => line.trim());
-                  const rows = lines.map(line => line.split(v).map(cell => cell.trim()));
-                  setAllRows(rows);
-                }}>
-                  <SelectTrigger className="h-8">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value=";">{t.movements.splitter.semicolon}</SelectItem>
-                    <SelectItem value=",">{t.movements.splitter.comma}</SelectItem>
-                    <SelectItem value={"\t"}>{t.movements.splitter.tab}</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
+              {/* Delimitador només visible per CSV/TXT (quan tenim rawText) */}
+              {rawText && (
+                <div className="space-y-1">
+                  <Label className="text-xs">{t.movements.splitter.delimiter}</Label>
+                  <Select value={delimiter} onValueChange={(v) => {
+                    setDelimiter(v);
+                    const lines = rawText.split('\n').filter(line => line.trim());
+                    const rows = lines.map(line => line.split(v).map(cell => cell.trim()));
+                    setAllRows(rows);
+                  }}>
+                    <SelectTrigger className="h-8">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value=";">{t.movements.splitter.semicolon}</SelectItem>
+                      <SelectItem value=",">{t.movements.splitter.comma}</SelectItem>
+                      <SelectItem value={"\t"}>{t.movements.splitter.tab}</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
               <div className="space-y-1">
                 <Label className="text-xs">{t.movements.splitter.startRow}</Label>
                 <Input
