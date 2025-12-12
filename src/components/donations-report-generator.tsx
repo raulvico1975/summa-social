@@ -24,22 +24,112 @@ import {
   AlertDescription,
   AlertTitle,
 } from '@/components/ui/alert';
-import { Download, Loader2, Heart, AlertTriangle, Undo2 } from 'lucide-react';
+import { Download, Loader2, Heart, Undo2 } from 'lucide-react';
 import type { Donor, Transaction, AnyContact } from '@/lib/data';
 import { formatCurrencyEU } from '@/lib/normalize';
 import { useToast } from '@/hooks/use-toast';
-import Papa from 'papaparse';
+import * as XLSX from 'xlsx';
 import { useCollection, useFirebase, useMemoFirebase } from '@/firebase';
 import { collection } from 'firebase/firestore';
 import { useTranslations } from '@/i18n';
 import { useCurrentOrganization } from '@/hooks/organization-provider';
 
+// Mapa de codis de província per a Model 182
+const PROVINCE_CODES: Record<string, string> = {
+  'álava': '01', 'alava': '01', 'araba': '01',
+  'albacete': '02',
+  'alicante': '03', 'alacant': '03',
+  'almería': '04', 'almeria': '04',
+  'ávila': '05', 'avila': '05',
+  'badajoz': '06',
+  'baleares': '07', 'balears': '07', 'illes balears': '07', 'mallorca': '07',
+  'barcelona': '08',
+  'burgos': '09',
+  'cáceres': '10', 'caceres': '10',
+  'cádiz': '11', 'cadiz': '11',
+  'castellón': '12', 'castellon': '12', 'castelló': '12',
+  'ciudad real': '13',
+  'córdoba': '14', 'cordoba': '14',
+  'coruña': '15', 'a coruña': '15', 'la coruña': '15',
+  'cuenca': '16',
+  'girona': '17', 'gerona': '17',
+  'granada': '18',
+  'guadalajara': '19',
+  'guipúzcoa': '20', 'guipuzcoa': '20', 'gipuzkoa': '20',
+  'huelva': '21',
+  'huesca': '22', 'osca': '22',
+  'jaén': '23', 'jaen': '23',
+  'león': '24', 'leon': '24',
+  'lleida': '25', 'lérida': '25', 'lerida': '25',
+  'la rioja': '26', 'rioja': '26',
+  'lugo': '27',
+  'madrid': '28',
+  'málaga': '29', 'malaga': '29',
+  'murcia': '30',
+  'navarra': '31', 'nafarroa': '31',
+  'ourense': '32', 'orense': '32',
+  'asturias': '33', 'oviedo': '33',
+  'palencia': '34',
+  'las palmas': '35', 'gran canaria': '35',
+  'pontevedra': '36',
+  'salamanca': '37',
+  'santa cruz de tenerife': '38', 'tenerife': '38',
+  'cantabria': '39', 'santander': '39',
+  'segovia': '40',
+  'sevilla': '41',
+  'soria': '42',
+  'tarragona': '43',
+  'teruel': '44',
+  'toledo': '45',
+  'valencia': '46', 'valència': '46',
+  'valladolid': '47',
+  'vizcaya': '48', 'bizkaia': '48',
+  'zamora': '49',
+  'zaragoza': '50', 'saragossa': '50',
+  'ceuta': '51',
+  'melilla': '52',
+};
+
+/**
+ * Obté el codi de província (2 dígits) a partir del nom o codi postal
+ */
+function getProvinceCode(province?: string, zipCode?: string): string {
+  // Primer intentar pel nom de província
+  if (province) {
+    const normalized = province.toLowerCase().trim();
+    if (PROVINCE_CODES[normalized]) {
+      return PROVINCE_CODES[normalized];
+    }
+    // Si ja és un codi de 2 dígits
+    if (/^\d{2}$/.test(province)) {
+      return province;
+    }
+  }
+
+  // Si no, obtenir del codi postal (primers 2 dígits)
+  if (zipCode && zipCode.length >= 2) {
+    const prefix = zipCode.substring(0, 2);
+    // Validar que és un codi vàlid (01-52)
+    const num = parseInt(prefix, 10);
+    if (num >= 1 && num <= 52) {
+      return prefix;
+    }
+  }
+
+  return '';
+}
+
 interface DonationReportRow {
   donorName: string;
   donorTaxId: string;
   donorZipCode: string;
+  donorProvince: string;       // Codi província (2 dígits)
+  donorNaturaleza: 'F' | 'J';  // F = persona física, J = persona jurídica
   totalAmount: number;
   returnedAmount: number;
+  valor1: number;              // Donacions any anterior (year-1)
+  valor2: number;              // Donacions dos anys abans (year-2)
+  recurrente: boolean;         // true si valor1 > 0 AND valor2 > 0
 }
 
 interface ReportStats {
@@ -92,14 +182,18 @@ export function DonationsReportGenerator() {
     }
 
     const year = parseInt(selectedYear, 10);
-    
+    const year1 = year - 1;  // Any anterior
+    const year2 = year - 2;  // Dos anys abans
+
     // Crear mapa de donants per ID
     const donorMap = new Map(donors.map(d => [d.id, d]));
 
-    const donationsByDonor: Record<string, { 
-      donor: Donor, 
-      total: number, 
-      returned: number 
+    const donationsByDonor: Record<string, {
+      donor: Donor,
+      total: number,
+      returned: number,
+      totalYear1: number,  // Donacions any-1
+      totalYear2: number,  // Donacions any-2
     }> = {};
 
     // Estadístiques globals
@@ -107,49 +201,62 @@ export function DonationsReportGenerator() {
     let excludedAmount = 0;
 
     // ═══════════════════════════════════════════════════════════════════════════
-    // PROCESSAR TOTES LES TRANSACCIONS
+    // PROCESSAR TOTES LES TRANSACCIONS (any actual + històric)
     // ═══════════════════════════════════════════════════════════════════════════
     transactions.forEach(tx => {
       const txYear = new Date(tx.date).getFullYear();
-      
-      // Només processar transaccions de l'any seleccionat amb donant assignat
-      if (txYear === year && tx.contactId && donorMap.has(tx.contactId)) {
-        
+
+      // Només processar transaccions amb donant assignat
+      if (tx.contactId && donorMap.has(tx.contactId)) {
+
         // Inicialitzar si no existeix
         if (!donationsByDonor[tx.contactId]) {
-          donationsByDonor[tx.contactId] = { 
-            donor: donorMap.get(tx.contactId)!, 
+          donationsByDonor[tx.contactId] = {
+            donor: donorMap.get(tx.contactId)!,
             total: 0,
-            returned: 0 
+            returned: 0,
+            totalYear1: 0,
+            totalYear2: 0,
           };
         }
-        
+
         // ═══════════════════════════════════════════════════════════════════════
-        // LÒGICA DE CÀLCUL:
-        // 1. Devolucions (transactionType === 'return', import negatiu) → comptabilitzar
-        // 2. Donacions marcades com retornades → excloure
-        // 3. Donacions normals → sumar
+        // LÒGICA DE CÀLCUL PER ANY
         // ═══════════════════════════════════════════════════════════════════════
-        
+
+        // Calcular import net de la transacció
+        let netAmount = 0;
+
         if (tx.transactionType === 'return' && tx.amount < 0) {
-          // És una DEVOLUCIÓ vinculada a aquest donant
-          // L'import és negatiu, així que agafem el valor absolut per comptabilitzar
-          const returnedAmount = Math.abs(tx.amount);
-          donationsByDonor[tx.contactId].returned += returnedAmount;
-          excludedReturns++;
-          excludedAmount += returnedAmount;
-          
-        } else if (tx.amount > 0) {
-          // És una donació positiva
-          if (tx.donationStatus === 'returned') {
-            // Donació marcada com a retornada (manualment) → excloure
-            donationsByDonor[tx.contactId].returned += tx.amount;
+          // Devolució → restar
+          netAmount = tx.amount; // ja és negatiu
+          if (txYear === year) {
+            excludedReturns++;
+            excludedAmount += Math.abs(tx.amount);
+          }
+        } else if (tx.amount > 0 && tx.donationStatus !== 'returned') {
+          // Donació vàlida → sumar
+          netAmount = tx.amount;
+        } else if (tx.amount > 0 && tx.donationStatus === 'returned') {
+          // Donació retornada manualment → restar
+          netAmount = -tx.amount;
+          if (txYear === year) {
             excludedReturns++;
             excludedAmount += tx.amount;
-          } else {
-            // Donació normal → sumar al total
-            donationsByDonor[tx.contactId].total += tx.amount;
           }
+        }
+
+        // Acumular segons l'any
+        if (txYear === year) {
+          if (netAmount > 0) {
+            donationsByDonor[tx.contactId].total += netAmount;
+          } else {
+            donationsByDonor[tx.contactId].returned += Math.abs(netAmount);
+          }
+        } else if (txYear === year1) {
+          donationsByDonor[tx.contactId].totalYear1 += Math.max(0, netAmount);
+        } else if (txYear === year2) {
+          donationsByDonor[tx.contactId].totalYear2 += Math.max(0, netAmount);
         }
       }
     });
@@ -158,14 +265,24 @@ export function DonationsReportGenerator() {
     // CALCULAR TOTAL NET: donacions - devolucions per cada donant
     // ═══════════════════════════════════════════════════════════════════════════
     const generatedReportData: DonationReportRow[] = Object.values(donationsByDonor)
-      .map(({ donor, total, returned }) => ({
-        donorName: donor.name,
-        donorTaxId: donor.taxId,
-        donorZipCode: donor.zipCode,
-        // Total net = donacions - devolucions (mínim 0)
-        totalAmount: Math.max(0, total - returned),
-        returnedAmount: returned,
-      }))
+      .map(({ donor, total, returned, totalYear1, totalYear2 }) => {
+        const netAmount = Math.max(0, total - returned);
+        const valor1 = totalYear1;
+        const valor2 = totalYear2;
+
+        return {
+          donorName: donor.name,
+          donorTaxId: donor.taxId,
+          donorZipCode: donor.zipCode,
+          donorProvince: getProvinceCode(donor.province, donor.zipCode),
+          donorNaturaleza: donor.donorType === 'company' ? 'J' as const : 'F' as const,
+          totalAmount: netAmount,
+          returnedAmount: returned,
+          valor1,
+          valor2,
+          recurrente: valor1 > 0 && valor2 > 0,
+        };
+      })
       // Només incloure donants amb total positiu
       .filter(({ totalAmount }) => totalAmount > 0)
       .sort((a, b) => b.totalAmount - a.totalAmount);
@@ -204,30 +321,52 @@ export function DonationsReportGenerator() {
     }
   };
 
-  const handleExportCSV = () => {
+  const handleExportExcel = () => {
     if (reportData.length === 0) {
       toast({ variant: 'destructive', title: t.reports.noDataToExport, description: t.reports.noDataToExportDescription });
       return;
     }
 
-    const csvData = reportData.map(row => ({
-      [t.reports.csvHeaderFullName]: row.donorName,
-      [t.reports.csvHeaderTaxId]: row.donorTaxId,
-      [t.reports.csvHeaderZipCode]: row.donorZipCode,
-      [t.reports.csvHeaderAmount]: row.totalAmount.toFixed(2),
+    // ═══════════════════════════════════════════════════════════════════════════
+    // FORMAT MODEL 182 PER GESTORIES
+    // Columnes: NIF, NOMBRE, CLAVE, PROVINCIA, PORCENTAJE, VALOR, VALOR_1, VALOR_2, RECURRENTE, NATURALEZA
+    // ═══════════════════════════════════════════════════════════════════════════
+    const excelData = reportData.map(row => ({
+      'NIF': row.donorTaxId,
+      'NOMBRE': row.donorName,
+      'CLAVE': 'A',                          // Sempre "A" per donacions
+      'PROVINCIA': row.donorProvince,        // Codi 2 dígits
+      'PORCENTAJE': '',                      // Buit - la gestoria/AEAT ho calcula automàticament
+      'VALOR': row.totalAmount.toFixed(2).replace('.', ','),     // Import any actual
+      'VALOR_1': row.valor1.toFixed(2).replace('.', ','),        // Import any-1
+      'VALOR_2': row.valor2.toFixed(2).replace('.', ','),        // Import any-2
+      'RECURRENTE': row.recurrente ? 'X' : '',                   // X si donant recurrent
+      'NATURALEZA': row.donorNaturaleza,     // F = física, J = jurídica
     }));
 
-    const csv = Papa.unparse(csvData);
-    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-    const link = document.createElement('a');
-    const url = URL.createObjectURL(blob);
-    link.setAttribute('href', url);
-    link.setAttribute('download', `informe_donacions_model182_${selectedYear}.csv`);
-    link.style.visibility = 'hidden';
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    
+    // Crear workbook i worksheet
+    const ws = XLSX.utils.json_to_sheet(excelData);
+
+    // Ajustar amplada de columnes
+    ws['!cols'] = [
+      { wch: 12 },  // NIF
+      { wch: 40 },  // NOMBRE
+      { wch: 6 },   // CLAVE
+      { wch: 10 },  // PROVINCIA
+      { wch: 12 },  // PORCENTAJE
+      { wch: 12 },  // VALOR
+      { wch: 12 },  // VALOR_1
+      { wch: 12 },  // VALOR_2
+      { wch: 12 },  // RECURRENTE
+      { wch: 12 },  // NATURALEZA
+    ];
+
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Model 182');
+
+    // Descarregar arxiu
+    XLSX.writeFile(wb, `model182_${selectedYear}.xlsx`);
+
     toast({ title: t.reports.exportComplete, description: t.reports.exportCompleteDescription });
   };
   
@@ -258,9 +397,9 @@ export function DonationsReportGenerator() {
                     {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                     {t.reports.generate}
                 </Button>
-                <Button variant="outline" onClick={handleExportCSV} disabled={reportData.length === 0}>
+                <Button variant="outline" onClick={handleExportExcel} disabled={reportData.length === 0}>
                     <Download className="mr-2 h-4 w-4" />
-                    {t.reports.exportCsv}
+                    {t.reports.exportExcel}
                 </Button>
               </div>
           </div>

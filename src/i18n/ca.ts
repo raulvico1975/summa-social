@@ -741,6 +741,7 @@ export const ca = {
     donationsReportDescription: "Genera el llistat de donacions anuals per a la declaració a Hisenda.",
     selectYear: "Selecciona un any",
     generate: "Generar Informe",
+    exportExcel: "Exportar Excel (Model 182)",
     exportCsv: "Exportar a CSV",
     donorName: "Nom del Donant",
     donorTaxId: "DNI/CIF",
@@ -755,7 +756,7 @@ export const ca = {
     reportGenerated: "Informe Generat",
     reportGeneratedDescription: (year: string, count: number) => `S'ha generat l'informe per a l'any ${year} amb ${count} donants.`,
     exportComplete: "Exportació Completada",
-    exportCompleteDescription: "L'informe de donacions s'ha descarregat com a arxiu CSV.",
+    exportCompleteDescription: "L'informe de donacions s'ha descarregat com a arxiu Excel.",
     returnsDiscountedTitle: "Devolucions descomptades",
     returnsDiscountedDescription: (count: number, amount: string) =>
       `S'han descomptat ${count} devolució${count > 1 ? 'ns' : ''} per un total de ${amount} del total de donacions. El Model 182 reflecteix les donacions netes efectivament rebudes.`,

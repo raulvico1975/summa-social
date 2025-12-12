@@ -774,6 +774,7 @@ export const es = {
     donationsReportDescription: "Genera el listado de donaciones anuales para la declaración a Hacienda.",
     selectYear: "Selecciona un año",
     generate: "Generar Informe",
+    exportExcel: "Exportar Excel (Model 182)",
     exportCsv: "Exportar a CSV",
     donorName: "Nombre del Donante",
     donorTaxId: "DNI/CIF",
@@ -788,7 +789,7 @@ export const es = {
     reportGenerated: "Informe Generado",
     reportGeneratedDescription: (year: string, count: number) => `Se ha generado el informe para el año ${year} con ${count} donantes.`,
     exportComplete: "Exportación Completada",
-    exportCompleteDescription: "El informe de donaciones se ha descargado como archivo CSV.",
+    exportCompleteDescription: "El informe de donaciones se ha descargado como archivo Excel.",
     returnsDiscountedTitle: "Devoluciones descontadas",
     returnsDiscountedDescription: (count: number, amount: string) =>
       `Se han descontado ${count} devolución${count > 1 ? 'es' : ''} por un total de ${amount} del total de donaciones. El Modelo 182 refleja las donaciones netas efectivamente recibidas.`,
