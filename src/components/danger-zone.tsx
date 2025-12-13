@@ -162,6 +162,9 @@ export function DangerZone() {
         batch.update(doc(transactionsRef, remittanceInfo.id), {
           isRemittance: false,
           remittanceItemCount: null,
+          category: null,
+          contactId: null,
+          contactType: null,
         });
 
         await batch.commit();
