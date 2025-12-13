@@ -63,11 +63,34 @@ export type Transaction = {
    * Similar a les remeses dividides
    */
   isSplit?: boolean;
-  
+
   /**
    * ID de la transacció pare (si és fruit d'una divisió)
    */
   parentTransactionId?: string | null;
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // CAMPS PER GESTIÓ DE REMESES
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  /**
+   * Indica si aquesta transacció és una remesa agrupada (múltiples quotes en un sol apunt)
+   */
+  isRemittance?: boolean;
+
+  /**
+   * Nombre de quotes individuals dins la remesa
+   * Només té valor si isRemittance = true
+   */
+  remittanceItemCount?: number;
+
+  /**
+   * Origen de la transacció
+   * - bank: Importada des d'extracte bancari
+   * - remittance: Generada al dividir una remesa
+   * - manual: Creada manualment per l'usuari
+   */
+  source?: 'bank' | 'remittance' | 'manual';
 };
 
 export type Category = {

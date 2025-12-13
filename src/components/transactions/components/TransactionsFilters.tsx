@@ -27,6 +27,8 @@ import {
   User,
 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Label } from '@/components/ui/label';
 
 // =============================================================================
 // TYPES
@@ -49,6 +51,8 @@ interface TransactionsFiltersProps {
   isBatchCategorizing: boolean;
   onBatchCategorize: () => void;
   onExportExpensesWithoutDoc: () => void;
+  hideRemittanceItems: boolean;
+  onHideRemittanceItemsChange: (value: boolean) => void;
   t: {
     categorizeAll: string;
     all: string;
@@ -59,6 +63,7 @@ interface TransactionsFiltersProps {
     pendingFilters: string;
     exportTooltip: string;
     searchPlaceholder: string;
+    hideRemittanceItems: string;
   };
 }
 
@@ -81,6 +86,8 @@ export const TransactionsFilters = React.memo(function TransactionsFilters({
   isBatchCategorizing,
   onBatchCategorize,
   onExportExpensesWithoutDoc,
+  hideRemittanceItems,
+  onHideRemittanceItemsChange,
   t,
 }: TransactionsFiltersProps) {
   // Calcular quants tipus de pendents tenen elements
@@ -238,6 +245,18 @@ export const TransactionsFilters = React.memo(function TransactionsFilters({
             </TooltipContent>
           </Tooltip>
         )}
+
+        {/* Hide remittance items checkbox */}
+        <div className="flex items-center space-x-2 ml-auto">
+          <Checkbox
+            id="hideRemittanceItems"
+            checked={hideRemittanceItems}
+            onCheckedChange={(checked) => onHideRemittanceItemsChange(checked === true)}
+          />
+          <Label htmlFor="hideRemittanceItems" className="text-sm text-muted-foreground cursor-pointer">
+            {t.hideRemittanceItems}
+          </Label>
+        </div>
       </div>
     </div>
   );

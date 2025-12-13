@@ -745,8 +745,14 @@ export function RemittanceSplitter({
         newDonorIds.set(donation.rowIndex, newDonorRef.id);
       }
 
-      // 2. Eliminar transacció original
-      batch.delete(doc(transactionsRef, transaction.id));
+      // 2. Marcar transacció original com a remesa (no eliminar)
+      batch.update(doc(transactionsRef, transaction.id), {
+        isRemittance: true,
+        remittanceItemCount: parsedDonations.length,
+        category: 'memberFees',
+        contactId: null,
+        contactType: null,
+      });
 
       // 3. Crear noves transaccions
       for (const donation of parsedDonations) {
@@ -775,6 +781,8 @@ export function RemittanceSplitter({
           document: null,
           contactId,
           projectId: transaction.projectId ?? null,
+          source: 'remittance',
+          parentTransactionId: transaction.id,
         };
         if (contactId) {
           (newTxData as any).contactType = 'donor';

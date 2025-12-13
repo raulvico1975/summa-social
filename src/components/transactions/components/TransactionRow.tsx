@@ -48,6 +48,7 @@ import {
   AlertTriangle,
   Undo2,
   Ban,
+  Eye,
 } from 'lucide-react';
 import type { Transaction, Category, Project, ContactType } from '@/lib/data';
 import { formatCurrencyEU } from '@/lib/normalize';
@@ -81,6 +82,7 @@ interface TransactionRowProps {
   onDelete: (tx: Transaction) => void;
   onOpenReturnDialog: (tx: Transaction) => void;
   onSplitRemittance: (tx: Transaction) => void;
+  onViewRemittanceDetail: (txId: string) => void;
   onCreateNewContact: (txId: string, type: 'donor' | 'supplier') => void;
   // Translations
   t: {
@@ -108,6 +110,8 @@ interface TransactionRowProps {
     edit: string;
     splitRemittance: string;
     delete: string;
+    viewRemittanceDetail: string;
+    remittanceQuotes: string;
   };
   getCategoryDisplayName: (category: string | null | undefined) => string;
 }
@@ -159,6 +163,7 @@ export const TransactionRow = React.memo(function TransactionRow({
   onDelete,
   onOpenReturnDialog,
   onSplitRemittance,
+  onViewRemittanceDetail,
   onCreateNewContact,
   t,
   getCategoryDisplayName,
@@ -227,6 +232,10 @@ export const TransactionRow = React.memo(function TransactionRow({
   const handleSplitRemittance = React.useCallback(() => {
     onSplitRemittance(tx);
   }, [tx, onSplitRemittance]);
+
+  const handleViewRemittanceDetail = React.useCallback(() => {
+    onViewRemittanceDetail(tx.id);
+  }, [tx.id, onViewRemittanceDetail]);
 
   // Render transaction type badge
   const renderTransactionTypeBadge = () => {
@@ -301,7 +310,24 @@ export const TransactionRow = React.memo(function TransactionRow({
       {/* Concept + Note + Badge */}
       <TableCell>
         <div className="space-y-1">
-          {renderTransactionTypeBadge()}
+          <div className="flex items-center gap-2">
+            {renderTransactionTypeBadge()}
+            {tx.isRemittance && (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Badge
+                    variant="outline"
+                    className="gap-1 text-xs cursor-pointer hover:bg-accent"
+                    onClick={handleViewRemittanceDetail}
+                  >
+                    <Eye className="h-3 w-3" />
+                    {tx.remittanceItemCount} {t.remittanceQuotes}
+                  </Badge>
+                </TooltipTrigger>
+                <TooltipContent>{t.viewRemittanceDetail}</TooltipContent>
+              </Tooltip>
+            )}
+          </div>
           <p className={`text-sm truncate max-w-[280px] ${isReturnedDonation ? 'text-gray-400' : ''}`} title={tx.description}>
             {tx.description}
           </p>

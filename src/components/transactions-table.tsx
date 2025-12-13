@@ -60,6 +60,7 @@ import type { Transaction, Category, Project, AnyContact, Donor, Supplier, Conta
 import { formatCurrencyEU } from '@/lib/normalize';
 import { useToast } from '@/hooks/use-toast';
 import { RemittanceSplitter } from '@/components/remittance-splitter';
+import { RemittanceDetailModal } from '@/components/remittance-detail-modal';
 import { useCollection, useFirebase, useMemoFirebase } from '@/firebase';
 import { collection } from 'firebase/firestore';
 import { useTranslations } from '@/i18n';
@@ -122,6 +123,9 @@ export function TransactionsTable() {
   // Columna Projecte col·lapsable
   const [showProjectColumn, setShowProjectColumn] = React.useState(false);
 
+  // Filtre per amagar desglossament de remeses
+  const [hideRemittanceItems, setHideRemittanceItems] = React.useState(true);
+
 
   // Col·leccions
   const transactionsCollection = useMemoFirebase(
@@ -165,6 +169,10 @@ export function TransactionsTable() {
 
   const [isSplitterOpen, setIsSplitterOpen] = React.useState(false);
   const [transactionToSplit, setTransactionToSplit] = React.useState<Transaction | null>(null);
+
+  // Modal detall remesa
+  const [isRemittanceDetailOpen, setIsRemittanceDetailOpen] = React.useState(false);
+  const [selectedRemittanceId, setSelectedRemittanceId] = React.useState<string | null>(null);
 
   // Maps per noms
   const contactMap = React.useMemo(() =>
@@ -333,6 +341,11 @@ export function TransactionsTable() {
         result = transactions;
     }
 
+    // Filtre per amagar quotes individuals de remeses
+    if (hideRemittanceItems) {
+      result = result.filter(tx => tx.source !== 'remittance');
+    }
+
     // Filtre de cerca intel·ligent
     if (searchQuery.trim()) {
       const query = searchQuery.toLowerCase().trim();
@@ -380,7 +393,7 @@ export function TransactionsTable() {
       const dateB = new Date(b.date).getTime();
       return sortDateAsc ? dateA - dateB : dateB - dateA;
     });
-  }, [transactions, tableFilter, expensesWithoutDoc, returnTransactions, uncategorizedTransactions, noContactTransactions, sortDateAsc, searchQuery, contactMap, projectMap, getCategoryDisplayName]);
+  }, [transactions, tableFilter, expensesWithoutDoc, returnTransactions, uncategorizedTransactions, noContactTransactions, sortDateAsc, searchQuery, contactMap, projectMap, getCategoryDisplayName, hideRemittanceItems]);
 
   // ═══════════════════════════════════════════════════════════════════════════
   // RESUM FILTRAT
@@ -515,6 +528,11 @@ export function TransactionsTable() {
     setTransactionToSplit(null);
   };
 
+  const handleViewRemittanceDetail = (remittanceId: string) => {
+    setSelectedRemittanceId(remittanceId);
+    setIsRemittanceDetailOpen(true);
+  };
+
   const hasUncategorized = React.useMemo(() => transactions?.some(tx => !tx.category), [transactions]);
 
   // Memoized categories map per tipus
@@ -549,6 +567,8 @@ export function TransactionsTable() {
     edit: t.movements.table.edit,
     splitRemittance: t.movements.table.splitRemittance,
     delete: t.movements.table.delete,
+    viewRemittanceDetail: t.movements.table.viewRemittanceDetail,
+    remittanceQuotes: t.movements.table.remittanceQuotes,
   }), [t]);
 
   // Memoized filter translations
@@ -562,6 +582,7 @@ export function TransactionsTable() {
     pendingFilters: t.movements.table.pendingFilters,
     exportTooltip: t.movements.table.exportTooltip,
     searchPlaceholder: t.movements.table.searchPlaceholder,
+    hideRemittanceItems: t.movements.table.hideRemittanceItems,
   }), [t]);
 
   return (
@@ -592,6 +613,8 @@ export function TransactionsTable() {
           isBatchCategorizing={isBatchCategorizing}
           onBatchCategorize={handleBatchCategorize}
           onExportExpensesWithoutDoc={handleExportExpensesWithoutDoc}
+          hideRemittanceItems={hideRemittanceItems}
+          onHideRemittanceItemsChange={setHideRemittanceItems}
           t={filterTranslations}
         />
       </div>
@@ -748,6 +771,7 @@ export function TransactionsTable() {
                 onDelete={handleDeleteClick}
                 onOpenReturnDialog={handleOpenReturnDialog}
                 onSplitRemittance={handleSplitRemittance}
+                onViewRemittanceDetail={handleViewRemittanceDetail}
                 onCreateNewContact={handleOpenNewContactDialog}
                 t={rowTranslations}
                 getCategoryDisplayName={getCategoryDisplayName}
@@ -931,6 +955,16 @@ export function TransactionsTable() {
           transaction={transactionToSplit}
           existingDonors={donors}
           onSplitDone={handleOnSplitDone}
+        />
+      )}
+
+      {/* Remittance Detail Modal */}
+      {organizationId && (
+        <RemittanceDetailModal
+          open={isRemittanceDetailOpen}
+          onOpenChange={setIsRemittanceDetailOpen}
+          remittanceId={selectedRemittanceId}
+          organizationId={organizationId}
         />
       )}
     </TooltipProvider>
