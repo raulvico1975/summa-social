@@ -141,50 +141,73 @@ const parseAmount = (value: string): number => {
 };
 
 // Detecta automàticament la fila on comencen les dades
-// Busca primer una fila capçalera amb paraules clau, i després la primera fila de dades
+// Utilitza consistència entre files i prioritza IBAN/DNI com a indicadors forts
 const detectStartRow = (rows: string[][]): number => {
-  // Paraules clau que indiquen capçalera (en minúscules per comparació)
-  const headerKeywords = [
-    'importe', 'import', 'amount', 'cantidad',
-    'iban', 'cuenta', 'account',
-    'nombre', 'name', 'titular',
-    'referencia', 'reference', 'dni', 'nif', 'cif',
-    'estado', 'status', 'recibo'
-  ];
+  const ibanPattern = /^(IBAN\s*)?[A-Z]{2}[0-9]{2}[A-Z0-9\s]{10,30}$/i;
+  const taxIdPattern = /^[0-9]{7,8}[A-Z]$|^[A-Z][0-9]{7,8}$|^[XYZ][0-9]{7}[A-Z]$/i;
 
-  let headerRowIndex = -1;
+  const isDataRow = (row: string[]): { score: number; hasIban: boolean; hasTaxId: boolean } => {
+    if (!row || row.length < 2) return { score: 0, hasIban: false, hasTaxId: false };
 
-  // Primer busca una fila que sembli capçalera (conté paraules clau)
-  for (let i = 0; i < Math.min(rows.length, 30); i++) { // Busca a les primeres 30 files
-    const row = rows[i];
-    const rowText = row.join(' ').toLowerCase();
-    const matchCount = headerKeywords.filter(kw => rowText.includes(kw)).length;
+    const hasIban = row.some(cell => {
+      const cleaned = (cell || '').toString().trim().replace(/\s/g, '');
+      return ibanPattern.test(cleaned);
+    });
+    const hasTaxId = row.some(cell => {
+      const cleaned = (cell || '').toString().trim();
+      return taxIdPattern.test(cleaned);
+    });
+    const hasAmount = row.some(cell => {
+      const amt = parseAmount((cell || '').toString());
+      return amt > 0 && amt < 50000;
+    });
+    const hasText = row.some(cell => {
+      const text = (cell || '').toString();
+      return /[a-zA-ZáéíóúÁÉÍÓÚñÑüÜ]{3,}/.test(text) &&
+             !text.includes('EUR') &&
+             !/^(fecha|socio|importe|estado|total|subtotal)/i.test(text);
+    });
 
-    if (matchCount >= 2) { // Si té almenys 2 paraules clau, és probablement la capçalera
-      headerRowIndex = i;
-      break;
+    let score = 0;
+    if (hasIban) score += 3;
+    if (hasTaxId) score += 2;
+    if (hasAmount) score += 1;
+    if (hasText) score += 1;
+
+    return { score, hasIban, hasTaxId };
+  };
+
+  const maxSearch = Math.min(rows.length, 50);
+
+  // Primera passada: busca files amb IBAN o DNI (indicadors forts)
+  for (let i = 0; i < maxSearch; i++) {
+    const current = isDataRow(rows[i]);
+    if ((current.hasIban || current.hasTaxId) && current.score >= 3) {
+      return i;
     }
   }
 
-  // Si hem trobat capçalera, les dades comencen a la següent fila
-  if (headerRowIndex >= 0) {
-    return headerRowIndex + 1;
-  }
+  // Segona passada: busca 3 files consecutives amb estructura consistent
+  for (let i = 0; i < maxSearch - 2; i++) {
+    const current = isDataRow(rows[i]);
+    const next1 = isDataRow(rows[i + 1]);
+    const next2 = isDataRow(rows[i + 2]);
 
-  // Fallback: busca la primera fila amb dades vàlides (import + text)
-  for (let i = 0; i < rows.length; i++) {
-    const row = rows[i];
-    if (row.length >= 2) {
-      const hasAmount = row.some(cell => {
-        const amount = parseAmount(cell);
-        return amount > 0 && amount < 100000;
-      });
-      const hasText = row.some(cell => /[a-zA-ZáéíóúÁÉÍÓÚñÑ]{3,}/.test(cell));
-      if (hasAmount && hasText) {
-        return i;
-      }
+    if (current.score >= 2 && next1.score >= 2 && next2.score >= 2) {
+      return i;
     }
   }
+
+  // Fallback: 2 files consecutives
+  for (let i = 0; i < maxSearch - 1; i++) {
+    const current = isDataRow(rows[i]);
+    const next = isDataRow(rows[i + 1]);
+
+    if (current.score >= 2 && next.score >= 2) {
+      return i;
+    }
+  }
+
   return 0;
 };
 
