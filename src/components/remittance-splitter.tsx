@@ -717,81 +717,102 @@ export function RemittanceSplitter({
     log(`[Splitter] Iniciant processament...`);
 
     try {
-      const batch = writeBatch(firestore);
       const transactionsRef = collection(firestore, 'organizations', organizationId, 'transactions');
       const contactsRef = collection(firestore, 'organizations', organizationId, 'contacts');
 
       const newDonorIds: Map<number, string> = new Map();
+      const CHUNK_SIZE = 50; // Processar en chunks petits per no bloquejar la UI
 
-      // 1. Crear nous donants
+      // 1. Crear nous donants en chunks
       const donorsToCreate = parsedDonations.filter(d => d.status !== 'found' && d.shouldCreate);
       log(`[Splitter] Creant ${donorsToCreate.length} nous donants...`);
 
-      for (const donation of donorsToCreate) {
-        const newDonorRef = doc(contactsRef);
+      for (let i = 0; i < donorsToCreate.length; i += CHUNK_SIZE) {
+        const chunk = donorsToCreate.slice(i, i + CHUNK_SIZE);
+        const batch = writeBatch(firestore);
         const now = new Date().toISOString();
 
-        const newDonorData: Omit<Donor, 'id'> = {
-          type: 'donor',
-          name: donation.name || `Donant ${donation.taxId}`,
-          taxId: donation.taxId,
-          zipCode: donation.zipCode,
-          donorType: 'individual',
-          membershipType: 'recurring',
-          createdAt: now,
-        };
+        for (const donation of chunk) {
+          const newDonorRef = doc(contactsRef);
 
-        batch.set(newDonorRef, newDonorData);
-        newDonorIds.set(donation.rowIndex, newDonorRef.id);
+          const newDonorData: Omit<Donor, 'id'> = {
+            type: 'donor',
+            name: donation.name || `Donant ${donation.taxId}`,
+            taxId: donation.taxId,
+            zipCode: donation.zipCode,
+            donorType: 'individual',
+            membershipType: 'recurring',
+            createdAt: now,
+          };
+
+          batch.set(newDonorRef, newDonorData);
+          newDonorIds.set(donation.rowIndex, newDonorRef.id);
+        }
+
+        await batch.commit();
+        // Petit delay per permetre que la UI respiri
+        await new Promise(resolve => setTimeout(resolve, 50));
+        log(`[Splitter] Donants creats: ${Math.min(i + CHUNK_SIZE, donorsToCreate.length)}/${donorsToCreate.length}`);
       }
 
-      // 2. Marcar transacció original com a remesa (no eliminar)
-      batch.update(doc(transactionsRef, transaction.id), {
+      // 2. Marcar transacció original com a remesa
+      const updateBatch = writeBatch(firestore);
+      updateBatch.update(doc(transactionsRef, transaction.id), {
         isRemittance: true,
         remittanceItemCount: parsedDonations.length,
         category: 'memberFees',
         contactId: null,
         contactType: null,
       });
+      await updateBatch.commit();
 
-      // 3. Crear noves transaccions
-      for (const donation of parsedDonations) {
-        const newTxRef = doc(transactionsRef);
-        
-        let contactId: string | null = null;
-        if (donation.matchedDonor) {
-          contactId = donation.matchedDonor.id;
-        } else if (donation.shouldCreate) {
-          contactId = newDonorIds.get(donation.rowIndex) || null;
+      // 3. Crear noves transaccions en chunks
+      log(`[Splitter] Creant ${parsedDonations.length} transaccions...`);
+
+      for (let i = 0; i < parsedDonations.length; i += CHUNK_SIZE) {
+        const chunk = parsedDonations.slice(i, i + CHUNK_SIZE);
+        const batch = writeBatch(firestore);
+
+        for (const donation of chunk) {
+          const newTxRef = doc(transactionsRef);
+
+          let contactId: string | null = null;
+          if (donation.matchedDonor) {
+            contactId = donation.matchedDonor.id;
+          } else if (donation.shouldCreate) {
+            contactId = newDonorIds.get(donation.rowIndex) || null;
+          }
+
+          const displayName = donation.name || donation.taxId || 'Anònim';
+
+          // Determina la categoria segons membershipType del donant
+          const membershipType = donation.matchedDonor?.membershipType ?? 'recurring';
+          const category = membershipType === 'recurring' ? 'memberFees' : 'donations';
+
+          const newTxData: Omit<Transaction, 'id'> & { id: string } = {
+            id: newTxRef.id,
+            date: transaction.date,
+            description: `${t.movements.splitter.donationDescription}: ${displayName}`,
+            amount: donation.amount,
+            category,
+            document: null,
+            contactId,
+            projectId: transaction.projectId ?? null,
+            source: 'remittance',
+            parentTransactionId: transaction.id,
+          };
+          if (contactId) {
+            (newTxData as any).contactType = 'donor';
+          }
+
+          batch.set(newTxRef, newTxData);
         }
 
-        const displayName = donation.name || donation.taxId || 'Anònim';
-
-        // Determina la categoria segons membershipType del donant
-        // Donants nous es creen com 'recurring' per defecte
-        const membershipType = donation.matchedDonor?.membershipType ?? 'recurring';
-        const category = membershipType === 'recurring' ? 'memberFees' : 'donations';
-
-        const newTxData: Omit<Transaction, 'id'> & { id: string } = {
-          id: newTxRef.id,
-          date: transaction.date,
-          description: `${t.movements.splitter.donationDescription}: ${displayName}`,
-          amount: donation.amount,
-          category,
-          document: null,
-          contactId,
-          projectId: transaction.projectId ?? null,
-          source: 'remittance',
-          parentTransactionId: transaction.id,
-        };
-        if (contactId) {
-          (newTxData as any).contactType = 'donor';
-        }
-
-        batch.set(newTxRef, newTxData);
+        await batch.commit();
+        // Petit delay per permetre que la UI respiri
+        await new Promise(resolve => setTimeout(resolve, 50));
+        log(`[Splitter] Transaccions creades: ${Math.min(i + CHUNK_SIZE, parsedDonations.length)}/${parsedDonations.length}`);
       }
-
-      await batch.commit();
 
       log(`[Splitter] ✅ Processament completat!`);
       toast({
