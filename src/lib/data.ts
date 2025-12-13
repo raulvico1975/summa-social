@@ -147,7 +147,12 @@ export type Donor = Contact & {
    * - inactive: Donat de baixa o massa devolucions
    */
   status?: DonorStatus;
-  
+
+  /**
+   * Data de baixa (quan status = 'inactive')
+   */
+  inactiveSince?: string;
+
   /**
    * Comptador de devolucions
    * Per generar alertes quan supera un llindar

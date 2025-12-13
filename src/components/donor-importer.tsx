@@ -66,6 +66,7 @@ type ColumnMapping = {
   email: string | null;
   phone: string | null;
   defaultCategory: string | null;
+  status: string | null;
 };
 
 type ImportRow = {
@@ -98,6 +99,7 @@ const emptyMapping: ColumnMapping = {
   email: null,
   phone: null,
   defaultCategory: null,
+  status: null,
 };
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -147,6 +149,7 @@ function autoDetectColumn(header: string): keyof ColumnMapping | null {
     email: ['email', 'correu', 'correo', 'mail'],
     phone: ['telefon', 'telefono', 'phone', 'mobil', 'movil'],
     defaultCategory: ['categoria', 'category', 'categoría'],
+    status: ['estado', 'estat', 'status', 'activo', 'actiu', 'baja', 'baixa'],
   };
 
   for (const [field, keywords] of Object.entries(patterns)) {
@@ -173,6 +176,15 @@ function parseMembershipType(value: any): 'one-time' | 'recurring' {
     return 'recurring';
   }
   return 'one-time';
+}
+
+function parseStatus(value: any): 'active' | 'inactive' {
+  if (!value) return 'active';
+  const normalized = normalizeText(String(value));
+  if (['baja', 'baixa', 'inactive', 'inactivo', 'inactiu', 'no'].some(k => normalized.includes(k))) {
+    return 'inactive';
+  }
+  return 'active';
 }
 
 function parseAmount(value: any): number | undefined {
@@ -228,6 +240,7 @@ export function DonorImporter({
     email: t.importers.donor.fields.email,
     phone: t.importers.donor.fields.phone,
     defaultCategory: t.importers.donor.fields.defaultCategory,
+    status: t.importers.donor.fields.status,
   };
 
   // Carregar categories d'ingrés
@@ -399,6 +412,7 @@ export function DonorImporter({
         iban: mapping.iban ? cleanIban(row[mapping.iban]) : undefined,
         email: mapping.email ? String(row[mapping.email] || '').trim() : undefined,
         phone: mapping.phone ? String(row[mapping.phone] || '').trim() : undefined,
+        status: mapping.status ? parseStatus(row[mapping.status]) : 'active',
       };
 
       let status: ImportRow['status'] = 'valid';
@@ -483,6 +497,12 @@ const executeImport = async () => {
         if (row.parsed.iban) cleanData.iban = row.parsed.iban;
         if (row.parsed.email) cleanData.email = row.parsed.email;
         if (row.parsed.phone) cleanData.phone = row.parsed.phone;
+        if (row.parsed.status) {
+          cleanData.status = row.parsed.status;
+          if (row.parsed.status === 'inactive') {
+            cleanData.inactiveSince = now;
+          }
+        }
 
         // Determinar defaultCategoryId
         let defaultCategoryId: string | null = null;

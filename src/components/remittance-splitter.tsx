@@ -36,14 +36,15 @@ import { useToast } from '@/hooks/use-toast';
 import { useAppLog } from '@/hooks/use-app-log';
 import type { Transaction, Donor } from '@/lib/data';
 import { formatCurrencyEU } from '@/lib/normalize';
-import { 
-  FileUp, 
-  Loader2, 
-  Info, 
-  CheckCircle2, 
-  AlertCircle, 
-  UserPlus, 
-  ArrowLeft, 
+import {
+  FileUp,
+  Loader2,
+  Info,
+  CheckCircle2,
+  AlertCircle,
+  AlertTriangle,
+  UserPlus,
+  ArrowLeft,
   ArrowRight,
   Settings2,
   Save,
@@ -89,7 +90,7 @@ interface ParsedDonation {
   taxId: string;
   iban: string;
   amount: number;
-  status: 'found' | 'new_with_taxid' | 'new_without_taxid';
+  status: 'found' | 'found_inactive' | 'new_with_taxid' | 'new_without_taxid';
   matchedDonor: Donor | null;
   shouldCreate: boolean;
   zipCode: string;
@@ -347,10 +348,11 @@ export function RemittanceSplitter({
   // Estadístiques
   const stats = React.useMemo(() => {
     const found = parsedDonations.filter(d => d.status === 'found').length;
+    const foundInactive = parsedDonations.filter(d => d.status === 'found_inactive').length;
     const newWithTaxId = parsedDonations.filter(d => d.status === 'new_with_taxid').length;
     const newWithoutTaxId = parsedDonations.filter(d => d.status === 'new_without_taxid').length;
-    const toCreate = parsedDonations.filter(d => d.status !== 'found' && d.shouldCreate).length;
-    return { found, newWithTaxId, newWithoutTaxId, toCreate };
+    const toCreate = parsedDonations.filter(d => d.status !== 'found' && d.status !== 'found_inactive' && d.shouldCreate).length;
+    return { found, foundInactive, newWithTaxId, newWithoutTaxId, toCreate };
   }, [parsedDonations]);
 
   // Files visibles per al preview del mapejat
@@ -631,7 +633,8 @@ export function RemittanceSplitter({
 
         let status: ParsedDonation['status'];
         if (matchedDonor) {
-          status = 'found';
+          // Comprovar si el donant trobat està de baixa
+          status = matchedDonor.status === 'inactive' ? 'found_inactive' : 'found';
         } else if (taxId) {
           status = 'new_with_taxid';
         } else {
@@ -646,7 +649,7 @@ export function RemittanceSplitter({
           amount,
           status,
           matchedDonor: matchedDonor ?? null,
-          shouldCreate: status !== 'found',
+          shouldCreate: status !== 'found' && status !== 'found_inactive',
           zipCode: defaultZipCode,
         });
       }
@@ -757,12 +760,18 @@ export function RemittanceSplitter({
         }
 
         const displayName = donation.name || donation.taxId || 'Anònim';
+
+        // Determina la categoria segons membershipType del donant
+        // Donants nous es creen com 'recurring' per defecte
+        const membershipType = donation.matchedDonor?.membershipType ?? 'recurring';
+        const category = membershipType === 'recurring' ? 'memberFees' : 'donations';
+
         const newTxData: Omit<Transaction, 'id'> & { id: string } = {
           id: newTxRef.id,
           date: transaction.date,
-          description: `Donació soci/a: ${displayName}`,
+          description: `${t.movements.splitter.donationDescription}: ${displayName}`,
           amount: donation.amount,
-          category: 'donations',
+          category,
           document: null,
           contactId,
           projectId: transaction.projectId ?? null,
@@ -1156,6 +1165,17 @@ export function RemittanceSplitter({
               </AlertDescription>
             </Alert>
 
+            {/* Avís de socis inactius */}
+            {stats.foundInactive > 0 && (
+              <Alert variant="default" className="border-amber-300 bg-amber-50">
+                <AlertTriangle className="h-4 w-4 text-amber-600" />
+                <AlertTitle className="text-amber-800">{t.movements.splitter.inactiveWarningTitle}</AlertTitle>
+                <AlertDescription className="text-amber-700">
+                  {t.movements.splitter.inactiveWarningDescription(stats.foundInactive)}
+                </AlertDescription>
+              </Alert>
+            )}
+
             {/* Opcions per crear donants */}
             <div className="space-y-3 rounded-lg border p-4">
               <h4 className="font-medium text-sm">{t.movements.splitter.newDonorOptions}</h4>
@@ -1241,6 +1261,12 @@ export function RemittanceSplitter({
                             {t.movements.splitter.foundBadge}
                           </Badge>
                         )}
+                        {donation.status === 'found_inactive' && (
+                          <Badge variant="outline" className="bg-amber-100 text-amber-800 border-amber-300">
+                            <AlertTriangle className="mr-1 h-3 w-3" />
+                            {t.movements.splitter.foundInactiveBadge}
+                          </Badge>
+                        )}
                         {donation.status === 'new_with_taxid' && (
                           <Badge variant="outline" className="bg-blue-100 text-blue-800 border-blue-300">
                             <UserPlus className="mr-1 h-3 w-3" />
@@ -1255,7 +1281,9 @@ export function RemittanceSplitter({
                         )}
                       </TableCell>
                       <TableCell className="text-sm">
-                        {donation.matchedDonor ? (
+                        {donation.status === 'found_inactive' && donation.matchedDonor ? (
+                          <span className="text-amber-700">{donation.matchedDonor.name}</span>
+                        ) : donation.matchedDonor ? (
                           <span className="text-green-700">{donation.matchedDonor.name}</span>
                         ) : donation.shouldCreate ? (
                           <span className="text-blue-600 italic">{t.movements.splitter.willBeCreated}</span>

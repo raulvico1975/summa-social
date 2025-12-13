@@ -127,6 +127,9 @@ export function DonorManager() {
   const [showIncompleteOnly, setShowIncompleteOnly] = React.useState(false);
   const [hasUrlFilter, setHasUrlFilter] = React.useState(false);
 
+  // Filtre per estat (actiu/inactiu)
+  const [statusFilter, setStatusFilter] = React.useState<'all' | 'active' | 'inactive'>('active');
+
   // Cercador intel·ligent
   const [searchQuery, setSearchQuery] = React.useState('');
 
@@ -153,11 +156,26 @@ export function DonorManager() {
     }
   };
 
-  // Filtrar donants (cerca + incomplets)
+  // Comptadors per estat
+  const statusCounts = React.useMemo(() => {
+    if (!donors) return { active: 0, inactive: 0, total: 0 };
+    const active = donors.filter(d => !d.status || d.status === 'active').length;
+    const inactive = donors.filter(d => d.status === 'inactive').length;
+    return { active, inactive, total: donors.length };
+  }, [donors]);
+
+  // Filtrar donants (cerca + incomplets + estat)
   const filteredDonors = React.useMemo(() => {
     if (!donors) return [];
 
     let result = donors;
+
+    // Filtre per estat
+    if (statusFilter === 'active') {
+      result = result.filter(donor => !donor.status || donor.status === 'active');
+    } else if (statusFilter === 'inactive') {
+      result = result.filter(donor => donor.status === 'inactive');
+    }
 
     // Filtre de cerca intel·ligent
     if (searchQuery.trim()) {
@@ -184,7 +202,7 @@ export function DonorManager() {
     }
 
     return result;
-  }, [donors, showIncompleteOnly, searchQuery]);
+  }, [donors, showIncompleteOnly, searchQuery, statusFilter]);
 
   const incompleteDonorsCount = React.useMemo(() => {
     if (!donors) return 0;
@@ -384,20 +402,37 @@ export function DonorManager() {
                 )}
               </div>
 
-              {/* Botons de filtre */}
+              {/* Botons de filtre per estat */}
               <div className="flex flex-wrap items-center gap-2">
                 <Button
-                  variant={!showIncompleteOnly ? 'default' : 'outline'}
+                  variant={statusFilter === 'active' && !showIncompleteOnly ? 'default' : 'outline'}
                   size="sm"
-                  onClick={() => setShowIncompleteOnly(false)}
+                  onClick={() => { setStatusFilter('active'); setShowIncompleteOnly(false); }}
                 >
-                  {t.donors.all} ({donors?.length || 0})
+                  {t.donors.allActive} ({statusCounts.active})
+                </Button>
+                {statusCounts.inactive > 0 && (
+                  <Button
+                    variant={statusFilter === 'inactive' ? 'default' : 'outline'}
+                    size="sm"
+                    onClick={() => { setStatusFilter('inactive'); setShowIncompleteOnly(false); }}
+                    className={statusFilter !== 'inactive' ? 'border-gray-400 text-gray-600' : ''}
+                  >
+                    {t.donors.allInactive} ({statusCounts.inactive})
+                  </Button>
+                )}
+                <Button
+                  variant={statusFilter === 'all' && !showIncompleteOnly ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => { setStatusFilter('all'); setShowIncompleteOnly(false); }}
+                >
+                  {t.donors.all} ({statusCounts.total})
                 </Button>
                 {incompleteDonorsCount > 0 && (
                   <Button
                     variant={showIncompleteOnly ? 'default' : 'outline'}
                     size="sm"
-                    onClick={() => setShowIncompleteOnly(true)}
+                    onClick={() => { setShowIncompleteOnly(true); setStatusFilter('all'); }}
                     className={!showIncompleteOnly ? 'border-amber-300 text-amber-600' : ''}
                   >
                     <AlertTriangle className="mr-1.5 h-3 w-3" />
@@ -459,6 +494,11 @@ export function DonorManager() {
                           >
                             {donor.name}
                           </button>
+                          {donor.status === 'inactive' && (
+                            <Badge variant="secondary" className="bg-gray-200 text-gray-600 text-xs">
+                              {t.donors.inactiveBadge}
+                            </Badge>
+                          )}
                           {hasIncompleteData(donor) && (
                             <Tooltip>
                               <TooltipTrigger>
