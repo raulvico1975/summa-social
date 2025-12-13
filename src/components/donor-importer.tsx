@@ -28,6 +28,7 @@ import {
 } from '@/components/ui/table';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Progress } from '@/components/ui/progress';
 import {
   Upload,
@@ -73,7 +74,7 @@ type ImportRow = {
   rowIndex: number;
   data: Record<string, any>;
   parsed: Partial<Donor>;
-  status: 'valid' | 'duplicate' | 'invalid';
+  status: 'new' | 'update' | 'duplicate' | 'invalid';
   error?: string;
 };
 
@@ -267,7 +268,11 @@ export function DonorImporter({
   const [importRows, setImportRows] = React.useState<ImportRow[]>([]);
   const [importProgress, setImportProgress] = React.useState(0);
   const [importedCount, setImportedCount] = React.useState(0);
-  const [existingIds, setExistingIds] = React.useState<Set<string>>(new Set(existingTaxIds));
+  const [updatedCount, setUpdatedCount] = React.useState(0);
+  // Map de taxId -> docId per poder fer updates
+  const [existingDonorIds, setExistingDonorIds] = React.useState<Map<string, string>>(new Map());
+  // Checkbox per actualitzar existents
+  const [updateExisting, setUpdateExisting] = React.useState(false);
 
   // Reset quan es tanca
   React.useEffect(() => {
@@ -281,7 +286,9 @@ export function DonorImporter({
         setImportRows([]);
         setImportProgress(0);
         setImportedCount(0);
+        setUpdatedCount(0);
         setGlobalDefaultCategory('__auto__');
+        setUpdateExisting(false);
       }, 300);
     }
   }, [open]);
@@ -334,14 +341,14 @@ export function DonorImporter({
       // Limitar a 5000 per rendiment - suficient per detectar duplicats
       const q = query(contactsRef, where('type', '==', 'donor'), limit(5000));
       const snapshot = await getDocs(q);
-      const ids = new Set<string>();
-      snapshot.forEach(doc => {
-        const data = doc.data();
+      const ids = new Map<string, string>();
+      snapshot.forEach(docSnap => {
+        const data = docSnap.data();
         if (data.taxId) {
-          ids.add(cleanTaxId(data.taxId));
+          ids.set(cleanTaxId(data.taxId), docSnap.id);
         }
       });
-      setExistingIds(ids);
+      setExistingDonorIds(ids);
     } catch (error) {
       console.error('Error carregant DNIs existents:', error);
       toast({ variant: 'destructive', title: t.common?.error || 'Error' });
@@ -415,7 +422,7 @@ export function DonorImporter({
         status: mapping.status ? parseStatus(row[mapping.status]) : 'active',
       };
 
-      let status: ImportRow['status'] = 'valid';
+      let status: ImportRow['status'] = 'new';
       let error: string | undefined;
 
       if (!parsed.name) {
@@ -427,9 +434,14 @@ export function DonorImporter({
       } else if (!parsed.zipCode) {
         status = 'invalid';
         error = t.importers.donor.errors.missingZipCode;
-      } else if (existingIds.has(parsed.taxId)) {
-        status = 'duplicate';
-        error = t.importers.common.alreadyExists;
+      } else if (existingDonorIds.has(parsed.taxId)) {
+        // Si existeix, decidir si actualitzar o marcar com duplicat
+        if (updateExisting) {
+          status = 'update';
+        } else {
+          status = 'duplicate';
+          error = t.importers.common.alreadyExists;
+        }
       }
 
       return { rowIndex: index + 2, data: row, parsed, status, error };
@@ -438,7 +450,7 @@ export function DonorImporter({
     // Detectar duplicats interns
     const seenTaxIds = new Set<string>();
     for (const row of rows) {
-      if (row.status === 'valid' && row.parsed.taxId) {
+      if ((row.status === 'new' || row.status === 'update') && row.parsed.taxId) {
         if (seenTaxIds.has(row.parsed.taxId)) {
           row.status = 'duplicate';
           row.error = t.importers.common.duplicateInFile;
@@ -458,90 +470,133 @@ const executeImport = async () => {
   setStep('importing');
   setImportProgress(0);
 
-  const validRows = importRows.filter(r => r.status === 'valid');
+  // Filtrar files noves i a actualitzar
+  const newRows = importRows.filter(r => r.status === 'new');
+  const updateRows = importRows.filter(r => r.status === 'update');
+  const totalRows = [...newRows, ...updateRows];
+
   const contactsRef = collection(firestore, 'organizations', organizationId, 'contacts');
   const now = new Date().toISOString();
-  
+
   let imported = 0;
+  let updated = 0;
   const batchSize = 50;
-  const batches = Math.ceil(validRows.length / batchSize);
+  const batches = Math.ceil(totalRows.length / batchSize);
 
   try {
     for (let i = 0; i < batches; i++) {
       const batch = writeBatch(firestore);
       const start = i * batchSize;
-      const end = Math.min(start + batchSize, validRows.length);
-      
+      const end = Math.min(start + batchSize, totalRows.length);
+
       for (let j = start; j < end; j++) {
-        const row = validRows[j];
-        const newDocRef = doc(contactsRef);
-        
-        // Netejar undefined abans de guardar (Firestore no accepta undefined)
-        const cleanData: Record<string, any> = {
-          id: newDocRef.id,
-          type: 'donor',
-          name: row.parsed.name || '',
-          taxId: row.parsed.taxId || '',
-          zipCode: row.parsed.zipCode || '',
-          donorType: row.parsed.donorType || 'individual',
-          membershipType: row.parsed.membershipType || 'one-time',
-          createdAt: now,
-          updatedAt: now,
-        };
+        const row = totalRows[j];
+        const isUpdate = row.status === 'update';
 
-        // Afegir camps opcionals només si tenen valor
-        if (row.parsed.address) cleanData.address = row.parsed.address;
-        if (row.parsed.city) cleanData.city = row.parsed.city;
-        if (row.parsed.province) cleanData.province = row.parsed.province;
-        if (row.parsed.monthlyAmount) cleanData.monthlyAmount = row.parsed.monthlyAmount;
-        if (row.parsed.iban) cleanData.iban = row.parsed.iban;
-        if (row.parsed.email) cleanData.email = row.parsed.email;
-        if (row.parsed.phone) cleanData.phone = row.parsed.phone;
-        if (row.parsed.status) {
-          cleanData.status = row.parsed.status;
-          if (row.parsed.status === 'inactive') {
-            cleanData.inactiveSince = now;
+        if (isUpdate && row.parsed.taxId) {
+          // ACTUALITZAR donant existent
+          const existingDocId = existingDonorIds.get(row.parsed.taxId);
+          if (existingDocId) {
+            const existingDocRef = doc(contactsRef, existingDocId);
+
+            // Només actualitzar camps que tenen valor al CSV (no sobreescriure amb buits)
+            const updateData: Record<string, any> = {
+              updatedAt: now,
+            };
+
+            // Camps a actualitzar si tenen valor
+            if (row.parsed.zipCode) updateData.zipCode = row.parsed.zipCode;
+            if (row.parsed.address) updateData.address = row.parsed.address;
+            if (row.parsed.email) updateData.email = row.parsed.email;
+            if (row.parsed.phone) updateData.phone = row.parsed.phone;
+            if (row.parsed.iban) updateData.iban = row.parsed.iban;
+            if (row.parsed.membershipType) updateData.membershipType = row.parsed.membershipType;
+            if (row.parsed.donorType) updateData.donorType = row.parsed.donorType;
+            if (row.parsed.monthlyAmount) updateData.monthlyAmount = row.parsed.monthlyAmount;
+            if (row.parsed.city) updateData.city = row.parsed.city;
+            if (row.parsed.province) updateData.province = row.parsed.province;
+            if (row.parsed.status) {
+              updateData.status = row.parsed.status;
+              if (row.parsed.status === 'inactive') {
+                updateData.inactiveSince = now;
+              }
+            }
+
+            batch.update(existingDocRef, updateData);
+            updated++;
           }
-        }
+        } else {
+          // CREAR nou donant
+          const newDocRef = doc(contactsRef);
 
-        // Determinar defaultCategoryId
-        let defaultCategoryId: string | null = null;
+          // Netejar undefined abans de guardar (Firestore no accepta undefined)
+          const cleanData: Record<string, any> = {
+            id: newDocRef.id,
+            type: 'donor',
+            name: row.parsed.name || '',
+            taxId: row.parsed.taxId || '',
+            zipCode: row.parsed.zipCode || '',
+            donorType: row.parsed.donorType || 'individual',
+            membershipType: row.parsed.membershipType || 'one-time',
+            createdAt: now,
+            updatedAt: now,
+          };
 
-        // 1. Prioritat: categoria del CSV (si s'ha mapejat la columna)
-        if (mapping.defaultCategory && row.data[mapping.defaultCategory]) {
-          defaultCategoryId = getCategoryIdByName(String(row.data[mapping.defaultCategory]));
-        }
-
-        // 2. Si no hi ha del CSV, usar selector global
-        if (!defaultCategoryId) {
-          if (globalDefaultCategory === '__auto__') {
-            // Automàtic segons membershipType
-            defaultCategoryId = getCategoryIdForMembershipType(row.parsed.membershipType || 'one-time');
-          } else if (globalDefaultCategory !== '__none__') {
-            // Categoria específica seleccionada
-            defaultCategoryId = globalDefaultCategory;
+          // Afegir camps opcionals només si tenen valor
+          if (row.parsed.address) cleanData.address = row.parsed.address;
+          if (row.parsed.city) cleanData.city = row.parsed.city;
+          if (row.parsed.province) cleanData.province = row.parsed.province;
+          if (row.parsed.monthlyAmount) cleanData.monthlyAmount = row.parsed.monthlyAmount;
+          if (row.parsed.iban) cleanData.iban = row.parsed.iban;
+          if (row.parsed.email) cleanData.email = row.parsed.email;
+          if (row.parsed.phone) cleanData.phone = row.parsed.phone;
+          if (row.parsed.status) {
+            cleanData.status = row.parsed.status;
+            if (row.parsed.status === 'inactive') {
+              cleanData.inactiveSince = now;
+            }
           }
-        }
 
-        if (defaultCategoryId) {
-          cleanData.defaultCategoryId = defaultCategoryId;
-        }
+          // Determinar defaultCategoryId
+          let defaultCategoryId: string | null = null;
 
-        batch.set(newDocRef, cleanData);
-        imported++;
+          // 1. Prioritat: categoria del CSV (si s'ha mapejat la columna)
+          if (mapping.defaultCategory && row.data[mapping.defaultCategory]) {
+            defaultCategoryId = getCategoryIdByName(String(row.data[mapping.defaultCategory]));
+          }
+
+          // 2. Si no hi ha del CSV, usar selector global
+          if (!defaultCategoryId) {
+            if (globalDefaultCategory === '__auto__') {
+              // Automàtic segons membershipType
+              defaultCategoryId = getCategoryIdForMembershipType(row.parsed.membershipType || 'one-time');
+            } else if (globalDefaultCategory !== '__none__') {
+              // Categoria específica seleccionada
+              defaultCategoryId = globalDefaultCategory;
+            }
+          }
+
+          if (defaultCategoryId) {
+            cleanData.defaultCategoryId = defaultCategoryId;
+          }
+
+          batch.set(newDocRef, cleanData);
+          imported++;
+        }
       }
 
       await batch.commit();
-      setImportProgress(Math.round((imported / validRows.length) * 100));
+      setImportProgress(Math.round(((imported + updated) / totalRows.length) * 100));
     }
 
     setImportedCount(imported);
+    setUpdatedCount(updated);
     setStep('complete');
-    onImportComplete?.(imported);
+    onImportComplete?.(imported + updated);
 
     toast({
       title: t.importers.donor.importSuccess,
-      description: t.importers.donor.importSuccessDescription(imported),
+      description: t.importers.donor.importSuccessDescription(imported + updated),
     });
   } catch (error) {
     console.error('Error important:', error);
@@ -592,7 +647,8 @@ const executeImport = async () => {
   // RENDER
   // ═══════════════════════════════════════════════════════════════════════════
 
-  const validCount = importRows.filter(r => r.status === 'valid').length;
+  const newCount = importRows.filter(r => r.status === 'new').length;
+  const updateCount = importRows.filter(r => r.status === 'update').length;
   const duplicateCount = importRows.filter(r => r.status === 'duplicate').length;
   const invalidCount = importRows.filter(r => r.status === 'invalid').length;
 
@@ -712,25 +768,34 @@ const executeImport = async () => {
         {/* STEP: PREVIEW */}
         {step === 'preview' && (
           <div className="py-4 space-y-4">
-            <div className="grid grid-cols-3 gap-4">
+            <div className="grid grid-cols-4 gap-3">
               <div className="bg-green-50 border border-green-200 rounded-lg p-3 text-center">
                 <div className="flex items-center justify-center gap-2 text-green-700 mb-1">
                   <CheckCircle2 className="h-4 w-4" />
-                  <span className="font-medium">{t.importers.common.valid}</span>
+                  <span className="font-medium text-sm">{t.importers.common.valid}</span>
                 </div>
-                <p className="text-2xl font-bold text-green-700">{validCount}</p>
+                <p className="text-2xl font-bold text-green-700">{newCount}</p>
               </div>
+              {updateCount > 0 && (
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 text-center">
+                  <div className="flex items-center justify-center gap-2 text-blue-700 mb-1">
+                    <CheckCircle2 className="h-4 w-4" />
+                    <span className="font-medium text-sm">{t.importers.donor.toUpdate}</span>
+                  </div>
+                  <p className="text-2xl font-bold text-blue-700">{updateCount}</p>
+                </div>
+              )}
               <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 text-center">
                 <div className="flex items-center justify-center gap-2 text-yellow-700 mb-1">
                   <AlertTriangle className="h-4 w-4" />
-                  <span className="font-medium">{t.importers.common.duplicates}</span>
+                  <span className="font-medium text-sm">{t.importers.common.duplicates}</span>
                 </div>
                 <p className="text-2xl font-bold text-yellow-700">{duplicateCount}</p>
               </div>
               <div className="bg-red-50 border border-red-200 rounded-lg p-3 text-center">
                 <div className="flex items-center justify-center gap-2 text-red-700 mb-1">
                   <AlertCircle className="h-4 w-4" />
-                  <span className="font-medium">{t.importers.common.invalid}</span>
+                  <span className="font-medium text-sm">{t.importers.common.invalid}</span>
                 </div>
                 <p className="text-2xl font-bold text-red-700">{invalidCount}</p>
               </div>
@@ -750,9 +815,10 @@ const executeImport = async () => {
                 </TableHeader>
                 <TableBody>
                   {importRows.slice(0, 50).map((row) => (
-                    <TableRow 
+                    <TableRow
                       key={row.rowIndex}
                       className={cn(
+                        row.status === 'update' && 'bg-blue-50',
                         row.status === 'duplicate' && 'bg-yellow-50',
                         row.status === 'invalid' && 'bg-red-50'
                       )}
@@ -769,10 +835,16 @@ const executeImport = async () => {
                         )}
                       </TableCell>
                       <TableCell>
-                        {row.status === 'valid' && (
+                        {row.status === 'new' && (
                           <Badge className="bg-green-100 text-green-800">
                             <CheckCircle2 className="h-3 w-3 mr-1" />
                             OK
+                          </Badge>
+                        )}
+                        {row.status === 'update' && (
+                          <Badge className="bg-blue-100 text-blue-800">
+                            <CheckCircle2 className="h-3 w-3 mr-1" />
+                            {t.importers.donor.updateBadge}
                           </Badge>
                         )}
                         {row.status === 'duplicate' && (
@@ -799,10 +871,28 @@ const executeImport = async () => {
               )}
             </div>
 
-            {duplicateCount > 0 && (
+            {duplicateCount > 0 && !updateExisting && (
               <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 text-sm text-yellow-800">
                 <AlertTriangle className="h-4 w-4 inline mr-2" />
                 {t.importers.common.duplicatesWillNotImport(duplicateCount)}
+              </div>
+            )}
+
+            {/* Checkbox per actualitzar existents */}
+            {existingDonorIds.size > 0 && (
+              <div className="flex items-center space-x-2 p-3 border rounded-lg bg-muted/30">
+                <Checkbox
+                  id="updateExisting"
+                  checked={updateExisting}
+                  onCheckedChange={(checked) => {
+                    setUpdateExisting(checked === true);
+                    // Re-processar les dades quan canvia
+                    processData();
+                  }}
+                />
+                <Label htmlFor="updateExisting" className="text-sm cursor-pointer">
+                  {t.importers.donor.updateExisting}
+                </Label>
               </div>
             )}
 
@@ -840,9 +930,9 @@ const executeImport = async () => {
               </Button>
               <Button
                 onClick={executeImport}
-                disabled={validCount === 0}
+                disabled={newCount + updateCount === 0}
               >
-                {t.importers.donor.importButton(validCount)}
+                {t.importers.donor.importButton(newCount + updateCount)}
                 <ArrowRight className="h-4 w-4 ml-2" />
               </Button>
             </DialogFooter>

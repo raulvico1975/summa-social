@@ -383,6 +383,9 @@ export const ca = {
       importedCount: (count: number) => `S'han importat ${count} donants correctament.`,
       templateName: "plantilla_donants.xlsx",
       worksheetName: "Donants",
+      updateExisting: "Actualitzar dades de donants existents",
+      toUpdate: "a actualitzar",
+      updateBadge: "Actualitzar",
     },
     supplier: {
       title: "Importar Proveïdors",
