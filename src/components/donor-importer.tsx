@@ -274,6 +274,27 @@ export function DonorImporter({
   // Checkbox per actualitzar existents
   const [updateExisting, setUpdateExisting] = React.useState(false);
 
+  // Actualitzar l'estat de les files quan canvia updateExisting
+  React.useEffect(() => {
+    if (importRows.length === 0) return;
+
+    setImportRows(prev => prev.map(row => {
+      // Només afecta files amb taxId que existeix a la BBDD
+      if (!row.parsed.taxId || !existingDonorIds.has(row.parsed.taxId)) {
+        return row;
+      }
+      // Si estava duplicate i ara volem actualitzar → update
+      if (row.status === 'duplicate' && updateExisting && !row.error?.includes(t.importers.common.duplicateInFile)) {
+        return { ...row, status: 'update', error: undefined };
+      }
+      // Si estava update i ara NO volem actualitzar → duplicate
+      if (row.status === 'update' && !updateExisting) {
+        return { ...row, status: 'duplicate', error: t.importers.common.alreadyExists };
+      }
+      return row;
+    }));
+  }, [updateExisting]);
+
   // Reset quan es tanca
   React.useEffect(() => {
     if (!open) {
@@ -884,11 +905,7 @@ const executeImport = async () => {
                 <Checkbox
                   id="updateExisting"
                   checked={updateExisting}
-                  onCheckedChange={(checked) => {
-                    setUpdateExisting(checked === true);
-                    // Re-processar les dades quan canvia
-                    processData();
-                  }}
+                  onCheckedChange={(checked) => setUpdateExisting(checked === true)}
                 />
                 <Label htmlFor="updateExisting" className="text-sm cursor-pointer">
                   {t.importers.donor.updateExisting}
