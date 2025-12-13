@@ -757,18 +757,21 @@ export function RemittanceSplitter({
         }
 
         const displayName = donation.name || donation.taxId || 'Anònim';
-        const newTxData: Omit<Transaction, 'id'> = {
+        const newTxData: Omit<Transaction, 'id'> & { id: string } = {
+          id: newTxRef.id,
           date: transaction.date,
           description: `Donació soci/a: ${displayName}`,
           amount: donation.amount,
           category: 'donations',
           document: null,
           contactId,
-          contactType: contactId ? 'donor' : undefined,
-          projectId: transaction.projectId,
+          projectId: transaction.projectId ?? null,
         };
+        if (contactId) {
+          (newTxData as any).contactType = 'donor';
+        }
 
-        batch.set(newTxRef, { ...newTxData, id: newTxRef.id });
+        batch.set(newTxRef, newTxData);
       }
 
       await batch.commit();
