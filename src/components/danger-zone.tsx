@@ -140,12 +140,35 @@ export function DangerZone() {
   const handleDeleteRemittance = async () => {
     if (!organizationId || remittanceConfirmText !== expectedConfirmText) return;
 
+    // Validar que tenim dades per esborrar
+    if (!remittanceInfo && !fallbackCount) {
+      console.error('No remittance data to delete');
+      toast({
+        variant: 'destructive',
+        title: t.dangerZone.noRemittanceFound,
+        description: t.dangerZone.noRemittanceFoundDescription,
+      });
+      setShowRemittanceDialog(false);
+      return;
+    }
+
     setIsDeletingRemittances(true);
     try {
       const transactionsRef = collection(firestore, `organizations/${organizationId}/transactions`);
       let deletedCount = 0;
 
-      if (remittanceInfo) {
+      if (remittanceInfo && remittanceInfo.id) {
+        // Validar que l'ID no és buit
+        if (!remittanceInfo.id.trim()) {
+          console.error('Remittance ID is empty');
+          toast({
+            variant: 'destructive',
+            title: t.dangerZone.deleteError,
+            description: 'ID de remesa invàlid',
+          });
+          return;
+        }
+
         // Cas 1: Esborrar remesa amb isRemittance i les seves filles
         const childQuery = query(transactionsRef, where('parentTransactionId', '==', remittanceInfo.id));
         const childSnapshot = await getDocs(childQuery);
@@ -159,7 +182,8 @@ export function DangerZone() {
         });
 
         // Restaurar la remesa original (treure flags de remesa)
-        batch.update(doc(transactionsRef, remittanceInfo.id), {
+        const remittanceDocRef = doc(transactionsRef, remittanceInfo.id);
+        batch.update(remittanceDocRef, {
           isRemittance: false,
           remittanceItemCount: null,
           category: null,
@@ -173,7 +197,7 @@ export function DangerZone() {
           title: t.dangerZone.deleteSuccess,
           description: t.dangerZone.remittanceDeletedDescription(deletedCount),
         });
-      } else if (fallbackCount) {
+      } else if (fallbackCount && fallbackCount > 0) {
         // Cas 2: Fallback - esborrar transaccions per descripció
         const allTransactions = await getDocs(transactionsRef);
         const fallbackDocs = allTransactions.docs.filter(d => {
