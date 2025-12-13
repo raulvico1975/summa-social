@@ -1,6 +1,7 @@
 'use client';
 
 import * as React from 'react';
+import { useRouter } from 'next/navigation';
 import {
   Dialog,
   DialogContent,
@@ -15,19 +16,90 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
+import {
+  HoverCard,
+  HoverCardContent,
+  HoverCardTrigger,
+} from '@/components/ui/hover-card';
 import { Input } from '@/components/ui/input';
-import { Search, X } from 'lucide-react';
+import { Search, X, ExternalLink, Calendar, Coins, User } from 'lucide-react';
 import { formatCurrencyEU } from '@/lib/normalize';
 import { useTranslations } from '@/i18n';
 import { useFirebase, useCollection, useMemoFirebase } from '@/firebase';
 import { collection, query, where } from 'firebase/firestore';
-import type { Transaction, AnyContact } from '@/lib/data';
+import { useOrgUrl } from '@/hooks/organization-provider';
+import type { Transaction, AnyContact, Donor } from '@/lib/data';
 
 interface RemittanceDetailModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   remittanceId: string | null;
   organizationId: string;
+}
+
+// Component per mostrar el resum del donant al hover
+function DonorHoverSummary({
+  donor,
+  transactions,
+  t,
+}: {
+  donor: Donor;
+  transactions: Transaction[];
+  t: any;
+}) {
+  const currentYear = new Date().getFullYear();
+
+  // Calcular total donat aquest any
+  const totalThisYear = React.useMemo(() => {
+    return transactions
+      .filter(tx => {
+        const txYear = new Date(tx.date).getFullYear();
+        return txYear === currentYear && tx.contactId === donor.id && tx.amount > 0;
+      })
+      .reduce((sum, tx) => sum + tx.amount, 0);
+  }, [transactions, donor.id, currentYear]);
+
+  // Comptar donacions totals
+  const totalDonations = React.useMemo(() => {
+    return transactions.filter(tx => tx.contactId === donor.id && tx.amount > 0).length;
+  }, [transactions, donor.id]);
+
+  return (
+    <div className="space-y-2">
+      <div className="flex items-center gap-2">
+        <User className="h-4 w-4 text-muted-foreground" />
+        <span className="font-medium">{donor.name}</span>
+      </div>
+      {donor.taxId && (
+        <div className="text-sm text-muted-foreground">
+          DNI/CIF: {donor.taxId}
+        </div>
+      )}
+      <div className="border-t pt-2 space-y-1">
+        <div className="flex items-center gap-2 text-sm">
+          <Coins className="h-3 w-3 text-green-600" />
+          <span>{typeof t.remittanceModal?.totalThisYear === 'function'
+            ? t.remittanceModal.totalThisYear(currentYear)
+            : `Total ${currentYear}`}:</span>
+          <span className="font-medium text-green-600">{formatCurrencyEU(totalThisYear)}</span>
+        </div>
+        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+          <span>{totalDonations} {t.donorDetail?.donations || 'donacions'}</span>
+        </div>
+        {donor.memberSince && (
+          <div className="flex items-center gap-2 text-sm">
+            <Calendar className="h-3 w-3 text-muted-foreground" />
+            <span>{t.donors?.memberSince || 'Soci des de'}:</span>
+            <span>{donor.memberSince}</span>
+          </div>
+        )}
+      </div>
+      <div className="text-xs text-muted-foreground flex items-center gap-1 pt-1 border-t">
+        <ExternalLink className="h-3 w-3" />
+        {t.remittanceModal?.clickToViewProfile || 'Clica per veure el perfil'}
+      </div>
+    </div>
+  );
 }
 
 export function RemittanceDetailModal({
@@ -38,6 +110,8 @@ export function RemittanceDetailModal({
 }: RemittanceDetailModalProps) {
   const { firestore } = useFirebase();
   const { t } = useTranslations();
+  const router = useRouter();
+  const { buildUrl } = useOrgUrl();
   const [searchQuery, setSearchQuery] = React.useState('');
 
   // Query per obtenir les transaccions filles de la remesa
@@ -51,6 +125,13 @@ export function RemittanceDetailModal({
   );
 
   const { data: remittanceItems } = useCollection<Transaction>(remittanceItemsQuery);
+
+  // Carregar totes les transaccions per al resum del donant
+  const allTransactionsQuery = useMemoFirebase(
+    () => organizationId ? collection(firestore, 'organizations', organizationId, 'transactions') : null,
+    [firestore, organizationId]
+  );
+  const { data: allTransactions } = useCollection<Transaction>(allTransactionsQuery);
 
   // Carregar contactes per mostrar noms
   const contactsCollection = useMemoFirebase(
@@ -79,12 +160,12 @@ export function RemittanceDetailModal({
     if (!remittanceItems) return [];
     if (!searchQuery.trim()) return remittanceItems;
 
-    const query = searchQuery.toLowerCase().trim();
+    const q = searchQuery.toLowerCase().trim();
     return remittanceItems.filter(item => {
       const contact = item.contactId ? contactMap[item.contactId] : null;
       const name = contact?.name?.toLowerCase() || '';
       const taxId = contact?.taxId?.toLowerCase() || '';
-      return name.includes(query) || taxId.includes(query);
+      return name.includes(q) || taxId.includes(q);
     });
   }, [remittanceItems, searchQuery, contactMap]);
 
@@ -99,6 +180,12 @@ export function RemittanceDetailModal({
       setSearchQuery('');
     }
   }, [open]);
+
+  // Navegar al perfil del donant
+  const handleDonorClick = (contactId: string) => {
+    onOpenChange(false); // Tancar modal
+    router.push(buildUrl(`/dashboard/donants?id=${contactId}`));
+  };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -127,32 +214,62 @@ export function RemittanceDetailModal({
           )}
         </div>
 
-        {/* Taula */}
+        {/* Taula responsive */}
         <div className="border rounded-lg overflow-auto flex-1 min-h-0">
           <Table>
             <TableHeader>
               <TableRow>
                 <TableHead>{t.movements.table.contact}</TableHead>
-                <TableHead>DNI/CIF</TableHead>
+                <TableHead className="hidden sm:table-cell">DNI/CIF</TableHead>
                 <TableHead className="text-right">{t.movements.table.amount}</TableHead>
-                <TableHead>{t.movements.table.category}</TableHead>
+                <TableHead className="hidden md:table-cell">{t.movements.table.category}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {filteredItems.map((item) => {
                 const contact = item.contactId ? contactMap[item.contactId] : null;
+                const isDonor = contact?.type === 'donor';
+
                 return (
                   <TableRow key={item.id}>
                     <TableCell className="font-medium">
-                      {contact?.name || '-'}
+                      {contact && isDonor ? (
+                        <HoverCard openDelay={300} closeDelay={100}>
+                          <HoverCardTrigger asChild>
+                            <button
+                              type="button"
+                              onClick={() => item.contactId && handleDonorClick(item.contactId)}
+                              className="text-left hover:text-primary hover:underline flex items-center gap-1 group"
+                            >
+                              <span>{contact.name}</span>
+                              <ExternalLink className="h-3 w-3 opacity-0 group-hover:opacity-50 transition-opacity" />
+                            </button>
+                          </HoverCardTrigger>
+                          <HoverCardContent className="w-72" side="right" align="start">
+                            <DonorHoverSummary
+                              donor={contact as Donor}
+                              transactions={allTransactions || []}
+                              t={t}
+                            />
+                          </HoverCardContent>
+                        </HoverCard>
+                      ) : (
+                        <span>{contact?.name || '-'}</span>
+                      )}
+                      {/* Mostrar DNI a mòbil sota el nom */}
+                      {contact?.taxId && (
+                        <span className="block sm:hidden text-xs text-muted-foreground mt-0.5">
+                          {contact.taxId}
+                        </span>
+                      )}
                     </TableCell>
-                    <TableCell className="text-muted-foreground">
+                    <TableCell className="text-muted-foreground hidden sm:table-cell">
                       {contact?.taxId || '-'}
                     </TableCell>
                     <TableCell className="text-right font-medium text-green-600">
                       {formatCurrencyEU(item.amount)}
                     </TableCell>
-                    <TableCell>
+                    <TableCell className="hidden md:table-cell">
                       {item.category ? (categoryTranslations[item.category] || item.category) : '-'}
                     </TableCell>
                   </TableRow>

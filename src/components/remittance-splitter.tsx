@@ -49,11 +49,12 @@ import {
   Settings2,
   Save,
   Trash2,
-  Eye
+  Eye,
+  RotateCcw
 } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { useFirebase } from '@/firebase';
-import { collection, writeBatch, doc, setDoc, deleteDoc } from 'firebase/firestore';
+import { collection, writeBatch, doc, setDoc, deleteDoc, updateDoc } from 'firebase/firestore';
 import { useCollection, useMemoFirebase } from '@/firebase';
 import { useTranslations } from '@/i18n';
 import { useCurrentOrganization } from '@/hooks/organization-provider';
@@ -704,9 +705,103 @@ export function RemittanceSplitter({
   };
 
   const handleApplyDefaultZipCode = () => {
-    setParsedDonations(prev => prev.map(d => 
+    setParsedDonations(prev => prev.map(d =>
       d.status !== 'found' ? { ...d, zipCode: defaultZipCode } : d
     ));
+  };
+
+  // Reactivar un donant individual
+  const handleReactivateDonor = async (index: number) => {
+    const donation = parsedDonations[index];
+    if (!donation.matchedDonor || !organizationId) return;
+
+    try {
+      const contactRef = doc(firestore, 'organizations', organizationId, 'contacts', donation.matchedDonor.id);
+      await updateDoc(contactRef, {
+        status: 'active',
+        inactiveSince: null,
+      });
+
+      // Actualitzar l'estat local: canviar status a 'found' i actualitzar matchedDonor
+      setParsedDonations(prev => prev.map((d, i) => {
+        if (i === index && d.matchedDonor) {
+          return {
+            ...d,
+            status: 'found',
+            matchedDonor: { ...d.matchedDonor, status: 'active', inactiveSince: undefined },
+          };
+        }
+        return d;
+      }));
+
+      toast({
+        title: t.movements.splitter.donorReactivated,
+        description: t.movements.splitter.donorReactivatedDescription(donation.matchedDonor.name),
+      });
+
+      log(`[Splitter] Donant reactivat: ${donation.matchedDonor.name}`);
+    } catch (error: any) {
+      console.error('Error reactivating donor:', error);
+      toast({ variant: 'destructive', title: t.movements.splitter.error, description: error.message });
+    }
+  };
+
+  // Reactivar tots els donants inactius
+  const handleReactivateAllInactive = async () => {
+    if (!organizationId) return;
+
+    const inactiveDonations = parsedDonations.filter(d => d.status === 'found_inactive' && d.matchedDonor);
+    if (inactiveDonations.length === 0) return;
+
+    setIsProcessing(true);
+
+    try {
+      // Processar en chunks per evitar límit de 500 operacions de Firestore
+      const BATCH_SIZE = 50;
+
+      for (let i = 0; i < inactiveDonations.length; i += BATCH_SIZE) {
+        const chunk = inactiveDonations.slice(i, i + BATCH_SIZE);
+        const batch = writeBatch(firestore);
+
+        for (const donation of chunk) {
+          if (donation.matchedDonor) {
+            const contactRef = doc(firestore, 'organizations', organizationId, 'contacts', donation.matchedDonor.id);
+            batch.update(contactRef, {
+              status: 'active',
+              inactiveSince: null,
+            });
+          }
+        }
+
+        await batch.commit();
+        // Petit delay per permetre que la UI respiri
+        await new Promise(resolve => setTimeout(resolve, 50));
+      }
+
+      // Actualitzar l'estat local
+      setParsedDonations(prev => prev.map(d => {
+        if (d.status === 'found_inactive' && d.matchedDonor) {
+          return {
+            ...d,
+            status: 'found',
+            matchedDonor: { ...d.matchedDonor, status: 'active', inactiveSince: undefined },
+          };
+        }
+        return d;
+      }));
+
+      toast({
+        title: t.movements.splitter.allDonorsReactivated,
+        description: t.movements.splitter.allDonorsReactivatedDescription(inactiveDonations.length),
+      });
+
+      log(`[Splitter] ${inactiveDonations.length} donants reactivats`);
+    } catch (error: any) {
+      console.error('Error reactivating donors:', error);
+      toast({ variant: 'destructive', title: t.movements.splitter.error, description: error.message });
+    } finally {
+      setIsProcessing(false);
+    }
   };
 
   const handleProcess = async () => {
@@ -1199,8 +1294,22 @@ export function RemittanceSplitter({
               <Alert variant="default" className="border-amber-300 bg-amber-50">
                 <AlertTriangle className="h-4 w-4 text-amber-600" />
                 <AlertTitle className="text-amber-800">{t.movements.splitter.inactiveWarningTitle}</AlertTitle>
-                <AlertDescription className="text-amber-700">
-                  {t.movements.splitter.inactiveWarningDescription(stats.foundInactive)}
+                <AlertDescription className="text-amber-700 flex items-center justify-between">
+                  <span>{t.movements.splitter.inactiveWarningDescription(stats.foundInactive)}</span>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleReactivateAllInactive}
+                    disabled={isProcessing}
+                    className="ml-4 border-amber-400 text-amber-800 hover:bg-amber-100"
+                  >
+                    {isProcessing ? (
+                      <Loader2 className="mr-1 h-3 w-3 animate-spin" />
+                    ) : (
+                      <RotateCcw className="mr-1 h-3 w-3" />
+                    )}
+                    {t.movements.splitter.reactivateAllDescription(stats.foundInactive)}
+                  </Button>
                 </AlertDescription>
               </Alert>
             )}
@@ -1291,10 +1400,21 @@ export function RemittanceSplitter({
                           </Badge>
                         )}
                         {donation.status === 'found_inactive' && (
-                          <Badge variant="outline" className="bg-amber-100 text-amber-800 border-amber-300">
-                            <AlertTriangle className="mr-1 h-3 w-3" />
-                            {t.movements.splitter.foundInactiveBadge}
-                          </Badge>
+                          <div className="flex items-center gap-1">
+                            <Badge variant="outline" className="bg-amber-100 text-amber-800 border-amber-300">
+                              <AlertTriangle className="mr-1 h-3 w-3" />
+                              {t.movements.splitter.foundInactiveBadge}
+                            </Badge>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleReactivateDonor(index)}
+                              className="h-6 px-2 text-xs text-amber-700 hover:text-amber-900 hover:bg-amber-100"
+                            >
+                              <RotateCcw className="mr-1 h-3 w-3" />
+                              {t.movements.splitter.reactivate}
+                            </Button>
+                          </div>
                         )}
                         {donation.status === 'new_with_taxid' && (
                           <Badge variant="outline" className="bg-blue-100 text-blue-800 border-blue-300">

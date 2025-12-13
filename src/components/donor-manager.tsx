@@ -135,7 +135,7 @@ export function DonorManager() {
   // Cercador intel·ligent
   const [searchQuery, setSearchQuery] = React.useState('');
 
-  // Llegir paràmetre de filtre de la URL
+  // Llegir paràmetres de la URL (filtre i id de donant)
   React.useEffect(() => {
     if (typeof window !== 'undefined') {
       const params = new URLSearchParams(window.location.search);
@@ -144,8 +144,22 @@ export function DonorManager() {
         setShowIncompleteOnly(true);
         setHasUrlFilter(true);
       }
+
+      // Si hi ha un ID de donant a la URL, obrir el drawer
+      const donorId = params.get('id');
+      if (donorId && donors) {
+        const donor = donors.find(d => d.id === donorId);
+        if (donor) {
+          setSelectedDonor(donor);
+          setIsDetailOpen(true);
+          // Netejar el paràmetre id de la URL
+          const url = new URL(window.location.href);
+          url.searchParams.delete('id');
+          window.history.replaceState({}, '', url.toString());
+        }
+      }
     }
-  }, []);
+  }, [donors]);
 
   // Funció per netejar el filtre i actualitzar la URL
   const clearFilter = () => {
