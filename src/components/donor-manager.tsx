@@ -526,8 +526,8 @@ export function DonorManager() {
                 </TableHeader>
                 <TableBody>
                   {filteredDonors && filteredDonors.map((donor) => (
-                    <TableRow key={donor.id}>
-                      <TableCell className="font-medium">
+                    <TableRow key={donor.id} className="h-12">
+                      <TableCell className="font-medium py-2">
                         <div className="flex items-center gap-2">
                           {donor.donorType === 'individual' ? (
                             <User className="h-4 w-4 text-muted-foreground" />
@@ -542,7 +542,7 @@ export function DonorManager() {
                             {donor.name}
                           </button>
                           {donor.status === 'inactive' && (
-                            <Badge variant="secondary" className="bg-gray-200 text-gray-600 text-xs">
+                            <Badge variant="secondary" className="bg-gray-200 text-gray-600 text-xs py-0.5 px-1.5">
                               {t.donors.inactiveBadge}
                             </Badge>
                           )}
@@ -558,29 +558,29 @@ export function DonorManager() {
                           )}
                         </div>
                       </TableCell>
-                      <TableCell>{donor.taxId || <span className="text-amber-500">-</span>}</TableCell>
-                      <TableCell>
-                        <Badge variant="outline">
+                      <TableCell className="py-2">{donor.taxId || <span className="text-amber-500">-</span>}</TableCell>
+                      <TableCell className="py-2">
+                        <Badge variant="outline" className="text-xs py-0.5 px-1.5">
                           {donor.donorType === 'individual' ? t.donors.types.individual : t.donors.types.company}
                         </Badge>
                       </TableCell>
-                      <TableCell>
+                      <TableCell className="py-2">
                         {donor.membershipType === 'recurring' ? (
-                          <Badge className="bg-green-100 text-green-800">
+                          <Badge className="bg-green-100 text-green-800 text-xs py-0.5 px-1.5">
                             <RefreshCw className="mr-1 h-3 w-3" />
                             {t.donors.membership.recurring}
                           </Badge>
                         ) : (
-                          <Badge variant="secondary">{t.donors.membership.oneTime}</Badge>
+                          <Badge variant="secondary" className="text-xs py-0.5 px-1.5">{t.donors.membership.oneTime}</Badge>
                         )}
                       </TableCell>
-                      <TableCell>
+                      <TableCell className="py-2">
                         {donor.membershipType === 'recurring' && donor.monthlyAmount
                           ? formatCurrencyEU(donor.monthlyAmount) + `/${t.donors.perMonth}`
                           : '-'
                         }
                       </TableCell>
-                      <TableCell className="text-right">
+                      <TableCell className="text-right py-2">
                         {donor.status === 'inactive' && (
                           <Tooltip>
                             <TooltipTrigger asChild>
