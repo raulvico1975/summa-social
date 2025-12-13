@@ -619,14 +619,17 @@ const executeImport = async () => {
       title: t.importers.donor.importSuccess,
       description: t.importers.donor.importSuccessDescription(imported + updated),
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error important:', error);
     toast({
       variant: 'destructive',
       title: 'Error',
-      description: t.importers.common.importError,
+      description: error?.message || t.importers.common.importError,
     });
     setStep('preview');
+  } finally {
+    // Assegurar que el progress indicator no queda bloquejat
+    // El progress es reseteja al useEffect quan el dialog es tanca
   }
 };
 

@@ -775,8 +775,8 @@ export function RemittanceSplitter({
         }
 
         await batch.commit();
-        // Petit delay per permetre que la UI respiri
-        await new Promise(resolve => setTimeout(resolve, 50));
+        // Delay per permetre que la UI es repinti (augmentat per evitar bloquejos)
+        await new Promise(resolve => setTimeout(resolve, 100));
       }
 
       // Actualitzar l'estat local
@@ -846,8 +846,8 @@ export function RemittanceSplitter({
         }
 
         await batch.commit();
-        // Petit delay per permetre que la UI respiri
-        await new Promise(resolve => setTimeout(resolve, 50));
+        // Delay per permetre que la UI es repinti (augmentat per evitar bloquejos)
+        await new Promise(resolve => setTimeout(resolve, 100));
         log(`[Splitter] Donants creats: ${Math.min(i + CHUNK_SIZE, donorsToCreate.length)}/${donorsToCreate.length}`);
       }
 
@@ -905,8 +905,8 @@ export function RemittanceSplitter({
         }
 
         await batch.commit();
-        // Petit delay per permetre que la UI respiri
-        await new Promise(resolve => setTimeout(resolve, 50));
+        // Delay per permetre que la UI es repinti (augmentat per evitar bloquejos)
+        await new Promise(resolve => setTimeout(resolve, 100));
         log(`[Splitter] Transaccions creades: ${Math.min(i + CHUNK_SIZE, parsedDonations.length)}/${parsedDonations.length}`);
       }
 
