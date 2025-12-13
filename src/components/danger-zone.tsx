@@ -91,9 +91,10 @@ export function DangerZone() {
 
       if (!remittanceSnapshot.empty) {
         // Ordenar per data/createdAt DESC i agafar la més recent
+        // IMPORTANT: ...d.data() primer, després id: d.id per sobreescriure qualsevol camp 'id' del document
         const remittances = remittanceSnapshot.docs.map(d => ({
-          id: d.id,
           ...d.data(),
+          id: d.id,
         }));
 
         // Ordenar per createdAt o date DESC
