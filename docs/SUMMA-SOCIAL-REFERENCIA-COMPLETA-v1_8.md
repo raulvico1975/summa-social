@@ -263,6 +263,13 @@ organizations/
       │       ├── isCounterpartTransfer: boolean  # Transferència a contrapart?
       │       ├── transactionType: string | null  # 'return' si és devolució
       │       ├── donationStatus: string | null   # 'returned' si marcada
+      │       │
+      │       # Camps de remeses (NOU v1.8):
+      │       ├── isRemittance: boolean | null    # És una remesa agrupada?
+      │       ├── remittanceItemCount: number | null  # Nombre de quotes
+      │       ├── source: 'bank' | 'remittance' | 'manual' | null  # Origen
+      │       ├── parentTransactionId: string | null  # ID remesa pare
+      │       │
       │       ├── createdAt: timestamp
       │       └── updatedAt: timestamp
       │
@@ -290,8 +297,8 @@ organizations/
       │       ├── membershipType: "one-time" | "recurring"
       │       ├── monthlyAmount: number           # Quota mensual
       │       ├── memberSince: string             # Data alta soci
-      │       ├── status: "active" | "pending_return" | "inactive"  # NOU v1.8
-      │       ├── inactiveSince: string | null    # Data baixa (NOU v1.8)
+      │       ├── status: "active" | "inactive"   # Estat (ACTUALITZAT v1.8)
+      │       ├── inactiveSince: string | null    # Data de baixa (NOU v1.8)
       │       ├── returnCount: number             # Comptador devolucions
       │       ├── lastReturnDate: string          # Última devolució
       │       │
@@ -460,14 +467,15 @@ Apareix quan hi ha fites positives:
 - Sense contacte
 
 
-## 3.3 DIVISOR DE REMESES
+## 3.3 DIVISOR DE REMESES (ACTUALITZAT v1.8)
 
 ### 3.3.1 Què és una Remesa?
 Agrupació de múltiples quotes de socis en un únic ingrés bancari.
 
-### 3.3.2 Formats suportats (NOU v1.7)
+### 3.3.2 Formats suportats
 - **CSV** amb detecció de separador
 - **XLSX / XLS** (Excel)
+- Detecció automàtica de fila inicial de dades
 
 ### 3.3.3 Procés de Divisió
 
@@ -482,22 +490,38 @@ Agrupació de múltiples quotes de socis en un únic ingrés bancari.
    - Per DNI/CIF (màxima)
    - Per IBAN (alta)
    - Per Nom (mitjana)
-5. **Processar**
+5. **Detecció de socis de baixa** (NOU v1.8):
+   - Avís visual si es detecten socis marcats com "baixa"
+   - Opció de reactivar individualment o tots alhora
+6. **Processar**
 
-### 3.3.4 Guardar Configuració
-Es pot guardar el mapejat per banc (Triodos, La Caixa, etc.)
+### 3.3.4 Vista Agrupada de Remeses (NOU v1.8)
 
-### 3.3.5 Vista Agrupada de Remeses (NOU v1.8)
-Les remeses processades es mostren com una sola fila amb badge indicant el nombre de quotes.
-- Badge clicable per veure detall de la remesa
-- Modal amb llistat de totes les donacions individuals
-- Informació resumida de cada donant (total any, històric)
+- La remesa processada queda com **1 sola línia** al llistat de moviments
+- Badge amb comptador de quotes: "👁 303"
+- **Filtre**: "Ocultar desglose de remesas" (activat per defecte)
+- **Modal de detall**: Clicar el badge obre una modal amb:
+  - Llista de totes les quotes individuals
+  - Cerca per nom o DNI
+  - Link directe al donant (clicar nom)
+  - Resum del donant (hover)
 
-### 3.3.6 Detecció de Socis de Baixa (NOU v1.8)
-En processar una remesa, es detecten socis marcats com "inactius":
-- Avís destacat amb nombre de socis de baixa detectats
-- Opció de reactivar individualment o tots alhora
-- Alerta per revisar domiciliacions bancàries
+### 3.3.5 Model de Dades de Remeses (NOU v1.8)
+
+**Transacció pare (remesa):**
+```
+isRemittance: true
+remittanceItemCount: 303
+```
+
+**Transaccions filles (quotes):**
+```
+source: 'remittance'
+parentTransactionId: '{id_remesa}'
+```
+
+### 3.3.6 Guardar Configuració
+Es pot guardar el mapejat per banc (Triodos, La Caixa, Santander, etc.)
 
 
 ## 3.4 GESTIÓ DE CONTACTES
@@ -522,28 +546,23 @@ En processar una remesa, es detecten socis marcats com "inactius":
 | Adreça | ❌ | ❌ |
 | Tipus (Particular/Empresa) | ✅ | ✅ NATURALEZA |
 | Modalitat (Puntual/Soci) | ✅ | ❌ |
+| **Estat (Actiu/Baixa)** | ❌ | ❌ | NOU v1.8 |
+| **Data de baixa** | ❌ | ❌ | NOU v1.8 |
 | Quota mensual | ❌ | ❌ |
 | IBAN | ❌ | ❌ |
 | Email | ❌ | ❌ |
 | Telèfon | ❌ | ❌ |
 | Categoria per defecte | ❌ | ❌ |
-| **Estat (Actiu/Baixa)** | ✅ | ❌ | **(NOU v1.8)** |
-| **Data baixa** | ❌ | ❌ | **(NOU v1.8)** |
 
-### 3.4.3 Gestió d'Estats de Donants (NOU v1.8)
+### 3.4.2.1 Gestió d'Estat Actiu/Baixa (NOU v1.8)
 
-| Estat | Descripció |
-|-------|------------|
-| **Actiu** | Donant operatiu |
-| **Baixa** | Donant que ha deixat de contribuir |
+- **Filtre per estat**: Per defecte es mostren només actius
+- **Badge visual**: Els donants de baixa mostren badge "Baixa"
+- **Reactivar**: Botó per tornar a donar d'alta un soci
+- **Edició**: Es pot canviar l'estat des del formulari d'edició
+- **Importador**: Detecta columna "Estado/Estat" automàticament
 
-**Funcionalitats:**
-- Filtre per estat a la llista de donants (Actius / Baixa / Tots)
-- Botó de reactivació ràpida per donants de baixa
-- Data de baixa automàtica quan es marca com inactiu
-- Comptador de donants per estat
-
-### 3.4.4 Importador de Donants (ACTUALITZAT v1.8)
+### 3.4.3 Importador de Donants (ACTUALITZAT v1.8)
 
 **Columnes detectades automàticament:**
 
@@ -557,18 +576,21 @@ En processar una remesa, es detecten socis marcats com "inactius":
 | Adreça | direccion, adreça, address, domicilio, calle |
 | Tipus | tipus, tipo, type, persona |
 | Modalitat | modalitat, modalidad, membership, soci |
+| **Estat** | estado, estat, status, activo, baja, baixa | NOU v1.8 |
 | Import | import, importe, quota, cuota, amount |
 | IBAN | iban, compte, cuenta, banc |
 | Email | email, correu, correo, mail |
 | Telèfon | telefon, telefono, phone |
 | Categoria | categoria, category |
 
-**Mode Actualització (NOU v1.8):**
-- Detecta donants existents per DNI/CIF o IBAN
-- Opció d'actualitzar dades existents o crear nous
-- Resum de donants a crear vs actualitzar
+**Funcionalitat "Actualitzar existents" (NOU v1.8):**
 
-### 3.4.5 Proveïdors - Camps
+- Checkbox opcional a la previsualització
+- Si un DNI ja existeix i el checkbox està activat → Actualitza en lloc d'ometre
+- Camps actualitzables: status, zipCode, address, email, phone, iban, membershipType, donorType
+- NO actualitza: name, taxId, createdAt (per seguretat)
+
+### 3.4.4 Proveïdors - Camps
 
 | Camp | Obligatori | Model 347 |
 |------|------------|-----------|
@@ -578,7 +600,7 @@ En processar una remesa, es detecten socis marcats com "inactius":
 | Adreça | ❌ | ❌ |
 | IBAN | ❌ | ❌ |
 
-### 3.4.6 DonorDetailDrawer
+### 3.4.5 DonorDetailDrawer
 
 Panel lateral que s'obre clicant el nom d'un donant:
 - Informació completa del donant
@@ -667,8 +689,24 @@ Categories d'ingressos i despeses personalitzables
 ### 3.7.5 Gestió de Membres
 Convidar, canviar rol, eliminar
 
-### 3.7.6 Zona de Perill (SuperAdmin)
-Esborrar tots els moviments/contactes/categories
+### 3.7.6 Zona de Perill (SuperAdmin) (ACTUALITZAT v1.8)
+
+Accions irreversibles només per SuperAdmin:
+
+| Acció | Descripció |
+|-------|------------|
+| Esborrar tots els donants | Elimina tots els donants de l'organització |
+| Esborrar tots els proveïdors | Elimina tots els proveïdors |
+| Esborrar tots els treballadors | Elimina tots els treballadors |
+| Esborrar tots els moviments | Elimina totes les transaccions |
+| **Esborrar última remesa** (NOU v1.8) | Esborra les transaccions filles i restaura la remesa original |
+
+**Esborrar última remesa:**
+- Busca l'última remesa processada (isRemittance === true)
+- Mostra info: data, concepte, import, nombre de quotes
+- Demana confirmació escrivint "BORRAR"
+- Esborra totes les transaccions filles
+- Restaura la transacció original per tornar-la a processar
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -691,7 +729,7 @@ Esborrar tots els moviments/contactes/categories
 | Excel | .xlsx, .xls |
 | CSV | .csv |
 
-**Columnes:** Veure secció 3.4.4
+**Columnes:** Veure secció 3.4.3
 
 ## 4.3 Importació de Proveïdors
 
@@ -854,10 +892,12 @@ Esborrar tots els moviments/contactes/categories
 # ═══════════════════════════════════════════════════════════════════════════════
 
 ## Completades recentment (v1.8)
-- ✅ Gestió d'estat actiu/baixa per donants
-- ✅ Vista agrupada de remeses amb badge clicable
-- ✅ Importador de donants amb mode actualització
-- ✅ Detecció de socis de baixa a remeses amb opció de reactivar
+- ✅ Estat actiu/baixa per donants
+- ✅ Importador actualitza donants existents
+- ✅ Vista agrupada de remeses (1 línia + modal detall)
+- ✅ Detecció i reactivació de socis de baixa a remeses
+- ✅ Link al donant des de modal de remesa
+- ✅ Eina per esborrar última remesa (Zona Perill)
 
 ## Completades (v1.7)
 - ✅ Suport Excel per divisor de remeses
@@ -981,6 +1021,40 @@ Esborrar tots els moviments/contactes/categories
 - Indicar path del fitxer
 - Incloure passos de verificació
 - Respondre en CATALÀ
+
+## 13.2 Patrons de Codi Obligatoris
+
+### Firestore: `null` vs `undefined`
+
+> ⚠️ **CRÍTIC**: Firestore **NO accepta `undefined`** com a valor de camp.
+
+**MAL** (provoca error):
+```typescript
+const newTxData = {
+  contactType: contactId ? 'donor' : undefined,  // ❌ ERROR
+  projectId: transaction.projectId,               // ❌ ERROR si és undefined
+};
+batch.set(docRef, newTxData);
+```
+
+**BÉ** (patró correcte):
+```typescript
+const newTxData = {
+  contactType: contactId ? 'donor' : null,        // ✅ null acceptat
+  projectId: transaction.projectId ?? null,       // ✅ converteix undefined a null
+};
+batch.set(docRef, newTxData);
+```
+
+**Alternativa** (ometre camp si no existeix):
+```typescript
+const newTxData = {
+  ...(contactId && { contactType: 'donor' }),     // ✅ només afegeix si existeix
+  ...(transaction.projectId && { projectId: transaction.projectId }),
+};
+```
+
+**Regla general**: Tots els camps opcionals han de ser `string | null`, mai `undefined`.
 
 **Quan se li demani nova funcionalitat:**
 - Validar si encaixa amb blocs estratègics
