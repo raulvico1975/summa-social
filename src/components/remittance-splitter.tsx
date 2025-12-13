@@ -338,6 +338,7 @@ export function RemittanceSplitter({
   React.useEffect(() => {
     if (!open) {
       setStep('upload');
+      setIsProcessing(false);
       setRawText('');
       setAllRows([]);
       setParsedDonations([]);
@@ -915,6 +916,13 @@ export function RemittanceSplitter({
         description: t.movements.splitter.remittanceProcessedDescription(parsedDonations.length, donorsToCreate.length),
       });
 
+      // Reiniciar estat abans de tancar per evitar bloquejos
+      setIsProcessing(false);
+      setStep('upload');
+
+      // Petit delay per assegurar que el state s'actualitza abans de tancar
+      await new Promise(resolve => setTimeout(resolve, 100));
+
       onSplitDone();
 
     } catch (error: any) {
@@ -922,7 +930,6 @@ export function RemittanceSplitter({
       log(`[Splitter] ERROR: ${error.message}`);
       toast({ variant: 'destructive', title: t.movements.splitter.error, description: error.message, duration: 9000 });
       setStep('preview');
-    } finally {
       setIsProcessing(false);
     }
   };
