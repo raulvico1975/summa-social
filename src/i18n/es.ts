@@ -584,6 +584,13 @@ export const es = {
     showAll: "Ver todos",
     inactiveBadge: "Baja",
     errorNameRequired: "El nombre es obligatorio.",
+    reactivate: "Reactivar",
+    statusField: "Estado",
+    statusActive: "Activo",
+    statusInactive: "Baja",
+    inactiveSinceLabel: "Fecha de baja",
+    donorReactivated: "Donante reactivado",
+    donorReactivatedDescription: (name: string) => `El donante "${name}" ha sido reactivado.`,
     importer: {
       title: "Importar Donantes",
       description: "Importa donantes desde un archivo Excel o CSV.",

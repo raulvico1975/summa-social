@@ -47,7 +47,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
-import { PlusCircle, Edit, Trash2, User, Building2, RefreshCw, Heart, Upload, AlertTriangle, Eye, Search, X } from 'lucide-react';
+import { PlusCircle, Edit, Trash2, User, Building2, RefreshCw, Heart, Upload, AlertTriangle, Eye, Search, X, RotateCcw } from 'lucide-react';
 import type { Donor, Category } from '@/lib/data';
 import { useToast } from '@/hooks/use-toast';
 import { Badge } from '@/components/ui/badge';
@@ -78,6 +78,8 @@ const emptyFormData: DonorFormData = {
   phone: '',
   notes: '',
   defaultCategoryId: undefined,
+  status: 'active',
+  inactiveSince: undefined,
 };
 
 export function DonorManager() {
@@ -228,6 +230,8 @@ export function DonorManager() {
       phone: donor.phone || '',
       notes: donor.notes || '',
       defaultCategoryId: donor.defaultCategoryId,
+      status: donor.status || 'active',
+      inactiveSince: donor.inactiveSince,
     });
     setIsDialogOpen(true);
   };
@@ -297,6 +301,17 @@ export function DonorManager() {
     }
 
     const now = new Date().toISOString();
+
+    // Gestionar canvi d'estat actiu/baixa
+    let inactiveSince: string | null | undefined = formData.inactiveSince;
+    if (formData.status === 'inactive' && !inactiveSince) {
+      // Si canvia a baixa i no tenia data, posar data actual
+      inactiveSince = now;
+    } else if (formData.status === 'active') {
+      // Si canvia a actiu, esborrar data de baixa
+      inactiveSince = null;
+    }
+
     const dataToSave = {
       ...normalized,
       taxId: normalized.taxId || null,
@@ -311,6 +326,8 @@ export function DonorManager() {
       monthlyAmount: normalized.monthlyAmount ?? null,
       memberSince: normalized.memberSince ?? null,
       iban: normalized.iban || null,
+      status: formData.status || 'active',
+      inactiveSince: inactiveSince,
       updatedAt: now,
     };
 
@@ -337,6 +354,22 @@ export function DonorManager() {
   const handleViewDetail = (donor: Donor) => {
     setSelectedDonor(donor);
     setIsDetailOpen(true);
+  };
+
+  const handleReactivate = (donor: Donor) => {
+    if (!contactsCollection) return;
+
+    const now = new Date().toISOString();
+    setDocumentNonBlocking(doc(contactsCollection, donor.id), {
+      status: 'active',
+      inactiveSince: null,
+      updatedAt: now,
+    }, { merge: true });
+
+    toast({
+      title: t.donors.donorReactivated,
+      description: t.donors.donorReactivatedDescription(donor.name),
+    });
   };
 
   const handleEditFromDrawer = (donor: Donor) => {
@@ -534,6 +567,21 @@ export function DonorManager() {
                         }
                       </TableCell>
                       <TableCell className="text-right">
+                        {donor.status === 'inactive' && (
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="text-green-600 hover:text-green-700"
+                                onClick={() => handleReactivate(donor)}
+                              >
+                                <RotateCcw className="h-4 w-4" />
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>{t.donors.reactivate}</TooltipContent>
+                          </Tooltip>
+                        )}
                         <Button variant="ghost" size="icon" onClick={() => handleEdit(donor)}>
                           <Edit className="h-4 w-4" />
                         </Button>
@@ -662,6 +710,31 @@ export function DonorManager() {
                   </SelectContent>
                 </Select>
               </div>
+
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="status" className="text-right">{t.donors.statusField}</Label>
+                <Select
+                  value={formData.status || 'active'}
+                  onValueChange={(v) => handleFormChange('status', v)}
+                >
+                  <SelectTrigger className="col-span-3">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="active">{t.donors.statusActive}</SelectItem>
+                    <SelectItem value="inactive">{t.donors.statusInactive}</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {formData.status === 'inactive' && formData.inactiveSince && (
+                <div className="grid grid-cols-4 items-center gap-4">
+                  <div className="col-span-1" />
+                  <div className="col-span-3 text-sm text-muted-foreground">
+                    {t.donors.inactiveSinceLabel}: {new Date(formData.inactiveSince).toLocaleDateString()}
+                  </div>
+                </div>
+              )}
             </div>
 
             <div className="space-y-4 pt-4 border-t">

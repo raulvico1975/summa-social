@@ -551,6 +551,13 @@ export const ca = {
     showAll: "Veure tots",
     inactiveBadge: "Baixa",
     errorNameRequired: "El nom és obligatori.",
+    reactivate: "Reactivar",
+    statusField: "Estat",
+    statusActive: "Actiu",
+    statusInactive: "Baixa",
+    inactiveSinceLabel: "Data de baixa",
+    donorReactivated: "Donant reactivat",
+    donorReactivatedDescription: (name: string) => `El donant "${name}" ha estat reactivat.`,
     importer: {
       title: "Importar Donants",
       description: "Importa donants des d'un arxiu Excel o CSV.",
