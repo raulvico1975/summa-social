@@ -695,26 +695,26 @@ export function TransactionsTable() {
       <div className="rounded-md border">
         <Table>
           <TableHeader>
-            <TableRow>
-              <TableHead className="w-[90px]">
+            <TableRow className="h-9">
+              <TableHead className="w-[70px] py-2">
   <button
     onClick={() => setSortDateAsc(!sortDateAsc)}
-    className="flex items-center gap-1 hover:text-foreground transition-colors"
+    className="flex items-center gap-1 hover:text-foreground transition-colors text-xs"
   >
     {t.movements.table.date}
     {sortDateAsc ? (
-      <ChevronUp className="h-4 w-4" />
+      <ChevronUp className="h-3 w-3" />
     ) : (
-      <ChevronDown className="h-4 w-4" />
+      <ChevronDown className="h-3 w-3" />
     )}
   </button>
 </TableHead>
-              <TableHead className="text-right w-[100px]">{t.movements.table.amount}</TableHead>
-              <TableHead className="max-w-[280px]">{t.movements.table.concept}</TableHead>
-              <TableHead className="w-[130px]">{t.movements.table.contact}</TableHead>
-              <TableHead className="w-[120px]">{t.movements.table.category}</TableHead>
+              <TableHead className="text-right w-[85px] py-2">{t.movements.table.amount}</TableHead>
+              <TableHead className="max-w-[250px] py-2">{t.movements.table.concept}</TableHead>
+              <TableHead className="w-[120px] py-2">{t.movements.table.contact}</TableHead>
+              <TableHead className="w-[100px] py-2">{t.movements.table.category}</TableHead>
               {showProjectColumn ? (
-                <TableHead className="w-[120px]">
+                <TableHead className="w-[100px] py-2">
                   <div className="flex items-center gap-1">
                     {t.movements.table.project}
                     <button
@@ -722,27 +722,27 @@ export function TransactionsTable() {
                       className="p-0.5 hover:bg-accent rounded transition-colors"
                       title={t.movements.table.hideProjectColumn}
                     >
-                      <ChevronUp className="h-3.5 w-3.5 text-muted-foreground" />
+                      <ChevronUp className="h-3 w-3 text-muted-foreground" />
                     </button>
                   </div>
                 </TableHead>
               ) : (
-                <TableHead className="w-[50px]">
+                <TableHead className="w-[40px] py-2">
                   <Tooltip>
                     <TooltipTrigger asChild>
                       <button
                         onClick={() => setShowProjectColumn(true)}
-                        className="flex items-center justify-center w-full px-1 py-1 hover:bg-accent rounded transition-colors text-muted-foreground"
+                        className="flex items-center justify-center w-full px-1 py-0.5 hover:bg-accent rounded transition-colors text-muted-foreground"
                       >
-                        <FolderKanban className="h-3.5 w-3.5" />
+                        <FolderKanban className="h-3 w-3" />
                       </button>
                     </TooltipTrigger>
                     <TooltipContent>{t.movements.table.projects}</TooltipContent>
                   </Tooltip>
                 </TableHead>
               )}
-              <TableHead className="w-[50px] text-center">Doc</TableHead>
-              <TableHead className="w-[50px]"><span className="sr-only">{t.movements.table.actions}</span></TableHead>
+              <TableHead className="w-[40px] text-center py-2">Doc</TableHead>
+              <TableHead className="w-[40px] py-2"><span className="sr-only">{t.movements.table.actions}</span></TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>

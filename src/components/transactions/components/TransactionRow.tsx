@@ -129,7 +129,7 @@ const formatDate = (dateString: string) => {
     return date.toLocaleDateString('ca-ES', {
       day: '2-digit',
       month: '2-digit',
-      year: 'numeric',
+      year: '2-digit',
     });
   } catch {
     return dateString;
@@ -243,7 +243,7 @@ export const TransactionRow = React.memo(function TransactionRow({
       return (
         <Tooltip>
           <TooltipTrigger asChild>
-            <Badge variant="destructive" className="gap-1 text-xs">
+            <Badge variant="destructive" className="gap-0.5 text-xs py-0 px-1.5">
               <Undo2 className="h-3 w-3" />
               {t.returnBadge}
             </Badge>
@@ -258,7 +258,7 @@ export const TransactionRow = React.memo(function TransactionRow({
       return (
         <Tooltip>
           <TooltipTrigger asChild>
-            <Badge variant="outline" className="gap-1 text-xs text-orange-600 border-orange-300">
+            <Badge variant="outline" className="gap-0.5 text-xs py-0 px-1.5 text-orange-600 border-orange-300">
               <Ban className="h-3 w-3" />
               {t.commissionBadge}
             </Badge>
@@ -273,7 +273,7 @@ export const TransactionRow = React.memo(function TransactionRow({
       return (
         <Tooltip>
           <TooltipTrigger asChild>
-            <Badge variant="outline" className="gap-1 text-xs text-gray-500 line-through">
+            <Badge variant="outline" className="gap-0.5 text-xs py-0 px-1.5 text-gray-500 line-through">
               {t.returnedDonation}
             </Badge>
           </TooltipTrigger>
@@ -288,18 +288,18 @@ export const TransactionRow = React.memo(function TransactionRow({
 
   return (
     <TableRow
-      className={
+      className={`h-10 ${
         isReturn ? 'bg-red-50/50' :
         isReturnFee ? 'bg-orange-50/50' :
         isReturnedDonation ? 'bg-gray-50/50' : ''
-      }
+      }`}
     >
       {/* Date */}
-      <TableCell className="text-muted-foreground">{formatDate(tx.date)}</TableCell>
+      <TableCell className="text-muted-foreground py-1 text-xs">{formatDate(tx.date)}</TableCell>
 
       {/* Amount */}
       <TableCell
-        className={`text-right font-mono font-medium ${
+        className={`text-right font-mono font-medium py-1 text-sm ${
           isReturnedDonation ? 'text-gray-400 line-through' :
           tx.amount > 0 ? 'text-green-600' : 'text-foreground'
         }`}
@@ -308,16 +308,16 @@ export const TransactionRow = React.memo(function TransactionRow({
       </TableCell>
 
       {/* Concept + Note + Badge */}
-      <TableCell>
-        <div className="space-y-1">
-          <div className="flex items-center gap-2">
+      <TableCell className="py-1">
+        <div className="space-y-0.5">
+          <div className="flex items-center gap-1">
             {renderTransactionTypeBadge()}
             {tx.isRemittance && (
               <Tooltip>
                 <TooltipTrigger asChild>
                   <Badge
                     variant="outline"
-                    className="gap-1 text-xs cursor-pointer hover:bg-accent"
+                    className="gap-0.5 text-xs py-0 px-1.5 cursor-pointer hover:bg-accent"
                     onClick={handleViewRemittanceDetail}
                   >
                     <Eye className="h-3 w-3" />
@@ -328,7 +328,7 @@ export const TransactionRow = React.memo(function TransactionRow({
               </Tooltip>
             )}
           </div>
-          <p className={`text-sm truncate max-w-[280px] ${isReturnedDonation ? 'text-gray-400' : ''}`} title={tx.description}>
+          <p className={`text-sm truncate max-w-[250px] ${isReturnedDonation ? 'text-gray-400' : ''}`} title={tx.description}>
             {tx.description}
           </p>
           <InlineNoteEditor
@@ -339,15 +339,15 @@ export const TransactionRow = React.memo(function TransactionRow({
       </TableCell>
 
       {/* Contact */}
-      <TableCell>
+      <TableCell className="py-1">
         {isReturn && !tx.contactId ? (
           <Button
             variant="outline"
             size="sm"
             onClick={handleOpenReturnDialog}
-            className="text-red-600 border-red-300 hover:bg-red-50"
+            className="text-red-600 border-red-300 hover:bg-red-50 h-7 text-xs"
           >
-            <AlertTriangle className="mr-1.5 h-3 w-3" />
+            <AlertTriangle className="mr-1 h-3 w-3" />
             {t.assign}
           </Button>
         ) : (
@@ -361,14 +361,14 @@ export const TransactionRow = React.memo(function TransactionRow({
       </TableCell>
 
       {/* Category */}
-      <TableCell>
+      <TableCell className="py-1">
         <Popover open={isCategoryPopoverOpen} onOpenChange={setIsCategoryPopoverOpen}>
           <PopoverTrigger asChild>
             <Button
               variant="ghost"
               role="combobox"
               disabled={isCategoryLoading}
-              className={`justify-start rounded-full border-0 px-3 py-1 text-xs font-semibold h-auto min-w-0 w-auto gap-1 ${
+              className={`justify-start rounded-full border-0 px-2 py-0.5 text-xs font-semibold h-6 min-w-0 w-auto gap-0.5 ${
                 tx.amount > 0
                   ? 'bg-green-600 text-white hover:bg-green-600/80 hover:text-white'
                   : 'bg-red-500 text-white hover:bg-red-500/80 hover:text-white'
@@ -380,11 +380,11 @@ export const TransactionRow = React.memo(function TransactionRow({
                   <span>{t.categorize}...</span>
                 </span>
               ) : (
-                <span className="truncate">
+                <span className="truncate max-w-[80px]">
                   {tx.category ? getCategoryDisplayName(tx.category) : t.uncategorized}
                 </span>
               )}
-              <ChevronDown className="ml-1 h-3 w-3 shrink-0 opacity-70" />
+              <ChevronDown className="ml-0.5 h-3 w-3 shrink-0 opacity-70" />
             </Button>
           </PopoverTrigger>
           <PopoverContent className="w-[200px] p-0" align="start">
@@ -421,17 +421,17 @@ export const TransactionRow = React.memo(function TransactionRow({
 
       {/* Project */}
       {showProjectColumn ? (
-        <TableCell>
+        <TableCell className="py-1">
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               {projectName ? (
                 <Button variant="ghost" className="h-auto p-0 text-left font-normal flex items-center gap-1">
-                  <span className={`text-sm truncate max-w-[100px] ${isReturnedDonation ? 'text-gray-400' : ''}`}>{projectName}</span>
+                  <span className={`text-xs truncate max-w-[90px] ${isReturnedDonation ? 'text-gray-400' : ''}`}>{projectName}</span>
                   <ChevronDown className="h-3 w-3 text-muted-foreground" />
                 </Button>
               ) : (
-                <Button variant="ghost" size="sm" className="text-muted-foreground">
-                  <FolderKanban className="mr-2 h-4 w-4" />
+                <Button variant="ghost" size="sm" className="text-muted-foreground h-6 text-xs">
+                  <FolderKanban className="mr-1 h-3 w-3" />
                   {t.assign}
                 </Button>
               )}
@@ -450,7 +450,7 @@ export const TransactionRow = React.memo(function TransactionRow({
           </DropdownMenu>
         </TableCell>
       ) : (
-        <TableCell className="text-center">
+        <TableCell className="text-center py-1">
           {projectName && (
             <Tooltip>
               <TooltipTrigger>
@@ -463,11 +463,11 @@ export const TransactionRow = React.memo(function TransactionRow({
       )}
 
       {/* Document */}
-      <TableCell className="text-center">
+      <TableCell className="text-center py-1">
         {isDocumentLoading ? (
-          <Loader2 className="h-4 w-4 animate-spin mx-auto text-muted-foreground" />
+          <Loader2 className="h-3 w-3 animate-spin mx-auto text-muted-foreground" />
         ) : hasDocument ? (
-          <div className="inline-flex items-center gap-1">
+          <div className="inline-flex items-center gap-0.5">
             <Tooltip>
               <TooltipTrigger asChild>
                 <a
@@ -476,7 +476,7 @@ export const TransactionRow = React.memo(function TransactionRow({
                   rel="noopener noreferrer"
                   className="inline-flex"
                 >
-                  <Circle className="h-3 w-3 fill-green-500 text-green-500" />
+                  <Circle className="h-2.5 w-2.5 fill-green-500 text-green-500" />
                 </a>
               </TooltipTrigger>
               <TooltipContent>{t.viewDocument}</TooltipContent>
@@ -487,7 +487,7 @@ export const TransactionRow = React.memo(function TransactionRow({
                   onClick={handleDeleteDocument}
                   className="inline-flex text-muted-foreground hover:text-destructive transition-colors"
                 >
-                  <Trash2 className="h-3 w-3" />
+                  <Trash2 className="h-2.5 w-2.5" />
                 </button>
               </TooltipTrigger>
               <TooltipContent>{t.deleteDocument}</TooltipContent>
@@ -500,7 +500,7 @@ export const TransactionRow = React.memo(function TransactionRow({
                 onClick={handleAttachDocument}
                 className="inline-flex hover:scale-110 transition-transform"
               >
-                <Circle className={`h-3 w-3 ${isExpense ? 'text-muted-foreground' : 'text-muted-foreground/30'}`} />
+                <Circle className={`h-2.5 w-2.5 ${isExpense ? 'text-muted-foreground' : 'text-muted-foreground/30'}`} />
               </button>
             </TooltipTrigger>
             <TooltipContent>
@@ -511,10 +511,10 @@ export const TransactionRow = React.memo(function TransactionRow({
       </TableCell>
 
       {/* Actions */}
-      <TableCell className="text-right">
+      <TableCell className="text-right py-1">
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button variant="ghost" size="icon">
+            <Button variant="ghost" size="icon" className="h-7 w-7">
               <MoreVertical className="h-4 w-4" />
             </Button>
           </DropdownMenuTrigger>
