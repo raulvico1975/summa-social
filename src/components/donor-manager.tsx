@@ -526,8 +526,8 @@ export function DonorManager() {
                 </TableHeader>
                 <TableBody>
                   {filteredDonors && filteredDonors.map((donor) => (
-                    <TableRow key={donor.id} className="h-12">
-                      <TableCell className="font-medium py-2">
+                    <TableRow key={donor.id} className="h-10">
+                      <TableCell className="font-medium py-1">
                         <div className="flex items-center gap-2">
                           {donor.donorType === 'individual' ? (
                             <User className="h-4 w-4 text-muted-foreground" />
@@ -542,7 +542,7 @@ export function DonorManager() {
                             {donor.name}
                           </button>
                           {donor.status === 'inactive' && (
-                            <Badge variant="secondary" className="bg-gray-200 text-gray-600 text-xs py-0.5 px-1.5">
+                            <Badge variant="secondary" className="bg-gray-200 text-gray-600 text-xs py-0 px-1.5">
                               {t.donors.inactiveBadge}
                             </Badge>
                           )}
@@ -558,54 +558,54 @@ export function DonorManager() {
                           )}
                         </div>
                       </TableCell>
-                      <TableCell className="py-2">{donor.taxId || <span className="text-amber-500">-</span>}</TableCell>
-                      <TableCell className="py-2">
-                        <Badge variant="outline" className="text-xs py-0.5 px-1.5">
+                      <TableCell className="py-1 text-xs">{donor.taxId || <span className="text-amber-500">-</span>}</TableCell>
+                      <TableCell className="py-1">
+                        <Badge variant="outline" className="text-xs py-0 px-1.5">
                           {donor.donorType === 'individual' ? t.donors.types.individual : t.donors.types.company}
                         </Badge>
                       </TableCell>
-                      <TableCell className="py-2">
+                      <TableCell className="py-1">
                         {donor.membershipType === 'recurring' ? (
-                          <Badge className="bg-green-100 text-green-800 text-xs py-0.5 px-1.5">
-                            <RefreshCw className="mr-1 h-3 w-3" />
+                          <Badge className="bg-green-100 text-green-800 text-xs py-0 px-1.5">
+                            <RefreshCw className="mr-0.5 h-2.5 w-2.5" />
                             {t.donors.membership.recurring}
                           </Badge>
                         ) : (
-                          <Badge variant="secondary" className="text-xs py-0.5 px-1.5">{t.donors.membership.oneTime}</Badge>
+                          <Badge variant="secondary" className="text-xs py-0 px-1.5">{t.donors.membership.oneTime}</Badge>
                         )}
                       </TableCell>
-                      <TableCell className="py-2">
+                      <TableCell className="py-1 text-xs">
                         {donor.membershipType === 'recurring' && donor.monthlyAmount
                           ? formatCurrencyEU(donor.monthlyAmount) + `/${t.donors.perMonth}`
                           : '-'
                         }
                       </TableCell>
-                      <TableCell className="text-right py-2">
+                      <TableCell className="text-right py-1">
                         {donor.status === 'inactive' && (
                           <Tooltip>
                             <TooltipTrigger asChild>
                               <Button
                                 variant="ghost"
                                 size="icon"
-                                className="text-green-600 hover:text-green-700"
+                                className="h-7 w-7 text-green-600 hover:text-green-700"
                                 onClick={() => handleReactivate(donor)}
                               >
-                                <RotateCcw className="h-4 w-4" />
+                                <RotateCcw className="h-3.5 w-3.5" />
                               </Button>
                             </TooltipTrigger>
                             <TooltipContent>{t.donors.reactivate}</TooltipContent>
                           </Tooltip>
                         )}
-                        <Button variant="ghost" size="icon" onClick={() => handleEdit(donor)}>
-                          <Edit className="h-4 w-4" />
+                        <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => handleEdit(donor)}>
+                          <Edit className="h-3.5 w-3.5" />
                         </Button>
                         <Button
                           variant="ghost"
                           size="icon"
-                          className="text-red-500 hover:text-red-600"
+                          className="h-7 w-7 text-red-500 hover:text-red-600"
                           onClick={() => handleDeleteRequest(donor)}
                         >
-                          <Trash2 className="h-4 w-4" />
+                          <Trash2 className="h-3.5 w-3.5" />
                         </Button>
                       </TableCell>
                     </TableRow>
