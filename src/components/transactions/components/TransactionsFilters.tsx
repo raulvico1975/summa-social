@@ -25,6 +25,7 @@ import {
   X,
   ChevronDown,
   User,
+  FileUp,
 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -34,7 +35,7 @@ import { Label } from '@/components/ui/label';
 // TYPES
 // =============================================================================
 
-export type TableFilter = 'all' | 'missing' | 'returns' | 'pendingReturns' | 'uncategorized' | 'noContact';
+export type TableFilter = 'all' | 'missing' | 'returns' | 'pendingReturns' | 'pendingRemittances' | 'pendingIndividuals' | 'uncategorized' | 'noContact';
 
 interface TransactionsFiltersProps {
   currentFilter: TableFilter;
@@ -53,6 +54,7 @@ interface TransactionsFiltersProps {
   onExportExpensesWithoutDoc: () => void;
   hideRemittanceItems: boolean;
   onHideRemittanceItemsChange: (value: boolean) => void;
+  onOpenReturnImporter?: () => void;
   t: {
     categorizeAll: string;
     all: string;
@@ -65,6 +67,7 @@ interface TransactionsFiltersProps {
     exportTooltip: string;
     searchPlaceholder: string;
     hideRemittanceItems: string;
+    importReturnsFile?: string;
   };
 }
 
@@ -89,6 +92,7 @@ export const TransactionsFilters = React.memo(function TransactionsFilters({
   onExportExpensesWithoutDoc,
   hideRemittanceItems,
   onHideRemittanceItemsChange,
+  onOpenReturnImporter,
   t,
 }: TransactionsFiltersProps) {
   // Calcular quants tipus de pendents tenen elements
@@ -237,6 +241,19 @@ export const TransactionsFilters = React.memo(function TransactionsFilters({
               )}
             </DropdownMenuContent>
           </DropdownMenu>
+        )}
+
+        {/* CTA: Importar fitxer del banc (visible quan filtre pendingReturns actiu) */}
+        {currentFilter === 'pendingReturns' && onOpenReturnImporter && (
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={onOpenReturnImporter}
+            className="border-red-300 text-red-700 hover:bg-red-100"
+          >
+            <FileUp className="mr-1 h-4 w-4" />
+            {t.importReturnsFile || 'Importar fitxer del banc'}
+          </Button>
         )}
 
         {/* Export button */}

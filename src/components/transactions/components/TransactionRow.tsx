@@ -49,6 +49,7 @@ import {
   Undo2,
   Ban,
   Eye,
+  AlertCircle,
 } from 'lucide-react';
 import type { Transaction, Category, Project, ContactType } from '@/lib/data';
 import { formatCurrencyEU } from '@/lib/normalize';
@@ -84,6 +85,7 @@ interface TransactionRowProps {
   onSplitRemittance: (tx: Transaction) => void;
   onViewRemittanceDetail: (txId: string) => void;
   onCreateNewContact: (txId: string, type: 'donor' | 'supplier') => void;
+  onOpenReturnImporter?: () => void;
   // Translations
   t: {
     date: string;
@@ -96,6 +98,11 @@ interface TransactionRowProps {
     returnedDonation: string;
     returnedDonationInfo: string;
     assign: string;
+    assignDonor: string;
+    assignDonorTooltip: string;
+    remittanceUseImporter: string;
+    uploadBankFile: string;
+    uploadBankFileTooltip: string;
     unlink: string;
     searchCategory: string;
     noResults: string;
@@ -165,11 +172,14 @@ export const TransactionRow = React.memo(function TransactionRow({
   onSplitRemittance,
   onViewRemittanceDetail,
   onCreateNewContact,
+  onOpenReturnImporter,
   t,
   getCategoryDisplayName,
 }: TransactionRowProps) {
   // Local state for category popover - avoids parent re-render
   const [isCategoryPopoverOpen, setIsCategoryPopoverOpen] = React.useState(false);
+  // Local state for actions dropdown menu - needed to close before opening modals (Radix aria-hidden fix)
+  const [isActionsMenuOpen, setIsActionsMenuOpen] = React.useState(false);
 
   const isExpense = tx.amount < 0;
   const hasDocument = !!tx.document;
@@ -226,12 +236,21 @@ export const TransactionRow = React.memo(function TransactionRow({
   }, [tx, onDelete]);
 
   const handleOpenReturnDialog = React.useCallback(() => {
-    onOpenReturnDialog(tx);
+    // Delay per permetre que el DropdownMenu es tanqui completament
+    // abans d'obrir la modal (evita conflicte aria-hidden)
+    setIsActionsMenuOpen(false);
+    setTimeout(() => {
+      if (document.activeElement instanceof HTMLElement) {
+        document.activeElement.blur();
+      }
+      onOpenReturnDialog(tx);
+    }, 100);
   }, [tx, onOpenReturnDialog]);
 
   const handleSplitRemittance = React.useCallback(() => {
     // Delay per permetre que el DropdownMenu es tanqui completament
     // abans d'obrir la modal (evita conflicte aria-hidden)
+    setIsActionsMenuOpen(false);
     setTimeout(() => {
       if (document.activeElement instanceof HTMLElement) {
         document.activeElement.blur();
@@ -324,14 +343,27 @@ export const TransactionRow = React.memo(function TransactionRow({
                 <TooltipTrigger asChild>
                   <Badge
                     variant="outline"
-                    className="gap-0.5 text-xs py-0 px-1.5 cursor-pointer hover:bg-accent"
+                    className={`gap-0.5 text-xs py-0 px-1.5 cursor-pointer hover:bg-accent ${
+                      tx.remittanceStatus === 'partial'
+                        ? 'border-orange-400 text-orange-700 bg-orange-50'
+                        : ''
+                    }`}
                     onClick={handleViewRemittanceDetail}
                   >
-                    <Eye className="h-3 w-3" />
-                    {tx.remittanceItemCount} {t.remittanceQuotes}
+                    {tx.remittanceStatus === 'partial' ? (
+                      <AlertCircle className="h-3 w-3 text-orange-600" />
+                    ) : (
+                      <Eye className="h-3 w-3" />
+                    )}
+                    {tx.remittanceResolvedCount ?? tx.remittanceItemCount}/{tx.remittanceItemCount} {t.remittanceQuotes}
                   </Badge>
                 </TooltipTrigger>
-                <TooltipContent>{t.viewRemittanceDetail}</TooltipContent>
+                <TooltipContent>
+                  {tx.remittanceStatus === 'partial'
+                    ? `Remesa parcial: ${tx.remittancePendingCount} pendents (${formatCurrencyEU(tx.remittancePendingTotalAmount || 0)})`
+                    : t.viewRemittanceDetail
+                  }
+                </TooltipContent>
               </Tooltip>
             )}
           </div>
@@ -348,15 +380,42 @@ export const TransactionRow = React.memo(function TransactionRow({
       {/* Contact */}
       <TableCell className="py-1">
         {isReturn && !tx.contactId ? (
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={handleOpenReturnDialog}
-            className="text-red-600 border-red-300 hover:bg-red-50 h-7 text-xs"
-          >
-            <AlertTriangle className="mr-1 h-3 w-3" />
-            {t.assign}
-          </Button>
+          // Devolució pendent: mostrar dues accions sempre
+          <div className="flex items-center gap-1">
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleOpenReturnDialog}
+                  className="text-red-600 border-red-300 hover:bg-red-50 h-7 text-xs px-2"
+                >
+                  <AlertTriangle className="mr-1 h-3 w-3" />
+                  {t.assignDonor}
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>
+                {t.assignDonorTooltip}
+              </TooltipContent>
+            </Tooltip>
+            {onOpenReturnImporter && (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={onOpenReturnImporter}
+                    className="text-muted-foreground hover:text-foreground h-7 text-xs px-2"
+                  >
+                    <FileUp className="h-3 w-3" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  {t.uploadBankFileTooltip}
+                </TooltipContent>
+              </Tooltip>
+            )}
+          </div>
         ) : (
           <ContactCombobox
             contacts={comboboxContacts}
@@ -519,18 +578,27 @@ export const TransactionRow = React.memo(function TransactionRow({
 
       {/* Actions */}
       <TableCell className="text-right py-1">
-        <DropdownMenu>
+        <DropdownMenu open={isActionsMenuOpen} onOpenChange={setIsActionsMenuOpen}>
           <DropdownMenuTrigger asChild>
             <Button variant="ghost" size="icon" className="h-7 w-7">
               <MoreVertical className="h-4 w-4" />
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
-            {isReturn && (
+            {isReturn && !tx.isRemittance && (
               <>
                 <DropdownMenuItem onClick={handleOpenReturnDialog}>
                   <Link className="mr-2 h-4 w-4 text-red-500" />
                   {t.manageReturn}
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+              </>
+            )}
+            {tx.isRemittance && tx.remittanceType === 'returns' && (
+              <>
+                <DropdownMenuItem onClick={handleViewRemittanceDetail}>
+                  <Eye className="mr-2 h-4 w-4 text-blue-500" />
+                  {t.viewRemittanceDetail}
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
               </>
@@ -545,7 +613,7 @@ export const TransactionRow = React.memo(function TransactionRow({
                 {t.attachDocument}
               </DropdownMenuItem>
             )}
-            {tx.amount > 0 && !isReturn && !isReturnFee && (
+            {tx.amount > 0 && !isReturn && !isReturnFee && !tx.isRemittance && (
               <DropdownMenuItem onClick={handleSplitRemittance}>
                 <GitMerge className="mr-2 h-4 w-4" />
                 {t.splitRemittance}

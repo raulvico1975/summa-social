@@ -79,10 +79,51 @@ export type Transaction = {
   isRemittance?: boolean;
 
   /**
-   * Nombre de quotes individuals dins la remesa
+   * Nombre total de quotes individuals dins la remesa
    * Només té valor si isRemittance = true
    */
   remittanceItemCount?: number;
+
+  /**
+   * Nombre de quotes ja resoltes (filles creades)
+   */
+  remittanceResolvedCount?: number;
+
+  /**
+   * Nombre de quotes pendents d'identificar
+   */
+  remittancePendingCount?: number;
+
+  /**
+   * Suma total dels imports pendents (positiu)
+   */
+  remittancePendingTotalAmount?: number;
+
+  /**
+   * Tipus de remesa
+   * - returns: Remesa de devolucions
+   */
+  remittanceType?: 'returns';
+
+  /**
+   * Estat de la remesa
+   * - complete: Totes les quotes han estat identificades i assignades
+   * - partial: Algunes quotes estan pendents d'identificar
+   * - pending: Cap quota ha estat processada encara
+   */
+  remittanceStatus?: 'complete' | 'partial' | 'pending';
+
+  /**
+   * Dades de devolucions pendents d'identificar (només per remeses parcials)
+   * Guarda IBAN, import i data per poder assistir l'usuari més tard
+   */
+  pendingReturns?: Array<{
+    iban: string;
+    amount: number;
+    date: string;
+    originalName?: string;
+    returnReason?: string;
+  }>;
 
   /**
    * Origen de la transacció

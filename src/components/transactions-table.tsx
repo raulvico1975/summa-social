@@ -54,7 +54,6 @@ import {
   Undo2,
   Download,
   X,
-  FileUp,
 } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import type { Transaction, Category, Project, AnyContact, Donor, Supplier, ContactType } from '@/lib/data';
@@ -312,6 +311,57 @@ export function TransactionsTable() {
     );
   }, [returnTransactions]);
 
+  // Estadístiques de devolucions pendents (diferenciant remeses vs individuals)
+  const pendingReturnsStats = React.useMemo(() => {
+    if (!transactions) return {
+      individualCount: 0,
+      remittanceCount: 0,
+      remittanceItemsCount: 0,
+      hasPendingRemittances: false,
+      hasPendingIndividuals: false,
+      pendingRemittancesList: [] as Transaction[],
+      pendingIndividualsList: [] as Transaction[],
+    };
+
+    // Devolucions individuals pendents (return sense contactId i NO part d'una remesa)
+    const pendingIndividuals = transactions.filter(tx =>
+      tx.transactionType === 'return' &&
+      !tx.contactId &&
+      !tx.isRemittance &&
+      tx.source !== 'remittance'  // No és filla d'una remesa
+    );
+
+    // Fitxers de devolucions pendents (remeses amb status !== 'complete')
+    const pendingRemittances = transactions.filter(tx =>
+      tx.isRemittance &&
+      tx.remittanceType === 'returns' &&
+      tx.remittanceStatus !== 'complete'
+    );
+
+    // Total d'ítems pendents dins les remeses
+    const remittanceItemsCount = pendingRemittances.reduce((sum, tx) =>
+      sum + (tx.remittancePendingCount ?? 0), 0
+    );
+
+    // Ordenar remeses per data descendent (més recents primer)
+    const sortedRemittances = [...pendingRemittances].sort((a, b) =>
+      new Date(b.date).getTime() - new Date(a.date).getTime()
+    );
+
+    return {
+      individualCount: pendingIndividuals.length,
+      remittanceCount: pendingRemittances.length,
+      remittanceItemsCount,
+      hasPendingRemittances: pendingRemittances.length > 0,
+      hasPendingIndividuals: pendingIndividuals.length > 0,
+      pendingRemittancesList: sortedRemittances,
+      pendingIndividualsList: pendingIndividuals,
+    };
+  }, [transactions]);
+
+  // Alias per compatibilitat amb codi existent
+  const hasPendingRemittances = pendingReturnsStats.hasPendingRemittances;
+
   // Moviments sense categoritzar
   const uncategorizedTransactions = React.useMemo(() => {
     if (!transactions) return [];
@@ -338,6 +388,14 @@ export function TransactionsTable() {
         break;
       case 'pendingReturns':
         result = pendingReturns;
+        break;
+      case 'pendingRemittances':
+        // Només fitxers de devolucions pendents (remeses)
+        result = pendingReturnsStats.pendingRemittancesList;
+        break;
+      case 'pendingIndividuals':
+        // Només devolucions individuals pendents
+        result = pendingReturnsStats.pendingIndividualsList;
         break;
       case 'uncategorized':
         result = uncategorizedTransactions;
@@ -561,6 +619,11 @@ export function TransactionsTable() {
     returnedDonation: t.movements.table.returnedDonation,
     returnedDonationInfo: t.movements.table.returnedDonationInfo,
     assign: t.movements.table.assign,
+    assignDonor: t.movements.table.assignDonor || 'Assignar donant',
+    assignDonorTooltip: t.movements.table.assignDonorTooltip || 'Assigna el donant afectat per aquesta devolució',
+    remittanceUseImporter: t.movements.table.remittanceUseImporter || 'Aquesta devolució forma part d\'una remesa. Fes servir "Importar fitxer del banc" per desglossar-la.',
+    uploadBankFile: t.movements.table.uploadBankFile || 'Pujar fitxer',
+    uploadBankFileTooltip: t.movements.table.uploadBankFileTooltip || 'Importar fitxer del banc per identificar devolucions',
     unlink: t.movements.table.unlink,
     searchCategory: t.movements.table.searchCategory,
     noResults: t.movements.table.noResults,
@@ -624,39 +687,31 @@ export function TransactionsTable() {
           onExportExpensesWithoutDoc={handleExportExpensesWithoutDoc}
           hideRemittanceItems={hideRemittanceItems}
           onHideRemittanceItemsChange={setHideRemittanceItems}
+          onOpenReturnImporter={() => setIsReturnImporterOpen(true)}
           t={filterTranslations}
         />
       </div>
 
-      {/* Avís devolucions pendents */}
+      {/* Avís devolucions pendents - flux únic simplificat */}
       {pendingReturns.length > 0 && tableFilter !== 'pendingReturns' && (
-        <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg flex items-center gap-3">
-          <AlertTriangle className="h-5 w-5 text-red-500 flex-shrink-0" />
-          <div className="flex-1">
-            <p className="text-sm font-medium text-red-800">
-              {t.movements.table.pendingReturnsWarning(pendingReturns.length)}
-            </p>
-            <p className="text-xs text-red-600">
-              {t.movements.table.pendingReturnsWarningDescription}
-            </p>
-          </div>
-          <div className="flex gap-2">
+        <div className="mb-4">
+          <div className="p-3 bg-red-50 border border-red-200 rounded-lg flex items-center gap-3">
+            <Undo2 className="h-5 w-5 text-red-500 flex-shrink-0" />
+            <div className="flex-1">
+              <p className="text-sm font-medium text-red-800">
+                Hi ha devolucions pendents d'assignar
+              </p>
+              <p className="text-xs text-red-600">
+                {pendingReturns.length} devolució{pendingReturns.length > 1 ? 'ns' : ''} sense donant assignat
+              </p>
+            </div>
             <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setIsReturnImporterOpen(true)}
-              className="border-red-300 text-red-700 hover:bg-red-100"
-            >
-              <FileUp className="mr-1 h-4 w-4" />
-              {t.returnImporter?.importButton || "Importar fitxer"}
-            </Button>
-            <Button
-              variant="outline"
+              variant="default"
               size="sm"
               onClick={() => setTableFilter('pendingReturns')}
-              className="border-red-300 text-red-700 hover:bg-red-100"
+              className="bg-red-600 hover:bg-red-700"
             >
-              {t.movements.table.reviewReturns}
+              Revisar
             </Button>
           </div>
         </div>
@@ -793,6 +848,7 @@ export function TransactionsTable() {
                 onSplitRemittance={handleSplitRemittance}
                 onViewRemittanceDetail={handleViewRemittanceDetail}
                 onCreateNewContact={handleOpenNewContactDialog}
+                onOpenReturnImporter={() => setIsReturnImporterOpen(true)}
                 t={rowTranslations}
                 getCategoryDisplayName={getCategoryDisplayName}
               />

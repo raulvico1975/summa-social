@@ -6,7 +6,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useAppLog } from '@/hooks/use-app-log';
 import { useFirebase, useCollection, useMemoFirebase } from '@/firebase';
 import { useCurrentOrganization } from '@/hooks/organization-provider';
-import { collection, query, where, updateDoc, doc, increment } from 'firebase/firestore';
+import { collection, query, where, updateDoc, doc, increment, addDoc } from 'firebase/firestore';
 import type { Transaction, Donor } from '@/lib/data';
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -15,23 +15,51 @@ import type { Transaction, Donor } from '@/lib/data';
 
 export type Step = 'upload' | 'mapping' | 'preview' | 'processing';
 
+export type DateConfidence = 'line' | 'file' | 'none';
+
+export type NoMatchReason = 'no-date' | 'ambiguous' | 'no-match' | null;
+
 export interface ColumnMapping {
   ibanColumn: number | null;
   amountColumn: number | null;
   dateColumn: number | null;
   dniColumn: number | null;
+  nameColumn: number | null;
+  reasonColumn: number | null;
 }
 
 export interface ParsedReturn {
   rowIndex: number;
   iban: string;
-  amount: number;
-  date: string | null;
+  amount: number;                          // SEMPRE POSITIU (Math.abs)
+  date: Date | null;                       // null si no hi ha data (MAI new Date() com fallback)
+  dateConfidence: DateConfidence;
+  sourceFile?: string;
   dni: string | null;
-  // Matching results
-  matchedDonor: Donor | null;
-  matchedTransaction: Transaction | null;
+  originalName: string | null;
+  returnReason: string | null;
+  // Matching donant
+  matchedDonorId: string | null;
+  matchedDonor: Donor | null;              // Referència completa per conveniència
+  matchedBy: 'iban' | 'dni' | 'name' | null;
+  // Matching transacció
+  matchType: 'grouped' | 'individual' | 'none';
+  noMatchReason: NoMatchReason;
+  groupId: string | null;
+  groupedTransactionId: string | null;
+  groupTotalAmount: number | null;
+  matchedTransactionId: string | null;
+  matchedTransaction: Transaction | null;  // Referència completa per conveniència
+  // Status derivat (per UI)
   status: 'matched' | 'donor_found' | 'not_found';
+}
+
+export interface GroupedMatch {
+  originalTransaction: Transaction;
+  returns: ParsedReturn[];
+  totalAmount: number;
+  date: Date;
+  groupId: string;
 }
 
 export interface ReturnImporterStats {
@@ -39,15 +67,47 @@ export interface ReturnImporterStats {
   matched: number;
   donorFound: number;
   notFound: number;
+  grouped: number;
+  ambiguous: number;
 }
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// MAPEIG DE COLUMNES PER BANC
+// ═══════════════════════════════════════════════════════════════════════════════
+
+const COLUMN_MAPPINGS = {
+  iban: [
+    'cuenta de adeudo', 'cuenta destino', 'cuenta del deudor', 'cta destino',
+    'cta. destino', 'cta adeudo', 'iban', 'cuenta', 'account', 'compte'
+  ],
+  amount: [
+    'importe', 'cantidad', 'amount', 'monto', 'valor', 'import', 'quantitat'
+  ],
+  date: [
+    'fecha de liquidación', 'fecha de liquidacion', 'fecha rechazo/devolución',
+    'fecha rechazo', 'fecha devolución', 'fecha devolucion', 'fecha liquidacion',
+    'fecha', 'date', 'data'
+  ],
+  dni: [
+    'referencia externa', 'dni', 'nif', 'cif', 'referencia', 'ref', 'id cliente',
+    'identificador', 'documento', 'tax id'
+  ],
+  name: [
+    'nombre cliente', 'nombre del deudor', 'nombre deudor', 'nombre', 'titular',
+    'cliente', 'name', 'nom', 'deudor', 'beneficiario'
+  ],
+  reason: [
+    'motivo devolución', 'motivo devolucion', 'motivo rechazo', 'motivo',
+    'razón', 'razon', 'reason', 'causa', 'descripción', 'descripcion'
+  ]
+} as const;
+
+type ColumnType = keyof typeof COLUMN_MAPPINGS;
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // UTILITATS
 // ═══════════════════════════════════════════════════════════════════════════════
 
-/**
- * Normalitza IBAN eliminant prefix "IBAN ", espais i passant a majúscules
- */
 const normalizeIban = (iban: string): string => {
   if (!iban) return '';
   return iban
@@ -56,9 +116,6 @@ const normalizeIban = (iban: string): string => {
     .toUpperCase();
 };
 
-/**
- * Normalitza DNI/CIF eliminant espais i guions
- */
 const normalizeTaxId = (taxId: string): string => {
   if (!taxId) return '';
   return taxId
@@ -66,49 +123,134 @@ const normalizeTaxId = (taxId: string): string => {
     .toUpperCase();
 };
 
-/**
- * Parseja un valor d'import (format europeu: 15,00 € -> 15.00)
- * Retorna sempre valor absolut (positiu)
- */
-const parseAmount = (value: string): number => {
-  if (!value) return 0;
-  let cleaned = value.replace(/[^\d,.-]/g, '');
-  if (cleaned.includes(',')) {
-    if (cleaned.indexOf('.') < cleaned.indexOf(',')) {
-      cleaned = cleaned.replace(/\./g, '').replace(',', '.');
-    } else {
-      cleaned = cleaned.replace(',', '.');
-    }
-  }
-  return Math.abs(parseFloat(cleaned) || 0);
+const normalizeName = (name: string): string => {
+  if (!name) return '';
+  return name
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/\s+/g, ' ')
+    .trim();
 };
 
 /**
- * Parseja una data en diversos formats
+ * Parseja un valor d'import (suporta formats EU i US)
+ * Retorna SEMPRE valor absolut (positiu)
  */
-const parseDate = (value: string): string | null => {
-  if (!value) return null;
+const parseAmount = (value: string | number): number => {
+  if (typeof value === 'number') return Math.abs(value);
+  if (!value) return 0;
 
-  // Format DD/MM/YYYY o DD-MM-YYYY
-  const ddmmyyyy = value.match(/(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})/);
-  if (ddmmyyyy) {
-    const [, day, month, year] = ddmmyyyy;
-    return `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
+  const str = value.toString().trim();
+  const cleaned = str.replace(/\s*(EUR|€|USD|\$|£)\s*/gi, '').trim();
+
+  // Format EU: 1.234,56 → 1234.56
+  if (/,\d{1,2}$/.test(cleaned)) {
+    return Math.abs(parseFloat(cleaned.replace(/\./g, '').replace(',', '.'))) || 0;
   }
 
-  // Format YYYY-MM-DD
-  const yyyymmdd = value.match(/(\d{4})[\/\-](\d{1,2})[\/\-](\d{1,2})/);
-  if (yyyymmdd) {
-    const [, year, month, day] = yyyymmdd;
-    return `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
+  // Format US: 1,234.56 → 1234.56
+  return Math.abs(parseFloat(cleaned.replace(/,/g, ''))) || 0;
+};
+
+/**
+ * Parseja una data en múltiples formats
+ * Retorna Date o null (MAI inventa dates)
+ */
+const parseDate = (value: string | number | Date | null | undefined): Date | null => {
+  if (!value) return null;
+  if (value instanceof Date) {
+    return isNaN(value.getTime()) ? null : value;
+  }
+
+  const str = value.toString().trim();
+  if (!str) return null;
+
+  // Format ISO: 2025-11-12 o 2025-11-12T00:00:00
+  if (/^\d{4}-\d{2}-\d{2}/.test(str)) {
+    const d = new Date(str.split(' ')[0].split('T')[0]);
+    return isNaN(d.getTime()) ? null : d;
+  }
+
+  // Format EU: DD/MM/YYYY o DD-MM-YYYY
+  const euMatch = str.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})/);
+  if (euMatch) {
+    const [, day, month, year] = euMatch;
+    const d = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
+    return isNaN(d.getTime()) ? null : d;
+  }
+
+  // Intentar parse directe com a últim recurs
+  try {
+    const parsed = new Date(str);
+    if (!isNaN(parsed.getTime())) {
+      return parsed;
+    }
+  } catch {
+    // Ignorar errors
   }
 
   return null;
 };
 
 /**
- * Detecta automàticament la fila on comencen les dades
+ * Extreu la data global de la capçalera del fitxer (per bancs com Santander)
+ * Busca patrons com "Fecha de liquidación" i la data adjacent
  */
+const extractGlobalDateFromHeaders = (rows: string[][]): Date | null => {
+  const datePatterns = [
+    'fecha de liquidación', 'fecha de liquidacion',
+    'fecha liquidación', 'fecha liquidacion',
+    'fecha rechazo', 'fecha devolución', 'fecha devolucion'
+  ];
+
+  // Buscar en les primeres 20 files
+  for (let i = 0; i < Math.min(20, rows.length); i++) {
+    const row = rows[i];
+    if (!row) continue;
+
+    for (let j = 0; j < row.length; j++) {
+      const cell = (row[j] || '').toString().toLowerCase().trim();
+
+      if (datePatterns.some(pattern => cell.includes(pattern))) {
+        // La data pot estar a cel·les adjacents
+        const candidates = [
+          row[j + 1],
+          row[j + 2],
+          rows[i + 1]?.[j],
+          rows[i + 1]?.[j + 1],
+          rows[i + 1]?.[j - 1]
+        ];
+
+        for (const val of candidates) {
+          if (val) {
+            const parsed = parseDate(val);
+            if (parsed) {
+              console.log('[extractGlobalDate] Data trobada:', parsed.toISOString().split('T')[0]);
+              return parsed;
+            }
+          }
+        }
+      }
+    }
+  }
+
+  console.log('[extractGlobalDate] Cap data global trobada');
+  return null;
+};
+
+/**
+ * Obté la data d'una transacció (gestiona Firestore Timestamp)
+ */
+const getTxDate = (tx: Transaction): Date => {
+  if (typeof tx.date === 'string') {
+    return new Date(tx.date);
+  } else if (tx.date && typeof (tx.date as any).toDate === 'function') {
+    return (tx.date as any).toDate();
+  }
+  return tx.date as Date;
+};
+
 const detectStartRow = (rows: string[][]): number => {
   const ibanPattern = /^(IBAN\s*)?[A-Z]{2}[0-9]{2}[A-Z0-9\s]{10,30}$/i;
 
@@ -116,7 +258,6 @@ const detectStartRow = (rows: string[][]): number => {
     const row = rows[i];
     if (!row || row.length < 2) continue;
 
-    // Busca si alguna cel·la conté un IBAN
     const hasIban = row.some(cell => {
       const cleaned = (cell || '').toString().trim().replace(/\s/g, '');
       return ibanPattern.test(cleaned);
@@ -128,19 +269,46 @@ const detectStartRow = (rows: string[][]): number => {
   return 0;
 };
 
-/**
- * Detecta automàticament les columnes basant-se en el contingut
- */
+const detectColumnByHeader = (headers: string[], fieldType: ColumnType): number => {
+  const normalizedHeaders = headers.map(h => (h || '').toString().toLowerCase().trim());
+  const patterns = COLUMN_MAPPINGS[fieldType];
+
+  for (const pattern of patterns) {
+    const index = normalizedHeaders.findIndex(h => h.includes(pattern));
+    if (index !== -1) return index;
+  }
+  return -1;
+};
+
 const detectColumns = (rows: string[][], startRow: number): ColumnMapping => {
-  const sampleRows = rows.slice(startRow, startRow + 10);
+  const headerRow = startRow > 0 ? rows[startRow - 1] : null;
 
   let ibanColumn: number | null = null;
   let amountColumn: number | null = null;
   let dateColumn: number | null = null;
   let dniColumn: number | null = null;
+  let nameColumn: number | null = null;
+  let reasonColumn: number | null = null;
 
+  if (headerRow && headerRow.length > 0) {
+    const ibanIdx = detectColumnByHeader(headerRow, 'iban');
+    const amountIdx = detectColumnByHeader(headerRow, 'amount');
+    const dateIdx = detectColumnByHeader(headerRow, 'date');
+    const dniIdx = detectColumnByHeader(headerRow, 'dni');
+    const nameIdx = detectColumnByHeader(headerRow, 'name');
+    const reasonIdx = detectColumnByHeader(headerRow, 'reason');
+
+    if (ibanIdx >= 0) ibanColumn = ibanIdx;
+    if (amountIdx >= 0) amountColumn = amountIdx;
+    if (dateIdx >= 0) dateColumn = dateIdx;
+    if (dniIdx >= 0) dniColumn = dniIdx;
+    if (nameIdx >= 0) nameColumn = nameIdx;
+    if (reasonIdx >= 0) reasonColumn = reasonIdx;
+  }
+
+  const sampleRows = rows.slice(startRow, startRow + 10);
   if (sampleRows.length === 0 || sampleRows[0].length === 0) {
-    return { ibanColumn: null, amountColumn: null, dateColumn: null, dniColumn: null };
+    return { ibanColumn, amountColumn, dateColumn, dniColumn, nameColumn, reasonColumn };
   }
 
   const numCols = Math.max(...sampleRows.map(r => r.length));
@@ -150,46 +318,50 @@ const detectColumns = (rows: string[][], startRow: number): ColumnMapping => {
     const nonEmptyValues = values.filter(v => v.length > 0);
     if (nonEmptyValues.length === 0) continue;
 
-    // Detecta IBAN (ES + 22 dígits o similar)
-    const ibanMatches = nonEmptyValues.filter(v => {
-      const cleaned = v.replace(/^IBAN\s*/i, '').replace(/\s/g, '').toUpperCase();
-      return /^[A-Z]{2}[0-9]{2}[A-Z0-9]{10,30}$/.test(cleaned);
-    });
-    if (ibanMatches.length > nonEmptyValues.length * 0.5 && ibanColumn === null) {
-      ibanColumn = col;
-      continue;
+    if (ibanColumn === null) {
+      const ibanMatches = nonEmptyValues.filter(v => {
+        const cleaned = v.replace(/^IBAN\s*/i, '').replace(/\s/g, '').toUpperCase();
+        return /^[A-Z]{2}[0-9]{2}[A-Z0-9]{10,30}$/.test(cleaned);
+      });
+      if (ibanMatches.length > nonEmptyValues.length * 0.5) {
+        ibanColumn = col;
+        continue;
+      }
     }
 
-    // Detecta import (números amb format monetari)
-    const amountMatches = nonEmptyValues.filter(v => {
-      const amount = parseAmount(v);
-      return amount > 0 && amount < 100000;
-    });
-    if (amountMatches.length > nonEmptyValues.length * 0.5 && amountColumn === null) {
-      amountColumn = col;
-      continue;
+    if (amountColumn === null) {
+      const amountMatches = nonEmptyValues.filter(v => {
+        const amount = parseAmount(v);
+        return amount > 0 && amount < 100000;
+      });
+      if (amountMatches.length > nonEmptyValues.length * 0.5) {
+        amountColumn = col;
+        continue;
+      }
     }
 
-    // Detecta data (DD/MM/YYYY o similar)
-    const dateMatches = nonEmptyValues.filter(v => parseDate(v) !== null);
-    if (dateMatches.length > nonEmptyValues.length * 0.5 && dateColumn === null) {
-      dateColumn = col;
-      continue;
+    if (dateColumn === null) {
+      const dateMatches = nonEmptyValues.filter(v => parseDate(v) !== null);
+      if (dateMatches.length > nonEmptyValues.length * 0.5) {
+        dateColumn = col;
+        continue;
+      }
     }
 
-    // Detecta DNI/CIF (8-9 dígits + lletra)
-    const dniMatches = nonEmptyValues.filter(v => {
-      const cleaned = v.replace(/[\s-]/g, '').toUpperCase();
-      return /^[0-9]{7,8}[A-Z]$/.test(cleaned) ||
-             /^[A-Z][0-9]{7,8}$/.test(cleaned) ||
-             /^[XYZ][0-9]{7}[A-Z]$/.test(cleaned);
-    });
-    if (dniMatches.length > nonEmptyValues.length * 0.3 && dniColumn === null) {
-      dniColumn = col;
+    if (dniColumn === null) {
+      const dniMatches = nonEmptyValues.filter(v => {
+        const cleaned = v.replace(/[\s-]/g, '').toUpperCase();
+        return /^[0-9]{7,8}[A-Z]$/.test(cleaned) ||
+               /^[A-Z][0-9]{7,8}$/.test(cleaned) ||
+               /^[XYZ][0-9]{7}[A-Z]$/.test(cleaned);
+      });
+      if (dniMatches.length > nonEmptyValues.length * 0.3) {
+        dniColumn = col;
+      }
     }
   }
 
-  return { ibanColumn, amountColumn, dateColumn, dniColumn };
+  return { ibanColumn, amountColumn, dateColumn, dniColumn, nameColumn, reasonColumn };
 };
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -217,12 +389,15 @@ export function useReturnImporter() {
     amountColumn: null,
     dateColumn: null,
     dniColumn: null,
+    nameColumn: null,
+    reasonColumn: null,
   });
 
   // Estat de resultats
   const [parsedReturns, setParsedReturns] = React.useState<ParsedReturn[]>([]);
+  const [groupedMatches, setGroupedMatches] = React.useState<GroupedMatch[]>([]);
 
-  // Carregar donants amb IBAN
+  // Carregar donants
   const donorsQuery = useMemoFirebase(
     () => organizationId ? collection(firestore, 'organizations', organizationId, 'contacts') : null,
     [firestore, organizationId]
@@ -251,7 +426,9 @@ export function useReturnImporter() {
     const matched = parsedReturns.filter(r => r.status === 'matched').length;
     const donorFound = parsedReturns.filter(r => r.status === 'donor_found').length;
     const notFound = parsedReturns.filter(r => r.status === 'not_found').length;
-    return { total: parsedReturns.length, matched, donorFound, notFound };
+    const grouped = parsedReturns.filter(r => r.matchType === 'grouped').length;
+    const ambiguous = parsedReturns.filter(r => r.noMatchReason === 'ambiguous').length;
+    return { total: parsedReturns.length, matched, donorFound, notFound, grouped, ambiguous };
   }, [parsedReturns]);
 
   // Reset
@@ -261,8 +438,9 @@ export function useReturnImporter() {
     setFiles([]);
     setAllRows([]);
     setStartRow(0);
-    setMapping({ ibanColumn: null, amountColumn: null, dateColumn: null, dniColumn: null });
+    setMapping({ ibanColumn: null, amountColumn: null, dateColumn: null, dniColumn: null, nameColumn: null, reasonColumn: null });
     setParsedReturns([]);
+    setGroupedMatches([]);
   }, []);
 
   // ═══════════════════════════════════════════════════════════════════════════
@@ -294,7 +472,6 @@ export function useReturnImporter() {
 
           allParsedRows.push(...filteredRows);
         } else {
-          // CSV/TXT
           const text = await file.text();
           const delimiter = text.includes(';') ? ';' : ',';
           const lines = text.split('\n').filter(line => line.trim());
@@ -312,7 +489,6 @@ export function useReturnImporter() {
       setAllRows(allParsedRows);
       setFiles(inputFiles);
 
-      // Detecta fila inicial i columnes
       const detectedStartRow = detectStartRow(allParsedRows);
       setStartRow(detectedStartRow);
 
@@ -320,8 +496,6 @@ export function useReturnImporter() {
       setMapping(detectedMapping);
 
       log(`[ReturnImporter] Fitxers carregats: ${inputFiles.length}, files: ${allParsedRows.length}`);
-      log(`[ReturnImporter] Detecció - IBAN: col ${detectedMapping.ibanColumn}, Import: col ${detectedMapping.amountColumn}, Data: col ${detectedMapping.dateColumn}, DNI: col ${detectedMapping.dniColumn}`);
-
       setStep('mapping');
     } catch (error: any) {
       console.error('Error parsing files:', error);
@@ -332,7 +506,7 @@ export function useReturnImporter() {
   }, [toast, log]);
 
   // ═══════════════════════════════════════════════════════════════════════════
-  // MATCHING
+  // MATCHING - FLUX COMPLET REFACTORITZAT
   // ═══════════════════════════════════════════════════════════════════════════
 
   const performMatching = React.useCallback(() => {
@@ -348,6 +522,11 @@ export function useReturnImporter() {
     setIsProcessing(true);
 
     try {
+      // ═══════════════════════════════════════════════════════════════════════
+      // FASE 1: PARSEJAR DADES
+      // ═══════════════════════════════════════════════════════════════════════
+
+      const globalDate = extractGlobalDateFromHeaders(allRows);
       const results: ParsedReturn[] = [];
       const dataRows = allRows.slice(startRow);
 
@@ -356,98 +535,293 @@ export function useReturnImporter() {
 
         const rawIban = mapping.ibanColumn !== null ? (row[mapping.ibanColumn] || '') : '';
         const iban = normalizeIban(rawIban);
-        if (!iban) continue; // Saltar files sense IBAN
+        if (!iban) continue;
 
         const amount = parseAmount(row[mapping.amountColumn!] || '');
-        if (amount <= 0) continue; // Saltar files sense import
+        if (amount <= 0) continue;
+
+        // ═══════════════════════════════════════════════════════════════════
+        // FASE 2: NORMALITZAR (dates + dateConfidence)
+        // ═══════════════════════════════════════════════════════════════════
 
         const rawDate = mapping.dateColumn !== null ? (row[mapping.dateColumn] || '') : '';
-        const date = parseDate(rawDate);
+        const lineDate = parseDate(rawDate);
+
+        let date: Date | null = null;
+        let dateConfidence: DateConfidence = 'none';
+
+        if (lineDate) {
+          date = lineDate;
+          dateConfidence = 'line';
+        } else if (globalDate) {
+          date = globalDate;
+          dateConfidence = 'file';
+        }
+        // Si no hi ha data, deixem date=null i dateConfidence='none' (MAI new Date())
 
         const rawDni = mapping.dniColumn !== null ? (row[mapping.dniColumn] || '') : '';
         const dni = normalizeTaxId(rawDni);
 
-        // 1. Buscar donant per IBAN
-        let matchedDonor = donors.find(d => d.iban && normalizeIban(d.iban) === iban);
-
-        // 2. Si no trobat per IBAN i tenim DNI, buscar per DNI
-        if (!matchedDonor && dni) {
-          matchedDonor = donors.find(d => d.taxId && normalizeTaxId(d.taxId) === dni);
-        }
-
-        // 3. Buscar devolució pendent que coincideixi
-        let matchedTransaction: Transaction | null = null;
-
-        if (matchedDonor && pendingReturns) {
-          // Buscar devolució amb import exacte (negatiu)
-          const targetAmount = -amount;
-
-          // Si tenim data, prioritzar devolucions dins de ±20 dies
-          if (date) {
-            const fileDate = new Date(date);
-            const dayMs = 24 * 60 * 60 * 1000;
-            const maxDiff = 20 * dayMs;
-
-            matchedTransaction = pendingReturns.find(tx => {
-              if (Math.abs(tx.amount - targetAmount) > 0.01) return false;
-
-              const txDate = tx.date instanceof Date ? tx.date : new Date(tx.date);
-              const diff = Math.abs(fileDate.getTime() - txDate.getTime());
-
-              return diff <= maxDiff;
-            }) || null;
-          }
-
-          // Si no hem trobat per mes, buscar per import exacte
-          if (!matchedTransaction) {
-            matchedTransaction = pendingReturns.find(tx =>
-              Math.abs(tx.amount - targetAmount) < 0.01
-            ) || null;
-          }
-        }
-
-        // Determinar estat
-        let status: ParsedReturn['status'];
-        if (matchedDonor && matchedTransaction) {
-          status = 'matched';
-        } else if (matchedDonor) {
-          status = 'donor_found';
-        } else {
-          status = 'not_found';
-        }
+        const originalName = mapping.nameColumn !== null ? (row[mapping.nameColumn] || '').trim() : null;
+        const returnReason = mapping.reasonColumn !== null ? (row[mapping.reasonColumn] || '').trim() : null;
 
         results.push({
           rowIndex: startRow + i + 1,
           iban,
-          amount,
+          amount,  // Ja és positiu (parseAmount fa Math.abs)
           date,
+          dateConfidence,
+          sourceFile: files[0]?.name,
           dni,
-          matchedDonor: matchedDonor || null,
-          matchedTransaction,
-          status,
+          originalName: originalName || null,
+          returnReason: returnReason || null,
+          matchedDonorId: null,
+          matchedDonor: null,
+          matchedBy: null,
+          matchType: 'none',
+          noMatchReason: null,
+          groupId: null,
+          groupedTransactionId: null,
+          groupTotalAmount: null,
+          matchedTransactionId: null,
+          matchedTransaction: null,
+          status: 'not_found',
         });
       }
 
+      // Log: breakdown per dateConfidence
+      const lineCount = results.filter(r => r.dateConfidence === 'line').length;
+      const fileCount = results.filter(r => r.dateConfidence === 'file').length;
+      const noneCount = results.filter(r => r.dateConfidence === 'none').length;
+      console.log(`[performMatching] FASE 1-2: ${results.length} parsejades (line:${lineCount}, file:${fileCount}, none:${noneCount})`);
+
+      // ═══════════════════════════════════════════════════════════════════════
+      // FASE 3: MATCHING DONANTS (sense tocar transaccions)
+      // ═══════════════════════════════════════════════════════════════════════
+
+      for (const r of results) {
+        // Buscar per IBAN
+        let matchedDonor = donors.find(d => d.iban && normalizeIban(d.iban) === r.iban);
+        let matchedBy: ParsedReturn['matchedBy'] = matchedDonor ? 'iban' : null;
+
+        // Buscar per DNI
+        if (!matchedDonor && r.dni) {
+          matchedDonor = donors.find(d => d.taxId && normalizeTaxId(d.taxId) === r.dni);
+          if (matchedDonor) matchedBy = 'dni';
+        }
+
+        // Buscar per nom
+        if (!matchedDonor && r.originalName && r.originalName.length > 3) {
+          const normalizedFileName = normalizeName(r.originalName);
+          matchedDonor = donors.find(d => {
+            if (!d.name) return false;
+            const normalizedDonorName = normalizeName(d.name);
+            return normalizedFileName === normalizedDonorName ||
+                   normalizedFileName.includes(normalizedDonorName) ||
+                   normalizedDonorName.includes(normalizedFileName);
+          });
+          if (matchedDonor) matchedBy = 'name';
+        }
+
+        r.matchedDonor = matchedDonor || null;
+        r.matchedDonorId = matchedDonor?.id || null;
+        r.matchedBy = matchedBy;
+      }
+
+      const withDonorCount = results.filter(r => r.matchedDonorId).length;
+      console.log(`[performMatching] FASE 3: ${withDonorCount} amb donant trobat`);
+
+      // ═══════════════════════════════════════════════════════════════════════
+      // FASE 4: DETECTAR AGRUPACIONS (ABANS del matching individual!)
+      // No exigim donant per detectar el pare - la suma inclou TOTES les devolucions
+      // ═══════════════════════════════════════════════════════════════════════
+
+      const usedTransactionIds = new Set<string>();
+      const foundGroups: GroupedMatch[] = [];
+
+      // Considerar TOTES les devolucions AMB data vàlida (NO exigim donant!)
+      const withValidDate = results.filter(r =>
+        r.dateConfidence !== 'none' &&
+        r.date !== null
+      );
+
+      // Agrupar per data (YYYY-MM-DD) - NO agrupar les 'no-date'
+      const dateGroups = new Map<string, ParsedReturn[]>();
+      for (const r of withValidDate) {
+        const dateKey = r.date!.toISOString().split('T')[0];
+        if (!dateGroups.has(dateKey)) dateGroups.set(dateKey, []);
+        dateGroups.get(dateKey)!.push(r);
+      }
+
+      let groupCounter = 0;
+      for (const [dateKey, returns] of dateGroups) {
+        // Ignorar grups amb <2 devolucions
+        if (returns.length < 2) continue;
+
+        const totalAmount = returns.reduce((sum, r) => sum + r.amount, 0);
+        const groupDate = returns[0].date!;
+
+        // Buscar transaccions candidates
+        const candidates = (pendingReturns || []).filter(tx => {
+          if (usedTransactionIds.has(tx.id)) return false;
+          if (tx.amount >= 0) return false; // Ha de ser negatiu
+
+          const txAmount = Math.abs(tx.amount);
+          const amountDiff = Math.abs(txAmount - totalAmount);
+          if (amountDiff > 0.02) return false;
+
+          // Filtre de data: ±5 dies
+          const txDate = getTxDate(tx);
+          const diffMs = Math.abs(txDate.getTime() - groupDate.getTime());
+          const diffDays = diffMs / (1000 * 60 * 60 * 24);
+          if (diffDays > 5) return false;
+
+          return true;
+        });
+
+        console.log(`[detectGrouped] Grup ${dateKey}: ${returns.length} devolucions, suma=${totalAmount.toFixed(2)}€, candidates=${candidates.length}`);
+
+        if (candidates.length === 1) {
+          // Match únic -> assignar
+          const matchingTx = candidates[0];
+          groupCounter++;
+          const groupId = `group-${groupCounter}`;
+
+          returns.forEach(r => {
+            r.matchType = 'grouped';
+            r.groupId = groupId;
+            r.groupedTransactionId = matchingTx.id;
+            r.groupTotalAmount = Math.abs(matchingTx.amount);
+            r.matchedTransactionId = matchingTx.id;
+            r.matchedTransaction = matchingTx;
+            r.status = 'matched';
+          });
+
+          foundGroups.push({
+            originalTransaction: matchingTx,
+            returns,
+            totalAmount,
+            date: groupDate,
+            groupId,
+          });
+
+          usedTransactionIds.add(matchingTx.id);
+          console.log(`[detectGrouped] ✅ Grup ${groupId} assignat a tx ${matchingTx.id}`);
+        } else if (candidates.length > 1) {
+          // Ambigüitat -> no assignar, marcar
+          returns.forEach(r => {
+            r.noMatchReason = 'ambiguous';
+          });
+          console.log(`[detectGrouped] ⚠️ Grup ${dateKey} ambiguo (${candidates.length} candidates)`);
+        }
+        // Si candidates.length === 0, no fem res (les devolucions queden per matching individual)
+      }
+
+      console.log(`[performMatching] FASE 4: ${foundGroups.length} grups trobats`);
+
+      // ═══════════════════════════════════════════════════════════════════════
+      // FASE 5: MATCHING INDIVIDUAL (només per les NO agrupades)
+      // ═══════════════════════════════════════════════════════════════════════
+
+      const nonGrouped = results.filter(r =>
+        r.matchType !== 'grouped' &&
+        r.matchedDonorId &&
+        r.noMatchReason !== 'ambiguous'
+      );
+      console.log(`[performMatching] FASE 5: ${nonGrouped.length} devolucions per matching individual`);
+
+      const DAY_MS = 24 * 60 * 60 * 1000;
+      const MAX_DATE_DIFF_DAYS = 20;
+
+      for (const r of nonGrouped) {
+        const targetAmount = r.amount;
+
+        // Buscar transaccions candidates
+        const candidates = (pendingReturns || []).filter(tx => {
+          if (usedTransactionIds.has(tx.id)) return false;
+
+          const txAmount = Math.abs(tx.amount);
+          const amountDiff = Math.abs(txAmount - targetAmount);
+          if (amountDiff > 0.02) return false;
+
+          // Filtre de data
+          if (r.dateConfidence !== 'none' && r.date) {
+            const txDate = getTxDate(tx);
+            const diffMs = Math.abs(txDate.getTime() - r.date.getTime());
+            const diffDays = diffMs / DAY_MS;
+            if (diffDays > MAX_DATE_DIFF_DAYS) return false;
+          }
+          // Si dateConfidence === 'none', NO apliquem filtre de data
+
+          return true;
+        });
+
+        if (candidates.length === 1) {
+          // Match únic -> assignar
+          const matchingTx = candidates[0];
+          r.matchType = 'individual';
+          r.matchedTransactionId = matchingTx.id;
+          r.matchedTransaction = matchingTx;
+          r.status = 'matched';
+          usedTransactionIds.add(matchingTx.id);
+        } else if (candidates.length > 1) {
+          // Ambigüitat
+          r.matchType = 'none';
+          r.noMatchReason = 'ambiguous';
+          r.status = 'donor_found';
+        } else {
+          // Cap candidat
+          r.matchType = 'none';
+          r.noMatchReason = r.dateConfidence === 'none' ? 'no-date' : 'no-match';
+          r.status = 'donor_found';
+        }
+      }
+
+      // Actualitzar status per les que no tenen donant
+      results.forEach(r => {
+        if (!r.matchedDonorId) {
+          r.status = 'not_found';
+        }
+      });
+
+      // ═══════════════════════════════════════════════════════════════════════
+      // FASE 6: GUARDAR RESULTATS + STATS
+      // ═══════════════════════════════════════════════════════════════════════
+
       setParsedReturns(results);
-      log(`[ReturnImporter] Matching completat: ${results.length} devolucions, ${results.filter(r => r.status === 'matched').length} coincidències`);
+      setGroupedMatches(foundGroups);
+
+      const individualMatched = results.filter(r => r.matchType === 'individual').length;
+      const groupedCount = results.filter(r => r.matchType === 'grouped').length;
+      const ambiguousCount = results.filter(r => r.noMatchReason === 'ambiguous').length;
+      log(`[ReturnImporter] Matching completat: ${results.length} devolucions | grouped:${groupedCount} (${foundGroups.length} grups) | individual:${individualMatched} | ambiguous:${ambiguousCount}`);
+
       setStep('preview');
+
     } catch (error: any) {
       console.error('Error in matching:', error);
       toast({ variant: 'destructive', title: 'Error', description: error.message });
     } finally {
       setIsProcessing(false);
     }
-  }, [allRows, startRow, mapping, donors, pendingReturns, toast, log]);
+  }, [allRows, startRow, mapping, donors, pendingReturns, files, toast, log]);
 
   // ═══════════════════════════════════════════════════════════════════════════
-  // PROCESSAR DEVOLUCIONS
+  // PROCESSAR DEVOLUCIONS (escriptura a Firestore)
   // ═══════════════════════════════════════════════════════════════════════════
 
   const processReturns = React.useCallback(async () => {
     if (!organizationId) return;
 
-    const toProcess = parsedReturns.filter(r => r.status === 'matched' || r.status === 'donor_found');
-    if (toProcess.length === 0) {
+    // Separar individuals i agrupades
+    const individualReturns = parsedReturns.filter(r =>
+      (r.status === 'matched' || r.status === 'donor_found') && r.matchType !== 'grouped'
+    );
+    const groupedReturnsToProcess = parsedReturns.filter(r =>
+      r.status === 'matched' && r.matchType === 'grouped'
+    );
+
+    if (individualReturns.length === 0 && groupedReturnsToProcess.length === 0) {
       toast({ variant: 'destructive', title: 'Res a processar', description: 'No hi ha devolucions per assignar' });
       return;
     }
@@ -456,9 +830,11 @@ export function useReturnImporter() {
     setIsProcessing(true);
 
     try {
-      let processed = 0;
+      let processedIndividual = 0;
+      let processedGrouped = 0;
 
-      for (const returnItem of toProcess) {
+      // 1. Processar devolucions individuals
+      for (const returnItem of individualReturns) {
         if (!returnItem.matchedDonor) continue;
 
         // Si tenim transacció coincident, actualitzar-la
@@ -470,21 +846,121 @@ export function useReturnImporter() {
           });
         }
 
-        // Actualitzar donant: incrementar returnCount i actualitzar lastReturnDate
+        // Actualitzar donant
         const donorRef = doc(firestore, 'organizations', organizationId, 'contacts', returnItem.matchedDonor.id);
         await updateDoc(donorRef, {
           returnCount: increment(1),
-          lastReturnDate: returnItem.date || new Date().toISOString().split('T')[0],
+          lastReturnDate: returnItem.date?.toISOString().split('T')[0] || new Date().toISOString().split('T')[0],
           status: 'pending_return',
         });
 
-        processed++;
+        processedIndividual++;
       }
 
-      log(`[ReturnImporter] ${processed} devolucions processades`);
+      // 2. Processar devolucions agrupades (patró remeses: pare + filles)
+      const processedGroupIds = new Set<string>();
+
+      for (const returnItem of groupedReturnsToProcess) {
+        if (!returnItem.groupId || processedGroupIds.has(returnItem.groupId)) continue;
+        processedGroupIds.add(returnItem.groupId);
+
+        const group = groupedMatches.find(g => g.groupId === returnItem.groupId);
+        if (!group) continue;
+
+        // SEPARAR: resolubles (amb donant) vs pendents (sense donant)
+        const resolubles = group.returns.filter(r => r.matchedDonor);
+        const pendents = group.returns.filter(r => !r.matchedDonor);
+
+        // Calcular remittanceStatus
+        let remittanceStatus: 'complete' | 'partial' | 'pending';
+        if (pendents.length === 0) {
+          remittanceStatus = 'complete';
+        } else if (resolubles.length === 0) {
+          remittanceStatus = 'pending';
+        } else {
+          remittanceStatus = 'partial';
+        }
+
+        // Preparar pendingReturns (dades per assistència posterior)
+        // IMPORTANT: No passar undefined a Firestore - usar null o ometre el camp
+        const pendingReturnsData = pendents.map(r => {
+          const item: {
+            iban: string;
+            amount: number;
+            date: string;
+            originalName?: string;
+            returnReason?: string;
+          } = {
+            iban: r.iban,
+            amount: r.amount,
+            date: r.date?.toISOString().split('T')[0] || '',
+          };
+          if (r.originalName) item.originalName = r.originalName;
+          if (r.returnReason) item.returnReason = r.returnReason;
+          return item;
+        });
+
+        // MARCAR EL PARE com a remesa (NO esborrar! NO tocar amount/date/description/contactId)
+        const parentTxRef = doc(firestore, 'organizations', organizationId, 'transactions', group.originalTransaction.id);
+
+        // Construir payload sense undefined (Firestore no accepta undefined)
+        const parentUpdateData = {
+          isRemittance: true,
+          remittanceType: 'returns' as const,
+          remittanceItemCount: group.returns.length,
+          remittanceResolvedCount: resolubles.length,
+          remittancePendingCount: pendents.length,
+          remittancePendingTotalAmount: pendents.reduce((sum, r) => sum + r.amount, 0),
+          remittanceStatus,
+          pendingReturns: pendingReturnsData.length > 0 ? pendingReturnsData : null,
+        };
+
+        console.log('[processReturns] parent update payload', parentUpdateData);
+        await updateDoc(parentTxRef, parentUpdateData);
+
+        // Crear transaccions FILLES NOMÉS per resolubles (amb donant)
+        for (const ret of resolubles) {
+          const childTxData = {
+            // Camps de la filla
+            source: 'remittance',
+            parentTransactionId: group.originalTransaction.id,
+            amount: -ret.amount,  // Import negatiu (devolució)
+            date: ret.date?.toISOString().split('T')[0] || group.date.toISOString().split('T')[0],
+            transactionType: 'return',
+            description: ret.returnReason || group.originalTransaction.description || 'Devolució',
+            // Donant assignat (això fa que compti a Model182)
+            contactId: ret.matchedDonor!.id,
+            contactType: 'donor',
+            emisorId: ret.matchedDonor!.id,
+            emisorName: ret.matchedDonor!.name,
+          };
+
+          await addDoc(
+            collection(firestore, 'organizations', organizationId, 'transactions'),
+            childTxData
+          );
+
+          // Actualitzar donant
+          const donorRef = doc(firestore, 'organizations', organizationId, 'contacts', ret.matchedDonor!.id);
+          await updateDoc(donorRef, {
+            returnCount: increment(1),
+            lastReturnDate: ret.date?.toISOString().split('T')[0] || new Date().toISOString().split('T')[0],
+            status: 'pending_return',
+          });
+
+          processedGrouped++;
+        }
+
+        // Log de l'estat de la remesa
+        if (remittanceStatus === 'partial') {
+          console.log(`[processReturns] Remesa ${group.groupId} PARCIAL: ${resolubles.length} resoltes, ${pendents.length} pendents (${pendents.reduce((s, r) => s + r.amount, 0).toFixed(2)}€)`);
+        }
+      }
+
+      log(`[ReturnImporter] ${processedIndividual} individuals + ${processedGrouped} agrupades processades`);
       toast({
         title: 'Devolucions assignades',
-        description: `S'han assignat ${processed} devolucions correctament`
+        description: `S'han assignat ${processedIndividual + processedGrouped} devolucions correctament`
       });
 
       reset();
@@ -495,7 +971,7 @@ export function useReturnImporter() {
     } finally {
       setIsProcessing(false);
     }
-  }, [organizationId, parsedReturns, firestore, toast, log, reset]);
+  }, [organizationId, parsedReturns, groupedMatches, firestore, toast, log, reset]);
 
   // ═══════════════════════════════════════════════════════════════════════════
   // HELPERS
@@ -529,6 +1005,7 @@ export function useReturnImporter() {
 
     // Resultats
     parsedReturns,
+    groupedMatches,
     stats,
 
     // Accions

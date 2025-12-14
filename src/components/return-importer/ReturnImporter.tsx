@@ -14,6 +14,11 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
+import {
   Table,
   TableBody,
   TableCell,
@@ -33,6 +38,10 @@ import {
   AlertTriangle,
   X,
   Upload,
+  Layers,
+  UserRoundX,
+  Search,
+  UserPlus,
 } from 'lucide-react';
 import { useReturnImporter } from './useReturnImporter';
 import { useTranslations } from '@/i18n';
@@ -75,6 +84,7 @@ export function ReturnImporter({
     mapping,
     setMapping,
     parsedReturns,
+    groupedMatches,
     stats,
     parseFiles,
     performMatching,
@@ -191,6 +201,42 @@ export function ReturnImporter({
   };
 
   const selectableCount = parsedReturns.filter(r => r.status === 'matched' || r.status === 'donor_found').length;
+
+  // Estadístiques de remeses parcials
+  const partialRemittanceStats = React.useMemo(() => {
+    // Comptar devolucions agrupades sense donant (pendents d'identificar)
+    const groupedWithoutDonor = parsedReturns.filter(r =>
+      r.matchType === 'grouped' && !r.matchedDonor
+    );
+    const pendingCount = groupedWithoutDonor.length;
+    const pendingAmount = groupedWithoutDonor.reduce((sum, r) => sum + r.amount, 0);
+
+    // Comptar devolucions agrupades AMB donant (resolubles)
+    const groupedWithDonor = parsedReturns.filter(r =>
+      r.matchType === 'grouped' && r.matchedDonor
+    );
+    const resolvedCount = groupedWithDonor.length;
+
+    // Determinar quants grups seran parcials
+    const groupsWithPending = new Set(groupedWithoutDonor.map(r => r.groupId)).size;
+
+    return {
+      pendingCount,
+      pendingAmount,
+      resolvedCount,
+      groupsWithPending,
+      hasPartial: pendingCount > 0 && resolvedCount > 0, // Té resolubles i pendents
+      allPending: pendingCount > 0 && resolvedCount === 0, // Tot és pendent (cap resolt)
+    };
+  }, [parsedReturns, stats.grouped]);
+
+  // Determinar si hi ha accions possibles (com a mínim una devolució amb donant)
+  const hasActionableReturns = selectableCount > 0 && !partialRemittanceStats.allPending;
+
+  // Determinar si hi ha alguna fila amb badge de tipus (per amagar la columna si no)
+  const hasAnyTypeBadge = parsedReturns.some(r =>
+    r.matchType === 'grouped' || r.matchType === 'individual' || !r.matchedDonor
+  );
 
   // ═══════════════════════════════════════════════════════════════════════════
   // RENDERITZACIÓ
@@ -479,25 +525,60 @@ export function ReturnImporter({
 
             {/* Resum */}
             <div className="flex flex-wrap gap-4">
-              <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-green-50 border border-green-200">
-                <CheckCircle2 className="h-4 w-4 text-green-600" />
-                <span className="text-sm font-medium text-green-800">
-                  {stats.matched} {t.returnImporter?.found || "coincidències completes"}
-                </span>
-              </div>
-              <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-yellow-50 border border-yellow-200">
-                <AlertTriangle className="h-4 w-4 text-yellow-600" />
-                <span className="text-sm font-medium text-yellow-800">
-                  {stats.donorFound} donants sense transacció
-                </span>
-              </div>
-              <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-red-50 border border-red-200">
-                <X className="h-4 w-4 text-red-600" />
-                <span className="text-sm font-medium text-red-800">
-                  {stats.notFound} {t.returnImporter?.notFound || "no trobats"}
-                </span>
-              </div>
+              {/* Devolucions amb donant identificat */}
+              {(stats.matched + stats.donorFound) > 0 && (
+                <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-green-50 border border-green-200">
+                  <CheckCircle2 className="h-4 w-4 text-green-600" />
+                  <span className="text-sm font-medium text-green-800">
+                    {stats.matched + stats.donorFound} amb donant identificat
+                  </span>
+                </div>
+              )}
+              {/* Devolucions agrupades (remesa) */}
+              {stats.grouped > 0 && (
+                <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-blue-50 border border-blue-200">
+                  <Layers className="h-4 w-4 text-blue-600" />
+                  <span className="text-sm font-medium text-blue-800">
+                    {stats.grouped} en remesa ({groupedMatches.length} {groupedMatches.length === 1 ? 'grup' : 'grups'})
+                  </span>
+                </div>
+              )}
+              {/* Devolucions sense donant (no trobat) */}
+              {stats.notFound > 0 && (
+                <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-red-50 border border-red-200">
+                  <X className="h-4 w-4 text-red-600" />
+                  <span className="text-sm font-medium text-red-800">
+                    {stats.notFound} sense donant
+                  </span>
+                </div>
+              )}
             </div>
+
+            {/* Avís de remesa parcial */}
+            {partialRemittanceStats.pendingCount > 0 && (
+              <div className={`p-3 rounded-lg border ${partialRemittanceStats.allPending ? 'border-red-300 bg-red-50' : 'border-orange-300 bg-orange-50'}`}>
+                <div className="flex items-start gap-2">
+                  <UserRoundX className={`h-5 w-5 mt-0.5 flex-shrink-0 ${partialRemittanceStats.allPending ? 'text-red-600' : 'text-orange-600'}`} />
+                  <div className="flex-1">
+                    <p className={`text-sm font-medium ${partialRemittanceStats.allPending ? 'text-red-800' : 'text-orange-800'}`}>
+                      {partialRemittanceStats.allPending
+                        ? `Cap donant identificat: ${partialRemittanceStats.pendingCount} devolucions pendents (${formatCurrencyEU(partialRemittanceStats.pendingAmount)})`
+                        : `Remesa parcial: ${partialRemittanceStats.pendingCount} devolucions sense donant identificat (${formatCurrencyEU(partialRemittanceStats.pendingAmount)} pendents)`
+                      }
+                    </p>
+                    <p className={`text-xs mt-1 ${partialRemittanceStats.allPending ? 'text-red-700' : 'text-orange-700'}`}>
+                      {partialRemittanceStats.allPending
+                        ? 'No hi ha cap devolució amb donant identificat. Identifica almenys un donant per poder processar.'
+                        : 'Les devolucions amb donant es processaran ara. Les pendents quedaran registrades per identificar-les manualment després.'
+                      }
+                    </p>
+                    <p className={`text-xs font-medium mt-1 ${partialRemittanceStats.allPending ? 'text-red-800' : 'text-orange-800'}`}>
+                      Estat: {partialRemittanceStats.resolvedCount}/{partialRemittanceStats.pendingCount + partialRemittanceStats.resolvedCount} identificades
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
 
             {/* Taula de resultats */}
             <ScrollArea className="h-[350px] rounded-md border">
@@ -508,14 +589,14 @@ export function ReturnImporter({
                       <Checkbox
                         checked={selectedRows.size === selectableCount && selectableCount > 0}
                         onCheckedChange={handleToggleAll}
-                        disabled={selectableCount === 0}
+                        disabled={selectableCount === 0 || partialRemittanceStats.allPending}
                       />
                     </TableHead>
                     <TableHead>Data</TableHead>
                     <TableHead className="text-right">Import</TableHead>
                     <TableHead>IBAN</TableHead>
                     <TableHead>Donant</TableHead>
-                    <TableHead>Devolució</TableHead>
+                    {hasAnyTypeBadge && <TableHead>Tipus</TableHead>}
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -523,6 +604,7 @@ export function ReturnImporter({
                     <TableRow
                       key={index}
                       className={
+                        item.matchType === 'grouped' ? 'bg-blue-50/50' :
                         item.status === 'matched' ? 'bg-green-50/50' :
                         item.status === 'donor_found' ? 'bg-yellow-50/50' :
                         'bg-red-50/30'
@@ -532,11 +614,11 @@ export function ReturnImporter({
                         <Checkbox
                           checked={selectedRows.has(index)}
                           onCheckedChange={() => handleToggleRow(index)}
-                          disabled={item.status === 'not_found'}
+                          disabled={item.status === 'not_found' || (item.matchType === 'grouped' && !item.matchedDonor)}
                         />
                       </TableCell>
                       <TableCell className="text-sm">
-                        {item.date || '-'}
+                        {item.date ? item.date.toISOString().split('T')[0] : '-'}
                       </TableCell>
                       <TableCell className="text-right font-mono text-sm">
                         {formatCurrencyEU(item.amount)}
@@ -546,9 +628,47 @@ export function ReturnImporter({
                       </TableCell>
                       <TableCell>
                         {item.matchedDonor ? (
-                          <span className="text-sm text-green-700 font-medium">
-                            {item.matchedDonor.name}
-                          </span>
+                          <div className="flex flex-col gap-0.5">
+                            <span className="text-sm text-green-700 font-medium">
+                              {item.matchedDonor.name}
+                            </span>
+                            <span className="text-xs text-muted-foreground">
+                              via {item.matchedBy === 'iban' ? 'IBAN' : item.matchedBy === 'dni' ? 'DNI' : 'Nom'}
+                            </span>
+                          </div>
+                        ) : item.matchType === 'grouped' ? (
+                          // Devolució agrupada SENSE donant → pendent d'identificar
+                          <div className="flex flex-col gap-1">
+                            <Badge variant="outline" className="bg-orange-100 text-orange-800 border-orange-300 w-fit">
+                              <UserRoundX className="mr-1 h-3 w-3" />
+                              Pendent d'identificar
+                            </Badge>
+                            <div className="flex gap-1">
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="h-6 px-2 text-xs text-orange-700 hover:text-orange-900 hover:bg-orange-100"
+                                onClick={() => toast({ title: 'Funcionalitat pendent', description: 'Buscar donant existent - pròximament' })}
+                              >
+                                <Search className="mr-1 h-3 w-3" />
+                                Buscar
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="h-6 px-2 text-xs text-orange-700 hover:text-orange-900 hover:bg-orange-100"
+                                onClick={() => toast({ title: 'Funcionalitat pendent', description: 'Crear nou donant - pròximament' })}
+                              >
+                                <UserPlus className="mr-1 h-3 w-3" />
+                                Crear
+                              </Button>
+                            </div>
+                            {item.originalName && (
+                              <span className="text-xs text-muted-foreground">
+                                {item.originalName}
+                              </span>
+                            )}
+                          </div>
                         ) : (
                           <div className="flex flex-col gap-0.5">
                             <Badge variant="outline" className="bg-red-100 text-red-800 border-red-300 w-fit">
@@ -560,24 +680,46 @@ export function ReturnImporter({
                                 DNI: {item.dni}
                               </span>
                             )}
+                            {!item.dni && item.originalName && (
+                              <span className="text-xs text-muted-foreground">
+                                Nom: {item.originalName}
+                              </span>
+                            )}
                           </div>
                         )}
                       </TableCell>
-                      <TableCell>
-                        {item.matchedTransaction ? (
-                          <Badge variant="outline" className="bg-green-100 text-green-800 border-green-300">
-                            <CheckCircle2 className="mr-1 h-3 w-3" />
-                            Sí
-                          </Badge>
-                        ) : item.matchedDonor ? (
-                          <Badge variant="outline" className="bg-yellow-100 text-yellow-800 border-yellow-300">
-                            <AlertTriangle className="mr-1 h-3 w-3" />
-                            No
-                          </Badge>
-                        ) : (
-                          <span className="text-muted-foreground">-</span>
-                        )}
-                      </TableCell>
+                      {hasAnyTypeBadge && (
+                        <TableCell>
+                          {item.matchType === 'grouped' ? (
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Badge variant="outline" className="bg-blue-100 text-blue-800 border-blue-300 cursor-help">
+                                  <Layers className="mr-1 h-3 w-3" />
+                                  Agrupada
+                                </Badge>
+                              </TooltipTrigger>
+                              <TooltipContent>Forma part d'una remesa de devolucions</TooltipContent>
+                            </Tooltip>
+                          ) : item.matchType === 'individual' ? (
+                            <Badge variant="outline" className="bg-green-100 text-green-800 border-green-300">
+                              <CheckCircle2 className="mr-1 h-3 w-3" />
+                              Individual
+                            </Badge>
+                          ) : !item.matchedDonor ? (
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Badge variant="outline" className="bg-orange-100 text-orange-800 border-orange-300 cursor-help">
+                                  <UserRoundX className="mr-1 h-3 w-3" />
+                                  Pendent
+                                </Badge>
+                              </TooltipTrigger>
+                              <TooltipContent>Pendent d'identificar donant</TooltipContent>
+                            </Tooltip>
+                          ) : (
+                            <span className="text-muted-foreground">-</span>
+                          )}
+                        </TableCell>
+                      )}
                     </TableRow>
                   ))}
                 </TableBody>
@@ -585,13 +727,22 @@ export function ReturnImporter({
             </ScrollArea>
 
             {/* Info */}
-            <div className="text-sm text-muted-foreground bg-muted rounded-lg p-3">
+            <div className="text-sm text-muted-foreground bg-muted rounded-lg p-3 space-y-1">
               <p>
                 <strong>{selectedRows.size}</strong> devolucions seleccionades per assignar.
-                {stats.donorFound > 0 && (
-                  <> Les que no tenen transacció coincident actualitzaran igualment el comptador de devolucions del donant.</>
-                )}
               </p>
+              {stats.grouped > 0 && partialRemittanceStats.resolvedCount > 0 && (
+                <p className="text-blue-700">
+                  <Layers className="inline h-3 w-3 mr-1" />
+                  Les {partialRemittanceStats.resolvedCount} devolucions agrupades s'assignaran com a part d'una remesa.
+                </p>
+              )}
+              {partialRemittanceStats.pendingCount > 0 && (
+                <p className="text-orange-700">
+                  <UserRoundX className="inline h-3 w-3 mr-1" />
+                  {partialRemittanceStats.pendingCount} devolucions quedaran pendents d'identificar. La remesa es marcarà com a <strong>parcial</strong> fins que s'identifiquin tots els donants.
+                </p>
+              )}
             </div>
 
             <DialogFooter className="gap-2 sm:gap-0">
@@ -599,15 +750,21 @@ export function ReturnImporter({
                 <ArrowLeft className="mr-2 h-4 w-4" />
                 Tornar
               </Button>
-              <Button
-                onClick={handleProcess}
-                disabled={isProcessing || selectedRows.size === 0}
-              >
-                {isProcessing ? (
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                ) : null}
-                {t.returnImporter?.process || "Assignar"} {selectedRows.size} devolucions
-              </Button>
+              {partialRemittanceStats.allPending ? (
+                <span className="text-sm text-muted-foreground italic">
+                  Identifica almenys un donant per continuar
+                </span>
+              ) : (
+                <Button
+                  onClick={handleProcess}
+                  disabled={isProcessing || selectedRows.size === 0}
+                >
+                  {isProcessing ? (
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  ) : null}
+                  {t.returnImporter?.process || "Assignar"} {selectedRows.size} devolucions
+                </Button>
+              )}
             </DialogFooter>
           </>
         )}
