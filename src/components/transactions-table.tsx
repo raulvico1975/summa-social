@@ -524,23 +524,8 @@ export function TransactionsTable() {
   };
 
   const handleOnSplitDone = () => {
-    // Treure el focus de qualsevol element interactiu abans de tancar
-    // per evitar conflicte aria-hidden amb elements focusats (Radix UI bug)
-    if (document.activeElement instanceof HTMLElement) {
-      document.activeElement.blur();
-    }
     setIsSplitterOpen(false);
     setTransactionToSplit(null);
-  };
-
-  const handleSplitterOpenChange = (open: boolean) => {
-    if (!open) {
-      // Treure el focus abans de tancar per evitar bloqueig aria-hidden
-      if (document.activeElement instanceof HTMLElement) {
-        document.activeElement.blur();
-      }
-    }
-    setIsSplitterOpen(open);
   };
 
   const handleViewRemittanceDetail = (remittanceId: string) => {
@@ -966,7 +951,7 @@ export function TransactionsTable() {
       {transactionToSplit && availableContacts && (
         <RemittanceSplitter
           open={isSplitterOpen}
-          onOpenChange={handleSplitterOpenChange}
+          onOpenChange={setIsSplitterOpen}
           transaction={transactionToSplit}
           existingDonors={donors}
           onSplitDone={handleOnSplitDone}
