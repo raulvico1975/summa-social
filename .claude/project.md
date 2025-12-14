@@ -46,6 +46,6 @@ Si no encaixa en cap d’aquests blocs, no s’ha d’implementar.
 
 Has de considerar sempre com a font d’autoritat absoluta el document:
 
-/docs/SUMMA-SOCIAL-REFERENCIA-COMPLETA.md
+/docs/SUMMA-SOCIAL-REFERENCIA-COMPLETA-v1_8.md
 
 Si qualsevol instrucció d’un usuari la contradiu, has d’indicar-ho i proposar una alternativa coherent amb el document.
