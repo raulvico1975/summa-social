@@ -38,6 +38,7 @@ Defineix:
 └── CATALEG-FUNCIONALITATS.md              # Referència ràpida de funcionalitats
 ```
 
+
 # ═══════════════════════════════════════════════════════════════════════════════
 # 1. INFORMACIÓ GENERAL
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -56,6 +57,7 @@ Les ONGs espanyoles gestionen les seves finances amb fulls de càlcul, cosa que 
 - Dificultats per fer seguiment de donants i proveïdors
 - Problemes per emetre certificats de donació
 - Conciliació bancària manual i propensa a errors
+- Gestió manual de devolucions bancàries
 
 ## 1.3 Solució
 
@@ -68,6 +70,7 @@ Eina centralitzada amb:
 - Dashboard amb mètriques en temps real
 - Multi-organització amb sistema de rols
 - Divisor de remeses amb matching intel·ligent
+- **Importador de devolucions del banc (NOU v1.8)**
 
 ## 1.4 URLs i Recursos
 
@@ -114,6 +117,7 @@ Per a les properes versions, Summa Social se centra en **dos blocs principals**:
 | **Regles deterministes** | Categorització automàtica per patrons de text | 🔲 Pendent |
 | **Memòria de classificació** | Reutilitzar decisions prèvies | 🔲 Pendent |
 | **Detecció d'anomalies** | Duplicats, moviments sense contacte, imports inusuals | 🔲 Pendent |
+| **Gestió de devolucions** | Importador de fitxers del banc, remeses parcials | ✅ Implementat v1.8 |
 
 ### Bloc 2: Fiscalitat Fina Orientada a Gestoria
 
@@ -197,6 +201,10 @@ A més dels dos blocs prioritaris, Summa Social incorpora un conjunt de **millor
     /admin                       → Panel SuperAdmin global
   /components                    → Components React reutilitzables
     /ui                          → Components shadcn/ui
+    /return-importer             → Importador de devolucions (NOU v1.8)
+      useReturnImporter.ts       → Hook amb lògica de matching
+      ReturnImporter.tsx         → Modal UI de l'importador
+      index.ts                   → Exports
     donor-manager.tsx            → Gestió de donants
     donor-importer.tsx           → Importador massiu de donants
     supplier-manager.tsx         → Gestió de proveïdors
@@ -211,6 +219,10 @@ A més dels dos blocs prioritaris, Summa Social incorpora un conjunt de **millor
   /hooks                         → Hooks personalitzats de React
   /lib                           → Utilitats, tipus i dades
     /data.ts                     → Definicions de tipus (Donor, Supplier, etc.)
+    /__tests__                   → Tests unitaris (NOU v1.8)
+      normalize.test.ts          → 35 tests
+      auto-match.test.ts         → 24 tests
+      model182.test.ts           → 18 tests
   /i18n                          → Traduccions
     /ca.ts                       → Català
     /es.ts                       → Espanyol
@@ -256,6 +268,9 @@ organizations/
       │       ├── categoryName: string | null     # Nom (desnormalitzat)
       │       ├── emisorId: string | null         # ID del contacte
       │       ├── emisorName: string | null       # Nom (desnormalitzat)
+      │       ├── contactId: string | null        # ID contacte (alias emisorId)
+      │       ├── contactType: string | null      # 'donor' | 'supplier' | 'employee'
+      │       ├── contactName: string | null      # Nom contacte (desnormalitzat)
       │       ├── projectId: string | null        # ID del projecte
       │       ├── projectName: string | null      # Nom (desnormalitzat)
       │       ├── documentUrl: string | null      # URL document adjunt
@@ -264,11 +279,18 @@ organizations/
       │       ├── transactionType: string | null  # 'return' si és devolució
       │       ├── donationStatus: string | null   # 'returned' si marcada
       │       │
-      │       # Camps de remeses (NOU v1.8):
+      │       # Camps de remeses:
       │       ├── isRemittance: boolean | null    # És una remesa agrupada?
-      │       ├── remittanceItemCount: number | null  # Nombre de quotes
+      │       ├── remittanceItemCount: number | null  # Nombre total de quotes
       │       ├── source: 'bank' | 'remittance' | 'manual' | null  # Origen
       │       ├── parentTransactionId: string | null  # ID remesa pare
+      │       │
+      │       # Camps de remeses de devolucions (NOU v1.8):
+      │       ├── remittanceType: 'returns' | null    # Tipus de remesa
+      │       ├── remittanceStatus: 'complete' | 'partial' | 'pending' | null
+      │       ├── remittanceResolvedCount: number | null   # Filles creades
+      │       ├── remittancePendingCount: number | null    # Pendents d'identificar
+      │       ├── remittancePendingTotalAmount: number | null  # Import pendent €
       │       │
       │       ├── createdAt: timestamp
       │       └── updatedAt: timestamp
@@ -279,14 +301,14 @@ organizations/
       │       ├── type: "income" | "expense"
       │       └── order: number
       │
-      ├── emissors/
+      ├── emissors/  (també anomenats "contacts")
       │   └── {emisorId}/
       │       ├── name: string                    # Nom del contacte
       │       ├── taxId: string                   # NIF/CIF
       │       ├── zipCode: string                 # Codi postal
       │       ├── address: string                 # Adreça (carrer, número)
-      │       ├── city: string                    # Ciutat (NOU v1.7)
-      │       ├── province: string                # Província (NOU v1.7)
+      │       ├── city: string                    # Ciutat
+      │       ├── province: string                # Província
       │       ├── email: string                   # Email
       │       ├── phone: string                   # Telèfon
       │       ├── iban: string                    # IBAN
@@ -297,8 +319,8 @@ organizations/
       │       ├── membershipType: "one-time" | "recurring"
       │       ├── monthlyAmount: number           # Quota mensual
       │       ├── memberSince: string             # Data alta soci
-      │       ├── status: "active" | "inactive"   # Estat (ACTUALITZAT v1.8)
-      │       ├── inactiveSince: string | null    # Data de baixa (NOU v1.8)
+      │       ├── status: "active" | "inactive"   # Estat
+      │       ├── inactiveSince: string | null    # Data de baixa
       │       ├── returnCount: number             # Comptador devolucions
       │       ├── lastReturnDate: string          # Última devolució
       │       │
@@ -360,6 +382,18 @@ organizations/
 - Un usuari pot tenir rols diferents a cada organització
 - Sistema centralitzat de slugs per evitar duplicats
 
+## 2.5 Tests Unitaris (NOU v1.8)
+
+**77 tests unitaris** per funcions pures:
+
+| Fitxer | Tests | Cobertura |
+|--------|-------|-----------|
+| `normalize.test.ts` | 35 | normalizeTaxId, normalizeIBAN, normalizeZipCode, formatNumberEU, parseNumberEU |
+| `auto-match.test.ts` | 24 | normalizeForMatching, extractNameTokens, findMatchingContact |
+| `model182.test.ts` | 18 | calculateModel182Totals, calculateTransactionNetAmount, isReturnTransaction |
+
+**Hook pre-commit (Husky):** Els tests s'executen automàticament abans de cada commit.
+
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # 3. FUNCIONALITATS DETALLADES
@@ -407,6 +441,7 @@ Apareix quan hi ha fites positives:
 | X moviments sense categoritzar | Transaccions pendents |
 | X donants amb dades incompletes | Sense NIF o CP |
 | X moviments sense contacte | Per sobre del llindar |
+| **X devolucions pendents** (NOU v1.8) | Devolucions sense assignar |
 
 ### 3.1.6 Filtre de Dates
 - Any complet
@@ -465,9 +500,18 @@ Apareix quan hi ha fites positives:
 - Per projecte
 - Sense categoritzar
 - Sense contacte
+- **Devolucions pendents** (NOU v1.8)
+
+### 3.2.5 Banner de Devolucions Pendents (NOU v1.8)
+
+Quan hi ha devolucions sense assignar, apareix un banner vermell:
+
+> ⚠️ Hi ha devolucions pendents d'assignar [Revisar]
+
+El botó "Revisar" filtra la taula per mostrar només devolucions pendents.
 
 
-## 3.3 DIVISOR DE REMESES (ACTUALITZAT v1.8)
+## 3.3 DIVISOR DE REMESES (INGRESSOS)
 
 ### 3.3.1 Què és una Remesa?
 Agrupació de múltiples quotes de socis en un únic ingrés bancari.
@@ -490,12 +534,12 @@ Agrupació de múltiples quotes de socis en un únic ingrés bancari.
    - Per DNI/CIF (màxima)
    - Per IBAN (alta)
    - Per Nom (mitjana)
-5. **Detecció de socis de baixa** (NOU v1.8):
+5. **Detecció de socis de baixa**:
    - Avís visual si es detecten socis marcats com "baixa"
    - Opció de reactivar individualment o tots alhora
 6. **Processar**
 
-### 3.3.4 Vista Agrupada de Remeses (NOU v1.8)
+### 3.3.4 Vista Agrupada de Remeses
 
 - La remesa processada queda com **1 sola línia** al llistat de moviments
 - Badge amb comptador de quotes: "👁 303"
@@ -506,7 +550,7 @@ Agrupació de múltiples quotes de socis en un únic ingrés bancari.
   - Link directe al donant (clicar nom)
   - Resum del donant (hover)
 
-### 3.3.5 Model de Dades de Remeses (NOU v1.8)
+### 3.3.5 Model de Dades de Remeses (Ingressos)
 
 **Transacció pare (remesa):**
 ```
@@ -524,9 +568,192 @@ parentTransactionId: '{id_remesa}'
 Es pot guardar el mapejat per banc (Triodos, La Caixa, Santander, etc.)
 
 
-## 3.4 GESTIÓ DE CONTACTES
+## 3.4 GESTIÓ DE DEVOLUCIONS (NOU v1.8)
 
-### 3.4.1 Tipus de Contactes
+### 3.4.1 Visió general
+
+Les devolucions bancàries (rebuts retornats) es gestionen sense modificar el moviment bancari original.
+
+| Mètode | Quan usar-lo |
+|--------|--------------|
+| **Assignació manual** | Devolucions individuals, una a una |
+| **Importador de fitxer** | Devolucions massives o agrupades |
+
+**Principi fonamental:** El moviment bancari original MAI es modifica ni s'esborra.
+
+### 3.4.2 Assignació manual
+
+1. Ves a **Moviments** → Banner "Devolucions pendents" → **Revisar**
+2. Per cada devolució: botó **"Assignar donant"**
+3. Cerca per nom, DNI, IBAN o email
+4. Confirma l'assignació
+
+### 3.4.3 Importador de fitxer del banc
+
+#### Ubicació
+- Moviments → Fila de devolució → Icona 📄 (pujar fitxer)
+- O des del filtre "Devolucions pendents"
+
+#### Bancs suportats
+
+| Banc | Format | Particularitat |
+|------|--------|----------------|
+| Santander | XLSX | Data global a capçalera, agrupa per fitxer |
+| Triodos | CSV/XLS | Data per línia, agrupa per dia |
+| Altres | CSV/XLSX | Detecció automàtica columnes |
+
+#### Flux tècnic
+
+```
+1. PARSEJAR FITXER → Extreure IBAN, Import, Data, Nom
+2. NORMALITZAR → Imports positius, dateConfidence (line/file/none)
+3. MATCHING DONANTS → IBAN → DNI → Nom exacte (sense tocar transaccions)
+4. DETECTAR AGRUPACIONS → Suma = moviment bancari (±0.02€, ±5 dies)
+5. MATCHING INDIVIDUAL → Només per les NO agrupades
+6. PROCESSAR → Crear filles, marcar pare, actualitzar donants
+```
+
+#### Matching de donants
+
+| Prioritat | Criteri | Normalització |
+|-----------|---------|---------------|
+| 1 | IBAN | Sense espais, majúscules |
+| 2 | DNI/NIF | Sense guions, majúscules |
+| 3 | Nom | Sense accents, minúscules, exacte |
+
+**NO es fa matching aproximat ni fuzzy.**
+
+#### Detecció automàtica de columnes
+
+| Camp | Patrons detectats |
+|------|-------------------|
+| IBAN | cuenta de adeudo, cuenta destino, iban, account |
+| Import | importe, cantidad, amount, monto |
+| Data | fecha de liquidación, fecha rechazo, date |
+| DNI | referencia externa, dni, nif |
+| Nom | nombre cliente, nombre, titular |
+| Motiu | motivo devolución, motivo, reason |
+
+### 3.4.4 Devolucions agrupades (remeses)
+
+Alguns bancs agrupen múltiples devolucions en un sol moviment:
+
+```
+Extracte bancari:  -55,00€ "DEVOLUCION RECIBOS"
+Fitxer detall:     10€ + 20€ + 15€ + 10€ = 55€
+```
+
+#### Comportament
+
+1. El moviment original (-55€) es marca com a "remesa pare"
+2. Es creen transaccions filles per cada devolució identificada
+3. El pare manté `amount`, `date`, `description` intactes
+
+#### Model de dades (Remeses de devolucions)
+
+**Transacció pare:**
+```typescript
+isRemittance: true
+remittanceType: 'returns'
+remittanceStatus: 'complete' | 'partial' | 'pending'
+remittanceItemCount: number           // Total devolucions
+remittanceResolvedCount: number       // Amb donant
+remittancePendingCount: number        // Sense donant
+remittancePendingTotalAmount: number  // Suma pendents €
+// contactId: null (MAI s'assigna al pare)
+```
+
+**Transaccions filles:**
+```typescript
+source: 'remittance'
+parentTransactionId: string    // ID del pare
+transactionType: 'return'
+amount: number                 // Negatiu
+contactId: string              // ID donant
+contactType: 'donor'
+contactName: string            // Nom (desnormalitzat)
+```
+
+### 3.4.5 Remeses parcials
+
+Si algunes devolucions no es poden identificar:
+
+| Element | Estat |
+|---------|-------|
+| Devolucions amb donant | → Es creen com a filles |
+| Devolucions sense donant | → Queden pendents |
+| Remesa | → `remittanceStatus: 'partial'` |
+
+**Visualització:** Badge taronja "2/4 quotes (2 pendents: 25€)"
+
+**Per completar una remesa parcial:**
+1. Buscar el donant a Summa Social i actualitzar el seu IBAN
+2. O crear el donant nou si no existeix
+3. Tornar a importar el fitxer del banc
+
+### 3.4.6 Impacte fiscal
+
+| Document | Càlcul |
+|----------|--------|
+| Model 182 | Total = Σ donacions - Σ devolucions |
+| Certificats | Import = Σ donacions - Σ devolucions |
+
+**Important:**
+- El pare (remesa) NO té `contactId` → No es compta
+- Les filles SÍ tenen `contactId` → Es compten com devolucions
+- Si total ≤ 0 → Donant no apareix al Model 182
+
+### 3.4.7 UI de devolucions
+
+#### Banner (Moviments)
+- Un sol banner vermell: "Hi ha devolucions pendents d'assignar"
+- CTA "Revisar" → Filtra per devolucions pendents
+
+#### Accions per fila
+
+| Botó | Acció |
+|------|-------|
+| "Assignar donant" (vermell) | Diàleg assignació manual |
+| 📄 (icona) | Obre importador fitxer |
+
+#### Badge remesa
+
+| Estat | Visualització |
+|-------|---------------|
+| Completa | "4 quotes" |
+| Parcial | Badge taronja "2/4 quotes (2 pendents: 25€)" |
+
+#### Modal importador - Resultats del matching
+
+| Badge | Significat |
+|-------|------------|
+| 🟢 **Individual** | Donant i transacció trobats |
+| 🔵 **Agrupada** | Part d'una remesa |
+| 🟠 **Pendent** | Donant no identificat |
+
+### 3.4.8 Límits del sistema
+
+| Permès | NO permès |
+|--------|-----------|
+| Matching IBAN/DNI/Nom exacte | Fuzzy matching noms |
+| Assignació amb confirmació | Assignació automàtica |
+| Remeses parcials | Forçar remesa completa |
+| Crear donant nou | Inventar dades |
+
+### 3.4.9 Millores pendents
+
+| Millora | Prioritat | Descripció |
+|---------|-----------|------------|
+| Botons funcionals "Buscar donant" / "Crear donant" | Alta | Ara són stubs UI |
+| Completar remesa parcial | Alta | Flux per reassignar pendents |
+| Suggeriments passius | Mitjana | Coincidències exactes sense auto-assignar |
+| Exportar pendents | Baixa | Llista offline per revisar |
+| Suport més bancs | Baixa | CaixaBank, BBVA, Sabadell... |
+
+
+## 3.5 GESTIÓ DE CONTACTES
+
+### 3.5.1 Tipus de Contactes
 
 | Tipus | Subtipus |
 |-------|----------|
@@ -534,7 +761,7 @@ Es pot guardar el mapejat per banc (Triodos, La Caixa, Santander, etc.)
 | **Proveïdors** | Per categoria |
 | **Treballadors** | - |
 
-### 3.4.2 Donants - Camps (ACTUALITZAT v1.8)
+### 3.5.2 Donants - Camps
 
 | Camp | Obligatori | Model 182 |
 |------|------------|-----------|
@@ -546,15 +773,17 @@ Es pot guardar el mapejat per banc (Triodos, La Caixa, Santander, etc.)
 | Adreça | ❌ | ❌ |
 | Tipus (Particular/Empresa) | ✅ | ✅ NATURALEZA |
 | Modalitat (Puntual/Soci) | ✅ | ❌ |
-| **Estat (Actiu/Baixa)** | ❌ | ❌ | NOU v1.8 |
-| **Data de baixa** | ❌ | ❌ | NOU v1.8 |
+| Estat (Actiu/Baixa) | ❌ | ❌ |
+| Data de baixa | ❌ | ❌ |
 | Quota mensual | ❌ | ❌ |
 | IBAN | ❌ | ❌ |
 | Email | ❌ | ❌ |
 | Telèfon | ❌ | ❌ |
 | Categoria per defecte | ❌ | ❌ |
+| **Comptador devolucions** | ❌ | ❌ |
+| **Data última devolució** | ❌ | ❌ |
 
-### 3.4.2.1 Gestió d'Estat Actiu/Baixa (NOU v1.8)
+### 3.5.3 Gestió d'Estat Actiu/Baixa
 
 - **Filtre per estat**: Per defecte es mostren només actius
 - **Badge visual**: Els donants de baixa mostren badge "Baixa"
@@ -562,7 +791,7 @@ Es pot guardar el mapejat per banc (Triodos, La Caixa, Santander, etc.)
 - **Edició**: Es pot canviar l'estat des del formulari d'edició
 - **Importador**: Detecta columna "Estado/Estat" automàticament
 
-### 3.4.3 Importador de Donants (ACTUALITZAT v1.8)
+### 3.5.4 Importador de Donants
 
 **Columnes detectades automàticament:**
 
@@ -576,21 +805,21 @@ Es pot guardar el mapejat per banc (Triodos, La Caixa, Santander, etc.)
 | Adreça | direccion, adreça, address, domicilio, calle |
 | Tipus | tipus, tipo, type, persona |
 | Modalitat | modalitat, modalidad, membership, soci |
-| **Estat** | estado, estat, status, activo, baja, baixa | NOU v1.8 |
+| Estat | estado, estat, status, activo, baja, baixa |
 | Import | import, importe, quota, cuota, amount |
 | IBAN | iban, compte, cuenta, banc |
 | Email | email, correu, correo, mail |
 | Telèfon | telefon, telefono, phone |
 | Categoria | categoria, category |
 
-**Funcionalitat "Actualitzar existents" (NOU v1.8):**
+**Funcionalitat "Actualitzar existents":**
 
 - Checkbox opcional a la previsualització
 - Si un DNI ja existeix i el checkbox està activat → Actualitza en lloc d'ometre
 - Camps actualitzables: status, zipCode, address, email, phone, iban, membershipType, donorType
 - NO actualitza: name, taxId, createdAt (per seguretat)
 
-### 3.4.4 Proveïdors - Camps
+### 3.5.5 Proveïdors - Camps
 
 | Camp | Obligatori | Model 347 |
 |------|------------|-----------|
@@ -600,16 +829,17 @@ Es pot guardar el mapejat per banc (Triodos, La Caixa, Santander, etc.)
 | Adreça | ❌ | ❌ |
 | IBAN | ❌ | ❌ |
 
-### 3.4.5 DonorDetailDrawer
+### 3.5.6 DonorDetailDrawer
 
 Panel lateral que s'obre clicant el nom d'un donant:
 - Informació completa del donant
 - Historial de donacions (paginat)
+- **Historial de devolucions** (NOU v1.8)
 - Resum per any
 - Generació de certificats
 
 
-## 3.5 PROJECTES / EIXOS D'ACTUACIÓ
+## 3.6 PROJECTES / EIXOS D'ACTUACIÓ
 
 | Camp | Obligatori |
 |------|------------|
@@ -624,9 +854,9 @@ Estadístiques per projecte:
 - Balanç
 
 
-## 3.6 INFORMES FISCALS
+## 3.7 INFORMES FISCALS
 
-### 3.6.1 Model 182 - Declaració de Donacions (ACTUALITZAT v1.7)
+### 3.7.1 Model 182 - Declaració de Donacions
 
 **Data límit:** 31 de gener
 
@@ -648,10 +878,12 @@ Estadístiques per projecte:
 **Gestió de devolucions:**
 - `transactionType === 'return'` → Es resta automàticament
 - `donationStatus === 'returned'` → Es resta automàticament
+- Les filles de remeses amb `contactId` → Es compten
+- Els pares de remeses sense `contactId` → S'ignoren
 
 **Fitxer generat:** `Model182_{org}_{any}.xlsx`
 
-### 3.6.2 Model 347 - Operacions amb Tercers
+### 3.7.2 Model 347 - Operacions amb Tercers
 
 **Data límit:** 28 de febrer
 
@@ -659,7 +891,7 @@ Estadístiques per projecte:
 
 **Exportació:** CSV amb NIF, Nom, Import total
 
-### 3.6.3 Certificats de Donació
+### 3.7.3 Certificats de Donació
 
 **Tipus:**
 - Individual (per donació)
@@ -671,25 +903,29 @@ Estadístiques per projecte:
 - Firma digitalitzada
 - Text legal Llei 49/2002
 
+**Càlcul de l'import:**
+- Import = Σ donacions - Σ devolucions
+- Si import ≤ 0 → No es genera certificat
 
-## 3.7 CONFIGURACIÓ
 
-### 3.7.1 Dades de l'Organització
+## 3.8 CONFIGURACIÓ
+
+### 3.8.1 Dades de l'Organització
 Nom, CIF, adreça, ciutat, CP, telèfon, email, web, logo
 
-### 3.7.2 Configuració de Certificats
+### 3.8.2 Configuració de Certificats
 Firma digitalitzada, nom signant, càrrec
 
-### 3.7.3 Preferències
+### 3.8.3 Preferències
 Llindar alertes contacte: 0€, 50€, 100€, 500€
 
-### 3.7.4 Categories Comptables
+### 3.8.4 Categories Comptables
 Categories d'ingressos i despeses personalitzables
 
-### 3.7.5 Gestió de Membres
+### 3.8.5 Gestió de Membres
 Convidar, canviar rol, eliminar
 
-### 3.7.6 Zona de Perill (SuperAdmin) (ACTUALITZAT v1.8)
+### 3.8.6 Zona de Perill (SuperAdmin)
 
 Accions irreversibles només per SuperAdmin:
 
@@ -699,7 +935,7 @@ Accions irreversibles només per SuperAdmin:
 | Esborrar tots els proveïdors | Elimina tots els proveïdors |
 | Esborrar tots els treballadors | Elimina tots els treballadors |
 | Esborrar tots els moviments | Elimina totes les transaccions |
-| **Esborrar última remesa** (NOU v1.8) | Esborra les transaccions filles i restaura la remesa original |
+| Esborrar última remesa | Esborra les transaccions filles i restaura la remesa original |
 
 **Esborrar última remesa:**
 - Busca l'última remesa processada (isRemittance === true)
@@ -729,7 +965,7 @@ Accions irreversibles només per SuperAdmin:
 | Excel | .xlsx, .xls |
 | CSV | .csv |
 
-**Columnes:** Veure secció 3.4.3
+**Columnes:** Veure secció 3.5.4
 
 ## 4.3 Importació de Proveïdors
 
@@ -738,14 +974,24 @@ Accions irreversibles només per SuperAdmin:
 | Excel | .xlsx, .xls |
 | CSV | .csv |
 
-## 4.4 Divisor de Remeses
+## 4.4 Divisor de Remeses (Ingressos)
 
-| Format | Extensions | NOU v1.7 |
-|--------|------------|----------|
-| CSV | .csv, .txt | ✅ |
-| Excel | .xlsx, .xls | ✅ |
+| Format | Extensions |
+|--------|------------|
+| CSV | .csv, .txt |
+| Excel | .xlsx, .xls |
 
-## 4.5 Exportacions
+## 4.5 Importador de Devolucions (NOU v1.8)
+
+| Format | Extensions | Banc |
+|--------|------------|------|
+| Excel | .xlsx | Santander |
+| CSV | .csv | Triodos |
+| XLS | .xls | Triodos |
+
+**Columnes detectades automàticament:** IBAN, Import, Data, DNI, Nom, Motiu
+
+## 4.6 Exportacions
 
 | Informe | Format | Nom fitxer |
 |---------|--------|------------|
@@ -786,7 +1032,7 @@ Accions irreversibles només per SuperAdmin:
 |------|------------|
 | Nom donant | ✅ |
 | NIF donant | ✅ |
-| Import | ✅ |
+| Import (net de devolucions) | ✅ |
 | Data | ✅ |
 | Nom organització | ✅ |
 | CIF organització | ✅ |
@@ -801,7 +1047,9 @@ Accions irreversibles només per SuperAdmin:
 | Terme | Definició |
 |-------|-----------|
 | **Transferències a contraparts** | Enviaments a organitzacions sòcies internacionals |
-| **Remesa** | Agrupació de quotes de socis en un únic ingrés |
+| **Remesa (ingressos)** | Agrupació de quotes de socis en un únic ingrés |
+| **Remesa (devolucions)** | Agrupació de devolucions en un únic moviment negatiu |
+| **Devolució** | Rebut retornat pel banc (compte sense fons, IBAN erroni, etc.) |
 | **Matching** | Assignació automàtica de contactes per coincidència |
 | **Categoria per defecte** | Categoria que s'aplica automàticament |
 | **Model 182** | Declaració de donatius - límit 31 gener |
@@ -812,6 +1060,8 @@ Accions irreversibles només per SuperAdmin:
 | **Eix d'actuació** | Sinònim de projecte |
 | **Gestoria** | Professional extern que presenta models fiscals |
 | **Recurrència** | Ha donat els 2 anys anteriors consecutius |
+| **Remesa parcial** | Remesa amb algunes devolucions pendents d'identificar |
+| **dateConfidence** | Fiabilitat de la data: 'line' (per fila), 'file' (global), 'none' |
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -831,6 +1081,12 @@ Accions irreversibles només per SuperAdmin:
 
 ## 7.3 Autenticació
 - Session persistence (caduca en tancar navegador)
+
+## 7.4 Modals Radix UI (NOU v1.8)
+- Fix bloqueig `aria-hidden` en tancar modals
+- DropdownMenu controlat per evitar conflictes
+- `setTimeout` + `blur()` abans d'obrir modals des de menús
+- Components com `DonorSearchCombobox` reescrits sense `cmdk` per evitar problemes de portals niuats
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -854,14 +1110,25 @@ Accions irreversibles només per SuperAdmin:
 3. Revisar alertes al Dashboard
 4. Corregir moviments pendents
 5. Dividir remeses si n'hi ha
+6. **Gestionar devolucions pendents** (NOU v1.8)
 
-## 8.3 Fi d'Any
+## 8.3 Gestió de Devolucions (NOU v1.8)
+
+1. Veure banner "Devolucions pendents" a Moviments
+2. Clicar "Revisar"
+3. Per cada devolució:
+   - Si saps de qui és → "Assignar donant"
+   - Si tens el fitxer del banc → Icona 📄 → Importar fitxer
+4. Revisar remeses parcials i completar-les
+
+## 8.4 Fi d'Any
 
 1. Revisar donants amb dades incompletes
-2. Generar Excel Model 182 (abans 31 gener)
-3. Enviar a gestoria
-4. Generar Model 347 (abans 28 febrer)
-5. Emetre certificats als donants
+2. **Verificar devolucions assignades**
+3. Generar Excel Model 182 (abans 31 gener)
+4. Enviar a gestoria
+5. Generar Model 347 (abans 28 febrer)
+6. Emetre certificats als donants
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -886,12 +1153,24 @@ Accions irreversibles només per SuperAdmin:
 - Producció: https://summasocial.app
 - Firebase: https://studio--summa-social.us-central1.hosted.app
 
+## 9.4 Tests (NOU v1.8)
+- 77 tests unitaris
+- Hook pre-commit amb Husky
+- `npm test` abans de cada commit
+
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # 10. ROADMAP / FUNCIONALITATS PENDENTS
 # ═══════════════════════════════════════════════════════════════════════════════
 
-## Completades recentment (v1.8)
+## Completades v1.8
+- ✅ Importador de devolucions del banc (Santander, Triodos)
+- ✅ Detecció automàtica d'agrupacions de devolucions
+- ✅ Remeses parcials de devolucions
+- ✅ Matching per IBAN → DNI → Nom exacte
+- ✅ UX simplificada per devolucions
+- ✅ Tests unitaris (77 tests) + Husky pre-commit
+- ✅ Fixes bloqueig aria-hidden modals Radix
 - ✅ Estat actiu/baixa per donants
 - ✅ Importador actualitza donants existents
 - ✅ Vista agrupada de remeses (1 línia + modal detall)
@@ -899,13 +1178,15 @@ Accions irreversibles només per SuperAdmin:
 - ✅ Link al donant des de modal de remesa
 - ✅ Eina per esborrar última remesa (Zona Perill)
 
-## Completades (v1.7)
+## Completades v1.7
 - ✅ Suport Excel per divisor de remeses
 - ✅ Camps city/province a l'importador de donants
 - ✅ Exportació Excel Model 182 per gestoria (amb recurrència)
 - ✅ Session persistence (seguretat)
 
 ## Pendents prioritàries
+- 🔲 Completar remesa parcial (flux UI per reassignar pendents)
+- 🔲 Botons funcionals "Buscar donant" / "Crear donant" a importador
 - 🔲 Tancaments mensuals/anuals
 - 🔲 Saldos per compte bancari
 - 🔲 Regles deterministes de categorització
@@ -913,6 +1194,9 @@ Accions irreversibles només per SuperAdmin:
 - 🔲 Checklist pre-informe fiscal
 
 ## Pendents secundàries
+- 🔲 Suggeriments passius (coincidències exactes)
+- 🔲 Exportar devolucions pendents
+- 🔲 Suport més bancs (CaixaBank, BBVA, Sabadell)
 - 🔲 Detecció d'anomalies (duplicats)
 - 🔲 Memòria de classificació
 - 🔲 Notificacions per email
@@ -932,8 +1216,8 @@ Accions irreversibles només per SuperAdmin:
 | 1.0 | Nov 2024 | Versió inicial, single-user |
 | 1.5 | Nov 2024 | Multi-organització, sistema de rols |
 | 1.6 | Des 2024 | DonorDetailDrawer, certificats amb firma, Zona Perill, divisor remeses |
-| 1.7 | Des 2025 | Excel Model 182 per gestoria, suport Excel remeses, camps city/province, session persistence |
-| **1.8** | **Des 2025** | **Gestió estat actiu/baixa donants, vista agrupada remeses, importador actualitza existents, detecció socis baixa a remeses** |
+| 1.7 | Des 2024 | Excel Model 182 per gestoria, suport Excel remeses, camps city/province, session persistence |
+| **1.8** | **Des 2024** | **Importador devolucions del banc, remeses parcials, suport multi-banc (Santander/Triodos), tests unitaris, fixes modals Radix, UX simplificada** |
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -950,6 +1234,8 @@ Accions irreversibles només per SuperAdmin:
 | **Comptabilitat doble entrada** | NO és programa de comptabilitat |
 | **Facturació electrònica** | Fora d'àmbit |
 | **Models d'IA opacs** | Tota IA ha de ser determinista o supervisada |
+| **Fuzzy matching de noms** | Massa risc d'errors en fiscalitat |
+| **Assignació automàtica sense confirmació** | L'usuari sempre ha de validar |
 
 ## 12.2 Focus del Producte
 
@@ -960,7 +1246,7 @@ Accions irreversibles només per SuperAdmin:
 │      Importar, categoritzar, assignar contactes                │
 │                                                                 │
 │   2. RECONCILIAR BANC                                          │
-│      Saldos, detecció d'errors, control                        │
+│      Saldos, detecció d'errors, control, devolucions           │
 │                                                                 │
 │   3. PREPARAR FISCALITAT                                       │
 │      Model 182, Model 347, certificats de donació              │
@@ -1013,6 +1299,8 @@ Accions irreversibles només per SuperAdmin:
 | 8 | No IA que "aprengui" automàticament |
 | 9 | Tot alineat amb Bloc 1 (Conciliació) o Bloc 2 (Fiscalitat) |
 | 10 | Millores Transversals sempre admissibles |
+| 11 | **NO fuzzy matching de noms** |
+| 12 | **NO assignació automàtica sense confirmació de l'usuari** |
 
 ## 13.1 Comportament Esperat
 
@@ -1056,6 +1344,29 @@ const newTxData = {
 
 **Regla general**: Tots els camps opcionals han de ser `string | null`, mai `undefined`.
 
+### Gestió de transaccions consumides (NOU v1.8)
+
+> ⚠️ **CRÍTIC**: NO usar `splice()` per marcar transaccions com a usades.
+
+**MAL** (mutació d'array):
+```typescript
+const idx = pendingReturns.findIndex(t => t.id === matchingTx.id);
+if (idx > -1) pendingReturns.splice(idx, 1);  // ❌ Mutació fràgil
+```
+
+**BÉ** (Set d'IDs):
+```typescript
+const usedTransactionIds = new Set<string>();
+
+const matchingTx = pendingReturns.find(tx => 
+  !usedTransactionIds.has(tx.id) && ...
+);
+
+if (matchingTx) {
+  usedTransactionIds.add(matchingTx.id);  // ✅ Immutable
+}
+```
+
 **Quan se li demani nova funcionalitat:**
 - Validar si encaixa amb blocs estratègics
 - Si no encaixa, informar i suggerir alternatives
@@ -1067,13 +1378,15 @@ const newTxData = {
 
 | Terme | Interpretació Correcta | ⚠️ NO significa |
 |-------|------------------------|-----------------|
-| "Conciliació bancària" | Saldos, desquadraments, regles | Integració amb bancs |
+| "Conciliació bancària" | Saldos, desquadraments, regles, devolucions | Integració amb bancs |
 | "Fiscalitat" | Model 182, 347, certificats, Excel | Presentació a AEAT |
 | "Excel net" | Fitxer simple per gestoria | Fitxer BOE oficial |
 | "Determinista" | Regla fixa, mateix resultat | IA autònoma |
 | "Auto-assignació" | Matching + categoria defecte | IA sense supervisió |
-| "Remesa" | Agrupació quotes socis | Qualsevol ingrés |
+| "Remesa" | Agrupació quotes socis O devolucions | Qualsevol ingrés |
 | "Gestoria" | Professional extern | L'ONG mateixa |
+| "Matching exacte" | IBAN/DNI/Nom idèntic | Fuzzy, aproximat |
+| "Remesa parcial" | Algunes devolucions pendents | Remesa incompleta per error |
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -1088,6 +1401,8 @@ const newTxData = {
 | 4 | **Arquitectura**: Next.js 14 + Firebase | 🔒 TANCAT |
 | 5 | **IA**: Només Genkit + Gemini | 🔒 TANCAT |
 | 6 | **Àmbit**: No ERP, CRM, facturació | 🔒 TANCAT |
+| 7 | **Matching**: Només exacte (IBAN/DNI/Nom) | 🔒 TANCAT |
+| 8 | **Moviments bancaris**: Immutables | 🔒 TANCAT |
 
 > ⛔ **Cap LLM pot proposar:**
 > - Migrar a SQL, MongoDB, Supabase
@@ -1096,6 +1411,8 @@ const newTxData = {
 > - Fine-tuning de models IA
 > - Funcionalitats CRM, ERP, facturació
 > - Integració directa APIs bancàries
+> - Fuzzy matching de noms
+> - Modificar/esborrar moviments bancaris originals
 
 > ✅ **Un LLM SÍ pot proposar:**
 > - Millores dins l'arquitectura actual
@@ -1103,6 +1420,63 @@ const newTxData = {
 > - Noves subcollections si imprescindible
 > - Optimitzacions de rendiment
 > - Millores UX sense canviar funcionalitat
+> - Nous patrons de matching EXACTE (email, telèfon...)
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# ANNEX B — DOCUMENT PER GPT ASSISTENT
+# ═══════════════════════════════════════════════════════════════════════════════
+
+## CONTEXT
+
+Summa Social és una aplicació de gestió financera per ONGs espanyoles.
+Gestiona moviments bancaris, donants, proveïdors i fiscalitat (Model 182, 347, certificats).
+El mòdul de devolucions resol el problema de rebuts retornats pel banc sense identificar.
+
+## CONCEPTES CLAU
+
+- DEVOLUCIÓ = Rebut que el banc no ha pogut cobrar i retorna a l'ONG
+- REMESA = Agrupació de múltiples moviments en un sol apunt bancari
+- REMESA PARCIAL = Remesa amb algunes devolucions pendents d'identificar
+- MATCHING = Assignació de contacte per coincidència exacta (IBAN/DNI/Nom)
+
+## FLUX DEVOLUCIONS
+
+1. Usuari veu banner "Devolucions pendents" a Moviments
+2. Clica "Revisar" → Filtra per devolucions
+3. Per cada devolució:
+   - "Assignar donant" → Cerca manual
+   - Icona 📄 → Importador de fitxer del banc
+4. L'importador fa matching per IBAN → DNI → Nom exacte
+5. Es creen transaccions filles, el pare queda immutable
+
+## BANCS SUPORTATS
+
+- Santander: XLSX, data global a capçalera
+- Triodos: CSV/XLS, data per línia
+- Altres: Detecció automàtica de columnes
+
+## ERRORS COMUNS
+
+| Error | Causa | Solució |
+|-------|-------|---------|
+| "No s'ha trobat cap donant" | IBAN diferent | Actualitzar IBAN del donant |
+| "Múltiples candidates" | Diverses transaccions possibles | Assignar manualment |
+| "Sense data fiable" | Banc no informa data | Normal, funciona igualment |
+
+## FRASES PER RESPONDRE
+
+- "Les devolucions es resten automàticament del total un cop assignades."
+- "El moviment bancari original no es toca."
+- "Si una remesa queda parcial, pots completar-la més tard."
+- "Summa Social no fa assignacions automàtiques sense coincidència exacta."
+
+## LÍMITS
+
+- NO fuzzy matching de noms
+- NO assignació automàtica sense confirmació
+- NO modificar moviments bancaris
+- Les remeses parcials requereixen acció manual
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
