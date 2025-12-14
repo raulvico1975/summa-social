@@ -230,7 +230,14 @@ export const TransactionRow = React.memo(function TransactionRow({
   }, [tx, onOpenReturnDialog]);
 
   const handleSplitRemittance = React.useCallback(() => {
-    onSplitRemittance(tx);
+    // Delay per permetre que el DropdownMenu es tanqui completament
+    // abans d'obrir la modal (evita conflicte aria-hidden)
+    setTimeout(() => {
+      if (document.activeElement instanceof HTMLElement) {
+        document.activeElement.blur();
+      }
+      onSplitRemittance(tx);
+    }, 100);
   }, [tx, onSplitRemittance]);
 
   const handleViewRemittanceDetail = React.useCallback(() => {

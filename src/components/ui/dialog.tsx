@@ -6,21 +6,39 @@ import { X } from "lucide-react"
 
 import { cn } from "@/lib/utils"
 
-const Dialog = React.forwardRef<
-  React.ElementRef<typeof DialogPrimitive.Root>,
-  React.ComponentPropsWithoutRef<typeof DialogPrimitive.Root>
->(({ onOpenChange, ...props }, _ref) => (
-  <DialogPrimitive.Root
-    onOpenChange={(open) => {
-      // Treure focus ABANS de tancar per evitar conflicte aria-hidden
-      if (!open && document.activeElement instanceof HTMLElement) {
+const Dialog: React.FC<React.ComponentPropsWithoutRef<typeof DialogPrimitive.Root>> = ({
+  onOpenChange,
+  children,
+  ...props
+}) => {
+  const handleOpenChange = React.useCallback((open: boolean) => {
+    if (!open) {
+      // 1. Treure focus immediatament
+      if (document.activeElement instanceof HTMLElement) {
         document.activeElement.blur();
       }
-      onOpenChange?.(open);
-    }}
-    {...props}
-  />
-));
+      // 2. Marcar el contingut com inert per evitar conflictes aria-hidden
+      const content = document.querySelector('[data-state="open"][role="dialog"]');
+      if (content instanceof HTMLElement) {
+        content.inert = true;
+      }
+      // 3. Tancar qualsevol popover/select obert dins la modal
+      const openPopovers = document.querySelectorAll('[data-radix-popper-content-wrapper]');
+      openPopovers.forEach((el) => {
+        if (el instanceof HTMLElement) {
+          el.style.display = 'none';
+        }
+      });
+    }
+    onOpenChange?.(open);
+  }, [onOpenChange]);
+
+  return (
+    <DialogPrimitive.Root onOpenChange={handleOpenChange} {...props}>
+      {children}
+    </DialogPrimitive.Root>
+  );
+};
 Dialog.displayName = "Dialog";
 
 const DialogTrigger = DialogPrimitive.Trigger
