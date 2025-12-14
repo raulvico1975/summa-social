@@ -34,7 +34,7 @@ import { Label } from '@/components/ui/label';
 // TYPES
 // =============================================================================
 
-export type TableFilter = 'all' | 'missing' | 'returns' | 'uncategorized' | 'noContact';
+export type TableFilter = 'all' | 'missing' | 'returns' | 'pendingReturns' | 'uncategorized' | 'noContact';
 
 interface TransactionsFiltersProps {
   currentFilter: TableFilter;
@@ -57,6 +57,7 @@ interface TransactionsFiltersProps {
     categorizeAll: string;
     all: string;
     returns: string;
+    pendingReturns: string;
     withoutDocument: string;
     uncategorized: string;
     noContact: string;
@@ -99,12 +100,13 @@ export const TransactionsFilters = React.memo(function TransactionsFilters({
   ].filter(Boolean).length;
 
   // Comprovar si un filtre de pendents està actiu
-  const isPendingFilterActive = ['returns', 'missing', 'uncategorized', 'noContact'].includes(currentFilter);
+  const isPendingFilterActive = ['returns', 'pendingReturns', 'missing', 'uncategorized', 'noContact'].includes(currentFilter);
 
   // Obtenir el nom del filtre actiu per mostrar al botó
   const getActiveFilterLabel = (): string => {
     switch (currentFilter) {
       case 'returns': return t.returns;
+      case 'pendingReturns': return t.pendingReturns;
       case 'missing': return t.withoutDocument;
       case 'uncategorized': return t.uncategorized;
       case 'noContact': return t.noContact;
@@ -176,7 +178,21 @@ export const TransactionsFilters = React.memo(function TransactionsFilters({
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="start">
-              {/* Returns filter */}
+              {/* Pending Returns filter (only unassigned returns, excludes fees) */}
+              {pendingReturnsCount > 0 && (
+                <DropdownMenuItem
+                  onClick={() => onFilterChange('pendingReturns')}
+                  className={currentFilter === 'pendingReturns' ? 'bg-accent' : ''}
+                >
+                  <Undo2 className="mr-2 h-4 w-4 text-red-500" />
+                  {t.pendingReturns} ({pendingReturnsCount})
+                  <Badge variant="destructive" className="ml-auto h-5 px-1.5">
+                    !
+                  </Badge>
+                </DropdownMenuItem>
+              )}
+
+              {/* All Returns filter (returns + fees) */}
               {returnsCount > 0 && (
                 <DropdownMenuItem
                   onClick={() => onFilterChange('returns')}
@@ -184,11 +200,6 @@ export const TransactionsFilters = React.memo(function TransactionsFilters({
                 >
                   <Undo2 className="mr-2 h-4 w-4" />
                   {t.returns} ({returnsCount})
-                  {pendingReturnsCount > 0 && (
-                    <Badge variant="destructive" className="ml-auto h-5 px-1.5">
-                      {pendingReturnsCount}
-                    </Badge>
-                  )}
                 </DropdownMenuItem>
               )}
 

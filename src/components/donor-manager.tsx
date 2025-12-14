@@ -214,7 +214,7 @@ export function DonorManager() {
 
     // Filtre de donants incomplets
     if (showIncompleteOnly) {
-      result = result.filter(donor => !donor.taxId || !donor.zipCode);
+      result = result.filter(donor => !donor.taxId || !donor.zipCode || (donor.membershipType === 'recurring' && !donor.iban));
     }
 
     return result;
@@ -222,7 +222,7 @@ export function DonorManager() {
 
   const incompleteDonorsCount = React.useMemo(() => {
     if (!donors) return 0;
-    return donors.filter(donor => !donor.taxId || !donor.zipCode).length;
+    return donors.filter(donor => !donor.taxId || !donor.zipCode || (donor.membershipType === 'recurring' && !donor.iban)).length;
   }, [donors]);
 
   const handleEdit = (donor: Donor) => {
@@ -397,7 +397,16 @@ export function DonorManager() {
     : t.donors.addDescription;
 
   // Helper per detectar dades incompletes
-  const hasIncompleteData = (donor: Donor) => !donor.taxId || !donor.zipCode;
+  const hasIncompleteData = (donor: Donor) => !donor.taxId || !donor.zipCode || (donor.membershipType === 'recurring' && !donor.iban);
+
+  // Helper per obtenir què falta (per mostrar a la columna "Falta")
+  const getMissingFields = (donor: Donor): string[] => {
+    const missing: string[] = [];
+    if (!donor.taxId) missing.push('NIF');
+    if (!donor.zipCode) missing.push('CP');
+    if (donor.membershipType === 'recurring' && !donor.iban) missing.push('IBAN');
+    return missing;
+  };
 
   return (
     <TooltipProvider>
@@ -521,6 +530,9 @@ export function DonorManager() {
                     <TableHead>{t.donors.donorType}</TableHead>
                     <TableHead>{t.donors.membershipType}</TableHead>
                     <TableHead>{t.donors.amount}</TableHead>
+                    {showIncompleteOnly && (
+                      <TableHead className="text-amber-600">{t.donors.missingColumn || 'Falta'}</TableHead>
+                    )}
                     <TableHead className="text-right">{t.donors.actions}</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -580,6 +592,17 @@ export function DonorManager() {
                           : '-'
                         }
                       </TableCell>
+                      {showIncompleteOnly && (
+                        <TableCell className="py-1">
+                          <div className="flex flex-wrap gap-1">
+                            {getMissingFields(donor).map(field => (
+                              <Badge key={field} variant="outline" className="text-amber-600 border-amber-300 text-xs py-0 px-1.5">
+                                {field}
+                              </Badge>
+                            ))}
+                          </div>
+                        </TableCell>
+                      )}
                       <TableCell className="text-right py-1">
                         {donor.status === 'inactive' && (
                           <Tooltip>
@@ -612,11 +635,11 @@ export function DonorManager() {
                   ))}
                   {(!filteredDonors || filteredDonors.length === 0) && (
                     <TableRow>
-                      <TableCell colSpan={6} className="text-center text-muted-foreground h-24">
+                      <TableCell colSpan={showIncompleteOnly ? 7 : 6} className="text-center text-muted-foreground h-24">
                         {searchQuery
                           ? t.donors.noSearchResults
                           : showIncompleteOnly
-                            ? "No hi ha donants amb dades incompletes"
+                            ? (t.donors.noIncompleteData || "No hi ha donants amb dades incompletes")
                             : t.donors.noData}
                       </TableCell>
                     </TableRow>

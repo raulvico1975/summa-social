@@ -54,6 +54,7 @@ import {
   Undo2,
   Download,
   X,
+  FileUp,
 } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import type { Transaction, Category, Project, AnyContact, Donor, Supplier, ContactType } from '@/lib/data';
@@ -61,6 +62,7 @@ import { formatCurrencyEU } from '@/lib/normalize';
 import { useToast } from '@/hooks/use-toast';
 import { RemittanceSplitter } from '@/components/remittance-splitter';
 import { RemittanceDetailModal } from '@/components/remittance-detail-modal';
+import { ReturnImporter } from '@/components/return-importer';
 import { useCollection, useFirebase, useMemoFirebase } from '@/firebase';
 import { collection } from 'firebase/firestore';
 import { useTranslations } from '@/i18n';
@@ -173,6 +175,9 @@ export function TransactionsTable() {
   // Modal detall remesa
   const [isRemittanceDetailOpen, setIsRemittanceDetailOpen] = React.useState(false);
   const [selectedRemittanceId, setSelectedRemittanceId] = React.useState<string | null>(null);
+
+  // Modal importador devolucions
+  const [isReturnImporterOpen, setIsReturnImporterOpen] = React.useState(false);
 
   // Maps per noms
   const contactMap = React.useMemo(() =>
@@ -330,6 +335,9 @@ export function TransactionsTable() {
         break;
       case 'returns':
         result = returnTransactions;
+        break;
+      case 'pendingReturns':
+        result = pendingReturns;
         break;
       case 'uncategorized':
         result = uncategorizedTransactions;
@@ -576,6 +584,7 @@ export function TransactionsTable() {
     categorizeAll: t.movements.table.categorizeAll,
     all: t.movements.table.all,
     returns: t.movements.table.returns,
+    pendingReturns: t.movements.table.pendingReturns || 'Devolucions pendents',
     withoutDocument: t.movements.table.withoutDocument,
     uncategorized: t.movements.table.uncategorized,
     noContact: t.movements.table.noContact,
@@ -620,7 +629,7 @@ export function TransactionsTable() {
       </div>
 
       {/* Avís devolucions pendents */}
-      {pendingReturns.length > 0 && tableFilter !== 'returns' && (
+      {pendingReturns.length > 0 && tableFilter !== 'pendingReturns' && (
         <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg flex items-center gap-3">
           <AlertTriangle className="h-5 w-5 text-red-500 flex-shrink-0" />
           <div className="flex-1">
@@ -631,14 +640,25 @@ export function TransactionsTable() {
               {t.movements.table.pendingReturnsWarningDescription}
             </p>
           </div>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setTableFilter('returns')}
-            className="border-red-300 text-red-700 hover:bg-red-100"
-          >
-            {t.movements.table.reviewReturns}
-          </Button>
+          <div className="flex gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setIsReturnImporterOpen(true)}
+              className="border-red-300 text-red-700 hover:bg-red-100"
+            >
+              <FileUp className="mr-1 h-4 w-4" />
+              {t.returnImporter?.importButton || "Importar fitxer"}
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setTableFilter('pendingReturns')}
+              className="border-red-300 text-red-700 hover:bg-red-100"
+            >
+              {t.movements.table.reviewReturns}
+            </Button>
+          </div>
         </div>
       )}
 
@@ -967,6 +987,15 @@ export function TransactionsTable() {
           organizationId={organizationId}
         />
       )}
+
+      {/* Return Importer Modal */}
+      <ReturnImporter
+        open={isReturnImporterOpen}
+        onOpenChange={setIsReturnImporterOpen}
+        onComplete={() => {
+          setIsReturnImporterOpen(false);
+        }}
+      />
     </TooltipProvider>
   );
 }
