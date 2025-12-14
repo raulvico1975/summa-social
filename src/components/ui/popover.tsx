@@ -5,7 +5,31 @@ import * as PopoverPrimitive from "@radix-ui/react-popover"
 
 import { cn } from "@/lib/utils"
 
-const Popover = PopoverPrimitive.Root
+// Patch: interceptar onOpenChange per evitar conflictes aria-hidden
+const Popover: React.FC<React.ComponentPropsWithoutRef<typeof PopoverPrimitive.Root>> = ({
+  onOpenChange,
+  children,
+  ...props
+}) => {
+  const handleOpenChange = React.useCallback((open: boolean) => {
+    if (!open) {
+      // Treure focus abans de tancar per evitar conflicte aria-hidden
+      setTimeout(() => {
+        if (document.activeElement instanceof HTMLElement) {
+          document.activeElement.blur();
+        }
+      }, 0);
+    }
+    onOpenChange?.(open);
+  }, [onOpenChange]);
+
+  return (
+    <PopoverPrimitive.Root onOpenChange={handleOpenChange} {...props}>
+      {children}
+    </PopoverPrimitive.Root>
+  );
+};
+Popover.displayName = "Popover";
 
 const PopoverTrigger = PopoverPrimitive.Trigger
 
