@@ -193,6 +193,8 @@ export const es = {
       pendingReturnsWarning: (count: number) => `${count} devolución${count > 1 ? 'es' : ''} pendiente${count > 1 ? 's' : ''} de asignar`,
       pendingReturnsWarningDescription: "Asigna el donante afectado para excluir la donación del Modelo 182.",
       reviewReturns: "Revisar",
+      uploadBankFile: "Importar archivo del banco",
+      uploadBankFileTooltip: "Importar archivo del banco para identificar devoluciones",
       hideProjectColumn: "Ocultar columna de ejes de actuación",
       projects: "Ejes de actuación",
       viewDocument: "Ver documento",

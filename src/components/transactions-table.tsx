@@ -674,6 +674,7 @@ export function TransactionsTable() {
     exportTooltip: t.movements.table.exportTooltip,
     searchPlaceholder: t.movements.table.searchPlaceholder,
     hideRemittanceItems: t.movements.table.hideRemittanceItems,
+    importReturnsFile: t.movements.table.uploadBankFile,
   }), [t]);
 
   return (

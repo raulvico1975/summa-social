@@ -193,6 +193,8 @@ export const ca = {
       pendingReturnsWarning: (count: number) => `${count} devolució${count > 1 ? 'ns' : ''} pendent${count > 1 ? 's' : ''} d'assignar`,
       pendingReturnsWarningDescription: "Assigna el donant afectat per excloure la donació del Model 182.",
       reviewReturns: "Revisar",
+      uploadBankFile: "Importar fitxer del banc",
+      uploadBankFileTooltip: "Importar fitxer del banc per identificar devolucions",
       hideProjectColumn: "Amagar columna d'eixos d'actuació",
       projects: "Eixos d'actuació",
       viewDocument: "Veure document",
