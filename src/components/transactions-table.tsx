@@ -62,6 +62,7 @@ import { useToast } from '@/hooks/use-toast';
 import { RemittanceSplitter } from '@/components/remittance-splitter';
 import { RemittanceDetailModal } from '@/components/remittance-detail-modal';
 import { ReturnImporter } from '@/components/return-importer';
+import { StripeImporter } from '@/components/stripe-importer';
 import { useCollection, useFirebase, useMemoFirebase } from '@/firebase';
 import { collection } from 'firebase/firestore';
 import { useTranslations } from '@/i18n';
@@ -189,6 +190,10 @@ export function TransactionsTable() {
 
   // Modal importador devolucions
   const [isReturnImporterOpen, setIsReturnImporterOpen] = React.useState(false);
+
+  // Modal importador Stripe
+  const [isStripeImporterOpen, setIsStripeImporterOpen] = React.useState(false);
+  const [stripeTransactionToSplit, setStripeTransactionToSplit] = React.useState<Transaction | null>(null);
 
   // Maps per noms
   const contactMap = React.useMemo(() =>
@@ -618,6 +623,17 @@ export function TransactionsTable() {
     setIsRemittanceDetailOpen(true);
   };
 
+  // Stripe Importer handlers
+  const handleSplitStripeRemittance = (transaction: Transaction) => {
+    setStripeTransactionToSplit(transaction);
+    setIsStripeImporterOpen(true);
+  };
+
+  const handleStripeImportDone = () => {
+    setIsStripeImporterOpen(false);
+    setStripeTransactionToSplit(null);
+  };
+
   const hasUncategorized = React.useMemo(() => transactions?.some(tx => !tx.category), [transactions]);
 
   // Memoized categories map per tipus
@@ -656,6 +672,7 @@ export function TransactionsTable() {
     manageReturn: t.movements.table.manageReturn,
     edit: t.movements.table.edit,
     splitRemittance: t.movements.table.splitRemittance,
+    splitStripeRemittance: t.movements.table.splitStripeRemittance,
     delete: t.movements.table.delete,
     viewRemittanceDetail: t.movements.table.viewRemittanceDetail,
     remittanceQuotes: t.movements.table.remittanceQuotes,
@@ -872,6 +889,7 @@ export function TransactionsTable() {
                 onDelete={handleDeleteClick}
                 onOpenReturnDialog={handleOpenReturnDialog}
                 onSplitRemittance={handleSplitRemittance}
+                onSplitStripeRemittance={handleSplitStripeRemittance}
                 onViewRemittanceDetail={handleViewRemittanceDetail}
                 onCreateNewContact={handleOpenNewContactDialog}
                 onOpenReturnImporter={() => setIsReturnImporterOpen(true)}
@@ -1078,6 +1096,34 @@ export function TransactionsTable() {
           setIsReturnImporterOpen(false);
         }}
       />
+
+      {/* Stripe Importer Modal */}
+      {stripeTransactionToSplit && (
+        <StripeImporter
+          open={isStripeImporterOpen}
+          onOpenChange={setIsStripeImporterOpen}
+          bankTransaction={{
+            id: stripeTransactionToSplit.id,
+            amount: stripeTransactionToSplit.amount,
+            date: stripeTransactionToSplit.date,
+            description: stripeTransactionToSplit.description,
+          }}
+          lookupDonorByEmail={async (email: string) => {
+            // Match per email (case-insensitive, exact)
+            const normalizedEmail = email.toLowerCase().trim();
+            const matchedDonor = donors.find(d => d.email?.toLowerCase().trim() === normalizedEmail);
+            if (matchedDonor) {
+              return {
+                id: matchedDonor.id,
+                name: matchedDonor.name,
+                defaultCategoryId: matchedDonor.defaultCategoryId || null,
+              };
+            }
+            return null;
+          }}
+          onImportDone={handleStripeImportDone}
+        />
+      )}
     </TooltipProvider>
   );
 }

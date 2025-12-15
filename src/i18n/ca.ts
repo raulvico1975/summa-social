@@ -95,6 +95,7 @@ export const ca = {
       noSearchResults: "No s'han trobat moviments amb aquest criteri",
       edit: "Editar",
       splitRemittance: "Dividir Remesa",
+      splitStripeRemittance: "Dividir Remesa Stripe",
       delete: "Eliminar",
       createNewEmisor: "Crear nou emissor...",
       unlink: "(Desvincular)",

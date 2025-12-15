@@ -95,6 +95,7 @@ export const es = {
       noSearchResults: "No se han encontrado movimientos con este criterio",
       edit: "Editar",
       splitRemittance: "Dividir Remesa",
+      splitStripeRemittance: "Dividir Remesa Stripe",
       delete: "Eliminar",
       createNewEmisor: "Crear nuevo emisor...",
       unlink: "(Desvincular)",

@@ -130,8 +130,15 @@ export type Transaction = {
    * - bank: Importada des d'extracte bancari
    * - remittance: Generada al dividir una remesa
    * - manual: Creada manualment per l'usuari
+   * - stripe: Importada des de CSV de Stripe
    */
-  source?: 'bank' | 'remittance' | 'manual';
+  source?: 'bank' | 'remittance' | 'manual' | 'stripe';
+
+  /**
+   * ID del pagament Stripe (ch_xxx)
+   * Per traçabilitat i idempotència (evitar duplicats)
+   */
+  stripePaymentId?: string | null;
 };
 
 export type Category = {

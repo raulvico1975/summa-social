@@ -83,6 +83,7 @@ interface TransactionRowProps {
   onDelete: (tx: Transaction) => void;
   onOpenReturnDialog: (tx: Transaction) => void;
   onSplitRemittance: (tx: Transaction) => void;
+  onSplitStripeRemittance?: (tx: Transaction) => void;
   onViewRemittanceDetail: (txId: string) => void;
   onCreateNewContact: (txId: string, type: 'donor' | 'supplier') => void;
   onOpenReturnImporter?: () => void;
@@ -116,6 +117,7 @@ interface TransactionRowProps {
     manageReturn: string;
     edit: string;
     splitRemittance: string;
+    splitStripeRemittance: string;
     delete: string;
     viewRemittanceDetail: string;
     remittanceQuotes: string;
@@ -170,6 +172,7 @@ export const TransactionRow = React.memo(function TransactionRow({
   onDelete,
   onOpenReturnDialog,
   onSplitRemittance,
+  onSplitStripeRemittance,
   onViewRemittanceDetail,
   onCreateNewContact,
   onOpenReturnImporter,
@@ -186,6 +189,8 @@ export const TransactionRow = React.memo(function TransactionRow({
   const isReturn = tx.transactionType === 'return';
   const isReturnFee = tx.transactionType === 'return_fee';
   const isReturnedDonation = tx.donationStatus === 'returned';
+  // Detecta ingressos amb descripció que conté "STRIPE" (case-insensitive)
+  const isStripeIncome = tx.amount > 0 && tx.description?.toUpperCase().includes('STRIPE');
 
   // Stable callbacks using useCallback to prevent child re-renders
   const handleSelectContact = React.useCallback((contactId: string | null) => {
@@ -258,6 +263,18 @@ export const TransactionRow = React.memo(function TransactionRow({
       onSplitRemittance(tx);
     }, 100);
   }, [tx, onSplitRemittance]);
+
+  const handleSplitStripeRemittance = React.useCallback(() => {
+    if (!onSplitStripeRemittance) return;
+    // Delay per permetre que el DropdownMenu es tanqui completament
+    setIsActionsMenuOpen(false);
+    setTimeout(() => {
+      if (document.activeElement instanceof HTMLElement) {
+        document.activeElement.blur();
+      }
+      onSplitStripeRemittance(tx);
+    }, 100);
+  }, [tx, onSplitStripeRemittance]);
 
   const handleViewRemittanceDetail = React.useCallback(() => {
     onViewRemittanceDetail(tx.id);
@@ -613,7 +630,13 @@ export const TransactionRow = React.memo(function TransactionRow({
                 {t.attachDocument}
               </DropdownMenuItem>
             )}
-            {tx.amount > 0 && !isReturn && !isReturnFee && !tx.isRemittance && (
+            {isStripeIncome && !tx.isRemittance && onSplitStripeRemittance && (
+              <DropdownMenuItem onClick={handleSplitStripeRemittance}>
+                <GitMerge className="mr-2 h-4 w-4 text-purple-600" />
+                {t.splitStripeRemittance}
+              </DropdownMenuItem>
+            )}
+            {tx.amount > 0 && !isReturn && !isReturnFee && !tx.isRemittance && !isStripeIncome && (
               <DropdownMenuItem onClick={handleSplitRemittance}>
                 <GitMerge className="mr-2 h-4 w-4" />
                 {t.splitRemittance}

@@ -1,6 +1,6 @@
 # ═══════════════════════════════════════════════════════════════════════════════
 # SUMMA SOCIAL - REFERÈNCIA COMPLETA DEL PROJECTE
-# Versió 1.8 - Desembre 2025
+# Versió 1.8.1 - Desembre 2025
 # ═══════════════════════════════════════════════════════════════════════════════
 
 
@@ -71,6 +71,8 @@ Eina centralitzada amb:
 - Multi-organització amb sistema de rols
 - Divisor de remeses amb matching intel·ligent
 - **Importador de devolucions del banc (NOU v1.8)**
+- **Enviament de certificats per email via Resend (NOU v1.8)**
+- **Compliment RGPD: política de privacitat i clàusula al registre (NOU v1.8)**
 
 ## 1.4 URLs i Recursos
 
@@ -450,6 +452,24 @@ Apareix quan hi ha fites positives:
 - Personalitzat
 - Tot
 
+### 3.1.7 Compartir Resum (NOU v1.8)
+
+Botó a la capçalera del dashboard que permet compartir les mètriques:
+
+**Funcionalitat:**
+- Genera text amb totes les dades del període seleccionat
+- Textarea editable abans d'enviar
+- Botó "Copiar" al portapapers
+- Botó "Enviar per email" (obre client d'email)
+
+**Contingut del resum:**
+- Nom de l'organització
+- Període seleccionat
+- Ingressos, despeses, balanç
+- Donants actius
+- Donacions rebudes
+- Peu: "Generat amb Summa Social"
+
 
 ## 3.2 GESTIÓ DE MOVIMENTS
 
@@ -494,15 +514,40 @@ Apareix quan hi ha fites positives:
 | Nota | ✅ |
 
 ### 3.2.4 Filtres
-- Per data (any, trimestre, mes, personalitzat)
-- Per categoria
-- Per contacte
-- Per projecte
-- Sense categoritzar
-- Sense contacte
-- **Devolucions pendents** (NOU v1.8)
 
-### 3.2.5 Banner de Devolucions Pendents (NOU v1.8)
+**Filtre de dates:**
+- Any, trimestre, mes, personalitzat, tot
+
+**Desplegable "Pendents" (NOU v1.8):**
+
+| Filtre | Descripció |
+|--------|------------|
+| Devolucions | `transactionType === 'return'` amb badge vermell per les no assignades |
+| Sense document | `documentUrl === null` |
+| Sense categoritzar | `categoryId === null` |
+| Sense contacte | `contactId === null` i import > llindar |
+
+**Comportament:**
+- Agrupa 4 filtres en un sol desplegable
+- Mostra comptador total de tipus amb elements
+- Quan un filtre està actiu, el botó mostra el nom del filtre
+- Badge vermell a "Devolucions" amb les pendents d'assignar
+
+### 3.2.5 Barra de Resum Contextual (NOU v1.8)
+
+Quan hi ha un filtre actiu (cerca o filtre de pendents), apareix una barra sobre la taula:
+
+```
+Mostrant 12 de 365 · Ingressos: 500€ · Despeses: -7.200€  [↓ Exportar] [✕]
+```
+
+**Funcionalitat:**
+- Comptador de moviments filtrats vs total
+- Suma d'ingressos (verd) i despeses (vermell)
+- Botó exportar Excel amb només els filtrats
+- Botó netejar filtres
+
+### 3.2.6 Banner de Devolucions Pendents (NOU v1.8)
 
 Quan hi ha devolucions sense assignar, apareix un banner vermell:
 
@@ -791,6 +836,23 @@ Si algunes devolucions no es poden identificar:
 - **Edició**: Es pot canviar l'estat des del formulari d'edició
 - **Importador**: Detecta columna "Estado/Estat" automàticament
 
+### 3.5.3b Filtre "Amb devolucions" (NOU v1.8)
+
+**Ubicació:** Al costat del filtre "Dades incompletes"
+
+**Criteri:** Donant té almenys una transacció amb:
+- `transactionType === 'return'`
+- `contactId === donor.id`
+
+**Badge a la fila:**
+- Indicador vermell "↩" al costat del nom
+- Tooltip: "Aquest donant té devolucions assignades"
+
+**Implementació (sense N+1):**
+- Una sola query: `transactions where transactionType == 'return'`
+- Crear `Set<string>` amb `contactId` únics
+- Filtrar/mostrar badge en memòria
+
 ### 3.5.4 Importador de Donants
 
 **Columnes detectades automàticament:**
@@ -836,7 +898,8 @@ Panel lateral que s'obre clicant el nom d'un donant:
 - Historial de donacions (paginat)
 - **Historial de devolucions** (NOU v1.8)
 - Resum per any
-- Generació de certificats
+- Generació de certificats (PDF)
+- **Enviament de certificats per email** (NOU v1.8)
 
 
 ## 3.6 PROJECTES / EIXOS D'ACTUACIÓ
@@ -902,6 +965,23 @@ Estadístiques per projecte:
 - Logo de l'organització
 - Firma digitalitzada
 - Text legal Llei 49/2002
+
+**Descarregar PDF:**
+- Fitxa donant → icona 📥 (individual)
+- Informes → Certificats → "Descarregar seleccionats" (ZIP)
+
+**Enviament per Email (NOU v1.8):**
+
+| Ubicació | Acció | Resultat |
+|----------|-------|----------|
+| Informes → Certificats | Botó "Enviar por email (N)" | Massiu a tots els seleccionats |
+| Informes → Certificats | Icona ✉️ a cada fila | Individual a aquell donant |
+| Fitxa donant | Botó "Enviar por email" | Certificat anual |
+| Historial donacions | Icona ✉️ a cada fila | Certificat d'aquella donació |
+
+**Integració:** Resend API (certifica@summasocial.app)
+
+**Requisit:** El donant ha de tenir email informat a la seva fitxa.
 
 **Càlcul de l'import:**
 - Import = Σ donacions - Σ devolucions
@@ -972,6 +1052,38 @@ Accions irreversibles només per SuperAdmin:
 - Demana confirmació escrivint "BORRAR"
 - Esborra totes les transaccions filles
 - Restaura la transacció original per tornar-la a processar
+
+
+## 3.9 COMPLIMENT RGPD (NOU v1.8)
+
+### 3.9.1 Política de Privacitat
+
+**Ubicació:** `/privacy` (pàgina pública)
+
+**Contingut:**
+- Qui és el responsable (Summa Social / Raül Vico)
+- Summa Social com a encarregat per dades de les ONGs
+- Base legal: execució del contracte
+- Drets dels interessats (accés, rectificació, supressió...)
+- Subencarregats (Firebase)
+- Contacte: privacy@summasocial.app
+
+**Enllaç visible:** Footer de l'aplicació (icona Shield + "Privacitat")
+
+### 3.9.2 Clàusula al Registre
+
+Al formulari de registre d'usuaris:
+> "En registrar-te, declares que has llegit la [Política de privacitat]."
+
+Enllaç actiu a `/privacy`.
+
+### 3.9.3 Documentació de Seguretat
+
+Carpeta `/docs/security/`:
+- `PRIVACY_POLICY.md` — Política completa
+- `Subprocessors.md` — Firebase i garanties UE
+- `TOMs.md` — Mesures tècniques i organitzatives
+- `DPA_Template.docx` — Contracte per ONGs clients
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -1193,11 +1305,29 @@ Accions irreversibles només per SuperAdmin:
 # ═══════════════════════════════════════════════════════════════════════════════
 
 ## Completades v1.8
-- ✅ Importador de devolucions del banc (Santander, Triodos)
-- ✅ Detecció automàtica d'agrupacions de devolucions
-- ✅ Remeses parcials de devolucions
-- ✅ Matching per IBAN → DNI → Nom exacte
-- ✅ UX simplificada per devolucions
+
+### Funcionalitats noves
+- ✅ Importador de devolucions del banc (Santander, Triodos, altres)
+- ✅ Devolucions agrupades (remeses)
+- ✅ Remeses parcials
+- ✅ Banner devolucions pendents
+- ✅ **Enviament certificats per email (Resend)**
+- ✅ **Política de privacitat + pàgina /privacy**
+- ✅ **Clàusula RGPD al registre**
+- ✅ **Desplegable "Pendents" a Moviments**
+- ✅ **Barra resum contextual amb filtres**
+- ✅ **Compartir resum dashboard**
+- ✅ **Exportar Excel filtrat**
+- ✅ **Eliminar documents adjunts**
+- ✅ **Filtre "Amb devolucions" a Donants + badge**
+
+### Millores UX
+- ✅ Filtre de dates a Moviments
+- ✅ Desplegable filtres pendents (abans 4 botons separats)
+- ✅ Selector de categories amb cerca
+- ✅ Indicadors visuals de devolucions a donants
+
+### Tècnic
 - ✅ Tests unitaris (77 tests) + Husky pre-commit
 - ✅ Fixes bloqueig aria-hidden modals Radix
 - ✅ Estat actiu/baixa per donants
@@ -1510,5 +1640,5 @@ El mòdul de devolucions resol el problema de rebuts retornats pel banc sense id
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # FI DEL DOCUMENT
-# Última actualització: Desembre 2025 - Versió 1.8
+# Última actualització: Desembre 2025 - Versió 1.8.1
 # ═══════════════════════════════════════════════════════════════════════════════
