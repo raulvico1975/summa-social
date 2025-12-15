@@ -1126,6 +1126,10 @@ export const es = {
     superAdmin: "Super Admin",
     adminPanel: "Panel Admin",
   },
+  register: {
+    privacyNotice: "Al registrarte, declaras que has leído la",
+    privacyLink: "Política de privacidad",
+  },
   login: {
     welcome: "Bienvenido a Summa Social",
     prompt: "Introduce tus credenciales para acceder.",

@@ -379,6 +379,19 @@ function RegistreContent() {
               </p>
             </div>
 
+            {/* Clàusula informativa de privacitat */}
+            <p className="text-xs text-muted-foreground text-center">
+              En registrar-te, declares que has llegit la{' '}
+              <a
+                href="/privacy"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-primary hover:underline"
+              >
+                Política de privacitat
+              </a>.
+            </p>
+
             {/* Botó de registre */}
             <Button
               onClick={handleRegister}

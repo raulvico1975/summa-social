@@ -1099,6 +1099,10 @@ export const ca = {
     superAdmin: "Super Admin",
     adminPanel: "Panell Admin",
   },
+  register: {
+    privacyNotice: "En registrar-te, declares que has llegit la",
+    privacyLink: "Política de privacitat",
+  },
   login: {
     welcome: "Benvingut a Summa Social",
     prompt: "Introdueix les teves credencials per accedir.",
