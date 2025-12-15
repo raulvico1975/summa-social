@@ -240,6 +240,14 @@ export function DashboardSidebarContent() {
             </SidebarMenuItem>
           )}
           <SidebarMenuItem>
+            <SidebarMenuButton asChild tooltip={{children: t.sidebar.privacy}}>
+              <a href="/privacy" target="_blank" rel="noopener noreferrer">
+                <Shield className="h-4 w-4" />
+                <span>{t.sidebar.privacy}</span>
+              </a>
+            </SidebarMenuButton>
+          </SidebarMenuItem>
+          <SidebarMenuItem>
              <SidebarMenuButton asChild tooltip={{children: t.sidebar.logout}}>
                 <Link href="/" onClick={handleSignOut}>
                   <LogOut />

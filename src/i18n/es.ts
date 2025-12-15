@@ -1116,6 +1116,7 @@ export const es = {
     employees: "Trabajadores",
     reports: "Informes",
     settings: "Configuración",
+    privacy: "Privacidad",
     logout: "Cerrar Sesión",
     user: "Usuario",
     anonymousUser: "Usuario Anónimo",

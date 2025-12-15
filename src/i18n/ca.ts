@@ -1089,6 +1089,7 @@ export const ca = {
     employees: "Treballadors",
     reports: "Informes",
     settings: "Configuració",
+    privacy: "Privacitat",
     logout: "Tancar Sessió",
     user: "Usuari",
     anonymousUser: "Usuari Anònim",
