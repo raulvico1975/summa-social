@@ -3,19 +3,31 @@
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Logo } from '@/components/logo';
-import { ArrowLeft, Mail } from 'lucide-react';
-import Link from 'next/link';
+import { X, Mail } from 'lucide-react';
 
 export default function PrivacyPage() {
+  const handleClose = () => {
+    // Si la finestra es va obrir com a popup, la tanquem
+    // Si no, tornem enrere en l'historial (fallback)
+    if (window.opener || window.history.length <= 1) {
+      window.close();
+    } else {
+      window.history.back();
+    }
+  };
+
   return (
     <main className="min-h-screen bg-background py-8 px-4">
       <div className="mx-auto max-w-3xl">
         {/* Header */}
         <div className="flex items-center justify-between mb-8">
-          <Link href="/" className="flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors">
-            <ArrowLeft className="h-4 w-4" />
-            <span>Tornar</span>
-          </Link>
+          <button
+            onClick={handleClose}
+            className="flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors"
+          >
+            <X className="h-4 w-4" />
+            <span>Tancar</span>
+          </button>
           <Logo className="h-8 w-8 text-primary" />
         </div>
 
