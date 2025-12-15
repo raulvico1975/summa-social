@@ -1481,6 +1481,7 @@ export const es = {
     title: "Importar devoluciones del banco",
     description: "Sube el archivo con el detalle de devoluciones que te facilita el banco. El sistema hará matching por IBAN con tus donantes.",
     dropzone: "Arrastra archivos aquí o haz clic para seleccionar",
+    dropzoneFormats: "CSV, Excel (.xlsx, .xls) - Múltiples archivos permitidos",
     columnMapping: "Configuración de columnas",
     ibanColumn: "Columna IBAN",
     amountColumn: "Columna Importe",
@@ -1489,8 +1490,30 @@ export const es = {
     results: "Resultado del matching",
     found: "coincidencias completas",
     notFound: "no encontrados",
+    withoutDonor: "sin donante",
     process: "Asignar",
     success: "Devoluciones asignadas correctamente",
     importButton: "Importar archivo del banco",
+    cancel: "Cancelar",
+    filesSelected: (count: number) => `${count} archivo(s) seleccionado(s):`,
+    readingFiles: "Leyendo archivos...",
+    noDonorIdentified: (count: number, amount: string) => `Ningún donante identificado: ${count} devoluciones pendientes (${amount})`,
+    partialRemittance: (count: number, amount: string) => `Remesa parcial: ${count} devoluciones sin donante identificado (${amount} pendientes)`,
+    noDonorIdentifiedHelp: "No hay ninguna devolución con donante identificado. Identifica al menos un donante para poder procesar.",
+    partialRemittanceHelp: "Las devoluciones con donante se procesarán ahora. Las pendientes quedarán registradas para identificarlas manualmente después.",
+    statusIdentified: (resolved: number, total: number) => `Estado: ${resolved}/${total} identificadas`,
+    inRemittance: "en remesa",
+    group: "grupo",
+    groups: "grupos",
+  },
+  // Aviso devoluciones pendientes (transactions-table)
+  pendingReturnsAlert: {
+    title: "Hay devoluciones pendientes de asignar",
+    description: (count: number) => `${count} devolución${count > 1 ? 'es' : ''} sin donante asignado`,
+    review: "Revisar",
+  },
+  // Filtro donantes con devoluciones
+  donorsFilter: {
+    withReturns: "Con devoluciones",
   },
 };

@@ -718,10 +718,10 @@ export function TransactionsTable() {
             <Undo2 className="h-5 w-5 text-red-500 flex-shrink-0" />
             <div className="flex-1">
               <p className="text-sm font-medium text-red-800">
-                Hi ha devolucions pendents d'assignar
+                {t.pendingReturnsAlert.title}
               </p>
               <p className="text-xs text-red-600">
-                {pendingReturns.length} devolució{pendingReturns.length > 1 ? 'ns' : ''} sense donant assignat
+                {t.pendingReturnsAlert.description(pendingReturns.length)}
               </p>
             </div>
             <Button
@@ -730,7 +730,7 @@ export function TransactionsTable() {
               onClick={() => setTableFilter('pendingReturns')}
               className="bg-red-600 hover:bg-red-700"
             >
-              Revisar
+              {t.pendingReturnsAlert.review}
             </Button>
           </div>
         </div>

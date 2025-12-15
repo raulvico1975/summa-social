@@ -292,14 +292,14 @@ export function ReturnImporter({
                 {t.returnImporter?.dropzone || "Arrossega fitxers aquí o clica per seleccionar"}
               </p>
               <p className="text-xs text-muted-foreground">
-                CSV, Excel (.xlsx, .xls) - Múltiples fitxers permesos
+                {t.returnImporter?.dropzoneFormats || "CSV, Excel (.xlsx, .xls)"}
               </p>
             </div>
 
             {/* Fitxers seleccionats */}
             {files.length > 0 && (
               <div className="space-y-2">
-                <p className="text-sm font-medium">{files.length} fitxer(s) seleccionat(s):</p>
+                <p className="text-sm font-medium">{t.returnImporter?.filesSelected?.(files.length) || `${files.length} fitxer(s) seleccionat(s):`}</p>
                 <div className="flex flex-wrap gap-2">
                   {files.map((file, i) => (
                     <Badge key={i} variant="secondary" className="gap-1">
@@ -313,13 +313,13 @@ export function ReturnImporter({
             {isProcessing && (
               <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground">
                 <Loader2 className="h-4 w-4 animate-spin" />
-                Llegint fitxers...
+                {t.returnImporter?.readingFiles || "Llegint fitxers..."}
               </div>
             )}
 
             <DialogFooter>
               <Button variant="outline" onClick={handleClose}>
-                Cancel·lar
+                {t.returnImporter?.cancel || t.common.cancel}
               </Button>
             </DialogFooter>
           </>
@@ -539,7 +539,7 @@ export function ReturnImporter({
                 <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-blue-50 border border-blue-200">
                   <Layers className="h-4 w-4 text-blue-600" />
                   <span className="text-sm font-medium text-blue-800">
-                    {stats.grouped} en remesa ({groupedMatches.length} {groupedMatches.length === 1 ? 'grup' : 'grups'})
+                    {stats.grouped} {t.returnImporter?.inRemittance || "en remesa"} ({groupedMatches.length} {groupedMatches.length === 1 ? (t.returnImporter?.group || 'grup') : (t.returnImporter?.groups || 'grups')})
                   </span>
                 </div>
               )}
@@ -548,7 +548,7 @@ export function ReturnImporter({
                 <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-red-50 border border-red-200">
                   <X className="h-4 w-4 text-red-600" />
                   <span className="text-sm font-medium text-red-800">
-                    {stats.notFound} sense donant
+                    {stats.notFound} {t.returnImporter?.withoutDonor || "sense donant"}
                   </span>
                 </div>
               )}
@@ -562,18 +562,18 @@ export function ReturnImporter({
                   <div className="flex-1">
                     <p className={`text-sm font-medium ${partialRemittanceStats.allPending ? 'text-red-800' : 'text-orange-800'}`}>
                       {partialRemittanceStats.allPending
-                        ? `Cap donant identificat: ${partialRemittanceStats.pendingCount} devolucions pendents (${formatCurrencyEU(partialRemittanceStats.pendingAmount)})`
-                        : `Remesa parcial: ${partialRemittanceStats.pendingCount} devolucions sense donant identificat (${formatCurrencyEU(partialRemittanceStats.pendingAmount)} pendents)`
+                        ? (t.returnImporter?.noDonorIdentified?.(partialRemittanceStats.pendingCount, formatCurrencyEU(partialRemittanceStats.pendingAmount)) || `Cap donant identificat: ${partialRemittanceStats.pendingCount} devolucions pendents (${formatCurrencyEU(partialRemittanceStats.pendingAmount)})`)
+                        : (t.returnImporter?.partialRemittance?.(partialRemittanceStats.pendingCount, formatCurrencyEU(partialRemittanceStats.pendingAmount)) || `Remesa parcial: ${partialRemittanceStats.pendingCount} devolucions sense donant identificat (${formatCurrencyEU(partialRemittanceStats.pendingAmount)} pendents)`)
                       }
                     </p>
                     <p className={`text-xs mt-1 ${partialRemittanceStats.allPending ? 'text-red-700' : 'text-orange-700'}`}>
                       {partialRemittanceStats.allPending
-                        ? 'No hi ha cap devolució amb donant identificat. Identifica almenys un donant per poder processar.'
-                        : 'Les devolucions amb donant es processaran ara. Les pendents quedaran registrades per identificar-les manualment després.'
+                        ? (t.returnImporter?.noDonorIdentifiedHelp || 'No hi ha cap devolució amb donant identificat. Identifica almenys un donant per poder processar.')
+                        : (t.returnImporter?.partialRemittanceHelp || 'Les devolucions amb donant es processaran ara. Les pendents quedaran registrades per identificar-les manualment després.')
                       }
                     </p>
                     <p className={`text-xs font-medium mt-1 ${partialRemittanceStats.allPending ? 'text-red-800' : 'text-orange-800'}`}>
-                      Estat: {partialRemittanceStats.resolvedCount}/{partialRemittanceStats.pendingCount + partialRemittanceStats.resolvedCount} identificades
+                      {t.returnImporter?.statusIdentified?.(partialRemittanceStats.resolvedCount, partialRemittanceStats.pendingCount + partialRemittanceStats.resolvedCount) || `Estat: ${partialRemittanceStats.resolvedCount}/${partialRemittanceStats.pendingCount + partialRemittanceStats.resolvedCount} identificades`}
                     </p>
                   </div>
                 </div>

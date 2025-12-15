@@ -1487,6 +1487,7 @@ export const ca = {
     title: "Importar devolucions del banc",
     description: "Puja el fitxer amb el detall de devolucions que et facilita el banc. El sistema farà matching per IBAN amb els teus donants.",
     dropzone: "Arrossega fitxers aquí o clica per seleccionar",
+    dropzoneFormats: "CSV, Excel (.xlsx, .xls) - Múltiples fitxers permesos",
     columnMapping: "Configuració de columnes",
     ibanColumn: "Columna IBAN",
     amountColumn: "Columna Import",
@@ -1495,8 +1496,30 @@ export const ca = {
     results: "Resultat del matching",
     found: "coincidències completes",
     notFound: "no trobats",
+    withoutDonor: "sense donant",
     process: "Assignar",
     success: "Devolucions assignades correctament",
     importButton: "Importar fitxer del banc",
+    cancel: "Cancel·lar",
+    filesSelected: (count: number) => `${count} fitxer(s) seleccionat(s):`,
+    readingFiles: "Llegint fitxers...",
+    noDonorIdentified: (count: number, amount: string) => `Cap donant identificat: ${count} devolucions pendents (${amount})`,
+    partialRemittance: (count: number, amount: string) => `Remesa parcial: ${count} devolucions sense donant identificat (${amount} pendents)`,
+    noDonorIdentifiedHelp: "No hi ha cap devolució amb donant identificat. Identifica almenys un donant per poder processar.",
+    partialRemittanceHelp: "Les devolucions amb donant es processaran ara. Les pendents quedaran registrades per identificar-les manualment després.",
+    statusIdentified: (resolved: number, total: number) => `Estat: ${resolved}/${total} identificades`,
+    inRemittance: "en remesa",
+    group: "grup",
+    groups: "grups",
+  },
+  // Avís devolucions pendents (transactions-table)
+  pendingReturnsAlert: {
+    title: "Hi ha devolucions pendents d'assignar",
+    description: (count: number) => `${count} devolució${count > 1 ? 'ns' : ''} sense donant assignat`,
+    review: "Revisar",
+  },
+  // Filtre donants amb devolucions
+  donorsFilter: {
+    withReturns: "Amb devolucions",
   },
 };
