@@ -25,6 +25,13 @@ import {
   AlertTitle,
 } from '@/components/ui/alert';
 import { Download, Loader2, Heart, Undo2 } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
 import type { Donor, Transaction, AnyContact } from '@/lib/data';
 import { formatCurrencyEU } from '@/lib/normalize';
 import { useToast } from '@/hooks/use-toast';
@@ -450,6 +457,7 @@ export function DonationsReportGenerator() {
                 TAULA DE DONANTS
                 ═══════════════════════════════════════════════════════════════════ */}
             <div className="rounded-md border">
+            <TooltipProvider>
             <Table>
                 <TableHeader>
                 <TableRow>
@@ -465,7 +473,24 @@ export function DonationsReportGenerator() {
                 <TableBody>
                 {reportData.map((row) => (
                     <TableRow key={row.donorTaxId}>
-                      <TableCell className="font-medium">{row.donorName}</TableCell>
+                      <TableCell className="font-medium">
+                        <span className="flex items-center gap-2">
+                          {row.donorName}
+                          {row.returnedAmount > 0 && (
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Badge variant="outline" className="text-orange-600 border-orange-300 bg-orange-50 text-xs px-1.5 py-0">
+                                  Dev.
+                                </Badge>
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                <p>Aquest donant té devolucions aquest any.</p>
+                                <p className="text-xs text-muted-foreground">Import net ja ajustat.</p>
+                              </TooltipContent>
+                            </Tooltip>
+                          )}
+                        </span>
+                      </TableCell>
                       <TableCell>{row.donorTaxId}</TableCell>
                       <TableCell>{row.donorZipCode}</TableCell>
                       <TableCell className="text-right font-mono text-green-600 font-medium">
@@ -494,6 +519,7 @@ export function DonationsReportGenerator() {
                 )}
                 </TableBody>
             </Table>
+            </TooltipProvider>
             </div>
 
             {/* ═══════════════════════════════════════════════════════════════════

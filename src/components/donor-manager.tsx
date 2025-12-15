@@ -47,17 +47,18 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
-import { PlusCircle, Edit, Trash2, User, Building2, RefreshCw, Heart, Upload, AlertTriangle, Eye, Search, X, RotateCcw } from 'lucide-react';
+import { PlusCircle, Edit, Trash2, User, Building2, RefreshCw, Heart, Upload, AlertTriangle, Search, X, RotateCcw } from 'lucide-react';
 import type { Donor, Category } from '@/lib/data';
 import { useToast } from '@/hooks/use-toast';
 import { Badge } from '@/components/ui/badge';
 import { useCollection, useFirebase, useMemoFirebase, addDocumentNonBlocking, deleteDocumentNonBlocking, setDocumentNonBlocking } from '@/firebase';
-import { collection, doc, query, where } from 'firebase/firestore';
+import { collection, doc, query, where, getDocs } from 'firebase/firestore';
 import { useCurrentOrganization } from '@/hooks/organization-provider';
 import { DonorImporter } from './donor-importer';
 import { DonorDetailDrawer } from './donor-detail-drawer';
 import { useTranslations } from '@/i18n';
 import { normalizeContact, formatCurrencyEU } from '@/lib/normalize';
+import { cn } from '@/lib/utils';
 
 type DonorFormData = Omit<Donor, 'id' | 'createdAt' | 'updatedAt'>;
 
@@ -135,6 +136,38 @@ export function DonorManager() {
   // Cercador intel·ligent
   const [searchQuery, setSearchQuery] = React.useState('');
 
+  // ═══════════════════════════════════════════════════════════════════════════
+  // DEVOLUCIONS: Estat i càrrega
+  // ═══════════════════════════════════════════════════════════════════════════
+  const [donorsWithReturns, setDonorsWithReturns] = React.useState<Set<string>>(new Set());
+  const [showWithReturnsOnly, setShowWithReturnsOnly] = React.useState(false);
+  const [loadingReturns, setLoadingReturns] = React.useState(false);
+
+  const loadDonorsWithReturns = React.useCallback(async () => {
+    if (!organizationId || !firestore) return;
+    setLoadingReturns(true);
+    try {
+      const txRef = collection(firestore, 'organizations', organizationId, 'transactions');
+      const q = query(txRef, where('transactionType', '==', 'return'));
+      const snapshot = await getDocs(q);
+      const ids = new Set<string>();
+      snapshot.forEach(doc => {
+        const contactId = doc.data().contactId;
+        if (contactId) ids.add(contactId);
+      });
+      setDonorsWithReturns(ids);
+    } catch (e) {
+      console.error('Error carregant devolucions:', e);
+    } finally {
+      setLoadingReturns(false);
+    }
+  }, [organizationId, firestore]);
+
+  // Carregar devolucions al mount
+  React.useEffect(() => {
+    loadDonorsWithReturns();
+  }, [loadDonorsWithReturns]);
+
   // Llegir paràmetres de la URL (filtre i id de donant)
   React.useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -164,6 +197,7 @@ export function DonorManager() {
   // Funció per netejar el filtre i actualitzar la URL
   const clearFilter = () => {
     setShowIncompleteOnly(false);
+    setShowWithReturnsOnly(false);
     setHasUrlFilter(false);
     if (typeof window !== 'undefined') {
       const url = new URL(window.location.href);
@@ -180,7 +214,7 @@ export function DonorManager() {
     return { active, inactive, total: donors.length };
   }, [donors]);
 
-  // Filtrar donants (cerca + incomplets + estat)
+  // Filtrar donants (cerca + incomplets + estat + devolucions)
   const filteredDonors = React.useMemo(() => {
     if (!donors) return [];
 
@@ -217,8 +251,13 @@ export function DonorManager() {
       result = result.filter(donor => !donor.taxId || !donor.zipCode || (donor.membershipType === 'recurring' && !donor.iban));
     }
 
+    // Filtre de donants amb devolucions
+    if (showWithReturnsOnly) {
+      result = result.filter(donor => donorsWithReturns.has(donor.id));
+    }
+
     return result;
-  }, [donors, showIncompleteOnly, searchQuery, statusFilter]);
+  }, [donors, showIncompleteOnly, showWithReturnsOnly, searchQuery, statusFilter, donorsWithReturns]);
 
   const incompleteDonorsCount = React.useMemo(() => {
     if (!donors) return 0;
@@ -392,8 +431,8 @@ export function DonorManager() {
   };
 
   const dialogTitle = editingDonor ? t.donors.editTitle : t.donors.addTitle;
-  const dialogDescription = editingDonor 
-    ? t.donors.editDescription 
+  const dialogDescription = editingDonor
+    ? t.donors.editDescription
     : t.donors.addDescription;
 
   // Helper per detectar dades incompletes
@@ -461,9 +500,9 @@ export function DonorManager() {
               {/* Botons de filtre per estat */}
               <div className="flex flex-wrap items-center gap-2">
                 <Button
-                  variant={statusFilter === 'active' && !showIncompleteOnly ? 'default' : 'outline'}
+                  variant={statusFilter === 'active' && !showIncompleteOnly && !showWithReturnsOnly ? 'default' : 'outline'}
                   size="sm"
-                  onClick={() => { setStatusFilter('active'); setShowIncompleteOnly(false); }}
+                  onClick={() => { setStatusFilter('active'); setShowIncompleteOnly(false); setShowWithReturnsOnly(false); }}
                 >
                   {t.donors.allActive} ({statusCounts.active})
                 </Button>
@@ -471,16 +510,16 @@ export function DonorManager() {
                   <Button
                     variant={statusFilter === 'inactive' ? 'default' : 'outline'}
                     size="sm"
-                    onClick={() => { setStatusFilter('inactive'); setShowIncompleteOnly(false); }}
+                    onClick={() => { setStatusFilter('inactive'); setShowIncompleteOnly(false); setShowWithReturnsOnly(false); }}
                     className={statusFilter !== 'inactive' ? 'border-gray-400 text-gray-600' : ''}
                   >
                     {t.donors.allInactive} ({statusCounts.inactive})
                   </Button>
                 )}
                 <Button
-                  variant={statusFilter === 'all' && !showIncompleteOnly ? 'default' : 'outline'}
+                  variant={statusFilter === 'all' && !showIncompleteOnly && !showWithReturnsOnly ? 'default' : 'outline'}
                   size="sm"
-                  onClick={() => { setStatusFilter('all'); setShowIncompleteOnly(false); }}
+                  onClick={() => { setStatusFilter('all'); setShowIncompleteOnly(false); setShowWithReturnsOnly(false); }}
                 >
                   {t.donors.all} ({statusCounts.total})
                 </Button>
@@ -488,12 +527,43 @@ export function DonorManager() {
                   <Button
                     variant={showIncompleteOnly ? 'default' : 'outline'}
                     size="sm"
-                    onClick={() => { setShowIncompleteOnly(true); setStatusFilter('all'); }}
+                    onClick={() => {
+                      setShowIncompleteOnly(true);
+                      setShowWithReturnsOnly(false);
+                      setStatusFilter('all');
+                    }}
                     className={!showIncompleteOnly ? 'border-amber-300 text-amber-600' : ''}
                   >
                     <AlertTriangle className="mr-1.5 h-3 w-3" />
                     {t.donors.incomplete} ({incompleteDonorsCount})
                   </Button>
+                )}
+                {donorsWithReturns.size > 0 && (
+                  <>
+                    <Button
+                      variant={showWithReturnsOnly ? 'default' : 'outline'}
+                      size="sm"
+                      onClick={() => {
+                        setShowWithReturnsOnly(prev => !prev);
+                        if (!showWithReturnsOnly) {
+                          setShowIncompleteOnly(false);
+                          setStatusFilter('all');
+                        }
+                      }}
+                      className={!showWithReturnsOnly ? 'border-orange-300 text-orange-600' : ''}
+                    >
+                      Amb devolucions ({donorsWithReturns.size})
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8"
+                      onClick={loadDonorsWithReturns}
+                      disabled={loadingReturns}
+                    >
+                      <RefreshCw className={cn("h-4 w-4", loadingReturns && "animate-spin")} />
+                    </Button>
+                  </>
                 )}
               </div>
             </div>
@@ -557,6 +627,18 @@ export function DonorManager() {
                             <Badge variant="secondary" className="bg-gray-200 text-gray-600 text-xs py-0 px-1.5">
                               {t.donors.inactiveBadge}
                             </Badge>
+                          )}
+                          {donorsWithReturns.has(donor.id) && (
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Badge variant="secondary" className="ml-1 text-xs bg-orange-100 text-orange-700 border-orange-200">
+                                  Dev.
+                                </Badge>
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                <p>Aquest donant té devolucions assignades</p>
+                              </TooltipContent>
+                            </Tooltip>
                           )}
                           {hasIncompleteData(donor) && (
                             <Tooltip>
@@ -640,7 +722,9 @@ export function DonorManager() {
                           ? t.donors.noSearchResults
                           : showIncompleteOnly
                             ? (t.donors.noIncompleteData || "No hi ha donants amb dades incompletes")
-                            : t.donors.noData}
+                            : showWithReturnsOnly
+                              ? "No hi ha donants amb devolucions"
+                              : t.donors.noData}
                       </TableCell>
                     </TableRow>
                   )}
@@ -655,11 +739,11 @@ export function DonorManager() {
             <DialogTitle>{dialogTitle}</DialogTitle>
             <DialogDescription>{dialogDescription}</DialogDescription>
           </DialogHeader>
-          
+
           <div className="grid gap-4 py-4">
             <div className="space-y-4">
               <h4 className="text-sm font-medium text-muted-foreground">{t.donors.basicData}</h4>
-              
+
               <div className="grid grid-cols-4 items-center gap-4">
                 <Label htmlFor="name" className="text-right">{t.donors.name} *</Label>
                 <Input

@@ -98,12 +98,22 @@ export function TransactionsTable() {
   // Llegir paràmetre de filtre de la URL
   const [hasUrlFilter, setHasUrlFilter] = React.useState(false);
 
+  // Filtre per contactId (des d'enllaç de donant)
+  const [contactIdFilter, setContactIdFilter] = React.useState<string | null>(null);
+
   React.useEffect(() => {
     if (typeof window !== 'undefined') {
       const params = new URLSearchParams(window.location.search);
       const filter = params.get('filter');
-      if (filter === 'uncategorized' || filter === 'noContact') {
-        setTableFilter(filter);
+      const contactId = params.get('contactId');
+
+      if (filter === 'uncategorized' || filter === 'noContact' || filter === 'returns') {
+        setTableFilter(filter as TableFilter);
+        setHasUrlFilter(true);
+      }
+
+      if (contactId) {
+        setContactIdFilter(contactId);
         setHasUrlFilter(true);
       }
     }
@@ -112,10 +122,12 @@ export function TransactionsTable() {
   // Funció per netejar el filtre i actualitzar la URL
   const clearFilter = () => {
     setTableFilter('all');
+    setContactIdFilter(null);
     setHasUrlFilter(false);
     if (typeof window !== 'undefined') {
       const url = new URL(window.location.href);
       url.searchParams.delete('filter');
+      url.searchParams.delete('contactId');
       window.history.replaceState({}, '', url.toString());
     }
   };
@@ -453,18 +465,23 @@ export function TransactionsTable() {
       });
     }
 
+    // Filtre per contactId (des d'enllaç de donant)
+    if (contactIdFilter) {
+      result = result.filter(tx => tx.contactId === contactIdFilter);
+    }
+
     // Ordenar per data descendent (més recents primer)
     return [...result].sort((a, b) => {
       const dateA = new Date(a.date).getTime();
       const dateB = new Date(b.date).getTime();
       return sortDateAsc ? dateA - dateB : dateB - dateA;
     });
-  }, [transactions, tableFilter, expensesWithoutDoc, returnTransactions, uncategorizedTransactions, noContactTransactions, sortDateAsc, searchQuery, contactMap, projectMap, getCategoryDisplayName, hideRemittanceItems]);
+  }, [transactions, tableFilter, expensesWithoutDoc, returnTransactions, uncategorizedTransactions, noContactTransactions, sortDateAsc, searchQuery, contactMap, projectMap, getCategoryDisplayName, hideRemittanceItems, contactIdFilter]);
 
   // ═══════════════════════════════════════════════════════════════════════════
   // RESUM FILTRAT
   // ═══════════════════════════════════════════════════════════════════════════
-  const hasActiveFilter = tableFilter !== 'all' || searchQuery.trim() !== '' || dateFilter.type !== 'all';
+  const hasActiveFilter = tableFilter !== 'all' || searchQuery.trim() !== '' || dateFilter.type !== 'all' || contactIdFilter !== null;
 
   const filteredSummary = React.useMemo(() => {
     if (!hasActiveFilter || !allTransactions) return null;
@@ -481,10 +498,12 @@ export function TransactionsTable() {
     setTableFilter('all');
     setSearchQuery('');
     setDateFilter({ type: 'all' });
+    setContactIdFilter(null);
     setHasUrlFilter(false);
     if (typeof window !== 'undefined') {
       const url = new URL(window.location.href);
       url.searchParams.delete('filter');
+      url.searchParams.delete('contactId');
       window.history.replaceState({}, '', url.toString());
     }
   }, []);
@@ -721,6 +740,12 @@ export function TransactionsTable() {
       {filteredSummary && (
         <div className="mb-4 px-4 py-2 bg-muted/50 border rounded-lg flex items-center justify-between gap-4">
           <div className="flex items-center gap-4 text-sm text-muted-foreground">
+            {/* Context: filtre per contactId des de fitxa donant */}
+            {contactIdFilter && contactMap[contactIdFilter] && (
+              <span className="text-orange-600 font-medium">
+                Devolucions de {contactMap[contactIdFilter].name}
+              </span>
+            )}
             <span>
               {t.movements.table.showingOf(filteredSummary.showing, filteredSummary.total)}
             </span>

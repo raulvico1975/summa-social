@@ -3,6 +3,7 @@
 import * as React from 'react';
 import { useFirebase, useCollection, useMemoFirebase } from '@/firebase';
 import { useCurrentOrganization } from '@/hooks/organization-provider';
+import Link from 'next/link';
 import { collection, query, orderBy, onSnapshot } from 'firebase/firestore';
 import type { Transaction, Donor, Organization } from '@/lib/data';
 import { formatCurrencyEU } from '@/lib/normalize';
@@ -71,6 +72,7 @@ import {
   Loader2,
   Mail,
   Send,
+  ExternalLink,
 } from 'lucide-react';
 
 // ════════════════════════════════════════════════════════════════════════════
@@ -84,6 +86,12 @@ interface DonorDetailDrawerProps {
   onEdit: (donor: Donor) => void;
 }
 
+interface ReturnItem {
+  date: string;
+  amount: number;
+  description: string;
+}
+
 interface DonationSummary {
   totalHistoric: number;
   totalHistoricCount: number;
@@ -93,7 +101,13 @@ interface DonationSummary {
   returns: {
     count: number;
     amount: number;
+    lastDate: string | null;
+    items: ReturnItem[];
   };
+  // Per a la targeta "Import net certificable"
+  currentYearGross: number;
+  currentYearReturned: number;
+  currentYearNet: number;
 }
 
 // ════════════════════════════════════════════════════════════════════════════
@@ -102,7 +116,7 @@ interface DonationSummary {
 
 export function DonorDetailDrawer({ donor, open, onOpenChange, onEdit }: DonorDetailDrawerProps) {
   const { firestore } = useFirebase();
-  const { organizationId, organization } = useCurrentOrganization();
+  const { organizationId, organization, orgSlug } = useCurrentOrganization();
   const { t, language } = useTranslations();
   const { toast } = useToast();
 
@@ -178,7 +192,10 @@ export function DonorDetailDrawer({ donor, open, onOpenChange, onEdit }: DonorDe
         currentYear: 0,
         currentYearCount: 0,
         lastDonationDate: null,
-        returns: { count: 0, amount: 0 },
+        returns: { count: 0, amount: 0, lastDate: null, items: [] },
+        currentYearGross: 0,
+        currentYearReturned: 0,
+        currentYearNet: 0,
       };
     }
 
@@ -190,10 +207,16 @@ export function DonorDetailDrawer({ donor, open, onOpenChange, onEdit }: DonorDe
     let lastDonationDate: string | null = null;
     let returnsCount = 0;
     let returnsAmount = 0;
+    let lastReturnDate: string | null = null;
+    const returnItems: ReturnItem[] = [];
+
+    // Per al càlcul NET (criteri conservador, coherent amb certificats)
+    let currentYearGross = 0;
+    let currentYearReturned = 0;
 
     transactions.forEach(tx => {
       if (tx.amount > 0 && tx.donationStatus !== 'returned') {
-        // Donació vàlida
+        // Donació vàlida (per mostrar a la UI)
         totalHistoric += tx.amount;
         totalHistoricCount++;
         if (tx.date.startsWith(currentYearStr)) {
@@ -203,12 +226,34 @@ export function DonorDetailDrawer({ donor, open, onOpenChange, onEdit }: DonorDe
         if (!lastDonationDate || tx.date > lastDonationDate) {
           lastDonationDate = tx.date;
         }
-      } else if (tx.amount < 0 && tx.transactionType === 'return') {
-        // Devolució
+      }
+
+      // CRITERI CONSERVADOR per a import net certificable (mateix que certificats)
+      if (tx.amount > 0 && tx.date.startsWith(currentYearStr)) {
+        currentYearGross += tx.amount;
+      }
+      if (tx.amount < 0 && tx.transactionType === 'return' && tx.date.startsWith(currentYearStr)) {
+        currentYearReturned += Math.abs(tx.amount);
+      }
+
+      if (tx.amount < 0 && tx.transactionType === 'return') {
+        // Devolució (per al bloc de devolucions)
         returnsCount++;
         returnsAmount += Math.abs(tx.amount);
+        if (!lastReturnDate || tx.date > lastReturnDate) {
+          lastReturnDate = tx.date;
+        }
+        returnItems.push({
+          date: tx.date,
+          amount: Math.abs(tx.amount),
+          description: tx.note || tx.description || '',
+        });
       }
     });
+
+    // Ordenar devolucions per data descendent i agafar les últimes 5
+    returnItems.sort((a, b) => b.date.localeCompare(a.date));
+    const recentReturns = returnItems.slice(0, 5);
 
     return {
       totalHistoric,
@@ -216,7 +261,10 @@ export function DonorDetailDrawer({ donor, open, onOpenChange, onEdit }: DonorDe
       currentYear: currentYearTotal,
       currentYearCount,
       lastDonationDate,
-      returns: { count: returnsCount, amount: returnsAmount },
+      returns: { count: returnsCount, amount: returnsAmount, lastDate: lastReturnDate, items: recentReturns },
+      currentYearGross,
+      currentYearReturned,
+      currentYearNet: Math.max(0, currentYearGross - currentYearReturned),
     };
   }, [transactions, currentYear]);
 
@@ -513,20 +561,32 @@ export function DonorDetailDrawer({ donor, open, onOpenChange, onEdit }: DonorDe
   const generateAnnualCertificate = async (year: string) => {
     if (!donor || !organization) return;
 
-    // Calcular total de l'any
+    // ═══════════════════════════════════════════════════════════════════════════
+    // CRITERI CONSERVADOR (coherent amb donation-certificate-generator.tsx)
+    // ═══════════════════════════════════════════════════════════════════════════
+
+    // Totes les donacions positives del donant dins l'any (NO filtrar per donationStatus)
     const yearDonations = transactions?.filter(tx =>
       tx.date.startsWith(year) &&
-      tx.amount > 0 &&
-      tx.donationStatus !== 'returned'
+      tx.amount > 0
     ) || [];
 
-    const totalAmount = yearDonations.reduce((sum, tx) => sum + tx.amount, 0);
+    // Totes les devolucions del donant dins l'any (excloure return_fee)
+    const yearReturns = transactions?.filter(tx =>
+      tx.date.startsWith(year) &&
+      tx.amount < 0 &&
+      tx.transactionType === 'return'
+    ) || [];
 
-    if (totalAmount === 0) {
+    const grossAmount = yearDonations.reduce((sum, tx) => sum + tx.amount, 0);
+    const returnedAmount = yearReturns.reduce((sum, tx) => sum + Math.abs(tx.amount), 0);
+    const netAmount = Math.max(0, grossAmount - returnedAmount);
+
+    if (netAmount === 0) {
       toast({
         variant: 'destructive',
         title: t.common.error,
-        description: t.donorDetail.certificate.noDonationsYear,
+        description: 'Import net 0 €: no es genera certificat',
       });
       return;
     }
@@ -659,7 +719,7 @@ export function DonorDetailDrawer({ donor, open, onOpenChange, onEdit }: DonorDe
       if (donorLocationPart) donorAddressParts.push(donorLocationPart);
       const donorAddress = donorAddressParts.length > 0 ? donorAddressParts.join(', ') : '[Domicili no informat]';
       const donationsText = yearDonations.length === 1 ? t.donorDetail.donation : t.donorDetail.donations;
-      const paragraph1 = `${t.donorDetail.certificate.thatDonor} ${donor.name} ${t.donorDetail.certificate.withNifCif} ${donor.taxId} ${t.donorDetail.certificate.andDomicile} ${donorAddress}, ${t.donorDetail.certificate.donatedAmount} ${formatCurrencyEU(totalAmount)} (${yearDonations.length} ${donationsText}) ${t.donorDetail.certificate.hasDonatedYear} ${year} ${t.donorDetail.certificate.toTheEntity}`;
+      const paragraph1 = `${t.donorDetail.certificate.thatDonor} ${donor.name} ${t.donorDetail.certificate.withNifCif} ${donor.taxId} ${t.donorDetail.certificate.andDomicile} ${donorAddress}, ${t.donorDetail.certificate.donatedAmount} ${formatCurrencyEU(netAmount)} (${yearDonations.length} ${donationsText}) ${t.donorDetail.certificate.hasDonatedYear} ${year} ${t.donorDetail.certificate.toTheEntity}`;
       const paragraph1Wrapped = doc.splitTextToSize(paragraph1, contentWidth);
       doc.text(paragraph1Wrapped, margin, y);
       y += paragraph1Wrapped.length * lineHeight + 6;
@@ -679,6 +739,45 @@ export function DonorDetailDrawer({ donor, open, onOpenChange, onEdit }: DonorDe
       const paragraph3Wrapped = doc.splitTextToSize(paragraph3, contentWidth);
       doc.text(paragraph3Wrapped, margin, y);
       y += paragraph3Wrapped.length * lineHeight + 15;
+
+      // ═══════════════════════════════════════════════════════════════════════
+      // BLOC DE RESUM FISCAL (només si hi ha devolucions)
+      // ═══════════════════════════════════════════════════════════════════════
+
+      if (returnedAmount > 0) {
+        doc.setFontSize(9);
+        doc.setFont('helvetica', 'normal');
+        doc.setDrawColor(200);
+        doc.setFillColor(250, 250, 250);
+
+        const boxX = margin + 20;
+        const boxWidth = pageWidth - margin * 2 - 40;
+        const boxHeight = 32;
+        doc.roundedRect(boxX, y - 4, boxWidth, boxHeight, 2, 2, 'FD');
+
+        y += 6;
+        doc.setFont('helvetica', 'bold');
+        doc.text('Resum fiscal:', boxX + 5, y);
+        y += lineHeight;
+
+        doc.setFont('helvetica', 'normal');
+        const col1 = boxX + 5;
+        const col2 = boxX + boxWidth - 5;
+
+        doc.text('Donacions rebudes:', col1, y);
+        doc.text(formatCurrencyEU(grossAmount), col2, y, { align: 'right' });
+        y += lineHeight;
+
+        doc.text('Devolucions efectuades:', col1, y);
+        doc.text(`-${formatCurrencyEU(returnedAmount)}`, col2, y, { align: 'right' });
+        y += lineHeight;
+
+        doc.setFont('helvetica', 'bold');
+        doc.text('Import net certificat:', col1, y);
+        doc.text(formatCurrencyEU(netAmount), col2, y, { align: 'right' });
+
+        y += lineHeight * 2;
+      }
 
       // ═══════════════════════════════════════════════════════════════════════
       // NOTA LEGAL
@@ -978,20 +1077,32 @@ export function DonorDetailDrawer({ donor, open, onOpenChange, onEdit }: DonorDe
       return;
     }
 
-    // Calcular total de l'any
+    // ═══════════════════════════════════════════════════════════════════════════
+    // CRITERI CONSERVADOR (coherent amb donation-certificate-generator.tsx)
+    // ═══════════════════════════════════════════════════════════════════════════
+
+    // Totes les donacions positives del donant dins l'any (NO filtrar per donationStatus)
     const yearDonations = transactions?.filter(tx =>
       tx.date.startsWith(year) &&
-      tx.amount > 0 &&
-      tx.donationStatus !== 'returned'
+      tx.amount > 0
     ) || [];
 
-    const totalAmount = yearDonations.reduce((sum, tx) => sum + tx.amount, 0);
+    // Totes les devolucions del donant dins l'any (excloure return_fee)
+    const yearReturns = transactions?.filter(tx =>
+      tx.date.startsWith(year) &&
+      tx.amount < 0 &&
+      tx.transactionType === 'return'
+    ) || [];
 
-    if (totalAmount === 0) {
+    const grossAmount = yearDonations.reduce((sum, tx) => sum + tx.amount, 0);
+    const returnedAmount = yearReturns.reduce((sum, tx) => sum + Math.abs(tx.amount), 0);
+    const netAmount = Math.max(0, grossAmount - returnedAmount);
+
+    if (netAmount === 0) {
       toast({
         variant: 'destructive',
         title: t.common.error,
-        description: t.donorDetail.certificate.noDonationsYear,
+        description: 'Import net 0 €: no es genera certificat',
       });
       return;
     }
@@ -1110,7 +1221,7 @@ export function DonorDetailDrawer({ donor, open, onOpenChange, onEdit }: DonorDe
       if (donorLocationPart) donorAddressParts.push(donorLocationPart);
       const donorAddress = donorAddressParts.length > 0 ? donorAddressParts.join(', ') : '[Domicili no informat]';
       const donationsText = yearDonations.length === 1 ? t.donorDetail.donation : t.donorDetail.donations;
-      const paragraph1 = `${t.donorDetail.certificate.thatDonor} ${donor.name} ${t.donorDetail.certificate.withNifCif} ${donor.taxId} ${t.donorDetail.certificate.andDomicile} ${donorAddress}, ${t.donorDetail.certificate.donatedAmount} ${formatCurrencyEU(totalAmount)} (${yearDonations.length} ${donationsText}) ${t.donorDetail.certificate.hasDonatedYear} ${year} ${t.donorDetail.certificate.toTheEntity}`;
+      const paragraph1 = `${t.donorDetail.certificate.thatDonor} ${donor.name} ${t.donorDetail.certificate.withNifCif} ${donor.taxId} ${t.donorDetail.certificate.andDomicile} ${donorAddress}, ${t.donorDetail.certificate.donatedAmount} ${formatCurrencyEU(netAmount)} (${yearDonations.length} ${donationsText}) ${t.donorDetail.certificate.hasDonatedYear} ${year} ${t.donorDetail.certificate.toTheEntity}`;
       const paragraph1Wrapped = doc.splitTextToSize(paragraph1, contentWidth);
       doc.text(paragraph1Wrapped, margin, y);
       y += paragraph1Wrapped.length * lineHeight + 6;
@@ -1320,22 +1431,88 @@ export function DonorDetailDrawer({ donor, open, onOpenChange, onEdit }: DonorDe
               </CardContent>
             </Card>
 
+            {/* Import net certificable */}
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-xs font-medium text-muted-foreground flex items-center gap-1">
+                  <FileText className="h-3 w-3" />
+                  Import net certificable ({currentYear})
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-xl font-bold text-blue-600">
+                  {formatCurrencyEU(summary.currentYearNet)}
+                </div>
+                {summary.currentYearReturned > 0 ? (
+                  <p className="text-xs text-muted-foreground">
+                    Després de devolucions. Aquest és l'import del certificat anual i el Model 182.
+                  </p>
+                ) : (
+                  <p className="text-xs text-muted-foreground">
+                    Sense devolucions
+                  </p>
+                )}
+              </CardContent>
+            </Card>
+
             {/* Devolucions (només si n'hi ha) */}
             {summary.returns.count > 0 && (
-              <Card className="border-orange-200 bg-orange-50/50">
+              <Card className="border-orange-200 bg-orange-50/50 col-span-2">
                 <CardHeader className="pb-2">
                   <CardTitle className="text-xs font-medium text-orange-600 flex items-center gap-1">
                     <Undo2 className="h-3 w-3" />
                     {t.donorDetail.returns}
                   </CardTitle>
                 </CardHeader>
-                <CardContent>
-                  <div className="text-lg font-semibold text-orange-600">
-                    {summary.returns.count}
+                <CardContent className="space-y-3">
+                  {/* Resum principal */}
+                  <div className="flex items-start justify-between">
+                    <div>
+                      <div className="text-lg font-semibold text-orange-600">
+                        {summary.returns.count} {summary.returns.count === 1 ? 'devolució' : 'devolucions'}
+                      </div>
+                      <p className="text-sm text-orange-500">
+                        Total retornat: {formatCurrencyEU(summary.returns.amount)}
+                      </p>
+                      {summary.returns.lastDate && (
+                        <p className="text-xs text-muted-foreground mt-1">
+                          Última: {formatDate(summary.returns.lastDate)}
+                        </p>
+                      )}
+                    </div>
                   </div>
-                  <p className="text-xs text-orange-500">
-                    -{formatCurrencyEU(summary.returns.amount)}
-                  </p>
+
+                  {/* Llista de les últimes devolucions */}
+                  {summary.returns.items.length > 0 && (
+                    <div className="border-t border-orange-200 pt-2">
+                      <p className="text-xs font-medium text-muted-foreground mb-2">Últimes devolucions:</p>
+                      <div className="space-y-1.5">
+                        {summary.returns.items.map((item, idx) => (
+                          <div key={idx} className="flex items-center justify-between text-xs">
+                            <span className="text-muted-foreground">
+                              {formatDate(item.date)}
+                            </span>
+                            <span className="text-orange-600 font-mono">
+                              {formatCurrencyEU(item.amount)}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Botó per veure totes */}
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="w-full text-orange-600 border-orange-300 hover:bg-orange-100"
+                    asChild
+                  >
+                    <Link href={`/${orgSlug}/dashboard/movimientos?filter=returns&contactId=${donor.id}`}>
+                      <ExternalLink className="h-3 w-3 mr-1" />
+                      Veure a Moviments
+                    </Link>
+                  </Button>
                 </CardContent>
               </Card>
             )}

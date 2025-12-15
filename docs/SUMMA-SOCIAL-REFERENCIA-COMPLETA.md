@@ -907,6 +907,35 @@ Estadístiques per projecte:
 - Import = Σ donacions - Σ devolucions
 - Si import ≤ 0 → No es genera certificat
 
+### 3.7.4 Criteri Fiscal de Certificats de Donació
+
+> Referència completa: `/docs/CRITERI-CERTIFICATS-DONACIO.md`
+
+**Criteri conservador:**
+- Donació certificable: `amount > 0` (no depèn de `donationStatus`)
+- Devolució: `transactionType === 'return'` (exclou `return_fee`)
+- Import net = Brut − |Devolucions|
+
+**Bloc de resum fiscal (PDF):**
+Quan hi ha devolucions, el certificat inclou un bloc visual:
+```
+┌─────────────────────────────────────────┐
+│ Resum fiscal:                           │
+│ Donacions rebudes:          1.200,00 €  │
+│ Devolucions efectuades:      -200,00 €  │
+│ Import net certificat:      1.000,00 €  │
+└─────────────────────────────────────────┘
+```
+
+**Casos límit:**
+| Cas | Comportament |
+|-----|--------------|
+| Import net = 0 € | No es genera certificat |
+| Import net < 0 € | Es mostra 0 € (mai negatiu) |
+| Devolució tardana | Compta a l'any de la devolució |
+
+**Coherència garantida:** Model 182 i certificats individuals usen exactament el mateix criteri.
+
 
 ## 3.8 CONFIGURACIÓ
 

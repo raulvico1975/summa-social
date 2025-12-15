@@ -287,23 +287,26 @@ export function DonationCertificateGenerator() {
       const yearStart = `${selectedYear}-01-01`;
       const yearEnd = `${selectedYear}-12-31`;
       
+      // CRITERI CONSERVADOR: totes les donacions positives del donant dins l'any
+      // No usem donationStatus perquè el returnedAmount ja cobreix les devolucions
       const yearDonations = allTransactions.filter(tx => {
         const txDate = tx.date.substring(0, 10);
-        return tx.amount > 0 && 
-               tx.contactId && 
+        return tx.amount > 0 &&
+               tx.contactId &&
                tx.contactType === 'donor' &&
-               tx.donationStatus !== 'returned' &&
-               txDate >= yearStart && 
+               txDate >= yearStart &&
                txDate <= yearEnd;
       });
 
+      // CRITERI CONSERVADOR: totes les devolucions (transactionType==='return') del donant dins l'any
+      // Exclou return_fee. No requereix linkedTransactionId - qualsevol devolució assignada compta.
       const yearReturns = allTransactions.filter(tx => {
         const txDate = tx.date.substring(0, 10);
-        return tx.amount < 0 && 
+        return tx.amount < 0 &&
                tx.transactionType === 'return' &&
-               tx.contactId && 
+               tx.contactId &&
                tx.contactType === 'donor' &&
-               txDate >= yearStart && 
+               txDate >= yearStart &&
                txDate <= yearEnd;
       });
 
@@ -521,7 +524,50 @@ export function DonationCertificateGenerator() {
     doc.setFontSize(10);
     doc.setFont('helvetica', 'italic');
     doc.text(`(${numberToWords(summary.totalAmount)})`, pageWidth / 2, y, { align: 'center' });
-    y += lineHeight * 3;
+    y += lineHeight * 2;
+
+    // ═══════════════════════════════════════════════════════════════════════════
+    // BLOC DE RESUM FISCAL (només si hi ha devolucions)
+    // Mostra explícitament: Brut - Devolucions = Net
+    // ═══════════════════════════════════════════════════════════════════════════
+    if (summary.returnedAmount > 0) {
+      y += lineHeight;
+      doc.setFontSize(9);
+      doc.setFont('helvetica', 'normal');
+      doc.setDrawColor(200);
+      doc.setFillColor(250, 250, 250);
+
+      // Requadre del resum
+      const boxX = margin + 20;
+      const boxWidth = pageWidth - margin * 2 - 40;
+      const boxHeight = 32;
+      doc.roundedRect(boxX, y - 4, boxWidth, boxHeight, 2, 2, 'FD');
+
+      y += 6;
+      doc.setFont('helvetica', 'bold');
+      doc.text('Resum fiscal:', boxX + 5, y);
+      y += lineHeight;
+
+      doc.setFont('helvetica', 'normal');
+      const col1 = boxX + 5;
+      const col2 = boxX + boxWidth - 5;
+
+      doc.text('Donacions rebudes:', col1, y);
+      doc.text(formatCurrencyEU(summary.grossAmount), col2, y, { align: 'right' });
+      y += lineHeight;
+
+      doc.text('Devolucions efectuades:', col1, y);
+      doc.text(`-${formatCurrencyEU(summary.returnedAmount)}`, col2, y, { align: 'right' });
+      y += lineHeight;
+
+      doc.setFont('helvetica', 'bold');
+      doc.text('Import net certificat:', col1, y);
+      doc.text(formatCurrencyEU(summary.totalAmount), col2, y, { align: 'right' });
+
+      y += lineHeight * 2;
+    } else {
+      y += lineHeight;
+    }
 
     // Nota legal
     doc.setFontSize(9);
