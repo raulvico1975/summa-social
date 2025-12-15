@@ -1436,7 +1436,7 @@ export function DonorDetailDrawer({ donor, open, onOpenChange, onEdit }: DonorDe
               <CardHeader className="pb-2">
                 <CardTitle className="text-xs font-medium text-muted-foreground flex items-center gap-1">
                   <FileText className="h-3 w-3" />
-                  Import net certificable ({currentYear})
+                  {t.donorDetail.netCertifiable} ({currentYear})
                 </CardTitle>
               </CardHeader>
               <CardContent>
@@ -1445,11 +1445,11 @@ export function DonorDetailDrawer({ donor, open, onOpenChange, onEdit }: DonorDe
                 </div>
                 {summary.currentYearReturned > 0 ? (
                   <p className="text-xs text-muted-foreground">
-                    Després de devolucions. Aquest és l'import del certificat anual i el Model 182.
+                    {t.donorDetail.afterReturns}
                   </p>
                 ) : (
                   <p className="text-xs text-muted-foreground">
-                    Sense devolucions
+                    {t.donorDetail.noReturns}
                   </p>
                 )}
               </CardContent>
@@ -1469,14 +1469,14 @@ export function DonorDetailDrawer({ donor, open, onOpenChange, onEdit }: DonorDe
                   <div className="flex items-start justify-between">
                     <div>
                       <div className="text-lg font-semibold text-orange-600">
-                        {summary.returns.count} {summary.returns.count === 1 ? 'devolució' : 'devolucions'}
+                        {summary.returns.count} {summary.returns.count === 1 ? t.donorDetail.returnSingular : t.donorDetail.returnPlural}
                       </div>
                       <p className="text-sm text-orange-500">
-                        Total retornat: {formatCurrencyEU(summary.returns.amount)}
+                        {t.donorDetail.totalReturned} {formatCurrencyEU(summary.returns.amount)}
                       </p>
                       {summary.returns.lastDate && (
                         <p className="text-xs text-muted-foreground mt-1">
-                          Última: {formatDate(summary.returns.lastDate)}
+                          {t.donorDetail.lastReturnDate} {formatDate(summary.returns.lastDate)}
                         </p>
                       )}
                     </div>
@@ -1485,7 +1485,7 @@ export function DonorDetailDrawer({ donor, open, onOpenChange, onEdit }: DonorDe
                   {/* Llista de les últimes devolucions */}
                   {summary.returns.items.length > 0 && (
                     <div className="border-t border-orange-200 pt-2">
-                      <p className="text-xs font-medium text-muted-foreground mb-2">Últimes devolucions:</p>
+                      <p className="text-xs font-medium text-muted-foreground mb-2">{t.donorDetail.recentReturns}</p>
                       <div className="space-y-1.5">
                         {summary.returns.items.map((item, idx) => (
                           <div key={idx} className="flex items-center justify-between text-xs">
@@ -1510,7 +1510,7 @@ export function DonorDetailDrawer({ donor, open, onOpenChange, onEdit }: DonorDe
                   >
                     <Link href={`/${orgSlug}/dashboard/movimientos?filter=returns&contactId=${donor.id}`}>
                       <ExternalLink className="h-3 w-3 mr-1" />
-                      Veure a Moviments
+                      {t.donorDetail.viewInMovements}
                     </Link>
                   </Button>
                 </CardContent>

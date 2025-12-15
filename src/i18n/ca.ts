@@ -677,6 +677,17 @@ export const ca = {
       issuedOn: "a",
       downloadPdf: "Descarregar PDF",
     },
+    // Targeta import net certificable
+    netCertifiable: "Import net certificable",
+    afterReturns: "Després de devolucions. Aquest és l'import del certificat anual i el Model 182.",
+    noReturns: "Sense devolucions",
+    // Bloc devolucions
+    returnSingular: "devolució",
+    returnPlural: "devolucions",
+    totalReturned: "Total retornat:",
+    lastReturnDate: "Última:",
+    recentReturns: "Últimes devolucions:",
+    viewInMovements: "Veure a Moviments",
   },
   employees: {
     title: "Treballadors",

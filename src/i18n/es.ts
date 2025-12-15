@@ -710,6 +710,17 @@ export const es = {
       issuedOn: "a",
       downloadPdf: "Descargar PDF",
     },
+    // Tarjeta importe neto certificable
+    netCertifiable: "Importe neto certificable",
+    afterReturns: "Después de devoluciones. Este es el importe del certificado anual y el Modelo 182.",
+    noReturns: "Sin devoluciones",
+    // Bloque devoluciones
+    returnSingular: "devolución",
+    returnPlural: "devoluciones",
+    totalReturned: "Total devuelto:",
+    lastReturnDate: "Última:",
+    recentReturns: "Últimas devoluciones:",
+    viewInMovements: "Ver en Movimientos",
   },
   employees: {
     title: "Trabajadores",
