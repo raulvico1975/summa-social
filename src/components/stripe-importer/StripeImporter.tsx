@@ -290,14 +290,22 @@ export function StripeImporter({
   // ══════════════════════════════════════════════════════════════════════════
 
   const handleImport = async () => {
-    console.log('[STRIPE IMPORT] 🚀 Handler executat');
-    console.log('[STRIPE IMPORT] selectedGroup:', selectedGroup);
-    console.log('[STRIPE IMPORT] organizationId:', organizationId);
-    console.log('[STRIPE IMPORT] bankTransaction.id:', bankTransaction.id);
-    console.log('[STRIPE IMPORT] donorMatches:', donorMatches);
+    console.group('[STRIPE IMPORT] 🚀 handleImport STARTED');
+    console.log('Timestamp:', new Date().toISOString());
+    console.log('selectedGroup:', selectedGroup);
+    console.log('organizationId:', organizationId);
+    console.log('firestore:', !!firestore);
+    console.log('bankTransaction:', bankTransaction);
+    console.log('donorMatches:', donorMatches);
+    console.log('categories:', categories?.map(c => ({ id: c.id, name: c.name, type: c.type })));
+    console.groupEnd();
 
     if (!selectedGroup || !organizationId || !firestore) {
-      console.error('[STRIPE IMPORT] ❌ Early return: missing dependencies');
+      console.error('[STRIPE IMPORT] ❌ Early return: missing dependencies', {
+        selectedGroup: !!selectedGroup,
+        organizationId: !!organizationId,
+        firestore: !!firestore,
+      });
       return;
     }
 
@@ -357,11 +365,23 @@ export function StripeImporter({
       let docsCreated = 0;
 
       console.log('[STRIPE IMPORT] 📝 Construint batch...');
+      console.log('[STRIPE IMPORT] transactionsRef path:', transactionsRef.path);
+      console.log('[STRIPE IMPORT] selectedGroup.rows.length:', selectedGroup.rows.length);
+      console.log('[STRIPE IMPORT] donorMatches keys:', Object.keys(donorMatches));
 
       // 3a. Crear N transaccions d'ingrés (donacions)
       for (const row of selectedGroup.rows) {
         const match = donorMatches[row.id];
         const newTxRef = doc(transactionsRef);
+
+        console.log(`[STRIPE IMPORT] 📦 Processing donation ${docsCreated + 1}/${selectedGroup.rows.length}`, {
+          rowId: row.id,
+          customerEmail: row.customerEmail,
+          amount: row.amount,
+          matchFound: !!match,
+          contactId: match?.contactId || null,
+          contactName: match?.contactName || null,
+        });
 
         const txData: Omit<Transaction, 'id'> = {
           date: row.createdDate,
@@ -376,19 +396,25 @@ export function StripeImporter({
           stripePaymentId: row.id,
         };
 
-        console.log(`[STRIPE IMPORT] Donation ${docsCreated + 1}:`, {
-          rowId: row.id,
-          contactId: match?.contactId,
-          amount: row.amount,
-          date: row.createdDate,
+        console.log(`[STRIPE IMPORT] 📝 Transaction data:`, {
+          newTxRefId: newTxRef.id,
+          contactId: txData.contactId,
+          contactType: txData.contactType,
+          category: txData.category,
+          amount: txData.amount,
+          stripePaymentId: txData.stripePaymentId,
+          parentTransactionId: txData.parentTransactionId,
         });
 
         batch.set(newTxRef, txData);
         docsCreated++;
       }
 
+      console.log('[STRIPE IMPORT] ✅ All donations added to batch. Total donations:', docsCreated);
+
       // 3b. Crear 1 transacció de despesa (comissions agregades)
       if (selectedGroup.fees > 0) {
+        console.log('[STRIPE IMPORT] 💰 Adding fee transaction...');
         const feeTxRef = doc(transactionsRef);
         const feeDate = bankTransaction.date || new Date().toISOString().split('T')[0];
 
@@ -403,19 +429,27 @@ export function StripeImporter({
           parentTransactionId: bankTransaction.id,
         };
 
-        console.log('[STRIPE IMPORT] Fee transaction:', {
-          amount: -selectedGroup.fees,
-          date: feeDate,
-          categoryId: bankFeesCategory.id,
+        console.log('[STRIPE IMPORT] 📝 Fee transaction data:', {
+          newTxRefId: feeTxRef.id,
+          amount: feeTxData.amount,
+          date: feeTxData.date,
+          category: feeTxData.category,
+          parentTransactionId: feeTxData.parentTransactionId,
         });
 
         batch.set(feeTxRef, feeTxData);
         docsCreated++;
+        console.log('[STRIPE IMPORT] ✅ Fee transaction added to batch');
+      } else {
+        console.log('[STRIPE IMPORT] ⚠️ No fees to process (fees = 0)');
       }
 
       // 3c. Eliminar el moviment bancari original
       const originalTxRef = doc(transactionsRef, bankTransaction.id);
-      console.log('[STRIPE IMPORT] Deleting original transaction:', bankTransaction.id);
+      console.log('[STRIPE IMPORT] 🗑️ Deleting original bank transaction:', {
+        id: bankTransaction.id,
+        path: originalTxRef.path,
+      });
       batch.delete(originalTxRef);
 
       console.log('[STRIPE IMPORT] 💾 Total operations in batch:', docsCreated + 1, `(${docsCreated} creates + 1 delete)`);
@@ -428,6 +462,7 @@ export function StripeImporter({
 
       // 5. Verificació post-commit (temporal per debug)
       console.log('[STRIPE IMPORT] 🔍 Verificant escriptura a Firestore...');
+      console.log('[STRIPE IMPORT] Query filter: parentTransactionId ==', bankTransaction.id);
       try {
         const verifyQuery = query(
           transactionsRef,
@@ -435,15 +470,36 @@ export function StripeImporter({
         );
         const verifySnapshot = await getDocs(verifyQuery);
         console.log('[STRIPE IMPORT] ✅ Transaccions trobades post-commit:', verifySnapshot.size);
-        console.log('[STRIPE IMPORT] Transaccions detalls:', verifySnapshot.docs.map(d => ({
-          id: d.id,
-          ...d.data()
-        })));
+
+        if (verifySnapshot.size === 0) {
+          console.error('[STRIPE IMPORT] ⚠️ WARNING: No transactions found! Expected:', docsCreated);
+        } else {
+          console.log('[STRIPE IMPORT] Expected:', docsCreated, 'Found:', verifySnapshot.size);
+        }
+
+        console.log('[STRIPE IMPORT] Transaccions detalls:', verifySnapshot.docs.map(d => {
+          const data = d.data();
+          return {
+            id: d.id,
+            amount: data.amount,
+            contactId: data.contactId,
+            category: data.category,
+            stripePaymentId: data.stripePaymentId,
+            parentTransactionId: data.parentTransactionId,
+          };
+        }));
+
+        // Check if original transaction still exists (should be deleted)
+        const originalCheck = await getDocs(query(
+          transactionsRef,
+          where('__name__', '==', bankTransaction.id)
+        ));
+        console.log('[STRIPE IMPORT] Original transaction still exists?', originalCheck.size > 0);
       } catch (verifyErr) {
         console.error('[STRIPE IMPORT] ❌ Error verificant:', verifyErr);
       }
 
-      // 5. Èxit
+      // 6. Èxit
       console.log('[STRIPE IMPORT] 🎉 Import completat, tancant modals...');
 
       // Tancar modal de confirmació
@@ -458,9 +514,19 @@ export function StripeImporter({
         )} ${t.importers.stripeImporter.success.reviewHint}`,
       });
 
-      console.log('[STRIPE IMPORT] Cridant onImportDone callback...');
+      console.log('[STRIPE IMPORT] 📢 Showing toast notification');
+      console.log('[STRIPE IMPORT] 🔄 Calling onImportDone callback...');
+      console.log('[STRIPE IMPORT] onImportDone is defined?', !!onImportDone);
+
       onOpenChange(false);
-      onImportDone?.();
+
+      if (onImportDone) {
+        console.log('[STRIPE IMPORT] 🚀 Executing onImportDone()...');
+        onImportDone();
+        console.log('[STRIPE IMPORT] ✅ onImportDone() executed');
+      } else {
+        console.warn('[STRIPE IMPORT] ⚠️ onImportDone callback is undefined - UI may not refresh!');
+      }
 
     } catch (err) {
       console.error('[STRIPE IMPORT] ❌ Error durant import:', err);
@@ -994,11 +1060,20 @@ export function StripeImporter({
           )}
 
           <AlertDialogFooter>
-            <AlertDialogCancel disabled={isSaving}>
+            <AlertDialogCancel
+              disabled={isSaving}
+              onClick={() => {
+                console.log('[STRIPE IMPORT] ❌ User cancelled confirmation dialog');
+              }}
+            >
               {t.importers.stripeImporter.confirmation.cancel}
             </AlertDialogCancel>
             <AlertDialogAction
-              onClick={handleImport}
+              onClick={() => {
+                console.log('[STRIPE IMPORT] ✅ User clicked CONFIRM in dialog');
+                console.log('[STRIPE IMPORT] About to call handleImport()...');
+                handleImport();
+              }}
               disabled={isSaving}
             >
               {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
