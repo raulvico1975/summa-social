@@ -290,7 +290,16 @@ export function StripeImporter({
   // ══════════════════════════════════════════════════════════════════════════
 
   const handleImport = async () => {
-    if (!selectedGroup || !organizationId || !firestore) return;
+    console.log('[STRIPE IMPORT] 🚀 Handler executat');
+    console.log('[STRIPE IMPORT] selectedGroup:', selectedGroup);
+    console.log('[STRIPE IMPORT] organizationId:', organizationId);
+    console.log('[STRIPE IMPORT] bankTransaction.id:', bankTransaction.id);
+    console.log('[STRIPE IMPORT] donorMatches:', donorMatches);
+
+    if (!selectedGroup || !organizationId || !firestore) {
+      console.error('[STRIPE IMPORT] ❌ Early return: missing dependencies');
+      return;
+    }
 
     setIsSaving(true);
     setErrorMessage(null);
@@ -298,12 +307,15 @@ export function StripeImporter({
     try {
       // 1. Obtenir categoria bankFees
       const bankFeesCategory = categories?.find(c => c.name === BANK_FEES_KEY && c.type === 'expense');
+      console.log('[STRIPE IMPORT] bankFeesCategory:', bankFeesCategory);
       if (!bankFeesCategory) {
         throw new Error(t.importers.stripeImporter.errors.noBankFeesCategory);
       }
 
       // 2. Validar límits
       const stripeIds = selectedGroup.rows.map(r => r.id);
+      console.log('[STRIPE IMPORT] Total rows:', selectedGroup.rows.length);
+      console.log('[STRIPE IMPORT] Stripe IDs:', stripeIds);
 
       // 2a. Massa files per un sol batch (Firestore limit ~500 ops/batch, deixem marge)
       if (stripeIds.length + 1 > 450) {
@@ -342,6 +354,9 @@ export function StripeImporter({
 
       // 3. Preparar batch d'escriptura atòmica
       const batch = writeBatch(firestore);
+      let docsCreated = 0;
+
+      console.log('[STRIPE IMPORT] 📝 Construint batch...');
 
       // 3a. Crear N transaccions d'ingrés (donacions)
       for (const row of selectedGroup.rows) {
@@ -361,7 +376,15 @@ export function StripeImporter({
           stripePaymentId: row.id,
         };
 
+        console.log(`[STRIPE IMPORT] Donation ${docsCreated + 1}:`, {
+          rowId: row.id,
+          contactId: match?.contactId,
+          amount: row.amount,
+          date: row.createdDate,
+        });
+
         batch.set(newTxRef, txData);
+        docsCreated++;
       }
 
       // 3b. Crear 1 transacció de despesa (comissions agregades)
@@ -380,17 +403,32 @@ export function StripeImporter({
           parentTransactionId: bankTransaction.id,
         };
 
+        console.log('[STRIPE IMPORT] Fee transaction:', {
+          amount: -selectedGroup.fees,
+          date: feeDate,
+          categoryId: bankFeesCategory.id,
+        });
+
         batch.set(feeTxRef, feeTxData);
+        docsCreated++;
       }
 
       // 3c. Eliminar el moviment bancari original
       const originalTxRef = doc(transactionsRef, bankTransaction.id);
+      console.log('[STRIPE IMPORT] Deleting original transaction:', bankTransaction.id);
       batch.delete(originalTxRef);
+
+      console.log('[STRIPE IMPORT] 💾 Total operations in batch:', docsCreated + 1, `(${docsCreated} creates + 1 delete)`);
+      console.log('[STRIPE IMPORT] 🔄 Committing batch...');
 
       // 4. Commit atòmic
       await batch.commit();
 
+      console.log('[STRIPE IMPORT] ✅ Batch committed successfully!');
+
       // 5. Èxit
+      console.log('[STRIPE IMPORT] 🎉 Import completat, tancant modals...');
+
       // Tancar modal de confirmació
       setShowConfirmation(false);
 
@@ -403,10 +441,13 @@ export function StripeImporter({
         )} ${t.importers.stripeImporter.success.reviewHint}`,
       });
 
+      console.log('[STRIPE IMPORT] Cridant onImportDone callback...');
       onOpenChange(false);
       onImportDone?.();
 
     } catch (err) {
+      console.error('[STRIPE IMPORT] ❌ Error durant import:', err);
+      console.error('[STRIPE IMPORT] Error stack:', err instanceof Error ? err.stack : 'No stack');
       const message = err instanceof Error ? err.message : t.importers.stripeImporter.errors.processingFile;
       setErrorMessage(message);
     } finally {
