@@ -192,6 +192,32 @@ export const TransactionRow = React.memo(function TransactionRow({
   // Detecta transaccions via Stripe (donations, fees)
   const isFromStripe = tx.source === 'stripe';
 
+  // Detecta si pot dividir remesa Stripe (amb fallback conservador per legacy data)
+  const canSplitStripeRemittance = (transaction: Transaction): boolean => {
+    // Validacions comunes: ingrés positiu, no dividida, no remesa
+    const isIncome = transaction.amount > 0;
+    const isNotAlreadyDivided = transaction.transactionType !== 'donation' && transaction.transactionType !== 'fee';
+    const isNotRemittance = !transaction.isRemittance;
+
+    if (!isIncome || !isNotAlreadyDivided || !isNotRemittance) {
+      return false;
+    }
+
+    // Cas 1: Transaccions amb source='stripe' (noves)
+    if (transaction.source === 'stripe') {
+      return true;
+    }
+
+    // Cas 2: Fallback per transaccions legacy (només si NO té source)
+    if (transaction.source) return false;
+
+    const descUpper = transaction.description?.toUpperCase() || '';
+    const hasStripeInDescription =
+      descUpper.includes('STRIPE') || descUpper.includes('TRANSFERENCIA DE STRIPE');
+
+    return hasStripeInDescription;
+  };
+
   // Stable callbacks using useCallback to prevent child re-renders
   const handleSelectContact = React.useCallback((contactId: string | null) => {
     if (contactId) {
@@ -637,7 +663,7 @@ export const TransactionRow = React.memo(function TransactionRow({
                 {t.attachDocument}
               </DropdownMenuItem>
             )}
-            {isFromStripe && !tx.isRemittance && onSplitStripeRemittance && (
+            {canSplitStripeRemittance(tx) && onSplitStripeRemittance && (
               <DropdownMenuItem onClick={handleSplitStripeRemittance}>
                 <GitMerge className="mr-2 h-4 w-4 text-purple-600" />
                 {t.splitStripeRemittance}
