@@ -340,7 +340,7 @@ export function StripeImporter({
         );
       }
 
-      // 3. Preparar batch d'escriptura
+      // 3. Preparar batch d'escriptura atòmica
       const batch = writeBatch(firestore);
 
       // 3a. Crear N transaccions d'ingrés (donacions)
@@ -382,6 +382,10 @@ export function StripeImporter({
 
         batch.set(feeTxRef, feeTxData);
       }
+
+      // 3c. Eliminar el moviment bancari original
+      const originalTxRef = doc(transactionsRef, bankTransaction.id);
+      batch.delete(originalTxRef);
 
       // 4. Commit atòmic
       await batch.commit();
