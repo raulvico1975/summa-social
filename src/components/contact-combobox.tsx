@@ -238,3 +238,121 @@ export const ContactCombobox = React.memo(function ContactCombobox({
     </Popover>
   );
 });
+
+// ═══════════════════════════════════════════════════════════════════════════
+// DONOR SELECTOR (només donants)
+// ═══════════════════════════════════════════════════════════════════════════
+
+interface DonorSelectorProps {
+  donors: Contact[];
+  value: string | null;
+  onSelect: (contactId: string | null) => void;
+  placeholder?: string;
+  emptyText?: string;
+  searchPlaceholder?: string;
+}
+
+export const DonorSelector = React.memo(function DonorSelector({
+  donors,
+  value,
+  onSelect,
+  placeholder,
+  emptyText,
+  searchPlaceholder,
+}: DonorSelectorProps) {
+  const { t } = useTranslations();
+  const [open, setOpen] = React.useState(false);
+  const [search, setSearch] = React.useState('');
+
+  const placeholderText = placeholder || t.movements.table.assign;
+  const emptyTextValue = emptyText || t.contactCombobox.emptyText;
+  const searchPlaceholderValue = searchPlaceholder || t.contactCombobox.searchPlaceholder;
+
+  const selectedDonor = donors.find((donor) => donor.id === value);
+
+  const filteredDonors = donors.filter((donor) =>
+    donor.name.toLowerCase().includes(search.toLowerCase())
+  );
+
+  const handleSelect = (donorId: string) => {
+    onSelect(donorId === value ? null : donorId);
+    setOpen(false);
+    setSearch('');
+  };
+
+  const handleUnlink = () => {
+    onSelect(null);
+    setOpen(false);
+    setSearch('');
+  };
+
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        {selectedDonor ? (
+          <Button
+            variant="ghost"
+            className="h-auto p-0 text-left font-normal flex items-center gap-1"
+          >
+            <Heart className="h-3 w-3 text-red-500 shrink-0" />
+            <span className="text-sm truncate max-w-[90px]" title={selectedDonor.name}>
+              {selectedDonor.name}
+            </span>
+            <ChevronsUpDown className="h-3 w-3 text-muted-foreground ml-1" />
+          </Button>
+        ) : (
+          <Button variant="ghost" size="sm" className="text-muted-foreground h-7 text-xs px-2">
+            <UserPlus className="mr-1 h-3 w-3" />
+            {placeholderText}
+          </Button>
+        )}
+      </PopoverTrigger>
+      <PopoverContent className="w-[300px] p-0" align="start">
+        <Command shouldFilter={false}>
+          <CommandInput
+            placeholder={searchPlaceholderValue}
+            value={search}
+            onValueChange={setSearch}
+          />
+          <CommandList>
+            <CommandEmpty>{emptyTextValue}</CommandEmpty>
+
+            {/* Donors */}
+            {filteredDonors.length > 0 && (
+              <CommandGroup heading={t.contactCombobox.donors}>
+                {filteredDonors.map((donor) => (
+                  <CommandItem
+                    key={donor.id}
+                    value={donor.id}
+                    onSelect={() => handleSelect(donor.id)}
+                  >
+                    <Check
+                      className={cn(
+                        'mr-2 h-4 w-4',
+                        value === donor.id ? 'opacity-100' : 'opacity-0'
+                      )}
+                    />
+                    <Heart className="mr-2 h-3 w-3 text-red-500" />
+                    {donor.name}
+                  </CommandItem>
+                ))}
+              </CommandGroup>
+            )}
+
+            {/* Unlink option */}
+            {value && (
+              <>
+                <CommandSeparator />
+                <CommandGroup>
+                  <CommandItem onSelect={handleUnlink}>
+                    Desvincular
+                  </CommandItem>
+                </CommandGroup>
+              </>
+            )}
+          </CommandList>
+        </Command>
+      </PopoverContent>
+    </Popover>
+  );
+});

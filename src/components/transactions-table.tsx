@@ -216,6 +216,11 @@ export function TransactionsTable() {
     availableContacts?.map(c => ({ id: c.id, name: c.name, type: c.type })) || [],
   [availableContacts]);
 
+  // Memoized donors for DonorSelector (StripeImporter)
+  const comboboxDonors = React.useMemo(() =>
+    availableContacts?.filter(c => c.type === 'donor').map(c => ({ id: c.id, name: c.name, type: 'donor' as const })) || [],
+  [availableContacts]);
+
   const projectMap = React.useMemo(() =>
     availableProjects?.reduce((acc, project) => {
         acc[project.id] = project.name;
@@ -1121,6 +1126,7 @@ export function TransactionsTable() {
             }
             return null;
           }}
+          donors={comboboxDonors}
           onImportDone={handleStripeImportDone}
         />
       )}
