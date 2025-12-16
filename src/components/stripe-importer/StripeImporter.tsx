@@ -426,6 +426,23 @@ export function StripeImporter({
 
       console.log('[STRIPE IMPORT] ✅ Batch committed successfully!');
 
+      // 5. Verificació post-commit (temporal per debug)
+      console.log('[STRIPE IMPORT] 🔍 Verificant escriptura a Firestore...');
+      try {
+        const verifyQuery = query(
+          transactionsRef,
+          where('parentTransactionId', '==', bankTransaction.id)
+        );
+        const verifySnapshot = await getDocs(verifyQuery);
+        console.log('[STRIPE IMPORT] ✅ Transaccions trobades post-commit:', verifySnapshot.size);
+        console.log('[STRIPE IMPORT] Transaccions detalls:', verifySnapshot.docs.map(d => ({
+          id: d.id,
+          ...d.data()
+        })));
+      } catch (verifyErr) {
+        console.error('[STRIPE IMPORT] ❌ Error verificant:', verifyErr);
+      }
+
       // 5. Èxit
       console.log('[STRIPE IMPORT] 🎉 Import completat, tancant modals...');
 
@@ -897,7 +914,26 @@ export function StripeImporter({
           </Button>
           <Button
             disabled={!canContinue || isSaving}
-            onClick={() => setShowConfirmation(true)}
+            onClick={() => {
+              console.group('[STRIPE IMPORT] 📤 BUTTON CLICKED');
+              console.log('canContinue:', canContinue);
+              console.log('isSaving:', isSaving);
+              console.log('selectedGroup:', selectedGroup);
+              console.log('displayRows.length:', displayRows.length);
+              console.log('matchedCount:', matchedCount);
+              console.log('pendingCount:', pendingCount);
+              console.log('allMatched:', allMatched);
+              console.log('amountMatches:', amountMatches);
+              console.log('bankTransaction:', {
+                id: bankTransaction.id,
+                amount: bankTransaction.amount,
+                date: bankTransaction.date,
+              });
+              console.log('donorMatches keys:', Object.keys(donorMatches).length);
+              console.log('donorMatches sample:', Object.entries(donorMatches).slice(0, 3));
+              console.groupEnd();
+              setShowConfirmation(true);
+            }}
             title={
               !selectedGroup
                 ? t.importers.stripeImporter.actions.selectPayout
