@@ -588,13 +588,10 @@ export const ca = {
         reviewHint: "Pots revisar-les a la pàgina de Moviments.",
       },
 
-      // Selector de donants millorat
+      // Selector de donants natiu
       donorSelector: {
-        searchPlaceholder: "Buscar donant...",
-        selectDonor: "Selecciona un donant",
-        emptyText: "No s'han trobat donants",
-        createNew: "➕ Crear nou donant amb aquest correu",
-        emailMatch: "Coincidència per email",
+        placeholder: "Selecciona un donant…",
+        createNewButton: "➕ Crear nou",
         noMatchForEmail: "Aquest correu no coincideix amb cap donant existent.",
       },
 

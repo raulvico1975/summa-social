@@ -589,11 +589,8 @@ export const es = {
 
       // Selector de donantes mejorado
       donorSelector: {
-        searchPlaceholder: "Buscar donante...",
-        selectDonor: "Selecciona un donante",
-        emptyText: "No se han encontrado donantes",
-        createNew: "➕ Crear nuevo donante con este correo",
-        emailMatch: "Coincidencia por email",
+        placeholder: "Selecciona un donante…",
+        createNewButton: "➕ Crear nuevo",
         noMatchForEmail: "Este correo no coincide con ningún donante existente.",
       },
 

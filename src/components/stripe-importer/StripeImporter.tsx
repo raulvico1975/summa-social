@@ -38,7 +38,6 @@ import {
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Upload, AlertTriangle, FileText, Loader2, CheckCircle2 } from 'lucide-react';
 import { type Contact } from '@/components/contact-combobox';
-import { DonorSelectorEnhanced } from './DonorSelectorEnhanced';
 import { CreateQuickDonorDialog, type QuickDonorFormData } from './CreateQuickDonorDialog';
 import { useTranslations } from '@/i18n';
 import { addDocumentNonBlocking } from '@/firebase';
@@ -775,13 +774,32 @@ export function StripeImporter({
                           {row.customerEmail || '-'}
                         </TableCell>
                         <TableCell>
-                          <DonorSelectorEnhanced
-                            donors={donors}
-                            value={hasMatch ? match.contactId : null}
-                            onSelect={(contactId) => handleManualAssign(row.id, contactId)}
-                            onCreateNew={() => handleOpenCreateDonor(row.id, row.customerEmail)}
-                            emailToMatch={row.customerEmail}
-                          />
+                          <div className="flex items-center gap-2">
+                            <select
+                              className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
+                              value={hasMatch ? match.contactId : ''}
+                              onChange={(e) => handleManualAssign(row.id, e.target.value || null)}
+                              disabled={isMatchingDonors}
+                            >
+                              <option value="">{t.importers.stripeImporter.donorSelector.placeholder}</option>
+                              {[...donors]
+                                .sort((a, b) => a.name.localeCompare(b.name))
+                                .map((donor) => (
+                                  <option key={donor.id} value={donor.id}>
+                                    {donor.email ? `${donor.name} — ${donor.email}` : donor.name}
+                                  </option>
+                                ))}
+                            </select>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleOpenCreateDonor(row.id, row.customerEmail)}
+                              disabled={isMatchingDonors}
+                              className="shrink-0"
+                            >
+                              {t.importers.stripeImporter.donorSelector.createNewButton}
+                            </Button>
+                          </div>
                           {!hasMatch && !isMatchingDonors && (
                             <p className="text-xs text-muted-foreground mt-1">
                               {t.importers.stripeImporter.donorSelector.noMatchForEmail}
