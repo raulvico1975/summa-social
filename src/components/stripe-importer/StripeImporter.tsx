@@ -426,9 +426,14 @@ export function StripeImporter({
           contactName: match?.contactName || null,
         });
 
+        // Assegurar que la descripció conté "Stripe" per cercabilitat
+        const baseDesc = row.description || `Donació - ${row.customerEmail}`;
+        const descUpper = baseDesc.toUpperCase();
+        const finalDesc = descUpper.includes('STRIPE') ? baseDesc : `${baseDesc} (via Stripe)`;
+
         const txData: Omit<Transaction, 'id'> = {
           date: row.createdDate,
-          description: row.description || `Donació Stripe - ${row.customerEmail}`,
+          description: finalDesc,
           amount: row.amount,
           category: match?.defaultCategoryId || 'donations',
           document: null,
