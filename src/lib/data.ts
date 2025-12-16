@@ -5,9 +5,9 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 /**
- * Tipus de transacció per identificar devolucions
+ * Tipus de transacció per identificar devolucions i imports Stripe
  */
-export type TransactionType = 'normal' | 'return' | 'return_fee';
+export type TransactionType = 'normal' | 'return' | 'return_fee' | 'donation' | 'fee';
 
 /**
  * Estat d'una donació
@@ -139,6 +139,12 @@ export type Transaction = {
    * Per traçabilitat i idempotència (evitar duplicats)
    */
   stripePaymentId?: string | null;
+
+  /**
+   * ID del transfer/payout de Stripe (po_xxx / tr_xxx)
+   * Permet relacionar donacions i comissions del mateix payout
+   */
+  stripeTransferId?: string | null;
 };
 
 export type Category = {
