@@ -411,6 +411,54 @@ export function StripeImporter({
     }
   };
 
+  /**
+   * Auto-match all rows with the same email to the given donor
+   * Si email és null, només assigna el contactId a la fila rowId
+   */
+  const applyDonorMatchForEmail = React.useCallback(
+    (rowId: string, contactId: string, contactName: string, email: string | null) => {
+      if (!selectedGroup) return;
+
+      setDonorMatches((prev) => {
+        const updated = { ...prev };
+
+        // Sempre assigna la fila especificada
+        updated[rowId] = {
+          contactId,
+          contactName,
+          defaultCategoryId: null,
+        };
+
+        // Si hi ha email, auto-matcheja totes les altres files amb el mateix email
+        if (email) {
+          const emailLower = email.toLowerCase().trim();
+
+          for (const row of selectedGroup.rows) {
+            // Skip la fila ja assignada
+            if (row.id === rowId) continue;
+
+            // Skip files que ja tenen un match manual diferent (no override)
+            if (prev[row.id] && prev[row.id]?.contactId !== contactId) {
+              continue;
+            }
+
+            // Auto-match si el email coincideix
+            if (row.customerEmail?.toLowerCase().trim() === emailLower) {
+              updated[row.id] = {
+                contactId,
+                contactName,
+                defaultCategoryId: null,
+              };
+            }
+          }
+        }
+
+        return updated;
+      });
+    },
+    [selectedGroup]
+  );
+
   // Handler per assignació manual de donant
   const handleManualAssign = (rowId: string, contactId: string | null) => {
     if (!contactId) {
@@ -425,14 +473,12 @@ export function StripeImporter({
     const donor = donors.find(d => d.id === contactId);
     if (!donor) return;
 
-    setDonorMatches(prev => ({
-      ...prev,
-      [rowId]: {
-        contactId: donor.id,
-        contactName: donor.name,
-        defaultCategoryId: null, // Nota: Contact no té defaultCategoryId
-      },
-    }));
+    // Trobar el row per obtenir el email
+    const row = selectedGroup?.rows.find(r => r.id === rowId);
+    const email = row?.customerEmail || null;
+
+    // Aplicar auto-match per email
+    applyDonorMatchForEmail(rowId, donor.id, donor.name, email);
   };
 
   // Handler per obrir el diàleg de creació de donant
@@ -464,15 +510,14 @@ export function StripeImporter({
         const docRef = await addDocumentNonBlocking(contactsCollection, newDonorData);
 
         if (docRef && createDonorInitialData?.rowId) {
-          // Auto-assign the newly created donor to the row
-          setDonorMatches((prev) => ({
-            ...prev,
-            [createDonorInitialData.rowId]: {
-              contactId: docRef.id,
-              contactName: formData.name.trim(),
-              defaultCategoryId: null,
-            },
-          }));
+          // Auto-assign the newly created donor to the row + auto-match by email
+          const email = formData.email.trim() || null;
+          applyDonorMatchForEmail(
+            createDonorInitialData.rowId,
+            docRef.id,
+            formData.name.trim(),
+            email
+          );
 
           // Show success toast
           toast({
@@ -488,7 +533,7 @@ export function StripeImporter({
               toast({
                 title: t.importers.stripeImporter.createQuickDonor.warnings.incompleteData,
                 description:
-                  t.importers.stripeImporter.createQuickDonor.warnings.incompleteDataDescription,
+                  t.importers.stripeImporter.createQuickDonor.warnings.incompleteFiscalData,
                 duration: 5000,
               });
             }, 500);
@@ -509,7 +554,7 @@ export function StripeImporter({
         return null;
       }
     },
-    [organizationId, firestore, createDonorInitialData, toast, t]
+    [organizationId, firestore, createDonorInitialData, toast, t, applyDonorMatchForEmail]
   );
 
   // Trobar warning de refunded
@@ -739,7 +784,7 @@ export function StripeImporter({
                           />
                           {!hasMatch && !isMatchingDonors && (
                             <p className="text-xs text-muted-foreground mt-1">
-                              {t.importers.stripeImporter.matching.assignDonor}
+                              {t.importers.stripeImporter.donorSelector.noMatchForEmail}
                             </p>
                           )}
                         </TableCell>

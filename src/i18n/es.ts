@@ -592,8 +592,9 @@ export const es = {
         searchPlaceholder: "Buscar donante...",
         selectDonor: "Selecciona un donante",
         emptyText: "No se han encontrado donantes",
-        createNew: "Crear nuevo donante...",
+        createNew: "➕ Crear nuevo donante con este correo",
         emailMatch: "Coincidencia por email",
+        noMatchForEmail: "Este correo no coincide con ningún donante existente.",
       },
 
       // Diálogo de creación rápida de donante
@@ -614,6 +615,7 @@ export const es = {
         warnings: {
           incompleteData: "Datos incompletos",
           incompleteDataDescription: "El NIF y el código postal son necesarios para el Modelo 182. Podrás completarlos después desde el gestor de donantes.",
+          incompleteFiscalData: "Faltan datos fiscales. Se podrá completar más adelante.",
         },
         actions: {
           cancel: "Cancelar",
@@ -621,7 +623,7 @@ export const es = {
           creating: "Creando...",
         },
         success: {
-          title: "Donante creado",
+          title: "Donante creado y asignado",
           description: (name: string) => `Se ha creado el donante "${name}" correctamente.`,
         },
       },

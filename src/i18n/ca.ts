@@ -593,8 +593,9 @@ export const ca = {
         searchPlaceholder: "Buscar donant...",
         selectDonor: "Selecciona un donant",
         emptyText: "No s'han trobat donants",
-        createNew: "Crear nou donant...",
+        createNew: "➕ Crear nou donant amb aquest correu",
         emailMatch: "Coincidència per email",
+        noMatchForEmail: "Aquest correu no coincideix amb cap donant existent.",
       },
 
       // Diàleg de creació ràpida de donant
@@ -615,6 +616,7 @@ export const ca = {
         warnings: {
           incompleteData: "Dades incompletes",
           incompleteDataDescription: "El NIF i el codi postal són necessaris pel Model 182. Podràs completar-los després des del gestor de donants.",
+          incompleteFiscalData: "Falten dades fiscals. Es podrà completar més endavant.",
         },
         actions: {
           cancel: "Cancel·lar",
@@ -622,7 +624,7 @@ export const ca = {
           creating: "Creant...",
         },
         success: {
-          title: "Donant creat",
+          title: "Donant creat i assignat",
           description: (name: string) => `S'ha creat el donant "${name}" correctament.`,
         },
       },

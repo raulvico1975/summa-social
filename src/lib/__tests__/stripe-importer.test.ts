@@ -274,3 +274,127 @@ describe('findAllMatchingPayoutGroups', () => {
     assert.strictEqual(matches[0].net, 96.50);
   });
 });
+
+// ═══════════════════════════════════════════════════════════════════
+// Auto-match by email - Logic tests
+// ═══════════════════════════════════════════════════════════════════
+
+describe('applyDonorMatchForEmail logic', () => {
+  it('should match all rows with same email', () => {
+    // Setup: 3 rows, 2 with same email
+    const rows: StripeRow[] = [
+      {
+        id: 'ch_1',
+        createdDate: '2024-01-15',
+        amount: 100,
+        fee: 3,
+        customerEmail: 'test@example.com',
+        status: 'succeeded',
+        transfer: 'po_abc',
+        description: null,
+      },
+      {
+        id: 'ch_2',
+        createdDate: '2024-01-15',
+        amount: 50,
+        fee: 2,
+        customerEmail: 'test@example.com', // Mateix email
+        status: 'succeeded',
+        transfer: 'po_abc',
+        description: null,
+      },
+      {
+        id: 'ch_3',
+        createdDate: '2024-01-16',
+        amount: 200,
+        fee: 5,
+        customerEmail: 'other@example.com', // Email diferent
+        status: 'succeeded',
+        transfer: 'po_abc',
+        description: null,
+      },
+    ];
+
+    // Simular la lògica d'applyDonorMatchForEmail
+    const donorMatches: Record<string, { contactId: string; contactName: string } | null> = {};
+    const rowId = 'ch_1';
+    const contactId = 'donor_123';
+    const contactName = 'Test Donor';
+    const email = 'test@example.com';
+
+    // Assignar la fila inicial
+    donorMatches[rowId] = { contactId, contactName };
+
+    // Auto-match altres files amb mateix email
+    const emailLower = email.toLowerCase().trim();
+    for (const row of rows) {
+      if (row.id === rowId) continue;
+      if (row.customerEmail?.toLowerCase().trim() === emailLower) {
+        donorMatches[row.id] = { contactId, contactName };
+      }
+    }
+
+    // Verificar que ch_1 i ch_2 tenen match, però ch_3 no
+    assert.strictEqual(donorMatches['ch_1']?.contactId, 'donor_123');
+    assert.strictEqual(donorMatches['ch_2']?.contactId, 'donor_123');
+    assert.strictEqual(donorMatches['ch_3'], undefined);
+  });
+
+  it('should not override existing manual match for different email', () => {
+    const rows: StripeRow[] = [
+      {
+        id: 'ch_1',
+        createdDate: '2024-01-15',
+        amount: 100,
+        fee: 3,
+        customerEmail: 'test@example.com',
+        status: 'succeeded',
+        transfer: 'po_abc',
+        description: null,
+      },
+      {
+        id: 'ch_2',
+        createdDate: '2024-01-15',
+        amount: 50,
+        fee: 2,
+        customerEmail: 'test@example.com',
+        status: 'succeeded',
+        transfer: 'po_abc',
+        description: null,
+      },
+    ];
+
+    // Estat inicial: ch_2 ja té un match manual amb un donant diferent
+    const donorMatches: Record<string, { contactId: string; contactName: string } | null> = {
+      'ch_2': { contactId: 'donor_999', contactName: 'Different Donor' },
+    };
+
+    const rowId = 'ch_1';
+    const contactId = 'donor_123';
+    const contactName = 'Test Donor';
+    const email = 'test@example.com';
+
+    // Assignar la fila inicial
+    donorMatches[rowId] = { contactId, contactName };
+
+    // Simular lògica: NO override si ja té match manual diferent
+    const emailLower = email.toLowerCase().trim();
+    for (const row of rows) {
+      if (row.id === rowId) continue;
+
+      // Skip si ja té un match manual diferent
+      if (donorMatches[row.id] && donorMatches[row.id]?.contactId !== contactId) {
+        continue;
+      }
+
+      if (row.customerEmail?.toLowerCase().trim() === emailLower) {
+        donorMatches[row.id] = { contactId, contactName };
+      }
+    }
+
+    // Verificar que ch_1 té el nou match, però ch_2 manté el seu match original
+    assert.strictEqual(donorMatches['ch_1']?.contactId, 'donor_123');
+    assert.strictEqual(donorMatches['ch_2']?.contactId, 'donor_999'); // NO override
+    assert.strictEqual(donorMatches['ch_2']?.contactName, 'Different Donor');
+  });
+});
