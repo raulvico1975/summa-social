@@ -612,7 +612,26 @@ export function StripeImporter({
     (rowId: string, contactId: string, contactName: string, email: string | null) => {
       if (!selectedGroup) return;
 
+      console.group('[DONOR MATCH] 📝 Applying donor match for email');
+      console.log('rowId:', rowId);
+      console.log('contactId:', contactId);
+      console.log('contactName:', contactName);
+      console.log('email:', email);
+
       setDonorMatches((prev) => {
+        console.log('[DONOR MATCH] BEFORE update - donorMatches:', { ...prev });
+
+        // Calculate counts BEFORE
+        const displayRows = selectedGroup.rows;
+        const matchedBefore = displayRows.filter(row => prev[row.id] !== null && prev[row.id] !== undefined).length;
+        const pendingBefore = displayRows.length - matchedBefore;
+
+        console.log('[DONOR MATCH] BEFORE counts:', {
+          totalRows: displayRows.length,
+          matchedCount: matchedBefore,
+          pendingCount: pendingBefore,
+        });
+
         const updated = { ...prev };
 
         // Sempre assigna la fila especificada
@@ -625,6 +644,7 @@ export function StripeImporter({
         // Si hi ha email, auto-matcheja totes les altres files amb el mateix email
         if (email) {
           const emailLower = email.toLowerCase().trim();
+          console.log('[DONOR MATCH] Auto-matching by email:', emailLower);
 
           for (const row of selectedGroup.rows) {
             // Skip la fila ja assignada
@@ -632,11 +652,13 @@ export function StripeImporter({
 
             // Skip files que ja tenen un match manual diferent (no override)
             if (prev[row.id] && prev[row.id]?.contactId !== contactId) {
+              console.log(`[DONOR MATCH] Skipping ${row.id} - already has different manual match`);
               continue;
             }
 
             // Auto-match si el email coincideix
             if (row.customerEmail?.toLowerCase().trim() === emailLower) {
+              console.log(`[DONOR MATCH] Auto-matched ${row.id} (email: ${row.customerEmail})`);
               updated[row.id] = {
                 contactId,
                 contactName,
@@ -645,6 +667,25 @@ export function StripeImporter({
             }
           }
         }
+
+        console.log('[DONOR MATCH] AFTER update - donorMatches:', { ...updated });
+
+        // Calculate counts AFTER
+        const matchedAfter = displayRows.filter(row => updated[row.id] !== null && updated[row.id] !== undefined).length;
+        const pendingAfter = displayRows.length - matchedAfter;
+
+        console.log('[DONOR MATCH] AFTER counts:', {
+          totalRows: displayRows.length,
+          matchedCount: matchedAfter,
+          pendingCount: pendingAfter,
+        });
+
+        console.log('[DONOR MATCH] DELTA:', {
+          matchedDelta: matchedAfter - matchedBefore,
+          pendingDelta: pendingAfter - pendingBefore,
+        });
+
+        console.groupEnd();
 
         return updated;
       });
@@ -769,6 +810,20 @@ export function StripeImporter({
 
   // Botó Continuar només s'habilita si quadra i totes les files tenen match
   const canContinue = amountMatches && allMatched && selectedGroup !== null;
+
+  // Log reactive state changes
+  React.useEffect(() => {
+    console.log('[REACTIVE STATE] 🔄 State recalculated:', {
+      displayRowsCount: displayRows.length,
+      matchedCount,
+      pendingCount,
+      allMatched,
+      isMatchingDonors,
+      amountMatches,
+      canContinue,
+      selectedGroup: selectedGroup ? selectedGroup.transferId : null,
+    });
+  }, [matchedCount, pendingCount, allMatched, canContinue, displayRows.length, isMatchingDonors, amountMatches, selectedGroup]);
 
   return (
     <>
