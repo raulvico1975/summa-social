@@ -1167,13 +1167,16 @@ export function StripeImporter({
           <AlertDialogCancel disabled={isSaving}>
             {t.importers.stripeImporter.confirmation.cancel}
           </AlertDialogCancel>
-          <AlertDialogAction
-            onClick={handleImport}
+          <Button
+            onClick={(e) => {
+              e.preventDefault();
+              handleImport();
+            }}
             disabled={isSaving}
           >
             {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
             {t.importers.stripeImporter.confirmation.confirm}
-          </AlertDialogAction>
+          </Button>
         </AlertDialogFooter>
       </AlertDialogContent>
     </AlertDialog>
