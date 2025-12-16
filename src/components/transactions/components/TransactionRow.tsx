@@ -189,8 +189,8 @@ export const TransactionRow = React.memo(function TransactionRow({
   const isReturn = tx.transactionType === 'return';
   const isReturnFee = tx.transactionType === 'return_fee';
   const isReturnedDonation = tx.donationStatus === 'returned';
-  // Detecta ingressos amb descripció que conté "STRIPE" (case-insensitive)
-  const isStripeIncome = tx.amount > 0 && tx.description?.toUpperCase().includes('STRIPE');
+  // Detecta transaccions via Stripe (donations, fees)
+  const isFromStripe = tx.source === 'stripe';
 
   // Stable callbacks using useCallback to prevent child re-renders
   const handleSelectContact = React.useCallback((contactId: string | null) => {
@@ -384,9 +384,16 @@ export const TransactionRow = React.memo(function TransactionRow({
               </Tooltip>
             )}
           </div>
-          <p className={`text-sm truncate max-w-[250px] ${isReturnedDonation ? 'text-gray-400' : ''}`} title={tx.description}>
-            {tx.description}
-          </p>
+          <div className="flex items-center gap-2">
+            <p className={`text-sm truncate max-w-[250px] ${isReturnedDonation ? 'text-gray-400' : ''}`} title={tx.description}>
+              {tx.description}
+            </p>
+            {isFromStripe && (
+              <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-4 bg-blue-50 text-blue-700 border-blue-200">
+                Stripe
+              </Badge>
+            )}
+          </div>
           <InlineNoteEditor
             note={tx.note}
             onSave={handleSetNote}
@@ -630,13 +637,13 @@ export const TransactionRow = React.memo(function TransactionRow({
                 {t.attachDocument}
               </DropdownMenuItem>
             )}
-            {isStripeIncome && !tx.isRemittance && onSplitStripeRemittance && (
+            {isFromStripe && !tx.isRemittance && onSplitStripeRemittance && (
               <DropdownMenuItem onClick={handleSplitStripeRemittance}>
                 <GitMerge className="mr-2 h-4 w-4 text-purple-600" />
                 {t.splitStripeRemittance}
               </DropdownMenuItem>
             )}
-            {tx.amount > 0 && !isReturn && !isReturnFee && !tx.isRemittance && !isStripeIncome && (
+            {tx.amount > 0 && !isReturn && !isReturnFee && !tx.isRemittance && !isFromStripe && (
               <DropdownMenuItem onClick={handleSplitRemittance}>
                 <GitMerge className="mr-2 h-4 w-4" />
                 {t.splitRemittance}

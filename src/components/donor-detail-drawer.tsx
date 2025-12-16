@@ -108,6 +108,12 @@ interface DonationSummary {
   currentYearGross: number;
   currentYearReturned: number;
   currentYearNet: number;
+  // Comparativa amb any anterior
+  previousYear: number;
+  previousYearCount: number;
+  previousYearGross: number;
+  previousYearReturned: number;
+  previousYearNet: number;
 }
 
 // ════════════════════════════════════════════════════════════════════════════
@@ -196,10 +202,16 @@ export function DonorDetailDrawer({ donor, open, onOpenChange, onEdit }: DonorDe
         currentYearGross: 0,
         currentYearReturned: 0,
         currentYearNet: 0,
+        previousYear: 0,
+        previousYearCount: 0,
+        previousYearGross: 0,
+        previousYearReturned: 0,
+        previousYearNet: 0,
       };
     }
 
     const currentYearStr = String(currentYear);
+    const previousYearStr = String(currentYear - 1);
     let totalHistoric = 0;
     let totalHistoricCount = 0;
     let currentYearTotal = 0;
@@ -214,6 +226,12 @@ export function DonorDetailDrawer({ donor, open, onOpenChange, onEdit }: DonorDe
     let currentYearGross = 0;
     let currentYearReturned = 0;
 
+    // Per a l'any anterior
+    let previousYearTotal = 0;
+    let previousYearCount = 0;
+    let previousYearGross = 0;
+    let previousYearReturned = 0;
+
     transactions.forEach(tx => {
       if (tx.amount > 0 && tx.donationStatus !== 'returned') {
         // Donació vàlida (per mostrar a la UI)
@@ -222,6 +240,10 @@ export function DonorDetailDrawer({ donor, open, onOpenChange, onEdit }: DonorDe
         if (tx.date.startsWith(currentYearStr)) {
           currentYearTotal += tx.amount;
           currentYearCount++;
+        }
+        if (tx.date.startsWith(previousYearStr)) {
+          previousYearTotal += tx.amount;
+          previousYearCount++;
         }
         if (!lastDonationDate || tx.date > lastDonationDate) {
           lastDonationDate = tx.date;
@@ -234,6 +256,14 @@ export function DonorDetailDrawer({ donor, open, onOpenChange, onEdit }: DonorDe
       }
       if (tx.amount < 0 && tx.transactionType === 'return' && tx.date.startsWith(currentYearStr)) {
         currentYearReturned += Math.abs(tx.amount);
+      }
+
+      // ANY ANTERIOR - Càlcul NET
+      if (tx.amount > 0 && tx.date.startsWith(previousYearStr)) {
+        previousYearGross += tx.amount;
+      }
+      if (tx.amount < 0 && tx.transactionType === 'return' && tx.date.startsWith(previousYearStr)) {
+        previousYearReturned += Math.abs(tx.amount);
       }
 
       if (tx.amount < 0 && tx.transactionType === 'return') {
@@ -265,6 +295,11 @@ export function DonorDetailDrawer({ donor, open, onOpenChange, onEdit }: DonorDe
       currentYearGross,
       currentYearReturned,
       currentYearNet: Math.max(0, currentYearGross - currentYearReturned),
+      previousYear: previousYearTotal,
+      previousYearCount,
+      previousYearGross,
+      previousYearReturned,
+      previousYearNet: Math.max(0, previousYearGross - previousYearReturned),
     };
   }, [transactions, currentYear]);
 
@@ -1413,6 +1448,9 @@ export function DonorDetailDrawer({ donor, open, onOpenChange, onEdit }: DonorDe
                 <p className="text-xs text-muted-foreground">
                   {summary.currentYearCount} {summary.currentYearCount === 1 ? t.donorDetail.donation : t.donorDetail.donations}
                 </p>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Any anterior ({currentYear - 1}): {formatCurrencyEU(summary.previousYear)}
+                </p>
               </CardContent>
             </Card>
 
@@ -1452,6 +1490,9 @@ export function DonorDetailDrawer({ donor, open, onOpenChange, onEdit }: DonorDe
                     {t.donorDetail.noReturns}
                   </p>
                 )}
+                <p className="text-xs text-muted-foreground mt-1">
+                  Any anterior ({currentYear - 1}): {formatCurrencyEU(summary.previousYearNet)}
+                </p>
               </CardContent>
             </Card>
 
