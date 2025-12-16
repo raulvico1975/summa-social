@@ -338,6 +338,10 @@ export function StripeImporter({
       // 3. Validar idempotència: comprovar si ja existeixen transaccions amb aquests stripePaymentId
       const transactionsRef = collection(firestore, 'organizations', organizationId, 'transactions');
 
+      console.log('🔍 [CRITICAL] transactionsRef.path:', transactionsRef.path);
+      console.log('🔍 [CRITICAL] organizationId:', organizationId);
+      console.log('🔍 [CRITICAL] Expected path: organizations/' + organizationId + '/transactions');
+
       // Firestore 'in' té límit de 30, fer en batches si cal
       const existingIds: string[] = [];
       const batchSize = 30;
@@ -368,6 +372,13 @@ export function StripeImporter({
       console.log('[STRIPE IMPORT] transactionsRef path:', transactionsRef.path);
       console.log('[STRIPE IMPORT] selectedGroup.rows.length:', selectedGroup.rows.length);
       console.log('[STRIPE IMPORT] donorMatches keys:', Object.keys(donorMatches));
+
+      // Verificar estabilitat row.id vs donorMatches keys
+      console.log('🔍 [CRITICAL] Row IDs stability check:');
+      console.log('  selectedGroup.rows IDs:', selectedGroup.rows.map(r => r.id));
+      console.log('  donorMatches keys:', Object.keys(donorMatches));
+      console.log('  Matched rows:', selectedGroup.rows.filter(r => donorMatches[r.id]).length);
+      console.log('  Unmatched rows:', selectedGroup.rows.filter(r => !donorMatches[r.id]).length);
 
       // 3a. Crear N transaccions d'ingrés (donacions)
       for (const row of selectedGroup.rows) {
@@ -453,10 +464,28 @@ export function StripeImporter({
       batch.delete(originalTxRef);
 
       console.log('[STRIPE IMPORT] 💾 Total operations in batch:', docsCreated + 1, `(${docsCreated} creates + 1 delete)`);
+
+      // 🔥 CRITICAL PRE-COMMIT SUMMARY
+      console.group('🔥 [CRITICAL] PRE-COMMIT SUMMARY');
+      console.log('transactionsRef.path:', transactionsRef.path);
+      console.log('organizationId:', organizationId);
+      console.log('bankTransaction.id:', bankTransaction.id);
+      console.log('Donations to create:', docsCreated - (selectedGroup.fees > 0 ? 1 : 0));
+      console.log('Fee transaction:', selectedGroup.fees > 0 ? 'YES' : 'NO');
+      console.log('Original transaction to delete:', bankTransaction.id);
+      console.log('Total batch operations:', docsCreated + 1);
+      console.groupEnd();
+
       console.log('[STRIPE IMPORT] 🔄 Committing batch...');
 
       // 4. Commit atòmic
-      await batch.commit();
+      try {
+        await batch.commit();
+        console.log('[STRIPE IMPORT] ✅ Batch commit() returned successfully');
+      } catch (commitErr) {
+        console.error('[STRIPE IMPORT] ❌ Batch commit() FAILED:', commitErr);
+        throw commitErr;
+      }
 
       console.log('[STRIPE IMPORT] ✅ Batch committed successfully!');
 

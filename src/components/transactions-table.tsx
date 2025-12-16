@@ -143,7 +143,13 @@ export function TransactionsTable() {
 
   // Col·leccions
   const transactionsCollection = useMemoFirebase(
-    () => organizationId ? collection(firestore, 'organizations', organizationId, 'transactions') : null,
+    () => {
+      if (!organizationId) return null;
+      const col = collection(firestore, 'organizations', organizationId, 'transactions');
+      console.log('🔍 [TransactionsTable] transactionsCollection.path:', col.path);
+      console.log('🔍 [TransactionsTable] organizationId:', organizationId);
+      return col;
+    },
     [firestore, organizationId]
   );
   const categoriesCollection = useMemoFirebase(
