@@ -1,6 +1,6 @@
 # ═══════════════════════════════════════════════════════════════════════════════
 # SUMMA SOCIAL - REFERÈNCIA COMPLETA DEL PROJECTE
-# Versió 1.8.1 - Desembre 2025
+# Versió 1.8.2 - Desembre 2025
 # ═══════════════════════════════════════════════════════════════════════════════
 
 
@@ -70,6 +70,7 @@ Eina centralitzada amb:
 - Dashboard amb mètriques en temps real
 - Multi-organització amb sistema de rols
 - Divisor de remeses amb matching intel·ligent
+- **Divisor de remeses Stripe amb assignació de donants (NOU v1.8.2)**
 - **Importador de devolucions del banc (NOU v1.8)**
 - **Enviament de certificats per email via Resend (NOU v1.8)**
 - **Compliment RGPD: política de privacitat i clàusula al registre (NOU v1.8)**
@@ -611,6 +612,191 @@ parentTransactionId: '{id_remesa}'
 
 ### 3.3.6 Guardar Configuració
 Es pot guardar el mapejat per banc (Triodos, La Caixa, Santander, etc.)
+
+### 3.3.7 Gestió de donacions via Stripe (Divisió de remeses)
+
+#### Visió general
+
+Quan una organització rep donacions via Stripe, els diners arriben al compte bancari com una **remesa (payout)** que agrupa múltiples donacions individuals. Aquest moviment bancari:
+- És un ingrés positiu
+- Representa el **net** (brut - comissions)
+- NO és encara una donació individual assignable
+
+El sistema permet **dividir aquesta remesa** per crear:
+- Donacions individuals assignades a donants
+- Registre separat de comissions Stripe
+- Traçabilitat completa
+
+#### 3.3.7.1 Detecció del moviment Stripe al banc
+
+El moviment apareix al llistat de Moviments com un ingrés amb descripció tipus:
+- "Transferencia de Stripe..."
+- O altres variants similars
+
+Per localitzar-lo ràpidament:
+- Escriure "Stripe" al cercador de moviments
+- Filtra automàticament tots els moviments relacionats amb Stripe
+
+**Important:**
+- Aquest moviment NO és encara una donació
+- Representa una remesa (payout) de Stripe que cal dividir
+
+#### 3.3.7.2 Opció "Dividir remesa Stripe"
+
+Al menú d'accions del moviment (⋮) apareix l'opció **"Dividir remesa Stripe"** quan:
+- És un ingrés (import positiu)
+- No està ja dividit
+- Correspon a Stripe (dades noves o antigues)
+
+Aquesta opció **no implica cap canvi comptable** fins que es confirmi la importació. Només obre l'assistent de divisió.
+
+#### 3.3.7.3 Exportació del CSV des de Stripe
+
+Per obtenir el fitxer de detall:
+
+1. Accedir a Stripe → **Pagos** → **Exportar**
+2. Seleccionar format: **Columnes predeterminades (CSV)**
+3. El CSV conté els pagaments individuals del payout
+
+El sistema llegeix automàticament les columnes estàndard de Stripe.
+
+#### 3.3.7.4 Càrrega del CSV i selecció del payout
+
+Quan es carrega el CSV:
+
+1. El sistema **llegeix el fitxer** i agrupa pagaments per payout
+2. Per cada payout, calcula:
+   - **Brut**: Suma de tots els imports
+   - **Comissions**: Suma de totes les fees
+   - **Net**: Brut - Comissions
+3. **Compara el net** amb l'import del moviment bancari
+
+**Si hi ha múltiples payouts compatibles:**
+- El sistema mostra tots els que coincideixen (±2¢ tolerància)
+- L'usuari ha de seleccionar manualment el correcte
+- Es mostra: nombre de donacions, brut i payout ID
+
+**Si el net no quadra:**
+- El botó d'importar queda deshabilitat
+- Es mostra avís clar: "L'import no quadra amb el banc"
+
+#### 3.3.7.5 Assignació de donants
+
+Per cada donació del payout:
+
+**Matching automàtic per email:**
+- El sistema busca donants amb el mateix email que el pagament de Stripe
+- Si troba coincidència exacta → assignació automàtica
+- Indicador visual: ✓ Match
+
+**Assignació manual:**
+- Si no hi ha match automàtic → selector de donant
+- Opcions:
+  - Seleccionar donant existent
+  - Crear donant nou
+- Help text: "Assigna el donant per continuar"
+
+**Auto-match múltiple:**
+- Si s'assigna manualment un donant a una donació
+- El sistema assigna automàticament el mateix donant a altres donacions amb el mateix email
+- Només si no tenen ja un match manual diferent
+
+**Bloqueig d'importació:**
+- No es pot importar mentre hi hagi donacions sense donant assignat
+- Indicador: "Pendents: X"
+- Botó deshabilitat amb tooltip explicatiu
+
+#### 3.3.7.6 Importació i efectes comptables
+
+Quan es confirma la importació:
+
+**Es creen:**
+1. **N moviments de donació** (ingressos):
+   - Un per cada pagament del payout
+   - Assignats al donant corresponent
+   - Import: import brut de cada donació
+   - Categoria: categoria per defecte del donant (o "donations")
+
+2. **1 moviment de comissions Stripe** (despesa):
+   - Import: total de comissions del payout (negatiu)
+   - Descripció: "Comissions Stripe - X donacions"
+   - Categoria: despeses bancàries
+   - Data: mateixa que el moviment bancari
+
+**El moviment bancari original:**
+- Queda marcat com a remesa dividida
+- No es torna a mostrar com pendent de dividir
+- Registre de traçabilitat complet
+
+#### 3.3.7.7 Descripció i traçabilitat
+
+Totes les donacions creades inclouen a la descripció:
+- Descripció original de Stripe (si n'hi ha)
+- **Suffix automàtic: "(via Stripe)"** si la descripció no conté ja "STRIPE"
+
+**Exemples:**
+- "Dona ahora - user@example.com" → "Dona ahora - user@example.com (via Stripe)"
+- "Stripe payment ch_123" → "Stripe payment ch_123" (ja conté STRIPE)
+
+**Beneficis:**
+- Cercar "Stripe" al llistat mostra totes les donacions + comissions Stripe
+- Auditoria fàcil
+- Traçabilitat visual immediata
+
+**Badge visual:**
+- Les donacions amb `source: 'stripe'` (noves) mostren badge blau "Stripe"
+- Donacions antigues (legacy) NO mostren badge, però són cercables per descripció
+
+#### 3.3.7.8 Verificació posterior
+
+Després d'importar, l'usuari pot:
+
+**Al llistat de Moviments:**
+- Cercar "Stripe" → veu totes les donacions i comissions
+- Filtrar per data, import, donant
+
+**A la fitxa del donant:**
+- Veure la donació registrada
+- Import anual correcte (incloent donacions Stripe)
+- Data correcta
+- Descripció completa
+
+**Per a informes i certificats:**
+- Les donacions Stripe compten per al Model 182
+- Es poden incloure en certificats de donació
+- Traçabilitat completa amb payout ID
+
+#### 3.3.7.9 Criteris i garanties del sistema
+
+**Garanties d'integritat:**
+- ✅ Una remesa només es pot dividir **una vegada**
+- ✅ No es poden crear donacions **duplicades** (control per stripePaymentId)
+- ✅ Les comissions queden **separades i categoritzades**
+- ✅ Les donacions Stripe són:
+  - **Cercables** (via descripció amb "Stripe")
+  - **Traçables** (stripePaymentId + stripeTransferId)
+  - **Certificables** (compten per Model 182 i certificats)
+
+**Límits tècnics:**
+- Màxim 449 donacions per payout (límit tècnic de Firestore batch)
+- Tolerància de ±2¢ en matching net vs import bancari
+- Idempotència: reimportar el mateix payout no crea duplicats
+
+**Model de dades:**
+```
+Donació Stripe:
+  source: 'stripe'
+  transactionType: 'donation'
+  parentTransactionId: {id_moviment_bancari}
+  stripePaymentId: 'ch_xxx'
+  stripeTransferId: 'po_xxx' | 'tr_xxx'
+
+Comissió Stripe:
+  source: 'stripe'
+  transactionType: 'fee'
+  parentTransactionId: {id_moviment_bancari}
+  stripeTransferId: 'po_xxx' | 'tr_xxx'
+```
 
 
 ## 3.4 GESTIÓ DE DEVOLUCIONS (NOU v1.8)
