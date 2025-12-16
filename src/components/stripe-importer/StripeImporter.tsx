@@ -1134,7 +1134,7 @@ export function StripeImporter({
             {t.importers.stripeImporter.confirmation.title}
           </AlertDialogTitle>
           <AlertDialogDescription>
-            {t.importers.stripeImporter.confirmation.description(selectedGroup?.rows.length || 0)}
+            {t.importers.stripeImporter.confirmation.description(displayRows.length)}
           </AlertDialogDescription>
         </AlertDialogHeader>
 
@@ -1145,11 +1145,11 @@ export function StripeImporter({
             <div className="space-y-1">
               <div className="flex justify-between">
                 <span>{t.importers.stripeImporter.summary.donations}</span>
-                <span className="font-mono">{selectedGroup.rows.length}</span>
+                <span className="font-mono">{displayRows.length}</span>
               </div>
               <div className="flex justify-between text-muted-foreground">
                 <span>{t.importers.stripeImporter.confirmation.netAmount('')}</span>
-                <span className="font-mono">{formatCurrencyEU(selectedGroup.net)}</span>
+                <span className="font-mono">{formatCurrencyEU(totalNet)}</span>
               </div>
               <div className="flex justify-between text-muted-foreground">
                 <span>{t.importers.stripeImporter.confirmation.feesAmount('')}</span>
