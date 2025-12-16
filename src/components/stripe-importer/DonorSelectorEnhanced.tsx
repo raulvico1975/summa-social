@@ -52,6 +52,19 @@ export const DonorSelectorEnhanced = React.memo(function DonorSelectorEnhanced({
   const [open, setOpen] = React.useState(false);
   const [search, setSearch] = React.useState('');
 
+  // Auto-focus input when popover opens
+  React.useEffect(() => {
+    if (open) {
+      // Small delay to ensure DOM is ready
+      setTimeout(() => {
+        const input = document.querySelector('[cmdk-input]') as HTMLInputElement;
+        if (input) {
+          input.focus();
+        }
+      }, 0);
+    }
+  }, [open]);
+
   const selectedDonor = donors.find((donor) => donor.id === value);
 
   // Filter and sort donors
@@ -114,7 +127,7 @@ export const DonorSelectorEnhanced = React.memo(function DonorSelectorEnhanced({
     : false;
 
   return (
-    <Popover open={open} onOpenChange={setOpen}>
+    <Popover open={open} onOpenChange={setOpen} modal={false}>
       <PopoverTrigger asChild>
         {selectedDonor ? (
           <Button
