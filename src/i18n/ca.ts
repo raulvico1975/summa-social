@@ -587,6 +587,45 @@ export const ca = {
           `S'han importat ${donations} donacions i ${fees} transacció de comissions.`,
         reviewHint: "Pots revisar-les a la pàgina de Moviments.",
       },
+
+      // Selector de donants millorat
+      donorSelector: {
+        searchPlaceholder: "Buscar donant...",
+        selectDonor: "Selecciona un donant",
+        emptyText: "No s'han trobat donants",
+        createNew: "Crear nou donant...",
+        emailMatch: "Coincidència per email",
+      },
+
+      // Diàleg de creació ràpida de donant
+      createQuickDonor: {
+        title: "Crear nou donant",
+        description: "Crea un donant ràpid amb les dades disponibles. Podràs completar la informació després.",
+        fields: {
+          name: "Nom del donant",
+          namePlaceholder: "Introdueix el nom",
+          nameRequired: "El nom és obligatori",
+          email: "Email",
+          emailFromCsv: "Email del CSV",
+          taxId: "NIF/CIF",
+          taxIdPlaceholder: "12345678A",
+          zipCode: "Codi postal",
+          zipCodePlaceholder: "08001",
+        },
+        warnings: {
+          incompleteData: "Dades incompletes",
+          incompleteDataDescription: "El NIF i el codi postal són necessaris pel Model 182. Podràs completar-los després des del gestor de donants.",
+        },
+        actions: {
+          cancel: "Cancel·lar",
+          create: "Crear donant",
+          creating: "Creant...",
+        },
+        success: {
+          title: "Donant creat",
+          description: (name: string) => `S'ha creat el donant "${name}" correctament.`,
+        },
+      },
     },
   },
   projects: {

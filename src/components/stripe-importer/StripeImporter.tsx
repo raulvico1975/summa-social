@@ -37,8 +37,11 @@ import {
 } from '@/components/ui/table';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Upload, AlertTriangle, FileText, Loader2, CheckCircle2 } from 'lucide-react';
-import { DonorSelector, type Contact } from '@/components/contact-combobox';
+import { type Contact } from '@/components/contact-combobox';
+import { DonorSelectorEnhanced } from './DonorSelectorEnhanced';
+import { CreateQuickDonorDialog, type QuickDonorFormData } from './CreateQuickDonorDialog';
 import { useTranslations } from '@/i18n';
+import { addDocumentNonBlocking } from '@/firebase';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -134,6 +137,13 @@ export function StripeImporter({
   // Estat per modal de confirmació
   const [showConfirmation, setShowConfirmation] = React.useState(false);
 
+  // Estat per diàleg de creació de donant
+  const [isCreateDonorOpen, setIsCreateDonorOpen] = React.useState(false);
+  const [createDonorInitialData, setCreateDonorInitialData] = React.useState<{
+    email?: string;
+    rowId?: string;
+  } | null>(null);
+
   // Reset quan es tanca el modal
   React.useEffect(() => {
     if (!open) {
@@ -146,6 +156,8 @@ export function StripeImporter({
       setIsMatchingDonors(false);
       setIsSaving(false);
       setShowConfirmation(false);
+      setIsCreateDonorOpen(false);
+      setCreateDonorInitialData(null);
     }
   }, [open]);
 
@@ -423,6 +435,83 @@ export function StripeImporter({
     }));
   };
 
+  // Handler per obrir el diàleg de creació de donant
+  const handleOpenCreateDonor = (rowId: string, email?: string) => {
+    setCreateDonorInitialData({ rowId, email });
+    setIsCreateDonorOpen(true);
+  };
+
+  // Handler per crear un nou donant ràpid
+  const handleCreateQuickDonor = React.useCallback(
+    async (formData: QuickDonorFormData): Promise<string | null> => {
+      if (!organizationId || !firestore) return null;
+
+      const contactsCollection = collection(firestore, 'organizations', organizationId, 'contacts');
+
+      const now = new Date().toISOString();
+      const newDonorData = {
+        type: 'donor',
+        name: formData.name.trim(),
+        taxId: formData.taxId.trim() || null,
+        zipCode: formData.zipCode.trim() || null,
+        email: formData.email.trim() || null,
+        donorType: 'individual',
+        membershipType: 'one-time',
+        createdAt: now,
+      };
+
+      try {
+        const docRef = await addDocumentNonBlocking(contactsCollection, newDonorData);
+
+        if (docRef && createDonorInitialData?.rowId) {
+          // Auto-assign the newly created donor to the row
+          setDonorMatches((prev) => ({
+            ...prev,
+            [createDonorInitialData.rowId]: {
+              contactId: docRef.id,
+              contactName: formData.name.trim(),
+              defaultCategoryId: null,
+            },
+          }));
+
+          // Show success toast
+          toast({
+            title: t.importers.stripeImporter.createQuickDonor.success.title,
+            description: t.importers.stripeImporter.createQuickDonor.success.description(
+              formData.name.trim()
+            ),
+          });
+
+          // Show warning if taxId or zipCode is missing
+          if (!formData.taxId.trim() || !formData.zipCode.trim()) {
+            setTimeout(() => {
+              toast({
+                title: t.importers.stripeImporter.createQuickDonor.warnings.incompleteData,
+                description:
+                  t.importers.stripeImporter.createQuickDonor.warnings.incompleteDataDescription,
+                duration: 5000,
+              });
+            }, 500);
+          }
+
+          return docRef.id;
+        }
+
+        return null;
+      } catch (err) {
+        console.error('Error creating donor:', err);
+        const message = err instanceof Error ? err.message : 'Error desconegut';
+        toast({
+          variant: 'destructive',
+          title: t.common.error,
+          description: message,
+        });
+        return null;
+      }
+    },
+    [organizationId, firestore, createDonorInitialData, toast, t]
+  );
+
   // Trobar warning de refunded
   const refundedWarning = warnings.find(w => w.code === 'WARN_REFUNDED');
 
@@ -641,11 +730,12 @@ export function StripeImporter({
                           {row.customerEmail || '-'}
                         </TableCell>
                         <TableCell>
-                          <DonorSelector
+                          <DonorSelectorEnhanced
                             donors={donors}
                             value={hasMatch ? match.contactId : null}
                             onSelect={(contactId) => handleManualAssign(row.id, contactId)}
-                            placeholder={t.importers.stripeImporter.table.donor}
+                            onCreateNew={() => handleOpenCreateDonor(row.id, row.customerEmail)}
+                            emailToMatch={row.customerEmail}
                           />
                           {!hasMatch && !isMatchingDonors && (
                             <p className="text-xs text-muted-foreground mt-1">
@@ -773,6 +863,16 @@ export function StripeImporter({
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Create Quick Donor Dialog */}
+      <CreateQuickDonorDialog
+        open={isCreateDonorOpen}
+        onOpenChange={setIsCreateDonorOpen}
+        onSave={handleCreateQuickDonor}
+        initialData={{
+          email: createDonorInitialData?.email,
+        }}
+      />
     </Dialog>
   );
 }

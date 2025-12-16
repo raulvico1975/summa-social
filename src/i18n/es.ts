@@ -586,6 +586,45 @@ export const es = {
           `Se han importado ${donations} donaciones y ${fees} transacción de comisiones.`,
         reviewHint: "Puedes revisarlas en la página de Movimientos.",
       },
+
+      // Selector de donantes mejorado
+      donorSelector: {
+        searchPlaceholder: "Buscar donante...",
+        selectDonor: "Selecciona un donante",
+        emptyText: "No se han encontrado donantes",
+        createNew: "Crear nuevo donante...",
+        emailMatch: "Coincidencia por email",
+      },
+
+      // Diálogo de creación rápida de donante
+      createQuickDonor: {
+        title: "Crear nuevo donante",
+        description: "Crea un donante rápido con los datos disponibles. Podrás completar la información después.",
+        fields: {
+          name: "Nombre del donante",
+          namePlaceholder: "Introduce el nombre",
+          nameRequired: "El nombre es obligatorio",
+          email: "Email",
+          emailFromCsv: "Email del CSV",
+          taxId: "NIF/CIF",
+          taxIdPlaceholder: "12345678A",
+          zipCode: "Código postal",
+          zipCodePlaceholder: "08001",
+        },
+        warnings: {
+          incompleteData: "Datos incompletos",
+          incompleteDataDescription: "El NIF y el código postal son necesarios para el Modelo 182. Podrás completarlos después desde el gestor de donantes.",
+        },
+        actions: {
+          cancel: "Cancelar",
+          create: "Crear donante",
+          creating: "Creando...",
+        },
+        success: {
+          title: "Donante creado",
+          description: (name: string) => `Se ha creado el donante "${name}" correctamente.`,
+        },
+      },
     },
   },
   projects: {
