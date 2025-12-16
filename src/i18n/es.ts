@@ -488,6 +488,105 @@ export const es = {
       duplicatesOmitted: (count: number) => `Se encontraron y omitieron ${count} transacciones duplicadas.`,
       noValidTransactions: "No se encontraron transacciones válidas para importar.",
     },
+
+    // Importador de Stripe
+    stripeImporter: {
+      title: "Dividir remesa Stripe",
+
+      bankInfo: {
+        amount: "Importe en el banco:",
+        date: "Fecha:",
+        description: "Descripción:",
+      },
+
+      csvUpload: {
+        label: "Archivo CSV de Stripe",
+        helpText: "Exporta desde Stripe: Pagos → Exportar → Columnas predeterminadas (CSV)",
+      },
+
+      errors: {
+        processingFile: "Error al procesar el archivo",
+        noValidRows: "El CSV no contiene donaciones válidas (succeeded y no reembolsadas).",
+        noMatch: (amount: string) => `No se ha encontrado ningún payout que coincida con el importe ${amount}`,
+        noBankFeesCategory: "No se ha encontrado la categoría de gastos bancarios en esta organización.",
+        tooManyRows: (count: number) => `El payout tiene ${count} donaciones. Máximo permitido: 449.`,
+        alreadyImported: (count: number, ids: string) =>
+          `Ya se han importado ${count} de estas donaciones (IDs: ${ids}).`,
+      },
+
+      multiplePayouts: {
+        title: "Múltiples payouts coinciden",
+        description: (count: number) =>
+          `Se han encontrado ${count} payouts que coinciden con el importe del banco. Selecciona el correcto:`,
+        donationsLabel: "donaciones",
+        grossLabel: "Bruto:",
+      },
+
+      summary: {
+        donations: "Donaciones:",
+        payout: "Payout:",
+        grossTotal: "Bruto total:",
+        fees: "Comisiones:",
+        net: "Neto:",
+        matches: "cuadra",
+        doesNotMatch: "no cuadra",
+      },
+
+      warnings: {
+        refundedExcluded: "Donaciones reembolsadas excluidas",
+        refundedDescription: (count: number, amount: string) =>
+          `Se han excluido ${count} donaciones reembolsadas. Importe excluido: ${amount}`,
+      },
+
+      matching: {
+        searching: "Buscando donantes...",
+        matched: (current: number, total: number) => `Matched: ${current} / ${total}`,
+        pending: (count: number) => `Pendientes: ${count}`,
+        allReady: "Todo listo para importar",
+        assignDonor: "Asigna el donante para continuar",
+      },
+
+      table: {
+        email: "Email",
+        donor: "Donante",
+        status: "Estado",
+        gross: "Bruto",
+        date: "Fecha",
+        matchStatus: "Match",
+        pendingStatus: "Pendiente",
+      },
+
+      emptyState: "Selecciona un archivo CSV exportado de Stripe para ver las donaciones",
+
+      confirmation: {
+        title: "Confirmar importación",
+        description: (count: number) =>
+          `Estás a punto de importar ${count} donaciones y crear los movimientos asociados.`,
+        summaryLabel: "Resumen:",
+        netAmount: (amount: string) => `Importe neto: ${amount}`,
+        feesAmount: (amount: string) => `Comisiones: ${amount}`,
+        payoutId: (id: string) => `Payout: ${id}`,
+        cancel: "Cancelar",
+        confirm: "Confirmar importación",
+      },
+
+      actions: {
+        close: "Cerrar",
+        importing: "Importando...",
+        import: "Importar donaciones",
+        selectPayout: "Es necesario seleccionar un payout",
+        amountMismatch: "El importe no cuadra con el banco",
+        pendingAssignments: (count: number) =>
+          `Aún hay ${count} donaciones pendientes de asignar`,
+      },
+
+      success: {
+        title: "Importación completada",
+        description: (donations: number, fees: number) =>
+          `Se han importado ${donations} donaciones y ${fees} transacción de comisiones.`,
+        reviewHint: "Puedes revisarlas en la página de Movimientos.",
+      },
+    },
   },
   projects: {
     title: "Ejes de actuación",
@@ -1518,104 +1617,5 @@ export const es = {
   // Filtro donantes con devoluciones
   donorsFilter: {
     withReturns: "Con devoluciones",
-  },
-  // Importador de Stripe
-  stripeImporter: {
-    title: "Dividir remesa Stripe",
-
-    // Secciones del modal
-    bankInfo: {
-      amount: "Importe en el banco:",
-      date: "Fecha:",
-      description: "Descripción:",
-    },
-
-    csvUpload: {
-      label: "Archivo CSV de Stripe",
-      helpText: "Exporta desde Stripe: Pagos → Exportar → Columnas predeterminadas (CSV)",
-    },
-
-    errors: {
-      processingFile: "Error al procesar el archivo",
-      noValidRows: "El CSV no contiene donaciones válidas (succeeded y no reembolsadas).",
-      noMatch: (amount: string) => `No se ha encontrado ningún payout que coincida con el importe ${amount}`,
-      noBankFeesCategory: "No se ha encontrado la categoría de gastos bancarios en esta organización.",
-      tooManyRows: (count: number) => `El payout tiene ${count} donaciones. Máximo permitido: 449.`,
-      alreadyImported: (count: number, ids: string) =>
-        `Ya se han importado ${count} de estas donaciones (IDs: ${ids}).`,
-    },
-
-    multiplePayouts: {
-      title: "Múltiples payouts coinciden",
-      description: (count: number) =>
-        `Se han encontrado ${count} payouts que coinciden con el importe del banco. Selecciona el correcto:`,
-      donationsLabel: "donaciones",
-      grossLabel: "Bruto:",
-    },
-
-    summary: {
-      donations: "Donaciones:",
-      payout: "Payout:",
-      grossTotal: "Bruto total:",
-      fees: "Comisiones:",
-      net: "Neto:",
-      matches: "cuadra",
-      doesNotMatch: "no cuadra",
-    },
-
-    warnings: {
-      refundedExcluded: "Donaciones reembolsadas excluidas",
-      refundedDescription: (count: number, amount: string) =>
-        `Se han excluido ${count} donaciones reembolsadas. Importe excluido: ${amount}`,
-    },
-
-    matching: {
-      searching: "Buscando donantes...",
-      matched: (current: number, total: number) => `Matched: ${current} / ${total}`,
-      pending: (count: number) => `Pendientes: ${count}`,
-      allReady: "Todo listo para importar",
-      assignDonor: "Asigna el donante para continuar",
-    },
-
-    table: {
-      email: "Email",
-      donor: "Donante",
-      status: "Estado",
-      gross: "Bruto",
-      date: "Fecha",
-      matchStatus: "Match",
-      pendingStatus: "Pendiente",
-    },
-
-    emptyState: "Selecciona un archivo CSV exportado de Stripe para ver las donaciones",
-
-    confirmation: {
-      title: "Confirmar importación",
-      description: (count: number) =>
-        `Estás a punto de importar ${count} donaciones y crear los movimientos asociados.`,
-      summaryLabel: "Resumen:",
-      netAmount: (amount: string) => `Importe neto: ${amount}`,
-      feesAmount: (amount: string) => `Comisiones: ${amount}`,
-      payoutId: (id: string) => `Payout: ${id}`,
-      cancel: "Cancelar",
-      confirm: "Confirmar importación",
-    },
-
-    actions: {
-      close: "Cerrar",
-      importing: "Importando...",
-      import: "Importar donaciones",
-      selectPayout: "Es necesario seleccionar un payout",
-      amountMismatch: "El importe no cuadra con el banco",
-      pendingAssignments: (count: number) =>
-        `Aún hay ${count} donaciones pendientes de asignar`,
-    },
-
-    success: {
-      title: "Importación completada",
-      description: (donations: number, fees: number) =>
-        `Se han importado ${donations} donaciones y ${fees} transacción de comisiones.`,
-      reviewHint: "Puedes revisarlas en la página de Movimientos.",
-    },
   },
 };

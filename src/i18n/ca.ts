@@ -488,6 +488,106 @@ export const ca = {
       duplicatesOmitted: (count: number) => `S'han trobat i omès ${count} transaccions duplicades.`,
       noValidTransactions: "No s'han trobat transaccions vàlides per importar.",
     },
+
+    // Importador de Stripe
+    stripeImporter: {
+      title: "Dividir remesa Stripe",
+
+      // Seccions del modal
+      bankInfo: {
+        amount: "Import al banc:",
+        date: "Data:",
+        description: "Descripció:",
+      },
+
+      csvUpload: {
+        label: "Fitxer CSV de Stripe",
+        helpText: "Exporta des de Stripe: Pagos → Exportar → Columnes predeterminades (CSV)",
+      },
+
+      errors: {
+        processingFile: "Error al processar el fitxer",
+        noValidRows: "El CSV no conté donacions vàlides (succeeded i no reemborsades).",
+        noMatch: (amount: string) => `No s'ha trobat cap payout que coincideixi amb l'import ${amount}`,
+        noBankFeesCategory: "No s'ha trobat la categoria de despeses bancàries a aquesta organització.",
+        tooManyRows: (count: number) => `El payout té ${count} donacions. Màxim permès: 449.`,
+        alreadyImported: (count: number, ids: string) =>
+          `Ja s'han importat ${count} d'aquestes donacions (IDs: ${ids}).`,
+      },
+
+      multiplePayouts: {
+        title: "Múltiples payouts coincideixen",
+        description: (count: number) =>
+          `S'han trobat ${count} payouts que coincideixen amb l'import del banc. Selecciona el correcte:`,
+        donationsLabel: "donacions",
+        grossLabel: "Brut:",
+      },
+
+      summary: {
+        donations: "Donacions:",
+        payout: "Payout:",
+        grossTotal: "Brut total:",
+        fees: "Comissions:",
+        net: "Net:",
+        matches: "quadra",
+        doesNotMatch: "no quadra",
+      },
+
+      warnings: {
+        refundedExcluded: "Donacions reemborsades excloses",
+        refundedDescription: (count: number, amount: string) =>
+          `S'han exclòs ${count} donacions reemborsades. Import exclòs: ${amount}`,
+      },
+
+      matching: {
+        searching: "Cercant donants...",
+        matched: (current: number, total: number) => `Matched: ${current} / ${total}`,
+        pending: (count: number) => `Pendents: ${count}`,
+        allReady: "Tot llest per importar",
+        assignDonor: "Assigna el donant per continuar",
+      },
+
+      table: {
+        email: "Email",
+        donor: "Donant",
+        status: "Estat",
+        gross: "Brut",
+        date: "Data",
+        matchStatus: "Match",
+        pendingStatus: "Pendent",
+      },
+
+      emptyState: "Selecciona un fitxer CSV exportat de Stripe per veure les donacions",
+
+      confirmation: {
+        title: "Confirmar importació",
+        description: (count: number) =>
+          `Estàs a punt d'importar ${count} donacions i crear els moviments associats.`,
+        summaryLabel: "Resum:",
+        netAmount: (amount: string) => `Import net: ${amount}`,
+        feesAmount: (amount: string) => `Comissions: ${amount}`,
+        payoutId: (id: string) => `Payout: ${id}`,
+        cancel: "Cancel·lar",
+        confirm: "Confirmar importació",
+      },
+
+      actions: {
+        close: "Tancar",
+        importing: "Important...",
+        import: "Importar donacions",
+        selectPayout: "Cal seleccionar un payout",
+        amountMismatch: "L'import no quadra amb el banc",
+        pendingAssignments: (count: number) =>
+          `Encara hi ha ${count} donacions pendents d'assignar`,
+      },
+
+      success: {
+        title: "Import completat",
+        description: (donations: number, fees: number) =>
+          `S'han importat ${donations} donacions i ${fees} transacció de comissions.`,
+        reviewHint: "Pots revisar-les a la pàgina de Moviments.",
+      },
+    },
   },
   projects: {
     title: "Eixos d'actuació",
@@ -1524,104 +1624,5 @@ export const ca = {
   // Filtre donants amb devolucions
   donorsFilter: {
     withReturns: "Amb devolucions",
-  },
-  // Importador de Stripe
-  stripeImporter: {
-    title: "Dividir remesa Stripe",
-
-    // Seccions del modal
-    bankInfo: {
-      amount: "Import al banc:",
-      date: "Data:",
-      description: "Descripció:",
-    },
-
-    csvUpload: {
-      label: "Fitxer CSV de Stripe",
-      helpText: "Exporta des de Stripe: Pagos → Exportar → Columnes predeterminades (CSV)",
-    },
-
-    errors: {
-      processingFile: "Error al processar el fitxer",
-      noValidRows: "El CSV no conté donacions vàlides (succeeded i no reemborsades).",
-      noMatch: (amount: string) => `No s'ha trobat cap payout que coincideixi amb l'import ${amount}`,
-      noBankFeesCategory: "No s'ha trobat la categoria de despeses bancàries a aquesta organització.",
-      tooManyRows: (count: number) => `El payout té ${count} donacions. Màxim permès: 449.`,
-      alreadyImported: (count: number, ids: string) =>
-        `Ja s'han importat ${count} d'aquestes donacions (IDs: ${ids}).`,
-    },
-
-    multiplePayouts: {
-      title: "Múltiples payouts coincideixen",
-      description: (count: number) =>
-        `S'han trobat ${count} payouts que coincideixen amb l'import del banc. Selecciona el correcte:`,
-      donationsLabel: "donacions",
-      grossLabel: "Brut:",
-    },
-
-    summary: {
-      donations: "Donacions:",
-      payout: "Payout:",
-      grossTotal: "Brut total:",
-      fees: "Comissions:",
-      net: "Net:",
-      matches: "quadra",
-      doesNotMatch: "no quadra",
-    },
-
-    warnings: {
-      refundedExcluded: "Donacions reemborsades excloses",
-      refundedDescription: (count: number, amount: string) =>
-        `S'han exclòs ${count} donacions reemborsades. Import exclòs: ${amount}`,
-    },
-
-    matching: {
-      searching: "Cercant donants...",
-      matched: (current: number, total: number) => `Matched: ${current} / ${total}`,
-      pending: (count: number) => `Pendents: ${count}`,
-      allReady: "Tot llest per importar",
-      assignDonor: "Assigna el donant per continuar",
-    },
-
-    table: {
-      email: "Email",
-      donor: "Donant",
-      status: "Estat",
-      gross: "Brut",
-      date: "Data",
-      matchStatus: "Match",
-      pendingStatus: "Pendent",
-    },
-
-    emptyState: "Selecciona un fitxer CSV exportat de Stripe per veure les donacions",
-
-    confirmation: {
-      title: "Confirmar importació",
-      description: (count: number) =>
-        `Estàs a punt d'importar ${count} donacions i crear els moviments associats.`,
-      summaryLabel: "Resum:",
-      netAmount: (amount: string) => `Import net: ${amount}`,
-      feesAmount: (amount: string) => `Comissions: ${amount}`,
-      payoutId: (id: string) => `Payout: ${id}`,
-      cancel: "Cancel·lar",
-      confirm: "Confirmar importació",
-    },
-
-    actions: {
-      close: "Tancar",
-      importing: "Important...",
-      import: "Importar donacions",
-      selectPayout: "Cal seleccionar un payout",
-      amountMismatch: "L'import no quadra amb el banc",
-      pendingAssignments: (count: number) =>
-        `Encara hi ha ${count} donacions pendents d'assignar`,
-    },
-
-    success: {
-      title: "Import completat",
-      description: (donations: number, fees: number) =>
-        `S'han importat ${donations} donacions i ${fees} transacció de comissions.`,
-      reviewHint: "Pots revisar-les a la pàgina de Moviments.",
-    },
   },
 };
