@@ -41,16 +41,6 @@ import { type Contact } from './DonorSelectorEnhanced';
 import { CreateQuickDonorDialog, type QuickDonorFormData } from './CreateQuickDonorDialog';
 import { useTranslations } from '@/i18n';
 import { addDocumentNonBlocking } from '@/firebase';
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from '@/components/ui/alert-dialog';
 
 // ════════════════════════════════════════════════════════════════════════════
 // CONSTANTS
@@ -141,7 +131,6 @@ export function StripeImporter({
     email?: string;
     rowId?: string;
   } | null>(null);
-  const [showConfirmation, setShowConfirmation] = React.useState(false);
 
   // Reset quan es tanca el modal
   React.useEffect(() => {
@@ -562,9 +551,6 @@ export function StripeImporter({
 
       // 6. Èxit
       console.log('[STRIPE IMPORT] 🎉 Import completat, tancant modals...');
-
-      // Tancar modal de confirmació
-      setShowConfirmation(false);
 
       // Toast d'èxit actualitzat
       toast({
@@ -1102,7 +1088,7 @@ export function StripeImporter({
           </Button>
           <Button
             disabled={!canContinue || isSaving}
-            onClick={() => setShowConfirmation(true)}
+            onClick={handleImport}
             title={
               !selectedGroup
                 ? t.importers.stripeImporter.actions.selectPayout
@@ -1125,61 +1111,6 @@ export function StripeImporter({
         </DialogFooter>
       </DialogContent>
     </Dialog>
-
-    {/* Confirmation Dialog */}
-    <AlertDialog open={showConfirmation} onOpenChange={setShowConfirmation}>
-      <AlertDialogContent>
-        <AlertDialogHeader>
-          <AlertDialogTitle>
-            {t.importers.stripeImporter.confirmation.title}
-          </AlertDialogTitle>
-          <AlertDialogDescription>
-            {t.importers.stripeImporter.confirmation.description(displayRows.length)}
-          </AlertDialogDescription>
-        </AlertDialogHeader>
-
-        {/* Resum compacte */}
-        {selectedGroup && (
-          <div className="rounded-lg bg-muted p-4 space-y-2 text-sm">
-            <p className="font-medium">{t.importers.stripeImporter.confirmation.summaryLabel}</p>
-            <div className="space-y-1">
-              <div className="flex justify-between">
-                <span>{t.importers.stripeImporter.summary.donations}</span>
-                <span className="font-mono">{displayRows.length}</span>
-              </div>
-              <div className="flex justify-between text-muted-foreground">
-                <span>{t.importers.stripeImporter.confirmation.netAmount('')}</span>
-                <span className="font-mono">{formatCurrencyEU(totalNet)}</span>
-              </div>
-              <div className="flex justify-between text-muted-foreground">
-                <span>{t.importers.stripeImporter.confirmation.feesAmount('')}</span>
-                <span className="font-mono text-red-600">-{formatCurrencyEU(selectedGroup.fees)}</span>
-              </div>
-              <div className="flex justify-between text-xs text-muted-foreground pt-1 border-t">
-                <span>{t.importers.stripeImporter.summary.payout}</span>
-                <span className="font-mono">{selectedGroup.transferId}</span>
-              </div>
-            </div>
-          </div>
-        )}
-
-        <AlertDialogFooter>
-          <AlertDialogCancel disabled={isSaving}>
-            {t.importers.stripeImporter.confirmation.cancel}
-          </AlertDialogCancel>
-          <Button
-            onClick={(e) => {
-              e.preventDefault();
-              handleImport();
-            }}
-            disabled={isSaving}
-          >
-            {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-            {t.importers.stripeImporter.confirmation.confirm}
-          </Button>
-        </AlertDialogFooter>
-      </AlertDialogContent>
-    </AlertDialog>
 
     {/* Create Quick Donor Dialog */}
     <CreateQuickDonorDialog
