@@ -37,7 +37,7 @@ import {
 } from '@/components/ui/table';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Upload, AlertTriangle, FileText, Loader2, CheckCircle2 } from 'lucide-react';
-import { type Contact } from '@/components/contact-combobox';
+import { type Contact } from './DonorSelectorEnhanced';
 import { CreateQuickDonorDialog, type QuickDonorFormData } from './CreateQuickDonorDialog';
 import { useTranslations } from '@/i18n';
 import { addDocumentNonBlocking } from '@/firebase';
@@ -133,8 +133,7 @@ export function StripeImporter({
   const [donorMatches, setDonorMatches] = React.useState<Record<string, DonorMatch>>({});
   const [isMatchingDonors, setIsMatchingDonors] = React.useState(false);
 
-  // Estat per modal de confirmació
-  const [showConfirmation, setShowConfirmation] = React.useState(false);
+  // Estat per modal de confirmació (REMOVED - using direct call instead)
 
   // Estat per diàleg de creació de donant
   const [isCreateDonorOpen, setIsCreateDonorOpen] = React.useState(false);
@@ -142,6 +141,7 @@ export function StripeImporter({
     email?: string;
     rowId?: string;
   } | null>(null);
+  const [showConfirmation, setShowConfirmation] = React.useState(false);
 
   // Reset quan es tanca el modal
   React.useEffect(() => {
@@ -154,7 +154,6 @@ export function StripeImporter({
       setDonorMatches({});
       setIsMatchingDonors(false);
       setIsSaving(false);
-      setShowConfirmation(false);
       setIsCreateDonorOpen(false);
       setCreateDonorInitialData(null);
     }
@@ -338,9 +337,13 @@ export function StripeImporter({
       // 3. Validar idempotència: comprovar si ja existeixen transaccions amb aquests stripePaymentId
       const transactionsRef = collection(firestore, 'organizations', organizationId, 'transactions');
 
-      console.log('🔍 [CRITICAL] transactionsRef.path:', transactionsRef.path);
-      console.log('🔍 [CRITICAL] organizationId:', organizationId);
-      console.log('🔍 [CRITICAL] Expected path: organizations/' + organizationId + '/transactions');
+      // 🔥 INSTRUMENTACIÓ CRÍTICA - PATH VERIFICATION
+      console.log('[StripeImporter] transactionsRef.path', transactionsRef.path);
+      console.log('[StripeImporter] organizationId', organizationId);
+      console.log('[StripeImporter] bankTransaction.id', bankTransaction.id);
+
+      const originalTxRefForLog = doc(transactionsRef, bankTransaction.id);
+      console.log('[StripeImporter] originalTxRef.path', originalTxRefForLog.path);
 
       // Firestore 'in' té límit de 30, fer en batches si cal
       const existingIds: string[] = [];
@@ -402,9 +405,12 @@ export function StripeImporter({
           document: null,
           contactId: match?.contactId || null,
           contactType: match ? 'donor' : undefined,
+          // CAMPS OBLIGATORIS STRIPE
           source: 'stripe',
+          transactionType: 'donation',
           parentTransactionId: bankTransaction.id,
           stripePaymentId: row.id,
+          stripeTransferId: selectedGroup.transferId,
         };
 
         console.log(`[STRIPE IMPORT] 📝 Transaction data:`, {
@@ -436,8 +442,11 @@ export function StripeImporter({
           category: bankFeesCategory.id,
           document: null,
           contactId: null,
+          // CAMPS OBLIGATORIS STRIPE
           source: 'stripe',
+          transactionType: 'fee',
           parentTransactionId: bankTransaction.id,
+          stripeTransferId: selectedGroup.transferId,
         };
 
         console.log('[STRIPE IMPORT] 📝 Fee transaction data:', {
@@ -476,57 +485,80 @@ export function StripeImporter({
       console.log('Total batch operations:', docsCreated + 1);
       console.groupEnd();
 
-      console.log('[STRIPE IMPORT] 🔄 Committing batch...');
-
-      // 4. Commit atòmic
+      // 🔥 INSTRUMENTACIÓ CRÍTICA - COMMIT
+      console.log('[StripeImporter] COMMIT START');
       try {
         await batch.commit();
-        console.log('[STRIPE IMPORT] ✅ Batch commit() returned successfully');
-      } catch (commitErr) {
-        console.error('[STRIPE IMPORT] ❌ Batch commit() FAILED:', commitErr);
-        throw commitErr;
+        console.log('[StripeImporter] COMMIT OK');
+      } catch (e) {
+        console.error('[StripeImporter] COMMIT ERROR', e);
+        throw e;
       }
 
-      console.log('[STRIPE IMPORT] ✅ Batch committed successfully!');
+      // 🔥 VERIFICACIÓ POST-COMMIT OBLIGATÒRIA
+      console.group('🔥 [POST-COMMIT VERIFICATION] Validant integritat');
 
-      // 5. Verificació post-commit (temporal per debug)
-      console.log('[STRIPE IMPORT] 🔍 Verificant escriptura a Firestore...');
-      console.log('[STRIPE IMPORT] Query filter: parentTransactionId ==', bankTransaction.id);
-      try {
-        const verifyQuery = query(
-          transactionsRef,
-          where('parentTransactionId', '==', bankTransaction.id)
-        );
-        const verifySnapshot = await getDocs(verifyQuery);
-        console.log('[STRIPE IMPORT] ✅ Transaccions trobades post-commit:', verifySnapshot.size);
+      const q = query(
+        transactionsRef,
+        where('parentTransactionId', '==', bankTransaction.id)
+      );
+      const snap = await getDocs(q);
+      console.log('Total documents creats:', snap.size);
 
-        if (verifySnapshot.size === 0) {
-          console.error('[STRIPE IMPORT] ⚠️ WARNING: No transactions found! Expected:', docsCreated);
-        } else {
-          console.log('[STRIPE IMPORT] Expected:', docsCreated, 'Found:', verifySnapshot.size);
+      // Comptar donacions i comissions
+      let donationCount = 0;
+      let feeCount = 0;
+      const errors: string[] = [];
+
+      snap.forEach(doc => {
+        const tx = doc.data() as Transaction;
+        console.log(`  - ${doc.id}:`, {
+          type: tx.transactionType,
+          amount: tx.amount,
+          source: tx.source,
+          stripePaymentId: tx.stripePaymentId,
+          stripeTransferId: tx.stripeTransferId,
+        });
+
+        if (tx.transactionType === 'donation') {
+          donationCount++;
+          // Validar camps obligatoris per donacions
+          if (!tx.source || tx.source !== 'stripe') errors.push(`Donation ${doc.id} missing source='stripe'`);
+          if (!tx.stripePaymentId) errors.push(`Donation ${doc.id} missing stripePaymentId`);
+          if (!tx.stripeTransferId) errors.push(`Donation ${doc.id} missing stripeTransferId`);
+        } else if (tx.transactionType === 'fee') {
+          feeCount++;
+          // Validar camps obligatoris per comissions
+          if (!tx.source || tx.source !== 'stripe') errors.push(`Fee ${doc.id} missing source='stripe'`);
+          if (!tx.stripeTransferId) errors.push(`Fee ${doc.id} missing stripeTransferId`);
+          if (tx.amount >= 0) errors.push(`Fee ${doc.id} has non-negative amount: ${tx.amount}`);
         }
+      });
 
-        console.log('[STRIPE IMPORT] Transaccions detalls:', verifySnapshot.docs.map(d => {
-          const data = d.data();
-          return {
-            id: d.id,
-            amount: data.amount,
-            contactId: data.contactId,
-            category: data.category,
-            stripePaymentId: data.stripePaymentId,
-            parentTransactionId: data.parentTransactionId,
-          };
-        }));
+      console.log('\nRESULTAT VALIDACIÓ:');
+      console.log(`  Donacions (type='donation'): ${donationCount}`);
+      console.log(`  Comissions (type='fee'): ${feeCount}`);
 
-        // Check if original transaction still exists (should be deleted)
-        const originalCheck = await getDocs(query(
-          transactionsRef,
-          where('__name__', '==', bankTransaction.id)
-        ));
-        console.log('[STRIPE IMPORT] Original transaction still exists?', originalCheck.size > 0);
-      } catch (verifyErr) {
-        console.error('[STRIPE IMPORT] ❌ Error verificant:', verifyErr);
+      // REGLES D'INTEGRITAT
+      const expectedDonations = selectedGroup.rows.length;
+      const expectedFees = selectedGroup.fees > 0 ? 1 : 0;
+
+      if (donationCount < expectedDonations) {
+        errors.push(`Expected ${expectedDonations} donations, got ${donationCount}`);
       }
+      if (feeCount !== expectedFees) {
+        errors.push(`Expected ${expectedFees} fee transaction, got ${feeCount}`);
+      }
+
+      if (errors.length > 0) {
+        console.error('❌ ERRORS DE VALIDACIÓ:');
+        errors.forEach(err => console.error(`  - ${err}`));
+        console.groupEnd();
+        throw new Error(`Validació post-commit fallida: ${errors.join('; ')}`);
+      }
+
+      console.log('✅ Validació post-commit OK');
+      console.groupEnd();
 
       // 6. Èxit
       console.log('[STRIPE IMPORT] 🎉 Import completat, tancant modals...');
@@ -544,6 +576,11 @@ export function StripeImporter({
       });
 
       console.log('[STRIPE IMPORT] 📢 Showing toast notification');
+
+      // 🔥 WAIT for Firestore listeners to sync BEFORE closing modal
+      console.log('[STRIPE IMPORT] ⏳ Waiting 500ms for Firestore listeners to sync...');
+      await new Promise(resolve => setTimeout(resolve, 500));
+
       console.log('[STRIPE IMPORT] 🔄 Calling onImportDone callback...');
       console.log('[STRIPE IMPORT] onImportDone is defined?', !!onImportDone);
 
@@ -734,6 +771,7 @@ export function StripeImporter({
   const canContinue = amountMatches && allMatched && selectedGroup !== null;
 
   return (
+    <>
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
@@ -1009,26 +1047,7 @@ export function StripeImporter({
           </Button>
           <Button
             disabled={!canContinue || isSaving}
-            onClick={() => {
-              console.group('[STRIPE IMPORT] 📤 BUTTON CLICKED');
-              console.log('canContinue:', canContinue);
-              console.log('isSaving:', isSaving);
-              console.log('selectedGroup:', selectedGroup);
-              console.log('displayRows.length:', displayRows.length);
-              console.log('matchedCount:', matchedCount);
-              console.log('pendingCount:', pendingCount);
-              console.log('allMatched:', allMatched);
-              console.log('amountMatches:', amountMatches);
-              console.log('bankTransaction:', {
-                id: bankTransaction.id,
-                amount: bankTransaction.amount,
-                date: bankTransaction.date,
-              });
-              console.log('donorMatches keys:', Object.keys(donorMatches).length);
-              console.log('donorMatches sample:', Object.entries(donorMatches).slice(0, 3));
-              console.groupEnd();
-              setShowConfirmation(true);
-            }}
+            onClick={() => setShowConfirmation(true)}
             title={
               !selectedGroup
                 ? t.importers.stripeImporter.actions.selectPayout
@@ -1050,77 +1069,69 @@ export function StripeImporter({
           </Button>
         </DialogFooter>
       </DialogContent>
+    </Dialog>
 
-      {/* Confirmation Dialog */}
-      <AlertDialog open={showConfirmation} onOpenChange={setShowConfirmation}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>
-              {t.importers.stripeImporter.confirmation.title}
-            </AlertDialogTitle>
-            <AlertDialogDescription>
-              {t.importers.stripeImporter.confirmation.description(selectedGroup?.rows.length || 0)}
-            </AlertDialogDescription>
-          </AlertDialogHeader>
+    {/* Confirmation Dialog */}
+    <AlertDialog open={showConfirmation} onOpenChange={setShowConfirmation}>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>
+            {t.importers.stripeImporter.confirmation.title}
+          </AlertDialogTitle>
+          <AlertDialogDescription>
+            {t.importers.stripeImporter.confirmation.description(selectedGroup?.rows.length || 0)}
+          </AlertDialogDescription>
+        </AlertDialogHeader>
 
-          {/* Resum compacte */}
-          {selectedGroup && (
-            <div className="rounded-lg bg-muted p-4 space-y-2 text-sm">
-              <p className="font-medium">{t.importers.stripeImporter.confirmation.summaryLabel}</p>
-              <div className="space-y-1">
-                <div className="flex justify-between">
-                  <span>{t.importers.stripeImporter.summary.donations}</span>
-                  <span className="font-mono">{selectedGroup.rows.length}</span>
-                </div>
-                <div className="flex justify-between text-muted-foreground">
-                  <span>{t.importers.stripeImporter.summary.net}</span>
-                  <span className="font-mono">{formatCurrencyEU(selectedGroup.net)}</span>
-                </div>
-                <div className="flex justify-between text-muted-foreground">
-                  <span>{t.importers.stripeImporter.summary.fees}</span>
-                  <span className="font-mono text-red-600">-{formatCurrencyEU(selectedGroup.fees)}</span>
-                </div>
-                <div className="flex justify-between text-xs text-muted-foreground pt-1 border-t">
-                  <span>{t.importers.stripeImporter.summary.payout}</span>
-                  <span className="font-mono">{selectedGroup.transferId}</span>
-                </div>
+        {/* Resum compacte */}
+        {selectedGroup && (
+          <div className="rounded-lg bg-muted p-4 space-y-2 text-sm">
+            <p className="font-medium">{t.importers.stripeImporter.confirmation.summaryLabel}</p>
+            <div className="space-y-1">
+              <div className="flex justify-between">
+                <span>{t.importers.stripeImporter.summary.donations}</span>
+                <span className="font-mono">{selectedGroup.rows.length}</span>
+              </div>
+              <div className="flex justify-between text-muted-foreground">
+                <span>{t.importers.stripeImporter.confirmation.netAmount('')}</span>
+                <span className="font-mono">{formatCurrencyEU(selectedGroup.net)}</span>
+              </div>
+              <div className="flex justify-between text-muted-foreground">
+                <span>{t.importers.stripeImporter.confirmation.feesAmount('')}</span>
+                <span className="font-mono text-red-600">-{formatCurrencyEU(selectedGroup.fees)}</span>
+              </div>
+              <div className="flex justify-between text-xs text-muted-foreground pt-1 border-t">
+                <span>{t.importers.stripeImporter.summary.payout}</span>
+                <span className="font-mono">{selectedGroup.transferId}</span>
               </div>
             </div>
-          )}
+          </div>
+        )}
 
-          <AlertDialogFooter>
-            <AlertDialogCancel
-              disabled={isSaving}
-              onClick={() => {
-                console.log('[STRIPE IMPORT] ❌ User cancelled confirmation dialog');
-              }}
-            >
-              {t.importers.stripeImporter.confirmation.cancel}
-            </AlertDialogCancel>
-            <AlertDialogAction
-              onClick={() => {
-                console.log('[STRIPE IMPORT] ✅ User clicked CONFIRM in dialog');
-                console.log('[STRIPE IMPORT] About to call handleImport()...');
-                handleImport();
-              }}
-              disabled={isSaving}
-            >
-              {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              {t.importers.stripeImporter.confirmation.confirm}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+        <AlertDialogFooter>
+          <AlertDialogCancel disabled={isSaving}>
+            {t.importers.stripeImporter.confirmation.cancel}
+          </AlertDialogCancel>
+          <AlertDialogAction
+            onClick={handleImport}
+            disabled={isSaving}
+          >
+            {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+            {t.importers.stripeImporter.confirmation.confirm}
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
 
-      {/* Create Quick Donor Dialog */}
-      <CreateQuickDonorDialog
-        open={isCreateDonorOpen}
-        onOpenChange={setIsCreateDonorOpen}
-        onSave={handleCreateQuickDonor}
-        initialData={{
-          email: createDonorInitialData?.email,
-        }}
-      />
-    </Dialog>
+    {/* Create Quick Donor Dialog */}
+    <CreateQuickDonorDialog
+      open={isCreateDonorOpen}
+      onOpenChange={setIsCreateDonorOpen}
+      onSave={handleCreateQuickDonor}
+      initialData={{
+        email: createDonorInitialData?.email,
+      }}
+    />
+    </>
   );
 }
