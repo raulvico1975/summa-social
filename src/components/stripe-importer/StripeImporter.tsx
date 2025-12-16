@@ -132,6 +132,14 @@ export function StripeImporter({
     rowId?: string;
   } | null>(null);
 
+  // Estat per confirmació inline (dins del mateix Dialog)
+  const [pendingConfirmation, setPendingConfirmation] = React.useState<{
+    donationsCount: number;
+    netAmount: number;
+    feesAmount: number;
+    payoutId: string;
+  } | null>(null);
+
   // Reset quan es tanca el modal
   React.useEffect(() => {
     if (!open) {
@@ -145,6 +153,7 @@ export function StripeImporter({
       setIsSaving(false);
       setIsCreateDonorOpen(false);
       setCreateDonorInitialData(null);
+      setPendingConfirmation(null);
     }
   }, [open]);
 
@@ -277,8 +286,37 @@ export function StripeImporter({
   // PAS 5: ESCRIPTURA FIRESTORE
   // ══════════════════════════════════════════════════════════════════════════
 
-  const handleImport = async () => {
-    console.group('[STRIPE IMPORT] 🚀 handleImport STARTED');
+  // ════════════════════════════════════════════════════════════════════════════
+  // STEP 1: Preparar confirmació (NO escriu a Firestore)
+  // ════════════════════════════════════════════════════════════════════════════
+  const handlePrepareImport = () => {
+    console.group('[STRIPE IMPORT] 🎯 handlePrepareImport');
+    console.log('Preparing confirmation with current state');
+    console.log('displayRows.length:', displayRows.length);
+    console.log('totalNet:', totalNet);
+    console.log('selectedGroup.fees:', selectedGroup?.fees);
+    console.log('selectedGroup.transferId:', selectedGroup?.transferId);
+    console.groupEnd();
+
+    if (!selectedGroup) {
+      console.error('[STRIPE IMPORT] ❌ No selectedGroup');
+      return;
+    }
+
+    // Capturar l'estat EXACTE que s'importarà
+    setPendingConfirmation({
+      donationsCount: displayRows.length,
+      netAmount: totalNet,
+      feesAmount: selectedGroup.fees,
+      payoutId: selectedGroup.transferId,
+    });
+  };
+
+  // ════════════════════════════════════════════════════════════════════════════
+  // STEP 2: Executar import (escriu a Firestore)
+  // ════════════════════════════════════════════════════════════════════════════
+  const handleConfirmImport = async () => {
+    console.group('[STRIPE IMPORT] 🚀 handleConfirmImport STARTED');
     console.log('Timestamp:', new Date().toISOString());
     console.log('selectedGroup:', selectedGroup);
     console.log('organizationId:', organizationId);
@@ -286,13 +324,15 @@ export function StripeImporter({
     console.log('bankTransaction:', bankTransaction);
     console.log('donorMatches:', donorMatches);
     console.log('categories:', categories?.map(c => ({ id: c.id, name: c.name, type: c.type })));
+    console.log('pendingConfirmation:', pendingConfirmation);
     console.groupEnd();
 
-    if (!selectedGroup || !organizationId || !firestore) {
+    if (!selectedGroup || !organizationId || !firestore || !pendingConfirmation) {
       console.error('[STRIPE IMPORT] ❌ Early return: missing dependencies', {
         selectedGroup: !!selectedGroup,
         organizationId: !!organizationId,
         firestore: !!firestore,
+        pendingConfirmation: !!pendingConfirmation,
       });
       return;
     }
@@ -570,6 +610,8 @@ export function StripeImporter({
       console.log('[STRIPE IMPORT] 🔄 Calling onImportDone callback...');
       console.log('[STRIPE IMPORT] onImportDone is defined?', !!onImportDone);
 
+      // Tancar confirmació i modal
+      setPendingConfirmation(null);
       onOpenChange(false);
 
       if (onImportDone) {
@@ -585,6 +627,8 @@ export function StripeImporter({
       console.error('[STRIPE IMPORT] Error stack:', err instanceof Error ? err.stack : 'No stack');
       const message = err instanceof Error ? err.message : t.importers.stripeImporter.errors.processingFile;
       setErrorMessage(message);
+      // En cas d'error, també tanquem la confirmació per permetre reintent
+      setPendingConfirmation(null);
     } finally {
       setIsSaving(false);
     }
@@ -1082,32 +1126,87 @@ export function StripeImporter({
           </div>
         )}
 
+        {/* Confirmació inline (dins del mateix Dialog) */}
+        {pendingConfirmation && (
+          <div className="border-t pt-4 space-y-4">
+            <div className="space-y-2">
+              <h4 className="font-semibold text-sm">
+                {t.importers.stripeImporter.confirmation.title}
+              </h4>
+              <p className="text-sm text-muted-foreground">
+                {t.importers.stripeImporter.confirmation.description(pendingConfirmation.donationsCount)}
+              </p>
+            </div>
+
+            <div className="rounded-lg bg-muted p-4 space-y-2 text-sm">
+              <p className="font-medium">{t.importers.stripeImporter.confirmation.summaryLabel}</p>
+              <div className="space-y-1">
+                <div className="flex justify-between">
+                  <span>{t.importers.stripeImporter.summary.donations}</span>
+                  <span className="font-mono">{pendingConfirmation.donationsCount}</span>
+                </div>
+                <div className="flex justify-between text-muted-foreground">
+                  <span>{t.importers.stripeImporter.confirmation.netAmount('')}</span>
+                  <span className="font-mono">{formatCurrencyEU(pendingConfirmation.netAmount)}</span>
+                </div>
+                <div className="flex justify-between text-muted-foreground">
+                  <span>{t.importers.stripeImporter.confirmation.feesAmount('')}</span>
+                  <span className="font-mono text-red-600">-{formatCurrencyEU(pendingConfirmation.feesAmount)}</span>
+                </div>
+                <div className="flex justify-between text-xs text-muted-foreground pt-1 border-t">
+                  <span>{t.importers.stripeImporter.summary.payout}</span>
+                  <span className="font-mono">{pendingConfirmation.payoutId}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
         <DialogFooter className="gap-2">
-          <Button variant="outline" onClick={() => onOpenChange(false)} disabled={isSaving}>
-            {t.importers.stripeImporter.actions.close}
-          </Button>
-          <Button
-            disabled={!canContinue || isSaving}
-            onClick={handleImport}
-            title={
-              !selectedGroup
-                ? t.importers.stripeImporter.actions.selectPayout
-                : !amountMatches
-                  ? t.importers.stripeImporter.actions.amountMismatch
-                  : !allMatched
-                    ? t.importers.stripeImporter.actions.pendingAssignments(pendingCount)
-                    : t.importers.stripeImporter.actions.import
-            }
-          >
-            {isSaving ? (
-              <>
-                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                {t.importers.stripeImporter.actions.importing}
-              </>
-            ) : (
-              t.importers.stripeImporter.actions.import
-            )}
-          </Button>
+          {pendingConfirmation ? (
+            // Botons de confirmació
+            <>
+              <Button
+                variant="outline"
+                onClick={() => setPendingConfirmation(null)}
+                disabled={isSaving}
+              >
+                {t.importers.stripeImporter.confirmation.cancel}
+              </Button>
+              <Button onClick={handleConfirmImport} disabled={isSaving}>
+                {isSaving ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    {t.importers.stripeImporter.actions.importing}
+                  </>
+                ) : (
+                  t.importers.stripeImporter.confirmation.confirm
+                )}
+              </Button>
+            </>
+          ) : (
+            // Botons normals
+            <>
+              <Button variant="outline" onClick={() => onOpenChange(false)} disabled={isSaving}>
+                {t.importers.stripeImporter.actions.close}
+              </Button>
+              <Button
+                disabled={!canContinue || isSaving}
+                onClick={handlePrepareImport}
+                title={
+                  !selectedGroup
+                    ? t.importers.stripeImporter.actions.selectPayout
+                    : !amountMatches
+                      ? t.importers.stripeImporter.actions.amountMismatch
+                      : !allMatched
+                        ? t.importers.stripeImporter.actions.pendingAssignments(pendingCount)
+                        : t.importers.stripeImporter.actions.import
+                }
+              >
+                {t.importers.stripeImporter.actions.import}
+              </Button>
+            </>
+          )}
         </DialogFooter>
       </DialogContent>
     </Dialog>
