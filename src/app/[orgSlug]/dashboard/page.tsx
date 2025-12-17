@@ -28,6 +28,7 @@ import {
 } from '@/lib/exports/economic-report';
 import * as XLSX from 'xlsx';
 import Papa from 'papaparse';
+import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from '@/components/ui/accordion';
 
 interface TaxObligation {
   id: string;
@@ -963,90 +964,103 @@ ${t.dashboard.generatedWith}`;
       </Card>
 
       <Dialog open={shareDialogOpen} onOpenChange={setShareDialogOpen}>
-        <DialogContent className="max-w-lg">
-          <DialogHeader>
-            <DialogTitle>{t.dashboard.shareSummary}</DialogTitle>
-            <DialogDescription>{t.dashboard.shareSummaryDescription}</DialogDescription>
-          </DialogHeader>
+        <DialogContent className="max-w-5xl w-full max-h-[85vh] overflow-hidden">
+          <div className="flex h-full flex-col">
+            <DialogHeader>
+              <DialogTitle>{t.dashboard.shareSummary}</DialogTitle>
+              <DialogDescription>{t.dashboard.shareSummaryDescription}</DialogDescription>
+            </DialogHeader>
 
-          <Textarea
-            value={summaryText}
-            onChange={(e) => setSummaryText(e.target.value)}
-            rows={12}
-            className="font-mono text-sm"
-          />
-
-          {narratives && (
-            <div className="space-y-5 rounded-lg border bg-muted/40 p-4">
-              <div className="flex items-start justify-between gap-4">
-                <div>
-                  <p className="text-sm font-semibold tracking-tight">Textos del període</p>
-                  <p className="text-xs text-muted-foreground">
-                    Relat institucional preparat per compartir al resum econòmic. Pots editar qualsevol bloc si necessites matisar-lo.
-                  </p>
+            <div className="flex flex-1 flex-col gap-6 overflow-y-auto md:flex-row">
+              <div className="space-y-4 md:w-1/3">
+                <div className="space-y-2">
+                  <p className="text-sm font-medium">Resum executiu</p>
+                  <Textarea
+                    value={summaryText}
+                    onChange={(e) => setSummaryText(e.target.value)}
+                    rows={10}
+                    className="font-mono text-sm"
+                  />
                 </div>
-                <Button variant="ghost" size="sm" onClick={handleResetNarratives} disabled={!defaultNarratives}>
-                  <RefreshCcw className="h-4 w-4 mr-2" />
-                  Reinicia a proposta
-                </Button>
+                <div className="flex flex-col gap-2">
+                  <Button variant="outline" onClick={handleCopy}>
+                    <Copy className="h-4 w-4 mr-2" />
+                    {copySuccess ? t.dashboard.copied : t.dashboard.copy}
+                  </Button>
+                  <Button variant="outline" onClick={handleResetNarratives} disabled={!defaultNarratives}>
+                    <RefreshCcw className="h-4 w-4 mr-2" />
+                    Reinicia a proposta
+                  </Button>
+                  <Button variant="secondary" onClick={handleExportEconomicExcel}>
+                    <FileSpreadsheet className="h-4 w-4 mr-2" />
+                    Exporta Excel
+                  </Button>
+                  <Button variant="secondary" onClick={handleExportEconomicCsv}>
+                    <FileText className="h-4 w-4 mr-2" />
+                    Exporta CSV
+                  </Button>
+                </div>
               </div>
-              {(Object.keys(NARRATIVE_LABELS) as (keyof NarrativeDraft)[]).map((field) => {
-                const isEditing = editingNarrative === field;
-                return (
-                  <div key={field} className="space-y-2">
-                    <div className="flex items-center justify-between gap-2">
-                      <span className="text-sm font-medium">{NARRATIVE_LABELS[field]}</span>
-                      <div className="flex items-center gap-2">
-                        <Button variant="ghost" size="icon" onClick={() => handleCopyNarrative(field)}>
-                          <Copy className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => setEditingNarrative(isEditing ? null : field)}
-                        >
-                          {isEditing ? 'Tanca' : 'Edita'}
-                        </Button>
-                      </div>
-                    </div>
-                    {isEditing ? (
-                      <Textarea
-                        value={narratives[field]}
-                        onChange={(e) => handleNarrativeChange(field, e.target.value)}
-                        rows={4}
-                        className="text-sm"
-                      />
-                    ) : (
-                      <p className="rounded-md border bg-background p-3 text-sm leading-relaxed text-muted-foreground">
-                        {narratives[field]}
-                      </p>
-                    )}
-                  </div>
-                );
-              })}
-              <div className="flex flex-wrap gap-2">
-                <Button variant="secondary" onClick={handleExportEconomicExcel}>
-                  <FileSpreadsheet className="h-4 w-4 mr-2" />
-                  Exporta Excel
-                </Button>
-                <Button variant="secondary" onClick={handleExportEconomicCsv}>
-                  <FileText className="h-4 w-4 mr-2" />
-                  Exporta CSV
-                </Button>
-              </div>
-            </div>
-          )}
 
-          <DialogFooter className="gap-2">
-            <Button variant="outline" onClick={handleCopy}>
-              <Copy className="h-4 w-4 mr-2" />
-              {copySuccess ? t.dashboard.copied : t.dashboard.copy}
-            </Button>
-            <Button variant="default" onClick={handleEmailShare}>
-              <Mail className="h-4 w-4 mr-2" />
-              {t.dashboard.sendByEmail}
-            </Button>
-          </DialogFooter>
+              {narratives && (
+                <div className="md:w-2/3 space-y-3">
+                  <div>
+                    <p className="text-sm font-semibold tracking-tight">Textos del període</p>
+                    <p className="text-xs text-muted-foreground">
+                      Relat institucional preparat per compartir al resum econòmic. Pots desplegar cada apartat per revisar o editar el contingut.
+                    </p>
+                  </div>
+                  <Accordion type="single" collapsible defaultValue="summary">
+                    {(Object.keys(NARRATIVE_LABELS) as (keyof NarrativeDraft)[]).map((field) => {
+                      const isEditing = editingNarrative === field;
+                      return (
+                        <AccordionItem key={field} value={field}>
+                          <div className="flex items-center justify-between gap-2">
+                            <AccordionTrigger className="flex-1 text-left text-sm font-medium">
+                              {NARRATIVE_LABELS[field]}
+                            </AccordionTrigger>
+                            <div className="flex items-center gap-1">
+                              <Button variant="ghost" size="icon" onClick={() => handleCopyNarrative(field)}>
+                                <Copy className="h-4 w-4" />
+                              </Button>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => setEditingNarrative(isEditing ? null : field)}
+                              >
+                                {isEditing ? 'Tanca' : 'Edita'}
+                              </Button>
+                            </div>
+                          </div>
+                          <AccordionContent className="pt-3">
+                            {isEditing ? (
+                              <Textarea
+                                value={narratives[field]}
+                                onChange={(e) => handleNarrativeChange(field, e.target.value)}
+                                rows={4}
+                                className="text-sm"
+                              />
+                            ) : (
+                              <p className="rounded-md border bg-background p-3 text-sm leading-relaxed text-muted-foreground">
+                                {narratives[field]}
+                              </p>
+                            )}
+                          </AccordionContent>
+                        </AccordionItem>
+                      );
+                    })}
+                  </Accordion>
+                </div>
+              )}
+            </div>
+
+            <DialogFooter className="mt-4">
+              <Button variant="default" onClick={handleEmailShare}>
+                <Mail className="h-4 w-4 mr-2" />
+                {t.dashboard.sendByEmail}
+              </Button>
+            </DialogFooter>
+          </div>
         </DialogContent>
       </Dialog>
     </div>
