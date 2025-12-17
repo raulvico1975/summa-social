@@ -31,6 +31,7 @@ import {
 import * as XLSX from 'xlsx';
 import Papa from 'papaparse';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from '@/components/ui/sheet';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { toPeriodQuery } from '@/lib/period-query';
 
 interface TaxObligation {
@@ -915,8 +916,19 @@ ${t.dashboard.generatedWith}`;
               href={createDonorsLink({ membershipType: 'one-time', viewActive: true })}
               className="block rounded-lg border p-4 text-left bg-gradient-to-br from-violet-50 to-white hover:shadow focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/70 active:scale-[0.99] cursor-pointer"
             >
-              <p className="text-sm text-muted-foreground">{t.dashboard.activeDonors}</p>
+              <div className="flex items-center gap-1">
+                <p className="text-sm text-muted-foreground">{t.dashboard.activeDonors}</p>
+                <Tooltip>
+                  <TooltipTrigger asChild onClick={(e) => e.preventDefault()}>
+                    <Info className="h-3.5 w-3.5 text-muted-foreground/60 hover:text-muted-foreground" />
+                  </TooltipTrigger>
+                  <TooltipContent side="top" className="max-w-xs">
+                    <p className="text-xs">{t.dashboard.activeDonorsTooltip}</p>
+                  </TooltipContent>
+                </Tooltip>
+              </div>
               <p className="text-2xl font-bold">{uniqueDonors}</p>
+              <p className="text-xs text-muted-foreground/70">{t.dashboard.withDonationsInPeriod}</p>
               {canShowComparison && (
                 <ComparisonBadge
                   current={uniqueDonors}
@@ -930,8 +942,19 @@ ${t.dashboard.generatedWith}`;
               href={createDonorsLink({ membershipType: 'recurring', viewActive: true })}
               className="block rounded-lg border p-4 text-left bg-gradient-to-br from-pink-50 to-white hover:shadow focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/70 active:scale-[0.99] cursor-pointer"
             >
-              <p className="text-sm text-muted-foreground">{t.dashboard.activeMembers}</p>
+              <div className="flex items-center gap-1">
+                <p className="text-sm text-muted-foreground">{t.dashboard.activeMembers}</p>
+                <Tooltip>
+                  <TooltipTrigger asChild onClick={(e) => e.preventDefault()}>
+                    <Info className="h-3.5 w-3.5 text-muted-foreground/60 hover:text-muted-foreground" />
+                  </TooltipTrigger>
+                  <TooltipContent side="top" className="max-w-xs">
+                    <p className="text-xs">{t.dashboard.activeMembersTooltip}</p>
+                  </TooltipContent>
+                </Tooltip>
+              </div>
               <p className="text-2xl font-bold">{activeMembers}</p>
+              <p className="text-xs text-muted-foreground/70">{t.dashboard.withFeesInPeriod}</p>
               {canShowComparison && (
                 <ComparisonBadge
                   current={activeMembers}
