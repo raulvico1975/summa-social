@@ -227,68 +227,91 @@ function buildSummaryNarrative(periodLabel: string, incomeTotal: number, expense
   if (incomeTotal === 0 && expenseTotal === 0) {
     return `Durant ${periodLabel} no s'han registrat moviments econòmics destacables.`;
   }
-  return `Durant ${periodLabel} s'han registrat ${formatCurrencyEU(incomeTotal)} d'ingressos i ${formatCurrencyEU(expenseTotal)} d'aplicació operativa, amb un balanç net de ${formatCurrencyEU(netBalance)}.`;
+  return `Durant ${periodLabel} s'han reconegut ${formatCurrencyEU(incomeTotal)} d'ingressos i ${formatCurrencyEU(expenseTotal)} d'aplicació operativa, amb un tancament net de ${formatCurrencyEU(netBalance)}.`;
 }
 
 function buildIncomeNarrative(income: AggregateResult): string {
   if (income.total === 0) {
-    return 'No s\'han registrat ingressos en aquest període.';
+    return 'En aquest període no consten entrades de recursos.';
   }
-  const [first, second] = income.aggregated.filter((row) => row.id !== OTHERS_ID);
-  const others = income.aggregated.find((row) => row.id === OTHERS_ID);
+
+  const ordered = income.aggregated.filter((row) => row.id !== OTHERS_ID);
+  const primary = ordered.find((row) => row.id !== UNCATEGORIZED_ID);
+  const fallback = ordered.find((row) => row.id === UNCATEGORIZED_ID);
+  const secondary = ordered.filter((row) => row !== primary && row.id !== UNCATEGORIZED_ID)[0];
 
   const parts: string[] = [];
-  if (first) {
-    parts.push(`L'origen principal ha estat ${first.name} (${formatPercentage(first.percentage)}).`);
+  if (primary) {
+    parts.push(`La principal font d'ingressos ha estat ${primary.name} (${formatPercentage(primary.percentage)}).`);
+  } else if (fallback) {
+    parts.push(`La major part dels ingressos encara no té categoria assignada (${formatPercentage(fallback.percentage)}).`);
   }
-  if (second) {
-    parts.push(`La segona font és ${second.name} (${formatPercentage(second.percentage)}).`);
+
+  if (secondary) {
+    parts.push(`També destaca ${secondary.name} (${formatPercentage(secondary.percentage)}), fet que reforça la diversificació d'entrades.`);
+  } else if (fallback && primary) {
+    parts.push(`Les aportacions pendents de classificar representen ${formatPercentage(fallback.percentage)} addicionals i demanen revisió documental.`);
   }
-  if (!first && others) {
-    parts.push(`Els ingressos s'han concentrat principalment a ${others.name}.`);
-  } else if (others && others.amount > 0) {
-    parts.push(`La resta de categories representen ${formatPercentage(others.percentage)} addicionals.`);
-  }
+
   return parts.join(' ');
 }
 
 function buildExpenseNarrative(expenses: AggregateResult): string {
   if (expenses.total === 0) {
-    return 'No s\'han imputat despeses operatives durant aquest període.';
+    return 'No s\'han executat despeses operatives durant el període.';
   }
-  const [first, second] = expenses.aggregated.filter((row) => row.id !== OTHERS_ID);
+
+  const ordered = expenses.aggregated.filter((row) => row.id !== OTHERS_ID);
+  const primary = ordered[0];
+  const secondary = ordered[1];
   const others = expenses.aggregated.find((row) => row.id === OTHERS_ID);
 
-  const parts: string[] = [];
-  if (first) {
-    parts.push(`L'aplicació principal dels fons ha estat l'eix ${first.name} (${formatPercentage(first.percentage)}).`);
+  if (primary && primary.id === GENERAL_PROJECT_ID && primary.percentage >= 99.5) {
+    return 'El 100% de la despesa consta a Funcionament general, la qual cosa evidencia que no s\'han assignat projectes específics en aquest període.';
   }
-  if (second) {
-    parts.push(`El següent eix destacat és ${second.name} (${formatPercentage(second.percentage)}).`);
+
+  const parts: string[] = [];
+  if (primary) {
+    const label = primary.id === GENERAL_PROJECT_ID ? `${primary.name} (operativa transversal)` : primary.name;
+    parts.push(`L'aplicació principal dels recursos s'ha destinat a ${label} (${formatPercentage(primary.percentage)}).`);
+  }
+  if (secondary) {
+    parts.push(`El segon focus ha estat ${secondary.name} (${formatPercentage(secondary.percentage)}).`);
   }
   if (others && others.amount > 0) {
-    parts.push(`Altres projectes concentren el ${formatPercentage(others.percentage)} restant.`);
+    parts.push(`La resta de projectes concentren el ${formatPercentage(others.percentage)} restant, mostrant un repartiment equilibrat.`);
   }
   return parts.join(' ');
 }
 
 function buildTransfersNarrative(transfers: AggregateResult): string {
   if (transfers.total === 0) {
-    return 'No s\'han registrat transferències a contraparts en aquest període.';
+    return 'No s\'han cursat transferències a contraparts durant el període.';
   }
-  const [first, second] = transfers.aggregated.filter((row) => row.id !== OTHERS_ID);
+
+  const ordered = transfers.aggregated.filter((row) => row.id !== OTHERS_ID);
+  const primary = ordered.find((row) => row.id !== NO_COUNTERPART_ID);
+  const fallback = ordered.find((row) => row.id === NO_COUNTERPART_ID);
+  const secondary = ordered.filter((row) => row !== primary && row.id !== NO_COUNTERPART_ID)[0];
   const others = transfers.aggregated.find((row) => row.id === OTHERS_ID);
 
   const parts: string[] = [];
-  if (first) {
-    parts.push(`La transferència principal ha estat per a ${first.name} (${formatPercentage(first.percentage)}).`);
+  if (primary) {
+    parts.push(`La principal transferència ha reforçat ${primary.name} (${formatPercentage(primary.percentage)} del total enviat).`);
+  } else if (fallback) {
+    parts.push(`Totes les transferències consten sense contrapart identificada (${formatPercentage(fallback.percentage)}), pendent de documentar.`);
   }
-  if (second) {
-    parts.push(`També destaca ${second.name} (${formatPercentage(second.percentage)}).`);
+
+  if (secondary) {
+    parts.push(`També es recullen aportacions a ${secondary.name} (${formatPercentage(secondary.percentage)}), consolidant la cooperació territorial.`);
+  } else if (fallback && primary) {
+    parts.push(`Les remeses sense contrapart associada representen ${formatPercentage(fallback.percentage)} i requereixen seguiment administratiu.`);
   }
+
   if (others && others.amount > 0) {
-    parts.push(`Les altres contraparts sumen el ${formatPercentage(others.percentage)} restant.`);
+    parts.push(`La resta de contraparts agrupen un ${formatPercentage(others.percentage)} addicional.`);
   }
+
   return parts.join(' ');
 }
 

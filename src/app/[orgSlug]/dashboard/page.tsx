@@ -179,6 +179,7 @@ export default function DashboardPage() {
   const [copySuccess, setCopySuccess] = React.useState(false);
   const [narratives, setNarratives] = React.useState<NarrativeDraft | null>(null);
   const [defaultNarratives, setDefaultNarratives] = React.useState<NarrativeDraft | null>(null);
+  const [editingNarrative, setEditingNarrative] = React.useState<keyof NarrativeDraft | null>(null);
 
   // Ref per gestionar timeout i evitar memory leaks
   const copyTimeoutRef = React.useRef<NodeJS.Timeout | null>(null);
@@ -280,6 +281,7 @@ ${t.dashboard.generatedWith}`;
     setSummaryText(text);
     setNarratives(baseNarratives);
     setDefaultNarratives(baseNarratives);
+    setEditingNarrative(null);
     setShareDialogOpen(true);
   };
 
@@ -290,6 +292,7 @@ ${t.dashboard.generatedWith}`;
   const handleResetNarratives = () => {
     if (defaultNarratives) {
       setNarratives(defaultNarratives);
+      setEditingNarrative(null);
     }
   };
 
@@ -974,34 +977,53 @@ ${t.dashboard.generatedWith}`;
           />
 
           {narratives && (
-            <div className="space-y-4">
-              <div className="flex items-center justify-between">
+            <div className="space-y-5 rounded-lg border bg-muted/40 p-4">
+              <div className="flex items-start justify-between gap-4">
                 <div>
-                  <p className="text-sm font-semibold">Textos del període</p>
-                  <p className="text-xs text-muted-foreground">Edita els missatges abans d'exportar</p>
+                  <p className="text-sm font-semibold tracking-tight">Textos del període</p>
+                  <p className="text-xs text-muted-foreground">
+                    Relat institucional preparat per compartir al resum econòmic. Pots editar qualsevol bloc si necessites matisar-lo.
+                  </p>
                 </div>
                 <Button variant="ghost" size="sm" onClick={handleResetNarratives} disabled={!defaultNarratives}>
                   <RefreshCcw className="h-4 w-4 mr-2" />
                   Reinicia a proposta
                 </Button>
               </div>
-              {(Object.keys(NARRATIVE_LABELS) as (keyof NarrativeDraft)[]).map((field) => (
-                <div key={field} className="space-y-2">
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm font-medium">{NARRATIVE_LABELS[field]}</span>
-                    <Button variant="outline" size="sm" onClick={() => handleCopyNarrative(field)}>
-                      <Copy className="h-4 w-4 mr-2" />
-                      Copia
-                    </Button>
+              {(Object.keys(NARRATIVE_LABELS) as (keyof NarrativeDraft)[]).map((field) => {
+                const isEditing = editingNarrative === field;
+                return (
+                  <div key={field} className="space-y-2">
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="text-sm font-medium">{NARRATIVE_LABELS[field]}</span>
+                      <div className="flex items-center gap-2">
+                        <Button variant="ghost" size="icon" onClick={() => handleCopyNarrative(field)}>
+                          <Copy className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setEditingNarrative(isEditing ? null : field)}
+                        >
+                          {isEditing ? 'Tanca' : 'Edita'}
+                        </Button>
+                      </div>
+                    </div>
+                    {isEditing ? (
+                      <Textarea
+                        value={narratives[field]}
+                        onChange={(e) => handleNarrativeChange(field, e.target.value)}
+                        rows={4}
+                        className="text-sm"
+                      />
+                    ) : (
+                      <p className="rounded-md border bg-background p-3 text-sm leading-relaxed text-muted-foreground">
+                        {narratives[field]}
+                      </p>
+                    )}
                   </div>
-                  <Textarea
-                    value={narratives[field]}
-                    onChange={(e) => handleNarrativeChange(field, e.target.value)}
-                    rows={4}
-                    className="text-sm"
-                  />
-                </div>
-              ))}
+                );
+              })}
               <div className="flex flex-wrap gap-2">
                 <Button variant="secondary" onClick={handleExportEconomicExcel}>
                   <FileSpreadsheet className="h-4 w-4 mr-2" />
