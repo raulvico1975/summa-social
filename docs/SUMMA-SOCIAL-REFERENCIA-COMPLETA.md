@@ -1,6 +1,6 @@
 # ═══════════════════════════════════════════════════════════════════════════════
 # SUMMA SOCIAL - REFERÈNCIA COMPLETA DEL PROJECTE
-# Versió 1.8.2 - Desembre 2025
+# Versió 1.9 - Desembre 2025
 # ═══════════════════════════════════════════════════════════════════════════════
 
 
@@ -70,10 +70,8 @@ Eina centralitzada amb:
 - Dashboard amb mètriques en temps real
 - Multi-organització amb sistema de rols
 - Divisor de remeses amb matching intel·ligent
-- **Divisor de remeses Stripe amb assignació de donants (NOU v1.8.2)**
 - **Importador de devolucions del banc (NOU v1.8)**
-- **Enviament de certificats per email via Resend (NOU v1.8)**
-- **Compliment RGPD: política de privacitat i clàusula al registre (NOU v1.8)**
+- **Importador de donacions Stripe (NOU v1.9)**
 
 ## 1.4 URLs i Recursos
 
@@ -131,6 +129,7 @@ Per a les properes versions, Summa Social se centra en **dos blocs principals**:
 | **Consolidació anual** | Import total per donant/proveïdor amb devolucions aplicades | ✅ Implementat |
 | **Checklist pre-informe** | Llista d'errors a corregir abans de generar 182/347 | 🔲 Pendent |
 | **Excel net per gestoria** | Format estàndard Model 182 amb recurrència | ✅ Implementat v1.7 |
+| **Importador Stripe** | Dividir remeses Stripe amb traçabilitat completa (donacions + comissions) | ✅ Implementat v1.9 |
 
 ### Criteri de Priorització
 
@@ -207,6 +206,10 @@ A més dels dos blocs prioritaris, Summa Social incorpora un conjunt de **millor
     /return-importer             → Importador de devolucions (NOU v1.8)
       useReturnImporter.ts       → Hook amb lògica de matching
       ReturnImporter.tsx         → Modal UI de l'importador
+      index.ts                   → Exports
+    /stripe-importer             → Importador de donacions Stripe (NOU v1.9)
+      useStripeImporter.ts       → Hook amb lògica de parsing i matching
+      StripeImporter.tsx         → Modal UI de l'importador
       index.ts                   → Exports
     donor-manager.tsx            → Gestió de donants
     donor-importer.tsx           → Importador massiu de donants
@@ -285,7 +288,7 @@ organizations/
       │       # Camps de remeses:
       │       ├── isRemittance: boolean | null    # És una remesa agrupada?
       │       ├── remittanceItemCount: number | null  # Nombre total de quotes
-      │       ├── source: 'bank' | 'remittance' | 'manual' | null  # Origen
+      │       ├── source: 'bank' | 'remittance' | 'manual' | 'stripe' | null  # Origen
       │       ├── parentTransactionId: string | null  # ID remesa pare
       │       │
       │       # Camps de remeses de devolucions (NOU v1.8):
@@ -294,6 +297,11 @@ organizations/
       │       ├── remittanceResolvedCount: number | null   # Filles creades
       │       ├── remittancePendingCount: number | null    # Pendents d'identificar
       │       ├── remittancePendingTotalAmount: number | null  # Import pendent €
+      │       │
+      │       # Camps de donacions Stripe (NOU v1.9):
+      │       ├── stripePaymentId: string | null      # ID pagament (ch_xxx)
+      │       ├── stripeTransferId: string | null     # ID payout (po_xxx)
+      │       ├── transactionType: 'donation' | 'fee' | 'return' | null  # Tipus específic
       │       │
       │       ├── createdAt: timestamp
       │       └── updatedAt: timestamp
@@ -453,24 +461,6 @@ Apareix quan hi ha fites positives:
 - Personalitzat
 - Tot
 
-### 3.1.7 Compartir Resum (NOU v1.8)
-
-Botó a la capçalera del dashboard que permet compartir les mètriques:
-
-**Funcionalitat:**
-- Genera text amb totes les dades del període seleccionat
-- Textarea editable abans d'enviar
-- Botó "Copiar" al portapapers
-- Botó "Enviar per email" (obre client d'email)
-
-**Contingut del resum:**
-- Nom de l'organització
-- Període seleccionat
-- Ingressos, despeses, balanç
-- Donants actius
-- Donacions rebudes
-- Peu: "Generat amb Summa Social"
-
 
 ## 3.2 GESTIÓ DE MOVIMENTS
 
@@ -515,40 +505,15 @@ Botó a la capçalera del dashboard que permet compartir les mètriques:
 | Nota | ✅ |
 
 ### 3.2.4 Filtres
+- Per data (any, trimestre, mes, personalitzat)
+- Per categoria
+- Per contacte
+- Per projecte
+- Sense categoritzar
+- Sense contacte
+- **Devolucions pendents** (NOU v1.8)
 
-**Filtre de dates:**
-- Any, trimestre, mes, personalitzat, tot
-
-**Desplegable "Pendents" (NOU v1.8):**
-
-| Filtre | Descripció |
-|--------|------------|
-| Devolucions | `transactionType === 'return'` amb badge vermell per les no assignades |
-| Sense document | `documentUrl === null` |
-| Sense categoritzar | `categoryId === null` |
-| Sense contacte | `contactId === null` i import > llindar |
-
-**Comportament:**
-- Agrupa 4 filtres en un sol desplegable
-- Mostra comptador total de tipus amb elements
-- Quan un filtre està actiu, el botó mostra el nom del filtre
-- Badge vermell a "Devolucions" amb les pendents d'assignar
-
-### 3.2.5 Barra de Resum Contextual (NOU v1.8)
-
-Quan hi ha un filtre actiu (cerca o filtre de pendents), apareix una barra sobre la taula:
-
-```
-Mostrant 12 de 365 · Ingressos: 500€ · Despeses: -7.200€  [↓ Exportar] [✕]
-```
-
-**Funcionalitat:**
-- Comptador de moviments filtrats vs total
-- Suma d'ingressos (verd) i despeses (vermell)
-- Botó exportar Excel amb només els filtrats
-- Botó netejar filtres
-
-### 3.2.6 Banner de Devolucions Pendents (NOU v1.8)
+### 3.2.5 Banner de Devolucions Pendents (NOU v1.8)
 
 Quan hi ha devolucions sense assignar, apareix un banner vermell:
 
@@ -612,191 +577,6 @@ parentTransactionId: '{id_remesa}'
 
 ### 3.3.6 Guardar Configuració
 Es pot guardar el mapejat per banc (Triodos, La Caixa, Santander, etc.)
-
-### 3.3.7 Gestió de donacions via Stripe (Divisió de remeses)
-
-#### Visió general
-
-Quan una organització rep donacions via Stripe, els diners arriben al compte bancari com una **remesa (payout)** que agrupa múltiples donacions individuals. Aquest moviment bancari:
-- És un ingrés positiu
-- Representa el **net** (brut - comissions)
-- NO és encara una donació individual assignable
-
-El sistema permet **dividir aquesta remesa** per crear:
-- Donacions individuals assignades a donants
-- Registre separat de comissions Stripe
-- Traçabilitat completa
-
-#### 3.3.7.1 Detecció del moviment Stripe al banc
-
-El moviment apareix al llistat de Moviments com un ingrés amb descripció tipus:
-- "Transferencia de Stripe..."
-- O altres variants similars
-
-Per localitzar-lo ràpidament:
-- Escriure "Stripe" al cercador de moviments
-- Filtra automàticament tots els moviments relacionats amb Stripe
-
-**Important:**
-- Aquest moviment NO és encara una donació
-- Representa una remesa (payout) de Stripe que cal dividir
-
-#### 3.3.7.2 Opció "Dividir remesa Stripe"
-
-Al menú d'accions del moviment (⋮) apareix l'opció **"Dividir remesa Stripe"** quan:
-- És un ingrés (import positiu)
-- No està ja dividit
-- Correspon a Stripe (dades noves o antigues)
-
-Aquesta opció **no implica cap canvi comptable** fins que es confirmi la importació. Només obre l'assistent de divisió.
-
-#### 3.3.7.3 Exportació del CSV des de Stripe
-
-Per obtenir el fitxer de detall:
-
-1. Accedir a Stripe → **Pagos** → **Exportar**
-2. Seleccionar format: **Columnes predeterminades (CSV)**
-3. El CSV conté els pagaments individuals del payout
-
-El sistema llegeix automàticament les columnes estàndard de Stripe.
-
-#### 3.3.7.4 Càrrega del CSV i selecció del payout
-
-Quan es carrega el CSV:
-
-1. El sistema **llegeix el fitxer** i agrupa pagaments per payout
-2. Per cada payout, calcula:
-   - **Brut**: Suma de tots els imports
-   - **Comissions**: Suma de totes les fees
-   - **Net**: Brut - Comissions
-3. **Compara el net** amb l'import del moviment bancari
-
-**Si hi ha múltiples payouts compatibles:**
-- El sistema mostra tots els que coincideixen (±2¢ tolerància)
-- L'usuari ha de seleccionar manualment el correcte
-- Es mostra: nombre de donacions, brut i payout ID
-
-**Si el net no quadra:**
-- El botó d'importar queda deshabilitat
-- Es mostra avís clar: "L'import no quadra amb el banc"
-
-#### 3.3.7.5 Assignació de donants
-
-Per cada donació del payout:
-
-**Matching automàtic per email:**
-- El sistema busca donants amb el mateix email que el pagament de Stripe
-- Si troba coincidència exacta → assignació automàtica
-- Indicador visual: ✓ Match
-
-**Assignació manual:**
-- Si no hi ha match automàtic → selector de donant
-- Opcions:
-  - Seleccionar donant existent
-  - Crear donant nou
-- Help text: "Assigna el donant per continuar"
-
-**Auto-match múltiple:**
-- Si s'assigna manualment un donant a una donació
-- El sistema assigna automàticament el mateix donant a altres donacions amb el mateix email
-- Només si no tenen ja un match manual diferent
-
-**Bloqueig d'importació:**
-- No es pot importar mentre hi hagi donacions sense donant assignat
-- Indicador: "Pendents: X"
-- Botó deshabilitat amb tooltip explicatiu
-
-#### 3.3.7.6 Importació i efectes comptables
-
-Quan es confirma la importació:
-
-**Es creen:**
-1. **N moviments de donació** (ingressos):
-   - Un per cada pagament del payout
-   - Assignats al donant corresponent
-   - Import: import brut de cada donació
-   - Categoria: categoria per defecte del donant (o "donations")
-
-2. **1 moviment de comissions Stripe** (despesa):
-   - Import: total de comissions del payout (negatiu)
-   - Descripció: "Comissions Stripe - X donacions"
-   - Categoria: despeses bancàries
-   - Data: mateixa que el moviment bancari
-
-**El moviment bancari original:**
-- Queda marcat com a remesa dividida
-- No es torna a mostrar com pendent de dividir
-- Registre de traçabilitat complet
-
-#### 3.3.7.7 Descripció i traçabilitat
-
-Totes les donacions creades inclouen a la descripció:
-- Descripció original de Stripe (si n'hi ha)
-- **Suffix automàtic: "(via Stripe)"** si la descripció no conté ja "STRIPE"
-
-**Exemples:**
-- "Dona ahora - user@example.com" → "Dona ahora - user@example.com (via Stripe)"
-- "Stripe payment ch_123" → "Stripe payment ch_123" (ja conté STRIPE)
-
-**Beneficis:**
-- Cercar "Stripe" al llistat mostra totes les donacions + comissions Stripe
-- Auditoria fàcil
-- Traçabilitat visual immediata
-
-**Badge visual:**
-- Les donacions amb `source: 'stripe'` (noves) mostren badge blau "Stripe"
-- Donacions antigues (legacy) NO mostren badge, però són cercables per descripció
-
-#### 3.3.7.8 Verificació posterior
-
-Després d'importar, l'usuari pot:
-
-**Al llistat de Moviments:**
-- Cercar "Stripe" → veu totes les donacions i comissions
-- Filtrar per data, import, donant
-
-**A la fitxa del donant:**
-- Veure la donació registrada
-- Import anual correcte (incloent donacions Stripe)
-- Data correcta
-- Descripció completa
-
-**Per a informes i certificats:**
-- Les donacions Stripe compten per al Model 182
-- Es poden incloure en certificats de donació
-- Traçabilitat completa amb payout ID
-
-#### 3.3.7.9 Criteris i garanties del sistema
-
-**Garanties d'integritat:**
-- ✅ Una remesa només es pot dividir **una vegada**
-- ✅ No es poden crear donacions **duplicades** (control per stripePaymentId)
-- ✅ Les comissions queden **separades i categoritzades**
-- ✅ Les donacions Stripe són:
-  - **Cercables** (via descripció amb "Stripe")
-  - **Traçables** (stripePaymentId + stripeTransferId)
-  - **Certificables** (compten per Model 182 i certificats)
-
-**Límits tècnics:**
-- Màxim 449 donacions per payout (límit tècnic de Firestore batch)
-- Tolerància de ±2¢ en matching net vs import bancari
-- Idempotència: reimportar el mateix payout no crea duplicats
-
-**Model de dades:**
-```
-Donació Stripe:
-  source: 'stripe'
-  transactionType: 'donation'
-  parentTransactionId: {id_moviment_bancari}
-  stripePaymentId: 'ch_xxx'
-  stripeTransferId: 'po_xxx' | 'tr_xxx'
-
-Comissió Stripe:
-  source: 'stripe'
-  transactionType: 'fee'
-  parentTransactionId: {id_moviment_bancari}
-  stripeTransferId: 'po_xxx' | 'tr_xxx'
-```
 
 
 ## 3.4 GESTIÓ DE DEVOLUCIONS (NOU v1.8)
@@ -1022,23 +802,6 @@ Si algunes devolucions no es poden identificar:
 - **Edició**: Es pot canviar l'estat des del formulari d'edició
 - **Importador**: Detecta columna "Estado/Estat" automàticament
 
-### 3.5.3b Filtre "Amb devolucions" (NOU v1.8)
-
-**Ubicació:** Al costat del filtre "Dades incompletes"
-
-**Criteri:** Donant té almenys una transacció amb:
-- `transactionType === 'return'`
-- `contactId === donor.id`
-
-**Badge a la fila:**
-- Indicador vermell "↩" al costat del nom
-- Tooltip: "Aquest donant té devolucions assignades"
-
-**Implementació (sense N+1):**
-- Una sola query: `transactions where transactionType == 'return'`
-- Crear `Set<string>` amb `contactId` únics
-- Filtrar/mostrar badge en memòria
-
 ### 3.5.4 Importador de Donants
 
 **Columnes detectades automàticament:**
@@ -1084,8 +847,7 @@ Panel lateral que s'obre clicant el nom d'un donant:
 - Historial de donacions (paginat)
 - **Historial de devolucions** (NOU v1.8)
 - Resum per any
-- Generació de certificats (PDF)
-- **Enviament de certificats per email** (NOU v1.8)
+- Generació de certificats
 
 
 ## 3.6 PROJECTES / EIXOS D'ACTUACIÓ
@@ -1152,55 +914,9 @@ Estadístiques per projecte:
 - Firma digitalitzada
 - Text legal Llei 49/2002
 
-**Descarregar PDF:**
-- Fitxa donant → icona 📥 (individual)
-- Informes → Certificats → "Descarregar seleccionats" (ZIP)
-
-**Enviament per Email (NOU v1.8):**
-
-| Ubicació | Acció | Resultat |
-|----------|-------|----------|
-| Informes → Certificats | Botó "Enviar por email (N)" | Massiu a tots els seleccionats |
-| Informes → Certificats | Icona ✉️ a cada fila | Individual a aquell donant |
-| Fitxa donant | Botó "Enviar por email" | Certificat anual |
-| Historial donacions | Icona ✉️ a cada fila | Certificat d'aquella donació |
-
-**Integració:** Resend API (certifica@summasocial.app)
-
-**Requisit:** El donant ha de tenir email informat a la seva fitxa.
-
 **Càlcul de l'import:**
 - Import = Σ donacions - Σ devolucions
 - Si import ≤ 0 → No es genera certificat
-
-### 3.7.4 Criteri Fiscal de Certificats de Donació
-
-> Referència completa: `/docs/CRITERI-CERTIFICATS-DONACIO.md`
-
-**Criteri conservador:**
-- Donació certificable: `amount > 0` (no depèn de `donationStatus`)
-- Devolució: `transactionType === 'return'` (exclou `return_fee`)
-- Import net = Brut − |Devolucions|
-
-**Bloc de resum fiscal (PDF):**
-Quan hi ha devolucions, el certificat inclou un bloc visual:
-```
-┌─────────────────────────────────────────┐
-│ Resum fiscal:                           │
-│ Donacions rebudes:          1.200,00 €  │
-│ Devolucions efectuades:      -200,00 €  │
-│ Import net certificat:      1.000,00 €  │
-└─────────────────────────────────────────┘
-```
-
-**Casos límit:**
-| Cas | Comportament |
-|-----|--------------|
-| Import net = 0 € | No es genera certificat |
-| Import net < 0 € | Es mostra 0 € (mai negatiu) |
-| Devolució tardana | Compta a l'any de la devolució |
-
-**Coherència garantida:** Model 182 i certificats individuals usen exactament el mateix criteri.
 
 
 ## 3.8 CONFIGURACIÓ
@@ -1240,36 +956,240 @@ Accions irreversibles només per SuperAdmin:
 - Restaura la transacció original per tornar-la a processar
 
 
-## 3.9 COMPLIMENT RGPD (NOU v1.8)
+## 3.9 IMPORTADOR STRIPE (NOU v1.9)
 
-### 3.9.1 Política de Privacitat
+### 3.9.1 Visió general
 
-**Ubicació:** `/privacy` (pàgina pública)
+L'importador Stripe permet dividir les liquidacions (payouts) de Stripe en transaccions individuals, identificant cada donació i separant les comissions.
 
-**Contingut:**
-- Qui és el responsable (Summa Social / Raül Vico)
-- Summa Social com a encarregat per dades de les ONGs
-- Base legal: execució del contracte
-- Drets dels interessats (accés, rectificació, supressió...)
-- Subencarregats (Firebase)
-- Contacte: privacy@summasocial.app
+| Característica | Valor |
+|----------------|-------|
+| **Format entrada** | CSV exportat de Stripe ("Pagos → Columnes predeterminades") |
+| **Matching donants** | Per email (exacte, case insensitive) |
+| **Creació automàtica donants** | NO |
+| **Gestió comissions** | Despesa agregada per payout |
 
-**Enllaç visible:** Footer de l'aplicació (icona Shield + "Privacitat")
+**Principi fonamental:** El moviment bancari original (payout) MAI es modifica.
 
-### 3.9.2 Clàusula al Registre
+### 3.9.2 Flux d'ús
 
-Al formulari de registre d'usuaris:
-> "En registrar-te, declares que has llegit la [Política de privacitat]."
+```
+1. L'usuari veu un ingrés de Stripe al llistat de moviments
+2. Menú ⋮ → "Dividir remesa Stripe"
+3. Puja el CSV exportat de Stripe
+4. El sistema agrupa per Transfer (payout) i cerca el que quadra amb l'import bancari
+5. Previsualització: donacions + comissions + matching donants
+6. L'usuari revisa i assigna manualment els pendents
+7. Confirma → Es creen les transaccions filles
+```
 
-Enllaç actiu a `/privacy`.
+### 3.9.3 Condició per mostrar l'acció
 
-### 3.9.3 Documentació de Seguretat
+L'opció "Dividir remesa Stripe" apareix si:
 
-Carpeta `/docs/security/`:
-- `PRIVACY_POLICY.md` — Política completa
-- `Subprocessors.md` — Firebase i garanties UE
-- `TOMs.md` — Mesures tècniques i organitzatives
-- `DPA_Template.docx` — Contracte per ONGs clients
+```typescript
+const canSplitStripeRemittance = (tx: Transaction): boolean => {
+  const isIncome = tx.amount > 0;
+  const isNotAlreadyDivided = tx.transactionType !== 'donation' && tx.transactionType !== 'fee';
+  const isNotRemittance = !tx.isRemittance;
+  
+  if (!isIncome || !isNotAlreadyDivided || !isNotRemittance) return false;
+  
+  // Transaccions noves (ja tenen source)
+  if (tx.source === 'stripe') return true;
+  
+  // Fallback legacy (backward compatibility)
+  const descUpper = tx.description?.toUpperCase() || '';
+  return descUpper.includes('STRIPE') || descUpper.includes('TRANSFERENCIA DE STRIPE');
+};
+```
+
+### 3.9.4 Camps CSV requerits
+
+| Camp Stripe | Ús a Summa Social | Obligatori |
+|-------------|-------------------|------------|
+| `id` | Traçabilitat (`stripePaymentId`) | ✅ |
+| `Created date (UTC)` | Data de la donació | ✅ |
+| `Amount` | Import brut | ✅ |
+| `Fee` | Comissió Stripe | ✅ |
+| `Customer Email` | Matching amb donant | ✅ |
+| `Status` | Filtrar només `succeeded` | ✅ |
+| `Transfer` | Agrupació per payout (`po_xxx`) | ✅ |
+| `Amount Refunded` | Detectar reemborsos | ✅ |
+| `Description` | Concepte (opcional) | ❌ |
+
+### 3.9.5 Filtratge automàtic
+
+| Condició | Acció |
+|----------|-------|
+| `Status !== 'succeeded'` | Excloure silenciosament |
+| `Amount Refunded > 0` | Excloure + mostrar avís |
+
+### 3.9.6 Agrupació per payout
+
+Les donacions s'agrupen pel camp `Transfer` (po_xxx):
+
+```typescript
+interface PayoutGroup {
+  transferId: string;    // po_xxx
+  rows: StripeRow[];     // Donacions del payout
+  gross: number;         // Σ Amount
+  fees: number;          // Σ Fee
+  net: number;           // gross - fees
+}
+```
+
+### 3.9.7 Match amb el banc
+
+**Criteri:** Per import net (±0,02€ de tolerància)
+
+```typescript
+const tolerance = 0.02;
+const match = Math.abs(payoutGroup.net - bankTransaction.amount) <= tolerance;
+```
+
+> ⚠️ El banc NO porta el `Transfer` (po_xxx). El match és exclusivament per import.
+
+### 3.9.8 Matching de donants
+
+| Prioritat | Criteri | Implementació |
+|-----------|---------|---------------|
+| 1 | Email | `donor.email.toLowerCase() === stripeRow.customerEmail.toLowerCase()` |
+
+**Regles estrictes:**
+- NO fuzzy matching
+- NO crear donants automàticament
+- Si no hi ha match → fila queda "Pendent d'assignar"
+
+### 3.9.9 Transaccions generades
+
+**Per cada donació (N ingressos):**
+
+```typescript
+{
+  date: stripeRow.createdDate,
+  description: ensureStripeInDescription(stripeRow.description, stripeRow.customerEmail),
+  amount: stripeRow.amount,              // Import BRUT (positiu)
+  contactId: matchedDonor?.id || null,
+  contactType: matchedDonor ? 'donor' : null,
+  contactName: matchedDonor?.name || null,
+  source: 'stripe',
+  transactionType: 'donation',
+  parentTransactionId: bankTransaction.id,
+  stripePaymentId: stripeRow.id,         // ch_xxx
+  stripeTransferId: selectedGroup.transferId,  // po_xxx
+  categoryId: matchedDonor?.defaultCategoryId || null
+}
+```
+
+**Per les comissions (1 despesa agregada):**
+
+```typescript
+{
+  date: bankTransaction.date,
+  description: `Comissions Stripe - ${count} donacions`,
+  amount: -totalFees,                    // Negatiu (despesa)
+  source: 'stripe',
+  transactionType: 'fee',
+  parentTransactionId: bankTransaction.id,
+  stripeTransferId: selectedGroup.transferId,
+  categoryId: bankFeesCategoryId         // Categoria 'bankFees'
+}
+```
+
+**Cercabilitat (sufix automàtic):**
+
+```typescript
+function ensureStripeInDescription(desc: string | null, email: string): string {
+  const base = desc || `Donació Stripe - ${email}`;
+  if (base.toUpperCase().includes('STRIPE')) return base;
+  return `${base} (via Stripe)`;
+}
+```
+
+### 3.9.10 Model de dades
+
+**Camps específics Stripe a Transaction:**
+
+| Camp | Tipus | Descripció |
+|------|-------|------------|
+| `source` | `'stripe'` | Identifica origen |
+| `transactionType` | `'donation' \| 'fee'` | Tipus de transacció |
+| `stripePaymentId` | `string \| null` | ID pagament (`ch_xxx`) - Idempotència |
+| `stripeTransferId` | `string \| null` | ID payout (`po_xxx`) - Correlació |
+| `parentTransactionId` | `string` | ID del moviment bancari pare |
+
+### 3.9.11 Impacte fiscal
+
+| Document | Tractament |
+|----------|------------|
+| **Model 182** | Només compten les filles amb `contactId` i `transactionType: 'donation'` |
+| **Certificats** | Import = Σ donacions Stripe del donant |
+| **Comissions** | NO afecten fiscalitat donants (són despeses de l'entitat) |
+
+### 3.9.12 UI
+
+**Pas 1: Pujar fitxer**
+```
+┌─────────────────────────────────────────┐
+│ Dividir remesa Stripe                   │
+│                                         │
+│ Import al banc: 115,55 €                │
+│                                         │
+│ [Arrossega el CSV aquí]                 │
+│                                         │
+│ ⚠️ No obrir el CSV amb Excel abans      │
+└─────────────────────────────────────────┘
+```
+
+**Pas 2: Revisió**
+```
+┌─────────────────────────────────────────────────────────────────┐
+│ 3 donacions trobades                                            │
+│                                                                 │
+│ Brut:        120,00 €                                           │
+│ Comissions:   -4,45 €                                           │
+│ Net:         115,55 € ✅ (quadra amb banc)                      │
+│                                                                 │
+│ ─────────────────────────────────────────────────────────────   │
+│ ✅ lourdes@example.com    → Lourdes Hoyal       50,00 €         │
+│ ✅ pere@example.com       → Pere Martí          30,00 €         │
+│ ⚠️ nou@email.com          → [Assignar]          40,00 €         │
+│                                                                 │
+│                              [Cancel·lar] [Processar]           │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+### 3.9.13 Errors i missatges
+
+| Codi | Condició | Missatge |
+|------|----------|----------|
+| `ERR_NO_COLUMNS` | Falten columnes | "El CSV no té les columnes necessàries: {columnes}" |
+| `ERR_NO_MATCH` | Cap payout quadra | "No s'ha trobat cap payout que coincideixi amb {amount} €" |
+| `ERR_AMOUNT_MISMATCH` | Import no quadra | "L'import no quadra. Esperats {expected} €, calculats {actual} €" |
+| `ERR_NO_BANK_FEES_CATEGORY` | Falta categoria | "No s'ha trobat la categoria de despeses bancàries" |
+| `WARN_REFUNDED` | Hi ha reemborsos | "S'han exclòs {count} donacions reemborsades ({amount} €)" |
+| `WARN_NO_DONOR` | Sense match | "{count} donacions pendents d'assignar donant" |
+
+### 3.9.14 Límits del sistema
+
+| Permès | NO permès |
+|--------|-----------|
+| Matching per email exacte | Fuzzy matching |
+| Assignació manual pendents | Creació automàtica donants |
+| Múltiples payouts al CSV | Connexió directa API Stripe |
+| Exclusió reemborsos | Processament automàtic refunds |
+
+### 3.9.15 Estructura de fitxers
+
+```
+/src/components/stripe-importer/
+  ├── useStripeImporter.ts    # Hook amb lògica de parsing i matching
+  ├── StripeImporter.tsx      # Component UI (modal)
+  └── index.ts                # Exports
+```
+
+**Punt de connexió:** `transaction-table.tsx` → menú ⋮ si `canSplitStripeRemittance(tx)`
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -1318,7 +1238,17 @@ Carpeta `/docs/security/`:
 
 **Columnes detectades automàticament:** IBAN, Import, Data, DNI, Nom, Motiu
 
-## 4.6 Exportacions
+## 4.6 Importador Stripe (NOU v1.9)
+
+| Format | Extensions | Font |
+|--------|------------|------|
+| CSV | .csv | Stripe Dashboard → Pagos → Exportar |
+
+**Columnes requerides:** id, Created date (UTC), Amount, Fee, Customer Email, Status, Transfer, Amount Refunded
+
+**Veure secció 3.9 per detalls complets.**
+
+## 4.7 Exportacions
 
 | Informe | Format | Nom fitxer |
 |---------|--------|------------|
@@ -1491,29 +1421,11 @@ Carpeta `/docs/security/`:
 # ═══════════════════════════════════════════════════════════════════════════════
 
 ## Completades v1.8
-
-### Funcionalitats noves
-- ✅ Importador de devolucions del banc (Santander, Triodos, altres)
-- ✅ Devolucions agrupades (remeses)
-- ✅ Remeses parcials
-- ✅ Banner devolucions pendents
-- ✅ **Enviament certificats per email (Resend)**
-- ✅ **Política de privacitat + pàgina /privacy**
-- ✅ **Clàusula RGPD al registre**
-- ✅ **Desplegable "Pendents" a Moviments**
-- ✅ **Barra resum contextual amb filtres**
-- ✅ **Compartir resum dashboard**
-- ✅ **Exportar Excel filtrat**
-- ✅ **Eliminar documents adjunts**
-- ✅ **Filtre "Amb devolucions" a Donants + badge**
-
-### Millores UX
-- ✅ Filtre de dates a Moviments
-- ✅ Desplegable filtres pendents (abans 4 botons separats)
-- ✅ Selector de categories amb cerca
-- ✅ Indicadors visuals de devolucions a donants
-
-### Tècnic
+- ✅ Importador de devolucions del banc (Santander, Triodos)
+- ✅ Detecció automàtica d'agrupacions de devolucions
+- ✅ Remeses parcials de devolucions
+- ✅ Matching per IBAN → DNI → Nom exacte
+- ✅ UX simplificada per devolucions
 - ✅ Tests unitaris (77 tests) + Husky pre-commit
 - ✅ Fixes bloqueig aria-hidden modals Radix
 - ✅ Estat actiu/baixa per donants
@@ -1545,7 +1457,8 @@ Carpeta `/docs/security/`:
 - 🔲 Detecció d'anomalies (duplicats)
 - 🔲 Memòria de classificació
 - 🔲 Notificacions per email
-- 🔲 Importació web (Stripe, altres)
+- ✅ Importació web Stripe (v1.9)
+- 🔲 Importació web (altres plataformes)
 
 ## Futures (sense data)
 - 🔲 Integració Open Banking
@@ -1732,6 +1645,9 @@ if (matchingTx) {
 | "Gestoria" | Professional extern | L'ONG mateixa |
 | "Matching exacte" | IBAN/DNI/Nom idèntic | Fuzzy, aproximat |
 | "Remesa parcial" | Algunes devolucions pendents | Remesa incompleta per error |
+| "Payout Stripe" | Liquidació de Stripe al banc (po_xxx) | Donació individual |
+| "Comissió Stripe" | Despesa agregada per payout | Cost per donació |
+| "Remesa Stripe" | Payout dividit en donacions individuals | Connexió API Stripe |
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -1826,5 +1742,5 @@ El mòdul de devolucions resol el problema de rebuts retornats pel banc sense id
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # FI DEL DOCUMENT
-# Última actualització: Desembre 2025 - Versió 1.8.1
+# Última actualització: Desembre 2025 - Versió 1.9
 # ═══════════════════════════════════════════════════════════════════════════════
