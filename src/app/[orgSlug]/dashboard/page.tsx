@@ -9,7 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Textarea } from '@/components/ui/textarea';
 import Link from 'next/link';
-import { DollarSign, TrendingUp, TrendingDown, Rocket, Heart, AlertTriangle, FolderKanban, CalendarClock, Share2, Copy, Mail, PartyPopper, Info, FileSpreadsheet, FileText, RefreshCcw } from 'lucide-react';
+import { DollarSign, TrendingUp, TrendingDown, Rocket, Heart, AlertTriangle, FolderKanban, CalendarClock, Share2, Copy, Mail, PartyPopper, Info, FileSpreadsheet, FileText, RefreshCcw, Pencil } from 'lucide-react';
 import type { Transaction, Contact, Project, Donor, Category } from '@/lib/data';
 import { useCollection, useFirebase, useMemoFirebase } from '@/firebase';
 import { collection } from 'firebase/firestore';
@@ -18,6 +18,7 @@ import { useCurrentOrganization, useOrgUrl } from '@/hooks/organization-provider
 import { formatCurrencyEU } from '@/lib/normalize';
 import { DateFilter, type DateFilterValue } from '@/components/date-filter';
 import { useTransactionFilters } from '@/hooks/use-transaction-filters';
+import { useIsMobile } from '@/hooks/use-mobile';
 import {
   aggregateIncomeByCategory,
   aggregateMissionTransfersByContact,
@@ -28,7 +29,7 @@ import {
 } from '@/lib/exports/economic-report';
 import * as XLSX from 'xlsx';
 import Papa from 'papaparse';
-import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from '@/components/ui/accordion';
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from '@/components/ui/sheet';
 
 interface TaxObligation {
   id: string;
@@ -49,6 +50,13 @@ const NARRATIVE_LABELS: Record<keyof NarrativeDraft, string> = {
   expenses: 'Aplicació dels fons',
   transfers: 'Transferències a contraparts',
 };
+const NARRATIVE_CARD_TITLES: Record<keyof NarrativeDraft, string> = {
+  summary: 'Resum',
+  income: 'Origen',
+  expenses: 'Aplicació',
+  transfers: 'Transferències',
+};
+const NARRATIVE_ORDER: (keyof NarrativeDraft)[] = ['summary', 'income', 'expenses', 'transfers'];
 
 interface Celebration {
   id: string;
@@ -180,7 +188,10 @@ export default function DashboardPage() {
   const [copySuccess, setCopySuccess] = React.useState(false);
   const [narratives, setNarratives] = React.useState<NarrativeDraft | null>(null);
   const [defaultNarratives, setDefaultNarratives] = React.useState<NarrativeDraft | null>(null);
-  const [editingNarrative, setEditingNarrative] = React.useState<keyof NarrativeDraft | null>(null);
+  const [editingField, setEditingField] = React.useState<keyof NarrativeDraft | null>(null);
+  const [editingValue, setEditingValue] = React.useState('');
+  const [isNarrativeEditorOpen, setNarrativeEditorOpen] = React.useState(false);
+  const isMobile = useIsMobile();
 
   // Ref per gestionar timeout i evitar memory leaks
   const copyTimeoutRef = React.useRef<NodeJS.Timeout | null>(null);
@@ -193,6 +204,12 @@ export default function DashboardPage() {
       }
     };
   }, []);
+  React.useEffect(() => {
+    if (!shareDialogOpen) {
+      setNarrativeEditorOpen(false);
+      setEditingField(null);
+    }
+  }, [shareDialogOpen]);
 
   // Funció per formatejar el període del filtre
   const formatPeriodLabel = (filter: DateFilterValue): string => {
@@ -282,18 +299,41 @@ ${t.dashboard.generatedWith}`;
     setSummaryText(text);
     setNarratives(baseNarratives);
     setDefaultNarratives(baseNarratives);
-    setEditingNarrative(null);
+    setEditingField(null);
+    setEditingValue('');
+    setNarrativeEditorOpen(false);
     setShareDialogOpen(true);
   };
 
-  const handleNarrativeChange = (field: keyof NarrativeDraft, value: string) => {
-    setNarratives((prev) => (prev ? { ...prev, [field]: value } : prev));
+  const openNarrativeEditor = (field: keyof NarrativeDraft) => {
+    if (!narratives) return;
+    setEditingField(field);
+    setEditingValue(narratives[field]);
+    setNarrativeEditorOpen(true);
+  };
+
+  const handleNarrativeSave = () => {
+    if (!narratives || !editingField) {
+      setNarrativeEditorOpen(false);
+      setEditingField(null);
+      return;
+    }
+    setNarratives({ ...narratives, [editingField]: editingValue });
+    setNarrativeEditorOpen(false);
+    setEditingField(null);
+  };
+
+  const handleNarrativeCancel = () => {
+    setNarrativeEditorOpen(false);
+    setEditingField(null);
   };
 
   const handleResetNarratives = () => {
     if (defaultNarratives) {
       setNarratives(defaultNarratives);
-      setEditingNarrative(null);
+      setEditingField(null);
+      setEditingValue('');
+      setNarrativeEditorOpen(false);
     }
   };
 
@@ -978,7 +1018,7 @@ ${t.dashboard.generatedWith}`;
                   <Textarea
                     value={summaryText}
                     onChange={(e) => setSummaryText(e.target.value)}
-                    rows={10}
+                    rows={8}
                     className="font-mono text-sm"
                   />
                 </div>
@@ -1007,49 +1047,32 @@ ${t.dashboard.generatedWith}`;
                   <div>
                     <p className="text-sm font-semibold tracking-tight">Textos del període</p>
                     <p className="text-xs text-muted-foreground">
-                      Relat institucional preparat per compartir al resum econòmic. Pots desplegar cada apartat per revisar o editar el contingut.
+                      Relat executiu resumit. Utilitza les accions de cada targeta per copiar o editar el contingut complet.
                     </p>
                   </div>
-                  <Accordion type="single" collapsible defaultValue="summary">
-                    {(Object.keys(NARRATIVE_LABELS) as (keyof NarrativeDraft)[]).map((field) => {
-                      const isEditing = editingNarrative === field;
-                      return (
-                        <AccordionItem key={field} value={field}>
-                          <div className="flex items-center justify-between gap-2">
-                            <AccordionTrigger className="flex-1 text-left text-sm font-medium">
-                              {NARRATIVE_LABELS[field]}
-                            </AccordionTrigger>
-                            <div className="flex items-center gap-1">
-                              <Button variant="ghost" size="icon" onClick={() => handleCopyNarrative(field)}>
-                                <Copy className="h-4 w-4" />
-                              </Button>
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => setEditingNarrative(isEditing ? null : field)}
-                              >
-                                {isEditing ? 'Tanca' : 'Edita'}
-                              </Button>
-                            </div>
+                  <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+                    {NARRATIVE_ORDER.map((field) => (
+                      <div key={field} className="flex h-full flex-col rounded-lg border bg-background/70 p-4 shadow-sm">
+                        <div className="flex items-start justify-between gap-2">
+                          <div>
+                            <p className="text-sm font-semibold">{NARRATIVE_CARD_TITLES[field]}</p>
+                            <p className="text-xs text-muted-foreground">{NARRATIVE_LABELS[field]}</p>
                           </div>
-                          <AccordionContent className="pt-3">
-                            {isEditing ? (
-                              <Textarea
-                                value={narratives[field]}
-                                onChange={(e) => handleNarrativeChange(field, e.target.value)}
-                                rows={4}
-                                className="text-sm"
-                              />
-                            ) : (
-                              <p className="rounded-md border bg-background p-3 text-sm leading-relaxed text-muted-foreground">
-                                {narratives[field]}
-                              </p>
-                            )}
-                          </AccordionContent>
-                        </AccordionItem>
-                      );
-                    })}
-                  </Accordion>
+                          <div className="flex items-center gap-1">
+                            <Button variant="ghost" size="icon" onClick={() => handleCopyNarrative(field)}>
+                              <Copy className="h-4 w-4" />
+                            </Button>
+                            <Button variant="ghost" size="icon" onClick={() => openNarrativeEditor(field)}>
+                              <Pencil className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        </div>
+                        <p className="mt-3 text-sm text-muted-foreground leading-relaxed line-clamp-3">
+                          {narratives[field]}
+                        </p>
+                      </div>
+                    ))}
+                  </div>
                 </div>
               )}
             </div>
@@ -1063,6 +1086,54 @@ ${t.dashboard.generatedWith}`;
           </div>
         </DialogContent>
       </Dialog>
+
+      {editingField && (
+        isMobile ? (
+          <Sheet open={isNarrativeEditorOpen} onOpenChange={(open) => (open ? setNarrativeEditorOpen(true) : handleNarrativeCancel())}>
+            <SheetContent side="bottom" className="h-[85vh] w-full overflow-y-auto">
+              <SheetHeader className="space-y-1">
+                <SheetTitle>{`Edita ${NARRATIVE_CARD_TITLES[editingField]}`}</SheetTitle>
+                <SheetDescription>{NARRATIVE_LABELS[editingField]}</SheetDescription>
+              </SheetHeader>
+              <div className="space-y-4 py-4">
+                <Textarea
+                  value={editingValue}
+                  onChange={(e) => setEditingValue(e.target.value)}
+                  rows={8}
+                  className="text-sm"
+                />
+                <div className="flex gap-2">
+                  <Button onClick={handleNarrativeSave}>Desa</Button>
+                  <Button variant="outline" onClick={handleNarrativeCancel}>
+                    Cancel·la
+                  </Button>
+                </div>
+              </div>
+            </SheetContent>
+          </Sheet>
+        ) : (
+          <Dialog open={isNarrativeEditorOpen} onOpenChange={(open) => (open ? setNarrativeEditorOpen(true) : handleNarrativeCancel())}>
+            <DialogContent className="max-w-lg">
+              <DialogHeader>
+                <DialogTitle>{`Edita ${NARRATIVE_CARD_TITLES[editingField]}`}</DialogTitle>
+                <DialogDescription>{NARRATIVE_LABELS[editingField]}</DialogDescription>
+              </DialogHeader>
+              <Textarea
+                value={editingValue}
+                onChange={(e) => setEditingValue(e.target.value)}
+                rows={8}
+                className="text-sm"
+              />
+              <DialogFooter className="mt-4">
+                <Button onClick={handleNarrativeSave}>Desa</Button>
+                <Button variant="outline" onClick={handleNarrativeCancel}>
+                  Cancel·la
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+        )
+      )}
     </div>
   );
 }
