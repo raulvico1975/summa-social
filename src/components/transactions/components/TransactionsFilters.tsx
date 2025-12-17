@@ -30,12 +30,24 @@ import {
 import { Input } from '@/components/ui/input';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
+import type { TransactionUrlFilter } from '@/lib/constants';
 
 // =============================================================================
 // TYPES
 // =============================================================================
 
-export type TableFilter = 'all' | 'missing' | 'returns' | 'pendingReturns' | 'pendingRemittances' | 'pendingIndividuals' | 'uncategorized' | 'noContact';
+export type TableFilter =
+  | 'all'
+  | 'missing'
+  | 'returns'
+  | 'pendingReturns'
+  | 'pendingRemittances'
+  | 'pendingIndividuals'
+  | 'uncategorized'
+  | 'noContact'
+  | 'income'
+  | 'operatingExpenses'
+  | 'missionTransfers';
 
 interface TransactionsFiltersProps {
   currentFilter: TableFilter;

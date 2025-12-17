@@ -76,11 +76,17 @@ import { TransactionRow } from '@/components/transactions/components/Transaction
 import { TransactionsFilters, TableFilter } from '@/components/transactions/components/TransactionsFilters';
 import { DateFilter, type DateFilterValue } from '@/components/date-filter';
 import { useTransactionFilters } from '@/hooks/use-transaction-filters';
+import { MISSION_TRANSFER_CATEGORY_KEY, TRANSACTION_URL_FILTERS, type TransactionUrlFilter } from '@/lib/constants';
 
-export function TransactionsTable() {
+interface TransactionsTableProps {
+  initialDateFilter?: DateFilterValue | null;
+}
+
+export function TransactionsTable({ initialDateFilter = null }: TransactionsTableProps = {}) {
   const { firestore, user, storage } = useFirebase();
   const { organizationId } = useCurrentOrganization();
-  const { t } = useTranslations();
+  const { t, language } = useTranslations();
+  const locale = language === 'es' ? 'es-ES' : 'ca-ES';
   // Memoitzar categoryTranslations per evitar re-renders innecessaris
   const categoryTranslations = React.useMemo(
     () => t.categories as Record<string, string>,
@@ -91,7 +97,7 @@ export function TransactionsTable() {
   const [tableFilter, setTableFilter] = React.useState<TableFilter>('all');
 
   // Filtre de dates
-  const [dateFilter, setDateFilter] = React.useState<DateFilterValue>({ type: 'all' });
+  const [dateFilter, setDateFilter] = React.useState<DateFilterValue>(initialDateFilter || { type: 'all' });
 
   // Cercador intel·ligent
   const [searchQuery, setSearchQuery] = React.useState('');
@@ -108,8 +114,8 @@ export function TransactionsTable() {
       const filter = params.get('filter');
       const contactId = params.get('contactId');
 
-      if (filter === 'uncategorized' || filter === 'noContact' || filter === 'returns') {
-        setTableFilter(filter as TableFilter);
+      if (isTransactionUrlFilter(filter)) {
+        setTableFilter(filter);
         setHasUrlFilter(true);
       }
 
@@ -119,6 +125,11 @@ export function TransactionsTable() {
       }
     }
   }, []);
+
+  React.useEffect(() => {
+    if (!initialDateFilter) return;
+    setDateFilter(prev => (areDateFiltersEqual(prev, initialDateFilter) ? prev : initialDateFilter));
+  }, [initialDateFilter]);
 
   // Funció per netejar el filtre i actualitzar la URL
   const clearFilter = () => {
@@ -414,6 +425,17 @@ export function TransactionsTable() {
       case 'returns':
         result = returnTransactions;
         break;
+      case 'income':
+        result = transactions.filter(tx => tx.amount > 0);
+        break;
+      case 'operatingExpenses':
+        result = transactions.filter(
+          tx => tx.amount < 0 && tx.category !== MISSION_TRANSFER_CATEGORY_KEY
+        );
+        break;
+      case 'missionTransfers':
+        result = transactions.filter(tx => tx.category === MISSION_TRANSFER_CATEGORY_KEY);
+        break;
       case 'pendingReturns':
         result = pendingReturns;
         break;
@@ -544,7 +566,7 @@ export function TransactionsTable() {
 
     const worksheet = XLSX.utils.json_to_sheet(excelData);
     const workbook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(workbook, worksheet, 'Moviments');
+    XLSX.utils.book_append_sheet(workbook, worksheet, t.movements.table.excelSheetName);
 
     // Ajustar amplada de columnes
     const colWidths = [
@@ -556,7 +578,9 @@ export function TransactionsTable() {
     ];
     worksheet['!cols'] = colWidths;
 
-    const fileName = `Moviments_filtrats_${new Date().toISOString().split('T')[0]}.xlsx`;
+    const fileName = t.movements.table.filteredExcelFileName({
+      date: new Date().toISOString().split('T')[0],
+    });
     XLSX.writeFile(workbook, fileName);
 
     toast({
@@ -591,15 +615,17 @@ export function TransactionsTable() {
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
-    link.download = `despeses-sense-justificant-${new Date().toISOString().split('T')[0]}.csv`;
+    link.download = t.movements.table.expensesWithoutDocumentFileName({
+      date: new Date().toISOString().split('T')[0],
+    });
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
     URL.revokeObjectURL(url);
 
-    toast({ 
-      title: 'Excel exportat', 
-      description: `S'han exportat ${expensesWithoutDoc.length} despeses sense justificant.` 
+    toast({
+      title: t.movements.table.expensesExportedTitle,
+      description: t.movements.table.expensesExportedDescription(expensesWithoutDoc.length),
     });
   };
 
@@ -609,7 +635,7 @@ export function TransactionsTable() {
       if (isNaN(date.getTime())) {
         return dateString;
       }
-      return date.toLocaleDateString('ca-ES', {
+      return date.toLocaleDateString(locale, {
         day: '2-digit',
         month: '2-digit',
         year: 'numeric',
@@ -1138,4 +1164,36 @@ export function TransactionsTable() {
       )}
     </TooltipProvider>
   );
+}
+
+function areDateFiltersEqual(a: DateFilterValue, b: DateFilterValue): boolean {
+  if (a.type !== b.type) return false;
+  if (a.type === 'all') return true;
+  if (a.type === 'year' || a.type === 'quarter' || a.type === 'month') {
+    if (a.year !== b.year) return false;
+  }
+  if (a.type === 'quarter') {
+    return a.quarter === b.quarter;
+  }
+  if (a.type === 'month') {
+    return a.month === b.month;
+  }
+  if (a.type === 'year') {
+    return true;
+  }
+  if (a.type === 'custom') {
+    const aRange = a.customRange;
+    const bRange = (b as DateFilterValue).customRange;
+    const aFrom = aRange?.from?.getTime() ?? null;
+    const bFrom = bRange?.from?.getTime() ?? null;
+    const aTo = aRange?.to?.getTime() ?? null;
+    const bTo = bRange?.to?.getTime() ?? null;
+    return aFrom === bFrom && aTo === bTo;
+  }
+  return false;
+}
+
+function isTransactionUrlFilter(value: string | null): value is TransactionUrlFilter {
+  if (!value) return false;
+  return (TRANSACTION_URL_FILTERS as readonly string[]).includes(value);
 }

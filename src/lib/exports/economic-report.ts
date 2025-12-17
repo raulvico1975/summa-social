@@ -1,5 +1,6 @@
 import type { Transaction, Category, Project, Contact } from '@/lib/data';
 import { formatCurrencyEU } from '@/lib/normalize';
+import { MISSION_TRANSFER_CATEGORY_KEY } from '@/lib/constants';
 
 export interface AggregateRow {
   id: string;
@@ -15,10 +16,49 @@ export interface AggregateResult {
   total: number;
 }
 
+export interface EconomicReportLabels {
+  uncategorized: string;
+  generalProject: string;
+  generalProjectDescriptor: string;
+  noCounterpart: string;
+  others: string;
+}
+
+export interface EconomicNarrativeTexts {
+  summary: {
+    noMovements: (params: { period: string }) => string;
+    general: (params: { period: string; income: string; expenses: string; balance: string }) => string;
+  };
+  income: {
+    noData: string;
+    primary: (params: { source: string; percentage: string }) => string;
+    fallbackPrimary: (params: { percentage: string }) => string;
+    secondary: (params: { source: string; percentage: string }) => string;
+    fallbackSecondary: (params: { percentage: string }) => string;
+  };
+  expenses: {
+    noData: string;
+    allGeneral: (params: { label: string }) => string;
+    generalDescriptor: (params: { label: string; descriptor: string }) => string;
+    primary: (params: { area: string; percentage: string }) => string;
+    secondary: (params: { area: string; percentage: string }) => string;
+    others: (params: { percentage: string }) => string;
+  };
+  transfers: {
+    noData: string;
+    primary: (params: { counterpart: string; percentage: string }) => string;
+    fallbackPrimary: (params: { percentage: string }) => string;
+    secondary: (params: { counterpart: string; percentage: string }) => string;
+    fallbackSecondary: (params: { percentage: string }) => string;
+    others: (params: { percentage: string }) => string;
+  };
+}
+
 interface IncomeAggregationParams {
   transactions?: Transaction[] | null;
   categories?: (Category & { id: string })[] | null;
   topN?: number;
+  labels: EconomicReportLabels;
 }
 
 interface ExpenseAggregationParams {
@@ -26,6 +66,7 @@ interface ExpenseAggregationParams {
   projects?: (Project & { id: string })[] | null;
   topN?: number;
   missionKey: string;
+  labels: EconomicReportLabels;
 }
 
 interface TransferAggregationParams {
@@ -33,16 +74,13 @@ interface TransferAggregationParams {
   contacts?: (Contact & { id: string })[] | null;
   topN?: number;
   missionKey: string;
+  labels: EconomicReportLabels;
 }
 
 const UNCATEGORIZED_ID = 'uncategorized';
-const UNCATEGORIZED_NAME = 'Sense categoria';
 const GENERAL_PROJECT_ID = 'general';
-const GENERAL_PROJECT_NAME = 'Funcionament general';
 const NO_COUNTERPART_ID = 'no-counterpart';
-const NO_COUNTERPART_NAME = 'Sense contrapart';
 const OTHERS_ID = 'others';
-const OTHERS_NAME = 'Altres';
 
 const DEFAULT_TOP_N = 3;
 
@@ -50,6 +88,7 @@ export function aggregateIncomeByCategory({
   transactions,
   categories,
   topN = DEFAULT_TOP_N,
+  labels,
 }: IncomeAggregationParams): AggregateResult {
   const categoryMap = new Map<string, Category & { id: string }>();
   categories?.forEach((category) => {
@@ -64,7 +103,7 @@ export function aggregateIncomeByCategory({
     const category = tx.category ? categoryMap.get(tx.category) : undefined;
     const isValidCategory = category && category.type === 'income';
     const key = isValidCategory ? category!.id : UNCATEGORIZED_ID;
-    const name = isValidCategory ? category!.name : UNCATEGORIZED_NAME;
+    const name = isValidCategory ? category!.name : labels.uncategorized;
 
     const amount = tx.amount;
     total += amount;
@@ -77,14 +116,15 @@ export function aggregateIncomeByCategory({
     entry.count += 1;
   });
 
-  return finalizeAggregation(rows, total, topN);
+  return finalizeAggregation(rows, total, topN, labels);
 }
 
 export function aggregateOperationalExpensesByProject({
   transactions,
   projects,
   topN = DEFAULT_TOP_N,
-  missionKey,
+  missionKey = MISSION_TRANSFER_CATEGORY_KEY,
+  labels,
 }: ExpenseAggregationParams): AggregateResult {
   const projectMap = new Map<string, Project & { id: string }>();
   projects?.forEach((project) => {
@@ -100,7 +140,7 @@ export function aggregateOperationalExpensesByProject({
 
     const project = tx.projectId ? projectMap.get(tx.projectId) : undefined;
     const key = project ? project.id : GENERAL_PROJECT_ID;
-    const name = project ? project.name : GENERAL_PROJECT_NAME;
+    const name = project ? project.name : labels.generalProject;
 
     const amount = Math.abs(tx.amount);
     total += amount;
@@ -113,14 +153,15 @@ export function aggregateOperationalExpensesByProject({
     entry.count += 1;
   });
 
-  return finalizeAggregation(rows, total, topN);
+  return finalizeAggregation(rows, total, topN, labels);
 }
 
 export function aggregateMissionTransfersByContact({
   transactions,
   contacts,
   topN = DEFAULT_TOP_N,
-  missionKey,
+  missionKey = MISSION_TRANSFER_CATEGORY_KEY,
+  labels,
 }: TransferAggregationParams): AggregateResult {
   const contactMap = new Map<string, Contact & { id: string }>();
   contacts?.forEach((contact) => {
@@ -134,7 +175,7 @@ export function aggregateMissionTransfersByContact({
     if (tx.category !== missionKey) return;
     const contact = tx.contactId ? contactMap.get(tx.contactId) : undefined;
     const key = contact ? contact.id : NO_COUNTERPART_ID;
-    const name = contact ? contact.name : NO_COUNTERPART_NAME;
+    const name = contact ? contact.name : labels.noCounterpart;
 
     const amount = Math.abs(tx.amount);
     total += amount;
@@ -147,13 +188,14 @@ export function aggregateMissionTransfersByContact({
     entry.count += 1;
   });
 
-  return finalizeAggregation(rows, total, topN);
+  return finalizeAggregation(rows, total, topN, labels);
 }
 
 function finalizeAggregation(
   rows: Map<string, AggregateRow>,
   total: number,
   topN: number,
+  labels: EconomicReportLabels,
 ): AggregateResult {
   const complete = Array.from(rows.values())
     .map((row) => ({
@@ -177,7 +219,7 @@ function finalizeAggregation(
       ...topRows,
       {
         id: OTHERS_ID,
-        name: OTHERS_NAME,
+        name: labels.others,
         amount: othersAmount,
         count: othersCount,
         percentage: total > 0 ? (othersAmount / total) * 100 : 0,
@@ -209,11 +251,13 @@ export function buildNarrativesFromAggregates({
   expenses,
   transfers,
   netBalance,
-}: NarrativeParams): NarrativeDraft {
-  const summary = buildSummaryNarrative(periodLabel, income.total, expenses.total, netBalance);
-  const incomeText = buildIncomeNarrative(income);
-  const expensesText = buildExpenseNarrative(expenses);
-  const transfersText = buildTransfersNarrative(transfers);
+  texts,
+  labels,
+}: NarrativeParams & { texts: EconomicNarrativeTexts; labels: EconomicReportLabels }): NarrativeDraft {
+  const summary = buildSummaryNarrative(periodLabel, income.total, expenses.total, netBalance, texts.summary);
+  const incomeText = buildIncomeNarrative(income, texts.income);
+  const expensesText = buildExpenseNarrative(expenses, texts.expenses, labels);
+  const transfersText = buildTransfersNarrative(transfers, texts.transfers);
 
   return {
     summary,
@@ -223,16 +267,27 @@ export function buildNarrativesFromAggregates({
   };
 }
 
-function buildSummaryNarrative(periodLabel: string, incomeTotal: number, expenseTotal: number, netBalance: number): string {
+function buildSummaryNarrative(
+  periodLabel: string,
+  incomeTotal: number,
+  expenseTotal: number,
+  netBalance: number,
+  texts: EconomicNarrativeTexts['summary'],
+): string {
   if (incomeTotal === 0 && expenseTotal === 0) {
-    return `Durant ${periodLabel} no s'han registrat moviments econòmics destacables.`;
+    return texts.noMovements({ period: periodLabel });
   }
-  return `Durant ${periodLabel} s'han reconegut ${formatCurrencyEU(incomeTotal)} d'ingressos i ${formatCurrencyEU(expenseTotal)} d'aplicació operativa, amb un tancament net de ${formatCurrencyEU(netBalance)}.`;
+  return texts.general({
+    period: periodLabel,
+    income: formatCurrencyEU(incomeTotal),
+    expenses: formatCurrencyEU(expenseTotal),
+    balance: formatCurrencyEU(netBalance),
+  });
 }
 
-function buildIncomeNarrative(income: AggregateResult): string {
+function buildIncomeNarrative(income: AggregateResult, texts: EconomicNarrativeTexts['income']): string {
   if (income.total === 0) {
-    return 'En aquest període no consten entrades de recursos.';
+    return texts.noData;
   }
 
   const ordered = income.aggregated.filter((row) => row.id !== OTHERS_ID);
@@ -242,23 +297,27 @@ function buildIncomeNarrative(income: AggregateResult): string {
 
   const parts: string[] = [];
   if (primary) {
-    parts.push(`La principal font d'ingressos ha estat ${primary.name} (${formatPercentage(primary.percentage)}).`);
+    parts.push(texts.primary({ source: primary.name, percentage: formatPercentage(primary.percentage) }));
   } else if (fallback) {
-    parts.push(`La major part dels ingressos encara no té categoria assignada (${formatPercentage(fallback.percentage)}).`);
+    parts.push(texts.fallbackPrimary({ percentage: formatPercentage(fallback.percentage) }));
   }
 
   if (secondary) {
-    parts.push(`També destaca ${secondary.name} (${formatPercentage(secondary.percentage)}), fet que reforça la diversificació d'entrades.`);
+    parts.push(texts.secondary({ source: secondary.name, percentage: formatPercentage(secondary.percentage) }));
   } else if (fallback && primary) {
-    parts.push(`Les aportacions pendents de classificar representen ${formatPercentage(fallback.percentage)} addicionals i demanen revisió documental.`);
+    parts.push(texts.fallbackSecondary({ percentage: formatPercentage(fallback.percentage) }));
   }
 
   return parts.join(' ');
 }
 
-function buildExpenseNarrative(expenses: AggregateResult): string {
+function buildExpenseNarrative(
+  expenses: AggregateResult,
+  texts: EconomicNarrativeTexts['expenses'],
+  labels: EconomicReportLabels,
+): string {
   if (expenses.total === 0) {
-    return 'No s\'han executat despeses operatives durant el període.';
+    return texts.noData;
   }
 
   const ordered = expenses.aggregated.filter((row) => row.id !== OTHERS_ID);
@@ -267,26 +326,32 @@ function buildExpenseNarrative(expenses: AggregateResult): string {
   const others = expenses.aggregated.find((row) => row.id === OTHERS_ID);
 
   if (primary && primary.id === GENERAL_PROJECT_ID && primary.percentage >= 99.5) {
-    return 'El 100% de la despesa consta a Funcionament general, la qual cosa evidencia que no s\'han assignat projectes específics en aquest període.';
+    return texts.allGeneral({ label: labels.generalProject });
   }
 
   const parts: string[] = [];
   if (primary) {
-    const label = primary.id === GENERAL_PROJECT_ID ? `${primary.name} (operativa transversal)` : primary.name;
-    parts.push(`L'aplicació principal dels recursos s'ha destinat a ${label} (${formatPercentage(primary.percentage)}).`);
+    const area =
+      primary.id === GENERAL_PROJECT_ID
+        ? texts.generalDescriptor({ label: labels.generalProject, descriptor: labels.generalProjectDescriptor })
+        : primary.name;
+    parts.push(texts.primary({ area, percentage: formatPercentage(primary.percentage) }));
   }
   if (secondary) {
-    parts.push(`El segon focus ha estat ${secondary.name} (${formatPercentage(secondary.percentage)}).`);
+    parts.push(texts.secondary({ area: secondary.name, percentage: formatPercentage(secondary.percentage) }));
   }
   if (others && others.amount > 0) {
-    parts.push(`La resta de projectes concentren el ${formatPercentage(others.percentage)} restant, mostrant un repartiment equilibrat.`);
+    parts.push(texts.others({ percentage: formatPercentage(others.percentage) }));
   }
   return parts.join(' ');
 }
 
-function buildTransfersNarrative(transfers: AggregateResult): string {
+function buildTransfersNarrative(
+  transfers: AggregateResult,
+  texts: EconomicNarrativeTexts['transfers'],
+): string {
   if (transfers.total === 0) {
-    return 'No s\'han cursat transferències a contraparts durant el període.';
+    return texts.noData;
   }
 
   const ordered = transfers.aggregated.filter((row) => row.id !== OTHERS_ID);
@@ -297,19 +362,19 @@ function buildTransfersNarrative(transfers: AggregateResult): string {
 
   const parts: string[] = [];
   if (primary) {
-    parts.push(`La principal transferència ha reforçat ${primary.name} (${formatPercentage(primary.percentage)} del total enviat).`);
+    parts.push(texts.primary({ counterpart: primary.name, percentage: formatPercentage(primary.percentage) }));
   } else if (fallback) {
-    parts.push(`Totes les transferències consten sense contrapart identificada (${formatPercentage(fallback.percentage)}), pendent de documentar.`);
+    parts.push(texts.fallbackPrimary({ percentage: formatPercentage(fallback.percentage) }));
   }
 
   if (secondary) {
-    parts.push(`També es recullen aportacions a ${secondary.name} (${formatPercentage(secondary.percentage)}), consolidant la cooperació territorial.`);
+    parts.push(texts.secondary({ counterpart: secondary.name, percentage: formatPercentage(secondary.percentage) }));
   } else if (fallback && primary) {
-    parts.push(`Les remeses sense contrapart associada representen ${formatPercentage(fallback.percentage)} i requereixen seguiment administratiu.`);
+    parts.push(texts.fallbackSecondary({ percentage: formatPercentage(fallback.percentage) }));
   }
 
   if (others && others.amount > 0) {
-    parts.push(`La resta de contraparts agrupen un ${formatPercentage(others.percentage)} addicional.`);
+    parts.push(texts.others({ percentage: formatPercentage(others.percentage) }));
   }
 
   return parts.join(' ');

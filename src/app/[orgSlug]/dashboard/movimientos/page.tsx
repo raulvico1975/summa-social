@@ -8,11 +8,15 @@ import { collection } from 'firebase/firestore';
 import type { Transaction } from '@/lib/data';
 import { useTranslations } from '@/i18n';
 import { useCurrentOrganization } from '@/hooks/organization-provider';
+import { useSearchParams } from 'next/navigation';
+import { fromPeriodQuery } from '@/lib/period-query';
 
 export default function MovimientosPage() {
   const { firestore } = useFirebase();
   const { organizationId } = useCurrentOrganization();
   const { t } = useTranslations();
+  const searchParams = useSearchParams();
+  const initialPeriodFilter = React.useMemo(() => fromPeriodQuery(searchParams), [searchParams]);
 
   const transactionsQuery = useMemoFirebase(
     () => organizationId ? collection(firestore, 'organizations', organizationId, 'transactions') : null,
@@ -35,7 +39,7 @@ export default function MovimientosPage() {
       {isLoading ? (
         <p>{t.common.loading}</p>
       ) : (
-        <TransactionsTable />
+        <TransactionsTable initialDateFilter={initialPeriodFilter ?? undefined} />
       )}
     </div>
   );

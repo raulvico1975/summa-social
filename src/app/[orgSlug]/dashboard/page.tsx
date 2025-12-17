@@ -19,6 +19,7 @@ import { formatCurrencyEU } from '@/lib/normalize';
 import { DateFilter, type DateFilterValue } from '@/components/date-filter';
 import { useTransactionFilters } from '@/hooks/use-transaction-filters';
 import { useIsMobile } from '@/hooks/use-mobile';
+import { MISSION_TRANSFER_CATEGORY_KEY } from '@/lib/constants';
 import {
   aggregateIncomeByCategory,
   aggregateMissionTransfersByContact,
@@ -30,6 +31,7 @@ import {
 import * as XLSX from 'xlsx';
 import Papa from 'papaparse';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from '@/components/ui/sheet';
+import { toPeriodQuery } from '@/lib/period-query';
 
 interface TaxObligation {
   id: string;
@@ -44,18 +46,6 @@ const TAX_OBLIGATIONS: TaxObligation[] = [
   { id: 'model347', nameKey: 'model347', month: 2, day: 28, reportPath: '/dashboard/informes' },
 ];
 
-const NARRATIVE_LABELS: Record<keyof NarrativeDraft, string> = {
-  summary: 'Resum executiu',
-  income: 'Origen dels fons',
-  expenses: 'Aplicació dels fons',
-  transfers: 'Transferències a contraparts',
-};
-const NARRATIVE_CARD_TITLES: Record<keyof NarrativeDraft, string> = {
-  summary: 'Resum',
-  income: 'Origen',
-  expenses: 'Aplicació',
-  transfers: 'Transferències',
-};
 const NARRATIVE_ORDER: (keyof NarrativeDraft)[] = ['summary', 'income', 'expenses', 'transfers'];
 
 interface Celebration {
@@ -72,30 +62,37 @@ function ComparisonBadge({
   previous,
   previousYear,
   isCurrency = false,
-  formatFn
+  formatFn,
+  texts,
 }: {
   current: number;
   previous: number;
   previousYear: number;
   isCurrency?: boolean;
   formatFn?: (value: number) => string;
+  texts: {
+    equal: (params: { year: number }) => string;
+    delta: (params: { sign: string; value: string; year: number }) => string;
+  };
 }) {
   const diff = current - previous;
 
   if (diff === 0) {
-    return <span className="text-xs text-muted-foreground">(= vs {previousYear})</span>;
+    return <span className="text-xs text-muted-foreground">{texts.equal({ year: previousYear })}</span>;
   }
 
   const isPositive = diff > 0;
   const Icon = isPositive ? TrendingUp : TrendingDown;
   const color = isPositive ? 'text-green-600' : 'text-red-600';
   const prefix = isPositive ? '+' : '-';
-  const displayDiff = formatFn ? formatFn(Math.abs(diff)) : Math.abs(diff);
+  const rawValue = formatFn ? formatFn(Math.abs(diff)) : Math.abs(diff);
+  const displayDiff = typeof rawValue === 'number' ? rawValue.toString() : rawValue;
+  const label = texts.delta({ sign: prefix, value: displayDiff, year: previousYear });
 
   return (
     <span className={`text-xs flex items-center gap-0.5 ${color}`}>
       <Icon className="h-3 w-3" />
-      ({prefix}{displayDiff} vs {previousYear})
+      {label}
     </span>
   );
 }
@@ -103,7 +100,10 @@ function ComparisonBadge({
 export default function DashboardPage() {
   const { firestore } = useFirebase();
   const { organizationId, organization } = useCurrentOrganization();
-  const { t } = useTranslations();
+  const { t, language } = useTranslations();
+  const locale = language === 'es' ? 'es-ES' : 'ca-ES';
+  const shareModalTexts = React.useMemo(() => t.dashboard.shareModal, [t]);
+  const shareModalExports = shareModalTexts.exports;
   const { buildUrl } = useOrgUrl();
 
   const transactionsQuery = useMemoFirebase(
@@ -140,8 +140,9 @@ export default function DashboardPage() {
         transactions: filteredTransactions,
         categories,
         topN: 3,
+        labels: shareModalTexts.labels,
       }),
-    [filteredTransactions, categories]
+    [filteredTransactions, categories, shareModalTexts]
   );
   const expenseAggregates = React.useMemo(
     () =>
@@ -150,8 +151,9 @@ export default function DashboardPage() {
         projects,
         topN: 3,
         missionKey: MISSION_TRANSFER_CATEGORY_KEY,
+        labels: shareModalTexts.labels,
       }),
-    [filteredTransactions, projects]
+    [filteredTransactions, projects, shareModalTexts]
   );
   const transferAggregates = React.useMemo(
     () =>
@@ -160,8 +162,9 @@ export default function DashboardPage() {
         contacts,
         topN: 3,
         missionKey: MISSION_TRANSFER_CATEGORY_KEY,
+        labels: shareModalTexts.labels,
       }),
-    [filteredTransactions, contacts]
+    [filteredTransactions, contacts, shareModalTexts]
   );
   const { totalIncome, totalExpenses, totalMissionTransfers } = React.useMemo(() => {
     if (!filteredTransactions) return { totalIncome: 0, totalExpenses: 0, totalMissionTransfers: 0 };
@@ -192,6 +195,14 @@ export default function DashboardPage() {
   const [editingValue, setEditingValue] = React.useState('');
   const [isNarrativeEditorOpen, setNarrativeEditorOpen] = React.useState(false);
   const isMobile = useIsMobile();
+  const periodQuery = React.useMemo(() => toPeriodQuery(dateFilter), [dateFilter]);
+  const createMovementsLink = React.useCallback(
+    (filter: string) => {
+      const params = new URLSearchParams({ filter, ...periodQuery });
+      return buildUrl(`/dashboard/movimientos?${params.toString()}`);
+    },
+    [buildUrl, periodQuery],
+  );
 
   // Ref per gestionar timeout i evitar memory leaks
   const copyTimeoutRef = React.useRef<NodeJS.Timeout | null>(null);
@@ -213,27 +224,53 @@ export default function DashboardPage() {
 
   // Funció per formatejar el període del filtre
   const formatPeriodLabel = (filter: DateFilterValue): string => {
+    const monthKeyOrder: (keyof typeof t.months)[] = [
+      'january',
+      'february',
+      'march',
+      'april',
+      'may',
+      'june',
+      'july',
+      'august',
+      'september',
+      'october',
+      'november',
+      'december',
+    ];
+    const formatMonthName = (monthIndex: number) => {
+      const key = monthKeyOrder[monthIndex];
+      if (!key) return '';
+      const monthLabel = t.months[key];
+      return monthLabel ? monthLabel.charAt(0).toUpperCase() + monthLabel.slice(1) : '';
+    };
     if (filter.type === 'all') return t.dashboard.allPeriods;
     if (filter.type === 'year' && filter.year) return `${t.dashboard.filterYear} ${filter.year}`;
     if (filter.type === 'month' && filter.year && filter.month) {
-      const monthNames = ['Gener', 'Febrer', 'Març', 'Abril', 'Maig', 'Juny', 'Juliol', 'Agost', 'Setembre', 'Octubre', 'Novembre', 'Desembre'];
-      return `${monthNames[filter.month - 1]} ${filter.year}`;
+      const monthName = formatMonthName(filter.month - 1);
+      return `${monthName} ${filter.year}`.trim();
     }
     if (filter.type === 'quarter' && filter.year && filter.quarter) {
-      return `T${filter.quarter} ${filter.year}`;
+      return t.dashboard.periodLabels.quarter({ quarter: filter.quarter, year: filter.year });
     }
     if (filter.type === 'custom' && filter.customRange?.from && filter.customRange?.to) {
-      const start = filter.customRange.from.toLocaleDateString();
-      const end = filter.customRange.to.toLocaleDateString();
-      return `${start} - ${end}`;
+      const formatter = new Intl.DateTimeFormat(locale, { day: '2-digit', month: '2-digit', year: 'numeric' });
+      const start = formatter.format(filter.customRange.from);
+      const end = formatter.format(filter.customRange.to);
+      return t.dashboard.periodLabels.customRange({ start, end });
     }
     return t.dashboard.allPeriods;
   };
+  const periodLabel = formatPeriodLabel(dateFilter);
+  const organizationName = organization?.name || shareModalTexts.summaryFallbackOrg;
+  const summaryOrgPeriodText = shareModalTexts.summaryOrgPeriod({ organization: organizationName, period: periodLabel });
+  const summaryHeaderText = shareModalTexts.summaryHeader({ organization: organizationName, period: periodLabel });
+  const emailSubjectText = shareModalTexts.emailSubject({ organization: organizationName });
 
   // Funció per generar el text de resum
   const generateSummaryText = (): string => {
-    const orgName = organization?.name || 'Organització';
-    const period = formatPeriodLabel(dateFilter);
+    const orgName = organizationName;
+    const period = periodLabel;
 
     // Comparativa amb any anterior
     const donorsComparison = canShowComparison
@@ -249,7 +286,7 @@ export default function DashboardPage() {
       ? ` (${formatCurrencyEU(prevMemberFees)} ${t.dashboard.vsPreviousYear})`
       : '';
 
-    return `📊 Resum ${orgName} - ${period}
+    return `${summaryHeaderText}
 
 💰 ${t.dashboard.totalIncome}: ${formatCurrencyEU(totalIncome)}
 💸 ${t.dashboard.operatingExpenses}: ${formatCurrencyEU(Math.abs(totalExpenses))}
@@ -280,7 +317,7 @@ ${t.dashboard.generatedWith}`;
 
   // Funció per enviar per email
   const handleEmailShare = () => {
-    const subject = encodeURIComponent(`Resum ${organization?.name || 'Organització'}`);
+    const subject = encodeURIComponent(emailSubjectText);
     const body = encodeURIComponent(summaryText);
     window.location.href = `mailto:?subject=${subject}&body=${body}`;
   };
@@ -295,6 +332,8 @@ ${t.dashboard.generatedWith}`;
       expenses: expenseAggregates,
       transfers: transferAggregates,
       netBalance,
+      texts: shareModalTexts.narratives,
+      labels: shareModalTexts.labels,
     });
     setSummaryText(text);
     setNarratives(baseNarratives);
@@ -346,24 +385,42 @@ ${t.dashboard.generatedWith}`;
     }
   };
 
-  const formatAggregateSheetRows = (rows: AggregateRow[]) =>
-    rows.map((row) => ({
-      ID: row.id,
-      Nom: row.name,
-      Import: Number(row.amount.toFixed(2)),
-      Percentatge: Number(row.percentage.toFixed(2)),
-      Operacions: row.count,
+  const formatAggregateSheetRows = (rows: AggregateRow[]) => {
+    const columns = shareModalExports.columns;
+    return rows.map((row) => ({
+      [columns.id]: row.id,
+      [columns.name]: row.name,
+      [columns.amount]: Number(row.amount.toFixed(2)),
+      [columns.percentage]: Number(row.percentage.toFixed(2)),
+      [columns.operations]: row.count,
     }));
+  };
 
   const handleExportEconomicExcel = () => {
     const workbook = XLSX.utils.book_new();
     const periodLabel = formatPeriodLabel(dateFilter);
+    const summarySheetTexts = shareModalExports.summarySheet;
     const summarySheet = XLSX.utils.json_to_sheet([
-      { Indicador: 'Període', Valor: periodLabel },
-      { Indicador: 'Ingressos totals', Valor: Number(incomeAggregates.total.toFixed(2)) },
-      { Indicador: 'Despeses operatives', Valor: Number(expenseAggregates.total.toFixed(2)) },
-      { Indicador: 'Transferències a contraparts', Valor: Number(transferAggregates.total.toFixed(2)) },
-      { Indicador: 'Balanç operatiu', Valor: Number(netBalance.toFixed(2)) },
+      {
+        [summarySheetTexts.columns.indicator]: summarySheetTexts.rows.period,
+        [summarySheetTexts.columns.value]: periodLabel,
+      },
+      {
+        [summarySheetTexts.columns.indicator]: summarySheetTexts.rows.income,
+        [summarySheetTexts.columns.value]: Number(incomeAggregates.total.toFixed(2)),
+      },
+      {
+        [summarySheetTexts.columns.indicator]: summarySheetTexts.rows.expenses,
+        [summarySheetTexts.columns.value]: Number(expenseAggregates.total.toFixed(2)),
+      },
+      {
+        [summarySheetTexts.columns.indicator]: summarySheetTexts.rows.transfers,
+        [summarySheetTexts.columns.value]: Number(transferAggregates.total.toFixed(2)),
+      },
+      {
+        [summarySheetTexts.columns.indicator]: summarySheetTexts.rows.balance,
+        [summarySheetTexts.columns.value]: Number(netBalance.toFixed(2)),
+      },
     ]);
 
     const appendSheet = (title: string, rows: AggregateRow[]) => {
@@ -371,30 +428,33 @@ ${t.dashboard.generatedWith}`;
       XLSX.utils.book_append_sheet(workbook, sheet, title);
     };
 
-    XLSX.utils.book_append_sheet(workbook, summarySheet, 'Resum');
-    appendSheet('Origen (Top)', incomeAggregates.aggregated);
-    appendSheet('Aplicació (Top)', expenseAggregates.aggregated);
-    appendSheet('Contraparts (Top)', transferAggregates.aggregated);
-    appendSheet('Origen (Complet)', incomeAggregates.complete);
-    appendSheet('Aplicació (Complet)', expenseAggregates.complete);
-    appendSheet('Contraparts (Complet)', transferAggregates.complete);
+    XLSX.utils.book_append_sheet(workbook, summarySheet, summarySheetTexts.name);
+    const sheetNames = shareModalExports.sheets;
+    appendSheet(sheetNames.incomeTop, incomeAggregates.aggregated);
+    appendSheet(sheetNames.expensesTop, expenseAggregates.aggregated);
+    appendSheet(sheetNames.transfersTop, transferAggregates.aggregated);
+    appendSheet(sheetNames.incomeComplete, incomeAggregates.complete);
+    appendSheet(sheetNames.expensesComplete, expenseAggregates.complete);
+    appendSheet(sheetNames.transfersComplete, transferAggregates.complete);
 
     const dateStamp = new Date().toISOString().split('T')[0];
-    const prefix = `informe-economic-${organization?.slug || 'org'}-${dateStamp}`;
-    XLSX.writeFile(workbook, `${prefix}.xlsx`);
+    const organizationSlug = organization?.slug || 'org';
+    const excelFileName = shareModalExports.excelFileName({ organizationSlug, date: dateStamp });
+    XLSX.writeFile(workbook, excelFileName);
   };
 
   const downloadCsv = (rows: AggregateRow[], filename: string) => {
-    const data = rows.map((row) => ({
-      id: row.id,
-      nom: row.name,
-      import: Number(row.amount.toFixed(2)),
-      percentatge: Number(row.percentage.toFixed(2)),
-      operacions: row.count,
-    }));
+    const columns = shareModalExports.columns;
+    const data = rows.map((row) => [
+      row.id,
+      row.name,
+      Number(row.amount.toFixed(2)),
+      Number(row.percentage.toFixed(2)),
+      row.count,
+    ]);
     const csv = Papa.unparse({
-      fields: ['id', 'nom', 'import', 'percentatge', 'operacions'],
-      data: data.map((row) => [row.id, row.nom, row.import, row.percentatge, row.operacions]),
+      fields: [columns.id, columns.name, columns.amount, columns.percentage, columns.operations],
+      data,
     });
     const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
@@ -409,10 +469,11 @@ ${t.dashboard.generatedWith}`;
 
   const handleExportEconomicCsv = () => {
     const dateStamp = new Date().toISOString().split('T')[0];
-    const prefix = `${organization?.slug || 'org'}-${dateStamp}`;
-    downloadCsv(incomeAggregates.complete, `origen-fons-${prefix}.csv`);
-    downloadCsv(expenseAggregates.complete, `aplicacio-fons-${prefix}.csv`);
-    downloadCsv(transferAggregates.complete, `transferencies-${prefix}.csv`);
+    const organizationSlug = organization?.slug || 'org';
+    const csvFiles = shareModalExports.csvFileNames;
+    downloadCsv(incomeAggregates.complete, csvFiles.income({ organizationSlug, date: dateStamp }));
+    downloadCsv(expenseAggregates.complete, csvFiles.expenses({ organizationSlug, date: dateStamp }));
+    downloadCsv(transferAggregates.complete, csvFiles.transfers({ organizationSlug, date: dateStamp }));
   };
 
   // Map de contactes per ID amb el seu membershipType
@@ -768,30 +829,45 @@ ${t.dashboard.generatedWith}`;
       )}
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+        <Link
+          href={createMovementsLink('income')}
+          className="block rounded-lg transition hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/70"
+        >
+          <StatCard
+            title={t.dashboard.totalIncome}
+            value={formatCurrencyEU(totalIncome)}
+            icon={TrendingUp}
+            description={t.dashboard.totalIncomeDescription}
+          />
+        </Link>
+        <Link
+          href={createMovementsLink('operatingExpenses')}
+          className="block rounded-lg transition hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/70"
+        >
+          <StatCard
+            title={t.dashboard.operatingExpenses}
+            value={formatCurrencyEU(totalExpenses)}
+            icon={TrendingDown}
+            description={t.dashboard.operatingExpensesDescription}
+          />
+        </Link>
         <StatCard
-          title={t.dashboard.totalIncome}
-          value={formatCurrencyEU(totalIncome)}
-          icon={TrendingUp}
-          description={t.dashboard.totalIncomeDescription}
-        />
-        <StatCard
-          title={t.dashboard.operatingExpenses}
-          value={formatCurrencyEU(totalExpenses)}
-          icon={TrendingDown}
-          description={t.dashboard.operatingExpensesDescription}
-        />
-         <StatCard
           title={t.dashboard.operatingBalance}
           value={formatCurrencyEU(netBalance)}
           icon={DollarSign}
           description={t.dashboard.operatingBalanceDescription}
         />
-        <StatCard
-          title={t.dashboard.missionTransfers}
-          value={formatCurrencyEU(totalMissionTransfers)}
-          icon={Rocket}
-          description={t.dashboard.missionTransfersDescription}
-        />
+        <Link
+          href={createMovementsLink('missionTransfers')}
+          className="block rounded-lg transition hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/70"
+        >
+          <StatCard
+            title={t.dashboard.missionTransfers}
+            value={formatCurrencyEU(totalMissionTransfers)}
+            icon={Rocket}
+            description={t.dashboard.missionTransfersDescription}
+          />
+        </Link>
       </div>
 
       <Card>
@@ -813,6 +889,7 @@ ${t.dashboard.generatedWith}`;
                   previousYear={previousYear}
                   isCurrency
                   formatFn={formatCurrencyEU}
+                  texts={t.dashboard.comparison}
                 />
               )}
             </div>
@@ -824,6 +901,7 @@ ${t.dashboard.generatedWith}`;
                   current={uniqueDonors}
                   previous={prevUniqueDonors}
                   previousYear={previousYear}
+                  texts={t.dashboard.comparison}
                 />
               )}
             </div>
@@ -835,6 +913,7 @@ ${t.dashboard.generatedWith}`;
                   current={activeMembers}
                   previous={prevActiveMembers}
                   previousYear={previousYear}
+                  texts={t.dashboard.comparison}
                 />
               )}
             </div>
@@ -848,6 +927,7 @@ ${t.dashboard.generatedWith}`;
                   previousYear={previousYear}
                   isCurrency
                   formatFn={formatCurrencyEU}
+                  texts={t.dashboard.comparison}
                 />
               )}
             </div>
@@ -1015,8 +1095,8 @@ ${t.dashboard.generatedWith}`;
               <div className="space-y-4 md:w-3/5">
                 <div className="space-y-3 rounded-lg border bg-background/80 p-4 shadow-sm">
                   <div>
-                    <p className="text-xs uppercase tracking-wider text-muted-foreground">Resum executiu</p>
-                    <p className="text-sm font-semibold">{organization?.name || 'Organització'} · {formatPeriodLabel(dateFilter)}</p>
+                    <p className="text-xs uppercase tracking-wider text-muted-foreground">{shareModalTexts.summaryBlockTitle}</p>
+                    <p className="text-sm font-semibold">{summaryOrgPeriodText}</p>
                   </div>
                   <Textarea
                     value={summaryText}
@@ -1031,15 +1111,15 @@ ${t.dashboard.generatedWith}`;
                   </Button>
                   <Button variant="outline" onClick={handleResetNarratives} disabled={!defaultNarratives}>
                     <RefreshCcw className="h-4 w-4 mr-2" />
-                    Reinicia a proposta
+                    {shareModalTexts.actions.reset}
                   </Button>
                   <Button variant="secondary" onClick={handleExportEconomicExcel}>
                     <FileSpreadsheet className="h-4 w-4 mr-2" />
-                    Exporta Excel
+                    {shareModalTexts.actions.exportExcel}
                   </Button>
                   <Button variant="secondary" onClick={handleExportEconomicCsv}>
                     <FileText className="h-4 w-4 mr-2" />
-                    Exporta CSV
+                    {shareModalTexts.actions.exportCsv}
                   </Button>
                 </div>
               </div>
@@ -1047,19 +1127,33 @@ ${t.dashboard.generatedWith}`;
               {narratives && (
                 <div className="md:w-2/5 space-y-3">
                   <div>
-                    <p className="text-xs uppercase tracking-wider text-muted-foreground">Textos del període</p>
+                    <p className="text-xs uppercase tracking-wider text-muted-foreground">{shareModalTexts.narrativesHeading}</p>
                     <p className="text-sm text-muted-foreground">
-                      Relat executiu resumit. Utilitza les accions de cada targeta per copiar o editar el contingut complet.
+                      {shareModalTexts.narrativesDescription}
                     </p>
                   </div>
                   <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
                     {NARRATIVE_ORDER.map((field) => (
                       <div key={field} className="flex h-full flex-col rounded-lg border border-dashed bg-muted/30 p-3 shadow-sm">
                         <div className="flex items-center justify-between gap-2">
-                          <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{NARRATIVE_CARD_TITLES[field]}</p>
+                          <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                            {shareModalTexts.cards[field].title}
+                          </p>
                           <div className="flex items-center gap-1 text-muted-foreground">
-                            <button onClick={() => handleCopyNarrative(field)} className="text-xs hover:text-foreground">📋</button>
-                            <button onClick={() => openNarrativeEditor(field)} className="text-xs hover:text-foreground">✏️</button>
+                            <button
+                              onClick={() => handleCopyNarrative(field)}
+                              className="text-xs hover:text-foreground"
+                              aria-label={shareModalTexts.actions.copy}
+                            >
+                              📋
+                            </button>
+                            <button
+                              onClick={() => openNarrativeEditor(field)}
+                              className="text-xs hover:text-foreground"
+                              aria-label={shareModalTexts.actions.edit}
+                            >
+                              ✏️
+                            </button>
                           </div>
                         </div>
                         <p className="mt-2 text-xs text-muted-foreground leading-relaxed line-clamp-2">
@@ -1087,8 +1181,8 @@ ${t.dashboard.generatedWith}`;
           <Sheet open={isNarrativeEditorOpen} onOpenChange={(open) => (open ? setNarrativeEditorOpen(true) : handleNarrativeCancel())}>
             <SheetContent side="bottom" className="h-[85vh] w-full overflow-y-auto">
               <SheetHeader className="space-y-1">
-                <SheetTitle>{`Edita ${NARRATIVE_CARD_TITLES[editingField]}`}</SheetTitle>
-                <SheetDescription>{NARRATIVE_LABELS[editingField]}</SheetDescription>
+                <SheetTitle>{shareModalTexts.editor.title({ section: shareModalTexts.cards[editingField].title })}</SheetTitle>
+                <SheetDescription>{shareModalTexts.editor.description({ section: shareModalTexts.cards[editingField].label })}</SheetDescription>
               </SheetHeader>
               <div className="space-y-4 py-4">
                 <Textarea
@@ -1098,9 +1192,9 @@ ${t.dashboard.generatedWith}`;
                   className="text-sm"
                 />
                 <div className="flex gap-2">
-                  <Button onClick={handleNarrativeSave}>Desa</Button>
+                  <Button onClick={handleNarrativeSave}>{t.common.save}</Button>
                   <Button variant="outline" onClick={handleNarrativeCancel}>
-                    Cancel·la
+                    {t.common.cancel}
                   </Button>
                 </div>
               </div>
@@ -1110,8 +1204,8 @@ ${t.dashboard.generatedWith}`;
           <Dialog open={isNarrativeEditorOpen} onOpenChange={(open) => (open ? setNarrativeEditorOpen(true) : handleNarrativeCancel())}>
             <DialogContent className="max-w-lg">
               <DialogHeader>
-                <DialogTitle>{`Edita ${NARRATIVE_CARD_TITLES[editingField]}`}</DialogTitle>
-                <DialogDescription>{NARRATIVE_LABELS[editingField]}</DialogDescription>
+                <DialogTitle>{shareModalTexts.editor.title({ section: shareModalTexts.cards[editingField].title })}</DialogTitle>
+                <DialogDescription>{shareModalTexts.editor.description({ section: shareModalTexts.cards[editingField].label })}</DialogDescription>
               </DialogHeader>
               <Textarea
                 value={editingValue}
@@ -1120,9 +1214,9 @@ ${t.dashboard.generatedWith}`;
                 className="text-sm"
               />
               <DialogFooter className="mt-4">
-                <Button onClick={handleNarrativeSave}>Desa</Button>
+                <Button onClick={handleNarrativeSave}>{t.common.save}</Button>
                 <Button variant="outline" onClick={handleNarrativeCancel}>
-                  Cancel·la
+                  {t.common.cancel}
                 </Button>
               </DialogFooter>
             </DialogContent>
