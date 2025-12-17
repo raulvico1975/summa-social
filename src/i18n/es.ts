@@ -43,6 +43,125 @@ export const es = {
     annualReport: "Memoria anual",
     shareSummary: "Compartir resumen",
     shareSummaryDescription: "Copia o comparte el resumen de este período",
+    shareModal: {
+      summaryHeader: ({ organization, period }: { organization: string; period: string }) => `📊 Resumen ${organization} - ${period}`,
+      summaryBlockTitle: "Resumen ejecutivo",
+      summaryFallbackOrg: "Organización",
+      summaryOrgPeriod: ({ organization, period }: { organization: string; period: string }) => `${organization} · ${period}`,
+      emailSubject: ({ organization }: { organization: string }) => `Resumen ${organization}`,
+      actions: {
+        copy: "Copiar texto",
+        edit: "Editar texto",
+        reset: "Reiniciar propuesta",
+        exportExcel: "Exportar Excel",
+        exportCsv: "Exportar CSV",
+      },
+      narrativesHeading: "Textos del período",
+      narrativesDescription: "Relato ejecutivo resumido. Usa las acciones de cada tarjeta para copiar o editar el contenido completo.",
+      cards: {
+        summary: { title: "Resumen", label: "Resumen ejecutivo" },
+        income: { title: "Origen", label: "Origen de los fondos" },
+        expenses: { title: "Aplicación", label: "Aplicación de los fondos" },
+        transfers: { title: "Transferencias", label: "Transferencias a contrapartes" },
+      },
+      editor: {
+        title: ({ section }: { section: string }) => `Editar ${section}`,
+        description: ({ section }: { section: string }) => `Revisa y edita el texto completo de ${section}.`,
+      },
+      labels: {
+        uncategorized: "Sin categoría",
+        generalProject: "Funcionamiento general",
+        generalProjectDescriptor: "operativa transversal",
+        noCounterpart: "Sin contraparte",
+        others: "Otros",
+      },
+      narratives: {
+        summary: {
+          noMovements: ({ period }: { period: string }) => `Durante ${period} no se han registrado movimientos económicos destacables.`,
+          general: ({ period, income, expenses, balance }: { period: string; income: string; expenses: string; balance: string }) =>
+            `Durante ${period} se han reconocido ${income} de ingresos y ${expenses} de aplicación operativa, con un cierre neto de ${balance}.`,
+        },
+        income: {
+          noData: "En este período no constan entradas de recursos.",
+          primary: ({ source, percentage }: { source: string; percentage: string }) => `La principal fuente de ingresos ha sido ${source} (${percentage}).`,
+          fallbackPrimary: ({ percentage }: { percentage: string }) => `La mayor parte de los ingresos todavía no tiene categoría asignada (${percentage}).`,
+          secondary: ({ source, percentage }: { source: string; percentage: string }) =>
+            `También destaca ${source} (${percentage}), lo que refuerza la diversificación de entradas.`,
+          fallbackSecondary: ({ percentage }: { percentage: string }) =>
+            `Los importes pendientes de clasificar representan ${percentage} adicionales y requieren revisión documental.`,
+        },
+        expenses: {
+          noData: "No se han ejecutado gastos operativos durante el período.",
+          allGeneral: ({ label }: { label: string }) => `El 100% del gasto consta en ${label}, lo que indica que no se han asignado proyectos específicos en este período.`,
+          generalDescriptor: ({ label, descriptor }: { label: string; descriptor: string }) => `${label} (${descriptor})`,
+          primary: ({ area, percentage }: { area: string; percentage: string }) => `La aplicación principal de los recursos se ha destinado a ${area} (${percentage}).`,
+          secondary: ({ area, percentage }: { area: string; percentage: string }) => `El segundo foco ha sido ${area} (${percentage}).`,
+          others: ({ percentage }: { percentage: string }) => `El resto de proyectos concentran el ${percentage} restante, mostrando un reparto equilibrado.`,
+        },
+        transfers: {
+          noData: "No se han cursado transferencias a contrapartes durante el período.",
+          primary: ({ counterpart, percentage }: { counterpart: string; percentage: string }) =>
+            `La transferencia principal ha reforzado a ${counterpart} (${percentage} del total enviado).`,
+          fallbackPrimary: ({ percentage }: { percentage: string }) =>
+            `Todas las transferencias constan sin contraparte identificada (${percentage}), pendiente de documentar.`,
+          secondary: ({ counterpart, percentage }: { counterpart: string; percentage: string }) =>
+            `También se registran aportaciones a ${counterpart} (${percentage}), consolidando la cooperación territorial.`,
+          fallbackSecondary: ({ percentage }: { percentage: string }) =>
+            `Las remesas sin contraparte asociada representan ${percentage} y requieren seguimiento administrativo.`,
+          others: ({ percentage }: { percentage: string }) => `El resto de contrapartes agrupan un ${percentage} adicional.`,
+        },
+      },
+      exports: {
+        summarySheet: {
+          name: "Resumen",
+          columns: {
+            indicator: "Indicador",
+            value: "Valor",
+          },
+          rows: {
+            period: "Período",
+            income: "Ingresos totales",
+            expenses: "Gastos operativos",
+            transfers: "Transferencias a contrapartes",
+            balance: "Balance operativo",
+          },
+        },
+        sheets: {
+          incomeTop: "Origen (Top)",
+          expensesTop: "Aplicación (Top)",
+          transfersTop: "Contrapartes (Top)",
+          incomeComplete: "Origen (Completo)",
+          expensesComplete: "Aplicación (Completo)",
+          transfersComplete: "Contrapartes (Completo)",
+        },
+        columns: {
+          id: "ID",
+          name: "Nombre",
+          amount: "Importe",
+          percentage: "Porcentaje",
+          operations: "Operaciones",
+        },
+        excelFileName: ({ organizationSlug, date }: { organizationSlug: string; date: string }) =>
+          `informe-economico-${organizationSlug}-${date}.xlsx`,
+        csvFileNames: {
+          income: ({ organizationSlug, date }: { organizationSlug: string; date: string }) =>
+            `origen-fondos-${organizationSlug}-${date}.csv`,
+          expenses: ({ organizationSlug, date }: { organizationSlug: string; date: string }) =>
+            `aplicacion-fondos-${organizationSlug}-${date}.csv`,
+          transfers: ({ organizationSlug, date }: { organizationSlug: string; date: string }) =>
+            `transferencias-${organizationSlug}-${date}.csv`,
+        },
+      },
+    },
+    periodLabels: {
+      quarter: ({ quarter, year }: { quarter: number; year: number }) => `T${quarter} ${year}`,
+      customRange: ({ start, end }: { start: string; end: string }) => `${start} - ${end}`,
+    },
+    comparison: {
+      equal: ({ year }: { year: number }) => `(= vs ${year})`,
+      delta: ({ sign, value, year }: { sign: string; value: string | number; year: number }) =>
+        `(${sign}${value} vs ${year})`,
+    },
     copy: "Copiar",
     copied: "¡Copiado!",
     sendByEmail: "Enviar por email",
@@ -129,6 +248,11 @@ export const es = {
       categorizationError: "No se ha podido categorizar la transacción.",
       dataUnavailable: "Datos no disponibles",
       dataLoadError: "No se han podido cargar las transacciones o categorías.",
+      excelSheetName: "Movimientos",
+      filteredExcelFileName: ({ date }: { date: string }) => `Movimientos_filtrados_${date}.xlsx`,
+      expensesWithoutDocumentFileName: ({ date }: { date: string }) => `gastos-sin-justificante-${date}.csv`,
+      expensesExportedTitle: "Excel exportado",
+      expensesExportedDescription: (count: number) => `Se han exportado ${count} gastos sin justificante.`,
       nothingToCategorize: "No hay nada que clasificar",
       allAlreadyCategorized: "Todas las transacciones ya tienen una categoría.",
       startingBatchCategorization: "Iniciando clasificación masiva...",
@@ -592,6 +716,12 @@ export const es = {
         placeholder: "Selecciona un donante…",
         createNewButton: "➕ Crear nuevo",
         noMatchForEmail: "Este correo no coincide con ningún donante existente.",
+        selectDonor: "Selecciona un donante",
+        searchPlaceholder: "Buscar por nombre o email",
+        emptyText: "Ningún donante coincide con la búsqueda.",
+        emailMatch: "Coincidencia exacta",
+        createNew: "Crear nuevo donante",
+        unlink: "Desvincular",
       },
 
       // Diálogo de creación rápida de donante
@@ -1009,6 +1139,7 @@ export const es = {
     suppliersReportTitle: "Generador de Informe de Proveedores (Modelo 347)",
     suppliersReportDescription: "Genera el listado de proveedores con operaciones superiores a 3.005,06€ para la declaración a Hacienda.",
     suppliersReportGeneratedDescription: (year: string, count: number) => `Se ha generado el informe para el año ${year} con ${count} proveedores.`,
+    suppliersCsvFileName: ({ year }: { year: string }) => `informe_proveedores_model347_${year}.csv`,
     supplierName: "Nombre del Proveedor",
     supplierTaxId: "NIF/CIF",
     suppliersWithoutTaxId: "Proveedores sin NIF",
@@ -1024,6 +1155,8 @@ export const es = {
     excludeSupplier: "Excluir proveedor",
   },
   certificates: {
+    pageTitle: "Generador de Certificados de Donación",
+    pageDescription: "Crea y descarga los certificados de donación para tus donantes.",
     title: "Certificados de Donación",
     description: "Genera certificados de donación para tus donantes.",
     fiscalYear: "Año fiscal",
@@ -1488,6 +1621,36 @@ export const es = {
       noSelection: "Selecciona al menos una opción",
       success: "Exportación completada",
       error: "Error durante la exportación",
+      fileNames: {
+        json: ({ organizationSlug, date }: { organizationSlug: string; date: string }) =>
+          `${organizationSlug}-export-${date}.json`,
+        transactions: ({ organizationSlug }: { organizationSlug: string }) => `${organizationSlug}-transacciones.csv`,
+        contacts: ({ organizationSlug }: { organizationSlug: string }) => `${organizationSlug}-contactos.csv`,
+        members: ({ organizationSlug }: { organizationSlug: string }) => `${organizationSlug}-miembros.csv`,
+      },
+      csvHeaders: {
+        transactions: {
+          date: "Fecha",
+          description: "Descripción",
+          amount: "Importe",
+          category: "Categoría",
+          contact: "Contacto",
+          project: "Proyecto",
+        },
+        contacts: {
+          name: "Nombre",
+          type: "Tipo",
+          taxId: "NIF",
+          zipCode: "Código Postal",
+          createdAt: "Creado",
+        },
+        members: {
+          name: "Nombre",
+          email: "Email",
+          role: "Rol",
+          joinedAt: "Fecha de incorporación",
+        },
+      },
     },
     validation: {
       duplicates: "NIF duplicados",
@@ -1637,6 +1800,8 @@ export const es = {
     cancel: "Cancelar",
     filesSelected: (count: number) => `${count} archivo(s) seleccionado(s):`,
     readingFiles: "Leyendo archivos...",
+    invalidFormatTitle: "Formato no válido",
+    invalidFormatDescription: "Solo se permiten archivos CSV o Excel (.xlsx, .xls)",
     noDonorIdentified: (count: number, amount: string) => `Ningún donante identificado: ${count} devoluciones pendientes (${amount})`,
     partialRemittance: (count: number, amount: string) => `Remesa parcial: ${count} devoluciones sin donante identificado (${amount} pendientes)`,
     noDonorIdentifiedHelp: "No hay ninguna devolución con donante identificado. Identifica al menos un donante para poder procesar.",

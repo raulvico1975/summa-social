@@ -212,7 +212,7 @@ export const DonorSelectorEnhanced = React.memo(function DonorSelectorEnhanced({
                 <CommandSeparator />
                 <CommandGroup>
                   <CommandItem onSelect={handleUnlink}>
-                    Desvincular
+                    {t.importers.stripeImporter.donorSelector.unlink}
                   </CommandItem>
                 </CommandGroup>
               </>

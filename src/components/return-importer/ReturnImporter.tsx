@@ -152,8 +152,10 @@ export function ReturnImporter({
     } else {
       toast({
         variant: 'destructive',
-        title: 'Format no vàlid',
-        description: 'Només es permeten fitxers CSV o Excel (.xlsx, .xls)'
+        title: t.returnImporter?.invalidFormatTitle || t.importers.transaction.errors.unsupportedFormat,
+        description:
+          t.returnImporter?.invalidFormatDescription ||
+          t.importers.transaction.errors.unsupportedFormatDescription,
       });
     }
   };

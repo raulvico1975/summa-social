@@ -100,7 +100,8 @@ export default function SuperAdminOrgPage() {
   const router = useRouter();
   const { user, firestore, isUserLoading } = useFirebase();
   const { organizationId, organization } = useCurrentOrganization();
-  const { t } = useTranslations();
+  const { t, language } = useTranslations();
+  const locale = language === 'es' ? 'es-ES' : 'ca-ES';
   const { toast } = useToast();
 
   const isSuperAdmin = user?.uid === SUPER_ADMIN_UID;
@@ -349,7 +350,11 @@ export default function SuperAdminOrgPage() {
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `${organization?.slug || 'org'}-export-${new Date().toISOString().split('T')[0]}.json`;
+      const jsonFileName = t.superAdminOrg.export.fileNames.json({
+        organizationSlug: organization?.slug || 'org',
+        date: new Date().toISOString().split('T')[0],
+      });
+      a.download = jsonFileName;
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
@@ -369,32 +374,53 @@ export default function SuperAdminOrgPage() {
     try {
       let csvContent = '';
       let filename = '';
+      const csvHeaders = t.superAdminOrg.export.csvHeaders;
+      const fileNames = t.superAdminOrg.export.fileNames;
+      const organizationSlug = organization?.slug || 'org';
 
       if (type === 'transactions' && transactions) {
-        csvContent = 'Data,Descripció,Import,Categoria,Contacte,Projecte\n';
+        csvContent = [
+          csvHeaders.transactions.date,
+          csvHeaders.transactions.description,
+          csvHeaders.transactions.amount,
+          csvHeaders.transactions.category,
+          csvHeaders.transactions.contact,
+          csvHeaders.transactions.project,
+        ].join(',') + '\n';
         csvContent += transactions.map(tx =>
           `"${tx.date}","${tx.description?.replace(/"/g, '""') || ''}",${tx.amount},"${tx.category || ''}","${tx.contactId || ''}","${tx.projectId || ''}"`
         ).join('\n');
-        filename = 'transaccions.csv';
+        filename = fileNames.transactions({ organizationSlug });
       } else if (type === 'contacts' && contacts) {
-        csvContent = 'Nom,Tipus,NIF,Codi Postal,Creat\n';
+        csvContent = [
+          csvHeaders.contacts.name,
+          csvHeaders.contacts.type,
+          csvHeaders.contacts.taxId,
+          csvHeaders.contacts.zipCode,
+          csvHeaders.contacts.createdAt,
+        ].join(',') + '\n';
         csvContent += contacts.map(c =>
           `"${c.name?.replace(/"/g, '""') || ''}","${c.type}","${c.taxId || ''}","${c.zipCode || ''}","${c.createdAt || ''}"`
         ).join('\n');
-        filename = 'contactes.csv';
+        filename = fileNames.contacts({ organizationSlug });
       } else if (type === 'members' && members) {
-        csvContent = 'Nom,Email,Rol,Data Unió\n';
+        csvContent = [
+          csvHeaders.members.name,
+          csvHeaders.members.email,
+          csvHeaders.members.role,
+          csvHeaders.members.joinedAt,
+        ].join(',') + '\n';
         csvContent += members.map(m =>
           `"${m.displayName?.replace(/"/g, '""') || ''}","${m.email}","${m.role}","${m.joinedAt || ''}"`
         ).join('\n');
-        filename = 'membres.csv';
+        filename = fileNames.members({ organizationSlug });
       }
 
       const blob = new Blob(['\ufeff' + csvContent], { type: 'text/csv;charset=utf-8' });
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `${organization?.slug || 'org'}-${filename}`;
+      a.download = filename;
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
@@ -411,7 +437,7 @@ export default function SuperAdminOrgPage() {
 
   const formatTimestamp = (timestamp: string) => {
     const date = new Date(timestamp);
-    return date.toLocaleDateString('ca-ES', {
+    return date.toLocaleDateString(locale, {
       day: '2-digit',
       month: '2-digit',
       year: 'numeric',

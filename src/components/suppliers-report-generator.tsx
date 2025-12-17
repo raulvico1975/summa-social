@@ -204,7 +204,7 @@ export function SuppliersReportGenerator() {
     const link = document.createElement('a');
     const url = URL.createObjectURL(blob);
     link.setAttribute('href', url);
-    link.setAttribute('download', `informe_proveidors_model347_${selectedYear}.csv`);
+    link.setAttribute('download', t.reports.suppliersCsvFileName({ year: selectedYear }));
     link.style.visibility = 'hidden';
     document.body.appendChild(link);
     link.click();

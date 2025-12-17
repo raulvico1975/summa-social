@@ -8,8 +8,8 @@ export default function CertificateGeneratorPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold tracking-tight font-headline">Generador de Certificats de Donació</h1>
-        <p className="text-muted-foreground">Crea i descarrega els certificats de donació per als teus donants.</p>
+        <h1 className="text-2xl font-bold tracking-tight font-headline">{t.certificates.pageTitle}</h1>
+        <p className="text-muted-foreground">{t.certificates.pageDescription}</p>
       </div>
       <DonationCertificateGenerator />
     </div>
