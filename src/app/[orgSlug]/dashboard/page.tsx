@@ -196,7 +196,6 @@ export default function DashboardPage() {
   const [isNarrativeEditorOpen, setNarrativeEditorOpen] = React.useState(false);
   const isMobile = useIsMobile();
   const periodQuery = React.useMemo(() => toPeriodQuery(dateFilter), [dateFilter]);
-  const periodQuery = React.useMemo(() => toPeriodQuery(dateFilter), [dateFilter]);
   const createMovementsLink = React.useCallback(
     (filter: string) => {
       const params = new URLSearchParams({ filter, ...periodQuery });
@@ -884,23 +883,25 @@ ${t.dashboard.generatedWith}`;
         </CardHeader>
         <CardContent>
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-            <Link
-              href={createMovementsLink('income')}
-              className="block rounded-lg border p-4 text-left bg-gradient-to-br from-rose-50 to-white hover:shadow focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/70 active:scale-[0.99] cursor-pointer"
-            >
-              <p className="text-sm text-muted-foreground">{t.dashboard.donations}</p>
-              <p className="text-xs text-muted-foreground mt-1">{t.dashboard.opensIncomeMovements}</p>
-              <p className="text-2xl font-bold">{formatCurrencyEU(totalDonations)}</p>
-              {canShowComparison && (
-                <ComparisonBadge
-                  current={totalDonations}
-                  previous={prevTotalDonations}
-                  previousYear={previousYear}
-                  isCurrency
-                  formatFn={formatCurrencyEU}
-                  texts={t.dashboard.comparison}
-                />
-              )}
+            <Link href={createMovementsLink('income')} legacyBehavior>
+              <a
+                data-debug="donations-link"
+                className="block rounded-lg border p-4 text-left bg-gradient-to-br from-rose-50 to-white hover:shadow focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/70 active:scale-[0.99] cursor-pointer"
+              >
+                <p className="text-sm text-muted-foreground">{t.dashboard.donations}</p>
+                <p className="text-xs text-muted-foreground mt-1">{t.dashboard.opensIncomeMovements}</p>
+                <p className="text-2xl font-bold">{formatCurrencyEU(totalDonations)}</p>
+                {canShowComparison && (
+                  <ComparisonBadge
+                    current={totalDonations}
+                    previous={prevTotalDonations}
+                    previousYear={previousYear}
+                    isCurrency
+                    formatFn={formatCurrencyEU}
+                    texts={t.dashboard.comparison}
+                  />
+                )}
+              </a>
             </Link>
             <Link
               href={createDonorsLink()}
