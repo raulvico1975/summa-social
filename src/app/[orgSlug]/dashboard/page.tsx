@@ -32,7 +32,6 @@ import * as XLSX from 'xlsx';
 import Papa from 'papaparse';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from '@/components/ui/sheet';
 import { toPeriodQuery } from '@/lib/period-query';
-import { useRouter } from 'next/navigation';
 
 interface TaxObligation {
   id: string;
@@ -102,7 +101,6 @@ export default function DashboardPage() {
   const { firestore } = useFirebase();
   const { organizationId, organization } = useCurrentOrganization();
   const { t, language } = useTranslations();
-  const router = useRouter();
   const locale = language === 'es' ? 'es-ES' : 'ca-ES';
   const shareModalTexts = React.useMemo(() => t.dashboard.shareModal, [t]);
   const shareModalExports = shareModalTexts.exports;
@@ -886,10 +884,9 @@ ${t.dashboard.generatedWith}`;
         </CardHeader>
         <CardContent>
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-            <button
-              type="button"
-              onClick={() => router.push(createMovementsLink('income'))}
-              className="rounded-lg border p-4 bg-gradient-to-br from-rose-50 to-white text-left hover:shadow focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/70"
+            <Link
+              href={createMovementsLink('income')}
+              className="block rounded-lg border p-4 text-left bg-gradient-to-br from-rose-50 to-white hover:shadow focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/70 active:scale-[0.99] cursor-pointer"
             >
               <p className="text-sm text-muted-foreground">{t.dashboard.donations}</p>
               <p className="text-xs text-muted-foreground mt-1">{t.dashboard.opensIncomeMovements}</p>
@@ -904,11 +901,10 @@ ${t.dashboard.generatedWith}`;
                   texts={t.dashboard.comparison}
                 />
               )}
-            </button>
-            <button
-              type="button"
-              onClick={() => router.push(createDonorsLink())}
-              className="rounded-lg border p-4 bg-gradient-to-br from-violet-50 to-white text-left hover:shadow focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/70"
+            </Link>
+            <Link
+              href={createDonorsLink()}
+              className="block rounded-lg border p-4 text-left bg-gradient-to-br from-violet-50 to-white hover:shadow focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/70 active:scale-[0.99] cursor-pointer"
             >
               <p className="text-sm text-muted-foreground">{t.dashboard.activeDonors}</p>
               <p className="text-2xl font-bold">{uniqueDonors}</p>
@@ -920,11 +916,10 @@ ${t.dashboard.generatedWith}`;
                   texts={t.dashboard.comparison}
                 />
               )}
-            </button>
-            <button
-              type="button"
-              onClick={() => router.push(createDonorsLink())}
-              className="rounded-lg border p-4 bg-gradient-to-br from-pink-50 to-white text-left hover:shadow focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/70"
+            </Link>
+            <Link
+              href={createDonorsLink()}
+              className="block rounded-lg border p-4 text-left bg-gradient-to-br from-pink-50 to-white hover:shadow focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/70 active:scale-[0.99] cursor-pointer"
             >
               <p className="text-sm text-muted-foreground">{t.dashboard.activeMembers}</p>
               <p className="text-2xl font-bold">{activeMembers}</p>
@@ -936,11 +931,10 @@ ${t.dashboard.generatedWith}`;
                   texts={t.dashboard.comparison}
                 />
               )}
-            </button>
-            <button
-              type="button"
-              onClick={() => router.push(createMovementsLink('income'))}
-              className="rounded-lg border p-4 bg-gradient-to-br from-indigo-50 to-white text-left hover:shadow focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/70"
+            </Link>
+            <Link
+              href={createMovementsLink('income')}
+              className="block rounded-lg border p-4 text-left bg-gradient-to-br from-indigo-50 to-white hover:shadow focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/70 active:scale-[0.99] cursor-pointer"
             >
               <p className="text-sm text-muted-foreground">{t.dashboard.memberFees}</p>
               <p className="text-xs text-muted-foreground mt-1">{t.dashboard.opensIncomeMovements}</p>
@@ -955,7 +949,7 @@ ${t.dashboard.generatedWith}`;
                   texts={t.dashboard.comparison}
                 />
               )}
-            </button>
+            </Link>
           </div>
         </CardContent>
       </Card>
