@@ -1012,17 +1012,19 @@ ${t.dashboard.generatedWith}`;
             </DialogHeader>
 
             <div className="flex flex-1 flex-col gap-6 overflow-y-auto md:flex-row">
-              <div className="space-y-4 md:w-1/3">
-                <div className="space-y-2">
-                  <p className="text-sm font-medium">Resum executiu</p>
+              <div className="space-y-4 md:w-3/5">
+                <div className="space-y-3 rounded-lg border bg-background/80 p-4 shadow-sm">
+                  <div>
+                    <p className="text-xs uppercase tracking-wider text-muted-foreground">Resum executiu</p>
+                    <p className="text-sm font-semibold">{organization?.name || 'Organització'} · {formatPeriodLabel(dateFilter)}</p>
+                  </div>
                   <Textarea
                     value={summaryText}
                     onChange={(e) => setSummaryText(e.target.value)}
-                    rows={8}
-                    className="font-mono text-sm"
+                    className="font-mono text-sm min-h-[280px]"
                   />
                 </div>
-                <div className="flex flex-col gap-2">
+                <div className="grid grid-cols-2 gap-2">
                   <Button variant="outline" onClick={handleCopy}>
                     <Copy className="h-4 w-4 mr-2" />
                     {copySuccess ? t.dashboard.copied : t.dashboard.copy}
@@ -1043,31 +1045,24 @@ ${t.dashboard.generatedWith}`;
               </div>
 
               {narratives && (
-                <div className="md:w-2/3 space-y-3">
+                <div className="md:w-2/5 space-y-3">
                   <div>
-                    <p className="text-sm font-semibold tracking-tight">Textos del període</p>
-                    <p className="text-xs text-muted-foreground">
+                    <p className="text-xs uppercase tracking-wider text-muted-foreground">Textos del període</p>
+                    <p className="text-sm text-muted-foreground">
                       Relat executiu resumit. Utilitza les accions de cada targeta per copiar o editar el contingut complet.
                     </p>
                   </div>
                   <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
                     {NARRATIVE_ORDER.map((field) => (
-                      <div key={field} className="flex h-full flex-col rounded-lg border bg-background/70 p-4 shadow-sm">
-                        <div className="flex items-start justify-between gap-2">
-                          <div>
-                            <p className="text-sm font-semibold">{NARRATIVE_CARD_TITLES[field]}</p>
-                            <p className="text-xs text-muted-foreground">{NARRATIVE_LABELS[field]}</p>
-                          </div>
-                          <div className="flex items-center gap-1">
-                            <Button variant="ghost" size="icon" onClick={() => handleCopyNarrative(field)}>
-                              <Copy className="h-4 w-4" />
-                            </Button>
-                            <Button variant="ghost" size="icon" onClick={() => openNarrativeEditor(field)}>
-                              <Pencil className="h-4 w-4" />
-                            </Button>
+                      <div key={field} className="flex h-full flex-col rounded-lg border border-dashed bg-muted/30 p-3 shadow-sm">
+                        <div className="flex items-center justify-between gap-2">
+                          <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{NARRATIVE_CARD_TITLES[field]}</p>
+                          <div className="flex items-center gap-1 text-muted-foreground">
+                            <button onClick={() => handleCopyNarrative(field)} className="text-xs hover:text-foreground">📋</button>
+                            <button onClick={() => openNarrativeEditor(field)} className="text-xs hover:text-foreground">✏️</button>
                           </div>
                         </div>
-                        <p className="mt-3 text-sm text-muted-foreground leading-relaxed line-clamp-3">
+                        <p className="mt-2 text-xs text-muted-foreground leading-relaxed line-clamp-2">
                           {narratives[field]}
                         </p>
                       </div>
