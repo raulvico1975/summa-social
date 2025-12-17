@@ -24,6 +24,7 @@ export const es = {
     activeDonors: "Donantes activos",
     memberFees: "Cuotas socios",
     activeMembers: "Socios activos",
+    opensIncomeMovements: "Abre movimientos de ingreso del período",
     vsPreviousYear: "el año anterior",
     alerts: "Atención",
     uncategorizedMovements: "Movimientos sin categorizar",

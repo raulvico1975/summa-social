@@ -24,6 +24,7 @@ export const ca = {
     activeDonors: "Donants actius",
     activeMembers: "Socis actius",
     memberFees: "Quotes socis",
+    opensIncomeMovements: "Obre moviments d’ingrés del període",
     vsPreviousYear: "l'any anterior",
     alerts: "Atenció",
     uncategorizedMovements: "Moviments sense categoritzar",

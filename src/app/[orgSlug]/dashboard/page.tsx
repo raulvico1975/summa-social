@@ -32,6 +32,7 @@ import * as XLSX from 'xlsx';
 import Papa from 'papaparse';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from '@/components/ui/sheet';
 import { toPeriodQuery } from '@/lib/period-query';
+import { useRouter } from 'next/navigation';
 
 interface TaxObligation {
   id: string;
@@ -101,6 +102,7 @@ export default function DashboardPage() {
   const { firestore } = useFirebase();
   const { organizationId, organization } = useCurrentOrganization();
   const { t, language } = useTranslations();
+  const router = useRouter();
   const locale = language === 'es' ? 'es-ES' : 'ca-ES';
   const shareModalTexts = React.useMemo(() => t.dashboard.shareModal, [t]);
   const shareModalExports = shareModalTexts.exports;
@@ -196,12 +198,17 @@ export default function DashboardPage() {
   const [isNarrativeEditorOpen, setNarrativeEditorOpen] = React.useState(false);
   const isMobile = useIsMobile();
   const periodQuery = React.useMemo(() => toPeriodQuery(dateFilter), [dateFilter]);
+  const periodQuery = React.useMemo(() => toPeriodQuery(dateFilter), [dateFilter]);
   const createMovementsLink = React.useCallback(
     (filter: string) => {
       const params = new URLSearchParams({ filter, ...periodQuery });
       return buildUrl(`/dashboard/movimientos?${params.toString()}`);
     },
     [buildUrl, periodQuery],
+  );
+  const createDonorsLink = React.useCallback(
+    () => buildUrl('/dashboard/donants'),
+    [buildUrl],
   );
 
   // Ref per gestionar timeout i evitar memory leaks
@@ -879,8 +886,13 @@ ${t.dashboard.generatedWith}`;
         </CardHeader>
         <CardContent>
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-            <div>
+            <button
+              type="button"
+              onClick={() => router.push(createMovementsLink('income'))}
+              className="rounded-lg border p-4 bg-gradient-to-br from-rose-50 to-white text-left hover:shadow focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/70"
+            >
               <p className="text-sm text-muted-foreground">{t.dashboard.donations}</p>
+              <p className="text-xs text-muted-foreground mt-1">{t.dashboard.opensIncomeMovements}</p>
               <p className="text-2xl font-bold">{formatCurrencyEU(totalDonations)}</p>
               {canShowComparison && (
                 <ComparisonBadge
@@ -892,8 +904,12 @@ ${t.dashboard.generatedWith}`;
                   texts={t.dashboard.comparison}
                 />
               )}
-            </div>
-            <div>
+            </button>
+            <button
+              type="button"
+              onClick={() => router.push(createDonorsLink())}
+              className="rounded-lg border p-4 bg-gradient-to-br from-violet-50 to-white text-left hover:shadow focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/70"
+            >
               <p className="text-sm text-muted-foreground">{t.dashboard.activeDonors}</p>
               <p className="text-2xl font-bold">{uniqueDonors}</p>
               {canShowComparison && (
@@ -904,8 +920,12 @@ ${t.dashboard.generatedWith}`;
                   texts={t.dashboard.comparison}
                 />
               )}
-            </div>
-            <div>
+            </button>
+            <button
+              type="button"
+              onClick={() => router.push(createDonorsLink())}
+              className="rounded-lg border p-4 bg-gradient-to-br from-pink-50 to-white text-left hover:shadow focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/70"
+            >
               <p className="text-sm text-muted-foreground">{t.dashboard.activeMembers}</p>
               <p className="text-2xl font-bold">{activeMembers}</p>
               {canShowComparison && (
@@ -916,9 +936,14 @@ ${t.dashboard.generatedWith}`;
                   texts={t.dashboard.comparison}
                 />
               )}
-            </div>
-            <div>
+            </button>
+            <button
+              type="button"
+              onClick={() => router.push(createMovementsLink('income'))}
+              className="rounded-lg border p-4 bg-gradient-to-br from-indigo-50 to-white text-left hover:shadow focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/70"
+            >
               <p className="text-sm text-muted-foreground">{t.dashboard.memberFees}</p>
+              <p className="text-xs text-muted-foreground mt-1">{t.dashboard.opensIncomeMovements}</p>
               <p className="text-2xl font-bold">{formatCurrencyEU(memberFees)}</p>
               {canShowComparison && (
                 <ComparisonBadge
@@ -930,7 +955,7 @@ ${t.dashboard.generatedWith}`;
                   texts={t.dashboard.comparison}
                 />
               )}
-            </div>
+            </button>
           </div>
         </CardContent>
       </Card>
