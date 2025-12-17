@@ -48,7 +48,10 @@ import {
 } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { PlusCircle, Edit, Trash2, User, Building2, RefreshCw, Heart, Upload, AlertTriangle, Search, X, RotateCcw } from 'lucide-react';
-import type { Donor, Category } from '@/lib/data';
+import type { Donor, Category, Transaction } from '@/lib/data';
+import { fromPeriodQuery } from '@/lib/period-query';
+import type { DateFilterValue } from '@/components/date-filter';
+import { useTransactionFilters } from '@/hooks/use-transaction-filters';
 import { useToast } from '@/hooks/use-toast';
 import { Badge } from '@/components/ui/badge';
 import { useCollection, useFirebase, useMemoFirebase, addDocumentNonBlocking, deleteDocumentNonBlocking, setDocumentNonBlocking } from '@/firebase';
@@ -111,6 +114,13 @@ export function DonorManager() {
     () => allCategories?.filter(c => c.type === 'income') || [],
     [allCategories]
   );
+
+  // Query per transaccions (només quan view=active)
+  const transactionsCollection = useMemoFirebase(
+    () => organizationId ? collection(firestore, 'organizations', organizationId, 'transactions') : null,
+    [firestore, organizationId]
+  );
+  const { data: allTransactions } = useCollection<Transaction>(transactionsCollection);
   // Memoitzar per evitar re-renders innecessaris
   const categoryTranslations = React.useMemo(
     () => t.categories as Record<string, string>,
@@ -135,6 +145,12 @@ export function DonorManager() {
 
   // Cercador intel·ligent
   const [searchQuery, setSearchQuery] = React.useState('');
+
+  // Nous filtres: view=active i membershipType
+  const [activeViewFilter, setActiveViewFilter] = React.useState(false);
+  const [membershipTypeFilter, setMembershipTypeFilter] = React.useState<'all' | 'one-time' | 'recurring'>('all');
+  const [periodFilter, setPeriodFilter] = React.useState<DateFilterValue | null>(null);
+  const [periodLabel, setPeriodLabel] = React.useState<string>('');
 
   // ═══════════════════════════════════════════════════════════════════════════
   // DEVOLUCIONS: Estat i càrrega
@@ -178,6 +194,35 @@ export function DonorManager() {
         setHasUrlFilter(true);
       }
 
+      // Nous filtres: view=active i membershipType
+      const view = params.get('view');
+      const membershipType = params.get('membershipType');
+
+      if (view === 'active') {
+        setActiveViewFilter(true);
+        setHasUrlFilter(true);
+        // Llegir el període dels paràmetres
+        const period = fromPeriodQuery(params);
+        if (period) {
+          setPeriodFilter(period);
+          // Construir label del període per mostrar a la UI
+          if (period.type === 'all') {
+            setPeriodLabel(t.donors.allPeriods || 'Tot el període');
+          } else if (period.type === 'year' && period.year) {
+            setPeriodLabel(`${period.year}`);
+          } else if (period.type === 'month' && period.year && period.month) {
+            setPeriodLabel(`${period.month}/${period.year}`);
+          } else if (period.type === 'quarter' && period.year && period.quarter) {
+            setPeriodLabel(`T${period.quarter} ${period.year}`);
+          }
+        }
+      }
+
+      if (membershipType === 'one-time' || membershipType === 'recurring') {
+        setMembershipTypeFilter(membershipType);
+        setHasUrlFilter(true);
+      }
+
       // Si hi ha un ID de donant a la URL, obrir el drawer
       const donorId = params.get('id');
       if (donorId && donors) {
@@ -192,19 +237,46 @@ export function DonorManager() {
         }
       }
     }
-  }, [donors]);
+  }, [donors, t.donors.allPeriods]);
 
   // Funció per netejar el filtre i actualitzar la URL
   const clearFilter = () => {
     setShowIncompleteOnly(false);
     setShowWithReturnsOnly(false);
+    setActiveViewFilter(false);
+    setMembershipTypeFilter('all');
+    setPeriodFilter(null);
+    setPeriodLabel('');
     setHasUrlFilter(false);
     if (typeof window !== 'undefined') {
       const url = new URL(window.location.href);
       url.searchParams.delete('filter');
+      url.searchParams.delete('view');
+      url.searchParams.delete('membershipType');
+      url.searchParams.delete('periodType');
+      url.searchParams.delete('periodYear');
+      url.searchParams.delete('periodMonth');
+      url.searchParams.delete('periodQuarter');
+      url.searchParams.delete('periodFrom');
+      url.searchParams.delete('periodTo');
       window.history.replaceState({}, '', url.toString());
     }
   };
+
+  // Filtrar transaccions pel període seleccionat
+  const filteredTransactions = useTransactionFilters(allTransactions || undefined, periodFilter || { type: 'all' });
+
+  // Calcular IDs de contactes actius (amb transaccions al període)
+  const activeContactIds = React.useMemo(() => {
+    if (!activeViewFilter || !filteredTransactions) return new Set<string>();
+    const ids = new Set<string>();
+    filteredTransactions.forEach(tx => {
+      if (tx.amount > 0 && tx.contactType === 'donor' && tx.contactId) {
+        ids.add(tx.contactId);
+      }
+    });
+    return ids;
+  }, [activeViewFilter, filteredTransactions]);
 
   // Comptadors per estat
   const statusCounts = React.useMemo(() => {
@@ -256,8 +328,18 @@ export function DonorManager() {
       result = result.filter(donor => donorsWithReturns.has(donor.id));
     }
 
+    // Filtre per contactes actius (amb transaccions al període)
+    if (activeViewFilter && activeContactIds.size > 0) {
+      result = result.filter(donor => activeContactIds.has(donor.id));
+    }
+
+    // Filtre per tipus de membre (donant puntual vs soci recurrent)
+    if (membershipTypeFilter !== 'all') {
+      result = result.filter(donor => (donor.membershipType || 'one-time') === membershipTypeFilter);
+    }
+
     return result;
-  }, [donors, showIncompleteOnly, showWithReturnsOnly, searchQuery, statusFilter, donorsWithReturns]);
+  }, [donors, showIncompleteOnly, showWithReturnsOnly, searchQuery, statusFilter, donorsWithReturns, activeViewFilter, activeContactIds, membershipTypeFilter]);
 
   const incompleteDonorsCount = React.useMemo(() => {
     if (!donors) return 0;
@@ -585,6 +667,36 @@ export function DonorManager() {
                   size="sm"
                   onClick={clearFilter}
                   className="border-blue-300 text-blue-700 hover:bg-blue-100"
+                >
+                  {t.donors.showAll}
+                </Button>
+              </div>
+            )}
+
+            {/* Avís de filtre actiu: donants/socis actius al període */}
+            {hasUrlFilter && (activeViewFilter || membershipTypeFilter !== 'all') && !showIncompleteOnly && (
+              <div className="mb-4 p-3 bg-violet-50 border border-violet-200 rounded-lg flex items-center gap-3">
+                <Heart className="h-5 w-5 text-violet-500 flex-shrink-0" />
+                <div className="flex-1">
+                  <p className="text-sm font-medium text-violet-800">
+                    {membershipTypeFilter === 'one-time'
+                      ? (t.donors.filterActiveDonors || 'Donants actius')
+                      : membershipTypeFilter === 'recurring'
+                        ? (t.donors.filterActiveMembers || 'Socis actius')
+                        : (t.donors.filterActive || 'Donants i socis actius')}
+                    {periodLabel && ` (${periodLabel})`}
+                  </p>
+                  <p className="text-xs text-violet-600">
+                    {t.donors.showingCount
+                      ? t.donors.showingCount({ count: filteredDonors.length })
+                      : `Mostrant ${filteredDonors.length} ${membershipTypeFilter === 'recurring' ? 'socis' : 'donants'} amb aportacions al període`}
+                  </p>
+                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={clearFilter}
+                  className="border-violet-300 text-violet-700 hover:bg-violet-100"
                 >
                   {t.donors.showAll}
                 </Button>

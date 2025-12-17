@@ -204,8 +204,19 @@ export default function DashboardPage() {
     [buildUrl, periodQuery],
   );
   const createDonorsLink = React.useCallback(
-    () => buildUrl('/dashboard/donants'),
-    [buildUrl],
+    (options?: { membershipType?: 'one-time' | 'recurring'; viewActive?: boolean }) => {
+      const params = new URLSearchParams();
+      if (options?.viewActive) {
+        params.set('view', 'active');
+        Object.entries(periodQuery).forEach(([k, v]) => params.set(k, v));
+      }
+      if (options?.membershipType) {
+        params.set('membershipType', options.membershipType);
+      }
+      const query = params.toString();
+      return buildUrl(`/dashboard/donants${query ? `?${query}` : ''}`);
+    },
+    [buildUrl, periodQuery],
   );
 
   // Ref per gestionar timeout i evitar memory leaks
@@ -901,7 +912,7 @@ ${t.dashboard.generatedWith}`;
               )}
             </Link>
             <Link
-              href={createDonorsLink()}
+              href={createDonorsLink({ membershipType: 'one-time', viewActive: true })}
               className="block rounded-lg border p-4 text-left bg-gradient-to-br from-violet-50 to-white hover:shadow focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/70 active:scale-[0.99] cursor-pointer"
             >
               <p className="text-sm text-muted-foreground">{t.dashboard.activeDonors}</p>
@@ -916,7 +927,7 @@ ${t.dashboard.generatedWith}`;
               )}
             </Link>
             <Link
-              href={createDonorsLink()}
+              href={createDonorsLink({ membershipType: 'recurring', viewActive: true })}
               className="block rounded-lg border p-4 text-left bg-gradient-to-br from-pink-50 to-white hover:shadow focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/70 active:scale-[0.99] cursor-pointer"
             >
               <p className="text-sm text-muted-foreground">{t.dashboard.activeMembers}</p>
