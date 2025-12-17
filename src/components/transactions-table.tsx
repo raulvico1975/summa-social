@@ -220,9 +220,19 @@ export function TransactionsTable({ initialDateFilter = null }: TransactionsTabl
     }, {} as Record<string, { name: string; type: ContactType }>) || {},
   [availableContacts]);
 
-  const donors = React.useMemo(() => 
-    availableContacts?.filter(c => c.type === 'donor') as Donor[] || [], 
+  const donors = React.useMemo(() =>
+    availableContacts?.filter(c => c.type === 'donor') as Donor[] || [],
   [availableContacts]);
+
+  // Map contactId -> membershipType per filtrar donations vs memberFees
+  const donorMembershipMap = React.useMemo(() => {
+    if (!availableContacts) return new Map<string, 'one-time' | 'recurring'>();
+    return new Map(
+      availableContacts
+        .filter((c): c is Donor => c.type === 'donor')
+        .map(c => [c.id, c.membershipType || 'one-time'])
+    );
+  }, [availableContacts]);
   
   const suppliers = React.useMemo(() =>
     availableContacts?.filter(c => c.type === 'supplier') as Supplier[] || [],
@@ -436,6 +446,22 @@ export function TransactionsTable({ initialDateFilter = null }: TransactionsTabl
       case 'missionTransfers':
         result = transactions.filter(tx => tx.category === MISSION_TRANSFER_CATEGORY_KEY);
         break;
+      case 'donations':
+        // Donacions: ingressos de contactType donor amb membershipType one-time
+        result = transactions.filter(tx => {
+          if (tx.amount <= 0 || tx.contactType !== 'donor' || !tx.contactId) return false;
+          const membershipType = donorMembershipMap.get(tx.contactId) || 'one-time';
+          return membershipType === 'one-time';
+        });
+        break;
+      case 'memberFees':
+        // Quotes de socis: ingressos de contactType donor amb membershipType recurring
+        result = transactions.filter(tx => {
+          if (tx.amount <= 0 || tx.contactType !== 'donor' || !tx.contactId) return false;
+          const membershipType = donorMembershipMap.get(tx.contactId) || 'one-time';
+          return membershipType === 'recurring';
+        });
+        break;
       case 'pendingReturns':
         result = pendingReturns;
         break;
@@ -514,7 +540,7 @@ export function TransactionsTable({ initialDateFilter = null }: TransactionsTabl
       const dateB = new Date(b.date).getTime();
       return sortDateAsc ? dateA - dateB : dateB - dateA;
     });
-  }, [transactions, tableFilter, expensesWithoutDoc, returnTransactions, uncategorizedTransactions, noContactTransactions, sortDateAsc, searchQuery, contactMap, projectMap, getCategoryDisplayName, hideRemittanceItems, contactIdFilter]);
+  }, [transactions, tableFilter, expensesWithoutDoc, returnTransactions, uncategorizedTransactions, noContactTransactions, sortDateAsc, searchQuery, contactMap, projectMap, getCategoryDisplayName, hideRemittanceItems, contactIdFilter, donorMembershipMap]);
 
   // ═══════════════════════════════════════════════════════════════════════════
   // RESUM FILTRAT

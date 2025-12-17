@@ -7,6 +7,8 @@ export const TRANSACTION_URL_FILTERS = [
   'income',
   'operatingExpenses',
   'missionTransfers',
+  'donations',
+  'memberFees',
 ] as const;
 
 export type TransactionUrlFilter = (typeof TRANSACTION_URL_FILTERS)[number];

@@ -47,7 +47,9 @@ export type TableFilter =
   | 'noContact'
   | 'income'
   | 'operatingExpenses'
-  | 'missionTransfers';
+  | 'missionTransfers'
+  | 'donations'
+  | 'memberFees';
 
 interface TransactionsFiltersProps {
   currentFilter: TableFilter;

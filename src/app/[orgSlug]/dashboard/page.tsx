@@ -884,11 +884,10 @@ ${t.dashboard.generatedWith}`;
         <CardContent>
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
             <Link
-              href={createMovementsLink('income')}
+              href={createMovementsLink('donations')}
               className="block rounded-lg border p-4 text-left bg-gradient-to-br from-rose-50 to-white hover:shadow focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/70 active:scale-[0.99] cursor-pointer"
             >
               <p className="text-sm text-muted-foreground">{t.dashboard.donations}</p>
-              <p className="text-xs text-muted-foreground mt-1">{t.dashboard.opensIncomeMovements}</p>
               <p className="text-2xl font-bold">{formatCurrencyEU(totalDonations)}</p>
               {canShowComparison && (
                 <ComparisonBadge
@@ -932,11 +931,10 @@ ${t.dashboard.generatedWith}`;
               )}
             </Link>
             <Link
-              href={createMovementsLink('income')}
+              href={createMovementsLink('memberFees')}
               className="block rounded-lg border p-4 text-left bg-gradient-to-br from-indigo-50 to-white hover:shadow focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/70 active:scale-[0.99] cursor-pointer"
             >
               <p className="text-sm text-muted-foreground">{t.dashboard.memberFees}</p>
-              <p className="text-xs text-muted-foreground mt-1">{t.dashboard.opensIncomeMovements}</p>
               <p className="text-2xl font-bold">{formatCurrencyEU(memberFees)}</p>
               {canShowComparison && (
                 <ComparisonBadge
