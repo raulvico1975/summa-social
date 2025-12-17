@@ -9,8 +9,8 @@ import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Textarea } from '@/components/ui/textarea';
 import Link from 'next/link';
-import { DollarSign, TrendingUp, TrendingDown, Rocket, Heart, AlertTriangle, FolderKanban, CalendarClock, Share2, Copy, Mail, PartyPopper, Info } from 'lucide-react';
-import type { Transaction, Contact, Project, Donor } from '@/lib/data';
+import { DollarSign, TrendingUp, TrendingDown, Rocket, Heart, AlertTriangle, FolderKanban, CalendarClock, Share2, Copy, Mail, PartyPopper, Info, FileSpreadsheet, FileText, RefreshCcw } from 'lucide-react';
+import type { Transaction, Contact, Project, Donor, Category } from '@/lib/data';
 import { useCollection, useFirebase, useMemoFirebase } from '@/firebase';
 import { collection } from 'firebase/firestore';
 import { useTranslations } from '@/i18n';
@@ -18,6 +18,16 @@ import { useCurrentOrganization, useOrgUrl } from '@/hooks/organization-provider
 import { formatCurrencyEU } from '@/lib/normalize';
 import { DateFilter, type DateFilterValue } from '@/components/date-filter';
 import { useTransactionFilters } from '@/hooks/use-transaction-filters';
+import {
+  aggregateIncomeByCategory,
+  aggregateMissionTransfersByContact,
+  aggregateOperationalExpensesByProject,
+  buildNarrativesFromAggregates,
+  type AggregateRow,
+  type NarrativeDraft,
+} from '@/lib/exports/economic-report';
+import * as XLSX from 'xlsx';
+import Papa from 'papaparse';
 
 interface TaxObligation {
   id: string;
@@ -31,6 +41,13 @@ const TAX_OBLIGATIONS: TaxObligation[] = [
   { id: 'model182', nameKey: 'model182', month: 1, day: 31, reportPath: '/dashboard/informes' },
   { id: 'model347', nameKey: 'model347', month: 2, day: 28, reportPath: '/dashboard/informes' },
 ];
+
+const NARRATIVE_LABELS: Record<keyof NarrativeDraft, string> = {
+  summary: 'Resum executiu',
+  income: 'Origen dels fons',
+  expenses: 'Aplicació dels fons',
+  transfers: 'Transferències a contraparts',
+};
 
 interface Celebration {
   id: string;
@@ -98,15 +115,70 @@ export default function DashboardPage() {
   );
   const { data: projects } = useCollection<Project>(projectsQuery);
 
+  const categoriesQuery = useMemoFirebase(
+    () => organizationId ? collection(firestore, 'organizations', organizationId, 'categories') : null,
+    [firestore, organizationId]
+  );
+  const { data: categories } = useCollection<Category>(categoriesQuery);
+
   const [dateFilter, setDateFilter] = React.useState<DateFilterValue>({ type: 'all' });
   const filteredTransactions = useTransactionFilters(transactions || undefined, dateFilter);
 
   const MISSION_TRANSFER_CATEGORY_KEY = 'missionTransfers';
+  const incomeAggregates = React.useMemo(
+    () =>
+      aggregateIncomeByCategory({
+        transactions: filteredTransactions,
+        categories,
+        topN: 3,
+      }),
+    [filteredTransactions, categories]
+  );
+  const expenseAggregates = React.useMemo(
+    () =>
+      aggregateOperationalExpensesByProject({
+        transactions: filteredTransactions,
+        projects,
+        topN: 3,
+        missionKey: MISSION_TRANSFER_CATEGORY_KEY,
+      }),
+    [filteredTransactions, projects]
+  );
+  const transferAggregates = React.useMemo(
+    () =>
+      aggregateMissionTransfersByContact({
+        transactions: filteredTransactions,
+        contacts,
+        topN: 3,
+        missionKey: MISSION_TRANSFER_CATEGORY_KEY,
+      }),
+    [filteredTransactions, contacts]
+  );
+  const { totalIncome, totalExpenses, totalMissionTransfers } = React.useMemo(() => {
+    if (!filteredTransactions) return { totalIncome: 0, totalExpenses: 0, totalMissionTransfers: 0 };
+    return filteredTransactions.reduce((acc, tx) => {
+      if (tx.amount > 0) {
+        acc.totalIncome += tx.amount;
+      } else if (tx.category === MISSION_TRANSFER_CATEGORY_KEY) {
+        acc.totalMissionTransfers += tx.amount;
+      } else {
+        acc.totalExpenses += tx.amount;
+      }
+      return acc;
+    }, { totalIncome: 0, totalExpenses: 0, totalMissionTransfers: 0 });
+  }, [filteredTransactions]);
 
+  const expenseTransactions = React.useMemo(
+    () => filteredTransactions?.filter((tx) => tx.amount < 0 && tx.category !== MISSION_TRANSFER_CATEGORY_KEY) || [],
+    [filteredTransactions]
+  );
+  const netBalance = totalIncome + totalExpenses;
   // Estat per compartir resum
   const [shareDialogOpen, setShareDialogOpen] = React.useState(false);
   const [summaryText, setSummaryText] = React.useState('');
   const [copySuccess, setCopySuccess] = React.useState(false);
+  const [narratives, setNarratives] = React.useState<NarrativeDraft | null>(null);
+  const [defaultNarratives, setDefaultNarratives] = React.useState<NarrativeDraft | null>(null);
 
   // Ref per gestionar timeout i evitar memory leaks
   const copyTimeoutRef = React.useRef<NodeJS.Timeout | null>(null);
@@ -197,29 +269,107 @@ ${t.dashboard.generatedWith}`;
   // Funció per obrir el diàleg
   const handleShareClick = () => {
     const text = generateSummaryText();
+    const periodLabel = formatPeriodLabel(dateFilter);
+    const baseNarratives = buildNarrativesFromAggregates({
+      periodLabel,
+      income: incomeAggregates,
+      expenses: expenseAggregates,
+      transfers: transferAggregates,
+      netBalance,
+    });
     setSummaryText(text);
+    setNarratives(baseNarratives);
+    setDefaultNarratives(baseNarratives);
     setShareDialogOpen(true);
   };
 
-  const { totalIncome, totalExpenses, totalMissionTransfers } = React.useMemo(() => {
-    if (!filteredTransactions) return { totalIncome: 0, totalExpenses: 0, totalMissionTransfers: 0 };
-    return filteredTransactions.reduce((acc, tx) => {
-      if (tx.amount > 0) {
-        acc.totalIncome += tx.amount;
-      } else {
-        if (tx.category === MISSION_TRANSFER_CATEGORY_KEY) {
-            acc.totalMissionTransfers += tx.amount;
-        } else {
-            acc.totalExpenses += tx.amount;
-        }
-      }
-      return acc;
-    }, { totalIncome: 0, totalExpenses: 0, totalMissionTransfers: 0 });
-  }, [filteredTransactions]);
+  const handleNarrativeChange = (field: keyof NarrativeDraft, value: string) => {
+    setNarratives((prev) => (prev ? { ...prev, [field]: value } : prev));
+  };
 
-  const expenseTransactions = React.useMemo(() =>
-    filteredTransactions?.filter(tx => tx.amount < 0 && tx.category !== MISSION_TRANSFER_CATEGORY_KEY) || [],
-  [filteredTransactions]);
+  const handleResetNarratives = () => {
+    if (defaultNarratives) {
+      setNarratives(defaultNarratives);
+    }
+  };
+
+  const handleCopyNarrative = async (field: keyof NarrativeDraft) => {
+    if (!narratives) return;
+    try {
+      await navigator.clipboard.writeText(narratives[field]);
+    } catch (err) {
+      console.error('Error copying narrative:', err);
+    }
+  };
+
+  const formatAggregateSheetRows = (rows: AggregateRow[]) =>
+    rows.map((row) => ({
+      ID: row.id,
+      Nom: row.name,
+      Import: Number(row.amount.toFixed(2)),
+      Percentatge: Number(row.percentage.toFixed(2)),
+      Operacions: row.count,
+    }));
+
+  const handleExportEconomicExcel = () => {
+    const workbook = XLSX.utils.book_new();
+    const periodLabel = formatPeriodLabel(dateFilter);
+    const summarySheet = XLSX.utils.json_to_sheet([
+      { Indicador: 'Període', Valor: periodLabel },
+      { Indicador: 'Ingressos totals', Valor: Number(incomeAggregates.total.toFixed(2)) },
+      { Indicador: 'Despeses operatives', Valor: Number(expenseAggregates.total.toFixed(2)) },
+      { Indicador: 'Transferències a contraparts', Valor: Number(transferAggregates.total.toFixed(2)) },
+      { Indicador: 'Balanç operatiu', Valor: Number(netBalance.toFixed(2)) },
+    ]);
+
+    const appendSheet = (title: string, rows: AggregateRow[]) => {
+      const sheet = XLSX.utils.json_to_sheet(formatAggregateSheetRows(rows));
+      XLSX.utils.book_append_sheet(workbook, sheet, title);
+    };
+
+    XLSX.utils.book_append_sheet(workbook, summarySheet, 'Resum');
+    appendSheet('Origen (Top)', incomeAggregates.aggregated);
+    appendSheet('Aplicació (Top)', expenseAggregates.aggregated);
+    appendSheet('Contraparts (Top)', transferAggregates.aggregated);
+    appendSheet('Origen (Complet)', incomeAggregates.complete);
+    appendSheet('Aplicació (Complet)', expenseAggregates.complete);
+    appendSheet('Contraparts (Complet)', transferAggregates.complete);
+
+    const dateStamp = new Date().toISOString().split('T')[0];
+    const prefix = `informe-economic-${organization?.slug || 'org'}-${dateStamp}`;
+    XLSX.writeFile(workbook, `${prefix}.xlsx`);
+  };
+
+  const downloadCsv = (rows: AggregateRow[], filename: string) => {
+    const data = rows.map((row) => ({
+      id: row.id,
+      nom: row.name,
+      import: Number(row.amount.toFixed(2)),
+      percentatge: Number(row.percentage.toFixed(2)),
+      operacions: row.count,
+    }));
+    const csv = Papa.unparse({
+      fields: ['id', 'nom', 'import', 'percentatge', 'operacions'],
+      data: data.map((row) => [row.id, row.nom, row.import, row.percentatge, row.operacions]),
+    });
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
+
+  const handleExportEconomicCsv = () => {
+    const dateStamp = new Date().toISOString().split('T')[0];
+    const prefix = `${organization?.slug || 'org'}-${dateStamp}`;
+    downloadCsv(incomeAggregates.complete, `origen-fons-${prefix}.csv`);
+    downloadCsv(expenseAggregates.complete, `aplicacio-fons-${prefix}.csv`);
+    downloadCsv(transferAggregates.complete, `transferencies-${prefix}.csv`);
+  };
 
   // Map de contactes per ID amb el seu membershipType
   const contactMembershipMap = React.useMemo(() => {
@@ -306,8 +456,6 @@ ${t.dashboard.generatedWith}`;
     memberFees: prevMemberFees,
     activeMembers: prevActiveMembers
   } = previousMetrics;
-
-  const netBalance = totalIncome + totalExpenses;
 
   // Càlcul de despeses per projecte
   const expensesByProject = React.useMemo(() => {
@@ -824,6 +972,48 @@ ${t.dashboard.generatedWith}`;
             rows={12}
             className="font-mono text-sm"
           />
+
+          {narratives && (
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-semibold">Textos del període</p>
+                  <p className="text-xs text-muted-foreground">Edita els missatges abans d'exportar</p>
+                </div>
+                <Button variant="ghost" size="sm" onClick={handleResetNarratives} disabled={!defaultNarratives}>
+                  <RefreshCcw className="h-4 w-4 mr-2" />
+                  Reinicia a proposta
+                </Button>
+              </div>
+              {(Object.keys(NARRATIVE_LABELS) as (keyof NarrativeDraft)[]).map((field) => (
+                <div key={field} className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm font-medium">{NARRATIVE_LABELS[field]}</span>
+                    <Button variant="outline" size="sm" onClick={() => handleCopyNarrative(field)}>
+                      <Copy className="h-4 w-4 mr-2" />
+                      Copia
+                    </Button>
+                  </div>
+                  <Textarea
+                    value={narratives[field]}
+                    onChange={(e) => handleNarrativeChange(field, e.target.value)}
+                    rows={4}
+                    className="text-sm"
+                  />
+                </div>
+              ))}
+              <div className="flex flex-wrap gap-2">
+                <Button variant="secondary" onClick={handleExportEconomicExcel}>
+                  <FileSpreadsheet className="h-4 w-4 mr-2" />
+                  Exporta Excel
+                </Button>
+                <Button variant="secondary" onClick={handleExportEconomicCsv}>
+                  <FileText className="h-4 w-4 mr-2" />
+                  Exporta CSV
+                </Button>
+              </div>
+            </div>
+          )}
 
           <DialogFooter className="gap-2">
             <Button variant="outline" onClick={handleCopy}>
