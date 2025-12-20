@@ -22,6 +22,7 @@ import type { Project, ExpenseAssignment } from '@/lib/project-module-types';
 interface AssignmentEditorProps {
   projects: Project[];
   projectsLoading: boolean;
+  projectsError?: Error | null;
   currentAssignments: ExpenseAssignment[];
   currentNote: string | null;
   totalAmount: number; // valor absolut de la despesa
@@ -44,6 +45,7 @@ function generateRowId(): string {
 export function AssignmentEditor({
   projects,
   projectsLoading,
+  projectsError,
   currentAssignments,
   currentNote,
   totalAmount,
@@ -137,6 +139,30 @@ export function AssignmentEditor({
         <Skeleton className="h-10 w-full" />
         <Skeleton className="h-10 w-full" />
         <Skeleton className="h-10 w-32" />
+      </div>
+    );
+  }
+
+  if (projectsError) {
+    const isIndexError = projectsError.message?.toLowerCase().includes('index');
+    return (
+      <div className="text-center py-6">
+        <AlertCircle className="h-8 w-8 mx-auto text-destructive mb-2" />
+        <p className="text-destructive font-medium">
+          {isIndexError
+            ? 'Falta un índex de Firestore per carregar projectes.'
+            : 'Error carregant projectes'}
+        </p>
+        <p className="text-sm text-muted-foreground mt-1">
+          {isIndexError
+            ? "Contacta amb l'administrador."
+            : projectsError.message}
+        </p>
+        <div className="flex justify-center gap-2 mt-4">
+          <Button variant="outline" onClick={onCancel}>
+            Cancel·lar
+          </Button>
+        </div>
       </div>
     );
   }

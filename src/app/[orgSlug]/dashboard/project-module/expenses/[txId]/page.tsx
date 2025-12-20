@@ -49,7 +49,7 @@ export default function ExpenseDetailPage() {
   const { toast } = useToast();
 
   const { expense, link, isLoading, error, refresh } = useExpenseDetail(txId);
-  const { projects, isLoading: projectsLoading } = useProjects(true);
+  const { projects, isLoading: projectsLoading, error: projectsError } = useProjects(true);
   const { save, remove, isSaving } = useSaveExpenseLink();
 
   const [isEditing, setIsEditing] = React.useState(false);
@@ -268,6 +268,7 @@ export default function ExpenseDetailPage() {
               <AssignmentEditor
                 projects={projects}
                 projectsLoading={projectsLoading}
+                projectsError={projectsError}
                 currentAssignments={link?.assignments ?? []}
                 currentNote={link?.note ?? null}
                 totalAmount={totalAmount}
