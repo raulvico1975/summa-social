@@ -127,13 +127,13 @@ function QuickAssignPopover({
     <Popover open={open} onOpenChange={handleOpenChange}>
       <PopoverTrigger asChild>
         <Button
-          variant="outline"
-          size="sm"
-          className="h-7 px-2"
+          variant="ghost"
+          size="icon"
+          className="h-7 w-7"
           disabled={isAssigning}
+          title="Assignar a projecte"
         >
-          <FolderPlus className="h-3.5 w-3.5 mr-1" />
-          Assignar
+          <FolderPlus className="h-4 w-4" />
         </Button>
       </PopoverTrigger>
       <PopoverContent className="w-64 p-0" align="end">
@@ -610,13 +610,13 @@ export default function ExpensesInboxPage() {
                         )}
                         {expense.source === 'offBank' && (
                           <Button
-                            variant="outline"
-                            size="sm"
-                            className="h-7 px-2"
+                            variant="ghost"
+                            size="icon"
+                            className="h-7 w-7"
                             onClick={() => handleEditOffBank(item)}
+                            title="Editar despesa"
                           >
-                            <Pencil className="h-3.5 w-3.5 mr-1" />
-                            Editar
+                            <Pencil className="h-4 w-4" />
                           </Button>
                         )}
                         {expense.source === 'bank' && (
