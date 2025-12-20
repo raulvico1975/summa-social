@@ -5,3 +5,4 @@ if (admin.apps.length === 0) {
 }
 
 export { exportProjectExpenses } from "./exports/projectExpenses";
+export { migrateProjectModulePaths } from "./migrations/migrateProjectModulePaths";
