@@ -1,10 +1,10 @@
 // src/components/project-module/add-off-bank-expense-modal.tsx
-// Modal per afegir despeses de terreny (off-bank)
+// Modal per afegir o editar despeses de terreny (off-bank)
 
 'use client';
 
 import * as React from 'react';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -16,22 +16,41 @@ import {
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { useSaveOffBankExpense } from '@/hooks/use-project-module';
+import { useSaveOffBankExpense, useUpdateOffBankExpense } from '@/hooks/use-project-module';
 import { useToast } from '@/hooks/use-toast';
+import { trackUX } from '@/lib/ux/trackUX';
 
-interface AddOffBankExpenseModalProps {
+interface OffBankExpenseInitialValues {
+  date: string;
+  amountEUR: string;
+  concept: string;
+  counterpartyName: string;
+  categoryName: string;
+}
+
+interface OffBankExpenseModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onSuccess: () => void;
+  mode?: 'create' | 'edit';
+  expenseId?: string;
+  initialValues?: OffBankExpenseInitialValues;
 }
 
-export function AddOffBankExpenseModal({
+export function OffBankExpenseModal({
   open,
   onOpenChange,
   onSuccess,
-}: AddOffBankExpenseModalProps) {
+  mode = 'create',
+  expenseId,
+  initialValues,
+}: OffBankExpenseModalProps) {
   const { save, isSaving } = useSaveOffBankExpense();
+  const { update, isUpdating } = useUpdateOffBankExpense();
   const { toast } = useToast();
+
+  const isEditMode = mode === 'edit';
+  const isProcessing = isSaving || isUpdating;
 
   const [date, setDate] = useState(() => {
     const today = new Date();
@@ -43,6 +62,18 @@ export function AddOffBankExpenseModal({
   const [categoryName, setCategoryName] = useState('');
 
   const [errors, setErrors] = useState<Record<string, string>>({});
+
+  // Carregar valors inicials quan s'obre en mode edit
+  useEffect(() => {
+    if (open && isEditMode && initialValues) {
+      setDate(initialValues.date);
+      setAmountEUR(initialValues.amountEUR);
+      setConcept(initialValues.concept);
+      setCounterpartyName(initialValues.counterpartyName);
+      setCategoryName(initialValues.categoryName);
+      setErrors({});
+    }
+  }, [open, isEditMode, initialValues]);
 
   const resetForm = () => {
     const today = new Date();
@@ -84,18 +115,39 @@ export function AddOffBankExpenseModal({
     if (!validate()) return;
 
     try {
-      await save({
-        date,
-        amountEUR: amountEUR.replace(',', '.'),
-        concept,
-        counterpartyName,
-        categoryName,
-      });
+      if (isEditMode && expenseId) {
+        // Mode edició
+        await update(expenseId, {
+          date,
+          amountEUR: amountEUR.replace(',', '.'),
+          concept,
+          counterpartyName,
+          categoryName,
+        });
 
-      toast({
-        title: 'Despesa afegida',
-        description: 'La despesa de terreny s\'ha creat correctament.',
-      });
+        trackUX('expenses.offBank.edit.save', { expenseId });
+
+        toast({
+          title: 'Despesa actualitzada',
+          description: 'La despesa de terreny s\'ha actualitzat correctament.',
+        });
+      } else {
+        // Mode creació
+        const newId = await save({
+          date,
+          amountEUR: amountEUR.replace(',', '.'),
+          concept,
+          counterpartyName,
+          categoryName,
+        });
+
+        trackUX('expenses.offBank.create', { expenseId: newId });
+
+        toast({
+          title: 'Despesa afegida',
+          description: 'La despesa de terreny s\'ha creat correctament.',
+        });
+      }
 
       resetForm();
       onOpenChange(false);
@@ -105,7 +157,7 @@ export function AddOffBankExpenseModal({
       toast({
         variant: 'destructive',
         title: 'Error',
-        description: err instanceof Error ? err.message : 'Error creant despesa',
+        description: err instanceof Error ? err.message : (isEditMode ? 'Error actualitzant despesa' : 'Error creant despesa'),
       });
     }
   };
@@ -121,9 +173,13 @@ export function AddOffBankExpenseModal({
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>Afegir despesa de terreny</DialogTitle>
+          <DialogTitle>
+            {isEditMode ? 'Editar despesa de terreny' : 'Afegir despesa de terreny'}
+          </DialogTitle>
           <DialogDescription>
-            Registra una despesa fora del circuit bancari
+            {isEditMode
+              ? 'Modifica les dades de la despesa'
+              : 'Registra una despesa fora del circuit bancari'}
           </DialogDescription>
         </DialogHeader>
 
@@ -205,12 +261,16 @@ export function AddOffBankExpenseModal({
               type="button"
               variant="outline"
               onClick={() => handleOpenChange(false)}
-              disabled={isSaving}
+              disabled={isProcessing}
             >
               Cancel·lar
             </Button>
-            <Button type="submit" disabled={isSaving}>
-              {isSaving ? 'Guardant...' : 'Afegir despesa'}
+            <Button type="submit" disabled={isProcessing}>
+              {isProcessing
+                ? 'Guardant...'
+                : isEditMode
+                  ? 'Desar canvis'
+                  : 'Afegir despesa'}
             </Button>
           </DialogFooter>
         </form>
@@ -218,3 +278,6 @@ export function AddOffBankExpenseModal({
     </Dialog>
   );
 }
+
+// Alias per compatibilitat amb codi existent
+export const AddOffBankExpenseModal = OffBankExpenseModal;

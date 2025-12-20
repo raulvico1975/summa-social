@@ -43,12 +43,12 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import { AlertCircle, RefreshCw, ChevronRight, FolderPlus, Check, MoreHorizontal, Split, X, Plus, Landmark, Globe, ArrowLeft, FolderKanban, Filter } from 'lucide-react';
+import { AlertCircle, RefreshCw, ChevronRight, FolderPlus, Check, MoreHorizontal, Split, X, Plus, Landmark, Globe, ArrowLeft, FolderKanban, Filter, Pencil } from 'lucide-react';
 import { formatDateDMY } from '@/lib/normalize';
 import { AssignmentEditor } from '@/components/project-module/assignment-editor';
 import type { ExpenseStatus, UnifiedExpenseWithLink, Project, ExpenseAssignment, BudgetLine } from '@/lib/project-module-types';
 import { useTranslations } from '@/i18n';
-import { AddOffBankExpenseModal } from '@/components/project-module/add-off-bank-expense-modal';
+import { OffBankExpenseModal } from '@/components/project-module/add-off-bank-expense-modal';
 
 function formatAmount(amount: number): string {
   return new Intl.NumberFormat('ca-ES', {
@@ -303,6 +303,7 @@ export default function ExpensesInboxPage() {
   const [bulkAssignOpen, setBulkAssignOpen] = React.useState(false);
   const [isBulkAssigning, setIsBulkAssigning] = React.useState(false);
   const [addOffBankOpen, setAddOffBankOpen] = React.useState(false);
+  const [editOffBankExpense, setEditOffBankExpense] = React.useState<UnifiedExpenseWithLink | null>(null);
 
   const handleRefresh = async () => {
     setIsRefreshing(true);
@@ -406,6 +407,12 @@ export default function ExpensesInboxPage() {
       newSet.add(txId);
     }
     setSelectedIds(newSet);
+  };
+
+  // Handler per obrir edició de despesa off-bank
+  const handleEditOffBank = (expense: UnifiedExpenseWithLink) => {
+    trackUX('expenses.offBank.edit.open', { expenseId: expense.expense.txId });
+    setEditOffBankExpense(expense);
   };
 
   const toggleSelectAll = () => {
@@ -601,6 +608,17 @@ export default function ExpensesInboxPage() {
                             isAssigning={isSaving}
                           />
                         )}
+                        {expense.source === 'offBank' && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="h-7 px-2"
+                            onClick={() => handleEditOffBank(item)}
+                          >
+                            <Pencil className="h-3.5 w-3.5 mr-1" />
+                            Editar
+                          </Button>
+                        )}
                         {expense.source === 'bank' && (
                           <Link href={buildUrl(`/dashboard/project-module/expenses/${expense.txId}`)}>
                             <Button
@@ -719,10 +737,30 @@ export default function ExpensesInboxPage() {
       </Dialog>
 
       {/* Add Off-Bank Expense Modal */}
-      <AddOffBankExpenseModal
+      <OffBankExpenseModal
         open={addOffBankOpen}
         onOpenChange={setAddOffBankOpen}
         onSuccess={refresh}
+        mode="create"
+      />
+
+      {/* Edit Off-Bank Expense Modal */}
+      <OffBankExpenseModal
+        open={!!editOffBankExpense}
+        onOpenChange={(open) => !open && setEditOffBankExpense(null)}
+        onSuccess={() => {
+          setEditOffBankExpense(null);
+          refresh();
+        }}
+        mode="edit"
+        expenseId={editOffBankExpense?.expense.txId.replace('off_', '')}
+        initialValues={editOffBankExpense ? {
+          date: editOffBankExpense.expense.date,
+          amountEUR: Math.abs(editOffBankExpense.expense.amountEUR).toString().replace('.', ','),
+          concept: editOffBankExpense.expense.description ?? '',
+          counterpartyName: editOffBankExpense.expense.counterpartyName ?? '',
+          categoryName: editOffBankExpense.expense.categoryName ?? '',
+        } : undefined}
       />
     </div>
   );

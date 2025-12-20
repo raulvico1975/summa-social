@@ -16,6 +16,7 @@ import {
   doc,
   setDoc,
   deleteDoc,
+  updateDoc,
   serverTimestamp,
   QueryDocumentSnapshot,
   DocumentData,
@@ -617,6 +618,114 @@ export function useSaveOffBankExpense(): UseSaveOffBankExpenseResult {
   return {
     save,
     isSaving,
+    error,
+  };
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// HOOK: Actualitzar despesa off-bank
+// ═══════════════════════════════════════════════════════════════════════════
+
+interface UseUpdateOffBankExpenseResult {
+  update: (expenseId: string, data: Partial<OffBankExpenseFormData>) => Promise<void>;
+  isUpdating: boolean;
+  error: Error | null;
+}
+
+export function useUpdateOffBankExpense(): UseUpdateOffBankExpenseResult {
+  const { firestore, user } = useFirebase();
+  const { organizationId } = useCurrentOrganization();
+
+  const [isUpdating, setIsUpdating] = useState(false);
+  const [error, setError] = useState<Error | null>(null);
+
+  const update = useCallback(async (expenseId: string, data: Partial<OffBankExpenseFormData>): Promise<void> => {
+    if (!organizationId || !user) {
+      throw new Error('No autenticat');
+    }
+
+    if (!expenseId) {
+      throw new Error('ID de despesa no vàlid');
+    }
+
+    // Validacions si s'inclouen els camps
+    if (data.amountEUR !== undefined) {
+      const amount = parseFloat(data.amountEUR);
+      if (isNaN(amount) || amount <= 0) {
+        throw new Error('L\'import ha de ser un número positiu');
+      }
+    }
+
+    if (data.concept !== undefined) {
+      const concept = data.concept.trim();
+      if (concept.length === 0) {
+        throw new Error('El concepte és obligatori');
+      }
+    }
+
+    if (data.date !== undefined) {
+      const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
+      if (!dateRegex.test(data.date)) {
+        throw new Error('La data ha de tenir format YYYY-MM-DD');
+      }
+    }
+
+    setIsUpdating(true);
+    setError(null);
+
+    try {
+      const expenseRef = doc(
+        firestore,
+        'organizations',
+        organizationId,
+        'projectModule',
+        '_',
+        'offBankExpenses',
+        expenseId
+      );
+
+      const updateData: {
+        updatedAt: ReturnType<typeof serverTimestamp>;
+        date?: string;
+        concept?: string;
+        amountEUR?: number;
+        counterpartyName?: string | null;
+        categoryName?: string | null;
+      } = {
+        updatedAt: serverTimestamp(),
+      };
+
+      if (data.date !== undefined) {
+        updateData.date = data.date;
+      }
+      if (data.concept !== undefined) {
+        updateData.concept = data.concept.trim();
+      }
+      if (data.amountEUR !== undefined) {
+        updateData.amountEUR = parseFloat(data.amountEUR);
+      }
+      if (data.counterpartyName !== undefined) {
+        updateData.counterpartyName = data.counterpartyName.trim() || null;
+      }
+      if (data.categoryName !== undefined) {
+        updateData.categoryName = data.categoryName.trim() || null;
+      }
+
+      await updateDoc(expenseRef, updateData);
+
+    } catch (err) {
+      console.error('Error updating off-bank expense:', err);
+      const e = err instanceof Error ? err : new Error('Error actualitzant despesa');
+      setError(e);
+      throw e;
+    } finally {
+      setIsUpdating(false);
+    }
+  }, [firestore, organizationId, user]);
+
+  return {
+    update,
+    isUpdating,
     error,
   };
 }
