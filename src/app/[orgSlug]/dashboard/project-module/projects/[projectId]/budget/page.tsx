@@ -11,6 +11,7 @@ import {
   useProjectBudgetLines,
   useSaveBudgetLine,
   useProjectExpenseLinks,
+  useUnifiedExpenseFeed,
 } from '@/hooks/use-project-module';
 import { useOrgUrl } from '@/hooks/organization-provider';
 import { useToast } from '@/hooks/use-toast';
@@ -65,10 +66,13 @@ import {
   Loader2,
   Eye,
   Info,
+  FileArchive,
 } from 'lucide-react';
 import { useFirebase } from '@/firebase';
 import { useCurrentOrganization } from '@/hooks/organization-provider';
+import { doc, getDoc } from 'firebase/firestore';
 import { buildProjectJustificationXlsx } from '@/lib/project-justification-export';
+import { exportProjectJustificationZip } from '@/lib/project-justification-attachments-zip';
 import { trackUX } from '@/lib/ux/trackUX';
 import { useRouter } from 'next/navigation';
 import type { BudgetLine, BudgetLineFormData, ExpenseAssignment } from '@/lib/project-module-types';
@@ -246,12 +250,15 @@ export default function ProjectBudgetPage() {
   const { project, isLoading: projectLoading, error: projectError } = useProjectDetail(projectId);
   const { budgetLines, isLoading: linesLoading, error: linesError, refresh: refreshLines } = useProjectBudgetLines(projectId);
   const { expenseLinks, isLoading: linksLoading } = useProjectExpenseLinks(projectId);
+  const { expenses: allExpenses, isLoading: expensesLoading } = useUnifiedExpenseFeed({ projectId });
   const { save, remove, isSaving } = useSaveBudgetLine();
 
   const [formOpen, setFormOpen] = React.useState(false);
   const [editingLine, setEditingLine] = React.useState<BudgetLine | null>(null);
   const [deleteConfirm, setDeleteConfirm] = React.useState<BudgetLine | null>(null);
   const [isExporting, setIsExporting] = React.useState(false);
+  const [isExportingZip, setIsExportingZip] = React.useState(false);
+  const [zipProgress, setZipProgress] = React.useState<{ current: number; total: number } | null>(null);
 
   // Calcular execució per partida
   const executionByLine = React.useMemo(() => {
@@ -382,6 +389,76 @@ export default function ProjectBudgetPage() {
     }
   };
 
+  // Comptar assignacions del projecte (per decidir si el botó s'ha de desactivar)
+  const projectAssignmentsCount = React.useMemo(() => {
+    let count = 0;
+    for (const link of expenseLinks) {
+      for (const assignment of link.assignments) {
+        if (assignment.projectId === projectId) {
+          count++;
+        }
+      }
+    }
+    return count;
+  }, [expenseLinks, projectId]);
+
+  const handleExportZip = async () => {
+    if (!organizationId || !project) return;
+
+    trackUX('budget.downloadZip.click', { projectId, entriesCount: projectAssignmentsCount });
+    setIsExportingZip(true);
+    setZipProgress(null);
+
+    try {
+      // Obtenir nom de l'organització
+      const orgDoc = await getDoc(doc(firestore, 'organizations', organizationId));
+      const orgName = orgDoc.data()?.name ?? 'Organitzacio';
+
+      // Extreure les despeses del feed (que ja té tota la info)
+      const expenses = allExpenses.map((e) => e.expense);
+
+      const result = await exportProjectJustificationZip(
+        {
+          organizationId,
+          organizationName: orgName,
+          projectId,
+          projectCode: project.code ?? '',
+          projectName: project.name,
+          allowedDeviationPct: project.allowedDeviationPct ?? 10,
+          budgetLines,
+          expenses,
+          expenseLinks,
+        },
+        (current, total) => {
+          setZipProgress({ current, total });
+        }
+      );
+
+      trackUX('budget.downloadZip.done', {
+        entriesCount: result.entriesCount,
+        okCount: result.okCount,
+        missingCount: result.missingCount,
+        fetchErrorCount: result.fetchErrorCount,
+      });
+
+      toast({
+        title: t.projectModule?.zipGenerated ?? 'ZIP generat',
+        description: `${result.okCount} comprovants descarregats. ${result.missingCount > 0 ? `${result.missingCount} sense document.` : ''}`,
+      });
+    } catch (err) {
+      console.error('Error exporting ZIP:', err);
+      trackUX('budget.downloadZip.error', { message: err instanceof Error ? err.message : 'Error desconegut' });
+      toast({
+        variant: 'destructive',
+        title: 'Error',
+        description: err instanceof Error ? err.message : 'Error generant ZIP',
+      });
+    } finally {
+      setIsExportingZip(false);
+      setZipProgress(null);
+    }
+  };
+
   if (projectLoading) {
     return (
       <div className="space-y-6">
@@ -440,6 +517,20 @@ export default function ProjectBudgetPage() {
               <Download className="h-4 w-4 mr-2" />
             )}
             {isExporting ? 'Exportant...' : 'Exportar justificació'}
+          </Button>
+          <Button
+            variant="outline"
+            onClick={handleExportZip}
+            disabled={isExportingZip || expensesLoading || projectAssignmentsCount === 0}
+          >
+            {isExportingZip ? (
+              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+            ) : (
+              <FileArchive className="h-4 w-4 mr-2" />
+            )}
+            {isExportingZip && zipProgress
+              ? `${zipProgress.current}/${zipProgress.total}`
+              : (t.projectModule?.downloadAttachments ?? 'Baixar comprovants')}
           </Button>
           <Button onClick={openNew}>
             <Plus className="h-4 w-4 mr-2" />

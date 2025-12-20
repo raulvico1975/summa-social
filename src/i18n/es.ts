@@ -1500,6 +1500,8 @@ export const es = {
     byBudgetLine: "por partida",
     byProject: "por proyecto",
     clearFilter: "Quitar filtro",
+    downloadAttachments: "Descargar justificantes",
+    zipGenerated: "ZIP generado",
   },
   logPanel: {
     title: "Log de Diagnóstico",

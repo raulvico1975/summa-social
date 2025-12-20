@@ -1474,6 +1474,8 @@ export const ca = {
     byBudgetLine: "per partida",
     byProject: "per projecte",
     clearFilter: "Treure filtre",
+    downloadAttachments: "Baixar comprovants",
+    zipGenerated: "ZIP generat",
   },
   logPanel: {
     title: "Log de Diagnòstic",
