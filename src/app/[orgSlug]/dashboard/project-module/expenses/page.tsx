@@ -45,6 +45,7 @@ import { AlertCircle, RefreshCw, ChevronRight, FolderPlus, Check, MoreHorizontal
 import { formatDateDMY } from '@/lib/normalize';
 import { AssignmentEditor } from '@/components/project-module/assignment-editor';
 import type { ExpenseStatus, ExpenseWithLink, Project, ExpenseAssignment } from '@/lib/project-module-types';
+import { useTranslations } from '@/i18n';
 
 function formatAmount(amount: number): string {
   return new Intl.NumberFormat('ca-ES', {
@@ -154,11 +155,19 @@ function QuickAssignPopover({
 }
 
 export default function ExpensesInboxPage() {
+  const { t } = useTranslations();
   const { expenses, isLoading, error, hasMore, loadMore, refresh } = useExpenseFeed();
   const { projects, isLoading: projectsLoading, error: projectsError } = useProjects(true);
   const { save, isSaving } = useSaveExpenseLink();
   const { buildUrl } = useOrgUrl();
   const { toast } = useToast();
+
+  // Tradueix el nom de categoria (si és una clau coneguda)
+  const getCategoryLabel = (categoryName: string | null): string => {
+    if (!categoryName) return '-';
+    const translated = (t.categories as Record<string, string>)?.[categoryName];
+    return translated ?? categoryName;
+  };
 
   const [isRefreshing, setIsRefreshing] = React.useState(false);
   const [selectedIds, setSelectedIds] = React.useState<Set<string>>(new Set());
@@ -376,7 +385,7 @@ export default function ExpensesInboxPage() {
                       {expense.description || '-'}
                     </TableCell>
                     <TableCell className="text-muted-foreground text-sm">
-                      {expense.categoryName || '-'}
+                      {getCategoryLabel(expense.categoryName)}
                     </TableCell>
                     <TableCell className="text-muted-foreground text-sm">
                       {expense.counterpartyName || '-'}

@@ -122,6 +122,22 @@ export const exportProjectExpenses = functions
     const isEligibleForProjects = calculateEligibility(tx);
     const documents = buildDocuments(tx.documentUrl ?? null);
 
+    // El camp tx.category ja conté el nom/codi de la categoria, no l'ID
+    // Per tant, categoryName = tx.category directament
+    const categoryName: string | null = tx.category ?? null;
+
+    // Lookup contactName si tenim contactId
+    let counterpartyName: string | null = null;
+    if (tx.contactId) {
+      const contactSnap = await db
+        .doc(`organizations/${orgId}/contacts/${tx.contactId}`)
+        .get();
+      if (contactSnap.exists) {
+        counterpartyName =
+          (contactSnap.data() as { name?: string })?.name ?? null;
+      }
+    }
+
     // Preservar createdAt de l'export (només el primer cop)
     const existing = await exportRef.get();
 
@@ -138,10 +154,10 @@ export const exportProjectExpenses = functions
       currency: "EUR",
 
       categoryId: tx.category ?? null,
-      categoryName: tx.categoryName ?? null,
+      categoryName,
 
       counterpartyId: tx.contactId ?? null,
-      counterpartyName: tx.contactName ?? null,
+      counterpartyName,
       counterpartyType: (tx.contactType as ContactType) ?? null,
 
       internalTagId: tx.projectId ?? null,
