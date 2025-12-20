@@ -23,7 +23,7 @@ import type { ExpenseStatus } from '@/lib/project-module-types';
 
 function formatDate(dateStr: string): string {
   const [year, month, day] = dateStr.split('-');
-  return `${day}/${month}/${year}`;
+  return `${day}.${month}.${year}`;
 }
 
 function formatAmount(amount: number): string {
@@ -33,15 +33,17 @@ function formatAmount(amount: number): string {
   }).format(amount);
 }
 
-function StatusBadge({ status }: { status: ExpenseStatus }) {
+function StatusBadge({ status, assignedAmount, totalAmount }: { status: ExpenseStatus; assignedAmount: number; totalAmount: number }) {
+  const percentage = totalAmount > 0 ? Math.round((assignedAmount / totalAmount) * 100) : 0;
+
   switch (status) {
     case 'assigned':
-      return <Badge variant="default" className="bg-green-600">Assignada</Badge>;
+      return <Badge variant="default" className="bg-green-600">100%</Badge>;
     case 'partial':
-      return <Badge variant="secondary" className="bg-yellow-500 text-black">Parcial</Badge>;
+      return <Badge variant="secondary" className="bg-yellow-500 text-black">{percentage}%</Badge>;
     case 'unassigned':
     default:
-      return <Badge variant="outline">Sense assignar</Badge>;
+      return <Badge variant="outline">0%</Badge>;
   }
 }
 
@@ -98,7 +100,7 @@ export default function ExpensesInboxPage() {
               <TableHead className="w-[100px]">Data</TableHead>
               <TableHead>Descripció</TableHead>
               <TableHead>Categoria</TableHead>
-              <TableHead>Contrapart</TableHead>
+              <TableHead>Origen / Destinatari</TableHead>
               <TableHead className="text-right">Import</TableHead>
               <TableHead className="w-[120px]">Estat</TableHead>
               <TableHead className="w-[50px]"></TableHead>
@@ -125,7 +127,7 @@ export default function ExpensesInboxPage() {
                 </TableCell>
               </TableRow>
             ) : (
-              expenses.map(({ expense, status }) => (
+              expenses.map(({ expense, status, assignedAmount }) => (
                 <TableRow key={expense.id} className="group hover:bg-muted/50">
                   <TableCell className="font-mono text-sm">
                     {formatDate(expense.date)}
@@ -143,7 +145,7 @@ export default function ExpensesInboxPage() {
                     {formatAmount(expense.amountEUR)}
                   </TableCell>
                   <TableCell>
-                    <StatusBadge status={status} />
+                    <StatusBadge status={status} assignedAmount={assignedAmount} totalAmount={Math.abs(expense.amountEUR)} />
                   </TableCell>
                   <TableCell>
                     <Link href={buildUrl(`/dashboard/project-module/expenses/${expense.id}`)}>

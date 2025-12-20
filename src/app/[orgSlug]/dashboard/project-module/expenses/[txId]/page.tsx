@@ -31,7 +31,7 @@ import type { ExpenseAssignment } from '@/lib/project-module-types';
 
 function formatDate(dateStr: string): string {
   const [year, month, day] = dateStr.split('-');
-  return `${day}/${month}/${year}`;
+  return `${day}.${month}.${year}`;
 }
 
 function formatAmount(amount: number): string {
@@ -53,6 +53,23 @@ export default function ExpenseDetailPage() {
   const { save, remove, isSaving } = useSaveExpenseLink();
 
   const [isEditing, setIsEditing] = React.useState(false);
+  const [hasAutoOpened, setHasAutoOpened] = React.useState(false);
+
+  // Obrir editor automàticament si la despesa no està completament assignada
+  React.useEffect(() => {
+    if (!isLoading && expense && !hasAutoOpened) {
+      const assignedAmt = link
+        ? link.assignments.reduce((sum, a) => sum + Math.abs(a.amountEUR), 0)
+        : 0;
+      const totalAmt = Math.abs(expense.amountEUR);
+      const fullyAssigned = (totalAmt - assignedAmt) <= 0.01;
+
+      if (!fullyAssigned) {
+        setIsEditing(true);
+        setHasAutoOpened(true);
+      }
+    }
+  }, [isLoading, expense, link, hasAutoOpened]);
 
   const handleSave = async (assignments: ExpenseAssignment[], note: string | null) => {
     try {
@@ -141,7 +158,6 @@ export default function ExpenseDetailPage() {
         </Link>
         <div>
           <h1 className="text-2xl font-bold">Detall de despesa</h1>
-          <p className="text-muted-foreground font-mono text-sm">{txId}</p>
         </div>
       </div>
 
@@ -154,7 +170,7 @@ export default function ExpenseDetailPage() {
               Informació de la despesa
             </CardTitle>
             <CardDescription>
-              Dades provinents de Summa Social (només lectura)
+              Informació sincronitzada automàticament
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -234,29 +250,24 @@ export default function ExpenseDetailPage() {
                   {link && (
                     <Button
                       variant="outline"
-                      size="sm"
+                      size="icon"
                       onClick={handleRemove}
                       disabled={isSaving}
+                      title="Eliminar assignació"
                     >
-                      <Trash2 className="h-4 w-4 mr-1" />
-                      Eliminar
+                      <Trash2 className="h-4 w-4" />
                     </Button>
                   )}
                   <Button
                     variant="default"
-                    size="sm"
+                    size="icon"
                     onClick={() => setIsEditing(true)}
+                    title={link ? 'Editar assignació' : 'Assignar a projecte'}
                   >
                     {link ? (
-                      <>
-                        <Edit className="h-4 w-4 mr-1" />
-                        Editar
-                      </>
+                      <Edit className="h-4 w-4" />
                     ) : (
-                      <>
-                        <Plus className="h-4 w-4 mr-1" />
-                        Assignar
-                      </>
+                      <Plus className="h-4 w-4" />
                     )}
                   </Button>
                 </div>
@@ -275,9 +286,21 @@ export default function ExpenseDetailPage() {
                 onSave={handleSave}
                 onCancel={() => setIsEditing(false)}
                 isSaving={isSaving}
+                createProjectUrl={buildUrl('/dashboard/project-module/projects/new')}
               />
             ) : link && link.assignments.length > 0 ? (
               <div className="space-y-4">
+                {/* Pendent d'assignar (si no complet) */}
+                {!isFullyAssigned && (
+                  <div className="flex items-center justify-between p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+                    <span className="text-yellow-800 font-medium">Pendent d'assignar</span>
+                    <span className="font-mono font-medium text-yellow-700">
+                      {formatAmount(-remainingAmount)}
+                    </span>
+                  </div>
+                )}
+
+                {/* Assignacions existents */}
                 {link.assignments.map((assignment, i) => (
                   <div
                     key={i}
@@ -301,12 +324,11 @@ export default function ExpenseDetailPage() {
                   </span>
                 </div>
 
-                <div className="flex items-center justify-between text-sm">
-                  <span className="text-muted-foreground">Pendent</span>
-                  <span className={`font-mono font-medium ${isFullyAssigned ? 'text-green-600' : 'text-yellow-600'}`}>
-                    {isFullyAssigned ? 'Complet' : formatAmount(-remainingAmount)}
-                  </span>
-                </div>
+                {isFullyAssigned && (
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="text-green-600 font-medium">Completament assignada</span>
+                  </div>
+                )}
 
                 {link.note && (
                   <>
@@ -322,7 +344,7 @@ export default function ExpenseDetailPage() {
               <div className="text-center py-8 text-muted-foreground">
                 <p>Aquesta despesa no està assignada a cap projecte.</p>
                 <p className="text-sm mt-1">
-                  Fes clic a &quot;Assignar&quot; per vincular-la.
+                  Fes clic al botó + per vincular-la.
                 </p>
               </div>
             )}

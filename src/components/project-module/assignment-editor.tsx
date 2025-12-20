@@ -16,7 +16,8 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Plus, Trash2, AlertCircle, Check, X } from 'lucide-react';
+import { Plus, Trash2, AlertCircle, Check, X, FolderPlus } from 'lucide-react';
+import Link from 'next/link';
 import type { Project, ExpenseAssignment } from '@/lib/project-module-types';
 
 interface AssignmentEditorProps {
@@ -29,6 +30,7 @@ interface AssignmentEditorProps {
   onSave: (assignments: ExpenseAssignment[], note: string | null) => Promise<void>;
   onCancel: () => void;
   isSaving: boolean;
+  createProjectUrl?: string;
 }
 
 interface AssignmentRow {
@@ -52,6 +54,7 @@ export function AssignmentEditor({
   onSave,
   onCancel,
   isSaving,
+  createProjectUrl,
 }: AssignmentEditorProps) {
   // Inicialitzar amb les assignacions actuals o una fila buida
   const [rows, setRows] = React.useState<AssignmentRow[]>(() => {
@@ -170,7 +173,7 @@ export function AssignmentEditor({
   if (projects.length === 0) {
     return (
       <div className="text-center py-6">
-        <AlertCircle className="h-8 w-8 mx-auto text-muted-foreground mb-2" />
+        <FolderPlus className="h-8 w-8 mx-auto text-muted-foreground mb-2" />
         <p className="text-muted-foreground">No hi ha projectes actius.</p>
         <p className="text-sm text-muted-foreground mt-1">
           Crea un projecte primer per poder assignar despeses.
@@ -179,6 +182,14 @@ export function AssignmentEditor({
           <Button variant="outline" onClick={onCancel}>
             Cancel·lar
           </Button>
+          {createProjectUrl && (
+            <Link href={createProjectUrl}>
+              <Button>
+                <FolderPlus className="h-4 w-4 mr-2" />
+                Crear projecte
+              </Button>
+            </Link>
+          )}
         </div>
       </div>
     );
