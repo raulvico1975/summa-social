@@ -12,17 +12,18 @@ import {
   SidebarMenuButton,
   SidebarFooter,
 } from '@/components/ui/sidebar';
-import { 
-  LayoutDashboard, 
-  Settings, 
-  LogOut, 
-  FileText, 
-  FolderKanban, 
-  AreaChart, 
+import {
+  LayoutDashboard,
+  Settings,
+  LogOut,
+  FileText,
+  FolderKanban,
+  AreaChart,
   Shield,
   Heart,
   Building2,
-  UserCog
+  UserCog,
+  ClipboardList
 } from 'lucide-react';
 import { Logo } from '@/components/logo';
 import { useFirebase } from '@/firebase';
@@ -107,6 +108,12 @@ export function DashboardSidebarContent() {
         path: '/dashboard/informes',
         label: t.sidebar.reports,
         icon: AreaChart,
+      },
+      {
+        path: '/dashboard/project-module/expenses',
+        label: 'Mòdul Projectes',
+        icon: ClipboardList,
+        className: 'text-emerald-600',
       },
       {
         path: '/dashboard/configuracion',

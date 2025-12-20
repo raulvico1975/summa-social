@@ -1741,6 +1741,82 @@ El mòdul de devolucions resol el problema de rebuts retornats pel banc sense id
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
+# ANNEX C — EXPORTS I MÒDULS DESACOBLATS
+# ═══════════════════════════════════════════════════════════════════════════════
+
+## C.1 Principi Arquitectònic
+
+Summa Social pot generar **feeds de dades de només lectura** mitjançant Cloud Functions.
+
+Aquests feeds serveixen perquè mòduls externs consumeixin dades sense afectar el core de l'aplicació. L'objectiu és permetre extensions opcionals mantenint la integritat i simplicitat del producte principal.
+
+## C.2 Patró Oficial
+
+| Responsabilitat | Actor |
+|-----------------|-------|
+| **Escriptura del feed** | Backend de Summa Social (Cloud Functions) |
+| **Lectura del feed** | Aplicacions o mòduls externs |
+| **Escriptura al mòdul extern** | Només el mòdul extern |
+
+> ⚠️ **Regla fonamental**: Cap mòdul extern pot escriure dins del core de Summa Social.
+
+## C.3 Exemple Normatiu: Mòdul de Projectes
+
+### Estructura Firestore
+
+**Feed de despeses (escriu Summa, llegeix mòdul extern):**
+
+```
+/organizations/{orgId}/exports/projectExpenses/items/{txId}
+```
+
+**Assignacions a projectes (fora de Summa, escriu mòdul extern):**
+
+```
+/organizations/{orgId}/projectModule/expenseLinks/{txId}
+```
+
+### Join Client-Side
+
+El mòdul extern fa el join entre:
+- La despesa (del feed `exports/projectExpenses/items`)
+- L'assignació (de `projectModule/expenseLinks`)
+
+Summa Social no coneix ni gestiona les assignacions.
+
+## C.4 Límits Explícits del Producte
+
+Summa Social **NO**:
+- Gestiona projectes (més enllà dels eixos d'actuació existents)
+- Gestiona subvencions
+- Fa justificacions econòmiques
+- Controla pressupostos de projectes
+
+Qualsevol funcionalitat en aquesta línia és **externa i opcional**, i s'ha d'implementar fora del core mitjançant el patró d'exports descrit.
+
+## C.5 Firestore Rules
+
+Els feeds d'exports són de només lectura per als clients:
+
+```javascript
+match /exports/{exportType} {
+  allow read: if isMemberOf(orgId) || hasOrgInProfile(orgId) || isSuperAdmin();
+  allow write: if false; // Només Cloud Functions
+
+  match /items/{itemId} {
+    allow read: if isMemberOf(orgId) || hasOrgInProfile(orgId) || isSuperAdmin();
+    allow write: if false; // Només Cloud Functions
+  }
+}
+
+match /projectModule/{document=**} {
+  allow read: if isMemberOf(orgId) || hasOrgInProfile(orgId) || isSuperAdmin();
+  allow write: if (isMemberOf(orgId) && getMemberRole(orgId) in ['admin', 'user']) || isSuperAdmin();
+}
+```
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
 # FI DEL DOCUMENT
 # Última actualització: Desembre 2025 - Versió 1.9
 # ═══════════════════════════════════════════════════════════════════════════════

@@ -89,7 +89,7 @@ export const exportProjectExpenses = functions
     };
 
     const exportRef = db.doc(
-      `/organizations/${orgId}/exports/projectExpenses/${transactionId}`
+      `organizations/${orgId}/exports/projectExpenses/items/${transactionId}`
     );
 
     const serverTs = admin.firestore.FieldValue.serverTimestamp();

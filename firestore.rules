@@ -168,6 +168,35 @@ service cloud.firestore {
         // Actualitzar/Eliminar: només Super Admin
         allow update, delete: if isSuperAdmin();
       }
+
+      // ─────────────────────────────────────────────────────────────────────
+      // EXPORTS (feed només lectura per clients; escriptura només backend)
+      // Estructura: /organizations/{orgId}/exports/{exportType}/items/{id}
+      // ─────────────────────────────────────────────────────────────────────
+
+      match /exports/{exportType} {
+        // (Opcional) llegir el document "exportType" si existeix
+        allow read: if isMemberOf(orgId) || hasOrgInProfile(orgId) || isSuperAdmin();
+        allow write: if false;
+
+        match /items/{itemId} {
+          // El nou mòdul pot llegir el feed si és membre de l'org
+          allow read: if isMemberOf(orgId) || hasOrgInProfile(orgId) || isSuperAdmin();
+
+          // Cap client pot escriure exports
+          allow create, update, delete: if false;
+        }
+      }
+
+      // ─────────────────────────────────────────────────────────────────────
+      // PROJECT MODULE (Projectes) — lectura/escriptura per membres de l'org
+      // Path: /organizations/{orgId}/projectModule/...
+      // ─────────────────────────────────────────────────────────────────────
+
+      match /projectModule/{document=**} {
+        allow read: if isMemberOf(orgId) || hasOrgInProfile(orgId) || isSuperAdmin();
+        allow write: if (isMemberOf(orgId) && getMemberRole(orgId) in ['admin', 'user']) || isSuperAdmin();
+      }
     }
   }
 }
