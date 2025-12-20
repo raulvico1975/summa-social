@@ -470,3 +470,60 @@ export function formatPercentageEU(
   const percent = value * 100;
   return `${formatNumberEU(percent, decimals)}%`;
 }
+
+/**
+ * Formata una data en format DD.MM.YYYY
+ * Accepta:
+ * - Firestore Timestamp (objecte amb toDate())
+ * - string ISO (2025-12-04T23:00:00.000Z)
+ * - string YYYY-MM-DD
+ * - Date object
+ * - null/undefined → retorna '-'
+ */
+export function formatDateDMY(
+  value: string | Date | { toDate: () => Date } | null | undefined
+): string {
+  if (!value) return '-';
+
+  let date: Date;
+
+  // Firestore Timestamp
+  if (typeof value === 'object' && 'toDate' in value && typeof value.toDate === 'function') {
+    date = value.toDate();
+  }
+  // Date object
+  else if (value instanceof Date) {
+    date = value;
+  }
+  // String
+  else if (typeof value === 'string') {
+    // ISO string (conté T)
+    if (value.includes('T')) {
+      date = new Date(value);
+    }
+    // YYYY-MM-DD
+    else if (/^\d{4}-\d{2}-\d{2}$/.test(value)) {
+      // Afegim T00:00:00 per evitar problemes de timezone
+      date = new Date(value + 'T00:00:00');
+    }
+    // Altres formats: intentem parsejar
+    else {
+      date = new Date(value);
+    }
+  }
+  // Fallback
+  else {
+    return '-';
+  }
+
+  // Validar que la data és vàlida
+  if (isNaN(date.getTime())) {
+    return '-';
+  }
+
+  const day = date.getDate().toString().padStart(2, '0');
+  const month = (date.getMonth() + 1).toString().padStart(2, '0');
+  const year = date.getFullYear();
+
+  return `${day}.${month}.${year}`;
+}

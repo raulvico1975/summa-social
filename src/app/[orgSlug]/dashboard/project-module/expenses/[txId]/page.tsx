@@ -27,12 +27,8 @@ import {
   Plus,
 } from 'lucide-react';
 import { AssignmentEditor } from '@/components/project-module/assignment-editor';
+import { formatDateDMY } from '@/lib/normalize';
 import type { ExpenseAssignment } from '@/lib/project-module-types';
-
-function formatDate(dateStr: string): string {
-  const [year, month, day] = dateStr.split('-');
-  return `${day}.${month}.${year}`;
-}
 
 function formatAmount(amount: number): string {
   return new Intl.NumberFormat('ca-ES', {
@@ -179,7 +175,7 @@ export default function ExpenseDetailPage() {
                 <Calendar className="h-4 w-4" />
                 Data
               </span>
-              <span className="font-medium">{formatDate(expense.date)}</span>
+              <span className="font-medium">{formatDateDMY(expense.date)}</span>
             </div>
 
             <div className="flex items-center justify-between">
