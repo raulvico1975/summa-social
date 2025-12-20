@@ -48,7 +48,7 @@ export interface ProjectExpenseExport {
 
 // ═══════════════════════════════════════════════════════════════════════════
 // PROJECTES DEL MÒDUL
-// Path: /organizations/{orgId}/projectModule/projects/{projectId}
+// Path: /organizations/{orgId}/projectModule/_/projects/{projectId}
 // ═══════════════════════════════════════════════════════════════════════════
 
 export interface Project {
@@ -79,7 +79,7 @@ export interface ProjectFormData {
 
 // ═══════════════════════════════════════════════════════════════════════════
 // ASSIGNACIONS DE DESPESES A PROJECTES
-// Path: /organizations/{orgId}/projectModule/expenseLinks/{txId}
+// Path: /organizations/{orgId}/projectModule/_/expenseLinks/{txId}
 // ═══════════════════════════════════════════════════════════════════════════
 
 export interface ExpenseAssignment {

@@ -1773,14 +1773,22 @@ Aquests feeds serveixen perquè mòduls externs consumeixin dades sense afectar 
 **Assignacions a projectes (fora de Summa, escriu mòdul extern):**
 
 ```
-/organizations/{orgId}/projectModule/expenseLinks/{txId}
+/organizations/{orgId}/projectModule/_/expenseLinks/{txId}
 ```
+
+**Projectes del mòdul:**
+
+```
+/organizations/{orgId}/projectModule/_/projects/{projectId}
+```
+
+> Nota: El document `_` és un placeholder tècnic necessari per complir l'estructura de Firestore (segments alterns col·lecció/document).
 
 ### Join Client-Side
 
 El mòdul extern fa el join entre:
 - La despesa (del feed `exports/projectExpenses/items`)
-- L'assignació (de `projectModule/expenseLinks`)
+- L'assignació (de `projectModule/_/expenseLinks`)
 
 Summa Social no coneix ni gestiona les assignacions.
 

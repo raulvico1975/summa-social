@@ -113,6 +113,7 @@ export function useExpenseFeed(): UseExpenseFeedResult {
         'organizations',
         organizationId,
         'projectModule',
+        '_',
         'expenseLinks'
       );
 
@@ -246,6 +247,7 @@ export function useExpenseDetail(txId: string): UseExpenseDetailResult {
         'organizations',
         organizationId,
         'projectModule',
+        '_',
         'expenseLinks',
         txId
       );
@@ -314,6 +316,7 @@ export function useSaveExpenseLink(): UseSaveExpenseLinkResult {
         'organizations',
         organizationId,
         'projectModule',
+        '_',
         'expenseLinks',
         txId
       );
@@ -362,6 +365,7 @@ export function useSaveExpenseLink(): UseSaveExpenseLinkResult {
         'organizations',
         organizationId,
         'projectModule',
+        '_',
         'expenseLinks',
         txId
       );
@@ -417,6 +421,7 @@ export function useProjects(onlyActive = false): UseProjectsResult {
         'organizations',
         organizationId,
         'projectModule',
+        '_',
         'projects'
       );
 
@@ -486,6 +491,7 @@ export function useProjectDetail(projectId: string): UseProjectDetailResult {
         'organizations',
         organizationId,
         'projectModule',
+        '_',
         'projects',
         projectId
       );
@@ -548,6 +554,7 @@ export function useSaveProject(): UseSaveProjectResult {
         'organizations',
         organizationId,
         'projectModule',
+        '_',
         'projects'
       );
 
