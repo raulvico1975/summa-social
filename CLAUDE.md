@@ -28,6 +28,9 @@ NO has de:
 - refactoritzar codi "per millorar-lo"
 - afegir funcionalitats fora de l'abast definit
 - introduir dependències noves
+- afegir noves llibreries sense preguntar
+
+Prohibit sobreanginyeria: no creis una funció complexa si una solució simple fuciona.
 
 Si una decisió no és òbvia, ATURA'T i demana aclariments.
 
@@ -59,4 +62,5 @@ Quan se't demani una modificació:
 3. Genera sempre codi complet amb paths exactes.
 4. Inclou passos de verificació (comandes de terminal o accions a la UI).
 
-Aquest projecte prioritza **criteri i control** per sobre de velocitat.
+Aquest projecte prioritza **estabilitat, senzillesa, criteri i control** per sobre de velocitat.
+

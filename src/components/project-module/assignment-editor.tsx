@@ -18,7 +18,9 @@ import {
 import { Skeleton } from '@/components/ui/skeleton';
 import { Plus, Trash2, AlertCircle, Check, X, FolderPlus } from 'lucide-react';
 import Link from 'next/link';
-import type { Project, ExpenseAssignment } from '@/lib/project-module-types';
+import { useTranslations } from '@/i18n';
+import { useProjectBudgetLines } from '@/hooks/use-project-module';
+import type { Project, ExpenseAssignment, BudgetLine } from '@/lib/project-module-types';
 
 interface AssignmentEditorProps {
   projects: Project[];
@@ -38,6 +40,66 @@ interface AssignmentRow {
   projectId: string;
   projectName: string;
   amountStr: string;
+  budgetLineId: string | null;
+  budgetLineName: string | null;
+}
+
+// Component per selector de partida que carrega les lines del projecte
+function BudgetLineSelector({
+  projectId,
+  value,
+  onChange,
+}: {
+  projectId: string;
+  value: string | null;
+  onChange: (lineId: string | null, lineName: string | null) => void;
+}) {
+  const { t } = useTranslations();
+  const { budgetLines, isLoading } = useProjectBudgetLines(projectId);
+
+  if (!projectId) {
+    return null;
+  }
+
+  if (isLoading) {
+    return <Skeleton className="h-9 w-full" />;
+  }
+
+  if (budgetLines.length === 0) {
+    return (
+      <span className="text-xs text-muted-foreground">
+        {t.projectModule?.noBudgetLines ?? '(sense pressupost)'}
+      </span>
+    );
+  }
+
+  return (
+    <Select
+      value={value ?? '__none__'}
+      onValueChange={(val) => {
+        if (val === '__none__') {
+          onChange(null, null);
+        } else {
+          const line = budgetLines.find((l) => l.id === val);
+          onChange(val, line?.name ?? null);
+        }
+      }}
+    >
+      <SelectTrigger className="h-8 text-xs">
+        <SelectValue placeholder={t.projectModule?.selectBudgetLine ?? 'Partida...'} />
+      </SelectTrigger>
+      <SelectContent>
+        <SelectItem value="__none__">
+          {t.projectModule?.unassignedLine ?? 'Sense partida'}
+        </SelectItem>
+        {budgetLines.map((line) => (
+          <SelectItem key={line.id} value={line.id}>
+            {line.code ? `${line.code} - ` : ''}{line.name}
+          </SelectItem>
+        ))}
+      </SelectContent>
+    </Select>
+  );
 }
 
 function generateRowId(): string {
@@ -64,6 +126,8 @@ export function AssignmentEditor({
         projectId: a.projectId,
         projectName: a.projectName,
         amountStr: Math.abs(a.amountEUR).toFixed(2),
+        budgetLineId: a.budgetLineId ?? null,
+        budgetLineName: a.budgetLineName ?? null,
       }));
     }
     return [
@@ -72,6 +136,8 @@ export function AssignmentEditor({
         projectId: '',
         projectName: '',
         amountStr: totalAmount.toFixed(2),
+        budgetLineId: null,
+        budgetLineName: null,
       },
     ];
   });
@@ -96,6 +162,8 @@ export function AssignmentEditor({
         projectId: '',
         projectName: '',
         amountStr: remaining > 0 ? remaining.toFixed(2) : '0.00',
+        budgetLineId: null,
+        budgetLineName: null,
       },
     ]);
   };
@@ -116,10 +184,22 @@ export function AssignmentEditor({
             ...row,
             projectId: value,
             projectName: project?.name ?? '',
+            // Reset budget line quan canvia el projecte
+            budgetLineId: null,
+            budgetLineName: null,
           };
         }
 
         return { ...row, [field]: value };
+      })
+    );
+  };
+
+  const updateBudgetLine = (id: string, budgetLineId: string | null, budgetLineName: string | null) => {
+    setRows((prev) =>
+      prev.map((row) => {
+        if (row.id !== id) return row;
+        return { ...row, budgetLineId, budgetLineName };
       })
     );
   };
@@ -131,6 +211,8 @@ export function AssignmentEditor({
       projectId: row.projectId,
       projectName: row.projectName,
       amountEUR: -Math.abs(parseFloat(row.amountStr)), // sempre negatiu
+      budgetLineId: row.budgetLineId,
+      budgetLineName: row.budgetLineName,
     }));
 
     await onSave(assignments, note.trim() || null);
@@ -199,51 +281,67 @@ export function AssignmentEditor({
     <div className="space-y-4">
       {/* Files d'assignació */}
       {rows.map((row, index) => (
-        <div key={row.id} className="flex gap-2 items-end">
-          <div className="flex-1 space-y-1">
-            {index === 0 && <Label className="text-xs">Projecte</Label>}
-            <Select
-              value={row.projectId}
-              onValueChange={(val) => updateRow(row.id, 'projectId', val)}
+        <div key={row.id} className="space-y-2 pb-3 border-b last:border-b-0">
+          <div className="flex gap-2 items-end">
+            <div className="flex-1 space-y-1">
+              {index === 0 && <Label className="text-xs">Projecte</Label>}
+              <Select
+                value={row.projectId}
+                onValueChange={(val) => updateRow(row.id, 'projectId', val)}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecciona projecte..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {projects.map((project) => (
+                    <SelectItem key={project.id} value={project.id}>
+                      {project.name}
+                      {project.code && (
+                        <span className="text-muted-foreground ml-2">({project.code})</span>
+                      )}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="w-32 space-y-1">
+              {index === 0 && <Label className="text-xs">Import (€)</Label>}
+              <Input
+                type="number"
+                step="0.01"
+                min="0"
+                value={row.amountStr}
+                onChange={(e) => updateRow(row.id, 'amountStr', e.target.value)}
+                className="text-right font-mono"
+              />
+            </div>
+
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              onClick={() => removeRow(row.id)}
+              disabled={rows.length <= 1}
+              className="shrink-0"
             >
-              <SelectTrigger>
-                <SelectValue placeholder="Selecciona projecte..." />
-              </SelectTrigger>
-              <SelectContent>
-                {projects.map((project) => (
-                  <SelectItem key={project.id} value={project.id}>
-                    {project.name}
-                    {project.code && (
-                      <span className="text-muted-foreground ml-2">({project.code})</span>
-                    )}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+              <Trash2 className="h-4 w-4" />
+            </Button>
           </div>
 
-          <div className="w-32 space-y-1">
-            {index === 0 && <Label className="text-xs">Import (€)</Label>}
-            <Input
-              type="number"
-              step="0.01"
-              min="0"
-              value={row.amountStr}
-              onChange={(e) => updateRow(row.id, 'amountStr', e.target.value)}
-              className="text-right font-mono"
-            />
-          </div>
-
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon"
-            onClick={() => removeRow(row.id)}
-            disabled={rows.length <= 1}
-            className="shrink-0"
-          >
-            <Trash2 className="h-4 w-4" />
-          </Button>
+          {/* Selector de partida (opcional) */}
+          {row.projectId && (
+            <div className="ml-4 flex items-center gap-2">
+              <span className="text-xs text-muted-foreground">Partida:</span>
+              <div className="w-48">
+                <BudgetLineSelector
+                  projectId={row.projectId}
+                  value={row.budgetLineId}
+                  onChange={(lineId, lineName) => updateBudgetLine(row.id, lineId, lineName)}
+                />
+              </div>
+            </div>
+          )}
         </div>
       ))}
 

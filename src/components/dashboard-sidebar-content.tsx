@@ -111,8 +111,14 @@ export function DashboardSidebarContent() {
       },
       {
         path: '/dashboard/project-module/expenses',
-        label: 'Mòdul Projectes',
+        label: t.sidebar.projectModuleExpenses ?? 'Despeses (Projectes)',
         icon: ClipboardList,
+        className: 'text-emerald-600',
+      },
+      {
+        path: '/dashboard/project-module/projects',
+        label: t.sidebar.projectModuleProjects ?? 'Projectes (Mòdul)',
+        icon: FolderKanban,
         className: 'text-emerald-600',
       },
       {

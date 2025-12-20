@@ -30,6 +30,12 @@ import type {
   ExpenseStatus,
   ProjectFormData,
   ExpenseAssignment,
+  OffBankExpense,
+  OffBankExpenseFormData,
+  UnifiedExpense,
+  UnifiedExpenseWithLink,
+  BudgetLine,
+  BudgetLineFormData,
 } from '@/lib/project-module-types';
 
 const PAGE_SIZE = 20;
@@ -196,6 +202,426 @@ export function useExpenseFeed(): UseExpenseFeedResult {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
+// HOOK: Llistat unificat de despeses (bank + off-bank) amb filtres opcionals
+// ═══════════════════════════════════════════════════════════════════════════
+
+interface UseUnifiedExpenseFeedOptions {
+  projectId?: string | null;
+  budgetLineId?: string | null;
+}
+
+interface UseUnifiedExpenseFeedResult {
+  expenses: UnifiedExpenseWithLink[];
+  isLoading: boolean;
+  error: Error | null;
+  refresh: () => Promise<void>;
+  isFiltered: boolean;
+  usedFallback: boolean;
+}
+
+export function useUnifiedExpenseFeed(options?: UseUnifiedExpenseFeedOptions): UseUnifiedExpenseFeedResult {
+  const { firestore } = useFirebase();
+  const { organizationId } = useCurrentOrganization();
+
+  const projectId = options?.projectId ?? null;
+  const budgetLineId = options?.budgetLineId ?? null;
+  const isFiltered = !!(projectId || budgetLineId);
+
+  const [expenses, setExpenses] = useState<UnifiedExpenseWithLink[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<Error | null>(null);
+  const [usedFallback, setUsedFallback] = useState(false);
+
+  // Helper per carregar despeses filtrades
+  const loadFilteredExpenses = useCallback(async () => {
+    const linksRef = collection(
+      firestore,
+      'organizations',
+      organizationId!,
+      'projectModule',
+      '_',
+      'expenseLinks'
+    );
+
+    let linksSnapshot;
+    let didUseFallback = false;
+
+    // Fer query segons el filtre
+    if (budgetLineId) {
+      // Cas A: filtrar per budgetLineId
+      // Primer intentem amb budgetLineIds (dades noves)
+      const directQuery = query(linksRef, where('budgetLineIds', 'array-contains', budgetLineId));
+      linksSnapshot = await getDocs(directQuery);
+
+      // Si no trobem res, fem fallback: carregar per projectId i filtrar client-side
+      if (linksSnapshot.empty && projectId) {
+        didUseFallback = true;
+        const fallbackQuery = query(linksRef, where('projectIds', 'array-contains', projectId));
+        const fallbackSnapshot = await getDocs(fallbackQuery);
+
+        // Filtrar client-side per budgetLineId dins assignments
+        const filteredDocs = fallbackSnapshot.docs.filter((d) => {
+          const data = d.data();
+          return data.assignments?.some((a: ExpenseAssignment) => a.budgetLineId === budgetLineId);
+        });
+
+        linksSnapshot = {
+          docs: filteredDocs,
+          empty: filteredDocs.length === 0,
+        } as unknown as typeof linksSnapshot;
+      }
+    } else if (projectId) {
+      // Cas B: filtrar per projectId
+      const directQuery = query(linksRef, where('projectIds', 'array-contains', projectId));
+      linksSnapshot = await getDocs(directQuery);
+    } else {
+      // No hauria d'arribar aquí, però per seguretat
+      setExpenses([]);
+      setUsedFallback(false);
+      return;
+    }
+
+    setUsedFallback(didUseFallback);
+
+    const linksMap = new Map<string, ExpenseLink>();
+    const txIds: string[] = [];
+
+    for (const linkDoc of linksSnapshot.docs) {
+      const linkData = { id: linkDoc.id, ...linkDoc.data() } as ExpenseLink;
+      linksMap.set(linkDoc.id, linkData);
+      txIds.push(linkDoc.id);
+    }
+
+    if (txIds.length === 0) {
+      setExpenses([]);
+      return;
+    }
+
+    // Carregar les despeses corresponents
+    const bankRef = collection(
+      firestore,
+      'organizations',
+      organizationId!,
+      'exports',
+      'projectExpenses',
+      'items'
+    );
+
+    const offBankRef = collection(
+      firestore,
+      'organizations',
+      organizationId!,
+      'projectModule',
+      '_',
+      'offBankExpenses'
+    );
+
+    const allExpenses: UnifiedExpense[] = [];
+
+    for (const txId of txIds) {
+      if (txId.startsWith('off_')) {
+        // Despesa off-bank
+        const offBankId = txId.replace('off_', '');
+        const offBankDoc = await getDoc(doc(offBankRef, offBankId));
+        if (offBankDoc.exists()) {
+          const data = offBankDoc.data() as OffBankExpense;
+          allExpenses.push({
+            txId,
+            source: 'offBank' as const,
+            date: data.date,
+            description: data.concept,
+            amountEUR: -Math.abs(data.amountEUR),
+            categoryName: data.categoryName,
+            counterpartyName: data.counterpartyName,
+            documentUrl: data.documentUrl,
+          });
+        }
+      } else {
+        // Despesa bank
+        const bankDoc = await getDoc(doc(bankRef, txId));
+        if (bankDoc.exists()) {
+          const data = bankDoc.data() as ProjectExpenseExport;
+          allExpenses.push({
+            txId,
+            source: 'bank' as const,
+            date: data.date,
+            description: data.description,
+            amountEUR: data.amountEUR,
+            categoryName: data.categoryName,
+            counterpartyName: data.counterpartyName,
+            documentUrl: data.documents?.[0]?.fileUrl ?? null,
+          });
+        }
+      }
+    }
+
+    // Ordenar per data desc
+    allExpenses.sort((a, b) => b.date.localeCompare(a.date));
+
+    // Combinar amb links
+    const result: UnifiedExpenseWithLink[] = allExpenses.map((expense) => {
+      const link = linksMap.get(expense.txId) ?? null;
+
+      const assignedAmount = link
+        ? link.assignments.reduce((sum, a) => sum + Math.abs(a.amountEUR), 0)
+        : 0;
+      const totalAmount = Math.abs(expense.amountEUR);
+      const remainingAmount = totalAmount - assignedAmount;
+
+      let status: ExpenseStatus = 'unassigned';
+      if (link && link.assignments.length > 0) {
+        status = remainingAmount <= 0.01 ? 'assigned' : 'partial';
+      }
+
+      return {
+        expense,
+        link,
+        status,
+        assignedAmount,
+        remainingAmount,
+      };
+    });
+
+    setExpenses(result);
+  }, [firestore, organizationId, projectId, budgetLineId]);
+
+  const loadExpenses = useCallback(async () => {
+    if (!organizationId) return;
+
+    try {
+      setIsLoading(true);
+
+      // Si hi ha filtre, carreguem des dels expenseLinks primer
+      if (budgetLineId || projectId) {
+        await loadFilteredExpenses();
+        return;
+      }
+
+      // Cas sense filtre: carregar totes les despeses
+      // 1. Carregar despeses bank (exports)
+      const bankRef = collection(
+        firestore,
+        'organizations',
+        organizationId,
+        'exports',
+        'projectExpenses',
+        'items'
+      );
+      const bankQuery = query(
+        bankRef,
+        where('isEligibleForProjects', '==', true),
+        where('deletedAt', '==', null),
+        orderBy('date', 'desc'),
+        limit(100)
+      );
+      const bankSnapshot = await getDocs(bankQuery);
+
+      // 2. Carregar despeses off-bank
+      const offBankRef = collection(
+        firestore,
+        'organizations',
+        organizationId,
+        'projectModule',
+        '_',
+        'offBankExpenses'
+      );
+      const offBankQuery = query(offBankRef, orderBy('date', 'desc'), limit(100));
+      const offBankSnapshot = await getDocs(offBankQuery);
+
+      // 3. Convertir a UnifiedExpense
+      const bankExpenses: UnifiedExpense[] = bankSnapshot.docs.map((d) => {
+        const data = d.data() as ProjectExpenseExport;
+        return {
+          txId: d.id,
+          source: 'bank' as const,
+          date: data.date,
+          description: data.description,
+          amountEUR: data.amountEUR, // ja negatiu
+          categoryName: data.categoryName,
+          counterpartyName: data.counterpartyName,
+          documentUrl: data.documents?.[0]?.fileUrl ?? null,
+        };
+      });
+
+      const offBankExpenses: UnifiedExpense[] = offBankSnapshot.docs.map((d) => {
+        const data = d.data() as OffBankExpense;
+        return {
+          txId: `off_${d.id}`,
+          source: 'offBank' as const,
+          date: data.date,
+          description: data.concept,
+          amountEUR: -Math.abs(data.amountEUR), // convertir a negatiu per consistència
+          categoryName: data.categoryName,
+          counterpartyName: data.counterpartyName,
+          documentUrl: data.documentUrl,
+        };
+      });
+
+      // 4. Mergeja i ordena per data desc
+      const allExpenses = [...bankExpenses, ...offBankExpenses].sort(
+        (a, b) => b.date.localeCompare(a.date)
+      );
+
+      // 5. Carregar els expenseLinks corresponents
+      const linksRef = collection(
+        firestore,
+        'organizations',
+        organizationId,
+        'projectModule',
+        '_',
+        'expenseLinks'
+      );
+
+      const linksMap = new Map<string, ExpenseLink>();
+      for (const exp of allExpenses) {
+        const linkDoc = await getDoc(doc(linksRef, exp.txId));
+        if (linkDoc.exists()) {
+          linksMap.set(exp.txId, { id: linkDoc.id, ...linkDoc.data() } as ExpenseLink);
+        }
+      }
+
+      // 6. Combinar amb links
+      const result: UnifiedExpenseWithLink[] = allExpenses.map((expense) => {
+        const link = linksMap.get(expense.txId) ?? null;
+
+        const assignedAmount = link
+          ? link.assignments.reduce((sum, a) => sum + Math.abs(a.amountEUR), 0)
+          : 0;
+        const totalAmount = Math.abs(expense.amountEUR);
+        const remainingAmount = totalAmount - assignedAmount;
+
+        let status: ExpenseStatus = 'unassigned';
+        if (link && link.assignments.length > 0) {
+          status = remainingAmount <= 0.01 ? 'assigned' : 'partial';
+        }
+
+        return {
+          expense,
+          link,
+          status,
+          assignedAmount,
+          remainingAmount,
+        };
+      });
+
+      setExpenses(result);
+
+    } catch (err) {
+      console.error('Error loading unified expense feed:', err);
+      setError(err instanceof Error ? err : new Error('Error desconegut'));
+    } finally {
+      setIsLoading(false);
+    }
+  }, [firestore, organizationId, projectId, budgetLineId, loadFilteredExpenses]);
+
+  const refresh = useCallback(async () => {
+    await loadExpenses();
+  }, [loadExpenses]);
+
+  useEffect(() => {
+    loadExpenses();
+  }, [organizationId, projectId, budgetLineId]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  return {
+    expenses,
+    isLoading,
+    error,
+    refresh,
+    isFiltered,
+    usedFallback,
+  };
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// HOOK: Crear despesa off-bank
+// ═══════════════════════════════════════════════════════════════════════════
+
+interface UseSaveOffBankExpenseResult {
+  save: (data: OffBankExpenseFormData) => Promise<string>;
+  isSaving: boolean;
+  error: Error | null;
+}
+
+export function useSaveOffBankExpense(): UseSaveOffBankExpenseResult {
+  const { firestore, user } = useFirebase();
+  const { organizationId } = useCurrentOrganization();
+
+  const [isSaving, setIsSaving] = useState(false);
+  const [error, setError] = useState<Error | null>(null);
+
+  const save = useCallback(async (data: OffBankExpenseFormData): Promise<string> => {
+    if (!organizationId || !user) {
+      throw new Error('No autenticat');
+    }
+
+    // Validacions
+    const amount = parseFloat(data.amountEUR);
+    if (isNaN(amount) || amount <= 0) {
+      throw new Error('L\'import ha de ser un número positiu');
+    }
+
+    const concept = data.concept.trim();
+    if (concept.length === 0) {
+      throw new Error('El concepte és obligatori');
+    }
+
+    const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
+    if (!dateRegex.test(data.date)) {
+      throw new Error('La data ha de tenir format YYYY-MM-DD');
+    }
+
+    setIsSaving(true);
+    setError(null);
+
+    try {
+      const offBankRef = collection(
+        firestore,
+        'organizations',
+        organizationId,
+        'projectModule',
+        '_',
+        'offBankExpenses'
+      );
+
+      const now = serverTimestamp();
+      const newRef = doc(offBankRef);
+
+      const expenseData = {
+        orgId: organizationId,
+        source: 'offBank' as const,
+        date: data.date,
+        concept,
+        amountEUR: amount,
+        counterpartyName: data.counterpartyName.trim() || null,
+        categoryName: data.categoryName.trim() || null,
+        documentUrl: null, // Implementar upload després
+        createdBy: user.uid,
+        createdAt: now,
+        updatedAt: now,
+      };
+
+      await setDoc(newRef, expenseData);
+
+      return newRef.id;
+
+    } catch (err) {
+      console.error('Error saving off-bank expense:', err);
+      const e = err instanceof Error ? err : new Error('Error desant despesa');
+      setError(e);
+      throw e;
+    } finally {
+      setIsSaving(false);
+    }
+  }, [firestore, organizationId, user]);
+
+  return {
+    save,
+    isSaving,
+    error,
+  };
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
 // HOOK: Detall d'una despesa amb el seu link
 // ═══════════════════════════════════════════════════════════════════════════
 
@@ -324,12 +750,23 @@ export function useSaveExpenseLink(): UseSaveExpenseLinkResult {
       const existingSnap = await getDoc(linkRef);
       const now = serverTimestamp();
 
+      // Calcular projectIds i budgetLineIds per queries ràpides
+      const projectIds = [...new Set(assignments.map((a) => a.projectId))];
+      const budgetLineIds = [...new Set(
+        assignments
+          .filter((a) => a.budgetLineId)
+          .map((a) => a.budgetLineId as string)
+      )];
+
       const linkData: Omit<ExpenseLink, 'id' | 'createdAt' | 'updatedAt'> & {
         createdAt?: ReturnType<typeof serverTimestamp>;
         updatedAt: ReturnType<typeof serverTimestamp>;
+        budgetLineIds: string[];
       } = {
         orgId: organizationId,
         assignments,
+        projectIds,
+        budgetLineIds,
         note: note ?? null,
         createdBy: user.uid,
         updatedAt: now,
@@ -560,6 +997,8 @@ export function useSaveProject(): UseSaveProjectResult {
 
       const now = serverTimestamp();
 
+      const deviationPct = data.allowedDeviationPct ? parseFloat(data.allowedDeviationPct) : 10;
+
       const projectData = {
         orgId: organizationId,
         name: data.name.trim(),
@@ -568,6 +1007,7 @@ export function useSaveProject(): UseSaveProjectResult {
         budgetEUR: data.budgetEUR ? parseFloat(data.budgetEUR) : null,
         startDate: data.startDate || null,
         endDate: data.endDate || null,
+        allowedDeviationPct: isNaN(deviationPct) ? 10 : deviationPct,
         updatedAt: now,
       };
 
@@ -605,5 +1045,379 @@ export function useSaveProject(): UseSaveProjectResult {
     save,
     isSaving,
     error,
+  };
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// HOOK: Partides de pressupost d'un projecte
+// ═══════════════════════════════════════════════════════════════════════════
+
+interface UseProjectBudgetLinesResult {
+  budgetLines: BudgetLine[];
+  isLoading: boolean;
+  error: Error | null;
+  refresh: () => Promise<void>;
+}
+
+export function useProjectBudgetLines(projectId: string): UseProjectBudgetLinesResult {
+  const { firestore } = useFirebase();
+  const { organizationId } = useCurrentOrganization();
+
+  const [budgetLines, setBudgetLines] = useState<BudgetLine[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<Error | null>(null);
+
+  const load = useCallback(async () => {
+    if (!organizationId || !projectId) {
+      setBudgetLines([]);
+      setIsLoading(false);
+      return;
+    }
+
+    setIsLoading(true);
+    setError(null);
+
+    try {
+      const linesRef = collection(
+        firestore,
+        'organizations',
+        organizationId,
+        'projectModule',
+        '_',
+        'projects',
+        projectId,
+        'budgetLines'
+      );
+
+      // Carregar totes les partides (ordenarem al client per evitar problemes amb nulls)
+      const snapshot = await getDocs(linesRef);
+
+      const lines: BudgetLine[] = snapshot.docs.map((d) => ({
+        id: d.id,
+        ...d.data(),
+      } as BudgetLine));
+
+      // Ordenar al client: primer per order (nulls al final), després per name
+      lines.sort((a, b) => {
+        if (a.order !== null && b.order !== null) return a.order - b.order;
+        if (a.order !== null) return -1;
+        if (b.order !== null) return 1;
+        return a.name.localeCompare(b.name);
+      });
+
+      setBudgetLines(lines);
+
+    } catch (err) {
+      console.error('Error loading budget lines:', err);
+      setError(err instanceof Error ? err : new Error('Error desconegut'));
+    } finally {
+      setIsLoading(false);
+    }
+  }, [firestore, organizationId, projectId]);
+
+  useEffect(() => {
+    load();
+  }, [load]);
+
+  return {
+    budgetLines,
+    isLoading,
+    error,
+    refresh: load,
+  };
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// HOOK: CRUD de partides de pressupost
+// ═══════════════════════════════════════════════════════════════════════════
+
+interface UseSaveBudgetLineResult {
+  save: (projectId: string, data: BudgetLineFormData, lineId?: string) => Promise<string>;
+  remove: (projectId: string, lineId: string) => Promise<void>;
+  isSaving: boolean;
+  error: Error | null;
+}
+
+export function useSaveBudgetLine(): UseSaveBudgetLineResult {
+  const { firestore, user } = useFirebase();
+  const { organizationId } = useCurrentOrganization();
+
+  const [isSaving, setIsSaving] = useState(false);
+  const [error, setError] = useState<Error | null>(null);
+
+  const save = useCallback(async (
+    projectId: string,
+    data: BudgetLineFormData,
+    lineId?: string
+  ): Promise<string> => {
+    if (!organizationId || !user) {
+      throw new Error('No autenticat');
+    }
+
+    const name = data.name.trim();
+    if (!name) {
+      throw new Error('El nom de la partida és obligatori');
+    }
+
+    const amount = parseFloat(data.budgetedAmountEUR);
+    if (isNaN(amount) || amount <= 0) {
+      throw new Error('L\'import pressupostat ha de ser positiu');
+    }
+
+    setIsSaving(true);
+    setError(null);
+
+    try {
+      const linesRef = collection(
+        firestore,
+        'organizations',
+        organizationId,
+        'projectModule',
+        '_',
+        'projects',
+        projectId,
+        'budgetLines'
+      );
+
+      const now = serverTimestamp();
+      const orderNum = data.order ? parseInt(data.order, 10) : null;
+
+      const lineData = {
+        name,
+        code: data.code.trim() || null,
+        budgetedAmountEUR: amount,
+        order: isNaN(orderNum as number) ? null : orderNum,
+        updatedAt: now,
+      };
+
+      let finalId: string;
+
+      if (lineId) {
+        const lineRef = doc(linesRef, lineId);
+        await setDoc(lineRef, lineData, { merge: true });
+        finalId = lineId;
+      } else {
+        const newRef = doc(linesRef);
+        await setDoc(newRef, {
+          ...lineData,
+          createdBy: user.uid,
+          createdAt: now,
+        });
+        finalId = newRef.id;
+      }
+
+      return finalId;
+
+    } catch (err) {
+      console.error('Error saving budget line:', err);
+      const e = err instanceof Error ? err : new Error('Error desant partida');
+      setError(e);
+      throw e;
+    } finally {
+      setIsSaving(false);
+    }
+  }, [firestore, organizationId, user]);
+
+  const remove = useCallback(async (projectId: string, lineId: string) => {
+    if (!organizationId) {
+      throw new Error('No autenticat');
+    }
+
+    setIsSaving(true);
+    setError(null);
+
+    try {
+      const lineRef = doc(
+        firestore,
+        'organizations',
+        organizationId,
+        'projectModule',
+        '_',
+        'projects',
+        projectId,
+        'budgetLines',
+        lineId
+      );
+
+      await deleteDoc(lineRef);
+
+    } catch (err) {
+      console.error('Error removing budget line:', err);
+      const e = err instanceof Error ? err : new Error('Error eliminant partida');
+      setError(e);
+      throw e;
+    } finally {
+      setIsSaving(false);
+    }
+  }, [firestore, organizationId]);
+
+  return {
+    save,
+    remove,
+    isSaving,
+    error,
+  };
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// HOOK: Actualitzar budgetLine d'una assignació
+// ═══════════════════════════════════════════════════════════════════════════
+
+interface UseSetBudgetLineResult {
+  setBudgetLineForAssignment: (
+    txId: string,
+    assignmentIndex: number,
+    budgetLineId: string | null,
+    budgetLineName: string | null
+  ) => Promise<void>;
+  isSaving: boolean;
+  error: Error | null;
+}
+
+export function useSetBudgetLine(): UseSetBudgetLineResult {
+  const { firestore } = useFirebase();
+  const { organizationId } = useCurrentOrganization();
+
+  const [isSaving, setIsSaving] = useState(false);
+  const [error, setError] = useState<Error | null>(null);
+
+  const setBudgetLineForAssignment = useCallback(async (
+    txId: string,
+    assignmentIndex: number,
+    budgetLineId: string | null,
+    budgetLineName: string | null
+  ) => {
+    if (!organizationId) {
+      throw new Error('No autenticat');
+    }
+
+    setIsSaving(true);
+    setError(null);
+
+    try {
+      const linkRef = doc(
+        firestore,
+        'organizations',
+        organizationId,
+        'projectModule',
+        '_',
+        'expenseLinks',
+        txId
+      );
+
+      const linkSnap = await getDoc(linkRef);
+      if (!linkSnap.exists()) {
+        throw new Error('Assignació no trobada');
+      }
+
+      const linkData = linkSnap.data() as ExpenseLink;
+      const assignments = [...linkData.assignments];
+
+      if (assignmentIndex < 0 || assignmentIndex >= assignments.length) {
+        throw new Error('Índex d\'assignació invàlid');
+      }
+
+      // Actualitzar budgetLineId i budgetLineName
+      assignments[assignmentIndex] = {
+        ...assignments[assignmentIndex],
+        budgetLineId,
+        budgetLineName,
+      };
+
+      await setDoc(linkRef, {
+        assignments,
+        updatedAt: serverTimestamp(),
+      }, { merge: true });
+
+    } catch (err) {
+      console.error('Error setting budget line:', err);
+      const e = err instanceof Error ? err : new Error('Error actualitzant partida');
+      setError(e);
+      throw e;
+    } finally {
+      setIsSaving(false);
+    }
+  }, [firestore, organizationId]);
+
+  return {
+    setBudgetLineForAssignment,
+    isSaving,
+    error,
+  };
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// HOOK: Despeses assignades a un projecte (per calcular execució)
+// ═══════════════════════════════════════════════════════════════════════════
+
+interface UseProjectExpenseLinksResult {
+  expenseLinks: ExpenseLink[];
+  isLoading: boolean;
+  error: Error | null;
+  refresh: () => Promise<void>;
+}
+
+export function useProjectExpenseLinks(projectId: string): UseProjectExpenseLinksResult {
+  const { firestore } = useFirebase();
+  const { organizationId } = useCurrentOrganization();
+
+  const [expenseLinks, setExpenseLinks] = useState<ExpenseLink[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<Error | null>(null);
+
+  const load = useCallback(async () => {
+    if (!organizationId || !projectId) {
+      setExpenseLinks([]);
+      setIsLoading(false);
+      return;
+    }
+
+    setIsLoading(true);
+    setError(null);
+
+    try {
+      const linksRef = collection(
+        firestore,
+        'organizations',
+        organizationId,
+        'projectModule',
+        '_',
+        'expenseLinks'
+      );
+
+      // Query amb projectIds array-contains
+      const q = query(linksRef, where('projectIds', 'array-contains', projectId));
+      const snapshot = await getDocs(q);
+
+      const links: ExpenseLink[] = snapshot.docs.map((d) => {
+        const data = d.data();
+        // Compatibilitat: si no té projectIds, calcular-lo
+        const projectIds = data.projectIds ?? data.assignments?.map((a: ExpenseAssignment) => a.projectId) ?? [];
+        return {
+          id: d.id,
+          ...data,
+          projectIds,
+        } as ExpenseLink;
+      });
+
+      setExpenseLinks(links);
+
+    } catch (err) {
+      console.error('Error loading project expense links:', err);
+      setError(err instanceof Error ? err : new Error('Error desconegut'));
+    } finally {
+      setIsLoading(false);
+    }
+  }, [firestore, organizationId, projectId]);
+
+  useEffect(() => {
+    load();
+  }, [load]);
+
+  return {
+    expenseLinks,
+    isLoading,
+    error,
+    refresh: load,
   };
 }

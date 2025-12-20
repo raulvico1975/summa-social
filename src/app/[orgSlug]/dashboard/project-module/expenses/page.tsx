@@ -5,9 +5,11 @@
 
 import * as React from 'react';
 import Link from 'next/link';
-import { useExpenseFeed, useProjects, useSaveExpenseLink } from '@/hooks/use-project-module';
+import { useSearchParams, useRouter } from 'next/navigation';
+import { useUnifiedExpenseFeed, useProjects, useSaveExpenseLink, useProjectBudgetLines } from '@/hooks/use-project-module';
 import { useOrgUrl } from '@/hooks/organization-provider';
 import { useToast } from '@/hooks/use-toast';
+import { trackUX } from '@/lib/ux/trackUX';
 import {
   Table,
   TableBody,
@@ -41,11 +43,12 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import { AlertCircle, RefreshCw, ChevronRight, FolderPlus, Check, MoreHorizontal, Split, X } from 'lucide-react';
+import { AlertCircle, RefreshCw, ChevronRight, FolderPlus, Check, MoreHorizontal, Split, X, Plus, Landmark, Globe, ArrowLeft, FolderKanban, Filter } from 'lucide-react';
 import { formatDateDMY } from '@/lib/normalize';
 import { AssignmentEditor } from '@/components/project-module/assignment-editor';
-import type { ExpenseStatus, ExpenseWithLink, Project, ExpenseAssignment } from '@/lib/project-module-types';
+import type { ExpenseStatus, UnifiedExpenseWithLink, Project, ExpenseAssignment, BudgetLine } from '@/lib/project-module-types';
 import { useTranslations } from '@/i18n';
+import { AddOffBankExpenseModal } from '@/components/project-module/add-off-bank-expense-modal';
 
 function formatAmount(amount: number): string {
   return new Intl.NumberFormat('ca-ES', {
@@ -68,7 +71,7 @@ function StatusBadge({ status, assignedAmount, totalAmount }: { status: ExpenseS
   }
 }
 
-// Component per Quick Assign amb Popover
+// Component per Quick Assign amb Popover (amb selecció de partida)
 function QuickAssignPopover({
   expense,
   projects,
@@ -76,27 +79,52 @@ function QuickAssignPopover({
   onOpenSplitModal,
   isAssigning,
 }: {
-  expense: ExpenseWithLink;
+  expense: UnifiedExpenseWithLink;
   projects: Project[];
-  onAssign100: (txId: string, project: Project) => Promise<void>;
-  onOpenSplitModal: (expense: ExpenseWithLink) => void;
+  onAssign100: (txId: string, project: Project, budgetLine?: BudgetLine | null) => Promise<void>;
+  onOpenSplitModal: (expense: UnifiedExpenseWithLink) => void;
   isAssigning: boolean;
 }) {
   const [open, setOpen] = React.useState(false);
   const [search, setSearch] = React.useState('');
+  const [selectedProject, setSelectedProject] = React.useState<Project | null>(null);
+
+  // Carregar partides quan es selecciona un projecte
+  const { budgetLines, isLoading: budgetLinesLoading } = useProjectBudgetLines(selectedProject?.id ?? '');
 
   const filteredProjects = projects.filter(p =>
     p.name.toLowerCase().includes(search.toLowerCase()) ||
     (p.code && p.code.toLowerCase().includes(search.toLowerCase()))
   );
 
-  const handleSelect = async (project: Project) => {
+  const handleSelectProject = (project: Project) => {
+    setSelectedProject(project);
+    setSearch('');
+  };
+
+  const handleSelectBudgetLine = async (budgetLine: BudgetLine | null) => {
+    if (!selectedProject) return;
     setOpen(false);
-    await onAssign100(expense.expense.id, project);
+    setSelectedProject(null);
+    setSearch('');
+    await onAssign100(expense.expense.txId, selectedProject, budgetLine);
+  };
+
+  const handleBack = () => {
+    setSelectedProject(null);
+    setSearch('');
+  };
+
+  const handleOpenChange = (isOpen: boolean) => {
+    setOpen(isOpen);
+    if (!isOpen) {
+      setSelectedProject(null);
+      setSearch('');
+    }
   };
 
   return (
-    <Popover open={open} onOpenChange={setOpen}>
+    <Popover open={open} onOpenChange={handleOpenChange}>
       <PopoverTrigger asChild>
         <Button
           variant="outline"
@@ -109,46 +137,108 @@ function QuickAssignPopover({
         </Button>
       </PopoverTrigger>
       <PopoverContent className="w-64 p-0" align="end">
-        <Command>
-          <CommandInput
-            placeholder="Cerca projecte..."
-            value={search}
-            onValueChange={setSearch}
-          />
-          <CommandList>
-            <CommandEmpty>No s'han trobat projectes</CommandEmpty>
-            <CommandGroup heading="Assignar 100%">
-              {filteredProjects.map((project) => (
+        {!selectedProject ? (
+          // Pas 1: Seleccionar projecte
+          <Command>
+            <CommandInput
+              placeholder="Cerca projecte..."
+              value={search}
+              onValueChange={setSearch}
+            />
+            <CommandList>
+              <CommandEmpty>No s'han trobat projectes</CommandEmpty>
+              <CommandGroup heading="Assignar 100%">
+                {filteredProjects.map((project) => (
+                  <CommandItem
+                    key={project.id}
+                    onSelect={() => handleSelectProject(project)}
+                    className="cursor-pointer"
+                  >
+                    <ChevronRight className="mr-2 h-4 w-4" />
+                    <div className="flex-1">
+                      <span>{project.name}</span>
+                      {project.code && (
+                        <span className="ml-2 text-muted-foreground text-xs">({project.code})</span>
+                      )}
+                    </div>
+                  </CommandItem>
+                ))}
+              </CommandGroup>
+              <CommandSeparator />
+              <CommandGroup>
                 <CommandItem
-                  key={project.id}
-                  onSelect={() => handleSelect(project)}
+                  onSelect={() => {
+                    setOpen(false);
+                    onOpenSplitModal(expense);
+                  }}
                   className="cursor-pointer"
                 >
-                  <Check className="mr-2 h-4 w-4 opacity-0" />
-                  <div className="flex-1">
-                    <span>{project.name}</span>
-                    {project.code && (
-                      <span className="ml-2 text-muted-foreground text-xs">({project.code})</span>
-                    )}
-                  </div>
+                  <Split className="mr-2 h-4 w-4" />
+                  Assignació múltiple...
                 </CommandItem>
-              ))}
-            </CommandGroup>
-            <CommandSeparator />
-            <CommandGroup>
-              <CommandItem
-                onSelect={() => {
-                  setOpen(false);
-                  onOpenSplitModal(expense);
-                }}
-                className="cursor-pointer"
+              </CommandGroup>
+            </CommandList>
+          </Command>
+        ) : (
+          // Pas 2: Seleccionar partida
+          <Command>
+            <div className="flex items-center border-b px-3 py-2">
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-6 w-6 p-0 mr-2"
+                onClick={handleBack}
               >
-                <Split className="mr-2 h-4 w-4" />
-                Assignació múltiple...
-              </CommandItem>
-            </CommandGroup>
-          </CommandList>
-        </Command>
+                <ArrowLeft className="h-4 w-4" />
+              </Button>
+              <span className="text-sm font-medium truncate">{selectedProject.name}</span>
+            </div>
+            <CommandList>
+              {budgetLinesLoading ? (
+                <div className="p-4 text-center text-sm text-muted-foreground">
+                  Carregant partides...
+                </div>
+              ) : budgetLines.length === 0 ? (
+                <CommandGroup heading="Sense partides">
+                  <CommandItem
+                    onSelect={() => handleSelectBudgetLine(null)}
+                    className="cursor-pointer"
+                  >
+                    <Check className="mr-2 h-4 w-4" />
+                    Assignar sense partida
+                  </CommandItem>
+                </CommandGroup>
+              ) : (
+                <>
+                  <CommandGroup heading="Selecciona partida">
+                    {budgetLines.map((line) => (
+                      <CommandItem
+                        key={line.id}
+                        onSelect={() => handleSelectBudgetLine(line)}
+                        className="cursor-pointer"
+                      >
+                        <Check className="mr-2 h-4 w-4 opacity-0" />
+                        <div className="flex-1">
+                          <span>{line.code ? `${line.code} - ` : ''}{line.name}</span>
+                        </div>
+                      </CommandItem>
+                    ))}
+                  </CommandGroup>
+                  <CommandSeparator />
+                  <CommandGroup>
+                    <CommandItem
+                      onSelect={() => handleSelectBudgetLine(null)}
+                      className="cursor-pointer text-muted-foreground"
+                    >
+                      <X className="mr-2 h-4 w-4" />
+                      Sense partida
+                    </CommandItem>
+                  </CommandGroup>
+                </>
+              )}
+            </CommandList>
+          </Command>
+        )}
       </PopoverContent>
     </Popover>
   );
@@ -156,11 +246,49 @@ function QuickAssignPopover({
 
 export default function ExpensesInboxPage() {
   const { t } = useTranslations();
-  const { expenses, isLoading, error, hasMore, loadMore, refresh } = useExpenseFeed();
-  const { projects, isLoading: projectsLoading, error: projectsError } = useProjects(true);
-  const { save, isSaving } = useSaveExpenseLink();
+  const searchParams = useSearchParams();
+  const router = useRouter();
   const { buildUrl } = useOrgUrl();
   const { toast } = useToast();
+
+  // Llegir filtres de query params
+  const projectIdFilter = searchParams.get('projectId');
+  const budgetLineIdFilter = searchParams.get('budgetLineId');
+
+  const { expenses, isLoading, error, refresh, isFiltered, usedFallback } = useUnifiedExpenseFeed({
+    projectId: projectIdFilter,
+    budgetLineId: budgetLineIdFilter,
+  });
+  const { projects, isLoading: projectsLoading, error: projectsError } = useProjects(true);
+  const { save, isSaving } = useSaveExpenseLink();
+
+  // Track page open
+  React.useEffect(() => {
+    trackUX('expenses.open', {
+      filtered: isFiltered,
+      projectId: projectIdFilter,
+      budgetLineId: budgetLineIdFilter,
+    });
+  }, [isFiltered, projectIdFilter, budgetLineIdFilter]);
+
+  // Track fallback used
+  React.useEffect(() => {
+    if (usedFallback) {
+      trackUX('expenses.filter.fallback_used', {
+        projectId: projectIdFilter,
+        budgetLineId: budgetLineIdFilter,
+      });
+    }
+  }, [usedFallback, projectIdFilter, budgetLineIdFilter]);
+
+  // Handler per treure filtre
+  const handleClearFilter = () => {
+    trackUX('expenses.filter.clear', {
+      projectId: projectIdFilter,
+      budgetLineId: budgetLineIdFilter,
+    });
+    router.push(buildUrl('/dashboard/project-module/expenses'));
+  };
 
   // Tradueix el nom de categoria (si és una clau coneguda)
   const getCategoryLabel = (categoryName: string | null): string => {
@@ -171,9 +299,10 @@ export default function ExpensesInboxPage() {
 
   const [isRefreshing, setIsRefreshing] = React.useState(false);
   const [selectedIds, setSelectedIds] = React.useState<Set<string>>(new Set());
-  const [splitModalExpense, setSplitModalExpense] = React.useState<ExpenseWithLink | null>(null);
+  const [splitModalExpense, setSplitModalExpense] = React.useState<UnifiedExpenseWithLink | null>(null);
   const [bulkAssignOpen, setBulkAssignOpen] = React.useState(false);
   const [isBulkAssigning, setIsBulkAssigning] = React.useState(false);
+  const [addOffBankOpen, setAddOffBankOpen] = React.useState(false);
 
   const handleRefresh = async () => {
     setIsRefreshing(true);
@@ -183,8 +312,8 @@ export default function ExpensesInboxPage() {
   };
 
   // Quick Assign 100%
-  const handleAssign100 = async (txId: string, project: Project) => {
-    const expense = expenses.find(e => e.expense.id === txId);
+  const handleAssign100 = async (txId: string, project: Project, budgetLine?: BudgetLine | null) => {
+    const expense = expenses.find(e => e.expense.txId === txId);
     if (!expense) return;
 
     try {
@@ -192,13 +321,17 @@ export default function ExpensesInboxPage() {
         projectId: project.id,
         projectName: project.name,
         amountEUR: expense.expense.amountEUR, // ja és negatiu
+        budgetLineId: budgetLine?.id ?? null,
+        budgetLineName: budgetLine?.name ?? null,
       }];
 
       await save(txId, assignments, null);
       await refresh();
+
+      const budgetInfo = budgetLine ? ` → ${budgetLine.name}` : '';
       toast({
         title: 'Assignada',
-        description: `Despesa assignada a "${project.name}"`,
+        description: `Despesa assignada a "${project.name}"${budgetInfo}`,
       });
     } catch (err) {
       toast({
@@ -214,7 +347,7 @@ export default function ExpensesInboxPage() {
     if (!splitModalExpense) return;
 
     try {
-      await save(splitModalExpense.expense.id, assignments, note);
+      await save(splitModalExpense.expense.txId, assignments, note);
       await refresh();
       setSplitModalExpense(null);
       toast({
@@ -235,7 +368,7 @@ export default function ExpensesInboxPage() {
     setIsBulkAssigning(true);
 
     try {
-      const selectedExpenses = expenses.filter(e => selectedIds.has(e.expense.id));
+      const selectedExpenses = expenses.filter(e => selectedIds.has(e.expense.txId));
 
       for (const expense of selectedExpenses) {
         const assignments: ExpenseAssignment[] = [{
@@ -243,7 +376,7 @@ export default function ExpensesInboxPage() {
           projectName: project.name,
           amountEUR: expense.expense.amountEUR,
         }];
-        await save(expense.expense.id, assignments, null);
+        await save(expense.expense.txId, assignments, null);
       }
 
       await refresh();
@@ -265,12 +398,12 @@ export default function ExpensesInboxPage() {
   };
 
   // Selection handlers
-  const toggleSelect = (id: string) => {
+  const toggleSelect = (txId: string) => {
     const newSet = new Set(selectedIds);
-    if (newSet.has(id)) {
-      newSet.delete(id);
+    if (newSet.has(txId)) {
+      newSet.delete(txId);
     } else {
-      newSet.add(id);
+      newSet.add(txId);
     }
     setSelectedIds(newSet);
   };
@@ -279,7 +412,7 @@ export default function ExpensesInboxPage() {
     if (selectedIds.size === expenses.length) {
       setSelectedIds(new Set());
     } else {
-      setSelectedIds(new Set(expenses.map(e => e.expense.id)));
+      setSelectedIds(new Set(expenses.map(e => e.expense.txId)));
     }
   };
 
@@ -309,16 +442,68 @@ export default function ExpensesInboxPage() {
             Despeses elegibles per vincular a projectes
           </p>
         </div>
-        <Button
-          onClick={handleRefresh}
-          variant="outline"
-          size="sm"
-          disabled={isRefreshing}
-        >
-          <RefreshCw className={`h-4 w-4 mr-2 ${isRefreshing ? 'animate-spin' : ''}`} />
-          Actualitzar
-        </Button>
+        <div className="flex items-center gap-2">
+          <Link href={buildUrl('/dashboard/project-module/projects')}>
+            <Button variant="outline" size="sm">
+              <FolderKanban className="h-4 w-4 mr-2" />
+              {t.breadcrumb?.projects ?? 'Projectes'}
+            </Button>
+          </Link>
+          <Button
+            onClick={() => setAddOffBankOpen(true)}
+            variant="outline"
+            size="sm"
+          >
+            <Plus className="h-4 w-4 mr-2" />
+            Afegir despesa de terreny
+          </Button>
+          <Button
+            onClick={handleRefresh}
+            variant="outline"
+            size="sm"
+            disabled={isRefreshing}
+          >
+            <RefreshCw className={`h-4 w-4 mr-2 ${isRefreshing ? 'animate-spin' : ''}`} />
+            Actualitzar
+          </Button>
+        </div>
       </div>
+
+      {/* Franja de filtre actiu */}
+      {isFiltered && (
+        <div className="flex items-center justify-between px-4 py-2 bg-muted/50 border rounded-lg">
+          <div className="flex items-center gap-2 text-sm">
+            <Filter className="h-4 w-4 text-muted-foreground" />
+            <span className="font-medium">
+              {t.projectModule?.filtered ?? 'Filtrat'}
+            </span>
+            {budgetLineIdFilter && (
+              <span className="text-muted-foreground">
+                ({t.projectModule?.byBudgetLine ?? 'per partida'})
+              </span>
+            )}
+            {projectIdFilter && !budgetLineIdFilter && (
+              <span className="text-muted-foreground">
+                ({t.projectModule?.byProject ?? 'per projecte'})
+              </span>
+            )}
+            {!isLoading && (
+              <span className="text-muted-foreground">
+                · {expenses.length} {expenses.length === 1 ? 'resultat' : 'resultats'}
+              </span>
+            )}
+          </div>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={handleClearFilter}
+            className="text-muted-foreground hover:text-foreground"
+          >
+            <X className="h-4 w-4 mr-1" />
+            {t.projectModule?.clearFilter ?? 'Treure filtre'}
+          </Button>
+        </div>
+      )}
 
       {/* Taula */}
       <div className="border rounded-lg">
@@ -332,6 +517,7 @@ export default function ExpensesInboxPage() {
                   aria-label="Seleccionar tot"
                 />
               </TableHead>
+              <TableHead className="w-[50px]">Font</TableHead>
               <TableHead className="w-[100px]">Data</TableHead>
               <TableHead>Descripció</TableHead>
               <TableHead>Categoria</TableHead>
@@ -346,6 +532,7 @@ export default function ExpensesInboxPage() {
               Array.from({ length: 5 }).map((_, i) => (
                 <TableRow key={i}>
                   <TableCell><Skeleton className="h-4 w-4" /></TableCell>
+                  <TableCell><Skeleton className="h-4 w-8" /></TableCell>
                   <TableCell><Skeleton className="h-4 w-20" /></TableCell>
                   <TableCell><Skeleton className="h-4 w-48" /></TableCell>
                   <TableCell><Skeleton className="h-4 w-24" /></TableCell>
@@ -357,26 +544,33 @@ export default function ExpensesInboxPage() {
               ))
             ) : expenses.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={8} className="text-center py-12 text-muted-foreground">
+                <TableCell colSpan={9} className="text-center py-12 text-muted-foreground">
                   No hi ha despeses elegibles per assignar
                 </TableCell>
               </TableRow>
             ) : (
               expenses.map((item) => {
                 const { expense, status, assignedAmount } = item;
-                const isSelected = selectedIds.has(expense.id);
+                const isSelected = selectedIds.has(expense.txId);
 
                 return (
                   <TableRow
-                    key={expense.id}
+                    key={expense.txId}
                     className={`group hover:bg-muted/50 ${isSelected ? 'bg-muted/30' : ''}`}
                   >
                     <TableCell>
                       <Checkbox
                         checked={isSelected}
-                        onCheckedChange={() => toggleSelect(expense.id)}
-                        aria-label={`Seleccionar despesa ${expense.id}`}
+                        onCheckedChange={() => toggleSelect(expense.txId)}
+                        aria-label={`Seleccionar despesa ${expense.txId}`}
                       />
+                    </TableCell>
+                    <TableCell>
+                      {expense.source === 'bank' ? (
+                        <Landmark className="h-4 w-4 text-muted-foreground" title="Bancària" />
+                      ) : (
+                        <Globe className="h-4 w-4 text-blue-500" title="Terreny" />
+                      )}
                     </TableCell>
                     <TableCell className="font-mono text-sm">
                       {formatDateDMY(expense.date)}
@@ -407,16 +601,18 @@ export default function ExpensesInboxPage() {
                             isAssigning={isSaving}
                           />
                         )}
-                        <Link href={buildUrl(`/dashboard/project-module/expenses/${expense.id}`)}>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-7 w-7"
-                            title="Veure detall"
-                          >
-                            <ChevronRight className="h-4 w-4" />
-                          </Button>
-                        </Link>
+                        {expense.source === 'bank' && (
+                          <Link href={buildUrl(`/dashboard/project-module/expenses/${expense.txId}`)}>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-7 w-7"
+                              title="Veure detall"
+                            >
+                              <ChevronRight className="h-4 w-4" />
+                            </Button>
+                          </Link>
+                        )}
                       </div>
                     </TableCell>
                   </TableRow>
@@ -426,15 +622,6 @@ export default function ExpensesInboxPage() {
           </TableBody>
         </Table>
       </div>
-
-      {/* Carrega més */}
-      {hasMore && !isLoading && (
-        <div className="flex justify-center">
-          <Button onClick={loadMore} variant="outline">
-            Carrega més
-          </Button>
-        </div>
-      )}
 
       {isLoading && expenses.length > 0 && (
         <div className="flex justify-center py-4">
@@ -530,6 +717,13 @@ export default function ExpensesInboxPage() {
           )}
         </DialogContent>
       </Dialog>
+
+      {/* Add Off-Bank Expense Modal */}
+      <AddOffBankExpenseModal
+        open={addOffBankOpen}
+        onOpenChange={setAddOffBankOpen}
+        onSuccess={refresh}
+      />
     </div>
   );
 }

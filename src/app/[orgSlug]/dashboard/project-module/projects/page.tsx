@@ -5,13 +5,16 @@
 
 import * as React from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { useProjects } from '@/hooks/use-project-module';
 import { useOrgUrl } from '@/hooks/organization-provider';
+import { useTranslations } from '@/i18n';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
-import { AlertCircle, Plus, FolderKanban, Calendar, Euro } from 'lucide-react';
+import { AlertCircle, Plus, FolderKanban, Calendar, Euro, Eye, Pencil } from 'lucide-react';
+import { trackUX } from '@/lib/ux/trackUX';
 import type { Project } from '@/lib/project-module-types';
 
 function formatDate(dateStr: string | null): string {
@@ -30,9 +33,38 @@ function formatAmount(amount: number | null): string {
 
 function ProjectCard({ project }: { project: Project }) {
   const { buildUrl } = useOrgUrl();
+  const router = useRouter();
+  const { t } = useTranslations();
+
+  // Click en el card → navega a Pressupost
+  const handleCardClick = () => {
+    trackUX('projects.card.click', { projectId: project.id, projectName: project.name });
+    router.push(buildUrl(`/dashboard/project-module/projects/${project.id}/budget`));
+  };
+
+  // Click en botó Pressupost
+  const handleBudgetClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    trackUX('projects.budget.click', { projectId: project.id, projectName: project.name });
+  };
+
+  // Click en botó Veure despeses
+  const handleViewExpensesClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    trackUX('projects.viewExpenses.click', { projectId: project.id, projectName: project.name });
+  };
+
+  // Click en botó Editar
+  const handleEditClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    trackUX('projects.edit.click', { projectId: project.id, projectName: project.name });
+  };
 
   return (
-    <Card className="hover:border-primary/50 transition-colors">
+    <Card
+      className="hover:border-primary/50 transition-colors cursor-pointer"
+      onClick={handleCardClick}
+    >
       <CardHeader className="pb-2">
         <div className="flex items-start justify-between">
           <div className="flex items-center gap-2">
@@ -68,10 +100,33 @@ function ProjectCard({ project }: { project: Project }) {
           </div>
         )}
 
-        <div className="pt-2">
-          <Link href={buildUrl(`/dashboard/project-module/projects/${project.id}/edit`)}>
+        <div className="pt-2 flex gap-2">
+          <Link
+            href={buildUrl(`/dashboard/project-module/projects/${project.id}/budget`)}
+            className="flex-1"
+            onClick={handleBudgetClick}
+          >
             <Button variant="outline" size="sm" className="w-full">
-              Editar projecte
+              <Euro className="h-4 w-4 mr-1" />
+              Pressupost
+            </Button>
+          </Link>
+          <Link
+            href={buildUrl(`/dashboard/project-module/expenses?projectId=${project.id}`)}
+            className="flex-1"
+            onClick={handleViewExpensesClick}
+          >
+            <Button variant="outline" size="sm" className="w-full">
+              <Eye className="h-4 w-4 mr-1" />
+              {t.projectModule?.viewExpenses ?? 'Despeses'}
+            </Button>
+          </Link>
+          <Link
+            href={buildUrl(`/dashboard/project-module/projects/${project.id}/edit`)}
+            onClick={handleEditClick}
+          >
+            <Button variant="outline" size="sm">
+              <Pencil className="h-4 w-4" />
             </Button>
           </Link>
         </div>
@@ -83,6 +138,11 @@ function ProjectCard({ project }: { project: Project }) {
 export default function ProjectsListPage() {
   const { projects, isLoading, error, refresh } = useProjects();
   const { buildUrl } = useOrgUrl();
+
+  // Track page open
+  React.useEffect(() => {
+    trackUX('projects.open', { projectCount: projects.length });
+  }, [projects.length]);
 
   if (error) {
     return (

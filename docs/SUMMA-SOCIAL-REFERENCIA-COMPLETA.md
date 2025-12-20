@@ -1823,6 +1823,34 @@ match /projectModule/{document=**} {
 }
 ```
 
+## C.6 Índexos Firestore (Mòdul Projectes)
+
+Els índexos necessaris per al mòdul de projectes:
+
+### expenseLinks (projectModule/_/expenseLinks)
+
+| Col·lecció | Camps | Ordre | Ús |
+|------------|-------|-------|-----|
+| expenseLinks | `projectIds` (array-contains) | - | Filtrar despeses per projecte |
+| expenseLinks | `budgetLineIds` (array-contains) | - | Filtrar despeses per partida pressupostària |
+
+> **Nota**: No s'utilitza `orderBy` en aquestes queries per evitar necessitat d'índexos compostos. L'ordenació es fa client-side.
+
+### exports/projectExpenses/items
+
+| Col·lecció | Camps | Ordre |
+|------------|-------|-------|
+| items | `isEligibleForProjects`, `deletedAt`, `date` | date DESC |
+
+> **Nota**: Aquest índex ja existeix per al feed de despeses elegibles.
+
+### Backfill de budgetLineIds
+
+Les assignacions creades abans de la implementació del camp `budgetLineIds` no el tindran poblat. El codi implementa un fallback:
+1. Si la query per `budgetLineIds` retorna 0 resultats i hi ha `projectId` disponible
+2. Es carreguen els links del projecte i es filtra client-side per `assignments[].budgetLineId`
+3. Es trackeja amb `expenses.filter.fallback_used` per monitorització
+
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # FI DEL DOCUMENT

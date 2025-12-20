@@ -1,0 +1,648 @@
+// src/app/[orgSlug]/dashboard/project-module/projects/[projectId]/budget/page.tsx
+// Pressupost del projecte amb partides i execució
+
+'use client';
+
+import * as React from 'react';
+import { useParams } from 'next/navigation';
+import Link from 'next/link';
+import {
+  useProjectDetail,
+  useProjectBudgetLines,
+  useSaveBudgetLine,
+  useProjectExpenseLinks,
+} from '@/hooks/use-project-module';
+import { useOrgUrl } from '@/hooks/organization-provider';
+import { useToast } from '@/hooks/use-toast';
+import { useTranslations } from '@/i18n';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Skeleton } from '@/components/ui/skeleton';
+import { Badge } from '@/components/ui/badge';
+import {
+  AlertCircle,
+  ArrowLeft,
+  Plus,
+  Pencil,
+  Trash2,
+  CheckCircle,
+  AlertTriangle,
+  Download,
+  Loader2,
+  Eye,
+  Info,
+} from 'lucide-react';
+import { useFirebase } from '@/firebase';
+import { useCurrentOrganization } from '@/hooks/organization-provider';
+import { buildProjectJustificationXlsx } from '@/lib/project-justification-export';
+import { trackUX } from '@/lib/ux/trackUX';
+import { useRouter } from 'next/navigation';
+import type { BudgetLine, BudgetLineFormData, ExpenseAssignment } from '@/lib/project-module-types';
+
+function formatAmount(amount: number): string {
+  return new Intl.NumberFormat('ca-ES', {
+    style: 'currency',
+    currency: 'EUR',
+  }).format(amount);
+}
+
+function formatPercent(value: number): string {
+  return new Intl.NumberFormat('ca-ES', {
+    style: 'percent',
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 1,
+  }).format(value / 100);
+}
+
+// Component per al formulari de partida
+function BudgetLineForm({
+  open,
+  onOpenChange,
+  onSave,
+  isSaving,
+  initialData,
+}: {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  onSave: (data: BudgetLineFormData) => Promise<void>;
+  isSaving: boolean;
+  initialData?: BudgetLine | null;
+}) {
+  const { t } = useTranslations();
+  const [name, setName] = React.useState('');
+  const [code, setCode] = React.useState('');
+  const [budgetedAmountEUR, setBudgetedAmountEUR] = React.useState('');
+  const [order, setOrder] = React.useState('');
+  const [errors, setErrors] = React.useState<Record<string, string>>({});
+
+  React.useEffect(() => {
+    if (open) {
+      if (initialData) {
+        setName(initialData.name);
+        setCode(initialData.code ?? '');
+        setBudgetedAmountEUR(initialData.budgetedAmountEUR.toString());
+        setOrder(initialData.order?.toString() ?? '');
+      } else {
+        setName('');
+        setCode('');
+        setBudgetedAmountEUR('');
+        setOrder('');
+      }
+      setErrors({});
+    }
+  }, [open, initialData]);
+
+  const validate = (): boolean => {
+    const newErrors: Record<string, string> = {};
+
+    if (!name.trim()) {
+      newErrors.name = t.projectModule?.nameRequired ?? 'El nom és obligatori';
+    }
+
+    const amount = parseFloat(budgetedAmountEUR.replace(',', '.'));
+    if (isNaN(amount) || amount <= 0) {
+      newErrors.budgetedAmountEUR = t.projectModule?.amountPositive ?? 'L\'import ha de ser positiu';
+    }
+
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!validate()) return;
+
+    await onSave({
+      name: name.trim(),
+      code: code.trim(),
+      budgetedAmountEUR: budgetedAmountEUR.replace(',', '.'),
+      order,
+    });
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle>
+            {initialData ? (t.projectModule?.editBudgetLine ?? 'Editar partida') : (t.projectModule?.addBudgetLine ?? 'Afegir partida')}
+          </DialogTitle>
+          <DialogDescription>
+            {t.projectModule?.budgetLineDescription ?? 'Defineix una partida del pressupost'}
+          </DialogDescription>
+        </DialogHeader>
+
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div className="space-y-2">
+            <Label htmlFor="name">{t.projectModule?.lineName ?? 'Nom de la partida'} *</Label>
+            <Input
+              id="name"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="p.ex. Personal, Materials, Viatges..."
+              className={errors.name ? 'border-destructive' : ''}
+            />
+            {errors.name && <p className="text-sm text-destructive">{errors.name}</p>}
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="code">{t.projectModule?.lineCode ?? 'Codi'}</Label>
+            <Input
+              id="code"
+              value={code}
+              onChange={(e) => setCode(e.target.value)}
+              placeholder="p.ex. A1, B2..."
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="budgetedAmountEUR">{t.projectModule?.budgetedAmount ?? 'Import pressupostat (€)'} *</Label>
+            <Input
+              id="budgetedAmountEUR"
+              type="text"
+              inputMode="decimal"
+              value={budgetedAmountEUR}
+              onChange={(e) => setBudgetedAmountEUR(e.target.value)}
+              placeholder="0,00"
+              className={errors.budgetedAmountEUR ? 'border-destructive' : ''}
+            />
+            {errors.budgetedAmountEUR && <p className="text-sm text-destructive">{errors.budgetedAmountEUR}</p>}
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="order">{t.projectModule?.lineOrder ?? 'Ordre'}</Label>
+            <Input
+              id="order"
+              type="number"
+              value={order}
+              onChange={(e) => setOrder(e.target.value)}
+              placeholder="1, 2, 3..."
+            />
+          </div>
+
+          <DialogFooter className="pt-4">
+            <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={isSaving}>
+              {t.common?.cancel ?? 'Cancel·lar'}
+            </Button>
+            <Button type="submit" disabled={isSaving}>
+              {isSaving ? (t.common?.saving ?? 'Desant...') : (t.common?.save ?? 'Desar')}
+            </Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+export default function ProjectBudgetPage() {
+  const params = useParams();
+  const projectId = params.projectId as string;
+  const router = useRouter();
+  const { buildUrl } = useOrgUrl();
+  const { toast } = useToast();
+  const { t } = useTranslations();
+  const { firestore } = useFirebase();
+  const { organizationId } = useCurrentOrganization();
+
+  // Track page open
+  React.useEffect(() => {
+    trackUX('budget.open', { projectId });
+  }, [projectId]);
+
+  const { project, isLoading: projectLoading, error: projectError } = useProjectDetail(projectId);
+  const { budgetLines, isLoading: linesLoading, error: linesError, refresh: refreshLines } = useProjectBudgetLines(projectId);
+  const { expenseLinks, isLoading: linksLoading } = useProjectExpenseLinks(projectId);
+  const { save, remove, isSaving } = useSaveBudgetLine();
+
+  const [formOpen, setFormOpen] = React.useState(false);
+  const [editingLine, setEditingLine] = React.useState<BudgetLine | null>(null);
+  const [deleteConfirm, setDeleteConfirm] = React.useState<BudgetLine | null>(null);
+  const [isExporting, setIsExporting] = React.useState(false);
+
+  // Calcular execució per partida
+  const executionByLine = React.useMemo(() => {
+    const map = new Map<string, number>();
+
+    for (const link of expenseLinks) {
+      for (const assignment of link.assignments) {
+        if (assignment.budgetLineId) {
+          const current = map.get(assignment.budgetLineId) ?? 0;
+          map.set(assignment.budgetLineId, current + Math.abs(assignment.amountEUR));
+        }
+      }
+    }
+
+    return map;
+  }, [expenseLinks]);
+
+  // Calcular totals
+  const totals = React.useMemo(() => {
+    let budgeted = 0;
+    let executed = 0;
+
+    for (const line of budgetLines) {
+      budgeted += line.budgetedAmountEUR;
+      executed += executionByLine.get(line.id) ?? 0;
+    }
+
+    return { budgeted, executed, difference: executed - budgeted };
+  }, [budgetLines, executionByLine]);
+
+  const handleSave = async (data: BudgetLineFormData) => {
+    try {
+      await save(projectId, data, editingLine?.id);
+      toast({
+        title: editingLine ? 'Partida actualitzada' : 'Partida creada',
+        description: `La partida "${data.name}" s'ha desat correctament.`,
+      });
+      setFormOpen(false);
+      setEditingLine(null);
+      await refreshLines();
+    } catch (err) {
+      toast({
+        variant: 'destructive',
+        title: 'Error',
+        description: err instanceof Error ? err.message : 'Error desant partida',
+      });
+    }
+  };
+
+  const handleDelete = async () => {
+    if (!deleteConfirm) return;
+
+    try {
+      await remove(projectId, deleteConfirm.id);
+      toast({
+        title: 'Partida eliminada',
+        description: `La partida "${deleteConfirm.name}" s'ha eliminat.`,
+      });
+      setDeleteConfirm(null);
+      await refreshLines();
+    } catch (err) {
+      toast({
+        variant: 'destructive',
+        title: 'Error',
+        description: err instanceof Error ? err.message : 'Error eliminant partida',
+      });
+    }
+  };
+
+  const openEdit = (line: BudgetLine, e?: React.MouseEvent) => {
+    e?.stopPropagation();
+    trackUX('budget.editLine.open', { lineId: line.id, lineName: line.name });
+    setEditingLine(line);
+    setFormOpen(true);
+  };
+
+  const openNew = () => {
+    setEditingLine(null);
+    setFormOpen(true);
+  };
+
+  const handleRowClick = (line: BudgetLine) => {
+    trackUX('budget.row.click', { lineId: line.id, lineName: line.name });
+    const url = buildUrl(`/dashboard/project-module/expenses?projectId=${projectId}&budgetLineId=${line.id}`);
+    router.push(url);
+  };
+
+  const handleViewExpenses = () => {
+    trackUX('budget.viewExpenses.click', { projectId });
+    const url = buildUrl(`/dashboard/project-module/expenses?projectId=${projectId}`);
+    router.push(url);
+  };
+
+  const handleExport = async () => {
+    if (!organizationId || !projectId) return;
+
+    setIsExporting(true);
+    try {
+      const { blob, filename } = await buildProjectJustificationXlsx(
+        firestore,
+        organizationId,
+        projectId
+      );
+
+      // Descarregar fitxer
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+
+      toast({
+        title: 'Excel generat',
+        description: `S'ha descarregat el fitxer ${filename}`,
+      });
+    } catch (err) {
+      console.error('Error exporting:', err);
+      toast({
+        variant: 'destructive',
+        title: 'Error',
+        description: err instanceof Error ? err.message : 'Error generant Excel',
+      });
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
+  if (projectLoading) {
+    return (
+      <div className="space-y-6">
+        <Skeleton className="h-8 w-48" />
+        <Skeleton className="h-64 w-full" />
+      </div>
+    );
+  }
+
+  if (projectError || !project) {
+    return (
+      <div className="flex flex-col items-center justify-center py-12 gap-4">
+        <AlertCircle className="h-12 w-12 text-destructive" />
+        <p className="text-destructive font-medium">Error carregant projecte</p>
+        <p className="text-muted-foreground text-sm">{projectError?.message ?? 'Projecte no trobat'}</p>
+        <Link href={buildUrl('/dashboard/project-module/projects')}>
+          <Button variant="outline">Tornar a projectes</Button>
+        </Link>
+      </div>
+    );
+  }
+
+  const allowedDeviation = project.allowedDeviationPct ?? 10;
+
+  return (
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="flex items-center gap-4">
+        <Link href={buildUrl('/dashboard/project-module/projects')}>
+          <Button variant="ghost" size="icon">
+            <ArrowLeft className="h-4 w-4" />
+          </Button>
+        </Link>
+        <div className="flex-1">
+          <h1 className="text-2xl font-bold">{t.projectModule?.budget ?? 'Pressupost'}</h1>
+          <p className="text-muted-foreground">
+            {project.name} {project.code && `(${project.code})`}
+          </p>
+        </div>
+        <div className="flex gap-2">
+          <Button
+            variant="outline"
+            onClick={handleViewExpenses}
+          >
+            <Eye className="h-4 w-4 mr-2" />
+            {t.projectModule?.viewExpenses ?? 'Veure despeses del projecte'}
+          </Button>
+          <Button
+            variant="outline"
+            onClick={handleExport}
+            disabled={isExporting || budgetLines.length === 0}
+          >
+            {isExporting ? (
+              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+            ) : (
+              <Download className="h-4 w-4 mr-2" />
+            )}
+            {isExporting ? 'Exportant...' : 'Exportar justificació'}
+          </Button>
+          <Button onClick={openNew}>
+            <Plus className="h-4 w-4 mr-2" />
+            {t.projectModule?.addBudgetLine ?? 'Afegir partida'}
+          </Button>
+        </div>
+      </div>
+
+      {/* Resum */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <Card>
+          <CardHeader className="pb-2">
+            <CardDescription>{t.projectModule?.budgeted ?? 'Pressupostat'}</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <p className="text-2xl font-bold">{formatAmount(totals.budgeted)}</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="pb-2">
+            <CardDescription>{t.projectModule?.executed ?? 'Executat'}</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <p className="text-2xl font-bold">{formatAmount(totals.executed)}</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="pb-2">
+            <CardDescription>
+              {totals.difference > 0
+                ? (t.projectModule?.overspend ?? 'Sobreexecució')
+                : (t.projectModule?.pending ?? 'Pendent')}
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <p className={`text-2xl font-bold ${totals.difference > 0 ? 'text-red-600' : ''}`}>
+              {formatAmount(Math.abs(totals.budgeted - totals.executed))}
+            </p>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Taula de partides */}
+      <Card>
+        <CardHeader>
+          <CardTitle>{t.projectModule?.budgetLines ?? 'Partides'}</CardTitle>
+          <CardDescription>
+            {t.projectModule?.deviationInfo ?? 'Desviació permesa'}: {allowedDeviation}%
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          {linesLoading || linksLoading ? (
+            <div className="space-y-2">
+              {Array.from({ length: 3 }).map((_, i) => (
+                <Skeleton key={i} className="h-12 w-full" />
+              ))}
+            </div>
+          ) : linesError ? (
+            <div className="text-center py-8 text-destructive">
+              Error carregant partides: {linesError.message}
+            </div>
+          ) : budgetLines.length === 0 ? (
+            <div className="text-center py-8 text-muted-foreground">
+              <p>{t.projectModule?.noBudgetDefined ?? 'Aquest projecte encara no té pressupost.'}</p>
+              <Button onClick={openNew} variant="outline" className="mt-4">
+                <Plus className="h-4 w-4 mr-2" />
+                {t.projectModule?.addBudgetLine ?? 'Afegir partida'}
+              </Button>
+            </div>
+          ) : (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="w-[60px]">{t.projectModule?.lineCode ?? 'Codi'}</TableHead>
+                  <TableHead>{t.projectModule?.lineName ?? 'Partida'}</TableHead>
+                  <TableHead className="text-right">{t.projectModule?.budgeted ?? 'Pressupostat'}</TableHead>
+                  <TableHead className="text-right">{t.projectModule?.executed ?? 'Executat'}</TableHead>
+                  <TableHead className="text-right">%</TableHead>
+                  <TableHead className="text-right">{t.projectModule?.pending ?? 'Pendent'}</TableHead>
+                  <TableHead className="w-[100px]">{t.projectModule?.status ?? 'Estat'}</TableHead>
+                  <TableHead className="w-[100px]"></TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {budgetLines.map((line) => {
+                  const executed = executionByLine.get(line.id) ?? 0;
+                  const pending = line.budgetedAmountEUR - executed; // pendent = pressupostat - executat
+                  const percentExec = line.budgetedAmountEUR > 0 ? (executed / line.budgetedAmountEUR) * 100 : 0;
+
+                  // Estat: OK si executat <= pressupostat * (1 + allowedDeviationPct/100)
+                  // ALERTA si executat > pressupostat * (1 + allowedDeviationPct/100)
+                  // INFO si executat === 0
+                  const maxAllowed = line.budgetedAmountEUR * (1 + allowedDeviation / 100);
+                  const isOverspend = executed > maxAllowed;
+                  const hasNoExecution = executed === 0;
+
+                  // Determinar què mostrar a la columna Pendent/Sobreexecució
+                  const showOverspend = pending < 0;
+
+                  return (
+                    <TableRow
+                      key={line.id}
+                      className="cursor-pointer hover:bg-muted/50"
+                      onClick={() => handleRowClick(line)}
+                    >
+                      <TableCell className="font-mono text-sm text-muted-foreground">
+                        {line.code ?? '-'}
+                      </TableCell>
+                      <TableCell className="font-medium">{line.name}</TableCell>
+                      <TableCell className="text-right font-mono">
+                        {formatAmount(line.budgetedAmountEUR)}
+                      </TableCell>
+                      <TableCell className="text-right font-mono">
+                        {formatAmount(executed)}
+                      </TableCell>
+                      <TableCell className="text-right font-mono">
+                        {formatPercent(percentExec)}
+                      </TableCell>
+                      <TableCell className={`text-right font-mono ${showOverspend ? 'text-red-600' : ''}`}>
+                        {showOverspend
+                          ? `${t.projectModule?.overspend ?? 'Sobreexecució'}: ${formatAmount(Math.abs(pending))}`
+                          : formatAmount(pending)}
+                      </TableCell>
+                      <TableCell>
+                        {hasNoExecution ? (
+                          <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">
+                            <Info className="h-3 w-3 mr-1" />
+                            {t.projectModule?.noExecution ?? 'Sense execució'}
+                          </Badge>
+                        ) : isOverspend ? (
+                          <Badge variant="outline" className="bg-yellow-50 text-yellow-700 border-yellow-200">
+                            <AlertTriangle className="h-3 w-3 mr-1" />
+                            ALERTA
+                          </Badge>
+                        ) : (
+                          <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
+                            <CheckCircle className="h-3 w-3 mr-1" />
+                            OK
+                          </Badge>
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-1 justify-end">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-7 w-7"
+                            onClick={(e) => openEdit(line, e)}
+                          >
+                            <Pencil className="h-3.5 w-3.5" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-7 w-7 text-destructive hover:text-destructive"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setDeleteConfirm(line);
+                            }}
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </Button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
+              </TableBody>
+            </Table>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Form Modal */}
+      <BudgetLineForm
+        open={formOpen}
+        onOpenChange={(open) => {
+          setFormOpen(open);
+          if (!open) setEditingLine(null);
+        }}
+        onSave={handleSave}
+        isSaving={isSaving}
+        initialData={editingLine}
+      />
+
+      {/* Delete Confirmation */}
+      <AlertDialog open={!!deleteConfirm} onOpenChange={(open) => !open && setDeleteConfirm(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Eliminar partida</AlertDialogTitle>
+            <AlertDialogDescription>
+              Estàs segur que vols eliminar la partida &quot;{deleteConfirm?.name}&quot;?
+              Aquesta acció no es pot desfer.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel·lar</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              Eliminar
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </div>
+  );
+}
