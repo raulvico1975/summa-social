@@ -1833,4 +1833,23 @@ export const ca = {
   donorsFilter: {
     withReturns: "Amb devolucions",
   },
+  // Breadcrumb
+  breadcrumb: {
+    dashboard: "Tauler",
+    projectModule: "Mòdul Projectes",
+    expenses: "Despeses",
+    projects: "Projectes",
+    new: "Nou",
+    edit: "Editar",
+    admin: "Administració",
+    detail: "Detall",
+    donors: "Donants",
+    transactions: "Moviments",
+    categories: "Categories",
+    settings: "Configuració",
+    model182: "Model 182",
+    model347: "Model 347",
+    stripe: "Stripe",
+    reports: "Informes",
+  },
 };

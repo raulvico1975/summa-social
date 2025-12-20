@@ -6,27 +6,129 @@ import { usePathname } from 'next/navigation';
 import { SidebarTrigger } from '@/components/ui/sidebar';
 import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator } from "@/components/ui/breadcrumb";
 import Link from 'next/link';
+import { useTranslations } from '@/i18n';
+import { useCurrentOrganization } from '@/hooks/organization-provider';
 
+// Mapatge de segments URL a claus de traducció
+const SEGMENT_TO_KEY: Record<string, keyof typeof import('@/i18n/ca').ca.breadcrumb> = {
+  'dashboard': 'dashboard',
+  'project-module': 'projectModule',
+  'expenses': 'expenses',
+  'projects': 'projects',
+  'new': 'new',
+  'edit': 'edit',
+  'admin': 'admin',
+  'donors': 'donors',
+  'transactions': 'transactions',
+  'categories': 'categories',
+  'settings': 'settings',
+  'model182': 'model182',
+  'model347': 'model347',
+  'stripe': 'stripe',
+  'reports': 'reports',
+};
+
+// Heurística per detectar IDs de Firestore (alfanumèrics, >= 12 caràcters)
+function isFirestoreId(segment: string): boolean {
+  return segment.length >= 12 && /^[a-zA-Z0-9]+$/.test(segment);
+}
+
+// Convertir kebab-case a Title Case com a fallback
+function toTitleCase(segment: string): string {
+  return segment
+    .split('-')
+    .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+    .join(' ');
+}
 
 export function DashboardHeader() {
   const pathname = usePathname();
+  const { t } = useTranslations();
+  const { organization } = useCurrentOrganization();
 
   const getBreadcrumbs = () => {
     const parts = pathname.split('/').filter(part => part);
-    let path = '';
-    const items = parts.map((part, index) => {
-      path += `/${part}`;
-      const isLast = index === parts.length - 1;
-      const name = part.charAt(0).toUpperCase() + part.slice(1);
+
+    // Filtrar segments que no volem mostrar
+    const filteredParts: { segment: string; path: string; isId: boolean }[] = [];
+    let currentPath = '';
+
+    for (let i = 0; i < parts.length; i++) {
+      const part = parts[i];
+      currentPath += `/${part}`;
+
+      // Primer segment és orgSlug - usar nom d'organització
+      if (i === 0) {
+        filteredParts.push({
+          segment: '__org__', // marcador especial
+          path: currentPath,
+          isId: false,
+        });
+        continue;
+      }
+
+      // Si és un ID de Firestore, marcar-lo per tractar-lo diferent
+      if (isFirestoreId(part)) {
+        // Mirar el segment anterior per determinar context
+        const prevSegment = parts[i - 1];
+
+        // Si el següent segment és 'edit', no afegim l'ID (es mostrarà "Editar")
+        if (parts[i + 1] === 'edit') {
+          continue;
+        }
+
+        // Per expenses/[txId] o projects/[projectId] sense edit, mostrar "Detall"
+        if (prevSegment === 'expenses' || prevSegment === 'projects') {
+          filteredParts.push({
+            segment: '__detail__',
+            path: currentPath,
+            isId: true,
+          });
+          continue;
+        }
+
+        // Altres IDs: no mostrar
+        continue;
+      }
+
+      filteredParts.push({
+        segment: part,
+        path: currentPath,
+        isId: false,
+      });
+    }
+
+    const items = filteredParts.map((item, index) => {
+      const isLast = index === filteredParts.length - 1;
+
+      // Determinar el label
+      let label: string;
+
+      if (item.segment === '__org__') {
+        // Usar nom de l'organització
+        label = organization?.name || 'Organització';
+      } else if (item.segment === '__detail__') {
+        // Usar traducció de "Detall"
+        label = t.breadcrumb.detail;
+      } else {
+        // Buscar al mapatge de traduccions
+        const key = SEGMENT_TO_KEY[item.segment];
+        if (key && t.breadcrumb[key]) {
+          label = t.breadcrumb[key];
+        } else {
+          // Fallback: Title Case
+          label = toTitleCase(item.segment);
+        }
+      }
 
       return (
-        <React.Fragment key={path}>
+        <React.Fragment key={item.path}>
           <BreadcrumbItem>
             {isLast ? (
-               <BreadcrumbPage>{name}</BreadcrumbPage>
+               <BreadcrumbPage>{label}</BreadcrumbPage>
             ) : (
               <BreadcrumbLink asChild>
-                <Link href={path}>{name}</Link>
+                <Link href={item.path}>{label}</Link>
               </BreadcrumbLink>
             )}
           </BreadcrumbItem>

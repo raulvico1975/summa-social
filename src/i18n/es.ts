@@ -1826,4 +1826,23 @@ export const es = {
   donorsFilter: {
     withReturns: "Con devoluciones",
   },
+  // Breadcrumb
+  breadcrumb: {
+    dashboard: "Panel",
+    projectModule: "Módulo Proyectos",
+    expenses: "Gastos",
+    projects: "Proyectos",
+    new: "Nuevo",
+    edit: "Editar",
+    admin: "Administración",
+    detail: "Detalle",
+    donors: "Donantes",
+    transactions: "Movimientos",
+    categories: "Categorías",
+    settings: "Configuración",
+    model182: "Modelo 182",
+    model347: "Modelo 347",
+    stripe: "Stripe",
+    reports: "Informes",
+  },
 };
