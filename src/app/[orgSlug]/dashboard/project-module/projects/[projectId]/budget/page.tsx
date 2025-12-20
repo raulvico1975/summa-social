@@ -501,38 +501,39 @@ export default function ProjectBudgetPage() {
         <div className="flex gap-2">
           <Button
             variant="outline"
+            size="icon"
             onClick={handleViewExpenses}
+            title={t.projectModule?.viewExpensesTooltip ?? 'Veure despeses del projecte'}
           >
-            <Eye className="h-4 w-4 mr-2" />
-            {t.projectModule?.viewExpenses ?? 'Veure despeses del projecte'}
+            <Eye className="h-4 w-4" />
           </Button>
           <Button
             variant="outline"
+            size="icon"
             onClick={handleExport}
             disabled={isExporting || budgetLines.length === 0}
+            title="Exportar justificació (Excel)"
           >
             {isExporting ? (
-              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              <Loader2 className="h-4 w-4 animate-spin" />
             ) : (
-              <Download className="h-4 w-4 mr-2" />
+              <Download className="h-4 w-4" />
             )}
-            {isExporting ? 'Exportant...' : 'Exportar justificació'}
           </Button>
           <Button
             variant="outline"
+            size="icon"
             onClick={handleExportZip}
             disabled={isExportingZip || expensesLoading || projectAssignmentsCount === 0}
+            title={t.projectModule?.downloadAttachments ?? 'Baixar comprovants (ZIP)'}
           >
             {isExportingZip ? (
-              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              <Loader2 className="h-4 w-4 animate-spin" />
             ) : (
-              <FileArchive className="h-4 w-4 mr-2" />
+              <FileArchive className="h-4 w-4" />
             )}
-            {isExportingZip && zipProgress
-              ? `${zipProgress.current}/${zipProgress.total}`
-              : (t.projectModule?.downloadAttachments ?? 'Baixar comprovants')}
           </Button>
-          <Button onClick={openNew}>
+          <Button onClick={openNew} title={t.projectModule?.addBudgetLine ?? 'Afegir partida'}>
             <Plus className="h-4 w-4 mr-2" />
             {t.projectModule?.addBudgetLine ?? 'Afegir partida'}
           </Button>
