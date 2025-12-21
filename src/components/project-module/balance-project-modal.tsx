@@ -182,6 +182,7 @@ function calculateMatchScore(expense: UnifiedExpense, line: BudgetLine): number 
 interface BalanceProjectModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  guidedMode?: boolean;
   project: Project;
   budgetLines: BudgetLine[];
   expenseLinks: ExpenseLink[];
@@ -192,6 +193,7 @@ interface BalanceProjectModalProps {
 export function BalanceProjectModal({
   open,
   onOpenChange,
+  guidedMode = false,
   project,
   budgetLines,
   expenseLinks,
@@ -608,7 +610,7 @@ export function BalanceProjectModal({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-5xl max-h-[90vh] flex flex-col">
+      <DialogContent className="max-w-5xl max-h-[90vh] flex flex-col" guidedMode={guidedMode}>
         <DialogHeader>
           <DialogTitle>Quadrar justificació del projecte</DialogTitle>
           <DialogDescription>
