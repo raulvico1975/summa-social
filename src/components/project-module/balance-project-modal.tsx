@@ -65,6 +65,12 @@ import type {
   UnifiedExpenseWithLink,
   ExpenseAssignment,
 } from '@/lib/project-module-types';
+import {
+  scoreExpenseForLine,
+  findBestCombinations,
+  type ScoredExpense,
+  type SuggestionProposal,
+} from '@/lib/project-module-suggestions';
 
 // ═══════════════════════════════════════════════════════════════════════════
 // TIPUS LOCALS
@@ -497,6 +503,58 @@ export function BalanceProjectModal({
     return { withBank, fromOtherProjects, withoutDoc, total };
   }, [selectedLineId, selectedDiag, allCandidates]);
 
+  // ═══════════════════════════════════════════════════════════════════════════
+  // PROPOSTES AUTOMÀTIQUES (només per infraexecució)
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  const suggestionProposals = React.useMemo((): SuggestionProposal[] => {
+    // Només per infraexecució
+    if (!selectedLineId || !selectedDiag || selectedDiag.difference >= 0) return [];
+
+    const deficit = Math.abs(selectedDiag.difference);
+    const toleranceEUR = Math.max(2, deficit * 0.02);
+    const selectedLine = budgetLines.find(l => l.id === selectedLineId);
+    if (!selectedLine) return [];
+
+    // Construir pool de despeses candidates amb score
+    const scoredPool: ScoredExpense[] = candidatesForSelectedLine
+      .filter(c => !simulatedMoves.some(m => m.txId === c.expense.txId)) // Excloure ja simulades
+      .map(c => ({
+        expense: c.expense,
+        score: scoreExpenseForLine(c.expense, selectedLine, {
+          deficit,
+          hasDocument: c.hasDocument,
+          assignedToOtherProject: !!c.assignedToOtherProject,
+        }),
+        hasDocument: c.hasDocument,
+        assignedToOtherProject: c.assignedToOtherProject,
+      }));
+
+    // Trobar millors combinacions
+    return findBestCombinations(scoredPool, deficit, toleranceEUR);
+  }, [selectedLineId, selectedDiag, budgetLines, candidatesForSelectedLine, simulatedMoves]);
+
+  // Handler per simular una proposta sencera
+  const simulateProposal = (proposal: SuggestionProposal) => {
+    trackUX('balance.simulateProposal', {
+      proposalId: proposal.id,
+      expenseCount: proposal.expenses.length,
+      sumEUR: proposal.sumEUR,
+      label: proposal.label,
+    });
+
+    for (const scored of proposal.expenses) {
+      const candidate = allCandidates.find(c => c.expense.txId === scored.expense.txId);
+      addSimulatedMove(
+        scored.expense.txId,
+        candidate?.currentBudgetLineId ?? null,
+        selectedLineId,
+        Math.abs(scored.expense.amountEUR),
+        candidate?.assignedToThisProject ? 'move' : 'add'
+      );
+    }
+  };
+
   // Afegir moviment simulat
   const addSimulatedMove = (
     txId: string,
@@ -891,6 +949,90 @@ export function BalanceProjectModal({
                     </CardHeader>
 
                     <CardContent className="flex-1 overflow-hidden flex flex-col gap-3">
+                      {/* BLOC PROPOSTES AUTOMÀTIQUES (només infraexecució) */}
+                      {selectedDiag.difference < 0 && suggestionProposals.length > 0 && (
+                        <div className="border rounded-lg bg-gradient-to-r from-violet-50/50 to-purple-50/50 p-3 space-y-3">
+                          <div className="flex items-center gap-2">
+                            <Sparkles className="h-4 w-4 text-purple-600" />
+                            <span className="text-sm font-medium text-purple-900">Propostes automàtiques</span>
+                            <Badge variant="secondary" className="text-xs">
+                              {suggestionProposals.length}
+                            </Badge>
+                          </div>
+
+                          <div className="grid gap-2">
+                            {suggestionProposals.slice(0, 3).map((proposal) => (
+                              <div
+                                key={proposal.id}
+                                className={`p-2 rounded-md border bg-white ${
+                                  proposal.label === 'perfect'
+                                    ? 'border-green-300 bg-green-50/50'
+                                    : proposal.label === 'close'
+                                    ? 'border-blue-200'
+                                    : 'border-gray-200'
+                                }`}
+                              >
+                                <div className="flex items-start justify-between gap-2">
+                                  <div className="flex-1 min-w-0">
+                                    <div className="flex items-center gap-2 mb-1">
+                                      {proposal.label === 'perfect' && (
+                                        <Badge className="bg-green-600 text-xs">Exacte</Badge>
+                                      )}
+                                      {proposal.label === 'close' && (
+                                        <Badge variant="outline" className="text-xs border-blue-300 text-blue-700">Proper</Badge>
+                                      )}
+                                      {proposal.label === 'approx' && (
+                                        <Badge variant="outline" className="text-xs">Aproximat</Badge>
+                                      )}
+                                      <span className="text-xs text-muted-foreground">
+                                        {proposal.expenses.length} despesa{proposal.expenses.length !== 1 ? 's' : ''}
+                                      </span>
+                                    </div>
+                                    <div className="text-sm">
+                                      <span className="font-mono font-medium">{formatAmount(proposal.sumEUR)}</span>
+                                      {proposal.deltaEUR > 0.01 && (
+                                        <span className="text-xs text-muted-foreground ml-1">
+                                          (dif. {formatAmount(proposal.deltaEUR)})
+                                        </span>
+                                      )}
+                                    </div>
+                                    <div className="text-xs text-muted-foreground mt-1 truncate">
+                                      {proposal.expenses.map(e =>
+                                        e.expense.counterpartyName ?? e.expense.description ?? 'Despesa'
+                                      ).join(', ')}
+                                    </div>
+                                  </div>
+                                  <Button
+                                    size="sm"
+                                    variant={proposal.label === 'perfect' ? 'default' : 'outline'}
+                                    className="shrink-0"
+                                    onClick={() => simulateProposal(proposal)}
+                                  >
+                                    <ArrowRight className="h-3 w-3 mr-1" />
+                                    Simular
+                                  </Button>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+
+                          {suggestionProposals.length > 3 && (
+                            <p className="text-xs text-center text-muted-foreground">
+                              +{suggestionProposals.length - 3} propostes més disponibles
+                            </p>
+                          )}
+                        </div>
+                      )}
+
+                      {/* Separador visual */}
+                      {selectedDiag.difference < 0 && suggestionProposals.length > 0 && candidatesForSelectedLine.length > 0 && (
+                        <div className="flex items-center gap-2">
+                          <div className="flex-1 border-t" />
+                          <span className="text-xs text-muted-foreground">o selecciona manualment</span>
+                          <div className="flex-1 border-t" />
+                        </div>
+                      )}
+
                       {/* Barra de cerca */}
                       <div className="relative">
                         <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
