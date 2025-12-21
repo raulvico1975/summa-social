@@ -15,6 +15,7 @@ import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { AlertCircle, Plus, FolderKanban, Calendar, Euro, Eye, Pencil } from 'lucide-react';
 import { trackUX } from '@/lib/ux/trackUX';
+import { useTranslations } from '@/i18n';
 import { collection, getDocs } from 'firebase/firestore';
 import type { Project, ExpenseLink, ExpenseAssignment } from '@/lib/project-module-types';
 
@@ -38,6 +39,7 @@ interface ProjectCardProps {
 }
 
 function ProjectCard({ project, executedAmount }: ProjectCardProps) {
+  const { t } = useTranslations();
   const { buildUrl } = useOrgUrl();
   const router = useRouter();
 
@@ -135,7 +137,7 @@ function ProjectCard({ project, executedAmount }: ProjectCardProps) {
             href={buildUrl(`/dashboard/project-module/expenses?projectId=${project.id}`)}
             onClick={handleViewExpensesClick}
           >
-            <Button variant="ghost" size="sm">
+            <Button variant="ghost" size="sm" title={t.projectModule?.viewProjectExpenses ?? 'Veure despeses del projecte'}>
               <Eye className="h-4 w-4" />
             </Button>
           </Link>
@@ -143,7 +145,7 @@ function ProjectCard({ project, executedAmount }: ProjectCardProps) {
             href={buildUrl(`/dashboard/project-module/projects/${project.id}/edit`)}
             onClick={handleEditClick}
           >
-            <Button variant="ghost" size="sm">
+            <Button variant="ghost" size="sm" title={t.projectModule?.editProject ?? 'Editar projecte'}>
               <Pencil className="h-4 w-4" />
             </Button>
           </Link>

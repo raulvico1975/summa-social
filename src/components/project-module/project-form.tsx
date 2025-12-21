@@ -21,6 +21,7 @@ import {
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { ArrowLeft, Save, Loader2 } from 'lucide-react';
 import Link from 'next/link';
+import { useTranslations } from '@/i18n';
 import type { Project, ProjectFormData } from '@/lib/project-module-types';
 
 interface ProjectFormProps {
@@ -29,6 +30,7 @@ interface ProjectFormProps {
 }
 
 export function ProjectForm({ project, mode }: ProjectFormProps) {
+  const { t } = useTranslations();
   const router = useRouter();
   const { buildUrl } = useOrgUrl();
   const { toast } = useToast();
@@ -97,7 +99,7 @@ export function ProjectForm({ project, mode }: ProjectFormProps) {
       {/* Header amb navegació */}
       <div className="flex items-center gap-4">
         <Link href={buildUrl('/dashboard/project-module/projects')}>
-          <Button type="button" variant="ghost" size="icon">
+          <Button type="button" variant="ghost" size="icon" title={t.projectModule?.backToProjects ?? 'Tornar a projectes'}>
             <ArrowLeft className="h-4 w-4" />
           </Button>
         </Link>

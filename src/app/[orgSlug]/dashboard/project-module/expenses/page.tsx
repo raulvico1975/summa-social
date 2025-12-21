@@ -93,12 +93,14 @@ function QuickAssignPopover({
   onAssign100,
   onOpenSplitModal,
   isAssigning,
+  assignTooltip,
 }: {
   expense: UnifiedExpenseWithLink;
   projects: Project[];
   onAssign100: (txId: string, project: Project, budgetLine?: BudgetLine | null) => Promise<void>;
   onOpenSplitModal: (expense: UnifiedExpenseWithLink) => void;
   isAssigning: boolean;
+  assignTooltip: string;
 }) {
   const [open, setOpen] = React.useState(false);
   const [search, setSearch] = React.useState('');
@@ -146,7 +148,7 @@ function QuickAssignPopover({
           size="icon"
           className="h-7 w-7"
           disabled={isAssigning}
-          title="Assignar a projecte"
+          title={assignTooltip}
         >
           <FolderPlus className="h-4 w-4" />
         </Button>
@@ -610,9 +612,13 @@ export default function ExpensesInboxPage() {
                     </TableCell>
                     <TableCell>
                       {expense.source === 'bank' ? (
-                        <Landmark className="h-4 w-4 text-muted-foreground" title="Bancària" />
+                        <span title={t.projectModule?.sourceBank ?? 'Despesa bancària'}>
+                          <Landmark className="h-4 w-4 text-muted-foreground" />
+                        </span>
                       ) : (
-                        <Globe className="h-4 w-4 text-blue-500" title="Terreny" />
+                        <span title={t.projectModule?.sourceOffBank ?? 'Despesa de terreny'}>
+                          <Globe className="h-4 w-4 text-blue-500" />
+                        </span>
                       )}
                     </TableCell>
                     <TableCell className="font-mono text-sm">
@@ -649,6 +655,7 @@ export default function ExpensesInboxPage() {
                               onAssign100={handleAssign100}
                               onOpenSplitModal={setSplitModalExpense}
                               isAssigning={isSaving}
+                              assignTooltip={t.projectModule?.assignToProject ?? 'Assignar a projecte'}
                             />
                           ) : (
                             <Button
@@ -656,7 +663,7 @@ export default function ExpensesInboxPage() {
                               size="icon"
                               className="h-7 w-7"
                               onClick={() => setSplitModalExpense(item)}
-                              title="Editar assignació"
+                              title={t.projectModule?.editAssignment ?? 'Editar assignació'}
                               disabled={isSaving}
                             >
                               <Split className="h-4 w-4" />
@@ -670,7 +677,7 @@ export default function ExpensesInboxPage() {
                             size="icon"
                             className="h-7 w-7 text-muted-foreground hover:text-destructive"
                             onClick={() => handleUnassign(expense.txId)}
-                            title="Eliminar assignació"
+                            title={t.projectModule?.removeAssignment ?? 'Eliminar assignació'}
                             disabled={isSaving}
                           >
                             <Trash2 className="h-4 w-4" />
@@ -683,7 +690,7 @@ export default function ExpensesInboxPage() {
                             size="icon"
                             className="h-7 w-7"
                             onClick={() => handleEditOffBank(item)}
-                            title="Editar despesa"
+                            title={t.projectModule?.editExpense ?? 'Editar despesa'}
                           >
                             <Pencil className="h-4 w-4" />
                           </Button>
@@ -695,7 +702,7 @@ export default function ExpensesInboxPage() {
                               variant="ghost"
                               size="icon"
                               className="h-7 w-7"
-                              title="Veure detall"
+                              title={t.projectModule?.viewDetail ?? 'Veure detall'}
                             >
                               <ChevronRight className="h-4 w-4" />
                             </Button>

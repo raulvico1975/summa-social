@@ -118,6 +118,8 @@ export function AssignmentEditor({
   isSaving,
   createProjectUrl,
 }: AssignmentEditorProps) {
+  const { t } = useTranslations();
+
   // Inicialitzar amb les assignacions actuals o una fila buida
   const [rows, setRows] = React.useState<AssignmentRow[]>(() => {
     if (currentAssignments.length > 0) {
@@ -324,6 +326,7 @@ export function AssignmentEditor({
               onClick={() => removeRow(row.id)}
               disabled={rows.length <= 1}
               className="shrink-0"
+              title={t.projectModule?.removeRow ?? 'Eliminar fila'}
             >
               <Trash2 className="h-4 w-4" />
             </Button>

@@ -507,7 +507,7 @@ export default function ProjectBudgetPage() {
       {/* Header */}
       <div className="flex items-center gap-4">
         <Link href={buildUrl('/dashboard/project-module/projects')}>
-          <Button variant="ghost" size="icon">
+          <Button variant="ghost" size="icon" title={t.projectModule?.backToProjects ?? 'Tornar a projectes'}>
             <ArrowLeft className="h-4 w-4" />
           </Button>
         </Link>
@@ -540,7 +540,7 @@ export default function ProjectBudgetPage() {
             size="icon"
             onClick={handleExport}
             disabled={isExporting || budgetLines.length === 0}
-            title="Exportar justificació (Excel)"
+            title={t.projectModule?.exportExcel ?? 'Exportar justificació (Excel)'}
           >
             {isExporting ? (
               <Loader2 className="h-4 w-4 animate-spin" />
@@ -610,7 +610,7 @@ export default function ProjectBudgetPage() {
               <CardTitle className="text-base">{t.projectModule?.fxConfig ?? 'Tipus de canvi del projecte'}</CardTitle>
             </div>
             {!fxEditMode && (
-              <Button variant="ghost" size="sm" onClick={() => setFxEditMode(true)}>
+              <Button variant="ghost" size="sm" onClick={() => setFxEditMode(true)} title={t.projectModule?.editFx ?? 'Editar tipus de canvi'}>
                 <Pencil className="h-4 w-4" />
               </Button>
             )}
@@ -814,6 +814,7 @@ export default function ProjectBudgetPage() {
                             size="icon"
                             className="h-7 w-7"
                             onClick={(e) => openEdit(line, e)}
+                            title={t.projectModule?.editBudgetLine ?? 'Editar partida'}
                           >
                             <Pencil className="h-3.5 w-3.5" />
                           </Button>
@@ -825,6 +826,7 @@ export default function ProjectBudgetPage() {
                               e.stopPropagation();
                               setDeleteConfirm(line);
                             }}
+                            title={t.projectModule?.deleteBudgetLine ?? 'Eliminar partida'}
                           >
                             <Trash2 className="h-3.5 w-3.5" />
                           </Button>
