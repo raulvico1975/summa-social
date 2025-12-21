@@ -72,9 +72,12 @@ import type {
 interface SimulatedMove {
   txId: string;
   fromBudgetLineId: string | null;
-  toBudgetLineId: string | null; // null = treure del projecte
+  toBudgetLineId: string | null; // null = "Sense partida" (dins el projecte)
   amountEUR: number;
-  action: 'add' | 'move' | 'remove';
+  action: 'add' | 'move' | 'remove' | 'unassign_line' | 'partial_unassign_line';
+  // 'unassign_line' = treure tota la despesa de la partida → queda "Sense partida" però dins projecte
+  // 'partial_unassign_line' = treure part de la despesa de la partida → split: part queda a la partida, part va a "Sense partida"
+  originalAssignmentAmount?: number; // per saber l'import original quan és parcial (només partial_unassign_line)
 }
 
 interface BudgetLineDiagnostic {
@@ -94,6 +97,7 @@ interface CandidateExpense {
   assignedToOtherProject: string | null;
   currentBudgetLineId: string | null;
   currentBudgetLineName: string | null;
+  currentAssignmentAmount: number; // Import assignat a la partida actual (valor absolut)
   matchScore: number;
   hasDocument: boolean;
 }
@@ -218,6 +222,10 @@ export function BalanceProjectModal({
   });
   const [expandSectionOpen, setExpandSectionOpen] = React.useState(false);
 
+  // Estat per edició parcial (Mode Excés)
+  const [partialEditTxId, setPartialEditTxId] = React.useState<string | null>(null);
+  const [partialEditAmount, setPartialEditAmount] = React.useState('');
+
   // Reset quan s'obre
   React.useEffect(() => {
     if (open) {
@@ -231,6 +239,8 @@ export function BalanceProjectModal({
         showAll: false,
       });
       setExpandSectionOpen(false);
+      setPartialEditTxId(null);
+      setPartialEditAmount('');
     }
   }, [open]);
 
@@ -244,6 +254,8 @@ export function BalanceProjectModal({
       showAll: false,
     });
     setExpandSectionOpen(false);
+    setPartialEditTxId(null);
+    setPartialEditAmount('');
   }, [selectedLineId]);
 
   // Calcular execució real per partida
@@ -386,6 +398,7 @@ export function BalanceProjectModal({
           assignedToOtherProject: otherProjectAssignment?.projectName ?? null,
           currentBudgetLineId: thisProjectAssignment?.budgetLineId ?? null,
           currentBudgetLineName: thisProjectAssignment?.budgetLineName ?? null,
+          currentAssignmentAmount: thisProjectAssignment ? Math.abs(thisProjectAssignment.amountEUR) : 0,
           matchScore,
           hasDocument,
         };
@@ -479,19 +492,28 @@ export function BalanceProjectModal({
     fromBudgetLineId: string | null,
     toBudgetLineId: string | null,
     amountEUR: number,
-    action: 'add' | 'move' | 'remove'
+    action: SimulatedMove['action'],
+    originalAssignmentAmount?: number
   ) => {
     trackUX('balance.simulateMove', { txId, fromBudgetLineId, toBudgetLineId, amountEUR, action });
 
     setSimulatedMoves(prev => {
       // Si ja hi ha un moviment per aquest txId, substituir-lo
       const existing = prev.findIndex(m => m.txId === txId);
+      const newMove: SimulatedMove = {
+        txId,
+        fromBudgetLineId,
+        toBudgetLineId,
+        amountEUR,
+        action,
+        ...(originalAssignmentAmount !== undefined && { originalAssignmentAmount }),
+      };
       if (existing >= 0) {
         const updated = [...prev];
-        updated[existing] = { txId, fromBudgetLineId, toBudgetLineId, amountEUR, action };
+        updated[existing] = newMove;
         return updated;
       }
-      return [...prev, { txId, fromBudgetLineId, toBudgetLineId, amountEUR, action }];
+      return [...prev, newMove];
     });
   };
 
@@ -520,14 +542,60 @@ export function BalanceProjectModal({
         let newAssignments: ExpenseAssignment[];
 
         if (move.action === 'remove') {
-          // Treure l'assignació d'aquest projecte
+          // Treure l'assignació d'aquest projecte completament
           if (existingLink) {
             newAssignments = existingLink.assignments.filter(a => a.projectId !== project.id);
           } else {
             continue; // No hi ha res a treure
           }
+        } else if (move.action === 'unassign_line') {
+          // Treure de la partida però mantenir al projecte (→ "Sense partida")
+          if (existingLink) {
+            newAssignments = existingLink.assignments.map(a => {
+              if (a.projectId === project.id && a.budgetLineId === move.fromBudgetLineId) {
+                return {
+                  ...a,
+                  budgetLineId: null,
+                  budgetLineName: null,
+                };
+              }
+              return a;
+            });
+          } else {
+            continue;
+          }
+        } else if (move.action === 'partial_unassign_line') {
+          // Split: part queda a la partida, part va a "Sense partida"
+          if (existingLink && move.originalAssignmentAmount) {
+            const remainingInLine = move.originalAssignmentAmount - move.amountEUR;
+            newAssignments = [];
+
+            for (const a of existingLink.assignments) {
+              if (a.projectId === project.id && a.budgetLineId === move.fromBudgetLineId) {
+                // Assignació que queda a la partida (amb import reduït)
+                if (remainingInLine > 0.01) {
+                  newAssignments.push({
+                    ...a,
+                    amountEUR: -Math.abs(remainingInLine),
+                  });
+                }
+                // Nova assignació "Sense partida"
+                newAssignments.push({
+                  projectId: project.id,
+                  projectName: project.name,
+                  amountEUR: -Math.abs(move.amountEUR),
+                  budgetLineId: null,
+                  budgetLineName: null,
+                });
+              } else {
+                newAssignments.push(a);
+              }
+            }
+          } else {
+            continue;
+          }
         } else if (existingLink) {
-          // Modificar assignació existent
+          // Modificar assignació existent (add/move)
           const hasThisProject = existingLink.assignments.some(a => a.projectId === project.id);
 
           if (hasThisProject) {
@@ -829,88 +897,191 @@ export function BalanceProjectModal({
                           <div className="p-2 space-y-2">
                             {candidatesForSelectedLine.slice(0, 10).map(candidate => {
                               const isSimulated = simulatedMoves.some(m => m.txId === candidate.expense.txId);
+                              const simulatedMove = simulatedMoves.find(m => m.txId === candidate.expense.txId);
+                              const isOverSpendMode = selectedDiag.difference > 0;
+                              const isEditingPartial = partialEditTxId === candidate.expense.txId;
+                              const excessAmount = selectedDiag.difference; // Import d'excés pendent
+                              const canPartialRemove = isOverSpendMode && candidate.currentAssignmentAmount > excessAmount;
 
                               return (
                                 <div
                                   key={candidate.expense.txId}
-                                  className={`flex items-center justify-between p-2 border rounded-md hover:bg-muted ${isSimulated ? 'bg-blue-50 border-blue-200' : ''}`}
+                                  className={`p-2 border rounded-md hover:bg-muted ${isSimulated ? 'bg-blue-50 border-blue-200' : ''}`}
                                 >
-                                  <div className="flex-1 min-w-0">
-                                    <div className="flex items-center gap-2">
-                                      {candidate.expense.source === 'offBank' ? (
-                                        <FileText className="h-4 w-4 text-muted-foreground shrink-0" />
-                                      ) : (
-                                        <Building2 className="h-4 w-4 text-muted-foreground shrink-0" />
-                                      )}
-                                      <span className="text-sm font-medium truncate">
-                                        {candidate.expense.counterpartyName ?? candidate.expense.description ?? 'Sense descripció'}
-                                      </span>
-                                      {!candidate.hasDocument && (
-                                        <span title="Sense document">
-                                          <FileWarning className="h-3 w-3 text-amber-500 shrink-0" />
+                                  <div className="flex items-center justify-between">
+                                    <div className="flex-1 min-w-0">
+                                      <div className="flex items-center gap-2">
+                                        {candidate.expense.source === 'offBank' ? (
+                                          <FileText className="h-4 w-4 text-muted-foreground shrink-0" />
+                                        ) : (
+                                          <Building2 className="h-4 w-4 text-muted-foreground shrink-0" />
+                                        )}
+                                        <span className="text-sm font-medium truncate">
+                                          {candidate.expense.counterpartyName ?? candidate.expense.description ?? 'Sense descripció'}
                                         </span>
-                                      )}
-                                      {candidate.assignedToOtherProject && (
-                                        <Badge variant="outline" className="text-xs bg-amber-50 text-amber-700">
-                                          {candidate.assignedToOtherProject}
-                                        </Badge>
-                                      )}
+                                        {!candidate.hasDocument && (
+                                          <span title="Sense document">
+                                            <FileWarning className="h-3 w-3 text-amber-500 shrink-0" />
+                                          </span>
+                                        )}
+                                        {candidate.assignedToOtherProject && (
+                                          <Badge variant="outline" className="text-xs bg-amber-50 text-amber-700">
+                                            {candidate.assignedToOtherProject}
+                                          </Badge>
+                                        )}
+                                      </div>
+                                      <div className="text-xs text-muted-foreground flex gap-2">
+                                        <span>{formatDateDMY(candidate.expense.date)}</span>
+                                        <span>·</span>
+                                        <span className="font-mono">{formatAmount(candidate.currentAssignmentAmount)}</span>
+                                        {candidate.expense.categoryName && (
+                                          <>
+                                            <span>·</span>
+                                            <span>{candidate.expense.categoryName}</span>
+                                          </>
+                                        )}
+                                      </div>
                                     </div>
-                                    <div className="text-xs text-muted-foreground flex gap-2">
-                                      <span>{formatDateDMY(candidate.expense.date)}</span>
-                                      <span>·</span>
-                                      <span className="font-mono">{formatAmount(Math.abs(candidate.expense.amountEUR))}</span>
-                                      {candidate.expense.categoryName && (
+                                    <div className="shrink-0 ml-2 flex gap-1">
+                                      {isSimulated ? (
+                                        <Button
+                                          size="sm"
+                                          variant="secondary"
+                                          onClick={() => removeSimulatedMove(candidate.expense.txId)}
+                                        >
+                                          <Undo2 className="h-4 w-4 mr-1" />
+                                          Desfer
+                                        </Button>
+                                      ) : selectedDiag.difference < 0 ? (
+                                        <Button
+                                          size="sm"
+                                          variant="outline"
+                                          onClick={() => addSimulatedMove(
+                                            candidate.expense.txId,
+                                            candidate.currentBudgetLineId,
+                                            selectedLineId,
+                                            Math.abs(candidate.expense.amountEUR),
+                                            candidate.assignedToThisProject ? 'move' : 'add'
+                                          )}
+                                        >
+                                          <ArrowRight className="h-4 w-4 mr-1" />
+                                          Simular aquí
+                                        </Button>
+                                      ) : (
                                         <>
-                                          <span>·</span>
-                                          <span>{candidate.expense.categoryName}</span>
+                                          {/* Mode Excés: Treure de la partida */}
+                                          <Button
+                                            size="sm"
+                                            variant="outline"
+                                            className="text-amber-600 hover:text-amber-700"
+                                            onClick={() => addSimulatedMove(
+                                              candidate.expense.txId,
+                                              selectedLineId,
+                                              null, // null = "Sense partida" però dins projecte
+                                              candidate.currentAssignmentAmount,
+                                              'unassign_line'
+                                            )}
+                                            title="Treure tota la despesa de la partida (quedarà 'Sense partida' dins el projecte)"
+                                          >
+                                            <ArrowDown className="h-4 w-4 mr-1" />
+                                            Treure tot
+                                          </Button>
+                                          {/* Botó per mostrar edició parcial */}
+                                          {canPartialRemove && !isEditingPartial && (
+                                            <Button
+                                              size="sm"
+                                              variant="ghost"
+                                              onClick={() => {
+                                                setPartialEditTxId(candidate.expense.txId);
+                                                setPartialEditAmount(excessAmount.toFixed(2));
+                                              }}
+                                              title="Treure només una part"
+                                            >
+                                              Parcial...
+                                            </Button>
+                                          )}
                                         </>
                                       )}
                                     </div>
                                   </div>
-                                  <div className="shrink-0 ml-2">
-                                    {isSimulated ? (
-                                      <Button
-                                        size="sm"
-                                        variant="secondary"
-                                        onClick={() => removeSimulatedMove(candidate.expense.txId)}
-                                      >
-                                        <Undo2 className="h-4 w-4 mr-1" />
-                                        Desfer
-                                      </Button>
-                                    ) : selectedDiag.difference < 0 ? (
-                                      <Button
-                                        size="sm"
-                                        variant="outline"
-                                        onClick={() => addSimulatedMove(
-                                          candidate.expense.txId,
-                                          candidate.currentBudgetLineId,
-                                          selectedLineId,
-                                          Math.abs(candidate.expense.amountEUR),
-                                          candidate.assignedToThisProject ? 'move' : 'add'
-                                        )}
-                                      >
-                                        <ArrowRight className="h-4 w-4 mr-1" />
-                                        Simular aquí
-                                      </Button>
-                                    ) : (
+
+                                  {/* UI per edició parcial (Mode Excés) */}
+                                  {isEditingPartial && isOverSpendMode && (
+                                    <div className="mt-2 pt-2 border-t flex items-center gap-2">
+                                      <span className="text-xs text-muted-foreground">Treure:</span>
+                                      <Input
+                                        type="number"
+                                        step="0.01"
+                                        min="0.01"
+                                        max={candidate.currentAssignmentAmount.toFixed(2)}
+                                        value={partialEditAmount}
+                                        onChange={(e) => setPartialEditAmount(e.target.value)}
+                                        className="w-24 h-7 text-xs font-mono text-right"
+                                      />
+                                      <span className="text-xs text-muted-foreground">€</span>
                                       <Button
                                         size="sm"
                                         variant="outline"
-                                        className="text-red-600 hover:text-red-700"
-                                        onClick={() => addSimulatedMove(
-                                          candidate.expense.txId,
-                                          selectedLineId,
-                                          null,
-                                          Math.abs(candidate.expense.amountEUR),
-                                          'remove'
-                                        )}
+                                        className="h-7 text-xs text-green-600 hover:text-green-700"
+                                        onClick={() => {
+                                          setPartialEditAmount(excessAmount.toFixed(2));
+                                        }}
+                                        title={`Treure exactament ${formatAmount(excessAmount)} per quadrar`}
                                       >
-                                        <ArrowDown className="h-4 w-4 mr-1" />
-                                        Treure
+                                        = Excés ({formatAmount(excessAmount)})
                                       </Button>
-                                    )}
-                                  </div>
+                                      <Button
+                                        size="sm"
+                                        variant="default"
+                                        className="h-7 text-xs"
+                                        onClick={() => {
+                                          const amount = parseFloat(partialEditAmount);
+                                          if (amount > 0 && amount <= candidate.currentAssignmentAmount) {
+                                            addSimulatedMove(
+                                              candidate.expense.txId,
+                                              selectedLineId,
+                                              null,
+                                              amount,
+                                              'partial_unassign_line',
+                                              candidate.currentAssignmentAmount
+                                            );
+                                            setPartialEditTxId(null);
+                                            setPartialEditAmount('');
+                                          }
+                                        }}
+                                        disabled={
+                                          !partialEditAmount ||
+                                          parseFloat(partialEditAmount) <= 0 ||
+                                          parseFloat(partialEditAmount) > candidate.currentAssignmentAmount
+                                        }
+                                      >
+                                        Aplicar
+                                      </Button>
+                                      <Button
+                                        size="sm"
+                                        variant="ghost"
+                                        className="h-7 text-xs"
+                                        onClick={() => {
+                                          setPartialEditTxId(null);
+                                          setPartialEditAmount('');
+                                        }}
+                                      >
+                                        <X className="h-3 w-3" />
+                                      </Button>
+                                    </div>
+                                  )}
+
+                                  {/* Mostrar info de simulació parcial */}
+                                  {simulatedMove?.action === 'partial_unassign_line' && (
+                                    <div className="mt-1 text-xs text-blue-600">
+                                      Treure {formatAmount(simulatedMove.amountEUR)} → Sense partida
+                                      {simulatedMove.originalAssignmentAmount && (
+                                        <span className="text-muted-foreground ml-1">
+                                          (quedarà {formatAmount(simulatedMove.originalAssignmentAmount - simulatedMove.amountEUR)} a la partida)
+                                        </span>
+                                      )}
+                                    </div>
+                                  )}
                                 </div>
                               );
                             })}
@@ -1086,7 +1257,13 @@ export function BalanceProjectModal({
                                   <Badge variant="outline" className="bg-blue-50 text-blue-700">Moure</Badge>
                                 )}
                                 {move.action === 'remove' && (
-                                  <Badge variant="outline" className="bg-red-50 text-red-700">Treure</Badge>
+                                  <Badge variant="outline" className="bg-red-50 text-red-700">Treure del projecte</Badge>
+                                )}
+                                {move.action === 'unassign_line' && (
+                                  <Badge variant="outline" className="bg-amber-50 text-amber-700">Treure de partida</Badge>
+                                )}
+                                {move.action === 'partial_unassign_line' && (
+                                  <Badge variant="outline" className="bg-amber-50 text-amber-700">Split parcial</Badge>
                                 )}
                               </TableCell>
                               <TableCell>
@@ -1099,6 +1276,8 @@ export function BalanceProjectModal({
                               <TableCell>
                                 {toLine ? (
                                   <span className="text-sm font-medium">{toLine.name}</span>
+                                ) : move.toBudgetLineId === null && (move.action === 'unassign_line' || move.action === 'partial_unassign_line') ? (
+                                  <span className="text-sm italic text-amber-600">Sense partida</span>
                                 ) : (
                                   <span className="text-muted-foreground text-sm">-</span>
                                 )}
