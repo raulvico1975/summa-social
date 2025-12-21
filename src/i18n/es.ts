@@ -1538,6 +1538,8 @@ export const es = {
     editFx: "Editar tipo de cambio",
     deleteBudgetLine: "Eliminar partida",
     removeRow: "Eliminar fila",
+    budgetInfoLabel: "Información sobre Presupuestado",
+    budgetFromLinesTooltip: "Presupuesto del proyecto = suma de las partidas.",
   },
   logPanel: {
     title: "Log de Diagnóstico",

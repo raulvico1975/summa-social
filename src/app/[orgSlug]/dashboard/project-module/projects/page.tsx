@@ -13,11 +13,17 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
-import { AlertCircle, Plus, FolderKanban, Calendar, Euro, Eye, Pencil } from 'lucide-react';
+import { AlertCircle, Plus, FolderKanban, Calendar, Euro, Eye, Pencil, Info } from 'lucide-react';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
 import { trackUX } from '@/lib/ux/trackUX';
 import { useTranslations } from '@/i18n';
 import { collection, getDocs } from 'firebase/firestore';
-import type { Project, ExpenseLink, ExpenseAssignment } from '@/lib/project-module-types';
+import type { Project, ExpenseAssignment } from '@/lib/project-module-types';
 
 function formatDate(dateStr: string | null): string {
   if (!dateStr) return '-';
@@ -36,9 +42,10 @@ function formatAmount(amount: number | null): string {
 interface ProjectCardProps {
   project: Project;
   executedAmount: number;
+  budgetLinesCount: number;
 }
 
-function ProjectCard({ project, executedAmount }: ProjectCardProps) {
+function ProjectCard({ project, executedAmount, budgetLinesCount }: ProjectCardProps) {
   const { t } = useTranslations();
   const { buildUrl } = useOrgUrl();
   const router = useRouter();
@@ -107,7 +114,30 @@ function ProjectCard({ project, executedAmount }: ProjectCardProps) {
         {/* Info econòmica */}
         <div className="grid grid-cols-3 gap-2 text-sm border-t pt-3">
           <div>
-            <span className="text-muted-foreground text-xs block">Pressupostat</span>
+            <span className="text-muted-foreground text-xs flex items-center gap-1">
+              Pressupostat
+              {budgetLinesCount > 0 && (
+                <TooltipProvider delayDuration={200}>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <button
+                        type="button"
+                        className="inline-flex items-center justify-center h-3.5 w-3.5 rounded-full border border-muted-foreground/30 text-muted-foreground/70 hover:border-muted-foreground/50 hover:text-muted-foreground cursor-help focus:outline-none focus:ring-1 focus:ring-ring"
+                        aria-label={t.projectModule?.budgetInfoLabel ?? 'Informació sobre Pressupostat'}
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        <Info className="h-2.5 w-2.5" />
+                      </button>
+                    </TooltipTrigger>
+                    <TooltipContent side="top" className="max-w-[200px] text-center">
+                      <p className="text-xs">
+                        {t.projectModule?.budgetFromLinesTooltip ?? 'Pressupost del projecte = suma de les partides.'}
+                      </p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              )}
+            </span>
             <span className="font-medium">{formatAmount(budgeted)}</span>
           </div>
           <div>
@@ -163,6 +193,7 @@ export default function ProjectsListPage() {
 
   // Carregar tots els expenseLinks per calcular execució per projecte
   const [executionByProject, setExecutionByProject] = React.useState<Map<string, number>>(new Map());
+  const [budgetLinesCountByProject, setBudgetLinesCountByProject] = React.useState<Map<string, number>>(new Map());
   const [linksLoading, setLinksLoading] = React.useState(true);
 
   React.useEffect(() => {
@@ -200,6 +231,38 @@ export default function ProjectsListPage() {
 
     loadLinks();
   }, [firestore, organizationId]);
+
+  // Carregar recompte de partides per cada projecte
+  React.useEffect(() => {
+    if (!organizationId || projects.length === 0) return;
+
+    const loadBudgetLinesCounts = async () => {
+      try {
+        const countsMap = new Map<string, number>();
+
+        for (const project of projects) {
+          const linesRef = collection(
+            firestore,
+            'organizations',
+            organizationId,
+            'projectModule',
+            '_',
+            'projects',
+            project.id,
+            'budgetLines'
+          );
+          const snapshot = await getDocs(linesRef);
+          countsMap.set(project.id, snapshot.size);
+        }
+
+        setBudgetLinesCountByProject(countsMap);
+      } catch (err) {
+        console.error('Error loading budget lines counts:', err);
+      }
+    };
+
+    loadBudgetLinesCounts();
+  }, [firestore, organizationId, projects]);
 
   // Track page open
   React.useEffect(() => {
@@ -277,6 +340,7 @@ export default function ProjectsListPage() {
               key={project.id}
               project={project}
               executedAmount={executionByProject.get(project.id) ?? 0}
+              budgetLinesCount={budgetLinesCountByProject.get(project.id) ?? 0}
             />
           ))}
         </div>

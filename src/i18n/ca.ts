@@ -1512,6 +1512,8 @@ export const ca = {
     editFx: "Editar tipus de canvi",
     deleteBudgetLine: "Eliminar partida",
     removeRow: "Eliminar fila",
+    budgetInfoLabel: "Informació sobre Pressupostat",
+    budgetFromLinesTooltip: "Pressupost del projecte = suma de les partides.",
   },
   logPanel: {
     title: "Log de Diagnòstic",
