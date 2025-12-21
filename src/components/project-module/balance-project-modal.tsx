@@ -1,5 +1,5 @@
 // src/components/project-module/balance-project-modal.tsx
-// Modal "Quadrar projecte" - Simulació de justificació econòmica
+// Modal "Quadrar projecte" - Vista partida-cèntrica per justificació econòmica
 
 'use client';
 
@@ -29,6 +29,9 @@ import {
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { Input } from '@/components/ui/input';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Label } from '@/components/ui/label';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import {
   AlertTriangle,
@@ -38,10 +41,17 @@ import {
   FileText,
   Building2,
   ArrowRight,
+  ArrowDown,
   Undo2,
   Check,
   Loader2,
   Info,
+  Search,
+  ChevronDown,
+  ChevronUp,
+  X,
+  FileWarning,
+  FolderOpen,
 } from 'lucide-react';
 import { useSaveExpenseLink } from '@/hooks/use-project-module';
 import { useToast } from '@/hooks/use-toast';
@@ -62,15 +72,16 @@ import type {
 interface SimulatedMove {
   txId: string;
   fromBudgetLineId: string | null;
-  toBudgetLineId: string;
+  toBudgetLineId: string | null; // null = treure del projecte
   amountEUR: number;
+  action: 'add' | 'move' | 'remove';
 }
 
 interface BudgetLineDiagnostic {
   line: BudgetLine;
   budgeted: number;
   executed: number;
-  simulated: number; // execució després de simulacions
+  simulated: number;
   difference: number;
   deviationPct: number;
   status: 'ok' | 'overSpend' | 'underSpend';
@@ -84,7 +95,14 @@ interface CandidateExpense {
   currentBudgetLineId: string | null;
   currentBudgetLineName: string | null;
   matchScore: number;
-  suggestedLineId: string | null;
+  hasDocument: boolean;
+}
+
+interface ExpandSearchOptions {
+  includeBankExpenses: boolean;
+  includeOtherProjects: boolean;
+  includeWithoutDocument: boolean;
+  showAll: boolean;
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -106,6 +124,12 @@ function formatPercent(value: number): string {
   }).format(value / 100);
 }
 
+function formatDateDMY(dateStr: string): string {
+  if (!dateStr) return '-';
+  const [year, month, day] = dateStr.split('-');
+  return `${day}/${month}/${year}`;
+}
+
 // Grups heurístics per matching
 const CATEGORY_GROUPS: Record<string, string[]> = {
   viatges: ['transport', 'vol', 'vols', 'dietes', 'dieta', 'allotjament', 'hotel', 'desplaçament', 'taxi', 'tren', 'avió', 'bitllet'],
@@ -116,10 +140,7 @@ const CATEGORY_GROUPS: Record<string, string[]> = {
   comunicacio: ['comunicació', 'màrqueting', 'publicitat', 'difusió', 'xarxes', 'web'],
 };
 
-function calculateMatchScore(
-  expense: UnifiedExpense,
-  line: BudgetLine
-): number {
+function calculateMatchScore(expense: UnifiedExpense, line: BudgetLine): number {
   const searchTexts = [
     expense.categoryName?.toLowerCase() ?? '',
     expense.counterpartyName?.toLowerCase() ?? '',
@@ -154,41 +175,6 @@ function calculateMatchScore(
   return score;
 }
 
-function findBestCombination(
-  candidates: CandidateExpense[],
-  targetAmount: number,
-  maxItems: number = 5
-): CandidateExpense[] {
-  // Algoritme simple: ordenar per proximitat a l'import objectiu
-  const available = candidates
-    .filter(c => !c.assignedToOtherProject)
-    .sort((a, b) => {
-      const diffA = Math.abs(Math.abs(a.expense.amountEUR) - targetAmount);
-      const diffB = Math.abs(Math.abs(b.expense.amountEUR) - targetAmount);
-      return diffA - diffB;
-    });
-
-  if (available.length === 0) return [];
-
-  // Intentar trobar combinació que s'aproximi
-  const result: CandidateExpense[] = [];
-  let currentSum = 0;
-
-  for (const candidate of available) {
-    if (result.length >= maxItems) break;
-
-    const amount = Math.abs(candidate.expense.amountEUR);
-    if (currentSum + amount <= targetAmount * 1.1) { // Permetre 10% d'excés
-      result.push(candidate);
-      currentSum += amount;
-    }
-
-    if (currentSum >= targetAmount * 0.95) break; // Prou a prop
-  }
-
-  return result;
-}
-
 // ═══════════════════════════════════════════════════════════════════════════
 // COMPONENT PRINCIPAL
 // ═══════════════════════════════════════════════════════════════════════════
@@ -220,13 +206,43 @@ export function BalanceProjectModal({
   const [selectedLineId, setSelectedLineId] = React.useState<string | null>(null);
   const [isApplying, setIsApplying] = React.useState(false);
 
+  // Estat del bloc "Opcions per quadrar"
+  const [searchQuery, setSearchQuery] = React.useState('');
+  const [expandOptions, setExpandOptions] = React.useState<ExpandSearchOptions>({
+    includeBankExpenses: false,
+    includeOtherProjects: false,
+    includeWithoutDocument: false,
+    showAll: false,
+  });
+  const [expandSectionOpen, setExpandSectionOpen] = React.useState(false);
+
   // Reset quan s'obre
   React.useEffect(() => {
     if (open) {
       setSimulatedMoves([]);
       setSelectedLineId(null);
+      setSearchQuery('');
+      setExpandOptions({
+        includeBankExpenses: false,
+        includeOtherProjects: false,
+        includeWithoutDocument: false,
+        showAll: false,
+      });
+      setExpandSectionOpen(false);
     }
   }, [open]);
+
+  // Reset opcions cerca quan canvia la partida seleccionada
+  React.useEffect(() => {
+    setSearchQuery('');
+    setExpandOptions({
+      includeBankExpenses: false,
+      includeOtherProjects: false,
+      includeWithoutDocument: false,
+      showAll: false,
+    });
+    setExpandSectionOpen(false);
+  }, [selectedLineId]);
 
   // Calcular execució real per partida
   const executionByLine = React.useMemo(() => {
@@ -252,9 +268,11 @@ export function BalanceProjectModal({
         const current = impact.get(move.fromBudgetLineId) ?? 0;
         impact.set(move.fromBudgetLineId, current - move.amountEUR);
       }
-      // Sumar al destí
-      const currentDest = impact.get(move.toBudgetLineId) ?? 0;
-      impact.set(move.toBudgetLineId, currentDest + move.amountEUR);
+      // Sumar al destí (si no és "remove")
+      if (move.toBudgetLineId) {
+        const currentDest = impact.get(move.toBudgetLineId) ?? 0;
+        impact.set(move.toBudgetLineId, currentDest + move.amountEUR);
+      }
     }
 
     return impact;
@@ -297,6 +315,12 @@ export function BalanceProjectModal({
     });
   }, [budgetLines, executionByLine, simulationImpact, project.allowedDeviationPct]);
 
+  // Diagnòstic de la partida seleccionada
+  const selectedDiag = React.useMemo(() => {
+    if (!selectedLineId) return null;
+    return diagnostics.find(d => d.line.id === selectedLineId) ?? null;
+  }, [selectedLineId, diagnostics]);
+
   // Resum global
   const summary = React.useMemo(() => {
     const outOfDeviation = diagnostics.filter(d => d.status !== 'ok').length;
@@ -311,16 +335,14 @@ export function BalanceProjectModal({
     };
   }, [diagnostics]);
 
-  // Despeses candidates
-  const candidates = React.useMemo((): CandidateExpense[] => {
+  // Despeses candidates (base)
+  const allCandidates = React.useMemo((): CandidateExpense[] => {
     const projectStart = project.startDate;
     const projectEnd = project.endDate;
 
     return allExpenses
       .filter(item => {
         const exp = item.expense;
-
-        // Ha de tenir import
         if (Math.abs(exp.amountEUR) === 0) return false;
 
         // Dins dates del projecte (si estan definides)
@@ -343,17 +365,17 @@ export function BalanceProjectModal({
           a => a.projectId !== project.id
         );
 
-        // Calcular score de matching amb cada partida
-        let bestScore = 0;
-        let suggestedLineId: string | null = null;
-
-        for (const line of budgetLines) {
-          const score = calculateMatchScore(exp, line);
-          if (score > bestScore) {
-            bestScore = score;
-            suggestedLineId = line.id;
+        // Calcular score de matching amb la partida seleccionada
+        let matchScore = 0;
+        if (selectedLineId) {
+          const selectedLine = budgetLines.find(l => l.id === selectedLineId);
+          if (selectedLine) {
+            matchScore = calculateMatchScore(exp, selectedLine);
           }
         }
+
+        // Determinar si té document
+        const hasDocument = !!exp.documentUrl || exp.source === 'bank'; // bank sempre té traçabilitat
 
         return {
           expense: exp,
@@ -362,53 +384,112 @@ export function BalanceProjectModal({
           assignedToOtherProject: otherProjectAssignment?.projectName ?? null,
           currentBudgetLineId: thisProjectAssignment?.budgetLineId ?? null,
           currentBudgetLineName: thisProjectAssignment?.budgetLineName ?? null,
-          matchScore: bestScore,
-          suggestedLineId,
+          matchScore,
+          hasDocument,
         };
-      })
-      .sort((a, b) => {
-        // Prioritzar: sense assignació > assignades a aquest projecte > altres
-        if (!a.assignedToThisProject && !a.assignedToOtherProject && (b.assignedToThisProject || b.assignedToOtherProject)) return -1;
-        if ((a.assignedToThisProject || a.assignedToOtherProject) && !b.assignedToThisProject && !b.assignedToOtherProject) return 1;
-        // Després per match score
-        return b.matchScore - a.matchScore;
       });
-  }, [allExpenses, project, budgetLines]);
+  }, [allExpenses, project, budgetLines, selectedLineId]);
 
-  // Candidates per a la partida seleccionada
+  // Candidates filtrades per la partida seleccionada
   const candidatesForSelectedLine = React.useMemo(() => {
-    if (!selectedLineId) return [];
+    if (!selectedLineId || !selectedDiag) return [];
 
-    const selectedDiag = diagnostics.find(d => d.line.id === selectedLineId);
-    if (!selectedDiag) return [];
+    const isUnderSpend = selectedDiag.difference < 0; // falta executar
+    const isOverSpend = selectedDiag.difference > 0; // excés
 
-    // Si la partida té dèficit, buscar despeses per cobrir-lo
-    if (selectedDiag.difference < 0) {
-      const needed = Math.abs(selectedDiag.difference);
-      return findBestCombination(candidates, needed);
+    let filtered = allCandidates;
+
+    // Criteri inicial estricte per infraexecució:
+    // - Despeses offBank (terreny) primer
+    // - Sense projecte assignat
+    // - Amb document
+    if (isUnderSpend && !expandOptions.showAll) {
+      filtered = filtered.filter(c => {
+        // Sempre excloure les ja assignades a altres projectes (excepte si s'activa l'opció)
+        if (c.assignedToOtherProject && !expandOptions.includeOtherProjects) return false;
+
+        // Per defecte només offBank (terreny)
+        if (!expandOptions.includeBankExpenses && c.expense.source === 'bank') return false;
+
+        // Per defecte només amb document
+        if (!expandOptions.includeWithoutDocument && !c.hasDocument) return false;
+
+        // Excloure les ja assignades a aquest projecte (ja estan comptades)
+        if (c.assignedToThisProject) return false;
+
+        return true;
+      });
     }
 
-    return candidates.slice(0, 10);
-  }, [selectedLineId, diagnostics, candidates]);
+    // Per sobreexecució: mostrar despeses assignades a AQUESTA partida
+    if (isOverSpend && !expandOptions.showAll) {
+      filtered = filtered.filter(c => {
+        return c.assignedToThisProject && c.currentBudgetLineId === selectedLineId;
+      });
+    }
+
+    // Filtrar per text de cerca
+    if (searchQuery.trim()) {
+      const query = searchQuery.toLowerCase();
+      filtered = filtered.filter(c => {
+        const searchText = [
+          c.expense.description,
+          c.expense.counterpartyName,
+          c.expense.categoryName,
+        ].filter(Boolean).join(' ').toLowerCase();
+        return searchText.includes(query);
+      });
+    }
+
+    // Ordenar per score + proximitat a l'import necessari
+    const neededAmount = Math.abs(selectedDiag.difference);
+    filtered = filtered.sort((a, b) => {
+      // Primer per score
+      if (b.matchScore !== a.matchScore) {
+        return b.matchScore - a.matchScore;
+      }
+      // Després per proximitat a l'import necessari
+      const diffA = Math.abs(Math.abs(a.expense.amountEUR) - neededAmount);
+      const diffB = Math.abs(Math.abs(b.expense.amountEUR) - neededAmount);
+      return diffA - diffB;
+    });
+
+    return filtered;
+  }, [selectedLineId, selectedDiag, allCandidates, searchQuery, expandOptions]);
+
+  // Comptar quantes n'hi hauria amb opcions relaxades
+  const expandedCounts = React.useMemo(() => {
+    if (!selectedLineId || !selectedDiag || selectedDiag.difference >= 0) return null;
+
+    const baseFiltered = allCandidates.filter(c => !c.assignedToThisProject);
+
+    const withBank = baseFiltered.filter(c => c.expense.source === 'bank' && !c.assignedToOtherProject).length;
+    const fromOtherProjects = baseFiltered.filter(c => !!c.assignedToOtherProject).length;
+    const withoutDoc = baseFiltered.filter(c => !c.hasDocument && !c.assignedToOtherProject).length;
+    const total = baseFiltered.length;
+
+    return { withBank, fromOtherProjects, withoutDoc, total };
+  }, [selectedLineId, selectedDiag, allCandidates]);
 
   // Afegir moviment simulat
   const addSimulatedMove = (
     txId: string,
     fromBudgetLineId: string | null,
-    toBudgetLineId: string,
-    amountEUR: number
+    toBudgetLineId: string | null,
+    amountEUR: number,
+    action: 'add' | 'move' | 'remove'
   ) => {
-    trackUX('balance.simulateMove', { txId, fromBudgetLineId, toBudgetLineId, amountEUR });
+    trackUX('balance.simulateMove', { txId, fromBudgetLineId, toBudgetLineId, amountEUR, action });
 
     setSimulatedMoves(prev => {
       // Si ja hi ha un moviment per aquest txId, substituir-lo
       const existing = prev.findIndex(m => m.txId === txId);
       if (existing >= 0) {
         const updated = [...prev];
-        updated[existing] = { txId, fromBudgetLineId, toBudgetLineId, amountEUR };
+        updated[existing] = { txId, fromBudgetLineId, toBudgetLineId, amountEUR, action };
         return updated;
       }
-      return [...prev, { txId, fromBudgetLineId, toBudgetLineId, amountEUR }];
+      return [...prev, { txId, fromBudgetLineId, toBudgetLineId, amountEUR, action }];
     });
   };
 
@@ -433,35 +514,45 @@ export function BalanceProjectModal({
 
     try {
       for (const move of simulatedMoves) {
-        // Trobar el link existent o crear-ne un de nou
         const existingLink = expenseLinks.find(l => l.id === move.txId);
-
         let newAssignments: ExpenseAssignment[];
 
-        if (existingLink) {
+        if (move.action === 'remove') {
+          // Treure l'assignació d'aquest projecte
+          if (existingLink) {
+            newAssignments = existingLink.assignments.filter(a => a.projectId !== project.id);
+          } else {
+            continue; // No hi ha res a treure
+          }
+        } else if (existingLink) {
           // Modificar assignació existent
-          newAssignments = existingLink.assignments.map(a => {
-            if (a.projectId === project.id) {
-              const newLine = budgetLines.find(l => l.id === move.toBudgetLineId);
-              return {
-                ...a,
+          const hasThisProject = existingLink.assignments.some(a => a.projectId === project.id);
+
+          if (hasThisProject) {
+            newAssignments = existingLink.assignments.map(a => {
+              if (a.projectId === project.id) {
+                const newLine = budgetLines.find(l => l.id === move.toBudgetLineId);
+                return {
+                  ...a,
+                  budgetLineId: move.toBudgetLineId,
+                  budgetLineName: newLine?.name ?? null,
+                };
+              }
+              return a;
+            });
+          } else {
+            // Afegir nova assignació a aquest projecte
+            const newLine = budgetLines.find(l => l.id === move.toBudgetLineId);
+            newAssignments = [
+              ...existingLink.assignments,
+              {
+                projectId: project.id,
+                projectName: project.name,
+                amountEUR: -Math.abs(move.amountEUR),
                 budgetLineId: move.toBudgetLineId,
                 budgetLineName: newLine?.name ?? null,
-              };
-            }
-            return a;
-          });
-
-          // Si no hi ha assignació a aquest projecte, afegir-ne una
-          if (!newAssignments.some(a => a.projectId === project.id)) {
-            const newLine = budgetLines.find(l => l.id === move.toBudgetLineId);
-            newAssignments.push({
-              projectId: project.id,
-              projectName: project.name,
-              amountEUR: -Math.abs(move.amountEUR),
-              budgetLineId: move.toBudgetLineId,
-              budgetLineName: newLine?.name ?? null,
-            });
+              },
+            ];
           }
         } else {
           // Crear nova assignació
@@ -473,6 +564,13 @@ export function BalanceProjectModal({
             budgetLineId: move.toBudgetLineId,
             budgetLineName: newLine?.name ?? null,
           }];
+        }
+
+        // Si no queden assignacions, esborrar el link (o no crear-lo)
+        if (newAssignments.length === 0) {
+          // El hook save amb array buit hauria d'esborrar, però per seguretat
+          // no fem res si no tenim assignacions
+          continue;
         }
 
         await saveExpenseLink(move.txId, newAssignments, existingLink?.note ?? null);
@@ -503,6 +601,11 @@ export function BalanceProjectModal({
     }
   };
 
+  // Handler per tancar el bloc d'opcions
+  const handleCloseOptions = () => {
+    setSelectedLineId(null);
+  };
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-5xl max-h-[90vh] flex flex-col">
@@ -515,7 +618,7 @@ export function BalanceProjectModal({
 
         <div className="flex-1 overflow-hidden">
           <Tabs defaultValue="diagnostic" className="h-full flex flex-col">
-            <TabsList className="grid w-full grid-cols-3">
+            <TabsList className="grid w-full grid-cols-2">
               <TabsTrigger value="diagnostic">
                 Diagnòstic
                 {summary.outOfDeviation > 0 && (
@@ -523,12 +626,6 @@ export function BalanceProjectModal({
                     {summary.outOfDeviation}
                   </Badge>
                 )}
-              </TabsTrigger>
-              <TabsTrigger value="candidates">
-                Despeses candidates
-                <Badge variant="secondary" className="ml-2">
-                  {candidates.length}
-                </Badge>
               </TabsTrigger>
               <TabsTrigger value="simulation">
                 Simulació
@@ -567,271 +664,377 @@ export function BalanceProjectModal({
                   </Card>
                   <Card>
                     <CardHeader className="pb-2">
-                      <CardDescription>Despeses candidates</CardDescription>
+                      <CardDescription>Desviació permesa</CardDescription>
                     </CardHeader>
                     <CardContent>
                       <p className="text-2xl font-bold">
-                        {candidates.filter(c => !c.assignedToOtherProject).length}
+                        ±{project.allowedDeviationPct ?? 10}%
                       </p>
                     </CardContent>
                   </Card>
                 </div>
 
                 {/* Taula diagnòstic */}
-                <ScrollArea className="flex-1 border rounded-md">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Partida</TableHead>
-                        <TableHead className="text-right">Pressupostat</TableHead>
-                        <TableHead className="text-right">Executat</TableHead>
-                        {simulatedMoves.length > 0 && (
-                          <TableHead className="text-right">Simulat</TableHead>
-                        )}
-                        <TableHead className="text-right">Diferència</TableHead>
-                        <TableHead className="text-right">Desviació</TableHead>
-                        <TableHead>Estat</TableHead>
-                        <TableHead></TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {diagnostics.map(diag => (
-                        <TableRow
-                          key={diag.line.id}
-                          className={selectedLineId === diag.line.id ? 'bg-muted' : ''}
-                        >
-                          <TableCell>
-                            <div>
-                              <span className="font-medium">{diag.line.name}</span>
-                              {diag.line.code && (
-                                <span className="text-muted-foreground text-xs ml-2">
-                                  {diag.line.code}
-                                </span>
-                              )}
-                            </div>
-                          </TableCell>
-                          <TableCell className="text-right font-mono">
-                            {formatAmount(diag.budgeted)}
-                          </TableCell>
-                          <TableCell className="text-right font-mono">
-                            {formatAmount(diag.executed)}
-                          </TableCell>
+                <div className="border rounded-md overflow-hidden">
+                  <ScrollArea className={selectedLineId ? 'h-[180px]' : 'h-[280px]'}>
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Partida</TableHead>
+                          <TableHead className="text-right">Pressupostat</TableHead>
+                          <TableHead className="text-right">Executat</TableHead>
                           {simulatedMoves.length > 0 && (
+                            <TableHead className="text-right">Simulat</TableHead>
+                          )}
+                          <TableHead className="text-right">Diferència</TableHead>
+                          <TableHead>Estat</TableHead>
+                          <TableHead></TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {diagnostics.map(diag => (
+                          <TableRow
+                            key={diag.line.id}
+                            className={selectedLineId === diag.line.id ? 'bg-muted' : ''}
+                          >
+                            <TableCell>
+                              <div>
+                                <span className="font-medium">{diag.line.name}</span>
+                                {diag.line.code && (
+                                  <span className="text-muted-foreground text-xs ml-2">
+                                    {diag.line.code}
+                                  </span>
+                                )}
+                              </div>
+                            </TableCell>
                             <TableCell className="text-right font-mono">
-                              {diag.simulated !== diag.executed ? (
-                                <span className="text-blue-600 font-medium">
-                                  {formatAmount(diag.simulated)}
-                                </span>
+                              {formatAmount(diag.budgeted)}
+                            </TableCell>
+                            <TableCell className="text-right font-mono">
+                              {formatAmount(diag.executed)}
+                            </TableCell>
+                            {simulatedMoves.length > 0 && (
+                              <TableCell className="text-right font-mono">
+                                {diag.simulated !== diag.executed ? (
+                                  <span className="text-blue-600 font-medium">
+                                    {formatAmount(diag.simulated)}
+                                  </span>
+                                ) : (
+                                  formatAmount(diag.simulated)
+                                )}
+                              </TableCell>
+                            )}
+                            <TableCell className={`text-right font-mono ${diag.difference > 0 ? 'text-red-600' : diag.difference < 0 ? 'text-amber-600' : ''}`}>
+                              {diag.difference > 0 ? '+' : ''}{formatAmount(diag.difference)}
+                            </TableCell>
+                            <TableCell>
+                              {diag.status === 'ok' ? (
+                                <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
+                                  <CheckCircle className="h-3 w-3 mr-1" />
+                                  OK
+                                </Badge>
+                              ) : diag.status === 'overSpend' ? (
+                                <Badge variant="outline" className="bg-red-50 text-red-700 border-red-200">
+                                  <TrendingUp className="h-3 w-3 mr-1" />
+                                  Excés
+                                </Badge>
                               ) : (
-                                formatAmount(diag.simulated)
+                                <Badge variant="outline" className="bg-amber-50 text-amber-700 border-amber-200">
+                                  <TrendingDown className="h-3 w-3 mr-1" />
+                                  Falta
+                                </Badge>
                               )}
                             </TableCell>
-                          )}
-                          <TableCell className={`text-right font-mono ${diag.difference > 0 ? 'text-red-600' : diag.difference < 0 ? 'text-amber-600' : ''}`}>
-                            {diag.difference > 0 ? '+' : ''}{formatAmount(diag.difference)}
-                          </TableCell>
-                          <TableCell className="text-right font-mono">
-                            {formatPercent(diag.deviationPct)}
-                          </TableCell>
-                          <TableCell>
-                            {diag.status === 'ok' ? (
-                              <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
-                                <CheckCircle className="h-3 w-3 mr-1" />
-                                OK
-                              </Badge>
-                            ) : diag.status === 'overSpend' ? (
-                              <Badge variant="outline" className="bg-red-50 text-red-700 border-red-200">
-                                <TrendingUp className="h-3 w-3 mr-1" />
-                                Sobreexecució
-                              </Badge>
-                            ) : (
-                              <Badge variant="outline" className="bg-amber-50 text-amber-700 border-amber-200">
-                                <TrendingDown className="h-3 w-3 mr-1" />
-                                Infraexecució
-                              </Badge>
-                            )}
-                          </TableCell>
-                          <TableCell>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => setSelectedLineId(
-                                selectedLineId === diag.line.id ? null : diag.line.id
-                              )}
-                            >
-                              {selectedLineId === diag.line.id ? 'Tancar' : 'Veure opcions'}
-                            </Button>
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </ScrollArea>
+                            <TableCell>
+                              <Button
+                                variant={selectedLineId === diag.line.id ? 'secondary' : 'ghost'}
+                                size="sm"
+                                onClick={() => setSelectedLineId(
+                                  selectedLineId === diag.line.id ? null : diag.line.id
+                                )}
+                              >
+                                {selectedLineId === diag.line.id ? 'Tancar' : 'Veure opcions'}
+                              </Button>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </ScrollArea>
+                </div>
 
-                {/* Suggeriments per partida seleccionada */}
-                {selectedLineId && candidatesForSelectedLine.length > 0 && (
-                  <Card className="mt-4">
-                    <CardHeader className="pb-2">
-                      <CardTitle className="text-sm">
-                        Despeses suggerides per aquesta partida
-                      </CardTitle>
+                {/* Bloc "Opcions per quadrar la partida" */}
+                {selectedLineId && selectedDiag && (
+                  <Card className="flex-1 overflow-hidden flex flex-col">
+                    <CardHeader className="pb-3">
+                      <div className="flex items-center justify-between">
+                        <CardTitle className="text-base flex items-center gap-2">
+                          <FolderOpen className="h-4 w-4" />
+                          Opcions per quadrar: {selectedDiag.line.name}
+                        </CardTitle>
+                        <Button variant="ghost" size="sm" onClick={handleCloseOptions}>
+                          <X className="h-4 w-4" />
+                        </Button>
+                      </div>
                       <CardDescription>
-                        {(() => {
-                          const diag = diagnostics.find(d => d.line.id === selectedLineId);
-                          if (!diag) return '';
-                          if (diag.difference < 0) {
-                            return `Et falten ${formatAmount(Math.abs(diag.difference))}`;
-                          }
-                          return `Tens ${formatAmount(diag.difference)} d'excés`;
-                        })()}
+                        {selectedDiag.difference < 0 ? (
+                          <span className="text-amber-700">
+                            <TrendingDown className="h-4 w-4 inline mr-1" />
+                            Et falten <strong>{formatAmount(Math.abs(selectedDiag.difference))}</strong> per arribar al pressupost d'aquesta partida.
+                          </span>
+                        ) : (
+                          <span className="text-red-700">
+                            <TrendingUp className="h-4 w-4 inline mr-1" />
+                            Tens un excés de <strong>{formatAmount(selectedDiag.difference)}</strong> en aquesta partida.
+                          </span>
+                        )}
                       </CardDescription>
                     </CardHeader>
-                    <CardContent>
-                      <div className="space-y-2">
-                        {candidatesForSelectedLine.map(candidate => (
-                          <div
-                            key={candidate.expense.txId}
-                            className="flex items-center justify-between p-2 border rounded-md hover:bg-muted"
+
+                    <CardContent className="flex-1 overflow-hidden flex flex-col gap-3">
+                      {/* Barra de cerca */}
+                      <div className="relative">
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                        <Input
+                          placeholder="Cercar per descripció, proveïdor o categoria..."
+                          value={searchQuery}
+                          onChange={(e) => setSearchQuery(e.target.value)}
+                          className="pl-10"
+                        />
+                      </div>
+
+                      {/* Llista de candidates */}
+                      <ScrollArea className="flex-1 min-h-[120px] border rounded-md">
+                        {candidatesForSelectedLine.length === 0 ? (
+                          <div className="p-6 text-center">
+                            <Info className="h-8 w-8 mx-auto mb-2 text-muted-foreground" />
+                            <p className="text-sm text-muted-foreground mb-2">
+                              {selectedDiag.difference < 0
+                                ? 'No hem trobat despeses amb criteri estricte.'
+                                : 'No hi ha despeses assignades a aquesta partida.'}
+                            </p>
+                            {selectedDiag.difference < 0 && (
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => setExpandSectionOpen(true)}
+                              >
+                                Ampliar la cerca
+                              </Button>
+                            )}
+                          </div>
+                        ) : (
+                          <div className="p-2 space-y-2">
+                            {candidatesForSelectedLine.slice(0, 10).map(candidate => {
+                              const isSimulated = simulatedMoves.some(m => m.txId === candidate.expense.txId);
+
+                              return (
+                                <div
+                                  key={candidate.expense.txId}
+                                  className={`flex items-center justify-between p-2 border rounded-md hover:bg-muted ${isSimulated ? 'bg-blue-50 border-blue-200' : ''}`}
+                                >
+                                  <div className="flex-1 min-w-0">
+                                    <div className="flex items-center gap-2">
+                                      {candidate.expense.source === 'offBank' ? (
+                                        <FileText className="h-4 w-4 text-muted-foreground shrink-0" />
+                                      ) : (
+                                        <Building2 className="h-4 w-4 text-muted-foreground shrink-0" />
+                                      )}
+                                      <span className="text-sm font-medium truncate">
+                                        {candidate.expense.counterpartyName ?? candidate.expense.description ?? 'Sense descripció'}
+                                      </span>
+                                      {!candidate.hasDocument && (
+                                        <span title="Sense document">
+                                          <FileWarning className="h-3 w-3 text-amber-500 shrink-0" />
+                                        </span>
+                                      )}
+                                      {candidate.assignedToOtherProject && (
+                                        <Badge variant="outline" className="text-xs bg-amber-50 text-amber-700">
+                                          {candidate.assignedToOtherProject}
+                                        </Badge>
+                                      )}
+                                    </div>
+                                    <div className="text-xs text-muted-foreground flex gap-2">
+                                      <span>{formatDateDMY(candidate.expense.date)}</span>
+                                      <span>·</span>
+                                      <span className="font-mono">{formatAmount(Math.abs(candidate.expense.amountEUR))}</span>
+                                      {candidate.expense.categoryName && (
+                                        <>
+                                          <span>·</span>
+                                          <span>{candidate.expense.categoryName}</span>
+                                        </>
+                                      )}
+                                    </div>
+                                  </div>
+                                  <div className="shrink-0 ml-2">
+                                    {isSimulated ? (
+                                      <Button
+                                        size="sm"
+                                        variant="secondary"
+                                        onClick={() => removeSimulatedMove(candidate.expense.txId)}
+                                      >
+                                        <Undo2 className="h-4 w-4 mr-1" />
+                                        Desfer
+                                      </Button>
+                                    ) : selectedDiag.difference < 0 ? (
+                                      <Button
+                                        size="sm"
+                                        variant="outline"
+                                        onClick={() => addSimulatedMove(
+                                          candidate.expense.txId,
+                                          candidate.currentBudgetLineId,
+                                          selectedLineId,
+                                          Math.abs(candidate.expense.amountEUR),
+                                          candidate.assignedToThisProject ? 'move' : 'add'
+                                        )}
+                                      >
+                                        <ArrowRight className="h-4 w-4 mr-1" />
+                                        Simular aquí
+                                      </Button>
+                                    ) : (
+                                      <Button
+                                        size="sm"
+                                        variant="outline"
+                                        className="text-red-600 hover:text-red-700"
+                                        onClick={() => addSimulatedMove(
+                                          candidate.expense.txId,
+                                          selectedLineId,
+                                          null,
+                                          Math.abs(candidate.expense.amountEUR),
+                                          'remove'
+                                        )}
+                                      >
+                                        <ArrowDown className="h-4 w-4 mr-1" />
+                                        Treure
+                                      </Button>
+                                    )}
+                                  </div>
+                                </div>
+                              );
+                            })}
+                            {candidatesForSelectedLine.length > 10 && (
+                              <p className="text-xs text-center text-muted-foreground py-2">
+                                Mostrant 10 de {candidatesForSelectedLine.length} resultats. Utilitza la cerca per refinar.
+                              </p>
+                            )}
+                          </div>
+                        )}
+                      </ScrollArea>
+
+                      {/* Bloc "Ampliar cerca" */}
+                      {selectedDiag.difference < 0 && (
+                        <div className="border rounded-md">
+                          <Button
+                            variant="ghost"
+                            className="w-full justify-between p-3 h-auto"
+                            onClick={() => setExpandSectionOpen(!expandSectionOpen)}
                           >
-                            <div className="flex-1">
-                              <div className="flex items-center gap-2">
-                                {candidate.expense.source === 'offBank' ? (
-                                  <FileText className="h-4 w-4 text-muted-foreground" />
-                                ) : (
-                                  <Building2 className="h-4 w-4 text-muted-foreground" />
-                                )}
-                                <span className="text-sm font-medium">
-                                  {candidate.expense.counterpartyName ?? candidate.expense.description ?? 'Sense descripció'}
-                                </span>
+                            <span className="text-sm font-medium flex items-center gap-2">
+                              <Search className="h-4 w-4" />
+                              No et serveix? Ampliar cerca
+                            </span>
+                            {expandSectionOpen ? (
+                              <ChevronUp className="h-4 w-4" />
+                            ) : (
+                              <ChevronDown className="h-4 w-4" />
+                            )}
+                          </Button>
+
+                          {expandSectionOpen && (
+                            <div className="px-3 pb-3 space-y-3">
+                              <div className="flex items-start space-x-3">
+                                <Checkbox
+                                  id="includeBankExpenses"
+                                  checked={expandOptions.includeBankExpenses}
+                                  onCheckedChange={(checked) => setExpandOptions(prev => ({
+                                    ...prev,
+                                    includeBankExpenses: !!checked,
+                                  }))}
+                                />
+                                <div className="grid gap-0.5 leading-none">
+                                  <Label htmlFor="includeBankExpenses" className="text-sm cursor-pointer">
+                                    Incloure despeses de la Seu (bancàries)
+                                    {expandedCounts && (
+                                      <Badge variant="secondary" className="ml-2 text-xs">{expandedCounts.withBank}</Badge>
+                                    )}
+                                  </Label>
+                                  <p className="text-xs text-muted-foreground">Moviments bancaris amb traçabilitat.</p>
+                                </div>
                               </div>
-                              <div className="text-xs text-muted-foreground">
-                                {candidate.expense.date} · {formatAmount(Math.abs(candidate.expense.amountEUR))}
+
+                              <div className="flex items-start space-x-3">
+                                <Checkbox
+                                  id="includeOtherProjects"
+                                  checked={expandOptions.includeOtherProjects}
+                                  onCheckedChange={(checked) => setExpandOptions(prev => ({
+                                    ...prev,
+                                    includeOtherProjects: !!checked,
+                                  }))}
+                                />
+                                <div className="grid gap-0.5 leading-none">
+                                  <Label htmlFor="includeOtherProjects" className="text-sm cursor-pointer">
+                                    Incloure despeses d'altres projectes
+                                    {expandedCounts && (
+                                      <Badge variant="secondary" className="ml-2 text-xs">{expandedCounts.fromOtherProjects}</Badge>
+                                    )}
+                                  </Label>
+                                  <p className="text-xs text-amber-600">
+                                    <AlertTriangle className="h-3 w-3 inline mr-1" />
+                                    Això pot desquadrar l'altre projecte.
+                                  </p>
+                                </div>
+                              </div>
+
+                              <div className="flex items-start space-x-3">
+                                <Checkbox
+                                  id="includeWithoutDocument"
+                                  checked={expandOptions.includeWithoutDocument}
+                                  onCheckedChange={(checked) => setExpandOptions(prev => ({
+                                    ...prev,
+                                    includeWithoutDocument: !!checked,
+                                  }))}
+                                />
+                                <div className="grid gap-0.5 leading-none">
+                                  <Label htmlFor="includeWithoutDocument" className="text-sm cursor-pointer">
+                                    Incloure despeses sense document
+                                    {expandedCounts && (
+                                      <Badge variant="secondary" className="ml-2 text-xs">{expandedCounts.withoutDoc}</Badge>
+                                    )}
+                                  </Label>
+                                  <p className="text-xs text-amber-600">
+                                    <FileWarning className="h-3 w-3 inline mr-1" />
+                                    Potser no serà justificable si el finançador demana comprovant.
+                                  </p>
+                                </div>
+                              </div>
+
+                              <div className="flex items-start space-x-3">
+                                <Checkbox
+                                  id="showAll"
+                                  checked={expandOptions.showAll}
+                                  onCheckedChange={(checked) => setExpandOptions(prev => ({
+                                    ...prev,
+                                    showAll: !!checked,
+                                  }))}
+                                />
+                                <div className="grid gap-0.5 leading-none">
+                                  <Label htmlFor="showAll" className="text-sm cursor-pointer">
+                                    Veure totes les despeses del període
+                                    {expandedCounts && (
+                                      <Badge variant="secondary" className="ml-2 text-xs">{expandedCounts.total}</Badge>
+                                    )}
+                                  </Label>
+                                  <p className="text-xs text-muted-foreground">Mostrar totes sense restriccions.</p>
+                                </div>
                               </div>
                             </div>
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              onClick={() => addSimulatedMove(
-                                candidate.expense.txId,
-                                candidate.currentBudgetLineId,
-                                selectedLineId,
-                                Math.abs(candidate.expense.amountEUR)
-                              )}
-                              disabled={simulatedMoves.some(m => m.txId === candidate.expense.txId)}
-                            >
-                              {simulatedMoves.some(m => m.txId === candidate.expense.txId) ? (
-                                <>
-                                  <Check className="h-4 w-4 mr-1" />
-                                  Afegit
-                                </>
-                              ) : (
-                                <>
-                                  <ArrowRight className="h-4 w-4 mr-1" />
-                                  Simular
-                                </>
-                              )}
-                            </Button>
-                          </div>
-                        ))}
-                      </div>
+                          )}
+                        </div>
+                      )}
                     </CardContent>
                   </Card>
                 )}
               </div>
-            </TabsContent>
-
-            {/* TAB: Despeses candidates */}
-            <TabsContent value="candidates" className="flex-1 overflow-hidden mt-4">
-              <ScrollArea className="h-[400px] border rounded-md">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Origen</TableHead>
-                      <TableHead>Data</TableHead>
-                      <TableHead>Descripció</TableHead>
-                      <TableHead className="text-right">Import</TableHead>
-                      <TableHead>Estat actual</TableHead>
-                      <TableHead></TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {candidates.map(candidate => (
-                      <TableRow key={candidate.expense.txId}>
-                        <TableCell>
-                          {candidate.expense.source === 'offBank' ? (
-                            <Badge variant="outline">
-                              <FileText className="h-3 w-3 mr-1" />
-                              Terreny
-                            </Badge>
-                          ) : (
-                            <Badge variant="outline">
-                              <Building2 className="h-3 w-3 mr-1" />
-                              Seu
-                            </Badge>
-                          )}
-                        </TableCell>
-                        <TableCell className="font-mono text-sm">
-                          {candidate.expense.date}
-                        </TableCell>
-                        <TableCell>
-                          <div className="max-w-xs truncate">
-                            {candidate.expense.counterpartyName ?? candidate.expense.description ?? '-'}
-                          </div>
-                          {candidate.expense.categoryName && (
-                            <div className="text-xs text-muted-foreground">
-                              {candidate.expense.categoryName}
-                            </div>
-                          )}
-                        </TableCell>
-                        <TableCell className="text-right font-mono">
-                          {formatAmount(Math.abs(candidate.expense.amountEUR))}
-                        </TableCell>
-                        <TableCell>
-                          {candidate.assignedToOtherProject ? (
-                            <Badge variant="outline" className="bg-amber-50 text-amber-700 border-amber-200">
-                              <AlertTriangle className="h-3 w-3 mr-1" />
-                              {candidate.assignedToOtherProject}
-                            </Badge>
-                          ) : candidate.assignedToThisProject ? (
-                            <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">
-                              <Info className="h-3 w-3 mr-1" />
-                              {candidate.currentBudgetLineName ?? 'Sense partida'}
-                            </Badge>
-                          ) : (
-                            <Badge variant="secondary">
-                              Sense projecte
-                            </Badge>
-                          )}
-                        </TableCell>
-                        <TableCell>
-                          {selectedLineId && !candidate.assignedToOtherProject && (
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              onClick={() => addSimulatedMove(
-                                candidate.expense.txId,
-                                candidate.currentBudgetLineId,
-                                selectedLineId,
-                                Math.abs(candidate.expense.amountEUR)
-                              )}
-                              disabled={simulatedMoves.some(m => m.txId === candidate.expense.txId)}
-                            >
-                              <ArrowRight className="h-4 w-4" />
-                            </Button>
-                          )}
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </ScrollArea>
-
-              {!selectedLineId && (
-                <div className="mt-4 p-4 border rounded-md bg-muted/50 text-center text-sm text-muted-foreground">
-                  <Info className="h-5 w-5 mx-auto mb-2" />
-                  Selecciona una partida a la pestanya "Diagnòstic" per poder assignar despeses.
-                </div>
-              )}
             </TabsContent>
 
             {/* TAB: Simulació */}
@@ -840,15 +1043,16 @@ export function BalanceProjectModal({
                 <div className="h-full flex flex-col items-center justify-center text-muted-foreground">
                   <Info className="h-12 w-12 mb-4 opacity-50" />
                   <p>No hi ha moviments simulats.</p>
-                  <p className="text-sm">Selecciona despeses a les pestanyes anteriors.</p>
+                  <p className="text-sm">Selecciona una partida i afegeix despeses.</p>
                 </div>
               ) : (
-                <div className="space-y-4">
-                  <ScrollArea className="h-[300px] border rounded-md">
+                <div className="space-y-4 h-full flex flex-col">
+                  <ScrollArea className="flex-1 border rounded-md">
                     <Table>
                       <TableHeader>
                         <TableRow>
                           <TableHead>Despesa</TableHead>
+                          <TableHead>Acció</TableHead>
                           <TableHead>Origen</TableHead>
                           <TableHead>Destí</TableHead>
                           <TableHead className="text-right">Import</TableHead>
@@ -857,7 +1061,8 @@ export function BalanceProjectModal({
                       </TableHeader>
                       <TableBody>
                         {simulatedMoves.map(move => {
-                          const expense = candidates.find(c => c.expense.txId === move.txId)?.expense;
+                          const candidate = allCandidates.find(c => c.expense.txId === move.txId);
+                          const expense = candidate?.expense;
                           const fromLine = budgetLines.find(l => l.id === move.fromBudgetLineId);
                           const toLine = budgetLines.find(l => l.id === move.toBudgetLineId);
 
@@ -868,18 +1073,33 @@ export function BalanceProjectModal({
                                   {expense?.counterpartyName ?? expense?.description ?? move.txId}
                                 </div>
                                 <div className="text-xs text-muted-foreground">
-                                  {expense?.date}
+                                  {expense?.date && formatDateDMY(expense.date)}
                                 </div>
                               </TableCell>
                               <TableCell>
-                                {fromLine ? (
-                                  <Badge variant="outline">{fromLine.name}</Badge>
-                                ) : (
-                                  <span className="text-muted-foreground">-</span>
+                                {move.action === 'add' && (
+                                  <Badge variant="outline" className="bg-green-50 text-green-700">Afegir</Badge>
+                                )}
+                                {move.action === 'move' && (
+                                  <Badge variant="outline" className="bg-blue-50 text-blue-700">Moure</Badge>
+                                )}
+                                {move.action === 'remove' && (
+                                  <Badge variant="outline" className="bg-red-50 text-red-700">Treure</Badge>
                                 )}
                               </TableCell>
                               <TableCell>
-                                <Badge variant="default">{toLine?.name ?? move.toBudgetLineId}</Badge>
+                                {fromLine ? (
+                                  <span className="text-sm">{fromLine.name}</span>
+                                ) : (
+                                  <span className="text-muted-foreground text-sm">-</span>
+                                )}
+                              </TableCell>
+                              <TableCell>
+                                {toLine ? (
+                                  <span className="text-sm font-medium">{toLine.name}</span>
+                                ) : (
+                                  <span className="text-muted-foreground text-sm">-</span>
+                                )}
                               </TableCell>
                               <TableCell className="text-right font-mono">
                                 {formatAmount(move.amountEUR)}
