@@ -57,33 +57,124 @@ function formatAmount(amount: number): string {
   }).format(amount);
 }
 
-function StatusBadge({
+// Component per mostrar i gestionar assignacions amb popover
+function AssignmentStatusPopover({
+  expense,
   status,
   assignedAmount,
   totalAmount,
-  assignments
+  assignments,
+  onRemoveAssignment,
+  onUnassignAll,
+  onEditAssignment,
+  isSaving,
 }: {
+  expense: UnifiedExpenseWithLink;
   status: ExpenseStatus;
   assignedAmount: number;
   totalAmount: number;
   assignments?: ExpenseAssignment[];
+  onRemoveAssignment: (txId: string, assignmentIndex: number) => Promise<void>;
+  onUnassignAll: (txId: string) => Promise<void>;
+  onEditAssignment: (expense: UnifiedExpenseWithLink) => void;
+  isSaving: boolean;
 }) {
+  const [open, setOpen] = React.useState(false);
   const percentage = totalAmount > 0 ? Math.round((assignedAmount / totalAmount) * 100) : 0;
 
-  // Generar tooltip amb els projectes assignats
-  const tooltip = assignments && assignments.length > 0
-    ? assignments.map(a => `${a.projectName}: ${formatAmount(a.amountEUR)}`).join('\n')
-    : undefined;
-
-  switch (status) {
-    case 'assigned':
-      return <Badge variant="default" className="bg-green-600 cursor-help" title={tooltip}>100%</Badge>;
-    case 'partial':
-      return <Badge variant="secondary" className="bg-yellow-500 text-black cursor-help" title={tooltip}>{percentage}%</Badge>;
-    case 'unassigned':
-    default:
-      return <Badge variant="outline">0%</Badge>;
+  // Si no té assignacions, mostrar badge simple
+  if (status === 'unassigned' || !assignments || assignments.length === 0) {
+    return <Badge variant="outline">0%</Badge>;
   }
+
+  const badgeClass = status === 'assigned'
+    ? 'bg-green-600 hover:bg-green-700 cursor-pointer'
+    : 'bg-yellow-500 text-black hover:bg-yellow-600 cursor-pointer';
+
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <Badge variant="default" className={badgeClass}>
+          {status === 'assigned' ? '100%' : `${percentage}%`}
+        </Badge>
+      </PopoverTrigger>
+      <PopoverContent className="w-72 p-0" align="end">
+        <div className="p-3 border-b">
+          <div className="flex items-center justify-between">
+            <span className="font-medium text-sm">Assignacions</span>
+            <span className="text-xs text-muted-foreground font-mono">
+              {formatAmount(assignedAmount)} / {formatAmount(totalAmount)}
+            </span>
+          </div>
+        </div>
+        <div className="p-2 space-y-1 max-h-48 overflow-y-auto">
+          {assignments.map((assignment, index) => (
+            <div
+              key={`${assignment.projectId}-${assignment.budgetLineId ?? 'none'}-${index}`}
+              className="flex items-center justify-between gap-2 p-2 rounded hover:bg-muted/50 group"
+            >
+              <div className="flex-1 min-w-0">
+                <div className="text-sm font-medium truncate">{assignment.projectName}</div>
+                {assignment.budgetLineName && (
+                  <div className="text-xs text-muted-foreground truncate">
+                    {assignment.budgetLineName}
+                  </div>
+                )}
+              </div>
+              <div className="flex items-center gap-2 shrink-0">
+                <span className="text-xs font-mono text-muted-foreground">
+                  {formatAmount(Math.abs(assignment.amountEUR))}
+                </span>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground hover:text-destructive"
+                  onClick={async (e) => {
+                    e.stopPropagation();
+                    await onRemoveAssignment(expense.expense.txId, index);
+                    if (assignments.length === 1) {
+                      setOpen(false);
+                    }
+                  }}
+                  disabled={isSaving}
+                  title="Eliminar aquesta assignació"
+                >
+                  <X className="h-3 w-3" />
+                </Button>
+              </div>
+            </div>
+          ))}
+        </div>
+        <div className="p-2 border-t flex gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            className="flex-1 text-xs"
+            onClick={() => {
+              setOpen(false);
+              onEditAssignment(expense);
+            }}
+          >
+            <Split className="h-3 w-3 mr-1" />
+            Editar
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            className="flex-1 text-xs text-destructive hover:text-destructive"
+            onClick={async () => {
+              await onUnassignAll(expense.expense.txId);
+              setOpen(false);
+            }}
+            disabled={isSaving}
+          >
+            <Trash2 className="h-3 w-3 mr-1" />
+            Eliminar tot
+          </Button>
+        </div>
+      </PopoverContent>
+    </Popover>
+  );
 }
 
 // Component per Quick Assign amb Popover (amb selecció de partida)
@@ -432,10 +523,14 @@ export default function ExpensesInboxPage() {
     setEditOffBankExpense(expense);
   };
 
-  // Handler per des-assignar completament
+  // Handler per des-assignar completament (amb confirmació)
   const handleUnassign = async (txId: string) => {
     if (!confirm('Segur que vols eliminar l\'assignació d\'aquesta despesa?')) return;
+    await handleUnassignAll(txId);
+  };
 
+  // Handler per des-assignar completament (sense confirmació, per ús des del popover)
+  const handleUnassignAll = async (txId: string) => {
     try {
       await remove(txId);
       await refresh();
@@ -443,6 +538,40 @@ export default function ExpensesInboxPage() {
       toast({
         title: 'Assignació eliminada',
         description: 'La despesa ja no està assignada a cap projecte.',
+      });
+    } catch (err) {
+      toast({
+        variant: 'destructive',
+        title: 'Error',
+        description: err instanceof Error ? err.message : 'Error eliminant assignació',
+      });
+    }
+  };
+
+  // Handler per eliminar una assignació específica (per index)
+  const handleRemoveSingleAssignment = async (txId: string, assignmentIndex: number) => {
+    // Buscar la despesa per obtenir les assignacions actuals
+    const expenseItem = expenses.find(e => e.expense.txId === txId);
+    if (!expenseItem?.link?.assignments) return;
+
+    const currentAssignments = expenseItem.link.assignments;
+
+    // Si només queda una assignació, eliminar tot el link
+    if (currentAssignments.length <= 1) {
+      await handleUnassignAll(txId);
+      return;
+    }
+
+    // Filtrar l'assignació per índex
+    const newAssignments = currentAssignments.filter((_, idx) => idx !== assignmentIndex);
+
+    try {
+      await save(txId, newAssignments, expenseItem.link.note, expenseItem.link.justification);
+      await refresh();
+      trackUX('expenses.removeAssignment', { txId, assignmentIndex });
+      toast({
+        title: 'Assignació eliminada',
+        description: 'S\'ha eliminat l\'assignació del projecte.',
       });
     } catch (err) {
       toast({
@@ -637,51 +766,30 @@ export default function ExpensesInboxPage() {
                       {formatAmount(expense.amountEUR)}
                     </TableCell>
                     <TableCell>
-                      <StatusBadge
+                      <AssignmentStatusPopover
+                        expense={item}
                         status={status}
                         assignedAmount={assignedAmount}
                         totalAmount={Math.abs(expense.amountEUR)}
                         assignments={item.link?.assignments}
+                        onRemoveAssignment={handleRemoveSingleAssignment}
+                        onUnassignAll={handleUnassignAll}
+                        onEditAssignment={setSplitModalExpense}
+                        isSaving={isSaving}
                       />
                     </TableCell>
                     <TableCell>
                       <div className="flex items-center gap-1 justify-end">
-                        {/* Assignar/Editar assignació */}
-                        {!projectsLoading && projects.length > 0 && (
-                          status === 'unassigned' ? (
-                            <QuickAssignPopover
-                              expense={item}
-                              projects={projects}
-                              onAssign100={handleAssign100}
-                              onOpenSplitModal={setSplitModalExpense}
-                              isAssigning={isSaving}
-                              assignTooltip={t.projectModule?.assignToProject ?? 'Assignar a projecte'}
-                            />
-                          ) : (
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-7 w-7"
-                              onClick={() => setSplitModalExpense(item)}
-                              title={t.projectModule?.editAssignment ?? 'Editar assignació'}
-                              disabled={isSaving}
-                            >
-                              <Split className="h-4 w-4" />
-                            </Button>
-                          )
-                        )}
-                        {/* Des-assignar (només si té assignació) */}
-                        {status !== 'unassigned' && (
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-7 w-7 text-muted-foreground hover:text-destructive"
-                            onClick={() => handleUnassign(expense.txId)}
-                            title={t.projectModule?.removeAssignment ?? 'Eliminar assignació'}
-                            disabled={isSaving}
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
+                        {/* Assignar (només si no té assignació) */}
+                        {!projectsLoading && projects.length > 0 && status === 'unassigned' && (
+                          <QuickAssignPopover
+                            expense={item}
+                            projects={projects}
+                            onAssign100={handleAssign100}
+                            onOpenSplitModal={setSplitModalExpense}
+                            isAssigning={isSaving}
+                            assignTooltip={t.projectModule?.assignToProject ?? 'Assignar a projecte'}
+                          />
                         )}
                         {/* Editar despesa off-bank */}
                         {expense.source === 'offBank' && (
