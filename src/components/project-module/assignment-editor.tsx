@@ -153,7 +153,8 @@ export function AssignmentEditor({
   }, 0);
 
   const remaining = totalAmount - assignedTotal;
-  const isValid = rows.every((r) => r.projectId && parseFloat(r.amountStr) > 0);
+  // Vàlid si: (a) no hi ha files (desvincular) o (b) totes les files tenen projecte i import > 0
+  const isValid = rows.length === 0 || rows.every((r) => r.projectId && parseFloat(r.amountStr) > 0);
   const isBalanced = Math.abs(remaining) <= 0.01;
 
   const addRow = () => {
@@ -171,7 +172,6 @@ export function AssignmentEditor({
   };
 
   const removeRow = (id: string) => {
-    if (rows.length <= 1) return;
     setRows((prev) => prev.filter((r) => r.id !== id));
   };
 
@@ -209,6 +209,7 @@ export function AssignmentEditor({
   const handleSave = async () => {
     if (!isValid) return;
 
+    // Si no hi ha files, enviar array buit (desvincular)
     const assignments: ExpenseAssignment[] = rows.map((row) => ({
       projectId: row.projectId,
       projectName: row.projectName,
@@ -281,6 +282,19 @@ export function AssignmentEditor({
 
   return (
     <div className="space-y-4">
+      {/* Missatge si no hi ha files */}
+      {rows.length === 0 && (
+        <div className="p-4 border border-dashed rounded-lg text-center">
+          <p className="text-sm text-muted-foreground mb-2">
+            Sense assignacions. La despesa quedarà desvinculada de qualsevol projecte.
+          </p>
+          <Button type="button" variant="outline" size="sm" onClick={addRow}>
+            <Plus className="h-4 w-4 mr-1" />
+            Afegir assignació
+          </Button>
+        </div>
+      )}
+
       {/* Files d'assignació */}
       {rows.map((row, index) => (
         <div key={row.id} className="space-y-2 pb-3 border-b last:border-b-0">
@@ -324,7 +338,6 @@ export function AssignmentEditor({
               variant="ghost"
               size="icon"
               onClick={() => removeRow(row.id)}
-              disabled={rows.length <= 1}
               className="shrink-0"
               title={t.projectModule?.removeRow ?? 'Eliminar fila'}
             >
@@ -348,13 +361,16 @@ export function AssignmentEditor({
         </div>
       ))}
 
-      {/* Afegir fila */}
-      <Button type="button" variant="outline" size="sm" onClick={addRow}>
-        <Plus className="h-4 w-4 mr-1" />
-        Afegir projecte
-      </Button>
+      {/* Afegir fila (només si ja hi ha files) */}
+      {rows.length > 0 && (
+        <Button type="button" variant="outline" size="sm" onClick={addRow}>
+          <Plus className="h-4 w-4 mr-1" />
+          Afegir projecte
+        </Button>
+      )}
 
-      {/* Resum */}
+      {/* Resum (només si hi ha files) */}
+      {rows.length > 0 && (
       <div className="bg-muted/50 p-3 rounded-lg space-y-2 text-sm">
         <div className="flex justify-between">
           <span className="text-muted-foreground">Total despesa</span>
@@ -377,6 +393,7 @@ export function AssignmentEditor({
           </p>
         )}
       </div>
+      )}
 
       {/* Nota */}
       <div className="space-y-1">
@@ -397,7 +414,7 @@ export function AssignmentEditor({
         </Button>
         <Button onClick={handleSave} disabled={!isValid || isSaving}>
           <Check className="h-4 w-4 mr-1" />
-          {isSaving ? 'Desant...' : 'Desar assignació'}
+          {isSaving ? 'Desant...' : rows.length === 0 ? 'Eliminar vinculació' : 'Desar assignació'}
         </Button>
       </div>
     </div>
