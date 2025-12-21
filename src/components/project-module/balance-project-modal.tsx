@@ -422,7 +422,12 @@ export function BalanceProjectModal({
       });
   }, [allExpenses, project, budgetLines, selectedLineId]);
 
+  // Nivell de fallback aplicat (per mostrar missatge a l'usuari)
+  const [fallbackLevel, setFallbackLevel] = React.useState<1 | 2 | 3>(1);
+
   // Candidates filtrades per la partida seleccionada
+  // IMPORTANT: Per sobreexecució, mostra sempre les despeses de la partida
+  // Per infraexecució, aplica fallback progressiu si no hi ha bones opcions
   const candidatesForSelectedLine = React.useMemo(() => {
     if (!selectedLineId || !selectedDiag) return [];
 
@@ -430,35 +435,54 @@ export function BalanceProjectModal({
     const isOverSpend = selectedDiag.difference > 0; // excés
 
     let filtered = allCandidates;
+    let currentFallbackLevel: 1 | 2 | 3 = 1;
 
-    // Criteri inicial estricte per infraexecució:
-    // - Despeses offBank (terreny) primer
-    // - Sense projecte assignat
-    // - Amb document
-    if (isUnderSpend && !expandOptions.showAll) {
-      filtered = filtered.filter(c => {
-        // Sempre excloure les ja assignades a altres projectes (excepte si s'activa l'opció)
-        if (c.assignedToOtherProject && !expandOptions.includeOtherProjects) return false;
-
-        // Per defecte només offBank (terreny)
-        if (!expandOptions.includeBankExpenses && c.expense.source === 'bank') return false;
-
-        // Per defecte només amb document
-        if (!expandOptions.includeWithoutDocument && !c.hasDocument) return false;
-
-        // Excloure les ja assignades a aquest projecte (ja estan comptades)
-        if (c.assignedToThisProject) return false;
-
-        return true;
-      });
-    }
-
-    // Per sobreexecució: mostrar despeses assignades a AQUESTA partida
-    if (isOverSpend && !expandOptions.showAll) {
+    // Per SOBREEXECUCIÓ: mostrar despeses assignades a AQUESTA partida
+    // Sempre, sense fallback - són les que hi ha
+    if (isOverSpend) {
       filtered = filtered.filter(c => {
         return c.assignedToThisProject && c.currentBudgetLineId === selectedLineId;
       });
     }
+
+    // Per INFRAEXECUCIÓ: aplicar fallback progressiu
+    if (isUnderSpend && !expandOptions.showAll) {
+      // Excloure les ja assignades a aquest projecte (ja estan comptades)
+      const basePool = filtered.filter(c => !c.assignedToThisProject);
+
+      // Nivell 1: Criteri estricte (offBank + no altres projectes)
+      const nivel1 = basePool.filter(c => {
+        if (c.assignedToOtherProject && !expandOptions.includeOtherProjects) return false;
+        if (!expandOptions.includeBankExpenses && c.expense.source === 'bank') return false;
+        return true;
+      });
+
+      // Si Nivell 1 té resultats, usar-los
+      if (nivel1.length > 0) {
+        filtered = nivel1;
+        currentFallbackLevel = 1;
+      } else {
+        // Nivell 2: Relaxar - incloure despeses bancàries
+        const nivel2 = basePool.filter(c => {
+          if (c.assignedToOtherProject && !expandOptions.includeOtherProjects) return false;
+          return true;
+        });
+
+        if (nivel2.length > 0) {
+          filtered = nivel2;
+          currentFallbackLevel = 2;
+        } else {
+          // Nivell 3: Totes les despeses del període (incloent altres projectes)
+          filtered = basePool;
+          currentFallbackLevel = 3;
+        }
+      }
+    }
+
+    // Actualitzar estat del nivell de fallback (fora del memo, via useEffect)
+    // No podem fer setFallbackLevel aquí perquè estem dins un memo
+    // Ho fem amb un efecte secundari
+    setTimeout(() => setFallbackLevel(currentFallbackLevel), 0);
 
     // Filtrar per text de cerca
     if (searchQuery.trim()) {
@@ -476,9 +500,11 @@ export function BalanceProjectModal({
     // Ordenar per score + proximitat a l'import necessari
     const neededAmount = Math.abs(selectedDiag.difference);
     filtered = filtered.sort((a, b) => {
-      // Primer per score
-      if (b.matchScore !== a.matchScore) {
-        return b.matchScore - a.matchScore;
+      // Primer per score (les que tenen document i no estan en altres projectes pugen)
+      const scoreA = a.matchScore - (a.hasDocument ? 0 : 2) - (a.assignedToOtherProject ? 3 : 0);
+      const scoreB = b.matchScore - (b.hasDocument ? 0 : 2) - (b.assignedToOtherProject ? 3 : 0);
+      if (scoreB !== scoreA) {
+        return scoreB - scoreA;
       }
       // Després per proximitat a l'import necessari
       const diffA = Math.abs(Math.abs(a.expense.amountEUR) - neededAmount);
@@ -1044,24 +1070,48 @@ export function BalanceProjectModal({
                         />
                       </div>
 
+                      {/* Indicador de fallback aplicat (només infraexecució) */}
+                      {selectedDiag.difference < 0 && fallbackLevel > 1 && candidatesForSelectedLine.length > 0 && (
+                        <div className="flex items-center gap-2 px-3 py-2 bg-blue-50 border border-blue-200 rounded-md text-sm text-blue-700">
+                          <Info className="h-4 w-4 shrink-0" />
+                          <span>
+                            {fallbackLevel === 2
+                              ? "S'han inclòs despeses bancàries perquè no hi havia prou despeses de terreny."
+                              : "S'han inclòs totes les despeses del període perquè no hi havia prou opcions amb criteri estricte."}
+                          </span>
+                        </div>
+                      )}
+
                       {/* Llista de candidates */}
                       <ScrollArea className="flex-1 min-h-[120px] border rounded-md">
                         {candidatesForSelectedLine.length === 0 ? (
                           <div className="p-6 text-center">
                             <Info className="h-8 w-8 mx-auto mb-2 text-muted-foreground" />
-                            <p className="text-sm text-muted-foreground mb-2">
-                              {selectedDiag.difference < 0
-                                ? 'No hem trobat despeses amb criteri estricte.'
-                                : 'No hi ha despeses assignades a aquesta partida.'}
-                            </p>
-                            {selectedDiag.difference < 0 && (
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => setExpandSectionOpen(true)}
-                              >
-                                Ampliar la cerca
-                              </Button>
+                            {selectedDiag.difference > 0 ? (
+                              <>
+                                <p className="text-sm text-muted-foreground mb-2">
+                                  No hi ha despeses assignades a aquesta partida.
+                                </p>
+                                <p className="text-xs text-muted-foreground">
+                                  Revisa si les despeses estan assignades a altres partides o sense partida dins el projecte.
+                                </p>
+                              </>
+                            ) : (
+                              <>
+                                <p className="text-sm text-muted-foreground mb-2">
+                                  No hem trobat despeses disponibles per afegir a aquesta partida.
+                                </p>
+                                <p className="text-xs text-muted-foreground mb-3">
+                                  Pot ser que totes les despeses del període ja estiguin assignades a altres projectes o partides.
+                                </p>
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => setExpandSectionOpen(true)}
+                                >
+                                  Ampliar la cerca
+                                </Button>
+                              </>
                             )}
                           </div>
                         ) : (
