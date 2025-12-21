@@ -52,6 +52,7 @@ import {
   X,
   FileWarning,
   FolderOpen,
+  Sparkles,
 } from 'lucide-react';
 import { useSaveExpenseLink } from '@/hooks/use-project-module';
 import { useToast } from '@/hooks/use-toast';
@@ -206,6 +207,16 @@ export function BalanceProjectModal({
 }: BalanceProjectModalProps) {
   const { toast } = useToast();
   const { save: saveExpenseLink, isSaving } = useSaveExpenseLink();
+
+  // Estat del mode guiat (activat si la prop és true, però pot desactivar-se internament)
+  const [guidedModeActive, setGuidedModeActive] = React.useState(guidedMode);
+
+  // Sincronitzar amb la prop quan s'obre
+  React.useEffect(() => {
+    if (open) {
+      setGuidedModeActive(guidedMode);
+    }
+  }, [open, guidedMode]);
 
   // Estat de simulació
   const [simulatedMoves, setSimulatedMoves] = React.useState<SimulatedMove[]>([]);
@@ -678,7 +689,25 @@ export function BalanceProjectModal({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-5xl max-h-[90vh] flex flex-col" guidedMode={guidedMode}>
+      <DialogContent className="max-w-5xl max-h-[90vh] flex flex-col" guidedMode={guidedModeActive}>
+        {/* Banner mode guiat */}
+        {guidedModeActive && (
+          <div className="flex items-center justify-between px-3 py-2 -mx-6 -mt-6 mb-4 bg-gradient-to-r from-violet-500/10 via-purple-500/10 to-fuchsia-500/10 border-b border-purple-200/50">
+            <div className="flex items-center gap-2 text-sm text-purple-700">
+              <Sparkles className="h-4 w-4" />
+              <span className="font-medium">Justificació assistida</span>
+            </div>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-7 text-xs text-purple-600 hover:text-purple-800 hover:bg-purple-100/50"
+              onClick={() => setGuidedModeActive(false)}
+            >
+              Desactivar guia
+            </Button>
+          </div>
+        )}
+
         <DialogHeader>
           <DialogTitle>Quadrar justificació del projecte</DialogTitle>
           <DialogDescription>
