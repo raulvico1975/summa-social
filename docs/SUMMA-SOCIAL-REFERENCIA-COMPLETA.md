@@ -1,6 +1,6 @@
 # ═══════════════════════════════════════════════════════════════════════════════
 # SUMMA SOCIAL - REFERÈNCIA COMPLETA DEL PROJECTE
-# Versió 1.9 - Desembre 2025
+# Versió 1.10 - Desembre 2025
 # ═══════════════════════════════════════════════════════════════════════════════
 
 
@@ -1192,6 +1192,184 @@ function ensureStripeInDescription(desc: string | null, email: string): string {
 **Punt de connexió:** `transaction-table.tsx` → menú ⋮ si `canSplitStripeRemittance(tx)`
 
 
+## 3.10 MÒDUL PROJECTES — JUSTIFICACIÓ ASSISTIDA (NOU v1.10)
+
+### 3.10.1 Objectiu del mòdul
+
+Permetre a una persona tècnica quadrar la justificació econòmica d'un projecte (ACCD, Fons Català, etc.) a partir de les despeses reals existents, sense treballar en Excel, sense preconfiguracions rígides i sense modificar dades fins a la validació final.
+
+> ⚠️ **Aquest mòdul és extern al core de Summa Social** i segueix el patró d'exports descrit a l'Annex C.
+
+### 3.10.2 Principis de disseny (no negociables)
+
+| Principi | Descripció |
+|----------|------------|
+| **Sense mapa obligatori** | No existeix un mapa rígid partides entitat ↔ finançador |
+| **Sense classificació prèvia** | No es força la classificació prèvia de despeses |
+| **Sense workflows** | No hi ha workflows d'aprovació ni estats de "justificat" |
+| **Sense entitats noves** | No es creen entitats noves per simular |
+| **Reversible** | Tot el procés és reversible fins a "Aplicar" |
+
+### 3.10.3 Pantalla base: Gestió Econòmica del Projecte
+
+| Element | Descripció |
+|---------|------------|
+| Targetes resum | Pressupostat / Executat / Pendent |
+| Bloc principal | Seguiment Econòmic (partides) |
+| CTA | "Quadrar justificació" |
+
+**Cap procés de justificació obliga a sortir d'aquesta pantalla.**
+
+#### Càlcul del pressupost
+
+| Condició | Pressupost mostrat |
+|----------|-------------------|
+| Projecte **amb** partides | Suma de `budgetedAmountEUR` de totes les partides |
+| Projecte **sense** partides | Camp `budgetEUR` del projecte |
+
+```typescript
+interface BudgetLinesData {
+  sum: number;
+  hasLines: boolean;  // Permet distingir "0 partides" de "partides amb sum=0"
+}
+
+const budgeted = budgetLinesData?.hasLines
+  ? budgetLinesData.sum
+  : (project.budgetEUR ?? 0);
+```
+
+### 3.10.4 Mode "Quadrar justificació del projecte"
+
+- Vista assistida superposada (modal)
+- L'usuari continua veient el seguiment econòmic
+- Organització per **partida**, no per despesa
+- Dos modes segons desviació:
+  - **Infraexecució** → afegir despeses
+  - **Sobreexecució** → treure o reduir imputacions
+
+### 3.10.5 Infraexecució: afegir despeses
+
+El sistema suggereix despeses:
+- Sense projecte assignat
+- Amb ressonància (categoria / concepte / proveïdor)
+- Amb imports que encaixen (individuals o combinats)
+
+Pot incloure:
+- Despeses de terreny
+- Despeses de seu
+- Despeses sense document (amb avís visual)
+
+L'usuari pot:
+- Acceptar una proposta sencera
+- Ampliar criteris de cerca
+- Seleccionar manualment
+
+**Les suggerències són heurístiques, mai bloquegen, mai escriuen dades.**
+
+#### Algorisme de scoring
+
+| Factor | Punts | Descripció |
+|--------|-------|------------|
+| Categoria coincident | +3 | La despesa pertany a la mateixa família semàntica |
+| Contrapart coincident | +2 | El nom del proveïdor apareix a la partida |
+| Descripció coincident | +2 | Keywords de la despesa apareixen a la partida |
+| Import encaixa | +1 | L'import és ≤ dèficit |
+| Assignada altre projecte | -3 | Risc de desquadrar altre projecte |
+| Sense document | -2 | No justificable |
+
+#### Famílies semàntiques
+
+```typescript
+const CATEGORY_FAMILIES = {
+  viatges: ['transport', 'dietes', 'allotjament', 'taxi', 'avió', ...],
+  personal: ['nòmina', 'salari', 'seguretat social', ...],
+  serveis: ['consultoria', 'assessorament', 'honoraris', ...],
+  material: ['subministrament', 'fungible', 'oficina', ...],
+  formacio: ['formació', 'curs', 'taller', ...],
+  comunicacio: ['comunicació', 'màrqueting', 'difusió', ...],
+};
+```
+
+#### Classificació de propostes
+
+| Etiqueta | Criteri | Visualització |
+|----------|---------|---------------|
+| `perfect` | Delta ≤ 0,50€ | Badge verd "Exacte" |
+| `close` | Delta ≤ 2% del dèficit | Badge blau "Proper" |
+| `approx` | Resta | Badge gris "Aproximat" |
+
+### 3.10.6 Sobreexecució: treure despeses
+
+Es pot:
+- Treure **tota** la despesa de la partida
+- Treure només una **part** de l'import (split parcial)
+
+La part treta queda:
+- Dins del projecte
+- Sense partida assignada
+
+> ⚠️ **El split parcial és una funcionalitat clau, no un edge case.** Aquesta és la forma més habitual i realista de quadrar justificacions.
+
+### 3.10.7 Simulació (capa crítica)
+
+| Element | Comportament |
+|---------|--------------|
+| Moviments | Es fan en memòria |
+| Escriptura | NO fins que l'usuari clica "Aplicar" |
+| Visualització | Execució abans / després, efecte per partida |
+| Aplicar | Usa els hooks existents (`useSaveExpenseLink`) |
+
+### 3.10.8 Tipus de canvi i justificació
+
+- El projecte defineix un tipus de canvi de referència
+- Les despeses de terreny poden tenir moneda original
+- La justificació sempre es quadra en EUR
+- Camps de justificació:
+  - No són obligatoris
+  - S'editen només quan cal justificar
+  - Existeixen per respondre al finançador, no per comptabilitat
+
+### 3.10.9 Què NO fa Summa (explícit)
+
+| NO fa | Motiu |
+|-------|-------|
+| No valida formalment justificacions | No som auditors |
+| No bloqueja desviacions | L'usuari decideix |
+| No obliga a quadrar al cèntim | Realisme operatiu |
+| No substitueix el criteri tècnic | Eina, no workflow |
+| No converteix la justificació en procés rígid | Flexibilitat > rigidesa |
+
+### 3.10.10 Estructura de fitxers
+
+```
+/src/app/[orgSlug]/dashboard/project-module/
+  ├── projects/
+  │   ├── page.tsx                    # Llista de projectes
+  │   └── [projectId]/
+  │       ├── budget/page.tsx         # Gestió Econòmica (pantalla base)
+  │       └── edit/page.tsx           # Edició del projecte
+
+/src/components/project-module/
+  ├── balance-project-modal.tsx       # Modal "Quadrar justificació"
+  └── ...
+
+/src/lib/
+  ├── project-module-types.ts         # Tipus del mòdul
+  └── project-module-suggestions.ts   # Scoring i combinacions (NOU v1.10)
+```
+
+### 3.10.11 Model de dades
+
+**Veure Annex C.3** per l'estructura Firestore completa del mòdul projectes.
+
+Camps afegits v1.10:
+
+| Col·lecció | Camp | Tipus | Descripció |
+|------------|------|-------|------------|
+| `projects` | `budgetEUR` | `number \| null` | Pressupost global (fallback si no hi ha partides) |
+| `budgetLines` | `budgetedAmountEUR` | `number` | Import pressupostat de la partida |
+
+
 # ═══════════════════════════════════════════════════════════════════════════════
 # 4. FORMATS D'IMPORTACIÓ I EXPORTACIÓ
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -1420,6 +1598,19 @@ function ensureStripeInDescription(desc: string | null, email: string): string {
 # 10. ROADMAP / FUNCIONALITATS PENDENTS
 # ═══════════════════════════════════════════════════════════════════════════════
 
+## Completades v1.10
+- ✅ Mòdul Projectes: justificació assistida per partides
+- ✅ Mode infraexecució: afegir despeses amb suggerències heurístiques
+- ✅ Mode sobreexecució: treure o reduir imputacions (split parcial)
+- ✅ Simulació en memòria fins a "Aplicar"
+- ✅ Pressupost unificat als cards (suma partides vs global)
+- ✅ Scoring per famílies semàntiques (viatges, personal, serveis, etc.)
+
+## Completades v1.9
+- ✅ Importador Stripe (dividir payouts en donacions + comissions)
+- ✅ Matching donants per email exacte
+- ✅ Traçabilitat completa (stripePaymentId, stripeTransferId)
+
 ## Completades v1.8
 - ✅ Importador de devolucions del banc (Santander, Triodos)
 - ✅ Detecció automàtica d'agrupacions de devolucions
@@ -1475,7 +1666,9 @@ function ensureStripeInDescription(desc: string | null, email: string): string {
 | 1.5 | Nov 2024 | Multi-organització, sistema de rols |
 | 1.6 | Des 2024 | DonorDetailDrawer, certificats amb firma, Zona Perill, divisor remeses |
 | 1.7 | Des 2024 | Excel Model 182 per gestoria, suport Excel remeses, camps city/province, session persistence |
-| **1.8** | **Des 2024** | **Importador devolucions del banc, remeses parcials, suport multi-banc (Santander/Triodos), tests unitaris, fixes modals Radix, UX simplificada** |
+| 1.8 | Des 2024 | Importador devolucions del banc, remeses parcials, suport multi-banc (Santander/Triodos), tests unitaris, fixes modals Radix, UX simplificada |
+| 1.9 | Des 2025 | Importador Stripe (payouts → donacions + comissions), matching per email, traçabilitat completa |
+| **1.10** | **Des 2025** | **Mòdul Projectes: justificació assistida per partides, suggerències heurístiques, split parcial de despeses, simulació en memòria** |
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -1854,5 +2047,5 @@ Les assignacions creades abans de la implementació del camp `budgetLineIds` no 
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # FI DEL DOCUMENT
-# Última actualització: Desembre 2025 - Versió 1.9
+# Última actualització: Desembre 2025 - Versió 1.10
 # ═══════════════════════════════════════════════════════════════════════════════

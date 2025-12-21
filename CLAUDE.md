@@ -38,7 +38,7 @@ Si una decisió no és òbvia, ATURA'T i demana aclariments.
 
 La font d'autoritat absoluta és el document mestre:
 
-- `/docs/SUMMA-SOCIAL-REFERENCIA-COMPLETA.md` (versió actual: v1.8)
+- `/docs/SUMMA-SOCIAL-REFERENCIA-COMPLETA.md` (versió actual: v1.10)
 
 Cap altra documentació pot contradir-lo.
 
@@ -63,4 +63,42 @@ Quan se't demani una modificació:
 4. Inclou passos de verificació (comandes de terminal o accions a la UI).
 
 Aquest projecte prioritza **estabilitat, senzillesa, criteri i control** per sobre de velocitat.
+
+## 6) Mòdul Projectes — Justificació Assistida
+
+### Pantalla base
+- `Gestió Econòmica` és la pantalla central del mòdul
+- Cap flux obliga a sortir d'aquesta pantalla
+- Ruta: `/dashboard/project-module/projects/[projectId]/budget`
+
+### Mode justificació
+- És **partida-cèntric**, no despesa-cèntric
+- Prioritza **criteri** per sobre de completitud
+- Tot es fa en **memòria** fins a "Aplicar"
+- No es modifica cap dada fins que l'usuari confirma
+
+### Suggerències automàtiques
+- Són heurístiques (scoring per ressonància semàntica)
+- Mai bloquegen el flux
+- Mai escriuen dades sense confirmació explícita
+- Fitxer: `src/lib/project-module-suggestions.ts`
+
+### Split parcial
+- És funcionalitat clau, **no** un edge case
+- Permet treure part d'una despesa d'una partida
+- La part treta queda al projecte sense partida assignada
+- Cas d'ús habitual: quadrar justificacions amb import exacte
+
+### Fitxers principals
+- `src/app/[orgSlug]/dashboard/project-module/projects/[projectId]/budget/page.tsx`
+- `src/components/project-module/balance-project-modal.tsx`
+- `src/lib/project-module-suggestions.ts`
+- `src/lib/project-module-types.ts`
+
+### Què NO fer
+- NO afegir workflows d'aprovació
+- NO crear entitats noves per simular
+- NO forçar classificació prèvia de despeses
+- NO bloquejar desviacions
+- NO obligar a quadrar al cèntim
 
