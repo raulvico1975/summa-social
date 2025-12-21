@@ -67,6 +67,7 @@ import {
   Eye,
   Info,
   FileArchive,
+  Compass,
 } from 'lucide-react';
 import { useFirebase } from '@/firebase';
 import { useCurrentOrganization } from '@/hooks/organization-provider';
@@ -75,7 +76,8 @@ import { buildProjectJustificationXlsx } from '@/lib/project-justification-expor
 import { exportProjectJustificationZip } from '@/lib/project-justification-attachments-zip';
 import { trackUX } from '@/lib/ux/trackUX';
 import { useRouter } from 'next/navigation';
-import type { BudgetLine, BudgetLineFormData, ExpenseAssignment } from '@/lib/project-module-types';
+import type { BudgetLine, BudgetLineFormData } from '@/lib/project-module-types';
+import { BalanceProjectModal } from '@/components/project-module/balance-project-modal';
 
 function formatAmount(amount: number): string {
   return new Intl.NumberFormat('ca-ES', {
@@ -259,6 +261,7 @@ export default function ProjectBudgetPage() {
   const [isExporting, setIsExporting] = React.useState(false);
   const [isExportingZip, setIsExportingZip] = React.useState(false);
   const [zipProgress, setZipProgress] = React.useState<{ current: number; total: number } | null>(null);
+  const [justificationModalOpen, setJustificationModalOpen] = React.useState(false);
 
   // Calcular execució per partida
   const executionByLine = React.useMemo(() => {
@@ -493,12 +496,21 @@ export default function ProjectBudgetPage() {
           </Button>
         </Link>
         <div className="flex-1">
-          <h1 className="text-2xl font-bold">{t.projectModule?.budget ?? 'Pressupost'}</h1>
+          <h1 className="text-2xl font-bold">Gestió Econòmica</h1>
           <p className="text-muted-foreground">
             {project.name} {project.code && `(${project.code})`}
           </p>
         </div>
         <div className="flex gap-2">
+          <Button
+            onClick={() => {
+              trackUX('budget.justification.open', { projectId });
+              setJustificationModalOpen(true);
+            }}
+          >
+            <Compass className="h-4 w-4 mr-2" />
+            Iniciar justificació
+          </Button>
           <Button
             variant="outline"
             size="icon"
@@ -533,9 +545,8 @@ export default function ProjectBudgetPage() {
               <FileArchive className="h-4 w-4" />
             )}
           </Button>
-          <Button onClick={openNew} title={t.projectModule?.addBudgetLine ?? 'Afegir partida'}>
-            <Plus className="h-4 w-4 mr-2" />
-            {t.projectModule?.addBudgetLine ?? 'Afegir partida'}
+          <Button variant="outline" size="icon" onClick={openNew} title={t.projectModule?.addBudgetLine ?? 'Afegir partida'}>
+            <Plus className="h-4 w-4" />
           </Button>
         </div>
       </div>
@@ -577,10 +588,7 @@ export default function ProjectBudgetPage() {
       {/* Taula de partides */}
       <Card>
         <CardHeader>
-          <CardTitle>{t.projectModule?.budgetLines ?? 'Partides'}</CardTitle>
-          <CardDescription>
-            {t.projectModule?.deviationInfo ?? 'Desviació permesa'}: {allowedDeviation}%
-          </CardDescription>
+          <CardTitle>{t.projectModule?.budgetLines ?? 'Seguiment Econòmic'}</CardTitle>
         </CardHeader>
         <CardContent>
           {linesLoading || linksLoading ? (
@@ -735,6 +743,19 @@ export default function ProjectBudgetPage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Modal Quadrar projecte */}
+      <BalanceProjectModal
+        open={justificationModalOpen}
+        onOpenChange={setJustificationModalOpen}
+        project={project}
+        budgetLines={budgetLines}
+        expenseLinks={expenseLinks}
+        allExpenses={allExpenses}
+        onSuccess={async () => {
+          await refreshLines();
+        }}
+      />
     </div>
   );
 }

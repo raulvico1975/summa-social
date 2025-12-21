@@ -7,15 +7,16 @@ import * as React from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useProjects } from '@/hooks/use-project-module';
-import { useOrgUrl } from '@/hooks/organization-provider';
-import { useTranslations } from '@/i18n';
+import { useOrgUrl, useCurrentOrganization } from '@/hooks/organization-provider';
+import { useFirebase } from '@/firebase';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { AlertCircle, Plus, FolderKanban, Calendar, Euro, Eye, Pencil } from 'lucide-react';
 import { trackUX } from '@/lib/ux/trackUX';
-import type { Project } from '@/lib/project-module-types';
+import { collection, getDocs } from 'firebase/firestore';
+import type { Project, ExpenseLink, ExpenseAssignment } from '@/lib/project-module-types';
 
 function formatDate(dateStr: string | null): string {
   if (!dateStr) return '-';
@@ -31,18 +32,26 @@ function formatAmount(amount: number | null): string {
   }).format(amount);
 }
 
-function ProjectCard({ project }: { project: Project }) {
+interface ProjectCardProps {
+  project: Project;
+  executedAmount: number;
+}
+
+function ProjectCard({ project, executedAmount }: ProjectCardProps) {
   const { buildUrl } = useOrgUrl();
   const router = useRouter();
-  const { t } = useTranslations();
 
-  // Click en el card → navega a Pressupost
+  // Càlculs econòmics
+  const budgeted = project.budgetEUR ?? 0;
+  const pending = budgeted - executedAmount;
+
+  // Click en el card → navega a Gestió Econòmica
   const handleCardClick = () => {
     trackUX('projects.card.click', { projectId: project.id, projectName: project.name });
     router.push(buildUrl(`/dashboard/project-module/projects/${project.id}/budget`));
   };
 
-  // Click en botó Pressupost
+  // Click en botó Gestió Econòmica
   const handleBudgetClick = (e: React.MouseEvent) => {
     e.stopPropagation();
     trackUX('projects.budget.click', { projectId: project.id, projectName: project.name });
@@ -93,12 +102,23 @@ function ProjectCard({ project }: { project: Project }) {
           </div>
         </div>
 
-        {project.budgetEUR !== null && (
-          <div className="flex items-center gap-2 text-sm">
-            <Euro className="h-4 w-4 text-muted-foreground" />
-            <span>Pressupost: {formatAmount(project.budgetEUR)}</span>
+        {/* Info econòmica */}
+        <div className="grid grid-cols-3 gap-2 text-sm border-t pt-3">
+          <div>
+            <span className="text-muted-foreground text-xs block">Pressupostat</span>
+            <span className="font-medium">{formatAmount(budgeted)}</span>
           </div>
-        )}
+          <div>
+            <span className="text-muted-foreground text-xs block">Executat</span>
+            <span className="font-medium">{formatAmount(executedAmount)}</span>
+          </div>
+          <div>
+            <span className="text-muted-foreground text-xs block">Pendent</span>
+            <span className={`font-medium ${pending < 0 ? 'text-red-600' : ''}`}>
+              {formatAmount(pending)}
+            </span>
+          </div>
+        </div>
 
         <div className="pt-2 flex gap-2">
           <Link
@@ -108,24 +128,22 @@ function ProjectCard({ project }: { project: Project }) {
           >
             <Button variant="outline" size="sm" className="w-full">
               <Euro className="h-4 w-4 mr-1" />
-              Pressupost
+              Gestió Econòmica
             </Button>
           </Link>
           <Link
             href={buildUrl(`/dashboard/project-module/expenses?projectId=${project.id}`)}
-            className="flex-1"
             onClick={handleViewExpensesClick}
           >
-            <Button variant="outline" size="sm" className="w-full">
-              <Eye className="h-4 w-4 mr-1" />
-              {t.projectModule?.viewExpenses ?? 'Despeses'}
+            <Button variant="ghost" size="sm">
+              <Eye className="h-4 w-4" />
             </Button>
           </Link>
           <Link
             href={buildUrl(`/dashboard/project-module/projects/${project.id}/edit`)}
             onClick={handleEditClick}
           >
-            <Button variant="outline" size="sm">
+            <Button variant="ghost" size="sm">
               <Pencil className="h-4 w-4" />
             </Button>
           </Link>
@@ -138,6 +156,48 @@ function ProjectCard({ project }: { project: Project }) {
 export default function ProjectsListPage() {
   const { projects, isLoading, error, refresh } = useProjects();
   const { buildUrl } = useOrgUrl();
+  const { firestore } = useFirebase();
+  const { organizationId } = useCurrentOrganization();
+
+  // Carregar tots els expenseLinks per calcular execució per projecte
+  const [executionByProject, setExecutionByProject] = React.useState<Map<string, number>>(new Map());
+  const [linksLoading, setLinksLoading] = React.useState(true);
+
+  React.useEffect(() => {
+    if (!organizationId) return;
+
+    const loadLinks = async () => {
+      setLinksLoading(true);
+      try {
+        const linksRef = collection(
+          firestore,
+          'organizations',
+          organizationId,
+          'projectModule',
+          '_',
+          'expenseLinks'
+        );
+        const snapshot = await getDocs(linksRef);
+
+        const map = new Map<string, number>();
+        for (const docSnap of snapshot.docs) {
+          const data = docSnap.data();
+          const assignments = data.assignments as ExpenseAssignment[] ?? [];
+          for (const assignment of assignments) {
+            const current = map.get(assignment.projectId) ?? 0;
+            map.set(assignment.projectId, current + Math.abs(assignment.amountEUR));
+          }
+        }
+        setExecutionByProject(map);
+      } catch (err) {
+        console.error('Error loading expense links:', err);
+      } finally {
+        setLinksLoading(false);
+      }
+    };
+
+    loadLinks();
+  }, [firestore, organizationId]);
 
   // Track page open
   React.useEffect(() => {
@@ -176,7 +236,7 @@ export default function ProjectsListPage() {
       </div>
 
       {/* Llistat */}
-      {isLoading ? (
+      {isLoading || linksLoading ? (
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
           {Array.from({ length: 3 }).map((_, i) => (
             <Card key={i}>
@@ -211,7 +271,11 @@ export default function ProjectsListPage() {
       ) : (
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
           {projects.map((project) => (
-            <ProjectCard key={project.id} project={project} />
+            <ProjectCard
+              key={project.id}
+              project={project}
+              executedAmount={executionByProject.get(project.id) ?? 0}
+            />
           ))}
         </div>
       )}
