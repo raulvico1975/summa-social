@@ -23,7 +23,7 @@ import {
 import { trackUX } from '@/lib/ux/trackUX';
 import { useTranslations } from '@/i18n';
 import { collection, getDocs } from 'firebase/firestore';
-import type { Project, ExpenseAssignment } from '@/lib/project-module-types';
+import type { Project, ExpenseAssignment, BudgetLine } from '@/lib/project-module-types';
 
 function formatDate(dateStr: string | null): string {
   if (!dateStr) return '-';
@@ -42,16 +42,18 @@ function formatAmount(amount: number | null): string {
 interface ProjectCardProps {
   project: Project;
   executedAmount: number;
-  budgetLinesCount: number;
+  budgetLinesSum: number | null; // null = no s'ha carregat o no hi ha partides
 }
 
-function ProjectCard({ project, executedAmount, budgetLinesCount }: ProjectCardProps) {
+function ProjectCard({ project, executedAmount, budgetLinesSum }: ProjectCardProps) {
   const { t } = useTranslations();
   const { buildUrl } = useOrgUrl();
   const router = useRouter();
 
   // Càlculs econòmics
-  const budgeted = project.budgetEUR ?? 0;
+  // Si hi ha partides amb pressupost, usar la suma; sinó, el pressupost global
+  const hasBudgetLines = budgetLinesSum !== null && budgetLinesSum > 0;
+  const budgeted = hasBudgetLines ? budgetLinesSum : (project.budgetEUR ?? 0);
   const pending = budgeted - executedAmount;
 
   // Click en el card → navega a Gestió Econòmica
@@ -116,7 +118,7 @@ function ProjectCard({ project, executedAmount, budgetLinesCount }: ProjectCardP
           <div>
             <span className="text-muted-foreground text-xs flex items-center gap-1">
               Pressupostat
-              {budgetLinesCount > 0 && (
+              {hasBudgetLines && (
                 <TooltipProvider delayDuration={200}>
                   <Tooltip>
                     <TooltipTrigger asChild>
@@ -193,7 +195,7 @@ export default function ProjectsListPage() {
 
   // Carregar tots els expenseLinks per calcular execució per projecte
   const [executionByProject, setExecutionByProject] = React.useState<Map<string, number>>(new Map());
-  const [budgetLinesCountByProject, setBudgetLinesCountByProject] = React.useState<Map<string, number>>(new Map());
+  const [budgetLinesSumByProject, setBudgetLinesSumByProject] = React.useState<Map<string, number>>(new Map());
   const [linksLoading, setLinksLoading] = React.useState(true);
 
   React.useEffect(() => {
@@ -232,13 +234,13 @@ export default function ProjectsListPage() {
     loadLinks();
   }, [firestore, organizationId]);
 
-  // Carregar recompte de partides per cada projecte
+  // Carregar suma de partides per cada projecte
   React.useEffect(() => {
     if (!organizationId || projects.length === 0) return;
 
-    const loadBudgetLinesCounts = async () => {
+    const loadBudgetLinesSums = async () => {
       try {
-        const countsMap = new Map<string, number>();
+        const sumsMap = new Map<string, number>();
 
         for (const project of projects) {
           const linesRef = collection(
@@ -252,16 +254,23 @@ export default function ProjectsListPage() {
             'budgetLines'
           );
           const snapshot = await getDocs(linesRef);
-          countsMap.set(project.id, snapshot.size);
+
+          // Sumar tots els budgetedAmountEUR de les partides
+          let sum = 0;
+          for (const doc of snapshot.docs) {
+            const data = doc.data() as BudgetLine;
+            sum += data.budgetedAmountEUR ?? 0;
+          }
+          sumsMap.set(project.id, sum);
         }
 
-        setBudgetLinesCountByProject(countsMap);
+        setBudgetLinesSumByProject(sumsMap);
       } catch (err) {
-        console.error('Error loading budget lines counts:', err);
+        console.error('Error loading budget lines sums:', err);
       }
     };
 
-    loadBudgetLinesCounts();
+    loadBudgetLinesSums();
   }, [firestore, organizationId, projects]);
 
   // Track page open
@@ -340,7 +349,7 @@ export default function ProjectsListPage() {
               key={project.id}
               project={project}
               executedAmount={executionByProject.get(project.id) ?? 0}
-              budgetLinesCount={budgetLinesCountByProject.get(project.id) ?? 0}
+              budgetLinesSum={budgetLinesSumByProject.get(project.id) ?? null}
             />
           ))}
         </div>

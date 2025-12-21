@@ -571,10 +571,15 @@ export default function ProjectBudgetPage() {
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <Card>
           <CardHeader className="pb-2">
-            <CardDescription>{t.projectModule?.budgeted ?? 'Pressupostat'}</CardDescription>
+            <CardDescription>{t.projectModule?.budgetTotalLabel ?? 'Pressupost total del projecte'}</CardDescription>
           </CardHeader>
           <CardContent>
             <p className="text-2xl font-bold">{formatAmount(totals.budgeted)}</p>
+            {budgetLines.length > 0 && totals.budgeted > 0 && (
+              <p className="text-xs text-muted-foreground mt-1">
+                {t.projectModule?.budgetTotalHintFromLines ?? 'Calculat automàticament a partir de les partides.'}
+              </p>
+            )}
           </CardContent>
         </Card>
         <Card>

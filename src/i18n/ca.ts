@@ -1514,6 +1514,8 @@ export const ca = {
     removeRow: "Eliminar fila",
     budgetInfoLabel: "Informació sobre Pressupostat",
     budgetFromLinesTooltip: "Pressupost del projecte = suma de les partides.",
+    budgetTotalLabel: "Pressupost total del projecte",
+    budgetTotalHintFromLines: "Calculat automàticament a partir de les partides.",
   },
   logPanel: {
     title: "Log de Diagnòstic",

@@ -1540,6 +1540,8 @@ export const es = {
     removeRow: "Eliminar fila",
     budgetInfoLabel: "Información sobre Presupuestado",
     budgetFromLinesTooltip: "Presupuesto del proyecto = suma de las partidas.",
+    budgetTotalLabel: "Presupuesto total del proyecto",
+    budgetTotalHintFromLines: "Calculado automáticamente a partir de las partidas.",
   },
   logPanel: {
     title: "Log de Diagnóstico",
