@@ -770,7 +770,6 @@ export default function ExpensesInboxPage() {
           issuerTaxId: editOffBankExpense.expense.issuerTaxId ?? undefined,
           invoiceDate: editOffBankExpense.expense.invoiceDate ?? undefined,
           paymentDate: editOffBankExpense.expense.paymentDate ?? undefined,
-          supportDocNumber: editOffBankExpense.expense.supportDocNumber ?? undefined,
         } : undefined}
       />
     </div>

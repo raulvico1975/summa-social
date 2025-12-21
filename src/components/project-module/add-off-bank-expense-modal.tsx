@@ -43,7 +43,6 @@ interface OffBankExpenseInitialValues {
   issuerTaxId?: string;
   invoiceDate?: string;
   paymentDate?: string;
-  supportDocNumber?: string;
 }
 
 interface OffBankExpenseModalProps {
@@ -98,7 +97,6 @@ export function OffBankExpenseModal({
   const [issuerTaxId, setIssuerTaxId] = useState('');
   const [invoiceDate, setInvoiceDate] = useState('');
   const [paymentDate, setPaymentDate] = useState('');
-  const [supportDocNumber, setSupportDocNumber] = useState('');
 
   const [errors, setErrors] = useState<Record<string, string>>({});
 
@@ -151,9 +149,9 @@ export function OffBankExpenseModal({
       // Justificació
       setInvoiceNumber(initialValues.invoiceNumber ?? '');
       setIssuerTaxId(initialValues.issuerTaxId ?? '');
-      setInvoiceDate(initialValues.invoiceDate ?? '');
+      // invoiceDate per defecte = date de la despesa
+      setInvoiceDate(initialValues.invoiceDate ?? initialValues.date);
       setPaymentDate(initialValues.paymentDate ?? '');
-      setSupportDocNumber(initialValues.supportDocNumber ?? '');
       // Obrir secció justificació si hi ha dades
       if (initialValues.invoiceNumber || initialValues.issuerTaxId || initialValues.invoiceDate) {
         setJustificationOpen(true);
@@ -188,7 +186,6 @@ export function OffBankExpenseModal({
     setIssuerTaxId('');
     setInvoiceDate('');
     setPaymentDate('');
-    setSupportDocNumber('');
     setErrors({});
   };
 
@@ -252,7 +249,6 @@ export function OffBankExpenseModal({
       issuerTaxId: issuerTaxId.trim() || undefined,
       invoiceDate: invoiceDate || undefined,
       paymentDate: paymentDate || undefined,
-      supportDocNumber: supportDocNumber.trim() || undefined,
     };
 
     try {
@@ -300,7 +296,7 @@ export function OffBankExpenseModal({
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="sm:max-w-md max-h-[85vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>
             {isEditMode ? 'Editar despesa de terreny' : 'Afegir despesa de terreny'}
@@ -484,7 +480,13 @@ export function OffBankExpenseModal({
           </div>
 
           {/* Secció Justificació (collapsible) */}
-          <Collapsible open={justificationOpen} onOpenChange={setJustificationOpen}>
+          <Collapsible open={justificationOpen} onOpenChange={(open) => {
+            setJustificationOpen(open);
+            // Pre-omplir data factura amb data despesa si no té valor
+            if (open && !invoiceDate && date) {
+              setInvoiceDate(date);
+            }
+          }}>
             <CollapsibleTrigger asChild>
               <Button variant="ghost" type="button" className="w-full justify-between px-3 py-2 h-auto">
                 <span className="text-sm font-medium">Dades de justificació</span>
@@ -541,17 +543,6 @@ export function OffBankExpenseModal({
                     className="h-9"
                   />
                 </div>
-              </div>
-              <div className="space-y-1">
-                <Label htmlFor="supportDocNumber" className="text-xs">Núm. justificant</Label>
-                <Input
-                  id="supportDocNumber"
-                  type="text"
-                  placeholder="J-001"
-                  value={supportDocNumber}
-                  onChange={(e) => setSupportDocNumber(e.target.value)}
-                  className="h-9"
-                />
               </div>
             </CollapsibleContent>
           </Collapsible>
