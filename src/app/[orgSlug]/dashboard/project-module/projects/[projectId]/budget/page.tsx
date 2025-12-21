@@ -12,6 +12,7 @@ import {
   useSaveBudgetLine,
   useProjectExpenseLinks,
   useUnifiedExpenseFeed,
+  useSaveProjectFx,
 } from '@/hooks/use-project-module';
 import { useOrgUrl } from '@/hooks/organization-provider';
 import { useToast } from '@/hooks/use-toast';
@@ -68,6 +69,7 @@ import {
   Info,
   FileArchive,
   Compass,
+  DollarSign,
 } from 'lucide-react';
 import { useFirebase } from '@/firebase';
 import { useCurrentOrganization } from '@/hooks/organization-provider';
@@ -249,11 +251,12 @@ export default function ProjectBudgetPage() {
     trackUX('budget.open', { projectId });
   }, [projectId]);
 
-  const { project, isLoading: projectLoading, error: projectError } = useProjectDetail(projectId);
+  const { project, isLoading: projectLoading, error: projectError, refresh: refreshProject } = useProjectDetail(projectId);
   const { budgetLines, isLoading: linesLoading, error: linesError, refresh: refreshLines } = useProjectBudgetLines(projectId);
   const { expenseLinks, isLoading: linksLoading } = useProjectExpenseLinks(projectId);
   const { expenses: allExpenses, isLoading: expensesLoading } = useUnifiedExpenseFeed({ projectId });
   const { save, remove, isSaving } = useSaveBudgetLine();
+  const { saveFx, isSaving: isSavingFx } = useSaveProjectFx();
 
   const [formOpen, setFormOpen] = React.useState(false);
   const [editingLine, setEditingLine] = React.useState<BudgetLine | null>(null);
@@ -262,6 +265,19 @@ export default function ProjectBudgetPage() {
   const [isExportingZip, setIsExportingZip] = React.useState(false);
   const [zipProgress, setZipProgress] = React.useState<{ current: number; total: number } | null>(null);
   const [justificationModalOpen, setJustificationModalOpen] = React.useState(false);
+
+  // Estat per edició FX
+  const [fxEditMode, setFxEditMode] = React.useState(false);
+  const [fxRateInput, setFxRateInput] = React.useState('');
+  const [fxCurrencyInput, setFxCurrencyInput] = React.useState('');
+
+  // Inicialitzar inputs FX quan es carrega el projecte
+  React.useEffect(() => {
+    if (project) {
+      setFxRateInput(project.fxRate?.toString() ?? '');
+      setFxCurrencyInput(project.fxCurrency ?? '');
+    }
+  }, [project]);
 
   // Calcular execució per partida
   const executionByLine = React.useMemo(() => {
@@ -584,6 +600,116 @@ export default function ProjectBudgetPage() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Configuració FX per despeses off-bank */}
+      <Card>
+        <CardHeader className="pb-3">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <DollarSign className="h-5 w-5 text-muted-foreground" />
+              <CardTitle className="text-base">{t.projectModule?.fxConfig ?? 'Tipus de canvi del projecte'}</CardTitle>
+            </div>
+            {!fxEditMode && (
+              <Button variant="ghost" size="sm" onClick={() => setFxEditMode(true)}>
+                <Pencil className="h-4 w-4" />
+              </Button>
+            )}
+          </div>
+          <CardDescription className="text-xs">
+            {t.projectModule?.fxConfigDesc ?? 'Per despeses de terreny (off-bank) en moneda local. Ex: 655.957 XOF = 1 EUR'}
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          {fxEditMode ? (
+            <div className="flex items-end gap-4">
+              <div className="flex-1 space-y-1">
+                <Label htmlFor="fxRate" className="text-xs">{t.projectModule?.fxRate ?? 'Tipus de canvi'}</Label>
+                <Input
+                  id="fxRate"
+                  type="text"
+                  inputMode="decimal"
+                  value={fxRateInput}
+                  onChange={(e) => setFxRateInput(e.target.value)}
+                  placeholder="655.957"
+                  className="h-9"
+                />
+              </div>
+              <div className="w-24 space-y-1">
+                <Label htmlFor="fxCurrency" className="text-xs">{t.projectModule?.currency ?? 'Moneda'}</Label>
+                <Input
+                  id="fxCurrency"
+                  type="text"
+                  value={fxCurrencyInput}
+                  onChange={(e) => setFxCurrencyInput(e.target.value.toUpperCase())}
+                  placeholder="XOF"
+                  maxLength={3}
+                  className="h-9 font-mono"
+                />
+              </div>
+              <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    setFxEditMode(false);
+                    setFxRateInput(project.fxRate?.toString() ?? '');
+                    setFxCurrencyInput(project.fxCurrency ?? '');
+                  }}
+                  disabled={isSavingFx}
+                >
+                  {t.common?.cancel ?? 'Cancel·lar'}
+                </Button>
+                <Button
+                  size="sm"
+                  onClick={async () => {
+                    const rate = fxRateInput ? parseFloat(fxRateInput.replace(',', '.')) : null;
+                    if (fxRateInput && (isNaN(rate!) || rate! <= 0)) {
+                      toast({
+                        variant: 'destructive',
+                        title: 'Error',
+                        description: t.projectModule?.fxRatePositive ?? 'El tipus de canvi ha de ser positiu',
+                      });
+                      return;
+                    }
+                    try {
+                      await saveFx(projectId, rate, fxCurrencyInput || null);
+                      toast({
+                        title: t.projectModule?.fxSaved ?? 'Tipus de canvi desat',
+                        description: rate ? `${rate} ${fxCurrencyInput} = 1 EUR` : 'Tipus de canvi eliminat',
+                      });
+                      setFxEditMode(false);
+                      await refreshProject();
+                    } catch (err) {
+                      toast({
+                        variant: 'destructive',
+                        title: 'Error',
+                        description: err instanceof Error ? err.message : 'Error desant tipus de canvi',
+                      });
+                    }
+                  }}
+                  disabled={isSavingFx}
+                >
+                  {isSavingFx ? <Loader2 className="h-4 w-4 animate-spin" /> : (t.common?.save ?? 'Desar')}
+                </Button>
+              </div>
+            </div>
+          ) : (
+            <div className="flex items-center gap-2 text-sm">
+              {project.fxRate ? (
+                <>
+                  <span className="font-mono font-medium">{project.fxRate}</span>
+                  <span className="text-muted-foreground">{project.fxCurrency ?? ''}</span>
+                  <span className="text-muted-foreground">= 1 EUR</span>
+                </>
+              ) : (
+                <span className="text-muted-foreground italic">
+                  {t.projectModule?.noFxConfigured ?? 'No configurat. Les despeses off-bank es registraran directament en EUR.'}
+                </span>
+              )}
+            </div>
+          )}
+        </CardContent>
+      </Card>
 
       {/* Taula de partides */}
       <Card>

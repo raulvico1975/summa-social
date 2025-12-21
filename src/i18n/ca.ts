@@ -1477,6 +1477,22 @@ export const ca = {
     clearFilter: "Treure filtre",
     downloadAttachments: "Baixar comprovants",
     zipGenerated: "ZIP generat",
+    // FX
+    fxConfig: "Tipus de canvi del projecte",
+    fxConfigDesc: "Per despeses de terreny (off-bank) en moneda local. Ex: 655.957 XOF = 1 EUR",
+    fxRate: "Tipus de canvi",
+    currency: "Moneda",
+    fxRatePositive: "El tipus de canvi ha de ser positiu",
+    fxSaved: "Tipus de canvi desat",
+    noFxConfigured: "No configurat. Les despeses off-bank es registraran directament en EUR.",
+    // Justificació
+    invoiceNumber: "Núm. factura",
+    issuerTaxId: "NIF emissor",
+    invoiceDate: "Data factura",
+    paymentDate: "Data pagament",
+    supportDocNumber: "Núm. justificant",
+    justificationData: "Dades de justificació",
+    justificationDesc: "Informació per a la justificació econòmica del projecte",
   },
   logPanel: {
     title: "Log de Diagnòstic",

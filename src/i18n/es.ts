@@ -1503,6 +1503,22 @@ export const es = {
     clearFilter: "Quitar filtro",
     downloadAttachments: "Descargar justificantes",
     zipGenerated: "ZIP generado",
+    // FX
+    fxConfig: "Tipo de cambio del proyecto",
+    fxConfigDesc: "Para gastos de terreno (off-bank) en moneda local. Ej: 655.957 XOF = 1 EUR",
+    fxRate: "Tipo de cambio",
+    currency: "Moneda",
+    fxRatePositive: "El tipo de cambio debe ser positivo",
+    fxSaved: "Tipo de cambio guardado",
+    noFxConfigured: "No configurado. Los gastos off-bank se registrarán directamente en EUR.",
+    // Justificación
+    invoiceNumber: "Núm. factura",
+    issuerTaxId: "NIF emisor",
+    invoiceDate: "Fecha factura",
+    paymentDate: "Fecha pago",
+    supportDocNumber: "Núm. justificante",
+    justificationData: "Datos de justificación",
+    justificationDesc: "Información para la justificación económica del proyecto",
   },
   logPanel: {
     title: "Log de Diagnóstico",

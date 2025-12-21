@@ -2,9 +2,31 @@
 // Exportació Excel de justificació de projecte (ACCD / Fons Català)
 
 import * as XLSX from 'xlsx';
-import type { BudgetLine, ExpenseLink, Project, ProjectExpenseExport } from '@/lib/project-module-types';
+import type { BudgetLine, ExpenseLink, Project, ProjectExpenseExport, OffBankExpense } from '@/lib/project-module-types';
 import type { Firestore } from 'firebase/firestore';
 import { collection, getDocs, doc, getDoc, query, where } from 'firebase/firestore';
+
+// Tipus unificat per despeses (bank o off-bank)
+interface UnifiedExpenseData {
+  id: string;
+  source: 'bank' | 'offBank';
+  date: string;
+  description: string | null;
+  counterpartyName: string | null;
+  categoryName: string | null;
+  amountEUR: number;
+  documentName: string | null;
+  // FX
+  currency?: string | null;
+  amountOriginal?: number | null;
+  fxRateUsed?: number | null;
+  // Justificació (per offBank)
+  invoiceNumber?: string | null;
+  issuerTaxId?: string | null;
+  invoiceDate?: string | null;
+  paymentDate?: string | null;
+  supportDocNumber?: string | null;
+}
 
 // ═══════════════════════════════════════════════════════════════════════════
 // TIPUS
@@ -20,7 +42,7 @@ interface JustificationData {
   organization: OrganizationData;
   budgetLines: BudgetLine[];
   expenseLinks: ExpenseLink[];
-  expenses: Map<string, ProjectExpenseExport>;
+  expenses: Map<string, UnifiedExpenseData>;
 }
 
 interface BudgetLineSummary {
@@ -144,9 +166,9 @@ async function fetchJustificationData(
     ...d.data(),
   } as ExpenseLink));
 
-  // 5. Carregar despeses relacionades
+  // 5. Carregar despeses relacionades (bank i off-bank)
   const txIds = expenseLinks.map((l) => l.id);
-  const expenses = new Map<string, ProjectExpenseExport>();
+  const expenses = new Map<string, UnifiedExpenseData>();
 
   const feedRef = collection(
     firestore,
@@ -157,17 +179,70 @@ async function fetchJustificationData(
     'items'
   );
 
-  // Carregar en batch (màxim 10 per query 'in')
-  for (let i = 0; i < txIds.length; i += 10) {
-    const batch = txIds.slice(i, i + 10);
-    // Per cada ID, fem getDoc individual (més simple i fiable)
-    for (const txId of batch) {
-      // Ignorar off-bank per ara (txId comença amb "off_")
-      if (txId.startsWith('off_')) continue;
+  const offBankRef = collection(
+    firestore,
+    'organizations',
+    organizationId,
+    'projectModule',
+    '_',
+    'offBankExpenses'
+  );
 
+  for (const txId of txIds) {
+    if (txId.startsWith('off_')) {
+      // Despesa off-bank
+      const offBankId = txId.replace('off_', '');
+      const offBankDoc = await getDoc(doc(offBankRef, offBankId));
+      if (offBankDoc.exists()) {
+        const data = offBankDoc.data() as OffBankExpense;
+        expenses.set(txId, {
+          id: txId,
+          source: 'offBank',
+          date: data.date,
+          description: data.concept,
+          counterpartyName: data.counterpartyName,
+          categoryName: data.categoryName,
+          amountEUR: -Math.abs(data.amountEUR),
+          documentName: null,
+          // FX
+          currency: data.currency ?? null,
+          amountOriginal: data.amountOriginal ?? null,
+          fxRateUsed: data.fxRateUsed ?? null,
+          // Justificació directa de offBank
+          invoiceNumber: data.invoiceNumber ?? null,
+          issuerTaxId: data.issuerTaxId ?? null,
+          invoiceDate: data.invoiceDate ?? null,
+          paymentDate: data.paymentDate ?? null,
+          supportDocNumber: data.supportDocNumber ?? null,
+        });
+      }
+    } else {
+      // Despesa bank
       const expenseDoc = await getDoc(doc(feedRef, txId));
       if (expenseDoc.exists()) {
-        expenses.set(txId, { id: expenseDoc.id, ...expenseDoc.data() } as ProjectExpenseExport);
+        const data = expenseDoc.data() as ProjectExpenseExport;
+        // Buscar justificació a l'expenseLink
+        const link = expenseLinks.find((l) => l.id === txId);
+        expenses.set(txId, {
+          id: txId,
+          source: 'bank',
+          date: data.date,
+          description: data.description,
+          counterpartyName: data.counterpartyName,
+          categoryName: data.categoryName,
+          amountEUR: data.amountEUR,
+          documentName: data.documents?.[0]?.name ?? null,
+          // FX (bank sempre és EUR)
+          currency: 'EUR',
+          amountOriginal: null,
+          fxRateUsed: null,
+          // Justificació de l'expenseLink
+          invoiceNumber: link?.justification?.invoiceNumber ?? null,
+          issuerTaxId: link?.justification?.issuerTaxId ?? null,
+          invoiceDate: link?.justification?.invoiceDate ?? null,
+          paymentDate: link?.justification?.paymentDate ?? null,
+          supportDocNumber: link?.justification?.supportDocNumber ?? null,
+        });
       }
     }
   }
@@ -276,8 +351,9 @@ function buildDespesesSheet(data: JustificationData): XLSX.WorkSheet {
 
   const rows: (string | number)[][] = [];
 
-  // Header
+  // Header amb noves columnes
   rows.push([
+    'Font',
     'Data',
     'Proveïdor/Contrapart',
     'Concepte',
@@ -285,7 +361,15 @@ function buildDespesesSheet(data: JustificationData): XLSX.WorkSheet {
     'Projecte',
     'Codi partida',
     'Partida',
-    'Import assignat',
+    'Moneda',
+    'Import original',
+    'FX',
+    'Import EUR',
+    'Núm. factura',
+    'NIF emissor',
+    'Data factura',
+    'Data pagament',
+    'Núm. justificant',
     'Document',
   ]);
 
@@ -313,6 +397,7 @@ function buildDespesesSheet(data: JustificationData): XLSX.WorkSheet {
         : null;
 
       rows.push([
+        expense.source === 'bank' ? 'Bancària' : 'Terreny',
         formatDateDMY(expense.date),
         expense.counterpartyName ?? '',
         expense.description ?? '',
@@ -320,8 +405,16 @@ function buildDespesesSheet(data: JustificationData): XLSX.WorkSheet {
         assignment.projectName,
         budgetLine?.code ?? '',
         assignment.budgetLineName ?? '(sense partida)',
+        expense.currency ?? 'EUR',
+        expense.amountOriginal ?? '',
+        expense.fxRateUsed ?? '',
         Math.abs(assignment.amountEUR),
-        expense.documents?.[0]?.name ?? '',
+        expense.invoiceNumber ?? '',
+        expense.issuerTaxId ?? '',
+        expense.invoiceDate ? formatDateDMY(expense.invoiceDate) : '',
+        expense.paymentDate ? formatDateDMY(expense.paymentDate) : '',
+        expense.supportDocNumber ?? '',
+        expense.documentName ?? '',
       ]);
     }
   }
@@ -330,6 +423,7 @@ function buildDespesesSheet(data: JustificationData): XLSX.WorkSheet {
 
   // Amplades de columna
   ws['!cols'] = [
+    { wch: 10 }, // Font
     { wch: 12 }, // Data
     { wch: 25 }, // Proveïdor
     { wch: 40 }, // Concepte
@@ -337,7 +431,15 @@ function buildDespesesSheet(data: JustificationData): XLSX.WorkSheet {
     { wch: 20 }, // Projecte
     { wch: 10 }, // Codi partida
     { wch: 25 }, // Partida
-    { wch: 15 }, // Import
+    { wch: 8 },  // Moneda
+    { wch: 15 }, // Import original
+    { wch: 10 }, // FX
+    { wch: 15 }, // Import EUR
+    { wch: 15 }, // Núm. factura
+    { wch: 12 }, // NIF emissor
+    { wch: 12 }, // Data factura
+    { wch: 12 }, // Data pagament
+    { wch: 15 }, // Núm. justificant
     { wch: 30 }, // Document
   ];
 

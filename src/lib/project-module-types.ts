@@ -65,6 +65,11 @@ export interface Project {
 
   allowedDeviationPct: number; // default 10
 
+  // Tipus de canvi per despeses offBank (moneda local → EUR)
+  // fxRate = quantes unitats de moneda local equivalen a 1 EUR
+  fxRate?: number | null;
+  fxCurrency?: string | null; // ex: "XOF", "VES", "DOP"
+
   createdBy: string;
   createdAt: Timestamp;
   updatedAt: Timestamp;
@@ -116,6 +121,15 @@ export interface ExpenseAssignment {
   budgetLineName?: string | null; // denormalitzat, opcional
 }
 
+// Dades de justificació opcionals (per bank expenses)
+export interface ExpenseJustification {
+  invoiceNumber?: string | null;
+  issuerTaxId?: string | null;
+  invoiceDate?: string | null; // YYYY-MM-DD
+  paymentDate?: string | null; // YYYY-MM-DD
+  supportDocNumber?: string | null;
+}
+
 export interface ExpenseLink {
   id: string; // = txId
   orgId: string;
@@ -124,6 +138,9 @@ export interface ExpenseLink {
   projectIds: string[]; // per queries ràpides (array-contains)
 
   note: string | null;
+
+  // Dades de justificació per despeses bank (opcional)
+  justification?: ExpenseJustification | null;
 
   createdBy: string;
   createdAt: Timestamp;
@@ -142,11 +159,23 @@ export interface OffBankExpense {
 
   date: string; // YYYY-MM-DD
   concept: string;
-  amountEUR: number; // positiu (despesa)
+  amountEUR: number; // positiu (despesa) - sempre en EUR
+
+  // Moneda original i conversió (opcional)
+  currency?: string | null; // ex: "XOF", "EUR"
+  amountOriginal?: number | null; // import en moneda local
+  fxRateUsed?: number | null; // si l'usuari sobrescriu el del projecte
 
   counterpartyName: string | null;
   categoryName: string | null; // text lliure
   documentUrl: string | null;
+
+  // Dades de justificació (opcional)
+  invoiceNumber?: string | null;
+  issuerTaxId?: string | null;
+  invoiceDate?: string | null; // YYYY-MM-DD
+  paymentDate?: string | null; // YYYY-MM-DD
+  supportDocNumber?: string | null;
 
   createdBy: string;
   createdAt: Timestamp;
@@ -159,6 +188,17 @@ export interface OffBankExpenseFormData {
   amountEUR: string;
   counterpartyName: string;
   categoryName: string;
+  // Camps nous
+  currency?: string;
+  amountOriginal?: string;
+  fxRateOverride?: string;
+  useFxOverride?: boolean;
+  // Justificació
+  invoiceNumber?: string;
+  issuerTaxId?: string;
+  invoiceDate?: string;
+  paymentDate?: string;
+  supportDocNumber?: string;
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -178,6 +218,16 @@ export interface UnifiedExpense {
   categoryName: string | null;
   counterpartyName: string | null;
   documentUrl: string | null;
+  // Camps opcionals per offBank amb moneda estrangera
+  currency?: string | null;
+  amountOriginal?: number | null;
+  fxRateUsed?: number | null;
+  // Camps justificació (per offBank)
+  invoiceNumber?: string | null;
+  issuerTaxId?: string | null;
+  invoiceDate?: string | null;
+  paymentDate?: string | null;
+  supportDocNumber?: string | null;
 }
 
 export interface ExpenseWithLink {

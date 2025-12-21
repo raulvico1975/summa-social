@@ -25,10 +25,21 @@ import {
   Edit,
   Trash2,
   Plus,
+  ChevronDown,
+  ChevronUp,
+  Save,
+  X,
 } from 'lucide-react';
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from '@/components/ui/collapsible';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { AssignmentEditor } from '@/components/project-module/assignment-editor';
 import { formatDateDMY } from '@/lib/normalize';
-import type { ExpenseAssignment } from '@/lib/project-module-types';
+import type { ExpenseAssignment, ExpenseJustification } from '@/lib/project-module-types';
 
 function formatAmount(amount: number): string {
   return new Intl.NumberFormat('ca-ES', {
@@ -51,6 +62,30 @@ export default function ExpenseDetailPage() {
   const [isEditing, setIsEditing] = React.useState(false);
   const [hasAutoOpened, setHasAutoOpened] = React.useState(false);
 
+  // Estat per justificació
+  const [justificationOpen, setJustificationOpen] = React.useState(false);
+  const [isEditingJustification, setIsEditingJustification] = React.useState(false);
+  const [invoiceNumber, setInvoiceNumber] = React.useState('');
+  const [issuerTaxId, setIssuerTaxId] = React.useState('');
+  const [invoiceDate, setInvoiceDate] = React.useState('');
+  const [paymentDate, setPaymentDate] = React.useState('');
+  const [supportDocNumber, setSupportDocNumber] = React.useState('');
+
+  // Inicialitzar camps de justificació quan es carrega el link
+  React.useEffect(() => {
+    if (link?.justification) {
+      setInvoiceNumber(link.justification.invoiceNumber ?? '');
+      setIssuerTaxId(link.justification.issuerTaxId ?? '');
+      setInvoiceDate(link.justification.invoiceDate ?? '');
+      setPaymentDate(link.justification.paymentDate ?? '');
+      setSupportDocNumber(link.justification.supportDocNumber ?? '');
+      // Obrir secció si hi ha dades
+      if (link.justification.invoiceNumber || link.justification.issuerTaxId) {
+        setJustificationOpen(true);
+      }
+    }
+  }, [link]);
+
   // Obrir editor automàticament si la despesa no està completament assignada
   React.useEffect(() => {
     if (!isLoading && expense && !hasAutoOpened) {
@@ -69,7 +104,8 @@ export default function ExpenseDetailPage() {
 
   const handleSave = async (assignments: ExpenseAssignment[], note: string | null) => {
     try {
-      await save(txId, assignments, note);
+      // Mantenir la justificació existent
+      await save(txId, assignments, note, link?.justification);
       await refresh();
       setIsEditing(false);
       toast({
@@ -83,6 +119,52 @@ export default function ExpenseDetailPage() {
         description: err instanceof Error ? err.message : 'Error desant assignació',
       });
     }
+  };
+
+  const handleSaveJustification = async () => {
+    if (!link) return;
+
+    const justification: ExpenseJustification = {
+      invoiceNumber: invoiceNumber.trim() || null,
+      issuerTaxId: issuerTaxId.trim() || null,
+      invoiceDate: invoiceDate || null,
+      paymentDate: paymentDate || null,
+      supportDocNumber: supportDocNumber.trim() || null,
+    };
+
+    try {
+      await save(txId, link.assignments, link.note, justification);
+      await refresh();
+      setIsEditingJustification(false);
+      toast({
+        title: 'Justificació desada',
+        description: 'Les dades de justificació s\'han actualitzat.',
+      });
+    } catch (err) {
+      toast({
+        variant: 'destructive',
+        title: 'Error',
+        description: err instanceof Error ? err.message : 'Error desant justificació',
+      });
+    }
+  };
+
+  const handleCancelJustification = () => {
+    // Restaurar valors originals
+    if (link?.justification) {
+      setInvoiceNumber(link.justification.invoiceNumber ?? '');
+      setIssuerTaxId(link.justification.issuerTaxId ?? '');
+      setInvoiceDate(link.justification.invoiceDate ?? '');
+      setPaymentDate(link.justification.paymentDate ?? '');
+      setSupportDocNumber(link.justification.supportDocNumber ?? '');
+    } else {
+      setInvoiceNumber('');
+      setIssuerTaxId('');
+      setInvoiceDate('');
+      setPaymentDate('');
+      setSupportDocNumber('');
+    }
+    setIsEditingJustification(false);
   };
 
   const handleRemove = async () => {
@@ -347,6 +429,146 @@ export default function ExpenseDetailPage() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Secció Justificació (només si hi ha assignació) */}
+      {link && link.assignments.length > 0 && (
+        <Card>
+          <Collapsible open={justificationOpen} onOpenChange={setJustificationOpen}>
+            <CardHeader className="pb-2">
+              <CollapsibleTrigger asChild>
+                <Button variant="ghost" className="w-full justify-between p-0 h-auto hover:bg-transparent">
+                  <CardTitle className="text-lg flex items-center gap-2">
+                    <FileText className="h-5 w-5" />
+                    Dades de justificació
+                  </CardTitle>
+                  {justificationOpen ? (
+                    <ChevronUp className="h-5 w-5 text-muted-foreground" />
+                  ) : (
+                    <ChevronDown className="h-5 w-5 text-muted-foreground" />
+                  )}
+                </Button>
+              </CollapsibleTrigger>
+              <CardDescription>
+                Informació per a la justificació econòmica del projecte
+              </CardDescription>
+            </CardHeader>
+            <CollapsibleContent>
+              <CardContent className="space-y-4">
+                {isEditingJustification ? (
+                  <>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-1">
+                        <Label htmlFor="invoiceNumber" className="text-sm">Núm. factura</Label>
+                        <Input
+                          id="invoiceNumber"
+                          type="text"
+                          placeholder="F-2024-001"
+                          value={invoiceNumber}
+                          onChange={(e) => setInvoiceNumber(e.target.value)}
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <Label htmlFor="issuerTaxId" className="text-sm">NIF emissor</Label>
+                        <Input
+                          id="issuerTaxId"
+                          type="text"
+                          placeholder="B12345678"
+                          value={issuerTaxId}
+                          onChange={(e) => setIssuerTaxId(e.target.value)}
+                        />
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-1">
+                        <Label htmlFor="invoiceDate" className="text-sm">Data factura</Label>
+                        <Input
+                          id="invoiceDate"
+                          type="date"
+                          value={invoiceDate}
+                          onChange={(e) => setInvoiceDate(e.target.value)}
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <Label htmlFor="paymentDate" className="text-sm">Data pagament</Label>
+                        <Input
+                          id="paymentDate"
+                          type="date"
+                          value={paymentDate}
+                          onChange={(e) => setPaymentDate(e.target.value)}
+                        />
+                      </div>
+                    </div>
+                    <div className="space-y-1">
+                      <Label htmlFor="supportDocNumber" className="text-sm">Núm. justificant</Label>
+                      <Input
+                        id="supportDocNumber"
+                        type="text"
+                        placeholder="J-001"
+                        value={supportDocNumber}
+                        onChange={(e) => setSupportDocNumber(e.target.value)}
+                      />
+                    </div>
+                    <div className="flex justify-end gap-2 pt-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={handleCancelJustification}
+                        disabled={isSaving}
+                      >
+                        <X className="h-4 w-4 mr-1" />
+                        Cancel·lar
+                      </Button>
+                      <Button
+                        size="sm"
+                        onClick={handleSaveJustification}
+                        disabled={isSaving}
+                      >
+                        <Save className="h-4 w-4 mr-1" />
+                        Desar
+                      </Button>
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <div className="grid grid-cols-2 gap-4 text-sm">
+                      <div>
+                        <span className="text-muted-foreground">Núm. factura</span>
+                        <p className="font-medium">{link.justification?.invoiceNumber || '-'}</p>
+                      </div>
+                      <div>
+                        <span className="text-muted-foreground">NIF emissor</span>
+                        <p className="font-medium">{link.justification?.issuerTaxId || '-'}</p>
+                      </div>
+                      <div>
+                        <span className="text-muted-foreground">Data factura</span>
+                        <p className="font-medium">{link.justification?.invoiceDate ? formatDateDMY(link.justification.invoiceDate) : '-'}</p>
+                      </div>
+                      <div>
+                        <span className="text-muted-foreground">Data pagament</span>
+                        <p className="font-medium">{link.justification?.paymentDate ? formatDateDMY(link.justification.paymentDate) : '-'}</p>
+                      </div>
+                    </div>
+                    <div className="text-sm">
+                      <span className="text-muted-foreground">Núm. justificant</span>
+                      <p className="font-medium">{link.justification?.supportDocNumber || '-'}</p>
+                    </div>
+                    <div className="flex justify-end pt-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setIsEditingJustification(true)}
+                      >
+                        <Edit className="h-4 w-4 mr-1" />
+                        Editar
+                      </Button>
+                    </div>
+                  </>
+                )}
+              </CardContent>
+            </CollapsibleContent>
+          </Collapsible>
+        </Card>
+      )}
     </div>
   );
 }

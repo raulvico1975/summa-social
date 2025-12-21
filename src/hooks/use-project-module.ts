@@ -31,6 +31,7 @@ import type {
   ExpenseStatus,
   ProjectFormData,
   ExpenseAssignment,
+  ExpenseJustification,
   OffBankExpense,
   OffBankExpenseFormData,
   UnifiedExpense,
@@ -335,6 +336,16 @@ export function useUnifiedExpenseFeed(options?: UseUnifiedExpenseFeedOptions): U
             categoryName: data.categoryName,
             counterpartyName: data.counterpartyName,
             documentUrl: data.documentUrl,
+            // Camps FX
+            currency: data.currency ?? null,
+            amountOriginal: data.amountOriginal ?? null,
+            fxRateUsed: data.fxRateUsed ?? null,
+            // Camps justificació
+            invoiceNumber: data.invoiceNumber ?? null,
+            issuerTaxId: data.issuerTaxId ?? null,
+            invoiceDate: data.invoiceDate ?? null,
+            paymentDate: data.paymentDate ?? null,
+            supportDocNumber: data.supportDocNumber ?? null,
           });
         }
       } else {
@@ -455,6 +466,16 @@ export function useUnifiedExpenseFeed(options?: UseUnifiedExpenseFeedOptions): U
           categoryName: data.categoryName,
           counterpartyName: data.counterpartyName,
           documentUrl: data.documentUrl,
+          // Camps FX
+          currency: data.currency ?? null,
+          amountOriginal: data.amountOriginal ?? null,
+          fxRateUsed: data.fxRateUsed ?? null,
+          // Camps justificació
+          invoiceNumber: data.invoiceNumber ?? null,
+          issuerTaxId: data.issuerTaxId ?? null,
+          invoiceDate: data.invoiceDate ?? null,
+          paymentDate: data.paymentDate ?? null,
+          supportDocNumber: data.supportDocNumber ?? null,
         };
       });
 
@@ -587,19 +608,54 @@ export function useSaveOffBankExpense(): UseSaveOffBankExpenseResult {
       const now = serverTimestamp();
       const newRef = doc(offBankRef);
 
-      const expenseData = {
+      // Camps FX opcionals
+      const currency = data.currency?.trim().toUpperCase() || null;
+      const amountOriginal = data.amountOriginal ? parseFloat(data.amountOriginal) : null;
+      const fxRateUsed = data.useFxOverride && data.fxRateOverride
+        ? parseFloat(data.fxRateOverride)
+        : null;
+
+      const expenseData: Record<string, unknown> = {
         orgId: organizationId,
         source: 'offBank' as const,
         date: data.date,
         concept,
         amountEUR: amount,
-        counterpartyName: data.counterpartyName.trim() || null,
-        categoryName: data.categoryName.trim() || null,
+        counterpartyName: data.counterpartyName?.trim() || null,
+        categoryName: data.categoryName?.trim() || null,
         documentUrl: null, // Implementar upload després
         createdBy: user.uid,
         createdAt: now,
         updatedAt: now,
       };
+
+      // Afegir camps FX si existeixen
+      if (currency && currency !== 'EUR') {
+        expenseData.currency = currency;
+        if (amountOriginal !== null && !isNaN(amountOriginal)) {
+          expenseData.amountOriginal = amountOriginal;
+        }
+        if (fxRateUsed !== null && !isNaN(fxRateUsed) && fxRateUsed > 0) {
+          expenseData.fxRateUsed = fxRateUsed;
+        }
+      }
+
+      // Camps justificació opcionals
+      if (data.invoiceNumber?.trim()) {
+        expenseData.invoiceNumber = data.invoiceNumber.trim();
+      }
+      if (data.issuerTaxId?.trim()) {
+        expenseData.issuerTaxId = data.issuerTaxId.trim();
+      }
+      if (data.invoiceDate) {
+        expenseData.invoiceDate = data.invoiceDate;
+      }
+      if (data.paymentDate) {
+        expenseData.paymentDate = data.paymentDate;
+      }
+      if (data.supportDocNumber?.trim()) {
+        expenseData.supportDocNumber = data.supportDocNumber.trim();
+      }
 
       await setDoc(newRef, expenseData);
 
@@ -684,14 +740,7 @@ export function useUpdateOffBankExpense(): UseUpdateOffBankExpenseResult {
         expenseId
       );
 
-      const updateData: {
-        updatedAt: ReturnType<typeof serverTimestamp>;
-        date?: string;
-        concept?: string;
-        amountEUR?: number;
-        counterpartyName?: string | null;
-        categoryName?: string | null;
-      } = {
+      const updateData: Record<string, unknown> = {
         updatedAt: serverTimestamp(),
       };
 
@@ -709,6 +758,46 @@ export function useUpdateOffBankExpense(): UseUpdateOffBankExpenseResult {
       }
       if (data.categoryName !== undefined) {
         updateData.categoryName = data.categoryName.trim() || null;
+      }
+
+      // Camps FX
+      if (data.currency !== undefined) {
+        const currency = data.currency?.trim().toUpperCase() || null;
+        if (currency && currency !== 'EUR') {
+          updateData.currency = currency;
+          if (data.amountOriginal !== undefined) {
+            const amountOriginal = parseFloat(data.amountOriginal);
+            updateData.amountOriginal = isNaN(amountOriginal) ? null : amountOriginal;
+          }
+          if (data.useFxOverride && data.fxRateOverride) {
+            const fxRateUsed = parseFloat(data.fxRateOverride);
+            updateData.fxRateUsed = isNaN(fxRateUsed) ? null : fxRateUsed;
+          } else {
+            updateData.fxRateUsed = null;
+          }
+        } else {
+          // Si torna a EUR, netejar camps FX
+          updateData.currency = null;
+          updateData.amountOriginal = null;
+          updateData.fxRateUsed = null;
+        }
+      }
+
+      // Camps justificació
+      if (data.invoiceNumber !== undefined) {
+        updateData.invoiceNumber = data.invoiceNumber?.trim() || null;
+      }
+      if (data.issuerTaxId !== undefined) {
+        updateData.issuerTaxId = data.issuerTaxId?.trim() || null;
+      }
+      if (data.invoiceDate !== undefined) {
+        updateData.invoiceDate = data.invoiceDate || null;
+      }
+      if (data.paymentDate !== undefined) {
+        updateData.paymentDate = data.paymentDate || null;
+      }
+      if (data.supportDocNumber !== undefined) {
+        updateData.supportDocNumber = data.supportDocNumber?.trim() || null;
       }
 
       await updateDoc(expenseRef, updateData);
@@ -820,7 +909,7 @@ export function useExpenseDetail(txId: string): UseExpenseDetailResult {
 // ═══════════════════════════════════════════════════════════════════════════
 
 interface UseSaveExpenseLinkResult {
-  save: (txId: string, assignments: ExpenseAssignment[], note: string | null) => Promise<void>;
+  save: (txId: string, assignments: ExpenseAssignment[], note: string | null, justification?: ExpenseJustification | null) => Promise<void>;
   remove: (txId: string) => Promise<void>;
   isSaving: boolean;
   error: Error | null;
@@ -836,7 +925,8 @@ export function useSaveExpenseLink(): UseSaveExpenseLinkResult {
   const save = useCallback(async (
     txId: string,
     assignments: ExpenseAssignment[],
-    note: string | null
+    note: string | null,
+    justification?: ExpenseJustification | null
   ) => {
     if (!organizationId || !user) {
       throw new Error('No autenticat');
@@ -877,6 +967,7 @@ export function useSaveExpenseLink(): UseSaveExpenseLinkResult {
         projectIds,
         budgetLineIds,
         note: note ?? null,
+        justification: justification ?? null,
         createdBy: user.uid,
         updatedAt: now,
       };
@@ -1152,6 +1243,69 @@ export function useSaveProject(): UseSaveProjectResult {
 
   return {
     save,
+    isSaving,
+    error,
+  };
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// HOOK: Desar tipus de canvi del projecte (FX)
+// ═══════════════════════════════════════════════════════════════════════════
+
+interface UseSaveProjectFxResult {
+  saveFx: (projectId: string, fxRate: number | null, fxCurrency: string | null) => Promise<void>;
+  isSaving: boolean;
+  error: Error | null;
+}
+
+export function useSaveProjectFx(): UseSaveProjectFxResult {
+  const { firestore } = useFirebase();
+  const { organizationId } = useCurrentOrganization();
+
+  const [isSaving, setIsSaving] = useState(false);
+  const [error, setError] = useState<Error | null>(null);
+
+  const saveFx = useCallback(async (
+    projectId: string,
+    fxRate: number | null,
+    fxCurrency: string | null
+  ): Promise<void> => {
+    if (!organizationId) {
+      throw new Error('No autenticat');
+    }
+
+    setIsSaving(true);
+    setError(null);
+
+    try {
+      const projectRef = doc(
+        firestore,
+        'organizations',
+        organizationId,
+        'projectModule',
+        '_',
+        'projects',
+        projectId
+      );
+
+      await setDoc(projectRef, {
+        fxRate: fxRate,
+        fxCurrency: fxCurrency,
+        updatedAt: serverTimestamp(),
+      }, { merge: true });
+
+    } catch (err) {
+      console.error('Error saving project FX:', err);
+      const e = err instanceof Error ? err : new Error('Error desant tipus de canvi');
+      setError(e);
+      throw e;
+    } finally {
+      setIsSaving(false);
+    }
+  }, [firestore, organizationId]);
+
+  return {
+    saveFx,
     isSaving,
     error,
   };

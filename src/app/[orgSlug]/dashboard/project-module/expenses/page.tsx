@@ -760,6 +760,17 @@ export default function ExpensesInboxPage() {
           concept: editOffBankExpense.expense.description ?? '',
           counterpartyName: editOffBankExpense.expense.counterpartyName ?? '',
           categoryName: editOffBankExpense.expense.categoryName ?? '',
+          // FX
+          currency: editOffBankExpense.expense.currency ?? undefined,
+          amountOriginal: editOffBankExpense.expense.amountOriginal?.toString().replace('.', ',') ?? undefined,
+          fxRateOverride: editOffBankExpense.expense.fxRateUsed?.toString() ?? undefined,
+          useFxOverride: !!editOffBankExpense.expense.fxRateUsed,
+          // Justificació
+          invoiceNumber: editOffBankExpense.expense.invoiceNumber ?? undefined,
+          issuerTaxId: editOffBankExpense.expense.issuerTaxId ?? undefined,
+          invoiceDate: editOffBankExpense.expense.invoiceDate ?? undefined,
+          paymentDate: editOffBankExpense.expense.paymentDate ?? undefined,
+          supportDocNumber: editOffBankExpense.expense.supportDocNumber ?? undefined,
         } : undefined}
       />
     </div>
