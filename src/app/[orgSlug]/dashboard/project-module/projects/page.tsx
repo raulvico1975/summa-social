@@ -42,18 +42,18 @@ function formatAmount(amount: number | null): string {
 interface ProjectCardProps {
   project: Project;
   executedAmount: number;
-  budgetLinesSum: number | null; // null = no s'ha carregat o no hi ha partides
+  budgetLinesData: { sum: number; hasLines: boolean } | null; // null = encara carregant
 }
 
-function ProjectCard({ project, executedAmount, budgetLinesSum }: ProjectCardProps) {
+function ProjectCard({ project, executedAmount, budgetLinesData }: ProjectCardProps) {
   const { t } = useTranslations();
   const { buildUrl } = useOrgUrl();
   const router = useRouter();
 
   // Càlculs econòmics
-  // Si hi ha partides amb pressupost, usar la suma; sinó, el pressupost global
-  const hasBudgetLines = budgetLinesSum !== null && budgetLinesSum > 0;
-  const budgeted = hasBudgetLines ? budgetLinesSum : (project.budgetEUR ?? 0);
+  // Si hi ha partides, usar la suma de partides; sinó, el pressupost global del projecte
+  const hasBudgetLines = budgetLinesData?.hasLines ?? false;
+  const budgeted = hasBudgetLines ? budgetLinesData!.sum : (project.budgetEUR ?? 0);
   const pending = budgeted - executedAmount;
 
   // Click en el card → navega a Gestió Econòmica
@@ -195,7 +195,6 @@ export default function ProjectsListPage() {
 
   // Carregar tots els expenseLinks per calcular execució per projecte
   const [executionByProject, setExecutionByProject] = React.useState<Map<string, number>>(new Map());
-  const [budgetLinesSumByProject, setBudgetLinesSumByProject] = React.useState<Map<string, number>>(new Map());
   const [linksLoading, setLinksLoading] = React.useState(true);
 
   React.useEffect(() => {
@@ -235,12 +234,15 @@ export default function ProjectsListPage() {
   }, [firestore, organizationId]);
 
   // Carregar suma de partides per cada projecte
+  // Guardem { sum, hasLines } per distingir entre "no hi ha partides" i "partides amb sum=0"
+  const [budgetLinesDataByProject, setBudgetLinesDataByProject] = React.useState<Map<string, { sum: number; hasLines: boolean }>>(new Map());
+
   React.useEffect(() => {
     if (!organizationId || projects.length === 0) return;
 
     const loadBudgetLinesSums = async () => {
       try {
-        const sumsMap = new Map<string, number>();
+        const dataMap = new Map<string, { sum: number; hasLines: boolean }>();
 
         for (const project of projects) {
           const linesRef = collection(
@@ -261,10 +263,10 @@ export default function ProjectsListPage() {
             const data = doc.data() as BudgetLine;
             sum += data.budgetedAmountEUR ?? 0;
           }
-          sumsMap.set(project.id, sum);
+          dataMap.set(project.id, { sum, hasLines: snapshot.docs.length > 0 });
         }
 
-        setBudgetLinesSumByProject(sumsMap);
+        setBudgetLinesDataByProject(dataMap);
       } catch (err) {
         console.error('Error loading budget lines sums:', err);
       }
@@ -344,14 +346,17 @@ export default function ProjectsListPage() {
         </Card>
       ) : (
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-          {projects.map((project) => (
-            <ProjectCard
-              key={project.id}
-              project={project}
-              executedAmount={executionByProject.get(project.id) ?? 0}
-              budgetLinesSum={budgetLinesSumByProject.get(project.id) ?? null}
-            />
-          ))}
+          {projects.map((project) => {
+            const linesData = budgetLinesDataByProject.get(project.id);
+            return (
+              <ProjectCard
+                key={project.id}
+                project={project}
+                executedAmount={executionByProject.get(project.id) ?? 0}
+                budgetLinesData={linesData ?? null}
+              />
+            );
+          })}
         </div>
       )}
     </div>
