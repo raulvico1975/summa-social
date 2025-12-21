@@ -43,7 +43,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import { AlertCircle, RefreshCw, ChevronRight, FolderPlus, Check, MoreHorizontal, Split, X, Plus, Landmark, Globe, ArrowLeft, FolderKanban, Filter, Pencil } from 'lucide-react';
+import { AlertCircle, RefreshCw, ChevronRight, FolderPlus, Check, MoreHorizontal, Split, X, Plus, Landmark, Globe, ArrowLeft, FolderKanban, Filter, Pencil, Trash2 } from 'lucide-react';
 import { formatDateDMY } from '@/lib/normalize';
 import { AssignmentEditor } from '@/components/project-module/assignment-editor';
 import type { ExpenseStatus, UnifiedExpenseWithLink, Project, ExpenseAssignment, BudgetLine } from '@/lib/project-module-types';
@@ -57,14 +57,29 @@ function formatAmount(amount: number): string {
   }).format(amount);
 }
 
-function StatusBadge({ status, assignedAmount, totalAmount }: { status: ExpenseStatus; assignedAmount: number; totalAmount: number }) {
+function StatusBadge({
+  status,
+  assignedAmount,
+  totalAmount,
+  assignments
+}: {
+  status: ExpenseStatus;
+  assignedAmount: number;
+  totalAmount: number;
+  assignments?: ExpenseAssignment[];
+}) {
   const percentage = totalAmount > 0 ? Math.round((assignedAmount / totalAmount) * 100) : 0;
+
+  // Generar tooltip amb els projectes assignats
+  const tooltip = assignments && assignments.length > 0
+    ? assignments.map(a => `${a.projectName}: ${formatAmount(a.amountEUR)}`).join('\n')
+    : undefined;
 
   switch (status) {
     case 'assigned':
-      return <Badge variant="default" className="bg-green-600">100%</Badge>;
+      return <Badge variant="default" className="bg-green-600 cursor-help" title={tooltip}>100%</Badge>;
     case 'partial':
-      return <Badge variant="secondary" className="bg-yellow-500 text-black">{percentage}%</Badge>;
+      return <Badge variant="secondary" className="bg-yellow-500 text-black cursor-help" title={tooltip}>{percentage}%</Badge>;
     case 'unassigned':
     default:
       return <Badge variant="outline">0%</Badge>;
@@ -260,7 +275,7 @@ export default function ExpensesInboxPage() {
     budgetLineId: budgetLineIdFilter,
   });
   const { projects, isLoading: projectsLoading, error: projectsError } = useProjects(true);
-  const { save, isSaving } = useSaveExpenseLink();
+  const { save, remove, isSaving } = useSaveExpenseLink();
 
   // Track page open
   React.useEffect(() => {
@@ -413,6 +428,27 @@ export default function ExpensesInboxPage() {
   const handleEditOffBank = (expense: UnifiedExpenseWithLink) => {
     trackUX('expenses.offBank.edit.open', { expenseId: expense.expense.txId });
     setEditOffBankExpense(expense);
+  };
+
+  // Handler per des-assignar completament
+  const handleUnassign = async (txId: string) => {
+    if (!confirm('Segur que vols eliminar l\'assignació d\'aquesta despesa?')) return;
+
+    try {
+      await remove(txId);
+      await refresh();
+      trackUX('expenses.unassign', { txId });
+      toast({
+        title: 'Assignació eliminada',
+        description: 'La despesa ja no està assignada a cap projecte.',
+      });
+    } catch (err) {
+      toast({
+        variant: 'destructive',
+        title: 'Error',
+        description: err instanceof Error ? err.message : 'Error eliminant assignació',
+      });
+    }
   };
 
   const toggleSelectAll = () => {
@@ -595,19 +631,52 @@ export default function ExpensesInboxPage() {
                       {formatAmount(expense.amountEUR)}
                     </TableCell>
                     <TableCell>
-                      <StatusBadge status={status} assignedAmount={assignedAmount} totalAmount={Math.abs(expense.amountEUR)} />
+                      <StatusBadge
+                        status={status}
+                        assignedAmount={assignedAmount}
+                        totalAmount={Math.abs(expense.amountEUR)}
+                        assignments={item.link?.assignments}
+                      />
                     </TableCell>
                     <TableCell>
                       <div className="flex items-center gap-1 justify-end">
+                        {/* Assignar/Editar assignació */}
                         {!projectsLoading && projects.length > 0 && (
-                          <QuickAssignPopover
-                            expense={item}
-                            projects={projects}
-                            onAssign100={handleAssign100}
-                            onOpenSplitModal={setSplitModalExpense}
-                            isAssigning={isSaving}
-                          />
+                          status === 'unassigned' ? (
+                            <QuickAssignPopover
+                              expense={item}
+                              projects={projects}
+                              onAssign100={handleAssign100}
+                              onOpenSplitModal={setSplitModalExpense}
+                              isAssigning={isSaving}
+                            />
+                          ) : (
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-7 w-7"
+                              onClick={() => setSplitModalExpense(item)}
+                              title="Editar assignació"
+                              disabled={isSaving}
+                            >
+                              <Split className="h-4 w-4" />
+                            </Button>
+                          )
                         )}
+                        {/* Des-assignar (només si té assignació) */}
+                        {status !== 'unassigned' && (
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-7 w-7 text-muted-foreground hover:text-destructive"
+                            onClick={() => handleUnassign(expense.txId)}
+                            title="Eliminar assignació"
+                            disabled={isSaving}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        )}
+                        {/* Editar despesa off-bank */}
                         {expense.source === 'offBank' && (
                           <Button
                             variant="ghost"
@@ -619,6 +688,7 @@ export default function ExpensesInboxPage() {
                             <Pencil className="h-4 w-4" />
                           </Button>
                         )}
+                        {/* Detall despesa bank */}
                         {expense.source === 'bank' && (
                           <Link href={buildUrl(`/dashboard/project-module/expenses/${expense.txId}`)}>
                             <Button
