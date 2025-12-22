@@ -956,6 +956,7 @@ export default function ExpensesInboxPage() {
           invoiceDate: editOffBankExpense.expense.invoiceDate ?? undefined,
           paymentDate: editOffBankExpense.expense.paymentDate ?? undefined,
         } : undefined}
+        existingAssignments={editOffBankExpense?.link?.assignments}
       />
     </div>
   );

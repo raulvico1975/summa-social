@@ -422,6 +422,58 @@ export function BalanceProjectModal({
       });
   }, [allExpenses, project, budgetLines, selectedLineId]);
 
+  // ═══════════════════════════════════════════════════════════════════════════
+  // SOLUCIONS SIMPLES DINS MARGE (per sobreexecució)
+  // Criteri: treure una despesa completa deixa la partida dins del marge permès
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  interface SimpleRemovalSolution {
+    expense: CandidateExpense;
+    resultingExecuted: number;
+    resultingDeviationPct: number;
+    resultingDifferenceEUR: number;
+  }
+
+  const simpleRemovalSolutions = React.useMemo((): SimpleRemovalSolution[] => {
+    if (!selectedDiag || selectedDiag.difference <= 0) return [];
+
+    const allowedDeviation = project.allowedDeviationPct ?? 10;
+    const budgeted = selectedDiag.budgeted;
+
+    // Obtenir despeses assignades a aquesta partida
+    const expensesInLine = allCandidates.filter(c =>
+      c.assignedToThisProject &&
+      c.currentBudgetLineId === selectedLineId &&
+      !simulatedMoves.some(m => m.txId === c.expense.txId)
+    );
+
+    const solutions: SimpleRemovalSolution[] = [];
+
+    for (const candidate of expensesInLine) {
+      const expenseAmount = candidate.currentAssignmentAmount;
+      const resultingExecuted = selectedDiag.simulated - expenseAmount;
+      const resultingDifference = resultingExecuted - budgeted;
+      const resultingDeviationPct = budgeted > 0
+        ? (resultingDifference / budgeted) * 100
+        : 0;
+
+      // Si la desviació resultant està dins del marge permès
+      if (Math.abs(resultingDeviationPct) <= allowedDeviation) {
+        solutions.push({
+          expense: candidate,
+          resultingExecuted,
+          resultingDeviationPct,
+          resultingDifferenceEUR: resultingDifference,
+        });
+      }
+    }
+
+    // Ordenar per menor desviació absoluta resultant
+    return solutions.sort((a, b) =>
+      Math.abs(a.resultingDeviationPct) - Math.abs(b.resultingDeviationPct)
+    );
+  }, [selectedDiag, selectedLineId, allCandidates, simulatedMoves, project.allowedDeviationPct]);
+
   // Nivell de fallback aplicat (per mostrar missatge a l'usuari)
   const [fallbackLevel, setFallbackLevel] = React.useState<1 | 2 | 3>(1);
 
@@ -975,6 +1027,78 @@ export function BalanceProjectModal({
                     </CardHeader>
 
                     <CardContent className="flex-1 overflow-hidden flex flex-col gap-3">
+                      {/* BLOC SOLUCIÓ RECOMANADA (només sobreexecució amb solució dins marge) */}
+                      {selectedDiag.difference > 0 && simpleRemovalSolutions.length > 0 && (
+                        <div className="border rounded-lg bg-gradient-to-r from-green-50/50 to-emerald-50/50 p-3 space-y-3">
+                          <div className="flex items-center gap-2">
+                            <CheckCircle className="h-4 w-4 text-green-600" />
+                            <span className="text-sm font-medium text-green-900">Solució recomanada (mínima intervenció)</span>
+                          </div>
+
+                          <div className="p-3 rounded-md border border-green-300 bg-white">
+                            {(() => {
+                              const best = simpleRemovalSolutions[0];
+                              const exp = best.expense.expense;
+                              return (
+                                <div className="space-y-2">
+                                  <p className="text-sm text-gray-700">
+                                    Si treus la despesa de{' '}
+                                    <strong className="font-mono">{formatAmount(best.expense.currentAssignmentAmount)}</strong>
+                                    {exp.counterpartyName && (
+                                      <span className="text-muted-foreground"> ({exp.counterpartyName})</span>
+                                    )}
+                                    , la partida queda amb una desviació de{' '}
+                                    <strong className="font-mono">
+                                      {formatAmount(Math.abs(best.resultingDifferenceEUR))}
+                                    </strong>{' '}
+                                    ({formatPercent(Math.abs(best.resultingDeviationPct))}),
+                                    dins del marge permès.
+                                  </p>
+                                  <div className="flex items-center gap-2">
+                                    <Button
+                                      size="sm"
+                                      variant="default"
+                                      className="bg-green-600 hover:bg-green-700"
+                                      onClick={() => {
+                                        trackUX('balance.simpleRemoval', {
+                                          txId: exp.txId,
+                                          amount: best.expense.currentAssignmentAmount,
+                                          resultingDeviation: best.resultingDeviationPct,
+                                        });
+                                        addSimulatedMove(
+                                          exp.txId,
+                                          selectedLineId,
+                                          null,
+                                          best.expense.currentAssignmentAmount,
+                                          'unassign_line'
+                                        );
+                                      }}
+                                    >
+                                      <ArrowDown className="h-3 w-3 mr-1" />
+                                      Treure aquesta despesa
+                                    </Button>
+                                    {simpleRemovalSolutions.length > 1 && (
+                                      <span className="text-xs text-muted-foreground">
+                                        (+{simpleRemovalSolutions.length - 1} alternatives)
+                                      </span>
+                                    )}
+                                  </div>
+                                </div>
+                              );
+                            })()}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Separador visual (sobreexecució amb solució) */}
+                      {selectedDiag.difference > 0 && simpleRemovalSolutions.length > 0 && candidatesForSelectedLine.length > 0 && (
+                        <div className="flex items-center gap-2">
+                          <div className="flex-1 border-t" />
+                          <span className="text-xs text-muted-foreground">o ajusta manualment</span>
+                          <div className="flex-1 border-t" />
+                        </div>
+                      )}
+
                       {/* BLOC PROPOSTES AUTOMÀTIQUES (només infraexecució) */}
                       {selectedDiag.difference < 0 && suggestionProposals.length > 0 && (
                         <div className="border rounded-lg bg-gradient-to-r from-violet-50/50 to-purple-50/50 p-3 space-y-3">
@@ -1207,19 +1331,30 @@ export function BalanceProjectModal({
                                             <ArrowDown className="h-4 w-4 mr-1" />
                                             Treure tot
                                           </Button>
-                                          {/* Botó per mostrar edició parcial */}
+                                          {/* Botó per mostrar edició parcial - secundari amb microcopy */}
                                           {canPartialRemove && !isEditingPartial && (
-                                            <Button
-                                              size="sm"
-                                              variant="ghost"
-                                              onClick={() => {
-                                                setPartialEditTxId(candidate.expense.txId);
-                                                setPartialEditAmount(excessAmount.toFixed(2));
-                                              }}
-                                              title="Treure només una part"
-                                            >
-                                              Parcial...
-                                            </Button>
+                                            <div className="flex flex-col items-end gap-0.5">
+                                              <Button
+                                                size="sm"
+                                                variant="ghost"
+                                                className="text-xs text-muted-foreground hover:text-foreground"
+                                                onClick={() => {
+                                                  setPartialEditTxId(candidate.expense.txId);
+                                                  // Només pre-omplir amb l'excés si NO hi ha solució simple dins marge
+                                                  setPartialEditAmount(
+                                                    simpleRemovalSolutions.length === 0
+                                                      ? excessAmount.toFixed(2)
+                                                      : ''
+                                                  );
+                                                }}
+                                                title="Ajust fi per quadrar exactament"
+                                              >
+                                                Parcial...
+                                              </Button>
+                                              <span className="text-[10px] text-muted-foreground/70">
+                                                (només si cal quadrar exactament)
+                                              </span>
+                                            </div>
                                           )}
                                         </>
                                       )}
@@ -1240,17 +1375,20 @@ export function BalanceProjectModal({
                                         className="w-24 h-7 text-xs font-mono text-right"
                                       />
                                       <span className="text-xs text-muted-foreground">€</span>
-                                      <Button
-                                        size="sm"
-                                        variant="outline"
-                                        className="h-7 text-xs text-green-600 hover:text-green-700"
-                                        onClick={() => {
-                                          setPartialEditAmount(excessAmount.toFixed(2));
-                                        }}
-                                        title={`Treure exactament ${formatAmount(excessAmount)} per quadrar`}
-                                      >
-                                        = Excés ({formatAmount(excessAmount)})
-                                      </Button>
+                                      {/* Botó ràpid "= Excés" només si NO hi ha solucions simples dins marge */}
+                                      {simpleRemovalSolutions.length === 0 && (
+                                        <Button
+                                          size="sm"
+                                          variant="outline"
+                                          className="h-7 text-xs text-green-600 hover:text-green-700"
+                                          onClick={() => {
+                                            setPartialEditAmount(excessAmount.toFixed(2));
+                                          }}
+                                          title={`Treure exactament ${formatAmount(excessAmount)} per quadrar`}
+                                        >
+                                          = Excés ({formatAmount(excessAmount)})
+                                        </Button>
+                                      )}
                                       <Button
                                         size="sm"
                                         variant="default"

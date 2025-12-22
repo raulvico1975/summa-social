@@ -22,10 +22,12 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
-import { useSaveOffBankExpense, useUpdateOffBankExpense } from '@/hooks/use-project-module';
+import { useSaveOffBankExpense, useUpdateOffBankExpense, useSaveExpenseLink } from '@/hooks/use-project-module';
+import type { ExpenseAssignment } from '@/lib/project-module-types';
 import { useToast } from '@/hooks/use-toast';
 import { trackUX } from '@/lib/ux/trackUX';
-import { ChevronDown, ChevronUp, Info } from 'lucide-react';
+import { ChevronDown, ChevronUp, Info, AlertTriangle } from 'lucide-react';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 
 interface OffBankExpenseInitialValues {
   date: string;
@@ -55,6 +57,8 @@ interface OffBankExpenseModalProps {
   // FX del projecte (opcional)
   projectFxRate?: number | null;
   projectFxCurrency?: string | null;
+  // Imputacions existents (per mode edit)
+  existingAssignments?: ExpenseAssignment[];
 }
 
 export function OffBankExpenseModal({
@@ -66,9 +70,11 @@ export function OffBankExpenseModal({
   initialValues,
   projectFxRate,
   projectFxCurrency,
+  existingAssignments,
 }: OffBankExpenseModalProps) {
   const { save, isSaving } = useSaveOffBankExpense();
   const { update, isUpdating } = useUpdateOffBankExpense();
+  const { save: saveExpenseLink } = useSaveExpenseLink();
   const { toast } = useToast();
 
   const isEditMode = mode === 'edit';
@@ -256,6 +262,21 @@ export function OffBankExpenseModal({
         // Mode edició
         await update(expenseId, formData);
 
+        // Si l'import ha canviat i hi ha una única imputació al 100%, actualitzar-la
+        const newAmountEUR = parseFloat(amountEUR.replace(',', '.'));
+        const oldAmountEUR = initialValues ? parseFloat(initialValues.amountEUR.replace(',', '.')) : 0;
+        const amountChanged = Math.abs(newAmountEUR - oldAmountEUR) > 0.001;
+
+        if (amountChanged && existingAssignments && existingAssignments.length === 1) {
+          // Única imputació - actualitzar automàticament al nou import
+          const assignment = existingAssignments[0];
+          const updatedAssignment: ExpenseAssignment = {
+            ...assignment,
+            amountEUR: -newAmountEUR, // negatiu per convenci
+          };
+          await saveExpenseLink(`off_${expenseId}`, [updatedAssignment], null);
+        }
+
         trackUX('expenses.offBank.edit.save', { expenseId });
 
         toast({
@@ -309,6 +330,17 @@ export function OffBankExpenseModal({
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-4">
+          {/* Avís si hi ha múltiples imputacions */}
+          {isEditMode && existingAssignments && existingAssignments.length > 1 && (
+            <Alert variant="default" className="border-amber-500/50 bg-amber-50 dark:bg-amber-950/20">
+              <AlertTriangle className="h-4 w-4 text-amber-600" />
+              <AlertDescription className="text-sm text-amber-800 dark:text-amber-200">
+                Aquesta despesa té {existingAssignments.length} imputacions a projectes.
+                Si canvies l&apos;import, hauràs d&apos;ajustar les imputacions manualment.
+              </AlertDescription>
+            </Alert>
+          )}
+
           {/* Data */}
           <div className="space-y-2">
             <Label htmlFor="date">Data *</Label>
