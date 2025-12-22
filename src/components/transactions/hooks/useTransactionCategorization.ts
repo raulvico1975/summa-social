@@ -223,7 +223,7 @@ export function useTransactionCategorization({
       return;
     }
 
-    const transactionsToCategorize = transactions.filter(tx => !tx.category);
+    const transactionsToCategorize = transactions.filter(tx => !tx.category || tx.category === 'Revisar');
     if (transactionsToCategorize.length === 0) {
       toast({ title: t.movements.table.nothingToCategorize, description: t.movements.table.allAlreadyCategorized });
       return;

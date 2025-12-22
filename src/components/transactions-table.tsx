@@ -726,7 +726,9 @@ export function TransactionsTable({ initialDateFilter = null }: TransactionsTabl
     setStripeTransactionToSplit(null);
   };
 
-  const hasUncategorized = React.useMemo(() => transactions?.some(tx => !tx.category), [transactions]);
+  const hasUncategorized = React.useMemo(() =>
+    transactions?.some(tx => !tx.category || tx.category === 'Revisar'),
+  [transactions]);
 
   // Memoized categories map per tipus
   const categoriesByType = React.useMemo(() => ({
