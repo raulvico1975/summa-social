@@ -27,6 +27,7 @@ interface UseTransactionCategorizationReturn {
   // Loading states
   loadingStates: Record<string, boolean>;
   isBatchCategorizing: boolean;
+  batchProgress: { current: number; total: number } | null;
 
   // Actions
   handleCategorize: (txId: string) => Promise<void>;
@@ -37,13 +38,14 @@ interface UseTransactionCategorizationReturn {
 // CONSTANTS
 // =============================================================================
 
-// Quota limits for AI API - Normal mode
-const BATCH_SIZE = 10;
-const DELAY_MS = 60000; // 60 seconds between batches
+// IMPORTANT: Processament SEQÜENCIAL (1 crida IA activa alhora)
+// La velocitat ve de l'automatització, NO del paral·lelisme
 
-// Bulk mode (SuperAdmin) - Més ràpid però pot esgotar quota
-const BULK_BATCH_SIZE = 25;
-const BULK_DELAY_MS = 3000; // 3 segons entre lots
+// Delay entre crides IA individuals
+const DELAY_BETWEEN_CALLS_MS = 1500; // 1.5 segons entre cada transacció
+
+// Bulk mode té delay més curt però segueix sent seqüencial
+const BULK_DELAY_BETWEEN_CALLS_MS = 800; // 0.8 segons en mode ràpid
 
 // =============================================================================
 // HOOK
@@ -67,6 +69,7 @@ export function useTransactionCategorization({
 
   const [loadingStates, setLoadingStates] = React.useState<Record<string, boolean>>({});
   const [isBatchCategorizing, setIsBatchCategorizing] = React.useState(false);
+  const [batchProgress, setBatchProgress] = React.useState<{ current: number; total: number } | null>(null);
 
   // ---------------------------------------------------------------------------
   // DERIVED DATA
@@ -134,7 +137,7 @@ export function useTransactionCategorization({
   ]);
 
   // ---------------------------------------------------------------------------
-  // BATCH CATEGORIZE ALL UNCATEGORIZED
+  // BATCH CATEGORIZE ALL UNCATEGORIZED (SEQÜENCIAL - 1 crida IA alhora)
   // ---------------------------------------------------------------------------
 
   const handleBatchCategorize = React.useCallback(async () => {
@@ -149,85 +152,72 @@ export function useTransactionCategorization({
       return;
     }
 
-    // Seleccionar paràmetres segons mode
-    const batchSize = bulkMode ? BULK_BATCH_SIZE : BATCH_SIZE;
-    const delayMs = bulkMode ? BULK_DELAY_MS : DELAY_MS;
+    // Delay entre crides segons mode (sempre seqüencial, mai paral·lel)
+    const delayMs = bulkMode ? BULK_DELAY_BETWEEN_CALLS_MS : DELAY_BETWEEN_CALLS_MS;
 
     setIsBatchCategorizing(true);
+    setBatchProgress({ current: 0, total: transactionsToCategorize.length });
     const startTime = Date.now();
-    log(`[IA] Iniciant classificacio massiva de ${transactionsToCategorize.length} moviments${bulkMode ? ' (MODE BULK)' : ''}.`);
-    trackUX('ai.bulk.run.start', { count: transactionsToCategorize.length, bulkMode });
-    toast({
-      title: t.movements.table.startingBatchCategorization,
-      description: `Classificant ${transactionsToCategorize.length} moviments${bulkMode ? ' (mode ràpid)' : ''}.`,
-    });
+    log(`[IA] Iniciant classificacio SEQÜENCIAL de ${transactionsToCategorize.length} moviments${bulkMode ? ' (MODE RÀPID)' : ''}.`);
+    trackUX('ai.bulk.run.start', { count: transactionsToCategorize.length, bulkMode, sequential: true });
 
     let successCount = 0;
+    let errorCount = 0;
     let quotaExceeded = false;
 
-    for (let i = 0; i < transactionsToCategorize.length; i += batchSize) {
-      // Si s'ha excedit la quota en mode bulk, sortir del bucle
+    // PROCESSAMENT SEQÜENCIAL: una transacció alhora amb for...of
+    for (let i = 0; i < transactionsToCategorize.length; i++) {
       if (quotaExceeded) break;
 
-      const batch = transactionsToCategorize.slice(i, i + batchSize);
-      const batchNumber = Math.floor(i / batchSize) + 1;
-      const totalBatches = Math.ceil(transactionsToCategorize.length / batchSize);
+      const tx = transactionsToCategorize[i];
+      setBatchProgress({ current: i + 1, total: transactionsToCategorize.length });
 
-      log(`[IA] Processant lot ${batchNumber}/${totalBatches} (${batch.length} transaccions)...`);
+      log(`[IA] Classificant ${i + 1}/${transactionsToCategorize.length}: "${tx.description.substring(0, 30)}..."`);
 
-      const batchResults = await Promise.all(batch.map(async (tx, batchIndex) => {
-        if (quotaExceeded) return { success: false };
+      try {
+        const result = await categorizeTransaction({
+          description: tx.description,
+          amount: tx.amount,
+          expenseCategories,
+          incomeCategories,
+        });
 
-        const index = i + batchIndex;
-        log(`[IA] Classificant moviment ${index + 1}/${transactionsToCategorize.length}: "${tx.description.substring(0, 30)}..."`);
-        try {
-          const result = await categorizeTransaction({
-            description: tx.description,
-            amount: tx.amount,
-            expenseCategories,
-            incomeCategories,
-          });
+        updateDocumentNonBlocking(doc(transactionsCollection, tx.id), { category: result.category });
+        const categoryName = getCategoryDisplayName(result.category);
+        log(`[IA] ✓ ${tx.id} → "${categoryName}"`);
+        successCount++;
+      } catch (error: any) {
+        console.error('Error categorizing transaction:', error);
+        log(`[IA] ✗ ERROR ${tx.id}: ${error?.message || error}`);
+        errorCount++;
 
-          updateDocumentNonBlocking(doc(transactionsCollection, tx.id), { category: result.category });
-          const categoryName = getCategoryDisplayName(result.category);
-          log(`[IA] Moviment ${tx.id} classificat com "${categoryName}".`);
-          return { success: true };
-        } catch (error: any) {
-          console.error('Error categorizing transaction:', error);
-          log(`[IA] ERROR categoritzant ${tx.id}: ${error}`);
-
-          // Detectar errors de quota
-          const errorMsg = error?.message || error?.toString() || '';
-          if (
-            errorMsg.includes('429') ||
-            errorMsg.toLowerCase().includes('quota') ||
-            errorMsg.toLowerCase().includes('resource_exhausted') ||
-            errorMsg.toLowerCase().includes('rate limit')
-          ) {
-            if (!quotaExceeded) {
-              quotaExceeded = true;
-              log('[IA] QUOTA EXCEDIDA - Notificant fallback');
-              onQuotaExceeded?.();
-            }
-          }
-
-          return { success: false };
+        // Detectar errors de quota
+        const errorMsg = error?.message || error?.toString() || '';
+        if (
+          errorMsg.includes('429') ||
+          errorMsg.toLowerCase().includes('quota') ||
+          errorMsg.toLowerCase().includes('resource_exhausted') ||
+          errorMsg.toLowerCase().includes('rate limit')
+        ) {
+          quotaExceeded = true;
+          log('[IA] QUOTA EXCEDIDA - Aturant procés');
+          onQuotaExceeded?.();
+          break;
         }
-      }));
+        // Si no és quota, continuar amb la següent transacció
+      }
 
-      successCount += batchResults.filter(r => r.success).length;
-
-      // Wait between batches (except the last one) if no quota exceeded
-      if (!quotaExceeded && i + batchSize < transactionsToCategorize.length) {
-        log(`[IA] Esperant ${delayMs / 1000}s abans del seguent lot...`);
+      // Delay entre crides (excepte l'última)
+      if (i < transactionsToCategorize.length - 1 && !quotaExceeded) {
         await new Promise(resolve => setTimeout(resolve, delayMs));
       }
     }
 
     const durationMs = Date.now() - startTime;
     setIsBatchCategorizing(false);
-    log(`[IA] Classificacio massiva completada. ${successCount} moviments classificats en ${Math.round(durationMs / 1000)}s.`);
-    trackUX('ai.bulk.run.done', { processedCount: successCount, durationMs, bulkMode, quotaExceeded });
+    setBatchProgress(null);
+    log(`[IA] Completat: ${successCount} OK, ${errorCount} errors en ${Math.round(durationMs / 1000)}s.`);
+    trackUX('ai.bulk.run.done', { processedCount: successCount, errorCount, durationMs, bulkMode, quotaExceeded });
     toast({
       title: t.movements.table.batchCategorizationComplete,
       description: t.movements.table.itemsCategorized(successCount),
@@ -254,6 +244,7 @@ export function useTransactionCategorization({
     // Loading states
     loadingStates,
     isBatchCategorizing,
+    batchProgress,
 
     // Actions
     handleCategorize,

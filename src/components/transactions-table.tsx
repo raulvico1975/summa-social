@@ -308,6 +308,7 @@ export function TransactionsTable({ initialDateFilter = null }: TransactionsTabl
   const {
     loadingStates,
     isBatchCategorizing,
+    batchProgress,
     handleCategorize,
     handleBatchCategorize,
   } = useTransactionCategorization({
@@ -818,6 +819,7 @@ export function TransactionsTable({ initialDateFilter = null }: TransactionsTabl
           isSuperAdmin={isSuperAdmin}
           isBulkMode={isBulkMode}
           onBulkModeChange={handleBulkModeChange}
+          batchProgress={batchProgress}
           t={filterTranslations}
         />
       </div>

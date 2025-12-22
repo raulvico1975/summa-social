@@ -75,6 +75,7 @@ interface TransactionsFiltersProps {
   isSuperAdmin?: boolean;
   isBulkMode?: boolean;
   onBulkModeChange?: (enabled: boolean) => void;
+  batchProgress?: { current: number; total: number } | null;
   t: {
     categorizeAll: string;
     all: string;
@@ -116,6 +117,7 @@ export const TransactionsFilters = React.memo(function TransactionsFilters({
   isSuperAdmin,
   isBulkMode,
   onBulkModeChange,
+  batchProgress,
   t,
 }: TransactionsFiltersProps) {
   // Calcular quants tipus de pendents tenen elements
@@ -177,7 +179,9 @@ export const TransactionsFilters = React.memo(function TransactionsFilters({
           ) : (
             <Sparkles className="mr-2 h-4 w-4" />
           )}
-          {t.categorizeAll}
+          {batchProgress
+            ? `${batchProgress.current} / ${batchProgress.total}`
+            : t.categorizeAll}
         </Button>
 
         {/* Bulk mode toggle (SuperAdmin only) */}
