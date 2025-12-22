@@ -86,6 +86,70 @@ async function callCategorizationAPI(input: {
 }
 
 // =============================================================================
+// ERROR MESSAGE HELPER
+// =============================================================================
+
+/**
+ * Tradueix el codi d'error de l'API a un missatge clar per l'usuari
+ */
+function getErrorMessage(code: ApiErrorResponse['code'], language: 'ca' | 'es'): { title: string; description: string } {
+  const messages: Record<ApiErrorResponse['code'], { ca: { title: string; description: string }; es: { title: string; description: string } }> = {
+    QUOTA_EXCEEDED: {
+      ca: {
+        title: "Límit d'ús d'IA assolit",
+        description: "S'ha arribat al límit d'ús d'IA per avui. La categorització automàtica es reprendrà quan es renovi la quota.",
+      },
+      es: {
+        title: "Límite de uso de IA alcanzado",
+        description: "Se ha alcanzado el límite de uso de IA para hoy. La categorización automática se reanudará cuando se renueve la cuota.",
+      },
+    },
+    RATE_LIMITED: {
+      ca: {
+        title: "Massa peticions",
+        description: "S'estan fent massa peticions. Esperant...",
+      },
+      es: {
+        title: "Demasiadas peticiones",
+        description: "Se están haciendo demasiadas peticiones. Esperando...",
+      },
+    },
+    TRANSIENT: {
+      ca: {
+        title: "Error temporal",
+        description: "Error temporal del servidor. Reintentant...",
+      },
+      es: {
+        title: "Error temporal",
+        description: "Error temporal del servidor. Reintentando...",
+      },
+    },
+    INVALID_INPUT: {
+      ca: {
+        title: "Dades invàlides",
+        description: "Les dades de la transacció no són vàlides.",
+      },
+      es: {
+        title: "Datos inválidos",
+        description: "Los datos de la transacción no son válidos.",
+      },
+    },
+    AI_ERROR: {
+      ca: {
+        title: "IA no disponible",
+        description: "No s'ha pogut accedir a la clau d'IA del sistema. Revisa la configuració del servei o torna-ho a provar més tard.",
+      },
+      es: {
+        title: "IA no disponible",
+        description: "No se ha podido acceder a la clave de IA del sistema. Revisa la configuración del servicio o inténtalo más tarde.",
+      },
+    },
+  };
+
+  return messages[code]?.[language] || messages.AI_ERROR[language];
+}
+
+// =============================================================================
 // HOOK
 // =============================================================================
 
@@ -98,7 +162,7 @@ export function useTransactionCategorization({
   onQuotaExceeded,
 }: UseTransactionCategorizationParams): UseTransactionCategorizationReturn {
   const { toast } = useToast();
-  const { t } = useTranslations();
+  const { t, language } = useTranslations();
   const { log } = useAppLog();
 
   // ---------------------------------------------------------------------------
@@ -165,12 +229,18 @@ export function useTransactionCategorization({
       if (!result.ok) {
         // Error controlat - marcar com Revisar
         updateDocumentNonBlocking(doc(transactionsCollection, txId), { category: 'Revisar' });
+
+        // Missatge d'error traduït
+        const errorMsg = getErrorMessage(result.code, language);
         toast({
           variant: 'destructive',
-          title: 'Error de IA',
-          description: result.message,
+          title: errorMsg.title,
+          description: errorMsg.description,
         });
-        log(`[IA] ERROR: ${result.code} - ${result.message}`);
+
+        // Log estructurat
+        log(`[IA] ERROR: code=${result.code} reason="${result.message}" model=gemini-2.0-flash`);
+        trackUX('ai.categorize.error', { code: result.code, reason: result.message, model: 'gemini-2.0-flash' });
         return;
       }
 
@@ -178,20 +248,25 @@ export function useTransactionCategorization({
 
       const categoryName = getCategoryDisplayName(result.category);
       toast({
-        title: 'Categorització Automàtica',
-        description: `Transacció classificada com "${categoryName}" amb una confiança del ${Math.round(result.confidence * 100)}%.`,
+        title: language === 'ca' ? 'Categorització Automàtica' : 'Categorización Automática',
+        description: language === 'ca'
+          ? `Transacció classificada com "${categoryName}" amb una confiança del ${Math.round(result.confidence * 100)}%.`
+          : `Transacción clasificada como "${categoryName}" con una confianza del ${Math.round(result.confidence * 100)}%.`,
       });
-      log(`[IA] Transaccio classificada com "${categoryName}" (confianca: ${(result.confidence * 100).toFixed(0)}%).`);
+      log(`[IA] OK: category="${categoryName}" confidence=${(result.confidence * 100).toFixed(0)}% model=gemini-2.0-flash`);
     } catch (error) {
       // Error de xarxa - marcar com Revisar
       console.error('Error categorizing transaction:', error);
       updateDocumentNonBlocking(doc(transactionsCollection, txId), { category: 'Revisar' });
+
+      const errorMsg = getErrorMessage('AI_ERROR', language);
       toast({
         variant: 'destructive',
-        title: 'Error de IA',
-        description: t.movements.table.categorizationError,
+        title: errorMsg.title,
+        description: errorMsg.description,
       });
-      log(`[IA] ERROR categoritzant: ${error}`);
+      log(`[IA] ERROR: code=NETWORK reason="${error}" model=gemini-2.0-flash`);
+      trackUX('ai.categorize.error', { code: 'NETWORK', reason: String(error), model: 'gemini-2.0-flash' });
     } finally {
       setLoadingStates((prev) => ({ ...prev, [txId]: false }));
     }
@@ -202,6 +277,7 @@ export function useTransactionCategorization({
     expenseCategories,
     incomeCategories,
     getCategoryDisplayName,
+    language,
     toast,
     t,
     log,
@@ -342,13 +418,25 @@ export function useTransactionCategorization({
 
     if (cancelled) {
       toast({
-        title: 'Categorització aturada',
-        description: `S'han classificat ${successCount} moviments abans de l'aturada.`,
+        title: language === 'ca' ? 'Categorització aturada' : 'Categorización detenida',
+        description: language === 'ca'
+          ? `S'han classificat ${successCount} moviments abans de l'aturada.`
+          : `Se han clasificado ${successCount} movimientos antes de la detención.`,
+      });
+    } else if (quotaExceeded) {
+      const errorMsg = getErrorMessage('QUOTA_EXCEEDED', language);
+      toast({
+        variant: 'destructive',
+        title: errorMsg.title,
+        description: errorMsg.description,
       });
     } else {
+      // Finalització correcta
       toast({
-        title: t.movements.table.batchCategorizationComplete,
-        description: t.movements.table.itemsCategorized(successCount),
+        title: language === 'ca' ? 'Categorització completada' : 'Categorización completada',
+        description: language === 'ca'
+          ? `${successCount} transaccions processades, ${errorCount} errors.`
+          : `${successCount} transacciones procesadas, ${errorCount} errores.`,
       });
     }
   }, [
@@ -361,6 +449,7 @@ export function useTransactionCategorization({
     bulkMode,
     onQuotaExceeded,
     isBatchCategorizing,
+    language,
     toast,
     t,
     log,
