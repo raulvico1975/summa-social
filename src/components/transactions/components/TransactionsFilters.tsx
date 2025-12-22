@@ -172,14 +172,21 @@ export const TransactionsFilters = React.memo(function TransactionsFilters({
       <div className="flex gap-2 items-center flex-wrap">
         {/* Categorize All button OR Cancel button */}
         {isBatchCategorizing ? (
-          <Button
-            onClick={onCancelBatch}
-            variant="destructive"
-            size="sm"
-          >
-            <Square className="mr-2 h-4 w-4" />
-            Aturar ({batchProgress ? `${batchProgress.current}/${batchProgress.total}` : '...'})
-          </Button>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                onClick={onCancelBatch}
+                variant="destructive"
+                size="sm"
+              >
+                <Square className="mr-2 h-4 w-4" />
+                Classificant… {batchProgress ? `${batchProgress.current}/${batchProgress.total}` : '...'}
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>
+              <p className="text-xs">Processant transaccions una a una per evitar errors.</p>
+            </TooltipContent>
+          </Tooltip>
         ) : (
           <Button
             onClick={onBatchCategorize}
@@ -208,9 +215,11 @@ export const TransactionsFilters = React.memo(function TransactionsFilters({
               <TooltipTrigger asChild>
                 <Info className="h-3.5 w-3.5 text-muted-foreground cursor-help" />
               </TooltipTrigger>
-              <TooltipContent className="max-w-xs">
-                <p className="text-xs">
-                  Accelera la categorització. Pot esgotar quota i degradarà automàticament.
+              <TooltipContent className="max-w-sm" side="bottom">
+                <p className="font-medium text-sm mb-1">Mode ràpid (SuperAdmin)</p>
+                <p className="text-xs text-muted-foreground">
+                  Accelera la categorització amb IA processant lots més grans amb pauses curtes.
+                  Pot aturar-se automàticament si es detecta límit de quota.
                 </p>
               </TooltipContent>
             </Tooltip>

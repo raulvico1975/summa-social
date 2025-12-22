@@ -290,10 +290,10 @@ export function TransactionsTable({ initialDateFilter = null }: TransactionsTabl
     trackUX('ai.bulk.fallback_quota', { reason: 'quota_exceeded' });
     toast({
       variant: 'destructive',
-      title: language === 'ca' ? "Quota d'IA esgotada" : "Cuota de IA agotada",
+      title: language === 'ca' ? "Quota d'IA assolida" : "Cuota de IA alcanzada",
       description: language === 'ca'
-        ? "Has esgotat la quota gratuïta de Gemini. Torna-ho a provar més tard o activa facturació a Google AI Studio."
-        : "Has agotado la cuota gratuita de Gemini. Inténtalo más tarde o activa facturación en Google AI Studio.",
+        ? "L'IA ha arribat al límit de quota. Pots continuar en mode normal o reprendre més tard."
+        : "La IA ha alcanzado el límite de cuota. Puedes continuar en modo normal o reanudar más tarde.",
     });
   }, [toast, language]);
 
