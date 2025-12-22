@@ -49,7 +49,15 @@ export default function LoginPage() {
             Para acceder, utiliza la URL de tu organización
           </h1>
           <p className="text-muted-foreground">
-            Ejemplo: <span className="font-mono text-primary">summasocial.app/nombre-de-tu-org</span>
+            Ejemplo:{' '}
+            <a
+              href="/nombre-de-tu-org"
+              target="_blank"
+              rel="noreferrer"
+              className="font-mono text-primary hover:underline"
+            >
+              summasocial.app/nombre-de-tu-org
+            </a>
           </p>
         </div>
 

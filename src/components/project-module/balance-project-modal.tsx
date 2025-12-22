@@ -7,9 +7,6 @@ import * as React from 'react';
 import {
   Dialog,
   DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
 import {
@@ -26,13 +23,17 @@ import {
   TabsList,
   TabsTrigger,
 } from '@/components/ui/tabs';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
-import { ScrollArea } from '@/components/ui/scroll-area';
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from '@/components/ui/collapsible';
 import {
   AlertTriangle,
   CheckCircle,
@@ -53,6 +54,7 @@ import {
   FileWarning,
   FolderOpen,
   Sparkles,
+  RotateCcw,
 } from 'lucide-react';
 import { useSaveExpenseLink } from '@/hooks/use-project-module';
 import { useToast } from '@/hooks/use-toast';
@@ -239,6 +241,19 @@ export function BalanceProjectModal({
   });
   const [expandSectionOpen, setExpandSectionOpen] = React.useState(false);
 
+  // Ref per scroll automàtic al bloc d'ampliació
+  const expandSearchRef = React.useRef<HTMLDivElement>(null);
+  const firstToggleRef = React.useRef<HTMLButtonElement>(null);
+
+  // Estat per col·lapsar diagnòstic quan treballem una partida
+  const [diagnosticCollapsed, setDiagnosticCollapsed] = React.useState(false);
+
+  // Computed: hi ha cerca ampliada activa?
+  const isSearchExpanded = expandOptions.includeBankExpenses ||
+    expandOptions.includeOtherProjects ||
+    expandOptions.includeWithoutDocument ||
+    expandOptions.showAll;
+
   // Estat per edició parcial (Mode Excés)
   const [partialEditTxId, setPartialEditTxId] = React.useState<string | null>(null);
   const [partialEditAmount, setPartialEditAmount] = React.useState('');
@@ -273,7 +288,36 @@ export function BalanceProjectModal({
     setExpandSectionOpen(false);
     setPartialEditTxId(null);
     setPartialEditAmount('');
+    // Col·lapsar diagnòstic automàticament quan seleccionem una partida
+    if (selectedLineId) {
+      setDiagnosticCollapsed(true);
+    }
   }, [selectedLineId]);
+
+  // Handler per ampliar cerca amb scroll i focus
+  const handleExpandSearch = React.useCallback(() => {
+    setExpandSectionOpen(true);
+    // Scroll i focus després del renderitzat
+    setTimeout(() => {
+      expandSearchRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      firstToggleRef.current?.focus();
+    }, 100);
+  }, []);
+
+  // Handler per restablir ampliació
+  const handleResetExpansion = React.useCallback(() => {
+    setExpandOptions({
+      includeBankExpenses: false,
+      includeOtherProjects: false,
+      includeWithoutDocument: false,
+      showAll: false,
+    });
+  }, []);
+
+  // Handler per canviar partida (reobre diagnòstic)
+  const handleChangeLine = React.useCallback(() => {
+    setDiagnosticCollapsed(false);
+  }, []);
 
   // Calcular execució real per partida
   const executionByLine = React.useMemo(() => {
@@ -825,47 +869,43 @@ export function BalanceProjectModal({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-5xl max-h-[90vh] flex flex-col" guidedMode={guidedModeActive}>
-        {/* Banner mode guiat */}
-        {guidedModeActive && (
-          <div className="flex items-center justify-between px-3 py-2 -mx-6 -mt-6 mb-4 bg-gradient-to-r from-violet-500/10 via-purple-500/10 to-fuchsia-500/10 border-b border-purple-200/50">
-            <div className="flex items-center gap-2 text-sm text-purple-700">
-              <Sparkles className="h-4 w-4" />
-              <span className="font-medium">Justificació assistida</span>
+      <DialogContent className="max-w-5xl max-h-[85vh] flex flex-col p-0" guidedMode={guidedModeActive}>
+        {/* Header compacte */}
+        <div className="flex-none px-6 pt-4 pb-2 border-b">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <DialogTitle className="text-base">Quadrar justificació</DialogTitle>
+              {guidedModeActive && (
+                <Badge variant="secondary" className="text-xs bg-purple-100 text-purple-700">
+                  <Sparkles className="h-3 w-3 mr-1" />
+                  Assistida
+                </Badge>
+              )}
             </div>
-            <Button
-              variant="ghost"
-              size="sm"
-              className="h-7 text-xs text-purple-600 hover:text-purple-800 hover:bg-purple-100/50"
-              onClick={() => setGuidedModeActive(false)}
-            >
-              Desactivar guia
-            </Button>
+            <div className="flex items-center gap-2 text-xs text-muted-foreground">
+              <span>{summary.outOfDeviation}/{summary.total} fora marge</span>
+              <span>·</span>
+              <span>±{project.allowedDeviationPct ?? 10}%</span>
+            </div>
           </div>
-        )}
+        </div>
 
-        <DialogHeader>
-          <DialogTitle>Quadrar justificació del projecte</DialogTitle>
-          <DialogDescription>
-            Revisió de desviacions i proposta de moviments abans de justificar
-          </DialogDescription>
-        </DialogHeader>
-
-        <div className="flex-1 min-h-0 overflow-y-auto">
+        {/* Body - únic scroll */}
+        <div className="flex-1 min-h-0 overflow-y-auto px-6 py-3">
           <Tabs defaultValue="diagnostic" className="flex flex-col">
-            <TabsList className="grid w-full grid-cols-2 sticky top-0 z-10 bg-background">
-              <TabsTrigger value="diagnostic">
+            <TabsList className="grid w-full grid-cols-2 h-8 mb-3">
+              <TabsTrigger value="diagnostic" className="text-xs">
                 Diagnòstic
                 {summary.outOfDeviation > 0 && (
-                  <Badge variant="destructive" className="ml-2">
+                  <Badge variant="destructive" className="ml-1.5 h-4 px-1.5 text-[10px]">
                     {summary.outOfDeviation}
                   </Badge>
                 )}
               </TabsTrigger>
-              <TabsTrigger value="simulation">
+              <TabsTrigger value="simulation" className="text-xs">
                 Simulació
                 {simulatedMoves.length > 0 && (
-                  <Badge variant="default" className="ml-2">
+                  <Badge variant="default" className="ml-1.5 h-4 px-1.5 text-[10px]">
                     {simulatedMoves.length}
                   </Badge>
                 )}
@@ -873,160 +913,156 @@ export function BalanceProjectModal({
             </TabsList>
 
             {/* TAB: Diagnòstic */}
-            <TabsContent value="diagnostic" className="mt-4">
-              <div className="space-y-4">
-                {/* Resum global */}
-                <div className="grid grid-cols-3 gap-4">
-                  <Card>
-                    <CardHeader className="pb-2">
-                      <CardDescription>Partides fora de desviació</CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                      <p className="text-2xl font-bold">
-                        {summary.outOfDeviation} / {summary.total}
-                      </p>
-                    </CardContent>
-                  </Card>
-                  <Card>
-                    <CardHeader className="pb-2">
-                      <CardDescription>Import a reequilibrar</CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                      <p className="text-2xl font-bold">
-                        {formatAmount(summary.totalToRebalance)}
-                      </p>
-                    </CardContent>
-                  </Card>
-                  <Card>
-                    <CardHeader className="pb-2">
-                      <CardDescription>Desviació permesa</CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                      <p className="text-2xl font-bold">
-                        ±{project.allowedDeviationPct ?? 10}%
-                      </p>
-                    </CardContent>
-                  </Card>
-                </div>
+            <TabsContent value="diagnostic" className="mt-0">
+              <div className="space-y-3">
+                {/* Sticky summary quan treballem una partida */}
+                {selectedLineId && selectedDiag && diagnosticCollapsed && (
+                  <div className="sticky top-0 z-10 bg-background border rounded-md p-2 flex items-center justify-between gap-2 shadow-sm">
+                    <div className="flex items-center gap-2 min-w-0 flex-1">
+                      <FolderOpen className="h-4 w-4 text-muted-foreground shrink-0" />
+                      <span className="text-sm font-medium truncate">{selectedDiag.line.name}</span>
+                      <div className="hidden sm:flex items-center gap-1.5 text-xs text-muted-foreground shrink-0">
+                        <span>Pres. <span className="font-mono">{formatAmount(selectedDiag.budgeted)}</span></span>
+                        <span>·</span>
+                        <span>Exec. <span className="font-mono">{formatAmount(selectedDiag.simulated)}</span></span>
+                        <span>·</span>
+                        <span className={selectedDiag.difference > 0 ? 'text-red-600' : selectedDiag.difference < 0 ? 'text-amber-600' : ''}>
+                          Dif. <span className="font-mono">{selectedDiag.difference > 0 ? '+' : ''}{formatAmount(selectedDiag.difference)}</span>
+                        </span>
+                      </div>
+                      {selectedDiag.difference < 0 ? (
+                        <Badge variant="outline" className="text-[10px] h-5 bg-amber-50 text-amber-700 border-amber-200 shrink-0">
+                          <TrendingDown className="h-2.5 w-2.5 mr-0.5" />
+                          Falta
+                        </Badge>
+                      ) : selectedDiag.difference > 0 ? (
+                        <Badge variant="outline" className="text-[10px] h-5 bg-red-50 text-red-700 border-red-200 shrink-0">
+                          <TrendingUp className="h-2.5 w-2.5 mr-0.5" />
+                          Excés
+                        </Badge>
+                      ) : null}
+                    </div>
+                    <Button variant="ghost" size="sm" className="h-7 text-xs shrink-0" onClick={handleChangeLine}>
+                      <ChevronDown className="h-3.5 w-3.5 mr-1" />
+                      Canviar partida
+                    </Button>
+                  </div>
+                )}
 
-                {/* Taula diagnòstic */}
-                <div className="border rounded-md overflow-hidden">
-                  <ScrollArea className={selectedLineId ? 'h-[180px]' : 'h-[280px]'}>
-                    <Table>
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead>Partida</TableHead>
-                          <TableHead className="text-right">Pressupostat</TableHead>
-                          <TableHead className="text-right">Executat</TableHead>
-                          {simulatedMoves.length > 0 && (
-                            <TableHead className="text-right">Simulat</TableHead>
-                          )}
-                          <TableHead className="text-right">Diferència</TableHead>
-                          <TableHead>Estat</TableHead>
-                          <TableHead></TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {diagnostics.map(diag => (
-                          <TableRow
-                            key={diag.line.id}
-                            className={selectedLineId === diag.line.id ? 'bg-muted' : ''}
-                          >
-                            <TableCell>
-                              <div>
-                                <span className="font-medium">{diag.line.name}</span>
-                                {diag.line.code && (
-                                  <span className="text-muted-foreground text-xs ml-2">
-                                    {diag.line.code}
-                                  </span>
-                                )}
-                              </div>
-                            </TableCell>
-                            <TableCell className="text-right font-mono">
-                              {formatAmount(diag.budgeted)}
-                            </TableCell>
-                            <TableCell className="text-right font-mono">
-                              {formatAmount(diag.executed)}
-                            </TableCell>
+                {/* Taula diagnòstic - col·lapsable quan treballem una partida */}
+                <Collapsible open={!diagnosticCollapsed || !selectedLineId} onOpenChange={(open) => setDiagnosticCollapsed(!open)}>
+                  {/* Trigger només visible quan està col·lapsat i hi ha partida */}
+                  {diagnosticCollapsed && selectedLineId && (
+                    <CollapsibleTrigger asChild>
+                      <Button variant="outline" size="sm" className="w-full h-7 text-xs text-muted-foreground">
+                        <ChevronDown className="h-3.5 w-3.5 mr-1" />
+                        Veure totes les partides ({diagnostics.length})
+                      </Button>
+                    </CollapsibleTrigger>
+                  )}
+                  <CollapsibleContent>
+                    <div className="border rounded-md">
+                      <Table>
+                        <TableHeader>
+                          <TableRow className="h-8">
+                            <TableHead className="text-xs py-1.5">Partida</TableHead>
+                            <TableHead className="text-xs py-1.5 text-right">Pres.</TableHead>
+                            <TableHead className="text-xs py-1.5 text-right">Exec.</TableHead>
                             {simulatedMoves.length > 0 && (
-                              <TableCell className="text-right font-mono">
-                                {diag.simulated !== diag.executed ? (
-                                  <span className="text-blue-600 font-medium">
-                                    {formatAmount(diag.simulated)}
-                                  </span>
+                              <TableHead className="text-xs py-1.5 text-right">Sim.</TableHead>
+                            )}
+                            <TableHead className="text-xs py-1.5 text-right">Dif.</TableHead>
+                            <TableHead className="text-xs py-1.5 w-16"></TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {diagnostics.map(diag => (
+                            <TableRow
+                              key={diag.line.id}
+                              className={`h-9 cursor-pointer hover:bg-muted/50 ${selectedLineId === diag.line.id ? 'bg-muted' : ''}`}
+                              onClick={() => setSelectedLineId(selectedLineId === diag.line.id ? null : diag.line.id)}
+                            >
+                              <TableCell className="py-1.5">
+                                <div className="flex items-center gap-2">
+                                  <span className="text-sm font-medium truncate max-w-[200px]">{diag.line.name}</span>
+                                  {diag.status !== 'ok' && (
+                                    <span className={`inline-block w-1.5 h-1.5 rounded-full ${diag.difference > 0 ? 'bg-red-500' : 'bg-amber-500'}`} />
+                                  )}
+                                </div>
+                              </TableCell>
+                              <TableCell className="py-1.5 text-right font-mono text-xs">
+                                {formatAmount(diag.budgeted)}
+                              </TableCell>
+                              <TableCell className="py-1.5 text-right font-mono text-xs">
+                                {formatAmount(diag.executed)}
+                              </TableCell>
+                              {simulatedMoves.length > 0 && (
+                                <TableCell className="py-1.5 text-right font-mono text-xs">
+                                  {diag.simulated !== diag.executed ? (
+                                    <span className="text-blue-600 font-medium">
+                                      {formatAmount(diag.simulated)}
+                                    </span>
+                                  ) : (
+                                    formatAmount(diag.simulated)
+                                  )}
+                                </TableCell>
+                              )}
+                              <TableCell className={`py-1.5 text-right font-mono text-xs ${diag.difference > 0 ? 'text-red-600' : diag.difference < 0 ? 'text-amber-600' : ''}`}>
+                                {diag.difference > 0 ? '+' : ''}{formatAmount(diag.difference)}
+                              </TableCell>
+                              <TableCell className="py-1.5 text-center">
+                                {diag.status === 'ok' ? (
+                                  <Badge variant="outline" className="text-[10px] h-5 px-1.5 bg-green-50 text-green-700 border-green-200">
+                                    <CheckCircle className="h-2.5 w-2.5 mr-0.5" />
+                                    OK
+                                  </Badge>
+                                ) : diag.status === 'overSpend' ? (
+                                  <Badge variant="outline" className="text-[10px] h-5 px-1.5 bg-red-50 text-red-700 border-red-200">
+                                    <TrendingUp className="h-2.5 w-2.5 mr-0.5" />
+                                    Excés
+                                  </Badge>
                                 ) : (
-                                  formatAmount(diag.simulated)
+                                  <Badge variant="outline" className="text-[10px] h-5 px-1.5 bg-amber-50 text-amber-700 border-amber-200">
+                                    <TrendingDown className="h-2.5 w-2.5 mr-0.5" />
+                                    Falta
+                                  </Badge>
                                 )}
                               </TableCell>
-                            )}
-                            <TableCell className={`text-right font-mono ${diag.difference > 0 ? 'text-red-600' : diag.difference < 0 ? 'text-amber-600' : ''}`}>
-                              {diag.difference > 0 ? '+' : ''}{formatAmount(diag.difference)}
-                            </TableCell>
-                            <TableCell>
-                              {diag.status === 'ok' ? (
-                                <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
-                                  <CheckCircle className="h-3 w-3 mr-1" />
-                                  OK
-                                </Badge>
-                              ) : diag.status === 'overSpend' ? (
-                                <Badge variant="outline" className="bg-red-50 text-red-700 border-red-200">
-                                  <TrendingUp className="h-3 w-3 mr-1" />
-                                  Excés
-                                </Badge>
-                              ) : (
-                                <Badge variant="outline" className="bg-amber-50 text-amber-700 border-amber-200">
-                                  <TrendingDown className="h-3 w-3 mr-1" />
-                                  Falta
-                                </Badge>
-                              )}
-                            </TableCell>
-                            <TableCell>
-                              <Button
-                                variant={selectedLineId === diag.line.id ? 'secondary' : 'ghost'}
-                                size="sm"
-                                onClick={() => setSelectedLineId(
-                                  selectedLineId === diag.line.id ? null : diag.line.id
-                                )}
-                              >
-                                {selectedLineId === diag.line.id ? 'Tancar' : 'Veure opcions'}
-                              </Button>
-                            </TableCell>
-                          </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
-                  </ScrollArea>
-                </div>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    </div>
+                  </CollapsibleContent>
+                </Collapsible>
 
                 {/* Bloc "Opcions per quadrar la partida" */}
                 {selectedLineId && selectedDiag && (
                   <Card>
-                    <CardHeader className="pb-3">
+                    <CardHeader className="py-2 px-3">
                       <div className="flex items-center justify-between">
-                        <CardTitle className="text-base flex items-center gap-2">
-                          <FolderOpen className="h-4 w-4" />
-                          Opcions per quadrar: {selectedDiag.line.name}
-                        </CardTitle>
-                        <Button variant="ghost" size="sm" onClick={handleCloseOptions}>
-                          <X className="h-4 w-4" />
+                        <div className="flex items-center gap-2">
+                          <FolderOpen className="h-4 w-4 text-muted-foreground" />
+                          <CardTitle className="text-sm">{selectedDiag.line.name}</CardTitle>
+                          {selectedDiag.difference < 0 ? (
+                            <Badge variant="outline" className="text-[10px] h-5 bg-amber-50 text-amber-700 border-amber-200">
+                              <TrendingDown className="h-2.5 w-2.5 mr-0.5" />
+                              Falten {formatAmount(Math.abs(selectedDiag.difference))}
+                            </Badge>
+                          ) : (
+                            <Badge variant="outline" className="text-[10px] h-5 bg-red-50 text-red-700 border-red-200">
+                              <TrendingUp className="h-2.5 w-2.5 mr-0.5" />
+                              Excés {formatAmount(selectedDiag.difference)}
+                            </Badge>
+                          )}
+                        </div>
+                        <Button variant="ghost" size="sm" className="h-6 w-6 p-0" onClick={handleCloseOptions}>
+                          <X className="h-3.5 w-3.5" />
                         </Button>
                       </div>
-                      <CardDescription>
-                        {selectedDiag.difference < 0 ? (
-                          <span className="text-amber-700">
-                            <TrendingDown className="h-4 w-4 inline mr-1" />
-                            Et falten <strong>{formatAmount(Math.abs(selectedDiag.difference))}</strong> per arribar al pressupost d'aquesta partida.
-                          </span>
-                        ) : (
-                          <span className="text-red-700">
-                            <TrendingUp className="h-4 w-4 inline mr-1" />
-                            Tens un excés de <strong>{formatAmount(selectedDiag.difference)}</strong> en aquesta partida.
-                          </span>
-                        )}
-                      </CardDescription>
                     </CardHeader>
 
-                    <CardContent className="space-y-3">
+                    <CardContent className="px-3 pb-3 pt-0 space-y-2">
                       {/* BLOC SOLUCIÓ RECOMANADA (només sobreexecució amb solució dins marge) */}
                       {selectedDiag.difference > 0 && simpleRemovalSolutions.length > 0 && (
                         <div className="border rounded-lg bg-gradient-to-r from-green-50/50 to-emerald-50/50 p-3 space-y-3">
@@ -1207,7 +1243,7 @@ export function BalanceProjectModal({
                       )}
 
                       {/* Llista de candidates */}
-                      <ScrollArea className="flex-1 min-h-[120px] border rounded-md">
+                      <div className="border rounded-md">
                         {candidatesForSelectedLine.length === 0 ? (
                           <div className="p-6 text-center">
                             <Info className="h-8 w-8 mx-auto mb-2 text-muted-foreground" />
@@ -1451,116 +1487,146 @@ export function BalanceProjectModal({
                             )}
                           </div>
                         )}
-                      </ScrollArea>
+                      </div>
 
-                      {/* Bloc "Ampliar cerca" */}
+                      {/* Bloc "Ampliar cerca" - persistent amb feedback immediat */}
                       {selectedDiag.difference < 0 && (
-                        <div className="border rounded-md">
-                          <Button
-                            variant="ghost"
-                            className="w-full justify-between p-3 h-auto"
-                            onClick={() => setExpandSectionOpen(!expandSectionOpen)}
-                          >
-                            <span className="text-sm font-medium flex items-center gap-2">
-                              <Search className="h-4 w-4" />
-                              No et serveix? Ampliar cerca
-                            </span>
-                            {expandSectionOpen ? (
-                              <ChevronUp className="h-4 w-4" />
-                            ) : (
-                              <ChevronDown className="h-4 w-4" />
-                            )}
-                          </Button>
+                        <div ref={expandSearchRef} className="border rounded-md">
+                          <Collapsible open={expandSectionOpen} onOpenChange={setExpandSectionOpen}>
+                            <CollapsibleTrigger asChild>
+                              <Button
+                                variant="ghost"
+                                className="w-full justify-between p-3 h-auto"
+                                onClick={handleExpandSearch}
+                              >
+                                <span className="text-sm font-medium flex items-center gap-2">
+                                  <Search className="h-4 w-4" />
+                                  Ampliar cerca
+                                  {isSearchExpanded && (
+                                    <Badge variant="default" className="text-[10px] h-5 px-1.5 bg-blue-600">
+                                      Cerca ampliada
+                                    </Badge>
+                                  )}
+                                </span>
+                                {expandSectionOpen ? (
+                                  <ChevronUp className="h-4 w-4" />
+                                ) : (
+                                  <ChevronDown className="h-4 w-4" />
+                                )}
+                              </Button>
+                            </CollapsibleTrigger>
 
-                          {expandSectionOpen && (
-                            <div className="px-3 pb-3 space-y-3">
-                              <div className="flex items-start space-x-3">
-                                <Checkbox
-                                  id="includeBankExpenses"
-                                  checked={expandOptions.includeBankExpenses}
-                                  onCheckedChange={(checked) => setExpandOptions(prev => ({
-                                    ...prev,
-                                    includeBankExpenses: !!checked,
-                                  }))}
-                                />
-                                <div className="grid gap-0.5 leading-none">
-                                  <Label htmlFor="includeBankExpenses" className="text-sm cursor-pointer">
-                                    Incloure despeses de la Seu (bancàries)
-                                    {expandedCounts && (
-                                      <Badge variant="secondary" className="ml-2 text-xs">{expandedCounts.withBank}</Badge>
-                                    )}
-                                  </Label>
-                                  <p className="text-xs text-muted-foreground">Moviments bancaris amb traçabilitat.</p>
-                                </div>
-                              </div>
+                            <CollapsibleContent>
+                              <div className="px-3 pb-3 space-y-3">
+                                {/* Microcopy */}
+                                <p className="text-xs text-muted-foreground">
+                                  Activa opcions per veure més despeses candidates.
+                                </p>
 
-                              <div className="flex items-start space-x-3">
-                                <Checkbox
-                                  id="includeOtherProjects"
-                                  checked={expandOptions.includeOtherProjects}
-                                  onCheckedChange={(checked) => setExpandOptions(prev => ({
-                                    ...prev,
-                                    includeOtherProjects: !!checked,
-                                  }))}
-                                />
-                                <div className="grid gap-0.5 leading-none">
-                                  <Label htmlFor="includeOtherProjects" className="text-sm cursor-pointer">
-                                    Incloure despeses d'altres projectes
-                                    {expandedCounts && (
-                                      <Badge variant="secondary" className="ml-2 text-xs">{expandedCounts.fromOtherProjects}</Badge>
-                                    )}
-                                  </Label>
-                                  <p className="text-xs text-amber-600">
-                                    <AlertTriangle className="h-3 w-3 inline mr-1" />
-                                    Això pot desquadrar l'altre projecte.
-                                  </p>
+                                <div className="flex items-start space-x-3">
+                                  <Checkbox
+                                    ref={firstToggleRef as React.RefObject<HTMLButtonElement>}
+                                    id="includeBankExpenses"
+                                    checked={expandOptions.includeBankExpenses}
+                                    onCheckedChange={(checked) => setExpandOptions(prev => ({
+                                      ...prev,
+                                      includeBankExpenses: !!checked,
+                                    }))}
+                                  />
+                                  <div className="grid gap-0.5 leading-none">
+                                    <Label htmlFor="includeBankExpenses" className="text-sm cursor-pointer">
+                                      Incloure despeses de la Seu (bancàries)
+                                      {expandedCounts && (
+                                        <Badge variant="secondary" className="ml-2 text-xs">{expandedCounts.withBank}</Badge>
+                                      )}
+                                    </Label>
+                                    <p className="text-xs text-muted-foreground">Moviments bancaris amb traçabilitat.</p>
+                                  </div>
                                 </div>
-                              </div>
 
-                              <div className="flex items-start space-x-3">
-                                <Checkbox
-                                  id="includeWithoutDocument"
-                                  checked={expandOptions.includeWithoutDocument}
-                                  onCheckedChange={(checked) => setExpandOptions(prev => ({
-                                    ...prev,
-                                    includeWithoutDocument: !!checked,
-                                  }))}
-                                />
-                                <div className="grid gap-0.5 leading-none">
-                                  <Label htmlFor="includeWithoutDocument" className="text-sm cursor-pointer">
-                                    Incloure despeses sense document
-                                    {expandedCounts && (
-                                      <Badge variant="secondary" className="ml-2 text-xs">{expandedCounts.withoutDoc}</Badge>
-                                    )}
-                                  </Label>
-                                  <p className="text-xs text-amber-600">
-                                    <FileWarning className="h-3 w-3 inline mr-1" />
-                                    Potser no serà justificable si el finançador demana comprovant.
-                                  </p>
+                                <div className="flex items-start space-x-3">
+                                  <Checkbox
+                                    id="includeOtherProjects"
+                                    checked={expandOptions.includeOtherProjects}
+                                    onCheckedChange={(checked) => setExpandOptions(prev => ({
+                                      ...prev,
+                                      includeOtherProjects: !!checked,
+                                    }))}
+                                  />
+                                  <div className="grid gap-0.5 leading-none">
+                                    <Label htmlFor="includeOtherProjects" className="text-sm cursor-pointer">
+                                      Incloure despeses d&apos;altres projectes
+                                      {expandedCounts && (
+                                        <Badge variant="secondary" className="ml-2 text-xs">{expandedCounts.fromOtherProjects}</Badge>
+                                      )}
+                                    </Label>
+                                    <p className="text-xs text-amber-600">
+                                      <AlertTriangle className="h-3 w-3 inline mr-1" />
+                                      Això pot desquadrar l&apos;altre projecte.
+                                    </p>
+                                  </div>
                                 </div>
-                              </div>
 
-                              <div className="flex items-start space-x-3">
-                                <Checkbox
-                                  id="showAll"
-                                  checked={expandOptions.showAll}
-                                  onCheckedChange={(checked) => setExpandOptions(prev => ({
-                                    ...prev,
-                                    showAll: !!checked,
-                                  }))}
-                                />
-                                <div className="grid gap-0.5 leading-none">
-                                  <Label htmlFor="showAll" className="text-sm cursor-pointer">
-                                    Veure totes les despeses del període
-                                    {expandedCounts && (
-                                      <Badge variant="secondary" className="ml-2 text-xs">{expandedCounts.total}</Badge>
-                                    )}
-                                  </Label>
-                                  <p className="text-xs text-muted-foreground">Mostrar totes sense restriccions.</p>
+                                <div className="flex items-start space-x-3">
+                                  <Checkbox
+                                    id="includeWithoutDocument"
+                                    checked={expandOptions.includeWithoutDocument}
+                                    onCheckedChange={(checked) => setExpandOptions(prev => ({
+                                      ...prev,
+                                      includeWithoutDocument: !!checked,
+                                    }))}
+                                  />
+                                  <div className="grid gap-0.5 leading-none">
+                                    <Label htmlFor="includeWithoutDocument" className="text-sm cursor-pointer">
+                                      Incloure despeses sense document
+                                      {expandedCounts && (
+                                        <Badge variant="secondary" className="ml-2 text-xs">{expandedCounts.withoutDoc}</Badge>
+                                      )}
+                                    </Label>
+                                    <p className="text-xs text-amber-600">
+                                      <FileWarning className="h-3 w-3 inline mr-1" />
+                                      Potser no serà justificable si el finançador demana comprovant.
+                                    </p>
+                                  </div>
                                 </div>
+
+                                <div className="flex items-start space-x-3">
+                                  <Checkbox
+                                    id="showAll"
+                                    checked={expandOptions.showAll}
+                                    onCheckedChange={(checked) => setExpandOptions(prev => ({
+                                      ...prev,
+                                      showAll: !!checked,
+                                    }))}
+                                  />
+                                  <div className="grid gap-0.5 leading-none">
+                                    <Label htmlFor="showAll" className="text-sm cursor-pointer">
+                                      Veure totes les despeses del període
+                                      {expandedCounts && (
+                                        <Badge variant="secondary" className="ml-2 text-xs">{expandedCounts.total}</Badge>
+                                      )}
+                                    </Label>
+                                    <p className="text-xs text-muted-foreground">Mostrar totes sense restriccions.</p>
+                                  </div>
+                                </div>
+
+                                {/* Botó restablir */}
+                                {isSearchExpanded && (
+                                  <div className="pt-2 border-t">
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      className="h-7 text-xs text-muted-foreground"
+                                      onClick={handleResetExpansion}
+                                    >
+                                      <RotateCcw className="h-3 w-3 mr-1" />
+                                      Restablir ampliació
+                                    </Button>
+                                  </div>
+                                )}
                               </div>
-                            </div>
-                          )}
+                            </CollapsibleContent>
+                          </Collapsible>
                         </div>
                       )}
                     </CardContent>
@@ -1578,17 +1644,17 @@ export function BalanceProjectModal({
                   <p className="text-sm">Selecciona una partida i afegeix despeses.</p>
                 </div>
               ) : (
-                <div className="space-y-4 h-full flex flex-col">
-                  <ScrollArea className="flex-1 border rounded-md">
+                <div className="space-y-3">
+                  <div className="border rounded-md">
                     <Table>
                       <TableHeader>
-                        <TableRow>
-                          <TableHead>Despesa</TableHead>
-                          <TableHead>Acció</TableHead>
-                          <TableHead>Origen</TableHead>
-                          <TableHead>Destí</TableHead>
-                          <TableHead className="text-right">Import</TableHead>
-                          <TableHead></TableHead>
+                        <TableRow className="h-8">
+                          <TableHead className="text-xs py-1.5">Despesa</TableHead>
+                          <TableHead className="text-xs py-1.5">Acció</TableHead>
+                          <TableHead className="text-xs py-1.5">Origen</TableHead>
+                          <TableHead className="text-xs py-1.5">Destí</TableHead>
+                          <TableHead className="text-xs py-1.5 text-right">Import</TableHead>
+                          <TableHead className="w-10"></TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
@@ -1658,18 +1724,16 @@ export function BalanceProjectModal({
                         })}
                       </TableBody>
                     </Table>
-                  </ScrollArea>
+                  </div>
 
-                  <div className="flex items-center justify-between p-4 border rounded-md bg-muted/50">
-                    <div>
-                      <p className="font-medium">Resum de la simulació</p>
-                      <p className="text-sm text-muted-foreground">
-                        {simulatedMoves.length} moviment{simulatedMoves.length !== 1 ? 's' : ''} ·
-                        Total: {formatAmount(simulatedMoves.reduce((sum, m) => sum + m.amountEUR, 0))}
-                      </p>
+                  <div className="flex items-center justify-between py-2 px-3 border rounded-md bg-muted/50">
+                    <div className="text-sm">
+                      <span className="font-medium">{simulatedMoves.length} moviment{simulatedMoves.length !== 1 ? 's' : ''}</span>
+                      <span className="text-muted-foreground mx-1">·</span>
+                      <span className="font-mono">{formatAmount(simulatedMoves.reduce((sum, m) => sum + m.amountEUR, 0))}</span>
                     </div>
-                    <Button variant="outline" onClick={clearSimulations}>
-                      <Undo2 className="h-4 w-4 mr-2" />
+                    <Button variant="outline" size="sm" onClick={clearSimulations}>
+                      <Undo2 className="h-3.5 w-3.5 mr-1" />
                       Esborrar tot
                     </Button>
                   </div>
@@ -1679,27 +1743,29 @@ export function BalanceProjectModal({
           </Tabs>
         </div>
 
-        <DialogFooter className="mt-4">
-          <Button variant="outline" onClick={() => onOpenChange(false)}>
+        {/* Footer compacte */}
+        <div className="flex-none px-6 py-2 border-t flex items-center justify-end gap-2">
+          <Button variant="outline" size="sm" onClick={() => onOpenChange(false)}>
             Tancar
           </Button>
           <Button
+            size="sm"
             onClick={applyChanges}
             disabled={simulatedMoves.length === 0 || isApplying || isSaving}
           >
             {isApplying || isSaving ? (
               <>
-                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />
                 Aplicant...
               </>
             ) : (
               <>
-                <Check className="h-4 w-4 mr-2" />
+                <Check className="h-3.5 w-3.5 mr-1.5" />
                 Aplicar {simulatedMoves.length} canvi{simulatedMoves.length !== 1 ? 's' : ''}
               </>
             )}
           </Button>
-        </DialogFooter>
+        </div>
       </DialogContent>
     </Dialog>
   );

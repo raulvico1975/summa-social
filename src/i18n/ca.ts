@@ -1930,4 +1930,18 @@ export const ca = {
     stripe: "Stripe",
     reports: "Informes",
   },
+  balance: {
+    workingLine: "Treballant aquesta partida",
+    changeLine: "Canviar partida",
+    viewAllLines: "Veure totes les partides",
+    expandSearch: "Ampliar cerca",
+    searchExpanded: "Cerca ampliada",
+    resetExpansion: "Restablir ampliació",
+    expansionHint: "Activa opcions per veure més despeses candidates.",
+    budget: "Pres.",
+    executed: "Exec.",
+    difference: "Dif.",
+    excess: "Excés",
+    missing: "Falta",
+  },
 };

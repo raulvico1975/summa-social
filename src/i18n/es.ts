@@ -1923,4 +1923,18 @@ export const es = {
     stripe: "Stripe",
     reports: "Informes",
   },
+  balance: {
+    workingLine: "Trabajando esta partida",
+    changeLine: "Cambiar partida",
+    viewAllLines: "Ver todas las partidas",
+    expandSearch: "Ampliar búsqueda",
+    searchExpanded: "Búsqueda ampliada",
+    resetExpansion: "Restablecer ampliación",
+    expansionHint: "Activa opciones para ver más gastos candidatos.",
+    budget: "Pres.",
+    executed: "Ejec.",
+    difference: "Dif.",
+    excess: "Exceso",
+    missing: "Falta",
+  },
 };

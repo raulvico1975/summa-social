@@ -881,6 +881,7 @@ export default function ProjectBudgetPage() {
       <BalanceProjectModal
         open={justificationModalOpen}
         onOpenChange={setJustificationModalOpen}
+        guidedMode={true}
         project={project}
         budgetLines={budgetLines}
         expenseLinks={expenseLinks}
