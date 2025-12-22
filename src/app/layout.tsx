@@ -24,7 +24,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="ca" className={inter.variable}>
-      <body className="font-sans antialiased">
+      <body className="font-sans antialiased" suppressHydrationWarning>
         <FirebaseClientProvider>
           <TranslationsProvider>
             {children}

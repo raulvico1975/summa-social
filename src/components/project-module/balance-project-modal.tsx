@@ -851,9 +851,9 @@ export function BalanceProjectModal({
           </DialogDescription>
         </DialogHeader>
 
-        <div className="flex-1 overflow-hidden">
-          <Tabs defaultValue="diagnostic" className="h-full flex flex-col">
-            <TabsList className="grid w-full grid-cols-2">
+        <div className="flex-1 min-h-0 overflow-y-auto">
+          <Tabs defaultValue="diagnostic" className="flex flex-col">
+            <TabsList className="grid w-full grid-cols-2 sticky top-0 z-10 bg-background">
               <TabsTrigger value="diagnostic">
                 Diagnòstic
                 {summary.outOfDeviation > 0 && (
@@ -873,8 +873,8 @@ export function BalanceProjectModal({
             </TabsList>
 
             {/* TAB: Diagnòstic */}
-            <TabsContent value="diagnostic" className="flex-1 overflow-hidden mt-4">
-              <div className="space-y-4 h-full flex flex-col">
+            <TabsContent value="diagnostic" className="mt-4">
+              <div className="space-y-4">
                 {/* Resum global */}
                 <div className="grid grid-cols-3 gap-4">
                   <Card>
@@ -1000,7 +1000,7 @@ export function BalanceProjectModal({
 
                 {/* Bloc "Opcions per quadrar la partida" */}
                 {selectedLineId && selectedDiag && (
-                  <Card className="flex-1 overflow-hidden flex flex-col">
+                  <Card>
                     <CardHeader className="pb-3">
                       <div className="flex items-center justify-between">
                         <CardTitle className="text-base flex items-center gap-2">
@@ -1026,9 +1026,7 @@ export function BalanceProjectModal({
                       </CardDescription>
                     </CardHeader>
 
-                    <CardContent className="flex-1 overflow-hidden p-0">
-                      <ScrollArea className="h-full px-6 pb-6">
-                        <div className="flex flex-col gap-3">
+                    <CardContent className="space-y-3">
                       {/* BLOC SOLUCIÓ RECOMANADA (només sobreexecució amb solució dins marge) */}
                       {selectedDiag.difference > 0 && simpleRemovalSolutions.length > 0 && (
                         <div className="border rounded-lg bg-gradient-to-r from-green-50/50 to-emerald-50/50 p-3 space-y-3">
@@ -1565,8 +1563,6 @@ export function BalanceProjectModal({
                           )}
                         </div>
                       )}
-                        </div>
-                      </ScrollArea>
                     </CardContent>
                   </Card>
                 )}
@@ -1574,7 +1570,7 @@ export function BalanceProjectModal({
             </TabsContent>
 
             {/* TAB: Simulació */}
-            <TabsContent value="simulation" className="flex-1 overflow-hidden mt-4">
+            <TabsContent value="simulation" className="mt-4">
               {simulatedMoves.length === 0 ? (
                 <div className="h-full flex flex-col items-center justify-center text-muted-foreground">
                   <Info className="h-12 w-12 mb-4 opacity-50" />
