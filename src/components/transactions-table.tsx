@@ -292,8 +292,8 @@ export function TransactionsTable({ initialDateFilter = null }: TransactionsTabl
       variant: 'destructive',
       title: language === 'ca' ? "Quota d'IA esgotada" : "Cuota de IA agotada",
       description: language === 'ca'
-        ? "Es torna al mode normal."
-        : "Se vuelve al modo normal.",
+        ? "Has esgotat la quota gratuïta de Gemini. Torna-ho a provar més tard o activa facturació a Google AI Studio."
+        : "Has agotado la cuota gratuita de Gemini. Inténtalo más tarde o activa facturación en Google AI Studio.",
     });
   }, [toast, language]);
 

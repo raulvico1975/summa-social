@@ -116,16 +116,19 @@ export async function POST(request: NextRequest): Promise<NextResponse<ApiRespon
     const errorMsg = error?.message || error?.toString() || '';
     const errorMsgLower = errorMsg.toLowerCase();
 
-    // Detect quota/rate limit errors
+    // Detect quota/rate limit errors (including 400 with quota message)
     if (
       errorMsg.includes('429') ||
       errorMsgLower.includes('quota') ||
-      errorMsgLower.includes('resource_exhausted')
+      errorMsgLower.includes('resource_exhausted') ||
+      errorMsgLower.includes('exceeded') ||
+      (errorMsg.includes('400') && errorMsgLower.includes('limit'))
     ) {
+      console.error('[API] Quota exceeded:', errorMsg.substring(0, 200));
       return NextResponse.json({
         ok: false,
         code: 'QUOTA_EXCEEDED',
-        message: 'AI quota exceeded. Please wait and retry.',
+        message: "Quota d'IA esgotada. Torna-ho a provar més tard o activa facturació a Google AI Studio.",
       });
     }
 
