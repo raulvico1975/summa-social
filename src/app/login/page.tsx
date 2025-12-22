@@ -1,11 +1,12 @@
 'use client';
 
 import * as React from 'react';
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Logo } from '@/components/logo';
 import { useFirebase } from '@/firebase';
-import { Loader2, ArrowLeft } from 'lucide-react';
+import { Loader2, ArrowLeft, ArrowRight } from 'lucide-react';
 
 export default function LoginPage() {
   const router = useRouter();
@@ -14,7 +15,7 @@ export default function LoginPage() {
   // Si l'usuari ja està autenticat, redirigir a /redirect-to-org
   React.useEffect(() => {
     if (user && !isUserLoading) {
-      router.push('/redirect-to-org');
+      router.push('/redirect-to-org?next=/dashboard');
     }
   }, [user, isUserLoading, router]);
 
@@ -38,7 +39,7 @@ export default function LoginPage() {
     );
   }
 
-  // Usuari NO autenticat: mostrar missatge informatiu
+  // Usuari NO autenticat: mostrar missatge informatiu amb CTA
   return (
     <main className="flex min-h-screen flex-col items-center justify-center bg-background p-4">
       <div className="w-full max-w-md flex flex-col items-center gap-6 text-center">
@@ -46,34 +47,43 @@ export default function LoginPage() {
 
         <div className="space-y-2">
           <h1 className="text-2xl font-bold tracking-tight">
-            Para acceder, utiliza la URL de tu organización
+            Accedeix a la teva organització
           </h1>
           <p className="text-muted-foreground">
-            Ejemplo:{' '}
-            <a
-              href="/nombre-de-tu-org"
-              target="_blank"
-              rel="noreferrer"
-              className="font-mono text-primary hover:underline"
-            >
-              summasocial.app/nombre-de-tu-org
-            </a>
+            Utilitza la URL de la teva entitat per accedir al tauler.
           </p>
         </div>
 
-        <div className="bg-muted/50 rounded-lg p-4 w-full">
+        {/* CTA principal */}
+        <Button asChild size="lg" className="w-full">
+          <Link href="/redirect-to-org?next=/dashboard">
+            Entrar a la teva organització
+            <ArrowRight className="ml-2 h-4 w-4" />
+          </Link>
+        </Button>
+
+        <div className="bg-muted/50 rounded-lg p-4 w-full space-y-2">
           <p className="text-sm text-muted-foreground">
-            Si no conoces la URL de tu organización, contacta con el administrador de tu entidad.
+            Si ja tens la URL de la teva organització, pots usar-la directament:
+          </p>
+          <p className="text-sm font-mono text-primary">
+            summasocial.app/
+            <span className="text-muted-foreground">&lt;slug&gt;</span>
           </p>
         </div>
+
+        <p className="text-xs text-muted-foreground">
+          Si no coneixes la URL de la teva organització, contacta amb l&apos;administrador de la teva entitat.
+        </p>
 
         <Button
-          variant="outline"
+          variant="ghost"
+          size="sm"
           onClick={() => router.back()}
-          className="mt-4"
+          className="mt-2"
         >
           <ArrowLeft className="mr-2 h-4 w-4" />
-          Volver
+          Tornar
         </Button>
       </div>
     </main>
