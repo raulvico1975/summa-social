@@ -66,6 +66,9 @@ export function DashboardSidebarContent() {
     }
   };
 
+  // Feature flag: Mòdul Projectes
+  const isProjectModuleEnabled = organization?.features?.projectModule ?? false;
+
   // ═══════════════════════════════════════════════════════════════════════════
   // CANVI PRINCIPAL: Construir URLs amb el slug de l'organització
   // ═══════════════════════════════════════════════════════════════════════════
@@ -109,24 +112,32 @@ export function DashboardSidebarContent() {
         label: t.sidebar.reports,
         icon: AreaChart,
       },
-      {
-        path: '/dashboard/project-module/expenses',
-        label: t.sidebar.projectModuleExpenses ?? 'Despeses (Projectes)',
-        icon: ClipboardList,
-        className: 'text-emerald-600',
-      },
-      {
-        path: '/dashboard/project-module/projects',
-        label: t.sidebar.projectModuleProjects ?? 'Projectes (Mòdul)',
-        icon: FolderKanban,
-        className: 'text-emerald-600',
-      },
-      {
-        path: '/dashboard/configuracion',
-        label: t.sidebar.settings,
-        icon: Settings,
-      },
     ];
+
+    // Afegir entrades del Mòdul Projectes només si està activat
+    if (isProjectModuleEnabled) {
+      baseItems.push(
+        {
+          path: '/dashboard/project-module/expenses',
+          label: t.sidebar.projectModuleExpenses ?? 'Despeses (Projectes)',
+          icon: ClipboardList,
+          className: 'text-emerald-600',
+        },
+        {
+          path: '/dashboard/project-module/projects',
+          label: t.sidebar.projectModuleProjects ?? 'Projectes (Mòdul)',
+          icon: FolderKanban,
+          className: 'text-emerald-600',
+        }
+      );
+    }
+
+    // Afegir configuració
+    baseItems.push({
+      path: '/dashboard/configuracion',
+      label: t.sidebar.settings,
+      icon: Settings,
+    });
 
     // Afegir opció Super Admin si l'usuari ho és
     if (isSuperAdmin) {
@@ -143,7 +154,7 @@ export function DashboardSidebarContent() {
       ...item,
       href: buildUrl(item.path),
     }));
-  }, [t, isSuperAdmin, buildUrl]);
+  }, [t, isSuperAdmin, isProjectModuleEnabled, buildUrl]);
 
   // ═══════════════════════════════════════════════════════════════════════════
   // Helper per comprovar si una ruta està activa

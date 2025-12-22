@@ -312,6 +312,14 @@ export type OrganizationStatus = 'active' | 'suspended' | 'pending';
 export type OrganizationLanguage = 'ca' | 'es';
 
 /**
+ * Feature flags per organització.
+ * Permet activar/desactivar mòduls opcionals.
+ */
+export type OrganizationFeatures = {
+  projectModule?: boolean;         // Mòdul de projectes i justificació econòmica
+};
+
+/**
  * Representa una organització (ONG/entitat social).
  * S'emmagatzema a: organizations/{orgId}
  */
@@ -341,6 +349,8 @@ export type Organization = {
   contactAlertThreshold?: number;  // Llindar mínim (€) per alertes de moviments sense contacte (default: 50)
   // Configuració d'idioma
   language?: OrganizationLanguage; // Idioma per certificats i emails (default: 'es')
+  // Feature flags
+  features?: OrganizationFeatures; // Mòduls opcionals activats/desactivats
   // Metadata
   updatedAt?: string;
   suspendedAt?: string;

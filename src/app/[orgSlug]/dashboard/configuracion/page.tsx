@@ -5,6 +5,7 @@ import { PasswordChangeForm } from '@/components/password-change-form';
 import { OrganizationSettings } from '@/components/organization-settings';
 import { LanguageSelector } from '@/components/language-selector';
 import { MembersManager } from '@/components/members-manager';
+import { FeatureFlagsSettings } from '@/components/feature-flags-settings';
 import { DangerZone } from '@/components/danger-zone';
 import { useCurrentOrganization } from '@/hooks/organization-provider';
 import { useTranslations } from '@/i18n';
@@ -20,6 +21,7 @@ export default function SettingsPage() {
   const canManageOrganization = userRole === 'admin';
   const canManageCategories = userRole === 'admin';
   const canManageMembers = userRole === 'admin';
+  const canManageFeatures = userRole === 'admin';
 
   // Només SuperAdmin pot veure la Zona de Perill
   const isSuperAdmin = user?.uid === SUPER_ADMIN_UID;
@@ -43,6 +45,9 @@ export default function SettingsPage() {
 
       {/* Gestió de membres (només admins) */}
       {canManageMembers && <MembersManager />}
+
+      {/* Mòduls opcionals (només admins) */}
+      {canManageFeatures && <FeatureFlagsSettings />}
 
       {/* Configuració de l'organització */}
       <div>
