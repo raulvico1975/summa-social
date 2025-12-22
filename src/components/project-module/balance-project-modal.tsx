@@ -1026,7 +1026,9 @@ export function BalanceProjectModal({
                       </CardDescription>
                     </CardHeader>
 
-                    <CardContent className="flex-1 overflow-hidden flex flex-col gap-3">
+                    <CardContent className="flex-1 overflow-hidden p-0">
+                      <ScrollArea className="h-full px-6 pb-6">
+                        <div className="flex flex-col gap-3">
                       {/* BLOC SOLUCIÓ RECOMANADA (només sobreexecució amb solució dins marge) */}
                       {selectedDiag.difference > 0 && simpleRemovalSolutions.length > 0 && (
                         <div className="border rounded-lg bg-gradient-to-r from-green-50/50 to-emerald-50/50 p-3 space-y-3">
@@ -1563,6 +1565,8 @@ export function BalanceProjectModal({
                           )}
                         </div>
                       )}
+                        </div>
+                      </ScrollArea>
                     </CardContent>
                   </Card>
                 )}
