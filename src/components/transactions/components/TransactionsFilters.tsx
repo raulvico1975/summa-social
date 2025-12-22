@@ -26,10 +26,12 @@ import {
   ChevronDown,
   User,
   FileUp,
+  Info,
 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
+import { Switch } from '@/components/ui/switch';
 import type { TransactionUrlFilter } from '@/lib/constants';
 
 // =============================================================================
@@ -69,6 +71,10 @@ interface TransactionsFiltersProps {
   hideRemittanceItems: boolean;
   onHideRemittanceItemsChange: (value: boolean) => void;
   onOpenReturnImporter?: () => void;
+  // Bulk mode (SuperAdmin only)
+  isSuperAdmin?: boolean;
+  isBulkMode?: boolean;
+  onBulkModeChange?: (enabled: boolean) => void;
   t: {
     categorizeAll: string;
     all: string;
@@ -107,6 +113,9 @@ export const TransactionsFilters = React.memo(function TransactionsFilters({
   hideRemittanceItems,
   onHideRemittanceItemsChange,
   onOpenReturnImporter,
+  isSuperAdmin,
+  isBulkMode,
+  onBulkModeChange,
   t,
 }: TransactionsFiltersProps) {
   // Calcular quants tipus de pendents tenen elements
@@ -170,6 +179,31 @@ export const TransactionsFilters = React.memo(function TransactionsFilters({
           )}
           {t.categorizeAll}
         </Button>
+
+        {/* Bulk mode toggle (SuperAdmin only) */}
+        {isSuperAdmin && onBulkModeChange && (
+          <div className="flex items-center gap-2">
+            <Switch
+              id="bulk-mode"
+              checked={isBulkMode ?? false}
+              onCheckedChange={onBulkModeChange}
+              disabled={isBatchCategorizing}
+            />
+            <Label htmlFor="bulk-mode" className="text-sm cursor-pointer whitespace-nowrap">
+              Mode ràpid
+            </Label>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Info className="h-3.5 w-3.5 text-muted-foreground cursor-help" />
+              </TooltipTrigger>
+              <TooltipContent className="max-w-xs">
+                <p className="text-xs">
+                  Accelera la categorització. Pot esgotar quota i degradarà automàticament.
+                </p>
+              </TooltipContent>
+            </Tooltip>
+          </div>
+        )}
 
         <div className="h-4 w-px bg-border" />
 

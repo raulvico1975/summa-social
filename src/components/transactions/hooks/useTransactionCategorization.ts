@@ -7,6 +7,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useTranslations } from '@/i18n';
 import { useAppLog } from '@/hooks/use-app-log';
 import { categorizeTransaction } from '@/ai/flows/categorize-transactions';
+import { trackUX } from '@/lib/ux/trackUX';
 import type { Transaction, Category } from '@/lib/data';
 
 // =============================================================================
@@ -18,6 +19,8 @@ interface UseTransactionCategorizationParams {
   transactions: Transaction[] | null;
   availableCategories: Category[] | null;
   getCategoryDisplayName: (categoryId: string) => string;
+  bulkMode?: boolean;
+  onQuotaExceeded?: () => void;
 }
 
 interface UseTransactionCategorizationReturn {
@@ -34,9 +37,13 @@ interface UseTransactionCategorizationReturn {
 // CONSTANTS
 // =============================================================================
 
-// Quota limits for AI API
+// Quota limits for AI API - Normal mode
 const BATCH_SIZE = 10;
 const DELAY_MS = 60000; // 60 seconds between batches
+
+// Bulk mode (SuperAdmin) - Més ràpid però pot esgotar quota
+const BULK_BATCH_SIZE = 25;
+const BULK_DELAY_MS = 3000; // 3 segons entre lots
 
 // =============================================================================
 // HOOK
@@ -47,6 +54,8 @@ export function useTransactionCategorization({
   transactions,
   availableCategories,
   getCategoryDisplayName,
+  bulkMode = false,
+  onQuotaExceeded,
 }: UseTransactionCategorizationParams): UseTransactionCategorizationReturn {
   const { toast } = useToast();
   const { t } = useTranslations();
@@ -140,23 +149,35 @@ export function useTransactionCategorization({
       return;
     }
 
+    // Seleccionar paràmetres segons mode
+    const batchSize = bulkMode ? BULK_BATCH_SIZE : BATCH_SIZE;
+    const delayMs = bulkMode ? BULK_DELAY_MS : DELAY_MS;
+
     setIsBatchCategorizing(true);
-    log(`[IA] Iniciant classificacio massiva de ${transactionsToCategorize.length} moviments.`);
+    const startTime = Date.now();
+    log(`[IA] Iniciant classificacio massiva de ${transactionsToCategorize.length} moviments${bulkMode ? ' (MODE BULK)' : ''}.`);
+    trackUX('ai.bulk.run.start', { count: transactionsToCategorize.length, bulkMode });
     toast({
       title: t.movements.table.startingBatchCategorization,
-      description: `Classificant ${transactionsToCategorize.length} moviments.`,
+      description: `Classificant ${transactionsToCategorize.length} moviments${bulkMode ? ' (mode ràpid)' : ''}.`,
     });
 
     let successCount = 0;
+    let quotaExceeded = false;
 
-    for (let i = 0; i < transactionsToCategorize.length; i += BATCH_SIZE) {
-      const batch = transactionsToCategorize.slice(i, i + BATCH_SIZE);
-      const batchNumber = Math.floor(i / BATCH_SIZE) + 1;
-      const totalBatches = Math.ceil(transactionsToCategorize.length / BATCH_SIZE);
+    for (let i = 0; i < transactionsToCategorize.length; i += batchSize) {
+      // Si s'ha excedit la quota en mode bulk, sortir del bucle
+      if (quotaExceeded) break;
+
+      const batch = transactionsToCategorize.slice(i, i + batchSize);
+      const batchNumber = Math.floor(i / batchSize) + 1;
+      const totalBatches = Math.ceil(transactionsToCategorize.length / batchSize);
 
       log(`[IA] Processant lot ${batchNumber}/${totalBatches} (${batch.length} transaccions)...`);
 
       const batchResults = await Promise.all(batch.map(async (tx, batchIndex) => {
+        if (quotaExceeded) return { success: false };
+
         const index = i + batchIndex;
         log(`[IA] Classificant moviment ${index + 1}/${transactionsToCategorize.length}: "${tx.description.substring(0, 30)}..."`);
         try {
@@ -171,24 +192,42 @@ export function useTransactionCategorization({
           const categoryName = getCategoryDisplayName(result.category);
           log(`[IA] Moviment ${tx.id} classificat com "${categoryName}".`);
           return { success: true };
-        } catch (error) {
+        } catch (error: any) {
           console.error('Error categorizing transaction:', error);
           log(`[IA] ERROR categoritzant ${tx.id}: ${error}`);
+
+          // Detectar errors de quota
+          const errorMsg = error?.message || error?.toString() || '';
+          if (
+            errorMsg.includes('429') ||
+            errorMsg.toLowerCase().includes('quota') ||
+            errorMsg.toLowerCase().includes('resource_exhausted') ||
+            errorMsg.toLowerCase().includes('rate limit')
+          ) {
+            if (!quotaExceeded) {
+              quotaExceeded = true;
+              log('[IA] QUOTA EXCEDIDA - Notificant fallback');
+              onQuotaExceeded?.();
+            }
+          }
+
           return { success: false };
         }
       }));
 
       successCount += batchResults.filter(r => r.success).length;
 
-      // Wait between batches (except the last one)
-      if (i + BATCH_SIZE < transactionsToCategorize.length) {
-        log(`[IA] Esperant ${DELAY_MS / 1000}s abans del seguent lot...`);
-        await new Promise(resolve => setTimeout(resolve, DELAY_MS));
+      // Wait between batches (except the last one) if no quota exceeded
+      if (!quotaExceeded && i + batchSize < transactionsToCategorize.length) {
+        log(`[IA] Esperant ${delayMs / 1000}s abans del seguent lot...`);
+        await new Promise(resolve => setTimeout(resolve, delayMs));
       }
     }
 
+    const durationMs = Date.now() - startTime;
     setIsBatchCategorizing(false);
-    log(`[IA] Classificacio massiva completada. ${successCount} moviments classificats.`);
+    log(`[IA] Classificacio massiva completada. ${successCount} moviments classificats en ${Math.round(durationMs / 1000)}s.`);
+    trackUX('ai.bulk.run.done', { processedCount: successCount, durationMs, bulkMode, quotaExceeded });
     toast({
       title: t.movements.table.batchCategorizationComplete,
       description: t.movements.table.itemsCategorized(successCount),
@@ -200,6 +239,8 @@ export function useTransactionCategorization({
     expenseCategories,
     incomeCategories,
     getCategoryDisplayName,
+    bulkMode,
+    onQuotaExceeded,
     toast,
     t,
     log,

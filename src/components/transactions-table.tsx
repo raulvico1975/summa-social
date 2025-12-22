@@ -57,7 +57,9 @@ import {
 } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import type { Transaction, Category, Project, AnyContact, Donor, Supplier, ContactType } from '@/lib/data';
+import { SUPER_ADMIN_UID } from '@/lib/data';
 import { formatCurrencyEU } from '@/lib/normalize';
+import { trackUX } from '@/lib/ux/trackUX';
 import { useToast } from '@/hooks/use-toast';
 import { RemittanceSplitter } from '@/components/remittance-splitter';
 import { RemittanceDetailModal } from '@/components/remittance-detail-modal';
@@ -86,7 +88,12 @@ export function TransactionsTable({ initialDateFilter = null }: TransactionsTabl
   const { firestore, user, storage } = useFirebase();
   const { organizationId } = useCurrentOrganization();
   const { t, language } = useTranslations();
+  const { toast } = useToast();
   const locale = language === 'es' ? 'es-ES' : 'ca-ES';
+
+  // SuperAdmin detection per bulk mode
+  const isSuperAdmin = user?.uid === SUPER_ADMIN_UID;
+  const [isBulkMode, setIsBulkMode] = React.useState(false);
   // Memoitzar categoryTranslations per evitar re-renders innecessaris
   const categoryTranslations = React.useMemo(
     () => t.categories as Record<string, string>,
@@ -196,8 +203,6 @@ export function TransactionsTable({ initialDateFilter = null }: TransactionsTabl
     return categoryTranslations[categoryValue] || categoryValue;
   }, [availableCategories, categoryTranslations]);
 
-  const { toast } = useToast();
-
   const [isSplitterOpen, setIsSplitterOpen] = React.useState(false);
   const [transactionToSplit, setTransactionToSplit] = React.useState<Transaction | null>(null);
 
@@ -278,6 +283,26 @@ export function TransactionsTable({ initialDateFilter = null }: TransactionsTabl
   });
 
   // ═══════════════════════════════════════════════════════════════════════════
+  // BULK MODE HANDLERS (SuperAdmin only)
+  // ═══════════════════════════════════════════════════════════════════════════
+  const handleQuotaExceeded = React.useCallback(() => {
+    setIsBulkMode(false);
+    trackUX('ai.bulk.fallback_quota', { reason: 'quota_exceeded' });
+    toast({
+      variant: 'destructive',
+      title: language === 'ca' ? "Quota d'IA esgotada" : "Cuota de IA agotada",
+      description: language === 'ca'
+        ? "Es torna al mode normal."
+        : "Se vuelve al modo normal.",
+    });
+  }, [toast, language]);
+
+  const handleBulkModeChange = React.useCallback((enabled: boolean) => {
+    setIsBulkMode(enabled);
+    trackUX('ai.bulk.toggle', { enabled });
+  }, []);
+
+  // ═══════════════════════════════════════════════════════════════════════════
   // CATEGORITZACIÓ IA (HOOK EXTERN)
   // ═══════════════════════════════════════════════════════════════════════════
   const {
@@ -290,6 +315,8 @@ export function TransactionsTable({ initialDateFilter = null }: TransactionsTabl
     transactions,
     availableCategories,
     getCategoryDisplayName,
+    bulkMode: isBulkMode,
+    onQuotaExceeded: handleQuotaExceeded,
   });
 
   // ═══════════════════════════════════════════════════════════════════════════
@@ -788,6 +815,9 @@ export function TransactionsTable({ initialDateFilter = null }: TransactionsTabl
           hideRemittanceItems={hideRemittanceItems}
           onHideRemittanceItemsChange={setHideRemittanceItems}
           onOpenReturnImporter={() => setIsReturnImporterOpen(true)}
+          isSuperAdmin={isSuperAdmin}
+          isBulkMode={isBulkMode}
+          onBulkModeChange={handleBulkModeChange}
           t={filterTranslations}
         />
       </div>
