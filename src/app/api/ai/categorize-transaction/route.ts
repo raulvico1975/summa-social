@@ -67,6 +67,17 @@ type ApiResponse = SuccessResponse | ErrorResponse;
 
 export async function POST(request: NextRequest): Promise<NextResponse<ApiResponse>> {
   try {
+    // Verify API key is available
+    const apiKey = process.env.GOOGLE_API_KEY || process.env.GOOGLE_GENAI_API_KEY;
+    if (!apiKey) {
+      console.error('[API] No API key found. Check GOOGLE_API_KEY or GOOGLE_GENAI_API_KEY');
+      return NextResponse.json({
+        ok: false,
+        code: 'AI_ERROR',
+        message: 'API key not configured',
+      });
+    }
+
     const body = await request.json();
 
     // Validate input
@@ -80,6 +91,8 @@ export async function POST(request: NextRequest): Promise<NextResponse<ApiRespon
     }
 
     const input = parseResult.data;
+
+    console.log('[API] Calling AI with description:', input.description.substring(0, 50));
 
     // Call AI
     const { output } = await prompt(input);
@@ -136,6 +149,22 @@ export async function POST(request: NextRequest): Promise<NextResponse<ApiRespon
         ok: false,
         code: 'TRANSIENT',
         message: 'Temporary error. Will retry.',
+      });
+    }
+
+    // Check for API key errors specifically
+    if (
+      errorMsgLower.includes('api key') ||
+      errorMsgLower.includes('api_key') ||
+      errorMsgLower.includes('authentication') ||
+      errorMsgLower.includes('unauthorized') ||
+      errorMsg.includes('401') ||
+      errorMsg.includes('403')
+    ) {
+      return NextResponse.json({
+        ok: false,
+        code: 'AI_ERROR',
+        message: 'API key invalid or unauthorized: ' + errorMsg.substring(0, 150),
       });
     }
 
