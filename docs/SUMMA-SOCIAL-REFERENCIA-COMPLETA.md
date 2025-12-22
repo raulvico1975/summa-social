@@ -174,6 +174,61 @@ A més dels dos blocs prioritaris, Summa Social incorpora un conjunt de **millor
 - Avisos o mecanismes per facilitar la depuració
 - Indicadors interns per detectar problemes
 
+#### Logs Estructurats de Categorització IA
+
+El sistema de categorització IA genera logs estructurats per facilitar el diagnòstic. Tots els logs utilitzen el prefix `[IA]`.
+
+**Format dels logs:**
+
+| Event | Format | Exemple |
+|-------|--------|---------|
+| Inici individual | `[IA] Iniciant categoritzacio per: "{desc}..."` | `[IA] Iniciant categoritzacio per: "TRANSFERENCIA DE NÒMINA..."` |
+| Èxit individual | `[IA] OK: category="{cat}" confidence={n}% model=gemini-2.0-flash` | `[IA] OK: category="Nòmines" confidence=95% model=gemini-2.0-flash` |
+| Error individual | `[IA] ERROR: code={code} reason="{msg}" model=gemini-2.0-flash` | `[IA] ERROR: code=QUOTA_EXCEEDED reason="Quota exceeded" model=gemini-2.0-flash` |
+| Inici batch | `[IA] Iniciant classificacio SEQÜENCIAL de {n} moviments{mode}.` | `[IA] Iniciant classificacio SEQÜENCIAL de 25 moviments (MODE RÀPID).` |
+| Progrés batch | `[IA] Classificant {i}/{n}: "{desc}..."` | `[IA] Classificant 3/25: "PAGAMENT LLOGU..."` |
+| Èxit batch item | `[IA] ✓ {txId} → "{category}"` | `[IA] ✓ abc123 → "Lloguer"` |
+| Error batch item | `[IA] ✗ {txId}: {code} - {message}` | `[IA] ✗ abc123: RATE_LIMITED - Rate limited` |
+| Backoff | `[IA] Backoff: nou delay = {ms}ms` | `[IA] Backoff: nou delay = 3000ms` |
+| Quota esgotada | `[IA] QUOTA EXCEDIDA - Aturant procés` | - |
+| Cancel·lació | `[IA] Cancel·lat per l'usuari` | - |
+| Finalització | `[IA] {status}: {ok} OK, {err} errors en {s}s.` | `[IA] COMPLETAT: 23 OK, 2 errors en 45s.` |
+
+**Codis d'error de l'API:**
+
+| Codi | Descripció | Acció |
+|------|------------|-------|
+| `QUOTA_EXCEEDED` | Quota diària d'IA esgotada (429 o 400 amb "limit/exceeded") | Aturar batch, notificar usuari |
+| `RATE_LIMITED` | Massa peticions en poc temps | Aplicar backoff, continuar |
+| `TRANSIENT` | Error temporal del servidor (503, 504, timeout) | Aplicar backoff, continuar |
+| `INVALID_INPUT` | Dades de la transacció invàlides | Marcar com "Revisar", continuar |
+| `AI_ERROR` | Error genèric d'IA (clau invàlida, model no disponible) | Marcar com "Revisar", continuar |
+| `NETWORK` | Error de xarxa (client-side) | Aplicar backoff, continuar |
+
+**Events trackUX (analytics):**
+
+| Event | Propietats | Quan |
+|-------|------------|------|
+| `ai.categorize.error` | `{ code, reason, model }` | Error en categorització individual |
+| `ai.bulk.run.start` | `{ count, bulkMode, sequential }` | Inici de batch |
+| `ai.bulk.run.done` | `{ processedCount, errorCount, durationMs, bulkMode, quotaExceeded, cancelled }` | Fi de batch |
+| `ai.bulk.toggle` | `{ enabled }` | SuperAdmin activa/desactiva mode ràpid |
+| `ai.bulk.fallback_quota` | `{ reason }` | Fallback automàtic per quota |
+
+**Constants de timing:**
+
+| Constant | Valor | Descripció |
+|----------|-------|------------|
+| `BASE_DELAY_NORMAL_MS` | 1500ms | Delay entre crides (mode normal) |
+| `BASE_DELAY_BULK_MS` | 1200ms | Delay entre crides (mode ràpid) |
+| `MAX_DELAY_MS` | 8000ms | Màxim delay amb backoff |
+| `BACKOFF_MULTIPLIER` | 2 | Factor de multiplicació del backoff |
+
+**Fitxers relacionats:**
+- `src/app/api/ai/categorize-transaction/route.ts` — Route Handler de l'API
+- `src/components/transactions/hooks/useTransactionCategorization.ts` — Hook client
+- `src/ai/genkit.ts` — Configuració Genkit
+
 ### Principi General
 
 > 💡 Aquestes millores són sempre compatibles amb la visió del producte i contribueixen directament a la seva estabilitat i longevitat.
