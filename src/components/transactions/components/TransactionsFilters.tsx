@@ -27,6 +27,7 @@ import {
   User,
   FileUp,
   Info,
+  Square,
 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -67,6 +68,7 @@ interface TransactionsFiltersProps {
   hasUncategorized: boolean;
   isBatchCategorizing: boolean;
   onBatchCategorize: () => void;
+  onCancelBatch?: () => void;
   onExportExpensesWithoutDoc: () => void;
   hideRemittanceItems: boolean;
   onHideRemittanceItemsChange: (value: boolean) => void;
@@ -110,6 +112,7 @@ export const TransactionsFilters = React.memo(function TransactionsFilters({
   hasUncategorized,
   isBatchCategorizing,
   onBatchCategorize,
+  onCancelBatch,
   onExportExpensesWithoutDoc,
   hideRemittanceItems,
   onHideRemittanceItemsChange,
@@ -167,22 +170,27 @@ export const TransactionsFilters = React.memo(function TransactionsFilters({
 
       {/* Filtres i accions */}
       <div className="flex gap-2 items-center flex-wrap">
-        {/* Categorize All button */}
-        <Button
-          onClick={onBatchCategorize}
-          disabled={!hasUncategorized || isBatchCategorizing}
-          variant="default"
-          size="sm"
-        >
-          {isBatchCategorizing ? (
-            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-          ) : (
+        {/* Categorize All button OR Cancel button */}
+        {isBatchCategorizing ? (
+          <Button
+            onClick={onCancelBatch}
+            variant="destructive"
+            size="sm"
+          >
+            <Square className="mr-2 h-4 w-4" />
+            Aturar ({batchProgress ? `${batchProgress.current}/${batchProgress.total}` : '...'})
+          </Button>
+        ) : (
+          <Button
+            onClick={onBatchCategorize}
+            disabled={!hasUncategorized}
+            variant="default"
+            size="sm"
+          >
             <Sparkles className="mr-2 h-4 w-4" />
-          )}
-          {batchProgress
-            ? `${batchProgress.current} / ${batchProgress.total}`
-            : t.categorizeAll}
-        </Button>
+            {t.categorizeAll}
+          </Button>
+        )}
 
         {/* Bulk mode toggle (SuperAdmin only) */}
         {isSuperAdmin && onBulkModeChange && (

@@ -311,6 +311,7 @@ export function TransactionsTable({ initialDateFilter = null }: TransactionsTabl
     batchProgress,
     handleCategorize,
     handleBatchCategorize,
+    handleCancelBatch,
   } = useTransactionCategorization({
     transactionsCollection,
     transactions,
@@ -812,6 +813,7 @@ export function TransactionsTable({ initialDateFilter = null }: TransactionsTabl
           hasUncategorized={hasUncategorized ?? false}
           isBatchCategorizing={isBatchCategorizing}
           onBatchCategorize={handleBatchCategorize}
+          onCancelBatch={handleCancelBatch}
           onExportExpensesWithoutDoc={handleExportExpensesWithoutDoc}
           hideRemittanceItems={hideRemittanceItems}
           onHideRemittanceItemsChange={setHideRemittanceItems}
