@@ -23,11 +23,13 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { useSaveOffBankExpense, useUpdateOffBankExpense, useSaveExpenseLink } from '@/hooks/use-project-module';
-import type { ExpenseAssignment } from '@/lib/project-module-types';
+import type { ExpenseAssignment, OffBankAttachment } from '@/lib/project-module-types';
 import { useToast } from '@/hooks/use-toast';
 import { trackUX } from '@/lib/ux/trackUX';
 import { ChevronDown, ChevronUp, Info, AlertTriangle } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { ExpenseAttachmentsDropzone } from './expense-attachments-dropzone';
+import { suggestCategory } from '@/lib/expense-category-suggestions';
 
 interface OffBankExpenseInitialValues {
   date: string;
@@ -45,6 +47,10 @@ interface OffBankExpenseInitialValues {
   issuerTaxId?: string;
   invoiceDate?: string;
   paymentDate?: string;
+  // Attachments
+  attachments?: OffBankAttachment[];
+  // Revisió
+  needsReview?: boolean;
 }
 
 interface OffBankExpenseModalProps {
@@ -59,6 +65,10 @@ interface OffBankExpenseModalProps {
   projectFxCurrency?: string | null;
   // Imputacions existents (per mode edit)
   existingAssignments?: ExpenseAssignment[];
+  // Per upload d'attachments
+  organizationId: string;
+  // Mode ràpid (terreny): marca needsReview automàticament
+  quickMode?: boolean;
 }
 
 export function OffBankExpenseModal({
@@ -71,6 +81,8 @@ export function OffBankExpenseModal({
   projectFxRate,
   projectFxCurrency,
   existingAssignments,
+  organizationId,
+  quickMode = false,
 }: OffBankExpenseModalProps) {
   const { save, isSaving } = useSaveOffBankExpense();
   const { update, isUpdating } = useUpdateOffBankExpense();
@@ -103,6 +115,12 @@ export function OffBankExpenseModal({
   const [issuerTaxId, setIssuerTaxId] = useState('');
   const [invoiceDate, setInvoiceDate] = useState('');
   const [paymentDate, setPaymentDate] = useState('');
+
+  // Attachments (nou)
+  const [attachments, setAttachments] = useState<OffBankAttachment[]>([]);
+
+  // Revisió (nou)
+  const [needsReview, setNeedsReview] = useState(quickMode);
 
   const [errors, setErrors] = useState<Record<string, string>>({});
 
@@ -162,6 +180,10 @@ export function OffBankExpenseModal({
       if (initialValues.invoiceNumber || initialValues.issuerTaxId || initialValues.invoiceDate) {
         setJustificationOpen(true);
       }
+      // Attachments
+      setAttachments(initialValues.attachments ?? []);
+      // Revisió
+      setNeedsReview(initialValues.needsReview ?? false);
       setErrors({});
     }
   }, [open, isEditMode, initialValues]);
@@ -172,6 +194,16 @@ export function OffBankExpenseModal({
       setCurrency(projectFxCurrency);
     }
   }, [open, isEditMode, projectFxCurrency]);
+
+  // Suggerir categoria automàticament quan canvia el concepte (només si està buit)
+  useEffect(() => {
+    if (!isEditMode && concept.length >= 3 && !categoryName) {
+      const suggested = suggestCategory(concept, counterpartyName);
+      if (suggested) {
+        setCategoryName(suggested);
+      }
+    }
+  }, [concept, counterpartyName, isEditMode, categoryName]);
 
   const resetForm = () => {
     const today = new Date();
@@ -192,6 +224,10 @@ export function OffBankExpenseModal({
     setIssuerTaxId('');
     setInvoiceDate('');
     setPaymentDate('');
+    // Attachments
+    setAttachments([]);
+    // Revisió
+    setNeedsReview(quickMode);
     setErrors({});
   };
 
@@ -255,6 +291,10 @@ export function OffBankExpenseModal({
       issuerTaxId: issuerTaxId.trim() || undefined,
       invoiceDate: invoiceDate || undefined,
       paymentDate: paymentDate || undefined,
+      // Attachments
+      attachments: attachments.length > 0 ? attachments : undefined,
+      // Revisió
+      needsReview: needsReview || undefined,
     };
 
     try {
@@ -508,6 +548,18 @@ export function OffBankExpenseModal({
               placeholder="p.ex. Transport, Material, etc."
               value={categoryName}
               onChange={(e) => setCategoryName(e.target.value)}
+            />
+          </div>
+
+          {/* Comprovants (Attachments) */}
+          <div className="space-y-2">
+            <Label>Comprovants</Label>
+            <ExpenseAttachmentsDropzone
+              organizationId={organizationId}
+              expenseId={isEditMode ? expenseId ?? null : null}
+              attachments={attachments}
+              onAttachmentsChange={setAttachments}
+              disabled={isProcessing}
             />
           </div>
 

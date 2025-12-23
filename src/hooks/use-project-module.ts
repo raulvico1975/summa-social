@@ -657,6 +657,16 @@ export function useSaveOffBankExpense(): UseSaveOffBankExpenseResult {
         expenseData.supportDocNumber = data.supportDocNumber.trim();
       }
 
+      // Attachments (nou)
+      if (data.attachments && data.attachments.length > 0) {
+        expenseData.attachments = data.attachments;
+      }
+
+      // needsReview (nou)
+      if (data.needsReview) {
+        expenseData.needsReview = true;
+      }
+
       await setDoc(newRef, expenseData);
 
       return newRef.id;
@@ -798,6 +808,16 @@ export function useUpdateOffBankExpense(): UseUpdateOffBankExpenseResult {
       }
       if (data.supportDocNumber !== undefined) {
         updateData.supportDocNumber = data.supportDocNumber?.trim() || null;
+      }
+
+      // Attachments (nou)
+      if (data.attachments !== undefined) {
+        updateData.attachments = data.attachments.length > 0 ? data.attachments : null;
+      }
+
+      // needsReview (nou)
+      if (data.needsReview !== undefined) {
+        updateData.needsReview = data.needsReview || null;
       }
 
       await updateDoc(expenseRef, updateData);

@@ -1516,6 +1516,22 @@ export const ca = {
     budgetFromLinesTooltip: "Pressupost del projecte = suma de les partides.",
     budgetTotalLabel: "Pressupost total del projecte",
     budgetTotalHintFromLines: "Calculat automàticament a partir de les partides.",
+    // Attachments dropzone
+    dropzoneTitle: "Arrossega fitxers aquí",
+    dropzoneOr: "o",
+    dropzoneSelect: "Selecciona fitxers",
+    dropzoneUploading: "Pujant...",
+    dropzoneMaxSize: "Màx. 10 MB per fitxer",
+    dropzoneFileTooLarge: "Fitxer massa gran",
+    dropzoneInvalidType: "Tipus no permès",
+    dropzoneUploadError: "Error en pujar",
+    // Filtre pendents de revisió
+    pendingReview: "Pendents de revisió",
+    showOnlyPending: "Només pendents",
+    needsReviewLabel: "Marcar per revisar a oficina",
+    needsReviewBadge: "Pendent de revisió",
+    noPendingExpenses: "No hi ha despeses pendents de revisió",
+    noEligibleExpenses: "No hi ha despeses elegibles per assignar",
   },
   logPanel: {
     title: "Log de Diagnòstic",

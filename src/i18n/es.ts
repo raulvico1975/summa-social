@@ -1542,6 +1542,22 @@ export const es = {
     budgetFromLinesTooltip: "Presupuesto del proyecto = suma de las partidas.",
     budgetTotalLabel: "Presupuesto total del proyecto",
     budgetTotalHintFromLines: "Calculado automáticamente a partir de las partidas.",
+    // Attachments dropzone
+    dropzoneTitle: "Arrastra archivos aquí",
+    dropzoneOr: "o",
+    dropzoneSelect: "Seleccionar archivos",
+    dropzoneUploading: "Subiendo...",
+    dropzoneMaxSize: "Máx. 10 MB por archivo",
+    dropzoneFileTooLarge: "Archivo demasiado grande",
+    dropzoneInvalidType: "Tipo no permitido",
+    dropzoneUploadError: "Error al subir",
+    // Filtro pendientes de revisión
+    pendingReview: "Pendientes de revisión",
+    showOnlyPending: "Solo pendientes",
+    needsReviewLabel: "Marcar para revisar en oficina",
+    needsReviewBadge: "Pendiente de revisión",
+    noPendingExpenses: "No hay gastos pendientes de revisión",
+    noEligibleExpenses: "No hay gastos elegibles para asignar",
   },
   logPanel: {
     title: "Log de Diagnóstico",

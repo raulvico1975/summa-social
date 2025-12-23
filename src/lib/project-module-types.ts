@@ -152,6 +152,15 @@ export interface ExpenseLink {
 // Path: /organizations/{orgId}/projectModule/_/offBankExpenses/{expenseId}
 // ═══════════════════════════════════════════════════════════════════════════
 
+/** Attachment dins d'una despesa off-bank */
+export interface OffBankAttachment {
+  url: string;
+  name: string;
+  contentType: string;
+  size: number;
+  uploadedAt: string; // YYYY-MM-DD
+}
+
 export interface OffBankExpense {
   id: string;
   orgId: string;
@@ -168,7 +177,13 @@ export interface OffBankExpense {
 
   counterpartyName: string | null;
   categoryName: string | null; // text lliure
-  documentUrl: string | null;
+  documentUrl: string | null; // DEPRECATED: usar attachments[]
+
+  // Múltiples comprovants (nou)
+  attachments?: OffBankAttachment[] | null;
+
+  // Estat de revisió (nou)
+  needsReview?: boolean | null; // true si ve de terreny i cal revisar a oficina
 
   // Dades de justificació (opcional)
   invoiceNumber?: string | null;
@@ -199,6 +214,10 @@ export interface OffBankExpenseFormData {
   invoiceDate?: string;
   paymentDate?: string;
   supportDocNumber?: string;
+  // Attachments
+  attachments?: OffBankAttachment[];
+  // Revisió
+  needsReview?: boolean;
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -228,6 +247,9 @@ export interface UnifiedExpense {
   invoiceDate?: string | null;
   paymentDate?: string | null;
   supportDocNumber?: string | null;
+  // Nous camps
+  attachments?: OffBankAttachment[] | null;
+  needsReview?: boolean | null;
 }
 
 export interface ExpenseWithLink {

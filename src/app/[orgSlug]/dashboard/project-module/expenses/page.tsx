@@ -7,7 +7,7 @@ import * as React from 'react';
 import Link from 'next/link';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { useUnifiedExpenseFeed, useProjects, useSaveExpenseLink, useProjectBudgetLines } from '@/hooks/use-project-module';
-import { useOrgUrl } from '@/hooks/organization-provider';
+import { useOrgUrl, useCurrentOrganization } from '@/hooks/organization-provider';
 import { useToast } from '@/hooks/use-toast';
 import { trackUX } from '@/lib/ux/trackUX';
 import {
@@ -357,6 +357,7 @@ export default function ExpensesInboxPage() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const { buildUrl } = useOrgUrl();
+  const { organizationId } = useCurrentOrganization();
   const { toast } = useToast();
 
   // Llegir filtres de query params
@@ -412,6 +413,13 @@ export default function ExpensesInboxPage() {
   const [isBulkAssigning, setIsBulkAssigning] = React.useState(false);
   const [addOffBankOpen, setAddOffBankOpen] = React.useState(false);
   const [editOffBankExpense, setEditOffBankExpense] = React.useState<UnifiedExpenseWithLink | null>(null);
+  const [showOnlyNeedsReview, setShowOnlyNeedsReview] = React.useState(false);
+
+  // Filtrar despeses per needsReview si el toggle està actiu
+  const filteredExpenses = React.useMemo(() => {
+    if (!showOnlyNeedsReview) return expenses;
+    return expenses.filter(e => e.expense.needsReview === true);
+  }, [expenses, showOnlyNeedsReview]);
 
   const handleRefresh = async () => {
     setIsRefreshing(true);
@@ -583,15 +591,15 @@ export default function ExpensesInboxPage() {
   };
 
   const toggleSelectAll = () => {
-    if (selectedIds.size === expenses.length) {
+    if (selectedIds.size === filteredExpenses.length) {
       setSelectedIds(new Set());
     } else {
-      setSelectedIds(new Set(expenses.map(e => e.expense.txId)));
+      setSelectedIds(new Set(filteredExpenses.map(e => e.expense.txId)));
     }
   };
 
   const hasSelection = selectedIds.size > 0;
-  const allSelected = expenses.length > 0 && selectedIds.size === expenses.length;
+  const allSelected = filteredExpenses.length > 0 && selectedIds.size === filteredExpenses.length;
 
   if (error) {
     return (
@@ -630,6 +638,14 @@ export default function ExpensesInboxPage() {
           >
             <Plus className="h-4 w-4 mr-2" />
             Afegir despesa de terreny
+          </Button>
+          <Button
+            onClick={() => setShowOnlyNeedsReview(!showOnlyNeedsReview)}
+            variant={showOnlyNeedsReview ? 'default' : 'outline'}
+            size="sm"
+          >
+            <AlertCircle className="h-4 w-4 mr-2" />
+            {t.projectModule.pendingReview}
           </Button>
           <Button
             onClick={handleRefresh}
@@ -702,7 +718,7 @@ export default function ExpensesInboxPage() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {isLoading && expenses.length === 0 ? (
+            {isLoading && filteredExpenses.length === 0 ? (
               Array.from({ length: 5 }).map((_, i) => (
                 <TableRow key={i}>
                   <TableCell><Skeleton className="h-4 w-4" /></TableCell>
@@ -716,14 +732,16 @@ export default function ExpensesInboxPage() {
                   <TableCell><Skeleton className="h-7 w-20" /></TableCell>
                 </TableRow>
               ))
-            ) : expenses.length === 0 ? (
+            ) : filteredExpenses.length === 0 ? (
               <TableRow>
                 <TableCell colSpan={9} className="text-center py-12 text-muted-foreground">
-                  No hi ha despeses elegibles per assignar
+                  {showOnlyNeedsReview
+                    ? t.projectModule.noPendingExpenses
+                    : t.projectModule.noEligibleExpenses}
                 </TableCell>
               </TableRow>
             ) : (
-              expenses.map((item) => {
+              filteredExpenses.map((item) => {
                 const { expense, status, assignedAmount } = item;
                 const isSelected = selectedIds.has(expense.txId);
 
@@ -927,6 +945,7 @@ export default function ExpensesInboxPage() {
         onOpenChange={setAddOffBankOpen}
         onSuccess={refresh}
         mode="create"
+        organizationId={organizationId ?? ''}
       />
 
       {/* Edit Off-Bank Expense Modal */}
@@ -939,6 +958,7 @@ export default function ExpensesInboxPage() {
         }}
         mode="edit"
         expenseId={editOffBankExpense?.expense.txId.replace('off_', '')}
+        organizationId={organizationId ?? ''}
         initialValues={editOffBankExpense ? {
           date: editOffBankExpense.expense.date,
           amountEUR: Math.abs(editOffBankExpense.expense.amountEUR).toString().replace('.', ','),
@@ -955,6 +975,9 @@ export default function ExpensesInboxPage() {
           issuerTaxId: editOffBankExpense.expense.issuerTaxId ?? undefined,
           invoiceDate: editOffBankExpense.expense.invoiceDate ?? undefined,
           paymentDate: editOffBankExpense.expense.paymentDate ?? undefined,
+          // Attachments
+          attachments: editOffBankExpense.expense.attachments ?? undefined,
+          needsReview: editOffBankExpense.expense.needsReview ?? undefined,
         } : undefined}
         existingAssignments={editOffBankExpense?.link?.assignments}
       />
