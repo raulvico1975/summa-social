@@ -4,6 +4,7 @@ import './globals.css';
 import { Toaster } from '@/components/ui/toaster';
 import { FirebaseClientProvider } from '@/firebase';
 import { TranslationsProvider } from '@/i18n/provider';
+import { IdleLogoutProvider } from '@/components/IdleLogoutProvider';
 
 // Font principal - Inter (Apple-like, molt llegible)
 const inter = Inter({ 
@@ -27,7 +28,9 @@ export default function RootLayout({
       <body className="font-sans antialiased" suppressHydrationWarning>
         <FirebaseClientProvider>
           <TranslationsProvider>
-            {children}
+            <IdleLogoutProvider idleMs={30 * 60 * 1000} warnMs={60 * 1000}>
+              {children}
+            </IdleLogoutProvider>
           </TranslationsProvider>
         </FirebaseClientProvider>
         <Toaster />
