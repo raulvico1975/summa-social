@@ -37,7 +37,7 @@ interface UseTransactionCategorizationReturn {
 // API Response types
 type ApiSuccessResponse = {
   ok: true;
-  category: string;
+  categoryId: string | null;
   confidence: number;
 };
 
@@ -48,6 +48,12 @@ type ApiErrorResponse = {
 };
 
 type ApiResponse = ApiSuccessResponse | ApiErrorResponse;
+
+// Category option for API input
+type CategoryOption = {
+  id: string;
+  name: string;
+};
 
 // =============================================================================
 // CONSTANTS
@@ -71,8 +77,8 @@ const BACKOFF_MULTIPLIER = 2;
 async function callCategorizationAPI(input: {
   description: string;
   amount: number;
-  expenseCategories: string[];
-  incomeCategories: string[];
+  expenseOptions: CategoryOption[];
+  incomeOptions: CategoryOption[];
 }): Promise<ApiResponse> {
   const response = await fetch('/api/ai/categorize-transaction', {
     method: 'POST',
@@ -187,13 +193,13 @@ export function useTransactionCategorization({
   // DERIVED DATA
   // ---------------------------------------------------------------------------
 
-  const expenseCategories = React.useMemo(
-    () => availableCategories?.filter((c) => c.type === 'expense').map((c) => c.name) || [],
+  const expenseOptions = React.useMemo(
+    () => availableCategories?.filter((c) => c.type === 'expense').map((c) => ({ id: c.id, name: c.name })) || [],
     [availableCategories]
   );
 
-  const incomeCategories = React.useMemo(
-    () => availableCategories?.filter((c) => c.type === 'income').map((c) => c.name) || [],
+  const incomeOptions = React.useMemo(
+    () => availableCategories?.filter((c) => c.type === 'income').map((c) => ({ id: c.id, name: c.name })) || [],
     [availableCategories]
   );
 
@@ -222,8 +228,8 @@ export function useTransactionCategorization({
       const result = await callCategorizationAPI({
         description: transaction.description,
         amount: transaction.amount,
-        expenseCategories,
-        incomeCategories,
+        expenseOptions,
+        incomeOptions,
       });
 
       if (!result.ok) {
@@ -244,9 +250,11 @@ export function useTransactionCategorization({
         return;
       }
 
-      updateDocumentNonBlocking(doc(transactionsCollection, txId), { category: result.category });
+      // Si categoryId és null, marcar com Revisar
+      const categoryToSave = result.categoryId ?? 'Revisar';
+      updateDocumentNonBlocking(doc(transactionsCollection, txId), { category: categoryToSave });
 
-      const categoryName = getCategoryDisplayName(result.category);
+      const categoryName = result.categoryId ? getCategoryDisplayName(result.categoryId) : 'Revisar';
       toast({
         title: language === 'ca' ? 'Categorització Automàtica' : 'Categorización Automática',
         description: language === 'ca'
@@ -274,8 +282,8 @@ export function useTransactionCategorization({
     transactions,
     availableCategories,
     transactionsCollection,
-    expenseCategories,
-    incomeCategories,
+    expenseOptions,
+    incomeOptions,
     getCategoryDisplayName,
     language,
     toast,
@@ -342,8 +350,8 @@ export function useTransactionCategorization({
         const result = await callCategorizationAPI({
           description: tx.description,
           amount: tx.amount,
-          expenseCategories,
-          incomeCategories,
+          expenseOptions,
+          incomeOptions,
         });
 
         if (!result.ok) {
@@ -372,9 +380,10 @@ export function useTransactionCategorization({
           continue;
         }
 
-        // Èxit
-        updateDocumentNonBlocking(doc(transactionsCollection, tx.id), { category: result.category });
-        const categoryName = getCategoryDisplayName(result.category);
+        // Èxit - Si categoryId és null, marcar com Revisar
+        const categoryToSave = result.categoryId ?? 'Revisar';
+        updateDocumentNonBlocking(doc(transactionsCollection, tx.id), { category: categoryToSave });
+        const categoryName = result.categoryId ? getCategoryDisplayName(result.categoryId) : 'Revisar';
         log(`[IA] ✓ ${tx.id} → "${categoryName}"`);
         successCount++;
 
@@ -443,8 +452,8 @@ export function useTransactionCategorization({
     transactions,
     availableCategories,
     transactionsCollection,
-    expenseCategories,
-    incomeCategories,
+    expenseOptions,
+    incomeOptions,
     getCategoryDisplayName,
     bulkMode,
     onQuotaExceeded,

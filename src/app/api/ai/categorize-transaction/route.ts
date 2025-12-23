@@ -6,15 +6,20 @@ import { z } from 'genkit';
 // SCHEMAS
 // =============================================================================
 
+const CategoryOptionSchema = z.object({
+  id: z.string().describe('The unique ID of the category.'),
+  name: z.string().describe('The display name of the category.'),
+});
+
 const CategorizeTransactionInputSchema = z.object({
   description: z.string().describe('The description of the transaction.'),
   amount: z.number().describe('The amount of the transaction. Positive for income, negative for expenses.'),
-  expenseCategories: z.array(z.string()).describe('List of available expense categories.'),
-  incomeCategories: z.array(z.string()).describe('List of available income categories.'),
+  expenseOptions: z.array(CategoryOptionSchema).describe('List of available expense category options.'),
+  incomeOptions: z.array(CategoryOptionSchema).describe('List of available income category options.'),
 });
 
 const CategorizeTransactionOutputSchema = z.object({
-  category: z.string().describe('The predicted category of the transaction. If unsure, return "Revisar".'),
+  categoryId: z.string().nullable().describe('The ID of the selected category, or null if no match.'),
   confidence: z.number().describe('The confidence level of the categorization (0-1).'),
 });
 
@@ -26,21 +31,45 @@ const prompt = ai.definePrompt({
   name: 'categorizeTransactionPromptAPI',
   input: { schema: CategorizeTransactionInputSchema },
   output: { schema: CategorizeTransactionOutputSchema },
-  prompt: `You are an expert financial categorizer for a social organization.
-  Given the transaction description and amount, determine the most appropriate accounting item (partida comptable) for the transaction from the provided lists.
-  Your response must be in Spanish.
+  prompt: `You are an expert financial categorizer for a small/medium non-profit organization in Spain.
+Your task is operational transaction categorization, not accounting or fiscal interpretation.
 
-  Transaction Details:
-  Description: {{{description}}}
-  Amount: {{{amount}}}
+Given the transaction description and amount, select the most appropriate category OPTION from the provided lists.
+Do NOT infer context, entities or purposes that are not explicitly present in the transaction description.
 
-  If the amount is negative, it's an expense. You MUST choose one of the following expense categories: {{#each expenseCategories}}{{{this}}}{{#unless @last}}, {{/unless}}{{/each}}.
-  If the amount is positive, it's an income. You MUST choose one of the following income categories: {{#each incomeCategories}}{{{this}}}{{#unless @last}}, {{/unless}}{{/each}}.
+Transaction Details:
+Description: {{{description}}}
+Amount: {{{amount}}}
 
-  If you cannot confidently determine the category from the provided lists, you MUST return "Revisar".
+If the amount is negative, it is an expense. You MUST choose ONE option from expenseOptions.
+If the amount is positive, it is an income. You MUST choose ONE option from incomeOptions.
 
-  Please provide the category and a confidence level (0-1) for your categorization.
-  `,
+Expense options:
+{{#each expenseOptions}}- {{id}}: {{name}}
+{{/each}}
+
+Income options:
+{{#each incomeOptions}}- {{id}}: {{name}}
+{{/each}}
+
+Options format:
+- Each option has an id and a name.
+- You MUST return the id of the selected option exactly as provided.
+- If you cannot confidently select an option, return null.
+
+Confidence rules:
+- 0.8–1.0 = high confidence
+- 0.5–0.79 = medium confidence
+- < 0.5 = low confidence → return categoryId null
+
+If confidence would be lower than 0.5, you MUST return categoryId null.
+
+Output schema:
+{
+  categoryId: string | null,
+  confidence: number
+}
+`,
 });
 
 // =============================================================================
@@ -49,7 +78,7 @@ const prompt = ai.definePrompt({
 
 type SuccessResponse = {
   ok: true;
-  category: string;
+  categoryId: string | null;
   confidence: number;
 };
 
@@ -92,6 +121,16 @@ export async function POST(request: NextRequest): Promise<NextResponse<ApiRespon
 
     const input = parseResult.data;
 
+    // Guard: si no hi ha opcions, retornar null directament
+    const options = input.amount < 0 ? input.expenseOptions : input.incomeOptions;
+    if (!options || options.length === 0) {
+      return NextResponse.json({
+        ok: true,
+        categoryId: null,
+        confidence: 0,
+      });
+    }
+
     console.log('[API] Calling AI with description:', input.description.substring(0, 50));
 
     // Call AI
@@ -107,7 +146,7 @@ export async function POST(request: NextRequest): Promise<NextResponse<ApiRespon
 
     return NextResponse.json({
       ok: true,
-      category: output.category,
+      categoryId: output.categoryId,
       confidence: output.confidence,
     });
   } catch (error: any) {
