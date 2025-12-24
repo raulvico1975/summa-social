@@ -122,6 +122,9 @@ export function OffBankExpenseModal({
   // Revisió (nou)
   const [needsReview, setNeedsReview] = useState(quickMode);
 
+  // Control categoria: per defecte readonly, només editable si l'usuari ho demana
+  const [allowManualCategory, setAllowManualCategory] = useState(false);
+
   const [errors, setErrors] = useState<Record<string, string>>({});
 
   // Determinar el tipus de canvi efectiu
@@ -195,15 +198,20 @@ export function OffBankExpenseModal({
     }
   }, [open, isEditMode, projectFxCurrency]);
 
-  // Suggerir categoria automàticament quan canvia el concepte (només si està buit)
+  // Suggerir categoria automàticament quan canvia el concepte
+  // Si no troba suggeriment, posa "Revisar" i marca needsReview
   useEffect(() => {
-    if (!isEditMode && concept.length >= 3 && !categoryName) {
+    if (!isEditMode && concept.length >= 3 && !allowManualCategory) {
       const suggested = suggestCategory(concept, counterpartyName);
       if (suggested) {
         setCategoryName(suggested);
+      } else if (!categoryName || categoryName === 'Revisar') {
+        // No s'ha trobat suggeriment: marcar per revisió
+        setCategoryName('Revisar');
+        setNeedsReview(true);
       }
     }
-  }, [concept, counterpartyName, isEditMode, categoryName]);
+  }, [concept, counterpartyName, isEditMode, allowManualCategory, categoryName]);
 
   const resetForm = () => {
     const today = new Date();
@@ -228,6 +236,8 @@ export function OffBankExpenseModal({
     setAttachments([]);
     // Revisió
     setNeedsReview(quickMode);
+    // Categoria manual
+    setAllowManualCategory(false);
     setErrors({});
   };
 
@@ -274,13 +284,19 @@ export function OffBankExpenseModal({
 
     if (!validate()) return;
 
+    // Determinar si cal marcar per revisió:
+    // - Si categoria és "Revisar"
+    // - Si l'usuari ha canviat la categoria manualment
+    // - Si ja estava marcat needsReview
+    const shouldNeedReview = needsReview || categoryName === 'Revisar' || allowManualCategory;
+
     // Preparar dades
     const formData = {
       date,
       amountEUR: amountEUR.replace(',', '.'),
       concept,
       counterpartyName,
-      categoryName,
+      categoryName: categoryName || 'Revisar', // Fallback a "Revisar" si està buit
       // FX (només si s'usa moneda estrangera)
       currency: useForeignCurrency ? currency.trim().toUpperCase() : undefined,
       amountOriginal: useForeignCurrency ? amountOriginal.replace(',', '.') : undefined,
@@ -293,8 +309,8 @@ export function OffBankExpenseModal({
       paymentDate: paymentDate || undefined,
       // Attachments
       attachments: attachments.length > 0 ? attachments : undefined,
-      // Revisió
-      needsReview: needsReview || undefined,
+      // Revisió: marcar si toca
+      needsReview: shouldNeedReview || undefined,
     };
 
     try {
@@ -357,7 +373,7 @@ export function OffBankExpenseModal({
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogContent className="sm:max-w-md max-h-[85vh] overflow-y-auto">
+      <DialogContent className="sm:max-w-4xl max-h-[85vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>
             {isEditMode ? 'Editar despesa de terreny' : 'Afegir despesa de terreny'}
@@ -381,19 +397,40 @@ export function OffBankExpenseModal({
             </Alert>
           )}
 
-          {/* Data */}
-          <div className="space-y-2">
-            <Label htmlFor="date">Data *</Label>
-            <Input
-              id="date"
-              type="date"
-              value={date}
-              onChange={(e) => setDate(e.target.value)}
-              className={errors.date ? 'border-destructive' : ''}
-            />
-            {errors.date && (
-              <p className="text-sm text-destructive">{errors.date}</p>
-            )}
+          {/* Grid 2 columnes per camps bàsics */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {/* Data */}
+            <div className="space-y-2">
+              <Label htmlFor="date">Data *</Label>
+              <Input
+                id="date"
+                type="date"
+                value={date}
+                onChange={(e) => setDate(e.target.value)}
+                className={errors.date ? 'border-destructive' : ''}
+              />
+              {errors.date && (
+                <p className="text-sm text-destructive">{errors.date}</p>
+              )}
+            </div>
+
+            {/* Import EUR */}
+            <div className="space-y-2">
+              <Label htmlFor="amountEUR">Import (EUR) *</Label>
+              <Input
+                id="amountEUR"
+                type="text"
+                inputMode="decimal"
+                placeholder="0,00"
+                value={amountEUR}
+                onChange={(e) => setAmountEUR(e.target.value)}
+                disabled={useForeignCurrency}
+                className={`${errors.amountEUR ? 'border-destructive' : ''} ${useForeignCurrency ? 'bg-muted' : ''}`}
+              />
+              {errors.amountEUR && (
+                <p className="text-sm text-destructive">{errors.amountEUR}</p>
+              )}
+            </div>
           </div>
 
           {/* Toggle moneda estrangera */}
@@ -493,25 +530,7 @@ export function OffBankExpenseModal({
             </div>
           )}
 
-          {/* Import EUR */}
-          <div className="space-y-2">
-            <Label htmlFor="amountEUR">Import (EUR) *</Label>
-            <Input
-              id="amountEUR"
-              type="text"
-              inputMode="decimal"
-              placeholder="0,00"
-              value={amountEUR}
-              onChange={(e) => setAmountEUR(e.target.value)}
-              disabled={useForeignCurrency}
-              className={`${errors.amountEUR ? 'border-destructive' : ''} ${useForeignCurrency ? 'bg-muted' : ''}`}
-            />
-            {errors.amountEUR && (
-              <p className="text-sm text-destructive">{errors.amountEUR}</p>
-            )}
-          </div>
-
-          {/* Concepte */}
+          {/* Concepte - full width */}
           <div className="space-y-2">
             <Label htmlFor="concept">Concepte *</Label>
             <Input
@@ -527,28 +546,52 @@ export function OffBankExpenseModal({
             )}
           </div>
 
-          {/* Origen/Destinatari */}
-          <div className="space-y-2">
-            <Label htmlFor="counterpartyName">Origen / Destinatari</Label>
-            <Input
-              id="counterpartyName"
-              type="text"
-              placeholder="Nom del proveïdor o persona"
-              value={counterpartyName}
-              onChange={(e) => setCounterpartyName(e.target.value)}
-            />
-          </div>
+          {/* Grid 2 columnes per contrapart i categoria */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {/* Origen/Destinatari */}
+            <div className="space-y-2">
+              <Label htmlFor="counterpartyName">Origen / Destinatari</Label>
+              <Input
+                id="counterpartyName"
+                type="text"
+                placeholder="Nom del proveïdor o persona"
+                value={counterpartyName}
+                onChange={(e) => setCounterpartyName(e.target.value)}
+              />
+            </div>
 
-          {/* Categoria */}
-          <div className="space-y-2">
-            <Label htmlFor="categoryName">Categoria</Label>
-            <Input
-              id="categoryName"
-              type="text"
-              placeholder="p.ex. Transport, Material, etc."
-              value={categoryName}
-              onChange={(e) => setCategoryName(e.target.value)}
-            />
+            {/* Categoria - readonly per defecte */}
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <Label htmlFor="categoryName">Categoria</Label>
+                {!allowManualCategory && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setAllowManualCategory(true);
+                      setNeedsReview(true); // Marcar per revisió si es canvia manualment
+                    }}
+                    className="text-xs text-primary hover:underline"
+                  >
+                    Canviar
+                  </button>
+                )}
+              </div>
+              {allowManualCategory ? (
+                <Input
+                  id="categoryName"
+                  type="text"
+                  placeholder="p.ex. Transport, Material, etc."
+                  value={categoryName}
+                  onChange={(e) => setCategoryName(e.target.value)}
+                  autoFocus
+                />
+              ) : (
+                <div className="flex items-center h-10 px-3 rounded-md border bg-muted/50 text-sm">
+                  {categoryName || <span className="text-muted-foreground">Pendent de suggeriment...</span>}
+                </div>
+              )}
+            </div>
           </div>
 
           {/* Comprovants (Attachments) */}
