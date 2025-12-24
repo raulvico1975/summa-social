@@ -5,6 +5,35 @@ import {
   extractNameTokens,
   findMatchingContact,
 } from '../auto-match';
+import type { AnyContact, Donor, Supplier } from '../data';
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// TEST HELPERS
+// ═══════════════════════════════════════════════════════════════════════════════
+
+function createDonor(id: string, name: string): Donor {
+  return {
+    id,
+    name,
+    type: 'donor',
+    taxId: '',
+    zipCode: '',
+    createdAt: new Date().toISOString(),
+    donorType: 'individual',
+    membershipType: 'one-time',
+  };
+}
+
+function createSupplier(id: string, name: string): Supplier {
+  return {
+    id,
+    name,
+    type: 'supplier',
+    taxId: '',
+    zipCode: '',
+    createdAt: new Date().toISOString(),
+  };
+}
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // NORMALIZE FOR MATCHING
@@ -72,12 +101,12 @@ describe('extractNameTokens', () => {
 // ═══════════════════════════════════════════════════════════════════════════════
 
 describe('findMatchingContact', () => {
-  const contacts = [
-    { id: '1', name: 'Maria Garcia Lopez', type: 'donor' as const },
-    { id: '2', name: 'GTL Consultors S.L.', type: 'supplier' as const },
-    { id: '3', name: 'Amazon', type: 'supplier' as const },
-    { id: '4', name: 'Fundació Baruma', type: 'donor' as const },
-    { id: '5', name: 'Joan Pere Martínez', type: 'donor' as const },
+  const contacts: AnyContact[] = [
+    createDonor('1', 'Maria Garcia Lopez'),
+    createSupplier('2', 'GTL Consultors S.L.'),
+    createSupplier('3', 'Amazon'),
+    createDonor('4', 'Fundació Baruma'),
+    createDonor('5', 'Joan Pere Martínez'),
   ];
 
   it('should match by full name in description', () => {
@@ -135,9 +164,9 @@ describe('findMatchingContact', () => {
   });
 
   it('should prefer higher token matches', () => {
-    const similarContacts = [
-      { id: '1', name: 'Maria Garcia', type: 'donor' as const },
-      { id: '2', name: 'Maria Garcia Lopez Fernandez', type: 'donor' as const },
+    const similarContacts: AnyContact[] = [
+      createDonor('1', 'Maria Garcia'),
+      createDonor('2', 'Maria Garcia Lopez Fernandez'),
     ];
     const result = findMatchingContact(
       'TRANSFERENCIA MARIA GARCIA LOPEZ FERNANDEZ',
