@@ -94,7 +94,7 @@ Eina centralitzada amb:
 | Autenticació | Firebase Auth | - |
 | Emmagatzematge | Firebase Storage | - |
 | IA | Genkit + Google Gemini | - |
-| Idiomes | Català i Espanyol | i18n |
+| Idiomes | Català, Espanyol i Francès | i18n |
 | Excel/CSV | SheetJS (xlsx) | - |
 | PDF | jsPDF | - |
 
@@ -287,6 +287,7 @@ El sistema de categorització IA genera logs estructurats per facilitar el diagn
   /i18n                          → Traduccions
     /ca.ts                       → Català
     /es.ts                       → Espanyol
+    /fr.ts                       → Francès
   /ai                            → Fluxos de Genkit (IA)
 ```
 
