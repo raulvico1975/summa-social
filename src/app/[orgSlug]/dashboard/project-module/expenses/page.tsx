@@ -406,7 +406,6 @@ export default function ExpensesInboxPage() {
     return translated ?? categoryName;
   };
 
-  const [isRefreshing, setIsRefreshing] = React.useState(false);
   const [selectedIds, setSelectedIds] = React.useState<Set<string>>(new Set());
   const [splitModalExpense, setSplitModalExpense] = React.useState<UnifiedExpenseWithLink | null>(null);
   const [bulkAssignOpen, setBulkAssignOpen] = React.useState(false);
@@ -420,13 +419,6 @@ export default function ExpensesInboxPage() {
     if (!showOnlyNeedsReview) return expenses;
     return expenses.filter(e => e.expense.needsReview === true);
   }, [expenses, showOnlyNeedsReview]);
-
-  const handleRefresh = async () => {
-    setIsRefreshing(true);
-    await refresh();
-    setSelectedIds(new Set());
-    setIsRefreshing(false);
-  };
 
   // Quick Assign 100%
   const handleAssign100 = async (txId: string, project: Project, budgetLine?: BudgetLine | null) => {
@@ -607,7 +599,7 @@ export default function ExpensesInboxPage() {
         <AlertCircle className="h-12 w-12 text-destructive" />
         <p className="text-destructive font-medium">Error carregant despeses</p>
         <p className="text-muted-foreground text-sm">{error.message}</p>
-        <Button onClick={handleRefresh} variant="outline">
+        <Button onClick={() => window.location.reload()} variant="outline">
           Reintentar
         </Button>
       </div>
@@ -646,15 +638,6 @@ export default function ExpensesInboxPage() {
           >
             <AlertCircle className="h-4 w-4 mr-2" />
             {t.projectModule.pendingReview}
-          </Button>
-          <Button
-            onClick={handleRefresh}
-            variant="outline"
-            size="sm"
-            disabled={isRefreshing}
-          >
-            <RefreshCw className={`h-4 w-4 mr-2 ${isRefreshing ? 'animate-spin' : ''}`} />
-            Actualitzar
           </Button>
         </div>
       </div>
