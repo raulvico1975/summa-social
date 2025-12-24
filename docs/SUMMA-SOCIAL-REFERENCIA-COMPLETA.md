@@ -1,6 +1,6 @@
 # ═══════════════════════════════════════════════════════════════════════════════
 # SUMMA SOCIAL - REFERÈNCIA COMPLETA DEL PROJECTE
-# Versió 1.10 - Desembre 2025
+# Versió 1.11 - Desembre 2025
 # ═══════════════════════════════════════════════════════════════════════════════
 
 
@@ -163,6 +163,7 @@ A més dels dos blocs prioritaris, Summa Social incorpora un conjunt de **millor
 - Simplificació d'interfícies o formularis sense alterar funcionalitats
 - Clarificació de textos, etiquetes i missatges
 - Reducció de passos innecessaris en fluxos d'ús actuals
+- **Regla 10s** (NOU v1.11): qualsevol acció de captura mòbil ha de completar-se en menys de 10 segons
 
 ### 1.8.5 Millores de Mantenibilitat
 - Refactors orientats a reduir complexitat o duplicació
@@ -1399,6 +1400,10 @@ La part treta queda:
 
 ```
 /src/app/[orgSlug]/dashboard/project-module/
+  ├── expenses/
+  │   ├── page.tsx                    # Llistat de despeses elegibles
+  │   ├── [txId]/page.tsx             # Detall d'una despesa
+  │   └── capture/page.tsx            # Captura ràpida de terreny (NOU v1.11)
   ├── projects/
   │   ├── page.tsx                    # Llista de projectes
   │   └── [projectId]/
@@ -1414,7 +1419,35 @@ La part treta queda:
   └── project-module-suggestions.ts   # Scoring i combinacions (NOU v1.10)
 ```
 
-### 3.10.11 Model de dades
+### 3.10.11 Captura de despeses de terreny (NOU v1.11)
+
+| Element | Descripció |
+|---------|------------|
+| Ruta | `/project-module/expenses/capture` |
+| Objectiu | Pujada ràpida de comprovants des del mòbil |
+| Criteri | "Captura ara, assignació després" |
+| Temps objectiu | < 10 segons per pujada |
+
+**Filosofia:**
+- L'usuari de terreny (editor) fa foto i envia
+- L'administració (admin) revisa, classifica i assigna
+- Camps mínims: import, data, foto del comprovant
+- Camp `needsReview: true` per defecte
+
+**Rols:**
+| Rol | Veu | Pot fer |
+|-----|-----|---------|
+| `viewer` | Res | Res |
+| `editor` | Només les seves pujades | Pujar comprovants |
+| `admin` | Totes les pujades | Revisar, classificar, assignar |
+
+**Camps rellevants (OffBankExpense):**
+- `needsReview: boolean` — indica si està pendent de revisió
+- `attachments: Attachment[]` — fitxers adjunts (justificants)
+- `uploadedBy: string` — UID de qui ha pujat
+- `quickMode: boolean` — indica pujada ràpida (sense camps opcionals)
+
+### 3.10.12 Model de dades
 
 **Veure Annex C.3** per l'estructura Firestore completa del mòdul projectes.
 
@@ -1725,6 +1758,7 @@ Camps afegits v1.10:
 | 1.8 | Des 2024 | Importador devolucions del banc, remeses parcials, suport multi-banc (Santander/Triodos), tests unitaris, fixes modals Radix, UX simplificada |
 | 1.9 | Des 2025 | Importador Stripe (payouts → donacions + comissions), matching per email, traçabilitat completa |
 | **1.10** | **Des 2025** | **Mòdul Projectes: justificació assistida per partides, suggerències heurístiques, split parcial de despeses, simulació en memòria** |
+| **1.11** | **Des 2025** | **Captura de despeses de terreny (quickMode, pujada ràpida <10s), i18n Francès complet (fr.ts), selector d'idioma amb 3 opcions** |
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
