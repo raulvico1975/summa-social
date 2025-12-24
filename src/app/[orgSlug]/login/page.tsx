@@ -8,7 +8,7 @@ import { Label } from '@/components/ui/label';
 import { Logo } from '@/components/logo';
 import { useFirebase } from '@/firebase';
 import { useToast } from '@/hooks/use-toast';
-import { signInWithEmailAndPassword, setPersistence, browserSessionPersistence } from 'firebase/auth';
+import { signInWithEmailAndPassword, setPersistence, browserLocalPersistence } from 'firebase/auth';
 import { doc, getDoc } from 'firebase/firestore';
 import { Loader2, Building2, AlertCircle } from 'lucide-react';
 
@@ -80,8 +80,8 @@ export default function OrgLoginPage() {
     setIsLoggingIn(true);
 
     try {
-      // Configurar persistència de sessió per tancar-se al tancar el navegador
-      await setPersistence(auth, browserSessionPersistence);
+      // Configurar persistència local per mantenir sessió entre pestanyes
+      await setPersistence(auth, browserLocalPersistence);
       await signInWithEmailAndPassword(auth, email, password);
 
       toast({
