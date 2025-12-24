@@ -20,6 +20,8 @@ import {
   serverTimestamp,
   QueryDocumentSnapshot,
   DocumentData,
+  QueryConstraint,
+  UpdateData,
 } from 'firebase/firestore';
 import { useFirebase } from '@/firebase';
 import { useCurrentOrganization } from '@/hooks/organization-provider';
@@ -438,7 +440,7 @@ export function useUnifiedExpenseFeed(options?: UseUnifiedExpenseFeedOptions): U
         'items'
       );
 
-      const bankQueryConstraints = [
+      const bankQueryConstraints: QueryConstraint[] = [
         where('isEligibleForProjects', '==', true),
         where('deletedAt', '==', null),
         orderBy('date', 'desc'),
@@ -460,7 +462,7 @@ export function useUnifiedExpenseFeed(options?: UseUnifiedExpenseFeedOptions): U
         'offBankExpenses'
       );
 
-      const offBankQueryConstraints = [orderBy('date', 'desc'), limit(PAGE_SIZE)];
+      const offBankQueryConstraints: QueryConstraint[] = [orderBy('date', 'desc'), limit(PAGE_SIZE)];
       if (loadMore && lastOffBankDoc) {
         offBankQueryConstraints.push(startAfter(lastOffBankDoc));
       }
@@ -812,7 +814,7 @@ export function useUpdateOffBankExpense(): UseUpdateOffBankExpenseResult {
         expenseId
       );
 
-      const updateData: Record<string, unknown> = {
+      const updateData: UpdateData<DocumentData> = {
         updatedAt: serverTimestamp(),
       };
 
