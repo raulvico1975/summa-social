@@ -286,9 +286,10 @@ El sistema de categorització IA genera logs estructurats per facilitar el diagn
       auto-match.test.ts         → 24 tests
       model182.test.ts           → 18 tests
   /i18n                          → Traduccions
-    /ca.ts                       → Català
+    /ca.ts                       → Català (idioma base)
     /es.ts                       → Espanyol
-    /fr.ts                       → Francès
+    /fr.ts                       → Francès (NOU v1.11, complet)
+    # Criteri: fr.ts conté totes les claus; si falta traducció, es manté text CA
   /ai                            → Fluxos de Genkit (IA)
 ```
 
@@ -1434,12 +1435,14 @@ La part treta queda:
 - Camps mínims: import, data, foto del comprovant
 - Camp `needsReview: true` per defecte
 
-**Rols:**
+**Rols:** (segons el camp `role` de `members`)
 | Rol | Veu | Pot fer |
 |-----|-----|---------|
 | `viewer` | Res | Res |
-| `editor` | Només les seves pujades | Pujar comprovants |
+| `user` | Només les seves pujades | Pujar comprovants |
 | `admin` | Totes les pujades | Revisar, classificar, assignar |
+
+> Nota: A la UI el rol `user` es mostra com "Editor" o "Usuari de terreny".
 
 **Camps rellevants (OffBankExpense):**
 - `needsReview: boolean` — indica si està pendent de revisió
@@ -2137,5 +2140,5 @@ Les assignacions creades abans de la implementació del camp `budgetLineIds` no 
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # FI DEL DOCUMENT
-# Última actualització: Desembre 2025 - Versió 1.10
+# Última actualització: Desembre 2025 - Versió 1.11
 # ═══════════════════════════════════════════════════════════════════════════════
