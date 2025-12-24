@@ -887,7 +887,15 @@ export default function ExpensesInboxPage() {
                     </TableCell>
                     <TableCell className="text-center">
                       {expense.documentUrl ? (
-                        <Circle className="h-2.5 w-2.5 fill-green-500 text-green-500 inline-block" />
+                        <button
+                          type="button"
+                          onClick={() => window.open(expense.documentUrl!, '_blank', 'noopener,noreferrer')}
+                          className="cursor-pointer hover:scale-110 transition-transform"
+                          title="Obrir comprovant"
+                          aria-label="Obrir comprovant en nova pestanya"
+                        >
+                          <Circle className="h-2.5 w-2.5 fill-green-500 text-green-500 inline-block" />
+                        </button>
                       ) : (
                         <Circle className="h-2.5 w-2.5 text-muted-foreground/30 inline-block" />
                       )}
