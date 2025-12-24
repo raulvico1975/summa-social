@@ -30,7 +30,7 @@ interface MigrationResult {
 }
 
 export default function ProjectModuleAdminPage() {
-  const { app } = useFirebase();
+  const { firebaseApp } = useFirebase();
   const { organizationId } = useCurrentOrganization();
 
   const [isRunning, setIsRunning] = React.useState(false);
@@ -43,7 +43,7 @@ export default function ProjectModuleAdminPage() {
     setResult(null);
 
     try {
-      const functions = getFunctions(app, 'europe-west1');
+      const functions = getFunctions(firebaseApp, 'europe-west1');
       const migrate = httpsCallable<{ dryRun: boolean; orgId?: string }, MigrationResult>(
         functions,
         'migrateProjectModulePaths'

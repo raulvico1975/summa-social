@@ -43,6 +43,7 @@ export function ProjectForm({ project, mode }: ProjectFormProps) {
     budgetEUR: project?.budgetEUR?.toString() ?? '',
     startDate: project?.startDate ?? '',
     endDate: project?.endDate ?? '',
+    allowedDeviationPct: project?.allowedDeviationPct?.toString() ?? '',
   });
 
   const [errors, setErrors] = React.useState<Partial<Record<keyof ProjectFormData, string>>>({});
