@@ -1498,8 +1498,14 @@ export const fr = {
     currency: "Moneda",
     fxRatePositive: "El tipus de canvi ha de ser positiu",
     fxSaved: "Tipus de canvi desat",
-    noFxConfigured: "No configurat. Les despeses off-bank es registraran directament en EUR.",
-    // Justificació
+    noFxConfigured: "Non configuré. Les dépenses off-bank seront enregistrées directement en EUR.",
+    // Monnaie locale (off-bank)
+    localCurrencyExpense: "Dépense en monnaie locale",
+    localAmount: "Montant (monnaie locale)",
+    fxRateLabel: "Taux de change (1 devise → EUR)",
+    eurAmount: "Montant (EUR)",
+    pendingConversion: "Conversion en attente",
+    // Justification
     invoiceNumber: "Núm. factura",
     issuerTaxId: "NIF emissor",
     invoiceDate: "Data factura",

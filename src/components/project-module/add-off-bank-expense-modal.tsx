@@ -102,11 +102,10 @@ export function OffBankExpenseModal({
   const [counterpartyName, setCounterpartyName] = useState('');
   const [categoryName, setCategoryName] = useState('');
 
-  // Camps FX
+  // Camps FX (moneda local)
   const [useForeignCurrency, setUseForeignCurrency] = useState(false);
   const [currency, setCurrency] = useState('');
   const [amountOriginal, setAmountOriginal] = useState('');
-  const [useFxOverride, setUseFxOverride] = useState(false);
   const [fxRateOverride, setFxRateOverride] = useState('');
 
   // Camps justificació (collapsible)
@@ -127,19 +126,16 @@ export function OffBankExpenseModal({
 
   const [errors, setErrors] = useState<Record<string, string>>({});
 
-  // Determinar el tipus de canvi efectiu
-  const effectiveFxRate = useFxOverride && fxRateOverride
-    ? parseFloat(fxRateOverride.replace(',', '.'))
-    : projectFxRate ?? null;
-
   // Calcular import EUR automàticament quan s'usa moneda estrangera
+  // Fórmula: amountEUR = originalAmount * fxRate (on fxRate és "1 moneda → EUR")
   const calculateEurAmount = useCallback(() => {
-    if (!useForeignCurrency || !amountOriginal) return '';
+    if (!useForeignCurrency || !amountOriginal || !fxRateOverride) return '';
     const originalAmount = parseFloat(amountOriginal.replace(',', '.'));
-    if (isNaN(originalAmount) || !effectiveFxRate || effectiveFxRate <= 0) return '';
-    const eurAmount = originalAmount / effectiveFxRate;
+    const fxRate = parseFloat(fxRateOverride.replace(',', '.'));
+    if (isNaN(originalAmount) || isNaN(fxRate) || fxRate <= 0) return '';
+    const eurAmount = originalAmount * fxRate;
     return eurAmount.toFixed(2);
-  }, [useForeignCurrency, amountOriginal, effectiveFxRate]);
+  }, [useForeignCurrency, amountOriginal, fxRateOverride]);
 
   // Actualitzar amountEUR quan canvia l'import original o el FX
   useEffect(() => {
@@ -164,13 +160,11 @@ export function OffBankExpenseModal({
         setUseForeignCurrency(true);
         setCurrency(initialValues.currency);
         setAmountOriginal(initialValues.amountOriginal ?? '');
-        setUseFxOverride(initialValues.useFxOverride ?? false);
         setFxRateOverride(initialValues.fxRateOverride ?? '');
       } else {
         setUseForeignCurrency(false);
         setCurrency('');
         setAmountOriginal('');
-        setUseFxOverride(false);
         setFxRateOverride('');
       }
       // Justificació
@@ -224,7 +218,6 @@ export function OffBankExpenseModal({
     setUseForeignCurrency(false);
     setCurrency(projectFxCurrency ?? '');
     setAmountOriginal('');
-    setUseFxOverride(false);
     setFxRateOverride('');
     // Justificació
     setJustificationOpen(false);
@@ -253,21 +246,25 @@ export function OffBankExpenseModal({
     // Validació FX si s'usa moneda estrangera
     if (useForeignCurrency) {
       if (!currency.trim()) {
-        newErrors.currency = 'Indica la moneda (ex: XOF)';
+        newErrors.currency = 'Selecciona una moneda';
       }
       const origAmount = parseFloat(amountOriginal.replace(',', '.'));
       if (isNaN(origAmount) || origAmount <= 0) {
-        newErrors.amountOriginal = 'Import original ha de ser positiu';
+        newErrors.amountOriginal = 'Import ha de ser positiu';
       }
-      if (!effectiveFxRate || effectiveFxRate <= 0) {
-        newErrors.fxRate = 'Cal un tipus de canvi vàlid';
+      // fxRate és OPCIONAL - no validar si està buit
+      if (fxRateOverride.trim()) {
+        const fxRate = parseFloat(fxRateOverride.replace(',', '.'));
+        if (isNaN(fxRate) || fxRate <= 0) {
+          newErrors.fxRate = 'Tipus de canvi ha de ser positiu';
+        }
       }
-    }
-
-    // Import EUR (calculat o manual)
-    const amount = parseFloat(amountEUR.replace(',', '.'));
-    if (isNaN(amount) || amount <= 0) {
-      newErrors.amountEUR = 'Import ha de ser positiu';
+    } else {
+      // Import EUR obligatori només si NO és moneda local
+      const amount = parseFloat(amountEUR.replace(',', '.'));
+      if (isNaN(amount) || amount <= 0) {
+        newErrors.amountEUR = 'Import ha de ser positiu';
+      }
     }
 
     // Concepte
@@ -290,18 +287,31 @@ export function OffBankExpenseModal({
     // - Si ja estava marcat needsReview
     const shouldNeedReview = needsReview || categoryName === 'Revisar' || allowManualCategory;
 
+    // Determinar amountEUR
+    // - Si moneda local sense fxRate → null
+    // - Si moneda local amb fxRate → calculat
+    // - Si EUR → valor introduït
+    let finalAmountEUR: string | null = null;
+    if (useForeignCurrency) {
+      if (fxRateOverride.trim()) {
+        finalAmountEUR = calculateEurAmount() || null;
+      }
+      // Si no hi ha fxRate, queda null
+    } else {
+      finalAmountEUR = amountEUR.replace(',', '.');
+    }
+
     // Preparar dades
     const formData = {
       date,
-      amountEUR: amountEUR.replace(',', '.'),
+      amountEUR: finalAmountEUR,
       concept,
       counterpartyName,
       categoryName: categoryName || 'Revisar', // Fallback a "Revisar" si està buit
-      // FX (només si s'usa moneda estrangera)
-      currency: useForeignCurrency ? currency.trim().toUpperCase() : undefined,
-      amountOriginal: useForeignCurrency ? amountOriginal.replace(',', '.') : undefined,
-      fxRateOverride: useForeignCurrency && useFxOverride ? fxRateOverride.replace(',', '.') : undefined,
-      useFxOverride: useForeignCurrency ? useFxOverride : undefined,
+      // Moneda local (nous camps)
+      originalCurrency: useForeignCurrency ? currency.trim().toUpperCase() : null,
+      originalAmount: useForeignCurrency ? amountOriginal.replace(',', '.') : null,
+      fxRate: useForeignCurrency && fxRateOverride.trim() ? fxRateOverride.replace(',', '.') : null,
       // Justificació
       invoiceNumber: invoiceNumber.trim() || undefined,
       issuerTaxId: issuerTaxId.trim() || undefined,
@@ -433,33 +443,68 @@ export function OffBankExpenseModal({
             </div>
           </div>
 
-          {/* Toggle moneda estrangera */}
-          {(projectFxRate || isEditMode) && (
-            <div className="flex items-center justify-between py-2 px-3 bg-muted/50 rounded-lg">
-              <div className="flex items-center gap-2">
-                <Label htmlFor="useForeignCurrency" className="text-sm font-normal cursor-pointer">
-                  Despesa en moneda local
-                </Label>
-                {projectFxCurrency && (
-                  <span className="text-xs text-muted-foreground">
-                    ({projectFxCurrency})
-                  </span>
-                )}
-              </div>
-              <Switch
-                id="useForeignCurrency"
-                checked={useForeignCurrency}
-                onCheckedChange={setUseForeignCurrency}
-              />
+          {/* Toggle moneda estrangera - sempre disponible */}
+          <div className="flex items-center justify-between py-2 px-3 bg-muted/50 rounded-lg">
+            <div className="flex items-center gap-2">
+              <Label htmlFor="useForeignCurrency" className="text-sm font-normal cursor-pointer">
+                Despesa en moneda local
+              </Label>
+              {useForeignCurrency && currency && (
+                <span className="text-xs text-muted-foreground">
+                  ({currency})
+                </span>
+              )}
             </div>
-          )}
+            <Switch
+              id="useForeignCurrency"
+              checked={useForeignCurrency}
+              onCheckedChange={(checked) => {
+                setUseForeignCurrency(checked);
+                // Si desactiva, netejar camps FX
+                if (!checked) {
+                  setCurrency('');
+                  setAmountOriginal('');
+                  setFxRateOverride('');
+                }
+              }}
+            />
+          </div>
 
           {/* Camps FX si s'usa moneda estrangera */}
           {useForeignCurrency && (
             <div className="space-y-3 p-3 border rounded-lg bg-muted/30">
-              <div className="grid grid-cols-3 gap-2">
-                <div className="col-span-2 space-y-1">
-                  <Label htmlFor="amountOriginal" className="text-xs">Import original *</Label>
+              {/* Fila 1: Moneda (select) */}
+              <div className="space-y-1">
+                <Label htmlFor="currency" className="text-xs">Moneda *</Label>
+                <select
+                  id="currency"
+                  value={currency}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    setCurrency(val);
+                    // Si trien EUR, desactivar toggle automàticament
+                    if (val === 'EUR') {
+                      setUseForeignCurrency(false);
+                      setAmountOriginal('');
+                      setFxRateOverride('');
+                    }
+                  }}
+                  className={`flex h-9 w-full rounded-md border bg-background px-3 py-1 text-sm font-mono ${errors.currency ? 'border-destructive' : 'border-input'}`}
+                >
+                  <option value="">Selecciona...</option>
+                  <option value="XOF">XOF - Franc CFA</option>
+                  <option value="USD">USD - Dòlar US</option>
+                  <option value="GBP">GBP - Lliura esterlina</option>
+                </select>
+                {errors.currency && (
+                  <p className="text-sm text-destructive">{errors.currency}</p>
+                )}
+              </div>
+
+              {/* Fila 2: Import local + Tipus de canvi */}
+              <div className="grid grid-cols-2 gap-2">
+                <div className="space-y-1">
+                  <Label htmlFor="amountOriginal" className="text-xs">Import (moneda local) *</Label>
                   <Input
                     id="amountOriginal"
                     type="text"
@@ -469,64 +514,37 @@ export function OffBankExpenseModal({
                     onChange={(e) => setAmountOriginal(e.target.value)}
                     className={errors.amountOriginal ? 'border-destructive h-9' : 'h-9'}
                   />
+                  {errors.amountOriginal && (
+                    <p className="text-sm text-destructive">{errors.amountOriginal}</p>
+                  )}
                 </div>
                 <div className="space-y-1">
-                  <Label htmlFor="currency" className="text-xs">Moneda *</Label>
+                  <Label htmlFor="fxRate" className="text-xs">Tipus de canvi (1 {currency || 'moneda'} → EUR)</Label>
                   <Input
-                    id="currency"
-                    type="text"
-                    placeholder="XOF"
-                    value={currency}
-                    onChange={(e) => setCurrency(e.target.value.toUpperCase())}
-                    maxLength={3}
-                    className={errors.currency ? 'border-destructive h-9 font-mono' : 'h-9 font-mono'}
-                  />
-                </div>
-              </div>
-              {(errors.amountOriginal || errors.currency) && (
-                <p className="text-sm text-destructive">{errors.amountOriginal || errors.currency}</p>
-              )}
-
-              {/* Override FX */}
-              <div className="flex items-center justify-between pt-2 border-t">
-                <div className="flex items-center gap-2">
-                  <Switch
-                    id="useFxOverride"
-                    checked={useFxOverride}
-                    onCheckedChange={setUseFxOverride}
-                  />
-                  <Label htmlFor="useFxOverride" className="text-xs font-normal cursor-pointer">
-                    Usar tipus de canvi diferent
-                  </Label>
-                </div>
-                {useFxOverride ? (
-                  <Input
+                    id="fxRate"
                     type="text"
                     inputMode="decimal"
-                    placeholder={projectFxRate?.toString() ?? '0'}
+                    placeholder="0,001525"
                     value={fxRateOverride}
                     onChange={(e) => setFxRateOverride(e.target.value)}
-                    className={errors.fxRate ? 'border-destructive h-8 w-24 text-sm font-mono' : 'h-8 w-24 text-sm font-mono'}
+                    className={errors.fxRate ? 'border-destructive h-9 font-mono' : 'h-9 font-mono'}
                   />
+                  {errors.fxRate && (
+                    <p className="text-sm text-destructive">{errors.fxRate}</p>
+                  )}
+                </div>
+              </div>
+
+              {/* Preview: Import EUR calculat o pendent */}
+              <div className="flex items-center gap-2 pt-2 border-t text-sm">
+                <Info className="h-3 w-3 text-muted-foreground" />
+                <span className="text-muted-foreground">Import (EUR):</span>
+                {calculateEurAmount() ? (
+                  <span className="font-medium">{calculateEurAmount()} €</span>
                 ) : (
-                  <span className="text-xs text-muted-foreground font-mono">
-                    {projectFxRate ?? 'No configurat'}
-                  </span>
+                  <span className="text-amber-600 italic">Pendent de conversió</span>
                 )}
               </div>
-              {errors.fxRate && (
-                <p className="text-sm text-destructive">{errors.fxRate}</p>
-              )}
-
-              {/* Preview conversió */}
-              {amountOriginal && effectiveFxRate && effectiveFxRate > 0 && (
-                <div className="flex items-center gap-2 pt-2 text-xs text-muted-foreground">
-                  <Info className="h-3 w-3" />
-                  <span>
-                    {parseFloat(amountOriginal.replace(',', '.')).toLocaleString('ca-ES')} {currency} ÷ {effectiveFxRate} = {calculateEurAmount()} EUR
-                  </span>
-                </div>
-              )}
             </div>
           )}
 

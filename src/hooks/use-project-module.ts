@@ -338,19 +338,22 @@ export function useUnifiedExpenseFeed(options?: UseUnifiedExpenseFeedOptions): U
         const offBankDoc = await getDoc(doc(offBankRef, offBankId));
         if (offBankDoc.exists()) {
           const data = offBankDoc.data() as OffBankExpense;
+          const isPending = data.amountEUR === null || data.amountEUR === undefined;
+          const amountEURValue = typeof data.amountEUR === 'number' ? -Math.abs(data.amountEUR) : 0;
           allExpenses.push({
             txId,
             source: 'offBank' as const,
             date: data.date,
             description: data.concept,
-            amountEUR: -Math.abs(data.amountEUR),
+            amountEUR: amountEURValue,
             categoryName: data.categoryName,
             counterpartyName: data.counterpartyName,
             documentUrl: data.documentUrl ?? data.attachments?.[0]?.url ?? null,
-            // Camps FX
-            currency: data.currency ?? null,
-            amountOriginal: data.amountOriginal ?? null,
-            fxRateUsed: data.fxRateUsed ?? null,
+            // Camps FX (nou model)
+            originalCurrency: data.originalCurrency ?? data.currency ?? null,
+            originalAmount: data.originalAmount ?? data.amountOriginal ?? null,
+            fxRate: data.fxRate ?? data.fxRateUsed ?? null,
+            pendingConversion: isPending,
             // Camps justificació
             invoiceNumber: data.invoiceNumber ?? null,
             issuerTaxId: data.issuerTaxId ?? null,
@@ -498,19 +501,22 @@ export function useUnifiedExpenseFeed(options?: UseUnifiedExpenseFeedOptions): U
 
       const offBankExpenses: UnifiedExpense[] = offBankSnapshot.docs.map((d) => {
         const data = d.data() as OffBankExpense;
+        const isPending = data.amountEUR === null || data.amountEUR === undefined;
+        const amountEURValue = typeof data.amountEUR === 'number' ? -Math.abs(data.amountEUR) : 0;
         return {
           txId: `off_${d.id}`,
           source: 'offBank' as const,
           date: data.date,
           description: data.concept,
-          amountEUR: -Math.abs(data.amountEUR), // convertir a negatiu per consistència
+          amountEUR: amountEURValue,
           categoryName: data.categoryName,
           counterpartyName: data.counterpartyName,
           documentUrl: data.documentUrl ?? data.attachments?.[0]?.url ?? null,
-          // Camps FX
-          currency: data.currency ?? null,
-          amountOriginal: data.amountOriginal ?? null,
-          fxRateUsed: data.fxRateUsed ?? null,
+          // Camps FX (nou model)
+          originalCurrency: data.originalCurrency ?? data.currency ?? null,
+          originalAmount: data.originalAmount ?? data.amountOriginal ?? null,
+          fxRate: data.fxRate ?? data.fxRateUsed ?? null,
+          pendingConversion: isPending,
           // Camps justificació
           invoiceNumber: data.invoiceNumber ?? null,
           issuerTaxId: data.issuerTaxId ?? null,
@@ -641,9 +647,13 @@ export function useSaveOffBankExpense(): UseSaveOffBankExpenseResult {
     }
 
     // Validacions
-    const amount = parseFloat(data.amountEUR);
-    if (isNaN(amount) || amount <= 0) {
-      throw new Error('L\'import ha de ser un número positiu');
+    // amountEUR pot ser null si és moneda local sense fxRate
+    let amount: number | null = null;
+    if (data.amountEUR) {
+      amount = parseFloat(data.amountEUR);
+      if (isNaN(amount) || amount <= 0) {
+        throw new Error('L\'import ha de ser un número positiu');
+      }
     }
 
     const concept = data.concept.trim();
@@ -654,6 +664,12 @@ export function useSaveOffBankExpense(): UseSaveOffBankExpenseResult {
     const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
     if (!dateRegex.test(data.date)) {
       throw new Error('La data ha de tenir format YYYY-MM-DD');
+    }
+
+    // Si no hi ha amountEUR, ha de ser moneda local
+    const originalCurrency = data.originalCurrency?.trim().toUpperCase() || null;
+    if (amount === null && !originalCurrency) {
+      throw new Error('Cal indicar import EUR o moneda local');
     }
 
     setIsSaving(true);
@@ -672,35 +688,32 @@ export function useSaveOffBankExpense(): UseSaveOffBankExpenseResult {
       const now = serverTimestamp();
       const newRef = doc(offBankRef);
 
-      // Camps FX opcionals
-      const currency = data.currency?.trim().toUpperCase() || null;
-      const amountOriginal = data.amountOriginal ? parseFloat(data.amountOriginal) : null;
-      const fxRateUsed = data.useFxOverride && data.fxRateOverride
-        ? parseFloat(data.fxRateOverride)
-        : null;
+      // Camps FX (nou model)
+      const originalAmount = data.originalAmount ? parseFloat(data.originalAmount) : null;
+      const fxRate = data.fxRate ? parseFloat(data.fxRate) : null;
 
       const expenseData: Record<string, unknown> = {
         orgId: organizationId,
         source: 'offBank' as const,
         date: data.date,
         concept,
-        amountEUR: amount,
+        amountEUR: amount, // pot ser null
         counterpartyName: data.counterpartyName?.trim() || null,
         categoryName: data.categoryName?.trim() || null,
-        documentUrl: null, // Implementar upload després
+        documentUrl: null,
         createdBy: user.uid,
         createdAt: now,
         updatedAt: now,
       };
 
-      // Afegir camps FX si existeixen
-      if (currency && currency !== 'EUR') {
-        expenseData.currency = currency;
-        if (amountOriginal !== null && !isNaN(amountOriginal)) {
-          expenseData.amountOriginal = amountOriginal;
+      // Afegir camps moneda local si existeixen
+      if (originalCurrency && originalCurrency !== 'EUR') {
+        expenseData.originalCurrency = originalCurrency;
+        if (originalAmount !== null && !isNaN(originalAmount)) {
+          expenseData.originalAmount = originalAmount;
         }
-        if (fxRateUsed !== null && !isNaN(fxRateUsed) && fxRateUsed > 0) {
-          expenseData.fxRateUsed = fxRateUsed;
+        if (fxRate !== null && !isNaN(fxRate) && fxRate > 0) {
+          expenseData.fxRate = fxRate;
         }
       }
 
@@ -779,7 +792,8 @@ export function useUpdateOffBankExpense(): UseUpdateOffBankExpenseResult {
     }
 
     // Validacions si s'inclouen els camps
-    if (data.amountEUR !== undefined) {
+    // amountEUR pot ser null si és moneda local sense fxRate
+    if (data.amountEUR !== undefined && data.amountEUR !== null) {
       const amount = parseFloat(data.amountEUR);
       if (isNaN(amount) || amount <= 0) {
         throw new Error('L\'import ha de ser un número positiu');
@@ -825,7 +839,7 @@ export function useUpdateOffBankExpense(): UseUpdateOffBankExpenseResult {
         updateData.concept = data.concept.trim();
       }
       if (data.amountEUR !== undefined) {
-        updateData.amountEUR = parseFloat(data.amountEUR);
+        updateData.amountEUR = data.amountEUR ? parseFloat(data.amountEUR) : null;
       }
       if (data.counterpartyName !== undefined) {
         updateData.counterpartyName = data.counterpartyName.trim() || null;
@@ -834,26 +848,24 @@ export function useUpdateOffBankExpense(): UseUpdateOffBankExpenseResult {
         updateData.categoryName = data.categoryName.trim() || null;
       }
 
-      // Camps FX
-      if (data.currency !== undefined) {
-        const currency = data.currency?.trim().toUpperCase() || null;
+      // Camps moneda local (nou model)
+      if (data.originalCurrency !== undefined) {
+        const currency = data.originalCurrency?.trim().toUpperCase() || null;
         if (currency && currency !== 'EUR') {
-          updateData.currency = currency;
-          if (data.amountOriginal !== undefined) {
-            const amountOriginal = parseFloat(data.amountOriginal);
-            updateData.amountOriginal = isNaN(amountOriginal) ? null : amountOriginal;
+          updateData.originalCurrency = currency;
+          if (data.originalAmount !== undefined) {
+            const origAmount = data.originalAmount ? parseFloat(data.originalAmount) : null;
+            updateData.originalAmount = origAmount !== null && !isNaN(origAmount) ? origAmount : null;
           }
-          if (data.useFxOverride && data.fxRateOverride) {
-            const fxRateUsed = parseFloat(data.fxRateOverride);
-            updateData.fxRateUsed = isNaN(fxRateUsed) ? null : fxRateUsed;
-          } else {
-            updateData.fxRateUsed = null;
+          if (data.fxRate !== undefined) {
+            const fxRate = data.fxRate ? parseFloat(data.fxRate) : null;
+            updateData.fxRate = fxRate !== null && !isNaN(fxRate) && fxRate > 0 ? fxRate : null;
           }
         } else {
           // Si torna a EUR, netejar camps FX
-          updateData.currency = null;
-          updateData.amountOriginal = null;
-          updateData.fxRateUsed = null;
+          updateData.originalCurrency = null;
+          updateData.originalAmount = null;
+          updateData.fxRate = null;
         }
       }
 

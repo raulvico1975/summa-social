@@ -1524,6 +1524,12 @@ export const es = {
     fxRatePositive: "El tipo de cambio debe ser positivo",
     fxSaved: "Tipo de cambio guardado",
     noFxConfigured: "No configurado. Los gastos off-bank se registrarán directamente en EUR.",
+    // Moneda local (off-bank)
+    localCurrencyExpense: "Gasto en moneda local",
+    localAmount: "Importe (moneda local)",
+    fxRateLabel: "Tipo de cambio (1 moneda → EUR)",
+    eurAmount: "Importe (EUR)",
+    pendingConversion: "Pendiente de conversión",
     // Justificación
     invoiceNumber: "N.º factura",
     issuerTaxId: "NIF emisor",

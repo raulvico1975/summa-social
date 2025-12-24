@@ -430,10 +430,14 @@ export default function CaptureExpensesPage() {
 
                         {/* Import */}
                         <TableCell className="text-right font-mono">
-                          {formatAmount(expense.amountEUR)}
-                          {expense.currency && expense.currency !== 'EUR' && expense.amountOriginal && (
+                          {expense.amountEUR !== null ? (
+                            formatAmount(expense.amountEUR)
+                          ) : (
+                            <span className="text-amber-600 italic text-xs">Pendent</span>
+                          )}
+                          {expense.originalCurrency && expense.originalCurrency !== 'EUR' && expense.originalAmount && (
                             <div className="text-xs text-muted-foreground">
-                              {expense.amountOriginal.toLocaleString('ca-ES')} {expense.currency}
+                              {expense.originalAmount.toLocaleString('ca-ES')} {expense.originalCurrency}
                             </div>
                           )}
                         </TableCell>

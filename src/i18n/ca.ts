@@ -1498,6 +1498,12 @@ export const ca = {
     fxRatePositive: "El tipus de canvi ha de ser positiu",
     fxSaved: "Tipus de canvi desat",
     noFxConfigured: "No configurat. Les despeses off-bank es registraran directament en EUR.",
+    // Moneda local (off-bank)
+    localCurrencyExpense: "Despesa en moneda local",
+    localAmount: "Import (moneda local)",
+    fxRateLabel: "Tipus de canvi (1 moneda → EUR)",
+    eurAmount: "Import (EUR)",
+    pendingConversion: "Pendent de conversió",
     // Justificació
     invoiceNumber: "Núm. factura",
     issuerTaxId: "NIF emissor",

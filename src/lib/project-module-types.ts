@@ -168,12 +168,18 @@ export interface OffBankExpense {
 
   date: string; // YYYY-MM-DD
   concept: string;
-  amountEUR: number; // positiu (despesa) - sempre en EUR
+  amountEUR: number | null; // positiu (despesa) - pot ser null si falta fxRate
 
   // Moneda original i conversió (opcional)
-  currency?: string | null; // ex: "XOF", "EUR"
-  amountOriginal?: number | null; // import en moneda local
-  fxRateUsed?: number | null; // si l'usuari sobrescriu el del projecte
+  originalCurrency?: string | null; // ex: "XOF", "USD" (null = EUR)
+  originalAmount?: number | null; // import en moneda local
+  fxRate?: number | null; // tipus de canvi (1 moneda → EUR)
+  fxDate?: string | null; // data del tipus de canvi (opcional)
+
+  // DEPRECATED: usar originalCurrency, originalAmount, fxRate
+  currency?: string | null;
+  amountOriginal?: number | null;
+  fxRateUsed?: number | null;
 
   counterpartyName: string | null;
   categoryName: string | null; // text lliure
@@ -200,14 +206,17 @@ export interface OffBankExpense {
 export interface OffBankExpenseFormData {
   date: string;
   concept: string;
-  amountEUR: string;
+  amountEUR?: string | null; // pot ser null si moneda local sense fxRate
   counterpartyName: string;
   categoryName: string;
-  // Camps nous
+  // Moneda local
+  originalCurrency?: string | null;
+  originalAmount?: string | null;
+  fxRate?: string | null;
+  // DEPRECATED
   currency?: string;
   amountOriginal?: string;
   fxRateOverride?: string;
-  useFxOverride?: boolean;
   // Justificació
   invoiceNumber?: string;
   issuerTaxId?: string;
@@ -233,11 +242,17 @@ export interface UnifiedExpense {
   source: ExpenseSource;
   date: string;
   description: string | null;
-  amountEUR: number; // sempre negatiu per consistència
+  amountEUR: number; // per UI, si és null intern usem 0
   categoryName: string | null;
   counterpartyName: string | null;
   documentUrl: string | null;
-  // Camps opcionals per offBank amb moneda estrangera
+  // Camps moneda estrangera (off-bank)
+  originalCurrency?: string | null;
+  originalAmount?: number | null;
+  fxRate?: number | null;
+  // Flag per indicar si amountEUR és real o pendent de conversió
+  pendingConversion?: boolean;
+  // DEPRECATED: usar originalCurrency, originalAmount, fxRate
   currency?: string | null;
   amountOriginal?: number | null;
   fxRateUsed?: number | null;

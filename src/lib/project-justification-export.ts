@@ -202,12 +202,12 @@ async function fetchJustificationData(
           description: data.concept,
           counterpartyName: data.counterpartyName,
           categoryName: data.categoryName,
-          amountEUR: -Math.abs(data.amountEUR),
+          amountEUR: typeof data.amountEUR === 'number' ? -Math.abs(data.amountEUR) : 0,
           documentName: null,
-          // FX
-          currency: data.currency ?? null,
-          amountOriginal: data.amountOriginal ?? null,
-          fxRateUsed: data.fxRateUsed ?? null,
+          // FX (nou model amb fallback a camps antics)
+          currency: data.originalCurrency ?? data.currency ?? null,
+          amountOriginal: data.originalAmount ?? data.amountOriginal ?? null,
+          fxRateUsed: data.fxRate ?? data.fxRateUsed ?? null,
           // Justificació directa de offBank
           invoiceNumber: data.invoiceNumber ?? null,
           issuerTaxId: data.issuerTaxId ?? null,
