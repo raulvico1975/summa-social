@@ -43,7 +43,8 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import { AlertCircle, RefreshCw, ChevronRight, FolderPlus, Check, MoreHorizontal, Split, X, Plus, Landmark, Globe, ArrowLeft, FolderKanban, Filter, Pencil, Trash2 } from 'lucide-react';
+import { AlertCircle, RefreshCw, ChevronRight, FolderPlus, Check, MoreHorizontal, Split, X, Plus, Landmark, Globe, ArrowLeft, FolderKanban, Filter, Pencil, Trash2, Search, Circle } from 'lucide-react';
+import { Input } from '@/components/ui/input';
 import { formatDateDMY } from '@/lib/normalize';
 import { AssignmentEditor } from '@/components/project-module/assignment-editor';
 import type { ExpenseStatus, UnifiedExpenseWithLink, Project, ExpenseAssignment, BudgetLine } from '@/lib/project-module-types';
@@ -364,7 +365,7 @@ export default function ExpensesInboxPage() {
   const projectIdFilter = searchParams.get('projectId');
   const budgetLineIdFilter = searchParams.get('budgetLineId');
 
-  const { expenses, isLoading, error, refresh, isFiltered, usedFallback } = useUnifiedExpenseFeed({
+  const { expenses, isLoading, isLoadingMore, error, refresh, loadMore, hasMore, isFiltered, usedFallback } = useUnifiedExpenseFeed({
     projectId: projectIdFilter,
     budgetLineId: budgetLineIdFilter,
   });
@@ -412,13 +413,73 @@ export default function ExpensesInboxPage() {
   const [isBulkAssigning, setIsBulkAssigning] = React.useState(false);
   const [addOffBankOpen, setAddOffBankOpen] = React.useState(false);
   const [editOffBankExpense, setEditOffBankExpense] = React.useState<UnifiedExpenseWithLink | null>(null);
-  const [showOnlyNeedsReview, setShowOnlyNeedsReview] = React.useState(false);
 
-  // Filtrar despeses per needsReview si el toggle està actiu
+  // Filtres locals (cerca + filtre ràpid)
+  const [searchQuery, setSearchQuery] = React.useState('');
+  type ExpenseTableFilter =
+    | 'all'
+    | 'withDocument'
+    | 'withoutDocument'
+    | 'uncategorized'
+    | 'noContact'
+    | 'bank'
+    | 'offBank'
+    | 'assigned'
+    | 'unassigned'
+    | 'needsReview';
+  const [tableFilter, setTableFilter] = React.useState<ExpenseTableFilter>('all');
+
+  // Filtratge combinat: tableFilter + searchQuery
   const filteredExpenses = React.useMemo(() => {
-    if (!showOnlyNeedsReview) return expenses;
-    return expenses.filter(e => e.expense.needsReview === true);
-  }, [expenses, showOnlyNeedsReview]);
+    let result = expenses;
+
+    // 1. Filtre per tableFilter
+    if (tableFilter !== 'all') {
+      result = result.filter(e => {
+        const exp = e.expense;
+        switch (tableFilter) {
+          case 'needsReview':
+            return exp.needsReview === true;
+          case 'withDocument':
+            return !!exp.documentUrl;
+          case 'withoutDocument':
+            return !exp.documentUrl;
+          case 'uncategorized':
+            return !exp.categoryName;
+          case 'noContact':
+            return !exp.counterpartyName;
+          case 'bank':
+            return exp.source === 'bank';
+          case 'offBank':
+            return exp.source === 'offBank';
+          case 'assigned':
+            return e.status === 'assigned';
+          case 'unassigned':
+            return e.status === 'unassigned';
+          default:
+            return true;
+        }
+      });
+    }
+
+    // 2. Filtre per searchQuery (case-insensitive)
+    if (searchQuery.trim()) {
+      const query = searchQuery.toLowerCase().trim();
+      result = result.filter(e => {
+        const exp = e.expense;
+        const searchableText = [
+          exp.description,
+          exp.counterpartyName,
+          exp.categoryName,
+          String(exp.amountEUR),
+          exp.txId,
+        ].filter(Boolean).join(' ').toLowerCase();
+        return searchableText.includes(query);
+      });
+    }
+
+    return result;
+  }, [expenses, tableFilter, searchQuery]);
 
   // Quick Assign 100%
   const handleAssign100 = async (txId: string, project: Project, budgetLine?: BudgetLine | null) => {
@@ -617,6 +678,14 @@ export default function ExpensesInboxPage() {
           </p>
         </div>
         <div className="flex items-center gap-2">
+          <Button
+            onClick={() => setAddOffBankOpen(true)}
+            variant="default"
+            size="sm"
+          >
+            <Plus className="h-4 w-4 mr-2" />
+            Afegir despesa (contrapart)
+          </Button>
           <Link href={buildUrl('/dashboard/project-module/projects')}>
             <Button variant="outline" size="sm">
               <FolderKanban className="h-4 w-4 mr-2" />
@@ -624,20 +693,83 @@ export default function ExpensesInboxPage() {
             </Button>
           </Link>
           <Button
-            onClick={() => setAddOffBankOpen(true)}
-            variant="outline"
-            size="sm"
-          >
-            <Plus className="h-4 w-4 mr-2" />
-            Afegir despesa de terreny
-          </Button>
-          <Button
-            onClick={() => setShowOnlyNeedsReview(!showOnlyNeedsReview)}
-            variant={showOnlyNeedsReview ? 'default' : 'outline'}
+            onClick={() => setTableFilter(tableFilter === 'needsReview' ? 'all' : 'needsReview')}
+            variant={tableFilter === 'needsReview' ? 'default' : 'outline'}
             size="sm"
           >
             <AlertCircle className="h-4 w-4 mr-2" />
             {t.projectModule.pendingReview}
+          </Button>
+        </div>
+      </div>
+
+      {/* Barra de cerca i filtres */}
+      <div className="flex flex-col gap-3">
+        {/* Cercador */}
+        <div className="relative max-w-md">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input
+            placeholder="Cerca per descripció, contrapart, categoria..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="pl-9 pr-9"
+          />
+          {searchQuery && (
+            <button
+              type="button"
+              onClick={() => setSearchQuery('')}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          )}
+        </div>
+
+        {/* Filtres ràpids */}
+        <div className="flex gap-2 items-center flex-wrap">
+          <Button
+            variant={tableFilter === 'all' ? 'default' : 'outline'}
+            size="sm"
+            onClick={() => setTableFilter('all')}
+          >
+            Tots ({expenses.length})
+          </Button>
+          <Button
+            variant={tableFilter === 'withoutDocument' ? 'default' : 'outline'}
+            size="sm"
+            onClick={() => setTableFilter('withoutDocument')}
+          >
+            Sense document
+          </Button>
+          <Button
+            variant={tableFilter === 'uncategorized' ? 'default' : 'outline'}
+            size="sm"
+            onClick={() => setTableFilter('uncategorized')}
+          >
+            Sense categoria
+          </Button>
+          <Button
+            variant={tableFilter === 'unassigned' ? 'default' : 'outline'}
+            size="sm"
+            onClick={() => setTableFilter('unassigned')}
+          >
+            No assignades
+          </Button>
+          <Button
+            variant={tableFilter === 'offBank' ? 'default' : 'outline'}
+            size="sm"
+            onClick={() => setTableFilter('offBank')}
+          >
+            <Globe className="h-4 w-4 mr-1" />
+            Terreny
+          </Button>
+          <Button
+            variant={tableFilter === 'bank' ? 'default' : 'outline'}
+            size="sm"
+            onClick={() => setTableFilter('bank')}
+          >
+            <Landmark className="h-4 w-4 mr-1" />
+            Seu
           </Button>
         </div>
       </div>
@@ -691,6 +823,7 @@ export default function ExpensesInboxPage() {
                 />
               </TableHead>
               <TableHead className="w-[50px]">Font</TableHead>
+              <TableHead className="w-[30px] text-center">Doc</TableHead>
               <TableHead className="w-[100px]">Data</TableHead>
               <TableHead>Descripció</TableHead>
               <TableHead>Categoria</TableHead>
@@ -706,6 +839,7 @@ export default function ExpensesInboxPage() {
                 <TableRow key={i}>
                   <TableCell><Skeleton className="h-4 w-4" /></TableCell>
                   <TableCell><Skeleton className="h-4 w-8" /></TableCell>
+                  <TableCell><Skeleton className="h-2.5 w-2.5 rounded-full" /></TableCell>
                   <TableCell><Skeleton className="h-4 w-20" /></TableCell>
                   <TableCell><Skeleton className="h-4 w-48" /></TableCell>
                   <TableCell><Skeleton className="h-4 w-24" /></TableCell>
@@ -717,9 +851,9 @@ export default function ExpensesInboxPage() {
               ))
             ) : filteredExpenses.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={9} className="text-center py-12 text-muted-foreground">
-                  {showOnlyNeedsReview
-                    ? t.projectModule.noPendingExpenses
+                <TableCell colSpan={10} className="text-center py-12 text-muted-foreground">
+                  {tableFilter !== 'all' || searchQuery
+                    ? 'No s\'han trobat resultats'
                     : t.projectModule.noEligibleExpenses}
                 </TableCell>
               </TableRow>
@@ -749,6 +883,13 @@ export default function ExpensesInboxPage() {
                         <span title={t.projectModule?.sourceOffBank ?? 'Despesa de terreny'}>
                           <Globe className="h-4 w-4 text-blue-500" />
                         </span>
+                      )}
+                    </TableCell>
+                    <TableCell className="text-center">
+                      {expense.documentUrl ? (
+                        <Circle className="h-2.5 w-2.5 fill-green-500 text-green-500 inline-block" />
+                      ) : (
+                        <Circle className="h-2.5 w-2.5 text-muted-foreground/30 inline-block" />
                       )}
                     </TableCell>
                     <TableCell className="font-mono text-sm">
@@ -830,6 +971,28 @@ export default function ExpensesInboxPage() {
       {isLoading && expenses.length > 0 && (
         <div className="flex justify-center py-4">
           <RefreshCw className="h-5 w-5 animate-spin text-muted-foreground" />
+        </div>
+      )}
+
+      {/* Botó carregar més (només si no hi ha filtres locals) */}
+      {!isLoading && hasMore && !isFiltered && tableFilter === 'all' && !searchQuery && (
+        <div className="flex justify-center py-4">
+          <Button
+            variant="outline"
+            onClick={loadMore}
+            disabled={isLoadingMore}
+          >
+            {isLoadingMore ? (
+              <>
+                <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                Carregant...
+              </>
+            ) : (
+              <>
+                Carregar més
+              </>
+            )}
+          </Button>
         </div>
       )}
 

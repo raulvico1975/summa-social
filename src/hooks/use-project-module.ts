@@ -40,7 +40,7 @@ import type {
   BudgetLineFormData,
 } from '@/lib/project-module-types';
 
-const PAGE_SIZE = 20;
+const PAGE_SIZE = 50;
 
 // ═══════════════════════════════════════════════════════════════════════════
 // HOOK: Llistat de despeses exportades (feed read-only)
@@ -215,8 +215,11 @@ interface UseUnifiedExpenseFeedOptions {
 interface UseUnifiedExpenseFeedResult {
   expenses: UnifiedExpenseWithLink[];
   isLoading: boolean;
+  isLoadingMore: boolean;
   error: Error | null;
   refresh: () => Promise<void>;
+  loadMore: () => Promise<void>;
+  hasMore: boolean;
   isFiltered: boolean;
   usedFallback: boolean;
 }
@@ -231,8 +234,14 @@ export function useUnifiedExpenseFeed(options?: UseUnifiedExpenseFeedOptions): U
 
   const [expenses, setExpenses] = useState<UnifiedExpenseWithLink[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [error, setError] = useState<Error | null>(null);
   const [usedFallback, setUsedFallback] = useState(false);
+
+  // Paginació
+  const [lastBankDoc, setLastBankDoc] = useState<QueryDocumentSnapshot | null>(null);
+  const [lastOffBankDoc, setLastOffBankDoc] = useState<QueryDocumentSnapshot | null>(null);
+  const [hasMore, setHasMore] = useState(true);
 
   // Helper per carregar despeses filtrades
   const loadFilteredExpenses = useCallback(async () => {
@@ -335,7 +344,7 @@ export function useUnifiedExpenseFeed(options?: UseUnifiedExpenseFeedOptions): U
             amountEUR: -Math.abs(data.amountEUR),
             categoryName: data.categoryName,
             counterpartyName: data.counterpartyName,
-            documentUrl: data.documentUrl,
+            documentUrl: data.documentUrl ?? data.attachments?.[0]?.url ?? null,
             // Camps FX
             currency: data.currency ?? null,
             amountOriginal: data.amountOriginal ?? null,
@@ -397,19 +406,28 @@ export function useUnifiedExpenseFeed(options?: UseUnifiedExpenseFeedOptions): U
     setExpenses(result);
   }, [firestore, organizationId, projectId, budgetLineId]);
 
-  const loadExpenses = useCallback(async () => {
+  const loadExpenses = useCallback(async (loadMore = false) => {
     if (!organizationId) return;
 
     try {
-      setIsLoading(true);
+      if (loadMore) {
+        setIsLoadingMore(true);
+      } else {
+        setIsLoading(true);
+        // Reset paginació quan es carrega de nou
+        setLastBankDoc(null);
+        setLastOffBankDoc(null);
+        setHasMore(true);
+      }
 
-      // Si hi ha filtre, carreguem des dels expenseLinks primer
+      // Si hi ha filtre, carreguem des dels expenseLinks primer (sense paginació)
       if (budgetLineId || projectId) {
         await loadFilteredExpenses();
+        setHasMore(false); // Els filtrats no tenen paginació
         return;
       }
 
-      // Cas sense filtre: carregar totes les despeses
+      // Cas sense filtre: carregar despeses amb paginació
       // 1. Carregar despeses bank (exports)
       const bankRef = collection(
         firestore,
@@ -419,13 +437,17 @@ export function useUnifiedExpenseFeed(options?: UseUnifiedExpenseFeedOptions): U
         'projectExpenses',
         'items'
       );
-      const bankQuery = query(
-        bankRef,
+
+      const bankQueryConstraints = [
         where('isEligibleForProjects', '==', true),
         where('deletedAt', '==', null),
         orderBy('date', 'desc'),
-        limit(100)
-      );
+        limit(PAGE_SIZE),
+      ];
+      if (loadMore && lastBankDoc) {
+        bankQueryConstraints.push(startAfter(lastBankDoc));
+      }
+      const bankQuery = query(bankRef, ...bankQueryConstraints);
       const bankSnapshot = await getDocs(bankQuery);
 
       // 2. Carregar despeses off-bank
@@ -437,8 +459,25 @@ export function useUnifiedExpenseFeed(options?: UseUnifiedExpenseFeedOptions): U
         '_',
         'offBankExpenses'
       );
-      const offBankQuery = query(offBankRef, orderBy('date', 'desc'), limit(100));
+
+      const offBankQueryConstraints = [orderBy('date', 'desc'), limit(PAGE_SIZE)];
+      if (loadMore && lastOffBankDoc) {
+        offBankQueryConstraints.push(startAfter(lastOffBankDoc));
+      }
+      const offBankQuery = query(offBankRef, ...offBankQueryConstraints);
       const offBankSnapshot = await getDocs(offBankQuery);
+
+      // Actualitzar cursors per paginació
+      if (bankSnapshot.docs.length > 0) {
+        setLastBankDoc(bankSnapshot.docs[bankSnapshot.docs.length - 1]);
+      }
+      if (offBankSnapshot.docs.length > 0) {
+        setLastOffBankDoc(offBankSnapshot.docs[offBankSnapshot.docs.length - 1]);
+      }
+
+      // Comprovar si hi ha més dades
+      const hasMoreData = bankSnapshot.docs.length === PAGE_SIZE || offBankSnapshot.docs.length === PAGE_SIZE;
+      setHasMore(hasMoreData);
 
       // 3. Convertir a UnifiedExpense
       const bankExpenses: UnifiedExpense[] = bankSnapshot.docs.map((d) => {
@@ -465,7 +504,7 @@ export function useUnifiedExpenseFeed(options?: UseUnifiedExpenseFeedOptions): U
           amountEUR: -Math.abs(data.amountEUR), // convertir a negatiu per consistència
           categoryName: data.categoryName,
           counterpartyName: data.counterpartyName,
-          documentUrl: data.documentUrl,
+          documentUrl: data.documentUrl ?? data.attachments?.[0]?.url ?? null,
           // Camps FX
           currency: data.currency ?? null,
           amountOriginal: data.amountOriginal ?? null,
@@ -480,7 +519,7 @@ export function useUnifiedExpenseFeed(options?: UseUnifiedExpenseFeedOptions): U
       });
 
       // 4. Mergeja i ordena per data desc
-      const allExpenses = [...bankExpenses, ...offBankExpenses].sort(
+      const newExpenses = [...bankExpenses, ...offBankExpenses].sort(
         (a, b) => b.date.localeCompare(a.date)
       );
 
@@ -495,15 +534,17 @@ export function useUnifiedExpenseFeed(options?: UseUnifiedExpenseFeedOptions): U
       );
 
       const linksMap = new Map<string, ExpenseLink>();
-      for (const exp of allExpenses) {
-        const linkDoc = await getDoc(doc(linksRef, exp.txId));
+      const linkDocs = await Promise.all(
+        newExpenses.map((exp) => getDoc(doc(linksRef, exp.txId)))
+      );
+      for (const linkDoc of linkDocs) {
         if (linkDoc.exists()) {
-          linksMap.set(exp.txId, { id: linkDoc.id, ...linkDoc.data() } as ExpenseLink);
+          linksMap.set(linkDoc.id, { id: linkDoc.id, ...linkDoc.data() } as ExpenseLink);
         }
       }
 
       // 6. Combinar amb links
-      const result: UnifiedExpenseWithLink[] = allExpenses.map((expense) => {
+      const result: UnifiedExpenseWithLink[] = newExpenses.map((expense) => {
         const link = linksMap.get(expense.txId) ?? null;
 
         const assignedAmount = link
@@ -526,29 +567,50 @@ export function useUnifiedExpenseFeed(options?: UseUnifiedExpenseFeedOptions): U
         };
       });
 
-      setExpenses(result);
+      // Si és loadMore, afegir als existents; si no, substituir
+      if (loadMore) {
+        setExpenses(prev => {
+          // Evitar duplicats
+          const existingIds = new Set(prev.map(e => e.expense.txId));
+          const newItems = result.filter(e => !existingIds.has(e.expense.txId));
+          const combined = [...prev, ...newItems];
+          // Reordenar per data
+          return combined.sort((a, b) => b.expense.date.localeCompare(a.expense.date));
+        });
+      } else {
+        setExpenses(result);
+      }
 
     } catch (err) {
       console.error('Error loading unified expense feed:', err);
       setError(err instanceof Error ? err : new Error('Error desconegut'));
     } finally {
       setIsLoading(false);
+      setIsLoadingMore(false);
     }
-  }, [firestore, organizationId, projectId, budgetLineId, loadFilteredExpenses]);
+  }, [firestore, organizationId, projectId, budgetLineId, loadFilteredExpenses, lastBankDoc, lastOffBankDoc]);
 
   const refresh = useCallback(async () => {
-    await loadExpenses();
+    await loadExpenses(false);
   }, [loadExpenses]);
 
+  const loadMore = useCallback(async () => {
+    if (!hasMore || isLoadingMore) return;
+    await loadExpenses(true);
+  }, [loadExpenses, hasMore, isLoadingMore]);
+
   useEffect(() => {
-    loadExpenses();
+    loadExpenses(false);
   }, [organizationId, projectId, budgetLineId]); // eslint-disable-line react-hooks/exhaustive-deps
 
   return {
     expenses,
     isLoading,
+    isLoadingMore,
     error,
     refresh,
+    loadMore,
+    hasMore,
     isFiltered,
     usedFallback,
   };
