@@ -1,7 +1,6 @@
 'use client';
 import * as React from 'react';
 import { StatCard } from '@/components/stat-card';
-import { ExpensesChart } from '@/components/expenses-chart';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
@@ -95,6 +94,130 @@ function ComparisonBadge({
       <Icon className="h-3 w-3" />
       {label}
     </span>
+  );
+}
+
+// Component per mostrar taula Top 5 categories + Altres
+function TopCategoriesTable({
+  transactions,
+  categories,
+  categoryTranslations,
+  texts,
+  buildUrl,
+}: {
+  transactions: Transaction[];
+  categories: Category[] | null;
+  categoryTranslations: Record<string, string>;
+  texts: {
+    title: string;
+    category: string;
+    amount: string;
+    percent: string;
+    delta: string;
+    viewExpenses: string;
+    others: string;
+    noData: string;
+  };
+  buildUrl: (path: string) => string;
+}) {
+  const topCategories = React.useMemo(() => {
+    if (!transactions || transactions.length === 0) return [];
+
+    // Agregar per categoria
+    const byCategory = transactions.reduce((acc, tx) => {
+      const categoryKey = tx.category || 'uncategorized';
+      if (!acc[categoryKey]) {
+        acc[categoryKey] = 0;
+      }
+      acc[categoryKey] += Math.abs(tx.amount);
+      return acc;
+    }, {} as Record<string, number>);
+
+    // Convertir a array i ordenar
+    const sorted = Object.entries(byCategory)
+      .map(([key, amount]) => ({ key, amount }))
+      .sort((a, b) => b.amount - a.amount);
+
+    // Calcular total
+    const total = sorted.reduce((sum, item) => sum + item.amount, 0);
+    if (total === 0) return [];
+
+    // Top 5 + Altres
+    const top5 = sorted.slice(0, 5);
+    const restAmount = sorted.slice(5).reduce((sum, item) => sum + item.amount, 0);
+
+    const result = top5.map(item => ({
+      key: item.key,
+      name: categoryTranslations[item.key] || item.key,
+      amount: item.amount,
+      percent: (item.amount / total) * 100,
+    }));
+
+    if (restAmount > 0) {
+      result.push({
+        key: '_others',
+        name: texts.others,
+        amount: restAmount,
+        percent: (restAmount / total) * 100,
+      });
+    }
+
+    return result;
+  }, [transactions, categoryTranslations, texts.others]);
+
+  if (topCategories.length === 0) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle>{texts.title}</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <p className="text-muted-foreground text-sm">{texts.noData}</p>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>{texts.title}</CardTitle>
+      </CardHeader>
+      <CardContent className="p-0">
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="border-b bg-muted/50">
+                <th className="text-left font-medium p-3">{texts.category}</th>
+                <th className="text-right font-medium p-3">{texts.amount}</th>
+                <th className="text-right font-medium p-3">{texts.percent}</th>
+                <th className="text-right font-medium p-3">{texts.delta}</th>
+                <th className="text-right font-medium p-3"></th>
+              </tr>
+            </thead>
+            <tbody>
+              {topCategories.map((cat) => (
+                <tr key={cat.key} className="border-b last:border-0 hover:bg-muted/30">
+                  <td className="p-3 font-medium">{cat.name}</td>
+                  <td className="p-3 text-right tabular-nums">{formatCurrencyEU(cat.amount)}</td>
+                  <td className="p-3 text-right tabular-nums text-muted-foreground">{cat.percent.toFixed(1)}%</td>
+                  <td className="p-3 text-right text-muted-foreground">—</td>
+                  <td className="p-3 text-right">
+                    {cat.key !== '_others' && (
+                      <Link href={buildUrl(`/dashboard/movimientos?category=${cat.key}`)}>
+                        <Button variant="ghost" size="sm" className="h-7 px-2 text-xs">
+                          {texts.viewExpenses}
+                        </Button>
+                      </Link>
+                    )}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </CardContent>
+    </Card>
   );
 }
 
@@ -1124,14 +1247,22 @@ ${t.dashboard.generatedWith}`;
         </CardContent>
       </Card>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>{t.dashboard.expensesByCategory}</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <ExpensesChart transactions={expenseTransactions} />
-        </CardContent>
-      </Card>
+      <TopCategoriesTable
+        transactions={expenseTransactions}
+        categories={categories}
+        categoryTranslations={t.categories as Record<string, string>}
+        texts={{
+          title: t.dashboard.topCategoriesTitle,
+          category: t.dashboard.topCategoriesCategory,
+          amount: t.dashboard.topCategoriesAmount,
+          percent: t.dashboard.topCategoriesPercent,
+          delta: t.dashboard.topCategoriesDelta,
+          viewExpenses: t.dashboard.topCategoriesViewExpenses,
+          others: t.dashboard.topCategoriesOthers,
+          noData: t.dashboard.noExpenseData,
+        }}
+        buildUrl={buildUrl}
+      />
 
       <Dialog open={shareDialogOpen} onOpenChange={setShareDialogOpen}>
         <DialogContent className="max-w-5xl w-full max-h-[85vh] overflow-hidden">
