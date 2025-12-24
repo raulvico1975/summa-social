@@ -98,8 +98,8 @@ async function callCategorizationAPI(input: {
 /**
  * Tradueix el codi d'error de l'API a un missatge clar per l'usuari
  */
-function getErrorMessage(code: ApiErrorResponse['code'], language: 'ca' | 'es'): { title: string; description: string } {
-  const messages: Record<ApiErrorResponse['code'], { ca: { title: string; description: string }; es: { title: string; description: string } }> = {
+function getErrorMessage(code: ApiErrorResponse['code'], language: 'ca' | 'es' | 'fr'): { title: string; description: string } {
+  const messages: Record<ApiErrorResponse['code'], { ca: { title: string; description: string }; es: { title: string; description: string }; fr: { title: string; description: string } }> = {
     QUOTA_EXCEEDED: {
       ca: {
         title: "Límit d'ús d'IA assolit",
@@ -108,6 +108,10 @@ function getErrorMessage(code: ApiErrorResponse['code'], language: 'ca' | 'es'):
       es: {
         title: "Límite de uso de IA alcanzado",
         description: "Se ha alcanzado el límite de uso de IA para hoy. La categorización automática se reanudará cuando se renueve la cuota.",
+      },
+      fr: {
+        title: "Limite d'utilisation de l'IA atteinte",
+        description: "La limite d'utilisation de l'IA pour aujourd'hui a été atteinte. La catégorisation automatique reprendra lorsque le quota sera renouvelé.",
       },
     },
     RATE_LIMITED: {
@@ -119,6 +123,10 @@ function getErrorMessage(code: ApiErrorResponse['code'], language: 'ca' | 'es'):
         title: "Demasiadas peticiones",
         description: "Se están haciendo demasiadas peticiones. Esperando...",
       },
+      fr: {
+        title: "Trop de requêtes",
+        description: "Trop de requêtes en cours. En attente...",
+      },
     },
     TRANSIENT: {
       ca: {
@@ -128,6 +136,10 @@ function getErrorMessage(code: ApiErrorResponse['code'], language: 'ca' | 'es'):
       es: {
         title: "Error temporal",
         description: "Error temporal del servidor. Reintentando...",
+      },
+      fr: {
+        title: "Erreur temporaire",
+        description: "Erreur temporaire du serveur. Nouvelle tentative...",
       },
     },
     INVALID_INPUT: {
@@ -139,6 +151,10 @@ function getErrorMessage(code: ApiErrorResponse['code'], language: 'ca' | 'es'):
         title: "Datos inválidos",
         description: "Los datos de la transacción no son válidos.",
       },
+      fr: {
+        title: "Données invalides",
+        description: "Les données de la transaction ne sont pas valides.",
+      },
     },
     AI_ERROR: {
       ca: {
@@ -148,6 +164,10 @@ function getErrorMessage(code: ApiErrorResponse['code'], language: 'ca' | 'es'):
       es: {
         title: "IA no disponible",
         description: "No se ha podido acceder a la clave de IA del sistema. Revisa la configuración del servicio o inténtalo más tarde.",
+      },
+      fr: {
+        title: "IA non disponible",
+        description: "Impossible d'accéder à la clé IA du système. Vérifiez la configuration du service ou réessayez plus tard.",
       },
     },
   };

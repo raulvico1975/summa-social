@@ -355,6 +355,7 @@ function QuickAssignPopover({
 
 export default function ExpensesInboxPage() {
   const { t } = useTranslations();
+  const ep = t.projectModule.expensesPage;
   const searchParams = useSearchParams();
   const router = useRouter();
   const { buildUrl } = useOrgUrl();
@@ -500,14 +501,14 @@ export default function ExpensesInboxPage() {
 
       const budgetInfo = budgetLine ? ` → ${budgetLine.name}` : '';
       toast({
-        title: 'Assignada',
-        description: `Despesa assignada a "${project.name}"${budgetInfo}`,
+        title: ep.toastAssigned,
+        description: ep.toastAssignedDesc(project.name, budgetInfo),
       });
     } catch (err) {
       toast({
         variant: 'destructive',
-        title: 'Error',
-        description: err instanceof Error ? err.message : 'Error assignant despesa',
+        title: ep.toastError,
+        description: err instanceof Error ? err.message : ep.toastErrorAssigning,
       });
     }
   };
@@ -521,14 +522,14 @@ export default function ExpensesInboxPage() {
       await refresh();
       setSplitModalExpense(null);
       toast({
-        title: 'Assignació desada',
-        description: 'La despesa s\'ha assignat correctament.',
+        title: ep.toastAssignmentSaved,
+        description: ep.toastAssignmentSavedDesc,
       });
     } catch (err) {
       toast({
         variant: 'destructive',
-        title: 'Error',
-        description: err instanceof Error ? err.message : 'Error desant assignació',
+        title: ep.toastError,
+        description: err instanceof Error ? err.message : ep.toastErrorSaving,
       });
     }
   };
@@ -553,14 +554,14 @@ export default function ExpensesInboxPage() {
       setSelectedIds(new Set());
       setBulkAssignOpen(false);
       toast({
-        title: 'Assignació massiva completada',
-        description: `${selectedExpenses.length} despeses assignades a "${project.name}"`,
+        title: ep.toastBulkAssigned,
+        description: ep.toastBulkAssignedDesc(selectedExpenses.length, project.name),
       });
     } catch (err) {
       toast({
         variant: 'destructive',
-        title: 'Error',
-        description: err instanceof Error ? err.message : 'Error en assignació massiva',
+        title: ep.toastError,
+        description: err instanceof Error ? err.message : ep.toastErrorBulk,
       });
     } finally {
       setIsBulkAssigning(false);
@@ -586,7 +587,7 @@ export default function ExpensesInboxPage() {
 
   // Handler per des-assignar completament (amb confirmació)
   const handleUnassign = async (txId: string) => {
-    if (!confirm('Segur que vols eliminar l\'assignació d\'aquesta despesa?')) return;
+    if (!confirm(ep.confirmUnassign)) return;
     await handleUnassignAll(txId);
   };
 
@@ -597,14 +598,14 @@ export default function ExpensesInboxPage() {
       await refresh();
       trackUX('expenses.unassign', { txId });
       toast({
-        title: 'Assignació eliminada',
-        description: 'La despesa ja no està assignada a cap projecte.',
+        title: ep.toastUnassigned,
+        description: ep.toastUnassignedDesc,
       });
     } catch (err) {
       toast({
         variant: 'destructive',
-        title: 'Error',
-        description: err instanceof Error ? err.message : 'Error eliminant assignació',
+        title: ep.toastError,
+        description: err instanceof Error ? err.message : ep.toastErrorRemoving,
       });
     }
   };
@@ -631,14 +632,14 @@ export default function ExpensesInboxPage() {
       await refresh();
       trackUX('expenses.removeAssignment', { txId, assignmentIndex });
       toast({
-        title: 'Assignació eliminada',
-        description: 'S\'ha eliminat l\'assignació del projecte.',
+        title: ep.toastAssignmentRemoved,
+        description: ep.toastAssignmentRemovedDesc,
       });
     } catch (err) {
       toast({
         variant: 'destructive',
-        title: 'Error',
-        description: err instanceof Error ? err.message : 'Error eliminant assignació',
+        title: ep.toastError,
+        description: err instanceof Error ? err.message : ep.toastErrorRemoving,
       });
     }
   };
@@ -658,10 +659,10 @@ export default function ExpensesInboxPage() {
     return (
       <div className="flex flex-col items-center justify-center py-12 gap-4">
         <AlertCircle className="h-12 w-12 text-destructive" />
-        <p className="text-destructive font-medium">Error carregant despeses</p>
+        <p className="text-destructive font-medium">{ep.errorLoading}</p>
         <p className="text-muted-foreground text-sm">{error.message}</p>
         <Button onClick={() => window.location.reload()} variant="outline">
-          Reintentar
+          {ep.retry}
         </Button>
       </div>
     );
@@ -672,9 +673,9 @@ export default function ExpensesInboxPage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold">Despeses per assignar</h1>
+          <h1 className="text-2xl font-bold">{ep.title}</h1>
           <p className="text-muted-foreground">
-            Despeses elegibles per vincular a projectes
+            {ep.subtitle}
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -684,7 +685,7 @@ export default function ExpensesInboxPage() {
             size="sm"
           >
             <Plus className="h-4 w-4 mr-2" />
-            Afegir despesa (contrapart)
+            {ep.addOffBank}
           </Button>
           <Link href={buildUrl('/dashboard/project-module/projects')}>
             <Button variant="outline" size="sm">
@@ -709,7 +710,7 @@ export default function ExpensesInboxPage() {
         <div className="relative max-w-md">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
-            placeholder="Cerca per descripció, contrapart, categoria..."
+            placeholder={ep.searchPlaceholder}
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="pl-9 pr-9"
@@ -732,28 +733,28 @@ export default function ExpensesInboxPage() {
             size="sm"
             onClick={() => setTableFilter('all')}
           >
-            Tots ({expenses.length})
+            {ep.filterAll} ({expenses.length})
           </Button>
           <Button
             variant={tableFilter === 'withoutDocument' ? 'default' : 'outline'}
             size="sm"
             onClick={() => setTableFilter('withoutDocument')}
           >
-            Sense document
+            {ep.filterWithoutDocument}
           </Button>
           <Button
             variant={tableFilter === 'uncategorized' ? 'default' : 'outline'}
             size="sm"
             onClick={() => setTableFilter('uncategorized')}
           >
-            Sense categoria
+            {ep.filterUncategorized}
           </Button>
           <Button
             variant={tableFilter === 'unassigned' ? 'default' : 'outline'}
             size="sm"
             onClick={() => setTableFilter('unassigned')}
           >
-            No assignades
+            {ep.filterUnassigned}
           </Button>
           <Button
             variant={tableFilter === 'offBank' ? 'default' : 'outline'}
@@ -761,7 +762,7 @@ export default function ExpensesInboxPage() {
             onClick={() => setTableFilter('offBank')}
           >
             <Globe className="h-4 w-4 mr-1" />
-            Terreny
+            {ep.filterOffBank}
           </Button>
           <Button
             variant={tableFilter === 'bank' ? 'default' : 'outline'}
@@ -769,7 +770,7 @@ export default function ExpensesInboxPage() {
             onClick={() => setTableFilter('bank')}
           >
             <Landmark className="h-4 w-4 mr-1" />
-            Seu
+            {ep.filterBank}
           </Button>
         </div>
       </div>
@@ -794,7 +795,7 @@ export default function ExpensesInboxPage() {
             )}
             {!isLoading && (
               <span className="text-muted-foreground">
-                · {expenses.length} {expenses.length === 1 ? 'resultat' : 'resultats'}
+                · {expenses.length} {ep.filterResults(expenses.length)}
               </span>
             )}
           </div>
@@ -819,17 +820,17 @@ export default function ExpensesInboxPage() {
                 <Checkbox
                   checked={allSelected}
                   onCheckedChange={toggleSelectAll}
-                  aria-label="Seleccionar tot"
+                  aria-label={ep.tableSelectAll}
                 />
               </TableHead>
-              <TableHead className="w-[50px]">Font</TableHead>
-              <TableHead className="w-[30px] text-center">Doc</TableHead>
-              <TableHead className="w-[100px]">Data</TableHead>
-              <TableHead>Descripció</TableHead>
-              <TableHead>Categoria</TableHead>
-              <TableHead>Origen / Destinatari</TableHead>
-              <TableHead className="text-right">Import</TableHead>
-              <TableHead className="w-[80px]">Estat</TableHead>
+              <TableHead className="w-[50px]">{ep.tableSource}</TableHead>
+              <TableHead className="w-[30px] text-center">{ep.tableDoc}</TableHead>
+              <TableHead className="w-[100px]">{ep.tableDate}</TableHead>
+              <TableHead>{ep.tableDescription}</TableHead>
+              <TableHead>{ep.tableCategory}</TableHead>
+              <TableHead>{ep.tableCounterparty}</TableHead>
+              <TableHead className="text-right">{ep.tableAmount}</TableHead>
+              <TableHead className="w-[80px]">{ep.tableStatus}</TableHead>
               <TableHead className="w-[120px]"></TableHead>
             </TableRow>
           </TableHeader>
@@ -853,7 +854,7 @@ export default function ExpensesInboxPage() {
               <TableRow>
                 <TableCell colSpan={10} className="text-center py-12 text-muted-foreground">
                   {tableFilter !== 'all' || searchQuery
-                    ? 'No s\'han trobat resultats'
+                    ? ep.filterNoResults
                     : t.projectModule.noEligibleExpenses}
                 </TableCell>
               </TableRow>
@@ -871,7 +872,7 @@ export default function ExpensesInboxPage() {
                       <Checkbox
                         checked={isSelected}
                         onCheckedChange={() => toggleSelect(expense.txId)}
-                        aria-label={`Seleccionar despesa ${expense.txId}`}
+                        aria-label={`${ep.tableSelectExpense} ${expense.txId}`}
                       />
                     </TableCell>
                     <TableCell>
@@ -891,8 +892,8 @@ export default function ExpensesInboxPage() {
                           type="button"
                           onClick={() => window.open(expense.documentUrl!, '_blank', 'noopener,noreferrer')}
                           className="cursor-pointer hover:scale-110 transition-transform"
-                          title="Obrir comprovant"
-                          aria-label="Obrir comprovant en nova pestanya"
+                          title={ep.tooltipOpenDocument}
+                          aria-label={ep.tooltipOpenDocument}
                         >
                           <Circle className="h-2.5 w-2.5 fill-green-500 text-green-500 inline-block" />
                         </button>

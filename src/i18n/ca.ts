@@ -896,7 +896,13 @@ export const ca = {
     perMonth: "mes",
     memberSince: "Soci des de",
     iban: "IBAN",
-    errorRequiredFields: "Els camps Nom, DNI/CIF i Codi Postal són obligatoris."
+    errorRequiredFields: "Els camps Nom, DNI/CIF i Codi Postal són obligatoris.",
+    // Claus per filtres de donants/socis actius
+    allPeriods: "Tot el període",
+    filterActiveDonors: "Donants actius",
+    filterActiveMembers: "Socis actius",
+    filterActive: "Donants i socis actius",
+    showingCount: ({ count }: { count: number }) => `Mostrant ${count} donants amb aportacions al període`,
   },
   donorDetail: {
     noTaxId: "Sense NIF",
@@ -1532,6 +1538,62 @@ export const ca = {
     needsReviewBadge: "Pendent de revisió",
     noPendingExpenses: "No hi ha despeses pendents de revisió",
     noEligibleExpenses: "No hi ha despeses elegibles per assignar",
+    // Pàgina de despeses (inbox)
+    expensesPage: {
+      title: "Despeses per assignar",
+      subtitle: "Despeses elegibles per vincular a projectes",
+      addOffBank: "Afegir despesa (contrapart)",
+      errorLoading: "Error carregant despeses",
+      retry: "Reintentar",
+      // Filtres
+      filterAll: "Tots",
+      filterWithoutDocument: "Sense document",
+      filterUncategorized: "Sense categoria",
+      filterUnassigned: "No assignades",
+      filterOffBank: "Terreny",
+      filterBank: "Seu",
+      filterNoResults: "No s'han trobat resultats",
+      filterResults: (count: number): string => count === 1 ? "resultat" : "resultats",
+      // Cerca
+      searchPlaceholder: "Cerca per descripció, contrapart, categoria...",
+      // Taula
+      tableSource: "Font",
+      tableDoc: "Doc",
+      tableDate: "Data",
+      tableDescription: "Descripció",
+      tableCategory: "Categoria",
+      tableCounterparty: "Origen / Destinatari",
+      tableAmount: "Import",
+      tableStatus: "Estat",
+      tableSelectAll: "Seleccionar tot",
+      tableSelectExpense: "Seleccionar despesa",
+      // Accions
+      actionAssign: "Assignar",
+      actionSplit: "Dividir",
+      actionEdit: "Editar",
+      actionUnassign: "Desassignar",
+      // Toasts
+      toastAssigned: "Assignada",
+      toastAssignedDesc: (projectName: string, budgetInfo: string) => `Despesa assignada a "${projectName}"${budgetInfo}`,
+      toastAssignmentSaved: "Assignació desada",
+      toastAssignmentSavedDesc: "La despesa s'ha assignat correctament.",
+      toastBulkAssigned: "Assignació massiva completada",
+      toastBulkAssignedDesc: (count: number, projectName: string) => `${count} despeses assignades a "${projectName}"`,
+      toastUnassigned: "Assignació eliminada",
+      toastUnassignedDesc: "La despesa ja no està assignada a cap projecte.",
+      toastAssignmentRemoved: "Assignació eliminada",
+      toastAssignmentRemovedDesc: "S'ha eliminat l'assignació del projecte.",
+      toastError: "Error",
+      toastErrorAssigning: "Error assignant despesa",
+      toastErrorSaving: "Error desant assignació",
+      toastErrorBulk: "Error en assignació massiva",
+      toastErrorRemoving: "Error eliminant assignació",
+      // Confirmació
+      confirmUnassign: "Segur que vols eliminar l'assignació d'aquesta despesa?",
+      // Tooltips
+      tooltipOpenDocument: "Obrir comprovant",
+      tooltipNoDocument: "Sense comprovant",
+    },
     // Captura (terreny)
     capture: {
       titleEditor: "Pujar comprovants",
