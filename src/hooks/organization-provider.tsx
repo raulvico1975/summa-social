@@ -302,18 +302,19 @@ export function useCurrentOrganization(): OrganizationContextType {
  */
 export function useOrgUrl() {
   const { orgSlug } = useCurrentOrganization();
-  
-  const buildUrl = React.useCallback((path: string) => {
+
+  const buildUrl = React.useCallback((path: string): string => {
     if (!orgSlug) {
-      // Fallback a URLs sense slug (compatibilitat)
+      // Fallback a URLs sense slug (no s'hauria d'arribar aquí si el component
+      // comprova orgSlug abans de renderitzar links)
       return path;
     }
-    
+
     // Eliminar /dashboard del principi si existeix, perquè l'afegirem amb el slug
-    const cleanPath = path.startsWith('/dashboard') 
-      ? path 
+    const cleanPath = path.startsWith('/dashboard')
+      ? path
       : `/dashboard${path.startsWith('/') ? path : '/' + path}`;
-    
+
     return `/${orgSlug}${cleanPath}`;
   }, [orgSlug]);
 

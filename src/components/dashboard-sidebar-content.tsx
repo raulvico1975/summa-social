@@ -200,6 +200,25 @@ export function DashboardSidebarContent() {
 
   const userInitials = getInitials(userName);
 
+  // No renderitzar el menú fins que orgSlug estigui disponible
+  // per evitar que Cmd+click generi URLs sense slug
+  if (!orgSlug) {
+    return (
+      <>
+        <SidebarHeader className="border-b">
+          <div className="flex items-center gap-2 p-2 group-data-[collapsible=icon]:justify-center">
+            <Logo className="h-8 w-8 text-primary" />
+            <div className="flex flex-col group-data-[collapsible=icon]:hidden">
+              <span className="text-lg font-semibold font-headline">Summa Social</span>
+            </div>
+          </div>
+        </SidebarHeader>
+        <SidebarContent className="flex-1 p-2" />
+        <SidebarFooter className="border-t p-2" />
+      </>
+    );
+  }
+
   return (
     <>
       <SidebarHeader className="border-b">
