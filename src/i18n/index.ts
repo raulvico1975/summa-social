@@ -3,10 +3,11 @@
 import { createContext, useContext } from 'react';
 import { ca } from './ca';
 import { es } from './es';
+import { fr } from './fr';
 
-export type Language = 'ca' | 'es';
+export type Language = 'ca' | 'es' | 'fr';
 
-export const translations = { ca, es };
+export const translations = { ca, es, fr };
 
 export interface TranslationsContextType {
   language: Language;

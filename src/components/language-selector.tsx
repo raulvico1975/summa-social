@@ -20,9 +20,12 @@ export function LanguageSelector() {
 
   const handleLanguageChange = (newLanguage: Language) => {
     setLanguage(newLanguage);
-    
-    const languageName = newLanguage === 'ca' ? t.settings.catalan : t.settings.spanish;
-    
+
+    const languageName =
+      newLanguage === 'ca' ? t.settings.catalan :
+      newLanguage === 'es' ? t.settings.spanish :
+      'Français';
+
     toast({
       title: t.settings.languageSaved,
       description: t.settings.languageSavedDescription(languageName),
@@ -50,6 +53,7 @@ export function LanguageSelector() {
             <SelectContent>
               <SelectItem value="ca">{t.settings.catalan}</SelectItem>
               <SelectItem value="es">{t.settings.spanish}</SelectItem>
+              <SelectItem value="fr">Français</SelectItem>
             </SelectContent>
           </Select>
         </div>
