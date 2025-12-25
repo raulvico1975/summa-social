@@ -1069,35 +1069,139 @@ export function useReturnImporter() {
         const group = groupedMatches.find(g => g.groupId === returnItem.groupId);
         if (!group) continue;
 
+        const parentId = group.originalTransaction.id;
+
         // ═══════════════════════════════════════════════════════════════════
-        // IDEMPOTENCY CHECK: Verificar si ja existeixen fills per aquest pare
+        // CARREGAR FILLS EXISTENTS
         // ═══════════════════════════════════════════════════════════════════
         const existingChildrenQuery = query(
           collection(firestore, 'organizations', organizationId, 'transactions'),
-          where('parentTransactionId', '==', group.originalTransaction.id)
+          where('parentTransactionId', '==', parentId)
         );
         const existingChildrenSnap = await getDocs(existingChildrenQuery);
         const existingChildrenCount = existingChildrenSnap.size;
 
         // ═══════════════════════════════════════════════════════════════════
-        // FORCE RECREATE: Si l'opció està activa, eliminar TOTS els fills existents
+        // MODE FORCE RECREATE: Eliminar TOTS els fills i crear des de zero
+        // Aquest és el mode determinista per migracions - garanteix consistència
         // ═══════════════════════════════════════════════════════════════════
-        if (forceRecreateChildren && existingChildrenCount > 0) {
-          console.log(`[processReturns] 🔴 FORCE RECREATE: Eliminant ${existingChildrenCount} fills existents del pare ${group.originalTransaction.id}`);
+        if (forceRecreateChildren) {
+          console.log(`[processReturns] 🔴 FORCE RECREATE MODE per pare ${parentId}`);
 
-          for (const childDoc of existingChildrenSnap.docs) {
-            await deleteDoc(doc(firestore, 'organizations', organizationId, 'transactions', childDoc.id));
-            console.log(`[processReturns] Eliminat fill: ${childDoc.id}`);
+          // 1. ELIMINAR tots els fills existents
+          if (existingChildrenCount > 0) {
+            console.log(`[processReturns] Eliminant ${existingChildrenCount} fills existents...`);
+            for (const childDoc of existingChildrenSnap.docs) {
+              await deleteDoc(doc(firestore, 'organizations', organizationId, 'transactions', childDoc.id));
+              console.log(`[processReturns] ✅ Eliminat fill: ${childDoc.id}`);
+            }
           }
 
-          console.log(`[processReturns] ✅ Fills eliminats. Ara es crearan de nou.`);
+          // 2. CREAR TOTES les filles des de les devolucions parsejades
+          const allReturnsInGroup = group.returns;
+          const resolubles = allReturnsInGroup.filter(r => r.matchedDonor);
+          const pendents = allReturnsInGroup.filter(r => !r.matchedDonor);
+
+          console.log(`[processReturns] Creant ${allReturnsInGroup.length} filles (${resolubles.length} amb donant, ${pendents.length} sense)`);
+
+          // Crear filles per TOTES les devolucions (resolubles i pendents)
+          for (const ret of allReturnsInGroup) {
+            const hasContact = !!ret.matchedDonor;
+            const childTxData: Record<string, unknown> = {
+              source: 'remittance',
+              parentTransactionId: parentId,
+              amount: -ret.amount,  // Import negatiu (devolució)
+              date: ret.date?.toISOString().split('T')[0] || group.date.toISOString().split('T')[0],
+              transactionType: 'return',
+              description: ret.returnReason || group.originalTransaction.description || 'Devolució',
+              createdAt: new Date().toISOString(),
+            };
+
+            // Si té donant assignat, afegir contactId/contactType
+            if (hasContact) {
+              childTxData.contactId = ret.matchedDonor!.id;
+              childTxData.contactType = 'donor';
+              childTxData.emisorId = ret.matchedDonor!.id;
+              childTxData.emisorName = ret.matchedDonor!.name;
+            }
+
+            const newChildRef = await addDoc(
+              collection(firestore, 'organizations', organizationId, 'transactions'),
+              childTxData
+            );
+            console.log(`[processReturns] ✅ Creada filla ${newChildRef.id} - contactId: ${hasContact ? ret.matchedDonor!.id : 'null'}`);
+
+            // Actualitzar donant si té contactId
+            if (hasContact) {
+              const donorRef = doc(firestore, 'organizations', organizationId, 'contacts', ret.matchedDonor!.id);
+              await updateDoc(donorRef, {
+                returnCount: increment(1),
+                lastReturnDate: ret.date?.toISOString().split('T')[0] || new Date().toISOString().split('T')[0],
+                status: 'pending_return',
+              });
+              processedGrouped++;
+            }
+          }
+
+          // 3. ACTUALITZAR EL PARE amb comptadors correctes
+          const itemCount = allReturnsInGroup.length;
+          const resolvedCount = resolubles.length;
+          const pendingCount = pendents.length;
+          const pendingTotalAmount = pendents.reduce((sum, r) => sum + r.amount, 0);
+
+          let remittanceStatus: 'complete' | 'partial' | 'pending';
+          if (pendingCount === 0) {
+            remittanceStatus = 'complete';
+          } else if (resolvedCount === 0) {
+            remittanceStatus = 'pending';
+          } else {
+            remittanceStatus = 'partial';
+          }
+
+          const pendingReturnsData = pendingCount > 0 ? pendents.map(r => {
+            const item: {
+              iban: string;
+              amount: number;
+              date: string;
+              originalName?: string;
+              returnReason?: string;
+            } = {
+              iban: r.iban,
+              amount: r.amount,
+              date: r.date?.toISOString().split('T')[0] || '',
+            };
+            if (r.originalName) item.originalName = r.originalName;
+            if (r.returnReason) item.returnReason = r.returnReason;
+            return item;
+          }) : null;
+
+          const parentUpdateData = {
+            isRemittance: true,
+            remittanceType: 'returns' as const,
+            remittanceItemCount: itemCount,
+            remittanceResolvedCount: resolvedCount,
+            remittancePendingCount: pendingCount,
+            remittancePendingTotalAmount: pendingTotalAmount,
+            remittanceStatus,
+            pendingReturns: pendingReturnsData,
+          };
+
+          console.log('[processReturns] FORCE RECREATE - parent update:', parentUpdateData);
+          const parentTxRef = doc(firestore, 'organizations', organizationId, 'transactions', parentId);
+          await updateDoc(parentTxRef, parentUpdateData);
+
+          console.log(`[processReturns] ✅ FORCE RECREATE completat per pare ${parentId}`);
+          continue; // Passar al següent grup, saltar la lògica normal
         }
 
-        // Si ja hi ha fills I NO estem forçant recreació, només actualitzem el pare (no creem més fills)
-        const skipChildCreation = existingChildrenCount > 0 && !forceRecreateChildren;
+        // ═══════════════════════════════════════════════════════════════════
+        // MODE NORMAL (sense forceRecreate): idempotència tradicional
+        // ═══════════════════════════════════════════════════════════════════
+
+        // Si ja hi ha fills, només actualitzem el pare (no creem més fills)
+        const skipChildCreation = existingChildrenCount > 0;
 
         // SEPARAR: resolubles (amb donant) vs pendents (sense donant)
-        // Necessari per a la creació de filles (quan !skipChildCreation)
         const resolubles = group.returns.filter(r => r.matchedDonor);
         const pendents = group.returns.filter(r => !r.matchedDonor);
 
@@ -1116,115 +1220,32 @@ export function useReturnImporter() {
         }> | null;
 
         if (skipChildCreation) {
-          // ═══════════════════════════════════════════════════════════════════
-          // BACKFILL: Actualitzar filles existents sense contactId
-          // ═══════════════════════════════════════════════════════════════════
-          console.log(`[processReturns] Grup ${group.groupId} ja té ${existingChildrenCount} fills existents (pare: ${group.originalTransaction.id}) - aplicant backfill`);
+          // Ja hi ha fills - recalcular estat des de Firestore
+          console.log(`[processReturns] Grup ${group.groupId} ja té ${existingChildrenCount} fills (pare: ${parentId}) - mode idempotent`);
 
-          // Carregar dades de les filles existents (amb ID del document)
-          const existingChildrenWithId = existingChildrenSnap.docs.map(d => {
-            const data = d.data() as Transaction;
-            // Usar l'ID del document, no el camp id de les dades
-            return { ...data, id: d.id };
-          });
-
-          // Filles sense contactId (pendents d'assignar)
-          const childrenWithoutContact = existingChildrenWithId.filter(c => !c.contactId);
-          console.log(`[processReturns] Filles sense contactId: ${childrenWithoutContact.length}`);
-          console.log(`[processReturns] Resolubles (amb donant): ${resolubles.length}`);
-
-          // Helper robust per comparar imports
-          const sameAmount = (a: number, b: number) => Math.abs(a - b) <= 0.02;
-
-          // Per cada devolució resoluble (amb donant), buscar una filla coincident
-          let backfilledCount = 0;
-          const usedChildIds = new Set<string>();
-
-          for (const ret of resolubles) {
-            const retAmount = ret.amount; // positiu (import de la devolució)
-            console.log(`[processReturns] Buscant filla per devolució: ${ret.matchedDonor?.name}, import=${retAmount}€`);
-
-            // Buscar filla amb import coincident (tolerància 0.02€) i sense contactId
-            const matchingChild = childrenWithoutContact.find(child => {
-              if (usedChildIds.has(child.id)) return false;
-              if (typeof child.amount !== 'number') {
-                console.log(`[processReturns] Filla ${child.id} té amount invàlid: ${child.amount}`);
-                return false;
-              }
-              const childAmount = Math.abs(child.amount); // positiu
-              const matches = sameAmount(childAmount, retAmount);
-              console.log(`[processReturns] Comparant filla ${child.id}: ${childAmount}€ vs ${retAmount}€ → ${matches ? 'MATCH' : 'no'}`);
-              return matches;
-            });
-
-            if (matchingChild) {
-              // Marcar com a usada
-              usedChildIds.add(matchingChild.id);
-
-              // Actualitzar la filla NOMÉS amb contactId i contactType
-              // (no emisorId/emisorName - camps que l'app no llegeix)
-              const childRef = doc(firestore, 'organizations', organizationId, 'transactions', matchingChild.id);
-              await updateDoc(childRef, {
-                contactId: ret.matchedDonor!.id,
-                contactType: 'donor',
-                transactionType: 'return',
-              });
-
-              // NO actualitzem el donant aquí (simplificar per debug)
-
-              backfilledCount++;
-              processedGrouped++;
-              console.log(`[processReturns] ✅ Backfill: filla ${matchingChild.id} assignada a donant ${ret.matchedDonor!.name} (contactId: ${ret.matchedDonor!.id})`);
-            } else {
-              console.log(`[processReturns] ⚠️ No s'ha trobat filla per devolució ${ret.matchedDonor?.name} (${retAmount}€)`);
-            }
-          }
-
-          console.log(`[processReturns] Backfill completat: ${backfilledCount}/${resolubles.length} filles actualitzades`);
-
-          // GUARDRAIL: Si no hem escrit res però hi havia resolubles, avisar
-          if (backfilledCount === 0 && resolubles.length > 0) {
-            console.warn(`[processReturns] ⚠️ BACKFILL FALLIT: ${resolubles.length} resolubles però 0 filles actualitzades!`);
-            console.warn(`[processReturns] Filles disponibles: ${childrenWithoutContact.map(c => `${c.id}:${c.amount}`).join(', ')}`);
-            console.warn(`[processReturns] Resolubles: ${resolubles.map(r => `${r.matchedDonor?.name}:${r.amount}`).join(', ')}`);
-          }
-
-          // Recalcular estat DESPRÉS del backfill (recarregar de Firestore)
-          const updatedChildrenSnap = await getDocs(existingChildrenQuery);
-          const updatedChildren = updatedChildrenSnap.docs.map(d => d.data());
-
-          // Comptar resoltes (amb contactId) vs pendents (sense contactId)
-          resolvedCount = updatedChildren.filter(c => c.contactId).length;
-
-          // itemCount: usar el del pare si existeix, sinó el nombre de fills actuals
+          const existingChildren = existingChildrenSnap.docs.map(d => d.data());
+          resolvedCount = existingChildren.filter(c => c.contactId).length;
           itemCount = group.originalTransaction.remittanceItemCount ?? existingChildrenCount;
-
-          // pendingCount: diferència entre total i resoltes
           pendingCount = Math.max(0, itemCount - resolvedCount);
 
-          // Calcular estat basat en les dades reals
           if (pendingCount === 0 && itemCount > 0) {
             remittanceStatus = 'complete';
             pendingReturnsData = null;
             pendingTotalAmount = 0;
           } else if (resolvedCount === 0) {
             remittanceStatus = 'pending';
-            // Mantenir pendingReturns del pare si existeix
             pendingReturnsData = group.originalTransaction.pendingReturns ?? null;
             pendingTotalAmount = pendingReturnsData?.reduce((sum, r) => sum + r.amount, 0) ?? 0;
           } else {
             remittanceStatus = 'partial';
-            // Recalcular pendingReturns basant-se en filles sense contactId
-            const stillPending = updatedChildren.filter(c => !c.contactId);
+            const stillPending = existingChildren.filter(c => !c.contactId);
             pendingReturnsData = stillPending.length > 0 ? stillPending.map(c => ({
-              iban: '', // No tenim IBAN de la filla
+              iban: '',
               amount: Math.abs(c.amount || 0),
               date: c.date || '',
             })) : null;
             pendingTotalAmount = stillPending.reduce((sum, c) => sum + Math.abs(c.amount || 0), 0);
           }
-
-          console.log(`[processReturns] Estat recalculat post-backfill: resolved=${resolvedCount}, pending=${pendingCount}, itemCount=${itemCount}, status=${remittanceStatus}`);
         } else {
           // ═══════════════════════════════════════════════════════════════════
           // CALCULAR ESTAT DES DE DADES PARSEJADES (primer processament)
@@ -1245,7 +1266,6 @@ export function useReturnImporter() {
           }
 
           // Preparar pendingReturns (dades per assistència posterior)
-          // IMPORTANT: No passar undefined a Firestore - usar null o ometre el camp
           pendingReturnsData = pendingCount > 0 ? pendents.map(r => {
             const item: {
               iban: string;
