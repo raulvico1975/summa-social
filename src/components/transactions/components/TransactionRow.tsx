@@ -648,7 +648,7 @@ export const TransactionRow = React.memo(function TransactionRow({
                   rel="noopener noreferrer"
                   className="inline-flex"
                 >
-                  <Circle className="h-2.5 w-2.5 fill-green-500 text-green-500" />
+                  <Circle className="h-3.5 w-3.5 fill-green-500 text-green-500" />
                 </a>
               </TooltipTrigger>
               <TooltipContent>{t.viewDocument}</TooltipContent>
@@ -672,7 +672,7 @@ export const TransactionRow = React.memo(function TransactionRow({
                 onClick={handleAttachDocument}
                 className="inline-flex hover:scale-110 transition-transform"
               >
-                <Circle className={`h-2.5 w-2.5 ${isExpense ? 'text-muted-foreground' : 'text-muted-foreground/30'}`} />
+                <Circle className={`h-3.5 w-3.5 ${isExpense ? 'text-muted-foreground' : 'text-muted-foreground/30'}`} />
               </button>
             </TooltipTrigger>
             <TooltipContent>
