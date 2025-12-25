@@ -75,6 +75,7 @@ export function ReturnImporter({
   const [selectedRows, setSelectedRows] = React.useState<Set<number>>(new Set());
   const [dragActive, setDragActive] = React.useState(false);
   const [forceRecreateChildren, setForceRecreateChildren] = React.useState(false);
+  const [confirmForceRecreate, setConfirmForceRecreate] = React.useState(false);
 
   const {
     step,
@@ -217,6 +218,15 @@ export function ReturnImporter({
   };
 
   const handleProcess = async () => {
+    // Si forceRecreateChildren està activat, requerir confirmació
+    if (forceRecreateChildren && !confirmForceRecreate) {
+      toast({
+        title: 'Confirmació requerida',
+        description: 'Has de marcar la casella de confirmació per forçar la recreació.',
+        variant: 'destructive',
+      });
+      return;
+    }
     await processReturns({ forceRecreateChildren });
     onComplete();
   };
@@ -928,22 +938,40 @@ export function ReturnImporter({
               )}
             </div>
 
-            {/* SuperAdmin: Opció de recrear fills */}
-            {isSuperAdmin && stats.grouped > 0 && (
-              <div className="flex items-center gap-3 p-3 rounded-lg border border-red-200 bg-red-50">
-                <Checkbox
-                  id="forceRecreateChildren"
-                  checked={forceRecreateChildren}
-                  onCheckedChange={(checked) => setForceRecreateChildren(checked === true)}
-                />
-                <div className="flex-1">
-                  <Label htmlFor="forceRecreateChildren" className="text-red-800 font-medium cursor-pointer">
-                    Recrear fills (forçar)
-                  </Label>
-                  <p className="text-xs text-red-700 mt-0.5">
-                    Això eliminarà i recrearà les devolucions filles d'aquesta remesa. Usar només si el backfill automàtic no funciona.
-                  </p>
+            {/* SuperAdmin: Opció de recrear fills - SEMPRE visible per SuperAdmin */}
+            {isSuperAdmin && (
+              <div className="space-y-2 p-3 rounded-lg border border-red-300 bg-red-50">
+                <div className="flex items-center gap-3">
+                  <Checkbox
+                    id="forceRecreateChildren"
+                    checked={forceRecreateChildren}
+                    onCheckedChange={(checked) => {
+                      setForceRecreateChildren(checked === true);
+                      if (!checked) setConfirmForceRecreate(false);
+                    }}
+                  />
+                  <div className="flex-1">
+                    <Label htmlFor="forceRecreateChildren" className="text-red-800 font-medium cursor-pointer">
+                      Forçar recreació de devolucions (SuperAdmin)
+                    </Label>
+                    <p className="text-xs text-red-700 mt-0.5">
+                      Elimina i recrea les filles de l'apunt pare seleccionat. Ús només per migracions.
+                    </p>
+                  </div>
                 </div>
+                {/* Confirmació obligatòria si s'activa */}
+                {forceRecreateChildren && (
+                  <div className="flex items-center gap-2 ml-6 p-2 bg-red-100 rounded border border-red-400">
+                    <Checkbox
+                      id="confirmForceRecreate"
+                      checked={confirmForceRecreate}
+                      onCheckedChange={(checked) => setConfirmForceRecreate(checked === true)}
+                    />
+                    <Label htmlFor="confirmForceRecreate" className="text-red-900 text-sm cursor-pointer">
+                      Entenc el risc: les devolucions filles existents s'eliminaran permanentment
+                    </Label>
+                  </div>
+                )}
               </div>
             )}
 
@@ -956,7 +984,7 @@ export function ReturnImporter({
                 // Mode BULK: botó per processar grups auto-matched
                 <Button
                   onClick={handleProcess}
-                  disabled={isProcessing || bulkReturnGroups.filter(g => g.status === 'auto').length === 0}
+                  disabled={isProcessing || bulkReturnGroups.filter(g => g.status === 'auto').length === 0 || (forceRecreateChildren && !confirmForceRecreate)}
                 >
                   {isProcessing ? (
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -970,7 +998,7 @@ export function ReturnImporter({
               ) : (
                 <Button
                   onClick={handleProcess}
-                  disabled={isProcessing || selectedRows.size === 0}
+                  disabled={isProcessing || selectedRows.size === 0 || (forceRecreateChildren && !confirmForceRecreate)}
                 >
                   {isProcessing ? (
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
