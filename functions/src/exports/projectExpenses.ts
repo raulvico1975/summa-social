@@ -28,7 +28,7 @@ interface Transaction {
   projectId?: string | null;
   projectName?: string | null;
 
-  documentUrl?: string | null;
+  document?: string | null; // URL del document adjunt (nom correcte del camp)
 
   isCounterpartTransfer?: boolean;
   isRemittance?: boolean | null;
@@ -120,7 +120,7 @@ export const exportProjectExpenses = functions
     }
 
     const isEligibleForProjects = calculateEligibility(tx);
-    const documents = buildDocuments(tx.documentUrl ?? null);
+    const documents = buildDocuments(tx.document ?? null);
 
     // El camp tx.category ja conté el nom/codi de la categoria, no l'ID
     // Per tant, categoryName = tx.category directament
