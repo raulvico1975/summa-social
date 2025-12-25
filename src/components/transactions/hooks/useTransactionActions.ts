@@ -8,6 +8,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useTranslations } from '@/i18n';
 import { useAppLog } from '@/hooks/use-app-log';
 import type { Transaction, AnyContact, ContactType } from '@/lib/data';
+import { buildDocumentFilename } from '@/lib/build-document-filename';
 
 // =============================================================================
 // TYPES
@@ -212,9 +213,16 @@ export function useTransactionActions({
         log(`[${transactionId}] Archivo seleccionado: ${file.name} (Tamaño: ${file.size} bytes)`);
 
         setDocLoadingStates(prev => ({ ...prev, [transactionId]: true }));
-        toast({ title: t.movements.table.uploadingDocument, description: `Adjuntant "${file.name}"...` });
 
-        const storagePath = `organizations/${organizationId}/documents/${transactionId}/${file.name}`;
+        // Construir nom de fitxer estandarditzat
+        const tx = transactions?.find(t => t.id === transactionId) ?? null;
+        const dateISO = tx?.date ?? new Date().toISOString().split('T')[0];
+        const concept = (tx?.note?.trim() || tx?.description?.trim() || 'moviment');
+        const finalName = buildDocumentFilename({ dateISO, concept, originalName: file.name });
+
+        toast({ title: t.movements.table.uploadingDocument, description: `Adjuntant "${finalName}"...` });
+
+        const storagePath = `organizations/${organizationId}/documents/${transactionId}/${finalName}`;
         log(`[${transactionId}] Ruta de subida en Storage: ${storagePath}`);
         const storageRef = ref(storage, storagePath);
 
