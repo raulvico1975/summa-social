@@ -8,6 +8,7 @@ import { useTranslations } from '@/i18n';
 import { useAppLog } from '@/hooks/use-app-log';
 import { trackUX } from '@/lib/ux/trackUX';
 import type { Transaction, Category } from '@/lib/data';
+import { getForcedIncomeCategoryIdByBankDescription } from '@/lib/auto-match';
 
 // =============================================================================
 // TYPES
@@ -245,6 +246,28 @@ export function useTransactionCategorization({
     try {
       log(`[IA] Iniciant categoritzacio per: "${transaction.description.substring(0, 40)}..."`);
 
+      // 1. Comprovar si hi ha categoria forçada per descripció (loteria, voluntariat)
+      const forcedCategoryId = getForcedIncomeCategoryIdByBankDescription(
+        transaction.description,
+        availableCategories
+      );
+
+      if (forcedCategoryId) {
+        // Categoria forçada - no cal cridar IA
+        updateDocumentNonBlocking(doc(transactionsCollection, txId), { category: forcedCategoryId });
+        const categoryName = getCategoryDisplayName(forcedCategoryId);
+        toast({
+          title: language === 'ca' ? 'Categoria assignada' : 'Categoría asignada',
+          description: language === 'ca'
+            ? `Transacció classificada com "${categoryName}" per paraules clau.`
+            : `Transacción clasificada como "${categoryName}" por palabras clave.`,
+        });
+        log(`[AUTO] Categoria forçada: "${categoryName}" per descripció bancària`);
+        trackUX('ai.categorize.forced', { categoryId: forcedCategoryId, categoryName });
+        return;
+      }
+
+      // 2. Si no hi ha categoria forçada, cridar IA
       const result = await callCategorizationAPI({
         description: transaction.description,
         amount: transaction.amount,
@@ -367,6 +390,22 @@ export function useTransactionCategorization({
       log(`[IA] Classificant ${i + 1}/${transactionsToCategorize.length}: "${tx.description.substring(0, 30)}..."`);
 
       try {
+        // 1. Comprovar si hi ha categoria forçada per descripció (loteria, voluntariat)
+        const forcedCategoryId = getForcedIncomeCategoryIdByBankDescription(
+          tx.description,
+          availableCategories
+        );
+
+        if (forcedCategoryId) {
+          // Categoria forçada - no cal cridar IA
+          updateDocumentNonBlocking(doc(transactionsCollection, tx.id), { category: forcedCategoryId });
+          const categoryName = getCategoryDisplayName(forcedCategoryId);
+          log(`[AUTO] ✓ ${tx.id} → "${categoryName}" (forçada)`);
+          successCount++;
+          continue; // No cal delay, no hem cridat l'API
+        }
+
+        // 2. Si no hi ha categoria forçada, cridar IA
         const result = await callCategorizationAPI({
           description: tx.description,
           amount: tx.amount,

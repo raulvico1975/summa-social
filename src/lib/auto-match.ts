@@ -4,7 +4,7 @@
 // Matching local sense IA: cerca el nom del contacte a la descripció bancària
 // ═══════════════════════════════════════════════════════════════════════════════
 
-import type { AnyContact } from './data';
+import type { AnyContact, Category } from './data';
 
 /**
  * Normalitza un text per a comparació (minúscules, sense accents, sense caràcters especials)
@@ -130,4 +130,101 @@ export function batchFindMatchingContacts(
   });
 
   return results;
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// FORCED CATEGORY BY DESCRIPTION
+// ═══════════════════════════════════════════════════════════════════════════════
+// Detecta ingressos especials (loteria, voluntariat) per la descripció bancària
+// i retorna la categoria forçada corresponent
+// ═══════════════════════════════════════════════════════════════════════════════
+
+/**
+ * Keywords per detectar ingressos de loteria
+ * Match si la descripció conté alguna d'aquestes paraules
+ */
+const LOTTERY_KEYWORDS = [
+  'loteria',
+  'papeleta',
+  'papeletas',
+  'rifa',
+  'sorteo',
+  'sorteig',
+];
+
+/**
+ * Keywords per detectar ingressos de voluntariat
+ */
+const VOLUNTEER_KEYWORDS = [
+  'voluntario',
+  'voluntarios',
+  'voluntari',
+  'voluntaris',
+  'voluntariat',
+  'voluntariado',
+  'volunfair',
+];
+
+/**
+ * Noms de categoria normalitzats que matchegen amb loteria
+ */
+const LOTTERY_CATEGORY_NAMES = ['loteria'];
+
+/**
+ * Noms de categoria normalitzats que matchegen amb voluntariat
+ */
+const VOLUNTEER_CATEGORY_NAMES = [
+  'voluntarios',
+  'voluntaris',
+  'voluntariat',
+  'voluntariado',
+];
+
+/**
+ * Detecta si una descripció bancària correspon a un ingrés especial
+ * (loteria o voluntariat) i retorna el categoryId corresponent.
+ *
+ * Ordre de prioritat:
+ * 1. Si la descripció conté keywords de loteria → cerca categoria "loteria"
+ * 2. Si la descripció conté keywords de voluntariat → cerca categoria "voluntarios/voluntaris/..."
+ *
+ * @param description Descripció bancària del moviment
+ * @param categories Llista de categories disponibles
+ * @returns categoryId si hi ha match, null altrament
+ */
+export function getForcedIncomeCategoryIdByBankDescription(
+  description: string,
+  categories: Category[]
+): string | null {
+  if (!description || !categories || categories.length === 0) {
+    return null;
+  }
+
+  const descNormalized = normalizeForMatching(description);
+
+  // 1. Comprovar si és loteria
+  const isLottery = LOTTERY_KEYWORDS.some(kw => descNormalized.includes(kw));
+  if (isLottery) {
+    const lotteryCategory = categories.find(cat => {
+      const catNameNormalized = normalizeForMatching(cat.name);
+      return LOTTERY_CATEGORY_NAMES.some(name => catNameNormalized.includes(name));
+    });
+    if (lotteryCategory) {
+      return lotteryCategory.id;
+    }
+  }
+
+  // 2. Comprovar si és voluntariat
+  const isVolunteer = VOLUNTEER_KEYWORDS.some(kw => descNormalized.includes(kw));
+  if (isVolunteer) {
+    const volunteerCategory = categories.find(cat => {
+      const catNameNormalized = normalizeForMatching(cat.name);
+      return VOLUNTEER_CATEGORY_NAMES.some(name => catNameNormalized.includes(name));
+    });
+    if (volunteerCategory) {
+      return volunteerCategory.id;
+    }
+  }
+
+  return null;
 }

@@ -4,8 +4,9 @@ import {
   normalizeForMatching,
   extractNameTokens,
   findMatchingContact,
+  getForcedIncomeCategoryIdByBankDescription,
 } from '../auto-match';
-import type { AnyContact, Donor, Supplier } from '../data';
+import type { AnyContact, Donor, Supplier, Category } from '../data';
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // TEST HELPERS
@@ -184,5 +185,134 @@ describe('findMatchingContact', () => {
     // "Joan" alone shouldn't match "Joan Pere Martínez" (needs 2+ tokens)
     // unless the name is short (1 token)
     // This depends on implementation - adjust if needed
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// GET FORCED INCOME CATEGORY BY BANK DESCRIPTION
+// ═══════════════════════════════════════════════════════════════════════════════
+
+describe('getForcedIncomeCategoryIdByBankDescription', () => {
+  // Categories de test
+  const categories: Category[] = [
+    { id: 'cat-donations', name: 'Donaciones', type: 'income' },
+    { id: 'cat-lottery', name: 'Loteria', type: 'income' },
+    { id: 'cat-volunteers', name: 'Voluntarios', type: 'income' },
+    { id: 'cat-membership', name: 'Cuotas socios', type: 'income' },
+    { id: 'cat-operating', name: 'Gastos operativos', type: 'expense' },
+  ];
+
+  // Categories en català
+  const categoriesCatalan: Category[] = [
+    { id: 'cat-donations', name: 'Donacions', type: 'income' },
+    { id: 'cat-lottery', name: 'Loteria', type: 'income' },
+    { id: 'cat-volunteers', name: 'Voluntariat', type: 'income' },
+    { id: 'cat-membership', name: 'Quotes socis', type: 'income' },
+  ];
+
+  // LOTERIA TESTS
+  it('should detect "Loteria" in description', () => {
+    const result = getForcedIncomeCategoryIdByBankDescription(
+      'Concepto Pago Lotería',
+      categories
+    );
+    assert.strictEqual(result, 'cat-lottery');
+  });
+
+  it('should detect "papeletas" in description', () => {
+    const result = getForcedIncomeCategoryIdByBankDescription(
+      'papeletas Laura Martínez',
+      categories
+    );
+    assert.strictEqual(result, 'cat-lottery');
+  });
+
+  it('should detect lottery with different casing', () => {
+    const result = getForcedIncomeCategoryIdByBankDescription(
+      'LOTERIA NAVIDAD 2025',
+      categories
+    );
+    assert.strictEqual(result, 'cat-lottery');
+  });
+
+  it('should detect "rifa" in description', () => {
+    const result = getForcedIncomeCategoryIdByBankDescription(
+      'Ingreso rifa solidària',
+      categories
+    );
+    assert.strictEqual(result, 'cat-lottery');
+  });
+
+  // VOLUNTARIAT TESTS
+  it('should detect "Voluntariado" in description', () => {
+    const result = getForcedIncomeCategoryIdByBankDescription(
+      'Voluntariado Flores Kiskeya',
+      categories
+    );
+    assert.strictEqual(result, 'cat-volunteers');
+  });
+
+  it('should detect "Volunfair" in description', () => {
+    const result = getForcedIncomeCategoryIdByBankDescription(
+      'Volunfair 2025 - Ingreso',
+      categories
+    );
+    assert.strictEqual(result, 'cat-volunteers');
+  });
+
+  it('should detect "voluntaris" in Catalan categories', () => {
+    const result = getForcedIncomeCategoryIdByBankDescription(
+      'Aportació voluntaris gener',
+      categoriesCatalan
+    );
+    assert.strictEqual(result, 'cat-volunteers');
+  });
+
+  it('should detect "voluntariat" in Catalan categories', () => {
+    const result = getForcedIncomeCategoryIdByBankDescription(
+      'Quota voluntariat anual',
+      categoriesCatalan
+    );
+    assert.strictEqual(result, 'cat-volunteers');
+  });
+
+  // CASOS NEGATIUS
+  it('should return null for normal donation description', () => {
+    const result = getForcedIncomeCategoryIdByBankDescription(
+      'TRANSFERENCIA MARIA GARCIA DONATIVO',
+      categories
+    );
+    assert.strictEqual(result, null);
+  });
+
+  it('should return null for expense description', () => {
+    const result = getForcedIncomeCategoryIdByBankDescription(
+      'PAGO FACTURA MATERIAL OFICINA',
+      categories
+    );
+    assert.strictEqual(result, null);
+  });
+
+  it('should return null for empty description', () => {
+    const result = getForcedIncomeCategoryIdByBankDescription('', categories);
+    assert.strictEqual(result, null);
+  });
+
+  it('should return null for empty categories', () => {
+    const result = getForcedIncomeCategoryIdByBankDescription(
+      'LOTERIA NAVIDAD',
+      []
+    );
+    assert.strictEqual(result, null);
+  });
+
+  // PRIORITAT: loteria > voluntariat
+  it('should prioritize lottery over volunteer if both match (edge case)', () => {
+    // Si per algun motiu la descripció conté ambdues, loteria té prioritat
+    const result = getForcedIncomeCategoryIdByBankDescription(
+      'Loteria solidària voluntarios',
+      categories
+    );
+    assert.strictEqual(result, 'cat-lottery');
   });
 });
