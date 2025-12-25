@@ -78,7 +78,7 @@ import { TransactionRow } from '@/components/transactions/components/Transaction
 import { TransactionsFilters, TableFilter } from '@/components/transactions/components/TransactionsFilters';
 import { DateFilter, type DateFilterValue } from '@/components/date-filter';
 import { useTransactionFilters } from '@/hooks/use-transaction-filters';
-import { MISSION_TRANSFER_CATEGORY_KEY, TRANSACTION_URL_FILTERS, type TransactionUrlFilter } from '@/lib/constants';
+import { MISSION_TRANSFER_CATEGORY_KEY, TRANSACTION_URL_FILTERS, type TransactionUrlFilter, type SourceFilter } from '@/lib/constants';
 
 interface TransactionsTableProps {
   initialDateFilter?: DateFilterValue | null;
@@ -157,6 +157,9 @@ export function TransactionsTable({ initialDateFilter = null }: TransactionsTabl
 
   // Filtre per amagar desglossament de remeses
   const [hideRemittanceItems, setHideRemittanceItems] = React.useState(true);
+
+  // Filtre per source
+  const [sourceFilter, setSourceFilter] = React.useState<SourceFilter>('all');
 
 
   // Col·leccions
@@ -517,6 +520,15 @@ export function TransactionsTable({ initialDateFilter = null }: TransactionsTabl
       result = result.filter(tx => tx.source !== 'remittance');
     }
 
+    // Filtre per source
+    if (sourceFilter !== 'all') {
+      if (sourceFilter === 'null') {
+        result = result.filter(tx => !tx.source);
+      } else {
+        result = result.filter(tx => tx.source === sourceFilter);
+      }
+    }
+
     // Filtre de cerca intel·ligent
     if (searchQuery.trim()) {
       const query = searchQuery.toLowerCase().trim();
@@ -569,12 +581,12 @@ export function TransactionsTable({ initialDateFilter = null }: TransactionsTabl
       const dateB = new Date(b.date).getTime();
       return sortDateAsc ? dateA - dateB : dateB - dateA;
     });
-  }, [transactions, tableFilter, expensesWithoutDoc, returnTransactions, uncategorizedTransactions, noContactTransactions, sortDateAsc, searchQuery, contactMap, projectMap, getCategoryDisplayName, hideRemittanceItems, contactIdFilter, donorMembershipMap]);
+  }, [transactions, tableFilter, expensesWithoutDoc, returnTransactions, uncategorizedTransactions, noContactTransactions, sortDateAsc, searchQuery, contactMap, projectMap, getCategoryDisplayName, hideRemittanceItems, contactIdFilter, donorMembershipMap, sourceFilter]);
 
   // ═══════════════════════════════════════════════════════════════════════════
   // RESUM FILTRAT
   // ═══════════════════════════════════════════════════════════════════════════
-  const hasActiveFilter = tableFilter !== 'all' || searchQuery.trim() !== '' || dateFilter.type !== 'all' || contactIdFilter !== null;
+  const hasActiveFilter = tableFilter !== 'all' || searchQuery.trim() !== '' || dateFilter.type !== 'all' || contactIdFilter !== null || sourceFilter !== 'all';
 
   const filteredSummary = React.useMemo(() => {
     if (!hasActiveFilter || !allTransactions) return null;
@@ -592,6 +604,7 @@ export function TransactionsTable({ initialDateFilter = null }: TransactionsTabl
     setSearchQuery('');
     setDateFilter({ type: 'all' });
     setContactIdFilter(null);
+    setSourceFilter('all');
     setHasUrlFilter(false);
     if (typeof window !== 'undefined') {
       const url = new URL(window.location.href);
@@ -820,6 +833,8 @@ export function TransactionsTable({ initialDateFilter = null }: TransactionsTabl
           hideRemittanceItems={hideRemittanceItems}
           onHideRemittanceItemsChange={setHideRemittanceItems}
           onOpenReturnImporter={() => setIsReturnImporterOpen(true)}
+          sourceFilter={sourceFilter}
+          onSourceFilterChange={setSourceFilter}
           isSuperAdmin={isSuperAdmin}
           isBulkMode={isBulkMode}
           onBulkModeChange={handleBulkModeChange}

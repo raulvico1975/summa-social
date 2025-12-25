@@ -33,7 +33,14 @@ import { Input } from '@/components/ui/input';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
-import type { TransactionUrlFilter } from '@/lib/constants';
+import type { TransactionUrlFilter, SourceFilter } from '@/lib/constants';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 
 // =============================================================================
 // TYPES
@@ -73,6 +80,9 @@ interface TransactionsFiltersProps {
   hideRemittanceItems: boolean;
   onHideRemittanceItemsChange: (value: boolean) => void;
   onOpenReturnImporter?: () => void;
+  // Source filter
+  sourceFilter: SourceFilter;
+  onSourceFilterChange: (filter: SourceFilter) => void;
   // Bulk mode (SuperAdmin only)
   isSuperAdmin?: boolean;
   isBulkMode?: boolean;
@@ -117,6 +127,8 @@ export const TransactionsFilters = React.memo(function TransactionsFilters({
   hideRemittanceItems,
   onHideRemittanceItemsChange,
   onOpenReturnImporter,
+  sourceFilter,
+  onSourceFilterChange,
   isSuperAdmin,
   isBulkMode,
   onBulkModeChange,
@@ -354,6 +366,21 @@ export const TransactionsFilters = React.memo(function TransactionsFilters({
             {t.hideRemittanceItems}
           </Label>
         </div>
+
+        {/* Source filter */}
+        <Select value={sourceFilter} onValueChange={(v) => onSourceFilterChange(v as SourceFilter)}>
+          <SelectTrigger className="w-[130px] h-9">
+            <SelectValue placeholder="Origen" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Tots</SelectItem>
+            <SelectItem value="bank">Bank</SelectItem>
+            <SelectItem value="remittance">Remittance</SelectItem>
+            <SelectItem value="manual">Manual</SelectItem>
+            <SelectItem value="stripe">Stripe</SelectItem>
+            <SelectItem value="null">(buit)</SelectItem>
+          </SelectContent>
+        </Select>
       </div>
     </div>
   );

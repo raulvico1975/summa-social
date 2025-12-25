@@ -12,3 +12,6 @@ export const TRANSACTION_URL_FILTERS = [
 ] as const;
 
 export type TransactionUrlFilter = (typeof TRANSACTION_URL_FILTERS)[number];
+
+// Filtre per source de transacció
+export type SourceFilter = 'all' | 'bank' | 'remittance' | 'manual' | 'stripe' | 'null';
