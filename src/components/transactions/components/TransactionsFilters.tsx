@@ -55,6 +55,7 @@ export type TableFilter =
   | 'pendingIndividuals'
   | 'uncategorized'
   | 'noContact'
+  | 'donationsNoContact'
   | 'income'
   | 'operatingExpenses'
   | 'missionTransfers'
@@ -72,6 +73,7 @@ interface TransactionsFiltersProps {
   expensesWithoutDocCount: number;
   uncategorizedCount: number;
   noContactCount: number;
+  donationsNoContactCount: number;
   hasUncategorized: boolean;
   isBatchCategorizing: boolean;
   onBatchCategorize: () => void;
@@ -96,6 +98,7 @@ interface TransactionsFiltersProps {
     withoutDocument: string;
     uncategorized: string;
     noContact: string;
+    donationsNoContact: string;
     pendingFilters: string;
     exportTooltip: string;
     searchPlaceholder: string;
@@ -119,6 +122,7 @@ export const TransactionsFilters = React.memo(function TransactionsFilters({
   expensesWithoutDocCount,
   uncategorizedCount,
   noContactCount,
+  donationsNoContactCount,
   hasUncategorized,
   isBatchCategorizing,
   onBatchCategorize,
@@ -135,25 +139,22 @@ export const TransactionsFilters = React.memo(function TransactionsFilters({
   batchProgress,
   t,
 }: TransactionsFiltersProps) {
-  // Calcular quants tipus de pendents tenen elements
+  // Calcular quants tipus de pendents tenen elements (només els 3 que mostrem)
   const pendingTypesCount = [
-    returnsCount > 0,
+    pendingReturnsCount > 0,
     expensesWithoutDocCount > 0,
-    uncategorizedCount > 0,
-    noContactCount > 0,
+    donationsNoContactCount > 0,
   ].filter(Boolean).length;
 
   // Comprovar si un filtre de pendents està actiu
-  const isPendingFilterActive = ['returns', 'pendingReturns', 'missing', 'uncategorized', 'noContact'].includes(currentFilter);
+  const isPendingFilterActive = ['pendingReturns', 'missing', 'donationsNoContact'].includes(currentFilter);
 
   // Obtenir el nom del filtre actiu per mostrar al botó
   const getActiveFilterLabel = (): string => {
     switch (currentFilter) {
-      case 'returns': return t.returns;
       case 'pendingReturns': return t.pendingReturns;
       case 'missing': return t.withoutDocument;
-      case 'uncategorized': return t.uncategorized;
-      case 'noContact': return t.noContact;
+      case 'donationsNoContact': return t.donationsNoContact;
       default: return t.pendingFilters;
     }
   };
@@ -258,7 +259,7 @@ export const TransactionsFilters = React.memo(function TransactionsFilters({
                 size="sm"
                 className={!isPendingFilterActive && pendingReturnsCount > 0 ? 'border-red-300 text-red-600' : ''}
               >
-                {isPendingFilterActive ? getActiveFilterLabel() : t.pendingFilters} ({pendingTypesCount})
+                {isPendingFilterActive ? getActiveFilterLabel() : t.pendingFilters}
                 <ChevronDown className="ml-1.5 h-3 w-3" />
               </Button>
             </DropdownMenuTrigger>
@@ -271,20 +272,6 @@ export const TransactionsFilters = React.memo(function TransactionsFilters({
                 >
                   <Undo2 className="mr-2 h-4 w-4 text-red-500" />
                   {t.pendingReturns} ({pendingReturnsCount})
-                  <Badge variant="destructive" className="ml-auto h-5 px-1.5">
-                    !
-                  </Badge>
-                </DropdownMenuItem>
-              )}
-
-              {/* All Returns filter (returns + fees) */}
-              {returnsCount > 0 && (
-                <DropdownMenuItem
-                  onClick={() => onFilterChange('returns')}
-                  className={currentFilter === 'returns' ? 'bg-accent' : ''}
-                >
-                  <Undo2 className="mr-2 h-4 w-4" />
-                  {t.returns} ({returnsCount})
                 </DropdownMenuItem>
               )}
 
@@ -299,25 +286,14 @@ export const TransactionsFilters = React.memo(function TransactionsFilters({
                 </DropdownMenuItem>
               )}
 
-              {/* Uncategorized filter */}
-              {uncategorizedCount > 0 && (
+              {/* Donations/member fees without contact */}
+              {donationsNoContactCount > 0 && (
                 <DropdownMenuItem
-                  onClick={() => onFilterChange('uncategorized')}
-                  className={currentFilter === 'uncategorized' ? 'bg-accent' : ''}
+                  onClick={() => onFilterChange('donationsNoContact')}
+                  className={currentFilter === 'donationsNoContact' ? 'bg-accent' : ''}
                 >
-                  <AlertTriangle className="mr-2 h-4 w-4 text-orange-500" />
-                  {t.uncategorized} ({uncategorizedCount})
-                </DropdownMenuItem>
-              )}
-
-              {/* No contact filter */}
-              {noContactCount > 0 && (
-                <DropdownMenuItem
-                  onClick={() => onFilterChange('noContact')}
-                  className={currentFilter === 'noContact' ? 'bg-accent' : ''}
-                >
-                  <User className="mr-2 h-4 w-4 text-muted-foreground" />
-                  {t.noContact} ({noContactCount})
+                  <User className="mr-2 h-4 w-4 text-orange-500" />
+                  {t.donationsNoContact} ({donationsNoContactCount})
                 </DropdownMenuItem>
               )}
             </DropdownMenuContent>

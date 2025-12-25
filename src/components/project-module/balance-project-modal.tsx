@@ -418,6 +418,7 @@ export function BalanceProjectModal({
     return allExpenses
       .filter(item => {
         const exp = item.expense;
+
         if (Math.abs(exp.amountEUR) === 0) return false;
 
         // Dins dates del projecte (si estan definides)
@@ -543,8 +544,22 @@ export function BalanceProjectModal({
 
     // Per INFRAEXECUCIÓ: aplicar fallback progressiu
     if (isUnderSpend && !expandOptions.showAll) {
-      // Excloure les ja assignades a aquest projecte (ja estan comptades)
-      const basePool = filtered.filter(c => !c.assignedToThisProject);
+      // Excloure les ja assignades a AQUESTA PARTIDA (ja estan comptades a executed)
+      // Però INCLOURE les assignades a ALTRES partides del mateix projecte (es poden moure)
+      const basePool = filtered.filter(c => {
+        // Si no està assignada a aquest projecte → candidata
+        if (!c.assignedToThisProject) return true;
+        // Si està assignada a aquest projecte però a una ALTRA partida → candidata per moure
+        if (c.currentBudgetLineId !== selectedLineId) return true;
+        // Si ja està a aquesta partida → excloure (ja compta a executed)
+        return false;
+      });
+
+      // DEBUG: Veure basePool
+      console.log(`[candidatesForSelectedLine] 📊 basePool: ${basePool.length}, selectedLineId: ${selectedLineId}`);
+      basePool.slice(0, 5).forEach((c, i) => {
+        console.log(`  [${i}] ${c.expense.description?.slice(0, 30)} | source=${c.expense.source} | assignedToThis=${c.assignedToThisProject} | currentLine=${c.currentBudgetLineId} | otherProject=${c.assignedToOtherProject}`);
+      });
 
       // Nivell 1: Criteri estricte (offBank + no altres projectes)
       const nivel1 = basePool.filter(c => {
@@ -552,6 +567,8 @@ export function BalanceProjectModal({
         if (!expandOptions.includeBankExpenses && c.expense.source === 'bank') return false;
         return true;
       });
+
+      console.log(`[candidatesForSelectedLine] 📊 nivel1: ${nivel1.length} (offBank, no altres projectes)`);
 
       // Si Nivell 1 té resultats, usar-los
       if (nivel1.length > 0) {
@@ -564,6 +581,8 @@ export function BalanceProjectModal({
           return true;
         });
 
+        console.log(`[candidatesForSelectedLine] 📊 nivel2: ${nivel2.length} (inclou bank)`);
+
         if (nivel2.length > 0) {
           filtered = nivel2;
           currentFallbackLevel = 2;
@@ -571,6 +590,7 @@ export function BalanceProjectModal({
           // Nivell 3: Totes les despeses del període (incloent altres projectes)
           filtered = basePool;
           currentFallbackLevel = 3;
+          console.log(`[candidatesForSelectedLine] 📊 nivel3: ${basePool.length} (totes)`);
         }
       }
     }
@@ -615,7 +635,12 @@ export function BalanceProjectModal({
   const expandedCounts = React.useMemo(() => {
     if (!selectedLineId || !selectedDiag || selectedDiag.difference >= 0) return null;
 
-    const baseFiltered = allCandidates.filter(c => !c.assignedToThisProject);
+    // Igual que basePool: excloure només les assignades a AQUESTA partida
+    const baseFiltered = allCandidates.filter(c => {
+      if (!c.assignedToThisProject) return true;
+      if (c.currentBudgetLineId !== selectedLineId) return true;
+      return false;
+    });
 
     const withBank = baseFiltered.filter(c => c.expense.source === 'bank' && !c.assignedToOtherProject).length;
     const fromOtherProjects = baseFiltered.filter(c => !!c.assignedToOtherProject).length;

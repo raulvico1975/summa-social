@@ -455,10 +455,20 @@ export function TransactionsTable({ initialDateFilter = null }: TransactionsTabl
     return transactions.filter(tx => tx.category === null || tx.category === 'Revisar');
   }, [transactions]);
 
-  // Moviments sense contacte assignat (amount > 50€)
+  // Moviments sense contacte assignat (amount > 50€) - DEPRECATED, ara usem donationsNoContact
   const noContactTransactions = React.useMemo(() => {
     if (!transactions) return [];
     return transactions.filter(tx => !tx.contactId && Math.abs(tx.amount) > 50);
+  }, [transactions]);
+
+  // Donacions/quotes sense contacte assignat (categoria "Donaciones" o "Cuotas socios" però sense contactId)
+  const donationsNoContactTransactions = React.useMemo(() => {
+    if (!transactions) return [];
+    return transactions.filter(tx =>
+      !tx.contactId &&
+      tx.amount > 0 &&
+      (tx.category === 'Donaciones' || tx.category === 'Cuotas socios')
+    );
   }, [transactions]);
 
   // Transaccions filtrades i ordenades per data (més recents primer)
@@ -516,6 +526,9 @@ export function TransactionsTable({ initialDateFilter = null }: TransactionsTabl
         break;
       case 'noContact':
         result = noContactTransactions;
+        break;
+      case 'donationsNoContact':
+        result = donationsNoContactTransactions;
         break;
       default:
         result = transactions;
@@ -587,7 +600,7 @@ export function TransactionsTable({ initialDateFilter = null }: TransactionsTabl
       const dateB = new Date(b.date).getTime();
       return sortDateAsc ? dateA - dateB : dateB - dateA;
     });
-  }, [transactions, tableFilter, expensesWithoutDoc, returnTransactions, uncategorizedTransactions, noContactTransactions, sortDateAsc, searchQuery, contactMap, projectMap, getCategoryDisplayName, hideRemittanceItems, contactIdFilter, donorMembershipMap, sourceFilter]);
+  }, [transactions, tableFilter, expensesWithoutDoc, returnTransactions, uncategorizedTransactions, noContactTransactions, donationsNoContactTransactions, sortDateAsc, searchQuery, contactMap, projectMap, getCategoryDisplayName, hideRemittanceItems, contactIdFilter, donorMembershipMap, sourceFilter]);
 
   // ═══════════════════════════════════════════════════════════════════════════
   // RESUM FILTRAT
@@ -800,6 +813,7 @@ export function TransactionsTable({ initialDateFilter = null }: TransactionsTabl
     withoutDocument: t.movements.table.withoutDocument,
     uncategorized: t.movements.table.uncategorized,
     noContact: t.movements.table.noContact,
+    donationsNoContact: t.movements.table.donationsNoContact || 'Donaciones sin contacto',
     pendingFilters: t.movements.table.pendingFilters,
     exportTooltip: t.movements.table.exportTooltip,
     searchPlaceholder: t.movements.table.searchPlaceholder,
@@ -831,6 +845,7 @@ export function TransactionsTable({ initialDateFilter = null }: TransactionsTabl
           expensesWithoutDocCount={expensesWithoutDoc.length}
           uncategorizedCount={uncategorizedTransactions.length}
           noContactCount={noContactTransactions.length}
+          donationsNoContactCount={donationsNoContactTransactions.length}
           hasUncategorized={hasUncategorized ?? false}
           isBatchCategorizing={isBatchCategorizing}
           onBatchCategorize={handleBatchCategorize}

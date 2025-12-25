@@ -438,13 +438,14 @@ export function useReturnImporter() {
   }, [allContacts]);
 
   // Carregar transaccions candidates per matching:
-  // - transactionType = 'return' amb contactId = null (individuals sense donant)
-  // - Excloem remittanceStatus === 'complete' (ja resoltes)
+  // - Import negatiu (despeses/devolucions del banc)
+  // - Sense contactId assignat
+  // - NO filtrem per transactionType perquè les devolucions bancàries individuals
+  //   NO tenen transactionType='return' fins que es processen
   const pendingReturnsQuery = useMemoFirebase(
     () => organizationId
       ? query(
           collection(firestore, 'organizations', organizationId, 'transactions'),
-          where('transactionType', '==', 'return'),
           where('contactId', '==', null)
         )
       : null,
@@ -452,11 +453,31 @@ export function useReturnImporter() {
   );
   const { data: pendingReturnsRaw } = useCollection<Transaction>(pendingReturnsQuery);
 
-  // Filtrar en memòria les que ja estan completes (remittanceStatus === 'complete')
-  // Aquestes ja no són "pendents" i no han d'aparèixer al llistat
+  // Filtrar en memòria per obtenir candidats vàlids:
+  // - Exclou remittanceStatus === 'complete' (ja resoltes)
+  // - Només imports negatius (devolucions = càrrecs al banc)
+  // - Exclou splits i transferències internes
   const pendingReturns = React.useMemo(() => {
     if (!pendingReturnsRaw) return null;
-    return pendingReturnsRaw.filter(tx => tx.remittanceStatus !== 'complete');
+    console.log(`[pendingReturns] 🔍 RAW count: ${pendingReturnsRaw.length}`);
+    const filtered = pendingReturnsRaw.filter(tx => {
+      // Excloure remeses completes
+      if (tx.remittanceStatus === 'complete') return false;
+      // Només imports negatius (devolucions són càrrecs)
+      if (tx.amount >= 0) return false;
+      // Excloure splits (transaccions dividides)
+      if (tx.isSplit) return false;
+      // Excloure fills de remeses (source === 'remittance')
+      if (tx.source === 'remittance') return false;
+      return true;
+    });
+    console.log(`[pendingReturns] 🔍 FILTERED count: ${filtered.length}`, filtered.slice(0, 5).map(tx => ({
+      id: tx.id.slice(0, 8),
+      amount: tx.amount,
+      date: tx.date,
+      desc: tx.description?.slice(0, 30),
+    })));
+    return filtered;
   }, [pendingReturnsRaw]);
 
   // Estadístiques
@@ -924,44 +945,64 @@ export function useReturnImporter() {
       for (const r of nonGrouped) {
         const targetAmount = r.amount;
 
+        console.log(`[performMatching] 🔍 Buscant tx per return: amount=${targetAmount}, date=${r.date?.toISOString()?.slice(0, 10)}, dateConfidence=${r.dateConfidence}`);
+        console.log(`[performMatching] 🔍 pendingReturns disponibles: ${(pendingReturns || []).length}`);
+
         // Buscar transaccions candidates
         const candidates = (pendingReturns || []).filter(tx => {
           if (usedTransactionIds.has(tx.id)) return false;
 
           const txAmount = Math.abs(tx.amount);
           const amountDiff = Math.abs(txAmount - targetAmount);
-          if (amountDiff > 0.02) return false;
+          if (amountDiff > 0.02) {
+            // Log només per les primeres 3 per no saturar
+            return false;
+          }
 
           // Filtre de data
           if (r.dateConfidence !== 'none' && r.date) {
             const txDate = getTxDate(tx);
             const diffMs = Math.abs(txDate.getTime() - r.date.getTime());
             const diffDays = diffMs / DAY_MS;
-            if (diffDays > MAX_DATE_DIFF_DAYS) return false;
+            if (diffDays > MAX_DATE_DIFF_DAYS) {
+              console.log(`[performMatching] ❌ Data massa lluny: tx ${tx.id.slice(0, 8)} date=${tx.date} vs return date=${r.date?.toISOString()?.slice(0, 10)}, diff=${diffDays.toFixed(1)} dies`);
+              return false;
+            }
           }
           // Si dateConfidence === 'none', NO apliquem filtre de data
 
+          console.log(`[performMatching] ✅ Candidat trobat: tx ${tx.id.slice(0, 8)} amount=${tx.amount} date=${tx.date}`);
           return true;
         });
 
-        if (candidates.length === 1) {
-          // Match únic -> assignar
-          const matchingTx = candidates[0];
+        console.log(`[performMatching] 📊 Candidats trobats: ${candidates.length}`);
+
+        if (candidates.length >= 1) {
+          // Si hi ha múltiples candidats, ordenar per proximitat de data (el més proper primer)
+          let matchingTx = candidates[0];
+          if (candidates.length > 1 && r.date) {
+            const returnDate = r.date.getTime();
+            candidates.sort((a, b) => {
+              const diffA = Math.abs(getTxDate(a).getTime() - returnDate);
+              const diffB = Math.abs(getTxDate(b).getTime() - returnDate);
+              return diffA - diffB; // El més proper primer
+            });
+            matchingTx = candidates[0];
+            console.log(`[performMatching] 🎯 Resolent ambigüitat: ${candidates.length} candidats, agafant el més proper: tx ${matchingTx.id} (date=${matchingTx.date})`);
+          }
+
           r.matchType = 'individual';
           r.matchedTransactionId = matchingTx.id;
           r.matchedTransaction = matchingTx;
           r.status = 'matched';
           usedTransactionIds.add(matchingTx.id);
-        } else if (candidates.length > 1) {
-          // Ambigüitat
-          r.matchType = 'none';
-          r.noMatchReason = 'ambiguous';
-          r.status = 'donor_found';
+          console.log(`[performMatching] ✅ MATCH INDIVIDUAL: return → tx ${matchingTx.id}`);
         } else {
           // Cap candidat
           r.matchType = 'none';
           r.noMatchReason = r.dateConfidence === 'none' ? 'no-date' : 'no-match';
           r.status = 'donor_found';
+          console.log(`[performMatching] ❌ CAP CANDIDAT: noMatchReason=${r.noMatchReason}`);
         }
       }
 
@@ -1015,13 +1056,28 @@ export function useReturnImporter() {
     const { forceRecreateChildren = false } = options;
     if (!organizationId) return;
 
+    // DEBUG: Veure totes les devolucions parsejades
+    console.log('[processReturns] 🔍 DEBUG parsedReturns:', parsedReturns.map(r => ({
+      status: r.status,
+      matchType: r.matchType,
+      matchedDonorId: r.matchedDonorId,
+      matchedTransactionId: r.matchedTransactionId,
+      amount: r.amount,
+    })));
+
     // Separar individuals i agrupades
-    const individualReturns = parsedReturns.filter(r =>
-      (r.status === 'matched' || r.status === 'donor_found') && r.matchType !== 'grouped'
-    );
+    // INDIVIDUAL = té donant + té transacció + NO és grouped
+    const individualReturns = parsedReturns.filter(r => {
+      const isIndividual = r.matchedDonorId && r.matchedTransactionId && r.matchType !== 'grouped';
+      console.log(`[processReturns] Checking: status=${r.status}, matchType=${r.matchType}, donorId=${r.matchedDonorId}, txId=${r.matchedTransactionId} → isIndividual=${isIndividual}`);
+      return isIndividual;
+    });
+
     const groupedReturnsToProcess = parsedReturns.filter(r =>
       r.status === 'matched' && r.matchType === 'grouped'
     );
+
+    console.log(`[processReturns] 📊 Filtratge: ${individualReturns.length} individuals, ${groupedReturnsToProcess.length} grouped`);
 
     if (individualReturns.length === 0 && groupedReturnsToProcess.length === 0) {
       toast({ variant: 'destructive', title: 'Res a processar', description: 'No hi ha devolucions per assignar' });
@@ -1036,17 +1092,25 @@ export function useReturnImporter() {
       let processedGrouped = 0;
 
       // 1. Processar devolucions individuals
+      // Una devolució és "individual resoluble" si:
+      // - matchType !== 'grouped'
+      // - matchedTransactionId existeix (tx.id del banc)
+      // - matchedDonorId existeix
       for (const returnItem of individualReturns) {
-        if (!returnItem.matchedDonor) continue;
-
-        // Si tenim transacció coincident, actualitzar-la
-        if (returnItem.matchedTransaction) {
-          const txRef = doc(firestore, 'organizations', organizationId, 'transactions', returnItem.matchedTransaction.id);
-          await updateDoc(txRef, {
-            contactId: returnItem.matchedDonor.id,
-            contactType: 'donor',
-          });
+        // Només processar si tenim donant I transacció
+        if (!returnItem.matchedDonor || !returnItem.matchedTransactionId) {
+          console.log(`[processReturns] ⏭️ Individual skip - donant: ${!!returnItem.matchedDonor}, txId: ${returnItem.matchedTransactionId}`);
+          continue;
         }
+
+        // ACTUALITZAR LA TRANSACCIÓ DEL BANC amb contactId i transactionType
+        const txRef = doc(firestore, 'organizations', organizationId, 'transactions', returnItem.matchedTransactionId);
+        await updateDoc(txRef, {
+          transactionType: 'return',
+          contactId: returnItem.matchedDonor.id,
+          contactType: 'donor',
+        });
+        console.log(`[processReturns] ✅ Individual: tx ${returnItem.matchedTransactionId} → contactId ${returnItem.matchedDonor.id}`);
 
         // Actualitzar donant
         const donorRef = doc(firestore, 'organizations', organizationId, 'contacts', returnItem.matchedDonor.id);
@@ -1058,6 +1122,8 @@ export function useReturnImporter() {
 
         processedIndividual++;
       }
+
+      console.log(`[processReturns] 📊 Individuals processats: ${processedIndividual}`);
 
       // 2. Processar devolucions agrupades (patró remeses: pare + filles)
       const processedGroupIds = new Set<string>();
@@ -1344,6 +1410,7 @@ export function useReturnImporter() {
         }
       }
 
+      console.log(`[processReturns] 📊 RESUM FINAL: ${processedIndividual} individuals, ${processedGrouped} agrupades`);
       log(`[ReturnImporter] ${processedIndividual} individuals + ${processedGrouped} agrupades processades`);
       toast({
         title: 'Devolucions assignades',

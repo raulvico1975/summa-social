@@ -248,6 +248,7 @@ export const fr = {
       withoutDocument: "Sans justificatif",
       uncategorized: "Non catégorisé",
       noContact: "Sans contact",
+      donationsNoContact: "Dons sans contact",
       pendingFilters: "En attente",
       hideRemittanceItems: "Masquer détail virements",
       showAll: "Voir tout",

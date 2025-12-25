@@ -248,6 +248,7 @@ export const ca = {
       withoutDocument: "Sense justificant",
       uncategorized: "Sense categoritzar",
       noContact: "Sense contacte",
+      donationsNoContact: "Donacions sense contacte",
       pendingFilters: "Pendents",
       hideRemittanceItems: "Amagar desglossament de remeses",
       showAll: "Veure tots",
