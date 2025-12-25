@@ -1102,55 +1102,73 @@ export function useReturnImporter() {
           // ═══════════════════════════════════════════════════════════════════
           console.log(`[processReturns] Grup ${group.groupId} ja té ${existingChildrenCount} fills existents (pare: ${group.originalTransaction.id}) - aplicant backfill`);
 
-          // Carregar dades de les filles existents (amb ID)
+          // Carregar dades de les filles existents (amb ID del document)
           const existingChildrenWithId = existingChildrenSnap.docs.map(d => {
             const data = d.data() as Transaction;
-            return { id: d.id, ...data };
+            // Usar l'ID del document, no el camp id de les dades
+            return { ...data, id: d.id };
           });
 
           // Filles sense contactId (pendents d'assignar)
           const childrenWithoutContact = existingChildrenWithId.filter(c => !c.contactId);
           console.log(`[processReturns] Filles sense contactId: ${childrenWithoutContact.length}`);
+          console.log(`[processReturns] Resolubles (amb donant): ${resolubles.length}`);
+
+          // Helper robust per comparar imports
+          const sameAmount = (a: number, b: number) => Math.abs(a - b) <= 0.02;
 
           // Per cada devolució resoluble (amb donant), buscar una filla coincident
           let backfilledCount = 0;
+          const usedChildIds = new Set<string>();
+
           for (const ret of resolubles) {
+            const retAmount = ret.amount; // positiu (import de la devolució)
+            console.log(`[processReturns] Buscant filla per devolució: ${ret.matchedDonor?.name}, import=${retAmount}€`);
+
             // Buscar filla amb import coincident (tolerància 0.02€) i sense contactId
             const matchingChild = childrenWithoutContact.find(child => {
-              const childAmount = Math.abs(child.amount || 0);
-              const retAmount = ret.amount;
-              return Math.abs(childAmount - retAmount) <= 0.02;
+              if (usedChildIds.has(child.id)) return false;
+              if (typeof child.amount !== 'number') {
+                console.log(`[processReturns] Filla ${child.id} té amount invàlid: ${child.amount}`);
+                return false;
+              }
+              const childAmount = Math.abs(child.amount); // positiu
+              const matches = sameAmount(childAmount, retAmount);
+              console.log(`[processReturns] Comparant filla ${child.id}: ${childAmount}€ vs ${retAmount}€ → ${matches ? 'MATCH' : 'no'}`);
+              return matches;
             });
 
             if (matchingChild) {
-              // Actualitzar la filla amb el contactId
+              // Marcar com a usada
+              usedChildIds.add(matchingChild.id);
+
+              // Actualitzar la filla NOMÉS amb contactId i contactType
+              // (no emisorId/emisorName - camps que l'app no llegeix)
               const childRef = doc(firestore, 'organizations', organizationId, 'transactions', matchingChild.id);
               await updateDoc(childRef, {
                 contactId: ret.matchedDonor!.id,
                 contactType: 'donor',
-                emisorId: ret.matchedDonor!.id,
-                emisorName: ret.matchedDonor!.name,
+                transactionType: 'return',
               });
 
-              // Actualitzar donant
-              const donorRef = doc(firestore, 'organizations', organizationId, 'contacts', ret.matchedDonor!.id);
-              await updateDoc(donorRef, {
-                returnCount: increment(1),
-                lastReturnDate: ret.date?.toISOString().split('T')[0] || new Date().toISOString().split('T')[0],
-                status: 'pending_return',
-              });
-
-              // Treure de la llista per no reusar
-              const idx = childrenWithoutContact.indexOf(matchingChild);
-              if (idx > -1) childrenWithoutContact.splice(idx, 1);
+              // NO actualitzem el donant aquí (simplificar per debug)
 
               backfilledCount++;
               processedGrouped++;
-              console.log(`[processReturns] Backfill: filla ${matchingChild.id} assignada a donant ${ret.matchedDonor!.name}`);
+              console.log(`[processReturns] ✅ Backfill: filla ${matchingChild.id} assignada a donant ${ret.matchedDonor!.name} (contactId: ${ret.matchedDonor!.id})`);
+            } else {
+              console.log(`[processReturns] ⚠️ No s'ha trobat filla per devolució ${ret.matchedDonor?.name} (${retAmount}€)`);
             }
           }
 
-          console.log(`[processReturns] Backfill completat: ${backfilledCount} filles actualitzades`);
+          console.log(`[processReturns] Backfill completat: ${backfilledCount}/${resolubles.length} filles actualitzades`);
+
+          // GUARDRAIL: Si no hem escrit res però hi havia resolubles, avisar
+          if (backfilledCount === 0 && resolubles.length > 0) {
+            console.warn(`[processReturns] ⚠️ BACKFILL FALLIT: ${resolubles.length} resolubles però 0 filles actualitzades!`);
+            console.warn(`[processReturns] Filles disponibles: ${childrenWithoutContact.map(c => `${c.id}:${c.amount}`).join(', ')}`);
+            console.warn(`[processReturns] Resolubles: ${resolubles.map(r => `${r.matchedDonor?.name}:${r.amount}`).join(', ')}`);
+          }
 
           // Recalcular estat DESPRÉS del backfill (recarregar de Firestore)
           const updatedChildrenSnap = await getDocs(existingChildrenQuery);
