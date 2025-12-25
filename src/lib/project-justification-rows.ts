@@ -146,19 +146,30 @@ function generateBudgetFolderName(budgetLine: BudgetLine | null): string {
 }
 
 /**
- * Generar nom de document estandarditzat.
- * Format: YYYY.MM.DD_{counterparty}_{amount}EUR_{concept}_{txId}[{budgetCode}].{ext}
+ * Padding del número d'ordre a 3 dígits mínim (001, 002, ..., 999, 1000, ...)
  */
-function generateDocumentName(
+function padOrderNumber(order: number): string {
+  return order.toString().padStart(3, '0');
+}
+
+/**
+ * Generar nom de document estandarditzat AMB prefix d'ordre.
+ * Format: {order}_{YYYY.MM.DD}_{counterparty}_{amount}EUR_{concept}.{ext}
+ *
+ * IMPORTANT: El prefix d'ordre és la CLAU MESTRA per traçabilitat:
+ * - Línia 7 de l'Excel → fitxer 007_...pdf
+ * - Sense buscar, sense interpretar, sense errors humans.
+ */
+function generateDocumentNameWithOrder(
+  order: number,
   expense: UnifiedExpense,
-  assignmentAmount: number,
-  budgetCode: string
+  assignmentAmount: number
 ): string {
+  const orderPart = padOrderNumber(order);
   const datePart = formatDateForFilename(expense.date);
   const counterparty = sanitizeForFilename(truncate(expense.counterpartyName ?? 'Sense', 20));
   const amount = formatAmountForFilename(assignmentAmount);
   const concept = sanitizeForFilename(truncate(expense.description ?? '', 30));
-  const txIdShort = expense.txId.slice(0, 12);
 
   // Si tenim attachments amb nom, usar l'extensió del primer attachment
   const attachment = expense.attachments?.[0];
@@ -170,7 +181,7 @@ function generateDocumentName(
     }
   }
 
-  return `${datePart}_${counterparty}_${amount}EUR_${concept}_${txIdShort}[${budgetCode}]${ext}`;
+  return `${orderPart}_${datePart}_${counterparty}_${amount}EUR_${concept}${ext}`;
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -193,7 +204,17 @@ export function buildJustificationRows(params: BuildJustificationRowsParams): Ju
   const budgetLineMap = new Map(budgetLines.map((bl) => [bl.id, bl]));
 
   // 1. Construir llista de files (una per cada assignment del projecte)
-  const rows: Omit<JustificationRow, 'order' | 'zipPathCronologic' | 'zipPathPerPartida'>[] = [];
+  // NOTA: No generem documentName encara - ho farem després d'ordenar i assignar ordre
+  interface PreRow {
+    txId: string;
+    expense: UnifiedExpense;
+    budgetLineCode: string;
+    budgetLineName: string;
+    budgetLineId: string | null;
+    amountAssignedEUR: number;
+  }
+
+  const preRows: PreRow[] = [];
 
   for (const link of expenseLinks) {
     const expense = expenses.get(link.id);
@@ -210,102 +231,74 @@ export function buildJustificationRows(params: BuildJustificationRowsParams): Ju
       const budgetLineCode = budgetLine?.code ?? 'ZZ_NO_PARTIDA';
       const budgetLineName = budgetLine?.name ?? '(sense partida)';
 
-      // Generar nom del document
-      const documentName = generateDocumentName(
-        expense,
-        Math.abs(assignment.amountEUR),
-        budgetLineCode
-      );
-
-      rows.push({
+      preRows.push({
         txId: link.id,
-        dateExpense: expense.date,
-        paymentDate: expense.paymentDate ?? null,
-        counterpartyName: expense.counterpartyName ?? '',
-        concept: expense.description ?? '',
+        expense,
         budgetLineCode,
         budgetLineName,
         budgetLineId: assignment.budgetLineId ?? null,
-        amountTotalEUR: expense.amountEUR !== 0 ? Math.abs(expense.amountEUR) : null,
         amountAssignedEUR: Math.abs(assignment.amountEUR),
-        documentName,
-        documentUrl: expense.documentUrl ?? expense.attachments?.[0]?.url ?? null,
-        source: expense.source,
-        categoryName: expense.categoryName,
       });
     }
   }
 
   // 2. Ordenar amb la regla fixa: budgetLineCode (asc) → date (asc) → txId (asc)
-  rows.sort((a, b) => {
+  // AQUEST ORDRE ÉS DEFINITIU I NO NEGOCIABLE
+  preRows.sort((a, b) => {
     // Primer: budgetLineCode alfabèticament
     const codeCompare = a.budgetLineCode.localeCompare(b.budgetLineCode);
     if (codeCompare !== 0) return codeCompare;
 
     // Segon: data de despesa
-    const dateCompare = a.dateExpense.localeCompare(b.dateExpense);
+    const dateCompare = a.expense.date.localeCompare(b.expense.date);
     if (dateCompare !== 0) return dateCompare;
 
-    // Tercer: txId com a desempat
+    // Tercer: txId com a desempat estable
     return a.txId.localeCompare(b.txId);
   });
 
-  // 3. Assignar ordre i generar paths
-  // Tracking de noms usats per evitar col·lisions
-  const usedNamesPerPartida = new Map<string, Set<string>>();
-  const usedNamesCronologic = new Set<string>();
-
-  const finalRows: JustificationRow[] = rows.map((row, index) => {
+  // 3. Assignar ordre (1..N) i generar noms amb prefix d'ordre
+  // IMPORTANT: L'ordre és la CLAU MESTRA per traçabilitat Excel ↔ ZIP ↔ manifest
+  const finalRows: JustificationRow[] = preRows.map((preRow, index) => {
     const order = index + 1;
+    const { expense, budgetLineCode, budgetLineName, budgetLineId, amountAssignedEUR, txId } = preRow;
+
+    // Generar nom del document AMB prefix d'ordre
+    const documentName = generateDocumentNameWithOrder(order, expense, amountAssignedEUR);
+
+    // Generar nom de carpeta de partida
     const budgetFolderName = generateBudgetFolderName(
-      row.budgetLineId ? budgetLineMap.get(row.budgetLineId) ?? null : null
+      budgetLineId ? budgetLineMap.get(budgetLineId) ?? null : null
     );
 
-    // Resoldre col·lisions per partida
-    if (!usedNamesPerPartida.has(budgetFolderName)) {
-      usedNamesPerPartida.set(budgetFolderName, new Set());
-    }
-    const partidaNames = usedNamesPerPartida.get(budgetFolderName)!;
-    const filenamePartida = resolveFilenameCollision(row.documentName, partidaNames);
-    partidaNames.add(filenamePartida);
-
-    // Resoldre col·lisions per cronològic
-    const filenameCronologic = resolveFilenameCollision(row.documentName, usedNamesCronologic);
-    usedNamesCronologic.add(filenameCronologic);
-
+    // ZIP paths:
+    // - 01_per_partida: subcarpeta per partida
+    // - 02_cronologic: CARPETA PLANA (sense subcarpetes per mes!)
+    //   L'ordre el dona el prefix numèric del nom de fitxer.
     return {
-      ...row,
       order,
-      zipPathPerPartida: `01_per_partida/${budgetFolderName}/${filenamePartida}`,
-      zipPathCronologic: `02_cronologic/${filenameCronologic}`,
+      txId,
+      dateExpense: expense.date,
+      paymentDate: expense.paymentDate ?? null,
+      counterpartyName: expense.counterpartyName ?? '',
+      concept: expense.description ?? '',
+      budgetLineCode,
+      budgetLineName,
+      budgetLineId,
+      amountTotalEUR: expense.amountEUR !== 0 ? Math.abs(expense.amountEUR) : null,
+      amountAssignedEUR,
+      documentName,
+      documentUrl: expense.documentUrl ?? expense.attachments?.[0]?.url ?? null,
+      source: expense.source,
+      categoryName: expense.categoryName,
+      // Paths dins del ZIP
+      zipPathPerPartida: `01_per_partida/${budgetFolderName}/${documentName}`,
+      zipPathCronologic: `02_cronologic/${documentName}`,
     };
   });
 
   return finalRows;
 }
 
-/**
- * Afegir sufix de col·lisió a un nom de fitxer si ja existeix.
- * Ex: "2025.12.25_taxi.pdf" → "2025.12.25_taxi__2.pdf"
- */
-function resolveFilenameCollision(filename: string, usedNames: Set<string>): string {
-  if (!usedNames.has(filename)) {
-    return filename;
-  }
-
-  // Separar nom base i extensió
-  const lastDot = filename.lastIndexOf('.');
-  const hasExtension = lastDot > 0;
-  const baseName = hasExtension ? filename.slice(0, lastDot) : filename;
-  const ext = hasExtension ? filename.slice(lastDot) : '';
-
-  // Buscar sufix lliure
-  let counter = 2;
-  let newFilename = `${baseName}__${counter}${ext}`;
-  while (usedNames.has(newFilename)) {
-    counter++;
-    newFilename = `${baseName}__${counter}${ext}`;
-  }
-
-  return newFilename;
-}
+// NOTA: resolveFilenameCollision ja no és necessària perquè cada fitxer
+// té un prefix d'ordre únic (001_, 002_, ...) que garanteix unicitat.
