@@ -452,11 +452,11 @@ export default function CaptureExpensesPage() {
                               title={c?.docOpen ?? 'Obrir comprovant'}
                               aria-label={c?.docOpen ?? 'Obrir comprovant'}
                             >
-                              <Circle className="h-2.5 w-2.5 fill-green-500 text-green-500 inline-block" />
+                              <Circle className="h-3.5 w-3.5 fill-green-500 text-green-500 inline-block" />
                             </button>
                           ) : (
                             <span title={c?.docNone ?? 'Sense comprovant'}>
-                              <Circle className="h-2.5 w-2.5 text-muted-foreground/30 inline-block" />
+                              <Circle className="h-3.5 w-3.5 text-muted-foreground/30 inline-block" />
                             </span>
                           )}
                         </TableCell>

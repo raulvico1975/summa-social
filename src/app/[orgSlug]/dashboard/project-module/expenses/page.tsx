@@ -895,10 +895,10 @@ export default function ExpensesInboxPage() {
                           title={ep.tooltipOpenDocument}
                           aria-label={ep.tooltipOpenDocument}
                         >
-                          <Circle className="h-2.5 w-2.5 fill-green-500 text-green-500 inline-block" />
+                          <Circle className="h-3.5 w-3.5 fill-green-500 text-green-500 inline-block" />
                         </button>
                       ) : (
-                        <Circle className="h-2.5 w-2.5 text-muted-foreground/30 inline-block" />
+                        <Circle className="h-3.5 w-3.5 text-muted-foreground/30 inline-block" />
                       )}
                     </TableCell>
                     <TableCell className="font-mono text-sm">
