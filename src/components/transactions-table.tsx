@@ -386,10 +386,16 @@ export function TransactionsTable({ initialDateFilter = null }: TransactionsTabl
   }, [transactions]);
 
   // Devolucions pendents d'assignar
+  // NOTA: Exclou pares de remeses amb status 'complete' (els donants estan a les filles)
   const pendingReturns = React.useMemo(() => {
-    return returnTransactions.filter(tx =>
-      tx.transactionType === 'return' && !tx.contactId
-    );
+    return returnTransactions.filter(tx => {
+      // Si és un pare de remesa de devolucions, només comptar si NO és complete
+      if (tx.isRemittance && tx.remittanceType === 'returns') {
+        return tx.remittanceStatus !== 'complete';
+      }
+      // Per la resta (individuals o filles), comprovar si no té contactId
+      return tx.transactionType === 'return' && !tx.contactId;
+    });
   }, [returnTransactions]);
 
   // Estadístiques de devolucions pendents (diferenciant remeses vs individuals)
