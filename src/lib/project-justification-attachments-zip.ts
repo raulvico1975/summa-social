@@ -154,10 +154,10 @@ function formatAmountForFilename(amount: number): string {
 }
 
 /**
- * Generar nom de fitxer segons especificació
+ * Generar nom de fitxer "legacy" segons especificació original
  * YYYY.MM.DD - {OrigenDestinatari|Sense} - {ImportAbs}EUR - {ConcepteCurt} - {txId} [{budgetCodeOrNO_PARTIDA}].{ext}
  */
-function generateFilename(
+function generateLegacyFilename(
   expense: UnifiedExpense,
   assignmentAmount: number,
   budgetCode: string,
@@ -172,6 +172,52 @@ function generateFilename(
   const filename = `${datePart} - ${counterparty} - ${amount}EUR - ${concept} - ${txIdShort} [${budgetCode}]${ext}`;
 
   return sanitizeForFilename(filename);
+}
+
+/**
+ * Obtenir el nom del fitxer per al ZIP.
+ * Preferència: attachment.name (nou format estandarditzat) > legacy filename
+ */
+function getFilenameForZip(
+  expense: UnifiedExpense,
+  assignmentAmount: number,
+  budgetCode: string,
+  ext: string
+): string {
+  // Si tenim attachments amb name, usar el primer attachment.name
+  const attachment = expense.attachments?.[0];
+  if (attachment?.name) {
+    return sanitizeForFilename(attachment.name);
+  }
+
+  // Fallback: nom legacy per documents antics
+  return generateLegacyFilename(expense, assignmentAmount, budgetCode, ext);
+}
+
+/**
+ * Afegir sufix de col·lisió a un nom de fitxer si ja existeix.
+ * Ex: "2025.12.25_taxi.pdf" → "2025.12.25_taxi__2.pdf"
+ */
+function resolveFilenameCollision(filename: string, usedNames: Set<string>): string {
+  if (!usedNames.has(filename)) {
+    return filename;
+  }
+
+  // Separar nom base i extensió
+  const lastDot = filename.lastIndexOf('.');
+  const hasExtension = lastDot > 0;
+  const baseName = hasExtension ? filename.slice(0, lastDot) : filename;
+  const ext = hasExtension ? filename.slice(lastDot) : '';
+
+  // Buscar sufix lliure
+  let counter = 2;
+  let newFilename = `${baseName}__${counter}${ext}`;
+  while (usedNames.has(newFilename)) {
+    counter++;
+    newFilename = `${baseName}__${counter}${ext}`;
+  }
+
+  return newFilename;
 }
 
 /**
@@ -317,6 +363,10 @@ export async function exportProjectJustificationZip(
   let missingCount = 0;
   let fetchErrorCount = 0;
 
+  // Tracking de noms usats per evitar col·lisions (per carpeta)
+  const usedNamesPerPartida = new Map<string, Set<string>>(); // budgetFolderName -> Set<filename>
+  const usedNamesCronologic = new Map<string, Set<string>>(); // monthFolder -> Set<filename>
+
   // 4. Processar cada entry
   for (let i = 0; i < processedEntries.length; i++) {
     const entry = processedEntries[i];
@@ -381,16 +431,33 @@ export async function exportProjectJustificationZip(
       const blob = await response.blob();
       const arrayBuffer = await blob.arrayBuffer();
 
-      // Generar nom de fitxer
-      const filename = generateFilename(expense, assignment.amountEUR, budgetCode, ext);
+      // Generar nom de fitxer base (prefereix attachment.name si existeix)
+      const baseFilename = getFilenameForZip(expense, assignment.amountEUR, budgetCode, ext);
+
+      // Inicialitzar sets de noms usats si no existeixen
+      if (!usedNamesPerPartida.has(budgetFolderName)) {
+        usedNamesPerPartida.set(budgetFolderName, new Set());
+      }
+      const monthFolder = formatDateForFolder(expense.date);
+      if (!usedNamesCronologic.has(monthFolder)) {
+        usedNamesCronologic.set(monthFolder, new Set());
+      }
+
+      // Resoldre col·lisions per cada carpeta
+      const partidaNames = usedNamesPerPartida.get(budgetFolderName)!;
+      const filenamePartida = resolveFilenameCollision(baseFilename, partidaNames);
+      partidaNames.add(filenamePartida);
+
+      const cronologicNames = usedNamesCronologic.get(monthFolder)!;
+      const filenameCronologic = resolveFilenameCollision(baseFilename, cronologicNames);
+      cronologicNames.add(filenameCronologic);
 
       // Carpeta per partida
-      const partidaPath = `${budgetFolderName}/${filename}`;
+      const partidaPath = `${budgetFolderName}/${filenamePartida}`;
       perPartidaFolder.file(partidaPath, arrayBuffer);
 
       // Carpeta cronològica
-      const monthFolder = formatDateForFolder(expense.date);
-      const cronologicPath = `${monthFolder}/${filename}`;
+      const cronologicPath = `${monthFolder}/${filenameCronologic}`;
       cronologicFolder.file(cronologicPath, arrayBuffer);
 
       // Actualitzar manifest
