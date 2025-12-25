@@ -6,7 +6,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useAppLog } from '@/hooks/use-app-log';
 import { useFirebase, useCollection, useMemoFirebase } from '@/firebase';
 import { useCurrentOrganization } from '@/hooks/organization-provider';
-import { collection, query, where, updateDoc, doc, increment, addDoc } from 'firebase/firestore';
+import { collection, query, where, updateDoc, doc, increment, addDoc, getDocs } from 'firebase/firestore';
 import type { Transaction, Donor } from '@/lib/data';
 import { normalizeIBAN, normalizeTaxId as normalizeLibTaxId } from '@/lib/normalize';
 
@@ -27,6 +27,9 @@ export interface ColumnMapping {
   dniColumn: number | null;
   nameColumn: number | null;
   reasonColumn: number | null;
+  // Columnes bulk (format NET)
+  liquidationDateColumn: number | null;
+  liquidationNumberColumn: number | null;
 }
 
 export interface ParsedReturn {
@@ -39,6 +42,9 @@ export interface ParsedReturn {
   dni: string | null;
   originalName: string | null;
   returnReason: string | null;
+  // Bulk mode (format NET) - opcional
+  liquidationDateISO?: string;             // YYYY-MM-DD
+  liquidationNumber?: string;
   // Matching donant
   matchedDonorId: string | null;
   matchedDonor: Donor | null;              // Referència completa per conveniència
@@ -61,6 +67,25 @@ export interface GroupedMatch {
   totalAmount: number;
   date: Date;
   groupId: string;
+}
+
+// Tipus per mode Bulk (format NET)
+export type BulkGroupStatus = 'auto' | 'needsReview' | 'noMatch';
+export type BulkGroupReason = 'multipleCandidates' | 'outsideWindow' | 'noCandidates' | null;
+
+export interface BulkReturnGroup {
+  key: string;                             // `${liquidationDateISO}|${liquidationNumber}`
+  liquidationDateISO: string;              // YYYY-MM-DD
+  liquidationNumber: string;
+  totalAmount: number;                     // POSITIU (suma de amounts)
+  rows: ParsedReturn[];
+  candidates: Transaction[];               // Pares candidats (amount match)
+  candidatesInWindow: Transaction[];       // Candidats dins ±2 dies
+  candidatesOutsideWindow: Transaction[];  // Candidats fora finestra
+  status: BulkGroupStatus;
+  reason: BulkGroupReason;
+  selectedParentId: string | null;         // Per UI quan needsReview
+  matchedParent: Transaction | null;       // Quan status='auto'
 }
 
 export interface ReturnImporterStats {
@@ -309,7 +334,7 @@ const detectColumns = (rows: string[][], startRow: number): ColumnMapping => {
 
   const sampleRows = rows.slice(startRow, startRow + 10);
   if (sampleRows.length === 0 || sampleRows[0].length === 0) {
-    return { ibanColumn, amountColumn, dateColumn, dniColumn, nameColumn, reasonColumn };
+    return { ibanColumn, amountColumn, dateColumn, dniColumn, nameColumn, reasonColumn, liquidationDateColumn: null, liquidationNumberColumn: null };
   }
 
   const numCols = Math.max(...sampleRows.map(r => r.length));
@@ -362,7 +387,7 @@ const detectColumns = (rows: string[][], startRow: number): ColumnMapping => {
     }
   }
 
-  return { ibanColumn, amountColumn, dateColumn, dniColumn, nameColumn, reasonColumn };
+  return { ibanColumn, amountColumn, dateColumn, dniColumn, nameColumn, reasonColumn, liquidationDateColumn: null, liquidationNumberColumn: null };
 };
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -392,11 +417,14 @@ export function useReturnImporter() {
     dniColumn: null,
     nameColumn: null,
     reasonColumn: null,
+    liquidationDateColumn: null,
+    liquidationNumberColumn: null,
   });
 
   // Estat de resultats
   const [parsedReturns, setParsedReturns] = React.useState<ParsedReturn[]>([]);
   const [groupedMatches, setGroupedMatches] = React.useState<GroupedMatch[]>([]);
+  const [bulkReturnGroups, setBulkReturnGroups] = React.useState<BulkReturnGroup[]>([]);
 
   // Carregar donants
   const donorsQuery = useMemoFirebase(
@@ -439,9 +467,10 @@ export function useReturnImporter() {
     setFiles([]);
     setAllRows([]);
     setStartRow(0);
-    setMapping({ ibanColumn: null, amountColumn: null, dateColumn: null, dniColumn: null, nameColumn: null, reasonColumn: null });
+    setMapping({ ibanColumn: null, amountColumn: null, dateColumn: null, dniColumn: null, nameColumn: null, reasonColumn: null, liquidationDateColumn: null, liquidationNumberColumn: null });
     setParsedReturns([]);
     setGroupedMatches([]);
+    setBulkReturnGroups([]);
   }, []);
 
   // ═══════════════════════════════════════════════════════════════════════════
@@ -566,6 +595,18 @@ export function useReturnImporter() {
         const originalName = mapping.nameColumn !== null ? (row[mapping.nameColumn] || '').trim() : null;
         const returnReason = mapping.reasonColumn !== null ? (row[mapping.reasonColumn] || '').trim() : null;
 
+        // Bulk mode (format NET): parsejar liquidationDate i liquidationNumber
+        let liquidationDateISO: string | undefined;
+        let liquidationNumber: string | undefined;
+        if (mapping.liquidationDateColumn !== null && mapping.liquidationNumberColumn !== null) {
+          const rawLiqDate = row[mapping.liquidationDateColumn] || '';
+          const liqDate = parseDate(rawLiqDate);
+          if (liqDate) {
+            liquidationDateISO = liqDate.toISOString().split('T')[0]; // YYYY-MM-DD
+          }
+          liquidationNumber = (row[mapping.liquidationNumberColumn] || '').trim() || undefined;
+        }
+
         results.push({
           rowIndex: startRow + i + 1,
           iban,
@@ -587,6 +628,9 @@ export function useReturnImporter() {
           matchedTransactionId: null,
           matchedTransaction: null,
           status: 'not_found',
+          // Bulk mode (format NET)
+          liquidationDateISO,
+          liquidationNumber,
         });
       }
 
@@ -634,88 +678,222 @@ export function useReturnImporter() {
 
       // ═══════════════════════════════════════════════════════════════════════
       // FASE 4: DETECTAR AGRUPACIONS (ABANS del matching individual!)
-      // No exigim donant per detectar el pare - la suma inclou TOTES les devolucions
+      // Mode BULK: agrupa per liquidationDateISO|liquidationNumber amb ±2 dies
+      // Mode NORMAL: agrupa per data amb ±5 dies
       // ═══════════════════════════════════════════════════════════════════════
 
       const usedTransactionIds = new Set<string>();
       const foundGroups: GroupedMatch[] = [];
+      const bulkGroups: BulkReturnGroup[] = [];
 
-      // Considerar TOTES les devolucions AMB data vàlida (NO exigim donant!)
-      const withValidDate = results.filter(r =>
-        r.dateConfidence !== 'none' &&
-        r.date !== null
-      );
+      // Detectar mode bulk: totes les columnes NET han d'estar definides
+      const isBulkNetFormat = mapping.liquidationDateColumn !== null && mapping.liquidationNumberColumn !== null;
 
-      // Agrupar per data (YYYY-MM-DD) - NO agrupar les 'no-date'
-      const dateGroups = new Map<string, ParsedReturn[]>();
-      for (const r of withValidDate) {
-        const dateKey = r.date!.toISOString().split('T')[0];
-        if (!dateGroups.has(dateKey)) dateGroups.set(dateKey, []);
-        dateGroups.get(dateKey)!.push(r);
-      }
+      if (isBulkNetFormat) {
+        // ═══════════════════════════════════════════════════════════════════
+        // MODE BULK: Agrupar per liquidationDateISO|liquidationNumber
+        // ═══════════════════════════════════════════════════════════════════
+        console.log('[performMatching] FASE 4: Mode BULK detectat');
 
-      let groupCounter = 0;
-      for (const [dateKey, returns] of dateGroups) {
-        // Ignorar grups amb <2 devolucions
-        if (returns.length < 2) continue;
+        const DAY_MS = 24 * 60 * 60 * 1000;
+        const BULK_WINDOW_DAYS = 2; // ±2 dies per bulk mode
 
-        const totalAmount = returns.reduce((sum, r) => sum + r.amount, 0);
-        const groupDate = returns[0].date!;
-
-        // Buscar transaccions candidates
-        const candidates = (pendingReturns || []).filter(tx => {
-          if (usedTransactionIds.has(tx.id)) return false;
-          if (tx.amount >= 0) return false; // Ha de ser negatiu
-
-          const txAmount = Math.abs(tx.amount);
-          const amountDiff = Math.abs(txAmount - totalAmount);
-          if (amountDiff > 0.02) return false;
-
-          // Filtre de data: ±5 dies
-          const txDate = getTxDate(tx);
-          const diffMs = Math.abs(txDate.getTime() - groupDate.getTime());
-          const diffDays = diffMs / (1000 * 60 * 60 * 24);
-          if (diffDays > 5) return false;
-
-          return true;
-        });
-
-        console.log(`[detectGrouped] Grup ${dateKey}: ${returns.length} devolucions, suma=${totalAmount.toFixed(2)}€, candidates=${candidates.length}`);
-
-        if (candidates.length === 1) {
-          // Match únic -> assignar
-          const matchingTx = candidates[0];
-          groupCounter++;
-          const groupId = `group-${groupCounter}`;
-
-          returns.forEach(r => {
-            r.matchType = 'grouped';
-            r.groupId = groupId;
-            r.groupedTransactionId = matchingTx.id;
-            r.groupTotalAmount = Math.abs(matchingTx.amount);
-            r.matchedTransactionId = matchingTx.id;
-            r.matchedTransaction = matchingTx;
-            r.status = 'matched';
-          });
-
-          foundGroups.push({
-            originalTransaction: matchingTx,
-            returns,
-            totalAmount,
-            date: groupDate,
-            groupId,
-          });
-
-          usedTransactionIds.add(matchingTx.id);
-          console.log(`[detectGrouped] ✅ Grup ${groupId} assignat a tx ${matchingTx.id}`);
-        } else if (candidates.length > 1) {
-          // Ambigüitat -> no assignar, marcar
-          returns.forEach(r => {
-            r.noMatchReason = 'ambiguous';
-          });
-          console.log(`[detectGrouped] ⚠️ Grup ${dateKey} ambiguo (${candidates.length} candidates)`);
+        // Agrupar per clau de liquidació
+        const liquidationGroups = new Map<string, ParsedReturn[]>();
+        for (const r of results) {
+          if (r.liquidationDateISO && r.liquidationNumber) {
+            const key = `${r.liquidationDateISO}|${r.liquidationNumber}`;
+            if (!liquidationGroups.has(key)) liquidationGroups.set(key, []);
+            liquidationGroups.get(key)!.push(r);
+          }
         }
-        // Si candidates.length === 0, no fem res (les devolucions queden per matching individual)
+
+        console.log(`[performMatching] BULK: ${liquidationGroups.size} grups de liquidació`);
+
+        let bulkGroupCounter = 0;
+        for (const [key, returns] of liquidationGroups) {
+          const [liquidationDateISO, liquidationNumber] = key.split('|');
+          const liquidationDate = new Date(liquidationDateISO);
+          const totalAmount = returns.reduce((sum, r) => sum + r.amount, 0);
+
+          // Buscar TOTS els candidats per import (sense filtre de data)
+          const allCandidates = (pendingReturns || []).filter(tx => {
+            if (usedTransactionIds.has(tx.id)) return false;
+            if (tx.amount >= 0) return false; // Ha de ser negatiu
+
+            const txAmount = Math.abs(tx.amount);
+            const amountDiff = Math.abs(txAmount - totalAmount);
+            return amountDiff <= 0.02;
+          });
+
+          // Separar candidats dins i fora de la finestra ±2 dies
+          const candidatesInWindow: typeof allCandidates = [];
+          const candidatesOutsideWindow: typeof allCandidates = [];
+
+          for (const tx of allCandidates) {
+            const txDate = getTxDate(tx);
+            const diffMs = Math.abs(txDate.getTime() - liquidationDate.getTime());
+            const diffDays = diffMs / DAY_MS;
+
+            if (diffDays <= BULK_WINDOW_DAYS) {
+              candidatesInWindow.push(tx);
+            } else {
+              candidatesOutsideWindow.push(tx);
+            }
+          }
+
+          // Determinar status i reason
+          let status: BulkGroupStatus;
+          let reason: BulkGroupReason = null;
+          let matchedParent: Transaction | null = null;
+
+          if (candidatesInWindow.length === 1) {
+            // Auto-match: 1 candidat dins la finestra
+            status = 'auto';
+            matchedParent = candidatesInWindow[0];
+          } else if (candidatesInWindow.length > 1) {
+            // Múltiples candidats dins la finestra
+            status = 'needsReview';
+            reason = 'multipleCandidates';
+          } else if (candidatesOutsideWindow.length > 0) {
+            // 0 dins finestra però hi ha fora
+            status = 'needsReview';
+            reason = 'outsideWindow';
+          } else {
+            // 0 candidats totals
+            status = 'noMatch';
+            reason = 'noCandidates';
+          }
+
+          bulkGroupCounter++;
+          const groupId = `bulk-${bulkGroupCounter}`;
+
+          // Si auto-match, assignar a les devolucions
+          if (status === 'auto' && matchedParent) {
+            returns.forEach(r => {
+              r.matchType = 'grouped';
+              r.groupId = groupId;
+              r.groupedTransactionId = matchedParent!.id;
+              r.groupTotalAmount = Math.abs(matchedParent!.amount);
+              r.matchedTransactionId = matchedParent!.id;
+              r.matchedTransaction = matchedParent;
+              r.status = 'matched';
+            });
+
+            foundGroups.push({
+              originalTransaction: matchedParent,
+              returns,
+              totalAmount,
+              date: liquidationDate,
+              groupId,
+            });
+
+            usedTransactionIds.add(matchedParent.id);
+          }
+
+          // Guardar el grup bulk per a la UI
+          bulkGroups.push({
+            key,
+            liquidationDateISO,
+            liquidationNumber,
+            totalAmount,
+            rows: returns,
+            candidates: allCandidates,
+            candidatesInWindow,
+            candidatesOutsideWindow,
+            status,
+            reason,
+            selectedParentId: matchedParent?.id || null,
+            matchedParent,
+          });
+
+          console.log(`[BULK] Grup ${key}: ${returns.length} devolucions, suma=${totalAmount.toFixed(2)}€, inWindow=${candidatesInWindow.length}, outWindow=${candidatesOutsideWindow.length}, status=${status}`);
+        }
+
+        console.log(`[performMatching] FASE 4 BULK: ${bulkGroups.filter(g => g.status === 'auto').length} auto, ${bulkGroups.filter(g => g.status === 'needsReview').length} needsReview, ${bulkGroups.filter(g => g.status === 'noMatch').length} noMatch`);
+
+      } else {
+        // ═══════════════════════════════════════════════════════════════════
+        // MODE NORMAL: Agrupar per data amb ±5 dies
+        // ═══════════════════════════════════════════════════════════════════
+
+        // Considerar TOTES les devolucions AMB data vàlida (NO exigim donant!)
+        const withValidDate = results.filter(r =>
+          r.dateConfidence !== 'none' &&
+          r.date !== null
+        );
+
+        // Agrupar per data (YYYY-MM-DD) - NO agrupar les 'no-date'
+        const dateGroups = new Map<string, ParsedReturn[]>();
+        for (const r of withValidDate) {
+          const dateKey = r.date!.toISOString().split('T')[0];
+          if (!dateGroups.has(dateKey)) dateGroups.set(dateKey, []);
+          dateGroups.get(dateKey)!.push(r);
+        }
+
+        let groupCounter = 0;
+        for (const [dateKey, returns] of dateGroups) {
+          // Ignorar grups amb <2 devolucions
+          if (returns.length < 2) continue;
+
+          const totalAmount = returns.reduce((sum, r) => sum + r.amount, 0);
+          const groupDate = returns[0].date!;
+
+          // Buscar transaccions candidates
+          const candidates = (pendingReturns || []).filter(tx => {
+            if (usedTransactionIds.has(tx.id)) return false;
+            if (tx.amount >= 0) return false; // Ha de ser negatiu
+
+            const txAmount = Math.abs(tx.amount);
+            const amountDiff = Math.abs(txAmount - totalAmount);
+            if (amountDiff > 0.02) return false;
+
+            // Filtre de data: ±5 dies
+            const txDate = getTxDate(tx);
+            const diffMs = Math.abs(txDate.getTime() - groupDate.getTime());
+            const diffDays = diffMs / (1000 * 60 * 60 * 24);
+            if (diffDays > 5) return false;
+
+            return true;
+          });
+
+          console.log(`[detectGrouped] Grup ${dateKey}: ${returns.length} devolucions, suma=${totalAmount.toFixed(2)}€, candidates=${candidates.length}`);
+
+          if (candidates.length === 1) {
+            // Match únic -> assignar
+            const matchingTx = candidates[0];
+            groupCounter++;
+            const groupId = `group-${groupCounter}`;
+
+            returns.forEach(r => {
+              r.matchType = 'grouped';
+              r.groupId = groupId;
+              r.groupedTransactionId = matchingTx.id;
+              r.groupTotalAmount = Math.abs(matchingTx.amount);
+              r.matchedTransactionId = matchingTx.id;
+              r.matchedTransaction = matchingTx;
+              r.status = 'matched';
+            });
+
+            foundGroups.push({
+              originalTransaction: matchingTx,
+              returns,
+              totalAmount,
+              date: groupDate,
+              groupId,
+            });
+
+            usedTransactionIds.add(matchingTx.id);
+            console.log(`[detectGrouped] ✅ Grup ${groupId} assignat a tx ${matchingTx.id}`);
+          } else if (candidates.length > 1) {
+            // Ambigüitat -> no assignar, marcar
+            returns.forEach(r => {
+              r.noMatchReason = 'ambiguous';
+            });
+            console.log(`[detectGrouped] ⚠️ Grup ${dateKey} ambiguo (${candidates.length} candidates)`);
+          }
+          // Si candidates.length === 0, no fem res (les devolucions queden per matching individual)
+        }
       }
 
       console.log(`[performMatching] FASE 4: ${foundGroups.length} grups trobats`);
@@ -791,11 +969,20 @@ export function useReturnImporter() {
 
       setParsedReturns(results);
       setGroupedMatches(foundGroups);
+      setBulkReturnGroups(bulkGroups);
 
       const individualMatched = results.filter(r => r.matchType === 'individual').length;
       const groupedCount = results.filter(r => r.matchType === 'grouped').length;
       const ambiguousCount = results.filter(r => r.noMatchReason === 'ambiguous').length;
-      log(`[ReturnImporter] Matching completat: ${results.length} devolucions | grouped:${groupedCount} (${foundGroups.length} grups) | individual:${individualMatched} | ambiguous:${ambiguousCount}`);
+
+      if (isBulkNetFormat) {
+        const autoCount = bulkGroups.filter(g => g.status === 'auto').length;
+        const reviewCount = bulkGroups.filter(g => g.status === 'needsReview').length;
+        const noMatchCount = bulkGroups.filter(g => g.status === 'noMatch').length;
+        log(`[ReturnImporter] BULK Matching: ${bulkGroups.length} grups | auto:${autoCount} | needsReview:${reviewCount} | noMatch:${noMatchCount}`);
+      } else {
+        log(`[ReturnImporter] Matching completat: ${results.length} devolucions | grouped:${groupedCount} (${foundGroups.length} grups) | individual:${individualMatched} | ambiguous:${ambiguousCount}`);
+      }
 
       setStep('preview');
 
@@ -867,6 +1054,20 @@ export function useReturnImporter() {
 
         const group = groupedMatches.find(g => g.groupId === returnItem.groupId);
         if (!group) continue;
+
+        // ═══════════════════════════════════════════════════════════════════
+        // IDEMPOTENCY CHECK: Verificar si ja existeixen fills per aquest pare
+        // ═══════════════════════════════════════════════════════════════════
+        const existingChildrenQuery = query(
+          collection(firestore, 'organizations', organizationId, 'transactions'),
+          where('parentTransactionId', '==', group.originalTransaction.id)
+        );
+        const existingChildrenSnap = await getDocs(existingChildrenQuery);
+
+        if (!existingChildrenSnap.empty) {
+          console.log(`[processReturns] SKIP: Grup ${group.groupId} ja té ${existingChildrenSnap.size} fills existents (pare: ${group.originalTransaction.id})`);
+          continue; // Saltar aquest grup - ja processat anteriorment
+        }
 
         // SEPARAR: resolubles (amb donant) vs pendents (sense donant)
         const resolubles = group.returns.filter(r => r.matchedDonor);
@@ -1100,6 +1301,7 @@ export function useReturnImporter() {
     // Resultats
     parsedReturns,
     groupedMatches,
+    bulkReturnGroups,
     stats,
 
     // Accions

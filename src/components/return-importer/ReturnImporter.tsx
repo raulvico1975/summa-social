@@ -45,7 +45,7 @@ import {
   Search,
   UserPlus,
 } from 'lucide-react';
-import { useReturnImporter, type ParsedReturn } from './useReturnImporter';
+import { useReturnImporter, type ParsedReturn, type BulkReturnGroup } from './useReturnImporter';
 import { useTranslations } from '@/i18n';
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -87,6 +87,7 @@ export function ReturnImporter({
     setMapping,
     parsedReturns,
     groupedMatches,
+    bulkReturnGroups,
     stats,
     parseFiles,
     performMatching,
@@ -555,32 +556,64 @@ export function ReturnImporter({
 
             {/* Resum */}
             <div className="flex flex-wrap gap-4">
-              {/* Devolucions amb donant identificat */}
-              {(stats.matched + stats.donorFound) > 0 && (
-                <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-green-50 border border-green-200">
-                  <CheckCircle2 className="h-4 w-4 text-green-600" />
-                  <span className="text-sm font-medium text-green-800">
-                    {stats.matched + stats.donorFound} amb donant identificat
-                  </span>
-                </div>
-              )}
-              {/* Devolucions agrupades (remesa) */}
-              {stats.grouped > 0 && (
-                <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-blue-50 border border-blue-200">
-                  <Layers className="h-4 w-4 text-blue-600" />
-                  <span className="text-sm font-medium text-blue-800">
-                    {stats.grouped} {t.returnImporter?.inRemittance || "en remesa"} ({groupedMatches.length} {groupedMatches.length === 1 ? (t.returnImporter?.group || 'grup') : (t.returnImporter?.groups || 'grups')})
-                  </span>
-                </div>
-              )}
-              {/* Devolucions sense donant (no trobat) */}
-              {stats.notFound > 0 && (
-                <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-red-50 border border-red-200">
-                  <X className="h-4 w-4 text-red-600" />
-                  <span className="text-sm font-medium text-red-800">
-                    {stats.notFound} {t.returnImporter?.withoutDonor || "sense donant"}
-                  </span>
-                </div>
+              {/* Mode BULK: Resum de grups */}
+              {bulkReturnGroups.length > 0 ? (
+                <>
+                  {bulkReturnGroups.filter(g => g.status === 'auto').length > 0 && (
+                    <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-green-50 border border-green-200">
+                      <CheckCircle2 className="h-4 w-4 text-green-600" />
+                      <span className="text-sm font-medium text-green-800">
+                        {bulkReturnGroups.filter(g => g.status === 'auto').length} liquidacions auto-matched
+                      </span>
+                    </div>
+                  )}
+                  {bulkReturnGroups.filter(g => g.status === 'needsReview').length > 0 && (
+                    <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-orange-50 border border-orange-200">
+                      <AlertTriangle className="h-4 w-4 text-orange-600" />
+                      <span className="text-sm font-medium text-orange-800">
+                        {bulkReturnGroups.filter(g => g.status === 'needsReview').length} pendents de revisió
+                      </span>
+                    </div>
+                  )}
+                  {bulkReturnGroups.filter(g => g.status === 'noMatch').length > 0 && (
+                    <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-red-50 border border-red-200">
+                      <X className="h-4 w-4 text-red-600" />
+                      <span className="text-sm font-medium text-red-800">
+                        {bulkReturnGroups.filter(g => g.status === 'noMatch').length} sense coincidència
+                      </span>
+                    </div>
+                  )}
+                </>
+              ) : (
+                <>
+                  {/* Mode NORMAL: Devolucions amb donant identificat */}
+                  {(stats.matched + stats.donorFound) > 0 && (
+                    <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-green-50 border border-green-200">
+                      <CheckCircle2 className="h-4 w-4 text-green-600" />
+                      <span className="text-sm font-medium text-green-800">
+                        {stats.matched + stats.donorFound} amb donant identificat
+                      </span>
+                    </div>
+                  )}
+                  {/* Devolucions agrupades (remesa) */}
+                  {stats.grouped > 0 && (
+                    <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-blue-50 border border-blue-200">
+                      <Layers className="h-4 w-4 text-blue-600" />
+                      <span className="text-sm font-medium text-blue-800">
+                        {stats.grouped} {t.returnImporter?.inRemittance || "en remesa"} ({groupedMatches.length} {groupedMatches.length === 1 ? (t.returnImporter?.group || 'grup') : (t.returnImporter?.groups || 'grups')})
+                      </span>
+                    </div>
+                  )}
+                  {/* Devolucions sense donant (no trobat) */}
+                  {stats.notFound > 0 && (
+                    <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-red-50 border border-red-200">
+                      <X className="h-4 w-4 text-red-600" />
+                      <span className="text-sm font-medium text-red-800">
+                        {stats.notFound} {t.returnImporter?.withoutDonor || "sense donant"}
+                      </span>
+                    </div>
+                  )}
+                </>
               )}
             </div>
 
@@ -610,27 +643,121 @@ export function ReturnImporter({
               </div>
             )}
 
-            {/* Taula de resultats */}
-            <ScrollArea className="h-[350px] rounded-md border">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead className="w-12">
-                      <Checkbox
-                        checked={selectedRows.size === selectableCount && selectableCount > 0}
-                        onCheckedChange={handleToggleAll}
-                        disabled={selectableCount === 0 || partialRemittanceStats.allPending}
-                      />
-                    </TableHead>
-                    <TableHead>Data</TableHead>
-                    <TableHead className="text-right">Import</TableHead>
-                    <TableHead>IBAN</TableHead>
-                    <TableHead>Donant</TableHead>
-                    {hasAnyTypeBadge && <TableHead>Tipus</TableHead>}
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {parsedReturns.map((item, index) => (
+            {/* Taula de resultats - Mode BULK */}
+            {bulkReturnGroups.length > 0 ? (
+              <ScrollArea className="h-[350px] rounded-md border">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Data Liquidació</TableHead>
+                      <TableHead>Núm. Liquidació</TableHead>
+                      <TableHead className="text-right">Import</TableHead>
+                      <TableHead className="text-center">Devolucions</TableHead>
+                      <TableHead>Estat</TableHead>
+                      <TableHead>Transacció Pare</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {bulkReturnGroups.map((group) => (
+                      <TableRow
+                        key={group.key}
+                        className={
+                          group.status === 'auto' ? 'bg-green-50/50' :
+                          group.status === 'needsReview' ? 'bg-orange-50/50' :
+                          'bg-red-50/30'
+                        }
+                      >
+                        <TableCell className="text-sm font-mono">
+                          {group.liquidationDateISO}
+                        </TableCell>
+                        <TableCell className="text-sm font-mono">
+                          {group.liquidationNumber}
+                        </TableCell>
+                        <TableCell className="text-right font-mono text-sm">
+                          {formatCurrencyEU(group.totalAmount)}
+                        </TableCell>
+                        <TableCell className="text-center text-sm">
+                          {group.rows.length}
+                        </TableCell>
+                        <TableCell>
+                          {group.status === 'auto' ? (
+                            <Badge variant="outline" className="bg-green-100 text-green-800 border-green-300">
+                              <CheckCircle2 className="mr-1 h-3 w-3" />
+                              Auto-matched
+                            </Badge>
+                          ) : group.status === 'needsReview' ? (
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Badge variant="outline" className="bg-orange-100 text-orange-800 border-orange-300 cursor-help">
+                                  <AlertTriangle className="mr-1 h-3 w-3" />
+                                  {group.reason === 'multipleCandidates' ? 'Múltiples candidats' :
+                                   group.reason === 'outsideWindow' ? 'Fora finestra' : 'Revisió'}
+                                </Badge>
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                {group.reason === 'multipleCandidates'
+                                  ? `${group.candidatesInWindow.length} candidats dins ±2 dies`
+                                  : group.reason === 'outsideWindow'
+                                  ? `${group.candidatesOutsideWindow.length} candidats fora de la finestra ±2 dies`
+                                  : 'Cal revisió manual'}
+                              </TooltipContent>
+                            </Tooltip>
+                          ) : (
+                            <Badge variant="outline" className="bg-red-100 text-red-800 border-red-300">
+                              <X className="mr-1 h-3 w-3" />
+                              Sense coincidència
+                            </Badge>
+                          )}
+                        </TableCell>
+                        <TableCell className="text-sm">
+                          {group.matchedParent ? (
+                            <div className="flex flex-col gap-0.5">
+                              <span className="text-green-700 font-medium">
+                                {group.matchedParent.date?.split('T')[0] || '-'}
+                              </span>
+                              <span className="text-xs text-muted-foreground truncate max-w-[200px]">
+                                {group.matchedParent.description || '-'}
+                              </span>
+                            </div>
+                          ) : group.candidatesInWindow.length > 0 ? (
+                            <span className="text-orange-600 text-xs">
+                              {group.candidatesInWindow.length} candidats disponibles
+                            </span>
+                          ) : group.candidatesOutsideWindow.length > 0 ? (
+                            <span className="text-orange-600 text-xs">
+                              {group.candidatesOutsideWindow.length} fora finestra
+                            </span>
+                          ) : (
+                            <span className="text-red-500 text-xs">Cap candidat</span>
+                          )}
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </ScrollArea>
+            ) : (
+              /* Taula de resultats - Mode NORMAL */
+              <ScrollArea className="h-[350px] rounded-md border">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead className="w-12">
+                        <Checkbox
+                          checked={selectedRows.size === selectableCount && selectableCount > 0}
+                          onCheckedChange={handleToggleAll}
+                          disabled={selectableCount === 0 || partialRemittanceStats.allPending}
+                        />
+                      </TableHead>
+                      <TableHead>Data</TableHead>
+                      <TableHead className="text-right">Import</TableHead>
+                      <TableHead>IBAN</TableHead>
+                      <TableHead>Donant</TableHead>
+                      {hasAnyTypeBadge && <TableHead>Tipus</TableHead>}
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {parsedReturns.map((item, index) => (
                     <TableRow
                       key={index}
                       className={
@@ -752,26 +879,49 @@ export function ReturnImporter({
                       )}
                     </TableRow>
                   ))}
-                </TableBody>
-              </Table>
-            </ScrollArea>
+                  </TableBody>
+                </Table>
+              </ScrollArea>
+            )}
 
             {/* Info */}
             <div className="text-sm text-muted-foreground bg-muted rounded-lg p-3 space-y-1">
-              <p>
-                <strong>{selectedRows.size}</strong> devolucions seleccionades per assignar.
-              </p>
-              {stats.grouped > 0 && partialRemittanceStats.resolvedCount > 0 && (
-                <p className="text-blue-700">
-                  <Layers className="inline h-3 w-3 mr-1" />
-                  Les {partialRemittanceStats.resolvedCount} devolucions agrupades s'assignaran com a part d'una remesa.
-                </p>
-              )}
-              {partialRemittanceStats.pendingCount > 0 && (
-                <p className="text-orange-700">
-                  <UserRoundX className="inline h-3 w-3 mr-1" />
-                  {partialRemittanceStats.pendingCount} devolucions quedaran pendents d'identificar. La remesa es marcarà com a <strong>parcial</strong> fins que s'identifiquin tots els donants.
-                </p>
+              {bulkReturnGroups.length > 0 ? (
+                <>
+                  <p>
+                    <strong>{bulkReturnGroups.filter(g => g.status === 'auto').length}</strong> liquidacions es processaran automàticament.
+                  </p>
+                  {bulkReturnGroups.filter(g => g.status === 'needsReview').length > 0 && (
+                    <p className="text-orange-700">
+                      <AlertTriangle className="inline h-3 w-3 mr-1" />
+                      {bulkReturnGroups.filter(g => g.status === 'needsReview').length} liquidacions requereixen revisió manual (múltiples candidats o fora de la finestra ±2 dies).
+                    </p>
+                  )}
+                  {bulkReturnGroups.filter(g => g.status === 'noMatch').length > 0 && (
+                    <p className="text-red-700">
+                      <X className="inline h-3 w-3 mr-1" />
+                      {bulkReturnGroups.filter(g => g.status === 'noMatch').length} liquidacions sense cap transacció coincident.
+                    </p>
+                  )}
+                </>
+              ) : (
+                <>
+                  <p>
+                    <strong>{selectedRows.size}</strong> devolucions seleccionades per assignar.
+                  </p>
+                  {stats.grouped > 0 && partialRemittanceStats.resolvedCount > 0 && (
+                    <p className="text-blue-700">
+                      <Layers className="inline h-3 w-3 mr-1" />
+                      Les {partialRemittanceStats.resolvedCount} devolucions agrupades s'assignaran com a part d'una remesa.
+                    </p>
+                  )}
+                  {partialRemittanceStats.pendingCount > 0 && (
+                    <p className="text-orange-700">
+                      <UserRoundX className="inline h-3 w-3 mr-1" />
+                      {partialRemittanceStats.pendingCount} devolucions quedaran pendents d'identificar. La remesa es marcarà com a <strong>parcial</strong> fins que s'identifiquin tots els donants.
+                    </p>
+                  )}
+                </>
               )}
             </div>
 
@@ -780,7 +930,18 @@ export function ReturnImporter({
                 <ArrowLeft className="mr-2 h-4 w-4" />
                 Tornar
               </Button>
-              {partialRemittanceStats.allPending ? (
+              {bulkReturnGroups.length > 0 ? (
+                // Mode BULK: botó per processar grups auto-matched
+                <Button
+                  onClick={handleProcess}
+                  disabled={isProcessing || bulkReturnGroups.filter(g => g.status === 'auto').length === 0}
+                >
+                  {isProcessing ? (
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  ) : null}
+                  Processar {bulkReturnGroups.filter(g => g.status === 'auto').length} liquidacions
+                </Button>
+              ) : partialRemittanceStats.allPending ? (
                 <span className="text-sm text-muted-foreground italic">
                   Identifica almenys un donant per continuar
                 </span>
@@ -837,7 +998,7 @@ interface CreateDonorDialogProps {
   returnItem: ParsedReturn | null;
   returnIndex: number;
   onSubmit: (data: { name: string; taxId: string; zipCode?: string; iban?: string }) => Promise<void>;
-  t: ReturnType<typeof useTranslations>;
+  t: ReturnType<typeof useTranslations>['t'];
 }
 
 function CreateDonorForReturnDialog({
