@@ -438,9 +438,10 @@ export async function exportProjectJustificationZip(
       if (!usedNamesPerPartida.has(budgetFolderName)) {
         usedNamesPerPartida.set(budgetFolderName, new Set());
       }
-      const monthFolder = formatDateForFolder(expense.date);
-      if (!usedNamesCronologic.has(monthFolder)) {
-        usedNamesCronologic.set(monthFolder, new Set());
+      // 02_cronologic/ és pla (sense subcarpetes), usem clau fixa
+      const CRONOLOGIC_ROOT = 'ROOT';
+      if (!usedNamesCronologic.has(CRONOLOGIC_ROOT)) {
+        usedNamesCronologic.set(CRONOLOGIC_ROOT, new Set());
       }
 
       // Resoldre col·lisions per cada carpeta
@@ -448,7 +449,7 @@ export async function exportProjectJustificationZip(
       const filenamePartida = resolveFilenameCollision(baseFilename, partidaNames);
       partidaNames.add(filenamePartida);
 
-      const cronologicNames = usedNamesCronologic.get(monthFolder)!;
+      const cronologicNames = usedNamesCronologic.get(CRONOLOGIC_ROOT)!;
       const filenameCronologic = resolveFilenameCollision(baseFilename, cronologicNames);
       cronologicNames.add(filenameCronologic);
 
@@ -456,8 +457,8 @@ export async function exportProjectJustificationZip(
       const partidaPath = `${budgetFolderName}/${filenamePartida}`;
       perPartidaFolder.file(partidaPath, arrayBuffer);
 
-      // Carpeta cronològica
-      const cronologicPath = `${monthFolder}/${filenameCronologic}`;
+      // Carpeta cronològica (plana, sense subcarpetes)
+      const cronologicPath = filenameCronologic;
       cronologicFolder.file(cronologicPath, arrayBuffer);
 
       // Actualitzar manifest
