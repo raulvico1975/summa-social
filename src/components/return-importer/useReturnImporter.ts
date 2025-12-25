@@ -8,6 +8,7 @@ import { useFirebase, useCollection, useMemoFirebase } from '@/firebase';
 import { useCurrentOrganization } from '@/hooks/organization-provider';
 import { collection, query, where, updateDoc, doc, increment, addDoc } from 'firebase/firestore';
 import type { Transaction, Donor } from '@/lib/data';
+import { normalizeIBAN, normalizeTaxId as normalizeLibTaxId } from '@/lib/normalize';
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // TIPUS
@@ -41,7 +42,7 @@ export interface ParsedReturn {
   // Matching donant
   matchedDonorId: string | null;
   matchedDonor: Donor | null;              // Referència completa per conveniència
-  matchedBy: 'iban' | 'dni' | 'name' | null;
+  matchedBy: 'iban' | 'dni' | 'name' | 'manual' | null;
   // Matching transacció
   matchType: 'grouped' | 'individual' | 'none';
   noMatchReason: NoMatchReason;
@@ -974,6 +975,99 @@ export function useReturnImporter() {
   }, [organizationId, parsedReturns, groupedMatches, firestore, toast, log, reset]);
 
   // ═══════════════════════════════════════════════════════════════════════════
+  // CREAR DONANT PER A DEVOLUCIÓ PENDENT
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  /**
+   * Crea un nou donant i l'assigna a una devolució pendent.
+   * - Dedupe per taxId: si ja existeix, assigna l'existent sense crear.
+   * - IBAN opcional (pot ser buit).
+   * - matchedBy: 'manual' per indicar creació manual.
+   */
+  const handleCreateDonorForReturn = React.useCallback(async (
+    returnIndex: number,
+    donorData: {
+      name: string;
+      taxId: string;
+      zipCode?: string;
+      iban?: string;
+    }
+  ): Promise<{ success: boolean; donorId?: string; error?: string }> => {
+    if (!organizationId || !firestore) {
+      return { success: false, error: 'No organization context' };
+    }
+
+    try {
+      const normalizedTaxId = normalizeLibTaxId(donorData.taxId);
+      const normalizedIban = donorData.iban ? normalizeIBAN(donorData.iban) : '';
+
+      // 1. Dedupe: buscar si ja existeix un donant amb aquest taxId
+      const existingDonor = donors?.find(d =>
+        normalizeLibTaxId(d.taxId || '') === normalizedTaxId
+      );
+
+      let finalDonor: Donor;
+
+      if (existingDonor) {
+        // Ja existeix → usar-lo directament
+        finalDonor = existingDonor;
+      } else {
+        // 2. Crear nou donant a Firestore
+        const now = new Date().toISOString();
+        const contactsRef = collection(firestore, `organizations/${organizationId}/contacts`);
+        const newDonorDoc = await addDoc(contactsRef, {
+          type: 'donor',
+          name: donorData.name.trim(),
+          taxId: normalizedTaxId,
+          zipCode: donorData.zipCode?.trim() || '',
+          ...(normalizedIban ? { iban: normalizedIban } : {}),
+          donorType: 'individual',
+          membershipType: 'one-time',
+          status: 'inactive',
+          createdAt: now,
+          updatedAt: now,
+        });
+
+        finalDonor = {
+          id: newDonorDoc.id,
+          type: 'donor',
+          name: donorData.name.trim(),
+          taxId: normalizedTaxId,
+          zipCode: donorData.zipCode?.trim() || '',
+          iban: normalizedIban || undefined,
+          donorType: 'individual',
+          membershipType: 'one-time',
+          status: 'inactive',
+          createdAt: now,
+          updatedAt: now,
+        };
+      }
+
+      // 3. Actualitzar l'estat local: assignar el donant a la devolució
+      setParsedReturns(prev => prev.map((item, idx) => {
+        if (idx === returnIndex) {
+          return {
+            ...item,
+            matchedDonor: finalDonor,
+            matchedDonorId: finalDonor.id,
+            matchedBy: 'manual' as const,
+            status: 'matched' as const,
+          };
+        }
+        return item;
+      }));
+
+      return { success: true, donorId: finalDonor.id };
+    } catch (error) {
+      console.error('Error creating donor:', error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error'
+      };
+    }
+  }, [organizationId, firestore, donors]);
+
+  // ═══════════════════════════════════════════════════════════════════════════
   // HELPERS
   // ═══════════════════════════════════════════════════════════════════════════
 
@@ -1013,5 +1107,6 @@ export function useReturnImporter() {
     performMatching,
     processReturns,
     reset,
+    handleCreateDonorForReturn,
   };
 }

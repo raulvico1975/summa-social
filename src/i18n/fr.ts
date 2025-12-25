@@ -2028,6 +2028,22 @@ export const fr = {
     inRemittance: "en remesa",
     group: "grup",
     groups: "grups",
+    createDonor: {
+      title: "Créer un nouveau donateur",
+      description: "Créez un donateur pour l'assigner à ce remboursement",
+      labelName: "Nom",
+      labelTaxId: "DNI/NIE/CIF",
+      labelIban: "IBAN",
+      labelZipCode: "Code postal",
+      placeholderName: "Nom complet du donateur",
+      submit: "Créer et assigner",
+      creating: "Création...",
+      errorNameRequired: "Le nom est obligatoire",
+      errorTaxIdRequired: "Le DNI/NIE/CIF est obligatoire",
+      errorGeneric: "Erreur lors de la création du donateur",
+      toastSuccess: "Donateur créé",
+      toastSuccessDesc: "Le donateur a été créé et assigné au remboursement",
+    },
   },
   // Avís devolucions pendents (transactions-table)
   pendingReturnsAlert: {

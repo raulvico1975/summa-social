@@ -2020,6 +2020,22 @@ export const es = {
     inRemittance: "en remesa",
     group: "grupo",
     groups: "grupos",
+    createDonor: {
+      title: "Crear nuevo donante",
+      description: "Crea un donante para asignarlo a esta devolución",
+      labelName: "Nombre",
+      labelTaxId: "DNI/NIE/CIF",
+      labelIban: "IBAN",
+      labelZipCode: "Código postal",
+      placeholderName: "Nombre completo del donante",
+      submit: "Crear y asignar",
+      creating: "Creando...",
+      errorNameRequired: "El nombre es obligatorio",
+      errorTaxIdRequired: "El DNI/NIE/CIF es obligatorio",
+      errorGeneric: "Error creando el donante",
+      toastSuccess: "Donante creado",
+      toastSuccessDesc: "Se ha creado el donante y se ha asignado a la devolución",
+    },
   },
   // Aviso devoluciones pendientes (transactions-table)
   pendingReturnsAlert: {

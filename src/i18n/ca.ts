@@ -2027,6 +2027,22 @@ export const ca = {
     inRemittance: "en remesa",
     group: "grup",
     groups: "grups",
+    createDonor: {
+      title: "Crear nou donant",
+      description: "Crea un donant per assignar-lo a aquesta devolució",
+      labelName: "Nom",
+      labelTaxId: "DNI/NIE/CIF",
+      labelIban: "IBAN",
+      labelZipCode: "Codi postal",
+      placeholderName: "Nom complet del donant",
+      submit: "Crear i assignar",
+      creating: "Creant...",
+      errorNameRequired: "El nom és obligatori",
+      errorTaxIdRequired: "El DNI/NIE/CIF és obligatori",
+      errorGeneric: "Error creant el donant",
+      toastSuccess: "Donant creat",
+      toastSuccessDesc: "S'ha creat el donant i s'ha assignat a la devolució",
+    },
   },
   // Avís devolucions pendents (transactions-table)
   pendingReturnsAlert: {

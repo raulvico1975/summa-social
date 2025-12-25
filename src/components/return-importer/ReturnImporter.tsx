@@ -10,6 +10,8 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -43,7 +45,7 @@ import {
   Search,
   UserPlus,
 } from 'lucide-react';
-import { useReturnImporter } from './useReturnImporter';
+import { useReturnImporter, type ParsedReturn } from './useReturnImporter';
 import { useTranslations } from '@/i18n';
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -90,6 +92,7 @@ export function ReturnImporter({
     performMatching,
     processReturns,
     reset,
+    handleCreateDonorForReturn,
   } = useReturnImporter();
 
   // Reset quan es tanca
@@ -111,6 +114,31 @@ export function ReturnImporter({
       setSelectedRows(matchedIndices);
     }
   }, [step, parsedReturns]);
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // DIALOG CREAR DONANT
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  const [createDonorDialog, setCreateDonorDialog] = React.useState<{
+    open: boolean;
+    returnIndex: number;
+    returnItem: ParsedReturn | null;
+  }>({ open: false, returnIndex: -1, returnItem: null });
+
+  const handleOpenCreateDonor = (index: number, item: ParsedReturn) => {
+    setCreateDonorDialog({ open: true, returnIndex: index, returnItem: item });
+  };
+
+  const handleCreateDonorSubmit = async (data: { name: string; taxId: string; zipCode?: string; iban?: string }) => {
+    const result = await handleCreateDonorForReturn(createDonorDialog.returnIndex, data);
+    if (!result.success) {
+      throw new Error(result.error || t.returnImporter.createDonor.errorGeneric);
+    }
+    toast({
+      title: t.returnImporter.createDonor.toastSuccess,
+      description: t.returnImporter.createDonor.toastSuccessDesc.replace('{name}', data.name),
+    });
+  };
 
   // ═══════════════════════════════════════════════════════════════════════════
   // HANDLERS
@@ -635,7 +663,7 @@ export function ReturnImporter({
                               {item.matchedDonor.name}
                             </span>
                             <span className="text-xs text-muted-foreground">
-                              via {item.matchedBy === 'iban' ? 'IBAN' : item.matchedBy === 'dni' ? 'DNI' : 'Nom'}
+                              via {item.matchedBy === 'iban' ? 'IBAN' : item.matchedBy === 'dni' ? 'DNI' : item.matchedBy === 'manual' ? 'Manual' : 'Nom'}
                             </span>
                           </div>
                         ) : item.matchType === 'grouped' ? (
@@ -659,7 +687,7 @@ export function ReturnImporter({
                                 variant="ghost"
                                 size="sm"
                                 className="h-6 px-2 text-xs text-orange-700 hover:text-orange-900 hover:bg-orange-100"
-                                onClick={() => toast({ title: 'Funcionalitat pendent', description: 'Crear nou donant - pròximament' })}
+                                onClick={() => handleOpenCreateDonor(index, item)}
                               >
                                 <UserPlus className="mr-1 h-3 w-3" />
                                 Crear
@@ -784,6 +812,148 @@ export function ReturnImporter({
           </div>
         )}
 
+      </DialogContent>
+
+      {/* Dialog per crear donant */}
+      <CreateDonorForReturnDialog
+        open={createDonorDialog.open}
+        onOpenChange={(open) => setCreateDonorDialog(prev => ({ ...prev, open }))}
+        returnItem={createDonorDialog.returnItem}
+        returnIndex={createDonorDialog.returnIndex}
+        onSubmit={handleCreateDonorSubmit}
+        t={t}
+      />
+    </Dialog>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// DIALOG CREAR DONANT
+// ═══════════════════════════════════════════════════════════════════════════════
+
+interface CreateDonorDialogProps {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  returnItem: ParsedReturn | null;
+  returnIndex: number;
+  onSubmit: (data: { name: string; taxId: string; zipCode?: string; iban?: string }) => Promise<void>;
+  t: ReturnType<typeof useTranslations>;
+}
+
+function CreateDonorForReturnDialog({
+  open,
+  onOpenChange,
+  returnItem,
+  onSubmit,
+  t,
+}: CreateDonorDialogProps) {
+  const [name, setName] = React.useState('');
+  const [taxId, setTaxId] = React.useState('');
+  const [zipCode, setZipCode] = React.useState('');
+  const [iban, setIban] = React.useState('');
+  const [isSubmitting, setIsSubmitting] = React.useState(false);
+  const [error, setError] = React.useState<string | null>(null);
+
+  // Pre-emplenar IBAN quan s'obre el dialog
+  React.useEffect(() => {
+    if (open && returnItem) {
+      setIban(returnItem.iban || '');
+      setName('');
+      setTaxId('');
+      setZipCode('');
+      setError(null);
+    }
+  }, [open, returnItem]);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError(null);
+
+    // Validacions
+    if (!name.trim()) {
+      setError(t.returnImporter.createDonor.errorNameRequired);
+      return;
+    }
+    if (!taxId.trim()) {
+      setError(t.returnImporter.createDonor.errorTaxIdRequired);
+      return;
+    }
+
+    setIsSubmitting(true);
+    try {
+      await onSubmit({ name, taxId, zipCode, iban: iban || undefined });
+      onOpenChange(false);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : t.returnImporter.createDonor.errorGeneric);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle>{t.returnImporter.createDonor.title}</DialogTitle>
+          <DialogDescription>
+            {t.returnImporter.createDonor.description}
+          </DialogDescription>
+        </DialogHeader>
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div className="space-y-2">
+            <Label htmlFor="donor-name">{t.returnImporter.createDonor.labelName} *</Label>
+            <Input
+              id="donor-name"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder={t.returnImporter.createDonor.placeholderName}
+              autoFocus
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="donor-taxId">{t.returnImporter.createDonor.labelTaxId} *</Label>
+            <Input
+              id="donor-taxId"
+              value={taxId}
+              onChange={(e) => setTaxId(e.target.value)}
+              placeholder="12345678A"
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="donor-iban">{t.returnImporter.createDonor.labelIban}</Label>
+            <Input
+              id="donor-iban"
+              value={iban}
+              onChange={(e) => setIban(e.target.value)}
+              placeholder="ES00 0000 0000 0000 0000 0000"
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="donor-zipCode">{t.returnImporter.createDonor.labelZipCode}</Label>
+            <Input
+              id="donor-zipCode"
+              value={zipCode}
+              onChange={(e) => setZipCode(e.target.value)}
+              placeholder="08001"
+            />
+          </div>
+          {error && (
+            <p className="text-sm text-destructive">{error}</p>
+          )}
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => onOpenChange(false)}
+              disabled={isSubmitting}
+            >
+              {t.common.cancel}
+            </Button>
+            <Button type="submit" disabled={isSubmitting}>
+              {isSubmitting ? t.returnImporter.createDonor.creating : t.returnImporter.createDonor.submit}
+            </Button>
+          </DialogFooter>
+        </form>
       </DialogContent>
     </Dialog>
   );
