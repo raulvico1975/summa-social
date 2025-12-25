@@ -44,6 +44,37 @@ import type {
 
 const PAGE_SIZE = 50;
 
+/**
+ * Resol la URL del document d'una despesa bancària.
+ * Prioritat: fileUrl → storagePath (convertit a URL pública)
+ */
+function resolveDocumentUrl(
+  documents: ProjectExpenseExport['documents'] | undefined
+): string | null {
+  if (!documents || documents.length === 0) return null;
+
+  const firstDoc = documents[0];
+
+  // 1. Si tenim fileUrl, usar-la directament
+  if (firstDoc.fileUrl) {
+    return firstDoc.fileUrl;
+  }
+
+  // 2. Si tenim storagePath però no fileUrl, intentar construir URL pública
+  // Format storagePath: "organizations/{orgId}/documents/{docId}"
+  // Format URL: https://firebasestorage.googleapis.com/v0/b/{bucket}/o/{encodedPath}?alt=media
+  if (firstDoc.storagePath) {
+    // El bucket hauria de ser summa-social.appspot.com (o similar)
+    // Com que no tenim accés directe al bucket aquí, retornem null i deixem
+    // que l'usuari regeneri el document. En futures versions es pot millorar.
+    // Per ara, loguem un warning per debug.
+    console.warn(`[resolveDocumentUrl] storagePath exists but no fileUrl: ${firstDoc.storagePath}`);
+    return null;
+  }
+
+  return null;
+}
+
 // ═══════════════════════════════════════════════════════════════════════════
 // HOOK: Llistat de despeses exportades (feed read-only)
 // ═══════════════════════════════════════════════════════════════════════════
@@ -375,7 +406,7 @@ export function useUnifiedExpenseFeed(options?: UseUnifiedExpenseFeedOptions): U
             amountEUR: data.amountEUR,
             categoryName: data.categoryName,
             counterpartyName: data.counterpartyName,
-            documentUrl: data.documents?.[0]?.fileUrl ?? null,
+            documentUrl: resolveDocumentUrl(data.documents),
           });
         }
       }
@@ -495,7 +526,7 @@ export function useUnifiedExpenseFeed(options?: UseUnifiedExpenseFeedOptions): U
           amountEUR: data.amountEUR, // ja negatiu
           categoryName: data.categoryName,
           counterpartyName: data.counterpartyName,
-          documentUrl: data.documents?.[0]?.fileUrl ?? null,
+          documentUrl: resolveDocumentUrl(data.documents),
         };
       });
 

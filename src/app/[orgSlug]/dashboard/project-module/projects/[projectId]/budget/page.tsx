@@ -74,7 +74,7 @@ import {
 import { useFirebase } from '@/firebase';
 import { useCurrentOrganization } from '@/hooks/organization-provider';
 import { doc, getDoc } from 'firebase/firestore';
-import { buildProjectJustificationXlsx, buildProjectJustificationFundingXlsx } from '@/lib/project-justification-export';
+import { buildProjectJustificationFundingXlsx } from '@/lib/project-justification-export';
 import { exportProjectJustificationZip } from '@/lib/project-justification-attachments-zip';
 import { trackUX } from '@/lib/ux/trackUX';
 import { useRouter } from 'next/navigation';
@@ -261,7 +261,6 @@ export default function ProjectBudgetPage() {
   const [formOpen, setFormOpen] = React.useState(false);
   const [editingLine, setEditingLine] = React.useState<BudgetLine | null>(null);
   const [deleteConfirm, setDeleteConfirm] = React.useState<BudgetLine | null>(null);
-  const [isExporting, setIsExporting] = React.useState(false);
   const [isExportingFunding, setIsExportingFunding] = React.useState(false);
   const [isExportingZip, setIsExportingZip] = React.useState(false);
   const [zipProgress, setZipProgress] = React.useState<{ current: number; total: number } | null>(null);
@@ -370,43 +369,6 @@ export default function ProjectBudgetPage() {
     trackUX('budget.viewExpenses.click', { projectId });
     const url = buildUrl(`/dashboard/project-module/expenses?projectId=${projectId}`);
     router.push(url);
-  };
-
-  const handleExport = async () => {
-    if (!organizationId || !projectId) return;
-
-    setIsExporting(true);
-    try {
-      const { blob, filename } = await buildProjectJustificationXlsx(
-        firestore,
-        organizationId,
-        projectId
-      );
-
-      // Descarregar fitxer
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = filename;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
-
-      toast({
-        title: 'Excel generat',
-        description: `S'ha descarregat el fitxer ${filename}`,
-      });
-    } catch (err) {
-      console.error('Error exporting:', err);
-      toast({
-        variant: 'destructive',
-        title: 'Error',
-        description: err instanceof Error ? err.message : 'Error generant Excel',
-      });
-    } finally {
-      setIsExporting(false);
-    }
   };
 
   const handleExportFunding = async () => {
@@ -582,27 +544,14 @@ export default function ProjectBudgetPage() {
           <Button
             variant="outline"
             size="icon"
-            onClick={handleExport}
-            disabled={isExporting || budgetLines.length === 0}
-            title={t.projectModule?.exportExcel ?? 'Exportar justificació (Excel)'}
-          >
-            {isExporting ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
-            ) : (
-              <Download className="h-4 w-4" />
-            )}
-          </Button>
-          <Button
-            variant="outline"
-            size="icon"
             onClick={handleExportFunding}
             disabled={isExportingFunding || expensesLoading || projectAssignmentsCount === 0}
-            title="Exportar justificació per finançador (Excel)"
+            title={t.projectModule?.exportExcel ?? 'Exportar justificació (Excel)'}
           >
             {isExportingFunding ? (
               <Loader2 className="h-4 w-4 animate-spin" />
             ) : (
-              <Download className="h-4 w-4 text-blue-600" />
+              <Download className="h-4 w-4" />
             )}
           </Button>
           <Button

@@ -534,11 +534,16 @@ export interface FundingExportParams {
   expenses: Map<string, UnifiedExpense>;
 }
 
-function formatDateDMYForFunding(dateStr: string | null): string {
-  if (!dateStr) return '';
+/**
+ * Converteix string YYYY-MM-DD a Date object per Excel.
+ * Excel requereix Date objects per formatar correctament les dates.
+ */
+function parseDateForExcel(dateStr: string | null): Date | null {
+  if (!dateStr) return null;
   const [year, month, day] = dateStr.split('-');
-  if (!year || !month || !day) return dateStr;
-  return `${day}/${month}/${year}`;
+  if (!year || !month || !day) return null;
+  // Crear date a mitjanit UTC per evitar problemes de timezone
+  return new Date(Date.UTC(parseInt(year), parseInt(month) - 1, parseInt(day)));
 }
 
 /**
@@ -547,22 +552,23 @@ function formatDateDMYForFunding(dateStr: string | null): string {
  *
  * Columnes:
  * 1. Número d'ordre
- * 2. Data despesa
- * 3. Data de pagament
+ * 2. Data despesa (Date object)
+ * 3. Data de pagament (Date object)
  * 4. Proveïdor/destinatari
  * 5. Concepte
  * 6. Codi partida
  * 7. Nom partida
  * 8. Import total (EUR)
- * 9. Import imputat (EUR)
- * 10. Nom del comprovant
- * 11. Ruta dins ZIP (cronològic)
- * 12. Observacions (buit)
+ * 9. Import total (moneda local) - si aplica
+ * 10. Import imputat (EUR)
+ * 11. Nom del comprovant
+ * 12. Ruta dins ZIP (cronològic)
+ * 13. Observacions (buit)
  */
 export function buildProjectJustificationFundingXlsx(
   params: FundingExportParams
 ): ExportResult {
-  const { projectCode, projectName, budgetLines, expenseLinks, expenses, projectId } = params;
+  const { projectCode, budgetLines, expenseLinks, expenses, projectId } = params;
 
   // 1. Obtenir files ordenades
   const rows = buildJustificationRows({
@@ -573,8 +579,8 @@ export function buildProjectJustificationFundingXlsx(
     expenses,
   });
 
-  // 2. Construir full de despeses
-  const wsData: (string | number)[][] = [];
+  // 2. Construir full de despeses amb tipus mixtos (Date | string | number | null)
+  const wsData: (string | number | Date | null)[][] = [];
 
   // Header
   wsData.push([
@@ -586,6 +592,7 @@ export function buildProjectJustificationFundingXlsx(
     'Codi partida',
     'Nom partida',
     'Import total (EUR)',
+    'Import total (moneda local)',
     'Import imputat (EUR)',
     'Nom del comprovant',
     'Ruta dins ZIP',
@@ -594,15 +601,23 @@ export function buildProjectJustificationFundingXlsx(
 
   // Files de dades
   for (const row of rows) {
+    // Buscar dades de moneda local des de l'expense original
+    const expense = expenses.get(row.txId);
+    const hasLocalCurrency = expense?.originalCurrency && expense?.originalCurrency !== 'EUR';
+    const localAmountDisplay = hasLocalCurrency && expense?.originalAmount
+      ? `${Math.abs(expense.originalAmount).toFixed(2)} ${expense.originalCurrency}`
+      : '';
+
     wsData.push([
       row.order,
-      formatDateDMYForFunding(row.dateExpense),
-      formatDateDMYForFunding(row.paymentDate),
+      parseDateForExcel(row.dateExpense),           // Date object o null
+      parseDateForExcel(row.paymentDate),           // Date object o null
       row.counterpartyName,
       row.concept,
       row.budgetLineCode,
       row.budgetLineName,
       row.amountTotalEUR ?? '',
+      localAmountDisplay,                           // Nova columna moneda local
       row.amountAssignedEUR,
       row.documentName,
       row.zipPathCronologic,
@@ -614,12 +629,13 @@ export function buildProjectJustificationFundingXlsx(
   const totalAssigned = rows.reduce((sum, r) => sum + r.amountAssignedEUR, 0);
   wsData.push([
     '',
-    '',
-    '',
+    null,
+    null,
     '',
     '',
     '',
     'TOTAL',
+    '',
     '',
     totalAssigned,
     '',
@@ -627,7 +643,7 @@ export function buildProjectJustificationFundingXlsx(
     '',
   ]);
 
-  const ws = XLSX.utils.aoa_to_sheet(wsData);
+  const ws = XLSX.utils.aoa_to_sheet(wsData, { cellDates: true });
 
   // Amplades de columna
   ws['!cols'] = [
@@ -638,7 +654,8 @@ export function buildProjectJustificationFundingXlsx(
     { wch: 35 },  // Concepte
     { wch: 12 },  // Codi partida
     { wch: 25 },  // Nom partida
-    { wch: 15 },  // Import total
+    { wch: 15 },  // Import total EUR
+    { wch: 20 },  // Import total moneda local
     { wch: 15 },  // Import imputat
     { wch: 40 },  // Nom comprovant
     { wch: 35 },  // Ruta ZIP

@@ -1098,15 +1098,66 @@ export function useReturnImporter() {
 
         if (skipChildCreation) {
           // ═══════════════════════════════════════════════════════════════════
-          // RECALCULAR ESTAT DES DE FIRESTORE (fills existents)
+          // BACKFILL: Actualitzar filles existents sense contactId
           // ═══════════════════════════════════════════════════════════════════
-          console.log(`[processReturns] Grup ${group.groupId} ja té ${existingChildrenCount} fills existents (pare: ${group.originalTransaction.id}) - recalculant estat des de Firestore`);
+          console.log(`[processReturns] Grup ${group.groupId} ja té ${existingChildrenCount} fills existents (pare: ${group.originalTransaction.id}) - aplicant backfill`);
 
-          // Carregar dades de les filles existents
-          const existingChildren = existingChildrenSnap.docs.map(d => d.data());
+          // Carregar dades de les filles existents (amb ID)
+          const existingChildrenWithId = existingChildrenSnap.docs.map(d => {
+            const data = d.data() as Transaction;
+            return { id: d.id, ...data };
+          });
+
+          // Filles sense contactId (pendents d'assignar)
+          const childrenWithoutContact = existingChildrenWithId.filter(c => !c.contactId);
+          console.log(`[processReturns] Filles sense contactId: ${childrenWithoutContact.length}`);
+
+          // Per cada devolució resoluble (amb donant), buscar una filla coincident
+          let backfilledCount = 0;
+          for (const ret of resolubles) {
+            // Buscar filla amb import coincident (tolerància 0.02€) i sense contactId
+            const matchingChild = childrenWithoutContact.find(child => {
+              const childAmount = Math.abs(child.amount || 0);
+              const retAmount = ret.amount;
+              return Math.abs(childAmount - retAmount) <= 0.02;
+            });
+
+            if (matchingChild) {
+              // Actualitzar la filla amb el contactId
+              const childRef = doc(firestore, 'organizations', organizationId, 'transactions', matchingChild.id);
+              await updateDoc(childRef, {
+                contactId: ret.matchedDonor!.id,
+                contactType: 'donor',
+                emisorId: ret.matchedDonor!.id,
+                emisorName: ret.matchedDonor!.name,
+              });
+
+              // Actualitzar donant
+              const donorRef = doc(firestore, 'organizations', organizationId, 'contacts', ret.matchedDonor!.id);
+              await updateDoc(donorRef, {
+                returnCount: increment(1),
+                lastReturnDate: ret.date?.toISOString().split('T')[0] || new Date().toISOString().split('T')[0],
+                status: 'pending_return',
+              });
+
+              // Treure de la llista per no reusar
+              const idx = childrenWithoutContact.indexOf(matchingChild);
+              if (idx > -1) childrenWithoutContact.splice(idx, 1);
+
+              backfilledCount++;
+              processedGrouped++;
+              console.log(`[processReturns] Backfill: filla ${matchingChild.id} assignada a donant ${ret.matchedDonor!.name}`);
+            }
+          }
+
+          console.log(`[processReturns] Backfill completat: ${backfilledCount} filles actualitzades`);
+
+          // Recalcular estat DESPRÉS del backfill (recarregar de Firestore)
+          const updatedChildrenSnap = await getDocs(existingChildrenQuery);
+          const updatedChildren = updatedChildrenSnap.docs.map(d => d.data());
 
           // Comptar resoltes (amb contactId) vs pendents (sense contactId)
-          resolvedCount = existingChildren.filter(c => c.contactId).length;
+          resolvedCount = updatedChildren.filter(c => c.contactId).length;
 
           // itemCount: usar el del pare si existeix, sinó el nombre de fills actuals
           itemCount = group.originalTransaction.remittanceItemCount ?? existingChildrenCount;
@@ -1126,12 +1177,17 @@ export function useReturnImporter() {
             pendingTotalAmount = pendingReturnsData?.reduce((sum, r) => sum + r.amount, 0) ?? 0;
           } else {
             remittanceStatus = 'partial';
-            // Mantenir pendingReturns del pare si existeix
-            pendingReturnsData = group.originalTransaction.pendingReturns ?? null;
-            pendingTotalAmount = pendingReturnsData?.reduce((sum, r) => sum + r.amount, 0) ?? 0;
+            // Recalcular pendingReturns basant-se en filles sense contactId
+            const stillPending = updatedChildren.filter(c => !c.contactId);
+            pendingReturnsData = stillPending.length > 0 ? stillPending.map(c => ({
+              iban: '', // No tenim IBAN de la filla
+              amount: Math.abs(c.amount || 0),
+              date: c.date || '',
+            })) : null;
+            pendingTotalAmount = stillPending.reduce((sum, c) => sum + Math.abs(c.amount || 0), 0);
           }
 
-          console.log(`[processReturns] Estat recalculat: resolved=${resolvedCount}, pending=${pendingCount}, itemCount=${itemCount}, status=${remittanceStatus}`);
+          console.log(`[processReturns] Estat recalculat post-backfill: resolved=${resolvedCount}, pending=${pendingCount}, itemCount=${itemCount}, status=${remittanceStatus}`);
         } else {
           // ═══════════════════════════════════════════════════════════════════
           // CALCULAR ESTAT DES DE DADES PARSEJADES (primer processament)
