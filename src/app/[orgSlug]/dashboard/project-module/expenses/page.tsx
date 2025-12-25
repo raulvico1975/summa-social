@@ -6,7 +6,7 @@
 import * as React from 'react';
 import Link from 'next/link';
 import { useSearchParams, useRouter } from 'next/navigation';
-import { useUnifiedExpenseFeed, useProjects, useSaveExpenseLink, useProjectBudgetLines } from '@/hooks/use-project-module';
+import { useUnifiedExpenseFeed, useProjects, useSaveExpenseLink, useProjectBudgetLines, useDeleteExpenseDocument } from '@/hooks/use-project-module';
 import { useOrgUrl, useCurrentOrganization } from '@/hooks/organization-provider';
 import { useToast } from '@/hooks/use-toast';
 import { trackUX } from '@/lib/ux/trackUX';
@@ -40,9 +40,15 @@ import {
   Dialog,
   DialogContent,
   DialogDescription,
+  DialogFooter,
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
 import { AlertCircle, RefreshCw, ChevronRight, FolderPlus, Check, MoreHorizontal, Split, X, Plus, Landmark, Globe, ArrowLeft, FolderKanban, Filter, Pencil, Trash2, Search, Circle } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { formatDateDMY } from '@/lib/normalize';
@@ -415,6 +421,10 @@ export default function ExpensesInboxPage() {
   const [addOffBankOpen, setAddOffBankOpen] = React.useState(false);
   const [editOffBankExpense, setEditOffBankExpense] = React.useState<UnifiedExpenseWithLink | null>(null);
 
+  // Esborrar document
+  const { deleteDocument, isDeleting: isDeletingDocument } = useDeleteExpenseDocument();
+  const [deleteDocExpense, setDeleteDocExpense] = React.useState<UnifiedExpenseWithLink | null>(null);
+
   // Filtres locals (cerca + filtre ràpid)
   const [searchQuery, setSearchQuery] = React.useState('');
   type ExpenseTableFilter =
@@ -583,6 +593,33 @@ export default function ExpensesInboxPage() {
   const handleEditOffBank = (expense: UnifiedExpenseWithLink) => {
     trackUX('expenses.offBank.edit.open', { expenseId: expense.expense.txId });
     setEditOffBankExpense(expense);
+  };
+
+  // Handler per confirmar esborrat de document
+  const handleDeleteDocumentConfirm = async () => {
+    if (!deleteDocExpense) return;
+
+    try {
+      await deleteDocument(
+        deleteDocExpense.expense.txId,
+        deleteDocExpense.expense.source,
+        deleteDocExpense.expense.documentUrl
+      );
+      await refresh();
+      trackUX('expenses.deleteDocument', { txId: deleteDocExpense.expense.txId });
+      toast({
+        title: 'Document esborrat',
+        description: 'El document s\'ha esborrat correctament.',
+      });
+    } catch (err) {
+      toast({
+        variant: 'destructive',
+        title: ep.toastError,
+        description: err instanceof Error ? err.message : 'Error esborrant document',
+      });
+    } finally {
+      setDeleteDocExpense(null);
+    }
   };
 
   // Handler per des-assignar completament (amb confirmació)
@@ -888,15 +925,32 @@ export default function ExpensesInboxPage() {
                     </TableCell>
                     <TableCell className="text-center">
                       {expense.documentUrl ? (
-                        <button
-                          type="button"
-                          onClick={() => window.open(expense.documentUrl!, '_blank', 'noopener,noreferrer')}
-                          className="cursor-pointer hover:scale-110 transition-transform"
-                          title={ep.tooltipOpenDocument}
-                          aria-label={ep.tooltipOpenDocument}
-                        >
-                          <Circle className="h-3.5 w-3.5 fill-green-500 text-green-500 inline-block" />
-                        </button>
+                        <div className="inline-flex items-center gap-0.5">
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <button
+                                type="button"
+                                onClick={() => window.open(expense.documentUrl!, '_blank', 'noopener,noreferrer')}
+                                className="cursor-pointer hover:scale-110 transition-transform"
+                              >
+                                <Circle className="h-3.5 w-3.5 fill-green-500 text-green-500 inline-block" />
+                              </button>
+                            </TooltipTrigger>
+                            <TooltipContent>{ep.tooltipOpenDocument}</TooltipContent>
+                          </Tooltip>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <button
+                                type="button"
+                                onClick={() => setDeleteDocExpense(item)}
+                                className="inline-flex text-muted-foreground hover:text-destructive transition-colors"
+                              >
+                                <Trash2 className="h-2.5 w-2.5" />
+                              </button>
+                            </TooltipTrigger>
+                            <TooltipContent>Esborrar document</TooltipContent>
+                          </Tooltip>
+                        </div>
                       ) : (
                         <Circle className="h-3.5 w-3.5 text-muted-foreground/30 inline-block" />
                       )}
@@ -1136,6 +1190,41 @@ export default function ExpensesInboxPage() {
         } : undefined}
         existingAssignments={editOffBankExpense?.link?.assignments}
       />
+
+      {/* Delete Document Confirmation Dialog */}
+      <Dialog open={!!deleteDocExpense} onOpenChange={(open) => !open && setDeleteDocExpense(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Esborrar document</DialogTitle>
+            <DialogDescription>
+              Estàs segur que vols esborrar aquest document? Aquesta acció no es pot desfer.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setDeleteDocExpense(null)}
+              disabled={isDeletingDocument}
+            >
+              Cancel·lar
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={handleDeleteDocumentConfirm}
+              disabled={isDeletingDocument}
+            >
+              {isDeletingDocument ? (
+                <>
+                  <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                  Esborrant...
+                </>
+              ) : (
+                'Esborrar'
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

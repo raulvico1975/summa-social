@@ -23,6 +23,7 @@ import {
   QueryConstraint,
   UpdateData,
 } from 'firebase/firestore';
+import { ref, deleteObject } from 'firebase/storage';
 import { useFirebase } from '@/firebase';
 import { useCurrentOrganization } from '@/hooks/organization-provider';
 import type {
@@ -1809,5 +1810,87 @@ export function useProjectExpenseLinks(projectId: string): UseProjectExpenseLink
     isLoading,
     error,
     refresh: load,
+  };
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// HOOK: Esborrar document d'una despesa (bank o offBank)
+// ═══════════════════════════════════════════════════════════════════════════
+
+interface UseDeleteExpenseDocumentResult {
+  deleteDocument: (txId: string, source: 'bank' | 'offBank', documentUrl: string | null) => Promise<void>;
+  isDeleting: boolean;
+}
+
+export function useDeleteExpenseDocument(): UseDeleteExpenseDocumentResult {
+  const { firestore, storage } = useFirebase();
+  const { organizationId } = useCurrentOrganization();
+
+  const [isDeleting, setIsDeleting] = useState(false);
+
+  const deleteDocument = useCallback(async (
+    txId: string,
+    source: 'bank' | 'offBank',
+    documentUrl: string | null
+  ): Promise<void> => {
+    if (!organizationId || !firestore) {
+      throw new Error('No autenticat');
+    }
+
+    setIsDeleting(true);
+
+    try {
+      // 1. Esborrar fitxer de Storage si existeix
+      if (documentUrl && storage) {
+        try {
+          // Extreure path del storage des de la URL
+          const url = new URL(documentUrl);
+          const pathMatch = url.pathname.match(/\/o\/(.+)\?/);
+          if (pathMatch) {
+            const storagePath = decodeURIComponent(pathMatch[1]);
+            const fileRef = ref(storage, storagePath);
+            await deleteObject(fileRef);
+          }
+        } catch (storageErr) {
+          // Si falla l'esborrat de Storage, continuar igualment
+          console.warn('No s\'ha pogut esborrar el fitxer de Storage:', storageErr);
+        }
+      }
+
+      // 2. Actualitzar el document a Firestore
+      if (source === 'bank') {
+        // Despesa bancària: actualitzar transacció
+        const txRef = doc(firestore, 'organizations', organizationId, 'transactions', txId);
+        await updateDoc(txRef, {
+          document: null,
+          updatedAt: serverTimestamp(),
+        });
+      } else {
+        // Despesa off-bank: actualitzar offBankExpenses
+        // txId té format "off_XXXXX", cal extreure l'ID real
+        const expenseId = txId.replace(/^off_/, '');
+        const expenseRef = doc(
+          firestore,
+          'organizations',
+          organizationId,
+          'projectModule',
+          '_',
+          'offBankExpenses',
+          expenseId
+        );
+        await updateDoc(expenseRef, {
+          documentUrl: null,
+          attachments: [],
+          updatedAt: serverTimestamp(),
+        });
+      }
+    } finally {
+      setIsDeleting(false);
+    }
+  }, [firestore, storage, organizationId]);
+
+  return {
+    deleteDocument,
+    isDeleting,
   };
 }
