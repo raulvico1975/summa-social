@@ -1209,6 +1209,7 @@ export function TransactionsTable({ initialDateFilter = null }: TransactionsTabl
         onComplete={() => {
           setIsReturnImporterOpen(false);
         }}
+        isSuperAdmin={isSuperAdmin}
       />
 
       {/* Stripe Importer Modal */}

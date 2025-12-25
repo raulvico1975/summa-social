@@ -6,7 +6,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useAppLog } from '@/hooks/use-app-log';
 import { useFirebase, useCollection, useMemoFirebase } from '@/firebase';
 import { useCurrentOrganization } from '@/hooks/organization-provider';
-import { collection, query, where, updateDoc, doc, increment, addDoc, getDocs } from 'firebase/firestore';
+import { collection, query, where, updateDoc, doc, increment, addDoc, getDocs, deleteDoc } from 'firebase/firestore';
 import type { Transaction, Donor } from '@/lib/data';
 import { normalizeIBAN, normalizeTaxId as normalizeLibTaxId } from '@/lib/normalize';
 
@@ -1007,7 +1007,12 @@ export function useReturnImporter() {
   // PROCESSAR DEVOLUCIONS (escriptura a Firestore)
   // ═══════════════════════════════════════════════════════════════════════════
 
-  const processReturns = React.useCallback(async () => {
+  interface ProcessReturnsOptions {
+    forceRecreateChildren?: boolean;
+  }
+
+  const processReturns = React.useCallback(async (options: ProcessReturnsOptions = {}) => {
+    const { forceRecreateChildren = false } = options;
     if (!organizationId) return;
 
     // Separar individuals i agrupades
@@ -1074,8 +1079,22 @@ export function useReturnImporter() {
         const existingChildrenSnap = await getDocs(existingChildrenQuery);
         const existingChildrenCount = existingChildrenSnap.size;
 
-        // Si ja hi ha fills, només actualitzem el pare (no creem més fills)
-        const skipChildCreation = existingChildrenCount > 0;
+        // ═══════════════════════════════════════════════════════════════════
+        // FORCE RECREATE: Si l'opció està activa, eliminar TOTS els fills existents
+        // ═══════════════════════════════════════════════════════════════════
+        if (forceRecreateChildren && existingChildrenCount > 0) {
+          console.log(`[processReturns] 🔴 FORCE RECREATE: Eliminant ${existingChildrenCount} fills existents del pare ${group.originalTransaction.id}`);
+
+          for (const childDoc of existingChildrenSnap.docs) {
+            await deleteDoc(doc(firestore, 'organizations', organizationId, 'transactions', childDoc.id));
+            console.log(`[processReturns] Eliminat fill: ${childDoc.id}`);
+          }
+
+          console.log(`[processReturns] ✅ Fills eliminats. Ara es crearan de nou.`);
+        }
+
+        // Si ja hi ha fills I NO estem forçant recreació, només actualitzem el pare (no creem més fills)
+        const skipChildCreation = existingChildrenCount > 0 && !forceRecreateChildren;
 
         // SEPARAR: resolubles (amb donant) vs pendents (sense donant)
         // Necessari per a la creació de filles (quan !skipChildCreation)

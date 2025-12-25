@@ -56,6 +56,7 @@ interface ReturnImporterProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onComplete: () => void;
+  isSuperAdmin?: boolean;
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -66,12 +67,14 @@ export function ReturnImporter({
   open,
   onOpenChange,
   onComplete,
+  isSuperAdmin = false,
 }: ReturnImporterProps) {
   const { t } = useTranslations();
   const { toast } = useToast();
   const fileInputRef = React.useRef<HTMLInputElement>(null);
   const [selectedRows, setSelectedRows] = React.useState<Set<number>>(new Set());
   const [dragActive, setDragActive] = React.useState(false);
+  const [forceRecreateChildren, setForceRecreateChildren] = React.useState(false);
 
   const {
     step,
@@ -214,7 +217,7 @@ export function ReturnImporter({
   };
 
   const handleProcess = async () => {
-    await processReturns();
+    await processReturns({ forceRecreateChildren });
     onComplete();
   };
 
@@ -924,6 +927,25 @@ export function ReturnImporter({
                 </>
               )}
             </div>
+
+            {/* SuperAdmin: Opció de recrear fills */}
+            {isSuperAdmin && stats.grouped > 0 && (
+              <div className="flex items-center gap-3 p-3 rounded-lg border border-red-200 bg-red-50">
+                <Checkbox
+                  id="forceRecreateChildren"
+                  checked={forceRecreateChildren}
+                  onCheckedChange={(checked) => setForceRecreateChildren(checked === true)}
+                />
+                <div className="flex-1">
+                  <Label htmlFor="forceRecreateChildren" className="text-red-800 font-medium cursor-pointer">
+                    Recrear fills (forçar)
+                  </Label>
+                  <p className="text-xs text-red-700 mt-0.5">
+                    Això eliminarà i recrearà les devolucions filles d'aquesta remesa. Usar només si el backfill automàtic no funciona.
+                  </p>
+                </div>
+              </div>
+            )}
 
             <DialogFooter className="gap-2 sm:gap-0">
               <Button variant="outline" onClick={() => setStep('mapping')}>
