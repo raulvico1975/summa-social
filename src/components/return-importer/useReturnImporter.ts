@@ -1076,42 +1076,100 @@ export function useReturnImporter() {
 
         // Si ja hi ha fills, només actualitzem el pare (no creem més fills)
         const skipChildCreation = existingChildrenCount > 0;
-        if (skipChildCreation) {
-          console.log(`[processReturns] Grup ${group.groupId} ja té ${existingChildrenCount} fills existents (pare: ${group.originalTransaction.id}) - només actualitzarem estat del pare`);
-        }
 
         // SEPARAR: resolubles (amb donant) vs pendents (sense donant)
+        // Necessari per a la creació de filles (quan !skipChildCreation)
         const resolubles = group.returns.filter(r => r.matchedDonor);
         const pendents = group.returns.filter(r => !r.matchedDonor);
 
-        // Calcular remittanceStatus
+        // Variables per l'estat del pare
         let remittanceStatus: 'complete' | 'partial' | 'pending';
-        if (pendents.length === 0) {
-          remittanceStatus = 'complete';
-        } else if (resolubles.length === 0) {
-          remittanceStatus = 'pending';
-        } else {
-          remittanceStatus = 'partial';
-        }
+        let itemCount: number;
+        let resolvedCount: number;
+        let pendingCount: number;
+        let pendingTotalAmount: number;
+        let pendingReturnsData: Array<{
+          iban: string;
+          amount: number;
+          date: string;
+          originalName?: string;
+          returnReason?: string;
+        }> | null;
 
-        // Preparar pendingReturns (dades per assistència posterior)
-        // IMPORTANT: No passar undefined a Firestore - usar null o ometre el camp
-        const pendingReturnsData = pendents.map(r => {
-          const item: {
-            iban: string;
-            amount: number;
-            date: string;
-            originalName?: string;
-            returnReason?: string;
-          } = {
-            iban: r.iban,
-            amount: r.amount,
-            date: r.date?.toISOString().split('T')[0] || '',
-          };
-          if (r.originalName) item.originalName = r.originalName;
-          if (r.returnReason) item.returnReason = r.returnReason;
-          return item;
-        });
+        if (skipChildCreation) {
+          // ═══════════════════════════════════════════════════════════════════
+          // RECALCULAR ESTAT DES DE FIRESTORE (fills existents)
+          // ═══════════════════════════════════════════════════════════════════
+          console.log(`[processReturns] Grup ${group.groupId} ja té ${existingChildrenCount} fills existents (pare: ${group.originalTransaction.id}) - recalculant estat des de Firestore`);
+
+          // Carregar dades de les filles existents
+          const existingChildren = existingChildrenSnap.docs.map(d => d.data());
+
+          // Comptar resoltes (amb contactId) vs pendents (sense contactId)
+          resolvedCount = existingChildren.filter(c => c.contactId).length;
+
+          // itemCount: usar el del pare si existeix, sinó el nombre de fills actuals
+          itemCount = group.originalTransaction.remittanceItemCount ?? existingChildrenCount;
+
+          // pendingCount: diferència entre total i resoltes
+          pendingCount = Math.max(0, itemCount - resolvedCount);
+
+          // Calcular estat basat en les dades reals
+          if (pendingCount === 0 && itemCount > 0) {
+            remittanceStatus = 'complete';
+            pendingReturnsData = null;
+            pendingTotalAmount = 0;
+          } else if (resolvedCount === 0) {
+            remittanceStatus = 'pending';
+            // Mantenir pendingReturns del pare si existeix
+            pendingReturnsData = group.originalTransaction.pendingReturns ?? null;
+            pendingTotalAmount = pendingReturnsData?.reduce((sum, r) => sum + r.amount, 0) ?? 0;
+          } else {
+            remittanceStatus = 'partial';
+            // Mantenir pendingReturns del pare si existeix
+            pendingReturnsData = group.originalTransaction.pendingReturns ?? null;
+            pendingTotalAmount = pendingReturnsData?.reduce((sum, r) => sum + r.amount, 0) ?? 0;
+          }
+
+          console.log(`[processReturns] Estat recalculat: resolved=${resolvedCount}, pending=${pendingCount}, itemCount=${itemCount}, status=${remittanceStatus}`);
+        } else {
+          // ═══════════════════════════════════════════════════════════════════
+          // CALCULAR ESTAT DES DE DADES PARSEJADES (primer processament)
+          // ═══════════════════════════════════════════════════════════════════
+
+          itemCount = group.returns.length;
+          resolvedCount = resolubles.length;
+          pendingCount = pendents.length;
+          pendingTotalAmount = pendents.reduce((sum, r) => sum + r.amount, 0);
+
+          // Calcular remittanceStatus
+          if (pendingCount === 0) {
+            remittanceStatus = 'complete';
+          } else if (resolvedCount === 0) {
+            remittanceStatus = 'pending';
+          } else {
+            remittanceStatus = 'partial';
+          }
+
+          // Preparar pendingReturns (dades per assistència posterior)
+          // IMPORTANT: No passar undefined a Firestore - usar null o ometre el camp
+          pendingReturnsData = pendingCount > 0 ? pendents.map(r => {
+            const item: {
+              iban: string;
+              amount: number;
+              date: string;
+              originalName?: string;
+              returnReason?: string;
+            } = {
+              iban: r.iban,
+              amount: r.amount,
+              date: r.date?.toISOString().split('T')[0] || '',
+            };
+            if (r.originalName) item.originalName = r.originalName;
+            if (r.returnReason) item.returnReason = r.returnReason;
+            return item;
+          }) : null;
+        }
 
         // MARCAR EL PARE com a remesa (NO esborrar! NO tocar amount/date/description/contactId)
         const parentTxRef = doc(firestore, 'organizations', organizationId, 'transactions', group.originalTransaction.id);
@@ -1120,12 +1178,12 @@ export function useReturnImporter() {
         const parentUpdateData = {
           isRemittance: true,
           remittanceType: 'returns' as const,
-          remittanceItemCount: group.returns.length,
-          remittanceResolvedCount: resolubles.length,
-          remittancePendingCount: pendents.length,
-          remittancePendingTotalAmount: pendents.reduce((sum, r) => sum + r.amount, 0),
+          remittanceItemCount: itemCount,
+          remittanceResolvedCount: resolvedCount,
+          remittancePendingCount: pendingCount,
+          remittancePendingTotalAmount: pendingTotalAmount,
           remittanceStatus,
-          pendingReturns: pendingReturnsData.length > 0 ? pendingReturnsData : null,
+          pendingReturns: pendingReturnsData,
         };
 
         console.log('[processReturns] parent update payload', parentUpdateData);
