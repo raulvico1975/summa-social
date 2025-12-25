@@ -437,7 +437,9 @@ export function useReturnImporter() {
     return (allContacts || []).filter(c => c.type === 'donor');
   }, [allContacts]);
 
-  // Carregar devolucions pendents (transactionType = 'return' i contactId = null)
+  // Carregar transaccions candidates per matching:
+  // - transactionType = 'return' amb contactId = null (individuals sense donant)
+  // - Excloem remittanceStatus === 'complete' (ja resoltes)
   const pendingReturnsQuery = useMemoFirebase(
     () => organizationId
       ? query(
@@ -448,7 +450,14 @@ export function useReturnImporter() {
       : null,
     [firestore, organizationId]
   );
-  const { data: pendingReturns } = useCollection<Transaction>(pendingReturnsQuery);
+  const { data: pendingReturnsRaw } = useCollection<Transaction>(pendingReturnsQuery);
+
+  // Filtrar en memòria les que ja estan completes (remittanceStatus === 'complete')
+  // Aquestes ja no són "pendents" i no han d'aparèixer al llistat
+  const pendingReturns = React.useMemo(() => {
+    if (!pendingReturnsRaw) return null;
+    return pendingReturnsRaw.filter(tx => tx.remittanceStatus !== 'complete');
+  }, [pendingReturnsRaw]);
 
   // Estadístiques
   const stats = React.useMemo<ReturnImporterStats>(() => {
@@ -1063,10 +1072,12 @@ export function useReturnImporter() {
           where('parentTransactionId', '==', group.originalTransaction.id)
         );
         const existingChildrenSnap = await getDocs(existingChildrenQuery);
+        const existingChildrenCount = existingChildrenSnap.size;
 
-        if (!existingChildrenSnap.empty) {
-          console.log(`[processReturns] SKIP: Grup ${group.groupId} ja té ${existingChildrenSnap.size} fills existents (pare: ${group.originalTransaction.id})`);
-          continue; // Saltar aquest grup - ja processat anteriorment
+        // Si ja hi ha fills, només actualitzem el pare (no creem més fills)
+        const skipChildCreation = existingChildrenCount > 0;
+        if (skipChildCreation) {
+          console.log(`[processReturns] Grup ${group.groupId} ja té ${existingChildrenCount} fills existents (pare: ${group.originalTransaction.id}) - només actualitzarem estat del pare`);
         }
 
         // SEPARAR: resolubles (amb donant) vs pendents (sense donant)
@@ -1121,36 +1132,39 @@ export function useReturnImporter() {
         await updateDoc(parentTxRef, parentUpdateData);
 
         // Crear transaccions FILLES NOMÉS per resolubles (amb donant)
-        for (const ret of resolubles) {
-          const childTxData = {
-            // Camps de la filla
-            source: 'remittance',
-            parentTransactionId: group.originalTransaction.id,
-            amount: -ret.amount,  // Import negatiu (devolució)
-            date: ret.date?.toISOString().split('T')[0] || group.date.toISOString().split('T')[0],
-            transactionType: 'return',
-            description: ret.returnReason || group.originalTransaction.description || 'Devolució',
-            // Donant assignat (això fa que compti a Model182)
-            contactId: ret.matchedDonor!.id,
-            contactType: 'donor',
-            emisorId: ret.matchedDonor!.id,
-            emisorName: ret.matchedDonor!.name,
-          };
+        // SKIP si ja existeixen fills (idempotency)
+        if (!skipChildCreation) {
+          for (const ret of resolubles) {
+            const childTxData = {
+              // Camps de la filla
+              source: 'remittance',
+              parentTransactionId: group.originalTransaction.id,
+              amount: -ret.amount,  // Import negatiu (devolució)
+              date: ret.date?.toISOString().split('T')[0] || group.date.toISOString().split('T')[0],
+              transactionType: 'return',
+              description: ret.returnReason || group.originalTransaction.description || 'Devolució',
+              // Donant assignat (això fa que compti a Model182)
+              contactId: ret.matchedDonor!.id,
+              contactType: 'donor',
+              emisorId: ret.matchedDonor!.id,
+              emisorName: ret.matchedDonor!.name,
+            };
 
-          await addDoc(
-            collection(firestore, 'organizations', organizationId, 'transactions'),
-            childTxData
-          );
+            await addDoc(
+              collection(firestore, 'organizations', organizationId, 'transactions'),
+              childTxData
+            );
 
-          // Actualitzar donant
-          const donorRef = doc(firestore, 'organizations', organizationId, 'contacts', ret.matchedDonor!.id);
-          await updateDoc(donorRef, {
-            returnCount: increment(1),
-            lastReturnDate: ret.date?.toISOString().split('T')[0] || new Date().toISOString().split('T')[0],
-            status: 'pending_return',
-          });
+            // Actualitzar donant
+            const donorRef = doc(firestore, 'organizations', organizationId, 'contacts', ret.matchedDonor!.id);
+            await updateDoc(donorRef, {
+              returnCount: increment(1),
+              lastReturnDate: ret.date?.toISOString().split('T')[0] || new Date().toISOString().split('T')[0],
+              status: 'pending_return',
+            });
 
-          processedGrouped++;
+            processedGrouped++;
+          }
         }
 
         // Log de l'estat de la remesa
