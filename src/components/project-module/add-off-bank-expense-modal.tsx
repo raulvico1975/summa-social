@@ -30,6 +30,7 @@ import { ChevronDown, ChevronUp, Info, AlertTriangle } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { ExpenseAttachmentsDropzone } from './expense-attachments-dropzone';
 import { suggestCategory } from '@/lib/expense-category-suggestions';
+import { buildDocumentFilename } from '@/lib/build-document-filename';
 
 interface OffBankExpenseInitialValues {
   date: string;
@@ -125,6 +126,15 @@ export function OffBankExpenseModal({
   const [allowManualCategory, setAllowManualCategory] = useState(false);
 
   const [errors, setErrors] = useState<Record<string, string>>({});
+
+  // Generador de noms de fitxer per attachments
+  const handleBuildFileName = useCallback((originalName: string) => {
+    return buildDocumentFilename({
+      dateISO: date,
+      concept: concept,
+      originalName,
+    });
+  }, [date, concept]);
 
   // Calcular import EUR automàticament quan s'usa moneda estrangera
   // Fórmula: amountEUR = originalAmount * fxRate (on fxRate és "1 moneda → EUR")
@@ -621,6 +631,7 @@ export function OffBankExpenseModal({
               attachments={attachments}
               onAttachmentsChange={setAttachments}
               disabled={isProcessing}
+              buildFileName={handleBuildFileName}
             />
           </div>
 

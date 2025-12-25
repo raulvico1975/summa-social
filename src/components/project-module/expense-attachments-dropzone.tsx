@@ -18,6 +18,8 @@ interface ExpenseAttachmentsDropzoneProps {
   attachments: OffBankAttachment[];
   onAttachmentsChange: (attachments: OffBankAttachment[]) => void;
   disabled?: boolean;
+  /** Funció opcional per generar el nom del fitxer a Storage. Rep el nom original i retorna el nom final. */
+  buildFileName?: (originalName: string) => string;
 }
 
 interface PendingFile {
@@ -77,6 +79,7 @@ export function ExpenseAttachmentsDropzone({
   attachments,
   onAttachmentsChange,
   disabled = false,
+  buildFileName,
 }: ExpenseAttachmentsDropzoneProps) {
   const storage = useStorage();
   const { t } = useTranslations();
@@ -167,7 +170,9 @@ export function ExpenseAttachmentsDropzone({
   const uploadFile = async (pending: PendingFile) => {
     const { file, id } = pending;
     const storageFolder = expenseId || 'temp';
-    const storagePath = `organizations/${organizationId}/offBankExpenses/${storageFolder}/${Date.now()}_${file.name}`;
+    // Usar buildFileName si està disponible, sinó usar timestamp + nom original
+    const finalFileName = buildFileName ? buildFileName(file.name) : `${Date.now()}_${file.name}`;
+    const storagePath = `organizations/${organizationId}/offBankExpenses/${storageFolder}/${finalFileName}`;
     const storageRef = ref(storage, storagePath);
 
     try {
@@ -176,7 +181,7 @@ export function ExpenseAttachmentsDropzone({
 
       const newAttachment: OffBankAttachment = {
         url: downloadURL,
-        name: file.name,
+        name: finalFileName,
         contentType: file.type,
         size: file.size,
         uploadedAt: new Date().toISOString().split('T')[0],
