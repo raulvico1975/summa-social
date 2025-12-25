@@ -429,8 +429,63 @@ export const TransactionRow = React.memo(function TransactionRow({
 
       {/* Contact */}
       <TableCell className="py-1">
-        {isReturn && !tx.contactId ? (
-          // Devolució pendent: mostrar dues accions sempre
+        {/* Cas 1: Pare de remesa de devolucions - mostrar estat, NO "Assignar donant" */}
+        {tx.isRemittance && tx.remittanceType === 'returns' ? (
+          <div className="flex items-center gap-1">
+            {tx.remittanceStatus === 'complete' ? (
+              <Badge variant="outline" className="text-green-700 border-green-300 bg-green-50 text-xs">
+                Remesa completa
+              </Badge>
+            ) : tx.remittanceStatus === 'partial' ? (
+              <div className="flex items-center gap-1">
+                <Badge variant="outline" className="text-orange-700 border-orange-300 bg-orange-50 text-xs">
+                  {tx.remittanceResolvedCount ?? 0}/{tx.remittanceItemCount ?? 0}
+                </Badge>
+                {onOpenReturnImporter && (
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={onOpenReturnImporter}
+                        className="text-orange-600 hover:text-orange-800 h-6 text-xs px-1"
+                      >
+                        <FileUp className="h-3 w-3" />
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      Importar fitxer per identificar devolucions pendents
+                    </TooltipContent>
+                  </Tooltip>
+                )}
+              </div>
+            ) : (
+              <div className="flex items-center gap-1">
+                <Badge variant="outline" className="text-red-700 border-red-300 bg-red-50 text-xs">
+                  Pendent
+                </Badge>
+                {onOpenReturnImporter && (
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={onOpenReturnImporter}
+                        className="text-red-600 hover:text-red-800 h-6 text-xs px-1"
+                      >
+                        <FileUp className="h-3 w-3" />
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      Importar fitxer per identificar devolucions
+                    </TooltipContent>
+                  </Tooltip>
+                )}
+              </div>
+            )}
+          </div>
+        ) : isReturn && !tx.contactId ? (
+          // Cas 2: Devolució individual pendent (NO és pare de remesa)
           <div className="flex items-center gap-1">
             <Tooltip>
               <TooltipTrigger asChild>
@@ -467,6 +522,7 @@ export const TransactionRow = React.memo(function TransactionRow({
             )}
           </div>
         ) : (
+          // Cas 3: Transacció normal - mostrar combobox de contactes
           <ContactCombobox
             contacts={comboboxContacts}
             value={tx.contactId ?? null}
