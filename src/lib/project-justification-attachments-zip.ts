@@ -3,6 +3,7 @@
 
 import JSZip from 'jszip';
 import type { UnifiedExpense, ExpenseLink, BudgetLine } from '@/lib/project-module-types';
+import { buildJustificationRows, type JustificationRow } from '@/lib/project-justification-rows';
 
 // ═══════════════════════════════════════════════════════════════════════════
 // TIPUS
@@ -42,19 +43,6 @@ interface ManifestEntry {
   documentUrl: string;
 }
 
-interface ProcessedEntry {
-  expense: UnifiedExpense;
-  assignment: {
-    projectId: string;
-    projectName: string;
-    amountEUR: number;
-    budgetLineId?: string | null;
-    budgetLineName?: string | null;
-  };
-  budgetLine: BudgetLine | null;
-  link: ExpenseLink;
-}
-
 interface ProgressCallback {
   (current: number, total: number): void;
 }
@@ -64,49 +52,6 @@ interface ProgressCallback {
 // ═══════════════════════════════════════════════════════════════════════════
 
 /**
- * Parsejar data en formats diversos i retornar parts
- */
-function parseDate(dateStr: string): { year: string; month: string; day: string } | null {
-  // YYYY-MM-DD
-  let match = dateStr.match(/^(\d{4})-(\d{2})-(\d{2})/);
-  if (match) {
-    return { year: match[1], month: match[2], day: match[3] };
-  }
-
-  // DD.MM.YYYY
-  match = dateStr.match(/^(\d{2})\.(\d{2})\.(\d{4})$/);
-  if (match) {
-    return { year: match[3], month: match[2], day: match[1] };
-  }
-
-  // DD/MM/YYYY
-  match = dateStr.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
-  if (match) {
-    return { year: match[3], month: match[2], day: match[1] };
-  }
-
-  return null;
-}
-
-/**
- * Format YYYY.MM.DD per nom de fitxer
- */
-function formatDateForFilename(dateStr: string): string {
-  const parsed = parseDate(dateStr);
-  if (!parsed) return '0000.00.00';
-  return `${parsed.year}.${parsed.month}.${parsed.day}`;
-}
-
-/**
- * Format YYYY.MM per carpeta cronològica
- */
-function formatDateForFolder(dateStr: string): string {
-  const parsed = parseDate(dateStr);
-  if (!parsed) return '0000.00';
-  return `${parsed.year}.${parsed.month}`;
-}
-
-/**
  * Sanititzar text per nom de fitxer (treure caràcters no vàlids)
  */
 function sanitizeForFilename(text: string): string {
@@ -114,120 +59,6 @@ function sanitizeForFilename(text: string): string {
     .replace(/[<>:"/\\|?*]/g, '')
     .replace(/\s+/g, ' ')
     .trim();
-}
-
-/**
- * Truncar text a un màxim de caràcters
- */
-function truncate(text: string, maxLength: number): string {
-  if (text.length <= maxLength) return text;
-  return text.slice(0, maxLength).trim();
-}
-
-/**
- * Obtenir extensió des de Content-Type
- */
-function getExtensionFromContentType(contentType: string | null): string {
-  if (!contentType) return '.bin';
-
-  const ct = contentType.toLowerCase();
-  if (ct.includes('application/pdf')) return '.pdf';
-  if (ct.includes('image/jpeg')) return '.jpg';
-  if (ct.includes('image/png')) return '.png';
-  if (ct.includes('image/gif')) return '.gif';
-  if (ct.includes('image/webp')) return '.webp';
-  if (ct.includes('application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')) return '.xlsx';
-  if (ct.includes('application/vnd.ms-excel')) return '.xls';
-  if (ct.includes('application/vnd.openxmlformats-officedocument.wordprocessingml.document')) return '.docx';
-  if (ct.includes('application/msword')) return '.doc';
-  if (ct.includes('text/plain')) return '.txt';
-  if (ct.includes('text/csv')) return '.csv';
-
-  return '.bin';
-}
-
-/**
- * Format import amb 2 decimals
- */
-function formatAmountForFilename(amount: number): string {
-  return Math.abs(amount).toFixed(2).replace('.', ',');
-}
-
-/**
- * Generar nom de fitxer "legacy" segons especificació original
- * YYYY.MM.DD - {OrigenDestinatari|Sense} - {ImportAbs}EUR - {ConcepteCurt} - {txId} [{budgetCodeOrNO_PARTIDA}].{ext}
- */
-function generateLegacyFilename(
-  expense: UnifiedExpense,
-  assignmentAmount: number,
-  budgetCode: string,
-  ext: string
-): string {
-  const datePart = formatDateForFilename(expense.date);
-  const counterparty = sanitizeForFilename(expense.counterpartyName ?? 'Sense');
-  const amount = formatAmountForFilename(assignmentAmount);
-  const concept = sanitizeForFilename(truncate(expense.description ?? '', 50));
-  const txIdShort = expense.txId.slice(0, 16); // Truncar txId si és molt llarg
-
-  const filename = `${datePart} - ${counterparty} - ${amount}EUR - ${concept} - ${txIdShort} [${budgetCode}]${ext}`;
-
-  return sanitizeForFilename(filename);
-}
-
-/**
- * Obtenir el nom del fitxer per al ZIP.
- * Preferència: attachment.name (nou format estandarditzat) > legacy filename
- */
-function getFilenameForZip(
-  expense: UnifiedExpense,
-  assignmentAmount: number,
-  budgetCode: string,
-  ext: string
-): string {
-  // Si tenim attachments amb name, usar el primer attachment.name
-  const attachment = expense.attachments?.[0];
-  if (attachment?.name) {
-    return sanitizeForFilename(attachment.name);
-  }
-
-  // Fallback: nom legacy per documents antics
-  return generateLegacyFilename(expense, assignmentAmount, budgetCode, ext);
-}
-
-/**
- * Afegir sufix de col·lisió a un nom de fitxer si ja existeix.
- * Ex: "2025.12.25_taxi.pdf" → "2025.12.25_taxi__2.pdf"
- */
-function resolveFilenameCollision(filename: string, usedNames: Set<string>): string {
-  if (!usedNames.has(filename)) {
-    return filename;
-  }
-
-  // Separar nom base i extensió
-  const lastDot = filename.lastIndexOf('.');
-  const hasExtension = lastDot > 0;
-  const baseName = hasExtension ? filename.slice(0, lastDot) : filename;
-  const ext = hasExtension ? filename.slice(lastDot) : '';
-
-  // Buscar sufix lliure
-  let counter = 2;
-  let newFilename = `${baseName}__${counter}${ext}`;
-  while (usedNames.has(newFilename)) {
-    counter++;
-    newFilename = `${baseName}__${counter}${ext}`;
-  }
-
-  return newFilename;
-}
-
-/**
- * Generar nom de carpeta de partida
- */
-function generateBudgetFolderName(budgetLine: BudgetLine | null): string {
-  if (!budgetLine) return 'ZZ_NO_PARTIDA';
-  const code = sanitizeForFilename(budgetLine.code ?? 'XX');
-  const name = sanitizeForFilename(truncate(budgetLine.name, 30));
-  return `${code}_${name}`;
 }
 
 /**
@@ -307,53 +138,19 @@ export async function exportProjectJustificationZip(
     expenseLinks,
   } = params;
 
-  // Mapa de budgetLineId -> BudgetLine
-  const budgetLineMap = new Map(budgetLines.map((bl) => [bl.id, bl]));
-
   // Mapa de txId -> UnifiedExpense
   const expenseMap = new Map(expenses.map((e) => [e.txId, e]));
 
-  // 1. Construir llista d'entries (una per cada assignment del projecte)
-  const processedEntries: ProcessedEntry[] = [];
-
-  for (const link of expenseLinks) {
-    const expense = expenseMap.get(link.id);
-
-    for (const assignment of link.assignments) {
-      if (assignment.projectId !== projectId) continue;
-
-      const budgetLine = assignment.budgetLineId
-        ? budgetLineMap.get(assignment.budgetLineId) ?? null
-        : null;
-
-      processedEntries.push({
-        expense: expense!, // pot ser undefined, ho gestionem després
-        assignment,
-        budgetLine,
-        link,
-      });
-    }
-  }
-
-  // 2. Ordenar: primer per partida (ordre), després per data
-  processedEntries.sort((a, b) => {
-    // Primer per partida (ordre o nom)
-    const orderA = a.budgetLine?.order ?? 9999;
-    const orderB = b.budgetLine?.order ?? 9999;
-    if (orderA !== orderB) return orderA - orderB;
-
-    // Després per data
-    const dateA = a.expense?.date ?? '9999-99-99';
-    const dateB = b.expense?.date ?? '9999-99-99';
-    if (dateA !== dateB) return dateA.localeCompare(dateB);
-
-    // Finalment per txId
-    const txIdA = a.link.id;
-    const txIdB = b.link.id;
-    return txIdA.localeCompare(txIdB);
+  // 1. Obtenir files ordenades des de buildJustificationRows (SINGLE SOURCE OF TRUTH)
+  const justificationRows = buildJustificationRows({
+    projectId,
+    projectCode: projectCode ?? '',
+    budgetLines,
+    expenseLinks,
+    expenses: expenseMap,
   });
 
-  // 3. Crear ZIP
+  // 2. Crear ZIP
   const zip = new JSZip();
   const perPartidaFolder = zip.folder('01_per_partida')!;
   const cronologicFolder = zip.folder('02_cronologic')!;
@@ -363,54 +160,40 @@ export async function exportProjectJustificationZip(
   let missingCount = 0;
   let fetchErrorCount = 0;
 
-  // Tracking de noms usats per evitar col·lisions (per carpeta)
-  const usedNamesPerPartida = new Map<string, Set<string>>(); // budgetFolderName -> Set<filename>
-  const usedNamesCronologic = new Map<string, Set<string>>(); // monthFolder -> Set<filename>
-
-  // 4. Processar cada entry
-  for (let i = 0; i < processedEntries.length; i++) {
-    const entry = processedEntries[i];
-    const { expense, assignment, budgetLine, link } = entry;
+  // 3. Processar cada fila (ja ordenada i amb paths calculats)
+  for (let i = 0; i < justificationRows.length; i++) {
+    const row = justificationRows[i];
 
     // Reportar progrés
     if (onProgress) {
-      onProgress(i + 1, processedEntries.length);
+      onProgress(i + 1, justificationRows.length);
     }
-
-    const budgetCode = budgetLine?.code ?? 'NO_PARTIDA';
-    const budgetFolderName = generateBudgetFolderName(budgetLine);
 
     // Crear manifest entry base
     const manifestEntry: ManifestEntry = {
-      order: i + 1,
-      date: expense?.date ?? '',
-      source: expense?.source ?? 'bank',
+      order: row.order,
+      date: row.dateExpense,
+      source: row.source,
       projectCode: projectCode ?? '',
       projectName: projectName,
-      budgetCode: budgetCode,
-      budgetName: budgetLine?.name ?? '(sense partida)',
-      amountAssignedEUR: Math.abs(assignment.amountEUR),
-      category: expense?.categoryName ?? '',
-      counterparty: expense?.counterpartyName ?? '',
-      description: expense?.description ?? '',
-      txId: link.id,
+      budgetCode: row.budgetLineCode,
+      budgetName: row.budgetLineName,
+      amountAssignedEUR: row.amountAssignedEUR,
+      category: row.categoryName ?? '',
+      counterparty: row.counterpartyName,
+      description: row.concept,
+      txId: row.txId,
       docStatus: 'OK',
-      docPathPerPartida: '',
-      docPathCronologic: '',
-      documentUrl: expense?.documentUrl ?? '',
+      docPathPerPartida: row.zipPathPerPartida,
+      docPathCronologic: row.zipPathCronologic,
+      documentUrl: row.documentUrl ?? '',
     };
 
-    // Verificar si tenim la despesa al feed
-    if (!expense) {
-      manifestEntry.docStatus = 'NO_EXPENSE_IN_FEED';
-      missingCount++;
-      manifestEntries.push(manifestEntry);
-      continue;
-    }
-
     // Verificar si té document
-    if (!expense.documentUrl) {
-      manifestEntry.docStatus = expense.source === 'offBank' ? 'MISSING_OFFBANK' : 'MISSING';
+    if (!row.documentUrl) {
+      manifestEntry.docStatus = row.source === 'offBank' ? 'MISSING_OFFBANK' : 'MISSING';
+      manifestEntry.docPathPerPartida = '';
+      manifestEntry.docPathCronologic = '';
       missingCount++;
       manifestEntries.push(manifestEntry);
       continue;
@@ -418,69 +201,47 @@ export async function exportProjectJustificationZip(
 
     // Intentar descarregar el document
     try {
-      const response = await fetch(expense.documentUrl);
+      const response = await fetch(row.documentUrl);
       if (!response.ok) {
         manifestEntry.docStatus = 'FETCH_ERROR';
+        manifestEntry.docPathPerPartida = '';
+        manifestEntry.docPathCronologic = '';
         fetchErrorCount++;
         manifestEntries.push(manifestEntry);
         continue;
       }
 
-      const contentType = response.headers.get('Content-Type');
-      const ext = getExtensionFromContentType(contentType);
       const blob = await response.blob();
       const arrayBuffer = await blob.arrayBuffer();
 
-      // Generar nom de fitxer base (prefereix attachment.name si existeix)
-      const baseFilename = getFilenameForZip(expense, assignment.amountEUR, budgetCode, ext);
+      // Extreure path relatiu dins de cada carpeta
+      // row.zipPathPerPartida = "01_per_partida/A1_Personal/filename.pdf"
+      // row.zipPathCronologic = "02_cronologic/filename.pdf"
+      const partidaPath = row.zipPathPerPartida.replace('01_per_partida/', '');
+      const cronologicPath = row.zipPathCronologic.replace('02_cronologic/', '');
 
-      // Inicialitzar sets de noms usats si no existeixen
-      if (!usedNamesPerPartida.has(budgetFolderName)) {
-        usedNamesPerPartida.set(budgetFolderName, new Set());
-      }
-      // 02_cronologic/ és pla (sense subcarpetes), usem clau fixa
-      const CRONOLOGIC_ROOT = 'ROOT';
-      if (!usedNamesCronologic.has(CRONOLOGIC_ROOT)) {
-        usedNamesCronologic.set(CRONOLOGIC_ROOT, new Set());
-      }
-
-      // Resoldre col·lisions per cada carpeta
-      const partidaNames = usedNamesPerPartida.get(budgetFolderName)!;
-      const filenamePartida = resolveFilenameCollision(baseFilename, partidaNames);
-      partidaNames.add(filenamePartida);
-
-      const cronologicNames = usedNamesCronologic.get(CRONOLOGIC_ROOT)!;
-      const filenameCronologic = resolveFilenameCollision(baseFilename, cronologicNames);
-      cronologicNames.add(filenameCronologic);
-
-      // Carpeta per partida
-      const partidaPath = `${budgetFolderName}/${filenamePartida}`;
+      // Afegir al ZIP
       perPartidaFolder.file(partidaPath, arrayBuffer);
-
-      // Carpeta cronològica (plana, sense subcarpetes)
-      const cronologicPath = filenameCronologic;
       cronologicFolder.file(cronologicPath, arrayBuffer);
 
-      // Actualitzar manifest
-      manifestEntry.docStatus = 'OK';
-      manifestEntry.docPathPerPartida = `01_per_partida/${partidaPath}`;
-      manifestEntry.docPathCronologic = `02_cronologic/${cronologicPath}`;
       okCount++;
 
     } catch (err) {
       console.error('Error fetching document:', err);
       manifestEntry.docStatus = 'FETCH_ERROR';
+      manifestEntry.docPathPerPartida = '';
+      manifestEntry.docPathCronologic = '';
       fetchErrorCount++;
     }
 
     manifestEntries.push(manifestEntry);
   }
 
-  // 5. Generar manifest.csv
+  // 4. Generar manifest.csv
   const manifestCsv = generateManifestCsv(manifestEntries);
   zip.file('manifest.csv', manifestCsv);
 
-  // 6. Generar i descarregar ZIP
+  // 5. Generar i descarregar ZIP
   const zipBlob = await zip.generateAsync({ type: 'blob' });
 
   // Generar nom de fitxer
@@ -499,7 +260,7 @@ export async function exportProjectJustificationZip(
   URL.revokeObjectURL(url);
 
   return {
-    entriesCount: processedEntries.length,
+    entriesCount: justificationRows.length,
     okCount,
     missingCount,
     fetchErrorCount,

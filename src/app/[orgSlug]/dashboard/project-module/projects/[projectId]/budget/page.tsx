@@ -74,7 +74,7 @@ import {
 import { useFirebase } from '@/firebase';
 import { useCurrentOrganization } from '@/hooks/organization-provider';
 import { doc, getDoc } from 'firebase/firestore';
-import { buildProjectJustificationXlsx } from '@/lib/project-justification-export';
+import { buildProjectJustificationXlsx, buildProjectJustificationFundingXlsx } from '@/lib/project-justification-export';
 import { exportProjectJustificationZip } from '@/lib/project-justification-attachments-zip';
 import { trackUX } from '@/lib/ux/trackUX';
 import { useRouter } from 'next/navigation';
@@ -262,6 +262,7 @@ export default function ProjectBudgetPage() {
   const [editingLine, setEditingLine] = React.useState<BudgetLine | null>(null);
   const [deleteConfirm, setDeleteConfirm] = React.useState<BudgetLine | null>(null);
   const [isExporting, setIsExporting] = React.useState(false);
+  const [isExportingFunding, setIsExportingFunding] = React.useState(false);
   const [isExportingZip, setIsExportingZip] = React.useState(false);
   const [zipProgress, setZipProgress] = React.useState<{ current: number; total: number } | null>(null);
   const [justificationModalOpen, setJustificationModalOpen] = React.useState(false);
@@ -408,6 +409,49 @@ export default function ProjectBudgetPage() {
     }
   };
 
+  const handleExportFunding = async () => {
+    if (!organizationId || !project) return;
+
+    setIsExportingFunding(true);
+    try {
+      // Construir mapa de despeses per buildJustificationRows
+      const expenseMap = new Map(allExpenses.map((e) => [e.expense.txId, e.expense]));
+
+      const { blob, filename } = buildProjectJustificationFundingXlsx({
+        projectId,
+        projectCode: project.code ?? '',
+        projectName: project.name,
+        budgetLines,
+        expenseLinks,
+        expenses: expenseMap,
+      });
+
+      // Descarregar fitxer
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+
+      toast({
+        title: 'Excel generat',
+        description: `S'ha descarregat el fitxer ${filename}`,
+      });
+    } catch (err) {
+      console.error('Error exporting funding:', err);
+      toast({
+        variant: 'destructive',
+        title: 'Error',
+        description: err instanceof Error ? err.message : 'Error generant Excel',
+      });
+    } finally {
+      setIsExportingFunding(false);
+    }
+  };
+
   // Comptar assignacions del projecte (per decidir si el botó s'ha de desactivar)
   const projectAssignmentsCount = React.useMemo(() => {
     let count = 0;
@@ -546,6 +590,19 @@ export default function ProjectBudgetPage() {
               <Loader2 className="h-4 w-4 animate-spin" />
             ) : (
               <Download className="h-4 w-4" />
+            )}
+          </Button>
+          <Button
+            variant="outline"
+            size="icon"
+            onClick={handleExportFunding}
+            disabled={isExportingFunding || expensesLoading || projectAssignmentsCount === 0}
+            title="Exportar justificació per finançador (Excel)"
+          >
+            {isExportingFunding ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <Download className="h-4 w-4 text-blue-600" />
             )}
           </Button>
           <Button

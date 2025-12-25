@@ -2,9 +2,10 @@
 // Exportació Excel de justificació de projecte (ACCD / Fons Català)
 
 import * as XLSX from 'xlsx';
-import type { BudgetLine, ExpenseLink, Project, ProjectExpenseExport, OffBankExpense } from '@/lib/project-module-types';
+import type { BudgetLine, ExpenseLink, Project, ProjectExpenseExport, OffBankExpense, UnifiedExpense } from '@/lib/project-module-types';
 import type { Firestore } from 'firebase/firestore';
 import { collection, getDocs, doc, getDoc, query, where } from 'firebase/firestore';
+import { buildJustificationRows, type JustificationRow } from '@/lib/project-justification-rows';
 
 // Tipus unificat per despeses (bank o off-bank)
 interface UnifiedExpenseData {
@@ -516,6 +517,146 @@ export async function buildProjectJustificationXlsx(
   const dateStr = new Date().toISOString().slice(0, 10).replace(/-/g, '');
   const projectCode = data.project.code?.replace(/[^a-zA-Z0-9]/g, '') ?? data.project.id.slice(0, 8);
   const filename = `justificacio_${projectCode}_${dateStr}.xlsx`;
+
+  return { blob, filename };
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// FUNDING EXCEL EXPORT (NOVA FUNCIÓ - USA buildJustificationRows)
+// ═══════════════════════════════════════════════════════════════════════════
+
+export interface FundingExportParams {
+  projectId: string;
+  projectCode: string;
+  projectName: string;
+  budgetLines: BudgetLine[];
+  expenseLinks: ExpenseLink[];
+  expenses: Map<string, UnifiedExpense>;
+}
+
+function formatDateDMYForFunding(dateStr: string | null): string {
+  if (!dateStr) return '';
+  const [year, month, day] = dateStr.split('-');
+  if (!year || !month || !day) return dateStr;
+  return `${day}/${month}/${year}`;
+}
+
+/**
+ * Construeix l'Excel de justificació per finançadors (format unificat).
+ * Utilitza buildJustificationRows com a single source of truth per l'ordre.
+ *
+ * Columnes:
+ * 1. Número d'ordre
+ * 2. Data despesa
+ * 3. Data de pagament
+ * 4. Proveïdor/destinatari
+ * 5. Concepte
+ * 6. Codi partida
+ * 7. Nom partida
+ * 8. Import total (EUR)
+ * 9. Import imputat (EUR)
+ * 10. Nom del comprovant
+ * 11. Ruta dins ZIP (cronològic)
+ * 12. Observacions (buit)
+ */
+export function buildProjectJustificationFundingXlsx(
+  params: FundingExportParams
+): ExportResult {
+  const { projectCode, projectName, budgetLines, expenseLinks, expenses, projectId } = params;
+
+  // 1. Obtenir files ordenades
+  const rows = buildJustificationRows({
+    projectId,
+    projectCode: projectCode ?? '',
+    budgetLines,
+    expenseLinks,
+    expenses,
+  });
+
+  // 2. Construir full de despeses
+  const wsData: (string | number)[][] = [];
+
+  // Header
+  wsData.push([
+    'Núm. ordre',
+    'Data despesa',
+    'Data pagament',
+    'Proveïdor/destinatari',
+    'Concepte',
+    'Codi partida',
+    'Nom partida',
+    'Import total (EUR)',
+    'Import imputat (EUR)',
+    'Nom del comprovant',
+    'Ruta dins ZIP',
+    'Observacions',
+  ]);
+
+  // Files de dades
+  for (const row of rows) {
+    wsData.push([
+      row.order,
+      formatDateDMYForFunding(row.dateExpense),
+      formatDateDMYForFunding(row.paymentDate),
+      row.counterpartyName,
+      row.concept,
+      row.budgetLineCode,
+      row.budgetLineName,
+      row.amountTotalEUR ?? '',
+      row.amountAssignedEUR,
+      row.documentName,
+      row.zipPathCronologic,
+      '', // Observacions (buit per defecte)
+    ]);
+  }
+
+  // Fila de totals
+  const totalAssigned = rows.reduce((sum, r) => sum + r.amountAssignedEUR, 0);
+  wsData.push([
+    '',
+    '',
+    '',
+    '',
+    '',
+    '',
+    'TOTAL',
+    '',
+    totalAssigned,
+    '',
+    '',
+    '',
+  ]);
+
+  const ws = XLSX.utils.aoa_to_sheet(wsData);
+
+  // Amplades de columna
+  ws['!cols'] = [
+    { wch: 10 },  // Núm. ordre
+    { wch: 12 },  // Data despesa
+    { wch: 12 },  // Data pagament
+    { wch: 25 },  // Proveïdor
+    { wch: 35 },  // Concepte
+    { wch: 12 },  // Codi partida
+    { wch: 25 },  // Nom partida
+    { wch: 15 },  // Import total
+    { wch: 15 },  // Import imputat
+    { wch: 40 },  // Nom comprovant
+    { wch: 35 },  // Ruta ZIP
+    { wch: 20 },  // Observacions
+  ];
+
+  // 3. Crear workbook
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'Justificació');
+
+  // 4. Generar fitxer
+  const wbout = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
+  const blob = new Blob([wbout], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+
+  // 5. Generar nom de fitxer
+  const dateStr = new Date().toISOString().slice(0, 10).replace(/-/g, '');
+  const safeProjectCode = (projectCode ?? 'projecte').replace(/[^a-zA-Z0-9]/g, '');
+  const filename = `justificacio_financador_${safeProjectCode}_${dateStr}.xlsx`;
 
   return { blob, filename };
 }
