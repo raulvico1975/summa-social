@@ -309,6 +309,9 @@ export function DonorManager() {
     // Filtre de cerca intel·ligent
     if (searchQuery.trim()) {
       const query = searchQuery.toLowerCase().trim();
+      // Normalitzar query per a cerca IBAN (sense espais)
+      const queryNoSpaces = query.replace(/\s/g, '');
+
       result = result.filter(donor => {
         const searchFields = [
           donor.name,
@@ -321,7 +324,14 @@ export function DonorManager() {
           donor.address,
         ].filter(Boolean).map(f => f!.toLowerCase());
 
-        return searchFields.some(field => field.includes(query));
+        // Cerca normal en camps de text
+        const matchesTextFields = searchFields.some(field => field.includes(query));
+
+        // Cerca especial per IBAN (normalitzat sense espais)
+        const ibanNormalized = (donor.iban || '').toLowerCase().replace(/\s/g, '');
+        const matchesIban = ibanNormalized.includes(queryNoSpaces);
+
+        return matchesTextFields || matchesIban;
       });
     }
 

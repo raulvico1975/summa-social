@@ -847,7 +847,7 @@ export const fr = {
     export: "Exporter",
     exportTooltip: "Exporter la liste des donateurs en Excel",
     noData: "Aucun donateur enregistré.",
-    searchPlaceholder: "Rechercher par nom, N° fiscal, e-mail, téléphone...",
+    searchPlaceholder: "Rechercher par nom, N° fiscal, IBAN, e-mail, téléphone...",
     noSearchResults: "Aucun donateur trouvé",
     name: "Nom",
     namePlaceholder: "Prénom et nom",

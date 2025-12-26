@@ -879,7 +879,7 @@ export const es = {
     export: "Exportar",
     exportTooltip: "Exportar lista de donantes a Excel",
     noData: "No hay donantes registrados.",
-    searchPlaceholder: "Buscar por nombre, DNI/CIF, email, teléfono...",
+    searchPlaceholder: "Buscar por nombre, DNI/CIF, IBAN, email, teléfono...",
     noSearchResults: "No se han encontrado donantes con este criterio",
     name: "Nombre",
     namePlaceholder: "Nombre y apellidos",

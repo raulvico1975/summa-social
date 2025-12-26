@@ -847,7 +847,7 @@ export const ca = {
     export: "Exportar",
     exportTooltip: "Exportar llista de donants a Excel",
     noData: "No hi ha donants registrats.",
-    searchPlaceholder: "Cercar per nom, DNI/CIF, email, telèfon...",
+    searchPlaceholder: "Cercar per nom, DNI/CIF, IBAN, email, telèfon...",
     noSearchResults: "No s'han trobat donants amb aquest criteri",
     name: "Nom",
     namePlaceholder: "Nom i cognoms",
