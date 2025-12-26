@@ -160,16 +160,33 @@ function RegistreContent() {
       });
 
       setPageState('success');
-      
+
       toast({
         title: 'Compte creat!',
         description: `Benvingut/da a ${invitation.organizationName}`,
       });
 
-      // Redirigir a l'inici, que ja gestiona la redirecció a l'organització
-      setTimeout(() => {
-        router.push('/');
-      }, 2000);
+      // Obtenir el slug de l'organització per redirigir directament
+      try {
+        const orgRef = doc(firestore, 'organizations', invitation.organizationId);
+        const orgSnap = await getDoc(orgRef);
+        const slug = orgSnap.exists() ? orgSnap.data().slug : null;
+
+        setTimeout(() => {
+          if (slug) {
+            // Redirecció directa a l'org (sense passar per redirect-to-org)
+            router.push(`/${slug}/dashboard`);
+          } else {
+            // Fallback si no hi ha slug (no hauria de passar)
+            router.push('/redirect-to-org?next=/dashboard');
+          }
+        }, 2000);
+      } catch {
+        // En cas d'error, usar el flux antic
+        setTimeout(() => {
+          router.push('/redirect-to-org?next=/dashboard');
+        }, 2000);
+      }
 
     } catch (err: any) {
       console.error('Error en el registre:', err);
