@@ -450,6 +450,21 @@ organizations/
 - La sessió caduca automàticament en tancar el navegador
 - Implementat a v1.7 per seguretat
 
+### Logout per inactivitat
+
+- **IdleLogoutProvider**: Component que tanca la sessió després de 30 minuts d'inactivitat
+- Avís 1 minut abans del logout
+- Events monitoritzats: mouse, teclat, scroll, touch, click, canvi de visibilitat
+- Redirecció a `/{slug}/login?reason=idle`
+- Implementat a `src/components/IdleLogoutProvider.tsx`
+
+### Flux de redirecció d'organització
+
+- **redirect-to-org**: Pàgina que determina l'organització de l'usuari i redirigeix a `/{slug}/dashboard`
+- Ordre de cerca: 1) `organizationId` al perfil, 2) query `collectionGroup('members')` pel uid
+- Si no té accés a cap org: mostra estat "no-org" amb opció de logout
+- Query optimitzada O(1) amb `collectionGroup` + `documentId()` (implementat v1.16)
+
 ## 2.4 Multi-Organització
 
 - Cada usuari pot pertànyer a múltiples organitzacions
@@ -2684,6 +2699,18 @@ Qualsevol funcionalitat en aquesta línia és **externa i opcional**, i s'ha d'i
 
 ## C.5 Firestore Rules
 
+### CollectionGroup per membres (v1.16)
+
+Permet a un usuari trobar les seves membresies via `collectionGroup`:
+
+```javascript
+match /{path=**}/members/{memberId} {
+  allow read: if isSignedIn() && request.auth.uid == memberId;
+}
+```
+
+### Exports i projectModule
+
 Els feeds d'exports són de només lectura per als clients:
 
 ```javascript
@@ -2734,5 +2761,5 @@ Les assignacions creades abans de la implementació del camp `budgetLineIds` no 
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # FI DEL DOCUMENT
-# Última actualització: Desembre 2025 - Versió 1.15
+# Última actualització: Desembre 2025 - Versió 1.16
 # ═══════════════════════════════════════════════════════════════════════════════
