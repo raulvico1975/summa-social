@@ -8,7 +8,7 @@ import { Suspense } from 'react';
 import { useEffect, useState, useRef } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useFirebase } from '@/firebase';
-import { doc, getDoc, collection, query, where, getDocs, limit } from 'firebase/firestore';
+import { doc, getDoc, collectionGroup, query, where, getDocs, limit, documentId } from 'firebase/firestore';
 import { Loader2, AlertCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -55,19 +55,24 @@ function RedirectContent() {
           orgId = profile.organizationId || profile.defaultOrganizationId || null;
         }
 
-        // 2. Si no hi ha orgId al perfil, buscar com a membre d'alguna org
+        // 2. Si no hi ha orgId al perfil, buscar com a membre d'alguna org (O(1) amb collectionGroup)
         if (!orgId) {
-          // Buscar a quines organitzacions és membre
-          const orgsRef = collection(firestore, 'organizations');
-          const orgsSnap = await getDocs(orgsRef);
+          const q = query(
+            collectionGroup(firestore, 'members'),
+            where(documentId(), '==', user.uid),
+            limit(1)
+          );
 
-          for (const orgDoc of orgsSnap.docs) {
-            const memberRef = doc(firestore, 'organizations', orgDoc.id, 'members', user.uid);
-            const memberSnap = await getDoc(memberRef);
-            if (memberSnap.exists()) {
-              orgId = orgDoc.id;
-              slug = orgDoc.data().slug;
-              break;
+          const membersSnap = await getDocs(q);
+
+          if (!membersSnap.empty) {
+            const memberDoc = membersSnap.docs[0];
+            const parentOrgRef = memberDoc.ref.parent.parent;
+            orgId = parentOrgRef?.id ?? null;
+
+            if (orgId) {
+              const orgSnap = await getDoc(doc(firestore, 'organizations', orgId));
+              slug = orgSnap.exists() ? (orgSnap.data().slug as string | null) : null;
             }
           }
         }

@@ -29,6 +29,15 @@ service cloud.firestore {
     }
 
     // ═══════════════════════════════════════════════════════════════════════
+    // COLLECTIONGROUP: MEMBERS (permet a un usuari trobar les seves membresies)
+    // ═══════════════════════════════════════════════════════════════════════
+
+    match /{path=**}/members/{memberId} {
+      // Un usuari pot llegir el seu propi document de membre via collectionGroup
+      allow read: if isSignedIn() && request.auth.uid == memberId;
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
     // SLUGS (índex d'unicitat per URLs d'organitzacions)
     // ═══════════════════════════════════════════════════════════════════════
 
