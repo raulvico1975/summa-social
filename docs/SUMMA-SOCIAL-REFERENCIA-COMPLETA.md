@@ -589,7 +589,36 @@ Apareix quan hi ha fites positives:
 - Sense contacte
 - **Devolucions pendents** (NOU v1.8)
 
-### 3.2.5 Banner de Devolucions Pendents (NOU v1.8)
+### 3.2.5 Selecció Múltiple i Accions en Bloc (NOU v1.13)
+
+Permet seleccionar múltiples moviments i aplicar accions massives.
+
+**Visibilitat:**
+- Només disponible per rols `admin` i `user`
+- Rol `viewer` no veu els checkboxes
+
+**Elements UI:**
+| Element | Descripció |
+|---------|------------|
+| Checkbox capçalera | Selecciona/deselecciona tots els visibles |
+| Checkbox fila | Selecciona moviment individual |
+| Estat indeterminat | Quan hi ha selecció parcial |
+| Barra d'accions | Apareix amb "N seleccionats" |
+
+**Accions disponibles:**
+| Acció | Descripció |
+|-------|------------|
+| **Assignar categoria...** | Obre diàleg per seleccionar categoria |
+| **Treure categoria** | Posa `category: null` a tots els seleccionats |
+
+**Implementació tècnica:**
+- Estat: `Set<string>` per IDs seleccionats
+- Batched writes: màxim 50 operacions per batch (límit Firestore)
+- Tracking UX: `bulk.category.start/success/partial/error`
+
+**Traduccions:** `movements.table.bulkSelection` (CA/ES/FR)
+
+### 3.2.6 Banner de Devolucions Pendents (NOU v1.8)
 
 Quan hi ha devolucions sense assignar, apareix un banner vermell:
 
@@ -1912,6 +1941,7 @@ Camps afegits v1.10:
 | **1.10** | **Des 2025** | **Mòdul Projectes: justificació assistida per partides, suggerències heurístiques, split parcial de despeses, simulació en memòria** |
 | **1.11** | **Des 2025** | **Captura de despeses de terreny (quickMode, pujada ràpida <10s), i18n Francès complet (fr.ts), selector d'idioma amb 3 opcions** |
 | **1.12** | **Des 2025** | **Multicomptes bancaris (CRUD, filtre per compte, traçabilitat bankAccountId), filtre per origen (source), diàleg crear donant a importador devolucions, mode bulk NET** |
+| **1.13** | **Des 2025** | **Selecció múltiple a Moviments (checkboxes + accions en bloc), assignar/treure categoria massivament, batched writes Firestore (50 ops/batch), traduccions CA/ES/FR** |
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
