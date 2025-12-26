@@ -12,10 +12,29 @@ type Props = {
   warnMs?: number;          // avís abans (opcional)
 };
 
+// Segments que NO són slugs d'organització
+const RESERVED_SEGMENTS = [
+  'login',
+  'registre',
+  'redirect-to-org',
+  'admin',
+  'dashboard',
+  'privacy',
+  'api',
+  'q',
+];
+
 function buildInstanceLoginUrl(pathname: string | null): string {
   if (!pathname) return '/login?reason=idle';
-  const slug = pathname.split('/').filter(Boolean)[0];
-  return slug ? `/${slug}/login?reason=idle` : '/login?reason=idle';
+  const firstSegment = pathname.split('/').filter(Boolean)[0];
+
+  // Si el primer segment és reservat o no existeix, login genèric
+  if (!firstSegment || RESERVED_SEGMENTS.includes(firstSegment)) {
+    return '/login?reason=idle';
+  }
+
+  // És un slug d'organització
+  return `/${firstSegment}/login?reason=idle`;
 }
 
 const DEFAULT_IDLE_MS = 30 * 60 * 1000; // 30 min
