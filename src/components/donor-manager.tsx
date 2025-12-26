@@ -47,7 +47,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
-import { PlusCircle, Edit, Trash2, User, Building2, RefreshCw, Heart, Upload, AlertTriangle, Search, X, RotateCcw } from 'lucide-react';
+import { PlusCircle, Edit, Trash2, User, Building2, RefreshCw, Heart, Upload, AlertTriangle, Search, X, RotateCcw, Download } from 'lucide-react';
 import type { Donor, Category, Transaction } from '@/lib/data';
 import { fromPeriodQuery } from '@/lib/period-query';
 import type { DateFilterValue } from '@/components/date-filter';
@@ -63,6 +63,7 @@ import { DonorDetailDrawer } from './donor-detail-drawer';
 import { useTranslations } from '@/i18n';
 import { normalizeContact, formatCurrencyEU } from '@/lib/normalize';
 import { cn } from '@/lib/utils';
+import { exportDonorsToExcel } from '@/lib/donors-export';
 
 type DonorFormData = Omit<Donor, 'id' | 'createdAt' | 'updatedAt'>;
 
@@ -570,6 +571,15 @@ export function DonorManager() {
               </CardDescription>
             </div>
             <div className="flex gap-2">
+              <Button
+                variant="outline"
+                onClick={() => donors && exportDonorsToExcel(donors)}
+                disabled={!donors || donors.length === 0}
+                title={t.donors.exportTooltip ?? 'Exportar llista de donants a Excel'}
+              >
+                <Download className="mr-2 h-4 w-4" />
+                {t.donors.export ?? 'Exportar'}
+              </Button>
               <Button variant="outline" onClick={() => setIsImportOpen(true)}>
                 <Upload className="mr-2 h-4 w-4" />
                 {t.donors.import}

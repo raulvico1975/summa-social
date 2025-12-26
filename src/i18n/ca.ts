@@ -844,6 +844,8 @@ export const ca = {
     description: "Gestiona els donants de la teva organització.",
     add: "Afegir Donant",
     import: "Importar Donants",
+    export: "Exportar",
+    exportTooltip: "Exportar llista de donants a Excel",
     noData: "No hi ha donants registrats.",
     searchPlaceholder: "Cercar per nom, DNI/CIF, email, telèfon...",
     noSearchResults: "No s'han trobat donants amb aquest criteri",

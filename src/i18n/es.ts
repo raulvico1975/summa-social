@@ -876,6 +876,8 @@ export const es = {
     description: "Gestiona los donantes de tu organización.",
     add: "Añadir Donante",
     import: "Importar Donantes",
+    export: "Exportar",
+    exportTooltip: "Exportar lista de donantes a Excel",
     noData: "No hay donantes registrados.",
     searchPlaceholder: "Buscar por nombre, DNI/CIF, email, teléfono...",
     noSearchResults: "No se han encontrado donantes con este criterio",

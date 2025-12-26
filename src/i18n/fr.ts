@@ -844,6 +844,8 @@ export const fr = {
     description: "Gérez les donateurs de votre organisation.",
     add: "Ajouter donateur",
     import: "Importer donateurs",
+    export: "Exporter",
+    exportTooltip: "Exporter la liste des donateurs en Excel",
     noData: "Aucun donateur enregistré.",
     searchPlaceholder: "Rechercher par nom, N° fiscal, e-mail, téléphone...",
     noSearchResults: "Aucun donateur trouvé",
