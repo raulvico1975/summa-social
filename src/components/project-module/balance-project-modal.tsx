@@ -1327,6 +1327,7 @@ export function BalanceProjectModal({
                                 >
                                   <div className="flex items-center justify-between">
                                     <div className="flex-1 min-w-0">
+                                      {/* Línia 1: Descripció/Concepte + icones d'estat */}
                                       <div className="flex items-center gap-2">
                                         {candidate.expense.source === 'offBank' ? (
                                           <FileText className="h-4 w-4 text-muted-foreground shrink-0" />
@@ -1334,7 +1335,7 @@ export function BalanceProjectModal({
                                           <Building2 className="h-4 w-4 text-muted-foreground shrink-0" />
                                         )}
                                         <span className="text-sm font-medium truncate">
-                                          {candidate.expense.counterpartyName ?? candidate.expense.description ?? 'Sense descripció'}
+                                          {candidate.expense.description ?? candidate.expense.counterpartyName ?? 'Sense descripció'}
                                         </span>
                                         {candidate.labels.noDocument && (
                                           <span title="Comprovant no adjuntat">
@@ -1346,20 +1347,37 @@ export function BalanceProjectModal({
                                             <AlertCircle className="h-3 w-3 text-orange-400 shrink-0" />
                                           </span>
                                         )}
+                                        {/* Badge d'estat d'assignació al projecte actual */}
+                                        {candidate.assignedToThisProject && (
+                                          candidate.currentBudgetLineId ? (
+                                            <Badge variant="outline" className="text-xs bg-blue-50 text-blue-700 border-blue-200">
+                                              Ja vinculada
+                                            </Badge>
+                                          ) : (
+                                            <Badge variant="outline" className="text-xs bg-slate-50 text-slate-600 border-slate-200">
+                                              Parcial
+                                            </Badge>
+                                          )
+                                        )}
                                         {candidate.assignedToOtherProject && (
                                           <Badge variant="outline" className="text-xs bg-amber-50 text-amber-700">
                                             {candidate.assignedToOtherProject}
                                           </Badge>
                                         )}
                                       </div>
-                                      <div className="text-xs text-muted-foreground flex gap-2">
+                                      {/* Línia 2: Categoria */}
+                                      <div className="text-xs text-muted-foreground mt-0.5 pl-6">
+                                        {candidate.expense.categoryName ?? 'Categoria pendent'}
+                                      </div>
+                                      {/* Línia 3: Data, import i contrapart (si diferent de descripció) */}
+                                      <div className="text-xs text-muted-foreground flex gap-2 pl-6">
                                         <span>{formatDateDMY(candidate.expense.date)}</span>
                                         <span>·</span>
                                         <span className="font-mono">{formatAmount(candidate.currentAssignmentAmount)}</span>
-                                        {candidate.expense.categoryName && (
+                                        {candidate.expense.counterpartyName && candidate.expense.counterpartyName !== candidate.expense.description && (
                                           <>
                                             <span>·</span>
-                                            <span>{candidate.expense.categoryName}</span>
+                                            <span className="truncate">{candidate.expense.counterpartyName}</span>
                                           </>
                                         )}
                                       </div>
