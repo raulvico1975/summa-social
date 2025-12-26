@@ -226,6 +226,7 @@ export const fr = {
       noSearchResults: "Aucun mouvement trouvé",
       edit: "Modifier",
       splitRemittance: "Ventiler virement",
+      splitPaymentRemittance: "Ventiler virement paiements",
       splitStripeRemittance: "Ventiler virement Stripe",
       delete: "Supprimer",
       createNewEmisor: "Créer un nouvel émetteur...",

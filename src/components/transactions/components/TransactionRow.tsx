@@ -94,6 +94,7 @@ interface TransactionRowProps {
   onSplitRemittance: (tx: Transaction) => void;
   onSplitStripeRemittance?: (tx: Transaction) => void;
   onViewRemittanceDetail: (txId: string) => void;
+  onUndoRemittance?: (tx: Transaction) => void;
   onCreateNewContact: (txId: string, type: 'donor' | 'supplier') => void;
   onOpenReturnImporter?: () => void;
   // Translations
@@ -126,12 +127,14 @@ interface TransactionRowProps {
     manageReturn: string;
     edit: string;
     splitRemittance: string;
+    splitPaymentRemittance?: string;
     splitStripeRemittance: string;
     delete: string;
     viewRemittanceDetail: string;
     remittanceQuotes: string;
     remittanceProcessedLabel: string;
     remittanceNotApplicable: string;
+    undoRemittance?: string;
   };
   getCategoryDisplayName: (category: string | null | undefined) => string;
 }
@@ -189,6 +192,7 @@ export const TransactionRow = React.memo(function TransactionRow({
   onSplitRemittance,
   onSplitStripeRemittance,
   onViewRemittanceDetail,
+  onUndoRemittance,
   onCreateNewContact,
   onOpenReturnImporter,
   t,
@@ -320,6 +324,18 @@ export const TransactionRow = React.memo(function TransactionRow({
   const handleViewRemittanceDetail = React.useCallback(() => {
     onViewRemittanceDetail(tx.id);
   }, [tx.id, onViewRemittanceDetail]);
+
+  const handleUndoRemittance = React.useCallback(() => {
+    if (!onUndoRemittance) return;
+    // Delay per permetre que el DropdownMenu es tanqui completament
+    setIsActionsMenuOpen(false);
+    setTimeout(() => {
+      if (document.activeElement instanceof HTMLElement) {
+        document.activeElement.blur();
+      }
+      onUndoRemittance(tx);
+    }, 100);
+  }, [tx, onUndoRemittance]);
 
   // Render transaction type badge
   const renderTransactionTypeBadge = () => {
@@ -778,6 +794,18 @@ export const TransactionRow = React.memo(function TransactionRow({
               <DropdownMenuItem onClick={handleSplitRemittance}>
                 <GitMerge className="mr-2 h-4 w-4" />
                 {t.splitRemittance}
+              </DropdownMenuItem>
+            )}
+            {tx.amount < 0 && !isReturn && !isReturnFee && !tx.isRemittance && !isFromStripe && (
+              <DropdownMenuItem onClick={handleSplitRemittance}>
+                <GitMerge className="mr-2 h-4 w-4 text-orange-600" />
+                {t.splitPaymentRemittance || 'Dividir remesa pagaments'}
+              </DropdownMenuItem>
+            )}
+            {tx.isRemittance && tx.remittanceId && onUndoRemittance && (
+              <DropdownMenuItem onClick={handleUndoRemittance} className="text-orange-600">
+                <Undo2 className="mr-2 h-4 w-4" />
+                {t.undoRemittance || 'Desfer remesa'}
               </DropdownMenuItem>
             )}
             <DropdownMenuSeparator />

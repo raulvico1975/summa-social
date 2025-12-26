@@ -102,8 +102,29 @@ export type Transaction = {
   /**
    * Tipus de remesa
    * - returns: Remesa de devolucions
+   * - donations: Remesa de donacions (IN)
+   * - payments: Remesa de pagaments (OUT)
    */
-  remittanceType?: 'returns';
+  remittanceType?: 'returns' | 'donations' | 'payments';
+
+  /**
+   * Direcció de la remesa
+   * - IN: Ingressos (donacions)
+   * - OUT: Sortides (pagaments)
+   */
+  remittanceDirection?: 'IN' | 'OUT';
+
+  /**
+   * ID del document de remesa associat (per pares i fills)
+   * Referència a: organizations/{orgId}/remittances/{remittanceId}
+   */
+  remittanceId?: string | null;
+
+  /**
+   * Indica si aquesta transacció és un element fill d'una remesa
+   * Les transaccions amb isRemittanceItem=true es poden ocultar a la taula
+   */
+  isRemittanceItem?: boolean;
 
   /**
    * Estat de la remesa

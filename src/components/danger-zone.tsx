@@ -63,11 +63,7 @@ export function DangerZone() {
 
   // Buscar última remesa processada
   const handleSearchLastRemittance = async () => {
-    console.log('[DangerZone] handleSearchLastRemittance called');
-    console.log('[DangerZone] organizationId:', organizationId);
-
     if (!organizationId) {
-      console.log('[DangerZone] No organizationId, returning early');
       toast({
         variant: 'destructive',
         title: 'Error',
@@ -81,13 +77,11 @@ export function DangerZone() {
     setFallbackCount(null);
 
     try {
-      console.log('[DangerZone] Searching for remittances...');
       const transactionsRef = collection(firestore, `organizations/${organizationId}/transactions`);
 
       // 1. Buscar transaccions amb isRemittance === true
       const remittanceQuery = query(transactionsRef, where('isRemittance', '==', true));
       const remittanceSnapshot = await getDocs(remittanceQuery);
-      console.log('[DangerZone] Remittances found with isRemittance=true:', remittanceSnapshot.size);
 
       if (!remittanceSnapshot.empty) {
         // Ordenar per data/createdAt DESC i agafar la més recent
@@ -105,12 +99,10 @@ export function DangerZone() {
         });
 
         const lastRemittance = remittances[0] as any;
-        console.log('[DangerZone] Last remittance found:', lastRemittance.id, lastRemittance.date, lastRemittance.description);
 
         // Buscar transaccions filles
         const childQuery = query(transactionsRef, where('parentTransactionId', '==', lastRemittance.id));
         const childSnapshot = await getDocs(childQuery);
-        console.log('[DangerZone] Child transactions found:', childSnapshot.size);
 
         setRemittanceInfo({
           id: lastRemittance.id,
@@ -120,13 +112,10 @@ export function DangerZone() {
           itemCount: lastRemittance.remittanceItemCount || 0,
           childCount: childSnapshot.size,
         });
-        console.log('[DangerZone] Opening remittance dialog');
         setShowRemittanceDialog(true);
       } else {
         // 2. Fallback: buscar per descripció
-        console.log('[DangerZone] No isRemittance found, trying fallback...');
         const allTransactions = await getDocs(transactionsRef);
-        console.log('[DangerZone] Total transactions:', allTransactions.size);
 
         const fallbackTransactions = allTransactions.docs.filter(d => {
           const data = d.data();
@@ -134,14 +123,11 @@ export function DangerZone() {
             data.description?.includes(pattern)
           );
         });
-        console.log('[DangerZone] Fallback transactions found:', fallbackTransactions.length);
 
         if (fallbackTransactions.length > 0) {
           setFallbackCount(fallbackTransactions.length);
-          console.log('[DangerZone] Opening fallback dialog');
           setShowRemittanceDialog(true);
         } else {
-          console.log('[DangerZone] No remittances found at all');
           toast({
             title: t.dangerZone.noRemittanceFound,
             description: t.dangerZone.noRemittanceFoundDescription,
@@ -162,21 +148,12 @@ export function DangerZone() {
 
   // Esborrar última remesa i les seves transaccions filles
   const handleDeleteRemittance = async () => {
-    console.log('[DangerZone] handleDeleteRemittance called');
-    console.log('[DangerZone] organizationId:', organizationId);
-    console.log('[DangerZone] remittanceConfirmText:', remittanceConfirmText);
-    console.log('[DangerZone] expectedConfirmText:', expectedConfirmText);
-    console.log('[DangerZone] remittanceInfo:', remittanceInfo);
-    console.log('[DangerZone] fallbackCount:', fallbackCount);
-
     if (!organizationId || remittanceConfirmText !== expectedConfirmText) {
-      console.log('[DangerZone] Validation failed - organizationId or confirmText mismatch');
       return;
     }
 
     // Validar que tenim dades per esborrar
     if (!remittanceInfo && !fallbackCount) {
-      console.error('[DangerZone] No remittance data to delete');
       toast({
         variant: 'destructive',
         title: t.dangerZone.noRemittanceFound,
@@ -188,15 +165,12 @@ export function DangerZone() {
 
     setIsDeletingRemittances(true);
     try {
-      console.log('[DangerZone] Starting deletion process...');
       const transactionsRef = collection(firestore, `organizations/${organizationId}/transactions`);
       let deletedCount = 0;
 
       if (remittanceInfo && remittanceInfo.id) {
-        console.log('[DangerZone] Deleting remittance with id:', remittanceInfo.id);
         // Validar que l'ID no és buit
         if (!remittanceInfo.id.trim()) {
-          console.error('[DangerZone] Remittance ID is empty');
           toast({
             variant: 'destructive',
             title: t.dangerZone.deleteError,
@@ -228,14 +202,12 @@ export function DangerZone() {
         });
 
         await batch.commit();
-        console.log('[DangerZone] Batch committed successfully, deleted:', deletedCount);
 
         toast({
           title: t.dangerZone.deleteSuccess,
           description: t.dangerZone.remittanceDeletedDescription(deletedCount),
         });
       } else if (fallbackCount && fallbackCount > 0) {
-        console.log('[DangerZone] Using fallback deletion method');
         // Cas 2: Fallback - esborrar transaccions per descripció
         const allTransactions = await getDocs(transactionsRef);
         const fallbackDocs = allTransactions.docs.filter(d => {

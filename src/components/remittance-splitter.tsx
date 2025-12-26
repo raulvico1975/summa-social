@@ -50,7 +50,9 @@ import {
   Save,
   Trash2,
   Eye,
-  RotateCcw
+  RotateCcw,
+  Download,
+  FileCode,
 } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { useFirebase } from '@/firebase';
@@ -58,6 +60,7 @@ import { collection, writeBatch, doc, setDoc, deleteDoc, updateDoc } from 'fireb
 import { useCollection, useMemoFirebase } from '@/firebase';
 import { useTranslations } from '@/i18n';
 import { useCurrentOrganization } from '@/hooks/organization-provider';
+import { parsePain001, isPain001File, downloadPain001 } from '@/lib/sepa';
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // TIPUS
@@ -70,6 +73,9 @@ interface RemittanceSplitterProps {
   existingDonors: Donor[];
   onSplitDone: () => void;
 }
+
+// Tipus de remesa: IN (donacions) o OUT (pagaments)
+type RemittanceDirection = 'IN' | 'OUT';
 
 // Configuració guardada per a un format de banc
 interface SavedMapping {
@@ -297,6 +303,10 @@ export function RemittanceSplitter({
   existingDonors,
   onSplitDone,
 }: RemittanceSplitterProps) {
+  // Detectar direcció: IN (donacions, amount > 0) o OUT (pagaments, amount < 0)
+  const direction: RemittanceDirection = transaction.amount >= 0 ? 'IN' : 'OUT';
+  const isPaymentRemittance = direction === 'OUT';
+
   // Estats de navegació
   const [step, setStep] = React.useState<Step>('upload');
   const [isProcessing, setIsProcessing] = React.useState(false);
@@ -323,7 +333,7 @@ export function RemittanceSplitter({
   const fileInputRef = React.useRef<HTMLInputElement>(null);
   const { toast } = useToast();
   const { log } = useAppLog();
-  const { firestore } = useFirebase();
+  const { firestore, user } = useFirebase();
   const { organizationId } = useCurrentOrganization();
   const { t } = useTranslations();
 
@@ -333,6 +343,19 @@ export function RemittanceSplitter({
     [firestore, organizationId]
   );
   const { data: savedMappings } = useCollection<SavedMapping>(mappingsQuery);
+
+  // Carregar comptes bancaris (per exportar SEPA amb l'IBAN del deutor)
+  const bankAccountsQuery = useMemoFirebase(
+    () => organizationId ? collection(firestore, 'organizations', organizationId, 'bankAccounts') : null,
+    [firestore, organizationId]
+  );
+  const { data: bankAccounts } = useCollection<{ id: string; name: string; iban: string }>(bankAccountsQuery);
+
+  // Obtenir l'IBAN del compte bancari de la transacció
+  const debtorBankAccount = React.useMemo(() => {
+    if (!transaction.bankAccountId || !bankAccounts) return null;
+    return bankAccounts.find(ba => ba.id === transaction.bankAccountId) ?? null;
+  }, [transaction.bankAccountId, bankAccounts]);
 
   // Reset quan es tanca el diàleg
   React.useEffect(() => {
@@ -357,6 +380,48 @@ export function RemittanceSplitter({
     return { found, foundInactive, newWithTaxId, newWithoutTaxId, toCreate };
   }, [parsedDonations]);
 
+  // Càlcul del delta en cèntims per validació i observabilitat
+  const validationDetails = React.useMemo(() => {
+    const parentAbsAmount = Math.abs(transaction.amount);
+    const deltaCents = Math.round((parentAbsAmount - totalAmount) * 100);
+    const invalidAmounts = parsedDonations.filter(d => !d.amount || d.amount <= 0);
+    const missingIbans = isPaymentRemittance
+      ? parsedDonations.filter(d => !d.matchedDonor?.iban && !d.iban)
+      : [];
+
+    return {
+      deltaCents,
+      parentAmount: parentAbsAmount,
+      totalItems: totalAmount,
+      itemCount: parsedDonations.length,
+      invalidAmounts: invalidAmounts.length,
+      missingIbans: missingIbans.length,
+    };
+  }, [parsedDonations, totalAmount, transaction.amount, isPaymentRemittance]);
+
+  // Validació per permetre processar: imports quadren i hi ha dades
+  const canProcess = React.useMemo(() => {
+    if (parsedDonations.length === 0) return false;
+    // Verificar que tots els imports són vàlids (> 0)
+    if (validationDetails.invalidAmounts > 0) return false;
+    // Verificar que el total quadra amb el pare (±2 cèntims)
+    if (Math.abs(validationDetails.deltaCents) > 2) return false;
+    return true;
+  }, [parsedDonations.length, validationDetails]);
+
+  // Motiu de bloqueig per mostrar a l'usuari
+  const blockReason = React.useMemo((): string | null => {
+    if (parsedDonations.length === 0) return 'No hi ha dades per processar';
+    if (validationDetails.invalidAmounts > 0) {
+      return `${validationDetails.invalidAmounts} element(s) amb import invàlid (≤0)`;
+    }
+    if (Math.abs(validationDetails.deltaCents) > 2) {
+      const deltaCentsAbs = Math.abs(validationDetails.deltaCents);
+      return `Delta ${deltaCentsAbs > 0 ? '+' : ''}${validationDetails.deltaCents / 100}€ (màx ±0.02€)`;
+    }
+    return null;
+  }, [parsedDonations.length, validationDetails]);
+
   // Files visibles per al preview del mapejat
   const previewRows = React.useMemo(() => {
     return allRows.slice(startRow, startRow + 8);
@@ -380,19 +445,182 @@ export function RemittanceSplitter({
     if (file) {
       const fileName = file.name.toLowerCase();
       const isExcel = fileName.endsWith('.xlsx') || fileName.endsWith('.xls');
+      const isXml = fileName.endsWith('.xml');
 
       if (isExcel) {
         parseExcelFile(file);
+      } else if (isXml) {
+        // Potser és un fitxer SEPA pain.001
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          const text = e.target?.result as string;
+          if (isPain001File(text)) {
+            parseSepaFile(text);
+          } else {
+            toast({ variant: 'destructive', title: 'Format no reconegut', description: 'El fitxer XML no és un pain.001 vàlid' });
+          }
+        };
+        reader.readAsText(file, 'UTF-8');
       } else {
         const reader = new FileReader();
         reader.onload = (e) => {
           const text = e.target?.result as string;
-          processRawText(text);
+          // Comprovar si és pain.001 encara que no tingui extensió .xml
+          if (isPain001File(text)) {
+            parseSepaFile(text);
+          } else {
+            processRawText(text);
+          }
         };
         reader.readAsText(file, 'UTF-8');
       }
     }
     event.target.value = '';
+  };
+
+  // Parser per fitxers SEPA pain.001 (només mode OUT)
+  const parseSepaFile = (xmlContent: string) => {
+    if (!isPaymentRemittance) {
+      toast({ variant: 'destructive', title: 'Error', description: 'Els fitxers SEPA només es poden importar per remeses de pagaments' });
+      return;
+    }
+
+    try {
+      const result = parsePain001(xmlContent);
+
+      if (result.payments.length === 0) {
+        toast({ variant: 'destructive', title: 'Fitxer buit', description: 'No s\'han trobat pagaments al fitxer SEPA' });
+        return;
+      }
+
+      // Validar import total vs pare
+      const parentAbsAmount = Math.abs(transaction.amount);
+      if (Math.abs(parentAbsAmount - result.totalAmount) > 0.02) {
+        toast({
+          variant: 'destructive',
+          title: 'Import no coincideix',
+          description: `El total del fitxer (${result.totalAmount.toFixed(2)} €) no coincideix amb la transacció (${parentAbsAmount.toFixed(2)} €)`,
+          duration: 9000,
+        });
+        return;
+      }
+
+      // Convertir pagaments SEPA a ParsedDonation (reutilitzem l'estructura)
+      const donations: ParsedDonation[] = result.payments.map((payment, index) => {
+        // Intentar trobar proveïdor existent per IBAN
+        const matchedDonor = existingDonors.find(d =>
+          d.iban && d.iban.replace(/\s/g, '').toUpperCase() === payment.creditorIban
+        ) || existingDonors.find(d =>
+          d.name && d.name.toLowerCase() === payment.creditorName.toLowerCase()
+        );
+
+        return {
+          rowIndex: index + 1,
+          name: payment.creditorName,
+          taxId: '',
+          iban: payment.creditorIban,
+          amount: payment.amount,
+          status: matchedDonor ? 'found' : 'new_without_taxid' as const,
+          matchedDonor: matchedDonor ?? null,
+          shouldCreate: !matchedDonor,
+          zipCode: '',
+        };
+      });
+
+      // Mostrar avisos si n'hi ha
+      if (result.warnings.length > 0) {
+        log(`[Splitter] Avisos SEPA: ${result.warnings.join(', ')}`);
+      }
+
+      setParsedDonations(donations);
+      setTotalAmount(result.totalAmount);
+      setStep('preview');
+
+      toast({
+        title: 'Fitxer SEPA importat',
+        description: `${result.payments.length} pagaments carregats`,
+      });
+
+      log(`[Splitter] SEPA pain.001 carregat: ${result.payments.length} pagaments, total ${result.totalAmount.toFixed(2)} €`);
+    } catch (error: any) {
+      console.error('Error parsing SEPA:', error);
+      toast({ variant: 'destructive', title: 'Error llegint SEPA', description: error.message });
+    }
+  };
+
+  // Exportar a SEPA pain.001 (només mode OUT)
+  const handleExportSepa = () => {
+    if (!isPaymentRemittance || parsedDonations.length === 0) return;
+
+    // Validar que tenim IBAN del deutor
+    if (!debtorBankAccount?.iban) {
+      toast({
+        variant: 'destructive',
+        title: 'IBAN no configurat',
+        description: 'Cal configurar l\'IBAN del compte bancari per exportar el fitxer SEPA',
+      });
+      return;
+    }
+
+    // Validar imports invàlids
+    const invalidAmounts = parsedDonations.filter(d => !d.amount || d.amount <= 0);
+    if (invalidAmounts.length > 0) {
+      toast({
+        variant: 'destructive',
+        title: 'Imports invàlids',
+        description: `${invalidAmounts.length} element(s) tenen import ≤ 0`,
+      });
+      return;
+    }
+
+    // Validar que el total quadra (±2 cèntims)
+    if (Math.abs(validationDetails.deltaCents) > 2) {
+      toast({
+        variant: 'destructive',
+        title: 'Import no quadra',
+        description: `Delta: ${validationDetails.deltaCents / 100}€ (màx ±0.02€)`,
+      });
+      return;
+    }
+
+    try {
+      // Preparar pagaments
+      const payments = parsedDonations.map((d, index) => ({
+        amount: d.amount,
+        creditorName: d.name || d.matchedDonor?.name || `Beneficiari ${index + 1}`,
+        creditorIban: d.iban || d.matchedDonor?.iban || '',
+        concept: d.name ? `Pagament a ${d.name}` : `Pagament ${index + 1}`,
+      }));
+
+      // Validar que tots tenen IBAN
+      const missingIban = payments.filter(p => !p.creditorIban);
+      if (missingIban.length > 0) {
+        toast({
+          variant: 'destructive',
+          title: 'Falten IBANs',
+          description: `${missingIban.length} pagaments no tenen IBAN configurat`,
+        });
+        return;
+      }
+
+      // Generar i descarregar
+      downloadPain001({
+        debtorName: debtorBankAccount.name || 'Organització',
+        debtorIban: debtorBankAccount.iban,
+        executionDate: new Date().toISOString().split('T')[0],
+        payments,
+      }, `pain001_${transaction.date}_${Date.now()}.xml`);
+
+      toast({
+        title: 'Fitxer SEPA generat',
+        description: `S'ha descarregat el fitxer pain.001 amb ${payments.length} pagaments`,
+      });
+
+      log(`[Splitter] SEPA pain.001 exportat: ${payments.length} pagaments`);
+    } catch (error: any) {
+      console.error('Error generating SEPA:', error);
+      toast({ variant: 'destructive', title: 'Error generant SEPA', description: error.message });
+    }
   };
 
   const parseExcelFile = (file: File) => {
@@ -656,12 +884,13 @@ export function RemittanceSplitter({
         });
       }
 
-      // Validar import total
-      if (Math.abs(transaction.amount - total) > 0.01) {
+      // Validar import total (comparar valors absoluts, tolerància ±0.02€)
+      const parentAbsAmount = Math.abs(transaction.amount);
+      if (Math.abs(parentAbsAmount - total) > 0.02) {
         toast({
           variant: 'destructive',
           title: t.movements.splitter.amountMismatch,
-          description: t.movements.splitter.amountMismatchDescription(`${total.toFixed(2)} €`, `${transaction.amount.toFixed(2)} €`),
+          description: t.movements.splitter.amountMismatchDescription(`${total.toFixed(2)} €`, `${parentAbsAmount.toFixed(2)} €`),
           duration: 9000,
         });
         setIsProcessing(false);
@@ -808,6 +1037,16 @@ export function RemittanceSplitter({
   const handleProcess = async () => {
     if (!organizationId) return;
 
+    // Guardrail: no processar si no es compleixen les condicions
+    if (!canProcess) {
+      toast({
+        variant: 'destructive',
+        title: 'No es pot processar',
+        description: blockReason || 'Validació fallida',
+      });
+      return;
+    }
+
     setStep('processing');
     setIsProcessing(true);
     log(`[Splitter] Iniciant processament...`);
@@ -815,81 +1054,111 @@ export function RemittanceSplitter({
     try {
       const transactionsRef = collection(firestore, 'organizations', organizationId, 'transactions');
       const contactsRef = collection(firestore, 'organizations', organizationId, 'contacts');
+      const remittancesRef = collection(firestore, 'organizations', organizationId, 'remittances');
 
       const newDonorIds: Map<number, string> = new Map();
       const CHUNK_SIZE = 50; // Processar en chunks petits per no bloquejar la UI
 
-      // 1. Crear nous donants en chunks
-      const donorsToCreate = parsedDonations.filter(d => d.status !== 'found' && d.shouldCreate);
-      log(`[Splitter] Creant ${donorsToCreate.length} nous donants...`);
+      // 0. Crear document de remesa
+      const remittanceRef = doc(remittancesRef);
+      const remittanceId = remittanceRef.id;
+      const now = new Date().toISOString();
 
-      for (let i = 0; i < donorsToCreate.length; i += CHUNK_SIZE) {
-        const chunk = donorsToCreate.slice(i, i + CHUNK_SIZE);
+      log(`[Splitter] Creant document de remesa ${remittanceId}...`);
+
+      // 1. Crear nous contactes en chunks (donants per IN, proveïdors per OUT)
+      const contactsToCreate = parsedDonations.filter(d => d.status !== 'found' && d.shouldCreate);
+      const contactTypeName = isPaymentRemittance ? 'proveïdors' : 'donants';
+      log(`[Splitter] Creant ${contactsToCreate.length} nous ${contactTypeName}...`);
+
+      for (let i = 0; i < contactsToCreate.length; i += CHUNK_SIZE) {
+        const chunk = contactsToCreate.slice(i, i + CHUNK_SIZE);
         const batch = writeBatch(firestore);
-        const now = new Date().toISOString();
 
-        for (const donation of chunk) {
-          const newDonorRef = doc(contactsRef);
+        for (const item of chunk) {
+          const newContactRef = doc(contactsRef);
 
-          const newDonorData: Omit<Donor, 'id'> = {
-            type: 'donor',
-            name: donation.name || `Donant ${donation.taxId}`,
-            taxId: donation.taxId,
-            zipCode: donation.zipCode,
-            donorType: 'individual',
-            membershipType: 'recurring',
-            createdAt: now,
-          };
+          // Per OUT: crear proveïdor; per IN: crear donant
+          // Nota: Firestore és schema-less, creem l'objecte adequat per cada tipus
+          const newContactData = isPaymentRemittance
+            ? {
+                type: 'supplier' as const,
+                name: item.name || `Proveïdor ${item.taxId}`,
+                taxId: item.taxId,
+                zipCode: '', // Proveïdors poden no tenir codi postal al CSV
+                createdAt: now,
+              }
+            : {
+                type: 'donor' as const,
+                name: item.name || `Donant ${item.taxId}`,
+                taxId: item.taxId,
+                zipCode: item.zipCode,
+                donorType: 'individual' as const,
+                membershipType: 'recurring' as const,
+                createdAt: now,
+              };
 
-          batch.set(newDonorRef, newDonorData);
-          newDonorIds.set(donation.rowIndex, newDonorRef.id);
+          batch.set(newContactRef, newContactData);
+          newDonorIds.set(item.rowIndex, newContactRef.id);
         }
 
         await batch.commit();
         // Delay per permetre que la UI es repinti (augmentat per evitar bloquejos)
         await new Promise(resolve => setTimeout(resolve, 100));
-        log(`[Splitter] Donants creats: ${Math.min(i + CHUNK_SIZE, donorsToCreate.length)}/${donorsToCreate.length}`);
+        log(`[Splitter] ${contactTypeName} creats: ${Math.min(i + CHUNK_SIZE, contactsToCreate.length)}/${contactsToCreate.length}`);
       }
 
-      // 2. Marcar transacció original com a remesa
-      const updateBatch = writeBatch(firestore);
-      updateBatch.update(doc(transactionsRef, transaction.id), {
-        isRemittance: true,
-        remittanceItemCount: parsedDonations.length,
-        category: 'memberFees',
-        contactId: null,
-        contactType: null,
-      });
-      await updateBatch.commit();
-
-      // 3. Crear noves transaccions en chunks
+      // 2. Crear transaccions filles i recollir IDs
+      const childTransactionIds: string[] = [];
       log(`[Splitter] Creant ${parsedDonations.length} transaccions...`);
 
       for (let i = 0; i < parsedDonations.length; i += CHUNK_SIZE) {
         const chunk = parsedDonations.slice(i, i + CHUNK_SIZE);
         const batch = writeBatch(firestore);
 
-        for (const donation of chunk) {
+        for (const item of chunk) {
           const newTxRef = doc(transactionsRef);
+          childTransactionIds.push(newTxRef.id);
 
           let contactId: string | null = null;
-          if (donation.matchedDonor) {
-            contactId = donation.matchedDonor.id;
-          } else if (donation.shouldCreate) {
-            contactId = newDonorIds.get(donation.rowIndex) || null;
+          if (item.matchedDonor) {
+            contactId = item.matchedDonor.id;
+          } else if (item.shouldCreate) {
+            contactId = newDonorIds.get(item.rowIndex) || null;
           }
 
-          const displayName = donation.name || donation.taxId || 'Anònim';
+          const displayName = item.name || item.taxId || 'Anònim';
 
-          // Determina la categoria segons membershipType del donant
-          const membershipType = donation.matchedDonor?.membershipType ?? 'recurring';
-          const category = membershipType === 'recurring' ? 'memberFees' : 'donations';
+          // Per OUT: import negatiu, categoria supplierPayments
+          // Per IN: import positiu, categoria segons membershipType
+          let category: string;
+          let finalAmount: number;
+          let description: string;
 
+          if (isPaymentRemittance) {
+            // OUT: pagaments a proveïdors
+            category = transaction.category || 'supplierPayments';
+            finalAmount = -Math.abs(item.amount); // Assegurar negatiu
+            description = `Pagament: ${displayName}`;
+          } else {
+            // IN: donacions
+            const membershipType = item.matchedDonor?.membershipType ?? 'recurring';
+            category = membershipType === 'recurring' ? 'memberFees' : 'donations';
+            finalAmount = Math.abs(item.amount); // Assegurar positiu
+            description = `${t.movements.splitter.donationDescription}: ${displayName}`;
+          }
+
+          // INVARIANT: Tota transacció filla ha de tenir:
+          // 1. parentTransactionId → referència al pare (immutable)
+          // 2. remittanceId → referència al document de remesa
+          // 3. isRemittanceItem: true → marcador per filtres i exports
+          // El pare MAI es modifica, només es marca amb isRemittance=true.
+          // Els fills són els que contenen el detall i computen en totals.
           const newTxData: Omit<Transaction, 'id'> & { id: string } = {
             id: newTxRef.id,
             date: transaction.date,
-            description: `${t.movements.splitter.donationDescription}: ${displayName}`,
-            amount: donation.amount,
+            description,
+            amount: finalAmount,
             category,
             document: null,
             contactId,
@@ -897,9 +1166,11 @@ export function RemittanceSplitter({
             source: 'remittance',
             parentTransactionId: transaction.id,
             bankAccountId: transaction.bankAccountId ?? null,
+            isRemittanceItem: true,
+            remittanceId,
           };
           if (contactId) {
-            (newTxData as any).contactType = 'donor';
+            (newTxData as any).contactType = isPaymentRemittance ? 'supplier' : 'donor';
           }
 
           batch.set(newTxRef, newTxData);
@@ -911,10 +1182,61 @@ export function RemittanceSplitter({
         log(`[Splitter] Transaccions creades: ${Math.min(i + CHUNK_SIZE, parsedDonations.length)}/${parsedDonations.length}`);
       }
 
+      // INVARIANT: El document de remesa SEMPRE ha de tenir parentTransactionId.
+      // Aquest document serveix per traçabilitat i per permetre "desfer remesa".
+      // validation.deltaCents guarda la diferència calculada per observabilitat futura.
+      const remittanceType = isPaymentRemittance ? 'payments' : 'donations';
+      await setDoc(remittanceRef, {
+        direction: direction.toLowerCase(), // 'in' o 'out'
+        type: remittanceType,
+        parentTransactionId: transaction.id,
+        transactionIds: childTransactionIds,
+        totalAmount: Math.abs(totalAmount),
+        itemCount: parsedDonations.length,
+        createdAt: now,
+        createdBy: user?.uid ?? null,
+        bankAccountId: transaction.bankAccountId ?? null,
+        validation: {
+          deltaCents: validationDetails.deltaCents,
+          parentAmount: validationDetails.parentAmount,
+          totalItems: validationDetails.totalItems,
+          validatedAt: now,
+          validatedByUid: user?.uid ?? null,
+        },
+      });
+      log(`[Splitter] Document de remesa creat: ${remittanceId} (deltaCents: ${validationDetails.deltaCents})`);
+
+      // 4. Marcar transacció pare com a remesa amb remittanceId
+      // DECISIÓ TÈCNICA: El pare és IMMUTABLE excepte pels camps de marcatge.
+      // No modifiquem amount, date ni description del pare.
+      // Motiu: El pare ve del banc i ha de coincidir sempre amb l'extracte bancari.
+      // Els fills són els que contenen el detall i computen en totals i projectes.
+      const updateBatch = writeBatch(firestore);
+      const remittanceCategory = isPaymentRemittance
+        ? (transaction.category || 'supplierPayments')
+        : 'memberFees';
+      updateBatch.update(doc(transactionsRef, transaction.id), {
+        isRemittance: true,
+        remittanceItemCount: parsedDonations.length,
+        remittanceDirection: direction,
+        remittanceType,
+        remittanceId,
+        remittanceStatus: 'complete',
+        remittanceResolvedCount: parsedDonations.length,
+        category: remittanceCategory,
+        contactId: null,
+        contactType: null,
+      });
+      await updateBatch.commit();
+
       log(`[Splitter] ✅ Processament completat!`);
       toast({
-        title: t.movements.splitter.remittanceProcessed,
-        description: t.movements.splitter.remittanceProcessedDescription(parsedDonations.length, donorsToCreate.length),
+        title: isPaymentRemittance
+          ? 'Remesa de pagaments processada'
+          : t.movements.splitter.remittanceProcessed,
+        description: isPaymentRemittance
+          ? `${parsedDonations.length} pagaments creats${contactsToCreate.length > 0 ? `, ${contactsToCreate.length} proveïdors nous` : ''}`
+          : t.movements.splitter.remittanceProcessedDescription(parsedDonations.length, contactsToCreate.length),
       });
 
       // Reiniciar estat abans de tancar per evitar bloquejos
@@ -954,13 +1276,19 @@ export function RemittanceSplitter({
         {step === 'upload' && (
           <>
             <DialogHeader>
-              <DialogTitle>{t.movements.splitter.title}</DialogTitle>
+              <DialogTitle>
+                {isPaymentRemittance
+                  ? 'Dividir remesa de pagaments'
+                  : t.movements.splitter.title}
+              </DialogTitle>
               <DialogDescription>
-                {t.movements.splitter.uploadDescription}
+                {isPaymentRemittance
+                  ? 'Puja el fitxer amb el detall dels pagaments per desglossar la remesa.'
+                  : t.movements.splitter.uploadDescription}
               </DialogDescription>
             </DialogHeader>
 
-            <Alert>
+            <Alert variant={isPaymentRemittance ? 'default' : undefined}>
               <Info className="h-4 w-4" />
               <AlertTitle>{t.movements.splitter.compatibleBanks}</AlertTitle>
               <AlertDescription>
@@ -972,19 +1300,29 @@ export function RemittanceSplitter({
               type="file"
               ref={fileInputRef}
               onChange={handleFileChange}
-              accept=".csv,.txt,.xlsx,.xls"
+              accept=".csv,.txt,.xlsx,.xls,.xml"
               className="hidden"
               disabled={isProcessing}
             />
 
-            <Button onClick={handleFileClick} disabled={isProcessing} className="w-full">
-              {isProcessing ? (
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              ) : (
-                <FileUp className="mr-2 h-4 w-4" />
+            <div className="flex flex-col gap-2">
+              <Button onClick={handleFileClick} disabled={isProcessing} className="w-full">
+                {isProcessing ? (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                ) : (
+                  <FileUp className="mr-2 h-4 w-4" />
+                )}
+                {t.movements.splitter.selectCsvFile}
+              </Button>
+
+              {/* Botó SEPA només per mode OUT */}
+              {isPaymentRemittance && (
+                <Button onClick={handleFileClick} disabled={isProcessing} variant="outline" className="w-full">
+                  <FileCode className="mr-2 h-4 w-4" />
+                  Importar SEPA (pain.001)
+                </Button>
               )}
-              {t.movements.splitter.selectCsvFile}
-            </Button>
+            </div>
 
             <DialogFooter>
               <DialogClose asChild>
@@ -1319,19 +1657,36 @@ export function RemittanceSplitter({
                 {/* Separador visual */}
                 <div className="h-5 w-px bg-border mx-1" />
 
-                {/* Import total compacte */}
+                {/* Import total compacte - comparem valors absoluts per suportar IN i OUT */}
                 <div className={`flex items-center gap-1.5 px-2.5 py-1 rounded-md text-sm ${
-                  Math.abs(transaction.amount - totalAmount) < 0.01
+                  Math.abs(validationDetails.deltaCents) <= 2
                     ? 'bg-green-50 border border-green-200'
                     : 'bg-red-50 border border-red-200'
                 }`}>
                   <CheckCircle2 className={`h-3.5 w-3.5 ${
-                    Math.abs(transaction.amount - totalAmount) < 0.01 ? 'text-green-600' : 'text-red-600'
+                    Math.abs(validationDetails.deltaCents) <= 2 ? 'text-green-600' : 'text-red-600'
                   }`} />
                   <span className="font-semibold">{formatCurrencyEU(totalAmount)}</span>
-                  <span className="text-muted-foreground">/ {formatCurrencyEU(transaction.amount)}</span>
+                  <span className="text-muted-foreground">/ {formatCurrencyEU(Math.abs(transaction.amount))}</span>
+                  {validationDetails.deltaCents !== 0 && (
+                    <span className={`text-xs ml-1 ${Math.abs(validationDetails.deltaCents) <= 2 ? 'text-green-600' : 'text-red-600'}`}>
+                      (Δ {validationDetails.deltaCents > 0 ? '+' : ''}{(validationDetails.deltaCents / 100).toFixed(2)}€)
+                    </span>
+                  )}
                 </div>
               </div>
+
+              {/* Banner d'alerta quan delta > ±2 cèntims */}
+              {Math.abs(validationDetails.deltaCents) > 2 && (
+                <Alert variant="destructive" className="py-2">
+                  <AlertCircle className="h-4 w-4" />
+                  <AlertTitle className="text-sm">Imports no quadren</AlertTitle>
+                  <AlertDescription className="text-xs">
+                    Diferència: {validationDetails.deltaCents > 0 ? '+' : ''}{(validationDetails.deltaCents / 100).toFixed(2)}€
+                    (màxim permès: ±0.02€). Revisa els imports o torna a importar el fitxer.
+                  </AlertDescription>
+                </Alert>
+              )}
 
               {/* Opcions per crear donants - compacte */}
               {(stats.newWithTaxId > 0 || stats.newWithoutTaxId > 0) && (
@@ -1485,19 +1840,46 @@ export function RemittanceSplitter({
                 ───────────────────────────────────────────────────────────────── */}
             <div className="flex-shrink-0 pt-3 border-t">
               <div className="flex items-center justify-between">
-                <div className="text-sm text-muted-foreground">
-                  {t.movements.splitter.actionSummary(stats.toCreate, parsedDonations.length)}
+                <div className="flex items-center gap-2">
+                  <span className="text-sm text-muted-foreground">
+                    {t.movements.splitter.actionSummary(stats.toCreate, parsedDonations.length)}
+                  </span>
+                  {/* Botó exportar SEPA només per mode OUT */}
+                  {isPaymentRemittance && parsedDonations.length > 0 && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={handleExportSepa}
+                      disabled={isProcessing || !debtorBankAccount?.iban || !canProcess}
+                      title={
+                        !debtorBankAccount?.iban
+                          ? 'Cal configurar l\'IBAN del compte bancari'
+                          : !canProcess
+                          ? blockReason || 'Validació fallida'
+                          : 'Exportar fitxer SEPA pain.001'
+                      }
+                    >
+                      <Download className="mr-1 h-3 w-3" />
+                      Exportar SEPA
+                    </Button>
+                  )}
                 </div>
                 <div className="flex gap-2">
                   <Button variant="outline" onClick={() => setStep('mapping')}>
                     <ArrowLeft className="mr-2 h-4 w-4" />
                     {t.movements.splitter.backToMapping}
                   </Button>
-                  <Button onClick={handleProcess} disabled={isProcessing}>
+                  <Button
+                    onClick={handleProcess}
+                    disabled={isProcessing || !canProcess}
+                    title={blockReason || undefined}
+                  >
                     {isProcessing ? (
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                     ) : null}
-                    {t.movements.splitter.processDonations(parsedDonations.length)}
+                    {isPaymentRemittance
+                      ? `Processar ${parsedDonations.length} pagaments`
+                      : t.movements.splitter.processDonations(parsedDonations.length)}
                   </Button>
                 </div>
               </div>

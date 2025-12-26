@@ -1,6 +1,6 @@
 # ═══════════════════════════════════════════════════════════════════════════════
 # SUMMA SOCIAL - REFERÈNCIA COMPLETA DEL PROJECTE
-# Versió 1.16 - Desembre 2025
+# Versió 1.17 - Desembre 2025
 # ═══════════════════════════════════════════════════════════════════════════════
 
 
@@ -1069,9 +1069,172 @@ Eina **excepcional** per a migracions o correcció de dades històriques.
 | Crear donant nou | Inventar dades |
 
 
-## 3.5 GESTIÓ DE CONTACTES
+## 3.5 REMESES OUT / PAGAMENTS (NOU v1.17)
 
-### 3.5.1 Tipus de Contactes
+### 3.5.1 Visió general
+
+Les **remeses de pagaments** (OUT) permeten dividir una remesa de sortida (despesa) en múltiples transferències a proveïdors o empleats, amb generació de fitxer SEPA pain.001.
+
+**Principi fonamental:** El moviment bancari original (pare) és **immutable**. El detall són transaccions filles amb `parentTransactionId`.
+
+| Tipus | Direcció | Import pare | Exemple |
+|-------|----------|-------------|---------|
+| Remesa IN (quotes) | Ingrés (+) | Positiu | +5.430€ "REMESA RECIBOS" |
+| Remesa OUT (pagaments) | Despesa (−) | Negatiu | −3.200€ "REMESA PAGAMENTS" |
+
+### 3.5.2 Flux de treball
+
+1. **Identificar moviment** → Despesa negativa agregada (ex: "REMESA NÒMINES TRIODOS")
+2. **Menú ⋮** → "Dividir remesa"
+3. **Pujar fitxer** → CSV/Excel amb detall de pagaments
+4. **Mapejat columnes**:
+   - 🟢 Import (obligatori)
+   - 🔵 Nom beneficiari
+   - 🔷 IBAN beneficiari
+5. **Matching** → Cerca proveïdors/treballadors per IBAN o nom
+6. **Validació** → Suma fills = |import pare| (tolerància ±0,02€)
+7. **Processar** → Crea filles i (opcionalment) exporta SEPA
+
+### 3.5.3 Model de dades
+
+**Transacció pare (remesa de pagaments):**
+```
+isRemittance: true
+remittanceId: '{uuid}'
+remittanceItemCount: 15
+```
+
+**Transaccions filles (pagaments individuals):**
+```
+source: 'remittance'
+parentTransactionId: '{id_remesa}'
+isRemittanceItem: true
+remittanceId: '{uuid}'
+amount: -250.00          // negatiu (despesa)
+contactId: '{proveidor}'
+contactType: 'supplier' | 'employee'
+```
+
+**Document remesa (`/organizations/{orgId}/remittances/{remittanceId}`):**
+```typescript
+{
+  id: string;
+  orgId: string;
+  parentTransactionId: string;
+  direction: 'OUT';
+  status: 'complete' | 'partial';
+
+  totalAmount: number;        // Import total absolut (positiu)
+  itemCount: number;          // Nombre de pagaments
+
+  validation: {
+    deltaCents: number;       // Diferència en cèntims (ideal: 0)
+    isValid: boolean;         // |deltaCents| <= 2
+    checkedAt: Timestamp;
+  };
+
+  createdAt: Timestamp;
+  createdBy: string;
+}
+```
+
+### 3.5.4 Invariant de suma
+
+La suma absoluta de les filles ha de coincidir amb el valor absolut del pare.
+
+```
+|pare.amount| = Σ |fill.amount|     (tolerància ±0,02€)
+```
+
+**Exemple:**
+- Pare: −3.200,00€
+- Fills: −1.200€ + −800€ + −600€ + −600€ = −3.200€
+- Validació: |−3.200| = |−3.200| ✓
+
+**Guardrails:**
+- Si `|delta| > 2 cèntims` → Banner d'avís a la UI
+- Si `delta !== 0` → Botó "Processar" desactivat
+- Camp `validation.deltaCents` guardat a Firestore per diagnòstic
+
+### 3.5.5 Exportació SEPA pain.001
+
+El sistema pot generar un fitxer SEPA pain.001.001.03 per enviar al banc.
+
+**Requisits per exportar:**
+- Tots els pagaments han de tenir IBAN vàlid
+- Tots els imports han de ser positius (>0)
+- La suma ha de quadrar amb el pare
+
+**Camps del fitxer SEPA:**
+
+| Element | Origen |
+|---------|--------|
+| `MsgId` | Auto-generat (`SEPA{timestamp}{random}`) |
+| `CreDtTm` | Data actual ISO |
+| `NbOfTxs` | Nombre de pagaments |
+| `CtrlSum` | Suma total |
+| `Dbtr/Nm` | Nom organització |
+| `DbtrAcct/IBAN` | IBAN organització |
+| `ReqdExctnDt` | Data d'execució (usuari) |
+| `CdtTrfTxInf/*` | Detall per cada pagament |
+
+**Fitxers relacionats:**
+- `src/lib/sepa/generate-pain001.ts` — Generador XML
+- `src/lib/sepa/parse-pain001.ts` — Parser (per importar)
+- `src/lib/sepa/index.ts` — Exports públics
+
+### 3.5.6 Desfer remesa OUT
+
+Acció disponible al menú ⋮ del moviment pare si `isRemittance === true`.
+
+**Flux "Desfer remesa":**
+1. Elimina totes les transaccions filles
+2. Elimina el document `/remittances/{remittanceId}`
+3. Neteja camps del pare (`isRemittance`, `remittanceId`, `remittanceItemCount`)
+4. Restaura pare a estat original
+
+**Implementació:** Operació atòmica amb `writeBatch()` i `deleteField()`.
+
+**Accés:** Qualsevol rol amb permisos d'edició (no requereix SuperAdmin).
+
+### 3.5.7 UI i indicadors visuals
+
+| Element | Comportament |
+|---------|-------------|
+| Badge pare | "✓ Remesa · 15 pagaments" (verd) |
+| Fons fila | `bg-emerald-50/30` |
+| Toggle filles | Clicar badge → expandeix/col·lapsa |
+| Banner delta | Si `|delta| > 2¢` → avís taronja |
+| Botó "Processar" | Desactivat si no quadra o falten IBANs |
+
+### 3.5.8 Diferències amb Remeses IN
+
+| Aspecte | Remeses IN (quotes) | Remeses OUT (pagaments) |
+|---------|---------------------|-------------------------|
+| Direcció | Ingrés (+) | Despesa (−) |
+| Contactes | Donants | Proveïdors/Treballadors |
+| Matching | DNI/IBAN/Nom | IBAN/Nom |
+| Export | No | SEPA pain.001 |
+| Camps fills | `contactType: 'donor'` | `contactType: 'supplier'/'employee'` |
+
+### 3.5.9 Observabilitat
+
+**Logs de desenvolupament:**
+```
+[REMESA-OUT] Validació: delta=0¢, items=15, pare=-3200.00€
+[REMESA-OUT] Processant: 15 pagaments, remittanceId={uuid}
+[REMESA-OUT] SEPA generat: pain001_{date}_{timestamp}.xml
+```
+
+**Camps de diagnòstic a Firestore:**
+- `remittances/{id}.validation.deltaCents`
+- `remittances/{id}.validation.checkedAt`
+- `remittances/{id}.createdBy`
+
+
+## 3.6 GESTIÓ DE CONTACTES
+
+### 3.6.1 Tipus de Contactes
 
 | Tipus | Subtipus |
 |-------|----------|
@@ -1079,7 +1242,7 @@ Eina **excepcional** per a migracions o correcció de dades històriques.
 | **Proveïdors** | Per categoria |
 | **Treballadors** | - |
 
-### 3.5.2 Donants - Camps
+### 3.6.2 Donants - Camps
 
 | Camp | Obligatori | Model 182 |
 |------|------------|-----------|
@@ -1101,7 +1264,7 @@ Eina **excepcional** per a migracions o correcció de dades històriques.
 | **Comptador devolucions** | ❌ | ❌ |
 | **Data última devolució** | ❌ | ❌ |
 
-### 3.5.3 Gestió d'Estat Actiu/Baixa
+### 3.6.3 Gestió d'Estat Actiu/Baixa
 
 - **Filtre per estat**: Per defecte es mostren només actius
 - **Badge visual**: Els donants de baixa mostren badge "Baixa"
@@ -1109,7 +1272,7 @@ Eina **excepcional** per a migracions o correcció de dades històriques.
 - **Edició**: Es pot canviar l'estat des del formulari d'edició
 - **Importador**: Detecta columna "Estado/Estat" automàticament
 
-### 3.5.4 Importador de Donants
+### 3.6.4 Importador de Donants
 
 **Columnes detectades automàticament:**
 
@@ -1137,7 +1300,7 @@ Eina **excepcional** per a migracions o correcció de dades històriques.
 - Camps actualitzables: status, zipCode, address, email, phone, iban, membershipType, donorType
 - NO actualitza: name, taxId, createdAt (per seguretat)
 
-### 3.5.5 Proveïdors - Camps
+### 3.6.5 Proveïdors - Camps
 
 | Camp | Obligatori | Model 347 |
 |------|------------|-----------|
@@ -1147,7 +1310,7 @@ Eina **excepcional** per a migracions o correcció de dades històriques.
 | Adreça | ❌ | ❌ |
 | IBAN | ❌ | ❌ |
 
-### 3.5.6 Exportació de Donants a Excel (NOU v1.16)
+### 3.6.6 Exportació de Donants a Excel (NOU v1.16)
 
 Botó "Exportar" a la llista de donants per descarregar un fitxer Excel.
 
@@ -1168,7 +1331,7 @@ Botó "Exportar" a la llista de donants per descarregar un fitxer Excel.
 
 **Fitxer:** `src/lib/donors-export.ts`
 
-### 3.5.7 DonorDetailDrawer
+### 3.6.7 DonorDetailDrawer
 
 Panel lateral que s'obre clicant el nom d'un donant:
 - Informació completa del donant
@@ -1178,7 +1341,7 @@ Panel lateral que s'obre clicant el nom d'un donant:
 - Generació de certificats
 
 
-## 3.6 PROJECTES / EIXOS D'ACTUACIÓ
+## 3.7 PROJECTES / EIXOS D'ACTUACIÓ
 
 | Camp | Obligatori |
 |------|------------|
@@ -1193,9 +1356,9 @@ Estadístiques per projecte:
 - Balanç
 
 
-## 3.7 INFORMES FISCALS
+## 3.8 INFORMES FISCALS
 
-### 3.7.1 Model 182 - Declaració de Donacions
+### 3.8.1 Model 182 - Declaració de Donacions
 
 **Data límit:** 31 de gener
 
@@ -1222,7 +1385,7 @@ Estadístiques per projecte:
 
 **Fitxer generat:** `Model182_{org}_{any}.xlsx`
 
-### 3.7.2 Model 347 - Operacions amb Tercers
+### 3.8.2 Model 347 - Operacions amb Tercers
 
 **Data límit:** 28 de febrer
 
@@ -1230,7 +1393,7 @@ Estadístiques per projecte:
 
 **Exportació:** CSV amb NIF, Nom, Import total
 
-### 3.7.3 Certificats de Donació
+### 3.8.3 Certificats de Donació
 
 **Tipus:**
 - Individual (per donació)
@@ -1247,24 +1410,24 @@ Estadístiques per projecte:
 - Si import ≤ 0 → No es genera certificat
 
 
-## 3.8 CONFIGURACIÓ
+## 3.9 CONFIGURACIÓ
 
-### 3.8.1 Dades de l'Organització
+### 3.9.1 Dades de l'Organització
 Nom, CIF, adreça, ciutat, CP, telèfon, email, web, logo
 
-### 3.8.2 Configuració de Certificats
+### 3.9.2 Configuració de Certificats
 Firma digitalitzada, nom signant, càrrec
 
-### 3.8.3 Preferències
+### 3.9.3 Preferències
 Llindar alertes contacte: 0€, 50€, 100€, 500€
 
-### 3.8.4 Categories Comptables
+### 3.9.4 Categories Comptables
 Categories d'ingressos i despeses personalitzables
 
-### 3.8.5 Gestió de Membres
+### 3.9.5 Gestió de Membres
 Convidar, canviar rol, eliminar
 
-### 3.8.6 Zona de Perill (SuperAdmin)
+### 3.9.6 Zona de Perill (SuperAdmin)
 
 Accions irreversibles només per SuperAdmin:
 
@@ -1283,7 +1446,7 @@ Accions irreversibles només per SuperAdmin:
 - Esborra totes les transaccions filles
 - Restaura la transacció original per tornar-la a processar
 
-### 3.8.7 Idiomes (i18n) (NOU v1.11)
+### 3.9.7 Idiomes (i18n) (NOU v1.11)
 
 #### Idiomes disponibles
 
@@ -1334,9 +1497,9 @@ Accions irreversibles només per SuperAdmin:
 | Model 182 | ✅ | ✅ | ✅ |
 
 
-## 3.9 IMPORTADOR STRIPE (NOU v1.9)
+## 3.10 IMPORTADOR STRIPE (NOU v1.9)
 
-### 3.9.1 Visió general
+### 3.10.1 Visió general
 
 L'importador Stripe permet dividir les liquidacions (payouts) de Stripe en transaccions individuals, identificant cada donació i separant les comissions.
 
@@ -1349,7 +1512,7 @@ L'importador Stripe permet dividir les liquidacions (payouts) de Stripe en trans
 
 **Principi fonamental:** El moviment bancari original (payout) MAI es modifica.
 
-### 3.9.2 Flux d'ús
+### 3.10.2 Flux d'ús
 
 ```
 1. L'usuari veu un ingrés de Stripe al llistat de moviments
@@ -1361,7 +1524,7 @@ L'importador Stripe permet dividir les liquidacions (payouts) de Stripe en trans
 7. Confirma → Es creen les transaccions filles
 ```
 
-### 3.9.3 Condició per mostrar l'acció
+### 3.10.3 Condició per mostrar l'acció
 
 L'opció "Dividir remesa Stripe" apareix si:
 
@@ -1382,7 +1545,7 @@ const canSplitStripeRemittance = (tx: Transaction): boolean => {
 };
 ```
 
-### 3.9.4 Camps CSV requerits
+### 3.10.4 Camps CSV requerits
 
 | Camp Stripe | Ús a Summa Social | Obligatori |
 |-------------|-------------------|------------|
@@ -1396,14 +1559,14 @@ const canSplitStripeRemittance = (tx: Transaction): boolean => {
 | `Amount Refunded` | Detectar reemborsos | ✅ |
 | `Description` | Concepte (opcional) | ❌ |
 
-### 3.9.5 Filtratge automàtic
+### 3.10.5 Filtratge automàtic
 
 | Condició | Acció |
 |----------|-------|
 | `Status !== 'succeeded'` | Excloure silenciosament |
 | `Amount Refunded > 0` | Excloure + mostrar avís |
 
-### 3.9.6 Agrupació per payout
+### 3.10.6 Agrupació per payout
 
 Les donacions s'agrupen pel camp `Transfer` (po_xxx):
 
@@ -1417,7 +1580,7 @@ interface PayoutGroup {
 }
 ```
 
-### 3.9.7 Match amb el banc
+### 3.10.7 Match amb el banc
 
 **Criteri:** Per import net (±0,02€ de tolerància)
 
@@ -1428,7 +1591,7 @@ const match = Math.abs(payoutGroup.net - bankTransaction.amount) <= tolerance;
 
 > ⚠️ El banc NO porta el `Transfer` (po_xxx). El match és exclusivament per import.
 
-### 3.9.8 Matching de donants
+### 3.10.8 Matching de donants
 
 | Prioritat | Criteri | Implementació |
 |-----------|---------|---------------|
@@ -1439,7 +1602,7 @@ const match = Math.abs(payoutGroup.net - bankTransaction.amount) <= tolerance;
 - NO crear donants automàticament
 - Si no hi ha match → fila queda "Pendent d'assignar"
 
-### 3.9.9 Transaccions generades
+### 3.10.9 Transaccions generades
 
 **Per cada donació (N ingressos):**
 
@@ -1485,7 +1648,7 @@ function ensureStripeInDescription(desc: string | null, email: string): string {
 }
 ```
 
-### 3.9.10 Model de dades
+### 3.10.10 Model de dades
 
 **Camps específics Stripe a Transaction:**
 
@@ -1497,7 +1660,7 @@ function ensureStripeInDescription(desc: string | null, email: string): string {
 | `stripeTransferId` | `string \| null` | ID payout (`po_xxx`) - Correlació |
 | `parentTransactionId` | `string` | ID del moviment bancari pare |
 
-### 3.9.11 Impacte fiscal
+### 3.10.11 Impacte fiscal
 
 | Document | Tractament |
 |----------|------------|
@@ -1505,7 +1668,7 @@ function ensureStripeInDescription(desc: string | null, email: string): string {
 | **Certificats** | Import = Σ donacions Stripe del donant |
 | **Comissions** | NO afecten fiscalitat donants (són despeses de l'entitat) |
 
-### 3.9.12 UI
+### 3.10.12 UI
 
 **Pas 1: Pujar fitxer**
 ```
@@ -1538,7 +1701,7 @@ function ensureStripeInDescription(desc: string | null, email: string): string {
 └─────────────────────────────────────────────────────────────────┘
 ```
 
-### 3.9.13 Errors i missatges
+### 3.10.13 Errors i missatges
 
 | Codi | Condició | Missatge |
 |------|----------|----------|
@@ -1549,7 +1712,7 @@ function ensureStripeInDescription(desc: string | null, email: string): string {
 | `WARN_REFUNDED` | Hi ha reemborsos | "S'han exclòs {count} donacions reemborsades ({amount} €)" |
 | `WARN_NO_DONOR` | Sense match | "{count} donacions pendents d'assignar donant" |
 
-### 3.9.14 Límits del sistema
+### 3.10.14 Límits del sistema
 
 | Permès | NO permès |
 |--------|-----------|
@@ -1558,7 +1721,7 @@ function ensureStripeInDescription(desc: string | null, email: string): string {
 | Múltiples payouts al CSV | Connexió directa API Stripe |
 | Exclusió reemborsos | Processament automàtic refunds |
 
-### 3.9.15 Estructura de fitxers
+### 3.10.15 Estructura de fitxers
 
 ```
 /src/components/stripe-importer/
@@ -1570,9 +1733,9 @@ function ensureStripeInDescription(desc: string | null, email: string): string {
 **Punt de connexió:** `transaction-table.tsx` → menú ⋮ si `canSplitStripeRemittance(tx)`
 
 
-## 3.10 MÒDUL PROJECTES — JUSTIFICACIÓ ASSISTIDA (NOU v1.10)
+## 3.11 MÒDUL PROJECTES — JUSTIFICACIÓ ASSISTIDA (NOU v1.10)
 
-### 3.10.0 Navegació del Mòdul Projectes (NOU v1.14)
+### 3.11.0 Navegació del Mòdul Projectes (NOU v1.14)
 
 El mòdul Projectes té una entrada única al sidebar amb un submenu col·lapsable.
 
@@ -1599,13 +1762,13 @@ El mòdul Projectes té una entrada única al sidebar amb un submenu col·lapsab
 - `sidebar.projectModuleManage`: "Gestió de projectes"
 - `sidebar.projectModuleExpenses`: "Assignació de despeses"
 
-### 3.10.1 Objectiu del mòdul
+### 3.11.1 Objectiu del mòdul
 
 Permetre a una persona tècnica quadrar la justificació econòmica d'un projecte (ACCD, Fons Català, etc.) a partir de les despeses reals existents, sense treballar en Excel, sense preconfiguracions rígides i sense modificar dades fins a la validació final.
 
 > ⚠️ **Aquest mòdul és extern al core de Summa Social** i segueix el patró d'exports descrit a l'Annex C.
 
-### 3.10.2 Principis de disseny (no negociables)
+### 3.11.2 Principis de disseny (no negociables)
 
 | Principi | Descripció |
 |----------|------------|
@@ -1615,7 +1778,7 @@ Permetre a una persona tècnica quadrar la justificació econòmica d'un project
 | **Sense entitats noves** | No es creen entitats noves per simular |
 | **Reversible** | Tot el procés és reversible fins a "Aplicar" |
 
-### 3.10.3 Pantalla base: Gestió Econòmica del Projecte
+### 3.11.3 Pantalla base: Gestió Econòmica del Projecte
 
 | Element | Descripció |
 |---------|------------|
@@ -1671,7 +1834,7 @@ Wizard d'importació de partides des d'Excel (.xlsx) amb 5 passos:
 - `src/lib/budget-import.ts`: Utilitats de parsing
 - `src/components/project-module/budget-import-wizard.tsx`: Wizard UI
 
-### 3.10.4 Mode "Quadrar justificació del projecte"
+### 3.11.4 Mode "Quadrar justificació del projecte"
 
 - Vista assistida superposada (modal)
 - L'usuari continua veient el seguiment econòmic
@@ -1680,7 +1843,7 @@ Wizard d'importació de partides des d'Excel (.xlsx) amb 5 passos:
   - **Infraexecució** → afegir despeses
   - **Sobreexecució** → treure o reduir imputacions
 
-### 3.10.5 Infraexecució: afegir despeses
+### 3.11.5 Infraexecució: afegir despeses
 
 El sistema suggereix despeses del pool per defecte:
 - Font = offBank (despeses fora de banc)
@@ -1744,7 +1907,7 @@ const CATEGORY_FAMILIES = {
 | `close` | Delta ≤ 2% del dèficit | Badge blau "Proper" |
 | `approx` | Resta | Badge gris "Aproximat" |
 
-### 3.10.6 Sobreexecució: treure despeses
+### 3.11.6 Sobreexecució: treure despeses
 
 Es pot:
 - Treure **tota** la despesa de la partida
@@ -1756,7 +1919,7 @@ La part treta queda:
 
 > ⚠️ **El split parcial és una funcionalitat clau, no un edge case.** Aquesta és la forma més habitual i realista de quadrar justificacions.
 
-### 3.10.7 Simulació (capa crítica)
+### 3.11.7 Simulació (capa crítica)
 
 | Element | Comportament |
 |---------|--------------|
@@ -1765,7 +1928,7 @@ La part treta queda:
 | Visualització | Execució abans / després, efecte per partida |
 | Aplicar | Usa els hooks existents (`useSaveExpenseLink`) |
 
-### 3.10.8 Tipus de canvi i justificació
+### 3.11.8 Tipus de canvi i justificació
 
 - El projecte defineix un tipus de canvi de referència
 - Les despeses de terreny poden tenir moneda original
@@ -1775,7 +1938,7 @@ La part treta queda:
   - S'editen només quan cal justificar
   - Existeixen per respondre al finançador, no per comptabilitat
 
-### 3.10.9 Què NO fa Summa (explícit)
+### 3.11.9 Què NO fa Summa (explícit)
 
 | NO fa | Motiu |
 |-------|-------|
@@ -1787,7 +1950,7 @@ La part treta queda:
 
 > **Blindatge:** Les assignacions i simulacions del mòdul de projectes no modifiquen ni condicionen els càlculs fiscals ni els informes oficials (Model 182, certificats).
 
-### 3.10.10 Estructura de fitxers
+### 3.11.10 Estructura de fitxers
 
 ```
 /src/app/[orgSlug]/dashboard/project-module/
@@ -1810,7 +1973,7 @@ La part treta queda:
   └── project-module-suggestions.ts   # Scoring i combinacions (NOU v1.10)
 ```
 
-### 3.10.11 Drag & Drop de documents a Assignació de despeses (NOU v1.16)
+### 3.11.11 Drag & Drop de documents a Assignació de despeses (NOU v1.16)
 
 Permet pujar documents arrossegant-los directament sobre cada fila de despesa a la safata d'assignació (`/project-module/expenses`).
 
@@ -1836,7 +1999,7 @@ Permet pujar documents arrossegant-los directament sobre cada fila de despesa a 
 - Edició inline del nom (sense extensió)
 - Enter per guardar, Escape per cancel·lar
 
-### 3.10.12 Captura de despeses de terreny (NOU v1.11)
+### 3.11.12 Captura de despeses de terreny (NOU v1.11)
 
 | Element | Descripció |
 |---------|------------|
@@ -1871,7 +2034,7 @@ Permet pujar documents arrossegant-los directament sobre cada fila de despesa a 
 - Exemple: `PROJ001_2025-01-15_Material_oficina_125.50.pdf`
 - S'aplica a despeses off-bank i documents adjunts a transaccions
 
-### 3.10.12 Model de dades
+### 3.11.13 Model de dades
 
 **Veure Annex C.3** per l'estructura Firestore completa del mòdul projectes.
 

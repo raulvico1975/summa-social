@@ -217,10 +217,7 @@ export function TransactionsTable({ initialDateFilter = null }: TransactionsTabl
   const transactionsCollection = useMemoFirebase(
     () => {
       if (!organizationId) return null;
-      const col = collection(firestore, 'organizations', organizationId, 'transactions');
-      console.log('🔍 [TransactionsTable] transactionsCollection.path:', col.path);
-      console.log('🔍 [TransactionsTable] organizationId:', organizationId);
-      return col;
+      return collection(firestore, 'organizations', organizationId, 'transactions');
     },
     [firestore, organizationId]
   );
@@ -623,8 +620,9 @@ export function TransactionsTable({ initialDateFilter = null }: TransactionsTabl
     }
 
     // Filtre per amagar quotes individuals de remeses
+    // Utilitza isRemittanceItem per als nous, i source === 'remittance' per compatibilitat legacy
     if (hideRemittanceItems) {
-      result = result.filter(tx => tx.source !== 'remittance');
+      result = result.filter(tx => !tx.isRemittanceItem && tx.source !== 'remittance');
     }
 
     // Filtre per source
@@ -940,6 +938,80 @@ export function TransactionsTable({ initialDateFilter = null }: TransactionsTabl
     setIsRemittanceDetailOpen(true);
   };
 
+  // Desfer remesa: elimina fills, document remesa, i neteja el pare
+  const handleUndoRemittance = async (transaction: Transaction) => {
+    if (!organizationId || !transaction.remittanceId) {
+      toast({
+        variant: 'destructive',
+        title: 'Error',
+        description: 'No es pot desfer la remesa: falta informació',
+      });
+      return;
+    }
+
+    const confirmed = window.confirm(
+      `Segur que vols desfer aquesta remesa? S'eliminaran ${transaction.remittanceItemCount || 0} transaccions filles i es restaurarà el moviment original.`
+    );
+    if (!confirmed) return;
+
+    try {
+      const batch = writeBatch(firestore);
+      const transactionsRef = collection(firestore, 'organizations', organizationId, 'transactions');
+      const remittanceRef = doc(firestore, 'organizations', organizationId, 'remittances', transaction.remittanceId);
+
+      // 1. Buscar i eliminar totes les transaccions filles amb aquest remittanceId
+      const { getDocs, query, where, deleteField } = await import('firebase/firestore');
+      const childrenQuery = query(
+        transactionsRef,
+        where('remittanceId', '==', transaction.remittanceId)
+      );
+      const childrenSnapshot = await getDocs(childrenQuery);
+
+      let deletedCount = 0;
+      childrenSnapshot.forEach((childDoc) => {
+        // Només eliminar fills (no el pare)
+        if (childDoc.id !== transaction.id) {
+          batch.delete(childDoc.ref);
+          deletedCount++;
+        }
+      });
+
+      // 2. Eliminar document de remesa
+      batch.delete(remittanceRef);
+
+      // 3. Netejar el pare (mantenir import/data/descripció immutables)
+      // Utilitzem deleteField() per eliminar camps opcionals de forma neta
+      const now = new Date().toISOString();
+      batch.update(doc(transactionsRef, transaction.id), {
+        isRemittance: deleteField(),
+        remittanceId: deleteField(),
+        remittanceItemCount: deleteField(),
+        remittanceResolvedCount: deleteField(),
+        remittancePendingCount: deleteField(),
+        remittancePendingTotalAmount: deleteField(),
+        remittanceType: deleteField(),
+        remittanceDirection: deleteField(),
+        remittanceStatus: deleteField(),
+        pendingReturns: deleteField(),
+        updatedAt: now,
+      });
+
+      await batch.commit();
+
+      toast({
+        title: 'Remesa desfeta',
+        description: `S'han eliminat ${deletedCount} transaccions filles i restaurat el moviment original.`,
+      });
+    } catch (error: any) {
+      console.error('Error undoing remittance:', error);
+      toast({
+        variant: 'destructive',
+        title: 'Error desfent remesa',
+        description: error.message,
+      });
+    }
+  };
+
   // Stripe Importer handlers
   const handleSplitStripeRemittance = (transaction: Transaction) => {
     setStripeTransactionToSplit(transaction);
@@ -997,6 +1069,7 @@ export function TransactionsTable({ initialDateFilter = null }: TransactionsTabl
     remittanceQuotes: t.movements.table.remittanceQuotes,
     remittanceProcessedLabel: t.movements.table.remittanceProcessedLabel,
     remittanceNotApplicable: t.movements.table.remittanceNotApplicable,
+    undoRemittance: (t.movements.table as any).undoRemittance || 'Desfer remesa',
   }), [t]);
 
   // Memoized filter translations
@@ -1283,6 +1356,7 @@ export function TransactionsTable({ initialDateFilter = null }: TransactionsTabl
                 onSplitRemittance={handleSplitRemittance}
                 onSplitStripeRemittance={handleSplitStripeRemittance}
                 onViewRemittanceDetail={handleViewRemittanceDetail}
+                onUndoRemittance={handleUndoRemittance}
                 onCreateNewContact={handleOpenNewContactDialog}
                 onOpenReturnImporter={() => setIsReturnImporterOpen(true)}
                 t={rowTranslations}
