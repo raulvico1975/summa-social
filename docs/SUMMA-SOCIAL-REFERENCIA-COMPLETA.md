@@ -455,7 +455,8 @@ organizations/
 - **IdleLogoutProvider**: Component que tanca la sessió després de 30 minuts d'inactivitat
 - Avís 1 minut abans del logout
 - Events monitoritzats: mouse, teclat, scroll, touch, click, canvi de visibilitat
-- Redirecció a `/{slug}/login?reason=idle`
+- Redirecció a `/{slug}/login?reason=idle` (si l'usuari està dins una org) o `/login?reason=idle` (rutes globals)
+- Segments reservats (no són slugs): `login`, `registre`, `redirect-to-org`, `admin`, `dashboard`, `privacy`, `api`, `q`
 - Implementat a `src/components/IdleLogoutProvider.tsx`
 
 ### Flux de redirecció d'organització
@@ -1642,6 +1643,34 @@ const budgeted = budgetLinesData?.hasLines
   : (project.budgetEUR ?? 0);
 ```
 
+#### Importador de pressupost (NOU v1.16)
+
+Wizard d'importació de partides des d'Excel (.xlsx) amb 5 passos:
+
+| Pas | Descripció |
+|-----|------------|
+| 1. Fitxer | Pujar fitxer Excel (.xlsx) |
+| 2. Pestanya | Seleccionar sheet (si n'hi ha múltiples) |
+| 3. Columnes | Mapar columnes: nom, import del finançador principal, codi (opcional) |
+| 4. Agrupació | Triar mode: agrupar subpartides a partida o importar tal qual |
+| 5. Revisió | Previsualització amb checkboxes per incloure/excloure |
+
+**Característiques:**
+- Auto-detecta columnes per patrons de capçalera
+- Parseja formats EU (1.234,56) i EN (1234.56)
+- Exclou automàticament files de totals/subtotals
+- Mode "Agrupar" suma subpartides al seu pare (evita duplicitats)
+- Substitueix completament el pressupost existent (batch delete + batch create)
+
+**Important:**
+- Només importa la columna del finançador principal (p.ex. ACCD)
+- No suport multi-finançador ni contrapartida
+- No suport PDF (només Excel)
+
+**Fitxers:**
+- `src/lib/budget-import.ts`: Utilitats de parsing
+- `src/components/project-module/budget-import-wizard.tsx`: Wizard UI
+
 ### 3.10.4 Mode "Quadrar justificació del projecte"
 
 - Vista assistida superposada (modal)
@@ -2141,7 +2170,7 @@ Camps afegits v1.10:
 | **1.13** | **Des 2025** | **Selecció múltiple a Moviments (checkboxes + accions en bloc), assignar/treure categoria massivament, batched writes Firestore (50 ops/batch), traduccions CA/ES/FR** |
 | **1.14** | **Des 2025** | **Reorganització UX Moviments (FiltersSheet, TableOptionsMenu), drag & drop documents, indicadors visuals remeses processades, modal RemittanceSplitter redissenyat (wide layout), sidebar Projectes col·lapsable** |
 | **1.15** | **Des 2025** | **Documentació completa de regles de normalització de dades (noms, NIF/NIE/CIF, IBAN, email, telèfon E.164, adreces, normalizedName per deduplicació)** |
-| **1.16** | **Des 2025** | **Drag & drop documents a safata de despeses (auto-naming, renomenar inline), exportació Excel de donants (nom, NIF, quota, IBAN, estat)** |
+| **1.16** | **Des 2025** | **Importador de pressupost Excel (wizard 5 passos, agrupació subpartides, columna finançador principal), fix redirect-to-org O(1) amb collectionGroup, fix idle logout redirecció a login d'org** |
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
