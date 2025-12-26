@@ -1,6 +1,6 @@
 # ═══════════════════════════════════════════════════════════════════════════════
 # SUMMA SOCIAL - REFERÈNCIA COMPLETA DEL PROJECTE
-# Versió 1.14 - Desembre 2025
+# Versió 1.16 - Desembre 2025
 # ═══════════════════════════════════════════════════════════════════════════════
 
 
@@ -1131,7 +1131,28 @@ Eina **excepcional** per a migracions o correcció de dades històriques.
 | Adreça | ❌ | ❌ |
 | IBAN | ❌ | ❌ |
 
-### 3.5.6 DonorDetailDrawer
+### 3.5.6 Exportació de Donants a Excel (NOU v1.16)
+
+Botó "Exportar" a la llista de donants per descarregar un fitxer Excel.
+
+**Columnes exportades:**
+
+| Columna | Font |
+|---------|------|
+| Nom | `donor.name` |
+| NIF | `donor.taxId` |
+| Quota mensual | `donor.monthlyAmount` (formatat €) |
+| IBAN | `donor.iban` (formatat amb espais) |
+| Estat | "Alta", "Baixa" o "Pendent devolució" |
+
+**Comportament:**
+- Llista ordenada alfabèticament per nom
+- Nom del fitxer: `donants_YYYY-MM-DD.xlsx`
+- Amplada de columnes ajustada automàticament
+
+**Fitxer:** `src/lib/donors-export.ts`
+
+### 3.5.7 DonorDetailDrawer
 
 Panel lateral que s'obre clicant el nom d'un donant:
 - Informació completa del donant
@@ -1745,7 +1766,33 @@ La part treta queda:
   └── project-module-suggestions.ts   # Scoring i combinacions (NOU v1.10)
 ```
 
-### 3.10.11 Captura de despeses de terreny (NOU v1.11)
+### 3.10.11 Drag & Drop de documents a Assignació de despeses (NOU v1.16)
+
+Permet pujar documents arrossegant-los directament sobre cada fila de despesa a la safata d'assignació (`/project-module/expenses`).
+
+**Comportament:**
+
+| Element | Descripció |
+|---------|------------|
+| Drop zone | Cada fila de la taula de despeses |
+| Feedback visual | Ring blau i fons semitransparent durant arrossegament |
+| Auto-naming | Format `YYYY.MM.DD_concepte_normalitzat.ext` |
+| Tipus acceptats | PDF, imatges, Word, Excel |
+| Mida màxima | 10 MB per fitxer |
+
+**Implementació:**
+- Despeses off-bank: S'afegeix a l'array `attachments[]`
+- Despeses bancàries: S'assigna al camp `document` (objecte únic)
+- Nom generat automàticament amb `buildDocumentFilename()`
+
+**Component:** `DroppableExpenseRow` dins `expenses/page.tsx`
+
+**Renomenar documents:**
+- Botó llapis a cada attachment pujat
+- Edició inline del nom (sense extensió)
+- Enter per guardar, Escape per cancel·lar
+
+### 3.10.12 Captura de despeses de terreny (NOU v1.11)
 
 | Element | Descripció |
 |---------|------------|
@@ -2020,6 +2067,12 @@ Camps afegits v1.10:
 # 10. ROADMAP / FUNCIONALITATS PENDENTS
 # ═══════════════════════════════════════════════════════════════════════════════
 
+## Completades v1.16
+- ✅ Drag & drop de documents a la safata de despeses (per fila)
+- ✅ Auto-naming de documents amb `buildDocumentFilename()` (format YYYY.MM.DD_concepte.ext)
+- ✅ Renomenar documents inline (botó llapis, Enter/Escape)
+- ✅ Exportació Excel de donants (nom, NIF, quota, IBAN, estat)
+
 ## Completades v1.10
 - ✅ Mòdul Projectes: justificació assistida per partides
 - ✅ Mode infraexecució: afegir despeses amb suggerències heurístiques
@@ -2072,6 +2125,8 @@ Camps afegits v1.10:
 | **1.12** | **Des 2025** | **Multicomptes bancaris (CRUD, filtre per compte, traçabilitat bankAccountId), filtre per origen (source), diàleg crear donant a importador devolucions, mode bulk NET** |
 | **1.13** | **Des 2025** | **Selecció múltiple a Moviments (checkboxes + accions en bloc), assignar/treure categoria massivament, batched writes Firestore (50 ops/batch), traduccions CA/ES/FR** |
 | **1.14** | **Des 2025** | **Reorganització UX Moviments (FiltersSheet, TableOptionsMenu), drag & drop documents, indicadors visuals remeses processades, modal RemittanceSplitter redissenyat (wide layout), sidebar Projectes col·lapsable** |
+| **1.15** | **Des 2025** | **Documentació completa de regles de normalització de dades (noms, NIF/NIE/CIF, IBAN, email, telèfon E.164, adreces, normalizedName per deduplicació)** |
+| **1.16** | **Des 2025** | **Drag & drop documents a safata de despeses (auto-naming, renomenar inline), exportació Excel de donants (nom, NIF, quota, IBAN, estat)** |
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -2255,6 +2310,224 @@ if (matchingTx) {
 | "Payout Stripe" | Liquidació de Stripe al banc (po_xxx) | Donació individual |
 | "Comissió Stripe" | Despesa agregada per payout | Cost per donació |
 | "Remesa Stripe" | Payout dividit en donacions individuals | Connexió API Stripe |
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# 15. NORMALITZACIÓ DE DADES
+# ═══════════════════════════════════════════════════════════════════════════════
+
+## 15.1 Principi General
+
+Totes les dades d'entrada es normalitzen abans de desar-les a Firestore. L'objectiu és garantir:
+- Consistència en les cerques i el matching
+- Deduplicació fiable
+- Formats vàlids per a fiscalitat (Model 182, 347)
+
+> **Fitxer principal**: `src/lib/normalize.ts`
+
+## 15.2 Noms de Persones Físiques
+
+### Regles de capitalització
+
+| Entrada | Sortida | Regla |
+|---------|---------|-------|
+| `JOAN GARCIA` | `Joan Garcia` | Cada paraula amb majúscula inicial |
+| `maria del carmen` | `Maria del Carmen` | Partícules en minúscula |
+| `pau de la font` | `Pau de la Font` | Partícules: de, del, de la, de les, dels |
+
+### Partícules i excepcions
+
+Les següents partícules es mantenen en minúscula quan van entre mots:
+- `de`, `del`, `de la`, `de les`, `dels`
+- `i`, `y`
+- `la`, `el`, `les`, `els` (quan són articles)
+
+**Apostrofats** (català):
+- `d'Amat` → manté l'apòstrof i majúscula al nom
+- `l'Hospitalet` → manté format
+
+**Exemple**:
+```
+Input:  "MARIA DELS ANGELS DE LA FONT I PUIG"
+Output: "Maria dels Àngels de la Font i Puig"
+```
+
+## 15.3 Noms de Persones Jurídiques
+
+### Sufixos de societat
+
+| Entrada | Sortida normalitzada |
+|---------|---------------------|
+| `S L`, `s.l`, `SL` | `S.L.` |
+| `S A`, `s.a`, `SA` | `S.A.` |
+| `S L U`, `slu`, `S.L.U` | `S.L.U.` |
+| `S COOP`, `s. coop` | `S.Coop.` |
+| `S C P`, `scp` | `S.C.P.` |
+| `C B`, `cb` | `C.B.` |
+
+**Exemple**:
+```
+Input:  "CONSULTORIA TECH sl"
+Output: "Consultoria Tech S.L."
+```
+
+### Fundacions i associacions
+
+| Tipus | Paraules clau | Tracte |
+|-------|---------------|--------|
+| Fundació | `Fundació`, `Fundación` | Majúscula inicial |
+| Associació | `Associació`, `Asociación` | Majúscula inicial |
+
+## 15.4 NIF, NIE i CIF
+
+### Formats acceptats i normalització
+
+| Entrada | Sortida | Vàlid |
+|---------|---------|-------|
+| `12345678-Z` | `12345678Z` | ✅ |
+| `12345678 z` | `12345678Z` | ✅ |
+| `x-1234567-w` | `X1234567W` | ✅ |
+| `b-12345678` | `B12345678` | ✅ |
+
+### Regles
+
+1. **Eliminar**: espais, guions, punts
+2. **Convertir**: tot a majúscules
+3. **Validar**: lletra de control (opcional, només avís)
+
+### Patrons vàlids
+
+| Tipus | Patró | Exemple |
+|-------|-------|---------|
+| NIF | `8 dígits + lletra` | `12345678Z` |
+| NIE | `X/Y/Z + 7 dígits + lletra` | `X1234567W` |
+| CIF | `lletra + 8 caràcters` | `B12345678` |
+
+## 15.5 IBAN
+
+### Normalització
+
+| Entrada | Sortida |
+|---------|---------|
+| `ES91 2100 0418 4502 0005 1332` | `ES91210004184502000051332` |
+| `es91-2100-0418-4502-0005-1332` | `ES91210004184502000051332` |
+
+### Regles
+
+1. **Eliminar**: espais, guions
+2. **Convertir**: tot a majúscules
+3. **Validar**: longitud 24 caràcters (Espanya)
+
+> **Emmagatzematge**: Sempre sense espais ni guions
+> **Visualització**: Amb espais cada 4 caràcters (`formatIBAN()`)
+
+## 15.6 Email
+
+### Normalització
+
+| Entrada | Sortida |
+|---------|---------|
+| `  Joan.Garcia@Gmail.COM  ` | `joan.garcia@gmail.com` |
+| `Maria@Empresa.Es` | `maria@empresa.es` |
+
+### Regles
+
+1. **Trim**: eliminar espais al principi i final
+2. **Lowercase**: tot en minúscules
+3. **Validar**: format email bàsic (conté `@` i `.`)
+
+## 15.7 Telèfon
+
+### Normalització a E.164
+
+| Entrada | Sortida |
+|---------|---------|
+| `612 34 56 78` | `+34612345678` |
+| `+34 612-345-678` | `+34612345678` |
+| `0034612345678` | `+34612345678` |
+| `612345678` | `+34612345678` |
+
+### Regles
+
+1. **Eliminar**: espais, guions, parèntesis, punts
+2. **Normalitzar prefix**:
+   - Si comença per `0034` → reemplaçar per `+34`
+   - Si comença per `34` → afegir `+`
+   - Si comença per `6` o `9` → afegir `+34`
+3. **Resultat**: format E.164 (`+34XXXXXXXXX`)
+
+> **Emmagatzematge**: Format E.164
+> **Visualització**: Amb espais (`formatPhone()`)
+
+## 15.8 Adreces
+
+### Camps separats (no normalització agressiva)
+
+Les adreces es desen en camps separats sense modificar excessivament:
+
+| Camp | Normalització |
+|------|---------------|
+| `street` | Trim, sense canvis de capitalització |
+| `city` | Trim |
+| `province` | Trim |
+| `postalCode` | Trim, només dígits, 5 caràcters |
+| `country` | Trim, default `Espanya` |
+
+### Codi Postal
+
+| Entrada | Sortida |
+|---------|---------|
+| `08001` | `08001` |
+| `8001` | `08001` |
+| `08-001` | `08001` |
+
+> **Regla**: Sempre 5 dígits, amb zero inicial si cal
+
+## 15.9 Espais en Blanc
+
+### Regles generals
+
+1. **Trim**: eliminar espais al principi i final de tots els camps
+2. **Col·lapsar**: múltiples espais consecutius → un sol espai
+3. **Eliminar NBSP**: reemplaçar `\u00A0` per espai normal
+
+```typescript
+function normalizeWhitespace(s: string): string {
+  return s
+    .replace(/\u00A0/g, ' ')  // NBSP → espai
+    .replace(/\s+/g, ' ')     // col·lapsar
+    .trim();                   // trim
+}
+```
+
+## 15.10 Clau de Deduplicació (normalizedName)
+
+### Propòsit
+
+Camp calculat per detectar duplicats i fer matching aproximat.
+
+### Càlcul
+
+```typescript
+function normalizedName(name: string): string {
+  return name
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')  // eliminar accents
+    .replace(/[^a-z0-9]/g, '')        // només alfanumèric
+    .trim();
+}
+```
+
+### Exemples
+
+| Nom original | normalizedName |
+|--------------|----------------|
+| `Joan García` | `joangarcia` |
+| `María del Carmen` | `mariadelcarmen` |
+| `Fundació l'Àncora` | `fundaciolancora` |
+
+> **Ús**: Cercar duplicats, no per matching fiscal (que usa NIF/IBAN exactes)
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -2461,5 +2734,5 @@ Les assignacions creades abans de la implementació del camp `budgetLineIds` no 
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # FI DEL DOCUMENT
-# Última actualització: Desembre 2025 - Versió 1.11
+# Última actualització: Desembre 2025 - Versió 1.15
 # ═══════════════════════════════════════════════════════════════════════════════
