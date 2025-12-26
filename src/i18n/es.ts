@@ -1564,6 +1564,7 @@ export const es = {
     budgetLines: "Partidas",
     addBudgetLine: "Añadir partida",
     editBudgetLine: "Editar línea presupuestaria",
+    importBudget: "Importar presupuesto (Excel)",
     budgetLineDescription: "Define una partida del presupuesto",
     lineName: "Nombre de la partida",
     lineCode: "Código",

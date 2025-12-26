@@ -70,6 +70,7 @@ import {
   FileArchive,
   Compass,
   DollarSign,
+  Upload,
 } from 'lucide-react';
 import { useFirebase } from '@/firebase';
 import { useCurrentOrganization } from '@/hooks/organization-provider';
@@ -80,6 +81,7 @@ import { trackUX } from '@/lib/ux/trackUX';
 import { useRouter } from 'next/navigation';
 import type { BudgetLine, BudgetLineFormData } from '@/lib/project-module-types';
 import { BalanceProjectModal } from '@/components/project-module/balance-project-modal';
+import { BudgetImportWizard } from '@/components/project-module/budget-import-wizard';
 
 function formatAmount(amount: number): string {
   return new Intl.NumberFormat('ca-ES', {
@@ -263,6 +265,7 @@ export default function ProjectBudgetPage() {
   const [formOpen, setFormOpen] = React.useState(false);
   const [editingLine, setEditingLine] = React.useState<BudgetLine | null>(null);
   const [deleteConfirm, setDeleteConfirm] = React.useState<BudgetLine | null>(null);
+  const [importWizardOpen, setImportWizardOpen] = React.useState(false);
   const [isExportingFunding, setIsExportingFunding] = React.useState(false);
   const [isExportingZip, setIsExportingZip] = React.useState(false);
   const [zipProgress, setZipProgress] = React.useState<{ current: number; total: number } | null>(null);
@@ -568,6 +571,14 @@ export default function ProjectBudgetPage() {
             ) : (
               <FileArchive className="h-4 w-4" />
             )}
+          </Button>
+          <Button
+            variant="outline"
+            size="icon"
+            onClick={() => setImportWizardOpen(true)}
+            title={t.projectModule?.importBudget ?? 'Importar pressupost (Excel)'}
+          >
+            <Upload className="h-4 w-4" />
           </Button>
           <Button variant="outline" size="icon" onClick={openNew} title={t.projectModule?.addBudgetLine ?? 'Afegir partida'}>
             <Plus className="h-4 w-4" />
@@ -896,6 +907,16 @@ export default function ProjectBudgetPage() {
         allExpenses={allExpensesForModal}
         onSuccess={async () => {
           await refreshLines();
+        }}
+      />
+
+      {/* Wizard d'importació de pressupost */}
+      <BudgetImportWizard
+        open={importWizardOpen}
+        onOpenChange={setImportWizardOpen}
+        projectId={projectId}
+        onComplete={() => {
+          refreshLines();
         }}
       />
     </div>

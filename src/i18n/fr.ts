@@ -1539,6 +1539,7 @@ export const fr = {
     budgetLines: "Partides",
     addBudgetLine: "Afegir partida",
     editBudgetLine: "Editar partida",
+    importBudget: "Importar pressupost (Excel)",
     budgetLineDescription: "Defineix una partida del pressupost",
     lineName: "Nom de la partida",
     lineCode: "Codi",
