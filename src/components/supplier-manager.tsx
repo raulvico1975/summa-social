@@ -45,7 +45,8 @@ import { PlusCircle, Edit, Trash2, Building2, Upload, Search, X } from 'lucide-r
 import type { Supplier, Category } from '@/lib/data';
 import { useToast } from '@/hooks/use-toast';
 import { Badge } from '@/components/ui/badge';
-import { useCollection, useFirebase, useMemoFirebase, addDocumentNonBlocking, deleteDocumentNonBlocking, setDocumentNonBlocking } from '@/firebase';
+import { useCollection, useFirebase, useMemoFirebase, addDocumentNonBlocking, archiveDocumentNonBlocking, setDocumentNonBlocking } from '@/firebase';
+import { findExistingContact } from '@/lib/contact-matching';
 import { collection, doc, query, where } from 'firebase/firestore';
 import { useCurrentOrganization } from '@/hooks/organization-provider';
 import { SupplierImporter } from './supplier-importer';
@@ -84,7 +85,12 @@ export function SupplierManager() {
     [contactsCollection]
   );
 
-  const { data: suppliers } = useCollection<Supplier>(suppliersQuery);
+  const { data: suppliersRaw } = useCollection<Supplier & { archivedAt?: string }>(suppliersQuery);
+  // Filtrar proveïdors arxivats (soft-deleted)
+  const suppliers = React.useMemo(
+    () => suppliersRaw?.filter(s => !s.archivedAt),
+    [suppliersRaw]
+  );
 
   // Categories de despesa per al selector de categoria per defecte
   const categoriesCollection = useMemoFirebase(
@@ -154,7 +160,8 @@ export function SupplierManager() {
 
   const handleDeleteConfirm = () => {
     if (supplierToDelete && contactsCollection) {
-      deleteDocumentNonBlocking(doc(contactsCollection, supplierToDelete.id));
+      // Soft-delete: arxiva en lloc d'eliminar per preservar integritat referencial
+      archiveDocumentNonBlocking(doc(contactsCollection, supplierToDelete.id));
       toast({
         title: t.suppliers.supplierDeleted,
         description: t.suppliers.supplierDeletedDescription(supplierToDelete.name),
@@ -216,7 +223,26 @@ export function SupplierManager() {
       setDocumentNonBlocking(doc(contactsCollection, editingSupplier.id), dataToSave, { merge: true });
       toast({ title: t.suppliers.supplierUpdated, description: t.suppliers.supplierUpdatedDescription(formData.name) });
     } else {
-      addDocumentNonBlocking(contactsCollection, { ...dataToSave, createdAt: now });
+      // Validar si ja existeix un contacte amb el mateix NIF/IBAN/email
+      const existingMatch = findExistingContact(
+        suppliers as any[] || [],
+        formData.taxId || undefined,
+        formData.iban || undefined,
+        formData.email || undefined
+      );
+
+      if (existingMatch.found && existingMatch.contact) {
+        const existing = existingMatch.contact;
+        toast({
+          variant: 'destructive',
+          title: 'Possible duplicat detectat',
+          description: `Ja existeix "${existing.name}" amb el mateix ${existingMatch.matchedBy === 'taxId' ? 'NIF' : existingMatch.matchedBy === 'iban' ? 'IBAN' : 'email'}. Revisa la llista abans de crear un duplicat.`,
+          duration: 8000,
+        });
+        return;
+      }
+
+      addDocumentNonBlocking(contactsCollection, { ...dataToSave, roles: { supplier: true }, createdAt: now });
       toast({ title: t.suppliers.supplierCreated, description: t.suppliers.supplierCreatedDescription(formData.name) });
     }
     handleOpenChange(false);
@@ -349,157 +375,159 @@ export function SupplierManager() {
           </CardContent>
         </Card>
 
-        <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
+        <DialogContent className="sm:max-w-3xl max-h-[90vh] flex flex-col">
+          {/* Header fix */}
+          <DialogHeader className="flex-shrink-0">
             <DialogTitle>{dialogTitle}</DialogTitle>
             <DialogDescription>{dialogDescription}</DialogDescription>
           </DialogHeader>
-          
-          <div className="grid gap-4 py-4">
+
+          {/* Cos amb scroll si cal */}
+          <div className="flex-1 min-h-0 overflow-y-auto py-4">
+            {/* ═══════════════════════════════════════════════════════════════════
+                BLOC 1: Dades bàsiques i identificació (2 columnes)
+                ═══════════════════════════════════════════════════════════════════ */}
             <div className="space-y-4">
               <h4 className="text-sm font-medium text-muted-foreground">{t.suppliers.basicData}</h4>
-              
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="name" className="text-right">{t.suppliers.name} *</Label>
-                <Input
-                  id="name"
-                  value={formData.name}
-                  onChange={(e) => handleFormChange('name', e.target.value)}
-                  className="col-span-3"
-                  placeholder={t.suppliers.namePlaceholder}
-                />
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {/* Columna esquerra: Identificació */}
+                <div className="space-y-3">
+                  <div className="space-y-1.5">
+                    <Label htmlFor="name">{t.suppliers.name} *</Label>
+                    <Input
+                      id="name"
+                      value={formData.name}
+                      onChange={(e) => handleFormChange('name', e.target.value)}
+                      placeholder={t.suppliers.namePlaceholder}
+                    />
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <Label htmlFor="taxId">{t.suppliers.taxId} *</Label>
+                    <Input
+                      id="taxId"
+                      value={formData.taxId}
+                      onChange={(e) => handleFormChange('taxId', e.target.value.toUpperCase())}
+                      placeholder="B12345678"
+                    />
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <Label htmlFor="defaultCategoryId">
+                      {t.contacts.defaultCategory}
+                      <span className="block text-xs font-normal text-muted-foreground">{t.contacts.defaultCategoryHint}</span>
+                    </Label>
+                    <Select
+                      value={formData.defaultCategoryId || '__none__'}
+                      onValueChange={(v) => handleFormChange('defaultCategoryId', v === '__none__' ? undefined : v)}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder={t.contacts.selectDefaultCategory} />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="__none__">{t.contacts.noDefaultCategory}</SelectItem>
+                        {expenseCategories.map(cat => (
+                          <SelectItem key={cat.id} value={cat.id}>{categoryTranslations[cat.name] || cat.name}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+
+                {/* Columna dreta: Contacte */}
+                <div className="space-y-3">
+                  <div className="space-y-1.5">
+                    <Label htmlFor="email">{t.suppliers.email}</Label>
+                    <Input
+                      id="email"
+                      type="email"
+                      value={formData.email || ''}
+                      onChange={(e) => handleFormChange('email', e.target.value)}
+                      placeholder="facturacio@empresa.com"
+                    />
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <Label htmlFor="phone">{t.suppliers.phone}</Label>
+                    <Input
+                      id="phone"
+                      value={formData.phone || ''}
+                      onChange={(e) => handleFormChange('phone', e.target.value)}
+                      placeholder="934 000 000"
+                    />
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <Label htmlFor="zipCode">{t.suppliers.zipCode}</Label>
+                    <Input
+                      id="zipCode"
+                      value={formData.zipCode}
+                      onChange={(e) => handleFormChange('zipCode', e.target.value)}
+                      placeholder="08001"
+                    />
+                  </div>
+                </div>
               </div>
 
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="taxId" className="text-right">{t.suppliers.taxId} *</Label>
-                <Input
-                  id="taxId"
-                  value={formData.taxId}
-                  onChange={(e) => handleFormChange('taxId', e.target.value.toUpperCase())}
-                  className="col-span-3"
-                  placeholder="B12345678"
-                />
-              </div>
-
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="defaultCategoryId" className="text-right">
-                  <span>{t.contacts.defaultCategory}</span>
-                  <span className="block text-xs font-normal text-muted-foreground">{t.contacts.defaultCategoryHint}</span>
-                </Label>
-                <Select
-                  value={formData.defaultCategoryId || '__none__'}
-                  onValueChange={(v) => handleFormChange('defaultCategoryId', v === '__none__' ? undefined : v)}
-                >
-                  <SelectTrigger className="col-span-3">
-                    <SelectValue placeholder={t.contacts.selectDefaultCategory} />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="__none__">{t.contacts.noDefaultCategory}</SelectItem>
-                    {expenseCategories.map(cat => (
-                      <SelectItem key={cat.id} value={cat.id}>{categoryTranslations[cat.name] || cat.name}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-
-            <div className="space-y-4 pt-4 border-t">
-              <h4 className="text-sm font-medium text-muted-foreground">{t.suppliers.addressInfo}</h4>
-
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="address" className="text-right">{t.suppliers.address}</Label>
+              {/* Adreça a tota amplada */}
+              <div className="space-y-1.5">
+                <Label htmlFor="address">{t.suppliers.address}</Label>
                 <Input
                   id="address"
                   value={formData.address || ''}
                   onChange={(e) => handleFormChange('address', e.target.value)}
-                  className="col-span-3"
                   placeholder={t.suppliers.addressPlaceholder}
                 />
               </div>
-
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="zipCode" className="text-right">{t.suppliers.zipCode}</Label>
-                <Input
-                  id="zipCode"
-                  value={formData.zipCode}
-                  onChange={(e) => handleFormChange('zipCode', e.target.value)}
-                  className="col-span-3"
-                  placeholder="08001"
-                />
-              </div>
             </div>
 
-            <div className="space-y-4 pt-4 border-t">
-              <h4 className="text-sm font-medium text-muted-foreground">{t.suppliers.contactInfo}</h4>
-
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="email" className="text-right">{t.suppliers.email}</Label>
-                <Input
-                  id="email"
-                  type="email"
-                  value={formData.email || ''}
-                  onChange={(e) => handleFormChange('email', e.target.value)}
-                  className="col-span-3"
-                  placeholder="facturacio@empresa.com"
-                />
-              </div>
-
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="phone" className="text-right">{t.suppliers.phone}</Label>
-                <Input
-                  id="phone"
-                  value={formData.phone || ''}
-                  onChange={(e) => handleFormChange('phone', e.target.value)}
-                  className="col-span-3"
-                  placeholder="934 000 000"
-                />
-              </div>
-            </div>
-
-            <div className="space-y-4 pt-4 border-t">
+            {/* ═══════════════════════════════════════════════════════════════════
+                BLOC 2: Dades de pagament (2 columnes)
+                ═══════════════════════════════════════════════════════════════════ */}
+            <div className="space-y-4 pt-4 mt-4 border-t">
               <h4 className="text-sm font-medium text-muted-foreground">{t.suppliers.paymentData}</h4>
 
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="iban" className="text-right">{t.suppliers.iban}</Label>
-                <Input
-                  id="iban"
-                  value={formData.iban || ''}
-                  onChange={(e) => handleFormChange('iban', e.target.value.toUpperCase().replace(/\s/g, ''))}
-                  className="col-span-3"
-                  placeholder="ES00 0000 0000 0000 0000 0000"
-                />
-              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-1.5">
+                  <Label htmlFor="iban">{t.suppliers.iban}</Label>
+                  <Input
+                    id="iban"
+                    value={formData.iban || ''}
+                    onChange={(e) => handleFormChange('iban', e.target.value.toUpperCase().replace(/\s/g, ''))}
+                    placeholder="ES00 0000 0000 0000 0000 0000"
+                  />
+                </div>
 
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="paymentTerms" className="text-right">{t.suppliers.paymentTerms}</Label>
-                <Input
-                  id="paymentTerms"
-                  value={formData.paymentTerms || ''}
-                  onChange={(e) => handleFormChange('paymentTerms', e.target.value)}
-                  className="col-span-3"
-                  placeholder={t.suppliers.paymentTermsPlaceholder}
-                />
+                <div className="space-y-1.5">
+                  <Label htmlFor="paymentTerms">{t.suppliers.paymentTerms}</Label>
+                  <Input
+                    id="paymentTerms"
+                    value={formData.paymentTerms || ''}
+                    onChange={(e) => handleFormChange('paymentTerms', e.target.value)}
+                    placeholder={t.suppliers.paymentTermsPlaceholder}
+                  />
+                </div>
               </div>
             </div>
 
-            <div className="space-y-4 pt-4 border-t">
+            {/* ═══════════════════════════════════════════════════════════════════
+                BLOC 3: Notes (tota amplada)
+                ═══════════════════════════════════════════════════════════════════ */}
+            <div className="space-y-3 pt-4 mt-4 border-t">
               <h4 className="text-sm font-medium text-muted-foreground">{t.suppliers.notes}</h4>
-
-              <div className="grid grid-cols-4 items-start gap-4">
-                <Label htmlFor="notes" className="text-right pt-2">{t.suppliers.notes}</Label>
-                <Textarea
-                  id="notes"
-                  value={formData.notes || ''}
-                  onChange={(e) => handleFormChange('notes', e.target.value)}
-                  className="col-span-3"
-                  placeholder={t.suppliers.notesPlaceholder}
-                  rows={3}
-                />
-              </div>
+              <Textarea
+                id="notes"
+                value={formData.notes || ''}
+                onChange={(e) => handleFormChange('notes', e.target.value)}
+                placeholder={t.suppliers.notesPlaceholder}
+                rows={2}
+              />
             </div>
           </div>
 
-          <DialogFooter>
+          {/* Footer fix */}
+          <DialogFooter className="flex-shrink-0 pt-4 border-t">
             <DialogClose asChild>
               <Button variant="outline">{t.common.cancel}</Button>
             </DialogClose>

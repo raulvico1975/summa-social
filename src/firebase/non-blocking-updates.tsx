@@ -87,3 +87,24 @@ export function deleteDocumentNonBlocking(docRef: DocumentReference) {
       )
     });
 }
+
+
+/**
+ * Soft-delete: Sets archivedAt timestamp instead of deleting.
+ * This preserves referential integrity with transactions.
+ * Does NOT await the write operation internally.
+ */
+export function archiveDocumentNonBlocking(docRef: DocumentReference) {
+  updateDoc(docRef, {
+    archivedAt: new Date().toISOString(),
+  })
+    .catch(error => {
+      errorEmitter.emit(
+        'permission-error',
+        new FirestorePermissionError({
+          path: docRef.path,
+          operation: 'update', // soft-delete is an update operation
+        })
+      )
+    });
+}

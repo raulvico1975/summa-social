@@ -41,6 +41,8 @@ import { type Contact } from './DonorSelectorEnhanced';
 import { CreateQuickDonorDialog, type QuickDonorFormData } from './CreateQuickDonorDialog';
 import { useTranslations } from '@/i18n';
 import { addDocumentNonBlocking } from '@/firebase';
+import { findExistingContact, addRole, needsRoleUpdate } from '@/lib/contact-matching';
+import { updateDoc } from 'firebase/firestore';
 
 // ════════════════════════════════════════════════════════════════════════════
 // CONSTANTS
@@ -762,15 +764,60 @@ export function StripeImporter({
   };
 
   // Handler per crear un nou donant ràpid
+  // REGLA: Comprova si ja existeix un contacte amb el mateix NIF/email abans de crear
   const handleCreateQuickDonor = React.useCallback(
     async (formData: QuickDonorFormData): Promise<string | null> => {
       if (!organizationId || !firestore) return null;
 
       const contactsCollection = collection(firestore, 'organizations', organizationId, 'contacts');
 
+      // Comprovar si ja existeix un contacte amb el mateix NIF o email
+      const existingMatch = findExistingContact(
+        donors as any[],
+        formData.taxId.trim() || undefined,
+        undefined, // No tenim IBAN en creació ràpida
+        formData.email.trim() || undefined
+      );
+
+      if (existingMatch.found && existingMatch.contact) {
+        // Ja existeix un contacte - usar-lo i afegir rol 'donor' si cal
+        const existing = existingMatch.contact;
+
+        if (needsRoleUpdate(existing, 'donor')) {
+          // Afegir rol 'donor' al contacte existent
+          const contactRef = doc(contactsCollection, existing.id);
+          const newRoles = addRole(existing, 'donor');
+          await updateDoc(contactRef, { roles: newRoles });
+
+          toast({
+            title: t.importers.stripeImporter.createQuickDonor.success.title,
+            description: `${existing.name} ja existia com a ${existing.type}. S'ha afegit el rol de donant.`,
+          });
+        } else {
+          toast({
+            title: t.importers.stripeImporter.createQuickDonor.success.title,
+            description: `${existing.name} ja existeix com a donant.`,
+          });
+        }
+
+        // Aplicar el match a la fila
+        if (createDonorInitialData?.rowId) {
+          applyDonorMatchForEmail(
+            createDonorInitialData.rowId,
+            existing.id,
+            existing.name,
+            (existing as any).email || null
+          );
+        }
+
+        return existing.id;
+      }
+
+      // No existeix - crear nou contacte
       const now = new Date().toISOString();
       const newDonorData = {
         type: 'donor',
+        roles: { donor: true },  // Inicialitzar amb rol explícit
         name: formData.name.trim(),
         taxId: formData.taxId.trim() || null,
         zipCode: formData.zipCode.trim() || null,

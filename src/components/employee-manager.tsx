@@ -44,7 +44,8 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
-import { useCollection, useFirebase, useMemoFirebase, addDocumentNonBlocking, deleteDocumentNonBlocking, setDocumentNonBlocking } from '@/firebase';
+import { useCollection, useFirebase, useMemoFirebase, addDocumentNonBlocking, archiveDocumentNonBlocking, setDocumentNonBlocking } from '@/firebase';
+import { findExistingContact } from '@/lib/contact-matching';
 import { collection, doc, query, where } from 'firebase/firestore';
 import { useCurrentOrganization } from '@/hooks/organization-provider';
 import { useTranslations } from '@/i18n';
@@ -81,7 +82,12 @@ export function EmployeeManager() {
     [contactsCollection]
   );
 
-  const { data: employees } = useCollection<Employee>(employeesQuery);
+  const { data: employeesRaw } = useCollection<Employee & { archivedAt?: string }>(employeesQuery);
+  // Filtrar empleats arxivats (soft-deleted)
+  const employees = React.useMemo(
+    () => employeesRaw?.filter(e => !e.archivedAt),
+    [employeesRaw]
+  );
 
   // Categories de despesa per al selector de categoria per defecte
   const categoriesCollection = useMemoFirebase(
@@ -125,7 +131,8 @@ export function EmployeeManager() {
 
   const handleDeleteConfirm = () => {
     if (employeeToDelete && contactsCollection) {
-      deleteDocumentNonBlocking(doc(contactsCollection, employeeToDelete.id));
+      // Soft-delete: arxiva en lloc d'eliminar per preservar integritat referencial
+      archiveDocumentNonBlocking(doc(contactsCollection, employeeToDelete.id));
       toast({
         title: t.employees.employeeDeleted,
         description: t.employees.employeeDeletedDescription(employeeToDelete.name),
@@ -195,7 +202,26 @@ export function EmployeeManager() {
         description: t.employees.employeeUpdatedDescription(normalized.name)
       });
     } else {
-      addDocumentNonBlocking(contactsCollection, { ...dataToSave, createdAt: now });
+      // Validar si ja existeix un contacte amb el mateix NIF/IBAN/email
+      const existingMatch = findExistingContact(
+        employees as any[] || [],
+        normalized.taxId || undefined,
+        normalized.iban || undefined,
+        normalized.email || undefined
+      );
+
+      if (existingMatch.found && existingMatch.contact) {
+        const existing = existingMatch.contact;
+        toast({
+          variant: 'destructive',
+          title: 'Possible duplicat detectat',
+          description: `Ja existeix "${existing.name}" amb el mateix ${existingMatch.matchedBy === 'taxId' ? 'NIF' : existingMatch.matchedBy === 'iban' ? 'IBAN' : 'email'}. Revisa la llista abans de crear un duplicat.`,
+          duration: 8000,
+        });
+        return;
+      }
+
+      addDocumentNonBlocking(contactsCollection, { ...dataToSave, roles: { employee: true }, createdAt: now });
       toast({
         title: t.employees.employeeCreated,
         description: t.employees.employeeCreatedDescription(normalized.name)
@@ -299,153 +325,139 @@ export function EmployeeManager() {
           </CardContent>
         </Card>
 
-        <DialogContent className="sm:max-w-lg">
-          <DialogHeader>
+        <DialogContent className="sm:max-w-2xl max-h-[90vh] flex flex-col">
+          {/* Header fix */}
+          <DialogHeader className="flex-shrink-0">
             <DialogTitle>{dialogTitle}</DialogTitle>
             <DialogDescription>{dialogDescription}</DialogDescription>
           </DialogHeader>
-          
-          <div className="grid gap-4 py-4">
+
+          {/* Cos amb scroll si cal */}
+          <div className="flex-1 min-h-0 overflow-y-auto py-4">
+            {/* ═══════════════════════════════════════════════════════════════════
+                BLOC 1: Dades bàsiques i contacte (2 columnes)
+                ═══════════════════════════════════════════════════════════════════ */}
             <div className="space-y-4">
-              <h4 className="text-sm font-medium text-muted-foreground">
-                {t.employees.basicData}
-              </h4>
+              <h4 className="text-sm font-medium text-muted-foreground">{t.employees.basicData}</h4>
 
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="name" className="text-right">
-                  {t.employees.name} *
-                </Label>
-                <Input
-                  id="name"
-                  value={formData.name}
-                  onChange={(e) => handleFormChange('name', e.target.value)}
-                  className="col-span-3"
-                  placeholder="Maria García López"
-                />
-              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {/* Columna esquerra: Identificació */}
+                <div className="space-y-3">
+                  <div className="space-y-1.5">
+                    <Label htmlFor="name">{t.employees.name} *</Label>
+                    <Input
+                      id="name"
+                      value={formData.name}
+                      onChange={(e) => handleFormChange('name', e.target.value)}
+                      placeholder="Maria García López"
+                    />
+                  </div>
 
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="taxId" className="text-right">
-                  {t.employees.taxId}
-                </Label>
-                <Input
-                  id="taxId"
-                  value={formData.taxId}
-                  onChange={(e) => handleFormChange('taxId', e.target.value.toUpperCase())}
-                  className="col-span-3"
-                  placeholder="12345678A"
-                />
-              </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="space-y-1.5">
+                      <Label htmlFor="taxId">{t.employees.taxId}</Label>
+                      <Input
+                        id="taxId"
+                        value={formData.taxId}
+                        onChange={(e) => handleFormChange('taxId', e.target.value.toUpperCase())}
+                        placeholder="12345678A"
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label htmlFor="startDate">{t.employees.startDate}</Label>
+                      <Input
+                        id="startDate"
+                        type="date"
+                        value={formData.startDate || ''}
+                        onChange={(e) => handleFormChange('startDate', e.target.value)}
+                      />
+                    </div>
+                  </div>
+                </div>
 
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="startDate" className="text-right">
-                  {t.employees.startDate}
-                </Label>
-                <Input
-                  id="startDate"
-                  type="date"
-                  value={formData.startDate || ''}
-                  onChange={(e) => handleFormChange('startDate', e.target.value)}
-                  className="col-span-3"
-                />
-              </div>
-            </div>
+                {/* Columna dreta: Contacte */}
+                <div className="space-y-3">
+                  <div className="space-y-1.5">
+                    <Label htmlFor="email">{t.employees.email}</Label>
+                    <Input
+                      id="email"
+                      type="email"
+                      value={formData.email || ''}
+                      onChange={(e) => handleFormChange('email', e.target.value)}
+                      placeholder="maria@exemple.com"
+                    />
+                  </div>
 
-            <div className="space-y-4 pt-4 border-t">
-              <h4 className="text-sm font-medium text-muted-foreground">
-                {t.employees.paymentData}
-              </h4>
-
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="iban" className="text-right">
-                  {t.employees.iban}
-                </Label>
-                <Input
-                  id="iban"
-                  value={formData.iban || ''}
-                  onChange={(e) => handleFormChange('iban', e.target.value.toUpperCase().replace(/\s/g, ''))}
-                  className="col-span-3"
-                  placeholder="ES00 0000 0000 0000 0000 0000"
-                />
-              </div>
-
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="defaultCategoryId" className="text-right">
-                  <span>{t.contacts.defaultCategory}</span>
-                  <span className="block text-xs font-normal text-muted-foreground">{t.contacts.defaultCategoryHint}</span>
-                </Label>
-                <Select
-                  value={formData.defaultCategoryId || '__none__'}
-                  onValueChange={(v) => handleFormChange('defaultCategoryId', v === '__none__' ? undefined : v)}
-                >
-                  <SelectTrigger className="col-span-3">
-                    <SelectValue placeholder={t.contacts.selectDefaultCategory} />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="__none__">{t.contacts.noDefaultCategory}</SelectItem>
-                    {expenseCategories.map(cat => (
-                      <SelectItem key={cat.id} value={cat.id}>{categoryTranslations[cat.name] || cat.name}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="phone">{t.employees.phone}</Label>
+                    <Input
+                      id="phone"
+                      value={formData.phone || ''}
+                      onChange={(e) => handleFormChange('phone', e.target.value)}
+                      placeholder="600 000 000"
+                    />
+                  </div>
+                </div>
               </div>
             </div>
 
-            <div className="space-y-4 pt-4 border-t">
-              <h4 className="text-sm font-medium text-muted-foreground">
-                {t.employees.contactInfo}
-              </h4>
+            {/* ═══════════════════════════════════════════════════════════════════
+                BLOC 2: Dades de pagament (2 columnes)
+                ═══════════════════════════════════════════════════════════════════ */}
+            <div className="space-y-4 pt-4 mt-4 border-t">
+              <h4 className="text-sm font-medium text-muted-foreground">{t.employees.paymentData}</h4>
 
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="email" className="text-right">
-                  {t.employees.email}
-                </Label>
-                <Input
-                  id="email"
-                  type="email"
-                  value={formData.email || ''}
-                  onChange={(e) => handleFormChange('email', e.target.value)}
-                  className="col-span-3"
-                  placeholder="maria@exemple.com"
-                />
-              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-1.5">
+                  <Label htmlFor="iban">{t.employees.iban}</Label>
+                  <Input
+                    id="iban"
+                    value={formData.iban || ''}
+                    onChange={(e) => handleFormChange('iban', e.target.value.toUpperCase().replace(/\s/g, ''))}
+                    placeholder="ES00 0000 0000 0000 0000 0000"
+                  />
+                </div>
 
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="phone" className="text-right">
-                  {t.employees.phone}
-                </Label>
-                <Input
-                  id="phone"
-                  value={formData.phone || ''}
-                  onChange={(e) => handleFormChange('phone', e.target.value)}
-                  className="col-span-3"
-                  placeholder="600 000 000"
-                />
+                <div className="space-y-1.5">
+                  <Label htmlFor="defaultCategoryId">
+                    {t.contacts.defaultCategory}
+                    <span className="block text-xs font-normal text-muted-foreground">{t.contacts.defaultCategoryHint}</span>
+                  </Label>
+                  <Select
+                    value={formData.defaultCategoryId || '__none__'}
+                    onValueChange={(v) => handleFormChange('defaultCategoryId', v === '__none__' ? undefined : v)}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder={t.contacts.selectDefaultCategory} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="__none__">{t.contacts.noDefaultCategory}</SelectItem>
+                      {expenseCategories.map(cat => (
+                        <SelectItem key={cat.id} value={cat.id}>{categoryTranslations[cat.name] || cat.name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
               </div>
             </div>
 
-            <div className="space-y-4 pt-4 border-t">
-              <h4 className="text-sm font-medium text-muted-foreground">
-                {t.employees.notes}
-              </h4>
-
-              <div className="grid grid-cols-4 items-start gap-4">
-                <Label htmlFor="notes" className="text-right pt-2">
-                  {t.employees.notes}
-                </Label>
-                <Textarea
-                  id="notes"
-                  value={formData.notes || ''}
-                  onChange={(e) => handleFormChange('notes', e.target.value)}
-                  className="col-span-3"
-                  placeholder="Observacions sobre el treballador..."
-                  rows={3}
-                />
-              </div>
+            {/* ═══════════════════════════════════════════════════════════════════
+                BLOC 3: Notes (tota amplada)
+                ═══════════════════════════════════════════════════════════════════ */}
+            <div className="space-y-3 pt-4 mt-4 border-t">
+              <h4 className="text-sm font-medium text-muted-foreground">{t.employees.notes}</h4>
+              <Textarea
+                id="notes"
+                value={formData.notes || ''}
+                onChange={(e) => handleFormChange('notes', e.target.value)}
+                placeholder="Observacions sobre el treballador..."
+                rows={2}
+              />
             </div>
           </div>
 
-          <DialogFooter>
+          {/* Footer fix */}
+          <DialogFooter className="flex-shrink-0 pt-4 border-t">
             <DialogClose asChild>
               <Button variant="outline">{t.common.cancel}</Button>
             </DialogClose>

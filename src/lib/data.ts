@@ -180,12 +180,23 @@ export type Project = {
 export type ContactType = 'donor' | 'supplier' | 'employee';
 
 /**
+ * Rols d'un contacte (per suportar persones amb múltiples rols, ex: Mario employee+donor)
+ * Camp progressiu: si no existeix, només té el rol de `type`
+ */
+export type ContactRoles = {
+  donor?: boolean;
+  supplier?: boolean;
+  employee?: boolean;
+};
+
+/**
  * Model base comú per tots els contactes
  * S'emmagatzema a: organizations/{orgId}/contacts/{contactId}
  */
 export type Contact = {
   id: string;
-  type: ContactType;
+  type: ContactType;               // Rol primari (compatibilitat UI)
+  roles?: ContactRoles;            // Rols addicionals (progressiu, no disruptiu)
   name: string;
   taxId: string;                   // DNI/CIF
   zipCode: string;                 // Codi postal
@@ -194,6 +205,7 @@ export type Contact = {
   createdAt: string;
   updatedAt?: string;
   defaultCategoryId?: string;      // Categoria per defecte per auto-assignar a transaccions
+  archivedAt?: string;             // Soft-delete timestamp
 };
 
 /**
