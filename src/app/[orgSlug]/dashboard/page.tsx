@@ -32,6 +32,8 @@ import Papa from 'papaparse';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from '@/components/ui/sheet';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { toPeriodQuery } from '@/lib/period-query';
+import { FeatureAnnouncementBanner } from '@/components/dashboard/feature-announcement-banner';
+import { WorkingOnCard } from '@/components/dashboard/working-on-card';
 
 interface TaxObligation {
   id: string;
@@ -925,6 +927,11 @@ ${t.dashboard.generatedWith}`;
        <div>
         <h1 className="text-2xl font-bold tracking-tight font-headline">{t.dashboard.title}</h1>
         <p className="text-muted-foreground">{t.dashboard.description}</p>
+      </div>
+
+      <div className="space-y-3">
+        <FeatureAnnouncementBanner />
+        <WorkingOnCard />
       </div>
 
       <div className="flex items-center justify-between gap-4">
