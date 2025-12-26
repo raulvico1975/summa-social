@@ -28,6 +28,8 @@ import { useOrgUrl } from '@/hooks/organization-provider';
 
 interface QuickExpenseScreenProps {
   organizationId: string;
+  /** Mode landing: 100dvh, sense scroll, footer absolut amb safe-area */
+  isLandingMode?: boolean;
 }
 
 interface PendingUpload {
@@ -72,7 +74,7 @@ function getFileIcon(contentType: string) {
 // COMPONENT
 // =============================================================================
 
-export function QuickExpenseScreen({ organizationId }: QuickExpenseScreenProps) {
+export function QuickExpenseScreen({ organizationId, isLandingMode = false }: QuickExpenseScreenProps) {
   const storage = useStorage();
   const { save, isSaving } = useSaveOffBankExpense();
   const { toast } = useToast();
@@ -259,16 +261,30 @@ export function QuickExpenseScreen({ organizationId }: QuickExpenseScreenProps) 
   // RENDER
   // ---------------------------------------------------------------------------
 
+  // Limitar visualització d'adjunts en mode landing (màxim 2 visibles)
+  const visibleUploads = isLandingMode ? uploads.slice(0, 2) : uploads;
+  const hiddenCount = isLandingMode ? Math.max(0, uploads.length - 2) : 0;
+
   return (
-    <div className="min-h-screen bg-background flex flex-col">
+    <div
+      className={
+        isLandingMode
+          ? 'h-[100dvh] bg-background flex flex-col overflow-hidden'
+          : 'min-h-screen bg-background flex flex-col'
+      }
+    >
       {/* Header minimalista */}
-      <div className="flex items-center justify-between p-4 border-b">
-        <Link href={buildUrl('/project-module/expenses')}>
-          <Button variant="ghost" size="sm">
-            <ArrowLeft className="h-4 w-4 mr-1" />
-            {t.common?.back ?? 'Tornar'}
-          </Button>
-        </Link>
+      <div className="flex items-center justify-between p-4 border-b shrink-0">
+        {isLandingMode ? (
+          <div className="w-20" />
+        ) : (
+          <Link href={buildUrl('/project-module/expenses')}>
+            <Button variant="ghost" size="sm">
+              <ArrowLeft className="h-4 w-4 mr-1" />
+              {t.common?.back ?? 'Tornar'}
+            </Button>
+          </Link>
+        )}
         <h1 className="font-semibold text-lg">
           {q?.title ?? 'Despesa ràpida'}
         </h1>
@@ -276,7 +292,13 @@ export function QuickExpenseScreen({ organizationId }: QuickExpenseScreenProps) 
       </div>
 
       {/* Contingut principal */}
-      <div className="flex-1 flex flex-col p-4 gap-6 max-w-lg mx-auto w-full">
+      <div
+        className={
+          isLandingMode
+            ? 'flex-1 flex flex-col p-4 gap-4 max-w-lg mx-auto w-full overflow-y-auto'
+            : 'flex-1 flex flex-col p-4 gap-6 max-w-lg mx-auto w-full'
+        }
+      >
 
         {/* Secció 1: Captura foto/fitxer */}
         <div className="space-y-3">
@@ -334,7 +356,7 @@ export function QuickExpenseScreen({ organizationId }: QuickExpenseScreenProps) 
           {/* Llista de fitxers pujats/pujant */}
           {uploads.length > 0 && (
             <div className="space-y-2 mt-3">
-              {uploads.map((upload) => (
+              {visibleUploads.map((upload) => (
                 <div
                   key={upload.id}
                   className="flex items-center gap-3 p-3 bg-muted/50 rounded-lg"
@@ -371,6 +393,11 @@ export function QuickExpenseScreen({ organizationId }: QuickExpenseScreenProps) 
                   )}
                 </div>
               ))}
+              {hiddenCount > 0 && (
+                <p className="text-xs text-muted-foreground text-center">
+                  +{hiddenCount} fitxer{hiddenCount > 1 ? 's' : ''} més
+                </p>
+              )}
             </div>
           )}
         </div>
@@ -411,11 +438,20 @@ export function QuickExpenseScreen({ organizationId }: QuickExpenseScreenProps) 
           />
         </div>
 
-        {/* Spacer */}
-        <div className="flex-1" />
+        {/* Spacer (només en mode normal) */}
+        {!isLandingMode && <div className="flex-1" />}
+      </div>
 
-        {/* Botó guardar (fixat al fons) */}
-        <div className="sticky bottom-0 bg-background pt-4 pb-6 -mx-4 px-4 border-t">
+      {/* Footer amb botó guardar */}
+      <div
+        className={
+          isLandingMode
+            ? 'shrink-0 bg-background pt-4 px-4 border-t'
+            : 'sticky bottom-0 bg-background pt-4 pb-6 -mx-4 px-4 border-t max-w-lg mx-auto w-full'
+        }
+        style={isLandingMode ? { paddingBottom: 'max(1.5rem, env(safe-area-inset-bottom))' } : undefined}
+      >
+        <div className="max-w-lg mx-auto">
           <Button
             type="button"
             size="lg"
