@@ -347,6 +347,26 @@ export const es = {
       searchDonor: "Buscar por nombre o DNI...",
       totalQuotes: "Total",
       viewRemittanceDetail: "Ver detalle",
+      // Selección múltiple y acciones en bloque
+      bulkSelection: {
+        selected: (count: number) => `${count} seleccionado${count > 1 ? 's' : ''}`,
+        selectAll: "Seleccionar todos",
+        deselectAll: "Deseleccionar todos",
+        assignCategory: "Asignar categoría...",
+        removeCategory: "Quitar categoría",
+        assignCategoryTitle: "Asignar categoría",
+        assignCategoryDescription: "Selecciona la categoría que quieres asignar a los movimientos seleccionados.",
+        selectCategoryPlaceholder: "Selecciona una categoría...",
+        cancel: "Cancelar",
+        apply: "Aplicar",
+        successAssigned: (count: number, categoryName: string) =>
+          `Se ha asignado "${categoryName}" a ${count} movimiento${count > 1 ? 's' : ''}.`,
+        successRemoved: (count: number) =>
+          `Se ha quitado la categoría de ${count} movimiento${count > 1 ? 's' : ''}.`,
+        errorPartial: (success: number, failed: number) =>
+          `Completado parcialmente: ${success} actualizados, ${failed} con errores.`,
+        errorAll: "No se ha podido actualizar ningún movimiento.",
+      },
     },
      splitter: {
         title: "Dividir Remesa",

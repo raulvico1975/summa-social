@@ -347,6 +347,26 @@ export const fr = {
       searchDonor: "Rechercher par nom ou N° fiscal...",
       totalQuotes: "Total",
       viewRemittanceDetail: "Voir détail",
+      // Sélection multiple et actions en bloc
+      bulkSelection: {
+        selected: (count: number) => `${count} sélectionné${count > 1 ? 's' : ''}`,
+        selectAll: "Tout sélectionner",
+        deselectAll: "Tout désélectionner",
+        assignCategory: "Attribuer catégorie...",
+        removeCategory: "Retirer catégorie",
+        assignCategoryTitle: "Attribuer catégorie",
+        assignCategoryDescription: "Sélectionnez la catégorie à attribuer aux mouvements sélectionnés.",
+        selectCategoryPlaceholder: "Sélectionner une catégorie...",
+        cancel: "Annuler",
+        apply: "Appliquer",
+        successAssigned: (count: number, categoryName: string) =>
+          `"${categoryName}" a été attribué à ${count} mouvement${count > 1 ? 's' : ''}.`,
+        successRemoved: (count: number) =>
+          `La catégorie a été retirée de ${count} mouvement${count > 1 ? 's' : ''}.`,
+        errorPartial: (success: number, failed: number) =>
+          `Partiellement complété : ${success} mis à jour, ${failed} en erreur.`,
+        errorAll: "Aucun mouvement n'a pu être mis à jour.",
+      },
     },
     splitter: {
         title: "Ventiler virement",

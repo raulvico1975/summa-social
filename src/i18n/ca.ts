@@ -347,6 +347,26 @@ export const ca = {
       searchDonor: "Buscar per nom o DNI...",
       totalQuotes: "Total",
       viewRemittanceDetail: "Veure detall",
+      // Selecció múltiple i accions en bloc
+      bulkSelection: {
+        selected: (count: number) => `${count} seleccionat${count > 1 ? 's' : ''}`,
+        selectAll: "Seleccionar tots",
+        deselectAll: "Deseleccionar tots",
+        assignCategory: "Assignar categoria...",
+        removeCategory: "Treure categoria",
+        assignCategoryTitle: "Assignar categoria",
+        assignCategoryDescription: "Selecciona la categoria que vols assignar als moviments seleccionats.",
+        selectCategoryPlaceholder: "Selecciona una categoria...",
+        cancel: "Cancel·lar",
+        apply: "Aplicar",
+        successAssigned: (count: number, categoryName: string) =>
+          `S'ha assignat "${categoryName}" a ${count} moviment${count > 1 ? 's' : ''}.`,
+        successRemoved: (count: number) =>
+          `S'ha tret la categoria de ${count} moviment${count > 1 ? 's' : ''}.`,
+        errorPartial: (success: number, failed: number) =>
+          `Completat parcialment: ${success} actualitzats, ${failed} amb errors.`,
+        errorAll: "No s'ha pogut actualitzar cap moviment.",
+      },
     },
     splitter: {
         title: "Dividir Remesa",

@@ -66,7 +66,9 @@ import { RemittanceDetailModal } from '@/components/remittance-detail-modal';
 import { ReturnImporter } from '@/components/return-importer';
 import { StripeImporter } from '@/components/stripe-importer';
 import { useCollection, useFirebase, useMemoFirebase } from '@/firebase';
-import { collection } from 'firebase/firestore';
+import { collection, doc, writeBatch } from 'firebase/firestore';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Minus, Tag, XCircle } from 'lucide-react';
 import { useTranslations } from '@/i18n';
 import { useCurrentOrganization } from '@/hooks/organization-provider';
 import { useReturnManagement } from '@/components/transactions/hooks/useReturnManagement';
@@ -87,7 +89,7 @@ interface TransactionsTableProps {
 
 export function TransactionsTable({ initialDateFilter = null }: TransactionsTableProps = {}) {
   const { firestore, user, storage } = useFirebase();
-  const { organizationId } = useCurrentOrganization();
+  const { organizationId, userRole } = useCurrentOrganization();
   const { t, language } = useTranslations();
   const { toast } = useToast();
   const locale = language === 'es' ? 'es-ES' : 'ca-ES';
@@ -167,6 +169,49 @@ export function TransactionsTable({ initialDateFilter = null }: TransactionsTabl
 
   // Bank accounts
   const { bankAccounts } = useBankAccounts();
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // SELECCIÓ MÚLTIPLE (bulk actions)
+  // ═══════════════════════════════════════════════════════════════════════════
+  const canBulkEdit = userRole === 'admin' || userRole === 'user';
+  const [selectedIds, setSelectedIds] = React.useState<Set<string>>(new Set());
+  const [isBulkCategoryDialogOpen, setIsBulkCategoryDialogOpen] = React.useState(false);
+  const [bulkCategoryId, setBulkCategoryId] = React.useState<string | null>(null);
+  const [isBulkUpdating, setIsBulkUpdating] = React.useState(false);
+
+  // Helpers de selecció
+  const toggleOne = React.useCallback((id: string) => {
+    setSelectedIds(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) {
+        next.delete(id);
+      } else {
+        next.add(id);
+      }
+      return next;
+    });
+  }, []);
+
+  const toggleAllVisible = React.useCallback((visibleIds: string[]) => {
+    setSelectedIds(prev => {
+      const allSelected = visibleIds.every(id => prev.has(id));
+      if (allSelected) {
+        // Deseleccionar tots els visibles
+        const next = new Set(prev);
+        visibleIds.forEach(id => next.delete(id));
+        return next;
+      } else {
+        // Seleccionar tots els visibles
+        const next = new Set(prev);
+        visibleIds.forEach(id => next.add(id));
+        return next;
+      }
+    });
+  }, []);
+
+  const clearSelection = React.useCallback(() => {
+    setSelectedIds(new Set());
+  }, []);
 
   // Col·leccions
   const transactionsCollection = useMemoFirebase(
@@ -645,6 +690,106 @@ export function TransactionsTable({ initialDateFilter = null }: TransactionsTabl
   }, []);
 
   // ═══════════════════════════════════════════════════════════════════════════
+  // ACCIONS EN BLOC (BULK)
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  const bulkT = t.movements?.table?.bulkSelection;
+
+  // Derivats per a la capçalera
+  const visibleIds = React.useMemo(() => filteredTransactions.map(tx => tx.id), [filteredTransactions]);
+  const selectedCount = selectedIds.size;
+  const allVisibleSelected = visibleIds.length > 0 && visibleIds.every(id => selectedIds.has(id));
+  const someVisibleSelected = visibleIds.some(id => selectedIds.has(id));
+  const checkboxState = allVisibleSelected ? 'checked' : someVisibleSelected ? 'indeterminate' : 'unchecked';
+
+  // Bulk update amb batching (màx 50 per batch)
+  const handleBulkUpdateCategory = React.useCallback(async (categoryName: string | null) => {
+    if (!organizationId || selectedIds.size === 0) return;
+
+    setIsBulkUpdating(true);
+    const idsToUpdate = Array.from(selectedIds);
+    const BATCH_SIZE = 50;
+    let successCount = 0;
+    let failCount = 0;
+
+    trackUX('bulk.category.start', { count: idsToUpdate.length, action: categoryName ? 'assign' : 'remove' });
+
+    try {
+      // Dividir en chunks de 50
+      for (let i = 0; i < idsToUpdate.length; i += BATCH_SIZE) {
+        const chunk = idsToUpdate.slice(i, i + BATCH_SIZE);
+        const batch = writeBatch(firestore);
+
+        for (const txId of chunk) {
+          const txRef = doc(firestore, 'organizations', organizationId, 'transactions', txId);
+          if (categoryName) {
+            batch.update(txRef, { category: categoryName });
+          } else {
+            batch.update(txRef, { category: null });
+          }
+        }
+
+        try {
+          await batch.commit();
+          successCount += chunk.length;
+        } catch (error) {
+          console.error('[BulkUpdate] Batch error:', error);
+          failCount += chunk.length;
+        }
+      }
+
+      // Feedback
+      if (failCount === 0) {
+        const categoryDisplayName = categoryName ? getCategoryDisplayName(categoryName) : '';
+        toast({
+          title: categoryName
+            ? bulkT?.successAssigned(successCount, categoryDisplayName) ?? `Categoria assignada a ${successCount} moviments.`
+            : bulkT?.successRemoved(successCount) ?? `Categoria treta de ${successCount} moviments.`,
+        });
+        trackUX('bulk.category.success', { count: successCount, action: categoryName ? 'assign' : 'remove' });
+      } else if (successCount > 0) {
+        toast({
+          title: bulkT?.errorPartial(successCount, failCount) ?? `Completat parcialment: ${successCount} actualitzats, ${failCount} amb errors.`,
+          variant: 'destructive',
+        });
+        trackUX('bulk.category.partial', { success: successCount, failed: failCount });
+      } else {
+        toast({
+          title: bulkT?.errorAll ?? "No s'ha pogut actualitzar cap moviment.",
+          variant: 'destructive',
+        });
+        trackUX('bulk.category.error', { count: idsToUpdate.length });
+      }
+
+      // Netejar selecció
+      clearSelection();
+      setIsBulkCategoryDialogOpen(false);
+      setBulkCategoryId(null);
+
+    } finally {
+      setIsBulkUpdating(false);
+    }
+  }, [organizationId, selectedIds, firestore, getCategoryDisplayName, toast, bulkT, clearSelection]);
+
+  const handleOpenBulkCategoryDialog = React.useCallback(() => {
+    setBulkCategoryId(null);
+    setIsBulkCategoryDialogOpen(true);
+  }, []);
+
+  const handleBulkRemoveCategory = React.useCallback(() => {
+    handleBulkUpdateCategory(null);
+  }, [handleBulkUpdateCategory]);
+
+  const handleApplyBulkCategory = React.useCallback(() => {
+    if (!bulkCategoryId) return;
+    // Buscar el nom de la categoria per ID
+    const category = availableCategories?.find(c => c.id === bulkCategoryId);
+    if (category) {
+      handleBulkUpdateCategory(category.name);
+    }
+  }, [bulkCategoryId, availableCategories, handleBulkUpdateCategory]);
+
+  // ═══════════════════════════════════════════════════════════════════════════
   // EXPORTAR EXCEL
   // ═══════════════════════════════════════════════════════════════════════════
 
@@ -958,25 +1103,89 @@ export function TransactionsTable({ initialDateFilter = null }: TransactionsTabl
       )}
 
       {/* ═══════════════════════════════════════════════════════════════════════
+          BARRA D'ACCIONS EN BLOC
+          ═══════════════════════════════════════════════════════════════════════ */}
+      {canBulkEdit && selectedCount > 0 && (
+        <div className="mb-4 px-4 py-3 bg-primary/5 border border-primary/20 rounded-lg flex items-center justify-between gap-4">
+          <div className="flex items-center gap-3">
+            <span className="text-sm font-medium">
+              {bulkT?.selected(selectedCount) ?? `${selectedCount} seleccionat${selectedCount > 1 ? 's' : ''}`}
+            </span>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={clearSelection}
+              className="text-muted-foreground h-7"
+            >
+              <X className="h-3 w-3 mr-1" />
+              {bulkT?.deselectAll ?? 'Deseleccionar'}
+            </Button>
+          </div>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleOpenBulkCategoryDialog}
+              disabled={isBulkUpdating}
+              className="h-8"
+            >
+              <Tag className="h-3.5 w-3.5 mr-1.5" />
+              {bulkT?.assignCategory ?? 'Assignar categoria...'}
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={handleBulkRemoveCategory}
+              disabled={isBulkUpdating}
+              className="h-8 text-muted-foreground hover:text-destructive"
+            >
+              {isBulkUpdating ? (
+                <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />
+              ) : (
+                <XCircle className="h-3.5 w-3.5 mr-1.5" />
+              )}
+              {bulkT?.removeCategory ?? 'Treure categoria'}
+            </Button>
+          </div>
+        </div>
+      )}
+
+      {/* ═══════════════════════════════════════════════════════════════════════
           TAULA DE TRANSACCIONS
           ═══════════════════════════════════════════════════════════════════════ */}
       <div className="rounded-md border">
         <Table>
           <TableHeader>
             <TableRow className="h-9">
+              {/* Checkbox columna - només visible per admin/user */}
+              {canBulkEdit && (
+                <TableHead className="w-[40px] py-2 px-2">
+                  <Checkbox
+                    checked={checkboxState === 'checked'}
+                    ref={(el) => {
+                      if (el) {
+                        (el as HTMLButtonElement & { indeterminate: boolean }).indeterminate = checkboxState === 'indeterminate';
+                      }
+                    }}
+                    onCheckedChange={() => toggleAllVisible(visibleIds)}
+                    aria-label={allVisibleSelected ? bulkT?.deselectAll ?? 'Deseleccionar tots' : bulkT?.selectAll ?? 'Seleccionar tots'}
+                    className="h-4 w-4"
+                  />
+                </TableHead>
+              )}
               <TableHead className="w-[70px] py-2">
-  <button
-    onClick={() => setSortDateAsc(!sortDateAsc)}
-    className="flex items-center gap-1 hover:text-foreground transition-colors text-xs"
-  >
-    {t.movements.table.date}
-    {sortDateAsc ? (
-      <ChevronUp className="h-3 w-3" />
-    ) : (
-      <ChevronDown className="h-3 w-3" />
-    )}
-  </button>
-</TableHead>
+                <button
+                  onClick={() => setSortDateAsc(!sortDateAsc)}
+                  className="flex items-center gap-1 hover:text-foreground transition-colors text-xs"
+                >
+                  {t.movements.table.date}
+                  {sortDateAsc ? (
+                    <ChevronUp className="h-3 w-3" />
+                  ) : (
+                    <ChevronDown className="h-3 w-3" />
+                  )}
+                </button>
+              </TableHead>
               <TableHead className="text-right w-[85px] py-2">{t.movements.table.amount}</TableHead>
               <TableHead className="max-w-[250px] py-2">{t.movements.table.concept}</TableHead>
               <TableHead className="w-[120px] py-2">{t.movements.table.contact}</TableHead>
@@ -1028,6 +1237,8 @@ export function TransactionsTable({ initialDateFilter = null }: TransactionsTabl
                 showProjectColumn={showProjectColumn}
                 isDocumentLoading={docLoadingStates[tx.id] || false}
                 isCategoryLoading={loadingStates[tx.id] || false}
+                isSelected={canBulkEdit ? selectedIds.has(tx.id) : undefined}
+                onToggleSelect={canBulkEdit ? toggleOne : undefined}
                 onSetNote={handleSetNote}
                 onSetCategory={handleSetCategory}
                 onSetContact={handleSetContact}
@@ -1049,7 +1260,7 @@ export function TransactionsTable({ initialDateFilter = null }: TransactionsTabl
             ))}
             {filteredTransactions.length === 0 && (
                 <TableRow>
-                    <TableCell colSpan={8} className="h-24 text-center text-muted-foreground">
+                    <TableCell colSpan={canBulkEdit ? 9 : 8} className="h-24 text-center text-muted-foreground">
                         {tableFilter === 'missing'
                           ? t.movements.table.allExpensesHaveProofEmpty
                           : tableFilter === 'returns'
@@ -1066,6 +1277,55 @@ export function TransactionsTable({ initialDateFilter = null }: TransactionsTabl
       {/* ═══════════════════════════════════════════════════════════════════════
           DIÀLEGS
           ═══════════════════════════════════════════════════════════════════════ */}
+
+      {/* Bulk Assign Category Dialog */}
+      <Dialog open={isBulkCategoryDialogOpen} onOpenChange={setIsBulkCategoryDialogOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Tag className="h-5 w-5" />
+              {bulkT?.assignCategoryTitle ?? 'Assignar categoria'}
+            </DialogTitle>
+            <DialogDescription>
+              {bulkT?.assignCategoryDescription ?? 'Selecciona la categoria que vols assignar als moviments seleccionats.'}
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="py-4">
+            <Select value={bulkCategoryId ?? ''} onValueChange={setBulkCategoryId}>
+              <SelectTrigger>
+                <SelectValue placeholder={bulkT?.selectCategoryPlaceholder ?? 'Selecciona una categoria...'} />
+              </SelectTrigger>
+              <SelectContent>
+                {availableCategories?.map((cat) => (
+                  <SelectItem key={cat.id} value={cat.id}>
+                    {categoryTranslations[cat.name] || cat.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <DialogFooter>
+            <DialogClose asChild>
+              <Button variant="outline">{bulkT?.cancel ?? 'Cancel·lar'}</Button>
+            </DialogClose>
+            <Button
+              onClick={handleApplyBulkCategory}
+              disabled={!bulkCategoryId || isBulkUpdating}
+            >
+              {isBulkUpdating ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  {bulkT?.apply ?? 'Aplicar'}...
+                </>
+              ) : (
+                bulkT?.apply ?? 'Aplicar'
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Return Assignment Dialog */}
       <Dialog open={isReturnDialogOpen} onOpenChange={(open) => !open && handleCloseReturnDialog()}>

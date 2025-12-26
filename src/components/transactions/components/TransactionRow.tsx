@@ -54,6 +54,7 @@ import {
 import type { Transaction, Category, Project, ContactType } from '@/lib/data';
 import { formatCurrencyEU } from '@/lib/normalize';
 import { InlineNoteEditor } from '@/components/transactions/InlineNoteEditor';
+import { Checkbox } from '@/components/ui/checkbox';
 
 // =============================================================================
 // TYPES
@@ -71,6 +72,9 @@ interface TransactionRowProps {
   showProjectColumn: boolean;
   isDocumentLoading: boolean;
   isCategoryLoading: boolean;
+  // Bulk selection (opcional, només si canBulkEdit)
+  isSelected?: boolean;
+  onToggleSelect?: (id: string) => void;
   // Handlers
   onSetNote: (txId: string, note: string) => void;
   onSetCategory: (txId: string, category: string) => void;
@@ -161,6 +165,8 @@ export const TransactionRow = React.memo(function TransactionRow({
   showProjectColumn,
   isDocumentLoading,
   isCategoryLoading,
+  isSelected,
+  onToggleSelect,
   onSetNote,
   onSetCategory,
   onSetContact,
@@ -361,8 +367,19 @@ export const TransactionRow = React.memo(function TransactionRow({
         isReturn ? 'bg-red-50/50' :
         isReturnFee ? 'bg-orange-50/50' :
         isReturnedDonation ? 'bg-gray-50/50' : ''
-      }`}
+      } ${isSelected ? 'bg-primary/5' : ''}`}
     >
+      {/* Checkbox - només si onToggleSelect està definit (canBulkEdit) */}
+      {onToggleSelect && (
+        <TableCell className="py-1 px-2">
+          <Checkbox
+            checked={isSelected}
+            onCheckedChange={() => onToggleSelect(tx.id)}
+            aria-label={`Seleccionar moviment ${tx.description}`}
+            className="h-4 w-4"
+          />
+        </TableCell>
+      )}
       {/* Date */}
       <TableCell className="text-muted-foreground py-1 text-xs">{formatDate(tx.date)}</TableCell>
 
