@@ -4,8 +4,9 @@ import * as React from 'react';
 import { ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
 import { useStorage } from '@/firebase/provider';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { useTranslations } from '@/i18n';
-import { Upload, X, FileText, Image as ImageIcon, Loader2 } from 'lucide-react';
+import { Upload, X, FileText, Image as ImageIcon, Loader2, Pencil, Check, XCircle } from 'lucide-react';
 import type { OffBankAttachment } from '@/lib/project-module-types';
 
 // =============================================================================
@@ -88,6 +89,9 @@ export function ExpenseAttachmentsDropzone({
   const [isDragging, setIsDragging] = React.useState(false);
   const [pendingFiles, setPendingFiles] = React.useState<PendingFile[]>([]);
   const [deletingUrls, setDeletingUrls] = React.useState<Set<string>>(new Set());
+  // Estat per renomenar attachments
+  const [editingUrl, setEditingUrl] = React.useState<string | null>(null);
+  const [editingName, setEditingName] = React.useState<string>('');
 
   // Textos i18n
   const texts = {
@@ -230,6 +234,45 @@ export function ExpenseAttachmentsDropzone({
   }, []);
 
   // ---------------------------------------------------------------------------
+  // RENAME HANDLER
+  // ---------------------------------------------------------------------------
+
+  const handleStartRename = React.useCallback((attachment: OffBankAttachment) => {
+    setEditingUrl(attachment.url);
+    // Treure l'extensió per editar només el nom
+    const nameParts = attachment.name.split('.');
+    const ext = nameParts.length > 1 ? nameParts.pop() : '';
+    const baseName = nameParts.join('.');
+    setEditingName(baseName);
+  }, []);
+
+  const handleCancelRename = React.useCallback(() => {
+    setEditingUrl(null);
+    setEditingName('');
+  }, []);
+
+  const handleSaveRename = React.useCallback((attachment: OffBankAttachment) => {
+    if (!editingName.trim()) {
+      handleCancelRename();
+      return;
+    }
+
+    // Recuperar l'extensió original
+    const nameParts = attachment.name.split('.');
+    const ext = nameParts.length > 1 ? nameParts.pop() : '';
+    const newName = ext ? `${editingName.trim()}.${ext}` : editingName.trim();
+
+    // Actualitzar l'attachment amb el nou nom
+    const updatedAttachments = attachments.map(a =>
+      a.url === attachment.url ? { ...a, name: newName } : a
+    );
+
+    onAttachmentsChange(updatedAttachments);
+    setEditingUrl(null);
+    setEditingName('');
+  }, [attachments, editingName, onAttachmentsChange]);
+
+  // ---------------------------------------------------------------------------
   // RENDER
   // ---------------------------------------------------------------------------
 
@@ -314,41 +357,107 @@ export function ExpenseAttachmentsDropzone({
         <div className="space-y-2">
           {attachments.map((attachment) => {
             const isDeleting = deletingUrls.has(attachment.url);
+            const isEditing = editingUrl === attachment.url;
+
             return (
               <div
                 key={attachment.url}
                 className="flex items-center gap-2 p-2 bg-muted/30 rounded-md text-sm"
               >
                 {getFileIcon(attachment.contentType)}
-                <a
-                  href={attachment.url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex-1 truncate text-primary hover:underline"
-                  onClick={(e) => e.stopPropagation()}
-                >
-                  {attachment.name}
-                </a>
-                <span className="text-xs text-muted-foreground">
-                  {formatFileSize(attachment.size)}
-                </span>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  className="h-6 w-6 p-0"
-                  disabled={isDeleting || disabled}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleDelete(attachment);
-                  }}
-                >
-                  {isDeleting ? (
-                    <Loader2 className="h-3 w-3 animate-spin" />
-                  ) : (
-                    <X className="h-3 w-3" />
-                  )}
-                </Button>
+
+                {isEditing ? (
+                  // Mode edició
+                  <>
+                    <Input
+                      type="text"
+                      value={editingName}
+                      onChange={(e) => setEditingName(e.target.value)}
+                      className="h-6 flex-1 text-sm"
+                      autoFocus
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          handleSaveRename(attachment);
+                        } else if (e.key === 'Escape') {
+                          handleCancelRename();
+                        }
+                      }}
+                      onClick={(e) => e.stopPropagation()}
+                    />
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      className="h-6 w-6 p-0 text-green-600 hover:text-green-700"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleSaveRename(attachment);
+                      }}
+                    >
+                      <Check className="h-3 w-3" />
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      className="h-6 w-6 p-0 text-muted-foreground hover:text-foreground"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleCancelRename();
+                      }}
+                    >
+                      <XCircle className="h-3 w-3" />
+                    </Button>
+                  </>
+                ) : (
+                  // Mode visualització
+                  <>
+                    <a
+                      href={attachment.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex-1 truncate text-primary hover:underline"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      {attachment.name}
+                    </a>
+                    <span className="text-xs text-muted-foreground">
+                      {formatFileSize(attachment.size)}
+                    </span>
+                    {!disabled && (
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        className="h-6 w-6 p-0 text-muted-foreground hover:text-foreground"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleStartRename(attachment);
+                        }}
+                        title="Renomenar"
+                      >
+                        <Pencil className="h-3 w-3" />
+                      </Button>
+                    )}
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      className="h-6 w-6 p-0"
+                      disabled={isDeleting || disabled}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleDelete(attachment);
+                      }}
+                    >
+                      {isDeleting ? (
+                        <Loader2 className="h-3 w-3 animate-spin" />
+                      ) : (
+                        <X className="h-3 w-3" />
+                      )}
+                    </Button>
+                  </>
+                )}
               </div>
             );
           })}

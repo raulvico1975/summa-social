@@ -7,8 +7,9 @@ import * as React from 'react';
 import Link from 'next/link';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { useUnifiedExpenseFeed, useProjects, useSaveExpenseLink, useProjectBudgetLines, useUpdateOffBankExpense } from '@/hooks/use-project-module';
-import { doc, updateDoc } from 'firebase/firestore';
-import { useFirebase } from '@/firebase/provider';
+import { doc, updateDoc, getDoc } from 'firebase/firestore';
+import { useFirebase, useStorage } from '@/firebase/provider';
+import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { useOrgUrl, useCurrentOrganization } from '@/hooks/organization-provider';
 import { useToast } from '@/hooks/use-toast';
 import { trackUX } from '@/lib/ux/trackUX';
@@ -45,7 +46,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import { AlertCircle, RefreshCw, ChevronRight, FolderPlus, Check, MoreHorizontal, Split, X, Plus, Landmark, Globe, ArrowLeft, FolderKanban, Filter, Pencil, Trash2, Search, Circle } from 'lucide-react';
+import { AlertCircle, RefreshCw, ChevronRight, FolderPlus, Check, MoreHorizontal, Split, X, Plus, Landmark, Globe, ArrowLeft, FolderKanban, Filter, Pencil, Trash2, Search, Circle, Upload } from 'lucide-react';
 import {
   Tooltip,
   TooltipContent,
@@ -54,9 +55,10 @@ import {
 import { Input } from '@/components/ui/input';
 import { formatDateDMY } from '@/lib/normalize';
 import { AssignmentEditor } from '@/components/project-module/assignment-editor';
-import type { ExpenseStatus, UnifiedExpenseWithLink, Project, ExpenseAssignment, BudgetLine } from '@/lib/project-module-types';
+import type { ExpenseStatus, UnifiedExpenseWithLink, Project, ExpenseAssignment, BudgetLine, OffBankAttachment } from '@/lib/project-module-types';
 import { useTranslations } from '@/i18n';
 import { OffBankExpenseModal } from '@/components/project-module/add-off-bank-expense-modal';
+import { buildDocumentFilename } from '@/lib/build-document-filename';
 
 function formatAmount(amount: number): string {
   return new Intl.NumberFormat('ca-ES', {
@@ -360,6 +362,87 @@ function QuickAssignPopover({
   );
 }
 
+// Component per a fila amb suport drag & drop de documents
+interface DroppableExpenseRowProps {
+  expense: UnifiedExpenseWithLink;
+  children: React.ReactNode;
+  onUploadDocument: (expense: UnifiedExpenseWithLink, file: File) => Promise<void>;
+  isUploading: boolean;
+  isSelected: boolean;
+}
+
+const ACCEPTED_TYPES = [
+  'application/pdf',
+  'image/jpeg',
+  'image/png',
+  'image/gif',
+  'image/webp',
+  'application/msword',
+  'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+  'application/vnd.ms-excel',
+  'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+];
+
+function DroppableExpenseRow({
+  expense,
+  children,
+  onUploadDocument,
+  isUploading,
+  isSelected,
+}: DroppableExpenseRowProps) {
+  const [isDragging, setIsDragging] = React.useState(false);
+
+  const handleDragOver = React.useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (!isUploading) {
+      setIsDragging(true);
+    }
+  }, [isUploading]);
+
+  const handleDragLeave = React.useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+  }, []);
+
+  const handleDrop = React.useCallback(async (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+
+    if (isUploading) return;
+
+    const files = Array.from(e.dataTransfer.files);
+    const validFile = files.find(f =>
+      ACCEPTED_TYPES.includes(f.type) || f.type.startsWith('image/')
+    );
+
+    if (validFile) {
+      await onUploadDocument(expense, validFile);
+    }
+  }, [expense, onUploadDocument, isUploading]);
+
+  return (
+    <TableRow
+      className={`group hover:bg-muted/50 transition-colors ${isSelected ? 'bg-muted/30' : ''} ${isDragging ? 'bg-primary/10 ring-2 ring-primary ring-inset' : ''}`}
+      onDragOver={handleDragOver}
+      onDragLeave={handleDragLeave}
+      onDrop={handleDrop}
+    >
+      {children}
+      {isDragging && (
+        <td className="absolute inset-0 flex items-center justify-center bg-primary/5 pointer-events-none z-10">
+          <div className="flex items-center gap-2 text-primary font-medium">
+            <Upload className="h-5 w-5" />
+            <span>Deixa anar per pujar</span>
+          </div>
+        </td>
+      )}
+    </TableRow>
+  );
+}
+
 export default function ExpensesInboxPage() {
   const { t } = useTranslations();
   const ep = t.projectModule.expensesPage;
@@ -368,6 +451,7 @@ export default function ExpensesInboxPage() {
   const { buildUrl } = useOrgUrl();
   const { organizationId } = useCurrentOrganization();
   const { toast } = useToast();
+  const storage = useStorage();
 
   // Llegir filtres de query params
   const projectIdFilter = searchParams.get('projectId');
@@ -384,6 +468,8 @@ export default function ExpensesInboxPage() {
 
   // Estat per controlar loading d'eliminació de document
   const [deletingDocTxId, setDeletingDocTxId] = React.useState<string | null>(null);
+  // Estat per controlar uploading de document per drag & drop
+  const [uploadingDocTxId, setUploadingDocTxId] = React.useState<string | null>(null);
 
   // Track page open
   React.useEffect(() => {
@@ -630,6 +716,76 @@ export default function ExpensesInboxPage() {
       setDeletingDocTxId(null);
     }
   };
+
+  // Handler per pujar document via drag & drop
+  const handleUploadDocument = React.useCallback(async (expense: UnifiedExpenseWithLink, file: File) => {
+    if (!organizationId) return;
+
+    const txId = expense.expense.txId;
+    setUploadingDocTxId(txId);
+
+    try {
+      // Generar nom automàtic basat en data i descripció de la despesa
+      const fileName = buildDocumentFilename({
+        dateISO: expense.expense.date,
+        concept: expense.expense.description || 'document',
+        originalName: file.name,
+      });
+
+      if (expense.expense.source === 'offBank') {
+        // Off-bank: afegir a attachments[]
+        const offBankId = txId.replace('off_', '');
+        const storagePath = `organizations/${organizationId}/offBankExpenses/${offBankId}/${fileName}`;
+        const storageRef = ref(storage, storagePath);
+        const uploadResult = await uploadBytes(storageRef, file);
+        const downloadURL = await getDownloadURL(uploadResult.ref);
+
+        const newAttachment: OffBankAttachment = {
+          url: downloadURL,
+          name: fileName,
+          contentType: file.type,
+          size: file.size,
+          uploadedAt: new Date().toISOString().split('T')[0],
+        };
+
+        // Afegir al array existent (o crear-ne un de nou)
+        const existingAttachments = expense.expense.attachments ?? [];
+        await updateOffBankExpense(offBankId, {
+          attachments: [...existingAttachments, newAttachment],
+        });
+      } else {
+        // Bank: actualitzar document (objecte amb url, name, storagePath)
+        const storagePath = `organizations/${organizationId}/transactions/${txId}/${fileName}`;
+        const storageRef = ref(storage, storagePath);
+        const uploadResult = await uploadBytes(storageRef, file);
+        const downloadURL = await getDownloadURL(uploadResult.ref);
+
+        const txRef = doc(firestore, 'organizations', organizationId, 'transactions', txId);
+        await updateDoc(txRef, {
+          document: {
+            url: downloadURL,
+            name: fileName,
+            storagePath: storagePath,
+          },
+        });
+      }
+
+      await refresh();
+      trackUX('expenses.uploadDocument', { txId, source: expense.expense.source });
+      toast({
+        title: 'Document pujat',
+        description: file.name,
+      });
+    } catch (err) {
+      toast({
+        variant: 'destructive',
+        title: ep.toastError,
+        description: err instanceof Error ? err.message : 'Error pujant document',
+      });
+    } finally {
+      setUploadingDocTxId(null);
+    }
+  }, [organizationId, storage, firestore, updateOffBankExpense, refresh, toast, t, ep]);
 
   // Handler per des-assignar completament (amb confirmació)
   const handleUnassign = async (txId: string) => {
@@ -908,11 +1064,15 @@ export default function ExpensesInboxPage() {
               filteredExpenses.map((item) => {
                 const { expense, status, assignedAmount } = item;
                 const isSelected = selectedIds.has(expense.txId);
+                const isUploading = uploadingDocTxId === expense.txId;
 
                 return (
-                  <TableRow
+                  <DroppableExpenseRow
                     key={expense.txId}
-                    className={`group hover:bg-muted/50 ${isSelected ? 'bg-muted/30' : ''}`}
+                    expense={item}
+                    onUploadDocument={handleUploadDocument}
+                    isUploading={isUploading}
+                    isSelected={isSelected}
                   >
                     <TableCell>
                       <Checkbox
@@ -933,7 +1093,9 @@ export default function ExpensesInboxPage() {
                       )}
                     </TableCell>
                     <TableCell className="text-center">
-                      {deletingDocTxId === expense.txId ? (
+                      {isUploading ? (
+                        <RefreshCw className="h-3 w-3 animate-spin text-primary inline-block" />
+                      ) : deletingDocTxId === expense.txId ? (
                         <RefreshCw className="h-3 w-3 animate-spin text-muted-foreground inline-block" />
                       ) : expense.documentUrl ? (
                         <div className="inline-flex items-center gap-0.5">
@@ -1034,7 +1196,7 @@ export default function ExpensesInboxPage() {
                         )}
                       </div>
                     </TableCell>
-                  </TableRow>
+                  </DroppableExpenseRow>
                 );
               })
             )}

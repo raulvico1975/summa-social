@@ -255,6 +255,8 @@ export default function ProjectBudgetPage() {
   const { budgetLines, isLoading: linesLoading, error: linesError, refresh: refreshLines } = useProjectBudgetLines(projectId);
   const { expenseLinks, isLoading: linksLoading } = useProjectExpenseLinks(projectId);
   const { expenses: allExpenses, isLoading: expensesLoading } = useUnifiedExpenseFeed({ projectId });
+  // Pool complet per al modal de justificació (inclou TOTES les despeses, no només les linkades al projecte)
+  const { expenses: allExpensesForModal, isLoading: allExpensesLoading } = useUnifiedExpenseFeed();
   const { save, remove, isSaving } = useSaveBudgetLine();
   const { saveFx, isSaving: isSavingFx } = useSaveProjectFx();
 
@@ -891,7 +893,7 @@ export default function ProjectBudgetPage() {
         project={project}
         budgetLines={budgetLines}
         expenseLinks={expenseLinks}
-        allExpenses={allExpenses}
+        allExpenses={allExpensesForModal}
         onSuccess={async () => {
           await refreshLines();
         }}
