@@ -1,6 +1,6 @@
 # ═══════════════════════════════════════════════════════════════════════════════
 # SUMMA SOCIAL - REFERÈNCIA COMPLETA DEL PROJECTE
-# Versió 1.12 - Desembre 2025
+# Versió 1.14 - Desembre 2025
 # ═══════════════════════════════════════════════════════════════════════════════
 
 
@@ -626,6 +626,71 @@ Quan hi ha devolucions sense assignar, apareix un banner vermell:
 
 El botó "Revisar" filtra la taula per mostrar només devolucions pendents.
 
+### 3.2.7 Reorganització UX de la Pàgina de Moviments (NOU v1.14)
+
+Nova estructura visual en 3 franges horitzontals:
+
+| Franja | Contingut |
+|--------|-----------|
+| **Header** | Títol + Botó "Nou moviment" + Botó "Filtres" (Sheet) + Menú opcions taula |
+| **Barra filtres actius** | Pills de filtres aplicats + botó "Neteja filtres" |
+| **Taula** | Taula de moviments amb tot l'espai vertical disponible |
+
+**Nous components:**
+
+| Component | Fitxer | Descripció |
+|-----------|--------|------------|
+| `FiltersSheet` | `src/components/transactions/components/FiltersSheet.tsx` | Sheet lateral amb tots els filtres consolidats (tipus, origen, compte) |
+| `TableOptionsMenu` | `src/components/transactions/components/TableOptionsMenu.tsx` | Menú desplegable amb opcions de visualització (ocultar desglose remeses, mostrar columna projecte) |
+
+**Comportament:**
+- El botó "Filtres" obre un Sheet lateral des de la dreta
+- Els filtres aplicats apareixen com a "pills" sota el header
+- El menú d'opcions (icona ⋮ o Settings) controla opcions de la taula
+
+### 3.2.8 Drag & Drop de Documents (NOU v1.14)
+
+Permet adjuntar documents arrossegant fitxers directament sobre una fila de moviment.
+
+**Funcionament:**
+- Arrossegar un fitxer sobre qualsevol fila activa el mode "drop"
+- La fila mostra un overlay amb "Deixa anar per adjuntar"
+- En deixar anar, el fitxer es puja a Storage i s'assigna al moviment
+
+**Tipus acceptats:**
+- PDF, imatges (JPG, PNG, GIF, WEBP), XML
+- Màxim 15MB per fitxer
+
+**Components:**
+
+| Component | Fitxer | Descripció |
+|-----------|--------|------------|
+| `RowDropTarget` | `src/components/files/row-drop-target.tsx` | Wrapper que afegeix drag & drop a files de taula |
+| `attachDocumentToTransaction` | `src/lib/files/attach-document.ts` | Helper per pujar fitxer a Storage i actualitzar Firestore |
+
+**Traduccions:** `movements.table.dropToAttach` (CA/ES/FR)
+
+### 3.2.9 Indicadors Visuals de Remeses Processades (NOU v1.14)
+
+Les remeses de donacions processades es mostren amb un estil visual distintiu per evitar confusió.
+
+**Objectiu:** L'usuari ha de poder identificar en 1 segon que una remesa ja està processada i no requereix acció.
+
+**Canvis visuals:**
+
+| Element | Abans | Ara |
+|---------|-------|-----|
+| **Badge concepte** | `👁 303/303 quotes` (gris) | `✓ Remesa processada · 303/303 quotes` (verd esmeralda) |
+| **Fons fila** | Cap | `bg-emerald-50/30` (verd molt suau) |
+| **Columna Contacte** | Botó "Assignar" | Guió "—" (no aplica) |
+
+**Detalls tècnics:**
+- Detecció: `tx.isRemittance && tx.remittanceType !== 'returns'`
+- Icona: `CheckCircle2` (lucide-react)
+- Colors: `border-emerald-300 text-emerald-700 bg-emerald-50`
+
+**Traduccions:** `movements.table.remittanceProcessedLabel`, `remittanceNotApplicable` (CA/ES/FR)
+
 
 ## 3.3 DIVISOR DE REMESES (INGRESSOS)
 
@@ -682,6 +747,43 @@ parentTransactionId: '{id_remesa}'
 
 ### 3.3.6 Guardar Configuració
 Es pot guardar el mapejat per banc (Triodos, La Caixa, Santander, etc.)
+
+### 3.3.7 Modal de Revisió Redissenyat (NOU v1.14)
+
+El modal de revisió de remeses ("Revisió de la Remesa") s'ha redissenyat per millorar la usabilitat amb taules denses.
+
+**Problemes resolts:**
+- Modal massa estret per a taules amb moltes columnes
+- Scroll confús (modal vs taula)
+- Targetes de resum ocupaven massa espai
+
+**Nou disseny:**
+
+| Característica | Valor |
+|----------------|-------|
+| **Amplada** | 95% del viewport, màxim 1400px |
+| **Alçada** | 90% del viewport |
+| **Layout** | Flexbox vertical amb 3 zones fixes |
+
+**Zones del modal:**
+
+| Zona | Contingut | Comportament |
+|------|-----------|--------------|
+| **Header fix** | Títol + Badges de resum compactes + Opcions de creació de donants | No fa scroll |
+| **Taula central** | Taula amb tots els donants/quotes | Scroll independent amb header sticky |
+| **Footer fix** | Resum d'accions + Botons (Enrere, Processar) | No fa scroll |
+
+**Badges de resum compactes:**
+Els 4 blocs de resum (Total, Trobats, Nous amb DNI, Nous sense DNI) ara són badges en línia:
+
+```
+[303 donacions] [✓ 280 trobats] [+ 15 nous amb DNI] [⚠ 8 sense DNI] | [1.234,56€ / 1.234,56€]
+```
+
+**Implementació:**
+- Classes: `w-[95vw] max-w-[1400px] h-[90vh] flex flex-col`
+- Taula: `flex-1 min-h-0 overflow-auto`
+- Header taula: `sticky top-0 bg-background z-10`
 
 
 ## 3.4 GESTIÓ DE DEVOLUCIONS (NOU v1.8)
@@ -1433,6 +1535,33 @@ function ensureStripeInDescription(desc: string | null, email: string): string {
 
 ## 3.10 MÒDUL PROJECTES — JUSTIFICACIÓ ASSISTIDA (NOU v1.10)
 
+### 3.10.0 Navegació del Mòdul Projectes (NOU v1.14)
+
+El mòdul Projectes té una entrada única al sidebar amb un submenu col·lapsable.
+
+**Estructura del sidebar:**
+
+| Nivell | Element | Ruta |
+|--------|---------|------|
+| Pare | **Projectes** (icona FolderKanban) | — |
+| └─ Fill 1 | Gestió de projectes | `/dashboard/project-module/projects` |
+| └─ Fill 2 | Assignació de despeses | `/dashboard/project-module/expenses` |
+
+**Component:** `Collapsible` de shadcn/ui
+
+**Comportament:**
+- Per defecte tancat
+- S'obre/tanca fent clic al pare
+- Icona `ChevronRight` rota 90° quan obert
+- Estil suau per a subelements (mida i color reduïts)
+
+**Fitxer:** `src/components/dashboard-sidebar-content.tsx`
+
+**Traduccions:**
+- `sidebar.projectModule`: "Projectes"
+- `sidebar.projectModuleManage`: "Gestió de projectes"
+- `sidebar.projectModuleExpenses`: "Assignació de despeses"
+
 ### 3.10.1 Objectiu del mòdul
 
 Permetre a una persona tècnica quadrar la justificació econòmica d'un projecte (ACCD, Fons Català, etc.) a partir de les despeses reals existents, sense treballar en Excel, sense preconfiguracions rígides i sense modificar dades fins a la validació final.
@@ -1942,6 +2071,7 @@ Camps afegits v1.10:
 | **1.11** | **Des 2025** | **Captura de despeses de terreny (quickMode, pujada ràpida <10s), i18n Francès complet (fr.ts), selector d'idioma amb 3 opcions** |
 | **1.12** | **Des 2025** | **Multicomptes bancaris (CRUD, filtre per compte, traçabilitat bankAccountId), filtre per origen (source), diàleg crear donant a importador devolucions, mode bulk NET** |
 | **1.13** | **Des 2025** | **Selecció múltiple a Moviments (checkboxes + accions en bloc), assignar/treure categoria massivament, batched writes Firestore (50 ops/batch), traduccions CA/ES/FR** |
+| **1.14** | **Des 2025** | **Reorganització UX Moviments (FiltersSheet, TableOptionsMenu), drag & drop documents, indicadors visuals remeses processades, modal RemittanceSplitter redissenyat (wide layout), sidebar Projectes col·lapsable** |
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
