@@ -2,7 +2,7 @@
 
 import * as React from 'react';
 import { Button } from '@/components/ui/button';
-import { FileUp, Loader2, ChevronDown, Trash2, ListPlus } from 'lucide-react';
+import { FileUp, Loader2, ChevronDown, Trash2, ListPlus, AlertTriangle } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import type { Transaction, AnyContact } from '@/lib/data';
 import { detectReturnType } from '@/lib/data';
@@ -19,6 +19,21 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import {
   AlertDialog,
   AlertDialogAction,
   AlertDialogCancel,
@@ -28,10 +43,13 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
+import { Label } from '@/components/ui/label';
 import { useCollection, useFirebase, useMemoFirebase } from '@/firebase';
 import { collection, writeBatch, doc } from 'firebase/firestore';
-import { useCurrentOrganization } from '@/hooks/organization-provider';
+import { useCurrentOrganization, useOrgUrl } from '@/hooks/organization-provider';
 import { useTranslations } from '@/i18n';
+import { useBankAccounts } from '@/hooks/use-bank-accounts';
+import Link from 'next/link';
 
 
 type ImportMode = 'append' | 'replace';
@@ -70,12 +88,27 @@ export function TransactionImporter({ existingTransactions }: TransactionImporte
   const [isImporting, setIsImporting] = React.useState(false);
   const [importMode, setImportMode] = React.useState<ImportMode>('append');
   const [isAlertOpen, setIsAlertOpen] = React.useState(false);
+  const [isAccountDialogOpen, setIsAccountDialogOpen] = React.useState(false);
   const [pendingFile, setPendingFile] = React.useState<File | null>(null);
+  const [selectedBankAccountId, setSelectedBankAccountId] = React.useState<string | null>(null);
   const { toast } = useToast();
   const { log } = useAppLog();
   const { firestore } = useFirebase();
   const { organizationId } = useCurrentOrganization();
+  const { buildUrl } = useOrgUrl();
   const { t } = useTranslations();
+
+  // Bank accounts
+  const { bankAccounts, defaultAccountId, isLoading: isLoadingBankAccounts } = useBankAccounts();
+
+  // Pre-seleccionar el compte per defecte quan es carreguen
+  React.useEffect(() => {
+    if (defaultAccountId && !selectedBankAccountId) {
+      setSelectedBankAccountId(defaultAccountId);
+    } else if (bankAccounts.length > 0 && !selectedBankAccountId) {
+      setSelectedBankAccountId(bankAccounts[0].id);
+    }
+  }, [defaultAccountId, bankAccounts, selectedBankAccountId]);
 
   const contactsQuery = useMemoFirebase(
     () => organizationId ? collection(firestore, 'organizations', organizationId, 'contacts') : null,
@@ -86,32 +119,41 @@ export function TransactionImporter({ existingTransactions }: TransactionImporte
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
-        if (importMode === 'replace') {
-            setPendingFile(file);
-            setIsAlertOpen(true);
-        } else {
-            startImportProcess(file, 'append');
-        }
+        setPendingFile(file);
+        // Sempre mostrar el diàleg de selecció de compte
+        setIsAccountDialogOpen(true);
     }
     // Reset file input to allow re-uploading the same file
     event.target.value = '';
   };
 
+  const handleAccountSelected = () => {
+    setIsAccountDialogOpen(false);
+    if (!pendingFile) return;
+
+    if (importMode === 'replace') {
+        setIsAlertOpen(true);
+    } else {
+        startImportProcess(pendingFile, 'append', selectedBankAccountId);
+        setPendingFile(null);
+    }
+  };
+
   const handleConfirmReplace = () => {
     setIsAlertOpen(false);
     if (pendingFile) {
-        startImportProcess(pendingFile, 'replace');
+        startImportProcess(pendingFile, 'replace', selectedBankAccountId);
         setPendingFile(null);
     }
   }
-  
-  const startImportProcess = (file: File, mode: ImportMode) => {
+
+  const startImportProcess = (file: File, mode: ImportMode, bankAccountId: string | null) => {
     setIsImporting(true);
-    log(`Iniciando importación en modo: ${mode}`);
+    log(`Iniciando importación en modo: ${mode}, cuenta bancaria: ${bankAccountId || 'ninguna'}`);
     if (file.name.endsWith('.csv')) {
-        parseCsv(file, mode);
+        parseCsv(file, mode, bankAccountId);
     } else if (file.name.endsWith('.xlsx')) {
-        parseXlsx(file, mode);
+        parseXlsx(file, mode, bankAccountId);
     } else {
         toast({
             variant: 'destructive',
@@ -122,7 +164,7 @@ export function TransactionImporter({ existingTransactions }: TransactionImporte
     }
   }
   
-  const parseXlsx = (file: File, mode: ImportMode) => {
+  const parseXlsx = (file: File, mode: ImportMode, bankAccountId: string | null) => {
     const reader = new FileReader();
     reader.onload = (e) => {
       try {
@@ -131,11 +173,11 @@ export function TransactionImporter({ existingTransactions }: TransactionImporte
         const sheetName = workbook.SheetNames[0];
         const worksheet = workbook.Sheets[sheetName];
         const json = XLSX.utils.sheet_to_json(worksheet, { header: 1, defval: "" });
-        
+
         if (!json || json.length === 0) {
             throw new Error(t.importers.transaction.errors.emptyXlsx);
         }
-        
+
         let headerRowIndex = -1;
         for(let i = 0; i < json.length; i++) {
             if (isHeaderRow(json[i] as any[])) {
@@ -147,10 +189,10 @@ export function TransactionImporter({ existingTransactions }: TransactionImporte
         if (headerRowIndex === -1) {
              throw new Error(t.importers.transaction.errors.headerNotFound);
         }
-        
+
         const header = (json[headerRowIndex] as string[]).map(h => String(h || '').trim());
         log(`Cabecera encontrada en la fila ${headerRowIndex + 1}: ${header.join(', ')}`);
-        
+
         const dateIndex = findColumnIndex(header, ['fecha operación', 'fecha', 'data']);
         const conceptIndex = findColumnIndex(header, ['concepto', 'descripció', 'description']);
         const amountIndex = findColumnIndex(header, ['importe', 'import', 'amount', 'quantitat']);
@@ -171,7 +213,7 @@ export function TransactionImporter({ existingTransactions }: TransactionImporte
             Importe: row[amountIndex]
         }));
 
-        processParsedData(parsedData, mode);
+        processParsedData(parsedData, mode, bankAccountId);
       } catch (error: any) {
         console.error("Error processing XLSX data:", error);
         toast({
@@ -194,12 +236,12 @@ export function TransactionImporter({ existingTransactions }: TransactionImporte
     reader.readAsArrayBuffer(file);
   }
 
-  const parseCsv = (file: File, mode: ImportMode) => {
+  const parseCsv = (file: File, mode: ImportMode, bankAccountId: string | null) => {
     Papa.parse(file, {
       header: true,
       skipEmptyLines: true,
       complete: (results) => {
-        processParsedData(results.data, mode);
+        processParsedData(results.data, mode, bankAccountId);
       },
       error: (error) => {
         console.error("PapaParse error:", error);
@@ -213,14 +255,14 @@ export function TransactionImporter({ existingTransactions }: TransactionImporte
     });
   };
 
-  const processParsedData = async (data: any[], mode: ImportMode) => {
+  const processParsedData = async (data: any[], mode: ImportMode, bankAccountId: string | null) => {
      if (!organizationId) {
         toast({ variant: 'destructive', title: t.importers.transaction.errors.processingError, description: t.importers.transaction.errors.cannotIdentifyOrg });
         setIsImporting(false);
         return;
      }
     const existingTransactionKeys = new Set(existingTransactions.map(createTransactionKey));
-    log(`Iniciando procesamiento de ${data.length} filas.`);
+    log(`Iniciando procesamiento de ${data.length} filas con cuenta bancaria: ${bankAccountId || 'ninguna'}.`);
 
     try {
         const allParsedRows = data
@@ -279,6 +321,8 @@ export function TransactionImporter({ existingTransactions }: TransactionImporte
                 contactId: null,
                 contactType: undefined,
                 transactionType,
+                bankAccountId: bankAccountId ?? null,
+                source: 'bank' as const,
             } as Omit<Transaction, 'id'>;
         })
         .filter((tx): tx is Omit<Transaction, 'id'> => tx !== null);
@@ -513,6 +557,80 @@ export function TransactionImporter({ existingTransactions }: TransactionImporte
             </DropdownMenuContent>
         </DropdownMenu>
       </div>
+
+      {/* Diàleg de selecció de compte bancari */}
+      <Dialog open={isAccountDialogOpen} onOpenChange={(open) => {
+        setIsAccountDialogOpen(open);
+        if (!open) setPendingFile(null);
+      }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{t.settings.bankAccounts.selectAccount}</DialogTitle>
+            <DialogDescription>
+              {t.settings.bankAccounts.selectAccountRequired}
+            </DialogDescription>
+          </DialogHeader>
+
+          {isLoadingBankAccounts ? (
+            <div className="flex items-center justify-center py-4">
+              <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+            </div>
+          ) : bankAccounts.length === 0 ? (
+            <div className="flex flex-col items-center gap-4 py-4">
+              <div className="flex items-center gap-2 text-amber-600">
+                <AlertTriangle className="h-5 w-5" />
+                <span>{t.settings.bankAccounts.noAccountsWarning}</span>
+              </div>
+              <Button asChild variant="outline">
+                <Link href={buildUrl('/configuracion')}>
+                  {t.settings.bankAccounts.goToSettings}
+                </Link>
+              </Button>
+            </div>
+          ) : (
+            <>
+              <div className="grid gap-4 py-4">
+                <div className="grid grid-cols-4 items-center gap-4">
+                  <Label className="text-right">{t.settings.bankAccounts.name}</Label>
+                  <Select
+                    value={selectedBankAccountId ?? ''}
+                    onValueChange={(value) => setSelectedBankAccountId(value)}
+                  >
+                    <SelectTrigger className="col-span-3">
+                      <SelectValue placeholder={t.settings.bankAccounts.selectAccount} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {bankAccounts.map((account) => (
+                        <SelectItem key={account.id} value={account.id}>
+                          {account.name}
+                          {account.isDefault && ` (${t.settings.bankAccounts.default})`}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+              <DialogFooter>
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    setIsAccountDialogOpen(false);
+                    setPendingFile(null);
+                  }}
+                >
+                  {t.common.cancel}
+                </Button>
+                <Button
+                  onClick={handleAccountSelected}
+                  disabled={!selectedBankAccountId}
+                >
+                  {t.common.continue}
+                </Button>
+              </DialogFooter>
+            </>
+          )}
+        </DialogContent>
+      </Dialog>
 
        <AlertDialog open={isAlertOpen} onOpenChange={setIsAlertOpen}>
         <AlertDialogContent>

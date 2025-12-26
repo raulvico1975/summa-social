@@ -896,6 +896,7 @@ export function RemittanceSplitter({
             projectId: transaction.projectId ?? null,
             source: 'remittance',
             parentTransactionId: transaction.id,
+            bankAccountId: transaction.bankAccountId ?? null,
           };
           if (contactId) {
             (newTxData as any).contactType = 'donor';

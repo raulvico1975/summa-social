@@ -1,5 +1,11 @@
 // src/lib/project-module-suggestions.ts
 // Utilitats per generar propostes automàtiques de despeses per quadrar partides
+//
+// CRITERI v1.12:
+// - Pool per defecte: offBank + dins dates projecte + unassigned/partial
+// - Scoring: família categoria + keywords descripció + import encaixa
+// - Sense penalització per "sense document" ni scoring per contrapart
+// - Etiquetes informatives: sense document, categoria Revisar, sense contrapart
 
 import type { UnifiedExpense, BudgetLine } from './project-module-types';
 
@@ -10,7 +16,12 @@ import type { UnifiedExpense, BudgetLine } from './project-module-types';
 export interface ScoredExpense {
   expense: UnifiedExpense;
   score: number;
-  hasDocument: boolean;
+  // Etiquetes informatives (no afecten scoring)
+  labels: {
+    noDocument: boolean;
+    categoryPending: boolean;  // categoria = "Revisar" o null
+    noCounterparty: boolean;
+  };
   assignedToOtherProject: string | null;
 }
 
@@ -23,7 +34,7 @@ export interface SuggestionProposal {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
-// GRUPS HEURÍSTICS PER MATCHING
+// GRUPS HEURÍSTICS PER MATCHING (famílies de categoria)
 // ═══════════════════════════════════════════════════════════════════════════
 
 const CATEGORY_FAMILIES: Record<string, string[]> = {
@@ -35,7 +46,7 @@ const CATEGORY_FAMILIES: Record<string, string[]> = {
   personal: [
     'nòmina', 'nòmines', 'salari', 'salaris', 'rrhh', 'sou', 'sous',
     'seguretat social', 'ss', 'retribució', 'remuneració', 'personal',
-    'contracte', 'treballador', 'empleat',
+    'contracte', 'treballador', 'empleat', 'salary', 'nomina',
   ],
   serveis: [
     'consultoria', 'assessorament', 'assessoria', 'serveis', 'honoraris',
@@ -56,59 +67,67 @@ const CATEGORY_FAMILIES: Record<string, string[]> = {
 };
 
 // ═══════════════════════════════════════════════════════════════════════════
-// SCORING
+// SCORING (només criteris defensables)
 // ═══════════════════════════════════════════════════════════════════════════
 
 /**
  * Calcula un score de "ressonància" entre una despesa i una partida.
- * Com més alt el score, més probable que la despesa encaixi a la partida.
+ *
+ * CRITERI v1.12:
+ * 1. Coincidència semàntica per família de categoria (+3)
+ * 2. Keywords de descripció/concepte (+2)
+ * 3. Import encaixa amb dèficit (+1)
+ *
+ * NO afecta scoring:
+ * - Sense document (només etiqueta informativa)
+ * - Contrapart (massa ambigu)
+ * - Assignada a altres projectes (ja filtrat al pool)
  */
 export function scoreExpenseForLine(
   expense: UnifiedExpense,
   line: BudgetLine,
   options?: {
     deficit?: number;
-    hasDocument?: boolean;
-    assignedToOtherProject?: boolean;
   }
 ): number {
   let score = 0;
 
-  // Textos a cercar
-  const expenseTexts = [
-    expense.categoryName?.toLowerCase() ?? '',
-    expense.counterpartyName?.toLowerCase() ?? '',
-    expense.description?.toLowerCase() ?? '',
-  ].join(' ');
+  // Textos de la despesa (categoria + descripció)
+  const categoryText = expense.categoryName?.toLowerCase() ?? '';
+  const descriptionText = expense.description?.toLowerCase() ?? '';
+  const expenseTexts = `${categoryText} ${descriptionText}`;
 
+  // Textos de la partida
   const lineTexts = [
     line.name.toLowerCase(),
     line.code?.toLowerCase() ?? '',
   ].join(' ');
 
-  // +3 per coincidència de categoria amb família
+  // Detectar si categoria és "Revisar" o buida (no útil per matching)
+  const categoryIsUseful = categoryText &&
+    !categoryText.includes('revisar') &&
+    categoryText !== 'sense categoria';
+
+  // +3 per coincidència de categoria amb família (si categoria és útil)
+  if (categoryIsUseful) {
+    for (const [family, keywords] of Object.entries(CATEGORY_FAMILIES)) {
+      const lineHasFamily = keywords.some(kw => lineTexts.includes(kw)) || lineTexts.includes(family);
+      const expenseHasFamily = keywords.some(kw => categoryText.includes(kw));
+
+      if (lineHasFamily && expenseHasFamily) {
+        score += 3;
+        break; // Només una família
+      }
+    }
+  }
+
+  // +2 per coincidència de keywords de descripció amb la partida
+  // Això rescata despeses amb categoria "Revisar" però descripció informativa
   for (const [family, keywords] of Object.entries(CATEGORY_FAMILIES)) {
     const lineHasFamily = keywords.some(kw => lineTexts.includes(kw)) || lineTexts.includes(family);
-    const expenseHasFamily = keywords.some(kw => expenseTexts.includes(kw));
+    const descriptionHasKeyword = keywords.some(kw => descriptionText.includes(kw));
 
-    if (lineHasFamily && expenseHasFamily) {
-      score += 3;
-      break; // Només una família
-    }
-  }
-
-  // +2 per coincidència de counterpartyName amb keywords de la partida
-  const lineWords = lineTexts.split(/\s+/).filter(w => w.length > 2);
-  for (const word of lineWords) {
-    if (expense.counterpartyName?.toLowerCase().includes(word)) {
-      score += 2;
-      break;
-    }
-  }
-
-  // +2 per coincidència de description amb keywords de la partida
-  for (const word of lineWords) {
-    if (expense.description?.toLowerCase().includes(word)) {
+    if (lineHasFamily && descriptionHasKeyword) {
       score += 2;
       break;
     }
@@ -119,17 +138,26 @@ export function scoreExpenseForLine(
     score += 1;
   }
 
-  // −3 si assignada a altre projecte (risc de desquadrar)
-  if (options?.assignedToOtherProject) {
-    score -= 3;
-  }
-
-  // −2 si sense document (potser no justificable)
-  if (options?.hasDocument === false) {
-    score -= 2;
-  }
+  // NO penalitzem:
+  // - Sense document (ara és etiqueta informativa)
+  // - Contrapart (massa ambigu)
+  // - Assignada a altres projectes (filtrat al pool)
 
   return score;
+}
+
+/**
+ * Genera les etiquetes informatives per una despesa.
+ * Aquestes etiquetes NO afecten el scoring, només ajuden l'usuari a decidir.
+ */
+export function getExpenseLabels(expense: UnifiedExpense): ScoredExpense['labels'] {
+  const categoryText = expense.categoryName?.toLowerCase() ?? '';
+
+  return {
+    noDocument: !expense.documentUrl,
+    categoryPending: !categoryText || categoryText.includes('revisar') || categoryText === 'sense categoria',
+    noCounterparty: !expense.counterpartyName,
+  };
 }
 
 // ═══════════════════════════════════════════════════════════════════════════

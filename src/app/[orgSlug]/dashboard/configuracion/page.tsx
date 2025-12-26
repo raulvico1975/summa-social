@@ -6,6 +6,7 @@ import { OrganizationSettings } from '@/components/organization-settings';
 import { LanguageSelector } from '@/components/language-selector';
 import { MembersManager } from '@/components/members-manager';
 import { FeatureFlagsSettings } from '@/components/feature-flags-settings';
+import { BankAccountsManager } from '@/components/bank-accounts/bank-accounts-manager';
 import { DangerZone } from '@/components/danger-zone';
 import { useCurrentOrganization } from '@/hooks/organization-provider';
 import { useTranslations } from '@/i18n';
@@ -69,6 +70,9 @@ export default function SettingsPage() {
           {t.settings.permissionDenied}
         </div>
       )}
+
+      {/* Gestió de comptes bancaris (només admins) */}
+      {canManageOrganization && <BankAccountsManager />}
 
       {/* Zona de Perill - només SuperAdmin */}
       {isSuperAdmin && <DangerZone />}

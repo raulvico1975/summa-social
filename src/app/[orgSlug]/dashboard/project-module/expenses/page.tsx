@@ -6,7 +6,9 @@
 import * as React from 'react';
 import Link from 'next/link';
 import { useSearchParams, useRouter } from 'next/navigation';
-import { useUnifiedExpenseFeed, useProjects, useSaveExpenseLink, useProjectBudgetLines } from '@/hooks/use-project-module';
+import { useUnifiedExpenseFeed, useProjects, useSaveExpenseLink, useProjectBudgetLines, useUpdateOffBankExpense } from '@/hooks/use-project-module';
+import { doc, updateDoc } from 'firebase/firestore';
+import { useFirebase } from '@/firebase/provider';
 import { useOrgUrl, useCurrentOrganization } from '@/hooks/organization-provider';
 import { useToast } from '@/hooks/use-toast';
 import { trackUX } from '@/lib/ux/trackUX';
@@ -44,6 +46,11 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { AlertCircle, RefreshCw, ChevronRight, FolderPlus, Check, MoreHorizontal, Split, X, Plus, Landmark, Globe, ArrowLeft, FolderKanban, Filter, Pencil, Trash2, Search, Circle } from 'lucide-react';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
 import { Input } from '@/components/ui/input';
 import { formatDateDMY } from '@/lib/normalize';
 import { AssignmentEditor } from '@/components/project-module/assignment-editor';
@@ -372,6 +379,11 @@ export default function ExpensesInboxPage() {
   });
   const { projects, isLoading: projectsLoading, error: projectsError } = useProjects(true);
   const { save, remove, isSaving } = useSaveExpenseLink();
+  const { update: updateOffBankExpense } = useUpdateOffBankExpense();
+  const { firestore } = useFirebase();
+
+  // Estat per controlar loading d'eliminació de document
+  const [deletingDocTxId, setDeletingDocTxId] = React.useState<string | null>(null);
 
   // Track page open
   React.useEffect(() => {
@@ -583,6 +595,40 @@ export default function ExpensesInboxPage() {
   const handleEditOffBank = (expense: UnifiedExpenseWithLink) => {
     trackUX('expenses.offBank.edit.open', { expenseId: expense.expense.txId });
     setEditOffBankExpense(expense);
+  };
+
+  // Handler per eliminar document/attachments d'una despesa
+  const handleDeleteDocument = async (expense: UnifiedExpenseWithLink) => {
+    if (!organizationId) return;
+
+    const txId = expense.expense.txId;
+    setDeletingDocTxId(txId);
+
+    try {
+      if (expense.expense.source === 'offBank') {
+        // Off-bank: eliminar attachments (posar array buit)
+        const offBankId = txId.replace('off_', '');
+        await updateOffBankExpense(offBankId, { attachments: [] });
+      } else {
+        // Bank: actualitzar document a null
+        const txRef = doc(firestore, 'organizations', organizationId, 'transactions', txId);
+        await updateDoc(txRef, { document: null });
+      }
+
+      await refresh();
+      trackUX('expenses.deleteDocument', { txId, source: expense.expense.source });
+      toast({
+        title: t.movements?.table?.documentDeleted ?? 'Document eliminat',
+      });
+    } catch (err) {
+      toast({
+        variant: 'destructive',
+        title: ep.toastError,
+        description: err instanceof Error ? err.message : 'Error eliminant document',
+      });
+    } finally {
+      setDeletingDocTxId(null);
+    }
   };
 
   // Handler per des-assignar completament (amb confirmació)
@@ -887,16 +933,35 @@ export default function ExpensesInboxPage() {
                       )}
                     </TableCell>
                     <TableCell className="text-center">
-                      {expense.documentUrl ? (
-                        <button
-                          type="button"
-                          onClick={() => window.open(expense.documentUrl!, '_blank', 'noopener,noreferrer')}
-                          className="cursor-pointer hover:scale-110 transition-transform"
-                          title={ep.tooltipOpenDocument}
-                          aria-label={ep.tooltipOpenDocument}
-                        >
-                          <Circle className="h-2.5 w-2.5 fill-green-500 text-green-500 inline-block" />
-                        </button>
+                      {deletingDocTxId === expense.txId ? (
+                        <RefreshCw className="h-3 w-3 animate-spin text-muted-foreground inline-block" />
+                      ) : expense.documentUrl ? (
+                        <div className="inline-flex items-center gap-0.5">
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <button
+                                type="button"
+                                onClick={() => window.open(expense.documentUrl!, '_blank', 'noopener,noreferrer')}
+                                className="inline-flex"
+                              >
+                                <Circle className="h-2.5 w-2.5 fill-green-500 text-green-500" />
+                              </button>
+                            </TooltipTrigger>
+                            <TooltipContent>{ep.tooltipOpenDocument}</TooltipContent>
+                          </Tooltip>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <button
+                                type="button"
+                                onClick={() => handleDeleteDocument(item)}
+                                className="inline-flex text-muted-foreground hover:text-destructive transition-colors"
+                              >
+                                <Trash2 className="h-2.5 w-2.5" />
+                              </button>
+                            </TooltipTrigger>
+                            <TooltipContent>{t.movements?.table?.deleteDocument ?? 'Eliminar document'}</TooltipContent>
+                          </Tooltip>
+                        </div>
                       ) : (
                         <Circle className="h-2.5 w-2.5 text-muted-foreground/30 inline-block" />
                       )}

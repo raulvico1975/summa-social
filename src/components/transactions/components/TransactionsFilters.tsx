@@ -34,6 +34,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import type { TransactionUrlFilter, SourceFilter } from '@/lib/constants';
+import type { BankAccount } from '@/lib/data';
 import {
   Select,
   SelectContent,
@@ -85,6 +86,10 @@ interface TransactionsFiltersProps {
   // Source filter
   sourceFilter: SourceFilter;
   onSourceFilterChange: (filter: SourceFilter) => void;
+  // Bank account filter
+  bankAccountFilter: string;
+  onBankAccountFilterChange: (accountId: string) => void;
+  bankAccounts: BankAccount[];
   // Bulk mode (SuperAdmin only)
   isSuperAdmin?: boolean;
   isBulkMode?: boolean;
@@ -104,6 +109,7 @@ interface TransactionsFiltersProps {
     searchPlaceholder: string;
     hideRemittanceItems: string;
     importReturnsFile?: string;
+    allAccounts: string;
   };
 }
 
@@ -133,6 +139,9 @@ export const TransactionsFilters = React.memo(function TransactionsFilters({
   onOpenReturnImporter,
   sourceFilter,
   onSourceFilterChange,
+  bankAccountFilter,
+  onBankAccountFilterChange,
+  bankAccounts,
   isSuperAdmin,
   isBulkMode,
   onBulkModeChange,
@@ -342,6 +351,23 @@ export const TransactionsFilters = React.memo(function TransactionsFilters({
             {t.hideRemittanceItems}
           </Label>
         </div>
+
+        {/* Bank account filter */}
+        {bankAccounts.length > 0 && (
+          <Select value={bankAccountFilter} onValueChange={onBankAccountFilterChange}>
+            <SelectTrigger className="w-[160px] h-9">
+              <SelectValue placeholder={t.allAccounts} />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="__all__">{t.allAccounts}</SelectItem>
+              {bankAccounts.map((account) => (
+                <SelectItem key={account.id} value={account.id}>
+                  {account.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        )}
 
         {/* Source filter */}
         <Select value={sourceFilter} onValueChange={(v) => onSourceFilterChange(v as SourceFilter)}>

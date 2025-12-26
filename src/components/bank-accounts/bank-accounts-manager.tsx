@@ -1,0 +1,392 @@
+'use client';
+
+import * as React from 'react';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+  DialogClose,
+} from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Badge } from '@/components/ui/badge';
+import { PlusCircle, Edit, Star, StarOff, Power, PowerOff, Loader2 } from 'lucide-react';
+import { useBankAccounts } from '@/hooks/use-bank-accounts';
+import { useToast } from '@/hooks/use-toast';
+import { useTranslations } from '@/i18n';
+import { useCurrentOrganization } from '@/hooks/organization-provider';
+import type { BankAccount } from '@/lib/data';
+import type { CreateBankAccountData, UpdateBankAccountData } from '@/lib/bank-accounts';
+
+interface FormData {
+  name: string;
+  iban: string;
+  bankName: string;
+}
+
+const EMPTY_FORM: FormData = {
+  name: '',
+  iban: '',
+  bankName: '',
+};
+
+export function BankAccountsManager() {
+  const { userRole } = useCurrentOrganization();
+  const { t } = useTranslations();
+  const { toast } = useToast();
+  const {
+    bankAccounts,
+    allBankAccounts,
+    isLoading,
+    create,
+    update,
+    setDefault,
+    deactivate,
+    activate,
+  } = useBankAccounts();
+
+  const canEdit = userRole === 'admin';
+
+  const [isDialogOpen, setIsDialogOpen] = React.useState(false);
+  const [editingAccount, setEditingAccount] = React.useState<BankAccount | null>(null);
+  const [formData, setFormData] = React.useState<FormData>(EMPTY_FORM);
+  const [isSaving, setIsSaving] = React.useState(false);
+
+  // Mostrar també els inactius si hi ha
+  const inactiveAccounts = React.useMemo(
+    () => allBankAccounts.filter((acc) => acc.isActive === false),
+    [allBankAccounts]
+  );
+
+  const handleOpenChange = (open: boolean) => {
+    setIsDialogOpen(open);
+    if (!open) {
+      setEditingAccount(null);
+      setFormData(EMPTY_FORM);
+    }
+  };
+
+  const handleAddNew = () => {
+    setEditingAccount(null);
+    setFormData(EMPTY_FORM);
+    setIsDialogOpen(true);
+  };
+
+  const handleEdit = (account: BankAccount) => {
+    setEditingAccount(account);
+    setFormData({
+      name: account.name,
+      iban: account.iban ?? '',
+      bankName: account.bankName ?? '',
+    });
+    setIsDialogOpen(true);
+  };
+
+  const handleFormChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setFormData({ ...formData, [e.target.id]: e.target.value });
+  };
+
+  const handleSave = async () => {
+    if (!formData.name.trim()) {
+      toast({
+        variant: 'destructive',
+        title: t.common.error,
+        description: t.settings.bankAccounts.errorNameEmpty,
+      });
+      return;
+    }
+
+    setIsSaving(true);
+
+    try {
+      if (editingAccount) {
+        const updateData: UpdateBankAccountData = {
+          name: formData.name.trim(),
+          iban: formData.iban.trim() || null,
+          bankName: formData.bankName.trim() || null,
+        };
+        await update(editingAccount.id, updateData);
+        toast({
+          title: t.settings.bankAccounts.accountUpdated,
+          description: t.settings.bankAccounts.accountUpdatedDescription(formData.name),
+        });
+      } else {
+        const createData: CreateBankAccountData = {
+          name: formData.name.trim(),
+          iban: formData.iban.trim() || null,
+          bankName: formData.bankName.trim() || null,
+          isDefault: bankAccounts.length === 0, // Primer compte és default
+        };
+        await create(createData);
+        toast({
+          title: t.settings.bankAccounts.accountCreated,
+          description: t.settings.bankAccounts.accountCreatedDescription(formData.name),
+        });
+      }
+      handleOpenChange(false);
+    } catch (err) {
+      console.error('[BankAccountsManager] Error saving:', err);
+      toast({
+        variant: 'destructive',
+        title: t.common.error,
+        description: t.common.dbConnectionError,
+      });
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleSetDefault = async (account: BankAccount) => {
+    try {
+      await setDefault(account.id);
+      toast({
+        title: t.settings.bankAccounts.defaultSet,
+        description: t.settings.bankAccounts.defaultSetDescription(account.name),
+      });
+    } catch (err) {
+      console.error('[BankAccountsManager] Error setting default:', err);
+      toast({
+        variant: 'destructive',
+        title: t.common.error,
+        description: t.common.dbConnectionError,
+      });
+    }
+  };
+
+  const handleToggleActive = async (account: BankAccount) => {
+    try {
+      if (account.isActive === false) {
+        await activate(account.id);
+        toast({
+          title: t.settings.bankAccounts.accountActivated,
+          description: t.settings.bankAccounts.accountActivatedDescription(account.name),
+        });
+      } else {
+        await deactivate(account.id);
+        toast({
+          title: t.settings.bankAccounts.accountDeactivated,
+          description: t.settings.bankAccounts.accountDeactivatedDescription(account.name),
+        });
+      }
+    } catch (err) {
+      console.error('[BankAccountsManager] Error toggling active:', err);
+      toast({
+        variant: 'destructive',
+        title: t.common.error,
+        description: t.common.dbConnectionError,
+      });
+    }
+  };
+
+  const dialogTitle = editingAccount
+    ? t.settings.bankAccounts.editTitle
+    : t.settings.bankAccounts.addTitle;
+  const dialogDescription = editingAccount
+    ? t.settings.bankAccounts.editDescription
+    : t.settings.bankAccounts.addDescription;
+
+  return (
+    <Dialog open={isDialogOpen} onOpenChange={handleOpenChange}>
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between">
+          <div>
+            <CardTitle>{t.settings.bankAccounts.title}</CardTitle>
+            <CardDescription>{t.settings.bankAccounts.description}</CardDescription>
+          </div>
+          {canEdit && (
+            <DialogTrigger asChild>
+              <Button size="sm" onClick={handleAddNew}>
+                <PlusCircle className="mr-2 h-4 w-4" />
+                {t.settings.bankAccounts.addAccount}
+              </Button>
+            </DialogTrigger>
+          )}
+        </CardHeader>
+        <CardContent>
+          {isLoading ? (
+            <div className="flex items-center justify-center py-8">
+              <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+            </div>
+          ) : bankAccounts.length === 0 && inactiveAccounts.length === 0 ? (
+            <div className="text-center py-8 text-muted-foreground">
+              {t.settings.bankAccounts.noAccounts}
+            </div>
+          ) : (
+            <div className="rounded-md border">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>{t.settings.bankAccounts.name}</TableHead>
+                    <TableHead>{t.settings.bankAccounts.iban}</TableHead>
+                    <TableHead>{t.settings.bankAccounts.bankName}</TableHead>
+                    <TableHead>{t.settings.bankAccounts.status}</TableHead>
+                    {canEdit && <TableHead className="text-right">{t.settings.actions}</TableHead>}
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {/* Comptes actius */}
+                  {bankAccounts.map((account) => (
+                    <TableRow key={account.id}>
+                      <TableCell className="font-medium">
+                        {account.name}
+                        {account.isDefault && (
+                          <Badge variant="secondary" className="ml-2">
+                            {t.settings.bankAccounts.default}
+                          </Badge>
+                        )}
+                      </TableCell>
+                      <TableCell className="font-mono text-sm">
+                        {account.iban || '-'}
+                      </TableCell>
+                      <TableCell>{account.bankName || '-'}</TableCell>
+                      <TableCell>
+                        <Badge variant="default">{t.settings.bankAccounts.active}</Badge>
+                      </TableCell>
+                      {canEdit && (
+                        <TableCell className="text-right">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => handleEdit(account)}
+                            title={t.common.edit}
+                          >
+                            <Edit className="h-4 w-4" />
+                          </Button>
+                          {!account.isDefault && (
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => handleSetDefault(account)}
+                              title={t.settings.bankAccounts.setAsDefault}
+                            >
+                              <Star className="h-4 w-4" />
+                            </Button>
+                          )}
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => handleToggleActive(account)}
+                            title={t.settings.bankAccounts.deactivate}
+                            className="text-orange-500 hover:text-orange-600"
+                          >
+                            <PowerOff className="h-4 w-4" />
+                          </Button>
+                        </TableCell>
+                      )}
+                    </TableRow>
+                  ))}
+                  {/* Comptes inactius */}
+                  {inactiveAccounts.map((account) => (
+                    <TableRow key={account.id} className="opacity-60">
+                      <TableCell className="font-medium">{account.name}</TableCell>
+                      <TableCell className="font-mono text-sm">
+                        {account.iban || '-'}
+                      </TableCell>
+                      <TableCell>{account.bankName || '-'}</TableCell>
+                      <TableCell>
+                        <Badge variant="outline">{t.settings.bankAccounts.inactive}</Badge>
+                      </TableCell>
+                      {canEdit && (
+                        <TableCell className="text-right">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => handleEdit(account)}
+                            title={t.common.edit}
+                          >
+                            <Edit className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => handleToggleActive(account)}
+                            title={t.settings.bankAccounts.activate}
+                            className="text-green-500 hover:text-green-600"
+                          >
+                            <Power className="h-4 w-4" />
+                          </Button>
+                        </TableCell>
+                      )}
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {canEdit && (
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{dialogTitle}</DialogTitle>
+            <DialogDescription>{dialogDescription}</DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="name" className="text-right">
+                {t.settings.bankAccounts.name} *
+              </Label>
+              <Input
+                id="name"
+                value={formData.name}
+                onChange={handleFormChange}
+                className="col-span-3"
+                placeholder={t.settings.bankAccounts.namePlaceholder}
+              />
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="iban" className="text-right">
+                {t.settings.bankAccounts.iban}
+              </Label>
+              <Input
+                id="iban"
+                value={formData.iban}
+                onChange={handleFormChange}
+                className="col-span-3 font-mono"
+                placeholder="ES00 0000 0000 0000 0000 0000"
+              />
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="bankName" className="text-right">
+                {t.settings.bankAccounts.bankName}
+              </Label>
+              <Input
+                id="bankName"
+                value={formData.bankName}
+                onChange={handleFormChange}
+                className="col-span-3"
+                placeholder={t.settings.bankAccounts.bankNamePlaceholder}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <DialogClose asChild>
+              <Button variant="outline" disabled={isSaving}>
+                {t.common.cancel}
+              </Button>
+            </DialogClose>
+            <Button onClick={handleSave} disabled={isSaving}>
+              {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              {t.settings.save}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      )}
+    </Dialog>
+  );
+}

@@ -36,6 +36,7 @@ import {
 } from '@/components/ui/collapsible';
 import {
   AlertTriangle,
+  AlertCircle,
   CheckCircle,
   TrendingDown,
   TrendingUp,
@@ -70,6 +71,7 @@ import type {
 import {
   scoreExpenseForLine,
   findBestCombinations,
+  getExpenseLabels,
   type ScoredExpense,
   type SuggestionProposal,
 } from '@/lib/project-module-suggestions';
@@ -108,7 +110,12 @@ interface CandidateExpense {
   currentBudgetLineName: string | null;
   currentAssignmentAmount: number; // Import assignat a la partida actual (valor absolut)
   matchScore: number;
-  hasDocument: boolean;
+  // Etiquetes informatives (NO afecten scoring, només UI)
+  labels: {
+    noDocument: boolean;
+    categoryPending: boolean;
+    noCounterparty: boolean;
+  };
 }
 
 interface ExpandSearchOptions {
@@ -450,8 +457,12 @@ export function BalanceProjectModal({
           }
         }
 
-        // Determinar si té document
-        const hasDocument = !!exp.documentUrl || exp.source === 'bank'; // bank sempre té traçabilitat
+        // Generar etiquetes informatives (NO afecten scoring)
+        const labels = getExpenseLabels(exp);
+        // Sobreescriure noDocument si és bank (sempre té traçabilitat)
+        if (exp.source === 'bank') {
+          labels.noDocument = false;
+        }
 
         return {
           expense: exp,
@@ -462,7 +473,7 @@ export function BalanceProjectModal({
           currentBudgetLineName: thisProjectAssignment?.budgetLineName ?? null,
           currentAssignmentAmount: thisProjectAssignment ? Math.abs(thisProjectAssignment.amountEUR) : 0,
           matchScore,
-          hasDocument,
+          labels,
         };
       });
   }, [allExpenses, project, budgetLines, selectedLineId]);
@@ -614,11 +625,12 @@ export function BalanceProjectModal({
     }
 
     // Ordenar per score + proximitat a l'import necessari
+    // CRITERI v1.12: NO penalitzem "sense document" al scoring, només altres projectes
     const neededAmount = Math.abs(selectedDiag.difference);
     filtered = filtered.sort((a, b) => {
-      // Primer per score (les que tenen document i no estan en altres projectes pugen)
-      const scoreA = a.matchScore - (a.hasDocument ? 0 : 2) - (a.assignedToOtherProject ? 3 : 0);
-      const scoreB = b.matchScore - (b.hasDocument ? 0 : 2) - (b.assignedToOtherProject ? 3 : 0);
+      // Primer per score (només penalitzem si està en altres projectes)
+      const scoreA = a.matchScore - (a.assignedToOtherProject ? 3 : 0);
+      const scoreB = b.matchScore - (b.assignedToOtherProject ? 3 : 0);
       if (scoreB !== scoreA) {
         return scoreB - scoreA;
       }
@@ -644,7 +656,7 @@ export function BalanceProjectModal({
 
     const withBank = baseFiltered.filter(c => c.expense.source === 'bank' && !c.assignedToOtherProject).length;
     const fromOtherProjects = baseFiltered.filter(c => !!c.assignedToOtherProject).length;
-    const withoutDoc = baseFiltered.filter(c => !c.hasDocument && !c.assignedToOtherProject).length;
+    const withoutDoc = baseFiltered.filter(c => c.labels.noDocument && !c.assignedToOtherProject).length;
     const total = baseFiltered.length;
 
     return { withBank, fromOtherProjects, withoutDoc, total };
@@ -664,16 +676,15 @@ export function BalanceProjectModal({
     if (!selectedLine) return [];
 
     // Construir pool de despeses candidates amb score
+    // CRITERI v1.12: scoring simplificat (sense penalització per document/contrapart)
     const scoredPool: ScoredExpense[] = candidatesForSelectedLine
       .filter(c => !simulatedMoves.some(m => m.txId === c.expense.txId)) // Excloure ja simulades
       .map(c => ({
         expense: c.expense,
         score: scoreExpenseForLine(c.expense, selectedLine, {
           deficit,
-          hasDocument: c.hasDocument,
-          assignedToOtherProject: !!c.assignedToOtherProject,
         }),
-        hasDocument: c.hasDocument,
+        labels: c.labels,
         assignedToOtherProject: c.assignedToOtherProject,
       }));
 
@@ -1325,9 +1336,14 @@ export function BalanceProjectModal({
                                         <span className="text-sm font-medium truncate">
                                           {candidate.expense.counterpartyName ?? candidate.expense.description ?? 'Sense descripció'}
                                         </span>
-                                        {!candidate.hasDocument && (
-                                          <span title="Sense document">
+                                        {candidate.labels.noDocument && (
+                                          <span title="Comprovant no adjuntat">
                                             <FileWarning className="h-3 w-3 text-amber-500 shrink-0" />
+                                          </span>
+                                        )}
+                                        {candidate.labels.categoryPending && (
+                                          <span title="Categoria pendent de revisar">
+                                            <AlertCircle className="h-3 w-3 text-orange-400 shrink-0" />
                                           </span>
                                         )}
                                         {candidate.assignedToOtherProject && (

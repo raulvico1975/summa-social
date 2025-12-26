@@ -62,6 +62,7 @@ interface BankTransaction {
   amount: number;
   date?: string;
   description?: string;
+  bankAccountId?: string | null;
 }
 
 interface DonorLookupResult {
@@ -445,6 +446,8 @@ export function StripeImporter({
           parentTransactionId: bankTransaction.id,
           stripePaymentId: row.id,
           stripeTransferId: selectedGroup.transferId,
+          // Heretar bankAccountId del pare
+          bankAccountId: bankTransaction.bankAccountId ?? null,
         };
 
         console.log(`[STRIPE IMPORT] 📝 Transaction data:`, {
@@ -481,6 +484,8 @@ export function StripeImporter({
           transactionType: 'fee',
           parentTransactionId: bankTransaction.id,
           stripeTransferId: selectedGroup.transferId,
+          // Heretar bankAccountId del pare
+          bankAccountId: bankTransaction.bankAccountId ?? null,
         };
 
         console.log('[STRIPE IMPORT] 📝 Fee transaction data:', {

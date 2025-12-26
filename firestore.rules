@@ -148,6 +148,15 @@ service cloud.firestore {
       }
 
       // ─────────────────────────────────────────────────────────────────────
+      // COMPTES BANCARIS
+      // ─────────────────────────────────────────────────────────────────────
+
+      match /bankAccounts/{bankAccountId} {
+        allow read: if isMemberOf(orgId) || isSuperAdmin();
+        allow create, update, delete: if isAdminOf(orgId) || isSuperAdmin();
+      }
+
+      // ─────────────────────────────────────────────────────────────────────
       // CONFIGURACIONS DE REMESES
       // ─────────────────────────────────────────────────────────────────────
 

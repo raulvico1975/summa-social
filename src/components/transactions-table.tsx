@@ -78,6 +78,7 @@ import { TransactionRow } from '@/components/transactions/components/Transaction
 import { TransactionsFilters, TableFilter } from '@/components/transactions/components/TransactionsFilters';
 import { DateFilter, type DateFilterValue } from '@/components/date-filter';
 import { useTransactionFilters } from '@/hooks/use-transaction-filters';
+import { useBankAccounts } from '@/hooks/use-bank-accounts';
 import { MISSION_TRANSFER_CATEGORY_KEY, TRANSACTION_URL_FILTERS, type TransactionUrlFilter, type SourceFilter } from '@/lib/constants';
 
 interface TransactionsTableProps {
@@ -161,6 +162,11 @@ export function TransactionsTable({ initialDateFilter = null }: TransactionsTabl
   // Filtre per source
   const [sourceFilter, setSourceFilter] = React.useState<SourceFilter>('all');
 
+  // Filtre per compte bancari
+  const [bankAccountFilter, setBankAccountFilter] = React.useState<string>('__all__');
+
+  // Bank accounts
+  const { bankAccounts } = useBankAccounts();
 
   // Col·leccions
   const transactionsCollection = useMemoFirebase(
@@ -548,6 +554,11 @@ export function TransactionsTable({ initialDateFilter = null }: TransactionsTabl
       }
     }
 
+    // Filtre per compte bancari
+    if (bankAccountFilter !== '__all__') {
+      result = result.filter(tx => tx.bankAccountId === bankAccountFilter);
+    }
+
     // Filtre de cerca intel·ligent
     if (searchQuery.trim()) {
       const query = searchQuery.toLowerCase().trim();
@@ -600,12 +611,12 @@ export function TransactionsTable({ initialDateFilter = null }: TransactionsTabl
       const dateB = new Date(b.date).getTime();
       return sortDateAsc ? dateA - dateB : dateB - dateA;
     });
-  }, [transactions, tableFilter, expensesWithoutDoc, returnTransactions, uncategorizedTransactions, noContactTransactions, donationsNoContactTransactions, sortDateAsc, searchQuery, contactMap, projectMap, getCategoryDisplayName, hideRemittanceItems, contactIdFilter, donorMembershipMap, sourceFilter]);
+  }, [transactions, tableFilter, expensesWithoutDoc, returnTransactions, uncategorizedTransactions, noContactTransactions, donationsNoContactTransactions, sortDateAsc, searchQuery, contactMap, projectMap, getCategoryDisplayName, hideRemittanceItems, contactIdFilter, donorMembershipMap, sourceFilter, bankAccountFilter]);
 
   // ═══════════════════════════════════════════════════════════════════════════
   // RESUM FILTRAT
   // ═══════════════════════════════════════════════════════════════════════════
-  const hasActiveFilter = tableFilter !== 'all' || searchQuery.trim() !== '' || dateFilter.type !== 'all' || contactIdFilter !== null || sourceFilter !== 'all';
+  const hasActiveFilter = tableFilter !== 'all' || searchQuery.trim() !== '' || dateFilter.type !== 'all' || contactIdFilter !== null || sourceFilter !== 'all' || bankAccountFilter !== '__all__';
 
   const filteredSummary = React.useMemo(() => {
     if (!hasActiveFilter || !allTransactions) return null;
@@ -819,6 +830,7 @@ export function TransactionsTable({ initialDateFilter = null }: TransactionsTabl
     searchPlaceholder: t.movements.table.searchPlaceholder,
     hideRemittanceItems: t.movements.table.hideRemittanceItems,
     importReturnsFile: t.movements.table.uploadBankFile,
+    allAccounts: t.settings.bankAccounts.allAccounts,
   }), [t]);
 
   return (
@@ -856,6 +868,9 @@ export function TransactionsTable({ initialDateFilter = null }: TransactionsTabl
           onOpenReturnImporter={() => setIsReturnImporterOpen(true)}
           sourceFilter={sourceFilter}
           onSourceFilterChange={setSourceFilter}
+          bankAccountFilter={bankAccountFilter}
+          onBankAccountFilterChange={setBankAccountFilter}
+          bankAccounts={bankAccounts}
           isSuperAdmin={isSuperAdmin}
           isBulkMode={isBulkMode}
           onBulkModeChange={handleBulkModeChange}
@@ -1243,6 +1258,7 @@ export function TransactionsTable({ initialDateFilter = null }: TransactionsTabl
             amount: stripeTransactionToSplit.amount,
             date: stripeTransactionToSplit.date,
             description: stripeTransactionToSplit.description,
+            bankAccountId: stripeTransactionToSplit.bankAccountId ?? null,
           }}
           lookupDonorByEmail={async (email: string) => {
             // Match per email (case-insensitive, exact)

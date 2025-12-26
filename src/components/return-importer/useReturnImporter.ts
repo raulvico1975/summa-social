@@ -1181,6 +1181,8 @@ export function useReturnImporter() {
               transactionType: 'return',
               description: ret.returnReason || group.originalTransaction.description || 'Devolució',
               createdAt: new Date().toISOString(),
+              // Heretar bankAccountId del pare
+              bankAccountId: group.originalTransaction.bankAccountId ?? null,
             };
 
             // Si té donant assignat, afegir contactId/contactType
@@ -1385,6 +1387,8 @@ export function useReturnImporter() {
               contactType: 'donor',
               emisorId: ret.matchedDonor!.id,
               emisorName: ret.matchedDonor!.name,
+              // Heretar bankAccountId del pare
+              bankAccountId: group.originalTransaction.bankAccountId ?? null,
             };
 
             await addDoc(

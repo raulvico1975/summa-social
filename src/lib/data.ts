@@ -145,6 +145,17 @@ export type Transaction = {
    * Permet relacionar donacions i comissions del mateix payout
    */
   stripeTransferId?: string | null;
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // CAMPS PER MULTICOMPTES BANCARIS
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  /**
+   * ID del compte bancari associat a aquesta transacció
+   * - null: transaccions antigues sense compte assignat
+   * - string: ID del compte bancari
+   */
+  bankAccountId?: string | null;
 };
 
 export type Category = {
@@ -487,20 +498,39 @@ export const RETURN_PATTERNS = {
  */
 export function detectReturnType(description: string): TransactionType | null {
   const normalized = description.toLowerCase();
-  
+
   // Primer comprovar si és una comissió (més específic)
   for (const pattern of RETURN_PATTERNS.returnFee) {
     if (pattern.test(normalized)) {
       return 'return_fee';
     }
   }
-  
+
   // Després comprovar si és una devolució
   for (const pattern of RETURN_PATTERNS.return) {
     if (pattern.test(normalized)) {
       return 'return';
     }
   }
-  
+
   return null;
 }
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// TIPUS PER MULTICOMPTES BANCARIS
+// ═══════════════════════════════════════════════════════════════════════════════
+
+/**
+ * Representa un compte bancari d'una organització.
+ * S'emmagatzema a: organizations/{orgId}/bankAccounts/{bankAccountId}
+ */
+export type BankAccount = {
+  id: string;
+  name: string;                    // Nom identificatiu (obligatori)
+  iban: string | null;             // IBAN normalitzat (opcional)
+  bankName: string | null;         // Nom del banc (opcional)
+  isDefault: boolean | null;       // Compte per defecte
+  isActive: boolean | null;        // Compte actiu (per soft-delete)
+  createdAt: string;               // ISO date
+  updatedAt: string;               // ISO date
+};
