@@ -38,6 +38,7 @@ import {
   Loader2,
   ChevronDown,
   FileUp,
+  FileText,
   Trash2,
   MoreVertical,
   Edit,
@@ -431,7 +432,7 @@ export const TransactionRow = React.memo(function TransactionRow({
         {formatCurrencyEU(tx.amount)}
       </TableCell>
 
-      {/* Concept + Note + Badge */}
+      {/* Concept + Note + Badge + Mobile summary */}
       <TableCell className="py-1">
         <div className="space-y-0.5">
           <div className="flex items-center gap-1 flex-wrap">
@@ -473,7 +474,7 @@ export const TransactionRow = React.memo(function TransactionRow({
             )}
           </div>
           <div className="flex items-center gap-2">
-            <p className={`text-sm truncate max-w-[250px] ${isReturnedDonation ? 'text-gray-400' : ''}`} title={tx.description}>
+            <p className={`text-sm truncate max-w-[320px] ${isReturnedDonation ? 'text-gray-400' : ''}`} title={tx.description}>
               {tx.description}
             </p>
             {isFromStripe && (
@@ -486,11 +487,17 @@ export const TransactionRow = React.memo(function TransactionRow({
             note={tx.note}
             onSave={handleSetNote}
           />
+          {/* Mobile summary: categoria i contacte sota el concepte */}
+          <div className="md:hidden mt-1 text-xs text-muted-foreground flex items-center gap-1 flex-wrap">
+            <span className="truncate max-w-[120px]">{getCategoryDisplayName(tx.category) || 'Sense categoria'}</span>
+            <span className="text-muted-foreground/50">·</span>
+            <span className="truncate max-w-[120px]">{contactName || 'Sense contacte'}</span>
+          </div>
         </div>
       </TableCell>
 
-      {/* Contact */}
-      <TableCell className="py-1">
+      {/* Contact - hidden on mobile */}
+      <TableCell className="py-1 hidden md:table-cell">
         {/* Cas 1: Pare de remesa de devolucions - mostrar estat, NO "Assignar donant" */}
         {tx.isRemittance && tx.remittanceType === 'returns' ? (
           <div className="flex items-center gap-1">
@@ -597,8 +604,8 @@ export const TransactionRow = React.memo(function TransactionRow({
         )}
       </TableCell>
 
-      {/* Category */}
-      <TableCell className="py-1">
+      {/* Category - hidden on mobile */}
+      <TableCell className="py-1 hidden md:table-cell">
         <Popover open={isCategoryPopoverOpen} onOpenChange={setIsCategoryPopoverOpen}>
           <PopoverTrigger asChild>
             <Button
@@ -656,9 +663,9 @@ export const TransactionRow = React.memo(function TransactionRow({
         </Popover>
       </TableCell>
 
-      {/* Project */}
+      {/* Project - hidden on tablet and smaller */}
       {showProjectColumn ? (
-        <TableCell className="py-1">
+        <TableCell className="py-1 hidden lg:table-cell">
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               {projectName ? (
@@ -702,18 +709,19 @@ export const TransactionRow = React.memo(function TransactionRow({
       {/* Document */}
       <TableCell className="text-center py-1">
         {isDocumentLoading ? (
-          <Loader2 className="h-3 w-3 animate-spin mx-auto text-muted-foreground" />
+          <Loader2 className="h-4 w-4 animate-spin mx-auto text-muted-foreground" />
         ) : hasDocument ? (
-          <div className="inline-flex items-center gap-0.5">
+          <div className="inline-flex items-center gap-1">
             <Tooltip>
               <TooltipTrigger asChild>
                 <a
                   href={tx.document!}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="inline-flex"
+                  className="inline-flex items-center justify-center h-8 w-8 rounded-md hover:bg-accent transition-colors"
+                  aria-label={t.viewDocument}
                 >
-                  <Circle className="h-2.5 w-2.5 fill-green-500 text-green-500" />
+                  <FileText className="h-5 w-5 text-emerald-600" />
                 </a>
               </TooltipTrigger>
               <TooltipContent>{t.viewDocument}</TooltipContent>
@@ -722,9 +730,10 @@ export const TransactionRow = React.memo(function TransactionRow({
               <TooltipTrigger asChild>
                 <button
                   onClick={handleDeleteDocument}
-                  className="inline-flex text-muted-foreground hover:text-destructive transition-colors"
+                  className="inline-flex items-center justify-center h-6 w-6 rounded-md text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors"
+                  aria-label={t.deleteDocument}
                 >
-                  <Trash2 className="h-2.5 w-2.5" />
+                  <Trash2 className="h-3.5 w-3.5" />
                 </button>
               </TooltipTrigger>
               <TooltipContent>{t.deleteDocument}</TooltipContent>
@@ -735,9 +744,10 @@ export const TransactionRow = React.memo(function TransactionRow({
             <TooltipTrigger asChild>
               <button
                 onClick={handleAttachDocument}
-                className="inline-flex hover:scale-110 transition-transform"
+                className="inline-flex items-center justify-center h-8 w-8 rounded-md hover:bg-accent transition-colors"
+                aria-label={isExpense ? t.attachProof : t.attachDocument}
               >
-                <Circle className={`h-2.5 w-2.5 ${isExpense ? 'text-muted-foreground' : 'text-muted-foreground/30'}`} />
+                <FileText className={`h-5 w-5 ${isExpense ? 'text-muted-foreground/60' : 'text-muted-foreground/30'}`} />
               </button>
             </TooltipTrigger>
             <TooltipContent>

@@ -1278,8 +1278,8 @@ export function TransactionsTable({ initialDateFilter = null }: TransactionsTabl
       {/* ═══════════════════════════════════════════════════════════════════════
           TAULA DE TRANSACCIONS
           ═══════════════════════════════════════════════════════════════════════ */}
-      <div className="rounded-md border">
-        <Table>
+      <div className="rounded-md border overflow-x-auto">
+        <Table className="min-w-[1100px]">
           <TableHeader>
             <TableRow className="h-9">
               {/* Checkbox columna - només visible per admin/user */}
@@ -1298,7 +1298,7 @@ export function TransactionsTable({ initialDateFilter = null }: TransactionsTabl
                   />
                 </TableHead>
               )}
-              <TableHead className="w-[70px] py-2">
+              <TableHead className="w-[100px] py-2">
                 <button
                   onClick={() => setSortDateAsc(!sortDateAsc)}
                   className="flex items-center gap-1 hover:text-foreground transition-colors text-xs"
@@ -1311,17 +1311,17 @@ export function TransactionsTable({ initialDateFilter = null }: TransactionsTabl
                   )}
                 </button>
               </TableHead>
-              <TableHead className="text-right w-[85px] py-2">{t.movements.table.amount}</TableHead>
-              <TableHead className="max-w-[250px] py-2">{t.movements.table.concept}</TableHead>
-              <TableHead className="w-[120px] py-2">{t.movements.table.contact}</TableHead>
-              <TableHead className="w-[100px] py-2">{t.movements.table.category}</TableHead>
+              <TableHead className="text-right w-[110px] py-2">{t.movements.table.amount}</TableHead>
+              <TableHead className="min-w-[320px] py-2">{t.movements.table.concept}</TableHead>
+              <TableHead className="w-[140px] py-2 hidden md:table-cell">{t.movements.table.contact}</TableHead>
+              <TableHead className="w-[120px] py-2 hidden md:table-cell">{t.movements.table.category}</TableHead>
               {showProjectColumn && (
-                <TableHead className="w-[100px] py-2">
+                <TableHead className="w-[100px] py-2 hidden lg:table-cell">
                   {t.movements.table.project}
                 </TableHead>
               )}
-              <TableHead className="w-[40px] text-center py-2">Doc</TableHead>
-              <TableHead className="w-[40px] py-2"><span className="sr-only">{t.movements.table.actions}</span></TableHead>
+              <TableHead className="w-[56px] text-center py-2">Doc</TableHead>
+              <TableHead className="w-[48px] py-2"><span className="sr-only">{t.movements.table.actions}</span></TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>

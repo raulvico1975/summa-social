@@ -25,7 +25,7 @@ export default function MovimientosPage() {
   const { data: transactions, isLoading } = useCollection<Transaction>(transactionsQuery);
 
   return (
-    <div className="flex flex-col gap-6">
+    <div className="w-full flex flex-col gap-6">
       <div className="flex flex-col gap-4">
         <div>
           <h1 className="text-2xl font-bold tracking-tight font-headline">{t.movements.title}</h1>
@@ -39,7 +39,9 @@ export default function MovimientosPage() {
       {isLoading ? (
         <p>{t.common.loading}</p>
       ) : (
-        <TransactionsTable initialDateFilter={initialPeriodFilter ?? undefined} />
+        <div className="w-full overflow-x-auto">
+          <TransactionsTable initialDateFilter={initialPeriodFilter ?? undefined} />
+        </div>
       )}
     </div>
   );
