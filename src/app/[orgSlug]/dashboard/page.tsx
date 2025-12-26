@@ -32,8 +32,8 @@ import Papa from 'papaparse';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from '@/components/ui/sheet';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { toPeriodQuery } from '@/lib/period-query';
-import { FeatureAnnouncementBanner } from '@/components/dashboard/feature-announcement-banner';
-import { WorkingOnCard } from '@/components/dashboard/working-on-card';
+import { useNotificationToast } from '@/components/notifications/use-notification-toast';
+import { DASHBOARD_NOTIFICATIONS } from '@/lib/notifications';
 
 interface TaxObligation {
   id: string;
@@ -231,6 +231,9 @@ export default function DashboardPage() {
   const shareModalTexts = React.useMemo(() => t.dashboard.shareModal, [t]);
   const shareModalExports = shareModalTexts.exports;
   const { buildUrl } = useOrgUrl();
+
+  // Toast de notificacions (només un cop per sessió)
+  useNotificationToast({ notifications: DASHBOARD_NOTIFICATIONS });
 
   const transactionsQuery = useMemoFirebase(
     () => organizationId ? collection(firestore, 'organizations', organizationId, 'transactions') : null,
@@ -927,11 +930,6 @@ ${t.dashboard.generatedWith}`;
        <div>
         <h1 className="text-2xl font-bold tracking-tight font-headline">{t.dashboard.title}</h1>
         <p className="text-muted-foreground">{t.dashboard.description}</p>
-      </div>
-
-      <div className="space-y-3">
-        <FeatureAnnouncementBanner />
-        <WorkingOnCard />
       </div>
 
       <div className="flex items-center justify-between gap-4">
