@@ -50,11 +50,13 @@ import {
   Ban,
   Eye,
   AlertCircle,
+  CheckCircle2,
 } from 'lucide-react';
 import type { Transaction, Category, Project, ContactType } from '@/lib/data';
 import { formatCurrencyEU } from '@/lib/normalize';
 import { InlineNoteEditor } from '@/components/transactions/InlineNoteEditor';
 import { Checkbox } from '@/components/ui/checkbox';
+import { RowDropTarget } from '@/components/files/row-drop-target';
 
 // =============================================================================
 // TYPES
@@ -75,6 +77,9 @@ interface TransactionRowProps {
   // Bulk selection (opcional, només si canBulkEdit)
   isSelected?: boolean;
   onToggleSelect?: (id: string) => void;
+  // Drag & drop document (opcional, només si canEdit)
+  onDropFile?: (txId: string, file: File) => Promise<void>;
+  dropHint?: string;
   // Handlers
   onSetNote: (txId: string, note: string) => void;
   onSetCategory: (txId: string, category: string) => void;
@@ -125,6 +130,8 @@ interface TransactionRowProps {
     delete: string;
     viewRemittanceDetail: string;
     remittanceQuotes: string;
+    remittanceProcessedLabel: string;
+    remittanceNotApplicable: string;
   };
   getCategoryDisplayName: (category: string | null | undefined) => string;
 }
@@ -167,6 +174,8 @@ export const TransactionRow = React.memo(function TransactionRow({
   isCategoryLoading,
   isSelected,
   onToggleSelect,
+  onDropFile,
+  dropHint,
   onSetNote,
   onSetCategory,
   onSetContact,
@@ -361,14 +370,27 @@ export const TransactionRow = React.memo(function TransactionRow({
     return null;
   };
 
-  return (
-    <TableRow
-      className={`h-10 ${
-        isReturn ? 'bg-red-50/50' :
-        isReturnFee ? 'bg-orange-50/50' :
-        isReturnedDonation ? 'bg-gray-50/50' : ''
-      } ${isSelected ? 'bg-primary/5' : ''}`}
-    >
+  // Handler per al drop de fitxers
+  const handleFileDrop = React.useCallback(async (file: File) => {
+    if (onDropFile) {
+      await onDropFile(tx.id, file);
+    }
+  }, [onDropFile, tx.id]);
+
+  // Detecta si és una remesa de donacions processada (no devolucions)
+  const isProcessedDonationRemittance = tx.isRemittance && tx.remittanceType !== 'returns';
+
+  // Classes de la fila
+  const rowClassName = `h-10 ${
+    isReturn ? 'bg-red-50/50' :
+    isReturnFee ? 'bg-orange-50/50' :
+    isReturnedDonation ? 'bg-gray-50/50' :
+    isProcessedDonationRemittance ? 'bg-emerald-50/30' : ''
+  } ${isSelected ? 'bg-primary/5' : ''}`;
+
+  // Renderitzar amb o sense RowDropTarget segons si onDropFile està definit
+  const rowContent = (
+    <>
       {/* Checkbox - només si onToggleSelect està definit (canBulkEdit) */}
       {onToggleSelect && (
         <TableCell className="py-1 px-2">
@@ -396,7 +418,7 @@ export const TransactionRow = React.memo(function TransactionRow({
       {/* Concept + Note + Badge */}
       <TableCell className="py-1">
         <div className="space-y-0.5">
-          <div className="flex items-center gap-1">
+          <div className="flex items-center gap-1 flex-wrap">
             {renderTransactionTypeBadge()}
             {tx.isRemittance && (
               <Tooltip>
@@ -406,16 +428,23 @@ export const TransactionRow = React.memo(function TransactionRow({
                     className={`gap-0.5 text-xs py-0 px-1.5 cursor-pointer hover:bg-accent ${
                       tx.remittanceStatus === 'partial'
                         ? 'border-orange-400 text-orange-700 bg-orange-50'
+                        : isProcessedDonationRemittance
+                        ? 'border-emerald-300 text-emerald-700 bg-emerald-50'
                         : ''
                     }`}
                     onClick={handleViewRemittanceDetail}
                   >
                     {tx.remittanceStatus === 'partial' ? (
                       <AlertCircle className="h-3 w-3 text-orange-600" />
+                    ) : isProcessedDonationRemittance ? (
+                      <CheckCircle2 className="h-3 w-3 text-emerald-600" />
                     ) : (
                       <Eye className="h-3 w-3" />
                     )}
-                    {tx.remittanceResolvedCount ?? tx.remittanceItemCount}/{tx.remittanceItemCount} {t.remittanceQuotes}
+                    {isProcessedDonationRemittance && <span className="font-medium">{t.remittanceProcessedLabel}</span>}
+                    <span className={isProcessedDonationRemittance ? 'text-emerald-600/70' : ''}>
+                      {tx.remittanceResolvedCount ?? tx.remittanceItemCount}/{tx.remittanceItemCount} {t.remittanceQuotes}
+                    </span>
                   </Badge>
                 </TooltipTrigger>
                 <TooltipContent>
@@ -501,8 +530,11 @@ export const TransactionRow = React.memo(function TransactionRow({
               </div>
             )}
           </div>
+        ) : isProcessedDonationRemittance ? (
+          // Cas 2: Remesa de donacions processada - NO té contacte, mostrar "—"
+          <span className="text-muted-foreground text-sm">{t.remittanceNotApplicable}</span>
         ) : isReturn && !tx.contactId ? (
-          // Cas 2: Devolució individual pendent (NO és pare de remesa)
+          // Cas 3: Devolució individual pendent (NO és pare de remesa)
           <div className="flex items-center gap-1">
             <Tooltip>
               <TooltipTrigger asChild>
@@ -756,6 +788,28 @@ export const TransactionRow = React.memo(function TransactionRow({
           </DropdownMenuContent>
         </DropdownMenu>
       </TableCell>
+    </>
+  );
+
+  // Si onDropFile està definit, embolcallem amb RowDropTarget
+  if (onDropFile) {
+    return (
+      <RowDropTarget
+        as="tr"
+        disabled={false}
+        onDropFile={handleFileDrop}
+        dropHint={dropHint}
+        className={rowClassName}
+      >
+        {rowContent}
+      </RowDropTarget>
+    );
+  }
+
+  // Sense drag & drop, renderitzem TableRow normal
+  return (
+    <TableRow className={rowClassName}>
+      {rowContent}
     </TableRow>
   );
 });

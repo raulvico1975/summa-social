@@ -9,39 +9,19 @@ import {
   TooltipTrigger,
 } from '@/components/ui/tooltip';
 import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
-import {
   Sparkles,
-  Loader2,
-  Circle,
-  AlertTriangle,
-  Undo2,
-  Download,
   Search,
   X,
-  ChevronDown,
-  User,
-  FileUp,
   Info,
   Square,
 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
-import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
-import type { TransactionUrlFilter, SourceFilter } from '@/lib/constants';
+import type { SourceFilter } from '@/lib/constants';
 import type { BankAccount } from '@/lib/data';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
+import { FiltersSheet } from './FiltersSheet';
+import { TableOptionsMenu } from './TableOptionsMenu';
 
 // =============================================================================
 // TYPES
@@ -82,6 +62,8 @@ interface TransactionsFiltersProps {
   onExportExpensesWithoutDoc: () => void;
   hideRemittanceItems: boolean;
   onHideRemittanceItemsChange: (value: boolean) => void;
+  showProjectColumn: boolean;
+  onShowProjectColumnChange: (value: boolean) => void;
   onOpenReturnImporter?: () => void;
   // Source filter
   sourceFilter: SourceFilter;
@@ -110,6 +92,17 @@ interface TransactionsFiltersProps {
     hideRemittanceItems: string;
     importReturnsFile?: string;
     allAccounts: string;
+    // New translations for reorganized UI
+    filtersTitle: string;
+    filtersDescription: string;
+    clearFilters: string;
+    applyFilters: string;
+    filterByType: string;
+    filterBySource: string;
+    filterByAccount: string;
+    pendingTasks: string;
+    tableOptions: string;
+    showProjectColumn: string;
   };
 }
 
@@ -123,20 +116,18 @@ export const TransactionsFilters = React.memo(function TransactionsFilters({
   searchQuery,
   onSearchChange,
   totalCount,
-  returnsCount,
   pendingReturnsCount,
   expensesWithoutDocCount,
   uncategorizedCount,
-  noContactCount,
   donationsNoContactCount,
   hasUncategorized,
   isBatchCategorizing,
   onBatchCategorize,
   onCancelBatch,
-  onExportExpensesWithoutDoc,
   hideRemittanceItems,
   onHideRemittanceItemsChange,
-  onOpenReturnImporter,
+  showProjectColumn,
+  onShowProjectColumnChange,
   sourceFilter,
   onSourceFilterChange,
   bankAccountFilter,
@@ -148,36 +139,29 @@ export const TransactionsFilters = React.memo(function TransactionsFilters({
   batchProgress,
   t,
 }: TransactionsFiltersProps) {
-  // Calcular quants tipus de pendents tenen elements (només els 3 que mostrem)
-  const pendingTypesCount = [
-    pendingReturnsCount > 0,
-    expensesWithoutDocCount > 0,
-    donationsNoContactCount > 0,
-  ].filter(Boolean).length;
-
-  // Comprovar si un filtre de pendents està actiu
-  const isPendingFilterActive = ['pendingReturns', 'missing', 'donationsNoContact'].includes(currentFilter);
-
-  // Obtenir el nom del filtre actiu per mostrar al botó
-  const getActiveFilterLabel = (): string => {
-    switch (currentFilter) {
-      case 'pendingReturns': return t.pendingReturns;
-      case 'missing': return t.withoutDocument;
-      case 'donationsNoContact': return t.donationsNoContact;
-      default: return t.pendingFilters;
-    }
-  };
+  // Count active filters for badge
+  const activeFiltersCount = React.useMemo(() => {
+    let count = 0;
+    if (currentFilter !== 'all') count++;
+    if (sourceFilter !== 'all') count++;
+    if (bankAccountFilter !== '__all__') count++;
+    return count;
+  }, [currentFilter, sourceFilter, bankAccountFilter]);
 
   return (
-    <div className="flex flex-col gap-3 w-full">
+    <div className="flex items-center gap-3 w-full flex-wrap">
+      {/* ═══════════════════════════════════════════════════════════════════
+          FRANJA 2: Treball actiu (Cerca + Classificar pendents + Mode ràpid)
+          ═══════════════════════════════════════════════════════════════════ */}
+
       {/* Cercador intel·ligent */}
-      <div className="relative max-w-md">
+      <div className="relative w-[280px]">
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
         <Input
           placeholder={t.searchPlaceholder}
           value={searchQuery}
           onChange={(e) => onSearchChange(e.target.value)}
-          className="pl-9 pr-9"
+          className="pl-9 pr-9 h-9"
         />
         {searchQuery && (
           <button
@@ -190,9 +174,11 @@ export const TransactionsFilters = React.memo(function TransactionsFilters({
         )}
       </div>
 
-      {/* Filtres i accions */}
-      <div className="flex gap-2 items-center flex-wrap">
-        {/* Categorize All button OR Cancel button */}
+      {/* Separador visual */}
+      <div className="h-6 w-px bg-border" />
+
+      {/* Classificar pendents + Mode ràpid (junts) */}
+      <div className="flex items-center gap-2">
         {isBatchCategorizing ? (
           <Tooltip>
             <TooltipTrigger asChild>
@@ -218,171 +204,92 @@ export const TransactionsFilters = React.memo(function TransactionsFilters({
           >
             <Sparkles className="mr-2 h-4 w-4" />
             {t.categorizeAll}
+            {uncategorizedCount > 0 && (
+              <Badge variant="secondary" className="ml-2 h-5 px-1.5 bg-primary-foreground/20">
+                {uncategorizedCount}
+              </Badge>
+            )}
           </Button>
         )}
 
-        {/* Bulk mode toggle (SuperAdmin only) */}
+        {/* Mode ràpid toggle (només SuperAdmin, adjunt al botó de classificar) */}
         {isSuperAdmin && onBulkModeChange && (
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1.5 pl-2 border-l border-border/50">
             <Switch
               id="bulk-mode"
               checked={isBulkMode ?? false}
               onCheckedChange={onBulkModeChange}
               disabled={isBatchCategorizing}
+              className="h-4 w-7"
             />
-            <Label htmlFor="bulk-mode" className="text-sm cursor-pointer whitespace-nowrap">
-              Mode ràpid
+            <Label htmlFor="bulk-mode" className="text-xs cursor-pointer whitespace-nowrap text-muted-foreground">
+              Ràpid
             </Label>
             <Tooltip>
               <TooltipTrigger asChild>
-                <Info className="h-3.5 w-3.5 text-muted-foreground cursor-help" />
+                <Info className="h-3 w-3 text-muted-foreground/60 cursor-help" />
               </TooltipTrigger>
               <TooltipContent className="max-w-sm" side="bottom">
                 <p className="font-medium text-sm mb-1">Mode ràpid (SuperAdmin)</p>
                 <p className="text-xs text-muted-foreground">
                   Accelera la categorització amb IA processant lots més grans amb pauses curtes.
-                  Pot aturar-se automàticament si es detecta límit de quota.
                 </p>
               </TooltipContent>
             </Tooltip>
           </div>
         )}
+      </div>
 
-        <div className="h-4 w-px bg-border" />
+      {/* ═══════════════════════════════════════════════════════════════════
+          ESPAI FLEXIBLE + ACCIONS DRETA (Filtres + Opcions taula)
+          ═══════════════════════════════════════════════════════════════════ */}
+      <div className="ml-auto flex items-center gap-2">
+        {/* Botó Filtres (obre Sheet) */}
+        <FiltersSheet
+          currentFilter={currentFilter}
+          onFilterChange={onFilterChange}
+          sourceFilter={sourceFilter}
+          onSourceFilterChange={onSourceFilterChange}
+          bankAccountFilter={bankAccountFilter}
+          onBankAccountFilterChange={onBankAccountFilterChange}
+          bankAccounts={bankAccounts}
+          totalCount={totalCount}
+          returnsCount={0}
+          pendingReturnsCount={pendingReturnsCount}
+          expensesWithoutDocCount={expensesWithoutDocCount}
+          uncategorizedCount={uncategorizedCount}
+          donationsNoContactCount={donationsNoContactCount}
+          t={{
+            all: t.all,
+            returns: t.returns,
+            pendingReturns: t.pendingReturns,
+            withoutDocument: t.withoutDocument,
+            uncategorized: t.uncategorized,
+            donationsNoContact: t.donationsNoContact,
+            allAccounts: t.allAccounts,
+            filtersTitle: t.filtersTitle,
+            filtersDescription: t.filtersDescription,
+            clearFilters: t.clearFilters,
+            applyFilters: t.applyFilters,
+            filterByType: t.filterByType,
+            filterBySource: t.filterBySource,
+            filterByAccount: t.filterByAccount,
+            pendingTasks: t.pendingTasks,
+          }}
+        />
 
-        {/* All filter */}
-        <Button
-          variant={currentFilter === 'all' ? 'default' : 'outline'}
-          size="sm"
-          onClick={() => onFilterChange('all')}
-        >
-          {t.all} ({totalCount})
-        </Button>
-
-        {/* Pending filters dropdown */}
-        {pendingTypesCount > 0 && (
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button
-                variant={isPendingFilterActive ? 'default' : 'outline'}
-                size="sm"
-                className={!isPendingFilterActive && pendingReturnsCount > 0 ? 'border-red-300 text-red-600' : ''}
-              >
-                {isPendingFilterActive ? getActiveFilterLabel() : t.pendingFilters}
-                <ChevronDown className="ml-1.5 h-3 w-3" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="start">
-              {/* Pending Returns filter (only unassigned returns, excludes fees) */}
-              {pendingReturnsCount > 0 && (
-                <DropdownMenuItem
-                  onClick={() => onFilterChange('pendingReturns')}
-                  className={currentFilter === 'pendingReturns' ? 'bg-accent' : ''}
-                >
-                  <Undo2 className="mr-2 h-4 w-4 text-red-500" />
-                  {t.pendingReturns} ({pendingReturnsCount})
-                </DropdownMenuItem>
-              )}
-
-              {/* Without document filter */}
-              {expensesWithoutDocCount > 0 && (
-                <DropdownMenuItem
-                  onClick={() => onFilterChange('missing')}
-                  className={currentFilter === 'missing' ? 'bg-accent' : ''}
-                >
-                  <Circle className="mr-2 h-4 w-4 fill-muted-foreground text-muted-foreground" />
-                  {t.withoutDocument} ({expensesWithoutDocCount})
-                </DropdownMenuItem>
-              )}
-
-              {/* Donations/member fees without contact */}
-              {donationsNoContactCount > 0 && (
-                <DropdownMenuItem
-                  onClick={() => onFilterChange('donationsNoContact')}
-                  className={currentFilter === 'donationsNoContact' ? 'bg-accent' : ''}
-                >
-                  <User className="mr-2 h-4 w-4 text-orange-500" />
-                  {t.donationsNoContact} ({donationsNoContactCount})
-                </DropdownMenuItem>
-              )}
-            </DropdownMenuContent>
-          </DropdownMenu>
-        )}
-
-        {/* CTA: Importar fitxer del banc (visible quan filtre pendingReturns actiu) */}
-        {currentFilter === 'pendingReturns' && onOpenReturnImporter && (
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={onOpenReturnImporter}
-            className="border-red-300 text-red-700 hover:bg-red-100"
-          >
-            <FileUp className="mr-1 h-4 w-4" />
-            {t.importReturnsFile || 'Importar fitxer del banc'}
-          </Button>
-        )}
-
-        {/* Export button */}
-        {expensesWithoutDocCount > 0 && (
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={onExportExpensesWithoutDoc}
-              >
-                <Download className="h-4 w-4" />
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent>
-              {t.exportTooltip}
-            </TooltipContent>
-          </Tooltip>
-        )}
-
-        {/* Hide remittance items checkbox */}
-        <div className="flex items-center space-x-2 ml-auto">
-          <Checkbox
-            id="hideRemittanceItems"
-            checked={hideRemittanceItems}
-            onCheckedChange={(checked) => onHideRemittanceItemsChange(checked === true)}
-          />
-          <Label htmlFor="hideRemittanceItems" className="text-sm text-muted-foreground cursor-pointer">
-            {t.hideRemittanceItems}
-          </Label>
-        </div>
-
-        {/* Bank account filter */}
-        {bankAccounts.length > 0 && (
-          <Select value={bankAccountFilter} onValueChange={onBankAccountFilterChange}>
-            <SelectTrigger className="w-[160px] h-9">
-              <SelectValue placeholder={t.allAccounts} />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="__all__">{t.allAccounts}</SelectItem>
-              {bankAccounts.map((account) => (
-                <SelectItem key={account.id} value={account.id}>
-                  {account.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        )}
-
-        {/* Source filter */}
-        <Select value={sourceFilter} onValueChange={(v) => onSourceFilterChange(v as SourceFilter)}>
-          <SelectTrigger className="w-[130px] h-9">
-            <SelectValue placeholder="Origen" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">Tots</SelectItem>
-            <SelectItem value="bank">Bank</SelectItem>
-            <SelectItem value="remittance">Remittance</SelectItem>
-            <SelectItem value="manual">Manual</SelectItem>
-            <SelectItem value="stripe">Stripe</SelectItem>
-            <SelectItem value="null">(buit)</SelectItem>
-          </SelectContent>
-        </Select>
+        {/* Opcions de taula */}
+        <TableOptionsMenu
+          hideRemittanceItems={hideRemittanceItems}
+          onHideRemittanceItemsChange={onHideRemittanceItemsChange}
+          showProjectColumn={showProjectColumn}
+          onShowProjectColumnChange={onShowProjectColumnChange}
+          t={{
+            tableOptions: t.tableOptions,
+            hideRemittanceItems: t.hideRemittanceItems,
+            showProjectColumn: t.showProjectColumn,
+          }}
+        />
       </div>
     </div>
   );

@@ -48,7 +48,6 @@ import {
   Loader2,
   ChevronDown,
   ChevronUp,
-  FolderKanban,
   Check,
   AlertTriangle,
   Undo2,
@@ -78,6 +77,7 @@ import { EditTransactionDialog } from '@/components/transactions/EditTransaction
 import { NewContactDialog } from '@/components/transactions/NewContactDialog';
 import { TransactionRow } from '@/components/transactions/components/TransactionRow';
 import { TransactionsFilters, TableFilter } from '@/components/transactions/components/TransactionsFilters';
+import { attachDocumentToTransaction } from '@/lib/files/attach-document';
 import { DateFilter, type DateFilterValue } from '@/components/date-filter';
 import { useTransactionFilters } from '@/hooks/use-transaction-filters';
 import { useBankAccounts } from '@/hooks/use-bank-accounts';
@@ -419,6 +419,43 @@ export function TransactionsTable({ initialDateFilter = null }: TransactionsTabl
     transactions,
     availableContacts,
   });
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // DRAG & DROP DOCUMENT HANDLER
+  // ═══════════════════════════════════════════════════════════════════════════
+  const handleDropFile = React.useCallback(async (txId: string, file: File) => {
+    if (!firestore || !storage || !organizationId) return;
+
+    const tx = transactions?.find(t => t.id === txId);
+
+    toast({
+      title: t.movements.table.uploadingDocument || 'Pujant document...',
+      description: file.name
+    });
+
+    const result = await attachDocumentToTransaction({
+      firestore,
+      storage,
+      organizationId,
+      transactionId: txId,
+      file,
+      transactionDate: tx?.date,
+      transactionConcept: tx?.note || tx?.description,
+    });
+
+    if (result.success) {
+      toast({
+        title: t.movements.table.uploadSuccess || 'Document adjuntat',
+        description: t.movements.table.documentUploadedSuccessfully || 'El document s\'ha adjuntat correctament.'
+      });
+    } else {
+      toast({
+        variant: 'destructive',
+        title: t.movements.table.uploadError || 'Error',
+        description: result.error || 'No s\'ha pogut adjuntar el document.'
+      });
+    }
+  }, [firestore, storage, organizationId, transactions, toast, t]);
 
   // ═══════════════════════════════════════════════════════════════════════════
   // ESTADÍSTIQUES
@@ -958,6 +995,8 @@ export function TransactionsTable({ initialDateFilter = null }: TransactionsTabl
     delete: t.movements.table.delete,
     viewRemittanceDetail: t.movements.table.viewRemittanceDetail,
     remittanceQuotes: t.movements.table.remittanceQuotes,
+    remittanceProcessedLabel: t.movements.table.remittanceProcessedLabel,
+    remittanceNotApplicable: t.movements.table.remittanceNotApplicable,
   }), [t]);
 
   // Memoized filter translations
@@ -976,6 +1015,17 @@ export function TransactionsTable({ initialDateFilter = null }: TransactionsTabl
     hideRemittanceItems: t.movements.table.hideRemittanceItems,
     importReturnsFile: t.movements.table.uploadBankFile,
     allAccounts: t.settings.bankAccounts.allAccounts,
+    // New translations for reorganized UI
+    filtersTitle: t.movements.table.filtersTitle || 'Filtres',
+    filtersDescription: t.movements.table.filtersDescription || 'Filtra els moviments per tipus, origen o compte',
+    clearFilters: t.movements.table.clearFilters || 'Netejar filtres',
+    applyFilters: t.movements.table.applyFilters || 'Aplicar',
+    filterByType: t.movements.table.filterByType || 'Tipus de moviment',
+    filterBySource: t.movements.table.filterBySource || 'Origen',
+    filterByAccount: t.movements.table.filterByAccount || 'Compte bancari',
+    pendingTasks: t.movements.table.pendingTasks || 'Tasques pendents',
+    tableOptions: t.movements.table.tableOptions || 'Opcions de taula',
+    showProjectColumn: t.movements.table.showProjectColumn || 'Mostrar columna Projecte',
   }), [t]);
 
   return (
@@ -988,9 +1038,9 @@ export function TransactionsTable({ initialDateFilter = null }: TransactionsTabl
       </div>
 
       {/* ═══════════════════════════════════════════════════════════════════════
-          SECCIÓ: Filtres i accions
+          SECCIÓ: Treball actiu (Cerca + Classificar + Mode ràpid + Filtres + Opcions)
           ═══════════════════════════════════════════════════════════════════════ */}
-      <div className="flex justify-between items-center mb-4 flex-wrap gap-4">
+      <div className="mb-4">
         <TransactionsFilters
           currentFilter={tableFilter}
           onFilterChange={setTableFilter}
@@ -1010,6 +1060,8 @@ export function TransactionsTable({ initialDateFilter = null }: TransactionsTabl
           onExportExpensesWithoutDoc={handleExportExpensesWithoutDoc}
           hideRemittanceItems={hideRemittanceItems}
           onHideRemittanceItemsChange={setHideRemittanceItems}
+          showProjectColumn={showProjectColumn}
+          onShowProjectColumnChange={setShowProjectColumn}
           onOpenReturnImporter={() => setIsReturnImporterOpen(true)}
           sourceFilter={sourceFilter}
           onSourceFilterChange={setSourceFilter}
@@ -1190,32 +1242,9 @@ export function TransactionsTable({ initialDateFilter = null }: TransactionsTabl
               <TableHead className="max-w-[250px] py-2">{t.movements.table.concept}</TableHead>
               <TableHead className="w-[120px] py-2">{t.movements.table.contact}</TableHead>
               <TableHead className="w-[100px] py-2">{t.movements.table.category}</TableHead>
-              {showProjectColumn ? (
+              {showProjectColumn && (
                 <TableHead className="w-[100px] py-2">
-                  <div className="flex items-center gap-1">
-                    {t.movements.table.project}
-                    <button
-                      onClick={() => setShowProjectColumn(false)}
-                      className="p-0.5 hover:bg-accent rounded transition-colors"
-                      title={t.movements.table.hideProjectColumn}
-                    >
-                      <ChevronUp className="h-3 w-3 text-muted-foreground" />
-                    </button>
-                  </div>
-                </TableHead>
-              ) : (
-                <TableHead className="w-[40px] py-2">
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <button
-                        onClick={() => setShowProjectColumn(true)}
-                        className="flex items-center justify-center w-full px-1 py-0.5 hover:bg-accent rounded transition-colors text-muted-foreground"
-                      >
-                        <FolderKanban className="h-3 w-3" />
-                      </button>
-                    </TooltipTrigger>
-                    <TooltipContent>{t.movements.table.projects}</TooltipContent>
-                  </Tooltip>
+                  {t.movements.table.project}
                 </TableHead>
               )}
               <TableHead className="w-[40px] text-center py-2">Doc</TableHead>
@@ -1239,6 +1268,8 @@ export function TransactionsTable({ initialDateFilter = null }: TransactionsTabl
                 isCategoryLoading={loadingStates[tx.id] || false}
                 isSelected={canBulkEdit ? selectedIds.has(tx.id) : undefined}
                 onToggleSelect={canBulkEdit ? toggleOne : undefined}
+                onDropFile={canBulkEdit ? handleDropFile : undefined}
+                dropHint={t.movements.table.dropToAttach || 'Deixa anar per adjuntar'}
                 onSetNote={handleSetNote}
                 onSetCategory={handleSetCategory}
                 onSetContact={handleSetContact}
@@ -1260,7 +1291,7 @@ export function TransactionsTable({ initialDateFilter = null }: TransactionsTabl
             ))}
             {filteredTransactions.length === 0 && (
                 <TableRow>
-                    <TableCell colSpan={canBulkEdit ? 9 : 8} className="h-24 text-center text-muted-foreground">
+                    <TableCell colSpan={(canBulkEdit ? 8 : 7) + (showProjectColumn ? 1 : 0)} className="h-24 text-center text-muted-foreground">
                         {tableFilter === 'missing'
                           ? t.movements.table.allExpensesHaveProofEmpty
                           : tableFilter === 'returns'

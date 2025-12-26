@@ -943,8 +943,8 @@ export function RemittanceSplitter({
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className={
-        step === 'mapping' ? "sm:max-w-5xl max-h-[90vh]" : 
-        step === 'preview' ? "sm:max-w-4xl max-h-[90vh]" : 
+        step === 'mapping' ? "sm:max-w-5xl max-h-[90vh]" :
+        step === 'preview' ? "w-[95vw] max-w-[1400px] h-[90vh] max-h-[90vh] flex flex-col" :
         "sm:max-w-md"
       }>
         
@@ -1257,123 +1257,139 @@ export function RemittanceSplitter({
         )}
 
         {/* ═══════════════════════════════════════════════════════════════════
-            STEP 3: PREVIEW
+            STEP 3: PREVIEW - Wide modal with fixed header/footer
             ═══════════════════════════════════════════════════════════════════ */}
         {step === 'preview' && (
           <>
-            <DialogHeader>
-              <DialogTitle>{t.movements.splitter.reviewTitle}</DialogTitle>
-              <DialogDescription>
-                {t.movements.splitter.reviewDescription}
-              </DialogDescription>
-            </DialogHeader>
+            {/* ─────────────────────────────────────────────────────────────────
+                HEADER FIX: Títol + Resum compacte + Alertes
+                ───────────────────────────────────────────────────────────────── */}
+            <div className="flex-shrink-0 space-y-3 pb-3 border-b">
+              {/* Títol i descripció */}
+              <DialogHeader className="pb-0">
+                <DialogTitle>{t.movements.splitter.reviewTitle}</DialogTitle>
+                <DialogDescription>
+                  {t.movements.splitter.reviewDescription}
+                </DialogDescription>
+              </DialogHeader>
 
-            {/* Resum */}
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              <div className="rounded-lg border p-3 text-center">
-                <div className="text-2xl font-bold">{parsedDonations.length}</div>
-                <div className="text-xs text-muted-foreground">{t.movements.splitter.donations}</div>
-              </div>
-              <div className="rounded-lg border p-3 text-center">
-                <div className="text-2xl font-bold text-green-600">{stats.found}</div>
-                <div className="text-xs text-muted-foreground">{t.movements.splitter.found}</div>
-              </div>
-              <div className="rounded-lg border p-3 text-center">
-                <div className="text-2xl font-bold text-blue-600">{stats.newWithTaxId}</div>
-                <div className="text-xs text-muted-foreground">{t.movements.splitter.newWithTaxId}</div>
-              </div>
-              <div className="rounded-lg border p-3 text-center">
-                <div className="text-2xl font-bold text-orange-600">{stats.newWithoutTaxId}</div>
-                <div className="text-xs text-muted-foreground">{t.movements.splitter.newWithoutTaxId}</div>
-              </div>
-            </div>
-
-            {/* Import total */}
-            <Alert variant={Math.abs(transaction.amount - totalAmount) < 0.01 ? "default" : "destructive"}>
-              <CheckCircle2 className="h-4 w-4" />
-              <AlertTitle>Import total: {formatCurrencyEU(totalAmount)}</AlertTitle>
-              <AlertDescription>
-                Coincideix amb la transacció original ({formatCurrencyEU(transaction.amount)}) ✓
-              </AlertDescription>
-            </Alert>
-
-            {/* Avís de socis inactius */}
-            {stats.foundInactive > 0 && (
-              <Alert variant="default" className="border-amber-300 bg-amber-50">
-                <AlertTriangle className="h-4 w-4 text-amber-600" />
-                <AlertTitle className="text-amber-800">{t.movements.splitter.inactiveWarningTitle}</AlertTitle>
-                <AlertDescription className="text-amber-700 flex items-center justify-between">
-                  <span>{t.movements.splitter.inactiveWarningDescription(stats.foundInactive)}</span>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={handleReactivateAllInactive}
-                    disabled={isProcessing}
-                    className="ml-4 border-amber-400 text-amber-800 hover:bg-amber-100"
-                  >
-                    {isProcessing ? (
-                      <Loader2 className="mr-1 h-3 w-3 animate-spin" />
-                    ) : (
-                      <RotateCcw className="mr-1 h-3 w-3" />
-                    )}
-                    {t.movements.splitter.reactivateAllDescription(stats.foundInactive)}
-                  </Button>
-                </AlertDescription>
-              </Alert>
-            )}
-
-            {/* Opcions per crear donants */}
-            <div className="space-y-3 rounded-lg border p-4">
-              <h4 className="font-medium text-sm">{t.movements.splitter.newDonorOptions}</h4>
-
-              <div className="flex items-center gap-4">
-                <Label htmlFor="defaultZipCode" className="text-sm whitespace-nowrap">
-                  {t.movements.splitter.defaultZipCode}
-                </Label>
-                <Input
-                  id="defaultZipCode"
-                  value={defaultZipCode}
-                  onChange={(e) => setDefaultZipCode(e.target.value)}
-                  className="w-24"
-                  placeholder={t.movements.splitter.zipCodePlaceholder}
-                />
-                <Button variant="outline" size="sm" onClick={handleApplyDefaultZipCode}>
-                  {t.movements.splitter.applyToAll}
-                </Button>
-              </div>
-
-              <div className="flex flex-wrap gap-4">
+              {/* Resum compacte en línia */}
+              <div className="flex flex-wrap items-center gap-3">
+                {/* Stats compactes com a badges */}
+                <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-muted text-sm">
+                  <span className="font-semibold">{parsedDonations.length}</span>
+                  <span className="text-muted-foreground">{t.movements.splitter.donations}</span>
+                </div>
+                <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-green-50 border border-green-200 text-sm">
+                  <CheckCircle2 className="h-3.5 w-3.5 text-green-600" />
+                  <span className="font-semibold text-green-700">{stats.found}</span>
+                  <span className="text-green-600">{t.movements.splitter.found}</span>
+                </div>
+                {stats.foundInactive > 0 && (
+                  <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-amber-50 border border-amber-200 text-sm">
+                    <AlertTriangle className="h-3.5 w-3.5 text-amber-600" />
+                    <span className="font-semibold text-amber-700">{stats.foundInactive}</span>
+                    <span className="text-amber-600">{t.movements.splitter.foundInactiveBadge}</span>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={handleReactivateAllInactive}
+                      disabled={isProcessing}
+                      className="h-5 px-1.5 text-xs text-amber-700 hover:text-amber-900 hover:bg-amber-100 ml-1"
+                    >
+                      <RotateCcw className="h-3 w-3" />
+                    </Button>
+                  </div>
+                )}
                 {stats.newWithTaxId > 0 && (
-                  <div className="flex items-center space-x-2">
-                    <Checkbox
-                      id="createAllWithTaxId"
-                      checked={parsedDonations.filter(d => d.status === 'new_with_taxid').every(d => d.shouldCreate)}
-                      onCheckedChange={(checked) => handleToggleAllNewWithTaxId(checked as boolean)}
-                    />
-                    <label htmlFor="createAllWithTaxId" className="text-sm">
-                      {t.movements.splitter.createAllWithTaxId(stats.newWithTaxId)}
-                    </label>
+                  <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-blue-50 border border-blue-200 text-sm">
+                    <UserPlus className="h-3.5 w-3.5 text-blue-600" />
+                    <span className="font-semibold text-blue-700">{stats.newWithTaxId}</span>
+                    <span className="text-blue-600">{t.movements.splitter.newWithTaxId}</span>
                   </div>
                 )}
                 {stats.newWithoutTaxId > 0 && (
-                  <div className="flex items-center space-x-2">
-                    <Checkbox
-                      id="createAllWithoutTaxId"
-                      checked={parsedDonations.filter(d => d.status === 'new_without_taxid').every(d => d.shouldCreate)}
-                      onCheckedChange={(checked) => handleToggleAllNewWithoutTaxId(checked as boolean)}
-                    />
-                    <label htmlFor="createAllWithoutTaxId" className="text-sm text-orange-600">
-                      {t.movements.splitter.createAllWithoutTaxId(stats.newWithoutTaxId)}
-                    </label>
+                  <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-orange-50 border border-orange-200 text-sm">
+                    <AlertCircle className="h-3.5 w-3.5 text-orange-600" />
+                    <span className="font-semibold text-orange-700">{stats.newWithoutTaxId}</span>
+                    <span className="text-orange-600">{t.movements.splitter.newWithoutTaxId}</span>
                   </div>
                 )}
+
+                {/* Separador visual */}
+                <div className="h-5 w-px bg-border mx-1" />
+
+                {/* Import total compacte */}
+                <div className={`flex items-center gap-1.5 px-2.5 py-1 rounded-md text-sm ${
+                  Math.abs(transaction.amount - totalAmount) < 0.01
+                    ? 'bg-green-50 border border-green-200'
+                    : 'bg-red-50 border border-red-200'
+                }`}>
+                  <CheckCircle2 className={`h-3.5 w-3.5 ${
+                    Math.abs(transaction.amount - totalAmount) < 0.01 ? 'text-green-600' : 'text-red-600'
+                  }`} />
+                  <span className="font-semibold">{formatCurrencyEU(totalAmount)}</span>
+                  <span className="text-muted-foreground">/ {formatCurrencyEU(transaction.amount)}</span>
+                </div>
               </div>
+
+              {/* Opcions per crear donants - compacte */}
+              {(stats.newWithTaxId > 0 || stats.newWithoutTaxId > 0) && (
+                <div className="flex flex-wrap items-center gap-4 px-3 py-2 rounded-md bg-muted/50 border text-sm">
+                  <div className="flex items-center gap-2">
+                    <Label htmlFor="defaultZipCode" className="text-xs whitespace-nowrap text-muted-foreground">
+                      {t.movements.splitter.defaultZipCode}:
+                    </Label>
+                    <Input
+                      id="defaultZipCode"
+                      value={defaultZipCode}
+                      onChange={(e) => setDefaultZipCode(e.target.value)}
+                      className="w-20 h-7 text-xs"
+                      placeholder={t.movements.splitter.zipCodePlaceholder}
+                    />
+                    <Button variant="ghost" size="sm" onClick={handleApplyDefaultZipCode} className="h-7 px-2 text-xs">
+                      {t.movements.splitter.applyToAll}
+                    </Button>
+                  </div>
+
+                  <div className="h-4 w-px bg-border" />
+
+                  {stats.newWithTaxId > 0 && (
+                    <div className="flex items-center space-x-1.5">
+                      <Checkbox
+                        id="createAllWithTaxId"
+                        checked={parsedDonations.filter(d => d.status === 'new_with_taxid').every(d => d.shouldCreate)}
+                        onCheckedChange={(checked) => handleToggleAllNewWithTaxId(checked as boolean)}
+                        className="h-3.5 w-3.5"
+                      />
+                      <label htmlFor="createAllWithTaxId" className="text-xs cursor-pointer">
+                        {t.movements.splitter.createAllWithTaxId(stats.newWithTaxId)}
+                      </label>
+                    </div>
+                  )}
+                  {stats.newWithoutTaxId > 0 && (
+                    <div className="flex items-center space-x-1.5">
+                      <Checkbox
+                        id="createAllWithoutTaxId"
+                        checked={parsedDonations.filter(d => d.status === 'new_without_taxid').every(d => d.shouldCreate)}
+                        onCheckedChange={(checked) => handleToggleAllNewWithoutTaxId(checked as boolean)}
+                        className="h-3.5 w-3.5"
+                      />
+                      <label htmlFor="createAllWithoutTaxId" className="text-xs text-orange-600 cursor-pointer">
+                        {t.movements.splitter.createAllWithoutTaxId(stats.newWithoutTaxId)}
+                      </label>
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
 
-            {/* Taula de donacions */}
-            <ScrollArea className="h-[250px] rounded-md border">
+            {/* ─────────────────────────────────────────────────────────────────
+                TAULA PROTAGONISTA: Scroll independent, ocupa tot l'espai
+                ───────────────────────────────────────────────────────────────── */}
+            <div className="flex-1 min-h-0 overflow-auto rounded-md border">
               <Table>
-                <TableHeader>
+                <TableHeader className="sticky top-0 bg-background z-10">
                   <TableRow>
                     <TableHead className="w-[50px]">{t.movements.splitter.create}</TableHead>
                     <TableHead>{t.movements.splitter.name}</TableHead>
@@ -1388,7 +1404,7 @@ export function RemittanceSplitter({
                   {parsedDonations.map((donation, index) => (
                     <TableRow key={index} className={donation.status === 'found' ? 'bg-green-50/50' : ''}>
                       <TableCell>
-                        {donation.status !== 'found' && (
+                        {donation.status !== 'found' && donation.status !== 'found_inactive' && (
                           <Checkbox
                             checked={donation.shouldCreate}
                             onCheckedChange={() => handleToggleCreate(index)}
@@ -1449,11 +1465,11 @@ export function RemittanceSplitter({
                         )}
                       </TableCell>
                       <TableCell>
-                        {donation.status !== 'found' && donation.shouldCreate && (
+                        {donation.status !== 'found' && donation.status !== 'found_inactive' && donation.shouldCreate && (
                           <Input
                             value={donation.zipCode}
                             onChange={(e) => handleZipCodeChange(index, e.target.value)}
-                            className="w-20 h-8 text-xs"
+                            className="w-20 h-7 text-xs"
                             placeholder={t.movements.splitter.zipCode}
                           />
                         )}
@@ -1462,27 +1478,30 @@ export function RemittanceSplitter({
                   ))}
                 </TableBody>
               </Table>
-            </ScrollArea>
-
-            {/* Resum final */}
-            <div className="rounded-lg bg-muted p-3 text-sm">
-              <p>
-                {t.movements.splitter.actionSummary(stats.toCreate, parsedDonations.length)}
-              </p>
             </div>
 
-            <DialogFooter className="gap-2 sm:gap-0">
-              <Button variant="outline" onClick={() => setStep('mapping')}>
-                <ArrowLeft className="mr-2 h-4 w-4" />
-                {t.movements.splitter.backToMapping}
-              </Button>
-              <Button onClick={handleProcess} disabled={isProcessing}>
-                {isProcessing ? (
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                ) : null}
-                {t.movements.splitter.processDonations(parsedDonations.length)}
-              </Button>
-            </DialogFooter>
+            {/* ─────────────────────────────────────────────────────────────────
+                FOOTER FIX: Resum + Accions
+                ───────────────────────────────────────────────────────────────── */}
+            <div className="flex-shrink-0 pt-3 border-t">
+              <div className="flex items-center justify-between">
+                <div className="text-sm text-muted-foreground">
+                  {t.movements.splitter.actionSummary(stats.toCreate, parsedDonations.length)}
+                </div>
+                <div className="flex gap-2">
+                  <Button variant="outline" onClick={() => setStep('mapping')}>
+                    <ArrowLeft className="mr-2 h-4 w-4" />
+                    {t.movements.splitter.backToMapping}
+                  </Button>
+                  <Button onClick={handleProcess} disabled={isProcessing}>
+                    {isProcessing ? (
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    ) : null}
+                    {t.movements.splitter.processDonations(parsedDonations.length)}
+                  </Button>
+                </div>
+              </div>
+            </div>
           </>
         )}
 

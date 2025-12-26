@@ -11,7 +11,15 @@ import {
   SidebarMenuItem,
   SidebarMenuButton,
   SidebarFooter,
+  SidebarMenuSub,
+  SidebarMenuSubItem,
+  SidebarMenuSubButton,
 } from '@/components/ui/sidebar';
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from '@/components/ui/collapsible';
 import {
   LayoutDashboard,
   Settings,
@@ -23,7 +31,8 @@ import {
   Heart,
   Building2,
   UserCog,
-  ClipboardList
+  ClipboardList,
+  ChevronRight,
 } from 'lucide-react';
 import { Logo } from '@/components/logo';
 import { useFirebase } from '@/firebase';
@@ -72,6 +81,32 @@ export function DashboardSidebarContent() {
   // ═══════════════════════════════════════════════════════════════════════════
   // CANVI PRINCIPAL: Construir URLs amb el slug de l'organització
   // ═══════════════════════════════════════════════════════════════════════════
+
+  // Items del submenú Projectes (Mòdul)
+  const projectModuleItems = React.useMemo(() => {
+    if (!isProjectModuleEnabled) return [];
+    return [
+      {
+        path: '/dashboard/project-module/projects',
+        label: t.sidebar.projectModuleManage ?? 'Gestió de projectes',
+        icon: FolderKanban,
+      },
+      {
+        path: '/dashboard/project-module/expenses',
+        label: t.sidebar.projectModuleExpenses ?? 'Assignació de despeses',
+        icon: ClipboardList,
+      },
+    ].map(item => ({
+      ...item,
+      href: buildUrl(item.path),
+    }));
+  }, [t, isProjectModuleEnabled, buildUrl]);
+
+  // Comprovar si estem en una ruta del mòdul projectes
+  const isProjectModuleActive = React.useMemo(() => {
+    return pathname.includes('/project-module');
+  }, [pathname]);
+
   const menuItems = React.useMemo(() => {
     const baseItems = [
       {
@@ -114,24 +149,6 @@ export function DashboardSidebarContent() {
       },
     ];
 
-    // Afegir entrades del Mòdul Projectes només si està activat
-    if (isProjectModuleEnabled) {
-      baseItems.push(
-        {
-          path: '/dashboard/project-module/expenses',
-          label: t.sidebar.projectModuleExpenses ?? 'Despeses (Projectes)',
-          icon: ClipboardList,
-          className: 'text-emerald-600',
-        },
-        {
-          path: '/dashboard/project-module/projects',
-          label: t.sidebar.projectModuleProjects ?? 'Projectes (Mòdul)',
-          icon: FolderKanban,
-          className: 'text-emerald-600',
-        }
-      );
-    }
-
     // Afegir configuració
     baseItems.push({
       path: '/dashboard/configuracion',
@@ -154,7 +171,7 @@ export function DashboardSidebarContent() {
       ...item,
       href: buildUrl(item.path),
     }));
-  }, [t, isSuperAdmin, isProjectModuleEnabled, buildUrl]);
+  }, [t, isSuperAdmin, buildUrl]);
 
   // ═══════════════════════════════════════════════════════════════════════════
   // Helper per comprovar si una ruta està activa
@@ -239,20 +256,80 @@ export function DashboardSidebarContent() {
       </SidebarHeader>
       <SidebarContent className="flex-1 p-2">
         <SidebarMenu>
-          {menuItems.map((item) => (
-            <SidebarMenuItem key={item.href}>
-              <SidebarMenuButton
-                asChild
-                isActive={isActive(item.href, item.path)}
-                tooltip={{ children: item.label }}
-              >
-                <Link href={item.href}>
-                  <item.icon className={item.className} />
-                  <span>{item.label}</span>
-                </Link>
-              </SidebarMenuButton>
-            </SidebarMenuItem>
-          ))}
+          {menuItems.map((item) => {
+            // Inserir el submenú Projectes després d'Informes
+            if (item.path === '/dashboard/configuracion' && projectModuleItems.length > 0) {
+              return (
+                <React.Fragment key={item.href}>
+                  {/* Submenú Projectes (Mòdul) */}
+                  <Collapsible
+                    asChild
+                    defaultOpen={isProjectModuleActive}
+                    className="group/collapsible"
+                  >
+                    <SidebarMenuItem>
+                      <CollapsibleTrigger asChild>
+                        <SidebarMenuButton
+                          tooltip={{ children: t.sidebar.projectModule ?? 'Projectes' }}
+                          isActive={isProjectModuleActive}
+                        >
+                          <FolderKanban className="text-emerald-600" />
+                          <span>{t.sidebar.projectModule ?? 'Projectes'}</span>
+                          <ChevronRight className="ml-auto h-4 w-4 transition-transform duration-200 group-data-[state=open]/collapsible:rotate-90" />
+                        </SidebarMenuButton>
+                      </CollapsibleTrigger>
+                      <CollapsibleContent>
+                        <SidebarMenuSub>
+                          {projectModuleItems.map((subItem) => (
+                            <SidebarMenuSubItem key={subItem.href}>
+                              <SidebarMenuSubButton
+                                asChild
+                                isActive={pathname.includes(subItem.path.replace('/dashboard', ''))}
+                              >
+                                <Link href={subItem.href}>
+                                  <subItem.icon className="h-4 w-4" />
+                                  <span>{subItem.label}</span>
+                                </Link>
+                              </SidebarMenuSubButton>
+                            </SidebarMenuSubItem>
+                          ))}
+                        </SidebarMenuSub>
+                      </CollapsibleContent>
+                    </SidebarMenuItem>
+                  </Collapsible>
+
+                  {/* Configuració */}
+                  <SidebarMenuItem>
+                    <SidebarMenuButton
+                      asChild
+                      isActive={isActive(item.href, item.path)}
+                      tooltip={{ children: item.label }}
+                    >
+                      <Link href={item.href}>
+                        <item.icon className={item.className} />
+                        <span>{item.label}</span>
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                </React.Fragment>
+              );
+            }
+
+            return (
+              <SidebarMenuItem key={item.href}>
+                <SidebarMenuButton
+                  asChild
+                  isActive={isActive(item.href, item.path)}
+                  tooltip={{ children: item.label }}
+                >
+                  <Link href={item.href}>
+                    <item.icon className={item.className} />
+                    <span>{item.label}</span>
+                  </Link>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+            );
+          })}
         </SidebarMenu>
       </SidebarContent>
       <SidebarFooter className="border-t p-2">
