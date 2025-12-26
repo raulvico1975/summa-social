@@ -26,15 +26,18 @@ const RESERVED_SEGMENTS = [
 
 function buildInstanceLoginUrl(pathname: string | null): string {
   if (!pathname) return '/login?reason=idle';
-  const firstSegment = pathname.split('/').filter(Boolean)[0];
+
+  const segments = pathname.split('/').filter(Boolean);
+  const firstSegment = segments[0];
 
   // Si el primer segment és reservat o no existeix, login genèric
   if (!firstSegment || RESERVED_SEGMENTS.includes(firstSegment)) {
     return '/login?reason=idle';
   }
 
-  // És un slug d'organització
-  return `/${firstSegment}/login?reason=idle`;
+  // És un slug d'organització - construir URL amb next per poder tornar
+  const next = encodeURIComponent(pathname);
+  return `/${firstSegment}/login?reason=idle&next=${next}`;
 }
 
 const DEFAULT_IDLE_MS = 30 * 60 * 1000; // 30 min
