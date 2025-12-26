@@ -119,9 +119,39 @@ function TopCategoriesTable({
     viewExpenses: string;
     others: string;
     noData: string;
+    uncategorized: string;
   };
   buildUrl: (path: string) => string;
 }) {
+  // Mapa de categoryId → nom (per categories de l'org)
+  const categoryNameById = React.useMemo(() => {
+    const m = new Map<string, string>();
+    if (categories) {
+      for (const c of categories) {
+        m.set(c.id, c.name);
+      }
+    }
+    return m;
+  }, [categories]);
+
+  // Funció per obtenir el nom de la categoria
+  const getCategoryName = React.useCallback((categoryKey: string): string => {
+    if (categoryKey === 'uncategorized') {
+      return texts.uncategorized;
+    }
+    // Primer intentar trobar en categories de l'org (per ID)
+    const orgCategoryName = categoryNameById.get(categoryKey);
+    if (orgCategoryName) {
+      return orgCategoryName;
+    }
+    // Després, traduccions predefinides (per clau)
+    if (categoryTranslations[categoryKey]) {
+      return categoryTranslations[categoryKey];
+    }
+    // Si no es troba enlloc, mostrar "Sense categoria" (no l'ID)
+    return texts.uncategorized;
+  }, [categoryNameById, categoryTranslations, texts.uncategorized]);
+
   const topCategories = React.useMemo(() => {
     if (!transactions || transactions.length === 0) return [];
 
@@ -150,7 +180,7 @@ function TopCategoriesTable({
 
     const result = top5.map(item => ({
       key: item.key,
-      name: categoryTranslations[item.key] || item.key,
+      name: getCategoryName(item.key),
       amount: item.amount,
       percent: (item.amount / total) * 100,
     }));
@@ -165,7 +195,7 @@ function TopCategoriesTable({
     }
 
     return result;
-  }, [transactions, categoryTranslations, texts.others]);
+  }, [transactions, getCategoryName, texts.others]);
 
   if (topCategories.length === 0) {
     return (
@@ -1265,6 +1295,7 @@ ${t.dashboard.generatedWith}`;
           viewExpenses: t.dashboard.topCategoriesViewExpenses,
           others: t.dashboard.topCategoriesOthers,
           noData: t.dashboard.noExpenseData,
+          uncategorized: t.common?.uncategorized ?? 'Sense categoria',
         }}
         buildUrl={buildUrl}
       />
