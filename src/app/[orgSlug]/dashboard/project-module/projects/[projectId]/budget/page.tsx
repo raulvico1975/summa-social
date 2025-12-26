@@ -614,115 +614,115 @@ export default function ProjectBudgetPage() {
         </Card>
       </div>
 
-      {/* Configuració FX per despeses off-bank */}
-      <Card>
-        <CardHeader className="pb-3">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <DollarSign className="h-5 w-5 text-muted-foreground" />
-              <CardTitle className="text-base">{t.projectModule?.fxConfig ?? 'Tipus de canvi del projecte'}</CardTitle>
-            </div>
-            {!fxEditMode && (
-              <Button variant="ghost" size="sm" onClick={() => setFxEditMode(true)} title={t.projectModule?.editFx ?? 'Editar tipus de canvi'}>
-                <Pencil className="h-4 w-4" />
-              </Button>
-            )}
-          </div>
-          <CardDescription className="text-xs">
-            {t.projectModule?.fxConfigDesc ?? 'Per despeses de terreny (off-bank) en moneda local. Ex: 655.957 XOF = 1 EUR'}
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          {fxEditMode ? (
-            <div className="flex items-end gap-4">
-              <div className="flex-1 space-y-1">
-                <Label htmlFor="fxRate" className="text-xs">{t.projectModule?.fxRate ?? 'Tipus de canvi'}</Label>
-                <Input
-                  id="fxRate"
-                  type="text"
-                  inputMode="decimal"
-                  value={fxRateInput}
-                  onChange={(e) => setFxRateInput(e.target.value)}
-                  placeholder="655.957"
-                  className="h-9"
-                />
-              </div>
-              <div className="w-24 space-y-1">
-                <Label htmlFor="fxCurrency" className="text-xs">{t.projectModule?.currency ?? 'Moneda'}</Label>
-                <Input
-                  id="fxCurrency"
-                  type="text"
-                  value={fxCurrencyInput}
-                  onChange={(e) => setFxCurrencyInput(e.target.value.toUpperCase())}
-                  placeholder="XOF"
-                  maxLength={3}
-                  className="h-9 font-mono"
-                />
-              </div>
-              <div className="flex gap-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => {
-                    setFxEditMode(false);
-                    setFxRateInput(project.fxRate?.toString() ?? '');
-                    setFxCurrencyInput(project.fxCurrency ?? '');
-                  }}
-                  disabled={isSavingFx}
-                >
-                  {t.common?.cancel ?? 'Cancel·lar'}
-                </Button>
-                <Button
-                  size="sm"
-                  onClick={async () => {
-                    const rate = fxRateInput ? parseFloat(fxRateInput.replace(',', '.')) : null;
-                    if (fxRateInput && (isNaN(rate!) || rate! <= 0)) {
-                      toast({
-                        variant: 'destructive',
-                        title: 'Error',
-                        description: t.projectModule?.fxRatePositive ?? 'El tipus de canvi ha de ser positiu',
-                      });
-                      return;
-                    }
-                    try {
-                      await saveFx(projectId, rate, fxCurrencyInput || null);
-                      toast({
-                        title: t.projectModule?.fxSaved ?? 'Tipus de canvi desat',
-                        description: rate ? `${rate} ${fxCurrencyInput} = 1 EUR` : 'Tipus de canvi eliminat',
-                      });
-                      setFxEditMode(false);
-                      await refreshProject();
-                    } catch (err) {
-                      toast({
-                        variant: 'destructive',
-                        title: 'Error',
-                        description: err instanceof Error ? err.message : 'Error desant tipus de canvi',
-                      });
-                    }
-                  }}
-                  disabled={isSavingFx}
-                >
-                  {isSavingFx ? <Loader2 className="h-4 w-4 animate-spin" /> : (t.common?.save ?? 'Desar')}
-                </Button>
-              </div>
-            </div>
-          ) : (
+      {/* Configuració FX per despeses off-bank (fila compacta) */}
+      <div className="rounded-lg border bg-muted/20 px-4 py-3">
+        {fxEditMode ? (
+          <div className="flex flex-wrap items-end gap-4">
             <div className="flex items-center gap-2 text-sm">
-              {project.fxRate ? (
-                <>
-                  <span className="font-mono font-medium">{project.fxRate}</span>
-                  <span className="text-muted-foreground">{project.fxCurrency ?? ''}</span>
-                  <span className="text-muted-foreground">= 1 EUR</span>
-                </>
-              ) : (
-                <span className="text-muted-foreground italic">
-                  {t.projectModule?.noFxConfigured ?? 'No configurat. Les despeses off-bank es registraran directament en EUR.'}
-                </span>
-              )}
+              <DollarSign className="h-4 w-4 text-muted-foreground" />
+              <span className="font-medium">{t.projectModule?.fxConfigShort ?? 'Tipus de canvi'}</span>
             </div>
-          )}
-        </CardContent>
-      </Card>
+            <div className="flex-1 min-w-[120px] max-w-[160px]">
+              <Input
+                id="fxRate"
+                type="text"
+                inputMode="decimal"
+                value={fxRateInput}
+                onChange={(e) => setFxRateInput(e.target.value)}
+                placeholder="655.957"
+                className="h-8 text-sm"
+              />
+            </div>
+            <div className="w-20">
+              <Input
+                id="fxCurrency"
+                type="text"
+                value={fxCurrencyInput}
+                onChange={(e) => setFxCurrencyInput(e.target.value.toUpperCase())}
+                placeholder="XOF"
+                maxLength={3}
+                className="h-8 text-sm font-mono"
+              />
+            </div>
+            <span className="text-sm text-muted-foreground">= 1 EUR</span>
+            <div className="flex gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-8"
+                onClick={() => {
+                  setFxEditMode(false);
+                  setFxRateInput(project.fxRate?.toString() ?? '');
+                  setFxCurrencyInput(project.fxCurrency ?? '');
+                }}
+                disabled={isSavingFx}
+              >
+                {t.common?.cancel ?? 'Cancel·lar'}
+              </Button>
+              <Button
+                size="sm"
+                className="h-8"
+                onClick={async () => {
+                  const rate = fxRateInput ? parseFloat(fxRateInput.replace(',', '.')) : null;
+                  if (fxRateInput && (isNaN(rate!) || rate! <= 0)) {
+                    toast({
+                      variant: 'destructive',
+                      title: 'Error',
+                      description: t.projectModule?.fxRatePositive ?? 'El tipus de canvi ha de ser positiu',
+                    });
+                    return;
+                  }
+                  try {
+                    await saveFx(projectId, rate, fxCurrencyInput || null);
+                    toast({
+                      title: t.projectModule?.fxSaved ?? 'Tipus de canvi desat',
+                      description: rate ? `${rate} ${fxCurrencyInput} = 1 EUR` : 'Tipus de canvi eliminat',
+                    });
+                    setFxEditMode(false);
+                    await refreshProject();
+                  } catch (err) {
+                    toast({
+                      variant: 'destructive',
+                      title: 'Error',
+                      description: err instanceof Error ? err.message : 'Error desant tipus de canvi',
+                    });
+                  }
+                }}
+                disabled={isSavingFx}
+              >
+                {isSavingFx ? <Loader2 className="h-4 w-4 animate-spin" /> : (t.common?.save ?? 'Desar')}
+              </Button>
+            </div>
+          </div>
+        ) : (
+          <div className="flex items-center justify-between gap-4">
+            <div className="flex items-center gap-3 min-w-0">
+              <DollarSign className="h-4 w-4 text-muted-foreground shrink-0" />
+              <div className="min-w-0">
+                <span className="text-sm font-medium">{t.projectModule?.fxConfigShort ?? 'Tipus de canvi'}</span>
+                <span className="text-sm text-muted-foreground ml-2">
+                  {project.fxRate ? (
+                    <>
+                      <span className="font-mono">{project.fxRate} {project.fxCurrency ?? ''}</span> = 1 EUR
+                    </>
+                  ) : (
+                    <span className="italic">{t.projectModule?.notConfigured ?? 'No configurat'}</span>
+                  )}
+                </span>
+              </div>
+            </div>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8 shrink-0"
+              onClick={() => setFxEditMode(true)}
+              title={t.projectModule?.editFx ?? 'Editar tipus de canvi'}
+            >
+              <Pencil className="h-4 w-4" />
+            </Button>
+          </div>
+        )}
+      </div>
 
       {/* Taula de partides */}
       <Card>
