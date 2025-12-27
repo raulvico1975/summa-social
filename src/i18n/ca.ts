@@ -1538,6 +1538,18 @@ export const ca = {
       deselectAll: "Deseleccionar tots",
       optional: "opcional",
       continue: "Continuar",
+      // Loading & progress patterns
+      processing: "Processant…",
+      processingCount: (current: number, total: number) => `Processant… ${current}/${total}`,
+      done: "Procés completat.",
+      tryAgain: "Torna-ho a provar",
+      uploading: "Pujant…",
+      uploadComplete: "Document adjuntat.",
+      uploadError: "No s'ha pogut pujar el document. Torna-ho a provar.",
+      stop: "Aturar",
+      stopped: "Procés aturat.",
+      stoppedPartial: (count: number) => `Procés aturat. ${count} canvis aplicats.`,
+      actionError: "No hem pogut completar l'acció. Torna-ho a provar.",
   },
   projectModule: {
     budget: "Pressupost",

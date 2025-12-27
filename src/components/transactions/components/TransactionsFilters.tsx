@@ -18,6 +18,7 @@ import {
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
+import { Progress } from '@/components/ui/progress';
 import type { SourceFilter } from '@/lib/constants';
 import type { BankAccount } from '@/lib/data';
 import { FiltersSheet } from './FiltersSheet';
@@ -180,22 +181,37 @@ export const TransactionsFilters = React.memo(function TransactionsFilters({
       {/* Suggerir categories + Mode ràpid (junts) */}
       <div className="flex items-center gap-2">
         {isBatchCategorizing ? (
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button
-                onClick={onCancelBatch}
-                variant="destructive"
-                size="sm"
-                aria-label="Aturar procés"
-              >
-                <Square className="mr-2 h-4 w-4" />
-                Processant… {batchProgress ? `${batchProgress.current}/${batchProgress.total}` : '...'}
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent>
-              <p className="text-xs">Prem per aturar el procés. Els canvis aplicats fins ara es mantenen.</p>
-            </TooltipContent>
-          </Tooltip>
+          <div className="flex items-center gap-3">
+            {/* Progress bar visual */}
+            {batchProgress && batchProgress.total > 0 && (
+              <div className="flex items-center gap-2 min-w-[140px]">
+                <Progress
+                  value={(batchProgress.current / batchProgress.total) * 100}
+                  className="h-2 w-24"
+                />
+                <span className="text-xs text-muted-foreground whitespace-nowrap">
+                  {batchProgress.current}/{batchProgress.total}
+                </span>
+              </div>
+            )}
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  onClick={onCancelBatch}
+                  variant="outline"
+                  size="sm"
+                  aria-label="Aturar procés"
+                  className="border-destructive text-destructive hover:bg-destructive/10"
+                >
+                  <Square className="mr-2 h-4 w-4" />
+                  Aturar
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p className="text-xs">Prem per aturar el procés. Els canvis aplicats fins ara es mantenen.</p>
+              </TooltipContent>
+            </Tooltip>
+          </div>
         ) : (
           <Tooltip>
             <TooltipTrigger asChild>

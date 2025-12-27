@@ -1564,6 +1564,18 @@ export const es = {
       deselectAll: "Deseleccionar todos",
       optional: "opcional",
       continue: "Continuar",
+      // Loading & progress patterns
+      processing: "Procesando…",
+      processingCount: (current: number, total: number) => `Procesando… ${current}/${total}`,
+      done: "Proceso completado.",
+      tryAgain: "Vuelve a intentarlo",
+      uploading: "Subiendo…",
+      uploadComplete: "Documento adjuntado.",
+      uploadError: "No se ha podido subir el documento. Vuelve a intentarlo.",
+      stop: "Detener",
+      stopped: "Proceso detenido.",
+      stoppedPartial: (count: number) => `Proceso detenido. ${count} cambios aplicados.`,
+      actionError: "No hemos podido completar la acción. Vuelve a intentarlo.",
   },
   projectModule: {
     budget: "Presupuesto",

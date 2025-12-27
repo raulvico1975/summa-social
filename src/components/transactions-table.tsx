@@ -69,6 +69,7 @@ import { collection, doc, writeBatch } from 'firebase/firestore';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Minus, Tag, XCircle, Search, FileX, Undo } from 'lucide-react';
 import { EmptyState } from '@/components/ui/empty-state';
+import { Skeleton } from '@/components/ui/skeleton';
 import { useTranslations } from '@/i18n';
 import { useCurrentOrganization } from '@/hooks/organization-provider';
 import { useReturnManagement } from '@/components/transactions/hooks/useReturnManagement';
@@ -235,7 +236,7 @@ export function TransactionsTable({ initialDateFilter = null }: TransactionsTabl
     [firestore, organizationId]
   );
   
-  const { data: allTransactions } = useCollection<Transaction>(transactionsCollection);
+  const { data: allTransactions, isLoading: isLoadingTransactions } = useCollection<Transaction>(transactionsCollection);
   const { data: availableCategories } = useCollection<Category>(categoriesCollection);
   const { data: availableContacts } = useCollection<AnyContact>(contactsCollection);
   const { data: availableProjects } = useCollection<Project>(projectsCollection);
@@ -1366,7 +1367,24 @@ export function TransactionsTable({ initialDateFilter = null }: TransactionsTabl
                 getCategoryDisplayName={getCategoryDisplayName}
               />
             ))}
-            {filteredTransactions.length === 0 && (
+            {/* Skeleton loading state */}
+            {isLoadingTransactions && !allTransactions && (
+              Array.from({ length: 8 }).map((_, i) => (
+                <TableRow key={`skeleton-${i}`}>
+                  {canBulkEdit && <TableCell className="w-10"><Skeleton className="h-4 w-4" /></TableCell>}
+                  <TableCell><Skeleton className="h-4 w-20" /></TableCell>
+                  <TableCell><Skeleton className="h-4 w-full max-w-[200px]" /></TableCell>
+                  <TableCell><Skeleton className="h-4 w-24" /></TableCell>
+                  <TableCell><Skeleton className="h-4 w-16" /></TableCell>
+                  <TableCell><Skeleton className="h-4 w-28" /></TableCell>
+                  {showProjectColumn && <TableCell><Skeleton className="h-4 w-24" /></TableCell>}
+                  <TableCell><Skeleton className="h-5 w-5 rounded" /></TableCell>
+                  <TableCell><Skeleton className="h-8 w-8 rounded" /></TableCell>
+                </TableRow>
+              ))
+            )}
+            {/* Empty state (only when not loading) */}
+            {!isLoadingTransactions && filteredTransactions.length === 0 && (
                 <TableRow>
                     <TableCell colSpan={(canBulkEdit ? 8 : 7) + (showProjectColumn ? 1 : 0)} className="p-0">
                       <EmptyState

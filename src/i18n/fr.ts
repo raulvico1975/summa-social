@@ -1539,6 +1539,18 @@ export const fr = {
       deselectAll: "Tout désélectionner",
       optional: "facultatif",
       continue: "Continuer",
+      // Loading & progress patterns
+      processing: "Traitement…",
+      processingCount: (current: number, total: number) => `Traitement… ${current}/${total}`,
+      done: "Processus terminé.",
+      tryAgain: "Réessayer",
+      uploading: "Téléchargement…",
+      uploadComplete: "Document joint.",
+      uploadError: "Impossible de télécharger le document. Réessayer.",
+      stop: "Arrêter",
+      stopped: "Processus arrêté.",
+      stoppedPartial: (count: number) => `Processus arrêté. ${count} modifications appliquées.`,
+      actionError: "Impossible de terminer l'action. Réessayer.",
   },
   projectModule: {
     budget: "Pressupost",

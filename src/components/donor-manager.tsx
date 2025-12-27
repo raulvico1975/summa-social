@@ -49,6 +49,7 @@ import {
 import { Textarea } from '@/components/ui/textarea';
 import { PlusCircle, Edit, Trash2, User, Building2, RefreshCw, Heart, Upload, AlertTriangle, Search, X, RotateCcw, Download, Users } from 'lucide-react';
 import { EmptyState } from '@/components/ui/empty-state';
+import { Skeleton } from '@/components/ui/skeleton';
 import type { Donor, Category, Transaction } from '@/lib/data';
 import { fromPeriodQuery } from '@/lib/period-query';
 import type { DateFilterValue } from '@/components/date-filter';
@@ -105,7 +106,7 @@ export function DonorManager() {
     [contactsCollection]
   );
 
-  const { data: donorsRaw } = useCollection<Donor & { archivedAt?: string }>(donorsQuery);
+  const { data: donorsRaw, isLoading: isLoadingDonors } = useCollection<Donor & { archivedAt?: string }>(donorsQuery);
   // Filtrar donants arxivats (soft-deleted)
   const donors = React.useMemo(
     () => donorsRaw?.filter(d => !d.archivedAt),
@@ -892,7 +893,22 @@ export function DonorManager() {
                       </TableCell>
                     </TableRow>
                   ))}
-                  {(!filteredDonors || filteredDonors.length === 0) && (
+                  {/* Skeleton loading state */}
+                  {isLoadingDonors && !donorsRaw && (
+                    Array.from({ length: 6 }).map((_, i) => (
+                      <TableRow key={`skeleton-${i}`}>
+                        <TableCell><Skeleton className="h-4 w-32" /></TableCell>
+                        <TableCell><Skeleton className="h-4 w-24" /></TableCell>
+                        <TableCell><Skeleton className="h-4 w-40" /></TableCell>
+                        <TableCell><Skeleton className="h-4 w-28" /></TableCell>
+                        <TableCell><Skeleton className="h-4 w-24" /></TableCell>
+                        {showIncompleteOnly && <TableCell><Skeleton className="h-4 w-20" /></TableCell>}
+                        <TableCell><Skeleton className="h-8 w-16" /></TableCell>
+                      </TableRow>
+                    ))
+                  )}
+                  {/* Empty state (only when not loading) */}
+                  {!isLoadingDonors && (!filteredDonors || filteredDonors.length === 0) && (
                     <TableRow>
                       <TableCell colSpan={showIncompleteOnly ? 7 : 6} className="p-0">
                         <EmptyState
