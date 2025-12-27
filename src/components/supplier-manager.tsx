@@ -415,7 +415,7 @@ export function SupplierManager() {
                 {/* Columna esquerra: Identificació */}
                 <div className="space-y-3">
                   <div className="space-y-1.5">
-                    <Label htmlFor="name">{t.suppliers.name}<span className="ml-1 text-destructive">*</span></Label>
+                    <Label htmlFor="name">{t.suppliers.name}<span className="ml-1 text-muted-foreground">*</span></Label>
                     <Input
                       id="name"
                       value={formData.name}
@@ -425,7 +425,7 @@ export function SupplierManager() {
                   </div>
 
                   <div className="space-y-1.5">
-                    <Label htmlFor="taxId">{t.suppliers.taxId}<span className="ml-1 text-destructive">*</span></Label>
+                    <Label htmlFor="taxId">{t.suppliers.taxId}<span className="ml-1 text-muted-foreground">*</span></Label>
                     <Input
                       id="taxId"
                       value={formData.taxId}

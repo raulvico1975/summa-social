@@ -959,7 +959,7 @@ export function DonorManager() {
                 {/* Columna esquerra: Identificació */}
                 <div className="space-y-3">
                   <div className="space-y-1.5">
-                    <Label htmlFor="name">{t.donors.name}<span className="ml-1 text-destructive">*</span></Label>
+                    <Label htmlFor="name">{t.donors.name}<span className="ml-1 text-muted-foreground">*</span></Label>
                     <Input
                       id="name"
                       value={formData.name}
@@ -971,7 +971,7 @@ export function DonorManager() {
                   <div className="space-y-1.5">
                     <Label htmlFor="taxId">
                       {t.donors.taxId}
-                      <span className="ml-1 text-destructive">*</span>
+                      <span className="ml-1 text-muted-foreground">*</span>
                       <span className="ml-1.5 text-xs font-normal text-amber-600">(Model 182)</span>
                     </Label>
                     <Input
@@ -1052,7 +1052,7 @@ export function DonorManager() {
                     <div className="space-y-1.5">
                       <Label htmlFor="zipCode">
                         {t.donors.zipCode}
-                        <span className="ml-1 text-destructive">*</span>
+                        <span className="ml-1 text-muted-foreground">*</span>
                       </Label>
                       <Input
                         id="zipCode"

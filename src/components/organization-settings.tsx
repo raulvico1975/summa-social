@@ -288,7 +288,7 @@ export function OrganizationSettings() {
 
         <div className="grid gap-4 sm:grid-cols-2">
           <div className="space-y-2">
-            <Label htmlFor="name">{t.settings.organization.name}<span className="ml-1 text-destructive">*</span></Label>
+            <Label htmlFor="name">{t.settings.organization.name}<span className="ml-1 text-muted-foreground">*</span></Label>
             <Input
               id="name"
               value={formData.name}
@@ -297,7 +297,7 @@ export function OrganizationSettings() {
             />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="taxId">{t.settings.organization.taxId}<span className="ml-1 text-destructive">*</span></Label>
+            <Label htmlFor="taxId">{t.settings.organization.taxId}<span className="ml-1 text-muted-foreground">*</span></Label>
             <Input
               id="taxId"
               value={formData.taxId}
