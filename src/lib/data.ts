@@ -396,7 +396,9 @@ export type Organization = {
   // Feature flags
   features?: OrganizationFeatures; // Mòduls opcionals activats/desactivats
   // Onboarding
-  onboardingSkippedAt?: string;    // Timestamp quan l'admin ha saltat l'onboarding
+  onboarding?: {
+    welcomeSeenAt?: string;        // Data (YYYY-MM-DD) quan el primer admin va veure la modal
+  };
   // Metadata
   updatedAt?: string;
   suspendedAt?: string;

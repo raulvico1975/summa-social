@@ -5,6 +5,7 @@ import * as React from 'react';
 import { useRouter } from 'next/navigation';
 import { useFirebase, useCollection, useMemoFirebase } from '@/firebase';
 import { collection, query, orderBy, doc, updateDoc, getCountFromServer } from 'firebase/firestore';
+import { sendPasswordResetEmail } from 'firebase/auth';
 import type { Organization } from '@/lib/data';
 import { SUPER_ADMIN_UID } from '@/lib/data';
 import { Button } from '@/components/ui/button';
@@ -35,32 +36,40 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import { 
-  Shield, 
-  Building2, 
-  Users, 
-  Plus, 
-  MoreHorizontal, 
-  LogIn, 
-  Pause, 
+import {
+  Shield,
+  Building2,
+  Users,
+  Plus,
+  MoreHorizontal,
+  LogIn,
+  Pause,
   Play,
   Loader2,
   AlertCircle,
-  ArrowLeft
+  ArrowLeft,
+  Mail,
+  ExternalLink,
+  FileText,
 } from 'lucide-react';
+import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
 import { CreateOrganizationDialog } from '@/components/admin/create-organization-dialog';
 import { migrateExistingSlugs } from '@/lib/slugs';
 
 export default function AdminPage() {
   const router = useRouter();
-  const { user, firestore, isUserLoading } = useFirebase();
+  const { user, firestore, auth, isUserLoading } = useFirebase();
   const { toast } = useToast();
-  
+
   const [isCreateDialogOpen, setIsCreateDialogOpen] = React.useState(false);
   const [suspendDialogOrg, setSuspendDialogOrg] = React.useState<Organization | null>(null);
   const [isProcessing, setIsProcessing] = React.useState(false);
   const [isMigrating, setIsMigrating] = React.useState(false);
+
+  // Reset contrasenya
+  const [resetEmail, setResetEmail] = React.useState('');
+  const [isResetting, setIsResetting] = React.useState(false);
 
   // Verificar que és Super Admin
   const isSuperAdmin = user?.uid === SUPER_ADMIN_UID;
@@ -137,6 +146,25 @@ export default function AdminPage() {
       });
     } finally {
       setIsMigrating(false);
+    }
+  };
+
+  const handlePasswordReset = async () => {
+    if (!resetEmail.trim()) return;
+    setIsResetting(true);
+    try {
+      await sendPasswordResetEmail(auth, resetEmail.trim());
+    } catch (error) {
+      // Silenciós: no revelar si l'email existeix o no
+      console.error('Password reset error (silenced):', error);
+    } finally {
+      // Sempre mostrar missatge genèric d'èxit
+      toast({
+        title: 'Correu enviat',
+        description: 'Si l\'adreça existeix, rebrà un correu per restablir la contrasenya.',
+      });
+      setResetEmail('');
+      setIsResetting(false);
     }
   };
 
@@ -240,6 +268,85 @@ export default function AdminPage() {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold text-destructive">{stats.suspended}</div>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Eines d'administració */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
+          {/* Reset contrasenya */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-base">
+                <Mail className="h-4 w-4" />
+                Reset contrasenya
+              </CardTitle>
+              <CardDescription>
+                Envia un correu per restablir la contrasenya d'un usuari
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="flex gap-2">
+                <Input
+                  type="email"
+                  placeholder="email@exemple.com"
+                  value={resetEmail}
+                  onChange={(e) => setResetEmail(e.target.value)}
+                  disabled={isResetting}
+                />
+                <Button
+                  onClick={handlePasswordReset}
+                  disabled={isResetting || !resetEmail.trim()}
+                >
+                  {isResetting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                  Enviar correu
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Diagnòstic */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-base">
+                <FileText className="h-4 w-4" />
+                Diagnòstic
+              </CardTitle>
+              <CardDescription>
+                Si estàs perdut o hi ha una incidència, comença pel manual.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="flex flex-col gap-2">
+                <a
+                  href="https://console.firebase.google.com/project/summa-social/overview"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-2 text-sm text-primary hover:underline"
+                >
+                  <ExternalLink className="h-4 w-4" />
+                  Firebase Console
+                </a>
+                <a
+                  href="https://console.cloud.google.com/logs/query?project=summa-social"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-2 text-sm text-primary hover:underline"
+                >
+                  <ExternalLink className="h-4 w-4" />
+                  Cloud Logging
+                </a>
+                <span
+                  className="flex items-center gap-2 text-sm text-muted-foreground cursor-pointer hover:text-foreground"
+                  onClick={() => {
+                    navigator.clipboard.writeText('docs/DEV-SOLO-MANUAL.md');
+                    toast({ title: 'Copiat al porta-retalls' });
+                  }}
+                >
+                  <FileText className="h-4 w-4" />
+                  <code className="text-xs bg-muted px-1 rounded">docs/DEV-SOLO-MANUAL.md</code>
+                </span>
+              </div>
             </CardContent>
           </Card>
         </div>

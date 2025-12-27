@@ -1,166 +1,66 @@
 /**
- * Onboarding status types and utilities
+ * Onboarding utilities - Modal de benvinguda per primer admin
+ *
+ * Nova lògica simplificada:
+ * - Només el primer admin veu una modal de benvinguda el primer cop
+ * - No hi ha checklist persistent, ni progrés, ni estats complexos
+ * - welcomeSeenAt es marca un cop i no torna a sortir
  */
 
-import type { Organization, Contact, Category } from './data';
-
-export type OnboardingStep =
-  | 'organization'  // Dades bàsiques org (nom, CIF, adreça)
-  | 'signature'     // Firma i signant per certificats
-  | 'categories'    // Categories personalitzades (mínim 1 creada)
-  | 'contacts'      // Almenys 1 contacte importat (opcional, es pot saltar)
-  | 'complete';     // Tot configurat
-
-export type OnboardingStatus = {
-  isComplete: boolean;
-  wasSkipped: boolean;
-  currentStep: OnboardingStep;
-  completedSteps: OnboardingStep[];
-  pendingSteps: OnboardingStep[];
-  progress: number; // 0-100
-};
-
-export type OnboardingCheckResult = {
-  step: OnboardingStep;
-  isComplete: boolean;
-  isOptional: boolean;
-  label: string;
-  description: string;
-  href: string;
-};
+import type { Organization, OrganizationMember } from './data';
 
 /**
- * Passos requerits per considerar l'onboarding complet.
- * Contactes és opcional.
+ * Determina si l'usuari actual és el "primer admin" de l'organització.
+ *
+ * Criteri: El membre admin/superadmin amb joinedAt més antic.
+ *
+ * Fallback si no hi ha timestamps: Si l'usuari és admin i és l'únic admin existent.
  */
-const REQUIRED_STEPS: OnboardingStep[] = ['organization', 'signature', 'categories'];
+export function isFirstAdmin(
+  currentUserId: string | undefined,
+  members: OrganizationMember[] | null
+): boolean {
+  if (!currentUserId || !members || members.length === 0) return false;
+
+  // Filtrar només admins
+  const admins = members.filter(m => m.role === 'admin');
+  if (admins.length === 0) return false;
+
+  // Comprovar si l'usuari actual és admin
+  const currentMember = admins.find(m => m.userId === currentUserId);
+  if (!currentMember) return false;
+
+  // Fallback: si és l'únic admin
+  if (admins.length === 1) return true;
+
+  // Ordenar per joinedAt ascendent
+  const sortedAdmins = [...admins].sort((a, b) => {
+    const dateA = a.joinedAt ? new Date(a.joinedAt).getTime() : Infinity;
+    const dateB = b.joinedAt ? new Date(b.joinedAt).getTime() : Infinity;
+    return dateA - dateB;
+  });
+
+  // El primer admin és el que té joinedAt més antic
+  return sortedAdmins[0]?.userId === currentUserId;
+}
 
 /**
- * Computa l'estat d'onboarding basant-se en les dades reals.
- * Si l'admin ha saltat l'onboarding (onboardingSkippedAt), es considera complet.
+ * Determina si cal mostrar la modal de benvinguda.
+ *
+ * Condicions:
+ * - L'usuari és el primer admin
+ * - No s'ha vist mai la modal (welcomeSeenAt no existeix)
  */
-export function computeOnboardingStatus(
+export function shouldShowWelcomeModal(
   organization: Organization | null,
-  contacts: Contact[] | null,
-  categories: Category[] | null
-): OnboardingStatus {
-  // Si s'ha saltat, l'onboarding es considera complet
-  if (organization?.onboardingSkippedAt) {
-    return {
-      isComplete: true,
-      wasSkipped: true,
-      currentStep: 'complete',
-      completedSteps: ['organization', 'signature', 'categories', 'contacts'],
-      pendingSteps: [],
-      progress: 100,
-    };
-  }
+  currentUserId: string | undefined,
+  members: OrganizationMember[] | null
+): boolean {
+  if (!organization) return false;
 
-  const checks = getOnboardingChecks(organization, contacts, categories);
-  const completedSteps = checks.filter(c => c.isComplete).map(c => c.step);
-  const pendingSteps = checks.filter(c => !c.isComplete).map(c => c.step);
+  // Si ja s'ha vist, no mostrar
+  if (organization.onboarding?.welcomeSeenAt) return false;
 
-  // L'onboarding està complet si tots els passos REQUERITS estan fets
-  const requiredPending = pendingSteps.filter(step => REQUIRED_STEPS.includes(step));
-  const isComplete = requiredPending.length === 0;
-
-  const currentStep = pendingSteps[0] || 'complete';
-
-  // Progrés basat només en passos requerits
-  const requiredChecks = checks.filter(c => REQUIRED_STEPS.includes(c.step));
-  const requiredCompleted = requiredChecks.filter(c => c.isComplete).length;
-  const progress = Math.round((requiredCompleted / requiredChecks.length) * 100);
-
-  return {
-    isComplete,
-    wasSkipped: false,
-    currentStep,
-    completedSteps,
-    pendingSteps,
-    progress,
-  };
-}
-
-/**
- * Retorna la llista de comprovacions d'onboarding amb el seu estat.
- */
-export function getOnboardingChecks(
-  organization: Organization | null,
-  contacts: Contact[] | null,
-  categories: Category[] | null
-): OnboardingCheckResult[] {
-  return [
-    {
-      step: 'organization',
-      isComplete: checkOrganizationStep(organization),
-      isOptional: false,
-      label: 'Dades de l\'organització',
-      description: 'Nom, CIF i adreça fiscal',
-      href: '/dashboard/configuracio',
-    },
-    {
-      step: 'signature',
-      isComplete: checkSignatureStep(organization),
-      isOptional: false,
-      label: 'Firma i signant',
-      description: 'Necessaris per emetre certificats',
-      href: '/dashboard/configuracio',
-    },
-    {
-      step: 'categories',
-      isComplete: checkCategoriesStep(categories),
-      isOptional: false,
-      label: 'Categories',
-      description: 'Crea o personalitza les categories',
-      href: '/dashboard/configuracio',
-    },
-    {
-      step: 'contacts',
-      isComplete: checkContactsStep(contacts),
-      isOptional: true,
-      label: 'Contactes',
-      description: 'Importa donants o proveïdors',
-      href: '/dashboard/donants',
-    },
-  ];
-}
-
-/**
- * Comprova si les dades bàsiques de l'organització estan completes.
- */
-function checkOrganizationStep(org: Organization | null): boolean {
-  if (!org) return false;
-  return !!(
-    org.name &&
-    org.taxId &&
-    org.address &&
-    org.city &&
-    org.zipCode
-  );
-}
-
-/**
- * Comprova si la firma i signant estan configurats.
- */
-function checkSignatureStep(org: Organization | null): boolean {
-  if (!org) return false;
-  return !!(
-    org.signatureUrl &&
-    org.signatoryName &&
-    org.signatoryRole
-  );
-}
-
-/**
- * Comprova si hi ha categories personalitzades.
- */
-function checkCategoriesStep(categories: Category[] | null): boolean {
-  return !!(categories && categories.length > 0);
-}
-
-/**
- * Comprova si hi ha almenys un contacte.
- */
-function checkContactsStep(contacts: Contact[] | null): boolean {
-  return !!(contacts && contacts.length > 0);
+  // Només per al primer admin
+  return isFirstAdmin(currentUserId, members);
 }

@@ -8,12 +8,8 @@ export type FeatureAnnouncement = {
 };
 
 export const FEATURE_ANNOUNCEMENT: FeatureAnnouncement | null = {
-  id: 'v1.18-onboarding',
-  text: "Novetat: Configuració inicial guiada per a noves organitzacions.",
-  cta: {
-    label: "Veure",
-    href: "/onboarding",
-  },
+  id: 'v1.19-onboarding-modal',
+  text: "Novetat: Benvinguda guiada per a noves organitzacions.",
 };
 
 export const WORKING_ON: string[] = [

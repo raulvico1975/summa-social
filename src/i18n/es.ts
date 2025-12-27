@@ -2215,32 +2215,24 @@ export const es = {
   },
   // Onboarding
   onboarding: {
+    // Modal de bienvenida
+    welcome: {
+      title: "Bienvenido a Summa Social",
+      body1: "Te guiaremos por los pasos básicos para configurar tu organización: datos fiscales, firma para certificados y categorías de movimientos.",
+      body2: "Puedes hacerlo ahora o más adelante desde Configuración.",
+      ctaGuide: "Guíame",
+      ctaSkip: "Empezar por mi cuenta",
+      sessionButton: "Configuración inicial",
+    },
+    // Wizard modal
     setupTitle: "Configuración inicial",
-    welcome: "Bienvenido a Summa Social",
     welcomeDescription: "Configura tu organización en pocos pasos para empezar a gestionar las finanzas.",
-    start: "Comenzar",
     progress: "Progreso",
     optional: "opcional",
-    skipForNow: "Lo haré después",
-    skipConfirmation: "De acuerdo. Puedes continuar trabajando.",
-    skipHint: "Si quieres completar la configuración inicial más adelante, la encontrarás en Configuración.",
-    continue: "Continuar",
-    continueSetup: "Continúa configurando tu organización",
     completeTitle: "¡Todo listo!",
     completeDescription: "La configuración inicial se ha completado. Ya puedes empezar a gestionar las finanzas de tu organización.",
     summaryTitle: "Resumen de configuración",
     goToDashboard: "Ir al Dashboard",
-    goToMovements: "Ir a Movimientos",
-    steps: {
-      organization: "Datos de la organización",
-      organizationDesc: "Nombre, CIF y dirección fiscal",
-      signature: "Firma y firmante",
-      signatureDesc: "Necesarios para emitir certificados",
-      categories: "Categorías",
-      categoriesDesc: "Crea o personaliza las categorías",
-      contacts: "Contactos",
-      contactsDesc: "Importa donantes o proveedores",
-    },
   },
   // Empty states - tono institucional, sin emojis
   emptyStates: {

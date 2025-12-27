@@ -8,8 +8,8 @@ import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Textarea } from '@/components/ui/textarea';
 import Link from 'next/link';
-import { DollarSign, TrendingUp, TrendingDown, Rocket, Heart, AlertTriangle, FolderKanban, CalendarClock, Share2, Copy, Mail, PartyPopper, Info, FileSpreadsheet, FileText, RefreshCcw, Pencil } from 'lucide-react';
-import type { Transaction, Contact, Project, Donor, Category } from '@/lib/data';
+import { DollarSign, TrendingUp, TrendingDown, Rocket, Heart, AlertTriangle, FolderKanban, CalendarClock, Share2, Copy, Mail, PartyPopper, Info, FileSpreadsheet, FileText, RefreshCcw, Pencil, Settings } from 'lucide-react';
+import type { Transaction, Contact, Project, Donor, Category, OrganizationMember } from '@/lib/data';
 import { useCollection, useFirebase, useMemoFirebase } from '@/firebase';
 import { collection } from 'firebase/firestore';
 import { useTranslations } from '@/i18n';
@@ -34,8 +34,9 @@ import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip
 import { toPeriodQuery } from '@/lib/period-query';
 import { useNotificationToast } from '@/components/notifications/use-notification-toast';
 import { DASHBOARD_NOTIFICATIONS } from '@/lib/notifications';
-import { OnboardingChecklist } from '@/components/onboarding/OnboardingChecklist';
-import { computeOnboardingStatus, getOnboardingChecks } from '@/lib/onboarding';
+import { shouldShowWelcomeModal, isFirstAdmin } from '@/lib/onboarding';
+import { WelcomeOnboardingModal } from '@/components/onboarding/WelcomeOnboardingModal';
+import { OnboardingWizardModal } from '@/components/onboarding/OnboardingWizard';
 
 interface TaxObligation {
   id: string;
@@ -154,12 +155,37 @@ function TopCategoriesTable({
     return texts.uncategorized;
   }, [categoryNameById, categoryTranslations, texts.uncategorized]);
 
-  const topCategories = React.useMemo(() => {
-    if (!transactions || transactions.length === 0) return [];
+  // Separar despeses categoritzades, no categoritzades i fees
+  const { categorizedTxs, uncategorizedTotal } = React.useMemo(() => {
+    if (!transactions || transactions.length === 0) {
+      return { categorizedTxs: [], uncategorizedTotal: 0 };
+    }
 
-    // Agregar per categoria
-    const byCategory = transactions.reduce((acc, tx) => {
-      const categoryKey = tx.category || 'uncategorized';
+    let uncatTotal = 0;
+    const catTxs: Transaction[] = [];
+
+    for (const tx of transactions) {
+      // Excloure fees (comissions bancàries i fees de retorn)
+      if (tx.transactionType === 'fee' || tx.transactionType === 'return_fee') {
+        continue;
+      }
+      // Separar categoritzades de no categoritzades
+      if (tx.category) {
+        catTxs.push(tx);
+      } else {
+        uncatTotal += Math.abs(tx.amount);
+      }
+    }
+
+    return { categorizedTxs: catTxs, uncategorizedTotal: uncatTotal };
+  }, [transactions]);
+
+  const topCategories = React.useMemo(() => {
+    if (categorizedTxs.length === 0) return [];
+
+    // Agregar per categoria (només categoritzades)
+    const byCategory = categorizedTxs.reduce((acc, tx) => {
+      const categoryKey = tx.category!;
       if (!acc[categoryKey]) {
         acc[categoryKey] = 0;
       }
@@ -172,7 +198,7 @@ function TopCategoriesTable({
       .map(([key, amount]) => ({ key, amount }))
       .sort((a, b) => b.amount - a.amount);
 
-    // Calcular total
+    // Calcular total (només categoritzades)
     const total = sorted.reduce((sum, item) => sum + item.amount, 0);
     if (total === 0) return [];
 
@@ -197,7 +223,7 @@ function TopCategoriesTable({
     }
 
     return result;
-  }, [transactions, getCategoryName, texts.others]);
+  }, [categorizedTxs, getCategoryName, texts.others]);
 
   if (topCategories.length === 0) {
     return (
@@ -250,13 +276,18 @@ function TopCategoriesTable({
             </tbody>
           </table>
         </div>
+        {uncategorizedTotal > 0 && (
+          <div className="px-3 py-2 border-t text-sm text-muted-foreground">
+            {texts.uncategorized}: {formatCurrencyEU(uncategorizedTotal)}
+          </div>
+        )}
       </CardContent>
     </Card>
   );
 }
 
 export default function DashboardPage() {
-  const { firestore } = useFirebase();
+  const { firestore, user } = useFirebase();
   const { organizationId, organization, userRole } = useCurrentOrganization();
   const { t, language } = useTranslations();
   const locale = language === 'es' ? 'es-ES' : 'ca-ES';
@@ -266,6 +297,53 @@ export default function DashboardPage() {
 
   // Toast de notificacions (només un cop per sessió)
   useNotificationToast({ notifications: DASHBOARD_NOTIFICATIONS });
+
+  // ═══════════════════════════════════════════════════════════════════════════════
+  // ONBOARDING: Modal de benvinguda per primer admin
+  // ═══════════════════════════════════════════════════════════════════════════════
+
+  // Carregar membres per detectar primer admin
+  const membersQuery = useMemoFirebase(
+    () => organizationId ? collection(firestore, 'organizations', organizationId, 'members') : null,
+    [firestore, organizationId]
+  );
+  const { data: members } = useCollection<OrganizationMember>(membersQuery);
+
+  // Estat de les modals
+  const [showWelcomeModal, setShowWelcomeModal] = React.useState(false);
+  const [showWizardModal, setShowWizardModal] = React.useState(false);
+  // Botó de sessió: només visible si ha declinat la welcome modal en aquesta sessió
+  const [showSessionButton, setShowSessionButton] = React.useState(false);
+
+  // Detectar si cal mostrar la welcome modal
+  const shouldShowWelcome = React.useMemo(
+    () => shouldShowWelcomeModal(organization, user?.uid, members),
+    [organization, user?.uid, members]
+  );
+
+  // Detectar si és el primer admin (per al botó de sessió)
+  const isUserFirstAdmin = React.useMemo(
+    () => isFirstAdmin(user?.uid, members),
+    [user?.uid, members]
+  );
+
+  // Obrir la welcome modal automàticament si cal
+  React.useEffect(() => {
+    if (shouldShowWelcome && !showWelcomeModal && !showWizardModal) {
+      setShowWelcomeModal(true);
+    }
+  }, [shouldShowWelcome, showWelcomeModal, showWizardModal]);
+
+  // Gestionar "Guia'm" des de la welcome modal
+  const handleStartGuide = () => {
+    setShowWizardModal(true);
+    setShowSessionButton(false);
+  };
+
+  // Gestionar "Començar pel meu compte" des de la welcome modal
+  const handleSkipWelcome = () => {
+    setShowSessionButton(true);
+  };
 
   const transactionsQuery = useMemoFirebase(
     () => organizationId ? collection(firestore, 'organizations', organizationId, 'transactions') : null,
@@ -789,10 +867,51 @@ ${t.dashboard.generatedWith}`;
     return expensesByProject.reduce((sum, p) => sum + p.totalExpense, 0);
   }, [expensesByProject]);
 
-  // Detectar si totes les despeses estan sense assignar
-  const allExpensesUnassigned = React.useMemo(() => {
-    return expensesByProject.length === 1 && expensesByProject[0]?.projectId === null;
+  // Total de despesa assignada a projectes (excloent "Sense assignar")
+  const totalAssignedProjectExpenses = React.useMemo(() => {
+    return expensesByProject
+      .filter(p => p.projectId !== null)
+      .reduce((sum, p) => sum + p.totalExpense, 0);
   }, [expensesByProject]);
+
+  // Top 5 projectes assignats + "Altres" (només projectes reals, sense "Sense assignar")
+  const topAssignedProjects = React.useMemo(() => {
+    // Filtrar només projectes assignats (excloure projectId === null)
+    const assigned = expensesByProject.filter(p => p.projectId !== null);
+    if (assigned.length === 0 || totalAssignedProjectExpenses === 0) return [];
+
+    // Ordenar per import descendent
+    const sorted = [...assigned].sort((a, b) => b.totalExpense - a.totalExpense);
+
+    // Top 5
+    const top5 = sorted.slice(0, 5);
+    const restAmount = sorted.slice(5).reduce((sum, p) => sum + p.totalExpense, 0);
+
+    // Recalcular percentatges sobre total assignat
+    const result = top5.map(p => ({
+      ...p,
+      percentage: (p.totalExpense / totalAssignedProjectExpenses) * 100,
+    }));
+
+    // Afegir "Altres" si cal
+    if (restAmount > 0) {
+      result.push({
+        projectId: '_others',
+        projectName: t.dashboard.topCategoriesOthers ?? 'Altres',
+        totalExpense: restAmount,
+        percentage: (restAmount / totalAssignedProjectExpenses) * 100,
+      });
+    }
+
+    return result;
+  }, [expensesByProject, totalAssignedProjectExpenses, t.dashboard.topCategoriesOthers]);
+
+  // Condicions per mostrar el bloc de "Despesa per Eix"
+  const hasProjectModule = organization?.features?.projectModule === true;
+  const hasActiveProjects = (projects?.length ?? 0) > 0;
+  const totalExpensesAbs = Math.abs(totalExpenses);
+  const assignedExpensesRatio = totalExpensesAbs > 0 ? totalAssignedProjectExpenses / totalExpensesAbs : 0;
+  const shouldShowProjectExpenses = hasProjectModule && hasActiveProjects && totalAssignedProjectExpenses > 0 && assignedExpensesRatio > 0.05;
 
   // Càlcul d'alertes
   const alerts = React.useMemo(() => {
@@ -957,30 +1076,39 @@ ${t.dashboard.generatedWith}`;
     return result.sort((a, b) => a.priority - b.priority);
   }, [filteredTransactions, netBalance, uniqueDonors, alerts, dateFilter]);
 
-  // Onboarding: només per admins i quan no està complet
-  const onboardingStatus = React.useMemo(
-    () => computeOnboardingStatus(organization, contacts, categories),
-    [organization, contacts, categories]
-  );
-  const onboardingChecks = React.useMemo(
-    () => getOnboardingChecks(organization, contacts, categories),
-    [organization, contacts, categories]
-  );
-  const showOnboardingChecklist = userRole === 'admin' && !onboardingStatus.isComplete;
-
   return (
     <div className="flex flex-col gap-6">
-       <div>
-        <h1 className="text-2xl font-bold tracking-tight font-headline">{t.dashboard.title}</h1>
-        <p className="text-muted-foreground">{t.dashboard.description}</p>
-      </div>
+      {/* Modals d'onboarding */}
+      <WelcomeOnboardingModal
+        open={showWelcomeModal}
+        onOpenChange={setShowWelcomeModal}
+        onStartGuide={handleStartGuide}
+        onSkip={handleSkipWelcome}
+      />
+      <OnboardingWizardModal
+        open={showWizardModal}
+        onOpenChange={setShowWizardModal}
+      />
 
-      {showOnboardingChecklist && (
-        <OnboardingChecklist
-          checks={onboardingChecks}
-          progress={onboardingStatus.progress}
-        />
-      )}
+      {/* Capçalera amb botó de sessió opcional */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight font-headline">{t.dashboard.title}</h1>
+          <p className="text-muted-foreground">{t.dashboard.description}</p>
+        </div>
+        {/* Botó "Configuració inicial" - només durant la sessió si ha declinat */}
+        {showSessionButton && isUserFirstAdmin && (
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setShowWizardModal(true)}
+            className="text-muted-foreground"
+          >
+            <Settings className="h-4 w-4 mr-2" />
+            {t.onboarding?.welcome?.sessionButton ?? "Configuració inicial"}
+          </Button>
+        )}
+      </div>
 
       <div className="flex items-center justify-between gap-4">
         <DateFilter value={dateFilter} onChange={setDateFilter} />
@@ -990,6 +1118,7 @@ ${t.dashboard.generatedWith}`;
         </Button>
       </div>
 
+      {/* OCULTAT TEMPORALMENT - Celebracions
       {celebrations.length > 0 && (
         <Card className="border-emerald-200/60 bg-emerald-50/30">
           <CardHeader className="pb-3">
@@ -1021,6 +1150,7 @@ ${t.dashboard.generatedWith}`;
           </CardContent>
         </Card>
       )}
+      */}
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <Link
@@ -1163,72 +1293,55 @@ ${t.dashboard.generatedWith}`;
         </CardContent>
       </Card>
 
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <FolderKanban className="h-5 w-5 text-muted-foreground" />
-            {t.dashboard.expensesByProject}
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          {expensesByProject.length === 0 ? (
-            <p className="text-muted-foreground text-sm">{t.dashboard.noExpenses}</p>
-          ) : allExpensesUnassigned ? (
-            <div className="space-y-4">
-              <div className="flex items-start gap-3 p-4 rounded-lg bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-900">
-                <Info className="h-5 w-5 text-blue-500 mt-0.5 flex-shrink-0" />
-                <div className="flex-1 space-y-3">
-                  <p className="text-sm text-blue-900 dark:text-blue-100">
-                    {t.dashboard.noProjectsAssigned}
-                  </p>
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm font-medium text-blue-900 dark:text-blue-100">{t.dashboard.totalExpensesProject}</span>
-                    <span className="text-sm font-semibold text-blue-900 dark:text-blue-100">{formatCurrencyEU(totalProjectExpenses)}</span>
-                  </div>
-                  <Link href={buildUrl('/dashboard/movimientos')}>
-                    <Button variant="outline" size="sm" className="w-full">
-                      {t.dashboard.assignProjectsToTransactions}
-                    </Button>
-                  </Link>
-                </div>
-              </div>
-            </div>
-          ) : (
+      {shouldShowProjectExpenses && (
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="flex items-center gap-2">
+              <FolderKanban className="h-5 w-5 text-muted-foreground" />
+              {t.dashboard.assignedExpensesByProject ?? "Despesa assignada per eix"}
+            </CardTitle>
+            <p className="text-xs text-muted-foreground">
+              {t.dashboard.assignedExpensesDescription ?? "Només inclou despeses ja assignades a projectes dins del període."}
+            </p>
+          </CardHeader>
+          <CardContent>
             <div className="space-y-3">
-              {expensesByProject.map((project) => {
-                const isUnassigned = project.projectId === null;
-                return (
-                  <div key={project.projectId || 'unassigned'} className="space-y-1.5">
-                    <div className="flex items-center justify-between">
-                      <span className={`text-sm font-medium ${isUnassigned ? 'text-muted-foreground italic' : ''}`}>
-                        {project.projectName}
+              {topAssignedProjects.map((project) => (
+                <div key={project.projectId} className="space-y-1.5">
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm font-medium">
+                      {project.projectName}
+                    </span>
+                    <span className="text-sm font-semibold tabular-nums">
+                      {formatCurrencyEU(project.totalExpense)}
+                      <span className="ml-2 text-xs text-muted-foreground font-normal">
+                        ({Math.round(project.percentage)}%)
                       </span>
-                      <span className="text-sm font-semibold tabular-nums">
-                        {formatCurrencyEU(project.totalExpense)}
-                        <span className="ml-2 text-xs text-muted-foreground font-normal">
-                          ({Math.round(project.percentage)}%)
-                        </span>
-                      </span>
-                    </div>
-                    <div className="h-3 w-full bg-muted rounded-full overflow-hidden">
-                      <div
-                        className={`h-full rounded-full transition-all ${isUnassigned ? 'bg-gray-400' : 'bg-blue-500'}`}
-                        style={{ width: `${project.percentage}%` }}
-                      />
-                    </div>
+                    </span>
                   </div>
-                );
-              })}
-              <div className="pt-4 mt-4 border-t">
-                <div className="flex items-center justify-between">
-                  <span className="text-sm font-bold">{t.dashboard.totalExpensesProject}</span>
-                  <span className="text-sm font-bold tabular-nums">{formatCurrencyEU(totalProjectExpenses)}</span>
+                  <div className="h-3 w-full bg-muted rounded-full overflow-hidden">
+                    <div
+                      className="h-full rounded-full transition-all bg-blue-500"
+                      style={{ width: `${project.percentage}%` }}
+                    />
+                  </div>
                 </div>
+              ))}
+              <div className="pt-4 mt-4 border-t space-y-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-bold">{t.dashboard.totalAssigned ?? "Total assignat"}</span>
+                  <span className="text-sm font-bold tabular-nums">{formatCurrencyEU(totalAssignedProjectExpenses)}</span>
+                </div>
+                <Link href={buildUrl('/dashboard/project-module/projects')}>
+                  <Button variant="outline" size="sm" className="w-full">
+                    {t.dashboard.viewProjectDetails ?? "Veure detall"}
+                  </Button>
+                </Link>
               </div>
             </div>
-          )}
-        </CardContent>
-      </Card>
+          </CardContent>
+        </Card>
+      )}
 
       <Card>
         <CardHeader>
@@ -1275,6 +1388,7 @@ ${t.dashboard.generatedWith}`;
         </CardContent>
       </Card>
 
+      {/* BLOC ALERTES COMENTAT TEMPORALMENT
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
@@ -1317,6 +1431,7 @@ ${t.dashboard.generatedWith}`;
           )}
         </CardContent>
       </Card>
+      */}
 
       <TopCategoriesTable
         transactions={expenseTransactions}
