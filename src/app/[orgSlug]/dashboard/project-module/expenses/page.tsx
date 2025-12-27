@@ -48,6 +48,14 @@ import {
 } from '@/components/ui/dialog';
 import { AlertCircle, RefreshCw, ChevronRight, FolderPlus, Check, MoreHorizontal, Split, X, Plus, Landmark, Globe, ArrowLeft, FolderKanban, Filter, Pencil, Trash2, Search, FileText, Upload } from 'lucide-react';
 import {
+  Breadcrumb,
+  BreadcrumbItem,
+  BreadcrumbLink,
+  BreadcrumbList,
+  BreadcrumbPage,
+  BreadcrumbSeparator,
+} from '@/components/ui/breadcrumb';
+import {
   Tooltip,
   TooltipContent,
   TooltipTrigger,
@@ -873,6 +881,23 @@ export default function ExpensesInboxPage() {
 
   return (
     <div className="space-y-6">
+      {/* Breadcrumb */}
+      <Breadcrumb>
+        <BreadcrumbList>
+          <BreadcrumbItem>
+            <BreadcrumbLink asChild>
+              <Link href={buildUrl('/dashboard/project-module/projects')}>
+                {t.breadcrumb?.projects ?? 'Projectes'}
+              </Link>
+            </BreadcrumbLink>
+          </BreadcrumbItem>
+          <BreadcrumbSeparator />
+          <BreadcrumbItem>
+            <BreadcrumbPage>{t.breadcrumb?.expenseAssignment ?? 'Assignació de despeses'}</BreadcrumbPage>
+          </BreadcrumbItem>
+        </BreadcrumbList>
+      </Breadcrumb>
+
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
@@ -890,12 +915,6 @@ export default function ExpensesInboxPage() {
             <Plus className="h-4 w-4 mr-2" />
             {ep.addOffBank}
           </Button>
-          <Link href={buildUrl('/dashboard/project-module/projects')}>
-            <Button variant="outline" size="sm">
-              <FolderKanban className="h-4 w-4 mr-2" />
-              {t.breadcrumb?.projects ?? 'Projectes'}
-            </Button>
-          </Link>
           <Button
             onClick={() => setTableFilter(tableFilter === 'needsReview' ? 'all' : 'needsReview')}
             variant={tableFilter === 'needsReview' ? 'default' : 'outline'}
