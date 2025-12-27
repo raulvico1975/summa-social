@@ -574,8 +574,7 @@ export function DonorManager() {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between">
             <div>
-              <CardTitle className="flex items-center gap-2">
-                <Heart className="h-5 w-5 text-red-500" />
+              <CardTitle className="text-2xl font-bold tracking-tight font-headline">
                 {t.donors.title}
               </CardTitle>
               <CardDescription>

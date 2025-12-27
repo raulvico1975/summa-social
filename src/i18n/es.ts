@@ -1,7 +1,7 @@
 export const es = {
   dashboard: {
-    title: "Panel de Control",
-    description: "Situación financiera, actividad reciente y obligaciones pendientes.",
+    title: "Dashboard",
+    description: "Visión general de la situación financiera, la actividad reciente y las obligaciones pendientes.",
     totalIncome: "Ingresos Totales",
     totalIncomeDescription: "Suma de todos los ingresos",
     operatingExpenses: "Gastos Operativos",
@@ -190,7 +190,7 @@ export const es = {
   },
   movements: {
     title: "Movimientos",
-    description: "Gestiona todas tus transacciones bancarias.",
+    description: "Importa, revisa y asigna categorías, contactos y documentos.",
     import: "Importar",
     export: "Exportar",
     deleteAll: "Eliminar todo",
@@ -875,7 +875,7 @@ export const es = {
   },
   donors: {
     title: "Donantes",
-    description: "Gestiona los donantes de tu organización.",
+    description: "Gestiona donantes y prepara datos para el Modelo 182 y certificados.",
     add: "Añadir Donante",
     import: "Importar Donantes",
     export: "Exportar",
@@ -1084,7 +1084,7 @@ export const es = {
   },
   suppliers: {
     title: "Proveedores",
-    description: "Gestiona los proveedores de tu organización.",
+    description: "Gestiona proveedores y prepara datos para el Modelo 347.",
     add: "Añadir Proveedor",
     import: "Importar Proveedores",
     noData: "No hay proveedores registrados.",
@@ -1687,8 +1687,8 @@ export const es = {
     noEligibleExpenses: "No hay gastos elegibles para asignar",
     // Página de gastos (inbox)
     expensesPage: {
-      title: "Gastos para asignar",
-      subtitle: "Gastos elegibles para vincular a proyectos",
+      title: "Asignación de gastos",
+      subtitle: "Asigna gastos a proyectos y controla la ejecución.",
       addOffBank: "Añadir gasto (contraparte)",
       errorLoading: "Error cargando gastos",
       retry: "Reintentar",

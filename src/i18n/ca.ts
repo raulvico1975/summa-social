@@ -1,7 +1,7 @@
 export const ca = {
   dashboard: {
-    title: "Panell de Control",
-    description: "Situació financera, activitat recent i obligacions pendents.",
+    title: "Dashboard",
+    description: "Visió general de la situació financera, l'activitat recent i les obligacions pendents.",
     totalIncome: "Ingressos Totals",
     totalIncomeDescription: "Suma de tots els ingressos",
     operatingExpenses: "Despeses Operatives",
@@ -190,7 +190,7 @@ export const ca = {
   },
   movements: {
     title: "Moviments",
-    description: "Gestiona totes les teves transaccions bancàries.",
+    description: "Importa, revisa i assigna categories, contactes i documents.",
     import: "Importar",
     export: "Exportar",
     deleteAll: "Eliminar tot",
@@ -843,7 +843,7 @@ export const ca = {
   },
   donors: {
     title: "Donants",
-    description: "Gestiona els donants de la teva organització.",
+    description: "Gestiona donants i prepara dades per al Model 182 i certificats.",
     add: "Afegir Donant",
     import: "Importar Donants",
     export: "Exportar",
@@ -1052,7 +1052,7 @@ export const ca = {
   },
   suppliers: {
     title: "Proveïdors",
-    description: "Gestiona els proveïdors de la teva organització.",
+    description: "Gestiona proveïdors i prepara dades per al Model 347.",
     add: "Afegir Proveïdor",
     import: "Importar Proveïdors",
     noData: "No hi ha proveïdors registrats.",
@@ -1661,8 +1661,8 @@ export const ca = {
     noEligibleExpenses: "No hi ha despeses elegibles per assignar",
     // Pàgina de despeses (inbox)
     expensesPage: {
-      title: "Despeses per assignar",
-      subtitle: "Despeses elegibles per vincular a projectes",
+      title: "Assignació de despeses",
+      subtitle: "Assigna despeses a projectes i controla l'execució.",
       addOffBank: "Afegir despesa (contrapart)",
       errorLoading: "Error carregant despeses",
       retry: "Reintentar",

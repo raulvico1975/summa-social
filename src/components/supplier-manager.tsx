@@ -264,8 +264,7 @@ export function SupplierManager() {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between">
             <div>
-              <CardTitle className="flex items-center gap-2">
-                <Building2 className="h-5 w-5 text-blue-500" />
+              <CardTitle className="text-2xl font-bold tracking-tight font-headline">
                 {t.suppliers.title}
               </CardTitle>
               <CardDescription>

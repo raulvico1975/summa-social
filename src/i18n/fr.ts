@@ -1,7 +1,7 @@
 export const fr = {
   dashboard: {
-    title: "Tableau de bord",
-    description: "Situation financière, activité récente et obligations en cours.",
+    title: "Dashboard",
+    description: "Vue d'ensemble de la situation financière, de l'activité récente et des obligations en cours.",
     totalIncome: "Revenus totaux",
     totalIncomeDescription: "Somme de tous les revenus",
     operatingExpenses: "Dépenses opérationnelles",
@@ -190,7 +190,7 @@ export const fr = {
   },
   movements: {
     title: "Mouvements",
-    description: "Gérez toutes vos transactions bancaires.",
+    description: "Importez, révisez et attribuez catégories, contacts et documents.",
     import: "Importer",
     export: "Exporter",
     deleteAll: "Tout supprimer",
@@ -843,7 +843,7 @@ export const fr = {
   },
   donors: {
     title: "Donateurs",
-    description: "Gérez les donateurs de votre organisation.",
+    description: "Gérez les donateurs et préparez les données pour les déclarations fiscales.",
     add: "Ajouter donateur",
     import: "Importer donateurs",
     export: "Exporter",
@@ -1052,7 +1052,7 @@ export const fr = {
   },
   suppliers: {
     title: "Fournisseurs",
-    description: "Gérez les fournisseurs de votre organisation.",
+    description: "Gérez les fournisseurs et préparez les déclarations fiscales.",
     add: "Ajouter fournisseur",
     import: "Importer fournisseurs",
     noData: "Aucun fournisseur enregistré.",
@@ -1662,8 +1662,8 @@ export const fr = {
     noEligibleExpenses: "Aucune dépense éligible à attribuer",
     // Page des dépenses (inbox)
     expensesPage: {
-      title: "Dépenses à attribuer",
-      subtitle: "Dépenses éligibles à lier à des projets",
+      title: "Attribution des dépenses",
+      subtitle: "Attribuez les dépenses aux projets et contrôlez l'exécution.",
       addOffBank: "Ajouter dépense (partenaire)",
       errorLoading: "Erreur de chargement des dépenses",
       retry: "Réessayer",
