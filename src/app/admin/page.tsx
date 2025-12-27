@@ -5,7 +5,7 @@ import * as React from 'react';
 import { useRouter } from 'next/navigation';
 import { useFirebase, useCollection, useMemoFirebase } from '@/firebase';
 import { collection, query, orderBy, doc, updateDoc, getCountFromServer } from 'firebase/firestore';
-import { sendPasswordResetEmail } from 'firebase/auth';
+import { sendPasswordResetEmail, signInWithEmailAndPassword } from 'firebase/auth';
 import type { Organization } from '@/lib/data';
 import { SUPER_ADMIN_UID } from '@/lib/data';
 import { Button } from '@/components/ui/button';
@@ -51,7 +51,9 @@ import {
   Mail,
   ExternalLink,
   FileText,
+  Lock,
 } from 'lucide-react';
+import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
 import { CreateOrganizationDialog } from '@/components/admin/create-organization-dialog';
@@ -70,6 +72,12 @@ export default function AdminPage() {
   // Reset contrasenya
   const [resetEmail, setResetEmail] = React.useState('');
   const [isResetting, setIsResetting] = React.useState(false);
+
+  // Login local
+  const [loginEmail, setLoginEmail] = React.useState('');
+  const [loginPassword, setLoginPassword] = React.useState('');
+  const [isLoggingIn, setIsLoggingIn] = React.useState(false);
+  const [loginError, setLoginError] = React.useState('');
 
   // Verificar que és Super Admin
   const isSuperAdmin = user?.uid === SUPER_ADMIN_UID;
@@ -91,12 +99,22 @@ export default function AdminPage() {
     };
   }, [organizations]);
 
-  // Redirigir si no és super admin
-  React.useEffect(() => {
-    if (!isUserLoading && !isSuperAdmin) {
-      router.push('/dashboard');
+  // Handler login
+  const handleLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!loginEmail.trim() || !loginPassword) return;
+    setIsLoggingIn(true);
+    setLoginError('');
+    try {
+      await signInWithEmailAndPassword(auth, loginEmail.trim(), loginPassword);
+      // El component es re-renderitzarà automàticament amb el nou user
+    } catch (error: unknown) {
+      console.error('Login error:', error);
+      setLoginError('Credencials incorrectes');
+    } finally {
+      setIsLoggingIn(false);
     }
-  }, [isUserLoading, isSuperAdmin, router]);
+  };
 
   const handleEnterOrganization = (org: Organization) => {
     // Guardar l'organització seleccionada a sessionStorage per "impersonar"
@@ -190,7 +208,7 @@ export default function AdminPage() {
   };
 
   // Loading state
-  if (isUserLoading || orgsLoading) {
+  if (isUserLoading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
@@ -198,7 +216,66 @@ export default function AdminPage() {
     );
   }
 
-  // No autoritzat
+  // No autenticat - mostrar login
+  if (!user) {
+    return (
+      <div className="flex items-center justify-center min-h-screen bg-background">
+        <Card className="w-full max-w-sm">
+          <CardHeader className="text-center">
+            <div className="mx-auto mb-2 flex h-12 w-12 items-center justify-center rounded-full bg-primary/10">
+              <Shield className="h-6 w-6 text-primary" />
+            </div>
+            <CardTitle>Panell SuperAdmin</CardTitle>
+            <CardDescription>Accés restringit</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <form onSubmit={handleLogin} className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="email">Email</Label>
+                <Input
+                  id="email"
+                  type="email"
+                  placeholder="admin@exemple.com"
+                  value={loginEmail}
+                  onChange={(e) => setLoginEmail(e.target.value)}
+                  disabled={isLoggingIn}
+                  autoComplete="email"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="password">Contrasenya</Label>
+                <Input
+                  id="password"
+                  type="password"
+                  value={loginPassword}
+                  onChange={(e) => setLoginPassword(e.target.value)}
+                  disabled={isLoggingIn}
+                  autoComplete="current-password"
+                />
+              </div>
+              {loginError && (
+                <p className="text-sm text-destructive">{loginError}</p>
+              )}
+              <Button
+                type="submit"
+                className="w-full"
+                disabled={isLoggingIn || !loginEmail.trim() || !loginPassword}
+              >
+                {isLoggingIn ? (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                ) : (
+                  <Lock className="mr-2 h-4 w-4" />
+                )}
+                Entrar
+              </Button>
+            </form>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  // Autenticat però no és SuperAdmin
   if (!isSuperAdmin) {
     return (
       <div className="flex flex-col items-center justify-center min-h-screen gap-4">
@@ -209,6 +286,15 @@ export default function AdminPage() {
           <ArrowLeft className="mr-2 h-4 w-4" />
           Tornar al dashboard
         </Button>
+      </div>
+    );
+  }
+
+  // Carregant organitzacions
+  if (orgsLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
       </div>
     );
   }
