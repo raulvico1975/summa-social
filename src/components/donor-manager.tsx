@@ -853,6 +853,7 @@ export function DonorManager() {
                                 size="icon"
                                 className="h-7 w-7 text-green-600 hover:text-green-700"
                                 onClick={() => handleReactivate(donor)}
+                                aria-label={t.donors.reactivate}
                               >
                                 <RotateCcw className="h-3.5 w-3.5" />
                               </Button>
@@ -860,17 +861,34 @@ export function DonorManager() {
                             <TooltipContent>{t.donors.reactivate}</TooltipContent>
                           </Tooltip>
                         )}
-                        <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => handleEdit(donor)}>
-                          <Edit className="h-3.5 w-3.5" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-7 w-7 text-red-500 hover:text-red-600"
-                          onClick={() => handleDeleteRequest(donor)}
-                        >
-                          <Trash2 className="h-3.5 w-3.5" />
-                        </Button>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-7 w-7"
+                              onClick={() => handleEdit(donor)}
+                              aria-label={t.donors.editDonor ?? 'Editar donant'}
+                            >
+                              <Edit className="h-3.5 w-3.5" />
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent>{t.donors.editDonor ?? 'Editar'}</TooltipContent>
+                        </Tooltip>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-7 w-7 text-red-500 hover:text-red-600"
+                              onClick={() => handleDeleteRequest(donor)}
+                              aria-label={t.donors.deleteDonor ?? 'Eliminar donant'}
+                            >
+                              <Trash2 className="h-3.5 w-3.5" />
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent>{t.donors.deleteDonor ?? 'Eliminar'}</TooltipContent>
+                        </Tooltip>
                       </TableCell>
                     </TableRow>
                   ))}

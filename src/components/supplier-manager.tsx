@@ -349,7 +349,12 @@ export function SupplierManager() {
                         </div>
                       </TableCell>
                       <TableCell className="text-right">
-                        <Button variant="ghost" size="icon" onClick={() => handleEdit(supplier)}>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => handleEdit(supplier)}
+                          aria-label={t.suppliers.editSupplier ?? 'Editar proveïdor'}
+                        >
                           <Edit className="h-4 w-4" />
                         </Button>
                         <Button
@@ -357,6 +362,7 @@ export function SupplierManager() {
                           size="icon"
                           className="text-red-500 hover:text-red-600"
                           onClick={() => handleDeleteRequest(supplier)}
+                          aria-label={t.suppliers.deleteSupplier ?? 'Eliminar proveïdor'}
                         >
                           <Trash2 className="h-4 w-4" />
                         </Button>

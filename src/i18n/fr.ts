@@ -898,6 +898,8 @@ export const fr = {
     inactiveSinceLabel: "Date de résiliation",
     donorReactivated: "Donateur réactivé",
     donorReactivatedDescription: (name: string) => `Le donateur « ${name} » a été réactivé.`,
+    editDonor: "Modifier donateur",
+    deleteDonor: "Supprimer donateur",
     importer: {
       title: "Importer donateurs",
       description: "Importez des donateurs depuis un fichier Excel ou CSV.",
@@ -1076,6 +1078,8 @@ export const fr = {
     supplierUpdatedDescription: (name: string) => `Le fournisseur "${name}" a été mis à jour.`,
     supplierDeleted: "Fournisseur supprimé",
     supplierDeletedDescription: (name: string) => `Le fournisseur "${name}" a été supprimé.`,
+    editSupplier: "Modifier fournisseur",
+    deleteSupplier: "Supprimer fournisseur",
     categories: {
       services: "Services professionnels",
       utilities: "Fournitures",

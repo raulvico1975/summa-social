@@ -148,7 +148,7 @@ function AssignmentStatusPopover({
                     }
                   }}
                   disabled={isSaving}
-                  title="Eliminar aquesta assignació"
+                  aria-label="Eliminar aquesta assignació"
                 >
                   <X className="h-3 w-3" />
                 </Button>
@@ -250,7 +250,7 @@ function QuickAssignPopover({
           size="icon"
           className="h-7 w-7"
           disabled={isAssigning}
-          title={assignTooltip}
+          aria-label={assignTooltip}
         >
           <FolderPlus className="h-4 w-4" />
         </Button>
@@ -1177,7 +1177,7 @@ export default function ExpensesInboxPage() {
                             size="icon"
                             className="h-7 w-7"
                             onClick={() => handleEditOffBank(item)}
-                            title={t.projectModule?.editExpense ?? 'Editar despesa'}
+                            aria-label={t.projectModule?.editExpense ?? 'Editar despesa'}
                           >
                             <Pencil className="h-4 w-4" />
                           </Button>
@@ -1189,7 +1189,7 @@ export default function ExpensesInboxPage() {
                               variant="ghost"
                               size="icon"
                               className="h-7 w-7"
-                              title={t.projectModule?.viewDetail ?? 'Veure detall'}
+                              aria-label={t.projectModule?.viewDetail ?? 'Veure detall'}
                             >
                               <ChevronRight className="h-4 w-4" />
                             </Button>

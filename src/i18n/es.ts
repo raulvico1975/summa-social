@@ -930,6 +930,8 @@ export const es = {
     inactiveSinceLabel: "Fecha de baja",
     donorReactivated: "Donante reactivado",
     donorReactivatedDescription: (name: string) => `El donante "${name}" ha sido reactivado.`,
+    editDonor: "Editar donante",
+    deleteDonor: "Eliminar donante",
     importer: {
       title: "Importar Donantes",
       description: "Importa donantes desde un archivo Excel o CSV.",
@@ -1108,6 +1110,8 @@ export const es = {
     supplierUpdatedDescription: (name: string) => `El proveedor "${name}" ha sido actualizado.`,
     supplierDeleted: "Proveedor Eliminado",
     supplierDeletedDescription: (name: string) => `El proveedor "${name}" ha sido eliminado.`,
+    editSupplier: "Editar proveedor",
+    deleteSupplier: "Eliminar proveedor",
     categories: {
       services: "Servicios profesionales",
       utilities: "Suministros",

@@ -898,6 +898,8 @@ export const ca = {
     inactiveSinceLabel: "Data de baixa",
     donorReactivated: "Donant reactivat",
     donorReactivatedDescription: (name: string) => `El donant "${name}" ha estat reactivat.`,
+    editDonor: "Editar donant",
+    deleteDonor: "Eliminar donant",
     importer: {
       title: "Importar Donants",
       description: "Importa donants des d'un arxiu Excel o CSV.",
@@ -1076,6 +1078,8 @@ export const ca = {
     supplierUpdatedDescription: (name: string) => `El proveïdor "${name}" ha estat actualitzat.`,
     supplierDeleted: "Proveïdor Eliminat",
     supplierDeletedDescription: (name: string) => `El proveïdor "${name}" ha estat eliminat.`,
+    editSupplier: "Editar proveïdor",
+    deleteSupplier: "Eliminar proveïdor",
     categories: {
       services: "Serveis professionals",
       utilities: "Subministraments",
