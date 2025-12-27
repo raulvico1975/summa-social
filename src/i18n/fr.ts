@@ -191,6 +191,7 @@ export const fr = {
   movements: {
     title: "Mouvements",
     description: "Importez, révisez et attribuez catégories, contacts et documents.",
+    quickExpenseCta: "+ Dépense rapide",
     import: "Importer",
     export: "Exporter",
     deleteAll: "Tout supprimer",

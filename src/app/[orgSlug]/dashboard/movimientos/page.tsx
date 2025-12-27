@@ -10,6 +10,9 @@ import { useTranslations } from '@/i18n';
 import { useCurrentOrganization } from '@/hooks/organization-provider';
 import { useSearchParams } from 'next/navigation';
 import { fromPeriodQuery } from '@/lib/period-query';
+import { Button } from '@/components/ui/button';
+import { Camera } from 'lucide-react';
+import Link from 'next/link';
 
 export default function MovimientosPage() {
   const { firestore } = useFirebase();
@@ -33,6 +36,12 @@ export default function MovimientosPage() {
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <TransactionImporter existingTransactions={transactions || []} />
+          <Button variant="outline" asChild>
+            <Link href="/q">
+              <Camera className="mr-2 h-4 w-4" />
+              {t.movements?.quickExpenseCta ?? '+ Despesa ràpida'}
+            </Link>
+          </Button>
         </div>
       </div>
 

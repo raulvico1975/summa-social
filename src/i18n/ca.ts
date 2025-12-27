@@ -191,6 +191,7 @@ export const ca = {
   movements: {
     title: "Moviments",
     description: "Importa, revisa i assigna categories, contactes i documents.",
+    quickExpenseCta: "+ Despesa ràpida",
     import: "Importar",
     export: "Exportar",
     deleteAll: "Eliminar tot",
