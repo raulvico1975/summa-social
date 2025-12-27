@@ -8,16 +8,16 @@ export type FeatureAnnouncement = {
 };
 
 export const FEATURE_ANNOUNCEMENT: FeatureAnnouncement | null = {
-  id: 'v1.17-ui-polish',
-  text: "Novetat: Interfície millorada amb taules més llegibles, navegació amb breadcrumbs i millor accessibilitat.",
+  id: 'v1.18-onboarding',
+  text: "Novetat: Configuració inicial guiada per a noves organitzacions.",
   cta: {
-    label: "Explorar",
-    href: "/dashboard/movimientos",
+    label: "Veure",
+    href: "/onboarding",
   },
 };
 
 export const WORKING_ON: string[] = [
   "Exportació de justificacions de projectes",
-  "Millores en el matching de devolucions",
+  "Guardrails contextuals per dades fiscals",
   "Informes de seguiment de projectes",
 ];
