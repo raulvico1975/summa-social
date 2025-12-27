@@ -248,7 +248,7 @@ function QuickAssignPopover({
         <Button
           variant="ghost"
           size="icon"
-          className="h-7 w-7"
+          className="h-8 w-8 text-muted-foreground hover:text-foreground hover:bg-muted/40"
           disabled={isAssigning}
           aria-label={assignTooltip}
         >
@@ -1175,7 +1175,7 @@ export default function ExpensesInboxPage() {
                           <Button
                             variant="ghost"
                             size="icon"
-                            className="h-7 w-7"
+                            className="h-8 w-8 text-muted-foreground hover:text-foreground hover:bg-muted/40"
                             onClick={() => handleEditOffBank(item)}
                             aria-label={t.projectModule?.editExpense ?? 'Editar despesa'}
                           >
@@ -1188,7 +1188,7 @@ export default function ExpensesInboxPage() {
                             <Button
                               variant="ghost"
                               size="icon"
-                              className="h-7 w-7"
+                              className="h-8 w-8 text-muted-foreground hover:text-foreground hover:bg-muted/40"
                               aria-label={t.projectModule?.viewDetail ?? 'Veure detall'}
                             >
                               <ChevronRight className="h-4 w-4" />

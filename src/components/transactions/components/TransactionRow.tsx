@@ -757,7 +757,12 @@ export const TransactionRow = React.memo(function TransactionRow({
       <TableCell className="text-right py-1">
         <DropdownMenu open={isActionsMenuOpen} onOpenChange={setIsActionsMenuOpen}>
           <DropdownMenuTrigger asChild>
-            <Button variant="ghost" size="icon" className="h-7 w-7">
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8 text-muted-foreground hover:text-foreground hover:bg-muted/40"
+              aria-label="Més opcions"
+            >
               <MoreVertical className="h-4 w-4" />
             </Button>
           </DropdownMenuTrigger>
@@ -815,7 +820,7 @@ export const TransactionRow = React.memo(function TransactionRow({
               </DropdownMenuItem>
             )}
             <DropdownMenuSeparator />
-            <DropdownMenuItem className="text-red-500" onClick={handleDelete}>
+            <DropdownMenuItem className="text-rose-600 focus:text-rose-600" onClick={handleDelete}>
               <Trash2 className="mr-2 h-4 w-4" />
               {t.delete}
             </DropdownMenuItem>

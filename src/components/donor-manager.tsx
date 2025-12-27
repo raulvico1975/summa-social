@@ -851,11 +851,11 @@ export function DonorManager() {
                               <Button
                                 variant="ghost"
                                 size="icon"
-                                className="h-7 w-7 text-green-600 hover:text-green-700"
+                                className="h-8 w-8 text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50"
                                 onClick={() => handleReactivate(donor)}
                                 aria-label={t.donors.reactivate}
                               >
-                                <RotateCcw className="h-3.5 w-3.5" />
+                                <RotateCcw className="h-4 w-4" />
                               </Button>
                             </TooltipTrigger>
                             <TooltipContent>{t.donors.reactivate}</TooltipContent>
@@ -866,11 +866,11 @@ export function DonorManager() {
                             <Button
                               variant="ghost"
                               size="icon"
-                              className="h-7 w-7"
+                              className="h-8 w-8 text-muted-foreground hover:text-foreground hover:bg-muted/40"
                               onClick={() => handleEdit(donor)}
                               aria-label={t.donors.editDonor ?? 'Editar donant'}
                             >
-                              <Edit className="h-3.5 w-3.5" />
+                              <Edit className="h-4 w-4" />
                             </Button>
                           </TooltipTrigger>
                           <TooltipContent>{t.donors.editDonor ?? 'Editar'}</TooltipContent>
@@ -880,11 +880,11 @@ export function DonorManager() {
                             <Button
                               variant="ghost"
                               size="icon"
-                              className="h-7 w-7 text-red-500 hover:text-red-600"
+                              className="h-8 w-8 text-rose-600 hover:text-rose-700 hover:bg-rose-50"
                               onClick={() => handleDeleteRequest(donor)}
                               aria-label={t.donors.deleteDonor ?? 'Eliminar donant'}
                             >
-                              <Trash2 className="h-3.5 w-3.5" />
+                              <Trash2 className="h-4 w-4" />
                             </Button>
                           </TooltipTrigger>
                           <TooltipContent>{t.donors.deleteDonor ?? 'Eliminar'}</TooltipContent>
