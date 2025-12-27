@@ -46,7 +46,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import { AlertCircle, RefreshCw, ChevronRight, FolderPlus, Check, MoreHorizontal, Split, X, Plus, Landmark, Globe, ArrowLeft, FolderKanban, Filter, Pencil, Trash2, Search, Circle, Upload } from 'lucide-react';
+import { AlertCircle, RefreshCw, ChevronRight, FolderPlus, Check, MoreHorizontal, Split, X, Plus, Landmark, Globe, ArrowLeft, FolderKanban, Filter, Pencil, Trash2, Search, FileText, Upload } from 'lucide-react';
 import {
   Tooltip,
   TooltipContent,
@@ -97,9 +97,10 @@ function AssignmentStatusPopover({
     return <Badge variant="outline">0%</Badge>;
   }
 
+  // Mapping segons contracte: 0%=neutral, parcial=ambre, 100%=verd
   const badgeClass = status === 'assigned'
-    ? 'bg-green-600 hover:bg-green-700 cursor-pointer'
-    : 'bg-yellow-500 text-black hover:bg-yellow-600 cursor-pointer';
+    ? 'bg-emerald-600 hover:bg-emerald-700 cursor-pointer'
+    : 'bg-amber-500 text-black hover:bg-amber-600 cursor-pointer';
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
@@ -1104,9 +1105,9 @@ export default function ExpensesInboxPage() {
                               <button
                                 type="button"
                                 onClick={() => window.open(expense.documentUrl!, '_blank', 'noopener,noreferrer')}
-                                className="inline-flex"
+                                className="inline-flex items-center justify-center h-6 w-6 rounded hover:bg-accent transition-colors"
                               >
-                                <Circle className="h-2.5 w-2.5 fill-green-500 text-green-500" />
+                                <FileText className="h-4 w-4 text-emerald-600" />
                               </button>
                             </TooltipTrigger>
                             <TooltipContent>{ep.tooltipOpenDocument}</TooltipContent>
@@ -1116,16 +1117,16 @@ export default function ExpensesInboxPage() {
                               <button
                                 type="button"
                                 onClick={() => handleDeleteDocument(item)}
-                                className="inline-flex text-muted-foreground hover:text-destructive transition-colors"
+                                className="inline-flex items-center justify-center h-5 w-5 rounded text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors"
                               >
-                                <Trash2 className="h-2.5 w-2.5" />
+                                <Trash2 className="h-3 w-3" />
                               </button>
                             </TooltipTrigger>
                             <TooltipContent>{t.movements?.table?.deleteDocument ?? 'Eliminar document'}</TooltipContent>
                           </Tooltip>
                         </div>
                       ) : (
-                        <Circle className="h-2.5 w-2.5 text-muted-foreground/30 inline-block" />
+                        <FileText className="h-4 w-4 text-muted-foreground/30 inline-block" />
                       )}
                     </TableCell>
                     <TableCell className="font-mono text-sm">

@@ -612,11 +612,7 @@ export const TransactionRow = React.memo(function TransactionRow({
               variant="ghost"
               role="combobox"
               disabled={isCategoryLoading}
-              className={`justify-start rounded-full border-0 px-2 py-0.5 text-xs font-semibold h-6 min-w-0 w-auto gap-0.5 ${
-                tx.amount > 0
-                  ? 'bg-green-600 text-white hover:bg-green-600/80 hover:text-white'
-                  : 'bg-red-500 text-white hover:bg-red-500/80 hover:text-white'
-              } ${isReturnedDonation ? 'opacity-50' : ''}`}
+              className={`justify-start rounded-full border border-border bg-muted/30 px-2 py-0.5 text-xs font-medium h-6 min-w-0 w-auto gap-0.5 text-foreground/90 hover:bg-muted/50 ${isReturnedDonation ? 'opacity-50' : ''}`}
             >
               {isCategoryLoading ? (
                 <span className="flex items-center gap-1">
