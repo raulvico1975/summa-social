@@ -971,14 +971,14 @@ ${t.dashboard.generatedWith}`;
       </div>
 
       {celebrations.length > 0 && (
-        <Card className="border-green-200 bg-gradient-to-r from-green-50 to-emerald-50">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <PartyPopper className="h-5 w-5 text-green-600" />
+        <Card className="border-emerald-200/60 bg-emerald-50/30">
+          <CardHeader className="pb-3">
+            <CardTitle className="flex items-center gap-2 text-base font-medium">
+              <PartyPopper className="h-4 w-4 text-emerald-600" />
               {t.dashboard.celebrations}
             </CardTitle>
           </CardHeader>
-          <CardContent>
+          <CardContent className="pt-0">
             <div className="flex flex-wrap gap-2">
               {celebrations.map((celebration) => {
                 const message = t.dashboard[celebration.messageKey as keyof typeof t.dashboard];
@@ -989,8 +989,8 @@ ${t.dashboard.generatedWith}`;
                 return (
                   <Badge
                     key={celebration.id}
-                    variant="success"
-                    className="text-sm py-1.5 px-3"
+                    variant="outline"
+                    className="text-sm py-1 px-2.5 border-emerald-200 text-emerald-700 bg-emerald-50/50"
                   >
                     <span className="mr-1">{celebration.emoji}</span>
                     {displayMessage}
@@ -1047,7 +1047,7 @@ ${t.dashboard.generatedWith}`;
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <Heart className="h-5 w-5 text-pink-500" />
+            <Heart className="h-5 w-5 text-muted-foreground" />
             {t.dashboard.donationsAndMembers}
           </CardTitle>
         </CardHeader>
@@ -1055,10 +1055,10 @@ ${t.dashboard.generatedWith}`;
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
             <Link
               href={createMovementsLink('donations')}
-              className="block rounded-lg border p-4 text-left bg-gradient-to-br from-rose-50 to-white hover:shadow focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/70 active:scale-[0.99] cursor-pointer"
+              className="block rounded-lg border p-4 text-left hover:bg-muted/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/70 active:scale-[0.99] cursor-pointer transition-colors"
             >
               <p className="text-sm text-muted-foreground">{t.dashboard.donations}</p>
-              <p className="text-2xl font-bold">{formatCurrencyEU(totalDonations)}</p>
+              <p className="text-2xl font-bold text-emerald-600">{formatCurrencyEU(totalDonations)}</p>
               {canShowComparison && (
                 <ComparisonBadge
                   current={totalDonations}
@@ -1072,7 +1072,7 @@ ${t.dashboard.generatedWith}`;
             </Link>
             <Link
               href={createDonorsLink({ membershipType: 'one-time', viewActive: true })}
-              className="block rounded-lg border p-4 text-left bg-gradient-to-br from-violet-50 to-white hover:shadow focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/70 active:scale-[0.99] cursor-pointer"
+              className="block rounded-lg border p-4 text-left hover:bg-muted/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/70 active:scale-[0.99] cursor-pointer transition-colors"
             >
               <div className="flex items-center gap-1">
                 <p className="text-sm text-muted-foreground">{t.dashboard.activeDonors}</p>
@@ -1098,7 +1098,7 @@ ${t.dashboard.generatedWith}`;
             </Link>
             <Link
               href={createDonorsLink({ membershipType: 'recurring', viewActive: true })}
-              className="block rounded-lg border p-4 text-left bg-gradient-to-br from-pink-50 to-white hover:shadow focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/70 active:scale-[0.99] cursor-pointer"
+              className="block rounded-lg border p-4 text-left hover:bg-muted/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/70 active:scale-[0.99] cursor-pointer transition-colors"
             >
               <div className="flex items-center gap-1">
                 <p className="text-sm text-muted-foreground">{t.dashboard.activeMembers}</p>
@@ -1124,10 +1124,10 @@ ${t.dashboard.generatedWith}`;
             </Link>
             <Link
               href={createMovementsLink('memberFees')}
-              className="block rounded-lg border p-4 text-left bg-gradient-to-br from-indigo-50 to-white hover:shadow focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/70 active:scale-[0.99] cursor-pointer"
+              className="block rounded-lg border p-4 text-left hover:bg-muted/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/70 active:scale-[0.99] cursor-pointer transition-colors"
             >
               <p className="text-sm text-muted-foreground">{t.dashboard.memberFees}</p>
-              <p className="text-2xl font-bold">{formatCurrencyEU(memberFees)}</p>
+              <p className="text-2xl font-bold text-emerald-600">{formatCurrencyEU(memberFees)}</p>
               {canShowComparison && (
                 <ComparisonBadge
                   current={memberFees}
@@ -1146,7 +1146,7 @@ ${t.dashboard.generatedWith}`;
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <FolderKanban className="h-5 w-5 text-blue-500" />
+            <FolderKanban className="h-5 w-5 text-muted-foreground" />
             {t.dashboard.expensesByProject}
           </CardTitle>
         </CardHeader>
@@ -1213,37 +1213,44 @@ ${t.dashboard.generatedWith}`;
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <CalendarClock className="h-5 w-5 text-amber-500" />
+            <CalendarClock className="h-5 w-5 text-muted-foreground" />
             {t.dashboard.taxObligations}
           </CardTitle>
         </CardHeader>
         <CardContent>
           <div className="flex flex-col gap-3">
-            {taxObligations.map((obligation) => (
-              <div
-                key={obligation.id}
-                className="flex items-center justify-between p-3 rounded-lg border"
-              >
-                <div className="flex items-center gap-3">
-                  <Badge variant={obligation.status === 'warning' ? 'default' : obligation.status}>
-                    {obligation.status === 'success' && '🟢'}
-                    {obligation.status === 'warning' && '🟡'}
-                    {obligation.status === 'destructive' && '🔴'}
-                  </Badge>
-                  <div>
-                    <p className="font-medium text-sm">{t.dashboard[obligation.nameKey as keyof typeof t.dashboard] as string}</p>
-                    <p className="text-xs text-muted-foreground">
-                      {obligation.daysRemaining} {t.dashboard.daysRemaining}
-                    </p>
+            {taxObligations.map((obligation) => {
+              // Mapping segons Design Contract: >60 dies = neutral, 30-60 = ambre, <30 = vermell
+              const badgeClass = obligation.status === 'destructive'
+                ? 'bg-rose-100 text-rose-700 border-rose-200'
+                : obligation.status === 'warning'
+                ? 'bg-amber-50 text-amber-700 border-amber-200'
+                : 'bg-muted/50 text-muted-foreground border-border';
+
+              return (
+                <div
+                  key={obligation.id}
+                  className="flex items-center justify-between p-3 rounded-lg border"
+                >
+                  <div className="flex items-center gap-3">
+                    <Badge variant="outline" className={badgeClass}>
+                      {obligation.daysRemaining}d
+                    </Badge>
+                    <div>
+                      <p className="font-medium text-sm">{t.dashboard[obligation.nameKey as keyof typeof t.dashboard] as string}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {obligation.daysRemaining} {t.dashboard.daysRemaining}
+                      </p>
+                    </div>
                   </div>
+                  <Link href={buildUrl(obligation.reportPath)}>
+                    <Button variant="outline" size="sm">
+                      {t.dashboard.prepare}
+                    </Button>
+                  </Link>
                 </div>
-                <Link href={buildUrl(obligation.reportPath)}>
-                  <Button variant="outline" size="sm">
-                    {t.dashboard.prepare}
-                  </Button>
-                </Link>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </CardContent>
       </Card>
@@ -1251,32 +1258,41 @@ ${t.dashboard.generatedWith}`;
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <AlertTriangle className="h-5 w-5 text-orange-500" />
+            <AlertTriangle className="h-5 w-5 text-muted-foreground" />
             {t.dashboard.alerts}
           </CardTitle>
         </CardHeader>
         <CardContent>
           {alerts.length === 0 ? (
-            <div className="flex items-center gap-2 text-green-600">
-              <span className="text-2xl">✅</span>
-              <span className="font-semibold">{t.dashboard.allClear}</span>
+            <div className="flex items-center gap-2 text-emerald-600">
+              <span className="text-lg">✓</span>
+              <span className="text-sm font-medium">{t.dashboard.allClear}</span>
             </div>
           ) : (
             <div className="flex flex-col gap-3">
-              {alerts.map((alert) => (
-                <div key={alert.type}>
-                  <Link
-                    href={alert.href}
-                    className="flex items-center justify-between p-3 rounded-lg border hover:bg-accent transition-colors"
-                  >
-                    <span className="text-sm">{alert.label}</span>
-                    <Badge variant={alert.variant}>{alert.count}</Badge>
-                  </Link>
-                  {(alert as any).info && (
-                    <p className="text-xs text-muted-foreground mt-1 ml-3">{(alert as any).info}</p>
-                  )}
-                </div>
-              ))}
+              {alerts.map((alert) => {
+                // Mapping segons Design Contract: destructive=vermell, default=ambre, secondary=neutral
+                const badgeClass = alert.variant === 'destructive'
+                  ? 'bg-rose-100 text-rose-700 border-rose-200'
+                  : alert.variant === 'default'
+                  ? 'bg-amber-50 text-amber-700 border-amber-200'
+                  : 'bg-muted/50 text-muted-foreground border-border';
+
+                return (
+                  <div key={alert.type}>
+                    <Link
+                      href={alert.href}
+                      className="flex items-center justify-between p-3 rounded-lg border hover:bg-accent transition-colors"
+                    >
+                      <span className="text-sm">{alert.label}</span>
+                      <Badge variant="outline" className={badgeClass}>{alert.count}</Badge>
+                    </Link>
+                    {(alert as any).info && (
+                      <p className="text-xs text-muted-foreground mt-1 ml-3">{(alert as any).info}</p>
+                    )}
+                  </div>
+                );
+              })}
             </div>
           )}
         </CardContent>
