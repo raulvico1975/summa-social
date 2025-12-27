@@ -1,6 +1,6 @@
 # ═══════════════════════════════════════════════════════════════════════════════
 # SUMMA SOCIAL - REFERÈNCIA COMPLETA DEL PROJECTE
-# Versió 1.17 - Desembre 2025
+# Versió 1.18 - Desembre 2025
 # ═══════════════════════════════════════════════════════════════════════════════
 
 
@@ -2197,6 +2197,138 @@ Camps afegits v1.10:
 - Fix bloqueig `aria-hidden` en tancar modals
 - DropdownMenu controlat per evitar conflictes
 - `setTimeout` + `blur()` abans d'obrir modals des de menús
+
+## 7.5 Convencions UI/UX (NOU v1.17)
+
+### 7.5.1 Contracte Cromàtic
+
+| Color | Ús exclusiu |
+|-------|-------------|
+| **Vermell** (`text-destructive`, `bg-red-*`) | Errors, accions destructives, alertes |
+| **Verd** (`text-green-*`, `bg-green-*`) | Èxit, estat positiu |
+| **Groc/Taronja** (`text-amber-*`, `bg-amber-*`) | Advertències, pendents |
+| **Gris** (`text-muted-foreground`) | Informació secundària, marcadors neutres |
+
+**Regla clau:** El vermell MAI s'usa per indicadors neutres com marcadors de camps requerits (`*`).
+Els camps requerits usen `text-muted-foreground` per evitar confusió amb errors.
+
+### 7.5.2 Capçaleres de Pàgina
+
+**Patró estàndard:**
+```tsx
+<h1 className="text-2xl font-bold tracking-tight font-headline">{títol}</h1>
+<p className="text-muted-foreground">{subtítol descriptiu}</p>
+```
+
+| Pàgina | Títol | Subtítol |
+|--------|-------|----------|
+| Dashboard | "Dashboard" | "Visió general de la situació financera de l'organització." |
+| Moviments | "Moviments" | "Importa, revisa i assigna categories, contactes i documents." |
+| Donants | "Donants" | "Gestiona donants i prepara dades per al Model 182 i certificats." |
+| Proveïdors | "Proveïdors" | "Gestiona proveïdors i prepara dades per al Model 347." |
+| Assignació despeses | "Assignació de despeses" | "Assigna despeses sense projecte als teus projectes." |
+
+### 7.5.3 Densitat de Taules
+
+**Configuració base (`src/components/ui/table.tsx`):**
+
+| Element | Estil |
+|---------|-------|
+| `TableRow` | `border-b border-border/50 hover:bg-muted/30` |
+| `TableHead` | `h-10 px-3 text-xs text-muted-foreground` |
+| `TableCell` | `px-3 py-2` |
+
+**Principis:**
+- Separadors subtils (`border-border/50`) per evitar soroll visual
+- Hover suau (`bg-muted/30`) que no competeix amb el focus
+- Capçaleres compactes però llegibles (`text-xs`, `h-10`)
+
+### 7.5.4 Breadcrumbs
+
+**Quan usar:**
+- Pàgines de nivell 2 o superior (dins d'un mòdul)
+- Quan la navegació amb botó "enrere" no és suficient
+
+**Quan NO usar:**
+- Pàgines de nivell 1 (Dashboard, Moviments, Donants, etc.)
+- Pàgines amb navegació lateral visible
+
+**Implementació:**
+```tsx
+import { Breadcrumb, BreadcrumbList, BreadcrumbItem, BreadcrumbLink, BreadcrumbPage, BreadcrumbSeparator } from "@/components/ui/breadcrumb"
+
+<Breadcrumb>
+  <BreadcrumbList>
+    <BreadcrumbItem>
+      <BreadcrumbLink asChild>
+        <Link href="/dashboard/project-module/projects">{t.breadcrumb?.projects}</Link>
+      </BreadcrumbLink>
+    </BreadcrumbItem>
+    <BreadcrumbSeparator />
+    <BreadcrumbItem>
+      <BreadcrumbPage>{t.breadcrumb?.expenseAssignment}</BreadcrumbPage>
+    </BreadcrumbItem>
+  </BreadcrumbList>
+</Breadcrumb>
+```
+
+### 7.5.5 Accessibilitat (Keyboard + Focus)
+
+| Element | Comportament |
+|---------|-------------|
+| Diàlegs (Radix) | `Esc` tanca automàticament |
+| Editors inline | `Enter` confirma, `Esc` cancel·la |
+| Botons icona | Mínim `36x36px` hit target |
+| Focus rings | `focus-visible:ring-2 focus-visible:ring-ring` |
+
+**Aria labels obligatoris per botons només icona:**
+```tsx
+<Button variant="ghost" size="icon" aria-label={t.common.edit}>
+  <Pencil className="h-4 w-4" />
+</Button>
+```
+
+### 7.5.6 Empty States
+
+**To institucional, mai humorístic:**
+- ✅ "No hi ha moviments per mostrar"
+- ❌ "Encara no has afegit cap moviment! Comença ara!"
+
+**Estructura:**
+```tsx
+<div className="text-center py-8 text-muted-foreground">
+  <p>{t.emptyState.noResults}</p>
+</div>
+```
+
+### 7.5.7 Tooltips IA
+
+Quan una acció usa IA, el tooltip ha de ser descriptiu i no implicar confirmació:
+- ✅ "Classifica automàticament amb IA"
+- ❌ "Vols que la IA classifiqui?"
+
+### 7.5.8 Confirmacions Destructives
+
+**Sempre requerides per:**
+- Eliminació de dades
+- Accions irreversibles
+- Operacions massives
+
+**Format:**
+```tsx
+<AlertDialog>
+  <AlertDialogContent>
+    <AlertDialogHeader>
+      <AlertDialogTitle>{t.confirm.deleteTitle}</AlertDialogTitle>
+      <AlertDialogDescription>{t.confirm.deleteDescription}</AlertDialogDescription>
+    </AlertDialogHeader>
+    <AlertDialogFooter>
+      <AlertDialogCancel>{t.common.cancel}</AlertDialogCancel>
+      <AlertDialogAction className="bg-destructive">{t.common.delete}</AlertDialogAction>
+    </AlertDialogFooter>
+  </AlertDialogContent>
+</AlertDialog>
+```
 - Components com `DonorSearchCombobox` reescrits sense `cmdk` per evitar problemes de portals niuats
 
 
@@ -2334,6 +2466,7 @@ Camps afegits v1.10:
 | **1.14** | **Des 2025** | **Reorganització UX Moviments (FiltersSheet, TableOptionsMenu), drag & drop documents, indicadors visuals remeses processades, modal RemittanceSplitter redissenyat (wide layout), sidebar Projectes col·lapsable** |
 | **1.15** | **Des 2025** | **Documentació completa de regles de normalització de dades (noms, NIF/NIE/CIF, IBAN, email, telèfon E.164, adreces, normalizedName per deduplicació)** |
 | **1.16** | **Des 2025** | **Importador de pressupost Excel (wizard 5 passos, agrupació subpartides, columna finançador principal), fix redirect-to-org O(1) amb collectionGroup, fix idle logout redirecció a login d'org** |
+| **1.17** | **Des 2025** | **Polish UX: convencions UI documentades (contracte cromàtic, capçaleres estàndard, densitat taules, breadcrumbs, accessibilitat, empty states, tooltips IA, confirmacions destructives)** |
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
