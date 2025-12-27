@@ -1,6 +1,6 @@
 # ═══════════════════════════════════════════════════════════════════════════════
 # SUMMA SOCIAL - REFERÈNCIA COMPLETA DEL PROJECTE
-# Versió 1.18 - Desembre 2025
+# Versió 1.19 - Desembre 2025
 # ═══════════════════════════════════════════════════════════════════════════════
 
 
@@ -2331,6 +2331,57 @@ Quan una acció usa IA, el tooltip ha de ser descriptiu i no implicar confirmaci
 ```
 - Components com `DonorSearchCombobox` reescrits sense `cmdk` per evitar problemes de portals niuats
 
+## 7.6 Onboarding / Configuració Inicial (NOU v1.18)
+
+### Objectiu
+Guiar nous admins perquè completin la configuració mínima necessària sense bloquejar l'ús de l'aplicació.
+
+### Principis
+- **No bloquejant**: L'usuari pot treballar sense completar l'onboarding.
+- **Discret**: Checklist visible només per admins i només mentre no estigui complet.
+- **Explícit**: L'usuari decideix conscientment si salta l'onboarding.
+- **Definitiu**: Un cop saltat o complet, la checklist desapareix sense avisos posteriors.
+
+### Passos de l'onboarding
+
+| Pas | Requerit | Què es valida |
+|-----|----------|---------------|
+| Dades de l'organització | ✅ | `name`, `taxId`, `address`, `city`, `zipCode` |
+| Firma i signant | ✅ | `signatureUrl`, `signatoryName`, `signatoryRole` |
+| Categories | ✅ | Almenys 1 categoria creada |
+| Contactes | ❌ (opcional) | Almenys 1 contacte |
+
+### Flux
+
+1. **Dashboard**: Mostra checklist discreta amb progrés (només admins, només si incomplert).
+2. **Pantalla `/onboarding`**: Wizard amb llista de passos i enllaços directes.
+3. **Botó "Ho faré després"**: Escriu `onboardingSkippedAt` a l'organització → missatge de confirmació → redirecció a Dashboard.
+4. **Configuració**: Mostra enllaç a "Configuració inicial" només si incomplert.
+5. **Pantalla final**: Resum dels passos completats + botons a Dashboard i Moviments.
+
+### Model de dades
+
+```typescript
+// A Organization (src/lib/data.ts)
+onboardingSkippedAt?: string;  // ISO timestamp quan l'admin ha saltat
+```
+
+### Fitxers principals
+
+| Fitxer | Funció |
+|--------|--------|
+| `src/lib/onboarding.ts` | Lògica `computeOnboardingStatus()`, `getOnboardingChecks()` |
+| `src/components/onboarding/OnboardingWizard.tsx` | Wizard principal |
+| `src/components/onboarding/OnboardingChecklist.tsx` | Checklist pel Dashboard |
+| `src/app/[orgSlug]/onboarding/page.tsx` | Pàgina del wizard |
+
+### Comportament "Ho faré després"
+
+1. Escriu `onboardingSkippedAt` a Firestore.
+2. Mostra missatge tranquil: "D'acord. Pots continuar treballant. Si vols completar la configuració inicial més endavant, la trobaràs a Configuració."
+3. Redirigeix a Dashboard després de 2.5 segons.
+4. La checklist desapareix definitivament.
+
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # 8. FLUX DE TREBALL RECOMANAT
@@ -2467,6 +2518,7 @@ Quan una acció usa IA, el tooltip ha de ser descriptiu i no implicar confirmaci
 | **1.15** | **Des 2025** | **Documentació completa de regles de normalització de dades (noms, NIF/NIE/CIF, IBAN, email, telèfon E.164, adreces, normalizedName per deduplicació)** |
 | **1.16** | **Des 2025** | **Importador de pressupost Excel (wizard 5 passos, agrupació subpartides, columna finançador principal), fix redirect-to-org O(1) amb collectionGroup, fix idle logout redirecció a login d'org** |
 | **1.17** | **Des 2025** | **Polish UX: convencions UI documentades (contracte cromàtic, capçaleres estàndard, densitat taules, breadcrumbs, accessibilitat, empty states, tooltips IA, confirmacions destructives)** |
+| **1.18** | **Des 2025** | **Onboarding: configuració inicial per admins (checklist Dashboard, wizard, "Ho faré després", camp onboardingSkippedAt), no bloquejant, discret, definitiu** |
 
 
 # ═══════════════════════════════════════════════════════════════════════════════

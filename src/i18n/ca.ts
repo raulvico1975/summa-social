@@ -2220,6 +2220,35 @@ export const ca = {
     excess: "Excés",
     missing: "Falta",
   },
+  // Onboarding
+  onboarding: {
+    setupTitle: "Configuració inicial",
+    welcome: "Benvingut a Summa Social",
+    welcomeDescription: "Configura la teva organització en pocs passos per començar a gestionar les finances.",
+    start: "Començar",
+    progress: "Progrés",
+    optional: "opcional",
+    skipForNow: "Ho faré després",
+    skipConfirmation: "D'acord. Pots continuar treballant.",
+    skipHint: "Si vols completar la configuració inicial més endavant, la trobaràs a Configuració.",
+    continue: "Continuar",
+    continueSetup: "Continua configurant la teva organització",
+    completeTitle: "Tot a punt!",
+    completeDescription: "La configuració inicial s'ha completat. Ja pots començar a gestionar les finances de la teva organització.",
+    summaryTitle: "Resum de configuració",
+    goToDashboard: "Anar al Dashboard",
+    goToMovements: "Anar a Moviments",
+    steps: {
+      organization: "Dades de l'organització",
+      organizationDesc: "Nom, CIF i adreça fiscal",
+      signature: "Firma i signant",
+      signatureDesc: "Necessaris per emetre certificats",
+      categories: "Categories",
+      categoriesDesc: "Crea o personalitza les categories",
+      contacts: "Contactes",
+      contactsDesc: "Importa donants o proveïdors",
+    },
+  },
   // Empty states - to institucional, sense emojis
   emptyStates: {
     movements: {

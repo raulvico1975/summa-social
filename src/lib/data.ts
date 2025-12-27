@@ -395,6 +395,8 @@ export type Organization = {
   language?: OrganizationLanguage; // Idioma per certificats i emails (default: 'es')
   // Feature flags
   features?: OrganizationFeatures; // Mòduls opcionals activats/desactivats
+  // Onboarding
+  onboardingSkippedAt?: string;    // Timestamp quan l'admin ha saltat l'onboarding
   // Metadata
   updatedAt?: string;
   suspendedAt?: string;

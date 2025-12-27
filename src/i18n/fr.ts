@@ -2221,6 +2221,35 @@ export const fr = {
     excess: "Excés",
     missing: "Falta",
   },
+  // Onboarding
+  onboarding: {
+    setupTitle: "Configuration initiale",
+    welcome: "Bienvenue sur Summa Social",
+    welcomeDescription: "Configurez votre organisation en quelques étapes pour commencer à gérer les finances.",
+    start: "Commencer",
+    progress: "Progression",
+    optional: "optionnel",
+    skipForNow: "Je le ferai plus tard",
+    skipConfirmation: "D'accord. Vous pouvez continuer à travailler.",
+    skipHint: "Si vous souhaitez compléter la configuration initiale plus tard, vous la trouverez dans Paramètres.",
+    continue: "Continuer",
+    continueSetup: "Continuez à configurer votre organisation",
+    completeTitle: "Tout est prêt !",
+    completeDescription: "La configuration initiale est terminée. Vous pouvez maintenant gérer les finances de votre organisation.",
+    summaryTitle: "Résumé de configuration",
+    goToDashboard: "Aller au Tableau de bord",
+    goToMovements: "Aller aux Mouvements",
+    steps: {
+      organization: "Données de l'organisation",
+      organizationDesc: "Nom, SIRET et adresse fiscale",
+      signature: "Signature et signataire",
+      signatureDesc: "Nécessaires pour émettre des certificats",
+      categories: "Catégories",
+      categoriesDesc: "Créez ou personnalisez les catégories",
+      contacts: "Contacts",
+      contactsDesc: "Importez des donateurs ou fournisseurs",
+    },
+  },
   // Empty states - ton institutionnel, sans emojis
   emptyStates: {
     movements: {

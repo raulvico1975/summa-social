@@ -34,6 +34,8 @@ import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip
 import { toPeriodQuery } from '@/lib/period-query';
 import { useNotificationToast } from '@/components/notifications/use-notification-toast';
 import { DASHBOARD_NOTIFICATIONS } from '@/lib/notifications';
+import { OnboardingChecklist } from '@/components/onboarding/OnboardingChecklist';
+import { computeOnboardingStatus, getOnboardingChecks } from '@/lib/onboarding';
 
 interface TaxObligation {
   id: string;
@@ -255,7 +257,7 @@ function TopCategoriesTable({
 
 export default function DashboardPage() {
   const { firestore } = useFirebase();
-  const { organizationId, organization } = useCurrentOrganization();
+  const { organizationId, organization, userRole } = useCurrentOrganization();
   const { t, language } = useTranslations();
   const locale = language === 'es' ? 'es-ES' : 'ca-ES';
   const shareModalTexts = React.useMemo(() => t.dashboard.shareModal, [t]);
@@ -955,12 +957,30 @@ ${t.dashboard.generatedWith}`;
     return result.sort((a, b) => a.priority - b.priority);
   }, [filteredTransactions, netBalance, uniqueDonors, alerts, dateFilter]);
 
+  // Onboarding: només per admins i quan no està complet
+  const onboardingStatus = React.useMemo(
+    () => computeOnboardingStatus(organization, contacts, categories),
+    [organization, contacts, categories]
+  );
+  const onboardingChecks = React.useMemo(
+    () => getOnboardingChecks(organization, contacts, categories),
+    [organization, contacts, categories]
+  );
+  const showOnboardingChecklist = userRole === 'admin' && !onboardingStatus.isComplete;
+
   return (
     <div className="flex flex-col gap-6">
        <div>
         <h1 className="text-2xl font-bold tracking-tight font-headline">{t.dashboard.title}</h1>
         <p className="text-muted-foreground">{t.dashboard.description}</p>
       </div>
+
+      {showOnboardingChecklist && (
+        <OnboardingChecklist
+          checks={onboardingChecks}
+          progress={onboardingStatus.progress}
+        />
+      )}
 
       <div className="flex items-center justify-between gap-4">
         <DateFilter value={dateFilter} onChange={setDateFilter} />
