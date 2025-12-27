@@ -486,10 +486,10 @@ export function useTransactionCategorization({
 
     if (cancelled) {
       toast({
-        title: language === 'ca' ? 'Procés cancel·lat' : 'Proceso cancelado',
+        title: language === 'ca' ? 'Procés aturat' : 'Proceso detenido',
         description: language === 'ca'
-          ? `No s'han aplicat canvis. ${successCount} moviments processats abans de l'aturada.`
-          : `No se han aplicado cambios. ${successCount} movimientos procesados antes de la detención.`,
+          ? `${successCount} moviments processats. Els canvis aplicats fins ara es mantenen.`
+          : `${successCount} movimientos procesados. Los cambios aplicados se mantienen.`,
       });
     } else if (quotaExceeded) {
       const errorMsg = getErrorMessage('QUOTA_EXCEEDED', language);

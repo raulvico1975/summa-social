@@ -352,7 +352,7 @@ export const ca = {
       noReturns: "✅ No hi ha devolucions",
       selectCategory: "Selecciona categoria",
       suggestWithAI: "Suggerir categoria",
-      suggestWithAITooltip: "Genera un suggeriment de categoria basat en el concepte bancari.",
+      suggestWithAITooltip: "Genera un suggeriment de categoria i l'aplica. Pots ajustar-lo després.",
       searchCategory: "Cerca categoria...",
       noResults: "Cap resultat",
       remittanceDetail: "Detall de la remesa",

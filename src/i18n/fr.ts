@@ -352,7 +352,7 @@ export const fr = {
       noReturns: "✅ Aucun rejet",
       selectCategory: "Sélectionner catégorie",
       suggestWithAI: "Suggérer catégorie",
-      suggestWithAITooltip: "Génère une suggestion de catégorie basée sur le libellé bancaire.",
+      suggestWithAITooltip: "Génère une suggestion de catégorie et l'applique. Vous pouvez l'ajuster ensuite.",
       searchCategory: "Rechercher catégorie...",
       noResults: "Aucun résultat",
       remittanceDetail: "Détail du virement",

@@ -352,7 +352,7 @@ export const es = {
       noReturns: "✅ No hay devoluciones",
       selectCategory: "Selecciona categoría",
       suggestWithAI: "Sugerir categoría",
-      suggestWithAITooltip: "Genera una sugerencia de categoría basada en el concepto bancario.",
+      suggestWithAITooltip: "Genera una sugerencia de categoría y la aplica. Puedes ajustarla después.",
       searchCategory: "Buscar categoría...",
       noResults: "Sin resultados",
       remittanceDetail: "Detalle de la remesa",

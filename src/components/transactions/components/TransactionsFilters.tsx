@@ -186,14 +186,14 @@ export const TransactionsFilters = React.memo(function TransactionsFilters({
                 onClick={onCancelBatch}
                 variant="destructive"
                 size="sm"
-                aria-label="Aturar procés de suggeriments"
+                aria-label="Aturar procés"
               >
                 <Square className="mr-2 h-4 w-4" />
                 Processant… {batchProgress ? `${batchProgress.current}/${batchProgress.total}` : '...'}
               </Button>
             </TooltipTrigger>
             <TooltipContent>
-              <p className="text-xs">Prem per cancel·lar. No s'han aplicat canvis no guardats.</p>
+              <p className="text-xs">Prem per aturar el procés. Els canvis aplicats fins ara es mantenen.</p>
             </TooltipContent>
           </Tooltip>
         ) : (
@@ -216,7 +216,7 @@ export const TransactionsFilters = React.memo(function TransactionsFilters({
               </Button>
             </TooltipTrigger>
             <TooltipContent className="max-w-xs">
-              <p className="text-xs">Genera suggeriments de categoria que s'apliquen directament. Pots desfer cada canvi individualment.</p>
+              <p className="text-xs">Genera suggeriments i els aplica a mesura que avança. Pots revisar i ajustar després.</p>
             </TooltipContent>
           </Tooltip>
         )}
