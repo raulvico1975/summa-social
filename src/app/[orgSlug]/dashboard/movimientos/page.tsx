@@ -37,7 +37,7 @@ export default function MovimientosPage() {
         <div className="flex flex-wrap items-center gap-2">
           <TransactionImporter existingTransactions={transactions || []} />
           <Button variant="outline" asChild>
-            <Link href="/q">
+            <Link href="project-module/quick-expense">
               <Camera className="mr-2 h-4 w-4" />
               {t.movements?.quickExpenseCta ?? '+ Despesa ràpida'}
             </Link>
