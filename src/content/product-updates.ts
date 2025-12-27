@@ -8,16 +8,16 @@ export type FeatureAnnouncement = {
 };
 
 export const FEATURE_ANNOUNCEMENT: FeatureAnnouncement | null = {
-  id: 'v1.13-bulk-categorization',
-  text: "Novetat: Ara pots seleccionar diversos moviments i assignar categories en bloc.",
+  id: 'v1.17-ui-polish',
+  text: "Novetat: Interfície millorada amb taules més llegibles, navegació amb breadcrumbs i millor accessibilitat.",
   cta: {
-    label: "Veure com funciona",
+    label: "Explorar",
     href: "/dashboard/movimientos",
   },
 };
 
 export const WORKING_ON: string[] = [
-  "Millorar la identificació de donants dins les remeses",
-  "Donar més visibilitat a les dades fiscals pendents",
-  "Afinar la gestió de devolucions parcials",
+  "Exportació de justificacions de projectes",
+  "Millores en el matching de devolucions",
+  "Informes de seguiment de projectes",
 ];
