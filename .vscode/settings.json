@@ -1,3 +1,4 @@
 {
-    "editor.defaultFormatter": null
+    "editor.defaultFormatter": null,
+    "workbench.colorTheme": "Visual Studio Light"
 }
