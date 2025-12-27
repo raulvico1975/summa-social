@@ -1,6 +1,6 @@
 # ═══════════════════════════════════════════════════════════════════════════════
 # SUMMA SOCIAL - REFERÈNCIA COMPLETA DEL PROJECTE
-# Versió 1.19 - Desembre 2025
+# Versió 1.20 - Desembre 2025
 # ═══════════════════════════════════════════════════════════════════════════════
 
 
@@ -33,6 +33,7 @@ Defineix:
 ```
 /docs
 ├── SUMMA-SOCIAL-REFERENCIA-COMPLETA.md   # Aquest document (mestre)
+├── DEV-SOLO-MANUAL.md                     # Manual operatiu pel mantenidor (NOU v1.20)
 ├── CHANGELOG.md                           # Historial de canvis detallat
 ├── manual-usuari-summa-social.md          # Per a usuaris finals
 └── CATALEG-FUNCIONALITATS.md              # Referència ràpida de funcionalitats
@@ -263,6 +264,11 @@ El sistema de categorització IA genera logs estructurats per facilitar el diagn
       useStripeImporter.ts       → Hook amb lògica de parsing i matching
       StripeImporter.tsx         → Modal UI de l'importador
       index.ts                   → Exports
+    /onboarding                  → Components d'onboarding (ACTUALITZAT v1.20)
+      WelcomeOnboardingModal.tsx → Modal de benvinguda per primer admin
+      OnboardingWizard.tsx       → Wizard de configuració inicial
+    /admin                       → Components del panell admin
+      create-organization-dialog.tsx → Modal crear organització
     donor-manager.tsx            → Gestió de donants
     donor-importer.tsx           → Importador massiu de donants
     supplier-manager.tsx         → Gestió de proveïdors
@@ -308,6 +314,9 @@ organizations/
       ├── signatureUrl: string | null     # URL de la firma digitalitzada
       ├── signerName: string | null       # Nom del signant
       ├── signerRole: string | null       # Càrrec del signant
+      │
+      ├── onboarding/                     # Estat onboarding (NOU v1.20)
+      │   └── welcomeSeenAt: string | null  # YYYY-MM-DD quan primer admin ha vist modal
       │
       ├── settings/
       │   └── preferences/
@@ -491,17 +500,9 @@ organizations/
 # 3. FUNCIONALITATS DETALLADES
 # ═══════════════════════════════════════════════════════════════════════════════
 
-## 3.1 DASHBOARD
+## 3.1 DASHBOARD (ACTUALITZAT v1.20)
 
-### 3.1.1 Bloc Celebracions
-Apareix quan hi ha fites positives:
-- ✅ "Totes les transaccions categoritzades"
-- 📈 "Balanç positiu"
-- ❤️ "X donants han contribuït"
-- 🎯 "Tot al dia, bona feina!"
-- 🎁 "Primera donació del mes"
-
-### 3.1.2 Targetes Principals (StatCards)
+### 3.1.1 Targetes Principals (StatCards)
 
 | Targeta | Càlcul |
 |---------|--------|
@@ -510,7 +511,7 @@ Apareix quan hi ha fites positives:
 | **Balanç operatiu** | Ingressos - Despeses operatives |
 | **Transferències a contraparts** | Suma isCounterpartTransfer = true |
 
-### 3.1.3 Bloc Donacions i Socis
+### 3.1.2 Bloc Donacions i Socis
 
 | Mètrica | Comparativa |
 |---------|-------------|
@@ -519,21 +520,30 @@ Apareix quan hi ha fites positives:
 | Socis actius | vs any anterior |
 | Quotes socis | vs any anterior |
 
-### 3.1.4 Bloc Obligacions Fiscals
+### 3.1.3 Bloc Obligacions Fiscals
 
 | Obligació | Data límit | Acció |
 |-----------|------------|-------|
 | Model 182 | 31 gener | Botó "Preparar" |
 | Model 347 | 28 febrer | Botó "Preparar" |
 
-### 3.1.5 Bloc Alertes
+### 3.1.4 Bloc Categories Principals (ACTUALITZAT v1.20)
 
-| Alerta | Descripció |
-|--------|------------|
-| X moviments sense categoritzar | Transaccions pendents |
-| X donants amb dades incompletes | Sense NIF o CP |
-| X moviments sense contacte | Per sobre del llindar |
-| **X devolucions pendents** (NOU v1.8) | Devolucions sense assignar |
+Mostra les categories amb més volum de despesa, excloent:
+- Comissions bancàries (`transactionType === 'fee'` o `'return_fee'`)
+- Moviments sense categoria (mostrats com a peu de taula neutral "Sense categoria")
+
+### 3.1.5 Bloc Despesa per Projecte (ACTUALITZAT v1.20)
+
+**Condicions de visibilitat:**
+- Mòdul Projectes activat (`featureFlags.projectModule`)
+- Almenys 1 projecte actiu
+- Més del 5% de les despeses assignades a projectes
+
+**Contingut:**
+- Top 3 projectes amb més despesa assignada
+- Percentatge del total per projecte
+- CTA "Veure detall" → `/dashboard/project-module/projects`
 
 ### 3.1.6 Filtre de Dates
 - Any complet
@@ -541,6 +551,19 @@ Apareix quan hi ha fites positives:
 - Mes
 - Personalitzat
 - Tot
+
+### 3.1.7 Modal de Benvinguda (NOU v1.20)
+
+El Dashboard gestiona la modal de benvinguda per al primer admin:
+- Comprova `shouldShowWelcomeModal()` al carregar
+- Si retorna `true`, mostra `WelcomeOnboardingModal`
+- Opcions: "Guia'm" (obre wizard) o "Començar pel meu compte" (tanca)
+
+### 3.1.8 Blocs Desactivats
+
+Els següents blocs estan **desactivats** (comentats al codi) a partir de v1.20:
+- **Celebracions**: Missatges de fites positives (massa soroll, poc valor)
+- **Alertes**: Avisos de moviments pendents (trasllat a altres pantalles)
 
 > **Nota:** El dashboard és una eina de visualització i seguiment, no de validació ni govern. Les mètriques mostrades són informatives i no constitueixen cap informe oficial.
 
@@ -2046,6 +2069,57 @@ Camps afegits v1.10:
 | `budgetLines` | `budgetedAmountEUR` | `number` | Import pressupostat de la partida |
 
 
+## 3.10 PANELL SUPERADMIN GLOBAL (NOU v1.20)
+
+Panell de control exclusiu per al SuperAdmin del sistema, accessible des de `/admin`.
+
+### 3.10.1 Accés i Seguretat
+
+| Aspecte | Detall |
+|---------|--------|
+| **URL** | `/admin` (sense orgSlug) |
+| **Accés** | Només `SUPER_ADMIN_UID` (definit a `src/lib/data.ts`) |
+| **Redirecció** | Si no és SuperAdmin → redirigeix a `/dashboard` |
+
+### 3.10.2 Funcionalitats
+
+| Secció | Descripció |
+|--------|------------|
+| **Estadístiques** | Total organitzacions, actives, suspeses |
+| **Llista d'organitzacions** | Taula amb nom, CIF, estat, data creació |
+| **Accions per organització** | Entrar (impersonar), suspendre/reactivar |
+| **Nova organització** | Crear organització manualment |
+| **Migrar slugs** | Migració d'organitzacions sense slug |
+
+### 3.10.3 Reset de Contrasenya (NOU v1.20)
+
+Secció per enviar correus de restabliment de contrasenya:
+
+| Element | Detall |
+|---------|--------|
+| **Input** | Email de l'usuari |
+| **Acció** | `sendPasswordResetEmail()` de Firebase Auth |
+| **Seguretat** | Missatge genèric sempre ("Si l'adreça existeix...") per no revelar si l'email existeix |
+
+### 3.10.4 Secció Diagnòstic (NOU v1.20)
+
+Enllaços ràpids per a manteniment i diagnòstic:
+
+| Enllaç | Destí |
+|--------|-------|
+| **Firebase Console** | `console.firebase.google.com/project/summa-social/overview` |
+| **Cloud Logging** | `console.cloud.google.com/logs/query?project=summa-social` |
+| **DEV-SOLO-MANUAL.md** | Path copiable al porta-retalls |
+
+### 3.10.5 Fitxers principals
+
+| Fitxer | Funció |
+|--------|--------|
+| `src/app/admin/page.tsx` | Pàgina del panell SuperAdmin |
+| `src/components/admin/create-organization-dialog.tsx` | Modal crear organització |
+| `src/lib/data.ts` | Constant `SUPER_ADMIN_UID` |
+
+
 # ═══════════════════════════════════════════════════════════════════════════════
 # 4. FORMATS D'IMPORTACIÓ I EXPORTACIÓ
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -2331,56 +2405,60 @@ Quan una acció usa IA, el tooltip ha de ser descriptiu i no implicar confirmaci
 ```
 - Components com `DonorSearchCombobox` reescrits sense `cmdk` per evitar problemes de portals niuats
 
-## 7.6 Onboarding / Configuració Inicial (NOU v1.18)
+## 7.6 Onboarding / Benvinguda Inicial (ACTUALITZAT v1.20)
 
 ### Objectiu
-Guiar nous admins perquè completin la configuració mínima necessària sense bloquejar l'ús de l'aplicació.
+Donar la benvinguda al primer admin d'una nova organització amb una única modal simple, sense bloquejar l'ús de l'aplicació.
 
 ### Principis
-- **No bloquejant**: L'usuari pot treballar sense completar l'onboarding.
-- **Discret**: Checklist visible només per admins i només mentre no estigui complet.
-- **Explícit**: L'usuari decideix conscientment si salta l'onboarding.
-- **Definitiu**: Un cop saltat o complet, la checklist desapareix sense avisos posteriors.
+- **Modal única**: Una sola modal de benvinguda, sense checklist persistent.
+- **No bloquejant**: L'usuari pot continuar sense completar res.
+- **Primer admin**: Només el primer admin (per `joinedAt`) veu la modal.
+- **Definitiu**: Un cop vista, `welcomeSeenAt` s'escriu i la modal no torna a aparèixer.
 
-### Passos de l'onboarding
+### Flux simplificat (v1.20)
 
-| Pas | Requerit | Què es valida |
-|-----|----------|---------------|
-| Dades de l'organització | ✅ | `name`, `taxId`, `address`, `city`, `zipCode` |
-| Firma i signant | ✅ | `signatureUrl`, `signatoryName`, `signatoryRole` |
-| Categories | ✅ | Almenys 1 categoria creada |
-| Contactes | ❌ (opcional) | Almenys 1 contacte |
-
-### Flux
-
-1. **Dashboard**: Mostra checklist discreta amb progrés (només admins, només si incomplert).
-2. **Pantalla `/onboarding`**: Wizard amb llista de passos i enllaços directes.
-3. **Botó "Ho faré després"**: Escriu `onboardingSkippedAt` a l'organització → missatge de confirmació → redirecció a Dashboard.
-4. **Configuració**: Mostra enllaç a "Configuració inicial" només si incomplert.
-5. **Pantalla final**: Resum dels passos completats + botons a Dashboard i Moviments.
+1. **Primera càrrega del Dashboard**: Si l'usuari és el primer admin i `welcomeSeenAt` no existeix, es mostra la modal de benvinguda.
+2. **Opció "Guia'm"**: Obre el wizard de configuració (dades fiscals, firma, categories).
+3. **Opció "Començar pel meu compte"**: Tanca la modal i permet treballar directament.
+4. **En ambdós casos**: Es marca `welcomeSeenAt` a Firestore → la modal no torna.
 
 ### Model de dades
 
 ```typescript
 // A Organization (src/lib/data.ts)
-onboardingSkippedAt?: string;  // ISO timestamp quan l'admin ha saltat
+onboarding?: {
+  welcomeSeenAt?: string;  // YYYY-MM-DD quan el primer admin ha vist la modal
+};
 ```
+
+### Lògica de decisió
+
+| Condició | Resultat |
+|----------|----------|
+| `welcomeSeenAt` existeix | No mostrar modal |
+| Usuari NO és primer admin | No mostrar modal |
+| Usuari és primer admin + `welcomeSeenAt` no existeix | Mostrar modal |
+
+**Primer admin**: L'admin amb `joinedAt` més antic. Si només hi ha un admin, és ell. Si no hi ha `joinedAt`, fallback a únic admin.
 
 ### Fitxers principals
 
 | Fitxer | Funció |
 |--------|--------|
-| `src/lib/onboarding.ts` | Lògica `computeOnboardingStatus()`, `getOnboardingChecks()` |
-| `src/components/onboarding/OnboardingWizard.tsx` | Wizard principal |
-| `src/components/onboarding/OnboardingChecklist.tsx` | Checklist pel Dashboard |
-| `src/app/[orgSlug]/onboarding/page.tsx` | Pàgina del wizard |
+| `src/lib/onboarding.ts` | `isFirstAdmin()`, `shouldShowWelcomeModal()` |
+| `src/components/onboarding/WelcomeOnboardingModal.tsx` | Modal de benvinguda |
+| `src/components/onboarding/OnboardingWizard.tsx` | Wizard de configuració (obert des de modal o Configuració) |
 
-### Comportament "Ho faré després"
+### Canvis respecte v1.18
 
-1. Escriu `onboardingSkippedAt` a Firestore.
-2. Mostra missatge tranquil: "D'acord. Pots continuar treballant. Si vols completar la configuració inicial més endavant, la trobaràs a Configuració."
-3. Redirigeix a Dashboard després de 2.5 segons.
-4. La checklist desapareix definitivament.
+| v1.18 | v1.20 |
+|-------|-------|
+| Checklist persistent al Dashboard | Modal única, apareix una sola vegada |
+| Pàgina `/onboarding` dedicada | Eliminada, wizard s'obre des de modal o Configuració |
+| `OnboardingChecklist.tsx` | Eliminat |
+| `onboardingSkippedAt` | Substituït per `onboarding.welcomeSeenAt` |
+| Lògica complexa `computeOnboardingStatus()` | Simplificat a `shouldShowWelcomeModal()` |
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -2519,6 +2597,8 @@ onboardingSkippedAt?: string;  // ISO timestamp quan l'admin ha saltat
 | **1.16** | **Des 2025** | **Importador de pressupost Excel (wizard 5 passos, agrupació subpartides, columna finançador principal), fix redirect-to-org O(1) amb collectionGroup, fix idle logout redirecció a login d'org** |
 | **1.17** | **Des 2025** | **Polish UX: convencions UI documentades (contracte cromàtic, capçaleres estàndard, densitat taules, breadcrumbs, accessibilitat, empty states, tooltips IA, confirmacions destructives)** |
 | **1.18** | **Des 2025** | **Onboarding: configuració inicial per admins (checklist Dashboard, wizard, "Ho faré després", camp onboardingSkippedAt), no bloquejant, discret, definitiu** |
+| **1.19** | **Des 2025** | **Simplificació onboarding a modal de benvinguda única per primer admin, eliminació checklist persistent** |
+| **1.20** | **Des 2025** | **Panell Admin: reset contrasenya + secció diagnòstic (Firebase Console, Cloud Logging, DEV-SOLO-MANUAL.md). Dashboard: neteja blocs Celebracions/Alertes, millora taula categories (exclou comissions), bloc projectes condicional. Nou document docs/DEV-SOLO-MANUAL.md per manteniment.** |
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
