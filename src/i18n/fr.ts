@@ -221,7 +221,7 @@ export const fr = {
       categorize: "Suggérer catégorie",
       categorizeAll: "Suggérer catégories",
       assign: "Attribuer",
-      noTransactions: "Aucun mouvement. Importez un relevé bancaire.",
+      noTransactions: "Aucun mouvement. Vous pouvez importer un relevé bancaire pour commencer.",
       searchPlaceholder: "Rechercher libellé, note, contact, montant...",
       noSearchResults: "Aucun mouvement trouvé",
       edit: "Modifier",

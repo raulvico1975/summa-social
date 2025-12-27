@@ -221,7 +221,7 @@ export const ca = {
       categorize: "Suggerir categoria",
       categorizeAll: "Suggerir categories",
       assign: "Assignar",
-      noTransactions: "No hi ha moviments. Comença important un extracte bancari.",
+      noTransactions: "No hi ha moviments. Pots importar un extracte bancari per començar.",
       searchPlaceholder: "Cercar per concepte, nota, contacte, import...",
       noSearchResults: "No s'han trobat moviments amb aquest criteri",
       edit: "Editar",

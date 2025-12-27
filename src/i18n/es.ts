@@ -221,7 +221,7 @@ export const es = {
       categorize: "Sugerir categoría",
       categorizeAll: "Sugerir categorías",
       assign: "Asignar",
-      noTransactions: "No hay movimientos. Empieza importando un extracto bancario.",
+      noTransactions: "No hay movimientos. Puedes importar un extracto bancario para empezar.",
       searchPlaceholder: "Buscar por concepto, nota, contacto, importe...",
       noSearchResults: "No se han encontrado movimientos con este criterio",
       edit: "Editar",
