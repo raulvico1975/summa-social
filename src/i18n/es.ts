@@ -1577,6 +1577,18 @@ export const es = {
       stoppedPartial: (count: number) => `Proceso detenido. ${count} cambios aplicados.`,
       actionError: "No hemos podido completar la acción. Vuelve a intentarlo.",
   },
+  // Form validation - claves centralizadas
+  form: {
+    required: "Obligatorio",
+    requiredField: "Este campo es obligatorio.",
+    invalidTaxId: "Introduce un NIF válido (DNI/NIE/CIF).",
+    invalidZipCode: "El código postal debe tener 5 dígitos.",
+    invalidEmail: "Introduce un email válido.",
+    invalidIban: "Introduce un IBAN válido.",
+    invalidPhone: "Introduce un teléfono válido.",
+    taxIdHelp: "8 dígitos + letra (DNI) o letra + 7 dígitos + letra (NIE/CIF).",
+    zipCodeHelp: "5 dígitos. Obligatorio para el Modelo 182.",
+  },
   projectModule: {
     budget: "Presupuesto",
     budgetLines: "Partidas",

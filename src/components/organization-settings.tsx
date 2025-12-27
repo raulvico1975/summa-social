@@ -288,7 +288,7 @@ export function OrganizationSettings() {
 
         <div className="grid gap-4 sm:grid-cols-2">
           <div className="space-y-2">
-            <Label htmlFor="name">{t.settings.organization.name} *</Label>
+            <Label htmlFor="name">{t.settings.organization.name}<span className="ml-1 text-destructive">*</span></Label>
             <Input
               id="name"
               value={formData.name}
@@ -297,13 +297,16 @@ export function OrganizationSettings() {
             />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="taxId">{t.settings.organization.taxId} *</Label>
+            <Label htmlFor="taxId">{t.settings.organization.taxId}<span className="ml-1 text-destructive">*</span></Label>
             <Input
               id="taxId"
               value={formData.taxId}
               onChange={(e) => handleChange('taxId', e.target.value.toUpperCase())}
               placeholder="G12345678"
             />
+            <p className="text-xs text-muted-foreground">
+              {t.form?.taxIdHelp ?? "8 dígits + lletra (DNI) o lletra + 7 dígits + lletra (NIE/CIF)."}
+            </p>
           </div>
         </div>
 
@@ -324,6 +327,7 @@ export function OrganizationSettings() {
               value={formData.zipCode}
               onChange={(e) => handleChange('zipCode', e.target.value)}
               placeholder="08001"
+              maxLength={5}
             />
           </div>
           <div className="space-y-2">

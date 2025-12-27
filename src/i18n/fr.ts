@@ -1552,6 +1552,18 @@ export const fr = {
       stoppedPartial: (count: number) => `Processus arrêté. ${count} modifications appliquées.`,
       actionError: "Impossible de terminer l'action. Réessayer.",
   },
+  // Form validation - clés centralisées
+  form: {
+    required: "Obligatoire",
+    requiredField: "Ce champ est obligatoire.",
+    invalidTaxId: "Introduisez un numéro fiscal valide (DNI/NIE/CIF).",
+    invalidZipCode: "Le code postal doit avoir 5 chiffres.",
+    invalidEmail: "Introduisez un email valide.",
+    invalidIban: "Introduisez un IBAN valide.",
+    invalidPhone: "Introduisez un téléphone valide.",
+    taxIdHelp: "8 chiffres + lettre (DNI) ou lettre + 7 chiffres + lettre (NIE/CIF).",
+    zipCodeHelp: "5 chiffres. Obligatoire pour le Modèle 182.",
+  },
   projectModule: {
     budget: "Pressupost",
     budgetLines: "Partides",

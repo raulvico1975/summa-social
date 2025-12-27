@@ -415,7 +415,7 @@ export function SupplierManager() {
                 {/* Columna esquerra: Identificació */}
                 <div className="space-y-3">
                   <div className="space-y-1.5">
-                    <Label htmlFor="name">{t.suppliers.name} *</Label>
+                    <Label htmlFor="name">{t.suppliers.name}<span className="ml-1 text-destructive">*</span></Label>
                     <Input
                       id="name"
                       value={formData.name}
@@ -425,13 +425,16 @@ export function SupplierManager() {
                   </div>
 
                   <div className="space-y-1.5">
-                    <Label htmlFor="taxId">{t.suppliers.taxId} *</Label>
+                    <Label htmlFor="taxId">{t.suppliers.taxId}<span className="ml-1 text-destructive">*</span></Label>
                     <Input
                       id="taxId"
                       value={formData.taxId}
                       onChange={(e) => handleFormChange('taxId', e.target.value.toUpperCase())}
                       placeholder="B12345678"
                     />
+                    <p className="text-xs text-muted-foreground">
+                      {t.form?.taxIdHelp ?? "8 dígits + lletra (DNI) o lletra + 7 dígits + lletra (NIE/CIF)."}
+                    </p>
                   </div>
 
                   <div className="space-y-1.5">

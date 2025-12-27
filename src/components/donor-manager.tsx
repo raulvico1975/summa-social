@@ -959,7 +959,7 @@ export function DonorManager() {
                 {/* Columna esquerra: Identificació */}
                 <div className="space-y-3">
                   <div className="space-y-1.5">
-                    <Label htmlFor="name">{t.donors.name} *</Label>
+                    <Label htmlFor="name">{t.donors.name}<span className="ml-1 text-destructive">*</span></Label>
                     <Input
                       id="name"
                       value={formData.name}
@@ -971,6 +971,7 @@ export function DonorManager() {
                   <div className="space-y-1.5">
                     <Label htmlFor="taxId">
                       {t.donors.taxId}
+                      <span className="ml-1 text-destructive">*</span>
                       <span className="ml-1.5 text-xs font-normal text-amber-600">(Model 182)</span>
                     </Label>
                     <Input
@@ -979,6 +980,9 @@ export function DonorManager() {
                       onChange={(e) => handleFormChange('taxId', e.target.value.toUpperCase())}
                       placeholder="12345678A o B12345678"
                     />
+                    <p className="text-xs text-muted-foreground">
+                      {t.form?.taxIdHelp ?? "8 dígits + lletra (DNI) o lletra + 7 dígits + lletra (NIE/CIF)."}
+                    </p>
                   </div>
 
                   <div className="grid grid-cols-2 gap-3">
@@ -1048,14 +1052,18 @@ export function DonorManager() {
                     <div className="space-y-1.5">
                       <Label htmlFor="zipCode">
                         {t.donors.zipCode}
-                        <span className="ml-1 text-xs font-normal text-amber-600">182</span>
+                        <span className="ml-1 text-destructive">*</span>
                       </Label>
                       <Input
                         id="zipCode"
                         value={formData.zipCode}
                         onChange={(e) => handleFormChange('zipCode', e.target.value)}
                         placeholder="08001"
+                        maxLength={5}
                       />
+                      <p className="text-xs text-muted-foreground">
+                        {t.form?.zipCodeHelp ?? "5 dígits. Obligatori per al Model 182."}
+                      </p>
                     </div>
                     <div className="space-y-1.5">
                       <Label htmlFor="city">{t.donors.city}</Label>

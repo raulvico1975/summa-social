@@ -1551,6 +1551,18 @@ export const ca = {
       stoppedPartial: (count: number) => `Procés aturat. ${count} canvis aplicats.`,
       actionError: "No hem pogut completar l'acció. Torna-ho a provar.",
   },
+  // Form validation - claus centralitzades
+  form: {
+    required: "Obligatori",
+    requiredField: "Aquest camp és obligatori.",
+    invalidTaxId: "Introdueix un NIF vàlid (DNI/NIE/CIF).",
+    invalidZipCode: "El codi postal ha de tenir 5 dígits.",
+    invalidEmail: "Introdueix un email vàlid.",
+    invalidIban: "Introdueix un IBAN vàlid.",
+    invalidPhone: "Introdueix un telèfon vàlid.",
+    taxIdHelp: "8 dígits + lletra (DNI) o lletra + 7 dígits + lletra (NIE/CIF).",
+    zipCodeHelp: "5 dígits. Obligatori per al Model 182.",
+  },
   projectModule: {
     budget: "Pressupost",
     budgetLines: "Partides",
