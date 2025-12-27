@@ -2181,4 +2181,45 @@ export const es = {
     excess: "Exceso",
     missing: "Falta",
   },
+  // Empty states - tono institucional, sin emojis
+  emptyStates: {
+    movements: {
+      noData: "No hay movimientos",
+      noDataDesc: "Importa un extracto bancario para empezar.",
+      noResults: "No hay resultados",
+      noResultsDesc: "No se han encontrado movimientos con los filtros actuales.",
+      clearFilters: "Limpiar filtros",
+    },
+    donors: {
+      noData: "Aún no hay donantes",
+      noDataDesc: "Puedes crear uno o importarlos desde Excel.",
+      noResults: "No hay resultados",
+      noResultsDesc: "No se han encontrado donantes con este criterio.",
+      addNew: "Nuevo donante",
+      import: "Importar",
+    },
+    suppliers: {
+      noData: "Aún no hay proveedores",
+      noDataDesc: "Puedes crear uno o importarlos desde Excel.",
+      noResults: "No hay resultados",
+      noResultsDesc: "No se han encontrado proveedores con este criterio.",
+      addNew: "Nuevo proveedor",
+      import: "Importar",
+    },
+    workers: {
+      noData: "Aún no hay trabajadores",
+      noDataDesc: "Añade trabajadores para poder asignar nóminas.",
+      addNew: "Nuevo trabajador",
+    },
+    projects: {
+      noData: "Aún no hay proyectos",
+      noDataDesc: "Crea un proyecto para poder asignar gastos y ver ejecución.",
+      addNew: "Crear proyecto",
+    },
+    expenses: {
+      noData: "No hay gastos para asignar",
+      noDataDesc: "Revisa los filtros o importa nuevos movimientos.",
+      goToMovements: "Ir a Movimientos",
+    },
+  },
 };

@@ -2189,4 +2189,45 @@ export const fr = {
     excess: "Excés",
     missing: "Falta",
   },
+  // Empty states - ton institutionnel, sans emojis
+  emptyStates: {
+    movements: {
+      noData: "Aucun mouvement",
+      noDataDesc: "Importez un relevé bancaire pour commencer.",
+      noResults: "Aucun résultat",
+      noResultsDesc: "Aucun mouvement trouvé avec les filtres actuels.",
+      clearFilters: "Effacer les filtres",
+    },
+    donors: {
+      noData: "Aucun donateur pour le moment",
+      noDataDesc: "Vous pouvez en créer un ou les importer depuis Excel.",
+      noResults: "Aucun résultat",
+      noResultsDesc: "Aucun donateur trouvé avec ce critère.",
+      addNew: "Nouveau donateur",
+      import: "Importer",
+    },
+    suppliers: {
+      noData: "Aucun fournisseur pour le moment",
+      noDataDesc: "Vous pouvez en créer un ou les importer depuis Excel.",
+      noResults: "Aucun résultat",
+      noResultsDesc: "Aucun fournisseur trouvé avec ce critère.",
+      addNew: "Nouveau fournisseur",
+      import: "Importer",
+    },
+    workers: {
+      noData: "Aucun salarié pour le moment",
+      noDataDesc: "Ajoutez des salariés pour pouvoir attribuer les fiches de paie.",
+      addNew: "Nouveau salarié",
+    },
+    projects: {
+      noData: "Aucun projet pour le moment",
+      noDataDesc: "Créez un projet pour pouvoir attribuer des dépenses et voir l'exécution.",
+      addNew: "Créer un projet",
+    },
+    expenses: {
+      noData: "Aucune dépense à attribuer",
+      noDataDesc: "Vérifiez les filtres ou importez de nouveaux mouvements.",
+      goToMovements: "Aller aux Mouvements",
+    },
+  },
 };

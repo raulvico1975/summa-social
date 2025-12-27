@@ -67,7 +67,8 @@ import { StripeImporter } from '@/components/stripe-importer';
 import { useCollection, useFirebase, useMemoFirebase } from '@/firebase';
 import { collection, doc, writeBatch } from 'firebase/firestore';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Minus, Tag, XCircle } from 'lucide-react';
+import { Minus, Tag, XCircle, Search, FileX, Undo } from 'lucide-react';
+import { EmptyState } from '@/components/ui/empty-state';
 import { useTranslations } from '@/i18n';
 import { useCurrentOrganization } from '@/hooks/organization-provider';
 import { useReturnManagement } from '@/components/transactions/hooks/useReturnManagement';
@@ -1365,13 +1366,23 @@ export function TransactionsTable({ initialDateFilter = null }: TransactionsTabl
             ))}
             {filteredTransactions.length === 0 && (
                 <TableRow>
-                    <TableCell colSpan={(canBulkEdit ? 8 : 7) + (showProjectColumn ? 1 : 0)} className="h-24 text-center text-muted-foreground">
-                        {tableFilter === 'missing'
-                          ? t.movements.table.allExpensesHaveProofEmpty
-                          : tableFilter === 'returns'
-                          ? t.movements.table.noReturns
-                          : t.movements.table.noTransactions
+                    <TableCell colSpan={(canBulkEdit ? 8 : 7) + (showProjectColumn ? 1 : 0)} className="p-0">
+                      <EmptyState
+                        icon={tableFilter === 'missing' ? FileX : tableFilter === 'returns' ? Undo : Search}
+                        title={
+                          tableFilter === 'missing'
+                            ? t.movements.table.allExpensesHaveProofEmpty
+                            : tableFilter === 'returns'
+                            ? t.movements.table.noReturns
+                            : (t.emptyStates?.movements?.noResults ?? t.movements.table.noTransactions)
                         }
+                        description={
+                          tableFilter !== 'missing' && tableFilter !== 'returns'
+                            ? (t.emptyStates?.movements?.noResultsDesc ?? undefined)
+                            : undefined
+                        }
+                        className="border-0 rounded-none py-12"
+                      />
                     </TableCell>
                 </TableRow>
              )}

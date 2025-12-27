@@ -14,6 +14,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { AlertCircle, Plus, FolderKanban, Calendar, Euro, Eye, Pencil, Info } from 'lucide-react';
+import { EmptyState } from '@/components/ui/empty-state';
 import {
   Tooltip,
   TooltipContent,
@@ -192,6 +193,7 @@ export default function ProjectsListPage() {
   const { buildUrl } = useOrgUrl();
   const { firestore } = useFirebase();
   const { organizationId } = useCurrentOrganization();
+  const { t } = useTranslations();
 
   // Carregar tots els expenseLinks per calcular execució per projecte
   const [executionByProject, setExecutionByProject] = React.useState<Map<string, number>>(new Map());
@@ -329,21 +331,18 @@ export default function ProjectsListPage() {
           ))}
         </div>
       ) : projects.length === 0 ? (
-        <Card>
-          <CardContent className="flex flex-col items-center justify-center py-12">
-            <FolderKanban className="h-12 w-12 text-muted-foreground mb-4" />
-            <p className="text-muted-foreground text-center mb-4">
-              No hi ha projectes creats.<br />
-              Crea el primer projecte per poder assignar despeses.
-            </p>
-            <Link href={buildUrl('/dashboard/project-module/projects/new')}>
-              <Button>
-                <Plus className="h-4 w-4 mr-2" />
-                Crear projecte
-              </Button>
-            </Link>
-          </CardContent>
-        </Card>
+        <EmptyState
+          icon={FolderKanban}
+          title={t.emptyStates?.projects?.noData ?? "Encara no hi ha projectes"}
+          description={t.emptyStates?.projects?.noDataDesc ?? "Crea un projecte per poder assignar despeses i veure execució."}
+        >
+          <Link href={buildUrl('/dashboard/project-module/projects/new')}>
+            <Button>
+              <Plus className="h-4 w-4 mr-2" />
+              {t.emptyStates?.projects?.addNew ?? "Crear projecte"}
+            </Button>
+          </Link>
+        </EmptyState>
       ) : (
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
           {projects.map((project) => {

@@ -47,7 +47,8 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
-import { PlusCircle, Edit, Trash2, User, Building2, RefreshCw, Heart, Upload, AlertTriangle, Search, X, RotateCcw, Download } from 'lucide-react';
+import { PlusCircle, Edit, Trash2, User, Building2, RefreshCw, Heart, Upload, AlertTriangle, Search, X, RotateCcw, Download, Users } from 'lucide-react';
+import { EmptyState } from '@/components/ui/empty-state';
 import type { Donor, Category, Transaction } from '@/lib/data';
 import { fromPeriodQuery } from '@/lib/period-query';
 import type { DateFilterValue } from '@/components/date-filter';
@@ -875,14 +876,27 @@ export function DonorManager() {
                   ))}
                   {(!filteredDonors || filteredDonors.length === 0) && (
                     <TableRow>
-                      <TableCell colSpan={showIncompleteOnly ? 7 : 6} className="text-center text-muted-foreground h-24">
-                        {searchQuery
-                          ? t.donors.noSearchResults
-                          : showIncompleteOnly
-                            ? (t.donors.noIncompleteData || "No hi ha donants amb dades incompletes")
-                            : showWithReturnsOnly
-                              ? "No hi ha donants amb devolucions"
-                              : t.donors.noData}
+                      <TableCell colSpan={showIncompleteOnly ? 7 : 6} className="p-0">
+                        <EmptyState
+                          icon={searchQuery ? Search : Users}
+                          title={
+                            searchQuery
+                              ? (t.emptyStates?.donors?.noResults ?? t.donors.noSearchResults)
+                              : showIncompleteOnly
+                                ? (t.donors.noIncompleteData || "No hi ha donants amb dades incompletes")
+                                : showWithReturnsOnly
+                                  ? "No hi ha donants amb devolucions"
+                                  : (t.emptyStates?.donors?.noData ?? t.donors.noData)
+                          }
+                          description={
+                            searchQuery
+                              ? (t.emptyStates?.donors?.noResultsDesc ?? undefined)
+                              : !showIncompleteOnly && !showWithReturnsOnly
+                                ? (t.emptyStates?.donors?.noDataDesc ?? undefined)
+                                : undefined
+                          }
+                          className="border-0 rounded-none py-12"
+                        />
                       </TableCell>
                     </TableRow>
                   )}

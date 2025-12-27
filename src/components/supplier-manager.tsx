@@ -41,7 +41,8 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
-import { PlusCircle, Edit, Trash2, Building2, Upload, Search, X } from 'lucide-react';
+import { PlusCircle, Edit, Trash2, Building2, Upload, Search, X, Factory } from 'lucide-react';
+import { EmptyState } from '@/components/ui/empty-state';
 import type { Supplier, Category } from '@/lib/data';
 import { useToast } from '@/hooks/use-toast';
 import { Badge } from '@/components/ui/badge';
@@ -364,8 +365,21 @@ export function SupplierManager() {
                   ))}
                   {filteredSuppliers.length === 0 && (
                     <TableRow>
-                      <TableCell colSpan={5} className="text-center text-muted-foreground h-24">
-                        {searchQuery ? t.suppliers.noSearchResults : t.suppliers.noData}
+                      <TableCell colSpan={5} className="p-0">
+                        <EmptyState
+                          icon={searchQuery ? Search : Factory}
+                          title={
+                            searchQuery
+                              ? (t.emptyStates?.suppliers?.noResults ?? t.suppliers.noSearchResults)
+                              : (t.emptyStates?.suppliers?.noData ?? t.suppliers.noData)
+                          }
+                          description={
+                            searchQuery
+                              ? (t.emptyStates?.suppliers?.noResultsDesc ?? undefined)
+                              : (t.emptyStates?.suppliers?.noDataDesc ?? undefined)
+                          }
+                          className="border-0 rounded-none py-12"
+                        />
                       </TableCell>
                     </TableRow>
                   )}

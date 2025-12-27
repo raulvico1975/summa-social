@@ -2188,4 +2188,45 @@ export const ca = {
     excess: "Excés",
     missing: "Falta",
   },
+  // Empty states - to institucional, sense emojis
+  emptyStates: {
+    movements: {
+      noData: "No hi ha moviments",
+      noDataDesc: "Importa un extracte bancari per començar.",
+      noResults: "No hi ha resultats",
+      noResultsDesc: "No s'han trobat moviments amb els filtres actuals.",
+      clearFilters: "Netejar filtres",
+    },
+    donors: {
+      noData: "Encara no hi ha donants",
+      noDataDesc: "Pots crear-ne un o importar-los des d'Excel.",
+      noResults: "No hi ha resultats",
+      noResultsDesc: "No s'han trobat donants amb aquest criteri.",
+      addNew: "Nou donant",
+      import: "Importar",
+    },
+    suppliers: {
+      noData: "Encara no hi ha proveïdors",
+      noDataDesc: "Pots crear-ne un o importar-los des d'Excel.",
+      noResults: "No hi ha resultats",
+      noResultsDesc: "No s'han trobat proveïdors amb aquest criteri.",
+      addNew: "Nou proveïdor",
+      import: "Importar",
+    },
+    workers: {
+      noData: "Encara no hi ha treballadors",
+      noDataDesc: "Afegeix treballadors per poder assignar nòmines.",
+      addNew: "Nou treballador",
+    },
+    projects: {
+      noData: "Encara no hi ha projectes",
+      noDataDesc: "Crea un projecte per poder assignar despeses i veure execució.",
+      addNew: "Crear projecte",
+    },
+    expenses: {
+      noData: "No hi ha despeses per assignar",
+      noDataDesc: "Revisa els filtres o importa nous moviments.",
+      goToMovements: "Anar a Moviments",
+    },
+  },
 };
