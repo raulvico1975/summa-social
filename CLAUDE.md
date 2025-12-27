@@ -102,3 +102,15 @@ Aquest projecte prioritza **estabilitat, senzillesa, criteri i control** per sob
 - NO bloquejar desviacions
 - NO obligar a quadrar al cèntim
 
+## 7) Actualitzar novetats del producte
+
+Quan es tanca una funcionalitat significativa (nova pantalla, nou flux, millora visible):
+
+1. Actualitza `src/content/product-updates.ts`:
+   - `FEATURE_ANNOUNCEMENT`: Canvia `id` (ex: `v1.18-onboarding`), `text` i `cta.href`
+   - `WORKING_ON`: Actualitza la llista amb el que queda pendent
+
+2. L'`id` ha de canviar per forçar que el banner es mostri als usuaris que ja l'havien vist.
+
+3. Format del text: curt, informatiu, sense exclamacions.
+
