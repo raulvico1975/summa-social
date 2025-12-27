@@ -52,12 +52,19 @@ import {
   ExternalLink,
   FileText,
   Lock,
+  History,
+  CheckCircle2,
+  XCircle,
+  ArrowUpRight,
+  Settings,
+  Info,
 } from 'lucide-react';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
 import { CreateOrganizationDialog } from '@/components/admin/create-organization-dialog';
 import { migrateExistingSlugs } from '@/lib/slugs';
+import { logAdminAction, getRecentAuditLogs, formatAuditAction, type AdminAuditLog } from '@/lib/admin-audit';
 
 export default function AdminPage() {
   const router = useRouter();
@@ -79,6 +86,10 @@ export default function AdminPage() {
   const [isLoggingIn, setIsLoggingIn] = React.useState(false);
   const [loginError, setLoginError] = React.useState('');
 
+  // Audit logs
+  const [auditLogs, setAuditLogs] = React.useState<AdminAuditLog[]>([]);
+  const [isLoadingAudit, setIsLoadingAudit] = React.useState(false);
+
   // Verificar que és Super Admin
   const isSuperAdmin = user?.uid === SUPER_ADMIN_UID;
 
@@ -98,6 +109,16 @@ export default function AdminPage() {
       suspended: organizations.filter(o => o.status === 'suspended').length,
     };
   }, [organizations]);
+
+  // Carregar audit logs quan l'usuari és SuperAdmin
+  React.useEffect(() => {
+    if (!isSuperAdmin) return;
+    setIsLoadingAudit(true);
+    getRecentAuditLogs(firestore, 15)
+      .then(setAuditLogs)
+      .catch(console.error)
+      .finally(() => setIsLoadingAudit(false));
+  }, [firestore, isSuperAdmin]);
 
   // Handler login
   const handleLogin = async (e: React.FormEvent) => {
@@ -131,10 +152,21 @@ export default function AdminPage() {
         ...(newStatus === 'suspended' ? { suspendedAt: new Date().toISOString() } : { suspendedAt: null, suspendedReason: null }),
         updatedAt: new Date().toISOString(),
       });
+      // Audit log (best-effort)
+      logAdminAction(
+        firestore,
+        newStatus === 'suspended' ? 'SUSPEND_ORG' : 'REACTIVATE_ORG',
+        user!.uid,
+        org.slug || org.id
+      );
+
       toast({
         title: newStatus === 'suspended' ? 'Organització suspesa' : 'Organització reactivada',
         description: `${org.name} ara està ${newStatus === 'suspended' ? 'suspesa' : 'activa'}.`,
       });
+
+      // Refrescar audit logs
+      getRecentAuditLogs(firestore, 15).then(setAuditLogs).catch(console.error);
     } catch (error) {
       console.error('Error updating organization:', error);
       toast({ variant: 'destructive', title: 'Error', description: 'No s\'ha pogut actualitzar l\'organització.' });
@@ -172,6 +204,10 @@ export default function AdminPage() {
     setIsResetting(true);
     try {
       await sendPasswordResetEmail(auth, resetEmail.trim());
+      // Audit log (best-effort, sempre, no revela si email existeix)
+      logAdminAction(firestore, 'RESET_PASSWORD_SENT', user!.uid, resetEmail.trim());
+      // Refrescar audit logs
+      getRecentAuditLogs(firestore, 15).then(setAuditLogs).catch(console.error);
     } catch (error) {
       // Silenciós: no revelar si l'email existeix o no
       console.error('Password reset error (silenced):', error);
@@ -311,6 +347,17 @@ export default function AdminPage() {
                 <h1 className="text-xl font-bold">Panell de Super Admin</h1>
                 <p className="text-sm text-muted-foreground">Gestió de Summa Social</p>
               </div>
+              {/* Estat del sistema */}
+              <div className="ml-6 flex items-center gap-3 text-xs text-muted-foreground border-l pl-4">
+                <span className="flex items-center gap-1">
+                  <Info className="h-3 w-3" />
+                  v1.20
+                </span>
+                <span>·</span>
+                <span>{process.env.NODE_ENV === 'production' ? 'prod' : 'dev'}</span>
+                <span>·</span>
+                <span className="font-mono">summa-social</span>
+              </div>
             </div>
             <div className="flex gap-2">
               <Button variant="outline" onClick={handleMigrateSlugs} disabled={isMigrating}>
@@ -437,6 +484,54 @@ export default function AdminPage() {
           </Card>
         </div>
 
+        {/* Activitat SuperAdmin (Audit Log) */}
+        <Card className="mb-8">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-base">
+              <History className="h-4 w-4" />
+              Activitat SuperAdmin
+            </CardTitle>
+            <CardDescription>
+              Últimes accions registrades
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            {isLoadingAudit ? (
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <Loader2 className="h-4 w-4 animate-spin" />
+                Carregant...
+              </div>
+            ) : auditLogs.length === 0 ? (
+              <p className="text-sm text-muted-foreground">Cap acció registrada encara.</p>
+            ) : (
+              <div className="space-y-2">
+                {auditLogs.map((log) => (
+                  <div key={log.id} className="flex items-center justify-between text-sm border-b pb-2 last:border-0">
+                    <div className="flex items-center gap-2">
+                      <Badge variant="outline" className="text-xs font-mono">
+                        {formatAuditAction(log.action)}
+                      </Badge>
+                      {log.target && (
+                        <span className="text-muted-foreground font-mono text-xs">
+                          {log.target}
+                        </span>
+                      )}
+                    </div>
+                    <span className="text-xs text-muted-foreground">
+                      {log.timestamp.toLocaleDateString('ca-ES', {
+                        day: '2-digit',
+                        month: '2-digit',
+                        hour: '2-digit',
+                        minute: '2-digit',
+                      })}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
         {/* Llista d'organitzacions */}
         <Card>
           <CardHeader>
@@ -452,8 +547,10 @@ export default function AdminPage() {
                   <TableHead>Organització</TableHead>
                   <TableHead>CIF</TableHead>
                   <TableHead>Estat</TableHead>
+                  <TableHead>Indicadors</TableHead>
                   <TableHead>Creada</TableHead>
-                  <TableHead className="w-[100px]">Accions</TableHead>
+                  <TableHead>Accessos</TableHead>
+                  <TableHead className="w-[80px]"></TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -471,8 +568,58 @@ export default function AdminPage() {
                       </TableCell>
                       <TableCell className="font-mono text-sm">{org.taxId}</TableCell>
                       <TableCell>{getStatusBadge(org.status)}</TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-2">
+                          {/* Onboarding vist */}
+                          <span
+                            className="flex items-center gap-1"
+                            title={org.onboarding?.welcomeSeenAt ? `Onboarding vist: ${org.onboarding.welcomeSeenAt}` : 'Onboarding pendent'}
+                          >
+                            {org.onboarding?.welcomeSeenAt ? (
+                              <CheckCircle2 className="h-4 w-4 text-green-600" />
+                            ) : (
+                              <XCircle className="h-4 w-4 text-muted-foreground" />
+                            )}
+                          </span>
+                          {/* Última activitat (updatedAt) */}
+                          {org.updatedAt && (
+                            <span className="text-xs text-muted-foreground" title={`Última activitat: ${org.updatedAt}`}>
+                              {formatDate(org.updatedAt)}
+                            </span>
+                          )}
+                        </div>
+                      </TableCell>
                       <TableCell className="text-sm text-muted-foreground">
                         {formatDate(org.createdAt)}
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-1">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-7 px-2 text-xs"
+                            onClick={() => {
+                              sessionStorage.setItem('adminViewingOrgId', org.id);
+                              router.push(`/${org.slug}/dashboard/movimientos`);
+                            }}
+                            title="Moviments"
+                          >
+                            <ArrowUpRight className="h-3 w-3 mr-1" />
+                            Mov
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-7 px-2 text-xs"
+                            onClick={() => {
+                              sessionStorage.setItem('adminViewingOrgId', org.id);
+                              router.push(`/${org.slug}/dashboard/configuracion`);
+                            }}
+                            title="Configuració"
+                          >
+                            <Settings className="h-3 w-3" />
+                          </Button>
+                        </div>
                       </TableCell>
                       <TableCell>
                         <DropdownMenu>
@@ -487,7 +634,7 @@ export default function AdminPage() {
                               Entrar
                             </DropdownMenuItem>
                             <DropdownMenuSeparator />
-                            <DropdownMenuItem 
+                            <DropdownMenuItem
                               onClick={() => setSuspendDialogOrg(org)}
                               className={org.status === 'suspended' ? 'text-green-600' : 'text-destructive'}
                             >
@@ -510,7 +657,7 @@ export default function AdminPage() {
                   ))
                 ) : (
                   <TableRow>
-                    <TableCell colSpan={5} className="text-center text-muted-foreground h-24">
+                    <TableCell colSpan={7} className="text-center text-muted-foreground h-24">
                       No hi ha organitzacions. Crea'n una per començar.
                     </TableCell>
                   </TableRow>

@@ -17,6 +17,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useFirebase } from '@/firebase';
 import { collection, doc, setDoc } from 'firebase/firestore';
 import { generateSlug, isSlugAvailable, reserveSlug, isValidSlug } from '@/lib/slugs';
+import { logAdminAction } from '@/lib/admin-audit';
 import { Loader2, Building2, Mail, User, Copy, Check } from 'lucide-react';
 import type { Organization, Invitation, OrganizationRole } from '@/lib/data';
 import { Alert, AlertDescription } from '@/components/ui/alert';
@@ -159,6 +160,9 @@ export function CreateOrganizationDialog({ open, onOpenChange }: CreateOrganizat
       const baseUrl = window.location.origin;
       const inviteUrl = `${baseUrl}/registre?token=${token}`;
       setCreatedInviteUrl(inviteUrl);
+
+      // 6. Audit log (best-effort)
+      logAdminAction(firestore, 'CREATE_ORG', user!.uid, slug.trim());
 
       toast({
         title: t.superAdmin.createOrganizationDialog.titleSuccess,
