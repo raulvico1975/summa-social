@@ -714,7 +714,7 @@ export const TransactionRow = React.memo(function TransactionRow({
                   href={tx.document!}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="inline-flex items-center justify-center h-8 w-8 rounded-md hover:bg-accent transition-colors"
+                  className="inline-flex items-center justify-center h-9 w-9 rounded-md hover:bg-accent transition-colors"
                   aria-label={t.viewDocument}
                 >
                   <FileText className="h-5 w-5 text-emerald-600" />
@@ -740,7 +740,7 @@ export const TransactionRow = React.memo(function TransactionRow({
             <TooltipTrigger asChild>
               <button
                 onClick={handleAttachDocument}
-                className="inline-flex items-center justify-center h-8 w-8 rounded-md hover:bg-accent transition-colors"
+                className="inline-flex items-center justify-center h-9 w-9 rounded-md hover:bg-accent transition-colors"
                 aria-label={isExpense ? t.attachProof : t.attachDocument}
               >
                 <FileText className={`h-5 w-5 ${isExpense ? 'text-muted-foreground/60' : 'text-muted-foreground/30'}`} />
@@ -760,7 +760,7 @@ export const TransactionRow = React.memo(function TransactionRow({
             <Button
               variant="ghost"
               size="icon"
-              className="h-8 w-8 text-muted-foreground hover:text-foreground hover:bg-muted/40"
+              className="h-9 w-9 text-muted-foreground hover:text-foreground hover:bg-muted/40"
               aria-label="Més opcions"
             >
               <MoreVertical className="h-4 w-4" />

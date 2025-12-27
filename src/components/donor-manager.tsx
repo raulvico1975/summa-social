@@ -686,7 +686,7 @@ export function DonorManager() {
                     <Button
                       variant="ghost"
                       size="icon"
-                      className="h-8 w-8"
+                      className="h-9 w-9"
                       onClick={loadDonorsWithReturns}
                       disabled={loadingReturns}
                     >
@@ -851,7 +851,7 @@ export function DonorManager() {
                               <Button
                                 variant="ghost"
                                 size="icon"
-                                className="h-8 w-8 text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50"
+                                className="h-9 w-9 text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50"
                                 onClick={() => handleReactivate(donor)}
                                 aria-label={t.donors.reactivate}
                               >
@@ -866,7 +866,7 @@ export function DonorManager() {
                             <Button
                               variant="ghost"
                               size="icon"
-                              className="h-8 w-8 text-muted-foreground hover:text-foreground hover:bg-muted/40"
+                              className="h-9 w-9 text-muted-foreground hover:text-foreground hover:bg-muted/40"
                               onClick={() => handleEdit(donor)}
                               aria-label={t.donors.editDonor ?? 'Editar donant'}
                             >
@@ -880,7 +880,7 @@ export function DonorManager() {
                             <Button
                               variant="ghost"
                               size="icon"
-                              className="h-8 w-8 text-rose-600 hover:text-rose-700 hover:bg-rose-50"
+                              className="h-9 w-9 text-rose-600 hover:text-rose-700 hover:bg-rose-50"
                               onClick={() => handleDeleteRequest(donor)}
                               aria-label={t.donors.deleteDonor ?? 'Eliminar donant'}
                             >

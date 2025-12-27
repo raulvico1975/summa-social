@@ -352,7 +352,7 @@ export function SupplierManager() {
                         <Button
                           variant="ghost"
                           size="icon"
-                          className="h-8 w-8 text-muted-foreground hover:text-foreground hover:bg-muted/40"
+                          className="h-9 w-9 text-muted-foreground hover:text-foreground hover:bg-muted/40"
                           onClick={() => handleEdit(supplier)}
                           aria-label={t.suppliers.editSupplier ?? 'Editar proveïdor'}
                         >
@@ -361,7 +361,7 @@ export function SupplierManager() {
                         <Button
                           variant="ghost"
                           size="icon"
-                          className="h-8 w-8 text-rose-600 hover:text-rose-700 hover:bg-rose-50"
+                          className="h-9 w-9 text-rose-600 hover:text-rose-700 hover:bg-rose-50"
                           onClick={() => handleDeleteRequest(supplier)}
                           aria-label={t.suppliers.deleteSupplier ?? 'Eliminar proveïdor'}
                         >
