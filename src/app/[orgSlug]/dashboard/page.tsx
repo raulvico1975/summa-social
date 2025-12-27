@@ -980,7 +980,7 @@ ${t.dashboard.generatedWith}`;
           </CardHeader>
           <CardContent className="pt-0">
             <div className="flex flex-wrap gap-2">
-              {celebrations.map((celebration) => {
+              {celebrations.slice(0, 3).map((celebration) => {
                 const message = t.dashboard[celebration.messageKey as keyof typeof t.dashboard];
                 const displayMessage = celebration.messageParams && typeof message === 'function'
                   ? message(celebration.messageParams as any)
@@ -1264,9 +1264,9 @@ ${t.dashboard.generatedWith}`;
         </CardHeader>
         <CardContent>
           {alerts.length === 0 ? (
-            <div className="flex items-center gap-2 text-emerald-600">
-              <span className="text-lg">✓</span>
-              <span className="text-sm font-medium">{t.dashboard.allClear}</span>
+            <div className="flex items-center gap-1.5 py-2 text-muted-foreground">
+              <span className="text-sm text-emerald-600">✓</span>
+              <span className="text-sm">{t.dashboard.allClear}</span>
             </div>
           ) : (
             <div className="flex flex-col gap-3">

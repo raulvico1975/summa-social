@@ -1,7 +1,7 @@
 export const fr = {
   dashboard: {
     title: "Tableau de bord",
-    description: "Analysez vos données financières avec des résumés et des graphiques.",
+    description: "Situation financière, activité récente et obligations en cours.",
     totalIncome: "Revenus totaux",
     totalIncomeDescription: "Somme de tous les revenus",
     operatingExpenses: "Dépenses opérationnelles",

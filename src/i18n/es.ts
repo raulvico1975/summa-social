@@ -1,7 +1,7 @@
 export const es = {
   dashboard: {
     title: "Panel de Control",
-    description: "Analiza tus datos financieros con resúmenes y gráficos.",
+    description: "Situación financiera, actividad reciente y obligaciones pendientes.",
     totalIncome: "Ingresos Totales",
     totalIncomeDescription: "Suma de todos los ingresos",
     operatingExpenses: "Gastos Operativos",

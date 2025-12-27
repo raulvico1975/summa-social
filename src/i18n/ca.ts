@@ -1,7 +1,7 @@
 export const ca = {
   dashboard: {
     title: "Panell de Control",
-    description: "Analitza les teves dades financeres amb resums i gràfics.",
+    description: "Situació financera, activitat recent i obligacions pendents.",
     totalIncome: "Ingressos Totals",
     totalIncomeDescription: "Suma de tots els ingressos",
     operatingExpenses: "Despeses Operatives",
