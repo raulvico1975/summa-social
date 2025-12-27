@@ -486,10 +486,10 @@ export function useTransactionCategorization({
 
     if (cancelled) {
       toast({
-        title: language === 'ca' ? 'Categorització aturada' : 'Categorización detenida',
+        title: language === 'ca' ? 'Procés cancel·lat' : 'Proceso cancelado',
         description: language === 'ca'
-          ? `S'han classificat ${successCount} moviments abans de l'aturada.`
-          : `Se han clasificado ${successCount} movimientos antes de la detención.`,
+          ? `No s'han aplicat canvis. ${successCount} moviments processats abans de l'aturada.`
+          : `No se han aplicado cambios. ${successCount} movimientos procesados antes de la detención.`,
       });
     } else if (quotaExceeded) {
       const errorMsg = getErrorMessage('QUOTA_EXCEEDED', language);
@@ -501,10 +501,10 @@ export function useTransactionCategorization({
     } else {
       // Finalització correcta
       toast({
-        title: language === 'ca' ? 'Categorització completada' : 'Categorización completada',
+        title: language === 'ca' ? 'Suggeriments aplicats' : 'Sugerencias aplicadas',
         description: language === 'ca'
-          ? `${successCount} transaccions processades, ${errorCount} errors.`
-          : `${successCount} transacciones procesadas, ${errorCount} errores.`,
+          ? `${successCount} categories assignades${errorCount > 0 ? `, ${errorCount} pendents de revisió` : ''}.`
+          : `${successCount} categorías asignadas${errorCount > 0 ? `, ${errorCount} pendientes de revisión` : ''}.`,
       });
     }
   }, [

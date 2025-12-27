@@ -1254,6 +1254,7 @@ export function TransactionsTable({ initialDateFilter = null }: TransactionsTabl
               onClick={handleOpenBulkCategoryDialog}
               disabled={isBulkUpdating}
               className="h-8"
+              aria-label={`Assignar categoria a ${selectedCount} moviments`}
             >
               <Tag className="h-3.5 w-3.5 mr-1.5" />
               {bulkT?.assignCategory ?? 'Assignar categoria...'}
@@ -1264,6 +1265,7 @@ export function TransactionsTable({ initialDateFilter = null }: TransactionsTabl
               onClick={handleBulkRemoveCategory}
               disabled={isBulkUpdating}
               className="h-8 text-muted-foreground hover:text-destructive"
+              aria-label={`Treure categoria de ${selectedCount} moviments`}
             >
               {isBulkUpdating ? (
                 <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />

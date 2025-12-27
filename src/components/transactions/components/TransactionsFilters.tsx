@@ -177,7 +177,7 @@ export const TransactionsFilters = React.memo(function TransactionsFilters({
       {/* Separador visual */}
       <div className="h-6 w-px bg-border" />
 
-      {/* Classificar pendents + Mode ràpid (junts) */}
+      {/* Suggerir categories + Mode ràpid (junts) */}
       <div className="flex items-center gap-2">
         {isBatchCategorizing ? (
           <Tooltip>
@@ -186,33 +186,42 @@ export const TransactionsFilters = React.memo(function TransactionsFilters({
                 onClick={onCancelBatch}
                 variant="destructive"
                 size="sm"
+                aria-label="Aturar procés de suggeriments"
               >
                 <Square className="mr-2 h-4 w-4" />
-                Classificant… {batchProgress ? `${batchProgress.current}/${batchProgress.total}` : '...'}
+                Processant… {batchProgress ? `${batchProgress.current}/${batchProgress.total}` : '...'}
               </Button>
             </TooltipTrigger>
             <TooltipContent>
-              <p className="text-xs">Processant transaccions una a una per evitar errors.</p>
+              <p className="text-xs">Prem per cancel·lar. No s'han aplicat canvis no guardats.</p>
             </TooltipContent>
           </Tooltip>
         ) : (
-          <Button
-            onClick={onBatchCategorize}
-            disabled={!hasUncategorized}
-            variant="default"
-            size="sm"
-          >
-            <Sparkles className="mr-2 h-4 w-4" />
-            {t.categorizeAll}
-            {uncategorizedCount > 0 && (
-              <Badge variant="secondary" className="ml-2 h-5 px-1.5 bg-primary-foreground/20">
-                {uncategorizedCount}
-              </Badge>
-            )}
-          </Button>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                onClick={onBatchCategorize}
+                disabled={!hasUncategorized}
+                variant="default"
+                size="sm"
+                aria-label="Suggerir categories amb IA"
+              >
+                <Sparkles className="mr-2 h-4 w-4" />
+                {t.categorizeAll}
+                {uncategorizedCount > 0 && (
+                  <Badge variant="secondary" className="ml-2 h-5 px-1.5 bg-primary-foreground/20">
+                    {uncategorizedCount}
+                  </Badge>
+                )}
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent className="max-w-xs">
+              <p className="text-xs">Genera suggeriments de categoria que s'apliquen directament. Pots desfer cada canvi individualment.</p>
+            </TooltipContent>
+          </Tooltip>
         )}
 
-        {/* Mode ràpid toggle (només SuperAdmin, adjunt al botó de classificar) */}
+        {/* Mode ràpid toggle (només SuperAdmin, adjunt al botó de suggeriments) */}
         {isSuperAdmin && onBulkModeChange && (
           <div className="flex items-center gap-1.5 pl-2 border-l border-border/50">
             <Switch
@@ -221,19 +230,17 @@ export const TransactionsFilters = React.memo(function TransactionsFilters({
               onCheckedChange={onBulkModeChange}
               disabled={isBatchCategorizing}
               className="h-4 w-7"
+              aria-label="Mode ràpid"
             />
             <Label htmlFor="bulk-mode" className="text-xs cursor-pointer whitespace-nowrap text-muted-foreground">
               Ràpid
             </Label>
             <Tooltip>
               <TooltipTrigger asChild>
-                <Info className="h-3 w-3 text-muted-foreground/60 cursor-help" />
+                <Info className="h-3 w-3 text-muted-foreground/60 cursor-help" aria-hidden="true" />
               </TooltipTrigger>
-              <TooltipContent className="max-w-sm" side="bottom">
-                <p className="font-medium text-sm mb-1">Mode ràpid (SuperAdmin)</p>
-                <p className="text-xs text-muted-foreground">
-                  Accelera la categorització amb IA processant lots més grans amb pauses curtes.
-                </p>
+              <TooltipContent className="max-w-xs" side="bottom">
+                <p className="text-xs">Accelera el procés reduint el temps entre suggeriments. Pot ser menys precís.</p>
               </TooltipContent>
             </Tooltip>
           </div>
