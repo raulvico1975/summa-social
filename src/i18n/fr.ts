@@ -1654,6 +1654,9 @@ export const fr = {
     dropzoneFileTooLarge: "Fitxer massa gran",
     dropzoneInvalidType: "Tipus no permès",
     dropzoneUploadError: "Error en pujar",
+    // Bouton dépense rapide
+    quickExpenseTooltip: "Enregistrer une dépense rapidement depuis le mobile (photo du reçu)",
+    addExpense: "Ajouter dépense",
     // Filtre pendents de revisió
     pendingReview: "Pendents de revisió",
     showOnlyPending: "Només pendents",

@@ -1653,6 +1653,9 @@ export const ca = {
     dropzoneFileTooLarge: "Fitxer massa gran",
     dropzoneInvalidType: "Tipus no permès",
     dropzoneUploadError: "Error en pujar",
+    // Botó despesa ràpida
+    quickExpenseTooltip: "Registrar una despesa ràpidament des del mòbil (foto del rebut)",
+    addExpense: "Afegir despesa",
     // Filtre pendents de revisió
     pendingReview: "Pendents de revisió",
     showOnlyPending: "Només pendents",

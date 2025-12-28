@@ -1679,6 +1679,9 @@ export const es = {
     dropzoneFileTooLarge: "Archivo demasiado grande",
     dropzoneInvalidType: "Tipo no permitido",
     dropzoneUploadError: "Error al subir",
+    // Botón gasto rápido
+    quickExpenseTooltip: "Registrar un gasto rápidamente desde el móvil (foto del recibo)",
+    addExpense: "Añadir gasto",
     // Filtro pendientes de revisión
     pendingReview: "Pendientes de revisión",
     showOnlyPending: "Solo pendientes",

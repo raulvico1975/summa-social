@@ -46,7 +46,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import { AlertCircle, RefreshCw, ChevronRight, FolderPlus, Check, MoreHorizontal, Split, X, Plus, Landmark, Globe, ArrowLeft, FolderKanban, Filter, Pencil, Trash2, Search, FileText, Upload } from 'lucide-react';
+import { AlertCircle, RefreshCw, ChevronRight, FolderPlus, Check, MoreHorizontal, Split, X, Plus, Landmark, Globe, ArrowLeft, FolderKanban, Filter, Pencil, Trash2, Search, FileText, Upload, Camera } from 'lucide-react';
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -58,6 +58,7 @@ import {
 import {
   Tooltip,
   TooltipContent,
+  TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/tooltip';
 import { Input } from '@/components/ui/input';
@@ -880,6 +881,7 @@ export default function ExpensesInboxPage() {
   }
 
   return (
+    <TooltipProvider>
     <div className="space-y-6">
       {/* Breadcrumb */}
       <Breadcrumb>
@@ -907,14 +909,36 @@ export default function ExpensesInboxPage() {
           </p>
         </div>
         <div className="flex items-center gap-2">
+          {/* Botó despesa ràpida (només icona amb tooltip) */}
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                onClick={() => router.push(buildUrl('/quick'))}
+                variant="outline"
+                size="icon"
+                className="h-9 w-9"
+              >
+                <Camera className="h-4 w-4" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>
+              {t.projectModule?.quickExpenseTooltip ?? 'Registrar una despesa ràpidament des del mòbil (foto del rebut)'}
+            </TooltipContent>
+          </Tooltip>
           <Button
             onClick={() => setAddOffBankOpen(true)}
             variant="default"
             size="sm"
           >
             <Plus className="h-4 w-4 mr-2" />
-            {ep.addOffBank}
+            {t.projectModule?.addExpense ?? 'Afegir despesa'}
           </Button>
+          <Link href={buildUrl('/dashboard/project-module/projects')}>
+            <Button variant="outline" size="sm">
+              <FolderKanban className="h-4 w-4 mr-2" />
+              {t.breadcrumb?.projects ?? 'Projectes'}
+            </Button>
+          </Link>
           <Button
             onClick={() => setTableFilter(tableFilter === 'needsReview' ? 'all' : 'needsReview')}
             variant={tableFilter === 'needsReview' ? 'default' : 'outline'}
@@ -1384,5 +1408,6 @@ export default function ExpensesInboxPage() {
         existingAssignments={editOffBankExpense?.link?.assignments}
       />
     </div>
+    </TooltipProvider>
   );
 }
