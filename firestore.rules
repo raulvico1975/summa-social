@@ -236,6 +236,16 @@ service cloud.firestore {
         allow read: if isMemberOf(orgId) || isSuperAdmin();
         allow create, update, delete: if (isMemberOf(orgId) && getMemberRole(orgId) in ['admin', 'user']) || isSuperAdmin();
       }
+
+      // ─────────────────────────────────────────────────────────────────────
+      // PREBANK REMITTANCES (remeses pendents de conciliar amb el banc)
+      // Path: /organizations/{orgId}/prebankRemittances/{remittanceId}
+      // ─────────────────────────────────────────────────────────────────────
+
+      match /prebankRemittances/{remittanceId} {
+        allow read: if isMemberOf(orgId) || isSuperAdmin();
+        allow create, update, delete: if (isMemberOf(orgId) && getMemberRole(orgId) in ['admin', 'user']) || isSuperAdmin();
+      }
     }
   }
 }
