@@ -4,7 +4,7 @@ import * as React from 'react';
 import { useFirebase, useCollection, useMemoFirebase } from '@/firebase';
 import { useCurrentOrganization } from '@/hooks/organization-provider';
 import Link from 'next/link';
-import { collection, query, orderBy, onSnapshot } from 'firebase/firestore';
+import { collection, query, orderBy, limit, onSnapshot } from 'firebase/firestore';
 import type { Transaction, Donor, Organization } from '@/lib/data';
 import { formatCurrencyEU } from '@/lib/normalize';
 import { useTranslations } from '@/i18n';
@@ -149,11 +149,12 @@ export function DonorDetailDrawer({ donor, open, onOpenChange, onEdit }: DonorDe
     setIsLoading(true);
     setPermissionError(false);
 
-    // Carregar totes les transaccions i filtrar al client
+    // Carregar transaccions recents i filtrar al client
     // Això evita problemes amb les Security Rules de Firestore que no permeten
     // queries amb where() quan l'usuari és SuperAdmin però no membre de l'org
+    // Limitem a 500 per rendiment (prou per la majoria de donants)
     const txRef = collection(firestore, 'organizations', organizationId, 'transactions');
-    const txQuery = query(txRef, orderBy('date', 'desc'));
+    const txQuery = query(txRef, orderBy('date', 'desc'), limit(500));
 
     const unsubscribe = onSnapshot(
       txQuery,

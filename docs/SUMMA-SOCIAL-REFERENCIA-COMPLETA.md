@@ -1,6 +1,6 @@
 # ═══════════════════════════════════════════════════════════════════════════════
 # SUMMA SOCIAL - REFERÈNCIA COMPLETA DEL PROJECTE
-# Versió 1.20 - Desembre 2025
+# Versió 1.21 - Desembre 2025
 # ═══════════════════════════════════════════════════════════════════════════════
 
 
@@ -2459,6 +2459,69 @@ onboarding?: {
 | `OnboardingChecklist.tsx` | Eliminat |
 | `onboardingSkippedAt` | Substituït per `onboarding.welcomeSeenAt` |
 | Lògica complexa `computeOnboardingStatus()` | Simplificat a `shouldShowWelcomeModal()` |
+
+## 7.7 Perfil de Rendiment (NOU v1.21)
+
+### Escala objectiu
+Summa Social està optimitzat per a **<100 usuaris concurrents** amb marge operatiu. El límit pràctic depèn del volum de dades per organització (transaccions, contactes).
+
+### Optimitzacions aplicades
+
+| Problema | Solució | Fitxer |
+|----------|---------|--------|
+| N+1 queries (links) | Batching amb `documentId()` en chunks de 10 | `src/hooks/use-project-module.ts:172` |
+| N+1 queries (expenses) | Batching paral·lel off-bank + bank | `src/hooks/use-project-module.ts:388` |
+| N+1 llistat projectes | Lazy-load de budgetLines, usar `project.budgetEUR` | `src/app/.../projects/page.tsx` |
+| Instància única | `maxInstances: 3` a Firebase App Hosting | `apphosting.yaml` |
+| Listener audit logs | `limit(100)` | `src/app/.../super-admin/page.tsx:149` |
+| Listener donor drawer | `limit(500)` + filtre client | `src/components/donor-detail-drawer.tsx:157` |
+
+### Patró de batching Firestore
+
+Quan cal carregar múltiples documents per ID, usar aquest patró:
+
+```typescript
+import { documentId } from 'firebase/firestore';
+
+function chunkArray<T>(arr: T[], size: number): T[][] {
+  const out: T[][] = [];
+  for (let i = 0; i < arr.length; i += size) out.push(arr.slice(i, i + size));
+  return out;
+}
+
+// Carregar en paral·lel (màxim 10 IDs per query, límit Firestore)
+const chunks = chunkArray(ids, 10);
+const snaps = await Promise.all(
+  chunks.map((chunkIds) =>
+    getDocs(query(collectionRef, where(documentId(), 'in', chunkIds)))
+  )
+);
+```
+
+### Listeners `onSnapshot` - Classificació
+
+| Fitxer | Tipus | Decisió |
+|--------|-------|---------|
+| `use-collection.tsx` | Hook base | CORE - no tocar |
+| `use-doc.tsx` | Hook base | CORE - no tocar |
+| `use-bank-accounts.ts` | Comptes bancaris | OK - pocs docs, real-time útil |
+| `donor-detail-drawer.tsx` | Transaccions donant | Limitat a 500, filtre client |
+| `super-admin/page.tsx` | Audit logs | Limitat a 100 |
+
+### Què NO cal fer (sense evidència de necessitat)
+
+- Refactors de model (denormalitzacions)
+- Observabilitat avançada (Sentry)
+- Pujar `maxInstances` a 5+
+- Reescriure hooks base
+- Paginació infinita a moviments (només si org té >1000 visibles)
+
+### Quan escalar
+
+Indicadors que requeririen intervenció:
+- Latència UI >2s consistent
+- Errors Firestore per quota
+- Usuaris reportant lentitud
 
 
 # ═══════════════════════════════════════════════════════════════════════════════

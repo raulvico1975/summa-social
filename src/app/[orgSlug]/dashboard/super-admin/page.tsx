@@ -3,7 +3,7 @@
 import * as React from 'react';
 import { useRouter } from 'next/navigation';
 import { useFirebase, useCollection, useMemoFirebase } from '@/firebase';
-import { collection, query, orderBy, onSnapshot } from 'firebase/firestore';
+import { collection, query, orderBy, limit, onSnapshot } from 'firebase/firestore';
 import type { Transaction, Contact, OrganizationMember, Category } from '@/lib/data';
 import { SUPER_ADMIN_UID } from '@/lib/data';
 import { useCurrentOrganization } from '@/hooks/organization-provider';
@@ -146,7 +146,7 @@ export default function SuperAdminOrgPage() {
     }
 
     const auditRef = collection(firestore, 'organizations', organizationId, 'audit_logs');
-    const auditQuery = query(auditRef, orderBy('timestamp', 'desc'));
+    const auditQuery = query(auditRef, orderBy('timestamp', 'desc'), limit(100));
 
     const unsubscribe = onSnapshot(
       auditQuery,

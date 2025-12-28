@@ -24,7 +24,7 @@ import {
 import { trackUX } from '@/lib/ux/trackUX';
 import { useTranslations } from '@/i18n';
 import { collection, getDocs } from 'firebase/firestore';
-import type { Project, ExpenseAssignment, BudgetLine } from '@/lib/project-module-types';
+import type { Project, ExpenseAssignment } from '@/lib/project-module-types';
 
 function formatDate(dateStr: string | null): string {
   if (!dateStr) return '-';
@@ -43,18 +43,15 @@ function formatAmount(amount: number | null): string {
 interface ProjectCardProps {
   project: Project;
   executedAmount: number;
-  budgetLinesData: { sum: number; hasLines: boolean } | null; // null = encara carregant
 }
 
-function ProjectCard({ project, executedAmount, budgetLinesData }: ProjectCardProps) {
+function ProjectCard({ project, executedAmount }: ProjectCardProps) {
   const { t } = useTranslations();
   const { buildUrl } = useOrgUrl();
   const router = useRouter();
 
-  // Càlculs econòmics
-  // Si hi ha partides, usar la suma de partides; sinó, el pressupost global del projecte
-  const hasBudgetLines = budgetLinesData?.hasLines ?? false;
-  const budgeted = hasBudgetLines ? budgetLinesData!.sum : (project.budgetEUR ?? 0);
+  // Càlculs econòmics (pressupost del projecte, sense carregar partides al llistat)
+  const budgeted = project.budgetEUR ?? 0;
   const pending = budgeted - executedAmount;
 
   // Click en el card → navega a Gestió Econòmica
@@ -235,48 +232,6 @@ export default function ProjectsListPage() {
     loadLinks();
   }, [firestore, organizationId]);
 
-  // Carregar suma de partides per cada projecte
-  // Guardem { sum, hasLines } per distingir entre "no hi ha partides" i "partides amb sum=0"
-  const [budgetLinesDataByProject, setBudgetLinesDataByProject] = React.useState<Map<string, { sum: number; hasLines: boolean }>>(new Map());
-
-  React.useEffect(() => {
-    if (!organizationId || projects.length === 0) return;
-
-    const loadBudgetLinesSums = async () => {
-      try {
-        const dataMap = new Map<string, { sum: number; hasLines: boolean }>();
-
-        for (const project of projects) {
-          const linesRef = collection(
-            firestore,
-            'organizations',
-            organizationId,
-            'projectModule',
-            '_',
-            'projects',
-            project.id,
-            'budgetLines'
-          );
-          const snapshot = await getDocs(linesRef);
-
-          // Sumar tots els budgetedAmountEUR de les partides
-          let sum = 0;
-          for (const doc of snapshot.docs) {
-            const data = doc.data() as BudgetLine;
-            sum += data.budgetedAmountEUR ?? 0;
-          }
-          dataMap.set(project.id, { sum, hasLines: snapshot.docs.length > 0 });
-        }
-
-        setBudgetLinesDataByProject(dataMap);
-      } catch (err) {
-        console.error('Error loading budget lines sums:', err);
-      }
-    };
-
-    loadBudgetLinesSums();
-  }, [firestore, organizationId, projects]);
-
   // Track page open
   React.useEffect(() => {
     trackUX('projects.open', { projectCount: projects.length });
@@ -345,17 +300,13 @@ export default function ProjectsListPage() {
         </EmptyState>
       ) : (
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-          {projects.map((project) => {
-            const linesData = budgetLinesDataByProject.get(project.id);
-            return (
-              <ProjectCard
-                key={project.id}
-                project={project}
-                executedAmount={executionByProject.get(project.id) ?? 0}
-                budgetLinesData={linesData ?? null}
-              />
-            );
-          })}
+          {projects.map((project) => (
+            <ProjectCard
+              key={project.id}
+              project={project}
+              executedAmount={executionByProject.get(project.id) ?? 0}
+            />
+          ))}
         </div>
       )}
     </div>
