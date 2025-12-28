@@ -88,7 +88,7 @@ export function ProductUpdatesInbox({
           variant="ghost"
           size="icon"
           className="relative"
-          aria-label={t('productUpdates.tooltip', { count: unreadCount })}
+          aria-label={t.productUpdates.tooltip({ count: unreadCount })}
         >
           <Bell className="h-5 w-5" />
           {unreadCount > 0 && (
@@ -102,7 +102,7 @@ export function ProductUpdatesInbox({
       <PopoverContent align="end" className="w-80 p-0">
         {/* Header */}
         <div className="flex items-center justify-between px-4 py-3 border-b">
-          <h3 className="font-semibold text-sm">{t('productUpdates.title')}</h3>
+          <h3 className="font-semibold text-sm">{t.productUpdates.title}</h3>
           {unreadCount > 0 && (
             <Button
               variant="ghost"
@@ -111,7 +111,7 @@ export function ProductUpdatesInbox({
               onClick={handleMarkAllRead}
             >
               <CheckCheck className="h-3.5 w-3.5 mr-1" />
-              {t('productUpdates.markAllRead')}
+              {t.productUpdates.markAllRead}
             </Button>
           )}
         </div>
@@ -155,7 +155,7 @@ export function ProductUpdatesInbox({
                           size="icon"
                           className="h-6 w-6 shrink-0"
                           onClick={() => handleMarkRead(update.id)}
-                          aria-label={t('productUpdates.markAsRead')}
+                          aria-label={t.productUpdates.markAsRead}
                         >
                           <Check className="h-3.5 w-3.5" />
                         </Button>
@@ -168,7 +168,7 @@ export function ProductUpdatesInbox({
           ) : (
             <div className="px-4 py-3">
               <p className="text-xs text-muted-foreground text-center">
-                {t('productUpdates.noUpdates')}
+                {t.productUpdates.noUpdates}
               </p>
             </div>
           )}
@@ -180,7 +180,7 @@ export function ProductUpdatesInbox({
             <Separator />
             <div className="px-4 py-3 bg-muted/20">
               <p className="text-xs font-medium text-muted-foreground mb-2">
-                {t('productUpdates.workingOn')}
+                {t.productUpdates.workingOn}
               </p>
               <ul className="space-y-1.5">
                 {roadmap.map((item) => (
