@@ -3,42 +3,42 @@ import { Logo } from '@/components/logo';
 import { Button } from '@/components/ui/button';
 import { ArrowRight, CheckCircle, X, Check } from 'lucide-react';
 
-// FAQ data per reutilitzar al JSON-LD
+// FAQ data per reutilitzar al JSON-LD (7 preguntes, enfocament dolor → solució)
 const faqItems = [
   {
-    question: 'Què és Summa Social?',
+    question: 'Quin problema resol Summa Social?',
     answer:
-      "És una aplicació web de gestió econòmica i fiscal per a ONGs petites i mitjanes d'Espanya, centrada en conciliació bancària i fiscalitat (Model 182 i 347).",
+      'Evita Excel paral·lels, redueix temps al banc i fa que remeses, devolucions i fiscalitat quadrin amb el moviment real.',
   },
   {
-    question: 'Per a què serveix?',
+    question: 'Què vol dir "estalviar temps al banc"?',
     answer:
-      "Serveix per importar i ordenar moviments bancaris, controlar devolucions i preparar informes fiscals i certificats de donació sense dependre d'Excel.",
+      'Que pots preparar pagaments agrupats en remesa (factures i nòmines) i gestionar liquidacions sense entrar pagament a pagament a la banca online.',
   },
   {
-    question: 'És un programa de comptabilitat?',
+    question: 'Com m\'ajuda amb remeses i quotes?',
     answer:
-      'No. Summa Social se situa abans de la comptabilitat: ordena i prepara les dades perquè la gestoria faci la feina fiscal amb seguretat.',
+      'Desglossa imports agregats i deixa cada quota assignada a qui correspon, perquè sàpigues què ha aportat cada soci.',
   },
   {
-    question: 'Quines entitats el poden fer servir?',
+    question: 'I amb devolucions?',
     answer:
-      "Associacions, fundacions i ONGs d'Espanya que gestionen donacions, quotes o operacions amb tercers.",
+      'Registra i assigna devolucions perquè el càlcul anual reflecteixi el que s\'ha cobrat realment.',
   },
   {
-    question: 'Inclou el Model 182 i el Model 347?',
+    question: 'Què envio a la gestoria?',
     answer:
-      'Sí. Genera els fitxers i exports necessaris i permet emetre certificats de donació coherents amb el càlcul anual.',
+      'L\'Excel del Model 182, l\'Excel/CSV del Model 347 i els certificats de donació en PDF.',
   },
   {
-    question: 'Com gestiona devolucions i remeses?',
+    question: 'Serveix per donacions via web?',
     answer:
-      "Permet tractar devolucions i remeses amb traçabilitat, mantenint el moviment bancari original i generant el detall necessari per al càlcul fiscal.",
+      'Sí: desglossa ingressos agregats, separa comissions i deixa les donacions traçables per donant.',
   },
   {
-    question: 'Serveix per gestionar projectes de cooperació?',
+    question: 'Serveix per projectes de cooperació?',
     answer:
-      "Sí. Permet imputar despeses a projectes, seguir l'execució pressupostària i preparar la base econòmica de la justificació de projectes de cooperació.",
+      'Sí: pressupost, execució per partida i assistent per quadrar justificacions, amb captura ràpida de despesa de terreny.',
   },
 ];
 
@@ -75,39 +75,49 @@ export default function LandingPage() {
               <h1 className="text-3xl font-bold tracking-tight sm:text-4xl">
                 Summa Social
               </h1>
+
+              {/* Frase canònica */}
               <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-                Gestió econòmica i fiscal per a ONGs petites i mitjanes d&apos;Espanya:
-                conciliació bancària i preparació del Model 182 i 347.
+                Gestió econòmica i fiscal per a ONGs petites i mitjanes d&apos;Espanya,
+                amb conciliació bancària i exports per a la gestoria (Model 182 i 347).
               </p>
-              <p className="text-sm text-muted-foreground/80">
-                Per deixar enrere l&apos;Excel, controlar devolucions i tenir un Excel net
-                llest per a la gestoria.
+
+              {/* Dolor */}
+              <p className="text-sm text-muted-foreground/80 max-w-xl mx-auto">
+                Excel dispers, remeses que no saps desglossar, devolucions sense assignar
+                i hores entrant pagaments un per un al banc.
+              </p>
+
+              {/* Solució */}
+              <p className="text-sm text-foreground/90 max-w-xl mx-auto font-medium">
+                Centralitzes documents, prepares remeses de pagament agrupades,
+                ho concilies amb l&apos;extracte i arribes al gener amb els models a punt.
               </p>
             </div>
 
-            <ul className="text-left space-y-3 mx-auto max-w-md">
+            <ul className="text-left space-y-3 mx-auto max-w-lg">
               <li className="flex items-start gap-3">
                 <CheckCircle className="h-5 w-5 text-primary shrink-0 mt-0.5" />
                 <span className="text-sm text-muted-foreground">
-                  Quadra el banc: moviments, saldos, desquadraments i remeses.
+                  Deixes de &quot;perseguir&quot; factures, tiquets i nòmines: tot queda al mateix lloc, amb traçabilitat.
                 </span>
               </li>
               <li className="flex items-start gap-3">
                 <CheckCircle className="h-5 w-5 text-primary shrink-0 mt-0.5" />
                 <span className="text-sm text-muted-foreground">
-                  Controla devolucions i traçabilitat de les donacions.
+                  Redueixes el temps al banc: pagues per remesa (SEPA) en lloc de pagament a pagament.
                 </span>
               </li>
               <li className="flex items-start gap-3">
                 <CheckCircle className="h-5 w-5 text-primary shrink-0 mt-0.5" />
                 <span className="text-sm text-muted-foreground">
-                  Prepara fiscalitat: Model 182, Model 347 i certificats de donació.
+                  El Model 182 i els certificats quadren perquè remeses i devolucions estan ben resoltes.
                 </span>
               </li>
               <li className="flex items-start gap-3">
                 <CheckCircle className="h-5 w-5 text-primary shrink-0 mt-0.5" />
                 <span className="text-sm text-muted-foreground">
-                  Ordena donants i proveïdors amb les dades mínimes obligatòries.
+                  Si fas cooperació: control d&apos;execució del projecte i assistent per quadrar justificacions.
                 </span>
               </li>
             </ul>
@@ -126,6 +136,152 @@ export default function LandingPage() {
           </div>
         </div>
 
+        {/* Bloc 1: Menys hores al banc */}
+        <section className="bg-muted/30 px-6 py-16">
+          <div className="max-w-3xl mx-auto">
+            <h2 className="text-2xl font-bold mb-6">
+              Menys hores al banc
+            </h2>
+
+            <div className="space-y-4 text-muted-foreground">
+              <p>
+                <span className="font-medium text-foreground">El dolor:</span>{' '}
+                La feina administrativa s&apos;encalla quan has d&apos;entrar al banc i fer pagaments
+                un a un, quan tens nòmines i factures agrupades, o quan has de fer reemborsaments
+                i liquidacions a persones.
+              </p>
+              <p>
+                <span className="font-medium text-foreground">La solució:</span>{' '}
+                Amb Summa Social puges factures i nòmines, les revises, i generes una remesa de
+                pagament agrupada per pujar al banc. Per tiquets i viatges, generes liquidacions
+                automàtiques amb PDF. Després, quan importes l&apos;extracte, ho concilies amb el moviment real.
+              </p>
+            </div>
+
+            <ul className="mt-6 space-y-2">
+              {[
+                'Remeses de pagament (SEPA) per factures i nòmines: menys clics, menys errors.',
+                'Liquidacions de tiquets, viatges i quilometratge amb PDF regenerable.',
+                'Enllaç clar document ↔ pagament ↔ moviment bancari.',
+                'Quan entra l\'extracte: conciliació i aplicació de categoria/proveïdor al moviment.',
+              ].map((item) => (
+                <li key={item} className="flex items-start gap-3 text-sm text-muted-foreground">
+                  <CheckCircle className="h-4 w-4 text-primary shrink-0 mt-0.5" />
+                  {item}
+                </li>
+              ))}
+            </ul>
+          </div>
+        </section>
+
+        {/* Bloc 2: Remeses i devolucions que quadren */}
+        <section className="px-6 py-16">
+          <div className="max-w-3xl mx-auto">
+            <h2 className="text-2xl font-bold mb-6">
+              Remeses i devolucions que quadren
+            </h2>
+
+            <div className="space-y-4 text-muted-foreground">
+              <p>
+                <span className="font-medium text-foreground">El dolor:</span>{' '}
+                Quan el banc ingressa una remesa, tens un únic import agregat i perds el detall
+                de qui ha pagat. I quan hi ha devolucions, el gener et rebenta: imports inflats,
+                certificats incorrectes i discussions amb donants.
+              </p>
+              <p>
+                <span className="font-medium text-foreground">La solució:</span>{' '}
+                Summa Social desglossa remeses en quotes individuals, identifica socis i manté
+                el detall necessari. Les devolucions queden registrades i aplicades al càlcul anual,
+                perquè el certificat i el Model 182 reflecteixin el que realment s&apos;ha cobrat.
+              </p>
+            </div>
+
+            <ul className="mt-6 space-y-2">
+              {[
+                'Desglossament de remeses: saps què ha aportat cada soci.',
+                'Devolucions assignades: el càlcul anual queda net i coherent.',
+                'Traçabilitat: menys "misteris" i menys feina manual al tancament.',
+              ].map((item) => (
+                <li key={item} className="flex items-start gap-3 text-sm text-muted-foreground">
+                  <CheckCircle className="h-4 w-4 text-primary shrink-0 mt-0.5" />
+                  {item}
+                </li>
+              ))}
+            </ul>
+          </div>
+        </section>
+
+        {/* Bloc 3: Gener i fiscalitat sense pànic */}
+        <section className="bg-muted/30 px-6 py-16">
+          <div className="max-w-3xl mx-auto">
+            <h2 className="text-2xl font-bold mb-6">
+              Gener i fiscalitat sense pànic
+            </h2>
+
+            <div className="space-y-4 text-muted-foreground">
+              <p>
+                <span className="font-medium text-foreground">El dolor:</span>{' '}
+                El gener no falla: falta DNI, falta CP, hi ha devolucions pendents, i acabes
+                muntant Excel a corre-cuita per enviar a la gestoria.
+              </p>
+              <p>
+                <span className="font-medium text-foreground">La solució:</span>{' '}
+                Summa Social t&apos;assenyala què falta i et genera els exports fiscals perquè
+                tu només hagis d&apos;enviar a la gestoria un fitxer net, traçable i coherent amb el banc.
+              </p>
+            </div>
+
+            <ul className="mt-6 space-y-2">
+              {[
+                'Excel del Model 182 (donacions per donant, amb devolucions aplicades).',
+                'Excel/CSV del Model 347 (operacions amb tercers).',
+                'Certificats de donació en PDF (individuals o massius).',
+              ].map((item) => (
+                <li key={item} className="flex items-start gap-3 text-sm text-muted-foreground">
+                  <CheckCircle className="h-4 w-4 text-primary shrink-0 mt-0.5" />
+                  {item}
+                </li>
+              ))}
+            </ul>
+          </div>
+        </section>
+
+        {/* Bloc 4: Si fas cooperació internacional */}
+        <section className="px-6 py-16">
+          <div className="max-w-3xl mx-auto">
+            <h2 className="text-2xl font-bold mb-6">
+              Si fas cooperació internacional
+            </h2>
+
+            <div className="space-y-4 text-muted-foreground">
+              <p>
+                <span className="font-medium text-foreground">El dolor:</span>{' '}
+                Pressupostos en Excel, despeses disperses (terreny i viatges), i justificacions
+                que es munten tard, amb risc d&apos;errors i d&apos;haver de &quot;rehacer-ho&quot; tot.
+              </p>
+              <p>
+                <span className="font-medium text-foreground">La solució:</span>{' '}
+                El mòdul de projectes connecta despesa real amb projecte i partida, mostra execució
+                pressupostària i incorpora un assistent per quadrar justificacions abans d&apos;exportar.
+              </p>
+            </div>
+
+            <ul className="mt-6 space-y-2">
+              {[
+                'Importa pressupost des d\'Excel i crea partides.',
+                'Execució per partida: pressupostat, executat i pendent.',
+                'Mode "Quadrar justificació": ajustos i repartiments guiats.',
+                'Captura ràpida de despeses de terreny/viatges i liquidacions per revisar i imputar després.',
+              ].map((item) => (
+                <li key={item} className="flex items-start gap-3 text-sm text-muted-foreground">
+                  <CheckCircle className="h-4 w-4 text-primary shrink-0 mt-0.5" />
+                  {item}
+                </li>
+              ))}
+            </ul>
+          </div>
+        </section>
+
         {/* Què és / Què no és */}
         <section className="bg-muted/30 px-6 py-16">
           <div className="max-w-3xl mx-auto">
@@ -137,14 +293,13 @@ export default function LandingPage() {
               {/* NO és */}
               <div className="space-y-4">
                 <h3 className="font-semibold text-muted-foreground">
-                  Summa Social NO és
+                  NO és
                 </h3>
                 <ul className="space-y-2">
                   {[
                     'Un ERP',
                     'Un programa de comptabilitat',
-                    'Un CRM de donants',
-                    'Una eina genèrica per a empreses',
+                    'Un CRM genèric',
                   ].map((item) => (
                     <li key={item} className="flex items-center gap-2 text-sm text-muted-foreground">
                       <X className="h-4 w-4 text-red-500 shrink-0" />
@@ -157,14 +312,14 @@ export default function LandingPage() {
               {/* SÍ és */}
               <div className="space-y-4">
                 <h3 className="font-semibold text-muted-foreground">
-                  Summa Social SÍ és
+                  SÍ és
                 </h3>
                 <ul className="space-y-2">
                   {[
-                    'Una eina per conciliar el banc i detectar desquadraments',
-                    'Un sistema per controlar devolucions i remeses',
-                    'Una manera directa d\'arribar al Model 182 i 347 amb dades coherents',
-                    'Una alternativa real a l\'Excel per a la gestió econòmica d\'una ONG',
+                    'Una eina per ordenar moviments, documents i contactes amb traçabilitat.',
+                    'Un sistema per gestionar remeses, devolucions i donacions web de manera coherent.',
+                    'Un generador d\'exports fiscals per enviar a la gestoria.',
+                    'Per cooperació: control d\'execució i assistent de justificació.',
                   ].map((item) => (
                     <li key={item} className="flex items-start gap-2 text-sm text-muted-foreground">
                       <Check className="h-4 w-4 text-green-600 shrink-0 mt-0.5" />
@@ -174,58 +329,6 @@ export default function LandingPage() {
                 </ul>
               </div>
             </div>
-          </div>
-        </section>
-
-        {/* Casos d'ús */}
-        <section className="px-6 py-16">
-          <div className="max-w-3xl mx-auto">
-            <h2 className="text-2xl font-bold text-center mb-10">
-              Quan et serà útil
-            </h2>
-
-            <ul className="space-y-4 max-w-xl mx-auto">
-              {[
-                'Quan arriba el gener i has de preparar el Model 182 sense errors.',
-                'Quan el banc retorna rebuts i necessites saber de quin donant són.',
-                'Quan la gestoria et demana un Excel net i coherent.',
-                'Quan l\'equip treballa amb Excel i ningú confia del tot en les dades.',
-                'Quan tens remeses i vols saber què ha donat cada soci.',
-              ].map((item) => (
-                <li key={item} className="flex items-start gap-3 text-muted-foreground">
-                  <CheckCircle className="h-5 w-5 text-primary shrink-0 mt-0.5" />
-                  <span className="text-sm">{item}</span>
-                </li>
-              ))}
-            </ul>
-          </div>
-        </section>
-
-        {/* Projectes i cooperació */}
-        <section className="bg-muted/30 px-6 py-16">
-          <div className="max-w-3xl mx-auto">
-            <h2 className="text-2xl font-bold text-center mb-6">
-              Projectes i cooperació internacional
-            </h2>
-
-            <p className="text-center text-muted-foreground mb-8 max-w-2xl mx-auto">
-              Summa Social inclou un mòdul de projectes pensat per a entitats que fan
-              cooperació internacional i necessiten imputar despeses i fer seguiment de
-              l&apos;execució econòmica dels seus projectes.
-            </p>
-
-            <ul className="space-y-3 max-w-xl mx-auto">
-              {[
-                'Assigna despeses reals a projectes i partides pressupostàries.',
-                'Permet veure l\'execució econòmica a partir de dades ja conciliades.',
-                'Ajuda a preparar la base econòmica de la justificació sense tornar a l\'Excel.',
-              ].map((item) => (
-                <li key={item} className="flex items-start gap-3 text-muted-foreground">
-                  <CheckCircle className="h-5 w-5 text-primary shrink-0 mt-0.5" />
-                  <span className="text-sm">{item}</span>
-                </li>
-              ))}
-            </ul>
           </div>
         </section>
 
