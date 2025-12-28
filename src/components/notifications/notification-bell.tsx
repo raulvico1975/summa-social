@@ -5,7 +5,7 @@
 'use client';
 
 import * as React from 'react';
-import { Sparkles, ExternalLink, Check, CheckCheck, Circle } from 'lucide-react';
+import { Bell, ExternalLink, Check, CheckCheck, Circle } from 'lucide-react';
 import Link from 'next/link';
 
 import { Button } from '@/components/ui/button';
@@ -90,7 +90,7 @@ export function ProductUpdatesInbox({
           className="relative"
           aria-label={t('productUpdates.tooltip', { count: unreadCount })}
         >
-          <Sparkles className="h-5 w-5" />
+          <Bell className="h-5 w-5" />
           {unreadCount > 0 && (
             <span className="absolute -top-1 -right-1 h-5 min-w-5 px-1.5 text-xs font-bold rounded-full bg-sky-500 text-white flex items-center justify-center">
               {unreadCount}
