@@ -52,6 +52,7 @@ import {
   Eye,
   AlertCircle,
   CheckCircle2,
+  CreditCard,
 } from 'lucide-react';
 import type { Transaction, Category, Project, ContactType } from '@/lib/data';
 import { formatCurrencyEU } from '@/lib/normalize';
@@ -98,6 +99,9 @@ interface TransactionRowProps {
   onUndoRemittance?: (tx: Transaction) => void;
   onCreateNewContact: (txId: string, type: 'donor' | 'supplier') => void;
   onOpenReturnImporter?: () => void;
+  // SEPA reconciliation
+  detectedPrebankRemittance?: { id: string; nbOfTxs: number; ctrlSum: number } | null;
+  onReconcileSepa?: (tx: Transaction) => void;
   // Translations
   t: {
     date: string;
@@ -136,6 +140,7 @@ interface TransactionRowProps {
     remittanceProcessedLabel: string;
     remittanceNotApplicable: string;
     undoRemittance?: string;
+    reconcileSepa?: string;
   };
   getCategoryDisplayName: (category: string | null | undefined) => string;
 }
@@ -196,6 +201,8 @@ export const TransactionRow = React.memo(function TransactionRow({
   onUndoRemittance,
   onCreateNewContact,
   onOpenReturnImporter,
+  detectedPrebankRemittance,
+  onReconcileSepa,
   t,
   getCategoryDisplayName,
 }: TransactionRowProps) {
@@ -338,6 +345,17 @@ export const TransactionRow = React.memo(function TransactionRow({
     }, 100);
   }, [tx, onUndoRemittance]);
 
+  const handleReconcileSepa = React.useCallback(() => {
+    if (!onReconcileSepa) return;
+    setIsActionsMenuOpen(false);
+    setTimeout(() => {
+      if (document.activeElement instanceof HTMLElement) {
+        document.activeElement.blur();
+      }
+      onReconcileSepa(tx);
+    }, 100);
+  }, [tx, onReconcileSepa]);
+
   // Render transaction type badge
   const renderTransactionTypeBadge = () => {
     if (isReturn) {
@@ -469,6 +487,24 @@ export const TransactionRow = React.memo(function TransactionRow({
                     ? `Remesa parcial: ${tx.remittancePendingCount} pendents (${formatCurrencyEU(tx.remittancePendingTotalAmount || 0)})`
                     : t.viewRemittanceDetail
                   }
+                </TooltipContent>
+              </Tooltip>
+            )}
+            {/* Badge SEPA detectada */}
+            {detectedPrebankRemittance && !tx.isRemittance && onReconcileSepa && (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Badge
+                    variant="outline"
+                    className="gap-0.5 text-xs py-0 px-1.5 cursor-pointer hover:bg-purple-100 border-purple-300 text-purple-700 bg-purple-50"
+                    onClick={handleReconcileSepa}
+                  >
+                    <CreditCard className="h-3 w-3 text-purple-600" />
+                    <span>Remesa SEPA ({detectedPrebankRemittance.nbOfTxs})</span>
+                  </Badge>
+                </TooltipTrigger>
+                <TooltipContent>
+                  Remesa SEPA detectada: {detectedPrebankRemittance.nbOfTxs} pagaments · {formatCurrencyEU(detectedPrebankRemittance.ctrlSum)}
                 </TooltipContent>
               </Tooltip>
             )}
@@ -811,6 +847,13 @@ export const TransactionRow = React.memo(function TransactionRow({
               <DropdownMenuItem onClick={handleSplitRemittance}>
                 <GitMerge className="mr-2 h-4 w-4 text-orange-600" />
                 {t.splitPaymentRemittance || 'Dividir remesa pagaments'}
+              </DropdownMenuItem>
+            )}
+            {/* SEPA pre-banc detectada */}
+            {detectedPrebankRemittance && !tx.isRemittance && onReconcileSepa && (
+              <DropdownMenuItem onClick={handleReconcileSepa} className="text-purple-600">
+                <CreditCard className="mr-2 h-4 w-4" />
+                {t.reconcileSepa || 'Desagregar i conciliar'}
               </DropdownMenuItem>
             )}
             {tx.isRemittance && tx.remittanceId && onUndoRemittance && (

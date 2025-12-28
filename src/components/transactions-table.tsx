@@ -84,6 +84,10 @@ import { DateFilter, type DateFilterValue } from '@/components/date-filter';
 import { useTransactionFilters } from '@/hooks/use-transaction-filters';
 import { useBankAccounts } from '@/hooks/use-bank-accounts';
 import { MISSION_TRANSFER_CATEGORY_KEY, TRANSACTION_URL_FILTERS, type TransactionUrlFilter, type SourceFilter } from '@/lib/constants';
+import { SepaReconcileModal } from '@/components/pending-documents/sepa-reconcile-modal';
+import type { PrebankRemittance } from '@/lib/pending-documents/sepa-remittance';
+import { prebankRemittancesCollection } from '@/lib/pending-documents/sepa-remittance';
+import { query, where, getDocs } from 'firebase/firestore';
 
 interface TransactionsTableProps {
   initialDateFilter?: DateFilterValue | null;
@@ -142,6 +146,36 @@ export function TransactionsTable({ initialDateFilter = null }: TransactionsTabl
     if (!initialDateFilter) return;
     setDateFilter(prev => (areDateFiltersEqual(prev, initialDateFilter) ? prev : initialDateFilter));
   }, [initialDateFilter]);
+
+  // Carregar remeses pre-banc per detectar SEPA pendents
+  React.useEffect(() => {
+    async function loadPrebankRemittances() {
+      if (!firestore || !organizationId) return;
+
+      try {
+        const q = query(
+          prebankRemittancesCollection(firestore, organizationId),
+          where('status', 'in', ['matched_to_bank', 'prebank_generated'])
+        );
+        const snap = await getDocs(q);
+
+        const remittanceMap = new Map<string, PrebankRemittance>();
+        snap.docs.forEach(d => {
+          const data = d.data();
+          const remittance = { ...data, id: d.id } as PrebankRemittance;
+          // Indexar per parentTransactionId si existeix
+          if (remittance.parentTransactionId) {
+            remittanceMap.set(remittance.parentTransactionId, remittance);
+          }
+        });
+        setDetectedSepaRemittances(remittanceMap);
+      } catch (error) {
+        console.error('Error loading prebank remittances:', error);
+      }
+    }
+
+    loadPrebankRemittances();
+  }, [firestore, organizationId]);
 
   // Funció per netejar el filtre i actualitzar la URL
   const clearFilter = () => {
@@ -268,6 +302,13 @@ export function TransactionsTable({ initialDateFilter = null }: TransactionsTabl
 
   // Modal importador Stripe
   const [isStripeImporterOpen, setIsStripeImporterOpen] = React.useState(false);
+
+  // Modal SEPA reconcile
+  const [sepaReconcileTx, setSepaReconcileTx] = React.useState<Transaction | null>(null);
+  const [sepaReconcileRemittance, setSepaReconcileRemittance] = React.useState<PrebankRemittance | null>(null);
+
+  // Cache de remeses pre-banc detectades per transacció (txId -> remittance)
+  const [detectedSepaRemittances, setDetectedSepaRemittances] = React.useState<Map<string, PrebankRemittance>>(new Map());
   const [stripeTransactionToSplit, setStripeTransactionToSplit] = React.useState<Transaction | null>(null);
 
   // Maps per noms
@@ -1025,6 +1066,22 @@ export function TransactionsTable({ initialDateFilter = null }: TransactionsTabl
     setStripeTransactionToSplit(null);
   };
 
+  // SEPA Reconcile handler
+  const handleReconcileSepa = (tx: Transaction) => {
+    const remittance = detectedSepaRemittances.get(tx.id);
+    if (!remittance) return;
+
+    setSepaReconcileTx(tx);
+    setSepaReconcileRemittance(remittance);
+  };
+
+  const handleSepaReconcileComplete = () => {
+    setSepaReconcileTx(null);
+    setSepaReconcileRemittance(null);
+    // Recarregar les remeses pre-banc (esborra la que s'ha reconciliat)
+    setDetectedSepaRemittances(new Map());
+  };
+
   const hasUncategorized = React.useMemo(() =>
     transactions?.some(tx => !tx.category || tx.category === 'Revisar'),
   [transactions]);
@@ -1363,6 +1420,12 @@ export function TransactionsTable({ initialDateFilter = null }: TransactionsTabl
                 onUndoRemittance={handleUndoRemittance}
                 onCreateNewContact={handleOpenNewContactDialog}
                 onOpenReturnImporter={() => setIsReturnImporterOpen(true)}
+                detectedPrebankRemittance={detectedSepaRemittances.get(tx.id) ? {
+                  id: detectedSepaRemittances.get(tx.id)!.id,
+                  nbOfTxs: detectedSepaRemittances.get(tx.id)!.nbOfTxs,
+                  ctrlSum: detectedSepaRemittances.get(tx.id)!.ctrlSum,
+                } : null}
+                onReconcileSepa={handleReconcileSepa}
                 t={rowTranslations}
                 getCategoryDisplayName={getCategoryDisplayName}
               />
@@ -1673,6 +1736,20 @@ export function TransactionsTable({ initialDateFilter = null }: TransactionsTabl
           onImportDone={handleStripeImportDone}
         />
       )}
+
+      {/* SEPA Reconcile Modal */}
+      <SepaReconcileModal
+        open={!!sepaReconcileTx}
+        onOpenChange={(open) => {
+          if (!open) {
+            setSepaReconcileTx(null);
+            setSepaReconcileRemittance(null);
+          }
+        }}
+        transaction={sepaReconcileTx}
+        prebankRemittance={sepaReconcileRemittance}
+        onComplete={handleSepaReconcileComplete}
+      />
     </TooltipProvider>
   );
 }

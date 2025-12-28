@@ -361,6 +361,7 @@ export type OrganizationLanguage = 'ca' | 'es';
  */
 export type OrganizationFeatures = {
   projectModule?: boolean;         // Mòdul de projectes i justificació econòmica
+  pendingDocs?: boolean;           // Documents pendents de conciliació (factures/nòmines pre-banc)
 };
 
 /**

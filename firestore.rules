@@ -215,6 +215,27 @@ service cloud.firestore {
         allow read: if isMemberOf(orgId) || hasOrgInProfile(orgId) || isSuperAdmin();
         allow write: if (isMemberOf(orgId) && getMemberRole(orgId) in ['admin', 'user']) || isSuperAdmin();
       }
+
+      // ─────────────────────────────────────────────────────────────────────
+      // DOCUMENTS PENDENTS DE CONCILIACIÓ
+      // Path: /organizations/{orgId}/pendingDocuments/{docId}
+      // Nota: Aquests documents NO afecten saldos ni fiscalitat fins a match
+      // ─────────────────────────────────────────────────────────────────────
+
+      match /pendingDocuments/{docId} {
+        allow read: if isMemberOf(orgId) || isSuperAdmin();
+        allow create, update, delete: if (isMemberOf(orgId) && getMemberRole(orgId) in ['admin', 'user']) || isSuperAdmin();
+      }
+
+      // ─────────────────────────────────────────────────────────────────────
+      // REMESES (per a SEPA i altres operacions de pagament en bloc)
+      // Path: /organizations/{orgId}/remittances/{remittanceId}
+      // ─────────────────────────────────────────────────────────────────────
+
+      match /remittances/{remittanceId} {
+        allow read: if isMemberOf(orgId) || isSuperAdmin();
+        allow create, update, delete: if (isMemberOf(orgId) && getMemberRole(orgId) in ['admin', 'user']) || isSuperAdmin();
+      }
     }
   }
 }

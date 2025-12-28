@@ -50,6 +50,7 @@ import { useCurrentOrganization, useOrgUrl } from '@/hooks/organization-provider
 import { useTranslations } from '@/i18n';
 import { useBankAccounts } from '@/hooks/use-bank-accounts';
 import Link from 'next/link';
+import { suggestPendingDocumentMatches } from '@/lib/pending-documents';
 
 
 type ImportMode = 'append' | 'replace';
@@ -480,13 +481,35 @@ export function TransactionImporter({ existingTransactions }: TransactionImporte
                 })
             }
             
+            // Crear transaccions i capturar IDs per al suggeriment de conciliació
+            const newTransactions: Transaction[] = [];
             transactionsWithContacts.forEach(tx => {
                 const newDocRef = doc(transactionsCollectionRef);
                 const normalizedTx = normalizeTransaction(tx);
                 batch.set(newDocRef, normalizedTx);
+                // Guardar la transacció amb el seu ID per al post-processing
+                newTransactions.push({ ...tx, id: newDocRef.id } as Transaction);
             });
 
             await batch.commit();
+
+            // Post-import: suggerir conciliació amb documents pendents
+            if (newTransactions.length > 0 && availableContacts) {
+              try {
+                const result = await suggestPendingDocumentMatches(
+                  firestore,
+                  organizationId,
+                  newTransactions,
+                  availableContacts
+                );
+                if (result.suggestedCount > 0 || result.linkedRemittanceCount > 0) {
+                  log(`🔗 Conciliació: ${result.suggestedCount} docs suggerits, ${result.linkedRemittanceCount} remeses vinculades`);
+                }
+              } catch (error) {
+                console.error('Error suggesting matches:', error);
+                // No bloquem la importació si falla el suggeriment
+              }
+            }
 
             toast({
                 title: t.importers.transaction.importSuccess,

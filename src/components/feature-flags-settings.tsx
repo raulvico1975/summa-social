@@ -12,7 +12,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useFirebase } from '@/firebase';
 import { useCurrentOrganization } from '@/hooks/organization-provider';
 import { doc, updateDoc } from 'firebase/firestore';
-import { Puzzle, FolderKanban, Loader2 } from 'lucide-react';
+import { Puzzle, FolderKanban, Loader2, FileStack } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 
 export function FeatureFlagsSettings() {
@@ -22,9 +22,11 @@ export function FeatureFlagsSettings() {
   const router = useRouter();
 
   const [isUpdating, setIsUpdating] = React.useState(false);
+  const [updatingFlag, setUpdatingFlag] = React.useState<string | null>(null);
 
   // Feature flags actuals
   const isProjectModuleEnabled = organization?.features?.projectModule ?? false;
+  const isPendingDocsEnabled = organization?.features?.pendingDocs ?? false;
 
   const handleToggleProjectModule = async (enabled: boolean) => {
     if (!organizationId || !firestore) return;
@@ -55,6 +57,40 @@ export function FeatureFlagsSettings() {
       });
     } finally {
       setIsUpdating(false);
+      setUpdatingFlag(null);
+    }
+  };
+
+  const handleTogglePendingDocs = async (enabled: boolean) => {
+    if (!organizationId || !firestore) return;
+
+    setIsUpdating(true);
+    setUpdatingFlag('pendingDocs');
+    try {
+      const orgRef = doc(firestore, 'organizations', organizationId);
+      await updateDoc(orgRef, {
+        'features.pendingDocs': enabled,
+        updatedAt: new Date().toISOString(),
+      });
+
+      toast({
+        title: enabled ? 'Mòdul activat' : 'Mòdul desactivat',
+        description: enabled
+          ? 'Documents pendents de conciliació activat.'
+          : 'Documents pendents de conciliació desactivat.',
+      });
+
+      router.refresh();
+    } catch (error) {
+      console.error('Error actualitzant feature flag:', error);
+      toast({
+        variant: 'destructive',
+        title: 'Error',
+        description: 'No s\'ha pogut actualitzar el mòdul. Torna-ho a intentar.',
+      });
+    } finally {
+      setIsUpdating(false);
+      setUpdatingFlag(null);
     }
   };
 
@@ -98,6 +134,42 @@ export function FeatureFlagsSettings() {
               id="project-module"
               checked={isProjectModuleEnabled}
               onCheckedChange={handleToggleProjectModule}
+              disabled={isUpdating}
+            />
+          </div>
+        </div>
+
+        {/* Mòdul Documents Pendents */}
+        <div className="flex items-center justify-between rounded-lg border p-4">
+          <div className="flex items-start gap-4">
+            <div className="rounded-lg bg-orange-100 p-2">
+              <FileStack className="h-5 w-5 text-orange-600" />
+            </div>
+            <div className="space-y-1">
+              <div className="flex items-center gap-2">
+                <Label htmlFor="pending-docs" className="text-base font-medium cursor-pointer">
+                  Documents pendents
+                </Label>
+                <Badge variant="outline" className="bg-amber-50 text-amber-700 border-amber-200">
+                  Experimental
+                </Badge>
+                {isPendingDocsEnabled && (
+                  <Badge variant="outline" className="bg-orange-50 text-orange-700 border-orange-200">
+                    Actiu
+                  </Badge>
+                )}
+              </div>
+              <p className="text-sm text-muted-foreground">
+                Pujar factures i nòmines abans de tenir l'extracte bancari. Es concilien automàticament quan arriba el moviment.
+              </p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2">
+            {updatingFlag === 'pendingDocs' && <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />}
+            <Switch
+              id="pending-docs"
+              checked={isPendingDocsEnabled}
+              onCheckedChange={handleTogglePendingDocs}
               disabled={isUpdating}
             />
           </div>
