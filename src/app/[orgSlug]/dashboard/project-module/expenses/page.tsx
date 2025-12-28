@@ -913,7 +913,7 @@ export default function ExpensesInboxPage() {
           <Tooltip>
             <TooltipTrigger asChild>
               <Button
-                onClick={() => router.push(buildUrl('/quick'))}
+                onClick={() => router.push(buildUrl('/dashboard/project-module/quick-expense'))}
                 variant="outline"
                 size="icon"
                 className="h-9 w-9"
