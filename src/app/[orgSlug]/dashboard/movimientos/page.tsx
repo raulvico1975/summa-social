@@ -11,7 +11,7 @@ import { useCurrentOrganization } from '@/hooks/organization-provider';
 import { useSearchParams } from 'next/navigation';
 import { fromPeriodQuery } from '@/lib/period-query';
 import { Button } from '@/components/ui/button';
-import { FileStack } from 'lucide-react';
+import { FileStack, Receipt } from 'lucide-react';
 import Link from 'next/link';
 import { Badge } from '@/components/ui/badge';
 
@@ -41,15 +41,20 @@ export default function MovimientosPage() {
         <div className="flex flex-wrap items-center gap-2">
           <TransactionImporter existingTransactions={transactions || []} />
           {isPendingDocsEnabled && (
-            <Button variant="outline" asChild>
-              <Link href="movimientos/pendents">
-                <FileStack className="mr-2 h-4 w-4" />
-                Pendents
-                <Badge variant="outline" className="ml-2 bg-orange-50 text-orange-700 border-orange-200">
-                  Nou
-                </Badge>
-              </Link>
-            </Button>
+            <>
+              <Button variant="outline" asChild>
+                <Link href="movimientos/pendents">
+                  <FileStack className="mr-2 h-4 w-4" />
+                  Pendents
+                </Link>
+              </Button>
+              <Button variant="outline" asChild>
+                <Link href="movimientos/liquidacions">
+                  <Receipt className="mr-2 h-4 w-4" />
+                  Liquidacions
+                </Link>
+              </Button>
+            </>
           )}
         </div>
       </div>

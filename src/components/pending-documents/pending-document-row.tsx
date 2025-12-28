@@ -382,6 +382,29 @@ export function PendingDocumentRow({
         )}
       </TableCell>
 
+      {/* Tipus */}
+      <TableCell>
+        {isEditable ? (
+          <Select
+            value={doc.type}
+            onValueChange={(value) => onUpdate(doc.id, 'type', value)}
+          >
+            <SelectTrigger className="w-[75px] h-8 text-xs">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="invoice">Factura</SelectItem>
+              <SelectItem value="payroll">Nòmina</SelectItem>
+              <SelectItem value="receipt">Tiquet</SelectItem>
+            </SelectContent>
+          </Select>
+        ) : (
+          <Badge variant="outline" className="text-xs">
+            {doc.type === 'invoice' ? 'Factura' : doc.type === 'payroll' ? 'Nòmina' : doc.type === 'receipt' ? 'Tiquet' : '?'}
+          </Badge>
+        )}
+      </TableCell>
+
       {/* Nº factura */}
       <TableCell>
         {isEditable ? (
@@ -395,8 +418,10 @@ export function PendingDocumentRow({
             placeholder="Nº"
             className={cn(
               'w-24 h-8 text-sm',
-              missingFields.includes('invoiceNumber') && 'border-amber-400 bg-amber-50'
+              missingFields.includes('invoiceNumber') && 'border-amber-400 bg-amber-50',
+              doc.type === 'receipt' && 'opacity-50'
             )}
+            disabled={doc.type === 'receipt'}
           />
         ) : (
           <span>{doc.invoiceNumber || '—'}</span>

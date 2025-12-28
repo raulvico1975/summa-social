@@ -596,6 +596,7 @@ export default function PendingDocsPage() {
                     <TableHead className="w-[200px]">Fitxer</TableHead>
                     <TableHead className="text-right w-[110px]">Import</TableHead>
                     <TableHead className="w-[120px]">Data</TableHead>
+                    <TableHead className="w-[80px]">Tipus</TableHead>
                     <TableHead className="w-[100px]">Nº factura</TableHead>
                     <TableHead className="w-[160px]">Proveïdor</TableHead>
                     <TableHead className="w-[140px]">Categoria</TableHead>

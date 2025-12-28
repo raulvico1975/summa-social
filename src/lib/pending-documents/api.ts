@@ -89,6 +89,7 @@ export async function createPendingDocumentDraft(
     extracted: null,
     sepa: null,
     matchedTransactionId: null,
+    reportId: null,
     createdAt: now as Timestamp,
     updatedAt: now as Timestamp,
     confirmedAt: null,
@@ -126,7 +127,9 @@ export async function updatePendingDocument(
 // ═══════════════════════════════════════════════════════════════════════════
 
 /**
- * Camps obligatoris per poder confirmar un document.
+ * Camps obligatoris per poder confirmar un document segons el tipus.
+ * - invoice/payroll: tots els camps (amount, invoiceDate, invoiceNumber, supplierId, categoryId)
+ * - receipt: només amount, invoiceDate, categoryId (invoiceNumber i supplierId opcionals)
  */
 export const REQUIRED_FIELDS_FOR_CONFIRM = [
   'amount',
@@ -136,10 +139,27 @@ export const REQUIRED_FIELDS_FOR_CONFIRM = [
   'categoryId',
 ] as const;
 
+export const REQUIRED_FIELDS_FOR_RECEIPT = [
+  'amount',
+  'invoiceDate',
+  'categoryId',
+] as const;
+
 /**
  * Comprova si un document té tots els camps obligatoris per confirmar.
+ * Els receipts tenen requisits més relaxats (no cal invoiceNumber ni supplierId).
  */
 export function isDocumentReadyToConfirm(doc: PendingDocument): boolean {
+  // Receipts: només cal amount, invoiceDate, categoryId
+  if (doc.type === 'receipt') {
+    return (
+      doc.amount !== null &&
+      doc.invoiceDate !== null &&
+      doc.categoryId !== null
+    );
+  }
+
+  // Invoice/payroll/unknown: tots els camps
   return (
     doc.amount !== null &&
     doc.invoiceDate !== null &&
@@ -152,15 +172,21 @@ export function isDocumentReadyToConfirm(doc: PendingDocument): boolean {
 
 /**
  * Retorna els camps que falten per poder confirmar.
+ * Els receipts tenen requisits més relaxats.
  */
 export function getMissingFields(doc: PendingDocument): string[] {
   const missing: string[] = [];
 
+  // Camps obligatoris per a tots
   if (doc.amount === null) missing.push('amount');
   if (doc.invoiceDate === null) missing.push('invoiceDate');
-  if (doc.invoiceNumber === null || doc.invoiceNumber.trim() === '') missing.push('invoiceNumber');
-  if (doc.supplierId === null) missing.push('supplierId');
   if (doc.categoryId === null) missing.push('categoryId');
+
+  // Camps addicionals per invoice/payroll/unknown
+  if (doc.type !== 'receipt') {
+    if (doc.invoiceNumber === null || doc.invoiceNumber.trim() === '') missing.push('invoiceNumber');
+    if (doc.supplierId === null) missing.push('supplierId');
+  }
 
   return missing;
 }

@@ -124,6 +124,9 @@ export interface PendingDocument {
   suggestedTransactionIds?: string[];  // Suggeriments de match (màx 3)
   ignoredTransactionIds?: string[];    // Suggeriments descartats manualment
 
+  // Liquidació (només per receipts)
+  reportId: string | null;  // ID de la liquidació a què pertany
+
   // Timestamps
   createdAt: Timestamp;
   updatedAt: Timestamp;
@@ -160,6 +163,7 @@ export interface UpdatePendingDocumentInput {
   matchedTransactionId?: string | null;
   suggestedTransactionIds?: string[];
   ignoredTransactionIds?: string[];
+  reportId?: string | null;
   confirmedAt?: Timestamp | null;
   archivedAt?: Timestamp | null;
   previousStatus?: PendingDocumentStatus | null;
