@@ -223,8 +223,8 @@ service cloud.firestore {
       // ─────────────────────────────────────────────────────────────────────
 
       match /expenseReports/{reportId} {
-        // DEBUG: obert temporalment
-        allow read, write: if true;
+        allow read: if isSuperAdmin() || isMemberOf(orgId) || hasOrgInProfile(orgId);
+        allow create, update, delete: if isSuperAdmin() || (isMemberOf(orgId) && getMemberRole(orgId) in ['admin', 'user']);
       }
 
       // ─────────────────────────────────────────────────────────────────────
