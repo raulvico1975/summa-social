@@ -763,11 +763,9 @@ export function useSaveOffBankExpense(): UseSaveOffBankExpenseResult {
       throw new Error('La data ha de tenir format YYYY-MM-DD');
     }
 
-    // Si no hi ha amountEUR, ha de ser moneda local
+    // Moneda local (opcional)
     const originalCurrency = data.originalCurrency?.trim().toUpperCase() || null;
-    if (amount === null && !originalCurrency) {
-      throw new Error('Cal indicar import EUR o moneda local');
-    }
+    // Ja no exigim import EUR o moneda local - es pot guardar una captura sense import
 
     setIsSaving(true);
     setError(null);

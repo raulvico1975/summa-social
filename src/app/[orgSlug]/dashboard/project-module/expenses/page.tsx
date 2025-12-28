@@ -1184,8 +1184,17 @@ export default function ExpensesInboxPage() {
                     <TableCell className="text-muted-foreground text-sm">
                       {expense.counterpartyName || '-'}
                     </TableCell>
-                    <TableCell className="text-right font-mono font-medium text-red-600">
-                      {formatAmount(expense.amountEUR)}
+                    <TableCell className="text-right font-mono font-medium">
+                      {expense.pendingConversion || expense.amountEUR === 0 ? (
+                        <div className="flex flex-col items-end gap-1">
+                          <span className="text-muted-foreground">—</span>
+                          <Badge variant="outline" className="text-[10px] px-1.5 py-0 bg-amber-50 text-amber-700 border-amber-200">
+                            Import pendent
+                          </Badge>
+                        </div>
+                      ) : (
+                        <span className="text-red-600">{formatAmount(expense.amountEUR)}</span>
+                      )}
                     </TableCell>
                     <TableCell>
                       <AssignmentStatusPopover
