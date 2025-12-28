@@ -220,11 +220,12 @@ service cloud.firestore {
       // DOCUMENTS PENDENTS DE CONCILIACIÓ
       // Path: /organizations/{orgId}/pendingDocuments/{docId}
       // Nota: Aquests documents NO afecten saldos ni fiscalitat fins a match
+      // Updated: 2025-12-28
       // ─────────────────────────────────────────────────────────────────────
 
       match /pendingDocuments/{docId} {
-        allow read: if isMemberOf(orgId) || isSuperAdmin();
-        allow create, update, delete: if (isMemberOf(orgId) && getMemberRole(orgId) in ['admin', 'user']) || isSuperAdmin();
+        allow read: if isSuperAdmin() || isMemberOf(orgId) || hasOrgInProfile(orgId);
+        allow create, update, delete: if isSuperAdmin() || (isMemberOf(orgId) && getMemberRole(orgId) in ['admin', 'user']);
       }
 
       // ─────────────────────────────────────────────────────────────────────
@@ -243,8 +244,8 @@ service cloud.firestore {
       // ─────────────────────────────────────────────────────────────────────
 
       match /prebankRemittances/{remittanceId} {
-        allow read: if isMemberOf(orgId) || isSuperAdmin();
-        allow create, update, delete: if (isMemberOf(orgId) && getMemberRole(orgId) in ['admin', 'user']) || isSuperAdmin();
+        allow read: if isSuperAdmin() || isMemberOf(orgId) || hasOrgInProfile(orgId);
+        allow create, update, delete: if isSuperAdmin() || (isMemberOf(orgId) && getMemberRole(orgId) in ['admin', 'user']);
       }
     }
   }
