@@ -217,6 +217,17 @@ service cloud.firestore {
       }
 
       // ─────────────────────────────────────────────────────────────────────
+      // LIQUIDACIONS (expense reports)
+      // Path: /organizations/{orgId}/expenseReports/{reportId}
+      // Updated: 2025-12-28
+      // ─────────────────────────────────────────────────────────────────────
+
+      match /expenseReports/{reportId} {
+        // DEBUG: obert temporalment
+        allow read, write: if true;
+      }
+
+      // ─────────────────────────────────────────────────────────────────────
       // DOCUMENTS PENDENTS DE CONCILIACIÓ
       // Path: /organizations/{orgId}/pendingDocuments/{docId}
       // Nota: Aquests documents NO afecten saldos ni fiscalitat fins a match

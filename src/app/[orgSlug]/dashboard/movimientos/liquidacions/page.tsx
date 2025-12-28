@@ -235,7 +235,7 @@ export default function LiquidacionsPage() {
           <h1 className="text-2xl font-bold font-headline">Liquidacions</h1>
         </div>
         <EmptyState
-          icon={<FileText className="h-12 w-12" />}
+          icon={FileText}
           title="Funcionalitat no activada"
           description="Contacta amb l'administrador per activar el mòdul de documents pendents."
         />
@@ -312,7 +312,7 @@ export default function LiquidacionsPage() {
             </div>
           ) : filteredReports.length === 0 ? (
             <EmptyState
-              icon={<FileText className="h-12 w-12" />}
+              icon={FileText}
               title={activeTab === 'draft' ? 'Cap esborrany' : `Cap liquidació ${activeTab}`}
               description={activeTab === 'draft' ? 'Crea una nova liquidació per començar.' : 'No hi ha liquidacions en aquest estat.'}
             />
