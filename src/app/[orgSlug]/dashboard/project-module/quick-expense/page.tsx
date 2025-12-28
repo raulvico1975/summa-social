@@ -49,5 +49,5 @@ export default function QuickExpensePage() {
     );
   }
 
-  return <QuickExpenseScreen organizationId={organizationId} />;
+  return <QuickExpenseScreen organizationId={organizationId} isLandingMode={true} />;
 }

@@ -1791,7 +1791,7 @@ export const es = {
       cameraButton: "Hacer foto",
       uploadButton: "Subir archivo",
       uploading: "Subiendo...",
-      amountLabel: "Importe (EUR)",
+      amountLabel: "Importe",
       amountHint: "Puedes dejarlo vacío y añadirlo después",
       conceptLabel: "Nota (opcional)",
       conceptPlaceholder: "Ej: Taxi aeropuerto, Material oficina...",

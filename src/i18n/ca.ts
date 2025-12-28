@@ -1765,7 +1765,7 @@ export const ca = {
       cameraButton: "Fer foto",
       uploadButton: "Pujar fitxer",
       uploading: "Pujant...",
-      amountLabel: "Import (EUR)",
+      amountLabel: "Import",
       amountHint: "Pots deixar-ho buit i afegir-ho després",
       conceptLabel: "Nota (opcional)",
       conceptPlaceholder: "Ex: Taxi aeroport, Material oficina...",

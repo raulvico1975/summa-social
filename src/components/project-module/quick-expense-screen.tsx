@@ -286,16 +286,12 @@ export function QuickExpenseScreen({ organizationId, isLandingMode = false }: Qu
     >
       {/* Header minimalista */}
       <div className="flex items-center justify-between p-4 border-b shrink-0">
-        {isLandingMode ? (
-          <div className="w-20" />
-        ) : (
-          <Link href={buildUrl('/project-module/expenses')}>
-            <Button variant="ghost" size="sm">
-              <ArrowLeft className="h-4 w-4 mr-1" />
-              {t.common?.back ?? 'Tornar'}
-            </Button>
-          </Link>
-        )}
+        <Link href={buildUrl('/project-module/expenses')}>
+          <Button variant="ghost" size="sm" className="text-muted-foreground">
+            <ArrowLeft className="h-4 w-4 mr-1" />
+            {t.common?.back ?? 'Tornar'}
+          </Button>
+        </Link>
         <h1 className="font-semibold text-lg">
           {q?.title ?? 'Despesa ràpida'}
         </h1>

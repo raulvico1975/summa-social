@@ -1766,7 +1766,7 @@ export const fr = {
       cameraButton: "Prendre photo",
       uploadButton: "Télécharger fichier",
       uploading: "Téléchargement...",
-      amountLabel: "Montant (EUR)",
+      amountLabel: "Montant",
       amountHint: "Vous pouvez le laisser vide et l'ajouter plus tard",
       conceptLabel: "Note (optionnel)",
       conceptPlaceholder: "Ex: Taxi aéroport, Matériel bureau...",
