@@ -2279,4 +2279,13 @@ export const es = {
       goToMovements: "Ir a Movimientos",
     },
   },
+  productUpdates: {
+    title: "Novedades",
+    tooltip: (params: { count: number }) =>
+      params.count > 0 ? `Novedades (${params.count} nuevas)` : "Novedades",
+    markAllRead: "Marcar como leídas",
+    markAsRead: "Marcar como leída",
+    noUpdates: "No hay novedades nuevas",
+    workingOn: "En lo que estamos trabajando",
+  },
 };

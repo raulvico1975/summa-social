@@ -2286,4 +2286,13 @@ export const ca = {
       goToMovements: "Anar a Moviments",
     },
   },
+  productUpdates: {
+    title: "Novetats",
+    tooltip: (params: { count: number }) =>
+      params.count > 0 ? `Novetats (${params.count} noves)` : "Novetats",
+    markAllRead: "Marcar com llegides",
+    markAsRead: "Marcar com llegida",
+    noUpdates: "No hi ha novetats noves",
+    workingOn: "En què estem treballant",
+  },
 };

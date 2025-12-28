@@ -1,39 +1,66 @@
 // src/lib/notifications.ts
-// Sistema de notificacions in-app sense backend
+// Sistema de novetats del producte (Product Updates Inbox)
 // Persistència via localStorage per marcar com llegides
 
-export type AppNotification = {
+export type ProductUpdate = {
   id: string;
   title: string;
   body: string;
   href?: string; // ruta interna sense orgSlug
   ctaLabel?: string;
-  severity?: 'info' | 'success' | 'warning';
   createdAt: string; // YYYY-MM-DD
-  scope: 'dashboard';
 };
 
-// Notificacions actives (hardcoded, s'actualitzen amb cada release)
-export const DASHBOARD_NOTIFICATIONS: AppNotification[] = [
+export type RoadmapItem = {
+  id: string;
+  text: string;
+};
+
+// Novetats del producte (màx 5-6 visibles)
+export const PRODUCT_UPDATES: ProductUpdate[] = [
   {
     id: 'bulk-categorize-2025-12-26',
-    title: 'Nova funció: categories en bloc',
+    title: 'Categories en bloc',
     body: 'Ara pots seleccionar diversos moviments i assignar categories de cop.',
     href: '/dashboard/movimientos',
     ctaLabel: 'Veure com funciona',
-    severity: 'info',
     createdAt: '2025-12-26',
-    scope: 'dashboard',
-  },
-  {
-    id: 'roadmap-2025-12',
-    title: 'En què estem treballant',
-    body: 'Identificació de donants a remeses · dades fiscals pendents · devolucions parcials.',
-    severity: 'info',
-    createdAt: '2025-12-26',
-    scope: 'dashboard',
   },
 ];
+
+// En què estem treballant (no compta per al badge)
+export const ROADMAP_ITEMS: RoadmapItem[] = [
+  { id: 'roadmap-donors-remittances', text: 'Identificació de donants a remeses' },
+  { id: 'roadmap-fiscal-data', text: 'Dades fiscals pendents' },
+  { id: 'roadmap-partial-returns', text: 'Devolucions parcials' },
+];
+
+// =============================================================================
+// LEGACY SUPPORT (per compatibilitat amb codi existent)
+// =============================================================================
+
+export type AppNotification = {
+  id: string;
+  title: string;
+  body: string;
+  href?: string;
+  ctaLabel?: string;
+  severity?: 'info' | 'success' | 'warning';
+  createdAt: string;
+  scope: 'dashboard';
+};
+
+// Converteix ProductUpdate a AppNotification per compatibilitat
+export const DASHBOARD_NOTIFICATIONS: AppNotification[] = PRODUCT_UPDATES.map((u) => ({
+  id: u.id,
+  title: u.title,
+  body: u.body,
+  href: u.href,
+  ctaLabel: u.ctaLabel,
+  severity: 'info' as const,
+  createdAt: u.createdAt,
+  scope: 'dashboard' as const,
+}));
 
 // =============================================================================
 // PERSISTENCE HELPERS
