@@ -43,6 +43,7 @@ import {
   ChevronDown,
   ChevronUp,
   Trash2,
+  Plus,
 } from 'lucide-react';
 import {
   AlertDialog,
@@ -65,6 +66,7 @@ import type { PendingDocument, PendingDocumentStatus } from '@/lib/pending-docum
 import type { Contact, Category } from '@/lib/data';
 import { isDocumentReadyToConfirm, getMissingFields } from '@/lib/pending-documents/api';
 import { CATEGORY_TRANSLATION_KEYS } from '@/lib/default-data';
+import { CreateSupplierModal } from '@/components/contacts/create-supplier-modal';
 
 // ═══════════════════════════════════════════════════════════════════════════
 // TYPES
@@ -165,6 +167,10 @@ export function PendingDocumentCard({
   const [supplierOpen, setSupplierOpen] = React.useState(false);
   const [categoryOpen, setCategoryOpen] = React.useState(false);
   const [dateOpen, setDateOpen] = React.useState(false);
+
+  // Create supplier modal
+  const [createSupplierOpen, setCreateSupplierOpen] = React.useState(false);
+  const [supplierSearchValue, setSupplierSearchValue] = React.useState('');
 
   // Local state for text inputs (debounced)
   const [localAmount, setLocalAmount] = React.useState(doc.amount?.toString() || '');
@@ -502,9 +508,29 @@ export function PendingDocumentCard({
                 </PopoverTrigger>
                 <PopoverContent className="w-[280px] p-0" align="start">
                   <Command>
-                    <CommandInput placeholder="Buscar proveïdor..." className="h-9" />
+                    <CommandInput
+                      placeholder="Buscar proveïdor..."
+                      className="h-9"
+                      value={supplierSearchValue}
+                      onValueChange={setSupplierSearchValue}
+                    />
                     <CommandList>
-                      <CommandEmpty>No s'ha trobat cap proveïdor.</CommandEmpty>
+                      <CommandEmpty>
+                        <div className="py-2 text-center">
+                          <p className="text-sm text-muted-foreground mb-2">No s'ha trobat cap proveïdor.</p>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => {
+                              setSupplierOpen(false);
+                              setCreateSupplierOpen(true);
+                            }}
+                          >
+                            <Plus className="h-4 w-4 mr-1" />
+                            Crear "{supplierSearchValue || 'nou'}"
+                          </Button>
+                        </div>
+                      </CommandEmpty>
                       <CommandGroup>
                         {suppliers.map((supplier) => (
                           <CommandItem
@@ -513,6 +539,7 @@ export function PendingDocumentCard({
                             onSelect={() => {
                               onUpdate(doc.id, 'supplierId', supplier.id);
                               setSupplierOpen(false);
+                              setSupplierSearchValue('');
                             }}
                           >
                             <div className="flex flex-col">
@@ -532,12 +559,38 @@ export function PendingDocumentCard({
                           </CommandItem>
                         ))}
                       </CommandGroup>
+                      {/* Botó sempre visible per crear nou */}
+                      <div className="border-t p-2">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="w-full justify-start text-muted-foreground hover:text-foreground"
+                          onClick={() => {
+                            setSupplierOpen(false);
+                            setCreateSupplierOpen(true);
+                          }}
+                        >
+                          <Plus className="h-4 w-4 mr-2" />
+                          Nou proveïdor...
+                        </Button>
+                      </div>
                     </CommandList>
                   </Command>
                 </PopoverContent>
               </Popover>
             </div>
           </div>
+
+          {/* Modal crear proveïdor */}
+          <CreateSupplierModal
+            open={createSupplierOpen}
+            onOpenChange={setCreateSupplierOpen}
+            initialName={supplierSearchValue}
+            onCreated={(contactId) => {
+              onUpdate(doc.id, 'supplierId', contactId);
+              setSupplierSearchValue('');
+            }}
+          />
 
           {/* Fila 3: Categoria */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
