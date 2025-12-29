@@ -133,6 +133,15 @@ export default function LandingPage() {
                 <Link href="/contacte">Contacte</Link>
               </Button>
             </div>
+
+            <div className="mt-4">
+              <Link
+                href="/funcionalitats"
+                className="text-sm text-primary hover:underline"
+              >
+                Veure totes les funcionalitats →
+              </Link>
+            </div>
           </div>
         </div>
 
@@ -332,8 +341,63 @@ export default function LandingPage() {
           </div>
         </section>
 
+        {/* Què resol Summa Social? */}
+        <section id="que-resol-summa-social" className="px-6 py-16">
+          <div className="max-w-3xl mx-auto">
+            <h2 className="text-2xl font-bold mb-8">Què resol Summa Social?</h2>
+
+            <div className="space-y-6 text-muted-foreground">
+              <p>
+                <strong className="text-foreground">
+                  Summa Social porta ordre, control i tranquil·litat a la gestió econòmica de les
+                  entitats socials petites i mitjanes.
+                </strong>
+              </p>
+
+              <p>
+                <strong className="text-foreground">Conciliació bancària senzilla i ràpida:</strong>{' '}
+                Importes l&apos;extracte i en pocs minuts tens tots els moviments classificats, sense
+                errors de transcripció. La intel·ligència artificial reconeix automàticament
+                proveïdors, socis i donants.
+              </p>
+
+              <p>
+                <strong className="text-foreground">Fiscalitat a temps real, sense esforç:</strong>{' '}
+                Models 182 i 347 amb un clic. Certificats de donació generats i enviats
+                automàticament. Tot validat i llest per enviar a la gestoria o l&apos;AEAT.
+              </p>
+
+              <p>
+                <strong className="text-foreground">
+                  Remeses de quotes i pagaments en pocs segons:
+                </strong>{' '}
+                Divideix automàticament les remeses agrupades del banc. Genera fitxers SEPA per
+                pagaments a proveïdors i nòmines. Fàcil, ràpid i sense errors.
+              </p>
+
+              <p>
+                <strong className="text-foreground">Visió clara i actualitzada:</strong> Dashboard
+                amb mètriques en temps real. Ingressos, despeses, balanç i alertes, tot visible
+                d&apos;un cop d&apos;ull. Informes automàtics per a junta o patronat.
+              </p>
+
+              <p>
+                <strong className="text-foreground">Control absolut de cada euro:</strong>{' '}
+                Trazabilitat completa des del comprovant fins al moviment bancari. Justificació de
+                subvencions amb un clic: Excel + totes les factures en un ZIP.
+              </p>
+
+              <p>
+                <strong className="text-foreground">El resultat:</strong> més temps per a la missió
+                de l&apos;entitat, menys temps amb fulls de càlcul i tasques repetitives. Gestió
+                econòmica professional, accessible i sense complicacions.
+              </p>
+            </div>
+          </div>
+        </section>
+
         {/* FAQ */}
-        <section className="px-6 py-16">
+        <section className="bg-muted/30 px-6 py-16">
           <div className="max-w-3xl mx-auto">
             <h2 className="text-2xl font-bold text-center mb-10">
               Preguntes freqüents
