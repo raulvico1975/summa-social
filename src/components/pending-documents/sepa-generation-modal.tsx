@@ -54,6 +54,7 @@ import {
   type ValidDocInfo,
   type InvalidDocInfo,
 } from '@/lib/pending-documents/sepa-remittance';
+import { useTranslations } from '@/i18n';
 
 // ═══════════════════════════════════════════════════════════════════════════
 // TYPES
@@ -84,6 +85,7 @@ export function SepaGenerationModal({
   const { organizationId, organization } = useCurrentOrganization();
   const { bankAccounts, isLoading: isLoadingBankAccounts } = useBankAccounts();
   const { toast } = useToast();
+  const { t } = useTranslations();
 
   // State
   const [step, setStep] = React.useState<ModalStep>('validation');
@@ -143,8 +145,8 @@ export function SepaGenerationModal({
     if (validDocs.length === 0) {
       toast({
         variant: 'destructive',
-        title: 'Cap document vàlid',
-        description: 'No hi ha documents que compleixin els requisits per SEPA.',
+        title: t.sepa.toasts.noValid,
+        description: t.sepa.toasts.noValidDesc,
       });
       return;
     }
@@ -155,8 +157,8 @@ export function SepaGenerationModal({
     if (!firestore || !storage || !organizationId || !organization) {
       toast({
         variant: 'destructive',
-        title: 'Error',
-        description: 'No s\'ha pogut iniciar la generació.',
+        title: t.sepa.toasts.error,
+        description: t.sepa.toasts.errorInit,
       });
       return;
     }
@@ -165,8 +167,8 @@ export function SepaGenerationModal({
     if (!bankAccount) {
       toast({
         variant: 'destructive',
-        title: 'Error',
-        description: 'Selecciona un compte bancari.',
+        title: t.sepa.toasts.error,
+        description: t.sepa.toasts.errorAccount,
       });
       return;
     }
@@ -174,8 +176,8 @@ export function SepaGenerationModal({
     if (!bankAccount.iban) {
       toast({
         variant: 'destructive',
-        title: 'Error',
-        description: 'El compte seleccionat no té IBAN configurat.',
+        title: t.sepa.toasts.error,
+        description: t.sepa.toasts.errorNoIban,
       });
       return;
     }
@@ -210,8 +212,8 @@ export function SepaGenerationModal({
 
       // 3. Toast clar amb CTA per tornar a descarregar
       toast({
-        title: 'Remesa SEPA descarregada',
-        description: `${resultData.nbOfTxs} pagaments · ${formatCurrencyEU(resultData.ctrlSum)}. Queda guardada a Summa.`,
+        title: t.sepa.toasts.downloaded,
+        description: t.sepa.toasts.downloadedDesc({ count: resultData.nbOfTxs, amount: formatCurrencyEU(resultData.ctrlSum) }),
         action: (
           <Button
             variant="outline"
@@ -226,7 +228,7 @@ export function SepaGenerationModal({
             }}
           >
             <Download className="mr-2 h-3 w-3" />
-            Tornar a descarregar
+            {t.sepa.downloadAgain}
           </Button>
         ),
       });
@@ -236,8 +238,8 @@ export function SepaGenerationModal({
       setStep('configuration');
       toast({
         variant: 'destructive',
-        title: 'Error generant remesa',
-        description: error instanceof Error ? error.message : 'Error desconegut',
+        title: t.sepa.toasts.errorGenerate,
+        description: error instanceof Error ? error.message : t.pendingDocs.toasts.errorUnknown,
       });
     }
   };
@@ -259,16 +261,16 @@ export function SepaGenerationModal({
       <DialogContent className="sm:max-w-[600px]">
         <DialogHeader>
           <DialogTitle>
-            {step === 'validation' && 'Generar remesa SEPA'}
-            {step === 'configuration' && 'Configurar remesa'}
-            {step === 'generating' && 'Generant...'}
-            {step === 'success' && 'Remesa generada'}
+            {step === 'validation' && t.sepa.title}
+            {step === 'configuration' && t.sepa.titleConfiguration}
+            {step === 'generating' && t.sepa.titleGenerating}
+            {step === 'success' && t.sepa.titleSuccess}
           </DialogTitle>
           <DialogDescription>
-            {step === 'validation' && `${selectedDocuments.length} documents seleccionats`}
-            {step === 'configuration' && `${validDocs.length} pagaments · ${formatCurrencyEU(totalAmount)}`}
-            {step === 'generating' && 'Espera mentre es genera el fitxer SEPA...'}
-            {step === 'success' && 'El fitxer s\'ha descarregat automàticament.'}
+            {step === 'validation' && t.sepa.description({ count: selectedDocuments.length })}
+            {step === 'configuration' && t.sepa.descriptionConfig({ count: validDocs.length, amount: formatCurrencyEU(totalAmount) })}
+            {step === 'generating' && t.sepa.descriptionGenerating}
+            {step === 'success' && t.sepa.descriptionSuccess}
           </DialogDescription>
         </DialogHeader>
 
@@ -276,7 +278,7 @@ export function SepaGenerationModal({
         <Alert className="border-blue-200 bg-blue-50">
           <Info className="h-4 w-4 text-blue-600" />
           <AlertDescription className="text-blue-700 text-sm">
-            Això genera un fitxer per pujar al banc. No crea moviments.
+            {t.sepa.infoBanner}
           </AlertDescription>
         </Alert>
 
@@ -288,7 +290,7 @@ export function SepaGenerationModal({
               <div>
                 <h4 className="text-sm font-medium mb-2 flex items-center gap-2">
                   <Check className="h-4 w-4 text-green-600" />
-                  {validDocs.length} documents vàlids
+                  {t.sepa.validDocs({ count: validDocs.length })}
                 </h4>
                 <ScrollArea className="h-[150px] rounded-md border p-2">
                   <div className="space-y-2">
@@ -318,7 +320,7 @@ export function SepaGenerationModal({
               <div>
                 <h4 className="text-sm font-medium mb-2 flex items-center gap-2 text-destructive">
                   <AlertCircle className="h-4 w-4" />
-                  {invalidDocs.length} documents no es poden incloure
+                  {t.sepa.invalidDocs({ count: invalidDocs.length })}
                 </h4>
                 <ScrollArea className="h-[120px] rounded-md border border-destructive/30 bg-destructive/5 p-2">
                   <div className="space-y-2">
@@ -345,7 +347,7 @@ export function SepaGenerationModal({
 
             {/* Summary */}
             <div className="flex items-center justify-between pt-2 border-t">
-              <span className="text-sm text-muted-foreground">Total a pagar:</span>
+              <span className="text-sm text-muted-foreground">{t.sepa.totalToPay}</span>
               <span className="text-lg font-bold">{formatCurrencyEU(totalAmount)}</span>
             </div>
           </div>
@@ -356,18 +358,18 @@ export function SepaGenerationModal({
           <div className="space-y-4">
             {/* Bank account selector */}
             <div className="space-y-2">
-              <Label htmlFor="bankAccount">Compte bancari emissor *</Label>
+              <Label htmlFor="bankAccount">{t.sepa.bankAccount}</Label>
               {isLoadingBankAccounts ? (
                 <div className="flex items-center gap-2 text-sm text-muted-foreground">
                   <Loader2 className="h-4 w-4 animate-spin" />
-                  Carregant comptes...
+                  {t.sepa.loadingAccounts}
                 </div>
               ) : bankAccountsWithIban.length === 0 ? (
                 <Alert variant="destructive">
                   <AlertCircle className="h-4 w-4" />
-                  <AlertTitle>Sense comptes amb IBAN</AlertTitle>
+                  <AlertTitle>{t.sepa.noAccountsWithIban}</AlertTitle>
                   <AlertDescription>
-                    Has de configurar almenys un compte bancari amb IBAN a Configuració.
+                    {t.sepa.noAccountsWithIbanDesc}
                   </AlertDescription>
                 </Alert>
               ) : (
@@ -376,7 +378,7 @@ export function SepaGenerationModal({
                   onValueChange={setSelectedBankAccountId}
                 >
                   <SelectTrigger>
-                    <SelectValue placeholder="Selecciona un compte" />
+                    <SelectValue placeholder={t.sepa.selectAccount} />
                   </SelectTrigger>
                   <SelectContent>
                     {bankAccountsWithIban.map((account) => (
@@ -396,7 +398,7 @@ export function SepaGenerationModal({
 
             {/* Execution date */}
             <div className="space-y-2">
-              <Label>Data d'execució</Label>
+              <Label>{t.sepa.executionDate}</Label>
               <Popover open={datePickerOpen} onOpenChange={setDatePickerOpen}>
                 <PopoverTrigger asChild>
                   <Button
@@ -407,7 +409,7 @@ export function SepaGenerationModal({
                     )}
                   >
                     <CalendarIcon className="mr-2 h-4 w-4" />
-                    {executionDate ? format(executionDate, 'dd/MM/yyyy') : 'Selecciona data'}
+                    {executionDate ? format(executionDate, 'dd/MM/yyyy') : t.sepa.selectDate}
                   </Button>
                 </PopoverTrigger>
                 <PopoverContent className="w-auto p-0" align="start">
@@ -433,7 +435,7 @@ export function SepaGenerationModal({
 
             {/* Filename */}
             <div className="space-y-2">
-              <Label htmlFor="filename">Nom del fitxer</Label>
+              <Label htmlFor="filename">{t.sepa.filename}</Label>
               <Input
                 id="filename"
                 value={filename}
@@ -444,12 +446,12 @@ export function SepaGenerationModal({
             {/* Summary */}
             <div className="flex items-center justify-between pt-2 border-t">
               <div>
-                <p className="text-sm text-muted-foreground">{validDocs.length} pagaments</p>
+                <p className="text-sm text-muted-foreground">{t.sepa.payments({ count: validDocs.length })}</p>
                 <p className="text-lg font-bold">{formatCurrencyEU(totalAmount)}</p>
               </div>
               {selectedBankAccount && (
                 <div className="text-right text-sm">
-                  <p className="text-muted-foreground">Des de:</p>
+                  <p className="text-muted-foreground">{t.sepa.fromAccount}</p>
                   <p className="font-medium">{selectedBankAccount.name}</p>
                 </div>
               )}
@@ -461,7 +463,7 @@ export function SepaGenerationModal({
         {step === 'generating' && (
           <div className="flex flex-col items-center justify-center py-8 gap-4">
             <Loader2 className="h-12 w-12 animate-spin text-primary" />
-            <p className="text-muted-foreground">Generant fitxer SEPA...</p>
+            <p className="text-muted-foreground">{t.sepa.generating}</p>
           </div>
         )}
 
@@ -471,9 +473,9 @@ export function SepaGenerationModal({
             <div className="flex items-center gap-3 p-4 bg-green-50 rounded-lg border border-green-200">
               <Check className="h-8 w-8 text-green-600" />
               <div>
-                <p className="font-medium text-green-800">Remesa generada correctament</p>
+                <p className="font-medium text-green-800">{t.sepa.success}</p>
                 <p className="text-sm text-green-700">
-                  {result.nbOfTxs} pagaments · {formatCurrencyEU(result.ctrlSum)}
+                  {t.sepa.successDesc({ count: result.nbOfTxs, amount: formatCurrencyEU(result.ctrlSum) })}
                 </p>
               </div>
             </div>
@@ -486,13 +488,13 @@ export function SepaGenerationModal({
               <Button variant="outline" size="sm" asChild>
                 <a href={result.downloadUrl} download={result.filename}>
                   <Download className="mr-2 h-4 w-4" />
-                  Descarregar
+                  {t.sepa.download}
                 </a>
               </Button>
             </div>
 
             <p className="text-sm text-muted-foreground text-center">
-              Puja aquest fitxer al teu banc per executar els pagaments.
+              {t.sepa.uploadToBank}
             </p>
           </div>
         )}
@@ -501,13 +503,13 @@ export function SepaGenerationModal({
           {step === 'validation' && (
             <>
               <Button variant="outline" onClick={handleClose}>
-                Cancel·lar
+                {t.pendingDocs.actions.cancel}
               </Button>
               <Button
                 onClick={handleContinue}
                 disabled={validDocs.length === 0}
               >
-                Continuar amb {validDocs.length} vàlids
+                {t.sepa.continueWithValid({ count: validDocs.length })}
               </Button>
             </>
           )}
@@ -515,20 +517,20 @@ export function SepaGenerationModal({
           {step === 'configuration' && (
             <>
               <Button variant="outline" onClick={() => setStep('validation')}>
-                Enrere
+                {t.pendingDocs.actions.back}
               </Button>
               <Button
                 onClick={handleGenerate}
                 disabled={!selectedBankAccountId || bankAccountsWithIban.length === 0}
               >
-                Generar remesa
+                {t.sepa.generate}
               </Button>
             </>
           )}
 
           {step === 'success' && (
             <Button onClick={handleClose}>
-              Tancar
+              {t.pendingDocs.actions.close}
             </Button>
           )}
         </DialogFooter>

@@ -26,6 +26,7 @@ import {
 import { format, parseISO } from 'date-fns';
 import { ca } from 'date-fns/locale';
 import { useToast } from '@/hooks/use-toast';
+import { useTranslations } from '@/i18n';
 import { useFirebase } from '@/firebase';
 import { useCurrentOrganization } from '@/hooks/organization-provider';
 import { formatCurrencyEU } from '@/lib/normalize';
@@ -95,6 +96,7 @@ export function ReconciliationModal({
   const { firestore, storage } = useFirebase();
   const { organizationId } = useCurrentOrganization();
   const { toast } = useToast();
+  const { t } = useTranslations();
 
   const [isLinking, setIsLinking] = React.useState(false);
   const [isIgnoring, setIsIgnoring] = React.useState(false);
@@ -108,8 +110,8 @@ export function ReconciliationModal({
       await linkDocumentToTransaction(firestore, storage, organizationId, pendingDoc, transaction.id);
 
       toast({
-        title: 'Document vinculat',
-        description: `${pendingDoc.invoiceNumber || pendingDoc.file.filename} vinculat al moviment.`,
+        title: t.reconciliation.linked,
+        description: t.reconciliation.linkedDesc({ name: pendingDoc.invoiceNumber || pendingDoc.file.filename }),
       });
 
       onComplete();
@@ -118,8 +120,8 @@ export function ReconciliationModal({
       console.error('Error linking document:', error);
       toast({
         variant: 'destructive',
-        title: 'Error',
-        description: 'No s\'ha pogut vincular el document.',
+        title: t.common.error,
+        description: t.reconciliation.linkError,
       });
     } finally {
       setIsLinking(false);
@@ -135,8 +137,8 @@ export function ReconciliationModal({
       await ignoreMatchSuggestion(firestore, organizationId, pendingDoc, transaction.id);
 
       toast({
-        title: 'Suggeriment ignorat',
-        description: 'Aquest suggeriment no es tornarà a mostrar.',
+        title: t.reconciliation.ignored,
+        description: t.reconciliation.ignoredDesc,
       });
 
       onComplete();
@@ -145,8 +147,8 @@ export function ReconciliationModal({
       console.error('Error ignoring suggestion:', error);
       toast({
         variant: 'destructive',
-        title: 'Error',
-        description: 'No s\'ha pogut ignorar el suggeriment.',
+        title: t.common.error,
+        description: t.reconciliation.ignoreError,
       });
     } finally {
       setIsIgnoring(false);
@@ -174,16 +176,16 @@ export function ReconciliationModal({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[600px]">
         <DialogHeader>
-          <DialogTitle>Conciliar document</DialogTitle>
+          <DialogTitle>{t.reconciliation.title}</DialogTitle>
           <DialogDescription>
-            Compara les dades i decideix si vincular el document al moviment.
+            {t.reconciliation.description}
           </DialogDescription>
         </DialogHeader>
 
         <div className="grid grid-cols-[1fr_auto_1fr] gap-4 py-4">
           {/* Document pendent */}
           <div className="space-y-3">
-            <h4 className="font-medium text-sm text-muted-foreground">Document pendent</h4>
+            <h4 className="font-medium text-sm text-muted-foreground">{t.reconciliation.pendingDoc}</h4>
 
             <div className="space-y-2">
               <div className="flex items-center gap-2 text-sm">
@@ -192,7 +194,7 @@ export function ReconciliationModal({
               </div>
 
               <div className="flex items-center gap-2 text-sm">
-                <span className="font-medium">Nº:</span>
+                <span className="font-medium">{t.reconciliation.invoiceNumber}:</span>
                 <span>{pendingDoc.invoiceNumber || '—'}</span>
               </div>
 
@@ -226,7 +228,7 @@ export function ReconciliationModal({
 
           {/* Transacció bancària */}
           <div className="space-y-3">
-            <h4 className="font-medium text-sm text-muted-foreground">Moviment bancari</h4>
+            <h4 className="font-medium text-sm text-muted-foreground">{t.reconciliation.bankMovement}</h4>
 
             <div className="space-y-2">
               <div className="flex items-center gap-2 text-sm">
@@ -265,13 +267,13 @@ export function ReconciliationModal({
         <div className="flex flex-wrap gap-2 py-2">
           <Badge variant={amountsMatch ? 'default' : 'secondary'} className={amountsMatch ? 'bg-green-100 text-green-800' : ''}>
             {amountsMatch ? <Check className="h-3 w-3 mr-1" /> : <X className="h-3 w-3 mr-1" />}
-            Import {amountsMatch ? 'coincideix' : 'diferent'}
+            {amountsMatch ? t.reconciliation.amountMatch : t.reconciliation.amountDifferent}
           </Badge>
 
           {supplier && transaction.description.toLowerCase().includes(supplier.name.toLowerCase().split(' ')[0]) && (
             <Badge variant="default" className="bg-green-100 text-green-800">
               <Check className="h-3 w-3 mr-1" />
-              Nom proveïdor detectat
+              {t.reconciliation.supplierDetected}
             </Badge>
           )}
         </div>
@@ -287,7 +289,7 @@ export function ReconciliationModal({
             ) : (
               <X className="mr-2 h-4 w-4" />
             )}
-            Ignorar
+            {t.reconciliation.ignore}
           </Button>
           <Button
             onClick={handleLink}
@@ -298,7 +300,7 @@ export function ReconciliationModal({
             ) : (
               <Check className="mr-2 h-4 w-4" />
             )}
-            Vincular
+            {t.reconciliation.link}
           </Button>
         </DialogFooter>
       </DialogContent>

@@ -9,6 +9,7 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Skeleton } from '@/components/ui/skeleton';
+import { useTranslations, type TranslationsContextType } from '@/i18n';
 import {
   ArrowLeft,
   FileText,
@@ -61,34 +62,34 @@ interface StatusInfo {
   tooltip: string;
 }
 
-function getStatusInfo(report: ExpenseReport): StatusInfo {
+function getStatusInfo(report: ExpenseReport, t: TranslationsContextType['t']): StatusInfo {
   const derived = getDerivedStatus(report);
 
   switch (derived) {
     case 'draft':
       return {
-        badge: <Badge variant="outline" className="bg-gray-50 text-gray-700">Esborrany</Badge>,
-        tooltip: 'En preparació. Encara no hi ha PDF ni pagament.',
+        badge: <Badge variant="outline" className="bg-gray-50 text-gray-700">{t.expenseReports.statuses.draft}</Badge>,
+        tooltip: t.expenseReports.tooltips.draft,
       };
     case 'ready':
       return {
-        badge: <Badge variant="outline" className="bg-amber-50 text-amber-700">Preparada</Badge>,
-        tooltip: 'PDF generat. Llesta per generar el pagament.',
+        badge: <Badge variant="outline" className="bg-amber-50 text-amber-700">{t.expenseReports.statuses.ready}</Badge>,
+        tooltip: t.expenseReports.tooltips.ready,
       };
     case 'sepa_generated':
       return {
-        badge: <Badge variant="outline" className="bg-blue-50 text-blue-700">SEPA generat</Badge>,
-        tooltip: 'Fitxer de pagament generat. Pendent d\'importar l\'extracte bancari.',
+        badge: <Badge variant="outline" className="bg-blue-50 text-blue-700">{t.expenseReports.statuses.sepaGenerated}</Badge>,
+        tooltip: t.expenseReports.tooltips.sepaGenerated,
       };
     case 'matched':
       return {
-        badge: <Badge variant="outline" className="bg-green-50 text-green-700">Conciliada</Badge>,
-        tooltip: 'Pagament conciliat amb el banc.',
+        badge: <Badge variant="outline" className="bg-green-50 text-green-700">{t.expenseReports.statuses.matched}</Badge>,
+        tooltip: t.expenseReports.tooltips.matched,
       };
     case 'archived':
       return {
-        badge: <Badge variant="outline" className="bg-slate-100 text-slate-500">Arxivada</Badge>,
-        tooltip: 'Liquidació tancada sense conciliació.',
+        badge: <Badge variant="outline" className="bg-slate-100 text-slate-500">{t.expenseReports.statuses.archived}</Badge>,
+        tooltip: t.expenseReports.tooltips.archived,
       };
     default:
       return {
@@ -107,6 +108,7 @@ export default function LiquidacionsPage() {
   const { firestore } = useFirebase();
   const { buildUrl } = useOrgUrl();
   const { toast } = useToast();
+  const { t } = useTranslations();
 
   // Feature flag check
   const isPendingDocsEnabled = organization?.features?.pendingDocs ?? false;
@@ -171,16 +173,16 @@ export default function LiquidacionsPage() {
     try {
       const reportId = await createExpenseReportDraft(firestore, organizationId);
       toast({
-        title: 'Liquidació creada',
-        description: 'Ara pots afegir tiquets i quilometratge.',
+        title: t.expenseReports.toasts.created,
+        description: t.expenseReports.toasts.createdDesc,
       });
       // Navegar al detall (TODO: implementar)
       // router.push(buildUrl(`/dashboard/movimientos/liquidacions/${reportId}`));
     } catch (error) {
       console.error('[handleCreate] Error:', error);
       toast({
-        title: 'Error',
-        description: 'No s\'ha pogut crear la liquidació.',
+        title: t.expenseReports.toasts.error,
+        description: t.expenseReports.toasts.errorCreate,
         variant: 'destructive',
       });
     } finally {
@@ -194,12 +196,12 @@ export default function LiquidacionsPage() {
 
     try {
       await archiveExpenseReport(firestore, organizationId, report.id);
-      toast({ title: 'Liquidació arxivada' });
+      toast({ title: t.expenseReports.toasts.archived });
     } catch (error) {
       console.error('[handleArchive] Error:', error);
       toast({
-        title: 'Error',
-        description: 'No s\'ha pogut arxivar.',
+        title: t.expenseReports.toasts.error,
+        description: t.expenseReports.toasts.errorArchive,
         variant: 'destructive',
       });
     }
@@ -211,12 +213,12 @@ export default function LiquidacionsPage() {
 
     try {
       await restoreExpenseReport(firestore, organizationId, report.id, 'draft');
-      toast({ title: 'Liquidació restaurada' });
+      toast({ title: t.expenseReports.toasts.restored });
     } catch (error) {
       console.error('[handleRestore] Error:', error);
       toast({
-        title: 'Error',
-        description: 'No s\'ha pogut restaurar.',
+        title: t.expenseReports.toasts.error,
+        description: t.expenseReports.toasts.errorRestore,
         variant: 'destructive',
       });
     }
@@ -232,12 +234,12 @@ export default function LiquidacionsPage() {
               <ArrowLeft className="h-4 w-4" />
             </Button>
           </Link>
-          <h1 className="text-2xl font-bold font-headline">Liquidacions</h1>
+          <h1 className="text-2xl font-bold font-headline">{t.expenseReports.title}</h1>
         </div>
         <EmptyState
           icon={FileText}
-          title="Funcionalitat no activada"
-          description="Contacta amb l'administrador per activar el mòdul de documents pendents."
+          title={t.expenseReports.featureDisabled}
+          description={t.expenseReports.featureDisabledDesc}
         />
       </div>
     );
@@ -254,9 +256,9 @@ export default function LiquidacionsPage() {
             </Button>
           </Link>
           <div>
-            <h1 className="text-2xl font-bold font-headline">Liquidacions</h1>
+            <h1 className="text-2xl font-bold font-headline">{t.expenseReports.title}</h1>
             <p className="text-muted-foreground text-sm">
-              Agrupa tiquets i quilometratge per a reemborsament
+              {t.expenseReports.subtitle}
             </p>
           </div>
         </div>
@@ -267,7 +269,7 @@ export default function LiquidacionsPage() {
             ) : (
               <Plus className="mr-2 h-4 w-4" />
             )}
-            Nova liquidació
+            {t.expenseReports.actions.create}
           </Button>
         )}
       </div>
@@ -275,10 +277,9 @@ export default function LiquidacionsPage() {
       {/* Banner pre-banc */}
       <Alert>
         <Info className="h-4 w-4" />
-        <AlertTitle>Pre-banc</AlertTitle>
+        <AlertTitle>{t.expenseReports.banners.prebank}</AlertTitle>
         <AlertDescription>
-          Les liquidacions s'usen per agrupar tiquets i quilometratge abans de fer el reemborsament.
-          Quan el banc executi el pagament, podràs conciliar-ho automàticament.
+          {t.expenseReports.banners.prebankDescription}
         </AlertDescription>
       </Alert>
 
@@ -286,19 +287,19 @@ export default function LiquidacionsPage() {
       <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as typeof activeTab)}>
         <TabsList>
           <TabsTrigger value="draft">
-            Esborrany
+            {t.expenseReports.tabs.draft}
             {counts.draft > 0 && <Badge variant="outline" className="ml-2">{counts.draft}</Badge>}
           </TabsTrigger>
           <TabsTrigger value="submitted">
-            Enviades
+            {t.expenseReports.tabs.submitted}
             {counts.submitted > 0 && <Badge variant="outline" className="ml-2">{counts.submitted}</Badge>}
           </TabsTrigger>
           <TabsTrigger value="matched">
-            Conciliades
+            {t.expenseReports.tabs.matched}
             {counts.matched > 0 && <Badge variant="outline" className="ml-2">{counts.matched}</Badge>}
           </TabsTrigger>
           <TabsTrigger value="archived">
-            Arxivades
+            {t.expenseReports.tabs.archived}
             {counts.archived > 0 && <Badge variant="outline" className="ml-2">{counts.archived}</Badge>}
           </TabsTrigger>
         </TabsList>
@@ -313,8 +314,8 @@ export default function LiquidacionsPage() {
           ) : filteredReports.length === 0 ? (
             <EmptyState
               icon={FileText}
-              title={activeTab === 'draft' ? 'Cap esborrany' : `Cap liquidació ${activeTab}`}
-              description={activeTab === 'draft' ? 'Crea una nova liquidació per començar.' : 'No hi ha liquidacions en aquest estat.'}
+              title={(t.expenseReports.empty as Record<string, string>)[activeTab]}
+              description={(t.expenseReports.empty as Record<string, string>)[`${activeTab}Desc`]}
             />
           ) : (
             <div className="space-y-2">
@@ -326,19 +327,19 @@ export default function LiquidacionsPage() {
                         <FileText className="h-5 w-5 text-muted-foreground" />
                         <div>
                           <p className="font-medium">
-                            {report.title || 'Liquidació sense títol'}
+                            {report.title || t.expenseReports.empty.noTitle}
                           </p>
                           <p className="text-sm text-muted-foreground">
                             {formatDateRange(report.dateFrom, report.dateTo)}
                             {report.receiptDocIds.length > 0 && (
-                              <span className="ml-2">· {report.receiptDocIds.length} tiquets</span>
+                              <span className="ml-2">· {t.expenseReports.details.receipts({ count: report.receiptDocIds.length })}</span>
                             )}
                             {report.mileage?.km && (
-                              <span className="ml-2">· {report.mileage.km} km</span>
+                              <span className="ml-2">· {t.expenseReports.details.km({ km: report.mileage.km })}</span>
                             )}
                           </p>
                           <p className="text-xs text-muted-foreground/70 mt-0.5">
-                            {getStatusInfo(report).tooltip}
+                            {getStatusInfo(report, t).tooltip}
                           </p>
                         </div>
                       </div>
@@ -346,8 +347,8 @@ export default function LiquidacionsPage() {
                         <span className="font-semibold">
                           {formatCurrencyEU(report.totalAmount)}
                         </span>
-                        <div className="flex items-center gap-1" title={getStatusInfo(report).tooltip}>
-                          {getStatusInfo(report).badge}
+                        <div className="flex items-center gap-1" title={getStatusInfo(report, t).tooltip}>
+                          {getStatusInfo(report, t).badge}
                         </div>
                         {report.status === 'draft' && !report.sepa && (
                           <Button

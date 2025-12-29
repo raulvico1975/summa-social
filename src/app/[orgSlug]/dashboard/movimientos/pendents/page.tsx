@@ -10,6 +10,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
+import { useTranslations } from '@/i18n';
 import {
   Table,
   TableBody,
@@ -70,6 +71,7 @@ export default function PendingDocsPage() {
   const { firestore, storage } = useFirebase();
   const router = useRouter();
   const { toast } = useToast();
+  const { t } = useTranslations();
 
   // Feature flag check - redirect if not enabled
   const isPendingDocsEnabled = organization?.features?.pendingDocs ?? false;
@@ -183,8 +185,8 @@ export default function PendingDocsPage() {
       console.error('Error updating field:', error);
       toast({
         variant: 'destructive',
-        title: 'Error',
-        description: 'No s\'ha pogut actualitzar el camp.',
+        title: t.pendingDocs.toasts.error,
+        description: t.pendingDocs.toasts.errorConfirm,
       });
     }
   }, [firestore, organizationId, toast]);
@@ -197,15 +199,15 @@ export default function PendingDocsPage() {
     try {
       await confirmPendingDocument(firestore, organizationId, doc);
       toast({
-        title: 'Document confirmat',
-        description: `${doc.invoiceNumber || doc.file.filename} confirmat correctament.`,
+        title: t.pendingDocs.toasts.confirmed,
+        description: `${doc.invoiceNumber || doc.file.filename}`,
       });
     } catch (error) {
       console.error('Error confirming document:', error);
       toast({
         variant: 'destructive',
-        title: 'Error',
-        description: error instanceof Error ? error.message : 'No s\'ha pogut confirmar el document.',
+        title: t.pendingDocs.toasts.error,
+        description: error instanceof Error ? error.message : t.pendingDocs.toasts.errorConfirm,
       });
     } finally {
       setConfirmingDocId(null);
@@ -225,24 +227,24 @@ export default function PendingDocsPage() {
 
       if (result.confirmedCount > 0) {
         toast({
-          title: `${result.confirmedCount} document${result.confirmedCount > 1 ? 's' : ''} confirmat${result.confirmedCount > 1 ? 's' : ''}`,
+          title: t.pendingDocs.toasts.confirmedMultiple({ count: result.confirmedCount }),
           description: result.skippedCount > 0
-            ? `${result.skippedCount} pendent${result.skippedCount > 1 ? 's' : ''} (incomplerts).`
+            ? `${result.skippedCount} ${t.pendingDocs.statuses.incomplete.toLowerCase()}`
             : undefined,
         });
       } else {
         toast({
           variant: 'destructive',
-          title: 'Cap document confirmat',
-          description: 'Tots els documents tenen camps obligatoris pendents.',
+          title: t.pendingDocs.toasts.error,
+          description: t.pendingDocs.toasts.errorConfirm,
         });
       }
     } catch (error) {
       console.error('Error bulk confirming:', error);
       toast({
         variant: 'destructive',
-        title: 'Error',
-        description: 'No s\'han pogut confirmar els documents.',
+        title: t.pendingDocs.toasts.error,
+        description: t.pendingDocs.toasts.errorConfirm,
       });
     } finally {
       setIsBulkConfirming(false);
@@ -257,15 +259,15 @@ export default function PendingDocsPage() {
     try {
       await archivePendingDocument(firestore, organizationId, doc);
       toast({
-        title: 'Document arxivat',
-        description: `${doc.invoiceNumber || doc.file.filename} arxivat correctament.`,
+        title: t.pendingDocs.toasts.archived,
+        description: `${doc.invoiceNumber || doc.file.filename}`,
       });
     } catch (error) {
       console.error('Error archiving document:', error);
       toast({
         variant: 'destructive',
-        title: 'Error',
-        description: error instanceof Error ? error.message : 'No s\'ha pogut arxivar el document.',
+        title: t.pendingDocs.toasts.error,
+        description: error instanceof Error ? error.message : t.pendingDocs.toasts.errorArchive,
       });
     } finally {
       setArchivingDocId(null);
@@ -280,15 +282,15 @@ export default function PendingDocsPage() {
     try {
       await restorePendingDocument(firestore, organizationId, doc);
       toast({
-        title: 'Document restaurat',
-        description: `${doc.invoiceNumber || doc.file.filename} restaurat a l'estat anterior.`,
+        title: t.pendingDocs.toasts.restored,
+        description: `${doc.invoiceNumber || doc.file.filename}`,
       });
     } catch (error) {
       console.error('Error restoring document:', error);
       toast({
         variant: 'destructive',
-        title: 'Error',
-        description: error instanceof Error ? error.message : 'No s\'ha pogut restaurar el document.',
+        title: t.pendingDocs.toasts.error,
+        description: error instanceof Error ? error.message : t.pendingDocs.toasts.errorRestore,
       });
     } finally {
       setArchivingDocId(null);
@@ -308,23 +310,16 @@ export default function PendingDocsPage() {
         setExpandedDocId(null);
       }
 
-      if (result.fileDeleted) {
-        toast({
-          title: 'Document eliminat',
-          description: `${doc.invoiceNumber || doc.file.filename} eliminat correctament.`,
-        });
-      } else {
-        toast({
-          title: 'Document eliminat',
-          description: `${doc.invoiceNumber || doc.file.filename} eliminat, però el fitxer pot haver quedat a Storage.`,
-        });
-      }
+      toast({
+        title: t.pendingDocs.toasts.deleted,
+        description: `${doc.invoiceNumber || doc.file.filename}`,
+      });
     } catch (error) {
       console.error('Error deleting document:', error);
       toast({
         variant: 'destructive',
-        title: 'Error',
-        description: error instanceof Error ? error.message : 'No s\'ha pogut eliminar el document.',
+        title: t.pendingDocs.toasts.error,
+        description: error instanceof Error ? error.message : t.pendingDocs.toasts.errorDelete,
       });
     } finally {
       setDeletingDocId(null);
@@ -413,8 +408,8 @@ export default function PendingDocsPage() {
     if (!suggestedId || !transactions) {
       toast({
         variant: 'destructive',
-        title: 'Error',
-        description: 'No s\'ha trobat cap suggeriment de conciliació.',
+        title: t.pendingDocs.toasts.error,
+        description: t.pendingDocs.toasts.errorLink,
       });
       return;
     }
@@ -423,8 +418,8 @@ export default function PendingDocsPage() {
     if (!tx) {
       toast({
         variant: 'destructive',
-        title: 'Error',
-        description: 'La transacció suggerida no existeix.',
+        title: t.pendingDocs.toasts.error,
+        description: t.pendingDocs.toasts.errorLink,
       });
       return;
     }
@@ -452,7 +447,7 @@ export default function PendingDocsPage() {
             <Button variant="ghost" size="sm" asChild>
               <Link href="../movimientos">
                 <ArrowLeft className="h-4 w-4 mr-1" />
-                Moviments
+                {t.movements.title}
               </Link>
             </Button>
           </div>
@@ -460,14 +455,14 @@ export default function PendingDocsPage() {
             <div>
               <div className="flex items-center gap-2">
                 <h1 className="text-2xl font-bold tracking-tight font-headline">
-                  Documents pendents
+                  {t.pendingDocs.title}
                 </h1>
                 <Badge variant="outline" className="bg-amber-50 text-amber-700 border-amber-200">
                   Experimental
                 </Badge>
               </div>
               <p className="text-muted-foreground">
-                Factures i nòmines pendents de conciliació bancària
+                {t.pendingDocs.subtitle}
               </p>
             </div>
             {canOperate && (
@@ -479,7 +474,7 @@ export default function PendingDocsPage() {
                     className="bg-purple-600 hover:bg-purple-700"
                   >
                     <CreditCard className="mr-2 h-4 w-4" />
-                    Generar remesa SEPA ({selectedDocs.length})
+                    {t.pendingDocs.actions.generateSepa} ({selectedDocs.length})
                   </Button>
                 )}
                 {/* Botó "Confirmar totes" només a la pestanya "Per revisar" */}
@@ -494,12 +489,12 @@ export default function PendingDocsPage() {
                     ) : (
                       <CheckCheck className="mr-2 h-4 w-4" />
                     )}
-                    Confirmar totes ({readyDrafts.length})
+                    {t.pendingDocs.actions.confirmAll} ({readyDrafts.length})
                   </Button>
                 )}
                 <Button onClick={() => setIsUploadModalOpen(true)}>
                   <Upload className="mr-2 h-4 w-4" />
-                  Pujar factures/nòmines
+                  {t.pendingDocs.actions.upload}
                 </Button>
               </div>
             )}
@@ -511,12 +506,11 @@ export default function PendingDocsPage() {
           <Alert className="border-orange-200 bg-orange-50">
             <Info className="h-4 w-4 text-orange-600" />
             <AlertTitle className="text-orange-800">
-              Aquests documents encara no són moviments
+              {t.pendingDocs.banners.prebank}
             </AlertTitle>
             <AlertDescription className="text-orange-700">
               <span>
-                Revisa les dades extretes (import, data, proveïdor) i confirma cada document.
-                Un cop confirmat, passarà a «Pendents de banc» fins que arribi l'extracte.
+                {t.pendingDocs.banners.reviewInfo}
               </span>
             </AlertDescription>
           </Alert>
@@ -526,23 +520,12 @@ export default function PendingDocsPage() {
           <Alert className="border-blue-200 bg-blue-50">
             <Info className="h-4 w-4 text-blue-600" />
             <AlertTitle className="text-blue-800">
-              Següent pas: importar l'extracte bancari
+              {t.pendingDocs.banners.prebank}
             </AlertTitle>
             <AlertDescription className="text-blue-700">
               <span>
-                Aquests documents estan confirmats i esperant el moviment bancari corresponent.
-                Quan importis l'extracte, el sistema suggerirà quins documents corresponen a cada moviment.
+                {t.pendingDocs.banners.bankPendingInfo}
               </span>
-              <Button
-                variant="link"
-                size="sm"
-                asChild
-                className="ml-2 h-auto p-0 text-blue-800 underline underline-offset-2"
-              >
-                <Link href="../movimientos">
-                  Anar a Moviments per importar extracte →
-                </Link>
-              </Button>
             </AlertDescription>
           </Alert>
         )}
@@ -554,7 +537,7 @@ export default function PendingDocsPage() {
             size="sm"
             onClick={() => setStatusFilter(DRAFTS_FILTER)}
           >
-            Per revisar
+            {t.pendingDocs.tabs.review}
             {drafts.length > 0 && (
               <Badge variant="outline" className="ml-2">{drafts.length}</Badge>
             )}
@@ -564,21 +547,21 @@ export default function PendingDocsPage() {
             size="sm"
             onClick={() => setStatusFilter(PENDING_FILTER)}
           >
-            Pendents de banc
+            {t.pendingDocs.tabs.bankPending}
           </Button>
           <Button
             variant={isFilterActive('matched') ? 'secondary' : 'ghost'}
             size="sm"
             onClick={() => setStatusFilter('matched')}
           >
-            Conciliat
+            {t.pendingDocs.tabs.reconciled}
           </Button>
           <Button
             variant={isFilterActive('archived') ? 'secondary' : 'ghost'}
             size="sm"
             onClick={() => setStatusFilter('archived')}
           >
-            Arxivat
+            {t.pendingDocs.tabs.archived}
           </Button>
         </div>
 
@@ -608,16 +591,16 @@ export default function PendingDocsPage() {
             ) : error ? (
               // Error state
               <div className="p-8 text-center">
-                <p className="text-destructive">Error carregant documents: {error.message}</p>
+                <p className="text-destructive">{t.pendingDocs.toasts.error}: {error.message}</p>
               </div>
             ) : filteredDocs.length === 0 ? (
               // Empty state
               <EmptyState
                 icon={FileStack}
-                title={pendingDocs && pendingDocs.length > 0 ? "Cap resultat" : "Cap document pendent"}
+                title={pendingDocs && pendingDocs.length > 0 ? t.pendingDocs.empty.review : t.pendingDocs.empty.bankPending}
                 description={pendingDocs && pendingDocs.length > 0
-                  ? "No hi ha documents que coincideixin amb els filtres seleccionats."
-                  : "Puja factures o nòmines que encara no hagin aparegut al banc. Es conciliaran automàticament quan arribi l'extracte."
+                  ? t.pendingDocs.empty.reviewDesc
+                  : t.pendingDocs.empty.bankPendingDesc
                 }
                 className="py-16"
               />
@@ -654,18 +637,18 @@ export default function PendingDocsPage() {
                           <Checkbox
                             checked={selectedDocIds.size > 0 && selectedDocIds.size === selectableDocs.length}
                             onCheckedChange={(checked) => handleSelectAll(!!checked)}
-                            aria-label="Seleccionar tots"
+                            aria-label={t.pendingDocs.selection.selectAll}
                           />
                         </TableHead>
                       )}
-                      <TableHead>Fitxer</TableHead>
-                      <TableHead className="text-right">Import</TableHead>
-                      <TableHead>Data</TableHead>
-                      <TableHead>Tipus</TableHead>
-                      <TableHead>Nº factura</TableHead>
-                      <TableHead>Proveïdor</TableHead>
-                      <TableHead>Categoria</TableHead>
-                      <TableHead>Estat</TableHead>
+                      <TableHead>{t.pendingDocs.fields.filename}</TableHead>
+                      <TableHead className="text-right">{t.pendingDocs.fields.amount}</TableHead>
+                      <TableHead>{t.pendingDocs.fields.invoiceDate}</TableHead>
+                      <TableHead>{t.pendingDocs.fields.type}</TableHead>
+                      <TableHead>{t.pendingDocs.fields.invoiceNumber}</TableHead>
+                      <TableHead>{t.pendingDocs.fields.supplier}</TableHead>
+                      <TableHead>{t.pendingDocs.fields.category}</TableHead>
+                      <TableHead>{t.pendingDocs.statuses.draft}</TableHead>
                       <TableHead className="w-[70px]"></TableHead>
                     </TableRow>
                   </TableHeader>
@@ -698,7 +681,7 @@ export default function PendingDocsPage() {
 
         {/* Nota de peu */}
         <p className="text-xs text-muted-foreground text-center">
-          Aquesta funcionalitat és experimental. Els documents pujats aquí no afecten saldos ni fiscalitat fins que es conciliïn amb un moviment bancari real.
+          {t.pendingDocs.banners.prebankDescription}
         </p>
 
         {/* Modal d'upload */}

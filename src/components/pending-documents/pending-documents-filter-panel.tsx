@@ -24,6 +24,7 @@ import { ca } from 'date-fns/locale';
 import type { Contact, Category } from '@/lib/data';
 import type { PendingDocument } from '@/lib/pending-documents/types';
 import { CATEGORY_TRANSLATION_KEYS } from '@/lib/default-data';
+import { useTranslations } from '@/i18n';
 
 // ═══════════════════════════════════════════════════════════════════════════
 // TYPES
@@ -150,6 +151,8 @@ export function PendingDocumentsFilterPanel({
   contacts,
   categories,
 }: PendingDocumentsFilterPanelProps) {
+  const { t } = useTranslations();
+
   // Combobox open states
   const [supplierOpen, setSupplierOpen] = React.useState(false);
   const [categoryOpen, setCategoryOpen] = React.useState(false);
@@ -220,7 +223,7 @@ export function PendingDocumentsFilterPanel({
       <div className="relative">
         <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
         <Input
-          placeholder="Cercar..."
+          placeholder={t.pendingDocs.filters.search}
           value={localSearch}
           onChange={(e) => handleSearchChange(e.target.value)}
           className="pl-8 w-[200px] h-9"
@@ -240,16 +243,16 @@ export function PendingDocumentsFilterPanel({
             )}
           >
             <span className="truncate">
-              {selectedSupplierName || 'Proveïdor'}
+              {selectedSupplierName || t.pendingDocs.filters.supplier}
             </span>
             <ChevronsUpDown className="ml-1 h-3 w-3 shrink-0 opacity-50" />
           </Button>
         </PopoverTrigger>
         <PopoverContent className="w-[250px] p-0" align="start">
           <Command>
-            <CommandInput placeholder="Buscar proveïdor..." className="h-9" />
+            <CommandInput placeholder={t.pendingDocs.filters.searchSupplier} className="h-9" />
             <CommandList>
-              <CommandEmpty>Cap proveïdor trobat.</CommandEmpty>
+              <CommandEmpty>{t.pendingDocs.filters.noSupplierFound}</CommandEmpty>
               <CommandGroup>
                 {suppliers.map((supplier) => (
                   <CommandItem
@@ -291,16 +294,16 @@ export function PendingDocumentsFilterPanel({
             )}
           >
             <span className="truncate">
-              {selectedCategoryName || 'Categoria'}
+              {selectedCategoryName || t.pendingDocs.filters.category}
             </span>
             <ChevronsUpDown className="ml-1 h-3 w-3 shrink-0 opacity-50" />
           </Button>
         </PopoverTrigger>
         <PopoverContent className="w-[200px] p-0" align="start">
           <Command>
-            <CommandInput placeholder="Buscar..." className="h-9" />
+            <CommandInput placeholder={t.pendingDocs.filters.searchCategory} className="h-9" />
             <CommandList>
-              <CommandEmpty>Cap categoria trobada.</CommandEmpty>
+              <CommandEmpty>{t.pendingDocs.filters.noCategoryFound}</CommandEmpty>
               <CommandGroup>
                 {expenseCategories.map((category) => (
                   <CommandItem
@@ -341,7 +344,7 @@ export function PendingDocumentsFilterPanel({
             )}
           >
             <CalendarIcon className="mr-1 h-3 w-3" />
-            {validDateFrom ? format(validDateFrom, 'dd/MM/yy') : 'Des de'}
+            {validDateFrom ? format(validDateFrom, 'dd/MM/yy') : t.pendingDocs.filters.dateFrom}
           </Button>
         </PopoverTrigger>
         <PopoverContent className="w-auto p-0" align="start">
@@ -373,7 +376,7 @@ export function PendingDocumentsFilterPanel({
             )}
           >
             <CalendarIcon className="mr-1 h-3 w-3" />
-            {validDateTo ? format(validDateTo, 'dd/MM/yy') : 'Fins a'}
+            {validDateTo ? format(validDateTo, 'dd/MM/yy') : t.pendingDocs.filters.dateTo}
           </Button>
         </PopoverTrigger>
         <PopoverContent className="w-auto p-0" align="start">
@@ -405,7 +408,7 @@ export function PendingDocumentsFilterPanel({
             )}
           >
             <Filter className="mr-1 h-3 w-3" />
-            Import
+            {t.pendingDocs.filters.amount}
           </Button>
         </PopoverTrigger>
         <PopoverContent className="w-[220px] p-3" align="start">
@@ -413,7 +416,7 @@ export function PendingDocumentsFilterPanel({
             <div className="flex items-center gap-2">
               <Input
                 type="number"
-                placeholder="Mínim"
+                placeholder={t.pendingDocs.filters.amountMin}
                 value={filters.amountMin ?? ''}
                 onChange={(e) => {
                   const val = e.target.value;
@@ -429,7 +432,7 @@ export function PendingDocumentsFilterPanel({
             <div className="flex items-center gap-2">
               <Input
                 type="number"
-                placeholder="Màxim"
+                placeholder={t.pendingDocs.filters.amountMax}
                 value={filters.amountMax ?? ''}
                 onChange={(e) => {
                   const val = e.target.value;
@@ -455,7 +458,7 @@ export function PendingDocumentsFilterPanel({
           className="h-9 text-muted-foreground hover:text-foreground"
         >
           <X className="mr-1 h-3 w-3" />
-          Netejar
+          {t.pendingDocs.filters.clear}
         </Button>
       )}
     </div>

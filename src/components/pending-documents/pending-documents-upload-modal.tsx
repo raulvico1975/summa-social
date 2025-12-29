@@ -11,6 +11,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
+import { useTranslations } from '@/i18n';
 import {
   Upload,
   FileText,
@@ -116,6 +117,7 @@ export function PendingDocumentsUploadModal({
   const { firestore, storage } = useFirebase();
   const { organizationId, organization } = useCurrentOrganization();
   const { toast } = useToast();
+  const { t } = useTranslations();
 
   const [files, setFiles] = React.useState<FileUploadItem[]>([]);
   const [isUploading, setIsUploading] = React.useState(false);
@@ -142,8 +144,8 @@ export function PendingDocumentsUploadModal({
     if (validFiles.length < fileArray.length) {
       toast({
         variant: 'destructive',
-        title: 'Alguns fitxers no són vàlids',
-        description: 'Només s\'accepten PDF, XML, JPG i PNG.',
+        title: t.pendingDocs.upload.invalidFiles,
+        description: t.pendingDocs.upload.invalidFilesDesc,
       });
     }
 
@@ -339,11 +341,11 @@ export function PendingDocumentsUploadModal({
       return true;
     } catch (error) {
       console.error('[processFile] Error:', error);
-      const errorMessage = error instanceof Error ? error.message : 'Error desconegut';
+      const errorMessage = error instanceof Error ? error.message : t.common.unknownError;
       updateFileStatus(item.id, { status: 'error', error: errorMessage });
       return false;
     }
-  }, [organizationId, organization, firestore, storage, updateFileStatus, checkDuplicate, contacts]);
+  }, [organizationId, organization, firestore, storage, updateFileStatus, checkDuplicate, contacts, t]);
 
   // Iniciar upload de tots els fitxers
   const startUpload = React.useCallback(async () => {
@@ -377,22 +379,22 @@ export function PendingDocumentsUploadModal({
     // Toast de resum
     if (successCount > 0) {
       toast({
-        title: `${successCount} document${successCount > 1 ? 's' : ''} pujat${successCount > 1 ? 's' : ''}`,
+        title: t.pendingDocs.toasts.uploaded({ count: successCount }),
         description: duplicateCount > 0
-          ? `${duplicateCount} duplicat${duplicateCount > 1 ? 's' : ''} ignorat${duplicateCount > 1 ? 's' : ''}.`
+          ? t.pendingDocs.toasts.uploadedWithDuplicates({ duplicates: duplicateCount })
           : undefined,
       });
       onUploadComplete?.(successCount);
     } else if (duplicateCount > 0 && errorCount === 0) {
       toast({
-        title: 'Tots els documents ja existeixen',
-        description: 'No s\'ha pujat cap document nou.',
+        title: t.pendingDocs.toasts.allDuplicates,
+        description: t.pendingDocs.toasts.allDuplicatesDesc,
       });
     } else if (errorCount > 0) {
       toast({
         variant: 'destructive',
-        title: 'Alguns documents han fallat',
-        description: `${errorCount} error${errorCount > 1 ? 's' : ''}.`,
+        title: t.pendingDocs.toasts.uploadFailed,
+        description: t.pendingDocs.upload.stats.errors({ count: errorCount }),
       });
     }
 
@@ -422,10 +424,10 @@ export function PendingDocumentsUploadModal({
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Upload className="h-5 w-5" />
-            Pujar factures o nòmines
+            {t.pendingDocs.upload.title}
           </DialogTitle>
           <DialogDescription>
-            Arrossega fitxers o clica per seleccionar. S'accepten PDF, XML, JPG i PNG.
+            {t.pendingDocs.upload.description}
           </DialogDescription>
         </DialogHeader>
 
@@ -452,7 +454,7 @@ export function PendingDocumentsUploadModal({
           />
           <Upload className="h-10 w-10 mx-auto text-muted-foreground mb-2" />
           <p className="text-sm text-muted-foreground">
-            {isDragging ? 'Deixa anar els fitxers aquí' : 'Arrossega fitxers o clica per seleccionar'}
+            {isDragging ? t.pendingDocs.upload.dropHere : t.pendingDocs.upload.dragOrClick}
           </p>
         </div>
 
@@ -477,31 +479,31 @@ export function PendingDocumentsUploadModal({
                   <p className="text-sm font-medium truncate">{item.file.name}</p>
                   <div className="flex items-center gap-2">
                     {item.status === 'queued' && (
-                      <span className="text-xs text-muted-foreground">Pendent</span>
+                      <span className="text-xs text-muted-foreground">{t.pendingDocs.upload.status.queued}</span>
                     )}
                     {item.status === 'hashing' && (
-                      <span className="text-xs text-blue-600">Calculant hash...</span>
+                      <span className="text-xs text-blue-600">{t.pendingDocs.upload.status.hashing}</span>
                     )}
                     {item.status === 'checking' && (
-                      <span className="text-xs text-blue-600">Comprovant duplicats...</span>
+                      <span className="text-xs text-blue-600">{t.pendingDocs.upload.status.checking}</span>
                     )}
                     {item.status === 'uploading' && (
-                      <span className="text-xs text-blue-600">Pujant...</span>
+                      <span className="text-xs text-blue-600">{t.pendingDocs.upload.status.uploading}</span>
                     )}
                     {item.status === 'saving' && (
-                      <span className="text-xs text-blue-600">Guardant...</span>
+                      <span className="text-xs text-blue-600">{t.pendingDocs.upload.status.saving}</span>
                     )}
                     {item.status === 'extracting' && (
-                      <span className="text-xs text-purple-600">Extractant dades...</span>
+                      <span className="text-xs text-purple-600">{t.pendingDocs.upload.status.extracting}</span>
                     )}
                     {item.status === 'done' && (
-                      <span className="text-xs text-green-600">Completat</span>
+                      <span className="text-xs text-green-600">{t.pendingDocs.upload.status.done}</span>
                     )}
                     {item.status === 'error' && (
-                      <span className="text-xs text-red-600">{item.error || 'Error'}</span>
+                      <span className="text-xs text-red-600">{item.error || t.pendingDocs.upload.status.error}</span>
                     )}
                     {item.status === 'duplicate' && (
-                      <span className="text-xs text-amber-600">Ja existeix</span>
+                      <span className="text-xs text-amber-600">{t.pendingDocs.upload.status.duplicate}</span>
                     )}
                   </div>
                   {/* Barra de progrés */}
@@ -547,20 +549,20 @@ export function PendingDocumentsUploadModal({
         {files.length > 0 && (
           <div className="flex items-center justify-between pt-2 border-t">
             <div className="flex items-center gap-2 text-sm text-muted-foreground">
-              <span>{stats.total} fitxer{stats.total > 1 ? 's' : ''}</span>
+              <span>{t.pendingDocs.upload.stats.files({ count: stats.total })}</span>
               {stats.done > 0 && (
                 <Badge variant="outline" className="bg-green-50 text-green-700">
-                  {stats.done} completat{stats.done > 1 ? 's' : ''}
+                  {t.pendingDocs.upload.stats.completed({ count: stats.done })}
                 </Badge>
               )}
               {stats.duplicates > 0 && (
                 <Badge variant="outline" className="bg-amber-50 text-amber-700">
-                  {stats.duplicates} duplicat{stats.duplicates > 1 ? 's' : ''}
+                  {t.pendingDocs.upload.stats.duplicates({ count: stats.duplicates })}
                 </Badge>
               )}
               {stats.errors > 0 && (
                 <Badge variant="outline" className="bg-red-50 text-red-700">
-                  {stats.errors} error{stats.errors > 1 ? 's' : ''}
+                  {t.pendingDocs.upload.stats.errors({ count: stats.errors })}
                 </Badge>
               )}
             </div>
@@ -570,12 +572,12 @@ export function PendingDocumentsUploadModal({
                 onClick={() => onOpenChange(false)}
                 disabled={isUploading}
               >
-                {stats.done === stats.total && stats.total > 0 ? 'Tancar' : 'Cancel·lar'}
+                {stats.done === stats.total && stats.total > 0 ? t.pendingDocs.actions.close : t.pendingDocs.actions.cancel}
               </Button>
               {canStartUpload && (
                 <Button onClick={startUpload}>
                   <Upload className="mr-2 h-4 w-4" />
-                  Pujar {stats.queued} fitxer{stats.queued > 1 ? 's' : ''}
+                  {t.pendingDocs.upload.button({ count: stats.queued })}
                 </Button>
               )}
             </div>

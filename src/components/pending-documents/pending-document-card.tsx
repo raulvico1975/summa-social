@@ -4,6 +4,7 @@ import * as React from 'react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { useTranslations, type TranslationsContextType } from '@/i18n';
 import {
   Tooltip,
   TooltipContent,
@@ -115,11 +116,11 @@ function getCategoryName(categoryId: string | null, categories: Category[]): str
 // STATUS BADGE
 // ═══════════════════════════════════════════════════════════════════════════
 
-function DraftStatusBadge({ isReady, missingFields }: { isReady: boolean; missingFields: string[] }) {
+function DraftStatusBadge({ isReady, missingFields, t }: { isReady: boolean; missingFields: string[]; t: TranslationsContextType['t'] }) {
   if (isReady) {
     return (
       <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
-        Llest
+        {t.pendingDocs.statuses.ready}
       </Badge>
     );
   }
@@ -128,11 +129,11 @@ function DraftStatusBadge({ isReady, missingFields }: { isReady: boolean; missin
       <TooltipTrigger asChild>
         <Badge variant="outline" className="bg-amber-50 text-amber-700 border-amber-200">
           <AlertCircle className="h-3 w-3 mr-1" />
-          Incomplet
+          {t.pendingDocs.statuses.incomplete}
         </Badge>
       </TooltipTrigger>
       <TooltipContent>
-        Falten: {missingFields.join(', ')}
+        {t.pendingDocs.missing}: {missingFields.join(', ')}
       </TooltipContent>
     </Tooltip>
   );
@@ -160,6 +161,7 @@ export function PendingDocumentCard({
   onToggleExpand,
 }: PendingDocumentCardProps) {
   const { storage } = useFirebase();
+  const { t } = useTranslations();
   const [fileUrl, setFileUrl] = React.useState<string | null>(null);
   const [isLoadingUrl, setIsLoadingUrl] = React.useState(false);
 
@@ -309,12 +311,12 @@ export function PendingDocumentCard({
               )} />
             </TooltipTrigger>
             <TooltipContent className="max-w-xs">
-              <p className="text-xs font-medium mb-1">Extret per IA ({confidence})</p>
+              <p className="text-xs font-medium mb-1">{t.pendingDocs.extraction.aiExtracted} ({confidence})</p>
               {doc.extracted?.evidence?.invoiceNumber && (
-                <p className="text-xs text-muted-foreground">Nº: "{doc.extracted.evidence.invoiceNumber}"</p>
+                <p className="text-xs text-muted-foreground">{t.pendingDocs.extraction.evidenceInvoice}: "{doc.extracted.evidence.invoiceNumber}"</p>
               )}
               {doc.extracted?.evidence?.amount && (
-                <p className="text-xs text-muted-foreground">Import: "{doc.extracted.evidence.amount}"</p>
+                <p className="text-xs text-muted-foreground">{t.pendingDocs.extraction.evidenceAmount}: "{doc.extracted.evidence.amount}"</p>
               )}
             </TooltipContent>
           </Tooltip>
@@ -338,7 +340,7 @@ export function PendingDocumentCard({
 
         {/* Estat */}
         <div className="flex-shrink-0">
-          <DraftStatusBadge isReady={isReady} missingFields={missingFields} />
+          <DraftStatusBadge isReady={isReady} missingFields={missingFields} t={t} />
         </div>
 
         {/* Botó expandir */}
@@ -371,14 +373,14 @@ export function PendingDocumentCard({
                 ) : (
                   <>
                     <Check className="h-4 w-4 sm:mr-1" />
-                    <span className="hidden sm:inline">Confirmar</span>
+                    <span className="hidden sm:inline">{t.pendingDocs.actions.confirm}</span>
                   </>
                 )}
               </Button>
             </span>
           </TooltipTrigger>
           <TooltipContent>
-            {isReady ? 'Confirmar document' : `Falten: ${missingFields.join(', ')}`}
+            {isReady ? t.pendingDocs.actions.confirm : `${t.pendingDocs.missing}: ${missingFields.join(', ')}`}
           </TooltipContent>
         </Tooltip>
       </div>
@@ -390,7 +392,7 @@ export function PendingDocumentCard({
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             {/* Import */}
             <div className="space-y-1">
-              <label className="text-xs font-medium text-muted-foreground">Import</label>
+              <label className="text-xs font-medium text-muted-foreground">{t.pendingDocs.fields.amount}</label>
               <div className="flex items-center gap-1">
                 <Input
                   type="text"
@@ -412,7 +414,7 @@ export function PendingDocumentCard({
 
             {/* Data */}
             <div className="space-y-1">
-              <label className="text-xs font-medium text-muted-foreground">Data factura</label>
+              <label className="text-xs font-medium text-muted-foreground">{t.pendingDocs.fields.invoiceDate}</label>
               <Popover open={dateOpen} onOpenChange={setDateOpen}>
                 <PopoverTrigger asChild>
                   <Button
@@ -424,7 +426,7 @@ export function PendingDocumentCard({
                     )}
                   >
                     <CalendarIcon className="mr-2 h-4 w-4" />
-                    {validInvoiceDate ? format(validInvoiceDate, 'dd/MM/yyyy') : 'Selecciona data'}
+                    {validInvoiceDate ? format(validInvoiceDate, 'dd/MM/yyyy') : t.pendingDocs.filters.dateFrom}
                   </Button>
                 </PopoverTrigger>
                 <PopoverContent className="w-auto p-0" align="start">
@@ -446,7 +448,7 @@ export function PendingDocumentCard({
 
             {/* Tipus */}
             <div className="space-y-1">
-              <label className="text-xs font-medium text-muted-foreground">Tipus</label>
+              <label className="text-xs font-medium text-muted-foreground">{t.pendingDocs.fields.type}</label>
               <Select
                 value={doc.type}
                 onValueChange={(value) => onUpdate(doc.id, 'type', value)}
@@ -455,9 +457,9 @@ export function PendingDocumentCard({
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="invoice">Factura</SelectItem>
-                  <SelectItem value="payroll">Nòmina</SelectItem>
-                  <SelectItem value="receipt">Tiquet</SelectItem>
+                  <SelectItem value="invoice">{t.pendingDocs.types.invoice}</SelectItem>
+                  <SelectItem value="payroll">{t.pendingDocs.types.payroll}</SelectItem>
+                  <SelectItem value="receipt">{t.pendingDocs.types.receipt}</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -467,7 +469,7 @@ export function PendingDocumentCard({
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             {/* Nº factura */}
             <div className="space-y-1">
-              <label className="text-xs font-medium text-muted-foreground">Nº factura</label>
+              <label className="text-xs font-medium text-muted-foreground">{t.pendingDocs.fields.invoiceNumber}</label>
               <Input
                 type="text"
                 value={localInvoiceNumber}
@@ -475,7 +477,7 @@ export function PendingDocumentCard({
                   setLocalInvoiceNumber(e.target.value);
                   handleTextChange('invoiceNumber', e.target.value);
                 }}
-                placeholder="Número de factura"
+                placeholder={t.pendingDocs.fields.invoiceNumber}
                 className={cn(
                   'h-9',
                   missingFields.includes('invoiceNumber') && 'border-amber-400 bg-amber-50',
@@ -487,7 +489,7 @@ export function PendingDocumentCard({
 
             {/* Proveïdor */}
             <div className="space-y-1">
-              <label className="text-xs font-medium text-muted-foreground">Proveïdor</label>
+              <label className="text-xs font-medium text-muted-foreground">{t.pendingDocs.fields.supplier}</label>
               <Popover open={supplierOpen} onOpenChange={setSupplierOpen}>
                 <PopoverTrigger asChild>
                   <Button
@@ -501,7 +503,7 @@ export function PendingDocumentCard({
                     )}
                   >
                     <span className="truncate">
-                      {doc.supplierId ? getContactName(doc.supplierId, contacts) : 'Selecciona proveïdor...'}
+                      {doc.supplierId ? getContactName(doc.supplierId, contacts) : `${t.pendingDocs.filters.supplier}...`}
                     </span>
                     <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                   </Button>
@@ -509,7 +511,7 @@ export function PendingDocumentCard({
                 <PopoverContent className="w-[280px] p-0" align="start">
                   <Command>
                     <CommandInput
-                      placeholder="Buscar proveïdor..."
+                      placeholder={`${t.pendingDocs.actions.search}...`}
                       className="h-9"
                       value={supplierSearchValue}
                       onValueChange={setSupplierSearchValue}
@@ -517,7 +519,7 @@ export function PendingDocumentCard({
                     <CommandList>
                       <CommandEmpty>
                         <div className="py-2 text-center">
-                          <p className="text-sm text-muted-foreground mb-2">No s'ha trobat cap proveïdor.</p>
+                          <p className="text-sm text-muted-foreground mb-2">{t.pendingDocs.filters.noSupplier}</p>
                           <Button
                             variant="outline"
                             size="sm"
@@ -527,7 +529,7 @@ export function PendingDocumentCard({
                             }}
                           >
                             <Plus className="h-4 w-4 mr-1" />
-                            Crear "{supplierSearchValue || 'nou'}"
+                            {t.pendingDocs.actions.createSupplier}
                           </Button>
                         </div>
                       </CommandEmpty>
@@ -571,7 +573,7 @@ export function PendingDocumentCard({
                           }}
                         >
                           <Plus className="h-4 w-4 mr-2" />
-                          Nou proveïdor...
+                          {t.pendingDocs.actions.createSupplier}
                         </Button>
                       </div>
                     </CommandList>
@@ -596,7 +598,7 @@ export function PendingDocumentCard({
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             {/* Categoria */}
             <div className="space-y-1">
-              <label className="text-xs font-medium text-muted-foreground">Categoria</label>
+              <label className="text-xs font-medium text-muted-foreground">{t.pendingDocs.fields.category}</label>
               <Popover open={categoryOpen} onOpenChange={setCategoryOpen}>
                 <PopoverTrigger asChild>
                   <Button
@@ -610,16 +612,16 @@ export function PendingDocumentCard({
                     )}
                   >
                     <span className="truncate">
-                      {doc.categoryId ? getCategoryName(doc.categoryId, categories) : 'Selecciona categoria...'}
+                      {doc.categoryId ? getCategoryName(doc.categoryId, categories) : `${t.pendingDocs.filters.category}...`}
                     </span>
                     <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                   </Button>
                 </PopoverTrigger>
                 <PopoverContent className="w-[250px] p-0" align="start">
                   <Command>
-                    <CommandInput placeholder="Buscar..." className="h-9" />
+                    <CommandInput placeholder={`${t.pendingDocs.actions.search}...`} className="h-9" />
                     <CommandList>
-                      <CommandEmpty>No s'ha trobat cap categoria.</CommandEmpty>
+                      <CommandEmpty>{t.pendingDocs.filters.noCategory}</CommandEmpty>
                       <CommandGroup>
                         {expenseCategories.map((category) => (
                           <CommandItem
@@ -717,20 +719,20 @@ export function PendingDocumentCard({
                   confidence === 'high' ? 'text-green-500' :
                   confidence === 'medium' ? 'text-amber-500' : 'text-red-500'
                 )} />
-                Extret per IA (confiança: {confidence})
+                {t.pendingDocs.extraction.aiExtracted} ({t.pendingDocs.extraction.confidence}: {confidence})
               </p>
               <div className="text-xs text-muted-foreground space-y-0.5">
                 {doc.extracted?.evidence?.invoiceNumber && (
-                  <p>Nº factura: "{doc.extracted.evidence.invoiceNumber}"</p>
+                  <p>{t.pendingDocs.extraction.evidenceInvoice}: "{doc.extracted.evidence.invoiceNumber}"</p>
                 )}
                 {doc.extracted?.evidence?.amount && (
-                  <p>Import: "{doc.extracted.evidence.amount}"</p>
+                  <p>{t.pendingDocs.extraction.evidenceAmount}: "{doc.extracted.evidence.amount}"</p>
                 )}
                 {doc.extracted?.evidence?.supplierName && (
-                  <p>Proveïdor: "{doc.extracted.evidence.supplierName}"</p>
+                  <p>{t.pendingDocs.extraction.evidenceSupplier}: "{doc.extracted.evidence.supplierName}"</p>
                 )}
                 {doc.extracted?.evidence?.invoiceDate && (
-                  <p>Data: "{doc.extracted.evidence.invoiceDate}"</p>
+                  <p>{t.pendingDocs.extraction.evidenceDate}: "{doc.extracted.evidence.invoiceDate}"</p>
                 )}
               </div>
             </div>

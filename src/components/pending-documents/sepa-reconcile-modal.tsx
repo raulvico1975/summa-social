@@ -31,6 +31,7 @@ import {
 import { format, parseISO } from 'date-fns';
 import { ca } from 'date-fns/locale';
 import { useToast } from '@/hooks/use-toast';
+import { useTranslations } from '@/i18n';
 import { useFirebase } from '@/firebase';
 import { useCurrentOrganization } from '@/hooks/organization-provider';
 import { formatCurrencyEU } from '@/lib/normalize';
@@ -77,6 +78,7 @@ export function SepaReconcileModal({
   const { firestore } = useFirebase();
   const { organizationId } = useCurrentOrganization();
   const { toast } = useToast();
+  const { t } = useTranslations();
 
   const [isProcessing, setIsProcessing] = React.useState(false);
   const [result, setResult] = React.useState<{
@@ -111,8 +113,8 @@ export function SepaReconcileModal({
           childCount: res.matchedDocCount,
         });
         toast({
-          title: 'Remesa conciliada',
-          description: `${res.matchedDocCount} pagaments desagregats i vinculats.`,
+          title: t.sepa.reconciled,
+          description: t.sepa.reconciledDesc({ count: res.matchedDocCount }),
         });
       } else {
         setResult({
@@ -121,20 +123,20 @@ export function SepaReconcileModal({
         });
         toast({
           variant: 'destructive',
-          title: 'Error',
-          description: res.error || 'No s\'ha pogut conciliar la remesa.',
+          title: t.common.error,
+          description: res.error || t.sepa.reconcileError,
         });
       }
     } catch (error) {
       console.error('Error reconciling:', error);
       setResult({
         success: false,
-        error: error instanceof Error ? error.message : 'Error desconegut',
+        error: error instanceof Error ? error.message : t.common.unknownError,
       });
       toast({
         variant: 'destructive',
-        title: 'Error',
-        description: 'No s\'ha pogut conciliar la remesa.',
+        title: t.common.error,
+        description: t.sepa.reconcileError,
       });
     } finally {
       setIsProcessing(false);
@@ -161,9 +163,9 @@ export function SepaReconcileModal({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[500px]">
         <DialogHeader>
-          <DialogTitle>Desagregar i conciliar</DialogTitle>
+          <DialogTitle>{t.sepa.disaggregateTitle}</DialogTitle>
           <DialogDescription>
-            S'ha detectat una remesa SEPA que coincideix amb aquest moviment.
+            {t.sepa.disaggregateDesc}
           </DialogDescription>
         </DialogHeader>
 
@@ -173,14 +175,14 @@ export function SepaReconcileModal({
             <div className="flex items-center gap-3 p-4 bg-green-50 rounded-lg border border-green-200">
               <CheckCircle2 className="h-8 w-8 text-green-600" />
               <div>
-                <p className="font-medium text-green-800">Conciliació completada</p>
+                <p className="font-medium text-green-800">{t.sepa.reconcileComplete}</p>
                 <p className="text-sm text-green-700">
-                  {result.childCount} pagaments desagregats i vinculats
+                  {t.sepa.reconciledDesc({ count: result.childCount ?? 0 })}
                 </p>
               </div>
             </div>
             <DialogFooter>
-              <Button onClick={handleClose}>Tancar</Button>
+              <Button onClick={handleClose}>{t.pendingDocs.actions.close}</Button>
             </DialogFooter>
           </div>
         ) : result?.error ? (
@@ -192,7 +194,7 @@ export function SepaReconcileModal({
             </Alert>
             <DialogFooter>
               <Button variant="outline" onClick={() => onOpenChange(false)}>
-                Tancar
+                {t.pendingDocs.actions.close}
               </Button>
             </DialogFooter>
           </div>
@@ -204,16 +206,16 @@ export function SepaReconcileModal({
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2 text-sm">
                   <CreditCard className="h-4 w-4 text-muted-foreground" />
-                  <span className="text-muted-foreground">Remesa SEPA</span>
+                  <span className="text-muted-foreground">{t.sepa.remittance}</span>
                 </div>
                 <Badge variant="outline" className="bg-purple-50 text-purple-700">
-                  {prebankRemittance.nbOfTxs} pagaments
+                  {t.sepa.paymentsCount({ count: prebankRemittance.nbOfTxs })}
                 </Badge>
               </div>
 
               <div className="flex items-center gap-2 text-sm">
                 <Calendar className="h-4 w-4 text-muted-foreground" />
-                <span>Data d'execució: {formatDate(prebankRemittance.executionDate)}</span>
+                <span>{t.sepa.executionDate}: {formatDate(prebankRemittance.executionDate)}</span>
               </div>
 
               <div className="flex items-center gap-2 text-sm">
@@ -224,23 +226,23 @@ export function SepaReconcileModal({
               <Separator />
 
               <div className="flex items-center justify-between">
-                <span className="text-sm text-muted-foreground">Total remesa:</span>
+                <span className="text-sm text-muted-foreground">{t.sepa.totalRemittance}:</span>
                 <span className="font-bold">{formatCurrencyEU(totalAmount)}</span>
               </div>
               <div className="flex items-center justify-between">
-                <span className="text-sm text-muted-foreground">Moviment bancari:</span>
+                <span className="text-sm text-muted-foreground">{t.sepa.bankMovement}:</span>
                 <span className="font-bold">{formatCurrencyEU(txAmount)}</span>
               </div>
               {!amountsMatch && (
                 <div className="flex items-center gap-2 text-amber-600 text-sm">
                   <AlertCircle className="h-4 w-4" />
-                  <span>Diferència: {formatCurrencyEU(difference)}</span>
+                  <span>{t.sepa.difference}: {formatCurrencyEU(difference)}</span>
                 </div>
               )}
               {amountsMatch && (
                 <div className="flex items-center gap-2 text-green-600 text-sm">
                   <Check className="h-4 w-4" />
-                  <span>Imports coincideixen</span>
+                  <span>{t.sepa.amountsMatch}</span>
                 </div>
               )}
             </div>
@@ -248,24 +250,24 @@ export function SepaReconcileModal({
             {/* Accions que es faran */}
             <div className="space-y-2">
               <p className="text-sm font-medium text-muted-foreground">
-                Accions a realitzar:
+                {t.sepa.actionsToPerform}:
               </p>
               <div className="space-y-2 pl-2">
                 <div className="flex items-center gap-2 text-sm">
                   <Split className="h-4 w-4 text-blue-600" />
-                  <span>Crear {prebankRemittance.nbOfTxs} transaccions fill</span>
+                  <span>{t.sepa.createChildTransactions({ count: prebankRemittance.nbOfTxs })}</span>
                 </div>
                 <div className="flex items-center gap-2 text-sm">
                   <Link2 className="h-4 w-4 text-blue-600" />
-                  <span>Vincular documents pendents als fills</span>
+                  <span>{t.sepa.linkPendingDocs}</span>
                 </div>
                 <div className="flex items-center gap-2 text-sm">
                   <Paperclip className="h-4 w-4 text-blue-600" />
-                  <span>Adjuntar factures a cada transacció</span>
+                  <span>{t.sepa.attachInvoices}</span>
                 </div>
                 <div className="flex items-center gap-2 text-sm">
                   <FolderOpen className="h-4 w-4 text-blue-600" />
-                  <span>Aplicar categories i proveïdors</span>
+                  <span>{t.sepa.applyCategories}</span>
                 </div>
               </div>
             </div>
@@ -276,7 +278,7 @@ export function SepaReconcileModal({
                 onClick={() => onOpenChange(false)}
                 disabled={isProcessing}
               >
-                Cancel·lar
+                {t.pendingDocs.actions.cancel}
               </Button>
               <Button
                 onClick={handleReconcile}
@@ -288,7 +290,7 @@ export function SepaReconcileModal({
                 ) : (
                   <Check className="mr-2 h-4 w-4" />
                 )}
-                Confirmar
+                {t.pendingDocs.actions.confirm}
               </Button>
             </DialogFooter>
           </div>

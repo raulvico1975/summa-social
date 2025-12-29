@@ -5,6 +5,7 @@ import { TableCell, TableRow } from '@/components/ui/table';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { useTranslations, type TranslationsContextType } from '@/i18n';
 import {
   Tooltip,
   TooltipContent,
@@ -111,36 +112,36 @@ function getCategoryName(categoryId: string | null, categories: Category[]): str
 // STATUS BADGE
 // ═══════════════════════════════════════════════════════════════════════════
 
-function StatusBadge({ status }: { status: PendingDocumentStatus }) {
+function StatusBadge({ status, t }: { status: PendingDocumentStatus; t: TranslationsContextType['t'] }) {
   switch (status) {
     case 'draft':
       return (
         <Badge variant="outline" className="bg-gray-50 text-gray-700 border-gray-200">
-          Esborrany
+          {t.pendingDocs.statuses.draft}
         </Badge>
       );
     case 'confirmed':
       return (
         <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">
-          Confirmat
+          {t.pendingDocs.statuses.confirmed}
         </Badge>
       );
     case 'sepa_generated':
       return (
         <Badge variant="outline" className="bg-purple-50 text-purple-700 border-purple-200">
-          SEPA
+          {t.pendingDocs.statuses.sepaGenerated}
         </Badge>
       );
     case 'matched':
       return (
         <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
-          Conciliat
+          {t.pendingDocs.statuses.matched}
         </Badge>
       );
     case 'archived':
       return (
         <Badge variant="outline" className="bg-amber-50 text-amber-700 border-amber-200">
-          Arxivat
+          {t.pendingDocs.statuses.archived}
         </Badge>
       );
     default:
@@ -169,6 +170,7 @@ export function PendingDocumentRow({
   onReconcile,
 }: PendingDocumentRowProps) {
   const { storage } = useFirebase();
+  const { t } = useTranslations();
   const [fileUrl, setFileUrl] = React.useState<string | null>(null);
   const [isLoadingUrl, setIsLoadingUrl] = React.useState(false);
 
@@ -305,15 +307,15 @@ export function PendingDocumentRow({
                 )} />
               </TooltipTrigger>
               <TooltipContent className="max-w-xs">
-                <p className="text-xs font-medium mb-1">Extret per IA ({confidence})</p>
+                <p className="text-xs font-medium mb-1">{t.pendingDocs.extraction.aiExtracted} ({confidence})</p>
                 {doc.extracted?.evidence?.invoiceNumber && (
-                  <p className="text-xs text-muted-foreground">Nº: "{doc.extracted.evidence.invoiceNumber}"</p>
+                  <p className="text-xs text-muted-foreground">{t.pendingDocs.extraction.evidenceInvoice}: "{doc.extracted.evidence.invoiceNumber}"</p>
                 )}
                 {doc.extracted?.evidence?.amount && (
-                  <p className="text-xs text-muted-foreground">Import: "{doc.extracted.evidence.amount}"</p>
+                  <p className="text-xs text-muted-foreground">{t.pendingDocs.extraction.evidenceAmount}: "{doc.extracted.evidence.amount}"</p>
                 )}
                 {doc.extracted?.evidence?.supplierName && (
-                  <p className="text-xs text-muted-foreground">Proveïdor: "{doc.extracted.evidence.supplierName}"</p>
+                  <p className="text-xs text-muted-foreground">{t.pendingDocs.extraction.evidenceSupplier}: "{doc.extracted.evidence.supplierName}"</p>
                 )}
               </TooltipContent>
             </Tooltip>
@@ -395,14 +397,14 @@ export function PendingDocumentRow({
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="invoice">Factura</SelectItem>
-              <SelectItem value="payroll">Nòmina</SelectItem>
-              <SelectItem value="receipt">Tiquet</SelectItem>
+              <SelectItem value="invoice">{t.pendingDocs.types.invoice}</SelectItem>
+              <SelectItem value="payroll">{t.pendingDocs.types.payroll}</SelectItem>
+              <SelectItem value="receipt">{t.pendingDocs.types.receipt}</SelectItem>
             </SelectContent>
           </Select>
         ) : (
           <Badge variant="outline" className="text-xs">
-            {doc.type === 'invoice' ? 'Factura' : doc.type === 'payroll' ? 'Nòmina' : doc.type === 'receipt' ? 'Tiquet' : '?'}
+            {doc.type === 'invoice' ? t.pendingDocs.types.invoice : doc.type === 'payroll' ? t.pendingDocs.types.payroll : doc.type === 'receipt' ? t.pendingDocs.types.receipt : '?'}
           </Badge>
         )}
       </TableCell>
@@ -447,16 +449,16 @@ export function PendingDocumentRow({
                 )}
               >
                 <span className="truncate">
-                  {doc.supplierId ? getContactName(doc.supplierId, contacts) : 'Proveïdor...'}
+                  {doc.supplierId ? getContactName(doc.supplierId, contacts) : `${t.pendingDocs.filters.supplier}...`}
                 </span>
                 <ChevronsUpDown className="ml-1 h-3 w-3 shrink-0 opacity-50" />
               </Button>
             </PopoverTrigger>
             <PopoverContent className="w-[250px] p-0" align="start">
               <Command>
-                <CommandInput placeholder="Buscar proveïdor..." className="h-9" />
+                <CommandInput placeholder={`${t.pendingDocs.actions.search}...`} className="h-9" />
                 <CommandList>
-                  <CommandEmpty>No s'ha trobat cap proveïdor.</CommandEmpty>
+                  <CommandEmpty>{t.pendingDocs.filters.noSupplier}</CommandEmpty>
                   <CommandGroup>
                     {suppliers.map((supplier) => (
                       <CommandItem
@@ -510,16 +512,16 @@ export function PendingDocumentRow({
                 )}
               >
                 <span className="truncate">
-                  {doc.categoryId ? getCategoryName(doc.categoryId, categories) : 'Categoria...'}
+                  {doc.categoryId ? getCategoryName(doc.categoryId, categories) : `${t.pendingDocs.filters.category}...`}
                 </span>
                 <ChevronsUpDown className="ml-1 h-3 w-3 shrink-0 opacity-50" />
               </Button>
             </PopoverTrigger>
             <PopoverContent className="w-[200px] p-0" align="start">
               <Command>
-                <CommandInput placeholder="Buscar..." className="h-9" />
+                <CommandInput placeholder={`${t.pendingDocs.actions.search}...`} className="h-9" />
                 <CommandList>
-                  <CommandEmpty>No s'ha trobat cap categoria.</CommandEmpty>
+                  <CommandEmpty>{t.pendingDocs.filters.noCategory}</CommandEmpty>
                   <CommandGroup>
                     {expenseCategories.map((category) => (
                       <CommandItem
@@ -552,7 +554,7 @@ export function PendingDocumentRow({
       {/* Estat */}
       <TableCell>
         <div className="flex items-center gap-1">
-          <StatusBadge status={doc.status} />
+          <StatusBadge status={doc.status} t={t} />
           {/* Badge suggeriment */}
           {doc.suggestedTransactionIds && doc.suggestedTransactionIds.length > 0 && (
             <Badge
@@ -561,7 +563,7 @@ export function PendingDocumentRow({
               onClick={() => onReconcile?.(doc)}
             >
               <Link2 className="h-3 w-3 mr-1" />
-              Suggerit
+              {t.pendingDocs.suggested}
             </Badge>
           )}
         </div>
@@ -583,7 +585,7 @@ export function PendingDocumentRow({
                   <Link2 className="h-4 w-4" />
                 </Button>
               </TooltipTrigger>
-              <TooltipContent>Conciliar amb moviment suggerit</TooltipContent>
+              <TooltipContent>{t.pendingDocs.suggestedTooltip}</TooltipContent>
             </Tooltip>
           )}
 
@@ -610,7 +612,7 @@ export function PendingDocumentRow({
                 </span>
               </TooltipTrigger>
               <TooltipContent>
-                {isReady ? 'Confirmar document' : `Falten: ${missingFields.join(', ')}`}
+                {isReady ? t.pendingDocs.actions.confirm : `${t.pendingDocs.missing}: ${missingFields.join(', ')}`}
               </TooltipContent>
             </Tooltip>
           )}
@@ -626,7 +628,7 @@ export function PendingDocumentRow({
               {/* View file */}
               <DropdownMenuItem onClick={handleOpenFile}>
                 <ExternalLink className="mr-2 h-4 w-4" />
-                Veure fitxer
+                {t.pendingDocs.actions.viewFile}
               </DropdownMenuItem>
 
               {/* Link to matched transaction */}
@@ -636,7 +638,7 @@ export function PendingDocumentRow({
                   <DropdownMenuItem asChild>
                     <a href={`${movimentsPath}?transaction=${doc.matchedTransactionId}`}>
                       <ArrowUpRight className="mr-2 h-4 w-4" />
-                      Veure moviment
+                      {t.pendingDocs.actions.viewTransaction}
                     </a>
                   </DropdownMenuItem>
                 </>
@@ -656,7 +658,7 @@ export function PendingDocumentRow({
                     ) : (
                       <Archive className="mr-2 h-4 w-4" />
                     )}
-                    Arxivar
+                    {t.pendingDocs.actions.archive}
                   </DropdownMenuItem>
                 </>
               )}
@@ -674,7 +676,7 @@ export function PendingDocumentRow({
                     ) : (
                       <RotateCcw className="mr-2 h-4 w-4" />
                     )}
-                    Restaurar
+                    {t.pendingDocs.actions.restore}
                   </DropdownMenuItem>
                 </>
               )}
