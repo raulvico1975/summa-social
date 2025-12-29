@@ -1,5 +1,5 @@
 // src/app/quick/page.tsx
-// Deep link per a Quick Expense: /quick → /{orgSlug}/dashboard/project-module/quick-expense
+// Deep link per a Quick Expense: /quick → /{orgSlug}/quick-expense
 // Reutilitza la lògica de redirect-to-org però amb destí fix.
 
 'use client';
@@ -25,8 +25,8 @@ export default function QuickExpenseLandingPage() {
 
   const hasAttemptedRef = useRef(false);
 
-  // Destí fix: quick-expense
-  const targetPath = '/dashboard/project-module/quick-expense';
+  // Destí fix: quick-expense (fora de /dashboard)
+  const targetPath = '/quick-expense';
 
   useEffect(() => {
     async function determineOrgAndRedirect() {

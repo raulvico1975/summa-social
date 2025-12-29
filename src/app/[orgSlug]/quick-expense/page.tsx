@@ -1,7 +1,6 @@
-// src/app/[orgSlug]/dashboard/project-module/quick-expense/page.tsx
+// src/app/[orgSlug]/quick-expense/page.tsx
 // Captura ultra-ràpida de despeses (<10s): foto + import + guardar
 // Rols permesos: admin, user. Viewer: bloquejat amb missatge.
-// Landing mode: sense sidebar/header (detectat pel layout del dashboard)
 
 'use client';
 
@@ -14,7 +13,6 @@ export default function QuickExpensePage() {
   const { organizationId, userRole } = useCurrentOrganization();
   const { t } = useTranslations();
 
-  // Textos i18n
   const q = t.projectModule?.quickExpense;
 
   // Bloquejar viewer
