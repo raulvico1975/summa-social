@@ -6,11 +6,13 @@ import {
   query,
   where,
   getDocs,
+  getDoc,
   updateDoc,
   doc,
   writeBatch,
   type Firestore,
 } from 'firebase/firestore';
+import { ref, getDownloadURL, type FirebaseStorage } from 'firebase/storage';
 import type { Transaction, Contact } from '@/lib/data';
 import type { PendingDocument } from './types';
 import type { PrebankRemittance } from './sepa-remittance';
@@ -353,28 +355,53 @@ export async function suggestPendingDocumentMatches(
  * - pendingDocument.status = 'matched'
  * - pendingDocument.matchedTransactionId = txId
  * - pendingDocument.suggestedTransactionIds = []
+ * - ignoredTransactionIds es manté intacte
+ * - transaction.document = downloadUrl (si el doc té fitxer i la tx no en té)
  * - transaction.category = doc.categoryId (si no té)
- * - transaction.document = storagePath (si el doc té fitxer)
+ * - transaction.contactId = doc.supplierId (si no té)
+ *
+ * @param firestore - Instància de Firestore
+ * @param storage - Instància de Firebase Storage (necessària per obtenir downloadUrl)
+ * @param orgId - ID de l'organització
+ * @param pendingDoc - Document pendent a vincular
+ * @param transactionId - ID de la transacció bancària
  */
 export async function linkDocumentToTransaction(
   firestore: Firestore,
+  storage: FirebaseStorage,
   orgId: string,
   pendingDoc: PendingDocument,
   transactionId: string
 ): Promise<void> {
+  // 1. Llegir la transacció actual per saber quins camps ja té
+  const txRef = doc(firestore, 'organizations', orgId, 'transactions', transactionId);
+  const txSnap = await getDoc(txRef);
+  const txData = txSnap.data() as Transaction | undefined;
+
+  // 2. Obtenir downloadUrl del document pendent (si té fitxer)
+  let documentUrl: string | null = null;
+  if (pendingDoc.file?.storagePath) {
+    try {
+      const storageRef = ref(storage, pendingDoc.file.storagePath);
+      documentUrl = await getDownloadURL(storageRef);
+    } catch (error) {
+      console.warn('[linkDocumentToTransaction] No s\'ha pogut obtenir downloadUrl:', error);
+    }
+  }
+
+  // 3. Preparar batch update
   const batch = writeBatch(firestore);
 
-  // 1. Actualitzar document pendent
+  // Actualitzar document pendent (mantenim ignoredTransactionIds)
   const docRef = pendingDocumentDoc(firestore, orgId, pendingDoc.id);
   batch.update(docRef, {
     status: 'matched',
     matchedTransactionId: transactionId,
     suggestedTransactionIds: [],
-    ignoredTransactionIds: [],
+    // ignoredTransactionIds es manté intacte (no l'esborrem)
   });
 
-  // 2. Actualitzar transacció
-  const txRef = doc(firestore, 'organizations', orgId, 'transactions', transactionId);
+  // 4. Actualitzar transacció (només camps buits)
   const txUpdates: {
     category?: string;
     document?: string;
@@ -382,18 +409,18 @@ export async function linkDocumentToTransaction(
     contactType?: string;
   } = {};
 
-  // Assignar categoria si el doc la té
-  if (pendingDoc.categoryId) {
+  // Assignar document (downloadUrl) si la tx no en té
+  if (documentUrl && !txData?.document) {
+    txUpdates.document = documentUrl;
+  }
+
+  // Assignar categoria si el doc la té i la tx no
+  if (pendingDoc.categoryId && !txData?.category) {
     txUpdates.category = pendingDoc.categoryId;
   }
 
-  // Assignar document (path del fitxer)
-  if (pendingDoc.file?.storagePath) {
-    txUpdates.document = pendingDoc.file.storagePath;
-  }
-
-  // Assignar contacte si el doc el té
-  if (pendingDoc.supplierId) {
+  // Assignar contacte si el doc el té i la tx no
+  if (pendingDoc.supplierId && !txData?.contactId) {
     txUpdates.contactId = pendingDoc.supplierId;
     txUpdates.contactType = 'supplier';
   }

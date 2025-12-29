@@ -92,7 +92,7 @@ export function ReconciliationModal({
   categories,
   onComplete,
 }: ReconciliationModalProps) {
-  const { firestore } = useFirebase();
+  const { firestore, storage } = useFirebase();
   const { organizationId } = useCurrentOrganization();
   const { toast } = useToast();
 
@@ -101,11 +101,11 @@ export function ReconciliationModal({
 
   // Handler: Vincular
   const handleLink = async () => {
-    if (!firestore || !organizationId || !pendingDoc || !transaction) return;
+    if (!firestore || !storage || !organizationId || !pendingDoc || !transaction) return;
 
     setIsLinking(true);
     try {
-      await linkDocumentToTransaction(firestore, organizationId, pendingDoc, transaction.id);
+      await linkDocumentToTransaction(firestore, storage, organizationId, pendingDoc, transaction.id);
 
       toast({
         title: 'Document vinculat',
