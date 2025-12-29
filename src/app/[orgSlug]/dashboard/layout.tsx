@@ -3,7 +3,7 @@
 'use client';
 
 import * as React from 'react';
-import { useParams, useRouter } from 'next/navigation';
+import { useParams, usePathname } from 'next/navigation';
 import { Sidebar, SidebarProvider, SidebarInset } from '@/components/ui/sidebar';
 import { DashboardSidebarContent } from '@/components/dashboard-sidebar-content';
 import { DashboardHeader } from '@/components/dashboard-header';
@@ -13,11 +13,17 @@ import type { LogMessage } from '@/hooks/use-app-log';
 import { OrganizationProvider } from '@/hooks/organization-provider';
 import { useInitializeOrganizationData } from '@/hooks/use-initialize-user-data';
 
+// Rutes que s'han de renderitzar com a "landing" (sense sidebar/header)
+const LANDING_ROUTES = ['/project-module/quick-expense'];
+
 function OrganizationDependentLayout({ children }: { children: React.ReactNode }) {
   useInitializeOrganizationData();
+  const pathname = usePathname();
+
+  // Detectar si estem en una ruta landing
+  const isLandingRoute = LANDING_ROUTES.some((route) => pathname.endsWith(route));
 
   const [logs, setLogs] = React.useState<LogMessage[]>([]);
-  // Usar useRef per evitar problemes amb variable global i SSR
   const logCounterRef = React.useRef(0);
 
   const log = React.useCallback((message: string) => {
@@ -38,9 +44,18 @@ function OrganizationDependentLayout({ children }: { children: React.ReactNode }
     setLogs([]);
   }, []);
 
-  // Memoitzar context value per evitar re-renders innecessaris
   const appLogValue = React.useMemo(() => ({ logs, log, clearLogs }), [logs, log, clearLogs]);
 
+  // Landing mode: sense sidebar, header ni log panel
+  if (isLandingRoute) {
+    return (
+      <AppLogContext.Provider value={appLogValue}>
+        {children}
+      </AppLogContext.Provider>
+    );
+  }
+
+  // Mode normal: amb sidebar i header
   return (
     <AppLogContext.Provider value={appLogValue}>
       <SidebarProvider defaultOpen={true}>

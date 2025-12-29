@@ -1,13 +1,47 @@
 // src/app/[orgSlug]/dashboard/project-module/quick-expense/page.tsx
-// Redirect a la ruta curta /q (landing sense dashboard header)
+// Captura ultra-ràpida de despeses (<10s): foto + import + guardar
+// Rols permesos: admin, user. Viewer: bloquejat amb missatge.
+// Landing mode: sense sidebar/header (detectat pel layout del dashboard)
 
-import { redirect } from 'next/navigation';
+'use client';
 
-interface PageProps {
-  params: Promise<{ orgSlug: string }>;
-}
+import { QuickExpenseScreen } from '@/components/project-module/quick-expense-screen';
+import { useCurrentOrganization } from '@/hooks/organization-provider';
+import { AlertCircle } from 'lucide-react';
+import { useTranslations } from '@/i18n';
 
-export default async function QuickExpenseRedirect({ params }: PageProps) {
-  const { orgSlug } = await params;
-  redirect(`/${orgSlug}/q`);
+export default function QuickExpensePage() {
+  const { organizationId, userRole } = useCurrentOrganization();
+  const { t } = useTranslations();
+
+  // Textos i18n
+  const q = t.projectModule?.quickExpense;
+
+  // Bloquejar viewer
+  if (userRole === 'viewer') {
+    return (
+      <div className="flex h-[100dvh] items-center justify-center p-4">
+        <div className="flex flex-col items-center gap-4 text-center max-w-sm">
+          <AlertCircle className="h-12 w-12 text-muted-foreground" />
+          <p className="font-semibold text-lg">
+            {q?.noPermission ?? 'No tens permís'}
+          </p>
+          <p className="text-muted-foreground text-sm">
+            {q?.noPermissionBody ?? "Demana accés a l'administració de l'entitat."}
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  // Validar organització
+  if (!organizationId) {
+    return (
+      <div className="flex h-[100dvh] items-center justify-center p-4">
+        <div className="animate-pulse text-muted-foreground">Carregant...</div>
+      </div>
+    );
+  }
+
+  return <QuickExpenseScreen organizationId={organizationId} isLandingMode />;
 }
