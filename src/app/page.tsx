@@ -202,23 +202,35 @@ export default function LandingPage() {
       {/* 5. Lectura ràpida de factures, nòmines i remeses SEPA */}
       <section id="despeses-pagaments-sepa" className="bg-muted/30 px-6 py-10">
         <div className="max-w-3xl mx-auto">
-          <h2 className="text-2xl font-bold mb-4">
+          <h2 className="text-2xl font-semibold">
             Lectura ràpida assistida amb IA de factures, nòmines i elaboració de remeses de
             pagaments SEPA
           </h2>
 
-          <div className="space-y-4 text-muted-foreground">
+          <div className="mt-6 space-y-4 text-muted-foreground">
             <p>
-              Arrossega factures i nòmines en PDF i Summa Social extreu automàticament les dades
-              principals: proveïdor, import, IBAN i data de venciment.
+              Summa Social permet incorporar al sistema la documentació econòmica que es genera en
+              el dia a dia de l&apos;entitat —factures, nòmines i altres documents— simplement
+              arrossegant els fitxers. Les dades rellevants s&apos;extreuen de manera intel·ligent i
+              passen a formar part del flux administratiu, amb criteri i context des del primer
+              moment.
             </p>
             <p>
-              Revisa les dades extretes, agrupa els pagaments pendents i genera una remesa SEPA
-              (pain.001) per pujar directament al banc.
+              A partir d&apos;aquí, la documentació queda vinculada a la gestió econòmica real: quan
+              el pagament es produeix i s&apos;importa l&apos;extracte bancari, la conciliació es fa
+              de manera automàtica, mantenint el vincle entre document, operació i moviment bancari.
             </p>
             <p>
-              Quan importes l&apos;extracte bancari, els pagaments es concilien automàticament amb
-              els documents originals, mantenint la traçabilitat completa.
+              Si l&apos;entitat ho necessita, Summa Social permet preparar remeses de pagament
+              agrupades a partir de les factures i nòmines pendents. Això fa possible executar tots
+              els pagaments d&apos;un període en una única remesa SEPA, llesta per pujar a la
+              plataforma del banc, sense haver de gestionar pagaments un a un a cada proveïdor o
+              treballador.
+            </p>
+            <p>
+              El resultat és un circuit administratiu continu: la documentació entra quan es
+              produeix, els pagaments s&apos;executen de manera ordenada i la conciliació bancària
+              es resol sense reconstruir informació a posteriori.
             </p>
           </div>
         </div>
