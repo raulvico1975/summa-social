@@ -50,6 +50,7 @@ import {
 } from '@/lib/pending-documents';
 import { PendingDocumentsUploadModal } from '@/components/pending-documents/pending-documents-upload-modal';
 import { PendingDocumentRow } from '@/components/pending-documents/pending-document-row';
+import { PendingDocumentCard } from '@/components/pending-documents/pending-document-card';
 import {
   PendingDocumentsFilterPanel,
   filterPendingDocuments,
@@ -98,6 +99,9 @@ export default function PendingDocsPage() {
   // Modal de conciliació
   const [reconcileDoc, setReconcileDoc] = React.useState<PendingDocument | null>(null);
   const [reconcileTx, setReconcileTx] = React.useState<Transaction | null>(null);
+
+  // Control d'expansió per files (només una a la vegada)
+  const [expandedDocId, setExpandedDocId] = React.useState<string | null>(null);
 
   // Ref per scroll a dalt després d'upload
   const topRef = React.useRef<HTMLDivElement>(null);
@@ -548,7 +552,7 @@ export default function PendingDocsPage() {
           categories={categories || []}
         />
 
-        {/* Taula de documents */}
+        {/* Llista de documents */}
         <Card>
           <CardContent className="p-0">
             {isLoading ? (
@@ -579,54 +583,75 @@ export default function PendingDocsPage() {
                 }
                 className="py-16"
               />
+            ) : isFilterActive(DRAFTS_FILTER) ? (
+              // Vista compacta + expandible per drafts (responsive)
+              <div className="divide-y">
+                {filteredDocs.map((doc) => (
+                  <PendingDocumentCard
+                    key={doc.id}
+                    doc={doc}
+                    contacts={contacts || []}
+                    categories={categories || []}
+                    onUpdate={handleFieldUpdate}
+                    onConfirm={handleConfirm}
+                    onArchive={handleArchive}
+                    isConfirming={confirmingDocId === doc.id}
+                    isArchiving={archivingDocId === doc.id}
+                    isExpanded={expandedDocId === doc.id}
+                    onToggleExpand={() => setExpandedDocId(expandedDocId === doc.id ? null : doc.id)}
+                  />
+                ))}
+              </div>
             ) : (
-              // Taula amb documents
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    {/* Checkbox per selecció múltiple */}
-                    {selectableDocs.length > 0 && (
-                      <TableHead className="w-[40px] pr-0">
-                        <Checkbox
-                          checked={selectedDocIds.size > 0 && selectedDocIds.size === selectableDocs.length}
-                          onCheckedChange={(checked) => handleSelectAll(!!checked)}
-                          aria-label="Seleccionar tots"
-                        />
-                      </TableHead>
-                    )}
-                    <TableHead className="w-[200px]">Fitxer</TableHead>
-                    <TableHead className="text-right w-[110px]">Import</TableHead>
-                    <TableHead className="w-[120px]">Data</TableHead>
-                    <TableHead className="w-[80px]">Tipus</TableHead>
-                    <TableHead className="w-[100px]">Nº factura</TableHead>
-                    <TableHead className="w-[160px]">Proveïdor</TableHead>
-                    <TableHead className="w-[140px]">Categoria</TableHead>
-                    <TableHead className="w-[90px]">Estat</TableHead>
-                    <TableHead className="w-[70px]"></TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filteredDocs.map((doc) => (
-                    <PendingDocumentRow
-                      key={doc.id}
-                      doc={doc}
-                      contacts={contacts || []}
-                      categories={categories || []}
-                      onUpdate={handleFieldUpdate}
-                      onConfirm={handleConfirm}
-                      onArchive={handleArchive}
-                      onRestore={handleRestore}
-                      onReconcile={handleReconcile}
-                      isConfirming={confirmingDocId === doc.id}
-                      isArchiving={archivingDocId === doc.id}
-                      movimentsPath={movimentsPath}
-                      isSelectable={canOperate && doc.status === 'confirmed'}
-                      isSelected={selectedDocIds.has(doc.id)}
-                      onSelect={handleSelectDoc}
-                    />
-                  ))}
-                </TableBody>
-              </Table>
+              // Taula tradicional per altres pestanyes
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      {/* Checkbox per selecció múltiple */}
+                      {selectableDocs.length > 0 && (
+                        <TableHead className="w-[40px] pr-0">
+                          <Checkbox
+                            checked={selectedDocIds.size > 0 && selectedDocIds.size === selectableDocs.length}
+                            onCheckedChange={(checked) => handleSelectAll(!!checked)}
+                            aria-label="Seleccionar tots"
+                          />
+                        </TableHead>
+                      )}
+                      <TableHead>Fitxer</TableHead>
+                      <TableHead className="text-right">Import</TableHead>
+                      <TableHead>Data</TableHead>
+                      <TableHead>Tipus</TableHead>
+                      <TableHead>Nº factura</TableHead>
+                      <TableHead>Proveïdor</TableHead>
+                      <TableHead>Categoria</TableHead>
+                      <TableHead>Estat</TableHead>
+                      <TableHead className="w-[70px]"></TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {filteredDocs.map((doc) => (
+                      <PendingDocumentRow
+                        key={doc.id}
+                        doc={doc}
+                        contacts={contacts || []}
+                        categories={categories || []}
+                        onUpdate={handleFieldUpdate}
+                        onConfirm={handleConfirm}
+                        onArchive={handleArchive}
+                        onRestore={handleRestore}
+                        onReconcile={handleReconcile}
+                        isConfirming={confirmingDocId === doc.id}
+                        isArchiving={archivingDocId === doc.id}
+                        movimentsPath={movimentsPath}
+                        isSelectable={canOperate && doc.status === 'confirmed'}
+                        isSelected={selectedDocIds.has(doc.id)}
+                        onSelect={handleSelectDoc}
+                      />
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
             )}
           </CardContent>
         </Card>
