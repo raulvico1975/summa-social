@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { Logo } from '@/components/logo';
 import { Button } from '@/components/ui/button';
+import { Separator } from '@/components/ui/separator';
 import { ArrowRight } from 'lucide-react';
 
 export default function LandingPage() {
@@ -109,6 +110,8 @@ export default function LandingPage() {
         </div>
       </section>
 
+      <Separator className="max-w-3xl mx-auto" />
+
       {/* 1. Conciliació bancària automàtica i seguiment de comptes */}
       <section id="conciliacio-bancaria" className="bg-muted/30 px-6 py-10">
         <div className="max-w-3xl mx-auto">
@@ -134,6 +137,8 @@ export default function LandingPage() {
           </div>
         </div>
       </section>
+
+      <Separator className="max-w-3xl mx-auto" />
 
       {/* 2. Gestió complerta de remeses de socis i devolucions */}
       <section id="remeses-devolucions" className="px-6 py-10">
@@ -163,6 +168,8 @@ export default function LandingPage() {
           </div>
         </div>
       </section>
+
+      <Separator className="max-w-3xl mx-auto" />
 
       {/* 3. Registre i control acurat de donacions online i ingressos web */}
       <section id="donacions-online" className="bg-muted/30 px-6 py-10">
@@ -194,6 +201,8 @@ export default function LandingPage() {
         </div>
       </section>
 
+      <Separator className="max-w-3xl mx-auto" />
+
       {/* 4. Elaboració i enviament de models fiscals i certificats */}
       <section id="fiscalitat-certificats" className="px-6 py-10">
         <div className="max-w-3xl mx-auto">
@@ -224,6 +233,8 @@ export default function LandingPage() {
           </div>
         </div>
       </section>
+
+      <Separator className="max-w-3xl mx-auto" />
 
       {/* 5. Lectura ràpida de factures, nòmines i remeses SEPA */}
       <section id="despeses-pagaments-sepa" className="bg-muted/30 px-6 py-10">
@@ -262,6 +273,8 @@ export default function LandingPage() {
         </div>
       </section>
 
+      <Separator className="max-w-3xl mx-auto" />
+
       {/* 6. Captura de tiquets i liquidacions */}
       <section id="tiquets-liquidacions" className="px-6 py-10">
         <div className="max-w-3xl mx-auto">
@@ -297,6 +310,8 @@ export default function LandingPage() {
           </div>
         </div>
       </section>
+
+      <Separator className="max-w-3xl mx-auto" />
 
       {/* 7. Mòdul de Projectes */}
       <section id="modul-projectes" className="bg-muted/30 px-6 py-10">
