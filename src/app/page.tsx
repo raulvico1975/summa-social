@@ -28,6 +28,32 @@ export default function LandingPage() {
               <Link href="/contacte">Contacte</Link>
             </Button>
           </div>
+
+          <nav aria-label="Navegació de seccions" className="pt-8">
+            <div className="flex flex-wrap justify-center gap-2">
+              <Button variant="outline" size="sm" asChild>
+                <Link href="#conciliacio-bancaria">Conciliació</Link>
+              </Button>
+              <Button variant="outline" size="sm" asChild>
+                <Link href="#remeses-devolucions">Remeses i devolucions</Link>
+              </Button>
+              <Button variant="outline" size="sm" asChild>
+                <Link href="#donacions-online">Donacions online</Link>
+              </Button>
+              <Button variant="outline" size="sm" asChild>
+                <Link href="#fiscalitat-certificats">Fiscalitat i certificats</Link>
+              </Button>
+              <Button variant="outline" size="sm" asChild>
+                <Link href="#despeses-pagaments-sepa">Factures i SEPA</Link>
+              </Button>
+              <Button variant="outline" size="sm" asChild>
+                <Link href="#tiquets-liquidacions">Tiquets i liquidacions</Link>
+              </Button>
+              <Button variant="outline" size="sm" asChild>
+                <Link href="#modul-projectes">Projectes</Link>
+              </Button>
+            </div>
+          </nav>
         </div>
       </div>
 
