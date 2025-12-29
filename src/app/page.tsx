@@ -171,23 +171,29 @@ export default function LandingPage() {
       {/* 4. Elaboració i enviament de models fiscals i certificats */}
       <section id="fiscalitat-certificats" className="px-6 py-10">
         <div className="max-w-3xl mx-auto">
-          <h2 className="text-2xl font-bold mb-4">
-            Elaboració i enviament de models fiscals (182 i 347) i certificats de donació
+          <h2 className="text-2xl font-semibold">
+            Elaboració i enviament en un click de models fiscals (182 i 347) i certificats de
+            donació
           </h2>
 
-          <div className="space-y-4 text-muted-foreground">
+          <div className="mt-6 space-y-4 text-muted-foreground">
             <p>
-              Genera l&apos;Excel del Model 182 amb totes les donacions agregades per donant,
-              incloent la validació de DNI/CIF, codi postal i requisits legals. Les devolucions ja
-              estan descomptades.
+              A mesura que la informació econòmica s&apos;ha anat treballant amb criteri —ingressos,
+              despeses, remeses i devolucions— la fiscalitat deixa de ser un exercici de
+              reconstrucció. Summa Social permet generar els models fiscals i els certificats de
+              donació a partir del que ja està ordenat i verificat dins del sistema.
             </p>
             <p>
-              El Model 347 (operacions amb tercers) es genera automàticament a partir dels moviments
-              classificats, llest per enviar a la gestoria.
+              Els models corresponents es construeixen amb les dades necessàries completes i
+              coherents, de manera que l&apos;entitat pot revisar-los i enviar-los a la gestoria amb
+              tranquil·litat. Els certificats de donació es generen amb la informació correcta de
+              cada donant i queden disponibles quan cal, sense haver de recalcular imports ni
+              revisar historials dispersos.
             </p>
             <p>
-              Els certificats de donació es generen en PDF amb el logo i signatura de l&apos;entitat,
-              i es poden enviar per email de forma individual o massiva.
+              D&apos;aquesta manera, la fiscalitat es resol com a continuïtat natural del treball
+              administratiu de l&apos;any, i no com un procés excepcional concentrat al final de
+              l&apos;exercici.
             </p>
           </div>
         </div>
