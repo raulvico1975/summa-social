@@ -1,8 +1,9 @@
 'use client';
 
 import * as React from 'react';
-import { usePathname } from 'next/navigation';
-import { HelpCircle } from 'lucide-react';
+import { usePathname, useSearchParams } from 'next/navigation';
+import Link from 'next/link';
+import { HelpCircle, BookOpen, Link2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
@@ -17,6 +18,7 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from '@/components/ui/tooltip';
+import { useToast } from '@/hooks/use-toast';
 import { getHelpContent } from '@/help/help-content';
 
 /**
@@ -53,15 +55,62 @@ function filterByQuery(items: string[] | undefined, query: string): string[] {
   return items.filter((item) => item.toLowerCase().includes(lowerQuery));
 }
 
+/**
+ * Extracts the orgSlug from a pathname.
+ * E.g., /acme/dashboard/movimientos -> acme
+ */
+function getOrgSlug(pathname: string): string | null {
+  const parts = pathname.split('/').filter(Boolean);
+  if (parts.length > 0 && parts[0] !== 'dashboard') {
+    return parts[0];
+  }
+  return null;
+}
+
 export function HelpSheet() {
   const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const { toast } = useToast();
   const helpContent = getHelpContent(pathname);
   const [query, setQuery] = React.useState('');
+  const [open, setOpen] = React.useState(false);
+
+  const orgSlug = getOrgSlug(pathname);
+  const manualUrl = orgSlug ? `/${orgSlug}/dashboard/manual` : '/dashboard/manual';
+
+  // Auto-open if ?help=1
+  React.useEffect(() => {
+    if (searchParams.get('help') === '1') {
+      setOpen(true);
+    }
+  }, [searchParams]);
 
   // Reset query when pathname changes
   React.useEffect(() => {
     setQuery('');
   }, [pathname]);
+
+  const handleCopyLink = async () => {
+    if (typeof window === 'undefined') return;
+
+    const currentUrl = new URL(window.location.href);
+    currentUrl.searchParams.set('help', '1');
+    const helpUrl = currentUrl.toString();
+
+    try {
+      await navigator.clipboard.writeText(helpUrl);
+      toast({
+        title: 'Enllaç copiat',
+        description: 'Ara pots compartir aquest enllaç amb algú altre.',
+      });
+    } catch {
+      toast({
+        variant: 'destructive',
+        title: 'Error',
+        description: 'No s\'ha pogut copiar l\'enllaç.',
+      });
+    }
+  };
 
   const filteredSteps = filterByQuery(helpContent.steps, query);
   const filteredTips = filterByQuery(helpContent.tips, query);
@@ -71,7 +120,7 @@ export function HelpSheet() {
   const showNoResults = hasQuery && !hasResults;
 
   return (
-    <Sheet>
+    <Sheet open={open} onOpenChange={setOpen}>
       <Tooltip>
         <TooltipTrigger asChild>
           <SheetTrigger asChild>
@@ -94,6 +143,20 @@ export function HelpSheet() {
         <SheetHeader>
           <SheetTitle>{helpContent.title}</SheetTitle>
         </SheetHeader>
+
+        {/* Action buttons */}
+        <div className="mt-4 flex gap-2">
+          <Button variant="outline" size="sm" asChild>
+            <Link href={manualUrl}>
+              <BookOpen className="h-4 w-4 mr-2" />
+              Veure manual complet
+            </Link>
+          </Button>
+          <Button variant="outline" size="sm" onClick={handleCopyLink}>
+            <Link2 className="h-4 w-4 mr-2" />
+            Copiar enllaç
+          </Button>
+        </div>
 
         <div className="mt-4">
           <Input
