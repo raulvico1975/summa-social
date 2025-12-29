@@ -101,8 +101,23 @@ export const HELP_CONTENT: Record<HelpRouteKey, HelpContent> = {
   },
   '/dashboard/configuracion': {
     title: 'Ajuda · Configuració',
-    intro: 'Aquesta ajuda està pendent d\'emplenar.',
-    steps: [],
+    intro:
+      'Aquí configures les dades base de l\'organització perquè els certificats i els informes fiscals surtin correctes.',
+    steps: [
+      'Completa les dades fiscals de l\'organització (nom, CIF, adreça i contacte): són les que apareixen als certificats i documents.',
+      'Puja el logo de l\'organització: s\'utilitza als certificats i dona coherència visual a l\'output.',
+      'Configura la firma digitalitzada (imatge) i omple el nom i càrrec del signant: sense això, els certificats poden quedar incomplets.',
+      'Revisa les categories: assegura\'t que tens categories d\'ingrés i despesa coherents amb el teu dia a dia (donacions, quotes, nòmines, despeses bancàries…).',
+      'Si treballeu en equip, gestiona els membres: convida persones i assigna rols segons el que necessiten fer (editar vs només lectura).',
+      'Ajusta preferències si existeixen (p. ex. llindars d\'alertes): l\'objectiu és veure només el que aporta valor i evitar soroll.',
+      'Quan tinguis dubtes d\'un resultat fiscal, torna aquí i revisa primer: dades de l\'entitat + signatura + categories (és el que més sovint ho explica).',
+    ],
+    tips: [
+      'Prioritza sempre: dades fiscals + signatura. És el que impacta directament en certificats i Model 182.',
+      'Si una persona només ha de consultar dades, posa rol de lectura: evita canvis accidentals.',
+      'Si canvies categories després d\'haver treballat mesos, fes-ho amb prudència: és millor afegir que no pas renombrar agressivament.',
+    ],
+    keywords: ['organització', 'cif', 'adreça', 'logo', 'firma', 'signant', 'categories', 'membres', 'rols', 'preferències'],
   },
   '/dashboard/projectes': {
     title: 'Ajuda · Projectes',
