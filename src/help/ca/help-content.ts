@@ -139,8 +139,24 @@ export const HELP_CONTENT_CA: Record<HelpRouteKey, HelpContent> = {
   },
   '/dashboard/project-module/projects': {
     title: 'Ajuda · Gestió de projectes',
-    intro: 'Aquesta ajuda està pendent d\'emplenar.',
-    steps: [],
+    intro:
+      'Aquí crees i gestiones els projectes del mòdul de Projectes, que després faràs servir per assignar-hi despeses.',
+    steps: [
+      'Crea un projecte quan necessitis agrupar despeses sota un mateix paraigua (p. ex. una subvenció, un programa o un període de treball concret).',
+      'Posa un nom clar i recognoscible: és el que veuràs a la safata d\'assignació de despeses.',
+      'Afegeix un codi o referència si treballes amb justificacions externes (opcional però recomanable).',
+      'Revisa l\'estat del projecte: actiu mentre s\'hi assignen despeses; tancat quan ja no s\'ha d\'utilitzar.',
+      'Si el projecte té pressupost, introdueix-lo o gestiona les partides des de la seva pantalla econòmica.',
+      'El projecte agafa sentit quan li assigns despeses des de "Assignació de despeses".',
+      'Evita crear projectes duplicats per variacions petites: és millor tenir pocs projectes ben definits.',
+      'Quan el projecte s\'acaba, tanca\'l per mantenir l\'ordre i evitar assignacions accidentals.',
+    ],
+    tips: [
+      'Si dubtes si una despesa ha d\'anar a un projecte, deixa-la sense assignar fins tenir criteri.',
+      'Un projecte ben definit fa que la pantalla d\'assignació sigui més ràpida i menys propensa a errors.',
+      'Tancar projectes antics redueix soroll i ajuda a evitar seleccions equivocades.',
+    ],
+    keywords: ['projecte', 'crear', 'editar', 'tancar', 'codi', 'pressupost', 'partides', 'assignació'],
   },
 };
 

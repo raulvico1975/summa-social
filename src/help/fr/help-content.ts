@@ -121,4 +121,26 @@ export const HELP_CONTENT_FR: Partial<Record<HelpRouteKey, HelpContent>> = {
       'terrain',
     ],
   },
+
+  '/dashboard/project-module/projects': {
+    title: 'Aide · Gestion des projets',
+    intro:
+      'Ici, vous créez et gérez les projets du module Projets, que vous utiliserez ensuite pour y affecter des dépenses.',
+    steps: [
+      'Créez un projet lorsque vous devez regrouper des dépenses sous un même ensemble (ex. une subvention, un programme ou une période de travail).',
+      'Choisissez un nom clair et identifiable : c\'est celui affiché dans la boîte d\'affectation des dépenses.',
+      'Ajoutez un code ou une référence si vous travaillez avec des justificatifs externes (optionnel mais recommandé).',
+      'Vérifiez le statut du projet : actif tant que des dépenses y sont affectées ; fermé lorsqu\'il ne doit plus être utilisé.',
+      'Si le projet a un budget, saisissez-le ou gérez les lignes budgétaires depuis son écran économique.',
+      'Le projet prend son sens lorsque vous y affectez des dépenses depuis « Affectation des dépenses ».',
+      'Évitez les projets en double pour de petites variantes : mieux vaut peu de projets bien définis.',
+      'Quand le projet est terminé, fermez-le pour garder de l\'ordre et éviter des affectations accidentelles.',
+    ],
+    tips: [
+      'Si vous hésitez pour une dépense, laissez-la non affectée jusqu\'à décision.',
+      'Un projet bien défini rend l\'affectation plus rapide et réduit les erreurs.',
+      'Fermer les anciens projets réduit le bruit et évite les mauvais choix.',
+    ],
+    keywords: ['projet', 'créer', 'éditer', 'fermer', 'code', 'budget', 'lignes budgétaires', 'affectation'],
+  },
 };

@@ -121,4 +121,26 @@ export const HELP_CONTENT_ES: Partial<Record<HelpRouteKey, HelpContent>> = {
       'terreno',
     ],
   },
+
+  '/dashboard/project-module/projects': {
+    title: 'Ayuda · Gestión de proyectos',
+    intro:
+      'Aquí creas y gestionas los proyectos del módulo de Proyectos, que luego usarás para asignarles gastos.',
+    steps: [
+      'Crea un proyecto cuando necesites agrupar gastos bajo un mismo paraguas (p. ej., una subvención, un programa o un periodo de trabajo concreto).',
+      'Pon un nombre claro y reconocible: es el que verás en la bandeja de asignación de gastos.',
+      'Añade un código o referencia si trabajas con justificaciones externas (opcional pero recomendable).',
+      'Revisa el estado del proyecto: activo mientras se asignan gastos; cerrado cuando ya no debe usarse.',
+      'Si el proyecto tiene presupuesto, introdúcelo o gestiona las partidas desde su pantalla económica.',
+      'El proyecto cobra sentido cuando le asignas gastos desde "Asignación de gastos".',
+      'Evita crear proyectos duplicados por pequeñas variaciones: mejor pocos proyectos bien definidos.',
+      'Cuando el proyecto termina, ciérralo para mantener el orden y evitar asignaciones accidentales.',
+    ],
+    tips: [
+      'Si dudas si un gasto debe ir a un proyecto, déjalo sin asignar hasta tener criterio.',
+      'Un proyecto bien definido hace que la pantalla de asignación sea más rápida y con menos errores.',
+      'Cerrar proyectos antiguos reduce ruido y evita selecciones equivocadas.',
+    ],
+    keywords: ['proyecto', 'crear', 'editar', 'cerrar', 'código', 'presupuesto', 'partidas', 'asignación'],
+  },
 };
