@@ -16,6 +16,7 @@ export type HelpContent = {
   intro?: string;
   steps?: string[];
   tips?: string[];
+  keywords?: string[];
 };
 
 export const HELP_CONTENT: Record<HelpRouteKey, HelpContent> = {
@@ -43,6 +44,7 @@ export const HELP_CONTENT: Record<HelpRouteKey, HelpContent> = {
       'En devolucions, el moviment original no es toca: cal assignar el donant a la devolució perquè resti correctament a la fiscalitat.',
       'Si un contacte té "categoria per defecte", en assignar-lo a un moviment la categoria es pot completar automàticament.',
     ],
+    keywords: ['importar', 'extracte', 'categoria', 'contacte', 'remesa', 'stripe', 'devolucions', 'document'],
   },
   '/dashboard/donants': {
     title: 'Ajuda · Donants',
@@ -63,6 +65,7 @@ export const HELP_CONTENT: Record<HelpRouteKey, HelpContent> = {
       'Per a imports massius, és millor importar i corregir duplicats que no pas crear manualment un per un.',
       'Quan hi ha dubtes amb un donant, la fitxa (resum anual + moviments) és el lloc més ràpid per validar què està passant.',
     ],
+    keywords: ['importar', 'dni', 'codi postal', 'model 182', 'certificat', 'baixa', 'categoria per defecte', 'historial'],
   },
   '/dashboard/proveidors': {
     title: 'Ajuda · Proveïdors',
