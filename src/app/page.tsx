@@ -112,22 +112,27 @@ export default function LandingPage() {
       {/* 2. Gestió complerta de remeses de socis i devolucions */}
       <section id="remeses-devolucions" className="px-6 py-10">
         <div className="max-w-3xl mx-auto">
-          <h2 className="text-2xl font-bold mb-4">
+          <h2 className="text-2xl font-semibold">
             Gestió completa de remeses de socis i devolucions
           </h2>
 
-          <div className="space-y-4 text-muted-foreground">
+          <div className="mt-6 space-y-4 text-muted-foreground">
             <p>
-              Quan el banc ingressa una remesa agrupada de quotes de socis, Summa Social la desglossa
-              automàticament, assignant cada import al soci corresponent mitjançant IBAN, DNI o nom.
+              Quan l&apos;entitat rep una remesa agrupada del banc —per quotes de socis o aportacions
+              periòdiques— Summa Social permet desglossar aquest ingrés i situar cada import en el
+              seu lloc. La remesa deixa de ser una xifra única i passa a convertir-se en el detall
+              necessari per saber qui ha aportat què i en quin moment.
             </p>
             <p>
-              Les devolucions bancàries es registren i s&apos;assignen al soci afectat, de manera que
-              el càlcul anual de donacions reflecteix exactament el que s&apos;ha cobrat realment.
+              Aquest mateix flux permet gestionar les devolucions quan es produeixen. Quan un rebut
+              és retornat pel banc, queda identificat i integrat dins del conjunt de moviments de
+              l&apos;entitat, mantenint la coherència amb la resta de la informació econòmica i amb
+              els càlculs posteriors.
             </p>
             <p>
-              El Model 182 i els certificats de donació es generen amb les devolucions ja aplicades,
-              evitant errors i discussions amb donants.
+              Així, tant les quotes cobrades com les devolucions formen part d&apos;un mateix
+              circuit: ingressos, ajustos i resultat final queden connectats sense haver de
+              reconstruir informació a posteriori ni revisar fulls de càlcul paral·lels.
             </p>
           </div>
         </div>
