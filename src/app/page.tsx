@@ -7,6 +7,13 @@ import { ArrowRight } from 'lucide-react';
 export default function LandingPage() {
   return (
     <main className="flex min-h-screen flex-col">
+      <a
+        href="#que-resol-summa-social"
+        className="sr-only focus:not-sr-only focus:fixed focus:top-4 focus:left-4 focus:z-50 focus:rounded-md focus:bg-background focus:px-3 focus:py-2 focus:text-sm focus:shadow"
+      >
+        Saltar al contingut
+      </a>
+
       {/* Hero */}
       <div className="flex flex-col items-center justify-center bg-background px-6 py-16">
         <div className="max-w-3xl mx-auto text-center space-y-6">
