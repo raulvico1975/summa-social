@@ -3,7 +3,7 @@
 import * as React from 'react';
 import { usePathname, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
-import { HelpCircle, BookOpen, Link2 } from 'lucide-react';
+import { HelpCircle, BookOpen, Link2, MessageSquare } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
@@ -21,6 +21,8 @@ import {
 import { useToast } from '@/hooks/use-toast';
 import { getHelpContent, normalizePathname } from '@/help/help-content';
 import { getManualAnchorForRoute } from '@/help/help-manual-links';
+
+const HELP_FEEDBACK_EMAIL = 'ajuda@summasocial.app';
 
 /**
  * Highlights matching text with a <mark> tag.
@@ -81,6 +83,20 @@ export function HelpSheet() {
   const manualAnchor = getManualAnchorForRoute(routeKey);
   const manualBase = orgSlug ? `/${orgSlug}/dashboard/manual` : '/dashboard/manual';
   const manualUrl = manualAnchor ? `${manualBase}#${manualAnchor}` : manualBase;
+
+  // Build feedback mailto URL
+  const feedbackMailto = React.useMemo(() => {
+    const subject = encodeURIComponent('Summa Social · Suggeriment d\'ajuda');
+    const currentUrl = typeof window !== 'undefined' ? window.location.href : '';
+    const body = encodeURIComponent(
+      `Pantalla: ${routeKey}\n` +
+      `URL: ${currentUrl}\n` +
+      `Cerca a l'ajuda: ${query || '(cap)'}\n\n` +
+      `Què faltava o què no s'entén?\n\n\n` +
+      `Proposta de text (si la tens):\n`
+    );
+    return `mailto:${HELP_FEEDBACK_EMAIL}?subject=${subject}&body=${body}`;
+  }, [routeKey, query]);
 
   // Auto-open if ?help=1
   React.useEffect(() => {
@@ -212,6 +228,16 @@ export function HelpSheet() {
               )}
             </>
           )}
+        </div>
+
+        {/* Feedback link */}
+        <div className="mt-6 pt-4 border-t">
+          <Button variant="ghost" size="sm" asChild className="text-muted-foreground">
+            <a href={feedbackMailto} rel="noreferrer">
+              <MessageSquare className="h-4 w-4 mr-2" />
+              Suggerir una millora
+            </a>
+          </Button>
         </div>
       </SheetContent>
     </Sheet>
