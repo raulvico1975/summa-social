@@ -88,4 +88,37 @@ export const HELP_CONTENT_FR: Partial<Record<HelpRouteKey, HelpContent>> = {
     ],
     keywords: ['organisation', 'cif', 'adresse', 'logo', 'signature', 'signataire', 'catégories', 'membres', 'rôles', 'préférences'],
   },
+
+  '/dashboard/project-module/expenses': {
+    title: 'Aide · Affectation des dépenses (Projets)',
+    intro:
+      'Cette boîte de réception regroupe les dépenses affectables : vous décidez ici à quel projet et à quelle ligne budgétaire rattacher chaque dépense, de façon rapide et réversible.',
+    steps: [
+      'Comprendre l\'écran : chaque ligne est une dépense (banque ou terrain) avec un statut 0% / partiel / 100%.',
+      'Commencez par les en attente : filtrez "Non affectées" (0%) pour prioriser ce qui n\'est pas encore imputé.',
+      'Quick Assign 100% : utilisez l\'action rapide pour affecter 100% de la dépense à un projet et (si besoin) à une ligne budgétaire.',
+      'Split (affectation multiple) : si une dépense doit être répartie entre projets ou lignes, utilisez l\'affectation multiple et répartissez les montants jusqu\'à équilibre.',
+      'Vérifiez le statut : le pourcentage doit refléter la réalité (100% si totalement imputée ; partiel si seulement une partie).',
+      'Désaffecter : en cas d\'erreur, annulez l\'affectation pour revenir à 0% (ou ajustez la répartition).',
+      'Affectation en masse : sélectionnez plusieurs dépenses et appliquez une affectation en bloc pour les cas répétitifs (même projet/ligne).',
+      'Fin de revue : avant de valider un projet, vérifiez que les dépenses clés sont à 100% et que les splits ne laissent pas de montants "orphelins".',
+    ],
+    tips: [
+      'Quand une ligne est sur-exécutée, le split partiel est la manière réaliste de rééquilibrer sans inventer des dépenses.',
+      'Si une dépense ne correspond à aucun projet, mieux vaut la laisser à 0% que forcer une affectation incorrecte.',
+      'Les dépenses terrain sont souvent saisies d\'abord puis affectées ensuite : privilégiez la cohérence de l\'imputation plutôt que la vitesse.',
+    ],
+    keywords: [
+      'affectation',
+      'projet',
+      'ligne budgétaire',
+      'quick assign',
+      'split',
+      '100%',
+      'partiel',
+      'désaffecter',
+      'en masse',
+      'terrain',
+    ],
+  },
 };
