@@ -44,6 +44,7 @@ import {
   confirmManyPendingDocuments,
   archivePendingDocument,
   restorePendingDocument,
+  deletePendingDocument,
   isDocumentReadyToConfirm,
   type PendingDocument,
   type PendingDocumentStatus,
@@ -66,7 +67,7 @@ const PENDING_FILTER: PendingDocumentStatus[] = ['confirmed', 'sepa_generated'];
 
 export default function PendingDocsPage() {
   const { organization, organizationId, userRole } = useCurrentOrganization();
-  const { firestore } = useFirebase();
+  const { firestore, storage } = useFirebase();
   const router = useRouter();
   const { toast } = useToast();
 
@@ -86,6 +87,7 @@ export default function PendingDocsPage() {
   const [confirmingDocId, setConfirmingDocId] = React.useState<string | null>(null);
   const [isBulkConfirming, setIsBulkConfirming] = React.useState(false);
   const [archivingDocId, setArchivingDocId] = React.useState<string | null>(null);
+  const [deletingDocId, setDeletingDocId] = React.useState<string | null>(null);
 
   // Filtres client-side
   const [filters, setFilters] = React.useState<PendingDocumentsFilters>(EMPTY_FILTERS);
@@ -292,6 +294,42 @@ export default function PendingDocsPage() {
       setArchivingDocId(null);
     }
   }, [firestore, organizationId, toast]);
+
+  // Handler per eliminar un document
+  const handleDelete = React.useCallback(async (doc: PendingDocument) => {
+    if (!firestore || !storage || !organizationId) return;
+
+    setDeletingDocId(doc.id);
+    try {
+      const result = await deletePendingDocument(firestore, storage, organizationId, doc.id);
+
+      // Tancar expansió si estava obert
+      if (expandedDocId === doc.id) {
+        setExpandedDocId(null);
+      }
+
+      if (result.fileDeleted) {
+        toast({
+          title: 'Document eliminat',
+          description: `${doc.invoiceNumber || doc.file.filename} eliminat correctament.`,
+        });
+      } else {
+        toast({
+          title: 'Document eliminat',
+          description: `${doc.invoiceNumber || doc.file.filename} eliminat, però el fitxer pot haver quedat a Storage.`,
+        });
+      }
+    } catch (error) {
+      console.error('Error deleting document:', error);
+      toast({
+        variant: 'destructive',
+        title: 'Error',
+        description: error instanceof Error ? error.message : 'No s\'ha pogut eliminar el document.',
+      });
+    } finally {
+      setDeletingDocId(null);
+    }
+  }, [firestore, storage, organizationId, toast, expandedDocId]);
 
   // Si encara no tenim l'organització o el flag no està actiu, mostrar loading
   if (!organization || !isPendingDocsEnabled) {
@@ -595,8 +633,10 @@ export default function PendingDocsPage() {
                     onUpdate={handleFieldUpdate}
                     onConfirm={handleConfirm}
                     onArchive={handleArchive}
+                    onDelete={handleDelete}
                     isConfirming={confirmingDocId === doc.id}
                     isArchiving={archivingDocId === doc.id}
+                    isDeleting={deletingDocId === doc.id}
                     isExpanded={expandedDocId === doc.id}
                     onToggleExpand={() => setExpandedDocId(expandedDocId === doc.id ? null : doc.id)}
                   />

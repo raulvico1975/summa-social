@@ -42,7 +42,19 @@ import {
   Archive,
   ChevronDown,
   ChevronUp,
+  Trash2,
 } from 'lucide-react';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/ui/alert-dialog';
 import { Checkbox } from '@/components/ui/checkbox';
 import { cn } from '@/lib/utils';
 import { format, parseISO, isValid } from 'date-fns';
@@ -65,8 +77,10 @@ interface PendingDocumentCardProps {
   onUpdate: (docId: string, field: string, value: string | number | null) => void;
   onConfirm: (doc: PendingDocument) => void;
   onArchive: (doc: PendingDocument) => void;
+  onDelete: (doc: PendingDocument) => void;
   isConfirming?: boolean;
   isArchiving?: boolean;
+  isDeleting?: boolean;
   /** Selection mode */
   isSelectable?: boolean;
   isSelected?: boolean;
@@ -133,8 +147,10 @@ export function PendingDocumentCard({
   onUpdate,
   onConfirm,
   onArchive,
+  onDelete,
   isConfirming = false,
   isArchiving = false,
+  isDeleting = false,
   isSelectable = false,
   isSelected = false,
   onSelect,
@@ -577,8 +593,44 @@ export function PendingDocumentCard({
               </Popover>
             </div>
 
-            {/* Espai buit o accions */}
+            {/* Accions */}
             <div className="flex items-end justify-end gap-2">
+              {/* Eliminar amb confirmació */}
+              <AlertDialog>
+                <AlertDialogTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    disabled={isDeleting}
+                    className="text-destructive hover:text-destructive"
+                  >
+                    {isDeleting ? (
+                      <Loader2 className="h-4 w-4 animate-spin mr-1" />
+                    ) : (
+                      <Trash2 className="h-4 w-4 mr-1" />
+                    )}
+                    Eliminar
+                  </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>Eliminar document?</AlertDialogTitle>
+                    <AlertDialogDescription>
+                      S'eliminarà el document i el fitxer pujat. Aquesta acció no es pot desfer.
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>Cancel·lar</AlertDialogCancel>
+                    <AlertDialogAction
+                      onClick={() => onDelete(doc)}
+                      className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                    >
+                      Eliminar
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
+
               <Button
                 variant="ghost"
                 size="sm"

@@ -8,11 +8,14 @@ import {
   Timestamp,
   addDoc,
   updateDoc,
+  deleteDoc,
+  getDoc,
   serverTimestamp,
   writeBatch,
   type Firestore,
   type Query,
 } from 'firebase/firestore';
+import { ref, deleteObject, type FirebaseStorage } from 'firebase/storage';
 import { pendingDocumentsCollection, pendingDocumentDoc } from './refs';
 import type {
   PendingDocument,
@@ -345,4 +348,133 @@ export async function restorePendingDocument(
     archivedAt: null,
     updatedAt: serverTimestamp(),
   });
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// ELIMINAR DOCUMENT
+// ═══════════════════════════════════════════════════════════════════════════
+
+/**
+ * Resultat de l'eliminació amb informació sobre el fitxer.
+ */
+export interface DeletePendingDocumentResult {
+  /** Si el fitxer s'ha esborrat correctament de Storage */
+  fileDeleted: boolean;
+  /** Missatge d'error si el fitxer no s'ha pogut esborrar */
+  fileError?: string;
+}
+
+/**
+ * Elimina un document pendent i el seu fitxer associat.
+ *
+ * Guardrails:
+ * - Només es poden eliminar documents amb status 'draft' o 'confirmed'
+ * - sepa_generated i matched NO es poden eliminar (només arxivar)
+ * - archived es pot eliminar (l'usuari ja l'havia descartat)
+ *
+ * El fitxer de Storage s'intenta esborrar best-effort:
+ * si falla, el document s'esborra igualment però es retorna l'error.
+ *
+ * @param firestore - Instància de Firestore
+ * @param storage - Instància de Firebase Storage
+ * @param orgId - ID de l'organització
+ * @param docId - ID del document a eliminar
+ * @returns Resultat amb info sobre l'eliminació del fitxer
+ * @throws Error si l'estat del document no permet eliminació
+ */
+export async function deletePendingDocument(
+  firestore: Firestore,
+  storage: FirebaseStorage,
+  orgId: string,
+  docId: string
+): Promise<DeletePendingDocumentResult> {
+  // 1. Llegir el document per obtenir storagePath i validar status
+  const docRef = pendingDocumentDoc(firestore, orgId, docId);
+  const docSnap = await getDoc(docRef);
+
+  if (!docSnap.exists()) {
+    throw new Error('El document no existeix');
+  }
+
+  const docData = docSnap.data() as PendingDocument;
+
+  // 2. Validar guardrails segons status
+  if (docData.status === 'sepa_generated') {
+    throw new Error(
+      'No es pot eliminar un document inclòs en una remesa SEPA. Arxiva\'l si no el vols veure.'
+    );
+  }
+
+  if (docData.status === 'matched') {
+    throw new Error(
+      'No es pot eliminar un document ja conciliat amb un moviment bancari. Arxiva\'l si no el vols veure.'
+    );
+  }
+
+  // 3. Esborrar el document de Firestore
+  await deleteDoc(docRef);
+
+  // 4. Intentar esborrar el fitxer de Storage (best-effort)
+  let fileDeleted = false;
+  let fileError: string | undefined;
+
+  if (docData.file?.storagePath) {
+    try {
+      const storageRef = ref(storage, docData.file.storagePath);
+      await deleteObject(storageRef);
+      fileDeleted = true;
+    } catch (error) {
+      // No fem rollback - el document ja està esborrat
+      console.warn('[deletePendingDocument] No s\'ha pogut esborrar el fitxer:', error);
+      fileError = error instanceof Error ? error.message : 'Error desconegut';
+    }
+  } else {
+    // No hi havia fitxer associat
+    fileDeleted = true;
+  }
+
+  return { fileDeleted, fileError };
+}
+
+/**
+ * Comprova si un document es pot eliminar segons el seu estat.
+ */
+export function canDeletePendingDocument(status: PendingDocumentStatus): boolean {
+  return status === 'draft' || status === 'confirmed' || status === 'archived';
+}
+
+/**
+ * Comprova si un document es pot editar completament segons el seu estat.
+ * - draft/confirmed: tots els camps editables
+ * - sepa_generated: només categoryId editable (camps de pagament bloquejats)
+ * - matched/archived: no editable
+ */
+export function getEditableFields(status: PendingDocumentStatus): {
+  allEditable: boolean;
+  limitedEditable: boolean;
+  editableFields: string[];
+} {
+  switch (status) {
+    case 'draft':
+    case 'confirmed':
+      return {
+        allEditable: true,
+        limitedEditable: false,
+        editableFields: ['amount', 'invoiceDate', 'invoiceNumber', 'supplierId', 'categoryId', 'type'],
+      };
+    case 'sepa_generated':
+      return {
+        allEditable: false,
+        limitedEditable: true,
+        editableFields: ['categoryId'], // Només categoria editable
+      };
+    case 'matched':
+    case 'archived':
+    default:
+      return {
+        allEditable: false,
+        limitedEditable: false,
+        editableFields: [],
+      };
+  }
 }
