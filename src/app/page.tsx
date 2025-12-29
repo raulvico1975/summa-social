@@ -86,22 +86,24 @@ export default function LandingPage() {
       {/* 1. Conciliació bancària automàtica i seguiment de comptes */}
       <section id="conciliacio-bancaria" className="bg-muted/30 px-6 py-10">
         <div className="max-w-3xl mx-auto">
-          <h2 className="text-2xl font-bold mb-4">
+          <h2 className="text-2xl font-semibold">
             Conciliació bancària automàtica i seguiment de comptes
           </h2>
 
-          <div className="space-y-4 text-muted-foreground">
+          <div className="mt-6 space-y-4 text-muted-foreground">
             <p>
-              Importa extractes bancaris en format CSV o Excel des de qualsevol banc espanyol. Summa
-              Social detecta automàticament duplicats i evita errors de transcripció.
+              Quan s&apos;importa l&apos;extracte bancari, Summa Social posa en relació el que ja
+              s&apos;ha treballat prèviament amb el que reflecteix el banc. Els moviments es
+              reconcilien amb la documentació, els pagaments i les remeses existents, tot evitant
+              duplicats i errors de transcripció.
             </p>
             <p>
-              Cada moviment queda associat al compte bancari d&apos;origen, permetent un seguiment
-              clar de saldos i una visió consolidada de tots els comptes de l&apos;entitat.
+              Aquest procés permet tenir una visió clara de l&apos;estat de cada compte: què està
+              conciliat, què queda pendent de revisar, i quin és el saldo real en cada moment.
             </p>
             <p>
-              La intel·ligència artificial reconeix automàticament proveïdors, socis i donants a
-              partir del concepte bancari, assignant categoria i contacte sense intervenció manual.
+              A partir d&apos;aquí, el seguiment dels comptes bancaris esdevé més fiable: es pot
+              verificar que tot quadra, detectar desviacions a temps i actuar amb criteri.
             </p>
           </div>
         </div>
