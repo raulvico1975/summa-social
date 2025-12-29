@@ -275,27 +275,33 @@ export default function LandingPage() {
       {/* 7. Mòdul de Projectes */}
       <section id="modul-projectes" className="bg-muted/30 px-6 py-10">
         <div className="max-w-3xl mx-auto">
-          <h2 className="text-2xl font-bold mb-4">
+          <h2 className="text-2xl font-semibold">
             Mòdul de Projectes opcional: execució pressupostària i assistent de justificacions
           </h2>
 
-          <div className="space-y-4 text-muted-foreground">
+          <div className="mt-6 space-y-4 text-muted-foreground">
             <p>
-              Importa el pressupost aprovat des d&apos;Excel i crea les partides del projecte. Summa
-              Social mostra en temps real l&apos;execució per partida: pressupostat, executat i
-              pendent.
+              Quan l&apos;entitat treballa amb projectes, la gestió econòmica requereix una lectura
+              diferent: no només què s&apos;ha pagat, sinó a quin projecte correspon cada despesa i
+              com s&apos;està executant el pressupost aprovat.
             </p>
             <p>
-              Assigna despeses a partides de forma parcial o total. L&apos;assistent de justificació
-              guia el procés per quadrar imports abans d&apos;exportar.
+              Summa Social permet vincular les despeses —tant bancàries com de terreny— als projectes
+              corresponents i situar-les dins de les partides pressupostàries definides. A partir
+              d&apos;aquí, l&apos;execució es pot seguir amb claredat: imports executats, desviacions
+              i estat general del projecte.
             </p>
             <p>
-              Exporta la justificació en format Excel amb totes les factures i comprovants en un ZIP,
-              llest per presentar al finançador.
+              Quan arriba el moment de preparar una justificació, el sistema acompanya aquest procés
+              amb un assistent específic. Les despeses ja estan estructurades, es poden ajustar i
+              repartir quan cal, i la documentació associada queda preparada per generar els exports
+              necessaris.
             </p>
             <p>
-              Per a projectes de cooperació internacional, inclou suport multidivisa i captura ràpida
-              de despeses de terreny des del mòbil.
+              El mòdul de projectes inclou suport per a projectes de cooperació, amb gestió
+              multidivisa i integració directa de les despeses capturades durant l&apos;execució.
+              D&apos;aquesta manera, la justificació econòmica es construeix sobre la despesa real
+              treballada al llarg del projecte, i no com un exercici posterior de recopilació.
             </p>
           </div>
         </div>
