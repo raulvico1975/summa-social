@@ -19,7 +19,8 @@ import {
   TooltipTrigger,
 } from '@/components/ui/tooltip';
 import { useToast } from '@/hooks/use-toast';
-import { getHelpContent } from '@/help/help-content';
+import { getHelpContent, normalizePathname } from '@/help/help-content';
+import { getManualAnchorForRoute } from '@/help/help-manual-links';
 
 /**
  * Highlights matching text with a <mark> tag.
@@ -76,7 +77,10 @@ export function HelpSheet() {
   const [open, setOpen] = React.useState(false);
 
   const orgSlug = getOrgSlug(pathname);
-  const manualUrl = orgSlug ? `/${orgSlug}/dashboard/manual` : '/dashboard/manual';
+  const routeKey = normalizePathname(pathname);
+  const manualAnchor = getManualAnchorForRoute(routeKey);
+  const manualBase = orgSlug ? `/${orgSlug}/dashboard/manual` : '/dashboard/manual';
+  const manualUrl = manualAnchor ? `${manualBase}#${manualAnchor}` : manualBase;
 
   // Auto-open if ?help=1
   React.useEffect(() => {
@@ -149,7 +153,7 @@ export function HelpSheet() {
           <Button variant="outline" size="sm" asChild>
             <Link href={manualUrl}>
               <BookOpen className="h-4 w-4 mr-2" />
-              Veure manual complet
+              Veure al manual
             </Link>
           </Button>
           <Button variant="outline" size="sm" onClick={handleCopyLink}>
