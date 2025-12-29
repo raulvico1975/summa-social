@@ -61,7 +61,7 @@ import { getDownloadURL, ref } from 'firebase/storage';
 import { useFirebase } from '@/firebase';
 import type { PendingDocument, PendingDocumentStatus } from '@/lib/pending-documents/types';
 import type { Contact, Category } from '@/lib/data';
-import { isDocumentReadyToConfirm, getMissingFields } from '@/lib/pending-documents/api';
+import { isDocumentReadyToConfirm, getMissingFields, getEditableFields } from '@/lib/pending-documents/api';
 import { CATEGORY_TRANSLATION_KEYS } from '@/lib/default-data';
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -239,8 +239,10 @@ export function PendingDocumentRow({
     }
   }, [storage, doc.file.storagePath, fileUrl, isLoadingUrl]);
 
-  // Check if editable (only drafts)
-  const isEditable = doc.status === 'draft';
+  // Determinar quins camps són editables segons l'estat
+  const editability = getEditableFields(doc.status);
+  const isEditable = editability.allEditable;
+  const canEditCategory = editability.editableFields.includes('categoryId');
   const isReady = isDocumentReadyToConfirm(doc);
   const missingFields = getMissingFields(doc);
 
@@ -491,9 +493,9 @@ export function PendingDocumentRow({
         )}
       </TableCell>
 
-      {/* Categoria */}
+      {/* Categoria - editable per drafts i sepa_generated */}
       <TableCell>
-        {isEditable ? (
+        {canEditCategory ? (
           <Popover open={categoryOpen} onOpenChange={setCategoryOpen}>
             <PopoverTrigger asChild>
               <Button
