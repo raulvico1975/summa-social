@@ -141,22 +141,28 @@ export default function LandingPage() {
       {/* 3. Registre i control acurat de donacions online i ingressos web */}
       <section id="donacions-online" className="bg-muted/30 px-6 py-10">
         <div className="max-w-3xl mx-auto">
-          <h2 className="text-2xl font-bold mb-4">
+          <h2 className="text-2xl font-semibold">
             Registre i control acurat de donacions online i ingressos web
           </h2>
 
-          <div className="space-y-4 text-muted-foreground">
+          <div className="mt-6 space-y-4 text-muted-foreground">
             <p>
-              Importa els pagaments de Stripe o altres passarel·les i desglossa cada payout en
-              donacions individuals, separant automàticament la comissió de la plataforma.
+              Quan l&apos;entitat rep donacions a través del web, els ingressos arriben al compte de
+              forma agrupada. Summa Social permet incorporar aquests ingressos al sistema,
+              identificar cada donació individual i situar-la dins del conjunt de la gestió
+              econòmica, mantenint el vincle amb la persona que ha fet l&apos;aportació.
             </p>
             <p>
-              Cada donació queda vinculada al donant corresponent mitjançant el seu email o DNI, amb
-              traçabilitat completa des de la transacció fins al certificat fiscal.
+              A partir de la informació disponible, les donacions queden desglossades, amb les
+              comissions corresponents separades i registrades, i passen a formar part del mateix
+              flux que la resta d&apos;ingressos de l&apos;entitat. Quan s&apos;importa
+              l&apos;extracte bancari, tot queda alineat amb el moviment real, sense haver de fer
+              ajustos manuals ni reconstruir dades.
             </p>
             <p>
-              Si el donant no existeix, Summa Social el crea automàticament amb les dades disponibles
-              perquè no es perdi cap aportació.
+              D&apos;aquesta manera, les donacions online deixen de ser un bloc opac i passen a
+              integrar-se amb normalitat en el control econòmic, el seguiment de donants i els
+              càlculs posteriors, tant per al control intern com per als processos fiscals.
             </p>
           </div>
         </div>
