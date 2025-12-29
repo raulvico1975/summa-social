@@ -137,7 +137,7 @@ export default function LandingPage() {
               duplicats i errors de transcripció.
             </p>
             <div className="pt-4">
-              <Button variant="link" asChild className="px-0">
+              <Button variant="link" asChild className="px-0 text-sm font-medium text-primary hover:underline">
                 <Link href="/funcionalitats#conciliacio-bancaria">Llegir més →</Link>
               </Button>
             </div>
@@ -162,7 +162,7 @@ export default function LandingPage() {
               necessari per saber qui ha aportat què i en quin moment.
             </p>
             <div className="pt-4">
-              <Button variant="link" asChild className="px-0">
+              <Button variant="link" asChild className="px-0 text-sm font-medium text-primary hover:underline">
                 <Link href="/funcionalitats#remeses-devolucions">Llegir més →</Link>
               </Button>
             </div>
@@ -187,7 +187,7 @@ export default function LandingPage() {
               econòmica, mantenint el vincle amb la persona que ha fet l&apos;aportació.
             </p>
             <div className="pt-4">
-              <Button variant="link" asChild className="px-0">
+              <Button variant="link" asChild className="px-0 text-sm font-medium text-primary hover:underline">
                 <Link href="/funcionalitats#donacions-online">Llegir més →</Link>
               </Button>
             </div>
@@ -213,7 +213,7 @@ export default function LandingPage() {
               donació a partir del que ja està ordenat i verificat dins del sistema.
             </p>
             <div className="pt-4">
-              <Button variant="link" asChild className="px-0">
+              <Button variant="link" asChild className="px-0 text-sm font-medium text-primary hover:underline">
                 <Link href="/funcionalitats#fiscalitat-certificats">Llegir més →</Link>
               </Button>
             </div>
@@ -240,7 +240,7 @@ export default function LandingPage() {
               moment.
             </p>
             <div className="pt-4">
-              <Button variant="link" asChild className="px-0">
+              <Button variant="link" asChild className="px-0 text-sm font-medium text-primary hover:underline">
                 <Link href="/funcionalitats#despeses-pagaments-sepa">Llegir més →</Link>
               </Button>
             </div>
@@ -267,7 +267,7 @@ export default function LandingPage() {
               què s&apos;han produït.
             </p>
             <div className="pt-4">
-              <Button variant="link" asChild className="px-0">
+              <Button variant="link" asChild className="px-0 text-sm font-medium text-primary hover:underline">
                 <Link href="/funcionalitats#tiquets-liquidacions">Llegir més →</Link>
               </Button>
             </div>
@@ -291,7 +291,7 @@ export default function LandingPage() {
               com s&apos;està executant el pressupost aprovat.
             </p>
             <div className="pt-4">
-              <Button variant="link" asChild className="px-0">
+              <Button variant="link" asChild className="px-0 text-sm font-medium text-primary hover:underline">
                 <Link href="/funcionalitats#modul-projectes">Llegir més →</Link>
               </Button>
             </div>
