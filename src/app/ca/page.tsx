@@ -1,8 +1,25 @@
+import type { Metadata } from 'next';
 import Link from 'next/link';
 import { Logo } from '@/components/logo';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import { ArrowRight } from 'lucide-react';
+
+const BASE_URL = 'https://summasocial.app';
+
+export const metadata: Metadata = {
+  title: 'Summa Social | Gestió econòmica per a entitats',
+  description:
+    "Gestió econòmica i fiscal per a entitats socials petites i mitjanes d'Espanya. Conciliació bancària, Model 182/347, remeses SEPA i més.",
+  alternates: {
+    canonical: `${BASE_URL}/ca`,
+    languages: {
+      'ca': `${BASE_URL}/ca`,
+      'es': `${BASE_URL}/es`,
+      'x-default': `${BASE_URL}/ca`,
+    },
+  },
+};
 
 export default function LandingPageCA() {
   return (

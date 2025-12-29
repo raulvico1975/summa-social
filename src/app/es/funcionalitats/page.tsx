@@ -3,10 +3,20 @@ import Link from 'next/link';
 import { ArrowLeft } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
+const BASE_URL = 'https://summasocial.app';
+
 export const metadata: Metadata = {
   title: 'Summa Social | Funcionalidades',
   description:
-    "Gestión económica y fiscal para entidades sociales pequeñas y medianas de España. Conciliación bancaria, Modelo 182/347, remesas SEPA y más.",
+    'Gestión económica y fiscal para entidades sociales pequeñas y medianas de España. Conciliación bancaria, Modelo 182/347, remesas SEPA y más.',
+  alternates: {
+    canonical: `${BASE_URL}/es/funcionalitats`,
+    languages: {
+      'ca': `${BASE_URL}/ca/funcionalitats`,
+      'es': `${BASE_URL}/es/funcionalitats`,
+      'x-default': `${BASE_URL}/ca/funcionalitats`,
+    },
+  },
 };
 
 export default function FuncionalitatsPageES() {
