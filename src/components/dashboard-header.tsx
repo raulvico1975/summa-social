@@ -10,6 +10,7 @@ import { useTranslations } from '@/i18n';
 import { useCurrentOrganization } from '@/hooks/organization-provider';
 import { NotificationBell } from '@/components/notifications/notification-bell';
 import { DASHBOARD_NOTIFICATIONS } from '@/lib/notifications';
+import { HelpSheet } from '@/components/help/HelpSheet';
 
 // Mapatge de segments URL a claus de traducció
 const SEGMENT_TO_KEY: Record<string, keyof typeof import('@/i18n/ca').ca.breadcrumb> = {
@@ -152,6 +153,7 @@ export function DashboardHeader() {
         </Breadcrumb>
       </div>
       <div className="flex items-center gap-2">
+        <HelpSheet />
         <NotificationBell notifications={DASHBOARD_NOTIFICATIONS} />
       </div>
     </header>
