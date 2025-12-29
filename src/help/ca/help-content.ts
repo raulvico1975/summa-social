@@ -1,25 +1,6 @@
-export type HelpRouteKey =
-  | '/dashboard'
-  | '/dashboard/movimientos'
-  | '/dashboard/donants'
-  | '/dashboard/proveidors'
-  | '/dashboard/treballadors'
-  | '/dashboard/informes'
-  | '/dashboard/configuracion'
-  | '/dashboard/projectes'
-  | '/dashboard/project-module/expenses'
-  | '/dashboard/project-module/projects'
-  | string;
+import type { HelpContent, HelpRouteKey } from '../help-types';
 
-export type HelpContent = {
-  title: string;
-  intro?: string;
-  steps?: string[];
-  tips?: string[];
-  keywords?: string[];
-};
-
-export const HELP_CONTENT: Record<HelpRouteKey, HelpContent> = {
+export const HELP_CONTENT_CA: Record<HelpRouteKey, HelpContent> = {
   '/dashboard': {
     title: 'Ajuda · Dashboard',
     intro: 'Aquesta ajuda està pendent d\'emplenar.',
@@ -136,32 +117,8 @@ export const HELP_CONTENT: Record<HelpRouteKey, HelpContent> = {
   },
 };
 
-export const HELP_FALLBACK: HelpContent = {
+export const HELP_FALLBACK_CA: HelpContent = {
   title: 'Ajuda',
   intro: 'Aquesta pantalla encara no té ajuda.',
   steps: [],
 };
-
-/**
- * Normalitza un pathname eliminant el segment orgSlug inicial.
- * Ex: /acme/dashboard/movimientos -> /dashboard/movimientos
- */
-export function normalizePathname(pathname: string): HelpRouteKey {
-  const parts = pathname.split('/').filter(Boolean);
-
-  // Si el primer segment no és 'dashboard', assumim que és orgSlug
-  if (parts.length > 0 && parts[0] !== 'dashboard') {
-    // Eliminar orgSlug
-    parts.shift();
-  }
-
-  return '/' + parts.join('/');
-}
-
-/**
- * Obté el contingut d'ajuda per a una ruta donada.
- */
-export function getHelpContent(pathname: string): HelpContent {
-  const normalizedPath = normalizePathname(pathname);
-  return HELP_CONTENT[normalizedPath] ?? HELP_FALLBACK;
-}

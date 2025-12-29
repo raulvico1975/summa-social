@@ -19,10 +19,72 @@ import {
   TooltipTrigger,
 } from '@/components/ui/tooltip';
 import { useToast } from '@/hooks/use-toast';
-import { getHelpContent, normalizePathname } from '@/help/help-content';
+import { useTranslations } from '@/i18n';
+import type { HelpContent, HelpRouteKey } from '@/help/help-types';
+import { HELP_CONTENT_CA, HELP_FALLBACK_CA } from '@/help/ca/help-content';
+import { HELP_CONTENT_ES } from '@/help/es/help-content';
+import { HELP_CONTENT_FR } from '@/help/fr/help-content';
 import { getManualAnchorForRoute } from '@/help/help-manual-links';
 
 const HELP_FEEDBACK_EMAIL = 'ajuda@summasocial.app';
+
+// UI strings per idioma
+const UI_STRINGS = {
+  ca: {
+    searchPlaceholder: "Cerca dins l'ajuda…",
+    viewManual: 'Veure al manual',
+    copyLink: 'Copiar enllaç',
+    suggest: 'Suggerir una millora',
+    noHelp: 'Aquesta pantalla encara no té ajuda.',
+    noSteps: 'Encara no hi ha passos definits per aquesta pantalla.',
+    noResults: (q: string) => `No s'han trobat resultats per "${q}".`,
+    linkCopied: 'Enllaç copiat',
+    linkCopiedDesc: 'Ara pots compartir aquest enllaç amb algú altre.',
+    steps: 'Passos',
+    tips: 'Consells',
+    tooltipHelp: "Ajuda d'aquesta pantalla",
+  },
+  es: {
+    searchPlaceholder: 'Buscar en la ayuda…',
+    viewManual: 'Ver en el manual',
+    copyLink: 'Copiar enlace',
+    suggest: 'Sugerir una mejora',
+    noHelp: 'Esta pantalla aún no tiene ayuda.',
+    noSteps: 'Aún no hay pasos definidos para esta pantalla.',
+    noResults: (q: string) => `No se han encontrado resultados para "${q}".`,
+    linkCopied: 'Enlace copiado',
+    linkCopiedDesc: 'Ahora puedes compartir este enlace con otra persona.',
+    steps: 'Pasos',
+    tips: 'Consejos',
+    tooltipHelp: 'Ayuda de esta pantalla',
+  },
+  fr: {
+    searchPlaceholder: "Rechercher dans l'aide…",
+    viewManual: 'Voir dans le manuel',
+    copyLink: 'Copier le lien',
+    suggest: 'Suggérer une amélioration',
+    noHelp: "Cet écran n'a pas encore d'aide.",
+    noSteps: "Aucune étape n'est encore définie pour cet écran.",
+    noResults: (q: string) => `Aucun résultat pour "${q}".`,
+    linkCopied: 'Lien copié',
+    linkCopiedDesc: 'Vous pouvez maintenant partager ce lien.',
+    steps: 'Étapes',
+    tips: 'Conseils',
+    tooltipHelp: 'Aide de cet écran',
+  },
+} as const;
+
+/**
+ * Normalitza un pathname eliminant el segment orgSlug inicial.
+ * Ex: /acme/dashboard/movimientos -> /dashboard/movimientos
+ */
+function normalizePathname(pathname: string): HelpRouteKey {
+  const parts = pathname.split('/').filter(Boolean);
+  if (parts.length > 0 && parts[0] !== 'dashboard') {
+    parts.shift();
+  }
+  return '/' + parts.join('/');
+}
 
 /**
  * Highlights matching text with a <mark> tag.
@@ -70,19 +132,40 @@ function getOrgSlug(pathname: string): string | null {
   return null;
 }
 
+/**
+ * Get help content with locale fallback to CA.
+ */
+function getHelpContent(routeKey: HelpRouteKey, locale: 'ca' | 'es' | 'fr'): HelpContent {
+  // Try localized content first
+  if (locale === 'es') {
+    const esContent = HELP_CONTENT_ES[routeKey];
+    if (esContent) return esContent;
+  } else if (locale === 'fr') {
+    const frContent = HELP_CONTENT_FR[routeKey];
+    if (frContent) return frContent;
+  }
+
+  // Fallback to CA
+  return HELP_CONTENT_CA[routeKey] ?? HELP_FALLBACK_CA;
+}
+
 export function HelpSheet() {
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const { toast } = useToast();
-  const helpContent = getHelpContent(pathname);
+  const { language } = useTranslations();
   const [query, setQuery] = React.useState('');
   const [open, setOpen] = React.useState(false);
 
   const orgSlug = getOrgSlug(pathname);
   const routeKey = normalizePathname(pathname);
+  const helpContent = getHelpContent(routeKey, language);
   const manualAnchor = getManualAnchorForRoute(routeKey);
   const manualBase = orgSlug ? `/${orgSlug}/dashboard/manual` : '/dashboard/manual';
   const manualUrl = manualAnchor ? `${manualBase}#${manualAnchor}` : manualBase;
+
+  // UI strings for current locale
+  const ui = UI_STRINGS[language] ?? UI_STRINGS.ca;
 
   // Build feedback mailto URL
   const feedbackMailto = React.useMemo(() => {
@@ -120,8 +203,8 @@ export function HelpSheet() {
     try {
       await navigator.clipboard.writeText(helpUrl);
       toast({
-        title: 'Enllaç copiat',
-        description: 'Ara pots compartir aquest enllaç amb algú altre.',
+        title: ui.linkCopied,
+        description: ui.linkCopiedDesc,
       });
     } catch {
       toast({
@@ -147,7 +230,7 @@ export function HelpSheet() {
             <Button
               variant="ghost"
               size="icon"
-              aria-label="Ajuda"
+              aria-label={ui.tooltipHelp}
               className="h-9 w-9"
             >
               <HelpCircle className="h-4 w-4" />
@@ -155,7 +238,7 @@ export function HelpSheet() {
           </SheetTrigger>
         </TooltipTrigger>
         <TooltipContent>
-          <p>Ajuda d&apos;aquesta pantalla</p>
+          <p>{ui.tooltipHelp}</p>
         </TooltipContent>
       </Tooltip>
 
@@ -169,19 +252,19 @@ export function HelpSheet() {
           <Button variant="outline" size="sm" asChild>
             <Link href={manualUrl}>
               <BookOpen className="h-4 w-4 mr-2" />
-              Veure al manual
+              {ui.viewManual}
             </Link>
           </Button>
           <Button variant="outline" size="sm" onClick={handleCopyLink}>
             <Link2 className="h-4 w-4 mr-2" />
-            Copiar enllaç
+            {ui.copyLink}
           </Button>
         </div>
 
         <div className="mt-4">
           <Input
             type="text"
-            placeholder="Cerca dins l'ajuda…"
+            placeholder={ui.searchPlaceholder}
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             className="w-full"
@@ -195,13 +278,13 @@ export function HelpSheet() {
 
           {showNoResults ? (
             <p className="text-sm text-muted-foreground italic">
-              No s&apos;han trobat resultats per &quot;{query}&quot;.
+              {ui.noResults(query)}
             </p>
           ) : (
             <>
               {filteredSteps.length > 0 && (
                 <div className="space-y-2">
-                  <h3 className="font-medium">Passos</h3>
+                  <h3 className="font-medium">{ui.steps}</h3>
                   <ol className="list-decimal list-inside space-y-2 text-muted-foreground">
                     {filteredSteps.map((step, index) => (
                       <li key={index}>{highlightText(step, query)}</li>
@@ -212,7 +295,7 @@ export function HelpSheet() {
 
               {filteredTips.length > 0 && (
                 <div className="space-y-2">
-                  <h3 className="font-medium">Consells</h3>
+                  <h3 className="font-medium">{ui.tips}</h3>
                   <ul className="list-disc list-inside space-y-1 text-muted-foreground">
                     {filteredTips.map((tip, index) => (
                       <li key={index}>{highlightText(tip, query)}</li>
@@ -223,7 +306,7 @@ export function HelpSheet() {
 
               {!hasQuery && filteredSteps.length === 0 && filteredTips.length === 0 && (
                 <p className="text-sm text-muted-foreground italic">
-                  Encara no hi ha passos definits per aquesta pantalla.
+                  {ui.noSteps}
                 </p>
               )}
             </>
@@ -235,7 +318,7 @@ export function HelpSheet() {
           <Button variant="ghost" size="sm" asChild className="text-muted-foreground">
             <a href={feedbackMailto} rel="noreferrer">
               <MessageSquare className="h-4 w-4 mr-2" />
-              Suggerir una millora
+              {ui.suggest}
             </a>
           </Button>
         </div>
