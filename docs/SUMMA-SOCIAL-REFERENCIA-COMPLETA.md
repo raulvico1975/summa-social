@@ -1,6 +1,6 @@
 # ═══════════════════════════════════════════════════════════════════════════════
 # SUMMA SOCIAL - REFERÈNCIA COMPLETA DEL PROJECTE
-# Versió 1.21 - Desembre 2025
+# Versió 1.22 - Desembre 2025
 # ═══════════════════════════════════════════════════════════════════════════════
 
 
@@ -465,7 +465,7 @@ organizations/
 - Avís 1 minut abans del logout
 - Events monitoritzats: mouse, teclat, scroll, touch, click, canvi de visibilitat
 - Redirecció a `/{slug}/login?reason=idle` (si l'usuari està dins una org) o `/login?reason=idle` (rutes globals)
-- Segments reservats (no són slugs): `login`, `registre`, `redirect-to-org`, `admin`, `dashboard`, `privacy`, `api`, `q`
+- Segments reservats (no són slugs): `login`, `registre`, `redirect-to-org`, `admin`, `dashboard`, `privacy`, `api`, `q`, `quick`, `quick-expense`
 - Implementat a `src/components/IdleLogoutProvider.tsx`
 
 ### Flux de redirecció d'organització
@@ -1976,24 +1976,34 @@ La part treta queda:
 ### 3.11.10 Estructura de fitxers
 
 ```
-/src/app/[orgSlug]/dashboard/project-module/
-  ├── expenses/
-  │   ├── page.tsx                    # Llistat de despeses elegibles
-  │   ├── [txId]/page.tsx             # Detall d'una despesa
-  │   └── capture/page.tsx            # Captura ràpida de terreny (NOU v1.11)
-  ├── projects/
-  │   ├── page.tsx                    # Llista de projectes
-  │   └── [projectId]/
-  │       ├── budget/page.tsx         # Gestió Econòmica (pantalla base)
-  │       └── edit/page.tsx           # Edició del projecte
+/src/app/[orgSlug]/
+  ├── quick-expense/                    # Landing fora de dashboard (NOU v1.22)
+  │   ├── layout.tsx                    # Layout mínim (OrganizationProvider)
+  │   └── page.tsx                      # Pàgina landing
+  └── dashboard/project-module/
+      ├── expenses/
+      │   ├── page.tsx                  # Llistat de despeses elegibles
+      │   ├── [txId]/page.tsx           # Detall d'una despesa
+      │   └── capture/page.tsx          # Captura ràpida de terreny (NOU v1.11)
+      ├── projects/
+      │   ├── page.tsx                  # Llista de projectes
+      │   └── [projectId]/
+      │       ├── budget/page.tsx       # Gestió Econòmica (pantalla base)
+      │       └── edit/page.tsx         # Edició del projecte
+      └── quick-expense/
+          └── page.tsx                  # Redirect 307 a /{orgSlug}/quick-expense
+
+/src/app/quick/
+  └── page.tsx                          # Shortcut global → detecta org → landing
 
 /src/components/project-module/
-  ├── balance-project-modal.tsx       # Modal "Quadrar justificació"
+  ├── balance-project-modal.tsx         # Modal "Quadrar justificació"
+  ├── quick-expense-screen.tsx          # Component UI de captura ràpida
   └── ...
 
 /src/lib/
-  ├── project-module-types.ts         # Tipus del mòdul
-  └── project-module-suggestions.ts   # Scoring i combinacions (NOU v1.10)
+  ├── project-module-types.ts           # Tipus del mòdul
+  └── project-module-suggestions.ts     # Scoring i combinacions (NOU v1.10)
 ```
 
 ### 3.11.11 Drag & Drop de documents a Assignació de despeses (NOU v1.16)
@@ -2067,6 +2077,66 @@ Camps afegits v1.10:
 |------------|------|-------|------------|
 | `projects` | `budgetEUR` | `number \| null` | Pressupost global (fallback si no hi ha partides) |
 | `budgetLines` | `budgetedAmountEUR` | `number` | Import pressupostat de la partida |
+
+### 3.11.14 Quick Expense Landing (NOU v1.22)
+
+Pantalla dedicada per a l'entrada ràpida de despeses des del mòbil, **sense layout de dashboard** (sense sidebar, header ni breadcrumbs).
+
+**Arquitectura de rutes:**
+
+| Ruta | Funció | Tipus |
+|------|--------|-------|
+| `/{orgSlug}/quick-expense` | Landing canònica | Pàgina amb layout mínim |
+| `/quick` | Shortcut global | Redirecció a landing (detecta org de l'usuari) |
+| `/{orgSlug}/dashboard/project-module/quick-expense` | Ruta antiga | Redirect 307 per backward-compatibility |
+
+**Decisions arquitectòniques:**
+
+| Decisió | Motiu |
+|---------|-------|
+| Fora de `/dashboard` | Next.js App Router no permet "saltar" layouts intermedis |
+| Layout propi mínim | Només `OrganizationProvider` + `InitializeData`, sense sidebar/header |
+| Redirect 307 antic | Manté compatibilitat amb bookmarks i enllaços existents |
+| Shortcut `/quick` | Permet "Afegir a pantalla d'inici" sense necessitat de saber l'org |
+
+**Permisos:**
+
+| Rol | Pot accedir |
+|-----|-------------|
+| `superadmin` | ✅ |
+| `admin` | ✅ |
+| `user` | ✅ |
+| `viewer` | ❌ (redirigit a dashboard) |
+
+**Flux d'accés:**
+
+```
+/quick → detecta orgSlug via perfil/membres → /{orgSlug}/quick-expense
+                                           ↓
+                           Landing sense dashboard layout
+                                           ↓
+                           Botó "Tornar" → /{orgSlug}/dashboard/project-module/expenses
+```
+
+**Fitxers principals:**
+
+| Fitxer | Funció |
+|--------|--------|
+| `src/app/[orgSlug]/quick-expense/layout.tsx` | Layout mínim (OrganizationProvider) |
+| `src/app/[orgSlug]/quick-expense/page.tsx` | Pàgina landing |
+| `src/app/quick/page.tsx` | Shortcut global amb detecció d'org |
+| `src/app/[orgSlug]/dashboard/project-module/quick-expense/page.tsx` | Redirect 307 legacy |
+| `src/components/project-module/quick-expense-screen.tsx` | Component UI compartit |
+
+**Connexió amb expenses:**
+
+El botó càmera a la safata de despeses (`/dashboard/project-module/expenses`) apunta a `/{orgSlug}/quick-expense`:
+
+```tsx
+<Link href={buildUrl('/quick-expense')}>
+  <Camera className="h-4 w-4" />
+</Link>
+```
 
 
 ## 3.10 PANELL SUPERADMIN GLOBAL (NOU v1.20)
@@ -2662,6 +2732,8 @@ Indicadors que requeririen intervenció:
 | **1.18** | **Des 2025** | **Onboarding: configuració inicial per admins (checklist Dashboard, wizard, "Ho faré després", camp onboardingSkippedAt), no bloquejant, discret, definitiu** |
 | **1.19** | **Des 2025** | **Simplificació onboarding a modal de benvinguda única per primer admin, eliminació checklist persistent** |
 | **1.20** | **Des 2025** | **Panell Admin: reset contrasenya + secció diagnòstic (Firebase Console, Cloud Logging, DEV-SOLO-MANUAL.md). Dashboard: neteja blocs Celebracions/Alertes, millora taula categories (exclou comissions), bloc projectes condicional. Nou document docs/DEV-SOLO-MANUAL.md per manteniment.** |
+| **1.21** | **Des 2025** | **i18n pàgina pública (ca/es), SEO tags amb canonical + hreflang, mòdul documents pendents hardened (permisos, guardrails, UI responsive)** |
+| **1.22** | **29 Des 2025** | **Quick Expense Landing: ruta canònica `/{orgSlug}/quick-expense` fora de `/dashboard` (sense sidebar/header), shortcut global `/quick`, redirect 307 per backward-compatibility, arquitectura neta sense hacks de layout** |
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
