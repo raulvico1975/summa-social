@@ -196,21 +196,40 @@ export function SepaGenerationModal({
         }
       );
 
-      setResult(resultData);
-      setStep('success');
-
-      toast({
-        title: `Remesa generada (${resultData.nbOfTxs} pagaments)`,
-        description: 'Fitxer SEPA llest per descarregar.',
-      });
-
-      // Trigger download
+      // 1. Descàrrega silent (sense obrir pestanya)
       const a = document.createElement('a');
       a.href = resultData.downloadUrl;
       a.download = resultData.filename;
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
+
+      // 2. Tancar modal i notificar pare
+      onComplete();
+      onOpenChange(false);
+
+      // 3. Toast clar amb CTA per tornar a descarregar
+      toast({
+        title: 'Remesa SEPA descarregada',
+        description: `${resultData.nbOfTxs} pagaments · ${formatCurrencyEU(resultData.ctrlSum)}. Queda guardada a Summa.`,
+        action: (
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => {
+              const link = document.createElement('a');
+              link.href = resultData.downloadUrl;
+              link.download = resultData.filename;
+              document.body.appendChild(link);
+              link.click();
+              document.body.removeChild(link);
+            }}
+          >
+            <Download className="mr-2 h-3 w-3" />
+            Tornar a descarregar
+          </Button>
+        ),
+      });
 
     } catch (error) {
       console.error('Error generating SEPA:', error);
