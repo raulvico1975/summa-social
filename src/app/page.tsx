@@ -239,24 +239,34 @@ export default function LandingPage() {
       {/* 6. Captura de tiquets i liquidacions */}
       <section id="tiquets-liquidacions" className="px-6 py-10">
         <div className="max-w-3xl mx-auto">
-          <h2 className="text-2xl font-bold mb-4">
-            Captura imatges de rebuts i tiquets de viatge amb el mòbil i elabora automàticament els
-            fulls de liquidació
+          <h2 className="text-2xl font-semibold">
+            Captura d&apos;imatges de rebuts i tiquets de viatge, i elaboració automàtica de
+            liquidacions
           </h2>
 
-          <div className="space-y-4 text-muted-foreground">
+          <div className="mt-6 space-y-4 text-muted-foreground">
             <p>
-              Des del mòbil, captura fotos de tiquets, rebuts i comprovants de viatge. La IA extreu
-              automàticament les dades principals: import, data, concepte i proveïdor.
+              Quan l&apos;equip de l&apos;entitat fa desplaçaments, viatges o activitats fora de
+              l&apos;oficina, Summa Social permet capturar de manera immediata els rebuts i tiquets
+              que es van generant. Una simple fotografia des del mòbil és suficient perquè aquests
+              comprovants quedin registrats dins del sistema, associats a la persona i al context en
+              què s&apos;han produït.
             </p>
             <p>
-              Agrupa les despeses per persona o per viatge i genera un full de liquidació en PDF,
-              llest per revisar i aprovar.
+              Un cop de tornada a l&apos;oficina —o directament des de la pròpia oficina— aquests
+              documents es poden revisar amb calma: confirmar o completar les dades extretes,
+              categoritzar-los i integrar-los dins del flux administratiu de l&apos;entitat.
             </p>
             <p>
-              Les liquidacions aprovades es converteixen en pagaments pendents que es poden incloure
-              en una remesa SEPA. Quan s&apos;executa el pagament i entra l&apos;extracte, la
-              conciliació és automàtica.
+              A partir d&apos;aquesta informació, Summa Social construeix automàticament el full de
+              liquidació corresponent. Ja no cal redactar-lo manualment ni recopilar comprovants
+              dispersos: el document queda generat i preparat per a la seva gestió interna.
+            </p>
+            <p>
+              D&apos;aquesta manera, els rebuts i tiquets de viatge deixen de perdre&apos;s o quedar
+              fora del circuit. Formen part de Summa Social i s&apos;incorporen al mateix flux que
+              la resta de despeses, tant per al control intern com per a la justificació de
+              projectes, si l&apos;entitat hi treballa.
             </p>
           </div>
         </div>
