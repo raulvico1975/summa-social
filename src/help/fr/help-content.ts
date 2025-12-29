@@ -45,6 +45,47 @@ export const HELP_CONTENT_FR: Partial<Record<HelpRouteKey, HelpContent>> = {
     keywords: ['importer', 'dni', 'code postal', 'modèle 182', 'certificat', 'inactif', 'catégorie par défaut', 'historique'],
   },
 
+  '/dashboard/proveidors': {
+    title: 'Aide · Fournisseurs',
+    intro:
+      'Ici, vous gérez les fournisseurs de l\'organisation afin d\'affecter correctement les dépenses et de préparer le Modèle 347.',
+    steps: [
+      'Créez un fournisseur lorsque vous avez des dépenses récurrentes ou significatives avec une entreprise ou un professionnel.',
+      'Renseignez le nom et le CIF : indispensable pour générer correctement le Modèle 347.',
+      'Définissez une catégorie par défaut si le fournisseur facture toujours le même type de dépense.',
+      'Complétez les coordonnées si utile (email, téléphone), même si ce n\'est pas obligatoire.',
+      'Lors de l\'affectation à un mouvement, la catégorie par défaut peut s\'appliquer automatiquement.',
+      'Utilisez le statut actif/inactif pour garder la liste propre sans perdre l\'historique.',
+      'Avant de générer le Modèle 347, vérifiez les CIF et la cohérence des montants.',
+    ],
+    tips: [
+      'Inutile de créer un fournisseur pour de petites dépenses ponctuelles : priorisez les récurrentes.',
+      'Si le nom commercial change mais pas le CIF, mettez à jour le fournisseur existant.',
+      'Un bon suivi des fournisseurs simplifie fortement le Modèle 347.',
+    ],
+    keywords: ['fournisseur', 'cif', 'modèle 347', 'catégorie par défaut', 'dépense', 'entreprise', 'professionnel'],
+  },
+
+  '/dashboard/treballadors': {
+    title: 'Aide · Salariés',
+    intro:
+      'Ici, vous gérez les salariés de l\'organisation pour affecter les salaires et autres dépenses de personnel.',
+    steps: [
+      'Créez un salarié lorsque vous avez des salaires ou paiements récurrents.',
+      'Renseignez le nom et le DNI pour faciliter le suivi interne.',
+      'Définissez une catégorie par défaut (souvent salaires) pour accélérer l\'affectation.',
+      'Maintenez le statut actif/inactif à jour lors des entrées et sorties.',
+      'Lors de l\'affectation à un mouvement, vérifiez la cohérence de la catégorie.',
+      'Utilisez cet écran comme référence interne ; il ne remplace pas un outil RH.',
+    ],
+    tips: [
+      'Si un salarié n\'a plus de nouveaux mouvements, marquez-le inactif plutôt que de le supprimer.',
+      'Centraliser les salaires par salarié rend la dépense de personnel plus lisible.',
+      'Ne mélangez pas salariés et fournisseurs : chaque type a un rôle distinct.',
+    ],
+    keywords: ['salarié', 'salaire', 'personnel', 'dni', 'catégorie par défaut', 'dépense'],
+  },
+
   '/dashboard/informes': {
     title: 'Aide · Rapports',
     intro:

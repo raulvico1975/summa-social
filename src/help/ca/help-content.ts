@@ -50,13 +50,42 @@ export const HELP_CONTENT_CA: Record<HelpRouteKey, HelpContent> = {
   },
   '/dashboard/proveidors': {
     title: 'Ajuda · Proveïdors',
-    intro: 'Aquesta ajuda està pendent d\'emplenar.',
-    steps: [],
+    intro:
+      'Aquí gestiones els proveïdors de l\'organització per poder assignar correctament les despeses i preparar el Model 347.',
+    steps: [
+      'Crea un proveïdor quan tinguis despeses recurrents o rellevants amb una empresa o professional.',
+      'Introdueix el nom i el CIF: és imprescindible perquè el Model 347 es generi correctament.',
+      'Assigna una categoria per defecte si el proveïdor sempre factura el mateix tipus de despesa (p. ex. nòmines, lloguer, serveis).',
+      'Revisa o completa dades de contacte si et són útils (email, telèfon), tot i que no són obligatòries.',
+      'Quan assignes un proveïdor a un moviment, la categoria per defecte pot aplicar-se automàticament.',
+      'Utilitza l\'estat actiu/inactiu per mantenir la llista neta sense perdre l\'històric.',
+      'Abans de generar el Model 347, revisa que els CIF estiguin correctes i que els imports quadrin.',
+    ],
+    tips: [
+      'No cal crear un proveïdor per a despeses puntuals petites: prioritza els recurrents o significatius.',
+      'Si un proveïdor canvia de nom comercial però manté el CIF, actualitza\'l en lloc de crear-ne un de nou.',
+      'Un bon manteniment de proveïdors simplifica molt el Model 347.',
+    ],
+    keywords: ['proveïdor', 'cif', 'model 347', 'categoria per defecte', 'despesa', 'empresa', 'professional'],
   },
   '/dashboard/treballadors': {
     title: 'Ajuda · Treballadors',
-    intro: 'Aquesta ajuda està pendent d\'emplenar.',
-    steps: [],
+    intro:
+      'Aquí gestiones els treballadors de l\'organització per assignar nòmines i altres despeses de personal.',
+    steps: [
+      'Crea un treballador quan tinguis nòmines o pagaments recurrents de personal.',
+      'Introdueix el nom i el DNI: facilita el control intern i la traçabilitat de despeses.',
+      'Assigna una categoria per defecte (habitualment nòmines) per agilitzar l\'assignació als moviments.',
+      'Mantén l\'estat actiu/inactiu al dia quan una persona entra o surt de l\'organització.',
+      'Quan assignes un treballador a un moviment, revisa que la categoria aplicada sigui coherent.',
+      'Utilitza aquesta pantalla com a referència interna; no substitueix una eina de recursos humans.',
+    ],
+    tips: [
+      'Si un treballador ja no té moviments nous, marca\'l com a inactiu en lloc d\'esborrar-lo.',
+      'Centralitzar nòmines sota treballadors fa més llegible la despesa de personal.',
+      'No barregis treballadors i proveïdors: cada tipus de contacte té una funció diferent.',
+    ],
+    keywords: ['treballador', 'nòmina', 'personal', 'dni', 'categoria per defecte', 'despesa'],
   },
   '/dashboard/informes': {
     title: 'Ajuda · Informes',

@@ -45,6 +45,47 @@ export const HELP_CONTENT_ES: Partial<Record<HelpRouteKey, HelpContent>> = {
     keywords: ['importar', 'dni', 'código postal', 'modelo 182', 'certificado', 'baja', 'categoría por defecto', 'historial'],
   },
 
+  '/dashboard/proveidors': {
+    title: 'Ayuda · Proveedores',
+    intro:
+      'Aquí gestionas los proveedores de la organización para asignar correctamente los gastos y preparar el Modelo 347.',
+    steps: [
+      'Crea un proveedor cuando tengas gastos recurrentes o relevantes con una empresa o profesional.',
+      'Introduce el nombre y el CIF: es imprescindible para que el Modelo 347 se genere correctamente.',
+      'Asigna una categoría por defecto si el proveedor suele facturar siempre el mismo tipo de gasto.',
+      'Completa los datos de contacto si te resultan útiles (email, teléfono), aunque no son obligatorios.',
+      'Al asignar un proveedor a un movimiento, la categoría por defecto puede aplicarse automáticamente.',
+      'Usa el estado activo/inactivo para mantener la lista ordenada sin perder histórico.',
+      'Antes de generar el Modelo 347, revisa que los CIF sean correctos y que los importes cuadren.',
+    ],
+    tips: [
+      'No es necesario crear un proveedor para gastos puntuales pequeños: prioriza los recurrentes.',
+      'Si cambia el nombre comercial pero se mantiene el CIF, actualiza el proveedor existente.',
+      'Un buen mantenimiento de proveedores simplifica mucho el Modelo 347.',
+    ],
+    keywords: ['proveedor', 'cif', 'modelo 347', 'categoría por defecto', 'gasto', 'empresa', 'profesional'],
+  },
+
+  '/dashboard/treballadors': {
+    title: 'Ayuda · Trabajadores',
+    intro:
+      'Aquí gestionas los trabajadores de la organización para asignar nóminas y otros gastos de personal.',
+    steps: [
+      'Crea un trabajador cuando tengas nóminas o pagos recurrentes de personal.',
+      'Introduce el nombre y el DNI para facilitar el control interno.',
+      'Asigna una categoría por defecto (normalmente nóminas) para agilizar la asignación.',
+      'Mantén el estado activo/inactivo actualizado cuando una persona entra o sale.',
+      'Al asignar un trabajador a un movimiento, revisa que la categoría aplicada sea coherente.',
+      'Usa esta pantalla como referencia interna; no sustituye a una herramienta de recursos humanos.',
+    ],
+    tips: [
+      'Si un trabajador ya no tiene movimientos nuevos, márcalo como inactivo en lugar de eliminarlo.',
+      'Centralizar las nóminas bajo trabajadores hace más legible el gasto de personal.',
+      'No mezcles trabajadores y proveedores: cada tipo de contacto cumple una función distinta.',
+    ],
+    keywords: ['trabajador', 'nómina', 'personal', 'dni', 'categoría por defecto', 'gasto'],
+  },
+
   '/dashboard/informes': {
     title: 'Ayuda · Informes',
     intro:
