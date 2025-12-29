@@ -79,8 +79,25 @@ export const HELP_CONTENT: Record<HelpRouteKey, HelpContent> = {
   },
   '/dashboard/informes': {
     title: 'Ajuda · Informes',
-    intro: 'Aquesta ajuda està pendent d\'emplenar.',
-    steps: [],
+    intro:
+      'Aquí generes els outputs per a la gestoria: Model 182, Model 347 i certificats de donació.',
+    steps: [
+      'Tria la secció adequada: Model 182 (donacions), Model 347 (tercers) o Certificats.',
+      'Selecciona l\'any fiscal abans de generar cap fitxer.',
+      'Model 182: revisa les alertes de donants amb dades incompletes (sobretot DNI/CIF i Codi Postal).',
+      'Model 182: corregeix les dades des de Donants i torna a aquesta pantalla per regenerar.',
+      'Model 182: genera l\'Excel i envia\'l a la gestoria.',
+      'Model 347: comprova que els proveïdors tinguin CIF correcte; només apareixeran els que superin el llindar anual.',
+      'Model 347: genera el CSV i envia\'l a la gestoria.',
+      'Certificats: genera un certificat individual quan un donant te\'l demani, o bé genera\'ls en lot si ho fas per campanya anual.',
+      'Si hi ha devolucions assignades a donants, aquestes resten automàticament del total net (important per 182 i certificats).',
+    ],
+    tips: [
+      'Abans de tancar l\'any, assegura\'t que les devolucions estan assignades al donant correcte: és la causa típica de totals incoherents.',
+      'Si un donant no té DNI o Codi Postal, pot bloquejar o embrutar el Model 182: prioritza completar aquests camps.',
+      'Per certificats massius, revisa primer 2 o 3 donants representatius (amb i sense devolucions) per validar que els imports quadren.',
+    ],
+    keywords: ['model 182', 'model 347', 'certificats', 'excel', 'csv', 'any', 'donacions', 'devolucions', 'gestoria'],
   },
   '/dashboard/configuracion': {
     title: 'Ajuda · Configuració',
