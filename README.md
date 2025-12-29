@@ -2,7 +2,7 @@
 
 ## Objectiu Principal
 
-L'objectiu de Summa Social és **simplificar i revolucionar la gestió financera i administrativa de petites i mitjanes organitzacions no governamentals (ONGs) i entitats socials**. L'aplicació busca substituir els complexos fulls de càlcul per una eina intuïtiva, intel·ligent i centralitzada, dissenyada específicament per a les necessitats úniques del sector social.
+L'objectiu de Summa Social és **simplificar i revolucionar la gestió financera i administrativa de petites i mitjanes entitats socials**. L'aplicació busca substituir els complexos fulls de càlcul per una eina intuïtiva, intel·ligent i centralitzada, dissenyada específicament per a les necessitats úniques del sector social.
 
 ## Públic Objectiu
 

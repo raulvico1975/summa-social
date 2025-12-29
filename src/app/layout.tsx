@@ -14,13 +14,13 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: 'Summa Social | Menys banc, remeses que quadren i Model 182/347 per a ONGs',
+  title: 'Summa Social | Menys banc, remeses que quadren i Model 182/347 per a entitats',
   description:
-    "Gestió econòmica i fiscal per a ONGs petites i mitjanes d'Espanya, amb conciliació bancària i exports per a la gestoria (Model 182 i 347).",
+    "Gestió econòmica i fiscal per a entitats petites i mitjanes d'Espanya, amb conciliació bancària i exports per a la gestoria (Model 182 i 347).",
   openGraph: {
-    title: 'Summa Social | Menys banc, remeses que quadren i Model 182/347 per a ONGs',
+    title: 'Summa Social | Menys banc, remeses que quadren i Model 182/347 per a entitats',
     description:
-      "Gestió econòmica i fiscal per a ONGs petites i mitjanes d'Espanya, amb conciliació bancària i exports per a la gestoria (Model 182 i 347).",
+      "Gestió econòmica i fiscal per a entitats petites i mitjanes d'Espanya, amb conciliació bancària i exports per a la gestoria (Model 182 i 347).",
     url: 'https://summasocial.org',
     siteName: 'Summa Social',
     locale: 'ca_ES',
@@ -28,9 +28,9 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: 'summary',
-    title: 'Summa Social | Menys banc, remeses que quadren i Model 182/347 per a ONGs',
+    title: 'Summa Social | Menys banc, remeses que quadren i Model 182/347 per a entitats',
     description:
-      "Gestió econòmica i fiscal per a ONGs petites i mitjanes d'Espanya, amb conciliació bancària i exports per a la gestoria (Model 182 i 347).",
+      "Gestió econòmica i fiscal per a entitats petites i mitjanes d'Espanya, amb conciliació bancària i exports per a la gestoria (Model 182 i 347).",
   },
   robots: {
     index: true,

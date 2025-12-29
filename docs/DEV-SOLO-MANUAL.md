@@ -30,7 +30,7 @@ No llegeixis tot. Consulta el que necessitis.
 
 - ❌ **NO és un ERP genèric** — No gestiona inventari, nòmines, facturació completa
 - ❌ **NO és un gestor de projectes** — El mòdul projectes és només per justificació econòmica
-- ❌ **NO és comptabilitat formal** — És pre-comptabilitat per ONGs petites
+- ❌ **NO és comptabilitat formal** — És pre-comptabilitat per entitats petites
 - ❌ **NO és multi-país** — Només Espanya (fiscalitat, formats bancaris)
 
 ### Stack tecnològic

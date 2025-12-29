@@ -485,7 +485,7 @@ Si sempre uses el mateix banc (Triodos, Santander, La Caixa...):
 
 ### 5.1 Què és una devolució?
 
-Una devolució és un rebut que el banc no ha pogut cobrar i retorna a l'ONG. Motius habituals:
+Una devolució és un rebut que el banc no ha pogut cobrar i retorna a l'entitat. Motius habituals:
 - Compte sense fons suficients
 - IBAN erroni o inexistent
 - Compte tancat
@@ -1371,4 +1371,4 @@ Si tens dubtes que no estan resolts en aquest manual:
 
 **Fi del Manual d'Usuari**
 
-*Manual creat per Summa Social - Gestió financera per a ONGs*
+*Manual creat per Summa Social - Gestió financera per a entitats*

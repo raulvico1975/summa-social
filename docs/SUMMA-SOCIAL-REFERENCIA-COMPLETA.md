@@ -46,11 +46,11 @@ Defineix:
 
 ## 1.1 Què és Summa Social?
 
-Summa Social és una aplicació web de gestió financera dissenyada específicament per a petites i mitjanes ONGs i entitats sense ànim de lucre d'Espanya. L'aplicació substitueix els fulls de càlcul (Excel/Google Sheets) per una eina intel·ligent i centralitzada.
+Summa Social és una aplicació web de gestió financera dissenyada específicament per a petites i mitjanes entitats sense ànim de lucre d'Espanya. L'aplicació substitueix els fulls de càlcul (Excel/Google Sheets) per una eina intel·ligent i centralitzada.
 
 ## 1.2 Problema que Resol
 
-Les ONGs espanyoles gestionen les seves finances amb fulls de càlcul, cosa que provoca:
+Les entitats espanyoles gestionen les seves finances amb fulls de càlcul, cosa que provoca:
 - Errors humans en la categorització de moviments
 - Dificultat per generar informes fiscals obligatoris (Model 182, Model 347)
 - Impossibilitat de tenir una visió consolidada de les finances
@@ -103,7 +103,7 @@ Eina centralitzada amb:
 ## 1.6 Sobre l'Usuari Desenvolupador
 
 - **Nom**: Raul
-- **Perfil**: NO programador - Assessor d'ONGs que porta els comptes de diverses entitats
+- **Perfil**: NO programador - Assessor d'entitats que porta els comptes de diverses organitzacions
 - **Entorn**: VS Code + Claude Code
 - **Necessitats**: Codi COMPLET (mai fragments), passos verificables, respostes en CATALÀ
 
@@ -2672,7 +2672,7 @@ Indicadors que requeririen intervenció:
 
 | Funcionalitat Exclosa | Motiu |
 |-----------------------|-------|
-| **Generació de fitxers BOE** | Les ONGs deleguen a gestories |
+| **Generació de fitxers BOE** | Les entitats deleguen a gestories |
 | **Presentació telemàtica AEAT** | Complexitat legal elevada |
 | **Integració directa APIs bancàries** | Requereix certificacions |
 | **Comptabilitat doble entrada** | NO és programa de comptabilitat |
@@ -2720,7 +2720,7 @@ Indicadors que requeririen intervenció:
 
 | Sí | No |
 |----|----|
-| ONGs petites i mitjanes d'Espanya | Grans ONGs amb ERP propi |
+| Entitats petites i mitjanes d'Espanya | Grans entitats amb ERP propi |
 | Entitats sense ànim de lucre | Empreses amb ànim de lucre |
 | Fundacions petites | Administracions públiques |
 | Associacions culturals, socials | Entitats fora d'Espanya |
@@ -2732,7 +2732,7 @@ Indicadors que requeririen intervenció:
 > Summa Social resol **molt bé** uns problemes concrets (conciliació + fiscalitat) en lloc de resoldre **regular** molts problemes diferents.
 >
 > Cada funcionalitat nova ha de passar el filtre:
-> - Redueix errors a l'ONG? ✅
+> - Redueix errors a l'entitat? ✅
 > - Estalvia temps real? ✅
 > - És mantenible per una sola persona? ✅
 > - Contribueix als objectius estratègics? ✅
@@ -2839,7 +2839,7 @@ if (matchingTx) {
 | "Determinista" | Regla fixa, mateix resultat | IA autònoma |
 | "Auto-assignació" | Matching + categoria defecte | IA sense supervisió |
 | "Remesa" | Agrupació quotes socis O devolucions | Qualsevol ingrés |
-| "Gestoria" | Professional extern | L'ONG mateixa |
+| "Gestoria" | Professional extern | L'entitat mateixa |
 | "Matching exacte" | IBAN/DNI/Nom idèntic | Fuzzy, aproximat |
 | "Remesa parcial" | Algunes devolucions pendents | Remesa incompleta per error |
 | "Payout Stripe" | Liquidació de Stripe al banc (po_xxx) | Donació individual |
@@ -3105,13 +3105,13 @@ function normalizedName(name: string): string {
 
 ## CONTEXT
 
-Summa Social és una aplicació de gestió financera per ONGs espanyoles.
+Summa Social és una aplicació de gestió financera per entitats espanyoles.
 Gestiona moviments bancaris, donants, proveïdors i fiscalitat (Model 182, 347, certificats).
 El mòdul de devolucions resol el problema de rebuts retornats pel banc sense identificar.
 
 ## CONCEPTES CLAU
 
-- DEVOLUCIÓ = Rebut que el banc no ha pogut cobrar i retorna a l'ONG
+- DEVOLUCIÓ = Rebut que el banc no ha pogut cobrar i retorna a l'entitat
 - REMESA = Agrupació de múltiples moviments en un sol apunt bancari
 - REMESA PARCIAL = Remesa amb algunes devolucions pendents d'identificar
 - MATCHING = Assignació de contacte per coincidència exacta (IBAN/DNI/Nom)

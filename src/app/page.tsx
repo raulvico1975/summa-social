@@ -78,7 +78,7 @@ export default function LandingPage() {
 
               {/* Frase canònica */}
               <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-                Gestió econòmica i fiscal per a ONGs petites i mitjanes d&apos;Espanya,
+                Gestió econòmica i fiscal per a entitats petites i mitjanes d&apos;Espanya,
                 amb conciliació bancària i exports per a la gestoria (Model 182 i 347).
               </p>
 

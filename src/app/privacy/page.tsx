@@ -48,11 +48,11 @@ export default function PrivacyPage() {
             <section className="mb-8">
               <h2 className="text-xl font-semibold mb-4">1. Qui som</h2>
               <p className="text-muted-foreground mb-4">
-                <strong className="text-foreground">Summa Social</strong> és una aplicació de gestió financera per a ONGs i entitats socials, desenvolupada i mantinguda per Raül Vico, que actua com a responsable del tractament de les dades dels usuaris de l&apos;aplicació.
+                <strong className="text-foreground">Summa Social</strong> és una aplicació de gestió financera per a entitats socials, desenvolupada i mantinguda per Raül Vico, que actua com a responsable del tractament de les dades dels usuaris de l&apos;aplicació.
               </p>
               <ul className="list-disc list-inside text-muted-foreground space-y-2">
                 <li><strong className="text-foreground">Responsable del tractament</strong> (per a dades d&apos;usuaris de l&apos;aplicació): Summa Social / Raül Vico</li>
-                <li><strong className="text-foreground">Encarregat del tractament</strong> (per a dades de les ONGs clients): Summa Social actua per compte de cada ONG, que és la responsable de les dades dels seus donants, socis, proveïdors i treballadors.</li>
+                <li><strong className="text-foreground">Encarregat del tractament</strong> (per a dades de les entitats clients): Summa Social actua per compte de cada entitat, que és la responsable de les dades dels seus donants, socis, proveïdors i treballadors.</li>
               </ul>
             </section>
 
@@ -83,8 +83,8 @@ export default function PrivacyPage() {
                 Les credencials d&apos;accés (contrasenyes) són gestionades per Firebase Authentication i no són accessibles per Summa Social.
               </p>
 
-              <h3 className="text-lg font-medium mb-3">2.2 Dades de les ONGs (Summa Social és encarregat)</h3>
-              <p className="text-muted-foreground mb-3">Summa Social tracta les següents dades per compte de les ONGs clients:</p>
+              <h3 className="text-lg font-medium mb-3">2.2 Dades de les entitats (Summa Social és encarregat)</h3>
+              <p className="text-muted-foreground mb-3">Summa Social tracta les següents dades per compte de les entitats clients:</p>
               <ul className="list-disc list-inside text-muted-foreground space-y-1 mb-4">
                 <li><strong className="text-foreground">Donants i socis</strong>: nom, NIF, IBAN, adreça, email, telèfon</li>
                 <li><strong className="text-foreground">Proveïdors</strong>: nom, NIF, dades de contacte</li>
@@ -92,7 +92,7 @@ export default function PrivacyPage() {
                 <li><strong className="text-foreground">Moviments bancaris</strong>: data, import, concepte, categoria</li>
               </ul>
               <p className="text-muted-foreground text-sm mb-2">
-                La base legal i el deure d&apos;informar els interessats (donants, socis, etc.) correspon a cada ONG com a responsable del tractament.
+                La base legal i el deure d&apos;informar els interessats (donants, socis, etc.) correspon a cada entitat com a responsable del tractament.
               </p>
               <p className="text-muted-foreground text-sm font-medium">
                 Summa Social no tracta dades de categories especials segons l&apos;Art. 9 del RGPD.
@@ -114,7 +114,7 @@ export default function PrivacyPage() {
                   </thead>
                   <tbody className="text-muted-foreground">
                     <tr className="border-b"><td className="py-2 pr-4">Usuaris de l&apos;aplicació</td><td className="py-2">Execució del contracte de servei (Art. 6.1.b RGPD)</td></tr>
-                    <tr><td className="py-2 pr-4">Dades de les ONGs</td><td className="py-2">Segons instruccions del responsable (ONG)</td></tr>
+                    <tr><td className="py-2 pr-4">Dades de les entitats</td><td className="py-2">Segons instruccions del responsable (entitat)</td></tr>
                   </tbody>
                 </table>
               </div>
@@ -147,12 +147,12 @@ export default function PrivacyPage() {
               </div>
 
               <h3 className="text-lg font-medium mb-3">4.2 Cessions per obligació legal</h3>
-              <p className="text-muted-foreground mb-2">Les ONGs clients poden cedir dades a:</p>
+              <p className="text-muted-foreground mb-2">Les entitats clients poden cedir dades a:</p>
               <ul className="list-disc list-inside text-muted-foreground space-y-1 mb-2">
                 <li><strong className="text-foreground">Agència Tributària</strong>: Model 182 (donatius), Model 347 (operacions amb tercers)</li>
                 <li><strong className="text-foreground">Entitats bancàries</strong>: Gestió de remeses i rebuts</li>
               </ul>
-              <p className="text-muted-foreground text-sm">Aquestes cessions són responsabilitat de cada ONG.</p>
+              <p className="text-muted-foreground text-sm">Aquestes cessions són responsabilitat de cada entitat.</p>
             </section>
 
             <hr className="my-6" />
@@ -170,8 +170,8 @@ export default function PrivacyPage() {
                   </thead>
                   <tbody className="text-muted-foreground">
                     <tr className="border-b"><td className="py-2 pr-4">Usuaris de l&apos;aplicació</td><td className="py-2">Mentre el compte estigui actiu + 12 mesos</td></tr>
-                    <tr className="border-b"><td className="py-2 pr-4">Dades fiscals (ONGs)</td><td className="py-2">Mínim 6 anys (obligacions mercantils i comptables)</td></tr>
-                    <tr><td className="py-2 pr-4">Altres dades de contactes</td><td className="py-2">Segons política del responsable (ONG)</td></tr>
+                    <tr className="border-b"><td className="py-2 pr-4">Dades fiscals (entitats)</td><td className="py-2">Mínim 6 anys (obligacions mercantils i comptables)</td></tr>
+                    <tr><td className="py-2 pr-4">Altres dades de contactes</td><td className="py-2">Segons política del responsable (entitat)</td></tr>
                   </tbody>
                 </table>
               </div>
@@ -198,7 +198,7 @@ export default function PrivacyPage() {
               <h3 className="text-lg font-medium mb-3">Com exercir els teus drets</h3>
               <ul className="list-disc list-inside text-muted-foreground space-y-1 mb-4">
                 <li><strong className="text-foreground">Usuaris de l&apos;aplicació</strong>: Escriu a <a href="mailto:privacy@summasocial.app" className="text-primary hover:underline">privacy@summasocial.app</a></li>
-                <li><strong className="text-foreground">Donants, socis o altres interessats d&apos;una ONG</strong>: Contacta directament amb l&apos;ONG corresponent. Summa Social assistirà l&apos;ONG en la gestió de la teva sol·licitud.</li>
+                <li><strong className="text-foreground">Donants, socis o altres interessats d&apos;una entitat</strong>: Contacta directament amb l&apos;entitat corresponent. Summa Social assistirà l&apos;entitat en la gestió de la teva sol·licitud.</li>
               </ul>
               <p className="text-muted-foreground text-sm mb-4">
                 Termini de resposta: 1 mes (ampliable a 2 en casos complexos).

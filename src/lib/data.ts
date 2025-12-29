@@ -368,7 +368,7 @@ export type OrganizationFeatures = {
 };
 
 /**
- * Representa una organització (ONG/entitat social).
+ * Representa una organització (entitat social).
  * S'emmagatzema a: organizations/{orgId}
  */
 export type Organization = {

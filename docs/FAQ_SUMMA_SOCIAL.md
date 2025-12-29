@@ -777,7 +777,7 @@ El més pràctic és crear una categoria específica anomenada "Transferències 
 
 ### 37. Què són les "transferències a contraparts" que veig al Dashboard?
 
-**Les contraparts són organitzacions sòcies** amb qui treballeu conjuntament en projectes de cooperació. És un terme molt usat al món de les ONG.
+**Les contraparts són organitzacions sòcies** amb qui treballeu conjuntament en projectes de cooperació. És un terme molt usat al món de les entitats de cooperació.
 
 **Exemple pràctic:**
 Si la vostra entitat té un projecte a Guatemala i envieu diners a una organització local perquè executi activitats allà, aquests diners són una "transferència a contrapart".
