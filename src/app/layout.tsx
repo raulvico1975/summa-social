@@ -14,23 +14,23 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: 'Summa Social | Menys banc, remeses que quadren i Model 182/347 per a entitats',
+  title: 'Summa Social | Gestió econòmica i fiscal per a entitats',
   description:
-    "Gestió econòmica i fiscal per a entitats petites i mitjanes d'Espanya, amb conciliació bancària i exports per a la gestoria (Model 182 i 347).",
+    'Gestió econòmica, fiscal i de projectes per a entitats del Tercer Sector Social.',
   openGraph: {
-    title: 'Summa Social | Menys banc, remeses que quadren i Model 182/347 per a entitats',
+    title: 'Summa Social | Gestió econòmica i fiscal per a entitats',
     description:
-      "Gestió econòmica i fiscal per a entitats petites i mitjanes d'Espanya, amb conciliació bancària i exports per a la gestoria (Model 182 i 347).",
-    url: 'https://summasocial.org',
+      'Gestió econòmica, fiscal i de projectes per a entitats del Tercer Sector Social.',
+    url: 'https://summasocial.app',
     siteName: 'Summa Social',
     locale: 'ca_ES',
     type: 'website',
   },
   twitter: {
     card: 'summary',
-    title: 'Summa Social | Menys banc, remeses que quadren i Model 182/347 per a entitats',
+    title: 'Summa Social | Gestió econòmica i fiscal per a entitats',
     description:
-      "Gestió econòmica i fiscal per a entitats petites i mitjanes d'Espanya, amb conciliació bancària i exports per a la gestoria (Model 182 i 347).",
+      'Gestió econòmica, fiscal i de projectes per a entitats del Tercer Sector Social.',
   },
   robots: {
     index: true,
