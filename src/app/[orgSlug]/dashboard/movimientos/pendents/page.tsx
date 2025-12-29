@@ -59,8 +59,9 @@ import {
 import { SepaGenerationModal } from '@/components/pending-documents/sepa-generation-modal';
 import { ReconciliationModal } from '@/components/pending-documents/reconciliation-modal';
 
-// Filtre per defecte: mostrar tots els no-arxivats
-const DEFAULT_STATUS_FILTER: PendingDocumentStatus[] = ['draft', 'confirmed', 'sepa_generated'];
+// Filtres per pestanyes (exclusius)
+const DRAFTS_FILTER: PendingDocumentStatus[] = ['draft'];
+const PENDING_FILTER: PendingDocumentStatus[] = ['confirmed', 'sepa_generated'];
 
 export default function PendingDocsPage() {
   const { organization, organizationId, userRole } = useCurrentOrganization();
@@ -74,8 +75,8 @@ export default function PendingDocsPage() {
   // Només admins poden operar (generar SEPA, conciliar, etc.)
   const canOperate = userRole === 'admin';
 
-  // Estat del filtre
-  const [statusFilter, setStatusFilter] = React.useState<PendingDocumentStatus[] | 'all' | 'matched' | 'archived'>(DEFAULT_STATUS_FILTER);
+  // Estat del filtre (per defecte: Per revisar = drafts)
+  const [statusFilter, setStatusFilter] = React.useState<PendingDocumentStatus[] | 'all' | 'matched' | 'archived'>(DRAFTS_FILTER);
 
   // Modal d'upload
   const [isUploadModalOpen, setIsUploadModalOpen] = React.useState(false);
@@ -309,8 +310,8 @@ export default function PendingDocsPage() {
   const handleUploadComplete = (count: number) => {
     // Scroll a dalt per veure els nous documents
     topRef.current?.scrollIntoView({ behavior: 'smooth' });
-    // Assegurar que estem mostrant els pendents (inclou drafts)
-    setStatusFilter(DEFAULT_STATUS_FILTER);
+    // Anar a "Per revisar" per veure els nous drafts
+    setStatusFilter(DRAFTS_FILTER);
   };
 
   // Aplicar filtres client-side
@@ -439,7 +440,8 @@ export default function PendingDocsPage() {
                     Generar remesa SEPA ({selectedDocs.length})
                   </Button>
                 )}
-                {readyDrafts.length > 0 && selectedDocs.length === 0 && (
+                {/* Botó "Confirmar totes" només a la pestanya "Per revisar" */}
+                {isFilterActive(DRAFTS_FILTER) && readyDrafts.length > 0 && selectedDocs.length === 0 && (
                   <Button
                     variant="outline"
                     onClick={handleBulkConfirm}
@@ -462,40 +464,53 @@ export default function PendingDocsPage() {
           </div>
         </div>
 
-        {/* Banner informatiu "pre-banc" */}
-        <Alert className="border-orange-200 bg-orange-50">
-          <Info className="h-4 w-4 text-orange-600" />
-          <AlertTitle className="text-orange-800">
-            Aquests documents encara no són moviments
-          </AlertTitle>
-          <AlertDescription className="text-orange-700">
-            <span>
-              Els documents pujats aquí es conciliaran automàticament quan arribi l'extracte bancari amb el moviment corresponent.
-            </span>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <button className="ml-1 underline underline-offset-2 text-orange-800">
-                  Més informació
-                </button>
-              </TooltipTrigger>
-              <TooltipContent className="max-w-sm">
-                <p className="text-sm">
-                  Puja factures o nòmines que encara no han aparegut al banc.
-                  Quan importis l'extracte bancari, el sistema suggerirà automàticament
-                  quins documents corresponen a cada moviment. Fins aleshores,
-                  aquests documents no afecten saldos, projectes ni fiscalitat.
-                </p>
-              </TooltipContent>
-            </Tooltip>
-          </AlertDescription>
-        </Alert>
+        {/* Banner informatiu segons la pestanya activa */}
+        {isFilterActive(DRAFTS_FILTER) && (
+          <Alert className="border-orange-200 bg-orange-50">
+            <Info className="h-4 w-4 text-orange-600" />
+            <AlertTitle className="text-orange-800">
+              Aquests documents encara no són moviments
+            </AlertTitle>
+            <AlertDescription className="text-orange-700">
+              <span>
+                Revisa les dades extretes (import, data, proveïdor) i confirma cada document.
+                Un cop confirmat, passarà a «Pendents de banc» fins que arribi l'extracte.
+              </span>
+            </AlertDescription>
+          </Alert>
+        )}
 
-        {/* Tabs de filtre */}
+        {isFilterActive(PENDING_FILTER) && (
+          <Alert className="border-blue-200 bg-blue-50">
+            <Info className="h-4 w-4 text-blue-600" />
+            <AlertTitle className="text-blue-800">
+              Següent pas: importar l'extracte bancari
+            </AlertTitle>
+            <AlertDescription className="text-blue-700">
+              <span>
+                Aquests documents estan confirmats i esperant el moviment bancari corresponent.
+                Quan importis l'extracte, el sistema suggerirà quins documents corresponen a cada moviment.
+              </span>
+              <Button
+                variant="link"
+                size="sm"
+                asChild
+                className="ml-2 h-auto p-0 text-blue-800 underline underline-offset-2"
+              >
+                <Link href="../movimientos">
+                  Anar a Moviments per importar extracte →
+                </Link>
+              </Button>
+            </AlertDescription>
+          </Alert>
+        )}
+
+        {/* Tabs de filtre (exclusius) */}
         <div className="flex items-center gap-2 border-b pb-2">
           <Button
-            variant={isFilterActive(['draft']) ? 'secondary' : 'ghost'}
+            variant={isFilterActive(DRAFTS_FILTER) ? 'secondary' : 'ghost'}
             size="sm"
-            onClick={() => setStatusFilter(['draft'])}
+            onClick={() => setStatusFilter(DRAFTS_FILTER)}
           >
             Per revisar
             {drafts.length > 0 && (
@@ -503,25 +518,11 @@ export default function PendingDocsPage() {
             )}
           </Button>
           <Button
-            variant={isFilterActive(DEFAULT_STATUS_FILTER) ? 'secondary' : 'ghost'}
+            variant={isFilterActive(PENDING_FILTER) ? 'secondary' : 'ghost'}
             size="sm"
-            onClick={() => setStatusFilter(DEFAULT_STATUS_FILTER)}
+            onClick={() => setStatusFilter(PENDING_FILTER)}
           >
-            Pendents
-          </Button>
-          <Button
-            variant={isFilterActive(['confirmed']) ? 'secondary' : 'ghost'}
-            size="sm"
-            onClick={() => setStatusFilter(['confirmed'])}
-          >
-            Confirmat
-          </Button>
-          <Button
-            variant={isFilterActive(['sepa_generated']) ? 'secondary' : 'ghost'}
-            size="sm"
-            onClick={() => setStatusFilter(['sepa_generated'])}
-          >
-            SEPA generat
+            Pendents de banc
           </Button>
           <Button
             variant={isFilterActive('matched') ? 'secondary' : 'ghost'}
