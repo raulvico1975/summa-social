@@ -33,6 +33,9 @@ export default function LandingPage() {
               </Link>
             </Button>
             <Button asChild variant="outline" size="lg">
+              <Link href="/funcionalitats">Funcionalitats</Link>
+            </Button>
+            <Button asChild variant="outline" size="lg">
               <Link href="/contacte">Contacte</Link>
             </Button>
           </div>
