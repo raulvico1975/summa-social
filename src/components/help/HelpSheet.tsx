@@ -25,6 +25,7 @@ import { HELP_CONTENT_CA, HELP_FALLBACK_CA } from '@/help/ca/help-content';
 import { HELP_CONTENT_ES } from '@/help/es/help-content';
 import { HELP_CONTENT_FR } from '@/help/fr/help-content';
 import { getManualAnchorForRoute } from '@/help/help-manual-links';
+import { trackUX } from '@/lib/ux/trackUX';
 
 const HELP_FEEDBACK_EMAIL = 'ajuda@summasocial.app';
 
@@ -157,6 +158,11 @@ export function HelpSheet() {
   const [query, setQuery] = React.useState('');
   const [open, setOpen] = React.useState(false);
 
+  // Ref to track how the sheet was opened
+  const openSourceRef = React.useRef<'button' | 'deeplink'>('button');
+  // Ref for search debounce timer
+  const searchDebounceRef = React.useRef<NodeJS.Timeout | null>(null);
+
   const orgSlug = getOrgSlug(pathname);
   const routeKey = normalizePathname(pathname);
   const helpContent = getHelpContent(routeKey, language);
@@ -181,9 +187,21 @@ export function HelpSheet() {
     return `mailto:${HELP_FEEDBACK_EMAIL}?subject=${subject}&body=${body}`;
   }, [routeKey, query]);
 
+  // Track help.open when sheet opens
+  React.useEffect(() => {
+    if (open) {
+      trackUX('help.open', {
+        routeKey,
+        locale: language,
+        source: openSourceRef.current,
+      });
+    }
+  }, [open, routeKey, language]);
+
   // Auto-open if ?help=1
   React.useEffect(() => {
     if (searchParams.get('help') === '1') {
+      openSourceRef.current = 'deeplink';
       setOpen(true);
     }
   }, [searchParams]);
@@ -200,6 +218,8 @@ export function HelpSheet() {
     currentUrl.searchParams.set('help', '1');
     const helpUrl = currentUrl.toString();
 
+    trackUX('help.copyLink', { routeKey, locale: language });
+
     try {
       await navigator.clipboard.writeText(helpUrl);
       toast({
@@ -215,6 +235,55 @@ export function HelpSheet() {
     }
   };
 
+  // Handle sheet open/close with tracking
+  const handleOpenChange = (newOpen: boolean) => {
+    if (newOpen) {
+      openSourceRef.current = 'button';
+    }
+    setOpen(newOpen);
+  };
+
+  // Handle manual link click
+  const handleManualClick = () => {
+    trackUX('help.manual.click', {
+      routeKey,
+      locale: language,
+      anchor: manualAnchor || null,
+    });
+  };
+
+  // Handle feedback link click
+  const handleFeedbackClick = () => {
+    trackUX('help.feedback.click', { routeKey, locale: language });
+  };
+
+  // Handle search with debounce
+  const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const newQuery = e.target.value;
+    setQuery(newQuery);
+
+    // Clear previous timer
+    if (searchDebounceRef.current) {
+      clearTimeout(searchDebounceRef.current);
+    }
+
+    // Only track if query is meaningful (>= 2 chars)
+    if (newQuery.trim().length >= 2) {
+      searchDebounceRef.current = setTimeout(() => {
+        const steps = filterByQuery(helpContent.steps, newQuery);
+        const tips = filterByQuery(helpContent.tips, newQuery);
+        trackUX('help.search', {
+          routeKey,
+          locale: language,
+          queryLen: newQuery.trim().length,
+          hasResults: steps.length > 0 || tips.length > 0,
+          matchesSteps: steps.length,
+          matchesTips: tips.length,
+        });
+      }, 500);
+    }
+  };
+
   const filteredSteps = filterByQuery(helpContent.steps, query);
   const filteredTips = filterByQuery(helpContent.tips, query);
 
@@ -223,7 +292,7 @@ export function HelpSheet() {
   const showNoResults = hasQuery && !hasResults;
 
   return (
-    <Sheet open={open} onOpenChange={setOpen}>
+    <Sheet open={open} onOpenChange={handleOpenChange}>
       <Tooltip>
         <TooltipTrigger asChild>
           <SheetTrigger asChild>
@@ -250,7 +319,7 @@ export function HelpSheet() {
         {/* Action buttons */}
         <div className="mt-4 flex gap-2">
           <Button variant="outline" size="sm" asChild>
-            <Link href={manualUrl}>
+            <Link href={manualUrl} onClick={handleManualClick}>
               <BookOpen className="h-4 w-4 mr-2" />
               {ui.viewManual}
             </Link>
@@ -266,7 +335,7 @@ export function HelpSheet() {
             type="text"
             placeholder={ui.searchPlaceholder}
             value={query}
-            onChange={(e) => setQuery(e.target.value)}
+            onChange={handleSearchChange}
             className="w-full"
           />
         </div>
@@ -316,7 +385,7 @@ export function HelpSheet() {
         {/* Feedback link */}
         <div className="mt-6 pt-4 border-t">
           <Button variant="ghost" size="sm" asChild className="text-muted-foreground">
-            <a href={feedbackMailto} rel="noreferrer">
+            <a href={feedbackMailto} rel="noreferrer" onClick={handleFeedbackClick}>
               <MessageSquare className="h-4 w-4 mr-2" />
               {ui.suggest}
             </a>
