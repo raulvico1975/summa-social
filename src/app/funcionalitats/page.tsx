@@ -49,7 +49,7 @@ export default function FuncionalitatsPage() {
 
           <div className="space-y-12">
             {/* 1. Conciliació Bancària Automàtica */}
-            <article>
+            <article id="conciliacio-bancaria">
               <h3 className="text-xl font-semibold mb-3">1. Conciliació Bancària Automàtica</h3>
               <p className="text-muted-foreground mb-4">
                 Importes l&apos;extracte del banc i Summa Social trova automàticament els moviments
@@ -81,7 +81,7 @@ export default function FuncionalitatsPage() {
             </article>
 
             {/* 3. Divisor de Remeses IN (Quotes de Socis) */}
-            <article>
+            <article id="remeses-devolucions">
               <h3 className="text-xl font-semibold mb-3">
                 3. Divisor de Remeses IN (Quotes de Socis)
               </h3>
@@ -98,7 +98,7 @@ export default function FuncionalitatsPage() {
             </article>
 
             {/* 4. Gestor de Despeses i Nòmines amb Generador de Remeses SEPA */}
-            <article>
+            <article id="despeses-pagaments-sepa">
               <h3 className="text-xl font-semibold mb-3">
                 4. Gestor de Despeses i Nòmines amb Generador de Remeses SEPA
               </h3>
@@ -107,7 +107,7 @@ export default function FuncionalitatsPage() {
                 s&apos;extreuen automàticament (IA) i genera una remesa de pagaments per pujar al
                 banc.
               </p>
-              <p className="text-muted-foreground mb-4">
+              <p id="tiquets-liquidacions" className="text-muted-foreground mb-4">
                 <strong className="text-foreground">Novetat:</strong> captura de tiquets, viatges i
                 quilometratge amb liquidacions automàtiques en PDF.
               </p>
@@ -123,7 +123,7 @@ export default function FuncionalitatsPage() {
             </article>
 
             {/* 5. Gestió Fiscal Automatitzada (Model 182 i 347) */}
-            <article>
+            <article id="fiscalitat-certificats">
               <h3 className="text-xl font-semibold mb-3">
                 5. Gestió Fiscal Automatitzada (Model 182 i 347)
               </h3>
@@ -202,7 +202,7 @@ export default function FuncionalitatsPage() {
             </article>
 
             {/* 11. Integració Stripe per Donacions Online */}
-            <article>
+            <article id="donacions-online">
               <h3 className="text-xl font-semibold mb-3">
                 11. Integració Stripe per Donacions Online
               </h3>
@@ -215,7 +215,7 @@ export default function FuncionalitatsPage() {
             </article>
 
             {/* 12. Mòdul de Projectes i Subvencions */}
-            <article>
+            <article id="modul-projectes">
               <h3 className="text-xl font-semibold mb-3">12. Mòdul de Projectes i Subvencions</h3>
               <ul className="list-disc list-inside text-muted-foreground space-y-1">
                 <li>Execució vs pressupostat</li>
