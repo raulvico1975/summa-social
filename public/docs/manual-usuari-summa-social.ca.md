@@ -38,7 +38,7 @@ Endavant!
 
 ---
 
-# 1. Primers Passos
+# 1. Primers Passos [id:1-primers-passos]
 
 **Aquesta secció t'ajudarà a...**
 
@@ -111,7 +111,7 @@ A la part esquerra de la pantalla tens el **menú de navegació**. Aquí tens un
 
 ---
 
-## 1.4 Entendre el Dashboard
+## 1.4 Entendre el Dashboard [id:14-entendre-el-dashboard]
 
 El Dashboard és la primera pantalla que veus en entrar. Pensa-hi com el **tauler de control** de les finances de l'entitat.
 
@@ -187,7 +187,7 @@ El color t'indica la urgència: 🟢 Tens temps · 🟡 Prepara-ho · 🔴 Urgen
 
 ---
 
-# 2. Configuració Inicial
+# 2. Configuració Inicial [id:2-configuracio-inicial]
 
 **Aquesta secció t'ajudarà a...**
 
@@ -350,7 +350,7 @@ La persona rebrà un email amb instruccions.
 
 ---
 
-# 3. Gestió de Donants
+# 3. Gestió de Donants [id:3-gestio-de-donants]
 
 **Aquesta secció t'ajudarà a...**
 
@@ -496,7 +496,7 @@ Si necessites les dades fora de Summa Social:
 
 ---
 
-# 4. Gestió de Proveïdors i Treballadors
+# 4. Gestió de Proveïdors i Treballadors [id:4-gestio-de-proveidors-i-treballadors]
 
 **Aquesta secció t'ajudarà a...**
 
@@ -532,7 +532,7 @@ Registra el personal contractat per tenir controlats els pagaments de nòmina.
 
 ---
 
-# 5. Gestió de Moviments
+# 5. Gestió de Moviments [id:5-gestio-de-moviments]
 
 **Aquesta secció t'ajudarà a...**
 
@@ -683,7 +683,7 @@ Clicant "Revisar" es filtren automàticament. Més detalls a la secció 7.
 
 ---
 
-# 6. Divisor de Remeses
+# 6. Divisor de Remeses [id:6-divisor-de-remeses]
 
 **Aquesta secció t'ajudarà a...**
 
@@ -821,7 +821,7 @@ Si has processat una remesa incorrectament:
 
 ---
 
-# 6b. Documents Pendents i Remeses SEPA OUT
+# 6b. Documents Pendents i Remeses SEPA OUT [id:6b-documents-pendents]
 
 **Aquesta secció t'ajudarà a...**
 
@@ -962,7 +962,7 @@ Si decideixes no pagar un document, pots arxivar-lo per treure'l de circulació 
 
 ---
 
-# 7. Gestió de Devolucions Bancàries
+# 7. Gestió de Devolucions Bancàries [id:7-gestio-de-devolucions]
 
 **Aquesta secció t'ajudarà a...**
 
@@ -1085,7 +1085,7 @@ Si el total és ≤ 0, el donant **no apareix** al Model 182.
 
 ---
 
-# 8. Donacions via Stripe
+# 8. Donacions via Stripe [id:8-donacions-via-stripe]
 
 **Aquesta secció t'ajudarà a...**
 
@@ -1173,7 +1173,7 @@ Clica **"Importar donacions"**. Es creen:
 
 ---
 
-# 9. Informes Fiscals
+# 9. Informes Fiscals [id:9-informes-fiscals]
 
 **Aquesta secció t'ajudarà a...**
 
@@ -1254,7 +1254,7 @@ Declaració d'operacions amb tercers que superen **3.005,06€ anuals**.
 
 ---
 
-# 10. Projectes i Justificació de Subvencions
+# 10. Projectes i Justificació de Subvencions [id:10-projectes]
 
 **Aquesta secció t'ajudarà a...**
 
@@ -1264,7 +1264,7 @@ Si la teva entitat no treballa amb subvencions ni necessita control per projecte
 
 ---
 
-## 10.1 Eixos d'actuació (ús bàsic)
+## 10.1 Eixos d'actuació (ús bàsic) [id:8-projectes-eixos-dactuacio]
 
 ### Quan usar-los
 
@@ -1285,7 +1285,7 @@ Edita un moviment → Columna "Projecte" → Selecciona
 
 ---
 
-## 10.2 Mòdul de Projectes (avançat)
+## 10.2 Mòdul de Projectes (avançat) [id:6-gestio-de-projectes]
 
 Per a qui justifica subvencions (ACCD, Fons Català, Ajuntaments...).
 
@@ -1295,7 +1295,7 @@ Al menú lateral, **Projectes** té un submenú:
 - Gestió de projectes
 - Assignació de despeses
 
-### Pantalla de Gestió Econòmica
+### Pantalla de Gestió Econòmica [id:6-assignacio-de-despeses]
 
 | Targeta | Descripció |
 |---------|------------|
@@ -1352,7 +1352,7 @@ A la pantalla d'assignació de despeses, pots arrossegar fitxers directament sob
 
 ---
 
-# 11. Zona de Perill
+# 11. Zona de Perill [id:11-zona-de-perill]
 
 **Aquesta secció t'ajudarà a...**
 
@@ -1393,7 +1393,7 @@ Pensa-hi com el "reset" definitiu. Usa-ho amb precaució.
 
 ---
 
-# 12. Resolució de Problemes
+# 12. Resolució de Problemes [id:12-resolucio-de-problemes]
 
 **Aquesta secció t'ajudarà a...**
 
@@ -1453,7 +1453,7 @@ Trobar respostes ràpides als problemes més comuns. Si et trobes encallat, mira
 
 ---
 
-# 13. Glossari
+# 13. Glossari [id:13-glossari]
 
 | Terme | Definició |
 |-------|-----------|

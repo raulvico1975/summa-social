@@ -436,7 +436,7 @@ export const HELP_CONTENT_FR: Partial<Record<HelpRouteKey, HelpContent>> = {
       },
       manual: {
         label: 'Manuel utilisateur · Rapports fiscaux',
-        href: '/dashboard/manual#7-informes-fiscals',
+        href: '/dashboard/manual#9-informes-fiscals',
       },
       video: {
         label: 'Vidéo (bientôt)',

@@ -433,7 +433,7 @@ export const HELP_CONTENT_CA: Record<HelpRouteKey, HelpContent> = {
       },
       manual: {
         label: 'Manual d\'usuari · Informes Fiscals',
-        href: '/dashboard/manual#7-informes-fiscals',
+        href: '/dashboard/manual#9-informes-fiscals',
       },
       video: {
         label: 'Vídeo (properament)',
