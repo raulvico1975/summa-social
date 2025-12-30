@@ -193,27 +193,27 @@ export function resolveBeneficiary(
   report: ExpenseReport,
   contacts: Contact[]
 ): { name: string; iban: string } | null {
-  if (!report.beneficiary) return null;
+  const beneficiary = report.beneficiary;
+  if (!beneficiary) return null;
 
-  switch (report.beneficiary.kind) {
+  switch (beneficiary.kind) {
     case 'employee': {
-      const contact = contacts.find((c) => c.id === report.beneficiary!.employeeId);
+      const contact = contacts.find((c) => c.id === beneficiary.employeeId);
       if (!contact) return null;
-      const iban = (contact as Contact & { iban?: string }).iban;
+      const iban = contact.iban;
       if (!iban) return null;
       return { name: contact.name, iban };
     }
     case 'contact': {
-      const contact = contacts.find((c) => c.id === (report.beneficiary as { kind: 'contact'; contactId: string }).contactId);
+      const contact = contacts.find((c) => c.id === beneficiary.contactId);
       if (!contact) return null;
-      const iban = (contact as Contact & { iban?: string }).iban;
+      const iban = contact.iban;
       if (!iban) return null;
       return { name: contact.name, iban };
     }
     case 'manual': {
-      const manual = report.beneficiary as { kind: 'manual'; name: string; iban: string };
-      if (!manual.iban || manual.iban.trim() === '') return null;
-      return { name: manual.name, iban: manual.iban };
+      if (!beneficiary.iban || beneficiary.iban.trim() === '') return null;
+      return { name: beneficiary.name, iban: beneficiary.iban };
     }
     default:
       return null;

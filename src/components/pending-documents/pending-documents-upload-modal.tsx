@@ -285,6 +285,7 @@ export function PendingDocumentsUploadModal({
         extracted: null,
         sepa: null,
         matchedTransactionId: null,
+        reportId: null,
         createdAt: now as any,
         updatedAt: now as any,
         confirmedAt: null,

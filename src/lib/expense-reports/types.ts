@@ -63,6 +63,11 @@ export type ExpenseReport = {
   submittedAt: Timestamp | null;
 };
 
+/**
+ * Tipus per crear ExpenseReport (sense id, Firestore el genera)
+ */
+export type ExpenseReportCreate = Omit<ExpenseReport, 'id'>;
+
 // Input per crear/actualitzar
 export type CreateExpenseReportInput = {
   title?: string | null;

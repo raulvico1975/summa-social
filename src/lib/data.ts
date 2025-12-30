@@ -223,6 +223,7 @@ export type Contact = {
   zipCode: string;                 // Codi postal
   city?: string;                   // Ciutat
   province?: string;               // Província
+  iban?: string;                   // IBAN (opcional, per pagaments/reemborsaments)
   createdAt: string;
   updatedAt?: string;
   defaultCategoryId?: string;      // Categoria per defecte per auto-assignar a transaccions

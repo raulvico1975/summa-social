@@ -11,8 +11,9 @@ import {
   serverTimestamp,
   type Firestore,
   type Unsubscribe,
+  type FieldValue,
 } from 'firebase/firestore';
-import { expenseReportsRef, expenseReportRef } from './refs';
+import { expenseReportsRef, expenseReportsRefUntyped, expenseReportRef } from './refs';
 import type {
   ExpenseReport,
   ExpenseReportStatus,
@@ -63,16 +64,24 @@ export function listenExpenseReports(
 // MUTATIONS
 // =============================================================================
 
+// Tipus per crear document (timestamps com FieldValue)
+type ExpenseReportCreate = Omit<ExpenseReport, 'id' | 'createdAt' | 'updatedAt' | 'submittedAt'> & {
+  createdAt: FieldValue;
+  updatedAt: FieldValue;
+  submittedAt: null;
+};
+
 export async function createExpenseReportDraft(
   firestore: Firestore,
   orgId: string,
   input?: CreateExpenseReportInput
 ): Promise<string> {
-  const ref = expenseReportsRef(firestore, orgId);
+  // Usar ref sense tipus per evitar WithFieldValue<ExpenseReport>
+  const ref = expenseReportsRefUntyped(firestore, orgId);
 
   const now = serverTimestamp();
 
-  const docRef = await addDoc(ref, {
+  const docData: ExpenseReportCreate = {
     status: 'draft',
     title: input?.title ?? null,
     dateFrom: input?.dateFrom ?? null,
@@ -90,7 +99,9 @@ export async function createExpenseReportDraft(
     createdAt: now,
     updatedAt: now,
     submittedAt: null,
-  });
+  };
+
+  const docRef = await addDoc(ref, docData);
 
   return docRef.id;
 }

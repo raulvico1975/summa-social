@@ -196,8 +196,8 @@ export function ErrorBoundaryGlobal({
     <ReactErrorBoundary
       firestore={firestore}
       pathname={pathname}
-      orgId={orgId}
-      orgSlug={orgSlug}
+      orgId={orgId ?? undefined}
+      orgSlug={orgSlug ?? undefined}
     >
       {children}
     </ReactErrorBoundary>

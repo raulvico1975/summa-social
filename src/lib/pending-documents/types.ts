@@ -42,6 +42,7 @@ export interface PendingDocumentFile {
   contentType: string;      // MIME type (application/pdf, text/xml, etc.)
   sizeBytes: number;        // Mida en bytes
   sha256: string | null;    // Hash per dedupe (calculat al client)
+  url?: string;             // URL signada (generada runtime, no persistida)
 }
 
 /**
