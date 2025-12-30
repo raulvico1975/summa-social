@@ -199,9 +199,22 @@ const GUIDE_CONTENT = {
     avoid: 'À éviter',
     guides: {
       movements: {
-        title: 'Mouvements (contrôle quotidien)',
-        intro: "Vérifiez les entrées et sorties bancaires. Détectez les éléments en attente et évitez les erreurs.",
-        steps: ['Filtrez les éléments en attente (sans contact/catégorie).', 'Affectez contact → catégorie → document.'],
+        title: 'Mouvements · Contrôle quotidien',
+        intro: 'Centre de contrôle du quotidien : vous voyez les entrées/sorties et détectez les points en attente avant qu\'ils ne grossissent.',
+        lookFirst: [
+          'Mouvements sans contact',
+          'Mouvements sans catégorie',
+          'Retours en attente',
+        ],
+        doNext: [
+          'Affecter contact → catégorie (dans cet ordre)',
+          'Scinder les remises avant de continuer',
+        ],
+        avoid: [
+          'Forcer des affectations "pour nettoyer"',
+          'Ignorer les retours avant les rapports',
+        ],
+        steps: [],
       },
       returns: {
         title: 'Retours',
