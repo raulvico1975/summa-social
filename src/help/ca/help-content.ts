@@ -133,24 +133,69 @@ export const HELP_CONTENT_CA: Record<HelpRouteKey, HelpContent> = {
   '/dashboard/informes': {
     title: 'Ajuda · Informes',
     intro:
-      'Aquí generes els outputs per a la gestoria: Model 182, Model 347 i certificats de donació.',
+      'Aquesta pantalla serveix per generar els outputs per a la gestoria: Model 182, Model 347 i certificats. Aquí no es corregeixen dades; aquí es verifiquen i s\'exporten.',
     steps: [
-      'Tria la secció adequada: Model 182 (donacions), Model 347 (tercers) o Certificats.',
-      'Selecciona l\'any fiscal abans de generar cap fitxer.',
-      'Model 182: revisa les alertes de donants amb dades incompletes (sobretot DNI/CIF i Codi Postal).',
-      'Model 182: corregeix les dades des de Donants i torna a aquesta pantalla per regenerar.',
-      'Model 182: genera l\'Excel i envia\'l a la gestoria.',
-      'Model 347: comprova que els proveïdors tinguin CIF correcte; només apareixeran els que superin el llindar anual.',
-      'Model 347: genera el CSV i envia\'l a la gestoria.',
-      'Certificats: genera un certificat individual quan un donant te\'l demani, o bé genera\'ls en lot si ho fas per campanya anual.',
-      'Si hi ha devolucions assignades a donants, aquestes resten automàticament del total net (important per 182 i certificats).',
+      'Tria l\'any fiscal i treballa sempre amb un any cada cop.',
+      'Model 182: resol primer les alertes de donants (sobretot DNI/CIF i Codi Postal).',
+      'Revisa devolucions assignades: afecten directament el total del 182 i dels certificats.',
+      'Genera el Model 182 i envia\'l a la gestoria.',
+      'Model 347: només apareixeran proveïdors que superin el llindar anual; comprova CIF abans d\'exportar.',
+      'Genera certificats individuals o en lot quan correspongui.',
     ],
     tips: [
-      'Abans de tancar l\'any, assegura\'t que les devolucions estan assignades al donant correcte: és la causa típica de totals incoherents.',
-      'Si un donant no té DNI o Codi Postal, pot bloquejar o embrutar el Model 182: prioritza completar aquests camps.',
-      'Per certificats massius, revisa primer 2 o 3 donants representatius (amb i sense devolucions) per validar que els imports quadren.',
+      'Si el 182 no quadra, gairebé sempre és per devolucions o dades incompletes de donants.',
+      'Valida 2–3 casos representatius abans d\'enviar certificats massius.',
+      'Treballa sempre amb un sol any obert per evitar confusions.',
     ],
-    keywords: ['model 182', 'model 347', 'certificats', 'excel', 'csv', 'any', 'donacions', 'devolucions', 'gestoria'],
+    extra: {
+      order: {
+        title: 'Ordre recomanat quan toca fer informes',
+        items: [
+          'Seleccionar l\'any fiscal.',
+          'Resoldre alertes de donants (DNI/CP).',
+          'Revisar devolucions.',
+          'Generar Model 182.',
+          'Generar Model 347.',
+          'Generar certificats.',
+        ],
+      },
+      pitfalls: {
+        title: 'Errors habituals',
+        items: [
+          'Generar el 182 amb donants sense DNI o Codi Postal.',
+          'Oblidar devolucions pendents i inflar els totals.',
+          'Barrejar anys (corregir dades d\'un any mentre n\'exportes un altre).',
+          'Fer certificats massius sense validar cap cas prèviament.',
+        ],
+      },
+      checks: {
+        title: 'Checks finals abans d\'enviar a gestoria',
+        items: [
+          '182: cap alerta crítica pendent.',
+          '182: totals coherents amb el que esperes.',
+          '347: proveïdors amb CIF correcte.',
+          'Certificats: signatura i càrrec configurats.',
+        ],
+      },
+      manual: {
+        label: 'Manual d\'usuari · Informes Fiscals',
+        href: '/dashboard/manual#7-informes-fiscals',
+      },
+      video: {
+        label: 'Vídeo (properament)',
+        note: 'Preparar Model 182 i certificats sense sorpreses (15 minuts)',
+      },
+    },
+    keywords: [
+      'model 182',
+      'model 347',
+      'certificats',
+      'gestoria',
+      'any fiscal',
+      'devolucions',
+      'alertes',
+      'exportar',
+    ],
   },
   '/dashboard/configuracion': {
     title: 'Ajuda · Configuració',

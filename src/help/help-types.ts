@@ -26,6 +26,7 @@ export type HelpExtra = {
   order?: HelpExtraSection;
   pitfalls?: HelpExtraSection;
   whenNot?: HelpExtraSection;
+  checks?: HelpExtraSection;
   manual?: HelpExtraLink;
   video?: HelpExtraLink;
 };
