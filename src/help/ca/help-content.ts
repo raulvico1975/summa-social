@@ -3,8 +3,55 @@ import type { HelpContent, HelpRouteKey } from '../help-types';
 export const HELP_CONTENT_CA: Record<HelpRouteKey, HelpContent> = {
   '/dashboard': {
     title: 'Ajuda · Dashboard',
-    intro: 'Aquesta ajuda està pendent d\'emplenar.',
-    steps: [],
+    intro:
+      'Aquesta pantalla és la foto ràpida: et diu com està l\'organització avui (sense entrar al detall). Serveix per orientar-te, no per "tancar" feina.',
+    steps: [
+      'Mira primer el balanç i les principals xifres (ingressos/despeses) per entendre el període.',
+      'Detecta senyals de feina pendent (moviments sense contacte/categoria, devolucions) i ves directament a Moviments.',
+      'Si estàs en mode fiscal, revisa terminis i prepara Informes quan toqui.',
+      'Si treballes per projectes, entra al mòdul de Projectes per veure execució i assignacions.',
+      'Torna al Dashboard per verificar que l\'ordre general té sentit (tendència i coherència).',
+    ],
+    tips: [
+      'El Dashboard és brúixola: decisions i correccions es fan a Moviments/Contactes/Informes.',
+      'Si una xifra "et sorprèn", no ho arreglis aquí: baixa al detall i valida l\'origen.',
+      'Una revisió curta (1–2 cops per setmana) evita que els pendents creixin.',
+    ],
+    extra: {
+      order: {
+        title: 'Ordre recomanat (2 minuts)',
+        items: [
+          'Foto general (xifres).',
+          'Pendents → Moviments.',
+          'Fiscal → Informes.',
+          'Projectes → Assignació.',
+        ],
+      },
+      pitfalls: {
+        title: 'Errors habituals',
+        items: [
+          'Esperar que el Dashboard resolgui problemes (només mostra).',
+          'Interpretar xifres sense revisar devolucions/remeses.',
+          'Voler "tancar" el mes només des d\'aquí.',
+        ],
+      },
+      whenNot: {
+        title: 'Quan no cal preocupar-se',
+        items: [
+          'Si el dia a dia està controlat, no cal mirar-ho cada dia.',
+          'Si hi ha pendents petits, resol-los a Moviments i torna després.',
+        ],
+      },
+      manual: {
+        label: 'Manual d\'usuari · Entendre el Dashboard',
+        href: '/dashboard/manual#14-entendre-el-dashboard',
+      },
+      video: {
+        label: 'Vídeo (properament)',
+        note: 'Llegir el Dashboard i saber què fer després (6 minuts)',
+      },
+    },
+    keywords: ['dashboard', 'balanç', 'pendents', 'moviments', 'informes', 'projectes', 'tendència'],
   },
   '/dashboard/movimientos': {
     title: 'Ajuda · Moviments',
@@ -347,6 +394,46 @@ export const HELP_CONTENT_CA: Record<HelpRouteKey, HelpContent> = {
     title: 'Ajuda · Projectes',
     intro: 'Aquesta ajuda està pendent d\'emplenar.',
     steps: [],
+  },
+  '/dashboard/manual': {
+    title: 'Ajuda · Manual d\'usuari',
+    intro:
+      'Aquesta pàgina és la referència completa. Serveix per ampliar el context quan l\'ajuda d\'una pantalla no és suficient.',
+    steps: [
+      'Fes servir el TOC per anar directament a la secció que busques.',
+      'Si vens des d\'una pantalla, mira primer l\'ancoratge del manual (t\'hi porta al bloc rellevant).',
+      'Quan hi ha dubtes, segueix l\'ordre: entendre → aplicar → revisar.',
+      'Si detectes una mancança, envia feedback amb el context (pantalla + enllaç).',
+    ],
+    tips: [
+      'No cal llegir-lo sencer: és una eina de consulta.',
+      'Valida 1–2 casos reals mentre llegeixes: aprens més ràpid.',
+      'Si una secció es repeteix molt, és candidata a vídeo curt.',
+    ],
+    extra: {
+      order: {
+        title: 'Com usar el manual (ràpid)',
+        items: ['Buscar secció', 'Llegir el mínim', 'Aplicar a la pantalla', 'Tornar i validar'],
+      },
+      pitfalls: {
+        title: 'Errors habituals',
+        items: [
+          'Llegir massa i actuar poc.',
+          'Voler resoldre-ho tot sense provar-ho a l\'app.',
+          'No usar els ancoratges i perdre temps fent scroll.',
+        ],
+      },
+      whenNot: {
+        title: 'Quan no cal',
+        items: [
+          'Si l\'ajuda contextual ja resol el dubte, no cal anar al manual.',
+          'Si el problema és de dades, vés a la pantalla corresponent (Moviments/Contactes).',
+        ],
+      },
+      manual: { label: 'Anar a l\'inici del manual', href: '/dashboard/manual#top' },
+      video: { label: 'Vídeo (properament)', note: 'Com trobar respostes al manual en 2 minuts' },
+    },
+    keywords: ['manual', 'toc', 'ancoratges', 'ajuda', 'consulta', 'referència', 'vídeo'],
   },
   '/dashboard/project-module/expenses': {
     title: 'Ajuda · Assignació de despeses (Projectes)',

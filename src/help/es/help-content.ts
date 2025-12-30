@@ -1,6 +1,57 @@
 import type { HelpContent, HelpRouteKey } from '../help-types';
 
 export const HELP_CONTENT_ES: Partial<Record<HelpRouteKey, HelpContent>> = {
+  '/dashboard': {
+    title: 'Ayuda · Dashboard',
+    intro:
+      'Esta pantalla es la foto rápida: te dice cómo está la organización hoy. Todo lo que ves aquí son datos derivados de otras pantallas.',
+    steps: [
+      'Revisa el balance general: te indica el saldo actual de la cuenta.',
+      'Mira los pendientes: cuántos movimientos sin contacto, sin categoría o con devol. pendiente.',
+      'Valora si hay que actuar o no: el dashboard señala, no obliga.',
+      'Accede a la pantalla concreta si quieres resolver algo.',
+    ],
+    tips: [
+      'El dashboard no se edita: es un reflejo de otras pantallas.',
+      'No hace falta tener 0 pendientes para estar "bien": usa criterio.',
+      'Los filtros rápidos te llevan al sitio correcto si quieres profundizar.',
+    ],
+    extra: {
+      order: {
+        title: 'Orden recomendado (2 minutos)',
+        items: [
+          'Mira el balance.',
+          'Valora pendientes.',
+          'Si algo pide atención, entra en la pantalla correspondiente.',
+        ],
+      },
+      pitfalls: {
+        title: 'Errores habituales',
+        items: [
+          'Intentar editar aquí (no se puede: es solo lectura).',
+          'Obsesionarse con cero pendientes sin criterio.',
+          'Ignorar avisos de desbalanceo importantes.',
+        ],
+      },
+      whenNot: {
+        title: 'Cuándo no hace falta preocuparse',
+        items: [
+          'Un puñado de pendientes no significa caos: prioriza lo que importa.',
+          'Si acabas de sincronizar, es normal que haya cosas por clasificar.',
+        ],
+      },
+      manual: {
+        label: 'Manual de usuario · Entender el Dashboard',
+        href: '/dashboard/manual#14-entendre-el-dashboard',
+      },
+      video: {
+        label: 'Vídeo (próximamente)',
+        note: 'Leer el Dashboard en 2 minutos y decidir si hay que actuar',
+      },
+    },
+    keywords: ['dashboard', 'balance', 'pendientes', 'resumen', 'contacto', 'categoría', 'devol.'],
+  },
+
   '/dashboard/movimientos': {
     title: 'Ayuda · Movimientos',
     intro:
@@ -417,5 +468,56 @@ export const HELP_CONTENT_ES: Partial<Record<HelpRouteKey, HelpContent>> = {
       },
     },
     keywords: ['proyecto', 'crear', 'editar', 'cerrar', 'código', 'presupuesto', 'partidas', 'asignación'],
+  },
+
+  '/dashboard/manual': {
+    title: 'Ayuda · Manual de usuario',
+    intro:
+      'Esta página es la referencia completa del producto: aquí encuentras la explicación detallada de cada pantalla, flujo y criterio de uso.',
+    steps: [
+      'Navega desde el TOC (tabla de contenidos): es la forma más rápida de ir a un apartado concreto.',
+      'Usa Cmd/Ctrl+F para buscar palabras clave si no encuentras lo que buscas.',
+      'Cuando otra pantalla te enlaza aquí, llegas directamente al ancla (p. ej., #5-gestio-de-moviments).',
+      'Los anclas se pueden compartir: copia la URL si quieres pasar un enlace directo a otra persona.',
+    ],
+    tips: [
+      'El manual no sustituye la ayuda de pantalla: aquí hay más detalle, pero allí hay contexto inmediato.',
+      'Si llegas desde un enlace de ayuda, vuelve atrás con el navegador; no hace falta cerrar.',
+      'Los vídeos (cuando estén disponibles) cubren los mismos apartados que el manual.',
+    ],
+    extra: {
+      order: {
+        title: 'Cómo usar el manual (rápido)',
+        items: [
+          'Usar TOC para saltar.',
+          'Ctrl+F para buscar.',
+          'Guardar ancla si es útil.',
+        ],
+      },
+      pitfalls: {
+        title: 'Errores habituales',
+        items: [
+          'Leer de arriba abajo sin ir al grano.',
+          'Ignorar que las anclas permiten enlaces directos.',
+          'Confundir manual con changelog (el changelog está en Novedades).',
+        ],
+      },
+      whenNot: {
+        title: 'Cuándo no hace falta',
+        items: [
+          'Si tienes una duda puntual, la ayuda de pantalla suele ser suficiente.',
+          'Si el producto ya te es familiar, no hace falta releer el manual cada vez.',
+        ],
+      },
+      manual: {
+        label: 'Ir al inicio del manual',
+        href: '/dashboard/manual#top',
+      },
+      video: {
+        label: 'Vídeo (próximamente)',
+        note: 'Cómo encontrar respuestas rápidas en el manual (3 minutos)',
+      },
+    },
+    keywords: ['manual', 'toc', 'anclas', 'referencia', 'documentación', 'búsqueda'],
   },
 };

@@ -1,6 +1,57 @@
 import type { HelpContent, HelpRouteKey } from '../help-types';
 
 export const HELP_CONTENT_FR: Partial<Record<HelpRouteKey, HelpContent>> = {
+  '/dashboard': {
+    title: 'Aide · Tableau de bord',
+    intro:
+      'Cet écran est la photo rapide : il vous dit comment va l\'organisation aujourd\'hui. Tout ce que vous voyez ici sont des données dérivées des autres écrans.',
+    steps: [
+      'Consultez le solde général : il indique le solde actuel du compte.',
+      'Regardez les éléments en attente : combien de mouvements sans contact, sans catégorie ou avec retour en attente.',
+      'Jugez s\'il faut agir ou non : le tableau de bord signale, il n\'oblige pas.',
+      'Accédez à l\'écran concerné si vous voulez traiter quelque chose.',
+    ],
+    tips: [
+      'Le tableau de bord ne se modifie pas : c\'est le reflet d\'autres écrans.',
+      'Pas besoin d\'avoir 0 en attente pour être "bien" : faites preuve de discernement.',
+      'Les filtres rapides vous amènent au bon endroit si vous voulez approfondir.',
+    ],
+    extra: {
+      order: {
+        title: 'Ordre recommandé (2 minutes)',
+        items: [
+          'Consulter le solde.',
+          'Évaluer les en attente.',
+          'Si quelque chose demande attention, entrer dans l\'écran concerné.',
+        ],
+      },
+      pitfalls: {
+        title: 'Erreurs fréquentes',
+        items: [
+          'Essayer de modifier ici (impossible : lecture seule).',
+          'S\'obséder à avoir zéro en attente sans critère.',
+          'Ignorer les avertissements de déséquilibre importants.',
+        ],
+      },
+      whenNot: {
+        title: 'Quand il n\'est pas nécessaire de s\'inquiéter',
+        items: [
+          'Quelques éléments en attente ne signifient pas le chaos : priorisez ce qui compte.',
+          'Si vous venez de synchroniser, il est normal d\'avoir des choses à classer.',
+        ],
+      },
+      manual: {
+        label: 'Manuel utilisateur · Comprendre le tableau de bord',
+        href: '/dashboard/manual#14-entendre-el-dashboard',
+      },
+      video: {
+        label: 'Vidéo (bientôt)',
+        note: 'Lire le tableau de bord en 2 minutes et décider s\'il faut agir',
+      },
+    },
+    keywords: ['tableau de bord', 'solde', 'en attente', 'résumé', 'contact', 'catégorie', 'retour'],
+  },
+
   '/dashboard/movimientos': {
     title: 'Aide · Mouvements',
     intro:
@@ -417,5 +468,56 @@ export const HELP_CONTENT_FR: Partial<Record<HelpRouteKey, HelpContent>> = {
       },
     },
     keywords: ['projet', 'créer', 'éditer', 'fermer', 'code', 'budget', 'lignes budgétaires', 'affectation'],
+  },
+
+  '/dashboard/manual': {
+    title: 'Aide · Manuel utilisateur',
+    intro:
+      'Cette page est la référence complète du produit : vous y trouvez l\'explication détaillée de chaque écran, flux et critère d\'utilisation.',
+    steps: [
+      'Naviguez depuis la table des matières (TOC) : c\'est le moyen le plus rapide d\'aller à une section.',
+      'Utilisez Cmd/Ctrl+F pour chercher des mots-clés si vous ne trouvez pas.',
+      'Quand un autre écran renvoie ici, vous arrivez directement à l\'ancre (ex. #5-gestio-de-moviments).',
+      'Les ancres peuvent être partagées : copiez l\'URL pour envoyer un lien direct à quelqu\'un.',
+    ],
+    tips: [
+      'Le manuel ne remplace pas l\'aide de l\'écran : ici plus de détails, là-bas du contexte immédiat.',
+      'Si vous arrivez depuis un lien d\'aide, revenez avec le navigateur ; pas besoin de fermer.',
+      'Les vidéos (quand elles seront disponibles) couvrent les mêmes sections que le manuel.',
+    ],
+    extra: {
+      order: {
+        title: 'Comment utiliser le manuel (rapide)',
+        items: [
+          'Utiliser la TOC pour sauter.',
+          'Ctrl+F pour chercher.',
+          'Enregistrer l\'ancre si utile.',
+        ],
+      },
+      pitfalls: {
+        title: 'Erreurs fréquentes',
+        items: [
+          'Lire de haut en bas sans aller à l\'essentiel.',
+          'Ignorer que les ancres permettent des liens directs.',
+          'Confondre manuel et changelog (le changelog est dans Nouveautés).',
+        ],
+      },
+      whenNot: {
+        title: 'Quand ce n\'est pas nécessaire',
+        items: [
+          'Si vous avez une question ponctuelle, l\'aide de l\'écran suffit souvent.',
+          'Si le produit vous est familier, pas besoin de relire le manuel chaque fois.',
+        ],
+      },
+      manual: {
+        label: 'Aller au début du manuel',
+        href: '/dashboard/manual#top',
+      },
+      video: {
+        label: 'Vidéo (bientôt)',
+        note: 'Comment trouver des réponses rapides dans le manuel (3 minutes)',
+      },
+    },
+    keywords: ['manuel', 'toc', 'ancres', 'référence', 'documentation', 'recherche'],
   },
 };
