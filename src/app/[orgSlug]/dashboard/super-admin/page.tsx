@@ -55,9 +55,11 @@ import {
   Copy,
   Unlink,
   Link2Off,
-  Trash2
+  Trash2,
+  Languages,
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { I18nManager } from '@/components/super-admin/i18n-manager';
 
 // ════════════════════════════════════════════════════════════════════════════
 // TIPUS
@@ -547,6 +549,10 @@ export default function SuperAdminOrgPage() {
             <Download className="h-4 w-4" />
             {t.superAdminOrg.tabs.export}
           </TabsTrigger>
+          <TabsTrigger value="i18n" className="gap-2">
+            <Languages className="h-4 w-4" />
+            Traduccions
+          </TabsTrigger>
         </TabsList>
 
         {/* ══════════════════════════════════════════════════════════════════ */}
@@ -1030,6 +1036,13 @@ export default function SuperAdminOrgPage() {
               </CardContent>
             </Card>
           </div>
+        </TabsContent>
+
+        {/* ══════════════════════════════════════════════════════════════════ */}
+        {/* TAB: TRADUCCIONS (i18n) */}
+        {/* ══════════════════════════════════════════════════════════════════ */}
+        <TabsContent value="i18n" className="space-y-4">
+          <I18nManager />
         </TabsContent>
       </Tabs>
     </div>

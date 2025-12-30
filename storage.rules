@@ -1,0 +1,27 @@
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+    // ════════════════════════════════════════════════════════════════════════════
+    // i18n translations - SuperAdmin can write, everyone can read
+    // ════════════════════════════════════════════════════════════════════════════
+    match /i18n/{langFile} {
+      // Lectura pública (l'app necessita carregar traduccions)
+      allow read: if true;
+
+      // Escriptura només per SuperAdmin
+      // Nota: Utilitzem el mateix UID fix que la resta de l'app per consistència
+      // TODO: Migrar a custom claims quan s'implementi
+      allow write: if request.auth != null
+        && request.auth.uid == 'f2AHJqjXiOZkYajwkOnZ8RY6h2k2';
+    }
+
+    // ════════════════════════════════════════════════════════════════════════════
+    // Regles per altres paths (afegir segons necessitat)
+    // ════════════════════════════════════════════════════════════════════════════
+
+    // Per defecte, denegar tot el que no estigui explícitament permès
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+  }
+}
