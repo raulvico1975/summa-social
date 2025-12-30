@@ -56,7 +56,8 @@ const GUIDES: GuideItem[] = [
     id: 'remittances',
     icon: <CreditCard className="h-5 w-5" />,
     href: '/dashboard/movimientos',
-    manualAnchor: '#6-remeses-i-quotes',
+    helpHref: '/dashboard/movimientos?help=1',
+    manualAnchor: '#6-divisor-de-remeses',
   },
   {
     id: 'donors',
@@ -147,9 +148,22 @@ const GUIDE_CONTENT = {
         steps: [],
       },
       remittances: {
-        title: 'Remeses (quotes i Stripe)',
-        intro: 'Divideix remeses per treballar amb quotes individuals i facilitar el control.',
-        steps: ['Divideix la remesa abans d\'assignar contactes.', 'Revisa pendents d\'assignació (matching per email).'],
+        title: 'Remeses · Processar i validar',
+        intro: 'La remesa no és el detall. El detall són les filles.',
+        lookFirst: [
+          'Pare: import gran amb concepte remesa/Stripe',
+          'Filles: creades i suma coherent amb el pare',
+          'Filles amb donant assignat (resol pendents)',
+        ],
+        doNext: [
+          'Divideix (banc) o Divideix Stripe (Stripe)',
+          'Marca "fet" quan no queden pendents',
+        ],
+        avoid: [
+          'Assignar contacte/categoria al pare com si fos una quota',
+          'Exportar 182/certificats amb filles pendents',
+        ],
+        steps: [],
       },
       donors: {
         title: 'Donants · Model 182 (sense errors)',
