@@ -252,6 +252,24 @@ export const HELP_CONTENT_ES: Partial<Record<HelpRouteKey, HelpContent>> = {
           'No hace falta generar certificados masivos si aún hay datos fiscales pendientes.',
         ],
       },
+      returns: {
+        title: 'Devoluciones (impacto fiscal)',
+        items: [
+          'Una devolución asignada al donante resta del total neto (certificado y Modelo 182).',
+          'Si la devolución no tiene donante asignado, no resta a nadie: el total queda inflado.',
+          'Si una devolución está asignada al donante equivocado, distorsiona a dos donantes a la vez.',
+          'Antes de cerrar el año, revisa devoluciones pendientes y las de donantes con importes extraños.',
+        ],
+      },
+      quality: {
+        title: 'Calidad fiscal (check rápido)',
+        items: [
+          'DNI/CIF y Código Postal completos: mínimo para 182.',
+          'Evitar duplicados: un donante por DNI (actualiza, no dupliques).',
+          'Coherencia de estado: baja cuando toca, activo si sigue aportando.',
+          'Muestra de validación: 2–3 donantes representativos antes de exportaciones masivas.',
+        ],
+      },
       manual: {
         label: 'Manual de usuario · Gestión de Donantes',
         href: '/dashboard/manual#3-gestio-de-donants',
@@ -261,7 +279,7 @@ export const HELP_CONTENT_ES: Partial<Record<HelpRouteKey, HelpContent>> = {
         note: 'Dejar Donantes listos para el Modelo 182 (10 minutos)',
       },
     },
-    keywords: ['donantes', 'socios', 'dni', 'cif', 'código postal', 'modelo 182', 'certificados', 'baja', 'devoluciones'],
+    keywords: ['donantes', 'socios', 'dni', 'cif', 'código postal', 'modelo 182', 'certificados', 'baja', 'devoluciones', 'calidad'],
   },
 
   '/dashboard/proveidors': {

@@ -252,6 +252,24 @@ export const HELP_CONTENT_FR: Partial<Record<HelpRouteKey, HelpContent>> = {
           'Inutile de générer des certificats en masse tant que des données fiscales manquent.',
         ],
       },
+      returns: {
+        title: 'Retours (impact fiscal)',
+        items: [
+          'Un retour affecté au donateur se déduit du total net (certificat et Modèle 182).',
+          'Si le retour n\'a pas de donateur affecté, il ne se déduit pour personne : le total est gonflé.',
+          'Si un retour est affecté au mauvais donateur, il fausse deux donateurs à la fois.',
+          'Avant de clôturer l\'année, vérifiez les retours en attente et les donateurs aux montants étranges.',
+        ],
+      },
+      quality: {
+        title: 'Qualité fiscale (check rapide)',
+        items: [
+          'DNI/CIF et Code postal complets : minimum pour 182.',
+          'Éviter les doublons : un donateur par DNI (mettre à jour, ne pas dupliquer).',
+          'Cohérence du statut : inactif quand il faut, actif s\'il contribue encore.',
+          'Échantillon de validation : 2–3 donateurs représentatifs avant les exports en masse.',
+        ],
+      },
       manual: {
         label: 'Manuel utilisateur · Gestion des donateurs',
         href: '/dashboard/manual#3-gestio-de-donants',
@@ -261,7 +279,7 @@ export const HELP_CONTENT_FR: Partial<Record<HelpRouteKey, HelpContent>> = {
         note: 'Préparer les donateurs pour le Modèle 182 (10 minutes)',
       },
     },
-    keywords: ['donateurs', 'adhérents', 'dni', 'cif', 'code postal', 'modèle 182', 'certificats', 'inactif', 'retours'],
+    keywords: ['donateurs', 'adhérents', 'dni', 'cif', 'code postal', 'modèle 182', 'certificats', 'inactif', 'retours', 'qualité'],
   },
 
   '/dashboard/proveidors': {

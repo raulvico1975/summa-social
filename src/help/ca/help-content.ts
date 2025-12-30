@@ -252,6 +252,24 @@ export const HELP_CONTENT_CA: Record<HelpRouteKey, HelpContent> = {
           'No cal generar certificats massius si encara hi ha dades fiscals pendents.',
         ],
       },
+      returns: {
+        title: 'Devolucions (impacte fiscal)',
+        items: [
+          'Una devolució assignada al donant resta del total net (certificat i Model 182).',
+          'Si la devolució no té donant assignat, no resta a ningú: el total queda inflat.',
+          'Si una devolució està assignada al donant equivocat, distorsiona dos donants a la vegada.',
+          'Abans de tancar l\'any, revisa devolucions pendents i les del donant amb imports estranys.',
+        ],
+      },
+      quality: {
+        title: 'Qualitat fiscal (check ràpid)',
+        items: [
+          'DNI/CIF i Codi Postal complets: és el mínim per 182.',
+          'Evitar duplicats: un sol donant per DNI (actualitza, no repliquis).',
+          'Coherència d\'estat: baixa quan toca, actiu si segueix aportant.',
+          'Mostra de validació: 2–3 donants representatius abans d\'exports massius.',
+        ],
+      },
       manual: {
         label: 'Manual d\'usuari · Gestió de Donants',
         href: '/dashboard/manual#3-gestio-de-donants',
@@ -261,7 +279,7 @@ export const HELP_CONTENT_CA: Record<HelpRouteKey, HelpContent> = {
         note: 'Deixar Donants a punt per al Model 182 (10 minuts)',
       },
     },
-    keywords: ['donants', 'socis', 'dni', 'cif', 'codi postal', 'model 182', 'certificats', 'baixa', 'devolucions'],
+    keywords: ['donants', 'socis', 'dni', 'cif', 'codi postal', 'model 182', 'certificats', 'baixa', 'devolucions', 'qualitat'],
   },
   '/dashboard/proveidors': {
     title: 'Ajuda · Proveïdors',
