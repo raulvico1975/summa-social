@@ -3,38 +3,137 @@
 'use client';
 
 import * as React from 'react';
-import { useParams } from 'next/navigation';
+import { useParams, usePathname } from 'next/navigation';
 import { Sidebar, SidebarProvider, SidebarInset } from '@/components/ui/sidebar';
 import { DashboardSidebarContent } from '@/components/dashboard-sidebar-content';
 import { DashboardHeader } from '@/components/dashboard-header';
 import { LogPanel } from '@/components/log-panel';
 import { AppLogContext } from '@/hooks/use-app-log';
 import type { LogMessage } from '@/hooks/use-app-log';
-import { OrganizationProvider } from '@/hooks/organization-provider';
+import { OrganizationProvider, useCurrentOrganization } from '@/hooks/organization-provider';
 import { useInitializeOrganizationData } from '@/hooks/use-initialize-user-data';
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Sidebar collapse logic: col·lapsa després de la primera navegació
+// ─────────────────────────────────────────────────────────────────────────────
+
+function useSidebarCollapseBehavior() {
+  const pathname = usePathname();
+  const { organizationId, firebaseUser } = useCurrentOrganization();
+  const userId = firebaseUser?.uid;
+
+  // Claus de localStorage per persistir preferències
+  const collapsedKey = organizationId && userId
+    ? `summa.sidebarCollapsed.${organizationId}.${userId}`
+    : null;
+  const firstNavKey = organizationId && userId
+    ? `summa.sidebar.firstNavDone.${organizationId}.${userId}`
+    : null;
+
+  // Estat intern: sidebar oberta o col·lapsada
+  const [sidebarOpen, setSidebarOpen] = React.useState<boolean>(() => {
+    // Inicial: si tenim preferència guardada, usar-la; sinó, oberta
+    if (typeof window !== 'undefined' && collapsedKey) {
+      const stored = localStorage.getItem(collapsedKey);
+      if (stored !== null) {
+        return stored !== 'true'; // 'true' = collapsed → open = false
+      }
+    }
+    return true; // Per defecte oberta (primera visita)
+  });
+
+  // Ref per detectar si ja ha passat la primera navegació
+  const initialPathnameRef = React.useRef<string | null>(null);
+
+  // Inicialitzar pathname inicial
+  React.useEffect(() => {
+    if (initialPathnameRef.current === null) {
+      initialPathnameRef.current = pathname;
+    }
+  }, [pathname]);
+
+  // Detectar canvi de ruta per col·lapsar després de la primera navegació
+  React.useEffect(() => {
+    // Esperar a tenir les claus de localStorage
+    if (!collapsedKey || !firstNavKey) return;
+
+    // Si ja hem fet la primera navegació abans (sessió anterior), no fer res
+    const firstNavDone = localStorage.getItem(firstNavKey);
+    if (firstNavDone === 'true') return;
+
+    // Si el pathname ha canviat des de l'inicial (primera navegació dins dashboard)
+    if (initialPathnameRef.current && pathname !== initialPathnameRef.current) {
+      // Col·lapsar sidebar
+      setSidebarOpen(false);
+      // Guardar preferències
+      localStorage.setItem(collapsedKey, 'true');
+      localStorage.setItem(firstNavKey, 'true');
+    }
+  }, [pathname, collapsedKey, firstNavKey]);
+
+  // Handler per canvis manuals de l'usuari (botó toggle)
+  const handleOpenChange = React.useCallback((open: boolean) => {
+    setSidebarOpen(open);
+    // Guardar preferència
+    if (collapsedKey) {
+      localStorage.setItem(collapsedKey, (!open).toString());
+    }
+    // Si l'usuari ha interactuat manualment, marcar firstNav com fet
+    if (firstNavKey) {
+      localStorage.setItem(firstNavKey, 'true');
+    }
+  }, [collapsedKey, firstNavKey]);
+
+  return { sidebarOpen, handleOpenChange };
+}
 
 function OrganizationDependentLayout({ children }: { children: React.ReactNode }) {
   useInitializeOrganizationData();
 
-  // DEV-ONLY: Horizontal scroll detector
+  // Sidebar collapse behavior
+  const { sidebarOpen, handleOpenChange } = useSidebarCollapseBehavior();
+
+  // DEV-ONLY: Horizontal scroll detector - troba l'element culpable
   React.useEffect(() => {
     if (process.env.NODE_ENV !== 'development') return;
 
-    const el = document.documentElement;
+    const findOverflowingElement = (): HTMLElement | null => {
+      const docWidth = document.documentElement.clientWidth;
+      const all = document.querySelectorAll('*');
+      for (const node of all) {
+        const el = node as HTMLElement;
+        const rect = el.getBoundingClientRect();
+        if (rect.right > docWidth + 1) {
+          return el;
+        }
+      }
+      return null;
+    };
+
     const check = () => {
+      const el = document.documentElement;
       const hasScroll = el.scrollWidth > el.clientWidth + 1;
       if (hasScroll) {
+        const culprit = findOverflowingElement();
         console.warn(
           '[UI] Horizontal scroll detected:',
-          `scrollWidth=${el.scrollWidth}`,
-          `clientWidth=${el.clientWidth}`,
-          `diff=${el.scrollWidth - el.clientWidth}px`
+          `diff=${el.scrollWidth - el.clientWidth}px`,
+          culprit ? `\nCulprit: ${culprit.tagName}.${culprit.className}` : ''
         );
+        if (culprit) {
+          console.warn('[UI] Culprit element:', culprit);
+        }
       }
     };
     check();
+    // Check after DOM updates
+    const observer = new MutationObserver(() => setTimeout(check, 100));
+    observer.observe(document.body, { childList: true, subtree: true });
     window.addEventListener('resize', check);
-    return () => window.removeEventListener('resize', check);
+    return () => {
+      observer.disconnect();
+      window.removeEventListener('resize', check);
+    };
   }, []);
 
   const [logs, setLogs] = React.useState<LogMessage[]>([]);
@@ -62,7 +161,7 @@ function OrganizationDependentLayout({ children }: { children: React.ReactNode }
 
   return (
     <AppLogContext.Provider value={appLogValue}>
-      <SidebarProvider defaultOpen={true}>
+      <SidebarProvider open={sidebarOpen} onOpenChange={handleOpenChange}>
         <div className="flex min-h-screen">
           <Sidebar collapsible="icon">
             <DashboardSidebarContent />

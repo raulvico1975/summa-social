@@ -1373,7 +1373,7 @@ export function TransactionsTable({ initialDateFilter = null }: TransactionsTabl
                 </button>
               </TableHead>
               <TableHead className="text-right w-[110px] py-2">{t.movements.table.amount}</TableHead>
-              <TableHead className="min-w-[180px] md:min-w-[320px] py-2">{t.movements.table.concept}</TableHead>
+              <TableHead className="min-w-[180px] lg:min-w-[280px] py-2">{t.movements.table.concept}</TableHead>
               <TableHead className="w-[140px] py-2 hidden md:table-cell">{t.movements.table.contact}</TableHead>
               <TableHead className="w-[120px] py-2 hidden md:table-cell">{t.movements.table.category}</TableHead>
               {showProjectColumn && (
