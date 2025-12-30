@@ -11,10 +11,30 @@ export type HelpRouteKey =
   | '/dashboard/project-module/projects'
   | string;
 
+export type HelpExtraSection = {
+  title: string;
+  items: string[];
+};
+
+export type HelpExtraLink = {
+  label: string;
+  href?: string;
+  note?: string;
+};
+
+export type HelpExtra = {
+  order?: HelpExtraSection;
+  pitfalls?: HelpExtraSection;
+  whenNot?: HelpExtraSection;
+  manual?: HelpExtraLink;
+  video?: HelpExtraLink;
+};
+
 export type HelpContent = {
   title: string;
   intro?: string;
   steps?: string[];
   tips?: string[];
+  extra?: HelpExtra;
   keywords?: string[];
 };

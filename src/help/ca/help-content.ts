@@ -9,23 +9,66 @@ export const HELP_CONTENT_CA: Record<HelpRouteKey, HelpContent> = {
   '/dashboard/movimientos': {
     title: 'Ajuda · Moviments',
     intro:
-      'Aquí importes i revises els moviments del banc, i els prepares perquè la fiscalitat i els informes surtin nets.',
+      'Aquesta pantalla és el centre de control del dia a dia: aquí revises què entra i què surt del banc, detectes pendents i evites errors abans que es facin grans.',
     steps: [
-      'Importa l\'extracte: clica "Importar extracte" i puja el CSV/XLSX del banc.',
-      'Revisa la previsualització abans d\'importar (dates, imports i descripcions).',
-      'Filtra el llistat per trobar pendents: "Sense categoritzar", "Sense contacte" i (si apareix) "Devolucions pendents".',
-      'Obre un moviment i assigna Categoria i Contacte (donant/proveïdor/treballador) si falta.',
-      'Adjunta el document (factura/justificant) quan calgui: icona de document o arrossegant-lo sobre la fila (si està disponible a la teva pantalla).',
-      'Si veus una remesa (un sol ingrés amb moltes quotes), usa el menú ⋮ de la fila per "Dividir remesa".',
-      'Si veus un ingrés de Stripe, usa el menú ⋮ per "Dividir remesa Stripe" i puja el CSV de Stripe (Pagos → export).',
-      'Quan acabis, comprova que els moviments clau queden amb Categoria + Contacte: això redueix errors als models fiscals i certificats.',
+      'Comença pels pendents: filtra per "Sense contacte", "Sense categoria" i "Devolucions pendents" si apareixen.',
+      'Assigna primer el contacte (donant, proveïdor o treballador): dona context al moviment.',
+      'Assigna després la categoria quan el contacte ja és clar.',
+      'Revisa ingressos agrupats (remeses): divideix-les abans de continuar si cal.',
+      'Adjunta documents només quan aporten valor (factures, justificants rellevants).',
     ],
     tips: [
-      'Prioritza primer els filtres de pendents (Sense categoritzar / Sense contacte) abans d\'entrar a retocar casos puntuals.',
-      'En devolucions, el moviment original no es toca: cal assignar el donant a la devolució perquè resti correctament a la fiscalitat.',
-      'Si un contacte té "categoria per defecte", en assignar-lo a un moviment la categoria es pot completar automàticament.',
+      'Ordre recomanat: contacte → categoria → document. Canviar l\'ordre sol generar dubtes després.',
+      'Si un moviment et genera dubte, deixa\'l pendent i segueix amb la resta.',
+      'Una passada regular pels pendents evita acumulacions difícils de revisar.',
     ],
-    keywords: ['importar', 'extracte', 'categoria', 'contacte', 'remesa', 'stripe', 'devolucions', 'document'],
+    extra: {
+      order: {
+        title: 'Ordre recomanat de treball',
+        items: [
+          'Filtrar pendents (què està sense resoldre).',
+          'Assignar contactes.',
+          'Assignar categories.',
+          'Revisar remeses i devolucions.',
+          'Adjuntar documents quan aporten valor.',
+        ],
+      },
+      pitfalls: {
+        title: 'Errors habituals',
+        items: [
+          'Assignar categoria sense haver definit el contacte.',
+          'Forçar una assignació només per "deixar-ho net".',
+          'Dividir remeses massa tard, amb altres camps ja tocats.',
+          'Generar informes sense haver revisat devolucions.',
+        ],
+      },
+      whenNot: {
+        title: 'Quan no cal fer res',
+        items: [
+          'No cal assignar projecte si només controles el dia a dia.',
+          'No cal adjuntar document a moviments petits i evidents.',
+          'No cal resoldre tots els dubtes al moment: pendents conscients també són control.',
+        ],
+      },
+      manual: {
+        label: 'Manual d\'usuari · Gestió de Moviments',
+        href: '/dashboard/manual#5-gestio-de-moviments',
+      },
+      video: {
+        label: 'Vídeo (properament)',
+        note: 'Com mantenir Moviments sota control en 10 minuts',
+      },
+    },
+    keywords: [
+      'control',
+      'pendents',
+      'contacte',
+      'categoria',
+      'remesa',
+      'devolucions',
+      'document',
+      'dia a dia',
+    ],
   },
   '/dashboard/donants': {
     title: 'Ajuda · Donants',

@@ -3,7 +3,7 @@
 import * as React from 'react';
 import { usePathname, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
-import { HelpCircle, BookOpen, Link2, MessageSquare } from 'lucide-react';
+import { HelpCircle, BookOpen, Link2, MessageSquare, ExternalLink, Play, AlertTriangle, CheckCircle2, XCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
@@ -20,7 +20,7 @@ import {
 } from '@/components/ui/tooltip';
 import { useToast } from '@/hooks/use-toast';
 import { useTranslations } from '@/i18n';
-import type { HelpContent, HelpRouteKey } from '@/help/help-types';
+import type { HelpContent, HelpRouteKey, HelpExtraSection, HelpExtraLink } from '@/help/help-types';
 import { HELP_CONTENT_CA, HELP_FALLBACK_CA } from '@/help/ca/help-content';
 import { HELP_CONTENT_ES } from '@/help/es/help-content';
 import { HELP_CONTENT_FR } from '@/help/fr/help-content';
@@ -377,6 +377,76 @@ export function HelpSheet() {
                 <p className="text-sm text-muted-foreground italic">
                   {ui.noSteps}
                 </p>
+              )}
+
+              {/* Extra sections (order, pitfalls, whenNot) */}
+              {!hasQuery && helpContent.extra && (
+                <div className="space-y-4 pt-4 border-t">
+                  {helpContent.extra.order && (
+                    <div className="space-y-2">
+                      <h4 className="text-sm font-medium flex items-center gap-2">
+                        <CheckCircle2 className="h-4 w-4 text-green-600" />
+                        {helpContent.extra.order.title}
+                      </h4>
+                      <ol className="list-decimal list-inside space-y-1 text-sm text-muted-foreground ml-6">
+                        {helpContent.extra.order.items.map((item, idx) => (
+                          <li key={idx}>{item}</li>
+                        ))}
+                      </ol>
+                    </div>
+                  )}
+
+                  {helpContent.extra.pitfalls && (
+                    <div className="space-y-2">
+                      <h4 className="text-sm font-medium flex items-center gap-2">
+                        <AlertTriangle className="h-4 w-4 text-amber-600" />
+                        {helpContent.extra.pitfalls.title}
+                      </h4>
+                      <ul className="list-disc list-inside space-y-1 text-sm text-muted-foreground ml-6">
+                        {helpContent.extra.pitfalls.items.map((item, idx) => (
+                          <li key={idx}>{item}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+
+                  {helpContent.extra.whenNot && (
+                    <div className="space-y-2">
+                      <h4 className="text-sm font-medium flex items-center gap-2">
+                        <XCircle className="h-4 w-4 text-slate-500" />
+                        {helpContent.extra.whenNot.title}
+                      </h4>
+                      <ul className="list-disc list-inside space-y-1 text-sm text-muted-foreground ml-6">
+                        {helpContent.extra.whenNot.items.map((item, idx) => (
+                          <li key={idx}>{item}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+
+                  {/* Manual link from extra */}
+                  {helpContent.extra.manual && helpContent.extra.manual.href && (
+                    <div className="pt-2">
+                      <Button variant="outline" size="sm" asChild>
+                        <Link href={helpContent.extra.manual.href} onClick={handleManualClick}>
+                          <BookOpen className="h-4 w-4 mr-2" />
+                          {helpContent.extra.manual.label}
+                        </Link>
+                      </Button>
+                    </div>
+                  )}
+
+                  {/* Video placeholder */}
+                  {helpContent.extra.video && (
+                    <div className="pt-2 flex items-center gap-2 text-sm text-muted-foreground">
+                      <Play className="h-4 w-4" />
+                      <span>{helpContent.extra.video.label}</span>
+                      {helpContent.extra.video.note && (
+                        <span className="text-xs">— {helpContent.extra.video.note}</span>
+                      )}
+                    </div>
+                  )}
+                </div>
               )}
             </>
           )}
