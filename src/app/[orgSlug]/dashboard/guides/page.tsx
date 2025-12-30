@@ -15,6 +15,9 @@ import {
   Users,
   FileText,
   FolderKanban,
+  Eye,
+  CheckCircle2,
+  XCircle,
 } from 'lucide-react';
 import { useTranslations } from '@/i18n';
 
@@ -76,11 +79,30 @@ const GUIDE_CONTENT = {
     viewManual: 'Veure al manual',
     goToScreen: 'Anar a la pantalla',
     recommendedOrder: 'Ordre recomanat',
+    // Labels per nou format checklist
+    lookFirst: 'Mira això primer',
+    doNext: 'Fes això després',
+    avoid: 'Evita això',
     guides: {
       movements: {
-        title: 'Moviments (control diari)',
-        intro: 'Revisa què entra i què surt del banc. Detecta pendents i evita errors.',
-        steps: ['Filtra pendents (sense contacte/categoria).', 'Assigna contacte → categoria → document.'],
+        title: 'Moviments · Control diari',
+        intro: 'Centre de control del dia a dia: aquí veus què entra i surt i detectes pendents abans que es facin grans.',
+        // Nou format checklist
+        lookFirst: [
+          'Moviments sense contacte',
+          'Moviments sense categoria',
+          'Devolucions pendents',
+        ],
+        doNext: [
+          'Assigna contacte → categoria (en aquest ordre)',
+          'Divideix remeses abans de seguir',
+        ],
+        avoid: [
+          'Forçar assignacions "per deixar-ho net"',
+          'Ignorar devolucions abans d\'informes',
+        ],
+        // Mantenim steps per compatibilitat amb altres guies
+        steps: [],
       },
       returns: {
         title: 'Devolucions',
@@ -115,6 +137,10 @@ const GUIDE_CONTENT = {
     viewManual: 'Ver en el manual',
     goToScreen: 'Ir a la pantalla',
     recommendedOrder: 'Orden recomendado',
+    // Labels per nou format checklist
+    lookFirst: 'Mira esto primero',
+    doNext: 'Haz esto después',
+    avoid: 'Evita esto',
     guides: {
       movements: {
         title: 'Movimientos (control diario)',
@@ -154,6 +180,10 @@ const GUIDE_CONTENT = {
     viewManual: 'Voir dans le manuel',
     goToScreen: "Aller à l'écran",
     recommendedOrder: 'Ordre recommandé',
+    // Labels per nou format checklist
+    lookFirst: 'À regarder d\'abord',
+    doNext: 'À faire ensuite',
+    avoid: 'À éviter',
     guides: {
       movements: {
         title: 'Mouvements (contrôle quotidien)',
@@ -235,17 +265,63 @@ export default function GuidesPage() {
               </CardHeader>
 
               <CardContent className="flex-1 flex flex-col">
-                {/* Ordre recomanat */}
-                <div className="mb-4">
-                  <Badge variant="outline" className="mb-2 text-xs">
-                    {content.recommendedOrder}
-                  </Badge>
-                  <ol className="text-sm text-muted-foreground space-y-1 list-decimal list-inside">
-                    {guideContent.steps.map((step, idx) => (
-                      <li key={idx} className="line-clamp-1">{step}</li>
-                    ))}
-                  </ol>
-                </div>
+                {/* Nou format checklist (si té lookFirst) */}
+                {'lookFirst' in guideContent && guideContent.lookFirst && guideContent.lookFirst.length > 0 ? (
+                  <div className="space-y-3 mb-4">
+                    {/* Mira això primer */}
+                    <div>
+                      <div className="flex items-center gap-1.5 mb-1">
+                        <Eye className="h-3.5 w-3.5 text-blue-500" />
+                        <span className="text-xs font-medium text-blue-600">{content.lookFirst}</span>
+                      </div>
+                      <ul className="text-xs text-muted-foreground space-y-0.5 ml-5">
+                        {guideContent.lookFirst.map((item: string, idx: number) => (
+                          <li key={idx} className="list-disc">{item}</li>
+                        ))}
+                      </ul>
+                    </div>
+                    {/* Fes això després */}
+                    {'doNext' in guideContent && guideContent.doNext && guideContent.doNext.length > 0 && (
+                      <div>
+                        <div className="flex items-center gap-1.5 mb-1">
+                          <CheckCircle2 className="h-3.5 w-3.5 text-green-500" />
+                          <span className="text-xs font-medium text-green-600">{content.doNext}</span>
+                        </div>
+                        <ul className="text-xs text-muted-foreground space-y-0.5 ml-5">
+                          {guideContent.doNext.map((item: string, idx: number) => (
+                            <li key={idx} className="list-disc">{item}</li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+                    {/* Evita això */}
+                    {'avoid' in guideContent && guideContent.avoid && guideContent.avoid.length > 0 && (
+                      <div>
+                        <div className="flex items-center gap-1.5 mb-1">
+                          <XCircle className="h-3.5 w-3.5 text-red-400" />
+                          <span className="text-xs font-medium text-red-500">{content.avoid}</span>
+                        </div>
+                        <ul className="text-xs text-muted-foreground space-y-0.5 ml-5">
+                          {guideContent.avoid.map((item: string, idx: number) => (
+                            <li key={idx} className="list-disc">{item}</li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  /* Format antic amb steps */
+                  <div className="mb-4">
+                    <Badge variant="outline" className="mb-2 text-xs">
+                      {content.recommendedOrder}
+                    </Badge>
+                    <ol className="text-sm text-muted-foreground space-y-1 list-decimal list-inside">
+                      {guideContent.steps.map((step: string, idx: number) => (
+                        <li key={idx} className="line-clamp-1">{step}</li>
+                      ))}
+                    </ol>
+                  </div>
+                )}
 
                 {/* CTAs */}
                 <div className="mt-auto flex flex-col gap-2">
