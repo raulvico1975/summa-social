@@ -62,7 +62,7 @@ const GUIDES: GuideItem[] = [
     id: 'donors',
     icon: <Users className="h-5 w-5" />,
     href: '/dashboard/donants',
-    manualAnchor: '#3-gestio-de-donants',
+    manualAnchor: '#donors',
   },
   {
     id: 'reports',
@@ -85,17 +85,24 @@ const GUIDE_CONTENT = {
     pageSubtitle: 'Aprèn a fer servir cada pantalla en 2 minuts. Per a més detall, consulta el manual.',
     viewManual: 'Veure al manual',
     viewHelp: 'Veure ajuda detallada',
-    goToScreen: 'Anar a Moviments',
+    goToScreen: {
+      movements: 'Anar a Moviments',
+      returns: 'Anar a Moviments',
+      remittances: 'Anar a Moviments',
+      donors: 'Anar a Donants',
+      reports: 'Anar a Informes',
+      projects: 'Anar a Projectes',
+    },
     recommendedOrder: 'Ordre recomanat',
     // Labels per nou format checklist
     lookFirst: 'Mira això primer',
     doNext: 'Fes això després',
     avoid: 'Evita això',
-    // Labels per format expert (devolucions)
-    notResolved: 'Quan NO està ben resolta',
+    // Labels per format expert (devolucions/donants)
+    notResolved: 'Quan NO està "a punt"',
     costlyError: 'L\'error més car',
-    checkBeforeExport: 'Què mires sempre abans d\'exportar',
-    dontFixYet: 'Quan NO arreglar-ho encara',
+    checkBeforeExport: 'Les 3 comprovacions abans d\'exportar',
+    dontFixYet: 'Quan NO tocar res',
     guides: {
       movements: {
         title: 'Moviments · Control diari',
@@ -145,9 +152,24 @@ const GUIDE_CONTENT = {
         steps: ['Divideix la remesa abans d\'assignar contactes.', 'Revisa pendents d\'assignació (matching per email).'],
       },
       donors: {
-        title: 'Donants (Model 182)',
-        intro: 'Mantén DNI/CIF i Codi Postal correctes per generar el Model 182 i certificats nets.',
-        steps: ['Completa DNI/CIF i Codi Postal.', 'Revisa devolucions assignades.'],
+        title: 'Donants · Model 182 (sense errors)',
+        intro: 'El Model 182 falla per dues coses: DNI/CP incomplets o devolucions mal resoltes. La resta és secundària.',
+        notResolved: [
+          'Falta DNI/CIF o Codi Postal',
+          'Hi ha duplicats (mateix DNI en dues fitxes)',
+          'Total anual "fa olor" per devolucions pendents',
+        ],
+        costlyError: 'Generar 182 o certificats massius sense revisar 2–3 donants representatius. Després no saps on està el problema.',
+        checkBeforeExport: [
+          'Donants amb DNI/CP complets',
+          'Duplicats resolts (1 DNI = 1 donant)',
+          'Donants "estranys" revisats (import net i devolucions)',
+        ],
+        dontFixYet: [
+          'Si no tens les dades fiscals: espera i demana-les',
+          'Si estàs en control diari: no cal "perfeccionar" fitxes',
+        ],
+        steps: [],
       },
       reports: {
         title: 'Informes (182/347/certificats)',
@@ -487,7 +509,7 @@ export default function GuidesPage() {
                 <div className="mt-auto flex flex-col gap-2">
                   <Button asChild size="sm">
                     <Link href={buildUrl(guide.href)}>
-                      {content.goToScreen}
+                      {content.goToScreen[guide.id as keyof typeof content.goToScreen]}
                       <ArrowRight className="ml-2 h-4 w-4" />
                     </Link>
                   </Button>
