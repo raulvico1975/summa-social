@@ -188,17 +188,24 @@ const GUIDE_CONTENT = {
     pageSubtitle: 'Aprende a usar cada pantalla en 2 minutos. Para más detalle, consulta el manual.',
     viewManual: 'Ver en el manual',
     viewHelp: 'Ver ayuda detallada',
-    goToScreen: 'Ir a Movimientos',
+    goToScreen: {
+      movements: 'Ir a Movimientos',
+      returns: 'Ir a Movimientos',
+      remittances: 'Ir a Movimientos',
+      donors: 'Ir a Donantes',
+      reports: 'Ir a Informes',
+      projects: 'Ir a Proyectos',
+    },
     recommendedOrder: 'Orden recomendado',
     // Labels per nou format checklist
     lookFirst: 'Mira esto primero',
     doNext: 'Haz esto después',
     avoid: 'Evita esto',
-    // Labels per format expert (devolucions)
-    notResolved: 'Cuándo NO está bien resuelta',
+    // Labels per format expert (devolucions/donants)
+    notResolved: 'Cuándo NO está "listo"',
     costlyError: 'El error más caro',
-    checkBeforeExport: 'Qué miras siempre antes de exportar',
-    dontFixYet: 'Cuándo NO arreglarlo todavía',
+    checkBeforeExport: 'Las 3 comprobaciones antes de exportar',
+    dontFixYet: 'Cuándo NO tocar nada',
     guides: {
       movements: {
         title: 'Movimientos · Control diario',
@@ -246,9 +253,24 @@ const GUIDE_CONTENT = {
         steps: ['Divide la remesa antes de asignar contactos.', 'Revisa pendientes de asignación (matching por email).'],
       },
       donors: {
-        title: 'Donantes (Modelo 182)',
-        intro: 'Mantén DNI/CIF y Código Postal correctos para generar el Modelo 182 y certificados limpios.',
-        steps: ['Completa DNI/CIF y Código Postal.', 'Revisa devoluciones asignadas.'],
+        title: 'Donantes · Modelo 182 (sin errores)',
+        intro: 'El Modelo 182 falla por dos cosas: DNI/CP incompletos o devoluciones mal resueltas. Lo demás es secundario.',
+        notResolved: [
+          'Falta DNI/CIF o Código Postal',
+          'Hay duplicados (mismo DNI en dos fichas)',
+          'Total anual "huele raro" por devoluciones pendientes',
+        ],
+        costlyError: 'Generar 182 o certificados masivos sin revisar 2–3 donantes representativos. Luego no sabes dónde está el problema.',
+        checkBeforeExport: [
+          'Donantes con DNI/CP completos',
+          'Duplicados resueltos (1 DNI = 1 donante)',
+          'Donantes "raros" revisados (importe neto y devoluciones)',
+        ],
+        dontFixYet: [
+          'Si no tienes datos fiscales: espera y pídelos',
+          'Si estás en control diario: no hace falta "perfeccionar" fichas',
+        ],
+        steps: [],
       },
       reports: {
         title: 'Informes (182/347/certificados)',
