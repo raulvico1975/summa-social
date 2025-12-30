@@ -134,6 +134,21 @@ function getOrgSlug(pathname: string): string | null {
 }
 
 /**
+ * Builds a manual URL with orgSlug, preserving any hash anchor.
+ * E.g., /dashboard/manual#top + orgSlug="acme" -> /acme/dashboard/manual#top
+ */
+function buildManualUrl(href: string, orgSlug: string | null): string {
+  // Extract anchor from href if present
+  const hashIndex = href.indexOf('#');
+  const anchor = hashIndex !== -1 ? href.slice(hashIndex) : '';
+
+  // Build base URL with orgSlug
+  const base = orgSlug ? `/${orgSlug}/dashboard/manual` : '/dashboard/manual';
+
+  return anchor ? `${base}${anchor}` : base;
+}
+
+/**
  * Get help content with locale fallback to CA.
  */
 function getHelpContent(routeKey: HelpRouteKey, locale: 'ca' | 'es' | 'fr'): HelpContent {
@@ -598,7 +613,7 @@ export function HelpSheet() {
                   {helpContent.extra.manual && helpContent.extra.manual.href && (
                     <div className="pt-2">
                       <Button variant="outline" size="sm" asChild>
-                        <Link href={helpContent.extra.manual.href} onClick={handleManualClick}>
+                        <Link href={buildManualUrl(helpContent.extra.manual.href, orgSlug)} onClick={handleManualClick}>
                           <BookOpen className="h-4 w-4 mr-2" />
                           {helpContent.extra.manual.label}
                         </Link>
