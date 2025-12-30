@@ -27,6 +27,8 @@ export type HelpExtra = {
   pitfalls?: HelpExtraSection;
   whenNot?: HelpExtraSection;
   checks?: HelpExtraSection;
+  returns?: HelpExtraSection;
+  remittances?: HelpExtraSection;
   manual?: HelpExtraLink;
   video?: HelpExtraLink;
 };
