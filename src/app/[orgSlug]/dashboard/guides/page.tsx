@@ -28,6 +28,7 @@ import {
   Upload,
   PlayCircle,
   Calendar,
+  CheckSquare,
 } from 'lucide-react';
 import { useTranslations } from '@/i18n';
 
@@ -53,6 +54,12 @@ const GUIDES: GuideItem[] = [
   {
     id: 'firstMonth',
     icon: <Calendar className="h-5 w-5" />,
+    href: '/dashboard/movimientos',
+    manualAnchor: '#5-gestio-de-moviments',
+  },
+  {
+    id: 'monthClose',
+    icon: <CheckSquare className="h-5 w-5" />,
     href: '/dashboard/movimientos',
     manualAnchor: '#5-gestio-de-moviments',
   },
