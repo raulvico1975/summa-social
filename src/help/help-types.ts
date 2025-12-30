@@ -31,6 +31,8 @@ export type HelpExtra = {
   remittances?: HelpExtraSection;
   contacts?: HelpExtraSection;
   categories?: HelpExtraSection;
+  documents?: HelpExtraSection;
+  bankAccounts?: HelpExtraSection;
   manual?: HelpExtraLink;
   video?: HelpExtraLink;
 };
