@@ -485,6 +485,23 @@ export default function AdminPage() {
                   <FileText className="h-4 w-4" />
                   <code className="text-xs bg-muted px-1 rounded">docs/DEV-SOLO-MANUAL.md</code>
                 </span>
+                {/* Botó QA Crash - només visible en dev */}
+                {process.env.NODE_ENV !== 'production' && (
+                  <Button
+                    variant="destructive"
+                    size="sm"
+                    className="mt-2"
+                    onClick={() => {
+                      // Dispara error client-side via setTimeout per assegurar que passa per window.onerror
+                      setTimeout(() => {
+                        throw new Error('QA_TEST_CLIENT_CRASH');
+                      }, 0);
+                    }}
+                  >
+                    <AlertCircle className="mr-2 h-4 w-4" />
+                    [QA] Provocar crash client
+                  </Button>
+                )}
               </div>
             </CardContent>
           </Card>

@@ -66,19 +66,34 @@ function useOrganizationBySlug(orgSlug?: string) {
 
         if (orgSlug) {
           // ═══════════════════════════════════════════════════════════════════
-          // CARREGA PER SLUG (nova funcionalitat)
+          // CARREGA PER SLUG (via /slugs/{slug} → orgId → /organizations/{orgId})
+          // Això evita fer query amb where() que requereix permisos de lectura global
           // ═══════════════════════════════════════════════════════════════════
-          const orgsRef = collection(firestore, 'organizations');
-          const q = query(orgsRef, where('slug', '==', orgSlug));
-          const snapshot = await getDocs(q);
 
-          if (snapshot.empty) {
+          // 1. Llegir el document de slug (públic, allow read: if true)
+          const slugRef = doc(firestore, 'slugs', orgSlug);
+          const slugSnap = await getDoc(slugRef);
+
+          if (!slugSnap.exists()) {
             throw new Error(`No s'ha trobat l'organització "${orgSlug}"`);
           }
 
-          const docSnap = snapshot.docs[0];
-          orgId = docSnap.id;
-          orgDoc = { id: orgId, ...docSnap.data() } as Organization;
+          const slugData = slugSnap.data();
+          orgId = slugData.orgId;
+
+          if (!orgId) {
+            throw new Error(`Slug "${orgSlug}" no té organització associada`);
+          }
+
+          // 2. Llegir l'organització directament pel seu ID
+          const orgRef = doc(firestore, 'organizations', orgId);
+          const orgSnap = await getDoc(orgRef);
+
+          if (!orgSnap.exists()) {
+            throw new Error(`No s'ha trobat l'organització amb ID "${orgId}"`);
+          }
+
+          orgDoc = { id: orgId, ...orgSnap.data() } as Organization;
 
           // Verificar que l'usuari té accés a aquesta organització
           const memberRef = doc(firestore, 'organizations', orgId, 'members', user.uid);

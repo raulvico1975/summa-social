@@ -1,5 +1,5 @@
 // src/components/ErrorBoundaryGlobal.tsx
-// Captura errors globals (window.onerror, unhandledrejection) i els envia a systemIncidents
+// Captura errors globals (window.onerror, unhandledrejection) i errors React i els envia a systemIncidents
 
 'use client';
 
@@ -11,6 +11,87 @@ import {
   reportSystemIncident,
   shouldIgnoreError,
 } from '@/lib/system-incidents';
+import type { Firestore } from 'firebase/firestore';
+
+// ═══════════════════════════════════════════════════════════════════════════
+// REACT ERROR BOUNDARY (Class component - requerit per componentDidCatch)
+// ═══════════════════════════════════════════════════════════════════════════
+
+interface ErrorBoundaryProps {
+  children: React.ReactNode;
+  firestore: Firestore | null;
+  pathname: string | null;
+  orgId?: string;
+  orgSlug?: string;
+}
+
+interface ErrorBoundaryState {
+  hasError: boolean;
+  error: Error | null;
+}
+
+class ReactErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoundaryState> {
+  constructor(props: ErrorBoundaryProps) {
+    super(props);
+    this.state = { hasError: false, error: null };
+  }
+
+  static getDerivedStateFromError(error: Error): ErrorBoundaryState {
+    return { hasError: true, error };
+  }
+
+  componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
+    const { firestore, pathname, orgId, orgSlug } = this.props;
+
+    // Filtrar soroll
+    if (shouldIgnoreError(error.message)) {
+      return;
+    }
+
+    if (firestore) {
+      reportSystemIncident({
+        firestore,
+        type: 'CLIENT_CRASH',
+        message: error.message || 'React render error',
+        route: pathname || undefined,
+        stack: error.stack,
+        orgId: orgId || undefined,
+        orgSlug: orgSlug || undefined,
+        meta: {
+          componentStack: errorInfo.componentStack?.slice(0, 500), // Limitar mida
+        },
+      });
+    }
+  }
+
+  render() {
+    if (this.state.hasError) {
+      // UI de fallback quan hi ha error
+      return (
+        <div className="min-h-screen flex items-center justify-center p-4">
+          <div className="max-w-md text-center">
+            <h1 className="text-2xl font-bold mb-4">Hi ha hagut un error</h1>
+            <p className="text-muted-foreground mb-4">
+              S&apos;ha produït un error inesperat. L&apos;equip tècnic ha estat notificat.
+            </p>
+            <button
+              onClick={() => window.location.reload()}
+              className="px-4 py-2 bg-primary text-primary-foreground rounded hover:opacity-90"
+            >
+              Recarregar pàgina
+            </button>
+          </div>
+        </div>
+      );
+    }
+
+    return this.props.children;
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// GLOBAL ERROR HANDLERS (window.onerror, unhandledrejection)
+// ═══════════════════════════════════════════════════════════════════════════
 
 export function ErrorBoundaryGlobal({
   children,
@@ -44,7 +125,9 @@ export function ErrorBoundaryGlobal({
       }
 
       const { firestore: fs, pathname: route, orgId: oid, orgSlug: slug } = contextRef.current;
-      if (!fs) return;
+      if (!fs) {
+        return;
+      }
 
       reportSystemIncident({
         firestore: fs,
@@ -109,5 +192,14 @@ export function ErrorBoundaryGlobal({
     };
   }, [firestore, isUserLoading]);
 
-  return <>{children}</>;
+  return (
+    <ReactErrorBoundary
+      firestore={firestore}
+      pathname={pathname}
+      orgId={orgId}
+      orgSlug={orgSlug}
+    >
+      {children}
+    </ReactErrorBoundary>
+  );
 }

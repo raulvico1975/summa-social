@@ -46,6 +46,7 @@ export interface SystemIncident {
   lastSeenAt: Timestamp;
   status: IncidentStatus;
   lastSeenMeta?: Record<string, unknown>; // error code, function name, etc.
+  alertSentAt?: Timestamp; // quan s'ha enviat email d'alerta (usat per Cloud Function)
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -210,22 +211,25 @@ export async function reportSystemIncident(
         `[SystemIncidents] Updated incident ${signature} (count: ${(data.count || 1) + 1})`
       );
     } else {
-      // Crear nou incident
-      const incident: Omit<SystemIncident, 'id'> = {
+      // Crear nou incident (filtrant undefined per evitar errors Firestore)
+      const incident: Record<string, unknown> = {
         signature,
         type,
         severity,
         message: message.slice(0, 500),
-        route: route?.slice(0, 200),
-        topStack: extractTopStackLine(stack),
-        orgId,
-        orgSlug,
         count: 1,
         firstSeenAt: now,
         lastSeenAt: now,
         status: 'OPEN',
-        lastSeenMeta: meta,
       };
+      // Afegir camps opcionals només si tenen valor
+      if (route) incident.route = route.slice(0, 200);
+      const topStack = extractTopStackLine(stack);
+      if (topStack) incident.topStack = topStack;
+      if (orgId) incident.orgId = orgId;
+      if (orgSlug) incident.orgSlug = orgSlug;
+      if (meta) incident.lastSeenMeta = meta;
+
       await setDoc(docRef, incident);
       console.info(`[SystemIncidents] Created incident ${signature}: ${message.slice(0, 60)}`);
     }
@@ -315,4 +319,159 @@ export async function reopenIncident(
   await updateDoc(doc(firestore, 'systemIncidents', incidentId), {
     status: 'OPEN',
   });
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// RUTES CORE (errors aquí són crítics des del primer cop)
+// ═══════════════════════════════════════════════════════════════════════════
+
+const CORE_ROUTES = [
+  '/movimientos',
+  '/moviments',
+  '/importar',
+  '/import',
+  '/fiscalitat',
+  '/fiscalidad',
+  '/project-module',
+  '/projectes',
+  '/proyectos',
+];
+
+export function isCoreRoute(route: string | undefined): boolean {
+  if (!route) return false;
+  const lowerRoute = route.toLowerCase();
+  return CORE_ROUTES.some((core) => lowerRoute.includes(core));
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// INCIDENT FIX PACK (prompt de reparació per Claude Code)
+// ═══════════════════════════════════════════════════════════════════════════
+
+export interface IncidentFixPack {
+  title: string;
+  summary: string;
+  promptText: string;
+}
+
+export interface AppMeta {
+  version?: string;
+  env?: 'prod' | 'dev';
+  projectId?: string;
+  commit?: string;
+}
+
+const TYPE_LABELS: Record<IncidentType, string> = {
+  CLIENT_CRASH: 'Error de codi (crash)',
+  PERMISSIONS: 'Error de permisos',
+  IMPORT_FAILURE: "Error d'importació",
+  EXPORT_FAILURE: "Error d'exportació",
+  INVARIANT_BROKEN: 'Invariant violada',
+};
+
+export function buildIncidentFixPack(
+  incident: SystemIncident,
+  appMeta: AppMeta = {}
+): IncidentFixPack {
+  const typeLabel = TYPE_LABELS[incident.type] || incident.type;
+  const routeShort = incident.route?.split('/').slice(-2).join('/') || 'desconeguda';
+
+  // Title: una línia humana
+  const title = `${typeLabel} a ${routeShort} – ${incident.message.slice(0, 50)}${incident.message.length > 50 ? '...' : ''}`;
+
+  // Summary: 3 línies
+  const help = INCIDENT_HELP[incident.type];
+  const summary = [
+    `Què passa: ${help.whatItMeans}`,
+    `Impacte: ${help.whyCritical}`,
+    `Primer pas: ${help.nextSteps.split('\n')[0]}`,
+  ].join('\n');
+
+  // PromptText: text complet per Claude Code
+  const promptText = `## Incident Fix Pack – Summa Social
+
+### 1. Context de projecte
+Ets Claude Code dins el repo Summa Social (Next.js 14 + Firebase).
+Abans de tocar res, llegeix:
+- docs/SUMMA-SOCIAL-REFERENCIA-COMPLETA.md
+- docs/DEV-SOLO-MANUAL.md
+
+**Regles obligatòries:**
+- No afegeixis dependències noves
+- No refactoritzis codi no afectat
+- Canvi mínim viable
+
+### 2. Detalls de l'incident
+
+| Camp | Valor |
+|------|-------|
+| **Tipus** | ${incident.type} |
+| **Severitat** | ${incident.severity} |
+| **Ruta** | ${incident.route || 'N/A'} |
+| **Organització** | ${incident.orgSlug || incident.orgId || 'N/A'} |
+| **Repeticions** | ${incident.count} |
+| **Última vegada** | ${incident.lastSeenAt?.toDate?.()?.toISOString?.() || 'N/A'} |
+| **Signatura** | ${incident.signature} |
+
+**Missatge d'error:**
+\`\`\`
+${incident.message}
+\`\`\`
+
+**Top stack:**
+\`\`\`
+${incident.topStack || 'No disponible'}
+\`\`\`
+
+${appMeta.version ? `**Versió app:** ${appMeta.version}` : ''}
+${appMeta.env ? `**Entorn:** ${appMeta.env}` : ''}
+${appMeta.commit ? `**Commit:** ${appMeta.commit}` : ''}
+
+### 3. Objectiu
+- Arreglar l'error perquè la ruta torni a carregar sense regressions.
+- Afegir test manual de regressió (passos reproducció → resultat esperat).
+
+### 4. Procediment obligatori
+1. Localitza el fitxer origen del stack (${incident.topStack?.split('/').slice(-1)[0] || 'desconegut'})
+2. Proposa canvi mínim amb paths exactes
+3. Indica QA: com verificar que funciona
+${incident.type === 'PERMISSIONS' ? '4. Si és PERMISSIONS: indica quina rule i quin path està denegant.' : ''}
+
+### 5. Informació addicional
+${help.nextSteps}
+`;
+
+  return { title, summary, promptText };
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// DETERMINAR SI CAL ENVIAR ALERTA
+// ═══════════════════════════════════════════════════════════════════════════
+
+export interface AlertDecision {
+  shouldAlert: boolean;
+  reason: string;
+}
+
+export function shouldSendAlert(incident: SystemIncident): AlertDecision {
+  // Condició 1: ha de ser CRITICAL
+  if (incident.severity !== 'CRITICAL') {
+    return { shouldAlert: false, reason: 'No és CRITICAL' };
+  }
+
+  // Condició 2: ha de ser OPEN (no ACK ni RESOLVED)
+  if (incident.status !== 'OPEN') {
+    return { shouldAlert: false, reason: `Status és ${incident.status}, no OPEN` };
+  }
+
+  // Condició 3: count >= 2 O primer error en ruta core
+  const isCore = isCoreRoute(incident.route);
+  if (incident.count < 2 && !isCore) {
+    return { shouldAlert: false, reason: 'count < 2 i no és ruta core' };
+  }
+
+  // Tot OK
+  return {
+    shouldAlert: true,
+    reason: isCore ? 'Ruta core afectada' : `Repetit ${incident.count} vegades`,
+  };
 }

@@ -2223,13 +2223,24 @@ Errors ignorats automàticament (no creen incidents):
 - `AbortError` — Requests cancel·lats intencionalment
 
 **Fitxers principals:**
-- `src/lib/system-incidents.ts` — Model, deduplicació, filtres
+- `src/lib/system-incidents.ts` — Model, deduplicació, filtres, buildIncidentFixPack
 - `src/components/ErrorBoundaryGlobal.tsx` — Capturador client
-- `src/components/admin/system-health.tsx` — UI sentinelles
+- `src/components/admin/system-health.tsx` — UI sentinelles + botó "Copiar prompt"
+- `functions/src/alerts/sendIncidentAlert.ts` — Cloud Function alertes email
+
+**Alertes email (v1.1):**
+- Cloud Function `sendIncidentAlert` envia email via Resend (proveïdor ja existent)
+- Criteris d'enviament:
+  - `severity === CRITICAL`
+  - `status === OPEN` (mai si ACK o RESOLVED)
+  - `count >= 2` O ruta core (movimientos, fiscalitat, project-module...)
+  - Cooldown 24h per incident (un email per finestra)
+- Email inclou prompt de reparació per Claude Code
+- Flag `ALERTS_ENABLED` (per defecte `false` en dev)
+- Sense dependències noves: usa Resend API directament
 
 **Límits:**
 - Només visible per SuperAdmin a `/admin`
-- No envia emails ni push (només panell)
 - S6–S8 requereixen implementació de consultes específiques
 
 ### 3.10.6 Fitxers principals

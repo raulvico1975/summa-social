@@ -289,6 +289,62 @@ Per validar que el sistema funciona:
 3. **Test anti-soroll:**
    - Els errors `ERR_BLOCKED_BY_CLIENT` (adblockers) NO han de crear incidents
 
+### Què fer quan rebo un email d'alerta (v1.1)
+
+1. **Obre el link** `/admin` de l'email i localitza l'incident
+2. **Copia el prompt** clicant el botó 📋 o "Copiar prompt de reparació"
+3. **Enganxa a Claude Code** i deixa que proposi el fix mínim + QA
+
+**Opcions després de copiar:**
+- Si vas a treballar-hi ara: deixa l'incident OPEN
+- Si l'has vist però no pots ara: fes **ACK** (silencia 24h)
+- Si l'has resolt: fes **Resolt**
+
+**Per desactivar alertes email ràpidament (kill switch):**
+```bash
+firebase functions:config:set alerts.enabled=false
+firebase deploy --only functions
+```
+
+### Checklist QA pre-prod (alertes email v1.1)
+
+Abans d'activar `ALERTS_ENABLED=true` en producció:
+
+```
+□ 1. Config dev OFF
+   - Confirmar alerts.enabled=false a dev
+   - Verificar que no s'envia cap email encara que hi hagi incidents
+
+□ 2. Config prod
+   - firebase functions:config:set resend.api_key="re_xxx"
+   - firebase functions:config:set alert.email="raul.vico.ferre@gmail.com"
+   - firebase functions:config:set alerts.enabled=true
+   - firebase deploy --only functions
+
+□ 3. Test crash ruta core
+   - Injectar throw new Error("TEST_CORE_CRASH") a Moviments
+   - Recarregar 2 cops → incident OPEN amb count>=2 → 1 email
+   - Verificar que el cos inclou link a /admin + prompt
+
+□ 4. Test ACK
+   - Marcar l'incident com ACK
+   - Recarregar 5 cops → count puja però 0 emails nous
+
+□ 5. Test RESOLVED + reaparició
+   - Posar RESOLVED
+   - Reproduir de nou → ha de reobrir a OPEN
+   - No email si dins del cooldown 24h
+
+□ 6. Test soroll filtrat
+   - Reproduir ERR_BLOCKED_BY_CLIENT → no incident
+
+□ 7. Test sanitització
+   - Verificar que prompt i email no contenen emails d'usuaris, IBANs ni tokens
+
+□ 8. Test idempotència
+   - Recàrregues ràpides al mateix incident → 1 sol email
+```
+
 ---
 
-*Última actualització: 2024-12-30*
+*Última actualització: 2025-12-30*

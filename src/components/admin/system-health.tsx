@@ -12,9 +12,11 @@ import {
   resolveIncident,
   reopenIncident,
   INCIDENT_HELP,
+  buildIncidentFixPack,
   type SystemIncident,
   type IncidentType,
 } from '@/lib/system-incidents';
+import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -57,6 +59,7 @@ import {
   Clock,
   FileText,
   Activity,
+  Copy,
 } from 'lucide-react';
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -137,6 +140,7 @@ const SENTINELS: Sentinel[] = [
 
 export function SystemHealth() {
   const { firestore } = useFirebase();
+  const { toast } = useToast();
   const [incidents, setIncidents] = React.useState<SystemIncident[]>([]);
   const [incidentCounts, setIncidentCounts] = React.useState<Record<IncidentType, number>>({
     CLIENT_CRASH: 0,
@@ -239,6 +243,25 @@ export function SystemHealth() {
     }
   };
 
+  // Handler per copiar prompt de reparació
+  const handleCopyPrompt = async (incident: SystemIncident) => {
+    const { promptText } = buildIncidentFixPack(incident);
+    try {
+      await navigator.clipboard.writeText(promptText);
+      toast({
+        title: 'Prompt copiat',
+        description: 'Enganxa el text a Claude Code per reparar l\'error.',
+      });
+    } catch (err) {
+      console.error('Error copying prompt:', err);
+      toast({
+        title: 'Error copiant',
+        description: 'No s\'ha pogut copiar al portapapers.',
+        variant: 'destructive',
+      });
+    }
+  };
+
   const totalOpenIncidents = incidents.filter((i) => i.status === 'OPEN').length;
 
   return (
@@ -250,7 +273,10 @@ export function SystemHealth() {
             Salut del sistema
           </CardTitle>
           <CardDescription>
-            Sentinelles que detecten problemes abans que els usuaris els reportin
+            Sentinelles que detecten problemes abans que els usuaris els reportin.
+            <span className="block text-xs mt-1 opacity-70">
+              Alertes email: veure Cloud Logging per estat (ALERTS_ENABLED)
+            </span>
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -411,6 +437,23 @@ export function SystemHealth() {
                     </TableCell>
                     <TableCell>
                       <div className="flex items-center gap-1">
+                        {/* Botó copiar prompt */}
+                        <TooltipProvider delayDuration={200}>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-7 w-7"
+                                onClick={() => handleCopyPrompt(incident)}
+                              >
+                                <Copy className="h-4 w-4" />
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>Copiar prompt de reparació</TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
+
                         {/* Botó ajuda */}
                         <TooltipProvider delayDuration={200}>
                           <Tooltip>
@@ -503,6 +546,18 @@ export function SystemHealth() {
                 <p className="text-sm text-muted-foreground">
                   {INCIDENT_HELP[selectedIncident.type].nextSteps}
                 </p>
+              </div>
+
+              {/* Botó copiar prompt */}
+              <div className="pt-4">
+                <Button
+                  variant="outline"
+                  className="w-full"
+                  onClick={() => handleCopyPrompt(selectedIncident)}
+                >
+                  <Copy className="h-4 w-4 mr-2" />
+                  Copiar prompt de reparació per Claude Code
+                </Button>
               </div>
 
               <div className="pt-4 border-t">

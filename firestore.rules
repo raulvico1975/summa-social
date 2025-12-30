@@ -60,6 +60,15 @@ service cloud.firestore {
     }
 
     // ═══════════════════════════════════════════════════════════════════════
+    // ADMIN AUDIT LOGS (registre d'accions de SuperAdmin)
+    // ═══════════════════════════════════════════════════════════════════════
+
+    match /adminAuditLogs/{logId} {
+      // Llegir i escriure: només SuperAdmin
+      allow read, write: if isSuperAdmin();
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
     // USUARIS
     // ═══════════════════════════════════════════════════════════════════════
 
