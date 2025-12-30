@@ -1,8 +1,11 @@
 'use client';
 
 import * as React from 'react';
-import { ExternalLink, ArrowUp } from 'lucide-react';
+import Link from 'next/link';
+import { useParams } from 'next/navigation';
+import { ExternalLink, ArrowUp, Lightbulb } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 import { extractToc, parseMarkdownWithIds } from '@/lib/help/manual-toc';
 import type { TocEntry, RenderedLine } from '@/lib/help/manual-toc';
 import { useTranslations } from '@/i18n';
@@ -16,6 +19,8 @@ const UI_STRINGS = {
     loading: 'Carregant manual...',
     toc: 'Continguts',
     backToTop: 'Tornar a dalt',
+    bannerText: 'Primer cop? Comença per les guies curtes, tornaràs aquí quan necessitis detalls.',
+    bannerButton: 'Veure guies',
   },
   es: {
     title: 'Manual de usuario',
@@ -24,6 +29,8 @@ const UI_STRINGS = {
     loading: 'Cargando manual...',
     toc: 'Contenidos',
     backToTop: 'Volver arriba',
+    bannerText: '¿Primera vez? Empieza por las guías cortas, volverás aquí cuando necesites detalles.',
+    bannerButton: 'Ver guías',
   },
   fr: {
     title: "Manuel d'utilisateur",
@@ -32,6 +39,8 @@ const UI_STRINGS = {
     loading: 'Chargement du manuel...',
     toc: 'Sommaire',
     backToTop: 'Retour en haut',
+    bannerText: 'Première fois ? Commencez par les guides rapides, vous reviendrez ici pour les détails.',
+    bannerButton: 'Voir les guides',
   },
 } as const;
 
@@ -59,6 +68,8 @@ async function fetchManualWithFallback(locale: 'ca' | 'es' | 'fr'): Promise<stri
 }
 
 export default function ManualPage() {
+  const params = useParams();
+  const orgSlug = params.orgSlug as string;
   const { language } = useTranslations();
   const [content, setContent] = React.useState<string | null>(null);
   const [error, setError] = React.useState<string | null>(null);
@@ -67,6 +78,7 @@ export default function ManualPage() {
   const [parsedContent, setParsedContent] = React.useState<RenderedLine[]>([]);
 
   const ui = UI_STRINGS[language] ?? UI_STRINGS.ca;
+  const guidesUrl = `/${orgSlug}/dashboard/guides`;
 
   React.useEffect(() => {
     fetchManualWithFallback(language)
@@ -126,6 +138,17 @@ export default function ManualPage() {
           </Button>
         </div>
       </div>
+
+      {/* Banner per redirigir a guies */}
+      <Alert className="mb-6 bg-primary/5 border-primary/20">
+        <Lightbulb className="h-4 w-4 text-primary" />
+        <AlertDescription className="flex items-center justify-between gap-4">
+          <span className="text-sm">{ui.bannerText}</span>
+          <Button size="sm" variant="outline" asChild className="shrink-0">
+            <Link href={guidesUrl}>{ui.bannerButton}</Link>
+          </Button>
+        </AlertDescription>
+      </Alert>
 
       {loading && (
         <div className="flex items-center justify-center py-12">
