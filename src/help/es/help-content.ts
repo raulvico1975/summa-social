@@ -114,6 +114,24 @@ export const HELP_CONTENT_ES: Partial<Record<HelpRouteKey, HelpContent>> = {
           'Si una remesa ya está procesada, no la vuelvas a tocar: revisa el detalle desde el badge/modal.',
         ],
       },
+      contacts: {
+        title: 'Contactos (criterio rápido)',
+        items: [
+          'Asigna primero el contacto: da contexto y hace que la categoría sea más fiable.',
+          'Si es una nómina → Trabajador. Si es una factura de un tercero → Proveedor. Si es un ingreso de cuota/donación → Donante.',
+          'Si no tienes claro el contacto, déjalo pendiente y busca pistas en el concepto bancario o el documento.',
+          'Evita crear contactos nuevos para casos puntuales pequeños: crea solo los recurrentes o relevantes.',
+        ],
+      },
+      categories: {
+        title: 'Categorías (criterio rápido)',
+        items: [
+          'Asigna la categoría después del contacto: el contacto suele sugerir la categoría correcta (categoría por defecto).',
+          'Si dudas entre dos categorías, elige la más estable y coherente con el histórico (consistencia > precisión ficticia).',
+          'No fuerces categorías "para dejarlo limpio": un pendiente consciente es mejor que una categoría equivocada.',
+          'Para volúmenes grandes, filtra pendientes y aplica un criterio repetible antes de entrar al detalle.',
+        ],
+      },
       manual: {
         label: 'Manual de usuario · Gestión de Movimientos',
         href: '/dashboard/manual#5-gestio-de-moviments',

@@ -115,6 +115,24 @@ export const HELP_CONTENT_CA: Record<HelpRouteKey, HelpContent> = {
           'Si una remesa ja està processada, no la tornis a tocar: revisa el detall des del badge/modal.',
         ],
       },
+      contacts: {
+        title: 'Contactes (criteri ràpid)',
+        items: [
+          'Assigna primer el contacte: dona context i fa la categoria més fiable.',
+          'Si és una nòmina → Treballador. Si és una factura d\'un tercer → Proveïdor. Si és un ingrés de quota/donació → Donant.',
+          'Si no tens clar el contacte, deixa\'l pendent i busca pistes al concepte bancari o al document.',
+          'Evita crear contactes nous per casos puntuals petits: crea només els recurrents o rellevants.',
+        ],
+      },
+      categories: {
+        title: 'Categories (criteri ràpid)',
+        items: [
+          'Assigna la categoria després del contacte: el contacte sovint suggereix la categoria correcta (categoria per defecte).',
+          'Si dubtes entre dues categories, tria la més estable i coherent amb l\'històric (consistència > precisió fictícia).',
+          'No forcis categories "per deixar-ho net": un pendent conscient és millor que una categoria equivocada.',
+          'Per imports massius, filtra pendents i aplica un criteri repetible abans d\'entrar al detall.',
+        ],
+      },
       manual: {
         label: "Manual d'usuari · Gestió de Moviments",
         href: '/dashboard/manual#5-gestio-de-moviments',

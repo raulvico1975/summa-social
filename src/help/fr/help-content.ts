@@ -114,6 +114,24 @@ export const HELP_CONTENT_FR: Partial<Record<HelpRouteKey, HelpContent>> = {
           "Si une remise est déjà traitée, ne la retravaillez pas : ouvrez le détail via le badge/modal.",
         ],
       },
+      contacts: {
+        title: 'Contacts (critère rapide)',
+        items: [
+          "Affectez d'abord le contact : cela donne du contexte et rend la catégorie plus fiable.",
+          "Si c'est un salaire → Salarié. Si c'est une facture d'un tiers → Fournisseur. Si c'est un encaissement de cotisation/don → Donateur.",
+          "Si le contact n'est pas clair, laissez en attente et cherchez des indices dans le libellé bancaire ou le document.",
+          "Évitez de créer des contacts pour de petits cas ponctuels : créez surtout les récurrents ou significatifs.",
+        ],
+      },
+      categories: {
+        title: 'Catégories (critère rapide)',
+        items: [
+          "Affectez la catégorie après le contact : le contact suggère souvent la bonne catégorie (catégorie par défaut).",
+          "En cas de doute, choisissez la catégorie la plus stable et cohérente avec l'historique (cohérence > fausse précision).",
+          "Ne forcez pas une catégorie « pour nettoyer » : un élément en attente vaut mieux qu'une catégorie erronée.",
+          "Pour de gros volumes, filtrez les éléments en attente et appliquez un critère répétable avant le détail.",
+        ],
+      },
       manual: {
         label: 'Manuel utilisateur · Gestion des mouvements',
         href: '/dashboard/manual#5-gestio-de-moviments',
