@@ -311,13 +311,15 @@ export function HelpSheet() {
         </TooltipContent>
       </Tooltip>
 
-      <SheetContent side="right" className="w-[400px] sm:w-[540px]">
+      <SheetContent side="right" className="flex h-[100dvh] flex-col w-[400px] sm:w-[540px]">
         <SheetHeader>
           <SheetTitle>{helpContent.title}</SheetTitle>
         </SheetHeader>
 
-        {/* Action buttons */}
-        <div className="mt-4 flex gap-2">
+        {/* Scrollable content area */}
+        <div className="flex-1 min-h-0 overflow-y-auto pb-6">
+          {/* Action buttons */}
+          <div className="mt-4 flex gap-2">
           <Button variant="outline" size="sm" asChild>
             <Link href={manualUrl} onClick={handleManualClick}>
               <BookOpen className="h-4 w-4 mr-2" />
@@ -619,9 +621,10 @@ export function HelpSheet() {
             </>
           )}
         </div>
+        </div>
 
-        {/* Feedback link */}
-        <div className="mt-6 pt-4 border-t">
+        {/* Feedback link - fixed footer */}
+        <div className="pt-4 border-t shrink-0">
           <Button variant="ghost" size="sm" asChild className="text-muted-foreground">
             <a href={feedbackMailto} rel="noreferrer" onClick={handleFeedbackClick}>
               <MessageSquare className="h-4 w-4 mr-2" />
