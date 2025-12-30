@@ -64,6 +64,7 @@ import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
 import { CreateOrganizationDialog } from '@/components/admin/create-organization-dialog';
 import { SystemHealth } from '@/components/admin/system-health';
+import { ProductUpdatesSection } from '@/components/admin/product-updates-section';
 import { migrateExistingSlugs } from '@/lib/slugs';
 import { logAdminAction, getRecentAuditLogs, formatAuditAction, type AdminAuditLog } from '@/lib/admin-audit';
 
@@ -409,6 +410,11 @@ export default function AdminPage() {
         {/* Salut del sistema */}
         <div className="mb-8">
           <SystemHealth />
+        </div>
+
+        {/* Novetats del producte */}
+        <div className="mb-8">
+          <ProductUpdatesSection />
         </div>
 
         {/* Eines d'administració */}
