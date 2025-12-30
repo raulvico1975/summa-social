@@ -280,6 +280,16 @@ export const HELP_CONTENT_ES: Partial<Record<HelpRouteKey, HelpContent>> = {
       'Un proyecto bien definido hace que la pantalla de asignación sea más rápida y con menos errores.',
       'Cerrar proyectos antiguos reduce ruido y evita selecciones equivocadas.',
     ],
+    extra: {
+      manual: {
+        label: 'Manual de usuario · Gestión de proyectos',
+        href: '/dashboard/manual#6-gestio-de-projectes',
+      },
+      video: {
+        label: 'Vídeo (próximamente)',
+        note: 'Crear y gestionar proyectos de forma eficiente (8 minutos)',
+      },
+    },
     keywords: ['proyecto', 'crear', 'editar', 'cerrar', 'código', 'presupuesto', 'partidas', 'asignación'],
   },
 };

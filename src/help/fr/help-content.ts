@@ -280,6 +280,16 @@ export const HELP_CONTENT_FR: Partial<Record<HelpRouteKey, HelpContent>> = {
       'Un projet bien défini rend l\'affectation plus rapide et réduit les erreurs.',
       'Fermer les anciens projets réduit le bruit et évite les mauvais choix.',
     ],
+    extra: {
+      manual: {
+        label: 'Manuel utilisateur · Gestion des projets',
+        href: '/dashboard/manual#6-gestio-de-projectes',
+      },
+      video: {
+        label: 'Vidéo (bientôt)',
+        note: 'Créer et gérer des projets de façon efficace (8 minutes)',
+      },
+    },
     keywords: ['projet', 'créer', 'éditer', 'fermer', 'code', 'budget', 'lignes budgétaires', 'affectation'],
   },
 };

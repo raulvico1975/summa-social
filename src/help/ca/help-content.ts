@@ -283,6 +283,16 @@ export const HELP_CONTENT_CA: Record<HelpRouteKey, HelpContent> = {
       'Un projecte ben definit fa que la pantalla d\'assignació sigui més ràpida i menys propensa a errors.',
       'Tancar projectes antics redueix soroll i ajuda a evitar seleccions equivocades.',
     ],
+    extra: {
+      manual: {
+        label: 'Manual d\'usuari · Gestió de projectes',
+        href: '/dashboard/manual#6-gestio-de-projectes',
+      },
+      video: {
+        label: 'Vídeo (properament)',
+        note: 'Crear i gestionar projectes de forma eficient (8 minuts)',
+      },
+    },
     keywords: ['projecte', 'crear', 'editar', 'tancar', 'codi', 'pressupost', 'partides', 'assignació'],
   },
 };
