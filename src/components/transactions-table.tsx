@@ -1340,7 +1340,7 @@ export function TransactionsTable({ initialDateFilter = null }: TransactionsTabl
           TAULA DE TRANSACCIONS
           ═══════════════════════════════════════════════════════════════════════ */}
       <div className="rounded-md border overflow-x-auto md:overflow-x-visible">
-        <Table className="min-w-[600px] md:min-w-[1100px]">
+        <Table className="min-w-[600px] md:min-w-0 lg:min-w-[1100px]">
           <TableHeader>
             <TableRow className="h-9">
               {/* Checkbox columna - només visible per admin/user */}
