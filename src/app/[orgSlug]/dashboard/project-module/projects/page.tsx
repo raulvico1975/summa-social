@@ -13,14 +13,8 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
-import { AlertCircle, Plus, FolderKanban, Calendar, Euro, Eye, Pencil, Info } from 'lucide-react';
+import { AlertCircle, Plus, FolderKanban, Calendar, Euro, Eye, Pencil } from 'lucide-react';
 import { EmptyState } from '@/components/ui/empty-state';
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from '@/components/ui/tooltip';
 import { trackUX } from '@/lib/ux/trackUX';
 import { useTranslations } from '@/i18n';
 import { collection, getDocs } from 'firebase/firestore';
@@ -114,29 +108,8 @@ function ProjectCard({ project, executedAmount }: ProjectCardProps) {
         {/* Info econòmica */}
         <div className="grid grid-cols-3 gap-2 text-sm border-t pt-3">
           <div>
-            <span className="text-muted-foreground text-xs flex items-center gap-1">
+            <span className="text-muted-foreground text-xs block">
               Pressupostat
-              {hasBudgetLines && (
-                <TooltipProvider delayDuration={200}>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <button
-                        type="button"
-                        className="inline-flex items-center justify-center h-3.5 w-3.5 rounded-full border border-muted-foreground/30 text-muted-foreground/70 hover:border-muted-foreground/50 hover:text-muted-foreground cursor-help focus:outline-none focus:ring-1 focus:ring-ring"
-                        aria-label={t.projectModule?.budgetInfoLabel ?? 'Informació sobre Pressupostat'}
-                        onClick={(e) => e.stopPropagation()}
-                      >
-                        <Info className="h-2.5 w-2.5" />
-                      </button>
-                    </TooltipTrigger>
-                    <TooltipContent side="top" className="max-w-[200px] text-center">
-                      <p className="text-xs">
-                        {t.projectModule?.budgetFromLinesTooltip ?? 'Pressupost del projecte = suma de les partides.'}
-                      </p>
-                    </TooltipContent>
-                  </Tooltip>
-                </TooltipProvider>
-              )}
             </span>
             <span className="font-medium">{formatAmount(budgeted)}</span>
           </div>
