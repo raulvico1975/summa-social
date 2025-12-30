@@ -244,7 +244,7 @@ function TopCategoriesTable({
         <CardTitle>{texts.title}</CardTitle>
       </CardHeader>
       <CardContent className="p-0">
-        <div className="overflow-x-auto">
+        <div>
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b bg-muted/50">

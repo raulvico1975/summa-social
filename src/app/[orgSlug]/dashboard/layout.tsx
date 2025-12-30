@@ -16,6 +16,27 @@ import { useInitializeOrganizationData } from '@/hooks/use-initialize-user-data'
 function OrganizationDependentLayout({ children }: { children: React.ReactNode }) {
   useInitializeOrganizationData();
 
+  // DEV-ONLY: Horizontal scroll detector
+  React.useEffect(() => {
+    if (process.env.NODE_ENV !== 'development') return;
+
+    const el = document.documentElement;
+    const check = () => {
+      const hasScroll = el.scrollWidth > el.clientWidth + 1;
+      if (hasScroll) {
+        console.warn(
+          '[UI] Horizontal scroll detected:',
+          `scrollWidth=${el.scrollWidth}`,
+          `clientWidth=${el.clientWidth}`,
+          `diff=${el.scrollWidth - el.clientWidth}px`
+        );
+      }
+    };
+    check();
+    window.addEventListener('resize', check);
+    return () => window.removeEventListener('resize', check);
+  }, []);
+
   const [logs, setLogs] = React.useState<LogMessage[]>([]);
   const logCounterRef = React.useRef(0);
 

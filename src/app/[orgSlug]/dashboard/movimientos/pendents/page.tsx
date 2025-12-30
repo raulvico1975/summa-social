@@ -627,8 +627,8 @@ export default function PendingDocsPage() {
               </div>
             ) : (
               // Taula tradicional per altres pestanyes
-              <div className="overflow-x-auto">
-                <Table>
+              <div className="overflow-x-auto lg:overflow-x-visible">
+                <Table className="min-w-[900px] lg:min-w-0">
                   <TableHeader>
                     <TableRow>
                       {/* Checkbox per selecció múltiple */}

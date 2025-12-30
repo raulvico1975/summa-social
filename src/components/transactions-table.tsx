@@ -1339,8 +1339,8 @@ export function TransactionsTable({ initialDateFilter = null }: TransactionsTabl
       {/* ═══════════════════════════════════════════════════════════════════════
           TAULA DE TRANSACCIONS
           ═══════════════════════════════════════════════════════════════════════ */}
-      <div className="rounded-md border overflow-x-auto">
-        <Table className="min-w-[1100px]">
+      <div className="rounded-md border overflow-x-auto md:overflow-x-visible">
+        <Table className="min-w-[600px] md:min-w-[1100px]">
           <TableHeader>
             <TableRow className="h-9">
               {/* Checkbox columna - només visible per admin/user */}
@@ -1373,7 +1373,7 @@ export function TransactionsTable({ initialDateFilter = null }: TransactionsTabl
                 </button>
               </TableHead>
               <TableHead className="text-right w-[110px] py-2">{t.movements.table.amount}</TableHead>
-              <TableHead className="min-w-[320px] py-2">{t.movements.table.concept}</TableHead>
+              <TableHead className="min-w-[180px] md:min-w-[320px] py-2">{t.movements.table.concept}</TableHead>
               <TableHead className="w-[140px] py-2 hidden md:table-cell">{t.movements.table.contact}</TableHead>
               <TableHead className="w-[120px] py-2 hidden md:table-cell">{t.movements.table.category}</TableHead>
               {showProjectColumn && (

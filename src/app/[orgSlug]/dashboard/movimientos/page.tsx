@@ -62,7 +62,7 @@ export default function MovimientosPage() {
       {isLoading ? (
         <p>{t.common.loading}</p>
       ) : (
-        <div className="w-full overflow-x-auto">
+        <div className="w-full">
           <TransactionsTable initialDateFilter={initialPeriodFilter ?? undefined} />
         </div>
       )}
