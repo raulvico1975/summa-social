@@ -1,6 +1,6 @@
 # ═══════════════════════════════════════════════════════════════════════════════
 # SUMMA SOCIAL - REFERÈNCIA COMPLETA DEL PROJECTE
-# Versió 1.22 - Desembre 2025
+# Versió 1.23 - Desembre 2025
 # ═══════════════════════════════════════════════════════════════════════════════
 
 
@@ -2181,7 +2181,58 @@ Enllaços ràpids per a manteniment i diagnòstic:
 | **Cloud Logging** | `console.cloud.google.com/logs/query?project=summa-social` |
 | **DEV-SOLO-MANUAL.md** | Path copiable al porta-retalls |
 
-### 3.10.5 Fitxers principals
+### 3.10.5 Salut del Sistema - Sentinelles (NOU v1.23)
+
+Sistema automàtic de detecció d'incidències accessible només des de `/admin`.
+
+**Model de dades:** Col·lecció `systemIncidents` a Firestore (només SuperAdmin pot llegir).
+
+**Sentinelles:**
+
+| ID | Nom | Tipus | Què detecta |
+|----|-----|-------|-------------|
+| S1 | Permisos | CRITICAL | Errors "Missing or insufficient permissions" |
+| S2 | Moviments | CRITICAL | Errors CLIENT_CRASH a ruta /movimientos |
+| S3 | Importadors | CRITICAL | Errors d'importació (banc, CSV, Stripe) |
+| S4 | Exports | CRITICAL | Errors d'exportació (Excel, PDF, SEPA) |
+| S5 | Remeses OUT | CRITICAL | Invariants violades (deltaCents≠0, isValid=false) |
+| S6 | Encallaments | CONSULTA | Transaccions sense classificar > 30 dies |
+| S7 | Fiscal 182 | CONSULTA | Donants sense dades fiscals |
+| S8 | Activitat | CONSULTA | Organitzacions inactives > 60 dies |
+
+**Política d'alertes:**
+- S1–S5: Generen incidents automàtics quan es detecta l'error
+- S6–S8: Només consulta, sense incidents automàtics
+
+**Deduplicació:**
+- Cada error genera una `signature` única (hash de type+route+message+stack)
+- Si el mateix error es repeteix, s'incrementa el comptador
+- Si un incident RESOLVED torna a aparèixer, es reobre automàticament
+
+**Accions disponibles:**
+- **ACK**: Silencia temporalment (l'he vist, però encara treballo en la solució)
+- **Resolt**: Tanca l'incident (corregit)
+
+**Filtres anti-soroll:**
+Errors ignorats automàticament (no creen incidents):
+- `ERR_BLOCKED_BY_CLIENT` — Adblockers o extensions del navegador
+- `ResizeObserver loop` — Error benigne de layout
+- `ChunkLoadError` / `Loading chunk` — Problemes de xarxa temporals
+- `Network request failed` / `Failed to fetch` — Xarxa temporal
+- `Script error.` — Errors cross-origin sense informació útil
+- `AbortError` — Requests cancel·lats intencionalment
+
+**Fitxers principals:**
+- `src/lib/system-incidents.ts` — Model, deduplicació, filtres
+- `src/components/ErrorBoundaryGlobal.tsx` — Capturador client
+- `src/components/admin/system-health.tsx` — UI sentinelles
+
+**Límits:**
+- Només visible per SuperAdmin a `/admin`
+- No envia emails ni push (només panell)
+- S6–S8 requereixen implementació de consultes específiques
+
+### 3.10.6 Fitxers principals
 
 | Fitxer | Funció |
 |--------|--------|

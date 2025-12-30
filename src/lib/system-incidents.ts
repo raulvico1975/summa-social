@@ -60,34 +60,34 @@ export interface IncidentHelp {
 
 export const INCIDENT_HELP: Record<IncidentType, IncidentHelp> = {
   CLIENT_CRASH: {
-    whatItMeans: 'Una pantalla peta per un error de codi.',
-    whyCritical: "L'usuari no pot continuar i pot perdre feina.",
+    whatItMeans: 'Una pantalla peta per un error de codi. L\'usuari veu una pantalla en blanc o un missatge d\'error.',
+    whyCritical: 'L\'usuari no pot continuar treballant. Si es repeteix, afecta la confiança en el sistema.',
     nextSteps:
-      "Obre la ruta afectada, copia el missatge d'error i passa'l a Claude per corregir-lo.",
+      '1. Obre la ruta afectada en una finestra privada per reproduir.\n2. Copia el missatge d\'error complet i passa\'l a Claude Code per corregir.',
   },
   PERMISSIONS: {
-    whatItMeans: "L'usuari no té permisos per accedir a una dada.",
-    whyCritical: 'Pot indicar un problema de rols o de regles de Firestore.',
+    whatItMeans: 'Un usuari ha intentat accedir a dades sense permisos. Pot ser un error de configuració o una regressió.',
+    whyCritical: 'L\'usuari no pot veure o modificar dades crítiques. Pot bloquejar operativa diària.',
     nextSteps:
-      "Revisa el rol de l'usuari a l'organització. Si ha passat després d'un deploy, és una regressió a les rules.",
+      '1. Verifica el rol de l\'usuari a l\'organització (admin/user/viewer).\n2. Si ha passat just després d\'un deploy, revisa firestore.rules amb Claude.',
   },
   IMPORT_FAILURE: {
-    whatItMeans: 'Una importació de dades (banc, CSV, etc.) ha fallat.',
-    whyCritical: "Les dades no s'han carregat i l'usuari no pot treballar.",
+    whatItMeans: 'Una importació de dades (banc, CSV, Stripe) ha fallat. Les dades no s\'han carregat.',
+    whyCritical: 'L\'usuari no pot treballar amb les dades noves. Pot retardar conciliació o informes.',
     nextSteps:
-      "Revisa el format del fitxer. Si és un error de codi, passa'l a Claude.",
+      '1. Demana a l\'usuari el fitxer original per revisar el format.\n2. Si el format és correcte, passa l\'error a Claude Code.',
   },
   EXPORT_FAILURE: {
-    whatItMeans: 'Una exportació (Excel, PDF, SEPA) ha fallat.',
-    whyCritical: "L'usuari no pot generar els documents que necessita.",
+    whatItMeans: 'Una exportació (Excel, PDF, SEPA) ha fallat. L\'usuari no ha rebut el fitxer.',
+    whyCritical: 'L\'usuari no pot generar documents per a gestories, finançadors o Hisenda.',
     nextSteps:
-      "Prova l'exportació manualment. Si falla, passa l'error a Claude.",
+      '1. Intenta reproduir l\'exportació manualment.\n2. Si falla, copia l\'error i passa\'l a Claude Code.',
   },
   INVARIANT_BROKEN: {
-    whatItMeans: "Una regla de negoci s'ha violat (ex: remesa amb desquadrament).",
-    whyCritical: 'Les dades poden estar corruptes o incoherents.',
+    whatItMeans: 'Una regla de negoci s\'ha violat (ex: remesa amb deltaCents≠0, isValid=false).',
+    whyCritical: 'Les dades poden estar desquadrades. No s\'hauria de continuar operant sense revisar.',
     nextSteps:
-      "No facis canvis. Identifica la transacció afectada i consulta el manual o Claude.",
+      '1. NO modifiquis res. Identifica la transacció o remesa afectada.\n2. Consulta el manual (DEV-SOLO-MANUAL.md) o passa el cas a Claude.',
   },
 };
 

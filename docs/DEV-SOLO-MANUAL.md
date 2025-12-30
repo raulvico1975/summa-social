@@ -129,7 +129,7 @@ No llegeixis tot. Consulta el que necessitis.
 
 ### 4.3 Incidències
 
-(pendent d'omplir)
+Consulta la secció 9 (Salut del sistema).
 
 ---
 
@@ -219,4 +219,76 @@ const isSuperAdmin = user?.uid === SUPER_ADMIN_UID;
 
 ---
 
-*Última actualització: 2024-12-27*
+## 9. Salut del sistema (Sentinelles)
+
+El panell `/admin` inclou un bloc **"Salut del sistema"** que detecta problemes automàticament.
+
+### Què mirar diàriament
+
+1. Entra a `/admin` i mira el bloc de sentinelles
+2. Si tot és 🟢, no cal fer res
+3. Si hi ha 🔴 vermell, obre "Veure incidents" i actua
+
+### Què mirar setmanalment
+
+1. S6 Encallaments: transaccions > 30 dies sense classificar
+2. S7 Fiscal 182: donants sense dades fiscals completes
+3. S8 Activitat: organitzacions inactives > 60 dies
+
+Aquestes són consultes, no generen alertes automàtiques.
+
+### Sentinelles (S1–S8)
+
+| ID | Nom | Tipus | Què detecta |
+|----|-----|-------|-------------|
+| S1 | Permisos | CRITICAL | Errors "Missing or insufficient permissions" |
+| S2 | Moviments | CRITICAL | Errors a la pantalla de moviments |
+| S3 | Importadors | CRITICAL | Errors d'importació (banc, CSV, Stripe) |
+| S4 | Exports | CRITICAL | Errors d'exportació (Excel, PDF, SEPA) |
+| S5 | Remeses OUT | CRITICAL | Invariants violades (deltaCents≠0, isValid=false) |
+| S6 | Encallaments | CONSULTA | Transaccions sense classificar > 30 dies |
+| S7 | Fiscal 182 | CONSULTA | Donants sense dades fiscals |
+| S8 | Activitat | CONSULTA | Organitzacions inactives > 60 dies |
+
+### Com actuar davant un incident
+
+1. **Clica l'icona ❓** per veure:
+   - Què passa (descripció)
+   - Impacte (per què és important)
+   - Primers passos (1-2 accions concretes)
+
+2. **Opcions d'acció:**
+   - **ACK**: Silencia l'incident temporalment (l'has vist però encara no l'has resolt)
+   - **Resolt**: Tanca l'incident (el problema s'ha corregit)
+
+3. **Si es repeteix el mateix error:** L'incident es reobre automàticament amb comptador incrementat.
+
+### Errors ignorats (anti-soroll)
+
+Aquests errors NO generen incidents:
+- `ERR_BLOCKED_BY_CLIENT` — Adblockers o extensions
+- `ResizeObserver loop` — Error benigne de layout
+- `ChunkLoadError` / `Loading chunk` — Problemes de xarxa
+- `Network request failed` / `Failed to fetch` — Xarxa temporal
+- `Script error.` — Errors cross-origin sense info útil
+- `AbortError` — Requests cancel·lats intencionalment
+
+### Test manual de verificació
+
+Per validar que el sistema funciona:
+
+1. **Test CLIENT_CRASH:**
+   - Afegeix `throw new Error('Test incident')` a qualsevol component
+   - Recarrega la pàgina
+   - Verifica que apareix incident a `/admin`
+
+2. **Test PERMISSIONS:**
+   - Intenta accedir a dades d'una altra org sense permisos
+   - Verifica que apareix incident tipus PERMISSIONS
+
+3. **Test anti-soroll:**
+   - Els errors `ERR_BLOCKED_BY_CLIENT` (adblockers) NO han de crear incidents
+
+---
+
+*Última actualització: 2024-12-30*
