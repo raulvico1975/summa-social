@@ -150,6 +150,24 @@ export const HELP_CONTENT_FR: Partial<Record<HelpRouteKey, HelpContent>> = {
           "Lors de la synchronisation d'un nouveau compte, vérifiez les données initiales (solde d'ouverture, date début) avant de continuer.",
         ],
       },
+      ai: {
+        title: "Catégorisation IA (quand l'utiliser)",
+        items: [
+          "Idéal : beaucoup de mouvements sans catégorie et des motifs répétitifs.",
+          "Règle d'or : l'IA suggère, vous validez. N'assumez pas qu'elle a toujours raison.",
+          "Si le contact est clair, affectez d'abord le contact : la catégorie sera souvent plus juste.",
+          "Après l'IA, vérifiez un échantillon (5–10) avant de valider globalement.",
+        ],
+      },
+      bulk: {
+        title: 'Actions en masse (nettoyage rapide)',
+        items: [
+          "Filtrez d'abord (en attente) puis sélectionnez en bloc : évitez de toucher ce qui est déjà correct.",
+          "Appliquez des changements répétables (même catégorie) à des groupes cohérents, pas à \"tout le mois\".",
+          "En cas de doute, travaillez par petits lots : plus simple à corriger et à vérifier.",
+          "Après une action en masse, vérifiez 3–5 lignes au hasard pour confirmer.",
+        ],
+      },
       manual: {
         label: 'Manuel utilisateur · Gestion des mouvements',
         href: '/dashboard/manual#5-gestio-de-moviments',
@@ -168,6 +186,8 @@ export const HELP_CONTENT_FR: Partial<Record<HelpRouteKey, HelpContent>> = {
       'retours',
       'document',
       'quotidien',
+      'ia',
+      'masse',
     ],
   },
 

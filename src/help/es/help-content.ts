@@ -150,6 +150,24 @@ export const HELP_CONTENT_ES: Partial<Record<HelpRouteKey, HelpContent>> = {
           'Cuando sincronices una nueva cuenta, revisa los datos iniciales (saldo apertura, fecha inicio) antes de continuar.',
         ],
       },
+      ai: {
+        title: 'Categorización con IA (cuándo usarla)',
+        items: [
+          'Uso ideal: muchos movimientos sin categoría y patrones repetitivos.',
+          'Regla de oro: la IA sugiere, tú validas. No asumas que siempre acierta.',
+          'Si el contacto está claro, asigna primero el contacto: la categoría suele salir más limpia.',
+          'Después de usar IA, revisa una muestra (5–10) antes de darlo por bueno.',
+        ],
+      },
+      bulk: {
+        title: 'Acciones masivas (para limpiar rápido)',
+        items: [
+          'Filtra primero (pendientes) y luego selecciona en bloque: así no tocas lo que ya está bien.',
+          'Aplica cambios repetibles (misma categoría) a grupos coherentes, no a "todo el mes".',
+          'Si tienes dudas, hazlo en lotes pequeños: es más fácil deshacer y revisar.',
+          'Después de una acción masiva, revisa 3–5 filas al azar para validar.',
+        ],
+      },
       manual: {
         label: 'Manual de usuario · Gestión de Movimientos',
         href: '/dashboard/manual#5-gestio-de-moviments',
@@ -168,6 +186,8 @@ export const HELP_CONTENT_ES: Partial<Record<HelpRouteKey, HelpContent>> = {
       'devoluciones',
       'documento',
       'día a día',
+      'ia',
+      'masivo',
     ],
   },
 

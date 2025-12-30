@@ -151,6 +151,24 @@ export const HELP_CONTENT_CA: Record<HelpRouteKey, HelpContent> = {
           'Quan sincronitzis un nou compte, revisa les dades inicials (saldo obert, data inici) abans de continuar.',
         ],
       },
+      ai: {
+        title: 'Categorització amb IA (quan usar-la)',
+        items: [
+          'Ús ideal: molts moviments sense categoria i patrons repetitius.',
+          'Regla d\'or: la IA suggereix, tu valides. No assumeixis que sempre encerta.',
+          'Si el contacte és clar, assigna primer el contacte: la categoria sol sortir més neta.',
+          'Després de l\'IA, revisa una mostra (5–10) abans de donar-ho per bo.',
+        ],
+      },
+      bulk: {
+        title: 'Accions massives (per netejar ràpid)',
+        items: [
+          'Filtra primer (pendents) i després selecciona en bloc: així no toques el que ja està bé.',
+          'Aplica canvis repetibles (mateixa categoria) a grups coherents, no a "tot el mes".',
+          'Si tens dubtes, fes-ho en lots petits: és més fàcil desfer i revisar.',
+          'Després d\'una acció massiva, revisa 3–5 files a l\'atzar per validar.',
+        ],
+      },
       manual: {
         label: "Manual d'usuari · Gestió de Moviments",
         href: '/dashboard/manual#5-gestio-de-moviments',
@@ -169,6 +187,8 @@ export const HELP_CONTENT_CA: Record<HelpRouteKey, HelpContent> = {
       'devolucions',
       'document',
       'dia a dia',
+      'ia',
+      'massiu',
     ],
   },
   '/dashboard/donants': {
