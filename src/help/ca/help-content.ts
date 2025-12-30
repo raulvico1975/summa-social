@@ -94,22 +94,53 @@ export const HELP_CONTENT_CA: Record<HelpRouteKey, HelpContent> = {
   '/dashboard/proveidors': {
     title: 'Ajuda · Proveïdors',
     intro:
-      'Aquí gestiones els proveïdors de l\'organització per poder assignar correctament les despeses i preparar el Model 347.',
+      'Aquesta pantalla ordena els tercers que et facturen. Si el CIF i la identificació estan bé, el Model 347 surt sense neteges d\'última hora.',
     steps: [
-      'Crea un proveïdor quan tinguis despeses recurrents o rellevants amb una empresa o professional.',
-      'Introdueix el nom i el CIF: és imprescindible perquè el Model 347 es generi correctament.',
-      'Assigna una categoria per defecte si el proveïdor sempre factura el mateix tipus de despesa (p. ex. nòmines, lloguer, serveis).',
-      'Revisa o completa dades de contacte si et són útils (email, telèfon), tot i que no són obligatòries.',
-      'Quan assignes un proveïdor a un moviment, la categoria per defecte pot aplicar-se automàticament.',
-      'Utilitza l\'estat actiu/inactiu per mantenir la llista neta sense perdre l\'històric.',
-      'Abans de generar el Model 347, revisa que els CIF estiguin correctes i que els imports quadrin.',
+      'Crea proveïdors per despeses recurrents o significatives (no per tot).',
+      'Completa nom + CIF: és el camp crític per al Model 347.',
+      'Posa categoria per defecte si és sempre el mateix tipus de despesa.',
+      'Mantén actiu/inactiu per netejar llista sense perdre historial.',
     ],
     tips: [
-      'No cal crear un proveïdor per a despeses puntuals petites: prioritza els recurrents o significatius.',
-      'Si un proveïdor canvia de nom comercial però manté el CIF, actualitza\'l en lloc de crear-ne un de nou.',
-      'Un bon manteniment de proveïdors simplifica molt el Model 347.',
+      'CIF correcte > qualsevol altra dada.',
+      'Si canvia el nom comercial però no el CIF, actualitza el mateix proveïdor.',
+      'Categoria per defecte accelera Moviments, però revisa-la si hi ha excepcions.',
     ],
-    keywords: ['proveïdor', 'cif', 'model 347', 'categoria per defecte', 'despesa', 'empresa', 'professional'],
+    extra: {
+      order: {
+        title: 'Ordre recomanat',
+        items: [
+          'Crear només els recurrents.',
+          'Validar CIF.',
+          'Definir categoria per defecte.',
+          'Marcar inactius els que ja no s\'usen.',
+        ],
+      },
+      pitfalls: {
+        title: 'Errors habituals',
+        items: [
+          'Crear duplicats del mateix proveïdor amb el mateix CIF.',
+          'Deixar CIF buit i esperar que el 347 surti bé.',
+          'Barrejar proveïdors amb treballadors (cada tipus té funció diferent).',
+        ],
+      },
+      whenNot: {
+        title: 'Quan no cal',
+        items: [
+          'No cal crear proveïdor per despeses puntuals petites.',
+          'No cal omplir dades extra si no les faràs servir.',
+        ],
+      },
+      manual: {
+        label: 'Manual d\'usuari · Proveïdors i Treballadors',
+        href: '/dashboard/manual#4-gestio-de-proveidors-i-treballadors',
+      },
+      video: {
+        label: 'Vídeo (properament)',
+        note: 'Preparar Proveïdors per al Model 347 (8 minuts)',
+      },
+    },
+    keywords: ['proveïdor', 'cif', 'model 347', 'tercers', 'categoria per defecte', 'inactiu', 'duplicats'],
   },
   '/dashboard/treballadors': {
     title: 'Ajuda · Treballadors',
@@ -200,22 +231,53 @@ export const HELP_CONTENT_CA: Record<HelpRouteKey, HelpContent> = {
   '/dashboard/configuracion': {
     title: 'Ajuda · Configuració',
     intro:
-      'Aquí configures les dades base de l\'organització perquè els certificats i els informes fiscals surtin correctes.',
+      'Aquí deixes l\'organització "a punt": dades fiscals, logo i signatura. Si això està bé, certificats i informes surten consistents.',
     steps: [
-      'Completa les dades fiscals de l\'organització (nom, CIF, adreça i contacte): són les que apareixen als certificats i documents.',
-      'Puja el logo de l\'organització: s\'utilitza als certificats i dona coherència visual a l\'output.',
-      'Configura la firma digitalitzada (imatge) i omple el nom i càrrec del signant: sense això, els certificats poden quedar incomplets.',
-      'Revisa les categories: assegura\'t que tens categories d\'ingrés i despesa coherents amb el teu dia a dia (donacions, quotes, nòmines, despeses bancàries…).',
-      'Si treballeu en equip, gestiona els membres: convida persones i assigna rols segons el que necessiten fer (editar vs només lectura).',
-      'Ajusta preferències si existeixen (p. ex. llindars d\'alertes): l\'objectiu és veure només el que aporta valor i evitar soroll.',
-      'Quan tinguis dubtes d\'un resultat fiscal, torna aquí i revisa primer: dades de l\'entitat + signatura + categories (és el que més sovint ho explica).',
+      'Completa dades fiscals de l\'entitat (nom, CIF, adreça): és el que surt als outputs.',
+      'Puja logo i configura signatura + càrrec: és el que dona validesa als certificats.',
+      'Revisa categories amb criteri: afegeix les que falten i evita canvis agressius.',
+      'Gestiona membres i rols: edició només per qui realment la necessita.',
     ],
     tips: [
-      'Prioritza sempre: dades fiscals + signatura. És el que impacta directament en certificats i Model 182.',
-      'Si una persona només ha de consultar dades, posa rol de lectura: evita canvis accidentals.',
-      'Si canvies categories després d\'haver treballat mesos, fes-ho amb prudència: és millor afegir que no pas renombrar agressivament.',
+      'Prioritat real: fiscals + signatura. La resta és secundària.',
+      'Millor afegir categories que renombrar-les si ja tens historial.',
+      'Rols de lectura eviten errors accidentals.',
     ],
-    keywords: ['organització', 'cif', 'adreça', 'logo', 'firma', 'signant', 'categories', 'membres', 'rols', 'preferències'],
+    extra: {
+      order: {
+        title: 'Ordre recomanat (10 minuts)',
+        items: [
+          'Dades fiscals.',
+          'Logo.',
+          'Signatura i càrrec.',
+          'Categories i rols.',
+        ],
+      },
+      pitfalls: {
+        title: 'Errors habituals',
+        items: [
+          'Deixar signatura/càrrec a mig configurar i generar certificats.',
+          'Renombrar categories ja en ús i perdre coherència.',
+          'Donar permisos d\'edició a qui només ha de consultar.',
+        ],
+      },
+      whenNot: {
+        title: 'Quan no cal tocar res',
+        items: [
+          'Si només vols treballar Moviments, no cal "polir" Configuració cada dia.',
+          'No cal tenir totes les dades perfectes per començar (excepte fiscals/signatura).',
+        ],
+      },
+      manual: {
+        label: 'Manual d\'usuari · Configuració inicial',
+        href: '/dashboard/manual#2-configuracio-inicial',
+      },
+      video: {
+        label: 'Vídeo (properament)',
+        note: 'Configurar Summa Social bé des del primer dia (8 minuts)',
+      },
+    },
+    keywords: ['configuració', 'cif', 'adreça', 'logo', 'signatura', 'càrrec', 'categories', 'membres', 'rols'],
   },
   '/dashboard/projectes': {
     title: 'Ajuda · Projectes',
