@@ -168,6 +168,24 @@ export const HELP_CONTENT_ES: Partial<Record<HelpRouteKey, HelpContent>> = {
           'Después de una acción masiva, revisa 3–5 filas al azar para validar.',
         ],
       },
+      importing: {
+        title: 'Importar extracto (sin sorpresas)',
+        items: [
+          'Descarga el extracto del banco en CSV/XLSX y súbelo tal cual.',
+          'Evita abrir y guardar el CSV con Excel si cambia formatos: puede romper separadores y decimales.',
+          'Antes de importar, revisa la previsualización: fechas, importes y descripciones.',
+          'Si detectas duplicados o importes extraños, para y revisa el fichero antes de seguir.',
+        ],
+      },
+      filters: {
+        title: 'Filtros (para trabajar rápido)',
+        items: [
+          'Regla: filtra antes de editar. Primero encuentra el grupo de pendientes y luego actúa.',
+          'Filtros clave: Sin contacto, Sin categoría, Devoluciones pendientes.',
+          'Para revisar una tarea concreta, combina filtro + búsqueda (nombre, importe, palabra clave).',
+          'Con mucho volumen, trabaja en lotes pequeños (por semana o por tipo) y valida al final.',
+        ],
+      },
       manual: {
         label: 'Manual de usuario · Gestión de Movimientos',
         href: '/dashboard/manual#5-gestio-de-moviments',
@@ -188,6 +206,8 @@ export const HELP_CONTENT_ES: Partial<Record<HelpRouteKey, HelpContent>> = {
       'día a día',
       'ia',
       'masivo',
+      'importar',
+      'filtros',
     ],
   },
 

@@ -168,6 +168,24 @@ export const HELP_CONTENT_FR: Partial<Record<HelpRouteKey, HelpContent>> = {
           "Après une action en masse, vérifiez 3–5 lignes au hasard pour confirmer.",
         ],
       },
+      importing: {
+        title: 'Importer un extrait (sans surprises)',
+        items: [
+          "Téléchargez l'extrait bancaire en CSV/XLSX et chargez-le tel quel.",
+          "Évitez d'ouvrir puis enregistrer le CSV avec Excel s'il modifie les formats : cela peut casser séparateurs et décimales.",
+          "Avant d'importer, vérifiez l'aperçu : dates, montants, libellés.",
+          "Si vous voyez des doublons ou des montants étranges, arrêtez et vérifiez le fichier avant de continuer.",
+        ],
+      },
+      filters: {
+        title: 'Filtres (travailler vite)',
+        items: [
+          "Règle : filtrer avant d'éditer. Trouvez d'abord les éléments en attente, puis agissez.",
+          "Filtres clés : Sans contact, Sans catégorie, Retours en attente.",
+          "Pour une tâche précise, combinez filtre + recherche (nom, montant, mot-clé).",
+          "Avec beaucoup de volume, travaillez par petits lots (par semaine ou par type) puis validez.",
+        ],
+      },
       manual: {
         label: 'Manuel utilisateur · Gestion des mouvements',
         href: '/dashboard/manual#5-gestio-de-moviments',
@@ -188,6 +206,8 @@ export const HELP_CONTENT_FR: Partial<Record<HelpRouteKey, HelpContent>> = {
       'quotidien',
       'ia',
       'masse',
+      'importer',
+      'filtres',
     ],
   },
 

@@ -169,6 +169,24 @@ export const HELP_CONTENT_CA: Record<HelpRouteKey, HelpContent> = {
           'Després d\'una acció massiva, revisa 3–5 files a l\'atzar per validar.',
         ],
       },
+      importing: {
+        title: 'Importar extracte (sense sorpreses)',
+        items: [
+          'Descarrega l\'extracte del banc en CSV/XLSX i puja\'l tal qual.',
+          'Evita obrir i desar el CSV amb Excel si canvia formats: pot trencar separadors i decimals.',
+          'Abans d\'importar, revisa la previsualització: dates, imports i descripcions.',
+          'Si detectes duplicats o imports estranys, atura i revisa el fitxer abans de continuar.',
+        ],
+      },
+      filters: {
+        title: 'Filtres (com treballar ràpid)',
+        items: [
+          'Regla: filtrar abans d\'editar. Primer troba el grup de pendents, després actua.',
+          'Filtres estrella: Sense contacte, Sense categoria, Devolucions pendents.',
+          'Per revisar una tasca concreta, combina filtre + cerca (nom, import, paraula clau).',
+          'En grans volums, treballa per lots petits (per setmana o per tipus) i valida al final.',
+        ],
+      },
       manual: {
         label: "Manual d'usuari · Gestió de Moviments",
         href: '/dashboard/manual#5-gestio-de-moviments',
@@ -189,6 +207,8 @@ export const HELP_CONTENT_CA: Record<HelpRouteKey, HelpContent> = {
       'dia a dia',
       'ia',
       'massiu',
+      'importar',
+      'filtres',
     ],
   },
   '/dashboard/donants': {
