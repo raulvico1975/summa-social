@@ -172,9 +172,24 @@ const GUIDE_CONTENT = {
         steps: [],
       },
       reports: {
-        title: 'Informes (182/347/certificats)',
-        intro: 'Genera els outputs per a la gestoria: verifica dades i exporta.',
-        steps: ['Resol alertes de donants (DNI, CP).', 'Genera i envia a la gestoria.'],
+        title: 'Informes · Fiscalitat neta',
+        intro: 'L\'informe no és el problema. El problema és la dada que hi entra. Si està bruta, l\'Excel també ho estarà.',
+        notResolved: [
+          'Donants amb DNI/CP incomplets',
+          'Devolucions sense donant assignat',
+          'Moviments recents sense categoritzar',
+        ],
+        costlyError: 'Enviar l\'Excel a la gestoria sense obrir-lo. Després et truquen amb 50 errors i no saps per on començar.',
+        checkBeforeExport: [
+          'Alertes de donants resoltes',
+          'Devolucions totes assignades',
+          'Totals coherents amb el que esperes',
+        ],
+        dontFixYet: [
+          'Si falten dades fiscals: espera-les abans d\'exportar',
+          'Si no és tancament: no cal generar res',
+        ],
+        steps: [],
       },
       projects: {
         title: 'Projectes (assignació despeses)',
