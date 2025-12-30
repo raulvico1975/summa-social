@@ -94,7 +94,12 @@ type DraftsImport = {
 // Component
 // ─────────────────────────────────────────────────────────────────────────────
 
-export function ProductUpdatesSection() {
+interface ProductUpdatesSectionProps {
+  /** Gating: Only SuperAdmin can query productUpdateDrafts/productUpdates */
+  isSuperAdmin?: boolean;
+}
+
+export function ProductUpdatesSection({ isSuperAdmin = false }: ProductUpdatesSectionProps) {
   const { firestore } = useFirebase();
   const { toast } = useToast();
 
@@ -109,20 +114,20 @@ export function ProductUpdatesSection() {
   const [isPublishing, setIsPublishing] = React.useState<string | null>(null);
   const [isDiscarding, setIsDiscarding] = React.useState<string | null>(null);
 
-  // Col·leccions
+  // Col·leccions - GATED: Only query if isSuperAdmin to avoid permission denied
   const draftsQuery = useMemoFirebase(
-    () => query(collection(firestore, 'productUpdateDrafts'), orderBy('createdAt', 'desc')),
-    [firestore]
+    () => isSuperAdmin ? query(collection(firestore, 'productUpdateDrafts'), orderBy('createdAt', 'desc')) : null,
+    [firestore, isSuperAdmin]
   );
   // Només mostrar publicades actives (isActive !== false)
   const publishedQuery = useMemoFirebase(
-    () => query(
+    () => isSuperAdmin ? query(
       collection(firestore, 'productUpdates'),
       where('isActive', '!=', false),
       orderBy('isActive'),
       orderBy('publishedAt', 'desc')
-    ),
-    [firestore]
+    ) : null,
+    [firestore, isSuperAdmin]
   );
 
   const { data: allDrafts, isLoading: isLoadingDrafts } = useCollection<DraftItem>(draftsQuery);

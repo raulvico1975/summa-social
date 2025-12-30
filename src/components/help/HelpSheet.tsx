@@ -19,74 +19,74 @@ import {
 } from '@/components/ui/tooltip';
 import { useToast } from '@/hooks/use-toast';
 import { useTranslations } from '@/i18n';
-import type { HelpContent, HelpRouteKey, HelpExtraSection, HelpExtraLink } from '@/help/help-types';
-import { HELP_CONTENT_CA, HELP_FALLBACK_CA } from '@/help/ca/help-content';
-import { HELP_CONTENT_ES } from '@/help/es/help-content';
-import { HELP_CONTENT_FR } from '@/help/fr/help-content';
 import { getManualAnchorForRoute } from '@/help/help-manual-links';
 import { trackUX } from '@/lib/ux/trackUX';
 
 const HELP_FEEDBACK_EMAIL = 'ajuda@summasocial.app';
 
-// UI strings per idioma
-const UI_STRINGS = {
-  ca: {
-    searchPlaceholder: "Cerca dins l'ajuda…",
-    viewGuide: 'Veure guia',
-    viewManual: 'Manual complet',
-    copyLink: 'Copiar enllaç',
-    suggest: 'Suggerir una millora',
-    noHelp: 'Aquesta pantalla encara no té ajuda.',
-    noSteps: 'Encara no hi ha passos definits per aquesta pantalla.',
-    noResults: (q: string) => `No s'han trobat resultats per "${q}".`,
-    linkCopied: 'Enllaç copiat',
-    linkCopiedDesc: 'Ara pots compartir aquest enllaç amb algú altre.',
-    steps: 'Passos',
-    tips: 'Consells',
-    tooltipHelp: "Ajuda d'aquesta pantalla",
-  },
-  es: {
-    searchPlaceholder: 'Buscar en la ayuda…',
-    viewGuide: 'Ver guía',
-    viewManual: 'Manual completo',
-    copyLink: 'Copiar enlace',
-    suggest: 'Sugerir una mejora',
-    noHelp: 'Esta pantalla aún no tiene ayuda.',
-    noSteps: 'Aún no hay pasos definidos para esta pantalla.',
-    noResults: (q: string) => `No se han encontrado resultados para "${q}".`,
-    linkCopied: 'Enlace copiado',
-    linkCopiedDesc: 'Ahora puedes compartir este enlace con otra persona.',
-    steps: 'Pasos',
-    tips: 'Consejos',
-    tooltipHelp: 'Ayuda de esta pantalla',
-  },
-  fr: {
-    searchPlaceholder: "Rechercher dans l'aide…",
-    viewGuide: 'Voir le guide',
-    viewManual: 'Manuel complet',
-    copyLink: 'Copier le lien',
-    suggest: 'Suggérer une amélioration',
-    noHelp: "Cet écran n'a pas encore d'aide.",
-    noSteps: "Aucune étape n'est encore définie pour cet écran.",
-    noResults: (q: string) => `Aucun résultat pour "${q}".`,
-    linkCopied: 'Lien copié',
-    linkCopiedDesc: 'Vous pouvez maintenant partager ce lien.',
-    steps: 'Étapes',
-    tips: 'Conseils',
-    tooltipHelp: 'Aide de cet écran',
-  },
-} as const;
+// Extra section icons mapping
+const EXTRA_SECTION_ICONS: Record<string, React.ReactNode> = {
+  order: <CheckCircle2 className="h-4 w-4 text-green-600" />,
+  pitfalls: <AlertTriangle className="h-4 w-4 text-amber-600" />,
+  whenNot: <XCircle className="h-4 w-4 text-slate-500" />,
+  checks: <ClipboardCheck className="h-4 w-4 text-blue-600" />,
+  returns: <RotateCcw className="h-4 w-4 text-amber-600" />,
+  remittances: <Layers className="h-4 w-4 text-blue-600" />,
+  contacts: <UserRound className="h-4 w-4 text-sky-600" />,
+  categories: <Tag className="h-4 w-4 text-violet-600" />,
+  documents: <FileText className="h-4 w-4 text-green-600" />,
+  bankAccounts: <Landmark className="h-4 w-4 text-blue-600" />,
+  ai: <Sparkles className="h-4 w-4 text-violet-500" />,
+  bulk: <ListChecks className="h-4 w-4 text-slate-500" />,
+  importing: <Upload className="h-4 w-4 text-teal-600" />,
+  filters: <Filter className="h-4 w-4 text-slate-500" />,
+  quality: <BadgeCheck className="h-4 w-4 text-emerald-600" />,
+};
+
+// Manual link hrefs (NOT translated - stay in code)
+const MANUAL_HREFS: Record<string, string> = {
+  dashboard: '/dashboard/manual#14-entendre-el-dashboard',
+  movimientos: '/dashboard/manual#5-gestio-de-moviments',
+  donants: '/dashboard/manual#3-gestio-de-donants',
+  proveidors: '/dashboard/manual#4-gestio-de-proveidors-i-treballadors',
+  treballadors: '/dashboard/manual#4-gestio-de-proveidors-i-treballadors',
+  informes: '/dashboard/manual#9-informes-fiscals',
+  configuracion: '/dashboard/manual#2-configuracio-inicial',
+  project_expenses: '/dashboard/manual#6-assignacio-de-despeses',
+  project_projects: '/dashboard/manual#6-gestio-de-projectes',
+};
 
 /**
  * Normalitza un pathname eliminant el segment orgSlug inicial.
  * Ex: /acme/dashboard/movimientos -> /dashboard/movimientos
  */
-function normalizePathname(pathname: string): HelpRouteKey {
+function normalizePathname(pathname: string): string {
   const parts = pathname.split('/').filter(Boolean);
   if (parts.length > 0 && parts[0] !== 'dashboard') {
     parts.shift();
   }
   return '/' + parts.join('/');
+}
+
+/**
+ * Normalitza el routeKey per clau JSON
+ * /dashboard/movimientos → movimientos
+ * /dashboard/project-module/expenses → project_expenses
+ */
+function normalizeRouteKey(route: string): string {
+  let key = route.replace(/^\/dashboard\//, '').replace(/^\//, '');
+
+  if (key.startsWith('project-module/')) {
+    key = key.replace('project-module/', 'project_');
+  }
+
+  key = key.replace(/-/g, '_').replace(/\//g, '_');
+
+  if (key === '' || route === '/dashboard') {
+    key = 'dashboard';
+  }
+
+  return key;
 }
 
 /**
@@ -117,8 +117,8 @@ function highlightText(text: string, query: string): React.ReactNode {
 /**
  * Filters an array of strings by substring match.
  */
-function filterByQuery(items: string[] | undefined, query: string): string[] {
-  if (!items || !query.trim()) return items ?? [];
+function filterByQuery(items: string[], query: string): string[] {
+  if (!query.trim()) return items;
   const lowerQuery = query.toLowerCase();
   return items.filter((item) => item.toLowerCase().includes(lowerQuery));
 }
@@ -140,31 +140,24 @@ function getOrgSlug(pathname: string): string | null {
  * E.g., /dashboard/manual#top + orgSlug="acme" -> /acme/dashboard/manual#top
  */
 function buildManualUrl(href: string, orgSlug: string | null): string {
-  // Extract anchor from href if present
   const hashIndex = href.indexOf('#');
   const anchor = hashIndex !== -1 ? href.slice(hashIndex) : '';
-
-  // Build base URL with orgSlug
   const base = orgSlug ? `/${orgSlug}/dashboard/manual` : '/dashboard/manual';
-
   return anchor ? `${base}${anchor}` : base;
 }
 
 /**
- * Get help content with locale fallback to CA.
+ * Helper to read array from tr()
  */
-function getHelpContent(routeKey: HelpRouteKey, locale: 'ca' | 'es' | 'fr'): HelpContent {
-  // Try localized content first
-  if (locale === 'es') {
-    const esContent = HELP_CONTENT_ES[routeKey];
-    if (esContent) return esContent;
-  } else if (locale === 'fr') {
-    const frContent = HELP_CONTENT_FR[routeKey];
-    if (frContent) return frContent;
+function getArray(tr: (key: string, fallback?: string) => string, prefix: string, maxItems = 20): string[] {
+  const result: string[] = [];
+  for (let i = 0; i < maxItems; i++) {
+    const key = `${prefix}.${i}`;
+    const value = tr(key);
+    if (value === key) break;
+    result.push(value);
   }
-
-  // Fallback to CA
-  return HELP_CONTENT_CA[routeKey] ?? HELP_FALLBACK_CA;
+  return result;
 }
 
 export function HelpSheet() {
@@ -172,7 +165,7 @@ export function HelpSheet() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const { toast } = useToast();
-  const { language } = useTranslations();
+  const { language, tr } = useTranslations();
   const [query, setQuery] = React.useState('');
   const [open, setOpen] = React.useState(false);
 
@@ -182,42 +175,103 @@ export function HelpSheet() {
   const searchDebounceRef = React.useRef<NodeJS.Timeout | null>(null);
 
   const orgSlug = getOrgSlug(pathname);
-  const routeKey = normalizePathname(pathname);
-  // pt fa fallback a ca (help content només té ca/es/fr)
-  const contentLang = language === 'pt' ? 'ca' : language;
-  const helpContent = getHelpContent(routeKey, contentLang);
-  const manualAnchor = getManualAnchorForRoute(routeKey);
+  const routeKeyPath = normalizePathname(pathname);
+  const routeKey = normalizeRouteKey(routeKeyPath);
+  const prefix = `help.${routeKey}`;
+
+  // Read help content from tr()
+  const title = tr(`${prefix}.title`);
+  const intro = tr(`${prefix}.intro`);
+  const steps = getArray(tr, `${prefix}.steps`);
+  const tips = getArray(tr, `${prefix}.tips`);
+
+  // Read extra sections
+  const extraSections = [
+    'order',
+    'pitfalls',
+    'whenNot',
+    'checks',
+    'returns',
+    'remittances',
+    'contacts',
+    'categories',
+    'documents',
+    'bankAccounts',
+    'ai',
+    'bulk',
+    'importing',
+    'filters',
+    'quality',
+  ];
+
+  const extra: Record<string, { title: string; items: string[] }> = {};
+  for (const section of extraSections) {
+    const sectionTitle = tr(`${prefix}.extra.${section}.title`);
+    const items = getArray(tr, `${prefix}.extra.${section}.items`);
+    if (sectionTitle !== `${prefix}.extra.${section}.title` && items.length > 0) {
+      extra[section] = { title: sectionTitle, items };
+    }
+  }
+
+  // Manual/video links
+  const manualLabel = tr(`${prefix}.extra.manual.label`);
+  const hasManualLabel = manualLabel !== `${prefix}.extra.manual.label`;
+  const videoLabel = tr(`${prefix}.extra.video.label`);
+  const videoNote = tr(`${prefix}.extra.video.note`);
+  const hasVideo = videoLabel !== `${prefix}.extra.video.label`;
+
+  // UI strings
+  const ui = {
+    searchPlaceholder: tr('help.ui.searchPlaceholder'),
+    viewGuide: tr('help.ui.viewGuide'),
+    viewManual: tr('help.ui.viewManual'),
+    copyLink: tr('help.ui.copyLink'),
+    suggest: tr('help.ui.suggest'),
+    noHelp: tr('help.ui.noHelp'),
+    noSteps: tr('help.ui.noSteps'),
+    noResults: tr('help.ui.noResults'),
+    linkCopied: tr('help.ui.linkCopied'),
+    linkCopiedDesc: tr('help.ui.linkCopiedDesc'),
+    steps: tr('help.ui.steps'),
+    tips: tr('help.ui.tips'),
+    tooltipHelp: tr('help.ui.tooltipHelp'),
+  };
+
+  // URLs
+  const manualAnchor = getManualAnchorForRoute(routeKeyPath);
   const manualBase = orgSlug ? `/${orgSlug}/dashboard/manual` : '/dashboard/manual';
   const manualUrl = manualAnchor ? `${manualBase}#${manualAnchor}` : manualBase;
   const guidesUrl = orgSlug ? `/${orgSlug}/dashboard/guides` : '/dashboard/guides';
+  const extraManualHref = MANUAL_HREFS[routeKey];
 
-  // UI strings for current locale
-  const ui = UI_STRINGS[contentLang];
+  // Check if we have help content
+  const hasTitle = title !== `${prefix}.title`;
+  const hasContent = hasTitle || steps.length > 0 || tips.length > 0;
 
   // Build feedback mailto URL
   const feedbackMailto = React.useMemo(() => {
     const subject = encodeURIComponent('Summa Social · Suggeriment d\'ajuda');
     const currentUrl = typeof window !== 'undefined' ? window.location.href : '';
     const body = encodeURIComponent(
-      `Pantalla: ${routeKey}\n` +
+      `Pantalla: ${routeKeyPath}\n` +
       `URL: ${currentUrl}\n` +
       `Cerca a l'ajuda: ${query || '(cap)'}\n\n` +
       `Què faltava o què no s'entén?\n\n\n` +
       `Proposta de text (si la tens):\n`
     );
     return `mailto:${HELP_FEEDBACK_EMAIL}?subject=${subject}&body=${body}`;
-  }, [routeKey, query]);
+  }, [routeKeyPath, query]);
 
   // Track help.open when sheet opens
   React.useEffect(() => {
     if (open) {
       trackUX('help.open', {
-        routeKey,
+        routeKey: routeKeyPath,
         locale: language,
         source: openSourceRef.current,
       });
     }
-  }, [open, routeKey, language]);
+  }, [open, routeKeyPath, language]);
 
   // Auto-open if ?help=1
   React.useEffect(() => {
@@ -239,7 +293,7 @@ export function HelpSheet() {
     currentUrl.searchParams.set('help', '1');
     const helpUrl = currentUrl.toString();
 
-    trackUX('help.copyLink', { routeKey, locale: language });
+    trackUX('help.copyLink', { routeKey: routeKeyPath, locale: language });
 
     try {
       await navigator.clipboard.writeText(helpUrl);
@@ -268,7 +322,7 @@ export function HelpSheet() {
   const handleGuidesClick = (e: React.MouseEvent) => {
     e.preventDefault();
     trackUX('help.guides.click', {
-      routeKey,
+      routeKey: routeKeyPath,
       locale: language,
     });
     setOpen(false);
@@ -279,7 +333,7 @@ export function HelpSheet() {
   const handleManualClick = (e: React.MouseEvent, targetUrl: string) => {
     e.preventDefault();
     trackUX('help.manual.click', {
-      routeKey,
+      routeKey: routeKeyPath,
       locale: language,
       anchor: manualAnchor || null,
     });
@@ -289,7 +343,7 @@ export function HelpSheet() {
 
   // Handle feedback link click
   const handleFeedbackClick = () => {
-    trackUX('help.feedback.click', { routeKey, locale: language });
+    trackUX('help.feedback.click', { routeKey: routeKeyPath, locale: language });
   };
 
   // Handle search with debounce
@@ -305,22 +359,22 @@ export function HelpSheet() {
     // Only track if query is meaningful (>= 2 chars)
     if (newQuery.trim().length >= 2) {
       searchDebounceRef.current = setTimeout(() => {
-        const steps = filterByQuery(helpContent.steps, newQuery);
-        const tips = filterByQuery(helpContent.tips, newQuery);
+        const filteredSteps = filterByQuery(steps, newQuery);
+        const filteredTips = filterByQuery(tips, newQuery);
         trackUX('help.search', {
-          routeKey,
+          routeKey: routeKeyPath,
           locale: language,
           queryLen: newQuery.trim().length,
-          hasResults: steps.length > 0 || tips.length > 0,
-          matchesSteps: steps.length,
-          matchesTips: tips.length,
+          hasResults: filteredSteps.length > 0 || filteredTips.length > 0,
+          matchesSteps: filteredSteps.length,
+          matchesTips: filteredTips.length,
         });
       }, 500);
     }
   };
 
-  const filteredSteps = filterByQuery(helpContent.steps, query);
-  const filteredTips = filterByQuery(helpContent.tips, query);
+  const filteredSteps = filterByQuery(steps, query);
+  const filteredTips = filterByQuery(tips, query);
 
   const hasQuery = query.trim().length > 0;
   const hasResults = filteredSteps.length > 0 || filteredTips.length > 0;
@@ -348,7 +402,7 @@ export function HelpSheet() {
 
       <SheetContent side="right" className="flex h-[100dvh] flex-col w-[400px] sm:w-[540px]">
         <SheetHeader>
-          <SheetTitle>{helpContent.title}</SheetTitle>
+          <SheetTitle>{hasTitle ? title : ui.noHelp}</SheetTitle>
         </SheetHeader>
 
         {/* Scrollable content area */}
@@ -380,13 +434,13 @@ export function HelpSheet() {
           </div>
 
           <div className="mt-6 space-y-4">
-          {helpContent.intro && !hasQuery && (
-            <p className="text-muted-foreground">{helpContent.intro}</p>
+          {intro && intro !== `${prefix}.intro` && !hasQuery && (
+            <p className="text-muted-foreground">{intro}</p>
           )}
 
           {showNoResults ? (
             <p className="text-sm text-muted-foreground italic">
-              {ui.noResults(query)}
+              {ui.noResults.replace('{query}', query)}
             </p>
           ) : (
             <>
@@ -412,246 +466,55 @@ export function HelpSheet() {
                 </div>
               )}
 
-              {!hasQuery && filteredSteps.length === 0 && filteredTips.length === 0 && (
+              {!hasQuery && filteredSteps.length === 0 && filteredTips.length === 0 && hasContent && (
                 <p className="text-sm text-muted-foreground italic">
                   {ui.noSteps}
                 </p>
               )}
 
-              {/* Extra sections (order, pitfalls, whenNot) */}
-              {!hasQuery && helpContent.extra && (
+              {/* Extra sections */}
+              {!hasQuery && Object.keys(extra).length > 0 && (
                 <div className="space-y-4 pt-4 border-t">
-                  {helpContent.extra.order && (
-                    <div className="space-y-2">
-                      <h4 className="text-sm font-medium flex items-center gap-2">
-                        <CheckCircle2 className="h-4 w-4 text-green-600" />
-                        {helpContent.extra.order.title}
-                      </h4>
-                      <ol className="list-decimal list-inside space-y-1 text-sm text-muted-foreground ml-6">
-                        {helpContent.extra.order.items.map((item, idx) => (
-                          <li key={idx}>{item}</li>
-                        ))}
-                      </ol>
-                    </div>
-                  )}
-
-                  {helpContent.extra.pitfalls && (
-                    <div className="space-y-2">
-                      <h4 className="text-sm font-medium flex items-center gap-2">
-                        <AlertTriangle className="h-4 w-4 text-amber-600" />
-                        {helpContent.extra.pitfalls.title}
-                      </h4>
-                      <ul className="list-disc list-inside space-y-1 text-sm text-muted-foreground ml-6">
-                        {helpContent.extra.pitfalls.items.map((item, idx) => (
-                          <li key={idx}>{item}</li>
-                        ))}
-                      </ul>
-                    </div>
-                  )}
-
-                  {helpContent.extra.whenNot && (
-                    <div className="space-y-2">
-                      <h4 className="text-sm font-medium flex items-center gap-2">
-                        <XCircle className="h-4 w-4 text-slate-500" />
-                        {helpContent.extra.whenNot.title}
-                      </h4>
-                      <ul className="list-disc list-inside space-y-1 text-sm text-muted-foreground ml-6">
-                        {helpContent.extra.whenNot.items.map((item, idx) => (
-                          <li key={idx}>{item}</li>
-                        ))}
-                      </ul>
-                    </div>
-                  )}
-
-                  {helpContent.extra.checks && (
-                    <div className="space-y-2">
-                      <h4 className="text-sm font-medium flex items-center gap-2">
-                        <ClipboardCheck className="h-4 w-4 text-blue-600" />
-                        {helpContent.extra.checks.title}
-                      </h4>
-                      <ul className="list-disc list-inside space-y-1 text-sm text-muted-foreground ml-6">
-                        {helpContent.extra.checks.items.map((item, idx) => (
-                          <li key={idx}>{item}</li>
-                        ))}
-                      </ul>
-                    </div>
-                  )}
-
-                  {helpContent.extra.returns && (
-                    <div className="space-y-2">
-                      <h4 className="text-sm font-medium flex items-center gap-2">
-                        <RotateCcw className="h-4 w-4 text-amber-600" />
-                        {helpContent.extra.returns.title}
-                      </h4>
-                      <ul className="list-disc list-inside space-y-1 text-sm text-muted-foreground ml-6">
-                        {helpContent.extra.returns.items.map((item, idx) => (
-                          <li key={idx}>{item}</li>
-                        ))}
-                      </ul>
-                    </div>
-                  )}
-
-                  {helpContent.extra.remittances && (
-                    <div className="space-y-2">
-                      <h4 className="text-sm font-medium flex items-center gap-2">
-                        <Layers className="h-4 w-4 text-blue-600" />
-                        {helpContent.extra.remittances.title}
-                      </h4>
-                      <ul className="list-disc list-inside space-y-1 text-sm text-muted-foreground ml-6">
-                        {helpContent.extra.remittances.items.map((item, idx) => (
-                          <li key={idx}>{item}</li>
-                        ))}
-                      </ul>
-                    </div>
-                  )}
-
-                  {helpContent.extra.contacts && (
-                    <div className="space-y-2">
-                      <h4 className="text-sm font-medium flex items-center gap-2">
-                        <UserRound className="h-4 w-4 text-sky-600" />
-                        {helpContent.extra.contacts.title}
-                      </h4>
-                      <ul className="list-disc list-inside space-y-1 text-sm text-muted-foreground ml-6">
-                        {helpContent.extra.contacts.items.map((item, idx) => (
-                          <li key={idx}>{item}</li>
-                        ))}
-                      </ul>
-                    </div>
-                  )}
-
-                  {helpContent.extra.categories && (
-                    <div className="space-y-2">
-                      <h4 className="text-sm font-medium flex items-center gap-2">
-                        <Tag className="h-4 w-4 text-violet-600" />
-                        {helpContent.extra.categories.title}
-                      </h4>
-                      <ul className="list-disc list-inside space-y-1 text-sm text-muted-foreground ml-6">
-                        {helpContent.extra.categories.items.map((item, idx) => (
-                          <li key={idx}>{item}</li>
-                        ))}
-                      </ul>
-                    </div>
-                  )}
-
-                  {helpContent.extra.documents && (
-                    <div className="space-y-2">
-                      <h4 className="text-sm font-medium flex items-center gap-2">
-                        <FileText className="h-4 w-4 text-green-600" />
-                        {helpContent.extra.documents.title}
-                      </h4>
-                      <ul className="list-disc list-inside space-y-1 text-sm text-muted-foreground ml-6">
-                        {helpContent.extra.documents.items.map((item, idx) => (
-                          <li key={idx}>{item}</li>
-                        ))}
-                      </ul>
-                    </div>
-                  )}
-
-                  {helpContent.extra.bankAccounts && (
-                    <div className="space-y-2">
-                      <h4 className="text-sm font-medium flex items-center gap-2">
-                        <Landmark className="h-4 w-4 text-blue-600" />
-                        {helpContent.extra.bankAccounts.title}
-                      </h4>
-                      <ul className="list-disc list-inside space-y-1 text-sm text-muted-foreground ml-6">
-                        {helpContent.extra.bankAccounts.items.map((item, idx) => (
-                          <li key={idx}>{item}</li>
-                        ))}
-                      </ul>
-                    </div>
-                  )}
-
-                  {helpContent.extra.ai && (
-                    <div className="space-y-2">
-                      <h4 className="text-sm font-medium flex items-center gap-2">
-                        <Sparkles className="h-4 w-4 text-violet-500" />
-                        {helpContent.extra.ai.title}
-                      </h4>
-                      <ul className="list-disc list-inside space-y-1 text-sm text-muted-foreground ml-6">
-                        {helpContent.extra.ai.items.map((item, idx) => (
-                          <li key={idx}>{item}</li>
-                        ))}
-                      </ul>
-                    </div>
-                  )}
-
-                  {helpContent.extra.bulk && (
-                    <div className="space-y-2">
-                      <h4 className="text-sm font-medium flex items-center gap-2">
-                        <ListChecks className="h-4 w-4 text-slate-500" />
-                        {helpContent.extra.bulk.title}
-                      </h4>
-                      <ul className="list-disc list-inside space-y-1 text-sm text-muted-foreground ml-6">
-                        {helpContent.extra.bulk.items.map((item, idx) => (
-                          <li key={idx}>{item}</li>
-                        ))}
-                      </ul>
-                    </div>
-                  )}
-
-                  {helpContent.extra.importing && (
-                    <div className="space-y-2">
-                      <h4 className="text-sm font-medium flex items-center gap-2">
-                        <Upload className="h-4 w-4 text-teal-600" />
-                        {helpContent.extra.importing.title}
-                      </h4>
-                      <ul className="list-disc list-inside space-y-1 text-sm text-muted-foreground ml-6">
-                        {helpContent.extra.importing.items.map((item, idx) => (
-                          <li key={idx}>{item}</li>
-                        ))}
-                      </ul>
-                    </div>
-                  )}
-
-                  {helpContent.extra.filters && (
-                    <div className="space-y-2">
-                      <h4 className="text-sm font-medium flex items-center gap-2">
-                        <Filter className="h-4 w-4 text-slate-500" />
-                        {helpContent.extra.filters.title}
-                      </h4>
-                      <ul className="list-disc list-inside space-y-1 text-sm text-muted-foreground ml-6">
-                        {helpContent.extra.filters.items.map((item, idx) => (
-                          <li key={idx}>{item}</li>
-                        ))}
-                      </ul>
-                    </div>
-                  )}
-
-                  {helpContent.extra.quality && (
-                    <div className="space-y-2">
-                      <h4 className="text-sm font-medium flex items-center gap-2">
-                        <BadgeCheck className="h-4 w-4 text-emerald-600" />
-                        {helpContent.extra.quality.title}
-                      </h4>
-                      <ul className="list-disc list-inside space-y-1 text-sm text-muted-foreground ml-6">
-                        {helpContent.extra.quality.items.map((item, idx) => (
-                          <li key={idx}>{item}</li>
-                        ))}
-                      </ul>
-                    </div>
-                  )}
+                  {extraSections.map((sectionKey) => {
+                    const section = extra[sectionKey];
+                    if (!section) return null;
+                    const icon = EXTRA_SECTION_ICONS[sectionKey];
+                    return (
+                      <div key={sectionKey} className="space-y-2">
+                        <h4 className="text-sm font-medium flex items-center gap-2">
+                          {icon}
+                          {section.title}
+                        </h4>
+                        <ul className="list-disc list-inside space-y-1 text-sm text-muted-foreground ml-6">
+                          {section.items.map((item, idx) => (
+                            <li key={idx}>{item}</li>
+                          ))}
+                        </ul>
+                      </div>
+                    );
+                  })}
 
                   {/* Manual link from extra */}
-                  {helpContent.extra?.manual?.href && (
+                  {hasManualLabel && extraManualHref && (
                     <div className="pt-2">
                       <Button
                         variant="outline"
                         size="sm"
-                        onClick={(e) => handleManualClick(e, buildManualUrl(helpContent.extra!.manual!.href!, orgSlug))}
+                        onClick={(e) => handleManualClick(e, buildManualUrl(extraManualHref, orgSlug))}
                       >
                         <BookOpen className="h-4 w-4 mr-2" />
-                        {helpContent.extra.manual.label}
+                        {manualLabel}
                       </Button>
                     </div>
                   )}
 
                   {/* Video placeholder */}
-                  {helpContent.extra.video && (
+                  {hasVideo && (
                     <div className="pt-2 flex items-center gap-2 text-sm text-muted-foreground">
                       <Play className="h-4 w-4" />
-                      <span>{helpContent.extra.video.label}</span>
-                      {helpContent.extra.video.note && (
-                        <span className="text-xs">— {helpContent.extra.video.note}</span>
+                      <span>{videoLabel}</span>
+                      {videoNote && videoNote !== `${prefix}.extra.video.note` && (
+                        <span className="text-xs">— {videoNote}</span>
                       )}
                     </div>
                   )}

@@ -414,7 +414,7 @@ export default function AdminPage() {
 
         {/* Novetats del producte */}
         <div className="mb-8">
-          <ProductUpdatesSection />
+          <ProductUpdatesSection isSuperAdmin={isSuperAdmin} />
         </div>
 
         {/* Eines d'administració */}

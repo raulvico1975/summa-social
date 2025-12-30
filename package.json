@@ -14,7 +14,9 @@
     "dev:restart": "bash scripts/dev-restart.sh",
     "prepare": "husky",
     "updates:drafts": "npx tsx scripts/generate-product-update-drafts.ts",
-    "i18n:export": "node --import tsx scripts/i18n/export-all.ts"
+    "i18n:export": "node --import tsx scripts/i18n/export-all.ts",
+    "i18n:validate-guides": "node --import tsx scripts/i18n/validate-guides-translations.ts",
+    "i18n:validate-help": "node --import tsx scripts/i18n/validate-help-translations.ts"
   },
   "dependencies": {
     "@genkit-ai/googleai": "^1.14.1",

@@ -14,6 +14,7 @@ import {
   SidebarMenuSub,
   SidebarMenuSubItem,
   SidebarMenuSubButton,
+  useSidebar,
 } from '@/components/ui/sidebar';
 import {
   Collapsible,
@@ -50,12 +51,14 @@ export function DashboardSidebarContent() {
   const { auth: firebaseAuth } = useFirebase();
   const { t } = useTranslations();
   const { toast } = useToast();
-  
+  const { state: sidebarState } = useSidebar();
+
   // Obtenir dades de l'organització i el helper per construir URLs
   const { userProfile, firebaseUser, organization, orgSlug } = useCurrentOrganization();
   const { buildUrl } = useOrgUrl();
-  
+
   const isSuperAdmin = firebaseUser?.uid === SUPER_ADMIN_UID;
+  const isSidebarCollapsed = sidebarState === 'collapsed';
 
   const handleSignOut = async (e: React.MouseEvent<HTMLAnchorElement>) => {
     e.preventDefault();
@@ -268,44 +271,65 @@ export function DashboardSidebarContent() {
           {menuItems.map((item) => {
             // Inserir el submenú Projectes després d'Informes
             if (item.path === '/dashboard/configuracion' && projectModuleItems.length > 0) {
+              // Quan sidebar col·lapsada: link directe (no collapsible)
+              // Quan sidebar expandida: submenú desplegable
+              const projectModuleMainHref = buildUrl('/dashboard/project-module/projects');
+
               return (
                 <React.Fragment key={item.href}>
                   {/* Submenú Projectes (Mòdul) */}
-                  <Collapsible
-                    asChild
-                    defaultOpen={isProjectModuleActive}
-                    className="group/collapsible"
-                  >
+                  {isSidebarCollapsed ? (
+                    // Mode col·lapsat: link directe a la pàgina principal del mòdul
                     <SidebarMenuItem>
-                      <CollapsibleTrigger asChild>
-                        <SidebarMenuButton
-                          tooltip={{ children: t.sidebar.projectModule ?? 'Projectes' }}
-                          isActive={isProjectModuleActive}
-                        >
+                      <SidebarMenuButton
+                        asChild
+                        tooltip={{ children: t.sidebar.projectModule ?? 'Projectes' }}
+                        isActive={isProjectModuleActive}
+                      >
+                        <Link href={projectModuleMainHref}>
                           <FolderKanban className="text-emerald-600" />
                           <span>{t.sidebar.projectModule ?? 'Projectes'}</span>
-                          <ChevronRight className="ml-auto h-4 w-4 transition-transform duration-200 group-data-[state=open]/collapsible:rotate-90" />
-                        </SidebarMenuButton>
-                      </CollapsibleTrigger>
-                      <CollapsibleContent>
-                        <SidebarMenuSub>
-                          {projectModuleItems.map((subItem) => (
-                            <SidebarMenuSubItem key={subItem.href}>
-                              <SidebarMenuSubButton
-                                asChild
-                                isActive={pathname.includes(subItem.path.replace('/dashboard', ''))}
-                              >
-                                <Link href={subItem.href}>
-                                  <subItem.icon className="h-4 w-4" />
-                                  <span>{subItem.label}</span>
-                                </Link>
-                              </SidebarMenuSubButton>
-                            </SidebarMenuSubItem>
-                          ))}
-                        </SidebarMenuSub>
-                      </CollapsibleContent>
+                        </Link>
+                      </SidebarMenuButton>
                     </SidebarMenuItem>
-                  </Collapsible>
+                  ) : (
+                    // Mode expandit: submenú desplegable
+                    <Collapsible
+                      asChild
+                      defaultOpen={isProjectModuleActive}
+                      className="group/collapsible"
+                    >
+                      <SidebarMenuItem>
+                        <CollapsibleTrigger asChild>
+                          <SidebarMenuButton
+                            tooltip={{ children: t.sidebar.projectModule ?? 'Projectes' }}
+                            isActive={isProjectModuleActive}
+                          >
+                            <FolderKanban className="text-emerald-600" />
+                            <span>{t.sidebar.projectModule ?? 'Projectes'}</span>
+                            <ChevronRight className="ml-auto h-4 w-4 transition-transform duration-200 group-data-[state=open]/collapsible:rotate-90" />
+                          </SidebarMenuButton>
+                        </CollapsibleTrigger>
+                        <CollapsibleContent>
+                          <SidebarMenuSub>
+                            {projectModuleItems.map((subItem) => (
+                              <SidebarMenuSubItem key={subItem.href}>
+                                <SidebarMenuSubButton
+                                  asChild
+                                  isActive={pathname.includes(subItem.path.replace('/dashboard', ''))}
+                                >
+                                  <Link href={subItem.href}>
+                                    <subItem.icon className="h-4 w-4" />
+                                    <span>{subItem.label}</span>
+                                  </Link>
+                                </SidebarMenuSubButton>
+                              </SidebarMenuSubItem>
+                            ))}
+                          </SidebarMenuSub>
+                        </CollapsibleContent>
+                      </SidebarMenuItem>
+                    </Collapsible>
+                  )}
 
                   {/* Configuració */}
                   <SidebarMenuItem>

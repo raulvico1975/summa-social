@@ -63,6 +63,9 @@ export const TranslationsProvider = ({ children }: TranslationsProviderProps) =>
   // Flag per evitar càrregues duplicades
   const isLoadingRef = useRef(false);
 
+  // Flag per desactivar listener si permission denied (evita spam)
+  const listenerDisabledRef = useRef(false);
+
   useEffect(() => {
     // This effect runs only on the client to sync the initial state
     setLanguage(getInitialLanguage());
@@ -76,6 +79,8 @@ export const TranslationsProvider = ({ children }: TranslationsProviderProps) =>
   // Listener per system/i18n.version (invalidació de cache)
   useEffect(() => {
     if (typeof window === 'undefined') return;
+    // Si ja hem desactivat el listener per permisos, no reintentem
+    if (listenerDisabledRef.current) return;
 
     let unsubscribe: (() => void) | undefined;
 
@@ -97,8 +102,13 @@ export const TranslationsProvider = ({ children }: TranslationsProviderProps) =>
             }
           },
           (error) => {
-            // Error listening - probably permissions, use local
-            console.warn('[i18n] Could not listen to system/i18n:', error.message);
+            // Error listening - probably permissions
+            // Log únic i desactivar listener per evitar spam
+            if (!listenerDisabledRef.current) {
+              listenerDisabledRef.current = true;
+              console.info('[i18n] Version listener disabled (permission denied), using local fallback');
+              unsubscribe?.();
+            }
             setI18nVersion(0);
           }
         );

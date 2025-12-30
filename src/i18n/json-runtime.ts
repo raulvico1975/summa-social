@@ -24,6 +24,11 @@ type CachedBundle = {
 };
 const cache = new Map<string, CachedBundle>();
 
+// Negative cache: idiomes on Storage no té el fitxer (evita reintentar cada render)
+const storageMissing = new Set<string>();
+// Control de logs únics
+const loggedStorageMissing = new Set<string>();
+
 /**
  * Obté el bundle local per un idioma
  * Fallback a 'ca' si l'idioma no existeix
@@ -45,25 +50,45 @@ function isValidMessages(data: unknown): data is JsonMessages {
 /**
  * Carrega traduccions des de Firebase Storage
  * Retorna null si no existeix o hi ha error
+ * Implementa negative cache per evitar reintentar fitxers inexistents
  */
 async function loadFromStorage(language: string): Promise<JsonMessages | null> {
+  // Negative cache: si ja sabem que no existeix, no reintentem
+  if (storageMissing.has(language)) {
+    return null;
+  }
+
   try {
     const storage = getStorage();
     const fileRef = ref(storage, `i18n/${language}.json`);
     const url = await getDownloadURL(fileRef);
 
     const response = await fetch(url);
-    if (!response.ok) return null;
+    if (!response.ok) {
+      // Marcar com a missing per no reintentar
+      storageMissing.add(language);
+      return null;
+    }
 
     const data = await response.json();
     if (!isValidMessages(data)) {
-      console.warn(`[i18n] Invalid JSON format from Storage for ${language}`);
+      // Log únic per format invàlid
+      if (!loggedStorageMissing.has(`invalid-${language}`)) {
+        loggedStorageMissing.add(`invalid-${language}`);
+        console.warn(`[i18n] Invalid JSON format from Storage for ${language}, using local fallback`);
+      }
       return null;
     }
 
     return data;
   } catch {
-    // Storage file doesn't exist or error - this is expected for fresh setups
+    // Storage file doesn't exist or error - marcar negative cache
+    storageMissing.add(language);
+    // Log únic: només la primera vegada per idioma
+    if (!loggedStorageMissing.has(language)) {
+      loggedStorageMissing.add(language);
+      // Silenciós: és comportament normal en setups nous
+    }
     return null;
   }
 }
@@ -118,9 +143,11 @@ export function trFactory(messages: JsonMessages) {
 
 /**
  * Neteja el cache (forçar recàrrega)
+ * Inclou el negative cache per permetre reintentar Storage
  */
 export function clearCache() {
   cache.clear();
+  storageMissing.clear();
 }
 
 /**
