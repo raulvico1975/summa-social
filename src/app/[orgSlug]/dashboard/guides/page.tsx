@@ -26,6 +26,7 @@ import {
   CalendarCheck,
   Shield,
   RefreshCw,
+  Upload,
 } from 'lucide-react';
 import { useTranslations } from '@/i18n';
 
@@ -98,6 +99,12 @@ const GUIDES: GuideItem[] = [
     href: '/dashboard',
     manualAnchor: '#1-primers-passos',
   },
+  {
+    id: 'initialLoad',
+    icon: <Upload className="h-5 w-5" />,
+    href: '/dashboard/movimientos',
+    manualAnchor: '#1-primers-passos',
+  },
 ];
 
 // Contingut per idioma
@@ -117,6 +124,7 @@ const GUIDE_CONTENT = {
       monthlyFlow: 'Anar a Moviments',
       yearEndFiscal: 'Anar a Informes',
       accessSecurity: 'Anar al Dashboard',
+      initialLoad: 'Anar a Moviments',
     },
     recommendedOrder: 'Ordre recomanat',
     // Labels per nou format checklist
@@ -284,6 +292,22 @@ const GUIDE_CONTENT = {
           'Ordinador compartit: tanca sessió sempre.',
         ],
       },
+      initialLoad: {
+        title: 'Càrrega inicial · Primer mes',
+        intro: 'Objectiu: deixar Moviments + Contactes preparats perquè el control diari i els informes surtin nets.',
+        steps: [
+          'Configura l\'entitat (CIF, adreça, logo, signatura) a Configuració.',
+          'Importa donants/proveïdors/treballadors (si tens fitxers) i completa DNI/CP/CIF mínims.',
+          'Importa l\'extracte del mes a Moviments (CSV/XLSX) i revisa la previsualització.',
+          'Neteja pendents en aquest ordre: Sense contacte → Sense categoria → Devolucions pendents.',
+          'Detecta remeses/Stripe i divideix-les abans de seguir assignant.',
+          'Revisió final: mostra 10 moviments aleatoris i valida coherència (contacte + categoria).',
+        ],
+        avoid: [
+          'No comencis per projectes o informes: primer neteja Moviments i Contactes.',
+          'No "forcis" categories per tancar: deixa pendents conscients.',
+        ],
+      },
     },
   },
   es: {
@@ -301,6 +325,7 @@ const GUIDE_CONTENT = {
       monthlyFlow: 'Ir a Movimientos',
       yearEndFiscal: 'Ir a Informes',
       accessSecurity: 'Ir al Dashboard',
+      initialLoad: 'Ir a Movimientos',
     },
     recommendedOrder: 'Orden recomendado',
     // Labels per nou format checklist
@@ -466,6 +491,22 @@ const GUIDE_CONTENT = {
           'Ordenador compartido: cierra sesión siempre.',
         ],
       },
+      initialLoad: {
+        title: 'Carga inicial · Primer mes',
+        intro: 'Objetivo: dejar Movimientos + Contactos listos para que el control diario y los informes salgan limpios.',
+        steps: [
+          'Configura la entidad (CIF, dirección, logo, firma) en Configuración.',
+          'Importa donantes/proveedores/trabajadores (si tienes archivos) y completa DNI/CP/CIF mínimos.',
+          'Importa el extracto del mes en Movimientos (CSV/XLSX) y revisa la previsualización.',
+          'Limpia pendientes en este orden: Sin contacto → Sin categoría → Devoluciones pendientes.',
+          'Detecta remesas/Stripe y divídelas antes de seguir asignando.',
+          'Revisión final: revisa 10 movimientos al azar y valida coherencia (contacto + categoría).',
+        ],
+        avoid: [
+          'No empieces por proyectos o informes: primero limpia Movimientos y Contactos.',
+          'No fuerces categorías para cerrar: deja pendientes conscientes.',
+        ],
+      },
     },
   },
   fr: {
@@ -483,6 +524,7 @@ const GUIDE_CONTENT = {
       monthlyFlow: 'Aller aux Mouvements',
       yearEndFiscal: 'Aller aux Rapports',
       accessSecurity: 'Aller au Dashboard',
+      initialLoad: 'Aller aux Mouvements',
     },
     recommendedOrder: 'Ordre recommandé',
     // Labels per nou format checklist
@@ -646,6 +688,22 @@ const GUIDE_CONTENT = {
           'Déconnexion par inactivité : si vous êtes expulsé, reconnectez-vous (reason=idle).',
           'Rôles : édition uniquement si nécessaire ; lecture pour consultations.',
           'Ordinateur partagé : déconnectez-vous toujours.',
+        ],
+      },
+      initialLoad: {
+        title: 'Chargement initial · Premier mois',
+        intro: 'Objectif : préparer Mouvements + Contacts pour que le suivi quotidien et les exports soient propres.',
+        steps: [
+          'Configurer l\'organisation (CIF, adresse, logo, signature) dans Paramètres.',
+          'Importer donateurs/fournisseurs/salariés (si fichiers) et compléter DNI/CP/CIF minimum.',
+          'Importer l\'extrait du mois dans Mouvements (CSV/XLSX) et vérifier l\'aperçu.',
+          'Nettoyer les en attente dans cet ordre : Sans contact → Sans catégorie → Retours en attente.',
+          'Détecter remises/Stripe et les scinder avant de continuer l\'affectation.',
+          'Revue finale : vérifier 10 mouvements au hasard (contact + catégorie cohérents).',
+        ],
+        avoid: [
+          'Ne commencez pas par projets/rapports : nettoyez d\'abord Mouvements et Contacts.',
+          'Ne forcez pas les catégories pour "clôturer" : laissez des points en attente assumés.',
         ],
       },
     },
