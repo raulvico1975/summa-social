@@ -454,9 +454,24 @@ const GUIDE_CONTENT = {
         steps: [],
       },
       projects: {
-        title: 'Projets (affectation des dépenses)',
-        intro: 'Affectez des dépenses aux lignes budgétaires pour justifier les subventions.',
-        steps: ['Sélectionnez projet et ligne.', 'Affectez les dépenses depuis Mouvements.'],
+        title: 'Projets · Justification sans surprises',
+        intro: 'L\'écart ne se découvre pas à la fin. Il se détecte en affectant les dépenses aux lignes avec méthode.',
+        notResolved: [
+          'Dépenses sans ligne budgétaire',
+          'Ligne avec montant affecté > budget',
+          'Mouvements du projet non catégorisés',
+        ],
+        costlyError: 'Affecter des dépenses en masse sans vérifier. Ensuite, impossible de savoir quelle dépense a déséquilibré la ligne.',
+        checkBeforeExport: [
+          'Toutes les dépenses du projet affectées',
+          'Aucune ligne avec écart critique',
+          'Documents justificatifs complets',
+        ],
+        dontFixYet: [
+          'Si le projet a encore des dépenses à saisir',
+          'Si vous êtes en phase d\'exécution, pas de justification',
+        ],
+        steps: [],
       },
     },
   },
