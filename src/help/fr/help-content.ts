@@ -69,23 +69,54 @@ export const HELP_CONTENT_FR: Partial<Record<HelpRouteKey, HelpContent>> = {
   '/dashboard/donants': {
     title: 'Aide · Donateurs',
     intro:
-      'Ici, vous gérez les donateurs/adhérents et préparez les données pour que le Modèle 182 et les certificats soient corrects.',
+      'Cet écran est la base fiscale de l\'entité : si DNI/CIF et Code postal sont corrects, le Modèle 182 et les certificats sortent propres.',
     steps: [
-      'Créez un donateur avec « + Nouveau donateur », ou importez une liste via « Importer des donateurs » (Excel/CSV).',
-      'Vérifiez les champs fiscaux minimum : DNI/CIF et Code postal (indispensables pour le Modèle 182).',
-      'Si le donateur existe déjà lors d\'un import, activez « Mettre à jour les donateurs existants » pour actualiser CP, IBAN, email, statut, etc.',
-      'Gardez le statut « Actif/Inactif » à jour (et réactivez si besoin).',
-      'Définissez une « Catégorie par défaut » si utile : lors de l\'assignation à un mouvement, la catégorie peut être préremplie.',
-      'Ouvrez la fiche pour voir l\'historique et le résumé annuel des dons.',
-      'Générez un certificat annuel depuis la fiche lorsque demandé (sélectionnez l\'année).',
-      'Avant de générer le Modèle 182 ou des certificats en lot, corrigez les donateurs avec données incomplètes (DNI/CP).',
+      'Priorisez DNI/CIF et Code postal : c\'est ce qui bloque ou dégrade le plus souvent le 182.',
+      'Évitez les doublons : en cas d\'import, mettez à jour l\'existant plutôt que de créer du nouveau.',
+      'Maintenez Actif/Inactif à jour pour une liste propre sans perdre l\'historique.',
+      'Définissez une catégorie par défaut si cela aide à catégoriser de façon cohérente.',
+      'Avant certificats ou 182, validez 2–3 donateurs représentatifs (avec et sans retours).',
     ],
     tips: [
-      'S\'il y a des retours, vérifiez qu\'ils sont assignés au bon donateur : ils impactent le total net et le Modèle 182.',
-      'Pour de gros volumes, mieux vaut importer et corriger les doublons que de tout créer manuellement.',
-      'En cas de doute, la fiche (résumé annuel + mouvements) est l\'endroit le plus rapide pour vérifier.',
+      'Ordre opérationnel : DNI/CP → statut → (si pertinent) catégorie par défaut.',
+      'Un retour mal affecté fausse le total net du certificat.',
+      'Tous les donateurs n\'ont pas besoin d\'une fiche parfaite : minimum fiscal suffit.',
     ],
-    keywords: ['importer', 'dni', 'code postal', 'modèle 182', 'certificat', 'inactif', 'catégorie par défaut', 'historique'],
+    extra: {
+      order: {
+        title: 'Ordre recommandé',
+        items: [
+          'Compléter DNI/CIF et Code postal.',
+          'Vérifier le statut Actif/Inactif.',
+          'Éviter les doublons (mettre à jour).',
+          'Valider les retours s\'il y en a.',
+        ],
+      },
+      pitfalls: {
+        title: 'Erreurs fréquentes',
+        items: [
+          'Laisser DNI ou Code postal vide en pensant que le 182 sortira correctement.',
+          'Créer des doublons par manque de critère lors des imports.',
+          'Ignorer les retours et gonfler les totaux nets.',
+        ],
+      },
+      whenNot: {
+        title: 'Quand il n\'est pas nécessaire de complexifier',
+        items: [
+          'Inutile de tout renseigner si cela n\'apporte pas de valeur (priorité au fiscal).',
+          'Inutile de générer des certificats en masse tant que des données fiscales manquent.',
+        ],
+      },
+      manual: {
+        label: 'Manuel utilisateur · Gestion des donateurs',
+        href: '/dashboard/manual#3-gestio-de-donants',
+      },
+      video: {
+        label: 'Vidéo (bientôt)',
+        note: 'Préparer les donateurs pour le Modèle 182 (10 minutes)',
+      },
+    },
+    keywords: ['donateurs', 'adhérents', 'dni', 'cif', 'code postal', 'modèle 182', 'certificats', 'inactif', 'retours'],
   },
 
   '/dashboard/proveidors': {
@@ -143,21 +174,54 @@ export const HELP_CONTENT_FR: Partial<Record<HelpRouteKey, HelpContent>> = {
   '/dashboard/treballadors': {
     title: 'Aide · Salariés',
     intro:
-      'Ici, vous gérez les salariés de l\'organisation pour affecter les salaires et autres dépenses de personnel.',
+      'Cet écran sert à organiser les dépenses de personnel (salaires et paiements récurrents). Bien tenu, le quotidien est plus propre et cohérent.',
     steps: [
-      'Créez un salarié lorsque vous avez des salaires ou paiements récurrents.',
-      'Renseignez le nom et le DNI pour faciliter le suivi interne.',
-      'Définissez une catégorie par défaut (souvent salaires) pour accélérer l\'affectation.',
-      'Maintenez le statut actif/inactif à jour lors des entrées et sorties.',
-      'Lors de l\'affectation à un mouvement, vérifiez la cohérence de la catégorie.',
-      'Utilisez cet écran comme référence interne ; il ne remplace pas un outil RH.',
+      'Créez un salarié lorsque vous avez des paiements récurrents (salaires, indemnités fixes, etc.).',
+      'Renseignez nom et DNI : cela apporte de la traçabilité et évite les confusions.',
+      'Définissez une catégorie par défaut (souvent Salaires) pour accélérer l\'affectation dans Mouvements.',
+      'Maintenez le statut Actif/Inactif lors des entrées/sorties (inutile de supprimer).',
+      'Lors de l\'affectation d\'un mouvement, vérifiez que contact + catégorie reflètent la réalité (salaire vs autre paiement).',
     ],
     tips: [
-      'Si un salarié n\'a plus de nouveaux mouvements, marquez-le inactif plutôt que de le supprimer.',
-      'Centraliser les salaires par salarié rend la dépense de personnel plus lisible.',
-      'Ne mélangez pas salariés et fournisseurs : chaque type a un rôle distinct.',
+      'Objectif : cohérence. Ce n\'est pas un outil RH, c\'est une classification opérationnelle.',
+      'Inactif > supprimer : vous gardez l\'historique et le contexte.',
+      'Si les paiements sont mixtes, ne forcez pas la catégorie par défaut : ajustez au cas par cas.',
     ],
-    keywords: ['salarié', 'salaire', 'personnel', 'dni', 'catégorie par défaut', 'dépense'],
+    extra: {
+      order: {
+        title: 'Ordre recommandé',
+        items: [
+          'Créer seulement les récurrents.',
+          'Renseigner le DNI.',
+          'Catégorie par défaut.',
+          'Statut actif/inactif.',
+        ],
+      },
+      pitfalls: {
+        title: 'Erreurs fréquentes',
+        items: [
+          'Mélanger salariés et fournisseurs (chaque type a une fonction).',
+          'Supprimer des salariés et perdre l\'historique.',
+          'Appliquer toujours la catégorie par défaut même si ce n\'est pas pertinent.',
+        ],
+      },
+      whenNot: {
+        title: 'Quand il n\'est pas nécessaire de complexifier',
+        items: [
+          'Inutile de créer des salariés pour des paiements ponctuels sans importance.',
+          'Inutile de remplir des champs supplémentaires si vous ne les utilisez pas.',
+        ],
+      },
+      manual: {
+        label: 'Manuel utilisateur · Fournisseurs et salariés',
+        href: '/dashboard/manual#4-gestio-de-proveidors-i-treballadors',
+      },
+      video: {
+        label: 'Vidéo (bientôt)',
+        note: 'Organiser salaires et dépenses de personnel (8 minutes)',
+      },
+    },
+    keywords: ['salariés', 'salaires', 'personnel', 'dni', 'catégorie par défaut', 'actif', 'inactif'],
   },
 
   '/dashboard/informes': {

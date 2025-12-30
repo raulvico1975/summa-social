@@ -73,23 +73,54 @@ export const HELP_CONTENT_CA: Record<HelpRouteKey, HelpContent> = {
   '/dashboard/donants': {
     title: 'Ajuda · Donants',
     intro:
-      'Aquí gestiones donants i socis, i prepares les dades perquè el Model 182 i els certificats surtin correctes.',
+      'Aquesta pantalla és la base fiscal de l\'entitat: si DNI/CIF i Codi Postal són correctes, el Model 182 i els certificats surten nets.',
     steps: [
-      'Crea un donant nou amb "+ Nou donant", o importa una llista amb "Importar donants" (Excel/CSV).',
-      'Assegura\'t que els camps fiscals mínims estan complets: DNI/CIF i Codi Postal (imprescindibles per Model 182).',
-      'Si un donant ja existeix i estàs important dades, activa "Actualitzar dades de donants existents" quan vulguis posar al dia CP, IBAN, email, estat, etc.',
-      'Mantén l\'estat "Actiu/Baixa" al dia (i reactiva quan correspongui).',
-      'Assigna una "Categoria per defecte" al donant si és útil: així, quan l\'assignis a un moviment, la categoria pot quedar predefinida.',
-      'Obre la fitxa d\'un donant per veure l\'historial i el resum anual de donacions.',
-      'Genera un certificat anual des de la fitxa del donant quan te\'l demanin (selecciona l\'any).',
-      'Abans de generar Model 182 o certificats massius, resol donants amb dades incompletes (DNI/CP): és el que sol provocar errors.',
+      'Prioritza DNI/CIF i Codi Postal: és el que més sovint bloqueja o embruta el 182.',
+      'Evita duplicats: si importes, actualitza existents en lloc de crear-ne de nous.',
+      'Mantén Actiu/Baixa al dia per tenir llista neta sense perdre històric.',
+      'Assigna categoria per defecte si ajuda a categoritzar moviments de manera consistent.',
+      'Abans de certificats o 182, valida 2–3 donants representatius (amb i sense devolucions).',
     ],
     tips: [
-      'Si tens devolucions, revisa que estiguin assignades al donant correcte: afecten el total net certificat i el Model 182.',
-      'Per a imports massius, és millor importar i corregir duplicats que no pas crear manualment un per un.',
-      'Quan hi ha dubtes amb un donant, la fitxa (resum anual + moviments) és el lloc més ràpid per validar què està passant.',
+      'Ordre operatiu: DNI/CP → estat → (si cal) categoria per defecte.',
+      'Si una devolució està mal assignada, distorsiona el total net del certificat.',
+      'No tot donant necessita fitxa perfecta: fiscal mínim i prou.',
     ],
-    keywords: ['importar', 'dni', 'codi postal', 'model 182', 'certificat', 'baixa', 'categoria per defecte', 'historial'],
+    extra: {
+      order: {
+        title: 'Ordre recomanat',
+        items: [
+          'Completar DNI/CIF i Codi Postal.',
+          'Revisar estat Actiu/Baixa.',
+          'Evitar duplicats (actualitzar).',
+          'Validar devolucions si n\'hi ha.',
+        ],
+      },
+      pitfalls: {
+        title: 'Errors habituals',
+        items: [
+          'Deixar DNI o Codi Postal buit i esperar que el 182 surti bé.',
+          'Crear duplicats per manca de criteri en importacions.',
+          'Ignorar devolucions i inflar totals nets.',
+        ],
+      },
+      whenNot: {
+        title: 'Quan no cal complicar-ho',
+        items: [
+          'No cal omplir totes les dades si no aporten valor (prioritza fiscal).',
+          'No cal generar certificats massius si encara hi ha dades fiscals pendents.',
+        ],
+      },
+      manual: {
+        label: 'Manual d\'usuari · Gestió de Donants',
+        href: '/dashboard/manual#3-gestio-de-donants',
+      },
+      video: {
+        label: 'Vídeo (properament)',
+        note: 'Deixar Donants a punt per al Model 182 (10 minuts)',
+      },
+    },
+    keywords: ['donants', 'socis', 'dni', 'cif', 'codi postal', 'model 182', 'certificats', 'baixa', 'devolucions'],
   },
   '/dashboard/proveidors': {
     title: 'Ajuda · Proveïdors',
@@ -145,21 +176,54 @@ export const HELP_CONTENT_CA: Record<HelpRouteKey, HelpContent> = {
   '/dashboard/treballadors': {
     title: 'Ajuda · Treballadors',
     intro:
-      'Aquí gestiones els treballadors de l\'organització per assignar nòmines i altres despeses de personal.',
+      'Aquesta pantalla serveix per ordenar despeses de personal (nòmines i pagaments recurrents). Ben mantinguda, fa el dia a dia més net i coherent.',
     steps: [
-      'Crea un treballador quan tinguis nòmines o pagaments recurrents de personal.',
-      'Introdueix el nom i el DNI: facilita el control intern i la traçabilitat de despeses.',
-      'Assigna una categoria per defecte (habitualment nòmines) per agilitzar l\'assignació als moviments.',
-      'Mantén l\'estat actiu/inactiu al dia quan una persona entra o surt de l\'organització.',
-      'Quan assignes un treballador a un moviment, revisa que la categoria aplicada sigui coherent.',
-      'Utilitza aquesta pantalla com a referència interna; no substitueix una eina de recursos humans.',
+      'Crea un treballador quan tinguis pagaments recurrents de personal (nòmines, dietes fixes, etc.).',
+      'Introdueix nom i DNI: et dona traçabilitat i evita confusions amb noms similars.',
+      'Defineix categoria per defecte (habitualment Nòmines) per agilitzar l\'assignació a Moviments.',
+      'Mantén l\'estat Actiu/Inactiu quan una persona entra o surt (no cal esborrar).',
+      'Quan assignis un moviment, revisa que contacte + categoria reflecteixin el que és (nòmina vs altres pagaments).',
     ],
     tips: [
-      'Si un treballador ja no té moviments nous, marca\'l com a inactiu en lloc d\'esborrar-lo.',
-      'Centralitzar nòmines sota treballadors fa més llegible la despesa de personal.',
-      'No barregis treballadors i proveïdors: cada tipus de contacte té una funció diferent.',
+      'Objectiu: coherència. No és una eina de RRHH, és classificació operativa.',
+      'Inactiu > eliminar: mantens històric i evites perdre context.',
+      'Si hi ha pagaments mixtos, no forcis la categoria per defecte: ajusta puntualment.',
     ],
-    keywords: ['treballador', 'nòmina', 'personal', 'dni', 'categoria per defecte', 'despesa'],
+    extra: {
+      order: {
+        title: 'Ordre recomanat',
+        items: [
+          'Crear només recurrents.',
+          'Posar DNI.',
+          'Categoria per defecte.',
+          'Estat actiu/inactiu.',
+        ],
+      },
+      pitfalls: {
+        title: 'Errors habituals',
+        items: [
+          'Barrejar treballadors amb proveïdors (cada tipus té funció diferent).',
+          'Esborrar treballadors i perdre històric.',
+          'Aplicar sempre la categoria per defecte encara que no toqui.',
+        ],
+      },
+      whenNot: {
+        title: 'Quan no cal complicar-ho',
+        items: [
+          'No cal crear treballadors per pagaments puntuals irrelevants.',
+          'No cal omplir camps extra si no els faràs servir.',
+        ],
+      },
+      manual: {
+        label: 'Manual d\'usuari · Proveïdors i Treballadors',
+        href: '/dashboard/manual#4-gestio-de-proveidors-i-treballadors',
+      },
+      video: {
+        label: 'Vídeo (properament)',
+        note: 'Ordenar nòmines i despeses de personal (8 minuts)',
+      },
+    },
+    keywords: ['treballadors', 'nòmines', 'personal', 'dni', 'categoria per defecte', 'actiu', 'inactiu'],
   },
   '/dashboard/informes': {
     title: 'Ajuda · Informes',

@@ -69,23 +69,54 @@ export const HELP_CONTENT_ES: Partial<Record<HelpRouteKey, HelpContent>> = {
   '/dashboard/donants': {
     title: 'Ayuda · Donantes',
     intro:
-      'Aquí gestionas donantes y socios, y preparas los datos para que el Modelo 182 y los certificados salgan correctos.',
+      'Esta pantalla es la base fiscal de la entidad: si DNI/CIF y Código Postal son correctos, el Modelo 182 y los certificados salen limpios.',
     steps: [
-      'Crea un donante con "+ Nuevo donante", o importa una lista con "Importar donantes" (Excel/CSV).',
-      'Asegúrate de que los campos fiscales mínimos están completos: DNI/CIF y Código Postal (imprescindibles para el Modelo 182).',
-      'Si el donante ya existe y estás importando, activa "Actualizar datos de donantes existentes" para poner al día CP, IBAN, email, estado, etc.',
-      'Mantén el estado "Activo/Baja" al día (y reactiva cuando corresponda).',
-      'Asigna una "Categoría por defecto" si te es útil: al asignar el donante a un movimiento, la categoría puede quedar predefinida.',
-      'Abre la ficha para ver historial y resumen anual de donaciones.',
-      'Genera un certificado anual desde la ficha cuando te lo pidan (selecciona el año).',
-      'Antes de generar el Modelo 182 o certificados masivos, corrige donantes con datos incompletos (DNI/CP): es lo que más errores provoca.',
+      'Prioriza DNI/CIF y Código Postal: es lo que más suele bloquear o ensuciar el 182.',
+      'Evita duplicados: si importas, actualiza existentes en lugar de crear nuevos.',
+      'Mantén Activo/Baja al día para una lista limpia sin perder histórico.',
+      'Asigna categoría por defecto si ayuda a categorizar movimientos de forma consistente.',
+      'Antes de certificados o 182, valida 2–3 donantes representativos (con y sin devoluciones).',
     ],
     tips: [
-      'Si hay devoluciones, revisa que estén asignadas al donante correcto: afectan al total neto del certificado y al Modelo 182.',
-      'Para cargas masivas, es mejor importar y corregir duplicados que crear manualmente uno a uno.',
-      'Cuando haya dudas, la ficha (resumen anual + movimientos) es el lugar más rápido para validar qué pasa.',
+      'Orden operativo: DNI/CP → estado → (si aplica) categoría por defecto.',
+      'Si una devolución está mal asignada, distorsiona el total neto del certificado.',
+      'No todo donante necesita una ficha perfecta: fiscal mínimo y listo.',
     ],
-    keywords: ['importar', 'dni', 'código postal', 'modelo 182', 'certificado', 'baja', 'categoría por defecto', 'historial'],
+    extra: {
+      order: {
+        title: 'Orden recomendado',
+        items: [
+          'Completar DNI/CIF y Código Postal.',
+          'Revisar estado Activo/Baja.',
+          'Evitar duplicados (actualizar).',
+          'Validar devoluciones si las hay.',
+        ],
+      },
+      pitfalls: {
+        title: 'Errores habituales',
+        items: [
+          'Dejar DNI o Código Postal vacío esperando que el 182 salga bien.',
+          'Crear duplicados por falta de criterio en importaciones.',
+          'Ignorar devoluciones e inflar totales netos.',
+        ],
+      },
+      whenNot: {
+        title: 'Cuándo no hace falta complicarlo',
+        items: [
+          'No hace falta rellenar todos los datos si no aportan valor (prioriza fiscal).',
+          'No hace falta generar certificados masivos si aún hay datos fiscales pendientes.',
+        ],
+      },
+      manual: {
+        label: 'Manual de usuario · Gestión de Donantes',
+        href: '/dashboard/manual#3-gestio-de-donants',
+      },
+      video: {
+        label: 'Vídeo (próximamente)',
+        note: 'Dejar Donantes listos para el Modelo 182 (10 minutos)',
+      },
+    },
+    keywords: ['donantes', 'socios', 'dni', 'cif', 'código postal', 'modelo 182', 'certificados', 'baja', 'devoluciones'],
   },
 
   '/dashboard/proveidors': {
@@ -143,21 +174,54 @@ export const HELP_CONTENT_ES: Partial<Record<HelpRouteKey, HelpContent>> = {
   '/dashboard/treballadors': {
     title: 'Ayuda · Trabajadores',
     intro:
-      'Aquí gestionas los trabajadores de la organización para asignar nóminas y otros gastos de personal.',
+      'Esta pantalla sirve para ordenar gastos de personal (nóminas y pagos recurrentes). Bien mantenida, el día a día queda más limpio y coherente.',
     steps: [
-      'Crea un trabajador cuando tengas nóminas o pagos recurrentes de personal.',
-      'Introduce el nombre y el DNI para facilitar el control interno.',
-      'Asigna una categoría por defecto (normalmente nóminas) para agilizar la asignación.',
-      'Mantén el estado activo/inactivo actualizado cuando una persona entra o sale.',
-      'Al asignar un trabajador a un movimiento, revisa que la categoría aplicada sea coherente.',
-      'Usa esta pantalla como referencia interna; no sustituye a una herramienta de recursos humanos.',
+      'Crea un trabajador cuando tengas pagos recurrentes de personal (nóminas, dietas fijas, etc.).',
+      'Introduce nombre y DNI: aporta trazabilidad y evita confusiones con nombres parecidos.',
+      'Define categoría por defecto (normalmente Nóminas) para agilizar la asignación en Movimientos.',
+      'Mantén el estado Activo/Inactivo cuando una persona entra o sale (no hace falta borrar).',
+      'Al asignar un movimiento, revisa que contacto + categoría reflejen lo que es (nómina vs otros pagos).',
     ],
     tips: [
-      'Si un trabajador ya no tiene movimientos nuevos, márcalo como inactivo en lugar de eliminarlo.',
-      'Centralizar las nóminas bajo trabajadores hace más legible el gasto de personal.',
-      'No mezcles trabajadores y proveedores: cada tipo de contacto cumple una función distinta.',
+      'Objetivo: coherencia. No es una herramienta de RRHH, es clasificación operativa.',
+      'Inactivo > eliminar: mantienes histórico y evitas perder contexto.',
+      'Si hay pagos mixtos, no fuerces la categoría por defecto: ajusta puntualmente.',
     ],
-    keywords: ['trabajador', 'nómina', 'personal', 'dni', 'categoría por defecto', 'gasto'],
+    extra: {
+      order: {
+        title: 'Orden recomendado',
+        items: [
+          'Crear solo recurrentes.',
+          'Poner DNI.',
+          'Categoría por defecto.',
+          'Estado activo/inactivo.',
+        ],
+      },
+      pitfalls: {
+        title: 'Errores habituales',
+        items: [
+          'Mezclar trabajadores con proveedores (cada tipo cumple una función).',
+          'Borrar trabajadores y perder histórico.',
+          'Aplicar siempre la categoría por defecto aunque no corresponda.',
+        ],
+      },
+      whenNot: {
+        title: 'Cuándo no hace falta complicarlo',
+        items: [
+          'No hace falta crear trabajadores para pagos puntuales irrelevantes.',
+          'No hace falta rellenar campos extra si no los vas a usar.',
+        ],
+      },
+      manual: {
+        label: 'Manual de usuario · Proveedores y Trabajadores',
+        href: '/dashboard/manual#4-gestio-de-proveidors-i-treballadors',
+      },
+      video: {
+        label: 'Vídeo (próximamente)',
+        note: 'Ordenar nóminas y gastos de personal (8 minutos)',
+      },
+    },
+    keywords: ['trabajadores', 'nóminas', 'personal', 'dni', 'categoría por defecto', 'activo', 'inactivo'],
   },
 
   '/dashboard/informes': {
