@@ -404,9 +404,24 @@ const GUIDE_CONTENT = {
         steps: [],
       },
       reports: {
-        title: 'Rapports (182/347/certificats)',
-        intro: 'Générez les exports pour le cabinet comptable : vérifiez les données et exportez.',
-        steps: ['Résolvez les alertes donateurs (DNI, CP).', 'Générez et envoyez au cabinet.'],
+        title: 'Rapports · Fiscalité propre',
+        intro: 'Le rapport n\'est pas le problème. Le problème, c\'est la donnée en entrée. Si elle est incorrecte, l\'Excel le sera aussi.',
+        notResolved: [
+          'Donateurs avec DNI/CP incomplets',
+          'Retours sans donateur affecté',
+          'Mouvements récents non catégorisés',
+        ],
+        costlyError: 'Envoyer l\'Excel au cabinet sans l\'ouvrir. Puis ils appellent avec 50 erreurs et vous ne savez pas par où commencer.',
+        checkBeforeExport: [
+          'Alertes donateurs résolues',
+          'Retours tous affectés',
+          'Totaux cohérents avec les attentes',
+        ],
+        dontFixYet: [
+          'Données fiscales manquantes : attendez-les avant d\'exporter',
+          'Hors clôture : pas besoin de générer',
+        ],
+        steps: [],
       },
       projects: {
         title: 'Projets (affectation des dépenses)',
