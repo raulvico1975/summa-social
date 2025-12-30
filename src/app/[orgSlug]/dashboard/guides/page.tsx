@@ -23,6 +23,9 @@ import {
   ClipboardCheck,
   Clock,
   HelpCircle,
+  CalendarCheck,
+  Shield,
+  RefreshCw,
 } from 'lucide-react';
 import { useTranslations } from '@/i18n';
 
@@ -77,6 +80,24 @@ const GUIDES: GuideItem[] = [
     href: '/dashboard/project-module/expenses',
     manualAnchor: '#10-projectes-i-justificació-de-subvencions',
   },
+  {
+    id: 'monthlyFlow',
+    icon: <RefreshCw className="h-5 w-5" />,
+    href: '/dashboard/movimientos',
+    manualAnchor: '#5-gestio-de-moviments',
+  },
+  {
+    id: 'yearEndFiscal',
+    icon: <CalendarCheck className="h-5 w-5" />,
+    href: '/dashboard/informes',
+    manualAnchor: '#9-informes-fiscals',
+  },
+  {
+    id: 'accessSecurity',
+    icon: <Shield className="h-5 w-5" />,
+    href: '/dashboard',
+    manualAnchor: '#1-primers-passos',
+  },
 ];
 
 // Contingut per idioma
@@ -93,6 +114,9 @@ const GUIDE_CONTENT = {
       donors: 'Anar a Donants',
       reports: 'Anar a Informes',
       projects: 'Anar a Projectes',
+      monthlyFlow: 'Anar a Moviments',
+      yearEndFiscal: 'Anar a Informes',
+      accessSecurity: 'Anar al Dashboard',
     },
     recommendedOrder: 'Ordre recomanat',
     // Labels per nou format checklist
@@ -225,6 +249,41 @@ const GUIDE_CONTENT = {
         ],
         steps: [],
       },
+      monthlyFlow: {
+        title: 'Flux mensual · Importar i deixar net',
+        intro: 'Checklist per passar l\'extracte del banc i deixar Moviments en estat operatiu.',
+        steps: [
+          'Descarrega extracte del banc (CSV/XLSX) i puja\'l a Moviments.',
+          'Revisa previsualització (dates, imports, descripcions) i importa.',
+          'Filtra: Sense contacte → resol.',
+          'Filtra: Sense categoria → resol.',
+          'Revisa: Devolucions pendents i Remeses (divideix si cal).',
+          'Revisió final: mostra 10 moviments aleatoris i valida coherència.',
+        ],
+      },
+      yearEndFiscal: {
+        title: 'Tancament anual · 182/347/certificats',
+        intro: 'Checklist per preparar els exports per gestoria sense correccions d\'última hora.',
+        steps: [
+          'A Donants: completa DNI/CIF i Codi Postal dels que tinguin alertes.',
+          'A Moviments: comprova que no hi ha devolucions pendents.',
+          'A Informes: genera Model 182.',
+          'A Proveïdors: verifica CIF i genera Model 347.',
+          'A Informes: genera certificats (individuals o lot).',
+          'Arxiva exports i fixa la versió enviada a gestoria.',
+        ],
+      },
+      accessSecurity: {
+        title: 'Accés i seguretat · Sessió i organització',
+        intro: 'Com entrar, què passa amb la redirecció i què fer si la sessió caduca.',
+        steps: [
+          'Login global → redirecció automàtica a la teva organització.',
+          'Si tens diverses orgs: selecciona l\'org correcta abans de treballar.',
+          'Logout per inactivitat: si et treu, torna a entrar (reason=idle).',
+          'Rols: edició només si cal; lectura per consultes.',
+          'Ordinador compartit: tanca sessió sempre.',
+        ],
+      },
     },
   },
   es: {
@@ -239,6 +298,9 @@ const GUIDE_CONTENT = {
       donors: 'Ir a Donantes',
       reports: 'Ir a Informes',
       projects: 'Ir a Proyectos',
+      monthlyFlow: 'Ir a Movimientos',
+      yearEndFiscal: 'Ir a Informes',
+      accessSecurity: 'Ir al Dashboard',
     },
     recommendedOrder: 'Orden recomendado',
     // Labels per nou format checklist
@@ -369,6 +431,41 @@ const GUIDE_CONTENT = {
         ],
         steps: [],
       },
+      monthlyFlow: {
+        title: 'Flujo mensual · Importar y dejar limpio',
+        intro: 'Checklist para pasar el extracto del banco y dejar Movimientos en estado operativo.',
+        steps: [
+          'Descarga extracto del banco (CSV/XLSX) y súbelo a Movimientos.',
+          'Revisa previsualización (fechas, importes, descripciones) e importa.',
+          'Filtra: Sin contacto → resuelve.',
+          'Filtra: Sin categoría → resuelve.',
+          'Revisa: Devoluciones pendientes y Remesas (divide si hace falta).',
+          'Revisión final: muestra 10 movimientos aleatorios y valida coherencia.',
+        ],
+      },
+      yearEndFiscal: {
+        title: 'Cierre anual · 182/347/certificados',
+        intro: 'Checklist para preparar los exports para gestoría sin correcciones de última hora.',
+        steps: [
+          'En Donantes: completa DNI/CIF y Código Postal de los que tengan alertas.',
+          'En Movimientos: comprueba que no hay devoluciones pendientes.',
+          'En Informes: genera Modelo 182.',
+          'En Proveedores: verifica CIF y genera Modelo 347.',
+          'En Informes: genera certificados (individuales o lote).',
+          'Archiva exports y fija la versión enviada a gestoría.',
+        ],
+      },
+      accessSecurity: {
+        title: 'Acceso y seguridad · Sesión y organización',
+        intro: 'Cómo entrar, qué pasa con la redirección y qué hacer si la sesión caduca.',
+        steps: [
+          'Login global → redirección automática a tu organización.',
+          'Si tienes varias orgs: selecciona la org correcta antes de trabajar.',
+          'Logout por inactividad: si te expulsa, vuelve a entrar (reason=idle).',
+          'Roles: edición solo si es necesario; lectura para consultas.',
+          'Ordenador compartido: cierra sesión siempre.',
+        ],
+      },
     },
   },
   fr: {
@@ -383,6 +480,9 @@ const GUIDE_CONTENT = {
       donors: 'Aller aux Donateurs',
       reports: 'Aller aux Rapports',
       projects: 'Aller aux Projets',
+      monthlyFlow: 'Aller aux Mouvements',
+      yearEndFiscal: 'Aller aux Rapports',
+      accessSecurity: 'Aller au Dashboard',
     },
     recommendedOrder: 'Ordre recommandé',
     // Labels per nou format checklist
@@ -512,6 +612,41 @@ const GUIDE_CONTENT = {
           'Si vous êtes en phase d\'exécution, pas de justification',
         ],
         steps: [],
+      },
+      monthlyFlow: {
+        title: 'Flux mensuel · Importer et nettoyer',
+        intro: 'Checklist pour traiter l\'extrait bancaire et laisser Mouvements en état opérationnel.',
+        steps: [
+          'Téléchargez l\'extrait de la banque (CSV/XLSX) et importez-le dans Mouvements.',
+          'Vérifiez la prévisualisation (dates, montants, descriptions) et importez.',
+          'Filtrez : Sans contact → résolvez.',
+          'Filtrez : Sans catégorie → résolvez.',
+          'Vérifiez : Retours en attente et Remises (scindez si nécessaire).',
+          'Vérification finale : affichez 10 mouvements aléatoires et validez la cohérence.',
+        ],
+      },
+      yearEndFiscal: {
+        title: 'Clôture annuelle · 182/347/certificats',
+        intro: 'Checklist pour préparer les exports pour le cabinet sans corrections de dernière minute.',
+        steps: [
+          'Dans Donateurs : complétez DNI/CIF et Code postal pour ceux avec alertes.',
+          'Dans Mouvements : vérifiez qu\'il n\'y a pas de retours en attente.',
+          'Dans Rapports : générez le Modèle 182.',
+          'Dans Fournisseurs : vérifiez le CIF et générez le Modèle 347.',
+          'Dans Rapports : générez les certificats (individuels ou en lot).',
+          'Archivez les exports et fixez la version envoyée au cabinet.',
+        ],
+      },
+      accessSecurity: {
+        title: 'Accès et sécurité · Session et organisation',
+        intro: 'Comment se connecter, ce qui se passe avec la redirection et que faire si la session expire.',
+        steps: [
+          'Login global → redirection automatique vers votre organisation.',
+          'Si vous avez plusieurs orgs : sélectionnez la bonne org avant de travailler.',
+          'Déconnexion par inactivité : si vous êtes expulsé, reconnectez-vous (reason=idle).',
+          'Rôles : édition uniquement si nécessaire ; lecture pour consultations.',
+          'Ordinateur partagé : déconnectez-vous toujours.',
+        ],
       },
     },
   },
