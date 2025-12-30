@@ -132,6 +132,24 @@ export const HELP_CONTENT_FR: Partial<Record<HelpRouteKey, HelpContent>> = {
           "Pour de gros volumes, filtrez les éléments en attente et appliquez un critère répétable avant le détail.",
         ],
       },
+      documents: {
+        title: 'Documents (critère rapide)',
+        items: [
+          "Inutile d'ajouter un document à chaque mouvement : réservez-le aux factures, justificatifs importants ou exigences de subvention.",
+          "Si vous ajoutez depuis la modale du mouvement, le document est lié automatiquement.",
+          "Un nom de fichier clair (date + concept) aide à le retrouver sans chercher.",
+          "Pour la justification de projets, le document peut être obligatoire : vérifiez avant de clôturer.",
+        ],
+      },
+      bankAccounts: {
+        title: 'Multi-compte bancaire (critère rapide)',
+        items: [
+          "Chaque compte se synchronise séparément : si vous en avez plusieurs, filtrez par compte lors de la revue des éléments en attente.",
+          "Les soldes du tableau de bord totalisent tous les comptes : n'interprétez pas comme un problème un solde global différent de celui de la banque.",
+          "Les virements internes apparaissent comme sortie d'un compte et entrée dans l'autre : affectez la même catégorie (ex. Virements internes) et ne les comptez pas deux fois comme dépense/recette réelle.",
+          "Lors de la synchronisation d'un nouveau compte, vérifiez les données initiales (solde d'ouverture, date début) avant de continuer.",
+        ],
+      },
       manual: {
         label: 'Manuel utilisateur · Gestion des mouvements',
         href: '/dashboard/manual#5-gestio-de-moviments',

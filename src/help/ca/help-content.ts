@@ -133,6 +133,24 @@ export const HELP_CONTENT_CA: Record<HelpRouteKey, HelpContent> = {
           'Per imports massius, filtra pendents i aplica un criteri repetible abans d\'entrar al detall.',
         ],
       },
+      documents: {
+        title: 'Documents (criteri ràpid)',
+        items: [
+          'No cal adjuntar document a cada moviment: reserva-ho per factures, justificants importants o requisits de subvenció.',
+          'Si adjuntes des del modal del moviment, el document queda vinculat automàticament.',
+          'Un nom de fitxer clar (data + concepte) ajuda després a trobar-lo sense cercar.',
+          'Per justificació de projectes, el document pot ser obligatori: revisa-ho abans de tancar.',
+        ],
+      },
+      bankAccounts: {
+        title: 'Multi-compte bancari (criteri ràpid)',
+        items: [
+          'Cada compte sincronitza per separat: si tens més d\'un, filtra per compte quan revisem pendents.',
+          'Els saldos del Dashboard sumen tots els comptes: no interpretis com a problema un saldo global diferent del que veus al banc.',
+          'Transferències internes apareixen com a sortida d\'un compte i entrada a l\'altre: assigna la mateixa categoria (p. ex. Transferències internes) i no les comptis dues vegades com a despesa/ingrés real.',
+          'Quan sincronitzis un nou compte, revisa les dades inicials (saldo obert, data inici) abans de continuar.',
+        ],
+      },
       manual: {
         label: "Manual d'usuari · Gestió de Moviments",
         href: '/dashboard/manual#5-gestio-de-moviments',

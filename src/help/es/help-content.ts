@@ -132,6 +132,24 @@ export const HELP_CONTENT_ES: Partial<Record<HelpRouteKey, HelpContent>> = {
           'Para volúmenes grandes, filtra pendientes y aplica un criterio repetible antes de entrar al detalle.',
         ],
       },
+      documents: {
+        title: 'Documentos (criterio rápido)',
+        items: [
+          'No hace falta adjuntar documento a cada movimiento: resérvalo para facturas, justificantes importantes o requisitos de subvención.',
+          'Si adjuntas desde el modal del movimiento, el documento queda vinculado automáticamente.',
+          'Un nombre de archivo claro (fecha + concepto) ayuda después a encontrarlo sin buscar.',
+          'Para justificación de proyectos, el documento puede ser obligatorio: revísalo antes de cerrar.',
+        ],
+      },
+      bankAccounts: {
+        title: 'Multi-cuenta bancaria (criterio rápido)',
+        items: [
+          'Cada cuenta sincroniza por separado: si tienes más de una, filtra por cuenta cuando revises pendientes.',
+          'Los saldos del Dashboard suman todas las cuentas: no interpretes como problema un saldo global diferente del que ves en el banco.',
+          'Las transferencias internas aparecen como salida de una cuenta y entrada en la otra: asigna la misma categoría (p. ej. Transferencias internas) y no las cuentes dos veces como gasto/ingreso real.',
+          'Cuando sincronices una nueva cuenta, revisa los datos iniciales (saldo apertura, fecha inicio) antes de continuar.',
+        ],
+      },
       manual: {
         label: 'Manual de usuario · Gestión de Movimientos',
         href: '/dashboard/manual#5-gestio-de-moviments',
