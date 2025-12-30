@@ -74,7 +74,7 @@ const GUIDES: GuideItem[] = [
     id: 'projects',
     icon: <FolderKanban className="h-5 w-5" />,
     href: '/dashboard/project-module/expenses',
-    manualAnchor: '#10-modul-projectes',
+    manualAnchor: '#10-projectes-i-justificació-de-subvencions',
   },
 ];
 
@@ -192,9 +192,24 @@ const GUIDE_CONTENT = {
         steps: [],
       },
       projects: {
-        title: 'Projectes (assignació despeses)',
-        intro: 'Assigna despeses a partides de projectes per justificar subvencions.',
-        steps: ['Selecciona projecte i partida.', 'Assigna despeses des de Moviments.'],
+        title: 'Projectes · Justificació sense sorpreses',
+        intro: 'El desquadrament no es descobreix al final. Es detecta assignant despeses a partides amb criteri.',
+        notResolved: [
+          'Despeses sense partida assignada',
+          'Partida amb import assignat > pressupost',
+          'Moviments del projecte sense categoritzar',
+        ],
+        costlyError: 'Assignar despeses massivament sense revisar. Després no saps quina despesa ha desquadrat la partida.',
+        checkBeforeExport: [
+          'Totes les despeses del projecte assignades',
+          'Cap partida amb desviació crítica',
+          'Documents adjunts complets',
+        ],
+        dontFixYet: [
+          'Si el projecte encara té despeses pendents d\'entrar',
+          'Si estàs en fase d\'execució, no de justificació',
+        ],
+        steps: [],
       },
     },
   },
