@@ -3,7 +3,7 @@
 import * as React from 'react';
 import { usePathname, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
-import { HelpCircle, BookOpen, Link2, MessageSquare, ExternalLink, Play, AlertTriangle, CheckCircle2, XCircle, ClipboardCheck, RotateCcw, Layers, UserRound, Tag, FileText, Landmark, Sparkles, ListChecks, Upload, Filter, BadgeCheck } from 'lucide-react';
+import { HelpCircle, BookOpen, Link2, MessageSquare, ExternalLink, Play, AlertTriangle, CheckCircle2, XCircle, ClipboardCheck, RotateCcw, Layers, UserRound, Tag, FileText, Landmark, Sparkles, ListChecks, Upload, Filter, BadgeCheck, Lightbulb } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
@@ -33,7 +33,8 @@ const HELP_FEEDBACK_EMAIL = 'ajuda@summasocial.app';
 const UI_STRINGS = {
   ca: {
     searchPlaceholder: "Cerca dins l'ajuda…",
-    viewManual: 'Veure al manual',
+    viewGuide: 'Veure guia',
+    viewManual: 'Manual complet',
     copyLink: 'Copiar enllaç',
     suggest: 'Suggerir una millora',
     noHelp: 'Aquesta pantalla encara no té ajuda.',
@@ -47,7 +48,8 @@ const UI_STRINGS = {
   },
   es: {
     searchPlaceholder: 'Buscar en la ayuda…',
-    viewManual: 'Ver en el manual',
+    viewGuide: 'Ver guía',
+    viewManual: 'Manual completo',
     copyLink: 'Copiar enlace',
     suggest: 'Sugerir una mejora',
     noHelp: 'Esta pantalla aún no tiene ayuda.',
@@ -61,7 +63,8 @@ const UI_STRINGS = {
   },
   fr: {
     searchPlaceholder: "Rechercher dans l'aide…",
-    viewManual: 'Voir dans le manuel',
+    viewGuide: 'Voir le guide',
+    viewManual: 'Manuel complet',
     copyLink: 'Copier le lien',
     suggest: 'Suggérer une amélioration',
     noHelp: "Cet écran n'a pas encore d'aide.",
@@ -184,6 +187,7 @@ export function HelpSheet() {
   const manualAnchor = getManualAnchorForRoute(routeKey);
   const manualBase = orgSlug ? `/${orgSlug}/dashboard/manual` : '/dashboard/manual';
   const manualUrl = manualAnchor ? `${manualBase}#${manualAnchor}` : manualBase;
+  const guidesUrl = orgSlug ? `/${orgSlug}/dashboard/guides` : '/dashboard/guides';
 
   // UI strings for current locale
   const ui = UI_STRINGS[language] ?? UI_STRINGS.ca;
@@ -256,6 +260,14 @@ export function HelpSheet() {
       openSourceRef.current = 'button';
     }
     setOpen(newOpen);
+  };
+
+  // Handle guides link click
+  const handleGuidesClick = () => {
+    trackUX('help.guides.click', {
+      routeKey,
+      locale: language,
+    });
   };
 
   // Handle manual link click
@@ -334,18 +346,24 @@ export function HelpSheet() {
         {/* Scrollable content area */}
         <div className="flex-1 min-h-0 overflow-y-auto pb-6">
           {/* Action buttons */}
-          <div className="mt-4 flex gap-2">
-          <Button variant="outline" size="sm" asChild>
-            <Link href={manualUrl} onClick={handleManualClick}>
-              <BookOpen className="h-4 w-4 mr-2" />
-              {ui.viewManual}
-            </Link>
-          </Button>
-          <Button variant="outline" size="sm" onClick={handleCopyLink}>
-            <Link2 className="h-4 w-4 mr-2" />
-            {ui.copyLink}
-          </Button>
-        </div>
+          <div className="mt-4 flex flex-wrap gap-2">
+            <Button size="sm" asChild>
+              <Link href={guidesUrl} onClick={handleGuidesClick}>
+                <Lightbulb className="h-4 w-4 mr-2" />
+                {ui.viewGuide}
+              </Link>
+            </Button>
+            <Button variant="outline" size="sm" asChild>
+              <Link href={manualUrl} onClick={handleManualClick}>
+                <BookOpen className="h-4 w-4 mr-2" />
+                {ui.viewManual}
+              </Link>
+            </Button>
+            <Button variant="outline" size="sm" onClick={handleCopyLink}>
+              <Link2 className="h-4 w-4 mr-2" />
+              {ui.copyLink}
+            </Button>
+          </div>
 
         <div className="mt-4">
           <Input
