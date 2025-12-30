@@ -37,6 +37,7 @@ export type HelpExtra = {
   bulk?: HelpExtraSection;
   importing?: HelpExtraSection;
   filters?: HelpExtraSection;
+  quality?: HelpExtraSection;
   manual?: HelpExtraLink;
   video?: HelpExtraLink;
 };
