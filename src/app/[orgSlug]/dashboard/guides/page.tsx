@@ -54,7 +54,7 @@ const GUIDES: GuideItem[] = [
     id: 'firstMonth',
     icon: <Calendar className="h-5 w-5" />,
     href: '/dashboard/movimientos',
-    manualAnchor: '#1-primers-passos',
+    manualAnchor: '#5-gestio-de-moviments',
   },
   {
     id: 'movements',
