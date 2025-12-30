@@ -35,6 +35,8 @@ export type HelpExtra = {
   bankAccounts?: HelpExtraSection;
   ai?: HelpExtraSection;
   bulk?: HelpExtraSection;
+  importing?: HelpExtraSection;
+  filters?: HelpExtraSection;
   manual?: HelpExtraLink;
   video?: HelpExtraLink;
 };

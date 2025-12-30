@@ -3,7 +3,7 @@
 import * as React from 'react';
 import { usePathname, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
-import { HelpCircle, BookOpen, Link2, MessageSquare, ExternalLink, Play, AlertTriangle, CheckCircle2, XCircle, ClipboardCheck, RotateCcw, Layers, UserRound, Tag, FileText, Landmark, Sparkles, ListChecks } from 'lucide-react';
+import { HelpCircle, BookOpen, Link2, MessageSquare, ExternalLink, Play, AlertTriangle, CheckCircle2, XCircle, ClipboardCheck, RotateCcw, Layers, UserRound, Tag, FileText, Landmark, Sparkles, ListChecks, Upload, Filter } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
@@ -544,6 +544,34 @@ export function HelpSheet() {
                       </h4>
                       <ul className="list-disc list-inside space-y-1 text-sm text-muted-foreground ml-6">
                         {helpContent.extra.bulk.items.map((item, idx) => (
+                          <li key={idx}>{item}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+
+                  {helpContent.extra.importing && (
+                    <div className="space-y-2">
+                      <h4 className="text-sm font-medium flex items-center gap-2">
+                        <Upload className="h-4 w-4 text-teal-600" />
+                        {helpContent.extra.importing.title}
+                      </h4>
+                      <ul className="list-disc list-inside space-y-1 text-sm text-muted-foreground ml-6">
+                        {helpContent.extra.importing.items.map((item, idx) => (
+                          <li key={idx}>{item}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+
+                  {helpContent.extra.filters && (
+                    <div className="space-y-2">
+                      <h4 className="text-sm font-medium flex items-center gap-2">
+                        <Filter className="h-4 w-4 text-slate-500" />
+                        {helpContent.extra.filters.title}
+                      </h4>
+                      <ul className="list-disc list-inside space-y-1 text-sm text-muted-foreground ml-6">
+                        {helpContent.extra.filters.items.map((item, idx) => (
                           <li key={idx}>{item}</li>
                         ))}
                       </ul>
