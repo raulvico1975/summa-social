@@ -4,23 +4,66 @@ export const HELP_CONTENT_FR: Partial<Record<HelpRouteKey, HelpContent>> = {
   '/dashboard/movimientos': {
     title: 'Aide · Mouvements',
     intro:
-      'Ici, vous importez et révisez les mouvements bancaires pour que la fiscalité et les exports soient propres.',
+      'Cet écran est le centre de contrôle du quotidien : vous y vérifiez les entrées/sorties bancaires, repérez les éléments en attente et évitez que les erreurs ne s\'amplifient.',
     steps: [
-      'Importez l\'extrait : cliquez sur « Importer l\'extrait » et chargez le CSV/XLSX de la banque.',
-      'Vérifiez l\'aperçu avant d\'importer (dates, montants, libellés).',
-      'Filtrez pour trouver les éléments en attente : « Sans catégorie », « Sans contact » et (si présent) « Retours en attente ».',
-      'Ouvrez un mouvement et assignez Catégorie et Contact (donateur/fournisseur/salarié) si nécessaire.',
-      'Ajoutez un justificatif (facture) quand il le faut : icône document ou glisser-déposer sur la ligne (si disponible).',
-      'Si vous voyez une remise (un seul crédit avec plusieurs cotisations), utilisez le menu ⋮ pour « Scinder la remise ».',
-      'Si vous voyez un versement Stripe, utilisez le menu ⋮ pour « Scinder la remise Stripe » et chargez le CSV Stripe (Paiements → exporter).',
-      'À la fin, vérifiez que les mouvements clés ont Catégorie + Contact : cela réduit les erreurs sur les modèles fiscaux et certificats.',
+      'Commencez par les éléments en attente : filtrez "Sans contact", "Sans catégorie" et "Retours en attente" si disponibles.',
+      'Assignez d\'abord le contact (donateur, fournisseur ou salarié) : cela donne du contexte au mouvement.',
+      'Assignez ensuite la catégorie lorsque le contact est clair.',
+      'Vérifiez les encaissements groupés (remises) : scindez-les avant de continuer si nécessaire.',
+      'Ajoutez des justificatifs seulement quand ils apportent de la valeur (factures, preuves pertinentes).',
     ],
     tips: [
-      'Commencez par les filtres d\'attente (Sans catégorie / Sans contact) avant de traiter les cas isolés.',
-      'Pour les retours, le mouvement d\'origine n\'est pas modifié : il faut assigner le donateur au retour pour que la déduction soit correcte.',
-      'Si un contact a une « catégorie par défaut », l\'assignation peut compléter automatiquement la catégorie.',
+      'Ordre recommandé : contact → catégorie → document. Changer l\'ordre crée souvent des doutes ensuite.',
+      'Si un mouvement vous pose question, laissez-le en attente et continuez avec le reste.',
+      'Une revue régulière des éléments en attente évite les accumulations difficiles à traiter.',
     ],
-    keywords: ['importer', 'extrait', 'catégorie', 'contact', 'remise', 'stripe', 'retours', 'document'],
+    extra: {
+      order: {
+        title: 'Ordre de travail recommandé',
+        items: [
+          'Filtrer les éléments en attente (ce qui n\'est pas résolu).',
+          'Assigner les contacts.',
+          'Assigner les catégories.',
+          'Vérifier remises et retours.',
+          'Ajouter des documents quand cela apporte de la valeur.',
+        ],
+      },
+      pitfalls: {
+        title: 'Erreurs fréquentes',
+        items: [
+          'Assigner une catégorie sans avoir défini le contact.',
+          'Forcer une affectation juste pour "tout nettoyer".',
+          'Scinder les remises trop tard, après avoir déjà modifié d\'autres champs.',
+          'Générer des rapports sans avoir vérifié les retours.',
+        ],
+      },
+      whenNot: {
+        title: 'Quand il n\'est pas nécessaire d\'agir',
+        items: [
+          'Inutile d\'assigner un projet si vous ne faites que le suivi du quotidien.',
+          'Inutile d\'ajouter un document pour de petits mouvements évidents.',
+          'Inutile de tout résoudre immédiatement : laisser des éléments en attente avec critère, c\'est aussi du contrôle.',
+        ],
+      },
+      manual: {
+        label: 'Manuel utilisateur · Gestion des mouvements',
+        href: '/dashboard/manual#5-gestio-de-moviments',
+      },
+      video: {
+        label: 'Vidéo (bientôt)',
+        note: 'Garder les mouvements sous contrôle en 10 minutes',
+      },
+    },
+    keywords: [
+      'contrôle',
+      'en attente',
+      'contact',
+      'catégorie',
+      'remise',
+      'retours',
+      'document',
+      'quotidien',
+    ],
   },
 
   '/dashboard/donants': {

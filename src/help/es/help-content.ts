@@ -4,23 +4,66 @@ export const HELP_CONTENT_ES: Partial<Record<HelpRouteKey, HelpContent>> = {
   '/dashboard/movimientos': {
     title: 'Ayuda · Movimientos',
     intro:
-      'Aquí importas y revisas los movimientos del banco, y los preparas para que la fiscalidad y los informes salgan limpios.',
+      'Esta pantalla es el centro de control del día a día: aquí revisas lo que entra y sale del banco, detectas pendientes y evitas que los errores crezcan.',
     steps: [
-      'Importa el extracto: pulsa "Importar extracto" y sube el CSV/XLSX del banco.',
-      'Revisa la previsualización antes de importar (fechas, importes y descripciones).',
-      'Filtra el listado para encontrar pendientes: "Sin categorizar", "Sin contacto" y (si aparece) "Devoluciones pendientes".',
-      'Abre un movimiento y asigna Categoría y Contacto (donante/proveedor/trabajador) si falta.',
-      'Adjunta el documento (factura/justificante) cuando haga falta: icono de documento o arrastrándolo sobre la fila (si está disponible).',
-      'Si ves una remesa (un solo ingreso con muchas cuotas), usa el menú ⋮ de la fila para "Dividir remesa".',
-      'Si ves un ingreso de Stripe, usa el menú ⋮ para "Dividir remesa Stripe" y sube el CSV de Stripe (Pagos → exportar).',
-      'Al terminar, comprueba que los movimientos clave quedan con Categoría + Contacto: reduce errores en modelos fiscales y certificados.',
+      'Empieza por los pendientes: filtra por "Sin contacto", "Sin categoría" y "Devoluciones pendientes" si aparecen.',
+      'Asigna primero el contacto (donante, proveedor o trabajador): da contexto al movimiento.',
+      'Asigna después la categoría cuando el contacto ya esté claro.',
+      'Revisa ingresos agrupados (remesas): divídelas antes de continuar si hace falta.',
+      'Adjunta documentos solo cuando aporten valor (facturas, justificantes relevantes).',
     ],
     tips: [
-      'Prioriza primero los filtros de pendientes (Sin categorizar / Sin contacto) antes de retocar casos puntuales.',
-      'En devoluciones, el movimiento original no se toca: hay que asignar el donante a la devolución para que reste correctamente en fiscalidad.',
-      'Si un contacto tiene "categoría por defecto", al asignarlo a un movimiento la categoría puede completarse automáticamente.',
+      'Orden recomendado: contacto → categoría → documento. Cambiar el orden suele generar dudas después.',
+      'Si un movimiento te genera duda, déjalo pendiente y sigue con el resto.',
+      'Una revisión regular de pendientes evita acumulaciones difíciles de revisar.',
     ],
-    keywords: ['importar', 'extracto', 'categoría', 'contacto', 'remesa', 'stripe', 'devoluciones', 'documento'],
+    extra: {
+      order: {
+        title: 'Orden recomendado de trabajo',
+        items: [
+          'Filtrar pendientes (qué está sin resolver).',
+          'Asignar contactos.',
+          'Asignar categorías.',
+          'Revisar remesas y devoluciones.',
+          'Adjuntar documentos cuando aporten valor.',
+        ],
+      },
+      pitfalls: {
+        title: 'Errores habituales',
+        items: [
+          'Asignar categoría sin haber definido el contacto.',
+          'Forzar una asignación solo por "dejarlo limpio".',
+          'Dividir remesas demasiado tarde, con otros campos ya tocados.',
+          'Generar informes sin haber revisado devoluciones.',
+        ],
+      },
+      whenNot: {
+        title: 'Cuándo no hace falta hacer nada',
+        items: [
+          'No hace falta asignar proyecto si solo controlas el día a día.',
+          'No hace falta adjuntar documento a movimientos pequeños y evidentes.',
+          'No hace falta resolver todas las dudas al momento: dejar pendientes con criterio también es control.',
+        ],
+      },
+      manual: {
+        label: 'Manual de usuario · Gestión de Movimientos',
+        href: '/dashboard/manual#5-gestio-de-moviments',
+      },
+      video: {
+        label: 'Vídeo (próximamente)',
+        note: 'Cómo mantener Movimientos bajo control en 10 minutos',
+      },
+    },
+    keywords: [
+      'control',
+      'pendientes',
+      'contacto',
+      'categoría',
+      'remesa',
+      'devoluciones',
+      'documento',
+      'día a día',
+    ],
   },
 
   '/dashboard/donants': {
