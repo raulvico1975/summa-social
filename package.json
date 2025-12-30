@@ -13,7 +13,8 @@
     "test": "node --import tsx --test src/lib/__tests__/*.test.ts",
     "dev:restart": "bash scripts/dev-restart.sh",
     "prepare": "husky",
-    "updates:drafts": "npx tsx scripts/generate-product-update-drafts.ts"
+    "updates:drafts": "npx tsx scripts/generate-product-update-drafts.ts",
+    "i18n:export": "node --import tsx scripts/i18n/export-all.ts"
   },
   "dependencies": {
     "@genkit-ai/googleai": "^1.14.1",

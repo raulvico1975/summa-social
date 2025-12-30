@@ -1,7 +1,14 @@
 'use client';
 
-import React, { useState, useCallback, useMemo, useEffect } from 'react';
+import React, { useState, useCallback, useMemo, useEffect, useRef } from 'react';
 import { TranslationsContext, translations, Language } from './index';
+import {
+  getLocalBundle,
+  trFactory,
+  loadTranslations,
+  JsonMessages,
+} from './json-runtime';
+import { getFirestore, doc, onSnapshot } from 'firebase/firestore';
 
 interface TranslationsProviderProps {
   children: React.ReactNode;
@@ -9,7 +16,7 @@ interface TranslationsProviderProps {
 
 /**
  * Detecta l'idioma del navegador (navigator.languages / navigator.language)
- * Retorna 'ca', 'es' o 'fr' segons la configuració del navegador
+ * Retorna 'ca', 'es', 'fr' o 'pt' segons la configuració del navegador
  * Fallback: 'ca' (català)
  */
 function detectBrowserLanguage(): Language {
@@ -20,6 +27,7 @@ function detectBrowserLanguage(): Language {
     if (code === 'ca') return 'ca';
     if (code === 'es') return 'es';
     if (code === 'fr') return 'fr';
+    if (code === 'pt') return 'pt';
   }
 
   // Fallback: català
@@ -31,7 +39,9 @@ const getInitialLanguage = (): Language => {
 
   // 1. Prioritat: localStorage (usuari ja ha triat manualment)
   const savedLanguage = localStorage.getItem('summa-lang') as Language;
-  if (savedLanguage && translations[savedLanguage]) {
+  // Acceptem tots els idiomes vàlids (ca/es/fr/pt), pt només té JSON però és vàlid
+  const validLanguages: Language[] = ['ca', 'es', 'fr', 'pt'];
+  if (savedLanguage && validLanguages.includes(savedLanguage)) {
     return savedLanguage;
   }
 
@@ -41,6 +51,17 @@ const getInitialLanguage = (): Language => {
 
 export const TranslationsProvider = ({ children }: TranslationsProviderProps) => {
   const [language, setLanguage] = useState<Language>(() => getInitialLanguage());
+
+  // Versió de traduccions (per invalidació de cache)
+  const [i18nVersion, setI18nVersion] = useState<number>(0);
+
+  // Messages JSON carregats (Storage o local)
+  const [jsonMessages, setJsonMessages] = useState<JsonMessages>(() =>
+    getLocalBundle('ca')
+  );
+
+  // Flag per evitar càrregues duplicades
+  const isLoadingRef = useRef(false);
 
   useEffect(() => {
     // This effect runs only on the client to sync the initial state
@@ -52,23 +73,96 @@ export const TranslationsProvider = ({ children }: TranslationsProviderProps) =>
     document.documentElement.lang = language;
   }, [language]);
 
-  const handleSetLanguage = useCallback((lang: Language) => {
-    if (translations[lang]) {
-      setLanguage(lang);
-      if (typeof window !== 'undefined') {
-        localStorage.setItem('summa-lang', lang);
+  // Listener per system/i18n.version (invalidació de cache)
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+
+    let unsubscribe: (() => void) | undefined;
+
+    const setupListener = async () => {
+      try {
+        const firestore = getFirestore();
+        const i18nDocRef = doc(firestore, 'system', 'i18n');
+
+        unsubscribe = onSnapshot(
+          i18nDocRef,
+          (snapshot) => {
+            if (snapshot.exists()) {
+              const data = snapshot.data();
+              const newVersion = data?.version ?? 0;
+              setI18nVersion(newVersion);
+            } else {
+              // Doc doesn't exist yet - use version 0
+              setI18nVersion(0);
+            }
+          },
+          (error) => {
+            // Error listening - probably permissions, use local
+            console.warn('[i18n] Could not listen to system/i18n:', error.message);
+            setI18nVersion(0);
+          }
+        );
+      } catch {
+        // Firestore not initialized yet
+        setI18nVersion(0);
       }
+    };
+
+    setupListener();
+
+    return () => {
+      unsubscribe?.();
+    };
+  }, []);
+
+  // Carregar traduccions quan canvia l'idioma o la versió
+  useEffect(() => {
+    if (isLoadingRef.current) return;
+
+    const load = async () => {
+      isLoadingRef.current = true;
+      try {
+        const messages = await loadTranslations(language, i18nVersion);
+        setJsonMessages(messages);
+      } catch (error) {
+        console.warn('[i18n] Error loading translations:', error);
+        // Fallback to local
+        setJsonMessages(getLocalBundle(language));
+      } finally {
+        isLoadingRef.current = false;
+      }
+    };
+
+    load();
+  }, [language, i18nVersion]);
+
+  const handleSetLanguage = useCallback((lang: Language) => {
+    // Acceptem tots els idiomes vàlids (inclòs pt que només té JSON)
+    setLanguage(lang);
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('summa-lang', lang);
     }
   }, []);
 
-  const t = useMemo(() => translations[language] || translations.ca, [language]);
+  // pt fa fallback a ca (translations TS només té ca/es/fr)
+  const tLang = language === 'pt' ? 'ca' : language;
+  const t = useMemo(() => translations[tLang], [tLang]);
+
+  // tr() per traduccions JSON planes (ara usa jsonMessages carregats)
+  const tr = useMemo(() => {
+    return trFactory(jsonMessages);
+  }, [jsonMessages]);
 
   // Memoitzar value per evitar re-renders massius a tota l'app
-  const value = useMemo(() => ({
-    language,
-    setLanguage: handleSetLanguage,
-    t,
-  }), [language, handleSetLanguage, t]);
+  const value = useMemo(
+    () => ({
+      language,
+      setLanguage: handleSetLanguage,
+      t,
+      tr,
+    }),
+    [language, handleSetLanguage, t, tr]
+  );
 
   return (
     <TranslationsContext.Provider value={value}>
