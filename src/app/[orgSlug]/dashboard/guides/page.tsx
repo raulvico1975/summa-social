@@ -26,6 +26,8 @@ import {
   Shield,
   RefreshCw,
   Upload,
+  PlayCircle,
+  Calendar,
 } from 'lucide-react';
 import { useTranslations } from '@/i18n';
 
@@ -42,6 +44,18 @@ type GuideItem = {
 };
 
 const GUIDES: GuideItem[] = [
+  {
+    id: 'firstDay',
+    icon: <PlayCircle className="h-5 w-5" />,
+    href: '/dashboard/configuracion',
+    manualAnchor: '#1-primers-passos',
+  },
+  {
+    id: 'firstMonth',
+    icon: <Calendar className="h-5 w-5" />,
+    href: '/dashboard/movimientos',
+    manualAnchor: '#1-primers-passos',
+  },
   {
     id: 'movements',
     icon: <Receipt className="h-5 w-5" />,

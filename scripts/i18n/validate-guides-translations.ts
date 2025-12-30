@@ -58,6 +58,8 @@ const REQUIRED_PAGE_KEYS = [
 
 // Guies amb camps obligatoris (title i intro)
 const GUIDE_IDS = [
+  'firstDay',
+  'firstMonth',
   'movements',
   'returns',
   'remittances',
