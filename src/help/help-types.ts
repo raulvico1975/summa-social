@@ -33,6 +33,8 @@ export type HelpExtra = {
   categories?: HelpExtraSection;
   documents?: HelpExtraSection;
   bankAccounts?: HelpExtraSection;
+  ai?: HelpExtraSection;
+  bulk?: HelpExtraSection;
   manual?: HelpExtraLink;
   video?: HelpExtraLink;
 };
