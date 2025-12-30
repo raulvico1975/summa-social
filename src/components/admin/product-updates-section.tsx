@@ -7,10 +7,10 @@ import {
   doc,
   setDoc,
   updateDoc,
-  deleteDoc,
   serverTimestamp,
   orderBy,
   query,
+  where,
   getDocs,
   writeBatch,
 } from 'firebase/firestore';
@@ -46,7 +46,7 @@ import {
   Loader2,
   Upload,
   Megaphone,
-  Trash2,
+  EyeOff,
   Check,
   Pencil,
   ExternalLink,
@@ -75,6 +75,7 @@ type PublishedUpdate = {
   description: string;
   link: string | null;
   publishedAt: Date;
+  isActive?: boolean; // soft delete: false = despublicat
 };
 
 type DraftsImport = {
@@ -113,8 +114,14 @@ export function ProductUpdatesSection() {
     () => query(collection(firestore, 'productUpdateDrafts'), orderBy('createdAt', 'desc')),
     [firestore]
   );
+  // Només mostrar publicades actives (isActive !== false)
   const publishedQuery = useMemoFirebase(
-    () => query(collection(firestore, 'productUpdates'), orderBy('publishedAt', 'desc')),
+    () => query(
+      collection(firestore, 'productUpdates'),
+      where('isActive', '!=', false),
+      orderBy('isActive'),
+      orderBy('publishedAt', 'desc')
+    ),
     [firestore]
   );
 
@@ -264,7 +271,7 @@ export function ProductUpdatesSection() {
   const handlePublish = async (draft: DraftItem) => {
     setIsPublishing(draft.id);
     try {
-      // Crear a productUpdates
+      // Crear a productUpdates amb isActive: true
       const updateId = `update-${Date.now()}`;
       await setDoc(doc(firestore, 'productUpdates', updateId), {
         id: updateId,
@@ -272,6 +279,7 @@ export function ProductUpdatesSection() {
         description: draft.description,
         link: draft.link,
         publishedAt: serverTimestamp(),
+        isActive: true,
       });
 
       // Marcar draft com publicat
@@ -307,17 +315,21 @@ export function ProductUpdatesSection() {
     }
   };
 
-  // Handler eliminar publicat
-  const handleDeletePublished = async (update: PublishedUpdate) => {
-    const confirmed = window.confirm(`Segur que vols eliminar "${update.title}"? Això és irreversible.`);
-    if (!confirmed) return;
+  // Handler despublicar (soft delete)
+  const [isUnpublishing, setIsUnpublishing] = React.useState<string | null>(null);
 
+  const handleUnpublish = async (update: PublishedUpdate) => {
+    setIsUnpublishing(update.id);
     try {
-      await deleteDoc(doc(firestore, 'productUpdates', update.id));
-      toast({ title: 'Novetat eliminada' });
+      await updateDoc(doc(firestore, 'productUpdates', update.id), {
+        isActive: false,
+      });
+      toast({ title: 'Novetat despublicada', description: 'Els usuaris ja no la veuran.' });
     } catch (error) {
-      console.error('Error eliminar:', error);
-      toast({ variant: 'destructive', title: 'Error', description: 'No s\'ha pogut eliminar.' });
+      console.error('Error despublicar:', error);
+      toast({ variant: 'destructive', title: 'Error', description: 'No s\'ha pogut despublicar.' });
+    } finally {
+      setIsUnpublishing(null);
     }
   };
 
@@ -502,11 +514,16 @@ export function ProductUpdatesSection() {
                         <Button
                           variant="ghost"
                           size="sm"
-                          onClick={() => handleDeletePublished(update)}
-                          className="text-destructive hover:text-destructive"
-                          title="Eliminar"
+                          onClick={() => handleUnpublish(update)}
+                          disabled={isUnpublishing === update.id}
+                          className="text-muted-foreground hover:text-foreground"
+                          title="Despublicar"
                         >
-                          <Trash2 className="h-4 w-4" />
+                          {isUnpublishing === update.id ? (
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                          ) : (
+                            <EyeOff className="h-4 w-4" />
+                          )}
                         </Button>
                       </TableCell>
                     </TableRow>
