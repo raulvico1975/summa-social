@@ -91,22 +91,53 @@ export const HELP_CONTENT_ES: Partial<Record<HelpRouteKey, HelpContent>> = {
   '/dashboard/proveidors': {
     title: 'Ayuda · Proveedores',
     intro:
-      'Aquí gestionas los proveedores de la organización para asignar correctamente los gastos y preparar el Modelo 347.',
+      'Esta pantalla ordena los terceros que te facturan. Si el CIF y la identificación están bien, el Modelo 347 sale sin limpiezas de última hora.',
     steps: [
-      'Crea un proveedor cuando tengas gastos recurrentes o relevantes con una empresa o profesional.',
-      'Introduce el nombre y el CIF: es imprescindible para que el Modelo 347 se genere correctamente.',
-      'Asigna una categoría por defecto si el proveedor suele facturar siempre el mismo tipo de gasto.',
-      'Completa los datos de contacto si te resultan útiles (email, teléfono), aunque no son obligatorios.',
-      'Al asignar un proveedor a un movimiento, la categoría por defecto puede aplicarse automáticamente.',
-      'Usa el estado activo/inactivo para mantener la lista ordenada sin perder histórico.',
-      'Antes de generar el Modelo 347, revisa que los CIF sean correctos y que los importes cuadren.',
+      'Crea proveedores para gastos recurrentes o relevantes (no para todo).',
+      'Completa nombre + CIF: es el campo crítico para el Modelo 347.',
+      'Define categoría por defecto si casi siempre es el mismo tipo de gasto.',
+      'Usa activo/inactivo para limpiar la lista sin perder histórico.',
     ],
     tips: [
-      'No es necesario crear un proveedor para gastos puntuales pequeños: prioriza los recurrentes.',
-      'Si cambia el nombre comercial pero se mantiene el CIF, actualiza el proveedor existente.',
-      'Un buen mantenimiento de proveedores simplifica mucho el Modelo 347.',
+      'CIF correcto > cualquier otro dato.',
+      'Si cambia el nombre comercial pero no el CIF, actualiza el mismo proveedor.',
+      'La categoría por defecto acelera Movimientos, pero revísala si hay excepciones.',
     ],
-    keywords: ['proveedor', 'cif', 'modelo 347', 'categoría por defecto', 'gasto', 'empresa', 'profesional'],
+    extra: {
+      order: {
+        title: 'Orden recomendado',
+        items: [
+          'Crear solo los recurrentes.',
+          'Validar CIF.',
+          'Definir categoría por defecto.',
+          'Marcar inactivos los que ya no se usan.',
+        ],
+      },
+      pitfalls: {
+        title: 'Errores habituales',
+        items: [
+          'Crear duplicados del mismo proveedor con el mismo CIF.',
+          'Dejar el CIF vacío esperando que el 347 salga bien.',
+          'Mezclar proveedores con trabajadores (cada tipo cumple una función).',
+        ],
+      },
+      whenNot: {
+        title: 'Cuándo no hace falta',
+        items: [
+          'No hace falta crear proveedor para gastos puntuales pequeños.',
+          'No hace falta rellenar datos extra si no los vas a usar.',
+        ],
+      },
+      manual: {
+        label: 'Manual de usuario · Proveedores y Trabajadores',
+        href: '/dashboard/manual#4-gestio-de-proveidors-i-treballadors',
+      },
+      video: {
+        label: 'Vídeo (próximamente)',
+        note: 'Preparar Proveedores para el Modelo 347 (8 minutos)',
+      },
+    },
+    keywords: ['proveedor', 'cif', 'modelo 347', 'terceros', 'categoría por defecto', 'inactivo', 'duplicados'],
   },
 
   '/dashboard/treballadors': {
@@ -200,22 +231,53 @@ export const HELP_CONTENT_ES: Partial<Record<HelpRouteKey, HelpContent>> = {
   '/dashboard/configuracion': {
     title: 'Ayuda · Configuración',
     intro:
-      'Aquí configuras los datos base de la organización para que certificados e informes fiscales salgan correctos.',
+      'Aquí dejas la organización "a punto": datos fiscales, logo y firma. Si esto está bien, certificados e informes salen consistentes.',
     steps: [
-      'Completa los datos fiscales de la organización (nombre, CIF, dirección y contacto): aparecen en certificados y documentos.',
-      'Sube el logo de la organización: se utiliza en certificados y da coherencia visual al output.',
-      'Configura la firma digitalizada (imagen) y completa nombre y cargo del firmante: sin esto, los certificados pueden quedar incompletos.',
-      'Revisa las categorías: asegúrate de tener categorías de ingreso y gasto coherentes con tu día a día (donaciones, cuotas, nóminas, gastos bancarios…).',
-      'Si trabajáis en equipo, gestiona miembros: invita personas y asigna roles según lo que necesiten hacer (editar vs solo lectura).',
-      'Ajusta preferencias si existen (p. ej. umbrales de alertas): la idea es ver solo lo que aporta valor y evitar ruido.',
-      'Si dudas de un resultado fiscal, vuelve aquí y revisa primero: datos de entidad + firma + categorías (lo más habitual).',
+      'Completa los datos fiscales (nombre, CIF, dirección): es lo que aparece en los outputs.',
+      'Sube el logo y configura firma + cargo: es lo que da validez a los certificados.',
+      'Revisa categorías con criterio: añade lo que falta y evita cambios agresivos.',
+      'Gestiona miembros y roles: edición solo para quien realmente la necesita.',
     ],
     tips: [
-      'Prioriza siempre: datos fiscales + firma. Es lo que impacta directamente en certificados y Modelo 182.',
-      'Si alguien solo debe consultar, pon rol de lectura: evita cambios accidentales.',
-      'Si cambias categorías tras meses de uso, hazlo con prudencia: suele ser mejor añadir que renombrar agresivamente.',
+      'Prioridad real: fiscal + firma. El resto es secundario.',
+      'Mejor añadir categorías que renombrarlas si ya hay histórico.',
+      'Roles de lectura evitan errores accidentales.',
     ],
-    keywords: ['organización', 'cif', 'dirección', 'logo', 'firma', 'firmante', 'categorías', 'miembros', 'roles', 'preferencias'],
+    extra: {
+      order: {
+        title: 'Orden recomendado (10 minutos)',
+        items: [
+          'Datos fiscales.',
+          'Logo.',
+          'Firma y cargo.',
+          'Categorías y roles.',
+        ],
+      },
+      pitfalls: {
+        title: 'Errores habituales',
+        items: [
+          'Dejar firma/cargo a medias y generar certificados.',
+          'Renombrar categorías ya en uso y perder coherencia.',
+          'Dar permisos de edición a quien solo debe consultar.',
+        ],
+      },
+      whenNot: {
+        title: 'Cuándo no hace falta tocar nada',
+        items: [
+          'Si solo quieres trabajar Movimientos, no hace falta "pulir" Configuración cada día.',
+          'No hace falta tener todo perfecto para empezar (excepto fiscal/firma).',
+        ],
+      },
+      manual: {
+        label: 'Manual de usuario · Configuración inicial',
+        href: '/dashboard/manual#2-configuracio-inicial',
+      },
+      video: {
+        label: 'Vídeo (próximamente)',
+        note: 'Configurar Summa Social bien desde el primer día (8 minutos)',
+      },
+    },
+    keywords: ['configuración', 'cif', 'dirección', 'logo', 'firma', 'cargo', 'categorías', 'miembros', 'roles'],
   },
 
   '/dashboard/project-module/expenses': {
