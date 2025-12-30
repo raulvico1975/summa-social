@@ -89,11 +89,29 @@ export const HELP_CONTENT_FR: Partial<Record<HelpRouteKey, HelpContent>> = {
         ],
       },
       whenNot: {
-        title: 'Quand il n\'est pas nécessaire d\'agir',
+        title: "Quand il n'est pas nécessaire d'agir",
         items: [
-          'Inutile d\'assigner un projet si vous ne faites que le suivi du quotidien.',
-          'Inutile d\'ajouter un document pour de petits mouvements évidents.',
-          'Inutile de tout résoudre immédiatement : laisser des éléments en attente avec critère, c\'est aussi du contrôle.',
+          "Inutile d'assigner un projet si vous ne faites que le suivi du quotidien.",
+          "Inutile d'ajouter un document pour de petits mouvements évidents.",
+          "Inutile de tout résoudre immédiatement : laisser des éléments en attente avec critère, c'est aussi du contrôle.",
+        ],
+      },
+      returns: {
+        title: 'Retours (contrôle rapide)',
+        items: [
+          "Priorité : affecter le bon donateur. Sans donateur, la déduction fiscale ne s'applique pas correctement.",
+          "Pour les remises de retours, le mouvement parent n'a pas de contact : le donateur est sur les lignes filles.",
+          "S'il reste des retours en attente, résolvez-les avant d'exporter 182/certificats (évite des totaux gonflés).",
+          "En cas de doute, laissez en attente et continuez, mais ne l'oubliez pas avant la clôture.",
+        ],
+      },
+      remittances: {
+        title: 'Remises (cotisations et Stripe)',
+        items: [
+          "Remise = un mouvement qui regroupe plusieurs cotisations. Scindez-la avant d'assigner contact/catégorie à la main.",
+          'Après scission, travaillez sur les lignes filles (ce sont elles qui comptent par donateur).',
+          "Stripe : utilisez « Scinder la remise Stripe » et traitez les affectations en attente (matching par email).",
+          "Si une remise est déjà traitée, ne la retravaillez pas : ouvrez le détail via le badge/modal.",
         ],
       },
       manual: {

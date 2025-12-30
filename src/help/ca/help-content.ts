@@ -97,8 +97,26 @@ export const HELP_CONTENT_CA: Record<HelpRouteKey, HelpContent> = {
           'No cal resoldre tots els dubtes al moment: pendents conscients també són control.',
         ],
       },
+      returns: {
+        title: 'Devolucions (control ràpid)',
+        items: [
+          'Prioritat: assignar el donant correcte. Si no hi ha donant, fiscalment no resta on toca.',
+          'En remeses de devolucions, el pare no porta contacte: el donant va a les filles.',
+          "Si hi ha pendents, resol-les abans d'exportar 182/certificats (evita totals inflats).",
+          "Si dubtes, deixa pendent conscient i continua; però no ho oblidis abans de tancament.",
+        ],
+      },
+      remittances: {
+        title: 'Remeses (quotes i Stripe)',
+        items: [
+          "Remesa = un moviment que agrupa moltes quotes. Divideix-la abans d'assignar contactes/categoria a mà.",
+          'Després de dividir, treballa sobre les quotes filles (són les que compten per donant).',
+          "Stripe: usa \"Dividir remesa Stripe\" i revisa pendents d'assignació (matching per email).",
+          'Si una remesa ja està processada, no la tornis a tocar: revisa el detall des del badge/modal.',
+        ],
+      },
       manual: {
-        label: 'Manual d\'usuari · Gestió de Moviments',
+        label: "Manual d'usuari · Gestió de Moviments",
         href: '/dashboard/manual#5-gestio-de-moviments',
       },
       video: {

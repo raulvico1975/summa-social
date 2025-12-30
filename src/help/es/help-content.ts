@@ -96,6 +96,24 @@ export const HELP_CONTENT_ES: Partial<Record<HelpRouteKey, HelpContent>> = {
           'No hace falta resolver todas las dudas al momento: dejar pendientes con criterio también es control.',
         ],
       },
+      returns: {
+        title: 'Devoluciones (control rápido)',
+        items: [
+          'Prioridad: asignar el donante correcto. Si no hay donante, fiscalmente no resta donde toca.',
+          'En remesas de devoluciones, el padre no lleva contacto: el donante va en las hijas.',
+          'Si hay pendientes, resuélvelos antes de exportar 182/certificados (evitas totales inflados).',
+          'Si dudas, deja pendiente consciente y sigue; pero no lo olvides antes de cierre.',
+        ],
+      },
+      remittances: {
+        title: 'Remesas (cuotas y Stripe)',
+        items: [
+          'Remesa = un movimiento que agrupa muchas cuotas. Divídela antes de asignar contacto/categoría a mano.',
+          'Tras dividir, trabaja sobre las cuotas hijas (son las que cuentan por donante).',
+          'Stripe: usa "Dividir remesa Stripe" y revisa pendientes de asignación (matching por email).',
+          'Si una remesa ya está procesada, no la vuelvas a tocar: revisa el detalle desde el badge/modal.',
+        ],
+      },
       manual: {
         label: 'Manual de usuario · Gestión de Movimientos',
         href: '/dashboard/manual#5-gestio-de-moviments',
