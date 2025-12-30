@@ -1469,55 +1469,103 @@ Accions irreversibles només per SuperAdmin:
 - Esborra totes les transaccions filles
 - Restaura la transacció original per tornar-la a processar
 
-### 3.9.7 Idiomes (i18n) (NOU v1.11)
+### 3.9.7 Sistema de traduccions (i18n)
+
+#### Context i problema resolt
+
+El sistema anterior (només `ca.ts`, `es.ts`, `fr.ts`) requeria un developer per afegir o modificar traduccions. Això bloquejava:
+- Traducció externa (traductors sense accés al codi)
+- Afegir idiomes nous sense deploy
+- Correccions ràpides de textos
+
+El nou sistema permet gestió completa des del SuperAdmin sense tocar codi.
+
+#### Arquitectura
+
+- **Source of truth editable**: Firebase Storage
+  `i18n/{lang}.json`
+
+- **Fallback local (repo)**:
+  `src/i18n/locales/{lang}.json`
+
+- **Legacy fallback**:
+  Objectes TypeScript (`ca.ts`, `es.ts`, `fr.ts`) només per codi antic
+
+#### Ordre de càrrega en runtime
+
+1. JSON a Firebase Storage (`i18n/{lang}.json`)
+2. JSON local del repositori (`src/i18n/locales/{lang}.json`)
+3. Fallback a la clau (`"dashboard.title"`)
+
+#### Contracte d'ús
+
+- **`t.xxx.yyy`** → sistema legacy (objecte TypeScript)
+- **`tr("xxx.yyy")`** → sistema nou (JSON pla)
+
+**❌ Prohibit: `t("xxx.yyy")`** (no existeix, causa error de producció)
 
 #### Idiomes disponibles
 
-| Codi | Idioma | Estat | Fitxer |
-|------|--------|-------|--------|
-| `ca` | Català | Base (complet) | `src/i18n/ca.ts` |
-| `es` | Espanyol | Complet | `src/i18n/es.ts` |
-| `fr` | Francès | Complet (v1.11) | `src/i18n/fr.ts` |
+| Codi | Idioma | TS (legacy) | JSON | Estat |
+|------|--------|-------------|------|-------|
+| `ca` | Català | ✅ | ✅ | Base (complet) |
+| `es` | Español | ✅ | ✅ | Complet |
+| `fr` | Français | ✅ | ✅ | Complet |
+| `pt` | Português | ❌ | ✅ | JSON-only |
 
 #### Selector d'idioma
 
 - Ubicació: Menú usuari (cantonada superior dreta)
-- Persistència: `localStorage` + document d'usuari a Firestore
+- Persistència: `localStorage`
 - Comportament: Canvi immediat sense recarregar
 
-#### Arquitectura i18n
+#### Operativa SuperAdmin (Traduccions)
 
-```typescript
-// Estructura de claus (exemple)
-{
-  common: { save, cancel, delete, ... },
-  dashboard: { title, metrics, ... },
-  movements: { title, filters, splitter, ... },
-  settings: { title, bankAccounts, ... },
-  ...
-}
+1. Accedir a SuperAdmin → Traduccions
+2. Seleccionar idioma
+3. Descarregar JSON
+4. Editar externament (Excel / POEditor / editor JSON)
+5. Pujar JSON validat
+6. Clicar "Publicar" (invalida cache global)
+
+Els canvis són immediats per a tots els usuaris.
+
+#### Afegir un idioma nou
+
+1. Afegir codi d'idioma a `Language` (`src/i18n/index.ts`)
+2. Crear `src/i18n/locales/{lang}.json` (copiat de `ca.json`)
+3. Afegir idioma als selectors (app + SuperAdmin)
+4. Descarregar plantilla via SuperAdmin
+5. Traduir, pujar i publicar
+
+#### Scripts
+
+```bash
+# Exportar traduccions TS a JSON i generar report de claus
+npm run i18n:export
 ```
 
-**Criteri de traducció:**
-- Si falta una clau a `fr.ts` o `es.ts`, es manté el text en català
-- Les claus són idèntiques en tots els fitxers
-- Les funcions amb paràmetres (ex: `(name) => \`Compte "${name}" creat\``) es tradueixen mantenint la signatura
+Exemple de report:
+```
+[i18n] Key comparison report:
+  Base (ca): 850 keys
+  es: ✓ Perfect match (850 keys)
+  fr: ✓ Perfect match (850 keys)
+  pt: ✓ Perfect match (850 keys)
+```
 
-#### Seccions traduïdes (v1.11+)
+#### Fitxers clau
 
-| Secció | ca | es | fr |
-|--------|----|----|----|
-| Dashboard | ✅ | ✅ | ✅ |
-| Moviments | ✅ | ✅ | ✅ |
-| Donants/Contactes | ✅ | ✅ | ✅ |
-| Projectes | ✅ | ✅ | ✅ |
-| Configuració | ✅ | ✅ | ✅ |
-| Comptes bancaris | ✅ | ✅ | ✅ (v1.12) |
-| Importador devolucions | ✅ | ✅ | ✅ |
-| Importador Stripe | ✅ | ✅ | ✅ |
-| Mòdul Projectes | ✅ | ✅ | ✅ |
-| Certificats | ✅ | ✅ | ✅ |
-| Model 182 | ✅ | ✅ | ✅ |
+| Fitxer | Responsabilitat |
+|--------|-----------------|
+| `src/i18n/index.ts` | Tipus `Language`, context, hook |
+| `src/i18n/provider.tsx` | Provider, listener versió, carrega JSON |
+| `src/i18n/json-runtime.ts` | Loader Storage/local, cache, `trFactory` |
+| `src/i18n/locales/*.json` | Bundles JSON (fallback local) |
+| `src/i18n/ca.ts`, `es.ts`, `fr.ts` | Traduccions TS legacy |
+| `scripts/i18n/export-all.ts` | Export TS → JSON |
+
+Per a més detall operatiu, veure `docs/i18n.md`.
 
 
 ## 3.10 IMPORTADOR STRIPE (NOU v1.9)
