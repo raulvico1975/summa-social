@@ -143,9 +143,22 @@ const GUIDE_CONTENT = {
     avoid: 'Evita esto',
     guides: {
       movements: {
-        title: 'Movimientos (control diario)',
-        intro: 'Revisa qué entra y qué sale del banco. Detecta pendientes y evita errores.',
-        steps: ['Filtra pendientes (sin contacto/categoría).', 'Asigna contacto → categoría → documento.'],
+        title: 'Movimientos · Control diario',
+        intro: 'Centro de control del día a día: aquí ves lo que entra y sale y detectas pendientes antes de que crezcan.',
+        lookFirst: [
+          'Movimientos sin contacto',
+          'Movimientos sin categoría',
+          'Devoluciones pendientes',
+        ],
+        doNext: [
+          'Asigna contacto → categoría (en este orden)',
+          'Divide remesas antes de seguir',
+        ],
+        avoid: [
+          'Forzar asignaciones "para dejarlo limpio"',
+          'Ignorar devoluciones antes de informes',
+        ],
+        steps: [],
       },
       returns: {
         title: 'Devoluciones',
