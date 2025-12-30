@@ -1,8 +1,7 @@
 'use client';
 
 import * as React from 'react';
-import { usePathname, useSearchParams } from 'next/navigation';
-import Link from 'next/link';
+import { usePathname, useSearchParams, useRouter } from 'next/navigation';
 import { HelpCircle, BookOpen, Link2, MessageSquare, ExternalLink, Play, AlertTriangle, CheckCircle2, XCircle, ClipboardCheck, RotateCcw, Layers, UserRound, Tag, FileText, Landmark, Sparkles, ListChecks, Upload, Filter, BadgeCheck, Lightbulb } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -171,6 +170,7 @@ function getHelpContent(routeKey: HelpRouteKey, locale: 'ca' | 'es' | 'fr'): Hel
 export function HelpSheet() {
   const pathname = usePathname();
   const searchParams = useSearchParams();
+  const router = useRouter();
   const { toast } = useToast();
   const { language } = useTranslations();
   const [query, setQuery] = React.useState('');
@@ -262,21 +262,27 @@ export function HelpSheet() {
     setOpen(newOpen);
   };
 
-  // Handle guides link click
-  const handleGuidesClick = () => {
+  // Handle guides link click - close sheet first, then navigate
+  const handleGuidesClick = (e: React.MouseEvent) => {
+    e.preventDefault();
     trackUX('help.guides.click', {
       routeKey,
       locale: language,
     });
+    setOpen(false);
+    router.push(guidesUrl);
   };
 
-  // Handle manual link click
-  const handleManualClick = () => {
+  // Handle manual link click - close sheet first, then navigate
+  const handleManualClick = (e: React.MouseEvent, targetUrl: string) => {
+    e.preventDefault();
     trackUX('help.manual.click', {
       routeKey,
       locale: language,
       anchor: manualAnchor || null,
     });
+    setOpen(false);
+    router.push(targetUrl);
   };
 
   // Handle feedback link click
@@ -344,20 +350,16 @@ export function HelpSheet() {
         </SheetHeader>
 
         {/* Scrollable content area */}
-        <div className="flex-1 min-h-0 overflow-y-auto pb-6">
+        <div className="flex-1 min-h-0 overflow-y-auto pb-8">
           {/* Action buttons */}
           <div className="mt-4 flex flex-wrap gap-2">
-            <Button size="sm" asChild>
-              <Link href={guidesUrl} onClick={handleGuidesClick}>
-                <Lightbulb className="h-4 w-4 mr-2" />
-                {ui.viewGuide}
-              </Link>
+            <Button size="sm" onClick={handleGuidesClick}>
+              <Lightbulb className="h-4 w-4 mr-2" />
+              {ui.viewGuide}
             </Button>
-            <Button variant="outline" size="sm" asChild>
-              <Link href={manualUrl} onClick={handleManualClick}>
-                <BookOpen className="h-4 w-4 mr-2" />
-                {ui.viewManual}
-              </Link>
+            <Button variant="outline" size="sm" onClick={(e) => handleManualClick(e, manualUrl)}>
+              <BookOpen className="h-4 w-4 mr-2" />
+              {ui.viewManual}
             </Button>
             <Button variant="outline" size="sm" onClick={handleCopyLink}>
               <Link2 className="h-4 w-4 mr-2" />
@@ -365,17 +367,17 @@ export function HelpSheet() {
             </Button>
           </div>
 
-        <div className="mt-4">
-          <Input
-            type="text"
-            placeholder={ui.searchPlaceholder}
-            value={query}
-            onChange={handleSearchChange}
-            className="w-full"
-          />
-        </div>
+          <div className="mt-4">
+            <Input
+              type="text"
+              placeholder={ui.searchPlaceholder}
+              value={query}
+              onChange={handleSearchChange}
+              className="w-full"
+            />
+          </div>
 
-        <div className="mt-6 space-y-4">
+          <div className="mt-6 space-y-4">
           {helpContent.intro && !hasQuery && (
             <p className="text-muted-foreground">{helpContent.intro}</p>
           )}
@@ -628,13 +630,15 @@ export function HelpSheet() {
                   )}
 
                   {/* Manual link from extra */}
-                  {helpContent.extra.manual && helpContent.extra.manual.href && (
+                  {helpContent.extra?.manual?.href && (
                     <div className="pt-2">
-                      <Button variant="outline" size="sm" asChild>
-                        <Link href={buildManualUrl(helpContent.extra.manual.href, orgSlug)} onClick={handleManualClick}>
-                          <BookOpen className="h-4 w-4 mr-2" />
-                          {helpContent.extra.manual.label}
-                        </Link>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={(e) => handleManualClick(e, buildManualUrl(helpContent.extra!.manual!.href!, orgSlug))}
+                      >
+                        <BookOpen className="h-4 w-4 mr-2" />
+                        {helpContent.extra.manual.label}
                       </Button>
                     </div>
                   )}
@@ -653,7 +657,7 @@ export function HelpSheet() {
               )}
             </>
           )}
-        </div>
+          </div>
         </div>
 
         {/* Feedback link - fixed footer */}
