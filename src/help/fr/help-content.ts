@@ -132,24 +132,69 @@ export const HELP_CONTENT_FR: Partial<Record<HelpRouteKey, HelpContent>> = {
   '/dashboard/informes': {
     title: 'Aide · Rapports',
     intro:
-      'Ici, vous générez les exports pour le cabinet : Modèle 182, Modèle 347 et certificats de don.',
+      'Cet écran sert à générer les exports pour le cabinet : Modèle 182, Modèle 347 et certificats. Ici, on ne corrige pas les données ; on vérifie et on exporte.',
     steps: [
-      'Choisissez la section : Modèle 182 (dons), Modèle 347 (tiers) ou Certificats.',
-      'Sélectionnez l\'année fiscale avant de générer un fichier.',
-      'Modèle 182 : vérifiez les alertes de donateurs avec données manquantes (DNI/CIF et Code postal).',
-      'Corrigez depuis Donateurs puis revenez ici pour régénérer.',
-      'Générez l\'Excel du Modèle 182 et envoyez-le au cabinet.',
-      'Modèle 347 : vérifiez que les fournisseurs ont un CIF correct ; seuls ceux au-dessus du seuil annuel apparaissent.',
-      'Générez le CSV du Modèle 347 et envoyez-le au cabinet.',
-      'Certificats : générez un certificat individuel à la demande ou en lot pour la campagne annuelle.',
-      'Les retours assignés sont automatiquement déduits du total net (important pour 182 et certificats).',
+      'Choisissez l\'année fiscale et travaillez toujours sur une seule année à la fois.',
+      'Modèle 182 : commencez par résoudre les alertes des donateurs (surtout DNI/CIF et Code postal).',
+      'Vérifiez les retours affectés : ils impactent directement le total du 182 et des certificats.',
+      'Générez le Modèle 182 et envoyez-le au cabinet.',
+      'Modèle 347 : seuls les fournisseurs au-dessus du seuil annuel apparaissent ; vérifiez le CIF avant l\'export.',
+      'Générez les certificats à l\'unité ou en lot selon le besoin.',
     ],
     tips: [
-      'Avant de clôturer l\'année, assurez-vous que les retours sont assignés au bon donateur : c\'est une cause fréquente d\'incohérences.',
-      'Un donateur sans DNI ou Code postal peut bloquer ou dégrader le Modèle 182 : priorisez ces champs.',
-      'Pour un envoi massif, vérifiez d\'abord 2–3 donateurs représentatifs (avec et sans retours).',
+      'Si le 182 ne "colle" pas, c\'est presque toujours lié aux retours ou à des données donateurs incomplètes.',
+      'Validez 2–3 cas représentatifs avant d\'envoyer des certificats en masse.',
+      'Gardez une seule année "ouverte" à la fois pour éviter les confusions.',
     ],
-    keywords: ['modèle 182', 'modèle 347', 'certificats', 'excel', 'csv', 'année', 'dons', 'retours', 'cabinet'],
+    extra: {
+      order: {
+        title: 'Ordre recommandé quand il faut faire les rapports',
+        items: [
+          'Sélectionner l\'année fiscale.',
+          'Résoudre les alertes donateurs (DNI/CP).',
+          'Vérifier les retours.',
+          'Générer le Modèle 182.',
+          'Générer le Modèle 347.',
+          'Générer les certificats.',
+        ],
+      },
+      pitfalls: {
+        title: 'Erreurs fréquentes',
+        items: [
+          'Générer le 182 avec des donateurs sans DNI ou Code postal.',
+          'Oublier des retours en attente et gonfler les totaux.',
+          'Mélanger les années (corriger une année tout en exportant une autre).',
+          'Générer des certificats en masse sans valider un cas au préalable.',
+        ],
+      },
+      checks: {
+        title: 'Vérifications finales avant d\'envoyer au cabinet',
+        items: [
+          '182 : aucune alerte critique en attente.',
+          '182 : totaux cohérents avec ce qui est attendu.',
+          '347 : fournisseurs avec CIF correct.',
+          'Certificats : signature et fonction configurées.',
+        ],
+      },
+      manual: {
+        label: 'Manuel utilisateur · Rapports fiscaux',
+        href: '/dashboard/manual#7-informes-fiscals',
+      },
+      video: {
+        label: 'Vidéo (bientôt)',
+        note: 'Préparer le Modèle 182 et les certificats sans surprises (15 minutes)',
+      },
+    },
+    keywords: [
+      'modèle 182',
+      'modèle 347',
+      'certificats',
+      'cabinet',
+      'année fiscale',
+      'retours',
+      'alertes',
+      'exporter',
+    ],
   },
 
   '/dashboard/configuracion': {

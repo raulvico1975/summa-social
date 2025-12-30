@@ -132,24 +132,69 @@ export const HELP_CONTENT_ES: Partial<Record<HelpRouteKey, HelpContent>> = {
   '/dashboard/informes': {
     title: 'Ayuda · Informes',
     intro:
-      'Aquí generas los outputs para la gestoría: Modelo 182, Modelo 347 y certificados de donación.',
+      'Esta pantalla sirve para generar los outputs para la gestoría: Modelo 182, Modelo 347 y certificados. Aquí no se corrigen datos; aquí se verifican y se exportan.',
     steps: [
-      'Elige la sección adecuada: Modelo 182 (donaciones), Modelo 347 (terceros) o Certificados.',
-      'Selecciona el año fiscal antes de generar ningún fichero.',
-      'Modelo 182: revisa las alertas de donantes con datos incompletos (sobre todo DNI/CIF y Código Postal).',
-      'Modelo 182: corrige los datos desde Donantes y vuelve aquí para regenerar.',
-      'Modelo 182: genera el Excel y envíalo a la gestoría.',
-      'Modelo 347: comprueba que los proveedores tengan CIF correcto; solo aparecerán los que superen el umbral anual.',
-      'Modelo 347: genera el CSV y envíalo a la gestoría.',
-      'Certificados: genera un certificado individual cuando te lo pidan, o en lote si lo haces en campaña anual.',
-      'Si hay devoluciones asignadas, restan automáticamente del total neto (importante para 182 y certificados).',
+      'Elige el año fiscal y trabaja siempre con un solo año cada vez.',
+      'Modelo 182: resuelve primero las alertas de donantes (sobre todo DNI/CIF y Código Postal).',
+      'Revisa devoluciones asignadas: afectan directamente al total del 182 y de los certificados.',
+      'Genera el Modelo 182 y envíalo a la gestoría.',
+      'Modelo 347: solo aparecerán proveedores que superen el umbral anual; comprueba el CIF antes de exportar.',
+      'Genera certificados individuales o en lote cuando corresponda.',
     ],
     tips: [
-      'Antes de cerrar el año, asegúrate de que las devoluciones están asignadas al donante correcto: es la causa típica de totales incoherentes.',
-      'Si un donante no tiene DNI o Código Postal, puede bloquear o ensuciar el Modelo 182: prioriza completar esos campos.',
-      'Para certificados masivos, revisa primero 2 o 3 donantes representativos (con y sin devoluciones) para validar importes.',
+      'Si el 182 no cuadra, casi siempre es por devoluciones o por datos incompletos de donantes.',
+      'Valida 2–3 casos representativos antes de enviar certificados masivos.',
+      'Trabaja siempre con un solo año abierto para evitar confusiones.',
     ],
-    keywords: ['modelo 182', 'modelo 347', 'certificados', 'excel', 'csv', 'año', 'donaciones', 'devoluciones', 'gestoría'],
+    extra: {
+      order: {
+        title: 'Orden recomendado cuando toca hacer informes',
+        items: [
+          'Seleccionar el año fiscal.',
+          'Resolver alertas de donantes (DNI/CP).',
+          'Revisar devoluciones.',
+          'Generar Modelo 182.',
+          'Generar Modelo 347.',
+          'Generar certificados.',
+        ],
+      },
+      pitfalls: {
+        title: 'Errores habituales',
+        items: [
+          'Generar el 182 con donantes sin DNI o Código Postal.',
+          'Olvidar devoluciones pendientes e inflar los totales.',
+          'Mezclar años (corregir datos de un año mientras exportas otro).',
+          'Generar certificados masivos sin validar ningún caso antes.',
+        ],
+      },
+      checks: {
+        title: 'Checks finales antes de enviar a gestoría',
+        items: [
+          '182: ninguna alerta crítica pendiente.',
+          '182: totales coherentes con lo esperado.',
+          '347: proveedores con CIF correcto.',
+          'Certificados: firma y cargo configurados.',
+        ],
+      },
+      manual: {
+        label: 'Manual de usuario · Informes fiscales',
+        href: '/dashboard/manual#7-informes-fiscals',
+      },
+      video: {
+        label: 'Vídeo (próximamente)',
+        note: 'Preparar Modelo 182 y certificados sin sorpresas (15 minutos)',
+      },
+    },
+    keywords: [
+      'modelo 182',
+      'modelo 347',
+      'certificados',
+      'gestoría',
+      'año fiscal',
+      'devoluciones',
+      'alertas',
+      'exportar',
+    ],
   },
 
   '/dashboard/configuracion': {
