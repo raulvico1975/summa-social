@@ -77,11 +77,13 @@ export default function ManualPage() {
   const [toc, setToc] = React.useState<TocEntry[]>([]);
   const [parsedContent, setParsedContent] = React.useState<RenderedLine[]>([]);
 
-  const ui = UI_STRINGS[language] ?? UI_STRINGS.ca;
+  // pt fa fallback a ca (UI_STRINGS i manual només tenen ca/es/fr)
+  const contentLang = language === 'pt' ? 'ca' : language;
+  const ui = UI_STRINGS[contentLang];
   const guidesUrl = `/${orgSlug}/dashboard/guides`;
 
   React.useEffect(() => {
-    fetchManualWithFallback(language)
+    fetchManualWithFallback(contentLang)
       .then((text) => {
         setContent(text);
         setToc(extractToc(text));
@@ -92,10 +94,10 @@ export default function ManualPage() {
         setError(err.message);
         setLoading(false);
       });
-  }, [language]);
+  }, [contentLang]);
 
   const handleOpenInNewTab = () => {
-    window.open(`/docs/manual-usuari-summa-social.${language}.md`, '_blank');
+    window.open(`/docs/manual-usuari-summa-social.${contentLang}.md`, '_blank');
   };
 
   // Padding segons nivell del TOC

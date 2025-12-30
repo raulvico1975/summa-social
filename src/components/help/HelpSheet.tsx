@@ -183,14 +183,16 @@ export function HelpSheet() {
 
   const orgSlug = getOrgSlug(pathname);
   const routeKey = normalizePathname(pathname);
-  const helpContent = getHelpContent(routeKey, language);
+  // pt fa fallback a ca (help content només té ca/es/fr)
+  const contentLang = language === 'pt' ? 'ca' : language;
+  const helpContent = getHelpContent(routeKey, contentLang);
   const manualAnchor = getManualAnchorForRoute(routeKey);
   const manualBase = orgSlug ? `/${orgSlug}/dashboard/manual` : '/dashboard/manual';
   const manualUrl = manualAnchor ? `${manualBase}#${manualAnchor}` : manualBase;
   const guidesUrl = orgSlug ? `/${orgSlug}/dashboard/guides` : '/dashboard/guides';
 
   // UI strings for current locale
-  const ui = UI_STRINGS[language] ?? UI_STRINGS.ca;
+  const ui = UI_STRINGS[contentLang];
 
   // Build feedback mailto URL
   const feedbackMailto = React.useMemo(() => {

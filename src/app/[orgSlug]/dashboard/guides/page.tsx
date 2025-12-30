@@ -330,7 +330,9 @@ export default function GuidesPage() {
   const orgSlug = params.orgSlug as string;
   const { language } = useTranslations();
 
-  const content = GUIDE_CONTENT[language] ?? GUIDE_CONTENT.ca;
+  // pt fa fallback a ca (GUIDE_CONTENT només té ca/es/fr)
+  const contentLang = language === 'pt' ? 'ca' : language;
+  const content = GUIDE_CONTENT[contentLang];
 
   const buildUrl = (path: string) => `/${orgSlug}${path}`;
 
