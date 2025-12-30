@@ -292,9 +292,22 @@ const GUIDE_CONTENT = {
         steps: [],
       },
       remittances: {
-        title: 'Remesas (cuotas y Stripe)',
-        intro: 'Divide remesas para trabajar con cuotas individuales y facilitar el control.',
-        steps: ['Divide la remesa antes de asignar contactos.', 'Revisa pendientes de asignación (matching por email).'],
+        title: 'Remesas · Procesar y validar',
+        intro: 'La remesa no es el detalle. El detalle son las hijas.',
+        lookFirst: [
+          'Padre: importe grande con concepto remesa/Stripe',
+          'Hijas: creadas y suma coherente con el padre',
+          'Hijas con donante asignado (resuelve pendientes)',
+        ],
+        doNext: [
+          'Divide (banco) o Divide Stripe (Stripe)',
+          'Marca "hecho" cuando no queden pendientes',
+        ],
+        avoid: [
+          'Asignar contacto/categoría al padre como si fuera una cuota',
+          'Exportar 182/certificados con hijas pendientes',
+        ],
+        steps: [],
       },
       donors: {
         title: 'Donantes · Modelo 182 (sin errores)',
@@ -423,9 +436,22 @@ const GUIDE_CONTENT = {
         steps: [],
       },
       remittances: {
-        title: 'Remises (cotisations et Stripe)',
-        intro: 'Divisez les remises pour travailler avec des cotisations individuelles.',
-        steps: ['Divisez la remise avant d\'affecter les contacts.', 'Vérifiez les affectations en attente (matching par email).'],
+        title: 'Remises · Traiter et valider',
+        intro: 'La remise n\'est pas le détail. Le détail, ce sont les lignes filles.',
+        lookFirst: [
+          'Parent : gros montant avec concept remise/Stripe',
+          'Filles : créées et somme cohérente avec le parent',
+          'Filles avec donateur affecté (résout les en-attente)',
+        ],
+        doNext: [
+          'Scinder (banque) ou Scinder Stripe (Stripe)',
+          'Marquer "fait" quand il n\'y a plus d\'en-attente',
+        ],
+        avoid: [
+          'Affecter contact/catégorie au parent comme s\'il était une cotisation',
+          'Exporter 182/certificats avec des filles en attente',
+        ],
+        steps: [],
       },
       donors: {
         title: 'Donateurs · Modèle 182 (sans erreurs)',
