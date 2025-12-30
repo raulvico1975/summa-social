@@ -289,17 +289,24 @@ const GUIDE_CONTENT = {
     pageSubtitle: 'Apprenez à utiliser chaque écran en 2 minutes. Pour plus de détails, consultez le manuel.',
     viewManual: 'Voir dans le manuel',
     viewHelp: 'Voir l\'aide détaillée',
-    goToScreen: 'Aller aux Mouvements',
+    goToScreen: {
+      movements: 'Aller aux Mouvements',
+      returns: 'Aller aux Mouvements',
+      remittances: 'Aller aux Mouvements',
+      donors: 'Aller aux Donateurs',
+      reports: 'Aller aux Rapports',
+      projects: 'Aller aux Projets',
+    },
     recommendedOrder: 'Ordre recommandé',
     // Labels per nou format checklist
     lookFirst: 'À regarder d\'abord',
     doNext: 'À faire ensuite',
     avoid: 'À éviter',
-    // Labels per format expert (devolucions)
-    notResolved: 'Quand ce n\'est PAS correctement résolu',
+    // Labels per format expert (devolucions/donants)
+    notResolved: 'Quand ce n\'est PAS "prêt"',
     costlyError: 'L\'erreur la plus coûteuse',
-    checkBeforeExport: 'À vérifier avant d\'exporter',
-    dontFixYet: 'Quand NE PAS corriger tout de suite',
+    checkBeforeExport: 'Les 3 vérifications avant export',
+    dontFixYet: 'Quand NE PAS toucher',
     guides: {
       movements: {
         title: 'Mouvements · Contrôle quotidien',
@@ -347,9 +354,24 @@ const GUIDE_CONTENT = {
         steps: ['Divisez la remise avant d\'affecter les contacts.', 'Vérifiez les affectations en attente (matching par email).'],
       },
       donors: {
-        title: 'Donateurs (Modèle 182)',
-        intro: 'Maintenez DNI/CIF et Code postal corrects pour générer le Modèle 182 et les certificats.',
-        steps: ['Complétez DNI/CIF et Code postal.', 'Vérifiez les retours affectés.'],
+        title: 'Donateurs · Modèle 182 (sans erreurs)',
+        intro: 'Le Modèle 182 échoue surtout pour deux raisons : DNI/CP incomplets ou retours mal résolus. Le reste est secondaire.',
+        notResolved: [
+          'DNI/CIF ou Code postal manquant',
+          'Doublons (même DNI sur deux fiches)',
+          'Total annuel "étrange" à cause de retours en attente',
+        ],
+        costlyError: 'Générer le 182 ou des certificats en masse sans vérifier 2–3 donateurs représentatifs. Ensuite, impossible de localiser le problème.',
+        checkBeforeExport: [
+          'Donateurs avec DNI/CP complets',
+          'Doublons résolus (1 DNI = 1 donateur)',
+          'Donateurs "étranges" vérifiés (net + retours)',
+        ],
+        dontFixYet: [
+          'Sans données fiscales, attendez et demandez-les',
+          'En suivi quotidien, inutile de "perfectionner" les fiches',
+        ],
+        steps: [],
       },
       reports: {
         title: 'Rapports (182/347/certificats)',
