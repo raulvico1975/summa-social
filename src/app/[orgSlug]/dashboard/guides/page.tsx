@@ -18,6 +18,11 @@ import {
   Eye,
   CheckCircle2,
   XCircle,
+  AlertTriangle,
+  CircleSlash,
+  ClipboardCheck,
+  Clock,
+  HelpCircle,
 } from 'lucide-react';
 import { useTranslations } from '@/i18n';
 
@@ -29,6 +34,7 @@ type GuideItem = {
   id: string;
   icon: React.ReactNode;
   href: string;
+  helpHref?: string;
   manualAnchor: string;
 };
 
@@ -42,8 +48,9 @@ const GUIDES: GuideItem[] = [
   {
     id: 'returns',
     icon: <RotateCcw className="h-5 w-5" />,
-    href: '/dashboard/movimientos?filter=returns',
-    manualAnchor: '#5-gestio-de-moviments',
+    href: '/dashboard/movimientos',
+    helpHref: '/dashboard/movimientos?help=1',
+    manualAnchor: '#remittances',
   },
   {
     id: 'remittances',
@@ -77,12 +84,18 @@ const GUIDE_CONTENT = {
     pageTitle: 'Guies curtes',
     pageSubtitle: 'Aprèn a fer servir cada pantalla en 2 minuts. Per a més detall, consulta el manual.',
     viewManual: 'Veure al manual',
-    goToScreen: 'Anar a la pantalla',
+    viewHelp: 'Veure ajuda detallada',
+    goToScreen: 'Anar a Moviments',
     recommendedOrder: 'Ordre recomanat',
     // Labels per nou format checklist
     lookFirst: 'Mira això primer',
     doNext: 'Fes això després',
     avoid: 'Evita això',
+    // Labels per format expert (devolucions)
+    notResolved: 'Quan NO està ben resolta',
+    costlyError: 'L\'error més car',
+    checkBeforeExport: 'Què mires sempre abans d\'exportar',
+    dontFixYet: 'Quan NO arreglar-ho encara',
     guides: {
       movements: {
         title: 'Moviments · Control diari',
@@ -105,9 +118,26 @@ const GUIDE_CONTENT = {
         steps: [],
       },
       returns: {
-        title: 'Devolucions',
-        intro: 'Gestiona devolucions perquè restin correctament als certificats i al Model 182.',
-        steps: ['Assigna el donant correcte a cada devolució.', 'Resol pendents abans de tancar l\'any.'],
+        title: 'Devolucions · Control fiscal',
+        intro: 'Una devolució només resta fiscalment si està assignada al donant correcte. Sense donant, no resta res.',
+        // Format expert
+        notResolved: [
+          'Import negatiu sense donant',
+          'Donant equivocat',
+          'Remesa tocada només al pare',
+        ],
+        costlyError: 'Assignar la devolució al pare de la remesa. El pare no compta fiscalment; el donant va a les línies filles.',
+        checkBeforeExport: [
+          'Cap devolució pendent',
+          'Devolucions amb donant assignat',
+          'Donants amb totals "estranys" revisats',
+        ],
+        dontFixYet: [
+          'No tens clar el donant',
+          'Estàs en control diari, no en tancament',
+          'Falta info externa (banc/gestoria)',
+        ],
+        steps: [],
       },
       remittances: {
         title: 'Remeses (quotes i Stripe)',
@@ -135,12 +165,18 @@ const GUIDE_CONTENT = {
     pageTitle: 'Guías cortas',
     pageSubtitle: 'Aprende a usar cada pantalla en 2 minutos. Para más detalle, consulta el manual.',
     viewManual: 'Ver en el manual',
-    goToScreen: 'Ir a la pantalla',
+    viewHelp: 'Ver ayuda detallada',
+    goToScreen: 'Ir a Movimientos',
     recommendedOrder: 'Orden recomendado',
     // Labels per nou format checklist
     lookFirst: 'Mira esto primero',
     doNext: 'Haz esto después',
     avoid: 'Evita esto',
+    // Labels per format expert (devolucions)
+    notResolved: 'Cuándo NO está bien resuelta',
+    costlyError: 'El error más caro',
+    checkBeforeExport: 'Qué miras siempre antes de exportar',
+    dontFixYet: 'Cuándo NO arreglarlo todavía',
     guides: {
       movements: {
         title: 'Movimientos · Control diario',
@@ -161,9 +197,26 @@ const GUIDE_CONTENT = {
         steps: [],
       },
       returns: {
-        title: 'Devoluciones',
-        intro: 'Gestiona devoluciones para que resten correctamente en certificados y Modelo 182.',
-        steps: ['Asigna el donante correcto a cada devolución.', 'Resuelve pendientes antes de cerrar el año.'],
+        title: 'Devoluciones · Control fiscal',
+        intro: 'Una devolución solo resta fiscalmente si está asignada al donante correcto. Sin donante, no resta nada.',
+        // Format expert
+        notResolved: [
+          'Importe negativo sin donante',
+          'Donante equivocado',
+          'Remesa tocada solo en el padre',
+        ],
+        costlyError: 'Asignar la devolución al padre de la remesa. El padre no cuenta fiscalmente; el donante va en las líneas hijas.',
+        checkBeforeExport: [
+          'Ninguna devolución pendiente',
+          'Devoluciones con donante asignado',
+          'Donantes con totales "raros" revisados',
+        ],
+        dontFixYet: [
+          'No está claro el donante',
+          'Estás en control diario, no en cierre',
+          'Falta info externa (banco/gestoría)',
+        ],
+        steps: [],
       },
       remittances: {
         title: 'Remesas (cuotas y Stripe)',
@@ -191,12 +244,18 @@ const GUIDE_CONTENT = {
     pageTitle: 'Guides rapides',
     pageSubtitle: 'Apprenez à utiliser chaque écran en 2 minutes. Pour plus de détails, consultez le manuel.',
     viewManual: 'Voir dans le manuel',
-    goToScreen: "Aller à l'écran",
+    viewHelp: 'Voir l\'aide détaillée',
+    goToScreen: 'Aller aux Mouvements',
     recommendedOrder: 'Ordre recommandé',
     // Labels per nou format checklist
     lookFirst: 'À regarder d\'abord',
     doNext: 'À faire ensuite',
     avoid: 'À éviter',
+    // Labels per format expert (devolucions)
+    notResolved: 'Quand ce n\'est PAS correctement résolu',
+    costlyError: 'L\'erreur la plus coûteuse',
+    checkBeforeExport: 'À vérifier avant d\'exporter',
+    dontFixYet: 'Quand NE PAS corriger tout de suite',
     guides: {
       movements: {
         title: 'Mouvements · Contrôle quotidien',
@@ -217,9 +276,26 @@ const GUIDE_CONTENT = {
         steps: [],
       },
       returns: {
-        title: 'Retours',
-        intro: 'Gérez les retours pour qu\'ils soient correctement déduits des certificats et du Modèle 182.',
-        steps: ['Affectez le bon donateur à chaque retour.', 'Résolvez les éléments en attente avant la clôture.'],
+        title: 'Retours · Contrôle fiscal',
+        intro: 'Un retour ne se déduit fiscalement que s\'il est affecté au bon donateur. Sans donateur, aucune déduction.',
+        // Format expert
+        notResolved: [
+          'Montant négatif sans donateur',
+          'Mauvais donateur',
+          'Remise modifiée uniquement sur le parent',
+        ],
+        costlyError: 'Affecter le retour au parent de la remise. Le parent ne compte pas fiscalement ; le donateur est sur les lignes filles.',
+        checkBeforeExport: [
+          'Aucun retour en attente',
+          'Retours avec donateur affecté',
+          'Donateurs aux totaux "étranges" vérifiés',
+        ],
+        dontFixYet: [
+          'Donateur incertain',
+          'Suivi quotidien, pas clôture',
+          'Infos externes manquantes (banque/cabinet)',
+        ],
+        steps: [],
       },
       remittances: {
         title: 'Remises (cotisations et Stripe)',
@@ -291,8 +367,64 @@ export default function GuidesPage() {
               </CardHeader>
 
               <CardContent className="flex-1 flex flex-col">
-                {/* Nou format checklist (si té lookFirst) */}
-                {'lookFirst' in guideContent && guideContent.lookFirst && guideContent.lookFirst.length > 0 ? (
+                {/* Format expert (devolucions) - si té notResolved */}
+                {'notResolved' in guideContent && guideContent.notResolved && guideContent.notResolved.length > 0 ? (
+                  <div className="space-y-2.5 mb-4 text-xs">
+                    {/* Quan NO està ben resolta */}
+                    <div>
+                      <div className="flex items-center gap-1.5 mb-1">
+                        <XCircle className="h-3.5 w-3.5 text-red-500" />
+                        <span className="font-medium text-red-600">{content.notResolved}</span>
+                      </div>
+                      <ul className="text-muted-foreground space-y-0.5 ml-5">
+                        {guideContent.notResolved.map((item: string, idx: number) => (
+                          <li key={idx} className="list-disc">{item}</li>
+                        ))}
+                      </ul>
+                    </div>
+                    {/* L'error més car */}
+                    {'costlyError' in guideContent && guideContent.costlyError && (
+                      <div className="bg-amber-50 dark:bg-amber-950/30 rounded-md p-2">
+                        <div className="flex items-start gap-1.5">
+                          <AlertTriangle className="h-3.5 w-3.5 text-amber-600 mt-0.5 shrink-0" />
+                          <div>
+                            <span className="font-medium text-amber-700 dark:text-amber-400">{content.costlyError}</span>
+                            <p className="text-muted-foreground mt-0.5">{guideContent.costlyError}</p>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                    {/* Què mires sempre abans d'exportar */}
+                    {'checkBeforeExport' in guideContent && guideContent.checkBeforeExport && guideContent.checkBeforeExport.length > 0 && (
+                      <div>
+                        <div className="flex items-center gap-1.5 mb-1">
+                          <ClipboardCheck className="h-3.5 w-3.5 text-green-500" />
+                          <span className="font-medium text-green-600">{content.checkBeforeExport}</span>
+                        </div>
+                        <ul className="text-muted-foreground space-y-0.5 ml-5">
+                          {guideContent.checkBeforeExport.map((item: string, idx: number) => (
+                            <li key={idx} className="list-disc">{item}</li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+                    {/* Quan NO arreglar-ho encara */}
+                    {'dontFixYet' in guideContent && guideContent.dontFixYet && guideContent.dontFixYet.length > 0 && (
+                      <div>
+                        <div className="flex items-center gap-1.5 mb-1">
+                          <Clock className="h-3.5 w-3.5 text-slate-400" />
+                          <span className="font-medium text-slate-500">{content.dontFixYet}</span>
+                        </div>
+                        <ul className="text-muted-foreground space-y-0.5 ml-5">
+                          {guideContent.dontFixYet.map((item: string, idx: number) => (
+                            <li key={idx} className="list-disc">{item}</li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+                  </div>
+                ) : 'lookFirst' in guideContent && guideContent.lookFirst && guideContent.lookFirst.length > 0 ? (
+                  /* Format checklist (moviments) */
                   <div className="space-y-3 mb-4">
                     {/* Mira això primer */}
                     <div>
@@ -357,6 +489,15 @@ export default function GuidesPage() {
                       <ArrowRight className="ml-2 h-4 w-4" />
                     </Link>
                   </Button>
+                  {/* CTA secundari: ajuda detallada (si helpHref existeix) */}
+                  {guide.helpHref && (
+                    <Button variant="outline" size="sm" asChild>
+                      <Link href={buildUrl(guide.helpHref)}>
+                        <HelpCircle className="mr-2 h-4 w-4" />
+                        {content.viewHelp}
+                      </Link>
+                    </Button>
+                  )}
                   <Button variant="ghost" size="sm" asChild>
                     <Link href={buildUrl(`/dashboard/manual${guide.manualAnchor}`)}>
                       <BookOpen className="mr-2 h-4 w-4" />
