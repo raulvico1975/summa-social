@@ -241,6 +241,16 @@ export const HELP_CONTENT_CA: Record<HelpRouteKey, HelpContent> = {
       'Si una despesa no encaixa en cap projecte, és millor deixar-la a 0% que no pas forçar una assignació incorrecta.',
       'Les despeses de terreny sovint es pengen primer i s\'assignen després: prioritza la coherència de l\'assignació, no la velocitat d\'entrada.',
     ],
+    extra: {
+      manual: {
+        label: 'Manual d\'usuari · Assignació de despeses',
+        href: '/dashboard/manual#6-assignacio-de-despeses',
+      },
+      video: {
+        label: 'Vídeo (properament)',
+        note: 'Assignar despeses a projectes de forma àgil (10 minuts)',
+      },
+    },
     keywords: [
       'assignació',
       'projecte',

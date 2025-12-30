@@ -237,6 +237,16 @@ export const HELP_CONTENT_ES: Partial<Record<HelpRouteKey, HelpContent>> = {
       'Si un gasto no encaja en ningún proyecto, es mejor dejarlo a 0% que forzar una asignación incorrecta.',
       'Los gastos de terreno suelen subirse primero y asignarse después: prioriza la coherencia de la imputación, no la velocidad de entrada.',
     ],
+    extra: {
+      manual: {
+        label: 'Manual de usuario · Asignación de gastos',
+        href: '/dashboard/manual#6-assignacio-de-despeses',
+      },
+      video: {
+        label: 'Vídeo (próximamente)',
+        note: 'Asignar gastos a proyectos de forma ágil (10 minutos)',
+      },
+    },
     keywords: [
       'asignación',
       'proyecto',

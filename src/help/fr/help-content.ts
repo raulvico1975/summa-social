@@ -237,6 +237,16 @@ export const HELP_CONTENT_FR: Partial<Record<HelpRouteKey, HelpContent>> = {
       'Si une dépense ne correspond à aucun projet, mieux vaut la laisser à 0% que forcer une affectation incorrecte.',
       'Les dépenses terrain sont souvent saisies d\'abord puis affectées ensuite : privilégiez la cohérence de l\'imputation plutôt que la vitesse.',
     ],
+    extra: {
+      manual: {
+        label: 'Manuel utilisateur · Affectation des dépenses',
+        href: '/dashboard/manual#6-assignacio-de-despeses',
+      },
+      video: {
+        label: 'Vidéo (bientôt)',
+        note: 'Affecter des dépenses aux projets de façon agile (10 minutes)',
+      },
+    },
     keywords: [
       'affectation',
       'projet',
