@@ -12,12 +12,34 @@ import type { Organization, Contact, Category } from '@/lib/data';
 // TYPES
 // =============================================================================
 
+export interface PdfLabels {
+  title: string;
+  reference: string;
+  reason: string;
+  beneficiary: string;
+  noBeneficiary: string;
+  contactNotFound: string;
+  iban: string;
+  period: string;
+  expenses: string;
+  tableDate: string;
+  tableConcept: string;
+  tableCategory: string;
+  tableAmount: string;
+  total: string;
+  attachments: string;
+  mileage: string;
+  mileageDesc: (params: { km: number; rate: number }) => string;
+  generatedBy: string;
+}
+
 export interface GenerateExpenseReportPdfParams {
   report: ExpenseReport;
   receipts: PendingDocument[];
   organization: Organization;
   beneficiaryContact: Contact | null; // Si és employee o contact
   categories: Category[];
+  labels: PdfLabels;
 }
 
 export interface GenerateExpenseReportPdfResult {
@@ -38,15 +60,16 @@ function formatDate(dateStr: string | null): string {
 
 function getBeneficiaryText(
   beneficiary: ExpenseReportBeneficiary | null,
-  contact: Contact | null
+  contact: Contact | null,
+  labels: PdfLabels
 ): { name: string; iban: string } {
-  if (!beneficiary) return { name: '(sense beneficiari)', iban: '' };
+  if (!beneficiary) return { name: labels.noBeneficiary, iban: '' };
 
   switch (beneficiary.kind) {
     case 'employee':
     case 'contact':
       return {
-        name: contact?.name ?? '(contacte no trobat)',
+        name: contact?.name ?? labels.contactNotFound,
         iban: contact?.iban ?? '',
       };
     case 'manual':
@@ -75,7 +98,7 @@ function getCategoryName(
 export function generateExpenseReportPdf(
   params: GenerateExpenseReportPdfParams
 ): GenerateExpenseReportPdfResult {
-  const { report, receipts, organization, beneficiaryContact, categories } = params;
+  const { report, receipts, organization, beneficiaryContact, categories, labels } = params;
 
   const doc = new jsPDF();
   const pageWidth = doc.internal.pageSize.getWidth();
@@ -88,7 +111,7 @@ export function generateExpenseReportPdf(
 
   doc.setFontSize(18);
   doc.setFont('helvetica', 'bold');
-  doc.text('Liquidacio de despeses', pageWidth / 2, y, { align: 'center' }); // PDF no suporta accents en helvetica bàsica
+  doc.text(labels.title, pageWidth / 2, y, { align: 'center' });
   y += 10;
 
   doc.setFontSize(10);
@@ -108,32 +131,32 @@ export function generateExpenseReportPdf(
   // DADES DE LA LIQUIDACIÓ
   // ═══════════════════════════════════════════════════════════════════════════
 
-  const beneficiaryInfo = getBeneficiaryText(report.beneficiary, beneficiaryContact);
+  const beneficiaryInfo = getBeneficiaryText(report.beneficiary, beneficiaryContact, labels);
 
   doc.setFontSize(10);
   doc.setFont('helvetica', 'bold');
-  doc.text('Referencia:', margin, y);
+  doc.text(`${labels.reference}:`, margin, y);
   doc.setFont('helvetica', 'normal');
   doc.text(report.id, margin + 30, y);
   y += 6;
 
   if (report.title) {
     doc.setFont('helvetica', 'bold');
-    doc.text('Motiu:', margin, y);
+    doc.text(`${labels.reason}:`, margin, y);
     doc.setFont('helvetica', 'normal');
     doc.text(report.title, margin + 30, y);
     y += 6;
   }
 
   doc.setFont('helvetica', 'bold');
-  doc.text('Beneficiari:', margin, y);
+  doc.text(`${labels.beneficiary}:`, margin, y);
   doc.setFont('helvetica', 'normal');
   doc.text(beneficiaryInfo.name, margin + 30, y);
   y += 6;
 
   if (beneficiaryInfo.iban) {
     doc.setFont('helvetica', 'bold');
-    doc.text('IBAN:', margin, y);
+    doc.text(`${labels.iban}:`, margin, y);
     doc.setFont('helvetica', 'normal');
     doc.text(beneficiaryInfo.iban, margin + 30, y);
     y += 6;
@@ -144,7 +167,7 @@ export function generateExpenseReportPdf(
       ? `${formatDate(report.dateFrom)} - ${formatDate(report.dateTo)}`
       : '—';
   doc.setFont('helvetica', 'bold');
-  doc.text('Periode:', margin, y);
+  doc.text(`${labels.period}:`, margin, y);
   doc.setFont('helvetica', 'normal');
   doc.text(dateRange, margin + 30, y);
   y += 10;
@@ -155,7 +178,7 @@ export function generateExpenseReportPdf(
 
   doc.setFontSize(11);
   doc.setFont('helvetica', 'bold');
-  doc.text('Despeses', margin, y);
+  doc.text(labels.expenses, margin, y);
   y += 6;
 
   // Preparar files de la taula
@@ -175,8 +198,8 @@ export function generateExpenseReportPdf(
   if (report.mileage?.km && report.mileage.rateEurPerKm) {
     const mileageAmount = report.mileage.km * report.mileage.rateEurPerKm;
     const mileageDescription = report.mileage.description
-      ? `Quilometratge: ${report.mileage.description}`
-      : `Quilometratge: ${report.mileage.km} km x ${report.mileage.rateEurPerKm} EUR/km`;
+      ? `${labels.mileage}: ${report.mileage.description}`
+      : `${labels.mileage}: ${labels.mileageDesc({ km: report.mileage.km, rate: report.mileage.rateEurPerKm })}`;
     tableRows.push([
       formatDate(report.dateFrom),
       mileageDescription,
@@ -188,7 +211,7 @@ export function generateExpenseReportPdf(
   // Dibuixar taula
   autoTable(doc, {
     startY: y,
-    head: [['Data', 'Concepte', 'Categoria', 'Import']],
+    head: [[labels.tableDate, labels.tableConcept, labels.tableCategory, labels.tableAmount]],
     body: tableRows,
     margin: { left: margin, right: margin },
     headStyles: {
@@ -206,7 +229,7 @@ export function generateExpenseReportPdf(
       2: { cellWidth: 40 },
       3: { cellWidth: 30, halign: 'right' },
     },
-    foot: [['', '', 'TOTAL', formatCurrencyEU(report.totalAmount)]],
+    foot: [['', '', labels.total, formatCurrencyEU(report.totalAmount)]],
     footStyles: {
       fillColor: [240, 240, 240],
       textColor: [0, 0, 0],
@@ -226,7 +249,7 @@ export function generateExpenseReportPdf(
   if (receipts.length > 0) {
     doc.setFontSize(11);
     doc.setFont('helvetica', 'bold');
-    doc.text('Annexos', margin, y);
+    doc.text(labels.attachments, margin, y);
     y += 6;
 
     doc.setFontSize(9);
@@ -253,7 +276,7 @@ export function generateExpenseReportPdf(
   doc.line(margin, footerY - 5, pageWidth - margin, footerY - 5);
 
   doc.text(
-    `Generat per Summa Social — Ref: ${report.id}`,
+    `${labels.generatedBy} — Ref: ${report.id}`,
     pageWidth / 2,
     footerY,
     { align: 'center' }

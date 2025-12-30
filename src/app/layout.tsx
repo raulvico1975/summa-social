@@ -5,6 +5,7 @@ import { Toaster } from '@/components/ui/toaster';
 import { FirebaseClientProvider } from '@/firebase';
 import { TranslationsProvider } from '@/i18n/provider';
 import { IdleLogoutProvider } from '@/components/IdleLogoutProvider';
+import { ErrorBoundaryGlobal } from '@/components/ErrorBoundaryGlobal';
 
 // Font principal - Inter (Apple-like, molt llegible)
 const inter = Inter({ 
@@ -49,7 +50,9 @@ export default function RootLayout({
         <FirebaseClientProvider>
           <TranslationsProvider>
             <IdleLogoutProvider idleMs={30 * 60 * 1000} warnMs={60 * 1000}>
-              {children}
+              <ErrorBoundaryGlobal>
+                {children}
+              </ErrorBoundaryGlobal>
             </IdleLogoutProvider>
           </TranslationsProvider>
         </FirebaseClientProvider>

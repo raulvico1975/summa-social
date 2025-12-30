@@ -52,6 +52,7 @@ import { useFirebase, useCollection, useMemoFirebase } from '@/firebase';
 import { collection, query, where, and, doc, getDoc, serverTimestamp, Timestamp } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { useToast } from '@/hooks/use-toast';
+import { useTranslations } from '@/i18n';
 import { formatCurrencyEU } from '@/lib/normalize';
 import {
   updateExpenseReport,
@@ -61,6 +62,7 @@ import {
   type ExpenseReport,
   type ExpenseReportBeneficiary,
   type ExpenseReportMileage,
+  type PdfLabels,
 } from '@/lib/expense-reports';
 import {
   updatePendingDocument,
@@ -100,6 +102,7 @@ export function ExpenseReportDetail({ report, onClose }: ExpenseReportDetailProp
   const { firestore, storage } = useFirebase();
   const { buildUrl } = useOrgUrl();
   const { toast } = useToast();
+  const { t } = useTranslations();
 
   // Estat local
   const [title, setTitle] = React.useState(report.title || '');
@@ -270,13 +273,13 @@ export function ExpenseReportDetail({ report, onClose }: ExpenseReportDetailProp
         receiptDocIds,
         totalAmount,
       });
-      toast({ title: 'Liquidació guardada' });
+      toast({ title: t.expenseReports.detail.saved });
       onClose();
     } catch (error) {
       console.error('[handleSave] Error:', error);
       toast({
-        title: 'Error',
-        description: 'No s\'ha pogut guardar.',
+        title: t.common.error,
+        description: t.expenseReports.detail.errorSave,
         variant: 'destructive',
       });
     } finally {
@@ -297,12 +300,12 @@ export function ExpenseReportDetail({ report, onClose }: ExpenseReportDetailProp
       }
       setReceiptDocIds((prev) => [...prev, ...selectedIds]);
       setIsReceiptsModalOpen(false);
-      toast({ title: `${selectedIds.length} tiquets afegits` });
+      toast({ title: t.expenseReports.detail.receiptsAdded({ count: selectedIds.length }) });
     } catch (error) {
       console.error('[handleAddReceipts] Error:', error);
       toast({
-        title: 'Error',
-        description: 'No s\'han pogut afegir els tiquets.',
+        title: t.common.error,
+        description: t.expenseReports.detail.errorAddReceipts,
         variant: 'destructive',
       });
     }
@@ -317,7 +320,7 @@ export function ExpenseReportDetail({ report, onClose }: ExpenseReportDetailProp
         reportId: null,
       });
       setReceiptDocIds((prev) => prev.filter((id) => id !== docId));
-      toast({ title: 'Tiquet tret de la liquidació' });
+      toast({ title: t.expenseReports.detail.receiptRemoved });
     } catch (error) {
       console.error('[handleRemoveReceipt] Error:', error);
     }
@@ -363,6 +366,9 @@ export function ExpenseReportDetail({ report, onClose }: ExpenseReportDetailProp
         totalAmount,
       };
 
+      // Construir labels traduïts per al PDF
+      const pdfLabels: PdfLabels = t.expenseReports.pdf;
+
       // Generar PDF
       const { blob, filename } = generateExpenseReportPdf({
         report: currentReport,
@@ -370,6 +376,7 @@ export function ExpenseReportDetail({ report, onClose }: ExpenseReportDetailProp
         organization: organization as Organization,
         beneficiaryContact,
         categories: categories || [],
+        labels: pdfLabels,
       });
 
       // Pujar a Storage
@@ -390,12 +397,12 @@ export function ExpenseReportDetail({ report, onClose }: ExpenseReportDetailProp
         },
       });
 
-      toast({ title: 'PDF generat correctament' });
+      toast({ title: t.expenseReports.detail.pdfGenerated });
     } catch (error) {
       console.error('[handleGeneratePdf] Error:', error);
       toast({
-        title: 'Error',
-        description: 'No s\'ha pogut generar el PDF.',
+        title: t.common.error,
+        description: t.expenseReports.detail.errorGeneratePdf,
         variant: 'destructive',
       });
     } finally {
@@ -421,7 +428,7 @@ export function ExpenseReportDetail({ report, onClose }: ExpenseReportDetailProp
         <CardHeader className="pb-3">
           <CardTitle className="text-base flex items-center gap-2">
             <User className="h-4 w-4" />
-            Beneficiari
+            {t.expenseReports.detail.beneficiary}
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-3">
@@ -438,12 +445,12 @@ export function ExpenseReportDetail({ report, onClose }: ExpenseReportDetailProp
             }}
           >
             <SelectTrigger>
-              <SelectValue placeholder="Selecciona tipus..." />
+              <SelectValue placeholder={t.expenseReports.detail.selectType} />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="employee">Treballador</SelectItem>
-              <SelectItem value="contact">Contacte</SelectItem>
-              <SelectItem value="manual">Manual (nom + IBAN)</SelectItem>
+              <SelectItem value="employee">{t.expenseReports.detail.employee}</SelectItem>
+              <SelectItem value="contact">{t.expenseReports.detail.contact}</SelectItem>
+              <SelectItem value="manual">{t.expenseReports.detail.manual}</SelectItem>
             </SelectContent>
           </Select>
 
@@ -453,7 +460,7 @@ export function ExpenseReportDetail({ report, onClose }: ExpenseReportDetailProp
               onValueChange={(id) => setBeneficiary({ kind: 'employee', employeeId: id })}
             >
               <SelectTrigger>
-                <SelectValue placeholder="Selecciona treballador..." />
+                <SelectValue placeholder={t.expenseReports.detail.selectEmployee} />
               </SelectTrigger>
               <SelectContent>
                 {employees.map((e) => (
@@ -466,12 +473,12 @@ export function ExpenseReportDetail({ report, onClose }: ExpenseReportDetailProp
           {beneficiary?.kind === 'manual' && (
             <div className="space-y-2">
               <Input
-                placeholder="Nom complet"
+                placeholder={t.expenseReports.detail.fullName}
                 value={beneficiary.name}
                 onChange={(e) => setBeneficiary({ ...beneficiary, name: e.target.value })}
               />
               <Input
-                placeholder="IBAN"
+                placeholder={t.expenseReports.detail.iban}
                 value={beneficiary.iban}
                 onChange={(e) => setBeneficiary({ ...beneficiary, iban: e.target.value })}
               />
@@ -483,20 +490,20 @@ export function ExpenseReportDetail({ report, onClose }: ExpenseReportDetailProp
       {/* Dades bàsiques */}
       <Card>
         <CardHeader className="pb-3">
-          <CardTitle className="text-base">Dades</CardTitle>
+          <CardTitle className="text-base">{t.expenseReports.detail.data}</CardTitle>
         </CardHeader>
         <CardContent className="space-y-3">
           <div>
-            <Label>Motiu / Viatge</Label>
+            <Label>{t.expenseReports.detail.reasonTrip}</Label>
             <Input
               value={title}
               onChange={(e) => setTitle(e.target.value)}
-              placeholder="Ex: Viatge a Barcelona"
+              placeholder={t.expenseReports.detail.reasonPlaceholder}
             />
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <Label>Data inici</Label>
+              <Label>{t.expenseReports.detail.dateStart}</Label>
               <Popover>
                 <PopoverTrigger asChild>
                   <Button
@@ -504,7 +511,7 @@ export function ExpenseReportDetail({ report, onClose }: ExpenseReportDetailProp
                     className={cn('w-full justify-start', !dateFrom && 'text-muted-foreground')}
                   >
                     <CalendarIcon className="mr-2 h-4 w-4" />
-                    {dateFrom ? format(dateFrom, 'dd/MM/yyyy') : 'Selecciona...'}
+                    {dateFrom ? format(dateFrom, 'dd/MM/yyyy') : t.expenseReports.detail.selectDate}
                   </Button>
                 </PopoverTrigger>
                 <PopoverContent className="w-auto p-0">
@@ -518,7 +525,7 @@ export function ExpenseReportDetail({ report, onClose }: ExpenseReportDetailProp
               </Popover>
             </div>
             <div>
-              <Label>Data fi</Label>
+              <Label>{t.expenseReports.detail.dateEnd}</Label>
               <Popover>
                 <PopoverTrigger asChild>
                   <Button
@@ -526,7 +533,7 @@ export function ExpenseReportDetail({ report, onClose }: ExpenseReportDetailProp
                     className={cn('w-full justify-start', !dateTo && 'text-muted-foreground')}
                   >
                     <CalendarIcon className="mr-2 h-4 w-4" />
-                    {dateTo ? format(dateTo, 'dd/MM/yyyy') : 'Selecciona...'}
+                    {dateTo ? format(dateTo, 'dd/MM/yyyy') : t.expenseReports.detail.selectDate}
                   </Button>
                 </PopoverTrigger>
                 <PopoverContent className="w-auto p-0">
@@ -541,11 +548,11 @@ export function ExpenseReportDetail({ report, onClose }: ExpenseReportDetailProp
             </div>
           </div>
           <div>
-            <Label>Notes</Label>
+            <Label>{t.expenseReports.detail.notes}</Label>
             <Textarea
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
-              placeholder="Observacions..."
+              placeholder={t.expenseReports.detail.notesPlaceholder}
               rows={2}
             />
           </div>
@@ -558,11 +565,11 @@ export function ExpenseReportDetail({ report, onClose }: ExpenseReportDetailProp
           <div className="flex items-center justify-between">
             <CardTitle className="text-base flex items-center gap-2">
               <Receipt className="h-4 w-4" />
-              Tiquets
+              {t.expenseReports.detail.receipts}
             </CardTitle>
             <Button size="sm" variant="outline" onClick={() => setIsReceiptsModalOpen(true)}>
               <Plus className="h-4 w-4 mr-1" />
-              Afegir
+              {t.expenseReports.detail.add}
             </Button>
           </div>
         </CardHeader>
@@ -586,7 +593,7 @@ export function ExpenseReportDetail({ report, onClose }: ExpenseReportDetailProp
                         className="h-8 w-8"
                         asChild
                       >
-                        <a href={receipt.file.url} target="_blank" rel="noopener noreferrer" title="Veure fitxer">
+                        <a href={receipt.file.url} target="_blank" rel="noopener noreferrer" title={t.expenseReports.detail.viewFile}>
                           <ExternalLink className="h-4 w-4 text-muted-foreground" />
                         </a>
                       </Button>
@@ -596,7 +603,7 @@ export function ExpenseReportDetail({ report, onClose }: ExpenseReportDetailProp
                       variant="ghost"
                       className="h-8 w-8"
                       onClick={() => handleRemoveReceipt(receipt.id)}
-                      title="Treure de la liquidació"
+                      title={t.expenseReports.detail.removeFromReport}
                     >
                       <Trash2 className="h-4 w-4 text-muted-foreground" />
                     </Button>
@@ -604,13 +611,13 @@ export function ExpenseReportDetail({ report, onClose }: ExpenseReportDetailProp
                 </div>
               ))}
               <div className="flex justify-between pt-2 font-medium">
-                <span>Subtotal tiquets</span>
+                <span>{t.expenseReports.detail.subtotalReceipts}</span>
                 <span>{formatCurrencyEU(receiptsTotal)}</span>
               </div>
             </div>
           ) : (
             <p className="text-sm text-muted-foreground text-center py-4">
-              Cap tiquet assignat. Afegeix tiquets confirmats.
+              {t.expenseReports.detail.noReceipts}
             </p>
           )}
         </CardContent>
@@ -621,13 +628,13 @@ export function ExpenseReportDetail({ report, onClose }: ExpenseReportDetailProp
         <CardHeader className="pb-3">
           <CardTitle className="text-base flex items-center gap-2">
             <Car className="h-4 w-4" />
-            Quilometratge
+            {t.expenseReports.detail.mileage}
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-3">
           <div className="grid grid-cols-3 gap-3">
             <div>
-              <Label>Km</Label>
+              <Label>{t.expenseReports.detail.km}</Label>
               <Input
                 type="number"
                 placeholder="0"
@@ -643,7 +650,7 @@ export function ExpenseReportDetail({ report, onClose }: ExpenseReportDetailProp
               />
             </div>
             <div>
-              <Label>Tarifa (€/km)</Label>
+              <Label>{t.expenseReports.detail.rate} ({t.expenseReports.detail.rateUnit})</Label>
               <Input
                 type="number"
                 step="0.01"
@@ -660,7 +667,7 @@ export function ExpenseReportDetail({ report, onClose }: ExpenseReportDetailProp
               />
             </div>
             <div>
-              <Label>Import</Label>
+              <Label>{t.expenseReports.detail.amount}</Label>
               <Input
                 type="text"
                 value={mileageTotal > 0 ? formatCurrencyEU(mileageTotal) : '—'}
@@ -670,9 +677,9 @@ export function ExpenseReportDetail({ report, onClose }: ExpenseReportDetailProp
             </div>
           </div>
           <div>
-            <Label>Descripció ruta</Label>
+            <Label>{t.expenseReports.detail.routeDescription}</Label>
             <Input
-              placeholder="Ex: Barcelona - Girona - Barcelona"
+              placeholder={t.expenseReports.detail.routePlaceholder}
               value={mileage?.description || ''}
               onChange={(e) => setMileage({
                 ...mileage,
@@ -685,7 +692,7 @@ export function ExpenseReportDetail({ report, onClose }: ExpenseReportDetailProp
             />
           </div>
           <div>
-            <Label>Categoria</Label>
+            <Label>{t.expenseReports.detail.category}</Label>
             <Select
               value={mileage?.categoryId || ''}
               onValueChange={(id) => setMileage({
@@ -698,7 +705,7 @@ export function ExpenseReportDetail({ report, onClose }: ExpenseReportDetailProp
               })}
             >
               <SelectTrigger>
-                <SelectValue placeholder="Selecciona categoria..." />
+                <SelectValue placeholder={t.expenseReports.detail.selectCategory} />
               </SelectTrigger>
               <SelectContent>
                 {expenseCategories.map((cat) => (
@@ -716,7 +723,7 @@ export function ExpenseReportDetail({ report, onClose }: ExpenseReportDetailProp
       <Card className="bg-muted/50">
         <CardContent className="py-4">
           <div className="flex items-center justify-between text-lg font-semibold">
-            <span>Total liquidació</span>
+            <span>{t.expenseReports.detail.totalReport}</span>
             <span>{formatCurrencyEU(totalAmount)}</span>
           </div>
         </CardContent>
@@ -727,7 +734,7 @@ export function ExpenseReportDetail({ report, onClose }: ExpenseReportDetailProp
         <CardHeader className="pb-3">
           <CardTitle className="text-base flex items-center gap-2">
             <FileText className="h-4 w-4" />
-            Document PDF
+            {t.expenseReports.detail.pdfDocument}
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-3">
@@ -740,24 +747,24 @@ export function ExpenseReportDetail({ report, onClose }: ExpenseReportDetailProp
                   onClick={handleDownloadPdf}
                 >
                   <Download className="mr-2 h-4 w-4" />
-                  Descarregar PDF
+                  {t.expenseReports.detail.downloadPdf}
                 </Button>
                 <Button
                   variant="ghost"
                   size="sm"
                   onClick={handleGeneratePdf}
                   disabled={isGeneratingPdf || !canGeneratePdf}
-                  title="Regenerar PDF amb les dades actuals"
+                  title={t.expenseReports.detail.regenerate}
                 >
                   {isGeneratingPdf ? (
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                   ) : (
                     <RefreshCw className="mr-2 h-4 w-4" />
                   )}
-                  Regenerar
+                  {t.expenseReports.detail.regenerate}
                 </Button>
                 <span className="text-xs text-muted-foreground ml-2">
-                  Generat: {report.generatedPdf?.createdAt?.toDate?.()?.toLocaleDateString('ca-ES') ?? '—'}
+                  {t.expenseReports.detail.generated}: {report.generatedPdf?.createdAt?.toDate?.()?.toLocaleDateString('ca-ES') ?? '—'}
                 </span>
               </>
             ) : (
@@ -773,17 +780,17 @@ export function ExpenseReportDetail({ report, onClose }: ExpenseReportDetailProp
                   ) : (
                     <FileText className="mr-2 h-4 w-4" />
                   )}
-                  {isGeneratingPdf ? 'Generant...' : 'Generar PDF de liquidació'}
+                  {isGeneratingPdf ? t.expenseReports.detail.generating : t.expenseReports.detail.generatePdf}
                 </Button>
                 <p className="text-xs text-muted-foreground">
-                  Crea el document resum per a justificació.
+                  {t.expenseReports.detail.pdfDescription}
                 </p>
               </div>
             )}
           </div>
           {!canGeneratePdf && !generatedPdfUrl && (
             <p className="text-xs text-amber-600">
-              No es pot generar el PDF. Cal un beneficiari i almenys una despesa.
+              {t.expenseReports.detail.cannotGeneratePdf}
             </p>
           )}
         </CardContent>
@@ -795,13 +802,13 @@ export function ExpenseReportDetail({ report, onClose }: ExpenseReportDetailProp
           <CardHeader className="pb-3">
             <CardTitle className="text-base flex items-center gap-2 text-green-700">
               <CheckCircle2 className="h-4 w-4" />
-              Conciliació
+              {t.expenseReports.detail.reconciliation}
             </CardTitle>
           </CardHeader>
           <CardContent>
             <div className="space-y-2">
               <p className="text-sm text-green-700">
-                Aquesta liquidació ha estat conciliada amb un moviment bancari.
+                {t.expenseReports.detail.reconciliationMatched}
               </p>
               <Button
                 variant="outline"
@@ -811,7 +818,7 @@ export function ExpenseReportDetail({ report, onClose }: ExpenseReportDetailProp
               >
                 <Link href={buildUrl(`/dashboard/movimientos?transactionId=${report.matchedTransactionId}`)}>
                   <Link2 className="mr-2 h-4 w-4" />
-                  Veure moviment conciliat
+                  {t.expenseReports.detail.viewMatchedMovement}
                 </Link>
               </Button>
             </div>
@@ -824,7 +831,7 @@ export function ExpenseReportDetail({ report, onClose }: ExpenseReportDetailProp
         <CardHeader className="pb-3">
           <CardTitle className="text-base flex items-center gap-2">
             <CreditCard className="h-4 w-4" />
-            Reemborsament SEPA
+            {t.expenseReports.detail.sepaReimbursement}
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -832,9 +839,9 @@ export function ExpenseReportDetail({ report, onClose }: ExpenseReportDetailProp
             // Ja té SEPA generat
             <div className="space-y-2">
               <div className="flex items-center gap-2">
-                <Badge variant="secondary" className="bg-blue-50 text-blue-700">SEPA generat</Badge>
+                <Badge variant="secondary" className="bg-blue-50 text-blue-700">{t.expenseReports.detail.sepaGenerated}</Badge>
                 <span className="text-xs text-muted-foreground">
-                  Ref: {report.sepa.endToEndId}
+                  {t.expenseReports.detail.sepaRef}: {report.sepa.endToEndId}
                 </span>
               </div>
               {sepaDownloadUrl && (
@@ -845,15 +852,15 @@ export function ExpenseReportDetail({ report, onClose }: ExpenseReportDetailProp
                 >
                   <a href={sepaDownloadUrl} download>
                     <Download className="mr-2 h-4 w-4" />
-                    Descarregar fitxer XML
+                    {t.expenseReports.detail.downloadXml}
                   </a>
                 </Button>
               )}
               <p className="text-xs text-muted-foreground">
-                Data execució prevista: {report.payment?.executionDate ?? '—'}
+                {t.expenseReports.detail.expectedExecutionDate}: {report.payment?.executionDate ?? '—'}
               </p>
               <p className="text-xs text-muted-foreground">
-                Quan el banc executi el pagament i importis l'extracte, es conciliarà automàticament.
+                {t.expenseReports.detail.sepaWillReconcile}
               </p>
             </div>
           ) : (
@@ -867,33 +874,33 @@ export function ExpenseReportDetail({ report, onClose }: ExpenseReportDetailProp
                     onClick={() => setIsSepaModalOpen(true)}
                   >
                     <CreditCard className="mr-2 h-4 w-4" />
-                    Generar SEPA de reemborsament
+                    {t.expenseReports.detail.generateSepaReimbursement}
                   </Button>
                   <p className="text-xs text-muted-foreground">
-                    Genera el fitxer per pagar aquesta liquidació. No crea moviments.
+                    {t.expenseReports.detail.sepaDescription}
                   </p>
                 </div>
               ) : (
                 <div className="text-sm space-y-1">
-                  <p className="text-muted-foreground font-medium">No es pot generar el pagament:</p>
+                  <p className="text-muted-foreground font-medium">{t.expenseReports.detail.cannotGeneratePayment}</p>
                   {!report.generatedPdf && (
-                    <p className="text-amber-600 text-xs">· Primer cal generar el PDF de liquidació.</p>
+                    <p className="text-amber-600 text-xs">· {t.expenseReports.detail.needPdfFirst}</p>
                   )}
                   {totalAmount <= 0 && (
-                    <p className="text-amber-600 text-xs">· Afegeix tiquets o quilometratge per tenir un import.</p>
+                    <p className="text-amber-600 text-xs">· {t.expenseReports.detail.addReceiptsOrMileage}</p>
                   )}
                   {!resolvedBeneficiary && (
-                    <p className="text-amber-600 text-xs">· El beneficiari no té IBAN. Revisa el contacte.</p>
+                    <p className="text-amber-600 text-xs">· {t.expenseReports.detail.beneficiaryNoIban}</p>
                   )}
                   {activeBankAccounts.length === 0 && (
-                    <p className="text-amber-600 text-xs">· Configura un compte bancari a Configuració.</p>
+                    <p className="text-amber-600 text-xs">· {t.expenseReports.detail.configureBankAccount}</p>
                   )}
                 </div>
               )}
               <Alert variant="default" className="bg-muted/50">
                 <AlertCircle className="h-4 w-4" />
                 <AlertDescription className="text-xs">
-                  Aquest pas només genera un fitxer. El pagament real es confirma quan s'importa l'extracte bancari.
+                  {t.expenseReports.detail.sepaOnlyFile}
                 </AlertDescription>
               </Alert>
             </div>
@@ -904,11 +911,11 @@ export function ExpenseReportDetail({ report, onClose }: ExpenseReportDetailProp
       {/* Accions */}
       <div className="flex justify-end gap-2">
         <Button variant="outline" onClick={onClose}>
-          Cancel·lar
+          {t.expenseReports.detail.cancel}
         </Button>
         <Button onClick={handleSave} disabled={isSaving}>
           {isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Check className="mr-2 h-4 w-4" />}
-          Guardar
+          {t.expenseReports.detail.save}
         </Button>
       </div>
 
@@ -955,12 +962,12 @@ export function ExpenseReportDetail({ report, onClose }: ExpenseReportDetailProp
             );
             setSepaDownloadUrl(result.downloadUrl);
             setIsSepaModalOpen(false);
-            toast({ title: 'SEPA generat correctament' });
+            toast({ title: t.expenseReports.detail.sepaGeneratedToast });
           } catch (error) {
             console.error('[handleGenerateSepa] Error:', error);
             toast({
-              title: 'Error',
-              description: error instanceof Error ? error.message : 'No s\'ha pogut generar el SEPA.',
+              title: t.common.error,
+              description: error instanceof Error ? error.message : t.expenseReports.detail.errorGenerateSepa,
               variant: 'destructive',
             });
           } finally {
@@ -985,6 +992,7 @@ interface AddReceiptsModalProps {
 }
 
 function AddReceiptsModal({ open, onClose, availableReceipts, onAdd, categories }: AddReceiptsModalProps) {
+  const { t } = useTranslations();
   const [selected, setSelected] = React.useState<Set<string>>(new Set());
 
   const handleToggle = (id: string) => {
@@ -1008,15 +1016,15 @@ function AddReceiptsModal({ open, onClose, availableReceipts, onAdd, categories 
     <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
       <DialogContent className="max-w-md">
         <DialogHeader>
-          <DialogTitle>Afegir tiquets</DialogTitle>
+          <DialogTitle>{t.expenseReports.detail.addReceiptsTitle}</DialogTitle>
           <DialogDescription>
-            Selecciona els tiquets confirmats per afegir a la liquidació.
+            {t.expenseReports.detail.addReceiptsDesc}
           </DialogDescription>
         </DialogHeader>
 
         {availableReceipts.length === 0 ? (
           <p className="text-sm text-muted-foreground text-center py-6">
-            No hi ha tiquets disponibles. Puja i confirma tiquets a Documents Pendents.
+            {t.expenseReports.detail.noReceiptsAvailable}
           </p>
         ) : (
           <div className="space-y-2 max-h-64 overflow-y-auto">
@@ -1043,9 +1051,9 @@ function AddReceiptsModal({ open, onClose, availableReceipts, onAdd, categories 
         )}
 
         <div className="flex justify-end gap-2 pt-4">
-          <Button variant="outline" onClick={onClose}>Cancel·lar</Button>
+          <Button variant="outline" onClick={onClose}>{t.common.cancel}</Button>
           <Button onClick={handleAdd} disabled={selected.size === 0}>
-            Afegir ({selected.size})
+            {t.expenseReports.detail.addCount({ count: selected.size })}
           </Button>
         </div>
       </DialogContent>
@@ -1081,6 +1089,7 @@ function GenerateSepaModal({
   isGenerating,
   onGenerate,
 }: GenerateSepaModalProps) {
+  const { t } = useTranslations();
   const today = format(new Date(), 'yyyy-MM-dd');
   const [selectedBankAccountId, setSelectedBankAccountId] = React.useState<string>(
     bankAccounts.find((ba) => ba.isDefault)?.id || bankAccounts[0]?.id || ''
@@ -1106,9 +1115,9 @@ function GenerateSepaModal({
     <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
       <DialogContent className="max-w-md">
         <DialogHeader>
-          <DialogTitle>Generar SEPA de reemborsament</DialogTitle>
+          <DialogTitle>{t.expenseReports.detail.generateSepaTitle}</DialogTitle>
           <DialogDescription>
-            Es crearà un fitxer XML que podràs importar al teu banc per ordenar el pagament.
+            {t.expenseReports.detail.sepaModalDesc}
           </DialogDescription>
         </DialogHeader>
 
@@ -1116,33 +1125,33 @@ function GenerateSepaModal({
           {/* Resum */}
           <div className="bg-muted/50 rounded-lg p-4 space-y-2">
             <div className="flex justify-between text-sm">
-              <span className="text-muted-foreground">Beneficiari:</span>
+              <span className="text-muted-foreground">{t.expenseReports.detail.beneficiaryLabel}</span>
               <span className="font-medium">{beneficiaryName}</span>
             </div>
             <div className="flex justify-between text-sm">
-              <span className="text-muted-foreground">IBAN:</span>
+              <span className="text-muted-foreground">{t.expenseReports.detail.ibanLabel}</span>
               <span className="font-mono text-xs">{beneficiaryIban}</span>
             </div>
             <div className="flex justify-between text-sm">
-              <span className="text-muted-foreground">Import:</span>
+              <span className="text-muted-foreground">{t.expenseReports.detail.amountLabel}</span>
               <span className="font-semibold">{formatCurrencyEU(totalAmount)}</span>
             </div>
           </div>
 
           {/* Compte emissor */}
           <div className="space-y-2">
-            <Label>Compte bancari emissor</Label>
+            <Label>{t.expenseReports.detail.emitterAccount}</Label>
             <Select
               value={selectedBankAccountId}
               onValueChange={setSelectedBankAccountId}
             >
               <SelectTrigger>
-                <SelectValue placeholder="Selecciona compte..." />
+                <SelectValue placeholder={t.expenseReports.detail.selectAccount} />
               </SelectTrigger>
               <SelectContent>
                 {bankAccounts.map((ba) => (
                   <SelectItem key={ba.id} value={ba.id}>
-                    {ba.name} {ba.isDefault && '(per defecte)'}
+                    {ba.name} {ba.isDefault && t.expenseReports.detail.defaultAccount}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -1156,7 +1165,7 @@ function GenerateSepaModal({
 
           {/* Data execució */}
           <div className="space-y-2">
-            <Label>Data d'execució</Label>
+            <Label>{t.expenseReports.detail.executionDate}</Label>
             <Popover>
               <PopoverTrigger asChild>
                 <Button
@@ -1183,14 +1192,14 @@ function GenerateSepaModal({
           <Alert variant="default" className="bg-blue-50 border-blue-200">
             <AlertCircle className="h-4 w-4 text-blue-600" />
             <AlertDescription className="text-xs text-blue-800">
-              Tranquil·litat: això no executarà cap pagament. Només genera un fitxer que hauràs d'importar manualment al teu banc.
+              {t.expenseReports.detail.sepaWarning}
             </AlertDescription>
           </Alert>
         </div>
 
         <div className="flex justify-end gap-2 pt-4">
           <Button variant="outline" onClick={onClose} disabled={isGenerating}>
-            Cancel·lar
+            {t.common.cancel}
           </Button>
           <Button
             onClick={handleGenerate}
@@ -1201,7 +1210,7 @@ function GenerateSepaModal({
             ) : (
               <CreditCard className="mr-2 h-4 w-4" />
             )}
-            {isGenerating ? 'Generant...' : 'Generar SEPA'}
+            {isGenerating ? t.common.generating : t.expenseReports.detail.generateSepa}
           </Button>
         </div>
       </DialogContent>

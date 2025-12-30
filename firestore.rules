@@ -38,6 +38,19 @@ service cloud.firestore {
     }
 
     // ═══════════════════════════════════════════════════════════════════════
+    // SYSTEM INCIDENTS (alertes internes per a SuperAdmin)
+    // ═══════════════════════════════════════════════════════════════════════
+
+    match /systemIncidents/{incidentId} {
+      // Llegir: només SuperAdmin
+      allow read: if isSuperAdmin();
+      // Crear/Actualitzar: qualsevol usuari autenticat (el sistema reporta errors)
+      allow create, update: if isSignedIn();
+      // Eliminar: només SuperAdmin
+      allow delete: if isSuperAdmin();
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
     // SLUGS (índex d'unicitat per URLs d'organitzacions)
     // ═══════════════════════════════════════════════════════════════════════
 

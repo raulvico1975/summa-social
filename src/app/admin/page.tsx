@@ -63,6 +63,7 @@ import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
 import { CreateOrganizationDialog } from '@/components/admin/create-organization-dialog';
+import { SystemHealth } from '@/components/admin/system-health';
 import { migrateExistingSlugs } from '@/lib/slugs';
 import { logAdminAction, getRecentAuditLogs, formatAuditAction, type AdminAuditLog } from '@/lib/admin-audit';
 
@@ -403,6 +404,11 @@ export default function AdminPage() {
               <div className="text-2xl font-bold text-destructive">{stats.suspended}</div>
             </CardContent>
           </Card>
+        </div>
+
+        {/* Salut del sistema */}
+        <div className="mb-8">
+          <SystemHealth />
         </div>
 
         {/* Eines d'administració */}
