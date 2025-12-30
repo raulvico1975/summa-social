@@ -60,6 +60,7 @@ const REQUIRED_PAGE_KEYS = [
 const GUIDE_IDS = [
   'firstDay',
   'firstMonth',
+  'monthClose',
   'movements',
   'returns',
   'remittances',
