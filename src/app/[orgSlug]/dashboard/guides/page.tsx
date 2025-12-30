@@ -288,9 +288,24 @@ const GUIDE_CONTENT = {
         steps: [],
       },
       reports: {
-        title: 'Informes (182/347/certificados)',
-        intro: 'Genera los outputs para la gestoría: verifica datos y exporta.',
-        steps: ['Resuelve alertas de donantes (DNI, CP).', 'Genera y envía a la gestoría.'],
+        title: 'Informes · Fiscalidad limpia',
+        intro: 'El informe no es el problema. El problema es el dato que entra. Si está sucio, el Excel también lo estará.',
+        notResolved: [
+          'Donantes con DNI/CP incompletos',
+          'Devoluciones sin donante asignado',
+          'Movimientos recientes sin categorizar',
+        ],
+        costlyError: 'Enviar el Excel a la gestoría sin abrirlo. Luego te llaman con 50 errores y no sabes por dónde empezar.',
+        checkBeforeExport: [
+          'Alertas de donantes resueltas',
+          'Devoluciones todas asignadas',
+          'Totales coherentes con lo esperado',
+        ],
+        dontFixYet: [
+          'Si faltan datos fiscales: espéralos antes de exportar',
+          'Si no es cierre: no hace falta generar nada',
+        ],
+        steps: [],
       },
       projects: {
         title: 'Proyectos (asignación gastos)',
