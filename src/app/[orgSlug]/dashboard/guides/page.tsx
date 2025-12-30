@@ -323,9 +323,24 @@ const GUIDE_CONTENT = {
         steps: [],
       },
       projects: {
-        title: 'Proyectos (asignación gastos)',
-        intro: 'Asigna gastos a partidas de proyectos para justificar subvenciones.',
-        steps: ['Selecciona proyecto y partida.', 'Asigna gastos desde Movimientos.'],
+        title: 'Proyectos · Justificación sin sorpresas',
+        intro: 'El descuadre no se descubre al final. Se detecta asignando gastos a partidas con criterio.',
+        notResolved: [
+          'Gastos sin partida asignada',
+          'Partida con importe asignado > presupuesto',
+          'Movimientos del proyecto sin categorizar',
+        ],
+        costlyError: 'Asignar gastos masivamente sin revisar. Luego no sabes qué gasto ha descuadrado la partida.',
+        checkBeforeExport: [
+          'Todos los gastos del proyecto asignados',
+          'Ninguna partida con desviación crítica',
+          'Documentos adjuntos completos',
+        ],
+        dontFixYet: [
+          'Si el proyecto aún tiene gastos pendientes de entrar',
+          'Si estás en fase de ejecución, no de justificación',
+        ],
+        steps: [],
       },
     },
   },
