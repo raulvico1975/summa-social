@@ -572,4 +572,49 @@ export const HELP_CONTENT_ES: Partial<Record<HelpRouteKey, HelpContent>> = {
     },
     keywords: ['manual', 'toc', 'anclas', 'referencia', 'documentación', 'búsqueda'],
   },
+
+  '/redirect-to-org': {
+    title: 'Ayuda · Acceso a la organización',
+    intro:
+      'Esta pantalla te redirige a tu organización. Si tienes acceso a más de una, el sistema te envía a la correcta según tus permisos.',
+    steps: [
+      'Espera unos segundos: la redirección es automática.',
+      'Si no redirige, comprueba que tienes sesión iniciada.',
+      'Si sigues aquí, puede que no tengas acceso a ninguna organización activa.',
+    ],
+    tips: [
+      'Si usas un ordenador compartido, cierra sesión al terminar.',
+      'Si te han cambiado rol u organización recientemente, puede que debas entrar de nuevo.',
+    ],
+    extra: {
+      order: {
+        title: 'Qué hacer',
+        items: [
+          'Esperar redirección',
+          'Reiniciar sesión si hace falta',
+          'Contactar con el admin si no tienes acceso',
+        ],
+      },
+      pitfalls: {
+        title: 'Errores habituales',
+        items: [
+          'Pensar que es un error de la app cuando es falta de permisos',
+          'Sesión caducada (browser session)',
+        ],
+      },
+      whenNot: {
+        title: 'Cuándo no preocuparse',
+        items: ['Si en 5–10 segundos te lleva al Dashboard, todo está bien.'],
+      },
+      manual: {
+        label: 'Manual de usuario · Primeros pasos',
+        href: '/dashboard/manual#1-primers-passos',
+      },
+      video: {
+        label: 'Vídeo (próximamente)',
+        note: 'Entrar en Summa Social y entender la redirección (2 minutos)',
+      },
+    },
+    keywords: ['acceso', 'organización', 'redirección', 'permisos', 'sesión'],
+  },
 };

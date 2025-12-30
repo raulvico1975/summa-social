@@ -572,4 +572,49 @@ export const HELP_CONTENT_FR: Partial<Record<HelpRouteKey, HelpContent>> = {
     },
     keywords: ['manuel', 'toc', 'ancres', 'référence', 'documentation', 'recherche'],
   },
+
+  '/redirect-to-org': {
+    title: "Aide · Accès à l'organisation",
+    intro:
+      "Cet écran vous redirige vers votre organisation. Si vous avez accès à plusieurs, le système choisit selon vos droits.",
+    steps: [
+      'Attendez quelques secondes : la redirection est automatique.',
+      'Si rien ne se passe, vérifiez que votre session est active.',
+      "Si vous restez ici, il est possible que vous n'ayez accès à aucune organisation active.",
+    ],
+    tips: [
+      "Sur un ordinateur partagé, déconnectez-vous en fin d'usage.",
+      'Après un changement de rôle/organisation, il peut être nécessaire de se reconnecter.',
+    ],
+    extra: {
+      order: {
+        title: 'Que faire',
+        items: [
+          'Attendre',
+          'Se reconnecter si besoin',
+          "Contacter l'admin en cas d'accès manquant",
+        ],
+      },
+      pitfalls: {
+        title: 'Erreurs fréquentes',
+        items: [
+          "Croire à un bug alors que c'est un manque de droits",
+          'Session expirée (browser session)',
+        ],
+      },
+      whenNot: {
+        title: "Quand ne pas s'inquiéter",
+        items: ['Si en 5–10 secondes vous arrivez au Dashboard, tout va bien.'],
+      },
+      manual: {
+        label: 'Manuel utilisateur · Premiers pas',
+        href: '/dashboard/manual#1-primers-passos',
+      },
+      video: {
+        label: 'Vidéo (bientôt)',
+        note: 'Se connecter et comprendre la redirection (2 minutes)',
+      },
+    },
+    keywords: ['accès', 'organisation', 'redirection', 'droits', 'session'],
+  },
 };

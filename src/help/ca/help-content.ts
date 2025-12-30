@@ -559,6 +559,50 @@ export const HELP_CONTENT_CA: Record<HelpRouteKey, HelpContent> = {
     },
     keywords: ['projecte', 'crear', 'editar', 'tancar', 'codi', 'pressupost', 'partides', 'assignació'],
   },
+  '/redirect-to-org': {
+    title: "Ajuda · Accés a l'organització",
+    intro:
+      "Aquesta pantalla et redirigeix a la teva organització. Si tens accés a més d'una, el sistema t'envia a la correcta segons els teus permisos.",
+    steps: [
+      'Espera uns segons: la redirecció és automàtica.',
+      'Si no et redirigeix, comprova que tens sessió iniciada.',
+      'Si continues aquí, pot ser que no tinguis accés a cap organització activa.',
+    ],
+    tips: [
+      'Si estàs en un ordinador compartit, tanca sessió quan acabis.',
+      "Si has canviat de rol o d'org recentment, pot caldre tornar a entrar.",
+    ],
+    extra: {
+      order: {
+        title: 'Què fer',
+        items: [
+          'Esperar redirecció',
+          'Reiniciar sessió si cal',
+          "Contactar l'admin si no tens accés",
+        ],
+      },
+      pitfalls: {
+        title: 'Errors habituals',
+        items: [
+          "Pensar que és un error de l'app quan és falta de permisos",
+          'Tenir la sessió caducada (browser session)',
+        ],
+      },
+      whenNot: {
+        title: 'Quan no cal preocupar-se',
+        items: ['Si en 5–10 segons et porta al Dashboard, tot està bé.'],
+      },
+      manual: {
+        label: "Manual d'usuari · Primers passos",
+        href: '/dashboard/manual#1-primers-passos',
+      },
+      video: {
+        label: 'Vídeo (properament)',
+        note: 'Entrar a Summa Social i entendre la redirecció (2 minuts)',
+      },
+    },
+    keywords: ['accés', 'organització', 'redirecció', 'permisos', 'sessió'],
+  },
 };
 
 export const HELP_FALLBACK_CA: HelpContent = {
