@@ -5,20 +5,71 @@ import { ExternalLink, ArrowUp } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { extractToc, parseMarkdownWithIds } from '@/lib/help/manual-toc';
 import type { TocEntry, RenderedLine } from '@/lib/help/manual-toc';
+import { useTranslations } from '@/i18n';
+
+// UI strings per idioma
+const UI_STRINGS = {
+  ca: {
+    title: "Manual d'usuari",
+    subtitle: 'Referencia completa per fer servir Summa Social sense suport.',
+    openNewTab: 'Obrir en una pestanya nova',
+    loading: 'Carregant manual...',
+    toc: 'Continguts',
+    backToTop: 'Tornar a dalt',
+  },
+  es: {
+    title: 'Manual de usuario',
+    subtitle: 'Referencia completa para usar Summa Social sin soporte.',
+    openNewTab: 'Abrir en una pestana nueva',
+    loading: 'Cargando manual...',
+    toc: 'Contenidos',
+    backToTop: 'Volver arriba',
+  },
+  fr: {
+    title: "Manuel d'utilisateur",
+    subtitle: 'Reference complete pour utiliser Summa Social sans support.',
+    openNewTab: 'Ouvrir dans un nouvel onglet',
+    loading: 'Chargement du manuel...',
+    toc: 'Sommaire',
+    backToTop: 'Retour en haut',
+  },
+} as const;
+
+/**
+ * Fetch manual with locale fallback to CA.
+ * Tries locale-specific file first, falls back to .ca.md if 404.
+ */
+async function fetchManualWithFallback(locale: 'ca' | 'es' | 'fr'): Promise<string> {
+  const basePath = '/docs/manual-usuari-summa-social';
+  const localePath = `${basePath}.${locale}.md`;
+  const fallbackPath = `${basePath}.ca.md`;
+
+  // Try locale-specific file first
+  const res = await fetch(localePath);
+  if (res.ok) {
+    return res.text();
+  }
+
+  // Fallback to CA
+  const fallbackRes = await fetch(fallbackPath);
+  if (!fallbackRes.ok) {
+    throw new Error('No s\'ha pogut carregar el manual');
+  }
+  return fallbackRes.text();
+}
 
 export default function ManualPage() {
+  const { language } = useTranslations();
   const [content, setContent] = React.useState<string | null>(null);
   const [error, setError] = React.useState<string | null>(null);
   const [loading, setLoading] = React.useState(true);
   const [toc, setToc] = React.useState<TocEntry[]>([]);
   const [parsedContent, setParsedContent] = React.useState<RenderedLine[]>([]);
 
+  const ui = UI_STRINGS[language] ?? UI_STRINGS.ca;
+
   React.useEffect(() => {
-    fetch('/docs/manual-usuari-summa-social.md')
-      .then((res) => {
-        if (!res.ok) throw new Error('No s\'ha pogut carregar el manual');
-        return res.text();
-      })
+    fetchManualWithFallback(language)
       .then((text) => {
         setContent(text);
         setToc(extractToc(text));
@@ -29,10 +80,10 @@ export default function ManualPage() {
         setError(err.message);
         setLoading(false);
       });
-  }, []);
+  }, [language]);
 
   const handleOpenInNewTab = () => {
-    window.open('/docs/manual-usuari-summa-social.md', '_blank');
+    window.open(`/docs/manual-usuari-summa-social.${language}.md`, '_blank');
   };
 
   // Padding segons nivell del TOC
@@ -64,21 +115,21 @@ export default function ManualPage() {
       <div className="mb-8">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-2xl font-bold">Manual d&apos;usuari</h1>
+            <h1 className="text-2xl font-bold">{ui.title}</h1>
             <p className="text-muted-foreground mt-1">
-              Referència completa per fer servir Summa Social sense suport.
+              {ui.subtitle}
             </p>
           </div>
           <Button variant="outline" size="sm" onClick={handleOpenInNewTab}>
             <ExternalLink className="h-4 w-4 mr-2" />
-            Obrir en una pestanya nova
+            {ui.openNewTab}
           </Button>
         </div>
       </div>
 
       {loading && (
         <div className="flex items-center justify-center py-12">
-          <p className="text-muted-foreground">Carregant manual...</p>
+          <p className="text-muted-foreground">{ui.loading}</p>
         </div>
       )}
 
@@ -93,7 +144,7 @@ export default function ManualPage() {
           {/* Taula de continguts */}
           {toc.length > 0 && (
             <div className="rounded-lg border bg-muted/30 p-4 mb-8">
-              <h2 className="font-semibold mb-3">Continguts</h2>
+              <h2 className="font-semibold mb-3">{ui.toc}</h2>
               <nav className="space-y-1">
                 {toc.map((entry, index) => (
                   <a
@@ -145,7 +196,7 @@ export default function ManualPage() {
             <Button variant="ghost" size="sm" asChild>
               <a href="#top">
                 <ArrowUp className="h-4 w-4 mr-2" />
-                Tornar a dalt
+                {ui.backToTop}
               </a>
             </Button>
           </div>
