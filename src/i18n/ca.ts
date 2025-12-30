@@ -1476,6 +1476,7 @@ export const ca = {
     projectModule: "Projectes",
     projectModuleManage: "Gestió de projectes",
     projectModuleExpenses: "Assignació de despeses",
+    guides: "Guies",
     settings: "Configuració",
     privacy: "Privacitat",
     logout: "Tancar Sessió",

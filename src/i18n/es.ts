@@ -1502,6 +1502,7 @@ export const es = {
     projectModule: "Proyectos",
     projectModuleManage: "Gestión de proyectos",
     projectModuleExpenses: "Asignación de gastos",
+    guides: "Guías",
     settings: "Configuración",
     privacy: "Privacidad",
     logout: "Cerrar Sesión",

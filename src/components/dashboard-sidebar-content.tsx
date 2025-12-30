@@ -33,6 +33,7 @@ import {
   UserCog,
   ClipboardList,
   ChevronRight,
+  Lightbulb,
 } from 'lucide-react';
 import { Logo } from '@/components/logo';
 import { useFirebase } from '@/firebase';
@@ -148,6 +149,14 @@ export function DashboardSidebarContent() {
         icon: AreaChart,
       },
     ];
+
+    // Afegir guies
+    baseItems.push({
+      path: '/dashboard/guides',
+      label: t.sidebar.guides ?? 'Guies',
+      icon: Lightbulb,
+      className: 'text-amber-500',
+    });
 
     // Afegir configuració
     baseItems.push({

@@ -1477,6 +1477,7 @@ export const fr = {
     projectModule: "Projets",
     projectModuleManage: "Gestion des projets",
     projectModuleExpenses: "Affectation des dépenses",
+    guides: "Guides",
     settings: "Configuration",
     privacy: "Confidentialité",
     logout: "Déconnexion",
