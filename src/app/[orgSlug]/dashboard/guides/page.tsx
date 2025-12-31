@@ -301,6 +301,7 @@ const GUIDES: GuideItem[] = [
 // Bloc A: "Tinc un problema" — Guies orientades a resoldre situacions
 const PROBLEM_GUIDE_IDS = [
   // Fiscalitat
+  'model182HasErrors',
   'model182',
   'model347',
   'certificatesBatch',

@@ -82,6 +82,7 @@ const GUIDE_IDS = [
   'changeLanguage',
   'importDonors',
   'generateDonorCertificate',
+  'model182HasErrors',
   'model182',
   'model347',
   'certificatesBatch',
