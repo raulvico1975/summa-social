@@ -5,7 +5,7 @@
 
 import * as React from 'react';
 import { useFirebase, useCollection, useMemoFirebase } from '@/firebase';
-import { collection, query, orderBy, doc, getDoc } from 'firebase/firestore';
+import { collection, query, orderBy, doc, getDoc, updateDoc, getDocs, limit } from 'firebase/firestore';
 import { getStorage, ref, getDownloadURL, uploadBytes, deleteObject } from 'firebase/storage';
 import {
   getOpenIncidents,
@@ -173,20 +173,89 @@ interface HealthCheck {
   id: string;
   name: string;
   description: string;
+  humanExplanation: string; // Text explicatiu per no-programadors
   status: CheckStatus;
   message?: string;
   requiresOrg?: boolean;
+  actionable?: 'documentsEnabled' | 'goToI18n' | 'openRoute'; // Tipus d'acció
+  isNonCritical?: boolean; // Si true, no contribueix al ❌ global del semàfor
 }
 
 const INITIAL_CHECKS: HealthCheck[] = [
-  { id: 'firestore-i18n', name: 'system/i18n', description: 'Firestore accessible', status: 'pending' },
-  { id: 'firestore-updates', name: 'productUpdates', description: 'Firestore accessible', status: 'pending' },
-  { id: 'storage-ca', name: 'i18n/ca.json', description: 'Storage accessible', status: 'pending' },
-  { id: 'storage-es', name: 'i18n/es.json', description: 'Storage accessible', status: 'pending' },
-  { id: 'storage-fr', name: 'i18n/fr.json', description: 'Storage accessible', status: 'pending' },
-  { id: 'storage-pt', name: 'i18n/pt.json', description: 'Storage accessible', status: 'pending' },
-  { id: 'storage-upload', name: 'pendingDocuments', description: 'Upload operatiu', status: 'pending', requiresOrg: true },
-  { id: 'legacy-redirect', name: 'quick-expense', description: 'Redirect legacy OK', status: 'pending', requiresOrg: true },
+  {
+    id: 'firestore-i18n',
+    name: 'system/i18n',
+    description: 'Firestore accessible',
+    humanExplanation: 'Activa la "versió de textos" que fa servir tothom. Sense això, pot haver-hi inconsistències.',
+    status: 'pending',
+    actionable: 'goToI18n',
+  },
+  {
+    id: 'firestore-updates',
+    name: 'productUpdates',
+    description: 'Novetats del producte',
+    humanExplanation: 'Normal si encara no has publicat cap novetat. No afecta el funcionament.',
+    status: 'pending',
+    isNonCritical: true, // No contribueix al ❌ global
+  },
+  {
+    id: 'storage-ca',
+    name: 'i18n/ca.json',
+    description: 'Storage accessible',
+    humanExplanation: 'Fitxer de traduccions en català. Si falla, els usuaris amb idioma català veuran claus sense traduir.',
+    status: 'pending',
+    actionable: 'goToI18n',
+  },
+  {
+    id: 'storage-es',
+    name: 'i18n/es.json',
+    description: 'Storage accessible',
+    humanExplanation: 'Fitxer de traduccions en castellà. Si falla, els usuaris amb idioma castellà veuran claus sense traduir.',
+    status: 'pending',
+    actionable: 'goToI18n',
+  },
+  {
+    id: 'storage-fr',
+    name: 'i18n/fr.json',
+    description: 'Storage accessible',
+    humanExplanation: 'Fitxer de traduccions en francès. Si falla, els usuaris amb idioma francès veuran claus sense traduir.',
+    status: 'pending',
+    actionable: 'goToI18n',
+  },
+  {
+    id: 'storage-pt',
+    name: 'i18n/pt.json',
+    description: 'Storage accessible',
+    humanExplanation: 'Fitxer de traduccions en portuguès. Si falla, els usuaris amb idioma portuguès veuran claus sense traduir.',
+    status: 'pending',
+    actionable: 'goToI18n',
+  },
+  {
+    id: 'firestore-transactions',
+    name: 'Moviments',
+    description: 'Lectura de transaccions',
+    humanExplanation: 'Si falla, els usuaris no podran veure els moviments de la seva organització.',
+    status: 'pending',
+    requiresOrg: true,
+  },
+  {
+    id: 'storage-upload',
+    name: 'pendingDocuments',
+    description: 'Upload operatiu',
+    humanExplanation: 'Permet pujar factures i nòmines. Si no ho actives, les pujades fallaran.',
+    status: 'pending',
+    requiresOrg: true,
+    actionable: 'documentsEnabled',
+  },
+  {
+    id: 'legacy-redirect',
+    name: 'quick-expense',
+    description: 'Redirect legacy OK',
+    humanExplanation: 'Comprova que l\'entrada ràpida de despeses funciona per als usuaris.',
+    status: 'pending',
+    requiresOrg: true,
+    actionable: 'openRoute',
+  },
 ];
 
 const SEMAPHORE_STORAGE_KEY = 'systemHealthSemaphore_selectedOrg';
@@ -224,6 +293,10 @@ export function SystemHealth() {
   const [healthChecks, setHealthChecks] = React.useState<HealthCheck[]>(INITIAL_CHECKS);
   const [isRunningChecks, setIsRunningChecks] = React.useState(false);
   const [selectedOrgId, setSelectedOrgId] = React.useState<string>('');
+
+  // Modal de confirmació per concedir permís de documents
+  const [documentsDialogOpen, setDocumentsDialogOpen] = React.useState(false);
+  const [isGrantingDocuments, setIsGrantingDocuments] = React.useState(false);
 
   // Carregar organitzacions per al selector
   const orgsQuery = useMemoFirebase(
@@ -404,6 +477,36 @@ export function SystemHealth() {
   const totalOpenIncidents = incidents.filter((i) => i.status === 'OPEN').length;
 
   // ─────────────────────────────────────────────────────────────────────────
+  // ACCIÓ: Concedir permís de documents
+  // ─────────────────────────────────────────────────────────────────────────
+
+  const handleGrantDocumentsPermission = async () => {
+    if (!firestore || !selectedOrgId) return;
+
+    setIsGrantingDocuments(true);
+    try {
+      const orgRef = doc(firestore, 'organizations', selectedOrgId);
+      await updateDoc(orgRef, { documentsEnabled: true });
+      toast({
+        title: 'Permís concedit',
+        description: 'Ara aquesta organització pot pujar documents.',
+      });
+      setDocumentsDialogOpen(false);
+      // Re-executar checks per veure el canvi
+      await runHealthChecks();
+    } catch (err) {
+      console.error('Error granting documents permission:', err);
+      toast({
+        title: 'Error',
+        description: 'No s\'ha pogut concedir el permís.',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsGrantingDocuments(false);
+    }
+  };
+
+  // ─────────────────────────────────────────────────────────────────────────
   // SEMÀFOR DE PRODUCCIÓ - Executar checks
   // ─────────────────────────────────────────────────────────────────────────
 
@@ -435,16 +538,18 @@ export function SystemHealth() {
       updateCheck('firestore-i18n', { status: 'error', message: (err as Error).message });
     }
 
-    // 2. Check productUpdates (Firestore)
+    // 2. Check productUpdates (Firestore) - no és crític si està buit
     try {
       const updatesDoc = await getDoc(doc(firestore, 'system', 'productUpdates'));
       if (updatesDoc.exists()) {
-        updateCheck('firestore-updates', { status: 'ok', message: 'OK' });
+        updateCheck('firestore-updates', { status: 'ok', message: 'Configurat' });
       } else {
-        updateCheck('firestore-updates', { status: 'warning', message: 'No existeix' });
+        // No existeix és normal si no s'han publicat novetats
+        updateCheck('firestore-updates', { status: 'ok', message: 'Normal (cap novetat publicada)' });
       }
     } catch (err) {
-      updateCheck('firestore-updates', { status: 'error', message: (err as Error).message });
+      // Error d'accés sí que és problema
+      updateCheck('firestore-updates', { status: 'warning', message: (err as Error).message });
     }
 
     // 3-6. Check i18n Storage files
@@ -466,7 +571,28 @@ export function SystemHealth() {
       }
     }
 
-    // 7. Check pendingDocuments upload (requires org)
+    // 7. Check moviments accessibles (Firestore read tècnic)
+    if (selectedOrg) {
+      try {
+        const txQuery = query(
+          collection(firestore, `organizations/${selectedOrgId}/transactions`),
+          limit(1)
+        );
+        await getDocs(txQuery);
+        updateCheck('firestore-transactions', { status: 'ok', message: 'Accessible' });
+      } catch (err) {
+        const error = err as { code?: string };
+        if (error.code === 'permission-denied') {
+          updateCheck('firestore-transactions', { status: 'error', message: 'Sense permisos' });
+        } else {
+          updateCheck('firestore-transactions', { status: 'error', message: (err as Error).message });
+        }
+      }
+    } else {
+      updateCheck('firestore-transactions', { status: 'warning', message: 'Cal seleccionar org' });
+    }
+
+    // 8. Check pendingDocuments upload (requires org)
     if (selectedOrg) {
       try {
         const testFileName = `_health_check_${Date.now()}.txt`;
@@ -488,7 +614,7 @@ export function SystemHealth() {
       updateCheck('storage-upload', { status: 'warning', message: 'Cal seleccionar org' });
     }
 
-    // 8. Check legacy quick-expense redirect
+    // 9. Check legacy quick-expense redirect
     if (selectedOrg) {
       try {
         const response = await fetch(`/${selectedOrg.slug}/quick-expense`, {
@@ -503,7 +629,7 @@ export function SystemHealth() {
         } else {
           updateCheck('legacy-redirect', { status: 'warning', message: `Status ${response.status}` });
         }
-      } catch (err) {
+      } catch {
         // fetch error usually means CORS or network issue, but route likely exists
         updateCheck('legacy-redirect', { status: 'ok', message: 'Ruta existeix (CORS)' });
       }
@@ -555,16 +681,28 @@ export function SystemHealth() {
   };
 
   // Calcular estat global del semàfor
+  // Només errors crítics (no isNonCritical) contribueixen al ❌ global
+  // Els warnings de "Cal seleccionar org" no penalitzen
   const semaphoreStatus = React.useMemo(() => {
-    const hasError = healthChecks.some((c) => c.status === 'error');
-    const hasWarning = healthChecks.some((c) => c.status === 'warning');
-    const allOk = healthChecks.every((c) => c.status === 'ok');
     const hasPending = healthChecks.some((c) => c.status === 'pending' || c.status === 'running');
-
     if (hasPending) return 'pending';
-    if (hasError) return 'error';
-    if (hasWarning) return 'warning';
-    if (allOk) return 'ok';
+
+    // Filtrar errors crítics (exclou isNonCritical)
+    const criticalChecks = healthChecks.filter((c) => !c.isNonCritical);
+    const hasCriticalError = criticalChecks.some((c) => c.status === 'error');
+
+    // Filtrar warnings que NO són "Cal seleccionar org" (aquests no penalitzen)
+    const hasRealWarning = healthChecks.some(
+      (c) => c.status === 'warning' && c.message !== 'Cal seleccionar org'
+    );
+
+    if (hasCriticalError) return 'error';
+    if (hasRealWarning) return 'warning';
+
+    // Si tots els checks crítics estan OK (o són non-critical OK/warning)
+    const allCriticalOk = criticalChecks.every((c) => c.status === 'ok' || c.status === 'warning');
+    if (allCriticalOk) return 'ok';
+
     return 'pending';
   }, [healthChecks]);
 
@@ -714,54 +852,143 @@ export function SystemHealth() {
                 </div>
 
                 {/* Grid de checks */}
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
-                  {healthChecks.map((check) => (
-                    <TooltipProvider key={check.id} delayDuration={200}>
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <div
-                            className={`flex items-center gap-2 p-2 rounded border text-xs ${
-                              check.status === 'ok'
-                                ? 'bg-green-50 border-green-200'
-                                : check.status === 'warning'
-                                  ? 'bg-yellow-50 border-yellow-200'
-                                  : check.status === 'error'
-                                    ? 'bg-red-50 border-red-200'
-                                    : check.status === 'running'
-                                      ? 'bg-blue-50 border-blue-200'
-                                      : 'bg-muted border-border'
-                            }`}
-                          >
-                            {check.status === 'ok' && <CheckCircle className="h-3 w-3 text-green-600 flex-shrink-0" />}
-                            {check.status === 'warning' && <AlertTriangle className="h-3 w-3 text-yellow-600 flex-shrink-0" />}
-                            {check.status === 'error' && <XCircle className="h-3 w-3 text-red-600 flex-shrink-0" />}
-                            {check.status === 'running' && <Loader2 className="h-3 w-3 text-blue-600 animate-spin flex-shrink-0" />}
-                            {check.status === 'pending' && <Clock className="h-3 w-3 text-muted-foreground flex-shrink-0" />}
-                            <div className="flex-1 min-w-0">
-                              <div className="font-medium truncate">{check.name}</div>
-                              {check.message && (
-                                <div className="text-[10px] text-muted-foreground truncate">{check.message}</div>
+                <div className="grid grid-cols-3 md:grid-cols-3 gap-2">
+                  {healthChecks.map((check) => {
+                    // Detectar si aquest check té una acció disponible
+                    const canGrantDocuments =
+                      check.id === 'storage-upload' &&
+                      check.status === 'error' &&
+                      check.message === 'storage/unauthorized' &&
+                      check.actionable === 'documentsEnabled';
+
+                    const canGoToI18n =
+                      check.actionable === 'goToI18n' &&
+                      (check.status === 'error' || check.status === 'warning');
+
+                    const canOpenRoute =
+                      check.actionable === 'openRoute' &&
+                      check.status === 'error' &&
+                      selectedOrgId;
+
+                    const selectedOrg = organizations?.find((o) => o.id === selectedOrgId);
+
+                    return (
+                      <TooltipProvider key={check.id} delayDuration={200}>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <div
+                              className={`flex flex-col p-2 rounded border text-xs ${
+                                check.status === 'ok'
+                                  ? 'bg-green-50 border-green-200'
+                                  : check.status === 'warning'
+                                    ? 'bg-yellow-50 border-yellow-200'
+                                    : check.status === 'error'
+                                      ? 'bg-red-50 border-red-200'
+                                      : check.status === 'running'
+                                        ? 'bg-blue-50 border-blue-200'
+                                        : 'bg-muted border-border'
+                              }`}
+                            >
+                              <div className="flex items-center gap-2">
+                                {check.status === 'ok' && <CheckCircle className="h-3 w-3 text-green-600 flex-shrink-0" />}
+                                {check.status === 'warning' && <AlertTriangle className="h-3 w-3 text-yellow-600 flex-shrink-0" />}
+                                {check.status === 'error' && <XCircle className="h-3 w-3 text-red-600 flex-shrink-0" />}
+                                {check.status === 'running' && <Loader2 className="h-3 w-3 text-blue-600 animate-spin flex-shrink-0" />}
+                                {check.status === 'pending' && <Clock className="h-3 w-3 text-muted-foreground flex-shrink-0" />}
+                                <div className="flex-1 min-w-0">
+                                  <div className="font-medium truncate">{check.name}</div>
+                                  {check.message && (
+                                    <div className="text-[10px] text-muted-foreground truncate">{check.message}</div>
+                                  )}
+                                </div>
+                                {check.requiresOrg && (
+                                  <TooltipProvider delayDuration={200}>
+                                    <Tooltip>
+                                      <TooltipTrigger asChild>
+                                        <Database className="h-3 w-3 text-muted-foreground flex-shrink-0" />
+                                      </TooltipTrigger>
+                                      <TooltipContent side="top">Requereix org</TooltipContent>
+                                    </Tooltip>
+                                  </TooltipProvider>
+                                )}
+                              </div>
+
+                              {/* Botons d'acció segons el tipus */}
+                              {canGrantDocuments && (
+                                <div className="mt-2 space-y-1">
+                                  <Button
+                                    variant="secondary"
+                                    size="sm"
+                                    className="h-6 text-[10px] w-full"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      setDocumentsDialogOpen(true);
+                                    }}
+                                  >
+                                    Concedir permís de documents
+                                  </Button>
+                                  <p className="text-[9px] text-muted-foreground leading-tight">
+                                    Permet pujar factures i nòmines. Si no ho actives, les pujades fallaran.
+                                  </p>
+                                </div>
+                              )}
+
+                              {canGoToI18n && (
+                                <div className="mt-2 space-y-1">
+                                  <Button
+                                    variant="secondary"
+                                    size="sm"
+                                    className="h-6 text-[10px] w-full"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      // Navegar a la secció de traduccions (SuperAdmin)
+                                      const superAdminSection = document.querySelector('[data-section="i18n"]');
+                                      if (superAdminSection) {
+                                        superAdminSection.scrollIntoView({ behavior: 'smooth' });
+                                      } else {
+                                        toast({
+                                          title: 'Traduccions',
+                                          description: 'Ves a la secció SuperAdmin → Traduccions per inicialitzar.',
+                                        });
+                                      }
+                                    }}
+                                  >
+                                    Anar a Traduccions
+                                  </Button>
+                                  <p className="text-[9px] text-muted-foreground leading-tight">
+                                    Això arregla els textos i elimina els errors de traducció.
+                                  </p>
+                                </div>
+                              )}
+
+                              {canOpenRoute && selectedOrg && (
+                                <div className="mt-2 space-y-1">
+                                  <Button
+                                    variant="secondary"
+                                    size="sm"
+                                    className="h-6 text-[10px] w-full"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      window.open(`/${selectedOrg.slug}/quick-expense`, '_blank');
+                                    }}
+                                  >
+                                    Obrir ruta
+                                  </Button>
+                                  <p className="text-[9px] text-muted-foreground leading-tight">
+                                    Comprova que l&apos;entrada ràpida de despeses funciona.
+                                  </p>
+                                </div>
                               )}
                             </div>
-                            {check.requiresOrg && (
-                              <TooltipProvider delayDuration={200}>
-                                <Tooltip>
-                                  <TooltipTrigger asChild>
-                                    <Database className="h-3 w-3 text-muted-foreground flex-shrink-0" />
-                                  </TooltipTrigger>
-                                  <TooltipContent side="top">Requereix org</TooltipContent>
-                                </Tooltip>
-                              </TooltipProvider>
-                            )}
-                          </div>
-                        </TooltipTrigger>
-                        <TooltipContent side="bottom">
-                          <p className="text-xs">{check.description}</p>
-                          {check.message && <p className="text-xs font-mono mt-1">{check.message}</p>}
-                        </TooltipContent>
-                      </Tooltip>
-                    </TooltipProvider>
-                  ))}
+                          </TooltipTrigger>
+                          <TooltipContent side="bottom" className="max-w-[250px]">
+                            <p className="text-xs">{check.humanExplanation}</p>
+                            {check.message && <p className="text-xs font-mono mt-1 text-muted-foreground">{check.message}</p>}
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
+                    );
+                  })}
                 </div>
               </div>
             </>
@@ -1168,6 +1395,65 @@ export function SystemHealth() {
               </div>
             </div>
           )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Modal de confirmació per concedir permís de documents */}
+      <Dialog open={documentsDialogOpen} onOpenChange={setDocumentsDialogOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Upload className="h-5 w-5 text-blue-600" />
+              Concedir permís de documents
+            </DialogTitle>
+            <DialogDescription>
+              Aquesta acció activarà la pujada de documents per a l&apos;organització seleccionada.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4">
+            {/* Resum de l'acció */}
+            <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg text-sm">
+              <p className="font-medium text-blue-900">
+                Organització: {organizations?.find((o) => o.id === selectedOrgId)?.name || '-'}
+              </p>
+              <p className="text-blue-700 text-xs mt-1">
+                S&apos;establirà <code className="bg-blue-100 px-1 rounded">documentsEnabled: true</code> al document de l&apos;organització.
+              </p>
+            </div>
+
+            {/* Advertència */}
+            <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg text-sm text-amber-800">
+              <p className="font-medium">Què passarà:</p>
+              <ul className="list-disc list-inside mt-1 text-xs space-y-1">
+                <li>Els usuaris podran pujar factures i nòmines</li>
+                <li>Les regles de Storage permetran escriptura a pendingDocuments</li>
+                <li>El check es re-executarà automàticament</li>
+              </ul>
+            </div>
+
+            {/* Botons */}
+            <div className="flex justify-end gap-2 pt-2">
+              <Button
+                variant="outline"
+                onClick={() => setDocumentsDialogOpen(false)}
+                disabled={isGrantingDocuments}
+              >
+                Cancel·lar
+              </Button>
+              <Button
+                onClick={handleGrantDocumentsPermission}
+                disabled={isGrantingDocuments}
+              >
+                {isGrantingDocuments ? (
+                  <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                ) : (
+                  <Check className="h-4 w-4 mr-2" />
+                )}
+                Concedir permís
+              </Button>
+            </div>
+          </div>
         </DialogContent>
       </Dialog>
     </>
