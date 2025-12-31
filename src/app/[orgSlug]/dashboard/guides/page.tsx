@@ -42,9 +42,10 @@ import {
   UserX,
   Save,
   ToggleLeft,
-  Trash2,
   Eye,
   Clock,
+  AlertCircle,
+  CheckCircle2,
 } from 'lucide-react';
 import { useTranslations } from '@/i18n';
 
@@ -291,12 +292,74 @@ const GUIDES: GuideItem[] = [
     href: '/dashboard/movimientos',
     manualAnchor: '#remittances',
   },
-  {
-    id: 'dangerDeleteLastRemittance',
-    icon: <Trash2 className="h-5 w-5" />,
-    href: '/dashboard/configuracion',
-    manualAnchor: '#danger',
-  },
+];
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Blocs A/B — Separació per intent d'usuari
+// ─────────────────────────────────────────────────────────────────────────────
+
+// Bloc A: "Tinc un problema" — Guies orientades a resoldre situacions
+const PROBLEM_GUIDE_IDS = [
+  // Fiscalitat
+  'model182',
+  'model347',
+  'certificatesBatch',
+  // Importació i remeses
+  'importMovements',
+  'remittances',
+  'remittanceLowMembers',
+  'returns',
+  // Stripe
+  'stripeDonations',
+  // Operativa
+  'movementFilters',
+  'bulkCategory',
+  'resetPassword',
+  'accessSecurity',
+];
+
+// Bloc B: "Vull fer una acció" — Guies orientades a tasques concretes
+const ACTION_GUIDE_IDS = [
+  // Onboarding
+  'firstDay',
+  'firstMonth',
+  'initialLoad',
+  // Moviments
+  'movements',
+  'importMovements',
+  'editMovement',
+  'attachDocument',
+  'changePeriod',
+  'selectBankAccount',
+  'bulkAICategorize',
+  'travelReceipts',
+  // Remeses
+  'splitRemittance',
+  'remittanceViewDetail',
+  'saveRemittanceMapping',
+  'toggleRemittanceItems',
+  // Stripe
+  'stripeDonations',
+  // Donants
+  'donors',
+  'importDonors',
+  'updateExistingDonors',
+  'donorSetInactive',
+  'donorReactivate',
+  'generateDonorCertificate',
+  // Informes
+  'model182',
+  'model347',
+  'certificatesBatch',
+  'yearEndFiscal',
+  // Projectes
+  'projects',
+  // Fluxos
+  'monthlyFlow',
+  'monthClose',
+  'reports',
+  // Configuració
+  'changeLanguage',
 ];
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -348,10 +411,91 @@ export default function GuidesPage() {
 
   // Page-level translations (amb fallback humà)
   const pageTitle = safeTr(tr, 'guides.pageTitle', 'Guies');
-  const pageSubtitle = safeTr(tr, 'guides.pageSubtitle', 'Consulta ràpida per a tasques habituals');
   const viewManual = safeTr(tr, 'guides.viewManual', 'Veure manual');
   const viewHelp = safeTr(tr, 'guides.viewHelp', 'Ajuda');
-  // NOTE: Labels i arrays (lookFirst, steps, avoid, etc.) només a pàgina de detall
+
+  // Helper per renderitzar una card de guia
+  const renderGuideCard = (guideId: string) => {
+    const guide = GUIDES.find((g) => g.id === guideId);
+    if (!guide) return null;
+
+    const titleKey = `guides.${guide.id}.title`;
+    const titleValue = tr(titleKey);
+    const titleResolved = !isUnresolvedKey(titleValue, titleKey);
+
+    if (!titleResolved) {
+      if (process.env.NODE_ENV === 'development') {
+        console.warn(`[guides] Skipping unresolved guide: ${guide.id}`);
+      }
+      return null;
+    }
+
+    const title = titleValue;
+    const cta = safeTr(tr, `guides.cta.${guide.id}`, 'Anar-hi');
+
+    // Summary amb fallback a whatIs > intro
+    const summaryKey = `guides.${guide.id}.summary`;
+    const summary = tr(summaryKey);
+    const hasSummary = !isUnresolvedKey(summary, summaryKey);
+
+    let cardDescription = '';
+    if (hasSummary) {
+      cardDescription = summary;
+    } else {
+      const whatIsKey = `guides.${guide.id}.whatIs`;
+      const whatIs = tr(whatIsKey);
+      if (!isUnresolvedKey(whatIs, whatIsKey)) {
+        cardDescription = whatIs;
+      } else {
+        cardDescription = safeTr(tr, `guides.${guide.id}.intro`, '');
+      }
+    }
+
+    return (
+      <Card key={guide.id} className="flex flex-col">
+        <CardHeader className="pb-3">
+          <div className="flex items-start gap-3">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
+              {guide.icon}
+            </div>
+            <div className="flex-1 min-w-0">
+              <CardTitle className="text-base leading-tight">{title}</CardTitle>
+            </div>
+          </div>
+          {cardDescription && (
+            <CardDescription className="mt-2">
+              {cardDescription}
+            </CardDescription>
+          )}
+        </CardHeader>
+
+        <CardContent className="flex-1 flex flex-col">
+          <div className="mt-auto flex flex-col gap-2">
+            <Button asChild size="sm">
+              <Link href={buildUrl(guide.href)}>
+                {cta}
+                <ArrowRight className="ml-2 h-4 w-4" />
+              </Link>
+            </Button>
+            {guide.helpHref && (
+              <Button variant="outline" size="sm" asChild>
+                <Link href={buildUrl(guide.helpHref)}>
+                  <HelpCircle className="mr-2 h-4 w-4" />
+                  {viewHelp}
+                </Link>
+              </Button>
+            )}
+            <Button variant="ghost" size="sm" asChild>
+              <Link href={buildUrl(`/dashboard/manual${guide.manualAnchor}`)}>
+                <BookOpen className="mr-2 h-4 w-4" />
+                {viewManual}
+              </Link>
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  };
 
   return (
     <div className="container max-w-5xl py-8">
@@ -361,97 +505,42 @@ export default function GuidesPage() {
           <BookOpen className="h-6 w-6 text-primary" />
           <h1 className="text-2xl font-bold">{pageTitle}</h1>
         </div>
-        <p className="text-muted-foreground">{pageSubtitle}</p>
+        <p className="text-muted-foreground">
+          Ajuda ràpida sense suport humà
+        </p>
       </div>
 
-      {/* Grid de guies */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {GUIDES.map((guide) => {
-          // Llegir traduccions per aquesta guia
-          const titleKey = `guides.${guide.id}.title`;
-          const titleValue = tr(titleKey);
-          const titleResolved = !isUnresolvedKey(titleValue, titleKey);
+      {/* Bloc A: Tinc un problema */}
+      <section className="rounded-lg bg-amber-50 dark:bg-amber-950/20 p-5 mb-8">
+        <div className="mb-4">
+          <h2 className="flex items-center gap-2 text-lg font-semibold text-amber-900 dark:text-amber-100">
+            <AlertCircle className="h-5 w-5" />
+            Tinc un problema
+          </h2>
+          <p className="text-sm text-amber-800 dark:text-amber-200 mt-1">
+            Tria el que t&apos;està passant i et portem al lloc correcte.
+          </p>
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {PROBLEM_GUIDE_IDS.map((id) => renderGuideCard(id))}
+        </div>
+      </section>
 
-          // Si el títol no es resol, ocultar la card (millor no mostrar res)
-          if (!titleResolved) {
-            if (process.env.NODE_ENV === 'development') {
-              console.warn(`[guides] Skipping unresolved guide: ${guide.id}`);
-            }
-            return null;
-          }
-
-          const title = titleValue;
-          const cta = safeTr(tr, `guides.cta.${guide.id}`, 'Anar-hi');
-
-          // DECISIÓ UX: Les cards NOMÉS mostren summary, MAI llistes ni passos
-          // Summary amb fallback a whatIs > intro (per compatibilitat)
-          const summaryKey = `guides.${guide.id}.summary`;
-          const summary = tr(summaryKey);
-          const hasSummary = !isUnresolvedKey(summary, summaryKey);
-
-          let cardDescription = '';
-          if (hasSummary) {
-            cardDescription = summary;
-          } else {
-            // Fallback per guies sense summary encara
-            const whatIsKey = `guides.${guide.id}.whatIs`;
-            const whatIs = tr(whatIsKey);
-            if (!isUnresolvedKey(whatIs, whatIsKey)) {
-              cardDescription = whatIs;
-            } else {
-              cardDescription = safeTr(tr, `guides.${guide.id}.intro`, '');
-            }
-          }
-
-          return (
-            <Card key={guide.id} className="flex flex-col">
-              <CardHeader className="pb-3">
-                <div className="flex items-start gap-3">
-                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
-                    {guide.icon}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <CardTitle className="text-base leading-tight">{title}</CardTitle>
-                  </div>
-                </div>
-                {/* DECISIÓ UX: Només summary, sense truncament */}
-                {cardDescription && (
-                  <CardDescription className="mt-2">
-                    {cardDescription}
-                  </CardDescription>
-                )}
-              </CardHeader>
-
-              <CardContent className="flex-1 flex flex-col">
-                {/* CTAs */}
-                <div className="mt-auto flex flex-col gap-2">
-                  <Button asChild size="sm">
-                    <Link href={buildUrl(guide.href)}>
-                      {cta}
-                      <ArrowRight className="ml-2 h-4 w-4" />
-                    </Link>
-                  </Button>
-                  {/* CTA secundari: ajuda detallada (si helpHref existeix) */}
-                  {guide.helpHref && (
-                    <Button variant="outline" size="sm" asChild>
-                      <Link href={buildUrl(guide.helpHref)}>
-                        <HelpCircle className="mr-2 h-4 w-4" />
-                        {viewHelp}
-                      </Link>
-                    </Button>
-                  )}
-                  <Button variant="ghost" size="sm" asChild>
-                    <Link href={buildUrl(`/dashboard/manual${guide.manualAnchor}`)}>
-                      <BookOpen className="mr-2 h-4 w-4" />
-                      {viewManual}
-                    </Link>
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-          );
-        })}
-      </div>
+      {/* Bloc B: Vull fer una acció */}
+      <section className="rounded-lg bg-blue-50 dark:bg-blue-950/20 p-5">
+        <div className="mb-4">
+          <h2 className="flex items-center gap-2 text-lg font-semibold text-blue-900 dark:text-blue-100">
+            <CheckCircle2 className="h-5 w-5" />
+            Vull fer una acció
+          </h2>
+          <p className="text-sm text-blue-800 dark:text-blue-200 mt-1">
+            Accés directe a tasques concretes.
+          </p>
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {ACTION_GUIDE_IDS.map((id) => renderGuideCard(id))}
+        </div>
+      </section>
     </div>
   );
 }
