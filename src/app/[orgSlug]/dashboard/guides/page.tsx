@@ -39,6 +39,8 @@ import {
   Languages,
   FileSpreadsheet,
   Award,
+  UserMinus,
+  UserCheck,
 } from 'lucide-react';
 import { useTranslations } from '@/i18n';
 
@@ -200,6 +202,36 @@ const GUIDES: GuideItem[] = [
     icon: <Award className="h-5 w-5" />,
     href: '/dashboard/donants',
     manualAnchor: '#reports',
+  },
+  {
+    id: 'model182',
+    icon: <FileSpreadsheet className="h-5 w-5" />,
+    href: '/dashboard/informes',
+    manualAnchor: '#reports',
+  },
+  {
+    id: 'model347',
+    icon: <FileSpreadsheet className="h-5 w-5" />,
+    href: '/dashboard/informes',
+    manualAnchor: '#reports',
+  },
+  {
+    id: 'certificatesBatch',
+    icon: <Award className="h-5 w-5" />,
+    href: '/dashboard/informes',
+    manualAnchor: '#reports',
+  },
+  {
+    id: 'donorSetInactive',
+    icon: <UserMinus className="h-5 w-5" />,
+    href: '/dashboard/donants',
+    manualAnchor: '#donors',
+  },
+  {
+    id: 'donorReactivate',
+    icon: <UserCheck className="h-5 w-5" />,
+    href: '/dashboard/donants',
+    manualAnchor: '#donors',
   },
 ];
 
