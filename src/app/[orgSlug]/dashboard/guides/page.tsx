@@ -88,6 +88,12 @@ const GUIDES: GuideItem[] = [
     manualAnchor: '#5-gestio-de-moviments',
   },
   {
+    id: 'changePeriod',
+    icon: <Clock className="h-5 w-5" />,
+    href: '/dashboard/movimientos',
+    manualAnchor: '#movements',
+  },
+  {
     id: 'attachDocument',
     icon: <Paperclip className="h-5 w-5" />,
     href: '/dashboard/movimientos',
