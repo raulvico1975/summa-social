@@ -274,7 +274,32 @@ function validateLanguage(baseMessages: JsonMessages, targetMessages: JsonMessag
     }
   }
 
-  // 6. Comprovar que no hi ha claus guides.* al target que no existeixin al base
+  // 6. HARD RULE: Cada guia ha de tenir com a mínim un array de contingut amb ≥1 element
+  // Formats acceptats:
+  // - stepsFormat: steps[]
+  // - checklistFormat: lookFirst[] (i opcionalment then[])
+  // - expertFormat: notResolved[]
+  // Això garanteix que el Hub pot renderitzar contingut útil
+  for (const guideId of GUIDE_IDS) {
+    const stepsPrefix = `guides.${guideId}.steps`;
+    const lookFirstPrefix = `guides.${guideId}.lookFirst`;
+    const thenPrefix = `guides.${guideId}.then`;
+    const notResolvedPrefix = `guides.${guideId}.notResolved`;
+
+    const hasSteps = getArrayKeys(targetMessages, stepsPrefix).length > 0;
+    const hasLookFirst = getArrayKeys(targetMessages, lookFirstPrefix).length > 0;
+    const hasThen = getArrayKeys(targetMessages, thenPrefix).length > 0;
+    const hasNotResolved = getArrayKeys(targetMessages, notResolvedPrefix).length > 0;
+
+    if (!hasSteps && !hasLookFirst && !hasThen && !hasNotResolved) {
+      errors.push({
+        type: 'critical',
+        message: `Guia ${guideId} no té cap array de contingut (steps, lookFirst, then, o notResolved). El Hub no pot renderitzar res útil.`,
+      });
+    }
+  }
+
+  // 7. Comprovar que no hi ha claus guides.* al target que no existeixin al base
   const baseGuideKeys = Object.keys(baseMessages).filter(k => k.startsWith('guides.'));
   const targetGuideKeys = Object.keys(targetMessages).filter(k => k.startsWith('guides.'));
   const extraKeys = targetGuideKeys.filter(k => !baseGuideKeys.includes(k));
