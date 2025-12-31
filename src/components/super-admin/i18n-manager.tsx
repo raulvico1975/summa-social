@@ -37,6 +37,8 @@ import {
   Database,
   XCircle,
   RefreshCw,
+  BookOpen,
+  Compass,
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { getStorage, ref, getDownloadURL, uploadBytes } from 'firebase/storage';
@@ -467,19 +469,36 @@ export function I18nManager() {
         </Select>
       </div>
 
+      {/* A) Text introductori */}
+      <div className="flex items-start gap-3 p-4 rounded-lg bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800">
+        <BookOpen className="h-5 w-5 text-blue-600 dark:text-blue-400 mt-0.5 shrink-0" />
+        <div className="space-y-1">
+          <h4 className="font-medium text-blue-900 dark:text-blue-100">Com funciona aquesta secció</h4>
+          <p className="text-sm text-blue-800 dark:text-blue-200">
+            Aquesta secció permet gestionar les traduccions de l&apos;aplicació sense tocar codi.
+            Els canvis no afecten els usuaris fins que es publiquen explícitament.
+          </p>
+        </div>
+      </div>
+
       <div className="grid gap-4 md:grid-cols-2">
         {/* Download Card */}
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-base">
               <Download className="h-4 w-4 text-green-500" />
-              Descarregar JSON
+              1. Descarregar JSON
             </CardTitle>
             <CardDescription>
               Baixa el paquet de traducció (Storage prioritari, fallback local)
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
+            {/* Micro-guia */}
+            <div className="text-xs space-y-1 p-2 rounded bg-muted/50 border-l-2 border-green-500">
+              <div><strong>Quan usar-ho:</strong> Abans de traduir o revisar textos. Aquest fitxer és la base actual amb totes les claus.</div>
+              <div><strong>Què fa:</strong> Descarrega l&apos;estat vigent de les traduccions.</div>
+            </div>
             <div className="flex items-center justify-between p-3 rounded-lg border bg-muted/30">
               <div className="flex items-center gap-2">
                 <FileJson className="h-4 w-4 text-muted-foreground" />
@@ -524,13 +543,18 @@ export function I18nManager() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-base">
               <Upload className="h-4 w-4 text-blue-500" />
-              Pujar JSON
+              2. Pujar JSON
             </CardTitle>
             <CardDescription>
               Puja un fitxer JSON traduït per validar-lo
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
+            {/* Micro-guia */}
+            <div className="text-xs space-y-1 p-2 rounded bg-muted/50 border-l-2 border-blue-500">
+              <div><strong>Quan usar-ho:</strong> Quan tens un fitxer JSON traduït o corregit.</div>
+              <div><strong>Què fa:</strong> Valida que el fitxer sigui coherent amb l&apos;idioma base (claus que falten o sobren). Encara no activa cap canvi als usuaris.</div>
+            </div>
             <input
               ref={fileInputRef}
               type="file"
@@ -688,13 +712,31 @@ export function I18nManager() {
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-base">
             <Database className="h-4 w-4 text-orange-500" />
-            Inicialització
+            3. Inicialització (casos especials)
           </CardTitle>
           <CardDescription>
             Això puja a Storage els fitxers de traducció (ca/es/fr/pt) que tens al projecte i els activa per tothom.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
+          {/* Micro-guia amb avís */}
+          <div className="text-xs space-y-2 p-3 rounded bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800">
+            <div className="flex items-center gap-2 font-medium text-amber-800 dark:text-amber-200">
+              <AlertTriangle className="h-4 w-4" />
+              Només necessari en casos especials
+            </div>
+            <div className="text-amber-700 dark:text-amber-300">
+              Usa aquest botó només si:
+              <ul className="list-disc ml-4 mt-1 space-y-0.5">
+                <li>és la primera vegada que es configuren traduccions, o</li>
+                <li>s&apos;ha esborrat el Storage de traduccions.</li>
+              </ul>
+            </div>
+            <div className="text-amber-600 dark:text-amber-400 font-medium">
+              Si només estàs corregint textos, no cal inicialitzar.
+            </div>
+          </div>
+
           {/* Status per idioma */}
           <div className="grid grid-cols-4 gap-2">
             {ALL_LANGUAGES.map((lang) => {
@@ -805,13 +847,28 @@ export function I18nManager() {
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-base">
             <Send className="h-4 w-4 text-purple-500" />
-            Publicar traduccions
+            4. Publicar traduccions
           </CardTitle>
           <CardDescription>
             Activa els canvis pujats a Storage per a tots els usuaris
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
+          {/* Micro-guia */}
+          <div className="text-xs space-y-2 p-3 rounded bg-purple-50 dark:bg-purple-950/30 border border-purple-200 dark:border-purple-800">
+            <div className="flex items-center gap-2 font-medium text-purple-800 dark:text-purple-200">
+              <Send className="h-4 w-4" />
+              Aquest pas activa els canvis per a tothom
+            </div>
+            <div className="text-purple-700 dark:text-purple-300">
+              Publicar incrementa la versió i invalida la cache dels usuaris.
+              Els canvis es veuran immediatament, sense recarregar la pàgina.
+            </div>
+            <div className="text-purple-600 dark:text-purple-400">
+              <strong>Quan usar-ho:</strong> Només quan estiguis segur que les traduccions són correctes.
+            </div>
+          </div>
+
           <div className="flex items-center justify-between p-3 rounded-lg border bg-muted/30">
             <div className="flex items-center gap-2">
               <span className="text-sm text-muted-foreground">Versió activa:</span>
@@ -842,11 +899,25 @@ export function I18nManager() {
         </CardContent>
       </Card>
 
+      {/* C) Resum final - Ordre habitual */}
+      <div className="flex items-start gap-3 p-4 rounded-lg bg-muted/50 border">
+        <Compass className="h-5 w-5 text-muted-foreground mt-0.5 shrink-0" />
+        <div className="space-y-2">
+          <h4 className="font-medium">Ordre habitual</h4>
+          <div className="font-mono text-sm bg-background px-3 py-2 rounded border">
+            Descarregar → Editar fora → Pujar → (Inicialitzar si cal) → Publicar
+          </div>
+          <p className="text-xs text-muted-foreground">
+            La majoria de vegades només necessites: Descarregar → Editar → Pujar → Publicar
+          </p>
+        </div>
+      </div>
+
       {/* Info footer */}
-      <div className="flex items-start gap-2 p-3 rounded-lg bg-muted/50 text-sm text-muted-foreground">
+      <div className="flex items-start gap-2 p-3 rounded-lg bg-muted/30 text-xs text-muted-foreground">
         <Info className="h-4 w-4 mt-0.5 shrink-0" />
         <div>
-          <strong>Referència:</strong> El català (ca) és l'idioma base. Les traduccions es comparen
+          <strong>Referència:</strong> El català (ca) és l&apos;idioma base. Les traduccions es comparen
           amb les {totalKeysInBase} claus del català per detectar diferències.
         </div>
       </div>
