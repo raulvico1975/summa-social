@@ -635,10 +635,15 @@ export function ProductUpdatesSection({ isSuperAdmin = false }: ProductUpdatesSe
             </CardDescription>
           </div>
           <div className="flex items-center gap-2">
-            <Button variant="outline" size="sm" onClick={handleExportWebJson}>
-              <FileJson className="mr-2 h-4 w-4" />
-              Exportar web JSON
-            </Button>
+            <div className="flex flex-col items-end gap-1">
+              <Button variant="outline" size="sm" onClick={handleExportWebJson}>
+                <FileJson className="mr-2 h-4 w-4" />
+                Exportar web JSON
+              </Button>
+              <p className="text-[10px] text-muted-foreground max-w-[200px] text-right">
+                Després: substituir public/novetats-data.json + commit + deploy
+              </p>
+            </div>
             <Label htmlFor="import-json" className="cursor-pointer">
               <Button variant="outline" size="sm" asChild disabled={isImporting}>
                 <span>
