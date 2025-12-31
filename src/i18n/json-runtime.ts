@@ -81,14 +81,23 @@ async function loadFromStorage(language: string): Promise<JsonMessages | null> {
     }
 
     return data;
-  } catch {
-    // Storage file doesn't exist or error - marcar negative cache
+  } catch (error: unknown) {
+    // Marcar negative cache per no reintentar
     storageMissing.add(language);
-    // Log únic: només la primera vegada per idioma
-    if (!loggedStorageMissing.has(language)) {
+
+    // Silenciós per errors esperats (object-not-found, permission-denied)
+    // Només loguejar errors inesperats
+    const isExpectedError =
+      error instanceof Error &&
+      (error.message.includes('storage/object-not-found') ||
+        error.message.includes('storage/unauthorized') ||
+        error.message.includes('permission-denied'));
+
+    if (!isExpectedError && !loggedStorageMissing.has(language)) {
       loggedStorageMissing.add(language);
-      // Silenciós: és comportament normal en setups nous
+      console.warn(`[i18n] Unexpected error loading ${language} from Storage, using local fallback`);
     }
+
     return null;
   }
 }
