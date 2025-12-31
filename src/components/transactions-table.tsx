@@ -1372,17 +1372,16 @@ export function TransactionsTable({ initialDateFilter = null }: TransactionsTabl
                   )}
                 </button>
               </TableHead>
-              <TableHead className="text-right w-[110px] py-2">{t.movements.table.amount}</TableHead>
-              <TableHead className="min-w-[180px] lg:min-w-[280px] py-2">{t.movements.table.concept}</TableHead>
-              <TableHead className="w-[140px] py-2 hidden md:table-cell">{t.movements.table.contact}</TableHead>
-              <TableHead className="w-[120px] py-2 hidden md:table-cell">{t.movements.table.category}</TableHead>
+              <TableHead className="text-right w-[100px] py-2 whitespace-nowrap">{t.movements.table.amount}</TableHead>
+              <TableHead className="min-w-[200px] lg:min-w-[360px] py-2">{t.movements.table.concept}</TableHead>
+              <TableHead className="w-[150px] py-2 hidden lg:table-cell">{t.movements.table.contact}</TableHead>
+              <TableHead className="w-[140px] py-2 hidden lg:table-cell">{t.movements.table.category}</TableHead>
               {showProjectColumn && (
                 <TableHead className="w-[100px] py-2 hidden lg:table-cell">
                   {t.movements.table.project}
                 </TableHead>
               )}
-              <TableHead className="w-[56px] text-center py-2">Doc</TableHead>
-              <TableHead className="w-[48px] py-2"><span className="sr-only">{t.movements.table.actions}</span></TableHead>
+              <TableHead className="w-[88px] text-right py-2 pr-3"><span className="sr-only">{t.movements.table.actions}</span></TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>

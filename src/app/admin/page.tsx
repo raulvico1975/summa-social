@@ -65,6 +65,7 @@ import { useToast } from '@/hooks/use-toast';
 import { CreateOrganizationDialog } from '@/components/admin/create-organization-dialog';
 import { SystemHealth } from '@/components/admin/system-health';
 import { ProductUpdatesSection } from '@/components/admin/product-updates-section';
+import { I18nManager } from '@/components/super-admin/i18n-manager';
 import { migrateExistingSlugs } from '@/lib/slugs';
 import { logAdminAction, getRecentAuditLogs, formatAuditAction, type AdminAuditLog } from '@/lib/admin-audit';
 
@@ -415,6 +416,11 @@ export default function AdminPage() {
         {/* Novetats del producte */}
         <div className="mb-8">
           <ProductUpdatesSection isSuperAdmin={isSuperAdmin} />
+        </div>
+
+        {/* Traduccions (i18n) */}
+        <div className="mb-8">
+          <I18nManager />
         </div>
 
         {/* Eines d'administració */}

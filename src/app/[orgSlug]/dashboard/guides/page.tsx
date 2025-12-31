@@ -31,6 +31,8 @@ import {
   CheckSquare,
   Smartphone,
   Wallet,
+  Layers,
+  Scissors,
 } from 'lucide-react';
 import { useTranslations } from '@/i18n';
 
@@ -72,6 +74,12 @@ const GUIDES: GuideItem[] = [
     manualAnchor: '#5-gestio-de-moviments',
   },
   {
+    id: 'bulkCategory',
+    icon: <Layers className="h-5 w-5" />,
+    href: '/dashboard/movimientos',
+    manualAnchor: '#5-gestio-de-moviments',
+  },
+  {
     id: 'returns',
     icon: <RotateCcw className="h-5 w-5" />,
     href: '/dashboard/movimientos',
@@ -84,6 +92,12 @@ const GUIDES: GuideItem[] = [
     href: '/dashboard/movimientos',
     helpHref: '/dashboard/movimientos?help=1',
     manualAnchor: '#6-divisor-de-remeses',
+  },
+  {
+    id: 'splitRemittance',
+    icon: <Scissors className="h-5 w-5" />,
+    href: '/dashboard/movimientos',
+    manualAnchor: '#remittances',
   },
   {
     id: 'stripeDonations',
