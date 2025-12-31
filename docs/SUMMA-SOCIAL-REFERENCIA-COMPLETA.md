@@ -1,6 +1,6 @@
 # ═══════════════════════════════════════════════════════════════════════════════
 # SUMMA SOCIAL - REFERÈNCIA COMPLETA DEL PROJECTE
-# Versió 1.25 - Desembre 2025
+# Versió 1.26 - Desembre 2025
 # ═══════════════════════════════════════════════════════════════════════════════
 
 
@@ -3765,6 +3765,97 @@ Les assignacions creades abans de la implementació del camp `budgetLineIds` no 
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
+# ANNEX D: NOVETATS DEL PRODUCTE (v1.26)
+# ═══════════════════════════════════════════════════════════════════════════════
+
+## D.1 Descripció del Sistema
+
+Sistema unificat per comunicar novetats del producte als usuaris a través de múltiples canals:
+- **Campaneta (instància)**: Mostra N últimes novetats dins l'aplicació
+- **Web públic**: Pàgina `/novetats` per SEO i sharing
+- **Social**: Copy per X i LinkedIn (manual)
+
+## D.2 Arquitectura
+
+### Font única: Firestore `productUpdates`
+
+```
+/productUpdates/{updateId}
+  id: string
+  title: string
+  description: string
+  link: string | null
+  isActive: boolean
+  publishedAt: Timestamp
+  createdAt: Timestamp
+
+  // Detall (TEXT PLA, NO HTML)
+  contentLong?: string | null
+  guideUrl?: string | null
+  videoUrl?: string | null
+
+  // Web
+  web?: {
+    enabled: boolean
+    slug: string
+    excerpt?: string | null
+    content?: string | null
+  } | null
+
+  // Social
+  social?: {
+    enabled: boolean
+    xText?: string | null
+    linkedinText?: string | null
+    linkUrl?: string | null
+  } | null
+```
+
+### Web públic: JSON estàtic (NO Firestore directe)
+
+El web públic `/novetats` NO llegeix Firestore directament per seguretat.
+
+**Flux:**
+1. SuperAdmin genera novetat amb `web.enabled: true`
+2. SuperAdmin clica "Exportar web JSON" → descarrega `novetats-data.json`
+3. Commit manual a `public/novetats-data.json`
+4. Deploy
+
+## D.3 Guardrails (NO NEGOCIABLES)
+
+| Regla | Motiu |
+|-------|-------|
+| NO HTML a `contentLong` | XSS prevention, render segur |
+| NO `dangerouslySetInnerHTML` | Seguretat |
+| NO Firestore list públic | Evitar leaks i costos |
+| NO `undefined` a writes | Firestore errors |
+| NO deps noves | Estabilitat |
+
+## D.4 Fitxers Principals
+
+```
+src/hooks/use-product-updates.ts           # Hook Firestore + fallback
+src/lib/render-structured-text.tsx         # Render text pla (NO HTML)
+src/lib/firestore-utils.ts                 # stripUndefined helpers
+src/components/notifications/              # Campaneta + modal
+src/components/admin/product-updates-section.tsx  # SuperAdmin
+src/app/api/ai/generate-product-update/    # Endpoint IA
+src/app/public/[lang]/novetats/            # Web públic
+public/novetats-data.json                  # JSON estàtic web
+```
+
+## D.5 Ritual Publicació Web
+
+1. Crear/editar novetat amb `web.enabled: true` a SuperAdmin
+2. Clicar "Exportar web JSON"
+3. Substituir `public/novetats-data.json` amb el fitxer descarregat
+4. `git add && git commit && git push`
+5. Deploy (Firebase Hosting)
+
+> **Important**: El web NO s'actualitza automàticament. Cal fer commit + deploy.
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
 # FI DEL DOCUMENT
-# Última actualització: Desembre 2025 - Versió 1.16
+# Última actualització: Desembre 2025 - Versió 1.26
 # ═══════════════════════════════════════════════════════════════════════════════

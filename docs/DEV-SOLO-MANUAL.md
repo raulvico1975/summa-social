@@ -347,4 +347,48 @@ Abans d'activar `ALERTS_ENABLED=true` en producció:
 
 ---
 
-*Última actualització: 2025-12-30*
+## 10. Novetats del producte — Ritual de publicació
+
+Quan publiques una novetat nova des de SuperAdmin (`/admin` → Novetats):
+
+### Flux complet
+
+```
+1. Publicar ─────────────────────────────────────────────────────
+   □ Crear novetat a SuperAdmin (omplir camps o usar "Generar amb IA")
+   □ Revisar preview (App / Web / X / LinkedIn)
+   □ Clicar "Publicar"
+   → La campaneta de les instàncies mostrarà la novetat immediatament
+
+2. Exportar JSON (si web.enabled = true) ────────────────────────
+   □ Clicar "Exportar web JSON" al SuperAdmin
+   □ Es descarrega novetats-data.json
+
+3. Commit ───────────────────────────────────────────────────────
+   □ Substituir public/novetats-data.json amb el fitxer descarregat
+   □ git add public/novetats-data.json
+   □ git commit -m "docs(novetats): actualitzar web JSON - [títol breu]"
+
+4. Deploy ───────────────────────────────────────────────────────
+   □ git push (App Hosting desplega automàticament)
+   □ Verificar que /ca/novetats mostra la nova entrada
+```
+
+### Checklist ràpid
+
+```
+□ Campaneta funciona? → No cal deploy
+□ Web públic necessita actualització? → Exportar + Commit + Deploy
+□ Social? → Copiar textos des de preview, publicar manualment
+```
+
+### Guardrails (no negociables)
+
+- **NO HTML** a Firestore — sempre text pla estructurat
+- **NO `dangerouslySetInnerHTML`** — render segur via `renderStructuredText()`
+- **NO Firestore públic** — web llegeix JSON estàtic
+- **NO deps noves** — tot funciona amb stack existent
+
+---
+
+*Última actualització: 2025-12-31*
