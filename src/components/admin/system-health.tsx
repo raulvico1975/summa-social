@@ -89,6 +89,7 @@ import {
   Database,
   Globe,
   HardDrive,
+  ExternalLink,
 } from 'lucide-react';
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -177,7 +178,7 @@ interface HealthCheck {
   status: CheckStatus;
   message?: string;
   requiresOrg?: boolean;
-  actionable?: 'documentsEnabled' | 'goToI18n' | 'openRoute'; // Tipus d'acció
+  actionable?: 'documentsEnabled' | 'goToI18n' | 'openRoute' | 'testRealUpload'; // Tipus d'acció
   isNonCritical?: boolean; // Si true, no contribueix al ❌ global del semàfor
 }
 
@@ -245,7 +246,7 @@ const INITIAL_CHECKS: HealthCheck[] = [
     humanExplanation: 'Permet pujar factures i nòmines. Si no ho actives, les pujades fallaran.',
     status: 'pending',
     requiresOrg: true,
-    actionable: 'documentsEnabled',
+    actionable: 'documentsEnabled', // Quan error: concedir permís. Quan OK: botó test real.
   },
   {
     id: 'legacy-redirect',
@@ -487,13 +488,39 @@ export function SystemHealth() {
     try {
       const orgRef = doc(firestore, 'organizations', selectedOrgId);
       await updateDoc(orgRef, { documentsEnabled: true });
-      toast({
-        title: 'Permís concedit',
-        description: 'Ara aquesta organització pot pujar documents.',
-      });
       setDocumentsDialogOpen(false);
-      // Re-executar checks per veure el canvi
+
+      // Re-executar checks i esperar per verificar si ara funciona
       await runHealthChecks();
+
+      // Esperar un moment perquè el state s'actualitzi
+      await new Promise((resolve) => setTimeout(resolve, 500));
+
+      // Verificar si el check ara passa
+      // Nota: healthChecks s'actualitza async, així que fem una prova directa
+      const storage = getStorage();
+      const selectedOrg = organizations?.find((o) => o.id === selectedOrgId);
+      if (selectedOrg) {
+        try {
+          const testFileName = `_verify_${Date.now()}.txt`;
+          const testRef = ref(storage, `organizations/${selectedOrgId}/pendingDocuments/${testFileName}`);
+          const testContent = new Blob(['verify'], { type: 'text/plain' });
+          await uploadBytes(testRef, testContent);
+          await deleteObject(testRef);
+          // Si arriba aquí, ha funcionat
+          toast({
+            title: 'Fet ✅',
+            description: 'Ara la pujada de documents funciona per aquesta organització.',
+          });
+        } catch {
+          // Encara falla
+          toast({
+            title: 'No s\'ha pogut completar',
+            description: 'El permís s\'ha concedit però la pujada encara falla. Comprova les regles de Storage.',
+            variant: 'destructive',
+          });
+        }
+      }
     } catch (err) {
       console.error('Error granting documents permission:', err);
       toast({
@@ -976,6 +1003,28 @@ export function SystemHealth() {
                                   </Button>
                                   <p className="text-[9px] text-muted-foreground leading-tight">
                                     Comprova que l&apos;entrada ràpida de despeses funciona.
+                                  </p>
+                                </div>
+                              )}
+
+                              {/* Botó "Provar pujada real" quan pendingDocuments OK */}
+                              {check.id === 'storage-upload' && check.status === 'ok' && selectedOrg && (
+                                <div className="mt-2 space-y-1">
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    className="h-6 text-[10px] w-full"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      // Navegar a la pantalla real de documents pendents
+                                      window.open(`/${selectedOrg.slug}/dashboard/pending-documents`, '_blank');
+                                    }}
+                                  >
+                                    <ExternalLink className="h-3 w-3 mr-1" />
+                                    Provar pujada real
+                                  </Button>
+                                  <p className="text-[9px] text-muted-foreground leading-tight">
+                                    Obre la pantalla real de pujada per confirmar que funciona.
                                   </p>
                                 </div>
                               )}
