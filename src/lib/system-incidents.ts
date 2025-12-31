@@ -31,6 +31,16 @@ export type IncidentSeverity = 'CRITICAL' | 'WARNING';
 
 export type IncidentStatus = 'OPEN' | 'ACK' | 'RESOLVED';
 
+export type IncidentImpact = 'blocker' | 'functional' | 'cosmetic';
+
+export interface IncidentResolution {
+  resolvedAt: string; // ISO timestamp
+  resolvedByUid: string;
+  fixCommit: string | null;
+  fixNote: string | null;
+  noCommit: boolean;
+}
+
 export interface SystemIncident {
   id: string;
   signature: string; // hash estable: type+route+topStackLine+code
@@ -47,6 +57,9 @@ export interface SystemIncident {
   status: IncidentStatus;
   lastSeenMeta?: Record<string, unknown>; // error code, function name, etc.
   alertSentAt?: Timestamp; // quan s'ha enviat email d'alerta (usat per Cloud Function)
+  // Nous camps per gestió millorada
+  impact?: IncidentImpact; // blocker | functional | cosmetic
+  resolution?: IncidentResolution; // dades de resolució
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -318,6 +331,43 @@ export async function reopenIncident(
 ): Promise<void> {
   await updateDoc(doc(firestore, 'systemIncidents', incidentId), {
     status: 'OPEN',
+  });
+}
+
+/**
+ * Resol un incident amb dades completes de resolució.
+ * Requereix indicar commit o marcar "no hi ha commit".
+ */
+export async function resolveIncidentWithDetails(
+  firestore: Firestore,
+  incidentId: string,
+  resolution: IncidentResolution,
+  impact?: IncidentImpact
+): Promise<void> {
+  if (impact) {
+    await updateDoc(doc(firestore, 'systemIncidents', incidentId), {
+      status: 'RESOLVED',
+      resolution,
+      impact,
+    });
+  } else {
+    await updateDoc(doc(firestore, 'systemIncidents', incidentId), {
+      status: 'RESOLVED',
+      resolution,
+    });
+  }
+}
+
+/**
+ * Actualitza l'impacte d'un incident sense canviar l'estat.
+ */
+export async function updateIncidentImpact(
+  firestore: Firestore,
+  incidentId: string,
+  impact: IncidentImpact
+): Promise<void> {
+  await updateDoc(doc(firestore, 'systemIncidents', incidentId), {
+    impact,
   });
 }
 

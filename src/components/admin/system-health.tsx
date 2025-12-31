@@ -11,14 +11,29 @@ import {
   getOpenIncidents,
   countOpenIncidentsByType,
   acknowledgeIncident,
-  resolveIncident,
+  resolveIncidentWithDetails,
+  updateIncidentImpact,
   reopenIncident,
   INCIDENT_HELP,
   buildIncidentFixPack,
   type SystemIncident,
   type IncidentType,
+  type IncidentImpact,
+  type IncidentResolution,
 } from '@/lib/system-incidents';
+import {
+  getRecommendedAction,
+  getDefaultImpact,
+  validateResolution,
+  buildResolution,
+  IMPACT_LABELS,
+  ACTION_LABELS,
+  type RecommendedAction,
+} from '@/lib/admin/incident-recommendations';
 import type { Organization } from '@/lib/data';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Checkbox } from '@/components/ui/checkbox';
 import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -181,7 +196,7 @@ const SEMAPHORE_STORAGE_KEY = 'systemHealthSemaphore_selectedOrg';
 // ═══════════════════════════════════════════════════════════════════════════
 
 export function SystemHealth() {
-  const { firestore } = useFirebase();
+  const { firestore, user } = useFirebase();
   const { toast } = useToast();
   const [incidents, setIncidents] = React.useState<SystemIncident[]>([]);
   const [incidentCounts, setIncidentCounts] = React.useState<Record<IncidentType, number>>({
@@ -195,6 +210,15 @@ export function SystemHealth() {
   const [dialogOpen, setDialogOpen] = React.useState(false);
   const [selectedIncident, setSelectedIncident] = React.useState<SystemIncident | null>(null);
   const [isProcessing, setIsProcessing] = React.useState(false);
+
+  // Modal de resolució d'incidents
+  const [resolveDialogOpen, setResolveDialogOpen] = React.useState(false);
+  const [incidentToResolve, setIncidentToResolve] = React.useState<SystemIncident | null>(null);
+  const [resolveCommit, setResolveCommit] = React.useState('');
+  const [resolveNote, setResolveNote] = React.useState('');
+  const [resolveNoCommit, setResolveNoCommit] = React.useState(false);
+  const [resolveImpact, setResolveImpact] = React.useState<IncidentImpact>('functional');
+  const [resolveError, setResolveError] = React.useState<string | null>(null);
 
   // Semàfor de producció state
   const [healthChecks, setHealthChecks] = React.useState<HealthCheck[]>(INITIAL_CHECKS);
@@ -283,17 +307,64 @@ export function SystemHealth() {
     }
   };
 
-  // Handler per RESOLVED
-  const handleResolve = async (incident: SystemIncident) => {
-    if (!firestore) return;
+  // Handler per obrir modal de resolució
+  const handleOpenResolveDialog = (incident: SystemIncident) => {
+    setIncidentToResolve(incident);
+    setResolveCommit('');
+    setResolveNote('');
+    setResolveNoCommit(false);
+    setResolveImpact(incident.impact || getDefaultImpact(incident));
+    setResolveError(null);
+    setResolveDialogOpen(true);
+  };
+
+  // Handler per confirmar resolució amb dades completes
+  const handleConfirmResolve = async () => {
+    if (!firestore || !incidentToResolve || !user) return;
+
+    // Validar
+    const validation = validateResolution(resolveCommit, resolveNoCommit);
+    if (!validation.valid) {
+      setResolveError(validation.error || 'Error de validació');
+      return;
+    }
+
     setIsProcessing(true);
+    setResolveError(null);
+
     try {
-      await resolveIncident(firestore, incident.id);
+      const resolution = buildResolution(
+        user.uid,
+        resolveCommit,
+        resolveNote,
+        resolveNoCommit
+      );
+      await resolveIncidentWithDetails(firestore, incidentToResolve.id, resolution, resolveImpact);
       await loadIncidents();
+      setResolveDialogOpen(false);
+      setIncidentToResolve(null);
+      toast({
+        title: 'Incident tancat',
+        description: resolveNoCommit
+          ? 'Marcat com resolt sense commit.'
+          : `Resolt amb commit: ${resolveCommit}`,
+      });
     } catch (err) {
       console.error('Error resolving incident:', err);
+      setResolveError('No s\'ha pogut tancar l\'incident.');
     } finally {
       setIsProcessing(false);
+    }
+  };
+
+  // Handler per canviar impacte sense tancar
+  const handleChangeImpact = async (incident: SystemIncident, newImpact: IncidentImpact) => {
+    if (!firestore) return;
+    try {
+      await updateIncidentImpact(firestore, incident.id, newImpact);
+      await loadIncidents();
+    } catch (err) {
+      console.error('Error updating impact:', err);
     }
   };
 
@@ -720,13 +791,13 @@ export function SystemHealth() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead className="w-[80px]">Severitat</TableHead>
+                  <TableHead className="w-[80px]">Impacte</TableHead>
                   <TableHead className="w-[100px]">Tipus</TableHead>
                   <TableHead>Què passa</TableHead>
                   <TableHead className="w-[120px]">Ruta / Org</TableHead>
                   <TableHead className="w-[60px]">Cops</TableHead>
                   <TableHead className="w-[100px]">Últim</TableHead>
-                  <TableHead className="w-[150px]">Accions</TableHead>
+                  <TableHead className="w-[180px]">Accions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -736,11 +807,27 @@ export function SystemHealth() {
                     className={incident.status === 'ACK' ? 'opacity-60' : ''}
                   >
                     <TableCell>
-                      <Badge
-                        variant={incident.severity === 'CRITICAL' ? 'destructive' : 'secondary'}
-                      >
-                        {incident.severity === 'CRITICAL' ? 'CRÍTIC' : 'AVÍS'}
-                      </Badge>
+                      {(() => {
+                        const currentImpact = incident.impact || getDefaultImpact(incident);
+                        const impactConfig = IMPACT_LABELS[currentImpact];
+                        return (
+                          <Select
+                            value={currentImpact}
+                            onValueChange={(val) => handleChangeImpact(incident, val as IncidentImpact)}
+                          >
+                            <SelectTrigger className={`h-7 w-[90px] text-xs border-0 ${impactConfig.color}`}>
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {(Object.keys(IMPACT_LABELS) as IncidentImpact[]).map((key) => (
+                                <SelectItem key={key} value={key} className="text-xs">
+                                  <span className={IMPACT_LABELS[key].color}>{IMPACT_LABELS[key].short}</span>
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        );
+                      })()}
                     </TableCell>
                     <TableCell>
                       <span className="text-xs font-mono">{incident.type}</span>
@@ -755,6 +842,37 @@ export function SystemHealth() {
                             {incident.topStack}
                           </p>
                         )}
+                        {/* Acció recomanada */}
+                        {(() => {
+                          const action = getRecommendedAction(incident);
+                          const actionConfig = ACTION_LABELS[action];
+                          return (
+                            <div className="mt-2 p-2 bg-muted rounded-md">
+                              <div className="text-[10px] text-muted-foreground mb-1">Què fer ara?</div>
+                              <Button
+                                variant="secondary"
+                                size="sm"
+                                className="h-6 text-xs"
+                                onClick={() => {
+                                  if (action === 'permissions') {
+                                    window.open('https://console.firebase.google.com/project/summa-social/firestore/rules', '_blank');
+                                  } else if (action === 'storage') {
+                                    window.open('https://console.firebase.google.com/project/summa-social/storage/rules', '_blank');
+                                  } else if (action === 'reload') {
+                                    toast({
+                                      title: 'Chunk error',
+                                      description: 'Demana a l\'usuari que recarregui la pàgina en mode incògnit.',
+                                    });
+                                  } else {
+                                    handleCopyPrompt(incident);
+                                  }
+                                }}
+                              >
+                                {actionConfig.label}
+                              </Button>
+                            </div>
+                          );
+                        })()}
                       </div>
                     </TableCell>
                     <TableCell>
@@ -834,11 +952,11 @@ export function SystemHealth() {
                               variant="default"
                               size="sm"
                               className="h-7 text-xs"
-                              onClick={() => handleResolve(incident)}
+                              onClick={() => handleOpenResolveDialog(incident)}
                               disabled={isProcessing}
                             >
                               <Check className="h-3 w-3 mr-1" />
-                              Resolt
+                              Tancar
                             </Button>
                           </>
                         )}
@@ -847,11 +965,11 @@ export function SystemHealth() {
                             variant="default"
                             size="sm"
                             className="h-7 text-xs"
-                            onClick={() => handleResolve(incident)}
+                            onClick={() => handleOpenResolveDialog(incident)}
                             disabled={isProcessing}
                           >
                             <Check className="h-3 w-3 mr-1" />
-                            Resolt
+                            Tancar
                           </Button>
                         )}
                       </div>
@@ -933,6 +1051,120 @@ export function SystemHealth() {
                     </div>
                   )}
                 </div>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Modal de resolució d'incident */}
+      <Dialog open={resolveDialogOpen} onOpenChange={setResolveDialogOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Check className="h-5 w-5 text-green-600" />
+              Tancar incident
+            </DialogTitle>
+            <DialogDescription>
+              Indica com s&apos;ha resolt per futurs incidents similars.
+            </DialogDescription>
+          </DialogHeader>
+
+          {incidentToResolve && (
+            <div className="space-y-4">
+              {/* Resum de l'incident */}
+              <div className="p-3 bg-muted rounded text-sm">
+                <div className="font-medium line-clamp-2">{incidentToResolve.message}</div>
+                <div className="text-xs text-muted-foreground mt-1">
+                  {incidentToResolve.type} · {incidentToResolve.count} cop{incidentToResolve.count > 1 ? 's' : ''}
+                </div>
+              </div>
+
+              {/* Selector d'impacte */}
+              <div className="space-y-2">
+                <Label htmlFor="resolve-impact">Impacte real</Label>
+                <Select
+                  value={resolveImpact}
+                  onValueChange={(val) => setResolveImpact(val as IncidentImpact)}
+                >
+                  <SelectTrigger id="resolve-impact">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {(Object.keys(IMPACT_LABELS) as IncidentImpact[]).map((key) => (
+                      <SelectItem key={key} value={key}>
+                        {IMPACT_LABELS[key].label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Commit */}
+              <div className="space-y-2">
+                <Label htmlFor="resolve-commit">Commit que ho ha arreglat</Label>
+                <Input
+                  id="resolve-commit"
+                  placeholder="abc1234 o URL del commit"
+                  value={resolveCommit}
+                  onChange={(e) => setResolveCommit(e.target.value)}
+                  disabled={resolveNoCommit}
+                />
+              </div>
+
+              {/* Checkbox "no hi ha commit" */}
+              <div className="flex items-center space-x-2">
+                <Checkbox
+                  id="resolve-no-commit"
+                  checked={resolveNoCommit}
+                  onCheckedChange={(checked) => {
+                    setResolveNoCommit(!!checked);
+                    if (checked) setResolveCommit('');
+                  }}
+                />
+                <Label htmlFor="resolve-no-commit" className="text-sm font-normal">
+                  No hi ha commit (configuració, permisos, etc.)
+                </Label>
+              </div>
+
+              {/* Nota opcional */}
+              <div className="space-y-2">
+                <Label htmlFor="resolve-note">Nota (opcional)</Label>
+                <Input
+                  id="resolve-note"
+                  placeholder="Descripció breu del fix..."
+                  value={resolveNote}
+                  onChange={(e) => setResolveNote(e.target.value)}
+                />
+              </div>
+
+              {/* Error de validació */}
+              {resolveError && (
+                <div className="p-2 bg-red-50 border border-red-200 rounded text-sm text-red-800">
+                  {resolveError}
+                </div>
+              )}
+
+              {/* Botons */}
+              <div className="flex justify-end gap-2 pt-2">
+                <Button
+                  variant="outline"
+                  onClick={() => setResolveDialogOpen(false)}
+                  disabled={isProcessing}
+                >
+                  Cancel·lar
+                </Button>
+                <Button
+                  onClick={handleConfirmResolve}
+                  disabled={isProcessing}
+                >
+                  {isProcessing ? (
+                    <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                  ) : (
+                    <Check className="h-4 w-4 mr-2" />
+                  )}
+                  Tancar incident
+                </Button>
               </div>
             </div>
           )}
