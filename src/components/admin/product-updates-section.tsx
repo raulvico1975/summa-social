@@ -54,6 +54,8 @@ import {
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
+import { stripUndefined } from '@/lib/firestore-utils';
+
 // ─────────────────────────────────────────────────────────────────────────────
 // Tipus
 // ─────────────────────────────────────────────────────────────────────────────
@@ -68,6 +70,10 @@ type DraftItem = {
   createdAt?: string;
 };
 
+/**
+ * Schema ampliat per productUpdates.
+ * Camps nous són opcionals per compatibilitat.
+ */
 type PublishedUpdate = {
   id: string;
   title: string;
@@ -75,6 +81,54 @@ type PublishedUpdate = {
   link: string | null;
   publishedAt: Date;
   isActive?: boolean; // soft delete: false = despublicat
+  createdAt?: Date;
+
+  // NOU - Detall app (TEXT PLA, NO HTML)
+  contentLong?: string | null;
+  guideUrl?: string | null;
+  videoUrl?: string | null;
+
+  // NOU - Web
+  web?: {
+    enabled: boolean;
+    slug: string;
+    title?: string | null;
+    excerpt?: string | null;
+    content?: string | null;
+    publishedAt?: Date;
+  } | null;
+
+  // NOU - Social
+  social?: {
+    enabled: boolean;
+    xText?: string | null;
+    linkedinText?: string | null;
+    linkUrl?: string | null;
+  } | null;
+
+  // NOU - IA
+  ai?: {
+    input?: {
+      changeBrief: string;
+      problemReal: string;
+      affects: string;
+      userAction: string;
+    } | null;
+    analysis?: {
+      clarityScore?: number;
+      techRisk?: 'low' | 'medium' | 'high';
+      recommendation?: 'PUBLICAR' | 'REVISAR' | 'NO_PUBLICAR';
+      notes?: string | null;
+    } | null;
+  } | null;
+
+  // NOU - Imatge (Fase 5)
+  image?: {
+    enabled: boolean;
+    prompt?: string | null;
+    altText?: string | null;
+    storagePath?: string | null;
+  } | null;
 };
 
 type DraftsImport = {
@@ -203,15 +257,15 @@ export function ProductUpdatesSection({ isSuperAdmin = false }: ProductUpdatesSe
         }
 
         const docRef = doc(firestore, 'productUpdateDrafts', draft.id);
-        batch.set(docRef, {
+        batch.set(docRef, stripUndefined({
           id: draft.id,
           title: draft.title,
           description: draft.description,
-          link: draft.link || null,
-          evidence: draft.evidence || [],
+          link: draft.link ?? null,
+          evidence: draft.evidence ?? [],
           status: 'draft',
           createdAt: new Date().toISOString(),
-        });
+        }));
         insertedCount++;
       }
 
@@ -293,14 +347,15 @@ export function ProductUpdatesSection({ isSuperAdmin = false }: ProductUpdatesSe
     try {
       // Crear a productUpdates amb isActive: true
       const updateId = `update-${Date.now()}`;
-      await setDoc(doc(firestore, 'productUpdates', updateId), {
+      await setDoc(doc(firestore, 'productUpdates', updateId), stripUndefined({
         id: updateId,
         title: draft.title,
         description: draft.description,
-        link: draft.link,
+        link: draft.link ?? null,
         publishedAt: serverTimestamp(),
+        createdAt: serverTimestamp(),
         isActive: true,
-      });
+      }));
 
       // Marcar draft com publicat
       await updateDoc(doc(firestore, 'productUpdateDrafts', draft.id), {
