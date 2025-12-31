@@ -50,14 +50,19 @@ service cloud.firestore {
 
     // ═══════════════════════════════════════════════════════════════════════
     // PRODUCT UPDATES (novetats del producte - només SuperAdmin)
+    // Updated: 2024-12-31 - Force redeploy
     // ═══════════════════════════════════════════════════════════════════════
 
     match /productUpdateDrafts/{draftId} {
-      allow read, write: if isSuperAdmin();
+      // Permet get i list per SuperAdmin
+      allow get, list: if isSuperAdmin();
+      allow create, update, delete: if isSuperAdmin();
     }
 
     match /productUpdates/{updateId} {
-      allow read, write: if isSuperAdmin();
+      // Permet get i list per SuperAdmin
+      allow get, list: if isSuperAdmin();
+      allow create, update, delete: if isSuperAdmin();
     }
 
     // ═══════════════════════════════════════════════════════════════════════

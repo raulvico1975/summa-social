@@ -10,7 +10,6 @@ import {
   serverTimestamp,
   orderBy,
   query,
-  where,
   getDocs,
   writeBatch,
 } from 'firebase/firestore';
@@ -123,12 +122,11 @@ export function ProductUpdatesSection({ isSuperAdmin = false }: ProductUpdatesSe
     [firestore, isSuperAdmin]
   );
   // Només mostrar publicades actives (isActive !== false)
+  // Nota: Simplificat per evitar problemes amb col·lecció buida
   const publishedQuery = useMemoFirebase(
     () => isSuperAdmin
       ? query(
           collection(firestore, 'productUpdates'),
-          where('isActive', '!=', false),
-          orderBy('isActive'),
           orderBy('publishedAt', 'desc')
         )
       : null,
@@ -136,7 +134,13 @@ export function ProductUpdatesSection({ isSuperAdmin = false }: ProductUpdatesSe
   );
 
   const { data: allDrafts, isLoading: isLoadingDrafts } = useCollection<DraftItem>(draftsQuery);
-  const { data: published, isLoading: isLoadingPublished } = useCollection<PublishedUpdate>(publishedQuery);
+  const { data: allPublished, isLoading: isLoadingPublished } = useCollection<PublishedUpdate>(publishedQuery);
+
+  // Filtrar publicades actives al client (isActive !== false)
+  const published = React.useMemo(() => {
+    if (!allPublished) return null;
+    return allPublished.filter(u => u.isActive !== false);
+  }, [allPublished]);
 
   // GATING: No renderitzar res si no és superadmin
   // (els hooks ja retornen null, però això evita renderitzar la UI)
