@@ -38,6 +38,29 @@ service cloud.firestore {
     }
 
     // ═══════════════════════════════════════════════════════════════════════
+    // SYSTEM CONFIG (i18n versions, feature flags, etc.)
+    // ═══════════════════════════════════════════════════════════════════════
+
+    match /system/{docId} {
+      // Llegir: qualsevol usuari autenticat (per rebre versions d'i18n)
+      allow read: if isSignedIn();
+      // Escriure: només SuperAdmin
+      allow write: if isSuperAdmin();
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // PRODUCT UPDATES (novetats del producte - només SuperAdmin)
+    // ═══════════════════════════════════════════════════════════════════════
+
+    match /productUpdateDrafts/{draftId} {
+      allow read, write: if isSuperAdmin();
+    }
+
+    match /productUpdates/{updateId} {
+      allow read, write: if isSuperAdmin();
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
     // SYSTEM INCIDENTS (alertes internes per a SuperAdmin)
     // ═══════════════════════════════════════════════════════════════════════
 
