@@ -92,6 +92,11 @@ const GUIDE_IDS = [
   'bulkAICategorize',
   'remittanceViewDetail',
   'resetPassword',
+  'updateExistingDonors',
+  'remittanceLowMembers',
+  'saveRemittanceMapping',
+  'toggleRemittanceItems',
+  'dangerDeleteLastRemittance',
 ];
 
 // Arrays que han de tenir mínim 1 element si existeixen al base
