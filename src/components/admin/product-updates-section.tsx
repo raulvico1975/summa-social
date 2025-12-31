@@ -573,6 +573,50 @@ export function ProductUpdatesSection({ isSuperAdmin = false }: ProductUpdatesSe
     toast({ title: `${label} copiat` });
   };
 
+  // Exportar JSON per web públic (Fase 4)
+  const handleExportWebJson = () => {
+    if (!published || published.length === 0) {
+      toast({ variant: 'destructive', title: 'Cap novetat', description: 'No hi ha novetats actives amb web.enabled' });
+      return;
+    }
+
+    // Filtrar només updates amb web.enabled
+    const webUpdates = published.filter(u => u.web?.enabled && u.web?.slug);
+    if (webUpdates.length === 0) {
+      toast({ variant: 'destructive', title: 'Cap novetat web', description: 'Activa web.enabled i slug a les novetats que vulguis publicar.' });
+      return;
+    }
+
+    // Generar JSON per al web públic
+    const exportData = {
+      updates: webUpdates.map(u => ({
+        id: u.id,
+        title: u.web?.title || u.title,
+        slug: u.web!.slug,
+        excerpt: u.web?.excerpt || null,
+        content: u.web?.content || u.contentLong || null,
+        publishedAt: u.web?.publishedAt?.toISOString?.()?.slice(0, 10)
+          || u.publishedAt?.toISOString?.()?.slice(0, 10)
+          || null,
+      })),
+      generatedAt: new Date().toISOString(),
+    };
+
+    // Descarregar fitxer
+    const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'novetats-data.json';
+    a.click();
+    URL.revokeObjectURL(url);
+
+    toast({
+      title: 'JSON exportat',
+      description: `${webUpdates.length} novetats. Copia a public/novetats-data.json i fes commit.`,
+    });
+  };
+
   return (
     <Card>
       <CardHeader>
@@ -587,6 +631,10 @@ export function ProductUpdatesSection({ isSuperAdmin = false }: ProductUpdatesSe
             </CardDescription>
           </div>
           <div className="flex items-center gap-2">
+            <Button variant="outline" size="sm" onClick={handleExportWebJson}>
+              <FileJson className="mr-2 h-4 w-4" />
+              Exportar web JSON
+            </Button>
             <Label htmlFor="import-json" className="cursor-pointer">
               <Button variant="outline" size="sm" asChild disabled={isImporting}>
                 <span>

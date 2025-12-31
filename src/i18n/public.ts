@@ -286,6 +286,15 @@ export interface PublicTranslations {
     };
     cta: string;
   };
+  updates: {
+    metaTitle: string;
+    metaDescription: string;
+    title: string;
+    back: string;
+    noUpdates: string;
+    readMore: string;
+    publishedAt: string;
+  };
 }
 
 const ca: PublicTranslations = {
@@ -739,6 +748,15 @@ const ca: PublicTranslations = {
     },
     cta: 'Entrar a Summa Social',
   },
+  updates: {
+    metaTitle: 'Novetats | Summa Social',
+    metaDescription: 'Descobreix les últimes novetats i millores de Summa Social.',
+    title: 'Novetats del producte',
+    back: 'Tornar',
+    noUpdates: 'No hi ha novetats publicades.',
+    readMore: 'Llegir més',
+    publishedAt: 'Publicat el',
+  },
 };
 
 const es: PublicTranslations = {
@@ -1191,6 +1209,15 @@ const es: PublicTranslations = {
       },
     },
     cta: 'Entrar a Summa Social',
+  },
+  updates: {
+    metaTitle: 'Novedades | Summa Social',
+    metaDescription: 'Descubre las últimas novedades y mejoras de Summa Social.',
+    title: 'Novedades del producto',
+    back: 'Volver',
+    noUpdates: 'No hay novedades publicadas.',
+    readMore: 'Leer más',
+    publishedAt: 'Publicado el',
   },
 };
 
@@ -1646,6 +1673,15 @@ const fr: PublicTranslations = {
     },
     cta: 'Entrer dans Summa Social',
   },
+  updates: {
+    metaTitle: 'Nouveautés | Summa Social',
+    metaDescription: 'Découvrez les dernières nouveautés et améliorations de Summa Social.',
+    title: 'Nouveautés du produit',
+    back: 'Retour',
+    noUpdates: 'Aucune nouveauté publiée.',
+    readMore: 'En savoir plus',
+    publishedAt: 'Publié le',
+  },
 };
 
 const pt: PublicTranslations = {
@@ -2098,6 +2134,15 @@ const pt: PublicTranslations = {
       },
     },
     cta: 'Entrar no Summa Social',
+  },
+  updates: {
+    metaTitle: 'Novidades | Summa Social',
+    metaDescription: 'Descubra as últimas novidades e melhorias do Summa Social.',
+    title: 'Novidades do produto',
+    back: 'Voltar',
+    noUpdates: 'Não há novidades publicadas.',
+    readMore: 'Ler mais',
+    publishedAt: 'Publicado em',
   },
 };
 
