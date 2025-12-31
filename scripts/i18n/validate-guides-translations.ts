@@ -56,7 +56,7 @@ const REQUIRED_PAGE_KEYS = [
   'guides.labels.dontFixYet',
 ];
 
-// Guies amb camps obligatoris (title i intro)
+// Guies amb camps obligatoris (title i intro/whatIs)
 const GUIDE_IDS = [
   'firstDay',
   'firstMonth',
@@ -64,6 +64,8 @@ const GUIDE_IDS = [
   'movements',
   'returns',
   'remittances',
+  'stripeDonations',
+  'travelReceipts',
   'donors',
   'reports',
   'projects',
@@ -77,6 +79,7 @@ const GUIDE_IDS = [
 const ARRAY_FIELDS = [
   'lookFirst',
   'doNext',
+  'then',
   'avoid',
   'notResolved',
   'checkBeforeExport',
@@ -165,10 +168,11 @@ function validateLanguage(baseMessages: JsonMessages, targetMessages: JsonMessag
     }
   }
 
-  // 3. Cada guia: title i intro obligatoris
+  // 3. Cada guia: title i (intro o whatIs) obligatoris
   for (const guideId of GUIDE_IDS) {
     const titleKey = `guides.${guideId}.title`;
     const introKey = `guides.${guideId}.intro`;
+    const whatIsKey = `guides.${guideId}.whatIs`;
 
     if (!(titleKey in targetMessages)) {
       errors.push({
@@ -182,15 +186,14 @@ function validateLanguage(baseMessages: JsonMessages, targetMessages: JsonMessag
       });
     }
 
-    if (!(introKey in targetMessages)) {
+    // intro o whatIs (un dels dos)
+    const hasIntro = introKey in targetMessages && targetMessages[introKey]?.trim();
+    const hasWhatIs = whatIsKey in targetMessages && targetMessages[whatIsKey]?.trim();
+
+    if (!hasIntro && !hasWhatIs) {
       errors.push({
         type: 'critical',
-        message: `Falta intro de guia: ${introKey}`,
-      });
-    } else if (!targetMessages[introKey] || targetMessages[introKey].trim() === '') {
-      errors.push({
-        type: 'critical',
-        message: `Intro buida: ${introKey}`,
+        message: `Falta intro o whatIs de guia: ${guideId}`,
       });
     }
   }

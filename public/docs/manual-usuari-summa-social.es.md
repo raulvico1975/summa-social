@@ -34,4 +34,24 @@ Mientras tanto, puedes:
 
 ---
 
+## Dividir un payout de Stripe [id:stripe]
+
+1. Ve a **Movimientos** y busca el ingreso de Stripe
+2. Menú **⋮** → **"Dividir remesa Stripe"**
+3. Sube el CSV exportado de Stripe (Pagos → export)
+4. Verifica que el neto cuadra con el banco
+5. Procesa: se crean donaciones (hijos) + comisiones (gasto)
+
+---
+
+## Captura de tickets en viaje [id:capture]
+
+1. Abre **Captura de tickets** desde el menú (ideal desde el móvil)
+2. Sube foto del ticket — uno por recibo
+3. El documento queda "pendiente de revisión"
+4. Cuando vuelvas: ve a **Asignación de gastos** y revisa los pendientes
+5. Asigna proyecto/partida según necesites
+
+---
+
 Para consultar el manual completo en catalán, cambia el idioma en la configuración.

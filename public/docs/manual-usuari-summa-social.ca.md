@@ -653,12 +653,28 @@ Pots arrossegar fitxers (factures, tiquets) directament sobre una fila de la tau
 4. Deixa anar el fitxer
 5. El document es puja i s'assigna
 
-**Tipus acceptats:** PDF, JPG, PNG, GIF, WEBP, XML  
+**Tipus acceptats:** PDF, JPG, PNG, GIF, WEBP, XML
 **Mida màxima:** 15 MB
 
 ---
 
-## 5.6 Selecció múltiple i accions en bloc
+## 5.6 Captura de tiquets en viatge [id:capture]
+
+Quan ets fora de l'oficina i necessites guardar rebuts o tiquets ràpidament.
+
+### Pas a pas
+
+1. Obre **Captura de tiquets** des del menú (ideal des del mòbil)
+2. Puja foto o fitxer del rebut — un per tiquet
+3. El document queda "pendent de revisió"
+4. Quan tornis: ves a **Assignació de despeses** i revisa els pendents
+5. Assigna projecte/partida i completa dades si cal per justificar
+
+> 💡 **Consell:** No intentis quadrar projectes des del mòbil. Puja i segueix — ja ho revisaràs després.
+
+---
+
+## 5.7 Selecció múltiple i accions en bloc [id:bulk-actions]
 
 Si tens molts moviments per categoritzar, pots fer-ho d'un cop.
 
@@ -673,7 +689,7 @@ Si tens molts moviments per categoritzar, pots fer-ho d'un cop.
 
 ---
 
-## 5.7 Banner de devolucions pendents
+## 5.8 Banner de devolucions pendents
 
 Quan hi ha devolucions sense assignar, apareix un banner vermell:
 
@@ -1115,7 +1131,7 @@ No saps qui ha donat què!
 
 ---
 
-## 8.2 Com dividir un payout de Stripe
+## 8.2 Com dividir un payout de Stripe [id:stripe]
 
 ### Pas 1: Localitza el moviment
 

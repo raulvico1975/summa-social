@@ -29,6 +29,8 @@ import {
   PlayCircle,
   Calendar,
   CheckSquare,
+  Smartphone,
+  Wallet,
 } from 'lucide-react';
 import { useTranslations } from '@/i18n';
 
@@ -82,6 +84,18 @@ const GUIDES: GuideItem[] = [
     href: '/dashboard/movimientos',
     helpHref: '/dashboard/movimientos?help=1',
     manualAnchor: '#6-divisor-de-remeses',
+  },
+  {
+    id: 'stripeDonations',
+    icon: <Wallet className="h-5 w-5" />,
+    href: '/dashboard/movimientos',
+    manualAnchor: '#stripe',
+  },
+  {
+    id: 'travelReceipts',
+    icon: <Smartphone className="h-5 w-5" />,
+    href: '/dashboard/project-module/expenses/capture',
+    manualAnchor: '#capture',
   },
   {
     id: 'donors',
@@ -164,6 +178,7 @@ export default function GuidesPage() {
   // Labels
   const labelLookFirst = tr('guides.labels.lookFirst');
   const labelDoNext = tr('guides.labels.doNext');
+  const labelThen = tr('guides.labels.then', 'Després');
   const labelAvoid = tr('guides.labels.avoid');
   const labelNotResolved = tr('guides.labels.notResolved');
   const labelCostlyError = tr('guides.labels.costlyError');
@@ -187,11 +202,15 @@ export default function GuidesPage() {
           // Llegir traduccions per aquesta guia
           const title = tr(`guides.${guide.id}.title`);
           const intro = tr(`guides.${guide.id}.intro`);
+          const whatIsKey = `guides.${guide.id}.whatIs`;
+          const whatIs = tr(whatIsKey);
+          const hasWhatIs = whatIs !== whatIsKey;
           const cta = tr(`guides.cta.${guide.id}`);
 
           // Arrays opcionals
           const lookFirst = getArray(tr, `guides.${guide.id}.lookFirst`);
           const doNext = getArray(tr, `guides.${guide.id}.doNext`);
+          const then = getArray(tr, `guides.${guide.id}.then`);
           const avoid = getArray(tr, `guides.${guide.id}.avoid`);
           const notResolved = getArray(tr, `guides.${guide.id}.notResolved`);
           const checkBeforeExport = getArray(tr, `guides.${guide.id}.checkBeforeExport`);
@@ -220,7 +239,7 @@ export default function GuidesPage() {
                   </div>
                 </div>
                 <CardDescription className="mt-2 line-clamp-2">
-                  {intro}
+                  {hasWhatIs ? whatIs : intro}
                 </CardDescription>
               </CardHeader>
 
@@ -302,15 +321,17 @@ export default function GuidesPage() {
                       </ul>
                     </div>
 
-                    {/* Fes això després */}
-                    {doNext.length > 0 && (
+                    {/* Fes això després (doNext o then) */}
+                    {(doNext.length > 0 || then.length > 0) && (
                       <div>
                         <div className="flex items-center gap-1.5 mb-1">
                           <CheckCircle2 className="h-3.5 w-3.5 text-green-500" />
-                          <span className="text-xs font-medium text-green-600">{labelDoNext}</span>
+                          <span className="text-xs font-medium text-green-600">
+                            {doNext.length > 0 ? labelDoNext : labelThen}
+                          </span>
                         </div>
                         <ul className="text-xs text-muted-foreground space-y-0.5 ml-5">
-                          {doNext.map((item, idx) => (
+                          {(doNext.length > 0 ? doNext : then).map((item, idx) => (
                             <li key={idx} className="list-disc">{item}</li>
                           ))}
                         </ul>
