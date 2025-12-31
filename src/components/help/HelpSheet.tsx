@@ -21,8 +21,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useTranslations } from '@/i18n';
 import { getManualAnchorForRoute } from '@/help/help-manual-links';
 import { trackUX } from '@/lib/ux/trackUX';
-
-const HELP_FEEDBACK_EMAIL = 'ajuda@summasocial.app';
+import { SUPPORT_EMAIL } from '@/lib/constants';
 
 // Extra section icons mapping
 const EXTRA_SECTION_ICONS: Record<string, React.ReactNode> = {
@@ -259,7 +258,7 @@ export function HelpSheet() {
       `Què faltava o què no s'entén?\n\n\n` +
       `Proposta de text (si la tens):\n`
     );
-    return `mailto:${HELP_FEEDBACK_EMAIL}?subject=${subject}&body=${body}`;
+    return `mailto:${SUPPORT_EMAIL}?subject=${subject}&body=${body}`;
   }, [routeKeyPath, query]);
 
   // Track help.open when sheet opens

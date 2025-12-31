@@ -90,7 +90,9 @@ import {
   Globe,
   HardDrive,
   ExternalLink,
+  Mail,
 } from 'lucide-react';
+import { SUPPORT_EMAIL } from '@/lib/constants';
 
 // ═══════════════════════════════════════════════════════════════════════════
 // DEFINICIÓ DE SENTINELLES
@@ -743,8 +745,9 @@ export function SystemHealth() {
           </CardTitle>
           <CardDescription>
             Sentinelles que detecten problemes abans que els usuaris els reportin.
-            <span className="block text-xs mt-1 opacity-70">
-              Alertes email: veure Cloud Logging per estat (ALERTS_ENABLED)
+            <span className="flex items-center gap-1 text-xs mt-1 opacity-70">
+              <Mail className="h-3 w-3" />
+              Contacte/suport: <span className="font-mono">{SUPPORT_EMAIL}</span>
             </span>
           </CardDescription>
         </CardHeader>

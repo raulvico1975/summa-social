@@ -39,7 +39,7 @@ export default function PrivacyPage() {
             </h1>
             <p className="text-muted-foreground mb-8">
               <strong>Última actualització</strong>: Desembre 2025<br />
-              <strong>Contacte de privacitat</strong>: <a href="mailto:privacy@summasocial.app" className="text-primary hover:underline">privacy@summasocial.app</a>
+              <strong>Contacte de privacitat</strong>: <a href="mailto:hola@summasocial.app" className="text-primary hover:underline">hola@summasocial.app</a>
             </p>
 
             <hr className="my-6" />
@@ -197,7 +197,7 @@ export default function PrivacyPage() {
 
               <h3 className="text-lg font-medium mb-3">Com exercir els teus drets</h3>
               <ul className="list-disc list-inside text-muted-foreground space-y-1 mb-4">
-                <li><strong className="text-foreground">Usuaris de l&apos;aplicació</strong>: Escriu a <a href="mailto:privacy@summasocial.app" className="text-primary hover:underline">privacy@summasocial.app</a></li>
+                <li><strong className="text-foreground">Usuaris de l&apos;aplicació</strong>: Escriu a <a href="mailto:hola@summasocial.app" className="text-primary hover:underline">hola@summasocial.app</a></li>
                 <li><strong className="text-foreground">Donants, socis o altres interessats d&apos;una entitat</strong>: Contacta directament amb l&apos;entitat corresponent. Summa Social assistirà l&apos;entitat en la gestió de la teva sol·licitud.</li>
               </ul>
               <p className="text-muted-foreground text-sm mb-4">
@@ -240,7 +240,7 @@ export default function PrivacyPage() {
               <h2 className="text-xl font-semibold mb-4">9. Contacte</h2>
               <p className="text-muted-foreground mb-4">Per a qualsevol qüestió relacionada amb la privacitat:</p>
               <div className="bg-muted/50 rounded-lg p-4 space-y-2 text-sm">
-                <p><strong>Email</strong>: <a href="mailto:privacy@summasocial.app" className="text-primary hover:underline">privacy@summasocial.app</a></p>
+                <p><strong>Email</strong>: <a href="mailto:hola@summasocial.app" className="text-primary hover:underline">hola@summasocial.app</a></p>
                 <p><strong>Responsable intern</strong>: Raül Vico</p>
                 <p><strong>Titular del servei</strong>: Raül Vico (Espanya)</p>
                 <p className="text-muted-foreground pt-2">
@@ -258,7 +258,7 @@ export default function PrivacyPage() {
             <span>Summa Social</span>
           </div>
           <Button variant="outline" size="sm" asChild>
-            <a href="mailto:privacy@summasocial.app">
+            <a href="mailto:hola@summasocial.app">
               <Mail className="h-4 w-4 mr-2" />
               Contactar
             </a>

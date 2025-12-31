@@ -52,7 +52,12 @@ function useOrganizationBySlug(orgSlug?: string) {
     // Si no hi ha usuari autenticat, redirigim a login
     if (!user) {
       setIsLoading(false);
-      router.push('/login');
+      // Si tenim orgSlug, redirigir al login de l'organització
+      if (orgSlug) {
+        router.push(`/${orgSlug}/login`);
+      } else {
+        router.push('/login');
+      }
       return;
     }
 
