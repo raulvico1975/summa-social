@@ -299,7 +299,33 @@ function validateLanguage(baseMessages: JsonMessages, targetMessages: JsonMessag
     }
   }
 
-  // 7. Comprovar que no hi ha claus guides.* al target que no existeixin al base
+  // 7. Validar summary: ≤140 chars i ha d'existir per cada guia
+  const MAX_SUMMARY_LENGTH = 140;
+  for (const guideId of GUIDE_IDS) {
+    const summaryKey = `guides.${guideId}.summary`;
+
+    if (!(summaryKey in targetMessages)) {
+      errors.push({
+        type: 'critical',
+        message: `Falta summary de guia: ${summaryKey}`,
+      });
+    } else {
+      const summary = targetMessages[summaryKey];
+      if (!summary || summary.trim() === '') {
+        errors.push({
+          type: 'critical',
+          message: `Summary buit: ${summaryKey}`,
+        });
+      } else if (summary.length > MAX_SUMMARY_LENGTH) {
+        errors.push({
+          type: 'critical',
+          message: `Summary massa llarg (${summary.length} chars, max ${MAX_SUMMARY_LENGTH}): ${summaryKey}`,
+        });
+      }
+    }
+  }
+
+  // 8. Comprovar que no hi ha claus guides.* al target que no existeixin al base
   const baseGuideKeys = Object.keys(baseMessages).filter(k => k.startsWith('guides.'));
   const targetGuideKeys = Object.keys(targetMessages).filter(k => k.startsWith('guides.'));
   const extraKeys = targetGuideKeys.filter(k => !baseGuideKeys.includes(k));

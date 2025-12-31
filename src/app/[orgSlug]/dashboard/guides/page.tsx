@@ -5,7 +5,6 @@ import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
 import {
   ArrowRight,
   BookOpen,
@@ -15,12 +14,6 @@ import {
   Users,
   FileText,
   FolderKanban,
-  Eye,
-  CheckCircle2,
-  XCircle,
-  AlertTriangle,
-  ClipboardCheck,
-  Clock,
   HelpCircle,
   CalendarCheck,
   Shield,
@@ -50,6 +43,7 @@ import {
   Save,
   ToggleLeft,
   Trash2,
+  Eye,
 } from 'lucide-react';
 import { useTranslations } from '@/i18n';
 
@@ -338,19 +332,7 @@ function safeTr(
   return value;
 }
 
-/**
- * Llegeix arrays del JSON amb fallback segur
- */
-function getArray(tr: (key: string, fallback?: string) => string, prefix: string, maxItems = 10): string[] {
-  const result: string[] = [];
-  for (let i = 0; i < maxItems; i++) {
-    const key = `${prefix}.${i}`;
-    const value = tr(key);
-    if (isUnresolvedKey(value, key)) break;
-    result.push(value);
-  }
-  return result;
-}
+// NOTE: getArray() moguda a la pàgina de detall (només s'hi usen steps/lookFirst/etc.)
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Component
@@ -368,17 +350,7 @@ export default function GuidesPage() {
   const pageSubtitle = safeTr(tr, 'guides.pageSubtitle', 'Consulta ràpida per a tasques habituals');
   const viewManual = safeTr(tr, 'guides.viewManual', 'Veure manual');
   const viewHelp = safeTr(tr, 'guides.viewHelp', 'Ajuda');
-  const recommendedOrder = safeTr(tr, 'guides.recommendedOrder', 'Ordre recomanat');
-
-  // Labels (amb fallback humà)
-  const labelLookFirst = safeTr(tr, 'guides.labels.lookFirst', 'Mira primer');
-  const labelDoNext = safeTr(tr, 'guides.labels.doNext', 'Fes després');
-  const labelThen = safeTr(tr, 'guides.labels.then', 'Després');
-  const labelAvoid = safeTr(tr, 'guides.labels.avoid', 'Evita');
-  const labelNotResolved = safeTr(tr, 'guides.labels.notResolved', 'No està resolt');
-  const labelCostlyError = safeTr(tr, 'guides.labels.costlyError', 'Error freqüent');
-  const labelCheckBeforeExport = safeTr(tr, 'guides.labels.checkBeforeExport', 'Revisa abans');
-  const labelDontFixYet = safeTr(tr, 'guides.labels.dontFixYet', 'No arreglis encara');
+  // NOTE: Labels i arrays (lookFirst, steps, avoid, etc.) només a pàgina de detall
 
   return (
     <div className="container max-w-5xl py-8">
@@ -408,31 +380,27 @@ export default function GuidesPage() {
           }
 
           const title = titleValue;
-          const intro = safeTr(tr, `guides.${guide.id}.intro`, '');
-          const whatIsKey = `guides.${guide.id}.whatIs`;
-          const whatIs = tr(whatIsKey);
-          const hasWhatIs = !isUnresolvedKey(whatIs, whatIsKey);
           const cta = safeTr(tr, `guides.cta.${guide.id}`, 'Anar-hi');
 
-          // Arrays opcionals
-          const lookFirst = getArray(tr, `guides.${guide.id}.lookFirst`);
-          const doNext = getArray(tr, `guides.${guide.id}.doNext`);
-          const then = getArray(tr, `guides.${guide.id}.then`);
-          const avoid = getArray(tr, `guides.${guide.id}.avoid`);
-          const notResolved = getArray(tr, `guides.${guide.id}.notResolved`);
-          const checkBeforeExport = getArray(tr, `guides.${guide.id}.checkBeforeExport`);
-          const dontFixYet = getArray(tr, `guides.${guide.id}.dontFixYet`);
-          const steps = getArray(tr, `guides.${guide.id}.steps`);
+          // DECISIÓ UX: Les cards NOMÉS mostren summary, MAI llistes ni passos
+          // Summary amb fallback a whatIs > intro (per compatibilitat)
+          const summaryKey = `guides.${guide.id}.summary`;
+          const summary = tr(summaryKey);
+          const hasSummary = !isUnresolvedKey(summary, summaryKey);
 
-          // costlyError és un string únic (no array)
-          const costlyErrorKey = `guides.${guide.id}.costlyError`;
-          const costlyError = tr(costlyErrorKey);
-          const hasCostlyError = !isUnresolvedKey(costlyError, costlyErrorKey);
-
-          // Determinar quin format usar
-          const isExpertFormat = notResolved.length > 0;
-          const isChecklistFormat = lookFirst.length > 0 && !isExpertFormat;
-          const isStepsFormat = steps.length > 0 && !isExpertFormat && !isChecklistFormat;
+          let cardDescription = '';
+          if (hasSummary) {
+            cardDescription = summary;
+          } else {
+            // Fallback per guies sense summary encara
+            const whatIsKey = `guides.${guide.id}.whatIs`;
+            const whatIs = tr(whatIsKey);
+            if (!isUnresolvedKey(whatIs, whatIsKey)) {
+              cardDescription = whatIs;
+            } else {
+              cardDescription = safeTr(tr, `guides.${guide.id}.intro`, '');
+            }
+          }
 
           return (
             <Card key={guide.id} className="flex flex-col">
@@ -445,151 +413,15 @@ export default function GuidesPage() {
                     <CardTitle className="text-base leading-tight">{title}</CardTitle>
                   </div>
                 </div>
-                <CardDescription className="mt-2 line-clamp-2">
-                  {hasWhatIs ? whatIs : intro}
-                </CardDescription>
+                {/* DECISIÓ UX: Només summary, sense truncament */}
+                {cardDescription && (
+                  <CardDescription className="mt-2">
+                    {cardDescription}
+                  </CardDescription>
+                )}
               </CardHeader>
 
               <CardContent className="flex-1 flex flex-col">
-                {/* Format expert (devolucions/donants) */}
-                {isExpertFormat && (
-                  <div className="space-y-2.5 mb-4 text-xs">
-                    {/* Quan NO està ben resolta */}
-                    <div>
-                      <div className="flex items-center gap-1.5 mb-1">
-                        <XCircle className="h-3.5 w-3.5 text-red-500" />
-                        <span className="font-medium text-red-600">{labelNotResolved}</span>
-                      </div>
-                      <ul className="text-muted-foreground space-y-0.5 ml-5">
-                        {notResolved.map((item, idx) => (
-                          <li key={idx} className="list-disc">{item}</li>
-                        ))}
-                      </ul>
-                    </div>
-
-                    {/* L'error més car */}
-                    {hasCostlyError && (
-                      <div className="bg-amber-50 dark:bg-amber-950/30 rounded-md p-2">
-                        <div className="flex items-start gap-1.5">
-                          <AlertTriangle className="h-3.5 w-3.5 text-amber-600 mt-0.5 shrink-0" />
-                          <div>
-                            <span className="font-medium text-amber-700 dark:text-amber-400">{labelCostlyError}</span>
-                            <p className="text-muted-foreground mt-0.5">{costlyError}</p>
-                          </div>
-                        </div>
-                      </div>
-                    )}
-
-                    {/* Què mires sempre abans d'exportar */}
-                    {checkBeforeExport.length > 0 && (
-                      <div>
-                        <div className="flex items-center gap-1.5 mb-1">
-                          <ClipboardCheck className="h-3.5 w-3.5 text-green-500" />
-                          <span className="font-medium text-green-600">{labelCheckBeforeExport}</span>
-                        </div>
-                        <ul className="text-muted-foreground space-y-0.5 ml-5">
-                          {checkBeforeExport.map((item, idx) => (
-                            <li key={idx} className="list-disc">{item}</li>
-                          ))}
-                        </ul>
-                      </div>
-                    )}
-
-                    {/* Quan NO arreglar-ho encara */}
-                    {dontFixYet.length > 0 && (
-                      <div>
-                        <div className="flex items-center gap-1.5 mb-1">
-                          <Clock className="h-3.5 w-3.5 text-slate-400" />
-                          <span className="font-medium text-slate-500">{labelDontFixYet}</span>
-                        </div>
-                        <ul className="text-muted-foreground space-y-0.5 ml-5">
-                          {dontFixYet.map((item, idx) => (
-                            <li key={idx} className="list-disc">{item}</li>
-                          ))}
-                        </ul>
-                      </div>
-                    )}
-                  </div>
-                )}
-
-                {/* Format checklist (moviments/remeses) */}
-                {isChecklistFormat && (
-                  <div className="space-y-3 mb-4">
-                    {/* Mira això primer */}
-                    <div>
-                      <div className="flex items-center gap-1.5 mb-1">
-                        <Eye className="h-3.5 w-3.5 text-blue-500" />
-                        <span className="text-xs font-medium text-blue-600">{labelLookFirst}</span>
-                      </div>
-                      <ul className="text-xs text-muted-foreground space-y-0.5 ml-5">
-                        {lookFirst.map((item, idx) => (
-                          <li key={idx} className="list-disc">{item}</li>
-                        ))}
-                      </ul>
-                    </div>
-
-                    {/* Fes això després (doNext o then) */}
-                    {(doNext.length > 0 || then.length > 0) && (
-                      <div>
-                        <div className="flex items-center gap-1.5 mb-1">
-                          <CheckCircle2 className="h-3.5 w-3.5 text-green-500" />
-                          <span className="text-xs font-medium text-green-600">
-                            {doNext.length > 0 ? labelDoNext : labelThen}
-                          </span>
-                        </div>
-                        <ul className="text-xs text-muted-foreground space-y-0.5 ml-5">
-                          {(doNext.length > 0 ? doNext : then).map((item, idx) => (
-                            <li key={idx} className="list-disc">{item}</li>
-                          ))}
-                        </ul>
-                      </div>
-                    )}
-
-                    {/* Evita això */}
-                    {avoid.length > 0 && (
-                      <div>
-                        <div className="flex items-center gap-1.5 mb-1">
-                          <XCircle className="h-3.5 w-3.5 text-red-400" />
-                          <span className="text-xs font-medium text-red-500">{labelAvoid}</span>
-                        </div>
-                        <ul className="text-xs text-muted-foreground space-y-0.5 ml-5">
-                          {avoid.map((item, idx) => (
-                            <li key={idx} className="list-disc">{item}</li>
-                          ))}
-                        </ul>
-                      </div>
-                    )}
-                  </div>
-                )}
-
-                {/* Format steps (monthlyFlow, yearEndFiscal, etc.) */}
-                {isStepsFormat && (
-                  <div className="mb-4">
-                    <Badge variant="outline" className="mb-2 text-xs">
-                      {recommendedOrder}
-                    </Badge>
-                    <ol className="text-sm text-muted-foreground space-y-1 list-decimal list-inside">
-                      {steps.map((step, idx) => (
-                        <li key={idx} className="line-clamp-1">{step}</li>
-                      ))}
-                    </ol>
-                    {/* Mostrar avoid si existeix per steps (p.ex. initialLoad) */}
-                    {avoid.length > 0 && (
-                      <div className="mt-3">
-                        <div className="flex items-center gap-1.5 mb-1">
-                          <XCircle className="h-3.5 w-3.5 text-red-400" />
-                          <span className="text-xs font-medium text-red-500">{labelAvoid}</span>
-                        </div>
-                        <ul className="text-xs text-muted-foreground space-y-0.5 ml-5">
-                          {avoid.map((item, idx) => (
-                            <li key={idx} className="list-disc">{item}</li>
-                          ))}
-                        </ul>
-                      </div>
-                    )}
-                  </div>
-                )}
-
                 {/* CTAs */}
                 <div className="mt-auto flex flex-col gap-2">
                   <Button asChild size="sm">
