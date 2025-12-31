@@ -305,16 +305,44 @@ const GUIDES: GuideItem[] = [
 ];
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Helpers per llegir arrays del JSON (claus amb .0, .1, .2...)
+// Helpers per llegir traduccions amb fallback HUMÀ (MAI claus tècniques)
 // ─────────────────────────────────────────────────────────────────────────────
 
+/**
+ * Detecta si un valor és una clau no resolta (MAI mostrar a UI)
+ */
+function isUnresolvedKey(value: string, key: string): boolean {
+  return value === key || value.startsWith('guides.');
+}
+
+/**
+ * Wrapper segur per tr() que mai retorna claus tècniques
+ * Si la traducció no es resol, retorna el fallback humà
+ */
+function safeTr(
+  tr: (key: string, fallback?: string) => string,
+  key: string,
+  fallback: string
+): string {
+  const value = tr(key);
+  if (isUnresolvedKey(value, key)) {
+    if (process.env.NODE_ENV === 'development') {
+      console.warn(`[i18n] Key not resolved: ${key}`);
+    }
+    return fallback;
+  }
+  return value;
+}
+
+/**
+ * Llegeix arrays del JSON amb fallback segur
+ */
 function getArray(tr: (key: string, fallback?: string) => string, prefix: string, maxItems = 10): string[] {
   const result: string[] = [];
   for (let i = 0; i < maxItems; i++) {
     const key = `${prefix}.${i}`;
     const value = tr(key);
-    // Si la clau retorna ella mateixa, l'element no existeix
-    if (value === key) break;
+    if (isUnresolvedKey(value, key)) break;
     result.push(value);
   }
   return result;
@@ -331,22 +359,22 @@ export default function GuidesPage() {
 
   const buildUrl = (path: string) => `/${orgSlug}${path}`;
 
-  // Page-level translations
-  const pageTitle = tr('guides.pageTitle');
-  const pageSubtitle = tr('guides.pageSubtitle');
-  const viewManual = tr('guides.viewManual');
-  const viewHelp = tr('guides.viewHelp');
-  const recommendedOrder = tr('guides.recommendedOrder');
+  // Page-level translations (amb fallback humà)
+  const pageTitle = safeTr(tr, 'guides.pageTitle', 'Guies');
+  const pageSubtitle = safeTr(tr, 'guides.pageSubtitle', 'Consulta ràpida per a tasques habituals');
+  const viewManual = safeTr(tr, 'guides.viewManual', 'Veure manual');
+  const viewHelp = safeTr(tr, 'guides.viewHelp', 'Ajuda');
+  const recommendedOrder = safeTr(tr, 'guides.recommendedOrder', 'Ordre recomanat');
 
-  // Labels
-  const labelLookFirst = tr('guides.labels.lookFirst');
-  const labelDoNext = tr('guides.labels.doNext');
-  const labelThen = tr('guides.labels.then', 'Després');
-  const labelAvoid = tr('guides.labels.avoid');
-  const labelNotResolved = tr('guides.labels.notResolved');
-  const labelCostlyError = tr('guides.labels.costlyError');
-  const labelCheckBeforeExport = tr('guides.labels.checkBeforeExport');
-  const labelDontFixYet = tr('guides.labels.dontFixYet');
+  // Labels (amb fallback humà)
+  const labelLookFirst = safeTr(tr, 'guides.labels.lookFirst', 'Mira primer');
+  const labelDoNext = safeTr(tr, 'guides.labels.doNext', 'Fes després');
+  const labelThen = safeTr(tr, 'guides.labels.then', 'Després');
+  const labelAvoid = safeTr(tr, 'guides.labels.avoid', 'Evita');
+  const labelNotResolved = safeTr(tr, 'guides.labels.notResolved', 'No està resolt');
+  const labelCostlyError = safeTr(tr, 'guides.labels.costlyError', 'Error freqüent');
+  const labelCheckBeforeExport = safeTr(tr, 'guides.labels.checkBeforeExport', 'Revisa abans');
+  const labelDontFixYet = safeTr(tr, 'guides.labels.dontFixYet', 'No arreglis encara');
 
   return (
     <div className="container max-w-5xl py-8">
@@ -362,13 +390,13 @@ export default function GuidesPage() {
       {/* Grid de guies */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {GUIDES.map((guide) => {
-          // Llegir traduccions per aquesta guia
-          const title = tr(`guides.${guide.id}.title`);
-          const intro = tr(`guides.${guide.id}.intro`);
+          // Llegir traduccions per aquesta guia (amb fallback humà)
+          const title = safeTr(tr, `guides.${guide.id}.title`, 'Guia');
+          const intro = safeTr(tr, `guides.${guide.id}.intro`, '');
           const whatIsKey = `guides.${guide.id}.whatIs`;
           const whatIs = tr(whatIsKey);
-          const hasWhatIs = whatIs !== whatIsKey;
-          const cta = tr(`guides.cta.${guide.id}`);
+          const hasWhatIs = !isUnresolvedKey(whatIs, whatIsKey);
+          const cta = safeTr(tr, `guides.cta.${guide.id}`, 'Anar-hi');
 
           // Arrays opcionals
           const lookFirst = getArray(tr, `guides.${guide.id}.lookFirst`);
@@ -383,7 +411,7 @@ export default function GuidesPage() {
           // costlyError és un string únic (no array)
           const costlyErrorKey = `guides.${guide.id}.costlyError`;
           const costlyError = tr(costlyErrorKey);
-          const hasCostlyError = costlyError !== costlyErrorKey;
+          const hasCostlyError = !isUnresolvedKey(costlyError, costlyErrorKey);
 
           // Determinar quin format usar
           const isExpertFormat = notResolved.length > 0;
