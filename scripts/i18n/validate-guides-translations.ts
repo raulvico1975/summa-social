@@ -87,6 +87,11 @@ const GUIDE_IDS = [
   'certificatesBatch',
   'donorSetInactive',
   'donorReactivate',
+  'editMovement',
+  'movementFilters',
+  'bulkAICategorize',
+  'remittanceViewDetail',
+  'resetPassword',
 ];
 
 // Arrays que han de tenir mínim 1 element si existeixen al base
