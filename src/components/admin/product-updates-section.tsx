@@ -103,13 +103,7 @@ export function ProductUpdatesSection({ isSuperAdmin = false }: ProductUpdatesSe
   const { firestore } = useFirebase();
   const { toast } = useToast();
 
-  // GATING CRÍTIC: No muntar res si no és superadmin
-  // Això evita que cap funció async pugui executar-se i rebre permission denied
-  if (!isSuperAdmin) {
-    return null;
-  }
-
-  // Estat
+  // Estat (sempre declarar hooks abans de qualsevol early return!)
   const [isImporting, setIsImporting] = React.useState(false);
   const [editingDraft, setEditingDraft] = React.useState<DraftItem | null>(null);
   const [isEditDialogOpen, setIsEditDialogOpen] = React.useState(false);
@@ -119,25 +113,36 @@ export function ProductUpdatesSection({ isSuperAdmin = false }: ProductUpdatesSe
   const [isSaving, setIsSaving] = React.useState(false);
   const [isPublishing, setIsPublishing] = React.useState<string | null>(null);
   const [isDiscarding, setIsDiscarding] = React.useState<string | null>(null);
+  const [isUnpublishing, setIsUnpublishing] = React.useState<string | null>(null);
 
-  // Col·leccions (el gating ja està fet al return null anterior)
+  // Col·leccions - CRÍTIC: retornar null si no és superadmin per evitar permission denied
   const draftsQuery = useMemoFirebase(
-    () => query(collection(firestore, 'productUpdateDrafts'), orderBy('createdAt', 'desc')),
-    [firestore]
+    () => isSuperAdmin
+      ? query(collection(firestore, 'productUpdateDrafts'), orderBy('createdAt', 'desc'))
+      : null,
+    [firestore, isSuperAdmin]
   );
   // Només mostrar publicades actives (isActive !== false)
   const publishedQuery = useMemoFirebase(
-    () => query(
-      collection(firestore, 'productUpdates'),
-      where('isActive', '!=', false),
-      orderBy('isActive'),
-      orderBy('publishedAt', 'desc')
-    ),
-    [firestore]
+    () => isSuperAdmin
+      ? query(
+          collection(firestore, 'productUpdates'),
+          where('isActive', '!=', false),
+          orderBy('isActive'),
+          orderBy('publishedAt', 'desc')
+        )
+      : null,
+    [firestore, isSuperAdmin]
   );
 
   const { data: allDrafts, isLoading: isLoadingDrafts } = useCollection<DraftItem>(draftsQuery);
   const { data: published, isLoading: isLoadingPublished } = useCollection<PublishedUpdate>(publishedQuery);
+
+  // GATING: No renderitzar res si no és superadmin
+  // (els hooks ja retornen null, però això evita renderitzar la UI)
+  if (!isSuperAdmin) {
+    return null;
+  }
 
   // Filtrar esborranys actius (no publicats ni descartats)
   const activeDrafts = React.useMemo(() => {
@@ -327,8 +332,6 @@ export function ProductUpdatesSection({ isSuperAdmin = false }: ProductUpdatesSe
   };
 
   // Handler despublicar (soft delete)
-  const [isUnpublishing, setIsUnpublishing] = React.useState<string | null>(null);
-
   const handleUnpublish = async (update: PublishedUpdate) => {
     setIsUnpublishing(update.id);
     try {
