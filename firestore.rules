@@ -60,8 +60,9 @@ service cloud.firestore {
     }
 
     match /productUpdates/{updateId} {
-      // Permet get i list per SuperAdmin
-      allow get, list: if isSuperAdmin();
+      // Lectura: usuaris autenticats (campaneta)
+      // Escriptura: només SuperAdmin
+      allow get, list: if isSignedIn();
       allow create, update, delete: if isSuperAdmin();
     }
 

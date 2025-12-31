@@ -16,7 +16,10 @@ export type RoadmapItem = {
   text: string;
 };
 
-// Novetats del producte (màx 5-6 visibles)
+/**
+ * @deprecated Usar Firestore productUpdates. Fallback només.
+ * Novetats del producte (màx 5-6 visibles)
+ */
 export const PRODUCT_UPDATES: ProductUpdate[] = [
   {
     id: 'bulk-categorize-2025-12-26',

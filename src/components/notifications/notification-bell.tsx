@@ -1,12 +1,13 @@
 // src/components/notifications/notification-bell.tsx
 // Product Updates Inbox - Novetats del producte
-// Persistència via localStorage (sense backend)
+// Llegeix de Firestore amb fallback a legacy hardcoded
 
 'use client';
 
 import * as React from 'react';
 import { Bell, ExternalLink, Check, CheckCheck, Circle } from 'lucide-react';
 import Link from 'next/link';
+import { collection, query, where, orderBy, limit, getDocs, Firestore } from 'firebase/firestore';
 
 import { Button } from '@/components/ui/button';
 import {
@@ -15,6 +16,7 @@ import {
   PopoverTrigger,
 } from '@/components/ui/popover';
 import { Separator } from '@/components/ui/separator';
+import { useFirebase } from '@/firebase';
 import { useOrgUrl, useCurrentOrganization } from '@/hooks/organization-provider';
 import { useAuth } from '@/hooks/use-auth';
 import { useTranslations } from '@/i18n';
@@ -29,18 +31,77 @@ import {
 } from '@/lib/notifications';
 
 interface ProductUpdatesInboxProps {
-  updates?: ProductUpdate[];
   roadmap?: RoadmapItem[];
 }
 
+/**
+ * Carrega novetats de Firestore amb fallback a legacy hardcoded.
+ * Query: isActive==true, orderBy createdAt desc, limit 6
+ */
+function useFirestoreUpdates(firestore: Firestore | null): {
+  updates: ProductUpdate[];
+  isLoading: boolean;
+  usingFallback: boolean;
+} {
+  const [updates, setUpdates] = React.useState<ProductUpdate[]>(PRODUCT_UPDATES);
+  const [isLoading, setIsLoading] = React.useState(true);
+  const [usingFallback, setUsingFallback] = React.useState(false);
+
+  React.useEffect(() => {
+    if (!firestore) {
+      setIsLoading(false);
+      setUsingFallback(true);
+      return;
+    }
+
+    async function fetchUpdates() {
+      try {
+        const q = query(
+          collection(firestore!, 'productUpdates'),
+          where('isActive', '==', true),
+          orderBy('createdAt', 'desc'),
+          limit(6)
+        );
+        const snapshot = await getDocs(q);
+        const firestoreUpdates: ProductUpdate[] = snapshot.docs.map((doc) => {
+          const data = doc.data();
+          return {
+            id: doc.id,
+            title: data.title ?? '',
+            body: data.description ?? '',
+            href: data.link ?? undefined,
+            ctaLabel: data.link ? 'Veure' : undefined,
+            createdAt: data.createdAt?.toDate?.()?.toISOString?.()?.slice(0, 10) ?? '',
+          };
+        });
+        setUpdates(firestoreUpdates.length > 0 ? firestoreUpdates : PRODUCT_UPDATES);
+        setUsingFallback(firestoreUpdates.length === 0);
+      } catch (err: unknown) {
+        const errorCode = (err as { code?: string })?.code ?? err;
+        console.warn('[notifications] Firestore failed, using legacy fallback', errorCode);
+        setUpdates(PRODUCT_UPDATES);
+        setUsingFallback(true);
+      } finally {
+        setIsLoading(false);
+      }
+    }
+    fetchUpdates();
+  }, [firestore]);
+
+  return { updates, isLoading, usingFallback };
+}
+
 export function ProductUpdatesInbox({
-  updates = PRODUCT_UPDATES,
   roadmap = ROADMAP_ITEMS,
 }: ProductUpdatesInboxProps) {
   const { organizationId } = useCurrentOrganization();
   const { user } = useAuth();
   const { buildUrl } = useOrgUrl();
   const { t } = useTranslations();
+  const { firestore } = useFirebase();
+
+  // Carregar updates de Firestore amb fallback
+  const { updates } = useFirestoreUpdates(firestore);
 
   const [readIds, setReadIds] = React.useState<string[]>([]);
   const [isOpen, setIsOpen] = React.useState(false);
@@ -208,17 +269,11 @@ interface NotificationBellProps {
   notifications: AppNotification[];
 }
 
-/** @deprecated Utilitza ProductUpdatesInbox */
-export function NotificationBell({ notifications }: NotificationBellProps) {
-  // Converteix AppNotification[] a ProductUpdate[]
-  const updates: ProductUpdate[] = notifications.map((n) => ({
-    id: n.id,
-    title: n.title,
-    body: n.body,
-    href: n.href,
-    ctaLabel: n.ctaLabel,
-    createdAt: n.createdAt,
-  }));
-
-  return <ProductUpdatesInbox updates={updates} roadmap={ROADMAP_ITEMS} />;
+/**
+ * @deprecated Utilitza ProductUpdatesInbox directament.
+ * Ara ProductUpdatesInbox carrega de Firestore amb fallback intern.
+ */
+export function NotificationBell(_props: NotificationBellProps) {
+  // Ignora notifications prop - ara usa hook intern amb Firestore
+  return <ProductUpdatesInbox roadmap={ROADMAP_ITEMS} />;
 }
