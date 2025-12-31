@@ -5,9 +5,8 @@
 'use client';
 
 import * as React from 'react';
-import { Bell, ExternalLink, Check, CheckCheck, Circle } from 'lucide-react';
+import { Bell, ExternalLink, Check, CheckCheck, Circle, ChevronRight } from 'lucide-react';
 import Link from 'next/link';
-import { collection, query, where, orderBy, limit, getDocs, Firestore } from 'firebase/firestore';
 
 import { Button } from '@/components/ui/button';
 import {
@@ -16,14 +15,13 @@ import {
   PopoverTrigger,
 } from '@/components/ui/popover';
 import { Separator } from '@/components/ui/separator';
-import { useFirebase } from '@/firebase';
 import { useOrgUrl, useCurrentOrganization } from '@/hooks/organization-provider';
 import { useAuth } from '@/hooks/use-auth';
 import { useTranslations } from '@/i18n';
+import { useProductUpdates, type FirestoreProductUpdate } from '@/hooks/use-product-updates';
+import { ProductUpdateDetailModal } from './product-update-detail-modal';
 import {
-  type ProductUpdate,
   type RoadmapItem,
-  PRODUCT_UPDATES,
   ROADMAP_ITEMS,
   getReadNotificationIds,
   markNotificationRead,
@@ -34,63 +32,6 @@ interface ProductUpdatesInboxProps {
   roadmap?: RoadmapItem[];
 }
 
-/**
- * Carrega novetats de Firestore amb fallback a legacy hardcoded.
- * Query: isActive==true, orderBy createdAt desc, limit 6
- */
-function useFirestoreUpdates(firestore: Firestore | null): {
-  updates: ProductUpdate[];
-  isLoading: boolean;
-  usingFallback: boolean;
-} {
-  const [updates, setUpdates] = React.useState<ProductUpdate[]>(PRODUCT_UPDATES);
-  const [isLoading, setIsLoading] = React.useState(true);
-  const [usingFallback, setUsingFallback] = React.useState(false);
-
-  React.useEffect(() => {
-    if (!firestore) {
-      setIsLoading(false);
-      setUsingFallback(true);
-      return;
-    }
-
-    async function fetchUpdates() {
-      try {
-        const q = query(
-          collection(firestore!, 'productUpdates'),
-          where('isActive', '==', true),
-          orderBy('createdAt', 'desc'),
-          limit(6)
-        );
-        const snapshot = await getDocs(q);
-        const firestoreUpdates: ProductUpdate[] = snapshot.docs.map((doc) => {
-          const data = doc.data();
-          return {
-            id: doc.id,
-            title: data.title ?? '',
-            body: data.description ?? '',
-            href: data.link ?? undefined,
-            ctaLabel: data.link ? 'Veure' : undefined,
-            createdAt: data.createdAt?.toDate?.()?.toISOString?.()?.slice(0, 10) ?? '',
-          };
-        });
-        setUpdates(firestoreUpdates.length > 0 ? firestoreUpdates : PRODUCT_UPDATES);
-        setUsingFallback(firestoreUpdates.length === 0);
-      } catch (err: unknown) {
-        const errorCode = (err as { code?: string })?.code ?? err;
-        console.warn('[notifications] Firestore failed, using legacy fallback', errorCode);
-        setUpdates(PRODUCT_UPDATES);
-        setUsingFallback(true);
-      } finally {
-        setIsLoading(false);
-      }
-    }
-    fetchUpdates();
-  }, [firestore]);
-
-  return { updates, isLoading, usingFallback };
-}
-
 export function ProductUpdatesInbox({
   roadmap = ROADMAP_ITEMS,
 }: ProductUpdatesInboxProps) {
@@ -98,13 +39,22 @@ export function ProductUpdatesInbox({
   const { user } = useAuth();
   const { buildUrl } = useOrgUrl();
   const { t } = useTranslations();
-  const { firestore } = useFirebase();
 
-  // Carregar updates de Firestore amb fallback
-  const { updates } = useFirestoreUpdates(firestore);
+  // Carregar updates de Firestore amb fallback (hook centralitzat)
+  const { updates } = useProductUpdates();
 
   const [readIds, setReadIds] = React.useState<string[]>([]);
   const [isOpen, setIsOpen] = React.useState(false);
+
+  // Modal detall
+  const [selectedUpdate, setSelectedUpdate] = React.useState<FirestoreProductUpdate | null>(null);
+  const [isDetailOpen, setIsDetailOpen] = React.useState(false);
+
+  const handleOpenDetail = (update: FirestoreProductUpdate) => {
+    setSelectedUpdate(update);
+    setIsDetailOpen(true);
+    setIsOpen(false); // Tancar popover
+  };
 
   // Carregar readIds al muntar
   React.useEffect(() => {
@@ -210,17 +160,32 @@ export function ProductUpdatesInbox({
                           </Link>
                         )}
                       </div>
-                      {!read && (
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-6 w-6 shrink-0"
-                          onClick={() => handleMarkRead(update.id)}
-                          aria-label={t.productUpdates.markAsRead}
-                        >
-                          <Check className="h-3.5 w-3.5" />
-                        </Button>
-                      )}
+                      <div className="flex items-center gap-1 shrink-0">
+                        {/* Botó veure detall (només si té contentLong) */}
+                        {update.contentLong && (
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-6 w-6"
+                            onClick={() => handleOpenDetail(update)}
+                            aria-label="Veure detall"
+                          >
+                            <ChevronRight className="h-3.5 w-3.5" />
+                          </Button>
+                        )}
+                        {/* Botó marcar com llegit */}
+                        {!read && (
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-6 w-6"
+                            onClick={() => handleMarkRead(update.id)}
+                            aria-label={t.productUpdates.markAsRead}
+                          >
+                            <Check className="h-3.5 w-3.5" />
+                          </Button>
+                        )}
+                      </div>
                     </div>
                   </div>
                 </React.Fragment>
@@ -255,6 +220,13 @@ export function ProductUpdatesInbox({
           </>
         )}
       </PopoverContent>
+
+      {/* Modal detall */}
+      <ProductUpdateDetailModal
+        update={selectedUpdate}
+        open={isDetailOpen}
+        onOpenChange={setIsDetailOpen}
+      />
     </Popover>
   );
 }
