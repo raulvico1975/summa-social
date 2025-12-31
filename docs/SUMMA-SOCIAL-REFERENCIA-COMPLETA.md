@@ -1,6 +1,6 @@
 # ═══════════════════════════════════════════════════════════════════════════════
 # SUMMA SOCIAL - REFERÈNCIA COMPLETA DEL PROJECTE
-# Versió 1.24 - Desembre 2025
+# Versió 1.25 - Desembre 2025
 # ═══════════════════════════════════════════════════════════════════════════════
 
 
@@ -96,7 +96,7 @@ Eina centralitzada amb:
 | Autenticació | Firebase Auth | - |
 | Emmagatzematge | Firebase Storage | - |
 | IA | Genkit + Google Gemini | - |
-| Idiomes | Català, Espanyol i Francès | i18n |
+| Idiomes | Català, Espanyol, Francès i Portuguès | i18n |
 | Excel/CSV | SheetJS (xlsx) | - |
 | PDF | jsPDF | - |
 
@@ -241,7 +241,12 @@ El sistema de categorització IA genera logs estructurats per facilitar el diagn
 ```
 /src
   /app                          → Pàgines (Next.js App Router)
-    /[orgSlug]                   → Rutes per organització
+    /[lang]                      → Rutes públiques multiidioma (NOU v1.25)
+      /login                     → Login públic (/ca/login, /es/login, etc.)
+      /privacy                   → Política de privacitat
+      /contact                   → Pàgina de contacte
+      layout.tsx                 → Validació idioma + generateStaticParams
+    /[orgSlug]                   → Rutes per organització (app privada)
       /dashboard
         /page.tsx                → Dashboard principal
         /movimientos             → Gestió de transaccions
@@ -254,6 +259,10 @@ El sistema de categorització IA genera logs estructurats per facilitar el diagn
         /configuracion           → Configuració de l'organització
       /login                     → Login per organització
     /admin                       → Panel SuperAdmin global
+    /login                       → Redirect stub → /[lang]/login
+    /privacy                     → Redirect stub → /[lang]/privacy
+    /contacte                    → Redirect stub → /[lang]/contact
+    /privacitat                  → Redirect stub → /[lang]/privacy (legacy)
   /components                    → Components React reutilitzables
     /ui                          → Components shadcn/ui
     /return-importer             → Importador de devolucions (NOU v1.8)
@@ -288,9 +297,11 @@ El sistema de categorització IA genera logs estructurats per facilitar el diagn
       auto-match.test.ts         → 24 tests
       model182.test.ts           → 18 tests
   /i18n                          → Traduccions
-    /ca.ts                       → Català (idioma base)
-    /es.ts                       → Espanyol
-    /fr.ts                       → Francès (NOU v1.11, complet)
+    /ca.ts                       → Català (idioma base, app privada)
+    /es.ts                       → Espanyol (app privada)
+    /fr.ts                       → Francès (app privada)
+    /public.ts                   → Traduccions pàgines públiques CA/ES/FR/PT (NOU v1.25)
+    /locales/*.json              → Bundles JSON per runtime (ca, es, fr, pt)
     # Criteri: fr.ts conté totes les claus; si falta traducció, es manté text CA
   /ai                            → Fluxos de Genkit (IA)
 ```
@@ -1563,9 +1574,200 @@ Exemple de report:
 | `src/i18n/json-runtime.ts` | Loader Storage/local, cache, `trFactory` |
 | `src/i18n/locales/*.json` | Bundles JSON (fallback local) |
 | `src/i18n/ca.ts`, `es.ts`, `fr.ts` | Traduccions TS legacy |
+| `src/i18n/public.ts` | Traduccions pàgines públiques (NOU v1.25) |
 | `scripts/i18n/export-all.ts` | Export TS → JSON |
 
 Per a més detall operatiu, veure `docs/i18n.md`.
+
+
+### 3.9.8 i18n per a Rutes Públiques (NOU v1.25)
+
+#### Context i problema resolt
+
+Les pàgines públiques (login, privacy, contact) estaven només en català amb textos hardcoded. Per millorar:
+- SEO internacional amb canonical + hreflang
+- Experiència d'usuari en el seu idioma preferit
+- Consistència amb l'app privada (4 idiomes)
+
+#### Arquitectura
+
+Per evitar col·lisió entre `[lang]` i `[orgSlug]` (tots dos segments dinàmics al root),
+les pàgines públiques estan sota un segment real `public`:
+
+```
+/src/app/public/[lang]/       → Segment real + dinàmic (intern)
+  /page.tsx                   → HOME multiidioma
+  /funcionalitats/page.tsx    → Funcionalitats
+  /login/page.tsx             → Pàgina login multiidioma
+  /privacy/page.tsx           → Política de privacitat
+  /contact/page.tsx           → Pàgina de contacte
+  layout.tsx                  → Validació idioma + SSG params
+
+/src/app/page.tsx             → Redirect stub → /${lang}
+/src/app/funcionalitats/page.tsx → Redirect stub → /${lang}/funcionalitats
+/src/app/login/page.tsx       → Redirect stub → /${lang}/login
+/src/app/privacy/page.tsx     → Redirect stub → /${lang}/privacy
+/src/app/contacte/page.tsx    → Redirect stub → /${lang}/contact
+/src/app/privacitat/page.tsx  → Redirect stub → /${lang}/privacy (legacy)
+```
+
+**Middleware rewrite:** `/fr/...` → `/public/fr/...` (URL pública es manté)
+
+**Slugs reservats** (no es poden usar com orgSlug):
+`ca`, `es`, `fr`, `pt`, `public`, `login`, `admin`, `dashboard`, `privacy`, `api`, `q`, `registre`, `redirect-to-org`
+
+#### Idiomes suportats (rutes públiques)
+
+| Codi | Idioma | URL exemple |
+|------|--------|-------------|
+| `ca` | Català | `/ca/login`, `/ca/privacy`, `/ca/contact` |
+| `es` | Español | `/es/login`, `/es/privacy`, `/es/contact` |
+| `fr` | Français | `/fr/login`, `/fr/privacy`, `/fr/contact` |
+| `pt` | Português | `/pt/login`, `/pt/privacy`, `/pt/contact` |
+
+#### Detecció automàtica d'idioma
+
+Quan un usuari accedeix a `/login` (sense idioma), el sistema:
+
+1. Llegeix l'header `Accept-Language` del navegador
+2. Parseja i ordena per qualitat (`q=0.9`, etc.)
+3. Troba el primer idioma suportat
+4. Redirigeix a `/{lang}/login`
+
+**Exemple:**
+```
+Accept-Language: pt-BR,pt;q=0.9,en;q=0.8
+→ Redirigeix a /pt/login
+
+Accept-Language: de-DE,de;q=0.9,en;q=0.8
+→ Redirigeix a /ca/login (default, alemany no suportat)
+```
+
+#### Fitxers clau
+
+| Fitxer | Responsabilitat |
+|--------|-----------------|
+| `src/lib/public-locale.ts` | Tipus `PublicLocale`, `detectPublicLocale()`, `generatePublicPageMetadata()` |
+| `src/i18n/public.ts` | Traduccions completes per home, funcionalitats, login, privacy, contact (CA/ES/FR/PT) |
+| `src/middleware.ts` | Rewrite `/fr/...` → `/public/fr/...` + protecció segments reservats |
+| `src/app/public/[lang]/layout.tsx` | Validació idioma + `generateStaticParams()` per SSG |
+| `src/app/public/[lang]/*/page.tsx` | Pàgines amb traduccions i metadades SEO |
+| `src/components/IdleLogoutProvider.tsx` | RESERVED_SEGMENTS (inclou idiomes) |
+
+#### SEO: Canonical i Hreflang
+
+Cada pàgina pública genera metadades SEO correctes:
+
+```typescript
+// Exemple per /ca/privacy
+{
+  alternates: {
+    canonical: "https://summasocial.app/ca/privacy",
+    languages: {
+      ca: "https://summasocial.app/ca/privacy",
+      es: "https://summasocial.app/es/privacy",
+      fr: "https://summasocial.app/fr/privacy",
+      pt: "https://summasocial.app/pt/privacy"
+    }
+  }
+}
+```
+
+Això genera els tags HTML:
+```html
+<link rel="canonical" href="https://summasocial.app/ca/privacy" />
+<link rel="alternate" hreflang="ca" href="https://summasocial.app/ca/privacy" />
+<link rel="alternate" hreflang="es" href="https://summasocial.app/es/privacy" />
+<link rel="alternate" hreflang="fr" href="https://summasocial.app/fr/privacy" />
+<link rel="alternate" hreflang="pt" href="https://summasocial.app/pt/privacy" />
+```
+
+#### Estructura de traduccions (public.ts)
+
+```typescript
+// src/i18n/public.ts
+export interface PublicTranslations {
+  common: {
+    appName: string;
+    tagline: string;
+    close: string;
+    backToHome: string;
+    // ...
+  };
+  login: {
+    title: string;
+    welcomeTitle: string;
+    welcomeDescription: string;
+    sessionExpired: string;
+    // ...
+  };
+  privacy: {
+    title: string;
+    sections: {
+      whoWeAre: { title: string; intro: string; /* ... */ };
+      whatData: { /* ... */ };
+      // 9 seccions completes
+    };
+  };
+  contact: {
+    title: string;
+    subtitle: string;
+    responseTime: string;
+  };
+}
+
+// Traduccions per cada idioma
+const ca: PublicTranslations = { /* ... */ };
+const es: PublicTranslations = { /* ... */ };
+const fr: PublicTranslations = { /* ... */ };
+const pt: PublicTranslations = { /* ... */ };
+
+export const publicTranslations: Record<PublicLocale, PublicTranslations> = {
+  ca, es, fr, pt
+};
+```
+
+#### Ús a les pàgines
+
+```tsx
+// src/app/[lang]/login/page.tsx
+import { getPublicTranslations } from '@/i18n/public';
+import { isValidPublicLocale } from '@/lib/public-locale';
+
+export default function LoginPage({ params }: { params: { lang: string } }) {
+  const lang = isValidPublicLocale(params.lang) ? params.lang : 'ca';
+  const t = getPublicTranslations(lang);
+
+  return (
+    <h1>{t.login.welcomeTitle}</h1>
+    // "Benvingut a Summa Social" / "Bienvenido a Summa Social" / etc.
+  );
+}
+```
+
+#### Compatibilitat amb URLs antigues
+
+Les URLs antigues continuen funcionant amb redirect:
+
+| URL antiga | Redirigeix a |
+|------------|--------------|
+| `/login` | `/{detectat}/login` |
+| `/privacy` | `/{detectat}/privacy` |
+| `/privacitat` | `/{detectat}/privacy` |
+| `/contacte` | `/{detectat}/contact` |
+
+On `{detectat}` és l'idioma detectat via Accept-Language (default: `ca`).
+
+#### Diferència amb i18n de l'app privada
+
+| Aspecte | App privada (`/[orgSlug]/dashboard`) | Pàgines públiques (`/[lang]/*`) |
+|---------|--------------------------------------|----------------------------------|
+| **Traduccions** | `src/i18n/ca.ts`, `es.ts`, `fr.ts` + JSON | `src/i18n/public.ts` |
+| **Tipus** | `Language` (`ca`, `es`, `fr`) | `PublicLocale` (`ca`, `es`, `fr`, `pt`) |
+| **Persistència idioma** | `localStorage` (selector usuari) | URL path (`/ca/`, `/es/`, etc.) |
+| **Detecció** | Preferència guardada | `Accept-Language` header |
+| **SEO** | No aplica (app privada) | Canonical + hreflang |
+| **SSG** | No (dinàmic) | Sí (`generateStaticParams`) |
 
 
 ## 3.10 IMPORTADOR STRIPE (NOU v1.9)
@@ -2943,6 +3145,8 @@ Indicadors que requeririen intervenció:
 | **1.22** | **29 Des 2025** | **Quick Expense Landing: ruta canònica `/{orgSlug}/quick-expense` fora de `/dashboard` (sense sidebar/header), shortcut global `/quick`, redirect 307 per backward-compatibility, arquitectura neta sense hacks de layout** |
 | **1.23** | **30 Des 2025** | **System Health Sentinelles (S1–S8): detecció automàtica d'errors amb deduplicació, alertes email per incidents CRITICAL, filtres anti-soroll. Hub de Guies: guies procedimentals amb traduccions CA/ES/FR/PT (changePeriod, selectBankAccount, monthClose), validador i18n.** |
 | **1.24** | **31 Des 2025** | **Routing hardening: simplificació `/quick` (delega a `/redirect-to-org`), middleware amb PROTECTED_ROUTES per evitar loops, preservació de `?next` params.** |
+| **1.25** | **31 Des 2025** | **i18n rutes públiques complet (CA/ES/FR/PT): estructura `[lang]` per login, privacy i contact. Detecció automàtica idioma via Accept-Language. SEO amb canonical + hreflang per 4 idiomes. Redirect stubs per compatibilitat URLs antigues. Nou fitxer `src/i18n/public.ts` amb traduccions separades de l'app privada.** |
+| **1.26** | **31 Des 2025** | **Resolució col·lisió `[lang]` vs `[orgSlug]`: arquitectura `public/[lang]` amb middleware rewrite (URL pública intacta). HOME i Funcionalitats multiidioma. x-default hreflang. Slugs reservats (ca/es/fr/pt/public) a IdleLogoutProvider.** |
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
