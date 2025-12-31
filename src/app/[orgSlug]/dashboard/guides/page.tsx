@@ -310,9 +310,13 @@ const GUIDES: GuideItem[] = [
 
 /**
  * Detecta si un valor és una clau no resolta (MAI mostrar a UI)
+ * NOMÉS retorna true si el valor retornat és EXACTAMENT la clau demanada
+ * (comportament de trFactory quan no troba la traducció)
  */
-function isUnresolvedKey(value: string, key: string): boolean {
-  return value === key || value.startsWith('guides.');
+function isUnresolvedKey(value: string | null | undefined, key: string): boolean {
+  if (value == null) return true;
+  // trFactory retorna la clau si no la troba: value === key
+  return value === key;
 }
 
 /**
@@ -390,8 +394,20 @@ export default function GuidesPage() {
       {/* Grid de guies */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {GUIDES.map((guide) => {
-          // Llegir traduccions per aquesta guia (amb fallback humà)
-          const title = safeTr(tr, `guides.${guide.id}.title`, 'Guia');
+          // Llegir traduccions per aquesta guia
+          const titleKey = `guides.${guide.id}.title`;
+          const titleValue = tr(titleKey);
+          const titleResolved = !isUnresolvedKey(titleValue, titleKey);
+
+          // Si el títol no es resol, ocultar la card (millor no mostrar res)
+          if (!titleResolved) {
+            if (process.env.NODE_ENV === 'development') {
+              console.warn(`[guides] Skipping unresolved guide: ${guide.id}`);
+            }
+            return null;
+          }
+
+          const title = titleValue;
           const intro = safeTr(tr, `guides.${guide.id}.intro`, '');
           const whatIsKey = `guides.${guide.id}.whatIs`;
           const whatIs = tr(whatIsKey);
