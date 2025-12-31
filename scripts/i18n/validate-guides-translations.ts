@@ -64,6 +64,7 @@ const GUIDE_IDS = [
   'movements',
   'importMovements',
   'bulkCategory',
+  'attachDocument',
   'returns',
   'remittances',
   'splitRemittance',

@@ -34,6 +34,7 @@ import {
   Layers,
   Scissors,
   FileUp,
+  Paperclip,
 } from 'lucide-react';
 import { useTranslations } from '@/i18n';
 
@@ -85,6 +86,12 @@ const GUIDES: GuideItem[] = [
     icon: <Layers className="h-5 w-5" />,
     href: '/dashboard/movimientos',
     manualAnchor: '#5-gestio-de-moviments',
+  },
+  {
+    id: 'attachDocument',
+    icon: <Paperclip className="h-5 w-5" />,
+    href: '/dashboard/movimientos',
+    manualAnchor: '#movements',
   },
   {
     id: 'returns',

@@ -12,6 +12,17 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/ui/alert-dialog';
+import {
   Download,
   Upload,
   Languages,
@@ -23,6 +34,9 @@ import {
   Cloud,
   HardDrive,
   Send,
+  Database,
+  XCircle,
+  RefreshCw,
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { getStorage, ref, getDownloadURL, uploadBytes } from 'firebase/storage';
@@ -63,6 +77,12 @@ type UploadValidation = {
   parseError?: string;
 };
 
+type StorageStatus = 'checking' | 'ok' | 'missing' | 'unauthorized' | 'error';
+
+type LanguageStorageStatus = Record<Language, StorageStatus>;
+
+const ALL_LANGUAGES: Language[] = ['ca', 'es', 'fr', 'pt'];
+
 export function I18nManager() {
   const { toast } = useToast();
   const [selectedLanguage, setSelectedLanguage] = React.useState<Language>('ca');
@@ -75,6 +95,17 @@ export function I18nManager() {
   const [downloadSource, setDownloadSource] = React.useState<DownloadSource>(null);
   const [currentVersion, setCurrentVersion] = React.useState<number | null>(null);
   const fileInputRef = React.useRef<HTMLInputElement>(null);
+
+  // Storage initialization state
+  const [storageStatus, setStorageStatus] = React.useState<LanguageStorageStatus>({
+    ca: 'checking',
+    es: 'checking',
+    fr: 'checking',
+    pt: 'checking',
+  });
+  const [isInitializing, setIsInitializing] = React.useState(false);
+  const [initProgress, setInitProgress] = React.useState<{ current: number; total: number } | null>(null);
+  const [initResult, setInitResult] = React.useState<{ success: boolean; message: string } | null>(null);
 
   // Estadístiques del bundle actual
   const currentBundle = localBundles[selectedLanguage];
@@ -99,6 +130,95 @@ export function I18nManager() {
     };
     loadVersion();
   }, []);
+
+  // Comprovar estat de Storage per cada idioma
+  const checkStorageStatus = React.useCallback(async () => {
+    const storage = getStorage();
+    const newStatus: LanguageStorageStatus = { ca: 'checking', es: 'checking', fr: 'checking', pt: 'checking' };
+    setStorageStatus(newStatus);
+
+    for (const lang of ALL_LANGUAGES) {
+      try {
+        const fileRef = ref(storage, `i18n/${lang}.json`);
+        await getDownloadURL(fileRef);
+        newStatus[lang] = 'ok';
+      } catch (error: unknown) {
+        const firebaseError = error as { code?: string };
+        if (firebaseError.code === 'storage/object-not-found') {
+          newStatus[lang] = 'missing';
+        } else if (firebaseError.code === 'storage/unauthorized') {
+          newStatus[lang] = 'unauthorized';
+        } else {
+          newStatus[lang] = 'error';
+        }
+      }
+      setStorageStatus({ ...newStatus });
+    }
+  }, []);
+
+  // Comprovar estat al mount
+  React.useEffect(() => {
+    checkStorageStatus();
+  }, [checkStorageStatus]);
+
+  // Inicialitzar Storage amb els fitxers locals
+  const handleInitializeStorage = async () => {
+    setIsInitializing(true);
+    setInitProgress({ current: 0, total: ALL_LANGUAGES.length });
+    setInitResult(null);
+
+    const storage = getStorage();
+    let failedLang: string | null = null;
+
+    try {
+      for (let i = 0; i < ALL_LANGUAGES.length; i++) {
+        const lang = ALL_LANGUAGES[i];
+        setInitProgress({ current: i + 1, total: ALL_LANGUAGES.length });
+
+        const bundle = localBundles[lang];
+        const jsonString = JSON.stringify(bundle, null, 2);
+        const blob = new Blob([jsonString], { type: 'application/json' });
+        const fileRef = ref(storage, `i18n/${lang}.json`);
+
+        await uploadBytes(fileRef, blob);
+      }
+
+      // Publicar (incrementar versió)
+      const firestore = getFirestore();
+      const i18nDocRef = doc(firestore, 'system', 'i18n');
+      const currentDoc = await getDoc(i18nDocRef);
+      const currentVer = currentDoc.exists() ? (currentDoc.data()?.version ?? 0) : 0;
+      const newVersion = currentVer + 1;
+
+      await setDoc(i18nDocRef, {
+        version: newVersion,
+        updatedAt: serverTimestamp(),
+      }, { merge: true });
+
+      setCurrentVersion(newVersion);
+      setInitResult({ success: true, message: 'Fet ✅ Els 4 idiomes són a Storage.' });
+
+      toast({
+        title: 'Storage inicialitzat',
+        description: `Els 4 idiomes s'han pujat i activat (v${newVersion}).`,
+      });
+    } catch (error) {
+      console.error('[i18n] Initialize error:', error);
+      failedLang = ALL_LANGUAGES[initProgress?.current ? initProgress.current - 1 : 0];
+      setInitResult({ success: false, message: `Error ❌ No s'ha pogut pujar: ${failedLang}` });
+
+      toast({
+        variant: 'destructive',
+        title: 'Error inicialitzant',
+        description: `No s'ha pogut pujar ${failedLang}. Verifica els permisos.`,
+      });
+    } finally {
+      setIsInitializing(false);
+      setInitProgress(null);
+      // Refrescar estat
+      checkStorageStatus();
+    }
+  };
 
   // Descarregar des de Storage (amb fallback a local)
   const handleDownloadFromStorage = async () => {
@@ -562,6 +682,123 @@ export function I18nManager() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Storage Initialization Section */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-base">
+            <Database className="h-4 w-4 text-orange-500" />
+            Inicialització
+          </CardTitle>
+          <CardDescription>
+            Això puja a Storage els fitxers de traducció (ca/es/fr/pt) que tens al projecte i els activa per tothom.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {/* Status per idioma */}
+          <div className="grid grid-cols-4 gap-2">
+            {ALL_LANGUAGES.map((lang) => {
+              const status = storageStatus[lang];
+              return (
+                <div
+                  key={lang}
+                  className="flex flex-col items-center gap-1 p-3 rounded-lg border bg-muted/30"
+                >
+                  <span className="text-sm font-medium">{languageLabels[lang]}</span>
+                  <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-1">
+                      <HardDrive className="h-3 w-3 text-muted-foreground" />
+                      <CheckCircle2 className="h-3.5 w-3.5 text-green-500" />
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <Cloud className="h-3 w-3 text-muted-foreground" />
+                      {status === 'checking' && (
+                        <Loader2 className="h-3.5 w-3.5 text-muted-foreground animate-spin" />
+                      )}
+                      {status === 'ok' && (
+                        <CheckCircle2 className="h-3.5 w-3.5 text-green-500" />
+                      )}
+                      {status === 'missing' && (
+                        <XCircle className="h-3.5 w-3.5 text-red-500" />
+                      )}
+                      {status === 'unauthorized' && (
+                        <AlertTriangle className="h-3.5 w-3.5 text-amber-500" />
+                      )}
+                      {status === 'error' && (
+                        <XCircle className="h-3.5 w-3.5 text-red-500" />
+                      )}
+                    </div>
+                  </div>
+                  <span className="text-xs text-muted-foreground">
+                    {status === 'checking' && 'Comprovant...'}
+                    {status === 'ok' && 'Storage OK'}
+                    {status === 'missing' && 'Falta a Storage'}
+                    {status === 'unauthorized' && 'Sense permís'}
+                    {status === 'error' && 'Error'}
+                  </span>
+                </div>
+              );
+            })}
+          </div>
+
+          {/* Botó refrescar */}
+          <div className="flex items-center justify-between">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={checkStorageStatus}
+              disabled={isInitializing}
+              className="gap-1 text-muted-foreground"
+            >
+              <RefreshCw className="h-3.5 w-3.5" />
+              Refrescar estat
+            </Button>
+
+            {/* Progress o resultat */}
+            {isInitializing && initProgress && (
+              <span className="text-sm text-muted-foreground">
+                Pujant... ({initProgress.current}/{initProgress.total})
+              </span>
+            )}
+            {!isInitializing && initResult && (
+              <span className={`text-sm ${initResult.success ? 'text-green-600' : 'text-red-600'}`}>
+                {initResult.message}
+              </span>
+            )}
+          </div>
+
+          {/* Botó principal amb confirmació */}
+          <AlertDialog>
+            <AlertDialogTrigger asChild>
+              <Button
+                className="w-full gap-2"
+                disabled={isInitializing}
+              >
+                {isInitializing ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Database className="h-4 w-4" />
+                )}
+                Inicialitzar Storage
+              </Button>
+            </AlertDialogTrigger>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Inicialitzar Storage?</AlertDialogTitle>
+                <AlertDialogDescription>
+                  Pujarà ca/es/fr/pt i activarà els canvis. Pots repetir-ho quan vulguis.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>Cancel·lar</AlertDialogCancel>
+                <AlertDialogAction onClick={handleInitializeStorage}>
+                  Sí, inicialitza
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
+        </CardContent>
+      </Card>
 
       {/* Publish Section */}
       <Card>
