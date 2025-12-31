@@ -4,6 +4,9 @@ import type { NextRequest } from 'next/server';
 const CANONICAL_HOST = 'summasocial.app';
 const ALIAS_HOST = 'app.summasocial.app';
 
+// Idiomes públics vàlids per [lang]
+const PUBLIC_LOCALES = new Set(['ca', 'es', 'fr', 'pt']);
+
 // Rutes que MAI s'han de redirigir (evitar loops i salts dobles)
 const PROTECTED_ROUTES = [
   '/redirect-to-org',
@@ -11,6 +14,7 @@ const PROTECTED_ROUTES = [
   '/login',
   '/quick',
   '/registre',
+  '/public', // segment intern per rutes públiques
 ];
 
 export function middleware(request: NextRequest) {
@@ -26,6 +30,18 @@ export function middleware(request: NextRequest) {
   // Mai redirigir rutes protegides (evita loops)
   if (PROTECTED_ROUTES.some((route) => pathname === route || pathname.startsWith(`${route}/`))) {
     return NextResponse.next();
+  }
+
+  // Rewrite d'idiomes: /fr/... → /public/fr/... (intern)
+  // Això evita la col·lisió amb [orgSlug] mantenint la URL pública
+  const segments = pathname.split('/').filter(Boolean);
+  const firstSegment = segments[0];
+
+  if (firstSegment && PUBLIC_LOCALES.has(firstSegment)) {
+    const url = request.nextUrl.clone();
+    const rest = '/' + segments.slice(1).join('/');
+    url.pathname = `/public/${firstSegment}${rest === '/' ? '' : rest}`;
+    return NextResponse.rewrite(url);
   }
 
   // Si l'usuari accedeix a /dashboard sense slug, redirigir a la pàgina de selecció
