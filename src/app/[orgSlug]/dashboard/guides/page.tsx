@@ -33,6 +33,7 @@ import {
   Wallet,
   Layers,
   Scissors,
+  FileUp,
 } from 'lucide-react';
 import { useTranslations } from '@/i18n';
 
@@ -72,6 +73,12 @@ const GUIDES: GuideItem[] = [
     icon: <Receipt className="h-5 w-5" />,
     href: '/dashboard/movimientos',
     manualAnchor: '#5-gestio-de-moviments',
+  },
+  {
+    id: 'importMovements',
+    icon: <FileUp className="h-5 w-5" />,
+    href: '/dashboard/movimientos',
+    manualAnchor: '#movements',
   },
   {
     id: 'bulkCategory',

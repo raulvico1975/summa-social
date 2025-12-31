@@ -62,6 +62,7 @@ const GUIDE_IDS = [
   'firstMonth',
   'monthClose',
   'movements',
+  'importMovements',
   'bulkCategory',
   'returns',
   'remittances',
