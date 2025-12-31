@@ -35,6 +35,7 @@ import {
   Scissors,
   FileUp,
   Paperclip,
+  Landmark,
 } from 'lucide-react';
 import { useTranslations } from '@/i18n';
 
@@ -90,6 +91,12 @@ const GUIDES: GuideItem[] = [
   {
     id: 'changePeriod',
     icon: <Clock className="h-5 w-5" />,
+    href: '/dashboard/movimientos',
+    manualAnchor: '#movements',
+  },
+  {
+    id: 'selectBankAccount',
+    icon: <Landmark className="h-5 w-5" />,
     href: '/dashboard/movimientos',
     manualAnchor: '#movements',
   },
