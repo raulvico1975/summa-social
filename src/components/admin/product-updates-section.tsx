@@ -51,10 +51,35 @@ import {
   ExternalLink,
   FileJson,
   X,
+  Sparkles,
+  Copy,
 } from 'lucide-react';
+import { Switch } from '@/components/ui/switch';
 import { useToast } from '@/hooks/use-toast';
 
-import { stripUndefined } from '@/lib/firestore-utils';
+import { stripUndefined, stripUndefinedDeep } from '@/lib/firestore-utils';
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Tipus IA
+// ─────────────────────────────────────────────────────────────────────────────
+
+type AIGeneratedContent = {
+  contentLong: string;
+  web?: {
+    excerpt: string;
+    content: string;
+  };
+  social?: {
+    xText: string;
+    linkedinText: string;
+  };
+  analysis: {
+    clarityScore: number;
+    techRisk: 'low' | 'medium' | 'high';
+    recommendation: 'PUBLICAR' | 'REVISAR' | 'NO_PUBLICAR';
+    notes: string;
+  };
+};
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Tipus
@@ -167,6 +192,21 @@ export function ProductUpdatesSection({ isSuperAdmin = false }: ProductUpdatesSe
   const [isPublishing, setIsPublishing] = React.useState<string | null>(null);
   const [isDiscarding, setIsDiscarding] = React.useState<string | null>(null);
   const [isUnpublishing, setIsUnpublishing] = React.useState<string | null>(null);
+
+  // Estat per crear amb IA
+  const [aiTitle, setAiTitle] = React.useState('');
+  const [aiDescription, setAiDescription] = React.useState('');
+  const [aiLink, setAiLink] = React.useState('');
+  const [aiChangeBrief, setAiChangeBrief] = React.useState('');
+  const [aiProblemReal, setAiProblemReal] = React.useState('');
+  const [aiAffects, setAiAffects] = React.useState('');
+  const [aiUserAction, setAiUserAction] = React.useState('');
+  const [webEnabled, setWebEnabled] = React.useState(false);
+  const [socialEnabled, setSocialEnabled] = React.useState(false);
+  const [isGenerating, setIsGenerating] = React.useState(false);
+  const [isPublishingAI, setIsPublishingAI] = React.useState(false);
+  const [generatedContent, setGeneratedContent] = React.useState<AIGeneratedContent | null>(null);
+  const [previewTab, setPreviewTab] = React.useState<'app' | 'web' | 'x' | 'linkedin'>('app');
 
   // Col·leccions - CRÍTIC: retornar null si no és superadmin per evitar permission denied
   const draftsQuery = useMemoFirebase(
@@ -406,6 +446,133 @@ export function ProductUpdatesSection({ isSuperAdmin = false }: ProductUpdatesSe
     }
   };
 
+  // Handler generar contingut amb IA
+  const handleGenerateAI = async () => {
+    if (!aiTitle.trim() || !aiDescription.trim()) {
+      toast({ variant: 'destructive', title: 'Error', description: 'Títol i descripció són obligatoris.' });
+      return;
+    }
+
+    setIsGenerating(true);
+    setGeneratedContent(null);
+
+    try {
+      const response = await fetch('/api/ai/generate-product-update', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          title: aiTitle.trim(),
+          description: aiDescription.trim(),
+          aiInput: {
+            changeBrief: aiChangeBrief.trim() || undefined,
+            problemReal: aiProblemReal.trim() || undefined,
+            affects: aiAffects.trim() || undefined,
+            userAction: aiUserAction.trim() || undefined,
+          },
+          webEnabled,
+          socialEnabled,
+        }),
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Error generant contingut');
+      }
+
+      const data = await response.json() as AIGeneratedContent;
+      setGeneratedContent(data);
+      toast({ title: 'Contingut generat', description: 'Revisa el preview abans de publicar.' });
+    } catch (error) {
+      console.error('Error generar IA:', error);
+      toast({
+        variant: 'destructive',
+        title: 'Error',
+        description: error instanceof Error ? error.message : 'No s\'ha pogut generar contingut.',
+      });
+    } finally {
+      setIsGenerating(false);
+    }
+  };
+
+  // Handler publicar des d'IA
+  const handlePublishAI = async () => {
+    if (!generatedContent || !aiTitle.trim() || !aiDescription.trim()) {
+      toast({ variant: 'destructive', title: 'Error', description: 'Genera contingut primer.' });
+      return;
+    }
+
+    setIsPublishingAI(true);
+    try {
+      const updateId = `update-${Date.now()}`;
+      const slug = aiTitle.trim().toLowerCase()
+        .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+        .replace(/[^a-z0-9]+/g, '-')
+        .replace(/^-|-$/g, '');
+
+      const updateData = stripUndefinedDeep({
+        id: updateId,
+        title: aiTitle.trim(),
+        description: aiDescription.trim(),
+        link: aiLink.trim() || null,
+        publishedAt: serverTimestamp(),
+        createdAt: serverTimestamp(),
+        isActive: true,
+        contentLong: generatedContent.contentLong,
+        ai: {
+          input: {
+            changeBrief: aiChangeBrief.trim() || null,
+            problemReal: aiProblemReal.trim() || null,
+            affects: aiAffects.trim() || null,
+            userAction: aiUserAction.trim() || null,
+          },
+          analysis: generatedContent.analysis,
+        },
+        web: webEnabled && generatedContent.web ? {
+          enabled: true,
+          slug,
+          excerpt: generatedContent.web.excerpt,
+          content: generatedContent.web.content,
+        } : null,
+        social: socialEnabled && generatedContent.social ? {
+          enabled: true,
+          xText: generatedContent.social.xText,
+          linkedinText: generatedContent.social.linkedinText,
+          linkUrl: webEnabled ? `https://summasocial.app/ca/novetats/${slug}` : null,
+        } : null,
+      });
+
+      await setDoc(doc(firestore, 'productUpdates', updateId), updateData);
+
+      toast({
+        title: 'Novetat publicada',
+        description: 'Els usuaris la veuran a la campaneta de novetats.',
+      });
+
+      // Reset form
+      setAiTitle('');
+      setAiDescription('');
+      setAiLink('');
+      setAiChangeBrief('');
+      setAiProblemReal('');
+      setAiAffects('');
+      setAiUserAction('');
+      setWebEnabled(false);
+      setSocialEnabled(false);
+      setGeneratedContent(null);
+    } catch (error) {
+      console.error('Error publicar IA:', error);
+      toast({ variant: 'destructive', title: 'Error', description: 'No s\'ha pogut publicar.' });
+    } finally {
+      setIsPublishingAI(false);
+    }
+  };
+
+  // Helper copiar text
+  const copyToClipboard = (text: string, label: string) => {
+    navigator.clipboard.writeText(text);
+    toast({ title: `${label} copiat` });
+  };
+
   return (
     <Card>
       <CardHeader>
@@ -457,6 +624,10 @@ export function ProductUpdatesSection({ isSuperAdmin = false }: ProductUpdatesSe
               {published && published.length > 0 && (
                 <Badge variant="outline" className="ml-2">{published.length}</Badge>
               )}
+            </TabsTrigger>
+            <TabsTrigger value="create-ai">
+              <Sparkles className="h-4 w-4 mr-1" />
+              Crear amb IA
             </TabsTrigger>
           </TabsList>
 
@@ -604,6 +775,297 @@ export function ProductUpdatesSection({ isSuperAdmin = false }: ProductUpdatesSe
                 </TableBody>
               </Table>
             )}
+          </TabsContent>
+
+          {/* Tab Crear amb IA */}
+          <TabsContent value="create-ai">
+            <div className="grid md:grid-cols-2 gap-6">
+              {/* Columna esquerra: Inputs */}
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="ai-title">
+                    Títol <span className="text-xs text-muted-foreground">(obligatori)</span>
+                  </Label>
+                  <Input
+                    id="ai-title"
+                    value={aiTitle}
+                    onChange={(e) => setAiTitle(e.target.value)}
+                    maxLength={60}
+                    placeholder="Títol curt i descriptiu"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="ai-description">
+                    Descripció breu <span className="text-xs text-muted-foreground">(obligatori)</span>
+                  </Label>
+                  <Textarea
+                    id="ai-description"
+                    value={aiDescription}
+                    onChange={(e) => setAiDescription(e.target.value)}
+                    maxLength={140}
+                    placeholder="Descripció que apareixerà a la campaneta"
+                    rows={2}
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="ai-link">
+                    Enllaç <span className="text-xs text-muted-foreground">(opcional)</span>
+                  </Label>
+                  <Input
+                    id="ai-link"
+                    value={aiLink}
+                    onChange={(e) => setAiLink(e.target.value)}
+                    placeholder="/dashboard/movimientos"
+                  />
+                </div>
+
+                <div className="border-t pt-4 space-y-3">
+                  <p className="text-xs font-medium text-muted-foreground">Context addicional per IA (opcional)</p>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="ai-change" className="text-xs">Què ha canviat?</Label>
+                    <Input
+                      id="ai-change"
+                      value={aiChangeBrief}
+                      onChange={(e) => setAiChangeBrief(e.target.value)}
+                      placeholder="Nou botó per exportar, millora de rendiment..."
+                      className="text-sm"
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="ai-problem" className="text-xs">Problema que resol?</Label>
+                    <Input
+                      id="ai-problem"
+                      value={aiProblemReal}
+                      onChange={(e) => setAiProblemReal(e.target.value)}
+                      placeholder="Abans calia fer-ho manualment..."
+                      className="text-sm"
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="ai-affects" className="text-xs">A qui afecta?</Label>
+                    <Input
+                      id="ai-affects"
+                      value={aiAffects}
+                      onChange={(e) => setAiAffects(e.target.value)}
+                      placeholder="Tots els usuaris, administradors..."
+                      className="text-sm"
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="ai-action" className="text-xs">Acció de l'usuari?</Label>
+                    <Input
+                      id="ai-action"
+                      value={aiUserAction}
+                      onChange={(e) => setAiUserAction(e.target.value)}
+                      placeholder="Anar a Moviments > Exportar..."
+                      className="text-sm"
+                    />
+                  </div>
+                </div>
+
+                <div className="border-t pt-4 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <Label htmlFor="web-toggle">Publicar al web</Label>
+                      <p className="text-xs text-muted-foreground">Genera contingut per /novetats</p>
+                    </div>
+                    <Switch
+                      id="web-toggle"
+                      checked={webEnabled}
+                      onCheckedChange={setWebEnabled}
+                    />
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <Label htmlFor="social-toggle">Xarxes socials</Label>
+                      <p className="text-xs text-muted-foreground">Genera copy per X i LinkedIn</p>
+                    </div>
+                    <Switch
+                      id="social-toggle"
+                      checked={socialEnabled}
+                      onCheckedChange={setSocialEnabled}
+                    />
+                  </div>
+                </div>
+
+                <div className="pt-4 flex gap-2">
+                  <Button
+                    onClick={handleGenerateAI}
+                    disabled={isGenerating || !aiTitle.trim() || !aiDescription.trim()}
+                    className="flex-1"
+                  >
+                    {isGenerating ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Generant...
+                      </>
+                    ) : (
+                      <>
+                        <Sparkles className="mr-2 h-4 w-4" />
+                        Generar contingut
+                      </>
+                    )}
+                  </Button>
+                </div>
+              </div>
+
+              {/* Columna dreta: Preview */}
+              <div className="space-y-4">
+                {generatedContent ? (
+                  <>
+                    <div className="flex items-center justify-between">
+                      <p className="text-sm font-medium">Preview</p>
+                      <div className="flex gap-1">
+                        <Button
+                          variant={previewTab === 'app' ? 'default' : 'ghost'}
+                          size="sm"
+                          onClick={() => setPreviewTab('app')}
+                        >
+                          App
+                        </Button>
+                        {generatedContent.web && (
+                          <Button
+                            variant={previewTab === 'web' ? 'default' : 'ghost'}
+                            size="sm"
+                            onClick={() => setPreviewTab('web')}
+                          >
+                            Web
+                          </Button>
+                        )}
+                        {generatedContent.social && (
+                          <>
+                            <Button
+                              variant={previewTab === 'x' ? 'default' : 'ghost'}
+                              size="sm"
+                              onClick={() => setPreviewTab('x')}
+                            >
+                              X
+                            </Button>
+                            <Button
+                              variant={previewTab === 'linkedin' ? 'default' : 'ghost'}
+                              size="sm"
+                              onClick={() => setPreviewTab('linkedin')}
+                            >
+                              LinkedIn
+                            </Button>
+                          </>
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="border rounded-lg p-4 min-h-[200px]">
+                      {previewTab === 'app' && (
+                        <div className="space-y-2">
+                          <p className="font-medium">{aiTitle}</p>
+                          <p className="text-sm text-muted-foreground">{aiDescription}</p>
+                          <div className="border-t pt-2 mt-2">
+                            <p className="text-sm whitespace-pre-wrap">{generatedContent.contentLong}</p>
+                          </div>
+                        </div>
+                      )}
+                      {previewTab === 'web' && generatedContent.web && (
+                        <div className="space-y-2">
+                          <p className="text-sm text-muted-foreground">{generatedContent.web.excerpt}</p>
+                          <div className="border-t pt-2 mt-2">
+                            <p className="text-sm whitespace-pre-wrap">{generatedContent.web.content}</p>
+                          </div>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => copyToClipboard(generatedContent.web!.content, 'Contingut web')}
+                          >
+                            <Copy className="h-4 w-4 mr-1" />
+                            Copiar
+                          </Button>
+                        </div>
+                      )}
+                      {previewTab === 'x' && generatedContent.social && (
+                        <div className="space-y-2">
+                          <p className="text-sm whitespace-pre-wrap">{generatedContent.social.xText}</p>
+                          <p className="text-xs text-muted-foreground">{generatedContent.social.xText.length}/280 chars</p>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => copyToClipboard(generatedContent.social!.xText, 'Text X')}
+                          >
+                            <Copy className="h-4 w-4 mr-1" />
+                            Copiar
+                          </Button>
+                        </div>
+                      )}
+                      {previewTab === 'linkedin' && generatedContent.social && (
+                        <div className="space-y-2">
+                          <p className="text-sm whitespace-pre-wrap">{generatedContent.social.linkedinText}</p>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => copyToClipboard(generatedContent.social!.linkedinText, 'Text LinkedIn')}
+                          >
+                            <Copy className="h-4 w-4 mr-1" />
+                            Copiar
+                          </Button>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Anàlisi IA */}
+                    <div className="border rounded-lg p-3 bg-muted/30">
+                      <p className="text-xs font-medium mb-2">Anàlisi IA</p>
+                      <div className="grid grid-cols-3 gap-2 text-xs">
+                        <div>
+                          <span className="text-muted-foreground">Claredat:</span>{' '}
+                          <span className="font-medium">{generatedContent.analysis.clarityScore}/10</span>
+                        </div>
+                        <div>
+                          <span className="text-muted-foreground">Risc:</span>{' '}
+                          <Badge variant={generatedContent.analysis.techRisk === 'low' ? 'secondary' : 'destructive'}>
+                            {generatedContent.analysis.techRisk}
+                          </Badge>
+                        </div>
+                        <div>
+                          <Badge variant={generatedContent.analysis.recommendation === 'PUBLICAR' ? 'default' : 'outline'}>
+                            {generatedContent.analysis.recommendation}
+                          </Badge>
+                        </div>
+                      </div>
+                      {generatedContent.analysis.notes && (
+                        <p className="text-xs text-muted-foreground mt-2">{generatedContent.analysis.notes}</p>
+                      )}
+                    </div>
+
+                    <Button
+                      onClick={handlePublishAI}
+                      disabled={isPublishingAI}
+                      className="w-full"
+                    >
+                      {isPublishingAI ? (
+                        <>
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          Publicant...
+                        </>
+                      ) : (
+                        <>
+                          <Check className="mr-2 h-4 w-4" />
+                          Publicar novetat
+                        </>
+                      )}
+                    </Button>
+                  </>
+                ) : (
+                  <div className="border rounded-lg p-8 text-center text-muted-foreground">
+                    <Sparkles className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                    <p className="text-sm">Omple els camps i genera contingut amb IA</p>
+                    <p className="text-xs mt-1">El contingut generat apareixerà aquí per revisar</p>
+                  </div>
+                )}
+              </div>
+            </div>
           </TabsContent>
         </Tabs>
       </CardContent>
