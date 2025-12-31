@@ -32,6 +32,10 @@ interface GenerateResponse {
     xText: string;
     linkedinText: string;
   };
+  image?: {
+    prompt: string;
+    altText: string;
+  };
   analysis: {
     clarityScore: number;
     techRisk: 'low' | 'medium' | 'high';
@@ -94,6 +98,13 @@ GENERA (en JSON vàlid):
   },
 `;
   }
+
+  // Sempre generar prompt d'imatge (útil per crear visualment)
+  prompt += `  "image": {
+    "prompt": "Prompt per generar imatge amb IA (DALL-E/Midjourney style). Descriu una il·lustració minimalista, colors corporatius blau i blanc, estil flat/modern, sense text",
+    "altText": "Text alternatiu descriptiu per accessibilitat (màx 125 chars)"
+  },
+`;
 
   prompt += `  "analysis": {
     "clarityScore": 1-10,

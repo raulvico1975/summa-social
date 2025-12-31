@@ -73,6 +73,10 @@ type AIGeneratedContent = {
     xText: string;
     linkedinText: string;
   };
+  image?: {
+    prompt: string;
+    altText: string;
+  };
   analysis: {
     clarityScore: number;
     techRisk: 'low' | 'medium' | 'high';
@@ -1060,7 +1064,50 @@ export function ProductUpdatesSection({ isSuperAdmin = false }: ProductUpdatesSe
                           </Button>
                         </div>
                       )}
+                      {/* Link web per social */}
+                      {(previewTab === 'x' || previewTab === 'linkedin') && webEnabled && aiTitle && (
+                        <div className="pt-2 border-t">
+                          <p className="text-xs text-muted-foreground mb-1">Link web:</p>
+                          <div className="flex items-center gap-2">
+                            <code className="text-xs bg-muted px-2 py-1 rounded flex-1 truncate">
+                              {`https://summasocial.app/ca/novetats/${aiTitle.trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')}`}
+                            </code>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => copyToClipboard(
+                                `https://summasocial.app/ca/novetats/${aiTitle.trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')}`,
+                                'Link'
+                              )}
+                            >
+                              <Copy className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        </div>
+                      )}
                     </div>
+
+                    {/* Prompt imatge */}
+                    {generatedContent.image && (
+                      <div className="border rounded-lg p-3 bg-muted/30">
+                        <div className="flex items-center justify-between mb-2">
+                          <p className="text-xs font-medium">Prompt imatge (per generar manualment)</p>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-6 px-2"
+                            onClick={() => copyToClipboard(generatedContent.image!.prompt, 'Prompt')}
+                          >
+                            <Copy className="h-3 w-3 mr-1" />
+                            Copiar
+                          </Button>
+                        </div>
+                        <p className="text-xs text-muted-foreground mb-2">{generatedContent.image.prompt}</p>
+                        <p className="text-xs text-muted-foreground">
+                          <span className="font-medium">Alt text:</span> {generatedContent.image.altText}
+                        </p>
+                      </div>
+                    )}
 
                     {/* Anàlisi IA */}
                     <div className="border rounded-lg p-3 bg-muted/30">
