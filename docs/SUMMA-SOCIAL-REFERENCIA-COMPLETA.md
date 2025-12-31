@@ -1,6 +1,6 @@
 # ═══════════════════════════════════════════════════════════════════════════════
 # SUMMA SOCIAL - REFERÈNCIA COMPLETA DEL PROJECTE
-# Versió 1.23 - Desembre 2025
+# Versió 1.24 - Desembre 2025
 # ═══════════════════════════════════════════════════════════════════════════════
 
 
@@ -2156,23 +2156,46 @@ Pantalla dedicada per a l'entrada ràpida de despeses des del mòbil, **sense la
 | `user` | ✅ |
 | `viewer` | ❌ (redirigit a dashboard) |
 
-**Flux d'accés:**
+**Flux d'accés (ACTUALITZAT v1.24):**
 
 ```
-/quick → detecta orgSlug via perfil/membres → /{orgSlug}/quick-expense
-                                           ↓
-                           Landing sense dashboard layout
-                                           ↓
-                           Botó "Tornar" → /{orgSlug}/dashboard/project-module/expenses
+/quick → (si no user) → /login?next=/quick
+       → (si user) → /redirect-to-org?next=/quick-expense
+                                    ↓
+                      detecta orgSlug via perfil/membres
+                                    ↓
+                      /{orgSlug}/quick-expense (landing sense sidebar)
+                                    ↓
+                      Botó "Tornar" → /{orgSlug}/dashboard/project-module/expenses
 ```
+
+**Middleware Routing (ACTUALITZAT v1.24):**
+
+El middleware (`src/middleware.ts`) protegeix certes rutes per evitar loops de redirecció:
+
+```typescript
+const PROTECTED_ROUTES = [
+  '/redirect-to-org',  // Detecció d'org
+  '/admin',            // Panell SuperAdmin
+  '/login',            // Autenticació
+  '/quick',            // Shortcut Quick Expense
+  '/registre',         // Registre públic
+];
+```
+
+**Regles del middleware:**
+1. Mai redirigir rutes protegides (evita loops)
+2. Sempre preservar `?next` quan redirigeix a `/redirect-to-org`
+3. Sempre preservar tots els searchParams en redireccions
 
 **Fitxers principals:**
 
 | Fitxer | Funció |
 |--------|--------|
+| `src/middleware.ts` | Routing central amb PROTECTED_ROUTES |
 | `src/app/[orgSlug]/quick-expense/layout.tsx` | Layout mínim (OrganizationProvider) |
 | `src/app/[orgSlug]/quick-expense/page.tsx` | Pàgina landing |
-| `src/app/quick/page.tsx` | Shortcut global amb detecció d'org |
+| `src/app/quick/page.tsx` | Shortcut global (delega a redirect-to-org) |
 | `src/app/[orgSlug]/dashboard/project-module/quick-expense/page.tsx` | Redirect 307 legacy |
 | `src/components/project-module/quick-expense-screen.tsx` | Component UI compartit |
 
@@ -2185,6 +2208,80 @@ El botó càmera a la safata de despeses (`/dashboard/project-module/expenses`) 
   <Camera className="h-4 w-4" />
 </Link>
 ```
+
+### 3.11.15 Hub de Guies Procedimentals (NOU v1.23)
+
+Centre d'ajuda contextual amb guies pas-a-pas per a les operacions més freqüents de Summa Social.
+
+**Ubicació:** `/{orgSlug}/dashboard/guides`
+
+**Característiques:**
+- Guies procedimentals amb format `whatIs` + `steps[]` + `avoid[]`
+- Traduccions CA/ES/FR/PT amb fallback a català
+- CTAs directes a pantalla + enllaç al manual
+- Indicadors visuals: `lookFirst`, `doNext`, `avoid`, `costlyError`
+- Validador i18n automatitzat (`npm run i18n:validate-guides`)
+
+**Guies disponibles:**
+
+| ID | Títol | Contingut |
+|----|-------|-----------|
+| `firstDay` | Primer dia | Checklist d'inici ràpid |
+| `firstMonth` | Primer mes | Guia d'operativa mensual |
+| `monthClose` | Tancament mensual | Procediment de tancament |
+| `movements` | Gestió de moviments | Operativa bàsica |
+| `importMovements` | Importar extracte | Pas a pas importació |
+| `bulkCategory` | Categorització massiva | Selecció múltiple |
+| `changePeriod` | Canviar de període | Filtre per data |
+| `selectBankAccount` | Seleccionar compte | Multicompte bancari |
+| `attachDocument` | Adjuntar document | Drag & drop |
+| `returns` | Devolucions | Gestió de retorns |
+| `remittances` | Remeses d'ingressos | Divisió de remeses |
+| `splitRemittance` | Dividir remesa | Split manual |
+| `stripeDonations` | Donacions Stripe | Importador Stripe |
+| `travelReceipts` | Tiquets de viatge | Captura ràpida |
+| `donors` | Gestió de donants | CRUD donants |
+| `reports` | Informes fiscals | 182, 347, certificats |
+| `projects` | Mòdul projectes | Justificació assistida |
+| `monthlyFlow` | Flux mensual | Operativa recurrent |
+| `yearEndFiscal` | Tancament fiscal | Fi d'any |
+| `accessSecurity` | Accés i seguretat | Multi-usuari |
+| `initialLoad` | Càrrega inicial | Primera configuració |
+
+**Format de traduccions (claus i18n):**
+
+```
+guides.{guideId}.title        — Títol de la guia
+guides.{guideId}.intro        — Introducció (opcional si whatIs)
+guides.{guideId}.whatIs       — Descripció breu
+guides.{guideId}.steps.0-N    — Passos ordenats
+guides.{guideId}.avoid.0-N    — Errors a evitar
+guides.{guideId}.lookFirst.0-N — Què mirar primer
+guides.{guideId}.doNext.0-N   — Passos següents
+guides.{guideId}.costlyError  — Error crític a destacar
+guides.cta.{guideId}          — Text del botó CTA
+```
+
+**Fitxers principals:**
+
+| Fitxer | Funció |
+|--------|--------|
+| `src/app/[orgSlug]/dashboard/guides/page.tsx` | Hub central amb llista de guies |
+| `src/i18n/locales/{ca,es,fr,pt}.json` | Traduccions (claus `guides.*`) |
+| `scripts/i18n/validate-guides-translations.ts` | Validador de completitud |
+
+**Validador i18n:**
+
+```bash
+npm run i18n:validate-guides
+```
+
+Comprova:
+- Claus page-level obligatòries (`guides.pageTitle`, `guides.viewManual`...)
+- CTA per cada guia (`guides.cta.{guideId}`)
+- Títol i intro/whatIs per cada guia
+- Arrays amb índexos consecutius (sense gaps)
+- Claus extra que no existeixen al base (CA)
 
 
 ## 3.10 PANELL SUPERADMIN GLOBAL (NOU v1.20)
@@ -2844,6 +2941,8 @@ Indicadors que requeririen intervenció:
 | **1.20** | **Des 2025** | **Panell Admin: reset contrasenya + secció diagnòstic (Firebase Console, Cloud Logging, DEV-SOLO-MANUAL.md). Dashboard: neteja blocs Celebracions/Alertes, millora taula categories (exclou comissions), bloc projectes condicional. Nou document docs/DEV-SOLO-MANUAL.md per manteniment.** |
 | **1.21** | **Des 2025** | **i18n pàgina pública (ca/es), SEO tags amb canonical + hreflang, mòdul documents pendents hardened (permisos, guardrails, UI responsive)** |
 | **1.22** | **29 Des 2025** | **Quick Expense Landing: ruta canònica `/{orgSlug}/quick-expense` fora de `/dashboard` (sense sidebar/header), shortcut global `/quick`, redirect 307 per backward-compatibility, arquitectura neta sense hacks de layout** |
+| **1.23** | **30 Des 2025** | **System Health Sentinelles (S1–S8): detecció automàtica d'errors amb deduplicació, alertes email per incidents CRITICAL, filtres anti-soroll. Hub de Guies: guies procedimentals amb traduccions CA/ES/FR/PT (changePeriod, selectBankAccount, monthClose), validador i18n.** |
+| **1.24** | **31 Des 2025** | **Routing hardening: simplificació `/quick` (delega a `/redirect-to-org`), middleware amb PROTECTED_ROUTES per evitar loops, preservació de `?next` params.** |
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
