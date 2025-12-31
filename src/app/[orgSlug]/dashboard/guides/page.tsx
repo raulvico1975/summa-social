@@ -38,6 +38,7 @@ import {
   Landmark,
   Languages,
   FileSpreadsheet,
+  Award,
 } from 'lucide-react';
 import { useTranslations } from '@/i18n';
 
@@ -193,6 +194,12 @@ const GUIDES: GuideItem[] = [
     icon: <FileSpreadsheet className="h-5 w-5" />,
     href: '/dashboard/donants',
     manualAnchor: '#donors',
+  },
+  {
+    id: 'generateDonorCertificate',
+    icon: <Award className="h-5 w-5" />,
+    href: '/dashboard/donants',
+    manualAnchor: '#reports',
   },
 ];
 
