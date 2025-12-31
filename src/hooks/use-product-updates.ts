@@ -30,6 +30,11 @@ export type UseProductUpdatesResult = {
  *
  * Query: productUpdates on isActive==true, orderBy createdAt desc, limit 6
  * Si Firestore falla → fallback a PRODUCT_UPDATES legacy + console.warn
+ *
+ * NOTA: Ordenem per createdAt (no publishedAt) perquè:
+ * - createdAt sempre està resolt com a Timestamp real després del setDoc
+ * - publishedAt pot quedar pendent fins que Firestore resol serverTimestamp()
+ * - Per timeline futur, es pot migrar a publishedAt quan sigui Timestamp garantit
  */
 export function useProductUpdates(): UseProductUpdatesResult {
   const { firestore } = useFirebase();
