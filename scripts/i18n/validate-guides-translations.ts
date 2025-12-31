@@ -79,6 +79,7 @@ const GUIDE_IDS = [
   'yearEndFiscal',
   'accessSecurity',
   'initialLoad',
+  'changeLanguage',
 ];
 
 // Arrays que han de tenir mínim 1 element si existeixen al base
