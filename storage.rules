@@ -38,13 +38,14 @@ service firebase.storage {
     // ════════════════════════════════════════════════════════════════════════════
     // pendingDocuments - Pujada de factures/nòmines per organització
     // Requereix: usuari autenticat + membre amb rol admin/user + documentsEnabled
+    // SuperAdmin pot escriure sempre (és qui concedeix el permís)
     // ════════════════════════════════════════════════════════════════════════════
     match /organizations/{orgId}/pendingDocuments/{path=**} {
       // Lectura: SuperAdmin o membre amb rol adequat
       allow read: if isSuperAdmin() || isOrgMemberWithRole(orgId);
 
-      // Escriptura: (SuperAdmin o membre) + documentsEnabled ha de ser true
-      allow write: if (isSuperAdmin() || isOrgMemberWithRole(orgId)) && orgDocumentsEnabled(orgId);
+      // Escriptura: SuperAdmin sempre, o (membre + documentsEnabled)
+      allow write: if isSuperAdmin() || (isOrgMemberWithRole(orgId) && orgDocumentsEnabled(orgId));
     }
 
     // ════════════════════════════════════════════════════════════════════════════
