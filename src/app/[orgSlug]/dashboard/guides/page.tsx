@@ -36,6 +36,7 @@ import {
   FileUp,
   Paperclip,
   Landmark,
+  Languages,
 } from 'lucide-react';
 import { useTranslations } from '@/i18n';
 
@@ -179,6 +180,12 @@ const GUIDES: GuideItem[] = [
     icon: <Upload className="h-5 w-5" />,
     href: '/dashboard/movimientos',
     manualAnchor: '#1-primers-passos',
+  },
+  {
+    id: 'changeLanguage',
+    icon: <Languages className="h-5 w-5" />,
+    href: '/dashboard/configuracion',
+    manualAnchor: '#first-steps',
   },
 ];
 
