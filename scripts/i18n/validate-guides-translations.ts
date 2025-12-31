@@ -80,6 +80,7 @@ const GUIDE_IDS = [
   'accessSecurity',
   'initialLoad',
   'changeLanguage',
+  'importDonors',
 ];
 
 // Arrays que han de tenir mínim 1 element si existeixen al base
