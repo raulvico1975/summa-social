@@ -51,10 +51,17 @@ export function DashboardSidebarContent() {
   const { auth: firebaseAuth } = useFirebase();
   const { t } = useTranslations();
   const { toast } = useToast();
-  const { state: sidebarState } = useSidebar();
+  const { state: sidebarState, isMobile, setOpenMobile } = useSidebar();
 
   // Obtenir dades de l'organització i el helper per construir URLs
   const { userProfile, firebaseUser, organization, orgSlug } = useCurrentOrganization();
+
+  // Handler per tancar el sidebar en mòbil després de navegar
+  const handleNavClick = React.useCallback(() => {
+    if (isMobile) {
+      setOpenMobile(false);
+    }
+  }, [isMobile, setOpenMobile]);
   const { buildUrl } = useOrgUrl();
 
   const isSuperAdmin = firebaseUser?.uid === SUPER_ADMIN_UID;
@@ -286,7 +293,7 @@ export function DashboardSidebarContent() {
                         tooltip={{ children: t.sidebar.projectModule ?? 'Projectes' }}
                         isActive={isProjectModuleActive}
                       >
-                        <Link href={projectModuleMainHref}>
+                        <Link href={projectModuleMainHref} onClick={handleNavClick}>
                           <FolderKanban className="text-emerald-600" />
                           <span>{t.sidebar.projectModule ?? 'Projectes'}</span>
                         </Link>
@@ -318,7 +325,7 @@ export function DashboardSidebarContent() {
                                   asChild
                                   isActive={pathname.includes(subItem.path.replace('/dashboard', ''))}
                                 >
-                                  <Link href={subItem.href}>
+                                  <Link href={subItem.href} onClick={handleNavClick}>
                                     <subItem.icon className="h-4 w-4" />
                                     <span>{subItem.label}</span>
                                   </Link>
@@ -338,7 +345,7 @@ export function DashboardSidebarContent() {
                       isActive={isActive(item.href, item.path)}
                       tooltip={{ children: item.label }}
                     >
-                      <Link href={item.href}>
+                      <Link href={item.href} onClick={handleNavClick}>
                         <item.icon className={item.className} />
                         <span>{item.label}</span>
                       </Link>
@@ -355,7 +362,7 @@ export function DashboardSidebarContent() {
                   isActive={isActive(item.href, item.path)}
                   tooltip={{ children: item.label }}
                 >
-                  <Link href={item.href}>
+                  <Link href={item.href} onClick={handleNavClick}>
                     <item.icon className={item.className} />
                     <span>{item.label}</span>
                   </Link>
@@ -385,7 +392,7 @@ export function DashboardSidebarContent() {
                 isActive={pathname === '/admin'}
                 tooltip={{children: t.sidebar.adminPanel}}
               >
-                <Link href="/admin">
+                <Link href="/admin" onClick={handleNavClick}>
                   <Shield className="text-amber-500" />
                   <span>{t.sidebar.adminPanel}</span>
                 </Link>
