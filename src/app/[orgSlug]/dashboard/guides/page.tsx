@@ -45,6 +45,11 @@ import {
   Filter,
   Sparkles,
   KeyRound,
+  RefreshCcwDot,
+  UserX,
+  Save,
+  ToggleLeft,
+  Trash2,
 } from 'lucide-react';
 import { useTranslations } from '@/i18n';
 
@@ -266,6 +271,36 @@ const GUIDES: GuideItem[] = [
     icon: <KeyRound className="h-5 w-5" />,
     href: '/login',
     manualAnchor: '#troubleshooting',
+  },
+  {
+    id: 'updateExistingDonors',
+    icon: <RefreshCcwDot className="h-5 w-5" />,
+    href: '/dashboard/donants',
+    manualAnchor: '#donors',
+  },
+  {
+    id: 'remittanceLowMembers',
+    icon: <UserX className="h-5 w-5" />,
+    href: '/dashboard/movimientos',
+    manualAnchor: '#remittances',
+  },
+  {
+    id: 'saveRemittanceMapping',
+    icon: <Save className="h-5 w-5" />,
+    href: '/dashboard/movimientos',
+    manualAnchor: '#remittances',
+  },
+  {
+    id: 'toggleRemittanceItems',
+    icon: <ToggleLeft className="h-5 w-5" />,
+    href: '/dashboard/movimientos',
+    manualAnchor: '#remittances',
+  },
+  {
+    id: 'dangerDeleteLastRemittance',
+    icon: <Trash2 className="h-5 w-5" />,
+    href: '/dashboard/configuracion',
+    manualAnchor: '#danger',
   },
 ];
 
