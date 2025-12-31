@@ -1515,7 +1515,7 @@ export const es = {
     logoutToastTitle: "Sesión Cerrada",
     logoutToastDescription: "Has cerrado sesión correctamente.",
     logoutError: "No se ha podido cerrar la sesión.",
-    superAdmin: "Super Admin",
+    superAdmin: "Gestión avanzada",
     adminPanel: "Panel Admin",
   },
   register: {
@@ -1911,8 +1911,9 @@ export const es = {
     }
   },
   superAdminOrg: {
-    title: "Super Admin",
-    description: "Gestión avanzada de la organización",
+    title: "Gestión avanzada",
+    description: "Configuración y validación de la entidad",
+    internalUse: "Uso interno",
     accessDenied: "Acceso denegado",
     accessDeniedDescription: "No tienes permisos para acceder a esta sección.",
     tabs: {

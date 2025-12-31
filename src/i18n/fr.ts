@@ -1490,7 +1490,7 @@ export const fr = {
     logoutToastTitle: "Déconnexion réussie",
     logoutToastDescription: "Vous avez été déconnecté avec succès.",
     logoutError: "Impossible de se déconnecter.",
-    superAdmin: "Super Admin",
+    superAdmin: "Gestion avancée",
     adminPanel: "Panneau Admin",
   },
   register: {
@@ -1886,9 +1886,10 @@ export const fr = {
     }
   },
   superAdminOrg: {
-    title: "Super Admin",
-    description: "Gestió avançada de l'organització",
-    accessDenied: "Accés denegat",
+    title: "Gestion avancée",
+    description: "Configuration et validation de l'entité",
+    internalUse: "Usage interne",
+    accessDenied: "Accès refusé",
     accessDeniedDescription: "No tens permisos per accedir a aquesta secció.",
     tabs: {
       stats: "Estadístiques",

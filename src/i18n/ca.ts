@@ -1489,7 +1489,7 @@ export const ca = {
     logoutToastTitle: "Sessió Tancada",
     logoutToastDescription: "Has tancat sessió correctament.",
     logoutError: "No s'ha pogut tancar la sessió.",
-    superAdmin: "Super Admin",
+    superAdmin: "Gestió avançada",
     adminPanel: "Panell Admin",
   },
   register: {
@@ -1885,8 +1885,9 @@ export const ca = {
     }
   },
   superAdminOrg: {
-    title: "Super Admin",
-    description: "Gestió avançada de l'organització",
+    title: "Gestió avançada",
+    description: "Configuració i validació de l'entitat",
+    internalUse: "Ús intern",
     accessDenied: "Accés denegat",
     accessDeniedDescription: "No tens permisos per accedir a aquesta secció.",
     tabs: {

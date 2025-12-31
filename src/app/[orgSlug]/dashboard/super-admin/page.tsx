@@ -55,11 +55,8 @@ import {
   Copy,
   Unlink,
   Link2Off,
-  Trash2,
-  Languages,
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import { I18nManager } from '@/components/super-admin/i18n-manager';
 
 // ════════════════════════════════════════════════════════════════════════════
 // TIPUS
@@ -516,10 +513,15 @@ export default function SuperAdminOrgPage() {
     <div className="space-y-6">
       {/* Header */}
       <div>
-        <h1 className="text-2xl font-bold tracking-tight font-headline flex items-center gap-2">
-          <Shield className="h-6 w-6 text-purple-500" />
-          {t.superAdminOrg.title}
-        </h1>
+        <div className="flex items-center gap-3">
+          <h1 className="text-2xl font-bold tracking-tight font-headline flex items-center gap-2">
+            <Shield className="h-6 w-6 text-purple-500" />
+            {t.superAdminOrg.title}
+          </h1>
+          <Badge variant="outline" className="text-xs text-muted-foreground">
+            {t.superAdminOrg.internalUse}
+          </Badge>
+        </div>
         <p className="text-muted-foreground">
           {t.superAdminOrg.description} — <span className="font-medium">{organization?.name}</span>
         </p>
@@ -548,10 +550,6 @@ export default function SuperAdminOrgPage() {
           <TabsTrigger value="export" className="gap-2">
             <Download className="h-4 w-4" />
             {t.superAdminOrg.tabs.export}
-          </TabsTrigger>
-          <TabsTrigger value="i18n" className="gap-2">
-            <Languages className="h-4 w-4" />
-            Traduccions
           </TabsTrigger>
         </TabsList>
 
@@ -1038,12 +1036,6 @@ export default function SuperAdminOrgPage() {
           </div>
         </TabsContent>
 
-        {/* ══════════════════════════════════════════════════════════════════ */}
-        {/* TAB: TRADUCCIONS (i18n) */}
-        {/* ══════════════════════════════════════════════════════════════════ */}
-        <TabsContent value="i18n" className="space-y-4">
-          <I18nManager />
-        </TabsContent>
       </Tabs>
     </div>
   );
