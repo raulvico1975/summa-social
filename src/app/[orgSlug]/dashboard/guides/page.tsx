@@ -41,6 +41,10 @@ import {
   Award,
   UserMinus,
   UserCheck,
+  Pencil,
+  Filter,
+  Sparkles,
+  KeyRound,
 } from 'lucide-react';
 import { useTranslations } from '@/i18n';
 
@@ -232,6 +236,36 @@ const GUIDES: GuideItem[] = [
     icon: <UserCheck className="h-5 w-5" />,
     href: '/dashboard/donants',
     manualAnchor: '#donors',
+  },
+  {
+    id: 'editMovement',
+    icon: <Pencil className="h-5 w-5" />,
+    href: '/dashboard/movimientos',
+    manualAnchor: '#movements',
+  },
+  {
+    id: 'movementFilters',
+    icon: <Filter className="h-5 w-5" />,
+    href: '/dashboard/movimientos',
+    manualAnchor: '#movements',
+  },
+  {
+    id: 'bulkAICategorize',
+    icon: <Sparkles className="h-5 w-5" />,
+    href: '/dashboard/movimientos',
+    manualAnchor: '#movements',
+  },
+  {
+    id: 'remittanceViewDetail',
+    icon: <Eye className="h-5 w-5" />,
+    href: '/dashboard/movimientos',
+    manualAnchor: '#remittances',
+  },
+  {
+    id: 'resetPassword',
+    icon: <KeyRound className="h-5 w-5" />,
+    href: '/login',
+    manualAnchor: '#troubleshooting',
   },
 ];
 
