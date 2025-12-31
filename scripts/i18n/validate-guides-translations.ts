@@ -82,6 +82,11 @@ const GUIDE_IDS = [
   'changeLanguage',
   'importDonors',
   'generateDonorCertificate',
+  'model182',
+  'model347',
+  'certificatesBatch',
+  'donorSetInactive',
+  'donorReactivate',
 ];
 
 // Arrays que han de tenir mínim 1 element si existeixen al base
