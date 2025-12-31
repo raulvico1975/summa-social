@@ -69,7 +69,7 @@ export function generateAlternateLanguages(
 
 /**
  * Genera les metadades completes per una pàgina pública.
- * Inclou canonical i hreflang alternates.
+ * Inclou canonical i hreflang alternates (incloent x-default).
  */
 export function generatePublicPageMetadata(
   locale: PublicLocale,
@@ -82,7 +82,10 @@ export function generatePublicPageMetadata(
   return {
     alternates: {
       canonical,
-      languages: alternates,
+      languages: {
+        ...alternates,
+        'x-default': alternates[DEFAULT_PUBLIC_LOCALE], // ca com a fallback
+      },
     },
   };
 }

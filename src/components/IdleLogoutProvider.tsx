@@ -22,6 +22,12 @@ const RESERVED_SEGMENTS = [
   'privacy',
   'api',
   'q',
+  // Idiomes públics i segment intern
+  'ca',
+  'es',
+  'fr',
+  'pt',
+  'public',
 ];
 
 function buildInstanceLoginUrl(pathname: string | null): string {
