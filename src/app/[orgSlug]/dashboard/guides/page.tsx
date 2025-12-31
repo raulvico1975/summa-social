@@ -37,6 +37,7 @@ import {
   Paperclip,
   Landmark,
   Languages,
+  FileSpreadsheet,
 } from 'lucide-react';
 import { useTranslations } from '@/i18n';
 
@@ -186,6 +187,12 @@ const GUIDES: GuideItem[] = [
     icon: <Languages className="h-5 w-5" />,
     href: '/dashboard/configuracion',
     manualAnchor: '#first-steps',
+  },
+  {
+    id: 'importDonors',
+    icon: <FileSpreadsheet className="h-5 w-5" />,
+    href: '/dashboard/donants',
+    manualAnchor: '#donors',
   },
 ];
 
