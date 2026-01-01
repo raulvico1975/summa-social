@@ -1,12 +1,12 @@
 // src/components/notifications/notification-bell.tsx
-// Product Updates Inbox - Novetats del producte
+// Novetats a Summa - Acompanya l'usuari amb les últimes novetats
 // Llegeix de Firestore amb fallback a legacy hardcoded
 
 'use client';
 
 import * as React from 'react';
 import Link from 'next/link';
-import { Bell, Check, CheckCheck, ChevronRight } from 'lucide-react';
+import { Bell, Check, CheckCheck, ChevronRight, Sparkles } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
 import {
@@ -108,13 +108,17 @@ export function ProductUpdatesInbox() {
       <PopoverContent align="end" className="w-96 max-w-[90vw] p-0">
         {/* Header */}
         <div className="flex items-center justify-between px-4 py-3 border-b">
-          <h3 className="font-semibold">{t.productUpdates.title}</h3>
+          <h3 className="font-semibold flex items-center gap-2">
+            <Sparkles className="h-4 w-4 text-amber-500" />
+            Novetats a Summa
+          </h3>
           {unreadCount > 0 && (
             <Button
               variant="secondary"
               size="sm"
               className="h-7 text-xs"
               onClick={handleMarkAllRead}
+              title="No afecta la visibilitat de les novetats"
             >
               <CheckCheck className="h-3.5 w-3.5 mr-1" />
               {t.productUpdates.markAllRead}
