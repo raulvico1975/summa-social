@@ -69,6 +69,7 @@ import { I18nManager } from '@/components/super-admin/i18n-manager';
 import { SuperAdminsManager } from '@/components/admin/super-admins-manager';
 import { migrateExistingSlugs } from '@/lib/slugs';
 import { logAdminAction, getRecentAuditLogs, formatAuditAction, type AdminAuditLog } from '@/lib/admin-audit';
+import { isDemoEnv } from '@/lib/demo/isDemoOrg';
 
 export default function AdminPage() {
   const router = useRouter();
@@ -93,6 +94,11 @@ export default function AdminPage() {
   // Audit logs
   const [auditLogs, setAuditLogs] = React.useState<AdminAuditLog[]>([]);
   const [isLoadingAudit, setIsLoadingAudit] = React.useState(false);
+
+  // Demo seed
+  const [isSeedingDemo, setIsSeedingDemo] = React.useState(false);
+  const [seedResult, setSeedResult] = React.useState<{ ok: boolean; counts?: Record<string, number>; error?: string } | null>(null);
+  const [showSeedConfirm, setShowSeedConfirm] = React.useState(false);
 
   // Verificar que és Super Admin
   const isSuperAdmin = user?.uid === SUPER_ADMIN_UID;
@@ -232,6 +238,56 @@ export default function AdminPage() {
       month: '2-digit',
       year: 'numeric',
     });
+  };
+
+  // Handler regenerar demo (executa després de confirmació)
+  const executeRegenerateDemo = async () => {
+    if (!user) return;
+    setShowSeedConfirm(false);
+    setIsSeedingDemo(true);
+    setSeedResult(null);
+
+    try {
+      const response = await fetch('/api/internal/demo/seed', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-User-UID': user.uid,
+        },
+      });
+
+      const data = await response.json();
+
+      if (response.ok && data.ok) {
+        setSeedResult({ ok: true, counts: data.counts });
+        toast({
+          title: 'Demo regenerada',
+          description: `Dades creades: ${Object.entries(data.counts || {}).map(([k, v]) => `${k}: ${v}`).join(', ')}`,
+        });
+      } else {
+        setSeedResult({ ok: false, error: data.error || 'Error desconegut' });
+        toast({
+          variant: 'destructive',
+          title: 'Error',
+          description: data.error || 'No s\'ha pogut regenerar la demo',
+        });
+      }
+    } catch (error) {
+      console.error('Error regenerant demo:', error);
+      setSeedResult({ ok: false, error: (error as Error).message });
+      toast({
+        variant: 'destructive',
+        title: 'Error',
+        description: 'Error de connexió regenerant la demo',
+      });
+    } finally {
+      setIsSeedingDemo(false);
+    }
+  };
+
+  // Obre diàleg de confirmació
+  const handleRegenerateDemo = () => {
+    setShowSeedConfirm(true);
   };
 
   const getStatusBadge = (status: Organization['status']) => {
@@ -428,6 +484,70 @@ export default function AdminPage() {
         <div className="mb-8">
           <SuperAdminsManager />
         </div>
+
+        {/* Demo Management - només visible en entorn demo */}
+        {isDemoEnv() && (
+          <Card className="mb-8 border-amber-300 bg-amber-50/50">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-base">
+                <AlertCircle className="h-4 w-4 text-amber-600" />
+                <span className="text-amber-800">Entorn DEMO</span>
+                <Badge variant="outline" className="ml-2 bg-amber-100 text-amber-800 border-amber-300">
+                  demo
+                </Badge>
+              </CardTitle>
+              <CardDescription className="text-amber-700">
+                Estàs treballant amb dades de demostració. Les accions aquí no afecten producció.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="flex flex-col gap-4">
+                <div className="flex items-center gap-4">
+                  <Button
+                    onClick={handleRegenerateDemo}
+                    disabled={isSeedingDemo}
+                    variant="outline"
+                    className="border-amber-400 hover:bg-amber-100"
+                  >
+                    {isSeedingDemo ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Regenerant...
+                      </>
+                    ) : (
+                      <>
+                        <Play className="mr-2 h-4 w-4" />
+                        Regenerar demo
+                      </>
+                    )}
+                  </Button>
+                  <span className="text-sm text-amber-700">
+                    Purga i recrea totes les dades sintètiques
+                  </span>
+                </div>
+
+                {seedResult && (
+                  <div className={`p-3 rounded-lg text-sm ${seedResult.ok ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
+                    {seedResult.ok ? (
+                      <div>
+                        <span className="font-medium">Seed completat</span>
+                        {seedResult.counts && (
+                          <div className="mt-1 grid grid-cols-3 gap-2 text-xs">
+                            {Object.entries(seedResult.counts).map(([key, value]) => (
+                              <span key={key}>{key}: {value}</span>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    ) : (
+                      <span>Error: {seedResult.error}</span>
+                    )}
+                  </div>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
         {/* Eines d'administració */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
@@ -706,7 +826,7 @@ export default function AdminPage() {
               {suspendDialogOrg?.status === 'suspended' ? 'Reactivar organització?' : 'Suspendre organització?'}
             </AlertDialogTitle>
             <AlertDialogDescription>
-              {suspendDialogOrg?.status === 'suspended' 
+              {suspendDialogOrg?.status === 'suspended'
                 ? `L'organització "${suspendDialogOrg?.name}" tornarà a estar activa i els seus membres podran accedir-hi.`
                 : `L'organització "${suspendDialogOrg?.name}" quedarà suspesa i els seus membres no podran accedir-hi.`
               }
@@ -714,13 +834,38 @@ export default function AdminPage() {
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel disabled={isProcessing}>Cancel·lar</AlertDialogCancel>
-            <AlertDialogAction 
+            <AlertDialogAction
               onClick={() => suspendDialogOrg && handleToggleSuspend(suspendDialogOrg)}
               disabled={isProcessing}
               className={suspendDialogOrg?.status === 'suspended' ? '' : 'bg-destructive text-destructive-foreground hover:bg-destructive/90'}
             >
               {isProcessing && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               {suspendDialogOrg?.status === 'suspended' ? 'Reactivar' : 'Suspendre'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Diàleg confirmar regenerar demo */}
+      <AlertDialog open={showSeedConfirm} onOpenChange={setShowSeedConfirm}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="text-amber-800">
+              Regenerar dades demo?
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              Aquesta acció esborrarà totes les dades de demostració existents i en crearà de noves.
+              <br /><br />
+              <strong>Només afecta l'organització demo</strong> (slug: demo). Cap dada de producció serà modificada.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel·lar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={executeRegenerateDemo}
+              className="bg-amber-600 text-white hover:bg-amber-700"
+            >
+              Regenerar demo
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

@@ -11,6 +11,8 @@ import { useCurrentOrganization } from '@/hooks/organization-provider';
 import { NotificationBell } from '@/components/notifications/notification-bell';
 import { DASHBOARD_NOTIFICATIONS } from '@/lib/notifications';
 import { HelpSheet } from '@/components/help/HelpSheet';
+import { Badge } from '@/components/ui/badge';
+import { isDemoEnv } from '@/lib/demo/isDemoOrg';
 
 // Mapatge de segments URL a claus de traducció
 const SEGMENT_TO_KEY: Record<string, keyof typeof import('@/i18n/ca').ca.breadcrumb> = {
@@ -146,6 +148,11 @@ export function DashboardHeader() {
     <header className="sticky top-0 z-10 flex h-16 shrink-0 items-center justify-between gap-4 border-b bg-background/80 px-4 backdrop-blur-sm md:px-6">
       <div className="flex items-center gap-2">
         <SidebarTrigger className="h-9 w-9 border border-border" />
+        {isDemoEnv() && (
+          <Badge variant="outline" className="bg-amber-100 text-amber-800 border-amber-300 text-xs font-medium">
+            DEMO
+          </Badge>
+        )}
         <Breadcrumb>
           <BreadcrumbList>
             {getBreadcrumbs()}

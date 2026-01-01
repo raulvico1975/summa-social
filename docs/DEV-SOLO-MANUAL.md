@@ -391,4 +391,68 @@ Quan publiques una novetat nova des de SuperAdmin (`/admin` → Novetats):
 
 ---
 
-*Última actualització: 2025-12-31*
+## 11. Entorn DEMO
+
+L'entorn DEMO és una instància completament separada de producció, amb dades 100% sintètiques per a demostracions i captures.
+
+### Característiques
+
+| Aspecte | Comportament |
+|---------|--------------|
+| **Firebase project** | `summa-social-demo` (separat de prod) |
+| **Dades** | 100% sintètiques, regenerables |
+| **Rols UI** | No hi ha fricció per rols (qualsevol pot navegar tot) |
+| **Regeneració** | Només SuperAdmin (botó a `/admin`) |
+| **Integracions** | Visibles en mode "desconnectat" (Stripe, banc, email) |
+| **ACL Firestore** | Intacte (el backend no canvia) |
+
+### Com arrencar DEMO
+
+```bash
+# 1. Assegura't que tens .env.demo omplert amb credencials del projecte demo
+# 2. Assegura't que tens secrets/serviceAccountKey-demo.json
+
+# 3. Arrenca amb:
+npm run dev:demo
+```
+
+### Fitxers clau
+
+| Fitxer | Funció |
+|--------|--------|
+| `.env.demo` | Variables d'entorn per Firebase demo |
+| `secrets/serviceAccountKey-demo.json` | Service account Admin SDK |
+| `src/lib/demo/isDemoOrg.ts` | Helper `isDemoEnv()`, `isDemoOrg()` |
+| `src/lib/demo/demoIntegrations.ts` | Estat d'integracions en demo |
+| `scripts/run-demo-dev.mjs` | Runner que carrega .env.demo |
+
+### Regenerar dades demo
+
+1. Entra a `/admin` (cal ser SuperAdmin)
+2. Secció "Entorn DEMO" visible només en mode demo
+3. Clicar "Regenerar demo" → confirmació obligatòria
+4. Esperar 10-30s segons el volum
+
+### Volums de seed
+
+| Entitat | Quantitat |
+|---------|-----------|
+| Donants | 120 |
+| Proveïdors | 35 |
+| Treballadors | 12 |
+| Transaccions | ~700 (18 mesos) |
+| Projectes | 4 |
+| Partides | 40 |
+| Despeses off-bank | 160 |
+| PDFs Storage | 30 |
+
+### Guardrails DEMO
+
+- ❌ **No hi ha rols a UI** — però l'ACL de Firestore és el mateix
+- ❌ **No es fan calls reals** — Stripe, email, banc desconnectats
+- ❌ **Regenerar només SuperAdmin** — amb confirmació obligatòria
+- ✅ **Identificació clara** — Badge "DEMO" a navbar i admin
+
+---
+
+*Última actualització: 2026-01-01*

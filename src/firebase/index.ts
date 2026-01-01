@@ -1,14 +1,7 @@
 'use client';
 
-const firebaseConfig = {
-  projectId: "summa-social",
-  appId: "1:469685881071:web:97483f2003df7c2407731a",
-  apiKey: "AIzaSyAi_dEPmqHpbEdZH04pCnRRS85AlJ9Pe5g",
-  authDomain: "summa-social.firebaseapp.com",
-  storageBucket: "summa-social.firebasestorage.app",
-  messagingSenderId: "469685881071"
-};
 import { initializeApp, getApps, getApp, FirebaseApp } from 'firebase/app';
+import { firebaseConfig } from './config';
 import { getAuth } from 'firebase/auth';
 import { getFirestore } from 'firebase/firestore';
 import { getStorage } from 'firebase/storage';

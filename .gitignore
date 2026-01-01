@@ -40,6 +40,10 @@ next-env.d.ts
 .genkit/*
 .env*
 
+# secrets (service account keys, etc.)
+secrets/
+secrets/*.json
+
 # firebase
 firebase-debug.log
 firestore-debug.log

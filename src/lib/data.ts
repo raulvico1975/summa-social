@@ -408,6 +408,8 @@ export type Organization = {
   updatedAt?: string;
   suspendedAt?: string;
   suspendedReason?: string;
+  // Demo
+  isDemo?: boolean;                // true només per l'org demo (entorn de demostració)
 };
 
 /**
