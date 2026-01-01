@@ -117,6 +117,41 @@ const PROBLEM_GUIDE_IDS = [
   'accessSecurity',
 ];
 
+// Guies del Bloc B (accions) que requereixen cardText obligatori
+const ACTION_GUIDE_IDS = [
+  'movements',
+  'editMovement',
+  'attachDocument',
+  'bulkAICategorize',
+  'changePeriod',
+  'selectBankAccount',
+  'donors',
+  'importDonors',
+  'updateExistingDonors',
+  'donorSetInactive',
+  'donorReactivate',
+  'generateDonorCertificate',
+  'splitRemittance',
+  'remittanceViewDetail',
+  'saveRemittanceMapping',
+  'toggleRemittanceItems',
+  'dangerDeleteLastRemittance',
+  'travelReceipts',
+  'reports',
+  'projects',
+  'changeLanguage',
+];
+
+// Guies del Bloc C (fluxos) que requereixen cardText obligatori
+const FLOW_GUIDE_IDS = [
+  'firstDay',
+  'firstMonth',
+  'initialLoad',
+  'monthlyFlow',
+  'monthClose',
+  'yearEndFiscal',
+];
+
 // Arrays que han de tenir mínim 1 element si existeixen al base
 const ARRAY_FIELDS = [
   'lookFirst',
@@ -343,14 +378,15 @@ function validateLanguage(baseMessages: JsonMessages, targetMessages: JsonMessag
     }
   }
 
-  // 8. PROBLEM_GUIDE_IDS: cardText obligatori per a guies del Bloc A
-  for (const guideId of PROBLEM_GUIDE_IDS) {
+  // 8. cardText obligatori per a totes les guies visibles (Blocs A, B, C)
+  const ALL_VISIBLE_GUIDE_IDS = [...PROBLEM_GUIDE_IDS, ...ACTION_GUIDE_IDS, ...FLOW_GUIDE_IDS];
+  for (const guideId of ALL_VISIBLE_GUIDE_IDS) {
     const cardTextKey = `guides.${guideId}.cardText`;
 
     if (!(cardTextKey in targetMessages)) {
       errors.push({
         type: 'critical',
-        message: `Falta cardText de guia problema: ${cardTextKey}`,
+        message: `Falta cardText de guia visible: ${cardTextKey}`,
       });
     } else {
       const cardText = targetMessages[cardTextKey];
