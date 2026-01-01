@@ -66,6 +66,8 @@ import { SystemHealth } from '@/components/admin/system-health';
 import { ProductUpdatesSection } from '@/components/admin/product-updates-section';
 import { I18nManager } from '@/components/super-admin/i18n-manager';
 import { SuperAdminsManager } from '@/components/admin/super-admins-manager';
+import { AdminSection } from '@/components/admin/admin-section';
+import { AdminNav } from '@/components/admin/admin-nav';
 import { migrateExistingSlugs } from '@/lib/slugs';
 import { logAdminAction, getRecentAuditLogs, formatAuditAction, type AdminAuditLog } from '@/lib/admin-audit';
 import { isDemoEnv } from '@/lib/demo/isDemoOrg';
@@ -537,157 +539,315 @@ export default function AdminPage() {
         </div>
       </header>
 
-      <main className="container mx-auto px-4 py-8">
-        {/* Estadístiques */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium">Total Organitzacions</CardTitle>
-              <Building2 className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{stats.total}</div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium">Actives</CardTitle>
-              <Play className="h-4 w-4 text-green-600" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-green-600">{stats.active}</div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium">Suspeses</CardTitle>
-              <Pause className="h-4 w-4 text-destructive" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-destructive">{stats.suspended}</div>
-            </CardContent>
-          </Card>
-        </div>
+      {/* Mini-navegació sticky */}
+      <AdminNav />
 
-        {/* Salut del sistema */}
-        <div className="mb-8">
-          <SystemHealth />
-        </div>
+      <main className="container mx-auto px-4 py-8 space-y-8">
+        {/* ═══════════════════════════════════════════════════════════════════════
+            A) GOVERN DEL SISTEMA
+            Organitzacions, superadmins i estat global.
+        ═══════════════════════════════════════════════════════════════════════ */}
+        <AdminSection
+          id="govern"
+          title="Govern del sistema"
+          description="Organitzacions, superadmins i estat global."
+          tone="neutral"
+        >
+          {/* Estadístiques globals */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between pb-2">
+                <CardTitle className="text-sm font-medium">Total Organitzacions</CardTitle>
+                <Building2 className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{stats.total}</div>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between pb-2">
+                <CardTitle className="text-sm font-medium">Actives</CardTitle>
+                <Play className="h-4 w-4 text-green-600" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold text-green-600">{stats.active}</div>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between pb-2">
+                <CardTitle className="text-sm font-medium">Suspeses</CardTitle>
+                <Pause className="h-4 w-4 text-destructive" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold text-destructive">{stats.suspended}</div>
+              </CardContent>
+            </Card>
+          </div>
 
-        {/* Novetats del producte */}
-        <div className="mb-8">
-          <ProductUpdatesSection isSuperAdmin={isSuperAdmin} />
-        </div>
-
-        {/* Traduccions (i18n) */}
-        <div className="mb-8">
-          <I18nManager />
-        </div>
-
-        {/* SuperAdmins */}
-        <div className="mb-8">
-          <SuperAdminsManager />
-        </div>
-
-        {/* Demo Management - només visible en entorn demo */}
-        {isDemoEnv() && (
-          <Card className="mb-8 border-amber-300 bg-amber-50/50">
+          {/* Llista d'organitzacions */}
+          <Card className="mb-6">
             <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-base">
-                <AlertCircle className="h-4 w-4 text-amber-600" />
-                <span className="text-amber-800">Entorn DEMO</span>
-                <Badge variant="outline" className="ml-2 bg-amber-100 text-amber-800 border-amber-300">
-                  demo
-                </Badge>
-              </CardTitle>
-              <CardDescription className="text-amber-700">
-                Estàs treballant amb dades de demostració. Les accions aquí no afecten producció.
+              <CardTitle>Organitzacions</CardTitle>
+              <CardDescription>
+                Gestiona totes les organitzacions registrades a Summa Social
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="flex flex-col gap-4">
-                <div className="flex items-center gap-4">
-                  <Button
-                    onClick={handleRegenerateDemo}
-                    disabled={isSeedingDemo}
-                    variant="outline"
-                    className="border-amber-400 hover:bg-amber-100"
-                  >
-                    {isSeedingDemo ? (
-                      <>
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        Regenerant...
-                      </>
-                    ) : (
-                      <>
-                        <Play className="mr-2 h-4 w-4" />
-                        Regenerar demo
-                      </>
-                    )}
-                  </Button>
-                  <span className="text-sm text-amber-700">
-                    Purga i recrea totes les dades sintètiques
-                  </span>
-                </div>
-
-                {seedResult && (
-                  <div className={`p-3 rounded-lg text-sm ${seedResult.ok ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
-                    {seedResult.ok ? (
-                      <div>
-                        <span className="font-medium">Seed completat</span>
-                        {seedResult.counts && (
-                          <div className="mt-1 grid grid-cols-3 gap-2 text-xs">
-                            {Object.entries(seedResult.counts).map(([key, value]) => (
-                              <span key={key}>{key}: {value}</span>
-                            ))}
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Organització</TableHead>
+                    <TableHead>CIF</TableHead>
+                    <TableHead>Estat</TableHead>
+                    <TableHead>Indicadors</TableHead>
+                    <TableHead>Creada</TableHead>
+                    <TableHead>Accessos</TableHead>
+                    <TableHead className="w-[80px]"></TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {organizations && organizations.length > 0 ? (
+                    organizations.map((org) => (
+                      <TableRow key={org.id}>
+                        <TableCell>
+                          <div className="flex items-center gap-2">
+                            <Building2 className="h-4 w-4 text-muted-foreground" />
+                            <div>
+                              <div className="font-medium">{org.name}</div>
+                              <div className="text-xs text-muted-foreground">{org.slug}</div>
+                            </div>
                           </div>
-                        )}
-                      </div>
-                    ) : (
-                      <span>Error: {seedResult.error}</span>
-                    )}
-                  </div>
-                )}
-              </div>
+                        </TableCell>
+                        <TableCell className="font-mono text-sm">{org.taxId}</TableCell>
+                        <TableCell>{getStatusBadge(org.status)}</TableCell>
+                        <TableCell>
+                          <div className="flex items-center gap-2">
+                            <span
+                              className="flex items-center gap-1"
+                              title={org.onboarding?.welcomeSeenAt ? `Onboarding vist: ${org.onboarding.welcomeSeenAt}` : 'Onboarding pendent'}
+                            >
+                              {org.onboarding?.welcomeSeenAt ? (
+                                <CheckCircle2 className="h-4 w-4 text-green-600" />
+                              ) : (
+                                <XCircle className="h-4 w-4 text-muted-foreground" />
+                              )}
+                            </span>
+                            {org.updatedAt && (
+                              <span className="text-xs text-muted-foreground" title={`Última activitat: ${org.updatedAt}`}>
+                                {formatDate(org.updatedAt)}
+                              </span>
+                            )}
+                          </div>
+                        </TableCell>
+                        <TableCell className="text-sm text-muted-foreground">
+                          {formatDate(org.createdAt)}
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex items-center gap-1">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-7 px-2 text-xs"
+                              onClick={() => {
+                                sessionStorage.setItem('adminViewingOrgId', org.id);
+                                router.push(`/${org.slug}/dashboard/movimientos`);
+                              }}
+                              title="Moviments"
+                            >
+                              <ArrowUpRight className="h-3 w-3 mr-1" />
+                              Mov
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-7 px-2 text-xs"
+                              onClick={() => {
+                                sessionStorage.setItem('adminViewingOrgId', org.id);
+                                router.push(`/${org.slug}/dashboard/configuracion`);
+                              }}
+                              title="Configuració"
+                            >
+                              <Settings className="h-3 w-3" />
+                            </Button>
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button variant="ghost" size="sm">
+                                <MoreHorizontal className="h-4 w-4" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                              <DropdownMenuItem onClick={() => handleEnterOrganization(org)}>
+                                <LogIn className="mr-2 h-4 w-4" />
+                                Entrar
+                              </DropdownMenuItem>
+                              <DropdownMenuSeparator />
+                              <DropdownMenuItem
+                                onClick={() => setSuspendDialogOrg(org)}
+                                className={org.status === 'suspended' ? 'text-green-600' : 'text-destructive'}
+                              >
+                                {org.status === 'suspended' ? (
+                                  <>
+                                    <Play className="mr-2 h-4 w-4" />
+                                    Reactivar
+                                  </>
+                                ) : (
+                                  <>
+                                    <Pause className="mr-2 h-4 w-4" />
+                                    Suspendre
+                                  </>
+                                )}
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  ) : (
+                    <TableRow>
+                      <TableCell colSpan={7} className="text-center text-muted-foreground h-24">
+                        No hi ha organitzacions. Crea'n una per començar.
+                      </TableCell>
+                    </TableRow>
+                  )}
+                </TableBody>
+              </Table>
             </CardContent>
           </Card>
-        )}
 
-        {/* Eines d'administració */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
-          {/* Reset contrasenya */}
-          <Card>
+          {/* SuperAdmins */}
+          <SuperAdminsManager />
+
+          {/* Audit logs */}
+          <Card className="mt-6">
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-base">
-                <Mail className="h-4 w-4" />
-                Reset contrasenya
+                <History className="h-4 w-4" />
+                Activitat SuperAdmin
               </CardTitle>
               <CardDescription>
-                Envia un correu per restablir la contrasenya d'un usuari
+                Últimes accions registrades
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="flex gap-2">
-                <Input
-                  type="email"
-                  placeholder="email@exemple.com"
-                  value={resetEmail}
-                  onChange={(e) => setResetEmail(e.target.value)}
-                  disabled={isResetting}
-                />
-                <Button
-                  onClick={handlePasswordReset}
-                  disabled={isResetting || !resetEmail.trim()}
-                >
-                  {isResetting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                  Enviar correu
-                </Button>
-              </div>
+              {isLoadingAudit ? (
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  Carregant...
+                </div>
+              ) : auditLogs.length === 0 ? (
+                <p className="text-sm text-muted-foreground">Cap acció registrada encara.</p>
+              ) : (
+                <div className="space-y-2">
+                  {auditLogs.map((log) => (
+                    <div key={log.id} className="flex items-center justify-between text-sm border-b pb-2 last:border-0">
+                      <div className="flex items-center gap-2">
+                        <Badge variant="outline" className="text-xs font-mono">
+                          {formatAuditAction(log.action)}
+                        </Badge>
+                        {log.target && (
+                          <span className="text-muted-foreground font-mono text-xs">
+                            {log.target}
+                          </span>
+                        )}
+                      </div>
+                      <span className="text-xs text-muted-foreground">
+                        {log.timestamp.toLocaleDateString('ca-ES', {
+                          day: '2-digit',
+                          month: '2-digit',
+                          hour: '2-digit',
+                          minute: '2-digit',
+                        })}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              )}
             </CardContent>
           </Card>
+        </AdminSection>
 
-          {/* Diagnòstic */}
-          <Card>
+        {/* ═══════════════════════════════════════════════════════════════════════
+            B) SALUT I DIAGNÒSTIC
+            Detecció d'incidències i verificacions de producció.
+        ═══════════════════════════════════════════════════════════════════════ */}
+        <AdminSection
+          id="salut"
+          title="Salut i diagnòstic"
+          description="Detecció d'incidències i verificacions de producció."
+          tone="info"
+        >
+          {/* Sentinelles + Semàfor */}
+          <SystemHealth />
+
+          {/* Demo Management - només visible en entorn demo */}
+          {isDemoEnv() && (
+            <Card className="mt-6 border-amber-300 bg-amber-50/50">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2 text-base">
+                  <AlertCircle className="h-4 w-4 text-amber-600" />
+                  <span className="text-amber-800">Entorn DEMO</span>
+                  <Badge variant="outline" className="ml-2 bg-amber-100 text-amber-800 border-amber-300">
+                    demo
+                  </Badge>
+                </CardTitle>
+                <CardDescription className="text-amber-700">
+                  Estàs treballant amb dades de demostració. Les accions aquí no afecten producció.
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="flex flex-col gap-4">
+                  <div className="flex items-center gap-4">
+                    <Button
+                      onClick={handleRegenerateDemo}
+                      disabled={isSeedingDemo}
+                      variant="outline"
+                      className="border-amber-400 hover:bg-amber-100"
+                    >
+                      {isSeedingDemo ? (
+                        <>
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          Regenerant...
+                        </>
+                      ) : (
+                        <>
+                          <Play className="mr-2 h-4 w-4" />
+                          Regenerar demo
+                        </>
+                      )}
+                    </Button>
+                    <span className="text-sm text-amber-700">
+                      Purga i recrea totes les dades sintètiques
+                    </span>
+                  </div>
+
+                  {seedResult && (
+                    <div className={`p-3 rounded-lg text-sm ${seedResult.ok ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
+                      {seedResult.ok ? (
+                        <div>
+                          <span className="font-medium">Seed completat</span>
+                          {seedResult.counts && (
+                            <div className="mt-1 grid grid-cols-3 gap-2 text-xs">
+                              {Object.entries(seedResult.counts).map(([key, value]) => (
+                                <span key={key}>{key}: {value}</span>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      ) : (
+                        <span>Error: {seedResult.error}</span>
+                      )}
+                    </div>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Diagnòstic links */}
+          <Card className="mt-6">
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-base">
                 <FileText className="h-4 w-4" />
@@ -730,190 +890,68 @@ export default function AdminPage() {
               </div>
             </CardContent>
           </Card>
-        </div>
+        </AdminSection>
 
-        {/* Activitat SuperAdmin (Audit Log) */}
-        <Card className="mb-8">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-base">
-              <History className="h-4 w-4" />
-              Activitat SuperAdmin
-            </CardTitle>
-            <CardDescription>
-              Últimes accions registrades
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            {isLoadingAudit ? (
-              <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                <Loader2 className="h-4 w-4 animate-spin" />
-                Carregant...
-              </div>
-            ) : auditLogs.length === 0 ? (
-              <p className="text-sm text-muted-foreground">Cap acció registrada encara.</p>
-            ) : (
-              <div className="space-y-2">
-                {auditLogs.map((log) => (
-                  <div key={log.id} className="flex items-center justify-between text-sm border-b pb-2 last:border-0">
-                    <div className="flex items-center gap-2">
-                      <Badge variant="outline" className="text-xs font-mono">
-                        {formatAuditAction(log.action)}
-                      </Badge>
-                      {log.target && (
-                        <span className="text-muted-foreground font-mono text-xs">
-                          {log.target}
-                        </span>
-                      )}
-                    </div>
-                    <span className="text-xs text-muted-foreground">
-                      {log.timestamp.toLocaleDateString('ca-ES', {
-                        day: '2-digit',
-                        month: '2-digit',
-                        hour: '2-digit',
-                        minute: '2-digit',
-                      })}
-                    </span>
-                  </div>
-                ))}
-              </div>
-            )}
-          </CardContent>
-        </Card>
+        {/* ═══════════════════════════════════════════════════════════════════════
+            C) CONTINGUT I COMUNICACIÓ
+            Novetats, web i traduccions.
+        ═══════════════════════════════════════════════════════════════════════ */}
+        <AdminSection
+          id="contingut"
+          title="Contingut i comunicació"
+          description="Novetats, web i traduccions."
+          tone="content"
+        >
+          {/* Novetats del producte */}
+          <ProductUpdatesSection isSuperAdmin={isSuperAdmin} />
 
-        {/* Llista d'organitzacions */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Organitzacions</CardTitle>
-            <CardDescription>
-              Gestiona totes les organitzacions registrades a Summa Social
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Organització</TableHead>
-                  <TableHead>CIF</TableHead>
-                  <TableHead>Estat</TableHead>
-                  <TableHead>Indicadors</TableHead>
-                  <TableHead>Creada</TableHead>
-                  <TableHead>Accessos</TableHead>
-                  <TableHead className="w-[80px]"></TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {organizations && organizations.length > 0 ? (
-                  organizations.map((org) => (
-                    <TableRow key={org.id}>
-                      <TableCell>
-                        <div className="flex items-center gap-2">
-                          <Building2 className="h-4 w-4 text-muted-foreground" />
-                          <div>
-                            <div className="font-medium">{org.name}</div>
-                            <div className="text-xs text-muted-foreground">{org.slug}</div>
-                          </div>
-                        </div>
-                      </TableCell>
-                      <TableCell className="font-mono text-sm">{org.taxId}</TableCell>
-                      <TableCell>{getStatusBadge(org.status)}</TableCell>
-                      <TableCell>
-                        <div className="flex items-center gap-2">
-                          {/* Onboarding vist */}
-                          <span
-                            className="flex items-center gap-1"
-                            title={org.onboarding?.welcomeSeenAt ? `Onboarding vist: ${org.onboarding.welcomeSeenAt}` : 'Onboarding pendent'}
-                          >
-                            {org.onboarding?.welcomeSeenAt ? (
-                              <CheckCircle2 className="h-4 w-4 text-green-600" />
-                            ) : (
-                              <XCircle className="h-4 w-4 text-muted-foreground" />
-                            )}
-                          </span>
-                          {/* Última activitat (updatedAt) */}
-                          {org.updatedAt && (
-                            <span className="text-xs text-muted-foreground" title={`Última activitat: ${org.updatedAt}`}>
-                              {formatDate(org.updatedAt)}
-                            </span>
-                          )}
-                        </div>
-                      </TableCell>
-                      <TableCell className="text-sm text-muted-foreground">
-                        {formatDate(org.createdAt)}
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex items-center gap-1">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="h-7 px-2 text-xs"
-                            onClick={() => {
-                              sessionStorage.setItem('adminViewingOrgId', org.id);
-                              router.push(`/${org.slug}/dashboard/movimientos`);
-                            }}
-                            title="Moviments"
-                          >
-                            <ArrowUpRight className="h-3 w-3 mr-1" />
-                            Mov
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="h-7 px-2 text-xs"
-                            onClick={() => {
-                              sessionStorage.setItem('adminViewingOrgId', org.id);
-                              router.push(`/${org.slug}/dashboard/configuracion`);
-                            }}
-                            title="Configuració"
-                          >
-                            <Settings className="h-3 w-3" />
-                          </Button>
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="sm">
-                              <MoreHorizontal className="h-4 w-4" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            <DropdownMenuItem onClick={() => handleEnterOrganization(org)}>
-                              <LogIn className="mr-2 h-4 w-4" />
-                              Entrar
-                            </DropdownMenuItem>
-                            <DropdownMenuSeparator />
-                            <DropdownMenuItem
-                              onClick={() => setSuspendDialogOrg(org)}
-                              className={org.status === 'suspended' ? 'text-green-600' : 'text-destructive'}
-                            >
-                              {org.status === 'suspended' ? (
-                                <>
-                                  <Play className="mr-2 h-4 w-4" />
-                                  Reactivar
-                                </>
-                              ) : (
-                                <>
-                                  <Pause className="mr-2 h-4 w-4" />
-                                  Suspendre
-                                </>
-                              )}
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      </TableCell>
-                    </TableRow>
-                  ))
-                ) : (
-                  <TableRow>
-                    <TableCell colSpan={7} className="text-center text-muted-foreground h-24">
-                      No hi ha organitzacions. Crea'n una per començar.
-                    </TableCell>
-                  </TableRow>
-                )}
-              </TableBody>
-            </Table>
-          </CardContent>
-        </Card>
+          {/* Traduccions (i18n) */}
+          <div className="mt-6">
+            <I18nManager />
+          </div>
+        </AdminSection>
+
+        {/* ═══════════════════════════════════════════════════════════════════════
+            D) OPERATIVA PUNTUAL
+            Accions ràpides de suport.
+        ═══════════════════════════════════════════════════════════════════════ */}
+        <AdminSection
+          id="operativa"
+          title="Operativa puntual"
+          description="Accions ràpides de suport."
+          tone="warn"
+        >
+          {/* Reset contrasenya */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-base">
+                <Mail className="h-4 w-4" />
+                Reset contrasenya
+              </CardTitle>
+              <CardDescription>
+                Envia un correu per restablir la contrasenya d'un usuari
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="flex gap-2">
+                <Input
+                  type="email"
+                  placeholder="email@exemple.com"
+                  value={resetEmail}
+                  onChange={(e) => setResetEmail(e.target.value)}
+                  disabled={isResetting}
+                />
+                <Button
+                  onClick={handlePasswordReset}
+                  disabled={isResetting || !resetEmail.trim()}
+                >
+                  {isResetting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                  Enviar correu
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </AdminSection>
       </main>
 
       {/* Diàleg crear organització */}
