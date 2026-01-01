@@ -87,8 +87,19 @@ export function useProductUpdates(): UseProductUpdatesResult {
           setUsingFallback(true);
         }
       } catch (err: unknown) {
-        const errorCode = (err as { code?: string })?.code ?? String(err);
-        console.warn('[notifications] Firestore failed, using legacy fallback', errorCode);
+        const errorCode = (err as { code?: string })?.code ?? 'unknown';
+        const errorMessage = (err as { message?: string })?.message ?? String(err);
+        // Log detallat per diagnòstic
+        console.warn(
+          '[product-updates] Firestore query failed, using legacy fallback',
+          { code: errorCode, message: errorMessage }
+        );
+        // Si és FAILED_PRECONDITION, probablement falta l'índex
+        if (errorCode === 'failed-precondition') {
+          console.error(
+            '[product-updates] Index missing! Run: firebase deploy --only firestore:indexes'
+          );
+        }
         setError(err instanceof Error ? err : new Error(String(err)));
         setUpdates(PRODUCT_UPDATES.map((u) => ({ ...u })));
         setUsingFallback(true);

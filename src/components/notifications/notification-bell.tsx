@@ -19,6 +19,7 @@ import { useOrgUrl, useCurrentOrganization } from '@/hooks/organization-provider
 import { useAuth } from '@/hooks/use-auth';
 import { useTranslations } from '@/i18n';
 import { useProductUpdates, type FirestoreProductUpdate } from '@/hooks/use-product-updates';
+import { SUPER_ADMIN_UID } from '@/lib/data';
 import { ProductUpdateDetailModal } from './product-update-detail-modal';
 import {
   type RoadmapItem,
@@ -41,7 +42,10 @@ export function ProductUpdatesInbox({
   const { t } = useTranslations();
 
   // Carregar updates de Firestore amb fallback (hook centralitzat)
-  const { updates } = useProductUpdates();
+  const { updates, usingFallback, error } = useProductUpdates();
+
+  // Detectar SuperAdmin per mostrar indicador de font
+  const isSuperAdmin = user?.uid === SUPER_ADMIN_UID;
 
   const [readIds, setReadIds] = React.useState<string[]>([]);
   const [isOpen, setIsOpen] = React.useState(false);
@@ -216,6 +220,19 @@ export function ProductUpdatesInbox({
                   </li>
                 ))}
               </ul>
+            </div>
+          </>
+        )}
+
+        {/* SuperAdmin: Indicador de font de dades */}
+        {isSuperAdmin && (
+          <>
+            <Separator />
+            <div className="px-4 py-2 bg-amber-50 dark:bg-amber-900/20">
+              <p className="text-[10px] font-mono text-amber-700 dark:text-amber-400">
+                Source: {usingFallback ? '⚠️ Legacy fallback' : '✓ Firestore'}
+                {error && ` (Error: ${error.message.slice(0, 50)})`}
+              </p>
             </div>
           </>
         )}
