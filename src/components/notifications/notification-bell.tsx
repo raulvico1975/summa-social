@@ -5,8 +5,8 @@
 'use client';
 
 import * as React from 'react';
-import { Bell, ExternalLink, Check, CheckCheck, ChevronRight } from 'lucide-react';
 import Link from 'next/link';
+import { Bell, Check, CheckCheck, ChevronRight } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
 import {
@@ -14,7 +14,6 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from '@/components/ui/popover';
-import { Separator } from '@/components/ui/separator';
 import { useOrgUrl, useCurrentOrganization } from '@/hooks/organization-provider';
 import { useAuth } from '@/hooks/use-auth';
 import { useTranslations } from '@/i18n';
@@ -106,15 +105,15 @@ export function ProductUpdatesInbox() {
         </Button>
       </PopoverTrigger>
 
-      <PopoverContent align="end" className="w-80 p-0">
+      <PopoverContent align="end" className="w-96 max-w-[90vw] p-0">
         {/* Header */}
         <div className="flex items-center justify-between px-4 py-3 border-b">
-          <h3 className="font-semibold text-sm">{t.productUpdates.title}</h3>
+          <h3 className="font-semibold">{t.productUpdates.title}</h3>
           {unreadCount > 0 && (
             <Button
-              variant="ghost"
+              variant="secondary"
               size="sm"
-              className="h-auto py-1 px-2 text-xs text-muted-foreground hover:text-foreground"
+              className="h-7 text-xs"
               onClick={handleMarkAllRead}
             >
               <CheckCheck className="h-3.5 w-3.5 mr-1" />
@@ -124,72 +123,72 @@ export function ProductUpdatesInbox() {
         </div>
 
         {/* Updates List */}
-        <div className="max-h-60 overflow-y-auto">
+        <div className="max-h-72 overflow-y-auto divide-y">
           {updates.length > 0 ? (
-            updates.slice(0, 6).map((update, idx) => {
+            updates.slice(0, 6).map((update) => {
               const read = isRead(update.id);
+              const hasDetail = !!update.contentLong;
               return (
-                <React.Fragment key={update.id}>
-                  {idx > 0 && <Separator />}
-                  <div
-                    className={`px-4 py-3 ${read ? 'opacity-60' : 'bg-muted/30'}`}
-                  >
-                    <div className="flex items-start gap-3">
-                      <div className="flex-1 min-w-0">
-                        <p className={`text-sm ${read ? 'font-normal' : 'font-medium'}`}>
-                          {update.title}
-                        </p>
-                        <p className="text-xs text-muted-foreground mt-0.5 line-clamp-2">
-                          {update.body}
-                        </p>
-                        {update.href && update.ctaLabel && (
-                          <Link
-                            href={buildUrl(update.href)}
-                            onClick={() => {
-                              handleMarkRead(update.id);
-                              setIsOpen(false);
-                            }}
-                            className="inline-flex items-center gap-1 text-xs text-primary hover:underline mt-1.5"
-                          >
-                            {update.ctaLabel}
-                            <ExternalLink className="h-3 w-3" />
-                          </Link>
-                        )}
-                      </div>
-                      <div className="flex items-center gap-1 shrink-0">
-                        {/* Botó veure detall (només si té contentLong) */}
-                        {update.contentLong && (
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-6 w-6"
-                            onClick={() => handleOpenDetail(update)}
-                            aria-label="Veure detall"
-                          >
-                            <ChevronRight className="h-3.5 w-3.5" />
-                          </Button>
-                        )}
-                        {/* Botó marcar com llegit */}
-                        {!read && (
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-6 w-6"
-                            onClick={() => handleMarkRead(update.id)}
-                            aria-label={t.productUpdates.markAsRead}
-                          >
-                            <Check className="h-3.5 w-3.5" />
-                          </Button>
-                        )}
-                      </div>
+                <div
+                  key={update.id}
+                  className={`px-4 py-3 transition-colors ${
+                    hasDetail ? 'cursor-pointer hover:bg-muted/50' : ''
+                  } ${read ? 'opacity-60' : ''}`}
+                  onClick={hasDetail ? () => handleOpenDetail(update) : undefined}
+                  role={hasDetail ? 'button' : undefined}
+                  tabIndex={hasDetail ? 0 : undefined}
+                  onKeyDown={hasDetail ? (e) => e.key === 'Enter' && handleOpenDetail(update) : undefined}
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="flex-1 min-w-0">
+                      <p className={`text-sm leading-snug ${read ? 'font-normal' : 'font-medium'}`}>
+                        {update.title}
+                      </p>
+                      <p className="text-sm text-muted-foreground mt-1 line-clamp-2">
+                        {update.body}
+                      </p>
+                      {update.href && update.ctaLabel && (
+                        <Link
+                          href={buildUrl(update.href)}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleMarkRead(update.id);
+                            setIsOpen(false);
+                          }}
+                          className="inline-flex items-center text-xs text-primary hover:underline mt-2"
+                        >
+                          {update.ctaLabel}
+                        </Link>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-1 shrink-0 mt-0.5">
+                      {/* Indicador llegida o chevron per detall */}
+                      {read ? (
+                        <Check className="h-4 w-4 text-muted-foreground" />
+                      ) : hasDetail ? (
+                        <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                      ) : (
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-6 w-6"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleMarkRead(update.id);
+                          }}
+                          aria-label={t.productUpdates.markAsRead}
+                        >
+                          <Check className="h-3.5 w-3.5" />
+                        </Button>
+                      )}
                     </div>
                   </div>
-                </React.Fragment>
+                </div>
               );
             })
           ) : (
-            <div className="px-4 py-3">
-              <p className="text-xs text-muted-foreground text-center">
+            <div className="px-4 py-6">
+              <p className="text-sm text-muted-foreground text-center">
                 {t.productUpdates.noUpdates}
               </p>
             </div>
@@ -199,17 +198,16 @@ export function ProductUpdatesInbox() {
         {/* Legacy roadmap content removed from notifications dropdown.
             Product updates now come exclusively from Firestore. */}
 
-        {/* SuperAdmin: Indicador de font de dades */}
+        {/* SuperAdmin: Indicador de font de dades (debug) */}
         {isSuperAdmin && (
-          <>
-            <Separator />
-            <div className="px-4 py-2 bg-amber-50 dark:bg-amber-900/20">
-              <p className="text-[10px] font-mono text-amber-700 dark:text-amber-400">
-                Source: {usingFallback ? '⚠️ Legacy fallback' : '✓ Firestore'}
-                {error && ` (Error: ${error.message.slice(0, 50)})`}
-              </p>
-            </div>
-          </>
+          <div className={`px-4 py-1.5 border-t text-xs ${
+            usingFallback
+              ? 'text-amber-600 dark:text-amber-400'
+              : 'text-muted-foreground'
+          }`}>
+            Source: {usingFallback ? '⚠️ Legacy' : 'Firestore'}
+            {error && ` · ${error.message.slice(0, 40)}`}
+          </div>
         )}
       </PopoverContent>
 
