@@ -252,7 +252,7 @@ const INITIAL_CHECKS: HealthCheck[] = [
     id: 'storage-upload',
     name: 'pendingDocuments',
     description: 'Upload operatiu',
-    humanExplanation: 'Permet pujar factures i nòmines. Qualsevol membre de l\'org pot pujar.',
+    humanExplanation: 'Permet pujar factures i nòmines. Política temporal: qualsevol usuari autenticat.',
     status: 'pending',
     requiresOrg: true,
     actionable: 'testRealUpload', // Quan OK: botó test real.
@@ -602,7 +602,7 @@ export function SystemHealth() {
     }
 
     // 8. Check pendingDocuments upload (requires org)
-    // Política simplificada: qualsevol membre de l'org pot pujar (sense flags)
+    // Política TEMPORAL: qualsevol usuari autenticat pot pujar
     if (selectedOrg && user) {
       const testFileName = `_healthcheck/${Date.now()}.txt`;
       const testPath = `organizations/${selectedOrgId}/pendingDocuments/${testFileName}`;
@@ -617,27 +617,11 @@ export function SystemHealth() {
       } catch (err) {
         const error = err as { code?: string };
         if (error.code === 'storage/unauthorized') {
-          // Diagnòstic simplificat: només comprovar si és membre
-          try {
-            const memberDoc = await getDoc(doc(firestore, `organizations/${selectedOrgId}/members/${user.uid}`));
-            if (!memberDoc.exists()) {
-              updateCheck('storage-upload', {
-                status: 'error',
-                message: 'No ets membre de l\'org',
-              });
-            } else {
-              // És membre però Storage denegat → problema a les regles
-              updateCheck('storage-upload', {
-                status: 'error',
-                message: 'Rules Storage incorrectes',
-              });
-            }
-          } catch {
-            updateCheck('storage-upload', {
-              status: 'error',
-              message: 'Error verificant membre',
-            });
-          }
+          // Amb la política temporal, si falla és problema de rules
+          updateCheck('storage-upload', {
+            status: 'error',
+            message: 'Rules Storage incorrectes',
+          });
           console.log('[Semàfor] pendingDocuments error:', { testPath, uid: user.uid, orgId: selectedOrgId });
         } else {
           updateCheck('storage-upload', { status: 'error', message: (err as Error).message });

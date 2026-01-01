@@ -2743,6 +2743,12 @@ Errors ignorats automàticament (no creen incidents):
 - CORS configurat per càrrega d'imatges
 - Logo i firma als PDFs generats al client
 
+### Política temporal d'uploads (Des 2025)
+**Estat actual:** Qualsevol usuari autenticat pot pujar documents a paths d'organització.
+- Afecta: `pendingDocuments`, `transactions/attachments`, `expenseReports`, `projectExpenses`, etc.
+- Motiu: Desbloquejar operativa mentre es completa RBAC Manager (Bloc 2)
+- Pendent: Reintroduir restricció per membres quan RBAC Manager estigui complet
+
 ## 7.3 Autenticació
 - Session persistence (caduca en tancar navegador)
 
