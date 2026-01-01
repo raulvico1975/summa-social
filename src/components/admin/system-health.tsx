@@ -660,12 +660,14 @@ export function SystemHealth() {
       updateCheck('firestore-transactions', { status: 'warning', message: 'Cal seleccionar org' });
     }
 
-    // 8. Check pendingDocuments upload (requires org)
-    if (selectedOrg) {
+    // 8. Check pendingDocuments upload (requires org) — AMB DIAGNÒSTIC HUMÀ
+    if (selectedOrg && user) {
+      const testFileName = `_healthcheck/${Date.now()}.txt`;
+      const testPath = `organizations/${selectedOrgId}/pendingDocuments/${testFileName}`;
+      const testRef = ref(storage, testPath);
+      const testContent = new Blob(['health check'], { type: 'text/plain' });
+
       try {
-        const testFileName = `_health_check_${Date.now()}.txt`;
-        const testRef = ref(storage, `organizations/${selectedOrgId}/pendingDocuments/${testFileName}`);
-        const testContent = new Blob(['health check'], { type: 'text/plain' });
         await uploadBytes(testRef, testContent);
         // Cleanup: delete the test file
         await deleteObject(testRef);
@@ -673,11 +675,62 @@ export function SystemHealth() {
       } catch (err) {
         const error = err as { code?: string };
         if (error.code === 'storage/unauthorized') {
-          updateCheck('storage-upload', { status: 'error', message: 'storage/unauthorized' });
+          // Diagnòstic humà: determinar la causa exacta
+          let diagnosis = '';
+          let diagnosisDetails = `Path: ${testPath} | UID: ${user.uid} | OrgId: ${selectedOrgId}`;
+
+          try {
+            // 1. Comprovar documentsEnabled
+            const orgDoc = await getDoc(doc(firestore, 'organizations', selectedOrgId));
+            const orgData = orgDoc.data();
+            const documentsEnabled = orgData?.documentsEnabled === true;
+
+            // 2. Comprovar si és membre
+            const memberDoc = await getDoc(doc(firestore, `organizations/${selectedOrgId}/members/${user.uid}`));
+            const isMember = memberDoc.exists();
+            const memberRole = isMember ? memberDoc.data()?.role : null;
+
+            if (!documentsEnabled) {
+              diagnosis = 'documentsEnabled=false';
+              diagnosisDetails = `L'org no té activat el permís de documents. Activa'l amb el botó.`;
+            } else if (!isMember) {
+              diagnosis = 'no-member';
+              diagnosisDetails = `L'usuari ${user.uid} no és membre de l'org ${selectedOrgId}.`;
+            } else if (memberRole && !['admin', 'user'].includes(memberRole)) {
+              diagnosis = 'wrong-role';
+              diagnosisDetails = `Rol "${memberRole}" no té permisos d'escriptura (cal admin o user).`;
+            } else {
+              // Tot sembla correcte però Storage denegat → problema a les regles
+              diagnosis = 'rules-mismatch';
+              diagnosisDetails = `documentsEnabled=true, membre=${memberRole}, però Storage denegat. Revisar storage.rules.`;
+            }
+          } catch (diagErr) {
+            // Si no podem llegir l'org o membre, probablement permisos de Firestore
+            diagnosis = 'firestore-denied';
+            diagnosisDetails = `No s'ha pogut diagnosticar: ${(diagErr as Error).message}`;
+          }
+
+          updateCheck('storage-upload', {
+            status: 'error',
+            message: diagnosis === 'documentsEnabled=false'
+              ? 'Falta activar documents'
+              : diagnosis === 'no-member'
+                ? 'No ets membre de l\'org'
+                : diagnosis === 'wrong-role'
+                  ? 'Rol sense permisos'
+                  : diagnosis === 'rules-mismatch'
+                    ? 'Rules Storage incorrectes'
+                    : `Diagnòstic: ${diagnosisDetails}`,
+          });
+
+          // Log detallat per debug
+          console.log('[Semàfor] pendingDocuments diagnòstic:', { diagnosis, diagnosisDetails, testPath, uid: user.uid, orgId: selectedOrgId });
         } else {
           updateCheck('storage-upload', { status: 'error', message: (err as Error).message });
         }
       }
+    } else if (!user) {
+      updateCheck('storage-upload', { status: 'warning', message: 'No autenticat' });
     } else {
       updateCheck('storage-upload', { status: 'warning', message: 'Cal seleccionar org' });
     }
