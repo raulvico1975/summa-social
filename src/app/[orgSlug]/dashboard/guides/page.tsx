@@ -46,6 +46,7 @@ import {
   Clock,
   AlertCircle,
   CheckCircle2,
+  ListChecks,
 } from 'lucide-react';
 import { useTranslations } from '@/i18n';
 
@@ -327,13 +328,8 @@ const PROBLEM_GUIDE_IDS = [
 
 // Bloc B: "Vull fer una acció" — Guies orientades a tasques concretes
 const ACTION_GUIDE_IDS = [
-  // Onboarding
-  'firstDay',
-  'firstMonth',
-  'initialLoad',
   // Moviments
   'movements',
-  'importMovements',
   'editMovement',
   'attachDocument',
   'changePeriod',
@@ -345,8 +341,6 @@ const ACTION_GUIDE_IDS = [
   'remittanceViewDetail',
   'saveRemittanceMapping',
   'toggleRemittanceItems',
-  // Stripe
-  'stripeDonations',
   // Donants
   'donors',
   'importDonors',
@@ -354,19 +348,27 @@ const ACTION_GUIDE_IDS = [
   'donorSetInactive',
   'donorReactivate',
   'generateDonorCertificate',
-  // Informes
-  'model182',
-  'model347',
-  'certificatesBatch',
-  'yearEndFiscal',
   // Projectes
   'projects',
-  // Fluxos
-  'monthlyFlow',
-  'monthClose',
+  // Informes
   'reports',
   // Configuració
   'changeLanguage',
+  // Zona Perill
+  'dangerDeleteLastRemittance',
+];
+
+// Bloc C: "Fluxos" — Checklists seqüencials (onboarding, mensual, anual)
+const FLOW_GUIDE_IDS = [
+  // Onboarding
+  'firstDay',
+  'firstMonth',
+  'initialLoad',
+  // Flux recurrent
+  'monthlyFlow',
+  'monthClose',
+  // Tancament anual
+  'yearEndFiscal',
 ];
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -627,6 +629,75 @@ export default function GuidesPage() {
     );
   };
 
+  // Helper per renderitzar una card del Bloc C (flux) amb cardText complet
+  const renderFlowCard = (guideId: string) => {
+    const guide = GUIDES.find((g) => g.id === guideId);
+    if (!guide) return null;
+
+    const titleKey = `guides.${guide.id}.title`;
+    const titleValue = tr(titleKey);
+    const titleResolved = !isUnresolvedKey(titleValue, titleKey);
+
+    if (!titleResolved) {
+      if (process.env.NODE_ENV === 'development') {
+        console.warn(`[guides] Skipping unresolved guide: ${guide.id}`);
+      }
+      return null;
+    }
+
+    const title = titleValue;
+    const cta = safeTr(tr, `guides.cta.${guide.id}`, 'Anar-hi');
+
+    // cardText amb fallback a summary
+    const cardTextKey = `guides.${guide.id}.cardText`;
+    const cardText = tr(cardTextKey);
+    const hasCardText = !isUnresolvedKey(cardText, cardTextKey);
+
+    let description = '';
+    if (hasCardText) {
+      description = cardText;
+    } else {
+      const summaryKey = `guides.${guide.id}.summary`;
+      const summary = tr(summaryKey);
+      if (!isUnresolvedKey(summary, summaryKey)) {
+        description = summary;
+      }
+    }
+
+    return (
+      <Card key={guide.id} className="flex flex-col">
+        <CardHeader className="pb-3">
+          <div className="flex items-start gap-3">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300">
+              {guide.icon}
+            </div>
+            <div className="flex-1 min-w-0">
+              <CardTitle className="text-base leading-tight">{title}</CardTitle>
+            </div>
+          </div>
+          {description && (
+            <div className="mt-3 text-sm leading-6">
+              {hasCardText ? renderCardText(description) : (
+                <span className="text-muted-foreground">{description}</span>
+              )}
+            </div>
+          )}
+        </CardHeader>
+
+        <CardContent className="flex-1 flex flex-col">
+          <div className="mt-auto flex flex-col gap-2">
+            <Button asChild size="sm">
+              <Link href={buildUrl(guide.href)}>
+                {cta}
+                <ArrowRight className="ml-2 h-4 w-4" />
+              </Link>
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  };
+
   return (
     <div className="container max-w-5xl py-8">
       {/* Header */}
@@ -653,6 +724,22 @@ export default function GuidesPage() {
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {PROBLEM_GUIDE_IDS.map((id) => renderProblemCard(id))}
+        </div>
+      </section>
+
+      {/* Bloc C: Fluxos */}
+      <section className="rounded-lg bg-green-50 dark:bg-green-950/20 p-5 mb-8">
+        <div className="mb-4">
+          <h2 className="flex items-center gap-2 text-lg font-semibold text-green-900 dark:text-green-100">
+            <ListChecks className="h-5 w-5" />
+            Fluxos
+          </h2>
+          <p className="text-sm text-green-800 dark:text-green-200 mt-1">
+            Checklists seqüencials: onboarding, mensual i anual.
+          </p>
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {FLOW_GUIDE_IDS.map((id) => renderFlowCard(id))}
         </div>
       </section>
 
