@@ -100,6 +100,23 @@ const GUIDE_IDS = [
   'dangerDeleteLastRemittance',
 ];
 
+// Guies del Bloc A (problemes) que requereixen cardText obligatori
+const PROBLEM_GUIDE_IDS = [
+  'model182HasErrors',
+  'model182',
+  'model347',
+  'certificatesBatch',
+  'importMovements',
+  'remittances',
+  'remittanceLowMembers',
+  'returns',
+  'stripeDonations',
+  'movementFilters',
+  'bulkCategory',
+  'resetPassword',
+  'accessSecurity',
+];
+
 // Arrays que han de tenir mínim 1 element si existeixen al base
 const ARRAY_FIELDS = [
   'lookFirst',
@@ -326,7 +343,27 @@ function validateLanguage(baseMessages: JsonMessages, targetMessages: JsonMessag
     }
   }
 
-  // 8. Comprovar que no hi ha claus guides.* al target que no existeixin al base
+  // 8. PROBLEM_GUIDE_IDS: cardText obligatori per a guies del Bloc A
+  for (const guideId of PROBLEM_GUIDE_IDS) {
+    const cardTextKey = `guides.${guideId}.cardText`;
+
+    if (!(cardTextKey in targetMessages)) {
+      errors.push({
+        type: 'critical',
+        message: `Falta cardText de guia problema: ${cardTextKey}`,
+      });
+    } else {
+      const cardText = targetMessages[cardTextKey];
+      if (!cardText || cardText.trim() === '') {
+        errors.push({
+          type: 'critical',
+          message: `cardText buit: ${cardTextKey}`,
+        });
+      }
+    }
+  }
+
+  // 9. Comprovar que no hi ha claus guides.* al target que no existeixin al base
   const baseGuideKeys = Object.keys(baseMessages).filter(k => k.startsWith('guides.'));
   const targetGuideKeys = Object.keys(targetMessages).filter(k => k.startsWith('guides.'));
   const extraKeys = targetGuideKeys.filter(k => !baseGuideKeys.includes(k));
