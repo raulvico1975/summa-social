@@ -420,6 +420,58 @@ export default function GuidesPage() {
   const pageTitle = safeTr(tr, 'guides.pageTitle', 'Guies');
   const viewHelp = safeTr(tr, 'guides.viewHelp', 'Ajuda');
 
+  // Helper per renderitzar cardText amb colors i jerarquia
+  // Format: "Què vol dir:...\n\nPas a pas:...\n\nSegurament t'ajudarà:..."
+  const renderCardText = (text: string) => {
+    // Patrons per detectar seccions (multiidioma)
+    const sections: { pattern: RegExp; className: string }[] = [
+      {
+        pattern: /^(Què vol dir:|Qué significa:|Que signifie:|O que significa:)/i,
+        className: 'text-muted-foreground' // gris
+      },
+      {
+        pattern: /^(Pas a pas:|Paso a paso:|Pas à pas:|Passo a passo:)/i,
+        className: 'text-foreground font-medium' // neutral, destacat
+      },
+      {
+        pattern: /^(Segurament t'ajudarà:|Seguramente te ayudará:|Cela vous aidera sûrement:|Isso vai te ajudar:)/i,
+        className: 'text-blue-600 dark:text-blue-400' // blau
+      },
+    ];
+
+    // Dividir per paràgrafs
+    const paragraphs = text.split('\n\n');
+
+    return (
+      <div className="space-y-3">
+        {paragraphs.map((paragraph, i) => {
+          // Trobar quin tipus de secció és
+          let sectionClass = 'text-muted-foreground';
+          for (const { pattern, className } of sections) {
+            if (pattern.test(paragraph.trim())) {
+              sectionClass = className;
+              break;
+            }
+          }
+
+          // Separar el header (primera línia) del contingut
+          const lines = paragraph.split('\n');
+          const firstLine = lines[0];
+          const restLines = lines.slice(1).join('\n');
+
+          return (
+            <div key={i} className={sectionClass}>
+              <div className="font-medium">{firstLine}</div>
+              {restLines && (
+                <div className="whitespace-pre-wrap mt-1">{restLines}</div>
+              )}
+            </div>
+          );
+        })}
+      </div>
+    );
+  };
+
   // Helper per renderitzar una card del Bloc A (problema) amb cardText complet
   const renderProblemCard = (guideId: string) => {
     const guide = GUIDES.find((g) => g.id === guideId);
@@ -468,8 +520,10 @@ export default function GuidesPage() {
             </div>
           </div>
           {description && (
-            <div className="mt-3 text-sm text-muted-foreground whitespace-pre-wrap leading-6">
-              {description}
+            <div className="mt-3 text-sm leading-6">
+              {hasCardText ? renderCardText(description) : (
+                <span className="text-muted-foreground">{description}</span>
+              )}
             </div>
           )}
         </CardHeader>
