@@ -3862,6 +3862,77 @@ public/novetats-data.json                  # JSON estàtic web
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
+# E. TROUBLESHOOTING - INCIDENTS RESOLTS
+# ═══════════════════════════════════════════════════════════════════════════════
+
+## E.1 Build App Hosting falla amb "PermissionDenied" per secrets
+
+**Data:** 2025-01-02
+**Commits:** `fd9754c`, `1833864`, `f7d82de`, `7fcd176`
+
+### Símptoma
+
+El build de Firebase App Hosting falla amb:
+```
+Error resolving secret version with name=projects/summa-social/secrets/RESEND_API_KEY/versions/latest
+Permission 'secretmanager.versions.get' denied
+```
+
+### Causa
+
+Quan es crea un secret nou via `gcloud` o manualment, **no s'afegeixen automàticament** els rols IAM que App Hosting necessita per:
+1. Llegir metadades del secret (`viewer`)
+2. "Pin" la versió latest a una concreta (`secretVersionManager`)
+3. Accedir al valor (`secretAccessor`)
+
+El secret `GOOGLE_API_KEY` funcionava perquè Firebase CLI l'havia configurat automàticament. `RESEND_API_KEY` es va crear manualment i no tenia els rols.
+
+### Solució (3 passos)
+
+```bash
+# 1. Afegir secretAccessor (llegir valor)
+gcloud secrets add-iam-policy-binding RESEND_API_KEY \
+  --project=summa-social \
+  --member="serviceAccount:service-469685881071@gcp-sa-firebaseapphosting.iam.gserviceaccount.com" \
+  --role="roles/secretmanager.secretAccessor"
+
+# 2. Afegir secretVersionManager (pin versions)
+gcloud secrets add-iam-policy-binding RESEND_API_KEY \
+  --project=summa-social \
+  --member="serviceAccount:service-469685881071@gcp-sa-firebaseapphosting.iam.gserviceaccount.com" \
+  --role="roles/secretmanager.secretVersionManager"
+
+# 3. Afegir viewer (llegir metadades)
+gcloud secrets add-iam-policy-binding RESEND_API_KEY \
+  --project=summa-social \
+  --member="serviceAccount:firebase-app-hosting-compute@summa-social.iam.gserviceaccount.com" \
+  --role="roles/secretmanager.viewer"
+```
+
+### Prevenció
+
+Quan afegeixis un **nou secret** per App Hosting:
+1. Crea el secret: `gcloud secrets create NOM_SECRET --project=summa-social`
+2. Afegeix el valor: `echo -n "valor" | gcloud secrets versions add NOM_SECRET --data-file=-`
+3. **Copia els rols IAM** d'un secret que funcioni (ex: `GOOGLE_API_KEY`):
+   ```bash
+   gcloud secrets get-iam-policy GOOGLE_API_KEY --project=summa-social
+   # Replicar els bindings al nou secret
+   ```
+
+### Verificació
+
+```bash
+gcloud secrets get-iam-policy NOM_SECRET --project=summa-social
+```
+
+Ha de mostrar com a mínim:
+- `roles/secretmanager.secretAccessor` → service agent
+- `roles/secretmanager.secretVersionManager` → service agent
+- `roles/secretmanager.viewer` → compute SA
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
 # FI DEL DOCUMENT
-# Última actualització: Desembre 2025 - Versió 1.26
+# Última actualització: Gener 2026 - Versió 1.27
 # ═══════════════════════════════════════════════════════════════════════════════

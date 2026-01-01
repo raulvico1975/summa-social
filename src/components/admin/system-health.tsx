@@ -442,6 +442,33 @@ export function SystemHealth() {
     if (!firestore) return;
     try {
       await updateIncidentImpact(firestore, incident.id, newImpact);
+
+      // Si es marca com "blocker", enviar alerta per email
+      if (newImpact === 'blocker' && incident.impact !== 'blocker') {
+        try {
+          await fetch('/api/admin/incident-alert', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              incidentId: incident.id,
+              title: incident.message.slice(0, 80),
+              type: incident.type,
+              severity: incident.severity,
+              impact: newImpact,
+              route: incident.route,
+              message: incident.message,
+              count: incident.count,
+            }),
+          });
+          toast({
+            title: 'Alerta enviada',
+            description: 'S\'ha enviat un email d\'alerta per aquest incident crític.',
+          });
+        } catch (emailErr) {
+          console.error('Error sending incident alert email:', emailErr);
+        }
+      }
+
       await loadIncidents();
     } catch (err) {
       console.error('Error updating impact:', err);
