@@ -5,7 +5,7 @@
 'use client';
 
 import * as React from 'react';
-import { Bell, ExternalLink, Check, CheckCheck, Circle, ChevronRight } from 'lucide-react';
+import { Bell, ExternalLink, Check, CheckCheck, ChevronRight } from 'lucide-react';
 import Link from 'next/link';
 
 import { Button } from '@/components/ui/button';
@@ -22,20 +22,12 @@ import { useProductUpdates, type FirestoreProductUpdate } from '@/hooks/use-prod
 import { SUPER_ADMIN_UID } from '@/lib/data';
 import { ProductUpdateDetailModal } from './product-update-detail-modal';
 import {
-  type RoadmapItem,
-  ROADMAP_ITEMS,
   getReadNotificationIds,
   markNotificationRead,
   markAllNotificationsRead,
 } from '@/lib/notifications';
 
-interface ProductUpdatesInboxProps {
-  roadmap?: RoadmapItem[];
-}
-
-export function ProductUpdatesInbox({
-  roadmap = ROADMAP_ITEMS,
-}: ProductUpdatesInboxProps) {
+export function ProductUpdatesInbox() {
   const { organizationId } = useCurrentOrganization();
   const { user } = useAuth();
   const { buildUrl } = useOrgUrl();
@@ -93,8 +85,8 @@ export function ProductUpdatesInbox({
 
   const isRead = (id: string) => readIds.includes(id);
 
-  // Si no hi ha cap update ni roadmap, no mostrar res
-  if (updates.length === 0 && roadmap.length === 0) return null;
+  // Si no hi ha cap update, no mostrar res
+  if (updates.length === 0) return null;
 
   return (
     <Popover open={isOpen} onOpenChange={setIsOpen}>
@@ -204,25 +196,8 @@ export function ProductUpdatesInbox({
           )}
         </div>
 
-        {/* Roadmap Section */}
-        {roadmap.length > 0 && (
-          <>
-            <Separator />
-            <div className="px-4 py-3 bg-muted/20">
-              <p className="text-xs font-medium text-muted-foreground mb-2">
-                {t.productUpdates.workingOn}
-              </p>
-              <ul className="space-y-1.5">
-                {roadmap.map((item) => (
-                  <li key={item.id} className="flex items-center gap-2 text-xs text-muted-foreground">
-                    <Circle className="h-1.5 w-1.5 fill-current" />
-                    {item.text}
-                  </li>
-                ))}
-              </ul>
-            </div>
-          </>
-        )}
+        {/* Legacy roadmap content removed from notifications dropdown.
+            Product updates now come exclusively from Firestore. */}
 
         {/* SuperAdmin: Indicador de font de dades */}
         {isSuperAdmin && (
@@ -264,5 +239,5 @@ interface NotificationBellProps {
  */
 export function NotificationBell(_props: NotificationBellProps) {
   // Ignora notifications prop - ara usa hook intern amb Firestore
-  return <ProductUpdatesInbox roadmap={ROADMAP_ITEMS} />;
+  return <ProductUpdatesInbox />;
 }
