@@ -69,6 +69,13 @@ import { SuperAdminsManager } from '@/components/admin/super-admins-manager';
 import { migrateExistingSlugs } from '@/lib/slugs';
 import { logAdminAction, getRecentAuditLogs, formatAuditAction, type AdminAuditLog } from '@/lib/admin-audit';
 import { isDemoEnv } from '@/lib/demo/isDemoOrg';
+import { AlertTriangle } from 'lucide-react';
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// MODE RESCAT: Accés obert temporal per recuperar control
+// Posar a false quan el pany de SuperAdmin estigui operatiu
+// ═══════════════════════════════════════════════════════════════════════════════
+const RESCUE_MODE = true;
 
 export default function AdminPage() {
   const router = useRouter();
@@ -77,6 +84,7 @@ export default function AdminPage() {
 
   // ─────────────────────────────────────────────────────────────────────────────
   // GUARD: Verificació SuperAdmin via Firestore (única font de veritat)
+  // En MODE RESCAT: qualsevol usuari autenticat pot entrar
   // ─────────────────────────────────────────────────────────────────────────────
   const [isSuperAdmin, setIsSuperAdmin] = React.useState<boolean | null>(null);
   const [superAdminCheckDone, setSuperAdminCheckDone] = React.useState(false);
@@ -89,7 +97,14 @@ export default function AdminPage() {
       return;
     }
 
-    // Verificar a Firestore
+    // En MODE RESCAT: bypass immediat
+    if (RESCUE_MODE) {
+      setIsSuperAdmin(true);
+      setSuperAdminCheckDone(true);
+      return;
+    }
+
+    // Verificar a Firestore (només si no estem en mode rescat)
     const checkSuperAdmin = async () => {
       try {
         const superAdminRef = doc(firestore, 'systemSuperAdmins', user.uid);
@@ -135,11 +150,12 @@ export default function AdminPage() {
   const [showSeedConfirm, setShowSeedConfirm] = React.useState(false);
 
   // ─────────────────────────────────────────────────────────────────────────────
-  // Carregar dades NOMÉS si és SuperAdmin confirmat
+  // Carregar dades (en mode rescat o si és SuperAdmin confirmat)
   // ─────────────────────────────────────────────────────────────────────────────
+  const canLoadData = RESCUE_MODE ? !!user : isSuperAdmin === true;
   const orgsQuery = useMemoFirebase(
-    () => isSuperAdmin === true ? query(collection(firestore, 'organizations'), orderBy('createdAt', 'desc')) : null,
-    [firestore, isSuperAdmin]
+    () => canLoadData ? query(collection(firestore, 'organizations'), orderBy('createdAt', 'desc')) : null,
+    [firestore, canLoadData]
   );
   const { data: organizations, isLoading: orgsLoading } = useCollection<Organization>(orgsQuery);
 
@@ -461,6 +477,21 @@ export default function AdminPage() {
 
   return (
     <div className="min-h-screen bg-background">
+      {/* Banner Mode Rescat */}
+      {RESCUE_MODE && (
+        <div className="bg-orange-500 text-white px-4 py-3">
+          <div className="container mx-auto flex items-center gap-3">
+            <AlertTriangle className="h-5 w-5 flex-shrink-0" />
+            <div>
+              <span className="font-semibold">Mode rescat activat</span>
+              <span className="ml-2 text-orange-100">
+                Accés obert temporalment per recuperar control. Algunes accions estan desactivades.
+              </span>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Header */}
       <header className="border-b bg-card">
         <div className="container mx-auto px-4 py-4">
@@ -484,11 +515,11 @@ export default function AdminPage() {
               </div>
             </div>
             <div className="flex gap-2">
-              <Button variant="outline" onClick={handleMigrateSlugs} disabled={isMigrating}>
+              <Button variant="outline" onClick={handleMigrateSlugs} disabled={isMigrating || RESCUE_MODE}>
                 {isMigrating && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                 Migrar slugs
               </Button>
-              <Button onClick={() => setIsCreateDialogOpen(true)}>
+              <Button onClick={() => setIsCreateDialogOpen(true)} disabled={RESCUE_MODE}>
                 <Plus className="mr-2 h-4 w-4" />
                 Nova organització
               </Button>
@@ -539,15 +570,37 @@ export default function AdminPage() {
           <ProductUpdatesSection isSuperAdmin={isSuperAdmin} />
         </div>
 
-        {/* Traduccions (i18n) */}
-        <div className="mb-8">
-          <I18nManager />
-        </div>
+        {/* Traduccions (i18n) - desactivat en mode rescat */}
+        {RESCUE_MODE ? (
+          <Card className="mb-8 border-orange-200 bg-orange-50/50">
+            <CardHeader>
+              <CardTitle className="text-base text-orange-700">Traduccions (i18n)</CardTitle>
+              <CardDescription className="text-orange-600">
+                Desactivat en mode rescat
+              </CardDescription>
+            </CardHeader>
+          </Card>
+        ) : (
+          <div className="mb-8">
+            <I18nManager />
+          </div>
+        )}
 
-        {/* SuperAdmins */}
-        <div className="mb-8">
-          <SuperAdminsManager />
-        </div>
+        {/* SuperAdmins - desactivat en mode rescat */}
+        {RESCUE_MODE ? (
+          <Card className="mb-8 border-orange-200 bg-orange-50/50">
+            <CardHeader>
+              <CardTitle className="text-base text-orange-700">Gestió SuperAdmins</CardTitle>
+              <CardDescription className="text-orange-600">
+                Desactivat en mode rescat
+              </CardDescription>
+            </CardHeader>
+          </Card>
+        ) : (
+          <div className="mb-8">
+            <SuperAdminsManager />
+          </div>
+        )}
 
         {/* Demo Management - només visible en entorn demo */}
         {isDemoEnv() && (
@@ -845,6 +898,7 @@ export default function AdminPage() {
                             <DropdownMenuItem
                               onClick={() => setSuspendDialogOrg(org)}
                               className={org.status === 'suspended' ? 'text-green-600' : 'text-destructive'}
+                              disabled={RESCUE_MODE}
                             >
                               {org.status === 'suspended' ? (
                                 <>
