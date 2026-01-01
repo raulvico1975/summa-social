@@ -209,6 +209,12 @@ const GUIDES: GuideItem[] = [
     manualAnchor: '#reports',
   },
   {
+    id: 'model182HasErrors',
+    icon: <AlertCircle className="h-5 w-5" />,
+    href: '/dashboard/donants',
+    manualAnchor: '#donors',
+  },
+  {
     id: 'model182',
     icon: <FileSpreadsheet className="h-5 w-5" />,
     href: '/dashboard/informes',
@@ -412,11 +418,86 @@ export default function GuidesPage() {
 
   // Page-level translations (amb fallback humà)
   const pageTitle = safeTr(tr, 'guides.pageTitle', 'Guies');
-  const viewManual = safeTr(tr, 'guides.viewManual', 'Veure manual');
   const viewHelp = safeTr(tr, 'guides.viewHelp', 'Ajuda');
 
-  // Helper per renderitzar una card de guia
-  const renderGuideCard = (guideId: string) => {
+  // Helper per renderitzar una card del Bloc A (problema) amb cardText complet
+  const renderProblemCard = (guideId: string) => {
+    const guide = GUIDES.find((g) => g.id === guideId);
+    if (!guide) return null;
+
+    const titleKey = `guides.${guide.id}.title`;
+    const titleValue = tr(titleKey);
+    const titleResolved = !isUnresolvedKey(titleValue, titleKey);
+
+    if (!titleResolved) {
+      if (process.env.NODE_ENV === 'development') {
+        console.warn(`[guides] Skipping unresolved guide: ${guide.id}`);
+      }
+      return null;
+    }
+
+    const title = titleValue;
+    const cta = safeTr(tr, `guides.cta.${guide.id}`, 'Anar-hi');
+
+    // cardText amb fallback a summary
+    const cardTextKey = `guides.${guide.id}.cardText`;
+    const cardText = tr(cardTextKey);
+    const hasCardText = !isUnresolvedKey(cardText, cardTextKey);
+
+    let description = '';
+    if (hasCardText) {
+      description = cardText;
+    } else {
+      // Fallback a summary si no hi ha cardText
+      const summaryKey = `guides.${guide.id}.summary`;
+      const summary = tr(summaryKey);
+      if (!isUnresolvedKey(summary, summaryKey)) {
+        description = summary;
+      }
+    }
+
+    return (
+      <Card key={guide.id} className="flex flex-col">
+        <CardHeader className="pb-3">
+          <div className="flex items-start gap-3">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300">
+              {guide.icon}
+            </div>
+            <div className="flex-1 min-w-0">
+              <CardTitle className="text-base leading-tight">{title}</CardTitle>
+            </div>
+          </div>
+          {description && (
+            <div className="mt-3 text-sm text-muted-foreground whitespace-pre-wrap leading-6">
+              {description}
+            </div>
+          )}
+        </CardHeader>
+
+        <CardContent className="flex-1 flex flex-col">
+          <div className="mt-auto flex flex-col gap-2">
+            <Button asChild size="sm">
+              <Link href={buildUrl(guide.href)}>
+                {cta}
+                <ArrowRight className="ml-2 h-4 w-4" />
+              </Link>
+            </Button>
+            {guide.helpHref && (
+              <Button variant="outline" size="sm" asChild>
+                <Link href={buildUrl(guide.helpHref)}>
+                  <HelpCircle className="mr-2 h-4 w-4" />
+                  {viewHelp}
+                </Link>
+              </Button>
+            )}
+          </div>
+        </CardContent>
+      </Card>
+    );
+  };
+
+  // Helper per renderitzar una card del Bloc B (acció) - format compacte
+  const renderActionCard = (guideId: string) => {
     const guide = GUIDES.find((g) => g.id === guideId);
     if (!guide) return null;
 
@@ -486,12 +567,6 @@ export default function GuidesPage() {
                 </Link>
               </Button>
             )}
-            <Button variant="ghost" size="sm" asChild>
-              <Link href={buildUrl(`/dashboard/manual${guide.manualAnchor}`)}>
-                <BookOpen className="mr-2 h-4 w-4" />
-                {viewManual}
-              </Link>
-            </Button>
           </div>
         </CardContent>
       </Card>
@@ -522,8 +597,8 @@ export default function GuidesPage() {
             Tria el que t&apos;està passant i et portem al lloc correcte.
           </p>
         </div>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {PROBLEM_GUIDE_IDS.map((id) => renderGuideCard(id))}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {PROBLEM_GUIDE_IDS.map((id) => renderProblemCard(id))}
         </div>
       </section>
 
@@ -539,7 +614,7 @@ export default function GuidesPage() {
           </p>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {ACTION_GUIDE_IDS.map((id) => renderGuideCard(id))}
+          {ACTION_GUIDE_IDS.map((id) => renderActionCard(id))}
         </div>
       </section>
     </div>
