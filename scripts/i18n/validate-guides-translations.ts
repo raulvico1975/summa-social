@@ -44,7 +44,6 @@ const LANGUAGES_TO_VALIDATE = ['es', 'fr', 'pt'];
 const REQUIRED_PAGE_KEYS = [
   'guides.pageTitle',
   'guides.pageSubtitle',
-  'guides.viewManual',
   'guides.viewHelp',
   'guides.recommendedOrder',
   'guides.labels.lookFirst',

@@ -59,7 +59,6 @@ type GuideItem = {
   icon: React.ReactNode;
   href: string;
   helpHref?: string;
-  manualAnchor: string;
 };
 
 const GUIDES: GuideItem[] = [
@@ -67,237 +66,198 @@ const GUIDES: GuideItem[] = [
     id: 'firstDay',
     icon: <PlayCircle className="h-5 w-5" />,
     href: '/dashboard/configuracion',
-    manualAnchor: '#1-primers-passos',
   },
   {
     id: 'firstMonth',
     icon: <Calendar className="h-5 w-5" />,
     href: '/dashboard/movimientos',
-    manualAnchor: '#5-gestio-de-moviments',
   },
   {
     id: 'monthClose',
     icon: <CheckSquare className="h-5 w-5" />,
     href: '/dashboard/movimientos',
-    manualAnchor: '#5-gestio-de-moviments',
   },
   {
     id: 'movements',
     icon: <Receipt className="h-5 w-5" />,
     href: '/dashboard/movimientos',
-    manualAnchor: '#5-gestio-de-moviments',
   },
   {
     id: 'importMovements',
     icon: <FileUp className="h-5 w-5" />,
     href: '/dashboard/movimientos',
-    manualAnchor: '#movements',
   },
   {
     id: 'bulkCategory',
     icon: <Layers className="h-5 w-5" />,
     href: '/dashboard/movimientos',
-    manualAnchor: '#5-gestio-de-moviments',
   },
   {
     id: 'changePeriod',
     icon: <Clock className="h-5 w-5" />,
     href: '/dashboard/movimientos',
-    manualAnchor: '#movements',
   },
   {
     id: 'selectBankAccount',
     icon: <Landmark className="h-5 w-5" />,
     href: '/dashboard/movimientos',
-    manualAnchor: '#movements',
   },
   {
     id: 'attachDocument',
     icon: <Paperclip className="h-5 w-5" />,
     href: '/dashboard/movimientos',
-    manualAnchor: '#movements',
   },
   {
     id: 'returns',
     icon: <RotateCcw className="h-5 w-5" />,
     href: '/dashboard/movimientos',
     helpHref: '/dashboard/movimientos?help=1',
-    manualAnchor: '#remittances',
   },
   {
     id: 'remittances',
     icon: <CreditCard className="h-5 w-5" />,
     href: '/dashboard/movimientos',
     helpHref: '/dashboard/movimientos?help=1',
-    manualAnchor: '#6-divisor-de-remeses',
   },
   {
     id: 'splitRemittance',
     icon: <Scissors className="h-5 w-5" />,
     href: '/dashboard/movimientos',
-    manualAnchor: '#remittances',
   },
   {
     id: 'stripeDonations',
     icon: <Wallet className="h-5 w-5" />,
     href: '/dashboard/movimientos',
-    manualAnchor: '#stripe',
   },
   {
     id: 'travelReceipts',
     icon: <Smartphone className="h-5 w-5" />,
     href: '/dashboard/project-module/expenses/capture',
-    manualAnchor: '#capture',
   },
   {
     id: 'donors',
     icon: <Users className="h-5 w-5" />,
     href: '/dashboard/donants',
-    manualAnchor: '#donors',
   },
   {
     id: 'reports',
     icon: <FileText className="h-5 w-5" />,
     href: '/dashboard/informes',
-    manualAnchor: '#9-informes-fiscals',
   },
   {
     id: 'projects',
     icon: <FolderKanban className="h-5 w-5" />,
     href: '/dashboard/project-module/expenses',
-    manualAnchor: '#10-projectes-i-justificació-de-subvencions',
   },
   {
     id: 'monthlyFlow',
     icon: <RefreshCw className="h-5 w-5" />,
     href: '/dashboard/movimientos',
-    manualAnchor: '#5-gestio-de-moviments',
   },
   {
     id: 'yearEndFiscal',
     icon: <CalendarCheck className="h-5 w-5" />,
     href: '/dashboard/informes',
-    manualAnchor: '#9-informes-fiscals',
   },
   {
     id: 'accessSecurity',
     icon: <Shield className="h-5 w-5" />,
     href: '/dashboard',
-    manualAnchor: '#1-primers-passos',
   },
   {
     id: 'initialLoad',
     icon: <Upload className="h-5 w-5" />,
     href: '/dashboard/movimientos',
-    manualAnchor: '#1-primers-passos',
   },
   {
     id: 'changeLanguage',
     icon: <Languages className="h-5 w-5" />,
     href: '/dashboard/configuracion',
-    manualAnchor: '#first-steps',
   },
   {
     id: 'importDonors',
     icon: <FileSpreadsheet className="h-5 w-5" />,
     href: '/dashboard/donants',
-    manualAnchor: '#donors',
   },
   {
     id: 'generateDonorCertificate',
     icon: <Award className="h-5 w-5" />,
     href: '/dashboard/donants',
-    manualAnchor: '#reports',
   },
   {
     id: 'model182HasErrors',
     icon: <AlertCircle className="h-5 w-5" />,
     href: '/dashboard/donants',
-    manualAnchor: '#donors',
   },
   {
     id: 'model182',
     icon: <FileSpreadsheet className="h-5 w-5" />,
     href: '/dashboard/informes',
-    manualAnchor: '#reports',
   },
   {
     id: 'model347',
     icon: <FileSpreadsheet className="h-5 w-5" />,
     href: '/dashboard/informes',
-    manualAnchor: '#reports',
   },
   {
     id: 'certificatesBatch',
     icon: <Award className="h-5 w-5" />,
     href: '/dashboard/informes',
-    manualAnchor: '#reports',
   },
   {
     id: 'donorSetInactive',
     icon: <UserMinus className="h-5 w-5" />,
     href: '/dashboard/donants',
-    manualAnchor: '#donors',
   },
   {
     id: 'donorReactivate',
     icon: <UserCheck className="h-5 w-5" />,
     href: '/dashboard/donants',
-    manualAnchor: '#donors',
   },
   {
     id: 'editMovement',
     icon: <Pencil className="h-5 w-5" />,
     href: '/dashboard/movimientos',
-    manualAnchor: '#movements',
   },
   {
     id: 'movementFilters',
     icon: <Filter className="h-5 w-5" />,
     href: '/dashboard/movimientos',
-    manualAnchor: '#movements',
   },
   {
     id: 'bulkAICategorize',
     icon: <Sparkles className="h-5 w-5" />,
     href: '/dashboard/movimientos',
-    manualAnchor: '#movements',
   },
   {
     id: 'remittanceViewDetail',
     icon: <Eye className="h-5 w-5" />,
     href: '/dashboard/movimientos',
-    manualAnchor: '#remittances',
   },
   {
     id: 'resetPassword',
     icon: <KeyRound className="h-5 w-5" />,
     href: '/login',
-    manualAnchor: '#troubleshooting',
   },
   {
     id: 'updateExistingDonors',
     icon: <RefreshCcwDot className="h-5 w-5" />,
     href: '/dashboard/donants',
-    manualAnchor: '#donors',
   },
   {
     id: 'remittanceLowMembers',
     icon: <UserX className="h-5 w-5" />,
     href: '/dashboard/movimientos',
-    manualAnchor: '#remittances',
   },
   {
     id: 'saveRemittanceMapping',
     icon: <Save className="h-5 w-5" />,
     href: '/dashboard/movimientos',
-    manualAnchor: '#remittances',
   },
   {
     id: 'toggleRemittanceItems',
     icon: <ToggleLeft className="h-5 w-5" />,
     href: '/dashboard/movimientos',
-    manualAnchor: '#remittances',
   },
 ];
 
