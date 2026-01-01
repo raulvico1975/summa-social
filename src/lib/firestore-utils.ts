@@ -1,6 +1,29 @@
 // src/lib/firestore-utils.ts
 // Utilitats per treballar amb Firestore de forma segura
 
+import { Timestamp, FieldValue } from 'firebase/firestore';
+
+/**
+ * Comprova si un valor és un Timestamp de Firestore.
+ */
+function isTimestamp(value: unknown): value is Timestamp {
+  return value instanceof Timestamp ||
+    (value !== null &&
+     typeof value === 'object' &&
+     'toDate' in value &&
+     typeof (value as Timestamp).toDate === 'function');
+}
+
+/**
+ * Comprova si un valor és un FieldValue de Firestore (serverTimestamp, etc.).
+ */
+function isFieldValue(value: unknown): value is FieldValue {
+  return value instanceof FieldValue ||
+    (value !== null &&
+     typeof value === 'object' &&
+     '_methodName' in value);
+}
+
 /**
  * Elimina propietats amb valor `undefined` d'un objecte.
  * Firestore no accepta `undefined` com a valor - causa errors silenciosos.
@@ -21,9 +44,16 @@ export function stripUndefined<T extends Record<string, unknown>>(obj: T): T {
 /**
  * Versió profunda de stripUndefined per objectes niuats.
  * Recorre recursivament i elimina propietats undefined a tots els nivells.
+ *
+ * IMPORTANT: Protegeix Timestamp i FieldValue de Firestore per no destruir-los.
  */
 export function stripUndefinedDeep<T>(obj: T): T {
   if (obj === null || obj === undefined) {
+    return obj;
+  }
+
+  // Protegir Timestamp i FieldValue (serverTimestamp, etc.)
+  if (isTimestamp(obj) || isFieldValue(obj)) {
     return obj;
   }
 

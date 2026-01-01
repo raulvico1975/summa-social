@@ -7,7 +7,7 @@ import {
   doc,
   setDoc,
   updateDoc,
-  serverTimestamp,
+  Timestamp,
   orderBy,
   query,
   getDocs,
@@ -396,8 +396,8 @@ export function ProductUpdatesSection({ isSuperAdmin = false }: ProductUpdatesSe
         title: draft.title,
         description: draft.description,
         link: draft.link ?? null,
-        publishedAt: serverTimestamp(),
-        createdAt: serverTimestamp(),
+        publishedAt: Timestamp.now(),
+        createdAt: Timestamp.now(),
         isActive: true,
       }));
 
@@ -518,8 +518,8 @@ export function ProductUpdatesSection({ isSuperAdmin = false }: ProductUpdatesSe
         title: aiTitle.trim(),
         description: aiDescription.trim(),
         link: aiLink.trim() || null,
-        publishedAt: serverTimestamp(),
-        createdAt: serverTimestamp(),
+        publishedAt: Timestamp.now(),
+        createdAt: Timestamp.now(),
         isActive: true,
         contentLong: generatedContent.contentLong,
         ai: {
