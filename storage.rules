@@ -11,7 +11,8 @@ service firebase.storage {
     }
 
     function isSuperAdmin() {
-      return isSignedIn() && request.auth.uid == 'f2AHJqjXiOZkYajwkOnZ8RY6h2k2';
+      return isSignedIn() &&
+        firestore.exists(/databases/(default)/documents/systemSuperAdmins/$(request.auth.uid));
     }
 
     function orgDocumentsEnabled(orgId) {

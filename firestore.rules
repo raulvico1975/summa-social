@@ -3,7 +3,8 @@ service cloud.firestore {
   match /databases/{database}/documents {
 
     function isSuperAdmin() {
-      return request.auth != null && request.auth.uid == 'f2AHJqjXiOZkYajwkOnZ8RY6h2k2';
+      return request.auth != null &&
+        exists(/databases/$(database)/documents/systemSuperAdmins/$(request.auth.uid));
     }
 
     function isSignedIn() {
