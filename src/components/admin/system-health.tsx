@@ -5,7 +5,7 @@
 
 import * as React from 'react';
 import { useFirebase, useCollection, useMemoFirebase } from '@/firebase';
-import { collection, query, orderBy, doc, getDoc, updateDoc, getDocs, limit } from 'firebase/firestore';
+import { collection, query, orderBy, doc, getDoc, updateDoc, getDocs, limit, setDoc } from 'firebase/firestore';
 import { getStorage, ref, getDownloadURL, uploadBytes, deleteObject } from 'firebase/storage';
 import {
   getOpenIncidents,
@@ -185,6 +185,13 @@ interface HealthCheck {
 }
 
 const INITIAL_CHECKS: HealthCheck[] = [
+  {
+    id: 'superadmin-status',
+    name: 'SuperAdmin',
+    description: 'Accés al panell /admin',
+    humanExplanation: 'Verifica que el teu usuari té un document a systemSuperAdmins. Sense això, no pots gestionar el sistema.',
+    status: 'pending',
+  },
   {
     id: 'firestore-i18n',
     name: 'system/i18n',
@@ -554,6 +561,38 @@ export function SystemHealth() {
 
     const storage = getStorage();
     const selectedOrg = organizations?.find((o) => o.id === selectedOrgId);
+
+    // 0. Check SuperAdmin status (nou check prioritari)
+    if (user) {
+      try {
+        const superAdminDoc = await getDoc(doc(firestore, 'systemSuperAdmins', user.uid));
+        if (superAdminDoc.exists()) {
+          const data = superAdminDoc.data();
+          updateCheck('superadmin-status', {
+            status: 'ok',
+            message: data?.email ? `✓ ${data.email}` : '✓ Registrat',
+          });
+        } else {
+          updateCheck('superadmin-status', {
+            status: 'error',
+            message: 'No ets SuperAdmin',
+          });
+        }
+      } catch (err) {
+        // Si permission-denied, vol dir que no tenim accés (probablement no som superadmin)
+        const error = err as { code?: string };
+        if (error.code === 'permission-denied') {
+          updateCheck('superadmin-status', {
+            status: 'error',
+            message: 'Sense permisos (no ets SuperAdmin)',
+          });
+        } else {
+          updateCheck('superadmin-status', { status: 'error', message: (err as Error).message });
+        }
+      }
+    } else {
+      updateCheck('superadmin-status', { status: 'warning', message: 'No autenticat' });
+    }
 
     // 1. Check system/i18n (Firestore)
     try {
