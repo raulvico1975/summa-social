@@ -393,65 +393,128 @@ Quan publiques una novetat nova des de SuperAdmin (`/admin` → Novetats):
 
 ## 11. Entorn DEMO
 
-L'entorn DEMO és una instància completament separada de producció, amb dades 100% sintètiques per a demostracions i captures.
+### 1. Propòsit
 
-### Característiques
+- **Què és**: Instància completament separada de producció amb Firebase project propi (`summa-social-demo`)
+- **Per a què serveix**: Demos comercials, captures de pantalla, tests visuals, formació
+- **Per a què NO serveix**: Producció, dades reals, tests d'integració amb serveis externs
 
-| Aspecte | Comportament |
-|---------|--------------|
-| **Firebase project** | `summa-social-demo` (separat de prod) |
-| **Dades** | 100% sintètiques, regenerables |
-| **Rols UI** | No hi ha fricció per rols (qualsevol pot navegar tot) |
-| **Regeneració** | Només SuperAdmin (botó a `/admin`) |
-| **Integracions** | Visibles en mode "desconnectat" (Stripe, banc, email) |
-| **ACL Firestore** | Intacte (el backend no canvia) |
+### 2. Principis clau
 
-### Com arrencar DEMO
+| Principi | Descripció |
+|----------|------------|
+| Firebase project separat | `summa-social-demo` — zero risc per a prod |
+| Dades 100% sintètiques | Noms, IBANs, imports... tot és fals |
+| Regenerable | Botó a `/admin` per tornar a l'estat inicial |
+| Sense serviceAccountKey | Usa ADC (Application Default Credentials) |
+| Bypass de rols UI | Qualsevol usuari autenticat pot navegar |
+
+### 3. Requisits previs (locals)
 
 ```bash
-# 1. Assegura't que tens .env.demo omplert amb credencials del projecte demo
-# 2. Assegura't que tens secrets/serviceAccountKey-demo.json
+# Node.js (versió del projecte)
+node -v
 
-# 3. Arrenca amb:
+# gcloud CLI instal·lat
+gcloud --version
+
+# Autenticar ADC (només primer cop o quan expira)
+gcloud auth application-default login
+
+# Accés al projecte Firebase demo
+# (has de tenir permisos a summa-social-demo)
+```
+
+### 4. Arrencada DEMO
+
+```bash
 npm run dev:demo
 ```
 
-### Fitxers clau
+**Què ha d'aparèixer:**
+- Terminal: `[DEMO] Projecte: summa-social-demo`
+- Browser: http://localhost:9002
+- Badge "DEMO" visible a navbar i `/admin`
+
+**Fitxers clau:**
 
 | Fitxer | Funció |
 |--------|--------|
-| `.env.demo` | Variables d'entorn per Firebase demo |
-| `secrets/serviceAccountKey-demo.json` | Service account Admin SDK |
-| `src/lib/demo/isDemoOrg.ts` | Helper `isDemoEnv()`, `isDemoOrg()` |
-| `src/lib/demo/demoIntegrations.ts` | Estat d'integracions en demo |
-| `scripts/run-demo-dev.mjs` | Runner que carrega .env.demo |
+| `.env.demo` | Config Firebase demo + `SUPERADMIN_EMAIL` + `SUPER_ADMIN_UID` |
+| `scripts/run-demo-dev.mjs` | Runner que carrega env i neteja credencials |
+| `src/lib/demo/isDemoOrg.ts` | `isDemoEnv()` client+server |
 
-### Regenerar dades demo
+### 5. Regenerar dades
 
-1. Entra a `/admin` (cal ser SuperAdmin)
-2. Secció "Entorn DEMO" visible només en mode demo
-3. Clicar "Regenerar demo" → confirmació obligatòria
-4. Esperar 10-30s segons el volum
+1. Ves a http://localhost:9002/admin
+2. Secció "Entorn DEMO" (només visible en demo)
+3. Clica "Regenerar demo" → confirmació obligatòria
+4. Espera ~10-30s
 
-### Volums de seed
+**Qui pot fer-ho**: Usuari amb email a `SUPERADMIN_EMAIL` o UID a `SUPER_ADMIN_UID` de `.env.demo`
+
+**Què fa el seed**:
+- Purga dades demo existents (`isDemoData: true`)
+- Crea org `demo-org` amb slug `demo`
+- Genera contactes, categories, transaccions, projectes, partides, despeses
+- Puja PDFs dummy a Storage
 
 | Entitat | Quantitat |
 |---------|-----------|
 | Donants | 120 |
 | Proveïdors | 35 |
 | Treballadors | 12 |
-| Transaccions | ~700 (18 mesos) |
+| Categories | 16 |
+| Transaccions | ~765 |
 | Projectes | 4 |
 | Partides | 40 |
-| Despeses off-bank | 160 |
-| PDFs Storage | 30 |
+| Despeses | 160 |
+| PDFs | 30 |
 
-### Guardrails DEMO
+### 6. Autenticació i permisos
 
-- ❌ **No hi ha rols a UI** — però l'ACL de Firestore és el mateix
-- ❌ **No es fan calls reals** — Stripe, email, banc desconnectats
-- ❌ **Regenerar només SuperAdmin** — amb confirmació obligatòria
-- ✅ **Identificació clara** — Badge "DEMO" a navbar i admin
+**En DEMO:**
+- `isDemoEnv()` retorna `true` (client i server)
+- Bypass de rols a UI: qualsevol usuari autenticat pot veure tot
+- El seed valida SuperAdmin via Firebase ID Token (no headers falsificables)
+- ADC substitueix serviceAccountKey per Admin SDK
+
+**Diferència amb prod:**
+- En prod, `isDemoEnv()` retorna `false`
+- Els rols i permisos funcionen normalment
+- Usa serviceAccountKey (no ADC)
+
+**⚠️ NO copiar patrons DEMO a prod** — el bypass de rols és només per UX de demo
+
+### 7. Problemes coneguts i solucions
+
+| Problema | Causa | Solució |
+|----------|-------|---------|
+| No puc descarregar serviceAccountKey | Google Workspace bloqueja claus privades | Usar ADC: `gcloud auth application-default login` |
+| "Could not load default credentials" | ADC no configurat o expirat | Executar `gcloud auth application-default login` |
+| "Cannot use undefined as Firestore value" | Camp `projectId` buit en algunes despeses | Sanejador a `writeBatch()` filtra camps undefined |
+| "No tens accés a aquesta organització" | UID no és membre ni SuperAdmin hardcodejat | `isDemoEnv()` fa bypass a `organization-provider.tsx` |
+| "Slug demo no té organització associada" | Mapping `slugs/demo` tenia camp incorrecte | Seed escriu `orgId` (no `organizationId`) |
+| "Firestore has already been initialized" | `db.settings()` cridat després d'altres operacions | Eliminat `db.settings()`, inicialització cached |
+
+### 8. Què NO s'ha de fer
+
+- ❌ **No fer seed des del client/browser** — sempre via API route amb Admin SDK
+- ❌ **No relaxar Firestore rules globals** — les rules són les mateixes que prod
+- ❌ **No reutilitzar DEMO per producció** — projectes Firebase separats
+- ❌ **No confiar en headers manuals per auth** — usar Firebase ID Token verificat
+- ❌ **No cridar `db.settings()` en runtime** — provoca crash en hot reload
+
+### Fitxers modificats per DEMO
+
+| Fitxer | Canvi |
+|--------|-------|
+| `src/lib/demo/isDemoOrg.ts` | `isDemoEnv()` mira `NEXT_PUBLIC_APP_ENV` + `APP_ENV` |
+| `src/lib/admin/superadmin-allowlist.ts` | Accepta `SUPERADMIN_EMAIL` de env |
+| `src/app/api/internal/demo/seed/route.ts` | Auth via ID Token, ADC, cached init |
+| `src/scripts/demo/seed-demo.ts` | Sanejador undefined, `orgId` al slug |
+| `src/hooks/organization-provider.tsx` | Bypass accés si `isDemoEnv()` |
+| `scripts/run-demo-dev.mjs` | Neteja `GOOGLE_APPLICATION_CREDENTIALS` |
 
 ---
 

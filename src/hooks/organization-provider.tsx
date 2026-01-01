@@ -10,6 +10,7 @@ import { generateUniqueSlug, reserveSlug } from '@/lib/slugs';
 import type { Organization, OrganizationRole, UserProfile } from '@/lib/data';
 import { Loader2, AlertCircle } from 'lucide-react';
 import { User } from 'firebase/auth';
+import { isDemoEnv } from '@/lib/demo/isDemoOrg';
 
 interface OrganizationContextType {
   organization: Organization | null;
@@ -105,13 +106,17 @@ function useOrganizationBySlug(orgSlug?: string) {
           const memberSnap = await getDoc(memberRef);
 
           if (!memberSnap.exists()) {
-            // Comprovar si és Super Admin
-            const SUPER_ADMIN_UID = 'f2AHJqjXiOZkYajwkOnZ8RY6h2k2';
-            if (user.uid !== SUPER_ADMIN_UID) {
-              throw new Error('No tens accés a aquesta organització');
+            // DEMO: permetre accés a qualsevol usuari autenticat
+            if (isDemoEnv()) {
+              setUserRole('admin');
+            } else {
+              // Comprovar si és Super Admin (només en prod)
+              const SUPER_ADMIN_UID = 'f2AHJqjXiOZkYajwkOnZ8RY6h2k2';
+              if (user.uid !== SUPER_ADMIN_UID) {
+                throw new Error('No tens accés a aquesta organització');
+              }
+              setUserRole('admin');
             }
-            // Super Admin pot veure qualsevol org
-            setUserRole('admin');
           } else {
             const memberData = memberSnap.data();
             setUserRole(memberData.role as OrganizationRole);

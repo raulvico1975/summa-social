@@ -84,6 +84,25 @@ function validateEnv(env) {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// Netejar GOOGLE_APPLICATION_CREDENTIALS si el fitxer no existeix
+// Això permet que ADC (gcloud auth application-default login) funcioni
+// ─────────────────────────────────────────────────────────────────────────────
+
+function cleanupCredentialsEnv(env) {
+  const credPath = env.GOOGLE_APPLICATION_CREDENTIALS;
+  if (credPath) {
+    // Resoldre path relatiu
+    const absolutePath = resolve(projectRoot, credPath);
+    if (!existsSync(absolutePath)) {
+      console.log('\x1b[33m[DEMO]\x1b[0m GOOGLE_APPLICATION_CREDENTIALS apunta a fitxer inexistent.');
+      console.log('\x1b[33m[DEMO]\x1b[0m Eliminant variable per usar ADC (gcloud auth application-default login).\n');
+      delete env.GOOGLE_APPLICATION_CREDENTIALS;
+    }
+  }
+  return env;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // Main
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -92,17 +111,23 @@ console.log('\x1b[36m[DEMO]\x1b[0m Carregant entorn demo...');
 const demoEnv = parseEnvFile(envDemoPath);
 validateEnv(demoEnv);
 
+// Netejar GOOGLE_APPLICATION_CREDENTIALS si fitxer no existeix
+cleanupCredentialsEnv(demoEnv);
+
 // Injectar a process.env
 Object.assign(process.env, demoEnv);
 
 console.log(`\x1b[36m[DEMO]\x1b[0m Projecte: ${demoEnv.NEXT_PUBLIC_FIREBASE_PROJECT_ID}`);
 console.log('\x1b[36m[DEMO]\x1b[0m Arrencant Next.js...\n');
 
-// Executar next dev
+// Executar next dev amb env net (sense GOOGLE_APPLICATION_CREDENTIALS si no existeix)
+const finalEnv = { ...process.env, ...demoEnv };
+delete finalEnv.GOOGLE_APPLICATION_CREDENTIALS; // Forçar ús d'ADC
+
 const nextDev = spawn('npx', ['next', 'dev', '--turbopack', '-p', '9002'], {
   cwd: projectRoot,
   stdio: 'inherit',
-  env: { ...process.env, ...demoEnv },
+  env: finalEnv,
   shell: process.platform === 'win32',
 });
 

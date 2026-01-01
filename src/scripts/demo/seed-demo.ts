@@ -102,7 +102,11 @@ async function writeBatch<T extends { id: string }>(
     const chunk = items.slice(i, i + BATCH_SIZE);
 
     for (const item of chunk) {
-      const { id, ...data } = item;
+      const { id, ...raw } = item;
+      // Sanejar: eliminar camps undefined (Firestore no els accepta)
+      const data = Object.fromEntries(
+        Object.entries(raw).filter(([, v]) => v !== undefined)
+      );
       const ref = db.collection(collectionPath).doc(id);
       batch.set(ref, data);
     }
@@ -180,11 +184,15 @@ export async function runDemoSeed(
     { merge: true }
   );
 
-  // Slug mapping
-  await db.doc(`slugs/${DEMO_ORG_SLUG}`).set({
-    organizationId: DEMO_ORG_ID,
-    createdAt: Timestamp.now(),
-  });
+  // Slug mapping (camp "orgId" requerit per organization-provider.tsx)
+  await db.doc(`slugs/${DEMO_ORG_SLUG}`).set(
+    {
+      orgId: DEMO_ORG_ID,
+      slug: DEMO_ORG_SLUG,
+      createdAt: Timestamp.now(),
+    },
+    { merge: true }
+  );
 
   // ─────────────────────────────────────────────────────────────────────────
   // 3. Generar dades

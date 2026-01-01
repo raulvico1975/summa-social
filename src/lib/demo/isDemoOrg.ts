@@ -10,9 +10,15 @@
 
 /**
  * Detecta si estem executant en entorn DEMO
+ * Funciona tant a client (NEXT_PUBLIC_APP_ENV) com a server (APP_ENV)
  */
 export function isDemoEnv(): boolean {
-  return process.env.APP_ENV === 'demo';
+  // Client-side: usa NEXT_PUBLIC_APP_ENV (exposat al browser)
+  // Server-side: pot usar APP_ENV o NEXT_PUBLIC_APP_ENV
+  return (
+    process.env.NEXT_PUBLIC_APP_ENV === 'demo' ||
+    process.env.APP_ENV === 'demo'
+  );
 }
 
 /**

@@ -303,11 +303,14 @@ export default function AdminPage() {
     setSeedResult(null);
 
     try {
+      // Obtenir ID Token per auth segura (no header falsificable)
+      const idToken = await user.getIdToken();
+
       const response = await fetch('/api/internal/demo/seed', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'X-User-UID': user.uid,
+          'Authorization': `Bearer ${idToken}`,
         },
       });
 
