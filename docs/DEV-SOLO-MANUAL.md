@@ -455,4 +455,46 @@ npm run dev:demo
 
 ---
 
+## 12. Mode Rescat (admin)
+
+El **Mode Rescat** és un bypass temporal per recuperar accés a `/admin` quan el sistema de SuperAdmin via Firestore no funciona.
+
+### Quan usar-lo
+
+- No pots accedir a `/admin` tot i estar autenticat
+- El document `systemSuperAdmins/{uid}` no existeix o hi ha problemes de permisos
+- Necessites accés urgent per administrar organitzacions
+
+### Com activar-lo
+
+1. Obrir `src/app/admin/page.tsx`
+2. Canviar `const RESCUE_MODE = false;` → `const RESCUE_MODE = true;`
+3. Deploy o `npm run dev`
+
+### Què passa en Mode Rescat
+
+| Aspecte | Comportament |
+|---------|--------------|
+| **Accés** | Qualsevol usuari autenticat pot entrar |
+| **Banner** | Taronja indicant "Mode rescat activat" |
+| **Crear org** | ❌ Desactivat |
+| **Migrar slugs** | ❌ Desactivat |
+| **Suspendre/Reactivar** | ❌ Desactivat |
+| **I18n Manager** | ❌ Desactivat |
+| **SuperAdmins Manager** | ❌ Desactivat |
+| **Veure orgs** | ✅ Funciona |
+| **Entrar a org** | ✅ Funciona |
+
+### Com desactivar-lo
+
+1. Assegurar que el teu UID existeix a `systemSuperAdmins/{uid}` a Firestore
+2. Canviar `const RESCUE_MODE = true;` → `const RESCUE_MODE = false;`
+3. Deploy
+
+### ⚠️ Advertència
+
+El Mode Rescat elimina tota seguretat d'accés a `/admin`. Només usar-lo temporalment per recuperar control i desactivar-lo immediatament després.
+
+---
+
 *Última actualització: 2026-01-01*
