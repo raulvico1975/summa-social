@@ -512,7 +512,7 @@ export default function GuidesPage() {
     );
   };
 
-  // Helper per renderitzar una card del Bloc B (acció) - format compacte
+  // Helper per renderitzar una card del Bloc B (acció) amb cardText complet
   const renderActionCard = (guideId: string) => {
     const guide = GUIDES.find((g) => g.id === guideId);
     if (!guide) return null;
@@ -531,21 +531,19 @@ export default function GuidesPage() {
     const title = titleValue;
     const cta = safeTr(tr, `guides.cta.${guide.id}`, 'Anar-hi');
 
-    // Summary amb fallback a whatIs > intro
-    const summaryKey = `guides.${guide.id}.summary`;
-    const summary = tr(summaryKey);
-    const hasSummary = !isUnresolvedKey(summary, summaryKey);
+    // cardText amb fallback a summary
+    const cardTextKey = `guides.${guide.id}.cardText`;
+    const cardText = tr(cardTextKey);
+    const hasCardText = !isUnresolvedKey(cardText, cardTextKey);
 
-    let cardDescription = '';
-    if (hasSummary) {
-      cardDescription = summary;
+    let description = '';
+    if (hasCardText) {
+      description = cardText;
     } else {
-      const whatIsKey = `guides.${guide.id}.whatIs`;
-      const whatIs = tr(whatIsKey);
-      if (!isUnresolvedKey(whatIs, whatIsKey)) {
-        cardDescription = whatIs;
-      } else {
-        cardDescription = safeTr(tr, `guides.${guide.id}.intro`, '');
+      const summaryKey = `guides.${guide.id}.summary`;
+      const summary = tr(summaryKey);
+      if (!isUnresolvedKey(summary, summaryKey)) {
+        description = summary;
       }
     }
 
@@ -553,17 +551,19 @@ export default function GuidesPage() {
       <Card key={guide.id} className="flex flex-col">
         <CardHeader className="pb-3">
           <div className="flex items-start gap-3">
-            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300">
               {guide.icon}
             </div>
             <div className="flex-1 min-w-0">
               <CardTitle className="text-base leading-tight">{title}</CardTitle>
             </div>
           </div>
-          {cardDescription && (
-            <CardDescription className="mt-2">
-              {cardDescription}
-            </CardDescription>
+          {description && (
+            <div className="mt-3 text-sm leading-6">
+              {hasCardText ? renderCardText(description) : (
+                <span className="text-muted-foreground">{description}</span>
+              )}
+            </div>
           )}
         </CardHeader>
 
@@ -575,14 +575,6 @@ export default function GuidesPage() {
                 <ArrowRight className="ml-2 h-4 w-4" />
               </Link>
             </Button>
-            {guide.helpHref && (
-              <Button variant="outline" size="sm" asChild>
-                <Link href={buildUrl(guide.helpHref)}>
-                  <HelpCircle className="mr-2 h-4 w-4" />
-                  {viewHelp}
-                </Link>
-              </Button>
-            )}
           </div>
         </CardContent>
       </Card>
