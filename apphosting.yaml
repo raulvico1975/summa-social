@@ -5,6 +5,24 @@ runConfig:
   # Increase this value if you'd like to automatically spin up
   # more instances in response to increased traffic.
   maxInstances: 3
+
 env:
+  # Firebase public config (required for build)
+  - variable: NEXT_PUBLIC_FIREBASE_API_KEY
+    value: AIzaSyAi_dEPmqHpbEdZH04pCnRRS85AlJ9Pe5g
+  - variable: NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN
+    value: summa-social.firebaseapp.com
+  - variable: NEXT_PUBLIC_FIREBASE_PROJECT_ID
+    value: summa-social
+  - variable: NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET
+    value: summa-social.firebasestorage.app
+  - variable: NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID
+    value: "469685881071"
+  - variable: NEXT_PUBLIC_FIREBASE_APP_ID
+    value: 1:469685881071:web:97483f2003df7c2407731a
+
+  # Secrets (reference from Cloud Secret Manager)
   - variable: GOOGLE_API_KEY
     secret: GOOGLE_API_KEY
+  - variable: RESEND_API_KEY
+    secret: RESEND_API_KEY
