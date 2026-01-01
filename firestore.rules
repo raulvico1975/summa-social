@@ -50,9 +50,14 @@ service cloud.firestore {
     }
 
     // Col·lecció top-level superAdmins (per governar qui és SuperAdmin)
-    // Nota: En fase bootstrap, encara amb UID hardcodejat. Fase 2 canviarà a exists()
+    // Cada usuari pot llegir el SEU document (necessari per a Storage rules cross-service)
+    // Llistar tots: només SuperAdmin. Escriure: només SuperAdmin.
     match /systemSuperAdmins/{uid} {
-      allow read: if isSuperAdmin();
+      // Permet llegir el propi document (Storage rules ho necessita per isSuperAdmin())
+      allow get: if isSignedIn() && request.auth.uid == uid;
+      // Llistar tots els superadmins: només SuperAdmin
+      allow list: if isSuperAdmin();
+      // Escriure: només SuperAdmin
       allow write: if isSuperAdmin();
     }
 
