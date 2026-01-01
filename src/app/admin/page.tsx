@@ -4,10 +4,9 @@
 import * as React from 'react';
 import { useRouter } from 'next/navigation';
 import { useFirebase, useCollection, useMemoFirebase } from '@/firebase';
-import { collection, query, orderBy, doc, updateDoc, getCountFromServer } from 'firebase/firestore';
-import { sendPasswordResetEmail, signInWithEmailAndPassword } from 'firebase/auth';
+import { collection, query, orderBy, doc, updateDoc, getDoc } from 'firebase/firestore';
+import { sendPasswordResetEmail, signInWithEmailAndPassword, signOut } from 'firebase/auth';
 import type { Organization } from '@/lib/data';
-import { SUPER_ADMIN_UID } from '@/lib/data';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -76,6 +75,41 @@ export default function AdminPage() {
   const { user, firestore, auth, isUserLoading } = useFirebase();
   const { toast } = useToast();
 
+  // ─────────────────────────────────────────────────────────────────────────────
+  // GUARD: Verificació SuperAdmin via Firestore (única font de veritat)
+  // ─────────────────────────────────────────────────────────────────────────────
+  const [isSuperAdmin, setIsSuperAdmin] = React.useState<boolean | null>(null);
+  const [superAdminCheckDone, setSuperAdminCheckDone] = React.useState(false);
+
+  React.useEffect(() => {
+    // Reset quan canvia l'usuari
+    if (!user) {
+      setIsSuperAdmin(null);
+      setSuperAdminCheckDone(false);
+      return;
+    }
+
+    // Verificar a Firestore
+    const checkSuperAdmin = async () => {
+      try {
+        const superAdminRef = doc(firestore, 'systemSuperAdmins', user.uid);
+        const superAdminDoc = await getDoc(superAdminRef);
+        setIsSuperAdmin(superAdminDoc.exists());
+      } catch (error) {
+        // Qualsevol error (permisos, xarxa) → no és superadmin
+        console.warn('[admin] Error verificant SuperAdmin:', error);
+        setIsSuperAdmin(false);
+      } finally {
+        setSuperAdminCheckDone(true);
+      }
+    };
+
+    checkSuperAdmin();
+  }, [user, firestore]);
+
+  // ─────────────────────────────────────────────────────────────────────────────
+  // Estats locals (només s'usen si isSuperAdmin === true)
+  // ─────────────────────────────────────────────────────────────────────────────
   const [isCreateDialogOpen, setIsCreateDialogOpen] = React.useState(false);
   const [suspendDialogOrg, setSuspendDialogOrg] = React.useState<Organization | null>(null);
   const [isProcessing, setIsProcessing] = React.useState(false);
@@ -100,12 +134,11 @@ export default function AdminPage() {
   const [seedResult, setSeedResult] = React.useState<{ ok: boolean; counts?: Record<string, number>; error?: string } | null>(null);
   const [showSeedConfirm, setShowSeedConfirm] = React.useState(false);
 
-  // Verificar que és Super Admin
-  const isSuperAdmin = user?.uid === SUPER_ADMIN_UID;
-
-  // Carregar totes les organitzacions
+  // ─────────────────────────────────────────────────────────────────────────────
+  // Carregar dades NOMÉS si és SuperAdmin confirmat
+  // ─────────────────────────────────────────────────────────────────────────────
   const orgsQuery = useMemoFirebase(
-    () => isSuperAdmin ? query(collection(firestore, 'organizations'), orderBy('createdAt', 'desc')) : null,
+    () => isSuperAdmin === true ? query(collection(firestore, 'organizations'), orderBy('createdAt', 'desc')) : null,
     [firestore, isSuperAdmin]
   );
   const { data: organizations, isLoading: orgsLoading } = useCollection<Organization>(orgsQuery);
@@ -120,9 +153,9 @@ export default function AdminPage() {
     };
   }, [organizations]);
 
-  // Carregar audit logs quan l'usuari és SuperAdmin
+  // Carregar audit logs quan l'usuari és SuperAdmin confirmat
   React.useEffect(() => {
-    if (!isSuperAdmin) return;
+    if (isSuperAdmin !== true) return;
     setIsLoadingAudit(true);
     getRecentAuditLogs(firestore, 15)
       .then(setAuditLogs)
@@ -303,7 +336,20 @@ export default function AdminPage() {
     }
   };
 
-  // Loading state
+  // Handler logout
+  const handleLogout = async () => {
+    try {
+      await signOut(auth);
+    } catch (error) {
+      console.error('Error logout:', error);
+    }
+  };
+
+  // ─────────────────────────────────────────────────────────────────────────────
+  // RENDERS CONDICIONALS (ordre important: loading → login → denied → content)
+  // ─────────────────────────────────────────────────────────────────────────────
+
+  // 1. Loading auth
   if (isUserLoading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
@@ -312,7 +358,7 @@ export default function AdminPage() {
     );
   }
 
-  // No autenticat - mostrar login
+  // 2. No autenticat → mostrar login
   if (!user) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-background">
@@ -371,22 +417,36 @@ export default function AdminPage() {
     );
   }
 
-  // Autenticat però no és SuperAdmin
-  if (!isSuperAdmin) {
+  // 3. Verificant SuperAdmin (després de login, abans de decidir)
+  if (!superAdminCheckDone) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  // 4. Autenticat però NO és SuperAdmin → Accés denegat + logout
+  if (isSuperAdmin !== true) {
     return (
       <div className="flex flex-col items-center justify-center min-h-screen gap-4">
         <AlertCircle className="h-12 w-12 text-destructive" />
         <h1 className="text-xl font-semibold">Accés denegat</h1>
         <p className="text-muted-foreground">No tens permisos per accedir al panell d'administració.</p>
-        <Button onClick={() => router.push('/dashboard')}>
-          <ArrowLeft className="mr-2 h-4 w-4" />
-          Tornar al dashboard
-        </Button>
+        <div className="flex gap-2">
+          <Button variant="outline" onClick={handleLogout}>
+            Tancar sessió
+          </Button>
+          <Button onClick={() => router.push('/dashboard')}>
+            <ArrowLeft className="mr-2 h-4 w-4" />
+            Tornar al dashboard
+          </Button>
+        </div>
       </div>
     );
   }
 
-  // Carregant organitzacions
+  // 5. SuperAdmin confirmat, carregant orgs
   if (orgsLoading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
@@ -394,6 +454,10 @@ export default function AdminPage() {
       </div>
     );
   }
+
+  // ─────────────────────────────────────────────────────────────────────────────
+  // 6. SuperAdmin confirmat → Panell complet
+  // ─────────────────────────────────────────────────────────────────────────────
 
   return (
     <div className="min-h-screen bg-background">
