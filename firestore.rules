@@ -48,9 +48,9 @@ service cloud.firestore {
       allow write: if isSuperAdmin();
     }
 
-    // Subcolecció superAdmins dins system (per governar qui és SuperAdmin)
+    // Col·lecció top-level superAdmins (per governar qui és SuperAdmin)
     // Nota: En fase bootstrap, encara amb UID hardcodejat. Fase 2 canviarà a exists()
-    match /system/superAdmins/{uid} {
+    match /systemSuperAdmins/{uid} {
       allow read: if isSuperAdmin();
       allow write: if isSuperAdmin();
     }

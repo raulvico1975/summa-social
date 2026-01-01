@@ -69,9 +69,9 @@ export function SuperAdminsManager() {
   const [deleteTarget, setDeleteTarget] = React.useState<SuperAdminDoc | null>(null);
   const [isDeleting, setIsDeleting] = React.useState(false);
 
-  // Carregar superadmins
+  // Carregar superadmins (col·lecció top-level per evitar path invàlid)
   const superAdminsQuery = useMemoFirebase(
-    () => query(collection(firestore, 'system/superAdmins'), orderBy('createdAt', 'desc')),
+    () => query(collection(firestore, 'systemSuperAdmins'), orderBy('createdAt', 'desc')),
     [firestore]
   );
   const { data: superAdmins, isLoading } = useCollection<SuperAdminDoc>(superAdminsQuery);
@@ -91,7 +91,7 @@ export function SuperAdminsManager() {
 
     setIsAdding(true);
     try {
-      const docRef = doc(firestore, 'system/superAdmins', newUid.trim());
+      const docRef = doc(firestore, 'systemSuperAdmins', newUid.trim());
       await setDoc(docRef, {
         email: newEmail.trim() || null,
         createdAt: serverTimestamp(),
@@ -125,7 +125,7 @@ export function SuperAdminsManager() {
 
     setIsDeleting(true);
     try {
-      await deleteDoc(doc(firestore, 'system/superAdmins', deleteTarget.id));
+      await deleteDoc(doc(firestore, 'systemSuperAdmins', deleteTarget.id));
       toast({ title: 'SuperAdmin eliminat', description: `UID: ${deleteTarget.id}` });
     } catch (error) {
       console.error('Error deleting superadmin:', error);
