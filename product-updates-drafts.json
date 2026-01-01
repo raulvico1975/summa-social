@@ -1,0 +1,98 @@
+{
+  "generatedAt": "2025-12-31T18:54:45.916Z",
+  "range": "last50",
+  "drafts": [
+    {
+      "id": "draft-20251231-ui-1",
+      "title": "Correccions d'interfície",
+      "description": "prevent raw translation keys from rendering in Guides Hub i 5 millores més.",
+      "link": null,
+      "evidence": [
+        "fix(i18n): prevent raw translation keys from rendering in Guides Hub",
+        "fix(i18n): add reserved segments + x-default hreflang",
+        "fix(auth): idle logout redirects to org-specific login + friendly /login page",
+        "fix(routing): simplify /quick delegation and protect middleware routes",
+        "fix(rules): add explicit get/list permissions for productUpdates",
+        "fix(admin): respect React hooks rules in ProductUpdatesSection"
+      ]
+    },
+    {
+      "id": "draft-20251231-ui-2",
+      "title": "Noves funcionalitats d'interfície",
+      "description": "surface 5 new documented guides in hub i 11 millores més.",
+      "link": null,
+      "evidence": [
+        "feat(guides): surface 5 new documented guides in hub",
+        "feat(guides): surface 5 new procedure guides in hub",
+        "feat(guides): surface 5 new guides in hub",
+        "feat(guides): surface generateDonorCertificate guide in hub",
+        "feat(guides): surface importDonors guide in hub",
+        "feat(guides): surface changeLanguage guide in hub",
+        "feat(admin): make system health checks actionable and non-fake",
+        "feat(guides): surface selectBankAccount guide in hub",
+        "feat(guides): surface changePeriod guide in hub",
+        "feat(admin): add actionable fixes and human explanations to system health checks",
+        "feat(admin): improve incidents with recommended action and resolution commit",
+        "feat(admin): add system health semaphore checks"
+      ]
+    },
+    {
+      "id": "draft-20251231-general-3",
+      "title": "Noves funcionalitats generals",
+      "description": "add FR/ES/PT aliases for privacy and contact. add localized feature page aliases. multilingual public pages with /public/[lang] rewrite.",
+      "link": null,
+      "evidence": [
+        "feat(public): add FR/ES/PT aliases for privacy and contact",
+        "feat(public): add localized feature page aliases",
+        "feat(i18n): multilingual public pages with /public/[lang] rewrite"
+      ]
+    },
+    {
+      "id": "draft-20251231-general-4",
+      "title": "Correccions generals",
+      "description": "allow pendingDocuments upload when documentsEnabled is true. add missing rules for productUpdates and system collections.",
+      "link": null,
+      "evidence": [
+        "fix(storage): allow pendingDocuments upload when documentsEnabled is true",
+        "fix(rules): add missing rules for productUpdates and system collections"
+      ]
+    },
+    {
+      "id": "draft-20251231-i18n-5",
+      "title": "Noves funcionalitats de traduccions",
+      "description": "add 5 documented procedure guides translations (CA/ES/FR/PT) i 10 millores més.",
+      "link": null,
+      "evidence": [
+        "feat(guides): add 5 documented procedure guides translations (CA/ES/FR/PT)",
+        "feat(guides): add 5 movement/remittance/access procedure guides translations (CA/ES/FR/PT)",
+        "feat(guides): add 5 procedural guides (models/certificates/donor-status) translations (CA/ES/FR/PT)",
+        "feat(guides): add generateDonorCertificate procedure guide (CA/ES/FR/PT)",
+        "feat(guides): add importDonors procedure guide (CA/ES/FR/PT)",
+        "feat(guides): add changeLanguage procedure guide (CA/ES/FR/PT)",
+        "feat(guides): add select bank account procedure guide (CA/ES/FR/PT)",
+        "feat(guides): add change period procedure guide (CA/ES/FR/PT)",
+        "feat(admin): add i18n Storage initialization and per-language status",
+        "feat(guides): add importMovements guide matching actual Import UI (CA/ES/FR/PT)",
+        "feat: UI polish + guides + admin translations section"
+      ]
+    },
+    {
+      "id": "draft-20251231-i18n-6",
+      "title": "Correccions de traduccions",
+      "description": "silence expected Storage errors (404, permission-denied)",
+      "link": null,
+      "evidence": [
+        "fix(i18n): silence expected Storage errors (404, permission-denied)"
+      ]
+    },
+    {
+      "id": "draft-20251231-ajuda-7",
+      "title": "Noves funcionalitats en ajuda",
+      "description": "add stripe and travel capture procedure guides",
+      "link": null,
+      "evidence": [
+        "feat(guides): add stripe and travel capture procedure guides"
+      ]
+    }
+  ]
+}

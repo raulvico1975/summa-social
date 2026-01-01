@@ -5,7 +5,7 @@
 
 import * as React from 'react';
 import { useFirebase, useCollection, useMemoFirebase } from '@/firebase';
-import { collection, query, orderBy, doc, getDoc, updateDoc, getDocs, limit, setDoc } from 'firebase/firestore';
+import { collection, query, orderBy, doc, getDoc, getDocs, limit, setDoc } from 'firebase/firestore';
 import { getStorage, ref, getDownloadURL, uploadBytes, deleteObject } from 'firebase/storage';
 import {
   getOpenIncidents,
@@ -252,10 +252,10 @@ const INITIAL_CHECKS: HealthCheck[] = [
     id: 'storage-upload',
     name: 'pendingDocuments',
     description: 'Upload operatiu',
-    humanExplanation: 'Permet pujar factures i nòmines. Si no ho actives, les pujades fallaran.',
+    humanExplanation: 'Permet pujar factures i nòmines. Qualsevol membre de l\'org pot pujar.',
     status: 'pending',
     requiresOrg: true,
-    actionable: 'documentsEnabled', // Quan error: concedir permís. Quan OK: botó test real.
+    actionable: 'testRealUpload', // Quan OK: botó test real.
   },
   {
     id: 'legacy-redirect',
@@ -304,9 +304,6 @@ export function SystemHealth() {
   const [isRunningChecks, setIsRunningChecks] = React.useState(false);
   const [selectedOrgId, setSelectedOrgId] = React.useState<string>('');
 
-  // Modal de confirmació per concedir permís de documents
-  const [documentsDialogOpen, setDocumentsDialogOpen] = React.useState(false);
-  const [isGrantingDocuments, setIsGrantingDocuments] = React.useState(false);
 
   // Carregar organitzacions per al selector
   const orgsQuery = useMemoFirebase(
@@ -487,62 +484,6 @@ export function SystemHealth() {
   const totalOpenIncidents = incidents.filter((i) => i.status === 'OPEN').length;
 
   // ─────────────────────────────────────────────────────────────────────────
-  // ACCIÓ: Concedir permís de documents
-  // ─────────────────────────────────────────────────────────────────────────
-
-  const handleGrantDocumentsPermission = async () => {
-    if (!firestore || !selectedOrgId) return;
-
-    setIsGrantingDocuments(true);
-    try {
-      const orgRef = doc(firestore, 'organizations', selectedOrgId);
-      await updateDoc(orgRef, { documentsEnabled: true });
-      setDocumentsDialogOpen(false);
-
-      // Re-executar checks i esperar per verificar si ara funciona
-      await runHealthChecks();
-
-      // Esperar un moment perquè el state s'actualitzi
-      await new Promise((resolve) => setTimeout(resolve, 500));
-
-      // Verificar si el check ara passa
-      // Nota: healthChecks s'actualitza async, així que fem una prova directa
-      const storage = getStorage();
-      const selectedOrg = organizations?.find((o) => o.id === selectedOrgId);
-      if (selectedOrg) {
-        try {
-          const testFileName = `_verify_${Date.now()}.txt`;
-          const testRef = ref(storage, `organizations/${selectedOrgId}/pendingDocuments/${testFileName}`);
-          const testContent = new Blob(['verify'], { type: 'text/plain' });
-          await uploadBytes(testRef, testContent);
-          await deleteObject(testRef);
-          // Si arriba aquí, ha funcionat
-          toast({
-            title: 'Fet ✅',
-            description: 'Ara la pujada de documents funciona per aquesta organització.',
-          });
-        } catch {
-          // Encara falla
-          toast({
-            title: 'No s\'ha pogut completar',
-            description: 'El permís s\'ha concedit però la pujada encara falla. Comprova les regles de Storage.',
-            variant: 'destructive',
-          });
-        }
-      }
-    } catch (err) {
-      console.error('Error granting documents permission:', err);
-      toast({
-        title: 'Error',
-        description: 'No s\'ha pogut concedir el permís.',
-        variant: 'destructive',
-      });
-    } finally {
-      setIsGrantingDocuments(false);
-    }
-  };
-
-  // ─────────────────────────────────────────────────────────────────────────
   // SEMÀFOR DE PRODUCCIÓ - Executar checks
   // ─────────────────────────────────────────────────────────────────────────
 
@@ -660,7 +601,8 @@ export function SystemHealth() {
       updateCheck('firestore-transactions', { status: 'warning', message: 'Cal seleccionar org' });
     }
 
-    // 8. Check pendingDocuments upload (requires org) — AMB DIAGNÒSTIC HUMÀ
+    // 8. Check pendingDocuments upload (requires org)
+    // Política simplificada: qualsevol membre de l'org pot pujar (sense flags)
     if (selectedOrg && user) {
       const testFileName = `_healthcheck/${Date.now()}.txt`;
       const testPath = `organizations/${selectedOrgId}/pendingDocuments/${testFileName}`;
@@ -675,56 +617,28 @@ export function SystemHealth() {
       } catch (err) {
         const error = err as { code?: string };
         if (error.code === 'storage/unauthorized') {
-          // Diagnòstic humà: determinar la causa exacta
-          let diagnosis = '';
-          let diagnosisDetails = `Path: ${testPath} | UID: ${user.uid} | OrgId: ${selectedOrgId}`;
-
+          // Diagnòstic simplificat: només comprovar si és membre
           try {
-            // 1. Comprovar documentsEnabled
-            const orgDoc = await getDoc(doc(firestore, 'organizations', selectedOrgId));
-            const orgData = orgDoc.data();
-            const documentsEnabled = orgData?.documentsEnabled === true;
-
-            // 2. Comprovar si és membre
             const memberDoc = await getDoc(doc(firestore, `organizations/${selectedOrgId}/members/${user.uid}`));
-            const isMember = memberDoc.exists();
-            const memberRole = isMember ? memberDoc.data()?.role : null;
-
-            if (!documentsEnabled) {
-              diagnosis = 'documentsEnabled=false';
-              diagnosisDetails = `L'org no té activat el permís de documents. Activa'l amb el botó.`;
-            } else if (!isMember) {
-              diagnosis = 'no-member';
-              diagnosisDetails = `L'usuari ${user.uid} no és membre de l'org ${selectedOrgId}.`;
-            } else if (memberRole && !['admin', 'user'].includes(memberRole)) {
-              diagnosis = 'wrong-role';
-              diagnosisDetails = `Rol "${memberRole}" no té permisos d'escriptura (cal admin o user).`;
+            if (!memberDoc.exists()) {
+              updateCheck('storage-upload', {
+                status: 'error',
+                message: 'No ets membre de l\'org',
+              });
             } else {
-              // Tot sembla correcte però Storage denegat → problema a les regles
-              diagnosis = 'rules-mismatch';
-              diagnosisDetails = `documentsEnabled=true, membre=${memberRole}, però Storage denegat. Revisar storage.rules.`;
+              // És membre però Storage denegat → problema a les regles
+              updateCheck('storage-upload', {
+                status: 'error',
+                message: 'Rules Storage incorrectes',
+              });
             }
-          } catch (diagErr) {
-            // Si no podem llegir l'org o membre, probablement permisos de Firestore
-            diagnosis = 'firestore-denied';
-            diagnosisDetails = `No s'ha pogut diagnosticar: ${(diagErr as Error).message}`;
+          } catch {
+            updateCheck('storage-upload', {
+              status: 'error',
+              message: 'Error verificant membre',
+            });
           }
-
-          updateCheck('storage-upload', {
-            status: 'error',
-            message: diagnosis === 'documentsEnabled=false'
-              ? 'Falta activar documents'
-              : diagnosis === 'no-member'
-                ? 'No ets membre de l\'org'
-                : diagnosis === 'wrong-role'
-                  ? 'Rol sense permisos'
-                  : diagnosis === 'rules-mismatch'
-                    ? 'Rules Storage incorrectes'
-                    : `Diagnòstic: ${diagnosisDetails}`,
-          });
-
-          // Log detallat per debug
-          console.log('[Semàfor] pendingDocuments diagnòstic:', { diagnosis, diagnosisDetails, testPath, uid: user.uid, orgId: selectedOrgId });
+          console.log('[Semàfor] pendingDocuments error:', { testPath, uid: user.uid, orgId: selectedOrgId });
         } else {
           updateCheck('storage-upload', { status: 'error', message: (err as Error).message });
         }
@@ -977,12 +891,6 @@ export function SystemHealth() {
                 <div className="grid grid-cols-3 md:grid-cols-3 gap-2">
                   {healthChecks.map((check) => {
                     // Detectar si aquest check té una acció disponible
-                    const canGrantDocuments =
-                      check.id === 'storage-upload' &&
-                      check.status === 'error' &&
-                      check.message === 'storage/unauthorized' &&
-                      check.actionable === 'documentsEnabled';
-
                     const canGoToI18n =
                       check.actionable === 'goToI18n' &&
                       (check.status === 'error' || check.status === 'warning');
@@ -1036,25 +944,6 @@ export function SystemHealth() {
                               </div>
 
                               {/* Botons d'acció segons el tipus */}
-                              {canGrantDocuments && (
-                                <div className="mt-2 space-y-1">
-                                  <Button
-                                    variant="secondary"
-                                    size="sm"
-                                    className="h-6 text-[10px] w-full"
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      setDocumentsDialogOpen(true);
-                                    }}
-                                  >
-                                    Concedir permís de documents
-                                  </Button>
-                                  <p className="text-[9px] text-muted-foreground leading-tight">
-                                    Permet pujar factures i nòmines. Si no ho actives, les pujades fallaran.
-                                  </p>
-                                </div>
-                              )}
-
                               {canGoToI18n && (
                                 <div className="mt-2 space-y-1">
                                   <Button
@@ -1542,64 +1431,6 @@ export function SystemHealth() {
         </DialogContent>
       </Dialog>
 
-      {/* Modal de confirmació per concedir permís de documents */}
-      <Dialog open={documentsDialogOpen} onOpenChange={setDocumentsDialogOpen}>
-        <DialogContent className="max-w-md">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <Upload className="h-5 w-5 text-blue-600" />
-              Concedir permís de documents
-            </DialogTitle>
-            <DialogDescription>
-              Aquesta acció activarà la pujada de documents per a l&apos;organització seleccionada.
-            </DialogDescription>
-          </DialogHeader>
-
-          <div className="space-y-4">
-            {/* Resum de l'acció */}
-            <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg text-sm">
-              <p className="font-medium text-blue-900">
-                Organització: {organizations?.find((o) => o.id === selectedOrgId)?.name || '-'}
-              </p>
-              <p className="text-blue-700 text-xs mt-1">
-                S&apos;establirà <code className="bg-blue-100 px-1 rounded">documentsEnabled: true</code> al document de l&apos;organització.
-              </p>
-            </div>
-
-            {/* Advertència */}
-            <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg text-sm text-amber-800">
-              <p className="font-medium">Què passarà:</p>
-              <ul className="list-disc list-inside mt-1 text-xs space-y-1">
-                <li>Els usuaris podran pujar factures i nòmines</li>
-                <li>Les regles de Storage permetran escriptura a pendingDocuments</li>
-                <li>El check es re-executarà automàticament</li>
-              </ul>
-            </div>
-
-            {/* Botons */}
-            <div className="flex justify-end gap-2 pt-2">
-              <Button
-                variant="outline"
-                onClick={() => setDocumentsDialogOpen(false)}
-                disabled={isGrantingDocuments}
-              >
-                Cancel·lar
-              </Button>
-              <Button
-                onClick={handleGrantDocumentsPermission}
-                disabled={isGrantingDocuments}
-              >
-                {isGrantingDocuments ? (
-                  <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                ) : (
-                  <Check className="h-4 w-4 mr-2" />
-                )}
-                Concedir permís
-              </Button>
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
     </>
   );
 }
