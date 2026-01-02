@@ -6,7 +6,7 @@
 
 import * as React from 'react';
 import Link from 'next/link';
-import { Bell, Check, CheckCheck, ChevronRight, Sparkles } from 'lucide-react';
+import { Inbox, Check, CheckCheck, ChevronRight, Sparkles } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
 import {
@@ -97,7 +97,7 @@ export function ProductUpdatesInbox() {
           className="relative"
           aria-label={t.productUpdates.tooltip({ count: unreadCount })}
         >
-          <Bell className="h-5 w-5" />
+          <Inbox className="h-5 w-5" />
           {unreadCount > 0 && (
             <span className="absolute -top-1 -right-1 h-5 min-w-5 px-1.5 text-xs font-bold rounded-full bg-sky-500 text-white flex items-center justify-center">
               {unreadCount}
