@@ -26,7 +26,7 @@ import {
   MessageSquare,
 } from 'lucide-react';
 import type { Transaction, ContactType } from '@/lib/data';
-import { formatCurrencyEU } from '@/lib/normalize';
+import { formatCurrencyEU, formatDateShort } from '@/lib/normalize';
 
 interface TransactionRowMobileProps {
   transaction: Transaction;
@@ -54,19 +54,6 @@ interface TransactionRowMobileProps {
   };
 }
 
-const formatDate = (dateString: string) => {
-  try {
-    const date = new Date(dateString);
-    if (isNaN(date.getTime())) return dateString;
-    return date.toLocaleDateString('ca-ES', {
-      day: '2-digit',
-      month: '2-digit',
-      year: '2-digit',
-    });
-  } catch {
-    return dateString;
-  }
-};
 
 export const TransactionRowMobile = React.memo(function TransactionRowMobile({
   transaction: tx,
@@ -131,7 +118,7 @@ export const TransactionRowMobile = React.memo(function TransactionRowMobile({
       {/* Top row: Data + Import */}
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0 flex-1">
-          <div className="text-xs text-muted-foreground">{formatDate(tx.date)}</div>
+          <div className="text-xs text-muted-foreground whitespace-nowrap">{formatDateShort(tx.date)}</div>
           <div
             className={`mt-1 text-sm leading-snug ${
               isReturnedDonation ? 'text-gray-400 line-through' : 'text-foreground'

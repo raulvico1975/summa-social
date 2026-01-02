@@ -56,7 +56,7 @@ import {
   MessageSquare,
 } from 'lucide-react';
 import type { Transaction, Category, Project, ContactType } from '@/lib/data';
-import { formatCurrencyEU } from '@/lib/normalize';
+import { formatCurrencyEU, formatDateShort } from '@/lib/normalize';
 import { Checkbox } from '@/components/ui/checkbox';
 import { RowDropTarget } from '@/components/files/row-drop-target';
 
@@ -151,21 +151,6 @@ interface TransactionRowProps {
 // HELPERS
 // =============================================================================
 
-const formatDate = (dateString: string) => {
-  try {
-    const date = new Date(dateString);
-    if (isNaN(date.getTime())) {
-      return dateString;
-    }
-    return date.toLocaleDateString('ca-ES', {
-      day: '2-digit',
-      month: '2-digit',
-      year: '2-digit',
-    });
-  } catch {
-    return dateString;
-  }
-};
 
 // =============================================================================
 // COMPONENT
@@ -440,7 +425,7 @@ export const TransactionRow = React.memo(function TransactionRow({
         </TableCell>
       )}
       {/* Date */}
-      <TableCell className="text-muted-foreground py-1 text-xs">{formatDate(tx.date)}</TableCell>
+      <TableCell className="text-muted-foreground py-1 text-xs whitespace-nowrap">{formatDateShort(tx.date)}</TableCell>
 
       {/* Amount */}
       <TableCell

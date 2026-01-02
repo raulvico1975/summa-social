@@ -62,7 +62,7 @@ import {
   TooltipTrigger,
 } from '@/components/ui/tooltip';
 import { Input } from '@/components/ui/input';
-import { formatDateDMY } from '@/lib/normalize';
+import { formatDateDMY, formatDateShort } from '@/lib/normalize';
 import { AssignmentEditor } from '@/components/project-module/assignment-editor';
 import type { ExpenseStatus, UnifiedExpenseWithLink, Project, ExpenseAssignment, BudgetLine, OffBankAttachment } from '@/lib/project-module-types';
 import { useTranslations } from '@/i18n';
@@ -1175,8 +1175,8 @@ export default function ExpensesInboxPage() {
                         <FileText className="h-4 w-4 text-muted-foreground/30 inline-block" />
                       )}
                     </TableCell>
-                    <TableCell className="font-mono text-[13px]">
-                      {formatDateDMY(expense.date)}
+                    <TableCell className="text-xs text-muted-foreground whitespace-nowrap">
+                      {formatDateShort(expense.date)}
                     </TableCell>
                     <TableCell className="max-w-[250px] truncate text-[13px]">
                       {expense.description || '-'}

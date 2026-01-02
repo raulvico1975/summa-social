@@ -12,6 +12,7 @@ import { useFirebase } from '@/firebase';
 import { useCurrentOrganization, useOrgUrl } from '@/hooks/organization-provider';
 import { useTranslations } from '@/i18n';
 import type { OffBankExpense } from '@/lib/project-module-types';
+import { formatDateShort } from '@/lib/normalize';
 
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
@@ -33,12 +34,6 @@ import { OffBankExpenseModal } from '@/components/project-module/add-off-bank-ex
 
 const PAGE_SIZE = 50;
 
-// Formatejar data en format DD/MM/YYYY
-function formatDateDMY(dateStr: string): string {
-  if (!dateStr) return '';
-  const [year, month, day] = dateStr.split('-');
-  return `${day}/${month}/${year}`;
-}
 
 // Formatejar import en EUR
 function formatAmount(amount: number): string {
@@ -408,8 +403,8 @@ export default function CaptureExpensesPage() {
                         </TableCell>
 
                         {/* Data */}
-                        <TableCell className="font-mono text-sm">
-                          {formatDateDMY(expense.date)}
+                        <TableCell className="text-xs text-muted-foreground whitespace-nowrap">
+                          {formatDateShort(expense.date)}
                         </TableCell>
 
                         {/* Concepte */}
