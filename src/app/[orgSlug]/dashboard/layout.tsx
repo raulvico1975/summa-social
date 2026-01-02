@@ -162,17 +162,24 @@ function OrganizationDependentLayout({ children }: { children: React.ReactNode }
 
   return (
     <AppLogContext.Provider value={appLogValue}>
-      <SidebarProvider open={sidebarOpen} onOpenChange={handleOpenChange}>
-        <div className="flex min-h-screen">
-          <Sidebar collapsible="icon">
-            <DashboardSidebarContent />
-          </Sidebar>
-          <SidebarInset className="flex min-w-0 flex-1 flex-col overflow-x-hidden transition-all duration-300 ease-in-out">
-            <DashboardHeader />
-            <main className="min-w-0 flex-1 overflow-x-hidden overflow-y-auto p-4 md:p-6">{children}</main>
-          </SidebarInset>
-        </div>
-      </SidebarProvider>
+      {/* Shell fix: h-screen + flex-col + overflow-hidden al wrapper */}
+      <div className="flex h-screen flex-col overflow-hidden">
+        {/* Header FORA del flux scrollable - ancorat al viewport */}
+        <DashboardHeader />
+
+        {/* Contingut: sidebar + main, amb overflow controlat */}
+        <SidebarProvider open={sidebarOpen} onOpenChange={handleOpenChange}>
+          <div className="flex flex-1 overflow-hidden">
+            <Sidebar collapsible="icon">
+              <DashboardSidebarContent />
+            </Sidebar>
+            <SidebarInset className="flex min-w-0 flex-1 flex-col transition-all duration-300 ease-in-out">
+              <main className="min-w-0 flex-1 overflow-y-auto p-4 md:p-6">{children}</main>
+            </SidebarInset>
+          </div>
+        </SidebarProvider>
+      </div>
+
       {/* FAB rail: stack vertical de botons flotants a baix-dreta */}
       <div className="fixed bottom-6 right-6 z-50 flex flex-col items-end gap-3">
         <ProductUpdatesFab />
