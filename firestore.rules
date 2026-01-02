@@ -3,7 +3,8 @@ service cloud.firestore {
   match /databases/{database}/documents {
 
     function isSuperAdmin() {
-      return request.auth != null && request.auth.uid == 'f2AHJqjXiOZkYajwkOnZ8RY6h2k2';
+      return request.auth != null &&
+        exists(/databases/$(database)/documents/systemSuperAdmins/$(request.auth.uid));
     }
 
     function isSignedIn() {
@@ -38,12 +39,75 @@ service cloud.firestore {
     }
 
     // ═══════════════════════════════════════════════════════════════════════
+    // SYSTEM CONFIG (i18n versions, feature flags, etc.)
+    // ═══════════════════════════════════════════════════════════════════════
+
+    match /system/{docId} {
+      // Llegir: qualsevol usuari autenticat (per rebre versions d'i18n)
+      allow read: if isSignedIn();
+      // Escriure: només SuperAdmin
+      allow write: if isSuperAdmin();
+    }
+
+    // Col·lecció top-level superAdmins (per governar qui és SuperAdmin)
+    // Cada usuari pot llegir el SEU document (necessari per a Storage rules cross-service)
+    // Llistar tots: només SuperAdmin. Escriure: només SuperAdmin.
+    match /systemSuperAdmins/{uid} {
+      // Permet llegir el propi document (Storage rules ho necessita per isSuperAdmin())
+      allow get: if isSignedIn() && request.auth.uid == uid;
+      // Llistar tots els superadmins: només SuperAdmin
+      allow list: if isSuperAdmin();
+      // Escriure: només SuperAdmin
+      allow write: if isSuperAdmin();
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // PRODUCT UPDATES (novetats del producte - només SuperAdmin)
+    // Updated: 2024-12-31 - Force redeploy
+    // ═══════════════════════════════════════════════════════════════════════
+
+    match /productUpdateDrafts/{draftId} {
+      // Permet get i list per SuperAdmin
+      allow get, list: if isSuperAdmin();
+      allow create, update, delete: if isSuperAdmin();
+    }
+
+    match /productUpdates/{updateId} {
+      // Lectura: usuaris autenticats (campaneta)
+      // Escriptura: només SuperAdmin
+      allow get, list: if isSignedIn();
+      allow create, update, delete: if isSuperAdmin();
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // SYSTEM INCIDENTS (alertes internes per a SuperAdmin)
+    // ═══════════════════════════════════════════════════════════════════════
+
+    match /systemIncidents/{incidentId} {
+      // Llegir: només SuperAdmin
+      allow read: if isSuperAdmin();
+      // Crear/Actualitzar: qualsevol usuari autenticat (el sistema reporta errors)
+      allow create, update: if isSignedIn();
+      // Eliminar: només SuperAdmin
+      allow delete: if isSuperAdmin();
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
     // SLUGS (índex d'unicitat per URLs d'organitzacions)
     // ═══════════════════════════════════════════════════════════════════════
 
     match /slugs/{slug} {
       allow read: if true;
       allow write: if isSuperAdmin();
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // ADMIN AUDIT LOGS (registre d'accions de SuperAdmin)
+    // ═══════════════════════════════════════════════════════════════════════
+
+    match /adminAuditLogs/{logId} {
+      // Llegir i escriure: només SuperAdmin
+      allow read, write: if isSuperAdmin();
     }
 
     // ═══════════════════════════════════════════════════════════════════════
@@ -214,6 +278,49 @@ service cloud.firestore {
       match /projectModule/{document=**} {
         allow read: if isMemberOf(orgId) || hasOrgInProfile(orgId) || isSuperAdmin();
         allow write: if (isMemberOf(orgId) && getMemberRole(orgId) in ['admin', 'user']) || isSuperAdmin();
+      }
+
+      // ─────────────────────────────────────────────────────────────────────
+      // LIQUIDACIONS (expense reports)
+      // Path: /organizations/{orgId}/expenseReports/{reportId}
+      // Updated: 2025-12-28
+      // ─────────────────────────────────────────────────────────────────────
+
+      match /expenseReports/{reportId} {
+        allow read: if isSuperAdmin() || isMemberOf(orgId) || hasOrgInProfile(orgId);
+        allow create, update, delete: if isSuperAdmin() || (isMemberOf(orgId) && getMemberRole(orgId) in ['admin', 'user']);
+      }
+
+      // ─────────────────────────────────────────────────────────────────────
+      // DOCUMENTS PENDENTS DE CONCILIACIÓ
+      // Path: /organizations/{orgId}/pendingDocuments/{docId}
+      // Nota: Aquests documents NO afecten saldos ni fiscalitat fins a match
+      // Updated: 2025-12-28
+      // ─────────────────────────────────────────────────────────────────────
+
+      match /pendingDocuments/{docId} {
+        allow read: if isSuperAdmin() || isMemberOf(orgId) || hasOrgInProfile(orgId);
+        allow create, update, delete: if isSuperAdmin() || (isMemberOf(orgId) && getMemberRole(orgId) in ['admin', 'user']);
+      }
+
+      // ─────────────────────────────────────────────────────────────────────
+      // REMESES (per a SEPA i altres operacions de pagament en bloc)
+      // Path: /organizations/{orgId}/remittances/{remittanceId}
+      // ─────────────────────────────────────────────────────────────────────
+
+      match /remittances/{remittanceId} {
+        allow read: if isMemberOf(orgId) || isSuperAdmin();
+        allow create, update, delete: if (isMemberOf(orgId) && getMemberRole(orgId) in ['admin', 'user']) || isSuperAdmin();
+      }
+
+      // ─────────────────────────────────────────────────────────────────────
+      // PREBANK REMITTANCES (remeses pendents de conciliar amb el banc)
+      // Path: /organizations/{orgId}/prebankRemittances/{remittanceId}
+      // ─────────────────────────────────────────────────────────────────────
+
+      match /prebankRemittances/{remittanceId} {
+        allow read: if isSuperAdmin() || isMemberOf(orgId) || hasOrgInProfile(orgId);
+        allow create, update, delete: if isSuperAdmin() || (isMemberOf(orgId) && getMemberRole(orgId) in ['admin', 'user']);
       }
     }
   }

@@ -30,7 +30,7 @@ No llegeixis tot. Consulta el que necessitis.
 
 - ❌ **NO és un ERP genèric** — No gestiona inventari, nòmines, facturació completa
 - ❌ **NO és un gestor de projectes** — El mòdul projectes és només per justificació econòmica
-- ❌ **NO és comptabilitat formal** — És pre-comptabilitat per ONGs petites
+- ❌ **NO és comptabilitat formal** — És pre-comptabilitat per entitats petites
 - ❌ **NO és multi-país** — Només Espanya (fiscalitat, formats bancaris)
 
 ### Stack tecnològic
@@ -129,7 +129,7 @@ No llegeixis tot. Consulta el que necessitis.
 
 ### 4.3 Incidències
 
-(pendent d'omplir)
+Consulta la secció 9 (Salut del sistema).
 
 ---
 
@@ -219,4 +219,345 @@ const isSuperAdmin = user?.uid === SUPER_ADMIN_UID;
 
 ---
 
-*Última actualització: 2024-12-27*
+## 9. Salut del sistema (Sentinelles)
+
+El panell `/admin` inclou un bloc **"Salut del sistema"** que detecta problemes automàticament.
+
+### Què mirar diàriament
+
+1. Entra a `/admin` i mira el bloc de sentinelles
+2. Si tot és 🟢, no cal fer res
+3. Si hi ha 🔴 vermell, obre "Veure incidents" i actua
+
+### Què mirar setmanalment
+
+1. S6 Encallaments: transaccions > 30 dies sense classificar
+2. S7 Fiscal 182: donants sense dades fiscals completes
+3. S8 Activitat: organitzacions inactives > 60 dies
+
+Aquestes són consultes, no generen alertes automàtiques.
+
+### Sentinelles (S1–S8)
+
+| ID | Nom | Tipus | Què detecta |
+|----|-----|-------|-------------|
+| S1 | Permisos | CRITICAL | Errors "Missing or insufficient permissions" |
+| S2 | Moviments | CRITICAL | Errors a la pantalla de moviments |
+| S3 | Importadors | CRITICAL | Errors d'importació (banc, CSV, Stripe) |
+| S4 | Exports | CRITICAL | Errors d'exportació (Excel, PDF, SEPA) |
+| S5 | Remeses OUT | CRITICAL | Invariants violades (deltaCents≠0, isValid=false) |
+| S6 | Encallaments | CONSULTA | Transaccions sense classificar > 30 dies |
+| S7 | Fiscal 182 | CONSULTA | Donants sense dades fiscals |
+| S8 | Activitat | CONSULTA | Organitzacions inactives > 60 dies |
+
+### Com actuar davant un incident
+
+1. **Clica l'icona ❓** per veure:
+   - Què passa (descripció)
+   - Impacte (per què és important)
+   - Primers passos (1-2 accions concretes)
+
+2. **Opcions d'acció:**
+   - **ACK**: Silencia l'incident temporalment (l'has vist però encara no l'has resolt)
+   - **Resolt**: Tanca l'incident (el problema s'ha corregit)
+
+3. **Si es repeteix el mateix error:** L'incident es reobre automàticament amb comptador incrementat.
+
+### Errors ignorats (anti-soroll)
+
+Aquests errors NO generen incidents:
+- `ERR_BLOCKED_BY_CLIENT` — Adblockers o extensions
+- `ResizeObserver loop` — Error benigne de layout
+- `ChunkLoadError` / `Loading chunk` — Problemes de xarxa
+- `Network request failed` / `Failed to fetch` — Xarxa temporal
+- `Script error.` — Errors cross-origin sense info útil
+- `AbortError` — Requests cancel·lats intencionalment
+
+### Test manual de verificació
+
+Per validar que el sistema funciona:
+
+1. **Test CLIENT_CRASH:**
+   - Afegeix `throw new Error('Test incident')` a qualsevol component
+   - Recarrega la pàgina
+   - Verifica que apareix incident a `/admin`
+
+2. **Test PERMISSIONS:**
+   - Intenta accedir a dades d'una altra org sense permisos
+   - Verifica que apareix incident tipus PERMISSIONS
+
+3. **Test anti-soroll:**
+   - Els errors `ERR_BLOCKED_BY_CLIENT` (adblockers) NO han de crear incidents
+
+### Què fer quan rebo un email d'alerta (v1.1)
+
+1. **Obre el link** `/admin` de l'email i localitza l'incident
+2. **Copia el prompt** clicant el botó 📋 o "Copiar prompt de reparació"
+3. **Enganxa a Claude Code** i deixa que proposi el fix mínim + QA
+
+**Opcions després de copiar:**
+- Si vas a treballar-hi ara: deixa l'incident OPEN
+- Si l'has vist però no pots ara: fes **ACK** (silencia 24h)
+- Si l'has resolt: fes **Resolt**
+
+**Per desactivar alertes email ràpidament (kill switch):**
+```bash
+firebase functions:config:set alerts.enabled=false
+firebase deploy --only functions
+```
+
+### Checklist QA pre-prod (alertes email v1.1)
+
+Abans d'activar `ALERTS_ENABLED=true` en producció:
+
+```
+□ 1. Config dev OFF
+   - Confirmar alerts.enabled=false a dev
+   - Verificar que no s'envia cap email encara que hi hagi incidents
+
+□ 2. Config prod
+   - firebase functions:config:set resend.api_key="re_xxx"
+   - firebase functions:config:set alert.email="raul.vico.ferre@gmail.com"
+   - firebase functions:config:set alerts.enabled=true
+   - firebase deploy --only functions
+
+□ 3. Test crash ruta core
+   - Injectar throw new Error("TEST_CORE_CRASH") a Moviments
+   - Recarregar 2 cops → incident OPEN amb count>=2 → 1 email
+   - Verificar que el cos inclou link a /admin + prompt
+
+□ 4. Test ACK
+   - Marcar l'incident com ACK
+   - Recarregar 5 cops → count puja però 0 emails nous
+
+□ 5. Test RESOLVED + reaparició
+   - Posar RESOLVED
+   - Reproduir de nou → ha de reobrir a OPEN
+   - No email si dins del cooldown 24h
+
+□ 6. Test soroll filtrat
+   - Reproduir ERR_BLOCKED_BY_CLIENT → no incident
+
+□ 7. Test sanitització
+   - Verificar que prompt i email no contenen emails d'usuaris, IBANs ni tokens
+
+□ 8. Test idempotència
+   - Recàrregues ràpides al mateix incident → 1 sol email
+```
+
+---
+
+## 10. Novetats del producte — Ritual de publicació
+
+Quan publiques una novetat nova des de SuperAdmin (`/admin` → Novetats):
+
+### Flux complet
+
+```
+1. Publicar ─────────────────────────────────────────────────────
+   □ Crear novetat a SuperAdmin (omplir camps o usar "Generar amb IA")
+   □ Revisar preview (App / Web / X / LinkedIn)
+   □ Clicar "Publicar"
+   → La campaneta de les instàncies mostrarà la novetat immediatament
+
+2. Exportar JSON (si web.enabled = true) ────────────────────────
+   □ Clicar "Exportar web JSON" al SuperAdmin
+   □ Es descarrega novetats-data.json
+
+3. Commit ───────────────────────────────────────────────────────
+   □ Substituir public/novetats-data.json amb el fitxer descarregat
+   □ git add public/novetats-data.json
+   □ git commit -m "docs(novetats): actualitzar web JSON - [títol breu]"
+
+4. Deploy ───────────────────────────────────────────────────────
+   □ git push (App Hosting desplega automàticament)
+   □ Verificar que /ca/novetats mostra la nova entrada
+```
+
+### Checklist ràpid
+
+```
+□ Campaneta funciona? → No cal deploy
+□ Web públic necessita actualització? → Exportar + Commit + Deploy
+□ Social? → Copiar textos des de preview, publicar manualment
+```
+
+### Guardrails (no negociables)
+
+- **NO HTML** a Firestore — sempre text pla estructurat
+- **NO `dangerouslySetInnerHTML`** — render segur via `renderStructuredText()`
+- **NO Firestore públic** — web llegeix JSON estàtic
+- **NO deps noves** — tot funciona amb stack existent
+
+---
+
+## 11. Entorn DEMO
+
+### 1. Propòsit
+
+- **Què és**: Instància completament separada de producció amb Firebase project propi (`summa-social-demo`)
+- **Per a què serveix**: Demos comercials, captures de pantalla, tests visuals, formació
+- **Per a què NO serveix**: Producció, dades reals, tests d'integració amb serveis externs
+
+### 2. Principis clau
+
+| Principi | Descripció |
+|----------|------------|
+| Firebase project separat | `summa-social-demo` — zero risc per a prod |
+| Dades 100% sintètiques | Noms, IBANs, imports... tot és fals |
+| Regenerable | Botó a `/admin` per tornar a l'estat inicial |
+| Sense serviceAccountKey | Usa ADC (Application Default Credentials) |
+| Bypass de rols UI | Qualsevol usuari autenticat pot navegar |
+
+### 3. Requisits previs (locals)
+
+```bash
+# Node.js (versió del projecte)
+node -v
+
+# gcloud CLI instal·lat
+gcloud --version
+
+# Autenticar ADC (només primer cop o quan expira)
+gcloud auth application-default login
+
+# Accés al projecte Firebase demo
+# (has de tenir permisos a summa-social-demo)
+```
+
+### 4. Arrencada DEMO
+
+```bash
+npm run dev:demo
+```
+
+**Què ha d'aparèixer:**
+- Terminal: `[DEMO] Projecte: summa-social-demo`
+- Browser: http://localhost:9002
+- Badge "DEMO" visible a navbar i `/admin`
+
+**Fitxers clau:**
+
+| Fitxer | Funció |
+|--------|--------|
+| `.env.demo` | Config Firebase demo + `SUPERADMIN_EMAIL` + `SUPER_ADMIN_UID` |
+| `scripts/run-demo-dev.mjs` | Runner que carrega env i neteja credencials |
+| `src/lib/demo/isDemoOrg.ts` | `isDemoEnv()` client+server |
+
+### 5. Regenerar dades
+
+1. Ves a http://localhost:9002/admin
+2. Secció "Entorn DEMO" (només visible en demo)
+3. Clica "Regenerar demo" → confirmació obligatòria
+4. Espera ~10-30s
+
+**Qui pot fer-ho**: Usuari amb email a `SUPERADMIN_EMAIL` o UID a `SUPER_ADMIN_UID` de `.env.demo`
+
+**Què fa el seed**:
+- Purga dades demo existents (`isDemoData: true`)
+- Crea org `demo-org` amb slug `demo`
+- Genera contactes, categories, transaccions, projectes, partides, despeses
+- Puja PDFs dummy a Storage
+
+| Entitat | Quantitat |
+|---------|-----------|
+| Donants | 120 |
+| Proveïdors | 35 |
+| Treballadors | 12 |
+| Categories | 16 |
+| Transaccions | ~765 |
+| Projectes | 4 |
+| Partides | 40 |
+| Despeses | 160 |
+| PDFs | 30 |
+
+### 6. Autenticació i permisos
+
+**En DEMO:**
+- `isDemoEnv()` retorna `true` (client i server)
+- Bypass de rols a UI: qualsevol usuari autenticat pot veure tot
+- El seed valida SuperAdmin via Firebase ID Token (no headers falsificables)
+- ADC substitueix serviceAccountKey per Admin SDK
+
+**Diferència amb prod:**
+- En prod, `isDemoEnv()` retorna `false`
+- Els rols i permisos funcionen normalment
+- Usa serviceAccountKey (no ADC)
+
+**⚠️ NO copiar patrons DEMO a prod** — el bypass de rols és només per UX de demo
+
+### 7. Problemes coneguts i solucions
+
+| Problema | Causa | Solució |
+|----------|-------|---------|
+| No puc descarregar serviceAccountKey | Google Workspace bloqueja claus privades | Usar ADC: `gcloud auth application-default login` |
+| "Could not load default credentials" | ADC no configurat o expirat | Executar `gcloud auth application-default login` |
+| "Cannot use undefined as Firestore value" | Camp `projectId` buit en algunes despeses | Sanejador a `writeBatch()` filtra camps undefined |
+| "No tens accés a aquesta organització" | UID no és membre ni SuperAdmin hardcodejat | `isDemoEnv()` fa bypass a `organization-provider.tsx` |
+| "Slug demo no té organització associada" | Mapping `slugs/demo` tenia camp incorrecte | Seed escriu `orgId` (no `organizationId`) |
+| "Firestore has already been initialized" | `db.settings()` cridat després d'altres operacions | Eliminat `db.settings()`, inicialització cached |
+
+### 8. Què NO s'ha de fer
+
+- ❌ **No fer seed des del client/browser** — sempre via API route amb Admin SDK
+- ❌ **No relaxar Firestore rules globals** — les rules són les mateixes que prod
+- ❌ **No reutilitzar DEMO per producció** — projectes Firebase separats
+- ❌ **No confiar en headers manuals per auth** — usar Firebase ID Token verificat
+- ❌ **No cridar `db.settings()` en runtime** — provoca crash en hot reload
+
+### Fitxers modificats per DEMO
+
+| Fitxer | Canvi |
+|--------|-------|
+| `src/lib/demo/isDemoOrg.ts` | `isDemoEnv()` mira `NEXT_PUBLIC_APP_ENV` + `APP_ENV` |
+| `src/lib/admin/superadmin-allowlist.ts` | Accepta `SUPERADMIN_EMAIL` de env |
+| `src/app/api/internal/demo/seed/route.ts` | Auth via ID Token, ADC, cached init |
+| `src/scripts/demo/seed-demo.ts` | Sanejador undefined, `orgId` al slug |
+| `src/hooks/organization-provider.tsx` | Bypass accés si `isDemoEnv()` |
+| `scripts/run-demo-dev.mjs` | Neteja `GOOGLE_APPLICATION_CREDENTIALS` |
+
+---
+
+## 12. Mode Rescat (admin)
+
+El **Mode Rescat** és un bypass temporal per recuperar accés a `/admin` quan el sistema de SuperAdmin via Firestore no funciona.
+
+### Quan usar-lo
+
+- No pots accedir a `/admin` tot i estar autenticat
+- El document `systemSuperAdmins/{uid}` no existeix o hi ha problemes de permisos
+- Necessites accés urgent per administrar organitzacions
+
+### Com activar-lo
+
+1. Obrir `src/app/admin/page.tsx`
+2. Canviar `const RESCUE_MODE = false;` → `const RESCUE_MODE = true;`
+3. Deploy o `npm run dev`
+
+### Què passa en Mode Rescat
+
+| Aspecte | Comportament |
+|---------|--------------|
+| **Accés** | Qualsevol usuari autenticat pot entrar |
+| **Banner** | Taronja indicant "Mode rescat activat" |
+| **Crear org** | ❌ Desactivat |
+| **Migrar slugs** | ❌ Desactivat |
+| **Suspendre/Reactivar** | ❌ Desactivat |
+| **I18n Manager** | ❌ Desactivat |
+| **SuperAdmins Manager** | ❌ Desactivat |
+| **Veure orgs** | ✅ Funciona |
+| **Entrar a org** | ✅ Funciona |
+
+### Com desactivar-lo
+
+1. Assegurar que el teu UID existeix a `systemSuperAdmins/{uid}` a Firestore
+2. Canviar `const RESCUE_MODE = true;` → `const RESCUE_MODE = false;`
+3. Deploy
+
+### ⚠️ Advertència
+
+El Mode Rescat elimina tota seguretat d'accés a `/admin`. Només usar-lo temporalment per recuperar control i desactivar-lo immediatament després.
+
+---
+
+*Última actualització: 2026-01-01*

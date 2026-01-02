@@ -264,13 +264,13 @@ export function OrganizationProvider({ children, orgSlug }: OrganizationProvider
             {organizationData.error.message}
           </p>
           <div className="flex gap-2 mt-4">
-            <button 
+            <button
               onClick={() => router.push('/dashboard')}
               className="px-4 py-2 bg-primary text-primary-foreground rounded-md hover:bg-primary/90"
             >
               Anar al panell
             </button>
-            <button 
+            <button
               onClick={() => router.push('/')}
               className="px-4 py-2 bg-secondary text-secondary-foreground rounded-md hover:bg-secondary/90"
             >
@@ -281,7 +281,7 @@ export function OrganizationProvider({ children, orgSlug }: OrganizationProvider
       </div>
     );
   }
-  
+
   // Si no hi ha organització (estat transitori, ex: redirect en curs), mostrar spinner
   // Això evita pàgina en blanc en cas de race condition
   if (!organizationData.organization) {
@@ -305,11 +305,11 @@ export function OrganizationProvider({ children, orgSlug }: OrganizationProvider
 /**
  * Hook per accedir a l'organització actual des de qualsevol component.
  * Ara també proporciona el slug de l'organització per construir URLs.
- * 
+ *
  * Ús:
  * ```typescript
  * const { organizationId, orgSlug, userRole } = useCurrentOrganization();
- * 
+ *
  * // Construir enllaços:
  * const dashboardUrl = `/${orgSlug}/dashboard`;
  * const movimentsUrl = `/${orgSlug}/dashboard/movimientos`;
@@ -317,21 +317,21 @@ export function OrganizationProvider({ children, orgSlug }: OrganizationProvider
  */
 export function useCurrentOrganization(): OrganizationContextType {
   const context = useContext(OrganizationContext);
-  
+
   if (context === undefined) {
     throw new Error('useCurrentOrganization must be used within an OrganizationProvider');
   }
-  
+
   return context;
 }
 
 /**
  * Hook helper per construir URLs amb el slug de l'organització actual.
- * 
+ *
  * Ús:
  * ```typescript
  * const { buildUrl } = useOrgUrl();
- * 
+ *
  * // Retorna: "/flores-kiskeya/dashboard/movimientos"
  * const url = buildUrl('/dashboard/movimientos');
  * ```

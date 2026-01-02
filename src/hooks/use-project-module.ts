@@ -18,6 +18,7 @@ import {
   deleteDoc,
   updateDoc,
   serverTimestamp,
+  documentId,
   QueryDocumentSnapshot,
   DocumentData,
   QueryConstraint,
@@ -43,6 +44,16 @@ import type {
 } from '@/lib/project-module-types';
 
 const PAGE_SIZE = 50;
+
+/**
+ * Helper per dividir un array en chunks de mida `size`.
+ * Usat per les queries batxejades amb `documentId()`.
+ */
+function chunkArray<T>(arr: T[], size: number): T[][] {
+  const out: T[][] = [];
+  for (let i = 0; i < arr.length; i += size) out.push(arr.slice(i, i + size));
+  return out;
+}
 
 /**
  * Resol la URL del document d'una despesa bancària.
@@ -160,12 +171,26 @@ export function useExpenseFeed(): UseExpenseFeedResult {
 
       const linksMap = new Map<string, ExpenseLink>();
 
-      // Firestore 'in' query suporta màxim 10 elements
-      // Per ara fem queries individuals (millorable amb batching)
-      for (const txId of txIds) {
-        const linkDoc = await getDoc(doc(linksRef, txId));
-        if (linkDoc.exists()) {
-          linksMap.set(txId, { id: linkDoc.id, ...linkDoc.data() } as ExpenseLink);
+      if (txIds.length > 0) {
+        // Firestore 'in' query: fem chunks de 10 per compatibilitat segura
+        const chunks = chunkArray(txIds, 10);
+
+        // Executem els chunks en paral·lel (roundtrips mínims)
+        const snaps = await Promise.all(
+          chunks.map((ids) =>
+            getDocs(
+              query(
+                linksRef,
+                where(documentId(), 'in', ids)
+              )
+            )
+          )
+        );
+
+        for (const snap of snaps) {
+          for (const d of snap.docs) {
+            linksMap.set(d.id, { id: d.id, ...(d.data() as Omit<ExpenseLink, 'id'>) } as ExpenseLink);
+          }
         }
       }
 
@@ -362,13 +387,56 @@ export function useUnifiedExpenseFeed(options?: UseUnifiedExpenseFeedOptions): U
 
     const allExpenses: UnifiedExpense[] = [];
 
+    // Separar IDs per tipus (off-bank vs bank) per fer queries batxejades
+    const offBankTxIds: string[] = [];
+    const bankTxIds: string[] = [];
     for (const txId of txIds) {
       if (txId.startsWith('off_')) {
-        // Despesa off-bank
+        offBankTxIds.push(txId);
+      } else {
+        bankTxIds.push(txId);
+      }
+    }
+
+    // Carregar off-bank expenses en paral·lel (chunks de 10)
+    const offBankMap = new Map<string, OffBankExpense>();
+    if (offBankTxIds.length > 0) {
+      const offBankDocIds = offBankTxIds.map(id => id.replace('off_', ''));
+      const chunks = chunkArray(offBankDocIds, 10);
+      const snaps = await Promise.all(
+        chunks.map((ids) =>
+          getDocs(query(offBankRef, where(documentId(), 'in', ids)))
+        )
+      );
+      for (const snap of snaps) {
+        for (const d of snap.docs) {
+          offBankMap.set(d.id, d.data() as OffBankExpense);
+        }
+      }
+    }
+
+    // Carregar bank expenses en paral·lel (chunks de 10)
+    const bankMap = new Map<string, ProjectExpenseExport>();
+    if (bankTxIds.length > 0) {
+      const chunks = chunkArray(bankTxIds, 10);
+      const snaps = await Promise.all(
+        chunks.map((ids) =>
+          getDocs(query(bankRef, where(documentId(), 'in', ids)))
+        )
+      );
+      for (const snap of snaps) {
+        for (const d of snap.docs) {
+          bankMap.set(d.id, d.data() as ProjectExpenseExport);
+        }
+      }
+    }
+
+    // Construir allExpenses mantenint l'ordre original
+    for (const txId of txIds) {
+      if (txId.startsWith('off_')) {
         const offBankId = txId.replace('off_', '');
-        const offBankDoc = await getDoc(doc(offBankRef, offBankId));
-        if (offBankDoc.exists()) {
-          const data = offBankDoc.data() as OffBankExpense;
+        const data = offBankMap.get(offBankId);
+        if (data) {
           const isPending = data.amountEUR === null || data.amountEUR === undefined;
           const amountEURValue = typeof data.amountEUR === 'number' ? -Math.abs(data.amountEUR) : 0;
           allExpenses.push({
@@ -394,10 +462,8 @@ export function useUnifiedExpenseFeed(options?: UseUnifiedExpenseFeedOptions): U
           });
         }
       } else {
-        // Despesa bank
-        const bankDoc = await getDoc(doc(bankRef, txId));
-        if (bankDoc.exists()) {
-          const data = bankDoc.data() as ProjectExpenseExport;
+        const data = bankMap.get(txId);
+        if (data) {
           allExpenses.push({
             txId,
             source: 'bank' as const,
@@ -697,11 +763,9 @@ export function useSaveOffBankExpense(): UseSaveOffBankExpenseResult {
       throw new Error('La data ha de tenir format YYYY-MM-DD');
     }
 
-    // Si no hi ha amountEUR, ha de ser moneda local
+    // Moneda local (opcional)
     const originalCurrency = data.originalCurrency?.trim().toUpperCase() || null;
-    if (amount === null && !originalCurrency) {
-      throw new Error('Cal indicar import EUR o moneda local');
-    }
+    // Ja no exigim import EUR o moneda local - es pot guardar una captura sense import
 
     setIsSaving(true);
     setError(null);

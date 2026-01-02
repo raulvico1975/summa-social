@@ -52,6 +52,7 @@ import {
   Eye,
   AlertCircle,
   CheckCircle2,
+  CreditCard,
 } from 'lucide-react';
 import type { Transaction, Category, Project, ContactType } from '@/lib/data';
 import { formatCurrencyEU } from '@/lib/normalize';
@@ -98,6 +99,9 @@ interface TransactionRowProps {
   onUndoRemittance?: (tx: Transaction) => void;
   onCreateNewContact: (txId: string, type: 'donor' | 'supplier') => void;
   onOpenReturnImporter?: () => void;
+  // SEPA reconciliation
+  detectedPrebankRemittance?: { id: string; nbOfTxs: number; ctrlSum: number } | null;
+  onReconcileSepa?: (tx: Transaction) => void;
   // Translations
   t: {
     date: string;
@@ -136,6 +140,7 @@ interface TransactionRowProps {
     remittanceProcessedLabel: string;
     remittanceNotApplicable: string;
     undoRemittance?: string;
+    reconcileSepa?: string;
   };
   getCategoryDisplayName: (category: string | null | undefined) => string;
 }
@@ -196,6 +201,8 @@ export const TransactionRow = React.memo(function TransactionRow({
   onUndoRemittance,
   onCreateNewContact,
   onOpenReturnImporter,
+  detectedPrebankRemittance,
+  onReconcileSepa,
   t,
   getCategoryDisplayName,
 }: TransactionRowProps) {
@@ -338,6 +345,17 @@ export const TransactionRow = React.memo(function TransactionRow({
     }, 100);
   }, [tx, onUndoRemittance]);
 
+  const handleReconcileSepa = React.useCallback(() => {
+    if (!onReconcileSepa) return;
+    setIsActionsMenuOpen(false);
+    setTimeout(() => {
+      if (document.activeElement instanceof HTMLElement) {
+        document.activeElement.blur();
+      }
+      onReconcileSepa(tx);
+    }, 100);
+  }, [tx, onReconcileSepa]);
+
   // Render transaction type badge
   const renderTransactionTypeBadge = () => {
     if (isReturn) {
@@ -472,6 +490,24 @@ export const TransactionRow = React.memo(function TransactionRow({
                 </TooltipContent>
               </Tooltip>
             )}
+            {/* Badge SEPA detectada */}
+            {detectedPrebankRemittance && !tx.isRemittance && onReconcileSepa && (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Badge
+                    variant="outline"
+                    className="gap-0.5 text-xs py-0 px-1.5 cursor-pointer hover:bg-purple-100 border-purple-300 text-purple-700 bg-purple-50"
+                    onClick={handleReconcileSepa}
+                  >
+                    <CreditCard className="h-3 w-3 text-purple-600" />
+                    <span>Remesa SEPA ({detectedPrebankRemittance.nbOfTxs})</span>
+                  </Badge>
+                </TooltipTrigger>
+                <TooltipContent>
+                  Remesa SEPA detectada: {detectedPrebankRemittance.nbOfTxs} pagaments · {formatCurrencyEU(detectedPrebankRemittance.ctrlSum)}
+                </TooltipContent>
+              </Tooltip>
+            )}
           </div>
           <div className="flex items-center gap-2">
             <p className={`text-sm truncate max-w-[320px] ${isReturnedDonation ? 'text-gray-400' : ''}`} title={tx.description}>
@@ -487,8 +523,8 @@ export const TransactionRow = React.memo(function TransactionRow({
             note={tx.note}
             onSave={handleSetNote}
           />
-          {/* Mobile summary: categoria i contacte sota el concepte */}
-          <div className="md:hidden mt-1 text-xs text-muted-foreground flex items-center gap-1 flex-wrap">
+          {/* Mobile/tablet summary: categoria i contacte sota el concepte */}
+          <div className="lg:hidden mt-1 text-xs text-muted-foreground flex items-center gap-1 flex-wrap">
             <span className="truncate max-w-[120px]">{getCategoryDisplayName(tx.category) || 'Sense categoria'}</span>
             <span className="text-muted-foreground/50">·</span>
             <span className="truncate max-w-[120px]">{contactName || 'Sense contacte'}</span>
@@ -496,8 +532,8 @@ export const TransactionRow = React.memo(function TransactionRow({
         </div>
       </TableCell>
 
-      {/* Contact - hidden on mobile */}
-      <TableCell className="py-1 hidden md:table-cell">
+      {/* Contact - hidden on mobile and tablet */}
+      <TableCell className="py-1 hidden lg:table-cell">
         {/* Cas 1: Pare de remesa de devolucions - mostrar estat, NO "Assignar donant" */}
         {tx.isRemittance && tx.remittanceType === 'returns' ? (
           <div className="flex items-center gap-1">
@@ -604,8 +640,8 @@ export const TransactionRow = React.memo(function TransactionRow({
         )}
       </TableCell>
 
-      {/* Category - hidden on mobile */}
-      <TableCell className="py-1 hidden md:table-cell">
+      {/* Category - hidden on mobile and tablet */}
+      <TableCell className="py-1 hidden lg:table-cell">
         <Popover open={isCategoryPopoverOpen} onOpenChange={setIsCategoryPopoverOpen}>
           <PopoverTrigger asChild>
             <Button
@@ -702,60 +738,46 @@ export const TransactionRow = React.memo(function TransactionRow({
         </TableCell>
       )}
 
-      {/* Document */}
-      <TableCell className="text-center py-1">
-        {isDocumentLoading ? (
-          <Loader2 className="h-4 w-4 animate-spin mx-auto text-muted-foreground" />
-        ) : hasDocument ? (
-          <div className="inline-flex items-center gap-1">
+      {/* Document + Actions (agrupats al rail dret) */}
+      <TableCell className="text-right py-1 pr-2">
+        <div className="inline-flex items-center justify-end gap-0.5">
+          {/* Document icon */}
+          {isDocumentLoading ? (
+            <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+          ) : hasDocument ? (
             <Tooltip>
               <TooltipTrigger asChild>
                 <a
                   href={tx.document!}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="inline-flex items-center justify-center h-9 w-9 rounded-md hover:bg-accent transition-colors"
+                  className="inline-flex items-center justify-center h-8 w-8 rounded-md hover:bg-accent transition-colors"
                   aria-label={t.viewDocument}
                 >
-                  <FileText className="h-5 w-5 text-emerald-600" />
+                  <FileText className="h-4 w-4 text-emerald-600" />
                 </a>
               </TooltipTrigger>
               <TooltipContent>{t.viewDocument}</TooltipContent>
             </Tooltip>
+          ) : (
             <Tooltip>
               <TooltipTrigger asChild>
                 <button
-                  onClick={handleDeleteDocument}
-                  className="inline-flex items-center justify-center h-6 w-6 rounded-md text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors"
-                  aria-label={t.deleteDocument}
+                  onClick={handleAttachDocument}
+                  className="inline-flex items-center justify-center h-8 w-8 rounded-md hover:bg-accent transition-colors"
+                  aria-label={isExpense ? t.attachProof : t.attachDocument}
                 >
-                  <Trash2 className="h-3.5 w-3.5" />
+                  <FileText className={`h-4 w-4 ${isExpense ? 'text-muted-foreground/60' : 'text-muted-foreground/30'}`} />
                 </button>
               </TooltipTrigger>
-              <TooltipContent>{t.deleteDocument}</TooltipContent>
+              <TooltipContent>
+                {isExpense ? t.attachProof : t.attachDocument}
+              </TooltipContent>
             </Tooltip>
-          </div>
-        ) : (
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <button
-                onClick={handleAttachDocument}
-                className="inline-flex items-center justify-center h-9 w-9 rounded-md hover:bg-accent transition-colors"
-                aria-label={isExpense ? t.attachProof : t.attachDocument}
-              >
-                <FileText className={`h-5 w-5 ${isExpense ? 'text-muted-foreground/60' : 'text-muted-foreground/30'}`} />
-              </button>
-            </TooltipTrigger>
-            <TooltipContent>
-              {isExpense ? t.attachProof : t.attachDocument}
-            </TooltipContent>
-          </Tooltip>
-        )}
-      </TableCell>
+          )}
 
-      {/* Actions */}
-      <TableCell className="text-right py-1">
-        <DropdownMenu open={isActionsMenuOpen} onOpenChange={setIsActionsMenuOpen}>
+          {/* Actions menu */}
+          <DropdownMenu open={isActionsMenuOpen} onOpenChange={setIsActionsMenuOpen}>
           <DropdownMenuTrigger asChild>
             <Button
               variant="ghost"
@@ -813,6 +835,13 @@ export const TransactionRow = React.memo(function TransactionRow({
                 {t.splitPaymentRemittance || 'Dividir remesa pagaments'}
               </DropdownMenuItem>
             )}
+            {/* SEPA pre-banc detectada */}
+            {detectedPrebankRemittance && !tx.isRemittance && onReconcileSepa && (
+              <DropdownMenuItem onClick={handleReconcileSepa} className="text-purple-600">
+                <CreditCard className="mr-2 h-4 w-4" />
+                {t.reconcileSepa || 'Desagregar i conciliar'}
+              </DropdownMenuItem>
+            )}
             {tx.isRemittance && tx.remittanceId && onUndoRemittance && (
               <DropdownMenuItem onClick={handleUndoRemittance} className="text-orange-600">
                 <Undo2 className="mr-2 h-4 w-4" />
@@ -826,6 +855,7 @@ export const TransactionRow = React.memo(function TransactionRow({
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
+        </div>
       </TableCell>
     </>
   );

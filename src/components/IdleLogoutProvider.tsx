@@ -22,6 +22,12 @@ const RESERVED_SEGMENTS = [
   'privacy',
   'api',
   'q',
+  // Idiomes públics i segment intern
+  'ca',
+  'es',
+  'fr',
+  'pt',
+  'public',
 ];
 
 function buildInstanceLoginUrl(pathname: string | null): string {
@@ -57,6 +63,10 @@ export function IdleLogoutProvider({
   const warnTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const didLogoutRef = useRef(false);
 
+  // Mantenim pathname en un ref per tenir sempre el valor actual quan dispara el timer
+  const pathnameRef = useRef(pathname);
+  pathnameRef.current = pathname;
+
   const clearTimers = useCallback(() => {
     if (idleTimerRef.current) clearTimeout(idleTimerRef.current);
     if (warnTimerRef.current) clearTimeout(warnTimerRef.current);
@@ -74,9 +84,12 @@ export function IdleLogoutProvider({
     didLogoutRef.current = true;
     clearTimers();
 
+    // Usem pathnameRef.current per tenir el valor actual, no el capturat pel closure
+    const currentPathname = pathnameRef.current;
+
     // Primer redirigim a login, després fem signOut
     // Així els components amb subscripcions Firestore es desmunten abans que auth sigui null
-    router.replace(buildInstanceLoginUrl(pathname));
+    router.replace(buildInstanceLoginUrl(currentPathname));
 
     // Petit delay per permetre la navegació abans del signOut
     setTimeout(async () => {
@@ -86,7 +99,7 @@ export function IdleLogoutProvider({
         // Ignorem errors de signOut si ja hem redirigit
       }
     }, 100);
-  }, [auth, clearTimers, router, pathname]);
+  }, [auth, clearTimers, router]);
 
   const scheduleTimers = useCallback(() => {
     clearTimers();

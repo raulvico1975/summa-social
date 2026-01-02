@@ -7,10 +7,10 @@
 
 ## 1. Qui som
 
-**Summa Social** és una aplicació de gestió financera per a ONGs i entitats socials, desenvolupada i mantinguda per Raül Vico, que actua com a responsable del tractament de les dades dels usuaris de l'aplicació.
+**Summa Social** és una aplicació de gestió financera per a entitats socials, desenvolupada i mantinguda per Raül Vico, que actua com a responsable del tractament de les dades dels usuaris de l'aplicació.
 
 - **Responsable del tractament** (per a dades d'usuaris de l'aplicació): Summa Social / Raül Vico
-- **Encarregat del tractament** (per a dades de les ONGs clients): Summa Social actua per compte de cada ONG, que és la responsable de les dades dels seus donants, socis, proveïdors i treballadors.
+- **Encarregat del tractament** (per a dades de les entitats clients): Summa Social actua per compte de cada entitat, que és la responsable de les dades dels seus donants, socis, proveïdors i treballadors.
 
 ---
 
@@ -27,16 +27,16 @@
 
 Les credencials d'accés (contrasenyes) són gestionades per Firebase Authentication i no són accessibles per Summa Social.
 
-### 2.2 Dades de les ONGs (Summa Social és encarregat)
+### 2.2 Dades de les entitats (Summa Social és encarregat)
 
-Summa Social tracta les següents dades per compte de les ONGs clients:
+Summa Social tracta les següents dades per compte de les entitats clients:
 
 - **Donants i socis**: nom, NIF, IBAN, adreça, email, telèfon
 - **Proveïdors**: nom, NIF, dades de contacte
 - **Treballadors**: nom, NIF, dades laborals
 - **Moviments bancaris**: data, import, concepte, categoria
 
-La base legal i el deure d'informar els interessats (donants, socis, etc.) correspon a cada ONG com a responsable del tractament.
+La base legal i el deure d'informar els interessats (donants, socis, etc.) correspon a cada entitat com a responsable del tractament.
 
 **Summa Social no tracta dades de categories especials segons l'Art. 9 del RGPD.**
 
@@ -47,7 +47,7 @@ La base legal i el deure d'informar els interessats (donants, socis, etc.) corre
 | Tractament | Base legal |
 |------------|------------|
 | Usuaris de l'aplicació | Execució del contracte de servei (Art. 6.1.b RGPD) |
-| Dades de les ONGs | Segons instruccions del responsable (ONG) |
+| Dades de les entitats | Segons instruccions del responsable (entitat) |
 
 ---
 
@@ -68,11 +68,11 @@ Més detalls al document intern [Subprocessors.md](./Subprocessors.md).
 
 ### 4.2 Cessions per obligació legal
 
-Les ONGs clients poden cedir dades a:
+Les entitats clients poden cedir dades a:
 - **Agència Tributària**: Model 182 (donatius), Model 347 (operacions amb tercers)
 - **Entitats bancàries**: Gestió de remeses i rebuts
 
-Aquestes cessions són responsabilitat de cada ONG.
+Aquestes cessions són responsabilitat de cada entitat.
 
 ---
 
@@ -81,8 +81,8 @@ Aquestes cessions són responsabilitat de cada ONG.
 | Tipus de dada | Termini |
 |---------------|---------|
 | Usuaris de l'aplicació | Mentre el compte estigui actiu + 12 mesos |
-| Dades fiscals (ONGs) | Mínim 6 anys (obligacions mercantils i comptables) |
-| Altres dades de contactes | Segons política del responsable (ONG) |
+| Dades fiscals (entitats) | Mínim 6 anys (obligacions mercantils i comptables) |
+| Altres dades de contactes | Segons política del responsable (entitat) |
 
 Les còpies de seguretat es conserven durant períodes limitats i es gestionen segons les mesures descrites al document intern de seguretat.
 
@@ -102,7 +102,7 @@ Com a interessat, tens dret a:
 ### Com exercir els teus drets
 
 - **Usuaris de l'aplicació**: Escriu a privacy@summasocial.app
-- **Donants, socis o altres interessats d'una ONG**: Contacta directament amb l'ONG corresponent. Summa Social assistirà l'ONG en la gestió de la teva sol·licitud.
+- **Donants, socis o altres interessats d'una entitat**: Contacta directament amb l'entitat corresponent. Summa Social assistirà l'entitat en la gestió de la teva sol·licitud.
 
 Termini de resposta: 1 mes (ampliable a 2 en casos complexos).
 

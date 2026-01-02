@@ -223,6 +223,7 @@ export type Contact = {
   zipCode: string;                 // Codi postal
   city?: string;                   // Ciutat
   province?: string;               // Província
+  iban?: string;                   // IBAN (opcional, per pagaments/reemborsaments)
   createdAt: string;
   updatedAt?: string;
   defaultCategoryId?: string;      // Categoria per defecte per auto-assignar a transaccions
@@ -361,10 +362,14 @@ export type OrganizationLanguage = 'ca' | 'es';
  */
 export type OrganizationFeatures = {
   projectModule?: boolean;         // Mòdul de projectes i justificació econòmica
+  pendingDocs?: boolean;           // Documents pendents de conciliació (factures/nòmines pre-banc)
+  expenseReports?: {
+    kmRateDefault?: number;        // Tarifa €/km per defecte per quilometratge (ex: 0.19)
+  };
 };
 
 /**
- * Representa una organització (ONG/entitat social).
+ * Representa una organització (entitat social).
  * S'emmagatzema a: organizations/{orgId}
  */
 export type Organization = {
@@ -403,6 +408,8 @@ export type Organization = {
   updatedAt?: string;
   suspendedAt?: string;
   suspendedReason?: string;
+  // Demo
+  isDemo?: boolean;                // true només per l'org demo (entorn de demostració)
 };
 
 /**

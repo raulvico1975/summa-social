@@ -13,18 +13,12 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
-import { AlertCircle, Plus, FolderKanban, Calendar, Euro, Eye, Pencil, Info } from 'lucide-react';
+import { AlertCircle, Plus, FolderKanban, Calendar, Euro, Eye, Pencil } from 'lucide-react';
 import { EmptyState } from '@/components/ui/empty-state';
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from '@/components/ui/tooltip';
 import { trackUX } from '@/lib/ux/trackUX';
 import { useTranslations } from '@/i18n';
 import { collection, getDocs } from 'firebase/firestore';
-import type { Project, ExpenseAssignment, BudgetLine } from '@/lib/project-module-types';
+import type { Project, ExpenseAssignment } from '@/lib/project-module-types';
 
 function formatDate(dateStr: string | null): string {
   if (!dateStr) return '-';
@@ -43,18 +37,15 @@ function formatAmount(amount: number | null): string {
 interface ProjectCardProps {
   project: Project;
   executedAmount: number;
-  budgetLinesData: { sum: number; hasLines: boolean } | null; // null = encara carregant
 }
 
-function ProjectCard({ project, executedAmount, budgetLinesData }: ProjectCardProps) {
+function ProjectCard({ project, executedAmount }: ProjectCardProps) {
   const { t } = useTranslations();
   const { buildUrl } = useOrgUrl();
   const router = useRouter();
 
-  // Càlculs econòmics
-  // Si hi ha partides, usar la suma de partides; sinó, el pressupost global del projecte
-  const hasBudgetLines = budgetLinesData?.hasLines ?? false;
-  const budgeted = hasBudgetLines ? budgetLinesData!.sum : (project.budgetEUR ?? 0);
+  // Càlculs econòmics (pressupost del projecte, sense carregar partides al llistat)
+  const budgeted = project.budgetEUR ?? 0;
   const pending = budgeted - executedAmount;
 
   // Click en el card → navega a Gestió Econòmica
@@ -117,29 +108,8 @@ function ProjectCard({ project, executedAmount, budgetLinesData }: ProjectCardPr
         {/* Info econòmica */}
         <div className="grid grid-cols-3 gap-2 text-sm border-t pt-3">
           <div>
-            <span className="text-muted-foreground text-xs flex items-center gap-1">
+            <span className="text-muted-foreground text-xs block">
               Pressupostat
-              {hasBudgetLines && (
-                <TooltipProvider delayDuration={200}>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <button
-                        type="button"
-                        className="inline-flex items-center justify-center h-3.5 w-3.5 rounded-full border border-muted-foreground/30 text-muted-foreground/70 hover:border-muted-foreground/50 hover:text-muted-foreground cursor-help focus:outline-none focus:ring-1 focus:ring-ring"
-                        aria-label={t.projectModule?.budgetInfoLabel ?? 'Informació sobre Pressupostat'}
-                        onClick={(e) => e.stopPropagation()}
-                      >
-                        <Info className="h-2.5 w-2.5" />
-                      </button>
-                    </TooltipTrigger>
-                    <TooltipContent side="top" className="max-w-[200px] text-center">
-                      <p className="text-xs">
-                        {t.projectModule?.budgetFromLinesTooltip ?? 'Pressupost del projecte = suma de les partides.'}
-                      </p>
-                    </TooltipContent>
-                  </Tooltip>
-                </TooltipProvider>
-              )}
             </span>
             <span className="font-medium">{formatAmount(budgeted)}</span>
           </div>
@@ -235,48 +205,6 @@ export default function ProjectsListPage() {
     loadLinks();
   }, [firestore, organizationId]);
 
-  // Carregar suma de partides per cada projecte
-  // Guardem { sum, hasLines } per distingir entre "no hi ha partides" i "partides amb sum=0"
-  const [budgetLinesDataByProject, setBudgetLinesDataByProject] = React.useState<Map<string, { sum: number; hasLines: boolean }>>(new Map());
-
-  React.useEffect(() => {
-    if (!organizationId || projects.length === 0) return;
-
-    const loadBudgetLinesSums = async () => {
-      try {
-        const dataMap = new Map<string, { sum: number; hasLines: boolean }>();
-
-        for (const project of projects) {
-          const linesRef = collection(
-            firestore,
-            'organizations',
-            organizationId,
-            'projectModule',
-            '_',
-            'projects',
-            project.id,
-            'budgetLines'
-          );
-          const snapshot = await getDocs(linesRef);
-
-          // Sumar tots els budgetedAmountEUR de les partides
-          let sum = 0;
-          for (const doc of snapshot.docs) {
-            const data = doc.data() as BudgetLine;
-            sum += data.budgetedAmountEUR ?? 0;
-          }
-          dataMap.set(project.id, { sum, hasLines: snapshot.docs.length > 0 });
-        }
-
-        setBudgetLinesDataByProject(dataMap);
-      } catch (err) {
-        console.error('Error loading budget lines sums:', err);
-      }
-    };
-
-    loadBudgetLinesSums();
-  }, [firestore, organizationId, projects]);
-
   // Track page open
   React.useEffect(() => {
     trackUX('projects.open', { projectCount: projects.length });
@@ -345,17 +273,13 @@ export default function ProjectsListPage() {
         </EmptyState>
       ) : (
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-          {projects.map((project) => {
-            const linesData = budgetLinesDataByProject.get(project.id);
-            return (
-              <ProjectCard
-                key={project.id}
-                project={project}
-                executedAmount={executionByProject.get(project.id) ?? 0}
-                budgetLinesData={linesData ?? null}
-              />
-            );
-          })}
+          {projects.map((project) => (
+            <ProjectCard
+              key={project.id}
+              project={project}
+              executedAmount={executionByProject.get(project.id) ?? 0}
+            />
+          ))}
         </div>
       )}
     </div>

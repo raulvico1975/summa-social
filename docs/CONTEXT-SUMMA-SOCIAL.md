@@ -8,7 +8,7 @@
 
 ## 1. QUÈ ÉS SUMMA SOCIAL
 
-Summa Social és una aplicació de gestió econòmica i fiscal per a ONGs petites i mitjanes d'Espanya.
+Summa Social és una aplicació de gestió econòmica i fiscal per a entitats petites i mitjanes d'Espanya.
 
 **NO és un ERP genèric ni un gestor de projectes.**
 

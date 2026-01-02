@@ -1,7 +1,8 @@
 'use client';
 
 import * as React from 'react';
-import { useRouter, useParams } from 'next/navigation';
+import { Suspense } from 'react';
+import { useRouter, useParams, useSearchParams } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -10,7 +11,7 @@ import { useFirebase } from '@/firebase';
 import { useToast } from '@/hooks/use-toast';
 import { signInWithEmailAndPassword, setPersistence, browserLocalPersistence } from 'firebase/auth';
 import { doc, getDoc } from 'firebase/firestore';
-import { Loader2, Building2, AlertCircle } from 'lucide-react';
+import { Loader2, Building2, AlertCircle, Clock } from 'lucide-react';
 
 interface OrgInfo {
   id: string;
@@ -18,10 +19,13 @@ interface OrgInfo {
   slug: string;
 }
 
-export default function OrgLoginPage() {
+function OrgLoginContent() {
   const router = useRouter();
   const params = useParams();
+  const searchParams = useSearchParams();
   const orgSlug = params.orgSlug as string;
+  const reason = searchParams.get('reason');
+  const nextPath = searchParams.get('next');
   const { auth, firestore, user, isUserLoading } = useFirebase();
   const { toast } = useToast();
 
@@ -63,12 +67,13 @@ export default function OrgLoginPage() {
     loadOrganization();
   }, [orgSlug, firestore]);
 
-  // Si l'usuari ja està autenticat, redirigir al dashboard
+  // Si l'usuari ja està autenticat, redirigir al dashboard (o nextPath si ve de inactivitat)
   React.useEffect(() => {
     if (user && !isUserLoading && organization) {
-      router.push(`/${orgSlug}/dashboard`);
+      const destination = nextPath || `/${orgSlug}/dashboard`;
+      router.push(destination);
     }
-  }, [user, isUserLoading, organization, orgSlug, router]);
+  }, [user, isUserLoading, organization, orgSlug, router, nextPath]);
 
   const handleLogin = async () => {
     if (!email || !password) {
@@ -89,7 +94,9 @@ export default function OrgLoginPage() {
         description: 'Bienvenido de nuevo',
       });
 
-      router.push(`/${orgSlug}/dashboard`);
+      // Redirigir a nextPath si existeix, sinó al dashboard
+      const destination = nextPath || `/${orgSlug}/dashboard`;
+      router.push(destination);
     } catch (err: any) {
       console.error('Error de login:', err);
       setIsLoggingIn(false);
@@ -179,6 +186,16 @@ export default function OrgLoginPage() {
           </div>
         )}
 
+        {/* Missatge de sessió tancada per inactivitat */}
+        {reason === 'idle' && (
+          <div className="flex items-center gap-2 bg-amber-50 dark:bg-amber-950/30 text-amber-700 dark:text-amber-400 rounded-lg px-4 py-3 w-full">
+            <Clock className="h-5 w-5 shrink-0" />
+            <span className="text-sm">
+              Sessió tancada per inactivitat. Torna a iniciar sessió per continuar.
+            </span>
+          </div>
+        )}
+
         <div>
           <h1 className="text-2xl font-bold tracking-tight">Iniciar sesión</h1>
           <p className="text-muted-foreground mt-2">
@@ -244,5 +261,20 @@ export default function OrgLoginPage() {
         </Button>
       </div>
     </main>
+  );
+}
+
+export default function OrgLoginPage() {
+  return (
+    <Suspense
+      fallback={
+        <main className="flex min-h-screen flex-col items-center justify-center bg-background p-4">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+          <p className="mt-4 text-muted-foreground">Cargando...</p>
+        </main>
+      }
+    >
+      <OrgLoginContent />
+    </Suspense>
   );
 }

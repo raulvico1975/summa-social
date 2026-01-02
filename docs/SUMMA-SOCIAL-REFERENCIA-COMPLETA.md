@@ -1,6 +1,6 @@
 # ═══════════════════════════════════════════════════════════════════════════════
 # SUMMA SOCIAL - REFERÈNCIA COMPLETA DEL PROJECTE
-# Versió 1.20 - Desembre 2025
+# Versió 1.26 - Desembre 2025
 # ═══════════════════════════════════════════════════════════════════════════════
 
 
@@ -46,11 +46,11 @@ Defineix:
 
 ## 1.1 Què és Summa Social?
 
-Summa Social és una aplicació web de gestió financera dissenyada específicament per a petites i mitjanes ONGs i entitats sense ànim de lucre d'Espanya. L'aplicació substitueix els fulls de càlcul (Excel/Google Sheets) per una eina intel·ligent i centralitzada.
+Summa Social és una aplicació web de gestió financera dissenyada específicament per a petites i mitjanes entitats sense ànim de lucre d'Espanya. L'aplicació substitueix els fulls de càlcul (Excel/Google Sheets) per una eina intel·ligent i centralitzada.
 
 ## 1.2 Problema que Resol
 
-Les ONGs espanyoles gestionen les seves finances amb fulls de càlcul, cosa que provoca:
+Les entitats espanyoles gestionen les seves finances amb fulls de càlcul, cosa que provoca:
 - Errors humans en la categorització de moviments
 - Dificultat per generar informes fiscals obligatoris (Model 182, Model 347)
 - Impossibilitat de tenir una visió consolidada de les finances
@@ -96,14 +96,14 @@ Eina centralitzada amb:
 | Autenticació | Firebase Auth | - |
 | Emmagatzematge | Firebase Storage | - |
 | IA | Genkit + Google Gemini | - |
-| Idiomes | Català, Espanyol i Francès | i18n |
+| Idiomes | Català, Espanyol, Francès i Portuguès | i18n |
 | Excel/CSV | SheetJS (xlsx) | - |
 | PDF | jsPDF | - |
 
 ## 1.6 Sobre l'Usuari Desenvolupador
 
 - **Nom**: Raul
-- **Perfil**: NO programador - Assessor d'ONGs que porta els comptes de diverses entitats
+- **Perfil**: NO programador - Assessor d'entitats que porta els comptes de diverses organitzacions
 - **Entorn**: VS Code + Claude Code
 - **Necessitats**: Codi COMPLET (mai fragments), passos verificables, respostes en CATALÀ
 
@@ -241,7 +241,12 @@ El sistema de categorització IA genera logs estructurats per facilitar el diagn
 ```
 /src
   /app                          → Pàgines (Next.js App Router)
-    /[orgSlug]                   → Rutes per organització
+    /[lang]                      → Rutes públiques multiidioma (NOU v1.25)
+      /login                     → Login públic (/ca/login, /es/login, etc.)
+      /privacy                   → Política de privacitat
+      /contact                   → Pàgina de contacte
+      layout.tsx                 → Validació idioma + generateStaticParams
+    /[orgSlug]                   → Rutes per organització (app privada)
       /dashboard
         /page.tsx                → Dashboard principal
         /movimientos             → Gestió de transaccions
@@ -254,6 +259,10 @@ El sistema de categorització IA genera logs estructurats per facilitar el diagn
         /configuracion           → Configuració de l'organització
       /login                     → Login per organització
     /admin                       → Panel SuperAdmin global
+    /login                       → Redirect stub → /[lang]/login
+    /privacy                     → Redirect stub → /[lang]/privacy
+    /contacte                    → Redirect stub → /[lang]/contact
+    /privacitat                  → Redirect stub → /[lang]/privacy (legacy)
   /components                    → Components React reutilitzables
     /ui                          → Components shadcn/ui
     /return-importer             → Importador de devolucions (NOU v1.8)
@@ -288,9 +297,11 @@ El sistema de categorització IA genera logs estructurats per facilitar el diagn
       auto-match.test.ts         → 24 tests
       model182.test.ts           → 18 tests
   /i18n                          → Traduccions
-    /ca.ts                       → Català (idioma base)
-    /es.ts                       → Espanyol
-    /fr.ts                       → Francès (NOU v1.11, complet)
+    /ca.ts                       → Català (idioma base, app privada)
+    /es.ts                       → Espanyol (app privada)
+    /fr.ts                       → Francès (app privada)
+    /public.ts                   → Traduccions pàgines públiques CA/ES/FR/PT (NOU v1.25)
+    /locales/*.json              → Bundles JSON per runtime (ca, es, fr, pt)
     # Criteri: fr.ts conté totes les claus; si falta traducció, es manté text CA
   /ai                            → Fluxos de Genkit (IA)
 ```
@@ -465,7 +476,7 @@ organizations/
 - Avís 1 minut abans del logout
 - Events monitoritzats: mouse, teclat, scroll, touch, click, canvi de visibilitat
 - Redirecció a `/{slug}/login?reason=idle` (si l'usuari està dins una org) o `/login?reason=idle` (rutes globals)
-- Segments reservats (no són slugs): `login`, `registre`, `redirect-to-org`, `admin`, `dashboard`, `privacy`, `api`, `q`
+- Segments reservats (no són slugs): `login`, `registre`, `redirect-to-org`, `admin`, `dashboard`, `privacy`, `api`, `q`, `quick`, `quick-expense`
 - Implementat a `src/components/IdleLogoutProvider.tsx`
 
 ### Flux de redirecció d'organització
@@ -1469,55 +1480,294 @@ Accions irreversibles només per SuperAdmin:
 - Esborra totes les transaccions filles
 - Restaura la transacció original per tornar-la a processar
 
-### 3.9.7 Idiomes (i18n) (NOU v1.11)
+### 3.9.7 Sistema de traduccions (i18n)
+
+#### Context i problema resolt
+
+El sistema anterior (només `ca.ts`, `es.ts`, `fr.ts`) requeria un developer per afegir o modificar traduccions. Això bloquejava:
+- Traducció externa (traductors sense accés al codi)
+- Afegir idiomes nous sense deploy
+- Correccions ràpides de textos
+
+El nou sistema permet gestió completa des del SuperAdmin sense tocar codi.
+
+#### Arquitectura
+
+- **Source of truth editable**: Firebase Storage
+  `i18n/{lang}.json`
+
+- **Fallback local (repo)**:
+  `src/i18n/locales/{lang}.json`
+
+- **Legacy fallback**:
+  Objectes TypeScript (`ca.ts`, `es.ts`, `fr.ts`) només per codi antic
+
+#### Ordre de càrrega en runtime
+
+1. JSON a Firebase Storage (`i18n/{lang}.json`)
+2. JSON local del repositori (`src/i18n/locales/{lang}.json`)
+3. Fallback a la clau (`"dashboard.title"`)
+
+#### Contracte d'ús
+
+- **`t.xxx.yyy`** → sistema legacy (objecte TypeScript)
+- **`tr("xxx.yyy")`** → sistema nou (JSON pla)
+
+**❌ Prohibit: `t("xxx.yyy")`** (no existeix, causa error de producció)
 
 #### Idiomes disponibles
 
-| Codi | Idioma | Estat | Fitxer |
-|------|--------|-------|--------|
-| `ca` | Català | Base (complet) | `src/i18n/ca.ts` |
-| `es` | Espanyol | Complet | `src/i18n/es.ts` |
-| `fr` | Francès | Complet (v1.11) | `src/i18n/fr.ts` |
+| Codi | Idioma | TS (legacy) | JSON | Estat |
+|------|--------|-------------|------|-------|
+| `ca` | Català | ✅ | ✅ | Base (complet) |
+| `es` | Español | ✅ | ✅ | Complet |
+| `fr` | Français | ✅ | ✅ | Complet |
+| `pt` | Português | ❌ | ✅ | JSON-only |
 
 #### Selector d'idioma
 
 - Ubicació: Menú usuari (cantonada superior dreta)
-- Persistència: `localStorage` + document d'usuari a Firestore
+- Persistència: `localStorage`
 - Comportament: Canvi immediat sense recarregar
 
-#### Arquitectura i18n
+#### Operativa SuperAdmin (Traduccions)
+
+1. Accedir a SuperAdmin → Traduccions
+2. Seleccionar idioma
+3. Descarregar JSON
+4. Editar externament (Excel / POEditor / editor JSON)
+5. Pujar JSON validat
+6. Clicar "Publicar" (invalida cache global)
+
+Els canvis són immediats per a tots els usuaris.
+
+#### Afegir un idioma nou
+
+1. Afegir codi d'idioma a `Language` (`src/i18n/index.ts`)
+2. Crear `src/i18n/locales/{lang}.json` (copiat de `ca.json`)
+3. Afegir idioma als selectors (app + SuperAdmin)
+4. Descarregar plantilla via SuperAdmin
+5. Traduir, pujar i publicar
+
+#### Scripts
+
+```bash
+# Exportar traduccions TS a JSON i generar report de claus
+npm run i18n:export
+```
+
+Exemple de report:
+```
+[i18n] Key comparison report:
+  Base (ca): 850 keys
+  es: ✓ Perfect match (850 keys)
+  fr: ✓ Perfect match (850 keys)
+  pt: ✓ Perfect match (850 keys)
+```
+
+#### Fitxers clau
+
+| Fitxer | Responsabilitat |
+|--------|-----------------|
+| `src/i18n/index.ts` | Tipus `Language`, context, hook |
+| `src/i18n/provider.tsx` | Provider, listener versió, carrega JSON |
+| `src/i18n/json-runtime.ts` | Loader Storage/local, cache, `trFactory` |
+| `src/i18n/locales/*.json` | Bundles JSON (fallback local) |
+| `src/i18n/ca.ts`, `es.ts`, `fr.ts` | Traduccions TS legacy |
+| `src/i18n/public.ts` | Traduccions pàgines públiques (NOU v1.25) |
+| `scripts/i18n/export-all.ts` | Export TS → JSON |
+
+Per a més detall operatiu, veure `docs/i18n.md`.
+
+
+### 3.9.8 i18n per a Rutes Públiques (NOU v1.25)
+
+#### Context i problema resolt
+
+Les pàgines públiques (login, privacy, contact) estaven només en català amb textos hardcoded. Per millorar:
+- SEO internacional amb canonical + hreflang
+- Experiència d'usuari en el seu idioma preferit
+- Consistència amb l'app privada (4 idiomes)
+
+#### Arquitectura
+
+Per evitar col·lisió entre `[lang]` i `[orgSlug]` (tots dos segments dinàmics al root),
+les pàgines públiques estan sota un segment real `public`:
+
+```
+/src/app/public/[lang]/       → Segment real + dinàmic (intern)
+  /page.tsx                   → HOME multiidioma
+  /funcionalitats/page.tsx    → Funcionalitats
+  /login/page.tsx             → Pàgina login multiidioma
+  /privacy/page.tsx           → Política de privacitat
+  /contact/page.tsx           → Pàgina de contacte
+  layout.tsx                  → Validació idioma + SSG params
+
+/src/app/page.tsx             → Redirect stub → /${lang}
+/src/app/funcionalitats/page.tsx → Redirect stub → /${lang}/funcionalitats
+/src/app/login/page.tsx       → Redirect stub → /${lang}/login
+/src/app/privacy/page.tsx     → Redirect stub → /${lang}/privacy
+/src/app/contacte/page.tsx    → Redirect stub → /${lang}/contact
+/src/app/privacitat/page.tsx  → Redirect stub → /${lang}/privacy (legacy)
+```
+
+**Middleware rewrite:** `/fr/...` → `/public/fr/...` (URL pública es manté)
+
+**Slugs reservats** (no es poden usar com orgSlug):
+`ca`, `es`, `fr`, `pt`, `public`, `login`, `admin`, `dashboard`, `privacy`, `api`, `q`, `registre`, `redirect-to-org`
+
+#### Idiomes suportats (rutes públiques)
+
+| Codi | Idioma | URL exemple |
+|------|--------|-------------|
+| `ca` | Català | `/ca/login`, `/ca/privacy`, `/ca/contact` |
+| `es` | Español | `/es/login`, `/es/privacy`, `/es/contact` |
+| `fr` | Français | `/fr/login`, `/fr/privacy`, `/fr/contact` |
+| `pt` | Português | `/pt/login`, `/pt/privacy`, `/pt/contact` |
+
+#### Detecció automàtica d'idioma
+
+Quan un usuari accedeix a `/login` (sense idioma), el sistema:
+
+1. Llegeix l'header `Accept-Language` del navegador
+2. Parseja i ordena per qualitat (`q=0.9`, etc.)
+3. Troba el primer idioma suportat
+4. Redirigeix a `/{lang}/login`
+
+**Exemple:**
+```
+Accept-Language: pt-BR,pt;q=0.9,en;q=0.8
+→ Redirigeix a /pt/login
+
+Accept-Language: de-DE,de;q=0.9,en;q=0.8
+→ Redirigeix a /ca/login (default, alemany no suportat)
+```
+
+#### Fitxers clau
+
+| Fitxer | Responsabilitat |
+|--------|-----------------|
+| `src/lib/public-locale.ts` | Tipus `PublicLocale`, `detectPublicLocale()`, `generatePublicPageMetadata()` |
+| `src/i18n/public.ts` | Traduccions completes per home, funcionalitats, login, privacy, contact (CA/ES/FR/PT) |
+| `src/middleware.ts` | Rewrite `/fr/...` → `/public/fr/...` + protecció segments reservats |
+| `src/app/public/[lang]/layout.tsx` | Validació idioma + `generateStaticParams()` per SSG |
+| `src/app/public/[lang]/*/page.tsx` | Pàgines amb traduccions i metadades SEO |
+| `src/components/IdleLogoutProvider.tsx` | RESERVED_SEGMENTS (inclou idiomes) |
+
+#### SEO: Canonical i Hreflang
+
+Cada pàgina pública genera metadades SEO correctes:
 
 ```typescript
-// Estructura de claus (exemple)
+// Exemple per /ca/privacy
 {
-  common: { save, cancel, delete, ... },
-  dashboard: { title, metrics, ... },
-  movements: { title, filters, splitter, ... },
-  settings: { title, bankAccounts, ... },
-  ...
+  alternates: {
+    canonical: "https://summasocial.app/ca/privacy",
+    languages: {
+      ca: "https://summasocial.app/ca/privacy",
+      es: "https://summasocial.app/es/privacy",
+      fr: "https://summasocial.app/fr/privacy",
+      pt: "https://summasocial.app/pt/privacy"
+    }
+  }
 }
 ```
 
-**Criteri de traducció:**
-- Si falta una clau a `fr.ts` o `es.ts`, es manté el text en català
-- Les claus són idèntiques en tots els fitxers
-- Les funcions amb paràmetres (ex: `(name) => \`Compte "${name}" creat\``) es tradueixen mantenint la signatura
+Això genera els tags HTML:
+```html
+<link rel="canonical" href="https://summasocial.app/ca/privacy" />
+<link rel="alternate" hreflang="ca" href="https://summasocial.app/ca/privacy" />
+<link rel="alternate" hreflang="es" href="https://summasocial.app/es/privacy" />
+<link rel="alternate" hreflang="fr" href="https://summasocial.app/fr/privacy" />
+<link rel="alternate" hreflang="pt" href="https://summasocial.app/pt/privacy" />
+```
 
-#### Seccions traduïdes (v1.11+)
+#### Estructura de traduccions (public.ts)
 
-| Secció | ca | es | fr |
-|--------|----|----|----|
-| Dashboard | ✅ | ✅ | ✅ |
-| Moviments | ✅ | ✅ | ✅ |
-| Donants/Contactes | ✅ | ✅ | ✅ |
-| Projectes | ✅ | ✅ | ✅ |
-| Configuració | ✅ | ✅ | ✅ |
-| Comptes bancaris | ✅ | ✅ | ✅ (v1.12) |
-| Importador devolucions | ✅ | ✅ | ✅ |
-| Importador Stripe | ✅ | ✅ | ✅ |
-| Mòdul Projectes | ✅ | ✅ | ✅ |
-| Certificats | ✅ | ✅ | ✅ |
-| Model 182 | ✅ | ✅ | ✅ |
+```typescript
+// src/i18n/public.ts
+export interface PublicTranslations {
+  common: {
+    appName: string;
+    tagline: string;
+    close: string;
+    backToHome: string;
+    // ...
+  };
+  login: {
+    title: string;
+    welcomeTitle: string;
+    welcomeDescription: string;
+    sessionExpired: string;
+    // ...
+  };
+  privacy: {
+    title: string;
+    sections: {
+      whoWeAre: { title: string; intro: string; /* ... */ };
+      whatData: { /* ... */ };
+      // 9 seccions completes
+    };
+  };
+  contact: {
+    title: string;
+    subtitle: string;
+    responseTime: string;
+  };
+}
+
+// Traduccions per cada idioma
+const ca: PublicTranslations = { /* ... */ };
+const es: PublicTranslations = { /* ... */ };
+const fr: PublicTranslations = { /* ... */ };
+const pt: PublicTranslations = { /* ... */ };
+
+export const publicTranslations: Record<PublicLocale, PublicTranslations> = {
+  ca, es, fr, pt
+};
+```
+
+#### Ús a les pàgines
+
+```tsx
+// src/app/[lang]/login/page.tsx
+import { getPublicTranslations } from '@/i18n/public';
+import { isValidPublicLocale } from '@/lib/public-locale';
+
+export default function LoginPage({ params }: { params: { lang: string } }) {
+  const lang = isValidPublicLocale(params.lang) ? params.lang : 'ca';
+  const t = getPublicTranslations(lang);
+
+  return (
+    <h1>{t.login.welcomeTitle}</h1>
+    // "Benvingut a Summa Social" / "Bienvenido a Summa Social" / etc.
+  );
+}
+```
+
+#### Compatibilitat amb URLs antigues
+
+Les URLs antigues continuen funcionant amb redirect:
+
+| URL antiga | Redirigeix a |
+|------------|--------------|
+| `/login` | `/{detectat}/login` |
+| `/privacy` | `/{detectat}/privacy` |
+| `/privacitat` | `/{detectat}/privacy` |
+| `/contacte` | `/{detectat}/contact` |
+
+On `{detectat}` és l'idioma detectat via Accept-Language (default: `ca`).
+
+#### Diferència amb i18n de l'app privada
+
+| Aspecte | App privada (`/[orgSlug]/dashboard`) | Pàgines públiques (`/[lang]/*`) |
+|---------|--------------------------------------|----------------------------------|
+| **Traduccions** | `src/i18n/ca.ts`, `es.ts`, `fr.ts` + JSON | `src/i18n/public.ts` |
+| **Tipus** | `Language` (`ca`, `es`, `fr`) | `PublicLocale` (`ca`, `es`, `fr`, `pt`) |
+| **Persistència idioma** | `localStorage` (selector usuari) | URL path (`/ca/`, `/es/`, etc.) |
+| **Detecció** | Preferència guardada | `Accept-Language` header |
+| **SEO** | No aplica (app privada) | Canonical + hreflang |
+| **SSG** | No (dinàmic) | Sí (`generateStaticParams`) |
 
 
 ## 3.10 IMPORTADOR STRIPE (NOU v1.9)
@@ -1976,24 +2226,34 @@ La part treta queda:
 ### 3.11.10 Estructura de fitxers
 
 ```
-/src/app/[orgSlug]/dashboard/project-module/
-  ├── expenses/
-  │   ├── page.tsx                    # Llistat de despeses elegibles
-  │   ├── [txId]/page.tsx             # Detall d'una despesa
-  │   └── capture/page.tsx            # Captura ràpida de terreny (NOU v1.11)
-  ├── projects/
-  │   ├── page.tsx                    # Llista de projectes
-  │   └── [projectId]/
-  │       ├── budget/page.tsx         # Gestió Econòmica (pantalla base)
-  │       └── edit/page.tsx           # Edició del projecte
+/src/app/[orgSlug]/
+  ├── quick-expense/                    # Landing fora de dashboard (NOU v1.22)
+  │   ├── layout.tsx                    # Layout mínim (OrganizationProvider)
+  │   └── page.tsx                      # Pàgina landing
+  └── dashboard/project-module/
+      ├── expenses/
+      │   ├── page.tsx                  # Llistat de despeses elegibles
+      │   ├── [txId]/page.tsx           # Detall d'una despesa
+      │   └── capture/page.tsx          # Captura ràpida de terreny (NOU v1.11)
+      ├── projects/
+      │   ├── page.tsx                  # Llista de projectes
+      │   └── [projectId]/
+      │       ├── budget/page.tsx       # Gestió Econòmica (pantalla base)
+      │       └── edit/page.tsx         # Edició del projecte
+      └── quick-expense/
+          └── page.tsx                  # Redirect 307 a /{orgSlug}/quick-expense
+
+/src/app/quick/
+  └── page.tsx                          # Shortcut global → detecta org → landing
 
 /src/components/project-module/
-  ├── balance-project-modal.tsx       # Modal "Quadrar justificació"
+  ├── balance-project-modal.tsx         # Modal "Quadrar justificació"
+  ├── quick-expense-screen.tsx          # Component UI de captura ràpida
   └── ...
 
 /src/lib/
-  ├── project-module-types.ts         # Tipus del mòdul
-  └── project-module-suggestions.ts   # Scoring i combinacions (NOU v1.10)
+  ├── project-module-types.ts           # Tipus del mòdul
+  └── project-module-suggestions.ts     # Scoring i combinacions (NOU v1.10)
 ```
 
 ### 3.11.11 Drag & Drop de documents a Assignació de despeses (NOU v1.16)
@@ -2068,6 +2328,163 @@ Camps afegits v1.10:
 | `projects` | `budgetEUR` | `number \| null` | Pressupost global (fallback si no hi ha partides) |
 | `budgetLines` | `budgetedAmountEUR` | `number` | Import pressupostat de la partida |
 
+### 3.11.14 Quick Expense Landing (NOU v1.22)
+
+Pantalla dedicada per a l'entrada ràpida de despeses des del mòbil, **sense layout de dashboard** (sense sidebar, header ni breadcrumbs).
+
+**Arquitectura de rutes:**
+
+| Ruta | Funció | Tipus |
+|------|--------|-------|
+| `/{orgSlug}/quick-expense` | Landing canònica | Pàgina amb layout mínim |
+| `/quick` | Shortcut global | Redirecció a landing (detecta org de l'usuari) |
+| `/{orgSlug}/dashboard/project-module/quick-expense` | Ruta antiga | Redirect 307 per backward-compatibility |
+
+**Decisions arquitectòniques:**
+
+| Decisió | Motiu |
+|---------|-------|
+| Fora de `/dashboard` | Next.js App Router no permet "saltar" layouts intermedis |
+| Layout propi mínim | Només `OrganizationProvider` + `InitializeData`, sense sidebar/header |
+| Redirect 307 antic | Manté compatibilitat amb bookmarks i enllaços existents |
+| Shortcut `/quick` | Permet "Afegir a pantalla d'inici" sense necessitat de saber l'org |
+
+**Permisos:**
+
+| Rol | Pot accedir |
+|-----|-------------|
+| `superadmin` | ✅ |
+| `admin` | ✅ |
+| `user` | ✅ |
+| `viewer` | ❌ (redirigit a dashboard) |
+
+**Flux d'accés (ACTUALITZAT v1.24):**
+
+```
+/quick → (si no user) → /login?next=/quick
+       → (si user) → /redirect-to-org?next=/quick-expense
+                                    ↓
+                      detecta orgSlug via perfil/membres
+                                    ↓
+                      /{orgSlug}/quick-expense (landing sense sidebar)
+                                    ↓
+                      Botó "Tornar" → /{orgSlug}/dashboard/project-module/expenses
+```
+
+**Middleware Routing (ACTUALITZAT v1.24):**
+
+El middleware (`src/middleware.ts`) protegeix certes rutes per evitar loops de redirecció:
+
+```typescript
+const PROTECTED_ROUTES = [
+  '/redirect-to-org',  // Detecció d'org
+  '/admin',            // Panell SuperAdmin
+  '/login',            // Autenticació
+  '/quick',            // Shortcut Quick Expense
+  '/registre',         // Registre públic
+];
+```
+
+**Regles del middleware:**
+1. Mai redirigir rutes protegides (evita loops)
+2. Sempre preservar `?next` quan redirigeix a `/redirect-to-org`
+3. Sempre preservar tots els searchParams en redireccions
+
+**Fitxers principals:**
+
+| Fitxer | Funció |
+|--------|--------|
+| `src/middleware.ts` | Routing central amb PROTECTED_ROUTES |
+| `src/app/[orgSlug]/quick-expense/layout.tsx` | Layout mínim (OrganizationProvider) |
+| `src/app/[orgSlug]/quick-expense/page.tsx` | Pàgina landing |
+| `src/app/quick/page.tsx` | Shortcut global (delega a redirect-to-org) |
+| `src/app/[orgSlug]/dashboard/project-module/quick-expense/page.tsx` | Redirect 307 legacy |
+| `src/components/project-module/quick-expense-screen.tsx` | Component UI compartit |
+
+**Connexió amb expenses:**
+
+El botó càmera a la safata de despeses (`/dashboard/project-module/expenses`) apunta a `/{orgSlug}/quick-expense`:
+
+```tsx
+<Link href={buildUrl('/quick-expense')}>
+  <Camera className="h-4 w-4" />
+</Link>
+```
+
+### 3.11.15 Hub de Guies Procedimentals (NOU v1.23)
+
+Centre d'ajuda contextual amb guies pas-a-pas per a les operacions més freqüents de Summa Social.
+
+**Ubicació:** `/{orgSlug}/dashboard/guides`
+
+**Característiques:**
+- Guies procedimentals amb format `whatIs` + `steps[]` + `avoid[]`
+- Traduccions CA/ES/FR/PT amb fallback a català
+- CTAs directes a pantalla + enllaç al manual
+- Indicadors visuals: `lookFirst`, `doNext`, `avoid`, `costlyError`
+- Validador i18n automatitzat (`npm run i18n:validate-guides`)
+
+**Guies disponibles:**
+
+| ID | Títol | Contingut |
+|----|-------|-----------|
+| `firstDay` | Primer dia | Checklist d'inici ràpid |
+| `firstMonth` | Primer mes | Guia d'operativa mensual |
+| `monthClose` | Tancament mensual | Procediment de tancament |
+| `movements` | Gestió de moviments | Operativa bàsica |
+| `importMovements` | Importar extracte | Pas a pas importació |
+| `bulkCategory` | Categorització massiva | Selecció múltiple |
+| `changePeriod` | Canviar de període | Filtre per data |
+| `selectBankAccount` | Seleccionar compte | Multicompte bancari |
+| `attachDocument` | Adjuntar document | Drag & drop |
+| `returns` | Devolucions | Gestió de retorns |
+| `remittances` | Remeses d'ingressos | Divisió de remeses |
+| `splitRemittance` | Dividir remesa | Split manual |
+| `stripeDonations` | Donacions Stripe | Importador Stripe |
+| `travelReceipts` | Tiquets de viatge | Captura ràpida |
+| `donors` | Gestió de donants | CRUD donants |
+| `reports` | Informes fiscals | 182, 347, certificats |
+| `projects` | Mòdul projectes | Justificació assistida |
+| `monthlyFlow` | Flux mensual | Operativa recurrent |
+| `yearEndFiscal` | Tancament fiscal | Fi d'any |
+| `accessSecurity` | Accés i seguretat | Multi-usuari |
+| `initialLoad` | Càrrega inicial | Primera configuració |
+
+**Format de traduccions (claus i18n):**
+
+```
+guides.{guideId}.title        — Títol de la guia
+guides.{guideId}.intro        — Introducció (opcional si whatIs)
+guides.{guideId}.whatIs       — Descripció breu
+guides.{guideId}.steps.0-N    — Passos ordenats
+guides.{guideId}.avoid.0-N    — Errors a evitar
+guides.{guideId}.lookFirst.0-N — Què mirar primer
+guides.{guideId}.doNext.0-N   — Passos següents
+guides.{guideId}.costlyError  — Error crític a destacar
+guides.cta.{guideId}          — Text del botó CTA
+```
+
+**Fitxers principals:**
+
+| Fitxer | Funció |
+|--------|--------|
+| `src/app/[orgSlug]/dashboard/guides/page.tsx` | Hub central amb llista de guies |
+| `src/i18n/locales/{ca,es,fr,pt}.json` | Traduccions (claus `guides.*`) |
+| `scripts/i18n/validate-guides-translations.ts` | Validador de completitud |
+
+**Validador i18n:**
+
+```bash
+npm run i18n:validate-guides
+```
+
+Comprova:
+- Claus page-level obligatòries (`guides.pageTitle`, `guides.viewManual`...)
+- CTA per cada guia (`guides.cta.{guideId}`)
+- Títol i intro/whatIs per cada guia
+- Arrays amb índexos consecutius (sense gaps)
+- Claus extra que no existeixen al base (CA)
+
 
 ## 3.10 PANELL SUPERADMIN GLOBAL (NOU v1.20)
 
@@ -2111,7 +2528,69 @@ Enllaços ràpids per a manteniment i diagnòstic:
 | **Cloud Logging** | `console.cloud.google.com/logs/query?project=summa-social` |
 | **DEV-SOLO-MANUAL.md** | Path copiable al porta-retalls |
 
-### 3.10.5 Fitxers principals
+### 3.10.5 Salut del Sistema - Sentinelles (NOU v1.23)
+
+Sistema automàtic de detecció d'incidències accessible només des de `/admin`.
+
+**Model de dades:** Col·lecció `systemIncidents` a Firestore (només SuperAdmin pot llegir).
+
+**Sentinelles:**
+
+| ID | Nom | Tipus | Què detecta |
+|----|-----|-------|-------------|
+| S1 | Permisos | CRITICAL | Errors "Missing or insufficient permissions" |
+| S2 | Moviments | CRITICAL | Errors CLIENT_CRASH a ruta /movimientos |
+| S3 | Importadors | CRITICAL | Errors d'importació (banc, CSV, Stripe) |
+| S4 | Exports | CRITICAL | Errors d'exportació (Excel, PDF, SEPA) |
+| S5 | Remeses OUT | CRITICAL | Invariants violades (deltaCents≠0, isValid=false) |
+| S6 | Encallaments | CONSULTA | Transaccions sense classificar > 30 dies |
+| S7 | Fiscal 182 | CONSULTA | Donants sense dades fiscals |
+| S8 | Activitat | CONSULTA | Organitzacions inactives > 60 dies |
+
+**Política d'alertes:**
+- S1–S5: Generen incidents automàtics quan es detecta l'error
+- S6–S8: Només consulta, sense incidents automàtics
+
+**Deduplicació:**
+- Cada error genera una `signature` única (hash de type+route+message+stack)
+- Si el mateix error es repeteix, s'incrementa el comptador
+- Si un incident RESOLVED torna a aparèixer, es reobre automàticament
+
+**Accions disponibles:**
+- **ACK**: Silencia temporalment (l'he vist, però encara treballo en la solució)
+- **Resolt**: Tanca l'incident (corregit)
+
+**Filtres anti-soroll:**
+Errors ignorats automàticament (no creen incidents):
+- `ERR_BLOCKED_BY_CLIENT` — Adblockers o extensions del navegador
+- `ResizeObserver loop` — Error benigne de layout
+- `ChunkLoadError` / `Loading chunk` — Problemes de xarxa temporals
+- `Network request failed` / `Failed to fetch` — Xarxa temporal
+- `Script error.` — Errors cross-origin sense informació útil
+- `AbortError` — Requests cancel·lats intencionalment
+
+**Fitxers principals:**
+- `src/lib/system-incidents.ts` — Model, deduplicació, filtres, buildIncidentFixPack
+- `src/components/ErrorBoundaryGlobal.tsx` — Capturador client
+- `src/components/admin/system-health.tsx` — UI sentinelles + botó "Copiar prompt"
+- `functions/src/alerts/sendIncidentAlert.ts` — Cloud Function alertes email
+
+**Alertes email (v1.1):**
+- Cloud Function `sendIncidentAlert` envia email via Resend (proveïdor ja existent)
+- Criteris d'enviament:
+  - `severity === CRITICAL`
+  - `status === OPEN` (mai si ACK o RESOLVED)
+  - `count >= 2` O ruta core (movimientos, fiscalitat, project-module...)
+  - Cooldown 24h per incident (un email per finestra)
+- Email inclou prompt de reparació per Claude Code
+- Flag `ALERTS_ENABLED` (per defecte `false` en dev)
+- Sense dependències noves: usa Resend API directament
+
+**Límits:**
+- Només visible per SuperAdmin a `/admin`
+- S6–S8 requereixen implementació de consultes específiques
+
+### 3.10.6 Fitxers principals
 
 | Fitxer | Funció |
 |--------|--------|
@@ -2263,6 +2742,12 @@ Enllaços ràpids per a manteniment i diagnòstic:
 ## 7.2 Firebase Storage
 - CORS configurat per càrrega d'imatges
 - Logo i firma als PDFs generats al client
+
+### Política temporal d'uploads (Des 2025)
+**Estat actual:** Qualsevol usuari autenticat pot pujar documents a paths d'organització.
+- Afecta: `pendingDocuments`, `transactions/attachments`, `expenseReports`, `projectExpenses`, etc.
+- Motiu: Desbloquejar operativa mentre es completa RBAC Manager (Bloc 2)
+- Pendent: Reintroduir restricció per membres quan RBAC Manager estigui complet
 
 ## 7.3 Autenticació
 - Session persistence (caduca en tancar navegador)
@@ -2460,6 +2945,69 @@ onboarding?: {
 | `onboardingSkippedAt` | Substituït per `onboarding.welcomeSeenAt` |
 | Lògica complexa `computeOnboardingStatus()` | Simplificat a `shouldShowWelcomeModal()` |
 
+## 7.7 Perfil de Rendiment (NOU v1.21)
+
+### Escala objectiu
+Summa Social està optimitzat per a **<100 usuaris concurrents** amb marge operatiu. El límit pràctic depèn del volum de dades per organització (transaccions, contactes).
+
+### Optimitzacions aplicades
+
+| Problema | Solució | Fitxer |
+|----------|---------|--------|
+| N+1 queries (links) | Batching amb `documentId()` en chunks de 10 | `src/hooks/use-project-module.ts:172` |
+| N+1 queries (expenses) | Batching paral·lel off-bank + bank | `src/hooks/use-project-module.ts:388` |
+| N+1 llistat projectes | Lazy-load de budgetLines, usar `project.budgetEUR` | `src/app/.../projects/page.tsx` |
+| Instància única | `maxInstances: 3` a Firebase App Hosting | `apphosting.yaml` |
+| Listener audit logs | `limit(100)` | `src/app/.../super-admin/page.tsx:149` |
+| Listener donor drawer | `limit(500)` + filtre client | `src/components/donor-detail-drawer.tsx:157` |
+
+### Patró de batching Firestore
+
+Quan cal carregar múltiples documents per ID, usar aquest patró:
+
+```typescript
+import { documentId } from 'firebase/firestore';
+
+function chunkArray<T>(arr: T[], size: number): T[][] {
+  const out: T[][] = [];
+  for (let i = 0; i < arr.length; i += size) out.push(arr.slice(i, i + size));
+  return out;
+}
+
+// Carregar en paral·lel (màxim 10 IDs per query, límit Firestore)
+const chunks = chunkArray(ids, 10);
+const snaps = await Promise.all(
+  chunks.map((chunkIds) =>
+    getDocs(query(collectionRef, where(documentId(), 'in', chunkIds)))
+  )
+);
+```
+
+### Listeners `onSnapshot` - Classificació
+
+| Fitxer | Tipus | Decisió |
+|--------|-------|---------|
+| `use-collection.tsx` | Hook base | CORE - no tocar |
+| `use-doc.tsx` | Hook base | CORE - no tocar |
+| `use-bank-accounts.ts` | Comptes bancaris | OK - pocs docs, real-time útil |
+| `donor-detail-drawer.tsx` | Transaccions donant | Limitat a 500, filtre client |
+| `super-admin/page.tsx` | Audit logs | Limitat a 100 |
+
+### Què NO cal fer (sense evidència de necessitat)
+
+- Refactors de model (denormalitzacions)
+- Observabilitat avançada (Sentry)
+- Pujar `maxInstances` a 5+
+- Reescriure hooks base
+- Paginació infinita a moviments (només si org té >1000 visibles)
+
+### Quan escalar
+
+Indicadors que requeririen intervenció:
+- Latència UI >2s consistent
+- Errors Firestore per quota
+- Usuaris reportant lentitud
+
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # 8. FLUX DE TREBALL RECOMANAT
@@ -2599,6 +3147,12 @@ onboarding?: {
 | **1.18** | **Des 2025** | **Onboarding: configuració inicial per admins (checklist Dashboard, wizard, "Ho faré després", camp onboardingSkippedAt), no bloquejant, discret, definitiu** |
 | **1.19** | **Des 2025** | **Simplificació onboarding a modal de benvinguda única per primer admin, eliminació checklist persistent** |
 | **1.20** | **Des 2025** | **Panell Admin: reset contrasenya + secció diagnòstic (Firebase Console, Cloud Logging, DEV-SOLO-MANUAL.md). Dashboard: neteja blocs Celebracions/Alertes, millora taula categories (exclou comissions), bloc projectes condicional. Nou document docs/DEV-SOLO-MANUAL.md per manteniment.** |
+| **1.21** | **Des 2025** | **i18n pàgina pública (ca/es), SEO tags amb canonical + hreflang, mòdul documents pendents hardened (permisos, guardrails, UI responsive)** |
+| **1.22** | **29 Des 2025** | **Quick Expense Landing: ruta canònica `/{orgSlug}/quick-expense` fora de `/dashboard` (sense sidebar/header), shortcut global `/quick`, redirect 307 per backward-compatibility, arquitectura neta sense hacks de layout** |
+| **1.23** | **30 Des 2025** | **System Health Sentinelles (S1–S8): detecció automàtica d'errors amb deduplicació, alertes email per incidents CRITICAL, filtres anti-soroll. Hub de Guies: guies procedimentals amb traduccions CA/ES/FR/PT (changePeriod, selectBankAccount, monthClose), validador i18n.** |
+| **1.24** | **31 Des 2025** | **Routing hardening: simplificació `/quick` (delega a `/redirect-to-org`), middleware amb PROTECTED_ROUTES per evitar loops, preservació de `?next` params.** |
+| **1.25** | **31 Des 2025** | **i18n rutes públiques complet (CA/ES/FR/PT): estructura `[lang]` per login, privacy i contact. Detecció automàtica idioma via Accept-Language. SEO amb canonical + hreflang per 4 idiomes. Redirect stubs per compatibilitat URLs antigues. Nou fitxer `src/i18n/public.ts` amb traduccions separades de l'app privada.** |
+| **1.26** | **31 Des 2025** | **Resolució col·lisió `[lang]` vs `[orgSlug]`: arquitectura `public/[lang]` amb middleware rewrite (URL pública intacta). HOME i Funcionalitats multiidioma. x-default hreflang. Slugs reservats (ca/es/fr/pt/public). Rutes canòniques: `/{lang}/funcionalitats`, `/{lang}/privacy`, `/{lang}/contact`. Aliases naturals: FR (`fonctionnalites`, `confidentialite`), ES (`funcionalidades`, `privacidad`, `contacto`), PT (`funcionalidades`, `privacidade`, `contacto`).** |
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -2609,7 +3163,7 @@ onboarding?: {
 
 | Funcionalitat Exclosa | Motiu |
 |-----------------------|-------|
-| **Generació de fitxers BOE** | Les ONGs deleguen a gestories |
+| **Generació de fitxers BOE** | Les entitats deleguen a gestories |
 | **Presentació telemàtica AEAT** | Complexitat legal elevada |
 | **Integració directa APIs bancàries** | Requereix certificacions |
 | **Comptabilitat doble entrada** | NO és programa de comptabilitat |
@@ -2657,7 +3211,7 @@ onboarding?: {
 
 | Sí | No |
 |----|----|
-| ONGs petites i mitjanes d'Espanya | Grans ONGs amb ERP propi |
+| Entitats petites i mitjanes d'Espanya | Grans entitats amb ERP propi |
 | Entitats sense ànim de lucre | Empreses amb ànim de lucre |
 | Fundacions petites | Administracions públiques |
 | Associacions culturals, socials | Entitats fora d'Espanya |
@@ -2669,7 +3223,7 @@ onboarding?: {
 > Summa Social resol **molt bé** uns problemes concrets (conciliació + fiscalitat) en lloc de resoldre **regular** molts problemes diferents.
 >
 > Cada funcionalitat nova ha de passar el filtre:
-> - Redueix errors a l'ONG? ✅
+> - Redueix errors a l'entitat? ✅
 > - Estalvia temps real? ✅
 > - És mantenible per una sola persona? ✅
 > - Contribueix als objectius estratègics? ✅
@@ -2776,7 +3330,7 @@ if (matchingTx) {
 | "Determinista" | Regla fixa, mateix resultat | IA autònoma |
 | "Auto-assignació" | Matching + categoria defecte | IA sense supervisió |
 | "Remesa" | Agrupació quotes socis O devolucions | Qualsevol ingrés |
-| "Gestoria" | Professional extern | L'ONG mateixa |
+| "Gestoria" | Professional extern | L'entitat mateixa |
 | "Matching exacte" | IBAN/DNI/Nom idèntic | Fuzzy, aproximat |
 | "Remesa parcial" | Algunes devolucions pendents | Remesa incompleta per error |
 | "Payout Stripe" | Liquidació de Stripe al banc (po_xxx) | Donació individual |
@@ -3042,13 +3596,13 @@ function normalizedName(name: string): string {
 
 ## CONTEXT
 
-Summa Social és una aplicació de gestió financera per ONGs espanyoles.
+Summa Social és una aplicació de gestió financera per entitats espanyoles.
 Gestiona moviments bancaris, donants, proveïdors i fiscalitat (Model 182, 347, certificats).
 El mòdul de devolucions resol el problema de rebuts retornats pel banc sense identificar.
 
 ## CONCEPTES CLAU
 
-- DEVOLUCIÓ = Rebut que el banc no ha pogut cobrar i retorna a l'ONG
+- DEVOLUCIÓ = Rebut que el banc no ha pogut cobrar i retorna a l'entitat
 - REMESA = Agrupació de múltiples moviments en un sol apunt bancari
 - REMESA PARCIAL = Remesa amb algunes devolucions pendents d'identificar
 - MATCHING = Assignació de contacte per coincidència exacta (IBAN/DNI/Nom)
@@ -3217,6 +3771,168 @@ Les assignacions creades abans de la implementació del camp `budgetLineIds` no 
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
+# ANNEX D: NOVETATS DEL PRODUCTE (v1.26)
+# ═══════════════════════════════════════════════════════════════════════════════
+
+## D.1 Descripció del Sistema
+
+Sistema unificat per comunicar novetats del producte als usuaris a través de múltiples canals:
+- **Campaneta (instància)**: Mostra N últimes novetats dins l'aplicació
+- **Web públic**: Pàgina `/novetats` per SEO i sharing
+- **Social**: Copy per X i LinkedIn (manual)
+
+## D.2 Arquitectura
+
+### Font única: Firestore `productUpdates`
+
+```
+/productUpdates/{updateId}
+  id: string
+  title: string
+  description: string
+  link: string | null
+  isActive: boolean
+  publishedAt: Timestamp
+  createdAt: Timestamp
+
+  // Detall (TEXT PLA, NO HTML)
+  contentLong?: string | null
+  guideUrl?: string | null
+  videoUrl?: string | null
+
+  // Web
+  web?: {
+    enabled: boolean
+    slug: string
+    excerpt?: string | null
+    content?: string | null
+  } | null
+
+  // Social
+  social?: {
+    enabled: boolean
+    xText?: string | null
+    linkedinText?: string | null
+    linkUrl?: string | null
+  } | null
+```
+
+### Web públic: JSON estàtic (NO Firestore directe)
+
+El web públic `/novetats` NO llegeix Firestore directament per seguretat.
+
+**Flux:**
+1. SuperAdmin genera novetat amb `web.enabled: true`
+2. SuperAdmin clica "Exportar web JSON" → descarrega `novetats-data.json`
+3. Commit manual a `public/novetats-data.json`
+4. Deploy
+
+## D.3 Guardrails (NO NEGOCIABLES)
+
+| Regla | Motiu |
+|-------|-------|
+| NO HTML a `contentLong` | XSS prevention, render segur |
+| NO `dangerouslySetInnerHTML` | Seguretat |
+| NO Firestore list públic | Evitar leaks i costos |
+| NO `undefined` a writes | Firestore errors |
+| NO deps noves | Estabilitat |
+
+## D.4 Fitxers Principals
+
+```
+src/hooks/use-product-updates.ts           # Hook Firestore + fallback
+src/lib/render-structured-text.tsx         # Render text pla (NO HTML)
+src/lib/firestore-utils.ts                 # stripUndefined helpers
+src/components/notifications/              # Campaneta + modal
+src/components/admin/product-updates-section.tsx  # SuperAdmin
+src/app/api/ai/generate-product-update/    # Endpoint IA
+src/app/public/[lang]/novetats/            # Web públic
+public/novetats-data.json                  # JSON estàtic web
+```
+
+## D.5 Ritual Publicació Web
+
+1. Crear/editar novetat amb `web.enabled: true` a SuperAdmin
+2. Clicar "Exportar web JSON"
+3. Substituir `public/novetats-data.json` amb el fitxer descarregat
+4. `git add && git commit && git push`
+5. Deploy (Firebase Hosting)
+
+> **Important**: El web NO s'actualitza automàticament. Cal fer commit + deploy.
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# E. TROUBLESHOOTING - INCIDENTS RESOLTS
+# ═══════════════════════════════════════════════════════════════════════════════
+
+## E.1 Build App Hosting falla amb "PermissionDenied" per secrets
+
+**Data:** 2025-01-02
+**Commits:** `fd9754c`, `1833864`, `f7d82de`, `7fcd176`
+
+### Símptoma
+
+El build de Firebase App Hosting falla amb:
+```
+Error resolving secret version with name=projects/summa-social/secrets/RESEND_API_KEY/versions/latest
+Permission 'secretmanager.versions.get' denied
+```
+
+### Causa
+
+Quan es crea un secret nou via `gcloud` o manualment, **no s'afegeixen automàticament** els rols IAM que App Hosting necessita per:
+1. Llegir metadades del secret (`viewer`)
+2. "Pin" la versió latest a una concreta (`secretVersionManager`)
+3. Accedir al valor (`secretAccessor`)
+
+El secret `GOOGLE_API_KEY` funcionava perquè Firebase CLI l'havia configurat automàticament. `RESEND_API_KEY` es va crear manualment i no tenia els rols.
+
+### Solució (3 passos)
+
+```bash
+# 1. Afegir secretAccessor (llegir valor)
+gcloud secrets add-iam-policy-binding RESEND_API_KEY \
+  --project=summa-social \
+  --member="serviceAccount:service-469685881071@gcp-sa-firebaseapphosting.iam.gserviceaccount.com" \
+  --role="roles/secretmanager.secretAccessor"
+
+# 2. Afegir secretVersionManager (pin versions)
+gcloud secrets add-iam-policy-binding RESEND_API_KEY \
+  --project=summa-social \
+  --member="serviceAccount:service-469685881071@gcp-sa-firebaseapphosting.iam.gserviceaccount.com" \
+  --role="roles/secretmanager.secretVersionManager"
+
+# 3. Afegir viewer (llegir metadades)
+gcloud secrets add-iam-policy-binding RESEND_API_KEY \
+  --project=summa-social \
+  --member="serviceAccount:firebase-app-hosting-compute@summa-social.iam.gserviceaccount.com" \
+  --role="roles/secretmanager.viewer"
+```
+
+### Prevenció
+
+Quan afegeixis un **nou secret** per App Hosting:
+1. Crea el secret: `gcloud secrets create NOM_SECRET --project=summa-social`
+2. Afegeix el valor: `echo -n "valor" | gcloud secrets versions add NOM_SECRET --data-file=-`
+3. **Copia els rols IAM** d'un secret que funcioni (ex: `GOOGLE_API_KEY`):
+   ```bash
+   gcloud secrets get-iam-policy GOOGLE_API_KEY --project=summa-social
+   # Replicar els bindings al nou secret
+   ```
+
+### Verificació
+
+```bash
+gcloud secrets get-iam-policy NOM_SECRET --project=summa-social
+```
+
+Ha de mostrar com a mínim:
+- `roles/secretmanager.secretAccessor` → service agent
+- `roles/secretmanager.secretVersionManager` → service agent
+- `roles/secretmanager.viewer` → compute SA
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
 # FI DEL DOCUMENT
-# Última actualització: Desembre 2025 - Versió 1.16
+# Última actualització: Gener 2026 - Versió 1.27
 # ═══════════════════════════════════════════════════════════════════════════════

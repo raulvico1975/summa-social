@@ -5,6 +5,7 @@ import { Toaster } from '@/components/ui/toaster';
 import { FirebaseClientProvider } from '@/firebase';
 import { TranslationsProvider } from '@/i18n/provider';
 import { IdleLogoutProvider } from '@/components/IdleLogoutProvider';
+import { ErrorBoundaryGlobal } from '@/components/ErrorBoundaryGlobal';
 
 // Font principal - Inter (Apple-like, molt llegible)
 const inter = Inter({ 
@@ -14,8 +15,28 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: 'Summa Social',
-  description: 'Gestió financera per a organitzacions socials.',
+  title: 'Summa Social | Gestió econòmica i fiscal per a entitats',
+  description:
+    'Gestió econòmica, fiscal i de projectes per a entitats del Tercer Sector Social.',
+  openGraph: {
+    title: 'Summa Social | Gestió econòmica i fiscal per a entitats',
+    description:
+      'Gestió econòmica, fiscal i de projectes per a entitats del Tercer Sector Social.',
+    url: 'https://summasocial.app',
+    siteName: 'Summa Social',
+    locale: 'ca_ES',
+    type: 'website',
+  },
+  twitter: {
+    card: 'summary',
+    title: 'Summa Social | Gestió econòmica i fiscal per a entitats',
+    description:
+      'Gestió econòmica, fiscal i de projectes per a entitats del Tercer Sector Social.',
+  },
+  robots: {
+    index: true,
+    follow: true,
+  },
 };
 
 export default function RootLayout({
@@ -29,7 +50,9 @@ export default function RootLayout({
         <FirebaseClientProvider>
           <TranslationsProvider>
             <IdleLogoutProvider idleMs={30 * 60 * 1000} warnMs={60 * 1000}>
-              {children}
+              <ErrorBoundaryGlobal>
+                {children}
+              </ErrorBoundaryGlobal>
             </IdleLogoutProvider>
           </TranslationsProvider>
         </FirebaseClientProvider>

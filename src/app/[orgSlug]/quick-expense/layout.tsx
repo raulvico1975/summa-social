@@ -1,6 +1,6 @@
-// src/app/[orgSlug]/q/layout.tsx
-// Layout mínim per a Quick Expense: sense sidebar, sense topbar
-// Dissenyat per ús mòbil com a "app" guardada a la pantalla d'inici
+// src/app/[orgSlug]/quick-expense/layout.tsx
+// Layout mínim per a Quick Expense: sense sidebar ni topbar
+// Fora del segment /dashboard per evitar heretar el layout del dashboard
 
 'use client';
 
@@ -13,7 +13,7 @@ function InitializeData({ children }: { children: React.ReactNode }) {
   return <>{children}</>;
 }
 
-export default function QuickLayout({
+export default function QuickExpenseLayout({
   children,
 }: {
   children: React.ReactNode;
@@ -24,7 +24,9 @@ export default function QuickLayout({
   return (
     <OrganizationProvider orgSlug={orgSlug}>
       <InitializeData>
-        {children}
+        <div className="min-h-[100dvh] bg-background">
+          {children}
+        </div>
       </InitializeData>
     </OrganizationProvider>
   );

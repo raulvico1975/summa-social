@@ -1,0 +1,53 @@
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+
+    // ════════════════════════════════════════════════════════════════════════════
+    // Funcions auxiliars
+    // ════════════════════════════════════════════════════════════════════════════
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isSuperAdmin() {
+      return isSignedIn() &&
+        firestore.exists(/databases/(default)/documents/systemSuperAdmins/$(request.auth.uid));
+    }
+
+    // Qualsevol membre de l'org pot llegir/escriure (sense checks de role ni flags)
+    function isOrgMember(orgId) {
+      return isSignedIn()
+        && firestore.exists(/databases/(default)/documents/organizations/$(orgId)/members/$(request.auth.uid));
+    }
+
+    // ════════════════════════════════════════════════════════════════════════════
+    // i18n translations - SuperAdmin can write, everyone can read
+    // ════════════════════════════════════════════════════════════════════════════
+    match /i18n/{langFile} {
+      // Lectura pública (l'app necessita carregar traduccions)
+      allow read: if true;
+
+      // Escriptura només per SuperAdmin
+      allow write: if isSuperAdmin();
+    }
+
+    // ════════════════════════════════════════════════════════════════════════════
+    // Organitzacions - Regla unificada per a TOTS els paths d'org
+    // Inclou: pendingDocuments, logo, signature, transactions/attachments,
+    //         expenseReports, projectExpenses, prebankRemittances
+    // TEMPORAL: qualsevol usuari autenticat pot llegir/escriure
+    // Pendent de reintroduir restricció per membres quan RBAC Manager (Bloc 2) estigui complet
+    // ════════════════════════════════════════════════════════════════════════════
+    match /organizations/{orgId}/{allPaths=**} {
+      allow read, write: if isSignedIn();
+    }
+
+    // ════════════════════════════════════════════════════════════════════════════
+    // Per defecte, denegar tot el que no estigui explícitament permès
+    // ════════════════════════════════════════════════════════════════════════════
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+  }
+}

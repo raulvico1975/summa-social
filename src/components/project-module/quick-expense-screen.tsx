@@ -221,13 +221,24 @@ export function QuickExpenseScreen({ organizationId, isLandingMode = false }: Qu
       // Suggerir categoria basada en concepte
       const suggestedCategory = suggestCategory(finalConcept);
 
-      // Import: si buit, serà null (es pot afegir després)
-      const finalAmountEUR = amountEUR.trim() || '0';
+      // Import: si buit, serà null (es pot afegir després a oficina)
+      const trimmedAmount = amountEUR.trim();
+      const parsedAmount = trimmedAmount ? parseFloat(trimmedAmount) : null;
+
+      // Validar que si hi ha import, sigui positiu
+      if (parsedAmount !== null && parsedAmount <= 0) {
+        toast({
+          title: 'Import no vàlid',
+          description: 'L\'import ha de ser positiu o deixar-lo buit.',
+          variant: 'destructive',
+        });
+        return;
+      }
 
       await save({
         date: today,
         concept: finalConcept,
-        amountEUR: finalAmountEUR,
+        amountEUR: parsedAmount !== null ? String(parsedAmount) : null,
         counterpartyName: '',
         categoryName: suggestedCategory ?? '',
         attachments,
@@ -275,16 +286,12 @@ export function QuickExpenseScreen({ organizationId, isLandingMode = false }: Qu
     >
       {/* Header minimalista */}
       <div className="flex items-center justify-between p-4 border-b shrink-0">
-        {isLandingMode ? (
-          <div className="w-20" />
-        ) : (
-          <Link href={buildUrl('/project-module/expenses')}>
-            <Button variant="ghost" size="sm">
-              <ArrowLeft className="h-4 w-4 mr-1" />
-              {t.common?.back ?? 'Tornar'}
-            </Button>
-          </Link>
-        )}
+        <Link href={buildUrl('/project-module/expenses')}>
+          <Button variant="ghost" size="sm" className="text-muted-foreground">
+            <ArrowLeft className="h-4 w-4 mr-1" />
+            {t.common?.back ?? 'Tornar'}
+          </Button>
+        </Link>
         <h1 className="font-semibold text-lg">
           {q?.title ?? 'Despesa ràpida'}
         </h1>
@@ -402,10 +409,10 @@ export function QuickExpenseScreen({ organizationId, isLandingMode = false }: Qu
           )}
         </div>
 
-        {/* Secció 2: Import */}
+        {/* Secció 2: Import (opcional) */}
         <div className="space-y-2">
           <Label htmlFor="amount" className="text-base font-medium">
-            {q?.amountLabel ?? 'Import (EUR)'}
+            {q?.amountLabel ?? 'Import'}
           </Label>
           <Input
             id="amount"
@@ -413,13 +420,13 @@ export function QuickExpenseScreen({ organizationId, isLandingMode = false }: Qu
             inputMode="decimal"
             step="0.01"
             min="0"
-            placeholder="0.00"
+            placeholder="Ex: 12,50"
             value={amountEUR}
             onChange={(e) => setAmountEUR(e.target.value)}
             className="text-2xl h-14 font-mono text-center"
           />
           <p className="text-xs text-muted-foreground text-center">
-            {q?.amountHint ?? 'Pots deixar-ho buit i afegir-ho després'}
+            {q?.amountHint ?? 'Opcional — pots afegir-ho després'}
           </p>
         </div>
 

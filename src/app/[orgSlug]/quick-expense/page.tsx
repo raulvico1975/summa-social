@@ -1,20 +1,18 @@
-// src/app/[orgSlug]/q/page.tsx
-// Ruta curta per a Quick Expense: /{orgSlug}/q
-// Dissenyat per guardar com a accés ràpid al mòbil
+// src/app/[orgSlug]/quick-expense/page.tsx
+// Captura ultra-ràpida de despeses (<10s): foto + import + guardar
+// Rols permesos: admin, user. Viewer: bloquejat amb missatge.
 
 'use client';
 
 import { QuickExpenseScreen } from '@/components/project-module/quick-expense-screen';
 import { useCurrentOrganization } from '@/hooks/organization-provider';
-import { Button } from '@/components/ui/button';
-import { AlertCircle, RefreshCw } from 'lucide-react';
+import { AlertCircle } from 'lucide-react';
 import { useTranslations } from '@/i18n';
 
-export default function QuickExpenseShortPage() {
+export default function QuickExpensePage() {
   const { organizationId, userRole } = useCurrentOrganization();
   const { t } = useTranslations();
 
-  // Textos i18n
   const q = t.projectModule?.quickExpense;
 
   // Bloquejar viewer

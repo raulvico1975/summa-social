@@ -192,6 +192,9 @@ export function useTransactionCategorization({
   const { t, language } = useTranslations();
   const { log } = useAppLog();
 
+  // pt fa fallback a ca per missatges d'error (getErrorMessage només té ca/es/fr)
+  const errorLang = language === 'pt' ? 'ca' : language;
+
   // ---------------------------------------------------------------------------
   // STATE
   // ---------------------------------------------------------------------------
@@ -280,7 +283,7 @@ export function useTransactionCategorization({
         updateDocumentNonBlocking(doc(transactionsCollection, txId), { category: 'Revisar' });
 
         // Missatge d'error traduït
-        const errorMsg = getErrorMessage(result.code, language);
+        const errorMsg = getErrorMessage(result.code, errorLang);
         toast({
           variant: 'destructive',
           title: errorMsg.title,
@@ -310,7 +313,7 @@ export function useTransactionCategorization({
       console.error('Error categorizing transaction:', error);
       updateDocumentNonBlocking(doc(transactionsCollection, txId), { category: 'Revisar' });
 
-      const errorMsg = getErrorMessage('AI_ERROR', language);
+      const errorMsg = getErrorMessage('AI_ERROR', errorLang);
       toast({
         variant: 'destructive',
         title: errorMsg.title,
@@ -492,7 +495,7 @@ export function useTransactionCategorization({
           : `${successCount} movimientos procesados. Los cambios aplicados se mantienen.`,
       });
     } else if (quotaExceeded) {
-      const errorMsg = getErrorMessage('QUOTA_EXCEEDED', language);
+      const errorMsg = getErrorMessage('QUOTA_EXCEEDED', errorLang);
       toast({
         variant: 'destructive',
         title: errorMsg.title,

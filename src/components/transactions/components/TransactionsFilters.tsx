@@ -155,14 +155,14 @@ export const TransactionsFilters = React.memo(function TransactionsFilters({
           FRANJA 2: Treball actiu (Cerca + Classificar pendents + Mode ràpid)
           ═══════════════════════════════════════════════════════════════════ */}
 
-      {/* Cercador intel·ligent */}
-      <div className="relative w-[280px]">
+      {/* Cercador intel·ligent — protagonista, ~40-50% de l'amplada */}
+      <div className="relative flex-1 min-w-[200px] max-w-[50%]">
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
         <Input
           placeholder={t.searchPlaceholder}
           value={searchQuery}
           onChange={(e) => onSearchChange(e.target.value)}
-          className="pl-9 pr-9 h-9"
+          className="pl-9 pr-9 h-10 text-base"
         />
         {searchQuery && (
           <button

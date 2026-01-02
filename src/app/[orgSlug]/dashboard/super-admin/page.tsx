@@ -3,7 +3,7 @@
 import * as React from 'react';
 import { useRouter } from 'next/navigation';
 import { useFirebase, useCollection, useMemoFirebase } from '@/firebase';
-import { collection, query, orderBy, onSnapshot } from 'firebase/firestore';
+import { collection, query, orderBy, limit, onSnapshot } from 'firebase/firestore';
 import type { Transaction, Contact, OrganizationMember, Category } from '@/lib/data';
 import { SUPER_ADMIN_UID } from '@/lib/data';
 import { useCurrentOrganization } from '@/hooks/organization-provider';
@@ -55,7 +55,6 @@ import {
   Copy,
   Unlink,
   Link2Off,
-  Trash2
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
@@ -146,7 +145,7 @@ export default function SuperAdminOrgPage() {
     }
 
     const auditRef = collection(firestore, 'organizations', organizationId, 'audit_logs');
-    const auditQuery = query(auditRef, orderBy('timestamp', 'desc'));
+    const auditQuery = query(auditRef, orderBy('timestamp', 'desc'), limit(100));
 
     const unsubscribe = onSnapshot(
       auditQuery,
@@ -514,10 +513,15 @@ export default function SuperAdminOrgPage() {
     <div className="space-y-6">
       {/* Header */}
       <div>
-        <h1 className="text-2xl font-bold tracking-tight font-headline flex items-center gap-2">
-          <Shield className="h-6 w-6 text-purple-500" />
-          {t.superAdminOrg.title}
-        </h1>
+        <div className="flex items-center gap-3">
+          <h1 className="text-2xl font-bold tracking-tight font-headline flex items-center gap-2">
+            <Shield className="h-6 w-6 text-purple-500" />
+            {t.superAdminOrg.title}
+          </h1>
+          <Badge variant="outline" className="text-xs text-muted-foreground">
+            {t.superAdminOrg.internalUse}
+          </Badge>
+        </div>
         <p className="text-muted-foreground">
           {t.superAdminOrg.description} — <span className="font-medium">{organization?.name}</span>
         </p>
@@ -1031,6 +1035,7 @@ export default function SuperAdminOrgPage() {
             </Card>
           </div>
         </TabsContent>
+
       </Tabs>
     </div>
   );

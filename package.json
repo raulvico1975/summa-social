@@ -12,7 +12,14 @@
     "typecheck": "tsc --noEmit",
     "test": "node --import tsx --test src/lib/__tests__/*.test.ts",
     "dev:restart": "bash scripts/dev-restart.sh",
-    "prepare": "husky"
+    "dev:demo": "node scripts/run-demo-dev.mjs",
+    "prepare": "husky",
+    "updates:drafts": "npx tsx scripts/generate-product-update-drafts.ts",
+    "i18n:export": "node --import tsx scripts/i18n/export-all.ts",
+    "i18n:validate-guides": "node --import tsx scripts/i18n/validate-guides-translations.ts",
+    "i18n:validate-help": "node --import tsx scripts/i18n/validate-help-translations.ts",
+    "check": "bash scripts/check.sh",
+    "prepush": "bash scripts/prepush.sh"
   },
   "dependencies": {
     "@genkit-ai/googleai": "^1.14.1",
