@@ -10,25 +10,24 @@ import { detectPublicLocale } from '@/lib/public-locale';
 export default async function LoginRedirect({
   searchParams,
 }: {
-  searchParams: Record<string, string | string[] | undefined>;
+  searchParams?: Promise<Record<string, string | string[] | undefined>>;
 }) {
   const headersList = await headers();
   const acceptLanguage = headersList.get('accept-language');
   const locale = detectPublicLocale(acceptLanguage);
 
-  // Preservar tots els searchParams al redirect
-  const params = searchParams;
+  // Preservar tots els searchParams al redirect (Next 15: searchParams és Promise)
+  const params = (await searchParams) ?? {};
   const queryString = new URLSearchParams();
   for (const [key, value] of Object.entries(params)) {
-    if (value !== undefined) {
-      // Si és array, afegir múltiples valors
-      if (Array.isArray(value)) {
-        for (const v of value) {
-          queryString.append(key, v);
-        }
-      } else {
-        queryString.set(key, value);
+    if (value === undefined) continue;
+    // Si és array, afegir múltiples valors
+    if (Array.isArray(value)) {
+      for (const v of value) {
+        queryString.append(key, v);
       }
+    } else {
+      queryString.set(key, value);
     }
   }
 
