@@ -143,7 +143,7 @@ export function DashboardHeader() {
   }
 
   return (
-    <header className="relative z-40 flex h-16 shrink-0 items-center justify-between gap-2 border-b bg-background px-4 md:px-6">
+    <header className="relative z-40 flex min-h-[56px] shrink-0 items-center justify-between gap-2 border-b bg-background px-4 py-3 md:px-6">
       {/* Bloc esquerra: degradable (breadcrumb truncat) */}
       <div className="flex min-w-0 flex-1 items-center gap-2">
         <SidebarTrigger className="h-9 w-9 shrink-0 border border-border" />
