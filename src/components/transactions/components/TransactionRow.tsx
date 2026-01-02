@@ -53,10 +53,10 @@ import {
   AlertCircle,
   CheckCircle2,
   CreditCard,
+  MessageSquare,
 } from 'lucide-react';
 import type { Transaction, Category, Project, ContactType } from '@/lib/data';
 import { formatCurrencyEU } from '@/lib/normalize';
-import { InlineNoteEditor } from '@/components/transactions/InlineNoteEditor';
 import { Checkbox } from '@/components/ui/checkbox';
 import { RowDropTarget } from '@/components/files/row-drop-target';
 
@@ -126,6 +126,8 @@ interface TransactionRowProps {
     categorize: string;
     uncategorized: string;
     viewDocument: string;
+    addNote?: string;
+    editNote?: string;
     attachProof: string;
     attachDocument: string;
     deleteDocument: string;
@@ -519,10 +521,12 @@ export const TransactionRow = React.memo(function TransactionRow({
               </Badge>
             )}
           </div>
-          <InlineNoteEditor
-            note={tx.note}
-            onSave={handleSetNote}
-          />
+          {/* Nota: només text, edició via menú ⋮ */}
+          {tx.note && (
+            <p className="text-xs text-muted-foreground truncate max-w-[320px] mt-0.5" title={tx.note}>
+              {tx.note}
+            </p>
+          )}
           {/* Mobile/tablet summary: categoria i contacte sota el concepte */}
           <div className="lg:hidden mt-1 text-xs text-muted-foreground flex items-center gap-1 flex-wrap">
             <span className="truncate max-w-[120px]">{getCategoryDisplayName(tx.category) || 'Sense categoria'}</span>
@@ -810,6 +814,10 @@ export const TransactionRow = React.memo(function TransactionRow({
             <DropdownMenuItem onClick={handleEdit}>
               <Edit className="mr-2 h-4 w-4" />
               {t.edit}
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={handleEdit}>
+              <MessageSquare className="mr-2 h-4 w-4" />
+              {tx.note ? (t.editNote || 'Editar nota') : (t.addNote || 'Afegir nota')}
             </DropdownMenuItem>
             {!hasDocument && (
               <DropdownMenuItem onClick={handleAttachDocument}>
