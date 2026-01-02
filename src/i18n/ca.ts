@@ -353,6 +353,7 @@ export const ca = {
       hideProjectColumn: "Amagar columna d'eixos d'actuació",
       projects: "Eixos d'actuació",
       viewDocument: "Veure justificant",
+      editNote: "Editar nota",
       allExpensesHaveProofEmpty: "🎉 Totes les despeses tenen justificant!",
       noReturns: "✅ No hi ha devolucions",
       selectCategory: "Selecciona categoria",

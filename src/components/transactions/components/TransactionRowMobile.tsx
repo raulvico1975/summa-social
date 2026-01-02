@@ -23,6 +23,7 @@ import {
   Edit,
   Trash2,
   FolderKanban,
+  MessageSquare,
 } from 'lucide-react';
 import type { Transaction, ContactType } from '@/lib/data';
 import { formatCurrencyEU } from '@/lib/normalize';
@@ -48,6 +49,8 @@ interface TransactionRowMobileProps {
     viewRemittanceDetail: string;
     remittanceQuotes: string;
     manageReturn?: string;
+    addNote?: string;
+    editNote?: string;
   };
 }
 
@@ -233,6 +236,10 @@ export const TransactionRowMobile = React.memo(function TransactionRowMobile({
             <DropdownMenuItem onClick={handleEdit}>
               <Edit className="h-4 w-4 mr-2" />
               {t.edit}
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={handleEdit}>
+              <MessageSquare className="h-4 w-4 mr-2" />
+              {tx.note ? (t.editNote || 'Editar nota') : (t.addNote || 'Afegir nota')}
             </DropdownMenuItem>
             {!hasDocument && onAttachDocument && (
               <DropdownMenuItem onClick={handleAttachDoc}>

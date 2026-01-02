@@ -353,6 +353,7 @@ export const fr = {
       hideProjectColumn: "Masquer colonne axes",
       projects: "Axes d'action",
       viewDocument: "Voir justificatif",
+      editNote: "Modifier note",
       allExpensesHaveProofEmpty: "🎉 Toutes les dépenses ont un justificatif !",
       noReturns: "✅ Aucun rejet",
       selectCategory: "Sélectionner catégorie",

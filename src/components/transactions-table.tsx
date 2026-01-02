@@ -1119,6 +1119,8 @@ export function TransactionsTable({ initialDateFilter = null }: TransactionsTabl
     categorize: t.movements.table.categorize,
     uncategorized: t.movements.table.uncategorized,
     viewDocument: t.movements.table.viewDocument,
+    addNote: t.movements.table.addNote,
+    editNote: t.movements.table.editNote,
     attachProof: t.movements.table.attachProof,
     attachDocument: t.movements.table.attachDocument,
     deleteDocument: t.movements.table.deleteDocument,

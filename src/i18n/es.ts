@@ -353,6 +353,7 @@ export const es = {
       hideProjectColumn: "Ocultar columna de ejes de actuación",
       projects: "Ejes de actuación",
       viewDocument: "Ver justificante",
+      editNote: "Editar nota",
       allExpensesHaveProofEmpty: "🎉 ¡Todos los gastos tienen justificante!",
       noReturns: "✅ No hay devoluciones",
       selectCategory: "Selecciona categoría",
