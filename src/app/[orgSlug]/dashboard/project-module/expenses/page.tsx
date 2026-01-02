@@ -1172,19 +1172,19 @@ export default function ExpensesInboxPage() {
                         <FileText className="h-4 w-4 text-muted-foreground/30 inline-block" />
                       )}
                     </TableCell>
-                    <TableCell className="font-mono text-sm">
+                    <TableCell className="font-mono text-[13px]">
                       {formatDateDMY(expense.date)}
                     </TableCell>
-                    <TableCell className="max-w-[250px] truncate">
+                    <TableCell className="max-w-[250px] truncate text-[13px]">
                       {expense.description || '-'}
                     </TableCell>
-                    <TableCell className="text-muted-foreground text-sm">
+                    <TableCell className="text-muted-foreground text-[13px]">
                       {getCategoryLabel(expense.categoryName)}
                     </TableCell>
-                    <TableCell className="text-muted-foreground text-sm">
+                    <TableCell className="text-muted-foreground text-[13px]">
                       {expense.counterpartyName || '-'}
                     </TableCell>
-                    <TableCell className="text-right font-mono font-medium">
+                    <TableCell className="text-right font-mono font-medium text-[13px] whitespace-nowrap tabular-nums">
                       {expense.pendingConversion || expense.amountEUR === 0 ? (
                         <div className="flex flex-col items-end gap-1">
                           <span className="text-muted-foreground">—</span>
