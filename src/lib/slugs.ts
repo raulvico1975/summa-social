@@ -2,6 +2,19 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 // GESTIÓ CENTRALITZADA DE SLUGS
 // ═══════════════════════════════════════════════════════════════════════════════
+//
+// ARQUITECTURA DE SLUGS (font de veritat):
+// -----------------------------------------
+// - /slugs/{slug}           → Índex CANÒNIC (slug → orgId). Lectura pública.
+// - /organizations/{id}.slug → Camp DENORMALITZAT per construir URLs dins context.
+//
+// Quan es crea o edita una organització, SEMPRE s'ha d'actualitzar AMBDÓS llocs
+// mitjançant `reserveSlug()`. La funció fa una transacció atòmica per garantir
+// consistència.
+//
+// Per fer lookup slug → orgId, usar /slugs/{slug} (O(1), públic).
+// Per construir URLs dins l'app, usar organizations.slug (ja carregat en context).
+// ═══════════════════════════════════════════════════════════════════════════════
 
 import {
   Firestore,

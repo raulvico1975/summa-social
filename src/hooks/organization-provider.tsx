@@ -3,13 +3,14 @@
 'use client';
 
 import React, { createContext, useContext, ReactNode, useMemo } from 'react';
-import { useParams, useRouter } from 'next/navigation';
+import { useParams, useRouter, usePathname, useSearchParams } from 'next/navigation';
 import { useFirebase, useCollection, useMemoFirebase } from '@/firebase';
 import { collection, collectionGroup, query, where, getDocs, doc, getDoc, limit } from 'firebase/firestore';
 import { generateUniqueSlug, reserveSlug } from '@/lib/slugs';
 import type { Organization, OrganizationRole, UserProfile } from '@/lib/data';
 import { Loader2, AlertCircle } from 'lucide-react';
 import { User } from 'firebase/auth';
+import { isDemoEnv } from '@/lib/demo/isDemoOrg';
 
 interface OrganizationContextType {
   organization: Organization | null;
@@ -35,7 +36,9 @@ interface OrganizationProviderProps {
 function useOrganizationBySlug(orgSlug?: string) {
   const { firestore, user, isUserLoading } = useFirebase();
   const router = useRouter();
-  
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+
   const [organization, setOrganization] = React.useState<Organization | null>(null);
   const [organizationId, setOrganizationId] = React.useState<string | null>(null);
   const [userProfile, setUserProfile] = React.useState<UserProfile | null>(null);
@@ -49,10 +52,16 @@ function useOrganizationBySlug(orgSlug?: string) {
       return;
     }
 
-    // Si no hi ha usuari autenticat, redirigim a login
+    // Si no hi ha usuari autenticat, redirigim a login preservant la ruta actual
+    // IMPORTANT: Mantenim isLoading=true per evitar flash (mostrar spinner fins redirect)
     if (!user) {
-      setIsLoading(false);
-      router.push('/login');
+      // Construir el next amb pathname + searchParams
+      const currentQuery = searchParams.toString();
+      const fullPath = currentQuery ? `${pathname}?${currentQuery}` : pathname;
+      const nextParam = encodeURIComponent(fullPath);
+
+      // Redirigir a login amb next (usem /login global que ja gestiona idioma)
+      router.replace(`/login?next=${nextParam}`);
       return;
     }
 
@@ -66,32 +75,51 @@ function useOrganizationBySlug(orgSlug?: string) {
 
         if (orgSlug) {
           // ═══════════════════════════════════════════════════════════════════
-          // CARREGA PER SLUG (nova funcionalitat)
+          // CARREGA PER SLUG (via /slugs/{slug} → orgId → /organizations/{orgId})
+          // Això evita fer query amb where() que requereix permisos de lectura global
           // ═══════════════════════════════════════════════════════════════════
-          const orgsRef = collection(firestore, 'organizations');
-          const q = query(orgsRef, where('slug', '==', orgSlug));
-          const snapshot = await getDocs(q);
 
-          if (snapshot.empty) {
+          // 1. Llegir el document de slug (públic, allow read: if true)
+          const slugRef = doc(firestore, 'slugs', orgSlug);
+          const slugSnap = await getDoc(slugRef);
+
+          if (!slugSnap.exists()) {
             throw new Error(`No s'ha trobat l'organització "${orgSlug}"`);
           }
 
-          const docSnap = snapshot.docs[0];
-          orgId = docSnap.id;
-          orgDoc = { id: orgId, ...docSnap.data() } as Organization;
+          const slugData = slugSnap.data();
+          orgId = slugData.orgId;
+
+          if (!orgId) {
+            throw new Error(`Slug "${orgSlug}" no té organització associada`);
+          }
+
+          // 2. Llegir l'organització directament pel seu ID
+          const orgRef = doc(firestore, 'organizations', orgId);
+          const orgSnap = await getDoc(orgRef);
+
+          if (!orgSnap.exists()) {
+            throw new Error(`No s'ha trobat l'organització amb ID "${orgId}"`);
+          }
+
+          orgDoc = { id: orgId, ...orgSnap.data() } as Organization;
 
           // Verificar que l'usuari té accés a aquesta organització
           const memberRef = doc(firestore, 'organizations', orgId, 'members', user.uid);
           const memberSnap = await getDoc(memberRef);
 
           if (!memberSnap.exists()) {
-            // Comprovar si és Super Admin
-            const SUPER_ADMIN_UID = 'f2AHJqjXiOZkYajwkOnZ8RY6h2k2';
-            if (user.uid !== SUPER_ADMIN_UID) {
-              throw new Error('No tens accés a aquesta organització');
+            // DEMO: permetre accés a qualsevol usuari autenticat
+            if (isDemoEnv()) {
+              setUserRole('admin');
+            } else {
+              // Comprovar si és Super Admin (només en prod)
+              const SUPER_ADMIN_UID = 'f2AHJqjXiOZkYajwkOnZ8RY6h2k2';
+              if (user.uid !== SUPER_ADMIN_UID) {
+                throw new Error('No tens accés a aquesta organització');
+              }
+              setUserRole('admin');
             }
-            // Super Admin pot veure qualsevol org
-            setUserRole('admin');
           } else {
             const memberData = memberSnap.data();
             setUserRole(memberData.role as OrganizationRole);
@@ -191,7 +219,7 @@ function useOrganizationBySlug(orgSlug?: string) {
     };
 
     loadOrganization();
-  }, [firestore, user, isUserLoading, orgSlug, router]);
+  }, [firestore, user, isUserLoading, orgSlug, router, pathname, searchParams]);
 
   return {
     organization,
@@ -254,9 +282,17 @@ export function OrganizationProvider({ children, orgSlug }: OrganizationProvider
     );
   }
   
-  // Si no hi ha organització, no renderitzar res
+  // Si no hi ha organització (estat transitori, ex: redirect en curs), mostrar spinner
+  // Això evita pàgina en blanc en cas de race condition
   if (!organizationData.organization) {
-    return null;
+    return (
+      <div className="flex min-h-screen items-center justify-center">
+        <div className="flex flex-col items-center gap-4">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+          <p className="text-muted-foreground">Carregant...</p>
+        </div>
+      </div>
+    );
   }
 
   return (

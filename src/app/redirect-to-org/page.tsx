@@ -52,10 +52,22 @@ function RedirectContent() {
 
         if (userProfileSnap.exists()) {
           const profile = userProfileSnap.data();
-          orgId = profile.organizationId || profile.defaultOrganizationId || null;
+          const profileOrgId = profile.organizationId || profile.defaultOrganizationId || null;
+
+          // Validar que l'usuari és membre real d'aquesta org
+          if (profileOrgId) {
+            const memberRef = doc(firestore, 'organizations', profileOrgId, 'members', user.uid);
+            const memberSnap = await getDoc(memberRef);
+
+            if (memberSnap.exists()) {
+              // L'usuari és membre confirmat
+              orgId = profileOrgId;
+            }
+            // Si no és membre, ignorem el perfil i fem fallback a collectionGroup
+          }
         }
 
-        // 2. Si no hi ha orgId al perfil, buscar com a membre d'alguna org (O(1) amb collectionGroup)
+        // 2. Si no hi ha orgId vàlid al perfil, buscar com a membre d'alguna org (O(1) amb collectionGroup)
         if (!orgId) {
           const q = query(
             collectionGroup(firestore, 'members'),
