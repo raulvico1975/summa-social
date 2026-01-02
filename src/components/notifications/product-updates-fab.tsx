@@ -84,28 +84,28 @@ export function ProductUpdatesFab() {
   // Si no hi ha cap update, no mostrar res
   if (updates.length === 0) return null;
 
-  // FAB tancat: només el botó flotant
-  if (!isOpen) {
-    return (
-      <Button
-        className="h-14 w-14 rounded-full shadow-lg bg-sky-600 hover:bg-sky-700 text-white relative"
-        onClick={() => setIsOpen(true)}
-        aria-label={t.productUpdates.tooltip({ count: unreadCount })}
-      >
-        <Inbox className="h-6 w-6" />
-        {unreadCount > 0 && (
-          <span className="absolute -top-1 -right-1 h-5 min-w-5 px-1.5 text-xs font-bold rounded-full bg-white text-sky-700 flex items-center justify-center shadow-sm">
-            {unreadCount}
-          </span>
-        )}
-      </Button>
-    );
-  }
-
   // FAB obert: panel complet (estil Card com LogPanel)
   return (
     <>
-      <Card className="w-full max-w-lg shadow-2xl">
+      {/* FAB tancat: només el botó flotant */}
+      {!isOpen && (
+        <Button
+          className="h-14 w-14 rounded-full shadow-lg bg-sky-600 hover:bg-sky-700 text-white relative"
+          onClick={() => setIsOpen(true)}
+          aria-label={t.productUpdates.tooltip({ count: unreadCount })}
+        >
+          <Inbox className="h-6 w-6" />
+          {unreadCount > 0 && (
+            <span className="absolute -top-1 -right-1 h-5 min-w-5 px-1.5 text-xs font-bold rounded-full bg-white text-sky-700 flex items-center justify-center shadow-sm">
+              {unreadCount}
+            </span>
+          )}
+        </Button>
+      )}
+
+      {/* FAB obert: panel complet */}
+      {isOpen && (
+        <Card className="w-full max-w-lg shadow-2xl">
         <CardHeader className="flex flex-row items-center justify-between p-4">
           <div className="flex items-center gap-2">
             <Sparkles className="h-5 w-5 text-amber-500" />
@@ -202,8 +202,9 @@ export function ProductUpdatesFab() {
           )}
         </CardContent>
       </Card>
+      )}
 
-      {/* Modal detall */}
+      {/* Modal detall - FORA del condicional isOpen perquè es mantingui */}
       <ProductUpdateDetailModal
         update={selectedUpdate}
         open={isDetailOpen}
