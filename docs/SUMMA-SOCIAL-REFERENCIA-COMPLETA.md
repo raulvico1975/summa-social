@@ -1,6 +1,6 @@
 # ═══════════════════════════════════════════════════════════════════════════════
 # SUMMA SOCIAL - REFERÈNCIA COMPLETA DEL PROJECTE
-# Versió 1.26 - Desembre 2025
+# Versió 1.27 - Gener 2026
 # ═══════════════════════════════════════════════════════════════════════════════
 
 
@@ -2890,6 +2890,55 @@ Quan una acció usa IA, el tooltip ha de ser descriptiu i no implicar confirmaci
 ```
 - Components com `DonorSearchCombobox` reescrits sense `cmdk` per evitar problemes de portals niuats
 
+### 7.5.9 Dashboard Layout i Overflow (NOU v1.27)
+
+**Problema resolt:**
+Contingut ample (com `TransactionsTable` amb `min-w-[600px]`) pot expandir el contenidor principal i empènyer elements fora del viewport, fent desaparèixer icones del header.
+
+**Solució aplicada a `src/app/[orgSlug]/dashboard/layout.tsx`:**
+
+```tsx
+<SidebarInset className="flex min-w-0 flex-1 flex-col overflow-x-hidden ...">
+  <DashboardHeader />
+  <main className="flex-1 overflow-y-auto p-4 md:p-6">{children}</main>
+</SidebarInset>
+```
+
+**Regles obligatòries per al layout del dashboard:**
+
+| Propietat | Motiu |
+|-----------|-------|
+| `min-w-0` | Permet que flex children es comprimeixin per sota del seu contingut natural |
+| `overflow-x-hidden` | Evita que contingut ample (taules, grids) expandeixi el contenidor |
+
+**Header responsive (`DashboardHeader`):**
+
+```tsx
+<header className="... flex items-center justify-between gap-2 ...">
+  {/* Bloc esquerra: degradable */}
+  <div className="flex min-w-0 flex-1 items-center gap-2">
+    <SidebarTrigger className="shrink-0" />
+    <Breadcrumb className="min-w-0">
+      <BreadcrumbList className="flex-nowrap overflow-hidden">
+        <BreadcrumbItem className="min-w-0 max-w-[8rem] sm:max-w-[12rem]">
+          <BreadcrumbPage className="truncate">{label}</BreadcrumbPage>
+        </BreadcrumbItem>
+      </BreadcrumbList>
+    </Breadcrumb>
+  </div>
+  {/* Bloc dreta: fix (icones sempre visibles) */}
+  <div className="flex shrink-0 items-center gap-2">
+    <HelpSheet />
+    <NotificationBell />
+  </div>
+</header>
+```
+
+**Patró de responsivitat:**
+- El bloc esquerra (`flex-1 min-w-0`) s'adapta i trunca el breadcrumb si cal
+- El bloc dreta (`shrink-0`) mai es comprimeix ni desapareix
+- Les icones d'ajuda i notificacions són sempre accessibles
+
 ## 7.6 Onboarding / Benvinguda Inicial (ACTUALITZAT v1.20)
 
 ### Objectiu
@@ -3153,6 +3202,7 @@ Indicadors que requeririen intervenció:
 | **1.24** | **31 Des 2025** | **Routing hardening: simplificació `/quick` (delega a `/redirect-to-org`), middleware amb PROTECTED_ROUTES per evitar loops, preservació de `?next` params.** |
 | **1.25** | **31 Des 2025** | **i18n rutes públiques complet (CA/ES/FR/PT): estructura `[lang]` per login, privacy i contact. Detecció automàtica idioma via Accept-Language. SEO amb canonical + hreflang per 4 idiomes. Redirect stubs per compatibilitat URLs antigues. Nou fitxer `src/i18n/public.ts` amb traduccions separades de l'app privada.** |
 | **1.26** | **31 Des 2025** | **Resolució col·lisió `[lang]` vs `[orgSlug]`: arquitectura `public/[lang]` amb middleware rewrite (URL pública intacta). HOME i Funcionalitats multiidioma. x-default hreflang. Slugs reservats (ca/es/fr/pt/public). Rutes canòniques: `/{lang}/funcionalitats`, `/{lang}/privacy`, `/{lang}/contact`. Aliases naturals: FR (`fonctionnalites`, `confidentialite`), ES (`funcionalidades`, `privacidad`, `contacto`), PT (`funcionalidades`, `privacidade`, `contacto`).** |
+| **1.27** | **2 Gen 2026** | **Fix routing Next 15 (`searchParams` Promise), header responsive (icones ajuda/novetats sempre visibles), cercador natural guies amb sinònims i scoring i18n, validador i18n claus de cerca, layout dashboard overflow fix (`min-w-0 + overflow-x-hidden` a SidebarInset).** |
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
