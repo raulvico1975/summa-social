@@ -114,7 +114,7 @@ export const ContactCombobox = React.memo(function ContactCombobox({
             ) : (
               <Building2 className="h-3 w-3 text-blue-500 shrink-0" />
             )}
-            <span className="text-sm truncate max-w-[90px]" title={selectedContact.name}>
+            <span className="text-[13px] truncate max-w-[90px]" title={selectedContact.name}>
               {selectedContact.name}
             </span>
             <ChevronsUpDown className="h-3 w-3 text-muted-foreground ml-1" />
@@ -295,7 +295,7 @@ export const DonorSelector = React.memo(function DonorSelector({
             className="h-auto p-0 text-left font-normal flex items-center gap-1"
           >
             <Heart className="h-3 w-3 text-red-500 shrink-0" />
-            <span className="text-sm truncate max-w-[90px]" title={selectedDonor.name}>
+            <span className="text-[13px] truncate max-w-[90px]" title={selectedDonor.name}>
               {selectedDonor.name}
             </span>
             <ChevronsUpDown className="h-3 w-3 text-muted-foreground ml-1" />
