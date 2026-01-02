@@ -128,16 +128,16 @@ export function DashboardHeader() {
 
       return (
         <React.Fragment key={item.path}>
-          <BreadcrumbItem>
+          <BreadcrumbItem className="min-w-0 max-w-[8rem] sm:max-w-[12rem]">
             {isLast ? (
-               <BreadcrumbPage>{label}</BreadcrumbPage>
+               <BreadcrumbPage className="truncate">{label}</BreadcrumbPage>
             ) : (
-              <BreadcrumbLink asChild>
+              <BreadcrumbLink asChild className="truncate">
                 <Link href={item.path}>{label}</Link>
               </BreadcrumbLink>
             )}
           </BreadcrumbItem>
-          {!isLast && <BreadcrumbSeparator />}
+          {!isLast && <BreadcrumbSeparator className="shrink-0" />}
         </React.Fragment>
       )
     });
@@ -145,21 +145,23 @@ export function DashboardHeader() {
   }
 
   return (
-    <header className="sticky top-0 z-10 flex h-16 shrink-0 items-center justify-between gap-4 border-b bg-background/80 px-4 backdrop-blur-sm md:px-6">
-      <div className="flex items-center gap-2">
-        <SidebarTrigger className="h-9 w-9 border border-border" />
+    <header className="sticky top-0 z-10 flex h-16 shrink-0 items-center justify-between gap-2 border-b bg-background/80 px-4 backdrop-blur-sm md:px-6">
+      {/* Bloc esquerra: degradable (breadcrumb truncat) */}
+      <div className="flex min-w-0 flex-1 items-center gap-2">
+        <SidebarTrigger className="h-9 w-9 shrink-0 border border-border" />
         {isDemoEnv() && (
-          <Badge variant="outline" className="bg-amber-100 text-amber-800 border-amber-300 text-xs font-medium">
+          <Badge variant="outline" className="shrink-0 bg-amber-100 text-amber-800 border-amber-300 text-xs font-medium">
             DEMO
           </Badge>
         )}
-        <Breadcrumb>
-          <BreadcrumbList>
+        <Breadcrumb className="min-w-0">
+          <BreadcrumbList className="flex-nowrap overflow-hidden">
             {getBreadcrumbs()}
           </BreadcrumbList>
         </Breadcrumb>
       </div>
-      <div className="flex items-center gap-2">
+      {/* Bloc dreta: fix (icones sempre visibles) */}
+      <div className="flex shrink-0 items-center gap-2">
         <HelpSheet />
         <NotificationBell notifications={DASHBOARD_NOTIFICATIONS} />
       </div>

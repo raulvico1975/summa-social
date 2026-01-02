@@ -163,6 +163,42 @@ const ARRAY_FIELDS = [
   'steps',
 ];
 
+// Claus obligatòries de cerca
+const REQUIRED_SEARCH_KEYS = [
+  'guides.search.placeholder',
+  'guides.search.helper',
+  'guides.search.noResultsTitle',
+  'guides.search.noResultsHint',
+  'guides.search.suggestionsTitle',
+];
+
+// Sinònims canònics (han de tenir almenys 2 variants cada un)
+const SEARCH_SYNONYM_CANONICALS = [
+  'no_veig',
+  'moviments',
+  'remesa',
+  'devolucions',
+  'stripe',
+  'certificat',
+  'model182',
+  'model347',
+  'categoria',
+  'importar',
+  'donants',
+  'filtrar',
+  'periode',
+  'document',
+  'error',
+  'quadrar',
+  'massiu',
+];
+
+// Mínim de stopwords per idioma
+const MIN_STOPWORDS = 10;
+
+// Mínim de suggeriments
+const MIN_SUGGESTIONS = 3;
+
 // ─────────────────────────────────────────────────────────────────────────────
 // Helpers
 // ─────────────────────────────────────────────────────────────────────────────
@@ -408,6 +444,51 @@ function validateLanguage(baseMessages: JsonMessages, targetMessages: JsonMessag
       type: 'warning',
       message: `Claus extra (no existeixen al base): ${extraKeys.slice(0, 5).join(', ')}${extraKeys.length > 5 ? '...' : ''}`,
     });
+  }
+
+  // 10. Validar claus de cerca obligatòries
+  for (const key of REQUIRED_SEARCH_KEYS) {
+    if (!(key in targetMessages)) {
+      errors.push({
+        type: 'critical',
+        message: `Falta clau de cerca: ${key}`,
+      });
+    } else if (!targetMessages[key] || targetMessages[key].trim() === '') {
+      errors.push({
+        type: 'critical',
+        message: `Clau de cerca buida: ${key}`,
+      });
+    }
+  }
+
+  // 11. Validar suggeriments (mínim 3)
+  const suggestionKeys = getArrayKeys(targetMessages, 'guides.search.suggestion');
+  if (suggestionKeys.length < MIN_SUGGESTIONS) {
+    errors.push({
+      type: 'critical',
+      message: `Falten suggeriments de cerca: ${suggestionKeys.length} trobats, mínim ${MIN_SUGGESTIONS}`,
+    });
+  }
+
+  // 12. Validar stopwords (mínim 10)
+  const stopwordKeys = getArrayKeys(targetMessages, 'guides.search.stopwords');
+  if (stopwordKeys.length < MIN_STOPWORDS) {
+    errors.push({
+      type: 'critical',
+      message: `Falten stopwords de cerca: ${stopwordKeys.length} trobats, mínim ${MIN_STOPWORDS}`,
+    });
+  }
+
+  // 13. Validar sinònims (cada canònic ha de tenir almenys 2 variants)
+  for (const canonical of SEARCH_SYNONYM_CANONICALS) {
+    const synPrefix = `guides.search.syn.${canonical}`;
+    const synKeys = getArrayKeys(targetMessages, synPrefix);
+    if (synKeys.length < 2) {
+      errors.push({
+        type: 'critical',
+        message: `Sinònim "${canonical}" té ${synKeys.length} variants, mínim 2`,
+      });
+    }
   }
 
   return {

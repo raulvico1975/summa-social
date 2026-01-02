@@ -23,12 +23,14 @@ function LoginPageContent() {
   const lang: PublicLocale = isValidPublicLocale(langParam) ? langParam : 'ca';
   const t = getPublicTranslations(lang);
 
-  // Si l'usuari ja està autenticat, redirigir a /redirect-to-org
+  // Si l'usuari ja està autenticat, redirigir a /redirect-to-org preservant next
+  const next = searchParams.get('next');
   React.useEffect(() => {
     if (user && !isUserLoading) {
-      router.push('/redirect-to-org?next=/dashboard');
+      const redirectNext = next || '/dashboard';
+      router.push(`/redirect-to-org?next=${encodeURIComponent(redirectNext)}`);
     }
-  }, [user, isUserLoading, router]);
+  }, [user, isUserLoading, router, next]);
 
   // Loading state mentre verifica sessió
   if (isUserLoading) {

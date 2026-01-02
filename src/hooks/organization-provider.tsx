@@ -3,7 +3,7 @@
 'use client';
 
 import React, { createContext, useContext, ReactNode, useMemo } from 'react';
-import { useParams, useRouter } from 'next/navigation';
+import { useParams, useRouter, usePathname, useSearchParams } from 'next/navigation';
 import { useFirebase, useCollection, useMemoFirebase } from '@/firebase';
 import { collection, collectionGroup, query, where, getDocs, doc, getDoc, limit } from 'firebase/firestore';
 import { generateUniqueSlug, reserveSlug } from '@/lib/slugs';
@@ -36,7 +36,9 @@ interface OrganizationProviderProps {
 function useOrganizationBySlug(orgSlug?: string) {
   const { firestore, user, isUserLoading } = useFirebase();
   const router = useRouter();
-  
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+
   const [organization, setOrganization] = React.useState<Organization | null>(null);
   const [organizationId, setOrganizationId] = React.useState<string | null>(null);
   const [userProfile, setUserProfile] = React.useState<UserProfile | null>(null);
@@ -50,15 +52,16 @@ function useOrganizationBySlug(orgSlug?: string) {
       return;
     }
 
-    // Si no hi ha usuari autenticat, redirigim a login
+    // Si no hi ha usuari autenticat, redirigim a login preservant la ruta actual
+    // IMPORTANT: Mantenim isLoading=true per evitar flash (mostrar spinner fins redirect)
     if (!user) {
-      setIsLoading(false);
-      // Si tenim orgSlug, redirigir al login de l'organització
-      if (orgSlug) {
-        router.push(`/${orgSlug}/login`);
-      } else {
-        router.push('/login');
-      }
+      // Construir el next amb pathname + searchParams
+      const currentQuery = searchParams.toString();
+      const fullPath = currentQuery ? `${pathname}?${currentQuery}` : pathname;
+      const nextParam = encodeURIComponent(fullPath);
+
+      // Redirigir a login amb next (usem /login global que ja gestiona idioma)
+      router.replace(`/login?next=${nextParam}`);
       return;
     }
 
@@ -216,7 +219,7 @@ function useOrganizationBySlug(orgSlug?: string) {
     };
 
     loadOrganization();
-  }, [firestore, user, isUserLoading, orgSlug, router]);
+  }, [firestore, user, isUserLoading, orgSlug, router, pathname, searchParams]);
 
   return {
     organization,
@@ -261,13 +264,13 @@ export function OrganizationProvider({ children, orgSlug }: OrganizationProvider
             {organizationData.error.message}
           </p>
           <div className="flex gap-2 mt-4">
-            <button 
+            <button
               onClick={() => router.push('/dashboard')}
               className="px-4 py-2 bg-primary text-primary-foreground rounded-md hover:bg-primary/90"
             >
               Anar al panell
             </button>
-            <button 
+            <button
               onClick={() => router.push('/')}
               className="px-4 py-2 bg-secondary text-secondary-foreground rounded-md hover:bg-secondary/90"
             >
@@ -278,10 +281,18 @@ export function OrganizationProvider({ children, orgSlug }: OrganizationProvider
       </div>
     );
   }
-  
-  // Si no hi ha organització, no renderitzar res
+
+  // Si no hi ha organització (estat transitori, ex: redirect en curs), mostrar spinner
+  // Això evita pàgina en blanc en cas de race condition
   if (!organizationData.organization) {
-    return null;
+    return (
+      <div className="flex min-h-screen items-center justify-center">
+        <div className="flex flex-col items-center gap-4">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+          <p className="text-muted-foreground">Carregant...</p>
+        </div>
+      </div>
+    );
   }
 
   return (
@@ -294,11 +305,11 @@ export function OrganizationProvider({ children, orgSlug }: OrganizationProvider
 /**
  * Hook per accedir a l'organització actual des de qualsevol component.
  * Ara també proporciona el slug de l'organització per construir URLs.
- * 
+ *
  * Ús:
  * ```typescript
  * const { organizationId, orgSlug, userRole } = useCurrentOrganization();
- * 
+ *
  * // Construir enllaços:
  * const dashboardUrl = `/${orgSlug}/dashboard`;
  * const movimentsUrl = `/${orgSlug}/dashboard/movimientos`;
@@ -306,21 +317,21 @@ export function OrganizationProvider({ children, orgSlug }: OrganizationProvider
  */
 export function useCurrentOrganization(): OrganizationContextType {
   const context = useContext(OrganizationContext);
-  
+
   if (context === undefined) {
     throw new Error('useCurrentOrganization must be used within an OrganizationProvider');
   }
-  
+
   return context;
 }
 
 /**
  * Hook helper per construir URLs amb el slug de l'organització actual.
- * 
+ *
  * Ús:
  * ```typescript
  * const { buildUrl } = useOrgUrl();
- * 
+ *
  * // Retorna: "/flores-kiskeya/dashboard/movimientos"
  * const url = buildUrl('/dashboard/movimientos');
  * ```
