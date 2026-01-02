@@ -1155,18 +1155,21 @@ export default function ExpensesInboxPage() {
                             </TooltipTrigger>
                             <TooltipContent>{ep.tooltipOpenDocument}</TooltipContent>
                           </Tooltip>
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <button
-                                type="button"
-                                onClick={() => handleDeleteDocument(item)}
-                                className="inline-flex items-center justify-center h-5 w-5 rounded text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors"
-                              >
-                                <Trash2 className="h-3 w-3" />
-                              </button>
-                            </TooltipTrigger>
-                            <TooltipContent>{t.movements?.table?.deleteDocument ?? 'Eliminar document'}</TooltipContent>
-                          </Tooltip>
+                          {/* No permetre eliminar docs de despeses bancàries - s'ha de fer des de Moviments */}
+                          {expense.source !== 'bank' && (
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <button
+                                  type="button"
+                                  onClick={() => handleDeleteDocument(item)}
+                                  className="inline-flex items-center justify-center h-5 w-5 rounded text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors"
+                                >
+                                  <Trash2 className="h-3 w-3" />
+                                </button>
+                              </TooltipTrigger>
+                              <TooltipContent>{t.movements?.table?.deleteDocument ?? 'Eliminar document'}</TooltipContent>
+                            </Tooltip>
+                          )}
                         </div>
                       ) : (
                         <FileText className="h-4 w-4 text-muted-foreground/30 inline-block" />
