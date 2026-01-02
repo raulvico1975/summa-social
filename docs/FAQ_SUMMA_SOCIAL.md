@@ -1,7 +1,7 @@
 # SUMMA SOCIAL - Preguntes Freqüents (FAQ)
 
-**Versió**: 1.16  
-**Última actualització**: Desembre 2025
+**Versió**: 1.27
+**Última actualització**: Gener 2026
 
 ---
 
@@ -17,7 +17,7 @@ Si no trobes la teva pregunta, no et preocupis: mira el Manual d'Usuari complet 
 
 ## Índex de preguntes
 
-**🚀 Primers passos i orientació** (1-7)
+**🚀 Primers passos i orientació** (1-7½)
 *T'acabes d'estrenar amb Summa Social i no saps per on agafar-ho? Aquí trobaràs respostes per perdre la por inicial.*
 
 **📥 Importació de dades** (8-15)
@@ -189,6 +189,28 @@ Summa Social guarda automàticament molts canvis mentre treballes. Si estaves ed
 4. El canvi s'aplica immediatament — no cal reiniciar res
 
 **Una cosa bonica:** Cada membre de l'equip pot tenir el seu propi idioma configurat. Si tu prefereixes el català i un company prefereix el castellà, cadascú veurà l'aplicació en el seu idioma sense afectar l'altre.
+
+---
+
+### 7½. Tinc un dubte i no trobo la resposta a cap lloc. On puc buscar ajuda dins l'app?
+
+**Hi ha un Hub de Guies integrat** directament a l'aplicació! El trobaràs clicant la icona d'interrogant (?) que veuràs a la cantonada superior dreta de qualsevol pantalla.
+
+**Què hi trobaràs:**
+- **Guies pas a pas** per a les funcionalitats principals
+- **Respostes a preguntes freqüents** sobre cada tema
+- **Un cercador intel·ligent** que entén com parles
+
+**El cercador és molt llest:**
+No cal que sàpigues els termes tècnics. Pots buscar coses com:
+- "no veig els meus moviments" → Et portarà a les guies d'importació
+- "182" → Et mostrarà les guies fiscals
+- "stripe comissions" → Et portarà a les guies de donacions online
+
+**Com funciona el cercador:**
+Escriu el que busques amb les teves paraules. El sistema reconeix sinònims i expressions comunes, així que no et preocupis per encertar el terme exacte.
+
+**Un consell:** Abans de contactar amb suport, fes una ullada al Hub de Guies. Moltes vegades la resposta ja hi és, i et pot estalviar temps d'espera.
 
 ---
 
@@ -1841,6 +1863,6 @@ Molta sort! 🍀
 
 ---
 
-**Summa Social v1.16** — Desembre 2025
+**Summa Social v1.27** — Gener 2026
 
 *Si tens dubtes, contacta amb el suport de l'app.*

@@ -1,6 +1,6 @@
 # Context Complet: SUMMA SOCIAL — Aplicació Sencera
 
-**Document per a ChatGPT — Versió actualitzada: 24 Desembre 2024**
+**Document per a ChatGPT — Versió actualitzada: 2 Gener 2026**
 
 > **NOTA:** Aquest document cobreix TOTA l'aplicació Summa Social, no només el mòdul de projectes.
 
@@ -20,10 +20,14 @@ El producte se centra en:
 - Exports nets per a gestories
 
 ### Stack Tecnològic
-- **Frontend:** Next.js 14 (App Router), React 18, TypeScript
+- **Frontend:** Next.js 15 (App Router), React 19, TypeScript
 - **UI:** Tailwind CSS + shadcn/ui
 - **Backend:** Firebase (Firestore, Auth, Storage, Functions)
 - **Hosting:** Firebase Hosting / App Hosting
+
+### Canvis importants Next.js 15
+- `searchParams` a les pàgines és ara un `Promise` (cal `await`)
+- Tipatge: `searchParams?: Promise<Record<string, string | string[] | undefined>>`
 
 ---
 
@@ -33,12 +37,38 @@ El producte se centra en:
 src/
 ├── app/[orgSlug]/dashboard/
 │   ├── movimientos/
-│   │   └── page.tsx                    # Pàgina de moviments bancaris
+│   │   ├── page.tsx                    # Pàgina de moviments bancaris
+│   │   ├── pendents/page.tsx           # Moviments pendents de classificar
+│   │   └── liquidacions/page.tsx       # Liquidacions pendents
+│   ├── informes/
+│   │   ├── page.tsx                    # Model 182, 347
+│   │   └── certificats/page.tsx        # Certificats de donació (PDF)
+│   ├── guides/
+│   │   └── page.tsx                    # ⭐ HUB DE GUIES (v1.27)
+│   ├── quick-expense/
+│   │   └── page.tsx                    # Captura ràpida despeses terreny
+│   ├── super-admin/
+│   │   └── page.tsx                    # Panell SuperAdmin
+│   ├── manual/
+│   │   └── page.tsx                    # Manual d'usuari integrat
+│   ├── donants/page.tsx                # Gestió donants
+│   ├── proveidors/page.tsx             # Gestió proveïdors
+│   ├── treballadors/page.tsx           # Gestió treballadors
+│   ├── projectes/page.tsx              # Projectes simplificat (no mòdul)
+│   ├── configuracion/page.tsx          # Configuració organització
 │   └── project-module/
+│       ├── page.tsx                    # Índex del mòdul projectes
+│       ├── admin/page.tsx              # Administració del mòdul (cleanup, etc.)
+│       ├── quick-expense/page.tsx      # Captura ràpida dins mòdul
 │       ├── expenses/
-│       │   └── page.tsx                # ⭐ LLISTAT DE DESPESES (fitxer principal)
+│       │   ├── page.tsx                # ⭐ LLISTAT DE DESPESES (fitxer principal)
+│       │   ├── [txId]/page.tsx         # Detall/edició d'una despesa
+│       │   └── capture/page.tsx        # Captura ràpida despesa
 │       └── projects/
+│           ├── page.tsx                # Llistat projectes
+│           ├── new/page.tsx            # Crear projecte
 │           └── [projectId]/
+│               ├── edit/page.tsx       # Editar projecte
 │               └── budget/
 │                   └── page.tsx        # Gestió econòmica d'un projecte
 │
@@ -47,11 +77,19 @@ src/
 │   │   ├── add-off-bank-expense-modal.tsx  # Modal crear/editar despeses terreny
 │   │   ├── assignment-editor.tsx       # Editor d'assignacions split
 │   │   └── expense-attachments-dropzone.tsx
-│   └── transactions/components/
-│       └── TransactionsFilters.tsx     # Filtres de la pàgina moviments (referència)
+│   ├── transactions/components/
+│   │   └── TransactionsFilters.tsx     # Filtres de la pàgina moviments (referència)
+│   └── help/
+│       └── HelpSheet.tsx               # ⭐ Hub de guies (sheet lateral)
 │
 ├── hooks/
 │   └── use-project-module.ts           # ⭐ HOOKS PRINCIPALS (useUnifiedExpenseFeed, etc.)
+│
+├── i18n/
+│   └── locales/
+│       ├── ca.json                     # Inclou guides.search.* (sinònims, stopwords)
+│       ├── es.json
+│       └── fr.json
 │
 └── lib/
     └── project-module-types.ts         # ⭐ TIPUS TYPESCRIPT
@@ -719,38 +757,68 @@ trackUX('expenses.offBank.edit.save', { expenseId });
 
 ---
 
-## 12. CANVIS RECENTS (Sessió 24 Desembre 2024)
+## 12. CANVIS RECENTS
 
-### 12.1 Paginació Implementada
+### 12.8 Hub de Guies (v1.27 - Gener 2026)
+- **Ruta**: `/dashboard/guides`
+- Centre d'autoajuda per usuaris amb guies procedimentals
+- Cercador amb scoring determinista (sense IA):
+  - Títol: +50 punts
+  - Resum: +20 punts
+  - Text card: +10 punts
+  - Sinònim: +5 a +45 punts
+- Diccionari de sinònims a `guides.search.syn.*` (permet cercar "no veig moviments" i trobar guies de "moviments")
+- Fitxers clau:
+  - `src/app/[orgSlug]/dashboard/guides/page.tsx`
+  - `src/i18n/locales/*.json` (claus `guides.search.*`)
+  - `scripts/i18n/validate-guides-translations.ts`
+
+### 12.9 Patrons de Layout (v1.27)
+- **Problema resolt**: Icones del header (ajuda, notificacions) desapareixien en pantalles estretes
+- **Causa**: Contingut amb `min-width` fixa expandia el contenidor
+- **Solució a `layout.tsx`**:
+  ```tsx
+  <SidebarInset className="flex min-w-0 flex-1 flex-col overflow-x-hidden ...">
+  ```
+- Pattern header responsive: bloc esquerra degradable (`min-w-0 flex-1`), bloc dreta fix (`shrink-0`)
+
+### 12.10 Next.js 15 Migration (v1.27)
+- `searchParams` és ara `Promise` a les pàgines
+- Afecta qualsevol `page.tsx` que usi searchParams
+- Error típic: `TS2344: Type '{ searchParams: Record<...> }' does not satisfy the constraint 'PageProps'`
+
+### Històric (Desembre 2024)
+
+#### 12.1 Paginació Implementada
 - `PAGE_SIZE = 50`
 - Cursors `lastBankDoc` i `lastOffBankDoc`
 - `loadMore()` i `hasMore` exposats
 - Botó "Carregar més" a la UI
 
-### 12.2 Cerca i Filtres
+#### 12.2 Cerca i Filtres
 - Camp de cerca amb icona Search i botó X
 - Filtres ràpids inline (Tots, Sense document, Sense categoria, etc.)
 - Filtres de tipus `ExpenseTableFilter`
 - Filtratge combinat amb `useMemo`
 
-### 12.3 Punt Verd
+#### 12.3 Punt Verd
 - Nova columna "Doc" a la taula
 - Usa `expense.documentUrl` per determinar estat
 
-### 12.4 Bug Fix documentUrl
+#### 12.4 Bug Fix documentUrl
 - Les despeses off-bank noves usen `attachments[]`
 - Hook fa fallback: `data.documentUrl ?? data.attachments?.[0]?.url ?? null`
 
-### 12.5 Modal Més Ample
+#### 12.5 Modal Més Ample
 - `DialogContent className="sm:max-w-4xl"`
 - Layout en 2 columnes: `grid grid-cols-1 md:grid-cols-2 gap-4`
 
-### 12.6 Botó Principal
+#### 12.6 Botó Principal
 - Text: "Afegir despesa (contrapart)"
 - Variant: default (primari)
 - Posició: primer botó (abans de "Projectes")
 
-### 12.7 Optimització Promise.all
+#### 12.7 Optimització Promise.all
 - Canviat `for...await` a `Promise.all` per carregar expenseLinks en paral·lel
 
 ---
@@ -855,6 +923,10 @@ Modal de crear/editar despeses. Consultable a:
   - `TransactionsFilters` - Filtres avançats
   - `TransactionRow` - Component d'una fila
 
+#### Sub-pàgines de Moviments
+- **`/dashboard/movimientos/pendents`**: Moviments pendents de classificar (sense categoria o contacte)
+- **`/dashboard/movimientos/liquidacions`**: Liquidacions pendents de processar
+
 #### Funcionalitats
 - Importació bancària (CSV/XLSX de múltiples bancs)
 - Auto-categorització intel·ligent amb IA
@@ -915,12 +987,17 @@ Modal de crear/editar despeses. Consultable a:
 
 #### Gestor d'Informes
 - **Ruta**: `/dashboard/informes`
-- **Components**: `DonationsReportGenerator`, `SuppliersReportGenerator`, `DonationCertificateGenerator`
+- **Components**: `DonationsReportGenerator`, `SuppliersReportGenerator`
+
+#### Certificats de Donació
+- **Ruta**: `/dashboard/informes/certificats`
+- **Components**: `DonationCertificateGenerator`
+- **Descripció**: Generació massiva o individual de certificats PDF per a donants
 
 #### Funcionalitats
 - **Model 182**: Declaració anual de donacions
 - **Model 347**: Declaració operacions amb tercers
-- **Certificats**: PDF de donació per donants
+- **Certificats**: PDF de donació per donants (ruta pròpia)
 - **Alertes**: Data límit de presentació
 
 ### 15.5 DASHBOARD PRINCIPAL
@@ -951,6 +1028,88 @@ Modal de crear/editar despeses. Consultable a:
 - `SupplierImporter` - Proveïdors
 - `StripeImporter` - Donacions Stripe
 - `ReturnImporter` - Devolucions
+
+### 15.8 HUB DE GUIES (v1.27)
+
+- **Ruta**: `/dashboard/guides`
+- **Descripció**: Centre d'autoajuda per usuaris amb guies procedimentals
+- **Funcionalitats**:
+  - Cercador amb scoring determinista (sense IA)
+  - Diccionari de sinònims per cerques naturals
+  - Guies agrupades per categoria
+  - Suggeriments de cerca
+- **Fitxers clau**:
+  - `src/app/[orgSlug]/dashboard/guides/page.tsx`
+  - `src/i18n/locales/*.json` (claus `guides.search.*`)
+
+### 15.9 QUICK EXPENSE (Captura ràpida)
+
+- **Ruta**: `/dashboard/quick-expense`
+- **Descripció**: Captura ràpida de despeses de terreny des del mòbil
+- **Funcionalitats**:
+  - Formulari simplificat (< 10 segons)
+  - Captura de foto del tiquet
+  - Assignació a projecte
+  - Marca `needsReview: true` per revisió posterior
+
+### 15.10 SUPER ADMIN
+
+- **Ruta**: `/dashboard/super-admin`
+- **Descripció**: Panell d'administració global (només SuperAdmins)
+- **Funcionalitats**:
+  - Gestió d'organitzacions
+  - Accés cross-org
+  - Mode rescat (rescue mode)
+
+### 15.11 MANUAL D'USUARI INTEGRAT
+
+- **Ruta**: `/dashboard/manual`
+- **Descripció**: Accés al manual d'usuari des de l'app
+
+### 15.12 PROJECT-MODULE ADMIN
+
+- **Ruta**: `/dashboard/project-module/admin`
+- **Descripció**: Administració del mòdul de projectes
+- **Funcionalitats**:
+  - Neteja de dades òrfenes (expenseLinks sense despesa)
+  - Estadístiques d'ús del mòdul
+  - Eines de diagnòstic
+
+### 15.13 DETALL DE DESPESA
+
+- **Ruta**: `/dashboard/project-module/expenses/[txId]`
+- **Descripció**: Vista detallada i edició d'una despesa individual
+- **Funcionalitats**:
+  - Visualització completa de la despesa
+  - Edició de camps (per off-bank)
+  - Gestió d'assignacions
+
+### 15.14 CAPTURA RÀPIDA (DINS PROJECT-MODULE)
+
+- **Ruta**: `/dashboard/project-module/expenses/capture`
+- **Descripció**: Formulari simplificat per capturar despeses de terreny
+- **Funcionalitats**:
+  - Captura amb foto del tiquet
+  - Marca `needsReview: true` per defecte
+
+### 15.15 PÀGINES PÚBLIQUES (MULTIIDIOMA)
+
+- **Ruta base**: `/public/[lang]/`
+- **Descripció**: Pàgines públiques accessibles sense login
+- **Rutes**:
+  - `/public/[lang]/` - Landing page
+  - `/public/[lang]/funcionalitats` (ca) / `funcionalidades` (es) / `fonctionnalites` (fr)
+  - `/public/[lang]/privacy` (en) / `privacitat` (ca) / `privacidad` (es) / `confidentialite` (fr)
+  - `/public/[lang]/contact` (en) / `contacte` (ca) / `contacto` (es)
+  - `/public/[lang]/novetats` - Bloc de novetats
+  - `/public/[lang]/novetats/[slug]` - Article individual
+  - `/public/[lang]/login` - Pàgina de login multiidioma
+
+### 15.16 ADMIN GLOBAL
+
+- **Ruta**: `/admin`
+- **Descripció**: Panell d'administració global (fora de context d'organització)
+- **Accés**: Només SuperAdmins
 
 ---
 
@@ -1600,29 +1759,68 @@ interface Remittance {
 
 ```
 src/app/
-├── (auth)/
-│   ├── login/page.tsx
-│   ├── register/page.tsx
-│   └── forgot-password/page.tsx
+├── login/page.tsx                    # Login global
+├── registre/page.tsx                 # Registre
+├── redirect-to-org/page.tsx          # Redirecció automàtica
+├── admin/page.tsx                    # Admin global (SuperAdmin)
+├── quick/page.tsx                    # Quick expense (sense org)
 │
-├── [orgSlug]/dashboard/
-│   ├── page.tsx                      # Dashboard principal
-│   ├── movimientos/page.tsx          # Moviments bancaris
-│   ├── donants/page.tsx              # Gestió donants
-│   ├── proveidors/page.tsx           # Gestió proveïdors
-│   ├── treballadors/page.tsx         # Gestió treballadors
-│   ├── informes/page.tsx             # Model 182, 347, certificats
-│   ├── configuracion/page.tsx        # Configuració org
+├── public/[lang]/                    # Pàgines públiques multiidioma
+│   ├── page.tsx                      # Landing page
+│   ├── login/page.tsx                # Login multiidioma
+│   ├── funcionalitats/page.tsx       # Features (ca)
+│   ├── funcionalidades/page.tsx      # Features (es)
+│   ├── fonctionnalites/page.tsx      # Features (fr)
+│   ├── privacy/page.tsx              # Privacitat (en)
+│   ├── privacitat/page.tsx           # Privacitat (ca)
+│   ├── privacidad/page.tsx           # Privacitat (es)
+│   ├── confidentialite/page.tsx      # Privacitat (fr)
+│   ├── contact/page.tsx              # Contacte (en)
+│   ├── contacte/page.tsx             # Contacte (ca)
+│   ├── contacto/page.tsx             # Contacte (es)
+│   └── novetats/
+│       ├── page.tsx                  # Llistat novetats
+│       └── [slug]/page.tsx           # Article individual
+│
+├── [orgSlug]/
+│   ├── page.tsx                      # Redirecció a dashboard
+│   ├── login/page.tsx                # Login dins org
+│   ├── quick-expense/page.tsx        # Quick expense amb org
 │   │
-│   └── project-module/
-│       ├── projects/
-│       │   ├── page.tsx              # Llistat projectes
-│       │   └── [projectId]/
-│       │       └── budget/page.tsx   # Gestió econòmica
-│       └── expenses/page.tsx         # Despeses assignables
-│
-├── super-admin/page.tsx              # Admin global
-└── redirect-to-org/page.tsx          # Redirecció automàtica
+│   └── dashboard/
+│       ├── page.tsx                  # Dashboard principal
+│       ├── movimientos/
+│       │   ├── page.tsx              # Moviments bancaris
+│       │   ├── pendents/page.tsx     # Moviments pendents
+│       │   └── liquidacions/page.tsx # Liquidacions
+│       ├── donants/page.tsx          # Gestió donants
+│       ├── proveidors/page.tsx       # Gestió proveïdors
+│       ├── treballadors/page.tsx     # Gestió treballadors
+│       ├── projectes/page.tsx        # Projectes simplificat
+│       ├── informes/
+│       │   ├── page.tsx              # Model 182, 347
+│       │   └── certificats/page.tsx  # Certificats donació
+│       ├── configuracion/page.tsx    # Configuració org
+│       ├── guides/page.tsx           # Hub de guies
+│       ├── manual/page.tsx           # Manual d'usuari
+│       ├── super-admin/page.tsx      # SuperAdmin (dins org)
+│       ├── quick-expense/page.tsx    # Quick expense dins dashboard
+│       │
+│       └── project-module/
+│           ├── page.tsx              # Índex del mòdul
+│           ├── admin/page.tsx        # Admin del mòdul
+│           ├── quick-expense/page.tsx# Quick expense del mòdul
+│           ├── expenses/
+│           │   ├── page.tsx          # Despeses assignables
+│           │   ├── [txId]/page.tsx   # Detall despesa
+│           │   └── capture/page.tsx  # Captura ràpida
+│           └── projects/
+│               ├── page.tsx          # Llistat projectes
+│               ├── new/page.tsx      # Crear projecte
+│               └── [projectId]/
+│                   ├── edit/page.tsx # Editar projecte
+│                   └── budget/
+│                       └── page.tsx  # Gestió econòmica
 ```
 
 ### 18.2 DASHBOARD PRINCIPAL

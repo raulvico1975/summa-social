@@ -1,7 +1,7 @@
 # SUMMA SOCIAL - Manual d'Usuari Complet
 
-**Versió**: 1.17
-**Última actualització**: Desembre 2025
+**Versió**: 1.27
+**Última actualització**: Gener 2026
 
 ---
 
@@ -1401,6 +1401,33 @@ Trobar respostes ràpides als problemes més comuns. Si et trobes encallat, mira
 
 ---
 
+## 12.0 El Hub de Guies: el teu primer recurs
+
+Abans de buscar ajuda externa, prova el **Hub de Guies** integrat a l'aplicació. El trobaràs clicant la icona **?** (interrogant) que apareix a la cantonada superior dreta de qualsevol pantalla.
+
+### Què hi trobaràs
+
+- **Guies pas a pas** per a les funcionalitats principals
+- **Respostes a preguntes freqüents** sobre cada tema
+- **Un cercador intel·ligent** que entén com parles
+
+### Com usar el cercador
+
+No cal que sàpigues els termes tècnics. Pots buscar coses com:
+
+| El que escrius | El que troba |
+|----------------|--------------|
+| "no veig els meus moviments" | Guies d'importació d'extractes |
+| "182" | Guies fiscals del Model 182 |
+| "stripe comissions" | Guies de donacions online |
+| "remesa no quadra" | Guies de divisió de remeses |
+
+El sistema reconeix sinònims i expressions comunes, així que no et preocupis per encertar el terme exacte.
+
+> 💡 **Consell:** Abans de contactar amb suport, fes una ullada al Hub de Guies. Moltes vegades la resposta ja hi és, i et pot estalviar temps d'espera.
+
+---
+
 ## 12.1 Problemes d'accés
 
 | Problema | Solució |
@@ -1494,6 +1521,6 @@ Molta sort! 🍀
 
 ---
 
-**Summa Social v1.17** — Desembre 2025
+**Summa Social v1.27** — Gener 2026
 
 *Gestió financera pensada per a entitats que volen dedicar el seu temps al que realment importa.*
