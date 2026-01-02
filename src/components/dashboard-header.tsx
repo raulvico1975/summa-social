@@ -8,8 +8,6 @@ import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbP
 import Link from 'next/link';
 import { useTranslations } from '@/i18n';
 import { useCurrentOrganization } from '@/hooks/organization-provider';
-import { NotificationBell } from '@/components/notifications/notification-bell';
-import { DASHBOARD_NOTIFICATIONS } from '@/lib/notifications';
 import { HelpSheet } from '@/components/help/HelpSheet';
 import { Badge } from '@/components/ui/badge';
 import { isDemoEnv } from '@/lib/demo/isDemoOrg';
@@ -163,7 +161,6 @@ export function DashboardHeader() {
       {/* Bloc dreta: fix (icones sempre visibles) */}
       <div className="flex shrink-0 items-center gap-2">
         <HelpSheet />
-        <NotificationBell notifications={DASHBOARD_NOTIFICATIONS} />
       </div>
     </header>
   );

@@ -73,8 +73,8 @@ export function LogPanel() {
 
   if (!isOpen) {
     return (
-      <Button 
-        className="fixed bottom-4 right-4 z-50 shadow-lg rounded-full h-14 w-14"
+      <Button
+        className="shadow-lg rounded-full h-14 w-14"
         onClick={() => setIsOpen(true)}
       >
         <Bot className="h-6 w-6" />
@@ -83,7 +83,7 @@ export function LogPanel() {
   }
 
   return (
-    <Card className="fixed bottom-4 right-4 z-50 w-full max-w-lg shadow-2xl">
+    <Card className="w-full max-w-lg shadow-2xl">
       <CardHeader className="flex flex-row items-center justify-between p-4">
         <div className="flex items-center gap-2">
             <Bot className="h-5 w-5" />

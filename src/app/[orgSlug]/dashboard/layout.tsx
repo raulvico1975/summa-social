@@ -8,6 +8,7 @@ import { Sidebar, SidebarProvider, SidebarInset } from '@/components/ui/sidebar'
 import { DashboardSidebarContent } from '@/components/dashboard-sidebar-content';
 import { DashboardHeader } from '@/components/dashboard-header';
 import { LogPanel } from '@/components/log-panel';
+import { ProductUpdatesFab } from '@/components/notifications/product-updates-fab';
 import { AppLogContext } from '@/hooks/use-app-log';
 import type { LogMessage } from '@/hooks/use-app-log';
 import { OrganizationProvider, useCurrentOrganization } from '@/hooks/organization-provider';
@@ -172,7 +173,11 @@ function OrganizationDependentLayout({ children }: { children: React.ReactNode }
           </SidebarInset>
         </div>
       </SidebarProvider>
-      <LogPanel />
+      {/* FAB rail: stack vertical de botons flotants a baix-dreta */}
+      <div className="fixed bottom-6 right-6 z-50 flex flex-col items-end gap-3">
+        <ProductUpdatesFab />
+        <LogPanel />
+      </div>
     </AppLogContext.Provider>
   );
 }
