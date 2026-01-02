@@ -560,4 +560,113 @@ El Mode Rescat elimina tota seguretat d'accés a `/admin`. Només usar-lo tempor
 
 ---
 
-*Última actualització: 2026-01-01*
+## 13. Hub de Guies (v1.27)
+
+### Què és
+
+Centre d'autoajuda per usuaris a `/dashboard/guides`. Permet trobar guies procedimentals sense contactar suport.
+
+### Cercador natural
+
+El cercador usa **scoring determinista** (sense IA):
+
+| Match | Punts |
+|-------|-------|
+| Títol | +50 |
+| Resum | +20 |
+| Text card | +10 |
+| Sinònim | +5 a +45 |
+
+**Sinònims**: L'usuari escriu "no veig moviments" → el sistema troba guies de "moviments" gràcies al diccionari de sinònims a `guides.search.syn.*`.
+
+### Fitxers clau
+
+| Fitxer | Funció |
+|--------|--------|
+| `src/app/[orgSlug]/dashboard/guides/page.tsx` | Pàgina principal amb cercador |
+| `src/i18n/locales/*.json` | Claus `guides.search.*` (stopwords, synonyms, suggestions) |
+| `scripts/i18n/validate-guides-translations.ts` | Validador de claus de cerca |
+
+### Afegir sinònims nous
+
+1. Edita `src/i18n/locales/ca.json` (i es/fr/pt):
+```json
+"guides.search.syn.nou_terme.0": "variant1",
+"guides.search.syn.nou_terme.1": "variant2"
+```
+
+2. Afegeix el canònic al validador (`SEARCH_SYNONYM_CANONICALS`)
+
+3. Executa `npm run i18n:validate-guides`
+
+---
+
+## 14. Patrons de Layout (v1.27)
+
+### Problema: icones del header desapareixen
+
+**Símptoma**: En pantalles estretes (o amb taules amples), les icones d'ajuda i notificacions del header desapareixen.
+
+**Causa**: Contingut amb `min-width` fixa (ex: `TransactionsTable` amb `min-w-[600px]`) expandeix el contenidor més enllà del viewport.
+
+**Solució aplicada a `layout.tsx`**:
+
+```tsx
+<SidebarInset className="flex min-w-0 flex-1 flex-col overflow-x-hidden ...">
+```
+
+| Propietat | Per què |
+|-----------|---------|
+| `min-w-0` | Permet que flex children es comprimeixin |
+| `overflow-x-hidden` | Evita que contingut ample expandeixi el contenidor |
+
+### Pattern header responsive
+
+```tsx
+<header className="flex items-center justify-between gap-2">
+  {/* Bloc esquerra: degradable */}
+  <div className="flex min-w-0 flex-1 items-center gap-2">
+    {/* Breadcrumb amb truncate */}
+  </div>
+  {/* Bloc dreta: fix */}
+  <div className="flex shrink-0 items-center gap-2">
+    <HelpSheet />
+    <NotificationBell />
+  </div>
+</header>
+```
+
+**Regla**: El bloc dreta (`shrink-0`) mai es comprimeix. El breadcrumb es trunca si cal.
+
+---
+
+## 15. Next.js 15 — Canvis importants
+
+### searchParams és Promise
+
+A Next 15, `searchParams` a les pàgines és un `Promise`:
+
+```tsx
+// ❌ Next 14 (no funciona a Next 15)
+export default function Page({ searchParams }: { searchParams: Record<string, string> }) {
+  const value = searchParams.key;
+}
+
+// ✅ Next 15
+export default async function Page({
+  searchParams,
+}: {
+  searchParams?: Promise<Record<string, string | string[] | undefined>>;
+}) {
+  const params = (await searchParams) ?? {};
+  const value = params.key;
+}
+```
+
+**Fitxers afectats**: Qualsevol `page.tsx` que usi `searchParams`.
+
+**Error típic**: `TS2344: Type '{ searchParams: Record<...> }' does not satisfy the constraint 'PageProps'`
+
+---
+
+*Última actualització: 2026-01-02*
