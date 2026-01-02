@@ -10,14 +10,22 @@ import { X, Bot, Trash2, Copy, Check } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { useTranslations } from '@/i18n';
 import { useToast } from '@/hooks/use-toast';
+import { useFirebase } from '@/firebase';
+import { SUPER_ADMIN_UID } from '@/lib/data';
 
 export function LogPanel() {
   const { logs, clearLogs } = useAppLog();
   const { t } = useTranslations();
   const { toast } = useToast();
+  const { user } = useFirebase();
   const [isOpen, setIsOpen] = React.useState(false);
   const [copied, setCopied] = React.useState(false);
   const scrollAreaRef = React.useRef<HTMLDivElement>(null);
+
+  // Només visible per SuperAdmin o en development
+  const isSuperAdmin = user?.uid === SUPER_ADMIN_UID;
+  const isDev = process.env.NODE_ENV === 'development';
+  const shouldShowUI = isSuperAdmin || isDev;
 
   // Ref per gestionar timeout i evitar memory leaks
   const copyTimeoutRef = React.useRef<NodeJS.Timeout | null>(null);
@@ -57,6 +65,11 @@ export function LogPanel() {
         }
     }
   }, [logs]);
+
+  // Amagar UI completament per usuaris normals (context segueix funcionant)
+  if (!shouldShowUI) {
+    return null;
+  }
 
   if (!isOpen) {
     return (
