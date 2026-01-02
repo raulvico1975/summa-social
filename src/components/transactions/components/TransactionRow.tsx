@@ -444,7 +444,7 @@ export const TransactionRow = React.memo(function TransactionRow({
 
       {/* Amount */}
       <TableCell
-        className={`text-right font-mono font-medium py-1 text-sm ${
+        className={`text-right font-mono font-medium py-1 text-[13px] whitespace-nowrap tabular-nums ${
           isReturnedDonation ? 'text-gray-400 line-through' :
           tx.amount > 0 ? 'text-green-600' : 'text-foreground'
         }`}
@@ -512,7 +512,7 @@ export const TransactionRow = React.memo(function TransactionRow({
             )}
           </div>
           <div className="flex items-center gap-2">
-            <p className={`text-sm truncate max-w-[320px] ${isReturnedDonation ? 'text-gray-400' : ''}`} title={tx.description}>
+            <p className={`text-[13px] truncate max-w-[320px] ${isReturnedDonation ? 'text-gray-400' : ''}`} title={tx.description}>
               {tx.description}
             </p>
             {isFromStripe && (
