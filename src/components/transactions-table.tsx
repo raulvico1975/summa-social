@@ -78,7 +78,9 @@ import { useTransactionActions } from '@/components/transactions/hooks/useTransa
 import { EditTransactionDialog } from '@/components/transactions/EditTransactionDialog';
 import { NewContactDialog } from '@/components/transactions/NewContactDialog';
 import { TransactionRow } from '@/components/transactions/components/TransactionRow';
+import { TransactionRowMobile } from '@/components/transactions/components/TransactionRowMobile';
 import { TransactionsFilters, TableFilter } from '@/components/transactions/components/TransactionsFilters';
+import { useIsMobile } from '@/hooks/use-is-mobile';
 import { attachDocumentToTransaction } from '@/lib/files/attach-document';
 import { DateFilter, type DateFilterValue } from '@/components/date-filter';
 import { useTransactionFilters } from '@/hooks/use-transaction-filters';
@@ -99,6 +101,7 @@ export function TransactionsTable({ initialDateFilter = null }: TransactionsTabl
   const { t, language } = useTranslations();
   const { toast } = useToast();
   const locale = language === 'es' ? 'es-ES' : 'ca-ES';
+  const isMobile = useIsMobile();
 
   // SuperAdmin detection per bulk mode
   const isSuperAdmin = user?.uid === SUPER_ADMIN_UID;
@@ -1337,140 +1340,203 @@ export function TransactionsTable({ initialDateFilter = null }: TransactionsTabl
       )}
 
       {/* ═══════════════════════════════════════════════════════════════════════
-          TAULA DE TRANSACCIONS
+          LLISTA MÒBIL (stacked rows) - < 768px
           ═══════════════════════════════════════════════════════════════════════ */}
-      <div className="rounded-md border overflow-x-auto md:overflow-x-visible">
-        <Table className="min-w-[600px] md:min-w-0 lg:min-w-[1100px]">
-          <TableHeader>
-            <TableRow className="h-9">
-              {/* Checkbox columna - només visible per admin/user */}
-              {canBulkEdit && (
-                <TableHead className="w-[40px] py-2 px-2">
-                  <Checkbox
-                    checked={checkboxState === 'checked'}
-                    ref={(el) => {
-                      if (el) {
-                        (el as HTMLButtonElement & { indeterminate: boolean }).indeterminate = checkboxState === 'indeterminate';
-                      }
-                    }}
-                    onCheckedChange={() => toggleAllVisible(visibleIds)}
-                    aria-label={allVisibleSelected ? bulkT?.deselectAll ?? 'Deseleccionar tots' : bulkT?.selectAll ?? 'Seleccionar tots'}
-                    className="h-4 w-4"
-                  />
-                </TableHead>
-              )}
-              <TableHead className="w-[100px] py-2">
-                <button
-                  onClick={() => setSortDateAsc(!sortDateAsc)}
-                  className="flex items-center gap-1 hover:text-foreground transition-colors text-xs"
-                >
-                  {t.movements.table.date}
-                  {sortDateAsc ? (
-                    <ChevronUp className="h-3 w-3" />
-                  ) : (
-                    <ChevronDown className="h-3 w-3" />
-                  )}
-                </button>
-              </TableHead>
-              <TableHead className="text-right w-[100px] py-2 whitespace-nowrap">{t.movements.table.amount}</TableHead>
-              <TableHead className="min-w-[200px] lg:min-w-[360px] py-2">{t.movements.table.concept}</TableHead>
-              <TableHead className="w-[150px] py-2 hidden lg:table-cell">{t.movements.table.contact}</TableHead>
-              <TableHead className="w-[140px] py-2 hidden lg:table-cell">{t.movements.table.category}</TableHead>
-              {showProjectColumn && (
-                <TableHead className="w-[100px] py-2 hidden lg:table-cell">
-                  {t.movements.table.project}
-                </TableHead>
-              )}
-              <TableHead className="w-[88px] text-right py-2 pr-3"><span className="sr-only">{t.movements.table.actions}</span></TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {filteredTransactions.map((tx) => (
-              <TransactionRow
-                key={tx.id}
-                transaction={tx}
-                contactName={tx.contactId ? contactMap[tx.contactId]?.name || null : null}
-                contactType={tx.contactId ? contactMap[tx.contactId]?.type || null : null}
-                projectName={tx.projectId ? projectMap[tx.projectId] || null : null}
-                relevantCategories={tx.amount > 0 ? categoriesByType.income : categoriesByType.expense}
-                categoryTranslations={categoryTranslations}
-                comboboxContacts={comboboxContacts}
-                availableProjects={availableProjects}
-                showProjectColumn={showProjectColumn}
-                isDocumentLoading={docLoadingStates[tx.id] || false}
-                isCategoryLoading={loadingStates[tx.id] || false}
-                isSelected={canBulkEdit ? selectedIds.has(tx.id) : undefined}
-                onToggleSelect={canBulkEdit ? toggleOne : undefined}
-                onDropFile={canBulkEdit ? handleDropFile : undefined}
-                dropHint={t.movements.table.dropToAttach || 'Deixa anar per adjuntar'}
-                onSetNote={handleSetNote}
-                onSetCategory={handleSetCategory}
-                onSetContact={handleSetContact}
-                onSetProject={handleSetProject}
-                onAttachDocument={handleAttachDocument}
-                onDeleteDocument={handleDeleteDocument}
-                onCategorize={handleCategorize}
-                onEdit={handleEditClick}
-                onDelete={handleDeleteClick}
-                onOpenReturnDialog={handleOpenReturnDialog}
-                onSplitRemittance={handleSplitRemittance}
-                onSplitStripeRemittance={handleSplitStripeRemittance}
-                onViewRemittanceDetail={handleViewRemittanceDetail}
-                onUndoRemittance={handleUndoRemittance}
-                onCreateNewContact={handleOpenNewContactDialog}
-                onOpenReturnImporter={() => setIsReturnImporterOpen(true)}
-                detectedPrebankRemittance={detectedSepaRemittances.get(tx.id) ? {
-                  id: detectedSepaRemittances.get(tx.id)!.id,
-                  nbOfTxs: detectedSepaRemittances.get(tx.id)!.nbOfTxs,
-                  ctrlSum: detectedSepaRemittances.get(tx.id)!.ctrlSum,
-                } : null}
-                onReconcileSepa={handleReconcileSepa}
-                t={rowTranslations}
-                getCategoryDisplayName={getCategoryDisplayName}
-              />
-            ))}
-            {/* Skeleton loading state */}
-            {isLoadingTransactions && !allTransactions && (
-              Array.from({ length: 8 }).map((_, i) => (
-                <TableRow key={`skeleton-${i}`}>
-                  {canBulkEdit && <TableCell className="w-10"><Skeleton className="h-4 w-4" /></TableCell>}
-                  <TableCell><Skeleton className="h-4 w-20" /></TableCell>
-                  <TableCell><Skeleton className="h-4 w-full max-w-[200px]" /></TableCell>
-                  <TableCell><Skeleton className="h-4 w-24" /></TableCell>
-                  <TableCell><Skeleton className="h-4 w-16" /></TableCell>
-                  <TableCell><Skeleton className="h-4 w-28" /></TableCell>
-                  {showProjectColumn && <TableCell><Skeleton className="h-4 w-24" /></TableCell>}
-                  <TableCell><Skeleton className="h-5 w-5 rounded" /></TableCell>
-                  <TableCell><Skeleton className="h-8 w-8 rounded" /></TableCell>
-                </TableRow>
-              ))
-            )}
-            {/* Empty state (only when not loading) */}
-            {!isLoadingTransactions && filteredTransactions.length === 0 && (
-                <TableRow>
-                    <TableCell colSpan={(canBulkEdit ? 8 : 7) + (showProjectColumn ? 1 : 0)} className="p-0">
-                      <EmptyState
-                        icon={tableFilter === 'missing' ? FileX : tableFilter === 'returns' ? Undo : Search}
-                        title={
-                          tableFilter === 'missing'
-                            ? t.movements.table.allExpensesHaveProofEmpty
-                            : tableFilter === 'returns'
-                            ? t.movements.table.noReturns
-                            : (t.emptyStates?.movements?.noResults ?? t.movements.table.noTransactions)
+      {isMobile && (
+        <div className="space-y-2">
+          {/* Loading skeleton mòbil */}
+          {isLoadingTransactions && !allTransactions && (
+            Array.from({ length: 5 }).map((_, i) => (
+              <div key={`skeleton-mobile-${i}`} className="border rounded-lg p-3 space-y-2">
+                <div className="flex justify-between">
+                  <Skeleton className="h-3 w-16" />
+                  <Skeleton className="h-4 w-20" />
+                </div>
+                <Skeleton className="h-4 w-full" />
+                <div className="flex gap-2">
+                  <Skeleton className="h-5 w-16" />
+                  <Skeleton className="h-5 w-24" />
+                </div>
+              </div>
+            ))
+          )}
+
+          {/* Llista de transaccions mòbil */}
+          {!isLoadingTransactions && filteredTransactions.map((tx) => (
+            <TransactionRowMobile
+              key={tx.id}
+              transaction={tx}
+              contactName={tx.contactId ? contactMap[tx.contactId]?.name || null : null}
+              contactType={tx.contactId ? contactMap[tx.contactId]?.type || null : null}
+              categoryDisplayName={getCategoryDisplayName(tx.category)}
+              onEdit={handleEditClick}
+              onDelete={handleDeleteClick}
+              onOpenReturnDialog={handleOpenReturnDialog}
+              onViewRemittanceDetail={handleViewRemittanceDetail}
+              onAttachDocument={handleAttachDocument}
+              t={rowTranslations}
+            />
+          ))}
+
+          {/* Empty state mòbil */}
+          {!isLoadingTransactions && filteredTransactions.length === 0 && (
+            <EmptyState
+              icon={tableFilter === 'missing' ? FileX : tableFilter === 'returns' ? Undo : Search}
+              title={
+                tableFilter === 'missing'
+                  ? t.movements.table.allExpensesHaveProofEmpty
+                  : tableFilter === 'returns'
+                  ? t.movements.table.noReturns
+                  : (t.emptyStates?.movements?.noResults ?? t.movements.table.noTransactions)
+              }
+              description={
+                tableFilter !== 'missing' && tableFilter !== 'returns'
+                  ? (t.emptyStates?.movements?.noResultsDesc ?? undefined)
+                  : undefined
+              }
+              className="py-12"
+            />
+          )}
+        </div>
+      )}
+
+      {/* ═══════════════════════════════════════════════════════════════════════
+          TAULA DE TRANSACCIONS (desktop/tablet) - >= 768px
+          ═══════════════════════════════════════════════════════════════════════ */}
+      {!isMobile && (
+        <div className="rounded-md border">
+          <Table>
+            <TableHeader>
+              <TableRow className="h-9">
+                {/* Checkbox columna - només visible per admin/user */}
+                {canBulkEdit && (
+                  <TableHead className="w-[40px] py-2 px-2">
+                    <Checkbox
+                      checked={checkboxState === 'checked'}
+                      ref={(el) => {
+                        if (el) {
+                          (el as HTMLButtonElement & { indeterminate: boolean }).indeterminate = checkboxState === 'indeterminate';
                         }
-                        description={
-                          tableFilter !== 'missing' && tableFilter !== 'returns'
-                            ? (t.emptyStates?.movements?.noResultsDesc ?? undefined)
-                            : undefined
-                        }
-                        className="border-0 rounded-none py-12"
-                      />
-                    </TableCell>
-                </TableRow>
-             )}
-          </TableBody>
-        </Table>
-      </div>
+                      }}
+                      onCheckedChange={() => toggleAllVisible(visibleIds)}
+                      aria-label={allVisibleSelected ? bulkT?.deselectAll ?? 'Deseleccionar tots' : bulkT?.selectAll ?? 'Seleccionar tots'}
+                      className="h-4 w-4"
+                    />
+                  </TableHead>
+                )}
+                <TableHead className="w-[100px] py-2">
+                  <button
+                    onClick={() => setSortDateAsc(!sortDateAsc)}
+                    className="flex items-center gap-1 hover:text-foreground transition-colors text-xs"
+                  >
+                    {t.movements.table.date}
+                    {sortDateAsc ? (
+                      <ChevronUp className="h-3 w-3" />
+                    ) : (
+                      <ChevronDown className="h-3 w-3" />
+                    )}
+                  </button>
+                </TableHead>
+                <TableHead className="text-right w-[100px] py-2 whitespace-nowrap">{t.movements.table.amount}</TableHead>
+                <TableHead className="min-w-[200px] lg:min-w-[360px] py-2">{t.movements.table.concept}</TableHead>
+                <TableHead className="w-[150px] py-2 hidden lg:table-cell">{t.movements.table.contact}</TableHead>
+                <TableHead className="w-[140px] py-2 hidden lg:table-cell">{t.movements.table.category}</TableHead>
+                {showProjectColumn && (
+                  <TableHead className="w-[100px] py-2 hidden lg:table-cell">
+                    {t.movements.table.project}
+                  </TableHead>
+                )}
+                <TableHead className="w-[88px] text-right py-2 pr-3"><span className="sr-only">{t.movements.table.actions}</span></TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {filteredTransactions.map((tx) => (
+                <TransactionRow
+                  key={tx.id}
+                  transaction={tx}
+                  contactName={tx.contactId ? contactMap[tx.contactId]?.name || null : null}
+                  contactType={tx.contactId ? contactMap[tx.contactId]?.type || null : null}
+                  projectName={tx.projectId ? projectMap[tx.projectId] || null : null}
+                  relevantCategories={tx.amount > 0 ? categoriesByType.income : categoriesByType.expense}
+                  categoryTranslations={categoryTranslations}
+                  comboboxContacts={comboboxContacts}
+                  availableProjects={availableProjects}
+                  showProjectColumn={showProjectColumn}
+                  isDocumentLoading={docLoadingStates[tx.id] || false}
+                  isCategoryLoading={loadingStates[tx.id] || false}
+                  isSelected={canBulkEdit ? selectedIds.has(tx.id) : undefined}
+                  onToggleSelect={canBulkEdit ? toggleOne : undefined}
+                  onDropFile={canBulkEdit ? handleDropFile : undefined}
+                  dropHint={t.movements.table.dropToAttach || 'Deixa anar per adjuntar'}
+                  onSetNote={handleSetNote}
+                  onSetCategory={handleSetCategory}
+                  onSetContact={handleSetContact}
+                  onSetProject={handleSetProject}
+                  onAttachDocument={handleAttachDocument}
+                  onDeleteDocument={handleDeleteDocument}
+                  onCategorize={handleCategorize}
+                  onEdit={handleEditClick}
+                  onDelete={handleDeleteClick}
+                  onOpenReturnDialog={handleOpenReturnDialog}
+                  onSplitRemittance={handleSplitRemittance}
+                  onSplitStripeRemittance={handleSplitStripeRemittance}
+                  onViewRemittanceDetail={handleViewRemittanceDetail}
+                  onUndoRemittance={handleUndoRemittance}
+                  onCreateNewContact={handleOpenNewContactDialog}
+                  onOpenReturnImporter={() => setIsReturnImporterOpen(true)}
+                  detectedPrebankRemittance={detectedSepaRemittances.get(tx.id) ? {
+                    id: detectedSepaRemittances.get(tx.id)!.id,
+                    nbOfTxs: detectedSepaRemittances.get(tx.id)!.nbOfTxs,
+                    ctrlSum: detectedSepaRemittances.get(tx.id)!.ctrlSum,
+                  } : null}
+                  onReconcileSepa={handleReconcileSepa}
+                  t={rowTranslations}
+                  getCategoryDisplayName={getCategoryDisplayName}
+                />
+              ))}
+              {/* Skeleton loading state */}
+              {isLoadingTransactions && !allTransactions && (
+                Array.from({ length: 8 }).map((_, i) => (
+                  <TableRow key={`skeleton-${i}`}>
+                    {canBulkEdit && <TableCell className="w-10"><Skeleton className="h-4 w-4" /></TableCell>}
+                    <TableCell><Skeleton className="h-4 w-20" /></TableCell>
+                    <TableCell><Skeleton className="h-4 w-full max-w-[200px]" /></TableCell>
+                    <TableCell><Skeleton className="h-4 w-24" /></TableCell>
+                    <TableCell><Skeleton className="h-4 w-16" /></TableCell>
+                    <TableCell><Skeleton className="h-4 w-28" /></TableCell>
+                    {showProjectColumn && <TableCell><Skeleton className="h-4 w-24" /></TableCell>}
+                    <TableCell><Skeleton className="h-5 w-5 rounded" /></TableCell>
+                    <TableCell><Skeleton className="h-8 w-8 rounded" /></TableCell>
+                  </TableRow>
+                ))
+              )}
+              {/* Empty state (only when not loading) */}
+              {!isLoadingTransactions && filteredTransactions.length === 0 && (
+                  <TableRow>
+                      <TableCell colSpan={(canBulkEdit ? 8 : 7) + (showProjectColumn ? 1 : 0)} className="p-0">
+                        <EmptyState
+                          icon={tableFilter === 'missing' ? FileX : tableFilter === 'returns' ? Undo : Search}
+                          title={
+                            tableFilter === 'missing'
+                              ? t.movements.table.allExpensesHaveProofEmpty
+                              : tableFilter === 'returns'
+                              ? t.movements.table.noReturns
+                              : (t.emptyStates?.movements?.noResults ?? t.movements.table.noTransactions)
+                          }
+                          description={
+                            tableFilter !== 'missing' && tableFilter !== 'returns'
+                              ? (t.emptyStates?.movements?.noResultsDesc ?? undefined)
+                              : undefined
+                          }
+                          className="border-0 rounded-none py-12"
+                        />
+                      </TableCell>
+                  </TableRow>
+               )}
+            </TableBody>
+          </Table>
+        </div>
+      )}
 
       {/* ═══════════════════════════════════════════════════════════════════════
           DIÀLEGS
