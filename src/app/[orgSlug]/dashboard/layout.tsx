@@ -163,20 +163,16 @@ function OrganizationDependentLayout({ children }: { children: React.ReactNode }
   return (
     <AppLogContext.Provider value={appLogValue}>
       <SidebarProvider open={sidebarOpen} onOpenChange={handleOpenChange}>
-        {/* Shell fix: h-screen + flex-col + overflow-hidden al wrapper */}
-        <div className="flex h-screen flex-col overflow-hidden">
-          {/* Header dins SidebarProvider (per SidebarTrigger) però FORA del flux scrollable */}
-          <DashboardHeader />
-
-          {/* Contingut: sidebar + main, amb overflow controlat */}
-          <div className="flex flex-1 overflow-hidden">
-            <Sidebar collapsible="icon">
-              <DashboardSidebarContent />
-            </Sidebar>
-            <SidebarInset className="flex min-w-0 flex-1 flex-col transition-all duration-300 ease-in-out">
-              <main className="min-w-0 flex-1 overflow-y-auto p-4 md:p-6">{children}</main>
-            </SidebarInset>
-          </div>
+        {/* Shell: sidebar + contingut (header+main) en flex horitzontal */}
+        <div className="flex h-screen overflow-hidden">
+          <Sidebar collapsible="icon">
+            <DashboardSidebarContent />
+          </Sidebar>
+          <SidebarInset className="flex min-w-0 flex-1 flex-col transition-all duration-300 ease-in-out">
+            {/* Header DINS SidebarInset: alineat amb el contingut */}
+            <DashboardHeader />
+            <main className="min-w-0 flex-1 overflow-y-auto p-4 md:p-6">{children}</main>
+          </SidebarInset>
         </div>
       </SidebarProvider>
 
