@@ -120,7 +120,7 @@ export const ContactCombobox = React.memo(function ContactCombobox({
             <ChevronsUpDown className="h-3 w-3 text-muted-foreground ml-1" />
           </Button>
         ) : (
-          <Button variant="ghost" size="sm" className="text-muted-foreground">
+          <Button variant="ghost" size="sm" className="text-muted-foreground text-[13px]">
             <UserPlus className="mr-2 h-4 w-4" />
             {placeholderText}
           </Button>
