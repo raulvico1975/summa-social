@@ -139,17 +139,14 @@ export function ProductUpdatesFab() {
               <div className="space-y-2">
                 {updates.slice(0, 6).map((update) => {
                   const read = isRead(update.id);
-                  const hasDetail = !!update.contentLong;
                   return (
                     <div
                       key={update.id}
-                      className={`p-3 rounded-md transition-colors ${
-                        hasDetail ? 'cursor-pointer hover:bg-muted/50' : ''
-                      } ${read ? 'opacity-60' : ''}`}
-                      onClick={hasDetail ? () => handleOpenDetail(update) : undefined}
-                      role={hasDetail ? 'button' : undefined}
-                      tabIndex={hasDetail ? 0 : undefined}
-                      onKeyDown={hasDetail ? (e) => e.key === 'Enter' && handleOpenDetail(update) : undefined}
+                      className={`p-3 rounded-md transition-colors cursor-pointer hover:bg-muted/50 ${read ? 'opacity-60' : ''}`}
+                      onClick={() => handleOpenDetail(update)}
+                      role="button"
+                      tabIndex={0}
+                      onKeyDown={(e) => e.key === 'Enter' && handleOpenDetail(update)}
                     >
                       <div className="flex items-start justify-between gap-3">
                         <div className="flex-1 min-w-0">
@@ -176,21 +173,8 @@ export function ProductUpdatesFab() {
                         <div className="flex items-center gap-1 shrink-0 mt-0.5">
                           {read ? (
                             <Check className="h-4 w-4 text-muted-foreground" />
-                          ) : hasDetail ? (
-                            <ChevronRight className="h-4 w-4 text-muted-foreground" />
                           ) : (
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-8 w-8"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleMarkRead(update.id);
-                              }}
-                              aria-label={t.productUpdates.markAsRead}
-                            >
-                              <Check className="h-4 w-4" />
-                            </Button>
+                            <ChevronRight className="h-4 w-4 text-muted-foreground" />
                           )}
                         </div>
                       </div>
