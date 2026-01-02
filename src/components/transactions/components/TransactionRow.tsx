@@ -819,10 +819,15 @@ export const TransactionRow = React.memo(function TransactionRow({
               <MessageSquare className="mr-2 h-4 w-4" />
               {tx.note ? (t.editNote || 'Editar nota') : (t.addNote || 'Afegir nota')}
             </DropdownMenuItem>
-            {!hasDocument && (
+            {!hasDocument ? (
               <DropdownMenuItem onClick={handleAttachDocument}>
                 <FileUp className="mr-2 h-4 w-4" />
                 {t.attachDocument}
+              </DropdownMenuItem>
+            ) : (
+              <DropdownMenuItem onClick={handleDeleteDocument} className="text-destructive">
+                <Trash2 className="mr-2 h-4 w-4" />
+                {t.deleteDocument}
               </DropdownMenuItem>
             )}
             {canSplitStripeRemittance(tx) && onSplitStripeRemittance && (
