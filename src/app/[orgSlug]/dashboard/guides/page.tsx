@@ -5,9 +5,11 @@ import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import {
   ArrowRight,
   BookOpen,
+  Search,
   Receipt,
   RotateCcw,
   CreditCard,
@@ -368,6 +370,128 @@ function safeTr(
 // NOTE: getArray() moguda a la pàgina de detall (només s'hi usen steps/lookFirst/etc.)
 
 // ─────────────────────────────────────────────────────────────────────────────
+// Search helpers
+// ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * Normalitza text: minúscules + elimina accents
+ */
+function normalize(text: string): string {
+  return text
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '');
+}
+
+/**
+ * Tokenitza text en paraules (split per espais i puntuació)
+ */
+function tokenize(text: string): string[] {
+  return normalize(text)
+    .split(/[\s,.;:!?¿¡()\[\]{}'"«»""'']+/)
+    .filter((t) => t.length > 1);
+}
+
+/**
+ * Carrega stopwords des de i18n (guides.search.stopwords.0..n)
+ */
+function loadStopwords(tr: (key: string) => string): Set<string> {
+  const stopwords = new Set<string>();
+  for (let i = 0; i < 50; i++) {
+    const key = `guides.search.stopwords.${i}`;
+    const value = tr(key);
+    if (value === key) break; // No més stopwords
+    stopwords.add(normalize(value));
+  }
+  return stopwords;
+}
+
+/**
+ * Carrega sinònims des de i18n (guides.search.syn.<canonical>.0..n)
+ * Retorna Map<variant, canonical> per lookup ràpid
+ */
+function loadSynonyms(tr: (key: string) => string): Map<string, string> {
+  const synonyms = new Map<string, string>();
+  const canonicals = [
+    'no_veig', 'moviments', 'remesa', 'devolucions', 'stripe',
+    'certificat', 'model182', 'model347', 'categoria', 'importar',
+    'donants', 'filtrar', 'periode', 'document', 'error',
+    'quadrar', 'massiu',
+  ];
+
+  for (const canonical of canonicals) {
+    for (let i = 0; i < 20; i++) {
+      const key = `guides.search.syn.${canonical}.${i}`;
+      const value = tr(key);
+      if (value === key) break; // No més variants
+      synonyms.set(normalize(value), canonical);
+    }
+    // El canònic també mapeja a si mateix
+    synonyms.set(normalize(canonical.replace(/_/g, ' ')), canonical);
+  }
+
+  return synonyms;
+}
+
+type IndexedGuide = {
+  id: string;
+  searchText: string; // title + summary + cardText normalitzat
+  titleNorm: string;
+  summaryNorm: string;
+  cardTextNorm: string;
+};
+
+type SearchResult = {
+  guideId: string;
+  score: number;
+};
+
+/**
+ * Cerca guies amb scoring
+ * +50 match a title, +20 match a summary, +10 match a cardText, +5 match via synonym
+ */
+function searchGuides(
+  query: string,
+  indexedGuides: IndexedGuide[],
+  stopwords: Set<string>,
+  synonyms: Map<string, string>
+): SearchResult[] {
+  const tokens = tokenize(query).filter((t) => !stopwords.has(t));
+  if (tokens.length === 0) return [];
+
+  const results: SearchResult[] = [];
+
+  for (const guide of indexedGuides) {
+    let score = 0;
+
+    for (const token of tokens) {
+      // Match directe
+      if (guide.titleNorm.includes(token)) score += 50;
+      if (guide.summaryNorm.includes(token)) score += 20;
+      if (guide.cardTextNorm.includes(token)) score += 10;
+
+      // Match via synonym
+      const canonical = synonyms.get(token);
+      if (canonical) {
+        const canonicalNorm = normalize(canonical.replace(/_/g, ' '));
+        if (guide.titleNorm.includes(canonicalNorm)) score += 45;
+        else if (guide.summaryNorm.includes(canonicalNorm)) score += 15;
+        else if (guide.cardTextNorm.includes(canonicalNorm)) score += 5;
+        // Bonus si el canonical apareix en qualsevol lloc
+        else if (guide.searchText.includes(canonicalNorm)) score += 5;
+      }
+    }
+
+    if (score > 0) {
+      results.push({ guideId: guide.id, score });
+    }
+  }
+
+  // Ordenar per score descendent
+  return results.sort((a, b) => b.score - a.score);
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // Component
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -376,11 +500,69 @@ export default function GuidesPage() {
   const orgSlug = params.orgSlug as string;
   const { tr } = useTranslations();
 
+  // Search state
+  const [searchQuery, setSearchQuery] = React.useState('');
+
   const buildUrl = (path: string) => `/${orgSlug}${path}`;
 
   // Page-level translations (amb fallback humà)
   const pageTitle = safeTr(tr, 'guides.pageTitle', 'Guies');
   const viewHelp = safeTr(tr, 'guides.viewHelp', 'Ajuda');
+
+  // Search UI translations
+  const searchPlaceholder = safeTr(tr, 'guides.search.placeholder', 'Què et passa?');
+  const searchHelper = safeTr(tr, 'guides.search.helper', 'Escriu com ho diries...');
+  const noResultsTitle = safeTr(tr, 'guides.search.noResultsTitle', 'No he trobat cap guia');
+  const noResultsHint = safeTr(tr, 'guides.search.noResultsHint', 'Prova amb paraules clau...');
+  const suggestionsTitle = safeTr(tr, 'guides.search.suggestionsTitle', 'Suggeriments');
+
+  // Carrega stopwords i sinònims (memo per evitar recàlculs)
+  const stopwords = React.useMemo(() => loadStopwords(tr), [tr]);
+  const synonyms = React.useMemo(() => loadSynonyms(tr), [tr]);
+
+  // Indexa guies (title + summary + cardText)
+  const indexedGuides = React.useMemo<IndexedGuide[]>(() => {
+    return GUIDES.map((guide) => {
+      const titleKey = `guides.${guide.id}.title`;
+      const summaryKey = `guides.${guide.id}.summary`;
+      const cardTextKey = `guides.${guide.id}.cardText`;
+
+      const title = tr(titleKey);
+      const summary = tr(summaryKey);
+      const cardText = tr(cardTextKey);
+
+      const titleNorm = title !== titleKey ? normalize(title) : '';
+      const summaryNorm = summary !== summaryKey ? normalize(summary) : '';
+      const cardTextNorm = cardText !== cardTextKey ? normalize(cardText) : '';
+
+      return {
+        id: guide.id,
+        searchText: `${titleNorm} ${summaryNorm} ${cardTextNorm}`,
+        titleNorm,
+        summaryNorm,
+        cardTextNorm,
+      };
+    });
+  }, [tr]);
+
+  // Cerca resultats
+  const searchResults = React.useMemo(() => {
+    if (!searchQuery.trim()) return [];
+    return searchGuides(searchQuery, indexedGuides, stopwords, synonyms);
+  }, [searchQuery, indexedGuides, stopwords, synonyms]);
+
+  // Suggeriments (chips)
+  const suggestions = React.useMemo(() => {
+    const items: string[] = [];
+    for (let i = 0; i < 5; i++) {
+      const key = `guides.search.suggestion.${i}`;
+      const value = tr(key);
+      if (value !== key) items.push(value);
+    }
+    return items;
+  }, [tr]);
+
+  const hasQuery = searchQuery.trim().length > 0;
 
   // Helper per renderitzar cardText amb colors i jerarquia
   // Format: "Què vol dir:...\n\nPas a pas:...\n\nSegurament t'ajudarà:..."
@@ -650,6 +832,67 @@ export default function GuidesPage() {
     );
   };
 
+  // Helper per renderitzar una card de resultat de cerca
+  const renderSearchResultCard = (guideId: string) => {
+    const guide = GUIDES.find((g) => g.id === guideId);
+    if (!guide) return null;
+
+    const titleKey = `guides.${guide.id}.title`;
+    const titleValue = tr(titleKey);
+    const titleResolved = !isUnresolvedKey(titleValue, titleKey);
+
+    if (!titleResolved) return null;
+
+    const title = titleValue;
+    const summaryKey = `guides.${guide.id}.summary`;
+    const summary = tr(summaryKey);
+    const hasSummary = !isUnresolvedKey(summary, summaryKey);
+
+    // Determinar color segons bloc
+    let bgColor = 'bg-muted/50';
+    let iconColor = 'text-muted-foreground';
+    if (PROBLEM_GUIDE_IDS.includes(guideId)) {
+      bgColor = 'bg-amber-100 dark:bg-amber-900/30';
+      iconColor = 'text-amber-700 dark:text-amber-300';
+    } else if (ACTION_GUIDE_IDS.includes(guideId)) {
+      bgColor = 'bg-blue-100 dark:bg-blue-900/30';
+      iconColor = 'text-blue-700 dark:text-blue-300';
+    } else if (FLOW_GUIDE_IDS.includes(guideId)) {
+      bgColor = 'bg-green-100 dark:bg-green-900/30';
+      iconColor = 'text-green-700 dark:text-green-300';
+    }
+
+    return (
+      <Card
+        key={guide.id}
+        className="cursor-pointer hover:shadow-md transition-shadow"
+        onClick={() => {
+          // Scroll to guide section (si volem)
+          setSearchQuery(''); // Clear search to show all blocks
+        }}
+      >
+        <CardHeader className="pb-3">
+          <div className="flex items-start gap-3">
+            <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-lg ${bgColor} ${iconColor}`}>
+              {guide.icon}
+            </div>
+            <div className="flex-1 min-w-0">
+              <CardTitle className="text-base leading-tight">{title}</CardTitle>
+              {hasSummary && (
+                <CardDescription className="mt-1 line-clamp-2">{summary}</CardDescription>
+              )}
+            </div>
+            <Button asChild size="sm" variant="ghost">
+              <Link href={buildUrl(guide.href)}>
+                <ArrowRight className="h-4 w-4" />
+              </Link>
+            </Button>
+          </div>
+        </CardHeader>
+      </Card>
+    );
+  };
+
   return (
     <div className="container max-w-5xl py-8">
       {/* Header */}
@@ -663,8 +906,54 @@ export default function GuidesPage() {
         </p>
       </div>
 
-      {/* Bloc A: Tinc un problema */}
-      <section className="rounded-lg bg-amber-50 dark:bg-amber-950/20 p-5 mb-8">
+      {/* Search bar */}
+      <div className="mb-8">
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+          <Input
+            type="text"
+            placeholder={searchPlaceholder}
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="pl-10 h-12 text-base"
+          />
+        </div>
+        <p className="mt-2 text-sm text-muted-foreground">{searchHelper}</p>
+      </div>
+
+      {/* Search results (when query exists) */}
+      {hasQuery && (
+        <div className="mb-8">
+          {searchResults.length > 0 ? (
+            <div className="space-y-3">
+              {searchResults.slice(0, 10).map((result) => renderSearchResultCard(result.guideId))}
+            </div>
+          ) : (
+            <div className="rounded-lg bg-muted/50 p-6 text-center">
+              <p className="text-lg font-medium text-foreground mb-2">{noResultsTitle}</p>
+              <p className="text-sm text-muted-foreground mb-4">{noResultsHint}</p>
+              <div className="flex flex-wrap justify-center gap-2">
+                <span className="text-sm text-muted-foreground">{suggestionsTitle}:</span>
+                {suggestions.map((suggestion, i) => (
+                  <button
+                    key={i}
+                    onClick={() => setSearchQuery(suggestion)}
+                    className="px-3 py-1 text-sm bg-primary/10 hover:bg-primary/20 text-primary rounded-full transition-colors"
+                  >
+                    {suggestion}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Blocks (only when no query or empty results) */}
+      {!hasQuery && (
+        <>
+          {/* Bloc A: Tinc un problema */}
+          <section className="rounded-lg bg-amber-50 dark:bg-amber-950/20 p-5 mb-8">
         <div className="mb-4">
           <h2 className="flex items-center gap-2 text-lg font-semibold text-amber-900 dark:text-amber-100">
             <AlertCircle className="h-5 w-5" />
@@ -710,6 +999,8 @@ export default function GuidesPage() {
           {ACTION_GUIDE_IDS.map((id) => renderActionCard(id))}
         </div>
       </section>
+        </>
+      )}
     </div>
   );
 }
