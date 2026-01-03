@@ -508,7 +508,15 @@ export default function LiquidacionsPage() {
             <Car className="h-4 w-4" />
             <AlertTitle>Quilometratge</AlertTitle>
             <AlertDescription>
-              Gestiona el quilometratge de cada liquidació. Selecciona una liquidació per afegir o editar línies de quilometratge.
+              Aquí només gestiones quilometratge. Per editar tickets o capçalera, ves a{' '}
+              <button
+                type="button"
+                className="underline hover:no-underline font-medium"
+                onClick={() => setMainTab('liquidacions')}
+              >
+                Liquidacions
+              </button>
+              .
             </AlertDescription>
           </Alert>
 
@@ -533,11 +541,7 @@ export default function LiquidacionsPage() {
                   const mileageCount = report.mileageItems?.length ?? 0;
 
                   return (
-                    <Card
-                      key={report.id}
-                      className="hover:shadow-sm transition-shadow cursor-pointer"
-                      onClick={() => router.push(buildUrl(`/dashboard/movimientos/liquidacions/${report.id}#quilometratge`))}
-                    >
+                    <Card key={report.id} className="transition-shadow">
                       <CardContent className="p-4">
                         <div className="flex items-center justify-between">
                           <div className="flex items-center gap-4">
@@ -566,17 +570,13 @@ export default function LiquidacionsPage() {
                               {getStatusInfo(report, t).badge}
                             </div>
                             <Button
-                              variant="outline"
+                              variant="default"
                               size="sm"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                router.push(buildUrl(`/dashboard/movimientos/liquidacions/${report.id}#quilometratge`));
-                              }}
+                              onClick={() => router.push(buildUrl(`/dashboard/movimientos/liquidacions/${report.id}?tab=kilometratge`))}
                             >
-                              <Plus className="mr-2 h-4 w-4" />
-                              Gestionar
+                              <Car className="mr-2 h-4 w-4" />
+                              Gestionar km
                             </Button>
-                            <ChevronRight className="h-4 w-4 text-muted-foreground" />
                           </div>
                         </div>
                       </CardContent>

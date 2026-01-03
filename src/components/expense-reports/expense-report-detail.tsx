@@ -83,6 +83,8 @@ import { CATEGORY_TRANSLATION_KEYS } from '@/lib/default-data';
 interface ExpenseReportDetailProps {
   report: ExpenseReport;
   onClose: () => void;
+  /** Si s'especifica, fa scroll i highlight a la secció indicada */
+  scrollToSection?: 'kilometratge';
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -147,12 +149,30 @@ async function fetchReceiptImages(receipts: PendingDocument[]): Promise<ReceiptI
 // COMPONENT
 // ═══════════════════════════════════════════════════════════════════════════
 
-export function ExpenseReportDetail({ report, onClose }: ExpenseReportDetailProps) {
+export function ExpenseReportDetail({ report, onClose, scrollToSection }: ExpenseReportDetailProps) {
   const { organizationId, organization } = useCurrentOrganization();
   const { firestore, storage } = useFirebase();
   const { buildUrl } = useOrgUrl();
   const { toast } = useToast();
   const { t } = useTranslations();
+
+  // Ref per la secció quilometratge (deep link)
+  const kmSectionRef = React.useRef<HTMLDivElement>(null);
+  const [kmHighlight, setKmHighlight] = React.useState(false);
+
+  // Scroll i highlight a la secció quilometratge si ve del deep link
+  React.useEffect(() => {
+    if (scrollToSection === 'kilometratge' && kmSectionRef.current) {
+      // Petit delay per assegurar que el DOM està renderitzat
+      const timeout = setTimeout(() => {
+        kmSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        setKmHighlight(true);
+        // Treure highlight després de 1.5s
+        setTimeout(() => setKmHighlight(false), 1500);
+      }, 100);
+      return () => clearTimeout(timeout);
+    }
+  }, [scrollToSection]);
 
   // Estat local
   const [title, setTitle] = React.useState(report.title || '');
@@ -745,7 +765,14 @@ export function ExpenseReportDetail({ report, onClose }: ExpenseReportDetailProp
       </Card>
 
       {/* Quilometratge */}
-      <Card id="quilometratge">
+      <Card
+        ref={kmSectionRef}
+        id="quilometratge"
+        className={cn(
+          'transition-all duration-300',
+          kmHighlight && 'ring-2 ring-ring bg-muted/20'
+        )}
+      >
         <CardHeader className="pb-3">
           <CardTitle className="text-base flex items-center gap-2">
             <Car className="h-4 w-4" />

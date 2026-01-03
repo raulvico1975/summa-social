@@ -14,7 +14,7 @@
  */
 
 import * as React from 'react';
-import { useParams, useRouter } from 'next/navigation';
+import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import { doc, onSnapshot } from 'firebase/firestore';
 import { useCurrentOrganization, useOrgUrl } from '@/hooks/organization-provider';
 import { useFirebase } from '@/firebase';
@@ -29,12 +29,14 @@ import { expenseReportRef, type ExpenseReport } from '@/lib/expense-reports';
 export default function LiquidacioDetailPage() {
   const params = useParams();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { organizationId } = useCurrentOrganization();
   const { firestore } = useFirebase();
   const { buildUrl } = useOrgUrl();
   const { t } = useTranslations();
 
   const reportId = params.id as string;
+  const initialTab = searchParams.get('tab'); // 'kilometratge' o null
 
   // Estat
   const [report, setReport] = React.useState<ExpenseReport | null>(null);
@@ -139,7 +141,11 @@ export default function LiquidacioDetailPage() {
       </div>
 
       {/* Detall */}
-      <ExpenseReportDetail report={report} onClose={handleClose} />
+      <ExpenseReportDetail
+        report={report}
+        onClose={handleClose}
+        scrollToSection={initialTab === 'kilometratge' ? 'kilometratge' : undefined}
+      />
     </div>
   );
 }
