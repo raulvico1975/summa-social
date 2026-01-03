@@ -1,6 +1,10 @@
 /**
  * Seed Demo Data
  *
+ * IMPORTANT: DEMO beta interna.
+ * No modificar volums ni anomalies sense decisió de producte.
+ * Invariants protegits per assertions al final de runDemoSeed().
+ *
  * Funció principal per regenerar totes les dades demo.
  *
  * Fluxe:
