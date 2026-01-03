@@ -34,12 +34,22 @@ function OrgLoginContent() {
   const [password, setPassword] = React.useState('');
   const [error, setError] = React.useState('');
   const [isLoggingIn, setIsLoggingIn] = React.useState(false);
-  const [organization, setOrganization] = React.useState<OrgInfo | null>(null);
-  const [isLoadingOrg, setIsLoadingOrg] = React.useState(true);
+  // DEMO: Bypass per /demo/login — no cal carregar org abans de login
+  const isDemoLogin = isDemoEnv() && orgSlug === 'demo';
+
+  const [organization, setOrganization] = React.useState<OrgInfo | null>(
+    // En DEMO, crear org dummy per evitar fetch a Firestore
+    isDemoLogin ? { id: 'demo-org', name: 'Demo', slug: 'demo' } : null
+  );
+  const [isLoadingOrg, setIsLoadingOrg] = React.useState(!isDemoLogin);
   const [orgNotFound, setOrgNotFound] = React.useState(false);
 
   // Carregar informació de l'organització pel slug
+  // DEMO: Skip si és /demo/login (ja tenim org dummy)
   React.useEffect(() => {
+    // DEMO: No carregar org, ja tenim dummy
+    if (isDemoLogin) return;
+
     const loadOrganization = async () => {
       if (!orgSlug) return;
 
@@ -58,12 +68,7 @@ function OrgLoginContent() {
           setOrgNotFound(true);
         }
       } catch (err) {
-        // DEMO: Silenciar errors de permisos (no bloquejants)
-        const isPermissionError = err instanceof Error &&
-          (err.message.includes('permission') || err.message.includes('Permission'));
-        if (!isDemoEnv() || !isPermissionError) {
-          console.error('Error loading organization:', err);
-        }
+        console.error('Error loading organization:', err);
         setOrgNotFound(true);
       } finally {
         setIsLoadingOrg(false);
@@ -71,7 +76,7 @@ function OrgLoginContent() {
     };
 
     loadOrganization();
-  }, [orgSlug, firestore]);
+  }, [orgSlug, firestore, isDemoLogin]);
 
   // Si l'usuari ja està autenticat, redirigir al dashboard (o nextPath si ve de inactivitat)
   React.useEffect(() => {
