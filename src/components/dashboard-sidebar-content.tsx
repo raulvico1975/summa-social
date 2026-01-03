@@ -65,7 +65,9 @@ export function DashboardSidebarContent() {
   const { buildUrl } = useOrgUrl();
 
   const isSuperAdmin = firebaseUser?.uid === SUPER_ADMIN_UID;
-  const isSidebarCollapsed = sidebarState === 'collapsed';
+  // En mòbil, el sidebar sempre es mostra expandit (dins d'un Sheet)
+  // Només considerem col·lapsat en desktop quan state === 'collapsed'
+  const isSidebarCollapsed = !isMobile && sidebarState === 'collapsed';
 
   const handleSignOut = async (e: React.MouseEvent<HTMLAnchorElement>) => {
     e.preventDefault();
