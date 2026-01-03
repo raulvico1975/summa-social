@@ -444,32 +444,85 @@ npm run dev:demo
 | `scripts/run-demo-dev.mjs` | Runner que carrega env i neteja credencials |
 | `src/lib/demo/isDemoOrg.ts` | `isDemoEnv()` client+server |
 
-### 5. Regenerar dades
+### 5. Regenerar dades (DemoMode dual)
+
+#### Modes disponibles
+
+| Mode | Descripció | Ús típic |
+|------|------------|----------|
+| **Short** | Dades netes, sense anomalies | Vídeos, pitch, captures |
+| **Work** | Dades amb "fang" controlat | Validar workflows reals |
+
+#### Regenerar
 
 1. Ves a http://localhost:9002/admin
 2. Secció "Entorn DEMO" (només visible en demo)
-3. Clica "Regenerar demo" → confirmació obligatòria
-4. Espera ~10-30s
+3. **Selecciona mode**: Short o Work
+4. Clica "Regenerar demo" → confirmació obligatòria
+5. Espera ~10-30s
 
 **Qui pot fer-ho**: Usuari amb email a `SUPERADMIN_EMAIL` o UID a `SUPER_ADMIN_UID` de `.env.demo`
 
 **Què fa el seed**:
-- Purga dades demo existents (`isDemoData: true`)
+- Purga totes les dades demo existents (`isDemoData: true`)
 - Crea org `demo-org` amb slug `demo`
 - Genera contactes, categories, transaccions, projectes, partides, despeses
 - Puja PDFs dummy a Storage
+- **Mode work**: Afegeix anomalies controlades
+
+#### Volums (base)
 
 | Entitat | Quantitat |
 |---------|-----------|
-| Donants | 120 |
-| Proveïdors | 35 |
-| Treballadors | 12 |
+| Donants | 50 |
+| Proveïdors | 20 |
+| Treballadors | 8 |
 | Categories | 16 |
-| Transaccions | ~765 |
+| Transaccions bank | 100 |
 | Projectes | 4 |
 | Partides | 40 |
-| Despeses | 160 |
-| PDFs | 30 |
+| Off-bank expenses | 30 (10 XOF + 10 HNL + 10 DOP) |
+| ExpenseLinks | 20 (10 full + 10 mixed) |
+| PDFs | 20 |
+
+#### Anomalies (només mode Work)
+
+| Anomalia | Quantitat | Descripció |
+|----------|-----------|------------|
+| Duplicats | 3 parells | Concepte similar, mateixa data, import ±1% |
+| Mal categoritzat | 1 | Ingrés amb categoria de despesa |
+| Pendents | 5 | Moviments sense categoria ni contacte |
+| Traçabilitat | 1 factura | 3 moviments compartint 1 PDF |
+
+#### Microcopy a la UI
+
+Quan `isDemoEnv() === true`:
+- Badge "DEMO" al header amb tooltip: "Dades sintètiques de demo"
+- Secció "Entorn DEMO" visible a `/admin`
+- Selector de mode (Short/Work) abans de regenerar
+
+#### Validació ràpida
+
+```bash
+# Smoke test (sense autenticació)
+npm run demo:smoke
+
+# Validació completa
+# 1. Arrenca la demo
+npm run dev:demo
+
+# 2. Login a /admin, regenera Short
+# 3. Comprova: /demo/dashboard net, 100 tx, 20–30 recents
+
+# 4. Regenera Work
+# 5. Comprova: duplicats visibles, pendents sense categoria
+```
+
+#### Guardrails
+
+- ❌ **NO editar dades manualment** a Firestore/Storage en demo — sempre usar seed
+- ❌ **NO relaxar Firestore rules** — les mateixes que prod
+- ✅ El seed valida invariants automàticament (throw si falla)
 
 ### 6. Autenticació i permisos
 
@@ -511,9 +564,12 @@ npm run dev:demo
 |--------|-------|
 | `src/lib/demo/isDemoOrg.ts` | `isDemoEnv()` mira `NEXT_PUBLIC_APP_ENV` + `APP_ENV` |
 | `src/lib/admin/superadmin-allowlist.ts` | Accepta `SUPERADMIN_EMAIL` de env |
-| `src/app/api/internal/demo/seed/route.ts` | Auth via ID Token, ADC, cached init |
-| `src/scripts/demo/seed-demo.ts` | Sanejador undefined, `orgId` al slug |
+| `src/app/api/internal/demo/seed/route.ts` | Auth via ID Token, ADC, demoMode param |
+| `src/scripts/demo/seed-demo.ts` | `runDemoSeed(db, bucket, demoMode)`, anomalies work |
+| `src/scripts/demo/demo-generators.ts` | Generadors deterministes amb volums actualitzats |
 | `src/hooks/organization-provider.tsx` | Bypass accés si `isDemoEnv()` |
+| `src/components/dashboard-header.tsx` | Badge DEMO amb tooltip microcopy |
+| `src/app/admin/page.tsx` | Selector Short/Work, diàleg confirmació |
 | `scripts/run-demo-dev.mjs` | Neteja `GOOGLE_APPLICATION_CREDENTIALS` |
 
 ---
@@ -669,4 +725,4 @@ export default async function Page({
 
 ---
 
-*Última actualització: 2026-01-02*
+*Última actualització: 2026-01-03*

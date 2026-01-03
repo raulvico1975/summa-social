@@ -13,6 +13,7 @@
     "test": "node --import tsx --test src/lib/__tests__/*.test.ts",
     "dev:restart": "bash scripts/dev-restart.sh",
     "dev:demo": "node scripts/run-demo-dev.mjs",
+    "demo:smoke": "node scripts/demo/smoke-demo.mjs",
     "prepare": "husky",
     "updates:drafts": "npx tsx scripts/generate-product-update-drafts.ts",
     "i18n:export": "node --import tsx scripts/i18n/export-all.ts",

@@ -8,16 +8,16 @@
  * 2. Crear/actualitzar org demo
  * 3. Generar i escriure noves dades
  *
- * Volums:
- * - Donants: 120
- * - Proveïdors: 35
- * - Treballadors: 12
- * - Mesos moviments: 18
+ * Volums (actualitzats):
+ * - Donants: 50
+ * - Proveïdors: 20
+ * - Treballadors: 8
+ * - Transaccions bank: 100 (exacte)
  * - Projectes: 4
  * - Partides/projecte: 10
- * - Despeses off-bank: 160
- * - Assignacions projecte: 80
- * - PDFs Storage: 30
+ * - Despeses off-bank: 30 (10 XOF, 10 HNL, 10 DOP)
+ * - Assignacions: 20 (10 full + 10 mixed)
+ * - PDFs Storage: 20
  */
 
 import type { Firestore } from 'firebase-admin/firestore';
@@ -31,9 +31,22 @@ import {
   generateCategories,
   generateTransactions,
   generateProjects,
-  generateExpenses,
   generateDummyPDF,
+  generateProjectExpensesFeed,
+  generateOffBankExpenses,
+  generateExpenseLinks,
 } from './demo-generators';
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Types
+// ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * DemoMode determina el tipus de dades generades:
+ * - 'short': Dades netes per vídeos/pitch (sense anomalies)
+ * - 'work': Dades amb "fang" controlat per validar workflows reals
+ */
+export type DemoMode = 'short' | 'work';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Constants
@@ -43,15 +56,13 @@ const DEMO_ORG_ID = 'demo-org';
 const DEMO_ORG_SLUG = 'demo';
 
 const VOLUMES = {
-  donors: 120,
-  suppliers: 35,
-  workers: 12,
-  months: 18,
+  donors: 50,
+  suppliers: 20,
+  workers: 8,
+  months: 24,  // 2 anys
   projects: 4,
   budgetLinesPerProject: 10,
-  offBankExpenses: 160,
-  projectAssignments: 80,
-  pdfs: 30,
+  pdfs: 20,
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -89,6 +100,35 @@ async function purgeStoragePrefix(bucket: Bucket, prefix: string): Promise<numbe
   }
 }
 
+async function purgeBudgetLines(db: Firestore, projectsPath: string): Promise<number> {
+  // Obtenir tots els projectes demo
+  const projectsSnapshot = await db
+    .collection(projectsPath)
+    .where(DEMO_DATA_MARKER, '==', true)
+    .get();
+
+  if (projectsSnapshot.empty) return 0;
+
+  let totalDeleted = 0;
+
+  // Per cada projecte, purgar la subcol·lecció budgetLines
+  for (const projectDoc of projectsSnapshot.docs) {
+    const budgetLinesSnapshot = await projectDoc.ref
+      .collection('budgetLines')
+      .where(DEMO_DATA_MARKER, '==', true)
+      .get();
+
+    if (!budgetLinesSnapshot.empty) {
+      const batch = db.batch();
+      budgetLinesSnapshot.docs.forEach((doc) => batch.delete(doc.ref));
+      await batch.commit();
+      totalDeleted += budgetLinesSnapshot.size;
+    }
+  }
+
+  return totalDeleted;
+}
+
 async function writeBatch<T extends { id: string }>(
   db: Firestore,
   collectionPath: string,
@@ -115,6 +155,70 @@ async function writeBatch<T extends { id: string }>(
   }
 }
 
+// Tipus flexible per acceptar qualsevol objecte amb id i projectId
+type BudgetLineWithProjectId = {
+  id: string;
+  projectId: string;
+} & Record<string, unknown>;
+
+async function writeBudgetLines(
+  db: Firestore,
+  projectsPath: string,
+  budgetLines: BudgetLineWithProjectId[]
+): Promise<void> {
+  // Agrupar per projectId
+  const byProject = new Map<string, BudgetLineWithProjectId[]>();
+  for (const line of budgetLines) {
+    const existing = byProject.get(line.projectId) || [];
+    existing.push(line);
+    byProject.set(line.projectId, existing);
+  }
+
+  // Escriure a cada subcol·lecció
+  for (const [projectId, lines] of byProject) {
+    const batch = db.batch();
+    for (const line of lines) {
+      const { id, projectId: _pid, ...raw } = line;
+      // Sanejar: eliminar camps undefined
+      const data = Object.fromEntries(
+        Object.entries(raw).filter(([, v]) => v !== undefined)
+      );
+      const ref = db
+        .collection(projectsPath)
+        .doc(projectId)
+        .collection('budgetLines')
+        .doc(id);
+      batch.set(ref, data);
+    }
+    await batch.commit();
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Anomalies per mode 'work'
+// ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * Anomalies generades en mode 'work':
+ * - 3 parells de duplicats (concepte similar)
+ * - 1 moviment amb categoria incorrecta
+ * - 5 moviments pendents (sense categoria ni contacte)
+ * - 1 cas de traçabilitat (factura amb diversos moviments)
+ */
+interface WorkAnomalies {
+  duplicates: number;         // 3 parells (6 tx)
+  miscategorized: number;     // 1 tx
+  pending: number;            // 5 tx
+  traceability: number;       // 1 factura compartida
+}
+
+const WORK_ANOMALIES: WorkAnomalies = {
+  duplicates: 3,
+  miscategorized: 1,
+  pending: 5,
+  traceability: 1,
+};
+
 // ─────────────────────────────────────────────────────────────────────────────
 // Main seed function
 // ─────────────────────────────────────────────────────────────────────────────
@@ -126,17 +230,20 @@ export interface SeedCounts {
   categories: number;
   transactions: number;
   projects: number;
-  projectAssignments: number;
   budgetLines: number;
-  expenses: number;
+  projectExpensesFeed: number;
+  offBankExpenses: number;
+  expenseLinks: number;
   pdfs: number;
 }
 
 export async function runDemoSeed(
   db: Firestore,
-  bucket: Bucket
+  bucket: Bucket,
+  demoMode: DemoMode = 'short'
 ): Promise<SeedCounts> {
   console.log('[seed-demo] Iniciant seed demo...');
+  console.log('[seed-demo] Mode:', demoMode);
   console.log('[seed-demo] Volums:', VOLUMES);
 
   // ─────────────────────────────────────────────────────────────────────────
@@ -150,9 +257,14 @@ export async function runDemoSeed(
     purgeCollection(db, `${orgPath}/contacts`),
     purgeCollection(db, `${orgPath}/categories`),
     purgeCollection(db, `${orgPath}/transactions`),
-    purgeCollection(db, `${orgPath}/projects`),
-    purgeCollection(db, `${orgPath}/projectModule/budgetLines/items`),
-    purgeCollection(db, `${orgPath}/projectModule/expenses/items`),
+    // Paths per project-module
+    purgeCollection(db, `${orgPath}/projectModule/_/projects`),
+    purgeCollection(db, `${orgPath}/projectModule/_/expenseLinks`),
+    purgeCollection(db, `${orgPath}/projectModule/_/offBankExpenses`),
+    // BudgetLines de cada projecte (subcol·lecció)
+    purgeBudgetLines(db, `${orgPath}/projectModule/_/projects`),
+    // Feed d'exports (bank expenses per project-module)
+    purgeCollection(db, `${orgPath}/exports/projectExpenses/items`),
     purgeStoragePrefix(bucket, `organizations/${DEMO_ORG_ID}/`),
   ]);
 
@@ -203,22 +315,244 @@ export async function runDemoSeed(
   const donors = generateDonors(VOLUMES.donors);
   const suppliers = generateSuppliers(VOLUMES.suppliers);
   const workers = generateWorkers(VOLUMES.workers);
-  const allContacts = [...donors, ...suppliers, ...workers];
+
+  // Afegir 2 contactes multi-rol (donant+proveïdor) per mostrar potència del model
+  const nowStr = new Date().toISOString();
+  const multiRoleContacts = [
+    {
+      id: `${DEMO_ID_PREFIX}multi_001`,
+      name: 'Fundació Exemple Multi-Rol',
+      type: 'donor' as const,
+      roles: { donor: true, supplier: true },
+      taxId: 'G08123456',
+      email: 'info@fundacioexemple.demo',
+      phone: '934567890',
+      address: 'Avinguda Diagonal, 100',
+      city: 'Barcelona',
+      province: 'Barcelona',
+      zipCode: '08019',
+      donorType: 'company' as const,
+      membershipType: 'recurring' as const,
+      monthlyAmount: 500,
+      memberSince: '2022-01-15',
+      status: 'active' as const,
+      createdAt: nowStr,
+      updatedAt: nowStr,
+      isDemoData: true as const,
+    },
+    {
+      id: `${DEMO_ID_PREFIX}multi_002`,
+      name: 'Cooperativa Solidària',
+      type: 'supplier' as const,
+      roles: { donor: true, supplier: true },
+      taxId: 'F08654321',
+      email: 'contacte@coopsolidaria.demo',
+      phone: '935678901',
+      address: 'Carrer Gran Via, 250',
+      city: 'Barcelona',
+      province: 'Barcelona',
+      zipCode: '08007',
+      donorType: 'company' as const,
+      membershipType: 'one-time' as const,
+      createdAt: nowStr,
+      updatedAt: nowStr,
+      isDemoData: true as const,
+    },
+  ];
+
+  const allContacts = [...donors, ...suppliers, ...workers, ...multiRoleContacts];
 
   // Categories
   const categories = generateCategories();
+
+  // URL base per PDFs
+  const pdfBaseUrl = `gs://summa-social-demo.appspot.com/organizations/${DEMO_ORG_ID}/pendingDocuments`;
 
   // Transaccions (18 mesos fins ara)
   const endDate = new Date();
   const startDate = new Date();
   startDate.setMonth(startDate.getMonth() - VOLUMES.months);
-  const transactions = generateTransactions(startDate, endDate, donors, suppliers, categories);
+  const transactions = generateTransactions(startDate, endDate, donors, suppliers, categories, pdfBaseUrl);
 
   // Projectes i partides
-  const { projects, budgetLines } = generateProjects(VOLUMES.projects);
+  const { projects, budgetLines } = generateProjects(VOLUMES.projects, DEMO_ORG_ID);
 
-  // Despeses off-bank
-  const expenses = generateExpenses(VOLUMES.offBankExpenses, suppliers, projects, budgetLines);
+  // Feed de despeses bank per project-module (exports/projectExpenses/items)
+  const projectExpensesFeed = generateProjectExpensesFeed(
+    transactions,
+    categories,
+    allContacts,
+    DEMO_ORG_ID,
+    pdfBaseUrl
+  );
+
+  // 10 off-bank expenses recents
+  const offBankExpenses = generateOffBankExpenses(DEMO_ORG_ID, pdfBaseUrl);
+
+  // ExpenseLinks (10-15 assignacions parcials per mostrar exemples)
+  const expenseLinks = generateExpenseLinks(projectExpensesFeed, projects, DEMO_ORG_ID);
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // 3b. Afegir anomalies (només mode 'work')
+  // ─────────────────────────────────────────────────────────────────────────
+  if (demoMode === 'work') {
+    console.log('[seed-demo] Afegint anomalies per mode work...');
+
+    // Anomalia 1: 3 parells de duplicats (concepte i import similar, dates properes)
+    for (let i = 0; i < WORK_ANOMALIES.duplicates; i++) {
+      const baseTx = transactions[i * 5]; // Agafar cada 5a tx com a base
+      if (baseTx) {
+        const duplicateTx = {
+          ...baseTx,
+          id: `${DEMO_ID_PREFIX}tx_dup_${i.toString().padStart(2, '0')}`,
+          date: baseTx.date, // Mateixa data
+          description: baseTx.description + ' (possible duplicat)',
+          amount: baseTx.amount * (1 + (Math.random() * 0.02 - 0.01)), // ±1% variació
+        };
+        transactions.push(duplicateTx);
+
+        // Si és despesa, afegir també al feed
+        if (duplicateTx.amount < 0) {
+          const category = categories.find((c) => c.id === duplicateTx.category);
+          const contact = allContacts.find((c) => c.id === duplicateTx.contactId);
+          projectExpensesFeed.push({
+            id: duplicateTx.id,
+            orgId: DEMO_ORG_ID,
+            schemaVersion: 1,
+            source: 'summa',
+            sourceUpdatedAt: Timestamp.now(),
+            date: duplicateTx.date,
+            amountEUR: duplicateTx.amount,
+            currency: 'EUR',
+            categoryId: category?.id ?? null,
+            categoryName: category?.name ?? null,
+            counterpartyId: contact?.id ?? null,
+            counterpartyName: contact?.name ?? null,
+            counterpartyType: (contact?.type as 'donor' | 'supplier' | 'employee') ?? null,
+            internalTagId: null,
+            internalTagName: null,
+            description: duplicateTx.description,
+            documents: [],
+            isEligibleForProjects: true,
+            createdAt: Timestamp.now(),
+            updatedAt: Timestamp.now(),
+            deletedAt: null,
+            isDemoData: true,
+          });
+        }
+      }
+    }
+    console.log(`[seed-demo]   - Duplicats: ${WORK_ANOMALIES.duplicates} parells`);
+
+    // Anomalia 2: 1 moviment mal categoritzat (ingrés amb categoria de despesa)
+    const miscatTx = transactions.find(tx => tx.amount > 0 && tx.category);
+    if (miscatTx) {
+      const expenseCat = categories.find(c => c.type === 'expense');
+      if (expenseCat) {
+        miscatTx.category = expenseCat.id;
+        miscatTx.note = '⚠️ Categoria potencialment incorrecta';
+      }
+    }
+    console.log(`[seed-demo]   - Mal categoritzat: ${WORK_ANOMALIES.miscategorized}`);
+
+    // Anomalia 3: 5 moviments pendents (sense categoria ni contacte)
+    for (let i = 0; i < WORK_ANOMALIES.pending; i++) {
+      const pendingTx = {
+        id: `${DEMO_ID_PREFIX}tx_pend_${i.toString().padStart(2, '0')}`,
+        date: new Date().toISOString().split('T')[0],
+        description: `Moviment pendent de revisar ${i + 1}`,
+        amount: -(Math.floor(Math.random() * 500) + 50),
+        category: undefined,
+        contactId: undefined,
+        contactType: undefined,
+        source: 'bank',
+        transactionType: 'normal',
+        createdAt: nowStr,
+        isDemoData: true as const,
+      };
+      transactions.push(pendingTx);
+
+      // Afegir al feed com a despesa elegible
+      projectExpensesFeed.push({
+        id: pendingTx.id,
+        orgId: DEMO_ORG_ID,
+        schemaVersion: 1,
+        source: 'summa',
+        sourceUpdatedAt: Timestamp.now(),
+        date: pendingTx.date,
+        amountEUR: pendingTx.amount,
+        currency: 'EUR',
+        categoryId: null,
+        categoryName: null,
+        counterpartyId: null,
+        counterpartyName: null,
+        counterpartyType: null,
+        internalTagId: null,
+        internalTagName: null,
+        description: pendingTx.description,
+        documents: [],
+        isEligibleForProjects: true,
+        createdAt: Timestamp.now(),
+        updatedAt: Timestamp.now(),
+        deletedAt: null,
+        isDemoData: true,
+      });
+    }
+    console.log(`[seed-demo]   - Pendents: ${WORK_ANOMALIES.pending}`);
+
+    // Anomalia 4: 1 cas traçabilitat (3 moviments que comparteixen 1 factura)
+    const tracePdfUrl = `${pdfBaseUrl}/${DEMO_ID_PREFIX}doc_factura_compartida.pdf`;
+    for (let i = 0; i < 3; i++) {
+      const traceTx = {
+        id: `${DEMO_ID_PREFIX}tx_trace_${i.toString().padStart(2, '0')}`,
+        date: new Date().toISOString().split('T')[0],
+        description: `Part ${i + 1}/3 - Factura compartida material oficina`,
+        amount: -(Math.floor(Math.random() * 200) + 100),
+        category: categories.find(c => c.type === 'expense')?.id,
+        contactId: suppliers[0]?.id,
+        contactType: 'supplier' as const,
+        document: tracePdfUrl,
+        source: 'bank',
+        transactionType: 'normal',
+        createdAt: nowStr,
+        isDemoData: true as const,
+      };
+      transactions.push(traceTx);
+
+      const supplier = suppliers[0];
+      const category = categories.find(c => c.id === traceTx.category);
+      projectExpensesFeed.push({
+        id: traceTx.id,
+        orgId: DEMO_ORG_ID,
+        schemaVersion: 1,
+        source: 'summa',
+        sourceUpdatedAt: Timestamp.now(),
+        date: traceTx.date,
+        amountEUR: traceTx.amount,
+        currency: 'EUR',
+        categoryId: category?.id ?? null,
+        categoryName: category?.name ?? null,
+        counterpartyId: supplier?.id ?? null,
+        counterpartyName: supplier?.name ?? null,
+        counterpartyType: 'supplier',
+        internalTagId: null,
+        internalTagName: null,
+        description: traceTx.description,
+        documents: [{
+          source: 'summa',
+          storagePath: tracePdfUrl,
+          fileUrl: null,
+          name: 'factura-compartida.pdf',
+        }],
+        isEligibleForProjects: true,
+        createdAt: Timestamp.now(),
+        updatedAt: Timestamp.now(),
+        deletedAt: null,
+        isDemoData: true,
+      });
+    }
+    console.log(`[seed-demo]   - Traçabilitat: ${WORK_ANOMALIES.traceability} factura amb 3 moviments`);
+  }
 
   // ─────────────────────────────────────────────────────────────────────────
   // 4. Escriure dades
@@ -234,14 +568,26 @@ export async function runDemoSeed(
   await writeBatch(db, `${orgPath}/transactions`, transactions);
   console.log(`[seed-demo]   - Transaccions: ${transactions.length}`);
 
-  await writeBatch(db, `${orgPath}/projects`, projects);
+  // Projectes
+  await writeBatch(db, `${orgPath}/projectModule/_/projects`, projects);
   console.log(`[seed-demo]   - Projectes: ${projects.length}`);
 
-  await writeBatch(db, `${orgPath}/projectModule/budgetLines/items`, budgetLines);
-  console.log(`[seed-demo]   - Partides: ${budgetLines.length}`);
+  // BudgetLines (subcol·lecció de cada projecte)
+  // Cast necessari perquè TypeScript no infereix el tipus correctament amb interfaces
+  await writeBudgetLines(db, `${orgPath}/projectModule/_/projects`, budgetLines as unknown as BudgetLineWithProjectId[]);
+  console.log(`[seed-demo]   - BudgetLines: ${budgetLines.length}`);
 
-  await writeBatch(db, `${orgPath}/projectModule/expenses/items`, expenses);
-  console.log(`[seed-demo]   - Despeses: ${expenses.length}`);
+  // Feed bank expenses per project-module
+  await writeBatch(db, `${orgPath}/exports/projectExpenses/items`, projectExpensesFeed);
+  console.log(`[seed-demo]   - ProjectExpensesFeed: ${projectExpensesFeed.length}`);
+
+  // Off-bank expenses
+  await writeBatch(db, `${orgPath}/projectModule/_/offBankExpenses`, offBankExpenses);
+  console.log(`[seed-demo]   - OffBankExpenses: ${offBankExpenses.length}`);
+
+  // ExpenseLinks (assignacions)
+  await writeBatch(db, `${orgPath}/projectModule/_/expenseLinks`, expenseLinks);
+  console.log(`[seed-demo]   - ExpenseLinks: ${expenseLinks.length}`);
 
   // ─────────────────────────────────────────────────────────────────────────
   // 5. Pujar PDFs dummy
@@ -264,9 +610,6 @@ export async function runDemoSeed(
   // ─────────────────────────────────────────────────────────────────────────
   // 6. Retornar comptadors
   // ─────────────────────────────────────────────────────────────────────────
-  // Comptador d'assignacions projecte (despeses amb projectId)
-  const projectAssignmentsCount = expenses.filter(e => e.projectId).length;
-
   const counts: SeedCounts = {
     donors: donors.length,
     suppliers: suppliers.length,
@@ -274,12 +617,64 @@ export async function runDemoSeed(
     categories: categories.length,
     transactions: transactions.length,
     projects: projects.length,
-    projectAssignments: projectAssignmentsCount,
     budgetLines: budgetLines.length,
-    expenses: expenses.length,
+    projectExpensesFeed: projectExpensesFeed.length,
+    offBankExpenses: offBankExpenses.length,
+    expenseLinks: expenseLinks.length,
     pdfs: VOLUMES.pdfs,
   };
 
+  // ─────────────────────────────────────────────────────────────────────────
+  // 7. Assertions anti-regressió (invariants)
+  // ─────────────────────────────────────────────────────────────────────────
+  console.log('[seed-demo] Validant invariants...');
+
+  const invariantErrors: string[] = [];
+
+  // Invariants comuns a tots els modes
+  if (counts.donors !== VOLUMES.donors) {
+    invariantErrors.push(`donors: esperats ${VOLUMES.donors}, obtinguts ${counts.donors}`);
+  }
+  if (counts.suppliers !== VOLUMES.suppliers) {
+    invariantErrors.push(`suppliers: esperats ${VOLUMES.suppliers}, obtinguts ${counts.suppliers}`);
+  }
+  if (counts.workers !== VOLUMES.workers) {
+    invariantErrors.push(`workers: esperats ${VOLUMES.workers}, obtinguts ${counts.workers}`);
+  }
+  if (counts.projects !== VOLUMES.projects) {
+    invariantErrors.push(`projects: esperats ${VOLUMES.projects}, obtinguts ${counts.projects}`);
+  }
+  if (counts.pdfs !== VOLUMES.pdfs) {
+    invariantErrors.push(`pdfs: esperats ${VOLUMES.pdfs}, obtinguts ${counts.pdfs}`);
+  }
+  if (counts.offBankExpenses !== 30) {
+    invariantErrors.push(`offBankExpenses: esperats 30, obtinguts ${counts.offBankExpenses}`);
+  }
+  if (counts.expenseLinks !== 20) {
+    invariantErrors.push(`expenseLinks: esperats 20, obtinguts ${counts.expenseLinks}`);
+  }
+
+  // Invariants específics per mode
+  if (demoMode === 'short') {
+    // Short: exactament 100 transaccions base (cap anomalia)
+    if (counts.transactions !== 100) {
+      invariantErrors.push(`[short] transactions: esperats 100, obtinguts ${counts.transactions}`);
+    }
+  } else {
+    // Work: 100 base + 3 duplicats + 5 pendents + 3 traçabilitat = 111
+    const expectedWorkTx = 100 + WORK_ANOMALIES.duplicates + WORK_ANOMALIES.pending + 3;
+    if (counts.transactions !== expectedWorkTx) {
+      invariantErrors.push(`[work] transactions: esperats ${expectedWorkTx}, obtinguts ${counts.transactions}`);
+    }
+  }
+
+  if (invariantErrors.length > 0) {
+    const errorMsg = `[seed-demo] invariant failed: ${invariantErrors.join('; ')}`;
+    console.error(errorMsg);
+    throw new Error(errorMsg);
+  }
+
+  console.log('[seed-demo] Invariants OK');
   console.log('[seed-demo] Seed completat!');
   console.log('[seed-demo] Comptadors:', counts);
 

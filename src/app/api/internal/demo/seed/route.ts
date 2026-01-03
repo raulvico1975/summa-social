@@ -19,6 +19,7 @@ import { getStorage } from 'firebase-admin/storage';
 import { getAuth, type Auth } from 'firebase-admin/auth';
 import type { Bucket } from '@google-cloud/storage';
 import { isDemoEnv } from '@/lib/demo/isDemoOrg';
+import type { DemoMode } from '@/scripts/demo/seed-demo';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Firebase Admin initialization (lazy, cached, idempotent)
@@ -142,20 +143,21 @@ interface SeedCounts {
   categories: number;
   transactions: number;
   projects: number;
-  projectAssignments: number;
   budgetLines: number;
-  expenses: number;
+  projectExpensesFeed: number;
+  offBankExpenses: number;
+  expenseLinks: number;
   pdfs: number;
 }
 
-async function seedDemoData(): Promise<SeedCounts> {
+async function seedDemoData(demoMode: DemoMode = 'short'): Promise<SeedCounts> {
   const db = getAdminDb();
   const bucket = getAdminStorage();
 
   // Import dinàmic del seeder per evitar carregar-lo en prod
   const { runDemoSeed } = await import('@/scripts/demo/seed-demo');
 
-  return runDemoSeed(db, bucket);
+  return runDemoSeed(db, bucket, demoMode);
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -187,16 +189,44 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  // 4. Executar seed
+  // 4. Parsejar i validar demoMode del body (estricte)
+  let demoMode: DemoMode = 'short';
   try {
-    console.log('[demo/seed] Iniciant seed demo per UID:', authResult.uid);
-    const counts = await seedDemoData();
-    console.log('[demo/seed] Seed completat:', counts);
+    const body = await request.json();
+    if (body.demoMode !== undefined) {
+      if (body.demoMode === 'work' || body.demoMode === 'short') {
+        demoMode = body.demoMode;
+      } else {
+        // Valor invàlid explícit → 400
+        return NextResponse.json(
+          {
+            error: 'Valor demoMode invàlid',
+            expected: "'short' | 'work'",
+            received: String(body.demoMode),
+          },
+          { status: 400 }
+        );
+      }
+    }
+  } catch {
+    // Body buit o no JSON → default 'short' (acceptat)
+  }
+
+  // 5. Executar seed
+  const startTime = Date.now();
+  try {
+    // Log sense tokens ni dades sensibles
+    console.log('[demo/seed] Iniciant seed demo - Mode:', demoMode);
+    const counts = await seedDemoData(demoMode);
+    const durationMs = Date.now() - startTime;
+    console.log('[demo/seed] Seed completat en', durationMs, 'ms');
 
     return NextResponse.json(
       {
         ok: true,
+        demoMode,
         counts,
+        durationMs,
         timestamp: new Date().toISOString(),
       },
       {
@@ -206,22 +236,35 @@ export async function POST(request: NextRequest) {
       }
     );
   } catch (error) {
-    console.error('[demo/seed] Error executant seed:', error);
+    const durationMs = Date.now() - startTime;
+    // Log error sense stack complet (seguretat)
+    console.error('[demo/seed] Error després de', durationMs, 'ms:', (error as Error).message);
 
-    // Missatge d'error més clar per problemes d'autenticació
+    // Missatges accionables per errors comuns
     const errorMessage = (error as Error).message;
-    let hint = '';
+    let userMessage = 'Error executant seed';
+    let hint: string | undefined;
 
     if (errorMessage.includes('Could not load the default credentials') ||
         errorMessage.includes('GOOGLE_APPLICATION_CREDENTIALS')) {
-      hint = 'Executa "gcloud auth application-default login" al terminal i reinicia la demo.';
+      userMessage = 'Credencials ADC no configurades';
+      hint = 'Executa "gcloud auth application-default login" i reinicia.';
+    } else if (errorMessage.includes('PERMISSION_DENIED')) {
+      userMessage = 'Permisos insuficients al projecte Firebase';
+      hint = 'Verifica que el teu compte té accés a summa-social-demo.';
+    } else if (errorMessage.includes('invariant failed')) {
+      userMessage = 'El seed ha fallat una validació interna';
+      hint = errorMessage; // El missatge d'invariant és útil
     }
 
     return NextResponse.json(
       {
-        error: 'Error executant seed',
-        details: errorMessage,
-        hint: hint || undefined,
+        ok: false,
+        error: userMessage,
+        hint,
+        demoMode,
+        durationMs,
+        timestamp: new Date().toISOString(),
       },
       { status: 500 }
     );
@@ -242,6 +285,11 @@ export async function GET() {
       type: 'Firebase ID Token',
       header: 'Authorization: Bearer <idToken>',
       note: 'El token ha de pertànyer a un SuperAdmin',
+    },
+    body: {
+      demoMode: "'short' | 'work' (default: 'short')",
+      short: 'Dades netes per vídeos/pitch',
+      work: 'Dades amb anomalies per validar workflows',
     },
     backend: 'Utilitza gcloud ADC (gcloud auth application-default login)',
   });

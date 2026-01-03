@@ -10,6 +10,7 @@ import { useTranslations } from '@/i18n';
 import { useCurrentOrganization } from '@/hooks/organization-provider';
 import { HelpSheet } from '@/components/help/HelpSheet';
 import { Badge } from '@/components/ui/badge';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { isDemoEnv } from '@/lib/demo/isDemoOrg';
 
 // Mapatge de segments URL a claus de traducció
@@ -148,9 +149,20 @@ export function DashboardHeader() {
       <div className="flex min-w-0 flex-1 items-center gap-2">
         <SidebarTrigger className="h-9 w-9 shrink-0" />
         {isDemoEnv() && (
-          <Badge variant="outline" className="shrink-0 bg-amber-100 text-amber-800 border-amber-300 text-xs font-medium">
-            DEMO
-          </Badge>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Badge variant="outline" className="shrink-0 bg-amber-100 text-amber-800 border-amber-300 text-xs font-medium cursor-help">
+                DEMO
+              </Badge>
+            </TooltipTrigger>
+            <TooltipContent side="bottom" className="max-w-xs">
+              <p className="font-medium">Dades sintètiques de demo</p>
+              <p className="text-xs text-muted-foreground mt-1">
+                Estàs navegant per un entorn de demostració amb dades generades automàticament.
+                Cap acció afectarà dades reals.
+              </p>
+            </TooltipContent>
+          </Tooltip>
         )}
         <Breadcrumb className="min-w-0">
           <BreadcrumbList className="flex-nowrap overflow-hidden text-sm">

@@ -154,8 +154,9 @@ export default function AdminPage() {
 
   // Demo seed
   const [isSeedingDemo, setIsSeedingDemo] = React.useState(false);
-  const [seedResult, setSeedResult] = React.useState<{ ok: boolean; counts?: Record<string, number>; error?: string } | null>(null);
+  const [seedResult, setSeedResult] = React.useState<{ ok: boolean; demoMode?: string; counts?: Record<string, number>; error?: string } | null>(null);
   const [showSeedConfirm, setShowSeedConfirm] = React.useState(false);
+  const [selectedDemoMode, setSelectedDemoMode] = React.useState<'short' | 'work'>('short');
 
   // ─────────────────────────────────────────────────────────────────────────────
   // Carregar dades (només si és SuperAdmin confirmat)
@@ -314,15 +315,16 @@ export default function AdminPage() {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${idToken}`,
         },
+        body: JSON.stringify({ demoMode: selectedDemoMode }),
       });
 
       const data = await response.json();
 
       if (response.ok && data.ok) {
-        setSeedResult({ ok: true, counts: data.counts });
+        setSeedResult({ ok: true, demoMode: data.demoMode, counts: data.counts });
         toast({
           title: 'Demo regenerada',
-          description: `Dades creades: ${Object.entries(data.counts || {}).map(([k, v]) => `${k}: ${v}`).join(', ')}`,
+          description: `Mode: ${data.demoMode}. Dades creades: ${Object.entries(data.counts || {}).map(([k, v]) => `${k}: ${v}`).join(', ')}`,
         });
       } else {
         setSeedResult({ ok: false, error: data.error || 'Error desconegut' });
@@ -799,6 +801,36 @@ export default function AdminPage() {
               </CardHeader>
               <CardContent>
                 <div className="flex flex-col gap-4">
+                  {/* Selector de mode */}
+                  <div className="flex items-center gap-3">
+                    <span className="text-sm text-amber-800 font-medium">Mode:</span>
+                    <div className="flex gap-2">
+                      <Button
+                        variant={selectedDemoMode === 'short' ? 'default' : 'outline'}
+                        size="sm"
+                        onClick={() => setSelectedDemoMode('short')}
+                        disabled={isSeedingDemo}
+                        className={selectedDemoMode === 'short' ? 'bg-amber-600 hover:bg-amber-700' : 'border-amber-400'}
+                      >
+                        Short
+                      </Button>
+                      <Button
+                        variant={selectedDemoMode === 'work' ? 'default' : 'outline'}
+                        size="sm"
+                        onClick={() => setSelectedDemoMode('work')}
+                        disabled={isSeedingDemo}
+                        className={selectedDemoMode === 'work' ? 'bg-amber-600 hover:bg-amber-700' : 'border-amber-400'}
+                      >
+                        Work
+                      </Button>
+                    </div>
+                    <span className="text-xs text-amber-600">
+                      {selectedDemoMode === 'short'
+                        ? 'Dades netes per vídeos/pitch'
+                        : 'Dades amb anomalies per validar workflows'}
+                    </span>
+                  </div>
+
                   <div className="flex items-center gap-4">
                     <Button
                       onClick={handleRegenerateDemo}
@@ -827,7 +859,7 @@ export default function AdminPage() {
                     <div className={`p-3 rounded-lg text-sm ${seedResult.ok ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
                       {seedResult.ok ? (
                         <div>
-                          <span className="font-medium">Seed completat</span>
+                          <span className="font-medium">Seed completat ({seedResult.demoMode})</span>
                           {seedResult.counts && (
                             <div className="mt-1 grid grid-cols-3 gap-2 text-xs">
                               {Object.entries(seedResult.counts).map(([key, value]) => (
@@ -993,10 +1025,15 @@ export default function AdminPage() {
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle className="text-amber-800">
-              Regenerar dades demo?
+              Regenerar dades demo ({selectedDemoMode})?
             </AlertDialogTitle>
             <AlertDialogDescription>
               Aquesta acció esborrarà totes les dades de demostració existents i en crearà de noves.
+              <br /><br />
+              <strong>Mode seleccionat:</strong>{' '}
+              {selectedDemoMode === 'short'
+                ? 'Short — Dades netes per vídeos i pitch'
+                : 'Work — Dades amb anomalies per validar workflows reals'}
               <br /><br />
               <strong>Només afecta l'organització demo</strong> (slug: demo). Cap dada de producció serà modificada.
             </AlertDialogDescription>
@@ -1007,7 +1044,7 @@ export default function AdminPage() {
               onClick={executeRegenerateDemo}
               className="bg-amber-600 text-white hover:bg-amber-700"
             >
-              Regenerar demo
+              Regenerar demo ({selectedDemoMode})
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

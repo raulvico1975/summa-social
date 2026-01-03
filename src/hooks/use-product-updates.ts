@@ -7,6 +7,7 @@ import * as React from 'react';
 import { collection, query, where, orderBy, limit, getDocs, Firestore } from 'firebase/firestore';
 import { useFirebase } from '@/firebase';
 import { type ProductUpdate, PRODUCT_UPDATES } from '@/lib/notifications';
+import { isDemoEnv } from '@/lib/demo/isDemoOrg';
 
 /**
  * Tipus ampliat per incloure camps nous de Firestore.
@@ -95,7 +96,7 @@ export function useProductUpdates(): UseProductUpdatesResult {
           { code: errorCode, message: errorMessage }
         );
         // Si és FAILED_PRECONDITION, probablement falta l'índex
-        if (errorCode === 'failed-precondition') {
+        if (errorCode === 'failed-precondition' && !isDemoEnv()) {
           console.error(
             '[product-updates] Index missing! Run: firebase deploy --only firestore:indexes'
           );

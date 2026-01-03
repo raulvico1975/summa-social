@@ -165,14 +165,23 @@ export const RowDropTarget = React.memo(function RowDropTarget({
     >
       {children}
 
-      {/* Overlay amb hint quan isOver */}
-      {isOver && (
+      {/* Overlay amb hint quan isOver - usar td per taules, div per altres */}
+      {isOver && (as === 'tr' ? (
+        <td
+          colSpan={100}
+          className="absolute inset-0 flex items-center justify-center bg-primary/10 pointer-events-none z-10 p-0 border-0"
+        >
+          <span className="text-xs font-medium text-primary bg-background/90 px-2 py-1 rounded shadow-sm">
+            {dropHint}
+          </span>
+        </td>
+      ) : (
         <div className="absolute inset-0 flex items-center justify-center bg-primary/10 pointer-events-none z-10">
           <span className="text-xs font-medium text-primary bg-background/90 px-2 py-1 rounded shadow-sm">
             {dropHint}
           </span>
         </div>
-      )}
+      ))}
     </Element>
   );
 });
