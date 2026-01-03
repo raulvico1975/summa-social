@@ -12,6 +12,7 @@ import { useToast } from '@/hooks/use-toast';
 import { signInWithEmailAndPassword, setPersistence, browserLocalPersistence } from 'firebase/auth';
 import { doc, getDoc } from 'firebase/firestore';
 import { Loader2, Building2, AlertCircle, Clock } from 'lucide-react';
+import { isDemoEnv } from '@/lib/demo/isDemoOrg';
 
 interface OrgInfo {
   id: string;
@@ -57,7 +58,12 @@ function OrgLoginContent() {
           setOrgNotFound(true);
         }
       } catch (err) {
-        console.error('Error loading organization:', err);
+        // DEMO: Silenciar errors de permisos (no bloquejants)
+        const isPermissionError = err instanceof Error &&
+          (err.message.includes('permission') || err.message.includes('Permission'));
+        if (!isDemoEnv() || !isPermissionError) {
+          console.error('Error loading organization:', err);
+        }
         setOrgNotFound(true);
       } finally {
         setIsLoadingOrg(false);
