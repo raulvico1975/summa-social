@@ -32,6 +32,7 @@ import { computeSha256 } from '@/lib/files/sha256';
 import { pendingDocumentsCollection } from '@/lib/pending-documents/refs';
 import { extractXmlData } from '@/lib/pending-documents/extract-xml';
 import { extractPdfData } from '@/lib/pending-documents/extract-pdf';
+import { extractImageData } from '@/lib/pending-documents/extract-image';
 import type { PendingDocument, PendingDocumentType } from '@/lib/pending-documents/types';
 import type { Contact } from '@/lib/data';
 
@@ -65,9 +66,24 @@ interface PendingDocumentsUploadModalProps {
 
 /**
  * Determina el tipus de document basat en l'extensió.
+ * - Imatges (jpg, png, etc.) → receipt (tiquet)
+ * - XML → invoice (factura electrònica)
+ * - PDF → unknown (pot ser factura, nòmina o tiquet)
  */
 function detectDocumentType(filename: string): PendingDocumentType {
-  // Per defecte unknown; l'AI o l'usuari determinarà el tipus real
+  const ext = filename.toLowerCase().split('.').pop();
+
+  // Imatges són normalment tickets/rebuts
+  if (['jpg', 'jpeg', 'png', 'gif', 'webp'].includes(ext || '')) {
+    return 'receipt';
+  }
+
+  // XML són normalment factures electròniques
+  if (ext === 'xml') {
+    return 'invoice';
+  }
+
+  // PDF pot ser qualsevol cosa, l'AI ho determinarà
   return 'unknown';
 }
 
@@ -335,6 +351,16 @@ export function PendingDocumentsUploadModal({
         } catch (extractError) {
           // L'extracció pot fallar sense bloquejar l'upload
           console.warn('[processFile] PDF extraction error (non-blocking):', extractError);
+        }
+      } else if (contentType.startsWith('image/')) {
+        // Imatges (tickets) - extraure amb IA
+        updateFileStatus(item.id, { status: 'extracting', progress: 95 });
+
+        try {
+          await extractImageData(storage, firestore, organizationId, fullDoc);
+        } catch (extractError) {
+          // L'extracció pot fallar sense bloquejar l'upload
+          console.warn('[processFile] Image extraction error (non-blocking):', extractError);
         }
       }
 

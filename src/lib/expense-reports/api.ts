@@ -8,6 +8,7 @@ import {
   orderBy,
   addDoc,
   updateDoc,
+  deleteDoc,
   serverTimestamp,
   type Firestore,
   type Unsubscribe,
@@ -90,6 +91,7 @@ export async function createExpenseReportDraft(
     beneficiary: input?.beneficiary ?? null,
     receiptDocIds: [],
     mileage: null,
+    mileageItems: null,
     totalAmount: 0,
     notes: input?.notes ?? null,
     matchedTransactionId: null,
@@ -159,4 +161,13 @@ export async function restoreExpenseReport(
     status: toStatus,
     updatedAt: serverTimestamp(),
   });
+}
+
+export async function deleteExpenseReport(
+  firestore: Firestore,
+  orgId: string,
+  reportId: string
+): Promise<void> {
+  const ref = expenseReportRef(firestore, orgId, reportId);
+  await deleteDoc(ref);
 }

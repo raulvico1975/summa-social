@@ -1,6 +1,7 @@
 'use client';
 
 import * as React from 'react';
+import { useRouter } from 'next/navigation';
 import { useCurrentOrganization, useOrgUrl } from '@/hooks/organization-provider';
 import { useFirebase } from '@/firebase';
 import { Button } from '@/components/ui/button';
@@ -19,6 +20,10 @@ import {
   Archive,
   RotateCcw,
   ChevronRight,
+  Receipt,
+  Pencil,
+  Trash2,
+  Car,
 } from 'lucide-react';
 import Link from 'next/link';
 import { useToast } from '@/hooks/use-toast';
@@ -28,12 +33,23 @@ import {
   createExpenseReportDraft,
   archiveExpenseReport,
   restoreExpenseReport,
+  deleteExpenseReport,
   type ExpenseReport,
-  type ExpenseReportStatus,
 } from '@/lib/expense-reports';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { formatCurrencyEU } from '@/lib/normalize';
 import { format } from 'date-fns';
 import { ca } from 'date-fns/locale';
+import { TicketsInbox } from '@/components/expense-reports/tickets-inbox';
 
 // ═══════════════════════════════════════════════════════════════════════════
 // HELPERS
@@ -104,8 +120,9 @@ function getStatusInfo(report: ExpenseReport, t: TranslationsContextType['t']): 
 // ═══════════════════════════════════════════════════════════════════════════
 
 export default function LiquidacionsPage() {
+  const router = useRouter();
   const { organization, organizationId, userRole } = useCurrentOrganization();
-  const { firestore } = useFirebase();
+  const { firestore, storage } = useFirebase();
   const { buildUrl } = useOrgUrl();
   const { toast } = useToast();
   const { t } = useTranslations();
@@ -116,7 +133,10 @@ export default function LiquidacionsPage() {
   // Només admins poden operar
   const canOperate = userRole === 'admin';
 
-  // Tab actiu
+  // Tab principal (liquidacions, tickets o quilometratge)
+  const [mainTab, setMainTab] = React.useState<'liquidacions' | 'tickets' | 'quilometratge'>('liquidacions');
+
+  // Tab de liquidacions
   const [activeTab, setActiveTab] = React.useState<'draft' | 'submitted' | 'matched' | 'archived'>('draft');
 
   // Liquidacions
@@ -125,6 +145,10 @@ export default function LiquidacionsPage() {
 
   // Creació
   const [isCreating, setIsCreating] = React.useState(false);
+
+  // Modal confirmació esborrar
+  const [reportToDelete, setReportToDelete] = React.useState<ExpenseReport | null>(null);
+  const [isDeleting, setIsDeleting] = React.useState(false);
 
   // Subscripció a liquidacions
   React.useEffect(() => {
@@ -176,8 +200,8 @@ export default function LiquidacionsPage() {
         title: t.expenseReports.toasts.created,
         description: t.expenseReports.toasts.createdDesc,
       });
-      // Navegar al detall (TODO: implementar)
-      // router.push(buildUrl(`/dashboard/movimientos/liquidacions/${reportId}`));
+      // Navegar al detall
+      router.push(buildUrl(`/dashboard/movimientos/liquidacions/${reportId}`));
     } catch (error) {
       console.error('[handleCreate] Error:', error);
       toast({
@@ -224,6 +248,32 @@ export default function LiquidacionsPage() {
     }
   };
 
+  // Esborrar (amb confirmació)
+  const handleDelete = async () => {
+    if (!organizationId || !firestore || !reportToDelete) return;
+
+    setIsDeleting(true);
+    try {
+      await deleteExpenseReport(firestore, organizationId, reportToDelete.id);
+      toast({ title: t.expenseReports.toasts.deleted });
+      setReportToDelete(null);
+    } catch (error) {
+      console.error('[handleDelete] Error:', error);
+      toast({
+        title: t.expenseReports.toasts.error,
+        description: t.expenseReports.toasts.errorDelete,
+        variant: 'destructive',
+      });
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
+  // Editar (navegar al detall)
+  const handleEdit = (report: ExpenseReport) => {
+    router.push(buildUrl(`/dashboard/movimientos/liquidacions/${report.id}`));
+  };
+
   // Si no té el feature activat, mostrar missatge
   if (!isPendingDocsEnabled) {
     return (
@@ -262,7 +312,7 @@ export default function LiquidacionsPage() {
             </p>
           </div>
         </div>
-        {canOperate && (
+        {canOperate && mainTab === 'liquidacions' && (
           <Button onClick={handleCreate} disabled={isCreating}>
             {isCreating ? (
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -274,110 +324,296 @@ export default function LiquidacionsPage() {
         )}
       </div>
 
-      {/* Banner pre-banc */}
-      <Alert>
-        <Info className="h-4 w-4" />
-        <AlertTitle>{t.expenseReports.banners.prebank}</AlertTitle>
-        <AlertDescription>
-          {t.expenseReports.banners.prebankDescription}
-        </AlertDescription>
-      </Alert>
-
-      {/* Tabs */}
-      <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as typeof activeTab)}>
+      {/* Tabs principals: Liquidacions / Tickets */}
+      <Tabs value={mainTab} onValueChange={(v) => setMainTab(v as typeof mainTab)}>
         <TabsList>
-          <TabsTrigger value="draft">
-            {t.expenseReports.tabs.draft}
-            {counts.draft > 0 && <Badge variant="outline" className="ml-2">{counts.draft}</Badge>}
+          <TabsTrigger value="liquidacions" className="flex items-center gap-2">
+            <FileText className="h-4 w-4" />
+            Liquidacions
           </TabsTrigger>
-          <TabsTrigger value="submitted">
-            {t.expenseReports.tabs.submitted}
-            {counts.submitted > 0 && <Badge variant="outline" className="ml-2">{counts.submitted}</Badge>}
+          <TabsTrigger value="tickets" className="flex items-center gap-2">
+            <Receipt className="h-4 w-4" />
+            Tickets
           </TabsTrigger>
-          <TabsTrigger value="matched">
-            {t.expenseReports.tabs.matched}
-            {counts.matched > 0 && <Badge variant="outline" className="ml-2">{counts.matched}</Badge>}
-          </TabsTrigger>
-          <TabsTrigger value="archived">
-            {t.expenseReports.tabs.archived}
-            {counts.archived > 0 && <Badge variant="outline" className="ml-2">{counts.archived}</Badge>}
+          <TabsTrigger value="quilometratge" className="flex items-center gap-2">
+            <Car className="h-4 w-4" />
+            Quilometratge
           </TabsTrigger>
         </TabsList>
 
-        <TabsContent value={activeTab} className="mt-4">
+        {/* Tab Liquidacions */}
+        <TabsContent value="liquidacions" className="mt-4 space-y-4">
+          {/* Banner pre-banc */}
+          <Alert>
+            <Info className="h-4 w-4" />
+            <AlertTitle>{t.expenseReports.banners.prebank}</AlertTitle>
+            <AlertDescription>
+              {t.expenseReports.banners.prebankDescription}
+            </AlertDescription>
+          </Alert>
+
+          {/* Subtabs de liquidacions */}
+          <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as typeof activeTab)}>
+            <TabsList>
+              <TabsTrigger value="draft">
+                {t.expenseReports.tabs.draft}
+                {counts.draft > 0 && <Badge variant="outline" className="ml-2">{counts.draft}</Badge>}
+              </TabsTrigger>
+              <TabsTrigger value="submitted">
+                {t.expenseReports.tabs.submitted}
+                {counts.submitted > 0 && <Badge variant="outline" className="ml-2">{counts.submitted}</Badge>}
+              </TabsTrigger>
+              <TabsTrigger value="matched">
+                {t.expenseReports.tabs.matched}
+                {counts.matched > 0 && <Badge variant="outline" className="ml-2">{counts.matched}</Badge>}
+              </TabsTrigger>
+              <TabsTrigger value="archived">
+                {t.expenseReports.tabs.archived}
+                {counts.archived > 0 && <Badge variant="outline" className="ml-2">{counts.archived}</Badge>}
+              </TabsTrigger>
+            </TabsList>
+
+            <TabsContent value={activeTab} className="mt-4">
+              {isLoading ? (
+                <div className="space-y-2">
+                  {Array.from({ length: 3 }).map((_, i) => (
+                    <Skeleton key={i} className="h-16 w-full" />
+                  ))}
+                </div>
+              ) : filteredReports.length === 0 ? (
+                <EmptyState
+                  icon={FileText}
+                  title={(t.expenseReports.empty as Record<string, string>)[activeTab]}
+                  description={(t.expenseReports.empty as Record<string, string>)[`${activeTab}Desc`]}
+                />
+              ) : (
+                <div className="space-y-2">
+                  {filteredReports.map((report) => (
+                    <Card
+                      key={report.id}
+                      className="hover:shadow-sm transition-shadow cursor-pointer"
+                      onClick={() => router.push(buildUrl(`/dashboard/movimientos/liquidacions/${report.id}`))}
+                    >
+                      <CardContent className="p-4">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-4">
+                            <FileText className="h-5 w-5 text-muted-foreground" />
+                            <div>
+                              <p className="font-medium">
+                                {report.title || t.expenseReports.empty.noTitle}
+                              </p>
+                              <p className="text-sm text-muted-foreground">
+                                {formatDateRange(report.dateFrom, report.dateTo)}
+                                {report.receiptDocIds.length > 0 && (
+                                  <span className="ml-2">· {t.expenseReports.details.receipts({ count: report.receiptDocIds.length })}</span>
+                                )}
+                                {report.mileage?.km && (
+                                  <span className="ml-2">· {t.expenseReports.details.km({ km: report.mileage.km })}</span>
+                                )}
+                              </p>
+                              <p className="text-xs text-muted-foreground/70 mt-0.5">
+                                {getStatusInfo(report, t).tooltip}
+                              </p>
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-3">
+                            <span className="font-semibold">
+                              {formatCurrencyEU(report.totalAmount)}
+                            </span>
+                            <div className="flex items-center gap-1" title={getStatusInfo(report, t).tooltip}>
+                              {getStatusInfo(report, t).badge}
+                            </div>
+                            {/* Editar - draft i submitted */}
+                            {(report.status === 'draft' || report.status === 'submitted') && (
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleEdit(report);
+                                }}
+                                title={t.common.edit}
+                              >
+                                <Pencil className="h-4 w-4" />
+                              </Button>
+                            )}
+                            {/* Esborrar - draft i submitted (sense SEPA) */}
+                            {(report.status === 'draft' || report.status === 'submitted') && !report.sepa && (
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setReportToDelete(report);
+                                }}
+                                title={t.common.delete}
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            )}
+                            {/* Arxivar - draft sense SEPA */}
+                            {report.status === 'draft' && !report.sepa && (
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleArchive(report);
+                                }}
+                                title={t.common.archive}
+                              >
+                                <Archive className="h-4 w-4" />
+                              </Button>
+                            )}
+                            {report.status === 'archived' && (
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleRestore(report);
+                                }}
+                                title={t.common.restore}
+                              >
+                                <RotateCcw className="h-4 w-4" />
+                              </Button>
+                            )}
+                            <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              )}
+            </TabsContent>
+          </Tabs>
+        </TabsContent>
+
+        {/* Tab Tickets */}
+        <TabsContent value="tickets" className="mt-4">
+          {organizationId && firestore && storage && (
+            <TicketsInbox
+              firestore={firestore}
+              storage={storage}
+              organizationId={organizationId}
+              canOperate={canOperate}
+            />
+          )}
+        </TabsContent>
+
+        {/* Tab Quilometratge */}
+        <TabsContent value="quilometratge" className="mt-4 space-y-4">
+          <Alert>
+            <Car className="h-4 w-4" />
+            <AlertTitle>Quilometratge</AlertTitle>
+            <AlertDescription>
+              Gestiona el quilometratge de cada liquidació. Selecciona una liquidació per afegir o editar línies de quilometratge.
+            </AlertDescription>
+          </Alert>
+
           {isLoading ? (
             <div className="space-y-2">
               {Array.from({ length: 3 }).map((_, i) => (
                 <Skeleton key={i} className="h-16 w-full" />
               ))}
             </div>
-          ) : filteredReports.length === 0 ? (
+          ) : reports.filter((r) => r.status === 'draft' || r.status === 'submitted').length === 0 ? (
             <EmptyState
-              icon={FileText}
-              title={(t.expenseReports.empty as Record<string, string>)[activeTab]}
-              description={(t.expenseReports.empty as Record<string, string>)[`${activeTab}Desc`]}
+              icon={Car}
+              title="Cap liquidació disponible"
+              description="Crea una liquidació per poder afegir quilometratge."
             />
           ) : (
             <div className="space-y-2">
-              {filteredReports.map((report) => (
-                <Card key={report.id} className="hover:shadow-sm transition-shadow">
-                  <CardContent className="p-4">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-4">
-                        <FileText className="h-5 w-5 text-muted-foreground" />
-                        <div>
-                          <p className="font-medium">
-                            {report.title || t.expenseReports.empty.noTitle}
-                          </p>
-                          <p className="text-sm text-muted-foreground">
-                            {formatDateRange(report.dateFrom, report.dateTo)}
-                            {report.receiptDocIds.length > 0 && (
-                              <span className="ml-2">· {t.expenseReports.details.receipts({ count: report.receiptDocIds.length })}</span>
+              {reports
+                .filter((r) => r.status === 'draft' || r.status === 'submitted')
+                .map((report) => {
+                  const mileageTotal = report.mileageItems?.reduce((sum, item) => sum + item.totalEur, 0) ?? 0;
+                  const mileageCount = report.mileageItems?.length ?? 0;
+
+                  return (
+                    <Card
+                      key={report.id}
+                      className="hover:shadow-sm transition-shadow cursor-pointer"
+                      onClick={() => router.push(buildUrl(`/dashboard/movimientos/liquidacions/${report.id}#quilometratge`))}
+                    >
+                      <CardContent className="p-4">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-4">
+                            <Car className="h-5 w-5 text-muted-foreground" />
+                            <div>
+                              <p className="font-medium">
+                                {report.title || t.expenseReports.empty.noTitle}
+                              </p>
+                              <p className="text-sm text-muted-foreground">
+                                {formatDateRange(report.dateFrom, report.dateTo)}
+                                {mileageCount > 0 && (
+                                  <span className="ml-2">
+                                    · {mileageCount} {mileageCount === 1 ? 'línia' : 'línies'}
+                                  </span>
+                                )}
+                              </p>
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-3">
+                            {mileageCount > 0 && (
+                              <span className="font-semibold">
+                                {formatCurrencyEU(mileageTotal)}
+                              </span>
                             )}
-                            {report.mileage?.km && (
-                              <span className="ml-2">· {t.expenseReports.details.km({ km: report.mileage.km })}</span>
-                            )}
-                          </p>
-                          <p className="text-xs text-muted-foreground/70 mt-0.5">
-                            {getStatusInfo(report, t).tooltip}
-                          </p>
+                            <div className="flex items-center gap-1">
+                              {getStatusInfo(report, t).badge}
+                            </div>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                router.push(buildUrl(`/dashboard/movimientos/liquidacions/${report.id}#quilometratge`));
+                              }}
+                            >
+                              <Plus className="mr-2 h-4 w-4" />
+                              Gestionar
+                            </Button>
+                            <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                          </div>
                         </div>
-                      </div>
-                      <div className="flex items-center gap-3">
-                        <span className="font-semibold">
-                          {formatCurrencyEU(report.totalAmount)}
-                        </span>
-                        <div className="flex items-center gap-1" title={getStatusInfo(report, t).tooltip}>
-                          {getStatusInfo(report, t).badge}
-                        </div>
-                        {report.status === 'draft' && !report.sepa && (
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => handleArchive(report)}
-                          >
-                            <Archive className="h-4 w-4" />
-                          </Button>
-                        )}
-                        {report.status === 'archived' && (
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => handleRestore(report)}
-                          >
-                            <RotateCcw className="h-4 w-4" />
-                          </Button>
-                        )}
-                        <ChevronRight className="h-4 w-4 text-muted-foreground" />
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
+                      </CardContent>
+                    </Card>
+                  );
+                })}
             </div>
           )}
         </TabsContent>
       </Tabs>
+
+      {/* Modal confirmació esborrar */}
+      <AlertDialog open={!!reportToDelete} onOpenChange={(open) => !open && setReportToDelete(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{t.expenseReports.confirmDelete.title}</AlertDialogTitle>
+            <AlertDialogDescription>
+              {t.expenseReports.confirmDelete.description}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isDeleting}>
+              {t.expenseReports.confirmDelete.cancel}
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDelete}
+              disabled={isDeleting}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {isDeleting ? (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              ) : null}
+              {t.expenseReports.confirmDelete.confirm}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

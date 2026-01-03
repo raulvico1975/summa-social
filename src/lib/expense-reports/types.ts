@@ -18,6 +18,30 @@ export type ExpenseReportMileage = {
   categoryId: string | null; // preomplir "Vehicle propi"
 };
 
+/**
+ * Adjunt opcional per una línia de quilometratge
+ */
+export type MileageItemAttachment = {
+  storagePath: string;
+  filename: string;
+  contentType: string;
+  sizeBytes: number;
+  uploadedAt: string; // YYYY-MM-DD
+};
+
+/**
+ * Línia individual de quilometratge
+ */
+export type MileageItem = {
+  id: string;
+  date: string; // YYYY-MM-DD (obligatori)
+  km: number; // quilòmetres (obligatori)
+  rateEurPerKm: number; // €/km (obligatori)
+  totalEur: number; // km * rate (persistit)
+  notes: string | null; // ruta / motiu (opcional)
+  attachment: MileageItemAttachment | null; // adjunt opcional
+};
+
 export type ExpenseReportGeneratedPdf = {
   storagePath: string; // organizations/{orgId}/expenseReports/{reportId}/liquidacio.pdf
   filename: string; // liquidacio_{reportId}.pdf
@@ -47,7 +71,8 @@ export type ExpenseReport = {
   beneficiary: ExpenseReportBeneficiary | null;
 
   receiptDocIds: string[]; // pendingDocuments ids (type receipt)
-  mileage: ExpenseReportMileage | null;
+  mileage: ExpenseReportMileage | null; // deprecated: usar mileageItems
+  mileageItems: MileageItem[] | null; // línies individuals de quilometratge
 
   totalAmount: number; // calculat (receipts + mileage)
   notes: string | null;
@@ -86,6 +111,7 @@ export type UpdateExpenseReportInput = {
   beneficiary?: ExpenseReportBeneficiary | null;
   receiptDocIds?: string[];
   mileage?: ExpenseReportMileage | null;
+  mileageItems?: MileageItem[] | null;
   totalAmount?: number;
   notes?: string | null;
   status?: ExpenseReportStatus;

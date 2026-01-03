@@ -41,6 +41,9 @@ import {
   AlertCircle,
   Link2,
   CheckCircle2,
+  Pencil,
+  Paperclip,
+  X,
 } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { cn } from '@/lib/utils';
@@ -62,7 +65,9 @@ import {
   type ExpenseReport,
   type ExpenseReportBeneficiary,
   type ExpenseReportMileage,
+  type MileageItem,
   type PdfLabels,
+  type ReceiptImageData,
 } from '@/lib/expense-reports';
 import {
   updatePendingDocument,
@@ -93,6 +98,51 @@ function getCategoryName(categoryId: string | null, categories: Category[]): str
   return categoryTranslations[category.name] || category.name;
 }
 
+/**
+ * Carrega les imatges dels tiquets des de Firebase Storage i les converteix a data URLs
+ * per poder-les incrustar al PDF.
+ */
+async function fetchReceiptImages(receipts: PendingDocument[]): Promise<ReceiptImageData[]> {
+  const imageReceipts = receipts.filter((r) => {
+    const mime = r.file.contentType || '';
+    return mime.startsWith('image/');
+  });
+
+  const results: ReceiptImageData[] = [];
+
+  for (const receipt of imageReceipts) {
+    if (!receipt.file.url) continue;
+
+    try {
+      // Fetch la imatge
+      const response = await fetch(receipt.file.url);
+      if (!response.ok) continue;
+
+      const blob = await response.blob();
+
+      // Convertir a data URL
+      const dataUrl = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onloadend = () => resolve(reader.result as string);
+        reader.onerror = reject;
+        reader.readAsDataURL(blob);
+      });
+
+      results.push({
+        receiptId: receipt.id,
+        filename: receipt.file.filename,
+        dataUrl,
+        mimeType: receipt.file.contentType || 'image/jpeg',
+      });
+    } catch (error) {
+      console.warn('[fetchReceiptImages] Error carregant imatge:', receipt.id, error);
+      // Continuar amb les altres imatges
+    }
+  }
+
+  return results;
+}
+
 // ═══════════════════════════════════════════════════════════════════════════
 // COMPONENT
 // ═══════════════════════════════════════════════════════════════════════════
@@ -118,7 +168,15 @@ export function ExpenseReportDetail({ report, onClose }: ExpenseReportDetailProp
     report.beneficiary
   );
   const [mileage, setMileage] = React.useState<ExpenseReportMileage | null>(report.mileage);
+  const [mileageItems, setMileageItems] = React.useState<MileageItem[]>(report.mileageItems || []);
   const [receiptDocIds, setReceiptDocIds] = React.useState<string[]>(report.receiptDocIds);
+
+  // Estat per formulari nova línia quilometratge
+  const [newMileageDate, setNewMileageDate] = React.useState<Date | undefined>(undefined);
+  const [newMileageKm, setNewMileageKm] = React.useState<string>('');
+  const [newMileageRate, setNewMileageRate] = React.useState<string>('');
+  const [newMileageNotes, setNewMileageNotes] = React.useState<string>('');
+  const [editingMileageId, setEditingMileageId] = React.useState<string | null>(null);
 
   // Modal de tiquets
   const [isReceiptsModalOpen, setIsReceiptsModalOpen] = React.useState(false);
@@ -224,9 +282,13 @@ export function ExpenseReportDetail({ report, onClose }: ExpenseReportDetailProp
   }, [assignedReceipts]);
 
   const mileageTotal = React.useMemo(() => {
+    // Usar mileageItems si existeix, sinó fallback al legacy mileage
+    if (mileageItems && mileageItems.length > 0) {
+      return mileageItems.reduce((sum, item) => sum + item.totalEur, 0);
+    }
     if (!mileage?.km || !mileage?.rateEurPerKm) return 0;
     return mileage.km * mileage.rateEurPerKm;
-  }, [mileage]);
+  }, [mileageItems, mileage]);
 
   const totalAmount = receiptsTotal + mileageTotal;
 
@@ -270,6 +332,7 @@ export function ExpenseReportDetail({ report, onClose }: ExpenseReportDetailProp
           ...mileage,
           amount: mileage.km && mileage.rateEurPerKm ? mileage.km * mileage.rateEurPerKm : null,
         } : null,
+        mileageItems: mileageItems.length > 0 ? mileageItems : null,
         receiptDocIds,
         totalAmount,
       });
@@ -326,6 +389,59 @@ export function ExpenseReportDetail({ report, onClose }: ExpenseReportDetailProp
     }
   };
 
+  // Funcions per gestionar mileageItems
+  const resetMileageForm = () => {
+    setNewMileageDate(undefined);
+    setNewMileageKm('');
+    setNewMileageRate('');
+    setNewMileageNotes('');
+    setEditingMileageId(null);
+  };
+
+  const handleAddMileageItem = () => {
+    if (!newMileageDate || !newMileageKm || !newMileageRate) return;
+
+    const km = parseFloat(newMileageKm);
+    const rate = parseFloat(newMileageRate);
+    if (isNaN(km) || isNaN(rate)) return;
+
+    const newItem: MileageItem = {
+      id: editingMileageId || crypto.randomUUID(),
+      date: format(newMileageDate, 'yyyy-MM-dd'),
+      km,
+      rateEurPerKm: rate,
+      totalEur: km * rate,
+      notes: newMileageNotes || null,
+      attachment: editingMileageId
+        ? mileageItems.find((item) => item.id === editingMileageId)?.attachment ?? null
+        : null,
+    };
+
+    if (editingMileageId) {
+      setMileageItems((prev) =>
+        prev.map((item) => (item.id === editingMileageId ? newItem : item))
+      );
+    } else {
+      setMileageItems((prev) => [...prev, newItem]);
+    }
+
+    resetMileageForm();
+    toast({ title: editingMileageId ? t.expenseReports.detail.mileageUpdated : t.expenseReports.detail.mileageAdded });
+  };
+
+  const handleEditMileageItem = (item: MileageItem) => {
+    setEditingMileageId(item.id);
+    setNewMileageDate(parseISO(item.date));
+    setNewMileageKm(item.km.toString());
+    setNewMileageRate(item.rateEurPerKm.toString());
+    setNewMileageNotes(item.notes || '');
+  };
+
+  const handleDeleteMileageItem = (itemId: string) => {
+    setMileageItems((prev) => prev.filter((item) => item.id !== itemId));
+    toast({ title: t.expenseReports.detail.mileageDeleted });
+  };
+
   // Trobar el contacte beneficiari
   const beneficiaryContact = React.useMemo(() => {
     if (!beneficiary || !contacts) return null;
@@ -363,13 +479,17 @@ export function ExpenseReportDetail({ report, onClose }: ExpenseReportDetailProp
           ...mileage,
           amount: mileage.km && mileage.rateEurPerKm ? mileage.km * mileage.rateEurPerKm : null,
         } : null,
+        mileageItems: mileageItems.length > 0 ? mileageItems : null,
         totalAmount,
       };
+
+      // Carregar imatges dels tiquets per incrustar al PDF
+      const receiptImages = await fetchReceiptImages(assignedReceipts || []);
 
       // Construir labels traduïts per al PDF
       const pdfLabels: PdfLabels = t.expenseReports.pdf;
 
-      // Generar PDF
+      // Generar PDF amb imatges incrustades
       const { blob, filename } = generateExpenseReportPdf({
         report: currentReport,
         receipts: assignedReceipts || [],
@@ -377,6 +497,7 @@ export function ExpenseReportDetail({ report, onClose }: ExpenseReportDetailProp
         beneficiaryContact,
         categories: categories || [],
         labels: pdfLabels,
+        receiptImages,
       });
 
       // Pujar a Storage
@@ -624,98 +745,165 @@ export function ExpenseReportDetail({ report, onClose }: ExpenseReportDetailProp
       </Card>
 
       {/* Quilometratge */}
-      <Card>
+      <Card id="quilometratge">
         <CardHeader className="pb-3">
           <CardTitle className="text-base flex items-center gap-2">
             <Car className="h-4 w-4" />
             {t.expenseReports.detail.mileage}
           </CardTitle>
         </CardHeader>
-        <CardContent className="space-y-3">
-          <div className="grid grid-cols-3 gap-3">
-            <div>
-              <Label>{t.expenseReports.detail.km}</Label>
-              <Input
-                type="number"
-                placeholder="0"
-                value={mileage?.km || ''}
-                onChange={(e) => setMileage({
-                  ...mileage,
-                  km: e.target.value ? parseFloat(e.target.value) : null,
-                  rateEurPerKm: mileage?.rateEurPerKm ?? defaultKmRate,
-                  amount: null,
-                  description: mileage?.description ?? null,
-                  categoryId: mileage?.categoryId ?? null,
-                })}
-              />
+        <CardContent className="space-y-4">
+          {/* Llista de línies existents */}
+          {mileageItems.length > 0 && (
+            <div className="space-y-2">
+              {mileageItems.map((item) => (
+                <div
+                  key={item.id}
+                  className={cn(
+                    'flex items-center justify-between py-2 px-3 border rounded-lg',
+                    editingMileageId === item.id && 'border-primary bg-primary/5'
+                  )}
+                >
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm font-medium">
+                        {format(parseISO(item.date), 'dd/MM/yyyy')}
+                      </span>
+                      <span className="text-sm text-muted-foreground">
+                        {item.km} km × {formatCurrencyEU(item.rateEurPerKm)}/km
+                      </span>
+                      {item.attachment && (
+                        <Paperclip className="h-3 w-3 text-muted-foreground" />
+                      )}
+                    </div>
+                    {item.notes && (
+                      <p className="text-xs text-muted-foreground truncate">{item.notes}</p>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <span className="font-medium mr-2">{formatCurrencyEU(item.totalEur)}</span>
+                    <Button
+                      size="icon"
+                      variant="ghost"
+                      className="h-8 w-8"
+                      onClick={() => handleEditMileageItem(item)}
+                      title={t.common.edit}
+                    >
+                      <Pencil className="h-4 w-4 text-muted-foreground" />
+                    </Button>
+                    <Button
+                      size="icon"
+                      variant="ghost"
+                      className="h-8 w-8"
+                      onClick={() => handleDeleteMileageItem(item.id)}
+                      title={t.common.delete}
+                    >
+                      <Trash2 className="h-4 w-4 text-muted-foreground" />
+                    </Button>
+                  </div>
+                </div>
+              ))}
+              <div className="flex justify-between pt-2 font-medium">
+                <span>{t.expenseReports.detail.subtotalMileage}</span>
+                <span>{formatCurrencyEU(mileageTotal)}</span>
+              </div>
+            </div>
+          )}
+
+          {/* Formulari afegir/editar línia */}
+          <div className="border rounded-lg p-3 space-y-3 bg-muted/30">
+            <p className="text-sm font-medium">
+              {editingMileageId ? t.expenseReports.detail.editMileage : t.expenseReports.detail.addMileage}
+            </p>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <Label>{t.expenseReports.detail.date}</Label>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      className={cn('w-full justify-start', !newMileageDate && 'text-muted-foreground')}
+                    >
+                      <CalendarIcon className="mr-2 h-4 w-4" />
+                      {newMileageDate ? format(newMileageDate, 'dd/MM/yyyy') : t.expenseReports.detail.selectDate}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0">
+                    <Calendar
+                      mode="single"
+                      selected={newMileageDate}
+                      onSelect={setNewMileageDate}
+                      locale={ca}
+                    />
+                  </PopoverContent>
+                </Popover>
+              </div>
+              <div>
+                <Label>{t.expenseReports.detail.km}</Label>
+                <Input
+                  type="number"
+                  placeholder="0"
+                  value={newMileageKm}
+                  onChange={(e) => setNewMileageKm(e.target.value)}
+                />
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <Label>{t.expenseReports.detail.rate} ({t.expenseReports.detail.rateUnit})</Label>
+                <Input
+                  type="number"
+                  step="0.01"
+                  placeholder={defaultKmRate.toString()}
+                  value={newMileageRate}
+                  onChange={(e) => setNewMileageRate(e.target.value)}
+                />
+              </div>
+              <div>
+                <Label>{t.expenseReports.detail.total}</Label>
+                <Input
+                  type="text"
+                  value={
+                    newMileageKm && newMileageRate
+                      ? formatCurrencyEU(parseFloat(newMileageKm) * parseFloat(newMileageRate))
+                      : '—'
+                  }
+                  disabled
+                  className="bg-muted"
+                />
+              </div>
             </div>
             <div>
-              <Label>{t.expenseReports.detail.rate} ({t.expenseReports.detail.rateUnit})</Label>
+              <Label>{t.expenseReports.detail.routeNotes}</Label>
               <Input
-                type="number"
-                step="0.01"
-                placeholder={defaultKmRate.toString()}
-                value={mileage?.rateEurPerKm || ''}
-                onChange={(e) => setMileage({
-                  ...mileage,
-                  km: mileage?.km ?? null,
-                  rateEurPerKm: e.target.value ? parseFloat(e.target.value) : null,
-                  amount: null,
-                  description: mileage?.description ?? null,
-                  categoryId: mileage?.categoryId ?? null,
-                })}
+                placeholder={t.expenseReports.detail.routePlaceholder}
+                value={newMileageNotes}
+                onChange={(e) => setNewMileageNotes(e.target.value)}
               />
             </div>
-            <div>
-              <Label>{t.expenseReports.detail.amount}</Label>
-              <Input
-                type="text"
-                value={mileageTotal > 0 ? formatCurrencyEU(mileageTotal) : '—'}
-                disabled
-                className="bg-muted"
-              />
+            <div className="flex justify-end gap-2">
+              {editingMileageId && (
+                <Button variant="ghost" size="sm" onClick={resetMileageForm}>
+                  <X className="mr-1 h-4 w-4" />
+                  {t.common.cancel}
+                </Button>
+              )}
+              <Button
+                size="sm"
+                onClick={handleAddMileageItem}
+                disabled={!newMileageDate || !newMileageKm || !newMileageRate}
+              >
+                <Plus className="mr-1 h-4 w-4" />
+                {editingMileageId ? t.expenseReports.detail.updateLine : t.expenseReports.detail.addLine}
+              </Button>
             </div>
           </div>
-          <div>
-            <Label>{t.expenseReports.detail.routeDescription}</Label>
-            <Input
-              placeholder={t.expenseReports.detail.routePlaceholder}
-              value={mileage?.description || ''}
-              onChange={(e) => setMileage({
-                ...mileage,
-                km: mileage?.km ?? null,
-                rateEurPerKm: mileage?.rateEurPerKm ?? defaultKmRate,
-                amount: null,
-                description: e.target.value || null,
-                categoryId: mileage?.categoryId ?? null,
-              })}
-            />
-          </div>
-          <div>
-            <Label>{t.expenseReports.detail.category}</Label>
-            <Select
-              value={mileage?.categoryId || ''}
-              onValueChange={(id) => setMileage({
-                ...mileage,
-                km: mileage?.km ?? null,
-                rateEurPerKm: mileage?.rateEurPerKm ?? defaultKmRate,
-                amount: null,
-                description: mileage?.description ?? null,
-                categoryId: id || null,
-              })}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder={t.expenseReports.detail.selectCategory} />
-              </SelectTrigger>
-              <SelectContent>
-                {expenseCategories.map((cat) => (
-                  <SelectItem key={cat.id} value={cat.id}>
-                    {categoryTranslations[cat.name] || cat.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+
+          {mileageItems.length === 0 && (
+            <p className="text-sm text-muted-foreground text-center">
+              {t.expenseReports.detail.noMileage}
+            </p>
+          )}
         </CardContent>
       </Card>
 

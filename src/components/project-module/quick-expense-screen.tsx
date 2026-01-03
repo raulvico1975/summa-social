@@ -2,6 +2,7 @@
 // Pantalla minimalista per captura ràpida de despeses (<10s)
 // Flux: Foto → Import → Guardar
 // Auto: date=avui, needsReview=true, sense projecte/partida
+// IA: extracció automàtica de data, import i concepte
 
 'use client';
 
@@ -18,9 +19,10 @@ import type { OffBankAttachment } from '@/lib/project-module-types';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Camera, Upload, X, Loader2, Check, Image as ImageIcon, FileText, ArrowLeft } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
+import { Camera, Upload, X, Loader2, Check, Image as ImageIcon, FileText, ArrowLeft, Sparkles } from 'lucide-react';
 import Link from 'next/link';
-import { useOrgUrl } from '@/hooks/organization-provider';
+import { useOrgUrl, useCurrentOrganization } from '@/hooks/organization-provider';
 
 // =============================================================================
 // TYPES
@@ -37,8 +39,22 @@ interface PendingUpload {
   id: string;
   uploading: boolean;
   url?: string;
+  storagePath?: string;
   error?: string;
 }
+
+/** Resultat de l'extracció IA */
+interface AIExtraction {
+  date: string | null;
+  amount: number | null;
+  currency: string | null;
+  merchant: string | null;
+  concept: string | null;
+  confidence: number;
+}
+
+/** Estat de l'extracció IA */
+type AIExtractionState = 'idle' | 'extracting' | 'done' | 'error';
 
 // =============================================================================
 // CONSTANTS
@@ -80,6 +96,7 @@ export function QuickExpenseScreen({ organizationId, isLandingMode = false }: Qu
   const { toast } = useToast();
   const { t } = useTranslations();
   const { buildUrl } = useOrgUrl();
+  const { organization } = useCurrentOrganization();
 
   // Textos i18n
   const q = t.projectModule?.quickExpense;
@@ -88,11 +105,25 @@ export function QuickExpenseScreen({ organizationId, isLandingMode = false }: Qu
   const cameraInputRef = useRef<HTMLInputElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  // Refs per detectar si l'usuari ha editat manualment els camps
+  const userEditedAmount = useRef(false);
+  const userEditedConcept = useRef(false);
+  const userEditedDate = useRef(false);
+
   // Estats
   const [uploads, setUploads] = useState<PendingUpload[]>([]);
   const [amountEUR, setAmountEUR] = useState('');
   const [concept, setConcept] = useState('');
+  const [date, setDate] = useState(''); // Per a la data extreta per IA
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Estats multimoneda (per monedes ≠ EUR)
+  const [currency, setCurrency] = useState('EUR');
+  const [amountOriginal, setAmountOriginal] = useState('');
+
+  // Estat IA
+  const [aiState, setAIState] = useState<AIExtractionState>('idle');
+  const [aiExtraction, setAIExtraction] = useState<AIExtraction | null>(null);
 
   // Derivats
   const hasAttachments = uploads.some(u => u.url && !u.error);
@@ -100,10 +131,77 @@ export function QuickExpenseScreen({ organizationId, isLandingMode = false }: Qu
   const canSubmit = hasAttachments && !isUploading && !isSubmitting;
 
   // ---------------------------------------------------------------------------
+  // IA EXTRACTION
+  // ---------------------------------------------------------------------------
+
+  const extractWithAI = useCallback(async (fileUrl: string, storagePath: string) => {
+    // Només intentem extracció per imatges
+    setAIState('extracting');
+
+    try {
+      const response = await fetch('/api/ai/extract-ticket', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ fileUrl, storagePath }),
+      });
+
+      if (!response.ok) {
+        console.warn('[QuickExpense] AI extraction failed:', response.status);
+        setAIState('error');
+        return;
+      }
+
+      const result = await response.json();
+      const extraction: AIExtraction = {
+        date: result.date ?? null,
+        amount: result.amount ?? null,
+        currency: result.currency ?? null,
+        merchant: result.merchant ?? null,
+        concept: result.concept ?? null,
+        confidence: result.confidence ?? 0,
+      };
+
+      setAIExtraction(extraction);
+      setAIState('done');
+
+      // Preomplir camps només si l'usuari no els ha editat manualment
+      if (extraction.date && !userEditedDate.current && !date) {
+        setDate(extraction.date);
+      }
+
+      if (extraction.amount !== null && !userEditedAmount.current && !amountEUR && !amountOriginal) {
+        const detectedCurrency = extraction.currency?.toUpperCase() || 'EUR';
+
+        if (detectedCurrency === 'EUR') {
+          setAmountEUR(String(extraction.amount));
+          setCurrency('EUR');
+        } else {
+          // Moneda estrangera
+          setCurrency(detectedCurrency);
+          setAmountOriginal(String(extraction.amount));
+          // amountEUR es calcularà amb fxRate del projecte o s'omplirà manualment
+        }
+      }
+
+      if (!userEditedConcept.current && !concept) {
+        // Combinar merchant + concept
+        const parts = [extraction.merchant, extraction.concept].filter(Boolean);
+        if (parts.length > 0) {
+          setConcept(parts.join(' — '));
+        }
+      }
+
+    } catch (error) {
+      console.error('[QuickExpense] AI extraction error:', error);
+      setAIState('error');
+    }
+  }, [date, amountEUR, amountOriginal, concept]);
+
+  // ---------------------------------------------------------------------------
   // FILE UPLOAD
   // ---------------------------------------------------------------------------
 
-  const uploadFile = useCallback(async (file: File): Promise<string | null> => {
+  const uploadFile = useCallback(async (file: File): Promise<{ url: string; storagePath: string } | null> => {
     const tempId = generateTempId();
     const storagePath = `organizations/${organizationId}/offBankExpenses/temp/${tempId}_${file.name}`;
     const storageRef = ref(storage, storagePath);
@@ -111,7 +209,7 @@ export function QuickExpenseScreen({ organizationId, isLandingMode = false }: Qu
     try {
       const uploadResult = await uploadBytes(storageRef, file);
       const downloadURL = await getDownloadURL(uploadResult.ref);
-      return downloadURL;
+      return { url: downloadURL, storagePath };
     } catch (error) {
       console.error('[QuickExpense] Upload error:', error);
       return null;
@@ -146,19 +244,37 @@ export function QuickExpenseScreen({ organizationId, isLandingMode = false }: Qu
     // Afegir a la llista
     setUploads(prev => [...prev, ...validFiles]);
 
-    // Pujar cadascun
+    // Pujar cadascun i extreure amb IA si és imatge
+    let firstImageUpload: { url: string; storagePath: string } | null = null;
+
     for (const pending of validFiles) {
-      const url = await uploadFile(pending.file);
+      const result = await uploadFile(pending.file);
 
       setUploads(prev =>
         prev.map(p =>
           p.id === pending.id
-            ? { ...p, uploading: false, url: url ?? undefined, error: url ? undefined : 'Error' }
+            ? {
+                ...p,
+                uploading: false,
+                url: result?.url ?? undefined,
+                storagePath: result?.storagePath ?? undefined,
+                error: result ? undefined : 'Error',
+              }
             : p
         )
       );
+
+      // Guardar la primera imatge per fer extracció IA
+      if (result && pending.file.type.startsWith('image/') && !firstImageUpload) {
+        firstImageUpload = result;
+      }
     }
-  }, [uploadFile]);
+
+    // Fer extracció IA automàtica amb la primera imatge pujada
+    if (firstImageUpload && aiState === 'idle') {
+      extractWithAI(firstImageUpload.url, firstImageUpload.storagePath);
+    }
+  }, [uploadFile, extractWithAI, aiState]);
 
   const handleRemoveUpload = useCallback(async (id: string) => {
     const upload = uploads.find(u => u.id === id);
@@ -212,8 +328,8 @@ export function QuickExpenseScreen({ organizationId, isLandingMode = false }: Qu
           uploadedAt: new Date().toISOString().split('T')[0],
         }));
 
-      // Data d'avui
-      const today = new Date().toISOString().split('T')[0];
+      // Data: usar la extreta per IA si disponible, sinó avui
+      const finalDate = date || new Date().toISOString().split('T')[0];
 
       // Concepte per defecte si buit
       const finalConcept = concept.trim() || 'Despesa ràpida';
@@ -221,28 +337,62 @@ export function QuickExpenseScreen({ organizationId, isLandingMode = false }: Qu
       // Suggerir categoria basada en concepte
       const suggestedCategory = suggestCategory(finalConcept);
 
-      // Import: si buit, serà null (es pot afegir després a oficina)
-      const trimmedAmount = amountEUR.trim();
-      const parsedAmount = trimmedAmount ? parseFloat(trimmedAmount) : null;
+      // Preparar imports segons moneda
+      const isMulticurrency = currency !== 'EUR' && currency !== '';
+      let finalAmountEUR: string | null = null;
+      let finalOriginalCurrency: string | null = null;
+      let finalOriginalAmount: string | null = null;
 
-      // Validar que si hi ha import, sigui positiu
-      if (parsedAmount !== null && parsedAmount <= 0) {
-        toast({
-          title: 'Import no vàlid',
-          description: 'L\'import ha de ser positiu o deixar-lo buit.',
-          variant: 'destructive',
-        });
-        return;
+      if (isMulticurrency) {
+        // Moneda estrangera
+        finalOriginalCurrency = currency;
+        const parsedOriginal = amountOriginal.trim() ? parseFloat(amountOriginal) : null;
+
+        if (parsedOriginal !== null && parsedOriginal <= 0) {
+          toast({
+            title: 'Import no vàlid',
+            description: 'L\'import ha de ser positiu o deixar-lo buit.',
+            variant: 'destructive',
+          });
+          setIsSubmitting(false);
+          return;
+        }
+
+        finalOriginalAmount = parsedOriginal !== null ? String(parsedOriginal) : null;
+
+        // Si també s'ha especificat amountEUR manualment
+        const parsedEUR = amountEUR.trim() ? parseFloat(amountEUR) : null;
+        if (parsedEUR !== null && parsedEUR > 0) {
+          finalAmountEUR = String(parsedEUR);
+        }
+      } else {
+        // EUR directe
+        const parsedAmount = amountEUR.trim() ? parseFloat(amountEUR) : null;
+
+        if (parsedAmount !== null && parsedAmount <= 0) {
+          toast({
+            title: 'Import no vàlid',
+            description: 'L\'import ha de ser positiu o deixar-lo buit.',
+            variant: 'destructive',
+          });
+          setIsSubmitting(false);
+          return;
+        }
+
+        finalAmountEUR = parsedAmount !== null ? String(parsedAmount) : null;
       }
 
       await save({
-        date: today,
+        date: finalDate,
         concept: finalConcept,
-        amountEUR: parsedAmount !== null ? String(parsedAmount) : null,
+        amountEUR: finalAmountEUR,
         counterpartyName: '',
         categoryName: suggestedCategory ?? '',
         attachments,
         needsReview: true,
+        // Camps multimoneda
+        originalCurrency: finalOriginalCurrency,
+        originalAmount: finalOriginalAmount,
       });
 
       // Èxit
@@ -254,7 +404,15 @@ export function QuickExpenseScreen({ organizationId, isLandingMode = false }: Qu
       // Reset form per encadenar
       setUploads([]);
       setAmountEUR('');
+      setAmountOriginal('');
       setConcept('');
+      setDate('');
+      setCurrency('EUR');
+      setAIState('idle');
+      setAIExtraction(null);
+      userEditedAmount.current = false;
+      userEditedConcept.current = false;
+      userEditedDate.current = false;
 
     } catch (error) {
       console.error('[QuickExpense] Save error:', error);
@@ -266,7 +424,7 @@ export function QuickExpenseScreen({ organizationId, isLandingMode = false }: Qu
     } finally {
       setIsSubmitting(false);
     }
-  }, [canSubmit, uploads, amountEUR, concept, save, toast, q]);
+  }, [canSubmit, uploads, amountEUR, amountOriginal, currency, date, concept, save, toast, q]);
 
   // ---------------------------------------------------------------------------
   // RENDER
@@ -405,26 +563,91 @@ export function QuickExpenseScreen({ organizationId, isLandingMode = false }: Qu
                   +{hiddenCount} fitxer{hiddenCount > 1 ? 's' : ''} més
                 </p>
               )}
+
+              {/* Indicador extracció IA */}
+              {aiState === 'extracting' && (
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  <span>Analitzant amb IA...</span>
+                </div>
+              )}
+              {aiState === 'done' && aiExtraction && aiExtraction.confidence > 0 && (
+                <Badge variant="secondary" className="gap-1">
+                  <Sparkles className="h-3 w-3" />
+                  Suggerit per IA
+                </Badge>
+              )}
             </div>
           )}
         </div>
 
         {/* Secció 2: Import (opcional) */}
         <div className="space-y-2">
-          <Label htmlFor="amount" className="text-base font-medium">
-            {q?.amountLabel ?? 'Import'}
-          </Label>
-          <Input
-            id="amount"
-            type="number"
-            inputMode="decimal"
-            step="0.01"
-            min="0"
-            placeholder="Ex: 12,50"
-            value={amountEUR}
-            onChange={(e) => setAmountEUR(e.target.value)}
-            className="text-2xl h-14 font-mono text-center"
-          />
+          <div className="flex items-center justify-between">
+            <Label htmlFor="amount" className="text-base font-medium">
+              {q?.amountLabel ?? 'Import'}
+            </Label>
+            {/* Mostrar moneda detectada si no és EUR */}
+            {currency !== 'EUR' && (
+              <Badge variant="outline" className="text-xs">
+                {currency}
+              </Badge>
+            )}
+          </div>
+
+          {currency === 'EUR' ? (
+            // Input EUR directe
+            <Input
+              id="amount"
+              type="number"
+              inputMode="decimal"
+              step="0.01"
+              min="0"
+              placeholder="Ex: 12,50"
+              value={amountEUR}
+              onChange={(e) => {
+                userEditedAmount.current = true;
+                setAmountEUR(e.target.value);
+              }}
+              className="text-2xl h-14 font-mono text-center"
+            />
+          ) : (
+            // Input moneda estrangera
+            <div className="space-y-2">
+              <div className="flex items-center gap-2">
+                <Input
+                  id="amount-original"
+                  type="number"
+                  inputMode="decimal"
+                  step="0.01"
+                  min="0"
+                  placeholder={`Import en ${currency}`}
+                  value={amountOriginal}
+                  onChange={(e) => {
+                    userEditedAmount.current = true;
+                    setAmountOriginal(e.target.value);
+                  }}
+                  className="text-xl h-12 font-mono text-center flex-1"
+                />
+                <span className="text-lg font-medium text-muted-foreground">{currency}</span>
+              </div>
+              <Input
+                id="amount-eur"
+                type="number"
+                inputMode="decimal"
+                step="0.01"
+                min="0"
+                placeholder="Import EUR (opcional)"
+                value={amountEUR}
+                onChange={(e) => {
+                  userEditedAmount.current = true;
+                  setAmountEUR(e.target.value);
+                }}
+                className="h-10 font-mono text-center text-sm"
+              />
+            </div>
+          )}
+
           <p className="text-xs text-muted-foreground text-center">
             {q?.amountHint ?? 'Opcional — pots afegir-ho després'}
           </p>
@@ -440,7 +663,10 @@ export function QuickExpenseScreen({ organizationId, isLandingMode = false }: Qu
             type="text"
             placeholder={q?.conceptPlaceholder ?? 'Ex: Taxi aeroport, Material oficina...'}
             value={concept}
-            onChange={(e) => setConcept(e.target.value)}
+            onChange={(e) => {
+              userEditedConcept.current = true;
+              setConcept(e.target.value);
+            }}
             className="h-12"
           />
         </div>

@@ -33,6 +33,13 @@ export interface PdfLabels {
   generatedBy: string;
 }
 
+export interface ReceiptImageData {
+  receiptId: string;
+  filename: string;
+  dataUrl: string; // base64 data URL
+  mimeType: string; // 'image/jpeg', 'image/png', etc.
+}
+
 export interface GenerateExpenseReportPdfParams {
   report: ExpenseReport;
   receipts: PendingDocument[];
@@ -40,6 +47,8 @@ export interface GenerateExpenseReportPdfParams {
   beneficiaryContact: Contact | null; // Si és employee o contact
   categories: Category[];
   labels: PdfLabels;
+  /** Imatges pre-carregades per incrustar al PDF (opcional) */
+  receiptImages?: ReceiptImageData[];
 }
 
 export interface GenerateExpenseReportPdfResult {
@@ -98,7 +107,7 @@ function getCategoryName(
 export function generateExpenseReportPdf(
   params: GenerateExpenseReportPdfParams
 ): GenerateExpenseReportPdfResult {
-  const { report, receipts, organization, beneficiaryContact, categories, labels } = params;
+  const { report, receipts, organization, beneficiaryContact, categories, labels, receiptImages = [] } = params;
 
   const doc = new jsPDF();
   const pageWidth = doc.internal.pageSize.getWidth();
@@ -194,8 +203,21 @@ export function generateExpenseReportPdf(
     ]);
   });
 
-  // Quilometratge
-  if (report.mileage?.km && report.mileage.rateEurPerKm) {
+  // Quilometratge - mileageItems (nou sistema)
+  if (report.mileageItems && report.mileageItems.length > 0) {
+    report.mileageItems.forEach((item) => {
+      const mileageDescription = item.notes
+        ? `${labels.mileage}: ${item.notes}`
+        : `${labels.mileage}: ${labels.mileageDesc({ km: item.km, rate: item.rateEurPerKm })}`;
+      tableRows.push([
+        formatDate(item.date),
+        mileageDescription,
+        '', // No tenim categoryId a mileageItems
+        formatCurrencyEU(item.totalEur),
+      ]);
+    });
+  } else if (report.mileage?.km && report.mileage.rateEurPerKm) {
+    // Fallback al sistema antic (legacy)
     const mileageAmount = report.mileage.km * report.mileage.rateEurPerKm;
     const mileageDescription = report.mileage.description
       ? `${labels.mileage}: ${report.mileage.description}`
@@ -283,6 +305,83 @@ export function generateExpenseReportPdf(
   );
 
   doc.setTextColor(0);
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // PÀGINES D'IMATGES (1 imatge per pàgina)
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  if (receiptImages.length > 0) {
+    const pageHeight = doc.internal.pageSize.getHeight();
+    const imageMargin = 15;
+    const maxImageWidth = pageWidth - 2 * imageMargin;
+    const maxImageHeight = pageHeight - 2 * imageMargin - 20; // 20 per al peu
+
+    receiptImages.forEach((imageData, index) => {
+      doc.addPage();
+
+      // Títol de la pàgina
+      doc.setFontSize(10);
+      doc.setFont('helvetica', 'bold');
+      doc.text(`${labels.attachments} ${index + 1}: ${imageData.filename}`, pageWidth / 2, imageMargin, { align: 'center' });
+
+      // Calcular dimensions mantenint aspect ratio
+      // jsPDF addImage amb format auto calcula les dimensions
+      try {
+        // Crear un Image temporal per obtenir dimensions
+        const img = new Image();
+        img.src = imageData.dataUrl;
+
+        // Si tenim dimensions, calcular escala
+        // Si no, jsPDF ho farà automàticament
+        let imgWidth = maxImageWidth;
+        let imgHeight = maxImageHeight;
+
+        // Intentar obtenir dimensions de la imatge
+        if (img.width && img.height) {
+          const aspectRatio = img.width / img.height;
+
+          if (aspectRatio > maxImageWidth / maxImageHeight) {
+            // Imatge més ampla que alta (respecte al contenidor)
+            imgWidth = maxImageWidth;
+            imgHeight = maxImageWidth / aspectRatio;
+          } else {
+            // Imatge més alta que ampla
+            imgHeight = maxImageHeight;
+            imgWidth = maxImageHeight * aspectRatio;
+          }
+        }
+
+        // Centrar horitzontalment
+        const xPos = (pageWidth - imgWidth) / 2;
+        const yPos = imageMargin + 10; // Després del títol
+
+        // Determinar format
+        const format = imageData.mimeType.includes('png') ? 'PNG' : 'JPEG';
+
+        doc.addImage(
+          imageData.dataUrl,
+          format,
+          xPos,
+          yPos,
+          imgWidth,
+          imgHeight
+        );
+      } catch (error) {
+        // Si falla, mostrar missatge d'error
+        console.error('[generateExpenseReportPdf] Error afegint imatge:', error);
+        doc.setFontSize(12);
+        doc.setFont('helvetica', 'normal');
+        doc.setTextColor(128);
+        doc.text(
+          `No s'ha pogut carregar la imatge: ${imageData.filename}`,
+          pageWidth / 2,
+          pageHeight / 2,
+          { align: 'center' }
+        );
+        doc.setTextColor(0);
+      }
+    });
+  }
 
   // ═══════════════════════════════════════════════════════════════════════════
   // OUTPUT
