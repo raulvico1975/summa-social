@@ -27,9 +27,10 @@ export default async function PublicLayout({ children, params }: PublicLayoutPro
     notFound();
   }
 
+  // No renderitzem <html> ni <body> aquí — ja ho fa src/app/layout.tsx
   return (
-    <html lang={lang}>
-      <body className="font-sans antialiased">{children}</body>
-    </html>
+    <div className="font-sans antialiased">
+      {children}
+    </div>
   );
 }

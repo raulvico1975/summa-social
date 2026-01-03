@@ -32,6 +32,13 @@ export function middleware(request: NextRequest) {
     return NextResponse.next();
   }
 
+  // Redirect /{lang}/login → /{lang} (no existeix login públic general)
+  const loginMatch = pathname.match(/^\/(ca|es|fr|pt)\/login$/);
+  if (loginMatch) {
+    const lang = loginMatch[1];
+    return NextResponse.redirect(new URL(`/${lang}`, request.url));
+  }
+
   // Rewrite d'idiomes: /fr/... → /public/fr/... (intern)
   // Això evita la col·lisió amb [orgSlug] mantenint la URL pública
   const segments = pathname.split('/').filter(Boolean);

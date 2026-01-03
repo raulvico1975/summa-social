@@ -566,6 +566,11 @@ npm run dev:demo
 
 **⚠️ NO copiar patrons DEMO a prod** — el bypass de rols és només per UX de demo
 
+**Login públic general:**
+- No existeix login general públic (`/{lang}/login`)
+- Qualsevol accés a `/ca/login`, `/es/login`, etc. redirigeix a la landing pública (`/{lang}`)
+- El login d'organització (`/{orgSlug}/login`) continua funcionant normalment
+
 ### 8. Problemes coneguts i solucions
 
 | Problema | Causa | Solució |
