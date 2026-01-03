@@ -2442,6 +2442,8 @@ Centre d'ajuda contextual amb guies pas-a-pas per a les operacions més freqüen
 | `splitRemittance` | Dividir remesa | Split manual |
 | `stripeDonations` | Donacions Stripe | Importador Stripe |
 | `travelReceipts` | Tiquets de viatge | Captura ràpida |
+| `travelExpenseReport` | Liquidació de despeses | Flux de liquidació (NOU v1.27) |
+| `mileageTravel` | Quilometratge de viatge | Registre de km (NOU v1.27) |
 | `donors` | Gestió de donants | CRUD donants |
 | `reports` | Informes fiscals | 182, 347, certificats |
 | `projects` | Mòdul projectes | Justificació assistida |
@@ -2484,6 +2486,210 @@ Comprova:
 - Títol i intro/whatIs per cada guia
 - Arrays amb índexos consecutius (sense gaps)
 - Claus extra que no existeixen al base (CA)
+
+
+## 3.12 LIQUIDACIONS DE DESPESES (NOU v1.27)
+
+Sistema per gestionar liquidacions de despeses de viatge i desplaçaments amb tiquets, quilometratge i generació de PDF.
+
+### 3.12.1 Accés i Ubicació
+
+| Aspecte | Detall |
+|---------|--------|
+| **URL** | `/{orgSlug}/dashboard/movimientos/liquidacions` |
+| **Requisit** | Feature flag `pendingDocs` activat |
+| **Permisos** | Només `admin` pot crear/editar/arxivar |
+| **Navegació** | Moviments → Liquidacions |
+
+### 3.12.2 Model de Dades
+
+**Col·lecció Firestore:** `organizations/{orgId}/expenseReports`
+
+| Camp | Tipus | Descripció |
+|------|-------|------------|
+| `id` | string | Identificador Firestore |
+| `status` | enum | `draft`, `submitted`, `matched`, `archived` |
+| `title` | string? | Motiu/viatge |
+| `dateFrom` | string? | Data inici (YYYY-MM-DD) |
+| `dateTo` | string? | Data fi (YYYY-MM-DD) |
+| `location` | string? | Ubicació/destinació |
+| `beneficiary` | object? | Qui rep el reemborsament |
+| `receiptDocIds` | string[] | IDs de PendingDocuments (tickets) |
+| `mileage` | object? | (Deprecated) quilometratge legacy |
+| `mileageItems` | MileageItem[]? | Línies individuals de quilometratge |
+| `totalAmount` | number | Import total (tickets + km) |
+| `notes` | string? | Notes addicionals |
+| `matchedTransactionId` | string? | Transacció bancària vinculada |
+| `generatedPdf` | object? | Info PDF generat |
+| `sepa` | object? | Info remesa SEPA |
+| `payment` | object? | Info pagament (SEPA o futur) |
+| `createdAt` | Timestamp | Data creació |
+| `updatedAt` | Timestamp | Última modificació |
+| `submittedAt` | Timestamp? | Data presentació |
+
+**Beneficiary (qui rep el reemborsament):**
+
+| Variant | Camps |
+|---------|-------|
+| `employee` | `kind: 'employee'`, `employeeId: string` |
+| `contact` | `kind: 'contact'`, `contactId: string` |
+| `manual` | `kind: 'manual'`, `name: string`, `iban: string` |
+
+**MileageItem (línia de quilometratge):**
+
+| Camp | Tipus | Descripció |
+|------|-------|------------|
+| `id` | string | UUID de la línia |
+| `date` | string | Data (YYYY-MM-DD) |
+| `km` | number | Quilòmetres |
+| `rateEurPerKm` | number | Tarifa €/km (defecte 0.26) |
+| `totalEur` | number | Import calculat |
+| `notes` | string? | Ruta / motiu |
+| `attachment` | object? | Adjunt opcional |
+
+### 3.12.3 Flux de Treball
+
+```
+┌─────────────┐    ┌─────────────┐    ┌─────────────┐    ┌─────────────┐
+│   DRAFT     │───▶│  SUBMITTED  │───▶│   MATCHED   │    │  ARCHIVED   │
+│ (Esborrany) │    │ (Presentada)│    │ (Conciliada)│    │ (Arxivada)  │
+└─────────────┘    └─────────────┘    └─────────────┘    └─────────────┘
+       │                  │                                     ▲
+       └──────────────────┴─────────────────────────────────────┘
+                         (Arxivar directament)
+```
+
+**Estats:**
+
+| Estat | Significat | Accions disponibles |
+|-------|------------|---------------------|
+| `draft` | Esborrany, en edició | Editar, PDF, Arxivar, Esborrar |
+| `submitted` | Presentada, pendent pagament | Editar, PDF, Esborrar |
+| `matched` | Vinculada a transacció bancària | Només lectura |
+| `archived` | Arxivada sense completar | Restaurar |
+
+### 3.12.4 Tabs de la Pàgina
+
+**Tabs principals:**
+
+| Tab | Icona | Funció |
+|-----|-------|--------|
+| Liquidacions | FileText | Llista de liquidacions per estat |
+| Tickets | Receipt | Safata de tiquets pendents |
+| Quilometratge | Car | Gestió ràpida de km |
+
+**Subtabs de Liquidacions:**
+
+| Subtab | Mostra |
+|--------|--------|
+| Esborranys | `status: 'draft'` |
+| Presentades | `status: 'submitted'` |
+| Conciliades | `status: 'matched'` |
+| Arxivades | `status: 'archived'` |
+
+### 3.12.5 Tickets Inbox
+
+Component `<TicketsInbox>` per gestionar tiquets (PendingDocument amb `type: 'receipt'`).
+
+**Funcionalitats:**
+- Llista de tiquets amb preview
+- Edició de camps (data, import, descripció)
+- Reprocessar amb IA (Sparkles)
+- Arxivar tiquets
+- Selecció múltiple per assignar a liquidació
+- Upload de nous tiquets
+
+**Integració amb PendingDocuments:**
+- Els tickets són `PendingDocument` amb `type: 'receipt'`
+- Es vinculen a la liquidació via `receiptDocIds[]`
+- En arxivar liquidació, es poden arxivar els tickets associats
+
+### 3.12.6 Quilometratge Multilínia
+
+**Evolució:**
+- **v1.26 i anteriors:** Camp `mileage` amb una sola línia
+- **v1.27+:** Array `mileageItems[]` amb múltiples línies
+
+**Compatibilitat:**
+- Si existeix `mileageItems[]`, té prioritat
+- Si només existeix `mileage` (legacy), es mostra com a línia única
+- En editar, es migra automàticament a `mileageItems[]`
+
+**Tarifa per defecte:** 0.26 €/km (configurable per línia)
+
+**Adjunts per línia:**
+- Cada `MileageItem` pot tenir un adjunt opcional (`attachment`)
+- Emmagatzematge: `organizations/{orgId}/expenseReports/{reportId}/mileage_{itemId}_{filename}`
+
+### 3.12.7 Generació de PDF
+
+**Ubicació:** `src/lib/expense-reports/generate-pdf.ts`
+
+**Contingut del PDF:**
+- Capçalera amb nom organització i liquidació
+- Dades del beneficiari
+- Llista de tickets amb import
+- Llista de quilometratge per línia
+- Total desglossat (tickets + km)
+- Notes addicionals
+
+**Emmagatzematge:**
+- Path: `organizations/{orgId}/expenseReports/{reportId}/liquidacio.pdf`
+- Nom: `liquidacio_{reportId}.pdf`
+
+**Tecnologia:** jsPDF (generació client-side)
+
+### 3.12.8 Deep Linking
+
+El tab de quilometratge suporta deep linking amb scroll automàtic:
+
+```
+/{orgSlug}/dashboard/movimientos/liquidacions/{id}?tab=kilometratge
+```
+
+**Implementació:**
+- Query param `tab=kilometratge` selecciona el tab
+- Scroll automàtic a la secció de quilometratge
+- Highlight temporal (parpadeig) de la secció
+
+### 3.12.9 Guies Relacionades
+
+| ID Guia | Títol | Enllaç |
+|---------|-------|--------|
+| `travelExpenseReport` | Liquidació de despeses | CTA → Liquidacions |
+| `mileageTravel` | Quilometratge de viatge | CTA → Liquidacions?tab=quilometratge |
+| `travelReceipts` | Tiquets de viatge | CTA → Quick Expense |
+
+### 3.12.10 Fitxers Principals
+
+| Fitxer | Funció |
+|--------|--------|
+| `src/app/[orgSlug]/dashboard/movimientos/liquidacions/page.tsx` | Pàgina principal |
+| `src/app/[orgSlug]/dashboard/movimientos/liquidacions/[id]/page.tsx` | Detall liquidació |
+| `src/components/expense-reports/expense-report-detail.tsx` | Component detall |
+| `src/components/expense-reports/tickets-inbox.tsx` | Safata de tickets |
+| `src/lib/expense-reports/types.ts` | Tipus TypeScript |
+| `src/lib/expense-reports/api.ts` | CRUD Firestore |
+| `src/lib/expense-reports/generate-pdf.ts` | Generador PDF |
+| `src/lib/expense-reports/refs.ts` | Referències Firestore |
+
+### 3.12.11 Traduccions i18n
+
+**Namespace:** `expenseReports.*`
+
+| Clau | Descripció |
+|------|------------|
+| `expenseReports.title` | Títol pàgina |
+| `expenseReports.subtitle` | Subtítol |
+| `expenseReports.statuses.*` | Etiquetes d'estat |
+| `expenseReports.tooltips.*` | Tooltips d'estat |
+| `expenseReports.tabs.*` | Labels dels tabs |
+| `expenseReports.actions.*` | Botons d'acció |
+| `expenseReports.empty.*` | Empty states |
+| `expenseReports.toasts.*` | Missatges toast |
+| `expenseReports.details.*` | Detalls (receipts, km) |
+| `expenseReports.confirmDelete.*` | Modal confirmació |
+| `expenseReports.banners.*` | Banners informatius |
 
 
 ## 3.10 PANELL SUPERADMIN GLOBAL (NOU v1.20)
@@ -3202,7 +3408,7 @@ Indicadors que requeririen intervenció:
 | **1.24** | **31 Des 2025** | **Routing hardening: simplificació `/quick` (delega a `/redirect-to-org`), middleware amb PROTECTED_ROUTES per evitar loops, preservació de `?next` params.** |
 | **1.25** | **31 Des 2025** | **i18n rutes públiques complet (CA/ES/FR/PT): estructura `[lang]` per login, privacy i contact. Detecció automàtica idioma via Accept-Language. SEO amb canonical + hreflang per 4 idiomes. Redirect stubs per compatibilitat URLs antigues. Nou fitxer `src/i18n/public.ts` amb traduccions separades de l'app privada.** |
 | **1.26** | **31 Des 2025** | **Resolució col·lisió `[lang]` vs `[orgSlug]`: arquitectura `public/[lang]` amb middleware rewrite (URL pública intacta). HOME i Funcionalitats multiidioma. x-default hreflang. Slugs reservats (ca/es/fr/pt/public). Rutes canòniques: `/{lang}/funcionalitats`, `/{lang}/privacy`, `/{lang}/contact`. Aliases naturals: FR (`fonctionnalites`, `confidentialite`), ES (`funcionalidades`, `privacidad`, `contacto`), PT (`funcionalidades`, `privacidade`, `contacto`).** |
-| **1.27** | **2 Gen 2026** | **Fix routing Next 15 (`searchParams` Promise), header responsive (icones ajuda/novetats sempre visibles), cercador natural guies amb sinònims i scoring i18n, validador i18n claus de cerca, layout dashboard overflow fix (`min-w-0 + overflow-x-hidden` a SidebarInset).** |
+| **1.27** | **2 Gen 2026** | **Fix routing Next 15 (`searchParams` Promise), header responsive (icones ajuda/novetats sempre visibles), cercador natural guies amb sinònims i scoring i18n, validador i18n claus de cerca, layout dashboard overflow fix (`min-w-0 + overflow-x-hidden` a SidebarInset). Secció 3.12 Liquidacions de Despeses: model ExpenseReport, quilometratge multilínia (mileageItems[]), generació PDF, tabs Liquidacions/Tickets/Quilometratge, deep linking. Guies: travelExpenseReport, mileageTravel. Fix sidebar mòbil: submenú Projectes ara expandeix correctament (isSidebarCollapsed = !isMobile && collapsed).** |
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
