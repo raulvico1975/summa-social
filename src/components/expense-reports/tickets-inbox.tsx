@@ -45,7 +45,6 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
-import { EmptyState } from '@/components/ui/empty-state';
 import { Checkbox } from '@/components/ui/checkbox';
 import {
   Dialog,
@@ -708,73 +707,83 @@ export function TicketsInbox({
 
   return (
     <div className="space-y-4">
-      {/* Header: Filtres + Botó Afegir */}
-      <div className="flex items-center justify-between gap-4">
-        {/* Filtres */}
-        <div className="flex gap-2">
-          <Button
-            variant={filter === 'unassigned' ? 'default' : 'outline'}
-            size="sm"
-            onClick={() => setFilter('unassigned')}
-          >
-            Sense liquidació
-            {counts.unassigned > 0 && (
-              <Badge variant="secondary" className="ml-2">
-                {counts.unassigned}
-              </Badge>
-            )}
-          </Button>
-          <Button
-            variant={filter === 'assigned' ? 'default' : 'outline'}
-            size="sm"
-            onClick={() => setFilter('assigned')}
-          >
-            Assignats
-            {counts.assigned > 0 && (
-              <Badge variant="secondary" className="ml-2">
-                {counts.assigned}
-              </Badge>
-            )}
-          </Button>
-          <Button
-            variant={filter === 'all' ? 'default' : 'outline'}
-            size="sm"
-            onClick={() => setFilter('all')}
-          >
-            Tots
-            <Badge variant="secondary" className="ml-2">
-              {counts.all}
-            </Badge>
-          </Button>
-        </div>
-
-        {/* Botons d'acció */}
-        {canOperate && (
-          <div className="flex items-center gap-2">
-            {/* Fer foto - obre càmera en mòbil */}
+      {/* Header: Layout responsive en 2 franges que fan wrap */}
+      <div className="flex flex-col gap-3">
+        {/* Franja 1: Filtres + Accions (wrap en mòbil) */}
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          {/* Filtres */}
+          <div className="flex flex-wrap gap-2">
             <Button
+              variant={filter === 'unassigned' ? 'default' : 'outline'}
               size="sm"
-              onClick={() => cameraInputRef.current?.click()}
-              disabled={isUploadingPhoto}
+              onClick={() => setFilter('unassigned')}
+              className="shrink-0"
             >
-              {isUploadingPhoto ? (
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              ) : (
-                <Camera className="mr-2 h-4 w-4" />
+              <span className="sm:hidden">Pendents</span>
+              <span className="hidden sm:inline">Sense liquidació</span>
+              {counts.unassigned > 0 && (
+                <Badge variant="secondary" className="ml-1.5">
+                  {counts.unassigned}
+                </Badge>
               )}
-              Fer foto
             </Button>
-            {/* Afegir ticket - obre modal genèric */}
             <Button
+              variant={filter === 'assigned' ? 'default' : 'outline'}
               size="sm"
-              variant="outline"
-              onClick={() => setShowUploadModal(true)}
+              onClick={() => setFilter('assigned')}
+              className="shrink-0"
             >
-              <Plus className="mr-2 h-4 w-4" />
-              Afegir ticket
+              Assignats
+              {counts.assigned > 0 && (
+                <Badge variant="secondary" className="ml-1.5">
+                  {counts.assigned}
+                </Badge>
+              )}
+            </Button>
+            <Button
+              variant={filter === 'all' ? 'default' : 'outline'}
+              size="sm"
+              onClick={() => setFilter('all')}
+              className="shrink-0"
+            >
+              Tots
+              <Badge variant="secondary" className="ml-1.5">
+                {counts.all}
+              </Badge>
             </Button>
           </div>
-        )}
+
+          {/* Botons d'acció */}
+          {canOperate && (
+            <div className="flex flex-wrap items-center gap-2">
+              {/* Fer foto - obre càmera en mòbil */}
+              <Button
+                size="sm"
+                onClick={() => cameraInputRef.current?.click()}
+                disabled={isUploadingPhoto}
+                className="shrink-0"
+              >
+                {isUploadingPhoto ? (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                ) : (
+                  <Camera className="mr-2 h-4 w-4" />
+                )}
+                Fer foto
+              </Button>
+              {/* Afegir ticket - obre modal genèric */}
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => setShowUploadModal(true)}
+                className="shrink-0"
+              >
+                <Plus className="mr-2 h-4 w-4" />
+                <span className="sm:hidden">Afegir</span>
+                <span className="hidden sm:inline">Afegir ticket</span>
+              </Button>
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Barra d'accions (quan hi ha selecció) */}
@@ -816,15 +825,45 @@ export function TicketsInbox({
 
       {/* Llista de tickets */}
       {filteredTickets.length === 0 ? (
-        <EmptyState
-          icon={Receipt}
-          title={filter === 'unassigned' ? 'Cap ticket pendent' : 'Cap ticket'}
-          description={
-            filter === 'unassigned'
-              ? 'Puja tickets des del modal de documents.'
-              : 'No hi ha tickets en aquest filtre.'
-          }
-        />
+        <Card className="py-6">
+          <CardContent className="text-center space-y-3">
+            <Receipt className="mx-auto h-10 w-10 text-muted-foreground/50" />
+            <div>
+              <p className="font-medium">
+                {filter === 'unassigned' ? 'Cap ticket pendent' : 'Cap ticket'}
+              </p>
+              <p className="text-sm text-muted-foreground">
+                {filter === 'unassigned'
+                  ? 'Puja tickets per començar.'
+                  : 'No hi ha tickets en aquest filtre.'}
+              </p>
+            </div>
+            {canOperate && filter === 'unassigned' && (
+              <div className="flex flex-wrap justify-center gap-2 pt-2">
+                <Button
+                  size="sm"
+                  onClick={() => cameraInputRef.current?.click()}
+                  disabled={isUploadingPhoto}
+                >
+                  {isUploadingPhoto ? (
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  ) : (
+                    <Camera className="mr-2 h-4 w-4" />
+                  )}
+                  Fer foto
+                </Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => setShowUploadModal(true)}
+                >
+                  <Plus className="mr-2 h-4 w-4" />
+                  Afegir ticket
+                </Button>
+              </div>
+            )}
+          </CardContent>
+        </Card>
       ) : (
         <div className="space-y-2">
           {filteredTickets.map((ticket) => {
