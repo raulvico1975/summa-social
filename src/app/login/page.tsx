@@ -3,34 +3,19 @@ import { redirect } from 'next/navigation';
 import { detectPublicLocale } from '@/lib/public-locale';
 
 /**
- * Redirect stub per /login → /[lang]/login
+ * Redirect stub per /login → /{lang} (landing pública)
+ *
+ * IMPORTANT: No existeix login públic general.
+ * - El login d'organització és /{orgSlug}/login
+ * - /login redirigeix a la landing pública
+ *
  * Detecta l'idioma del navegador via Accept-Language.
- * IMPORTANT: Preserva tots els searchParams (next, reason, etc.)
  */
-export default async function LoginRedirect({
-  searchParams,
-}: {
-  searchParams?: Promise<Record<string, string | string[] | undefined>>;
-}) {
+export default async function LoginRedirect() {
   const headersList = await headers();
   const acceptLanguage = headersList.get('accept-language');
   const locale = detectPublicLocale(acceptLanguage);
 
-  // Preservar tots els searchParams al redirect (Next 15: searchParams és Promise)
-  const params = (await searchParams) ?? {};
-  const queryString = new URLSearchParams();
-  for (const [key, value] of Object.entries(params)) {
-    if (value === undefined) continue;
-    // Si és array, afegir múltiples valors
-    if (Array.isArray(value)) {
-      for (const v of value) {
-        queryString.append(key, v);
-      }
-    } else {
-      queryString.set(key, value);
-    }
-  }
-
-  const query = queryString.toString();
-  redirect(`/${locale}/login${query ? `?${query}` : ''}`);
+  // Redirigir a landing pública (no existeix login general)
+  redirect(`/${locale}`);
 }

@@ -762,4 +762,59 @@ export default async function Page({
 
 ---
 
+## 15. Arquitectura de rutes i layouts (anti-regressions)
+
+### Principis fonamentals
+
+| Principi | Regla |
+|----------|-------|
+| **Un sol `<html>`** | Només `src/app/layout.tsx` (RootLayout) renderitza `<html>` i `<body>` |
+| **Layouts fills = `<div>`** | Tots els altres layouts usen `<div>` o fragments |
+| **Middleware = font de veritat** | Totes les decisions de routing es fan al middleware abans de renderitzar JSX |
+| **Públic ≠ privat** | Les rutes públiques MAI intenten carregar orgs ni auth |
+
+### Tipus de rutes
+
+| Tipus | Patró URL | Exemple | Comportament |
+|-------|-----------|---------|--------------|
+| **Landing pública** | `/{lang}` | `/es`, `/ca` | SSG, sense auth, reescrit a `/public/{lang}` |
+| **Pàgina pública** | `/{lang}/{page}` | `/es/funcionalidades` | SSG, sense auth |
+| **Login org** | `/{orgSlug}/login` | `/demo/login` | Formulari login per org específica |
+| **Dashboard** | `/{orgSlug}/dashboard/*` | `/demo/dashboard` | Requereix auth, OrganizationProvider |
+
+### Rutes que NO existeixen
+
+| Ruta | Per què | Què passa |
+|------|---------|-----------|
+| `/login` | No hi ha login global | Redirigeix a `/{lang}` (landing) |
+| `/{lang}/login` | No hi ha login públic general | Middleware redirigeix a `/{lang}` |
+| `/dashboard` | Requereix slug d'org | Redirigeix a `/redirect-to-org` |
+
+### Middleware: responsabilitats
+
+```
+1. app.summasocial.app → summasocial.app (canonical)
+2. /{lang}/login → /{lang} (no existeix login públic)
+3. /{lang}/... → /public/{lang}/... (rewrite intern)
+4. /dashboard → /redirect-to-org (selector d'org)
+```
+
+### Què NO fer mai
+
+- ❌ **Renderitzar `<html>` o `<body>` fora de RootLayout** — causa hydration errors
+- ❌ **Carregar orgs a rutes públiques** — errors de permisos en DEMO
+- ❌ **Crear rutes `/login` amb formularis** — el model és `/{orgSlug}/login`
+- ❌ **Fer redirects a JSX** — sempre al middleware
+
+### Fitxers clau
+
+| Fitxer | Responsabilitat |
+|--------|-----------------|
+| `src/app/layout.tsx` | RootLayout — únic `<html>` i `<body>` |
+| `src/middleware.ts` | Routing i redirects (font de veritat) |
+| `src/app/public/[lang]/layout.tsx` | Layout públic (sense `<html>`) |
+| `src/app/[orgSlug]/login/page.tsx` | Login per org específica |
+
+---
+
 *Última actualització: 2026-01-03*

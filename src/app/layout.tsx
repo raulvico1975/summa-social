@@ -1,3 +1,13 @@
+/**
+ * RootLayout — ÚNIC lloc on es renderitza <html> i <body>
+ *
+ * IMPORTANT (anti-regressió):
+ * - Cap altre layout pot renderitzar <html> ni <body>
+ * - Tots els layouts fills han d'usar <div> o fragments
+ * - Si cal canviar lang dinàmicament, fer-ho via document.documentElement.lang
+ *
+ * @see docs/DEV-SOLO-MANUAL.md secció "Arquitectura de rutes i layouts"
+ */
 import type { Metadata } from 'next';
 import { Inter } from 'next/font/google';
 import './globals.css';

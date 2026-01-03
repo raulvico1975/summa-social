@@ -1,3 +1,13 @@
+/**
+ * PublicLayout — Layout per pàgines públiques multi-idioma
+ *
+ * IMPORTANT (anti-regressió):
+ * - NO renderitzar <html> ni <body> — ja ho fa RootLayout
+ * - Aquesta ruta és pública: NO intentar carregar orgs ni auth
+ * - El middleware reescriu /{lang}/... → /public/{lang}/...
+ *
+ * @see docs/DEV-SOLO-MANUAL.md secció "Arquitectura de rutes i layouts"
+ */
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import { PUBLIC_LOCALES, isValidPublicLocale, type PublicLocale } from '@/lib/public-locale';

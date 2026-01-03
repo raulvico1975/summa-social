@@ -1,3 +1,19 @@
+/**
+ * Middleware — Font de veritat per a routing i redirects
+ *
+ * Responsabilitats:
+ * 1. Redirect app.summasocial.app → summasocial.app (canonical)
+ * 2. Redirect /{lang}/login → /{lang} (no existeix login públic general)
+ * 3. Rewrite /{lang}/... → /public/{lang}/... (rutes públiques)
+ * 4. Redirect /dashboard → /redirect-to-org (selector d'org)
+ *
+ * IMPORTANT (anti-regressió):
+ * - Totes les decisions de routing es fan AQUÍ, abans de renderitzar JSX
+ * - Si una ruta no hauria d'existir, redirigir-la aquí
+ * - PROTECTED_ROUTES mai es redirigeixen (evitar loops)
+ *
+ * @see docs/DEV-SOLO-MANUAL.md secció "Arquitectura de rutes i layouts"
+ */
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 
