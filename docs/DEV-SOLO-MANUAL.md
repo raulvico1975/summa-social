@@ -444,7 +444,34 @@ npm run dev:demo
 | `scripts/run-demo-dev.mjs` | Runner que carrega env i neteja credencials |
 | `src/lib/demo/isDemoOrg.ts` | `isDemoEnv()` client+server |
 
-### 5. Regenerar dades (DemoMode dual)
+### 5. Estat: Beta interna
+
+| Aspecte | Regla |
+|---------|-------|
+| **Objectiu** | Validació comercial en reunions reals |
+| **Permès** | microcopy DEMO, ajustos de volums ±10%, retocar textos/ordres del guió |
+| **Prohibit** | tocar queries/models, afegir "wows" nous, canviar flux Short/Work, editar dades manualment |
+
+**Qualsevol canvi fora d'això requereix decisió explícita de producte.**
+
+> **Canvis bloquejats**: qualsevol modificació de DEMO requereix decisió de producte (Raül).
+
+#### Checklists operatius
+
+**Abans d'una demo:**
+```
+□ npm run dev:demo
+□ Regenerar Short o Work segons sessió
+□ Verificar dashboard net / anomalies segons mode
+```
+
+**Després d'un ajust:**
+```
+□ npm run demo:smoke
+□ Verificar invariants del mode corresponent
+```
+
+### 6. Regenerar dades (DemoMode dual)
 
 #### Modes disponibles
 
@@ -524,7 +551,7 @@ npm run dev:demo
 - ❌ **NO relaxar Firestore rules** — les mateixes que prod
 - ✅ El seed valida invariants automàticament (throw si falla)
 
-### 6. Autenticació i permisos
+### 7. Autenticació i permisos
 
 **En DEMO:**
 - `isDemoEnv()` retorna `true` (client i server)
@@ -539,7 +566,7 @@ npm run dev:demo
 
 **⚠️ NO copiar patrons DEMO a prod** — el bypass de rols és només per UX de demo
 
-### 7. Problemes coneguts i solucions
+### 8. Problemes coneguts i solucions
 
 | Problema | Causa | Solució |
 |----------|-------|---------|
@@ -550,7 +577,7 @@ npm run dev:demo
 | "Slug demo no té organització associada" | Mapping `slugs/demo` tenia camp incorrecte | Seed escriu `orgId` (no `organizationId`) |
 | "Firestore has already been initialized" | `db.settings()` cridat després d'altres operacions | Eliminat `db.settings()`, inicialització cached |
 
-### 8. Què NO s'ha de fer
+### 9. Què NO s'ha de fer
 
 - ❌ **No fer seed des del client/browser** — sempre via API route amb Admin SDK
 - ❌ **No relaxar Firestore rules globals** — les rules són les mateixes que prod
