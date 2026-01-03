@@ -49,6 +49,8 @@ import {
   AlertCircle,
   CheckCircle2,
   ListChecks,
+  Car,
+  FileOutput,
 } from 'lucide-react';
 import { useTranslations } from '@/i18n';
 
@@ -135,6 +137,16 @@ const GUIDES: GuideItem[] = [
     id: 'travelReceipts',
     icon: <Smartphone className="h-5 w-5" />,
     href: '/dashboard/project-module/expenses/capture',
+  },
+  {
+    id: 'travelExpenseReport',
+    icon: <FileOutput className="h-5 w-5" />,
+    href: '/dashboard/movimientos/liquidacions',
+  },
+  {
+    id: 'mileageTravel',
+    icon: <Car className="h-5 w-5" />,
+    href: '/dashboard/movimientos/liquidacions',
   },
   {
     id: 'donors',
@@ -298,6 +310,8 @@ const ACTION_GUIDE_IDS = [
   'selectBankAccount',
   'bulkAICategorize',
   'travelReceipts',
+  'travelExpenseReport',
+  'mileageTravel',
   // Remeses
   'splitRemittance',
   'remittanceViewDetail',
@@ -416,7 +430,7 @@ function loadSynonyms(tr: (key: string) => string): Map<string, string> {
     'no_veig', 'moviments', 'remesa', 'devolucions', 'stripe',
     'certificat', 'model182', 'model347', 'categoria', 'importar',
     'donants', 'filtrar', 'periode', 'document', 'error',
-    'quadrar', 'massiu',
+    'quadrar', 'massiu', 'liquidacio', 'quilometratge', 'viatge',
   ];
 
   for (const canonical of canonicals) {
