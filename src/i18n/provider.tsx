@@ -9,6 +9,7 @@ import {
   JsonMessages,
 } from './json-runtime';
 import { getFirestore, doc, onSnapshot } from 'firebase/firestore';
+import { isDemoEnv } from '@/lib/demo/isDemoOrg';
 
 interface TranslationsProviderProps {
   children: React.ReactNode;
@@ -77,8 +78,14 @@ export const TranslationsProvider = ({ children }: TranslationsProviderProps) =>
   }, [language]);
 
   // Listener per system/i18n.version (invalidació de cache)
+  // DEMO: No subscriure listener (evita errors de permisos)
   useEffect(() => {
     if (typeof window === 'undefined') return;
+    // DEMO: Sempre usar local, no subscriure a Firestore
+    if (isDemoEnv()) {
+      setI18nVersion(0);
+      return;
+    }
     // Si ja hem desactivat el listener per permisos, no reintentem
     if (listenerDisabledRef.current) return;
 

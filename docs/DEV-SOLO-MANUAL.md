@@ -566,6 +566,11 @@ npm run dev:demo
 
 **⚠️ NO copiar patrons DEMO a prod** — el bypass de rols és només per UX de demo
 
+**i18n en DEMO:**
+- En DEMO/local, i18n usa sempre fallback local (sense Storage) per evitar CORS/permisos
+- No es subscriu al listener de versions (`system/i18n`)
+- Errors de permisos no bloquejants es silencien en DEMO
+
 **Login públic general:**
 - No existeix login general públic (`/{lang}/login`)
 - Qualsevol accés a `/ca/login`, `/es/login`, etc. redirigeix a la landing pública (`/{lang}`)

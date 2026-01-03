@@ -211,7 +211,12 @@ function useOrganizationBySlug(orgSlug?: string) {
         }
 
       } catch (err) {
-        console.error('Error loading organization:', err);
+        // DEMO: Silenciar errors de permisos (no bloquejants)
+        const isPermissionError = err instanceof Error &&
+          (err.message.includes('permission') || err.message.includes('Permission'));
+        if (!isDemoEnv() || !isPermissionError) {
+          console.error('Error loading organization:', err);
+        }
         setError(err instanceof Error ? err : new Error('Error desconegut'));
       } finally {
         setIsLoading(false);

@@ -3,9 +3,13 @@
  *
  * Fase 2: Només locals (imports explícits)
  * Fase 4: Storage override amb invalidació per version
+ *
+ * DEMO: En entorn demo, sempre usa fallback local (sense Storage)
+ * per evitar CORS i errors de permisos.
  */
 
 import { getStorage, ref, getDownloadURL } from 'firebase/storage';
+import { isDemoEnv } from '@/lib/demo/isDemoOrg';
 
 // Imports explícits (NO dinàmics) - Next.js compatible
 import ca from './locales/ca.json';
@@ -51,8 +55,15 @@ function isValidMessages(data: unknown): data is JsonMessages {
  * Carrega traduccions des de Firebase Storage
  * Retorna null si no existeix o hi ha error
  * Implementa negative cache per evitar reintentar fitxers inexistents
+ *
+ * DEMO: Retorna null immediatament (usa local sense Storage)
  */
 async function loadFromStorage(language: string): Promise<JsonMessages | null> {
+  // DEMO: Sempre usar local, no intentar Storage (evita CORS/permisos)
+  if (isDemoEnv()) {
+    return null;
+  }
+
   // Negative cache: si ja sabem que no existeix, no reintentem
   if (storageMissing.has(language)) {
     return null;
