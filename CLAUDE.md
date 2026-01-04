@@ -114,3 +114,15 @@ Quan es tanca una funcionalitat significativa (nova pantalla, nou flux, millora 
 
 3. Format del text: curt, informatiu, sense exclamacions.
 
+## 8) Deploy a producció
+
+Claude Code **només pot desplegar** quan el CEO dona una ordre explícita amb el text:
+"Autoritzo deploy".
+
+En aquest cas, Claude Code executarà exclusivament:
+- El ritual documentat a `docs/GOVERN-DE-CODI-I-DEPLOY.md`
+- Sense modificar el flux
+- Sense prendre decisions
+
+Qualsevol altra acció sobre `prod` requereix ordre explícita del CEO.
+

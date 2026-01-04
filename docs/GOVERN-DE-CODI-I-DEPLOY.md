@@ -120,5 +120,18 @@ Fins llavors: **simplicitat i disciplina > automatització**.
 
 ---
 
+## Automatització amb Claude Code
+
+Claude Code pot executar el desplegament de Summa Social **només sota autorització explícita del CEO**.
+
+Model:
+- El CEO decideix: "Autoritzo deploy".
+- Claude Code executa únicament el ritual definit (sense improvisar).
+- Claude Code reporta el resultat (SHA abans/després + estat).
+
+Claude Code **no pot** decidir quan desplegar ni fer canvis fora del ritual establert.
+
+---
+
 **Aquest document és norma del projecte.**
 Quan algú pregunti "com despleguem Summa?", la resposta és: llegeix aquest document i segueix-lo.
