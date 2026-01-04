@@ -37,6 +37,7 @@ import { DASHBOARD_NOTIFICATIONS } from '@/lib/notifications';
 import { shouldShowWelcomeModal, isFirstAdmin } from '@/lib/onboarding';
 import { WelcomeOnboardingModal } from '@/components/onboarding/WelcomeOnboardingModal';
 import { OnboardingWizardModal } from '@/components/onboarding/OnboardingWizard';
+import { BackupAlertBanner } from '@/components/backup-alert-banner';
 
 interface TaxObligation {
   id: string;
@@ -1089,6 +1090,9 @@ ${t.dashboard.generatedWith}`;
         open={showWizardModal}
         onOpenChange={setShowWizardModal}
       />
+
+      {/* Banner d'avís de backup no configurat */}
+      <BackupAlertBanner />
 
       {/* Capçalera amb botó de sessió opcional */}
       <div className="flex items-center justify-between">

@@ -817,4 +817,133 @@ export default async function Page({
 
 ---
 
-*Última actualització: 2026-01-03*
+## 16. Backups externs (v1.x)
+
+### Què és
+
+Sistema de backup automàtic que exporta les dades de cada organització a un proveïdor extern (Dropbox o Google Drive).
+
+### Arquitectura
+
+| Component | Ubicació | Funció |
+|-----------|----------|--------|
+| **UI** | `src/components/backups-settings.tsx` | Configuració i execució manual |
+| **API routes** | `src/app/api/integrations/backup/` | OAuth start/callback, run-now |
+| **Cloud Functions** | `functions/src/backups/` | Scheduler setmanal, providers |
+| **Tipus** | `src/lib/backups/types.ts` | `BackupIntegration`, `BackupRun` |
+
+### Estructura a Firestore
+
+```
+/organizations/{orgId}/
+  ├── integrations/backup     # Config integració
+  ├── integrations/backupOAuthRequests/{id}  # One-shot OAuth
+  └── backups/{id}            # Logs d'execució
+```
+
+### Estructura al proveïdor
+
+```
+Summa Social/{orgSlug}/backups/{YYYY-MM-DD}/
+  ├── data.json       # Dades exportades
+  └── manifest.json   # Checksums i metadata
+```
+
+### Checklist de proves manuals
+
+#### Dropbox
+
+```
+□ Seleccionar Dropbox com a proveïdor
+□ Clicar "Connectar" → OAuth consent
+□ Verificar toast "Connexió establerta"
+□ Verificar status "Connectat" i badge verd
+□ Clicar "Executar backup ara"
+□ Verificar toast "Backup executat correctament"
+□ Verificar a Dropbox: carpeta /Summa Social/{orgSlug}/backups/{data}
+□ Verificar fitxers data.json i manifest.json existeixen
+□ Verificar a Firestore: document a /organizations/{orgId}/backups
+□ Verificar banner d'avís desapareix del dashboard
+```
+
+#### Google Drive
+
+```
+□ Seleccionar Google Drive com a proveïdor
+□ Clicar "Connectar" → OAuth consent Google
+□ Verificar toast "Connexió establerta"
+□ Verificar status "Connectat" i badge verd
+□ Clicar "Executar backup ara"
+□ Verificar toast "Backup executat correctament"
+□ Verificar a Drive: carpeta Summa Social/{orgSlug}/backups/{data}
+□ Verificar fitxers data.json i manifest.json existeixen
+□ Verificar a Firestore: document a /organizations/{orgId}/backups
+```
+
+#### Scheduler setmanal
+
+```
+□ Verificar Cloud Function runWeeklyBackup desplegada
+□ Per forçar execució: Firebase Console → Functions → runWeeklyBackup → Run
+□ Verificar logs a Cloud Logging amb prefix [runWeeklyBackup]
+```
+
+#### Retenció
+
+```
+□ Crear >8 backups (executar manualment varis cops)
+□ Verificar que només en queden 8 a Dropbox/Drive
+□ Verificar que el backup del dia actual MAI s'esborra
+```
+
+#### Banner d'avís
+
+```
+□ Desconnectar provider (o org nova sense backup)
+□ Verificar banner apareix al dashboard
+□ Connectar provider
+□ Verificar banner desapareix
+```
+
+### Secrets necessaris
+
+| Variable | On | Descripció |
+|----------|-----|------------|
+| `DROPBOX_APP_KEY` | Vercel + Functions | Client ID Dropbox |
+| `DROPBOX_APP_SECRET` | Vercel + Functions | Client Secret Dropbox |
+| `GOOGLE_DRIVE_CLIENT_ID` | Vercel | Client ID Google OAuth |
+| `GOOGLE_DRIVE_CLIENT_SECRET` | Vercel | Client Secret Google OAuth |
+
+### Redirect URIs a registrar
+
+**Dropbox App Console:**
+- `https://app.summasocial.org/api/integrations/backup/dropbox/callback`
+
+**Google Cloud Console (OAuth 2.0 Client):**
+- `https://app.summasocial.org/api/integrations/backup/google-drive/callback`
+
+### Troubleshooting
+
+| Problema | Causa probable | Solució |
+|----------|----------------|---------|
+| "Token refresh failed" | Refresh token expirat o revocat | Desconnectar i tornar a connectar |
+| "Missing refresh token" | OAuth sense `access_type=offline` | Verificar paràmetres OAuth |
+| "Folder already exists" | Normal, és idempotent | No cal acció |
+| Backup no apareix a Drive/Dropbox | Error d'upload | Mirar `lastError` a Firestore |
+| Banner no desapareix | `status !== 'connected'` | Verificar `integrations/backup.status` |
+
+### Fitxers clau
+
+| Fitxer | Funció |
+|--------|--------|
+| `src/components/backups-settings.tsx` | UI de configuració |
+| `src/components/backup-alert-banner.tsx` | Banner d'avís al dashboard |
+| `functions/src/backups/runBackupForOrg.ts` | Runner principal |
+| `functions/src/backups/runWeeklyBackup.ts` | Scheduler setmanal |
+| `functions/src/backups/applyRetention.ts` | Política de retenció |
+| `functions/src/backups/providers/dropboxProvider.ts` | Operacions Dropbox |
+| `functions/src/backups/providers/googleDriveProvider.ts` | Operacions Google Drive |
+
+---
+
+*Última actualització: 2026-01-04*
