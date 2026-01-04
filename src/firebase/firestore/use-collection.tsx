@@ -105,7 +105,8 @@ export function useCollection<T = any>(
         // Això és esperable durant logout (listeners es desmunten després del signOut).
         // Si auth === null, l'error és esperat i no hem de mostrar la pàgina d'error.
         if (contextualError.request.auth === null) {
-          console.log('[useCollection] Ignoring permission error (user not authenticated):', path);
+          // Debug log desactivat per defecte (descomentar per debugging)
+          // console.log('[useCollection] Ignoring permission error (user not authenticated):', path);
           return;
         }
 

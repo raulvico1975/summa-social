@@ -98,8 +98,6 @@ export function AuthRedirectGuard() {
 
     // Si acaba de fer logout (transició de true a false)
     if (wasLoggedIn === true && !isLoggedIn) {
-      console.log('[AuthRedirectGuard] User logged out, checking redirect...');
-
       // Si ja hem redirigit, no tornar a fer-ho
       if (hasRedirectedRef.current) {
         return;
@@ -107,13 +105,11 @@ export function AuthRedirectGuard() {
 
       // Si ja estem a una pàgina de login, no redirigir
       if (pathname.includes('/login')) {
-        console.log('[AuthRedirectGuard] Already on login page, skipping redirect');
         return;
       }
 
       // Si estem a un path públic, no redirigir
       if (isPublicPath(pathname)) {
-        console.log('[AuthRedirectGuard] On public path, skipping redirect');
         return;
       }
 
@@ -126,10 +122,8 @@ export function AuthRedirectGuard() {
       hasRedirectedRef.current = true;
 
       if (orgSlug) {
-        console.log('[AuthRedirectGuard] Hard redirect to org login:', `/${orgSlug}/login`);
         window.location.assign(`/${orgSlug}/login`);
       } else {
-        console.log('[AuthRedirectGuard] Hard redirect to home');
         window.location.assign('/');
       }
     }
