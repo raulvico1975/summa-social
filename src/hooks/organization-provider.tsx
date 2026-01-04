@@ -8,8 +8,8 @@ import { useFirebase, useCollection, useMemoFirebase } from '@/firebase';
 import { collection, collectionGroup, query, where, getDocs, doc, getDoc, limit } from 'firebase/firestore';
 import { generateUniqueSlug, reserveSlug } from '@/lib/slugs';
 import type { Organization, OrganizationRole, UserProfile } from '@/lib/data';
-import { Loader2, AlertCircle } from 'lucide-react';
-import { User } from 'firebase/auth';
+import { Loader2, AlertCircle, LogOut } from 'lucide-react';
+import { User, signOut } from 'firebase/auth';
 import { isDemoEnv } from '@/lib/demo/isDemoOrg';
 
 interface OrganizationContextType {
@@ -301,7 +301,20 @@ function useOrganizationBySlug(orgSlug?: string) {
  */
 export function OrganizationProvider({ children, orgSlug }: OrganizationProviderProps) {
   const organizationData = useOrganizationBySlug(orgSlug);
+  const { auth } = useFirebase();
   const router = useRouter();
+
+  // Handler per tancar sessió
+  const handleLogout = async () => {
+    try {
+      await signOut(auth);
+      router.push('/');
+    } catch (err) {
+      console.error('[ORG_PROVIDER] Error signing out:', err);
+      // Forçar navegació a login encara que falli el signOut
+      router.push('/');
+    }
+  };
 
   // Mentre es carrega, mostrar un indicador
   if (organizationData.isLoading) {
@@ -317,21 +330,39 @@ export function OrganizationProvider({ children, orgSlug }: OrganizationProvider
 
   // Si hi ha error, mostrar-lo
   if (organizationData.error) {
+    const isAccessDenied = organizationData.error instanceof AccessDeniedError
+      || organizationData.error.message.includes('No tens accés');
+
     return (
       <div className="flex min-h-screen items-center justify-center">
         <div className="flex flex-col items-center gap-4 text-center p-4 max-w-md">
           <AlertCircle className="h-12 w-12 text-destructive" />
-          <p className="text-destructive font-semibold text-lg">Error carregant l'organització</p>
-          <p className="text-muted-foreground">
-            {organizationData.error.message}
+          <p className="text-destructive font-semibold text-lg">
+            {isAccessDenied ? 'Accés denegat' : 'Error carregant l\'organització'}
           </p>
-          <div className="flex gap-2 mt-4">
-            <button
-              onClick={() => router.push('/dashboard')}
-              className="px-4 py-2 bg-primary text-primary-foreground rounded-md hover:bg-primary/90"
-            >
-              Anar al panell
-            </button>
+          <p className="text-muted-foreground">
+            {isAccessDenied
+              ? 'Aquest usuari no té accés a aquesta organització. Contacta amb l\'administrador o inicia sessió amb un altre compte.'
+              : organizationData.error.message}
+          </p>
+          <div className="flex flex-col sm:flex-row gap-2 mt-4 w-full sm:w-auto">
+            {/* Botó principal: Tancar sessió (per errors d'accés) o Anar al panell (altres) */}
+            {isAccessDenied ? (
+              <button
+                onClick={handleLogout}
+                className="flex items-center justify-center gap-2 px-4 py-2 bg-destructive text-destructive-foreground rounded-md hover:bg-destructive/90"
+              >
+                <LogOut className="h-4 w-4" />
+                Tancar sessió
+              </button>
+            ) : (
+              <button
+                onClick={() => router.push('/dashboard')}
+                className="px-4 py-2 bg-primary text-primary-foreground rounded-md hover:bg-primary/90"
+              >
+                Anar al panell
+              </button>
+            )}
             <button
               onClick={() => router.push('/')}
               className="px-4 py-2 bg-secondary text-secondary-foreground rounded-md hover:bg-secondary/90"
