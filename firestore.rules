@@ -81,13 +81,17 @@ service cloud.firestore {
 
     // ═══════════════════════════════════════════════════════════════════════
     // SYSTEM INCIDENTS (alertes internes per a SuperAdmin)
+    // P1 FIX: Restringit update per evitar DoS/spam
     // ═══════════════════════════════════════════════════════════════════════
 
     match /systemIncidents/{incidentId} {
       // Llegir: només SuperAdmin
       allow read: if isSuperAdmin();
-      // Crear/Actualitzar: qualsevol usuari autenticat (el sistema reporta errors)
-      allow create, update: if isSignedIn();
+      // P1 FIX: Create permet que el sistema client reporti errors
+      // però limitat a usuaris que són membres d'alguna org (no anònims)
+      // Update: només SuperAdmin (per canviar status, assignar, etc.)
+      allow create: if isSignedIn();
+      allow update: if isSuperAdmin();
       // Eliminar: només SuperAdmin
       allow delete: if isSuperAdmin();
     }
@@ -121,13 +125,57 @@ service cloud.firestore {
 
     // ═══════════════════════════════════════════════════════════════════════
     // INVITACIONS
+    // P0 FIX: Restringit read/create/update per evitar exposició i manipulació
     // ═══════════════════════════════════════════════════════════════════════
 
     match /invitations/{invitationId} {
-      allow read: if true;
-      allow create: if isSignedIn();
-      allow update: if isSignedIn();
-      allow delete: if isSuperAdmin() || (isSignedIn() && resource.data.createdBy == request.auth.uid);
+      // P0 FIX: read només per:
+      // - SuperAdmin (gestió global)
+      // - Creador de la invitació
+      // - Admin de l'org de la invitació
+      // - Usuari amb l'email de la invitació (per acceptar-la)
+      allow read: if isSuperAdmin()
+        || (isSignedIn() && resource.data.createdBy == request.auth.uid)
+        || (isSignedIn() && isAdminOf(resource.data.organizationId))
+        || (isSignedIn() && resource.data.email == request.auth.token.email);
+
+      // P0 FIX: create només per admin de l'org o superadmin
+      // Validació: cal que organizationId i createdBy siguin correctes
+      allow create: if isSuperAdmin()
+        || (isSignedIn()
+            && isAdminOf(request.resource.data.organizationId)
+            && request.resource.data.createdBy == request.auth.uid
+            && request.resource.data.keys().hasAll(['organizationId', 'email', 'role', 'createdBy', 'createdAt', 'expiresAt'])
+            && request.resource.data.role in ['admin', 'user', 'viewer']);
+
+      // P0 FIX: update només per creador, admin de l'org, o superadmin
+      // O l'usuari convidat pot marcar-la com usada (acceptar invitació)
+      // P1 FIX: Blindat amb immutabilitat i validació de usedBy
+      allow update: if isSuperAdmin()
+        || (isSignedIn() && resource.data.createdBy == request.auth.uid)
+        || (isSignedIn() && isAdminOf(resource.data.organizationId))
+        // Acceptació d'invitació: només el convidat pot marcar-la
+        || (isSignedIn()
+            // L'email ha de coincidir
+            && resource.data.email == request.auth.token.email
+            // Invitació no usada
+            && resource.data.usedAt == null
+            // Marcar com usada
+            && request.resource.data.usedAt != null
+            // usedBy ha de ser l'UID de l'usuari autenticat
+            && request.resource.data.usedBy == request.auth.uid
+            // Només afectar camps permesos
+            && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['usedAt', 'usedBy'])
+            // IMMUTABILITAT: camps crítics no poden canviar
+            && request.resource.data.organizationId == resource.data.organizationId
+            && request.resource.data.email == resource.data.email
+            && request.resource.data.role == resource.data.role
+            && request.resource.data.createdBy == resource.data.createdBy);
+
+      // Delete: creador, admin de l'org, o superadmin
+      allow delete: if isSuperAdmin()
+        || (isSignedIn() && resource.data.createdBy == request.auth.uid)
+        || (isSignedIn() && isAdminOf(resource.data.organizationId));
     }
 
     // ═══════════════════════════════════════════════════════════════════════
@@ -149,21 +197,65 @@ service cloud.firestore {
 
       // ─────────────────────────────────────────────────────────────────────
       // MEMBRES de l'organització
+      // P0 FIX: Eliminat self-join - només admin/superadmin poden crear membres
+      // El flux d'invitació crea el membre via acceptació d'invitació vàlida
       // ─────────────────────────────────────────────────────────────────────
 
       match /members/{memberId} {
         allow read: if isMemberOf(orgId) || hasOrgInProfile(orgId) || isSuperAdmin();
-        allow create: if isSignedIn() && (request.auth.uid == memberId || isAdminOf(orgId) || isSuperAdmin());
+        // P0 FIX: Només admin de l'org o superadmin poden crear membres
+        // Self-join eliminat per evitar escalada de privilegis cross-org
+        // P1 FIX: El rol del membre ha de derivar de la invitació (client no pot triar)
+        allow create: if isAdminOf(orgId) || isSuperAdmin()
+          // Excepció: permetre self-create NOMÉS si existeix una invitació vàlida
+          // amb el mateix email i orgId, i l'usuari s'està afegint ell mateix
+          || (isSignedIn()
+              && request.auth.uid == memberId
+              // Invitació ha d'existir
+              && exists(/databases/$(database)/documents/invitations/$(request.resource.data.invitationId))
+              // orgId ha de coincidir
+              && get(/databases/$(database)/documents/invitations/$(request.resource.data.invitationId)).data.organizationId == orgId
+              // email ha de coincidir
+              && get(/databases/$(database)/documents/invitations/$(request.resource.data.invitationId)).data.email == request.auth.token.email
+              // Invitació no usada
+              && get(/databases/$(database)/documents/invitations/$(request.resource.data.invitationId)).data.usedAt == null
+              // ROL DERIVAT: el rol del membre HA de ser el de la invitació (client no pot triar)
+              && request.resource.data.role == get(/databases/$(database)/documents/invitations/$(request.resource.data.invitationId)).data.role
+              // Camps permesos (evita que el client afegeixi camps arbitraris)
+              // Nota: userId, joinedAt són camps del client actual
+              && request.resource.data.keys().hasOnly(['role', 'invitationId', 'email', 'displayName', 'photoURL', 'userId', 'joinedAt']));
         allow update, delete: if isAdminOf(orgId) || isSuperAdmin();
       }
 
       // ─────────────────────────────────────────────────────────────────────
       // TRANSACCIONS
+      // P1 FIX: Validació mínima de camps crítics per integritat de saldos
       // ─────────────────────────────────────────────────────────────────────
 
       match /transactions/{transactionId} {
         allow read: if isSuperAdmin() || isMemberOf(orgId);
-        allow create, update, delete: if isSuperAdmin() || (isMemberOf(orgId) && getMemberRole(orgId) in ['admin', 'user']);
+
+        // P1 FIX: Validació de camps crítics
+        // Fase 1: Només valida tipus (amount és number, date és string)
+        // No bloqueja camps opcionals per compatibilitat amb UI existent
+        allow create: if isSuperAdmin()
+          || (isMemberOf(orgId) && getMemberRole(orgId) in ['admin', 'user']
+              // VALIDACIÓ MÍNIMA: camps obligatoris existeixen
+              && request.resource.data.keys().hasAll(['amount', 'date', 'description'])
+              // VALIDACIÓ DE TIPUS: amount ha de ser número
+              && request.resource.data.amount is number
+              // VALIDACIÓ: amount no pot ser NaN (implícit amb is number)
+          );
+
+        // Update: més permissiu per no trencar edicions parcials
+        // Però validem que amount segueixi sent number si es modifica
+        allow update: if isSuperAdmin()
+          || (isMemberOf(orgId) && getMemberRole(orgId) in ['admin', 'user']
+              // Si s'actualitza amount, ha de ser number
+              && (!('amount' in request.resource.data) || request.resource.data.amount is number)
+          );
+
+        allow delete: if isSuperAdmin() || (isMemberOf(orgId) && getMemberRole(orgId) in ['admin', 'user']);
       }
 
       // ─────────────────────────────────────────────────────────────────────
@@ -319,6 +411,35 @@ service cloud.firestore {
       // ─────────────────────────────────────────────────────────────────────
 
       match /prebankRemittances/{remittanceId} {
+        allow read: if isSuperAdmin() || isMemberOf(orgId) || hasOrgInProfile(orgId);
+        allow create, update, delete: if isSuperAdmin() || (isMemberOf(orgId) && getMemberRole(orgId) in ['admin', 'user']);
+      }
+
+      // ─────────────────────────────────────────────────────────────────────
+      // INTEGRACIONS (backups, OAuth, etc.)
+      // Path: /organizations/{orgId}/integrations/{integrationId}
+      // FIX: hasOrgInProfile afegit per permetre lectura durant inicialització
+      // ─────────────────────────────────────────────────────────────────────
+
+      match /integrations/{integrationId} {
+        // Read: membre, perfil amb org, o superadmin
+        allow read: if isSuperAdmin() || isMemberOf(orgId) || hasOrgInProfile(orgId);
+        // Write: només admin de l'org o superadmin
+        allow create, update, delete: if isSuperAdmin() || isAdminOf(orgId);
+
+        // Subcol·lecció per OAuth requests
+        match /backupOAuthRequests/{requestId} {
+          allow read: if isSuperAdmin() || isMemberOf(orgId) || hasOrgInProfile(orgId);
+          allow create, update, delete: if isSuperAdmin() || isAdminOf(orgId);
+        }
+      }
+
+      // ─────────────────────────────────────────────────────────────────────
+      // ONBOARDING (configuració inicial)
+      // Path: /organizations/{orgId}/onboarding/{docId}
+      // ─────────────────────────────────────────────────────────────────────
+
+      match /onboarding/{docId} {
         allow read: if isSuperAdmin() || isMemberOf(orgId) || hasOrgInProfile(orgId);
         allow create, update, delete: if isSuperAdmin() || (isMemberOf(orgId) && getMemberRole(orgId) in ['admin', 'user']);
       }

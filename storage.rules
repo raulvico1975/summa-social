@@ -36,11 +36,10 @@ service firebase.storage {
     // Organitzacions - Regla unificada per a TOTS els paths d'org
     // Inclou: pendingDocuments, logo, signature, transactions/attachments,
     //         expenseReports, projectExpenses, prebankRemittances
-    // TEMPORAL: qualsevol usuari autenticat pot llegir/escriure
-    // Pendent de reintroduir restricció per membres quan RBAC Manager (Bloc 2) estigui complet
+    // P0 FIX: Restringit a membres de l'org o SuperAdmin (abans permetia cross-org)
     // ════════════════════════════════════════════════════════════════════════════
     match /organizations/{orgId}/{allPaths=**} {
-      allow read, write: if isSignedIn();
+      allow read, write: if isSuperAdmin() || isOrgMember(orgId);
     }
 
     // ════════════════════════════════════════════════════════════════════════════

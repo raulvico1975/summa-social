@@ -183,6 +183,7 @@ export type Category = {
   id: string;
   name: string;
   type: 'income' | 'expense';
+  order?: number;  // Ordre de visualització (opcional)
 };
 
 export type Project = {
@@ -423,6 +424,7 @@ export type OrganizationMember = {
   role: OrganizationRole;
   joinedAt: string;
   invitedBy?: string;              // UID de qui el va convidar
+  invitationId?: string;           // ID de la invitació (obligatori per self-join via regles)
 };
 
 /**

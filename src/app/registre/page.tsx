@@ -155,12 +155,14 @@ function RegistreContent() {
       await setDoc(doc(firestore, 'users', user.uid), userProfile);
 
       // 4. Afegir l'usuari com a membre de l'organització
+      // IMPORTANT: invitationId és obligatori per validar a Firestore Rules
       const memberData: OrganizationMember = {
         userId: user.uid,
         email: email,
         displayName: displayName,
         role: invitation.role,
         joinedAt: new Date().toISOString(),
+        invitationId: invitation.id,
       };
       await setDoc(
         doc(firestore, 'organizations', invitation.organizationId, 'members', user.uid),

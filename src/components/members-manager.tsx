@@ -41,9 +41,11 @@ import { useCollection, useFirebase, useMemoFirebase } from '@/firebase';
 import { useCurrentOrganization } from '@/hooks/organization-provider';
 import { useTranslations } from '@/i18n';
 import { collection, doc, deleteDoc, updateDoc, query, where, getDocs } from 'firebase/firestore';
-import { Users, UserPlus, MoreHorizontal, Trash2, Shield, User, Eye, Clock, Loader2 } from 'lucide-react';
+import { Users, UserPlus, MoreHorizontal, Trash2, Shield, User, Eye, Clock, Loader2, Download, Upload } from 'lucide-react';
 import type { OrganizationMember, OrganizationRole, Invitation } from '@/lib/data';
 import { InviteMemberDialog } from './invite-member-dialog';
+import { MemberInviterImporter } from './member-inviter-importer';
+import { exportMembersToExcel, downloadMembersInviteTemplate } from '@/lib/members-export';
 
 export function MembersManager() {
   const { firestore, user } = useFirebase();
@@ -81,6 +83,7 @@ export function MembersManager() {
 
   // Estats
   const [isInviteDialogOpen, setIsInviteDialogOpen] = React.useState(false);
+  const [isImporterOpen, setIsImporterOpen] = React.useState(false);
   const [memberToDelete, setMemberToDelete] = React.useState<OrganizationMember | null>(null);
   const [invitationToDelete, setInvitationToDelete] = React.useState<Invitation | null>(null);
   const [isProcessing, setIsProcessing] = React.useState(false);
@@ -199,10 +202,34 @@ export function MembersManager() {
             </CardDescription>
           </div>
           {isAdmin && (
-            <Button onClick={() => setIsInviteDialogOpen(true)}>
-              <UserPlus className="mr-2 h-4 w-4" />
-              {t.members.inviteMember}
-            </Button>
+            <div className="flex gap-2">
+              {/* Exportar membres */}
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => exportMembersToExcel(members || [])}
+                disabled={!members || members.length === 0}
+                title="Exportar membres a Excel"
+              >
+                <Download className="h-4 w-4" />
+              </Button>
+
+              {/* Importar invitacions massives */}
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setIsImporterOpen(true)}
+                title="Importar invitacions massives"
+              >
+                <Upload className="h-4 w-4" />
+              </Button>
+
+              {/* Convidar membre individual */}
+              <Button onClick={() => setIsInviteDialogOpen(true)}>
+                <UserPlus className="mr-2 h-4 w-4" />
+                {t.members.inviteMember}
+              </Button>
+            </div>
           )}
         </CardHeader>
         <CardContent className="space-y-6">
@@ -389,6 +416,12 @@ export function MembersManager() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Importador d'invitacions massives */}
+      <MemberInviterImporter
+        open={isImporterOpen}
+        onOpenChange={setIsImporterOpen}
+      />
     </>
   );
 }

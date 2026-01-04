@@ -40,7 +40,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { PlusCircle, Edit, Trash2 } from 'lucide-react';
+import { PlusCircle, Edit, Trash2, Download, Upload, FileSpreadsheet } from 'lucide-react';
 import type { Category } from '@/lib/data';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
@@ -48,6 +48,8 @@ import { useCollection, useFirebase, useMemoFirebase, addDocumentNonBlocking, de
 import { collection, doc } from 'firebase/firestore';
 import { useTranslations } from '@/i18n';
 import { useCurrentOrganization } from '@/hooks/organization-provider';
+import { CategoryImporter } from './category-importer';
+import { exportCategoriesToExcel, downloadCategoriesTemplate } from '@/lib/categories-export';
 
 function CategoryTable({
   categories,
@@ -122,6 +124,7 @@ export function CategoryManager() {
 
   const [isDialogOpen, setIsDialogOpen] = React.useState(false);
   const [isAlertOpen, setIsAlertOpen] = React.useState(false);
+  const [isImporterOpen, setIsImporterOpen] = React.useState(false);
   const [editingCategory, setEditingCategory] = React.useState<Category | null>(null);
   const [categoryToDelete, setCategoryToDelete] = React.useState<Category | null>(null);
   const [formData, setFormData] = React.useState<{ name: string; type: Category['type'] }>({ name: '', type: 'expense' });
@@ -224,13 +227,47 @@ export function CategoryManager() {
             <CardDescription>{t.settings.manageCategoriesDescription}</CardDescription>
           </div>
           {canEdit && (
-            <DialogTrigger asChild>
+            <div className="flex gap-2">
+              {/* Descarregar plantilla */}
+              <Button
+                variant="outline"
+                size="icon"
+                onClick={() => downloadCategoriesTemplate()}
+                title="Descarregar plantilla Excel"
+              >
+                <FileSpreadsheet className="h-4 w-4" />
+              </Button>
+
+              {/* Exportar categories */}
+              <Button
+                variant="outline"
+                size="icon"
+                onClick={() => categories && categories.length > 0 && exportCategoriesToExcel(categories, categoryTranslations)}
+                disabled={!categories || categories.length === 0}
+                title="Exportar a Excel"
+              >
+                <Download className="h-4 w-4" />
+              </Button>
+
+              {/* Importar categories */}
+              <Button
+                variant="outline"
+                size="icon"
+                onClick={() => setIsImporterOpen(true)}
+                title="Importar categories"
+              >
+                <Upload className="h-4 w-4" />
+              </Button>
+
+              {/* Afegir categoria */}
+              <DialogTrigger asChild>
                 <Button size="sm" onClick={handleAddNew}>
-                <PlusCircle className="mr-2 h-4 w-4" />
-                {t.settings.addCategory}
+                  <PlusCircle className="mr-2 h-4 w-4" />
+                  {t.settings.addCategory}
                 </Button>
-            </DialogTrigger>
-           )}
+              </DialogTrigger>
+            </div>
+          )}
         </CardHeader>
         <CardContent>
           <Tabs defaultValue="expenses">
@@ -314,6 +351,12 @@ export function CategoryManager() {
             </AlertDialogContent>
         </AlertDialog>
     )}
+
+    {/* Importador de categories */}
+    <CategoryImporter
+      open={isImporterOpen}
+      onOpenChange={setIsImporterOpen}
+    />
     </>
   );
 }
