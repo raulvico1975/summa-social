@@ -237,23 +237,104 @@ export function TransactionImporter({ existingTransactions }: TransactionImporte
     reader.readAsArrayBuffer(file);
   }
 
-  const parseCsv = (file: File, mode: ImportMode, bankAccountId: string | null) => {
-    Papa.parse(file, {
-      header: true,
-      skipEmptyLines: true,
-      complete: (results) => {
-        processParsedData(results.data, mode, bankAccountId);
-      },
-      error: (error) => {
-        console.error("PapaParse error:", error);
+  /**
+   * Detecta el separador més probable d'un CSV (`;` o `,`)
+   */
+  const detectCsvDelimiter = (text: string): string => {
+    const firstLine = text.split('\n')[0] || '';
+    const semicolonCount = (firstLine.match(/;/g) || []).length;
+    const commaCount = (firstLine.match(/,/g) || []).length;
+    return semicolonCount > commaCount ? ';' : ',';
+  };
+
+  /**
+   * Parseja CSV amb suport per Triodos i altres bancs espanyols:
+   * - Encoding: UTF-8 o ISO-8859-1 (latin1)
+   * - Separador: `;` o `,` (autodetectat)
+   * - Headers alternatius: F. ejecución, F. valor, Concepto, Importe
+   */
+  const parseCsv = async (file: File, mode: ImportMode, bankAccountId: string | null) => {
+    // Funció auxiliar per llegir amb un encoding específic
+    const readWithEncoding = (encoding: string): Promise<string> => {
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result as string);
+        reader.onerror = () => reject(reader.error);
+        reader.readAsText(file, encoding);
+      });
+    };
+
+    // Funció auxiliar per parsejar el text CSV
+    const parseText = (text: string): Promise<any[]> => {
+      return new Promise((resolve) => {
+        const delimiter = detectCsvDelimiter(text);
+        log(`Delimitador detectat: "${delimiter}"`);
+
+        Papa.parse(text, {
+          header: true,
+          skipEmptyLines: true,
+          delimiter,
+          complete: (results) => {
+            resolve(results.data);
+          },
+          error: () => {
+            resolve([]);
+          }
+        });
+      });
+    };
+
+    // Funció per verificar si les dades són vàlides (tenen transaccions processables)
+    const hasValidTransactions = (data: any[]): boolean => {
+      if (!data || data.length === 0) return false;
+
+      // Comprovar si almenys una fila té les columnes necessàries
+      for (const row of data.slice(0, 5)) { // Només mirem les primeres 5 files
+        const dateValue = row.Fecha || row.fecha || row['Fecha Operación'] || row['fecha operación'] ||
+                          row['F. ejecución'] || row['F. valor'] || row['F. Valor'] || row['F. Ejecución'];
+        const descriptionValue = row.Concepto || row.concepto || row.description || row.descripción;
+        const amountValue = row.Importe || row.importe || row.amount;
+
+        if (dateValue && descriptionValue && amountValue !== undefined) {
+          return true;
+        }
+      }
+      return false;
+    };
+
+    try {
+      // Intent 1: UTF-8
+      let text = await readWithEncoding('UTF-8');
+      let data = await parseText(text);
+
+      if (!hasValidTransactions(data)) {
+        log('UTF-8 no ha trobat transaccions vàlides, provant ISO-8859-1...');
+        // Intent 2: ISO-8859-1 (latin1) - comú en bancs espanyols com Triodos
+        text = await readWithEncoding('ISO-8859-1');
+        data = await parseText(text);
+      }
+
+      if (hasValidTransactions(data)) {
+        log(`CSV parsejat correctament: ${data.length} files`);
+        processParsedData(data, mode, bankAccountId);
+      } else {
+        log('No s\'han trobat transaccions vàlides en cap encoding');
         toast({
           variant: 'destructive',
           title: t.importers.transaction.errors.importError,
-          description: t.importers.transaction.errors.cannotReadCsv,
+          description: t.importers.transaction.noValidTransactions,
         });
         setIsImporting(false);
       }
-    });
+    } catch (error) {
+      console.error("CSV parse error:", error);
+      toast({
+        variant: 'destructive',
+        title: t.importers.transaction.errors.importError,
+        description: t.importers.transaction.errors.cannotReadCsv,
+      });
+      setIsImporting(false);
+    }
   };
 
   const processParsedData = async (data: any[], mode: ImportMode, bankAccountId: string | null) => {
@@ -268,12 +349,17 @@ export function TransactionImporter({ existingTransactions }: TransactionImporte
     try {
         const allParsedRows = data
         .map((row: any, index: number) => {
-            const dateValue = row.Fecha || row.fecha || row['Fecha Operación'] || row['fecha operación'];
+            // Suportar múltiples formats de headers (bancs espanyols, Triodos, etc.)
+            // Per dates: prioritzar F. valor sobre F. ejecución (data valor és més precisa)
+            const dateValue = row['F. valor'] || row['F. Valor'] || row['F. ejecución'] || row['F. Ejecución'] ||
+                              row.Fecha || row.fecha || row['Fecha Operación'] || row['fecha operación'];
             const descriptionValue = row.Concepto || row.concepto || row.description || row.descripción;
             let amountValue = row.Importe || row.importe || row.amount;
 
             if (typeof amountValue === 'string') {
-                amountValue = amountValue.replace('.', '').replace(',', '.'); // Handle thousand separators and decimal commas
+                // Triodos i altres bancs espanyols: "83.253,39" o "-4.941,89"
+                // Primer treure punts de milers, després canviar coma decimal per punt
+                amountValue = amountValue.replace(/\./g, '').replace(',', '.');
             }
             const amount = parseFloat(amountValue);
             

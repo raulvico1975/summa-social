@@ -10,9 +10,10 @@ import { Logo } from '@/components/logo';
 import { useFirebase } from '@/firebase';
 import { useToast } from '@/hooks/use-toast';
 import { signInWithEmailAndPassword, setPersistence, browserLocalPersistence } from 'firebase/auth';
-import { doc, getDoc } from 'firebase/firestore';
+import { doc, getDoc, setDoc, updateDoc, collection, query, where, getDocs } from 'firebase/firestore';
 import { Loader2, Building2, AlertCircle, Clock } from 'lucide-react';
 import { isDemoEnv } from '@/lib/demo/isDemoOrg';
+import type { Invitation, OrganizationMember, UserProfile } from '@/lib/data';
 
 interface OrgInfo {
   id: string;
@@ -27,6 +28,7 @@ function OrgLoginContent() {
   const orgSlug = params.orgSlug as string;
   const reason = searchParams.get('reason');
   const nextPath = searchParams.get('next');
+  const inviteToken = searchParams.get('inviteToken');
   const { auth, firestore, user, isUserLoading } = useFirebase();
   const { toast } = useToast();
 
@@ -98,7 +100,79 @@ function OrgLoginContent() {
     try {
       // Configurar persistència local per mantenir sessió entre pestanyes
       await setPersistence(auth, browserLocalPersistence);
-      await signInWithEmailAndPassword(auth, email, password);
+      const userCredential = await signInWithEmailAndPassword(auth, email, password);
+      const loggedInUser = userCredential.user;
+
+      // Si hi ha inviteToken, completar l'acceptació de la invitació
+      if (inviteToken && organization) {
+        try {
+          // Buscar la invitació pel token
+          const invitationsRef = collection(firestore, 'invitations');
+          const q = query(invitationsRef, where('token', '==', inviteToken));
+          const querySnapshot = await getDocs(q);
+
+          if (!querySnapshot.empty) {
+            const invitationDoc = querySnapshot.docs[0];
+            const invitationData = { id: invitationDoc.id, ...invitationDoc.data() } as Invitation;
+
+            // Verificar que la invitació és per aquesta organització i no ha estat usada
+            if (
+              invitationData.organizationId === organization.id &&
+              !invitationData.usedAt
+            ) {
+              // Verificar si l'usuari ja és membre
+              const memberRef = doc(
+                firestore,
+                'organizations',
+                organization.id,
+                'members',
+                loggedInUser.uid
+              );
+              const memberSnap = await getDoc(memberRef);
+
+              if (!memberSnap.exists()) {
+                // Afegir l'usuari com a membre
+                const memberData: OrganizationMember = {
+                  userId: loggedInUser.uid,
+                  email: loggedInUser.email || email,
+                  displayName: loggedInUser.displayName || email.split('@')[0],
+                  role: invitationData.role,
+                  joinedAt: new Date().toISOString(),
+                  invitedBy: invitationData.createdBy,
+                };
+                await setDoc(memberRef, memberData);
+
+                // Actualitzar el perfil d'usuari si no té organització
+                const userProfileRef = doc(firestore, 'users', loggedInUser.uid);
+                const userProfileSnap = await getDoc(userProfileRef);
+                if (!userProfileSnap.exists()) {
+                  const userProfile: UserProfile = {
+                    organizationId: organization.id,
+                    role: invitationData.role,
+                    displayName: loggedInUser.displayName || email.split('@')[0],
+                  };
+                  await setDoc(userProfileRef, userProfile);
+                }
+
+                // Marcar la invitació com a usada
+                const invitationRef = doc(firestore, 'invitations', invitationData.id);
+                await updateDoc(invitationRef, {
+                  usedAt: new Date().toISOString(),
+                  usedBy: loggedInUser.uid,
+                });
+
+                toast({
+                  title: 'Invitació acceptada!',
+                  description: `T'has unit a ${organization.name}`,
+                });
+              }
+            }
+          }
+        } catch (inviteErr) {
+          // Si falla l'acceptació de la invitació, no bloquegem el login
+          console.error('Error processant invitació:', inviteErr);
+        }
+      }
 
       toast({
         title: 'Sesión iniciada',

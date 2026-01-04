@@ -2,6 +2,7 @@
 
 import * as React from 'react';
 import Link from 'next/link';
+import { useSearchParams } from 'next/navigation';
 import {
   Dialog,
   DialogContent,
@@ -17,6 +18,42 @@ import { useCurrentOrganization, useOrgUrl } from '@/hooks/organization-provider
 import { useFirebase, useCollection, useMemoFirebase } from '@/firebase';
 import { collection } from 'firebase/firestore';
 import type { Contact, Category, Organization } from '@/lib/data';
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// PERSISTÈNCIA D'ONBOARDING
+// ═══════════════════════════════════════════════════════════════════════════════
+
+const ONBOARDING_STORAGE_KEY = 'summa.onboarding';
+
+interface OnboardingState {
+  inProgress: boolean;
+  startedAt: string;
+}
+
+function getOnboardingState(orgId: string, userId: string): OnboardingState | null {
+  if (typeof window === 'undefined') return null;
+  try {
+    const key = `${ONBOARDING_STORAGE_KEY}.${orgId}.${userId}`;
+    const stored = localStorage.getItem(key);
+    return stored ? JSON.parse(stored) : null;
+  } catch {
+    return null;
+  }
+}
+
+function setOnboardingState(orgId: string, userId: string, state: OnboardingState | null): void {
+  if (typeof window === 'undefined') return;
+  try {
+    const key = `${ONBOARDING_STORAGE_KEY}.${orgId}.${userId}`;
+    if (state) {
+      localStorage.setItem(key, JSON.stringify(state));
+    } else {
+      localStorage.removeItem(key);
+    }
+  } catch {
+    // Ignore localStorage errors
+  }
+}
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // TIPUS I UTILITATS INTERNES (no exposades)
@@ -98,9 +135,10 @@ interface OnboardingWizardModalProps {
 
 export function OnboardingWizardModal({ open, onOpenChange }: OnboardingWizardModalProps) {
   const { t } = useTranslations();
-  const { firestore } = useFirebase();
+  const { firestore, user } = useFirebase();
   const { organizationId, organization } = useCurrentOrganization();
   const { buildUrl } = useOrgUrl();
+  const searchParams = useSearchParams();
 
   // Carregar dades per computar estat
   const contactsQuery = useMemoFirebase(
@@ -123,13 +161,51 @@ export function OnboardingWizardModal({ open, onOpenChange }: OnboardingWizardMo
   const progress = React.useMemo(() => computeProgress(checks), [checks]);
   const isComplete = React.useMemo(() => isOnboardingComplete(checks), [checks]);
 
+  // Detectar si venim de configuració amb onboarding=1
+  const isReturningFromOnboarding = searchParams.get('onboarding') === '1';
+
+  // Reobrir modal automàticament si venim de configuració amb onboarding actiu
+  React.useEffect(() => {
+    if (!organizationId || !user?.uid) return;
+
+    // Si venim amb ?onboarding=1, reobrir la modal
+    if (isReturningFromOnboarding && !open) {
+      onOpenChange(true);
+      return;
+    }
+
+    // Si hi ha estat d'onboarding persistent i no està obert, reobrir
+    const savedState = getOnboardingState(organizationId, user.uid);
+    if (savedState?.inProgress && !open && !isComplete) {
+      onOpenChange(true);
+    }
+  }, [organizationId, user?.uid, isReturningFromOnboarding, open, isComplete, onOpenChange]);
+
+  // Netejar estat quan l'onboarding es completa
+  React.useEffect(() => {
+    if (isComplete && organizationId && user?.uid) {
+      setOnboardingState(organizationId, user.uid, null);
+    }
+  }, [isComplete, organizationId, user?.uid]);
+
   // Tancar modal
   const handleClose = () => {
+    // Netejar estat persistent quan l'usuari tanca manualment
+    if (organizationId && user?.uid) {
+      setOnboardingState(organizationId, user.uid, null);
+    }
     onOpenChange(false);
   };
 
-  // Navegar a una secció i tancar el modal
+  // Navegar a una secció i guardar estat
   const handleNavigate = (href: string) => {
+    // Guardar estat abans de navegar
+    if (organizationId && user?.uid) {
+      setOnboardingState(organizationId, user.uid, {
+        inProgress: true,
+        startedAt: new Date().toISOString(),
+      });
+    }
     // Tancar el modal abans de navegar
     onOpenChange(false);
     // La navegació es fa via Link, no cal fer res més
@@ -192,10 +268,13 @@ export function OnboardingWizardModal({ open, onOpenChange }: OnboardingWizardMo
 
               {/* Llista de passos */}
               <ul className="space-y-2">
-                {checks.map((check) => (
+                {checks.map((check) => {
+                  // Afegir ?onboarding=1 per poder tornar i reobrir la modal
+                  const hrefWithOnboarding = `${buildUrl(check.href)}?onboarding=1`;
+                  return (
                   <li key={check.step}>
                     <Link
-                      href={buildUrl(check.href)}
+                      href={hrefWithOnboarding}
                       onClick={() => handleNavigate(check.href)}
                       className="flex items-center gap-3 p-3 rounded-lg border hover:bg-muted/50 transition-colors group"
                     >
@@ -222,7 +301,8 @@ export function OnboardingWizardModal({ open, onOpenChange }: OnboardingWizardMo
                       )}
                     </Link>
                   </li>
-                ))}
+                  );
+                })}
               </ul>
 
               {/* Botó tancar */}

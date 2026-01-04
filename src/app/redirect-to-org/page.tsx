@@ -8,7 +8,7 @@ import { Suspense } from 'react';
 import { useEffect, useState, useRef } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useFirebase } from '@/firebase';
-import { doc, getDoc, collectionGroup, query, where, getDocs, limit, documentId } from 'firebase/firestore';
+import { doc, getDoc, collectionGroup, query, where, getDocs, limit } from 'firebase/firestore';
 import { Loader2, AlertCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -68,10 +68,11 @@ function RedirectContent() {
         }
 
         // 2. Si no hi ha orgId vàlid al perfil, buscar com a membre d'alguna org (O(1) amb collectionGroup)
+        // Nota: No podem usar documentId() amb collectionGroup, cal usar el camp userId
         if (!orgId) {
           const q = query(
             collectionGroup(firestore, 'members'),
-            where(documentId(), '==', user.uid),
+            where('userId', '==', user.uid),
             limit(1)
           );
 
@@ -79,8 +80,9 @@ function RedirectContent() {
 
           if (!membersSnap.empty) {
             const memberDoc = membersSnap.docs[0];
-            const parentOrgRef = memberDoc.ref.parent.parent;
-            orgId = parentOrgRef?.id ?? null;
+            // Extreure l'orgId del path: organizations/{orgId}/members/{memberId}
+            const pathParts = memberDoc.ref.path.split('/');
+            orgId = pathParts[1]; // organizations/{orgId}/members/{memberId}
 
             if (orgId) {
               const orgSnap = await getDoc(doc(firestore, 'organizations', orgId));

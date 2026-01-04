@@ -25,13 +25,14 @@ function RegistreContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const token = searchParams.get('token');
-  
+
   const { auth, firestore } = useFirebase();
   const { toast } = useToast();
-  
+
   const [pageState, setPageState] = React.useState<PageState>('loading');
   const [invitation, setInvitation] = React.useState<Invitation | null>(null);
-  
+  const [orgSlug, setOrgSlug] = React.useState<string | null>(null);
+
   const [displayName, setDisplayName] = React.useState('');
   const [email, setEmail] = React.useState('');
   const [password, setPassword] = React.useState('');
@@ -76,12 +77,26 @@ function RegistreContent() {
 
         // Tot correcte!
         setInvitation(invitationData);
-        
+
+        // Carregar el slug de l'organització per l'enllaç d'inici de sessió
+        try {
+          const orgRef = doc(firestore, 'organizations', invitationData.organizationId);
+          const orgSnap = await getDoc(orgRef);
+          if (orgSnap.exists()) {
+            const slug = orgSnap.data().slug;
+            if (slug) {
+              setOrgSlug(slug);
+            }
+          }
+        } catch {
+          // Si no podem carregar el slug, l'enllaç d'inici sessió mostrarà text alternatiu
+        }
+
         // Si la invitació té un email específic, pre-omplir-lo
         if (invitationData.email) {
           setEmail(invitationData.email);
         }
-        
+
         setPageState('ready');
       } catch (err) {
         console.error('Error validant invitació:', err);
@@ -428,9 +443,18 @@ function RegistreContent() {
             {/* Enllaç a login */}
             <p className="text-center text-sm text-muted-foreground">
               Ja tens compte?{' '}
-              <a href="/" className="text-primary hover:underline">
-                Inicia sessió
-              </a>
+              {orgSlug ? (
+                <a
+                  href={`/${orgSlug}/login?inviteToken=${token}&next=/${orgSlug}/dashboard`}
+                  className="text-primary hover:underline"
+                >
+                  Inicia sessió
+                </a>
+              ) : (
+                <span className="text-muted-foreground">
+                  Inicia sessió a la teva organització.
+                </span>
+              )}
             </p>
           </CardContent>
         </Card>

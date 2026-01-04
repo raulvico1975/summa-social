@@ -72,15 +72,23 @@ export function DashboardSidebarContent() {
   const handleSignOut = async (e: React.MouseEvent<HTMLAnchorElement>) => {
     e.preventDefault();
     try {
+      // Guardar el slug abans de tancar sessió per poder redirigir després
+      const savedOrgSlug = orgSlug;
+
       // Netejar sessionStorage si el Super Admin estava veient una altra org
       sessionStorage.removeItem('adminViewingOrgId');
-      
+
       await firebaseSignOut(firebaseAuth);
-      
+
       toast({ title: t.sidebar.logoutToastTitle, description: t.sidebar.logoutToastDescription });
-      
-      router.push('/');
-      router.refresh(); 
+
+      // Redirigir al login de l'organització, no a la home pública
+      if (savedOrgSlug) {
+        router.push(`/${savedOrgSlug}/login`);
+      } else {
+        router.push('/login');
+      }
+      router.refresh();
 
     } catch (error) {
        console.error("Error signing out: ", error);
