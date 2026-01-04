@@ -260,7 +260,16 @@ export function BackupsSettings() {
 
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to start OAuth');
+        // Mostrar missatges d'error diferenciats segons el codi
+        let errorMessage = t.settings.backups.connectionFailed;
+        if (errorData.code === 'ORG_NOT_FOUND') {
+          errorMessage = 'Organització no trobada';
+        } else if (errorData.code === 'NOT_MEMBER') {
+          errorMessage = 'No ets membre d\'aquesta organització';
+        } else if (errorData.code === 'NOT_ADMIN') {
+          errorMessage = 'Només els administradors poden connectar proveïdors de backup';
+        }
+        throw new Error(errorMessage);
       }
 
       const data = await response.json();

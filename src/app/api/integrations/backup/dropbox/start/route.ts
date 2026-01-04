@@ -117,23 +117,56 @@ export async function POST(request: NextRequest) {
 
     // 3. Verificar que l'usuari és admin de l'org
     const db = getAdminDb();
+
+    // Primer verificar que l'organització existeix
+    const orgRef = db.doc(`organizations/${orgId}`);
+    const orgSnap = await orgRef.get();
+
+    if (!orgSnap.exists) {
+      console.error(`[dropbox/start] Organization not found: ${orgId}`);
+      return NextResponse.json(
+        { error: 'Organization not found', code: 'ORG_NOT_FOUND' },
+        { status: 404 }
+      );
+    }
+
+    // Buscar membre per ID de document (uid)
     const memberRef = db.doc(`organizations/${orgId}/members/${authResult.uid}`);
     const memberSnap = await memberRef.get();
 
-    if (!memberSnap.exists) {
+    // Si no existeix per ID, buscar per camp userId (per compatibilitat)
+    let memberData = memberSnap.exists ? memberSnap.data() : null;
+
+    if (!memberData) {
+      // Fallback: buscar per userId field
+      const membersQuery = db.collection(`organizations/${orgId}/members`)
+        .where('userId', '==', authResult.uid)
+        .limit(1);
+      const membersSnap = await membersQuery.get();
+
+      if (!membersSnap.empty) {
+        memberData = membersSnap.docs[0].data();
+        console.log(`[dropbox/start] Member found via userId query for ${authResult.uid}`);
+      }
+    }
+
+    if (!memberData) {
+      console.error(`[dropbox/start] User ${authResult.uid} not a member of org ${orgId}`);
       return NextResponse.json(
-        { error: 'Not a member of this organization' },
+        { error: 'Not a member of this organization', code: 'NOT_MEMBER' },
         { status: 403 }
       );
     }
 
-    const memberData = memberSnap.data();
-    if (memberData?.role !== 'admin') {
+    if (memberData.role !== 'admin') {
+      console.error(`[dropbox/start] User ${authResult.uid} is ${memberData.role}, not admin`);
       return NextResponse.json(
-        { error: 'Only admins can connect backup providers' },
+        { error: 'Only admins can connect backup providers', code: 'NOT_ADMIN' },
         { status: 403 }
       );
     }
+
+    console.log(`[dropbox/start] Auth OK for ${authResult.uid} (${memberData.role}) in org ${orgId}`);
 
     // 4. Verificar secrets
     const DROPBOX_APP_KEY = process.env.DROPBOX_APP_KEY;
