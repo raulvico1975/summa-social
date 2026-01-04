@@ -305,18 +305,17 @@ export function OrganizationProvider({ children, orgSlug }: OrganizationProvider
   const router = useRouter();
 
   // Handler per tancar sessió
-  // Redirigeix a /{orgSlug}/login (no a / públic) per mantenir context d'org
+  // HARD REDIRECT: Usem window.location.assign per desmuntar tota l'app
+  // immediatament i evitar que el dashboard es mostri buit durant la transició.
   const handleLogout = async () => {
-    // Determinar URL de login: usar orgSlug si disponible
     const loginUrl = orgSlug ? `/${orgSlug}/login` : '/';
     try {
       await signOut(auth);
-      router.replace(loginUrl);
     } catch (err) {
       console.error('[ORG_PROVIDER] Error signing out:', err);
-      // Forçar navegació a login encara que falli el signOut
-      router.replace(loginUrl);
     }
+    // Hard redirect sempre, fins i tot si signOut falla
+    window.location.assign(loginUrl);
   };
 
   // Mentre es carrega, mostrar un indicador
