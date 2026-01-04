@@ -208,10 +208,19 @@ function RegistreContent() {
     } catch (err: any) {
       console.error('Error en el registre:', err);
       setPageState('ready');
-      
+
       switch (err.code) {
         case 'auth/email-already-in-use':
-          setError('Aquest email ja està registrat. Prova d\'iniciar sessió.');
+          // Redirigir a login amb la invitació per acceptar-la amb el compte existent
+          if (orgSlug && token) {
+            toast({
+              title: 'Compte existent',
+              description: 'Redirigint per iniciar sessió i acceptar la invitació...',
+            });
+            router.push(`/${orgSlug}/login?inviteToken=${token}&next=/${orgSlug}/dashboard`);
+          } else {
+            setError('Aquest email ja està registrat. Inicia sessió per acceptar la invitació.');
+          }
           break;
         case 'auth/invalid-email':
           setError('L\'email no és vàlid');

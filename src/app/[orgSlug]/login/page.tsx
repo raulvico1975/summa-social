@@ -116,10 +116,15 @@ function OrgLoginContent() {
             const invitationData = { id: invitationDoc.id, ...invitationDoc.data() } as Invitation;
 
             // Verificar que la invitació és per aquesta organització i no ha estat usada
-            if (
-              invitationData.organizationId === organization.id &&
-              !invitationData.usedAt
-            ) {
+            const isValidOrg = invitationData.organizationId === organization.id;
+            const isNotUsed = !invitationData.usedAt;
+            // Si la invitació té email específic, verificar que coincideix
+            const emailMatches = !invitationData.email ||
+              invitationData.email.toLowerCase() === (loggedInUser.email || email).toLowerCase();
+            // Verificar que no ha expirat
+            const notExpired = new Date() <= new Date(invitationData.expiresAt);
+
+            if (isValidOrg && isNotUsed && emailMatches && notExpired) {
               // Verificar si l'usuari ja és membre
               const memberRef = doc(
                 firestore,
@@ -132,6 +137,7 @@ function OrgLoginContent() {
 
               if (!memberSnap.exists()) {
                 // Afegir l'usuari com a membre
+                // IMPORTANT: invitationId és obligatori per validar a Firestore Rules
                 const memberData: OrganizationMember = {
                   userId: loggedInUser.uid,
                   email: loggedInUser.email || email,
@@ -139,6 +145,7 @@ function OrgLoginContent() {
                   role: invitationData.role,
                   joinedAt: new Date().toISOString(),
                   invitedBy: invitationData.createdBy,
+                  invitationId: invitationData.id,
                 };
                 await setDoc(memberRef, memberData);
 
@@ -166,6 +173,18 @@ function OrgLoginContent() {
                   description: `T'has unit a ${organization.name}`,
                 });
               }
+            } else if (!emailMatches) {
+              toast({
+                variant: 'destructive',
+                title: 'Email no coincideix',
+                description: `Aquesta invitació és per ${invitationData.email}`,
+              });
+            } else if (!notExpired) {
+              toast({
+                variant: 'destructive',
+                title: 'Invitació expirada',
+                description: 'Demana una nova invitació a l\'administrador',
+              });
             }
           }
         } catch (inviteErr) {
