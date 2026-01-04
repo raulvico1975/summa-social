@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useContext, useRef } from 'react';
-import { useRouter, usePathname } from 'next/navigation';
+import { usePathname } from 'next/navigation';
 import { FirebaseContext } from '@/firebase/provider';
 
 /**
@@ -76,7 +76,6 @@ function extractOrgSlugFromPath(pathname: string): string | null {
  */
 export function AuthRedirectGuard() {
   const firebaseContext = useContext(FirebaseContext);
-  const router = useRouter();
   const pathname = usePathname();
 
   // Ref per evitar múltiples redirects
@@ -121,16 +120,17 @@ export function AuthRedirectGuard() {
       // Extreure el slug de l'org del path actual
       const orgSlug = extractOrgSlugFromPath(pathname);
 
+      // HARD REDIRECT: Usem window.location.assign per desmuntar tota l'app
+      // immediatament. router.replace és massa suau i deixa la UI visible
+      // durant la transició, mostrant dashboard buit.
+      hasRedirectedRef.current = true;
+
       if (orgSlug) {
-        // Redirigir a la pàgina de login de l'org
-        console.log('[AuthRedirectGuard] Redirecting to org login:', `/${orgSlug}/login`);
-        hasRedirectedRef.current = true;
-        router.replace(`/${orgSlug}/login`);
+        console.log('[AuthRedirectGuard] Hard redirect to org login:', `/${orgSlug}/login`);
+        window.location.assign(`/${orgSlug}/login`);
       } else {
-        // Redirigir a la pàgina principal
-        console.log('[AuthRedirectGuard] Redirecting to home');
-        hasRedirectedRef.current = true;
-        router.replace('/');
+        console.log('[AuthRedirectGuard] Hard redirect to home');
+        window.location.assign('/');
       }
     }
 
@@ -138,7 +138,7 @@ export function AuthRedirectGuard() {
     if (isLoggedIn) {
       hasRedirectedRef.current = false;
     }
-  }, [firebaseContext?.user, firebaseContext?.isUserLoading, pathname, router]);
+  }, [firebaseContext?.user, firebaseContext?.isUserLoading, pathname]);
 
   // Aquest component no renderitza res
   return null;
