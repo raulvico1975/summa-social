@@ -2,7 +2,7 @@
 
 'use client';
 
-import React, { createContext, useContext, ReactNode, useMemo, useRef } from 'react';
+import React, { createContext, useContext, ReactNode, useMemo } from 'react';
 import { useParams, useRouter, usePathname, useSearchParams } from 'next/navigation';
 import { useFirebase, useCollection, useMemoFirebase } from '@/firebase';
 import { collection, collectionGroup, query, where, getDocs, doc, getDoc, limit } from 'firebase/firestore';
@@ -36,7 +36,21 @@ interface OrganizationProviderProps {
 function isPermissionDenied(err: unknown): boolean {
   if (!(err instanceof Error)) return false;
   const msg = err.message.toLowerCase();
+  // Check Firebase error code first (més fiable)
+  const code = (err as any)?.code;
+  if (code === 'permission-denied') return true;
   return msg.includes('permission') || msg.includes('permission-denied') || msg.includes('missing or insufficient');
+}
+
+/**
+ * Classe d'error específica per accés denegat per Firestore Rules
+ * (diferent d'errors tècnics com network, unavailable, etc.)
+ */
+class AccessDeniedError extends Error {
+  constructor(message: string = 'No tens accés a aquesta organització') {
+    super(message);
+    this.name = 'AccessDeniedError';
+  }
 }
 
 /**
@@ -54,9 +68,6 @@ function useOrganizationBySlug(orgSlug?: string) {
   const [userRole, setUserRole] = React.useState<OrganizationRole | null>(null);
   const [isLoading, setIsLoading] = React.useState(true);
   const [error, setError] = React.useState<Error | null>(null);
-
-  // Ref per controlar el retry de SuperAdmin (màxim 1 vegada per sessió)
-  const superAdminRetryRef = useRef(false);
 
   React.useEffect(() => {
     // Si encara estem carregant l'usuari, esperem
@@ -106,9 +117,25 @@ function useOrganizationBySlug(orgSlug?: string) {
             throw new Error(`Slug "${orgSlug}" no té organització associada`);
           }
 
-          // 2. Llegir l'organització directament pel seu ID
+          // ═══════════════════════════════════════════════════════════════════
+          // 2. CANARY READ: Llegir l'organització directament pel seu ID
+          // Si Firestore permet la lectura, l'usuari té accés (via rules).
+          // Si retorna permission-denied, no té accés.
+          // El client NO decideix permisos — les rules són l'autoritat.
+          // ═══════════════════════════════════════════════════════════════════
           const orgRef = doc(firestore, 'organizations', orgId);
-          const orgSnap = await getDoc(orgRef);
+          let orgSnap;
+          try {
+            orgSnap = await getDoc(orgRef);
+          } catch (readErr) {
+            // Si és permission-denied, convertir a AccessDeniedError
+            if (isPermissionDenied(readErr)) {
+              console.log('[ORG_PROVIDER] Canary read failed: permission-denied for org', orgId);
+              throw new AccessDeniedError();
+            }
+            // Altres errors (network, unavailable) es propaguen
+            throw readErr;
+          }
 
           if (!orgSnap.exists()) {
             throw new Error(`No s'ha trobat l'organització amb ID "${orgId}"`);
@@ -116,28 +143,35 @@ function useOrganizationBySlug(orgSlug?: string) {
 
           orgDoc = { id: orgId, ...orgSnap.data() } as Organization;
 
-          // Verificar que l'usuari té accés a aquesta organització
+          // ═══════════════════════════════════════════════════════════════════
+          // 3. Carregar rol de l'usuari (per UI, no per decidir accés)
+          // L'accés ja està validat pel canary read anterior.
+          // ═══════════════════════════════════════════════════════════════════
           const memberRef = doc(firestore, 'organizations', orgId, 'members', user.uid);
-          const memberSnap = await getDoc(memberRef);
-
-          if (!memberSnap.exists()) {
-            // DEMO: permetre accés a qualsevol usuari autenticat
-            if (isDemoEnv()) {
-              setUserRole('admin');
+          try {
+            const memberSnap = await getDoc(memberRef);
+            if (memberSnap.exists()) {
+              const memberData = memberSnap.data();
+              setUserRole(memberData.role as OrganizationRole);
             } else {
-              // Comprovar si és Super Admin via systemSuperAdmins collection
-              const saRef = doc(firestore, 'systemSuperAdmins', user.uid);
-              const saSnap = await getDoc(saRef);
-              const isSuperAdmin = saSnap.exists();
-
-              if (!isSuperAdmin) {
-                throw new Error('No tens accés a aquesta organització');
+              // No és membre directe, però té accés (SuperAdmin o hasOrgInProfile via rules)
+              // Per UI, assignem rol admin (SuperAdmin) o viewer (altres)
+              if (!isDemoEnv()) {
+                const saRef = doc(firestore, 'systemSuperAdmins', user.uid);
+                const saSnap = await getDoc(saRef);
+                const isSuperAdmin = saSnap.exists();
+                console.log('[ORG_PROVIDER] User has access but not member. isSuperAdmin=', isSuperAdmin, 'uid=', user.uid);
+                setUserRole(isSuperAdmin ? 'admin' : 'viewer');
+              } else {
+                // DEMO: assignar admin a tots
+                setUserRole('admin');
               }
-              setUserRole('admin');
             }
-          } else {
-            const memberData = memberSnap.data();
-            setUserRole(memberData.role as OrganizationRole);
+          } catch (memberErr) {
+            // Si falla la lectura del membre (permission-denied), assumim viewer
+            // (l'accés a l'org ja està validat pel canary)
+            console.log('[ORG_PROVIDER] Member read failed, assuming viewer role');
+            setUserRole('viewer');
           }
 
         } else {
@@ -226,34 +260,21 @@ function useOrganizationBySlug(orgSlug?: string) {
         }
 
       } catch (err) {
-        // DEMO: Silenciar errors de permisos (no bloquejants)
-        if (!isDemoEnv() || !isPermissionDenied(err)) {
-          console.error('Error loading organization:', err);
-        }
-
-        // SuperAdmin retry: si és error de permisos i encara no hem reintentat
-        if (isPermissionDenied(err) && !superAdminRetryRef.current && user) {
-          superAdminRetryRef.current = true; // Marcar que ja hem reintentat
-
-          try {
-            // Comprovar si és SuperAdmin
-            const saRef = doc(firestore, 'systemSuperAdmins', user.uid);
-            const saSnap = await getDoc(saRef);
-
-            if (saSnap.exists()) {
-              // És SuperAdmin, reintentar carregant l'organització
-              console.log('SuperAdmin detected, retrying organization load...');
-              // Tornar a executar loadOrganization al proper cicle
-              setTimeout(() => loadOrganization(), 100);
-              return; // No setError, deixem que el retry gestioni
-            }
-          } catch (retryErr) {
-            // Si falla el check de SuperAdmin, continuar amb l'error original
-            console.error('SuperAdmin check failed:', retryErr);
+        // AccessDeniedError: accés denegat per Firestore Rules (canary read failed)
+        if (err instanceof AccessDeniedError) {
+          console.log('[ORG_PROVIDER] Access denied by Firestore Rules');
+          setError(err);
+        } else if (isPermissionDenied(err)) {
+          // Error de permisos genèric de Firestore
+          console.log('[ORG_PROVIDER] Permission denied error:', (err as any)?.code || err);
+          setError(new AccessDeniedError());
+        } else {
+          // Altres errors (network, not found, etc.)
+          if (!isDemoEnv()) {
+            console.error('[ORG_PROVIDER] Error loading organization:', err);
           }
+          setError(err instanceof Error ? err : new Error('Error desconegut'));
         }
-
-        setError(err instanceof Error ? err : new Error('Error desconegut'));
       } finally {
         setIsLoading(false);
       }
