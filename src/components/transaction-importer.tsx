@@ -55,6 +55,20 @@ import { suggestPendingDocumentMatches } from '@/lib/pending-documents';
 
 type ImportMode = 'append' | 'replace';
 
+// Firestore batch limit is 500, use 450 for safety margin
+const BATCH_LIMIT = 450;
+
+/**
+ * Divideix un array en chunks de mida màxima
+ */
+function chunk<T>(arr: T[], size: number): T[][] {
+  const out: T[][] = [];
+  for (let i = 0; i < arr.length; i += size) {
+    out.push(arr.slice(i, i + size));
+  }
+  return out;
+}
+
 interface TransactionImporterProps {
   existingTransactions: Transaction[];
 }
@@ -559,25 +573,82 @@ export function TransactionImporter({ existingTransactions }: TransactionImporte
             log(`🎯 RESUM FINAL: ${finalMatched}/${transactionsToProcess.length} (${finalPercentage}%) transaccions amb contacte assignat`)
 
             const transactionsCollectionRef = collection(firestore, 'organizations', organizationId, 'transactions');
-            const batch = writeBatch(firestore);
 
-            if (mode === 'replace') {
-                existingTransactions.forEach(tx => {
-                    batch.delete(doc(transactionsCollectionRef, tx.id));
-                })
-            }
-            
-            // Crear transaccions i capturar IDs per al suggeriment de conciliació
+            // ═══════════════════════════════════════════════════════════════════
+            // CHUNKING: Dividir operacions en lots de màxim 450 per evitar error
+            // Firestore té un límit de 500 operacions per batch
+            // ═══════════════════════════════════════════════════════════════════
+
+            // Preparar operacions de delete (mode replace)
+            const deleteOperations: string[] = mode === 'replace'
+                ? existingTransactions.map(tx => tx.id)
+                : [];
+
+            // Preparar operacions de create i capturar IDs
             const newTransactions: Transaction[] = [];
+            const createOperations: { ref: ReturnType<typeof doc>; data: ReturnType<typeof normalizeTransaction> }[] = [];
+
             transactionsWithContacts.forEach(tx => {
                 const newDocRef = doc(transactionsCollectionRef);
                 const normalizedTx = normalizeTransaction(tx);
-                batch.set(newDocRef, normalizedTx);
-                // Guardar la transacció amb el seu ID per al post-processing
+                createOperations.push({ ref: newDocRef, data: normalizedTx });
                 newTransactions.push({ ...tx, id: newDocRef.id } as Transaction);
             });
 
-            await batch.commit();
+            // Combinar totes les operacions i dividir en chunks
+            const totalOperations = deleteOperations.length + createOperations.length;
+            const totalChunks = Math.ceil(totalOperations / BATCH_LIMIT);
+
+            log(`📦 Import: ${totalOperations} operacions totals (${deleteOperations.length} deletes, ${createOperations.length} creates) → ${totalChunks} lots`);
+
+            let operationsProcessed = 0;
+            let chunksCompleted = 0;
+
+            try {
+                // Processar deletes primer (en chunks)
+                if (deleteOperations.length > 0) {
+                    const deleteChunks = chunk(deleteOperations, BATCH_LIMIT);
+                    for (let i = 0; i < deleteChunks.length; i++) {
+                        const batch = writeBatch(firestore);
+                        deleteChunks[i].forEach(txId => {
+                            batch.delete(doc(transactionsCollectionRef, txId));
+                        });
+                        await batch.commit();
+                        operationsProcessed += deleteChunks[i].length;
+                        chunksCompleted++;
+                        log(`🗑️ Lot ${chunksCompleted}/${totalChunks}: ${deleteChunks[i].length} transaccions eliminades`);
+                    }
+                }
+
+                // Processar creates (en chunks)
+                const createChunks = chunk(createOperations, BATCH_LIMIT);
+                for (let i = 0; i < createChunks.length; i++) {
+                    const batch = writeBatch(firestore);
+                    createChunks[i].forEach(op => {
+                        batch.set(op.ref, op.data);
+                    });
+                    await batch.commit();
+                    operationsProcessed += createChunks[i].length;
+                    chunksCompleted++;
+                    log(`✅ Lot ${chunksCompleted}/${totalChunks}: ${createChunks[i].length} transaccions creades`);
+                }
+
+                log(`🎉 Import complet: ${operationsProcessed} operacions en ${chunksCompleted} lots`);
+
+            } catch (batchError: any) {
+                // Error a mig camí: informar l'usuari sense reintentar
+                console.error('Error during batch commit:', batchError);
+                const errorMessage = `Error al lot ${chunksCompleted + 1}/${totalChunks}. S'han processat ${operationsProcessed} operacions. No repeteixis sense revisar si s'han creat moviments parcials.`;
+
+                toast({
+                    variant: 'destructive',
+                    title: t.importers.transaction.errors.processingError,
+                    description: errorMessage,
+                    duration: 15000,
+                });
+                log(`❌ ERROR al lot ${chunksCompleted + 1}: ${batchError.message}`);
+                throw batchError; // Re-throw per entrar al catch extern
+            }
 
             // Post-import: suggerir conciliació amb documents pendents
             if (newTransactions.length > 0 && availableContacts) {
