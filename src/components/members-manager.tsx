@@ -62,12 +62,16 @@ export function MembersManager() {
   const { data: members, isLoading: membersLoading } = useCollection<OrganizationMember>(membersCollection);
 
   // Invitacions pendents
+  // NOTA: Només admins de l'org poden llistar invitacions (via Firestore Rules).
+  // useCollection pot fallar amb permission-denied si l'usuari no és admin.
+  // El hook useCollection ha de capturar l'error i no trencar la UI.
   const invitationsQuery = useMemoFirebase(
-    () => organizationId ? query(
+    // Només fer la query si l'usuari és admin (evitem errors permission-denied)
+    () => (organizationId && userRole === 'admin') ? query(
       collection(firestore, 'invitations'),
       where('organizationId', '==', organizationId)
     ) : null,
-    [firestore, organizationId]
+    [firestore, organizationId, userRole]
   );
 
   const { data: allInvitations } = useCollection<Invitation>(invitationsQuery);

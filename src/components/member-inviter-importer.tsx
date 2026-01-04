@@ -56,7 +56,7 @@ interface MemberInviterImporterProps {
 export function MemberInviterImporter({ open, onOpenChange, onComplete }: MemberInviterImporterProps) {
   const { toast } = useToast();
   const { firestore, user } = useFirebase();
-  const { organization, organizationId } = useCurrentOrganization();
+  const { organization, organizationId, userRole } = useCurrentOrganization();
   const { t } = useTranslations();
 
   // Membres existents
@@ -67,12 +67,14 @@ export function MemberInviterImporter({ open, onOpenChange, onComplete }: Member
   const { data: members } = useCollection<OrganizationMember>(membersCollection);
 
   // Invitacions pendents
+  // NOTA: Només admins de l'org poden llistar invitacions (via Firestore Rules).
+  // Només fem la query si l'usuari és admin per evitar errors permission-denied.
   const invitationsQuery = useMemoFirebase(
-    () => organizationId ? query(
+    () => (organizationId && userRole === 'admin') ? query(
       collection(firestore, 'invitations'),
       where('organizationId', '==', organizationId)
     ) : null,
-    [firestore, organizationId]
+    [firestore, organizationId, userRole]
   );
   const { data: allInvitations } = useCollection<Invitation>(invitationsQuery);
 
