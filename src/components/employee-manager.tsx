@@ -34,7 +34,7 @@ import {
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { PlusCircle, Edit, Trash2, UserCog } from 'lucide-react';
+import { PlusCircle, Edit, Trash2, UserCog, Download, Upload } from 'lucide-react';
 import type { Employee, Category } from '@/lib/data';
 import {
   Select,
@@ -50,6 +50,8 @@ import { collection, doc, query, where } from 'firebase/firestore';
 import { useCurrentOrganization } from '@/hooks/organization-provider';
 import { useTranslations } from '@/i18n';
 import { normalizeContact, formatIBANDisplay } from '@/lib/normalize';
+import { exportEmployeesToExcel } from '@/lib/employees-export';
+import { EmployeeImporter } from '@/components/employee-importer';
 
 type EmployeeFormData = Omit<Employee, 'id' | 'createdAt' | 'updatedAt'>;
 
@@ -106,6 +108,7 @@ export function EmployeeManager() {
   const [editingEmployee, setEditingEmployee] = React.useState<Employee | null>(null);
   const [employeeToDelete, setEmployeeToDelete] = React.useState<Employee | null>(null);
   const [formData, setFormData] = React.useState<EmployeeFormData>(emptyFormData);
+  const [isImportOpen, setIsImportOpen] = React.useState(false);
 
   const handleEdit = (employee: Employee) => {
     setEditingEmployee(employee);
@@ -260,12 +263,31 @@ export function EmployeeManager() {
                 {t.employees.description}
               </CardDescription>
             </div>
-            <DialogTrigger asChild>
-              <Button onClick={handleAddNew}>
-                <PlusCircle className="mr-2 h-4 w-4" />
-                {t.employees.add}
+            <div className="flex gap-2">
+              <Button
+                variant="outline"
+                size="icon"
+                onClick={() => setIsImportOpen(true)}
+                title="Importar des d'Excel"
+              >
+                <Upload className="h-4 w-4" />
               </Button>
-            </DialogTrigger>
+              <Button
+                variant="outline"
+                size="icon"
+                onClick={() => employees && employees.length > 0 && exportEmployeesToExcel(employees)}
+                disabled={!employees || employees.length === 0}
+                title="Exportar a Excel"
+              >
+                <Download className="h-4 w-4" />
+              </Button>
+              <DialogTrigger asChild>
+                <Button onClick={handleAddNew}>
+                  <PlusCircle className="mr-2 h-4 w-4" />
+                  {t.employees.add}
+                </Button>
+              </DialogTrigger>
+            </div>
           </CardHeader>
           <CardContent>
             <div className="rounded-md border">
@@ -488,6 +510,11 @@ export function EmployeeManager() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <EmployeeImporter
+        open={isImportOpen}
+        onOpenChange={setIsImportOpen}
+      />
     </>
   );
 }
