@@ -147,23 +147,33 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    if (!memberData) {
-      console.error(`[google-drive/start] User ${authResult.uid} not a member of org ${orgId}`);
-      return NextResponse.json(
-        { error: 'Not a member of this organization', code: 'NOT_MEMBER' },
-        { status: 403 }
-      );
-    }
+    // Comprovar si és SuperAdmin (té document a systemSuperAdmins)
+    const superAdminRef = db.doc(`systemSuperAdmins/${authResult.uid}`);
+    const superAdminSnap = await superAdminRef.get();
+    const isSuperAdmin = superAdminSnap.exists;
 
-    if (memberData.role !== 'admin') {
-      console.error(`[google-drive/start] User ${authResult.uid} is ${memberData.role}, not admin`);
-      return NextResponse.json(
-        { error: 'Only admins can connect backup providers', code: 'NOT_ADMIN' },
-        { status: 403 }
-      );
-    }
+    if (isSuperAdmin) {
+      console.log(`[google-drive/start] SuperAdmin ${authResult.uid} authorized for org ${orgId}`);
+    } else {
+      // Si no és SuperAdmin, cal ser membre admin de l'org
+      if (!memberData) {
+        console.error(`[google-drive/start] User ${authResult.uid} not a member of org ${orgId}`);
+        return NextResponse.json(
+          { error: 'Not a member of this organization', code: 'NOT_MEMBER' },
+          { status: 403 }
+        );
+      }
 
-    console.log(`[google-drive/start] Auth OK for ${authResult.uid} (${memberData.role}) in org ${orgId}`);
+      if (memberData.role !== 'admin') {
+        console.error(`[google-drive/start] User ${authResult.uid} is ${memberData.role}, not admin`);
+        return NextResponse.json(
+          { error: 'Only admins can connect backup providers', code: 'NOT_ADMIN' },
+          { status: 403 }
+        );
+      }
+
+      console.log(`[google-drive/start] Auth OK for ${authResult.uid} (${memberData.role}) in org ${orgId}`);
+    }
 
     // 4. Verificar secrets
     const GOOGLE_CLIENT_ID = process.env.GOOGLE_DRIVE_CLIENT_ID;
