@@ -6,6 +6,7 @@ import { Firestore } from 'firebase/firestore';
 import { Auth, User, onAuthStateChanged } from 'firebase/auth';
 import { FirebaseStorage } from 'firebase/storage';
 import { FirebaseErrorListener } from '@/components/FirebaseErrorListener'
+import { AuthRedirectGuard } from '@/components/AuthRedirectGuard'
 
 interface FirebaseProviderProps {
   children: ReactNode;
@@ -112,6 +113,7 @@ export const FirebaseProvider: React.FC<FirebaseProviderProps> = ({
   return (
     <FirebaseContext.Provider value={contextValue}>
       <FirebaseErrorListener />
+      <AuthRedirectGuard />
       {children}
     </FirebaseContext.Provider>
   );
