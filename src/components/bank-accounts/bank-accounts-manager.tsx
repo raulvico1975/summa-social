@@ -24,13 +24,15 @@ import {
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
-import { PlusCircle, Edit, Star, StarOff, Power, PowerOff, Loader2 } from 'lucide-react';
+import { PlusCircle, Edit, Star, StarOff, Power, PowerOff, Loader2, Download, Upload } from 'lucide-react';
 import { useBankAccounts } from '@/hooks/use-bank-accounts';
 import { useToast } from '@/hooks/use-toast';
 import { useTranslations } from '@/i18n';
 import { useCurrentOrganization } from '@/hooks/organization-provider';
 import type { BankAccount } from '@/lib/data';
 import type { CreateBankAccountData, UpdateBankAccountData } from '@/lib/bank-accounts';
+import { exportBankAccountsToExcel } from '@/lib/bank-accounts-export';
+import { BankAccountImporter } from '@/components/bank-accounts/bank-account-importer';
 
 interface FormData {
   name: string;
@@ -65,6 +67,7 @@ export function BankAccountsManager() {
   const [editingAccount, setEditingAccount] = React.useState<BankAccount | null>(null);
   const [formData, setFormData] = React.useState<FormData>(EMPTY_FORM);
   const [isSaving, setIsSaving] = React.useState(false);
+  const [isImportOpen, setIsImportOpen] = React.useState(false);
 
   // Mostrar també els inactius si hi ha
   const inactiveAccounts = React.useMemo(
@@ -208,12 +211,31 @@ export function BankAccountsManager() {
             <CardDescription>{t.settings.bankAccounts.description}</CardDescription>
           </div>
           {canEdit && (
-            <DialogTrigger asChild>
-              <Button size="sm" onClick={handleAddNew}>
-                <PlusCircle className="mr-2 h-4 w-4" />
-                {t.settings.bankAccounts.addAccount}
+            <div className="flex gap-2">
+              <Button
+                variant="outline"
+                size="icon"
+                onClick={() => setIsImportOpen(true)}
+                title="Importar des d'Excel"
+              >
+                <Upload className="h-4 w-4" />
               </Button>
-            </DialogTrigger>
+              <Button
+                variant="outline"
+                size="icon"
+                onClick={() => allBankAccounts.length > 0 && exportBankAccountsToExcel(allBankAccounts)}
+                disabled={allBankAccounts.length === 0}
+                title="Exportar a Excel"
+              >
+                <Download className="h-4 w-4" />
+              </Button>
+              <DialogTrigger asChild>
+                <Button size="sm" onClick={handleAddNew}>
+                  <PlusCircle className="mr-2 h-4 w-4" />
+                  {t.settings.bankAccounts.addAccount}
+                </Button>
+              </DialogTrigger>
+            </div>
           )}
         </CardHeader>
         <CardContent>
@@ -387,6 +409,11 @@ export function BankAccountsManager() {
           </DialogFooter>
         </DialogContent>
       )}
+
+      <BankAccountImporter
+        open={isImportOpen}
+        onOpenChange={setIsImportOpen}
+      />
     </Dialog>
   );
 }
