@@ -2,7 +2,7 @@
 
 'use client';
 
-import React, { createContext, useContext, ReactNode, useMemo } from 'react';
+import React, { createContext, useContext, ReactNode, useMemo, useRef } from 'react';
 import { useParams, useRouter, usePathname, useSearchParams } from 'next/navigation';
 import { useFirebase, useCollection, useMemoFirebase } from '@/firebase';
 import { collection, collectionGroup, query, where, getDocs, doc, getDoc, limit } from 'firebase/firestore';
@@ -31,6 +31,15 @@ interface OrganizationProviderProps {
 }
 
 /**
+ * Detecta si un error és un error de permisos de Firestore/Firebase
+ */
+function isPermissionDenied(err: unknown): boolean {
+  if (!(err instanceof Error)) return false;
+  const msg = err.message.toLowerCase();
+  return msg.includes('permission') || msg.includes('permission-denied') || msg.includes('missing or insufficient');
+}
+
+/**
  * Hook intern per carregar l'organització pel slug o per l'usuari
  */
 function useOrganizationBySlug(orgSlug?: string) {
@@ -45,6 +54,9 @@ function useOrganizationBySlug(orgSlug?: string) {
   const [userRole, setUserRole] = React.useState<OrganizationRole | null>(null);
   const [isLoading, setIsLoading] = React.useState(true);
   const [error, setError] = React.useState<Error | null>(null);
+
+  // Ref per controlar el retry de SuperAdmin (màxim 1 vegada per sessió)
+  const superAdminRetryRef = useRef(false);
 
   React.useEffect(() => {
     // Si encara estem carregant l'usuari, esperem
@@ -113,9 +125,12 @@ function useOrganizationBySlug(orgSlug?: string) {
             if (isDemoEnv()) {
               setUserRole('admin');
             } else {
-              // Comprovar si és Super Admin (només en prod)
-              const SUPER_ADMIN_UID = 'f2AHJqjXiOZkYajwkOnZ8RY6h2k2';
-              if (user.uid !== SUPER_ADMIN_UID) {
+              // Comprovar si és Super Admin via systemSuperAdmins collection
+              const saRef = doc(firestore, 'systemSuperAdmins', user.uid);
+              const saSnap = await getDoc(saRef);
+              const isSuperAdmin = saSnap.exists();
+
+              if (!isSuperAdmin) {
                 throw new Error('No tens accés a aquesta organització');
               }
               setUserRole('admin');
@@ -212,11 +227,32 @@ function useOrganizationBySlug(orgSlug?: string) {
 
       } catch (err) {
         // DEMO: Silenciar errors de permisos (no bloquejants)
-        const isPermissionError = err instanceof Error &&
-          (err.message.includes('permission') || err.message.includes('Permission'));
-        if (!isDemoEnv() || !isPermissionError) {
+        if (!isDemoEnv() || !isPermissionDenied(err)) {
           console.error('Error loading organization:', err);
         }
+
+        // SuperAdmin retry: si és error de permisos i encara no hem reintentat
+        if (isPermissionDenied(err) && !superAdminRetryRef.current && user) {
+          superAdminRetryRef.current = true; // Marcar que ja hem reintentat
+
+          try {
+            // Comprovar si és SuperAdmin
+            const saRef = doc(firestore, 'systemSuperAdmins', user.uid);
+            const saSnap = await getDoc(saRef);
+
+            if (saSnap.exists()) {
+              // És SuperAdmin, reintentar carregant l'organització
+              console.log('SuperAdmin detected, retrying organization load...');
+              // Tornar a executar loadOrganization al proper cicle
+              setTimeout(() => loadOrganization(), 100);
+              return; // No setError, deixem que el retry gestioni
+            }
+          } catch (retryErr) {
+            // Si falla el check de SuperAdmin, continuar amb l'error original
+            console.error('SuperAdmin check failed:', retryErr);
+          }
+        }
+
         setError(err instanceof Error ? err : new Error('Error desconegut'));
       } finally {
         setIsLoading(false);
