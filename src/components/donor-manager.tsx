@@ -66,6 +66,7 @@ import { useTranslations } from '@/i18n';
 import { normalizeContact, formatCurrencyEU } from '@/lib/normalize';
 import { cn } from '@/lib/utils';
 import { exportDonorsToExcel } from '@/lib/donors-export';
+import { useIsMobile } from '@/hooks/use-is-mobile';
 
 type DonorFormData = Omit<Donor, 'id' | 'createdAt' | 'updatedAt'>;
 
@@ -95,6 +96,7 @@ export function DonorManager() {
   const { organizationId } = useCurrentOrganization();
   const { toast } = useToast();
   const { t } = useTranslations();
+  const isMobile = useIsMobile();
 
   const contactsCollection = useMemoFirebase(
     () => organizationId ? collection(firestore, 'organizations', organizationId, 'contacts') : null,
@@ -572,7 +574,7 @@ export function DonorManager() {
     <TooltipProvider>
       <Dialog open={isDialogOpen} onOpenChange={handleOpenChange}>
         <Card>
-          <CardHeader className="flex flex-row items-center justify-between">
+          <CardHeader className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
             <div>
               <CardTitle className="text-2xl font-bold tracking-tight font-headline">
                 {t.donors.title}
@@ -581,7 +583,7 @@ export function DonorManager() {
                 {t.donors.description}
               </CardDescription>
             </div>
-            <div className="flex gap-2">
+            <div className="flex flex-wrap gap-2">
               <Button
                 variant="outline"
                 onClick={() => donors && exportDonorsToExcel(donors)}
@@ -750,192 +752,342 @@ export function DonorManager() {
               </div>
             )}
 
-            <div className="rounded-md border">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>{t.donors.name}</TableHead>
-                    <TableHead>{t.donors.taxId}</TableHead>
-                    <TableHead>{t.donors.donorType}</TableHead>
-                    <TableHead>{t.donors.membershipType}</TableHead>
-                    <TableHead>{t.donors.amount}</TableHead>
-                    {showIncompleteOnly && (
-                      <TableHead className="text-amber-600">{t.donors.missingColumn || 'Falta'}</TableHead>
-                    )}
-                    <TableHead className="text-right">{t.donors.actions}</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filteredDonors && filteredDonors.map((donor) => (
-                    <TableRow key={donor.id} className="h-10">
-                      <TableCell className="font-medium py-1">
-                        <div className="flex items-center gap-2">
-                          {donor.donorType === 'individual' ? (
-                            <User className="h-4 w-4 text-muted-foreground" />
-                          ) : (
-                            <Building2 className="h-4 w-4 text-muted-foreground" />
-                          )}
-                          <button
-                            type="button"
-                            onClick={() => handleViewDetail(donor)}
-                            className="text-blue-600 hover:text-blue-800 hover:underline text-left font-medium cursor-pointer"
-                          >
-                            {donor.name}
-                          </button>
-                          {donor.status === 'inactive' && (
-                            <Badge variant="secondary" className="bg-gray-200 text-gray-600 text-xs py-0 px-1.5">
-                              {t.donors.inactiveBadge}
-                            </Badge>
-                          )}
-                          {donorsWithReturns.has(donor.id) && (
-                            <Tooltip>
-                              <TooltipTrigger asChild>
-                                <Badge variant="secondary" className="ml-1 text-xs bg-orange-100 text-orange-700 border-orange-200">
-                                  Dev.
-                                </Badge>
-                              </TooltipTrigger>
-                              <TooltipContent>
-                                <p>Aquest donant té devolucions assignades</p>
-                              </TooltipContent>
-                            </Tooltip>
-                          )}
-                          {hasIncompleteData(donor) && (
-                            <Tooltip>
-                              <TooltipTrigger>
-                                <AlertTriangle className="h-4 w-4 text-amber-500" />
-                              </TooltipTrigger>
-                              <TooltipContent>
-                                {t.donors.incompleteDataTooltip}
-                              </TooltipContent>
-                            </Tooltip>
-                          )}
-                        </div>
-                      </TableCell>
-                      <TableCell className="py-1 text-xs">{donor.taxId || <span className="text-amber-500">-</span>}</TableCell>
-                      <TableCell className="py-1">
-                        <Badge variant="outline" className="text-xs py-0 px-1.5">
-                          {donor.donorType === 'individual' ? t.donors.types.individual : t.donors.types.company}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="py-1">
-                        {donor.membershipType === 'recurring' ? (
-                          <Badge className="bg-green-100 text-green-800 text-xs py-0 px-1.5">
-                            <RefreshCw className="mr-0.5 h-2.5 w-2.5" />
-                            {t.donors.membership.recurring}
-                          </Badge>
-                        ) : (
-                          <Badge variant="secondary" className="text-xs py-0 px-1.5">{t.donors.membership.oneTime}</Badge>
-                        )}
-                      </TableCell>
-                      <TableCell className="py-1 text-xs">
-                        {donor.membershipType === 'recurring' && donor.monthlyAmount
-                          ? formatCurrencyEU(donor.monthlyAmount) + `/${t.donors.perMonth}`
-                          : '-'
-                        }
-                      </TableCell>
+            {/* ═══════════════════════════════════════════════════════════════════════
+                DESKTOP: Taula clàssica
+                ═══════════════════════════════════════════════════════════════════════ */}
+            {!isMobile && (
+              <div className="rounded-md border">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>{t.donors.name}</TableHead>
+                      <TableHead>{t.donors.taxId}</TableHead>
+                      <TableHead>{t.donors.donorType}</TableHead>
+                      <TableHead>{t.donors.membershipType}</TableHead>
+                      <TableHead>{t.donors.amount}</TableHead>
                       {showIncompleteOnly && (
-                        <TableCell className="py-1">
-                          <div className="flex flex-wrap gap-1">
-                            {getMissingFields(donor).map(field => (
-                              <Badge key={field} variant="outline" className="text-amber-600 border-amber-300 text-xs py-0 px-1.5">
-                                {field}
+                        <TableHead className="text-amber-600">{t.donors.missingColumn || 'Falta'}</TableHead>
+                      )}
+                      <TableHead className="text-right">{t.donors.actions}</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {filteredDonors && filteredDonors.map((donor) => (
+                      <TableRow key={donor.id} className="h-10">
+                        <TableCell className="font-medium py-1">
+                          <div className="flex items-center gap-2">
+                            {donor.donorType === 'individual' ? (
+                              <User className="h-4 w-4 text-muted-foreground" />
+                            ) : (
+                              <Building2 className="h-4 w-4 text-muted-foreground" />
+                            )}
+                            <button
+                              type="button"
+                              onClick={() => handleViewDetail(donor)}
+                              className="text-blue-600 hover:text-blue-800 hover:underline text-left font-medium cursor-pointer"
+                            >
+                              {donor.name}
+                            </button>
+                            {donor.status === 'inactive' && (
+                              <Badge variant="secondary" className="bg-gray-200 text-gray-600 text-xs py-0 px-1.5">
+                                {t.donors.inactiveBadge}
                               </Badge>
-                            ))}
+                            )}
+                            {donorsWithReturns.has(donor.id) && (
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <Badge variant="secondary" className="ml-1 text-xs bg-orange-100 text-orange-700 border-orange-200">
+                                    Dev.
+                                  </Badge>
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                  <p>Aquest donant té devolucions assignades</p>
+                                </TooltipContent>
+                              </Tooltip>
+                            )}
+                            {hasIncompleteData(donor) && (
+                              <Tooltip>
+                                <TooltipTrigger>
+                                  <AlertTriangle className="h-4 w-4 text-amber-500" />
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                  {t.donors.incompleteDataTooltip}
+                                </TooltipContent>
+                              </Tooltip>
+                            )}
                           </div>
                         </TableCell>
-                      )}
-                      <TableCell className="text-right py-1">
-                        {donor.status === 'inactive' && (
+                        <TableCell className="py-1 text-xs">{donor.taxId || <span className="text-amber-500">-</span>}</TableCell>
+                        <TableCell className="py-1">
+                          <Badge variant="outline" className="text-xs py-0 px-1.5">
+                            {donor.donorType === 'individual' ? t.donors.types.individual : t.donors.types.company}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="py-1">
+                          {donor.membershipType === 'recurring' ? (
+                            <Badge className="bg-green-100 text-green-800 text-xs py-0 px-1.5">
+                              <RefreshCw className="mr-0.5 h-2.5 w-2.5" />
+                              {t.donors.membership.recurring}
+                            </Badge>
+                          ) : (
+                            <Badge variant="secondary" className="text-xs py-0 px-1.5">{t.donors.membership.oneTime}</Badge>
+                          )}
+                        </TableCell>
+                        <TableCell className="py-1 text-xs">
+                          {donor.membershipType === 'recurring' && donor.monthlyAmount
+                            ? formatCurrencyEU(donor.monthlyAmount) + `/${t.donors.perMonth}`
+                            : '-'
+                          }
+                        </TableCell>
+                        {showIncompleteOnly && (
+                          <TableCell className="py-1">
+                            <div className="flex flex-wrap gap-1">
+                              {getMissingFields(donor).map(field => (
+                                <Badge key={field} variant="outline" className="text-amber-600 border-amber-300 text-xs py-0 px-1.5">
+                                  {field}
+                                </Badge>
+                              ))}
+                            </div>
+                          </TableCell>
+                        )}
+                        <TableCell className="text-right py-1">
+                          {donor.status === 'inactive' && (
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-9 w-9 text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50"
+                                  onClick={() => handleReactivate(donor)}
+                                  aria-label={t.donors.reactivate}
+                                >
+                                  <RotateCcw className="h-4 w-4" />
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent>{t.donors.reactivate}</TooltipContent>
+                            </Tooltip>
+                          )}
                           <Tooltip>
                             <TooltipTrigger asChild>
                               <Button
                                 variant="ghost"
                                 size="icon"
-                                className="h-9 w-9 text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50"
-                                onClick={() => handleReactivate(donor)}
-                                aria-label={t.donors.reactivate}
+                                className="h-9 w-9 text-muted-foreground hover:text-foreground hover:bg-muted/40"
+                                onClick={() => handleEdit(donor)}
+                                aria-label={t.donors.editDonor ?? 'Editar donant'}
                               >
-                                <RotateCcw className="h-4 w-4" />
+                                <Edit className="h-4 w-4" />
                               </Button>
                             </TooltipTrigger>
-                            <TooltipContent>{t.donors.reactivate}</TooltipContent>
+                            <TooltipContent>{t.donors.editDonor ?? 'Editar'}</TooltipContent>
                           </Tooltip>
-                        )}
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-9 w-9 text-muted-foreground hover:text-foreground hover:bg-muted/40"
-                              onClick={() => handleEdit(donor)}
-                              aria-label={t.donors.editDonor ?? 'Editar donant'}
-                            >
-                              <Edit className="h-4 w-4" />
-                            </Button>
-                          </TooltipTrigger>
-                          <TooltipContent>{t.donors.editDonor ?? 'Editar'}</TooltipContent>
-                        </Tooltip>
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-9 w-9 text-rose-600 hover:text-rose-700 hover:bg-rose-50"
-                              onClick={() => handleDeleteRequest(donor)}
-                              aria-label={t.donors.deleteDonor ?? 'Eliminar donant'}
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          </TooltipTrigger>
-                          <TooltipContent>{t.donors.deleteDonor ?? 'Eliminar'}</TooltipContent>
-                        </Tooltip>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                  {/* Skeleton loading state */}
-                  {isLoadingDonors && !donorsRaw && (
-                    Array.from({ length: 6 }).map((_, i) => (
-                      <TableRow key={`skeleton-${i}`}>
-                        <TableCell><Skeleton className="h-4 w-32" /></TableCell>
-                        <TableCell><Skeleton className="h-4 w-24" /></TableCell>
-                        <TableCell><Skeleton className="h-4 w-40" /></TableCell>
-                        <TableCell><Skeleton className="h-4 w-28" /></TableCell>
-                        <TableCell><Skeleton className="h-4 w-24" /></TableCell>
-                        {showIncompleteOnly && <TableCell><Skeleton className="h-4 w-20" /></TableCell>}
-                        <TableCell><Skeleton className="h-8 w-16" /></TableCell>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-9 w-9 text-rose-600 hover:text-rose-700 hover:bg-rose-50"
+                                onClick={() => handleDeleteRequest(donor)}
+                                aria-label={t.donors.deleteDonor ?? 'Eliminar donant'}
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>{t.donors.deleteDonor ?? 'Eliminar'}</TooltipContent>
+                          </Tooltip>
+                        </TableCell>
                       </TableRow>
-                    ))
-                  )}
-                  {/* Empty state (only when not loading) */}
-                  {!isLoadingDonors && (!filteredDonors || filteredDonors.length === 0) && (
-                    <TableRow>
-                      <TableCell colSpan={showIncompleteOnly ? 7 : 6} className="p-0">
-                        <EmptyState
-                          icon={searchQuery ? Search : Users}
-                          title={
-                            searchQuery
-                              ? (t.emptyStates?.donors?.noResults ?? t.donors.noSearchResults)
-                              : showIncompleteOnly
-                                ? (t.donors.noIncompleteData || "No hi ha donants amb dades incompletes")
-                                : showWithReturnsOnly
-                                  ? "No hi ha donants amb devolucions"
-                                  : (t.emptyStates?.donors?.noData ?? t.donors.noData)
-                          }
-                          description={
-                            searchQuery
-                              ? (t.emptyStates?.donors?.noResultsDesc ?? undefined)
-                              : !showIncompleteOnly && !showWithReturnsOnly
-                                ? (t.emptyStates?.donors?.noDataDesc ?? undefined)
-                                : undefined
-                          }
-                          className="border-0 rounded-none py-12"
-                        />
-                      </TableCell>
-                    </TableRow>
-                  )}
-                </TableBody>
-              </Table>
-            </div>
+                    ))}
+                    {/* Skeleton loading state */}
+                    {isLoadingDonors && !donorsRaw && (
+                      Array.from({ length: 6 }).map((_, i) => (
+                        <TableRow key={`skeleton-${i}`}>
+                          <TableCell><Skeleton className="h-4 w-32" /></TableCell>
+                          <TableCell><Skeleton className="h-4 w-24" /></TableCell>
+                          <TableCell><Skeleton className="h-4 w-40" /></TableCell>
+                          <TableCell><Skeleton className="h-4 w-28" /></TableCell>
+                          <TableCell><Skeleton className="h-4 w-24" /></TableCell>
+                          {showIncompleteOnly && <TableCell><Skeleton className="h-4 w-20" /></TableCell>}
+                          <TableCell><Skeleton className="h-8 w-16" /></TableCell>
+                        </TableRow>
+                      ))
+                    )}
+                    {/* Empty state (only when not loading) */}
+                    {!isLoadingDonors && (!filteredDonors || filteredDonors.length === 0) && (
+                      <TableRow>
+                        <TableCell colSpan={showIncompleteOnly ? 7 : 6} className="p-0">
+                          <EmptyState
+                            icon={searchQuery ? Search : Users}
+                            title={
+                              searchQuery
+                                ? (t.emptyStates?.donors?.noResults ?? t.donors.noSearchResults)
+                                : showIncompleteOnly
+                                  ? (t.donors.noIncompleteData || "No hi ha donants amb dades incompletes")
+                                  : showWithReturnsOnly
+                                    ? "No hi ha donants amb devolucions"
+                                    : (t.emptyStates?.donors?.noData ?? t.donors.noData)
+                            }
+                            description={
+                              searchQuery
+                                ? (t.emptyStates?.donors?.noResultsDesc ?? undefined)
+                                : !showIncompleteOnly && !showWithReturnsOnly
+                                  ? (t.emptyStates?.donors?.noDataDesc ?? undefined)
+                                  : undefined
+                            }
+                            className="border-0 rounded-none py-12"
+                          />
+                        </TableCell>
+                      </TableRow>
+                    )}
+                  </TableBody>
+                </Table>
+              </div>
+            )}
+
+            {/* ═══════════════════════════════════════════════════════════════════════
+                MÒBIL: Stacked rows (sense scroll horitzontal)
+                ═══════════════════════════════════════════════════════════════════════ */}
+            {isMobile && (
+              <div className="space-y-2">
+                {/* Skeleton loading state mòbil */}
+                {isLoadingDonors && !donorsRaw && (
+                  Array.from({ length: 4 }).map((_, i) => (
+                    <div key={`skeleton-mobile-${i}`} className="border rounded-lg p-3 space-y-2">
+                      <div className="flex justify-between">
+                        <Skeleton className="h-4 w-32" />
+                        <Skeleton className="h-4 w-16" />
+                      </div>
+                      <Skeleton className="h-3 w-24" />
+                      <div className="flex gap-2">
+                        <Skeleton className="h-5 w-16" />
+                        <Skeleton className="h-5 w-20" />
+                      </div>
+                    </div>
+                  ))
+                )}
+
+                {/* Llista de donants */}
+                {!isLoadingDonors && filteredDonors && filteredDonors.map((donor) => (
+                  <div key={donor.id} className="border rounded-lg p-3">
+                    {/* Fila 1: Nom + Accions */}
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-2">
+                          {donor.donorType === 'individual' ? (
+                            <User className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                          ) : (
+                            <Building2 className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                          )}
+                          <button
+                            type="button"
+                            onClick={() => handleViewDetail(donor)}
+                            className="text-blue-600 hover:text-blue-800 text-left font-medium truncate"
+                          >
+                            {donor.name}
+                          </button>
+                          {hasIncompleteData(donor) && (
+                            <AlertTriangle className="h-4 w-4 text-amber-500 flex-shrink-0" />
+                          )}
+                        </div>
+                        {donor.taxId && (
+                          <div className="text-xs text-muted-foreground mt-0.5 ml-6">{donor.taxId}</div>
+                        )}
+                      </div>
+                      <div className="flex gap-1 flex-shrink-0">
+                        {donor.status === 'inactive' && (
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 text-emerald-600"
+                            onClick={() => handleReactivate(donor)}
+                          >
+                            <RotateCcw className="h-4 w-4" />
+                          </Button>
+                        )}
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8"
+                          onClick={() => handleEdit(donor)}
+                        >
+                          <Edit className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 text-rose-600"
+                          onClick={() => handleDeleteRequest(donor)}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </div>
+
+                    {/* Fila 2: Badges + Import */}
+                    <div className="mt-2 flex flex-wrap items-center gap-2">
+                      {donor.status === 'inactive' && (
+                        <Badge variant="secondary" className="bg-gray-200 text-gray-600 text-xs py-0 px-1.5">
+                          {t.donors.inactiveBadge}
+                        </Badge>
+                      )}
+                      {donor.membershipType === 'recurring' ? (
+                        <Badge className="bg-green-100 text-green-800 text-xs py-0 px-1.5">
+                          <RefreshCw className="mr-0.5 h-2.5 w-2.5" />
+                          {t.donors.membership.recurring}
+                        </Badge>
+                      ) : (
+                        <Badge variant="secondary" className="text-xs py-0 px-1.5">{t.donors.membership.oneTime}</Badge>
+                      )}
+                      {donor.membershipType === 'recurring' && donor.monthlyAmount && (
+                        <span className="text-xs text-muted-foreground">
+                          {formatCurrencyEU(donor.monthlyAmount)}/{t.donors.perMonth}
+                        </span>
+                      )}
+                      {donorsWithReturns.has(donor.id) && (
+                        <Badge variant="secondary" className="text-xs bg-orange-100 text-orange-700 border-orange-200">
+                          Dev.
+                        </Badge>
+                      )}
+                    </div>
+
+                    {/* Fila 3: Camps que falten (si aplica) */}
+                    {showIncompleteOnly && hasIncompleteData(donor) && (
+                      <div className="mt-2 flex flex-wrap gap-1">
+                        {getMissingFields(donor).map(field => (
+                          <Badge key={field} variant="outline" className="text-amber-600 border-amber-300 text-xs py-0 px-1.5">
+                            {field}
+                          </Badge>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                ))}
+
+                {/* Empty state mòbil */}
+                {!isLoadingDonors && (!filteredDonors || filteredDonors.length === 0) && (
+                  <EmptyState
+                    icon={searchQuery ? Search : Users}
+                    title={
+                      searchQuery
+                        ? (t.emptyStates?.donors?.noResults ?? t.donors.noSearchResults)
+                        : showIncompleteOnly
+                          ? (t.donors.noIncompleteData || "No hi ha donants amb dades incompletes")
+                          : showWithReturnsOnly
+                            ? "No hi ha donants amb devolucions"
+                            : (t.emptyStates?.donors?.noData ?? t.donors.noData)
+                    }
+                    description={
+                      searchQuery
+                        ? (t.emptyStates?.donors?.noResultsDesc ?? undefined)
+                        : !showIncompleteOnly && !showWithReturnsOnly
+                          ? (t.emptyStates?.donors?.noDataDesc ?? undefined)
+                          : undefined
+                    }
+                    className="py-12"
+                  />
+                )}
+              </div>
+            )}
           </CardContent>
         </Card>
 

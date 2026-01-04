@@ -49,12 +49,14 @@ import { useCollection, useFirebase, useMemoFirebase, addDocumentNonBlocking, de
 import { collection, doc } from 'firebase/firestore';
 import { useTranslations } from '@/i18n';
 import { useCurrentOrganization } from '@/hooks/organization-provider';
+import { useIsMobile } from '@/hooks/use-is-mobile';
 
 
 export function EmisorManager() {
   const { firestore } = useFirebase();
   const { organizationId } = useCurrentOrganization();
   const { t } = useTranslations();
+  const isMobile = useIsMobile();
 
   // ═══════════════════════════════════════════════════════════════════════════
   // CANVI: Ara la col·lecció apunta a organizations/{orgId}/emissors
@@ -149,7 +151,7 @@ export function EmisorManager() {
     <>
     <Dialog open={isDialogOpen} onOpenChange={handleOpenChange}>
       <Card>
-        <CardHeader className="flex flex-row items-center justify-between">
+        <CardHeader className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
           <div>
             <CardTitle>{t.emissors.manage}</CardTitle>
             <CardDescription>{t.emissors.manageDescription}</CardDescription>
@@ -162,51 +164,107 @@ export function EmisorManager() {
           </DialogTrigger>
         </CardHeader>
         <CardContent>
-            <div className="rounded-md border">
-            <Table>
-                <TableHeader>
-                <TableRow>
-                    <TableHead>{t.emissors.name}</TableHead>
-                    <TableHead>{t.emissors.taxId}</TableHead>
-                    <TableHead>{t.emissors.zipCode}</TableHead>
-                    <TableHead>{t.emissors.type}</TableHead>
-                    <TableHead className="text-right">{t.emissors.actions}</TableHead>
-                </TableRow>
-                </TableHeader>
-                <TableBody>
+            {/* ═══════════════════════════════════════════════════════════════════════
+                DESKTOP: Taula clàssica
+                ═══════════════════════════════════════════════════════════════════════ */}
+            {!isMobile && (
+              <div className="rounded-md border">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>{t.emissors.name}</TableHead>
+                      <TableHead>{t.emissors.taxId}</TableHead>
+                      <TableHead>{t.emissors.zipCode}</TableHead>
+                      <TableHead>{t.emissors.type}</TableHead>
+                      <TableHead className="text-right">{t.emissors.actions}</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {emissors && emissors.map((emisor) => (
+                      <TableRow key={emisor.id}>
+                        <TableCell className="font-medium">{emisor.name}</TableCell>
+                        <TableCell>{emisor.taxId}</TableCell>
+                        <TableCell>{emisor.zipCode}</TableCell>
+                        <TableCell>
+                          <Badge variant="secondary">{emisorTypeMap[emisor.type]}</Badge>
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <Button variant="ghost" size="icon" onClick={() => handleEdit(emisor)}>
+                            <Edit className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="text-red-500 hover:text-red-600"
+                            onClick={() => handleDeleteRequest(emisor)}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                    {(!emissors || emissors.length === 0) && (
+                      <TableRow>
+                        <TableCell colSpan={5} className="text-center text-muted-foreground">
+                          {t.emissors.noEmissors}
+                        </TableCell>
+                      </TableRow>
+                    )}
+                  </TableBody>
+                </Table>
+              </div>
+            )}
+
+            {/* ═══════════════════════════════════════════════════════════════════════
+                MÒBIL: Stacked rows (sense scroll horitzontal)
+                ═══════════════════════════════════════════════════════════════════════ */}
+            {isMobile && (
+              <div className="space-y-2">
                 {emissors && emissors.map((emisor) => (
-                    <TableRow key={emisor.id}>
-                    <TableCell className="font-medium">{emisor.name}</TableCell>
-                    <TableCell>{emisor.taxId}</TableCell>
-                    <TableCell>{emisor.zipCode}</TableCell>
-                    <TableCell>
-                        <Badge variant="secondary">{emisorTypeMap[emisor.type]}</Badge>
-                    </TableCell>
-                    <TableCell className="text-right">
-                        <Button variant="ghost" size="icon" onClick={() => handleEdit(emisor)}>
-                        <Edit className="h-4 w-4" />
+                  <div key={emisor.id} className="border rounded-lg p-3">
+                    {/* Fila 1: Nom + Accions */}
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="min-w-0 flex-1">
+                        <div className="font-medium truncate">{emisor.name}</div>
+                        <div className="text-xs text-muted-foreground mt-0.5">{emisor.taxId}</div>
+                      </div>
+                      <div className="flex gap-1 flex-shrink-0">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8"
+                          onClick={() => handleEdit(emisor)}
+                        >
+                          <Edit className="h-4 w-4" />
                         </Button>
                         <Button
-                        variant="ghost"
-                        size="icon"
-                        className="text-red-500 hover:text-red-600"
-                        onClick={() => handleDeleteRequest(emisor)}
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 text-red-500"
+                          onClick={() => handleDeleteRequest(emisor)}
                         >
-                        <Trash2 className="h-4 w-4" />
+                          <Trash2 className="h-4 w-4" />
                         </Button>
-                    </TableCell>
-                    </TableRow>
+                      </div>
+                    </div>
+
+                    {/* Fila 2: CP + Tipus */}
+                    <div className="mt-2 flex flex-wrap items-center gap-2">
+                      {emisor.zipCode && (
+                        <span className="text-xs text-muted-foreground">{emisor.zipCode}</span>
+                      )}
+                      <Badge variant="secondary" className="text-xs">{emisorTypeMap[emisor.type]}</Badge>
+                    </div>
+                  </div>
                 ))}
+
                 {(!emissors || emissors.length === 0) && (
-                    <TableRow>
-                        <TableCell colSpan={5} className="text-center text-muted-foreground">
-                            {t.emissors.noEmissors}
-                        </TableCell>
-                    </TableRow>
+                  <div className="text-center text-muted-foreground py-12">
+                    {t.emissors.noEmissors}
+                  </div>
                 )}
-                </TableBody>
-            </Table>
-            </div>
+              </div>
+            )}
         </CardContent>
       </Card>
       

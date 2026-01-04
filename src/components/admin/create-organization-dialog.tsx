@@ -247,8 +247,8 @@ export function CreateOrganizationDialog({ open, onOpenChange }: CreateOrganizat
                 {t.superAdmin.createOrganizationDialog.organizationDataTitle}
               </h3>
 
-              <div className="grid grid-cols-2 gap-4">
-                <div className="col-span-2 space-y-2">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="col-span-full space-y-2">
                   <Label htmlFor="name">{t.superAdmin.createOrganizationDialog.nameLabel}</Label>
                   <Input
                     id="name"
@@ -290,7 +290,7 @@ export function CreateOrganizationDialog({ open, onOpenChange }: CreateOrganizat
                 {t.superAdmin.createOrganizationDialog.firstAdminTitle}
               </h3>
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="adminEmail">{t.superAdmin.createOrganizationDialog.adminEmailLabel}</Label>
                   <Input

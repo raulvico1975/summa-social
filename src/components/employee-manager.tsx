@@ -52,6 +52,7 @@ import { useTranslations } from '@/i18n';
 import { normalizeContact, formatIBANDisplay } from '@/lib/normalize';
 import { exportEmployeesToExcel } from '@/lib/employees-export';
 import { EmployeeImporter } from '@/components/employee-importer';
+import { useIsMobile } from '@/hooks/use-is-mobile';
 
 type EmployeeFormData = Omit<Employee, 'id' | 'createdAt' | 'updatedAt'>;
 
@@ -73,6 +74,7 @@ export function EmployeeManager() {
   const { organizationId } = useCurrentOrganization();
   const { toast } = useToast();
   const { t } = useTranslations();
+  const isMobile = useIsMobile();
 
   const contactsCollection = useMemoFirebase(
     () => organizationId ? collection(firestore, 'organizations', organizationId, 'contacts') : null,
@@ -253,7 +255,7 @@ export function EmployeeManager() {
     <>
       <Dialog open={isDialogOpen} onOpenChange={handleOpenChange}>
         <Card>
-          <CardHeader className="flex flex-row items-center justify-between">
+          <CardHeader className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
             <div>
               <CardTitle className="flex items-center gap-2">
                 <UserCog className="h-5 w-5 text-purple-500" />
@@ -263,7 +265,7 @@ export function EmployeeManager() {
                 {t.employees.description}
               </CardDescription>
             </div>
-            <div className="flex gap-2">
+            <div className="flex flex-wrap gap-2">
               <Button
                 variant="outline"
                 size="icon"
@@ -290,60 +292,126 @@ export function EmployeeManager() {
             </div>
           </CardHeader>
           <CardContent>
-            <div className="rounded-md border">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>{t.employees.name}</TableHead>
-                    <TableHead>{t.employees.taxId}</TableHead>
-                    <TableHead>{t.employees.startDate}</TableHead>
-                    <TableHead>{t.employees.contact}</TableHead>
-                    <TableHead className="text-right">{t.employees.actions}</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {employees && employees.map((employee) => (
-                    <TableRow key={employee.id}>
-                      <TableCell className="font-medium">
+            {/* ═══════════════════════════════════════════════════════════════════════
+                DESKTOP: Taula clàssica
+                ═══════════════════════════════════════════════════════════════════════ */}
+            {!isMobile && (
+              <div className="rounded-md border">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>{t.employees.name}</TableHead>
+                      <TableHead>{t.employees.taxId}</TableHead>
+                      <TableHead>{t.employees.startDate}</TableHead>
+                      <TableHead>{t.employees.contact}</TableHead>
+                      <TableHead className="text-right">{t.employees.actions}</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {employees && employees.map((employee) => (
+                      <TableRow key={employee.id}>
+                        <TableCell className="font-medium">
+                          <div className="flex items-center gap-2">
+                            <UserCog className="h-4 w-4 text-purple-500" />
+                            {employee.name}
+                          </div>
+                        </TableCell>
+                        <TableCell>{employee.taxId || <span className="text-muted-foreground">-</span>}</TableCell>
+                        <TableCell>{formatDate(employee.startDate)}</TableCell>
+                        <TableCell>
+                          <div className="text-sm">
+                            {employee.email && <div>{employee.email}</div>}
+                            {employee.phone && <div className="text-muted-foreground">{employee.phone}</div>}
+                            {!employee.email && !employee.phone && <span className="text-muted-foreground">-</span>}
+                          </div>
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <Button variant="ghost" size="icon" onClick={() => handleEdit(employee)}>
+                            <Edit className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="text-red-500 hover:text-red-600"
+                            onClick={() => handleDeleteRequest(employee)}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                    {(!employees || employees.length === 0) && (
+                      <TableRow>
+                        <TableCell colSpan={5} className="text-center text-muted-foreground h-24">
+                          {t.employees.noData}
+                        </TableCell>
+                      </TableRow>
+                    )}
+                  </TableBody>
+                </Table>
+              </div>
+            )}
+
+            {/* ═══════════════════════════════════════════════════════════════════════
+                MÒBIL: Stacked rows (sense scroll horitzontal)
+                ═══════════════════════════════════════════════════════════════════════ */}
+            {isMobile && (
+              <div className="space-y-2">
+                {employees && employees.map((employee) => (
+                  <div key={employee.id} className="border rounded-lg p-3">
+                    {/* Fila 1: Nom + Accions */}
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="min-w-0 flex-1">
                         <div className="flex items-center gap-2">
-                          <UserCog className="h-4 w-4 text-purple-500" />
-                          {employee.name}
+                          <UserCog className="h-4 w-4 text-purple-500 flex-shrink-0" />
+                          <span className="font-medium truncate">{employee.name}</span>
                         </div>
-                      </TableCell>
-                      <TableCell>{employee.taxId || <span className="text-muted-foreground">-</span>}</TableCell>
-                      <TableCell>{formatDate(employee.startDate)}</TableCell>
-                      <TableCell>
-                        <div className="text-sm">
-                          {employee.email && <div>{employee.email}</div>}
-                          {employee.phone && <div className="text-muted-foreground">{employee.phone}</div>}
-                          {!employee.email && !employee.phone && <span className="text-muted-foreground">-</span>}
-                        </div>
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <Button variant="ghost" size="icon" onClick={() => handleEdit(employee)}>
+                        {employee.taxId && (
+                          <div className="text-xs text-muted-foreground mt-0.5 ml-6">{employee.taxId}</div>
+                        )}
+                      </div>
+                      <div className="flex gap-1 flex-shrink-0">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8"
+                          onClick={() => handleEdit(employee)}
+                        >
                           <Edit className="h-4 w-4" />
                         </Button>
                         <Button
                           variant="ghost"
                           size="icon"
-                          className="text-red-500 hover:text-red-600"
+                          className="h-8 w-8 text-red-500"
                           onClick={() => handleDeleteRequest(employee)}
                         >
                           <Trash2 className="h-4 w-4" />
                         </Button>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                  {(!employees || employees.length === 0) && (
-                    <TableRow>
-                      <TableCell colSpan={5} className="text-center text-muted-foreground h-24">
-                        {t.employees.noData}
-                      </TableCell>
-                    </TableRow>
-                  )}
-                </TableBody>
-              </Table>
-            </div>
+                      </div>
+                    </div>
+
+                    {/* Fila 2: Data inici + Contacte */}
+                    <div className="mt-2 flex flex-wrap gap-2 text-xs text-muted-foreground">
+                      {employee.startDate && (
+                        <span>{formatDate(employee.startDate)}</span>
+                      )}
+                      {employee.email && (
+                        <span>{employee.email}</span>
+                      )}
+                      {employee.phone && (
+                        <span>{employee.phone}</span>
+                      )}
+                    </div>
+                  </div>
+                ))}
+
+                {(!employees || employees.length === 0) && (
+                  <div className="text-center text-muted-foreground py-12">
+                    {t.employees.noData}
+                  </div>
+                )}
+              </div>
+            )}
           </CardContent>
         </Card>
 

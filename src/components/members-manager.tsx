@@ -46,12 +46,14 @@ import type { OrganizationMember, OrganizationRole, Invitation } from '@/lib/dat
 import { InviteMemberDialog } from './invite-member-dialog';
 import { MemberInviterImporter } from './member-inviter-importer';
 import { exportMembersToExcel, downloadMembersInviteTemplate } from '@/lib/members-export';
+import { useIsMobile } from '@/hooks/use-is-mobile';
 
 export function MembersManager() {
   const { firestore, user } = useFirebase();
   const { organizationId, userRole } = useCurrentOrganization();
   const { toast } = useToast();
   const { t } = useTranslations();
+  const isMobile = useIsMobile();
 
   // Col·leccions
   const membersCollection = useMemoFirebase(
@@ -195,7 +197,7 @@ export function MembersManager() {
   return (
     <>
       <Card>
-        <CardHeader className="flex flex-row items-center justify-between">
+        <CardHeader className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
           <div>
             <CardTitle className="flex items-center gap-2">
               <Users className="h-5 w-5" />
@@ -206,7 +208,7 @@ export function MembersManager() {
             </CardDescription>
           </div>
           {isAdmin && (
-            <div className="flex gap-2">
+            <div className="flex flex-wrap gap-2">
               {/* Exportar membres */}
               <Button
                 variant="outline"
@@ -240,88 +242,165 @@ export function MembersManager() {
           {/* Membres actius */}
           <div>
             <h3 className="text-sm font-medium mb-3">{t.members.activeMembers} ({members?.length || 0})</h3>
-            <div className="rounded-md border">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>{t.members.member}</TableHead>
-                    <TableHead>{t.members.role}</TableHead>
-                    <TableHead>{t.members.joinedAt}</TableHead>
-                    {isAdmin && <TableHead className="w-[80px]">{t.members.actions}</TableHead>}
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {members && members.length > 0 ? (
-                    members.map((member) => (
-                      <TableRow key={member.id || member.userId}>
-                        <TableCell>
-                          <div>
-                            <div className="font-medium">{member.displayName || t.members.noName}</div>
-                            <div className="text-sm text-muted-foreground">{member.email}</div>
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          {isAdmin && member.userId !== user?.uid ? (
-                            <Select
-                              value={member.role}
-                              onValueChange={(value) => handleChangeRole(member, value as OrganizationRole)}
-                              disabled={isProcessing}
-                            >
-                              <SelectTrigger className="w-[140px]">
-                                <SelectValue />
-                              </SelectTrigger>
-                              <SelectContent>
-                                <SelectItem value="admin">{t.members.roleAdmin}</SelectItem>
-                                <SelectItem value="user">{t.members.roleUser}</SelectItem>
-                                <SelectItem value="viewer">{t.members.roleViewer}</SelectItem>
-                              </SelectContent>
-                            </Select>
-                          ) : (
-                            <div className="flex items-center gap-2">
-                              {getRoleBadge(member.role)}
-                              {member.userId === user?.uid && (
-                                <span className="text-xs text-muted-foreground">({t.members.you})</span>
-                              )}
-                            </div>
-                          )}
-                        </TableCell>
-                        <TableCell className="text-sm text-muted-foreground">
-                          {formatDate(member.joinedAt)}
-                        </TableCell>
-                        {isAdmin && (
+
+            {/* ═══════════════════════════════════════════════════════════════════════
+                DESKTOP: Taula clàssica
+                ═══════════════════════════════════════════════════════════════════════ */}
+            {!isMobile && (
+              <div className="rounded-md border">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>{t.members.member}</TableHead>
+                      <TableHead>{t.members.role}</TableHead>
+                      <TableHead>{t.members.joinedAt}</TableHead>
+                      {isAdmin && <TableHead className="w-[80px]">{t.members.actions}</TableHead>}
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {members && members.length > 0 ? (
+                      members.map((member) => (
+                        <TableRow key={member.id || member.userId}>
                           <TableCell>
-                            {member.userId !== user?.uid && (
-                              <DropdownMenu>
-                                <DropdownMenuTrigger asChild>
-                                  <Button variant="ghost" size="sm">
-                                    <MoreHorizontal className="h-4 w-4" />
-                                  </Button>
-                                </DropdownMenuTrigger>
-                                <DropdownMenuContent align="end">
-                                  <DropdownMenuItem
-                                    onClick={() => setMemberToDelete(member)}
-                                    className="text-destructive"
-                                  >
-                                    <Trash2 className="mr-2 h-4 w-4" />
-                                    {t.members.removeMember}
-                                  </DropdownMenuItem>
-                                </DropdownMenuContent>
-                              </DropdownMenu>
+                            <div>
+                              <div className="font-medium">{member.displayName || t.members.noName}</div>
+                              <div className="text-sm text-muted-foreground">{member.email}</div>
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            {isAdmin && member.userId !== user?.uid ? (
+                              <Select
+                                value={member.role}
+                                onValueChange={(value) => handleChangeRole(member, value as OrganizationRole)}
+                                disabled={isProcessing}
+                              >
+                                <SelectTrigger className="w-[140px]">
+                                  <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="admin">{t.members.roleAdmin}</SelectItem>
+                                  <SelectItem value="user">{t.members.roleUser}</SelectItem>
+                                  <SelectItem value="viewer">{t.members.roleViewer}</SelectItem>
+                                </SelectContent>
+                              </Select>
+                            ) : (
+                              <div className="flex items-center gap-2">
+                                {getRoleBadge(member.role)}
+                                {member.userId === user?.uid && (
+                                  <span className="text-xs text-muted-foreground">({t.members.you})</span>
+                                )}
+                              </div>
                             )}
                           </TableCell>
-                        )}
+                          <TableCell className="text-sm text-muted-foreground">
+                            {formatDate(member.joinedAt)}
+                          </TableCell>
+                          {isAdmin && (
+                            <TableCell>
+                              {member.userId !== user?.uid && (
+                                <DropdownMenu>
+                                  <DropdownMenuTrigger asChild>
+                                    <Button variant="ghost" size="sm">
+                                      <MoreHorizontal className="h-4 w-4" />
+                                    </Button>
+                                  </DropdownMenuTrigger>
+                                  <DropdownMenuContent align="end">
+                                    <DropdownMenuItem
+                                      onClick={() => setMemberToDelete(member)}
+                                      className="text-destructive"
+                                    >
+                                      <Trash2 className="mr-2 h-4 w-4" />
+                                      {t.members.removeMember}
+                                    </DropdownMenuItem>
+                                  </DropdownMenuContent>
+                                </DropdownMenu>
+                              )}
+                            </TableCell>
+                          )}
+                        </TableRow>
+                      ))
+                    ) : (
+                      <TableRow>
+                        <TableCell colSpan={isAdmin ? 4 : 3} className="text-center text-muted-foreground h-24">
+                          {t.members.noMembers}
+                        </TableCell>
                       </TableRow>
-                    ))
-                  ) : (
-                    <TableRow>
-                      <TableCell colSpan={isAdmin ? 4 : 3} className="text-center text-muted-foreground h-24">
-                        {t.members.noMembers}
-                      </TableCell>
-                    </TableRow>
-                  )}
-                </TableBody>
-              </Table>
-            </div>
+                    )}
+                  </TableBody>
+                </Table>
+              </div>
+            )}
+
+            {/* ═══════════════════════════════════════════════════════════════════════
+                MÒBIL: Stacked rows (sense scroll horitzontal)
+                ═══════════════════════════════════════════════════════════════════════ */}
+            {isMobile && (
+              <div className="space-y-2">
+                {members && members.length > 0 ? (
+                  members.map((member) => (
+                    <div key={member.id || member.userId} className="border rounded-lg p-3">
+                      {/* Fila 1: Nom + Accions */}
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="min-w-0 flex-1">
+                          <div className="font-medium truncate">{member.displayName || t.members.noName}</div>
+                          <div className="text-xs text-muted-foreground truncate">{member.email}</div>
+                        </div>
+                        {isAdmin && member.userId !== user?.uid && (
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button variant="ghost" size="icon" className="h-8 w-8 flex-shrink-0">
+                                <MoreHorizontal className="h-4 w-4" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                              <DropdownMenuItem
+                                onClick={() => setMemberToDelete(member)}
+                                className="text-destructive"
+                              >
+                                <Trash2 className="mr-2 h-4 w-4" />
+                                {t.members.removeMember}
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        )}
+                      </div>
+
+                      {/* Fila 2: Rol + Data */}
+                      <div className="mt-2 flex flex-wrap items-center gap-2">
+                        {isAdmin && member.userId !== user?.uid ? (
+                          <Select
+                            value={member.role}
+                            onValueChange={(value) => handleChangeRole(member, value as OrganizationRole)}
+                            disabled={isProcessing}
+                          >
+                            <SelectTrigger className="w-[120px] h-8 text-xs">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="admin">{t.members.roleAdmin}</SelectItem>
+                              <SelectItem value="user">{t.members.roleUser}</SelectItem>
+                              <SelectItem value="viewer">{t.members.roleViewer}</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        ) : (
+                          <div className="flex items-center gap-1">
+                            {getRoleBadge(member.role)}
+                            {member.userId === user?.uid && (
+                              <span className="text-xs text-muted-foreground">({t.members.you})</span>
+                            )}
+                          </div>
+                        )}
+                        <span className="text-xs text-muted-foreground">{formatDate(member.joinedAt)}</span>
+                      </div>
+                    </div>
+                  ))
+                ) : (
+                  <div className="text-center text-muted-foreground py-12">
+                    {t.members.noMembers}
+                  </div>
+                )}
+              </div>
+            )}
           </div>
 
           {/* Invitacions pendents */}
@@ -331,39 +410,70 @@ export function MembersManager() {
                 <Clock className="h-4 w-4" />
                 {t.members.pendingInvitations} ({pendingInvitations.length})
               </h3>
-              <div className="rounded-md border">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>{t.members.email}</TableHead>
-                      <TableHead>{t.members.role}</TableHead>
-                      <TableHead>{t.members.expiresAt}</TableHead>
-                      <TableHead className="w-[80px]">{t.members.actions}</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {pendingInvitations.map((invitation) => (
-                      <TableRow key={invitation.id}>
-                        <TableCell className="font-medium">{invitation.email}</TableCell>
-                        <TableCell>{getRoleBadge(invitation.role)}</TableCell>
-                        <TableCell className="text-sm text-muted-foreground">
-                          {formatDate(invitation.expiresAt)}
-                        </TableCell>
-                        <TableCell>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => setInvitationToDelete(invitation)}
-                            className="text-destructive hover:text-destructive"
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </TableCell>
+
+              {/* DESKTOP: Taula */}
+              {!isMobile && (
+                <div className="rounded-md border">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>{t.members.email}</TableHead>
+                        <TableHead>{t.members.role}</TableHead>
+                        <TableHead>{t.members.expiresAt}</TableHead>
+                        <TableHead className="w-[80px]">{t.members.actions}</TableHead>
                       </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </div>
+                    </TableHeader>
+                    <TableBody>
+                      {pendingInvitations.map((invitation) => (
+                        <TableRow key={invitation.id}>
+                          <TableCell className="font-medium">{invitation.email}</TableCell>
+                          <TableCell>{getRoleBadge(invitation.role)}</TableCell>
+                          <TableCell className="text-sm text-muted-foreground">
+                            {formatDate(invitation.expiresAt)}
+                          </TableCell>
+                          <TableCell>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => setInvitationToDelete(invitation)}
+                              className="text-destructive hover:text-destructive"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              )}
+
+              {/* MÒBIL: Stacked rows */}
+              {isMobile && (
+                <div className="space-y-2">
+                  {pendingInvitations.map((invitation) => (
+                    <div key={invitation.id} className="border rounded-lg p-3">
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="min-w-0 flex-1">
+                          <div className="font-medium truncate">{invitation.email}</div>
+                          <div className="mt-1 flex flex-wrap items-center gap-2">
+                            {getRoleBadge(invitation.role)}
+                            <span className="text-xs text-muted-foreground">{formatDate(invitation.expiresAt)}</span>
+                          </div>
+                        </div>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 flex-shrink-0 text-destructive"
+                          onClick={() => setInvitationToDelete(invitation)}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           )}
         </CardContent>

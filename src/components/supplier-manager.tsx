@@ -53,6 +53,7 @@ import { useCurrentOrganization } from '@/hooks/organization-provider';
 import { SupplierImporter } from './supplier-importer';
 import { useTranslations } from '@/i18n';
 import { exportSuppliersToExcel, downloadSuppliersTemplate } from '@/lib/suppliers-export';
+import { useIsMobile } from '@/hooks/use-is-mobile';
 
 type SupplierFormData = Omit<Supplier, 'id' | 'createdAt' | 'updatedAt'>;
 
@@ -76,6 +77,7 @@ export function SupplierManager() {
   const { organizationId } = useCurrentOrganization();
   const { toast } = useToast();
   const { t } = useTranslations();
+  const isMobile = useIsMobile();
 
   const contactsCollection = useMemoFirebase(
     () => organizationId ? collection(firestore, 'organizations', organizationId, 'contacts') : null,
@@ -263,7 +265,7 @@ export function SupplierManager() {
     <>
       <Dialog open={isDialogOpen} onOpenChange={handleOpenChange}>
         <Card>
-          <CardHeader className="flex flex-row items-center justify-between">
+          <CardHeader className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
             <div>
               <CardTitle className="text-2xl font-bold tracking-tight font-headline">
                 {t.suppliers.title}
@@ -272,7 +274,7 @@ export function SupplierManager() {
                 {t.suppliers.description}
               </CardDescription>
             </div>
-            <div className="flex gap-2">
+            <div className="flex flex-wrap gap-2">
               <Button
                 variant="outline"
                 size="icon"
@@ -325,91 +327,173 @@ export function SupplierManager() {
               </div>
             </div>
 
-            <div className="rounded-md border">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>{t.suppliers.name}</TableHead>
-                    <TableHead>{t.suppliers.taxId}</TableHead>
-                    <TableHead>{t.contacts.defaultCategory}</TableHead>
-                    <TableHead>{t.suppliers.contactInfo}</TableHead>
-                    <TableHead className="text-right">{t.suppliers.actions}</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filteredSuppliers.map((supplier) => (
-                    <TableRow key={supplier.id}>
-                      <TableCell className="font-medium">
+            {/* ═══════════════════════════════════════════════════════════════════════
+                DESKTOP: Taula clàssica
+                ═══════════════════════════════════════════════════════════════════════ */}
+            {!isMobile && (
+              <div className="rounded-md border">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>{t.suppliers.name}</TableHead>
+                      <TableHead>{t.suppliers.taxId}</TableHead>
+                      <TableHead>{t.contacts.defaultCategory}</TableHead>
+                      <TableHead>{t.suppliers.contactInfo}</TableHead>
+                      <TableHead className="text-right">{t.suppliers.actions}</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {filteredSuppliers.map((supplier) => (
+                      <TableRow key={supplier.id}>
+                        <TableCell className="font-medium">
+                          <div className="flex items-center gap-2">
+                            <Building2 className="h-4 w-4 text-muted-foreground" />
+                            {supplier.name}
+                          </div>
+                        </TableCell>
+                        <TableCell>{supplier.taxId}</TableCell>
+                        <TableCell>
+                          {supplier.defaultCategoryId ? (
+                            <Badge variant="outline">
+                              {(() => {
+                                const cat = expenseCategories.find(c => c.id === supplier.defaultCategoryId);
+                                return cat ? (categoryTranslations[cat.name] || cat.name) : '-';
+                              })()}
+                            </Badge>
+                          ) : (
+                            <span className="text-muted-foreground">-</span>
+                          )}
+                        </TableCell>
+                        <TableCell>
+                          <div className="text-sm">
+                            {supplier.email && <div>{supplier.email}</div>}
+                            {supplier.phone && <div className="text-muted-foreground">{supplier.phone}</div>}
+                            {!supplier.email && !supplier.phone && <span className="text-muted-foreground">-</span>}
+                          </div>
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-9 w-9 text-muted-foreground hover:text-foreground hover:bg-muted/40"
+                            onClick={() => handleEdit(supplier)}
+                            aria-label={t.suppliers.editSupplier ?? 'Editar proveïdor'}
+                          >
+                            <Edit className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-9 w-9 text-rose-600 hover:text-rose-700 hover:bg-rose-50"
+                            onClick={() => handleDeleteRequest(supplier)}
+                            aria-label={t.suppliers.deleteSupplier ?? 'Eliminar proveïdor'}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                    {filteredSuppliers.length === 0 && (
+                      <TableRow>
+                        <TableCell colSpan={5} className="p-0">
+                          <EmptyState
+                            icon={searchQuery ? Search : Factory}
+                            title={
+                              searchQuery
+                                ? (t.emptyStates?.suppliers?.noResults ?? t.suppliers.noSearchResults)
+                                : (t.emptyStates?.suppliers?.noData ?? t.suppliers.noData)
+                            }
+                            description={
+                              searchQuery
+                                ? (t.emptyStates?.suppliers?.noResultsDesc ?? undefined)
+                                : (t.emptyStates?.suppliers?.noDataDesc ?? undefined)
+                            }
+                            className="border-0 rounded-none py-12"
+                          />
+                        </TableCell>
+                      </TableRow>
+                    )}
+                  </TableBody>
+                </Table>
+              </div>
+            )}
+
+            {/* ═══════════════════════════════════════════════════════════════════════
+                MÒBIL: Stacked rows (sense scroll horitzontal)
+                ═══════════════════════════════════════════════════════════════════════ */}
+            {isMobile && (
+              <div className="space-y-2">
+                {filteredSuppliers.map((supplier) => (
+                  <div key={supplier.id} className="border rounded-lg p-3">
+                    {/* Fila 1: Nom + Accions */}
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="min-w-0 flex-1">
                         <div className="flex items-center gap-2">
-                          <Building2 className="h-4 w-4 text-muted-foreground" />
-                          {supplier.name}
+                          <Building2 className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                          <span className="font-medium truncate">{supplier.name}</span>
                         </div>
-                      </TableCell>
-                      <TableCell>{supplier.taxId}</TableCell>
-                      <TableCell>
-                        {supplier.defaultCategoryId ? (
-                          <Badge variant="outline">
-                            {(() => {
-                              const cat = expenseCategories.find(c => c.id === supplier.defaultCategoryId);
-                              return cat ? (categoryTranslations[cat.name] || cat.name) : '-';
-                            })()}
-                          </Badge>
-                        ) : (
-                          <span className="text-muted-foreground">-</span>
+                        {supplier.taxId && (
+                          <div className="text-xs text-muted-foreground mt-0.5 ml-6">{supplier.taxId}</div>
                         )}
-                      </TableCell>
-                      <TableCell>
-                        <div className="text-sm">
-                          {supplier.email && <div>{supplier.email}</div>}
-                          {supplier.phone && <div className="text-muted-foreground">{supplier.phone}</div>}
-                          {!supplier.email && !supplier.phone && <span className="text-muted-foreground">-</span>}
-                        </div>
-                      </TableCell>
-                      <TableCell className="text-right">
+                      </div>
+                      <div className="flex gap-1 flex-shrink-0">
                         <Button
                           variant="ghost"
                           size="icon"
-                          className="h-9 w-9 text-muted-foreground hover:text-foreground hover:bg-muted/40"
+                          className="h-8 w-8 text-muted-foreground"
                           onClick={() => handleEdit(supplier)}
-                          aria-label={t.suppliers.editSupplier ?? 'Editar proveïdor'}
                         >
                           <Edit className="h-4 w-4" />
                         </Button>
                         <Button
                           variant="ghost"
                           size="icon"
-                          className="h-9 w-9 text-rose-600 hover:text-rose-700 hover:bg-rose-50"
+                          className="h-8 w-8 text-rose-600"
                           onClick={() => handleDeleteRequest(supplier)}
-                          aria-label={t.suppliers.deleteSupplier ?? 'Eliminar proveïdor'}
                         >
                           <Trash2 className="h-4 w-4" />
                         </Button>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                  {filteredSuppliers.length === 0 && (
-                    <TableRow>
-                      <TableCell colSpan={5} className="p-0">
-                        <EmptyState
-                          icon={searchQuery ? Search : Factory}
-                          title={
-                            searchQuery
-                              ? (t.emptyStates?.suppliers?.noResults ?? t.suppliers.noSearchResults)
-                              : (t.emptyStates?.suppliers?.noData ?? t.suppliers.noData)
-                          }
-                          description={
-                            searchQuery
-                              ? (t.emptyStates?.suppliers?.noResultsDesc ?? undefined)
-                              : (t.emptyStates?.suppliers?.noDataDesc ?? undefined)
-                          }
-                          className="border-0 rounded-none py-12"
-                        />
-                      </TableCell>
-                    </TableRow>
-                  )}
-                </TableBody>
-              </Table>
-            </div>
+                      </div>
+                    </div>
+
+                    {/* Fila 2: Categoria + Contacte */}
+                    <div className="mt-2 flex flex-wrap gap-2 text-sm">
+                      {supplier.defaultCategoryId && (
+                        <Badge variant="outline" className="text-xs">
+                          {(() => {
+                            const cat = expenseCategories.find(c => c.id === supplier.defaultCategoryId);
+                            return cat ? (categoryTranslations[cat.name] || cat.name) : '-';
+                          })()}
+                        </Badge>
+                      )}
+                      {supplier.email && (
+                        <span className="text-muted-foreground text-xs">{supplier.email}</span>
+                      )}
+                      {supplier.phone && (
+                        <span className="text-muted-foreground text-xs">{supplier.phone}</span>
+                      )}
+                    </div>
+                  </div>
+                ))}
+
+                {filteredSuppliers.length === 0 && (
+                  <EmptyState
+                    icon={searchQuery ? Search : Factory}
+                    title={
+                      searchQuery
+                        ? (t.emptyStates?.suppliers?.noResults ?? t.suppliers.noSearchResults)
+                        : (t.emptyStates?.suppliers?.noData ?? t.suppliers.noData)
+                    }
+                    description={
+                      searchQuery
+                        ? (t.emptyStates?.suppliers?.noResultsDesc ?? undefined)
+                        : (t.emptyStates?.suppliers?.noDataDesc ?? undefined)
+                    }
+                    className="py-12"
+                  />
+                )}
+              </div>
+            )}
           </CardContent>
         </Card>
 

@@ -400,7 +400,7 @@ export function ReturnImporter({
             </div>
 
             {/* Mapejat de columnes */}
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               {/* IBAN */}
               <div className="space-y-1">
                 <label className="text-sm font-medium flex items-center gap-2">

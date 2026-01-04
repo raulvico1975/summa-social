@@ -205,13 +205,13 @@ export function BankAccountsManager() {
   return (
     <Dialog open={isDialogOpen} onOpenChange={handleOpenChange}>
       <Card>
-        <CardHeader className="flex flex-row items-center justify-between">
+        <CardHeader className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
           <div>
             <CardTitle>{t.settings.bankAccounts.title}</CardTitle>
             <CardDescription>{t.settings.bankAccounts.description}</CardDescription>
           </div>
           {canEdit && (
-            <div className="flex gap-2">
+            <div className="flex flex-wrap gap-2">
               <Button
                 variant="outline"
                 size="icon"

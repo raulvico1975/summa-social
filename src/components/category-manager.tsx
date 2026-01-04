@@ -221,13 +221,13 @@ export function CategoryManager() {
     <>
     <Dialog open={isDialogOpen} onOpenChange={handleOpenChange}>
       <Card>
-        <CardHeader className="flex flex-row items-center justify-between">
+        <CardHeader className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
           <div>
             <CardTitle>{t.settings.manageCategories}</CardTitle>
             <CardDescription>{t.settings.manageCategoriesDescription}</CardDescription>
           </div>
           {canEdit && (
-            <div className="flex gap-2">
+            <div className="flex flex-wrap gap-2">
               {/* Descarregar plantilla */}
               <Button
                 variant="outline"
