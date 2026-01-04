@@ -81,6 +81,14 @@ export function useDoc<T = any>(
         setData(null)
         setIsLoading(false)
 
+        // GUARD: No emetre error global si l'usuari no està autenticat.
+        // Això és esperable durant logout (listeners es desmunten després del signOut).
+        // Si auth === null, l'error és esperat i no hem de mostrar la pàgina d'error.
+        if (contextualError.request.auth === null) {
+          console.log('[useDoc] Ignoring permission error (user not authenticated):', memoizedDocRef.path);
+          return;
+        }
+
         // trigger global error propagation
         errorEmitter.emit('permission-error', contextualError);
       }

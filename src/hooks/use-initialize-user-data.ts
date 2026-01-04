@@ -14,16 +14,21 @@ import { useToast } from '@/hooks/use-toast';
  * Detecta automàticament si l'organització no té categories i les crea.
  */
 export function useInitializeOrganizationData() {
-  const { firestore } = useFirebase();
+  const { firestore, user } = useFirebase();
   const { organizationId, isLoading: isOrgLoading } = useCurrentOrganization();
   const { toast } = useToast();
-  
+
   const [isInitializing, setIsInitializing] = useState(false);
-  
+
   // Track which organization we've initialized for
   const initializedForOrgRef = useRef<string | null>(null);
 
   useEffect(() => {
+    // GUARD: No fer queries si no hi ha user (evita permission-denied durant logout)
+    if (!user) {
+      return;
+    }
+
     // Esperar a tenir organització
     if (isOrgLoading || !organizationId) {
       return;
@@ -84,7 +89,7 @@ export function useInitializeOrganizationData() {
     };
 
     initializeIfNeeded();
-  }, [organizationId, isOrgLoading, firestore, toast]);
+  }, [user, organizationId, isOrgLoading, firestore, toast]);
 
   return { isInitializing };
 }

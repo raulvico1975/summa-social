@@ -63,7 +63,7 @@ interface UseBankAccountsResult {
  * ```
  */
 export function useBankAccounts(): UseBankAccountsResult {
-  const { firestore } = useFirebase();
+  const { firestore, user } = useFirebase();
   const { organizationId } = useCurrentOrganization();
 
   const [allBankAccounts, setAllBankAccounts] = useState<BankAccount[]>([]);
@@ -71,9 +71,12 @@ export function useBankAccounts(): UseBankAccountsResult {
   const [error, setError] = useState<Error | null>(null);
 
   // Subscripció en temps real als comptes bancaris
+  // GUARD: No crear listener si no hi ha user (evita permission-denied durant logout)
   useEffect(() => {
-    if (!organizationId || !firestore) {
+    if (!user || !organizationId || !firestore) {
+      setAllBankAccounts([]);
       setIsLoading(false);
+      setError(null);
       return;
     }
 
@@ -103,7 +106,7 @@ export function useBankAccounts(): UseBankAccountsResult {
     );
 
     return () => unsubscribe();
-  }, [firestore, organizationId]);
+  }, [firestore, organizationId, user]);
 
   // Filtrar només actius i ordenar (default primer)
   const bankAccounts = useMemo(() => {
