@@ -57,6 +57,7 @@ import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { useToast } from '@/hooks/use-toast';
 import { useTranslations } from '@/i18n';
 import { formatCurrencyEU } from '@/lib/normalize';
+import { isStorageUnauthorizedError, reportStorageUnauthorized } from '@/lib/system-incidents';
 import {
   updateExpenseReport,
   generateExpenseReportPdf,
@@ -541,6 +542,20 @@ export function ExpenseReportDetail({ report, onClose, scrollToSection }: Expens
       toast({ title: t.expenseReports.detail.pdfGenerated });
     } catch (error) {
       console.error('[handleGeneratePdf] Error:', error);
+
+      // Detectar i reportar storage/unauthorized
+      if (isStorageUnauthorizedError(error) && firestore && organizationId) {
+        const storagePath = `organizations/${organizationId}/expenseReports/${report.id}/liquidacio_${report.id}.pdf`;
+        reportStorageUnauthorized(firestore, {
+          storagePath,
+          feature: 'expenseReportsPdf',
+          route: typeof window !== 'undefined' ? window.location.pathname : undefined,
+          orgId: organizationId,
+          orgSlug: organization?.slug,
+          originalError: error,
+        }).catch(reportErr => console.error('[handleGeneratePdf] Failed to report storage incident:', reportErr));
+      }
+
       toast({
         title: t.common.error,
         description: t.expenseReports.detail.errorGeneratePdf,

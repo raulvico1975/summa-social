@@ -30,6 +30,7 @@ import { ref, uploadBytes } from 'firebase/storage';
 import { doc, collection, serverTimestamp, setDoc, query, where, getDocs } from 'firebase/firestore';
 import { computeSha256 } from '@/lib/files/sha256';
 import { pendingDocumentsCollection } from '@/lib/pending-documents/refs';
+import { isStorageUnauthorizedError, reportStorageUnauthorized } from '@/lib/system-incidents';
 import { extractXmlData } from '@/lib/pending-documents/extract-xml';
 import { extractPdfData } from '@/lib/pending-documents/extract-pdf';
 import { extractImageData } from '@/lib/pending-documents/extract-image';
@@ -368,6 +369,20 @@ export function PendingDocumentsUploadModal({
       return true;
     } catch (error) {
       console.error('[processFile] Error:', error);
+
+      // Detectar i reportar storage/unauthorized
+      if (isStorageUnauthorizedError(error) && firestore && organizationId) {
+        const storagePath = `organizations/${organizationId}/pendingDocuments/${item.docId || 'unknown'}/${item.file.name}`;
+        reportStorageUnauthorized(firestore, {
+          storagePath,
+          feature: 'pendingDocuments',
+          route: typeof window !== 'undefined' ? window.location.pathname : undefined,
+          orgId: organizationId,
+          orgSlug: organization?.slug,
+          originalError: error,
+        }).catch(reportErr => console.error('[processFile] Failed to report storage incident:', reportErr));
+      }
+
       const errorMessage = error instanceof Error ? error.message : t.common.unknownError;
       updateFileStatus(item.id, { status: 'error', error: errorMessage });
       return false;

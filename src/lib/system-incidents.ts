@@ -385,6 +385,9 @@ const CORE_ROUTES = [
   '/project-module',
   '/projectes',
   '/proyectos',
+  '/pendents',       // Documents pendents
+  '/liquidacions',   // Liquidacions / expense reports
+  '/liquidaciones',
 ];
 
 export function isCoreRoute(route: string | undefined): boolean {
@@ -500,6 +503,73 @@ ${help.nextSteps}
 export interface AlertDecision {
   shouldAlert: boolean;
   reason: string;
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// DETECCIÓ D'ERRORS DE STORAGE
+// ═══════════════════════════════════════════════════════════════════════════
+
+/**
+ * Detecta si un error és de tipus storage/unauthorized.
+ * Suporta tant FirebaseError amb code com missatges de text.
+ */
+export function isStorageUnauthorizedError(error: unknown): boolean {
+  if (!error) return false;
+
+  // Check FirebaseError code
+  if (typeof error === 'object' && error !== null) {
+    const err = error as { code?: string; message?: string };
+    if (err.code === 'storage/unauthorized') return true;
+    if (err.message?.includes('storage/unauthorized')) return true;
+    if (err.message?.includes('User does not have permission')) return true;
+  }
+
+  // Check string message
+  if (typeof error === 'string') {
+    if (error.includes('storage/unauthorized')) return true;
+    if (error.includes('User does not have permission')) return true;
+  }
+
+  return false;
+}
+
+/**
+ * Reporta un error de storage/unauthorized com a incident CRITICAL.
+ * Sanititza el path per no incloure tokens ni dades sensibles.
+ */
+export async function reportStorageUnauthorized(
+  firestore: Firestore,
+  params: {
+    storagePath: string;
+    feature: 'pendingDocuments' | 'expenseReportsPdf' | 'attachments' | 'other';
+    route?: string;
+    orgId?: string;
+    orgSlug?: string;
+    originalError?: unknown;
+  }
+): Promise<void> {
+  // Sanititzar path: només el bucket path, sense URL signada ni tokens
+  const sanitizedPath = params.storagePath
+    .replace(/\?.*$/, '')          // Treure query params
+    .replace(/^https?:\/\/[^/]+/, '') // Treure domini si és URL
+    .replace(/[0-9a-f]{40,}/gi, '[TOKEN]'); // Ofuscar tokens llargs
+
+  const message = `Storage permission denied: ${params.feature} at ${sanitizedPath}`;
+
+  await reportSystemIncident({
+    firestore,
+    type: 'PERMISSIONS',
+    message,
+    route: params.route,
+    orgId: params.orgId,
+    orgSlug: params.orgSlug,
+    code: 'storage/unauthorized',
+    meta: {
+      feature: params.feature,
+      storagePath: sanitizedPath,
+      errorCode: 'storage/unauthorized',
+    },
+  });
 }
 
 export function shouldSendAlert(incident: SystemIncident): AlertDecision {
