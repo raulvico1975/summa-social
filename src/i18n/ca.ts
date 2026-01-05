@@ -2139,6 +2139,7 @@ export const ca = {
       suppliers: "proveïdors",
       employees: "treballadors",
       transactions: "moviments",
+      categories: "categories",
     },
     confirmTitle: "Confirmar esborrat massiu",
     confirmDescription: (type: string, orgName: string) => `Estàs a punt d'esborrar TOTS els ${type} de "${orgName}". Aquesta acció és permanent i no es pot desfer.`,

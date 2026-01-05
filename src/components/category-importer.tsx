@@ -39,6 +39,7 @@ import {
 } from '@/lib/categories-import';
 import { downloadCategoriesTemplate } from '@/lib/categories-export';
 import type { Category } from '@/lib/data';
+import { normalizeCategoryLabel } from '@/lib/categories/normalizeCategoryLabel';
 
 // ═══════════════════════════════════════════════════════════════════════════
 // TIPUS
@@ -298,24 +299,29 @@ export function CategoryImporter({ open, onOpenChange, onComplete }: CategoryImp
               </Alert>
             )}
 
-            <div className="flex gap-3">
-              <Button
-                variant="outline"
-                onClick={() => downloadCategoriesTemplate()}
-                className="gap-2"
-              >
-                <Download className="h-4 w-4" />
-                Descarregar plantilla
-              </Button>
+            <div className="flex flex-col items-center gap-2">
+              <div className="flex gap-3">
+                <Button
+                  variant="outline"
+                  onClick={() => downloadCategoriesTemplate()}
+                  className="gap-2"
+                >
+                  <Download className="h-4 w-4" />
+                  Descarregar plantilla oficial
+                </Button>
 
-              <Button
-                onClick={() => fileInputRef.current?.click()}
-                disabled={isProcessing}
-                className="gap-2"
-              >
-                <FileSpreadsheet className="h-4 w-4" />
-                {isProcessing ? 'Processant...' : 'Seleccionar fitxer'}
-              </Button>
+                <Button
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={isProcessing}
+                  className="gap-2"
+                >
+                  <FileSpreadsheet className="h-4 w-4" />
+                  {isProcessing ? 'Processant...' : 'Seleccionar fitxer'}
+                </Button>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Utilitza aquesta plantilla per importar categories.
+              </p>
             </div>
 
             <input
@@ -387,8 +393,8 @@ export function CategoryImporter({ open, onOpenChange, onComplete }: CategoryImp
               </Alert>
             )}
 
-            {/* Taula de preview */}
-            <ScrollArea className="flex-1 border rounded-md">
+            {/* Taula de preview amb scroll vertical */}
+            <ScrollArea className="flex-1 border rounded-md max-h-[400px]">
               <Table>
                 <TableHeader>
                   <TableRow>
@@ -396,7 +402,6 @@ export function CategoryImporter({ open, onOpenChange, onComplete }: CategoryImp
                     <TableHead>Nom</TableHead>
                     <TableHead className="w-20">Tipus</TableHead>
                     <TableHead className="w-16">Ordre</TableHead>
-                    <TableHead className="w-48">Detalls</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -406,22 +411,30 @@ export function CategoryImporter({ open, onOpenChange, onComplete }: CategoryImp
                       className={preview.action === 'skip' ? 'opacity-50' : ''}
                     >
                       <TableCell>{renderActionBadge(preview.action)}</TableCell>
-                      <TableCell className="font-medium">
-                        {preview.parsed.name}
+                      <TableCell>
+                        <div>
+                          <span className="font-medium">
+                            {normalizeCategoryLabel(preview.parsed.name)}
+                          </span>
+                          {/* Raó d'omissió sota el nom */}
+                          {preview.action === 'skip' && preview.reason && (
+                            <div className="text-xs text-muted-foreground mt-0.5">
+                              {preview.reason}
+                            </div>
+                          )}
+                          {/* Canvis per updates */}
+                          {preview.action === 'update' && preview.changes && (
+                            <div className="text-xs text-blue-600 mt-0.5">
+                              {preview.changes.join(', ')}
+                            </div>
+                          )}
+                        </div>
                       </TableCell>
                       <TableCell>
                         {getTypeBadge(preview.parsed.type)}
                       </TableCell>
                       <TableCell className="text-sm text-muted-foreground">
                         {preview.parsed.order ?? '-'}
-                      </TableCell>
-                      <TableCell className="text-xs text-muted-foreground">
-                        {preview.action === 'update' && preview.changes && (
-                          <span>{preview.changes.join(', ')}</span>
-                        )}
-                        {preview.action === 'skip' && preview.reason && (
-                          <span>{preview.reason}</span>
-                        )}
                       </TableCell>
                     </TableRow>
                   ))}

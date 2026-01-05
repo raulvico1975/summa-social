@@ -2132,6 +2132,7 @@ export const es = {
       suppliers: "proveedores",
       employees: "trabajadores",
       transactions: "movimientos",
+      categories: "categorías",
     },
     confirmTitle: "Confirmar borrado masivo",
     confirmDescription: (type: string, orgName: string) => `Estás a punto de borrar TODOS los ${type} de "${orgName}". Esta acción es permanente y no se puede deshacer.`,

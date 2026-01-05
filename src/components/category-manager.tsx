@@ -40,16 +40,16 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { PlusCircle, Edit, Trash2, Download, Upload, FileSpreadsheet } from 'lucide-react';
+import { PlusCircle, Edit, Trash2, Download, Upload } from 'lucide-react';
 import type { Category } from '@/lib/data';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
 import { useCollection, useFirebase, useMemoFirebase, addDocumentNonBlocking, deleteDocumentNonBlocking, setDocumentNonBlocking } from '@/firebase';
-import { collection, doc } from 'firebase/firestore';
+import { collection, doc, query, where, getCountFromServer } from 'firebase/firestore';
 import { useTranslations } from '@/i18n';
 import { useCurrentOrganization } from '@/hooks/organization-provider';
 import { CategoryImporter } from './category-importer';
-import { exportCategoriesToExcel, downloadCategoriesTemplate } from '@/lib/categories-export';
+import { exportCategoriesToExcel } from '@/lib/categories-export';
 
 function CategoryTable({
   categories,
@@ -127,6 +127,8 @@ export function CategoryManager() {
   const [isImporterOpen, setIsImporterOpen] = React.useState(false);
   const [editingCategory, setEditingCategory] = React.useState<Category | null>(null);
   const [categoryToDelete, setCategoryToDelete] = React.useState<Category | null>(null);
+  const [affectedTransactionsCount, setAffectedTransactionsCount] = React.useState<number | null>(null);
+  const [isCountingTransactions, setIsCountingTransactions] = React.useState(false);
   const [formData, setFormData] = React.useState<{ name: string; type: Category['type'] }>({ name: '', type: 'expense' });
   const { toast } = useToast();
 
@@ -140,10 +142,25 @@ export function CategoryManager() {
     setIsDialogOpen(true);
   };
   
-  const handleDeleteRequest = (category: Category) => {
-    if (!canEdit) return;
+  const handleDeleteRequest = async (category: Category) => {
+    if (!canEdit || !organizationId) return;
     setCategoryToDelete(category);
+    setAffectedTransactionsCount(null);
+    setIsCountingTransactions(true);
     setIsAlertOpen(true);
+
+    try {
+      // Comptar moviments que tenen aquesta categoria
+      const transactionsRef = collection(firestore, 'organizations', organizationId, 'transactions');
+      const q = query(transactionsRef, where('category', '==', category.name));
+      const snapshot = await getCountFromServer(q);
+      setAffectedTransactionsCount(snapshot.data().count);
+    } catch (error) {
+      console.error('Error comptant transaccions:', error);
+      setAffectedTransactionsCount(0);
+    } finally {
+      setIsCountingTransactions(false);
+    }
   }
 
   const handleDeleteConfirm = () => {
@@ -228,16 +245,6 @@ export function CategoryManager() {
           </div>
           {canEdit && (
             <div className="flex gap-2">
-              {/* Descarregar plantilla */}
-              <Button
-                variant="outline"
-                size="icon"
-                onClick={() => downloadCategoriesTemplate()}
-                title="Descarregar plantilla Excel"
-              >
-                <FileSpreadsheet className="h-4 w-4" />
-              </Button>
-
               {/* Exportar categories */}
               <Button
                 variant="outline"
@@ -334,17 +341,32 @@ export function CategoryManager() {
     </Dialog>
 
     {canEdit && (
-        <AlertDialog open={isAlertOpen} onOpenChange={setIsAlertOpen}>
+        <AlertDialog open={isAlertOpen} onOpenChange={(open) => {
+          setIsAlertOpen(open);
+          if (!open) {
+            setCategoryToDelete(null);
+            setAffectedTransactionsCount(null);
+          }
+        }}>
             <AlertDialogContent>
             <AlertDialogHeader>
                 <AlertDialogTitle>{t.settings.confirmDeleteTitle}</AlertDialogTitle>
-                <AlertDialogDescription>
-                {t.settings.confirmDeleteDescription}
+                <AlertDialogDescription asChild>
+                  <div className="space-y-2">
+                    <p>{t.settings.confirmDeleteDescription}</p>
+                    {isCountingTransactions ? (
+                      <p className="text-sm text-muted-foreground">Comptant moviments afectats...</p>
+                    ) : affectedTransactionsCount !== null && affectedTransactionsCount > 0 ? (
+                      <p className="text-sm font-medium text-amber-600">
+                        {affectedTransactionsCount} {affectedTransactionsCount === 1 ? 'moviment quedarà' : 'moviments quedaran'} sense categoria.
+                      </p>
+                    ) : null}
+                  </div>
                 </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
                 <AlertDialogCancel onClick={() => setCategoryToDelete(null)}>{t.common.cancel}</AlertDialogCancel>
-                <AlertDialogAction onClick={handleDeleteConfirm}>
+                <AlertDialogAction onClick={handleDeleteConfirm} disabled={isCountingTransactions}>
                 {t.common.delete}
                 </AlertDialogAction>
             </AlertDialogFooter>

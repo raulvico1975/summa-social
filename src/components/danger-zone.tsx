@@ -20,10 +20,10 @@ import { useTranslations } from '@/i18n';
 import { useFirebase } from '@/firebase';
 import { useCurrentOrganization } from '@/hooks/organization-provider';
 import { collection, getDocs, writeBatch, query, where, doc } from 'firebase/firestore';
-import { AlertTriangle, Trash2, Users, Truck, Briefcase, ArrowRightLeft, Loader2, GitMerge, Calendar, FileText, Coins, Hash } from 'lucide-react';
+import { AlertTriangle, Trash2, Users, Truck, Briefcase, ArrowRightLeft, Loader2, GitMerge, Calendar, FileText, Coins, Hash, Tags } from 'lucide-react';
 import { formatCurrencyEU } from '@/lib/normalize';
 
-type DeleteType = 'donors' | 'suppliers' | 'employees' | 'transactions' | null;
+type DeleteType = 'donors' | 'suppliers' | 'employees' | 'transactions' | 'categories' | null;
 
 // Patró per detectar transaccions de remesa (fallback)
 const REMITTANCE_PATTERNS = [
@@ -268,6 +268,8 @@ export function DangerZone() {
 
       if (deleteType === 'transactions') {
         collectionPath = `organizations/${organizationId}/transactions`;
+      } else if (deleteType === 'categories') {
+        collectionPath = `organizations/${organizationId}/categories`;
       } else {
         collectionPath = `organizations/${organizationId}/contacts`;
         const typeMap = {
@@ -354,6 +356,12 @@ export function DangerZone() {
       icon: ArrowRightLeft,
       label: t.dangerZone.deleteTransactions,
       description: t.dangerZone.deleteTransactionsDescription,
+    },
+    {
+      type: 'categories' as const,
+      icon: Tags,
+      label: 'Esborrar totes les categories',
+      description: 'Elimina totes les categories. Els moviments quedaran sense categoria.',
     },
   ];
 
