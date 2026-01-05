@@ -385,11 +385,27 @@ export default function PendingDocsPage() {
     setIsDraggingOver(false);
 
     if (e.dataTransfer.files.length > 0) {
-      // Obrir el modal amb els fitxers arrossegats
-      setInitialUploadFiles(Array.from(e.dataTransfer.files));
+      // Filtrar només fitxers vàlids abans d'obrir el modal
+      const allFiles = Array.from(e.dataTransfer.files);
+      const validFiles = allFiles.filter(f => {
+        const ext = f.name.toLowerCase().split('.').pop();
+        return ['pdf', 'xml', 'jpg', 'jpeg', 'png'].includes(ext || '');
+      });
+
+      if (validFiles.length === 0) {
+        // Cap fitxer vàlid → mostrar toast i no obrir modal
+        toast({
+          variant: 'destructive',
+          title: t.pendingDocs.upload.invalidFiles,
+          description: t.pendingDocs.upload.invalidFilesDesc,
+        });
+        return;
+      }
+
+      setInitialUploadFiles(validFiles);
       setIsUploadModalOpen(true);
     }
-  }, []);
+  }, [toast, t]);
 
   // Aplicar filtres client-side
   const filteredDocs = React.useMemo(() => {
