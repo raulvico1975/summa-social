@@ -1,6 +1,6 @@
 # SUMMA SOCIAL - Preguntes Freqüents (FAQ)
 
-**Versió**: 1.27
+**Versió**: 1.28
 **Última actualització**: Gener 2026
 
 ---
@@ -20,14 +20,14 @@ Si no trobes la teva pregunta, no et preocupis: mira el Manual d'Usuari complet 
 **🚀 Primers passos i orientació** (1-7½)
 *T'acabes d'estrenar amb Summa Social i no saps per on agafar-ho? Aquí trobaràs respostes per perdre la por inicial.*
 
-**📥 Importació de dades** (8-15)
-*Tens dades en Excels antics, extractes del banc, llistes de donants... Com ho poses tot dins de Summa Social sense tornar-te boig/boja?*
+**📥 Importació de dades** (8-8½, 9-15)
+*Tens dades en Excels antics, extractes del banc, llistes de donants... Com ho poses tot dins de Summa Social sense tornar-te boig/boja? Inclou info sobre la plantilla oficial (8½).*
 
 **❤️ Donants i contactes** (16-27)
 *Els donants són el cor de l'entitat. Aquí resolem dubtes sobre com gestionar les seves dades, baixes, canvis de DNI i tot el que pugui sorgir.*
 
-**💰 Moviments i categorització** (28-41)
-*El dia a dia de la gestió econòmica: com classificar moviments, adjuntar factures, corregir errors sense estrès.*
+**💰 Moviments i categorització** (28-39½, 40-41)
+*El dia a dia de la gestió econòmica: com classificar moviments, adjuntar factures, corregir errors sense estrès. Inclou Documents Pendents amb drag & drop (39½).*
 
 **📦 Remeses de quotes** (42-53)
 *Les remeses són un dels conceptes que més confonen. Aquí t'expliquem què són, com dividir-les i què fer si algo surt malament.*
@@ -41,8 +41,8 @@ Si no trobes la teva pregunta, no et preocupis: mira el Manual d'Usuari complet 
 **📄 Informes fiscals** (69-78)
 *El Model 182, el 347, els certificats de donació... Tot el que necessites saber per tenir la fiscalitat al dia sense maldecaps.*
 
-**📁 Projectes i subvencions** (79-84)
-*Si treballeu amb subvencions o voleu control per àrees de treball, aquí t'expliquem com organitzar-ho sense complicar-te la vida.*
+**📁 Projectes i subvencions** (79-84½)
+*Si treballeu amb subvencions o voleu control per àrees de treball, aquí t'expliquem com organitzar-ho sense complicar-te la vida. Inclou Liquidacions de Despeses de Viatge (84½).*
 
 **🔧 Problemes i errors** (85-92)
 *Algo no funciona com esperaves? Tranquil/a, aquí trobaràs solucions als problemes més comuns.*
@@ -235,7 +235,28 @@ L'importador de Summa Social és bastant llest i tolerant. El que necessita per 
 - L'ordre de les columnes és diferent al que esperaries → No importa gens
 - Hi ha files buides enmig → S'ignoraran automàticament
 
-**El meu consell:** Fes primer una prova petita. Copia unes 10-20 files del teu Excel a un fitxer nou i prova d'importar-lo. Si funciona bé (que probablement sí), llavors importa la resta amb confiança.
+**El meu consell:** La manera més segura és fer servir la **plantilla oficial** que trobaràs dins del modal d'importació. Descarrega-la, omple-la amb les dades, i importa-la. Així el sistema detectarà automàticament totes les columnes sense necessitat de mapejar res manualment.
+
+---
+
+### 8½. Què és això de la "plantilla oficial" que veig als importadors?
+
+**És la millor manera d'assegurar-te que la importació funciona a la primera!** A partir de la versió 1.28, tots els importadors (donants, proveïdors, categories) ofereixen una plantilla oficial descarregable.
+
+**Per què usar-la:**
+- El sistema reconeix automàticament el 100% de les columnes
+- No cal mapejar res manualment
+- Evites errors de format o noms de columnes
+- Pots exportar les dades actuals i fer servir el mateix format per reimportar
+
+**Com funciona:**
+1. Ves a l'importador (Donants → Importar donants, per exemple)
+2. Clica "Descarrega plantilla" dins del modal
+3. S'obre un Excel amb les capçaleres correctes
+4. Omple'l amb les teves dades
+5. Guarda i puja el fitxer
+
+**Consell extra:** Si ja tens dades a Summa Social i vols fer una modificació massiva (actualitzar adreces, per exemple), pots exportar les dades actuals, modificar-les a l'Excel, i reimportar-les. El format és idèntic.
 
 ---
 
@@ -845,6 +866,34 @@ Aquestes notes són internes — no apareixen als informes ni a cap lloc visible
 
 **Per veure o descarregar el document:**
 Clica sobre la icona de document i s'obrirà o es descarregarà directament.
+
+---
+
+### 39½. Què és la secció "Documents Pendents" que veig a Moviments?
+
+**És una safata d'entrada per a factures i tiquets que encara no has conciliat!** A partir de la versió 1.28, pots pujar documents (factures de proveïdors, tiquets de despeses) i després vincular-los als moviments bancaris corresponents.
+
+**Per què és útil:**
+- Pots pujar les factures el dia que les reps, sense esperar l'extracte del banc
+- Quan arribi el moviment al banc, ja tindràs la factura preparada per conciliar
+- Facilita el flux de treball en equip: un membre puja factures, un altre concilia
+
+**Com pujar documents (dues opcions):**
+
+**Opció 1: Botó "Pujar"**
+1. Ves a Moviments → Pendents
+2. Clica el botó "Pujar"
+3. Selecciona els fitxers (PDF, XML, JPG, PNG)
+
+**Opció 2: Drag & Drop (la més ràpida)**
+1. Ves a Moviments → Pendents
+2. Arrossega els fitxers directament sobre la pàgina
+3. Veuràs un overlay blau "Deixa anar per pujar"
+4. S'obre el modal amb els fitxers precarregats
+
+**Formats admesos:** PDF, XML, JPG, JPEG, PNG
+
+**Després de pujar:** Revisa les dades extretes automàticament (proveïdor, import, data) i quan tinguis el moviment bancari corresponent, concilia'ls amb un clic.
 
 ---
 
@@ -1676,6 +1725,26 @@ El sistema analitza totes les despeses de l'entitat i et suggereix quines podrie
    - Pas 3: Revisa la previsualització
    - Pas 4: Confirma i importa
 4. Les partides es creen automàticament
+
+---
+
+### 84½. Què són les "Liquidacions de Despeses de Viatge"?
+
+**És una funcionalitat per gestionar els reemborsaments de despeses de viatge dels membres de l'equip.** A partir de la versió 1.28, pots crear liquidacions que agrupen tiquets i quilometratge d'un viatge i generar automàticament el PDF de reemborsament i el fitxer SEPA.
+
+**Flux típic:**
+
+1. **Durant el viatge:** El membre puja els tiquets (foto des del mòbil o drag & drop al PC)
+2. **Al tornar:** Crea una liquidació a Moviments → Liquidacions → Nova liquidació
+3. **Afegeix tiquets:** Des de la peça de Tiquets, pot arrossegar fitxers directament sobre la card
+4. **Afegeix quilometratge:** Si ha fet desplaçaments amb vehicle propi
+5. **Genera PDF:** Un document net amb tots els justificants
+6. **Genera SEPA:** Per fer el pagament del reemborsament
+
+**Drag & Drop de tiquets:**
+Pots arrossegar fitxers (PDF, JPG, PNG) directament sobre la secció de Tiquets de la liquidació. Els fitxers es pugen automàticament com a documents pendents i es vinculen a la liquidació.
+
+**Formats admesos:** PDF, JPG, JPEG, PNG
 
 ---
 
