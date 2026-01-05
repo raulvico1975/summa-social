@@ -12,13 +12,6 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
-import {
   Table,
   TableBody,
   TableCell,
@@ -26,7 +19,6 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import {
@@ -42,12 +34,17 @@ import {
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
-import type { Supplier, SupplierCategory } from '@/lib/data';
-import { SUPPLIER_CATEGORIES } from '@/lib/data';
+import type { Supplier, Category } from '@/lib/data';
 import { collection, query, where, getDocs, writeBatch, doc, limit } from 'firebase/firestore';
-import { useFirebase } from '@/firebase';
+import { useFirebase, useCollection, useMemoFirebase } from '@/firebase';
 import { useCurrentOrganization } from '@/hooks/organization-provider';
 import { useTranslations } from '@/i18n';
+import {
+  isOfficialSuppliersTemplate,
+  getOfficialSupplierMapping,
+  downloadSuppliersTemplate,
+  SUPPLIERS_TEMPLATE_HEADERS,
+} from '@/lib/suppliers/suppliers-template';
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // TIPUS
@@ -56,55 +53,47 @@ import { useTranslations } from '@/i18n';
 type ColumnMapping = {
   name: string | null;
   taxId: string | null;
-  zipCode: string | null;
-  category: string | null;
+  defaultCategory: string | null;
   address: string | null;
-  email: string | null;
+  zipCode: string | null;
+  city: string | null;
+  province: string | null;
   phone: string | null;
+  email: string | null;
   iban: string | null;
-  paymentTerms: string | null;
 };
 
 type ImportRow = {
   rowIndex: number;
   data: Record<string, any>;
-  parsed: Partial<Supplier>;
+  parsed: Partial<Supplier> & { defaultCategoryId?: string };
   status: 'valid' | 'duplicate' | 'invalid';
   error?: string;
+  warning?: string;
 };
 
-type ImportStep = 'upload' | 'mapping' | 'preview' | 'importing' | 'complete';
+type ImportStep = 'upload' | 'preview' | 'importing' | 'complete';
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // CONSTANTS
 // ═══════════════════════════════════════════════════════════════════════════════
 
-const REQUIRED_FIELDS = ['name', 'taxId'] as const;
-
 const emptyMapping: ColumnMapping = {
   name: null,
   taxId: null,
-  zipCode: null,
-  category: null,
+  defaultCategory: null,
   address: null,
-  email: null,
+  zipCode: null,
+  city: null,
+  province: null,
   phone: null,
+  email: null,
   iban: null,
-  paymentTerms: null,
 };
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // HELPERS
 // ═══════════════════════════════════════════════════════════════════════════════
-
-function normalizeText(text: string): string {
-  if (!text) return '';
-  return text
-    .toLowerCase()
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .replace(/[^a-z0-9]/g, '');
-}
 
 function toTitleCase(text: string): string {
   if (!text) return '';
@@ -122,74 +111,6 @@ function toTitleCase(text: string): string {
     .replace(/\s+/g, ' ');
 }
 
-function autoDetectColumn(header: string): keyof ColumnMapping | null {
-  const normalized = normalizeText(header);
-  
-  const patterns: Record<keyof ColumnMapping, string[]> = {
-    name: ['nom', 'nombre', 'name', 'raosocial', 'denominacio', 'empresa', 'proveidor'],
-    taxId: ['cif', 'nif', 'dni', 'taxid', 'documento', 'identificacio'],
-    zipCode: ['cp', 'codipostal', 'codigopostal', 'zipcode', 'postal'],
-    category: ['categoria', 'category', 'tipo', 'tipus'],
-    address: ['adreca', 'direccion', 'address', 'domicili'],
-    email: ['email', 'correu', 'correo', 'mail'],
-    phone: ['telefon', 'telefono', 'phone', 'mobil', 'movil'],
-    iban: ['iban', 'compte', 'cuenta', 'banc', 'banco', 'cc'],
-    paymentTerms: ['pagament', 'pago', 'payment', 'condicions', 'condiciones', 'venciment'],
-  };
-
-  for (const [field, keywords] of Object.entries(patterns)) {
-    if (keywords.some(kw => normalized.includes(kw))) {
-      return field as keyof ColumnMapping;
-    }
-  }
-  return null;
-}
-
-function parseCategory(value: any): SupplierCategory | undefined {
-  if (!value) return undefined;
-  const normalized = normalizeText(String(value));
-  
-  const categoryMap: Record<string, SupplierCategory> = {
-    'serveis': 'services',
-    'services': 'services',
-    'professional': 'services',
-    'subministraments': 'utilities',
-    'utilities': 'utilities',
-    'llum': 'utilities',
-    'aigua': 'utilities',
-    'gas': 'utilities',
-    'materials': 'materials',
-    'equipament': 'materials',
-    'lloguer': 'rent',
-    'rent': 'rent',
-    'alquiler': 'rent',
-    'assegurances': 'insurance',
-    'insurance': 'insurance',
-    'seguros': 'insurance',
-    'banc': 'banking',
-    'banking': 'banking',
-    'banco': 'banking',
-    'comunicacions': 'communications',
-    'communications': 'communications',
-    'telefon': 'communications',
-    'internet': 'communications',
-    'transport': 'transport',
-    'missatgeria': 'transport',
-    'manteniment': 'maintenance',
-    'maintenance': 'maintenance',
-    'altres': 'other',
-    'other': 'other',
-    'otros': 'other',
-  };
-
-  for (const [key, cat] of Object.entries(categoryMap)) {
-    if (normalized.includes(key)) {
-      return cat;
-    }
-  }
-  return undefined;
-}
-
 function cleanTaxId(value: any): string {
   if (!value) return '';
   return String(value).toUpperCase().replace(/[^A-Z0-9]/g, '');
@@ -198,6 +119,17 @@ function cleanTaxId(value: any): string {
 function cleanIban(value: any): string {
   if (!value) return '';
   return String(value).toUpperCase().replace(/\s/g, '');
+}
+
+/**
+ * Normalitza un nom de categoria per matching
+ */
+function normalizeCategoryName(name: string): string {
+  return name
+    .trim()
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '');
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -220,6 +152,14 @@ export function SupplierImporter({
   const { toast } = useToast();
   const { t } = useTranslations();
 
+  // Carregar TOTES les categories per matching (agnòstic de tipus)
+  const categoriesQuery = useMemoFirebase(
+    () => organizationId ? collection(firestore, 'organizations', organizationId, 'categories') : null,
+    [firestore, organizationId]
+  );
+  const { data: allCategories } = useCollection<Category>(categoriesQuery);
+  const categoryTranslations = t.categories as Record<string, string>;
+
   const [step, setStep] = React.useState<ImportStep>('upload');
   const [file, setFile] = React.useState<File | null>(null);
   const [headers, setHeaders] = React.useState<string[]>([]);
@@ -228,32 +168,10 @@ export function SupplierImporter({
   const [importRows, setImportRows] = React.useState<ImportRow[]>([]);
   const [importProgress, setImportProgress] = React.useState(0);
   const [importedCount, setImportedCount] = React.useState(0);
-  const [existingIds, setExistingIds] = React.useState<Set<string>>(new Set());
-
-  const FIELD_LABELS: Record<keyof ColumnMapping, string> = {
-    name: t.importers.supplier.fields.name,
-    taxId: t.importers.supplier.fields.cif,
-    zipCode: t.importers.supplier.fields.zipCode,
-    category: t.importers.supplier.fields.category,
-    address: t.importers.supplier.fields.address,
-    email: t.importers.supplier.fields.email,
-    phone: t.importers.supplier.fields.phone,
-    iban: t.importers.supplier.fields.iban,
-    paymentTerms: t.importers.supplier.fields.paymentTerms,
-  };
-
-  const CATEGORY_LABELS: Record<SupplierCategory, string> = {
-    services: t.importers.supplier.categories.professional,
-    utilities: t.importers.supplier.categories.supplies,
-    materials: t.importers.supplier.categories.materials,
-    rent: t.importers.supplier.categories.rent,
-    insurance: t.importers.supplier.categories.insurance,
-    banking: t.importers.supplier.categories.banking,
-    communications: t.importers.supplier.categories.telecom,
-    transport: t.importers.supplier.categories.transport,
-    maintenance: t.importers.supplier.categories.maintenance,
-    other: t.importers.supplier.categories.other,
-  };
+  // Map de taxId -> docId per detectar duplicats (només actius)
+  const [existingSupplierIds, setExistingSupplierIds] = React.useState<Map<string, string>>(new Map());
+  // Error si no és plantilla oficial
+  const [templateError, setTemplateError] = React.useState<string | null>(null);
 
   // Reset quan es tanca
   React.useEffect(() => {
@@ -267,11 +185,12 @@ export function SupplierImporter({
         setImportRows([]);
         setImportProgress(0);
         setImportedCount(0);
+        setTemplateError(null);
       }, 300);
     }
   }, [open]);
 
-  // Carregar CIFs existents quan s'obre
+  // Carregar CIFs existents quan s'obre (només proveïdors NO eliminats)
   React.useEffect(() => {
     if (open && organizationId && firestore) {
       loadExistingTaxIds();
@@ -282,28 +201,72 @@ export function SupplierImporter({
     if (!organizationId || !firestore) return;
     try {
       const contactsRef = collection(firestore, 'organizations', organizationId, 'contacts');
-      // Limitar a 5000 per rendiment - suficient per detectar duplicats
+      // Limitar a 5000 per rendiment
       const q = query(contactsRef, where('type', '==', 'supplier'), limit(5000));
       const snapshot = await getDocs(q);
-      const ids = new Set<string>();
-      snapshot.forEach(doc => {
-        const data = doc.data();
+      const ids = new Map<string, string>();
+      snapshot.forEach(docSnap => {
+        const data = docSnap.data();
+        // Criteri normalitzat: "actiu" = deletedAt == null && archivedAt == null
+        // Suportem els dos camps defensivament per compatibilitat
+        if (data.deletedAt || data.archivedAt) {
+          return; // Ignorar proveïdors eliminats
+        }
         if (data.taxId) {
-          ids.add(cleanTaxId(data.taxId));
+          ids.set(cleanTaxId(data.taxId), docSnap.id);
         }
       });
-      setExistingIds(ids);
+      setExistingSupplierIds(ids);
     } catch (error) {
       console.error('Error carregant CIFs existents:', error);
       toast({ variant: 'destructive', title: t.common?.error || 'Error' });
     }
   };
 
+  /**
+   * Busca categoria per nom (matching normalitzat, agnòstic de tipus).
+   * Si hi ha duplicats amb diferent tipus (income/expense), retorna null i avisa.
+   */
+  const getCategoryIdByName = React.useCallback((categoryName: string): { id: string | null; ambiguous: boolean } => {
+    if (!categoryName || !allCategories || allCategories.length === 0) {
+      return { id: null, ambiguous: false };
+    }
+
+    const normalizedInput = normalizeCategoryName(categoryName);
+
+    // Buscar TOTES les categories que coincideixen (per nom o traducció)
+    const matches = allCategories.filter(c => {
+      const normalizedName = normalizeCategoryName(c.name);
+      const translatedName = categoryTranslations[c.name] || '';
+      const normalizedTranslation = normalizeCategoryName(translatedName);
+
+      return normalizedName === normalizedInput || normalizedTranslation === normalizedInput;
+    });
+
+    if (matches.length === 0) {
+      return { id: null, ambiguous: false };
+    }
+
+    // Si hi ha múltiples matches amb diferents tipus, és ambigu
+    const types = new Set(matches.map(c => c.type));
+    if (types.size > 1) {
+      return { id: null, ambiguous: true };
+    }
+
+    // Match únic o tots del mateix tipus: agafar el primer
+    return { id: matches[0].id, ambiguous: false };
+  }, [allCategories, categoryTranslations]);
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // HANDLERS
+  // ═══════════════════════════════════════════════════════════════════════════
+
   const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const selectedFile = e.target.files?.[0];
     if (!selectedFile) return;
 
     setFile(selectedFile);
+    setTemplateError(null);
 
     try {
       const data = await selectedFile.arrayBuffer();
@@ -320,43 +283,70 @@ export function SupplierImporter({
       setHeaders(detectedHeaders);
       setRawData(jsonData);
 
-      // Auto-detectar mapejat
-      const autoMapping: ColumnMapping = { ...emptyMapping };
-      const usedHeaders = new Set<string>();
-      
-      for (const header of detectedHeaders) {
-        const field = autoDetectColumn(header);
-        if (field && !autoMapping[field] && !usedHeaders.has(header)) {
-          autoMapping[field] = header;
-          usedHeaders.add(header);
+      // Comprovar si és la plantilla oficial de Summa
+      const official = isOfficialSuppliersTemplate(detectedHeaders);
+
+      if (official) {
+        // Plantilla oficial: mapatge automàtic i saltar a preview
+        const officialMapping = getOfficialSupplierMapping(detectedHeaders);
+        const autoMapping: ColumnMapping = { ...emptyMapping };
+
+        // Convertir índexs a noms de capçalera
+        for (const [field, idx] of Object.entries(officialMapping)) {
+          if (idx !== undefined && idx >= 0 && idx < detectedHeaders.length) {
+            autoMapping[field as keyof ColumnMapping] = detectedHeaders[idx];
+          }
         }
+
+        setMapping(autoMapping);
+        // Processar directament sense passar per mapping
+        processDataWithMapping(autoMapping, jsonData);
+      } else {
+        // NO és plantilla oficial: mostrar error
+        setTemplateError('Fes servir la plantilla oficial de Summa per importar proveïdors.');
       }
-      setMapping(autoMapping);
-      setStep('mapping');
     } catch (error) {
       console.error('Error llegint fitxer:', error);
       toast({ variant: 'destructive', title: 'Error', description: t.importers.common.cannotReadFile });
     }
   };
 
-  const handleMappingChange = (field: keyof ColumnMapping, value: string | null) => {
-    setMapping(prev => ({ ...prev, [field]: value === '__none__' ? null : value }));
-  };
+  // Processar dades amb un mapping específic (per plantilla oficial)
+  const processDataWithMapping = (currentMapping: ColumnMapping, data: Record<string, any>[]) => {
+    const rows: ImportRow[] = data.map((row, index) => {
+      // Llegir categoria de l'Excel
+      const categoryFromExcel = currentMapping.defaultCategory
+        ? String(row[currentMapping.defaultCategory] || '').trim()
+        : '';
 
-  const processData = () => {
-    const rows: ImportRow[] = rawData.map((row, index) => {
-      const parsed: Partial<Supplier> = {
+      // Fer matching amb categories existents (agnòstic de tipus)
+      const categoryMatch = categoryFromExcel ? getCategoryIdByName(categoryFromExcel) : { id: null, ambiguous: false };
+      let categoryWarning: string | undefined;
+      if (categoryFromExcel) {
+        if (categoryMatch.ambiguous) {
+          categoryWarning = `Categoria "${categoryFromExcel}" ambigua (existeix com income i expense)`;
+        } else if (!categoryMatch.id) {
+          categoryWarning = `Categoria "${categoryFromExcel}" no trobada`;
+        }
+      }
+
+      const parsed: Partial<Supplier> & { defaultCategoryId?: string } = {
         type: 'supplier',
-        name: mapping.name ? toTitleCase(String(row[mapping.name] || '')) : '',
-        taxId: mapping.taxId ? cleanTaxId(row[mapping.taxId]) : '',
-        zipCode: mapping.zipCode ? String(row[mapping.zipCode] || '').trim() : '',
-        category: mapping.category ? parseCategory(row[mapping.category]) : undefined,
-        address: mapping.address ? String(row[mapping.address] || '').trim() : undefined,
-        email: mapping.email ? String(row[mapping.email] || '').trim() : undefined,
-        phone: mapping.phone ? String(row[mapping.phone] || '').trim() : undefined,
-        iban: mapping.iban ? cleanIban(row[mapping.iban]) : undefined,
-        paymentTerms: mapping.paymentTerms ? String(row[mapping.paymentTerms] || '').trim() : undefined,
+        name: currentMapping.name ? toTitleCase(String(row[currentMapping.name] || '')) : '',
+        taxId: currentMapping.taxId ? cleanTaxId(row[currentMapping.taxId]) : '',
+        address: currentMapping.address ? String(row[currentMapping.address] || '').trim() : undefined,
+        zipCode: currentMapping.zipCode ? String(row[currentMapping.zipCode] || '').trim() : undefined,
+        city: currentMapping.city ? String(row[currentMapping.city] || '').trim() : undefined,
+        province: currentMapping.province ? String(row[currentMapping.province] || '').trim() : undefined,
+        phone: currentMapping.phone ? String(row[currentMapping.phone] || '').trim() : undefined,
+        email: currentMapping.email ? String(row[currentMapping.email] || '').trim() : undefined,
+        iban: currentMapping.iban ? cleanIban(row[currentMapping.iban]) : undefined,
       };
+
+      // Assignar defaultCategoryId si s'ha trobat (i no és ambigu)
+      if (categoryMatch.id) {
+        parsed.defaultCategoryId = categoryMatch.id;
+      }
 
       let status: ImportRow['status'] = 'valid';
       let error: string | undefined;
@@ -364,18 +354,16 @@ export function SupplierImporter({
       if (!parsed.name) {
         status = 'invalid';
         error = t.importers.supplier.errors.missingName;
-      } else if (!parsed.taxId) {
-        status = 'invalid';
-        error = t.importers.supplier.errors.missingCif;
-      } else if (existingIds.has(parsed.taxId)) {
+      } else if (parsed.taxId && existingSupplierIds.has(parsed.taxId)) {
+        // Només marcar duplicat si té taxId i aquest existeix (i no està eliminat)
         status = 'duplicate';
         error = t.importers.common.alreadyExists;
       }
 
-      return { rowIndex: index + 2, data: row, parsed, status, error };
+      return { rowIndex: index + 2, data: row, parsed, status, error, warning: categoryWarning };
     });
 
-    // Detectar duplicats interns
+    // Detectar duplicats interns per taxId
     const seenTaxIds = new Set<string>();
     for (const row of rows) {
       if (row.status === 'valid' && row.parsed.taxId) {
@@ -401,7 +389,7 @@ export function SupplierImporter({
     const validRows = importRows.filter(r => r.status === 'valid');
     const contactsRef = collection(firestore, 'organizations', organizationId, 'contacts');
     const now = new Date().toISOString();
-    
+
     let imported = 0;
     const batchSize = 50;
     const batches = Math.ceil(validRows.length / batchSize);
@@ -411,28 +399,31 @@ export function SupplierImporter({
         const batch = writeBatch(firestore);
         const start = i * batchSize;
         const end = Math.min(start + batchSize, validRows.length);
-        
+
         for (let j = start; j < end; j++) {
           const row = validRows[j];
           const newDocRef = doc(contactsRef);
-          
+
           // Netejar undefined abans de guardar
           const cleanData: Record<string, any> = {
             id: newDocRef.id,
             type: 'supplier',
             name: row.parsed.name || '',
-            taxId: row.parsed.taxId || '',
-            zipCode: row.parsed.zipCode || '',
             createdAt: now,
             updatedAt: now,
           };
 
-          if (row.parsed.category) cleanData.category = row.parsed.category;
+          // Camps opcionals
+          if (row.parsed.taxId) cleanData.taxId = row.parsed.taxId;
           if (row.parsed.address) cleanData.address = row.parsed.address;
-          if (row.parsed.email) cleanData.email = row.parsed.email;
+          if (row.parsed.zipCode) cleanData.zipCode = row.parsed.zipCode;
+          if (row.parsed.city) cleanData.city = row.parsed.city;
+          if (row.parsed.province) cleanData.province = row.parsed.province;
           if (row.parsed.phone) cleanData.phone = row.parsed.phone;
+          if (row.parsed.email) cleanData.email = row.parsed.email;
           if (row.parsed.iban) cleanData.iban = row.parsed.iban;
-          if (row.parsed.paymentTerms) cleanData.paymentTerms = row.parsed.paymentTerms;
+          // Categoria per defecte (FIX: ara s'importa correctament)
+          if (row.parsed.defaultCategoryId) cleanData.defaultCategoryId = row.parsed.defaultCategoryId;
 
           batch.set(newDocRef, cleanData);
           imported++;
@@ -461,37 +452,14 @@ export function SupplierImporter({
     }
   };
 
-  const downloadTemplate = () => {
-    const template = [
-      [
-        t.importers.supplier.fields.name.replace(' *', ''),
-        t.importers.supplier.fields.cif.replace(' *', ''),
-        t.importers.supplier.fields.zipCode,
-        t.importers.supplier.fields.category,
-        t.importers.supplier.fields.address,
-        t.importers.supplier.fields.email,
-        t.importers.supplier.fields.phone,
-        t.importers.supplier.fields.iban,
-        t.importers.supplier.fields.paymentTerms
-      ],
-      ['Empresa Serveis SL', 'B12345678', '08001', t.importers.supplier.categories.professional, 'Carrer Major 1', 'info@empresa.com', '934000000', 'ES1234567890123456789012', '30 dies'],
-      ['Subministraments SA', 'A87654321', '28001', t.importers.supplier.categories.materials, 'Avinguda Central 50', 'vendes@submin.com', '915000000', '', 'Al comptat'],
-    ];
-
-    const ws = XLSX.utils.aoa_to_sheet(template);
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, t.importers.supplier.worksheetName);
-    ws['!cols'] = [
-      { wch: 25 }, { wch: 12 }, { wch: 12 }, { wch: 15 },
-      { wch: 25 }, { wch: 25 }, { wch: 12 }, { wch: 26 }, { wch: 18 }
-    ];
-
-    XLSX.writeFile(wb, t.importers.supplier.templateName);
-  };
+  // ═══════════════════════════════════════════════════════════════════════════
+  // RENDER
+  // ═══════════════════════════════════════════════════════════════════════════
 
   const validCount = importRows.filter(r => r.status === 'valid').length;
   const duplicateCount = importRows.filter(r => r.status === 'duplicate').length;
   const invalidCount = importRows.filter(r => r.status === 'invalid').length;
+  const warningCount = importRows.filter(r => r.warning).length;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -503,7 +471,6 @@ export function SupplierImporter({
           </DialogTitle>
           <DialogDescription>
             {step === 'upload' && t.importers.supplier.uploadDescription}
-            {step === 'mapping' && t.importers.supplier.mappingDescription}
             {step === 'preview' && t.importers.supplier.previewDescription}
             {step === 'importing' && t.importers.supplier.importingDescription}
             {step === 'complete' && t.importers.supplier.completeDescription}
@@ -513,6 +480,21 @@ export function SupplierImporter({
         {/* STEP: UPLOAD */}
         {step === 'upload' && (
           <div className="py-6 space-y-6">
+            {/* Error de plantilla no oficial */}
+            {templateError && (
+              <div className="bg-red-50 border border-red-200 rounded-lg p-4 text-sm text-red-800">
+                <div className="flex items-start gap-3">
+                  <AlertCircle className="h-5 w-5 flex-shrink-0 mt-0.5" />
+                  <div className="space-y-2">
+                    <p className="font-medium">{templateError}</p>
+                    <p className="text-red-600">
+                      Descarrega la plantilla oficial i copia les teves dades en ella.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
+
             <div
               className="border-2 border-dashed rounded-lg p-8 text-center hover:border-primary/50 transition-colors cursor-pointer"
               onClick={() => document.getElementById('supplier-file-input')?.click()}
@@ -530,76 +512,22 @@ export function SupplierImporter({
             </div>
 
             <div className="flex items-center justify-center gap-2">
-              <Button variant="outline" size="sm" onClick={downloadTemplate}>
+              <Button variant="outline" size="sm" onClick={downloadSuppliersTemplate}>
                 <Download className="h-4 w-4 mr-2" />
                 {t.importers.common.downloadTemplate}
               </Button>
             </div>
 
-            <div className="bg-muted/50 rounded-lg p-4 text-sm">
-              <p className="font-medium mb-2">{t.importers.common.recommendedFormat}</p>
-              <ul className="list-disc list-inside space-y-1 text-muted-foreground">
-                <li><strong>{t.importers.common.requiredColumns}</strong> {t.importers.supplier.requiredColumnsText}</li>
-                <li><strong>{t.importers.common.optionalColumns}</strong> {t.importers.supplier.optionalColumnsText}</li>
-                <li>{t.importers.common.firstRowHeaders}</li>
-              </ul>
-            </div>
-          </div>
-        )}
-
-        {/* STEP: MAPPING */}
-        {step === 'mapping' && (
-          <div className="py-4 space-y-4">
-            {file && (
-              <div className="flex items-center gap-2 text-sm bg-muted/50 rounded p-2">
-                <FileSpreadsheet className="h-4 w-4" />
-                <span className="font-medium">{file.name}</span>
-                <span className="text-muted-foreground">({rawData.length} {t.importers.common.rows})</span>
+            <div className="bg-muted/50 rounded-lg p-4 text-sm space-y-3">
+              <p className="font-medium">Fes servir la plantilla oficial de Summa per importar proveïdors.</p>
+              <div className="space-y-1 text-muted-foreground">
+                <p><strong>{t.importers.common.requiredColumns}</strong> Nom</p>
+                <p><strong>{t.importers.common.optionalColumns}</strong> NIF/CIF, Categoria, Adreça, CP, Ciutat, Telèfon, Email, IBAN</p>
               </div>
-            )}
-
-            <div className="grid gap-3">
-              {(Object.keys(FIELD_LABELS) as (keyof ColumnMapping)[]).map((field) => (
-                <div key={field} className="grid grid-cols-5 items-center gap-4">
-                  <Label className={cn(
-                    "text-right text-sm col-span-2",
-                    REQUIRED_FIELDS.includes(field as any) && "font-medium"
-                  )}>
-                    {FIELD_LABELS[field]}
-                  </Label>
-                  <Select
-                    value={mapping[field] || '__none__'}
-                    onValueChange={(v) => handleMappingChange(field, v)}
-                  >
-                    <SelectTrigger className="col-span-3">
-                      <SelectValue placeholder={t.importers.common.doNotImport} />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="__none__">{t.importers.common.doNotImport}</SelectItem>
-                      {headers.map((header) => (
-                        <SelectItem key={header} value={header}>
-                          {header}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              ))}
+              <div className="pt-2 border-t border-muted space-y-1 text-muted-foreground">
+                <p>La columna "Categoria per defecte" s'assigna si coincideix amb una categoria de despesa existent.</p>
+              </div>
             </div>
-
-            <DialogFooter className="pt-4">
-              <Button variant="outline" onClick={() => setStep('upload')}>
-                <ArrowLeft className="h-4 w-4 mr-2" />
-                {t.importers.common.back}
-              </Button>
-              <Button
-                onClick={processData}
-                disabled={!mapping.name || !mapping.taxId}
-              >
-                {t.importers.common.continue}
-                <ArrowRight className="h-4 w-4 ml-2" />
-              </Button>
-            </DialogFooter>
           </div>
         )}
 
@@ -630,6 +558,13 @@ export function SupplierImporter({
               </div>
             </div>
 
+            {warningCount > 0 && (
+              <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 text-sm text-amber-800">
+                <AlertTriangle className="h-4 w-4 inline mr-2" />
+                {warningCount} fila(es) amb categoria no reconeguda. S'importaran sense categoria per defecte.
+              </div>
+            )}
+
             <div className="border rounded-lg max-h-64 overflow-auto">
               <Table>
                 <TableHeader>
@@ -637,7 +572,6 @@ export function SupplierImporter({
                     <TableHead className="w-16">{t.importers.common.row}</TableHead>
                     <TableHead>{t.importers.common.name}</TableHead>
                     <TableHead>{t.importers.supplier.tableHeaders.cif}</TableHead>
-                    <TableHead>{t.importers.supplier.tableHeaders.category}</TableHead>
                     <TableHead className="w-24">{t.importers.common.status}</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -651,17 +585,15 @@ export function SupplierImporter({
                       )}
                     >
                       <TableCell className="text-muted-foreground">{row.rowIndex}</TableCell>
-                      <TableCell className="font-medium">{row.parsed.name || '-'}</TableCell>
-                      <TableCell>{row.parsed.taxId || '-'}</TableCell>
                       <TableCell>
-                        {row.parsed.category ? (
-                          <Badge variant="outline">
-                            {CATEGORY_LABELS[row.parsed.category as SupplierCategory] || row.parsed.category}
-                          </Badge>
-                        ) : (
-                          <span className="text-muted-foreground">-</span>
-                        )}
+                        <div>
+                          <span className="font-medium">{row.parsed.name || '-'}</span>
+                          {row.warning && (
+                            <div className="text-xs text-amber-600 mt-0.5">{row.warning}</div>
+                          )}
+                        </div>
                       </TableCell>
+                      <TableCell>{row.parsed.taxId || '-'}</TableCell>
                       <TableCell>
                         {row.status === 'valid' && (
                           <Badge className="bg-green-100 text-green-800">
@@ -701,7 +633,7 @@ export function SupplierImporter({
             )}
 
             <DialogFooter>
-              <Button variant="outline" onClick={() => setStep('mapping')}>
+              <Button variant="outline" onClick={() => setStep('upload')}>
                 <ArrowLeft className="h-4 w-4 mr-2" />
                 {t.importers.common.back}
               </Button>
@@ -754,4 +686,4 @@ export function SupplierImporter({
       </DialogContent>
     </Dialog>
   );
-} 
+}

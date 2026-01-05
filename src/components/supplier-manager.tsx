@@ -41,7 +41,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
-import { PlusCircle, Edit, Trash2, Building2, Upload, Search, X, Factory, Download, FileSpreadsheet } from 'lucide-react';
+import { PlusCircle, Edit, Trash2, Building2, Upload, Search, X, Factory, Download } from 'lucide-react';
 import { EmptyState } from '@/components/ui/empty-state';
 import type { Supplier, Category } from '@/lib/data';
 import { useToast } from '@/hooks/use-toast';
@@ -52,7 +52,7 @@ import { collection, doc, query, where } from 'firebase/firestore';
 import { useCurrentOrganization } from '@/hooks/organization-provider';
 import { SupplierImporter } from './supplier-importer';
 import { useTranslations } from '@/i18n';
-import { exportSuppliersToExcel, downloadSuppliersTemplate } from '@/lib/suppliers-export';
+import { exportSuppliersToExcel } from '@/lib/suppliers-export';
 
 type SupplierFormData = Omit<Supplier, 'id' | 'createdAt' | 'updatedAt'>;
 
@@ -273,14 +273,6 @@ export function SupplierManager() {
               </CardDescription>
             </div>
             <div className="flex gap-2">
-              <Button
-                variant="outline"
-                size="icon"
-                onClick={() => downloadSuppliersTemplate()}
-                title="Descarregar plantilla Excel"
-              >
-                <FileSpreadsheet className="h-4 w-4" />
-              </Button>
               <Button
                 variant="outline"
                 size="icon"
