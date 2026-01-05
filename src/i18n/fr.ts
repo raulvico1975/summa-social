@@ -2718,6 +2718,7 @@ export const fr = {
       add: "Ajouter",
       subtotalReceipts: "Sous-total tickets",
       noReceipts: "Aucun ticket assigné. Ajoutez des tickets confirmés.",
+      dropReceipts: "Déposez les tickets ici",
       viewFile: "Voir le fichier",
       removeFromReport: "Retirer de la note de frais",
       mileage: "Kilométrage",

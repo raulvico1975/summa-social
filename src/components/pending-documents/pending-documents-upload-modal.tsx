@@ -59,6 +59,8 @@ interface PendingDocumentsUploadModalProps {
   onUploadComplete?: (count: number) => void;
   /** Contactes per fer match de proveïdor durant l'extracció XML */
   contacts?: Contact[];
+  /** Fitxers inicials per carregar automàticament (drag & drop extern) */
+  initialFiles?: File[];
 }
 
 // =============================================================================
@@ -130,6 +132,7 @@ export function PendingDocumentsUploadModal({
   onOpenChange,
   onUploadComplete,
   contacts = [],
+  initialFiles,
 }: PendingDocumentsUploadModalProps) {
   const { firestore, storage } = useFirebase();
   const { organizationId, organization } = useCurrentOrganization();
@@ -149,6 +152,26 @@ export function PendingDocumentsUploadModal({
       setIsDragging(false);
     }
   }, [open]);
+
+  // Carregar fitxers inicials quan s'obre el modal (drag & drop extern)
+  React.useEffect(() => {
+    if (open && initialFiles && initialFiles.length > 0 && files.length === 0) {
+      const validFiles = initialFiles.filter(f => {
+        const ext = f.name.toLowerCase().split('.').pop();
+        return ['pdf', 'xml', 'jpg', 'jpeg', 'png'].includes(ext || '');
+      });
+
+      if (validFiles.length > 0) {
+        const newItems: FileUploadItem[] = validFiles.map(file => ({
+          id: crypto.randomUUID(),
+          file,
+          status: 'queued' as const,
+          progress: 0,
+        }));
+        setFiles(newItems);
+      }
+    }
+  }, [open, initialFiles]);
 
   // Afegir fitxers a la llista
   const addFiles = React.useCallback((newFiles: FileList | File[]) => {

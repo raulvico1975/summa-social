@@ -2717,6 +2717,7 @@ export const ca = {
       add: "Afegir",
       subtotalReceipts: "Subtotal tiquets",
       noReceipts: "Cap tiquet assignat. Afegeix tiquets confirmats.",
+      dropReceipts: "Deixa anar els tiquets aquí",
       viewFile: "Veure fitxer",
       removeFromReport: "Treure de la liquidació",
       mileage: "Quilometratge",

@@ -2710,6 +2710,7 @@ export const es = {
       add: "Añadir",
       subtotalReceipts: "Subtotal tickets",
       noReceipts: "Ningún ticket asignado. Añade tickets confirmados.",
+      dropReceipts: "Suelta los tickets aquí",
       viewFile: "Ver archivo",
       removeFromReport: "Quitar de la liquidación",
       mileage: "Kilometraje",

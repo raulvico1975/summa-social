@@ -44,6 +44,7 @@ import {
   Pencil,
   Paperclip,
   X,
+  Upload,
 } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { cn } from '@/lib/utils';
@@ -74,6 +75,7 @@ import {
   updatePendingDocument,
   type PendingDocument,
 } from '@/lib/pending-documents';
+import { PendingDocumentsUploadModal } from '@/components/pending-documents/pending-documents-upload-modal';
 import type { Contact, Category, Organization, BankAccount } from '@/lib/data';
 import { CATEGORY_TRANSLATION_KEYS } from '@/lib/default-data';
 
@@ -201,6 +203,11 @@ export function ExpenseReportDetail({ report, onClose, scrollToSection }: Expens
 
   // Modal de tiquets
   const [isReceiptsModalOpen, setIsReceiptsModalOpen] = React.useState(false);
+
+  // Drag & drop per afegir tiquets
+  const [isDraggingReceipts, setIsDraggingReceipts] = React.useState(false);
+  const [isUploadModalOpen, setIsUploadModalOpen] = React.useState(false);
+  const [initialUploadFiles, setInitialUploadFiles] = React.useState<File[] | undefined>(undefined);
 
   // Carregant
   const [isSaving, setIsSaving] = React.useState(false);
@@ -409,6 +416,77 @@ export function ExpenseReportDetail({ report, onClose, scrollToSection }: Expens
       console.error('[handleRemoveReceipt] Error:', error);
     }
   };
+
+  // Handlers de drag & drop per afegir tiquets nous
+  const handleReceiptsDragOver = React.useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (e.dataTransfer.types.includes('Files')) {
+      setIsDraggingReceipts(true);
+    }
+  }, []);
+
+  const handleReceiptsDragLeave = React.useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDraggingReceipts(false);
+  }, []);
+
+  const handleReceiptsDrop = React.useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDraggingReceipts(false);
+
+    if (e.dataTransfer.files.length > 0) {
+      setInitialUploadFiles(Array.from(e.dataTransfer.files));
+      setIsUploadModalOpen(true);
+    }
+  }, []);
+
+  // Callback quan es completa l'upload de tiquets nous (des de drag & drop)
+  // Consulta els nous docs i els vincula a la liquidació
+  const handleReceiptsUploadComplete = React.useCallback(async (count: number) => {
+    if (!organizationId || !firestore || count === 0) return;
+
+    // Petit delay per esperar que Firestore propagui els nous docs
+    await new Promise(resolve => setTimeout(resolve, 500));
+
+    // Buscar tots els pendingDocuments draft creats recentment (últims 30s)
+    // que no tenen reportId i vincular-los a aquesta liquidació
+    try {
+      const { query: firestoreQuery, collection: firestoreCollection, where, getDocs, Timestamp } = await import('firebase/firestore');
+      const thirtySecondsAgo = new Date(Date.now() - 30000);
+
+      const recentDocsQuery = firestoreQuery(
+        firestoreCollection(firestore, 'organizations', organizationId, 'pendingDocuments'),
+        where('status', '==', 'draft'),
+        where('reportId', '==', null),
+        where('createdAt', '>=', Timestamp.fromDate(thirtySecondsAgo))
+      );
+
+      const snapshot = await getDocs(recentDocsQuery);
+      const newDocIds: string[] = [];
+
+      for (const docSnap of snapshot.docs) {
+        const docId = docSnap.id;
+        // Vincular a la liquidació
+        await updatePendingDocument(firestore, organizationId, docId, {
+          reportId: report.id,
+          type: 'receipt', // Forçar tipus receipt per liquidacions
+        });
+        newDocIds.push(docId);
+      }
+
+      if (newDocIds.length > 0) {
+        setReceiptDocIds(prev => [...prev, ...newDocIds]);
+        toast({ title: t.expenseReports.detail.receiptsAdded({ count: newDocIds.length }) });
+      }
+    } catch (error) {
+      console.error('[handleReceiptsUploadComplete] Error vinculant tiquets:', error);
+    }
+
+    setInitialUploadFiles(undefined);
+  }, [organizationId, firestore, report.id, toast, t]);
 
   // Funcions per gestionar mileageItems
   const resetMileageForm = () => {
@@ -716,7 +794,25 @@ export function ExpenseReportDetail({ report, onClose, scrollToSection }: Expens
       </Card>
 
       {/* Tiquets */}
-      <Card>
+      <Card
+        className={cn(
+          'relative transition-all',
+          isDraggingReceipts && 'ring-2 ring-primary border-primary'
+        )}
+        onDragOver={handleReceiptsDragOver}
+        onDragLeave={handleReceiptsDragLeave}
+        onDrop={handleReceiptsDrop}
+      >
+        {/* Overlay de drag & drop */}
+        {isDraggingReceipts && (
+          <div className="absolute inset-0 z-10 bg-primary/5 rounded-lg flex items-center justify-center pointer-events-none">
+            <div className="flex items-center gap-2 text-primary font-medium">
+              <Upload className="h-5 w-5" />
+              {t.expenseReports.detail.dropReceipts}
+            </div>
+          </div>
+        )}
+
         <CardHeader className="pb-3">
           <div className="flex items-center justify-between">
             <CardTitle className="text-base flex items-center gap-2">
@@ -1156,6 +1252,18 @@ export function ExpenseReportDetail({ report, onClose, scrollToSection }: Expens
         availableReceipts={availableReceipts || []}
         onAdd={handleAddReceipts}
         categories={categories || []}
+      />
+
+      {/* Modal upload tiquets nous (drag & drop) */}
+      <PendingDocumentsUploadModal
+        open={isUploadModalOpen}
+        onOpenChange={(open) => {
+          setIsUploadModalOpen(open);
+          if (!open) setInitialUploadFiles(undefined);
+        }}
+        onUploadComplete={handleReceiptsUploadComplete}
+        contacts={contacts || []}
+        initialFiles={initialUploadFiles}
       />
 
       {/* Modal SEPA reemborsament */}

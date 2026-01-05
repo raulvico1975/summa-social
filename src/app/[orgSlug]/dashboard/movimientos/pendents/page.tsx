@@ -84,6 +84,7 @@ export default function PendingDocsPage() {
 
   // Modal d'upload
   const [isUploadModalOpen, setIsUploadModalOpen] = React.useState(false);
+  const [initialUploadFiles, setInitialUploadFiles] = React.useState<File[] | undefined>(undefined);
 
   // Estats de càrrega
   const [confirmingDocId, setConfirmingDocId] = React.useState<string | null>(null);
@@ -106,6 +107,9 @@ export default function PendingDocsPage() {
 
   // Control d'expansió per files (només una a la vegada)
   const [expandedDocId, setExpandedDocId] = React.useState<string | null>(null);
+
+  // Drag & drop extern (per obrir modal amb fitxers)
+  const [isDraggingOver, setIsDraggingOver] = React.useState(false);
 
   // Ref per scroll a dalt després d'upload
   const topRef = React.useRef<HTMLDivElement>(null);
@@ -349,7 +353,43 @@ export default function PendingDocsPage() {
     topRef.current?.scrollIntoView({ behavior: 'smooth' });
     // Anar a "Per revisar" per veure els nous drafts
     setStatusFilter(DRAFTS_FILTER);
+    // Netejar fitxers inicials
+    setInitialUploadFiles(undefined);
   };
+
+  // Handlers de drag & drop extern (zona de la pàgina)
+  const handlePageDragOver = React.useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    // Només activar si hi ha fitxers
+    if (e.dataTransfer.types.includes('Files')) {
+      setIsDraggingOver(true);
+    }
+  }, []);
+
+  const handlePageDragLeave = React.useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    // Només desactivar si sortim de la zona principal
+    const rect = e.currentTarget.getBoundingClientRect();
+    const x = e.clientX;
+    const y = e.clientY;
+    if (x < rect.left || x > rect.right || y < rect.top || y > rect.bottom) {
+      setIsDraggingOver(false);
+    }
+  }, []);
+
+  const handlePageDrop = React.useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDraggingOver(false);
+
+    if (e.dataTransfer.files.length > 0) {
+      // Obrir el modal amb els fitxers arrossegats
+      setInitialUploadFiles(Array.from(e.dataTransfer.files));
+      setIsUploadModalOpen(true);
+    }
+  }, []);
 
   // Aplicar filtres client-side
   const filteredDocs = React.useMemo(() => {
@@ -440,7 +480,27 @@ export default function PendingDocsPage() {
 
   return (
     <TooltipProvider>
-      <div ref={topRef} className="w-full flex flex-col gap-6">
+      <div
+        ref={topRef}
+        className="w-full flex flex-col gap-6 relative"
+        onDragOver={handlePageDragOver}
+        onDragLeave={handlePageDragLeave}
+        onDrop={handlePageDrop}
+      >
+        {/* Overlay de drag & drop */}
+        {isDraggingOver && (
+          <div className="absolute inset-0 z-50 bg-primary/5 border-2 border-dashed border-primary rounded-lg flex items-center justify-center pointer-events-none">
+            <div className="bg-background/95 backdrop-blur-sm rounded-lg px-6 py-4 shadow-lg border">
+              <div className="flex items-center gap-3 text-primary">
+                <Upload className="h-8 w-8" />
+                <span className="text-lg font-medium">
+                  {t.pendingDocs.upload.dropHere}
+                </span>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Header */}
         <div className="flex flex-col gap-4">
           <div className="flex items-center gap-2">
@@ -687,9 +747,13 @@ export default function PendingDocsPage() {
         {/* Modal d'upload */}
         <PendingDocumentsUploadModal
           open={isUploadModalOpen}
-          onOpenChange={setIsUploadModalOpen}
+          onOpenChange={(open) => {
+            setIsUploadModalOpen(open);
+            if (!open) setInitialUploadFiles(undefined);
+          }}
           onUploadComplete={handleUploadComplete}
           contacts={contacts || []}
+          initialFiles={initialUploadFiles}
         />
 
         {/* Modal SEPA */}
