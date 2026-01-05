@@ -584,7 +584,7 @@ export function DonorManager() {
             <div className="flex gap-2">
               <Button
                 variant="outline"
-                onClick={() => donors && exportDonorsToExcel(donors)}
+                onClick={() => donors && exportDonorsToExcel(donors, allCategories || [])}
                 disabled={!donors || donors.length === 0}
                 title={t.donors.exportTooltip ?? 'Exportar llista de donants a Excel'}
               >

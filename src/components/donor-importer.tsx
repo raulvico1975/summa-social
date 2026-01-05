@@ -48,6 +48,12 @@ import { collection, query, where, getDocs, writeBatch, doc, limit } from 'fireb
 import { useFirebase, useCollection, useMemoFirebase } from '@/firebase';
 import { useCurrentOrganization } from '@/hooks/organization-provider';
 import { useTranslations } from '@/i18n';
+import {
+  isOfficialTemplate,
+  getOfficialTemplateMapping,
+  downloadDonorsTemplate,
+  DONORS_TEMPLATE_HEADERS,
+} from '@/lib/donors/donors-template';
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // TIPUS
@@ -273,6 +279,9 @@ export function DonorImporter({
   const [existingDonorIds, setExistingDonorIds] = React.useState<Map<string, string>>(new Map());
   // Checkbox per actualitzar existents
   const [updateExisting, setUpdateExisting] = React.useState(false);
+  // Detectar si el fitxer és la plantilla oficial
+  const [isOfficial, setIsOfficial] = React.useState(false);
+  const [templateError, setTemplateError] = React.useState<string | null>(null);
 
   // Actualitzar l'estat de les files quan canvia updateExisting
   React.useEffect(() => {
@@ -310,6 +319,8 @@ export function DonorImporter({
         setUpdatedCount(0);
         setGlobalDefaultCategory('__auto__');
         setUpdateExisting(false);
+        setIsOfficial(false);
+        setTemplateError(null);
       }, 300);
     }
   }, [open]);
@@ -385,6 +396,7 @@ export function DonorImporter({
     if (!selectedFile) return;
 
     setFile(selectedFile);
+    setTemplateError(null);
 
     try {
       const data = await selectedFile.arrayBuffer();
@@ -401,23 +413,94 @@ export function DonorImporter({
       setHeaders(detectedHeaders);
       setRawData(jsonData);
 
-      // Auto-detectar mapejat
-      const autoMapping: ColumnMapping = { ...emptyMapping };
-      const usedHeaders = new Set<string>();
-      
-      for (const header of detectedHeaders) {
-        const field = autoDetectColumn(header);
-        if (field && !autoMapping[field] && !usedHeaders.has(header)) {
-          autoMapping[field] = header;
-          usedHeaders.add(header);
+      // Comprovar si és la plantilla oficial de Summa
+      const official = isOfficialTemplate(detectedHeaders);
+      setIsOfficial(official);
+
+      if (official) {
+        // Plantilla oficial: mapatge automàtic i saltar a preview
+        const officialMapping = getOfficialTemplateMapping(detectedHeaders);
+        const autoMapping: ColumnMapping = { ...emptyMapping };
+
+        // Convertir índexs a noms de capçalera
+        for (const [field, idx] of Object.entries(officialMapping)) {
+          if (idx !== undefined && idx >= 0 && idx < detectedHeaders.length) {
+            autoMapping[field as keyof ColumnMapping] = detectedHeaders[idx];
+          }
         }
+
+        setMapping(autoMapping);
+        // Processar directament sense passar per mapping
+        processDataWithMapping(autoMapping, jsonData);
+      } else {
+        // NO és plantilla oficial: mostrar error
+        setTemplateError('Fes servir la plantilla oficial de Summa per importar donants.');
       }
-      setMapping(autoMapping);
-      setStep('mapping');
     } catch (error) {
       console.error('Error llegint fitxer:', error);
       toast({ variant: 'destructive', title: 'Error', description: t.importers.common.cannotReadFile });
     }
+  };
+
+  // Processar dades amb un mapping específic (per plantilla oficial)
+  const processDataWithMapping = (currentMapping: ColumnMapping, data: Record<string, any>[]) => {
+    const rows: ImportRow[] = data.map((row, index) => {
+      const parsed: Partial<Donor> = {
+        type: 'donor',
+        name: currentMapping.name ? toTitleCase(String(row[currentMapping.name] || '')) : '',
+        taxId: currentMapping.taxId ? cleanTaxId(row[currentMapping.taxId]) : '',
+        zipCode: currentMapping.zipCode ? String(row[currentMapping.zipCode] || '').trim() : '',
+        address: currentMapping.address ? String(row[currentMapping.address] || '').trim() : undefined,
+        city: currentMapping.city ? String(row[currentMapping.city] || '').trim() : undefined,
+        province: currentMapping.province ? String(row[currentMapping.province] || '').trim() : undefined,
+        donorType: currentMapping.donorType ? parseDonorType(row[currentMapping.donorType]) : 'individual',
+        membershipType: currentMapping.membershipType ? parseMembershipType(row[currentMapping.membershipType]) : 'one-time',
+        monthlyAmount: currentMapping.monthlyAmount ? parseAmount(row[currentMapping.monthlyAmount]) : undefined,
+        iban: currentMapping.iban ? cleanIban(row[currentMapping.iban]) : undefined,
+        email: currentMapping.email ? String(row[currentMapping.email] || '').trim() : undefined,
+        phone: currentMapping.phone ? String(row[currentMapping.phone] || '').trim() : undefined,
+        status: currentMapping.status ? parseStatus(row[currentMapping.status]) : 'active',
+      };
+
+      let status: ImportRow['status'] = 'new';
+      let error: string | undefined;
+
+      if (!parsed.name) {
+        status = 'invalid';
+        error = t.importers.donor.errors.missingName;
+      } else if (!parsed.taxId) {
+        status = 'invalid';
+        error = t.importers.donor.errors.missingTaxId;
+      } else if (!parsed.zipCode) {
+        status = 'invalid';
+        error = t.importers.donor.errors.missingZipCode;
+      } else if (existingDonorIds.has(parsed.taxId)) {
+        if (updateExisting) {
+          status = 'update';
+        } else {
+          status = 'duplicate';
+          error = t.importers.common.alreadyExists;
+        }
+      }
+
+      return { rowIndex: index + 2, data: row, parsed, status, error };
+    });
+
+    // Detectar duplicats interns
+    const seenTaxIds = new Set<string>();
+    for (const row of rows) {
+      if ((row.status === 'new' || row.status === 'update') && row.parsed.taxId) {
+        if (seenTaxIds.has(row.parsed.taxId)) {
+          row.status = 'duplicate';
+          row.error = t.importers.common.duplicateInFile;
+        } else {
+          seenTaxIds.add(row.parsed.taxId);
+        }
+      }
+    }
+
+    setImportRows(rows);
+    setStep('preview');
   };
 
   const handleMappingChange = (field: keyof ColumnMapping, value: string | null) => {
@@ -633,40 +716,6 @@ const executeImport = async () => {
   }
 };
 
-  const downloadTemplate = () => {
-    // Obtenir noms de categories traduïts per l'exemple
-    const memberFeesName = categoryTranslations['memberFees'] || 'Quotes socis';
-    const donationsName = categoryTranslations['donations'] || 'Donacions';
-
-    const template = [
-      [
-        t.importers.donor.fields.name,
-        t.importers.donor.fields.taxId,
-        t.importers.donor.fields.zipCode,
-        t.importers.donor.fields.type,
-        t.importers.donor.fields.modality,
-        t.importers.donor.fields.monthlyAmount,
-        t.importers.donor.fields.iban,
-        t.importers.donor.fields.email,
-        t.importers.donor.fields.phone,
-        t.importers.donor.fields.defaultCategory
-      ],
-      ['Maria García López', '12345678A', '28001', 'Particular', t.importers.donor.modality.member, '10', 'ES1234567890123456789012', 'maria@exemple.com', '612345678', memberFeesName],
-      ['Joan Pérez Martí', '87654321B', '08001', 'Particular', t.importers.donor.modality.oneTime, '', '', 'joan@exemple.com', '', donationsName],
-      ['Empresa S.L.', 'B12345678', '25001', 'Empresa', t.importers.donor.modality.member, '50', 'ES0987654321098765432109', 'info@empresa.com', '973123456', memberFeesName],
-    ];
-
-    const ws = XLSX.utils.aoa_to_sheet(template);
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, t.importers.donor.worksheetName);
-    ws['!cols'] = [
-      { wch: 25 }, { wch: 12 }, { wch: 12 }, { wch: 18 },
-      { wch: 18 }, { wch: 14 }, { wch: 26 }, { wch: 25 }, { wch: 12 }, { wch: 18 }
-    ];
-
-    XLSX.writeFile(wb, t.importers.donor.templateName);
-  };
-
   // ═══════════════════════════════════════════════════════════════════════════
   // RENDER
   // ═══════════════════════════════════════════════════════════════════════════
@@ -696,6 +745,21 @@ const executeImport = async () => {
         {/* STEP: UPLOAD */}
         {step === 'upload' && (
           <div className="py-6 space-y-6">
+            {/* Error de plantilla no oficial */}
+            {templateError && (
+              <div className="bg-red-50 border border-red-200 rounded-lg p-4 text-sm text-red-800">
+                <div className="flex items-start gap-3">
+                  <AlertCircle className="h-5 w-5 flex-shrink-0 mt-0.5" />
+                  <div className="space-y-2">
+                    <p className="font-medium">{templateError}</p>
+                    <p className="text-red-600">
+                      {t.importers.donor.templateErrorHint || 'Descarrega la plantilla oficial i copia les teves dades en ella.'}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
+
             <div
               className="border-2 border-dashed rounded-lg p-8 text-center hover:border-primary/50 transition-colors cursor-pointer"
               onClick={() => document.getElementById('file-input')?.click()}
@@ -713,14 +777,14 @@ const executeImport = async () => {
             </div>
 
             <div className="flex items-center justify-center gap-2">
-              <Button variant="outline" size="sm" onClick={downloadTemplate}>
+              <Button variant="outline" size="sm" onClick={downloadDonorsTemplate}>
                 <Download className="h-4 w-4 mr-2" />
                 {t.importers.common.downloadTemplate}
               </Button>
             </div>
 
             <div className="bg-muted/50 rounded-lg p-4 text-sm space-y-3">
-              <p className="font-medium">{t.importers.donor.templateTip}</p>
+              <p className="font-medium">{t.importers.donor.officialTemplateRequired || 'Fes servir la plantilla oficial de Summa per importar donants.'}</p>
               <div className="space-y-1 text-muted-foreground">
                 <p><strong>{t.importers.common.requiredColumns}</strong> {t.importers.donor.requiredColumnsText}</p>
                 <p><strong>{t.importers.common.optionalColumns}</strong> {t.importers.donor.optionalColumnsText}</p>
@@ -944,7 +1008,7 @@ const executeImport = async () => {
             </div>
 
             <DialogFooter>
-              <Button variant="outline" onClick={() => setStep('mapping')}>
+              <Button variant="outline" onClick={() => setStep('upload')}>
                 <ArrowLeft className="h-4 w-4 mr-2" />
                 {t.importers.common.back}
               </Button>
