@@ -1,7 +1,7 @@
 # SUMMA SOCIAL - Manual d'Usuari Complet
 
-**Versió**: 1.27
-**Última actualització**: Gener 2026
+**Versió**: 1.28
+**Última actualització**: 5 Gener 2026
 
 ---
 
@@ -28,6 +28,7 @@ Endavant!
 5. [Gestió de Moviments](#5-gestió-de-moviments)
 6. [Divisor de Remeses](#6-divisor-de-remeses)
 6b. [Documents Pendents i Remeses SEPA OUT](#6b-documents-pendents-i-remeses-sepa-out)
+6c. [Liquidacions de Despeses de Viatge](#107-liquidacions-de-despeses-de-viatge-v128)
 7. [Gestió de Devolucions Bancàries](#7-gestió-de-devolucions-bancàries)
 8. [Donacions via Stripe](#8-donacions-via-stripe)
 9. [Informes Fiscals](#9-informes-fiscals)
@@ -297,6 +298,22 @@ Les categories serveixen per classificar els moviments (ingressos i despeses). S
 
 > 💡 **Un consell:** Millor tenir 10-15 categories clares que 50 de massa específiques. Les categories molt granulars acaben sent difícils de mantenir i no aporten gaire valor.
 
+### Importar categories des d'Excel (v1.28)
+
+1. Ves a ⚙️ **Configuració > Categories**
+2. Clica **"Importar categories"**
+3. Dins el modal, clica **"Descarregar plantilla"** per obtenir el format correcte
+4. Omple la plantilla amb les teves categories
+5. Arrossega el fitxer omplert
+6. Revisa la previsualització (els duplicats es marquen com "Omesa")
+7. Clica **"Importar"**
+
+### Eliminar categories
+
+Quan elimines una categoria, els moviments que la tenien assignada **no s'esborren**, simplement perden la categoria. Veuràs un avís amb el nombre de moviments afectats.
+
+> ⚠️ **Zona de perill:** Si necessites esborrar TOTES les categories i tornar a començar, hi ha un botó especial a "Configuració > Zona de Perill". Les categories per defecte es regeneraran automàticament.
+
 ---
 
 ## 2.5 Configurar comptes bancaris
@@ -412,24 +429,43 @@ Això t'estalvia molta feina repetitiva.
 
 ---
 
-## 3.3 Importar donants des d'Excel
+## 3.3 Importar donants des d'Excel (v1.28)
 
 Si ja tens una llista de donants en un full de càlcul, no cal que els introdueixis un per un.
 
-### Pas a pas
+### Pas a pas (amb plantilla oficial)
 
 1. Ves a ❤️ **Donants**
 2. Clica **"Importar donants"**
-3. Arrossega el fitxer Excel o CSV
-4. L'aplicació **detecta automàticament** les columnes
-5. Revisa el mapejat i corregeix si cal
-6. Clica **"Previsualitzar"**
+3. Clica **"Descarregar plantilla"** per obtenir el format oficial
+4. Omple la plantilla amb les teves dades
+5. Arrossega el fitxer omplert
+6. L'aplicació **detecta automàticament** totes les columnes (100% sense mapeig)
 7. Revisa les dades (🟢 OK · 🟡 Avís · 🔴 Error)
 8. Clica **"Importar"**
 
-### Columnes que es detecten automàticament
+> 💡 **Consell:** La plantilla oficial garanteix detecció al 100%. Si uses un altre format, potser caldrà mapejar columnes manualment.
 
-El sistema reconeix columnes amb noms com: nom, nombre, name, dni, nif, cif, cp, codipostal, email, iban...
+### Columnes de la plantilla oficial
+
+| Columna | Descripció | Obligatori |
+|---------|------------|------------|
+| Nom | Nom complet | ✅ |
+| NIF | Document d'identitat | Per Model 182 |
+| Tipus | Particular o Empresa | ✅ |
+| Modalitat | Puntual o Soci | ✅ |
+| Estat | Alta o Baixa | Opcional |
+| Quota mensual | Import en € | Opcional |
+| IBAN | Compte bancari | Opcional |
+| Adreça | Domicili | Opcional |
+| Codi postal | CP | Per Model 182 |
+| Ciutat, Província | Localització | Opcional |
+| Telèfon, Email | Contacte | Opcional |
+| Categoria | Categoria per defecte | Opcional |
+
+### Categoria per defecte
+
+Si l'Excel porta una columna "Categoria", el sistema intentarà trobar-la entre les categories existents. Si no la troba, s'usarà la categoria de fallback configurada (sense bloquejar la importació).
 
 ---
 
@@ -516,6 +552,26 @@ Si pagues **més de 3.005,06€ anuals** a un proveïdor, ha d'aparèixer al **M
 2. Clica **"+ Nou proveïdor"**
 3. Omple: Nom, NIF/CIF, Categoria per defecte
 4. Clica **"Guardar"**
+
+### Importar proveïdors des d'Excel (v1.28)
+
+1. Ves a 🏢 **Proveïdors**
+2. Clica **"Importar proveïdors"**
+3. Clica **"Descarregar plantilla"** per obtenir el format oficial
+4. Omple la plantilla amb les teves dades
+5. Arrossega el fitxer omplert
+6. Revisa les dades (🟢 OK · 🟡 Avís · 🔴 Error)
+7. Clica **"Importar"**
+
+### Categoria per defecte
+
+Si l'Excel porta una columna "Categoria", el sistema buscarà entre TOTES les categories (ingressos i despeses).
+
+> ⚠️ **Avís d'ambigüitat:** Si existeix una categoria "Altres" com a ingrés i una altra com a despesa, veuràs un warning groc. En aquest cas, revisa manualment i assigna la correcta després d'importar.
+
+### Proveïdors eliminats i reimportació
+
+Si havies eliminat un proveïdor i el reimportes, es crearà com a nou (no es considera duplicat).
 
 ---
 
@@ -851,14 +907,28 @@ Són factures o rebuts que:
 
 ## 6b.2 Pujar documents pendents
 
-### Pas a pas
+Hi ha **dues maneres** de pujar documents pendents:
+
+### Opció A: Amb el botó "Pujar"
 
 1. Ves a 💰 **Moviments > Pendents**
 2. Clica **"Pujar documents"**
-3. Arrossega els fitxers (PDF, imatges o XML)
+3. Selecciona o arrossega els fitxers
 4. El sistema extrau automàticament: import, proveïdor, data, número de factura
 5. Revisa i corregeix si cal
 6. Clica **"Pujar"**
+
+### Opció B: Arrossegant fitxers a la pàgina (v1.28)
+
+1. Ves a 💰 **Moviments > Pendents**
+2. Arrossega els fitxers directament sobre la pàgina
+3. Veuràs un overlay blau "Deixa anar per pujar"
+4. Deixa anar i s'obrirà el modal d'upload amb els fitxers precarregats
+5. Continua com a l'opció A
+
+**Formats admesos:** PDF, XML, JPG, JPEG, PNG
+
+> 💡 Si arrossegues fitxers d'un format no admès (ex: .doc, .txt), veuràs un missatge d'error i no s'obrirà el modal.
 
 ### Estats d'un document
 
@@ -1349,6 +1419,54 @@ L'administració revisa i categoritza després.
 ## 10.6 Drag & Drop de documents
 
 A la pantalla d'assignació de despeses, pots arrossegar fitxers directament sobre cada fila per adjuntar justificants.
+
+---
+
+## 10.7 Liquidacions de Despeses de Viatge (v1.28)
+
+Per gestionar despeses de viatge: tiquets, quilometratge i reemborsaments.
+
+### Dues maneres de treballar
+
+**Opció A: Des del terreny (viatge)**
+1. Puja els tiquets a **Moviments > Pendents** (via mòbil o drag & drop)
+2. Quan tornis, ves a **Moviments > Liquidacions**
+3. Crea una nova liquidació
+4. Selecciona els tiquets pujats i afegeix quilometratge
+5. Genera el PDF
+
+**Opció B: Des de l'oficina (directe)**
+1. Ves a **Moviments > Liquidacions**
+2. Crea una nova liquidació
+3. Arrossega els tiquets directament sobre la card de "Tiquets"
+4. Afegeix quilometratge si cal
+5. Genera el PDF
+
+### Afegir tiquets amb drag & drop (v1.28)
+
+Dins la liquidació, la card de "Tiquets" accepta drag & drop:
+1. Arrossega els fitxers sobre la card
+2. Veuràs un overlay blau
+3. Deixa anar i s'obrirà el modal d'upload
+4. Els tiquets nous es vinculen automàticament a la liquidació
+
+**Formats admesos:** PDF, XML, JPG, JPEG, PNG
+
+### Quilometratge
+
+Pots afegir múltiples línies de quilometratge amb:
+- Data del desplaçament
+- Quilòmetres
+- Tarifa (per defecte 0,26 €/km)
+- Notes (ruta o motiu)
+
+### Generar PDF
+
+El PDF inclou:
+- Dades de la liquidació i beneficiari
+- Llista de tiquets amb imports
+- Línies de quilometratge
+- Total desglossat
 
 ---
 

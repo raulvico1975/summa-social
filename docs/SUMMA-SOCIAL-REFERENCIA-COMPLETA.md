@@ -720,6 +720,22 @@ Permet adjuntar documents arrossegant fitxers directament sobre una fila de movi
 
 **Traduccions:** `movements.table.dropToAttach` (CA/ES/FR)
 
+### 3.2.8.1 Documents Pendents - Drag & Drop (NOU v1.28)
+
+La pàgina de Documents Pendents (`/movimientos/pendents`) accepta drag & drop com a punt d'entrada equivalent al botó "Pujar".
+
+**Funcionament:**
+- Arrossegar fitxers sobre la pàgina activa overlay visual "Deixa anar per pujar"
+- En deixar anar, s'obre el modal d'upload amb els fitxers precarregats
+- Formats admesos: PDF, XML, JPG, JPEG, PNG
+- Validació al drop handler: si cap fitxer és vàlid → toast d'error (no s'obre modal buit)
+
+**Components:**
+- `handlePageDrop` a `src/app/[orgSlug]/dashboard/movimientos/pendents/page.tsx`
+- `PendingDocumentsUploadModal` amb prop `initialFiles`
+
+**Traduccions:** `pendingDocs.upload.dropHere`, `invalidFiles`, `invalidFilesDesc` (CA/ES/FR/PT)
+
 ### 3.2.9 Indicadors Visuals de Remeses Processades (NOU v1.14)
 
 Les remeses de donacions processades es mostren amb un estil visual distintiu per evitar confusió.
@@ -1306,26 +1322,36 @@ Acció disponible al menú ⋮ del moviment pare si `isRemittance === true`.
 - **Edició**: Es pot canviar l'estat des del formulari d'edició
 - **Importador**: Detecta columna "Estado/Estat" automàticament
 
-### 3.6.4 Importador de Donants
+### 3.6.4 Importador de Donants (ACTUALITZAT v1.28)
 
-**Columnes detectades automàticament:**
+**Plantilla oficial única:**
+- Descarregable dins l'importador ("Descarregar plantilla")
+- Detecció automàtica 100% sense mapeig manual
+- Format: Export = Import (les mateixes columnes)
 
-| Camp | Patrons de detecció |
-|------|---------------------|
-| Nom | nom, nombre, name |
-| DNI/CIF | dni, nif, cif, taxid, documento |
-| Codi postal | cp, codipostal, codigopostal, zipcode |
-| Ciutat | ciudad, ciutat, city, localidad, población |
-| Província | provincia, province, comunidad, región |
-| Adreça | direccion, adreça, address, domicilio, calle |
-| Tipus | tipus, tipo, type, persona |
-| Modalitat | modalitat, modalidad, membership, soci |
-| Estat | estado, estat, status, activo, baja, baixa |
-| Import | import, importe, quota, cuota, amount |
-| IBAN | iban, compte, cuenta, banc |
-| Email | email, correu, correo, mail |
-| Telèfon | telefon, telefono, phone |
-| Categoria | categoria, category |
+**Columnes de la plantilla oficial:**
+
+| Columna | Camp | Obligatori |
+|---------|------|------------|
+| Nom | name | ✅ |
+| NIF | taxId | ⚠️ Per Model 182 |
+| Tipus | donorType | ✅ |
+| Modalitat | membershipType | ✅ |
+| Estat | status | ❌ |
+| Quota mensual | monthlyAmount | ❌ |
+| IBAN | iban | ❌ |
+| Adreça | address | ❌ |
+| Codi postal | zipCode | ⚠️ Per Model 182 |
+| Ciutat | city | ❌ |
+| Província | province | ❌ |
+| Telèfon | phone | ❌ |
+| Email | email | ❌ |
+| Categoria | defaultCategoryId | ❌ |
+
+**Categoria per defecte:**
+- Si l'Excel porta columna "Categoria", es fa matching amb categories existents
+- Si no es troba la categoria: s'usa el fallback configurat (microcopy informatiu)
+- Matching normalitzat (sense accents, case-insensitive)
 
 **Funcionalitat "Actualitzar existents":**
 
@@ -1343,6 +1369,38 @@ Acció disponible al menú ⋮ del moviment pare si `isRemittance === true`.
 | Categoria per defecte | ❌ | ❌ |
 | Adreça | ❌ | ❌ |
 | IBAN | ❌ | ❌ |
+
+### 3.6.5.1 Importador de Proveïdors (ACTUALITZAT v1.28)
+
+**Plantilla oficial única:**
+- Descarregable dins l'importador ("Descarregar plantilla")
+- Detecció automàtica 100% sense mapeig manual
+- Format: Export = Import (les mateixes columnes)
+
+**Columnes de la plantilla oficial:**
+
+| Columna | Camp | Obligatori |
+|---------|------|------------|
+| Nom | name | ✅ |
+| CIF | taxId | ⚠️ Per Model 347 |
+| Adreça | address | ❌ |
+| Codi postal | zipCode | ❌ |
+| Ciutat | city | ❌ |
+| Província | province | ❌ |
+| Telèfon | phone | ❌ |
+| Email | email | ❌ |
+| IBAN | iban | ❌ |
+| Categoria | defaultCategoryId | ❌ |
+
+**Categoria per defecte (agnòstica v1.28):**
+- Matching amb TOTES les categories (income + expense), no només expense
+- Si una categoria existeix amb el mateix nom com income i expense → warning "ambigua"
+- L'usuari ha de revisar manualment les files amb warning
+- Matching normalitzat (sense accents, case-insensitive)
+
+**Deduplicació (v1.28):**
+- Ignora proveïdors amb `deletedAt` o `archivedAt` en la detecció de duplicats
+- Un proveïdor eliminat i reimportat es crea com a nou
 
 ### 3.6.6 Exportació de Donants a Excel (NOU v1.16)
 
@@ -1455,8 +1513,25 @@ Firma digitalitzada, nom signant, càrrec
 ### 3.9.3 Preferències
 Llindar alertes contacte: 0€, 50€, 100€, 500€
 
-### 3.9.4 Categories Comptables
-Categories d'ingressos i despeses personalitzables
+### 3.9.4 Categories Comptables (ACTUALITZAT v1.28)
+
+Categories d'ingressos i despeses personalitzables.
+
+**Importador de Categories:**
+- Plantilla oficial única dins l'importador ("Descarregar plantilla")
+- Detecció automàtica 100% sense mapeig manual
+- Normalització de label (majúscules, sense accents) per matching
+- Scroll automàtic a preview si hi ha errors
+- Motiu d'omissió visible per cada fila (duplicat, sense nom, etc.)
+
+**Eliminar Categoria:**
+- Advertència amb comptador de moviments afectats
+- Els moviments no s'esborren, només perden la categoria assignada
+
+**Zona de Perill (Categories):**
+- Botó "Esborrar totes les categories" dins la secció Danger Zone
+- Requereix confirmació escrivint "ESBORRAR"
+- Les categories per defecte es regeneren automàticament
 
 ### 3.9.5 Gestió de Membres
 Convidar, canviar rol, eliminar
@@ -2598,11 +2673,18 @@ Component `<TicketsInbox>` per gestionar tiquets (PendingDocument amb `type: 're
 - Arxivar tiquets
 - Selecció múltiple per assignar a liquidació
 - Upload de nous tiquets
+- **Drag & drop (v1.28):** Arrossegar fitxers dins la card de tiquets per afegir-los directament
 
 **Integració amb PendingDocuments:**
 - Els tickets són `PendingDocument` amb `type: 'receipt'`
 - Es vinculen a la liquidació via `receiptDocIds[]`
 - En arxivar liquidació, es poden arxivar els tickets associats
+
+**Drag & Drop de Tiquets (NOU v1.28):**
+- La card de tiquets accepta drag & drop extern de fitxers
+- Formats admesos: PDF, XML, JPG, JPEG, PNG
+- Validació al drop handler: si cap fitxer és vàlid → toast d'error (no s'obre modal buit)
+- Els fitxers nous es pugen via modal Upload i es vinculen automàticament a la liquidació
 
 ### 3.12.6 Quilometratge Multilínia
 
@@ -2752,9 +2834,16 @@ Sistema automàtic de detecció d'incidències accessible només des de `/admin`
 | S6 | Encallaments | CONSULTA | Transaccions sense classificar > 30 dies |
 | S7 | Fiscal 182 | CONSULTA | Donants sense dades fiscals |
 | S8 | Activitat | CONSULTA | Organitzacions inactives > 60 dies |
+| S9 | Storage | CRITICAL | Errors `storage/unauthorized` (v1.28) |
+
+**Storage Unauthorized (NOU v1.28):**
+- Detecta errors de permisos de Firebase Storage
+- Afecta: upload de pendingDocuments, generació PDF liquidacions
+- Report automàtic com a incident CRITICAL si passa a ruta core (/pendents, /liquidacions)
+- Path sanititzat: sense tokens ni URLs signades
 
 **Política d'alertes:**
-- S1–S5: Generen incidents automàtics quan es detecta l'error
+- S1–S5, S9: Generen incidents automàtics quan es detecta l'error
 - S6–S8: Només consulta, sense incidents automàtics
 
 **Deduplicació:**
@@ -3409,6 +3498,7 @@ Indicadors que requeririen intervenció:
 | **1.25** | **31 Des 2025** | **i18n rutes públiques complet (CA/ES/FR/PT): estructura `[lang]` per login, privacy i contact. Detecció automàtica idioma via Accept-Language. SEO amb canonical + hreflang per 4 idiomes. Redirect stubs per compatibilitat URLs antigues. Nou fitxer `src/i18n/public.ts` amb traduccions separades de l'app privada.** |
 | **1.26** | **31 Des 2025** | **Resolució col·lisió `[lang]` vs `[orgSlug]`: arquitectura `public/[lang]` amb middleware rewrite (URL pública intacta). HOME i Funcionalitats multiidioma. x-default hreflang. Slugs reservats (ca/es/fr/pt/public). Rutes canòniques: `/{lang}/funcionalitats`, `/{lang}/privacy`, `/{lang}/contact`. Aliases naturals: FR (`fonctionnalites`, `confidentialite`), ES (`funcionalidades`, `privacidad`, `contacto`), PT (`funcionalidades`, `privacidade`, `contacto`).** |
 | **1.27** | **2 Gen 2026** | **Fix routing Next 15 (`searchParams` Promise), header responsive (icones ajuda/novetats sempre visibles), cercador natural guies amb sinònims i scoring i18n, validador i18n claus de cerca, layout dashboard overflow fix (`min-w-0 + overflow-x-hidden` a SidebarInset). Secció 3.12 Liquidacions de Despeses: model ExpenseReport, quilometratge multilínia (mileageItems[]), generació PDF, tabs Liquidacions/Tickets/Quilometratge, deep linking. Guies: travelExpenseReport, mileageTravel. Fix sidebar mòbil: submenú Projectes ara expandeix correctament (isSidebarCollapsed = !isMobile && collapsed).** |
+| **1.28** | **5 Gen 2026** | **Importadors millorats: plantilla oficial única per Categories/Donants/Proveïdors (detecció 100%), export=import per donants i proveïdors, categoria per defecte agnòstica amb warning d'ambigüitat, dedupe ignora deletedAt/archivedAt. Categories: normalització label, scroll preview, motiu omissió, delete warning + count, Danger Zone esborrar categories. Pendents/Liquidacions: drag & drop com a punt d'entrada per pujar fitxers, validació d'extensions al drop handler (pdf/xml/jpg/png), toast feedback si cap vàlid. Storage observability: detecció i report `storage/unauthorized` com a incident CRITICAL.** |
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
