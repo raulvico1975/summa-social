@@ -1,7 +1,7 @@
 # Govern de Codi i Deploy — Summa Social
 
-**Versió:** 1.0
-**Data:** 2026-01-04
+**Versió:** 1.1
+**Data:** 2026-01-06
 **Autor:** Raül Vico (CEO/CTO)
 
 ---
@@ -11,18 +11,17 @@
 | Branca | Funció | Qui hi treballa |
 |--------|--------|-----------------|
 | `main` | Integració i desenvolupament | Desenvolupador |
-| `prod` | Producció (allò desplegat) | Només deploy |
+| `master` | Producció (allò desplegat) | Només deploy |
 | `ui/*`, `fix/*`, `feat/*` | Branques WIP específiques | Desenvolupador |
-| `master` | **Obsoleta** — no tocar | Ningú |
 
 ---
 
 ## Flux de treball
 
 ```
-[Branca WIP] → [main] → [prod] → [Deploy]
-     ↑            ↑         ↑
-   Codi        Validat   Desplegat
+[Branca WIP] → [main] → [master] → [Deploy]
+     ↑            ↑          ↑
+   Codi        Validat    Desplegat
 ```
 
 1. **Desenvolupar** a `main` o a una branca específica (`ui/xxx`, `fix/xxx`).
@@ -30,50 +29,43 @@
    - `npm run build` passa
    - `npm test` passa
    - Prova manual si és canvi UI
-3. **Desplegar** només des de `prod`.
+3. **Desplegar** només des de `master`.
 
 ---
 
 ## Ritual de deploy (3 comandes)
 
 ```bash
-git checkout prod
+git checkout master
 git pull --ff-only
-git merge --ff-only main
+git merge --no-ff main
 git push
 ```
 
-Després:
-```bash
-firebase deploy
-```
+Firebase App Hosting desplega automàticament quan `master` rep un push.
 
-**Regla:** `prod` només es mou amb `--ff-only` des de `main`. Mai es treballa directament a `prod`.
+**Regla:** `master` només es mou amb merge des de `main`. Mai es treballa directament a `master`.
 
 ---
 
 ## Rollback (si cal)
 
 ```bash
-git checkout prod
+git checkout master
 git reset --hard <SHA_BON>
 git push --force-with-lease
 ```
 
-Després, redesplegar:
-```bash
-firebase deploy
-```
+Firebase App Hosting redesplegarà automàticament.
 
 ---
 
 ## Regles d'or
 
-1. **Mai commitejar directament a `prod`.**
-2. **Mai fer push a `master`** (obsoleta).
-3. **Mai desplegar sense passar per `prod`.**
-4. **Verificar UI en mòbil abans de mergear canvis visuals.**
-5. **Un commit = un propòsit clar.** No barrejar QA amb UI amb features.
+1. **Mai commitejar directament a `master`.**
+2. **Mai desplegar sense passar per `master`.**
+3. **Verificar UI en mòbil abans de mergear canvis visuals.**
+4. **Un commit = un propòsit clar.** No barrejar QA amb UI amb features.
 
 ---
 
@@ -97,7 +89,7 @@ Per canvis importants, executar també:
 Només si:
 - L'equip creix a 3+ desenvolupadors → afegir PRs obligatoris
 - Hi ha CI/CD automatitzat → afegir protecció de branques
-- Es necessita staging → afegir branca `staging` entre `main` i `prod`
+- Es necessita staging → afegir branca `staging` entre `main` i `master`
 
 Fins llavors: **simplicitat i disciplina > automatització**.
 
@@ -109,12 +101,12 @@ Fins llavors: **simplicitat i disciplina > automatització**.
 ┌─────────────────────────────────────────────────────────┐
 │                    DESENVOLUPAMENT                      │
 │  ┌──────────┐    ┌──────────┐    ┌──────────┐          │
-│  │ ui/xxx   │───▶│   main   │───▶│   prod   │──▶ DEPLOY│
+│  │ ui/xxx   │───▶│   main   │───▶│  master  │──▶ DEPLOY│
 │  │ fix/xxx  │    │          │    │          │          │
 │  │ feat/xxx │    │ (validat)│    │(producció)│         │
 │  └──────────┘    └──────────┘    └──────────┘          │
 │                                                         │
-│  master = OBSOLETA (ignorar)                           │
+│  Firebase App Hosting desplega automàticament master   │
 └─────────────────────────────────────────────────────────┘
 ```
 
