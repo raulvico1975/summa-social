@@ -3162,5 +3162,6 @@
   "notes.liquidacions.body.1": "Si guardes el tiquet quan passa, no t'estàs organitzant: t'estàs estalviant haver de reconstruir-ho després.",
   "notes.liquidacions.body.2": "Quan arriba el moment d'ordenar i justificar, la informació ja hi és. I tot pesa menys.",
   "notes.liquidacions.title": "Una nota sobre liquidacions",
-  "notes.liquidacions.tooltip": "Nota informativa"
+  "notes.liquidacions.tooltip": "Nota informativa",
+  "notes.liquidacions.imageAlt": "Il·lustració sobre liquidacions"
 }

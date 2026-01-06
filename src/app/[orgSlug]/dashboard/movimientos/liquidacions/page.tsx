@@ -135,6 +135,15 @@ export default function LiquidacionsPage() {
   const { toast } = useToast();
   const { t, tr } = useTranslations();
 
+  // Helper defensiu per traduccions JSON (evita mostrar claus literals)
+  const trSafe = React.useCallback(
+    (key: string, fallback: string): string => {
+      const v = tr(key);
+      return v === key ? fallback : v;
+    },
+    [tr]
+  );
+
   // Feature flag check
   const isPendingDocsEnabled = organization?.features?.pendingDocs ?? false;
 
@@ -327,8 +336,8 @@ export default function LiquidacionsPage() {
               variant="ghost"
               size="icon"
               onClick={() => setIsNoteOpen(true)}
-              aria-label={tr('notes.liquidacions.aria')}
-              title={tr('notes.liquidacions.tooltip')}
+              aria-label={trSafe('notes.liquidacions.aria', 'Informació sobre liquidacions')}
+              title={trSafe('notes.liquidacions.tooltip', 'Nota informativa')}
               className="h-8 w-8 text-muted-foreground hover:text-foreground"
             >
               <Info className="h-4 w-4" />
@@ -655,25 +664,24 @@ export default function LiquidacionsPage() {
 
       {/* Dialog nota informativa */}
       <Dialog open={isNoteOpen} onOpenChange={setIsNoteOpen}>
-        <DialogContent className="sm:max-w-3xl">
+        <DialogContent className="sm:max-w-lg max-h-[85vh] overflow-hidden">
           <DialogHeader>
-            <DialogTitle>{tr('notes.liquidacions.title')}</DialogTitle>
+            <DialogTitle>{trSafe('notes.liquidacions.title', 'Una nota sobre liquidacions')}</DialogTitle>
           </DialogHeader>
-          <div className="space-y-4">
+          <div className="flex flex-col gap-3">
             <img
               src="/img/doodle_liquidac.png"
-              alt=""
-              className="w-full h-auto rounded-md border border-border/30"
+              alt={trSafe('notes.liquidacions.imageAlt', 'Il·lustració sobre liquidacions')}
+              className="w-full max-w-full max-h-[160px] sm:max-h-[200px] rounded-md border border-border/30 object-contain"
             />
-            <div className="space-y-3 text-muted-foreground">
-              <p>{tr('notes.liquidacions.body.0')}</p>
-              <p>{tr('notes.liquidacions.body.1')}</p>
-              <p>{tr('notes.liquidacions.body.2')}</p>
+            <div className="text-sm text-muted-foreground leading-relaxed space-y-2 break-words">
+              <p>{trSafe('notes.liquidacions.body.0', 'Quan estàs en ruta, no penses en liquidacions. Penses en arribar, en resoldre, en continuar.')}</p>
+              <p>{trSafe('notes.liquidacions.body.1', 'Si guardes el tiquet quan passa, no t\'estàs organitzant: t\'estàs estalviant haver de reconstruir-ho després.')}</p>
             </div>
           </div>
           <DialogFooter>
-            <Button onClick={() => setIsNoteOpen(false)}>
-              {tr('notes.common.close')}
+            <Button size="sm" onClick={() => setIsNoteOpen(false)}>
+              {trSafe('notes.common.close', 'Tancar')}
             </Button>
           </DialogFooter>
         </DialogContent>

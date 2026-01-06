@@ -3160,5 +3160,6 @@
   "notes.liquidacions.body.1": "Si tu gardes le ticket au moment où il arrive, tu ne t'organises pas : tu t'épargnes de devoir le reconstituer plus tard.",
   "notes.liquidacions.body.2": "Quand vient le moment de classer et justifier, l'information est déjà là. Et tout devient plus léger.",
   "notes.liquidacions.title": "Une note sur les notes de frais",
-  "notes.liquidacions.tooltip": "Note informative"
+  "notes.liquidacions.tooltip": "Note informative",
+  "notes.liquidacions.imageAlt": "Illustration sur les notes de frais"
 }

@@ -3160,5 +3160,6 @@
   "notes.liquidacions.body.1": "Si guardas el ticket cuando sucede, no te estás organizando: te estás ahorrando tener que reconstruirlo después.",
   "notes.liquidacions.body.2": "Cuando llega el momento de ordenar y justificar, la información ya está ahí. Y todo pesa menos.",
   "notes.liquidacions.title": "Una nota sobre liquidaciones",
-  "notes.liquidacions.tooltip": "Nota informativa"
+  "notes.liquidacions.tooltip": "Nota informativa",
+  "notes.liquidacions.imageAlt": "Ilustración sobre liquidaciones"
 }

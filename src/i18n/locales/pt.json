@@ -3155,5 +3155,6 @@
   "notes.liquidacions.body.1": "Se guardas o recibo quando acontece, não te estás a organizar: estás a poupar-te de ter que o reconstruir depois.",
   "notes.liquidacions.body.2": "Quando chega o momento de ordenar e justificar, a informação já está lá. E tudo pesa menos.",
   "notes.liquidacions.title": "Uma nota sobre prestações de contas",
-  "notes.liquidacions.tooltip": "Nota informativa"
+  "notes.liquidacions.tooltip": "Nota informativa",
+  "notes.liquidacions.imageAlt": "Ilustração sobre prestações de contas"
 }
