@@ -1,10 +1,10 @@
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
+import Image from 'next/image';
 import { Logo } from '@/components/logo';
 import { Button } from '@/components/ui/button';
-import { Separator } from '@/components/ui/separator';
-import { ArrowRight } from 'lucide-react';
+import { ArrowRight, Upload, Settings, FileCheck } from 'lucide-react';
 import {
   PUBLIC_LOCALES,
   isValidPublicLocale,
@@ -14,6 +14,9 @@ import {
 import { getPublicTranslations } from '@/i18n/public';
 
 const BASE_URL = 'https://summasocial.app';
+
+// Classe consistent per "product window frame" a totes les captures
+const frameClass = 'rounded-xl border border-border/50 shadow-sm overflow-hidden bg-background';
 
 interface PageProps {
   params: Promise<{ lang: string }>;
@@ -41,55 +44,35 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 const SECTION_ANCHORS: Record<
   PublicLocale,
   {
-    solves: string;
     conciliation: string;
     remittances: string;
     onlineDonations: string;
     fiscalCertificates: string;
-    invoicesSepa: string;
-    ticketsSettlements: string;
-    projects: string;
   }
 > = {
   ca: {
-    solves: 'que-resol-summa-social',
     conciliation: 'conciliacio-bancaria',
     remittances: 'remeses-devolucions',
     onlineDonations: 'donacions-online',
     fiscalCertificates: 'fiscalitat-certificats',
-    invoicesSepa: 'despeses-pagaments-sepa',
-    ticketsSettlements: 'tiquets-liquidacions',
-    projects: 'modul-projectes',
   },
   es: {
-    solves: 'que-resuelve-summa-social',
     conciliation: 'conciliacion-bancaria',
     remittances: 'remesas-devoluciones',
     onlineDonations: 'donaciones-online',
     fiscalCertificates: 'fiscalidad-certificados',
-    invoicesSepa: 'gastos-pagos-sepa',
-    ticketsSettlements: 'tickets-liquidaciones',
-    projects: 'modulo-proyectos',
   },
   fr: {
-    solves: 'que-resout-summa-social',
     conciliation: 'rapprochement-bancaire',
     remittances: 'prelevements-rejets',
     onlineDonations: 'dons-en-ligne',
     fiscalCertificates: 'fiscalite-certificats',
-    invoicesSepa: 'factures-sepa',
-    ticketsSettlements: 'tickets-notes-frais',
-    projects: 'module-projets',
   },
   pt: {
-    solves: 'que-resolve-summa-social',
     conciliation: 'reconciliacao-bancaria',
     remittances: 'remessas-devolucoes',
     onlineDonations: 'doacoes-online',
     fiscalCertificates: 'fiscalidade-certificados',
-    invoicesSepa: 'faturas-sepa',
-    ticketsSettlements: 'tickets-liquidacoes',
-    projects: 'modulo-projetos',
   },
 };
 
@@ -115,265 +98,335 @@ export default async function HomePage({ params }: PageProps) {
 
   return (
     <main className="flex min-h-screen flex-col">
+      {/* Skip link for accessibility */}
       <a
-        href={`#${anchors.solves}`}
+        href="#capabilities"
         className="sr-only focus:not-sr-only focus:fixed focus:top-4 focus:left-4 focus:z-50 focus:rounded-md focus:bg-background focus:px-3 focus:py-2 focus:text-sm focus:shadow"
       >
         {t.home.skipToContent}
       </a>
 
-      {/* Hero */}
-      <div className="flex flex-col items-center justify-center bg-background px-6 py-16">
-        <div className="max-w-3xl mx-auto text-center space-y-6">
-          <Logo className="h-16 w-16 mx-auto text-primary" />
+      {/* ═══════════════════════════════════════════════════════════════════════
+          A) HERO — 2 columnes desktop, 1 columna mòbil
+          ═══════════════════════════════════════════════════════════════════════ */}
+      <section className="bg-background px-6 py-16 lg:py-24">
+        <div className="mx-auto max-w-6xl">
+          <div className="grid gap-12 lg:grid-cols-2 lg:gap-16 items-center">
+            {/* Columna esquerra: Text */}
+            <div className="space-y-6 text-center lg:text-left">
+              <div className="flex items-center justify-center lg:justify-start gap-3">
+                <Logo className="h-12 w-12 lg:h-14 lg:w-14 text-primary" />
+                <h1 className="text-4xl font-bold tracking-tight sm:text-5xl lg:text-6xl">
+                  {t.common.appName}
+                </h1>
+              </div>
 
-          <h1 className="text-3xl font-bold tracking-tight sm:text-4xl">{t.common.appName}</h1>
+              <p className="text-xl text-muted-foreground sm:text-2xl">
+                {t.home.heroTagline}
+              </p>
 
-          <p className="text-lg text-muted-foreground">{t.home.heroTagline}</p>
+              <p className="text-base text-muted-foreground/80 sm:text-lg">
+                {t.home.solves.intro}
+              </p>
 
-          <div className="flex flex-col sm:flex-row items-center justify-center gap-4 pt-4">
-            <Button asChild size="lg">
-              <Link href="/login">
-                {t.common.enter}
-                <ArrowRight className="ml-2 h-4 w-4" />
+              {/* Imatge en mòbil: entre text i CTAs */}
+              <div className="lg:hidden">
+                <div className={frameClass}>
+                  <Image
+                    src="/visuals/web/web_dashboard.png"
+                    alt="Summa Social Dashboard"
+                    width={800}
+                    height={500}
+                    sizes="100vw"
+                    className="w-full h-auto"
+                    priority
+                  />
+                </div>
+              </div>
+
+              {/* CTAs */}
+              <div className="flex flex-col sm:flex-row items-center justify-center lg:justify-start gap-4 pt-4">
+                <Button asChild size="lg">
+                  <Link href={`/${locale}/${featuresPath}`}>{t.common.features}</Link>
+                </Button>
+                <Button asChild variant="outline" size="lg">
+                  <Link href={`/${locale}/contact`}>{t.common.contact}</Link>
+                </Button>
+              </div>
+            </div>
+
+            {/* Columna dreta: Imatge (només desktop) */}
+            <div className="hidden lg:block">
+              <div className={frameClass}>
+                <Image
+                  src="/visuals/web/web_dashboard.png"
+                  alt="Summa Social Dashboard"
+                  width={800}
+                  height={500}
+                  sizes="50vw"
+                  className="w-full h-auto"
+                  priority
+                />
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* ═══════════════════════════════════════════════════════════════════════
+          B) TRUST STRIP — Números clau
+          ═══════════════════════════════════════════════════════════════════════ */}
+      <section className="border-y border-border/50 bg-muted/30 px-6 py-10">
+        <div className="mx-auto max-w-4xl">
+          <div className="grid grid-cols-3 divide-x divide-border/50 text-center">
+            <div className="px-4">
+              <p className="text-3xl font-semibold text-primary sm:text-4xl">{t.home.stats.entities}</p>
+              <p className="text-sm text-muted-foreground">{t.home.stats.entitiesLabel}</p>
+            </div>
+            <div className="px-4">
+              <p className="text-3xl font-semibold text-primary sm:text-4xl">{t.home.stats.movements}</p>
+              <p className="text-sm text-muted-foreground">{t.home.stats.movementsLabel}</p>
+            </div>
+            <div className="px-4">
+              <p className="text-3xl font-semibold text-primary sm:text-4xl">{t.home.stats.countries}</p>
+              <p className="text-sm text-muted-foreground">{t.home.stats.countriesLabel}</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* ═══════════════════════════════════════════════════════════════════════
+          C) WORKFLOW — 3 passos
+          ═══════════════════════════════════════════════════════════════════════ */}
+      <section className="px-6 py-16 lg:py-20">
+        <div className="mx-auto max-w-5xl">
+          <h2 className="text-2xl font-semibold text-center mb-12">{t.home.workflow.title}</h2>
+
+          <div className="grid gap-8 md:grid-cols-3">
+            {/* Pas 1 */}
+            <div className="text-center space-y-4">
+              <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-primary/10 text-primary">
+                <Upload className="h-6 w-6" />
+              </div>
+              <h3 className="text-lg font-semibold">{t.home.workflow.step1.title}</h3>
+              <p className="text-sm text-muted-foreground">{t.home.workflow.step1.description}</p>
+            </div>
+
+            {/* Pas 2 */}
+            <div className="text-center space-y-4">
+              <div className="relative mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-primary/10 text-primary">
+                <Settings className="h-6 w-6" />
+                {/* Badge +IA estil Spark */}
+                <span className="absolute -top-1 -right-1 flex items-center gap-0.5 rounded-full bg-gradient-to-r from-violet-500 to-fuchsia-500 px-1.5 py-0.5 text-[10px] font-bold text-white shadow-sm">
+                  +IA
+                </span>
+              </div>
+              <h3 className="text-lg font-semibold">{t.home.workflow.step2.title}</h3>
+              <p className="text-sm text-muted-foreground">{t.home.workflow.step2.description}</p>
+            </div>
+
+            {/* Pas 3 */}
+            <div className="text-center space-y-4">
+              <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-primary/10 text-primary">
+                <FileCheck className="h-6 w-6" />
+              </div>
+              <h3 className="text-lg font-semibold">{t.home.workflow.step3.title}</h3>
+              <p className="text-sm text-muted-foreground">{t.home.workflow.step3.description}</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* ═══════════════════════════════════════════════════════════════════════
+          D) CAPABILITIES GRID — 2x2
+          ═══════════════════════════════════════════════════════════════════════ */}
+      <section id="capabilities" className="bg-muted/30 px-6 py-16 lg:py-20">
+        <div className="mx-auto max-w-6xl">
+          <h2 className="text-2xl font-semibold text-center mb-12">{t.home.capabilities.title}</h2>
+
+          <div className="grid gap-8 md:grid-cols-2">
+            {/* Card 1: Conciliació */}
+            <div className={frameClass}>
+              <div className="aspect-video overflow-hidden bg-muted/20">
+                <Image
+                  src="/visuals/web/web_concilia_bancaria.png"
+                  alt={t.home.capabilities.conciliation.title}
+                  width={600}
+                  height={340}
+                  sizes="(min-width: 768px) 50vw, 100vw"
+                  className="w-full h-full object-cover"
+                />
+              </div>
+              <div className="p-6 space-y-3">
+                <h3 className="text-lg font-semibold">{t.home.capabilities.conciliation.title}</h3>
+                <p className="text-sm text-muted-foreground">{t.home.capabilities.conciliation.description}</p>
+                <Link
+                  href={`/${locale}/${featuresPath}#${anchors.conciliation}`}
+                  className="inline-flex items-center text-sm font-medium text-primary hover:underline"
+                >
+                  {t.home.readMore}
+                </Link>
+              </div>
+            </div>
+
+            {/* Card 2: Remeses */}
+            <div className={frameClass}>
+              <div className="aspect-video overflow-hidden bg-muted/20">
+                <Image
+                  src="/visuals/web/web_divide_remeses.png"
+                  alt={t.home.capabilities.remittances.title}
+                  width={600}
+                  height={340}
+                  sizes="(min-width: 768px) 50vw, 100vw"
+                  className="w-full h-full object-cover"
+                />
+              </div>
+              <div className="p-6 space-y-3">
+                <h3 className="text-lg font-semibold">{t.home.capabilities.remittances.title}</h3>
+                <p className="text-sm text-muted-foreground">{t.home.capabilities.remittances.description}</p>
+                <Link
+                  href={`/${locale}/${featuresPath}#${anchors.remittances}`}
+                  className="inline-flex items-center text-sm font-medium text-primary hover:underline"
+                >
+                  {t.home.readMore}
+                </Link>
+              </div>
+            </div>
+
+            {/* Card 3: Donacions */}
+            <div className={frameClass}>
+              <div className="aspect-video overflow-hidden bg-muted/20">
+                <Image
+                  src="/visuals/web/web_divide_stripe.png"
+                  alt={t.home.capabilities.donations.title}
+                  width={600}
+                  height={340}
+                  sizes="(min-width: 768px) 50vw, 100vw"
+                  className="w-full h-full object-cover"
+                />
+              </div>
+              <div className="p-6 space-y-3">
+                <h3 className="text-lg font-semibold">{t.home.capabilities.donations.title}</h3>
+                <p className="text-sm text-muted-foreground">{t.home.capabilities.donations.description}</p>
+                <Link
+                  href={`/${locale}/${featuresPath}#${anchors.onlineDonations}`}
+                  className="inline-flex items-center text-sm font-medium text-primary hover:underline"
+                >
+                  {t.home.readMore}
+                </Link>
+              </div>
+            </div>
+
+            {/* Card 4: Fiscalitat */}
+            <div className={frameClass}>
+              <div className="aspect-video overflow-hidden bg-muted/20">
+                <Image
+                  src="/visuals/web/web_certificats_182.png"
+                  alt={t.home.capabilities.fiscal.title}
+                  width={600}
+                  height={340}
+                  sizes="(min-width: 768px) 50vw, 100vw"
+                  className="w-full h-full object-cover"
+                />
+              </div>
+              <div className="p-6 space-y-3">
+                <h3 className="text-lg font-semibold">{t.home.capabilities.fiscal.title}</h3>
+                <p className="text-sm text-muted-foreground">{t.home.capabilities.fiscal.description}</p>
+                <Link
+                  href={`/${locale}/${featuresPath}#${anchors.fiscalCertificates}`}
+                  className="inline-flex items-center text-sm font-medium text-primary hover:underline"
+                >
+                  {t.home.readMore}
+                </Link>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* ═══════════════════════════════════════════════════════════════════════
+          E) BLOCS "Per a qui és" — 2 blocs grans
+          ═══════════════════════════════════════════════════════════════════════ */}
+      {/* Bloc A: Admin/Tresoreria */}
+      <section className="px-6 py-16 lg:py-20">
+        <div className="mx-auto max-w-6xl">
+          <div className="grid gap-12 lg:grid-cols-2 lg:gap-16 items-center">
+            <div className="space-y-6">
+              <h2 className="text-2xl font-semibold">{t.home.profiles.admin.title}</h2>
+              <p className="text-muted-foreground">{t.home.profiles.admin.description}</p>
+              <Link
+                href={`/${locale}/${featuresPath}`}
+                className="inline-flex items-center text-sm font-medium text-primary hover:underline"
+              >
+                {t.home.readMore}
               </Link>
-            </Button>
-            <Button asChild variant="outline" size="lg">
-              <Link href={`/${locale}/${featuresPath}`}>{t.common.features}</Link>
-            </Button>
-            <Button asChild variant="outline" size="lg">
-              <Link href={`/${locale}/contact`}>{t.common.contact}</Link>
-            </Button>
-          </div>
-
-          <nav aria-label={t.home.skipToContent} className="pt-8">
-            <div className="flex flex-wrap justify-center gap-2">
-              <Button variant="outline" size="sm" asChild>
-                <Link href={`#${anchors.conciliation}`}>{t.home.nav.conciliation}</Link>
-              </Button>
-              <Button variant="outline" size="sm" asChild>
-                <Link href={`#${anchors.remittances}`}>{t.home.nav.remittances}</Link>
-              </Button>
-              <Button variant="outline" size="sm" asChild>
-                <Link href={`#${anchors.onlineDonations}`}>{t.home.nav.onlineDonations}</Link>
-              </Button>
-              <Button variant="outline" size="sm" asChild>
-                <Link href={`#${anchors.fiscalCertificates}`}>{t.home.nav.fiscalCertificates}</Link>
-              </Button>
-              <Button variant="outline" size="sm" asChild>
-                <Link href={`#${anchors.invoicesSepa}`}>{t.home.nav.invoicesSepa}</Link>
-              </Button>
-              <Button variant="outline" size="sm" asChild>
-                <Link href={`#${anchors.ticketsSettlements}`}>{t.home.nav.ticketsSettlements}</Link>
-              </Button>
-              <Button variant="outline" size="sm" asChild>
-                <Link href={`#${anchors.projects}`}>{t.home.nav.projects}</Link>
-              </Button>
             </div>
-          </nav>
-        </div>
-      </div>
-
-      {/* Què resol Summa Social? */}
-      <section id={anchors.solves} className="px-6 py-10">
-        <div className="max-w-3xl mx-auto">
-          <h2 className="text-2xl font-semibold">{t.home.solves.title}</h2>
-
-          <div className="mt-6 space-y-4 text-muted-foreground">
-            <p>
-              <strong>{t.home.solves.intro}</strong>
-            </p>
-            <p>
-              <strong>{t.home.solves.conciliation.split(':')[0]}:</strong>
-              {t.home.solves.conciliation.split(':').slice(1).join(':')}
-            </p>
-            <p>
-              <strong>{t.home.solves.fiscal.split(':')[0]}:</strong>
-              {t.home.solves.fiscal.split(':').slice(1).join(':')}
-            </p>
-            <p>
-              <strong>{t.home.solves.remittances.split(':')[0]}:</strong>
-              {t.home.solves.remittances.split(':').slice(1).join(':')}
-            </p>
-            <p>
-              <strong>{t.home.solves.vision.split(':')[0]}:</strong>
-              {t.home.solves.vision.split(':').slice(1).join(':')}
-            </p>
-            <p>
-              <strong>{t.home.solves.control.split(':')[0]}:</strong>
-              {t.home.solves.control.split(':').slice(1).join(':')}
-            </p>
-            <p>
-              <strong>{t.home.solves.result.split(':')[0]}:</strong>
-              {t.home.solves.result.split(':').slice(1).join(':')}
-            </p>
-          </div>
-        </div>
-      </section>
-
-      <Separator className="max-w-3xl mx-auto" />
-
-      {/* 1. Conciliació bancària */}
-      <section id={anchors.conciliation} className="bg-muted/30 px-6 py-10">
-        <div className="max-w-3xl mx-auto">
-          <h2 className="text-2xl font-semibold">{t.home.sections.conciliation.title}</h2>
-          <div className="mt-6 text-muted-foreground">
-            <p>{t.home.sections.conciliation.description}</p>
-            <div className="pt-4">
-              <Button
-                variant="link"
-                asChild
-                className="px-0 text-sm font-medium text-primary hover:underline"
-              >
-                <Link href={`/${locale}/${featuresPath}#${anchors.conciliation}`}>
-                  {t.home.readMore}
-                </Link>
-              </Button>
+            <div className={frameClass}>
+              <Image
+                src="/visuals/web/web_gestio_docs.png"
+                alt={t.home.profiles.admin.title}
+                width={600}
+                height={400}
+                sizes="(min-width: 1024px) 50vw, 100vw"
+                className="w-full h-auto"
+              />
             </div>
           </div>
         </div>
       </section>
 
-      <Separator className="max-w-3xl mx-auto" />
-
-      {/* 2. Remeses i devolucions */}
-      <section id={anchors.remittances} className="px-6 py-10">
-        <div className="max-w-3xl mx-auto">
-          <h2 className="text-2xl font-semibold">{t.home.sections.remittances.title}</h2>
-          <div className="mt-6 text-muted-foreground">
-            <p>{t.home.sections.remittances.description}</p>
-            <div className="pt-4">
-              <Button
-                variant="link"
-                asChild
-                className="px-0 text-sm font-medium text-primary hover:underline"
+      {/* Bloc B: Projectes */}
+      <section className="bg-muted/30 px-6 py-16 lg:py-20">
+        <div className="mx-auto max-w-6xl">
+          <div className="grid gap-12 lg:grid-cols-2 lg:gap-16 items-center">
+            <div className="order-2 lg:order-1">
+              <div className={frameClass}>
+                <Image
+                  src="/visuals/web/web_seguiment_projectes.png"
+                  alt={t.home.profiles.projects.title}
+                  width={600}
+                  height={400}
+                  sizes="(min-width: 1024px) 50vw, 100vw"
+                  className="w-full h-auto"
+                />
+              </div>
+            </div>
+            <div className="order-1 lg:order-2 space-y-6">
+              <h2 className="text-2xl font-semibold">{t.home.profiles.projects.title}</h2>
+              <p className="text-muted-foreground">{t.home.profiles.projects.description}</p>
+              <Link
+                href={`/${locale}/${featuresPath}`}
+                className="inline-flex items-center text-sm font-medium text-primary hover:underline"
               >
-                <Link href={`/${locale}/${featuresPath}#${anchors.remittances}`}>
-                  {t.home.readMore}
-                </Link>
-              </Button>
+                {t.home.readMore}
+              </Link>
             </div>
           </div>
         </div>
       </section>
 
-      <Separator className="max-w-3xl mx-auto" />
-
-      {/* 3. Donacions online */}
-      <section id={anchors.onlineDonations} className="bg-muted/30 px-6 py-10">
-        <div className="max-w-3xl mx-auto">
-          <h2 className="text-2xl font-semibold">{t.home.sections.onlineDonations.title}</h2>
-          <div className="mt-6 text-muted-foreground">
-            <p>{t.home.sections.onlineDonations.description}</p>
-            <div className="pt-4">
-              <Button
-                variant="link"
-                asChild
-                className="px-0 text-sm font-medium text-primary hover:underline"
-              >
-                <Link href={`/${locale}/${featuresPath}#${anchors.onlineDonations}`}>
-                  {t.home.readMore}
-                </Link>
-              </Button>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <Separator className="max-w-3xl mx-auto" />
-
-      {/* 4. Fiscalitat i certificats */}
-      <section id={anchors.fiscalCertificates} className="px-6 py-10">
-        <div className="max-w-3xl mx-auto">
-          <h2 className="text-2xl font-semibold">{t.home.sections.fiscalCertificates.title}</h2>
-          <div className="mt-6 text-muted-foreground">
-            <p>{t.home.sections.fiscalCertificates.description}</p>
-            <div className="pt-4">
-              <Button
-                variant="link"
-                asChild
-                className="px-0 text-sm font-medium text-primary hover:underline"
-              >
-                <Link href={`/${locale}/${featuresPath}#${anchors.fiscalCertificates}`}>
-                  {t.home.readMore}
-                </Link>
-              </Button>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <Separator className="max-w-3xl mx-auto" />
-
-      {/* 5. Factures i SEPA */}
-      <section id={anchors.invoicesSepa} className="bg-muted/30 px-6 py-10">
-        <div className="max-w-3xl mx-auto">
-          <h2 className="text-2xl font-semibold">{t.home.sections.invoicesSepa.title}</h2>
-          <div className="mt-6 text-muted-foreground">
-            <p>{t.home.sections.invoicesSepa.description}</p>
-            <div className="pt-4">
-              <Button
-                variant="link"
-                asChild
-                className="px-0 text-sm font-medium text-primary hover:underline"
-              >
-                <Link href={`/${locale}/${featuresPath}#${anchors.invoicesSepa}`}>
-                  {t.home.readMore}
-                </Link>
-              </Button>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <Separator className="max-w-3xl mx-auto" />
-
-      {/* 6. Tiquets i liquidacions */}
-      <section id={anchors.ticketsSettlements} className="px-6 py-10">
-        <div className="max-w-3xl mx-auto">
-          <h2 className="text-2xl font-semibold">{t.home.sections.ticketsSettlements.title}</h2>
-          <div className="mt-6 text-muted-foreground">
-            <p>{t.home.sections.ticketsSettlements.description}</p>
-            <div className="pt-4">
-              <Button
-                variant="link"
-                asChild
-                className="px-0 text-sm font-medium text-primary hover:underline"
-              >
-                <Link href={`/${locale}/${featuresPath}#${anchors.ticketsSettlements}`}>
-                  {t.home.readMore}
-                </Link>
-              </Button>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <Separator className="max-w-3xl mx-auto" />
-
-      {/* 7. Mòdul de Projectes */}
-      <section id={anchors.projects} className="bg-muted/30 px-6 py-10">
-        <div className="max-w-3xl mx-auto">
-          <h2 className="text-2xl font-semibold">{t.home.sections.projects.title}</h2>
-          <div className="mt-6 text-muted-foreground">
-            <p>{t.home.sections.projects.description}</p>
-            <div className="pt-4">
-              <Button
-                variant="link"
-                asChild
-                className="px-0 text-sm font-medium text-primary hover:underline"
-              >
-                <Link href={`/${locale}/${featuresPath}#${anchors.projects}`}>
-                  {t.home.readMore}
-                </Link>
-              </Button>
-            </div>
-          </div>
+      {/* ═══════════════════════════════════════════════════════════════════════
+          F) FINAL CTA
+          ═══════════════════════════════════════════════════════════════════════ */}
+      <section className="bg-primary px-6 py-16 lg:py-20">
+        <div className="mx-auto max-w-3xl text-center space-y-6">
+          <h2 className="text-2xl font-semibold text-primary-foreground lg:text-3xl">
+            {t.home.finalCta.title}
+          </h2>
+          <p className="text-primary-foreground/90">
+            {t.home.finalCta.subtitle}
+          </p>
+          <Button asChild size="lg" variant="secondary">
+            <Link href={`/${locale}/contact`}>
+              {t.common.contact}
+              <ArrowRight className="ml-2 h-4 w-4" />
+            </Link>
+          </Button>
         </div>
       </section>
 
       {/* Footer */}
-      <footer className="border-t py-6 px-4 mt-12">
+      <footer className="border-t py-6 px-4">
         <div className="max-w-lg mx-auto flex items-center justify-center gap-6 text-sm text-muted-foreground">
           <Link href={`/${locale}/${featuresPath}`} className="hover:underline">
             {t.common.features}

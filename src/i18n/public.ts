@@ -205,6 +205,37 @@ export interface PublicTranslations {
       };
     };
     readMore: string;
+    // Landing page sections (Kobo-style)
+    stats: {
+      entities: string;
+      entitiesLabel: string;
+      movements: string;
+      movementsLabel: string;
+      countries: string;
+      countriesLabel: string;
+    };
+    workflow: {
+      title: string;
+      step1: { title: string; description: string };
+      step2: { title: string; description: string };
+      step3: { title: string; description: string };
+    };
+    capabilities: {
+      title: string;
+      conciliation: { title: string; description: string };
+      remittances: { title: string; description: string };
+      donations: { title: string; description: string };
+      fiscal: { title: string; description: string };
+    };
+    profiles: {
+      admin: { title: string; description: string };
+      projects: { title: string; description: string };
+    };
+    finalCta: {
+      title: string;
+      subtitle: string;
+      cta: string;
+    };
   };
   features: {
     metaTitle: string;
@@ -518,7 +549,7 @@ const ca: PublicTranslations = {
     metaDescription:
       "Gestió econòmica i fiscal per a entitats socials petites i mitjanes d'Espanya. Conciliació bancària, Model 182/347, remeses SEPA i més.",
     skipToContent: 'Saltar al contingut',
-    heroTagline: 'Gestió econòmica i fiscal per a entitats petites i mitjanes.',
+    heroTagline: 'Gestió econòmica i fiscal per a entitats no lucratives.',
     nav: {
       conciliation: 'Conciliació',
       remittances: 'Remeses i devolucions',
@@ -531,7 +562,7 @@ const ca: PublicTranslations = {
     solves: {
       title: 'Què resol Summa Social?',
       intro:
-        'Summa Social porta ordre, control i tranquil·litat a la gestió econòmica de les entitats socials petites i mitjanes.',
+        'Summa Social porta ordre, control i tranquil·litat a la gestió econòmica de les entitats d\'acció social i de cooperació.',
       conciliation:
         "Conciliació bancària senzilla i ràpida: Importes l'extracte i en pocs minuts tens tots els moviments classificats, sense errors de transcripció. La intel·ligència artificial reconeix automàticament proveïdors, socis i donants.",
       fiscal:
@@ -586,6 +617,63 @@ const ca: PublicTranslations = {
       },
     },
     readMore: 'Llegir més →',
+    stats: {
+      entities: '15+',
+      entitiesLabel: 'entitats actives',
+      movements: '2.000+',
+      movementsLabel: 'moviments/mes',
+      countries: '5',
+      countriesLabel: 'països',
+    },
+    workflow: {
+      title: 'Com funciona',
+      step1: {
+        title: 'Connecta',
+        description: "Importa l'extracte bancari i la documentació econòmica en pocs segons.",
+      },
+      step2: {
+        title: 'Gestiona',
+        description: 'Classifica moviments (ara amb IA), genera remeses i controla cada euro amb criteri.',
+      },
+      step3: {
+        title: 'Compleix',
+        description: 'Genera models fiscals, certificats i justificacions amb un clic.',
+      },
+    },
+    capabilities: {
+      title: 'Què pots fer amb Summa Social',
+      conciliation: {
+        title: 'Conciliació bancària',
+        description: 'Importa extractes i concilia automàticament amb la documentació existent.',
+      },
+      remittances: {
+        title: 'Remeses i devolucions',
+        description: 'Divideix remeses agrupades i gestiona devolucions amb traçabilitat.',
+      },
+      donations: {
+        title: 'Donacions online',
+        description: 'Integra Stripe i altres passarel·les per registrar donacions web.',
+      },
+      fiscal: {
+        title: 'Fiscalitat i certificats',
+        description: 'Model 182, 347 i certificats de donació generats automàticament.',
+      },
+    },
+    profiles: {
+      admin: {
+        title: 'Per a administradors i tresoreria',
+        description: "Control complet de la gestió econòmica diària: conciliació, remeses, despeses i documentació. Tot en un sol lloc, amb criteri i sense complicacions.",
+      },
+      projects: {
+        title: 'Per a gestors de projectes',
+        description: "Seguiment de l'execució pressupostària, justificació de subvencions i exportació completa amb un clic. Excel + factures en ZIP.",
+      },
+    },
+    finalCta: {
+      title: 'Comença avui',
+      subtitle: "Summa Social t'ajuda a portar ordre i control a la gestió econòmica de la teva entitat.",
+      cta: 'Entrar',
+    },
   },
   features: {
     metaTitle: 'Summa Social | Funcionalitats',
@@ -597,7 +685,7 @@ const ca: PublicTranslations = {
       subtitle:
         "Gestió econòmica i fiscal per a entitats petites i mitjanes d'Espanya, amb conciliació bancària i exports per a la gestoria (Model 182 i 347).",
       tagline:
-        'Summa Social porta ordre, control i tranquil·litat a la gestió econòmica de les entitats socials petites i mitjanes.',
+        'Summa Social porta ordre, control i tranquil·litat a la gestió econòmica de les entitats d\'acció social i de cooperació.',
     },
     mainTitle: '15 Principals Funcionalitats de Summa Social',
     list: {
@@ -980,7 +1068,7 @@ const es: PublicTranslations = {
     metaDescription:
       'Gestión económica y fiscal para entidades sociales pequeñas y medianas de España. Conciliación bancaria, Modelo 182/347, remesas SEPA y más.',
     skipToContent: 'Saltar al contenido',
-    heroTagline: 'Gestión económica y fiscal para entidades pequeñas y medianas.',
+    heroTagline: 'Gestión económica y fiscal para entidades sin ánimo de lucro.',
     nav: {
       conciliation: 'Conciliación',
       remittances: 'Remesas y devoluciones',
@@ -1048,6 +1136,63 @@ const es: PublicTranslations = {
       },
     },
     readMore: 'Leer más →',
+    stats: {
+      entities: '15+',
+      entitiesLabel: 'entidades activas',
+      movements: '2.000+',
+      movementsLabel: 'movimientos/mes',
+      countries: '5',
+      countriesLabel: 'países',
+    },
+    workflow: {
+      title: 'Cómo funciona',
+      step1: {
+        title: 'Conecta',
+        description: 'Importa el extracto bancario y la documentación económica en pocos segundos.',
+      },
+      step2: {
+        title: 'Gestiona',
+        description: 'Clasifica movimientos, genera remesas y controla cada euro con criterio.',
+      },
+      step3: {
+        title: 'Cumple',
+        description: 'Genera modelos fiscales, certificados y justificaciones con un clic.',
+      },
+    },
+    capabilities: {
+      title: 'Qué puedes hacer con Summa Social',
+      conciliation: {
+        title: 'Conciliación bancaria',
+        description: 'Importa extractos y concilia automáticamente con la documentación existente.',
+      },
+      remittances: {
+        title: 'Remesas y devoluciones',
+        description: 'Divide remesas agrupadas y gestiona devoluciones con trazabilidad.',
+      },
+      donations: {
+        title: 'Donaciones online',
+        description: 'Integra Stripe y otras pasarelas para registrar donaciones web.',
+      },
+      fiscal: {
+        title: 'Fiscalidad y certificados',
+        description: 'Modelo 182, 347 y certificados de donación generados automáticamente.',
+      },
+    },
+    profiles: {
+      admin: {
+        title: 'Para administradores y tesorería',
+        description: 'Control completo de la gestión económica diaria: conciliación, remesas, gastos y documentación. Todo en un solo lugar, con criterio y sin complicaciones.',
+      },
+      projects: {
+        title: 'Para gestores de proyectos',
+        description: 'Seguimiento de la ejecución presupuestaria, justificación de subvenciones y exportación completa con un clic. Excel + facturas en ZIP.',
+      },
+    },
+    finalCta: {
+      title: 'Empieza hoy',
+      subtitle: 'Summa Social te ayuda a llevar orden y control a la gestión económica de tu entidad.',
+      cta: 'Entrar',
+    },
   },
   features: {
     metaTitle: 'Summa Social | Funcionalidades',
@@ -1443,7 +1588,7 @@ const fr: PublicTranslations = {
     metaDescription:
       "Gestion économique et fiscale pour les associations petites et moyennes d'Espagne. Rapprochement bancaire, Modèle 182/347, prélèvements SEPA et plus.",
     skipToContent: 'Aller au contenu',
-    heroTagline: 'Gestion économique et fiscale pour les petites et moyennes associations.',
+    heroTagline: 'Gestion économique et fiscale pour les associations à but non lucratif.',
     nav: {
       conciliation: 'Rapprochement',
       remittances: 'Prélèvements et rejets',
@@ -1511,6 +1656,63 @@ const fr: PublicTranslations = {
       },
     },
     readMore: 'En savoir plus →',
+    stats: {
+      entities: '15+',
+      entitiesLabel: 'associations actives',
+      movements: '2 000+',
+      movementsLabel: 'mouvements/mois',
+      countries: '5',
+      countriesLabel: 'pays',
+    },
+    workflow: {
+      title: 'Comment ça marche',
+      step1: {
+        title: 'Connectez',
+        description: "Importez l'extrait bancaire et la documentation économique en quelques secondes.",
+      },
+      step2: {
+        title: 'Gérez',
+        description: 'Classifiez les mouvements, générez des prélèvements et contrôlez chaque euro avec discernement.',
+      },
+      step3: {
+        title: 'Conformez',
+        description: "Générez les modèles fiscaux, certificats et justificatifs d'un seul clic.",
+      },
+    },
+    capabilities: {
+      title: 'Ce que vous pouvez faire avec Summa Social',
+      conciliation: {
+        title: 'Rapprochement bancaire',
+        description: 'Importez des extraits et rapprochez automatiquement avec la documentation existante.',
+      },
+      remittances: {
+        title: 'Prélèvements et rejets',
+        description: 'Divisez les prélèvements groupés et gérez les rejets avec traçabilité.',
+      },
+      donations: {
+        title: 'Dons en ligne',
+        description: "Intégrez Stripe et d'autres passerelles pour enregistrer les dons web.",
+      },
+      fiscal: {
+        title: 'Fiscalité et certificats',
+        description: 'Modèle 182, 347 et certificats de don générés automatiquement.',
+      },
+    },
+    profiles: {
+      admin: {
+        title: 'Pour administrateurs et trésorerie',
+        description: "Contrôle complet de la gestion économique quotidienne : rapprochement, prélèvements, dépenses et documentation. Tout au même endroit, avec discernement et sans complications.",
+      },
+      projects: {
+        title: 'Pour gestionnaires de projets',
+        description: "Suivi de l'exécution budgétaire, justification des subventions et export complet en un clic. Excel + factures en ZIP.",
+      },
+    },
+    finalCta: {
+      title: "Commencez aujourd'hui",
+      subtitle: 'Summa Social vous aide à mettre de l\'ordre et du contrôle dans la gestion économique de votre association.',
+      cta: 'Entrer',
+    },
   },
   features: {
     metaTitle: 'Summa Social | Fonctionnalités',
@@ -1905,7 +2107,7 @@ const pt: PublicTranslations = {
     metaDescription:
       'Gestão económica e fiscal para entidades sociais pequenas e médias de Espanha. Reconciliação bancária, Modelo 182/347, remessas SEPA e mais.',
     skipToContent: 'Saltar para o conteúdo',
-    heroTagline: 'Gestão económica e fiscal para entidades pequenas e médias.',
+    heroTagline: 'Gestão económica e fiscal para entidades sem fins lucrativos.',
     nav: {
       conciliation: 'Reconciliação',
       remittances: 'Remessas e devoluções',
@@ -1973,6 +2175,63 @@ const pt: PublicTranslations = {
       },
     },
     readMore: 'Ler mais →',
+    stats: {
+      entities: '15+',
+      entitiesLabel: 'entidades ativas',
+      movements: '2.000+',
+      movementsLabel: 'movimentos/mês',
+      countries: '5',
+      countriesLabel: 'países',
+    },
+    workflow: {
+      title: 'Como funciona',
+      step1: {
+        title: 'Conecta',
+        description: 'Importa o extrato bancário e a documentação económica em poucos segundos.',
+      },
+      step2: {
+        title: 'Gere',
+        description: 'Classifica movimentos, gera remessas e controla cada euro com critério.',
+      },
+      step3: {
+        title: 'Cumpre',
+        description: 'Gera modelos fiscais, certificados e justificações com um clique.',
+      },
+    },
+    capabilities: {
+      title: 'O que podes fazer com Summa Social',
+      conciliation: {
+        title: 'Reconciliação bancária',
+        description: 'Importa extratos e reconcilia automaticamente com a documentação existente.',
+      },
+      remittances: {
+        title: 'Remessas e devoluções',
+        description: 'Divide remessas agrupadas e gere devoluções com rastreabilidade.',
+      },
+      donations: {
+        title: 'Doações online',
+        description: 'Integra Stripe e outras gateways para registar doações web.',
+      },
+      fiscal: {
+        title: 'Fiscalidade e certificados',
+        description: 'Modelo 182, 347 e certificados de doação gerados automaticamente.',
+      },
+    },
+    profiles: {
+      admin: {
+        title: 'Para administradores e tesouraria',
+        description: 'Controlo completo da gestão económica diária: reconciliação, remessas, despesas e documentação. Tudo num só lugar, com critério e sem complicações.',
+      },
+      projects: {
+        title: 'Para gestores de projetos',
+        description: 'Seguimento da execução orçamental, justificação de subsídios e exportação completa com um clique. Excel + faturas em ZIP.',
+      },
+    },
+    finalCta: {
+      title: 'Começa hoje',
+      subtitle: 'Summa Social ajuda-te a levar ordem e controlo à gestão económica da tua entidade.',
+      cta: 'Entrar',
+    },
   },
   features: {
     metaTitle: 'Summa Social | Funcionalidades',
