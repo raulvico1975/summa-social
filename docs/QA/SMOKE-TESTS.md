@@ -6,7 +6,7 @@
 
 ---
 
-## Checklist ràpid (15 checks)
+## Checklist ràpid (14 checks)
 
 ### Autenticació (3 checks)
 - [ ] **S1** Login: `/{orgSlug}/login` carrega sense errors
@@ -25,13 +25,12 @@
 - [ ] **S10** Filtre dates: Aplicar filtre de dates funciona
 - [ ] **S11** Saldo: Dashboard mostra saldo numèric (no NaN, no "undefined")
 
-### Exports (2 checks)
-- [ ] **S12** Export moviments: Botó "Exportar" descarrega fitxer Excel
-- [ ] **S13** Export donants: Botó "Exportar" a Donants descarrega fitxer
+### Exports (1 check)
+- [ ] **S12** Export donants: Botó "Exportar" a Donants descarrega fitxer
 
 ### Errors (2 checks)
-- [ ] **S14** Consola neta: DevTools Console no mostra errors greus (vermells) en navegació normal
-- [ ] **S15** 404 controlat: Anar a ruta inexistent mostra pàgina d'error (no pantalla blanca)
+- [ ] **S13** Consola neta: DevTools Console no mostra errors greus (vermells) en navegació normal
+- [ ] **S14** 404 controlat: Anar a ruta inexistent mostra pàgina d'error (no pantalla blanca)
 
 ---
 
@@ -50,12 +49,11 @@
 | S9 | Cerca | ☐ |
 | S10 | Filtre dates | ☐ |
 | S11 | Saldo | ☐ |
-| S12 | Export moviments | ☐ |
-| S13 | Export donants | ☐ |
-| S14 | Consola neta | ☐ |
-| S15 | 404 controlat | ☐ |
+| S12 | Export donants | ☐ |
+| S13 | Consola neta | ☐ |
+| S14 | 404 controlat | ☐ |
 
-**Total:** ___/15
+**Total:** ___/14
 
 **Data:** _______________
 **Entorn:** ☐ Local / ☐ Producció

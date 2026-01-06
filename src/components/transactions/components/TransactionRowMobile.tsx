@@ -87,30 +87,45 @@ export const TransactionRowMobile = React.memo(function TransactionRowMobile({
 
   const handleEdit = React.useCallback(() => {
     setIsMenuOpen(false);
-    setTimeout(() => onEdit(tx), 50);
+    setTimeout(() => {
+      if (document.activeElement instanceof HTMLElement) document.activeElement.blur();
+      onEdit(tx);
+    }, 50);
   }, [tx, onEdit]);
 
   const handleDelete = React.useCallback(() => {
     setIsMenuOpen(false);
-    setTimeout(() => onDelete(tx), 50);
+    setTimeout(() => {
+      if (document.activeElement instanceof HTMLElement) document.activeElement.blur();
+      onDelete(tx);
+    }, 50);
   }, [tx, onDelete]);
 
   const handleManageReturn = React.useCallback(() => {
     if (!onOpenReturnDialog) return;
     setIsMenuOpen(false);
-    setTimeout(() => onOpenReturnDialog(tx), 50);
+    setTimeout(() => {
+      if (document.activeElement instanceof HTMLElement) document.activeElement.blur();
+      onOpenReturnDialog(tx);
+    }, 50);
   }, [tx, onOpenReturnDialog]);
 
   const handleViewRemittance = React.useCallback(() => {
     if (!onViewRemittanceDetail) return;
     setIsMenuOpen(false);
-    setTimeout(() => onViewRemittanceDetail(tx.id), 50);
+    setTimeout(() => {
+      if (document.activeElement instanceof HTMLElement) document.activeElement.blur();
+      onViewRemittanceDetail(tx.id);
+    }, 50);
   }, [tx.id, onViewRemittanceDetail]);
 
   const handleAttachDoc = React.useCallback(() => {
     if (!onAttachDocument) return;
     setIsMenuOpen(false);
-    setTimeout(() => onAttachDocument(tx.id), 50);
+    setTimeout(() => {
+      if (document.activeElement instanceof HTMLElement) document.activeElement.blur();
+      onAttachDocument(tx.id);
+    }, 50);
   }, [tx.id, onAttachDocument]);
 
   return (

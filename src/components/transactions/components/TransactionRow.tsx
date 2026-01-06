@@ -273,11 +273,27 @@ export const TransactionRow = React.memo(function TransactionRow({
   }, [tx.id, onDeleteDocument]);
 
   const handleEdit = React.useCallback(() => {
-    onEdit(tx);
+    // Delay per permetre que el DropdownMenu es tanqui completament
+    // abans d'obrir la modal d'edició (evita conflicte aria-hidden)
+    setIsActionsMenuOpen(false);
+    setTimeout(() => {
+      if (document.activeElement instanceof HTMLElement) {
+        document.activeElement.blur();
+      }
+      onEdit(tx);
+    }, 100);
   }, [tx, onEdit]);
 
   const handleDelete = React.useCallback(() => {
-    onDelete(tx);
+    // Delay per permetre que el DropdownMenu es tanqui completament
+    // abans d'obrir la modal de confirmació (evita conflicte aria-hidden)
+    setIsActionsMenuOpen(false);
+    setTimeout(() => {
+      if (document.activeElement instanceof HTMLElement) {
+        document.activeElement.blur();
+      }
+      onDelete(tx);
+    }, 100);
   }, [tx, onDelete]);
 
   const handleOpenReturnDialog = React.useCallback(() => {

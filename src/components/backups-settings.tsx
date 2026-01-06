@@ -29,6 +29,21 @@ import { doc, setDoc, updateDoc, collection, query, orderBy, limit, getDocs } fr
 import type { BackupIntegration, BackupProvider, BackupRun } from '@/lib/backups/types';
 import { INITIAL_BACKUP_INTEGRATION } from '@/lib/backups/types';
 
+/**
+ * Detecta errors de permisos Firestore (permission-denied)
+ * Usem això per silenciar errors esperats quan l'usuari no té accés
+ */
+function isPermissionDenied(err: unknown): boolean {
+  const error = err as { code?: string; message?: string };
+  const code = error?.code ?? '';
+  const msg = error?.message ?? '';
+  return (
+    code === 'permission-denied' ||
+    msg.includes('Missing or insufficient permissions') ||
+    msg.includes('permission-denied')
+  );
+}
+
 export function BackupsSettings() {
   const { firestore, user } = useFirebase();
   const { organizationId, orgSlug, userRole } = useCurrentOrganization();
@@ -113,11 +128,15 @@ export function BackupsSettings() {
   }, [backupDocRef, isLoadingDoc, backupData, isInitializing, toast, t]);
 
   // Carregar últim backup run
+  // Flag per indicar que no tenim accés (mostrar "no disponible" en lloc d'error)
+  const [lastRunUnavailable, setLastRunUnavailable] = React.useState(false);
+
   React.useEffect(() => {
     if (!firestore || !organizationId) return;
 
     const loadLastRun = async () => {
       setIsLoadingLastRun(true);
+      setLastRunUnavailable(false);
       try {
         const backupsRef = collection(firestore, `organizations/${organizationId}/backups`);
         const q = query(backupsRef, orderBy('startedAt', 'desc'), limit(1));
@@ -130,6 +149,13 @@ export function BackupsSettings() {
           setLastRun(null);
         }
       } catch (err) {
+        // Silenciar errors de permisos - mostrar "no disponible" sense error a consola
+        if (isPermissionDenied(err)) {
+          setLastRun(null);
+          setLastRunUnavailable(true);
+          return;
+        }
+        // Altres errors sí que els loguejem
         console.error('Error carregant últim backup:', err);
       } finally {
         setIsLoadingLastRun(false);
@@ -374,6 +400,8 @@ export function BackupsSettings() {
             <span className="text-muted-foreground">{t.settings.backups.lastRunLabel}</span>
             {isLoadingLastRun ? (
               <Skeleton className="h-4 w-24" />
+            ) : lastRunUnavailable ? (
+              <span className="text-muted-foreground">No disponible</span>
             ) : lastRun ? (
               <span className="flex items-center gap-1">
                 {lastRun.status === 'success' ? (
