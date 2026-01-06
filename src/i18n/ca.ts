@@ -497,6 +497,22 @@ export const ca = {
         remittanceProcessedDescription: (donations: number, newDonors: number) => `S'han creat ${donations} donacions${newDonors > 0 ? ` i ${newDonors} nous donants` : ''}.`,
         donationDescription: "Donació soci/a",
         error: "Error",
+        // Mode OUT (pagaments)
+        paymentsTitle: "Dividir remesa de pagaments",
+        paymentsUploadDescription: "Puja el fitxer amb el detall dels pagaments per desglossar la remesa.",
+        paymentsReviewTitle: "📊 Revisió de Pagaments",
+        paymentsReviewDescription: "Revisa els pagaments abans de processar. Pots decidir quins proveïdors nous crear.",
+        payments: "Pagaments",
+        beneficiary: "Beneficiari",
+        supplierBadge: "Proveïdor",
+        employeeBadge: "Treballador",
+        processPayments: (count: number) => `Processar ${count} pagaments`,
+        paymentsActionSummary: (toCreate: number, total: number) => `Acció: Es crearan ${toCreate} proveïdors nous i ${total} transaccions.`,
+        paymentsRemittanceProcessed: "Remesa de pagaments processada!",
+        paymentsRemittanceProcessedDescription: (payments: number, newSuppliers: number) => `S'han creat ${payments} pagaments${newSuppliers > 0 ? ` i ${newSuppliers} nous proveïdors` : ''}.`,
+        paymentDescription: "Pagament a",
+        createSupplier: "Crear proveïdor",
+        newSuppliers: "proveïdors nous",
     }
   },
   importers: {

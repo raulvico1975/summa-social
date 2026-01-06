@@ -34,7 +34,7 @@ import {
 } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
 import { useAppLog } from '@/hooks/use-app-log';
-import type { Transaction, Donor } from '@/lib/data';
+import type { Transaction, Donor, Supplier, Employee } from '@/lib/data';
 import { formatCurrencyEU } from '@/lib/normalize';
 import {
   FileUp,
@@ -71,6 +71,8 @@ interface RemittanceSplitterProps {
   onOpenChange: (open: boolean) => void;
   transaction: Transaction;
   existingDonors: Donor[];
+  existingSuppliers?: Supplier[];
+  existingEmployees?: Employee[];
   onSplitDone: () => void;
 }
 
@@ -91,6 +93,7 @@ interface SavedMapping {
 }
 
 // Resultat de l'anàlisi de cada fila del CSV
+// Nota: Usem "matchedDonor" i "Donor" per compatibilitat, però pot ser proveïdor/treballador
 interface ParsedDonation {
   rowIndex: number;
   name: string;
@@ -99,6 +102,7 @@ interface ParsedDonation {
   amount: number;
   status: 'found' | 'found_inactive' | 'new_with_taxid' | 'new_without_taxid';
   matchedDonor: Donor | null;
+  matchedContactType?: 'donor' | 'supplier' | 'employee';
   shouldCreate: boolean;
   zipCode: string;
 }
@@ -301,6 +305,8 @@ export function RemittanceSplitter({
   onOpenChange,
   transaction,
   existingDonors,
+  existingSuppliers = [],
+  existingEmployees = [],
   onSplitDone,
 }: RemittanceSplitterProps) {
   // Detectar direcció: IN (donacions, amount > 0) o OUT (pagaments, amount < 0)
@@ -805,6 +811,52 @@ export function RemittanceSplitter({
     return undefined;
   };
 
+  // Buscar beneficiari per mode OUT (proveïdors i treballadors)
+  // Ordre: 1) IBAN, 2) NIF/CIF, 3) Nom exacte (normalitzat)
+  // NO fuzzy matching, NO codi postal
+  const findBeneficiary = (
+    name: string,
+    taxId: string,
+    iban: string
+  ): { contact: Donor | null; contactType: 'supplier' | 'employee' | null } => {
+    const normalizedCsvName = normalizeString(name);
+
+    // 1. Buscar per IBAN (màxima prioritat per pagaments)
+    if (iban) {
+      const normalizedCsvIban = normalizeIban(iban);
+
+      // Buscar a proveïdors
+      const foundSupplier = existingSuppliers.find(s => s.iban && normalizeIban(s.iban) === normalizedCsvIban);
+      if (foundSupplier) return { contact: foundSupplier as unknown as Donor, contactType: 'supplier' };
+
+      // Buscar a treballadors
+      const foundEmployee = existingEmployees.find(e => e.iban && normalizeIban(e.iban) === normalizedCsvIban);
+      if (foundEmployee) return { contact: foundEmployee as unknown as Donor, contactType: 'employee' };
+    }
+
+    // 2. Buscar per NIF/CIF
+    if (taxId) {
+      const normalizedTaxId = normalizeString(taxId);
+
+      const foundSupplier = existingSuppliers.find(s => normalizeString(s.taxId) === normalizedTaxId);
+      if (foundSupplier) return { contact: foundSupplier as unknown as Donor, contactType: 'supplier' };
+
+      const foundEmployee = existingEmployees.find(e => normalizeString(e.taxId) === normalizedTaxId);
+      if (foundEmployee) return { contact: foundEmployee as unknown as Donor, contactType: 'employee' };
+    }
+
+    // 3. Buscar per nom exacte (normalitzat)
+    if (normalizedCsvName) {
+      const foundSupplier = existingSuppliers.find(s => normalizeString(s.name) === normalizedCsvName);
+      if (foundSupplier) return { contact: foundSupplier as unknown as Donor, contactType: 'supplier' };
+
+      const foundEmployee = existingEmployees.find(e => normalizeString(e.name) === normalizedCsvName);
+      if (foundEmployee) return { contact: foundEmployee as unknown as Donor, contactType: 'employee' };
+    }
+
+    return { contact: null, contactType: null };
+  };
+
   const handleContinueToPreview = () => {
     // Permetre matching si hi ha almenys una columna d'identificació (nom, DNI o IBAN)
     if (nameColumn === null && taxIdColumn === null && ibanColumn === null) {
@@ -859,16 +911,37 @@ export function RemittanceSplitter({
 
         total += amount;
 
-        const matchedDonor = findDonor(name, taxId, iban, existingDonors);
-
+        // Matching diferent segons mode IN (donants) o OUT (proveïdors/treballadors)
+        let matchedDonor: Donor | null = null;
+        let matchedContactType: 'donor' | 'supplier' | 'employee' | undefined;
         let status: ParsedDonation['status'];
-        if (matchedDonor) {
-          // Comprovar si el donant trobat està de baixa
-          status = matchedDonor.status === 'inactive' ? 'found_inactive' : 'found';
-        } else if (taxId) {
-          status = 'new_with_taxid';
+
+        if (isPaymentRemittance) {
+          // Mode OUT: buscar a proveïdors i treballadors
+          const result = findBeneficiary(name, taxId, iban);
+          matchedDonor = result.contact;
+          matchedContactType = result.contactType ?? undefined;
+
+          if (matchedDonor) {
+            status = 'found';
+          } else if (taxId) {
+            status = 'new_with_taxid';
+          } else {
+            status = 'new_without_taxid';
+          }
         } else {
-          status = 'new_without_taxid';
+          // Mode IN: buscar a donants (comportament original)
+          const found = findDonor(name, taxId, iban, existingDonors);
+          matchedDonor = found ?? null;
+          matchedContactType = found ? 'donor' : undefined;
+
+          if (matchedDonor) {
+            status = matchedDonor.status === 'inactive' ? 'found_inactive' : 'found';
+          } else if (taxId) {
+            status = 'new_with_taxid';
+          } else {
+            status = 'new_without_taxid';
+          }
         }
 
         donations.push({
@@ -878,7 +951,8 @@ export function RemittanceSplitter({
           iban,
           amount,
           status,
-          matchedDonor: matchedDonor ?? null,
+          matchedDonor,
+          matchedContactType,
           shouldCreate: status !== 'found' && status !== 'found_inactive',
           zipCode: defaultZipCode,
         });
@@ -1232,10 +1306,10 @@ export function RemittanceSplitter({
       log(`[Splitter] ✅ Processament completat!`);
       toast({
         title: isPaymentRemittance
-          ? 'Remesa de pagaments processada'
+          ? t.movements.splitter.paymentsRemittanceProcessed
           : t.movements.splitter.remittanceProcessed,
         description: isPaymentRemittance
-          ? `${parsedDonations.length} pagaments creats${contactsToCreate.length > 0 ? `, ${contactsToCreate.length} proveïdors nous` : ''}`
+          ? t.movements.splitter.paymentsRemittanceProcessedDescription(parsedDonations.length, contactsToCreate.length)
           : t.movements.splitter.remittanceProcessedDescription(parsedDonations.length, contactsToCreate.length),
       });
 
@@ -1278,12 +1352,12 @@ export function RemittanceSplitter({
             <DialogHeader>
               <DialogTitle>
                 {isPaymentRemittance
-                  ? 'Dividir remesa de pagaments'
+                  ? t.movements.splitter.paymentsTitle
                   : t.movements.splitter.title}
               </DialogTitle>
               <DialogDescription>
                 {isPaymentRemittance
-                  ? 'Puja el fitxer amb el detall dels pagaments per desglossar la remesa.'
+                  ? t.movements.splitter.paymentsUploadDescription
                   : t.movements.splitter.uploadDescription}
               </DialogDescription>
             </DialogHeader>
@@ -1605,9 +1679,15 @@ export function RemittanceSplitter({
             <div className="flex-shrink-0 space-y-3 pb-3 border-b">
               {/* Títol i descripció */}
               <DialogHeader className="pb-0">
-                <DialogTitle>{t.movements.splitter.reviewTitle}</DialogTitle>
+                <DialogTitle>
+                  {isPaymentRemittance
+                    ? t.movements.splitter.paymentsReviewTitle
+                    : t.movements.splitter.reviewTitle}
+                </DialogTitle>
                 <DialogDescription>
-                  {t.movements.splitter.reviewDescription}
+                  {isPaymentRemittance
+                    ? t.movements.splitter.paymentsReviewDescription
+                    : t.movements.splitter.reviewDescription}
                 </DialogDescription>
               </DialogHeader>
 
@@ -1616,7 +1696,9 @@ export function RemittanceSplitter({
                 {/* Stats compactes com a badges */}
                 <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-muted text-sm">
                   <span className="font-semibold">{parsedDonations.length}</span>
-                  <span className="text-muted-foreground">{t.movements.splitter.donations}</span>
+                  <span className="text-muted-foreground">
+                    {isPaymentRemittance ? t.movements.splitter.payments : t.movements.splitter.donations}
+                  </span>
                 </div>
                 <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-green-50 border border-green-200 text-sm">
                   <CheckCircle2 className="h-3.5 w-3.5 text-green-600" />
@@ -1688,26 +1770,32 @@ export function RemittanceSplitter({
                 </Alert>
               )}
 
-              {/* Opcions per crear donants - compacte */}
+              {/* Opcions per crear contactes - compacte */}
+              {/* Per mode IN: mostra opcions de CP i checkboxes de creació de donants */}
+              {/* Per mode OUT: només mostra checkboxes (no CP) */}
               {(stats.newWithTaxId > 0 || stats.newWithoutTaxId > 0) && (
                 <div className="flex flex-wrap items-center gap-4 px-3 py-2 rounded-md bg-muted/50 border text-sm">
-                  <div className="flex items-center gap-2">
-                    <Label htmlFor="defaultZipCode" className="text-xs whitespace-nowrap text-muted-foreground">
-                      {t.movements.splitter.defaultZipCode}:
-                    </Label>
-                    <Input
-                      id="defaultZipCode"
-                      value={defaultZipCode}
-                      onChange={(e) => setDefaultZipCode(e.target.value)}
-                      className="w-20 h-7 text-xs"
-                      placeholder={t.movements.splitter.zipCodePlaceholder}
-                    />
-                    <Button variant="ghost" size="sm" onClick={handleApplyDefaultZipCode} className="h-7 px-2 text-xs">
-                      {t.movements.splitter.applyToAll}
-                    </Button>
-                  </div>
-
-                  <div className="h-4 w-px bg-border" />
+                  {/* CP només per mode IN (donants) */}
+                  {!isPaymentRemittance && (
+                    <>
+                      <div className="flex items-center gap-2">
+                        <Label htmlFor="defaultZipCode" className="text-xs whitespace-nowrap text-muted-foreground">
+                          {t.movements.splitter.defaultZipCode}:
+                        </Label>
+                        <Input
+                          id="defaultZipCode"
+                          value={defaultZipCode}
+                          onChange={(e) => setDefaultZipCode(e.target.value)}
+                          className="w-20 h-7 text-xs"
+                          placeholder={t.movements.splitter.zipCodePlaceholder}
+                        />
+                        <Button variant="ghost" size="sm" onClick={handleApplyDefaultZipCode} className="h-7 px-2 text-xs">
+                          {t.movements.splitter.applyToAll}
+                        </Button>
+                      </div>
+                      <div className="h-4 w-px bg-border" />
+                    </>
+                  )}
 
                   {stats.newWithTaxId > 0 && (
                     <div className="flex items-center space-x-1.5">
@@ -1747,12 +1835,17 @@ export function RemittanceSplitter({
                 <TableHeader className="sticky top-0 bg-background z-10">
                   <TableRow>
                     <TableHead className="w-[50px]">{t.movements.splitter.create}</TableHead>
-                    <TableHead>{t.movements.splitter.name}</TableHead>
+                    <TableHead>
+                      {isPaymentRemittance ? t.movements.splitter.beneficiary : t.movements.splitter.name}
+                    </TableHead>
                     <TableHead>{t.movements.splitter.taxId}</TableHead>
                     <TableHead className="text-right">{t.movements.splitter.amount}</TableHead>
                     <TableHead>{t.movements.splitter.status}</TableHead>
                     <TableHead>{t.movements.splitter.inDatabase}</TableHead>
-                    <TableHead className="w-[100px]">{t.movements.splitter.zipCode}</TableHead>
+                    {/* CP només per mode IN (donants) */}
+                    {!isPaymentRemittance && (
+                      <TableHead className="w-[100px]">{t.movements.splitter.zipCode}</TableHead>
+                    )}
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -1812,23 +1905,42 @@ export function RemittanceSplitter({
                         {donation.status === 'found_inactive' && donation.matchedDonor ? (
                           <span className="text-amber-700">{donation.matchedDonor.name}</span>
                         ) : donation.matchedDonor ? (
-                          <span className="text-green-700">{donation.matchedDonor.name}</span>
+                          <div className="flex items-center gap-1.5">
+                            <span className="text-green-700">{donation.matchedDonor.name}</span>
+                            {/* Badge tipus de contacte per mode OUT */}
+                            {isPaymentRemittance && donation.matchedContactType && (
+                              <Badge variant="secondary" className="text-xs px-1.5 py-0">
+                                {donation.matchedContactType === 'supplier'
+                                  ? t.movements.splitter.supplierBadge
+                                  : donation.matchedContactType === 'employee'
+                                  ? t.movements.splitter.employeeBadge
+                                  : ''}
+                              </Badge>
+                            )}
+                          </div>
                         ) : donation.shouldCreate ? (
-                          <span className="text-blue-600 italic">{t.movements.splitter.willBeCreated}</span>
+                          <span className="text-blue-600 italic">
+                            {isPaymentRemittance
+                              ? t.movements.splitter.createSupplier
+                              : t.movements.splitter.willBeCreated}
+                          </span>
                         ) : (
                           <span className="text-muted-foreground">{t.movements.splitter.manualAssignment}</span>
                         )}
                       </TableCell>
-                      <TableCell>
-                        {donation.status !== 'found' && donation.status !== 'found_inactive' && donation.shouldCreate && (
-                          <Input
-                            value={donation.zipCode}
-                            onChange={(e) => handleZipCodeChange(index, e.target.value)}
-                            className="w-20 h-7 text-xs"
-                            placeholder={t.movements.splitter.zipCode}
-                          />
-                        )}
-                      </TableCell>
+                      {/* CP només per mode IN (donants) */}
+                      {!isPaymentRemittance && (
+                        <TableCell>
+                          {donation.status !== 'found' && donation.status !== 'found_inactive' && donation.shouldCreate && (
+                            <Input
+                              value={donation.zipCode}
+                              onChange={(e) => handleZipCodeChange(index, e.target.value)}
+                              className="w-20 h-7 text-xs"
+                              placeholder={t.movements.splitter.zipCode}
+                            />
+                          )}
+                        </TableCell>
+                      )}
                     </TableRow>
                   ))}
                 </TableBody>
@@ -1842,7 +1954,9 @@ export function RemittanceSplitter({
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <span className="text-sm text-muted-foreground">
-                    {t.movements.splitter.actionSummary(stats.toCreate, parsedDonations.length)}
+                    {isPaymentRemittance
+                      ? t.movements.splitter.paymentsActionSummary(stats.toCreate, parsedDonations.length)
+                      : t.movements.splitter.actionSummary(stats.toCreate, parsedDonations.length)}
                   </span>
                   {/* Botó exportar SEPA només per mode OUT */}
                   {isPaymentRemittance && parsedDonations.length > 0 && (
@@ -1878,7 +1992,7 @@ export function RemittanceSplitter({
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                     ) : null}
                     {isPaymentRemittance
-                      ? `Processar ${parsedDonations.length} pagaments`
+                      ? t.movements.splitter.processPayments(parsedDonations.length)
                       : t.movements.splitter.processDonations(parsedDonations.length)}
                   </Button>
                 </div>

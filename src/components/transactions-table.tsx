@@ -55,7 +55,7 @@ import {
   X,
 } from 'lucide-react';
 import * as XLSX from 'xlsx';
-import type { Transaction, Category, Project, AnyContact, Donor, Supplier, ContactType } from '@/lib/data';
+import type { Transaction, Category, Project, AnyContact, Donor, Supplier, Employee, ContactType } from '@/lib/data';
 import { SUPER_ADMIN_UID } from '@/lib/data';
 import { formatCurrencyEU } from '@/lib/normalize';
 import { trackUX } from '@/lib/ux/trackUX';
@@ -338,6 +338,10 @@ export function TransactionsTable({ initialDateFilter = null }: TransactionsTabl
   
   const suppliers = React.useMemo(() =>
     availableContacts?.filter(c => c.type === 'supplier') as Supplier[] || [],
+  [availableContacts]);
+
+  const employees = React.useMemo(() =>
+    availableContacts?.filter(c => c.type === 'employee') as Employee[] || [],
   [availableContacts]);
 
   // Memoized contacts for ContactCombobox to prevent re-renders
@@ -1750,6 +1754,8 @@ export function TransactionsTable({ initialDateFilter = null }: TransactionsTabl
           onOpenChange={setIsSplitterOpen}
           transaction={transactionToSplit}
           existingDonors={donors}
+          existingSuppliers={suppliers}
+          existingEmployees={employees}
           onSplitDone={handleOnSplitDone}
         />
       )}
