@@ -669,11 +669,13 @@ export default function LiquidacionsPage() {
             <DialogTitle>{trSafe('notes.liquidacions.title', 'Una nota sobre liquidacions')}</DialogTitle>
           </DialogHeader>
           <div className="flex flex-col gap-3">
-            <img
-              src="/img/doodle_liquidac.png"
-              alt={trSafe('notes.liquidacions.imageAlt', 'Il·lustració sobre liquidacions')}
-              className="w-full max-w-full max-h-[160px] sm:max-h-[200px] rounded-md border border-border/30 object-contain"
-            />
+            <div className="bg-white rounded-md border border-primary/20 p-2">
+              <img
+                src="/img/doodle_liquidac.png"
+                alt={trSafe('notes.liquidacions.imageAlt', 'Il·lustració sobre liquidacions')}
+                className="w-full max-w-full max-h-[160px] sm:max-h-[200px] object-contain"
+              />
+            </div>
             <div className="text-sm text-muted-foreground leading-relaxed space-y-2 break-words">
               <p>{trSafe('notes.liquidacions.body.0', 'Quan estàs en ruta, no penses en liquidacions. Penses en arribar, en resoldre, en continuar.')}</p>
               <p>{trSafe('notes.liquidacions.body.1', 'Si guardes el tiquet quan passa, no t\'estàs organitzant: t\'estàs estalviant haver de reconstruir-ho després.')}</p>
