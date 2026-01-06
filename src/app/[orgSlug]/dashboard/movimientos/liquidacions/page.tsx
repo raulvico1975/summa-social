@@ -460,7 +460,7 @@ export default function LiquidacionsPage() {
                       title={t.expenseReports.contextHelp?.title ?? 'Flux recomanat'}
                       story={t.expenseReports.contextHelp?.story ?? 'Puja els tiquets durant el viatge, crea la liquidació al tornar, i genera el PDF quan estigui tot.'}
                       exampleImage={{
-                        src: '/img/doodle_captura.png',
+                        src: '/visuals/marca/doodle_captura.png',
                         alt: 'Flux recomanat: captura de tiquets',
                       }}
                       exampleLabel={t.common.viewExample ?? 'Veure exemple'}
@@ -751,7 +751,7 @@ export default function LiquidacionsPage() {
           <div className="flex flex-col gap-3">
             <div className="bg-white rounded-md border border-primary/20 p-2">
               <img
-                src="/img/doodle_liquidac.png"
+                src="/visuals/marca/doodle_liquidac.png"
                 alt={trSafe('notes.liquidacions.imageAlt', 'Il·lustració sobre liquidacions')}
                 className="w-full max-w-full max-h-[160px] sm:max-h-[200px] object-contain"
               />
