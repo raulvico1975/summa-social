@@ -1579,6 +1579,7 @@ export const ca = {
       yes: "Sí",
       no: "No",
       close: "Tancar",
+      viewExample: "Veure exemple",
       back: "Tornar",
       next: "Següent",
       previous: "Anterior",
@@ -2667,6 +2668,10 @@ export const ca = {
       archived: "Cap liquidació arxivada",
       archivedDesc: "No hi ha liquidacions en aquest estat.",
       noTitle: "Liquidació sense títol",
+    },
+    contextHelp: {
+      title: "Flux recomanat",
+      story: "Durant el viatge, puja el tiquet al moment; al tornar, crees la liquidació i el PDF surt net, sense oblits.",
     },
     details: {
       receipts: (params: { count: number }) => `${params.count} tiquets`,

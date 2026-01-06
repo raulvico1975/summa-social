@@ -393,8 +393,9 @@ export function CategoryImporter({ open, onOpenChange, onComplete }: CategoryImp
               </Alert>
             )}
 
-            {/* Taula de preview amb scroll vertical */}
-            <ScrollArea className="flex-1 border rounded-md max-h-[400px]">
+            {/* Taula de preview amb scroll vertical robust */}
+            <div className="flex-1 min-h-0 border rounded-md overflow-hidden">
+              <ScrollArea className="h-[50vh] max-h-[400px]">
               <Table>
                 <TableHeader>
                   <TableRow>
@@ -440,7 +441,8 @@ export function CategoryImporter({ open, onOpenChange, onComplete }: CategoryImp
                   ))}
                 </TableBody>
               </Table>
-            </ScrollArea>
+              </ScrollArea>
+            </div>
           </div>
         )}
 

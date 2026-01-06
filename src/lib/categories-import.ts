@@ -409,6 +409,12 @@ export function generateCategoryImportPreview(
 /**
  * Prepara les dades d'una categoria per crear a Firestore
  * Mai escriu undefined
+ *
+ * IMPORTANT: Usem parsed.name (original amb espais), NO nameKey (guions)
+ * El nameKey només és per matching intern
+ *
+ * NO fem toLowerCase() perquè degradaria noms propis:
+ * "Quotes socis - Barcelona" ha de quedar "Quotes socis - Barcelona"
  */
 export function prepareCategoryCreateData(
   parsed: ParsedCategoryRow
@@ -417,12 +423,13 @@ export function prepareCategoryCreateData(
   type: 'income' | 'expense';
   order?: number;
 } {
+  // Només trim, conservant majúscules/minúscules originals
   const data: {
     name: string;
     type: 'income' | 'expense';
     order?: number;
   } = {
-    name: parsed.nameKey,
+    name: parsed.name.trim(),
     type: parsed.type,
   };
 

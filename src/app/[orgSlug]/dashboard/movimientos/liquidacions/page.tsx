@@ -24,6 +24,7 @@ import {
   Pencil,
   Trash2,
   Car,
+  Send,
 } from 'lucide-react';
 import Link from 'next/link';
 import { useToast } from '@/hooks/use-toast';
@@ -32,6 +33,7 @@ import { ContextHelpCard } from '@/components/ui/context-help-card';
 import {
   listenExpenseReports,
   createExpenseReportDraft,
+  submitExpenseReport,
   archiveExpenseReport,
   restoreExpenseReport,
   deleteExpenseReport,
@@ -70,40 +72,48 @@ function formatDateRange(dateFrom: string | null, dateTo: string | null): string
   return `${format(new Date(dateFrom!), 'dd/MM', { locale: ca })} - ${format(new Date(dateTo!), 'dd/MM/yyyy', { locale: ca })}`;
 }
 
-// Estat derivat per mostrar a l'usuari (no és un camp de Firestore)
-type DerivedStatus = 'draft' | 'ready' | 'sepa_generated' | 'matched' | 'archived';
-
-function getDerivedStatus(report: ExpenseReport): DerivedStatus {
-  if (report.status === 'archived') return 'archived';
-  if (report.status === 'matched' || report.matchedTransactionId) return 'matched';
-  if (report.sepa) return 'sepa_generated';
-  if (report.generatedPdf) return 'ready';
-  return 'draft';
-}
+// ═══════════════════════════════════════════════════════════════════════════
+// HELPERS D'ESTAT
+// ═══════════════════════════════════════════════════════════════════════════
 
 interface StatusInfo {
   badge: React.ReactNode;
   tooltip: string;
 }
 
+/**
+ * Retorna badge i tooltip basats en els 4 ESTATS OFICIALS:
+ * - draft: En preparació
+ * - submitted: Enviada (amb subestats opcionals: PDF generat, SEPA generat)
+ * - matched: Conciliada amb pagament bancari
+ * - archived: Arxivada
+ */
 function getStatusInfo(report: ExpenseReport, t: TranslationsContextType['t']): StatusInfo {
-  const derived = getDerivedStatus(report);
-
-  switch (derived) {
+  // Usar l'estat oficial de Firestore, no derivats
+  switch (report.status) {
     case 'draft':
       return {
         badge: <Badge variant="outline" className="bg-gray-50 text-gray-700">{t.expenseReports.statuses.draft}</Badge>,
         tooltip: t.expenseReports.tooltips.draft,
       };
-    case 'ready':
+    case 'submitted':
+      // Subestats visuals dins de "Enviada"
+      if (report.sepa) {
+        return {
+          badge: <Badge variant="outline" className="bg-blue-50 text-blue-700">{t.expenseReports.statuses.sepaGenerated}</Badge>,
+          tooltip: t.expenseReports.tooltips.sepaGenerated,
+        };
+      }
+      if (report.generatedPdf) {
+        return {
+          badge: <Badge variant="outline" className="bg-amber-50 text-amber-700">{t.expenseReports.statuses.ready}</Badge>,
+          tooltip: t.expenseReports.tooltips.ready,
+        };
+      }
+      // Submitted sense PDF ni SEPA
       return {
-        badge: <Badge variant="outline" className="bg-amber-50 text-amber-700">{t.expenseReports.statuses.ready}</Badge>,
-        tooltip: t.expenseReports.tooltips.ready,
-      };
-    case 'sepa_generated':
-      return {
-        badge: <Badge variant="outline" className="bg-blue-50 text-blue-700">{t.expenseReports.statuses.sepaGenerated}</Badge>,
-        tooltip: t.expenseReports.tooltips.sepaGenerated,
+        badge: <Badge variant="outline" className="bg-yellow-50 text-yellow-700">Enviada</Badge>,
+        tooltip: 'Pendent de conciliació amb pagament bancari',
       };
     case 'matched':
       return {
@@ -166,6 +176,10 @@ export default function LiquidacionsPage() {
   // Modal confirmació esborrar
   const [reportToDelete, setReportToDelete] = React.useState<ExpenseReport | null>(null);
   const [isDeleting, setIsDeleting] = React.useState(false);
+
+  // Modal confirmació enviar
+  const [reportToSubmit, setReportToSubmit] = React.useState<ExpenseReport | null>(null);
+  const [isSubmitting, setIsSubmitting] = React.useState(false);
 
   // Modal nota informativa
   const [isNoteOpen, setIsNoteOpen] = React.useState(false);
@@ -248,6 +262,27 @@ export default function LiquidacionsPage() {
         description: t.expenseReports.toasts.errorArchive,
         variant: 'destructive',
       });
+    }
+  };
+
+  // Marcar com enviada (amb confirmació)
+  const handleSubmit = async () => {
+    if (!organizationId || !firestore || !reportToSubmit) return;
+
+    setIsSubmitting(true);
+    try {
+      await submitExpenseReport(firestore, organizationId, reportToSubmit.id);
+      toast({ title: 'Liquidació marcada com enviada' });
+      setReportToSubmit(null);
+    } catch (error) {
+      console.error('[handleSubmit] Error:', error);
+      toast({
+        title: t.expenseReports.toasts.error,
+        description: 'Error en marcar com enviada',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -484,6 +519,22 @@ export default function LiquidacionsPage() {
                                 <Pencil className="h-4 w-4" />
                               </Button>
                             )}
+                            {/* Marcar com enviada - només draft */}
+                            {report.status === 'draft' && (
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setReportToSubmit(report);
+                                }}
+                                title="Marcar com enviada"
+                                className="text-blue-600 border-blue-200 hover:bg-blue-50"
+                              >
+                                <Send className="h-4 w-4 mr-1" />
+                                Enviar
+                              </Button>
+                            )}
                             {/* Esborrar - draft i submitted (sense SEPA) */}
                             {(report.status === 'draft' || report.status === 'submitted') && !report.sepa && (
                               <Button
@@ -634,6 +685,35 @@ export default function LiquidacionsPage() {
           )}
         </TabsContent>
       </Tabs>
+
+      {/* Modal confirmació enviar */}
+      <AlertDialog open={!!reportToSubmit} onOpenChange={(open) => !open && setReportToSubmit(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Marcar com enviada</AlertDialogTitle>
+            <AlertDialogDescription>
+              Això marca la liquidació com enviada (presentada). Passarà a la pestanya "Enviades" pendent de conciliació amb el pagament bancari.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isSubmitting}>
+              Cancel·lar
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleSubmit}
+              disabled={isSubmitting}
+              className="bg-blue-600 text-white hover:bg-blue-700"
+            >
+              {isSubmitting ? (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              ) : (
+                <Send className="mr-2 h-4 w-4" />
+              )}
+              Confirmar enviament
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       {/* Modal confirmació esborrar */}
       <AlertDialog open={!!reportToDelete} onOpenChange={(open) => !open && setReportToDelete(null)}>

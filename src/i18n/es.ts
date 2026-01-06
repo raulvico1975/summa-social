@@ -1605,6 +1605,7 @@ export const es = {
       yes: "Sí",
       no: "No",
       close: "Cerrar",
+      viewExample: "Ver ejemplo",
       back: "Volver",
       next: "Siguiente",
       previous: "Anterior",
@@ -2660,6 +2661,10 @@ export const es = {
       archived: "Ninguna liquidación archivada",
       archivedDesc: "No hay liquidaciones en este estado.",
       noTitle: "Liquidación sin título",
+    },
+    contextHelp: {
+      title: "Flujo recomendado",
+      story: "Durante el viaje, sube el ticket en el momento; al volver, creas la liquidación y el PDF sale limpio, sin olvidos.",
     },
     details: {
       receipts: (params: { count: number }) => `${params.count} tickets`,

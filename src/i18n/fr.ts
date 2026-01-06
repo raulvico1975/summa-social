@@ -1580,6 +1580,7 @@ export const fr = {
       yes: "Oui",
       no: "Non",
       close: "Fermer",
+      viewExample: "Voir l'exemple",
       back: "Retour",
       next: "Suivant",
       previous: "Précédent",
@@ -2668,6 +2669,10 @@ export const fr = {
       archived: "Aucune note de frais archivée",
       archivedDesc: "Aucune note de frais dans cet état.",
       noTitle: "Note de frais sans titre",
+    },
+    contextHelp: {
+      title: "Flux recommandé",
+      story: "Pendant le voyage, téléchargez le ticket sur le moment ; au retour, créez la note de frais et le PDF sort propre, sans oublis.",
     },
     details: {
       receipts: (params: { count: number }) => `${params.count} ticket${params.count > 1 ? 's' : ''}`,
