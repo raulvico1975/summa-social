@@ -811,8 +811,9 @@ export function RemittanceSplitter({
     return undefined;
   };
 
-  // Buscar beneficiari per mode OUT (proveïdors i treballadors)
-  // Ordre: 1) IBAN, 2) NIF/CIF, 3) Nom exacte (normalitzat)
+  // Buscar beneficiari per mode OUT (treballadors i proveïdors)
+  // ORDRE IMPORTANT: Treballadors PRIMER (nòmines), Proveïdors DESPRÉS
+  // Criteri: 1) IBAN, 2) NIF/CIF, 3) Nom exacte (normalitzat)
   // NO fuzzy matching, NO codi postal
   const findBeneficiary = (
     name: string,
@@ -825,33 +826,37 @@ export function RemittanceSplitter({
     if (iban) {
       const normalizedCsvIban = normalizeIban(iban);
 
-      // Buscar a proveïdors
-      const foundSupplier = existingSuppliers.find(s => s.iban && normalizeIban(s.iban) === normalizedCsvIban);
-      if (foundSupplier) return { contact: foundSupplier as unknown as Donor, contactType: 'supplier' };
-
-      // Buscar a treballadors
+      // Buscar a TREBALLADORS PRIMER (nòmines tenen prioritat)
       const foundEmployee = existingEmployees.find(e => e.iban && normalizeIban(e.iban) === normalizedCsvIban);
       if (foundEmployee) return { contact: foundEmployee as unknown as Donor, contactType: 'employee' };
+
+      // Després buscar a proveïdors
+      const foundSupplier = existingSuppliers.find(s => s.iban && normalizeIban(s.iban) === normalizedCsvIban);
+      if (foundSupplier) return { contact: foundSupplier as unknown as Donor, contactType: 'supplier' };
     }
 
     // 2. Buscar per NIF/CIF
     if (taxId) {
       const normalizedTaxId = normalizeString(taxId);
 
-      const foundSupplier = existingSuppliers.find(s => normalizeString(s.taxId) === normalizedTaxId);
-      if (foundSupplier) return { contact: foundSupplier as unknown as Donor, contactType: 'supplier' };
-
+      // Buscar a TREBALLADORS PRIMER
       const foundEmployee = existingEmployees.find(e => normalizeString(e.taxId) === normalizedTaxId);
       if (foundEmployee) return { contact: foundEmployee as unknown as Donor, contactType: 'employee' };
+
+      // Després buscar a proveïdors
+      const foundSupplier = existingSuppliers.find(s => normalizeString(s.taxId) === normalizedTaxId);
+      if (foundSupplier) return { contact: foundSupplier as unknown as Donor, contactType: 'supplier' };
     }
 
     // 3. Buscar per nom exacte (normalitzat)
     if (normalizedCsvName) {
-      const foundSupplier = existingSuppliers.find(s => normalizeString(s.name) === normalizedCsvName);
-      if (foundSupplier) return { contact: foundSupplier as unknown as Donor, contactType: 'supplier' };
-
+      // Buscar a TREBALLADORS PRIMER
       const foundEmployee = existingEmployees.find(e => normalizeString(e.name) === normalizedCsvName);
       if (foundEmployee) return { contact: foundEmployee as unknown as Donor, contactType: 'employee' };
+
+      // Després buscar a proveïdors
+      const foundSupplier = existingSuppliers.find(s => normalizeString(s.name) === normalizedCsvName);
+      if (foundSupplier) return { contact: foundSupplier as unknown as Donor, contactType: 'supplier' };
     }
 
     return { contact: null, contactType: null };
