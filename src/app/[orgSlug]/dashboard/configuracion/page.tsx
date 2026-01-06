@@ -13,6 +13,7 @@ import { useCurrentOrganization } from '@/hooks/organization-provider';
 import { useTranslations } from '@/i18n';
 import { useFirebase } from '@/firebase';
 import { SUPER_ADMIN_UID } from '@/lib/data';
+import { isAllowlistedSuperAdmin } from '@/lib/admin/superadmin-allowlist';
 
 export default function SettingsPage() {
   const { userRole } = useCurrentOrganization();
@@ -25,8 +26,9 @@ export default function SettingsPage() {
   const canManageMembers = userRole === 'admin';
   const canManageFeatures = userRole === 'admin';
 
-  // Només SuperAdmin pot veure la Zona de Perill
-  const isSuperAdmin = user?.uid === SUPER_ADMIN_UID;
+  // Només SuperAdmin pot veure la Zona de Perill i Backups
+  // Usem allowlist d'emails (més robust que UID hardcoded)
+  const isSuperAdmin = user?.uid === SUPER_ADMIN_UID || isAllowlistedSuperAdmin(user?.email);
 
   return (
     <div className="space-y-6">
@@ -75,8 +77,8 @@ export default function SettingsPage() {
       {/* Gestió de comptes bancaris (només admins) */}
       {canManageOrganization && <BankAccountsManager />}
 
-      {/* Backups (només admins) */}
-      {canManageOrganization && <BackupsSettings />}
+      {/* Backups - només SuperAdmin (els admins normals no veuen res) */}
+      {isSuperAdmin && <BackupsSettings />}
 
       {/* Zona de Perill - només SuperAdmin */}
       {isSuperAdmin && <DangerZone />}
