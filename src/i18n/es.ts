@@ -497,6 +497,22 @@ export const es = {
         remittanceProcessedDescription: (donations: number, newDonors: number) => `Se han creado ${donations} donaciones${newDonors > 0 ? ` y ${newDonors} nuevos donantes` : ''}.`,
         donationDescription: "Donación socio/a",
         error: "Error",
+        // Mode OUT (pagos)
+        paymentsTitle: "Dividir remesa de pagos",
+        paymentsUploadDescription: "Sube el archivo con el detalle de los pagos para desglosar la remesa.",
+        paymentsReviewTitle: "📊 Revisión de Pagos",
+        paymentsReviewDescription: "Revisa los pagos antes de procesar. Puedes decidir qué proveedores nuevos crear.",
+        payments: "Pagos",
+        beneficiary: "Beneficiario",
+        supplierBadge: "Proveedor",
+        employeeBadge: "Trabajador",
+        processPayments: (count: number) => `Procesar ${count} pagos`,
+        paymentsActionSummary: (toCreate: number, total: number) => `Acción: Se crearán ${toCreate} proveedores nuevos y ${total} transacciones.`,
+        paymentsRemittanceProcessed: "¡Remesa de pagos procesada!",
+        paymentsRemittanceProcessedDescription: (payments: number, newSuppliers: number) => `Se han creado ${payments} pagos${newSuppliers > 0 ? ` y ${newSuppliers} nuevos proveedores` : ''}.`,
+        paymentDescription: "Pago a",
+        createSupplier: "Crear proveedor",
+        newSuppliers: "proveedores nuevos",
     }
   },
   importers: {

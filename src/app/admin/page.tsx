@@ -57,6 +57,7 @@ import {
   ArrowUpRight,
   Settings,
   Info,
+  Download,
 } from 'lucide-react';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
@@ -157,6 +158,9 @@ export default function AdminPage() {
   const [seedResult, setSeedResult] = React.useState<{ ok: boolean; demoMode?: string; counts?: Record<string, number>; error?: string } | null>(null);
   const [showSeedConfirm, setShowSeedConfirm] = React.useState(false);
   const [selectedDemoMode, setSelectedDemoMode] = React.useState<'short' | 'work'>('short');
+
+  // Backup local
+  const [backupOrgId, setBackupOrgId] = React.useState<string | null>(null);
 
   // ─────────────────────────────────────────────────────────────────────────────
   // Carregar dades (només si és SuperAdmin confirmat)
@@ -350,6 +354,58 @@ export default function AdminPage() {
   // Obre diàleg de confirmació
   const handleRegenerateDemo = () => {
     setShowSeedConfirm(true);
+  };
+
+  // Handler per descarregar backup local d'una org
+  const handleDownloadBackup = async (orgId: string, orgName: string) => {
+    if (!user) return;
+    setBackupOrgId(orgId);
+
+    try {
+      const idToken = await user.getIdToken();
+
+      const response = await fetch(`/api/admin/orgs/${orgId}/backup/local`, {
+        method: 'GET',
+        headers: {
+          Authorization: `Bearer ${idToken}`,
+        },
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Error descarregant backup');
+      }
+
+      // Obtenir filename del header Content-Disposition
+      const contentDisposition = response.headers.get('Content-Disposition');
+      const filenameMatch = contentDisposition?.match(/filename="(.+)"/);
+      const filename = filenameMatch ? filenameMatch[1] : `backup_${orgId}.json`;
+
+      // Crear blob i descarregar
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+
+      toast({
+        title: 'Backup descarregat',
+        description: `S'ha descarregat el backup de ${orgName}.`,
+      });
+    } catch (error) {
+      console.error('Error descarregant backup:', error);
+      toast({
+        variant: 'destructive',
+        title: 'Error',
+        description: (error as Error).message || 'No s\'ha pogut descarregar el backup.',
+      });
+    } finally {
+      setBackupOrgId(null);
+    }
   };
 
   const getStatusBadge = (status: Organization['status']) => {
@@ -684,6 +740,17 @@ export default function AdminPage() {
                               <DropdownMenuItem onClick={() => handleEnterOrganization(org)}>
                                 <LogIn className="mr-2 h-4 w-4" />
                                 Entrar
+                              </DropdownMenuItem>
+                              <DropdownMenuItem
+                                onClick={() => handleDownloadBackup(org.id, org.name)}
+                                disabled={backupOrgId === org.id}
+                              >
+                                {backupOrgId === org.id ? (
+                                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                ) : (
+                                  <Download className="mr-2 h-4 w-4" />
+                                )}
+                                Backup local
                               </DropdownMenuItem>
                               <DropdownMenuSeparator />
                               <DropdownMenuItem

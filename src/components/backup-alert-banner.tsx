@@ -10,20 +10,24 @@ import { useCurrentOrganization, useOrgUrl } from '@/hooks/organization-provider
 import { useTranslations } from '@/i18n';
 import { doc } from 'firebase/firestore';
 import type { BackupIntegration } from '@/lib/backups/types';
+import { isAllowlistedSuperAdmin } from '@/lib/admin/superadmin-allowlist';
+import { SUPER_ADMIN_UID } from '@/lib/data';
 
 /**
  * Banner suau que mostra un avís quan el backup automàtic no està configurat.
  * Es mostra si status !== 'connected'.
- * No té dismiss permanent (no ACK).
+ *
+ * IMPORTANT: Només visible per SuperAdmin.
+ * Admins normals no veuen res de backups (decisió de producte).
  */
 export function BackupAlertBanner() {
-  const { firestore } = useFirebase();
-  const { organizationId, userRole } = useCurrentOrganization();
+  const { firestore, user } = useFirebase();
+  const { organizationId } = useCurrentOrganization();
   const { buildUrl } = useOrgUrl();
   const { t } = useTranslations();
 
-  // Només admins veuen el banner
-  const isAdmin = userRole === 'admin';
+  // Només SuperAdmin veu el banner (admins normals no veuen res de backups)
+  const isSuperAdmin = user?.uid === SUPER_ADMIN_UID || isAllowlistedSuperAdmin(user?.email);
 
   // Ref memoitzada per al document d'integració
   const backupDocRef = React.useMemo(() => {
@@ -34,8 +38,8 @@ export function BackupAlertBanner() {
   // Subscripció realtime al document
   const { data: backupData, isLoading } = useDoc<BackupIntegration>(backupDocRef);
 
-  // No mostrar res mentre carrega o si no és admin
-  if (isLoading || !isAdmin) {
+  // No mostrar res mentre carrega o si no és SuperAdmin
+  if (isLoading || !isSuperAdmin) {
     return null;
   }
 
