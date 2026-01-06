@@ -28,6 +28,7 @@ import {
 import Link from 'next/link';
 import { useToast } from '@/hooks/use-toast';
 import { EmptyState } from '@/components/ui/empty-state';
+import { ContextHelpCard } from '@/components/ui/context-help-card';
 import {
   listenExpenseReports,
   createExpenseReportDraft,
@@ -46,6 +47,13 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
+import {
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 import { formatCurrencyEU } from '@/lib/normalize';
 import { format } from 'date-fns';
 import { ca } from 'date-fns/locale';
@@ -125,7 +133,7 @@ export default function LiquidacionsPage() {
   const { firestore, storage } = useFirebase();
   const { buildUrl } = useOrgUrl();
   const { toast } = useToast();
-  const { t } = useTranslations();
+  const { t, tr } = useTranslations();
 
   // Feature flag check
   const isPendingDocsEnabled = organization?.features?.pendingDocs ?? false;
@@ -149,6 +157,9 @@ export default function LiquidacionsPage() {
   // Modal confirmació esborrar
   const [reportToDelete, setReportToDelete] = React.useState<ExpenseReport | null>(null);
   const [isDeleting, setIsDeleting] = React.useState(false);
+
+  // Modal nota informativa
+  const [isNoteOpen, setIsNoteOpen] = React.useState(false);
 
   // Subscripció a liquidacions
   React.useEffect(() => {
@@ -305,11 +316,23 @@ export default function LiquidacionsPage() {
               <ArrowLeft className="h-4 w-4" />
             </Button>
           </Link>
-          <div>
-            <h1 className="text-2xl font-bold font-headline">{t.expenseReports.title}</h1>
-            <p className="text-muted-foreground text-sm">
-              {t.expenseReports.subtitle}
-            </p>
+          <div className="flex items-center gap-2">
+            <div>
+              <h1 className="text-2xl font-bold font-headline">{t.expenseReports.title}</h1>
+              <p className="text-muted-foreground text-sm">
+                {t.expenseReports.subtitle}
+              </p>
+            </div>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => setIsNoteOpen(true)}
+              aria-label={tr('notes.liquidacions.aria')}
+              title={tr('notes.liquidacions.tooltip')}
+              className="h-8 w-8 text-muted-foreground hover:text-foreground"
+            >
+              <Info className="h-4 w-4" />
+            </Button>
           </div>
         </div>
         {canOperate && mainTab === 'liquidacions' && (
@@ -381,11 +404,26 @@ export default function LiquidacionsPage() {
                   ))}
                 </div>
               ) : filteredReports.length === 0 ? (
-                <EmptyState
-                  icon={FileText}
-                  title={(t.expenseReports.empty as Record<string, string>)[activeTab]}
-                  description={(t.expenseReports.empty as Record<string, string>)[`${activeTab}Desc`]}
-                />
+                <div className="space-y-4">
+                  <EmptyState
+                    icon={FileText}
+                    title={(t.expenseReports.empty as Record<string, string>)[activeTab]}
+                    description={(t.expenseReports.empty as Record<string, string>)[`${activeTab}Desc`]}
+                  />
+                  {/* Context help: només al tab draft */}
+                  {activeTab === 'draft' && (
+                    <ContextHelpCard
+                      title={t.expenseReports.contextHelp?.title ?? 'Flux recomanat'}
+                      story={t.expenseReports.contextHelp?.story ?? 'Puja els tiquets durant el viatge, crea la liquidació al tornar, i genera el PDF quan estigui tot.'}
+                      exampleImage={{
+                        src: '/img/doodle_captura.png',
+                        alt: 'Flux recomanat: captura de tiquets',
+                      }}
+                      exampleLabel={t.common.viewExample ?? 'Veure exemple'}
+                      className="max-w-lg mx-auto"
+                    />
+                  )}
+                </div>
               ) : (
                 <div className="space-y-2">
                   {filteredReports.map((report) => (
@@ -614,6 +652,32 @@ export default function LiquidacionsPage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Dialog nota informativa */}
+      <Dialog open={isNoteOpen} onOpenChange={setIsNoteOpen}>
+        <DialogContent className="sm:max-w-3xl">
+          <DialogHeader>
+            <DialogTitle>{tr('notes.liquidacions.title')}</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <img
+              src="/img/doodle_liquidac.png"
+              alt=""
+              className="w-full h-auto rounded-md border border-border/30"
+            />
+            <div className="space-y-3 text-muted-foreground">
+              <p>{tr('notes.liquidacions.body.0')}</p>
+              <p>{tr('notes.liquidacions.body.1')}</p>
+              <p>{tr('notes.liquidacions.body.2')}</p>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button onClick={() => setIsNoteOpen(false)}>
+              {tr('notes.common.close')}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

@@ -637,6 +637,8 @@
   "expenseReports.empty.noTitle": "Liquidación sin título",
   "expenseReports.empty.submitted": "Ninguna liquidación enviada",
   "expenseReports.empty.submittedDesc": "No hay liquidaciones en este estado.",
+  "expenseReports.contextHelp.title": "Flujo recomendado",
+  "expenseReports.contextHelp.story": "Durante el viaje, sube el ticket en el momento; al volver, creas la liquidación y el PDF sale limpio, sin olvidos.",
   "expenseReports.featureDisabled": "Funcionalidad no activada",
   "expenseReports.featureDisabledDesc": "Contacta con el administrador para activar el módulo de documentos pendientes.",
   "expenseReports.pdf.attachments": "Anexos",
@@ -3150,5 +3152,13 @@
   "guides.search.syn.viatge.1": "desplazamiento",
   "guides.search.syn.viatge.2": "desplazamientos",
   "guides.search.syn.viatge.3": "salida",
-  "guides.search.syn.viatge.4": "mision"
+  "guides.search.syn.viatge.4": "mision",
+
+  "notes.common.close": "Cerrar",
+  "notes.liquidacions.aria": "Información sobre liquidaciones",
+  "notes.liquidacions.body.0": "Cuando estás en ruta, no piensas en liquidaciones. Piensas en llegar, en resolver, en continuar.",
+  "notes.liquidacions.body.1": "Si guardas el ticket cuando sucede, no te estás organizando: te estás ahorrando tener que reconstruirlo después.",
+  "notes.liquidacions.body.2": "Cuando llega el momento de ordenar y justificar, la información ya está ahí. Y todo pesa menos.",
+  "notes.liquidacions.title": "Una nota sobre liquidaciones",
+  "notes.liquidacions.tooltip": "Nota informativa"
 }

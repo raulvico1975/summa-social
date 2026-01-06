@@ -637,6 +637,8 @@
   "expenseReports.empty.noTitle": "Note de frais sans titre",
   "expenseReports.empty.submitted": "Aucune note de frais envoyée",
   "expenseReports.empty.submittedDesc": "Aucune note de frais dans cet état.",
+  "expenseReports.contextHelp.title": "Flux recommandé",
+  "expenseReports.contextHelp.story": "Pendant le voyage, téléchargez le ticket sur le moment ; au retour, créez la note de frais et le PDF sort propre, sans oublis.",
   "expenseReports.featureDisabled": "Fonctionnalité non activée",
   "expenseReports.featureDisabledDesc": "Contactez l'administrateur pour activer le module de documents en attente.",
   "expenseReports.pdf.attachments": "Annexes",
@@ -3150,5 +3152,13 @@
   "guides.search.syn.viatge.1": "deplacement",
   "guides.search.syn.viatge.2": "deplacements",
   "guides.search.syn.viatge.3": "sortie",
-  "guides.search.syn.viatge.4": "mission"
+  "guides.search.syn.viatge.4": "mission",
+
+  "notes.common.close": "Fermer",
+  "notes.liquidacions.aria": "Informations sur les notes de frais",
+  "notes.liquidacions.body.0": "Quand tu es en déplacement, tu ne penses pas aux notes de frais. Tu penses à arriver, à résoudre, à continuer.",
+  "notes.liquidacions.body.1": "Si tu gardes le ticket au moment où il arrive, tu ne t'organises pas : tu t'épargnes de devoir le reconstituer plus tard.",
+  "notes.liquidacions.body.2": "Quand vient le moment de classer et justifier, l'information est déjà là. Et tout devient plus léger.",
+  "notes.liquidacions.title": "Une note sur les notes de frais",
+  "notes.liquidacions.tooltip": "Note informative"
 }

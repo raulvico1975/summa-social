@@ -637,6 +637,8 @@
   "expenseReports.empty.noTitle": "Liquidació sense títol",
   "expenseReports.empty.submitted": "Cap liquidació enviada",
   "expenseReports.empty.submittedDesc": "No hi ha liquidacions en aquest estat.",
+  "expenseReports.contextHelp.title": "Flux recomanat",
+  "expenseReports.contextHelp.story": "Durant el viatge, puja el tiquet al moment; al tornar, crees la liquidació i el PDF surt net, sense oblits.",
   "expenseReports.featureDisabled": "Funcionalitat no activada",
   "expenseReports.featureDisabledDesc": "Contacta amb l'administrador per activar el mòdul de documents pendents.",
   "expenseReports.pdf.attachments": "Annexos",
@@ -3152,5 +3154,13 @@
   "guides.search.syn.viatge.1": "desplacament",
   "guides.search.syn.viatge.2": "desplacaments",
   "guides.search.syn.viatge.3": "sortida",
-  "guides.search.syn.viatge.4": "missio"
+  "guides.search.syn.viatge.4": "missio",
+
+  "notes.common.close": "Tancar",
+  "notes.liquidacions.aria": "Informació sobre liquidacions",
+  "notes.liquidacions.body.0": "Quan estàs en ruta, no penses en liquidacions. Penses en arribar, en resoldre, en continuar.",
+  "notes.liquidacions.body.1": "Si guardes el tiquet quan passa, no t'estàs organitzant: t'estàs estalviant haver de reconstruir-ho després.",
+  "notes.liquidacions.body.2": "Quan arriba el moment d'ordenar i justificar, la informació ja hi és. I tot pesa menys.",
+  "notes.liquidacions.title": "Una nota sobre liquidacions",
+  "notes.liquidacions.tooltip": "Nota informativa"
 }

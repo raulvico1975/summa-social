@@ -630,8 +630,10 @@
   "expenseReports.empty.matchedDesc": "No hi ha liquidacions en aquest estat.",
   "expenseReports.empty.noTitle": "Liquidació sense títol",
   "expenseReports.empty.submitted": "Cap liquidació enviada",
-  "expenseReports.empty.submittedDesc": "No hi ha liquidacions en aquest estat.",
-  "expenseReports.featureDisabled": "Funcionalitat no activada",
+  "expenseReports.empty.submittedDesc": "Não há liquidações neste estado.",
+  "expenseReports.contextHelp.title": "Fluxo recomendado",
+  "expenseReports.contextHelp.story": "Durante a viagem, carrega o ticket no momento; ao voltar, crias a liquidação e o PDF sai limpo, sem esquecimentos.",
+  "expenseReports.featureDisabled": "Funcionalidade não ativada",
   "expenseReports.featureDisabledDesc": "Contacta amb l'administrador per activar el mòdul de documents pendents.",
   "expenseReports.pdf.attachments": "Annexos",
   "expenseReports.pdf.beneficiary": "Beneficiari",
@@ -3145,5 +3147,13 @@
   "guides.search.syn.viatge.1": "deslocação",
   "guides.search.syn.viatge.2": "deslocações",
   "guides.search.syn.viatge.3": "saída",
-  "guides.search.syn.viatge.4": "missão"
+  "guides.search.syn.viatge.4": "missão",
+
+  "notes.common.close": "Fechar",
+  "notes.liquidacions.aria": "Informações sobre prestações de contas",
+  "notes.liquidacions.body.0": "Quando estás em viagem, não pensas em prestações de contas. Pensas em chegar, em resolver, em continuar.",
+  "notes.liquidacions.body.1": "Se guardas o recibo quando acontece, não te estás a organizar: estás a poupar-te de ter que o reconstruir depois.",
+  "notes.liquidacions.body.2": "Quando chega o momento de ordenar e justificar, a informação já está lá. E tudo pesa menos.",
+  "notes.liquidacions.title": "Uma nota sobre prestações de contas",
+  "notes.liquidacions.tooltip": "Nota informativa"
 }
