@@ -1,6 +1,6 @@
 # ═══════════════════════════════════════════════════════════════════════════════
 # SUMMA SOCIAL - REFERÈNCIA COMPLETA DEL PROJECTE
-# Versió 1.27 - Gener 2026
+# Versió 1.28 - Gener 2026
 # ═══════════════════════════════════════════════════════════════════════════════
 
 
@@ -2892,6 +2892,54 @@ Errors ignorats automàticament (no creen incidents):
 | `src/app/admin/page.tsx` | Pàgina del panell SuperAdmin |
 | `src/components/admin/create-organization-dialog.tsx` | Modal crear organització |
 | `src/lib/data.ts` | Constant `SUPER_ADMIN_UID` |
+
+### 3.10.7 Backup Local d'Organitzacions (NOU v1.28)
+
+Funcionalitat per descarregar un backup complet d'una organització en format JSON.
+
+**Accés:**
+- Només SuperAdmin (verificació server-side)
+- Des del panell `/admin` → Menú ⋮ d'una organització → "Backup local"
+
+**Contingut del backup:**
+
+| Col·lecció | Inclòs |
+|------------|--------|
+| `organization` | Dades principals de l'org |
+| `categories` | Totes les categories |
+| `bankAccounts` | Comptes bancaris |
+| `members` | Membres de l'org |
+| `transactions` | Tots els moviments (paginat) |
+| `contacts` | Donants, proveïdors, treballadors (paginat) |
+| `remittances` | Remeses processades |
+| `pendingDocuments` | Documents pendents |
+| `expenseReports` | Liquidacions |
+| `projectModule/*` | Projects, budgetLines, expenses (si existeix) |
+
+**Camps sensibles exclosos:**
+- `accessToken`, `refreshToken` — Tokens
+- `downloadUrl`, `signedUrl`, `tempUrl` — URLs signades
+- `logoUrl`, `signatureUrl`, `document`, `documentUrl` — URLs de Storage
+
+**Format de sortida:**
+```json
+{
+  "schemaVersion": 1,
+  "exportedAt": "2026-01-06T...",
+  "orgId": "abc123",
+  "orgSlug": "entitat-demo",
+  "counts": { "transactions": 1234, ... },
+  "data": { ... }
+}
+```
+
+**Fitxer descarregat:** `summa_backup_{slug}_{YYYY-MM-DD}.json`
+
+**Fitxers principals:**
+- `src/app/api/admin/orgs/[orgId]/backup/local/route.ts` — API Route
+- `src/lib/admin/org-backup-export.ts` — Lògica d'exportació
+
+**Nota:** Aquesta funcionalitat és independent de la integració de backups automàtics (Google Drive). Permet descàrregues manuals puntuals per a migracions o auditories.
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
