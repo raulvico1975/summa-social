@@ -8,6 +8,7 @@ import {
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { ContactCombobox, Contact } from '@/components/contact-combobox';
+import { SummaTooltip } from '@/components/ui/summa-tooltip';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -546,9 +547,15 @@ export const TransactionRow = React.memo(function TransactionRow({
           <div className="lg:hidden mt-1 text-xs text-muted-foreground flex items-center gap-1 flex-wrap">
             <span className="truncate max-w-[120px]">{getCategoryDisplayName(tx.category) || 'Sense categoria'}</span>
             <span className="text-muted-foreground/50">·</span>
-            <span className="max-w-[180px]" title={contactName || undefined}>
-              {contactName ? middleEllipsis(contactName) : 'Sense contacte'}
-            </span>
+            {contactName ? (
+              <SummaTooltip content={contactName}>
+                <span className="max-w-[180px]">
+                  {middleEllipsis(contactName)}
+                </span>
+              </SummaTooltip>
+            ) : (
+              <span className="max-w-[180px]">Sense contacte</span>
+            )}
           </div>
         </div>
       </TableCell>

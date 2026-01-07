@@ -4,6 +4,7 @@ import * as React from 'react';
 import { Check, ChevronsUpDown, Heart, Building2, UserPlus, Users } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
+import { SummaTooltip } from '@/components/ui/summa-tooltip';
 import { useTranslations } from '@/i18n';
 import {
   Command,
@@ -124,9 +125,11 @@ export const ContactCombobox = React.memo(function ContactCombobox({
             ) : (
               <Building2 className="h-3 w-3 text-blue-500 shrink-0" />
             )}
-            <span className="text-[13px] max-w-[220px]" title={selectedContact.name}>
-              {middleEllipsis(selectedContact.name)}
-            </span>
+            <SummaTooltip content={selectedContact.name}>
+              <span className="text-[13px] max-w-[220px]">
+                {middleEllipsis(selectedContact.name)}
+              </span>
+            </SummaTooltip>
             <ChevronsUpDown className="h-3 w-3 text-muted-foreground ml-1" />
           </Button>
         ) : (

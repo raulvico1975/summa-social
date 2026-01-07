@@ -6,6 +6,7 @@
 import * as React from 'react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { SummaTooltip } from '@/components/ui/summa-tooltip';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -214,7 +215,9 @@ export const TransactionRowMobile = React.memo(function TransactionRowMobile({
         {contactName && (
           <span className="inline-flex items-center gap-1">
             <User className="h-3 w-3" />
-            <span className="max-w-[220px]" title={contactName}>{middleEllipsis(contactName)}</span>
+            <SummaTooltip content={contactName}>
+              <span className="max-w-[220px]">{middleEllipsis(contactName)}</span>
+            </SummaTooltip>
           </span>
         )}
         {hasDocument && (
