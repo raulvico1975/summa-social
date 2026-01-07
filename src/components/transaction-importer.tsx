@@ -472,6 +472,9 @@ export function TransactionImporter({ existingTransactions }: TransactionImporte
         return;
      }
     const existingTransactionKeys = new Set(existingTransactions.map(createTransactionKey));
+    log(`🔍 [DEDUPE DEBUG] Transaccions existents: ${existingTransactions.length}`);
+    log(`🔍 [DEDUPE DEBUG] Claus existents generades: ${existingTransactionKeys.size}`);
+    log(`🔍 [DEDUPE DEBUG] Exemple clau existent: ${Array.from(existingTransactionKeys)[0] || 'N/A'}`);
     log(`Iniciando procesamiento de ${data.length} filas con cuenta bancaria: ${bankAccountId || 'ninguna'}.`);
 
     try {
@@ -546,9 +549,12 @@ export function TransactionImporter({ existingTransactions }: TransactionImporte
         let duplicatesFound = 0;
 
         if (mode === 'append') {
-            transactionsToProcess = allParsedRows.filter(tx => {
+            transactionsToProcess = allParsedRows.filter((tx, index) => {
                 const key = createTransactionKey(tx as Transaction);
                 const isDuplicate = existingTransactionKeys.has(key);
+                if (index < 3) {
+                    log(`🔍 [DEDUPE DEBUG] Transacció ${index}: key="${key}", duplicat=${isDuplicate}`);
+                }
                 if (isDuplicate) {
                     log(`Transacción duplicada encontrada y omitida: ${key}`);
                 }
