@@ -133,7 +133,7 @@ export default async function HomePage({ params }: PageProps) {
               <div className="lg:hidden">
                 <div className={frameClass}>
                   <Image
-                    src="/visuals/web/web_dashboard.png"
+                    src="/visuals/web/web_dashboard.webp"
                     alt="Summa Social Dashboard"
                     width={800}
                     height={500}
@@ -159,7 +159,7 @@ export default async function HomePage({ params }: PageProps) {
             <div className="hidden lg:block">
               <div className={frameClass}>
                 <Image
-                  src="/visuals/web/web_dashboard.png"
+                  src="/visuals/web/web_dashboard.webp"
                   alt="Summa Social Dashboard"
                   width={800}
                   height={500}
@@ -249,7 +249,7 @@ export default async function HomePage({ params }: PageProps) {
             <div className={frameClass}>
               <div className="aspect-video overflow-hidden bg-muted/20">
                 <Image
-                  src="/visuals/web/web_concilia_bancaria.png"
+                  src="/visuals/web/web_concilia_bancaria.webp"
                   alt={t.home.capabilities.conciliation.title}
                   width={600}
                   height={340}
@@ -273,7 +273,7 @@ export default async function HomePage({ params }: PageProps) {
             <div className={frameClass}>
               <div className="aspect-video overflow-hidden bg-muted/20">
                 <Image
-                  src="/visuals/web/web_divide_remeses.png"
+                  src="/visuals/web/web_divide_remeses.webp"
                   alt={t.home.capabilities.remittances.title}
                   width={600}
                   height={340}
@@ -297,7 +297,7 @@ export default async function HomePage({ params }: PageProps) {
             <div className={frameClass}>
               <div className="aspect-video overflow-hidden bg-muted/20">
                 <Image
-                  src="/visuals/web/web_divide_stripe.png"
+                  src="/visuals/web/web_divide_stripe.webp"
                   alt={t.home.capabilities.donations.title}
                   width={600}
                   height={340}
@@ -321,7 +321,7 @@ export default async function HomePage({ params }: PageProps) {
             <div className={frameClass}>
               <div className="aspect-video overflow-hidden bg-muted/20">
                 <Image
-                  src="/visuals/web/web_certificats_182.png"
+                  src="/visuals/web/web_certificats_182.webp"
                   alt={t.home.capabilities.fiscal.title}
                   width={600}
                   height={340}
@@ -363,7 +363,7 @@ export default async function HomePage({ params }: PageProps) {
             </div>
             <div className={frameClass}>
               <Image
-                src="/visuals/web/web_gestio_docs.png"
+                src="/visuals/web/web_gestio_docs.webp"
                 alt={t.home.profiles.admin.title}
                 width={600}
                 height={400}
@@ -382,7 +382,7 @@ export default async function HomePage({ params }: PageProps) {
             <div className="order-2 lg:order-1">
               <div className={frameClass}>
                 <Image
-                  src="/visuals/web/web_seguiment_projectes.png"
+                  src="/visuals/web/web_seguiment_projectes.webp"
                   alt={t.home.profiles.projects.title}
                   width={600}
                   height={400}
