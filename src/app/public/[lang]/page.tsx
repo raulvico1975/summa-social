@@ -242,7 +242,10 @@ export default async function HomePage({ params }: PageProps) {
           ═══════════════════════════════════════════════════════════════════════ */}
       <section id="capabilities" className="bg-muted/30 px-6 py-16 lg:py-20">
         <div className="mx-auto max-w-6xl">
-          <h2 className="text-2xl font-semibold text-center mb-12">{t.home.capabilities.title}</h2>
+          <h2 className="text-2xl font-semibold text-center">{t.home.systemOverview.title}</h2>
+          <p className="mt-2 mb-12 text-center text-muted-foreground max-w-2xl mx-auto">
+            {t.home.systemOverview.subtitle}
+          </p>
 
           <div className="grid gap-8 md:grid-cols-2">
             {/* Card 1: Conciliació */}

@@ -220,6 +220,10 @@ export interface PublicTranslations {
       step2: { title: string; description: string };
       step3: { title: string; description: string };
     };
+    systemOverview: {
+      title: string;
+      subtitle: string;
+    };
     capabilities: {
       title: string;
       conciliation: { title: string; description: string };
@@ -639,6 +643,10 @@ const ca: PublicTranslations = {
         title: 'Compleix',
         description: 'Genera models fiscals, certificats i justificacions amb un clic.',
       },
+    },
+    systemOverview: {
+      title: "Com s'ordena la gestió amb Summa Social",
+      subtitle: 'Cada part de Summa resol una peça concreta del dia a dia, però totes treballen juntes.',
     },
     capabilities: {
       title: 'Què pots fer amb Summa Social',
@@ -1158,6 +1166,10 @@ const es: PublicTranslations = {
         title: 'Cumple',
         description: 'Genera modelos fiscales, certificados y justificaciones con un clic.',
       },
+    },
+    systemOverview: {
+      title: 'Cómo se ordena la gestión con Summa Social',
+      subtitle: 'Cada parte de Summa resuelve una pieza concreta del día a día, pero todas trabajan juntas.',
     },
     capabilities: {
       title: 'Qué puedes hacer con Summa Social',
@@ -1679,6 +1691,10 @@ const fr: PublicTranslations = {
         description: "Générez les modèles fiscaux, certificats et justificatifs d'un seul clic.",
       },
     },
+    systemOverview: {
+      title: "Comment la gestion s'organise avec Summa Social",
+      subtitle: 'Chaque partie de Summa résout une pièce concrète du quotidien, mais toutes travaillent ensemble.',
+    },
     capabilities: {
       title: 'Ce que vous pouvez faire avec Summa Social',
       conciliation: {
@@ -2197,6 +2213,10 @@ const pt: PublicTranslations = {
         title: 'Cumpre',
         description: 'Gera modelos fiscais, certificados e justificações com um clique.',
       },
+    },
+    systemOverview: {
+      title: 'Como se organiza a gestão com Summa Social',
+      subtitle: 'Cada parte do Summa resolve uma peça concreta do dia a dia, mas todas trabalham juntas.',
     },
     capabilities: {
       title: 'O que podes fazer com Summa Social',
