@@ -767,8 +767,8 @@ export const TransactionRow = React.memo(function TransactionRow({
       )}
 
       {/* Document + Actions (agrupats al rail dret) */}
-      <TableCell className="text-right py-1 pr-2">
-        <div className="inline-flex items-center justify-end gap-0.5">
+      <TableCell className="w-7 shrink-0 text-right py-1 pr-2">
+        <div className="flex items-center justify-center shrink-0">
           {/* Document icon */}
           {isDocumentLoading ? (
             <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />

@@ -1444,7 +1444,7 @@ export function TransactionsTable({ initialDateFilter = null }: TransactionsTabl
                   </button>
                 </TableHead>
                 <TableHead className="text-right w-[90px] py-2 whitespace-nowrap">{t.movements.table.amount}</TableHead>
-                <TableHead className="min-w-[200px] lg:min-w-[360px] py-2">{t.movements.table.concept}</TableHead>
+                <TableHead className="min-w-[200px] lg:min-w-[340px] py-2">{t.movements.table.concept}</TableHead>
                 <TableHead className="min-w-[220px] py-2 hidden lg:table-cell">{t.movements.table.contact}</TableHead>
                 <TableHead className="min-w-[160px] py-2 hidden lg:table-cell">{t.movements.table.category}</TableHead>
                 {showProjectColumn && (
@@ -1452,7 +1452,7 @@ export function TransactionsTable({ initialDateFilter = null }: TransactionsTabl
                     {t.movements.table.project}
                   </TableHead>
                 )}
-                <TableHead className="w-7 text-right py-2 pr-2"><span className="sr-only">{t.movements.table.actions}</span></TableHead>
+                <TableHead className="w-7 shrink-0 text-right py-2 pr-2"><span className="sr-only">{t.movements.table.actions}</span></TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>

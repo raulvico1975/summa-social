@@ -229,12 +229,12 @@ export const TransactionRowMobile = React.memo(function TransactionRowMobile({
       </div>
 
       {/* Actions rail */}
-      <div className="mt-2 flex justify-end gap-1">
+      <div className="mt-2 flex justify-end gap-1 shrink-0">
         {hasDocument && tx.document && (
           <Button
             variant="ghost"
             size="icon"
-            className="h-8 w-8"
+            className="h-8 w-8 shrink-0"
             onClick={() => window.open(tx.document!, '_blank')}
             aria-label={t.viewDocument}
           >
