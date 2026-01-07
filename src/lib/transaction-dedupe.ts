@@ -51,6 +51,9 @@ export function normalizeBankRefForDedupe(ref: string | undefined | null): strin
  * Regla:
  * 1. Si bankRef existeix → bankRef normalitzada
  * 2. Sinó → dateKey|amountCents|descKey
+ *
+ * CRÍTIC: Usa sempre el camp `description` per garantir coherència
+ * entre transaccions existents i parsejades.
  */
 export function createDedupeKey(tx: {
   date: string;
