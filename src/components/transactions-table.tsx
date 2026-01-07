@@ -1410,8 +1410,8 @@ export function TransactionsTable({ initialDateFilter = null }: TransactionsTabl
           TAULA DE TRANSACCIONS (desktop/tablet) - >= 768px
           ═══════════════════════════════════════════════════════════════════════ */}
       {!isMobile && (
-        <div className="rounded-md border">
-          <Table>
+        <div className="w-full rounded-md border table-scroll-stable overflow-x-auto [&>div]:overflow-visible">
+          <Table className="w-full">
             <TableHeader>
               <TableRow className="h-9">
                 {/* Checkbox columna - només visible per admin/user */}
@@ -1443,16 +1443,17 @@ export function TransactionsTable({ initialDateFilter = null }: TransactionsTabl
                     )}
                   </button>
                 </TableHead>
-                <TableHead className="text-right w-[90px] py-2 whitespace-nowrap">{t.movements.table.amount}</TableHead>
-                <TableHead className="min-w-[200px] lg:min-w-[340px] py-2">{t.movements.table.concept}</TableHead>
-                <TableHead className="min-w-[220px] py-2 hidden lg:table-cell">{t.movements.table.contact}</TableHead>
-                <TableHead className="min-w-[160px] py-2 hidden lg:table-cell">{t.movements.table.category}</TableHead>
+                <TableHead className="w-[110px] text-right py-2 whitespace-nowrap">{t.movements.table.amount}</TableHead>
+                <TableHead className="py-2 min-w-0">{t.movements.table.concept}</TableHead>
+                <TableHead className="w-[180px] py-2 hidden lg:table-cell">{t.movements.table.contact}</TableHead>
+                <TableHead className="w-[160px] py-2 hidden lg:table-cell">{t.movements.table.category}</TableHead>
                 {showProjectColumn && (
                   <TableHead className="w-[100px] py-2 hidden lg:table-cell">
                     {t.movements.table.project}
                   </TableHead>
                 )}
-                <TableHead className="w-7 shrink-0 text-right py-2 pr-2"><span className="sr-only">{t.movements.table.actions}</span></TableHead>
+                <TableHead className="w-7 shrink-0 text-center py-2"><span className="sr-only">Document</span></TableHead>
+                <TableHead className="w-9 shrink-0 text-right py-2 pr-2"><span className="sr-only">{t.movements.table.actions}</span></TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
