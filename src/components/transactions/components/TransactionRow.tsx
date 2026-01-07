@@ -661,7 +661,7 @@ export const TransactionRow = React.memo(function TransactionRow({
                   <span>{t.categorize}...</span>
                 </span>
               ) : (
-                <span className="truncate max-w-[80px]">
+                <span className="truncate max-w-[140px]">
                   {tx.category ? getCategoryDisplayName(tx.category) : t.uncategorized}
                 </span>
               )}

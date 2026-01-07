@@ -204,7 +204,7 @@ export const TransactionRowMobile = React.memo(function TransactionRowMobile({
         {contactName && (
           <span className="inline-flex items-center gap-1">
             <User className="h-3 w-3" />
-            <span className="truncate max-w-[120px]">{contactName}</span>
+            <span className="truncate max-w-[180px]">{contactName}</span>
           </span>
         )}
         {hasDocument && (
