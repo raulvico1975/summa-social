@@ -208,8 +208,8 @@ export const TransactionRowMobile = React.memo(function TransactionRowMobile({
           </span>
         )}
         {hasDocument && (
-          <span className="inline-flex items-center gap-1 text-green-600">
-            <FileText className="h-3 w-3" />
+          <span className="inline-flex items-center gap-1 text-foreground">
+            <FileText className="h-3 w-3 fill-current" />
             Doc
           </span>
         )}
@@ -225,7 +225,7 @@ export const TransactionRowMobile = React.memo(function TransactionRowMobile({
             onClick={() => window.open(tx.document!, '_blank')}
             aria-label={t.viewDocument}
           >
-            <FileText className="h-4 w-4" />
+            <FileText className="h-4 w-4 fill-current text-foreground" />
           </Button>
         )}
         <DropdownMenu open={isMenuOpen} onOpenChange={setIsMenuOpen}>
@@ -245,7 +245,7 @@ export const TransactionRowMobile = React.memo(function TransactionRowMobile({
             </DropdownMenuItem>
             {!hasDocument && onAttachDocument && (
               <DropdownMenuItem onClick={handleAttachDoc}>
-                <FileText className="h-4 w-4 mr-2" />
+                <FileText className="h-4 w-4 mr-2 text-muted-foreground" />
                 {t.attachProof}
               </DropdownMenuItem>
             )}
