@@ -28,6 +28,16 @@ import {
 import type { Transaction, ContactType } from '@/lib/data';
 import { formatCurrencyEU, formatDateShort } from '@/lib/normalize';
 
+/**
+ * Helper: middle ellipsis per a noms llargs
+ * Mostra primers 18 caràcters + … + últims 10
+ */
+function middleEllipsis(s: string, head = 18, tail = 10): string {
+  if (!s) return s;
+  if (s.length <= head + tail + 1) return s;
+  return `${s.slice(0, head)}…${s.slice(-tail)}`;
+}
+
 interface TransactionRowMobileProps {
   transaction: Transaction;
   contactName: string | null;
@@ -204,7 +214,7 @@ export const TransactionRowMobile = React.memo(function TransactionRowMobile({
         {contactName && (
           <span className="inline-flex items-center gap-1">
             <User className="h-3 w-3" />
-            <span className="truncate max-w-[180px]">{contactName}</span>
+            <span className="max-w-[220px]" title={contactName}>{middleEllipsis(contactName)}</span>
           </span>
         )}
         {hasDocument && (

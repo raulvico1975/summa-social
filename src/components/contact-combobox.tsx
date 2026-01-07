@@ -20,6 +20,16 @@ import {
   PopoverTrigger,
 } from '@/components/ui/popover';
 
+/**
+ * Helper: middle ellipsis per a noms llargs
+ * Mostra primers 18 caràcters + … + últims 10
+ */
+function middleEllipsis(s: string, head = 18, tail = 10): string {
+  if (!s) return s;
+  if (s.length <= head + tail + 1) return s;
+  return `${s.slice(0, head)}…${s.slice(-tail)}`;
+}
+
 export interface Contact {
   id: string;
   name: string;
@@ -114,8 +124,8 @@ export const ContactCombobox = React.memo(function ContactCombobox({
             ) : (
               <Building2 className="h-3 w-3 text-blue-500 shrink-0" />
             )}
-            <span className="text-[13px] truncate max-w-[90px]" title={selectedContact.name}>
-              {selectedContact.name}
+            <span className="text-[13px] max-w-[220px]" title={selectedContact.name}>
+              {middleEllipsis(selectedContact.name)}
             </span>
             <ChevronsUpDown className="h-3 w-3 text-muted-foreground ml-1" />
           </Button>

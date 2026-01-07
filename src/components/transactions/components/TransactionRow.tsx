@@ -61,6 +61,20 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { RowDropTarget } from '@/components/files/row-drop-target';
 
 // =============================================================================
+// HELPERS
+// =============================================================================
+
+/**
+ * Helper: middle ellipsis per a noms llargs
+ * Mostra primers 18 caràcters + … + últims 10
+ */
+function middleEllipsis(s: string, head = 18, tail = 10): string {
+  if (!s) return s;
+  if (s.length <= head + tail + 1) return s;
+  return `${s.slice(0, head)}…${s.slice(-tail)}`;
+}
+
+// =============================================================================
 // TYPES
 // =============================================================================
 
@@ -532,7 +546,9 @@ export const TransactionRow = React.memo(function TransactionRow({
           <div className="lg:hidden mt-1 text-xs text-muted-foreground flex items-center gap-1 flex-wrap">
             <span className="truncate max-w-[120px]">{getCategoryDisplayName(tx.category) || 'Sense categoria'}</span>
             <span className="text-muted-foreground/50">·</span>
-            <span className="truncate max-w-[120px]">{contactName || 'Sense contacte'}</span>
+            <span className="max-w-[180px]" title={contactName || undefined}>
+              {contactName ? middleEllipsis(contactName) : 'Sense contacte'}
+            </span>
           </div>
         </div>
       </TableCell>
