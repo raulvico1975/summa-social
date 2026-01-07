@@ -1430,7 +1430,7 @@ export function TransactionsTable({ initialDateFilter = null }: TransactionsTabl
                     />
                   </TableHead>
                 )}
-                <TableHead className="w-[100px] py-2">
+                <TableHead className="w-[90px] py-2">
                   <button
                     onClick={() => setSortDateAsc(!sortDateAsc)}
                     className="flex items-center gap-1 hover:text-foreground transition-colors text-xs"
@@ -1443,16 +1443,16 @@ export function TransactionsTable({ initialDateFilter = null }: TransactionsTabl
                     )}
                   </button>
                 </TableHead>
-                <TableHead className="text-right w-[100px] py-2 whitespace-nowrap">{t.movements.table.amount}</TableHead>
+                <TableHead className="text-right w-[90px] py-2 whitespace-nowrap">{t.movements.table.amount}</TableHead>
                 <TableHead className="min-w-[200px] lg:min-w-[360px] py-2">{t.movements.table.concept}</TableHead>
-                <TableHead className="w-[260px] py-2 hidden lg:table-cell">{t.movements.table.contact}</TableHead>
+                <TableHead className="w-[290px] py-2 hidden lg:table-cell">{t.movements.table.contact}</TableHead>
                 <TableHead className="w-[180px] py-2 hidden lg:table-cell">{t.movements.table.category}</TableHead>
                 {showProjectColumn && (
                   <TableHead className="w-[100px] py-2 hidden lg:table-cell">
                     {t.movements.table.project}
                   </TableHead>
                 )}
-                <TableHead className="w-8 text-right py-2 pr-2"><span className="sr-only">{t.movements.table.actions}</span></TableHead>
+                <TableHead className="w-7 text-right py-2 pr-2"><span className="sr-only">{t.movements.table.actions}</span></TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
