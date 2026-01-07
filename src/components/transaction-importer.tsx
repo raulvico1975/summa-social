@@ -45,12 +45,15 @@ import {
 } from '@/components/ui/alert-dialog';
 import { Label } from '@/components/ui/label';
 import { useCollection, useFirebase, useMemoFirebase } from '@/firebase';
-import { collection, writeBatch, doc } from 'firebase/firestore';
+import { collection, writeBatch, doc, serverTimestamp, setDoc } from 'firebase/firestore';
 import { useCurrentOrganization, useOrgUrl } from '@/hooks/organization-provider';
+import { createImportRunDoc, type ImportRun } from '@/lib/import-runs';
 import { useTranslations } from '@/i18n';
 import { useBankAccounts } from '@/hooks/use-bank-accounts';
+import { useAuth } from '@/hooks/use-auth';
 import Link from 'next/link';
 import { suggestPendingDocumentMatches } from '@/lib/pending-documents';
+import { createDedupeKey, type DedupeTransaction } from '@/lib/transaction-dedupe';
 
 
 type ImportMode = 'append' | 'replace';
@@ -73,10 +76,10 @@ interface TransactionImporterProps {
   existingTransactions: Transaction[];
 }
 
-// Function to create a unique key for a transaction to detect duplicates
+// DEPRECATED: Mantingut per compatibilitat temporal
+// Ara usem createDedupeKey de @/lib/transaction-dedupe
 const createTransactionKey = (tx: { date: string, description: string, amount: number }): string => {
-  const date = new Date(tx.date).toISOString().split('T')[0]; // Normalize date to YYYY-MM-DD
-  return `${date}|${tx.description.trim()}|${tx.amount.toFixed(2)}`;
+  return createDedupeKey(tx);
 };
 
 const findColumnIndex = (header: string[], potentialNames: string[]): number => {
@@ -106,12 +109,16 @@ export function TransactionImporter({ existingTransactions }: TransactionImporte
   const [isAccountDialogOpen, setIsAccountDialogOpen] = React.useState(false);
   const [pendingFile, setPendingFile] = React.useState<File | null>(null);
   const [selectedBankAccountId, setSelectedBankAccountId] = React.useState<string | null>(null);
+  const [isOverlapAlertOpen, setIsOverlapAlertOpen] = React.useState(false);
+  const [overlapInfo, setOverlapInfo] = React.useState<{ lastRun: ImportRun | null; dateMin: string; dateMax: string } | null>(null);
+  const [pendingParsedData, setPendingParsedData] = React.useState<{ data: any[]; mode: ImportMode; bankAccountId: string | null; fileName: string | null } | null>(null);
   const { toast } = useToast();
   const { log } = useAppLog();
   const { firestore } = useFirebase();
   const { organizationId } = useCurrentOrganization();
   const { buildUrl } = useOrgUrl();
   const { t } = useTranslations();
+  const { user } = useAuth();
 
   // Bank accounts
   const { bankAccounts, defaultAccountId, isLoading: isLoadingBankAccounts } = useBankAccounts();
@@ -178,6 +185,113 @@ export function TransactionImporter({ existingTransactions }: TransactionImporte
         setIsImporting(false);
     }
   }
+
+  /**
+   * Detecta solapament amb transaccions existents i últim importRun
+   */
+  const checkOverlapAndConfirm = async (parsedData: any[], mode: ImportMode, bankAccountId: string | null, fileName: string | null) => {
+    if (!organizationId || mode === 'replace') {
+      // Mode replace no necessita avís de solapament (esborra tot)
+      processParsedData(parsedData, mode, bankAccountId, fileName);
+      return;
+    }
+
+    try {
+      // Calcular dateMin i dateMax de les dades parsejades
+      const dates: string[] = [];
+      for (const row of parsedData) {
+        const dateValue = row['F. valor'] || row['F. Valor'] || row['F. ejecución'] || row['F. Ejecución'] ||
+                          row.Fecha || row.fecha || row['Fecha Operación'] || row['fecha operación'];
+        if (dateValue) {
+          let date;
+          if (dateValue instanceof Date) {
+            date = dateValue;
+          } else {
+            const dateString = String(dateValue);
+            const parts = dateString.match(/(\d{1,2})[/-](\d{1,2})[/-](\d{2,4})/);
+            if (parts) {
+              const day = parseInt(parts[1], 10);
+              const month = parseInt(parts[2], 10);
+              let year = parseInt(parts[3], 10);
+              if (year < 100) year += 2000;
+              date = new Date(year, month - 1, day);
+            }
+          }
+          if (date && !isNaN(date.getTime())) {
+            dates.push(date.toISOString().split('T')[0]);
+          }
+        }
+      }
+
+      if (dates.length === 0) {
+        // No hi ha dates vàlides, continuar sense avís
+        processParsedData(parsedData, mode, bankAccountId, fileName);
+        return;
+      }
+
+      dates.sort();
+      const dateMin = dates[0];
+      const dateMax = dates[dates.length - 1];
+
+      // Detectar si hi ha transaccions existents en aquest rang
+      const hasOverlap = existingTransactions.some(tx => {
+        return tx.date >= dateMin && tx.date <= dateMax;
+      });
+
+      if (!hasOverlap) {
+        // No hi ha solapament, continuar directament
+        processParsedData(parsedData, mode, bankAccountId, fileName);
+        return;
+      }
+
+      // Hi ha solapament: buscar últim importRun
+      const { collection: firestoreCollection, query, orderBy, limit, getDocs, where } = await import('firebase/firestore');
+      const importRunsRef = firestoreCollection(firestore, 'organizations', organizationId, 'importRuns');
+      const q = query(
+        importRunsRef,
+        where('type', '==', 'bankTransactions'),
+        where('dateMax', '>=', dateMin),
+        orderBy('dateMax', 'desc'),
+        orderBy('createdAt', 'desc'),
+        limit(1)
+      );
+
+      const snapshot = await getDocs(q);
+      const lastRun = snapshot.empty ? null : { id: snapshot.docs[0].id, ...snapshot.docs[0].data() } as ImportRun;
+
+      // Mostrar diàleg d'avís
+      setOverlapInfo({ lastRun, dateMin, dateMax });
+      setPendingParsedData({ data: parsedData, mode, bankAccountId, fileName });
+      setIsOverlapAlertOpen(true);
+      setIsImporting(false); // Aturar spinner mentre l'usuari decideix
+
+    } catch (error) {
+      console.error('Error detectant solapament:', error);
+      // En cas d'error, continuar sense avís
+      processParsedData(parsedData, mode, bankAccountId, fileName);
+    }
+  };
+
+  const handleConfirmOverlap = () => {
+    setIsOverlapAlertOpen(false);
+    if (pendingParsedData) {
+      setIsImporting(true);
+      processParsedData(
+        pendingParsedData.data,
+        pendingParsedData.mode,
+        pendingParsedData.bankAccountId,
+        pendingParsedData.fileName
+      );
+      setPendingParsedData(null);
+      setOverlapInfo(null);
+    }
+  };
+
+  const handleCancelOverlap = () => {
+    setIsOverlapAlertOpen(false);
+    setPendingParsedData(null);
+    setOverlapInfo(null);
+  };
   
   const parseXlsx = (file: File, mode: ImportMode, bankAccountId: string | null) => {
     const reader = new FileReader();
@@ -228,7 +342,7 @@ export function TransactionImporter({ existingTransactions }: TransactionImporte
             Importe: row[amountIndex]
         }));
 
-        processParsedData(parsedData, mode, bankAccountId);
+        checkOverlapAndConfirm(parsedData, mode, bankAccountId, file.name);
       } catch (error: any) {
         console.error("Error processing XLSX data:", error);
         toast({
@@ -330,7 +444,7 @@ export function TransactionImporter({ existingTransactions }: TransactionImporte
 
       if (hasValidTransactions(data)) {
         log(`CSV parsejat correctament: ${data.length} files`);
-        processParsedData(data, mode, bankAccountId);
+        checkOverlapAndConfirm(data, mode, bankAccountId, file.name);
       } else {
         log('No s\'han trobat transaccions vàlides en cap encoding');
         toast({
@@ -351,7 +465,7 @@ export function TransactionImporter({ existingTransactions }: TransactionImporte
     }
   };
 
-  const processParsedData = async (data: any[], mode: ImportMode, bankAccountId: string | null) => {
+  const processParsedData = async (data: any[], mode: ImportMode, bankAccountId: string | null, fileName: string | null) => {
      if (!organizationId) {
         toast({ variant: 'destructive', title: t.importers.transaction.errors.processingError, description: t.importers.transaction.errors.cannotIdentifyOrg });
         setIsImporting(false);
@@ -674,6 +788,44 @@ export function TransactionImporter({ existingTransactions }: TransactionImporte
             });
             log('¡Éxito! Importación completada.');
 
+            // Escriure importRun (no falla la importació si falla l'escriptura)
+            try {
+              if (transactionsToProcess.length > 0) {
+                // Calcular dateMin i dateMax
+                const dates = transactionsToProcess.map(tx => tx.date).sort();
+                const dateMin = dates[0];
+                const dateMax = dates[dates.length - 1];
+
+                // Determinar source (csv o xlsx)
+                const source: 'csv' | 'xlsx' = fileName?.endsWith('.xlsx') ? 'xlsx' : 'csv';
+
+                // Crear document importRun
+                const importRunData = createImportRunDoc({
+                  type: 'bankTransactions',
+                  source,
+                  fileName,
+                  dateMin,
+                  dateMax,
+                  totalRows: data.length,
+                  createdCount: transactionsToProcess.length,
+                  duplicateSkippedCount: duplicatesFound,
+                  createdBy: user?.uid || 'unknown',
+                  bankAccountId,
+                });
+
+                const importRunRef = doc(collection(firestore, 'organizations', organizationId, 'importRuns'));
+                await setDoc(importRunRef, {
+                  ...importRunData,
+                  createdAt: serverTimestamp(),
+                });
+
+                log(`📝 ImportRun creat: ${importRunRef.id} (${dateMin} → ${dateMax})`);
+              }
+            } catch (importRunError) {
+              console.error('Error escrivint importRun (no crític):', importRunError);
+              log(`⚠️ No s'ha pogut guardar l'històric d'importació (no afecta les transaccions)`);
+            }
+
         } else {
              toast({
                 title: mode === 'append' && duplicatesFound > 0 ? t.importers.transaction.noNewTransactions : t.importers.transaction.noTransactionsFound,
@@ -811,6 +963,62 @@ export function TransactionImporter({ existingTransactions }: TransactionImporte
           )}
         </DialogContent>
       </Dialog>
+
+      {/* Avís de solapament */}
+      <AlertDialog open={isOverlapAlertOpen} onOpenChange={setIsOverlapAlertOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <div className="flex items-center gap-2">
+              <AlertTriangle className="h-5 w-5 text-amber-500" />
+              <AlertDialogTitle>{t.importers.transaction.overlapWarningTitle || 'Dates solapades amb importacions existents'}</AlertDialogTitle>
+            </div>
+            <AlertDialogDescription asChild>
+              <div className="space-y-3 pt-2">
+                <p>
+                  {t.importers.transaction.overlapWarningDescription ||
+                   `Aquest fitxer conté transaccions entre ${overlapInfo?.dateMin} i ${overlapInfo?.dateMax} que solapen amb dades ja importades.`}
+                </p>
+                {overlapInfo?.lastRun && (
+                  <div className="rounded-md bg-muted p-3 text-sm">
+                    <p className="font-medium">
+                      {t.importers.transaction.lastImportInfo || 'Última importació en aquest rang:'}
+                    </p>
+                    <ul className="mt-1 space-y-1 text-muted-foreground">
+                      <li>
+                        {t.importers.transaction.lastImportDate || 'Data:'}{' '}
+                        {overlapInfo.lastRun.createdAt && typeof overlapInfo.lastRun.createdAt === 'object' && 'toDate' in overlapInfo.lastRun.createdAt
+                          ? new Date(overlapInfo.lastRun.createdAt.toDate()).toLocaleDateString()
+                          : 'N/A'}
+                      </li>
+                      <li>
+                        {t.importers.transaction.lastImportFile || 'Fitxer:'} {overlapInfo.lastRun.fileName || 'N/A'}
+                      </li>
+                      <li>
+                        {t.importers.transaction.lastImportCreated || 'Creades:'} {overlapInfo.lastRun.createdCount}
+                      </li>
+                      <li>
+                        {t.importers.transaction.lastImportSkipped || 'Duplicats omesos:'} {overlapInfo.lastRun.duplicateSkippedCount}
+                      </li>
+                    </ul>
+                  </div>
+                )}
+                <p className="text-sm text-muted-foreground">
+                  {t.importers.transaction.overlapWarningNote ||
+                   'El sistema detectarà i ometrà duplicats automàticament. Vols continuar?'}
+                </p>
+              </div>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={handleCancelOverlap}>
+              {t.importers.transaction.cancel || 'Cancel·lar'}
+            </AlertDialogCancel>
+            <AlertDialogAction onClick={handleConfirmOverlap}>
+              {t.importers.transaction.confirmImport || 'Continuar importació'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
        <AlertDialog open={isAlertOpen} onOpenChange={setIsAlertOpen}>
         <AlertDialogContent>
