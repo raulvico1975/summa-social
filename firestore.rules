@@ -322,6 +322,23 @@ service cloud.firestore {
       }
 
       // ─────────────────────────────────────────────────────────────────────
+      // HISTÒRIC D'IMPORTACIONS (importRuns)
+      // Col·lecció de logs operatius: només admins poden crear/llegir
+      // ─────────────────────────────────────────────────────────────────────
+
+      match /importRuns/{runId} {
+        // Read per veure històric i obtenir "últim importRun"
+        allow read: if isSuperAdmin() || isAdminOf(orgId);
+
+        // Create només per admins (i superadmin)
+        // (és un log operatiu: ha de ser fiable, no writable per qualsevol user)
+        allow create: if isSuperAdmin() || isAdminOf(orgId);
+
+        // No cal update/delete des del client
+        allow update, delete: if false;
+      }
+
+      // ─────────────────────────────────────────────────────────────────────
       // CONFIGURACIONS DE REMESES
       // ─────────────────────────────────────────────────────────────────────
 
