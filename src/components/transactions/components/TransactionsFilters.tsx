@@ -39,6 +39,8 @@ export type TableFilter =
   | 'noContact'
   | 'donationsNoContact'
   | 'income'
+  | 'expenses'
+  | 'expensesWithoutDoc'
   | 'operatingExpenses'
   | 'missionTransfers'
   | 'donations'
@@ -104,6 +106,10 @@ interface TransactionsFiltersProps {
     pendingTasks: string;
     tableOptions: string;
     showProjectColumn: string;
+    // Quick filters (shortcuts)
+    onlyExpenses?: string;
+    expensesWithoutDocument?: string;
+    expensesWithoutDocumentTooltip?: string;
   };
 }
 
@@ -173,6 +179,46 @@ export const TransactionsFilters = React.memo(function TransactionsFilters({
             <X className="h-4 w-4" />
           </button>
         )}
+      </div>
+
+      {/* Separador visual */}
+      <div className="h-6 w-px bg-border" />
+
+      {/* ═══════════════════════════════════════════════════════════════════
+          FILTRES RÀPIDS (shortcuts per despeses)
+          ═══════════════════════════════════════════════════════════════════ */}
+      <div className="flex items-center gap-1">
+        {/* Només despeses */}
+        <Button
+          variant={currentFilter === 'expenses' ? 'secondary' : 'ghost'}
+          size="sm"
+          onClick={() => onFilterChange(currentFilter === 'expenses' ? 'all' : 'expenses')}
+          className="h-8 text-xs"
+        >
+          {t.onlyExpenses || 'Només despeses'}
+        </Button>
+
+        {/* Despeses sense document (prioritari) */}
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button
+              variant={currentFilter === 'expensesWithoutDoc' ? 'secondary' : 'ghost'}
+              size="sm"
+              onClick={() => onFilterChange(currentFilter === 'expensesWithoutDoc' ? 'all' : 'expensesWithoutDoc')}
+              className="h-8 text-xs"
+            >
+              {t.expensesWithoutDocument || 'Despeses sense document'}
+              {expensesWithoutDocCount > 0 && (
+                <Badge variant="destructive" className="ml-1.5 h-4 px-1 text-[10px]">
+                  {expensesWithoutDocCount}
+                </Badge>
+              )}
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent side="bottom" className="max-w-xs">
+            <p className="text-xs">{t.expensesWithoutDocumentTooltip || 'Mostra només les despeses que encara no tenen comprovant adjunt.'}</p>
+          </TooltipContent>
+        </Tooltip>
       </div>
 
       {/* Separador visual */}

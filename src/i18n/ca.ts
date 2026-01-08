@@ -271,6 +271,10 @@ export const ca = {
       pendingTasks: "Tasques pendents",
       tableOptions: "Opcions de taula",
       showProjectColumn: "Mostrar columna Projecte",
+      // Quick filters (shortcuts)
+      onlyExpenses: "Només despeses",
+      expensesWithoutDocument: "Despeses sense document",
+      expensesWithoutDocumentTooltip: "Mostra només les despeses que encara no tenen comprovant adjunt.",
       dropToAttach: "Deixa anar per adjuntar",
       showAll: "Veure tots",
       attachProof: "Adjuntar justificant",

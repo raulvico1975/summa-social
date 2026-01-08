@@ -621,6 +621,14 @@ export function TransactionsTable({ initialDateFilter = null }: TransactionsTabl
       case 'income':
         result = transactions.filter(tx => tx.amount > 0);
         break;
+      case 'expenses':
+        // Totes les despeses (amount < 0)
+        result = transactions.filter(tx => tx.amount < 0);
+        break;
+      case 'expensesWithoutDoc':
+        // Despeses sense document adjunt
+        result = transactions.filter(tx => tx.amount < 0 && !tx.document);
+        break;
       case 'operatingExpenses':
         result = transactions.filter(
           tx => tx.amount < 0 && tx.category !== MISSION_TRANSFER_CATEGORY_KEY
@@ -1167,6 +1175,10 @@ export function TransactionsTable({ initialDateFilter = null }: TransactionsTabl
     pendingTasks: t.movements.table.pendingTasks || 'Tasques pendents',
     tableOptions: t.movements.table.tableOptions || 'Opcions de taula',
     showProjectColumn: t.movements.table.showProjectColumn || 'Mostrar columna Projecte',
+    // Quick filters (shortcuts)
+    onlyExpenses: t.movements.table.onlyExpenses,
+    expensesWithoutDocument: t.movements.table.expensesWithoutDocument,
+    expensesWithoutDocumentTooltip: t.movements.table.expensesWithoutDocumentTooltip,
   }), [t]);
 
   return (

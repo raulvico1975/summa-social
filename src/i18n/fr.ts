@@ -271,6 +271,10 @@ export const fr = {
       pendingTasks: "Tâches en attente",
       tableOptions: "Options de tableau",
       showProjectColumn: "Afficher colonne Projet",
+      // Quick filters (shortcuts)
+      onlyExpenses: "Seulement dépenses",
+      expensesWithoutDocument: "Dépenses sans justificatif",
+      expensesWithoutDocumentTooltip: "Affiche uniquement les dépenses sans justificatif joint.",
       dropToAttach: "Déposer pour joindre",
       showAll: "Voir tout",
       attachProof: "Joindre justificatif",

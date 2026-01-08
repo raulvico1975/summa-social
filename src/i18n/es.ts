@@ -271,6 +271,10 @@ export const es = {
       pendingTasks: "Tareas pendientes",
       tableOptions: "Opciones de tabla",
       showProjectColumn: "Mostrar columna Proyecto",
+      // Quick filters (shortcuts)
+      onlyExpenses: "Solo gastos",
+      expensesWithoutDocument: "Gastos sin documento",
+      expensesWithoutDocumentTooltip: "Muestra solo los gastos que aún no tienen justificante adjunto.",
       dropToAttach: "Suelta para adjuntar",
       showAll: "Ver todos",
       attachProof: "Adjuntar justificante",
