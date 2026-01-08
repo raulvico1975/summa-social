@@ -1976,6 +1976,7 @@ export function RemittanceSplitter({
                       {isPaymentRemittance ? t.movements.splitter.beneficiary : t.movements.splitter.name}
                     </TableHead>
                     <TableHead>{t.movements.splitter.taxId}</TableHead>
+                    <TableHead>IBAN</TableHead>
                     <TableHead className="text-right">{t.movements.splitter.amount}</TableHead>
                     <TableHead>{t.movements.splitter.status}</TableHead>
                     <TableHead>{t.movements.splitter.inDatabase}</TableHead>
@@ -2007,6 +2008,16 @@ export function RemittanceSplitter({
                             <span className="ml-1 text-[10px] text-orange-500">(ref)</span>
                           </span>
                         ) : '-'}
+                      </TableCell>
+                      {/* IBAN - SEMPRE visible, especialment important per pendents */}
+                      <TableCell className="font-mono text-xs">
+                        {donation.iban ? (
+                          <span className={donation.status === 'new_without_taxid' ? 'text-orange-700 font-medium' : 'text-muted-foreground'}>
+                            {donation.iban.replace(/(.{4})/g, '$1 ').trim().slice(0, 19)}···
+                          </span>
+                        ) : (
+                          <span className="text-muted-foreground">-</span>
+                        )}
                       </TableCell>
                       <TableCell className="text-right font-mono">
                         {formatCurrencyEU(donation.amount)}
@@ -2098,10 +2109,17 @@ export function RemittanceSplitter({
                           <div className="space-y-0.5">
                             <span className="text-orange-600 italic">{t.movements.splitter.willBePendingLabel ?? 'Quedarà pendent'}</span>
                             <div className="text-[11px] text-orange-500">
+                              {/* Motiu del pendent */}
                               {donation.idCandidate
                                 ? (t.movements.splitter.nonFiscalIdReason ?? 'ID no és DNI/CIF vàlid')
                                 : (t.movements.splitter.noTaxIdReason ?? 'Sense identificador fiscal')}
                             </div>
+                            {/* IBAN traçable per pendents */}
+                            {donation.iban && (
+                              <div className="text-[10px] text-orange-600 font-mono">
+                                IBAN: {donation.iban.slice(-8)}
+                              </div>
+                            )}
                           </div>
                         )}
                       </TableCell>
