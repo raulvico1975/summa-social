@@ -90,6 +90,7 @@ import { SepaReconcileModal } from '@/components/pending-documents/sepa-reconcil
 import type { PrebankRemittance } from '@/lib/pending-documents/sepa-remittance';
 import { prebankRemittancesCollection } from '@/lib/pending-documents/sepa-remittance';
 import { query, where, getDocs } from 'firebase/firestore';
+import { filterActiveContacts } from '@/lib/contacts/filterActiveContacts';
 
 interface TransactionsTableProps {
   initialDateFilter?: DateFilterValue | null;
@@ -323,7 +324,7 @@ export function TransactionsTable({ initialDateFilter = null }: TransactionsTabl
   [availableContacts]);
 
   const donors = React.useMemo(() =>
-    availableContacts?.filter(c => c.type === 'donor') as Donor[] || [],
+    filterActiveContacts(availableContacts?.filter(c => c.type === 'donor') as Donor[] || []),
   [availableContacts]);
 
   // Map contactId -> membershipType per filtrar donations vs memberFees

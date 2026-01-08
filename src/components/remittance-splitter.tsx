@@ -62,6 +62,7 @@ import { useCollection, useMemoFirebase } from '@/firebase';
 import { useTranslations } from '@/i18n';
 import { useCurrentOrganization } from '@/hooks/organization-provider';
 import { parsePain001, isPain001File, downloadPain001 } from '@/lib/sepa';
+import { filterActiveContacts, isNumericLikeName, maskMatchValue } from '@/lib/contacts/filterActiveContacts';
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // TIPUS
@@ -93,6 +94,9 @@ interface SavedMapping {
   createdAt: string;
 }
 
+// Tipus de matching per traçabilitat
+type MatchMethod = 'taxId' | 'iban' | 'name' | null;
+
 // Resultat de l'anàlisi de cada fila del CSV
 // Nota: Usem "matchedDonor" i "Donor" per compatibilitat, però pot ser proveïdor/treballador
 interface ParsedDonation {
@@ -107,6 +111,8 @@ interface ParsedDonation {
   status: 'found' | 'found_inactive' | 'new_with_taxid' | 'new_without_taxid';
   matchedDonor: Donor | null;
   matchedContactType?: 'donor' | 'supplier' | 'employee';
+  matchMethod?: MatchMethod;        // Com s'ha trobat el match (per traçabilitat)
+  matchValueMasked?: string;        // Valor emmascarament per mostrar a la UI (últims 4 IBAN, etc.)
   shouldCreate: boolean;
   zipCode: string;
 }
@@ -786,7 +792,13 @@ export function RemittanceSplitter({
       .toUpperCase();
   };
 
-  const findDonor = (name: string, taxId: string, iban: string, donors: Donor[]): Donor | undefined => {
+  // Retorna el donant trobat, el mètode de matching i el valor usat per traçabilitat
+  const findDonor = (
+    name: string,
+    taxId: string,
+    iban: string,
+    donors: Donor[]
+  ): { donor: Donor | undefined; method: MatchMethod; matchedValue: string } => {
     const normalizedCsvName = normalizeString(name);
     const csvNameTokens = new Set(normalizedCsvName.split(' ').filter(Boolean));
 
@@ -794,28 +806,33 @@ export function RemittanceSplitter({
     if (taxId) {
       const normalizedTaxId = normalizeString(taxId);
       const foundByTaxId = donors.find(d => normalizeString(d.taxId) === normalizedTaxId);
-      if (foundByTaxId) return foundByTaxId;
+      if (foundByTaxId) return { donor: foundByTaxId, method: 'taxId', matchedValue: foundByTaxId.taxId || taxId };
     }
 
     // 2. Buscar per IBAN (molt fiable si coincideix)
     if (iban) {
       const normalizedCsvIban = normalizeIban(iban);
       const foundByIban = donors.find(d => d.iban && normalizeIban(d.iban) === normalizedCsvIban);
-      if (foundByIban) return foundByIban;
+      if (foundByIban) return { donor: foundByIban, method: 'iban', matchedValue: foundByIban.iban || iban };
     }
 
     // 3. Buscar per nom (menys fiable)
-    if (normalizedCsvName) {
+    // GUARD: Bloquejar noms purament numèrics (poden fer falsos positius)
+    if (normalizedCsvName && !isNumericLikeName(normalizedCsvName)) {
       const potentialMatches = donors.filter(d => {
         const normalizedDonorName = normalizeString(d.name);
         if (!normalizedDonorName) return false;
+        // Bloquejar també donants amb noms numèrics
+        if (isNumericLikeName(normalizedDonorName)) return false;
         const donorNameTokens = normalizedDonorName.split(' ').filter(Boolean);
         return [...csvNameTokens].every(token => donorNameTokens.includes(token));
       });
-      if (potentialMatches.length === 1) return potentialMatches[0];
+      if (potentialMatches.length === 1) {
+        return { donor: potentialMatches[0], method: 'name', matchedValue: potentialMatches[0].name };
+      }
     }
 
-    return undefined;
+    return { donor: undefined, method: null, matchedValue: '' };
   };
 
   // Buscar beneficiari per mode OUT (treballadors i proveïdors)
@@ -936,6 +953,8 @@ export function RemittanceSplitter({
         // Matching diferent segons mode IN (donants) o OUT (proveïdors/treballadors)
         let matchedDonor: Donor | null = null;
         let matchedContactType: 'donor' | 'supplier' | 'employee' | undefined;
+        let matchMethod: MatchMethod = null;
+        let matchValueMasked: string | undefined;
         let status: ParsedDonation['status'];
 
         if (isPaymentRemittance) {
@@ -944,6 +963,8 @@ export function RemittanceSplitter({
           const result = findBeneficiary(name, taxId, iban);
           matchedDonor = result.contact;
           matchedContactType = result.contactType ?? undefined;
+          // findBeneficiary no retorna method, però segueix l'ordre: IBAN > taxId > nom
+          // Podríem expandir-ho en el futur si cal
 
           if (matchedDonor) {
             status = 'found';
@@ -956,9 +977,16 @@ export function RemittanceSplitter({
           }
         } else {
           // Mode IN: buscar a donants (comportament original)
-          const found = findDonor(name, taxId, iban, existingDonors);
-          matchedDonor = found ?? null;
-          matchedContactType = found ? 'donor' : undefined;
+          // IMPORTANT: Filtrar contactes actius abans de fer matching
+          const activeDonors = filterActiveContacts(existingDonors);
+          const result = findDonor(name, taxId, iban, activeDonors);
+          matchedDonor = result.donor ?? null;
+          matchedContactType = result.donor ? 'donor' : undefined;
+          matchMethod = result.method;
+          // Generar valor emmascarament per mostrar a la UI
+          if (result.method && result.matchedValue) {
+            matchValueMasked = maskMatchValue(result.method, result.matchedValue);
+          }
 
           if (matchedDonor) {
             status = matchedDonor.status === 'inactive' ? 'found_inactive' : 'found';
@@ -983,6 +1011,8 @@ export function RemittanceSplitter({
           status,
           matchedDonor,
           matchedContactType,
+          matchMethod,                     // Traçabilitat: com s'ha trobat el match
+          matchValueMasked,                // Valor emmascarament per mostrar a la UI
           shouldCreate: status !== 'found' && status !== 'found_inactive',
           zipCode: defaultZipCode,
         });
@@ -2017,10 +2047,26 @@ export function RemittanceSplitter({
                       </TableCell>
                       <TableCell className="text-sm">
                         {donation.status === 'found_inactive' && donation.matchedDonor ? (
-                          <span className="text-amber-700">{donation.matchedDonor.name}</span>
+                          <div className="flex items-center gap-1.5">
+                            <span className="text-amber-700">{donation.matchedDonor.name}</span>
+                            {/* Badge traçabilitat match amb valor emmascarament */}
+                            {donation.matchMethod && (
+                              <Badge variant="outline" className="text-[10px] px-1 py-0 text-amber-600 border-amber-300">
+                                {donation.matchMethod === 'iban' ? 'IBAN' : donation.matchMethod === 'taxId' ? 'DNI' : 'Nom'}
+                                {donation.matchValueMasked && ` ${donation.matchValueMasked}`}
+                              </Badge>
+                            )}
+                          </div>
                         ) : donation.matchedDonor ? (
                           <div className="flex items-center gap-1.5">
                             <span className="text-green-700">{donation.matchedDonor.name}</span>
+                            {/* Badge traçabilitat match per mode IN amb valor emmascarament */}
+                            {!isPaymentRemittance && donation.matchMethod && (
+                              <Badge variant="outline" className="text-[10px] px-1 py-0 text-green-600 border-green-300">
+                                {donation.matchMethod === 'iban' ? 'IBAN' : donation.matchMethod === 'taxId' ? 'DNI' : 'Nom'}
+                                {donation.matchValueMasked && ` ${donation.matchValueMasked}`}
+                              </Badge>
+                            )}
                             {/* Badge tipus de contacte per mode OUT */}
                             {isPaymentRemittance && donation.matchedContactType && (
                               <Badge variant="secondary" className="text-xs px-1.5 py-0">
