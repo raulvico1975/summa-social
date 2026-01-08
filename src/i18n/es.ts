@@ -520,6 +520,57 @@ export const es = {
         paymentDescription: "Pago a",
         createSupplier: "Crear proveedor",
         newSuppliers: "proveedores nuevos",
+        // Remesa parcial + pendientes
+        remittancePartial: "Remesa parcial",
+        remittancePartialDescription: (pending: number) => `Hay ${pending} líneas pendientes de procesar.`,
+        willCreateWithTaxId: (count: number) => `Se crearán ${count} donantes nuevos (con DNI válido)`,
+        willBePending: (count: number) => `${count} líneas quedarán pendientes`,
+        willBePendingLabel: "Pendiente",
+        // Validación fiscal
+        newValidTaxIdLabel: "Nuevo (DNI/CIF válido)",
+        nonFiscalIdLabel: "ID no fiscal",
+        nonFiscalIdReason: "Este identificador no es un DNI/CIF válido",
+        noTaxIdReason: "Sin identificador fiscal",
+        noMatchCreateDonorReason: "No se ha encontrado ningún donante con este DNI/CIF. Se creará automáticamente.",
+        taxIdTypeDni: "DNI",
+        taxIdTypeNie: "NIE",
+        taxIdTypeCif: "CIF",
+        refLabel: "Ref",
+        // Tabs modal detalle
+        quotesTab: "Cuotas",
+        pendingTab: "Pendientes",
+        // Reprocesar
+        reprocessPending: "Reprocesar pendientes",
+        reprocessSuccess: "Ítems resueltos",
+        reprocessSuccessDescription: (count: number) => `Se han resuelto ${count} ítems pendientes.`,
+        reprocessNoMatch: "Sin coincidencia",
+        reprocessNoMatchDescription: "No se ha podido resolver ningún ítem pendiente. Revisa que los donantes tengan el DNI/CIF correcto.",
+        // Motivos de pendiente
+        pendingReasonNoTaxId: "Sin DNI/CIF",
+        pendingReasonInvalidData: "Datos inválidos",
+        pendingReasonNoMatch: "Sin coincidencia",
+        pendingReasonDuplicate: "Duplicado",
+        pendingReason: "Motivo",
+        pendingItems: (count: number) => `${count} ítem${count !== 1 ? 's' : ''} pendiente${count !== 1 ? 's' : ''}`,
+        noPending: "No hay ítems pendientes.",
+        allResolved: "Todos los ítems han sido resueltos.",
+        // UI Pendientes mejorada
+        pendingExplanation: "Estas líneas no se han podido procesar porque la remesa no lleva DNI/NIF válido y el IBAN no coincide con ningún donante existente.",
+        pendingIbanLabel: "IBAN detectado",
+        pendingNextStepsTitle: "¿Qué puedes hacer ahora?",
+        pendingStep1: "Añadir el IBAN a un donante existente (en la ficha del donante)",
+        pendingStep2: "Crear un donante nuevo con este IBAN",
+        pendingStep3: "Dejarlo pendiente y continuar (lo podrás resolver antes del Modelo 182)",
+        // Pre-process info box (modal revisión)
+        pendingPreProcessTitle: "Algunas líneas no se pueden procesar ahora",
+        pendingPreProcessBody: "Esta remesa contiene donaciones sin DNI/NIF fiscal válido y el IBAN no coincide con ningún donante existente.",
+        pendingPreProcessNextTitle: "Qué pasará después de procesar",
+        pendingPreProcessNextStep1: "Estas líneas quedarán como \"Pendientes\".",
+        pendingPreProcessNextStep2: "Podrás ver el IBAN detectado.",
+        pendingPreProcessNextStep3: "Podrás crear un donante o añadir el IBAN a uno existente.",
+        pendingPreProcessNextStep4: "Y pulsar \"Reprocesar pendientes\" para completar la remesa.",
+        // Microcopy mejorado para badge de pendientes
+        willBePendingWithNote: (count: number) => `${count} línea${count !== 1 ? 's' : ''} quedar${count !== 1 ? 'án' : 'á'} pendiente${count !== 1 ? 's' : ''} (se podr${count !== 1 ? 'án' : 'á'} completar después)`,
     }
   },
   importers: {
@@ -2144,6 +2195,23 @@ export const es = {
   remittanceModal: {
     totalThisYear: (year: number) => `Total ${year}`,
     clickToViewProfile: "Haz clic para ver el perfil",
+    // Tabs
+    tabQuotes: "Cuotas",
+    tabPending: "Pendientes",
+    // Pending items
+    pendingTitle: "Ítems pendientes",
+    pendingDescription: "Estas líneas no se han podido procesar automáticamente. Puedes crear los donantes manualmente y reprocesar.",
+    pendingEmpty: "No hay ítems pendientes.",
+    pendingReasons: {
+      NO_TAXID: "Sin DNI/CIF",
+      INVALID_DATA: "Datos inválidos",
+      NO_MATCH: "Sin coincidencia",
+      DUPLICATE: "Duplicado",
+    },
+    reprocessButton: "Reprocesar pendientes",
+    reprocessing: "Reprocesando...",
+    reprocessSuccess: (count: number) => `Se han resuelto ${count} ítems pendientes`,
+    reprocessNone: "No se ha podido resolver ningún ítem. Revisa que los donantes tengan el DNI/CIF correcto.",
   },
   numbers: {
     euros: "euros",

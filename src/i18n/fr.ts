@@ -520,6 +520,57 @@ export const fr = {
         paymentDescription: "Paiement à",
         createSupplier: "Créer fournisseur",
         newSuppliers: "nouveaux fournisseurs",
+        // Remise partielle + en attente
+        remittancePartial: "Remise partielle",
+        remittancePartialDescription: (pending: number) => `Il y a ${pending} lignes en attente de traitement.`,
+        willCreateWithTaxId: (count: number) => `${count} nouveaux donateurs seront créés (avec numéro fiscal valide)`,
+        willBePending: (count: number) => `${count} lignes resteront en attente`,
+        willBePendingLabel: "En attente",
+        // Validation fiscale
+        newValidTaxIdLabel: "Nouveau (NIF/CIF valide)",
+        nonFiscalIdLabel: "ID non fiscal",
+        nonFiscalIdReason: "Cet identifiant n'est pas un NIF/CIF valide",
+        noTaxIdReason: "Sans identifiant fiscal",
+        noMatchCreateDonorReason: "Aucun donateur existant avec ce NIF/CIF. Création automatique.",
+        taxIdTypeDni: "DNI",
+        taxIdTypeNie: "NIE",
+        taxIdTypeCif: "CIF",
+        refLabel: "Réf",
+        // Onglets modal détail
+        quotesTab: "Cotisations",
+        pendingTab: "En attente",
+        // Retraiter
+        reprocessPending: "Retraiter les éléments en attente",
+        reprocessSuccess: "Éléments résolus",
+        reprocessSuccessDescription: (count: number) => `${count} éléments en attente ont été résolus.`,
+        reprocessNoMatch: "Aucune correspondance",
+        reprocessNoMatchDescription: "Aucun élément en attente n'a pu être résolu. Vérifiez que les donateurs ont le bon numéro fiscal.",
+        // Raisons de mise en attente
+        pendingReasonNoTaxId: "Sans numéro fiscal",
+        pendingReasonInvalidData: "Données invalides",
+        pendingReasonNoMatch: "Aucune correspondance",
+        pendingReasonDuplicate: "Doublon",
+        pendingReason: "Raison",
+        pendingItems: (count: number) => `${count} élément${count !== 1 ? 's' : ''} en attente`,
+        noPending: "Aucun élément en attente.",
+        allResolved: "Tous les éléments ont été résolus.",
+        // UI En attente améliorée
+        pendingExplanation: "Ces lignes n'ont pas pu être traitées car la remise ne contient pas de numéro fiscal valide et l'IBAN ne correspond à aucun donateur existant.",
+        pendingIbanLabel: "IBAN détecté",
+        pendingNextStepsTitle: "Que pouvez-vous faire maintenant ?",
+        pendingStep1: "Ajouter l'IBAN à un donateur existant (dans la fiche du donateur)",
+        pendingStep2: "Créer un nouveau donateur avec cet IBAN",
+        pendingStep3: "Le laisser en attente et continuer (vous pourrez le résoudre avant le Modèle 182)",
+        // Pre-process info box (modal révision)
+        pendingPreProcessTitle: "Certaines lignes ne peuvent pas être traitées maintenant",
+        pendingPreProcessBody: "Cette remise contient des dons sans NIF fiscal valide et l'IBAN ne correspond à aucun donateur existant.",
+        pendingPreProcessNextTitle: "Que se passera-t-il après le traitement",
+        pendingPreProcessNextStep1: "Ces lignes resteront en \"En attente\".",
+        pendingPreProcessNextStep2: "Vous pourrez voir l'IBAN détecté.",
+        pendingPreProcessNextStep3: "Vous pourrez créer un donateur ou ajouter l'IBAN à un existant.",
+        pendingPreProcessNextStep4: "Et cliquer sur \"Retraiter les en attente\" pour compléter la remise.",
+        // Microcopy amélioré pour badge en attente
+        willBePendingWithNote: (count: number) => `${count} ligne${count !== 1 ? 's' : ''} restera${count !== 1 ? 'ont' : ''} en attente (${count !== 1 ? 'elles pourront' : 'elle pourra'} être complétée${count !== 1 ? 's' : ''} après)`,
     }
   },
   importers: {
@@ -2118,7 +2169,24 @@ export const fr = {
   },
   remittanceModal: {
     totalThisYear: (year: number) => `Total ${year}`,
-    clickToViewProfile: "Clica per veure el perfil",
+    clickToViewProfile: "Cliquez pour voir le profil",
+    // Tabs
+    tabQuotes: "Cotisations",
+    tabPending: "En attente",
+    // Pending items
+    pendingTitle: "Éléments en attente",
+    pendingDescription: "Ces lignes n'ont pas pu être traitées automatiquement. Vous pouvez créer les donateurs manuellement et retraiter.",
+    pendingEmpty: "Aucun élément en attente.",
+    pendingReasons: {
+      NO_TAXID: "Sans numéro fiscal",
+      INVALID_DATA: "Données invalides",
+      NO_MATCH: "Aucune correspondance",
+      DUPLICATE: "Doublon",
+    },
+    reprocessButton: "Retraiter les éléments en attente",
+    reprocessing: "Retraitement en cours...",
+    reprocessSuccess: (count: number) => `${count} éléments en attente ont été résolus`,
+    reprocessNone: "Aucun élément n'a pu être résolu. Vérifiez que les donateurs ont le bon numéro fiscal.",
   },
   emissors: {
     title: "Emissors",

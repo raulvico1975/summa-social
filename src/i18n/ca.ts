@@ -520,6 +520,57 @@ export const ca = {
         paymentDescription: "Pagament a",
         createSupplier: "Crear proveïdor",
         newSuppliers: "proveïdors nous",
+        // Remesa parcial + pendents
+        remittancePartial: "Remesa parcial",
+        remittancePartialDescription: (pending: number) => `Hi ha ${pending} línies pendents de processar.`,
+        willCreateWithTaxId: (count: number) => `Es crearan ${count} donants nous (amb DNI vàlid)`,
+        willBePending: (count: number) => `${count} línies quedaran pendents`,
+        willBePendingLabel: "Pendent",
+        // Validació fiscal
+        newValidTaxIdLabel: "Nou (DNI/CIF vàlid)",
+        nonFiscalIdLabel: "ID no fiscal",
+        nonFiscalIdReason: "Aquest identificador no és un DNI/CIF vàlid",
+        noTaxIdReason: "Sense identificador fiscal",
+        noMatchCreateDonorReason: "No s'ha trobat cap donant existent amb aquest DNI/CIF. Es crearà automàticament.",
+        taxIdTypeDni: "DNI",
+        taxIdTypeNie: "NIE",
+        taxIdTypeCif: "CIF",
+        refLabel: "Ref",
+        // Tabs modal detall
+        quotesTab: "Quotes",
+        pendingTab: "Pendents",
+        // Reprocessar
+        reprocessPending: "Reprocessar pendents",
+        reprocessSuccess: "Ítems resolts",
+        reprocessSuccessDescription: (count: number) => `S'han resolt ${count} ítems pendents.`,
+        reprocessNoMatch: "Cap coincidència",
+        reprocessNoMatchDescription: "No s'ha pogut resoldre cap ítem pendent. Revisa que els donants tinguin el DNI/CIF correcte.",
+        // Motius de pendent
+        pendingReasonNoTaxId: "Sense DNI/CIF",
+        pendingReasonInvalidData: "Dades invàlides",
+        pendingReasonNoMatch: "Sense coincidència",
+        pendingReasonDuplicate: "Duplicat",
+        pendingReason: "Motiu",
+        pendingItems: (count: number) => `${count} ítem${count !== 1 ? 's' : ''} pendent${count !== 1 ? 's' : ''}`,
+        noPending: "No hi ha ítems pendents.",
+        allResolved: "Tots els ítems han estat resolts.",
+        // UI Pendents millorada
+        pendingExplanation: "Aquestes línies no s'han pogut processar perquè la remesa no porta DNI/NIF vàlid i l'IBAN no coincideix amb cap donant existent.",
+        pendingIbanLabel: "IBAN detectat",
+        pendingNextStepsTitle: "Què pots fer ara?",
+        pendingStep1: "Afegir l'IBAN a un donant existent (a la fitxa del donant)",
+        pendingStep2: "Crear un donant nou amb aquest IBAN",
+        pendingStep3: "Deixar-ho pendent i continuar (ho podràs resoldre abans del Model 182)",
+        // Pre-process info box (modal revisió)
+        pendingPreProcessTitle: "Algunes línies no es poden processar ara",
+        pendingPreProcessBody: "Aquesta remesa conté donacions que no porten DNI/NIF fiscal vàlid i l'IBAN no coincideix amb cap donant existent.",
+        pendingPreProcessNextTitle: "Què passarà després de processar",
+        pendingPreProcessNextStep1: "Aquestes línies quedaran com a \"Pendents\".",
+        pendingPreProcessNextStep2: "Podràs veure l'IBAN detectat.",
+        pendingPreProcessNextStep3: "Podràs crear un donant o afegir l'IBAN a un existent.",
+        pendingPreProcessNextStep4: "I clicar \"Reprocessar pendents\" per completar la remesa.",
+        // Microcopy millorat pel badge de pendents
+        willBePendingWithNote: (count: number) => `${count} líni${count !== 1 ? 'es' : 'a'} quedar${count !== 1 ? 'an' : 'à'} pendent${count !== 1 ? 's' : ''} (es podr${count !== 1 ? 'an' : 'à'} completar després)`,
     }
   },
   importers: {
@@ -2118,6 +2169,23 @@ export const ca = {
   remittanceModal: {
     totalThisYear: (year: number) => `Total ${year}`,
     clickToViewProfile: "Clica per veure el perfil",
+    // Tabs
+    tabQuotes: "Quotes",
+    tabPending: "Pendents",
+    // Pending items
+    pendingTitle: "Ítems pendents",
+    pendingDescription: "Aquestes línies no s'han pogut processar automàticament. Pots crear els donants manualment i reprocessar.",
+    pendingEmpty: "No hi ha ítems pendents.",
+    pendingReasons: {
+      NO_TAXID: "Sense DNI/CIF",
+      INVALID_DATA: "Dades invàlides",
+      NO_MATCH: "Sense coincidència",
+      DUPLICATE: "Duplicat",
+    },
+    reprocessButton: "Reprocessar pendents",
+    reprocessing: "Reprocessant...",
+    reprocessSuccess: (count: number) => `S'han resolt ${count} ítems pendents`,
+    reprocessNone: "No s'ha pogut resoldre cap ítem. Revisa que els donants tinguin el DNI/CIF correcte.",
   },
   emissors: {
     title: "Emissors",

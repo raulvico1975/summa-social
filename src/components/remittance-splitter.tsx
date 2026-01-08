@@ -35,7 +35,8 @@ import {
 import { useToast } from '@/hooks/use-toast';
 import { useAppLog } from '@/hooks/use-app-log';
 import type { Transaction, Donor, Supplier, Employee } from '@/lib/data';
-import { formatCurrencyEU } from '@/lib/normalize';
+import { formatCurrencyEU, isValidSpanishTaxId, getSpanishTaxIdType, normalizeTaxId } from '@/lib/normalize';
+import type { SpanishTaxIdType } from '@/lib/normalize';
 import {
   FileUp,
   Loader2,
@@ -97,7 +98,10 @@ interface SavedMapping {
 interface ParsedDonation {
   rowIndex: number;
   name: string;
-  taxId: string;
+  taxId: string;                    // Valor original de la columna (pot ser ref bancària)
+  taxIdValid: boolean;              // true només si isValidSpanishTaxId() passa
+  taxIdType: SpanishTaxIdType;      // 'DNI' | 'NIE' | 'CIF' | null
+  idCandidate: string;              // Valor cru abans de normalitzar (per mostrar)
   iban: string;
   amount: number;
   status: 'found' | 'found_inactive' | 'new_with_taxid' | 'new_without_taxid';
@@ -524,6 +528,9 @@ export function RemittanceSplitter({
           rowIndex: index + 1,
           name: payment.creditorName,
           taxId: '',
+          taxIdValid: false,
+          taxIdType: null as SpanishTaxIdType,
+          idCandidate: '',
           iban: payment.creditorIban,
           amount: payment.amount,
           status: matchedDonor ? 'found' : 'new_without_taxid' as const,
@@ -916,6 +923,16 @@ export function RemittanceSplitter({
 
         total += amount;
 
+        // Guardem el valor cru per mostrar (referència bancària, etc.)
+        const idCandidate = taxId;
+
+        // Validació fiscal REAL: només és taxId vàlid si passa isValidSpanishTaxId()
+        const taxIdValid = isValidSpanishTaxId(taxId);
+        const taxIdType = getSpanishTaxIdType(taxId);
+
+        // Normalitzar el taxId NOMÉS si és vàlid, sinó buidar-lo
+        const normalizedTaxId = taxIdValid ? normalizeTaxId(taxId) : '';
+
         // Matching diferent segons mode IN (donants) o OUT (proveïdors/treballadors)
         let matchedDonor: Donor | null = null;
         let matchedContactType: 'donor' | 'supplier' | 'employee' | undefined;
@@ -923,15 +940,18 @@ export function RemittanceSplitter({
 
         if (isPaymentRemittance) {
           // Mode OUT: buscar a proveïdors i treballadors
+          // Usem el taxId original per matching (pot haver-hi coincidència per altres camps)
           const result = findBeneficiary(name, taxId, iban);
           matchedDonor = result.contact;
           matchedContactType = result.contactType ?? undefined;
 
           if (matchedDonor) {
             status = 'found';
-          } else if (taxId) {
+          } else if (taxIdValid) {
+            // NOMÉS és new_with_taxid si és un DNI/NIE/CIF vàlid
             status = 'new_with_taxid';
           } else {
+            // Tot el que no passa validació fiscal → new_without_taxid (inclou refs bancàries)
             status = 'new_without_taxid';
           }
         } else {
@@ -942,9 +962,11 @@ export function RemittanceSplitter({
 
           if (matchedDonor) {
             status = matchedDonor.status === 'inactive' ? 'found_inactive' : 'found';
-          } else if (taxId) {
+          } else if (taxIdValid) {
+            // NOMÉS és new_with_taxid si és un DNI/NIE/CIF vàlid
             status = 'new_with_taxid';
           } else {
+            // Tot el que no passa validació fiscal → new_without_taxid (inclou refs bancàries)
             status = 'new_without_taxid';
           }
         }
@@ -952,7 +974,10 @@ export function RemittanceSplitter({
         donations.push({
           rowIndex: startRow + i + 1,
           name,
-          taxId,
+          taxId: normalizedTaxId,          // Només guardem taxId si és vàlid
+          taxIdValid,
+          taxIdType,
+          idCandidate,                     // Valor original (ref bancària, etc.)
           iban,
           amount,
           status,
@@ -1136,7 +1161,7 @@ export function RemittanceSplitter({
       const remittancesRef = collection(firestore, 'organizations', organizationId, 'remittances');
 
       const newDonorIds: Map<number, string> = new Map();
-      const CHUNK_SIZE = 50; // Processar en chunks petits per no bloquejar la UI
+      const CHUNK_SIZE = 50;
 
       // 0. Crear document de remesa
       const remittanceRef = doc(remittancesRef);
@@ -1145,8 +1170,25 @@ export function RemittanceSplitter({
 
       log(`[Splitter] Creant document de remesa ${remittanceId}...`);
 
-      // 1. Crear nous contactes en chunks (donants per IN, proveïdors per OUT)
-      const contactsToCreate = parsedDonations.filter(d => d.status !== 'found' && d.shouldCreate);
+      // ═══════════════════════════════════════════════════════════════════════
+      // REGLA FIXA: Separar resoluble vs pendent
+      // - Resoluble: match O (new_with_taxid amb name i amount > 0)
+      // - Pendent: new_without_taxid O dades invàlides
+      // ═══════════════════════════════════════════════════════════════════════
+      const resolvableDonations = parsedDonations.filter(d =>
+        d.status === 'found' ||
+        d.status === 'found_inactive' ||
+        (d.status === 'new_with_taxid' && d.name && d.amount > 0)
+      );
+      const pendingDonations = parsedDonations.filter(d =>
+        d.status === 'new_without_taxid' ||
+        (d.status === 'new_with_taxid' && (!d.name || d.amount <= 0))
+      );
+
+      log(`[Splitter] Resoluble: ${resolvableDonations.length}, Pendents: ${pendingDonations.length}`);
+
+      // 1. Crear nous contactes NOMÉS per resoluble amb new_with_taxid
+      const contactsToCreate = resolvableDonations.filter(d => d.status === 'new_with_taxid');
       const contactTypeName = isPaymentRemittance ? 'proveïdors' : 'donants';
       log(`[Splitter] Creant ${contactsToCreate.length} nous ${contactTypeName}...`);
 
@@ -1156,15 +1198,12 @@ export function RemittanceSplitter({
 
         for (const item of chunk) {
           const newContactRef = doc(contactsRef);
-
-          // Per OUT: crear proveïdor; per IN: crear donant
-          // Nota: Firestore és schema-less, creem l'objecte adequat per cada tipus
           const newContactData = isPaymentRemittance
             ? {
                 type: 'supplier' as const,
                 name: item.name || `Proveïdor ${item.taxId}`,
                 taxId: item.taxId,
-                zipCode: '', // Proveïdors poden no tenir codi postal al CSV
+                zipCode: '',
                 createdAt: now,
               }
             : {
@@ -1182,17 +1221,17 @@ export function RemittanceSplitter({
         }
 
         await batch.commit();
-        // Delay per permetre que la UI es repinti (augmentat per evitar bloquejos)
         await new Promise(resolve => setTimeout(resolve, 100));
         log(`[Splitter] ${contactTypeName} creats: ${Math.min(i + CHUNK_SIZE, contactsToCreate.length)}/${contactsToCreate.length}`);
       }
 
-      // 2. Crear transaccions filles i recollir IDs
+      // 2. Crear transaccions filles NOMÉS per resoluble
       const childTransactionIds: string[] = [];
-      log(`[Splitter] Creant ${parsedDonations.length} transaccions...`);
+      let resolvedTotalCents = 0;
+      log(`[Splitter] Creant ${resolvableDonations.length} transaccions...`);
 
-      for (let i = 0; i < parsedDonations.length; i += CHUNK_SIZE) {
-        const chunk = parsedDonations.slice(i, i + CHUNK_SIZE);
+      for (let i = 0; i < resolvableDonations.length; i += CHUNK_SIZE) {
+        const chunk = resolvableDonations.slice(i, i + CHUNK_SIZE);
         const batch = writeBatch(firestore);
 
         for (const item of chunk) {
@@ -1202,37 +1241,29 @@ export function RemittanceSplitter({
           let contactId: string | null = null;
           if (item.matchedDonor) {
             contactId = item.matchedDonor.id;
-          } else if (item.shouldCreate) {
+          } else if (item.status === 'new_with_taxid') {
             contactId = newDonorIds.get(item.rowIndex) || null;
           }
 
           const displayName = item.name || item.taxId || 'Anònim';
 
-          // Per OUT: import negatiu, categoria supplierPayments
-          // Per IN: import positiu, categoria segons membershipType
           let category: string;
           let finalAmount: number;
           let description: string;
 
           if (isPaymentRemittance) {
-            // OUT: pagaments a proveïdors
             category = transaction.category || 'supplierPayments';
-            finalAmount = -Math.abs(item.amount); // Assegurar negatiu
+            finalAmount = -Math.abs(item.amount);
             description = `Pagament: ${displayName}`;
           } else {
-            // IN: donacions
             const membershipType = item.matchedDonor?.membershipType ?? 'recurring';
             category = membershipType === 'recurring' ? 'memberFees' : 'donations';
-            finalAmount = Math.abs(item.amount); // Assegurar positiu
+            finalAmount = Math.abs(item.amount);
             description = `${t.movements.splitter.donationDescription}: ${displayName}`;
           }
 
-          // INVARIANT: Tota transacció filla ha de tenir:
-          // 1. parentTransactionId → referència al pare (immutable)
-          // 2. remittanceId → referència al document de remesa
-          // 3. isRemittanceItem: true → marcador per filtres i exports
-          // El pare MAI es modifica, només es marca amb isRemittance=true.
-          // Els fills són els que contenen el detall i computen en totals.
+          resolvedTotalCents += Math.round(Math.abs(item.amount) * 100);
+
           const newTxData: Omit<Transaction, 'id'> & { id: string } = {
             id: newTxRef.id,
             date: transaction.date,
@@ -1256,17 +1287,55 @@ export function RemittanceSplitter({
         }
 
         await batch.commit();
-        // Delay per permetre que la UI es repinti (augmentat per evitar bloquejos)
         await new Promise(resolve => setTimeout(resolve, 100));
-        log(`[Splitter] Transaccions creades: ${Math.min(i + CHUNK_SIZE, parsedDonations.length)}/${parsedDonations.length}`);
+        log(`[Splitter] Transaccions creades: ${Math.min(i + CHUNK_SIZE, resolvableDonations.length)}/${resolvableDonations.length}`);
       }
 
-      // INVARIANT: El document de remesa SEMPRE ha de tenir parentTransactionId.
-      // Aquest document serveix per traçabilitat i per permetre "desfer remesa".
-      // validation.deltaCents guarda la diferència calculada per observabilitat futura.
+      // 3. Guardar pendents a subcol·lecció
+      let pendingTotalCents = 0;
+      if (pendingDonations.length > 0) {
+        log(`[Splitter] Guardant ${pendingDonations.length} pendents...`);
+        const pendingRef = collection(firestore, 'organizations', organizationId, 'remittances', remittanceId, 'pending');
+
+        for (let i = 0; i < pendingDonations.length; i += CHUNK_SIZE) {
+          const chunk = pendingDonations.slice(i, i + CHUNK_SIZE);
+          const batch = writeBatch(firestore);
+
+          for (const item of chunk) {
+            const pendingDocRef = doc(pendingRef);
+            const reason: import('@/lib/data').RemittancePendingReason =
+              !item.taxId ? 'NO_TAXID' :
+              !item.name || item.amount <= 0 ? 'INVALID_DATA' :
+              'NO_MATCH';
+
+            pendingTotalCents += Math.round(Math.abs(item.amount) * 100);
+
+            batch.set(pendingDocRef, {
+              id: pendingDocRef.id,
+              nameRaw: item.name || '',
+              taxId: item.taxId || null,
+              iban: item.iban || null,
+              amountCents: Math.round(Math.abs(item.amount) * 100),
+              reason,
+              sourceRowIndex: item.rowIndex,
+              createdAt: now,
+            });
+          }
+
+          await batch.commit();
+          await new Promise(resolve => setTimeout(resolve, 100));
+        }
+        log(`[Splitter] Pendents guardats: ${pendingDonations.length}`);
+      }
+
+      // Calcular totals en cèntims
+      const expectedTotalCents = Math.round(parsedDonations.reduce((sum, d) => sum + Math.abs(d.amount), 0) * 100);
+      const remittanceStatus = pendingDonations.length > 0 ? 'partial' : 'complete';
+
+      // 4. Crear document de remesa amb totals
       const remittanceType = isPaymentRemittance ? 'payments' : 'donations';
       await setDoc(remittanceRef, {
-        direction: direction.toLowerCase(), // 'in' o 'out'
+        direction: direction.toLowerCase(),
         type: remittanceType,
         parentTransactionId: transaction.id,
         transactionIds: childTransactionIds,
@@ -1275,6 +1344,12 @@ export function RemittanceSplitter({
         createdAt: now,
         createdBy: user?.uid ?? null,
         bankAccountId: transaction.bankAccountId ?? null,
+        // Nous camps per traçabilitat
+        resolvedCount: resolvableDonations.length,
+        pendingCount: pendingDonations.length,
+        expectedTotalCents,
+        resolvedTotalCents,
+        pendingTotalCents,
         validation: {
           deltaCents: validationDetails.deltaCents,
           parentAmount: validationDetails.parentAmount,
@@ -1283,13 +1358,9 @@ export function RemittanceSplitter({
           validatedByUid: user?.uid ?? null,
         },
       });
-      log(`[Splitter] Document de remesa creat: ${remittanceId} (deltaCents: ${validationDetails.deltaCents})`);
+      log(`[Splitter] Document de remesa creat: ${remittanceId} (status: ${remittanceStatus}, resolved: ${resolvableDonations.length}, pending: ${pendingDonations.length})`);
 
-      // 4. Marcar transacció pare com a remesa amb remittanceId
-      // DECISIÓ TÈCNICA: El pare és IMMUTABLE excepte pels camps de marcatge.
-      // No modifiquem amount, date ni description del pare.
-      // Motiu: El pare ve del banc i ha de coincidir sempre amb l'extracte bancari.
-      // Els fills són els que contenen el detall i computen en totals i projectes.
+      // 5. Marcar transacció pare amb estat correcte
       const updateBatch = writeBatch(firestore);
       const remittanceCategory = isPaymentRemittance
         ? (transaction.category || 'supplierPayments')
@@ -1300,8 +1371,12 @@ export function RemittanceSplitter({
         remittanceDirection: direction,
         remittanceType,
         remittanceId,
-        remittanceStatus: 'complete',
-        remittanceResolvedCount: parsedDonations.length,
+        remittanceStatus,
+        remittanceResolvedCount: resolvableDonations.length,
+        remittancePendingCount: pendingDonations.length,
+        remittanceExpectedTotalCents: expectedTotalCents,
+        remittanceResolvedTotalCents: resolvedTotalCents,
+        remittancePendingTotalCents: pendingTotalCents,
         category: remittanceCategory,
         contactId: null,
         contactType: null,
@@ -1309,22 +1384,30 @@ export function RemittanceSplitter({
       await updateBatch.commit();
 
       log(`[Splitter] ✅ Processament completat!`);
-      toast({
-        title: isPaymentRemittance
-          ? t.movements.splitter.paymentsRemittanceProcessed
-          : t.movements.splitter.remittanceProcessed,
-        description: isPaymentRemittance
-          ? t.movements.splitter.paymentsRemittanceProcessedDescription(parsedDonations.length, contactsToCreate.length)
-          : t.movements.splitter.remittanceProcessedDescription(parsedDonations.length, contactsToCreate.length),
-      });
 
-      // Reiniciar estat abans de tancar per evitar bloquejos
+      // Toast diferent segons si hi ha pendents
+      if (pendingDonations.length > 0) {
+        toast({
+          title: t.movements.splitter.remittancePartial ?? 'Remesa parcial',
+          description: typeof t.movements.splitter.remittancePartialDescription === 'function'
+            ? t.movements.splitter.remittancePartialDescription(pendingDonations.length)
+            : `S'han creat ${resolvableDonations.length} quotes. ${pendingDonations.length} han quedat pendents.`,
+          variant: 'default',
+        });
+      } else {
+        toast({
+          title: isPaymentRemittance
+            ? t.movements.splitter.paymentsRemittanceProcessed
+            : t.movements.splitter.remittanceProcessed,
+          description: isPaymentRemittance
+            ? t.movements.splitter.paymentsRemittanceProcessedDescription(parsedDonations.length, contactsToCreate.length)
+            : t.movements.splitter.remittanceProcessedDescription(parsedDonations.length, contactsToCreate.length),
+        });
+      }
+
       setIsProcessing(false);
       setStep('upload');
-
-      // Petit delay per assegurar que el state s'actualitza abans de tancar
       await new Promise(resolve => setTimeout(resolve, 100));
-
       onSplitDone();
 
     } catch (error: any) {
@@ -1802,32 +1885,47 @@ export function RemittanceSplitter({
                     </>
                   )}
 
+                  {/* Info: els nous donants amb taxId es creen automàticament, els altres van a pendents */}
                   {stats.newWithTaxId > 0 && (
-                    <div className="flex items-center space-x-1.5">
-                      <Checkbox
-                        id="createAllWithTaxId"
-                        checked={parsedDonations.filter(d => d.status === 'new_with_taxid').every(d => d.shouldCreate)}
-                        onCheckedChange={(checked) => handleToggleAllNewWithTaxId(checked as boolean)}
-                        className="h-3.5 w-3.5"
-                      />
-                      <label htmlFor="createAllWithTaxId" className="text-xs cursor-pointer">
-                        {t.movements.splitter.createAllWithTaxId(stats.newWithTaxId)}
-                      </label>
+                    <div className="flex items-center space-x-1.5 text-xs text-blue-600">
+                      <UserPlus className="h-3.5 w-3.5" />
+                      <span>{t.movements.splitter.willCreateWithTaxId?.(stats.newWithTaxId) ?? `${stats.newWithTaxId} es crearan (amb DNI)`}</span>
                     </div>
                   )}
                   {stats.newWithoutTaxId > 0 && (
-                    <div className="flex items-center space-x-1.5">
-                      <Checkbox
-                        id="createAllWithoutTaxId"
-                        checked={parsedDonations.filter(d => d.status === 'new_without_taxid').every(d => d.shouldCreate)}
-                        onCheckedChange={(checked) => handleToggleAllNewWithoutTaxId(checked as boolean)}
-                        className="h-3.5 w-3.5"
-                      />
-                      <label htmlFor="createAllWithoutTaxId" className="text-xs text-orange-600 cursor-pointer">
-                        {t.movements.splitter.createAllWithoutTaxId(stats.newWithoutTaxId)}
-                      </label>
+                    <div className="flex items-center space-x-1.5 text-xs text-orange-600">
+                      <AlertCircle className="h-3.5 w-3.5" />
+                      <span>{t.movements.splitter.willBePendingWithNote?.(stats.newWithoutTaxId) ?? t.movements.splitter.willBePending?.(stats.newWithoutTaxId) ?? `${stats.newWithoutTaxId} quedaran pendents (sense DNI)`}</span>
                     </div>
                   )}
+                </div>
+              )}
+
+              {/* InfoBox informatiu: només si hi ha pendents i és remesa IN */}
+              {stats.newWithoutTaxId > 0 && !isPaymentRemittance && (
+                <div className="px-3 py-3 rounded-md bg-orange-50 border border-orange-200 text-orange-900 text-sm">
+                  <div className="flex items-start gap-2">
+                    <AlertTriangle className="h-4 w-4 mt-0.5 flex-shrink-0" />
+                    <div className="space-y-2">
+                      <p className="font-medium">
+                        {t.movements.splitter.pendingPreProcessTitle ?? "Algunes línies no es poden processar ara"}
+                      </p>
+                      <p className="text-xs text-orange-800">
+                        {t.movements.splitter.pendingPreProcessBody ?? "Aquesta remesa conté donacions que no porten DNI/NIF fiscal vàlid i l'IBAN no coincideix amb cap donant existent."}
+                      </p>
+                      <div className="pt-1">
+                        <p className="font-medium text-xs">
+                          {t.movements.splitter.pendingPreProcessNextTitle ?? "Què passarà després de processar"}
+                        </p>
+                        <ol className="list-decimal list-inside text-xs text-orange-800 mt-1 space-y-0.5">
+                          <li>{t.movements.splitter.pendingPreProcessNextStep1 ?? "Aquestes línies quedaran com a \"Pendents\"."}</li>
+                          <li>{t.movements.splitter.pendingPreProcessNextStep2 ?? "Podràs veure l'IBAN detectat."}</li>
+                          <li>{t.movements.splitter.pendingPreProcessNextStep3 ?? "Podràs crear un donant o afegir l'IBAN a un existent."}</li>
+                          <li>{t.movements.splitter.pendingPreProcessNextStep4 ?? "I clicar \"Reprocessar pendents\" per completar la remesa."}</li>
+                        </ol>
+                      </div>
+                    </div>
+                  </div>
                 </div>
               )}
             </div>
@@ -1839,7 +1937,6 @@ export function RemittanceSplitter({
               <Table>
                 <TableHeader className="sticky top-0 bg-background z-10">
                   <TableRow>
-                    <TableHead className="w-[50px]">{t.movements.splitter.create}</TableHead>
                     <TableHead>
                       {isPaymentRemittance ? t.movements.splitter.beneficiary : t.movements.splitter.name}
                     </TableHead>
@@ -1855,17 +1952,27 @@ export function RemittanceSplitter({
                 </TableHeader>
                 <TableBody>
                   {parsedDonations.map((donation, index) => (
-                    <TableRow key={index} className={donation.status === 'found' ? 'bg-green-50/50' : ''}>
-                      <TableCell>
-                        {donation.status !== 'found' && donation.status !== 'found_inactive' && (
-                          <Checkbox
-                            checked={donation.shouldCreate}
-                            onCheckedChange={() => handleToggleCreate(index)}
-                          />
-                        )}
-                      </TableCell>
+                    <TableRow key={index} className={
+                      donation.status === 'found' || donation.status === 'found_inactive'
+                        ? 'bg-green-50/50'
+                        : donation.status === 'new_with_taxid'
+                        ? 'bg-blue-50/50'
+                        : 'bg-orange-50/50'
+                    }>
                       <TableCell className="font-medium">{donation.name || '-'}</TableCell>
-                      <TableCell className="font-mono text-xs">{donation.taxId || '-'}</TableCell>
+                      <TableCell className="font-mono text-xs">
+                        {donation.taxIdValid ? (
+                          <span className="text-green-700" title={`${donation.taxIdType}: ${donation.taxId}`}>
+                            {donation.taxId}
+                            <span className="ml-1 text-[10px] text-green-600">({donation.taxIdType})</span>
+                          </span>
+                        ) : donation.idCandidate ? (
+                          <span className="text-orange-600" title={t.movements?.splitter?.nonFiscalIdLabel ?? 'ID no fiscal'}>
+                            {donation.idCandidate}
+                            <span className="ml-1 text-[10px] text-orange-500">(ref)</span>
+                          </span>
+                        ) : '-'}
+                      </TableCell>
                       <TableCell className="text-right font-mono">
                         {formatCurrencyEU(donation.amount)}
                       </TableCell>
@@ -1896,13 +2003,15 @@ export function RemittanceSplitter({
                         {donation.status === 'new_with_taxid' && (
                           <Badge variant="outline" className="bg-blue-100 text-blue-800 border-blue-300">
                             <UserPlus className="mr-1 h-3 w-3" />
-                            {t.movements.splitter.newBadge}
+                            {t.movements.splitter.newValidTaxIdLabel ?? `Nou (${donation.taxIdType} vàlid)`}
                           </Badge>
                         )}
                         {donation.status === 'new_without_taxid' && (
                           <Badge variant="outline" className="bg-orange-100 text-orange-800 border-orange-300">
                             <AlertCircle className="mr-1 h-3 w-3" />
-                            {t.movements.splitter.withoutTaxIdBadge}
+                            {donation.idCandidate
+                              ? (t.movements.splitter.nonFiscalIdLabel ?? 'ID no fiscal')
+                              : t.movements.splitter.withoutTaxIdBadge}
                           </Badge>
                         )}
                       </TableCell>
@@ -1923,20 +2032,32 @@ export function RemittanceSplitter({
                               </Badge>
                             )}
                           </div>
-                        ) : donation.shouldCreate ? (
-                          <span className="text-blue-600 italic">
-                            {isPaymentRemittance
-                              ? t.movements.splitter.createSupplier
-                              : t.movements.splitter.willBeCreated}
-                          </span>
+                        ) : donation.status === 'new_with_taxid' ? (
+                          <div className="space-y-0.5">
+                            <span className="text-blue-600 font-medium">
+                              {isPaymentRemittance
+                                ? t.movements.splitter.createSupplier
+                                : t.movements.splitter.willBeCreated}
+                            </span>
+                            <div className="text-[11px] text-blue-500">
+                              {donation.name} · {donation.taxIdType}: {donation.taxId}
+                            </div>
+                          </div>
                         ) : (
-                          <span className="text-muted-foreground">{t.movements.splitter.manualAssignment}</span>
+                          <div className="space-y-0.5">
+                            <span className="text-orange-600 italic">{t.movements.splitter.willBePendingLabel ?? 'Quedarà pendent'}</span>
+                            <div className="text-[11px] text-orange-500">
+                              {donation.idCandidate
+                                ? (t.movements.splitter.nonFiscalIdReason ?? 'ID no és DNI/CIF vàlid')
+                                : (t.movements.splitter.noTaxIdReason ?? 'Sense identificador fiscal')}
+                            </div>
+                          </div>
                         )}
                       </TableCell>
-                      {/* CP només per mode IN (donants) */}
+                      {/* CP només per mode IN (donants) i només per nous amb taxId */}
                       {!isPaymentRemittance && (
                         <TableCell>
-                          {donation.status !== 'found' && donation.status !== 'found_inactive' && donation.shouldCreate && (
+                          {donation.status === 'new_with_taxid' && (
                             <Input
                               value={donation.zipCode}
                               onChange={(e) => handleZipCodeChange(index, e.target.value)}
