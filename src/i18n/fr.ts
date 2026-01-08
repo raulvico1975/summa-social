@@ -196,7 +196,10 @@ export const fr = {
     title: "Mouvements",
     description: "Importez, révisez et attribuez catégories, contacts et documents.",
     quickExpenseCta: "+ Dépense rapide",
-    import: "Importer",
+    import: {
+      label: "Importer",
+      formatsHelp: "Formats acceptés : CSV et Excel (.xlsx)",
+    },
     export: "Exporter",
     deleteAll: "Tout supprimer",
     recentTransactions: "Transactions récentes",
@@ -1476,6 +1479,7 @@ export const fr = {
       selectAccountRequired: "Vous devez sélectionner un compte pour importer le relevé.",
       noAccountsWarning: "Aucun compte créé. Créez-en un dans les Paramètres.",
       goToSettings: "Aller aux Paramètres",
+      cannotDeactivateLast: "Vous devez conserver au moins un compte bancaire actif.",
     }
   },
   members: {

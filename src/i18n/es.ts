@@ -196,7 +196,10 @@ export const es = {
     title: "Movimientos",
     description: "Importa, revisa y asigna categorías, contactos y documentos.",
     quickExpenseCta: "+ Gasto rápido",
-    import: "Importar",
+    import: {
+      label: "Importar",
+      formatsHelp: "Formatos admitidos: CSV y Excel (.xlsx)",
+    },
     export: "Exportar",
     deleteAll: "Eliminar todo",
     recentTransactions: "Transacciones Recientes",
@@ -1507,6 +1510,7 @@ export const es = {
       selectAccountRequired: "Es necesario seleccionar una cuenta para importar el extracto.",
       noAccountsWarning: "No tienes ninguna cuenta creada. Crea una en Configuración.",
       goToSettings: "Ir a Configuración",
+      cannotDeactivateLast: "Debes mantener al menos una cuenta bancaria activa.",
     }
   },
   members: {

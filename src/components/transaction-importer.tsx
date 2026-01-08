@@ -142,8 +142,21 @@ export function TransactionImporter({ existingTransactions }: TransactionImporte
     const file = event.target.files?.[0];
     if (file) {
         setPendingFile(file);
-        // Sempre mostrar el diàleg de selecció de compte
-        setIsAccountDialogOpen(true);
+        // INVARIANT: Si només hi ha 1 compte actiu, assignar automàticament
+        if (bankAccounts.length === 1) {
+          const autoAccountId = bankAccounts[0].id;
+          setSelectedBankAccountId(autoAccountId);
+          // Saltar el diàleg i processar directament
+          if (importMode === 'replace') {
+            setIsAlertOpen(true);
+          } else {
+            startImportProcess(file, 'append', autoAccountId);
+            setPendingFile(null);
+          }
+        } else {
+          // Mostrar el diàleg de selecció de compte si n'hi ha més d'un
+          setIsAccountDialogOpen(true);
+        }
     }
     // Reset file input to allow re-uploading the same file
     event.target.value = '';
@@ -233,23 +246,26 @@ export function TransactionImporter({ existingTransactions }: TransactionImporte
       const dateMin = dates[0];
       const dateMax = dates[dates.length - 1];
 
-      // Detectar si hi ha transaccions existents en aquest rang
+      // Detectar si hi ha transaccions existents en aquest rang PER COMPTE
+      // INVARIANT: El solapament és per compte bancari, no global
       const hasOverlap = existingTransactions.some(tx => {
-        return tx.date >= dateMin && tx.date <= dateMax;
+        return tx.bankAccountId === bankAccountId && tx.date >= dateMin && tx.date <= dateMax;
       });
 
       if (!hasOverlap) {
-        // No hi ha solapament, continuar directament
+        // No hi ha solapament per a aquest compte, continuar directament
         processParsedData(parsedData, mode, bankAccountId, fileName);
         return;
       }
 
-      // Hi ha solapament: buscar últim importRun
+      // Hi ha solapament: buscar últim importRun DEL MATEIX COMPTE
       const { collection: firestoreCollection, query, orderBy, limit, getDocs, where } = await import('firebase/firestore');
       const importRunsRef = firestoreCollection(firestore, 'organizations', organizationId, 'importRuns');
+      // INVARIANT: Només buscar importRuns del mateix compte bancari
       const q = query(
         importRunsRef,
         where('type', '==', 'bankTransactions'),
+        where('bankAccountId', '==', bankAccountId),
         where('dateMax', '>=', dateMin),
         orderBy('dateMax', 'desc'),
         orderBy('createdAt', 'desc'),
@@ -946,6 +962,9 @@ export function TransactionImporter({ existingTransactions }: TransactionImporte
                       ))}
                     </SelectContent>
                   </Select>
+                  <div className="col-span-3 col-start-2 text-xs text-muted-foreground">
+                    {t.movements.import.formatsHelp}
+                  </div>
                 </div>
               </div>
               <DialogFooter>

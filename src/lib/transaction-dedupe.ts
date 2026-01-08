@@ -49,8 +49,12 @@ export function normalizeBankRefForDedupe(ref: string | undefined | null): strin
  * Crea clau única per detectar duplicats
  *
  * Regla:
- * 1. Si bankRef existeix → bankRef normalitzada
- * 2. Sinó → dateKey|amountCents|descKey
+ * 1. La clau sempre inclou bankAccountId (dedupe per compte, no global)
+ * 2. Si bankRef existeix → bankAccountId:ref:bankRef
+ * 3. Sinó → bankAccountId:dateKey|amountCents|descKey
+ *
+ * INVARIANT: El dedupe és per compte bancari, no global.
+ * Si bankAccountId és diferent, NO és duplicat encara que la resta coincideixi.
  *
  * CRÍTIC: Usa sempre el camp `description` per garantir coherència
  * entre transaccions existents i parsejades.
@@ -61,12 +65,16 @@ export function createDedupeKey(tx: {
   amount: number;
   bankRef?: string | null;
   valueDate?: string;
+  bankAccountId?: string | null;
 }): string {
+  // Prefix amb bankAccountId (o 'no-account' si no n'hi ha)
+  const accountPrefix = tx.bankAccountId || 'no-account';
+
   // Prioritat 1: referència bancària (si existeix)
   if (tx.bankRef) {
     const normalizedRef = normalizeBankRefForDedupe(tx.bankRef);
     if (normalizedRef) {
-      return `ref:${normalizedRef}`;
+      return `${accountPrefix}:ref:${normalizedRef}`;
     }
   }
 
@@ -75,7 +83,7 @@ export function createDedupeKey(tx: {
   const amountCents = normalizeAmountForDedupe(tx.amount);
   const descKey = normalizeDescriptionForDedupe(tx.description);
 
-  return `${dateKey}|${amountCents}|${descKey}`;
+  return `${accountPrefix}:${dateKey}|${amountCents}|${descKey}`;
 }
 
 /**
@@ -87,4 +95,5 @@ export interface DedupeTransaction {
   amount: number;
   bankRef?: string | null;
   valueDate?: string;
+  bankAccountId?: string | null;
 }

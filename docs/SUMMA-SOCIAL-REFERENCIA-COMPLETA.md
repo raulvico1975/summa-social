@@ -119,6 +119,16 @@ Per a les properes versions, Summa Social se centra en **dos blocs principals**:
 | **Regles deterministes** | Categorització automàtica per patrons de text (loteria, voluntariat) | ✅ Implementat v1.12 |
 | **Gestió de devolucions** | Importador de fitxers del banc, remeses parcials | ✅ Implementat v1.8 |
 
+#### Invariant de comptes bancaris
+
+- Cada organització ha de tenir sempre almenys 1 compte bancari actiu.
+- El sistema no permet:
+  - eliminar l'últim compte actiu,
+  - desactivar-lo,
+  - importar extractes sense compte assignat.
+- Tots els moviments bancaris pertanyen sempre a un compte (`bankAccountId` obligatori).
+- El dedupe i els avisos de solapament són per compte bancari, no globals.
+
 ### Bloc 2: Fiscalitat Fina Orientada a Gestoria
 
 | Funcionalitat | Descripció | Estat |

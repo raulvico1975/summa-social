@@ -1868,6 +1868,7 @@
   "movements.description": "Importa, revisa y asigna categorías, contactos y documentos.",
   "movements.export": "Exportar",
   "movements.import": "Importar",
+  "movements.import.formatsHelp": "Formatos admitidos: CSV y Excel (.xlsx)",
   "movements.importer.add": "Añadir movimientos",
   "movements.importer.button": "Importar",
   "movements.importer.confirm": "Sí, reemplazarlo todo",

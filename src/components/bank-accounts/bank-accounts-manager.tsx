@@ -75,6 +75,9 @@ export function BankAccountsManager() {
     [allBankAccounts]
   );
 
+  // Guardrail: detectar si només queda 1 compte actiu
+  const isLastActiveAccount = bankAccounts.length === 1;
+
   const handleOpenChange = (open: boolean) => {
     setIsDialogOpen(open);
     if (!open) {
@@ -302,8 +305,9 @@ export function BankAccountsManager() {
                             variant="ghost"
                             size="icon"
                             onClick={() => handleToggleActive(account)}
-                            title={t.settings.bankAccounts.deactivate}
-                            className="text-orange-500 hover:text-orange-600"
+                            disabled={isLastActiveAccount}
+                            title={isLastActiveAccount ? t.settings.bankAccounts.cannotDeactivateLast : t.settings.bankAccounts.deactivate}
+                            className={isLastActiveAccount ? "text-muted-foreground cursor-not-allowed" : "text-orange-500 hover:text-orange-600"}
                           >
                             <PowerOff className="h-4 w-4" />
                           </Button>

@@ -196,7 +196,10 @@ export const ca = {
     title: "Moviments",
     description: "Importa, revisa i assigna categories, contactes i documents.",
     quickExpenseCta: "+ Despesa ràpida",
-    import: "Importar",
+    import: {
+      label: "Importar",
+      formatsHelp: "Formats admesos: CSV i Excel (.xlsx)",
+    },
     export: "Exportar",
     deleteAll: "Eliminar tot",
     recentTransactions: "Transaccions Recents",
@@ -1475,6 +1478,7 @@ export const ca = {
       selectAccountRequired: "Cal seleccionar un compte per importar l'extracte.",
       noAccountsWarning: "No tens cap compte creat. Crea'n un a Configuració.",
       goToSettings: "Anar a Configuració",
+      cannotDeactivateLast: "Cal mantenir almenys un compte bancari actiu.",
     }
   },
   members: {
