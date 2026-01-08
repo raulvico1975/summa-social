@@ -108,11 +108,115 @@ export function normalizeSentences(text: string | null | undefined): string {
  */
 export function normalizeTaxId(taxId: string | null | undefined): string {
   if (!taxId) return '';
-  
+
   return taxId
     .trim()
     .toUpperCase()
     .replace(/[\s.-]/g, '');
+}
+
+/**
+ * Tipus de document fiscal espanyol
+ */
+export type SpanishTaxIdType = 'DNI' | 'NIE' | 'CIF' | null;
+
+/**
+ * Valida i detecta el tipus de document fiscal espanyol (DNI/NIE/CIF)
+ * Retorna el tipus si és vàlid, null si no ho és
+ *
+ * DNI: 8 dígits + lletra de control
+ * NIE: X/Y/Z + 7 dígits + lletra de control
+ * CIF: lletra + 7 dígits + control (lletra o dígit segons tipus)
+ *
+ * Guardrail: si dubte → null (millor pendent que donant fals)
+ */
+export function getSpanishTaxIdType(rawTaxId: string | null | undefined): SpanishTaxIdType {
+  if (!rawTaxId) return null;
+
+  const taxId = normalizeTaxId(rawTaxId);
+  if (taxId.length < 8 || taxId.length > 9) return null;
+
+  // DNI: 8 dígits + lletra
+  const dniPattern = /^(\d{8})([A-Z])$/;
+  const dniMatch = taxId.match(dniPattern);
+  if (dniMatch) {
+    const [, numbers, letter] = dniMatch;
+    const controlLetters = 'TRWAGMYFPDXBNJZSQVHLCKE';
+    const expectedLetter = controlLetters[parseInt(numbers, 10) % 23];
+    if (letter === expectedLetter) return 'DNI';
+    return null; // Lletra de control incorrecta
+  }
+
+  // NIE: X/Y/Z + 7 dígits + lletra
+  const niePattern = /^([XYZ])(\d{7})([A-Z])$/;
+  const nieMatch = taxId.match(niePattern);
+  if (nieMatch) {
+    const [, prefix, numbers, letter] = nieMatch;
+    const controlLetters = 'TRWAGMYFPDXBNJZSQVHLCKE';
+    // X=0, Y=1, Z=2
+    const prefixValue = prefix === 'X' ? '0' : prefix === 'Y' ? '1' : '2';
+    const fullNumber = parseInt(prefixValue + numbers, 10);
+    const expectedLetter = controlLetters[fullNumber % 23];
+    if (letter === expectedLetter) return 'NIE';
+    return null; // Lletra de control incorrecta
+  }
+
+  // CIF: lletra + 7 dígits + control
+  const cifPattern = /^([ABCDEFGHJKLMNPQRSUVW])(\d{7})([A-J0-9])$/;
+  const cifMatch = taxId.match(cifPattern);
+  if (cifMatch) {
+    const [, orgType, digits, control] = cifMatch;
+
+    // Càlcul del dígit de control CIF
+    let sumA = 0;
+    let sumB = 0;
+
+    for (let i = 0; i < 7; i++) {
+      const digit = parseInt(digits[i], 10);
+      if (i % 2 === 0) {
+        // Posicions parells (0, 2, 4, 6): multiplicar per 2
+        const doubled = digit * 2;
+        sumB += doubled > 9 ? doubled - 9 : doubled;
+      } else {
+        // Posicions senars (1, 3, 5): sumar directament
+        sumA += digit;
+      }
+    }
+
+    const total = sumA + sumB;
+    const controlDigit = (10 - (total % 10)) % 10;
+    const controlLetter = 'JABCDEFGHI'[controlDigit];
+
+    // Segons el tipus d'organització, el control pot ser lletra o número
+    // P, Q, R, S, W: sempre lletra
+    // A, B: sempre número
+    // Altres: ambdós vàlids
+    const letterOrgs = 'PQRSW';
+    const numberOrgs = 'AB';
+
+    if (letterOrgs.includes(orgType)) {
+      if (control === controlLetter) return 'CIF';
+    } else if (numberOrgs.includes(orgType)) {
+      if (control === controlDigit.toString()) return 'CIF';
+    } else {
+      // Acceptar lletra o número
+      if (control === controlLetter || control === controlDigit.toString()) return 'CIF';
+    }
+
+    return null; // Control incorrecte
+  }
+
+  return null; // No coincideix cap patró
+}
+
+/**
+ * Valida si un identificador és un DNI/NIE/CIF espanyol vàlid
+ * Retorna true només si és un identificador fiscal vàlid
+ *
+ * Guardrail: si dubte → false (millor pendent que donant fals)
+ */
+export function isValidSpanishTaxId(rawTaxId: string | null | undefined): boolean {
+  return getSpanishTaxIdType(rawTaxId) !== null;
 }
 
 /**

@@ -420,6 +420,12 @@ service cloud.firestore {
       match /remittances/{remittanceId} {
         allow read: if isMemberOf(orgId) || isSuperAdmin();
         allow create, update, delete: if (isMemberOf(orgId) && getMemberRole(orgId) in ['admin', 'user']) || isSuperAdmin();
+
+        // Subcol·lecció per ítems pendents de remesa (sense taxId vàlid, etc.)
+        match /pending/{pendingId} {
+          allow read: if isMemberOf(orgId) || isSuperAdmin();
+          allow create, update, delete: if (isMemberOf(orgId) && getMemberRole(orgId) in ['admin', 'user']) || isSuperAdmin();
+        }
       }
 
       // ─────────────────────────────────────────────────────────────────────

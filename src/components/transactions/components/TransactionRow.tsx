@@ -494,9 +494,16 @@ export const TransactionRow = React.memo(function TransactionRow({
                     ) : (
                       <Eye className="h-3 w-3" />
                     )}
-                    {isProcessedDonationRemittance && <span className="font-medium">{t.remittanceProcessedLabel}</span>}
-                    <span className={isProcessedDonationRemittance ? 'text-emerald-600/70' : ''}>
-                      {tx.remittanceResolvedCount ?? tx.remittanceItemCount}/{tx.remittanceItemCount} {t.remittanceQuotes}
+                    {isProcessedDonationRemittance && tx.remittanceStatus !== 'partial' && (
+                      <span className="font-medium">{t.remittanceProcessedLabel}</span>
+                    )}
+                    <span className={isProcessedDonationRemittance && tx.remittanceStatus !== 'partial' ? 'text-emerald-600/70' : ''}>
+                      {tx.remittanceResolvedCount ?? tx.remittanceItemCount}/{tx.remittanceItemCount}
+                      {tx.remittanceStatus === 'partial' && tx.remittancePendingCount ? (
+                        <span className="text-orange-600 ml-1">({tx.remittancePendingCount} pend.)</span>
+                      ) : (
+                        <span> {t.remittanceQuotes}</span>
+                      )}
                     </span>
                   </Badge>
                 </TooltipTrigger>

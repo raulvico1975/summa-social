@@ -2,6 +2,8 @@ import { describe, it } from 'node:test';
 import assert from 'node:assert';
 import {
   normalizeTaxId,
+  isValidSpanishTaxId,
+  getSpanishTaxIdType,
   normalizeIBAN,
   formatIBANDisplay,
   normalizeZipCode,
@@ -42,6 +44,105 @@ describe('normalizeTaxId', () => {
     assert.strictEqual(normalizeTaxId(null as any), '');
     assert.strictEqual(normalizeTaxId(undefined as any), '');
     assert.strictEqual(normalizeTaxId(''), '');
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// VALIDATE SPANISH TAX ID (DNI/NIE/CIF)
+// ═══════════════════════════════════════════════════════════════════════════════
+
+describe('isValidSpanishTaxId', () => {
+  // DNI vàlids
+  it('should validate correct DNI', () => {
+    assert.strictEqual(isValidSpanishTaxId('12345678Z'), true);
+    assert.strictEqual(isValidSpanishTaxId('00000000T'), true);
+    assert.strictEqual(isValidSpanishTaxId('99999999R'), true);
+  });
+
+  it('should validate DNI with formatting', () => {
+    assert.strictEqual(isValidSpanishTaxId('12.345.678-Z'), true);
+    assert.strictEqual(isValidSpanishTaxId('12345678z'), true); // lowercase
+  });
+
+  // DNI invàlids
+  it('should reject DNI with wrong control letter', () => {
+    assert.strictEqual(isValidSpanishTaxId('12345678A'), false); // Z és correcte
+    assert.strictEqual(isValidSpanishTaxId('00000000A'), false); // T és correcte
+  });
+
+  it('should reject DNI with wrong format', () => {
+    assert.strictEqual(isValidSpanishTaxId('1234567Z'), false);   // 7 dígits
+    assert.strictEqual(isValidSpanishTaxId('123456789Z'), false); // 9 dígits
+  });
+
+  // NIE vàlids
+  it('should validate correct NIE', () => {
+    assert.strictEqual(isValidSpanishTaxId('X0000000T'), true);
+    assert.strictEqual(isValidSpanishTaxId('Y0000000Z'), true);
+    assert.strictEqual(isValidSpanishTaxId('Z0000000M'), true);
+  });
+
+  it('should validate NIE with formatting', () => {
+    assert.strictEqual(isValidSpanishTaxId('X-0000000-T'), true);
+    assert.strictEqual(isValidSpanishTaxId('x0000000t'), true); // lowercase
+  });
+
+  // NIE invàlids
+  it('should reject NIE with wrong control letter', () => {
+    assert.strictEqual(isValidSpanishTaxId('X0000000A'), false); // T és correcte
+  });
+
+  // CIF vàlids
+  it('should validate correct CIF', () => {
+    assert.strictEqual(isValidSpanishTaxId('A58818501'), true);  // Societat anònima
+    assert.strictEqual(isValidSpanishTaxId('B12345674'), true);  // SL
+    assert.strictEqual(isValidSpanishTaxId('G08169815'), true);  // Associació
+  });
+
+  it('should validate CIF with letter control', () => {
+    assert.strictEqual(isValidSpanishTaxId('P0800000B'), true);  // Corporació local
+    assert.strictEqual(isValidSpanishTaxId('Q0818001J'), true);  // Organisme públic
+  });
+
+  // CIF invàlids
+  it('should reject CIF with wrong control', () => {
+    assert.strictEqual(isValidSpanishTaxId('A58818502'), false); // 1 és correcte
+    assert.strictEqual(isValidSpanishTaxId('B12345670'), false); // 4 és correcte
+  });
+
+  // No fiscals (referències bancàries, etc.)
+  it('should reject non-fiscal identifiers', () => {
+    assert.strictEqual(isValidSpanishTaxId('0027129'), false);     // Referència bancària curta
+    assert.strictEqual(isValidSpanishTaxId('002712900001'), false); // Referència bancària llarga
+    assert.strictEqual(isValidSpanishTaxId('SOCIO123'), false);    // Codi de soci
+    assert.strictEqual(isValidSpanishTaxId('REF-2024-001'), false); // Referència
+    assert.strictEqual(isValidSpanishTaxId('ABC12345'), false);    // Format incorrecte
+  });
+
+  // Casos límit
+  it('should return false for null/undefined/empty', () => {
+    assert.strictEqual(isValidSpanishTaxId(null), false);
+    assert.strictEqual(isValidSpanishTaxId(undefined), false);
+    assert.strictEqual(isValidSpanishTaxId(''), false);
+  });
+});
+
+describe('getSpanishTaxIdType', () => {
+  it('should return DNI for valid DNI', () => {
+    assert.strictEqual(getSpanishTaxIdType('12345678Z'), 'DNI');
+  });
+
+  it('should return NIE for valid NIE', () => {
+    assert.strictEqual(getSpanishTaxIdType('X0000000T'), 'NIE');
+  });
+
+  it('should return CIF for valid CIF', () => {
+    assert.strictEqual(getSpanishTaxIdType('G08169815'), 'CIF');
+  });
+
+  it('should return null for invalid identifiers', () => {
+    assert.strictEqual(getSpanishTaxIdType('0027129'), null);
+    assert.strictEqual(getSpanishTaxIdType('INVALID'), null);
   });
 });
 

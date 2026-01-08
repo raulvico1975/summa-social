@@ -95,9 +95,24 @@ export type Transaction = {
   remittancePendingCount?: number;
 
   /**
-   * Suma total dels imports pendents (positiu)
+   * Suma total dels imports pendents en cèntims (positiu)
    */
   remittancePendingTotalAmount?: number;
+
+  /**
+   * Import total esperat de la remesa en cèntims (sum de totes les files CSV)
+   */
+  remittanceExpectedTotalCents?: number;
+
+  /**
+   * Import total resolt en cèntims (sum de filles creades)
+   */
+  remittanceResolvedTotalCents?: number;
+
+  /**
+   * Import total pendent en cèntims (sum de pendents)
+   */
+  remittancePendingTotalCents?: number;
 
   /**
    * Tipus de remesa
@@ -579,4 +594,32 @@ export type BankAccount = {
   isActive: boolean | null;        // Compte actiu (per soft-delete)
   createdAt: string;               // ISO date
   updatedAt: string;               // ISO date
+};
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// REMESES - QUOTES PENDENTS
+// ═══════════════════════════════════════════════════════════════════════════════
+
+/**
+ * Motiu pel qual una quota de remesa està pendent
+ */
+export type RemittancePendingReason =
+  | 'NO_TAXID'      // Fila sense DNI/CIF vàlid
+  | 'INVALID_DATA'  // Dades invàlides (import negatiu, nom buit, etc.)
+  | 'NO_MATCH'      // No s'ha trobat coincidència amb cap donant existent
+  | 'DUPLICATE';    // Fila duplicada dins la mateixa remesa
+
+/**
+ * Element pendent d'una remesa IN (quota no processada)
+ * S'emmagatzema a: organizations/{orgId}/remittances/{remittanceId}/pending/{pendingId}
+ */
+export type RemittancePendingItem = {
+  id: string;
+  nameRaw: string;                        // Nom original del CSV
+  taxId: string | null;                   // DNI/CIF (pot ser null o invàlid)
+  iban: string | null;                    // IBAN (pot ser null)
+  amountCents: number;                    // Import en cèntims (sempre positiu per IN)
+  reason: RemittancePendingReason;        // Motiu del pendent
+  sourceRowIndex: number;                 // Índex de la fila original al CSV (per debug)
+  createdAt: string;                      // ISO date
 };
