@@ -861,6 +861,117 @@ Els 4 blocs de resum (Total, Trobats, Nous amb DNI, Nous sense DNI) ara són bad
 - Taula: `flex-1 min-h-0 overflow-auto`
 - Header taula: `sticky top-0 bg-background z-10`
 
+### 3.3.8 Matching de Remeses: Criteris, Exclusions i Traçabilitat (NOU v1.28)
+
+#### Problema resolt
+
+Abans de v1.28, el motor de matching de remeses tenia tres problemes:
+
+1. **Donants fantasma**: Contactes arxivats o eliminats apareixien com a match i es recreaven
+2. **Falsos positius numèrics**: Referències bancàries (ex: "123456") feien match per nom amb donants que tenien números al nom
+3. **Manca de traçabilitat**: No era possible saber com s'havia fet el match (IBAN, DNI o Nom)
+
+#### Pre-filtrat obligatori
+
+Abans de fer qualsevol matching, el sistema filtra els candidats amb:
+
+```
+filterActiveContacts(contacts):
+  - Exclou contactes amb archivedAt (arxivats)
+  - Exclou contactes amb deletedAt (eliminats soft)
+  - Exclou contactes amb status === 'inactive'
+```
+
+**Invariant:** Només contactes actius entren al motor de matching.
+
+#### Ordre de matching (prioritat)
+
+| Prioritat | Camp | Criteri | Fiabilitat |
+|-----------|------|---------|------------|
+| **1** | IBAN | Exacte, normalitzat (sense espais, majúscules) | Màxima |
+| **2** | DNI/NIE/CIF | Validació fiscal real (`isValidSpanishTaxId()`) | Alta |
+| **3** | Nom | Tots els tokens del CSV existeixen al donant | Mitjana |
+
+#### Bloqueig de noms numèrics
+
+El matching per nom es desactiva si:
+- El nom del CSV és purament numèric (ex: "123456", "00123")
+- El nom del donant és purament numèric
+
+**Funció:** `isNumericLikeName(str)` → `true` si només conté dígits després d'eliminar espais i guions.
+
+**Exemple:**
+| Valor CSV | Match per nom? |
+|-----------|----------------|
+| "MARIA GARCIA" | ✓ Sí |
+| "123456" | ✗ No (bloquejat) |
+| "GARCIA-123" | ✓ Sí |
+
+#### Traçabilitat del match
+
+Cada match inclou:
+
+| Camp | Tipus | Descripció |
+|------|-------|------------|
+| `matchMethod` | `'iban' \| 'taxId' \| 'name' \| null` | Com s'ha trobat el match |
+| `matchValueMasked` | `string` | Valor emmascarament per auditoria |
+
+**Format del valor emmascarament:**
+
+| Mètode | Format | Exemple |
+|--------|--------|---------|
+| IBAN | Últims 4 dígits | `···1234` |
+| DNI | Últims 3 caràcters | `···78Z` |
+| Nom | Primers 2 tokens | `Maria Garcia` |
+
+#### Visualització a la UI
+
+El badge de match mostra el mètode i el valor:
+
+```
+[✓ Trobat] Maria García López [IBAN ···1234]
+[✓ Trobat] Juan Pérez [DNI ···45X]
+[✓ Trobat] Ana López [Nom Ana López]
+```
+
+Colors del badge:
+- **Verd** (`text-green-600`): Match actiu
+- **Ambre** (`text-amber-600`): Match inactiu (donant de baixa)
+
+#### Comportament amb donants arxivats
+
+- **Mai es fan servir per matching** (pre-filtrat obligatori)
+- Si una remesa antiga apunta a un donant que posteriorment s'ha arxivat:
+  - La filla manté el `contactId` (històric)
+  - Però el Model 182 ja no el compta (donant inactiu)
+- Si es reprocessa una remesa:
+  - El donant arxivat no apareix com a candidat
+  - La fila queda com "pendent" o "nou"
+
+#### Impacte funcional
+
+| Problema | Solució |
+|----------|---------|
+| Duplicats fantasma | Eliminats pel pre-filtrat |
+| Recreació incorrecta de donants | El donant arxivat no fa match |
+| Auditoria impossible | Badge amb mètode + valor emmascarament |
+| Neteges "començar de zero" | Compatible: arxivar tots no afecta futures remeses |
+
+#### Fitxers clau
+
+| Fitxer | Funció |
+|--------|--------|
+| `src/lib/contacts/filterActiveContacts.ts` | Helper centralitzat amb `filterActiveContacts()`, `isNumericLikeName()`, `maskMatchValue()` |
+| `src/components/transactions-table.tsx` | Aplica `filterActiveContacts()` als donants del llistat |
+| `src/components/remittance-splitter.tsx` | Aplica `filterActiveContacts()` abans de matching + UI de badges |
+
+#### Invariants fixats
+
+1. **Només contactes actius** entren al motor de matching
+2. **Cap match per nom** si el valor no és semàntic (numèric)
+3. **Tot match és explicable** visualment amb mètode i valor
+4. **El filtratge és centralitzat** (un sol helper per a tota l'app)
+
 
 ## 3.4 GESTIÓ DE DEVOLUCIONS (NOU v1.8)
 

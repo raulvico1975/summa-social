@@ -62,7 +62,7 @@ import { useCollection, useMemoFirebase } from '@/firebase';
 import { useTranslations } from '@/i18n';
 import { useCurrentOrganization } from '@/hooks/organization-provider';
 import { parsePain001, isPain001File, downloadPain001 } from '@/lib/sepa';
-import { filterActiveContacts, isNumericLikeName, maskMatchValue } from '@/lib/contacts/filterActiveContacts';
+import { filterMatchableContacts, isNumericLikeName, maskMatchValue } from '@/lib/contacts/filterActiveContacts';
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // TIPUS
@@ -977,9 +977,11 @@ export function RemittanceSplitter({
           }
         } else {
           // Mode IN: buscar a donants (comportament original)
-          // IMPORTANT: Filtrar contactes actius abans de fer matching
-          const activeDonors = filterActiveContacts(existingDonors);
-          const result = findDonor(name, taxId, iban, activeDonors);
+          // IMPORTANT: Usar filterMatchableContacts per INCLOURE donants de baixa
+          // Això garanteix que no es creïn duplicats amb el mateix DNI
+          // INVARIANT: Mai crear donant nou si existeix taxId (actiu O baixa)
+          const matchableDonors = filterMatchableContacts(existingDonors);
+          const result = findDonor(name, taxId, iban, matchableDonors);
           matchedDonor = result.donor ?? null;
           matchedContactType = result.donor ? 'donor' : undefined;
           matchMethod = result.method;
@@ -989,9 +991,12 @@ export function RemittanceSplitter({
           }
 
           if (matchedDonor) {
+            // Si el donant està inactiu (baixa), marcar com found_inactive
+            // Això permet oferir reactivació sense crear duplicats
             status = matchedDonor.status === 'inactive' ? 'found_inactive' : 'found';
           } else if (taxIdValid) {
             // NOMÉS és new_with_taxid si és un DNI/NIE/CIF vàlid
+            // I no existeix cap donant amb aquest taxId (ni actiu ni baixa)
             status = 'new_with_taxid';
           } else {
             // Tot el que no passa validació fiscal → new_without_taxid (inclou refs bancàries)
