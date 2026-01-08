@@ -2280,6 +2280,17 @@ export const ca = {
     fallbackRemittanceTitle: "Transaccions de remesa trobades",
     fallbackRemittanceDescription: (count: number) => `S'han trobat ${count} transaccions amb patró de remesa. Estàs segur que vols esborrar-les?`,
     testRemittanceTransactions: "transaccions de remesa",
+    // Accions separades per tipus de remesa
+    deleteIncomeRemittances: "Esborrar remeses de quotes de socis",
+    deleteIncomeRemittancesDescription: "Elimina totes les remeses d'ingressos generades a partir de quotes de socis (remeses IN). S'esborraran el moviment pare i totes les quotes associades.",
+    deleteIncomeRemittancesConfirmWord: "ESBORRAR QUOTES",
+    deleteReturnsRemittances: "Esborrar devolucions conjuntes",
+    deleteReturnsRemittancesDescription: "Elimina totes les remeses de devolucions bancàries agrupades. Això desfà devolucions processades a partir de fitxers del banc.",
+    deleteReturnsRemittancesConfirmWord: "ESBORRAR DEVOLUCIONS",
+    incomeRemittancesDeleted: (count: number) => `S'han esborrat ${count} remeses de quotes i les seves transaccions associades.`,
+    returnsRemittancesDeleted: (count: number) => `S'han esborrat ${count} remeses de devolucions i les seves transaccions associades.`,
+    noIncomeRemittancesFound: "No s'han trobat remeses de quotes",
+    noReturnsRemittancesFound: "No s'han trobat remeses de devolucions",
   },
   donorSearchCombobox: {
     searchPlaceholder: "Cerca per nom o DNI...",

@@ -2281,6 +2281,17 @@ export const fr = {
     fallbackRemittanceTitle: "Transaccions de remesa trobades",
     fallbackRemittanceDescription: (count: number) => `S'han trobat ${count} transaccions amb patró de remesa. Estàs segur que vols esborrar-les?`,
     testRemittanceTransactions: "transaccions de remesa",
+    // Actions séparées par type de remise
+    deleteIncomeRemittances: "Supprimer les remises de cotisations",
+    deleteIncomeRemittancesDescription: "Supprime toutes les remises de revenus générées à partir des cotisations des membres (remises IN). Le mouvement parent et toutes les cotisations associées seront supprimés.",
+    deleteIncomeRemittancesConfirmWord: "SUPPRIMER COTISATIONS",
+    deleteReturnsRemittances: "Supprimer les retours groupés",
+    deleteReturnsRemittancesDescription: "Supprime toutes les remises de retours bancaires groupés. Cela annule les retours traités à partir des fichiers bancaires.",
+    deleteReturnsRemittancesConfirmWord: "SUPPRIMER RETOURS",
+    incomeRemittancesDeleted: (count: number) => `${count} remises de cotisations et leurs transactions associées ont été supprimées.`,
+    returnsRemittancesDeleted: (count: number) => `${count} remises de retours et leurs transactions associées ont été supprimées.`,
+    noIncomeRemittancesFound: "Aucune remise de cotisations trouvée",
+    noReturnsRemittancesFound: "Aucune remise de retours trouvée",
   },
   donorSearchCombobox: {
     searchPlaceholder: "Cerca per nom o DNI...",

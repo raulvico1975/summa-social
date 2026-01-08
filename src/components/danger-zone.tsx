@@ -51,208 +51,168 @@ export function DangerZone() {
   const [confirmText, setConfirmText] = React.useState('');
   const [isDeleting, setIsDeleting] = React.useState(false);
 
-  // Estat per esborrar última remesa
-  const [remittanceInfo, setRemittanceInfo] = React.useState<RemittanceInfo | null>(null);
-  const [fallbackCount, setFallbackCount] = React.useState<number | null>(null); // Per fallback sense isRemittance
-  const [isSearchingRemittances, setIsSearchingRemittances] = React.useState(false);
-  const [isDeletingRemittances, setIsDeletingRemittances] = React.useState(false);
-  const [remittanceConfirmText, setRemittanceConfirmText] = React.useState('');
-  const [showRemittanceDialog, setShowRemittanceDialog] = React.useState(false);
+  // Estat per esborrar remeses separades (quotes vs devolucions)
+  const [isDeletingIncomeRemittances, setIsDeletingIncomeRemittances] = React.useState(false);
+  const [isDeletingReturnsRemittances, setIsDeletingReturnsRemittances] = React.useState(false);
+  const [showIncomeRemittanceDialog, setShowIncomeRemittanceDialog] = React.useState(false);
+  const [showReturnsRemittanceDialog, setShowReturnsRemittanceDialog] = React.useState(false);
+  const [incomeRemittanceConfirmText, setIncomeRemittanceConfirmText] = React.useState('');
+  const [returnsRemittanceConfirmText, setReturnsRemittanceConfirmText] = React.useState('');
 
   const expectedConfirmText = t.dangerZone.confirmWord;
+  const expectedIncomeConfirmText = t.dangerZone.deleteIncomeRemittancesConfirmWord ?? 'ESBORRAR QUOTES';
+  const expectedReturnsConfirmText = t.dangerZone.deleteReturnsRemittancesConfirmWord ?? 'ESBORRAR DEVOLUCIONS';
 
-  // Buscar última remesa processada
-  const handleSearchLastRemittance = async () => {
-    if (!organizationId) {
-      toast({
-        variant: 'destructive',
-        title: 'Error',
-        description: 'No s\'ha trobat l\'organització',
-      });
+  // Esborrar remeses de quotes de socis (IN, amount > 0)
+  const handleDeleteIncomeRemittances = async () => {
+    if (!organizationId || incomeRemittanceConfirmText !== expectedIncomeConfirmText) {
       return;
     }
 
-    setIsSearchingRemittances(true);
-    setRemittanceInfo(null);
-    setFallbackCount(null);
-
+    setIsDeletingIncomeRemittances(true);
     try {
       const transactionsRef = collection(firestore, `organizations/${organizationId}/transactions`);
 
-      // 1. Buscar transaccions amb isRemittance === true
-      const remittanceQuery = query(transactionsRef, where('isRemittance', '==', true));
+      // Buscar remeses IN (isRemittance === true i amount > 0)
+      const remittanceQuery = query(
+        transactionsRef,
+        where('isRemittance', '==', true)
+      );
       const remittanceSnapshot = await getDocs(remittanceQuery);
 
-      if (!remittanceSnapshot.empty) {
-        // Ordenar per data/createdAt DESC i agafar la més recent
-        // IMPORTANT: ...d.data() primer, després id: d.id per sobreescriure qualsevol camp 'id' del document
-        const remittances = remittanceSnapshot.docs.map(d => ({
-          ...d.data(),
-          id: d.id,
-        }));
+      // Filtrar només les d'ingrés (amount > 0 i NO són returns)
+      const incomeRemittances = remittanceSnapshot.docs.filter(d => {
+        const data = d.data();
+        return data.amount > 0 && data.remittanceType !== 'returns';
+      });
 
-        // Ordenar per createdAt o date DESC
-        remittances.sort((a: any, b: any) => {
-          const dateA = a.createdAt || a.date || '';
-          const dateB = b.createdAt || b.date || '';
-          return dateB.localeCompare(dateA);
+      if (incomeRemittances.length === 0) {
+        toast({
+          title: t.dangerZone.noIncomeRemittancesFound ?? "No s'han trobat remeses de quotes",
+          description: t.dangerZone.noDataToDeleteDescription,
         });
-
-        const lastRemittance = remittances[0] as any;
-
-        // Buscar transaccions filles
-        const childQuery = query(transactionsRef, where('parentTransactionId', '==', lastRemittance.id));
-        const childSnapshot = await getDocs(childQuery);
-
-        setRemittanceInfo({
-          id: lastRemittance.id,
-          date: lastRemittance.date,
-          description: lastRemittance.description,
-          amount: lastRemittance.amount,
-          itemCount: lastRemittance.remittanceItemCount || 0,
-          childCount: childSnapshot.size,
-        });
-        setShowRemittanceDialog(true);
-      } else {
-        // 2. Fallback: buscar per descripció
-        const allTransactions = await getDocs(transactionsRef);
-
-        const fallbackTransactions = allTransactions.docs.filter(d => {
-          const data = d.data();
-          return REMITTANCE_PATTERNS.some(pattern =>
-            data.description?.includes(pattern)
-          );
-        });
-
-        if (fallbackTransactions.length > 0) {
-          setFallbackCount(fallbackTransactions.length);
-          setShowRemittanceDialog(true);
-        } else {
-          toast({
-            title: t.dangerZone.noRemittanceFound,
-            description: t.dangerZone.noRemittanceFoundDescription,
-          });
-        }
+        setShowIncomeRemittanceDialog(false);
+        setIncomeRemittanceConfirmText('');
+        return;
       }
-    } catch (error: any) {
-      console.error('[DangerZone] Error searching remittances:', error);
-      toast({
-        variant: 'destructive',
-        title: t.dangerZone.searchError,
-        description: error?.message || String(error),
-      });
-    } finally {
-      setIsSearchingRemittances(false);
-    }
-  };
 
-  // Esborrar última remesa i les seves transaccions filles
-  const handleDeleteRemittance = async () => {
-    if (!organizationId || remittanceConfirmText !== expectedConfirmText) {
-      return;
-    }
+      let deletedRemittanceCount = 0;
+      let deletedChildCount = 0;
 
-    // Validar que tenim dades per esborrar
-    if (!remittanceInfo && !fallbackCount) {
-      toast({
-        variant: 'destructive',
-        title: t.dangerZone.noRemittanceFound,
-        description: t.dangerZone.noRemittanceFoundDescription,
-      });
-      setShowRemittanceDialog(false);
-      return;
-    }
+      // Esborrar cada remesa i les seves filles
+      for (const remittanceDoc of incomeRemittances) {
+        const remittanceId = remittanceDoc.id;
 
-    setIsDeletingRemittances(true);
-    try {
-      const transactionsRef = collection(firestore, `organizations/${organizationId}/transactions`);
-      let deletedCount = 0;
-
-      if (remittanceInfo && remittanceInfo.id) {
-        // Validar que l'ID no és buit
-        if (!remittanceInfo.id.trim()) {
-          toast({
-            variant: 'destructive',
-            title: t.dangerZone.deleteError,
-            description: 'ID de remesa invàlid',
-          });
-          return;
-        }
-
-        // Cas 1: Esborrar remesa amb isRemittance i les seves filles
-        const childQuery = query(transactionsRef, where('parentTransactionId', '==', remittanceInfo.id));
+        // Buscar i esborrar transaccions filles
+        const childQuery = query(transactionsRef, where('parentTransactionId', '==', remittanceId));
         const childSnapshot = await getDocs(childQuery);
 
         const batch = writeBatch(firestore);
 
-        // Esborrar transaccions filles
+        // Esborrar filles
         childSnapshot.docs.forEach(childDoc => {
           batch.delete(childDoc.ref);
-          deletedCount++;
+          deletedChildCount++;
         });
 
-        // Restaurar la remesa original (treure flags de remesa)
-        const remittanceDocRef = doc(transactionsRef, remittanceInfo.id);
-        batch.update(remittanceDocRef, {
-          isRemittance: false,
-          remittanceItemCount: null,
-          category: null,
-          contactId: null,
-          contactType: null,
-        });
+        // Esborrar pare
+        batch.delete(remittanceDoc.ref);
+        deletedRemittanceCount++;
 
         await batch.commit();
-
-        toast({
-          title: t.dangerZone.deleteSuccess,
-          description: t.dangerZone.remittanceDeletedDescription(deletedCount),
-        });
-      } else if (fallbackCount && fallbackCount > 0) {
-        // Cas 2: Fallback - esborrar transaccions per descripció
-        const allTransactions = await getDocs(transactionsRef);
-        const fallbackDocs = allTransactions.docs.filter(d => {
-          const data = d.data();
-          return REMITTANCE_PATTERNS.some(pattern =>
-            data.description?.includes(pattern)
-          );
-        });
-
-        // Esborrar en batches de 500
-        const batchSize = 500;
-        const batches = Math.ceil(fallbackDocs.length / batchSize);
-
-        for (let i = 0; i < batches; i++) {
-          const batch = writeBatch(firestore);
-          const start = i * batchSize;
-          const end = Math.min(start + batchSize, fallbackDocs.length);
-
-          for (let j = start; j < end; j++) {
-            batch.delete(fallbackDocs[j].ref);
-            deletedCount++;
-          }
-
-          await batch.commit();
-        }
-
-        toast({
-          title: t.dangerZone.deleteSuccess,
-          description: t.dangerZone.deleteSuccessDescription(deletedCount, t.dangerZone.testRemittanceTransactions),
-        });
       }
 
-      setShowRemittanceDialog(false);
-      setRemittanceConfirmText('');
-      setRemittanceInfo(null);
-      setFallbackCount(null);
+      toast({
+        title: t.dangerZone.deleteSuccess,
+        description: t.dangerZone.incomeRemittancesDeleted?.(deletedRemittanceCount) ??
+          `S'han esborrat ${deletedRemittanceCount} remeses de quotes i ${deletedChildCount} transaccions associades.`,
+      });
+
+      setShowIncomeRemittanceDialog(false);
+      setIncomeRemittanceConfirmText('');
     } catch (error: any) {
-      console.error('[DangerZone] Error deleting remittance:', error);
+      console.error('[DangerZone] Error deleting income remittances:', error);
       toast({
         variant: 'destructive',
         title: t.dangerZone.deleteError,
         description: error?.message || t.dangerZone.deleteErrorDescription,
       });
     } finally {
-      setIsDeletingRemittances(false);
+      setIsDeletingIncomeRemittances(false);
+    }
+  };
+
+  // Esborrar remeses de devolucions (remittanceType === 'returns')
+  const handleDeleteReturnsRemittances = async () => {
+    if (!organizationId || returnsRemittanceConfirmText !== expectedReturnsConfirmText) {
+      return;
+    }
+
+    setIsDeletingReturnsRemittances(true);
+    try {
+      const transactionsRef = collection(firestore, `organizations/${organizationId}/transactions`);
+
+      // Buscar remeses de devolucions
+      const remittanceQuery = query(
+        transactionsRef,
+        where('isRemittance', '==', true),
+        where('remittanceType', '==', 'returns')
+      );
+      const remittanceSnapshot = await getDocs(remittanceQuery);
+
+      if (remittanceSnapshot.empty) {
+        toast({
+          title: t.dangerZone.noReturnsRemittancesFound ?? "No s'han trobat remeses de devolucions",
+          description: t.dangerZone.noDataToDeleteDescription,
+        });
+        setShowReturnsRemittanceDialog(false);
+        setReturnsRemittanceConfirmText('');
+        return;
+      }
+
+      let deletedRemittanceCount = 0;
+      let deletedChildCount = 0;
+
+      // Esborrar cada remesa i les seves filles
+      for (const remittanceDoc of remittanceSnapshot.docs) {
+        const remittanceId = remittanceDoc.id;
+
+        // Buscar i esborrar transaccions filles
+        const childQuery = query(transactionsRef, where('parentTransactionId', '==', remittanceId));
+        const childSnapshot = await getDocs(childQuery);
+
+        const batch = writeBatch(firestore);
+
+        // Esborrar filles
+        childSnapshot.docs.forEach(childDoc => {
+          batch.delete(childDoc.ref);
+          deletedChildCount++;
+        });
+
+        // Esborrar pare
+        batch.delete(remittanceDoc.ref);
+        deletedRemittanceCount++;
+
+        await batch.commit();
+      }
+
+      toast({
+        title: t.dangerZone.deleteSuccess,
+        description: t.dangerZone.returnsRemittancesDeleted?.(deletedRemittanceCount) ??
+          `S'han esborrat ${deletedRemittanceCount} remeses de devolucions i ${deletedChildCount} transaccions associades.`,
+      });
+
+      setShowReturnsRemittanceDialog(false);
+      setReturnsRemittanceConfirmText('');
+    } catch (error: any) {
+      console.error('[DangerZone] Error deleting returns remittances:', error);
+      toast({
+        variant: 'destructive',
+        title: t.dangerZone.deleteError,
+        description: error?.message || t.dangerZone.deleteErrorDescription,
+      });
+    } finally {
+      setIsDeletingReturnsRemittances(false);
     }
   };
 
@@ -397,29 +357,42 @@ export function DangerZone() {
             ))}
           </div>
 
-          {/* Secció temporal: Esborrar última remesa */}
+          {/* Secció: Esborrar remeses */}
           <div className="border-t pt-4 mt-4">
             <p className="text-sm text-muted-foreground mb-3">
               {t.dangerZone.remittanceSection}
             </p>
-            <Button
-              variant="outline"
-              className="h-auto flex-col items-start gap-1 p-4 border-orange-200 hover:border-orange-400 hover:bg-orange-50 dark:border-orange-900 dark:hover:border-orange-700 dark:hover:bg-orange-950"
-              onClick={handleSearchLastRemittance}
-              disabled={isSearchingRemittances}
-            >
-              <div className="flex items-center gap-2 text-orange-600 dark:text-orange-400">
-                {isSearchingRemittances ? (
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                ) : (
+            <div className="grid gap-3 sm:grid-cols-2">
+              {/* Botó 1: Esborrar remeses de quotes de socis */}
+              <Button
+                variant="outline"
+                className="h-auto flex-col items-start gap-1 p-4 border-orange-200 hover:border-orange-400 hover:bg-orange-50 dark:border-orange-900 dark:hover:border-orange-700 dark:hover:bg-orange-950"
+                onClick={() => setShowIncomeRemittanceDialog(true)}
+              >
+                <div className="flex items-center gap-2 text-orange-600 dark:text-orange-400">
                   <GitMerge className="h-4 w-4" />
-                )}
-                <span className="font-medium">{t.dangerZone.deleteLastRemittance}</span>
-              </div>
-              <span className="text-xs text-muted-foreground text-left">
-                {t.dangerZone.deleteLastRemittanceDescription}
-              </span>
-            </Button>
+                  <span className="font-medium">{t.dangerZone.deleteIncomeRemittances ?? 'Esborrar remeses de quotes de socis'}</span>
+                </div>
+                <span className="text-xs text-muted-foreground text-left">
+                  {t.dangerZone.deleteIncomeRemittancesDescription ?? "Elimina totes les remeses d'ingressos generades a partir de quotes de socis."}
+                </span>
+              </Button>
+
+              {/* Botó 2: Esborrar devolucions conjuntes */}
+              <Button
+                variant="outline"
+                className="h-auto flex-col items-start gap-1 p-4 border-orange-200 hover:border-orange-400 hover:bg-orange-50 dark:border-orange-900 dark:hover:border-orange-700 dark:hover:bg-orange-950"
+                onClick={() => setShowReturnsRemittanceDialog(true)}
+              >
+                <div className="flex items-center gap-2 text-orange-600 dark:text-orange-400">
+                  <GitMerge className="h-4 w-4" />
+                  <span className="font-medium">{t.dangerZone.deleteReturnsRemittances ?? 'Esborrar devolucions conjuntes'}</span>
+                </div>
+                <span className="text-xs text-muted-foreground text-left">
+                  {t.dangerZone.deleteReturnsRemittancesDescription ?? 'Elimina totes les remeses de devolucions bancàries agrupades.'}
+                </span>
+              </Button>
+            </div>
           </div>
         </CardContent>
       </Card>
@@ -483,58 +456,22 @@ export function DangerZone() {
         </AlertDialogContent>
       </AlertDialog>
 
-      {/* Dialog per esborrar última remesa */}
-      <AlertDialog open={showRemittanceDialog} onOpenChange={(open) => {
+      {/* Dialog per esborrar remeses de quotes de socis */}
+      <AlertDialog open={showIncomeRemittanceDialog} onOpenChange={(open) => {
         if (!open) {
-          setShowRemittanceDialog(false);
-          setRemittanceConfirmText('');
-          setRemittanceInfo(null);
-          setFallbackCount(null);
+          setShowIncomeRemittanceDialog(false);
+          setIncomeRemittanceConfirmText('');
         }
       }}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle className="flex items-center gap-2 text-orange-600">
               <AlertTriangle className="h-5 w-5" />
-              {remittanceInfo ? t.dangerZone.remittanceFoundTitle : t.dangerZone.fallbackRemittanceTitle}
+              {t.dangerZone.deleteIncomeRemittances ?? 'Esborrar remeses de quotes de socis'}
             </AlertDialogTitle>
             <AlertDialogDescription asChild>
               <div className="space-y-3">
-                {remittanceInfo ? (
-                  <>
-                    <p>{t.dangerZone.remittanceFoundDescription}</p>
-                    {/* Info de la remesa */}
-                    <div className="bg-muted rounded-lg p-3 space-y-2 text-sm">
-                      <div className="flex items-center gap-2">
-                        <Calendar className="h-4 w-4 text-muted-foreground" />
-                        <span className="font-medium">{t.dangerZone.remittanceDate}:</span>
-                        <span>{remittanceInfo.date}</span>
-                      </div>
-                      <div className="flex items-start gap-2">
-                        <FileText className="h-4 w-4 text-muted-foreground mt-0.5" />
-                        <span className="font-medium">{t.dangerZone.remittanceDescription}:</span>
-                        <span className="truncate max-w-[200px]" title={remittanceInfo.description}>
-                          {remittanceInfo.description}
-                        </span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <Coins className="h-4 w-4 text-muted-foreground" />
-                        <span className="font-medium">{t.dangerZone.remittanceAmount}:</span>
-                        <span className="text-green-600 font-medium">{formatCurrencyEU(remittanceInfo.amount)}</span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <Hash className="h-4 w-4 text-muted-foreground" />
-                        <span className="font-medium">{t.dangerZone.remittanceQuotes}:</span>
-                        <span>{remittanceInfo.itemCount} ({t.dangerZone.childTransactions}: {remittanceInfo.childCount})</span>
-                      </div>
-                    </div>
-                    <p className="text-sm">
-                      {t.dangerZone.remittanceDeleteInfo(remittanceInfo.childCount)}
-                    </p>
-                  </>
-                ) : fallbackCount ? (
-                  <p>{t.dangerZone.fallbackRemittanceDescription(fallbackCount)}</p>
-                ) : null}
+                <p>{t.dangerZone.deleteIncomeRemittancesDescription ?? "Elimina totes les remeses d'ingressos generades a partir de quotes de socis (remeses IN). S'esborraran el moviment pare i totes les quotes associades."}</p>
                 <p className="font-semibold text-orange-600">
                   {t.dangerZone.confirmWarning}
                 </p>
@@ -543,29 +480,91 @@ export function DangerZone() {
           </AlertDialogHeader>
 
           <div className="space-y-2 py-4">
-            <Label htmlFor="remittance-confirm-text">
-              {t.dangerZone.confirmLabel} <span className="font-mono font-bold">{expectedConfirmText}</span>
+            <Label htmlFor="income-remittance-confirm-text">
+              {t.dangerZone.confirmLabel} <span className="font-mono font-bold">{expectedIncomeConfirmText}</span>
             </Label>
             <Input
-              id="remittance-confirm-text"
-              value={remittanceConfirmText}
-              onChange={(e) => setRemittanceConfirmText(e.target.value)}
-              placeholder={expectedConfirmText}
+              id="income-remittance-confirm-text"
+              value={incomeRemittanceConfirmText}
+              onChange={(e) => setIncomeRemittanceConfirmText(e.target.value)}
+              placeholder={expectedIncomeConfirmText}
               className="font-mono"
               autoComplete="off"
             />
           </div>
 
           <AlertDialogFooter>
-            <AlertDialogCancel disabled={isDeletingRemittances}>
+            <AlertDialogCancel disabled={isDeletingIncomeRemittances}>
               {t.dangerZone.cancel}
             </AlertDialogCancel>
             <AlertDialogAction
-              onClick={handleDeleteRemittance}
-              disabled={remittanceConfirmText !== expectedConfirmText || isDeletingRemittances}
+              onClick={handleDeleteIncomeRemittances}
+              disabled={incomeRemittanceConfirmText !== expectedIncomeConfirmText || isDeletingIncomeRemittances}
               className="bg-orange-600 hover:bg-orange-700 focus:ring-orange-600"
             >
-              {isDeletingRemittances ? (
+              {isDeletingIncomeRemittances ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  {t.dangerZone.deleting}
+                </>
+              ) : (
+                <>
+                  <Trash2 className="mr-2 h-4 w-4" />
+                  {t.dangerZone.deleteButton}
+                </>
+              )}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Dialog per esborrar devolucions conjuntes */}
+      <AlertDialog open={showReturnsRemittanceDialog} onOpenChange={(open) => {
+        if (!open) {
+          setShowReturnsRemittanceDialog(false);
+          setReturnsRemittanceConfirmText('');
+        }
+      }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2 text-orange-600">
+              <AlertTriangle className="h-5 w-5" />
+              {t.dangerZone.deleteReturnsRemittances ?? 'Esborrar devolucions conjuntes'}
+            </AlertDialogTitle>
+            <AlertDialogDescription asChild>
+              <div className="space-y-3">
+                <p>{t.dangerZone.deleteReturnsRemittancesDescription ?? 'Elimina totes les remeses de devolucions bancàries agrupades. Això desfà devolucions processades a partir de fitxers del banc.'}</p>
+                <p className="font-semibold text-orange-600">
+                  {t.dangerZone.confirmWarning}
+                </p>
+              </div>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+
+          <div className="space-y-2 py-4">
+            <Label htmlFor="returns-remittance-confirm-text">
+              {t.dangerZone.confirmLabel} <span className="font-mono font-bold">{expectedReturnsConfirmText}</span>
+            </Label>
+            <Input
+              id="returns-remittance-confirm-text"
+              value={returnsRemittanceConfirmText}
+              onChange={(e) => setReturnsRemittanceConfirmText(e.target.value)}
+              placeholder={expectedReturnsConfirmText}
+              className="font-mono"
+              autoComplete="off"
+            />
+          </div>
+
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isDeletingReturnsRemittances}>
+              {t.dangerZone.cancel}
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDeleteReturnsRemittances}
+              disabled={returnsRemittanceConfirmText !== expectedReturnsConfirmText || isDeletingReturnsRemittances}
+              className="bg-orange-600 hover:bg-orange-700 focus:ring-orange-600"
+            >
+              {isDeletingReturnsRemittances ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                   {t.dangerZone.deleting}

@@ -2273,6 +2273,17 @@ export const es = {
     fallbackRemittanceTitle: "Transacciones de remesa encontradas",
     fallbackRemittanceDescription: (count: number) => `Se han encontrado ${count} transacciones con patrón de remesa. ¿Estás seguro de que quieres borrarlas?`,
     testRemittanceTransactions: "transacciones de remesa",
+    // Acciones separadas por tipo de remesa
+    deleteIncomeRemittances: "Borrar remesas de cuotas de socios",
+    deleteIncomeRemittancesDescription: "Elimina todas las remesas de ingresos generadas a partir de cuotas de socios (remesas IN). Se borrarán el movimiento padre y todas las cuotas asociadas.",
+    deleteIncomeRemittancesConfirmWord: "BORRAR CUOTAS",
+    deleteReturnsRemittances: "Borrar devoluciones conjuntas",
+    deleteReturnsRemittancesDescription: "Elimina todas las remesas de devoluciones bancarias agrupadas. Esto deshace devoluciones procesadas a partir de ficheros del banco.",
+    deleteReturnsRemittancesConfirmWord: "BORRAR DEVOLUCIONES",
+    incomeRemittancesDeleted: (count: number) => `Se han borrado ${count} remesas de cuotas y sus transacciones asociadas.`,
+    returnsRemittancesDeleted: (count: number) => `Se han borrado ${count} remesas de devoluciones y sus transacciones asociadas.`,
+    noIncomeRemittancesFound: "No se han encontrado remesas de cuotas",
+    noReturnsRemittancesFound: "No se han encontrado remesas de devoluciones",
   },
   donorSearchCombobox: {
     searchPlaceholder: "Buscar por nombre o DNI...",
