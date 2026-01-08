@@ -47,7 +47,8 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
-import { PlusCircle, Edit, Trash2, User, Building2, RefreshCw, Heart, Upload, AlertTriangle, Search, X, RotateCcw, Download, Users } from 'lucide-react';
+import { PlusCircle, Edit, Trash2, User, Building2, RefreshCw, Heart, Upload, AlertTriangle, Search, X, RotateCcw, Download, Users, CreditCard } from 'lucide-react';
+import Link from 'next/link';
 import { EmptyState } from '@/components/ui/empty-state';
 import { Skeleton } from '@/components/ui/skeleton';
 import type { Donor, Category, Transaction } from '@/lib/data';
@@ -92,7 +93,7 @@ const emptyFormData: DonorFormData = {
 
 export function DonorManager() {
   const { firestore } = useFirebase();
-  const { organizationId } = useCurrentOrganization();
+  const { organizationId, orgSlug } = useCurrentOrganization();
   const { toast } = useToast();
   const { t } = useTranslations();
 
@@ -582,6 +583,15 @@ export function DonorManager() {
               </CardDescription>
             </div>
             <div className="flex gap-2">
+              <Button
+                variant="outline"
+                asChild
+              >
+                <Link href={`/${orgSlug}/dashboard/donants/remeses-cobrament`}>
+                  <CreditCard className="mr-2 h-4 w-4" />
+                  {t.sepaCollection?.newCollection ?? 'Remesa SEPA'}
+                </Link>
+              </Button>
               <Button
                 variant="outline"
                 onClick={() => donors && exportDonorsToExcel(donors, allCategories || [])}

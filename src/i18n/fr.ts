@@ -2918,4 +2918,103 @@ export const fr = {
       generateSepa: "Générer SEPA",
     },
   },
+  // ═══════════════════════════════════════════════════════════════════════════
+  // SEPA Direct Debit (Prélèvements)
+  // ═══════════════════════════════════════════════════════════════════════════
+  sepaCollection: {
+    title: "Prélèvement SEPA",
+    description: "Génère des fichiers pain.008 pour prélever les cotisations des adhérents par prélèvement bancaire.",
+    newCollection: "Nouveau prélèvement",
+    // Wizard steps
+    steps: {
+      config: "Configuration",
+      selection: "Sélection",
+      review: "Révision",
+    },
+    // Step 1: Config
+    config: {
+      title: "Configuration du prélèvement",
+      bankAccount: "Compte bancaire",
+      bankAccountHint: "Sélectionnez le compte où les cotisations seront prélevées",
+      collectionDate: "Date de prélèvement",
+      collectionDateHint: "Date à laquelle la banque traitera les prélèvements",
+      scheme: "Schéma SEPA",
+      schemeCore: "CORE (particuliers)",
+      schemeB2B: "B2B (entreprises)",
+      noCreditorId: "Le compte sélectionné n'a pas d'identifiant créancier SEPA configuré.",
+      configureCreditorId: "Configurez le creditorId dans les paramètres du compte bancaire.",
+    },
+    // Step 2: Selection
+    selection: {
+      title: "Sélection des adhérents",
+      eligible: "Adhérents éligibles",
+      eligibleCount: (params: { count: number }) => `${params.count} adhérents avec mandat SEPA actif`,
+      excluded: "Exclus",
+      excludedCount: (params: { count: number }) => `${params.count} adhérents sans données complètes`,
+      selectAll: "Tout sélectionner",
+      deselectAll: "Tout désélectionner",
+      selected: (params: { count: number }) => `${params.count} sélectionnés`,
+      noEligible: "Aucun adhérent éligible pour ce prélèvement.",
+      reasons: {
+        noIban: "Sans IBAN",
+        noMandate: "Sans mandat SEPA",
+        mandateInactive: "Mandat inactif",
+        noUmr: "Sans référence de mandat",
+        noSignatureDate: "Sans date de signature",
+        donorInactive: "Adhérent inactif",
+      },
+    },
+    // Step 3: Review
+    review: {
+      title: "Révision et exportation",
+      summary: "Résumé du prélèvement",
+      totalAmount: "Montant total",
+      totalItems: "Nombre de prélèvements",
+      collectionDate: "Date de prélèvement",
+      creditorId: "ID Créancier",
+      sequenceBreakdown: "Répartition par séquence",
+      sequenceTypes: {
+        FRST: "Premiers prélèvements",
+        RCUR: "Prélèvements récurrents",
+        OOFF: "Prélèvements uniques",
+        FNAL: "Derniers prélèvements",
+      },
+      itemsTable: {
+        name: "Nom",
+        taxId: "ID fiscal",
+        iban: "IBAN",
+        amount: "Montant",
+        sequence: "Séquence",
+      },
+      export: "Exporter XML",
+      exportAndSave: "Exporter et enregistrer",
+      warning: "Ceci générera un fichier pain.008 que vous devrez importer dans votre banque.",
+    },
+    // Toasts
+    toasts: {
+      exported: "Prélèvement exporté avec succès",
+      saved: "Prélèvement enregistré",
+      error: "Erreur lors de la génération du prélèvement",
+      validationError: "Il y a des erreurs de validation",
+    },
+    // Mandate fields (for donor form)
+    mandate: {
+      title: "Mandat SEPA",
+      umr: "Référence unique (RUM)",
+      umrHint: "Identifiant unique du mandat (max 35 caractères)",
+      signatureDate: "Date de signature",
+      signatureDateHint: "Date à laquelle l'adhérent a signé le mandat",
+      isActive: "Mandat actif",
+      scheme: "Schéma",
+      lastCollectedAt: "Dernier prélèvement",
+      sequenceOverride: "Forcer la séquence",
+      noOverride: "Automatique",
+    },
+    // BankAccount creditorId field
+    creditorId: {
+      label: "Identifiant créancier SEPA",
+      hint: "Format : ES + 2 chiffres + 3 caractères + CIF (ex : ES21001G70782933)",
+      invalid: "Format d'identifiant créancier invalide",
+    },
+  },
 };

@@ -2917,4 +2917,103 @@ export const ca = {
       generateSepa: "Generar SEPA",
     },
   },
+  // ═══════════════════════════════════════════════════════════════════════════
+  // SEPA Direct Debit (Remeses de cobrament)
+  // ═══════════════════════════════════════════════════════════════════════════
+  sepaCollection: {
+    title: "Remesa SEPA",
+    description: "Genera fitxers pain.008 per cobrar quotes de socis per domiciliació bancària.",
+    newCollection: "Nova remesa",
+    // Wizard steps
+    steps: {
+      config: "Configuració",
+      selection: "Selecció",
+      review: "Revisió",
+    },
+    // Step 1: Config
+    config: {
+      title: "Configuració de la remesa",
+      bankAccount: "Compte bancari",
+      bankAccountHint: "Selecciona el compte on es cobraran les quotes",
+      collectionDate: "Data de cobrament",
+      collectionDateHint: "Data en què el banc processarà els càrrecs",
+      scheme: "Esquema SEPA",
+      schemeCore: "CORE (particulars)",
+      schemeB2B: "B2B (empreses)",
+      noCreditorId: "El compte seleccionat no té identificador de creditor SEPA configurat.",
+      configureCreditorId: "Configura el creditorId a la configuració del compte bancari.",
+    },
+    // Step 2: Selection
+    selection: {
+      title: "Selecció de socis",
+      eligible: "Socis elegibles",
+      eligibleCount: (params: { count: number }) => `${params.count} socis amb mandat SEPA actiu`,
+      excluded: "Exclosos",
+      excludedCount: (params: { count: number }) => `${params.count} socis sense dades completes`,
+      selectAll: "Seleccionar tots",
+      deselectAll: "Treure tots",
+      selected: (params: { count: number }) => `${params.count} seleccionats`,
+      noEligible: "No hi ha socis elegibles per aquesta remesa.",
+      reasons: {
+        noIban: "Sense IBAN",
+        noMandate: "Sense mandat SEPA",
+        mandateInactive: "Mandat inactiu",
+        noUmr: "Sense referència de mandat",
+        noSignatureDate: "Sense data de signatura",
+        donorInactive: "Soci inactiu",
+      },
+    },
+    // Step 3: Review
+    review: {
+      title: "Revisió i exportació",
+      summary: "Resum de la remesa",
+      totalAmount: "Import total",
+      totalItems: "Nombre de càrrecs",
+      collectionDate: "Data de cobrament",
+      creditorId: "ID Creditor",
+      sequenceBreakdown: "Desglossament per seqüència",
+      sequenceTypes: {
+        FRST: "Primers cobraments",
+        RCUR: "Cobraments recurrents",
+        OOFF: "Cobraments únics",
+        FNAL: "Últims cobraments",
+      },
+      itemsTable: {
+        name: "Nom",
+        taxId: "DNI/CIF",
+        iban: "IBAN",
+        amount: "Import",
+        sequence: "Seqüència",
+      },
+      export: "Exportar XML",
+      exportAndSave: "Exportar i guardar",
+      warning: "Això generarà un fitxer pain.008 que hauràs d'importar al teu banc.",
+    },
+    // Toasts
+    toasts: {
+      exported: "Remesa exportada correctament",
+      saved: "Remesa guardada",
+      error: "Error en generar la remesa",
+      validationError: "Hi ha errors de validació",
+    },
+    // Mandate fields (for donor form)
+    mandate: {
+      title: "Mandat SEPA",
+      umr: "Referència única (UMR)",
+      umrHint: "Identificador únic del mandat (màx 35 caràcters)",
+      signatureDate: "Data de signatura",
+      signatureDateHint: "Data en què el soci va signar el mandat",
+      isActive: "Mandat actiu",
+      scheme: "Esquema",
+      lastCollectedAt: "Últim cobrament",
+      sequenceOverride: "Forçar seqüència",
+      noOverride: "Automàtic",
+    },
+    // BankAccount creditorId field
+    creditorId: {
+      label: "Identificador de creditor SEPA",
+      hint: "Format: ES + 2 dígits + 3 caràcters + CIF (ex: ES21001G70782933)",
+      invalid: "Format d'identificador de creditor invàlid",
+    },
+  },
 };

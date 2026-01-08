@@ -2910,4 +2910,103 @@ export const es = {
       generateSepa: "Generar SEPA",
     },
   },
+  // ═══════════════════════════════════════════════════════════════════════════
+  // SEPA Direct Debit (Remesas de cobro)
+  // ═══════════════════════════════════════════════════════════════════════════
+  sepaCollection: {
+    title: "Remesa SEPA",
+    description: "Genera archivos pain.008 para cobrar cuotas de socios por domiciliación bancaria.",
+    newCollection: "Nueva remesa",
+    // Wizard steps
+    steps: {
+      config: "Configuración",
+      selection: "Selección",
+      review: "Revisión",
+    },
+    // Step 1: Config
+    config: {
+      title: "Configuración de la remesa",
+      bankAccount: "Cuenta bancaria",
+      bankAccountHint: "Selecciona la cuenta donde se cobrarán las cuotas",
+      collectionDate: "Fecha de cobro",
+      collectionDateHint: "Fecha en la que el banco procesará los cargos",
+      scheme: "Esquema SEPA",
+      schemeCore: "CORE (particulares)",
+      schemeB2B: "B2B (empresas)",
+      noCreditorId: "La cuenta seleccionada no tiene identificador de acreedor SEPA configurado.",
+      configureCreditorId: "Configura el creditorId en la configuración de la cuenta bancaria.",
+    },
+    // Step 2: Selection
+    selection: {
+      title: "Selección de socios",
+      eligible: "Socios elegibles",
+      eligibleCount: (params: { count: number }) => `${params.count} socios con mandato SEPA activo`,
+      excluded: "Excluidos",
+      excludedCount: (params: { count: number }) => `${params.count} socios sin datos completos`,
+      selectAll: "Seleccionar todos",
+      deselectAll: "Quitar todos",
+      selected: (params: { count: number }) => `${params.count} seleccionados`,
+      noEligible: "No hay socios elegibles para esta remesa.",
+      reasons: {
+        noIban: "Sin IBAN",
+        noMandate: "Sin mandato SEPA",
+        mandateInactive: "Mandato inactivo",
+        noUmr: "Sin referencia de mandato",
+        noSignatureDate: "Sin fecha de firma",
+        donorInactive: "Socio inactivo",
+      },
+    },
+    // Step 3: Review
+    review: {
+      title: "Revisión y exportación",
+      summary: "Resumen de la remesa",
+      totalAmount: "Importe total",
+      totalItems: "Número de cargos",
+      collectionDate: "Fecha de cobro",
+      creditorId: "ID Acreedor",
+      sequenceBreakdown: "Desglose por secuencia",
+      sequenceTypes: {
+        FRST: "Primeros cobros",
+        RCUR: "Cobros recurrentes",
+        OOFF: "Cobros únicos",
+        FNAL: "Últimos cobros",
+      },
+      itemsTable: {
+        name: "Nombre",
+        taxId: "DNI/CIF",
+        iban: "IBAN",
+        amount: "Importe",
+        sequence: "Secuencia",
+      },
+      export: "Exportar XML",
+      exportAndSave: "Exportar y guardar",
+      warning: "Esto generará un archivo pain.008 que tendrás que importar a tu banco.",
+    },
+    // Toasts
+    toasts: {
+      exported: "Remesa exportada correctamente",
+      saved: "Remesa guardada",
+      error: "Error al generar la remesa",
+      validationError: "Hay errores de validación",
+    },
+    // Mandate fields (for donor form)
+    mandate: {
+      title: "Mandato SEPA",
+      umr: "Referencia única (UMR)",
+      umrHint: "Identificador único del mandato (máx 35 caracteres)",
+      signatureDate: "Fecha de firma",
+      signatureDateHint: "Fecha en la que el socio firmó el mandato",
+      isActive: "Mandato activo",
+      scheme: "Esquema",
+      lastCollectedAt: "Último cobro",
+      sequenceOverride: "Forzar secuencia",
+      noOverride: "Automático",
+    },
+    // BankAccount creditorId field
+    creditorId: {
+      label: "Identificador de acreedor SEPA",
+      hint: "Formato: ES + 2 dígitos + 3 caracteres + CIF (ej: ES21001G70782933)",
+      invalid: "Formato de identificador de acreedor inválido",
+    },
+  },
 };

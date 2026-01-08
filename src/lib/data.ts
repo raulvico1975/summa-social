@@ -208,6 +208,39 @@ export type Project = {
 };
 
 // ═══════════════════════════════════════════════════════════════════════════════
+// TIPUS PER SEPA DIRECT DEBIT (pain.008)
+// ═══════════════════════════════════════════════════════════════════════════════
+
+/**
+ * Esquema SEPA per adeudos directos
+ * - CORE: Particulars i empreses (v1)
+ * - B2B: Empreses (Business-to-Business, v2)
+ */
+export type SepaScheme = 'CORE' | 'B2B';
+
+/**
+ * Tipus de seqüència SEPA
+ * - FRST: Primer cobrament d'un mandat recurrent
+ * - RCUR: Cobraments successius recurrents
+ * - OOFF: Cobrament únic (one-off)
+ * - FNAL: Últim cobrament d'una sèrie
+ */
+export type SepaSequenceType = 'FRST' | 'RCUR' | 'OOFF' | 'FNAL';
+
+/**
+ * Mandat SEPA per a domiciliació bancària.
+ * Permet cobrar directament del compte del donant/soci.
+ */
+export interface SepaMandate {
+  scheme: SepaScheme;                      // CORE (v1) o B2B (v2)
+  umr: string;                             // Unique Mandate Reference (obligatori)
+  signatureDate: string;                   // YYYY-MM-DD (data signatura, obligatori)
+  isActive: boolean;                       // true per defecte
+  lastCollectedAt?: string | null;         // YYYY-MM-DD (última execució, per seqüència)
+  sequenceTypeOverride?: SepaSequenceType | null;  // Override manual si cal
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
 // SISTEMA DE CONTACTES (Donants + Proveïdors)
 // ═══════════════════════════════════════════════════════════════════════════════
 
@@ -301,6 +334,16 @@ export type Donor = Contact & {
    * Data de l'última devolució
    */
   lastReturnDate?: string;
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // CAMPS PER SEPA DIRECT DEBIT
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  /**
+   * Mandat SEPA per domiciliació bancària
+   * Si existeix i isActive=true, el donant es pot incloure en remeses SEPA
+   */
+  sepaMandate?: SepaMandate | null;
 };
 
 /**
@@ -594,7 +637,57 @@ export type BankAccount = {
   isActive: boolean | null;        // Compte actiu (per soft-delete)
   createdAt: string;               // ISO date
   updatedAt: string;               // ISO date
+  // SEPA Direct Debit
+  creditorId?: string | null;      // Identificador de creditor SEPA (ex: ES21001G70782933)
 };
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// SEPA COLLECTION RUNS (Remeses de cobrament SEPA)
+// ═══════════════════════════════════════════════════════════════════════════════
+
+/**
+ * Estat d'una execució de remesa SEPA
+ */
+export type SepaCollectionRunStatus = 'draft' | 'exported' | 'sent' | 'processed';
+
+/**
+ * Element individual d'una remesa SEPA (un cobrament)
+ */
+export interface SepaCollectionItem {
+  donorId: string;                         // ID del donant/soci
+  donorName: string;                       // Nom del donant (snapshot)
+  donorTaxId: string;                      // DNI/CIF (snapshot)
+  iban: string;                            // IBAN del donant
+  amountCents: number;                     // Import en cèntims
+  umr: string;                             // Unique Mandate Reference
+  signatureDate: string;                   // Data signatura mandat (YYYY-MM-DD)
+  sequenceType: SepaSequenceType;          // FRST, RCUR, OOFF, FNAL
+  endToEndId: string;                      // Identificador únic de la transacció
+}
+
+/**
+ * Execució d'una remesa de cobrament SEPA (pain.008)
+ * S'emmagatzema a: organizations/{orgId}/sepaCollectionRuns/{runId}
+ */
+export interface SepaCollectionRun {
+  id: string;
+  status: SepaCollectionRunStatus;
+  scheme: SepaScheme;                      // CORE o B2B
+  bankAccountId: string;                   // ID del compte bancari creditor
+  creditorId: string;                      // Identificador de creditor SEPA (snapshot)
+  creditorName: string;                    // Nom de l'organització (snapshot)
+  creditorIban: string;                    // IBAN del creditor (snapshot)
+  requestedCollectionDate: string;         // Data de cobrament sol·licitada (YYYY-MM-DD)
+  items: SepaCollectionItem[];             // Cobraments individuals
+  totalAmountCents: number;                // Suma total en cèntims
+  totalCount: number;                      // Nombre de cobraments
+  messageId: string;                       // MsgId del XML (per traçabilitat)
+  createdAt: string;                       // ISO date
+  createdBy: string;                       // UID de l'usuari
+  exportedAt?: string | null;              // Data d'exportació del XML
+  sentAt?: string | null;                  // Data d'enviament al banc
+  processedAt?: string | null;             // Data de processament
+}
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // REMESES - QUOTES PENDENTS
