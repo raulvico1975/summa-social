@@ -327,6 +327,12 @@ export function TransactionsTable({ initialDateFilter = null }: TransactionsTabl
     filterActiveContacts(availableContacts?.filter(c => c.type === 'donor') as Donor[] || []),
   [availableContacts]);
 
+  // P0: TOTS els donants per matching IBAN en remeses (sense filtrar per estat)
+  // Inclou: active, inactive (baixa), archived, deleted
+  const allDonorsForRemittance = React.useMemo(() =>
+    (availableContacts?.filter(c => c.type === 'donor') as Donor[] || []),
+  [availableContacts]);
+
   // Map contactId -> membershipType per filtrar donations vs memberFees
   const donorMembershipMap = React.useMemo(() => {
     if (!availableContacts) return new Map<string, 'one-time' | 'recurring'>();
@@ -1767,7 +1773,7 @@ export function TransactionsTable({ initialDateFilter = null }: TransactionsTabl
           open={isSplitterOpen}
           onOpenChange={setIsSplitterOpen}
           transaction={transactionToSplit}
-          existingDonors={donors}
+          existingDonors={allDonorsForRemittance}
           existingSuppliers={suppliers}
           existingEmployees={employees}
           onSplitDone={handleOnSplitDone}
