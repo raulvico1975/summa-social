@@ -18,6 +18,8 @@ function loadEnvFile(envPath: string) {
     const idx = trimmed.indexOf('=');
     if (idx === -1) continue;
     const key = trimmed.slice(0, idx).trim();
+    // DEMO: mai injectar GOOGLE_APPLICATION_CREDENTIALS (forcem ADC)
+    if (key === 'GOOGLE_APPLICATION_CREDENTIALS') continue;
     const value = trimmed.slice(idx + 1).trim();
     if (!process.env[key]) process.env[key] = value;
   }
@@ -50,6 +52,12 @@ async function main() {
   }
 
   const mode = parseMode(process.argv);
+
+  // DEMO: forçar ADC i ignorar qualsevol service account local
+  if (process.env.GOOGLE_APPLICATION_CREDENTIALS) {
+    console.warn('[demo:seed] Ignorant GOOGLE_APPLICATION_CREDENTIALS en DEMO (forçant ADC)');
+    delete process.env.GOOGLE_APPLICATION_CREDENTIALS;
+  }
 
   try {
     if (getApps().length === 0) {
