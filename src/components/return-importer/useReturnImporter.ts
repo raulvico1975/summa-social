@@ -49,8 +49,9 @@ export interface ParsedReturn {
   matchedDonorId: string | null;
   matchedDonor: Donor | null;              // Referència completa per conveniència
   matchedBy: 'iban' | 'dni' | 'name' | 'manual' | null;
-  // Camp canònic únic: SI té valor, hi ha donant resolt (P0)
+  // Camps canònics P0: SI resolvedDonorId té valor, hi ha donant resolt
   resolvedDonorId: string | null;
+  resolvedDonorName: string | null;
   // Matching transacció
   matchType: 'grouped' | 'individual' | 'none';
   noMatchReason: NoMatchReason;
@@ -661,6 +662,7 @@ export function useReturnImporter(options: UseReturnImporterOptions = {}) {
           matchedDonor: null,
           matchedBy: null,
           resolvedDonorId: null,  // Camp canònic P0
+          resolvedDonorName: null,  // Camp canònic P0
           matchType: 'none',
           noMatchReason: null,
           groupId: null,
@@ -712,8 +714,9 @@ export function useReturnImporter(options: UseReturnImporterOptions = {}) {
         r.matchedDonor = matchedDonor || null;
         r.matchedDonorId = matchedDonor?.id || null;
         r.matchedBy = matchedBy;
-        // Camp canònic P0: sempre s'omple si hi ha donant
+        // Camps canònics P0: sempre s'omplen si hi ha donant
         r.resolvedDonorId = matchedDonor?.id || null;
+        r.resolvedDonorName = matchedDonor?.name || null;
       }
 
       // Logs deterministes P0
@@ -1264,14 +1267,16 @@ export function useReturnImporter(options: UseReturnImporterOptions = {}) {
 
           // 2. CREAR TOTES les filles des de les devolucions parsejades
           const allReturnsInGroup = group.returns;
-          const resolubles = allReturnsInGroup.filter(r => r.matchedDonor);
-          const pendents = allReturnsInGroup.filter(r => !r.matchedDonor);
+          // P0: usar resolvedDonorId com a criteri canònic
+          const resolubles = allReturnsInGroup.filter(r => r.resolvedDonorId);
+          const pendents = allReturnsInGroup.filter(r => !r.resolvedDonorId);
 
           console.log(`[processReturns] Creant ${allReturnsInGroup.length} filles (${resolubles.length} amb donant, ${pendents.length} sense)`);
 
           // Crear filles per TOTES les devolucions (resolubles i pendents)
           for (const ret of allReturnsInGroup) {
-            const hasContact = !!ret.matchedDonor;
+            // P0: usar camps canònics resolvedDonorId/resolvedDonorName
+            const hasContact = !!ret.resolvedDonorId;
             const childTxData: Record<string, unknown> = {
               source: 'remittance',
               parentTransactionId: parentId,
@@ -1284,23 +1289,23 @@ export function useReturnImporter(options: UseReturnImporterOptions = {}) {
               bankAccountId: group.originalTransaction.bankAccountId ?? null,
             };
 
-            // Si té donant assignat, afegir contactId/contactType
+            // Si té donant assignat, afegir contactId/contactType (P0: camps canònics)
             if (hasContact) {
-              childTxData.contactId = ret.matchedDonor!.id;
+              childTxData.contactId = ret.resolvedDonorId;
               childTxData.contactType = 'donor';
-              childTxData.emisorId = ret.matchedDonor!.id;
-              childTxData.emisorName = ret.matchedDonor!.name;
+              childTxData.emisorId = ret.resolvedDonorId;
+              childTxData.emisorName = ret.resolvedDonorName || ret.matchedDonor?.name || 'Donant';
             }
 
             const newChildRef = await addDoc(
               collection(firestore, 'organizations', organizationId, 'transactions'),
               childTxData
             );
-            console.log(`[processReturns] ✅ Creada filla ${newChildRef.id} - contactId: ${hasContact ? ret.matchedDonor!.id : 'null'}`);
+            console.log(`[processReturns] ✅ Creada filla ${newChildRef.id} - contactId: ${hasContact ? ret.resolvedDonorId : 'null'}`);
 
-            // Actualitzar donant si té contactId
+            // Actualitzar donant si té contactId (P0: usar resolvedDonorId)
             if (hasContact) {
-              const donorRef = doc(firestore, 'organizations', organizationId, 'contacts', ret.matchedDonor!.id);
+              const donorRef = doc(firestore, 'organizations', organizationId, 'contacts', ret.resolvedDonorId!);
               await updateDoc(donorRef, {
                 returnCount: increment(1),
                 lastReturnDate: ret.date?.toISOString().split('T')[0] || new Date().toISOString().split('T')[0],
@@ -1368,9 +1373,9 @@ export function useReturnImporter(options: UseReturnImporterOptions = {}) {
         // Si ja hi ha fills, només actualitzem el pare (no creem més fills)
         const skipChildCreation = existingChildrenCount > 0;
 
-        // SEPARAR: resolubles (amb donant) vs pendents (sense donant)
-        const resolubles = group.returns.filter(r => r.matchedDonor);
-        const pendents = group.returns.filter(r => !r.matchedDonor);
+        // SEPARAR: resolubles (amb donant) vs pendents (sense donant) - P0: usar resolvedDonorId
+        const resolubles = group.returns.filter(r => r.resolvedDonorId);
+        const pendents = group.returns.filter(r => !r.resolvedDonorId);
 
         // Variables per l'estat del pare
         let remittanceStatus: 'complete' | 'partial' | 'pending';
@@ -1473,6 +1478,7 @@ export function useReturnImporter(options: UseReturnImporterOptions = {}) {
         // SKIP si ja existeixen fills (idempotency)
         if (!skipChildCreation) {
           for (const ret of resolubles) {
+            // P0: usar camps canònics resolvedDonorId/resolvedDonorName
             const childTxData = {
               // Camps de la filla
               source: 'remittance',
@@ -1481,11 +1487,11 @@ export function useReturnImporter(options: UseReturnImporterOptions = {}) {
               date: ret.date?.toISOString().split('T')[0] || group.date.toISOString().split('T')[0],
               transactionType: 'return',
               description: ret.returnReason || group.originalTransaction.description || 'Devolució',
-              // Donant assignat (això fa que compti a Model182)
-              contactId: ret.matchedDonor!.id,
+              // Donant assignat (P0: camps canònics)
+              contactId: ret.resolvedDonorId,
               contactType: 'donor',
-              emisorId: ret.matchedDonor!.id,
-              emisorName: ret.matchedDonor!.name,
+              emisorId: ret.resolvedDonorId,
+              emisorName: ret.resolvedDonorName || ret.matchedDonor?.name || 'Donant',
               // Heretar bankAccountId del pare
               bankAccountId: group.originalTransaction.bankAccountId ?? null,
             };
@@ -1495,8 +1501,8 @@ export function useReturnImporter(options: UseReturnImporterOptions = {}) {
               childTxData
             );
 
-            // Actualitzar donant
-            const donorRef = doc(firestore, 'organizations', organizationId, 'contacts', ret.matchedDonor!.id);
+            // Actualitzar donant (P0: usar resolvedDonorId)
+            const donorRef = doc(firestore, 'organizations', organizationId, 'contacts', ret.resolvedDonorId!);
             await updateDoc(donorRef, {
               returnCount: increment(1),
               lastReturnDate: ret.date?.toISOString().split('T')[0] || new Date().toISOString().split('T')[0],
@@ -1607,6 +1613,7 @@ export function useReturnImporter(options: UseReturnImporterOptions = {}) {
             matchedDonor: finalDonor,
             matchedDonorId: finalDonor.id,
             resolvedDonorId: finalDonor.id,  // Camp canònic P0
+            resolvedDonorName: finalDonor.name,  // Camp canònic P0
             matchedBy: 'manual' as const,
             status: 'matched' as const,
           };
