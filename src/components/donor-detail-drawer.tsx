@@ -4,7 +4,7 @@ import * as React from 'react';
 import { useFirebase, useCollection, useMemoFirebase } from '@/firebase';
 import { useCurrentOrganization } from '@/hooks/organization-provider';
 import Link from 'next/link';
-import { collection, query, orderBy, limit, onSnapshot } from 'firebase/firestore';
+import { collection, query, where, orderBy, limit, onSnapshot } from 'firebase/firestore';
 import type { Transaction, Donor, Organization } from '@/lib/data';
 import { formatCurrencyEU } from '@/lib/normalize';
 import { useTranslations } from '@/i18n';
@@ -149,19 +149,21 @@ export function DonorDetailDrawer({ donor, open, onOpenChange, onEdit }: DonorDe
     setIsLoading(true);
     setPermissionError(false);
 
-    // Carregar transaccions recents i filtrar al client
-    // Això evita problemes amb les Security Rules de Firestore que no permeten
-    // queries amb where() quan l'usuari és SuperAdmin però no membre de l'org
-    // Limitem a 500 per rendiment (prou per la majoria de donants)
+    // P0: Query directa per contactId (no carregar globals i filtrar al client)
+    // Això garanteix que totes les transaccions del donant apareixen independentment
+    // del volum global. Necessita índex: contactId + date (desc)
     const txRef = collection(firestore, 'organizations', organizationId, 'transactions');
-    const txQuery = query(txRef, orderBy('date', 'desc'), limit(500));
+    const txQuery = query(
+      txRef,
+      where('contactId', '==', donor.id),
+      orderBy('date', 'desc'),
+      limit(1000)
+    );
 
     const unsubscribe = onSnapshot(
       txQuery,
       (snapshot) => {
-        // Filtrar les transaccions d'aquest donant al client
-        const allTxs = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Transaction));
-        const donorTxs = allTxs.filter(tx => tx.contactId === donor.id);
+        const donorTxs = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Transaction));
         setTransactions(donorTxs);
         setIsLoading(false);
         setPermissionError(false);
