@@ -571,6 +571,17 @@ export const es = {
         pendingPreProcessNextStep4: "Y pulsar \"Reprocesar pendientes\" para completar la remesa.",
         // Microcopy mejorado para badge de pendientes
         willBePendingWithNote: (count: number) => `${count} línea${count !== 1 ? 's' : ''} quedar${count !== 1 ? 'án' : 'á'} pendiente${count !== 1 ? 's' : ''} (se podr${count !== 1 ? 'án' : 'á'} completar después)`,
+        // IBAN ambiguo (cuenta conjunta)
+        ambiguousIbanTitle: (count: number) => `${count} donantes con este IBAN`,
+        ambiguousIbanSubtitle: "(posible cuenta conjunta)",
+        ambiguousIbanHelp: "Asigna cada cobro al donante correcto según el DNI.",
+        ambiguousAssignTo: "Asignar a:",
+        ambiguousAssignAllTo: (name: string, taxId: string) => `Todo a ${name} (${taxId})`,
+        ambiguousAssignAllLabel: "O asignar todas las líneas con este IBAN a:",
+        ambiguousManualSelection: "Selección manual",
+        ambiguousChangeSelection: "Cambiar selección",
+        ambiguousResolved: "Resuelto",
+        ibanCopied: "IBAN copiado",
     }
   },
   importers: {

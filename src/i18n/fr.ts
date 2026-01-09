@@ -571,6 +571,17 @@ export const fr = {
         pendingPreProcessNextStep4: "Et cliquer sur \"Retraiter les en attente\" pour compléter la remise.",
         // Microcopy amélioré pour badge en attente
         willBePendingWithNote: (count: number) => `${count} ligne${count !== 1 ? 's' : ''} restera${count !== 1 ? 'ont' : ''} en attente (${count !== 1 ? 'elles pourront' : 'elle pourra'} être complétée${count !== 1 ? 's' : ''} après)`,
+        // IBAN ambigu (compte joint)
+        ambiguousIbanTitle: (count: number) => `${count} donateurs avec cet IBAN`,
+        ambiguousIbanSubtitle: "(possible compte joint)",
+        ambiguousIbanHelp: "Attribuez chaque prélèvement au donateur correct selon le DNI.",
+        ambiguousAssignTo: "Attribuer à :",
+        ambiguousAssignAllTo: (name: string, taxId: string) => `Tout à ${name} (${taxId})`,
+        ambiguousAssignAllLabel: "Ou attribuer toutes les lignes avec cet IBAN à :",
+        ambiguousManualSelection: "Sélection manuelle",
+        ambiguousChangeSelection: "Changer sélection",
+        ambiguousResolved: "Résolu",
+        ibanCopied: "IBAN copié",
     }
   },
   importers: {

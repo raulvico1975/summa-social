@@ -2446,32 +2446,50 @@ export function RemittanceSplitter({
                           /* IBAN ambigu: selector per resoldre */
                           <div className="space-y-2">
                             {donation.manualMatchContactId ? (
-                              /* Ja resolt: mostrar qui */
+                              /* Ja resolt: mostrar qui amb DNI */
                               <div className="space-y-1">
-                                <div className="flex items-center gap-2">
-                                  <span className="text-green-700 font-medium">
-                                    {donation.ambiguousDonors?.find(d => d.id === donation.manualMatchContactId)?.name || 'Assignat'}
-                                  </span>
-                                  <Badge variant="outline" className="text-[10px] px-1 py-0 text-green-600 border-green-300">
-                                    Selecció manual
-                                  </Badge>
-                                </div>
+                                {(() => {
+                                  const selectedDonor = donation.ambiguousDonors?.find(d => d.id === donation.manualMatchContactId);
+                                  return (
+                                    <div className="flex items-center gap-2">
+                                      <div>
+                                        <span className="text-green-700 font-medium block">
+                                          {selectedDonor?.name || t.movements.splitter.ambiguousResolved}
+                                        </span>
+                                        {selectedDonor?.taxId && (
+                                          <span className="text-[11px] text-green-600">
+                                            DNI: {selectedDonor.taxId}
+                                          </span>
+                                        )}
+                                      </div>
+                                      <Badge variant="outline" className="text-[10px] px-1 py-0 text-green-600 border-green-300">
+                                        {t.movements.splitter.ambiguousManualSelection}
+                                      </Badge>
+                                    </div>
+                                  );
+                                })()}
                                 <button
                                   type="button"
                                   onClick={() => handleAssignDonorToLine(donation.rowIndex, '')}
                                   className="text-[11px] text-muted-foreground hover:underline"
                                 >
-                                  Canviar selecció
+                                  {t.movements.splitter.ambiguousChangeSelection}
                                 </button>
                               </div>
                             ) : (
-                              /* Pendent: mostrar selector */
+                              /* Pendent: mostrar selector amb DNI */
                               <>
                                 <div className="flex items-center gap-2">
                                   <span className="text-amber-600 font-medium">
-                                    {donation.ambiguousDonors?.length ?? 0} donants amb aquest IBAN
+                                    {t.movements.splitter.ambiguousIbanTitle(donation.ambiguousDonors?.length ?? 0)}
                                   </span>
-                                  <span className="text-[11px] text-muted-foreground">(possible compte conjunta)</span>
+                                  <span className="text-[11px] text-muted-foreground">
+                                    {t.movements.splitter.ambiguousIbanSubtitle}
+                                  </span>
+                                </div>
+                                {/* Microcopy explicatiu */}
+                                <div className="text-[11px] text-muted-foreground italic">
+                                  {t.movements.splitter.ambiguousIbanHelp}
                                 </div>
                                 {/* IBAN complet per diagnòstic */}
                                 {donation.iban && (
@@ -2483,7 +2501,7 @@ export function RemittanceSplitter({
                                       type="button"
                                       onClick={() => {
                                         navigator.clipboard.writeText(normalizeIBAN(donation.iban));
-                                        toast({ description: 'IBAN copiat' });
+                                        toast({ description: t.movements.splitter.ibanCopied });
                                       }}
                                       className="p-0.5 hover:bg-muted rounded"
                                       title="Copiar IBAN"
@@ -2492,37 +2510,45 @@ export function RemittanceSplitter({
                                     </button>
                                   </div>
                                 )}
-                                {/* Selector de donant */}
+                                {/* Selector de donant amb DNI */}
                                 {donation.ambiguousDonors && donation.ambiguousDonors.length > 0 && (
-                                  <div className="flex flex-col gap-1">
-                                    <span className="text-[11px] text-muted-foreground">Assignar a:</span>
-                                    <div className="flex flex-wrap gap-1">
+                                  <div className="flex flex-col gap-1.5">
+                                    <span className="text-[11px] text-muted-foreground">
+                                      {t.movements.splitter.ambiguousAssignTo}
+                                    </span>
+                                    <div className="flex flex-col gap-1">
                                       {donation.ambiguousDonors.map(donor => (
                                         <button
                                           key={donor.id}
                                           type="button"
                                           onClick={() => handleAssignDonorToLine(donation.rowIndex, donor.id)}
-                                          className="px-2 py-1 text-xs bg-primary/10 hover:bg-primary/20 text-primary rounded border border-primary/30 transition-colors"
+                                          className="px-3 py-2 text-left bg-primary/5 hover:bg-primary/10 text-primary rounded border border-primary/20 transition-colors"
                                         >
-                                          {donor.name}
+                                          <span className="font-medium block">{donor.name}</span>
+                                          {donor.taxId && (
+                                            <span className="text-[11px] text-primary/70">DNI: {donor.taxId}</span>
+                                          )}
                                         </button>
                                       ))}
                                     </div>
                                     {/* Botó per assignar tot el grup */}
                                     {(ambiguousIbanGroups.find(g => g.ibanKey === normalizeIBAN(donation.iban))?.indices.length ?? 0) > 1 && (
-                                      <div className="mt-1 pt-1 border-t border-dashed">
-                                        <span className="text-[10px] text-muted-foreground">
-                                          O assignar totes les línies amb aquest IBAN a:
+                                      <div className="mt-1.5 pt-1.5 border-t border-dashed">
+                                        <span className="text-[10px] text-muted-foreground block mb-1">
+                                          {t.movements.splitter.ambiguousAssignAllLabel}
                                         </span>
-                                        <div className="flex flex-wrap gap-1 mt-0.5">
+                                        <div className="flex flex-col gap-1">
                                           {donation.ambiguousDonors.map(donor => (
                                             <button
                                               key={`group-${donor.id}`}
                                               type="button"
                                               onClick={() => handleAssignDonorToGroup(normalizeIBAN(donation.iban), donor.id)}
-                                              className="px-2 py-0.5 text-[10px] bg-amber-100 hover:bg-amber-200 text-amber-800 rounded border border-amber-300 transition-colors"
+                                              className="px-2 py-1 text-left text-[11px] bg-amber-50 hover:bg-amber-100 text-amber-800 rounded border border-amber-200 transition-colors"
                                             >
-                                              Tot a {donor.name}
+                                              {t.movements.splitter.ambiguousAssignAllTo(
+                                                donor.name,
+                                                donor.taxId ? `DNI ${donor.taxId}` : ''
+                                              )}
                                             </button>
                                           ))}
                                         </div>
