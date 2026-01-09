@@ -1127,22 +1127,39 @@ export function useReturnImporter(options: UseReturnImporterOptions = {}) {
       amount: r.amount,
     })));
 
+    // Helper: té donant assignat?
+    const hasDonor = (r: ParsedReturn) => !!(r.matchedDonorId || r.matchedDonor);
+
     // Separar individuals i agrupades
     // INDIVIDUAL = té donant + té transacció + NO és grouped
     const individualReturns = parsedReturns.filter(r => {
-      const isIndividual = r.matchedDonorId && r.matchedTransactionId && r.matchType !== 'grouped';
+      const isIndividual = hasDonor(r) && r.matchedTransactionId && r.matchType !== 'grouped';
       console.log(`[processReturns] Checking: status=${r.status}, matchType=${r.matchType}, donorId=${r.matchedDonorId}, txId=${r.matchedTransactionId} → isIndividual=${isIndividual}`);
       return isIndividual;
     });
 
+    // GROUPED = matchType === 'grouped' + té donant
+    // (En mode contextual, status pot ser 'donor_found' però igualment s'ha de processar si té donant)
     const groupedReturnsToProcess = parsedReturns.filter(r =>
-      r.status === 'matched' && r.matchType === 'grouped'
+      r.matchType === 'grouped' && hasDonor(r)
     );
 
-    console.log(`[processReturns] 📊 Filtratge: ${individualReturns.length} individuals, ${groupedReturnsToProcess.length} grouped`);
+    // Comptar quantes no tenen donant (per feedback)
+    const withoutDonor = parsedReturns.filter(r => !hasDonor(r));
+
+    console.log(`[processReturns] 📊 Filtratge: ${individualReturns.length} individuals, ${groupedReturnsToProcess.length} grouped, ${withoutDonor.length} sense donant`);
 
     if (individualReturns.length === 0 && groupedReturnsToProcess.length === 0) {
-      toast({ variant: 'destructive', title: 'Res a processar', description: 'No hi ha devolucions per assignar' });
+      // Missatge explicatiu segons el cas
+      if (withoutDonor.length > 0) {
+        toast({
+          variant: 'destructive',
+          title: 'No s\'han pogut assignar',
+          description: `${withoutDonor.length} devolucions no tenen donant identificat. Cal assignar donant manualment.`
+        });
+      } else {
+        toast({ variant: 'destructive', title: 'Res a processar', description: 'No hi ha devolucions per assignar' });
+      }
       return;
     }
 
