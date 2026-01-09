@@ -427,6 +427,8 @@ gcloud auth application-default login
 
 ### 4. Arrencada DEMO
 
+> **Per instruccions pas a pas per no-programadors:** [docs/DEMO-PAS-A-PAS.md](./DEMO-PAS-A-PAS.md)
+
 #### DEMO en 1 comandament (recomanat)
 
 ```bash
