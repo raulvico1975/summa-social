@@ -50,6 +50,18 @@ export function filterMatchableContacts<T extends AnyContact>(contacts: T[]): T[
 }
 
 /**
+ * Filtra contactes per matching per IBAN en remeses IN
+ * INCLOU TOTS els estats: active, inactive, archived, deleted
+ *
+ * INVARIANT P0: Si s'ha passat un rebut i s'ha cobrat, Summa HA de trobar el soci
+ * independentment del seu estat intern. Mai crear duplicat si IBAN existeix.
+ */
+export function filterAllForIbanMatching<T extends AnyContact>(contacts: T[]): T[] {
+  // NO exclou res - TOTS els contactes són matchables per IBAN
+  return contacts;
+}
+
+/**
  * Filtra només donants actius (helper tipat)
  */
 export function filterActiveDonors(donors: Donor[]): Donor[] {

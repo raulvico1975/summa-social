@@ -697,10 +697,13 @@ export interface SepaCollectionRun {
  * Motiu pel qual una quota de remesa està pendent
  */
 export type RemittancePendingReason =
-  | 'NO_TAXID'      // Fila sense DNI/CIF vàlid
-  | 'INVALID_DATA'  // Dades invàlides (import negatiu, nom buit, etc.)
-  | 'NO_MATCH'      // No s'ha trobat coincidència amb cap donant existent
-  | 'DUPLICATE';    // Fila duplicada dins la mateixa remesa
+  | 'NO_TAXID'        // Fila sense DNI/CIF vàlid (legacy mode OUT)
+  | 'INVALID_DATA'    // Dades invàlides (import negatiu, nom buit, etc.)
+  | 'NO_MATCH'        // No s'ha trobat coincidència amb cap donant existent (legacy)
+  | 'DUPLICATE'       // Fila duplicada dins la mateixa remesa
+  // P0: Nous motius per mode IN (IBAN-first)
+  | 'NO_IBAN_MATCH'   // IBAN no trobat a Summa
+  | 'AMBIGUOUS_IBAN'; // IBAN duplicat (>1 donant)
 
 /**
  * Element pendent d'una remesa IN (quota no processada)
@@ -715,4 +718,6 @@ export type RemittancePendingItem = {
   reason: RemittancePendingReason;        // Motiu del pendent
   sourceRowIndex: number;                 // Índex de la fila original al CSV (per debug)
   createdAt: string;                      // ISO date
+  // P0: Donants candidats per IBAN ambigu (selecció manual)
+  ambiguousDonorIds?: string[];           // IDs dels donants amb IBAN duplicat
 };

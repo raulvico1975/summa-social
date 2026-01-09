@@ -62,7 +62,7 @@ import { useCollection, useMemoFirebase } from '@/firebase';
 import { useTranslations } from '@/i18n';
 import { useCurrentOrganization } from '@/hooks/organization-provider';
 import { parsePain001, isPain001File, downloadPain001 } from '@/lib/sepa';
-import { filterMatchableContacts, isNumericLikeName, maskMatchValue } from '@/lib/contacts/filterActiveContacts';
+import { filterMatchableContacts, filterAllForIbanMatching, isNumericLikeName, maskMatchValue } from '@/lib/contacts/filterActiveContacts';
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // TIPUS
@@ -95,7 +95,10 @@ interface SavedMapping {
 }
 
 // Tipus de matching per traçabilitat
-type MatchMethod = 'taxId' | 'iban' | 'name' | null;
+type MatchMethod = 'iban' | 'taxId' | 'name' | null;
+
+// Estat del donant per mostrar a la UI
+type DonorMatchStatus = 'active' | 'inactive' | 'archived' | 'deleted';
 
 // Resultat de l'anàlisi de cada fila del CSV
 // Nota: Usem "matchedDonor" i "Donor" per compatibilitat, però pot ser proveïdor/treballador
@@ -108,13 +111,24 @@ interface ParsedDonation {
   idCandidate: string;              // Valor cru abans de normalitzar (per mostrar)
   iban: string;
   amount: number;
-  status: 'found' | 'found_inactive' | 'new_with_taxid' | 'new_without_taxid';
+  // NOUS ESTATS P0:
+  // - found: match IBAN amb donant actiu
+  // - found_inactive: match IBAN amb donant baixa
+  // - found_archived: match IBAN amb donant arxivat
+  // - found_deleted: match IBAN amb donant eliminat
+  // - ambiguous_iban: IBAN duplicat (>1 donant)
+  // - no_iban_match: IBAN no trobat
+  status: 'found' | 'found_inactive' | 'found_archived' | 'found_deleted' | 'ambiguous_iban' | 'no_iban_match' | 'new_with_taxid' | 'new_without_taxid';
   matchedDonor: Donor | null;
+  matchedDonorStatus?: DonorMatchStatus; // Estat del donant matched (per mostrar badge)
+  ambiguousDonors?: Donor[];        // Llista de donants amb IBAN duplicat (per selecció manual)
   matchedContactType?: 'donor' | 'supplier' | 'employee';
   matchMethod?: MatchMethod;        // Com s'ha trobat el match (per traçabilitat)
   matchValueMasked?: string;        // Valor emmascarament per mostrar a la UI (últims 4 IBAN, etc.)
   shouldCreate: boolean;
   zipCode: string;
+  // Nota explicativa per la UI
+  matchNote?: string;
 }
 
 type Step = 'upload' | 'mapping' | 'preview' | 'processing';
@@ -386,14 +400,38 @@ export function RemittanceSplitter({
     }
   }, [open]);
 
-  // Estadístiques
+  // Estadístiques P0: nous estats per matching IBAN-first
   const stats = React.useMemo(() => {
     const found = parsedDonations.filter(d => d.status === 'found').length;
     const foundInactive = parsedDonations.filter(d => d.status === 'found_inactive').length;
+    const foundArchived = parsedDonations.filter(d => d.status === 'found_archived').length;
+    const foundDeleted = parsedDonations.filter(d => d.status === 'found_deleted').length;
+    const ambiguousIban = parsedDonations.filter(d => d.status === 'ambiguous_iban').length;
+    const noIbanMatch = parsedDonations.filter(d => d.status === 'no_iban_match').length;
+    // Legacy (mode OUT)
     const newWithTaxId = parsedDonations.filter(d => d.status === 'new_with_taxid').length;
     const newWithoutTaxId = parsedDonations.filter(d => d.status === 'new_without_taxid').length;
-    const toCreate = parsedDonations.filter(d => d.status !== 'found' && d.status !== 'found_inactive' && d.shouldCreate).length;
-    return { found, foundInactive, newWithTaxId, newWithoutTaxId, toCreate };
+
+    // Totals per categories
+    const totalFound = found + foundInactive + foundArchived + foundDeleted;
+    const totalPending = ambiguousIban + noIbanMatch;
+
+    // toCreate ja no aplica per mode IN (tot via IBAN), però mantenim per mode OUT
+    const toCreate = parsedDonations.filter(d => d.shouldCreate).length;
+
+    return {
+      found,
+      foundInactive,
+      foundArchived,
+      foundDeleted,
+      ambiguousIban,
+      noIbanMatch,
+      newWithTaxId,
+      newWithoutTaxId,
+      totalFound,
+      totalPending,
+      toCreate,
+    };
   }, [parsedDonations]);
 
   // Càlcul del delta en cèntims per validació i observabilitat
@@ -422,8 +460,10 @@ export function RemittanceSplitter({
     if (validationDetails.invalidAmounts > 0) return false;
     // Verificar que el total quadra amb el pare (±2 cèntims)
     if (Math.abs(validationDetails.deltaCents) > 2) return false;
+    // P0: Bloquejar si hi ha IBAN ambigus sense resoldre (mode IN)
+    if (!isPaymentRemittance && stats.ambiguousIban > 0) return false;
     return true;
-  }, [parsedDonations.length, validationDetails]);
+  }, [parsedDonations.length, validationDetails, isPaymentRemittance, stats.ambiguousIban]);
 
   // Motiu de bloqueig per mostrar a l'usuari
   const blockReason = React.useMemo((): string | null => {
@@ -435,8 +475,12 @@ export function RemittanceSplitter({
       const deltaCentsAbs = Math.abs(validationDetails.deltaCents);
       return `Delta ${deltaCentsAbs > 0 ? '+' : ''}${validationDetails.deltaCents / 100}€ (màx ±0.02€)`;
     }
+    // P0: Bloqueig per IBAN ambigu
+    if (!isPaymentRemittance && stats.ambiguousIban > 0) {
+      return `${stats.ambiguousIban} IBAN(s) ambigu(s) - cal selecció manual`;
+    }
     return null;
-  }, [parsedDonations.length, validationDetails]);
+  }, [parsedDonations.length, validationDetails, isPaymentRemittance, stats.ambiguousIban]);
 
   // Files visibles per al preview del mapejat
   const previewRows = React.useMemo(() => {
@@ -792,47 +836,137 @@ export function RemittanceSplitter({
       .toUpperCase();
   };
 
-  // Retorna el donant trobat, el mètode de matching i el valor usat per traçabilitat
-  const findDonor = (
-    name: string,
-    taxId: string,
+  // ═══════════════════════════════════════════════════════════════════════════
+  // MATCHING P0: IBAN-FIRST per remeses IN
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  /**
+   * Determina l'estat del donant per mostrar a la UI
+   */
+  const getDonorMatchStatus = (donor: Donor): DonorMatchStatus => {
+    if ('deletedAt' in donor && donor.deletedAt) return 'deleted';
+    if (donor.archivedAt) return 'archived';
+    if (donor.status === 'inactive') return 'inactive';
+    return 'active';
+  };
+
+  /**
+   * Matching per remeses IN - IBAN és el criteri ÚNIC i PRIORITARI
+   *
+   * INVARIANTS P0:
+   * 1. IBAN és el criteri de matching principal i prioritari
+   * 2. L'estat del donant NO bloqueja el match (active, inactive, archived, deleted → TOTS fan match)
+   * 3. IBAN duplicat és l'ÚNIC cas que bloqueja l'automatització
+   * 4. DNI/NIF NO és criteri de cobrament (serveix per fiscalitat)
+   *
+   * @returns { status, donor, donors, method, matchedValue, matchNote }
+   */
+  const matchDonorForRemittance = (
     iban: string,
-    donors: Donor[]
-  ): { donor: Donor | undefined; method: MatchMethod; matchedValue: string } => {
-    const normalizedCsvName = normalizeString(name);
-    const csvNameTokens = new Set(normalizedCsvName.split(' ').filter(Boolean));
-
-    // 1. Buscar per DNI/CIF (màxima prioritat)
-    if (taxId) {
-      const normalizedTaxId = normalizeString(taxId);
-      const foundByTaxId = donors.find(d => normalizeString(d.taxId) === normalizedTaxId);
-      if (foundByTaxId) return { donor: foundByTaxId, method: 'taxId', matchedValue: foundByTaxId.taxId || taxId };
+    allDonors: Donor[]
+  ): {
+    status: 'found' | 'found_inactive' | 'found_archived' | 'found_deleted' | 'ambiguous_iban' | 'no_iban_match';
+    donor: Donor | null;
+    donors?: Donor[];
+    donorStatus?: DonorMatchStatus;
+    method: MatchMethod;
+    matchedValue: string;
+    matchNote: string;
+  } => {
+    // Si no hi ha IBAN, no podem fer match
+    if (!iban) {
+      return {
+        status: 'no_iban_match',
+        donor: null,
+        method: null,
+        matchedValue: '',
+        matchNote: 'IBAN no disponible al fitxer',
+      };
     }
 
-    // 2. Buscar per IBAN (molt fiable si coincideix)
-    if (iban) {
-      const normalizedCsvIban = normalizeIban(iban);
-      const foundByIban = donors.find(d => d.iban && normalizeIban(d.iban) === normalizedCsvIban);
-      if (foundByIban) return { donor: foundByIban, method: 'iban', matchedValue: foundByIban.iban || iban };
+    const normalizedCsvIban = normalizeIban(iban);
+
+    // Buscar TOTS els donants amb aquest IBAN (sense excloure cap estat)
+    const matchedDonors = allDonors.filter(d =>
+      d.iban && normalizeIban(d.iban) === normalizedCsvIban
+    );
+
+    // Cap resultat → IBAN no trobat
+    if (matchedDonors.length === 0) {
+      return {
+        status: 'no_iban_match',
+        donor: null,
+        method: null,
+        matchedValue: '',
+        matchNote: 'IBAN no trobat a Summa',
+      };
     }
 
-    // 3. Buscar per nom (menys fiable)
-    // GUARD: Bloquejar noms purament numèrics (poden fer falsos positius)
-    if (normalizedCsvName && !isNumericLikeName(normalizedCsvName)) {
-      const potentialMatches = donors.filter(d => {
-        const normalizedDonorName = normalizeString(d.name);
-        if (!normalizedDonorName) return false;
-        // Bloquejar també donants amb noms numèrics
-        if (isNumericLikeName(normalizedDonorName)) return false;
-        const donorNameTokens = normalizedDonorName.split(' ').filter(Boolean);
-        return [...csvNameTokens].every(token => donorNameTokens.includes(token));
-      });
-      if (potentialMatches.length === 1) {
-        return { donor: potentialMatches[0], method: 'name', matchedValue: potentialMatches[0].name };
-      }
+    // Més d'un resultat → IBAN ambigu (duplicat)
+    if (matchedDonors.length > 1) {
+      return {
+        status: 'ambiguous_iban',
+        donor: null,
+        donors: matchedDonors,
+        method: 'iban',
+        matchedValue: iban,
+        matchNote: `IBAN duplicat: ${matchedDonors.length} donants`,
+      };
     }
 
-    return { donor: undefined, method: null, matchedValue: '' };
+    // Exactament 1 resultat → match automàtic (independentment de l'estat)
+    const matchedDonor = matchedDonors[0];
+    const donorStatus = getDonorMatchStatus(matchedDonor);
+
+    // Determinar estat i nota segons l'estat del donant
+    let status: 'found' | 'found_inactive' | 'found_archived' | 'found_deleted';
+    let matchNote: string;
+
+    switch (donorStatus) {
+      case 'deleted':
+        status = 'found_deleted';
+        matchNote = 'Registre eliminat, però la donació s\'imputa';
+        break;
+      case 'archived':
+        status = 'found_archived';
+        matchNote = 'Registre arxivat, però la donació s\'imputa';
+        break;
+      case 'inactive':
+        status = 'found_inactive';
+        matchNote = 'Donació imputada tot i estar de baixa';
+        break;
+      default:
+        status = 'found';
+        matchNote = 'Trobat per IBAN';
+    }
+
+    return {
+      status,
+      donor: matchedDonor,
+      donorStatus,
+      method: 'iban',
+      matchedValue: matchedDonor.iban || iban,
+      matchNote,
+    };
+  };
+
+  // Fallback: matching per taxId (només per remeses IN quan no hi ha IBAN)
+  // NOTA: Això és un fallback, NO crea donants nous
+  const matchDonorByTaxId = (
+    taxId: string,
+    allDonors: Donor[]
+  ): { donor: Donor | null; donorStatus?: DonorMatchStatus } => {
+    if (!taxId) return { donor: null };
+
+    const normalizedTaxId = normalizeString(taxId);
+    const matchedDonor = allDonors.find(d => normalizeString(d.taxId) === normalizedTaxId);
+
+    if (!matchedDonor) return { donor: null };
+
+    return {
+      donor: matchedDonor,
+      donorStatus: getDonorMatchStatus(matchedDonor),
+    };
   };
 
   // Buscar beneficiari per mode OUT (treballadors i proveïdors)
@@ -976,32 +1110,59 @@ export function RemittanceSplitter({
             status = 'new_without_taxid';
           }
         } else {
-          // Mode IN: buscar a donants (comportament original)
-          // IMPORTANT: Usar filterMatchableContacts per INCLOURE donants de baixa
-          // Això garanteix que no es creïn duplicats amb el mateix DNI
-          // INVARIANT: Mai crear donant nou si existeix taxId (actiu O baixa)
-          const matchableDonors = filterMatchableContacts(existingDonors);
-          const result = findDonor(name, taxId, iban, matchableDonors);
-          matchedDonor = result.donor ?? null;
+          // ═══════════════════════════════════════════════════════════════════
+          // MODE IN: MATCHING IBAN-FIRST (P0)
+          // ═══════════════════════════════════════════════════════════════════
+          // INVARIANTS:
+          // 1. IBAN és el criteri de matching principal i prioritari
+          // 2. L'estat del donant NO bloqueja el match
+          // 3. IBAN duplicat és l'ÚNIC cas que bloqueja l'automatització
+          // 4. DNI/NIF NO és criteri de cobrament
+          // ═══════════════════════════════════════════════════════════════════
+
+          // Usar TOTS els donants per matching IBAN (sense excloure cap estat)
+          const allDonorsForMatching = filterAllForIbanMatching(existingDonors);
+          const result = matchDonorForRemittance(iban, allDonorsForMatching);
+
+          matchedDonor = result.donor;
           matchedContactType = result.donor ? 'donor' : undefined;
           matchMethod = result.method;
+          status = result.status;
+
+          // Variables addicionals per al nou matching
+          let matchedDonorStatus: DonorMatchStatus | undefined = result.donorStatus;
+          let ambiguousDonors: Donor[] | undefined = result.donors;
+          let matchNote: string = result.matchNote;
+
           // Generar valor emmascarament per mostrar a la UI
           if (result.method && result.matchedValue) {
             matchValueMasked = maskMatchValue(result.method, result.matchedValue);
           }
 
-          if (matchedDonor) {
-            // Si el donant està inactiu (baixa), marcar com found_inactive
-            // Això permet oferir reactivació sense crear duplicats
-            status = matchedDonor.status === 'inactive' ? 'found_inactive' : 'found';
-          } else if (taxIdValid) {
-            // NOMÉS és new_with_taxid si és un DNI/NIE/CIF vàlid
-            // I no existeix cap donant amb aquest taxId (ni actiu ni baixa)
-            status = 'new_with_taxid';
-          } else {
-            // Tot el que no passa validació fiscal → new_without_taxid (inclou refs bancàries)
-            status = 'new_without_taxid';
-          }
+          // Push donation amb nous camps
+          donations.push({
+            rowIndex: startRow + i + 1,
+            name,
+            taxId: normalizedTaxId,
+            taxIdValid,
+            taxIdType,
+            idCandidate,
+            iban,
+            amount,
+            status,
+            matchedDonor,
+            matchedDonorStatus,
+            ambiguousDonors,
+            matchedContactType,
+            matchMethod,
+            matchValueMasked,
+            // shouldCreate només per estats que permeten processament automàtic
+            // Els pendents (no_iban_match, ambiguous_iban) NO es creen automàticament
+            shouldCreate: false, // Mai crear automàticament - tot via IBAN
+            zipCode: defaultZipCode,
+            matchNote,
+          });
+          continue; // Salt el push general de més avall
         }
 
         donations.push({
@@ -1018,7 +1179,7 @@ export function RemittanceSplitter({
           matchedContactType,
           matchMethod,                     // Traçabilitat: com s'ha trobat el match
           matchValueMasked,                // Valor emmascarament per mostrar a la UI
-          shouldCreate: status !== 'found' && status !== 'found_inactive',
+          shouldCreate: false, // Mode OUT: mai crear automàticament
           zipCode: defaultZipCode,
         });
       }
@@ -1206,24 +1367,45 @@ export function RemittanceSplitter({
       log(`[Splitter] Creant document de remesa ${remittanceId}...`);
 
       // ═══════════════════════════════════════════════════════════════════════
-      // REGLA FIXA: Separar resoluble vs pendent
-      // - Resoluble: match O (new_with_taxid amb name i amount > 0)
-      // - Pendent: new_without_taxid O dades invàlides
+      // P0: REGLA FIXA per remeses IN (IBAN-first)
+      // - Resoluble: found, found_inactive, found_archived, found_deleted
+      // - Pendent: no_iban_match, ambiguous_iban (ja bloquejat per canProcess)
+      // Mode OUT: manté comportament original
       // ═══════════════════════════════════════════════════════════════════════
-      const resolvableDonations = parsedDonations.filter(d =>
-        d.status === 'found' ||
-        d.status === 'found_inactive' ||
-        (d.status === 'new_with_taxid' && d.name && d.amount > 0)
-      );
-      const pendingDonations = parsedDonations.filter(d =>
-        d.status === 'new_without_taxid' ||
-        (d.status === 'new_with_taxid' && (!d.name || d.amount <= 0))
-      );
+      const resolvableDonations = parsedDonations.filter(d => {
+        if (isPaymentRemittance) {
+          // Mode OUT: comportament original
+          return d.status === 'found' ||
+                 d.status === 'found_inactive' ||
+                 (d.status === 'new_with_taxid' && d.name && d.amount > 0);
+        } else {
+          // Mode IN: TOTS els found* són resolubles (IBAN match)
+          return d.status === 'found' ||
+                 d.status === 'found_inactive' ||
+                 d.status === 'found_archived' ||
+                 d.status === 'found_deleted';
+        }
+      });
+
+      const pendingDonations = parsedDonations.filter(d => {
+        if (isPaymentRemittance) {
+          // Mode OUT: comportament original
+          return d.status === 'new_without_taxid' ||
+                 (d.status === 'new_with_taxid' && (!d.name || d.amount <= 0));
+        } else {
+          // Mode IN: només pendents per IBAN no trobat o ambigu
+          // NOTA: ambiguous_iban ja està bloquejat per canProcess
+          return d.status === 'no_iban_match' ||
+                 d.status === 'ambiguous_iban';
+        }
+      });
 
       log(`[Splitter] Resoluble: ${resolvableDonations.length}, Pendents: ${pendingDonations.length}`);
 
-      // 1. Crear nous contactes NOMÉS per resoluble amb new_with_taxid
-      const contactsToCreate = resolvableDonations.filter(d => d.status === 'new_with_taxid');
+      // 1. Crear nous contactes (mode OUT només - mode IN no crea per IBAN)
+      const contactsToCreate = isPaymentRemittance
+        ? resolvableDonations.filter(d => d.status === 'new_with_taxid')
+        : []; // Mode IN: MAI crear donants nous - tot via IBAN
       const contactTypeName = isPaymentRemittance ? 'proveïdors' : 'donants';
       log(`[Splitter] Creant ${contactsToCreate.length} nous ${contactTypeName}...`);
 
@@ -1338,10 +1520,18 @@ export function RemittanceSplitter({
 
           for (const item of chunk) {
             const pendingDocRef = doc(pendingRef);
-            const reason: import('@/lib/data').RemittancePendingReason =
-              !item.taxId ? 'NO_TAXID' :
-              !item.name || item.amount <= 0 ? 'INVALID_DATA' :
-              'NO_MATCH';
+
+            // P0: Nous motius de pendent per mode IN (IBAN-first)
+            let reason: import('@/lib/data').RemittancePendingReason;
+            if (!isPaymentRemittance) {
+              // Mode IN: només 2 motius possibles
+              reason = item.status === 'ambiguous_iban' ? 'AMBIGUOUS_IBAN' : 'NO_IBAN_MATCH';
+            } else {
+              // Mode OUT: comportament original
+              reason = !item.taxId ? 'NO_TAXID' :
+                       !item.name || item.amount <= 0 ? 'INVALID_DATA' :
+                       'NO_MATCH';
+            }
 
             pendingTotalCents += Math.round(Math.abs(item.amount) * 100);
 
@@ -1354,6 +1544,10 @@ export function RemittanceSplitter({
               reason,
               sourceRowIndex: item.rowIndex,
               createdAt: now,
+              // P0: Guardar donants candidats per IBAN ambigu
+              ...(item.ambiguousDonors && {
+                ambiguousDonorIds: item.ambiguousDonors.map(d => d.id),
+              }),
             });
           }
 
@@ -1814,62 +2008,120 @@ export function RemittanceSplitter({
                 </DialogDescription>
               </DialogHeader>
 
-              {/* Resum compacte en línia */}
+              {/* P0: Header resum compacte - Format: "314 trobades · 3 pendents · Total 4.390,00 €" */}
               <div className="flex flex-wrap items-center gap-3">
-                {/* Stats compactes com a badges */}
-                <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-muted text-sm">
-                  <span className="font-semibold">{parsedDonations.length}</span>
-                  <span className="text-muted-foreground">
-                    {isPaymentRemittance ? t.movements.splitter.payments : t.movements.splitter.donations}
-                  </span>
-                </div>
-                <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-green-50 border border-green-200 text-sm">
-                  <CheckCircle2 className="h-3.5 w-3.5 text-green-600" />
-                  <span className="font-semibold text-green-700">{stats.found}</span>
-                  <span className="text-green-600">{t.movements.splitter.found}</span>
-                </div>
-                {stats.foundInactive > 0 && (
-                  <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-amber-50 border border-amber-200 text-sm">
-                    <AlertTriangle className="h-3.5 w-3.5 text-amber-600" />
-                    <span className="font-semibold text-amber-700">{stats.foundInactive}</span>
-                    <span className="text-amber-600">{t.movements.splitter.foundInactiveBadge}</span>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={handleReactivateAllInactive}
-                      disabled={isProcessing}
-                      className="h-5 px-1.5 text-xs text-amber-700 hover:text-amber-900 hover:bg-amber-100 ml-1"
-                    >
-                      <RotateCcw className="h-3 w-3" />
-                    </Button>
-                  </div>
-                )}
-                {stats.newWithTaxId > 0 && (
-                  <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-blue-50 border border-blue-200 text-sm">
-                    <UserPlus className="h-3.5 w-3.5 text-blue-600" />
-                    <span className="font-semibold text-blue-700">{stats.newWithTaxId}</span>
-                    <span className="text-blue-600">{t.movements.splitter.newWithTaxId}</span>
-                  </div>
-                )}
-                {stats.newWithoutTaxId > 0 && (
-                  <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-orange-50 border border-orange-200 text-sm">
-                    <AlertCircle className="h-3.5 w-3.5 text-orange-600" />
-                    <span className="font-semibold text-orange-700">{stats.newWithoutTaxId}</span>
-                    <span className="text-orange-600">{t.movements.splitter.newWithoutTaxId}</span>
-                  </div>
+                {/* Mode IN: mostrar trobades per IBAN (totalFound) */}
+                {!isPaymentRemittance ? (
+                  <>
+                    {/* Trobades per IBAN (tots els estats: active, inactive, archived, deleted) */}
+                    <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-green-50 border border-green-200 text-sm">
+                      <CheckCircle2 className="h-3.5 w-3.5 text-green-600" />
+                      <span className="font-semibold text-green-700">{stats.totalFound}</span>
+                      <span className="text-green-600">trobades</span>
+                    </div>
+
+                    {/* Desglossat per estats especials */}
+                    {stats.foundInactive > 0 && (
+                      <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-amber-50 border border-amber-200 text-sm">
+                        <AlertTriangle className="h-3.5 w-3.5 text-amber-600" />
+                        <span className="font-semibold text-amber-700">{stats.foundInactive}</span>
+                        <span className="text-amber-600">Baixa</span>
+                      </div>
+                    )}
+                    {stats.foundArchived > 0 && (
+                      <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-gray-100 border border-gray-300 text-sm">
+                        <AlertTriangle className="h-3.5 w-3.5 text-gray-600" />
+                        <span className="font-semibold text-gray-700">{stats.foundArchived}</span>
+                        <span className="text-gray-600">Arxivat</span>
+                      </div>
+                    )}
+                    {stats.foundDeleted > 0 && (
+                      <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-red-50 border border-red-200 text-sm">
+                        <AlertTriangle className="h-3.5 w-3.5 text-red-600" />
+                        <span className="font-semibold text-red-700">{stats.foundDeleted}</span>
+                        <span className="text-red-600">Eliminat</span>
+                      </div>
+                    )}
+
+                    {/* Pendents (IBAN no trobat o ambigu) */}
+                    {stats.totalPending > 0 && (
+                      <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-orange-50 border border-orange-200 text-sm">
+                        <AlertCircle className="h-3.5 w-3.5 text-orange-600" />
+                        <span className="font-semibold text-orange-700">{stats.totalPending}</span>
+                        <span className="text-orange-600">pendents</span>
+                      </div>
+                    )}
+
+                    {/* Desglossat pendents */}
+                    {stats.ambiguousIban > 0 && (
+                      <div className="flex items-center gap-1.5 px-2 py-0.5 rounded bg-red-100 border border-red-300 text-xs">
+                        <span className="font-semibold text-red-700">{stats.ambiguousIban}</span>
+                        <span className="text-red-600">IBAN ambigu</span>
+                      </div>
+                    )}
+                    {stats.noIbanMatch > 0 && (
+                      <div className="flex items-center gap-1.5 px-2 py-0.5 rounded bg-orange-100 border border-orange-300 text-xs">
+                        <span className="font-semibold text-orange-700">{stats.noIbanMatch}</span>
+                        <span className="text-orange-600">IBAN no trobat</span>
+                      </div>
+                    )}
+                  </>
+                ) : (
+                  /* Mode OUT: comportament original */
+                  <>
+                    <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-muted text-sm">
+                      <span className="font-semibold">{parsedDonations.length}</span>
+                      <span className="text-muted-foreground">{t.movements.splitter.payments}</span>
+                    </div>
+                    <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-green-50 border border-green-200 text-sm">
+                      <CheckCircle2 className="h-3.5 w-3.5 text-green-600" />
+                      <span className="font-semibold text-green-700">{stats.found}</span>
+                      <span className="text-green-600">{t.movements.splitter.found}</span>
+                    </div>
+                    {stats.foundInactive > 0 && (
+                      <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-amber-50 border border-amber-200 text-sm">
+                        <AlertTriangle className="h-3.5 w-3.5 text-amber-600" />
+                        <span className="font-semibold text-amber-700">{stats.foundInactive}</span>
+                        <span className="text-amber-600">{t.movements.splitter.foundInactiveBadge}</span>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={handleReactivateAllInactive}
+                          disabled={isProcessing}
+                          className="h-5 px-1.5 text-xs text-amber-700 hover:text-amber-900 hover:bg-amber-100 ml-1"
+                        >
+                          <RotateCcw className="h-3 w-3" />
+                        </Button>
+                      </div>
+                    )}
+                    {stats.newWithTaxId > 0 && (
+                      <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-blue-50 border border-blue-200 text-sm">
+                        <UserPlus className="h-3.5 w-3.5 text-blue-600" />
+                        <span className="font-semibold text-blue-700">{stats.newWithTaxId}</span>
+                        <span className="text-blue-600">{t.movements.splitter.newWithTaxId}</span>
+                      </div>
+                    )}
+                    {stats.newWithoutTaxId > 0 && (
+                      <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-orange-50 border border-orange-200 text-sm">
+                        <AlertCircle className="h-3.5 w-3.5 text-orange-600" />
+                        <span className="font-semibold text-orange-700">{stats.newWithoutTaxId}</span>
+                        <span className="text-orange-600">{t.movements.splitter.newWithoutTaxId}</span>
+                      </div>
+                    )}
+                  </>
                 )}
 
                 {/* Separador visual */}
                 <div className="h-5 w-px bg-border mx-1" />
 
-                {/* Import total compacte - comparem valors absoluts per suportar IN i OUT */}
+                {/* Import total compacte */}
                 <div className={`flex items-center gap-1.5 px-2.5 py-1 rounded-md text-sm ${
-                  Math.abs(validationDetails.deltaCents) <= 2
+                  Math.abs(validationDetails.deltaCents) <= 2 && (!stats.ambiguousIban || isPaymentRemittance)
                     ? 'bg-green-50 border border-green-200'
                     : 'bg-red-50 border border-red-200'
                 }`}>
                   <CheckCircle2 className={`h-3.5 w-3.5 ${
-                    Math.abs(validationDetails.deltaCents) <= 2 ? 'text-green-600' : 'text-red-600'
+                    Math.abs(validationDetails.deltaCents) <= 2 && (!stats.ambiguousIban || isPaymentRemittance) ? 'text-green-600' : 'text-red-600'
                   }`} />
                   <span className="font-semibold">{formatCurrencyEU(totalAmount)}</span>
                   <span className="text-muted-foreground">/ {formatCurrencyEU(Math.abs(transaction.amount))}</span>
@@ -1989,11 +2241,15 @@ export function RemittanceSplitter({
                 <TableBody>
                   {parsedDonations.map((donation, index) => (
                     <TableRow key={index} className={
-                      donation.status === 'found' || donation.status === 'found_inactive'
-                        ? 'bg-green-50/50'
-                        : donation.status === 'new_with_taxid'
-                        ? 'bg-blue-50/50'
-                        : 'bg-orange-50/50'
+                      // P0: Colors segons estat
+                      donation.status === 'found' ? 'bg-green-50/50' :
+                      donation.status === 'found_inactive' ? 'bg-amber-50/50' :
+                      donation.status === 'found_archived' ? 'bg-gray-50/50' :
+                      donation.status === 'found_deleted' ? 'bg-red-50/30' :
+                      donation.status === 'ambiguous_iban' ? 'bg-red-100/50' :
+                      donation.status === 'no_iban_match' ? 'bg-orange-50/50' :
+                      donation.status === 'new_with_taxid' ? 'bg-blue-50/50' :
+                      'bg-orange-50/50'
                     }>
                       <TableCell className="font-medium">{donation.name || '-'}</TableCell>
                       <TableCell className="font-mono text-xs">
@@ -2009,43 +2265,68 @@ export function RemittanceSplitter({
                           </span>
                         ) : '-'}
                       </TableCell>
-                      {/* IBAN - SEMPRE visible, especialment important per pendents */}
+                      {/* IBAN - P0: SEMPRE visible, criteri principal per mode IN */}
                       <TableCell className="font-mono text-xs">
                         {donation.iban ? (
-                          <span className={donation.status === 'new_without_taxid' ? 'text-orange-700 font-medium' : 'text-muted-foreground'}>
+                          <span className={
+                            // P0: Color segons estat de matching IBAN
+                            donation.status === 'found' || donation.status === 'found_inactive' ||
+                            donation.status === 'found_archived' || donation.status === 'found_deleted'
+                              ? 'text-green-700 font-medium' // Match IBAN
+                              : donation.status === 'ambiguous_iban'
+                              ? 'text-red-700 font-bold' // IBAN duplicat
+                              : donation.status === 'no_iban_match'
+                              ? 'text-orange-700 font-medium' // IBAN no trobat
+                              : 'text-muted-foreground'
+                          }>
                             {donation.iban.replace(/(.{4})/g, '$1 ').trim().slice(0, 19)}···
                           </span>
                         ) : (
-                          <span className="text-muted-foreground">-</span>
+                          <span className="text-orange-600 italic">sense IBAN</span>
                         )}
                       </TableCell>
                       <TableCell className="text-right font-mono">
                         {formatCurrencyEU(donation.amount)}
                       </TableCell>
                       <TableCell>
+                        {/* P0: Columna Estat amb nous badges */}
                         {donation.status === 'found' && (
                           <Badge variant="outline" className="bg-green-100 text-green-800 border-green-300">
                             <CheckCircle2 className="mr-1 h-3 w-3" />
-                            {t.movements.splitter.foundBadge}
+                            Trobat per IBAN
                           </Badge>
                         )}
                         {donation.status === 'found_inactive' && (
-                          <div className="flex items-center gap-1">
-                            <Badge variant="outline" className="bg-amber-100 text-amber-800 border-amber-300">
-                              <AlertTriangle className="mr-1 h-3 w-3" />
-                              {t.movements.splitter.foundInactiveBadge}
-                            </Badge>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => handleReactivateDonor(index)}
-                              className="h-6 px-2 text-xs text-amber-700 hover:text-amber-900 hover:bg-amber-100"
-                            >
-                              <RotateCcw className="mr-1 h-3 w-3" />
-                              {t.movements.splitter.reactivate}
-                            </Button>
-                          </div>
+                          <Badge variant="outline" className="bg-amber-100 text-amber-800 border-amber-300">
+                            <AlertTriangle className="mr-1 h-3 w-3" />
+                            Baixa
+                          </Badge>
                         )}
+                        {donation.status === 'found_archived' && (
+                          <Badge variant="outline" className="bg-gray-100 text-gray-800 border-gray-300">
+                            <AlertTriangle className="mr-1 h-3 w-3" />
+                            Arxivat
+                          </Badge>
+                        )}
+                        {donation.status === 'found_deleted' && (
+                          <Badge variant="outline" className="bg-red-100 text-red-800 border-red-300">
+                            <AlertTriangle className="mr-1 h-3 w-3" />
+                            Eliminat
+                          </Badge>
+                        )}
+                        {donation.status === 'ambiguous_iban' && (
+                          <Badge variant="outline" className="bg-red-100 text-red-800 border-red-300">
+                            <AlertCircle className="mr-1 h-3 w-3" />
+                            IBAN ambigu
+                          </Badge>
+                        )}
+                        {donation.status === 'no_iban_match' && (
+                          <Badge variant="outline" className="bg-orange-100 text-orange-800 border-orange-300">
+                            <AlertCircle className="mr-1 h-3 w-3" />
+                            IBAN no trobat
+                          </Badge>
+                        )}
+                        {/* Mode OUT legacy */}
                         {donation.status === 'new_with_taxid' && (
                           <Badge variant="outline" className="bg-blue-100 text-blue-800 border-blue-300">
                             <UserPlus className="mr-1 h-3 w-3" />
@@ -2061,27 +2342,33 @@ export function RemittanceSplitter({
                           </Badge>
                         )}
                       </TableCell>
+                      {/* P0: Columna Nota explicativa */}
                       <TableCell className="text-sm">
-                        {donation.status === 'found_inactive' && donation.matchedDonor ? (
-                          <div className="flex items-center gap-1.5">
-                            <span className="text-amber-700">{donation.matchedDonor.name}</span>
-                            {/* Badge traçabilitat match amb valor emmascarament */}
-                            {donation.matchMethod && (
-                              <Badge variant="outline" className="text-[10px] px-1 py-0 text-amber-600 border-amber-300">
-                                {donation.matchMethod === 'iban' ? 'IBAN' : donation.matchMethod === 'taxId' ? 'DNI' : 'Nom'}
-                                {donation.matchValueMasked && ` ${donation.matchValueMasked}`}
-                              </Badge>
-                            )}
-                          </div>
-                        ) : donation.matchedDonor ? (
-                          <div className="flex items-center gap-1.5">
-                            <span className="text-green-700">{donation.matchedDonor.name}</span>
-                            {/* Badge traçabilitat match per mode IN amb valor emmascarament */}
-                            {!isPaymentRemittance && donation.matchMethod && (
-                              <Badge variant="outline" className="text-[10px] px-1 py-0 text-green-600 border-green-300">
-                                {donation.matchMethod === 'iban' ? 'IBAN' : donation.matchMethod === 'taxId' ? 'DNI' : 'Nom'}
-                                {donation.matchValueMasked && ` ${donation.matchValueMasked}`}
-                              </Badge>
+                        {/* Donant trobat (qualsevol estat) */}
+                        {donation.matchedDonor ? (
+                          <div className="space-y-0.5">
+                            <div className="flex items-center gap-1.5">
+                              <span className={
+                                donation.status === 'found' ? 'text-green-700' :
+                                donation.status === 'found_inactive' ? 'text-amber-700' :
+                                donation.status === 'found_archived' ? 'text-gray-700' :
+                                donation.status === 'found_deleted' ? 'text-red-700' :
+                                'text-green-700'
+                              }>
+                                {donation.matchedDonor.name}
+                              </span>
+                              {/* Badge traçabilitat IBAN */}
+                              {donation.matchMethod === 'iban' && donation.matchValueMasked && (
+                                <Badge variant="outline" className="text-[10px] px-1 py-0 text-green-600 border-green-300">
+                                  IBAN {donation.matchValueMasked}
+                                </Badge>
+                              )}
+                            </div>
+                            {/* Nota segons estat */}
+                            {donation.matchNote && (
+                              <div className="text-[11px] text-muted-foreground italic">
+                                {donation.matchNote}
+                              </div>
                             )}
                             {/* Badge tipus de contacte per mode OUT */}
                             {isPaymentRemittance && donation.matchedContactType && (
@@ -2094,7 +2381,29 @@ export function RemittanceSplitter({
                               </Badge>
                             )}
                           </div>
+                        ) : donation.status === 'ambiguous_iban' ? (
+                          /* IBAN ambigu: mostrar candidats */
+                          <div className="space-y-0.5">
+                            <span className="text-red-600 font-medium">Selecció manual requerida</span>
+                            <div className="text-[11px] text-red-500">
+                              {donation.ambiguousDonors?.length ?? 0} donants amb aquest IBAN
+                            </div>
+                            {donation.ambiguousDonors && donation.ambiguousDonors.length > 0 && (
+                              <div className="text-[10px] text-red-600">
+                                {donation.ambiguousDonors.map(d => d.name).join(', ')}
+                              </div>
+                            )}
+                          </div>
+                        ) : donation.status === 'no_iban_match' ? (
+                          /* IBAN no trobat */
+                          <div className="space-y-0.5">
+                            <span className="text-orange-600 italic">IBAN no trobat a Summa</span>
+                            <div className="text-[11px] text-orange-500">
+                              Crear donant o assignar IBAN a existent
+                            </div>
+                          </div>
                         ) : donation.status === 'new_with_taxid' ? (
+                          /* Mode OUT: nou amb taxId */
                           <div className="space-y-0.5">
                             <span className="text-blue-600 font-medium">
                               {isPaymentRemittance
@@ -2106,20 +2415,14 @@ export function RemittanceSplitter({
                             </div>
                           </div>
                         ) : (
+                          /* Mode OUT: sense taxId */
                           <div className="space-y-0.5">
                             <span className="text-orange-600 italic">{t.movements.splitter.willBePendingLabel ?? 'Quedarà pendent'}</span>
                             <div className="text-[11px] text-orange-500">
-                              {/* Motiu del pendent */}
                               {donation.idCandidate
                                 ? (t.movements.splitter.nonFiscalIdReason ?? 'ID no és DNI/CIF vàlid')
                                 : (t.movements.splitter.noTaxIdReason ?? 'Sense identificador fiscal')}
                             </div>
-                            {/* IBAN traçable per pendents */}
-                            {donation.iban && (
-                              <div className="text-[10px] text-orange-600 font-mono">
-                                IBAN: {donation.iban.slice(-8)}
-                              </div>
-                            )}
                           </div>
                         )}
                       </TableCell>

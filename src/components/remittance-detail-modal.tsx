@@ -50,6 +50,9 @@ function getPendingReasonLabel(reason: RemittancePendingReason, t: any): string 
     INVALID_DATA: t.movements?.splitter?.pendingReasonInvalidData ?? 'Dades invàlides',
     NO_MATCH: t.movements?.splitter?.pendingReasonNoMatch ?? 'Sense coincidència',
     DUPLICATE: t.movements?.splitter?.pendingReasonDuplicate ?? 'Duplicat',
+    // P0: Nous motius per mode IN (IBAN-first)
+    NO_IBAN_MATCH: 'IBAN no trobat a Summa',
+    AMBIGUOUS_IBAN: 'IBAN duplicat',
   };
   return labels[reason] || reason;
 }
