@@ -750,9 +750,13 @@ export function useReturnImporter(options: UseReturnImporterOptions = {}) {
           return;
         }
 
+        // Crear groupId per mode contextual
+        const contextGroupId = `context_${parentTransaction.id}`;
+
         // Assignar totes les devolucions al pare directament
         for (const r of results) {
           r.matchType = 'grouped'; // Tractarem com agrupades
+          r.groupId = contextGroupId;  // P0 FIX: cal groupId per processar!
           r.matchedTransactionId = parentTransaction.id;
           r.matchedTransaction = parentTransaction;
           r.groupedTransactionId = parentTransaction.id;
@@ -768,7 +772,7 @@ export function useReturnImporter(options: UseReturnImporterOptions = {}) {
           returns: results,
           totalAmount: sumReturnsAbsCents / 100,
           date: new Date(parentTransaction.date),
-          groupId: `context_${parentTransaction.id}`,
+          groupId: contextGroupId,
         };
 
         setParsedReturns(results);
@@ -1156,7 +1160,7 @@ export function useReturnImporter(options: UseReturnImporterOptions = {}) {
     // GROUPED = matchType === 'grouped' + té donant (resolvedDonorId)
     const groupedReturnsToProcess = parsedReturns.filter(r => {
       const isGrouped = r.matchType === 'grouped' && hasDonor(r);
-      console.log(`[processReturns] Grouped check: iban=${r.iban}, matchType=${r.matchType}, resolvedDonorId=${r.resolvedDonorId} → isGrouped=${isGrouped}`);
+      console.log(`[processReturns] Grouped check: iban=${r.iban}, matchType=${r.matchType}, groupId=${r.groupId}, resolvedDonorId=${r.resolvedDonorId} → isGrouped=${isGrouped}`);
       return isGrouped;
     });
 
