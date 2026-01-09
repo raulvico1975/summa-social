@@ -133,8 +133,8 @@ export default async function HomePage({ params }: PageProps) {
               <div className="lg:hidden">
                 <div className={frameClass}>
                   <Image
-                    src="/visuals/web/web_dashboard.webp"
-                    alt="Summa Social Dashboard"
+                    src="/visuals/web/web_pantalla_summa.webp"
+                    alt={t.home.hero.visualAlt}
                     width={800}
                     height={500}
                     sizes="100vw"
@@ -159,8 +159,8 @@ export default async function HomePage({ params }: PageProps) {
             <div className="hidden lg:block">
               <div className={frameClass}>
                 <Image
-                  src="/visuals/web/web_dashboard.webp"
-                  alt="Summa Social Dashboard"
+                  src="/visuals/web/web_pantalla_summa.webp"
+                  alt={t.home.hero.visualAlt}
                   width={800}
                   height={500}
                   sizes="50vw"

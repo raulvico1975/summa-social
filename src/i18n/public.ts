@@ -155,6 +155,9 @@ export interface PublicTranslations {
     metaDescription: string;
     skipToContent: string;
     heroTagline: string;
+    hero: {
+      visualAlt: string;
+    };
     nav: {
       conciliation: string;
       remittances: string;
@@ -554,6 +557,9 @@ const ca: PublicTranslations = {
       "Gestió econòmica i fiscal per a entitats socials petites i mitjanes d'Espanya. Conciliació bancària, Model 182/347, remeses SEPA i més.",
     skipToContent: 'Saltar al contingut',
     heroTagline: 'Gestió econòmica i fiscal per a entitats no lucratives.',
+    hero: {
+      visualAlt: 'Captura de pantalla de Summa Social',
+    },
     nav: {
       conciliation: 'Conciliació',
       remittances: 'Remeses i devolucions',
@@ -1077,6 +1083,9 @@ const es: PublicTranslations = {
       'Gestión económica y fiscal para entidades sociales pequeñas y medianas de España. Conciliación bancaria, Modelo 182/347, remesas SEPA y más.',
     skipToContent: 'Saltar al contenido',
     heroTagline: 'Gestión económica y fiscal para entidades sin ánimo de lucro.',
+    hero: {
+      visualAlt: 'Captura de pantalla de Summa Social',
+    },
     nav: {
       conciliation: 'Conciliación',
       remittances: 'Remesas y devoluciones',
@@ -1601,6 +1610,9 @@ const fr: PublicTranslations = {
       "Gestion économique et fiscale pour les associations petites et moyennes d'Espagne. Rapprochement bancaire, Modèle 182/347, prélèvements SEPA et plus.",
     skipToContent: 'Aller au contenu',
     heroTagline: 'Gestion économique et fiscale pour les associations à but non lucratif.',
+    hero: {
+      visualAlt: 'Capture d\'écran de Summa Social',
+    },
     nav: {
       conciliation: 'Rapprochement',
       remittances: 'Prélèvements et rejets',
@@ -2124,6 +2136,9 @@ const pt: PublicTranslations = {
       'Gestão económica e fiscal para entidades sociais pequenas e médias de Espanha. Reconciliação bancária, Modelo 182/347, remessas SEPA e mais.',
     skipToContent: 'Saltar para o conteúdo',
     heroTagline: 'Gestão económica e fiscal para entidades sem fins lucrativos.',
+    hero: {
+      visualAlt: 'Captura de ecrã de Summa Social',
+    },
     nav: {
       conciliation: 'Reconciliação',
       remittances: 'Remessas e devoluções',
