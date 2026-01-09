@@ -35,7 +35,7 @@ import {
 import { useToast } from '@/hooks/use-toast';
 import { useAppLog } from '@/hooks/use-app-log';
 import type { Transaction, Donor, Supplier, Employee } from '@/lib/data';
-import { formatCurrencyEU, isValidSpanishTaxId, getSpanishTaxIdType, normalizeTaxId } from '@/lib/normalize';
+import { formatCurrencyEU, isValidSpanishTaxId, getSpanishTaxIdType, normalizeTaxId, formatIBANDisplay, normalizeIBAN } from '@/lib/normalize';
 import type { SpanishTaxIdType } from '@/lib/normalize';
 import {
   FileUp,
@@ -54,6 +54,7 @@ import {
   RotateCcw,
   Download,
   FileCode,
+  Copy,
 } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { useFirebase } from '@/firebase';
@@ -2382,9 +2383,28 @@ export function RemittanceSplitter({
                             )}
                           </div>
                         ) : donation.status === 'ambiguous_iban' ? (
-                          /* IBAN ambigu: mostrar candidats */
-                          <div className="space-y-0.5">
+                          /* IBAN ambigu: mostrar IBAN complet + candidats */
+                          <div className="space-y-1">
                             <span className="text-red-600 font-medium">Selecció manual requerida</span>
+                            {/* IBAN complet per diagnòstic */}
+                            {donation.iban && (
+                              <div className="flex items-center gap-1.5">
+                                <code className="text-xs font-mono text-foreground bg-muted px-1.5 py-0.5 rounded">
+                                  {formatIBANDisplay(donation.iban)}
+                                </code>
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    navigator.clipboard.writeText(normalizeIBAN(donation.iban));
+                                    toast({ description: 'IBAN copiat' });
+                                  }}
+                                  className="p-0.5 hover:bg-muted rounded"
+                                  title="Copiar IBAN"
+                                >
+                                  <Copy className="h-3 w-3 text-muted-foreground" />
+                                </button>
+                              </div>
+                            )}
                             <div className="text-[11px] text-red-500">
                               {donation.ambiguousDonors?.length ?? 0} donants amb aquest IBAN
                             </div>
@@ -2395,9 +2415,28 @@ export function RemittanceSplitter({
                             )}
                           </div>
                         ) : donation.status === 'no_iban_match' ? (
-                          /* IBAN no trobat */
-                          <div className="space-y-0.5">
+                          /* IBAN no trobat: mostrar IBAN complet per diagnòstic */
+                          <div className="space-y-1">
                             <span className="text-orange-600 italic">IBAN no trobat a Summa</span>
+                            {/* IBAN complet per diagnòstic */}
+                            {donation.iban && (
+                              <div className="flex items-center gap-1.5">
+                                <code className="text-xs font-mono text-foreground bg-muted px-1.5 py-0.5 rounded">
+                                  {formatIBANDisplay(donation.iban)}
+                                </code>
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    navigator.clipboard.writeText(normalizeIBAN(donation.iban));
+                                    toast({ description: 'IBAN copiat' });
+                                  }}
+                                  className="p-0.5 hover:bg-muted rounded"
+                                  title="Copiar IBAN"
+                                >
+                                  <Copy className="h-3 w-3 text-muted-foreground" />
+                                </button>
+                              </div>
+                            )}
                             <div className="text-[11px] text-orange-500">
                               Crear donant o assignar IBAN a existent
                             </div>
