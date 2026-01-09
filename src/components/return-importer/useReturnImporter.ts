@@ -49,9 +49,8 @@ export interface ParsedReturn {
   matchedDonorId: string | null;
   matchedDonor: Donor | null;              // Referència completa per conveniència
   matchedBy: 'iban' | 'dni' | 'name' | 'manual' | null;
-  // Camps canònics P0: SI resolvedDonorId té valor, hi ha donant resolt
+  // Camp canònic P0: SI resolvedDonorId té valor, hi ha donant resolt
   resolvedDonorId: string | null;
-  resolvedDonorName: string | null;
   // Matching transacció
   matchType: 'grouped' | 'individual' | 'none';
   noMatchReason: NoMatchReason;
@@ -662,7 +661,6 @@ export function useReturnImporter(options: UseReturnImporterOptions = {}) {
           matchedDonor: null,
           matchedBy: null,
           resolvedDonorId: null,  // Camp canònic P0
-          resolvedDonorName: null,  // Camp canònic P0
           matchType: 'none',
           noMatchReason: null,
           groupId: null,
@@ -714,9 +712,8 @@ export function useReturnImporter(options: UseReturnImporterOptions = {}) {
         r.matchedDonor = matchedDonor || null;
         r.matchedDonorId = matchedDonor?.id || null;
         r.matchedBy = matchedBy;
-        // Camps canònics P0: sempre s'omplen si hi ha donant
+        // Camp canònic P0: sempre s'omple si hi ha donant
         r.resolvedDonorId = matchedDonor?.id || null;
-        r.resolvedDonorName = matchedDonor?.name || null;
       }
 
       // Logs deterministes P0
@@ -1138,6 +1135,9 @@ export function useReturnImporter(options: UseReturnImporterOptions = {}) {
     const { forceRecreateChildren = false } = options;
     if (!organizationId) return;
 
+    // P0: Mapa donorsById per obtenir nom/taxId sense queries
+    const donorsById = new Map(donors.map(d => [d.id, d]));
+
     // DEBUG P0: Veure estat de resolvedDonorId
     console.log('[processReturns] 🔍 DEBUG parsedReturns:', parsedReturns.map(r => ({
       iban: r.iban,
@@ -1275,8 +1275,9 @@ export function useReturnImporter(options: UseReturnImporterOptions = {}) {
 
           // Crear filles per TOTES les devolucions (resolubles i pendents)
           for (const ret of allReturnsInGroup) {
-            // P0: usar camps canònics resolvedDonorId/resolvedDonorName
+            // P0: usar camp canònic resolvedDonorId + mapa donorsById
             const hasContact = !!ret.resolvedDonorId;
+            const donor = hasContact ? donorsById.get(ret.resolvedDonorId!) : null;
             const childTxData: Record<string, unknown> = {
               source: 'remittance',
               parentTransactionId: parentId,
@@ -1289,12 +1290,12 @@ export function useReturnImporter(options: UseReturnImporterOptions = {}) {
               bankAccountId: group.originalTransaction.bankAccountId ?? null,
             };
 
-            // Si té donant assignat, afegir contactId/contactType (P0: camps canònics)
+            // Si té donant assignat, afegir contactId/contactType (P0: donorsById)
             if (hasContact) {
               childTxData.contactId = ret.resolvedDonorId;
               childTxData.contactType = 'donor';
               childTxData.emisorId = ret.resolvedDonorId;
-              childTxData.emisorName = ret.resolvedDonorName || ret.matchedDonor?.name || 'Donant';
+              childTxData.emisorName = donor?.name ?? 'Donant';
             }
 
             const newChildRef = await addDoc(
@@ -1478,7 +1479,8 @@ export function useReturnImporter(options: UseReturnImporterOptions = {}) {
         // SKIP si ja existeixen fills (idempotency)
         if (!skipChildCreation) {
           for (const ret of resolubles) {
-            // P0: usar camps canònics resolvedDonorId/resolvedDonorName
+            // P0: usar camp canònic resolvedDonorId + mapa donorsById
+            const donor = donorsById.get(ret.resolvedDonorId!);
             const childTxData = {
               // Camps de la filla
               source: 'remittance',
@@ -1487,11 +1489,11 @@ export function useReturnImporter(options: UseReturnImporterOptions = {}) {
               date: ret.date?.toISOString().split('T')[0] || group.date.toISOString().split('T')[0],
               transactionType: 'return',
               description: ret.returnReason || group.originalTransaction.description || 'Devolució',
-              // Donant assignat (P0: camps canònics)
+              // Donant assignat (P0: donorsById)
               contactId: ret.resolvedDonorId,
               contactType: 'donor',
               emisorId: ret.resolvedDonorId,
-              emisorName: ret.resolvedDonorName || ret.matchedDonor?.name || 'Donant',
+              emisorName: donor?.name ?? 'Donant',
               // Heretar bankAccountId del pare
               bankAccountId: group.originalTransaction.bankAccountId ?? null,
             };
@@ -1613,7 +1615,6 @@ export function useReturnImporter(options: UseReturnImporterOptions = {}) {
             matchedDonor: finalDonor,
             matchedDonorId: finalDonor.id,
             resolvedDonorId: finalDonor.id,  // Camp canònic P0
-            resolvedDonorName: finalDonor.name,  // Camp canònic P0
             matchedBy: 'manual' as const,
             status: 'matched' as const,
           };
