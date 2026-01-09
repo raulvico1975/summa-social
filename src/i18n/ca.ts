@@ -592,6 +592,9 @@ export const ca = {
         ibanNotFoundLeavePending: "Deixar pendent",
         ibanNotFoundAssignedTo: (name: string) => `Assignat a ${name}`,
         ibanNotFoundSelectDonor: "Selecciona un donant per assignar aquest IBAN:",
+        // Navegació ràpida
+        goToAmbiguous: (count: number) => `Anar a ambigus (${count})`,
+        goToNotFound: (count: number) => `Anar a no trobats (${count})`,
     }
   },
   importers: {

@@ -592,6 +592,9 @@ export const fr = {
         ibanNotFoundLeavePending: "Laisser en attente",
         ibanNotFoundAssignedTo: (name: string) => `Attribué à ${name}`,
         ibanNotFoundSelectDonor: "Sélectionnez un donateur pour attribuer cet IBAN :",
+        // Navigation rapide
+        goToAmbiguous: (count: number) => `Aller aux ambigus (${count})`,
+        goToNotFound: (count: number) => `Aller aux non trouvés (${count})`,
     }
   },
   importers: {

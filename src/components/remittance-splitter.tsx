@@ -368,6 +368,7 @@ export function RemittanceSplitter({
 
   // Refs i hooks
   const fileInputRef = React.useRef<HTMLInputElement>(null);
+  const tableContainerRef = React.useRef<HTMLDivElement>(null);
   const { toast } = useToast();
   const { log } = useAppLog();
   const { firestore, user } = useFirebase();
@@ -1312,6 +1313,21 @@ export function RemittanceSplitter({
     }));
   };
 
+  // Navegació ràpida: scroll a primera fila amb status donat
+  const handleScrollToStatus = (status: 'ambiguous_iban' | 'no_iban_match') => {
+    if (!tableContainerRef.current) return;
+
+    const row = tableContainerRef.current.querySelector(`[data-status="${status}"]`);
+    if (row) {
+      row.scrollIntoView({ block: 'center', behavior: 'smooth' });
+      // Highlight temporal
+      row.classList.add('ring-2', 'ring-amber-400', 'ring-offset-1');
+      setTimeout(() => {
+        row.classList.remove('ring-2', 'ring-amber-400', 'ring-offset-1');
+      }, 1500);
+    }
+  };
+
   // Reactivar un donant individual
   const handleReactivateDonor = async (index: number) => {
     const donation = parsedDonations[index];
@@ -2133,16 +2149,28 @@ export function RemittanceSplitter({
 
                     {/* Desglossat pendents */}
                     {stats.ambiguousIban > 0 && (
-                      <div className="flex items-center gap-1.5 px-2 py-0.5 rounded bg-red-100 border border-red-300 text-xs">
+                      <button
+                        type="button"
+                        onClick={() => handleScrollToStatus('ambiguous_iban')}
+                        className="flex items-center gap-1.5 px-2 py-0.5 rounded bg-red-100 border border-red-300 text-xs hover:bg-red-200 transition-colors cursor-pointer"
+                        title={t.movements.splitter.goToAmbiguous(stats.ambiguousIban)}
+                      >
                         <span className="font-semibold text-red-700">{stats.ambiguousIban}</span>
                         <span className="text-red-600">IBAN ambigu</span>
-                      </div>
+                        <ArrowRight className="h-3 w-3 text-red-500" />
+                      </button>
                     )}
                     {stats.noIbanMatch > 0 && (
-                      <div className="flex items-center gap-1.5 px-2 py-0.5 rounded bg-orange-100 border border-orange-300 text-xs">
+                      <button
+                        type="button"
+                        onClick={() => handleScrollToStatus('no_iban_match')}
+                        className="flex items-center gap-1.5 px-2 py-0.5 rounded bg-orange-100 border border-orange-300 text-xs hover:bg-orange-200 transition-colors cursor-pointer"
+                        title={t.movements.splitter.goToNotFound(stats.noIbanMatch)}
+                      >
                         <span className="font-semibold text-orange-700">{stats.noIbanMatch}</span>
                         <span className="text-orange-600">IBAN no trobat</span>
-                      </div>
+                        <ArrowRight className="h-3 w-3 text-orange-500" />
+                      </button>
                     )}
                   </>
                 ) : (
@@ -2299,7 +2327,7 @@ export function RemittanceSplitter({
             {/* ─────────────────────────────────────────────────────────────────
                 TAULA PROTAGONISTA: Scroll independent, ocupa tot l'espai
                 ───────────────────────────────────────────────────────────────── */}
-            <div className="flex-1 min-h-0 overflow-auto rounded-md border">
+            <div ref={tableContainerRef} className="flex-1 min-h-0 overflow-auto rounded-md border">
               <Table>
                 <TableHeader className="sticky top-0 bg-background z-10">
                   <TableRow>
@@ -2319,17 +2347,22 @@ export function RemittanceSplitter({
                 </TableHeader>
                 <TableBody>
                   {parsedDonations.map((donation, index) => (
-                    <TableRow key={index} className={
-                      // P0: Colors segons estat
-                      donation.status === 'found' ? 'bg-green-50/50' :
-                      donation.status === 'found_inactive' ? 'bg-amber-50/50' :
-                      donation.status === 'found_archived' ? 'bg-gray-50/50' :
-                      donation.status === 'found_deleted' ? 'bg-red-50/30' :
-                      donation.status === 'ambiguous_iban' ? 'bg-red-100/50' :
-                      donation.status === 'no_iban_match' ? 'bg-orange-50/50' :
-                      donation.status === 'new_with_taxid' ? 'bg-blue-50/50' :
-                      'bg-orange-50/50'
-                    }>
+                    <TableRow
+                      key={index}
+                      data-status={donation.status}
+                      data-row-index={index}
+                      className={
+                        // P0: Colors segons estat
+                        donation.status === 'found' ? 'bg-green-50/50' :
+                        donation.status === 'found_inactive' ? 'bg-amber-50/50' :
+                        donation.status === 'found_archived' ? 'bg-gray-50/50' :
+                        donation.status === 'found_deleted' ? 'bg-red-50/30' :
+                        donation.status === 'ambiguous_iban' ? 'bg-red-100/50' :
+                        donation.status === 'no_iban_match' ? 'bg-orange-50/50' :
+                        donation.status === 'new_with_taxid' ? 'bg-blue-50/50' :
+                        'bg-orange-50/50'
+                      }
+                    >
                       <TableCell className="font-medium">{donation.name || '-'}</TableCell>
                       <TableCell className="font-mono text-xs">
                         {donation.taxIdValid ? (
