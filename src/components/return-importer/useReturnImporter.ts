@@ -1256,14 +1256,17 @@ export function useReturnImporter(options: UseReturnImporterOptions = {}) {
         if (forceRecreateChildren) {
           console.log(`[processReturns] 🔴 FORCE RECREATE MODE per pare ${parentId}`);
 
-          // 1. ELIMINAR tots els fills existents
+          // 1. ELIMINAR tots els fills existents (devolucions)
+          let deletedChildrenCount = 0;
           if (existingChildrenCount > 0) {
             console.log(`[processReturns] Eliminant ${existingChildrenCount} fills existents...`);
             for (const childDoc of existingChildrenSnap.docs) {
               await deleteDoc(doc(firestore, 'organizations', organizationId, 'transactions', childDoc.id));
+              deletedChildrenCount++;
               console.log(`[processReturns] ✅ Eliminat fill: ${childDoc.id}`);
             }
           }
+          console.log(`[processReturns] 🗑️ Eliminades ${deletedChildrenCount} filles antigues`);
 
           // 2. CREAR TOTES les filles des de les devolucions parsejades
           const allReturnsInGroup = group.returns;
@@ -1274,14 +1277,18 @@ export function useReturnImporter(options: UseReturnImporterOptions = {}) {
           console.log(`[processReturns] Creant ${allReturnsInGroup.length} filles (${resolubles.length} amb donant, ${pendents.length} sense)`);
 
           // Crear filles per TOTES les devolucions (resolubles i pendents)
+          let createdChildrenCount = 0;
           for (const ret of allReturnsInGroup) {
             // P0: usar camp canònic resolvedDonorId + mapa donorsById
             const hasContact = !!ret.resolvedDonorId;
-            const donor = hasContact ? donorsById.get(ret.resolvedDonorId!) : null;
+            const donorId = ret.resolvedDonorId;
+            const donor = hasContact ? donorsById.get(donorId!) : null;
+            const donorName = donor?.name ?? 'Donant';
+
             const childTxData: Record<string, unknown> = {
               source: 'remittance',
               parentTransactionId: parentId,
-              amount: -ret.amount,  // Import negatiu (devolució)
+              amount: -Math.abs(ret.amount),  // Import SEMPRE negatiu (devolució)
               date: ret.date?.toISOString().split('T')[0] || group.date.toISOString().split('T')[0],
               transactionType: 'return',
               description: ret.returnReason || group.originalTransaction.description || 'Devolució',
@@ -1290,19 +1297,32 @@ export function useReturnImporter(options: UseReturnImporterOptions = {}) {
               bankAccountId: group.originalTransaction.bankAccountId ?? null,
             };
 
-            // Si té donant assignat, afegir contactId/contactType (P0: donorsById)
-            if (hasContact) {
-              childTxData.contactId = ret.resolvedDonorId;
+            // Si té donant assignat: contactId + contactType + contactName + legacy emisor*
+            if (hasContact && donorId) {
+              childTxData.contactId = donorId;
               childTxData.contactType = 'donor';
-              childTxData.emisorId = ret.resolvedDonorId;
-              childTxData.emisorName = donor?.name ?? 'Donant';
+              childTxData.contactName = donorName;
+              // Compat legacy (pantalles que llegeixen emisor*)
+              childTxData.emisorId = donorId;
+              childTxData.emisorName = donorName;
             }
 
             const newChildRef = await addDoc(
               collection(firestore, 'organizations', organizationId, 'transactions'),
               childTxData
             );
-            console.log(`[processReturns] ✅ Creada filla ${newChildRef.id} - contactId: ${hasContact ? ret.resolvedDonorId : 'null'}`);
+            createdChildrenCount++;
+
+            // Log primera filla per debug
+            if (createdChildrenCount === 1) {
+              console.log(`[processReturns] 🔍 Primera filla creada:`, {
+                id: newChildRef.id,
+                contactId: childTxData.contactId ?? 'null',
+                contactName: childTxData.contactName ?? 'null',
+                amount: childTxData.amount,
+              });
+            }
+            console.log(`[processReturns] ✅ Creada filla ${newChildRef.id} - contactId: ${hasContact ? donorId : 'null'}`);
 
             // Actualitzar donant si té contactId (P0: usar resolvedDonorId)
             if (hasContact) {
@@ -1363,7 +1383,12 @@ export function useReturnImporter(options: UseReturnImporterOptions = {}) {
           const parentTxRef = doc(firestore, 'organizations', organizationId, 'transactions', parentId);
           await updateDoc(parentTxRef, parentUpdateData);
 
-          console.log(`[processReturns] ✅ FORCE RECREATE completat per pare ${parentId}`);
+          console.log(`[processReturns] ✅ FORCE RECREATE completat per pare ${parentId}:`, {
+            deletedChildrenCount,
+            createdChildrenCount,
+            resolvedCount,
+            pendingCount,
+          });
           continue; // Passar al següent grup, saltar la lògica normal
         }
 
@@ -1480,20 +1505,24 @@ export function useReturnImporter(options: UseReturnImporterOptions = {}) {
         if (!skipChildCreation) {
           for (const ret of resolubles) {
             // P0: usar camp canònic resolvedDonorId + mapa donorsById
-            const donor = donorsById.get(ret.resolvedDonorId!);
+            const donorId = ret.resolvedDonorId!;
+            const donor = donorsById.get(donorId);
+            const donorName = donor?.name ?? 'Donant';
             const childTxData = {
               // Camps de la filla
               source: 'remittance',
               parentTransactionId: group.originalTransaction.id,
-              amount: -ret.amount,  // Import negatiu (devolució)
+              amount: -Math.abs(ret.amount),  // Import SEMPRE negatiu (devolució)
               date: ret.date?.toISOString().split('T')[0] || group.date.toISOString().split('T')[0],
               transactionType: 'return',
               description: ret.returnReason || group.originalTransaction.description || 'Devolució',
-              // Donant assignat (P0: donorsById)
-              contactId: ret.resolvedDonorId,
+              // Donant assignat: contactId + contactType + contactName + legacy
+              contactId: donorId,
               contactType: 'donor',
-              emisorId: ret.resolvedDonorId,
-              emisorName: donor?.name ?? 'Donant',
+              contactName: donorName,
+              // Compat legacy (pantalles que llegeixen emisor*)
+              emisorId: donorId,
+              emisorName: donorName,
               // Heretar bankAccountId del pare
               bankAccountId: group.originalTransaction.bankAccountId ?? null,
             };
