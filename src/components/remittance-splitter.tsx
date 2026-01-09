@@ -419,14 +419,18 @@ export function RemittanceSplitter({
     const ambiguousIbanUnresolved = parsedDonations.filter(d =>
       d.status === 'ambiguous_iban' && !d.manualMatchContactId
     ).length;
-    const noIbanMatch = parsedDonations.filter(d => d.status === 'no_iban_match').length;
+    // noIbanMatch: només comptem els que NO tenen selecció manual
+    const noIbanMatchTotal = parsedDonations.filter(d => d.status === 'no_iban_match').length;
+    const noIbanMatchUnresolved = parsedDonations.filter(d =>
+      d.status === 'no_iban_match' && !d.manualMatchContactId
+    ).length;
     // Legacy (mode OUT)
     const newWithTaxId = parsedDonations.filter(d => d.status === 'new_with_taxid').length;
     const newWithoutTaxId = parsedDonations.filter(d => d.status === 'new_without_taxid').length;
 
     // Totals per categories
     const totalFound = found + foundInactive + foundArchived + foundDeleted;
-    const totalPending = ambiguousIbanUnresolved + noIbanMatch;
+    const totalPending = ambiguousIbanUnresolved + noIbanMatchUnresolved;
 
     // toCreate ja no aplica per mode IN (tot via IBAN), però mantenim per mode OUT
     const toCreate = parsedDonations.filter(d => d.shouldCreate).length;
@@ -438,7 +442,8 @@ export function RemittanceSplitter({
       foundDeleted,
       ambiguousIban: ambiguousIbanUnresolved, // Per bloqueig: només sense resoldre
       ambiguousIbanTotal, // Per mostrar a UI: tots
-      noIbanMatch,
+      noIbanMatch: noIbanMatchUnresolved, // Per UI: només sense resoldre
+      noIbanMatchTotal, // Per mostrar total a UI si cal
       newWithTaxId,
       newWithoutTaxId,
       totalFound,
