@@ -582,6 +582,16 @@ export const ca = {
         ambiguousChangeSelection: "Canviar selecció",
         ambiguousResolved: "Resolt",
         ibanCopied: "IBAN copiat",
+        // IBAN no trobat - accions
+        ibanNotFoundTitle: "IBAN no registrat a Summa",
+        ibanNotFoundHelp: "Pots crear un donant nou, assignar l'IBAN a un existent, o deixar-ho pendent.",
+        ibanNotFoundSuggestedByTaxId: (name: string, taxId: string) => `Suggerit per DNI: ${name} (${taxId})`,
+        ibanNotFoundAssignSuggested: "Assignar al suggerit",
+        ibanNotFoundCreateDonor: "Crear donant",
+        ibanNotFoundAssignExisting: "Assignar a existent",
+        ibanNotFoundLeavePending: "Deixar pendent",
+        ibanNotFoundAssignedTo: (name: string) => `Assignat a ${name}`,
+        ibanNotFoundSelectDonor: "Selecciona un donant per assignar aquest IBAN:",
     }
   },
   importers: {

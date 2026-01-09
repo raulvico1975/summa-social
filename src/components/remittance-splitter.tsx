@@ -130,8 +130,10 @@ interface ParsedDonation {
   zipCode: string;
   // Nota explicativa per la UI
   matchNote?: string;
-  // Selecció manual per IBAN ambigu (compte conjunta)
+  // Selecció manual per IBAN ambigu (compte conjunta) o IBAN no trobat
   manualMatchContactId?: string;
+  // Suggeriment per DNI quan IBAN no trobat (per facilitar assignació)
+  suggestedDonorByTaxId?: Donor;
 }
 
 type Step = 'upload' | 'mapping' | 'preview' | 'processing';
@@ -361,6 +363,8 @@ export function RemittanceSplitter({
   const [parsedDonations, setParsedDonations] = React.useState<ParsedDonation[]>([]);
   const [totalAmount, setTotalAmount] = React.useState(0);
   const [defaultZipCode, setDefaultZipCode] = React.useState('08001');
+  // Selector expandit de donants per IBAN no trobat
+  const [showDonorSelectorForRow, setShowDonorSelectorForRow] = React.useState<number | null>(null);
 
   // Refs i hooks
   const fileInputRef = React.useRef<HTMLInputElement>(null);
@@ -1178,6 +1182,17 @@ export function RemittanceSplitter({
             matchValueMasked = maskMatchValue(result.method, result.matchedValue);
           }
 
+          // Suggeriment per DNI quan IBAN no trobat
+          let suggestedDonorByTaxId: Donor | undefined;
+          if (status === 'no_iban_match' && taxIdValid && normalizedTaxId) {
+            // Buscar donant amb el mateix DNI (podria ser que l'IBAN no estigui actualitzat)
+            const taxIdMatch = matchDonorByTaxId(normalizedTaxId, allDonorsForMatching);
+            if (taxIdMatch.donor) {
+              suggestedDonorByTaxId = taxIdMatch.donor;
+              matchNote = `IBAN no trobat, però DNI coincideix amb ${taxIdMatch.donor.name}`;
+            }
+          }
+
           // Push donation amb nous camps
           donations.push({
             rowIndex: startRow + i + 1,
@@ -1200,6 +1215,7 @@ export function RemittanceSplitter({
             shouldCreate: false, // Mai crear automàticament - tot via IBAN
             zipCode: defaultZipCode,
             matchNote,
+            suggestedDonorByTaxId,
           });
           continue; // Salt el push general de més avall
         }
@@ -1438,11 +1454,13 @@ export function RemittanceSplitter({
         } else {
           // Mode IN: TOTS els found* són resolubles (IBAN match)
           // + ambiguous_iban AMB selecció manual (compte conjunta resolta)
+          // + no_iban_match AMB selecció manual (assignat manualment)
           return d.status === 'found' ||
                  d.status === 'found_inactive' ||
                  d.status === 'found_archived' ||
                  d.status === 'found_deleted' ||
-                 (d.status === 'ambiguous_iban' && !!d.manualMatchContactId);
+                 (d.status === 'ambiguous_iban' && !!d.manualMatchContactId) ||
+                 (d.status === 'no_iban_match' && !!d.manualMatchContactId);
         }
       });
 
@@ -1453,7 +1471,7 @@ export function RemittanceSplitter({
                  (d.status === 'new_with_taxid' && (!d.name || d.amount <= 0));
         } else {
           // Mode IN: pendents per IBAN no trobat o ambigu sense resoldre
-          return d.status === 'no_iban_match' ||
+          return (d.status === 'no_iban_match' && !d.manualMatchContactId) ||
                  (d.status === 'ambiguous_iban' && !d.manualMatchContactId);
         }
       });
@@ -2560,31 +2578,139 @@ export function RemittanceSplitter({
                             )}
                           </div>
                         ) : donation.status === 'no_iban_match' ? (
-                          /* IBAN no trobat: mostrar IBAN complet per diagnòstic */
-                          <div className="space-y-1">
-                            <span className="text-orange-600 italic">IBAN no trobat a Summa</span>
-                            {/* IBAN complet per diagnòstic */}
-                            {donation.iban && (
-                              <div className="flex items-center gap-1.5">
-                                <code className="text-xs font-mono text-foreground bg-muted px-1.5 py-0.5 rounded">
-                                  {formatIBANDisplay(donation.iban)}
-                                </code>
+                          /* IBAN no trobat: accions per resoldre */
+                          <div className="space-y-2">
+                            {donation.manualMatchContactId ? (
+                              /* Ja assignat manualment */
+                              <div className="space-y-1">
+                                {(() => {
+                                  const assignedDonor = existingDonors.find(d => d.id === donation.manualMatchContactId);
+                                  return (
+                                    <div className="flex items-center gap-2">
+                                      <div>
+                                        <span className="text-green-700 font-medium block">
+                                          {t.movements.splitter.ibanNotFoundAssignedTo(assignedDonor?.name || '')}
+                                        </span>
+                                        {assignedDonor?.taxId && (
+                                          <span className="text-[11px] text-green-600">
+                                            DNI: {assignedDonor.taxId}
+                                          </span>
+                                        )}
+                                      </div>
+                                      <Badge variant="outline" className="text-[10px] px-1 py-0 text-green-600 border-green-300">
+                                        {t.movements.splitter.ambiguousManualSelection}
+                                      </Badge>
+                                    </div>
+                                  );
+                                })()}
                                 <button
                                   type="button"
-                                  onClick={() => {
-                                    navigator.clipboard.writeText(normalizeIBAN(donation.iban));
-                                    toast({ description: 'IBAN copiat' });
-                                  }}
-                                  className="p-0.5 hover:bg-muted rounded"
-                                  title="Copiar IBAN"
+                                  onClick={() => handleAssignDonorToLine(donation.rowIndex, '')}
+                                  className="text-[11px] text-muted-foreground hover:underline"
                                 >
-                                  <Copy className="h-3 w-3 text-muted-foreground" />
+                                  {t.movements.splitter.ambiguousChangeSelection}
                                 </button>
                               </div>
+                            ) : (
+                              /* Pendent: mostrar opcions */
+                              <>
+                                <div className="flex items-center gap-2">
+                                  <span className="text-orange-600 font-medium">
+                                    {t.movements.splitter.ibanNotFoundTitle}
+                                  </span>
+                                </div>
+                                {/* Microcopy explicatiu */}
+                                <div className="text-[11px] text-muted-foreground italic">
+                                  {t.movements.splitter.ibanNotFoundHelp}
+                                </div>
+                                {/* IBAN complet per diagnòstic */}
+                                {donation.iban && (
+                                  <div className="flex items-center gap-1.5">
+                                    <code className="text-xs font-mono text-foreground bg-muted px-1.5 py-0.5 rounded">
+                                      {formatIBANDisplay(donation.iban)}
+                                    </code>
+                                    <button
+                                      type="button"
+                                      onClick={() => {
+                                        navigator.clipboard.writeText(normalizeIBAN(donation.iban));
+                                        toast({ description: t.movements.splitter.ibanCopied });
+                                      }}
+                                      className="p-0.5 hover:bg-muted rounded"
+                                      title="Copiar IBAN"
+                                    >
+                                      <Copy className="h-3 w-3 text-muted-foreground" />
+                                    </button>
+                                  </div>
+                                )}
+                                {/* Suggeriment per DNI si existeix */}
+                                {donation.suggestedDonorByTaxId && (
+                                  <div className="p-2 bg-blue-50 rounded border border-blue-200">
+                                    <div className="text-[11px] text-blue-700 mb-1.5">
+                                      {t.movements.splitter.ibanNotFoundSuggestedByTaxId(
+                                        donation.suggestedDonorByTaxId.name,
+                                        donation.suggestedDonorByTaxId.taxId || ''
+                                      )}
+                                    </div>
+                                    <button
+                                      type="button"
+                                      onClick={() => handleAssignDonorToLine(donation.rowIndex, donation.suggestedDonorByTaxId!.id)}
+                                      className="px-3 py-1.5 text-sm bg-blue-600 hover:bg-blue-700 text-white rounded transition-colors"
+                                    >
+                                      {t.movements.splitter.ibanNotFoundAssignSuggested}
+                                    </button>
+                                  </div>
+                                )}
+                                {/* Accions */}
+                                <div className="flex flex-wrap gap-1.5">
+                                  <button
+                                    type="button"
+                                    onClick={() => setShowDonorSelectorForRow(donation.rowIndex)}
+                                    className="px-2 py-1 text-[11px] bg-primary/10 hover:bg-primary/20 text-primary rounded border border-primary/30 transition-colors"
+                                  >
+                                    {t.movements.splitter.ibanNotFoundAssignExisting}
+                                  </button>
+                                  <span className="text-[10px] text-muted-foreground self-center">
+                                    {t.movements.splitter.ibanNotFoundLeavePending}
+                                  </span>
+                                </div>
+                                {/* Selector de donant expandit */}
+                                {showDonorSelectorForRow === donation.rowIndex && (
+                                  <div className="mt-2 p-2 bg-muted/50 rounded border">
+                                    <div className="text-[11px] text-muted-foreground mb-2">
+                                      {t.movements.splitter.ibanNotFoundSelectDonor}
+                                    </div>
+                                    <div className="max-h-32 overflow-y-auto space-y-1">
+                                      {existingDonors
+                                        .filter(d => d.status === 'active')
+                                        .slice(0, 20)
+                                        .map(donor => (
+                                          <button
+                                            key={donor.id}
+                                            type="button"
+                                            onClick={() => {
+                                              handleAssignDonorToLine(donation.rowIndex, donor.id);
+                                              setShowDonorSelectorForRow(null);
+                                            }}
+                                            className="w-full px-2 py-1.5 text-left text-[11px] bg-white hover:bg-primary/5 rounded border transition-colors"
+                                          >
+                                            <span className="font-medium block">{donor.name}</span>
+                                            {donor.taxId && (
+                                              <span className="text-muted-foreground">DNI: {donor.taxId}</span>
+                                            )}
+                                          </button>
+                                        ))}
+                                    </div>
+                                    <button
+                                      type="button"
+                                      onClick={() => setShowDonorSelectorForRow(null)}
+                                      className="mt-2 text-[10px] text-muted-foreground hover:underline"
+                                    >
+                                      {t.common.cancel}
+                                    </button>
+                                  </div>
+                                )}
+                              </>
                             )}
-                            <div className="text-[11px] text-orange-500">
-                              Crear donant o assignar IBAN a existent
-                            </div>
                           </div>
                         ) : donation.status === 'new_with_taxid' ? (
                           /* Mode OUT: nou amb taxId */

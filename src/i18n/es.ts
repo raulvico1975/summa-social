@@ -582,6 +582,16 @@ export const es = {
         ambiguousChangeSelection: "Cambiar selección",
         ambiguousResolved: "Resuelto",
         ibanCopied: "IBAN copiado",
+        // IBAN no encontrado - acciones
+        ibanNotFoundTitle: "IBAN no registrado en Summa",
+        ibanNotFoundHelp: "Puedes crear un donante nuevo, asignar el IBAN a uno existente, o dejarlo pendiente.",
+        ibanNotFoundSuggestedByTaxId: (name: string, taxId: string) => `Sugerido por DNI: ${name} (${taxId})`,
+        ibanNotFoundAssignSuggested: "Asignar al sugerido",
+        ibanNotFoundCreateDonor: "Crear donante",
+        ibanNotFoundAssignExisting: "Asignar a existente",
+        ibanNotFoundLeavePending: "Dejar pendiente",
+        ibanNotFoundAssignedTo: (name: string) => `Asignado a ${name}`,
+        ibanNotFoundSelectDonor: "Selecciona un donante para asignar este IBAN:",
     }
   },
   importers: {
