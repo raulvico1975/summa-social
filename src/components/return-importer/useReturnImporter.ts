@@ -1140,9 +1140,11 @@ export function useReturnImporter(options: UseReturnImporterOptions = {}) {
 
     // GROUPED = matchType === 'grouped' + té donant
     // (En mode contextual, status pot ser 'donor_found' però igualment s'ha de processar si té donant)
-    const groupedReturnsToProcess = parsedReturns.filter(r =>
-      r.matchType === 'grouped' && hasDonor(r)
-    );
+    const groupedReturnsToProcess = parsedReturns.filter(r => {
+      const isGrouped = r.matchType === 'grouped' && hasDonor(r);
+      console.log(`[processReturns] Grouped check: matchType=${r.matchType}, matchedDonorId=${r.matchedDonorId}, matchedDonor=${r.matchedDonor?.id}, hasDonor=${hasDonor(r)} → isGrouped=${isGrouped}`);
+      return isGrouped;
+    });
 
     // Comptar quantes no tenen donant (per feedback)
     const withoutDonor = parsedReturns.filter(r => !hasDonor(r));
