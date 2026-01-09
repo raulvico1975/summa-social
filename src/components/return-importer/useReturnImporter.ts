@@ -49,6 +49,8 @@ export interface ParsedReturn {
   matchedDonorId: string | null;
   matchedDonor: Donor | null;              // Referència completa per conveniència
   matchedBy: 'iban' | 'dni' | 'name' | 'manual' | null;
+  // Camp canònic únic: SI té valor, hi ha donant resolt (P0)
+  resolvedDonorId: string | null;
   // Matching transacció
   matchType: 'grouped' | 'individual' | 'none';
   noMatchReason: NoMatchReason;
@@ -658,6 +660,7 @@ export function useReturnImporter(options: UseReturnImporterOptions = {}) {
           matchedDonorId: null,
           matchedDonor: null,
           matchedBy: null,
+          resolvedDonorId: null,  // Camp canònic P0
           matchType: 'none',
           noMatchReason: null,
           groupId: null,
@@ -709,10 +712,20 @@ export function useReturnImporter(options: UseReturnImporterOptions = {}) {
         r.matchedDonor = matchedDonor || null;
         r.matchedDonorId = matchedDonor?.id || null;
         r.matchedBy = matchedBy;
+        // Camp canònic P0: sempre s'omple si hi ha donant
+        r.resolvedDonorId = matchedDonor?.id || null;
       }
 
-      const withDonorCount = results.filter(r => r.matchedDonorId).length;
-      console.log(`[performMatching] FASE 3: ${withDonorCount} amb donant trobat`);
+      // Logs deterministes P0
+      const withDonorCount = results.filter(r => r.resolvedDonorId).length;
+      const donorsWithIban = donors.filter(d => d.iban).length;
+      console.log(`[performMatching] FASE 3: ${withDonorCount}/${results.length} amb donant trobat`);
+      console.log(`[performMatching] FASE 3: ${donorsWithIban} donants tenen IBAN a la BD`);
+      if (withDonorCount === 0 && results.length > 0) {
+        // Mostrar primers 3 IBANs del fitxer per debug
+        const sampleIbans = results.slice(0, 3).map(r => r.iban);
+        console.log(`[performMatching] FASE 3: ⚠️ 0 matches! Primers IBANs del fitxer:`, sampleIbans);
+      }
 
       // ═══════════════════════════════════════════════════════════════════════
       // MODE CONTEXTUAL: Assignar directament al pare (saltar matching tx)
@@ -745,8 +758,8 @@ export function useReturnImporter(options: UseReturnImporterOptions = {}) {
           r.groupedTransactionId = parentTransaction.id;
           r.groupTotalAmount = parentAbsCents / 100;
           r.noMatchReason = null;
-          // Status segons si té donant o no
-          r.status = r.matchedDonorId ? 'matched' : 'donor_found';
+          // Status segons si té donant o no (usa camp canònic P0)
+          r.status = r.resolvedDonorId ? 'matched' : 'donor_found';
         }
 
         // Crear un grup únic pel pare
@@ -996,7 +1009,7 @@ export function useReturnImporter(options: UseReturnImporterOptions = {}) {
 
       const nonGrouped = results.filter(r =>
         r.matchType !== 'grouped' &&
-        r.matchedDonorId &&
+        r.resolvedDonorId &&  // Camp canònic P0
         r.noMatchReason !== 'ambiguous'
       );
       console.log(`[performMatching] FASE 5: ${nonGrouped.length} devolucions per matching individual`);
@@ -1068,9 +1081,9 @@ export function useReturnImporter(options: UseReturnImporterOptions = {}) {
         }
       }
 
-      // Actualitzar status per les que no tenen donant
+      // Actualitzar status per les que no tenen donant (usa camp canònic P0)
       results.forEach(r => {
-        if (!r.matchedDonorId) {
+        if (!r.resolvedDonorId) {
           r.status = 'not_found';
         }
       });
@@ -1118,31 +1131,32 @@ export function useReturnImporter(options: UseReturnImporterOptions = {}) {
     const { forceRecreateChildren = false } = options;
     if (!organizationId) return;
 
-    // DEBUG: Veure totes les devolucions parsejades
+    // DEBUG P0: Veure estat de resolvedDonorId
     console.log('[processReturns] 🔍 DEBUG parsedReturns:', parsedReturns.map(r => ({
+      iban: r.iban,
       status: r.status,
       matchType: r.matchType,
+      resolvedDonorId: r.resolvedDonorId,  // Camp canònic P0
       matchedDonorId: r.matchedDonorId,
       matchedTransactionId: r.matchedTransactionId,
       amount: r.amount,
     })));
 
-    // Helper: té donant assignat?
-    const hasDonor = (r: ParsedReturn) => !!(r.matchedDonorId || r.matchedDonor);
+    // Helper P0: usa camp canònic resolvedDonorId
+    const hasDonor = (r: ParsedReturn) => !!r.resolvedDonorId;
 
     // Separar individuals i agrupades
     // INDIVIDUAL = té donant + té transacció + NO és grouped
     const individualReturns = parsedReturns.filter(r => {
       const isIndividual = hasDonor(r) && r.matchedTransactionId && r.matchType !== 'grouped';
-      console.log(`[processReturns] Checking: status=${r.status}, matchType=${r.matchType}, donorId=${r.matchedDonorId}, txId=${r.matchedTransactionId} → isIndividual=${isIndividual}`);
+      console.log(`[processReturns] Individual check: iban=${r.iban}, resolvedDonorId=${r.resolvedDonorId}, txId=${r.matchedTransactionId} → isIndividual=${isIndividual}`);
       return isIndividual;
     });
 
-    // GROUPED = matchType === 'grouped' + té donant
-    // (En mode contextual, status pot ser 'donor_found' però igualment s'ha de processar si té donant)
+    // GROUPED = matchType === 'grouped' + té donant (resolvedDonorId)
     const groupedReturnsToProcess = parsedReturns.filter(r => {
       const isGrouped = r.matchType === 'grouped' && hasDonor(r);
-      console.log(`[processReturns] Grouped check: matchType=${r.matchType}, matchedDonorId=${r.matchedDonorId}, matchedDonor=${r.matchedDonor?.id}, hasDonor=${hasDonor(r)} → isGrouped=${isGrouped}`);
+      console.log(`[processReturns] Grouped check: iban=${r.iban}, matchType=${r.matchType}, resolvedDonorId=${r.resolvedDonorId} → isGrouped=${isGrouped}`);
       return isGrouped;
     });
 
@@ -1588,6 +1602,7 @@ export function useReturnImporter(options: UseReturnImporterOptions = {}) {
             ...item,
             matchedDonor: finalDonor,
             matchedDonorId: finalDonor.id,
+            resolvedDonorId: finalDonor.id,  // Camp canònic P0
             matchedBy: 'manual' as const,
             status: 'matched' as const,
           };
