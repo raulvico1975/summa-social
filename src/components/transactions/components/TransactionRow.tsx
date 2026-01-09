@@ -113,7 +113,7 @@ interface TransactionRowProps {
   onViewRemittanceDetail: (txId: string) => void;
   onUndoRemittance?: (tx: Transaction) => void;
   onCreateNewContact: (txId: string, type: 'donor' | 'supplier') => void;
-  onOpenReturnImporter?: () => void;
+  onOpenReturnImporter?: (parentTx?: Transaction) => void;
   // SEPA reconciliation
   detectedPrebankRemittance?: { id: string; nbOfTxs: number; ctrlSum: number } | null;
   onReconcileSepa?: (tx: Transaction) => void;
@@ -587,7 +587,7 @@ export const TransactionRow = React.memo(function TransactionRow({
                       <Button
                         variant="ghost"
                         size="sm"
-                        onClick={onOpenReturnImporter}
+                        onClick={() => onOpenReturnImporter(tx)}
                         className="text-orange-600 hover:text-orange-800 h-6 text-xs px-1"
                       >
                         <FileUp className="h-3 w-3" />
@@ -610,7 +610,7 @@ export const TransactionRow = React.memo(function TransactionRow({
                       <Button
                         variant="ghost"
                         size="sm"
-                        onClick={onOpenReturnImporter}
+                        onClick={() => onOpenReturnImporter(tx)}
                         className="text-red-600 hover:text-red-800 h-6 text-xs px-1"
                       >
                         <FileUp className="h-3 w-3" />
@@ -652,7 +652,7 @@ export const TransactionRow = React.memo(function TransactionRow({
                   <Button
                     variant="ghost"
                     size="sm"
-                    onClick={onOpenReturnImporter}
+                    onClick={() => onOpenReturnImporter(tx)}
                     className="text-muted-foreground hover:text-foreground h-7 text-xs px-2"
                   >
                     <FileUp className="h-3 w-3" />

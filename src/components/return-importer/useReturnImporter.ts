@@ -394,7 +394,15 @@ const detectColumns = (rows: string[][], startRow: number): ColumnMapping => {
 // HOOK
 // ═══════════════════════════════════════════════════════════════════════════════
 
-export function useReturnImporter() {
+interface UseReturnImporterOptions {
+  /** Mode contextual: assignar devolucions directament a aquest pare */
+  parentTransaction?: Transaction | null;
+}
+
+export function useReturnImporter(options: UseReturnImporterOptions = {}) {
+  const { parentTransaction = null } = options;
+  const isContextMode = !!parentTransaction;
+
   const { toast } = useToast();
   const { log } = useAppLog();
   const { firestore } = useFirebase();
@@ -705,6 +713,60 @@ export function useReturnImporter() {
 
       const withDonorCount = results.filter(r => r.matchedDonorId).length;
       console.log(`[performMatching] FASE 3: ${withDonorCount} amb donant trobat`);
+
+      // ═══════════════════════════════════════════════════════════════════════
+      // MODE CONTEXTUAL: Assignar directament al pare (saltar matching tx)
+      // ═══════════════════════════════════════════════════════════════════════
+
+      if (isContextMode && parentTransaction) {
+        console.log(`[performMatching] MODE CONTEXTUAL: Assignant ${results.length} devolucions al pare ${parentTransaction.id}`);
+
+        // Validar que l'import quadra (±2 cèntims)
+        const sumReturnsAbsCents = Math.round(results.reduce((sum, r) => sum + r.amount, 0) * 100);
+        const parentAbsCents = Math.round(Math.abs(parentTransaction.amount) * 100);
+        const deltaCents = Math.abs(sumReturnsAbsCents - parentAbsCents);
+
+        if (deltaCents > 2) {
+          const deltaEur = (sumReturnsAbsCents - parentAbsCents) / 100;
+          toast({
+            variant: 'destructive',
+            title: 'Import no quadra',
+            description: `El fitxer suma ${(sumReturnsAbsCents / 100).toFixed(2)}€, però l'apunt és ${(parentAbsCents / 100).toFixed(2)}€ (delta: ${deltaEur > 0 ? '+' : ''}${deltaEur.toFixed(2)}€)`,
+          });
+          setIsProcessing(false);
+          return;
+        }
+
+        // Assignar totes les devolucions al pare directament
+        for (const r of results) {
+          r.matchType = 'grouped'; // Tractarem com agrupades
+          r.matchedTransactionId = parentTransaction.id;
+          r.matchedTransaction = parentTransaction;
+          r.groupedTransactionId = parentTransaction.id;
+          r.groupTotalAmount = parentAbsCents / 100;
+          r.noMatchReason = null;
+          // Status segons si té donant o no
+          r.status = r.matchedDonorId ? 'matched' : 'donor_found';
+        }
+
+        // Crear un grup únic pel pare
+        const contextGroup: GroupedMatch = {
+          originalTransaction: parentTransaction,
+          returns: results,
+          totalAmount: sumReturnsAbsCents / 100,
+          date: new Date(parentTransaction.date),
+          groupId: `context_${parentTransaction.id}`,
+        };
+
+        setParsedReturns(results);
+        setGroupedMatches([contextGroup]);
+        setBulkReturnGroups([]);
+
+        log(`[ReturnImporter] MODE CONTEXTUAL: ${results.length} devolucions assignades al pare ${parentTransaction.id}`);
+        setStep('preview');
+        setIsProcessing(false);
+        return; // Sortir aquí, no cal el matching normal
+      }
 
       // ═══════════════════════════════════════════════════════════════════════
       // FASE 4: DETECTAR AGRUPACIONS (ABANS del matching individual!)
@@ -1042,7 +1104,7 @@ export function useReturnImporter() {
     } finally {
       setIsProcessing(false);
     }
-  }, [allRows, startRow, mapping, donors, pendingReturns, files, toast, log]);
+  }, [allRows, startRow, mapping, donors, pendingReturns, files, toast, log, isContextMode, parentTransaction]);
 
   // ═══════════════════════════════════════════════════════════════════════════
   // PROCESSAR DEVOLUCIONS (escriptura a Firestore)
@@ -1541,6 +1603,10 @@ export function useReturnImporter() {
     step,
     setStep,
     isProcessing,
+
+    // Mode contextual
+    isContextMode,
+    parentTransaction,
 
     // Fitxers
     files,

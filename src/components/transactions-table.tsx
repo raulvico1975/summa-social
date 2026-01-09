@@ -303,6 +303,7 @@ export function TransactionsTable({ initialDateFilter = null }: TransactionsTabl
 
   // Modal importador devolucions
   const [isReturnImporterOpen, setIsReturnImporterOpen] = React.useState(false);
+  const [returnImporterParentTx, setReturnImporterParentTx] = React.useState<Transaction | null>(null);
 
   // Modal importador Stripe
   const [isStripeImporterOpen, setIsStripeImporterOpen] = React.useState(false);
@@ -1509,7 +1510,10 @@ export function TransactionsTable({ initialDateFilter = null }: TransactionsTabl
                   onViewRemittanceDetail={handleViewRemittanceDetail}
                   onUndoRemittance={handleUndoRemittance}
                   onCreateNewContact={handleOpenNewContactDialog}
-                  onOpenReturnImporter={() => setIsReturnImporterOpen(true)}
+                  onOpenReturnImporter={(parentTx?: Transaction) => {
+                    setReturnImporterParentTx(parentTx || tx); // Mode contextual: usa la tx actual
+                    setIsReturnImporterOpen(true);
+                  }}
                   detectedPrebankRemittance={detectedSepaRemittances.get(tx.id) ? {
                     id: detectedSepaRemittances.get(tx.id)!.id,
                     nbOfTxs: detectedSepaRemittances.get(tx.id)!.nbOfTxs,
@@ -1793,11 +1797,16 @@ export function TransactionsTable({ initialDateFilter = null }: TransactionsTabl
       {/* Return Importer Modal */}
       <ReturnImporter
         open={isReturnImporterOpen}
-        onOpenChange={setIsReturnImporterOpen}
+        onOpenChange={(open) => {
+          setIsReturnImporterOpen(open);
+          if (!open) setReturnImporterParentTx(null);
+        }}
         onComplete={() => {
           setIsReturnImporterOpen(false);
+          setReturnImporterParentTx(null);
         }}
         isSuperAdmin={isSuperAdmin}
+        parentTransaction={returnImporterParentTx}
       />
 
       {/* Stripe Importer Modal */}

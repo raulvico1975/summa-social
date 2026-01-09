@@ -57,6 +57,8 @@ interface ReturnImporterProps {
   onOpenChange: (open: boolean) => void;
   onComplete: () => void;
   isSuperAdmin?: boolean;
+  /** Mode contextual: assignar devolucions directament a aquest pare */
+  parentTransaction?: Transaction | null;
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -68,6 +70,7 @@ export function ReturnImporter({
   onOpenChange,
   onComplete,
   isSuperAdmin = false,
+  parentTransaction = null,
 }: ReturnImporterProps) {
   const { t } = useTranslations();
   const { toast } = useToast();
@@ -81,6 +84,8 @@ export function ReturnImporter({
     step,
     setStep,
     isProcessing,
+    isContextMode,
+    parentTransaction: hookParentTx,
     files,
     allRows,
     startRow,
@@ -98,7 +103,7 @@ export function ReturnImporter({
     processReturns,
     reset,
     handleCreateDonorForReturn,
-  } = useReturnImporter();
+  } = useReturnImporter({ parentTransaction });
 
   // Reset quan es tanca
   React.useEffect(() => {
@@ -560,10 +565,21 @@ export function ReturnImporter({
           <>
             <DialogHeader>
               <DialogTitle>
-                {t.returnImporter?.results || "Resultat del matching"}
+                {isContextMode
+                  ? "Assignar devolucions a l'apunt seleccionat"
+                  : (t.returnImporter?.results || "Resultat del matching")}
               </DialogTitle>
               <DialogDescription>
-                Revisa les coincidències i selecciona les devolucions a assignar
+                {isContextMode && hookParentTx ? (
+                  <span className="flex flex-col gap-1">
+                    <span className="font-medium text-foreground">
+                      {hookParentTx.date} · {formatCurrencyEU(Math.abs(hookParentTx.amount))} · {hookParentTx.description?.slice(0, 50)}
+                    </span>
+                    <span>Les {parsedReturns.length} devolucions del fitxer s'assignaran a aquest apunt</span>
+                  </span>
+                ) : (
+                  "Revisa les coincidències i selecciona les devolucions a assignar"
+                )}
               </DialogDescription>
             </DialogHeader>
 
