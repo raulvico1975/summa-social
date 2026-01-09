@@ -427,6 +427,25 @@ gcloud auth application-default login
 
 ### 4. Arrencada DEMO
 
+#### DEMO en 1 comandament (recomanat)
+
+```bash
+npm run demo:up        # Mode Short (demo ràpida)
+npm run demo:up:work   # Mode Work (dades realistes)
+```
+
+**Què fa:**
+1. Mata el port 9002 si està ocupat
+2. Arrenca servidor DEMO
+3. Executa seed (Short o Work)
+4. Obre navegador a `/demo`
+
+**Què ha d'aparèixer:**
+- Terminal: `[demo:up] DEMO a punt. (Ctrl+C per aturar)`
+- Browser: http://localhost:9002/demo amb dades
+
+#### Arrencada manual (per debugging)
+
 ```bash
 npm run dev:demo
 ```
