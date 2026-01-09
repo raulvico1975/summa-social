@@ -130,6 +130,8 @@ interface ParsedDonation {
   zipCode: string;
   // Nota explicativa per la UI
   matchNote?: string;
+  // Selecció manual per IBAN ambigu (compte conjunta)
+  manualMatchContactId?: string;
 }
 
 type Step = 'upload' | 'mapping' | 'preview' | 'processing';
@@ -407,7 +409,11 @@ export function RemittanceSplitter({
     const foundInactive = parsedDonations.filter(d => d.status === 'found_inactive').length;
     const foundArchived = parsedDonations.filter(d => d.status === 'found_archived').length;
     const foundDeleted = parsedDonations.filter(d => d.status === 'found_deleted').length;
-    const ambiguousIban = parsedDonations.filter(d => d.status === 'ambiguous_iban').length;
+    // ambiguousIban: només comptem els que NO tenen selecció manual
+    const ambiguousIbanTotal = parsedDonations.filter(d => d.status === 'ambiguous_iban').length;
+    const ambiguousIbanUnresolved = parsedDonations.filter(d =>
+      d.status === 'ambiguous_iban' && !d.manualMatchContactId
+    ).length;
     const noIbanMatch = parsedDonations.filter(d => d.status === 'no_iban_match').length;
     // Legacy (mode OUT)
     const newWithTaxId = parsedDonations.filter(d => d.status === 'new_with_taxid').length;
@@ -415,7 +421,7 @@ export function RemittanceSplitter({
 
     // Totals per categories
     const totalFound = found + foundInactive + foundArchived + foundDeleted;
-    const totalPending = ambiguousIban + noIbanMatch;
+    const totalPending = ambiguousIbanUnresolved + noIbanMatch;
 
     // toCreate ja no aplica per mode IN (tot via IBAN), però mantenim per mode OUT
     const toCreate = parsedDonations.filter(d => d.shouldCreate).length;
@@ -425,7 +431,8 @@ export function RemittanceSplitter({
       foundInactive,
       foundArchived,
       foundDeleted,
-      ambiguousIban,
+      ambiguousIban: ambiguousIbanUnresolved, // Per bloqueig: només sense resoldre
+      ambiguousIbanTotal, // Per mostrar a UI: tots
       noIbanMatch,
       newWithTaxId,
       newWithoutTaxId,
@@ -492,6 +499,37 @@ export function RemittanceSplitter({
   const numColumns = React.useMemo(() => {
     return Math.max(...allRows.map(r => r.length), 0);
   }, [allRows]);
+
+  // Agrupar línies ambigües per IBAN (per UI de resolució)
+  const ambiguousIbanGroups = React.useMemo(() => {
+    const ambiguous = parsedDonations.filter(d => d.status === 'ambiguous_iban');
+    const groups: Map<string, { indices: number[]; donors: Donor[]; iban: string }> = new Map();
+
+    ambiguous.forEach((d, _) => {
+      const ibanKey = normalizeIBAN(d.iban);
+      if (!ibanKey) return;
+
+      if (!groups.has(ibanKey)) {
+        groups.set(ibanKey, {
+          indices: [],
+          donors: d.ambiguousDonors || [],
+          iban: d.iban,
+        });
+      }
+      groups.get(ibanKey)!.indices.push(d.rowIndex);
+    });
+
+    return Array.from(groups.entries()).map(([ibanKey, data]) => ({
+      ibanKey,
+      iban: data.iban,
+      indices: data.indices,
+      donors: data.donors,
+      // Comptem quantes línies del grup estan resoltes
+      resolvedCount: data.indices.filter(idx =>
+        parsedDonations.find(d => d.rowIndex === idx)?.manualMatchContactId
+      ).length,
+    }));
+  }, [parsedDonations]);
 
   // ═══════════════════════════════════════════════════════════════════════════
   // HANDLERS
@@ -1241,6 +1279,23 @@ export function RemittanceSplitter({
     ));
   };
 
+  // Assignar donant manualment a una línia ambigua
+  const handleAssignDonorToLine = (rowIndex: number, donorId: string) => {
+    setParsedDonations(prev => prev.map(d =>
+      d.rowIndex === rowIndex ? { ...d, manualMatchContactId: donorId } : d
+    ));
+  };
+
+  // Assignar donant a totes les línies d'un grup IBAN (compte conjunta)
+  const handleAssignDonorToGroup = (ibanKey: string, donorId: string) => {
+    setParsedDonations(prev => prev.map(d => {
+      if (d.status === 'ambiguous_iban' && normalizeIBAN(d.iban) === ibanKey) {
+        return { ...d, manualMatchContactId: donorId };
+      }
+      return d;
+    }));
+  };
+
   // Reactivar un donant individual
   const handleReactivateDonor = async (index: number) => {
     const donation = parsedDonations[index];
@@ -1370,7 +1425,8 @@ export function RemittanceSplitter({
       // ═══════════════════════════════════════════════════════════════════════
       // P0: REGLA FIXA per remeses IN (IBAN-first)
       // - Resoluble: found, found_inactive, found_archived, found_deleted
-      // - Pendent: no_iban_match, ambiguous_iban (ja bloquejat per canProcess)
+      //              + ambiguous_iban AMB manualMatchContactId (compte conjunta resolta)
+      // - Pendent: no_iban_match, ambiguous_iban SENSE manualMatchContactId
       // Mode OUT: manté comportament original
       // ═══════════════════════════════════════════════════════════════════════
       const resolvableDonations = parsedDonations.filter(d => {
@@ -1381,10 +1437,12 @@ export function RemittanceSplitter({
                  (d.status === 'new_with_taxid' && d.name && d.amount > 0);
         } else {
           // Mode IN: TOTS els found* són resolubles (IBAN match)
+          // + ambiguous_iban AMB selecció manual (compte conjunta resolta)
           return d.status === 'found' ||
                  d.status === 'found_inactive' ||
                  d.status === 'found_archived' ||
-                 d.status === 'found_deleted';
+                 d.status === 'found_deleted' ||
+                 (d.status === 'ambiguous_iban' && !!d.manualMatchContactId);
         }
       });
 
@@ -1394,10 +1452,9 @@ export function RemittanceSplitter({
           return d.status === 'new_without_taxid' ||
                  (d.status === 'new_with_taxid' && (!d.name || d.amount <= 0));
         } else {
-          // Mode IN: només pendents per IBAN no trobat o ambigu
-          // NOTA: ambiguous_iban ja està bloquejat per canProcess
+          // Mode IN: pendents per IBAN no trobat o ambigu sense resoldre
           return d.status === 'no_iban_match' ||
-                 d.status === 'ambiguous_iban';
+                 (d.status === 'ambiguous_iban' && !d.manualMatchContactId);
         }
       });
 
@@ -1457,7 +1514,10 @@ export function RemittanceSplitter({
           childTransactionIds.push(newTxRef.id);
 
           let contactId: string | null = null;
-          if (item.matchedDonor) {
+          // Prioritat: manualMatchContactId (compte conjunta) > matchedDonor > nou creat
+          if (item.manualMatchContactId) {
+            contactId = item.manualMatchContactId;
+          } else if (item.matchedDonor) {
             contactId = item.matchedDonor.id;
           } else if (item.status === 'new_with_taxid') {
             contactId = newDonorIds.get(item.rowIndex) || null;
@@ -2383,35 +2443,94 @@ export function RemittanceSplitter({
                             )}
                           </div>
                         ) : donation.status === 'ambiguous_iban' ? (
-                          /* IBAN ambigu: mostrar IBAN complet + candidats */
-                          <div className="space-y-1">
-                            <span className="text-red-600 font-medium">Selecció manual requerida</span>
-                            {/* IBAN complet per diagnòstic */}
-                            {donation.iban && (
-                              <div className="flex items-center gap-1.5">
-                                <code className="text-xs font-mono text-foreground bg-muted px-1.5 py-0.5 rounded">
-                                  {formatIBANDisplay(donation.iban)}
-                                </code>
+                          /* IBAN ambigu: selector per resoldre */
+                          <div className="space-y-2">
+                            {donation.manualMatchContactId ? (
+                              /* Ja resolt: mostrar qui */
+                              <div className="space-y-1">
+                                <div className="flex items-center gap-2">
+                                  <span className="text-green-700 font-medium">
+                                    {donation.ambiguousDonors?.find(d => d.id === donation.manualMatchContactId)?.name || 'Assignat'}
+                                  </span>
+                                  <Badge variant="outline" className="text-[10px] px-1 py-0 text-green-600 border-green-300">
+                                    Selecció manual
+                                  </Badge>
+                                </div>
                                 <button
                                   type="button"
-                                  onClick={() => {
-                                    navigator.clipboard.writeText(normalizeIBAN(donation.iban));
-                                    toast({ description: 'IBAN copiat' });
-                                  }}
-                                  className="p-0.5 hover:bg-muted rounded"
-                                  title="Copiar IBAN"
+                                  onClick={() => handleAssignDonorToLine(donation.rowIndex, '')}
+                                  className="text-[11px] text-muted-foreground hover:underline"
                                 >
-                                  <Copy className="h-3 w-3 text-muted-foreground" />
+                                  Canviar selecció
                                 </button>
                               </div>
-                            )}
-                            <div className="text-[11px] text-red-500">
-                              {donation.ambiguousDonors?.length ?? 0} donants amb aquest IBAN
-                            </div>
-                            {donation.ambiguousDonors && donation.ambiguousDonors.length > 0 && (
-                              <div className="text-[10px] text-red-600">
-                                {donation.ambiguousDonors.map(d => d.name).join(', ')}
-                              </div>
+                            ) : (
+                              /* Pendent: mostrar selector */
+                              <>
+                                <div className="flex items-center gap-2">
+                                  <span className="text-amber-600 font-medium">
+                                    {donation.ambiguousDonors?.length ?? 0} donants amb aquest IBAN
+                                  </span>
+                                  <span className="text-[11px] text-muted-foreground">(possible compte conjunta)</span>
+                                </div>
+                                {/* IBAN complet per diagnòstic */}
+                                {donation.iban && (
+                                  <div className="flex items-center gap-1.5">
+                                    <code className="text-xs font-mono text-foreground bg-muted px-1.5 py-0.5 rounded">
+                                      {formatIBANDisplay(donation.iban)}
+                                    </code>
+                                    <button
+                                      type="button"
+                                      onClick={() => {
+                                        navigator.clipboard.writeText(normalizeIBAN(donation.iban));
+                                        toast({ description: 'IBAN copiat' });
+                                      }}
+                                      className="p-0.5 hover:bg-muted rounded"
+                                      title="Copiar IBAN"
+                                    >
+                                      <Copy className="h-3 w-3 text-muted-foreground" />
+                                    </button>
+                                  </div>
+                                )}
+                                {/* Selector de donant */}
+                                {donation.ambiguousDonors && donation.ambiguousDonors.length > 0 && (
+                                  <div className="flex flex-col gap-1">
+                                    <span className="text-[11px] text-muted-foreground">Assignar a:</span>
+                                    <div className="flex flex-wrap gap-1">
+                                      {donation.ambiguousDonors.map(donor => (
+                                        <button
+                                          key={donor.id}
+                                          type="button"
+                                          onClick={() => handleAssignDonorToLine(donation.rowIndex, donor.id)}
+                                          className="px-2 py-1 text-xs bg-primary/10 hover:bg-primary/20 text-primary rounded border border-primary/30 transition-colors"
+                                        >
+                                          {donor.name}
+                                        </button>
+                                      ))}
+                                    </div>
+                                    {/* Botó per assignar tot el grup */}
+                                    {(ambiguousIbanGroups.find(g => g.ibanKey === normalizeIBAN(donation.iban))?.indices.length ?? 0) > 1 && (
+                                      <div className="mt-1 pt-1 border-t border-dashed">
+                                        <span className="text-[10px] text-muted-foreground">
+                                          O assignar totes les línies amb aquest IBAN a:
+                                        </span>
+                                        <div className="flex flex-wrap gap-1 mt-0.5">
+                                          {donation.ambiguousDonors.map(donor => (
+                                            <button
+                                              key={`group-${donor.id}`}
+                                              type="button"
+                                              onClick={() => handleAssignDonorToGroup(normalizeIBAN(donation.iban), donor.id)}
+                                              className="px-2 py-0.5 text-[10px] bg-amber-100 hover:bg-amber-200 text-amber-800 rounded border border-amber-300 transition-colors"
+                                            >
+                                              Tot a {donor.name}
+                                            </button>
+                                          ))}
+                                        </div>
+                                      </div>
+                                    )}
+                                  </div>
+                                )}
+                              </>
                             )}
                           </div>
                         ) : donation.status === 'no_iban_match' ? (
