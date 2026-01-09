@@ -157,6 +157,7 @@ export interface PublicTranslations {
     heroTagline: string;
     hero: {
       visualAlt: string;
+      bridgeLine: string;
     };
     nav: {
       conciliation: string;
@@ -559,6 +560,7 @@ const ca: PublicTranslations = {
     heroTagline: 'Gestió econòmica i fiscal per a entitats no lucratives.',
     hero: {
       visualAlt: 'Captura de pantalla de Summa Social',
+      bridgeLine: 'Tot queda alineat sense haver-hi de pensar cada vegada.',
     },
     nav: {
       conciliation: 'Conciliació',
@@ -1085,6 +1087,7 @@ const es: PublicTranslations = {
     heroTagline: 'Gestión económica y fiscal para entidades sin ánimo de lucro.',
     hero: {
       visualAlt: 'Captura de pantalla de Summa Social',
+      bridgeLine: 'Todo queda alineado sin tener que pensarlo cada vez.',
     },
     nav: {
       conciliation: 'Conciliación',
@@ -1612,6 +1615,7 @@ const fr: PublicTranslations = {
     heroTagline: 'Gestion économique et fiscale pour les associations à but non lucratif.',
     hero: {
       visualAlt: 'Capture d\'écran de Summa Social',
+      bridgeLine: 'Tout reste aligné sans avoir à y penser à chaque fois.',
     },
     nav: {
       conciliation: 'Rapprochement',
@@ -2138,6 +2142,7 @@ const pt: PublicTranslations = {
     heroTagline: 'Gestão económica e fiscal para entidades sem fins lucrativos.',
     hero: {
       visualAlt: 'Captura de ecrã de Summa Social',
+      bridgeLine: 'Tudo fica alinhado sem ter de pensar nisso a cada momento.',
     },
     nav: {
       conciliation: 'Reconciliação',

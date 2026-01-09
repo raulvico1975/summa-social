@@ -111,7 +111,7 @@ export default async function HomePage({ params }: PageProps) {
           ═══════════════════════════════════════════════════════════════════════ */}
       <section className="bg-background px-6 py-16 lg:py-24">
         <div className="mx-auto max-w-6xl">
-          <div className="grid gap-12 lg:grid-cols-2 lg:gap-16 items-center">
+          <div className="grid gap-12 lg:grid-cols-[0.9fr_1.1fr] lg:gap-16 items-center">
             {/* Columna esquerra: Text */}
             <div className="space-y-6 text-center lg:text-left">
               <div className="flex items-center justify-center lg:justify-start gap-3">
@@ -127,6 +127,10 @@ export default async function HomePage({ params }: PageProps) {
 
               <p className="text-base text-muted-foreground/80 sm:text-lg">
                 {t.home.solves.intro}
+              </p>
+
+              <p className="text-sm text-muted-foreground/80">
+                {t.home.hero.bridgeLine}
               </p>
 
               {/* Imatge en mòbil: entre text i CTAs */}
