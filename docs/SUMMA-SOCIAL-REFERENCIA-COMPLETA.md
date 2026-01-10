@@ -138,6 +138,51 @@ Per a les properes versions, Summa Social se centra en **dos blocs principals**:
 | **Excel net per gestoria** | Format estàndard Model 182 amb recurrència | ✅ Implementat v1.7 |
 | **Importador Stripe** | Dividir remeses Stripe amb traçabilitat completa (donacions + comissions) | ✅ Implementat v1.9 |
 
+### Invariants Fiscals (A1-A3)
+
+El sistema garanteix les següents invariants per assegurar la integritat de les dades fiscals:
+
+#### A1: contactId segons tipus de transacció
+
+| Tipus | contactId |
+|-------|-----------|
+| `transactionType === 'return'` | **OBLIGATORI** |
+| `source === 'remittance'` + `amount > 0` (quotes IN) | **OBLIGATORI** |
+| `source === 'stripe'` + `transactionType === 'donation'` | Opcional (no fiscal fins assignació) |
+| `transactionType === 'fee'` | **MAI** (sempre null) |
+
+**Nota sobre Stripe:** Les donacions Stripe sense `contactId` es creen però queden excloses automàticament de Model 182, certificats de donació i càlcul de net per donant fins que l'usuari assigni un donant manualment.
+
+#### A2: Coherència de signes (amount)
+
+| Tipus | amount |
+|-------|--------|
+| `transactionType === 'return'` | `< 0` (sempre negatiu) |
+| `transactionType === 'donation'` | `> 0` (sempre positiu) |
+| `transactionType === 'fee'` | `< 0` (sempre negatiu) |
+
+#### A3: Estat del donant no bloqueja fiscal
+
+L'estat del donant (`inactive`, `pending_return`, `archived`, `deleted`) **NO bloqueja** la imputació fiscal si existeix `contactId`. L'estat només afecta l'operativa interna, no el dret fiscal.
+
+#### Notes de robustesa
+
+- **Reimports:** Idempotents per `bankAccountId` + `importRuns`
+- **Multiusuari:** Processaments protegits amb lock per `parentTxId`
+- **Eliminació accidental:** Soft-delete per transaccions fiscals (return, remittance)
+
+#### Punts de validació
+
+Les invariants es validen abans d'escriure qualsevol transacció fiscal a Firestore:
+- `useReturnImporter.ts` (creació de filles return)
+- `StripeImporter.tsx` (creació de donacions i comissions)
+- `remittance-splitter.tsx` (divisió de remeses)
+
+**Comportament en violació:**
+1. Llençar Error amb missatge descriptiu
+2. Reportar SystemIncident amb `type='INVARIANT_BROKEN'`, `severity='CRITICAL'`
+3. Abortar l'operació d'escriptura
+
 ### Criteri de Priorització
 
 > ⚠️ **Qualsevol nova funcionalitat s'ha de valorar segons si contribueix a aquests dos objectius.**
