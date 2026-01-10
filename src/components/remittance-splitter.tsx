@@ -64,6 +64,7 @@ import { useTranslations } from '@/i18n';
 import { useCurrentOrganization } from '@/hooks/organization-provider';
 import { parsePain001, isPain001File, downloadPain001 } from '@/lib/sepa';
 import { filterMatchableContacts, filterAllForIbanMatching, isNumericLikeName, maskMatchValue } from '@/lib/contacts/filterActiveContacts';
+import { assertFiscalTxCanBeSaved } from '@/lib/fiscal/assertFiscalInvariant';
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // TIPUS
@@ -1598,6 +1599,26 @@ export function RemittanceSplitter({
           };
           if (contactId) {
             (newTxData as any).contactType = isPaymentRemittance ? 'supplier' : 'donor';
+          }
+
+          // P0: Validar invariants fiscals abans d'escriure
+          // Nota: Per remittance IN (amount > 0, donacions), contactId és obligatori (A1)
+          // Per remittance OUT (amount < 0, pagaments), no aplica l'invariant fiscal
+          if (newTxData.amount > 0) {
+            assertFiscalTxCanBeSaved(
+              {
+                transactionType: undefined, // No és return/donation/fee explícit
+                amount: newTxData.amount,
+                contactId: newTxData.contactId,
+                source: newTxData.source,
+              },
+              {
+                firestore,
+                orgId: organizationId,
+                operation: 'splitRemittance',
+                route: '/remittance-splitter',
+              }
+            );
           }
 
           batch.set(newTxRef, newTxData);

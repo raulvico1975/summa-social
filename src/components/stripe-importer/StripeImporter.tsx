@@ -15,6 +15,7 @@ import { useCurrentOrganization } from '@/hooks/organization-provider';
 import { collection, doc, query, where, getDocs, writeBatch } from 'firebase/firestore';
 import type { Transaction, Category } from '@/lib/data';
 import { useToast } from '@/hooks/use-toast';
+import { assertFiscalTxCanBeSaved } from '@/lib/fiscal/assertFiscalInvariant';
 
 // UI Components
 import {
@@ -462,6 +463,23 @@ export function StripeImporter({
           parentTransactionId: txData.parentTransactionId,
         });
 
+        // P0: Validar invariants fiscals abans d'escriure
+        // Nota: Stripe donations contactId és opcional (excepció controlada A1)
+        assertFiscalTxCanBeSaved(
+          {
+            transactionType: txData.transactionType,
+            amount: txData.amount,
+            contactId: txData.contactId,
+            source: txData.source,
+          },
+          {
+            firestore,
+            orgId: organizationId,
+            operation: 'stripeImport',
+            route: '/stripe-importer',
+          }
+        );
+
         batch.set(newTxRef, txData);
         docsCreated++;
       }
@@ -497,6 +515,23 @@ export function StripeImporter({
           category: feeTxData.category,
           parentTransactionId: feeTxData.parentTransactionId,
         });
+
+        // P0: Validar invariants fiscals abans d'escriure
+        // Nota: Fees mai han de tenir contactId (A1) i amount ha de ser negatiu (A2)
+        assertFiscalTxCanBeSaved(
+          {
+            transactionType: feeTxData.transactionType,
+            amount: feeTxData.amount,
+            contactId: feeTxData.contactId,
+            source: feeTxData.source,
+          },
+          {
+            firestore,
+            orgId: organizationId,
+            operation: 'stripeImport',
+            route: '/stripe-importer',
+          }
+        );
 
         batch.set(feeTxRef, feeTxData);
         docsCreated++;

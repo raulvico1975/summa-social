@@ -9,6 +9,7 @@ import { useCurrentOrganization } from '@/hooks/organization-provider';
 import { collection, query, where, updateDoc, doc, increment, addDoc, getDocs, deleteDoc } from 'firebase/firestore';
 import type { Transaction, Donor } from '@/lib/data';
 import { normalizeIBAN, normalizeTaxId as normalizeLibTaxId } from '@/lib/normalize';
+import { assertFiscalTxCanBeSaved } from '@/lib/fiscal/assertFiscalInvariant';
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // TIPUS
@@ -1307,6 +1308,22 @@ export function useReturnImporter(options: UseReturnImporterOptions = {}) {
               childTxData.emisorName = donorName;
             }
 
+            // P0: Validar invariants fiscals abans d'escriure
+            assertFiscalTxCanBeSaved(
+              {
+                transactionType: childTxData.transactionType as 'return',
+                amount: childTxData.amount as number,
+                contactId: childTxData.contactId as string | null | undefined,
+                source: childTxData.source as 'remittance',
+              },
+              {
+                firestore,
+                orgId: organizationId,
+                operation: 'createReturn',
+                route: '/return-importer',
+              }
+            );
+
             const newChildRef = await addDoc(
               collection(firestore, 'organizations', organizationId, 'transactions'),
               childTxData
@@ -1526,6 +1543,22 @@ export function useReturnImporter(options: UseReturnImporterOptions = {}) {
               // Heretar bankAccountId del pare
               bankAccountId: group.originalTransaction.bankAccountId ?? null,
             };
+
+            // P0: Validar invariants fiscals abans d'escriure
+            assertFiscalTxCanBeSaved(
+              {
+                transactionType: childTxData.transactionType as 'return',
+                amount: childTxData.amount,
+                contactId: childTxData.contactId,
+                source: childTxData.source as 'remittance',
+              },
+              {
+                firestore,
+                orgId: organizationId,
+                operation: 'createReturn',
+                route: '/return-importer',
+              }
+            );
 
             await addDoc(
               collection(firestore, 'organizations', organizationId, 'transactions'),
