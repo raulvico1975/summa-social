@@ -192,6 +192,33 @@ export type Transaction = {
    * - string: ID del compte bancari
    */
   bankAccountId?: string | null;
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // CAMPS PER SOFT-DELETE (TRANSACCIONS FISCALS)
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  /**
+   * Timestamp ISO quan la transacció va ser arxivada (soft-delete)
+   * null = no arxivada (activa)
+   */
+  archivedAt?: string | null;
+
+  /**
+   * UID de l'usuari que va arxivar la transacció
+   */
+  archivedByUid?: string | null;
+
+  /**
+   * Motiu de l'arxivat
+   */
+  archivedReason?: string | null;
+
+  /**
+   * Acció que va provocar l'arxivat
+   * - user_delete: L'usuari va intentar eliminar
+   * - superadmin_cleanup: SuperAdmin va fer neteja
+   */
+  archivedFromAction?: 'user_delete' | 'superadmin_cleanup' | null;
 };
 
 export type Category = {

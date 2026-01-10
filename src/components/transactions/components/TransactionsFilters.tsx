@@ -80,6 +80,9 @@ interface TransactionsFiltersProps {
   isBulkMode?: boolean;
   onBulkModeChange?: (enabled: boolean) => void;
   batchProgress?: { current: number; total: number } | null;
+  // Show archived transactions (SuperAdmin only)
+  showArchived?: boolean;
+  onShowArchivedChange?: (enabled: boolean) => void;
   t: {
     categorizeAll: string;
     all: string;
@@ -144,6 +147,8 @@ export const TransactionsFilters = React.memo(function TransactionsFilters({
   isBulkMode,
   onBulkModeChange,
   batchProgress,
+  showArchived,
+  onShowArchivedChange,
   t,
 }: TransactionsFiltersProps) {
   // Count active filters for badge
@@ -303,6 +308,30 @@ export const TransactionsFilters = React.memo(function TransactionsFilters({
               </TooltipTrigger>
               <TooltipContent className="max-w-xs" side="bottom">
                 <p className="text-xs">Accelera el procés reduint el temps entre suggeriments. Pot ser menys precís.</p>
+              </TooltipContent>
+            </Tooltip>
+          </div>
+        )}
+
+        {/* Toggle incloure arxivades (només SuperAdmin) */}
+        {isSuperAdmin && onShowArchivedChange && (
+          <div className="flex items-center gap-1.5 pl-2 border-l border-border/50">
+            <Switch
+              id="show-archived"
+              checked={showArchived ?? false}
+              onCheckedChange={onShowArchivedChange}
+              className="h-4 w-7"
+              aria-label="Incloure arxivades"
+            />
+            <Label htmlFor="show-archived" className="text-xs cursor-pointer whitespace-nowrap text-muted-foreground">
+              Arxivades
+            </Label>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Info className="h-3 w-3 text-muted-foreground/60 cursor-help" aria-hidden="true" />
+              </TooltipTrigger>
+              <TooltipContent className="max-w-xs" side="bottom">
+                <p className="text-xs">Mostra les transaccions fiscals arxivades (soft-deleted). Només visible per SuperAdmin.</p>
               </TooltipContent>
             </Tooltip>
           </div>

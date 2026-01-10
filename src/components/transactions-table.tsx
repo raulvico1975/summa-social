@@ -279,8 +279,22 @@ export function TransactionsTable({ initialDateFilter = null }: TransactionsTabl
   const { data: availableContacts } = useCollection<AnyContact>(contactsCollection);
   const { data: availableProjects } = useCollection<Project>(projectsCollection);
 
+  // Estat per toggle SuperAdmin "incloure arxivades"
+  const [showArchived, setShowArchived] = React.useState(false);
+
+  // Filtrar transaccions arxivades (soft-delete) - només SuperAdmin pot veure-les
+  const activeTransactions = React.useMemo(() => {
+    if (!allTransactions) return null;
+    if (showArchived && isSuperAdmin) {
+      // SuperAdmin amb toggle: mostrar totes
+      return allTransactions;
+    }
+    // Filtrar les que tenen archivedAt (soft-deleted)
+    return allTransactions.filter(tx => !tx.archivedAt);
+  }, [allTransactions, showArchived, isSuperAdmin]);
+
   // Aplicar filtre de dates primer
-  const transactions = useTransactionFilters(allTransactions ?? undefined, dateFilter);
+  const transactions = useTransactionFilters(activeTransactions ?? undefined, dateFilter);
 
   // Helper per obtenir el nom traduït d'una categoria (pot ser ID o nom clau)
   const getCategoryDisplayName = React.useCallback((categoryValue: string | null | undefined): string => {
@@ -473,6 +487,8 @@ export function TransactionsTable({ initialDateFilter = null }: TransactionsTabl
     storage,
     transactions,
     availableContacts,
+    firestore,
+    userId: user?.uid,
   });
 
   // ═══════════════════════════════════════════════════════════════════════════
@@ -1233,6 +1249,8 @@ export function TransactionsTable({ initialDateFilter = null }: TransactionsTabl
           isBulkMode={isBulkMode}
           onBulkModeChange={handleBulkModeChange}
           batchProgress={batchProgress}
+          showArchived={showArchived}
+          onShowArchivedChange={setShowArchived}
           t={filterTranslations}
         />
       </div>

@@ -163,7 +163,10 @@ export function DonorDetailDrawer({ donor, open, onOpenChange, onEdit }: DonorDe
     const unsubscribe = onSnapshot(
       txQuery,
       (snapshot) => {
-        const donorTxs = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Transaction));
+        const donorTxs = snapshot.docs
+          .map(doc => ({ id: doc.id, ...doc.data() } as Transaction))
+          // Filtrar transaccions arxivades (soft-delete) - no mostrar a fitxa donant
+          .filter(tx => !tx.archivedAt);
         setTransactions(donorTxs);
         setIsLoading(false);
         setPermissionError(false);
