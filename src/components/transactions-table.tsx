@@ -91,6 +91,13 @@ import type { PrebankRemittance } from '@/lib/pending-documents/sepa-remittance'
 import { prebankRemittancesCollection } from '@/lib/pending-documents/sepa-remittance';
 import { query, where, getDocs } from 'firebase/firestore';
 import { filterActiveContacts } from '@/lib/contacts/filterActiveContacts';
+import { UndoProcessingDialog } from '@/components/undo-processing-dialog';
+import {
+  detectUndoOperationType,
+  countChildTransactions,
+  executeUndo,
+  type UndoOperationType,
+} from '@/lib/fiscal/undoProcessing';
 
 interface TransactionsTableProps {
   initialDateFilter?: DateFilterValue | null;
@@ -329,6 +336,12 @@ export function TransactionsTable({ initialDateFilter = null }: TransactionsTabl
   // Cache de remeses pre-banc detectades per transacció (txId -> remittance)
   const [detectedSepaRemittances, setDetectedSepaRemittances] = React.useState<Map<string, PrebankRemittance>>(new Map());
   const [stripeTransactionToSplit, setStripeTransactionToSplit] = React.useState<Transaction | null>(null);
+
+  // Modal undo processament
+  const [isUndoDialogOpen, setIsUndoDialogOpen] = React.useState(false);
+  const [undoTransaction, setUndoTransaction] = React.useState<Transaction | null>(null);
+  const [undoChildCount, setUndoChildCount] = React.useState(0);
+  const [isUndoProcessing, setIsUndoProcessing] = React.useState(false);
 
   // Maps per noms
   const contactMap = React.useMemo(() =>
@@ -1020,77 +1033,90 @@ export function TransactionsTable({ initialDateFilter = null }: TransactionsTabl
     setIsRemittanceDetailOpen(true);
   };
 
-  // Desfer remesa: elimina fills, document remesa, i neteja el pare
+  // Desfer remesa/Stripe: obre diàleg de confirmació
   const handleUndoRemittance = async (transaction: Transaction) => {
-    if (!organizationId || !transaction.remittanceId) {
+    if (!organizationId) {
       toast({
         variant: 'destructive',
         title: 'Error',
-        description: 'No es pot desfer la remesa: falta informació',
+        description: 'No es pot desfer: falta informació',
       });
       return;
     }
 
-    const confirmed = window.confirm(
-      `Segur que vols desfer aquesta remesa? S'eliminaran ${transaction.remittanceItemCount || 0} transaccions filles i es restaurarà el moviment original.`
-    );
-    if (!confirmed) return;
-
-    try {
-      const batch = writeBatch(firestore);
-      const transactionsRef = collection(firestore, 'organizations', organizationId, 'transactions');
-      const remittanceRef = doc(firestore, 'organizations', organizationId, 'remittances', transaction.remittanceId);
-
-      // 1. Buscar i eliminar totes les transaccions filles amb aquest remittanceId
-      const { getDocs, query, where, deleteField } = await import('firebase/firestore');
-      const childrenQuery = query(
-        transactionsRef,
-        where('remittanceId', '==', transaction.remittanceId)
-      );
-      const childrenSnapshot = await getDocs(childrenQuery);
-
-      let deletedCount = 0;
-      childrenSnapshot.forEach((childDoc) => {
-        // Només eliminar fills (no el pare)
-        if (childDoc.id !== transaction.id) {
-          batch.delete(childDoc.ref);
-          deletedCount++;
-        }
-      });
-
-      // 2. Eliminar document de remesa
-      batch.delete(remittanceRef);
-
-      // 3. Netejar el pare (mantenir import/data/descripció immutables)
-      // Utilitzem deleteField() per eliminar camps opcionals de forma neta
-      const now = new Date().toISOString();
-      batch.update(doc(transactionsRef, transaction.id), {
-        isRemittance: deleteField(),
-        remittanceId: deleteField(),
-        remittanceItemCount: deleteField(),
-        remittanceResolvedCount: deleteField(),
-        remittancePendingCount: deleteField(),
-        remittancePendingTotalAmount: deleteField(),
-        remittanceType: deleteField(),
-        remittanceDirection: deleteField(),
-        remittanceStatus: deleteField(),
-        pendingReturns: deleteField(),
-        updatedAt: now,
-      });
-
-      await batch.commit();
-
-      toast({
-        title: 'Remesa desfeta',
-        description: `S'han eliminat ${deletedCount} transaccions filles i restaurat el moviment original.`,
-      });
-    } catch (error: any) {
-      console.error('Error undoing remittance:', error);
+    // Detectar el tipus d'operació
+    const opType = detectUndoOperationType(transaction);
+    if (!opType) {
       toast({
         variant: 'destructive',
-        title: 'Error desfent remesa',
+        title: 'Error',
+        description: 'No es pot desfer aquesta transacció',
+      });
+      return;
+    }
+
+    // Comptar filles
+    const childCount = await countChildTransactions(
+      firestore,
+      organizationId,
+      transaction.id,
+      transaction.remittanceId
+    );
+
+    if (childCount === 0) {
+      toast({
+        variant: 'destructive',
+        title: 'Error',
+        description: 'No s\'han trobat transaccions filles per desfer',
+      });
+      return;
+    }
+
+    // Obrir diàleg de confirmació
+    setUndoTransaction(transaction);
+    setUndoChildCount(childCount);
+    setIsUndoDialogOpen(true);
+  };
+
+  // Executar l'undo quan l'usuari confirma
+  const handleUndoConfirm = async () => {
+    if (!undoTransaction || !organizationId || !user?.uid) return;
+
+    const opType = detectUndoOperationType(undoTransaction);
+    if (!opType) return;
+
+    setIsUndoProcessing(true);
+
+    try {
+      const result = await executeUndo(undoTransaction, opType, {
+        firestore,
+        orgId: organizationId,
+        userId: user.uid,
+      });
+
+      if (result.success) {
+        toast({
+          title: 'Processament desfet',
+          description: `S'han arxivat ${result.childrenArchived} transaccions fiscals${result.childrenDeleted > 0 ? ` i eliminat ${result.childrenDeleted} no fiscals` : ''}. Pots processar de nou.`,
+        });
+        setIsUndoDialogOpen(false);
+        setUndoTransaction(null);
+      } else {
+        toast({
+          variant: 'destructive',
+          title: 'Error desfent processament',
+          description: result.error || 'Error desconegut',
+        });
+      }
+    } catch (error: any) {
+      console.error('Error undoing processing:', error);
+      toast({
+        variant: 'destructive',
+        title: 'Error desfent processament',
         description: error.message,
       });
+    } finally {
+      setIsUndoProcessing(false);
     }
   };
 
@@ -1869,6 +1895,22 @@ export function TransactionsTable({ initialDateFilter = null }: TransactionsTabl
         transaction={sepaReconcileTx}
         prebankRemittance={sepaReconcileRemittance}
         onComplete={handleSepaReconcileComplete}
+      />
+
+      {/* Undo Processing Dialog */}
+      <UndoProcessingDialog
+        open={isUndoDialogOpen}
+        onOpenChange={(open) => {
+          if (!open && !isUndoProcessing) {
+            setIsUndoDialogOpen(false);
+            setUndoTransaction(null);
+          }
+        }}
+        transaction={undoTransaction}
+        operationType={undoTransaction ? detectUndoOperationType(undoTransaction) : null}
+        childCount={undoChildCount}
+        isProcessing={isUndoProcessing}
+        onConfirm={handleUndoConfirm}
       />
     </TooltipProvider>
   );
