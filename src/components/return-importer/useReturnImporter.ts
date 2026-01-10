@@ -10,6 +10,7 @@ import { collection, query, where, updateDoc, doc, increment, addDoc, getDocs, d
 import type { Transaction, Donor } from '@/lib/data';
 import { normalizeIBAN, normalizeTaxId as normalizeLibTaxId } from '@/lib/normalize';
 import { assertFiscalTxCanBeSaved } from '@/lib/fiscal/assertFiscalInvariant';
+import { acquireProcessLock, releaseProcessLock, getLockFailureMessage } from '@/lib/fiscal/processLocks';
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // TIPUS
@@ -408,8 +409,9 @@ export function useReturnImporter(options: UseReturnImporterOptions = {}) {
 
   const { toast } = useToast();
   const { log } = useAppLog();
-  const { firestore } = useFirebase();
+  const { firestore, user } = useFirebase();
   const { organizationId } = useCurrentOrganization();
+  const userId = user?.uid;
 
   // Estat de navegació
   const [step, setStep] = React.useState<Step>('upload');
@@ -1190,6 +1192,9 @@ export function useReturnImporter(options: UseReturnImporterOptions = {}) {
     setStep('processing');
     setIsProcessing(true);
 
+    // Track locks to release in finally (declarat fora del try per accedir-hi al finally)
+    const acquiredLocks: string[] = [];
+
     try {
       let processedIndividual = 0;
       let processedGrouped = 0;
@@ -1239,6 +1244,32 @@ export function useReturnImporter(options: UseReturnImporterOptions = {}) {
         if (!group) continue;
 
         const parentId = group.originalTransaction.id;
+
+        // ═══════════════════════════════════════════════════════════════════
+        // LOCK: Adquirir lock per evitar doble processament concurrent
+        // ═══════════════════════════════════════════════════════════════════
+        if (userId) {
+          const lockResult = await acquireProcessLock({
+            firestore,
+            orgId: organizationId,
+            parentTxId: parentId,
+            operation: 'returnImport',
+            uid: userId,
+          });
+
+          if (!lockResult.ok) {
+            console.warn(`[processReturns] ⚠️ Lock failed for parent ${parentId}:`, lockResult.reason);
+            toast({
+              variant: 'destructive',
+              title: 'Operació bloquejada',
+              description: getLockFailureMessage(lockResult),
+            });
+            continue; // Skip this group, try next
+          }
+
+          acquiredLocks.push(parentId);
+          console.log(`[processReturns] 🔒 Lock adquirit per pare ${parentId}`);
+        }
 
         // ═══════════════════════════════════════════════════════════════════
         // CARREGAR FILLS EXISTENTS
@@ -1596,9 +1627,16 @@ export function useReturnImporter(options: UseReturnImporterOptions = {}) {
       toast({ variant: 'destructive', title: 'Error', description: error.message });
       setStep('preview');
     } finally {
+      // Alliberar tots els locks adquirits
+      if (userId) {
+        for (const parentId of acquiredLocks) {
+          await releaseProcessLock({ firestore, orgId: organizationId, parentTxId: parentId });
+          console.log(`[processReturns] 🔓 Lock alliberat per pare ${parentId}`);
+        }
+      }
       setIsProcessing(false);
     }
-  }, [organizationId, parsedReturns, groupedMatches, firestore, toast, log, reset]);
+  }, [organizationId, parsedReturns, groupedMatches, firestore, userId, toast, log, reset]);
 
   // ═══════════════════════════════════════════════════════════════════════════
   // CREAR DONANT PER A DEVOLUCIÓ PENDENT

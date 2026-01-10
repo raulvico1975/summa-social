@@ -65,6 +65,7 @@ import { useCurrentOrganization } from '@/hooks/organization-provider';
 import { parsePain001, isPain001File, downloadPain001 } from '@/lib/sepa';
 import { filterMatchableContacts, filterAllForIbanMatching, isNumericLikeName, maskMatchValue } from '@/lib/contacts/filterActiveContacts';
 import { assertFiscalTxCanBeSaved } from '@/lib/fiscal/assertFiscalInvariant';
+import { acquireProcessLock, releaseProcessLock, getLockFailureMessage } from '@/lib/fiscal/processLocks';
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // TIPUS
@@ -1441,6 +1442,36 @@ export function RemittanceSplitter({
       return;
     }
 
+    const parentTxId = transaction.id;
+    const userId = user?.uid;
+    let lockAcquired = false;
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // LOCK: Adquirir lock per evitar doble processament concurrent
+    // ═══════════════════════════════════════════════════════════════════════
+    if (userId) {
+      const lockResult = await acquireProcessLock({
+        firestore,
+        orgId: organizationId,
+        parentTxId,
+        operation: 'remittanceSplit',
+        uid: userId,
+      });
+
+      if (!lockResult.ok) {
+        console.warn(`[Splitter] ⚠️ Lock failed for parent ${parentTxId}:`, lockResult.reason);
+        toast({
+          variant: 'destructive',
+          title: 'Operació bloquejada',
+          description: getLockFailureMessage(lockResult),
+        });
+        return;
+      }
+
+      lockAcquired = true;
+      log(`[Splitter] 🔒 Lock adquirit per pare ${parentTxId}`);
+    }
+
     setStep('processing');
     setIsProcessing(true);
     log(`[Splitter] Iniciant processament...`);
@@ -1766,6 +1797,12 @@ export function RemittanceSplitter({
       toast({ variant: 'destructive', title: t.movements.splitter.error, description: error.message, duration: 9000 });
       setStep('preview');
       setIsProcessing(false);
+    } finally {
+      // Alliberar lock sempre (encara que hi hagi error)
+      if (lockAcquired && userId) {
+        await releaseProcessLock({ firestore, orgId: organizationId, parentTxId });
+        log(`[Splitter] 🔓 Lock alliberat per pare ${parentTxId}`);
+      }
     }
   };
 

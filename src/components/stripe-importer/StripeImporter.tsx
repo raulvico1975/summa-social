@@ -16,6 +16,7 @@ import { collection, doc, query, where, getDocs, writeBatch } from 'firebase/fir
 import type { Transaction, Category } from '@/lib/data';
 import { useToast } from '@/hooks/use-toast';
 import { assertFiscalTxCanBeSaved } from '@/lib/fiscal/assertFiscalInvariant';
+import { acquireProcessLock, releaseProcessLock, getLockFailureMessage } from '@/lib/fiscal/processLocks';
 
 // UI Components
 import {
@@ -102,8 +103,9 @@ export function StripeImporter({
   onImportDone,
 }: StripeImporterProps) {
   // Hooks de Firebase i organització
-  const { firestore } = useFirebase();
+  const { firestore, user } = useFirebase();
   const { organizationId } = useCurrentOrganization();
+  const userId = user?.uid;
   const { toast } = useToast();
   const { t } = useTranslations();
 
@@ -339,6 +341,30 @@ export function StripeImporter({
         pendingConfirmation: !!pendingConfirmation,
       });
       return;
+    }
+
+    // PAS 7: Adquirir lock per parentTxId (multiusuari)
+    const parentTxId = bankTransaction.id;
+    let lockAcquired = false;
+
+    if (userId) {
+      const lockResult = await acquireProcessLock({
+        firestore,
+        orgId: organizationId,
+        parentTxId,
+        operation: 'stripeSplit',
+        uid: userId,
+      });
+
+      if (!lockResult.ok) {
+        toast({
+          variant: 'destructive',
+          title: 'Operació bloquejada',
+          description: getLockFailureMessage(lockResult),
+        });
+        return;
+      }
+      lockAcquired = true;
     }
 
     setIsSaving(true);
@@ -678,6 +704,15 @@ export function StripeImporter({
       setPendingConfirmation(null);
     } finally {
       setIsSaving(false);
+
+      // PAS 7: Alliberar lock sempre (encara que hi hagi error)
+      if (lockAcquired && userId && organizationId) {
+        await releaseProcessLock({
+          firestore,
+          orgId: organizationId,
+          parentTxId,
+        });
+      }
     }
   };
 
