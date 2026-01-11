@@ -61,10 +61,21 @@ import {
   Calendar,
   Undo2,
   Send,
+  User,
+  MoreVertical,
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useTranslations } from '@/i18n';
 import { jsPDF } from 'jspdf';
+import { useIsMobile } from '@/hooks/use-is-mobile';
+import { MobileListItem } from '@/components/mobile/mobile-list-item';
+import { Skeleton } from '@/components/ui/skeleton';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 
 // Tipus per al resum de donacions per donant
 interface DonorSummary {
@@ -140,6 +151,7 @@ export function DonationCertificateGenerator() {
   const { organizationId, organization } = useCurrentOrganization();
   const { toast } = useToast();
   const { t, language } = useTranslations();
+  const isMobile = useIsMobile();
 
   const [selectedYear, setSelectedYear] = React.useState<string>(String(new Date().getFullYear() - 1));
   const [isLoading, setIsLoading] = React.useState(false);
@@ -946,16 +958,114 @@ export function DonationCertificateGenerator() {
         </CardHeader>
         <CardContent>
           {isLoading ? (
-            <div className="flex items-center justify-center h-40">
-              <Loader2 className="h-8 w-8 animate-spin text-primary" />
-            </div>
+            isMobile ? (
+              <div className="space-y-2">
+                {[1, 2, 3].map((i) => (
+                  <div key={i} className="border border-border/50 rounded-lg p-3">
+                    <Skeleton className="h-4 w-3/4 mb-2" />
+                    <Skeleton className="h-3 w-1/2" />
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="flex items-center justify-center h-40">
+                <Loader2 className="h-8 w-8 animate-spin text-primary" />
+              </div>
+            )
           ) : donorSummaries.length === 0 ? (
             <div className="flex flex-col items-center justify-center h-40 text-muted-foreground">
               <AlertCircle className="h-8 w-8 mb-2" />
               <p>{t.certificates.noDonations(selectedYear)}</p>
               <p className="text-sm">{t.certificates.noDonationsHint}</p>
             </div>
+          ) : isMobile ? (
+            /* ═══════════════════════════════════════════════════════════════════
+               VISTA MÒBIL - MobileListItem
+               ═══════════════════════════════════════════════════════════════════ */
+            <div className="space-y-2">
+              {/* Checkbox per seleccionar tots */}
+              <div className="flex items-center gap-2 p-2 border-b border-border/50">
+                <Checkbox
+                  checked={selectedDonors.size === donorSummaries.length}
+                  onCheckedChange={toggleAll}
+                />
+                <span className="text-sm text-muted-foreground">
+                  {selectedDonors.size === donorSummaries.length ? t.common.deselectAll : t.common.selectAll}
+                </span>
+              </div>
+              {donorSummaries.map(summary => (
+                <MobileListItem
+                  key={summary.donor.id}
+                  leadingIcon={
+                    <Checkbox
+                      checked={selectedDonors.has(summary.donor.id)}
+                      onCheckedChange={() => toggleDonor(summary.donor.id)}
+                      onClick={(e) => e.stopPropagation()}
+                    />
+                  }
+                  title={cleanName(summary.donor.name)}
+                  badges={[
+                    <Badge key="donations" variant="secondary" className="text-xs">
+                      {summary.donationCount} {summary.donationCount === 1 ? 'donació' : 'donacions'}
+                    </Badge>,
+                    summary.hasEmail && (
+                      <Badge key="email" variant="outline" className="text-xs text-green-600 border-green-300">
+                        <Mail className="h-3 w-3 mr-1" />
+                        Email
+                      </Badge>
+                    ),
+                  ].filter(Boolean) as React.ReactNode[]}
+                  meta={[
+                    { label: 'NIF', value: summary.donor.taxId },
+                    {
+                      value: (
+                        <span className="font-mono text-green-600 font-medium">
+                          {formatCurrencyEU(summary.totalAmount)}
+                        </span>
+                      )
+                    },
+                    ...(summary.returnedAmount > 0 ? [{
+                      value: (
+                        <span className="flex items-center gap-1 font-mono text-orange-500">
+                          <Undo2 className="h-3 w-3" />
+                          -{formatCurrencyEU(summary.returnedAmount)}
+                        </span>
+                      )
+                    }] : [])
+                  ]}
+                  actions={
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" size="icon" className="h-8 w-8">
+                          <MoreVertical className="h-4 w-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuItem onClick={() => handlePreview(summary)}>
+                          <Eye className="h-4 w-4 mr-2" />
+                          {t.certificates.preview}
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => handleDownloadOne(summary)}>
+                          <Download className="h-4 w-4 mr-2" />
+                          {t.certificates.download}
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                          onClick={() => openEmailConfirmOne(summary)}
+                          disabled={!summary.hasEmail || isSendingEmails}
+                        >
+                          <Mail className="h-4 w-4 mr-2" />
+                          {t.certificates.email.sendOne}
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  }
+                />
+              ))}
+            </div>
           ) : (
+            /* ═══════════════════════════════════════════════════════════════════
+               VISTA DESKTOP - Taula
+               ═══════════════════════════════════════════════════════════════════ */
             <div className="rounded-md border">
               <Table>
                 <TableHeader>
