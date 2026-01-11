@@ -1711,6 +1711,12 @@ export const ca = {
       unknownError: "Error desconegut",
       archive: "Arxivar",
       restore: "Restaurar",
+      // Tipus de contacte (per badges i labels)
+      supplier: "Proveïdor",
+      donor: "Donant",
+      employee: "Treballador",
+      contact: "Contacte",
+      unknownCategory: "Categoria desconeguda",
   },
   // Form validation - claus centralitzades
   form: {

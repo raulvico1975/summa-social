@@ -10,6 +10,7 @@ import {
 import type { Transaction } from '@/lib/data';
 import * as React from 'react';
 import { useTranslations } from '@/i18n';
+import { getCategoryDisplayLabel } from '@/lib/ui/display-labels';
 
 export function ExpensesChart({ transactions }: { transactions: Transaction[] }) {
   const { t } = useTranslations();
@@ -42,7 +43,10 @@ export function ExpensesChart({ transactions }: { transactions: Transaction[] })
     }, {} as Record<string, number>);
 
     return Object.entries(expensesByCategory).map(([categoryKey, expenses]) => ({
-      category: categoryTranslations[categoryKey] || categoryKey,
+      category: getCategoryDisplayLabel(categoryKey, {
+        categoryTranslations,
+        unknownCategoryLabel: t.common.uncategorized,
+      }),
       expenses: parseFloat(expenses.toFixed(2)),
     })).sort((a, b) => b.expenses - a.expenses); // Sort descending
 

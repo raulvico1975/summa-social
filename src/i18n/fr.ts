@@ -1712,6 +1712,12 @@ export const fr = {
       unknownError: "Erreur inconnue",
       archive: "Archiver",
       restore: "Restaurer",
+      // Types de contact (pour badges et labels)
+      supplier: "Fournisseur",
+      donor: "Donateur",
+      employee: "Employé",
+      contact: "Contact",
+      unknownCategory: "Catégorie inconnue",
   },
   // Form validation - clés centralisées
   form: {

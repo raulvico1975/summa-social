@@ -8,6 +8,7 @@ import type { Transaction, Contact, OrganizationMember, Category } from '@/lib/d
 import { SUPER_ADMIN_UID } from '@/lib/data';
 import { useCurrentOrganization } from '@/hooks/organization-provider';
 import { useTranslations } from '@/i18n';
+import { getContactTypeLabel } from '@/lib/ui/display-labels';
 
 // UI Components
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -764,7 +765,7 @@ export default function SuperAdminOrgPage() {
                         {dupes.map(contact => (
                           <div key={contact.id} className="flex items-center justify-between text-sm">
                             <span>{contact.name}</span>
-                            <Badge variant="secondary">{contact.type}</Badge>
+                            <Badge variant="secondary">{getContactTypeLabel(contact.type, t.common)}</Badge>
                           </div>
                         ))}
                       </div>
@@ -799,7 +800,7 @@ export default function SuperAdminOrgPage() {
                     {orphanContacts.slice(0, 20).map(contact => (
                       <TableRow key={contact.id}>
                         <TableCell className="font-medium">{contact.name}</TableCell>
-                        <TableCell><Badge variant="outline">{contact.type}</Badge></TableCell>
+                        <TableCell><Badge variant="outline">{getContactTypeLabel(contact.type, t.common)}</Badge></TableCell>
                         <TableCell className="font-mono text-sm">{contact.taxId || '-'}</TableCell>
                         <TableCell className="text-sm text-muted-foreground">
                           {contact.createdAt ? new Date(contact.createdAt).toLocaleDateString('ca-ES') : '-'}

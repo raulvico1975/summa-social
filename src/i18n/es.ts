@@ -1737,6 +1737,12 @@ export const es = {
       unknownError: "Error desconocido",
       archive: "Archivar",
       restore: "Restaurar",
+      // Tipos de contacto (para badges y labels)
+      supplier: "Proveedor",
+      donor: "Donante",
+      employee: "Trabajador",
+      contact: "Contacto",
+      unknownCategory: "Categoría desconocida",
   },
   // Form validation - claves centralizadas
   form: {
