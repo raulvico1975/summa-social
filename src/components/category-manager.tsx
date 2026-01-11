@@ -40,7 +40,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { PlusCircle, Edit, Trash2, Download, Upload } from 'lucide-react';
+import { PlusCircle, Edit, Trash2, Download, Upload, Tag, MoreVertical } from 'lucide-react';
 import type { Category } from '@/lib/data';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
@@ -50,20 +50,73 @@ import { useTranslations } from '@/i18n';
 import { useCurrentOrganization } from '@/hooks/organization-provider';
 import { CategoryImporter } from './category-importer';
 import { exportCategoriesToExcel } from '@/lib/categories-export';
+import { useIsMobile } from '@/hooks/use-is-mobile';
+import { MobileListItem } from '@/components/mobile/mobile-list-item';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 
 function CategoryTable({
   categories,
   onEdit,
   onDelete,
-  canEdit
+  canEdit,
+  isMobile
 }: {
   categories: Category[];
   onEdit: (category: Category) => void;
   onDelete: (category: Category) => void;
   canEdit: boolean;
+  isMobile: boolean;
 }) {
   const { t } = useTranslations();
   const categoryTranslations = t.categories as Record<string, string>;
+
+  if (isMobile) {
+    return (
+      <div className="flex flex-col gap-2">
+        {categories.map((category) => (
+          <MobileListItem
+            key={category.id}
+            title={categoryTranslations[category.name] || category.name}
+            leadingIcon={<Tag className="h-4 w-4" />}
+            actions={
+              canEdit ? (
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="ghost" size="icon" className="h-8 w-8">
+                      <MoreVertical className="h-4 w-4" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    <DropdownMenuItem onClick={() => onEdit(category)}>
+                      <Edit className="mr-2 h-4 w-4" />
+                      Editar
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      onClick={() => onDelete(category)}
+                      className="text-rose-600"
+                    >
+                      <Trash2 className="mr-2 h-4 w-4" />
+                      Eliminar
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              ) : undefined
+            }
+          />
+        ))}
+        {categories.length === 0 && (
+          <div className="text-center text-muted-foreground py-12">
+            {t.settings.noCategories}
+          </div>
+        )}
+      </div>
+    );
+  }
 
   return (
     <div className="rounded-md border">
@@ -113,7 +166,8 @@ export function CategoryManager() {
   const { organizationId, userRole } = useCurrentOrganization();
   const { t } = useTranslations();
   const categoryTranslations = t.categories as Record<string, string>;
-  
+  const isMobile = useIsMobile();
+
   const canEdit = userRole === 'admin' || userRole === 'user';
 
   const categoriesCollection = useMemoFirebase(
@@ -288,6 +342,7 @@ export function CategoryManager() {
                 onEdit={handleEdit}
                 onDelete={handleDeleteRequest}
                 canEdit={canEdit}
+                isMobile={isMobile}
               />
             </TabsContent>
             <TabsContent value="income" className="mt-4">
@@ -296,6 +351,7 @@ export function CategoryManager() {
                 onEdit={handleEdit}
                 onDelete={handleDeleteRequest}
                 canEdit={canEdit}
+                isMobile={isMobile}
               />
             </TabsContent>
           </Tabs>

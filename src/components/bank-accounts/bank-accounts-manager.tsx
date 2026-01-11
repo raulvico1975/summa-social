@@ -24,7 +24,7 @@ import {
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
-import { PlusCircle, Edit, Star, StarOff, Power, PowerOff, Loader2, Download, Upload } from 'lucide-react';
+import { PlusCircle, Edit, Star, StarOff, Power, PowerOff, Loader2, Download, Upload, Building2, MoreVertical } from 'lucide-react';
 import { useBankAccounts } from '@/hooks/use-bank-accounts';
 import { useToast } from '@/hooks/use-toast';
 import { useTranslations } from '@/i18n';
@@ -33,6 +33,16 @@ import type { BankAccount } from '@/lib/data';
 import type { CreateBankAccountData, UpdateBankAccountData } from '@/lib/bank-accounts';
 import { exportBankAccountsToExcel } from '@/lib/bank-accounts-export';
 import { BankAccountImporter } from '@/components/bank-accounts/bank-account-importer';
+import { useIsMobile } from '@/hooks/use-is-mobile';
+import { MobileListItem } from '@/components/mobile/mobile-list-item';
+import { Skeleton } from '@/components/ui/skeleton';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 
 interface FormData {
   name: string;
@@ -50,6 +60,7 @@ export function BankAccountsManager() {
   const { userRole } = useCurrentOrganization();
   const { t } = useTranslations();
   const { toast } = useToast();
+  const isMobile = useIsMobile();
   const {
     bankAccounts,
     allBankAccounts,
@@ -243,14 +254,126 @@ export function BankAccountsManager() {
         </CardHeader>
         <CardContent>
           {isLoading ? (
-            <div className="flex items-center justify-center py-8">
-              <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-            </div>
+            isMobile ? (
+              <div className="flex flex-col gap-2">
+                {Array.from({ length: 2 }).map((_, i) => (
+                  <div key={`skeleton-${i}`} className="border border-border/50 rounded-lg p-3">
+                    <Skeleton className="h-4 w-32 mb-2" />
+                    <Skeleton className="h-3 w-24" />
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="flex items-center justify-center py-8">
+                <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+              </div>
+            )
           ) : bankAccounts.length === 0 && inactiveAccounts.length === 0 ? (
             <div className="text-center py-8 text-muted-foreground">
               {t.settings.bankAccounts.noAccounts}
             </div>
+          ) : isMobile ? (
+            /* Vista mòbil */
+            <div className="flex flex-col gap-2">
+              {/* Comptes actius */}
+              {bankAccounts.map((account) => (
+                <MobileListItem
+                  key={account.id}
+                  title={account.name}
+                  leadingIcon={<Building2 className="h-4 w-4" />}
+                  badges={[
+                    account.isDefault && (
+                      <Badge key="default" variant="secondary" className="text-xs">
+                        {t.settings.bankAccounts.default}
+                      </Badge>
+                    ),
+                    <Badge key="status" variant="default" className="text-xs">
+                      {t.settings.bankAccounts.active}
+                    </Badge>
+                  ].filter(Boolean) as React.ReactNode[]}
+                  meta={[
+                    ...(account.iban ? [{ label: 'IBAN', value: account.iban }] : []),
+                    ...(account.bankName ? [{ value: account.bankName }] : []),
+                  ]}
+                  actions={
+                    canEdit ? (
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" size="icon" className="h-8 w-8">
+                            <MoreVertical className="h-4 w-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuItem onClick={() => handleEdit(account)}>
+                            <Edit className="mr-2 h-4 w-4" />
+                            {t.common.edit}
+                          </DropdownMenuItem>
+                          {!account.isDefault && (
+                            <DropdownMenuItem onClick={() => handleSetDefault(account)}>
+                              <Star className="mr-2 h-4 w-4" />
+                              {t.settings.bankAccounts.setAsDefault}
+                            </DropdownMenuItem>
+                          )}
+                          <DropdownMenuSeparator />
+                          <DropdownMenuItem
+                            onClick={() => handleToggleActive(account)}
+                            disabled={isLastActiveAccount}
+                            className="text-orange-600"
+                          >
+                            <PowerOff className="mr-2 h-4 w-4" />
+                            {t.settings.bankAccounts.deactivate}
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    ) : undefined
+                  }
+                />
+              ))}
+              {/* Comptes inactius */}
+              {inactiveAccounts.map((account) => (
+                <MobileListItem
+                  key={account.id}
+                  className="opacity-60"
+                  title={account.name}
+                  leadingIcon={<Building2 className="h-4 w-4" />}
+                  badges={[
+                    <Badge key="status" variant="outline" className="text-xs">
+                      {t.settings.bankAccounts.inactive}
+                    </Badge>
+                  ]}
+                  meta={[
+                    ...(account.iban ? [{ label: 'IBAN', value: account.iban }] : []),
+                    ...(account.bankName ? [{ value: account.bankName }] : []),
+                  ]}
+                  actions={
+                    canEdit ? (
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" size="icon" className="h-8 w-8">
+                            <MoreVertical className="h-4 w-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuItem onClick={() => handleEdit(account)}>
+                            <Edit className="mr-2 h-4 w-4" />
+                            {t.common.edit}
+                          </DropdownMenuItem>
+                          <DropdownMenuItem
+                            onClick={() => handleToggleActive(account)}
+                            className="text-green-600"
+                          >
+                            <Power className="mr-2 h-4 w-4" />
+                            {t.settings.bankAccounts.activate}
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    ) : undefined
+                  }
+                />
+              ))}
+            </div>
           ) : (
+            /* Vista desktop */
             <div className="rounded-md border">
               <Table>
                 <TableHeader>

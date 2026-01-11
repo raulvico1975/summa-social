@@ -41,7 +41,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { PlusCircle, Edit, Trash2 } from 'lucide-react';
+import { PlusCircle, Edit, Trash2, Building2, MoreVertical } from 'lucide-react';
 import type { Emisor } from '@/lib/data';
 import { useToast } from '@/hooks/use-toast';
 import { Badge } from '@/components/ui/badge';
@@ -49,12 +49,22 @@ import { useCollection, useFirebase, useMemoFirebase, addDocumentNonBlocking, de
 import { collection, doc } from 'firebase/firestore';
 import { useTranslations } from '@/i18n';
 import { useCurrentOrganization } from '@/hooks/organization-provider';
+import { useIsMobile } from '@/hooks/use-is-mobile';
+import { MobileListItem } from '@/components/mobile/mobile-list-item';
+import { Skeleton } from '@/components/ui/skeleton';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 
 
 export function EmisorManager() {
   const { firestore } = useFirebase();
   const { organizationId } = useCurrentOrganization();
   const { t } = useTranslations();
+  const isMobile = useIsMobile();
 
   // ═══════════════════════════════════════════════════════════════════════════
   // CANVI: Ara la col·lecció apunta a organizations/{orgId}/emissors
@@ -162,6 +172,63 @@ export function EmisorManager() {
           </DialogTrigger>
         </CardHeader>
         <CardContent>
+          {/* Vista mòbil */}
+          {isMobile ? (
+            <div className="flex flex-col gap-2">
+              {!emissors && (
+                Array.from({ length: 3 }).map((_, i) => (
+                  <div key={`skeleton-${i}`} className="border border-border/50 rounded-lg p-3">
+                    <Skeleton className="h-4 w-32 mb-2" />
+                    <Skeleton className="h-3 w-24" />
+                  </div>
+                ))
+              )}
+              {emissors && emissors.map((emisor) => (
+                <MobileListItem
+                  key={emisor.id}
+                  title={emisor.name}
+                  leadingIcon={<Building2 className="h-4 w-4" />}
+                  badges={[
+                    <Badge key="type" variant="secondary" className="text-xs">
+                      {emisorTypeMap[emisor.type]}
+                    </Badge>
+                  ]}
+                  meta={[
+                    { label: 'CIF', value: emisor.taxId },
+                    { label: 'CP', value: emisor.zipCode },
+                  ]}
+                  actions={
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" size="icon" className="h-8 w-8">
+                          <MoreVertical className="h-4 w-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuItem onClick={() => handleEdit(emisor)}>
+                          <Edit className="mr-2 h-4 w-4" />
+                          Editar
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                          onClick={() => handleDeleteRequest(emisor)}
+                          className="text-rose-600"
+                        >
+                          <Trash2 className="mr-2 h-4 w-4" />
+                          Eliminar
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  }
+                />
+              ))}
+              {emissors && emissors.length === 0 && (
+                <div className="text-center text-muted-foreground py-12">
+                  {t.emissors.noEmissors}
+                </div>
+              )}
+            </div>
+          ) : (
+            /* Vista desktop */
             <div className="rounded-md border">
             <Table>
                 <TableHeader>
@@ -207,6 +274,7 @@ export function EmisorManager() {
                 </TableBody>
             </Table>
             </div>
+          )}
         </CardContent>
       </Card>
       
