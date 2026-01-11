@@ -43,6 +43,8 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import { cn } from '@/lib/utils';
+import { MOBILE_ACTIONS_BAR, MOBILE_CTA_PRIMARY } from '@/lib/ui/mobile-actions';
 
 interface FormData {
   name: string;
@@ -219,36 +221,38 @@ export function BankAccountsManager() {
   return (
     <Dialog open={isDialogOpen} onOpenChange={handleOpenChange}>
       <Card>
-        <CardHeader className="flex flex-row items-center justify-between">
+        <CardHeader className={cn("flex flex-col gap-4", "sm:flex-row sm:items-center sm:justify-between")}>
           <div>
             <CardTitle>{t.settings.bankAccounts.title}</CardTitle>
             <CardDescription>{t.settings.bankAccounts.description}</CardDescription>
           </div>
           {canEdit && (
-            <div className="flex gap-2">
-              <Button
-                variant="outline"
-                size="icon"
-                onClick={() => setIsImportOpen(true)}
-                title="Importar des d'Excel"
-              >
-                <Upload className="h-4 w-4" />
-              </Button>
-              <Button
-                variant="outline"
-                size="icon"
-                onClick={() => allBankAccounts.length > 0 && exportBankAccountsToExcel(allBankAccounts)}
-                disabled={allBankAccounts.length === 0}
-                title="Exportar a Excel"
-              >
-                <Download className="h-4 w-4" />
-              </Button>
+            <div className={cn(MOBILE_ACTIONS_BAR, "sm:justify-end")}>
               <DialogTrigger asChild>
-                <Button size="sm" onClick={handleAddNew}>
+                <Button size="sm" onClick={handleAddNew} className={MOBILE_CTA_PRIMARY}>
                   <PlusCircle className="mr-2 h-4 w-4" />
                   {t.settings.bankAccounts.addAccount}
                 </Button>
               </DialogTrigger>
+              <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  size="icon"
+                  onClick={() => setIsImportOpen(true)}
+                  title="Importar des d'Excel"
+                >
+                  <Upload className="h-4 w-4" />
+                </Button>
+                <Button
+                  variant="outline"
+                  size="icon"
+                  onClick={() => allBankAccounts.length > 0 && exportBankAccountsToExcel(allBankAccounts)}
+                  disabled={allBankAccounts.length === 0}
+                  title="Exportar a Excel"
+                >
+                  <Download className="h-4 w-4" />
+                </Button>
+              </div>
             </div>
           )}
         </CardHeader>

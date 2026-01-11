@@ -62,6 +62,8 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import { cn } from '@/lib/utils';
+import { MOBILE_ACTIONS_BAR, MOBILE_CTA_PRIMARY } from '@/lib/ui/mobile-actions';
 
 type SupplierFormData = Omit<Supplier, 'id' | 'createdAt' | 'updatedAt'>;
 
@@ -273,7 +275,7 @@ export function SupplierManager() {
     <>
       <Dialog open={isDialogOpen} onOpenChange={handleOpenChange}>
         <Card>
-          <CardHeader className="flex flex-row items-center justify-between">
+          <CardHeader className={cn("flex flex-col gap-4", "sm:flex-row sm:items-center sm:justify-between")}>
             <div>
               <CardTitle className="text-2xl font-bold tracking-tight font-headline">
                 {t.suppliers.title}
@@ -282,26 +284,27 @@ export function SupplierManager() {
                 {t.suppliers.description}
               </CardDescription>
             </div>
-            <div className="flex gap-2">
-              <Button
-                variant="outline"
-                size="icon"
-                onClick={() => suppliers && suppliers.length > 0 && exportSuppliersToExcel(suppliers, expenseCategories, categoryTranslations)}
-                disabled={!suppliers || suppliers.length === 0}
-                title="Exportar a Excel"
-              >
-                <Download className="h-4 w-4" />
-              </Button>
-              <Button variant="outline" onClick={() => setIsImportOpen(true)}>
-                <Upload className="mr-2 h-4 w-4" />
-                {t.suppliers.import}
-              </Button>
+            <div className={cn(MOBILE_ACTIONS_BAR, "sm:justify-end")}>
               <DialogTrigger asChild>
-                <Button onClick={handleAddNew}>
+                <Button onClick={handleAddNew} className={MOBILE_CTA_PRIMARY}>
                   <PlusCircle className="mr-2 h-4 w-4" />
                   {t.suppliers.add}
                 </Button>
               </DialogTrigger>
+              <div className="flex gap-2">
+                <Button variant="outline" size="icon" onClick={() => setIsImportOpen(true)} title={t.suppliers.import}>
+                  <Upload className="h-4 w-4" />
+                </Button>
+                <Button
+                  variant="outline"
+                  size="icon"
+                  onClick={() => suppliers && suppliers.length > 0 && exportSuppliersToExcel(suppliers, expenseCategories, categoryTranslations)}
+                  disabled={!suppliers || suppliers.length === 0}
+                  title="Exportar a Excel"
+                >
+                  <Download className="h-4 w-4" />
+                </Button>
+              </div>
             </div>
           </CardHeader>
           <CardContent>

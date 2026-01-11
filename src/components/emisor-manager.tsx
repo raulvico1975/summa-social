@@ -58,6 +58,8 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import { cn } from '@/lib/utils';
+import { MOBILE_CTA_PRIMARY } from '@/lib/ui/mobile-actions';
 
 
 export function EmisorManager() {
@@ -159,13 +161,13 @@ export function EmisorManager() {
     <>
     <Dialog open={isDialogOpen} onOpenChange={handleOpenChange}>
       <Card>
-        <CardHeader className="flex flex-row items-center justify-between">
+        <CardHeader className={cn("flex flex-col gap-4", "sm:flex-row sm:items-center sm:justify-between")}>
           <div>
             <CardTitle>{t.emissors.manage}</CardTitle>
             <CardDescription>{t.emissors.manageDescription}</CardDescription>
           </div>
           <DialogTrigger asChild>
-            <Button size="sm" onClick={handleAddNew}>
+            <Button size="sm" onClick={handleAddNew} className={MOBILE_CTA_PRIMARY}>
               <PlusCircle className="mr-2 h-4 w-4" />
               {t.emissors.add}
             </Button>

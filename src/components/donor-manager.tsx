@@ -75,6 +75,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import { MOBILE_ACTIONS_BAR, MOBILE_CTA_PRIMARY } from '@/lib/ui/mobile-actions';
 
 type DonorFormData = Omit<Donor, 'id' | 'createdAt' | 'updatedAt'>;
 
@@ -582,7 +583,7 @@ export function DonorManager() {
     <TooltipProvider>
       <Dialog open={isDialogOpen} onOpenChange={handleOpenChange}>
         <Card>
-          <CardHeader className="flex flex-row items-center justify-between">
+          <CardHeader className={cn("flex flex-col gap-4", "sm:flex-row sm:items-center sm:justify-between")}>
             <div>
               <CardTitle className="text-2xl font-bold tracking-tight font-headline">
                 {t.donors.title}
@@ -591,35 +592,37 @@ export function DonorManager() {
                 {t.donors.description}
               </CardDescription>
             </div>
-            <div className="flex gap-2">
-              <Button
-                variant="outline"
-                asChild
-              >
-                <Link href={`/${orgSlug}/dashboard/donants/remeses-cobrament`}>
-                  <CreditCard className="mr-2 h-4 w-4" />
-                  {t.sepaCollection?.newCollection ?? 'Remesa SEPA'}
-                </Link>
-              </Button>
-              <Button
-                variant="outline"
-                onClick={() => donors && exportDonorsToExcel(donors, allCategories || [])}
-                disabled={!donors || donors.length === 0}
-                title={t.donors.exportTooltip ?? 'Exportar llista de donants a Excel'}
-              >
-                <Download className="mr-2 h-4 w-4" />
-                {t.donors.export ?? 'Exportar'}
-              </Button>
-              <Button variant="outline" onClick={() => setIsImportOpen(true)}>
-                <Upload className="mr-2 h-4 w-4" />
-                {t.donors.import}
-              </Button>
+            <div className={cn(MOBILE_ACTIONS_BAR, "sm:justify-end")}>
               <DialogTrigger asChild>
-                <Button onClick={handleAddNew}>
+                <Button onClick={handleAddNew} className={MOBILE_CTA_PRIMARY}>
                   <PlusCircle className="mr-2 h-4 w-4" />
                   {t.donors.add}
                 </Button>
               </DialogTrigger>
+              <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  asChild
+                  className="flex-1 sm:flex-none"
+                >
+                  <Link href={`/${orgSlug}/dashboard/donants/remeses-cobrament`}>
+                    <CreditCard className="mr-2 h-4 w-4" />
+                    <span className="sm:inline">{t.sepaCollection?.newCollection ?? 'Remesa SEPA'}</span>
+                  </Link>
+                </Button>
+                <Button
+                  variant="outline"
+                  size="icon"
+                  onClick={() => donors && exportDonorsToExcel(donors, allCategories || [])}
+                  disabled={!donors || donors.length === 0}
+                  title={t.donors.exportTooltip ?? 'Exportar llista de donants a Excel'}
+                >
+                  <Download className="h-4 w-4" />
+                </Button>
+                <Button variant="outline" size="icon" onClick={() => setIsImportOpen(true)} title={t.donors.import}>
+                  <Upload className="h-4 w-4" />
+                </Button>
+              </div>
             </div>
           </CardHeader>
           <CardContent>

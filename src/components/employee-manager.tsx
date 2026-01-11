@@ -61,6 +61,8 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import { cn } from '@/lib/utils';
+import { MOBILE_ACTIONS_BAR, MOBILE_CTA_PRIMARY } from '@/lib/ui/mobile-actions';
 
 type EmployeeFormData = Omit<Employee, 'id' | 'createdAt' | 'updatedAt'>;
 
@@ -263,7 +265,7 @@ export function EmployeeManager() {
     <>
       <Dialog open={isDialogOpen} onOpenChange={handleOpenChange}>
         <Card>
-          <CardHeader className="flex flex-row items-center justify-between">
+          <CardHeader className={cn("flex flex-col gap-4", "sm:flex-row sm:items-center sm:justify-between")}>
             <div>
               <CardTitle className="flex items-center gap-2">
                 <UserCog className="h-5 w-5 text-purple-500" />
@@ -273,30 +275,32 @@ export function EmployeeManager() {
                 {t.employees.description}
               </CardDescription>
             </div>
-            <div className="flex gap-2">
-              <Button
-                variant="outline"
-                size="icon"
-                onClick={() => setIsImportOpen(true)}
-                title="Importar des d'Excel"
-              >
-                <Upload className="h-4 w-4" />
-              </Button>
-              <Button
-                variant="outline"
-                size="icon"
-                onClick={() => employees && employees.length > 0 && exportEmployeesToExcel(employees)}
-                disabled={!employees || employees.length === 0}
-                title="Exportar a Excel"
-              >
-                <Download className="h-4 w-4" />
-              </Button>
+            <div className={cn(MOBILE_ACTIONS_BAR, "sm:justify-end")}>
               <DialogTrigger asChild>
-                <Button onClick={handleAddNew}>
+                <Button onClick={handleAddNew} className={MOBILE_CTA_PRIMARY}>
                   <PlusCircle className="mr-2 h-4 w-4" />
                   {t.employees.add}
                 </Button>
               </DialogTrigger>
+              <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  size="icon"
+                  onClick={() => setIsImportOpen(true)}
+                  title="Importar des d'Excel"
+                >
+                  <Upload className="h-4 w-4" />
+                </Button>
+                <Button
+                  variant="outline"
+                  size="icon"
+                  onClick={() => employees && employees.length > 0 && exportEmployeesToExcel(employees)}
+                  disabled={!employees || employees.length === 0}
+                  title="Exportar a Excel"
+                >
+                  <Download className="h-4 w-4" />
+                </Button>
+              </div>
             </div>
           </CardHeader>
           <CardContent>

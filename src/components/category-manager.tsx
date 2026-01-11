@@ -58,6 +58,8 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import { cn } from '@/lib/utils';
+import { MOBILE_ACTIONS_BAR, MOBILE_CTA_PRIMARY } from '@/lib/ui/mobile-actions';
 
 function CategoryTable({
   categories,
@@ -292,41 +294,41 @@ export function CategoryManager() {
     <>
     <Dialog open={isDialogOpen} onOpenChange={handleOpenChange}>
       <Card>
-        <CardHeader className="flex flex-row items-center justify-between">
+        <CardHeader className={cn("flex flex-col gap-4", "sm:flex-row sm:items-center sm:justify-between")}>
           <div>
             <CardTitle>{t.settings.manageCategories}</CardTitle>
             <CardDescription>{t.settings.manageCategoriesDescription}</CardDescription>
           </div>
           {canEdit && (
-            <div className="flex gap-2">
-              {/* Exportar categories */}
-              <Button
-                variant="outline"
-                size="icon"
-                onClick={() => categories && categories.length > 0 && exportCategoriesToExcel(categories, categoryTranslations)}
-                disabled={!categories || categories.length === 0}
-                title="Exportar a Excel"
-              >
-                <Download className="h-4 w-4" />
-              </Button>
-
-              {/* Importar categories */}
-              <Button
-                variant="outline"
-                size="icon"
-                onClick={() => setIsImporterOpen(true)}
-                title="Importar categories"
-              >
-                <Upload className="h-4 w-4" />
-              </Button>
-
+            <div className={cn(MOBILE_ACTIONS_BAR, "sm:justify-end")}>
               {/* Afegir categoria */}
               <DialogTrigger asChild>
-                <Button size="sm" onClick={handleAddNew}>
+                <Button size="sm" onClick={handleAddNew} className={MOBILE_CTA_PRIMARY}>
                   <PlusCircle className="mr-2 h-4 w-4" />
                   {t.settings.addCategory}
                 </Button>
               </DialogTrigger>
+              <div className="flex gap-2">
+                {/* Importar categories */}
+                <Button
+                  variant="outline"
+                  size="icon"
+                  onClick={() => setIsImporterOpen(true)}
+                  title="Importar categories"
+                >
+                  <Upload className="h-4 w-4" />
+                </Button>
+                {/* Exportar categories */}
+                <Button
+                  variant="outline"
+                  size="icon"
+                  onClick={() => categories && categories.length > 0 && exportCategoriesToExcel(categories, categoryTranslations)}
+                  disabled={!categories || categories.length === 0}
+                  title="Exportar a Excel"
+                >
+                  <Download className="h-4 w-4" />
+                </Button>
+              </div>
             </div>
           )}
         </CardHeader>

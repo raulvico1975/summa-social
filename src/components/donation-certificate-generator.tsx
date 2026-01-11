@@ -76,6 +76,8 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import { cn } from '@/lib/utils';
+import { MOBILE_ACTIONS_BAR, MOBILE_CTA_PRIMARY, MOBILE_CTA_TRUNCATE } from '@/lib/ui/mobile-actions';
 
 // Tipus per al resum de donacions per donant
 interface DonorSummary {
@@ -915,38 +917,40 @@ export function DonationCertificateGenerator() {
                 {t.certificates.selectDonorsDescription}
               </CardDescription>
             </div>
-            <div className="flex gap-2">
+            <div className={cn(MOBILE_ACTIONS_BAR, "sm:justify-end")}>
               <Button
                 variant="outline"
-                onClick={openEmailConfirmSelected}
-                disabled={isLoading || isSendingEmails || stats.selectedWithEmail === 0}
+                onClick={handleDownloadAll}
+                disabled={isLoading || isGenerating || selectedDonors.size === 0}
+                className={cn(MOBILE_CTA_PRIMARY, MOBILE_CTA_TRUNCATE)}
               >
-                {isSendingEmails ? (
+                {isGenerating ? (
                   <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    {t.certificates.email.sending}
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin flex-shrink-0" />
+                    <span className="truncate">{t.certificates.generating}</span>
                   </>
                 ) : (
                   <>
-                    <Send className="mr-2 h-4 w-4" />
-                    {t.certificates.email.sendSelected(stats.selectedWithEmail)}
+                    <Download className="mr-2 h-4 w-4 flex-shrink-0" />
+                    <span className="truncate">{t.certificates.downloadSelected(stats.selectedDonors)}</span>
                   </>
                 )}
               </Button>
               <Button
                 variant="outline"
-                onClick={handleDownloadAll}
-                disabled={isLoading || isGenerating || selectedDonors.size === 0}
+                onClick={openEmailConfirmSelected}
+                disabled={isLoading || isSendingEmails || stats.selectedWithEmail === 0}
+                className={cn(MOBILE_CTA_PRIMARY, MOBILE_CTA_TRUNCATE)}
               >
-                {isGenerating ? (
+                {isSendingEmails ? (
                   <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    {t.certificates.generating}
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin flex-shrink-0" />
+                    <span className="truncate">{t.certificates.email.sending}</span>
                   </>
                 ) : (
                   <>
-                    <Download className="mr-2 h-4 w-4" />
-                    {t.certificates.downloadSelected(stats.selectedDonors)}
+                    <Send className="mr-2 h-4 w-4 flex-shrink-0" />
+                    <span className="truncate">{t.certificates.email.sendSelected(stats.selectedWithEmail)}</span>
                   </>
                 )}
               </Button>

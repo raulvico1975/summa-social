@@ -49,6 +49,8 @@ import { exportMembersToExcel, downloadMembersInviteTemplate } from '@/lib/membe
 import { useIsMobile } from '@/hooks/use-is-mobile';
 import { MobileListItem } from '@/components/mobile/mobile-list-item';
 import { Skeleton } from '@/components/ui/skeleton';
+import { cn } from '@/lib/utils';
+import { MOBILE_ACTIONS_BAR, MOBILE_CTA_PRIMARY } from '@/lib/ui/mobile-actions';
 
 export function MembersManager() {
   const { firestore, user } = useFirebase();
@@ -199,7 +201,7 @@ export function MembersManager() {
   return (
     <>
       <Card>
-        <CardHeader className="flex flex-row items-center justify-between">
+        <CardHeader className={cn("flex flex-col gap-4", "sm:flex-row sm:items-center sm:justify-between")}>
           <div>
             <CardTitle className="flex items-center gap-2">
               <Users className="h-5 w-5" />
@@ -210,33 +212,33 @@ export function MembersManager() {
             </CardDescription>
           </div>
           {isAdmin && (
-            <div className="flex gap-2">
-              {/* Exportar membres */}
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => exportMembersToExcel(members || [])}
-                disabled={!members || members.length === 0}
-                title="Exportar membres a Excel"
-              >
-                <Download className="h-4 w-4" />
-              </Button>
-
-              {/* Importar invitacions massives */}
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setIsImporterOpen(true)}
-                title="Importar invitacions massives"
-              >
-                <Upload className="h-4 w-4" />
-              </Button>
-
+            <div className={cn(MOBILE_ACTIONS_BAR, "sm:justify-end")}>
               {/* Convidar membre individual */}
-              <Button onClick={() => setIsInviteDialogOpen(true)}>
+              <Button onClick={() => setIsInviteDialogOpen(true)} className={MOBILE_CTA_PRIMARY}>
                 <UserPlus className="mr-2 h-4 w-4" />
                 {t.members.inviteMember}
               </Button>
+              <div className="flex gap-2">
+                {/* Importar invitacions massives */}
+                <Button
+                  variant="outline"
+                  size="icon"
+                  onClick={() => setIsImporterOpen(true)}
+                  title="Importar invitacions massives"
+                >
+                  <Upload className="h-4 w-4" />
+                </Button>
+                {/* Exportar membres */}
+                <Button
+                  variant="outline"
+                  size="icon"
+                  onClick={() => exportMembersToExcel(members || [])}
+                  disabled={!members || members.length === 0}
+                  title="Exportar membres a Excel"
+                >
+                  <Download className="h-4 w-4" />
+                </Button>
+              </div>
             </div>
           )}
         </CardHeader>
