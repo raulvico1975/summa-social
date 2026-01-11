@@ -41,7 +41,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
-import { PlusCircle, Edit, Trash2, Building2, Upload, Search, X, Factory, Download } from 'lucide-react';
+import { PlusCircle, Edit, Trash2, Building2, Upload, Search, X, Factory, Download, MoreVertical } from 'lucide-react';
 import { EmptyState } from '@/components/ui/empty-state';
 import type { Supplier, Category } from '@/lib/data';
 import { useToast } from '@/hooks/use-toast';
@@ -53,6 +53,15 @@ import { useCurrentOrganization } from '@/hooks/organization-provider';
 import { SupplierImporter } from './supplier-importer';
 import { useTranslations } from '@/i18n';
 import { exportSuppliersToExcel } from '@/lib/suppliers-export';
+import { useIsMobile } from '@/hooks/use-is-mobile';
+import { MobileListItem } from '@/components/mobile/mobile-list-item';
+import { Skeleton } from '@/components/ui/skeleton';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 
 type SupplierFormData = Omit<Supplier, 'id' | 'createdAt' | 'updatedAt'>;
 
@@ -76,6 +85,7 @@ export function SupplierManager() {
   const { organizationId } = useCurrentOrganization();
   const { toast } = useToast();
   const { t } = useTranslations();
+  const isMobile = useIsMobile();
 
   const contactsCollection = useMemoFirebase(
     () => organizationId ? collection(firestore, 'organizations', organizationId, 'contacts') : null,
@@ -317,91 +327,161 @@ export function SupplierManager() {
               </div>
             </div>
 
-            <div className="rounded-md border">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>{t.suppliers.name}</TableHead>
-                    <TableHead>{t.suppliers.taxId}</TableHead>
-                    <TableHead>{t.contacts.defaultCategory}</TableHead>
-                    <TableHead>{t.suppliers.contactInfo}</TableHead>
-                    <TableHead className="text-right">{t.suppliers.actions}</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filteredSuppliers.map((supplier) => (
-                    <TableRow key={supplier.id}>
-                      <TableCell className="font-medium">
-                        <div className="flex items-center gap-2">
-                          <Building2 className="h-4 w-4 text-muted-foreground" />
-                          {supplier.name}
-                        </div>
-                      </TableCell>
-                      <TableCell>{supplier.taxId}</TableCell>
-                      <TableCell>
-                        {supplier.defaultCategoryId ? (
-                          <Badge variant="outline">
-                            {(() => {
-                              const cat = expenseCategories.find(c => c.id === supplier.defaultCategoryId);
-                              return cat ? (categoryTranslations[cat.name] || cat.name) : '-';
-                            })()}
-                          </Badge>
-                        ) : (
-                          <span className="text-muted-foreground">-</span>
-                        )}
-                      </TableCell>
-                      <TableCell>
-                        <div className="text-sm">
-                          {supplier.email && <div>{supplier.email}</div>}
-                          {supplier.phone && <div className="text-muted-foreground">{supplier.phone}</div>}
-                          {!supplier.email && !supplier.phone && <span className="text-muted-foreground">-</span>}
-                        </div>
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-9 w-9 text-muted-foreground hover:text-foreground hover:bg-muted/40"
-                          onClick={() => handleEdit(supplier)}
-                          aria-label={t.suppliers.editSupplier ?? 'Editar proveïdor'}
-                        >
-                          <Edit className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-9 w-9 text-rose-600 hover:text-rose-700 hover:bg-rose-50"
-                          onClick={() => handleDeleteRequest(supplier)}
-                          aria-label={t.suppliers.deleteSupplier ?? 'Eliminar proveïdor'}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                  {filteredSuppliers.length === 0 && (
+            {/* Vista mòbil */}
+            {isMobile ? (
+              <div className="flex flex-col gap-2">
+                {!suppliersRaw && (
+                  Array.from({ length: 4 }).map((_, i) => (
+                    <div key={`skeleton-${i}`} className="border border-border/50 rounded-lg p-3">
+                      <Skeleton className="h-4 w-32 mb-2" />
+                      <Skeleton className="h-3 w-24" />
+                    </div>
+                  ))
+                )}
+                {filteredSuppliers.map((supplier) => (
+                  <MobileListItem
+                    key={supplier.id}
+                    title={supplier.name}
+                    leadingIcon={<Building2 className="h-4 w-4" />}
+                    meta={[
+                      { label: 'CIF', value: supplier.taxId },
+                      ...(supplier.defaultCategoryId ? [{
+                        value: (() => {
+                          const cat = expenseCategories.find(c => c.id === supplier.defaultCategoryId);
+                          return cat ? (categoryTranslations[cat.name] || cat.name) : '-';
+                        })()
+                      }] : []),
+                      ...(supplier.email ? [{ value: supplier.email }] : []),
+                    ]}
+                    actions={
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" size="icon" className="h-8 w-8">
+                            <MoreVertical className="h-4 w-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuItem onClick={() => handleEdit(supplier)}>
+                            <Edit className="mr-2 h-4 w-4" />
+                            {t.suppliers.editSupplier ?? 'Editar'}
+                          </DropdownMenuItem>
+                          <DropdownMenuItem
+                            onClick={() => handleDeleteRequest(supplier)}
+                            className="text-rose-600"
+                          >
+                            <Trash2 className="mr-2 h-4 w-4" />
+                            {t.suppliers.deleteSupplier ?? 'Eliminar'}
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    }
+                  />
+                ))}
+                {filteredSuppliers.length === 0 && (
+                  <EmptyState
+                    icon={searchQuery ? Search : Factory}
+                    title={
+                      searchQuery
+                        ? (t.emptyStates?.suppliers?.noResults ?? t.suppliers.noSearchResults)
+                        : (t.emptyStates?.suppliers?.noData ?? t.suppliers.noData)
+                    }
+                    description={
+                      searchQuery
+                        ? (t.emptyStates?.suppliers?.noResultsDesc ?? undefined)
+                        : (t.emptyStates?.suppliers?.noDataDesc ?? undefined)
+                    }
+                    className="py-12"
+                  />
+                )}
+              </div>
+            ) : (
+              /* Vista desktop (taula) */
+              <div className="rounded-md border">
+                <Table>
+                  <TableHeader>
                     <TableRow>
-                      <TableCell colSpan={5} className="p-0">
-                        <EmptyState
-                          icon={searchQuery ? Search : Factory}
-                          title={
-                            searchQuery
-                              ? (t.emptyStates?.suppliers?.noResults ?? t.suppliers.noSearchResults)
-                              : (t.emptyStates?.suppliers?.noData ?? t.suppliers.noData)
-                          }
-                          description={
-                            searchQuery
-                              ? (t.emptyStates?.suppliers?.noResultsDesc ?? undefined)
-                              : (t.emptyStates?.suppliers?.noDataDesc ?? undefined)
-                          }
-                          className="border-0 rounded-none py-12"
-                        />
-                      </TableCell>
+                      <TableHead>{t.suppliers.name}</TableHead>
+                      <TableHead>{t.suppliers.taxId}</TableHead>
+                      <TableHead>{t.contacts.defaultCategory}</TableHead>
+                      <TableHead>{t.suppliers.contactInfo}</TableHead>
+                      <TableHead className="text-right">{t.suppliers.actions}</TableHead>
                     </TableRow>
-                  )}
-                </TableBody>
-              </Table>
-            </div>
+                  </TableHeader>
+                  <TableBody>
+                    {filteredSuppliers.map((supplier) => (
+                      <TableRow key={supplier.id}>
+                        <TableCell className="font-medium">
+                          <div className="flex items-center gap-2">
+                            <Building2 className="h-4 w-4 text-muted-foreground" />
+                            {supplier.name}
+                          </div>
+                        </TableCell>
+                        <TableCell>{supplier.taxId}</TableCell>
+                        <TableCell>
+                          {supplier.defaultCategoryId ? (
+                            <Badge variant="outline">
+                              {(() => {
+                                const cat = expenseCategories.find(c => c.id === supplier.defaultCategoryId);
+                                return cat ? (categoryTranslations[cat.name] || cat.name) : '-';
+                              })()}
+                            </Badge>
+                          ) : (
+                            <span className="text-muted-foreground">-</span>
+                          )}
+                        </TableCell>
+                        <TableCell>
+                          <div className="text-sm">
+                            {supplier.email && <div>{supplier.email}</div>}
+                            {supplier.phone && <div className="text-muted-foreground">{supplier.phone}</div>}
+                            {!supplier.email && !supplier.phone && <span className="text-muted-foreground">-</span>}
+                          </div>
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-9 w-9 text-muted-foreground hover:text-foreground hover:bg-muted/40"
+                            onClick={() => handleEdit(supplier)}
+                            aria-label={t.suppliers.editSupplier ?? 'Editar proveïdor'}
+                          >
+                            <Edit className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-9 w-9 text-rose-600 hover:text-rose-700 hover:bg-rose-50"
+                            onClick={() => handleDeleteRequest(supplier)}
+                            aria-label={t.suppliers.deleteSupplier ?? 'Eliminar proveïdor'}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                    {filteredSuppliers.length === 0 && (
+                      <TableRow>
+                        <TableCell colSpan={5} className="p-0">
+                          <EmptyState
+                            icon={searchQuery ? Search : Factory}
+                            title={
+                              searchQuery
+                                ? (t.emptyStates?.suppliers?.noResults ?? t.suppliers.noSearchResults)
+                                : (t.emptyStates?.suppliers?.noData ?? t.suppliers.noData)
+                            }
+                            description={
+                              searchQuery
+                                ? (t.emptyStates?.suppliers?.noResultsDesc ?? undefined)
+                                : (t.emptyStates?.suppliers?.noDataDesc ?? undefined)
+                            }
+                            className="border-0 rounded-none py-12"
+                          />
+                        </TableCell>
+                      </TableRow>
+                    )}
+                  </TableBody>
+                </Table>
+              </div>
+            )}
           </CardContent>
         </Card>
 
