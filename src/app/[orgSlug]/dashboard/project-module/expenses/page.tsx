@@ -68,6 +68,8 @@ import type { ExpenseStatus, UnifiedExpenseWithLink, Project, ExpenseAssignment,
 import { useTranslations } from '@/i18n';
 import { OffBankExpenseModal } from '@/components/project-module/add-off-bank-expense-modal';
 import { buildDocumentFilename } from '@/lib/build-document-filename';
+import { useIsMobile } from '@/hooks/use-is-mobile';
+import { MobileListItem } from '@/components/mobile/mobile-list-item';
 
 function formatAmount(amount: number): string {
   return new Intl.NumberFormat('ca-ES', {
@@ -462,6 +464,7 @@ export default function ExpensesInboxPage() {
   const { organizationId } = useCurrentOrganization();
   const { toast } = useToast();
   const storage = useStorage();
+  const isMobile = useIsMobile();
 
   // Llegir filtres de query params
   const projectIdFilter = searchParams.get('projectId');
@@ -1057,208 +1060,315 @@ export default function ExpensesInboxPage() {
         </div>
       )}
 
-      {/* Taula */}
-      <div className="border rounded-lg">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead className="w-[40px]">
-                <Checkbox
-                  checked={allSelected}
-                  onCheckedChange={toggleSelectAll}
-                  aria-label={ep.tableSelectAll}
-                />
-              </TableHead>
-              <TableHead className="w-[50px]">{ep.tableSource}</TableHead>
-              <TableHead className="w-[30px] text-center">{ep.tableDoc}</TableHead>
-              <TableHead className="w-[100px]">{ep.tableDate}</TableHead>
-              <TableHead>{ep.tableDescription}</TableHead>
-              <TableHead>{ep.tableCategory}</TableHead>
-              <TableHead>{ep.tableCounterparty}</TableHead>
-              <TableHead className="text-right">{ep.tableAmount}</TableHead>
-              <TableHead className="w-[80px]">{ep.tableStatus}</TableHead>
-              <TableHead className="w-[120px]"></TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {isLoading && filteredExpenses.length === 0 ? (
-              Array.from({ length: 5 }).map((_, i) => (
-                <TableRow key={i}>
-                  <TableCell><Skeleton className="h-4 w-4" /></TableCell>
-                  <TableCell><Skeleton className="h-4 w-8" /></TableCell>
-                  <TableCell><Skeleton className="h-2.5 w-2.5 rounded-full" /></TableCell>
-                  <TableCell><Skeleton className="h-4 w-20" /></TableCell>
-                  <TableCell><Skeleton className="h-4 w-48" /></TableCell>
-                  <TableCell><Skeleton className="h-4 w-24" /></TableCell>
-                  <TableCell><Skeleton className="h-4 w-32" /></TableCell>
-                  <TableCell><Skeleton className="h-4 w-20 ml-auto" /></TableCell>
-                  <TableCell><Skeleton className="h-6 w-16" /></TableCell>
-                  <TableCell><Skeleton className="h-7 w-20" /></TableCell>
-                </TableRow>
-              ))
-            ) : filteredExpenses.length === 0 ? (
-              <TableRow>
-                <TableCell colSpan={10} className="text-center py-12 text-muted-foreground">
-                  {tableFilter !== 'all' || searchQuery
-                    ? ep.filterNoResults
-                    : t.projectModule.noEligibleExpenses}
-                </TableCell>
-              </TableRow>
-            ) : (
-              filteredExpenses.map((item) => {
-                const { expense, status, assignedAmount } = item;
-                const isSelected = selectedIds.has(expense.txId);
-                const isUploading = uploadingDocTxId === expense.txId;
+      {/* Vista mòbil */}
+      {isMobile ? (
+        <div className="flex flex-col gap-2">
+          {isLoading && filteredExpenses.length === 0 ? (
+            Array.from({ length: 5 }).map((_, i) => (
+              <div key={`skeleton-${i}`} className="border border-border/50 rounded-lg p-3">
+                <Skeleton className="h-4 w-48 mb-2" />
+                <Skeleton className="h-3 w-32" />
+              </div>
+            ))
+          ) : filteredExpenses.length === 0 ? (
+            <div className="text-center text-muted-foreground py-12">
+              {tableFilter !== 'all' || searchQuery
+                ? ep.filterNoResults
+                : t.projectModule.noEligibleExpenses}
+            </div>
+          ) : (
+            filteredExpenses.map((item) => {
+              const { expense, status, assignedAmount } = item;
+              const percentage = Math.abs(expense.amountEUR) > 0
+                ? Math.round((assignedAmount / Math.abs(expense.amountEUR)) * 100)
+                : 0;
 
-                return (
-                  <DroppableExpenseRow
-                    key={expense.txId}
-                    expense={item}
-                    onUploadDocument={handleUploadDocument}
-                    isUploading={isUploading}
-                    isSelected={isSelected}
-                  >
-                    <TableCell>
-                      <Checkbox
-                        checked={isSelected}
-                        onCheckedChange={() => toggleSelect(expense.txId)}
-                        aria-label={`${ep.tableSelectExpense} ${expense.txId}`}
-                      />
-                    </TableCell>
-                    <TableCell>
-                      {expense.source === 'bank' ? (
-                        <span title={t.projectModule?.sourceBank ?? 'Despesa bancària'}>
-                          <Landmark className="h-4 w-4 text-muted-foreground" />
-                        </span>
-                      ) : (
-                        <span title={t.projectModule?.sourceOffBank ?? 'Despesa de terreny'}>
-                          <Globe className="h-4 w-4 text-blue-500" />
-                        </span>
+              return (
+                <MobileListItem
+                  key={expense.txId}
+                  title={expense.description || '-'}
+                  leadingIcon={
+                    expense.source === 'bank'
+                      ? <Landmark className="h-4 w-4" />
+                      : <Globe className="h-4 w-4 text-blue-500" />
+                  }
+                  badges={[
+                    <Badge
+                      key="status"
+                      variant={status === 'assigned' ? 'default' : status === 'partial' ? 'secondary' : 'outline'}
+                      className={
+                        status === 'assigned'
+                          ? 'bg-emerald-600 text-xs'
+                          : status === 'partial'
+                          ? 'bg-amber-500 text-black text-xs'
+                          : 'text-xs'
+                      }
+                    >
+                      {status === 'assigned' ? '100%' : status === 'partial' ? `${percentage}%` : '0%'}
+                    </Badge>,
+                    expense.documentUrl && (
+                      <Badge key="doc" variant="outline" className="text-xs">
+                        <FileText className="h-3 w-3 mr-1" />
+                        Doc
+                      </Badge>
+                    ),
+                  ].filter(Boolean)}
+                  meta={[
+                    { value: formatDateShort(expense.date) },
+                    {
+                      value: expense.pendingConversion || expense.amountEUR === 0
+                        ? <span className="text-amber-600">Import pendent</span>
+                        : <span className="font-mono font-medium text-red-600">{formatAmount(expense.amountEUR)}</span>
+                    },
+                    expense.counterpartyName && { value: expense.counterpartyName },
+                  ].filter(Boolean) as { label?: string; value: React.ReactNode }[]}
+                  actions={
+                    <div className="flex items-center gap-1">
+                      {/* Assignar (només si no té assignació) */}
+                      {!projectsLoading && projects.length > 0 && status === 'unassigned' && (
+                        <QuickAssignPopover
+                          expense={item}
+                          projects={projects}
+                          onAssign100={handleAssign100}
+                          onOpenSplitModal={setSplitModalExpense}
+                          isAssigning={isSaving}
+                          assignTooltip={t.projectModule?.assignToProject ?? 'Assignar a projecte'}
+                        />
                       )}
-                    </TableCell>
-                    <TableCell className="text-center">
-                      {isUploading ? (
-                        <RefreshCw className="h-3 w-3 animate-spin text-primary inline-block" />
-                      ) : deletingDocTxId === expense.txId ? (
-                        <RefreshCw className="h-3 w-3 animate-spin text-muted-foreground inline-block" />
-                      ) : expense.documentUrl ? (
-                        <div className="inline-flex items-center gap-0.5">
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <button
-                                type="button"
-                                onClick={() => window.open(expense.documentUrl!, '_blank', 'noopener,noreferrer')}
-                                className="inline-flex items-center justify-center h-6 w-6 rounded hover:bg-accent transition-colors"
-                              >
-                                <FileText className="h-4 w-4 text-emerald-600" />
-                              </button>
-                            </TooltipTrigger>
-                            <TooltipContent>{ep.tooltipOpenDocument}</TooltipContent>
-                          </Tooltip>
-                          {/* No permetre eliminar docs de despeses bancàries - s'ha de fer des de Moviments */}
-                          {expense.source !== 'bank' && (
+                      {/* Editar despesa off-bank */}
+                      {expense.source === 'offBank' && (
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8"
+                          onClick={() => handleEditOffBank(item)}
+                        >
+                          <Pencil className="h-4 w-4" />
+                        </Button>
+                      )}
+                      {/* Detall despesa bank */}
+                      {expense.source === 'bank' && (
+                        <Link href={buildUrl(`/dashboard/project-module/expenses/${expense.txId}`)}>
+                          <Button variant="ghost" size="icon" className="h-8 w-8">
+                            <ChevronRight className="h-4 w-4" />
+                          </Button>
+                        </Link>
+                      )}
+                    </div>
+                  }
+                  onClick={expense.source === 'bank'
+                    ? () => router.push(buildUrl(`/dashboard/project-module/expenses/${expense.txId}`))
+                    : () => handleEditOffBank(item)
+                  }
+                />
+              );
+            })
+          )}
+        </div>
+      ) : (
+        /* Vista desktop - Taula */
+        <div className="border rounded-lg">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead className="w-[40px]">
+                  <Checkbox
+                    checked={allSelected}
+                    onCheckedChange={toggleSelectAll}
+                    aria-label={ep.tableSelectAll}
+                  />
+                </TableHead>
+                <TableHead className="w-[50px]">{ep.tableSource}</TableHead>
+                <TableHead className="w-[30px] text-center">{ep.tableDoc}</TableHead>
+                <TableHead className="w-[100px]">{ep.tableDate}</TableHead>
+                <TableHead>{ep.tableDescription}</TableHead>
+                <TableHead>{ep.tableCategory}</TableHead>
+                <TableHead>{ep.tableCounterparty}</TableHead>
+                <TableHead className="text-right">{ep.tableAmount}</TableHead>
+                <TableHead className="w-[80px]">{ep.tableStatus}</TableHead>
+                <TableHead className="w-[120px]"></TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {isLoading && filteredExpenses.length === 0 ? (
+                Array.from({ length: 5 }).map((_, i) => (
+                  <TableRow key={i}>
+                    <TableCell><Skeleton className="h-4 w-4" /></TableCell>
+                    <TableCell><Skeleton className="h-4 w-8" /></TableCell>
+                    <TableCell><Skeleton className="h-2.5 w-2.5 rounded-full" /></TableCell>
+                    <TableCell><Skeleton className="h-4 w-20" /></TableCell>
+                    <TableCell><Skeleton className="h-4 w-48" /></TableCell>
+                    <TableCell><Skeleton className="h-4 w-24" /></TableCell>
+                    <TableCell><Skeleton className="h-4 w-32" /></TableCell>
+                    <TableCell><Skeleton className="h-4 w-20 ml-auto" /></TableCell>
+                    <TableCell><Skeleton className="h-6 w-16" /></TableCell>
+                    <TableCell><Skeleton className="h-7 w-20" /></TableCell>
+                  </TableRow>
+                ))
+              ) : filteredExpenses.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={10} className="text-center py-12 text-muted-foreground">
+                    {tableFilter !== 'all' || searchQuery
+                      ? ep.filterNoResults
+                      : t.projectModule.noEligibleExpenses}
+                  </TableCell>
+                </TableRow>
+              ) : (
+                filteredExpenses.map((item) => {
+                  const { expense, status, assignedAmount } = item;
+                  const isSelected = selectedIds.has(expense.txId);
+                  const isUploading = uploadingDocTxId === expense.txId;
+
+                  return (
+                    <DroppableExpenseRow
+                      key={expense.txId}
+                      expense={item}
+                      onUploadDocument={handleUploadDocument}
+                      isUploading={isUploading}
+                      isSelected={isSelected}
+                    >
+                      <TableCell>
+                        <Checkbox
+                          checked={isSelected}
+                          onCheckedChange={() => toggleSelect(expense.txId)}
+                          aria-label={`${ep.tableSelectExpense} ${expense.txId}`}
+                        />
+                      </TableCell>
+                      <TableCell>
+                        {expense.source === 'bank' ? (
+                          <span title={t.projectModule?.sourceBank ?? 'Despesa bancària'}>
+                            <Landmark className="h-4 w-4 text-muted-foreground" />
+                          </span>
+                        ) : (
+                          <span title={t.projectModule?.sourceOffBank ?? 'Despesa de terreny'}>
+                            <Globe className="h-4 w-4 text-blue-500" />
+                          </span>
+                        )}
+                      </TableCell>
+                      <TableCell className="text-center">
+                        {isUploading ? (
+                          <RefreshCw className="h-3 w-3 animate-spin text-primary inline-block" />
+                        ) : deletingDocTxId === expense.txId ? (
+                          <RefreshCw className="h-3 w-3 animate-spin text-muted-foreground inline-block" />
+                        ) : expense.documentUrl ? (
+                          <div className="inline-flex items-center gap-0.5">
                             <Tooltip>
                               <TooltipTrigger asChild>
                                 <button
                                   type="button"
-                                  onClick={() => handleDeleteDocument(item)}
-                                  className="inline-flex items-center justify-center h-5 w-5 rounded text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors"
+                                  onClick={() => window.open(expense.documentUrl!, '_blank', 'noopener,noreferrer')}
+                                  className="inline-flex items-center justify-center h-6 w-6 rounded hover:bg-accent transition-colors"
                                 >
-                                  <Trash2 className="h-3 w-3" />
+                                  <FileText className="h-4 w-4 text-emerald-600" />
                                 </button>
                               </TooltipTrigger>
-                              <TooltipContent>{t.movements?.table?.deleteDocument ?? 'Eliminar document'}</TooltipContent>
+                              <TooltipContent>{ep.tooltipOpenDocument}</TooltipContent>
                             </Tooltip>
+                            {/* No permetre eliminar docs de despeses bancàries - s'ha de fer des de Moviments */}
+                            {expense.source !== 'bank' && (
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <button
+                                    type="button"
+                                    onClick={() => handleDeleteDocument(item)}
+                                    className="inline-flex items-center justify-center h-5 w-5 rounded text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors"
+                                  >
+                                    <Trash2 className="h-3 w-3" />
+                                  </button>
+                                </TooltipTrigger>
+                                <TooltipContent>{t.movements?.table?.deleteDocument ?? 'Eliminar document'}</TooltipContent>
+                              </Tooltip>
+                            )}
+                          </div>
+                        ) : (
+                          <FileText className="h-4 w-4 text-muted-foreground/30 inline-block" />
+                        )}
+                      </TableCell>
+                      <TableCell className="text-xs text-muted-foreground whitespace-nowrap">
+                        {formatDateShort(expense.date)}
+                      </TableCell>
+                      <TableCell className="max-w-[250px] truncate text-[13px]">
+                        {expense.description || '-'}
+                      </TableCell>
+                      <TableCell className="text-muted-foreground text-[13px]">
+                        {getCategoryLabel(expense.categoryName)}
+                      </TableCell>
+                      <TableCell className="text-muted-foreground text-[13px]">
+                        {expense.counterpartyName || '-'}
+                      </TableCell>
+                      <TableCell className="text-right font-mono font-medium text-[13px] whitespace-nowrap tabular-nums">
+                        {expense.pendingConversion || expense.amountEUR === 0 ? (
+                          <div className="flex flex-col items-end gap-1">
+                            <span className="text-muted-foreground">—</span>
+                            <Badge variant="outline" className="text-[10px] px-1.5 py-0 bg-amber-50 text-amber-700 border-amber-200">
+                              Import pendent
+                            </Badge>
+                          </div>
+                        ) : (
+                          <span className="text-red-600">{formatAmount(expense.amountEUR)}</span>
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        <AssignmentStatusPopover
+                          expense={item}
+                          status={status}
+                          assignedAmount={assignedAmount}
+                          totalAmount={Math.abs(expense.amountEUR)}
+                          assignments={item.link?.assignments}
+                          onRemoveAssignment={handleRemoveSingleAssignment}
+                          onUnassignAll={handleUnassignAll}
+                          onEditAssignment={setSplitModalExpense}
+                          isSaving={isSaving}
+                        />
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-1 justify-end">
+                          {/* Assignar (només si no té assignació) */}
+                          {!projectsLoading && projects.length > 0 && status === 'unassigned' && (
+                            <QuickAssignPopover
+                              expense={item}
+                              projects={projects}
+                              onAssign100={handleAssign100}
+                              onOpenSplitModal={setSplitModalExpense}
+                              isAssigning={isSaving}
+                              assignTooltip={t.projectModule?.assignToProject ?? 'Assignar a projecte'}
+                            />
                           )}
-                        </div>
-                      ) : (
-                        <FileText className="h-4 w-4 text-muted-foreground/30 inline-block" />
-                      )}
-                    </TableCell>
-                    <TableCell className="text-xs text-muted-foreground whitespace-nowrap">
-                      {formatDateShort(expense.date)}
-                    </TableCell>
-                    <TableCell className="max-w-[250px] truncate text-[13px]">
-                      {expense.description || '-'}
-                    </TableCell>
-                    <TableCell className="text-muted-foreground text-[13px]">
-                      {getCategoryLabel(expense.categoryName)}
-                    </TableCell>
-                    <TableCell className="text-muted-foreground text-[13px]">
-                      {expense.counterpartyName || '-'}
-                    </TableCell>
-                    <TableCell className="text-right font-mono font-medium text-[13px] whitespace-nowrap tabular-nums">
-                      {expense.pendingConversion || expense.amountEUR === 0 ? (
-                        <div className="flex flex-col items-end gap-1">
-                          <span className="text-muted-foreground">—</span>
-                          <Badge variant="outline" className="text-[10px] px-1.5 py-0 bg-amber-50 text-amber-700 border-amber-200">
-                            Import pendent
-                          </Badge>
-                        </div>
-                      ) : (
-                        <span className="text-red-600">{formatAmount(expense.amountEUR)}</span>
-                      )}
-                    </TableCell>
-                    <TableCell>
-                      <AssignmentStatusPopover
-                        expense={item}
-                        status={status}
-                        assignedAmount={assignedAmount}
-                        totalAmount={Math.abs(expense.amountEUR)}
-                        assignments={item.link?.assignments}
-                        onRemoveAssignment={handleRemoveSingleAssignment}
-                        onUnassignAll={handleUnassignAll}
-                        onEditAssignment={setSplitModalExpense}
-                        isSaving={isSaving}
-                      />
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex items-center gap-1 justify-end">
-                        {/* Assignar (només si no té assignació) */}
-                        {!projectsLoading && projects.length > 0 && status === 'unassigned' && (
-                          <QuickAssignPopover
-                            expense={item}
-                            projects={projects}
-                            onAssign100={handleAssign100}
-                            onOpenSplitModal={setSplitModalExpense}
-                            isAssigning={isSaving}
-                            assignTooltip={t.projectModule?.assignToProject ?? 'Assignar a projecte'}
-                          />
-                        )}
-                        {/* Editar despesa off-bank */}
-                        {expense.source === 'offBank' && (
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-9 w-9 text-muted-foreground hover:text-foreground hover:bg-muted/40"
-                            onClick={() => handleEditOffBank(item)}
-                            aria-label={t.projectModule?.editExpense ?? 'Editar despesa'}
-                          >
-                            <Pencil className="h-4 w-4" />
-                          </Button>
-                        )}
-                        {/* Detall despesa bank */}
-                        {expense.source === 'bank' && (
-                          <Link href={buildUrl(`/dashboard/project-module/expenses/${expense.txId}`)}>
+                          {/* Editar despesa off-bank */}
+                          {expense.source === 'offBank' && (
                             <Button
                               variant="ghost"
                               size="icon"
                               className="h-9 w-9 text-muted-foreground hover:text-foreground hover:bg-muted/40"
-                              aria-label={t.projectModule?.viewDetail ?? 'Veure detall'}
+                              onClick={() => handleEditOffBank(item)}
+                              aria-label={t.projectModule?.editExpense ?? 'Editar despesa'}
                             >
-                              <ChevronRight className="h-4 w-4" />
+                              <Pencil className="h-4 w-4" />
                             </Button>
-                          </Link>
-                        )}
-                      </div>
-                    </TableCell>
-                  </DroppableExpenseRow>
-                );
-              })
-            )}
-          </TableBody>
-        </Table>
-      </div>
+                          )}
+                          {/* Detall despesa bank */}
+                          {expense.source === 'bank' && (
+                            <Link href={buildUrl(`/dashboard/project-module/expenses/${expense.txId}`)}>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-9 w-9 text-muted-foreground hover:text-foreground hover:bg-muted/40"
+                                aria-label={t.projectModule?.viewDetail ?? 'Veure detall'}
+                              >
+                                <ChevronRight className="h-4 w-4" />
+                              </Button>
+                            </Link>
+                          )}
+                        </div>
+                      </TableCell>
+                    </DroppableExpenseRow>
+                  );
+                })
+              )}
+            </TableBody>
+          </Table>
+        </div>
+      )}
 
       {isLoading && expenses.length > 0 && (
         <div className="flex justify-center py-4">

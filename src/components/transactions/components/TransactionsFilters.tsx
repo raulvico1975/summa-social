@@ -161,13 +161,13 @@ export const TransactionsFilters = React.memo(function TransactionsFilters({
   }, [currentFilter, sourceFilter, bankAccountFilter]);
 
   return (
-    <div className="flex items-center gap-3 w-full flex-wrap">
+    <div className="flex flex-col gap-3 w-full md:flex-row md:flex-wrap md:items-center">
       {/* ═══════════════════════════════════════════════════════════════════
           FRANJA 2: Treball actiu (Cerca + Classificar pendents + Mode ràpid)
           ═══════════════════════════════════════════════════════════════════ */}
 
-      {/* Cercador intel·ligent — protagonista, ~40-50% de l'amplada */}
-      <div className="relative flex-1 min-w-[200px] max-w-[50%]">
+      {/* Cercador intel·ligent — full-width en mòbil, ~40-50% en desktop */}
+      <div className="relative w-full md:flex-1 md:min-w-[200px] md:max-w-[50%]">
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
         <Input
           placeholder={t.searchPlaceholder}
@@ -186,8 +186,8 @@ export const TransactionsFilters = React.memo(function TransactionsFilters({
         )}
       </div>
 
-      {/* Separador visual */}
-      <div className="h-6 w-px bg-border" />
+      {/* Separador visual (només desktop) */}
+      <div className="hidden md:block h-6 w-px bg-border" />
 
       {/* ═══════════════════════════════════════════════════════════════════
           FILTRES RÀPIDS (shortcuts per despeses)
@@ -226,11 +226,11 @@ export const TransactionsFilters = React.memo(function TransactionsFilters({
         </Tooltip>
       </div>
 
-      {/* Separador visual */}
-      <div className="h-6 w-px bg-border" />
+      {/* Separador visual (només desktop) */}
+      <div className="hidden md:block h-6 w-px bg-border" />
 
       {/* Suggerir categories + Mode ràpid (junts) */}
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-2 flex-wrap">
         {isBatchCategorizing ? (
           <div className="flex items-center gap-3">
             {/* Progress bar visual */}
