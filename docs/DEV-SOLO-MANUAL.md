@@ -121,13 +121,28 @@ No llegeixis tot. Consulta el que necessitis.
 
 ---
 
-### 4.2 Desplegament
+### 4.2 Gate de producció (obligatori)
+
+**Abans de push a master**, si el canvi toca Moviments, Remeses, Devolucions, Donants, Certificats, Imports o Permisos:
+
+```
+□ scripts/verify-ci.sh ✅ (typecheck + tests + build)
+□ docs/QA-P0-FISCAL.md completat amb PASS/FAIL ✅
+```
+
+**Sense això: prohibit push.**
+
+Guia ràpida d'execució: [scripts/verify-p0-fiscal.md](../scripts/verify-p0-fiscal.md)
+
+---
+
+### 4.3 Desplegament
 
 (pendent d'omplir)
 
 ---
 
-### 4.3 Incidències
+### 4.4 Incidències
 
 Consulta la secció 9 (Salut del sistema).
 

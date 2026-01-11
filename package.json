@@ -23,7 +23,8 @@
     "i18n:validate-guides": "node --import tsx scripts/i18n/validate-guides-translations.ts",
     "i18n:validate-help": "node --import tsx scripts/i18n/validate-help-translations.ts",
     "check": "bash scripts/check.sh",
-    "prepush": "bash scripts/prepush.sh"
+    "prepush": "bash scripts/prepush.sh",
+    "verify:ci": "bash scripts/verify-ci.sh"
   },
   "dependencies": {
     "@genkit-ai/googleai": "^1.14.1",
