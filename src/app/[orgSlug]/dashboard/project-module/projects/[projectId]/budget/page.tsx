@@ -525,76 +525,139 @@ export default function ProjectBudgetPage() {
   const allowedDeviation = project.allowedDeviationPct ?? 10;
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 pb-24 md:pb-0">
       {/* Header */}
-      <div className="flex items-center gap-4">
-        <Link href={buildUrl('/dashboard/project-module/projects')}>
-          <Button variant="ghost" size="icon" title={t.projectModule?.backToProjects ?? 'Tornar a projectes'}>
-            <ArrowLeft className="h-4 w-4" />
-          </Button>
-        </Link>
-        <div className="flex-1">
-          <h1 className="text-2xl font-bold">Gestió Econòmica</h1>
-          <p className="text-muted-foreground">
-            {project.name} {project.code && `(${project.code})`}
-          </p>
+      <div className="flex flex-col gap-3 md:flex-row md:items-center md:gap-4">
+        <div className="flex items-center gap-3 flex-1 min-w-0">
+          <Link href={buildUrl('/dashboard/project-module/projects')}>
+            <Button variant="ghost" size="icon" title={t.projectModule?.backToProjects ?? 'Tornar a projectes'}>
+              <ArrowLeft className="h-4 w-4" />
+            </Button>
+          </Link>
+          <div className="min-w-0">
+            <h1 className="text-xl md:text-2xl font-bold truncate">Gestió Econòmica</h1>
+            <p className="text-muted-foreground text-sm truncate">
+              {project.name} {project.code && `(${project.code})`}
+            </p>
+          </div>
         </div>
-        <div className="flex gap-2">
-          <Button
-            onClick={() => {
-              trackUX('budget.justification.open', { projectId });
-              setJustificationModalOpen(true);
-            }}
-          >
-            <Compass className="h-4 w-4 mr-2" />
-            Iniciar justificació
-          </Button>
-          <Button
-            variant="outline"
-            size="icon"
-            onClick={handleViewExpenses}
-            title={t.projectModule?.viewExpensesTooltip ?? 'Veure despeses del projecte'}
-          >
-            <Eye className="h-4 w-4" />
-          </Button>
-          <Button
-            variant="outline"
-            size="icon"
-            onClick={handleExportFunding}
-            disabled={isExportingFunding || expensesLoading || projectAssignmentsCount === 0}
-            title={t.projectModule?.exportExcel ?? 'Exportar justificació (Excel)'}
-          >
-            {isExportingFunding ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
-            ) : (
-              <Download className="h-4 w-4" />
-            )}
-          </Button>
-          <Button
-            variant="outline"
-            size="icon"
-            onClick={handleExportZip}
-            disabled={isExportingZip || expensesLoading || projectAssignmentsCount === 0}
-            title={t.projectModule?.downloadAttachments ?? 'Baixar comprovants (ZIP)'}
-          >
-            {isExportingZip ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
-            ) : (
-              <FileArchive className="h-4 w-4" />
-            )}
-          </Button>
-          <Button
-            variant="outline"
-            size="icon"
-            onClick={() => setImportWizardOpen(true)}
-            title={t.projectModule?.importBudget ?? 'Importar pressupost (Excel)'}
-          >
-            <Upload className="h-4 w-4" />
-          </Button>
-          <Button variant="outline" size="icon" onClick={openNew} title={t.projectModule?.addBudgetLine ?? 'Afegir partida'}>
-            <Plus className="h-4 w-4" />
-          </Button>
-        </div>
+
+        {/* Actions - Mobile: stacked, Desktop: row */}
+        {isMobile ? (
+          <div className="flex flex-col gap-2">
+            <Button
+              className="w-full"
+              onClick={() => {
+                trackUX('budget.justification.open', { projectId });
+                setJustificationModalOpen(true);
+              }}
+            >
+              <Compass className="h-4 w-4 mr-2" />
+              Iniciar justificació
+            </Button>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" className="w-full">
+                  <MoreVertical className="h-4 w-4 mr-2" />
+                  Més accions
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-56">
+                <DropdownMenuItem onClick={handleViewExpenses}>
+                  <Eye className="mr-2 h-4 w-4" />
+                  {t.projectModule?.viewExpensesTooltip ?? 'Veure despeses'}
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  onClick={handleExportFunding}
+                  disabled={isExportingFunding || expensesLoading || projectAssignmentsCount === 0}
+                >
+                  {isExportingFunding ? (
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  ) : (
+                    <Download className="mr-2 h-4 w-4" />
+                  )}
+                  {t.projectModule?.exportExcel ?? 'Exportar Excel'}
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  onClick={handleExportZip}
+                  disabled={isExportingZip || expensesLoading || projectAssignmentsCount === 0}
+                >
+                  {isExportingZip ? (
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  ) : (
+                    <FileArchive className="mr-2 h-4 w-4" />
+                  )}
+                  {t.projectModule?.downloadAttachments ?? 'Baixar comprovants'}
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setImportWizardOpen(true)}>
+                  <Upload className="mr-2 h-4 w-4" />
+                  {t.projectModule?.importBudget ?? 'Importar pressupost'}
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={openNew}>
+                  <Plus className="mr-2 h-4 w-4" />
+                  {t.projectModule?.addBudgetLine ?? 'Afegir partida'}
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
+        ) : (
+          <div className="flex gap-2">
+            <Button
+              onClick={() => {
+                trackUX('budget.justification.open', { projectId });
+                setJustificationModalOpen(true);
+              }}
+            >
+              <Compass className="h-4 w-4 mr-2" />
+              Iniciar justificació
+            </Button>
+            <Button
+              variant="outline"
+              size="icon"
+              onClick={handleViewExpenses}
+              title={t.projectModule?.viewExpensesTooltip ?? 'Veure despeses del projecte'}
+            >
+              <Eye className="h-4 w-4" />
+            </Button>
+            <Button
+              variant="outline"
+              size="icon"
+              onClick={handleExportFunding}
+              disabled={isExportingFunding || expensesLoading || projectAssignmentsCount === 0}
+              title={t.projectModule?.exportExcel ?? 'Exportar justificació (Excel)'}
+            >
+              {isExportingFunding ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Download className="h-4 w-4" />
+              )}
+            </Button>
+            <Button
+              variant="outline"
+              size="icon"
+              onClick={handleExportZip}
+              disabled={isExportingZip || expensesLoading || projectAssignmentsCount === 0}
+              title={t.projectModule?.downloadAttachments ?? 'Baixar comprovants (ZIP)'}
+            >
+              {isExportingZip ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <FileArchive className="h-4 w-4" />
+              )}
+            </Button>
+            <Button
+              variant="outline"
+              size="icon"
+              onClick={() => setImportWizardOpen(true)}
+              title={t.projectModule?.importBudget ?? 'Importar pressupost (Excel)'}
+            >
+              <Upload className="h-4 w-4" />
+            </Button>
+            <Button variant="outline" size="icon" onClick={openNew} title={t.projectModule?.addBudgetLine ?? 'Afegir partida'}>
+              <Plus className="h-4 w-4" />
+            </Button>
+          </div>
+        )}
       </div>
 
       {/* Resum */}
