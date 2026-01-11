@@ -62,6 +62,8 @@ import {
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
+import { useIsMobile } from '@/hooks/use-is-mobile';
+import { MobileListItem } from '@/components/mobile/mobile-list-item';
 import { CreateOrganizationDialog } from '@/components/admin/create-organization-dialog';
 import { SystemHealth } from '@/components/admin/system-health';
 import { ProductUpdatesSection } from '@/components/admin/product-updates-section';
@@ -79,6 +81,7 @@ export default function AdminPage() {
   const router = useRouter();
   const { user, firestore, auth, isUserLoading } = useFirebase();
   const { toast } = useToast();
+  const isMobile = useIsMobile();
 
   // ─────────────────────────────────────────────────────────────────────────────
   // GUARD: Verificació SuperAdmin via allowlist d'emails
@@ -651,88 +654,25 @@ export default function AdminPage() {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Organització</TableHead>
-                    <TableHead>CIF</TableHead>
-                    <TableHead>Estat</TableHead>
-                    <TableHead>Indicadors</TableHead>
-                    <TableHead>Creada</TableHead>
-                    <TableHead>Accessos</TableHead>
-                    <TableHead className="w-[80px]"></TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
+              {/* Mobile: MobileListItem */}
+              {isMobile ? (
+                <div className="flex flex-col gap-2">
                   {organizations && organizations.length > 0 ? (
                     organizations.map((org) => (
-                      <TableRow key={org.id}>
-                        <TableCell>
-                          <div className="flex items-center gap-2">
-                            <Building2 className="h-4 w-4 text-muted-foreground" />
-                            <div>
-                              <div className="font-medium">{org.name}</div>
-                              <div className="text-xs text-muted-foreground">{org.slug}</div>
-                            </div>
-                          </div>
-                        </TableCell>
-                        <TableCell className="font-mono text-sm">{org.taxId}</TableCell>
-                        <TableCell>{getStatusBadge(org.status)}</TableCell>
-                        <TableCell>
-                          <div className="flex items-center gap-2">
-                            <span
-                              className="flex items-center gap-1"
-                              title={org.onboarding?.welcomeSeenAt ? `Onboarding vist: ${org.onboarding.welcomeSeenAt}` : 'Onboarding pendent'}
-                            >
-                              {org.onboarding?.welcomeSeenAt ? (
-                                <CheckCircle2 className="h-4 w-4 text-green-600" />
-                              ) : (
-                                <XCircle className="h-4 w-4 text-muted-foreground" />
-                              )}
-                            </span>
-                            {org.updatedAt && (
-                              <span className="text-xs text-muted-foreground" title={`Última activitat: ${org.updatedAt}`}>
-                                {formatDate(org.updatedAt)}
-                              </span>
-                            )}
-                          </div>
-                        </TableCell>
-                        <TableCell className="text-sm text-muted-foreground">
-                          {formatDate(org.createdAt)}
-                        </TableCell>
-                        <TableCell>
-                          <div className="flex items-center gap-1">
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              className="h-7 px-2 text-xs"
-                              onClick={() => {
-                                sessionStorage.setItem('adminViewingOrgId', org.id);
-                                router.push(`/${org.slug}/dashboard/movimientos`);
-                              }}
-                              title="Moviments"
-                            >
-                              <ArrowUpRight className="h-3 w-3 mr-1" />
-                              Mov
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              className="h-7 px-2 text-xs"
-                              onClick={() => {
-                                sessionStorage.setItem('adminViewingOrgId', org.id);
-                                router.push(`/${org.slug}/dashboard/configuracion`);
-                              }}
-                              title="Configuració"
-                            >
-                              <Settings className="h-3 w-3" />
-                            </Button>
-                          </div>
-                        </TableCell>
-                        <TableCell>
+                      <MobileListItem
+                        key={org.id}
+                        title={org.name}
+                        leadingIcon={<Building2 className="h-4 w-4" />}
+                        badges={[getStatusBadge(org.status)]}
+                        meta={[
+                          { value: org.slug },
+                          org.taxId && { label: 'CIF', value: org.taxId },
+                          { value: formatDate(org.createdAt) },
+                        ].filter(Boolean) as { label?: string; value: React.ReactNode }[]}
+                        actions={
                           <DropdownMenu>
                             <DropdownMenuTrigger asChild>
-                              <Button variant="ghost" size="sm">
+                              <Button variant="ghost" size="icon" className="h-8 w-8">
                                 <MoreHorizontal className="h-4 w-4" />
                               </Button>
                             </DropdownMenuTrigger>
@@ -740,6 +680,20 @@ export default function AdminPage() {
                               <DropdownMenuItem onClick={() => handleEnterOrganization(org)}>
                                 <LogIn className="mr-2 h-4 w-4" />
                                 Entrar
+                              </DropdownMenuItem>
+                              <DropdownMenuItem onClick={() => {
+                                sessionStorage.setItem('adminViewingOrgId', org.id);
+                                router.push(`/${org.slug}/dashboard/movimientos`);
+                              }}>
+                                <ArrowUpRight className="mr-2 h-4 w-4" />
+                                Moviments
+                              </DropdownMenuItem>
+                              <DropdownMenuItem onClick={() => {
+                                sessionStorage.setItem('adminViewingOrgId', org.id);
+                                router.push(`/${org.slug}/dashboard/configuracion`);
+                              }}>
+                                <Settings className="mr-2 h-4 w-4" />
+                                Configuració
                               </DropdownMenuItem>
                               <DropdownMenuItem
                                 onClick={() => handleDownloadBackup(org.id, org.name)}
@@ -771,18 +725,151 @@ export default function AdminPage() {
                               </DropdownMenuItem>
                             </DropdownMenuContent>
                           </DropdownMenu>
-                        </TableCell>
-                      </TableRow>
+                        }
+                        onClick={() => handleEnterOrganization(org)}
+                      />
                     ))
                   ) : (
-                    <TableRow>
-                      <TableCell colSpan={7} className="text-center text-muted-foreground h-24">
-                        No hi ha organitzacions. Crea'n una per començar.
-                      </TableCell>
-                    </TableRow>
+                    <div className="text-center text-muted-foreground py-12">
+                      No hi ha organitzacions. Crea'n una per començar.
+                    </div>
                   )}
-                </TableBody>
-              </Table>
+                </div>
+              ) : (
+                /* Desktop: Table */
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Organització</TableHead>
+                      <TableHead>CIF</TableHead>
+                      <TableHead>Estat</TableHead>
+                      <TableHead>Indicadors</TableHead>
+                      <TableHead>Creada</TableHead>
+                      <TableHead>Accessos</TableHead>
+                      <TableHead className="w-[80px]"></TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {organizations && organizations.length > 0 ? (
+                      organizations.map((org) => (
+                        <TableRow key={org.id}>
+                          <TableCell>
+                            <div className="flex items-center gap-2">
+                              <Building2 className="h-4 w-4 text-muted-foreground" />
+                              <div>
+                                <div className="font-medium">{org.name}</div>
+                                <div className="text-xs text-muted-foreground">{org.slug}</div>
+                              </div>
+                            </div>
+                          </TableCell>
+                          <TableCell className="font-mono text-sm">{org.taxId}</TableCell>
+                          <TableCell>{getStatusBadge(org.status)}</TableCell>
+                          <TableCell>
+                            <div className="flex items-center gap-2">
+                              <span
+                                className="flex items-center gap-1"
+                                title={org.onboarding?.welcomeSeenAt ? `Onboarding vist: ${org.onboarding.welcomeSeenAt}` : 'Onboarding pendent'}
+                              >
+                                {org.onboarding?.welcomeSeenAt ? (
+                                  <CheckCircle2 className="h-4 w-4 text-green-600" />
+                                ) : (
+                                  <XCircle className="h-4 w-4 text-muted-foreground" />
+                                )}
+                              </span>
+                              {org.updatedAt && (
+                                <span className="text-xs text-muted-foreground" title={`Última activitat: ${org.updatedAt}`}>
+                                  {formatDate(org.updatedAt)}
+                                </span>
+                              )}
+                            </div>
+                          </TableCell>
+                          <TableCell className="text-sm text-muted-foreground">
+                            {formatDate(org.createdAt)}
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex items-center gap-1">
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="h-7 px-2 text-xs"
+                                onClick={() => {
+                                  sessionStorage.setItem('adminViewingOrgId', org.id);
+                                  router.push(`/${org.slug}/dashboard/movimientos`);
+                                }}
+                                title="Moviments"
+                              >
+                                <ArrowUpRight className="h-3 w-3 mr-1" />
+                                Mov
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="h-7 px-2 text-xs"
+                                onClick={() => {
+                                  sessionStorage.setItem('adminViewingOrgId', org.id);
+                                  router.push(`/${org.slug}/dashboard/configuracion`);
+                                }}
+                                title="Configuració"
+                              >
+                                <Settings className="h-3 w-3" />
+                              </Button>
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <Button variant="ghost" size="sm">
+                                  <MoreHorizontal className="h-4 w-4" />
+                                </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="end">
+                                <DropdownMenuItem onClick={() => handleEnterOrganization(org)}>
+                                  <LogIn className="mr-2 h-4 w-4" />
+                                  Entrar
+                                </DropdownMenuItem>
+                                <DropdownMenuItem
+                                  onClick={() => handleDownloadBackup(org.id, org.name)}
+                                  disabled={backupOrgId === org.id}
+                                >
+                                  {backupOrgId === org.id ? (
+                                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                  ) : (
+                                    <Download className="mr-2 h-4 w-4" />
+                                  )}
+                                  Backup local
+                                </DropdownMenuItem>
+                                <DropdownMenuSeparator />
+                                <DropdownMenuItem
+                                  onClick={() => setSuspendDialogOrg(org)}
+                                  className={org.status === 'suspended' ? 'text-green-600' : 'text-destructive'}
+                                >
+                                  {org.status === 'suspended' ? (
+                                    <>
+                                      <Play className="mr-2 h-4 w-4" />
+                                      Reactivar
+                                    </>
+                                  ) : (
+                                    <>
+                                      <Pause className="mr-2 h-4 w-4" />
+                                      Suspendre
+                                    </>
+                                  )}
+                                </DropdownMenuItem>
+                              </DropdownMenuContent>
+                            </DropdownMenu>
+                          </TableCell>
+                        </TableRow>
+                      ))
+                    ) : (
+                      <TableRow>
+                        <TableCell colSpan={7} className="text-center text-muted-foreground h-24">
+                          No hi ha organitzacions. Crea'n una per començar.
+                        </TableCell>
+                      </TableRow>
+                    )}
+                  </TableBody>
+                </Table>
+              )}
             </CardContent>
           </Card>
 

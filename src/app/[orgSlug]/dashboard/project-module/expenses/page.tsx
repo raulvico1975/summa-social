@@ -46,7 +46,20 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import { AlertCircle, RefreshCw, ChevronRight, FolderPlus, Check, MoreHorizontal, Split, X, Plus, Landmark, Globe, ArrowLeft, FolderKanban, Filter, Pencil, Trash2, Search, FileText, Upload, Camera } from 'lucide-react';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import { AlertCircle, RefreshCw, ChevronRight, FolderPlus, Check, MoreHorizontal, Split, X, Plus, Landmark, Globe, ArrowLeft, FolderKanban, Filter, Pencil, Trash2, Search, FileText, Upload, Camera, MoreVertical } from 'lucide-react';
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -885,7 +898,7 @@ export default function ExpensesInboxPage() {
 
   return (
     <TooltipProvider>
-    <div className="space-y-6">
+    <div className="space-y-6 pb-24 md:pb-0">
       {/* Breadcrumb */}
       <Breadcrumb>
         <BreadcrumbList>
@@ -904,59 +917,94 @@ export default function ExpensesInboxPage() {
       </Breadcrumb>
 
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
         <div>
           <h1 className="text-2xl font-bold tracking-tight font-headline">{ep.title}</h1>
           <p className="text-muted-foreground">
             {ep.subtitle}
           </p>
         </div>
-        <div className="flex items-center gap-2">
-          {/* Botó despesa ràpida (només icona amb tooltip) */}
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button
-                onClick={() => router.push(buildUrl('/quick-expense'))}
-                variant="outline"
-                size="icon"
-                className="h-9 w-9"
-              >
-                <Camera className="h-4 w-4" />
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent>
-              {t.projectModule?.quickExpenseTooltip ?? 'Registrar una despesa ràpidament des del mòbil (foto del rebut)'}
-            </TooltipContent>
-          </Tooltip>
-          <Button
-            onClick={() => setAddOffBankOpen(true)}
-            variant="default"
-            size="sm"
-          >
-            <Plus className="h-4 w-4 mr-2" />
-            {t.projectModule?.addExpense ?? 'Afegir despesa'}
-          </Button>
-          <Link href={buildUrl('/dashboard/project-module/projects')}>
-            <Button variant="outline" size="sm">
-              <FolderKanban className="h-4 w-4 mr-2" />
-              {t.breadcrumb?.projects ?? 'Projectes'}
+        {/* Mobile: CTA + dropdown menu */}
+        {isMobile ? (
+          <div className="flex flex-col gap-2">
+            <Button
+              onClick={() => setAddOffBankOpen(true)}
+              className="w-full"
+            >
+              <Plus className="h-4 w-4 mr-2" />
+              {t.projectModule?.addExpense ?? 'Afegir despesa'}
             </Button>
-          </Link>
-          <Button
-            onClick={() => setTableFilter(tableFilter === 'needsReview' ? 'all' : 'needsReview')}
-            variant={tableFilter === 'needsReview' ? 'default' : 'outline'}
-            size="sm"
-          >
-            <AlertCircle className="h-4 w-4 mr-2" />
-            {t.projectModule.pendingReview}
-          </Button>
-        </div>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" className="w-full">
+                  <MoreVertical className="h-4 w-4 mr-2" />
+                  {'Més accions'}
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-56">
+                <DropdownMenuItem onClick={() => router.push(buildUrl('/quick-expense'))}>
+                  <Camera className="h-4 w-4 mr-2" />
+                  {t.projectModule?.quickExpenseTooltip ?? 'Despesa ràpida'}
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => router.push(buildUrl('/dashboard/project-module/projects'))}>
+                  <FolderKanban className="h-4 w-4 mr-2" />
+                  {t.breadcrumb?.projects ?? 'Projectes'}
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setTableFilter(tableFilter === 'needsReview' ? 'all' : 'needsReview')}>
+                  <AlertCircle className="h-4 w-4 mr-2" />
+                  {t.projectModule.pendingReview}
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
+        ) : (
+          /* Desktop: row of buttons */
+          <div className="flex items-center gap-2">
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  onClick={() => router.push(buildUrl('/quick-expense'))}
+                  variant="outline"
+                  size="icon"
+                  className="h-9 w-9"
+                >
+                  <Camera className="h-4 w-4" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>
+                {t.projectModule?.quickExpenseTooltip ?? 'Registrar una despesa ràpidament des del mòbil (foto del rebut)'}
+              </TooltipContent>
+            </Tooltip>
+            <Button
+              onClick={() => setAddOffBankOpen(true)}
+              variant="default"
+              size="sm"
+            >
+              <Plus className="h-4 w-4 mr-2" />
+              {t.projectModule?.addExpense ?? 'Afegir despesa'}
+            </Button>
+            <Link href={buildUrl('/dashboard/project-module/projects')}>
+              <Button variant="outline" size="sm">
+                <FolderKanban className="h-4 w-4 mr-2" />
+                {t.breadcrumb?.projects ?? 'Projectes'}
+              </Button>
+            </Link>
+            <Button
+              onClick={() => setTableFilter(tableFilter === 'needsReview' ? 'all' : 'needsReview')}
+              variant={tableFilter === 'needsReview' ? 'default' : 'outline'}
+              size="sm"
+            >
+              <AlertCircle className="h-4 w-4 mr-2" />
+              {t.projectModule.pendingReview}
+            </Button>
+          </div>
+        )}
       </div>
 
       {/* Barra de cerca i filtres */}
       <div className="flex flex-col gap-3">
         {/* Cercador */}
-        <div className="relative max-w-md">
+        <div className="relative w-full md:max-w-md">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
             placeholder={ep.searchPlaceholder}
@@ -975,53 +1023,73 @@ export default function ExpensesInboxPage() {
           )}
         </div>
 
-        {/* Filtres ràpids */}
-        <div className="flex gap-2 items-center flex-wrap">
-          <Button
-            variant={tableFilter === 'all' ? 'default' : 'outline'}
-            size="sm"
-            onClick={() => setTableFilter('all')}
+        {/* Filtres ràpids - Select on mobile, buttons on desktop */}
+        {isMobile ? (
+          <Select
+            value={tableFilter}
+            onValueChange={(value) => setTableFilter(value as ExpenseTableFilter)}
           >
-            {ep.filterAll} ({expenses.length})
-          </Button>
-          <Button
-            variant={tableFilter === 'withoutDocument' ? 'default' : 'outline'}
-            size="sm"
-            onClick={() => setTableFilter('withoutDocument')}
-          >
-            {ep.filterWithoutDocument}
-          </Button>
-          <Button
-            variant={tableFilter === 'uncategorized' ? 'default' : 'outline'}
-            size="sm"
-            onClick={() => setTableFilter('uncategorized')}
-          >
-            {ep.filterUncategorized}
-          </Button>
-          <Button
-            variant={tableFilter === 'unassigned' ? 'default' : 'outline'}
-            size="sm"
-            onClick={() => setTableFilter('unassigned')}
-          >
-            {ep.filterUnassigned}
-          </Button>
-          <Button
-            variant={tableFilter === 'offBank' ? 'default' : 'outline'}
-            size="sm"
-            onClick={() => setTableFilter('offBank')}
-          >
-            <Globe className="h-4 w-4 mr-1" />
-            {ep.filterOffBank}
-          </Button>
-          <Button
-            variant={tableFilter === 'bank' ? 'default' : 'outline'}
-            size="sm"
-            onClick={() => setTableFilter('bank')}
-          >
-            <Landmark className="h-4 w-4 mr-1" />
-            {ep.filterBank}
-          </Button>
-        </div>
+            <SelectTrigger className="w-full">
+              <Filter className="h-4 w-4 mr-2" />
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">{ep.filterAll} ({expenses.length})</SelectItem>
+              <SelectItem value="withoutDocument">{ep.filterWithoutDocument}</SelectItem>
+              <SelectItem value="uncategorized">{ep.filterUncategorized}</SelectItem>
+              <SelectItem value="unassigned">{ep.filterUnassigned}</SelectItem>
+              <SelectItem value="offBank">{ep.filterOffBank}</SelectItem>
+              <SelectItem value="bank">{ep.filterBank}</SelectItem>
+            </SelectContent>
+          </Select>
+        ) : (
+          <div className="flex gap-2 items-center flex-wrap">
+            <Button
+              variant={tableFilter === 'all' ? 'default' : 'outline'}
+              size="sm"
+              onClick={() => setTableFilter('all')}
+            >
+              {ep.filterAll} ({expenses.length})
+            </Button>
+            <Button
+              variant={tableFilter === 'withoutDocument' ? 'default' : 'outline'}
+              size="sm"
+              onClick={() => setTableFilter('withoutDocument')}
+            >
+              {ep.filterWithoutDocument}
+            </Button>
+            <Button
+              variant={tableFilter === 'uncategorized' ? 'default' : 'outline'}
+              size="sm"
+              onClick={() => setTableFilter('uncategorized')}
+            >
+              {ep.filterUncategorized}
+            </Button>
+            <Button
+              variant={tableFilter === 'unassigned' ? 'default' : 'outline'}
+              size="sm"
+              onClick={() => setTableFilter('unassigned')}
+            >
+              {ep.filterUnassigned}
+            </Button>
+            <Button
+              variant={tableFilter === 'offBank' ? 'default' : 'outline'}
+              size="sm"
+              onClick={() => setTableFilter('offBank')}
+            >
+              <Globe className="h-4 w-4 mr-1" />
+              {ep.filterOffBank}
+            </Button>
+            <Button
+              variant={tableFilter === 'bank' ? 'default' : 'outline'}
+              size="sm"
+              onClick={() => setTableFilter('bank')}
+            >
+              <Landmark className="h-4 w-4 mr-1" />
+              {ep.filterBank}
+            </Button>
+          </div>
+        )}
       </div>
 
       {/* Franja de filtre actiu */}

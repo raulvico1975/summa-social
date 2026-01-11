@@ -58,6 +58,7 @@ import {
   Link2Off,
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { useIsMobile } from '@/hooks/use-is-mobile';
 
 // ════════════════════════════════════════════════════════════════════════════
 // TIPUS
@@ -103,6 +104,10 @@ export default function SuperAdminOrgPage() {
   const { t, language } = useTranslations();
   const locale = language === 'es' ? 'es-ES' : 'ca-ES';
   const { toast } = useToast();
+  const isMobile = useIsMobile();
+
+  // Tab actiu (per controllar tant Tabs com Select)
+  const [activeTab, setActiveTab] = React.useState<string>('stats');
 
   const isSuperAdmin = user?.uid === SUPER_ADMIN_UID;
 
@@ -528,31 +533,54 @@ export default function SuperAdminOrgPage() {
         </p>
       </div>
 
-      {/* Tabs */}
-      <Tabs defaultValue="stats" className="space-y-4">
-        <TabsList>
-          <TabsTrigger value="stats" className="gap-2">
-            <BarChart3 className="h-4 w-4" />
-            {t.superAdminOrg.tabs.stats}
-          </TabsTrigger>
-          <TabsTrigger value="validation" className="gap-2">
-            <SearchCheck className="h-4 w-4" />
-            {t.superAdminOrg.tabs.validation}
-            {validationSummary.hasIssues && (
-              <Badge variant="destructive" className="ml-1 h-5 w-5 rounded-full p-0 text-xs">
-                !
-              </Badge>
-            )}
-          </TabsTrigger>
-          <TabsTrigger value="audit" className="gap-2">
-            <Activity className="h-4 w-4" />
-            {t.superAdminOrg.tabs.audit}
-          </TabsTrigger>
-          <TabsTrigger value="export" className="gap-2">
-            <Download className="h-4 w-4" />
-            {t.superAdminOrg.tabs.export}
-          </TabsTrigger>
-        </TabsList>
+      {/* Tabs - Select on mobile, TabsList on desktop */}
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
+        {isMobile ? (
+          <Select value={activeTab} onValueChange={setActiveTab}>
+            <SelectTrigger className="w-full">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="stats">
+                {t.superAdminOrg.tabs.stats}
+              </SelectItem>
+              <SelectItem value="validation">
+                {t.superAdminOrg.tabs.validation}
+                {validationSummary.hasIssues && ' (!)'}
+              </SelectItem>
+              <SelectItem value="audit">
+                {t.superAdminOrg.tabs.audit}
+              </SelectItem>
+              <SelectItem value="export">
+                {t.superAdminOrg.tabs.export}
+              </SelectItem>
+            </SelectContent>
+          </Select>
+        ) : (
+          <TabsList>
+            <TabsTrigger value="stats" className="gap-2">
+              <BarChart3 className="h-4 w-4" />
+              {t.superAdminOrg.tabs.stats}
+            </TabsTrigger>
+            <TabsTrigger value="validation" className="gap-2">
+              <SearchCheck className="h-4 w-4" />
+              {t.superAdminOrg.tabs.validation}
+              {validationSummary.hasIssues && (
+                <Badge variant="destructive" className="ml-1 h-5 w-5 rounded-full p-0 text-xs">
+                  !
+                </Badge>
+              )}
+            </TabsTrigger>
+            <TabsTrigger value="audit" className="gap-2">
+              <Activity className="h-4 w-4" />
+              {t.superAdminOrg.tabs.audit}
+            </TabsTrigger>
+            <TabsTrigger value="export" className="gap-2">
+              <Download className="h-4 w-4" />
+              {t.superAdminOrg.tabs.export}
+            </TabsTrigger>
+          </TabsList>
+        )}
 
         {/* ══════════════════════════════════════════════════════════════════ */}
         {/* TAB: ESTADÍSTIQUES */}

@@ -1,6 +1,12 @@
 'use client';
 
 import * as React from 'react';
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from '@/components/ui/accordion';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import {
@@ -327,75 +333,81 @@ export function DangerZone() {
 
   return (
     <>
-      <Card className="border-red-200 dark:border-red-900">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2 text-red-600 dark:text-red-400">
-            <AlertTriangle className="h-5 w-5" />
-            {t.dangerZone.title}
-          </CardTitle>
-          <CardDescription className="text-red-600/80 dark:text-red-400/80">
-            {t.dangerZone.description}
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="grid gap-3 sm:grid-cols-2">
-            {deleteOptions.map((option) => (
-              <Button
-                key={option.type}
-                variant="outline"
-                className="h-auto flex-col items-start gap-1 p-4 border-red-200 hover:border-red-400 hover:bg-red-50 dark:border-red-900 dark:hover:border-red-700 dark:hover:bg-red-950"
-                onClick={() => setDeleteType(option.type)}
-              >
-                <div className="flex items-center gap-2 text-red-600 dark:text-red-400">
-                  <option.icon className="h-4 w-4" />
-                  <span className="font-medium">{option.label}</span>
-                </div>
-                <span className="text-xs text-muted-foreground text-left">
-                  {option.description}
-                </span>
-              </Button>
-            ))}
-          </div>
-
-          {/* Secció: Esborrar remeses */}
-          <div className="border-t pt-4 mt-4">
-            <p className="text-sm text-muted-foreground mb-3">
-              {t.dangerZone.remittanceSection}
-            </p>
-            <div className="grid gap-3 sm:grid-cols-2">
-              {/* Botó 1: Esborrar remeses de quotes de socis */}
-              <Button
-                variant="outline"
-                className="h-auto flex-col items-start gap-1 p-4 border-orange-200 hover:border-orange-400 hover:bg-orange-50 dark:border-orange-900 dark:hover:border-orange-700 dark:hover:bg-orange-950"
-                onClick={() => setShowIncomeRemittanceDialog(true)}
-              >
-                <div className="flex items-center gap-2 text-orange-600 dark:text-orange-400">
-                  <GitMerge className="h-4 w-4" />
-                  <span className="font-medium">{t.dangerZone.deleteIncomeRemittances ?? 'Esborrar remeses de quotes de socis'}</span>
-                </div>
-                <span className="text-xs text-muted-foreground text-left">
-                  {t.dangerZone.deleteIncomeRemittancesDescription ?? "Elimina totes les remeses d'ingressos generades a partir de quotes de socis."}
-                </span>
-              </Button>
-
-              {/* Botó 2: Esborrar devolucions conjuntes */}
-              <Button
-                variant="outline"
-                className="h-auto flex-col items-start gap-1 p-4 border-orange-200 hover:border-orange-400 hover:bg-orange-50 dark:border-orange-900 dark:hover:border-orange-700 dark:hover:bg-orange-950"
-                onClick={() => setShowReturnsRemittanceDialog(true)}
-              >
-                <div className="flex items-center gap-2 text-orange-600 dark:text-orange-400">
-                  <GitMerge className="h-4 w-4" />
-                  <span className="font-medium">{t.dangerZone.deleteReturnsRemittances ?? 'Esborrar devolucions conjuntes'}</span>
-                </div>
-                <span className="text-xs text-muted-foreground text-left">
-                  {t.dangerZone.deleteReturnsRemittancesDescription ?? 'Elimina totes les remeses de devolucions bancàries agrupades.'}
-                </span>
-              </Button>
+      <Accordion type="single" collapsible className="w-full">
+        <AccordionItem value="danger-zone" className="border border-red-200 dark:border-red-900 rounded-lg">
+          <AccordionTrigger className="px-6 py-4 hover:no-underline hover:bg-red-50/50 dark:hover:bg-red-950/30 rounded-t-lg [&[data-state=open]]:rounded-b-none">
+            <div className="flex flex-col items-start gap-1 text-left">
+              <div className="flex items-center gap-2 text-red-600 dark:text-red-400">
+                <AlertTriangle className="h-5 w-5" />
+                <span className="font-semibold">{t.dangerZone.title}</span>
+              </div>
+              <span className="text-sm text-red-600/80 dark:text-red-400/80 font-normal">
+                {t.dangerZone.description}
+              </span>
             </div>
-          </div>
-        </CardContent>
-      </Card>
+          </AccordionTrigger>
+          <AccordionContent className="px-6 pb-6">
+            <div className="space-y-4 pt-2">
+              <div className="grid gap-3 sm:grid-cols-2">
+                {deleteOptions.map((option) => (
+                  <Button
+                    key={option.type}
+                    variant="outline"
+                    className="h-auto flex-col items-start gap-1 p-4 border-red-200 hover:border-red-400 hover:bg-red-50 dark:border-red-900 dark:hover:border-red-700 dark:hover:bg-red-950"
+                    onClick={() => setDeleteType(option.type)}
+                  >
+                    <div className="flex items-center gap-2 text-red-600 dark:text-red-400">
+                      <option.icon className="h-4 w-4" />
+                      <span className="font-medium">{option.label}</span>
+                    </div>
+                    <span className="text-xs text-muted-foreground text-left">
+                      {option.description}
+                    </span>
+                  </Button>
+                ))}
+              </div>
+
+              {/* Secció: Esborrar remeses */}
+              <div className="border-t pt-4 mt-4">
+                <p className="text-sm text-muted-foreground mb-3">
+                  {t.dangerZone.remittanceSection}
+                </p>
+                <div className="grid gap-3 sm:grid-cols-2">
+                  {/* Botó 1: Esborrar remeses de quotes de socis */}
+                  <Button
+                    variant="outline"
+                    className="h-auto flex-col items-start gap-1 p-4 border-orange-200 hover:border-orange-400 hover:bg-orange-50 dark:border-orange-900 dark:hover:border-orange-700 dark:hover:bg-orange-950"
+                    onClick={() => setShowIncomeRemittanceDialog(true)}
+                  >
+                    <div className="flex items-center gap-2 text-orange-600 dark:text-orange-400">
+                      <GitMerge className="h-4 w-4" />
+                      <span className="font-medium">{t.dangerZone.deleteIncomeRemittances ?? 'Esborrar remeses de quotes de socis'}</span>
+                    </div>
+                    <span className="text-xs text-muted-foreground text-left">
+                      {t.dangerZone.deleteIncomeRemittancesDescription ?? "Elimina totes les remeses d'ingressos generades a partir de quotes de socis."}
+                    </span>
+                  </Button>
+
+                  {/* Botó 2: Esborrar devolucions conjuntes */}
+                  <Button
+                    variant="outline"
+                    className="h-auto flex-col items-start gap-1 p-4 border-orange-200 hover:border-orange-400 hover:bg-orange-50 dark:border-orange-900 dark:hover:border-orange-700 dark:hover:bg-orange-950"
+                    onClick={() => setShowReturnsRemittanceDialog(true)}
+                  >
+                    <div className="flex items-center gap-2 text-orange-600 dark:text-orange-400">
+                      <GitMerge className="h-4 w-4" />
+                      <span className="font-medium">{t.dangerZone.deleteReturnsRemittances ?? 'Esborrar devolucions conjuntes'}</span>
+                    </div>
+                    <span className="text-xs text-muted-foreground text-left">
+                      {t.dangerZone.deleteReturnsRemittancesDescription ?? 'Elimina totes les remeses de devolucions bancàries agrupades.'}
+                    </span>
+                  </Button>
+                </div>
+              </div>
+            </div>
+          </AccordionContent>
+        </AccordionItem>
+      </Accordion>
 
       <AlertDialog open={deleteType !== null} onOpenChange={(open) => !open && setDeleteType(null)}>
         <AlertDialogContent>
