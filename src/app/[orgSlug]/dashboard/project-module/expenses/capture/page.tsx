@@ -27,8 +27,10 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { Loader2, Camera, AlertCircle, ArrowLeft, Circle, CheckCircle2 } from 'lucide-react';
+import { Loader2, Camera, AlertCircle, ArrowLeft, Circle, CheckCircle2, MoreVertical, FileText } from 'lucide-react';
 import Link from 'next/link';
+import { useIsMobile } from '@/hooks/use-is-mobile';
+import { MobileListItem } from '@/components/mobile/mobile-list-item';
 
 import { OffBankExpenseModal } from '@/components/project-module/add-off-bank-expense-modal';
 
@@ -50,6 +52,7 @@ export default function CaptureExpensesPage() {
   const { buildUrl } = useOrgUrl();
   const { t } = useTranslations();
   const searchParams = useSearchParams();
+  const isMobile = useIsMobile();
 
   // Textos i18n per captura
   const c = t.projectModule?.capture;
@@ -371,95 +374,149 @@ export default function CaptureExpensesPage() {
                 </div>
               )}
 
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead className="w-[40px]"></TableHead>
-                    <TableHead className="w-[100px]">Data</TableHead>
-                    <TableHead>Concepte</TableHead>
-                    <TableHead className="hidden md:table-cell">Categoria</TableHead>
-                    <TableHead className="text-right">Import</TableHead>
-                    <TableHead className="w-[60px] text-center">Doc.</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
+              {isMobile ? (
+                <div className="flex flex-col gap-2 p-3">
                   {filteredExpenses.map((expense) => {
                     const hasDocument = (expense.attachments && expense.attachments.length > 0) || !!expense.documentUrl;
                     const documentUrl = expense.attachments?.[0]?.url ?? expense.documentUrl;
 
                     return (
-                      <TableRow key={expense.id}>
-                        {/* Indicador revisió amb tooltip */}
-                        <TableCell className="text-center">
-                          {expense.needsReview ? (
-                            <span title={c?.statusPending ?? 'Pendent'}>
-                              <AlertCircle className="h-4 w-4 text-amber-500" />
-                            </span>
+                      <MobileListItem
+                        key={expense.id}
+                        title={expense.concept || (c?.noNote ?? '(sense nota)')}
+                        leadingIcon={
+                          expense.needsReview ? (
+                            <AlertCircle className="h-4 w-4 text-amber-500" />
                           ) : (
-                            <span title={c?.statusReviewed ?? 'Revisat'}>
-                              <CheckCircle2 className="h-4 w-4 text-green-500" />
-                            </span>
-                          )}
-                        </TableCell>
-
-                        {/* Data */}
-                        <TableCell className="text-xs text-muted-foreground whitespace-nowrap">
-                          {formatDateShort(expense.date)}
-                        </TableCell>
-
-                        {/* Concepte */}
-                        <TableCell className="max-w-[200px] truncate">
-                          {expense.concept || <span className="text-muted-foreground">{c?.noNote ?? '(sense nota)'}</span>}
-                        </TableCell>
-
-                        {/* Categoria - hidden on mobile */}
-                        <TableCell className="hidden md:table-cell">
-                          {expense.categoryName ? (
-                            <Badge variant="outline" className="font-normal">
-                              {expense.categoryName}
-                            </Badge>
-                          ) : (
-                            <span className="text-muted-foreground text-sm">—</span>
-                          )}
-                        </TableCell>
-
-                        {/* Import */}
-                        <TableCell className="text-right font-mono">
-                          {expense.amountEUR !== null ? (
-                            formatAmount(expense.amountEUR)
-                          ) : (
-                            <span className="text-amber-600 italic text-xs">Pendent</span>
-                          )}
-                          {expense.originalCurrency && expense.originalCurrency !== 'EUR' && expense.originalAmount && (
-                            <div className="text-xs text-muted-foreground">
-                              {expense.originalAmount.toLocaleString('ca-ES')} {expense.originalCurrency}
-                            </div>
-                          )}
-                        </TableCell>
-
-                        {/* Document (punt verd) */}
-                        <TableCell className="text-center">
-                          {hasDocument && documentUrl ? (
+                            <CheckCircle2 className="h-4 w-4 text-green-500" />
+                          )
+                        }
+                        badges={expense.categoryName ? [
+                          <Badge key="cat" variant="outline" className="font-normal text-xs">
+                            {expense.categoryName}
+                          </Badge>
+                        ] : undefined}
+                        meta={[
+                          { value: formatDateShort(expense.date) },
+                          {
+                            value: expense.amountEUR !== null
+                              ? formatAmount(expense.amountEUR)
+                              : <span className="text-amber-600 italic">Pendent</span>
+                          },
+                          ...(expense.originalCurrency && expense.originalCurrency !== 'EUR' && expense.originalAmount
+                            ? [{ value: `${expense.originalAmount.toLocaleString('ca-ES')} ${expense.originalCurrency}` }]
+                            : []),
+                        ]}
+                        actions={
+                          hasDocument && documentUrl ? (
                             <button
                               type="button"
-                              onClick={() => window.open(documentUrl, '_blank', 'noopener,noreferrer')}
-                              className="cursor-pointer hover:scale-110 transition-transform"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                window.open(documentUrl, '_blank', 'noopener,noreferrer');
+                              }}
+                              className="p-2"
                               title={c?.docOpen ?? 'Obrir comprovant'}
-                              aria-label={c?.docOpen ?? 'Obrir comprovant'}
                             >
-                              <Circle className="h-2.5 w-2.5 fill-green-500 text-green-500 inline-block" />
+                              <FileText className="h-4 w-4 text-green-600" />
                             </button>
-                          ) : (
-                            <span title={c?.docNone ?? 'Sense comprovant'}>
-                              <Circle className="h-2.5 w-2.5 text-muted-foreground/30 inline-block" />
-                            </span>
-                          )}
-                        </TableCell>
-                      </TableRow>
+                          ) : undefined
+                        }
+                      />
                     );
                   })}
-                </TableBody>
-              </Table>
+                </div>
+              ) : (
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead className="w-[40px]"></TableHead>
+                      <TableHead className="w-[100px]">Data</TableHead>
+                      <TableHead>Concepte</TableHead>
+                      <TableHead className="hidden md:table-cell">Categoria</TableHead>
+                      <TableHead className="text-right">Import</TableHead>
+                      <TableHead className="w-[60px] text-center">Doc.</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {filteredExpenses.map((expense) => {
+                      const hasDocument = (expense.attachments && expense.attachments.length > 0) || !!expense.documentUrl;
+                      const documentUrl = expense.attachments?.[0]?.url ?? expense.documentUrl;
+
+                      return (
+                        <TableRow key={expense.id}>
+                          {/* Indicador revisió amb tooltip */}
+                          <TableCell className="text-center">
+                            {expense.needsReview ? (
+                              <span title={c?.statusPending ?? 'Pendent'}>
+                                <AlertCircle className="h-4 w-4 text-amber-500" />
+                              </span>
+                            ) : (
+                              <span title={c?.statusReviewed ?? 'Revisat'}>
+                                <CheckCircle2 className="h-4 w-4 text-green-500" />
+                              </span>
+                            )}
+                          </TableCell>
+
+                          {/* Data */}
+                          <TableCell className="text-xs text-muted-foreground whitespace-nowrap">
+                            {formatDateShort(expense.date)}
+                          </TableCell>
+
+                          {/* Concepte */}
+                          <TableCell className="max-w-[200px] truncate">
+                            {expense.concept || <span className="text-muted-foreground">{c?.noNote ?? '(sense nota)'}</span>}
+                          </TableCell>
+
+                          {/* Categoria - hidden on mobile */}
+                          <TableCell className="hidden md:table-cell">
+                            {expense.categoryName ? (
+                              <Badge variant="outline" className="font-normal">
+                                {expense.categoryName}
+                              </Badge>
+                            ) : (
+                              <span className="text-muted-foreground text-sm">—</span>
+                            )}
+                          </TableCell>
+
+                          {/* Import */}
+                          <TableCell className="text-right font-mono">
+                            {expense.amountEUR !== null ? (
+                              formatAmount(expense.amountEUR)
+                            ) : (
+                              <span className="text-amber-600 italic text-xs">Pendent</span>
+                            )}
+                            {expense.originalCurrency && expense.originalCurrency !== 'EUR' && expense.originalAmount && (
+                              <div className="text-xs text-muted-foreground">
+                                {expense.originalAmount.toLocaleString('ca-ES')} {expense.originalCurrency}
+                              </div>
+                            )}
+                          </TableCell>
+
+                          {/* Document (punt verd) */}
+                          <TableCell className="text-center">
+                            {hasDocument && documentUrl ? (
+                              <button
+                                type="button"
+                                onClick={() => window.open(documentUrl, '_blank', 'noopener,noreferrer')}
+                                className="cursor-pointer hover:scale-110 transition-transform"
+                                title={c?.docOpen ?? 'Obrir comprovant'}
+                                aria-label={c?.docOpen ?? 'Obrir comprovant'}
+                              >
+                                <Circle className="h-2.5 w-2.5 fill-green-500 text-green-500 inline-block" />
+                              </button>
+                            ) : (
+                              <span title={c?.docNone ?? 'Sense comprovant'}>
+                                <Circle className="h-2.5 w-2.5 text-muted-foreground/30 inline-block" />
+                              </span>
+                            )}
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })}
+                  </TableBody>
+                </Table>
+              )}
 
               {/* Botó carregar més */}
               {hasMore && (

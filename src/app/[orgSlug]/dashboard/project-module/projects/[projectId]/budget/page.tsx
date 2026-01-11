@@ -71,7 +71,17 @@ import {
   Compass,
   DollarSign,
   Upload,
+  MoreVertical,
+  Hash,
 } from 'lucide-react';
+import { useIsMobile } from '@/hooks/use-is-mobile';
+import { MobileListItem } from '@/components/mobile/mobile-list-item';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { useFirebase } from '@/firebase';
 import { useCurrentOrganization } from '@/hooks/organization-provider';
 import { doc, getDoc } from 'firebase/firestore';
@@ -247,6 +257,7 @@ export default function ProjectBudgetPage() {
   const { t } = useTranslations();
   const { firestore } = useFirebase();
   const { organizationId } = useCurrentOrganization();
+  const isMobile = useIsMobile();
 
   // Track page open
   React.useEffect(() => {
@@ -758,6 +769,86 @@ export default function ProjectBudgetPage() {
                 <Plus className="h-4 w-4 mr-2" />
                 {t.projectModule?.addBudgetLine ?? 'Afegir partida'}
               </Button>
+            </div>
+          ) : isMobile ? (
+            <div className="flex flex-col gap-2 p-3">
+              {budgetLines.map((line) => {
+                const executed = executionByLine.get(line.id) ?? 0;
+                const pending = line.budgetedAmountEUR - executed;
+                const percentExec = line.budgetedAmountEUR > 0 ? (executed / line.budgetedAmountEUR) * 100 : 0;
+                const maxAllowed = line.budgetedAmountEUR * (1 + allowedDeviation / 100);
+                const isOverspend = executed > maxAllowed;
+                const hasNoExecution = executed === 0;
+                const showOverspend = pending < 0;
+
+                return (
+                  <MobileListItem
+                    key={line.id}
+                    title={line.name}
+                    leadingIcon={
+                      line.code ? (
+                        <span className="text-xs font-mono text-muted-foreground">{line.code}</span>
+                      ) : (
+                        <Hash className="h-4 w-4 text-muted-foreground" />
+                      )
+                    }
+                    badges={[
+                      hasNoExecution ? (
+                        <Badge key="status" variant="outline" className="bg-blue-50 text-blue-700 border-blue-200 text-xs">
+                          <Info className="h-2.5 w-2.5 mr-0.5" />
+                          Sense exec.
+                        </Badge>
+                      ) : isOverspend ? (
+                        <Badge key="status" variant="outline" className="bg-yellow-50 text-yellow-700 border-yellow-200 text-xs">
+                          <AlertTriangle className="h-2.5 w-2.5 mr-0.5" />
+                          ALERTA
+                        </Badge>
+                      ) : (
+                        <Badge key="status" variant="outline" className="bg-green-50 text-green-700 border-green-200 text-xs">
+                          <CheckCircle className="h-2.5 w-2.5 mr-0.5" />
+                          OK
+                        </Badge>
+                      )
+                    ]}
+                    meta={[
+                      { label: 'Pres.', value: formatAmount(line.budgetedAmountEUR) },
+                      { label: 'Exec.', value: formatAmount(executed) },
+                      { value: formatPercent(percentExec) },
+                      ...(showOverspend
+                        ? [{ value: <span className="text-red-600 font-medium">+{formatAmount(Math.abs(pending))}</span> }]
+                        : []),
+                    ]}
+                    actions={
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8"
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            <MoreVertical className="h-4 w-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuItem onClick={() => openEdit(line)}>
+                            <Pencil className="mr-2 h-4 w-4" />
+                            Editar
+                          </DropdownMenuItem>
+                          <DropdownMenuItem
+                            onClick={() => setDeleteConfirm(line)}
+                            className="text-destructive"
+                          >
+                            <Trash2 className="mr-2 h-4 w-4" />
+                            Eliminar
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    }
+                    onClick={() => handleRowClick(line)}
+                  />
+                );
+              })}
             </div>
           ) : (
             <Table>
