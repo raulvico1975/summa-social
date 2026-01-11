@@ -138,21 +138,32 @@ function TopCategoriesTable({
     return m;
   }, [categories]);
 
-  // Funció per obtenir el nom de la categoria
+  // Funció per obtenir el nom de la categoria (resol ID → name → traducció)
   const getCategoryName = React.useCallback((categoryKey: string): string => {
     if (categoryKey === 'uncategorized') {
       return texts.uncategorized;
     }
+
     // Primer intentar trobar en categories de l'org (per ID)
     const orgCategoryName = categoryNameById.get(categoryKey);
     if (orgCategoryName) {
+      // El nom de la categoria pot ser una clau de traducció (ex: 'salaries')
+      // Intentem traduir-la
+      const translated = categoryTranslations[orgCategoryName];
+      if (translated && typeof translated === 'string') {
+        return translated;
+      }
+      // Si no es pot traduir, retornem el nom directament (categories custom)
       return orgCategoryName;
     }
-    // Després, traduccions predefinides (per clau)
-    if (categoryTranslations[categoryKey]) {
-      return categoryTranslations[categoryKey];
+
+    // Després, traduccions predefinides (per clau directa)
+    const translatedCategory = categoryTranslations[categoryKey];
+    if (translatedCategory && typeof translatedCategory === 'string') {
+      return translatedCategory;
     }
-    // Si no es troba enlloc, mostrar "Sense categoria" (no l'ID)
+
+    // Si no es troba, retornar "Sense categoria" per evitar mostrar claus internes
     return texts.uncategorized;
   }, [categoryNameById, categoryTranslations, texts.uncategorized]);
 
