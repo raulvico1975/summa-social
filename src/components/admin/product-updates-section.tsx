@@ -42,6 +42,19 @@ import {
   TabsTrigger,
 } from '@/components/ui/tabs';
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import {
   Loader2,
   Upload,
   Megaphone,
@@ -53,9 +66,11 @@ import {
   X,
   Sparkles,
   Copy,
+  MoreVertical,
 } from 'lucide-react';
 import { Switch } from '@/components/ui/switch';
 import { useToast } from '@/hooks/use-toast';
+import { useIsMobile } from '@/hooks/use-is-mobile';
 
 import { stripUndefined, stripUndefinedDeep } from '@/lib/firestore-utils';
 
@@ -184,6 +199,10 @@ interface ProductUpdatesSectionProps {
 export function ProductUpdatesSection({ isSuperAdmin = false }: ProductUpdatesSectionProps) {
   const { firestore } = useFirebase();
   const { toast } = useToast();
+  const isMobile = useIsMobile();
+
+  // Tab actiu controlat per Select/Tabs
+  const [activeTab, setActiveTab] = React.useState<string>('drafts');
 
   // Estat (sempre declarar hooks abans de qualsevol early return!)
   const [isImporting, setIsImporting] = React.useState(false);
@@ -624,7 +643,7 @@ export function ProductUpdatesSection({ isSuperAdmin = false }: ProductUpdatesSe
   return (
     <Card>
       <CardHeader>
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
           <div>
             <CardTitle className="flex items-center gap-2 text-base">
               <Megaphone className="h-4 w-4" />
@@ -634,59 +653,120 @@ export function ProductUpdatesSection({ isSuperAdmin = false }: ProductUpdatesSe
               Gestiona les novetats que veuran els usuaris
             </CardDescription>
           </div>
-          <div className="flex items-center gap-2">
-            <div className="flex flex-col items-end gap-1">
-              <Button variant="outline" size="sm" onClick={handleExportWebJson}>
-                <FileJson className="mr-2 h-4 w-4" />
-                Exportar web JSON
-              </Button>
-              <p className="text-[10px] text-muted-foreground max-w-[200px] text-right">
-                Després: substituir public/novetats-data.json + commit + deploy
-              </p>
+          {/* Mobile: CTA + dropdown */}
+          {isMobile ? (
+            <div className="flex flex-col gap-2">
+              <Label htmlFor="import-json-mobile" className="cursor-pointer w-full">
+                <Button variant="default" className="w-full" asChild disabled={isImporting}>
+                  <span>
+                    {isImporting ? (
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    ) : (
+                      <Upload className="mr-2 h-4 w-4" />
+                    )}
+                    Importar esborranys
+                  </span>
+                </Button>
+              </Label>
+              <input
+                id="import-json-mobile"
+                type="file"
+                accept=".json"
+                className="sr-only"
+                onChange={handleImportJson}
+                disabled={isImporting}
+              />
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline" className="w-full">
+                    <MoreVertical className="h-4 w-4 mr-2" />
+                    Més accions
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-56">
+                  <DropdownMenuItem onClick={handleExportWebJson}>
+                    <FileJson className="h-4 w-4 mr-2" />
+                    Exportar web JSON
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
             </div>
-            <Label htmlFor="import-json" className="cursor-pointer">
-              <Button variant="outline" size="sm" asChild disabled={isImporting}>
-                <span>
-                  {isImporting ? (
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  ) : (
-                    <Upload className="mr-2 h-4 w-4" />
-                  )}
-                  Importar esborranys
-                </span>
-              </Button>
-            </Label>
-            <input
-              id="import-json"
-              type="file"
-              accept=".json"
-              className="sr-only"
-              onChange={handleImportJson}
-              disabled={isImporting}
-            />
-          </div>
+          ) : (
+            /* Desktop: row of buttons */
+            <div className="flex items-center gap-2">
+              <div className="flex flex-col items-end gap-1">
+                <Button variant="outline" size="sm" onClick={handleExportWebJson}>
+                  <FileJson className="mr-2 h-4 w-4" />
+                  Exportar web JSON
+                </Button>
+                <p className="text-[10px] text-muted-foreground max-w-[200px] text-right">
+                  Després: substituir public/novetats-data.json + commit + deploy
+                </p>
+              </div>
+              <Label htmlFor="import-json" className="cursor-pointer">
+                <Button variant="outline" size="sm" asChild disabled={isImporting}>
+                  <span>
+                    {isImporting ? (
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    ) : (
+                      <Upload className="mr-2 h-4 w-4" />
+                    )}
+                    Importar esborranys
+                  </span>
+                </Button>
+              </Label>
+              <input
+                id="import-json"
+                type="file"
+                accept=".json"
+                className="sr-only"
+                onChange={handleImportJson}
+                disabled={isImporting}
+              />
+            </div>
+          )}
         </div>
       </CardHeader>
       <CardContent>
-        <Tabs defaultValue="drafts">
-          <TabsList className="mb-4">
-            <TabsTrigger value="drafts">
-              Esborranys
-              {activeDrafts.length > 0 && (
-                <Badge variant="secondary" className="ml-2">{activeDrafts.length}</Badge>
-              )}
-            </TabsTrigger>
-            <TabsTrigger value="published">
-              Publicades
-              {published && published.length > 0 && (
-                <Badge variant="outline" className="ml-2">{published.length}</Badge>
-              )}
-            </TabsTrigger>
-            <TabsTrigger value="create-ai">
-              <Sparkles className="h-4 w-4 mr-1" />
-              Crear amb IA
-            </TabsTrigger>
-          </TabsList>
+        <Tabs value={activeTab} onValueChange={setActiveTab}>
+          {/* Mobile: Select navigation */}
+          {isMobile ? (
+            <Select value={activeTab} onValueChange={setActiveTab}>
+              <SelectTrigger className="w-full mb-4">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="drafts">
+                  Esborranys {activeDrafts.length > 0 && `(${activeDrafts.length})`}
+                </SelectItem>
+                <SelectItem value="published">
+                  Publicades {published && published.length > 0 && `(${published.length})`}
+                </SelectItem>
+                <SelectItem value="create-ai">
+                  Crear amb IA
+                </SelectItem>
+              </SelectContent>
+            </Select>
+          ) : (
+            <TabsList className="mb-4">
+              <TabsTrigger value="drafts">
+                Esborranys
+                {activeDrafts.length > 0 && (
+                  <Badge variant="secondary" className="ml-2">{activeDrafts.length}</Badge>
+                )}
+              </TabsTrigger>
+              <TabsTrigger value="published">
+                Publicades
+                {published && published.length > 0 && (
+                  <Badge variant="outline" className="ml-2">{published.length}</Badge>
+                )}
+              </TabsTrigger>
+              <TabsTrigger value="create-ai">
+                <Sparkles className="h-4 w-4 mr-1" />
+                Crear amb IA
+              </TabsTrigger>
+            </TabsList>
+          )}
 
           {/* Tab Esborranys */}
           <TabsContent value="drafts">
@@ -699,7 +779,9 @@ export function ProductUpdatesSection({ isSuperAdmin = false }: ProductUpdatesSe
               <div className="py-8 text-center text-muted-foreground">
                 <FileJson className="h-8 w-8 mx-auto mb-2 opacity-50" />
                 <p className="text-sm">Cap esborrany pendent.</p>
-                <p className="text-xs mt-1">Executa <code className="bg-muted px-1 rounded">npm run updates:drafts</code> i importa el JSON.</p>
+                {!isMobile && (
+                  <p className="text-xs mt-1">Executa <code className="bg-muted px-1 rounded">npm run updates:drafts</code> i importa el JSON.</p>
+                )}
               </div>
             ) : (
               <Table>

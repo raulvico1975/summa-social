@@ -437,8 +437,8 @@ export function I18nManager() {
 
   return (
     <div className="space-y-4">
-      {/* Header amb selector */}
-      <div className="flex items-center justify-between">
+      {/* Header amb selector - stacked on mobile */}
+      <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
         <div className="flex items-center gap-3">
           <Languages className="h-5 w-5 text-blue-500" />
           <div>
@@ -456,7 +456,7 @@ export function I18nManager() {
             handleClearUpload();
           }}
         >
-          <SelectTrigger className="w-[140px]">
+          <SelectTrigger className="w-full md:w-[140px]">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
