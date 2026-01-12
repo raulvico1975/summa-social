@@ -799,18 +799,25 @@ export function TransactionsTable({ initialDateFilter = null }: TransactionsTabl
   // ═══════════════════════════════════════════════════════════════════════════
   // RESUM FILTRAT
   // ═══════════════════════════════════════════════════════════════════════════
-  const hasActiveFilter = tableFilter !== 'all' || searchQuery.trim() !== '' || dateFilter.type !== 'all' || contactIdFilter !== null || sourceFilter !== 'all' || bankAccountFilter !== '__all__';
+  // Filtre de període (dates) és diferent dels filtres secundaris
+  const hasSecondaryFilter = tableFilter !== 'all' || searchQuery.trim() !== '' || contactIdFilter !== null || sourceFilter !== 'all' || bankAccountFilter !== '__all__';
+  // hasActiveFilter inclou també el filtre de dates per a altres usos
+  const hasActiveFilter = hasSecondaryFilter || dateFilter.type !== 'all';
+
+  // Total del període = transactions (ja filtrat per dates), no allTransactions
+  const periodTotalCount = transactions?.length ?? 0;
 
   const filteredSummary = React.useMemo(() => {
-    if (!hasActiveFilter || !allTransactions) return null;
+    // Mostrar resum sempre que hi hagi filtres secundaris O filtre de dates actiu
+    if (!hasActiveFilter || !transactions) return null;
     const visible = filteredTransactions;
     return {
       showing: visible.length,
-      total: allTransactions.length,
+      total: periodTotalCount,  // Total del període, no global
       income: visible.filter(tx => tx.amount > 0).reduce((sum, tx) => sum + tx.amount, 0),
       expenses: visible.filter(tx => tx.amount < 0).reduce((sum, tx) => sum + tx.amount, 0),
     };
-  }, [filteredTransactions, allTransactions, hasActiveFilter]);
+  }, [filteredTransactions, transactions, hasActiveFilter, periodTotalCount]);
 
   const clearAllFilters = React.useCallback(() => {
     setTableFilter('all');
