@@ -1,6 +1,6 @@
 # ═══════════════════════════════════════════════════════════════════════════════
 # SUMMA SOCIAL - REFERÈNCIA COMPLETA DEL PROJECTE
-# Versió 1.28 - Gener 2026
+# Versió 1.29 - Gener 2026
 # ═══════════════════════════════════════════════════════════════════════════════
 
 
@@ -3448,6 +3448,91 @@ Contingut ample (com `TransactionsTable` amb `min-w-[600px]`) pot expandir el co
 - El bloc dreta (`shrink-0`) mai es comprimeix ni desapareix
 - Les icones d'ajuda i notificacions són sempre accessibles
 
+### 7.5.10 Adaptació Mòbil (NOU v1.29)
+
+**Detecció de dispositiu:**
+```tsx
+import { useIsMobile } from '@/hooks/use-mobile';
+const isMobile = useIsMobile();
+```
+
+**Patrons obligatoris per a pantalles mòbils:**
+
+| Situació | Patró Desktop | Patró Mòbil |
+|----------|---------------|-------------|
+| **Barra d'accions amb múltiples botons** | Tots els botons visibles | CTA principal (`w-full`) + DropdownMenu "Més accions" |
+| **Tabs de navegació** | `<TabsList>` amb `<TabsTrigger>` | `<Select>` amb les mateixes opcions |
+| **Taules de dades** | `<Table>` amb columnes | `<MobileListItem>` amb title, badges, meta i actions |
+| **Filtres múltiples** | Botons en línia | `<Select>` per cada grup de filtres |
+| **Zona de perill** | Card sempre visible | `<Accordion>` col·lapsable |
+
+**Exemple - Barra d'accions mòbil:**
+```tsx
+{isMobile ? (
+  <div className="flex flex-col gap-2">
+    <Button onClick={handlePrimaryAction} className="w-full">
+      <Plus className="h-4 w-4 mr-2" />
+      {t.primaryAction}
+    </Button>
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <Button variant="outline" className="w-full">
+          <MoreVertical className="h-4 w-4 mr-2" />
+          Més accions
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end">
+        <DropdownMenuItem onClick={handleSecondaryAction}>
+          {t.secondaryAction}
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
+  </div>
+) : (
+  <div className="flex items-center gap-2">
+    {/* Tots els botons visibles */}
+  </div>
+)}
+```
+
+**Exemple - Tabs → Select:**
+```tsx
+const [activeTab, setActiveTab] = useState<string>('tab1');
+
+<Tabs value={activeTab} onValueChange={setActiveTab}>
+  {isMobile ? (
+    <Select value={activeTab} onValueChange={setActiveTab}>
+      <SelectTrigger className="w-full">
+        <SelectValue />
+      </SelectTrigger>
+      <SelectContent>
+        <SelectItem value="tab1">{t.tab1Label}</SelectItem>
+        <SelectItem value="tab2">{t.tab2Label}</SelectItem>
+      </SelectContent>
+    </Select>
+  ) : (
+    <TabsList>
+      <TabsTrigger value="tab1">{t.tab1Label}</TabsTrigger>
+      <TabsTrigger value="tab2">{t.tab2Label}</TabsTrigger>
+    </TabsList>
+  )}
+  <TabsContent value="tab1">...</TabsContent>
+  <TabsContent value="tab2">...</TabsContent>
+</Tabs>
+```
+
+**Espai per FAB (Floating Action Button):**
+Quan hi ha un FAB a la pàgina, afegir `pb-24 md:pb-0` al contenidor principal per evitar col·lisions amb el contingut.
+
+**Fitxers principals adaptats (v1.29):**
+- `src/app/[orgSlug]/dashboard/project-module/expenses/page.tsx`
+- `src/app/[orgSlug]/dashboard/project-module/projects/[projectId]/budget/page.tsx`
+- `src/app/[orgSlug]/dashboard/super-admin/page.tsx`
+- `src/app/admin/page.tsx`
+- `src/components/danger-zone.tsx`
+- `src/components/admin/product-updates-section.tsx`
+- `src/components/super-admin/i18n-manager.tsx`
+
 ## 7.6 Onboarding / Benvinguda Inicial (ACTUALITZAT v1.20)
 
 ### Objectiu
@@ -3641,6 +3726,15 @@ Indicadors que requeririen intervenció:
 # 10. ROADMAP / FUNCIONALITATS PENDENTS
 # ═══════════════════════════════════════════════════════════════════════════════
 
+## Completades v1.29
+- ✅ Adaptació mòbil completa: patrons normalitzats per a barres d'accions, navegació i taules
+- ✅ CTA + "Més accions" DropdownMenu per a pantalles mòbils
+- ✅ Tabs → Select per a navegació mòbil
+- ✅ MobileListItem per a taules en mòbil
+- ✅ DangerZone col·lapsable amb Accordion
+- ✅ Fix traduccions de categories al Dashboard (TopCategoriesTable)
+- ✅ Pàgines adaptades: expenses, super-admin, admin, configuracio, product-updates, i18n-manager
+
 ## Completades v1.16
 - ✅ Drag & drop de documents a la safata de despeses (per fila)
 - ✅ Auto-naming de documents amb `buildDocumentFilename()` (format YYYY.MM.DD_concepte.ext)
@@ -3713,6 +3807,7 @@ Indicadors que requeririen intervenció:
 | **1.26** | **31 Des 2025** | **Resolució col·lisió `[lang]` vs `[orgSlug]`: arquitectura `public/[lang]` amb middleware rewrite (URL pública intacta). HOME i Funcionalitats multiidioma. x-default hreflang. Slugs reservats (ca/es/fr/pt/public). Rutes canòniques: `/{lang}/funcionalitats`, `/{lang}/privacy`, `/{lang}/contact`. Aliases naturals: FR (`fonctionnalites`, `confidentialite`), ES (`funcionalidades`, `privacidad`, `contacto`), PT (`funcionalidades`, `privacidade`, `contacto`).** |
 | **1.27** | **2 Gen 2026** | **Fix routing Next 15 (`searchParams` Promise), header responsive (icones ajuda/novetats sempre visibles), cercador natural guies amb sinònims i scoring i18n, validador i18n claus de cerca, layout dashboard overflow fix (`min-w-0 + overflow-x-hidden` a SidebarInset). Secció 3.12 Liquidacions de Despeses: model ExpenseReport, quilometratge multilínia (mileageItems[]), generació PDF, tabs Liquidacions/Tickets/Quilometratge, deep linking. Guies: travelExpenseReport, mileageTravel. Fix sidebar mòbil: submenú Projectes ara expandeix correctament (isSidebarCollapsed = !isMobile && collapsed).** |
 | **1.28** | **5 Gen 2026** | **Importadors millorats: plantilla oficial única per Categories/Donants/Proveïdors (detecció 100%), export=import per donants i proveïdors, categoria per defecte agnòstica amb warning d'ambigüitat, dedupe ignora deletedAt/archivedAt. Categories: normalització label, scroll preview, motiu omissió, delete warning + count, Danger Zone esborrar categories. Pendents/Liquidacions: drag & drop com a punt d'entrada per pujar fitxers, validació d'extensions al drop handler (pdf/xml/jpg/png), toast feedback si cap vàlid. Storage observability: detecció i report `storage/unauthorized` com a incident CRITICAL.** |
+| **1.29** | **12 Gen 2026** | **Adaptació mòbil completa: patrons UI normalitzats (CTA + DropdownMenu "Més accions", Tabs → Select, Table → MobileListItem, DangerZone col·lapsable amb Accordion). Pàgines adaptades: expenses, super-admin, admin, configuracio, product-updates-section, i18n-manager. Fix traduccions categories Dashboard (TopCategoriesTable resol category.name → t.categories). Nova secció documentació 7.5.10 Adaptació Mòbil amb exemples de codi.** |
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
