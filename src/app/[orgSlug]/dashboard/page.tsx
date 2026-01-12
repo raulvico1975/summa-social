@@ -400,11 +400,26 @@ export default function DashboardPage() {
     return true;
   }, []);
 
-  // KPIs: només transaccions que representen el ledger bancari real
+  // KPIs econòmics: només transaccions que representen el ledger bancari real
+  // (per Ingressos, Despeses, Balance)
   const filteredTransactions = React.useMemo(() => {
     if (!dateFilteredTransactions) return [];
     return dateFilteredTransactions.filter(isBankLedgerTx);
   }, [dateFilteredTransactions, isBankLedgerTx]);
+
+  // KPIs socials: transaccions amb contacte (incloent fills de remesa)
+  // (per Donants actius, Socis actius, Quotes)
+  // Aquí SÍ usem fills perquè són l'única manera de saber quin contacte ha pagat
+  const socialMetricsTxs = React.useMemo(() => {
+    if (!dateFilteredTransactions) return [];
+    // Incloure totes les transaccions positives amb contactId
+    // (fills de remesa tenen contactId, pares de remesa no)
+    return dateFilteredTransactions.filter(tx =>
+      tx.amount > 0 &&
+      tx.contactId &&
+      tx.contactType === 'donor'
+    );
+  }, [dateFilteredTransactions]);
 
   const MISSION_TRANSFER_CATEGORY_KEY = 'missionTransfers';
   const incomeAggregates = React.useMemo(
@@ -778,10 +793,15 @@ ${t.dashboard.generatedWith}`;
   const canShowComparison = dateFilter.type === 'year' || dateFilter.type === 'quarter' || dateFilter.type === 'month';
   const previousYear = (dateFilter.year || new Date().getFullYear()) - 1;
 
-  // Funció per obtenir transaccions del període anterior
-  const getPreviousPeriodTransactions = React.useCallback(() => {
+  // Funció per obtenir transaccions socials del període anterior (per comparativa)
+  // Usa el mateix criteri que socialMetricsTxs: ingressos amb contactId
+  const getPreviousPeriodSocialTxs = React.useCallback(() => {
     if (!transactions || !canShowComparison) return [];
     return transactions.filter(tx => {
+      // Primer: criteri social (igual que socialMetricsTxs)
+      if (tx.amount <= 0 || !tx.contactId || tx.contactType !== 'donor') return false;
+
+      // Després: criteri de període anterior
       const txDate = new Date(tx.date);
       const txYear = txDate.getFullYear();
 
@@ -830,17 +850,18 @@ ${t.dashboard.generatedWith}`;
     };
   }, [contactMembershipMap]);
 
-  // Mètriques del període actual
+  // Mètriques del període actual (usa socialMetricsTxs, no filteredTransactions)
+  // Perquè els fills de remesa tenen contactId, els pares no
   const currentMetrics = React.useMemo(() => {
-    if (!filteredTransactions) return { totalDonations: 0, uniqueDonors: 0, memberFees: 0, activeMembers: 0 };
-    return calculateDonorMetrics(filteredTransactions);
-  }, [filteredTransactions, calculateDonorMetrics]);
+    if (!socialMetricsTxs) return { totalDonations: 0, uniqueDonors: 0, memberFees: 0, activeMembers: 0 };
+    return calculateDonorMetrics(socialMetricsTxs);
+  }, [socialMetricsTxs, calculateDonorMetrics]);
 
   // Mètriques del període anterior (per comparativa)
   const previousMetrics = React.useMemo(() => {
     if (!canShowComparison) return { totalDonations: 0, uniqueDonors: 0, memberFees: 0, activeMembers: 0 };
-    return calculateDonorMetrics(getPreviousPeriodTransactions());
-  }, [canShowComparison, getPreviousPeriodTransactions, calculateDonorMetrics]);
+    return calculateDonorMetrics(getPreviousPeriodSocialTxs());
+  }, [canShowComparison, getPreviousPeriodSocialTxs, calculateDonorMetrics]);
 
   const { totalDonations, uniqueDonors, memberFees, activeMembers } = currentMetrics;
   const {

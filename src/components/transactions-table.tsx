@@ -202,11 +202,13 @@ export function TransactionsTable({ initialDateFilter = null }: TransactionsTabl
   };
   const [sortDateAsc, setSortDateAsc] = React.useState(false); // false = més recents primer
 
-  // Columna Projecte col·lapsable
-  const [showProjectColumn, setShowProjectColumn] = React.useState(false);
+  // Columna Projecte - sempre oculta a la taula de moviments
+  // (es gestiona a través de filtres i detalls individuals)
+  const showProjectColumn = false;
 
-  // Filtre per amagar desglossament de remeses
-  const [hideRemittanceItems, setHideRemittanceItems] = React.useState(true);
+  // Filtre per amagar desglossament de remeses - sempre actiu (ledger mode)
+  // Els ítems de remesa es gestionen dins els modals de remesa, no a la taula principal
+  const hideRemittanceItems = true;
 
   // Filtre per source
   const [sourceFilter, setSourceFilter] = React.useState<SourceFilter>('all');
@@ -804,20 +806,21 @@ export function TransactionsTable({ initialDateFilter = null }: TransactionsTabl
   // hasActiveFilter inclou també el filtre de dates per a altres usos
   const hasActiveFilter = hasSecondaryFilter || dateFilter.type !== 'all';
 
-  // Total del període = transactions (ja filtrat per dates), no allTransactions
-  const periodTotalCount = transactions?.length ?? 0;
-
   const filteredSummary = React.useMemo(() => {
     // Mostrar resum sempre que hi hagi filtres secundaris O filtre de dates actiu
     if (!hasActiveFilter || !transactions) return null;
+
+    // Total del període = només apunts bancaris (ledger), excloent desglossaments interns
+    const periodTotal = transactions.filter(tx => !tx.isRemittanceItem && tx.source !== 'remittance').length;
+
     const visible = filteredTransactions;
     return {
       showing: visible.length,
-      total: periodTotalCount,  // Total del període, no global
+      total: periodTotal,
       income: visible.filter(tx => tx.amount > 0).reduce((sum, tx) => sum + tx.amount, 0),
       expenses: visible.filter(tx => tx.amount < 0).reduce((sum, tx) => sum + tx.amount, 0),
     };
-  }, [filteredTransactions, transactions, hasActiveFilter, periodTotalCount]);
+  }, [filteredTransactions, transactions, hasActiveFilter]);
 
   const clearAllFilters = React.useCallback(() => {
     setTableFilter('all');
@@ -1279,7 +1282,6 @@ export function TransactionsTable({ initialDateFilter = null }: TransactionsTabl
     pendingFilters: t.movements.table.pendingFilters,
     exportTooltip: t.movements.table.exportTooltip,
     searchPlaceholder: t.movements.table.searchPlaceholder,
-    hideRemittanceItems: t.movements.table.hideRemittanceItems,
     importReturnsFile: t.movements.table.uploadBankFile,
     allAccounts: t.settings.bankAccounts.allAccounts,
     // New translations for reorganized UI
@@ -1291,8 +1293,6 @@ export function TransactionsTable({ initialDateFilter = null }: TransactionsTabl
     filterBySource: t.movements.table.filterBySource || 'Origen',
     filterByAccount: t.movements.table.filterByAccount || 'Compte bancari',
     pendingTasks: t.movements.table.pendingTasks || 'Tasques pendents',
-    tableOptions: t.movements.table.tableOptions || 'Opcions de taula',
-    showProjectColumn: t.movements.table.showProjectColumn || 'Mostrar columna Projecte',
     // Quick filters (shortcuts)
     onlyExpenses: t.movements.table.onlyExpenses,
     expensesWithoutDocument: t.movements.table.expensesWithoutDocument,
@@ -1329,10 +1329,6 @@ export function TransactionsTable({ initialDateFilter = null }: TransactionsTabl
           onBatchCategorize={handleBatchCategorize}
           onCancelBatch={handleCancelBatch}
           onExportExpensesWithoutDoc={handleExportExpensesWithoutDoc}
-          hideRemittanceItems={hideRemittanceItems}
-          onHideRemittanceItemsChange={setHideRemittanceItems}
-          showProjectColumn={showProjectColumn}
-          onShowProjectColumnChange={setShowProjectColumn}
           onOpenReturnImporter={() => setIsReturnImporterOpen(true)}
           sourceFilter={sourceFilter}
           onSourceFilterChange={setSourceFilter}

@@ -22,7 +22,6 @@ import { Progress } from '@/components/ui/progress';
 import type { SourceFilter } from '@/lib/constants';
 import type { BankAccount } from '@/lib/data';
 import { FiltersSheet } from './FiltersSheet';
-import { TableOptionsMenu } from './TableOptionsMenu';
 
 // =============================================================================
 // TYPES
@@ -63,10 +62,6 @@ interface TransactionsFiltersProps {
   onBatchCategorize: () => void;
   onCancelBatch?: () => void;
   onExportExpensesWithoutDoc: () => void;
-  hideRemittanceItems: boolean;
-  onHideRemittanceItemsChange: (value: boolean) => void;
-  showProjectColumn: boolean;
-  onShowProjectColumnChange: (value: boolean) => void;
   onOpenReturnImporter?: () => void;
   // Source filter
   sourceFilter: SourceFilter;
@@ -95,7 +90,6 @@ interface TransactionsFiltersProps {
     pendingFilters: string;
     exportTooltip: string;
     searchPlaceholder: string;
-    hideRemittanceItems: string;
     importReturnsFile?: string;
     allAccounts: string;
     // New translations for reorganized UI
@@ -107,8 +101,6 @@ interface TransactionsFiltersProps {
     filterBySource: string;
     filterByAccount: string;
     pendingTasks: string;
-    tableOptions: string;
-    showProjectColumn: string;
     // Quick filters (shortcuts)
     onlyExpenses?: string;
     expensesWithoutDocument?: string;
@@ -134,10 +126,6 @@ export const TransactionsFilters = React.memo(function TransactionsFilters({
   isBatchCategorizing,
   onBatchCategorize,
   onCancelBatch,
-  hideRemittanceItems,
-  onHideRemittanceItemsChange,
-  showProjectColumn,
-  onShowProjectColumnChange,
   sourceFilter,
   onSourceFilterChange,
   bankAccountFilter,
@@ -373,19 +361,6 @@ export const TransactionsFilters = React.memo(function TransactionsFilters({
             filterBySource: t.filterBySource,
             filterByAccount: t.filterByAccount,
             pendingTasks: t.pendingTasks,
-          }}
-        />
-
-        {/* Opcions de taula */}
-        <TableOptionsMenu
-          hideRemittanceItems={hideRemittanceItems}
-          onHideRemittanceItemsChange={onHideRemittanceItemsChange}
-          showProjectColumn={showProjectColumn}
-          onShowProjectColumnChange={onShowProjectColumnChange}
-          t={{
-            tableOptions: t.tableOptions,
-            hideRemittanceItems: t.hideRemittanceItems,
-            showProjectColumn: t.showProjectColumn,
           }}
         />
       </div>
