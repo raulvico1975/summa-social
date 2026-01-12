@@ -396,6 +396,14 @@ export function TransactionsTable({ initialDateFilter = null }: TransactionsTabl
     }, {} as Record<string, string>) || {},
   [availableProjects]);
 
+  // Mapa de comptes bancaris per ID (per export)
+  const bankAccountMap = React.useMemo(() =>
+    bankAccounts.reduce((acc, account) => {
+      acc[account.id] = account.name;
+      return acc;
+    }, {} as Record<string, string>),
+  [bankAccounts]);
+
   // ═══════════════════════════════════════════════════════════════════════════
   // GESTIÓ DE DEVOLUCIONS (HOOK EXTERN)
   // ═══════════════════════════════════════════════════════════════════════════
@@ -929,13 +937,60 @@ export function TransactionsTable({ initialDateFilter = null }: TransactionsTabl
       return;
     }
 
-    const excelData = filteredTransactions.map(tx => ({
-      [t.movements.table.date]: formatDate(tx.date),
-      [t.movements.table.amount]: tx.amount,
-      [t.movements.table.concept]: tx.description,
-      [t.movements.table.contact]: tx.contactId && contactMap[tx.contactId] ? contactMap[tx.contactId].name : '',
-      [t.movements.table.category]: tx.category ? getCategoryDisplayName(tx.category) : '',
-    }));
+    // Traduccions de columnes (amb fallback)
+    const exportCols = t.movements.table.exportColumns ?? {
+      date: 'Data',
+      description: 'Descripció',
+      amount: 'Import',
+      category: 'Categoria',
+      contact: 'Contacte',
+      contactType: 'Tipus contacte',
+      project: 'Projecte',
+      bankAccount: 'Compte bancari',
+      source: 'Origen',
+      transactionType: 'Tipus',
+      transactionId: 'ID transacció',
+    };
+
+    // Mapa per traduir source
+    const sourceLabels: Record<string, string> = {
+      bank: t.movements.table.sourceBank ?? 'Banc',
+      remittance: t.movements.table.sourceRemittance ?? 'Remesa',
+      stripe: 'Stripe',
+      manual: t.movements.table.sourceManual ?? 'Manual',
+    };
+
+    // Mapa per traduir contactType
+    const contactTypeLabels: Record<string, string> = {
+      donor: t.common?.donor ?? 'Donant',
+      supplier: t.common?.supplier ?? 'Proveïdor',
+      employee: t.common?.employee ?? 'Empleat',
+    };
+
+    // Mapa per traduir transactionType
+    const txTypeLabels: Record<string, string> = {
+      donation: t.movements.table.typeDonation ?? 'Donació',
+      return: t.movements.table.typeReturn ?? 'Devolució',
+      fee: t.movements.table.typeFee ?? 'Comissió',
+      return_fee: t.movements.table.typeReturnFee ?? 'Comissió devolució',
+    };
+
+    const excelData = filteredTransactions.map(tx => {
+      const contact = tx.contactId ? contactMap[tx.contactId] : null;
+      return {
+        [exportCols.date]: formatDate(tx.date),
+        [exportCols.description]: tx.description || '',
+        [exportCols.amount]: tx.amount,
+        [exportCols.category]: tx.category ? getCategoryDisplayName(tx.category) : '',
+        [exportCols.contact]: contact?.name || '',
+        [exportCols.contactType]: contact?.type ? (contactTypeLabels[contact.type] || contact.type) : '',
+        [exportCols.project]: tx.projectId ? (projectMap[tx.projectId] || '') : '',
+        [exportCols.bankAccount]: tx.bankAccountId ? (bankAccountMap[tx.bankAccountId] || '') : '',
+        [exportCols.source]: tx.source ? (sourceLabels[tx.source] || tx.source) : '',
+        [exportCols.transactionType]: tx.transactionType ? (txTypeLabels[tx.transactionType] || tx.transactionType) : '',
+        [exportCols.transactionId]: tx.id,
+      };
+    });
 
     const worksheet = XLSX.utils.json_to_sheet(excelData);
     const workbook = XLSX.utils.book_new();
@@ -943,11 +998,17 @@ export function TransactionsTable({ initialDateFilter = null }: TransactionsTabl
 
     // Ajustar amplada de columnes
     const colWidths = [
-      { wch: 12 }, // Data
-      { wch: 12 }, // Import
-      { wch: 40 }, // Concepte
-      { wch: 25 }, // Contacte
-      { wch: 20 }, // Categoria
+      { wch: 12 },  // Data
+      { wch: 45 },  // Descripció
+      { wch: 12 },  // Import
+      { wch: 22 },  // Categoria
+      { wch: 28 },  // Contacte
+      { wch: 12 },  // Tipus contacte
+      { wch: 22 },  // Projecte
+      { wch: 20 },  // Compte bancari
+      { wch: 10 },  // Origen
+      { wch: 14 },  // Tipus
+      { wch: 24 },  // ID transacció
     ];
     worksheet['!cols'] = colWidths;
 
@@ -1308,8 +1369,8 @@ export function TransactionsTable({ initialDateFilter = null }: TransactionsTabl
 
       {/* Barra de resum quan hi ha filtre actiu */}
       {filteredSummary && (
-        <div className="mb-4 px-4 py-2 bg-muted/50 border rounded-lg flex items-center justify-between gap-4">
-          <div className="flex items-center gap-4 text-sm text-muted-foreground">
+        <div className="mb-4 px-4 py-2 bg-muted/50 border rounded-lg flex flex-col gap-2 md:flex-row md:items-center md:justify-between md:gap-4">
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-muted-foreground">
             {/* Context: filtre per contactId des de fitxa donant */}
             {contactIdFilter && contactMap[contactIdFilter] && (
               <span className="text-orange-600 font-medium">
@@ -1319,16 +1380,16 @@ export function TransactionsTable({ initialDateFilter = null }: TransactionsTabl
             <span>
               {t.movements.table.showingOf(filteredSummary.showing, filteredSummary.total)}
             </span>
-            <span className="text-muted-foreground/50">·</span>
+            <span className="hidden md:inline text-muted-foreground/50">·</span>
             <span>
               {t.movements.table.income}: <span className="text-green-600 font-medium">{formatCurrencyEU(filteredSummary.income)}</span>
             </span>
-            <span className="text-muted-foreground/50">·</span>
+            <span className="hidden md:inline text-muted-foreground/50">·</span>
             <span>
               {t.movements.table.expenses}: <span className="text-red-600 font-medium">{formatCurrencyEU(filteredSummary.expenses)}</span>
             </span>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 shrink-0">
             <Tooltip>
               <TooltipTrigger asChild>
                 <Button
