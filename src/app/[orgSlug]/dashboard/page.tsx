@@ -404,7 +404,22 @@ export default function DashboardPage() {
   // (per Ingressos, Despeses, Balance)
   const filteredTransactions = React.useMemo(() => {
     if (!dateFilteredTransactions) return [];
-    return dateFilteredTransactions.filter(isBankLedgerTx);
+    const ledgerTxs = dateFilteredTransactions.filter(isBankLedgerTx);
+
+    // DEV-only: validar que el ledger no conté transaccions que haurien de ser excloses
+    if (process.env.NODE_ENV === 'development' && ledgerTxs.length > 0) {
+      const invalidRemittance = ledgerTxs.filter(tx => tx.isRemittanceItem === true || tx.source === 'remittance');
+      const invalidChildren = ledgerTxs.filter(tx => tx.parentTransactionId);
+      if (invalidRemittance.length > 0 || invalidChildren.length > 0) {
+        console.warn('[Dashboard] LEDGER CONTAMINATION DETECTED:', {
+          remittanceItems: invalidRemittance.length,
+          childTransactions: invalidChildren.length,
+          total: ledgerTxs.length,
+        });
+      }
+    }
+
+    return ledgerTxs;
   }, [dateFilteredTransactions, isBankLedgerTx]);
 
   // KPIs socials: transaccions amb contacte (incloent fills de remesa)
@@ -414,11 +429,23 @@ export default function DashboardPage() {
     if (!dateFilteredTransactions) return [];
     // Incloure totes les transaccions positives amb contactId
     // (fills de remesa tenen contactId, pares de remesa no)
-    return dateFilteredTransactions.filter(tx =>
+    const socialTxs = dateFilteredTransactions.filter(tx =>
       tx.amount > 0 &&
       tx.contactId &&
       tx.contactType === 'donor'
     );
+
+    // DEV-only: log per debugging
+    if (process.env.NODE_ENV === 'development' && socialTxs.length > 0) {
+      const withParent = socialTxs.filter(tx => tx.parentTransactionId);
+      console.debug('[Dashboard] Social metrics:', {
+        total: socialTxs.length,
+        withParent: withParent.length,
+        uniqueContacts: new Set(socialTxs.map(tx => tx.contactId)).size,
+      });
+    }
+
+    return socialTxs;
   }, [dateFilteredTransactions]);
 
   const MISSION_TRANSFER_CATEGORY_KEY = 'missionTransfers';
