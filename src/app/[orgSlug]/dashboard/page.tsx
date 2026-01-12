@@ -472,7 +472,8 @@ export default function DashboardPage() {
     () => filteredTransactions?.filter((tx) => tx.amount < 0 && tx.category !== MISSION_TRANSFER_CATEGORY_KEY) || [],
     [filteredTransactions]
   );
-  const netBalance = totalIncome + totalExpenses;
+  // Saldo = Ingressos + Despeses + Terreny (tots tres ja amb signe: despeses i terreny són negatius)
+  const netBalance = totalIncome + totalExpenses + totalMissionTransfers;
   // Estat per compartir resum
   const [shareDialogOpen, setShareDialogOpen] = React.useState(false);
   const [summaryText, setSummaryText] = React.useState('');
@@ -1210,67 +1211,80 @@ ${t.dashboard.generatedWith}`;
       )}
       */}
 
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <Link
-          href={createMovementsLink('income')}
-          className="block rounded-lg transition hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/70"
-        >
-          <StatCard
-            title={t.dashboard.totalIncome}
-            value={formatCurrencyEU(totalIncome)}
-            icon={TrendingUp}
-            description={t.dashboard.totalIncomeDescription}
-          />
-        </Link>
-        <Link
-          href={createMovementsLink('operatingExpenses')}
-          className="block rounded-lg transition hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/70"
-        >
-          <StatCard
-            title={t.dashboard.operatingExpenses}
-            value={formatCurrencyEU(totalExpenses)}
-            icon={TrendingDown}
-            description={t.dashboard.operatingExpensesDescription}
-          />
-        </Link>
-        <StatCard
-          title={t.dashboard.operatingBalance}
-          value={formatCurrencyEU(netBalance)}
-          icon={DollarSign}
-          description={t.dashboard.operatingBalanceDescription}
-        />
-        <Link
-          href={createMovementsLink('missionTransfers')}
-          className="block rounded-lg transition hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/70"
-        >
-          <StatCard
-            title={t.dashboard.missionTransfers}
-            value={formatCurrencyEU(totalMissionTransfers)}
-            icon={Rocket}
-            description={t.dashboard.missionTransfersDescription}
-          />
-        </Link>
-      </div>
-
+      {/* ═══════════════════════════════════════════════════════════════════════════════
+          BLOC A — DINERS (veritat bancària, ledger)
+          Dataset: filteredTransactions (només apunts del banc)
+          ═══════════════════════════════════════════════════════════════════════════════ */}
       <Card>
-        <CardHeader>
+        <CardHeader className="pb-2">
           <CardTitle className="flex items-center gap-2">
-            <Heart className="h-5 w-5 text-muted-foreground" />
-            {t.dashboard.donationsAndMembers}
+            <DollarSign className="h-5 w-5 text-muted-foreground" />
+            {t.dashboard.moneyBlock}
           </CardTitle>
+          <p className="text-xs text-muted-foreground">{t.dashboard.moneyBlockDescription}</p>
         </CardHeader>
         <CardContent>
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
             <Link
-              href={createMovementsLink('donations')}
+              href={createMovementsLink('income')}
               className="block rounded-lg border p-4 text-left hover:bg-muted/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/70 active:scale-[0.99] cursor-pointer transition-colors"
             >
-              <p className="text-sm text-muted-foreground">{t.dashboard.donations}</p>
-              <p className="text-2xl font-bold text-emerald-600">{formatCurrencyEU(totalDonations)}</p>
+              <p className="text-sm text-muted-foreground">{t.dashboard.totalIncome}</p>
+              <p className="text-2xl font-bold text-emerald-600">{formatCurrencyEU(totalIncome)}</p>
+              <p className="text-xs text-muted-foreground/70 mt-1">{t.dashboard.totalIncomeDescription}</p>
+            </Link>
+            <Link
+              href={createMovementsLink('operatingExpenses')}
+              className="block rounded-lg border p-4 text-left hover:bg-muted/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/70 active:scale-[0.99] cursor-pointer transition-colors"
+            >
+              <p className="text-sm text-muted-foreground">{t.dashboard.operatingExpenses}</p>
+              <p className="text-2xl font-bold text-rose-600">{formatCurrencyEU(totalExpenses)}</p>
+              <p className="text-xs text-muted-foreground/70 mt-1">{t.dashboard.operatingExpensesDescription}</p>
+            </Link>
+            <Link
+              href={createMovementsLink('missionTransfers')}
+              className="block rounded-lg border p-4 text-left hover:bg-muted/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/70 active:scale-[0.99] cursor-pointer transition-colors"
+            >
+              <p className="text-sm text-muted-foreground">{t.dashboard.missionTransfers}</p>
+              <p className="text-2xl font-bold text-blue-600">{formatCurrencyEU(totalMissionTransfers)}</p>
+              <p className="text-xs text-muted-foreground/70 mt-1">{t.dashboard.missionTransfersDescription}</p>
+            </Link>
+            <div className="rounded-lg border p-4 bg-muted/20">
+              <p className="text-sm text-muted-foreground">{t.dashboard.operatingBalance}</p>
+              <p className={`text-2xl font-bold ${netBalance >= 0 ? 'text-emerald-600' : 'text-rose-600'}`}>
+                {formatCurrencyEU(netBalance)}
+              </p>
+              <p className="text-xs text-muted-foreground/70 mt-1">{t.dashboard.operatingBalanceDescription}</p>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* ═══════════════════════════════════════════════════════════════════════════════
+          BLOC B — QUI ENS SOSTÉ (veritat relacional, per contacte)
+          Dataset: socialMetricsTxs (transaccions amb contactId, inclou fills de remesa)
+          ═══════════════════════════════════════════════════════════════════════════════ */}
+      <Card>
+        <CardHeader className="pb-2">
+          <CardTitle className="flex items-center gap-2">
+            <Heart className="h-5 w-5 text-muted-foreground" />
+            {t.dashboard.supportersBlock}
+          </CardTitle>
+          <p className="text-xs text-muted-foreground">{t.dashboard.supportersBlockDescription}</p>
+        </CardHeader>
+        <CardContent>
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+            <Link
+              href={createMovementsLink('memberFees')}
+              className="block rounded-lg border p-4 text-left hover:bg-muted/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/70 active:scale-[0.99] cursor-pointer transition-colors"
+            >
+              <p className="text-sm text-muted-foreground">{t.dashboard.memberFees}</p>
+              <p className="text-2xl font-bold text-emerald-600">{formatCurrencyEU(memberFees)}</p>
+              <p className="text-xs text-muted-foreground/70 mt-1">{t.dashboard.memberFeesDescription}</p>
               {canShowComparison && (
                 <ComparisonBadge
-                  current={totalDonations}
-                  previous={prevTotalDonations}
+                  current={memberFees}
+                  previous={prevMemberFees}
                   previousYear={previousYear}
                   isCurrency
                   formatFn={formatCurrencyEU}
@@ -1279,27 +1293,19 @@ ${t.dashboard.generatedWith}`;
               )}
             </Link>
             <Link
-              href={createDonorsLink({ membershipType: 'one-time', viewActive: true })}
+              href={createMovementsLink('donations')}
               className="block rounded-lg border p-4 text-left hover:bg-muted/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/70 active:scale-[0.99] cursor-pointer transition-colors"
             >
-              <div className="flex items-center gap-1">
-                <p className="text-sm text-muted-foreground">{t.dashboard.activeDonors}</p>
-                <Tooltip>
-                  <TooltipTrigger asChild onClick={(e) => e.preventDefault()}>
-                    <Info className="h-3.5 w-3.5 text-muted-foreground/60 hover:text-muted-foreground" />
-                  </TooltipTrigger>
-                  <TooltipContent side="top" className="max-w-xs">
-                    <p className="text-xs">{t.dashboard.activeDonorsTooltip}</p>
-                  </TooltipContent>
-                </Tooltip>
-              </div>
-              <p className="text-2xl font-bold">{uniqueDonors}</p>
-              <p className="text-xs text-muted-foreground/70">{t.dashboard.withDonationsInPeriod}</p>
+              <p className="text-sm text-muted-foreground">{t.dashboard.oneTimeDonations}</p>
+              <p className="text-2xl font-bold text-emerald-600">{formatCurrencyEU(totalDonations)}</p>
+              <p className="text-xs text-muted-foreground/70 mt-1">{t.dashboard.oneTimeDonationsDescription}</p>
               {canShowComparison && (
                 <ComparisonBadge
-                  current={uniqueDonors}
-                  previous={prevUniqueDonors}
+                  current={totalDonations}
+                  previous={prevTotalDonations}
                   previousYear={previousYear}
+                  isCurrency
+                  formatFn={formatCurrencyEU}
                   texts={t.dashboard.comparison}
                 />
               )}
@@ -1320,7 +1326,7 @@ ${t.dashboard.generatedWith}`;
                 </Tooltip>
               </div>
               <p className="text-2xl font-bold">{activeMembers}</p>
-              <p className="text-xs text-muted-foreground/70">{t.dashboard.withFeesInPeriod}</p>
+              <p className="text-xs text-muted-foreground/70 mt-1">{t.dashboard.activeMembersDescription}</p>
               {canShowComparison && (
                 <ComparisonBadge
                   current={activeMembers}
@@ -1331,18 +1337,27 @@ ${t.dashboard.generatedWith}`;
               )}
             </Link>
             <Link
-              href={createMovementsLink('memberFees')}
+              href={createDonorsLink({ membershipType: 'one-time', viewActive: true })}
               className="block rounded-lg border p-4 text-left hover:bg-muted/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/70 active:scale-[0.99] cursor-pointer transition-colors"
             >
-              <p className="text-sm text-muted-foreground">{t.dashboard.memberFees}</p>
-              <p className="text-2xl font-bold text-emerald-600">{formatCurrencyEU(memberFees)}</p>
+              <div className="flex items-center gap-1">
+                <p className="text-sm text-muted-foreground">{t.dashboard.activeDonors}</p>
+                <Tooltip>
+                  <TooltipTrigger asChild onClick={(e) => e.preventDefault()}>
+                    <Info className="h-3.5 w-3.5 text-muted-foreground/60 hover:text-muted-foreground" />
+                  </TooltipTrigger>
+                  <TooltipContent side="top" className="max-w-xs">
+                    <p className="text-xs">{t.dashboard.activeDonorsTooltip}</p>
+                  </TooltipContent>
+                </Tooltip>
+              </div>
+              <p className="text-2xl font-bold">{uniqueDonors}</p>
+              <p className="text-xs text-muted-foreground/70 mt-1">{t.dashboard.activeDonorsDescription}</p>
               {canShowComparison && (
                 <ComparisonBadge
-                  current={memberFees}
-                  previous={prevMemberFees}
+                  current={uniqueDonors}
+                  previous={prevUniqueDonors}
                   previousYear={previousYear}
-                  isCurrency
-                  formatFn={formatCurrencyEU}
                   texts={t.dashboard.comparison}
                 />
               )}
