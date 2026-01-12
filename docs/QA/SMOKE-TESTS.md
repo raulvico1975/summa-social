@@ -6,7 +6,7 @@
 
 ---
 
-## Checklist ràpid (14 checks)
+## Checklist ràpid (15 checks)
 
 ### Autenticació (3 checks)
 - [ ] **S1** Login: `/{orgSlug}/login` carrega sense errors
@@ -25,8 +25,9 @@
 - [ ] **S10** Filtre dates: Aplicar filtre de dates funciona
 - [ ] **S11** Saldo: Dashboard mostra saldo numèric (no NaN, no "undefined")
 
-### Exports (1 check)
+### Exports (2 checks)
 - [ ] **S12** Export donants: Botó "Exportar" a Donants descarrega fitxer
+- [ ] **S12b** Export moviments filtrats (WYSIWYG): Aplicar filtres a Moviments → clic icona descàrrega → Excel amb mateixes files i ordre que la taula
 
 ### Errors (2 checks)
 - [ ] **S13** Consola neta: DevTools Console no mostra errors greus (vermells) en navegació normal
@@ -50,10 +51,11 @@
 | S10 | Filtre dates | ☐ |
 | S11 | Saldo | ☐ |
 | S12 | Export donants | ☐ |
+| S12b | Export moviments filtrats | ☐ |
 | S13 | Consola neta | ☐ |
 | S14 | 404 controlat | ☐ |
 
-**Total:** ___/14
+**Total:** ___/15
 
 **Data:** _______________
 **Entorn:** ☐ Local / ☐ Producció
