@@ -382,7 +382,29 @@ export default function DashboardPage() {
   const { data: categories } = useCollection<Category>(categoriesQuery);
 
   const [dateFilter, setDateFilter] = React.useState<DateFilterValue>({ type: 'all' });
-  const filteredTransactions = useTransactionFilters(transactions || undefined, dateFilter);
+  const dateFilteredTransactions = useTransactionFilters(transactions || undefined, dateFilter);
+
+  // Predicate: moviment bancari real (ledger)
+  // Exclou desglossaments interns encara que no tinguin parentTransactionId
+  const isBankLedgerTx = React.useCallback((tx: Transaction) => {
+    // 1) No sumar mai desglossaments amb parent
+    if (tx.parentTransactionId) return false;
+    // 2) No sumar mai ítems de remesa
+    if (tx.isRemittanceItem === true) return false;
+    // 3) No sumar mai transaccions internes Stripe (donacions i comissions desglossades)
+    if (tx.transactionType === 'donation') return false;
+    if (tx.transactionType === 'fee') return false;
+    // 4) No sumar mai files de remesa (si existeixen sense parent per bug)
+    if (tx.source === 'remittance') return false;
+    // 5) Devolucions bancàries reals SÍ compten (transactionType === 'return')
+    return true;
+  }, []);
+
+  // KPIs: només transaccions que representen el ledger bancari real
+  const filteredTransactions = React.useMemo(() => {
+    if (!dateFilteredTransactions) return [];
+    return dateFilteredTransactions.filter(isBankLedgerTx);
+  }, [dateFilteredTransactions, isBankLedgerTx]);
 
   const MISSION_TRANSFER_CATEGORY_KEY = 'missionTransfers';
   const incomeAggregates = React.useMemo(
