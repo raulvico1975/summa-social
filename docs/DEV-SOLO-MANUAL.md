@@ -982,4 +982,65 @@ Summa Social/{orgSlug}/backups/{YYYY-MM-DD}/
 
 ---
 
-*Última actualització: 2026-01-04*
+## 17. Dashboard — Datasets separats (v1.28)
+
+### Principi fonamental
+
+**Els KPIs econòmics i socials utilitzen datasets diferents per evitar duplicats i confusions.**
+
+| Bloc | Dataset | Què mostra | Font de veritat |
+|------|---------|------------|-----------------|
+| **Diners** | `filteredTransactions` (ledger) | Ingressos, Despeses, Terreny, Saldo | Extracte bancari |
+| **Qui ens sosté** | `socialMetricsTxs` (contacte) | Quotes, Donacions, Socis, Donants | Relacions amb persones |
+
+### Perquè cal separar-ho
+
+Les remeses i Stripe creen **fills desglossats**:
+- El **pare** representa l'apunt bancari real (ex: 1.500 € remesa SEPA)
+- Els **fills** representen qui ha pagat (ex: 50 quotes de 30 €)
+
+Si sumem pares + fills, duplicaríem els imports.
+
+### Regles dels datasets
+
+**Ledger (Bloc Diners):**
+```typescript
+// Exclou:
+if (tx.parentTransactionId) return false;        // fills
+if (tx.isRemittanceItem === true) return false;  // ítems remesa
+if (tx.transactionType === 'donation') return false;  // Stripe donation
+if (tx.transactionType === 'fee') return false;  // Stripe fee
+if (tx.source === 'remittance') return false;    // files remesa
+```
+
+**Social (Bloc Qui ens sosté):**
+```typescript
+// Inclou:
+tx.amount > 0 && tx.contactId && tx.contactType === 'donor'
+// Inclou fills de remesa perquè tenen contactId
+```
+
+### Test per afegir nous KPIs
+
+Abans d'afegir un KPI al dashboard, verifica:
+
+1. **Pregunta humana**: "Un gestor pot explicar aquest número en una frase?"
+2. **Dataset correcte**: És veritat bancària (ledger) o relacional (social)?
+3. **Reproduïble**: Es pot verificar amb 1-2 filtres a Moviments o Donants?
+
+### Guardrails (DEV-only)
+
+En mode development, el dashboard imprimeix:
+- `[Dashboard] Social metrics: { total, withParent, uniqueContacts }`
+- `[Dashboard] LEDGER CONTAMINATION DETECTED` si el ledger conté ítems que haurien ser exclosos
+
+### Fitxers clau
+
+| Fitxer | Funció |
+|--------|--------|
+| `src/app/[orgSlug]/dashboard/page.tsx` | `isBankLedgerTx`, `filteredTransactions`, `socialMetricsTxs` |
+| `src/i18n/ca.ts` | `moneyBlock`, `supportersBlock` i descripcions |
+
+---
+
+*Última actualització: 2026-01-12*
