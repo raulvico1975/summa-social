@@ -328,8 +328,8 @@ export function TicketsInbox({
       } else {
         if (!selectedReportId) {
           toast({
-            title: 'Error',
-            description: 'Selecciona una liquidació existent.',
+            title: t.common?.error ?? 'Error',
+            description: t.ticketsInbox?.toasts?.selectExisting ?? 'Selecciona una liquidació existent.',
             variant: 'destructive',
           });
           setIsAssigning(false);
@@ -355,8 +355,8 @@ export function TicketsInbox({
 
       if (alreadyAssigned.length > 0) {
         toast({
-          title: 'Alguns tickets ja assignats',
-          description: `${alreadyAssigned.length} ticket(s) ja tenien liquidació assignada.`,
+          title: t.ticketsInbox?.toasts?.alreadyAssignedTitle ?? 'Alguns tickets ja assignats',
+          description: t.ticketsInbox?.toasts?.alreadyAssignedDesc?.({ count: alreadyAssigned.length }) ?? `${alreadyAssigned.length} ticket(s) ja tenien liquidació assignada.`,
           variant: 'destructive',
         });
         // Treure els ja assignats de la selecció
@@ -405,8 +405,8 @@ export function TicketsInbox({
       await Promise.all(batches.map((b) => b.commit()));
 
       toast({
-        title: 'Tickets assignats',
-        description: `${validTicketIds.length} ticket(s) assignats correctament.`,
+        title: t.ticketsInbox?.toasts?.assignedSuccess ?? 'Tickets assignats',
+        description: t.ticketsInbox?.toasts?.assignedSuccessDesc?.({ count: validTicketIds.length }) ?? `${validTicketIds.length} ticket(s) assignats correctament.`,
       });
 
       // Netejar i tancar
@@ -415,8 +415,8 @@ export function TicketsInbox({
     } catch (error) {
       console.error('[handleAssignToReport] Error:', error);
       toast({
-        title: 'Error',
-        description: 'No s\'ha pogut completar l\'assignació.',
+        title: t.common?.error ?? 'Error',
+        description: t.ticketsInbox?.toasts?.assignError ?? 'No s\'ha pogut completar l\'assignació.',
         variant: 'destructive',
       });
     } finally {
@@ -436,7 +436,7 @@ export function TicketsInbox({
         console.error('[handlePreview] Error:', error);
         toast({
           title: t.common?.error ?? 'Error',
-          description: 'No s\'ha pogut obrir el fitxer.',
+          description: t.ticketsInbox?.toasts?.cannotOpenFile ?? 'No s\'ha pogut obrir el fitxer.',
           variant: 'destructive',
         });
       }
@@ -453,7 +453,7 @@ export function TicketsInbox({
       console.error('[handlePreview] Error:', error);
       toast({
         title: t.common?.error ?? 'Error',
-        description: 'No s\'ha pogut carregar la imatge.',
+        description: t.ticketsInbox?.toasts?.cannotLoadImage ?? 'No s\'ha pogut carregar la imatge.',
         variant: 'destructive',
       });
     } finally {
@@ -493,7 +493,7 @@ export function TicketsInbox({
       if (Object.keys(patch).length > 0) {
         await updatePendingDocument(firestore, organizationId, editingTicket.id, patch);
         toast({
-          title: 'Ticket guardat',
+          title: t.ticketsInbox?.toasts?.ticketSaved ?? 'Ticket guardat',
         });
       }
 
@@ -502,7 +502,7 @@ export function TicketsInbox({
       console.error('[handleSaveEdit] Error:', error);
       toast({
         title: t.common?.error ?? 'Error',
-        description: 'No s\'ha pogut guardar.',
+        description: t.ticketsInbox?.toasts?.cannotSave ?? 'No s\'ha pogut guardar.',
         variant: 'destructive',
       });
     } finally {
@@ -549,22 +549,21 @@ export function TicketsInbox({
       if (Object.keys(patch).length > 0) {
         await updatePendingDocument(firestore, organizationId, ticket.id, patch);
         toast({
-          title: 'Camps omplerts amb IA',
-          description: `Confiança: ${Math.round((result.confidence ?? 0) * 100)}%`,
+          title: t.ticketsInbox?.toasts?.aiFilledTitle ?? 'Camps omplerts amb IA',
         });
       } else {
         toast({
-          title: 'Sense canvis',
+          title: t.ticketsInbox?.toasts?.noChanges ?? 'Sense canvis',
           description: result.confidence > 0
-            ? 'Tots els camps ja tenien valor.'
-            : 'La IA no ha pogut extreure dades.',
+            ? (t.ticketsInbox?.toasts?.noChangesHadValues ?? 'Tots els camps ja tenien valor.')
+            : (t.ticketsInbox?.toasts?.noChangesNoData ?? 'La IA no ha pogut extreure dades.'),
         });
       }
     } catch (error) {
       console.error('[handleProcessWithAI] Error:', error);
       toast({
-        title: 'Error de IA',
-        description: error instanceof Error ? error.message : 'No s\'ha pogut processar.',
+        title: t.ticketsInbox?.toasts?.aiErrorTitle ?? 'Error de IA',
+        description: error instanceof Error ? error.message : (t.ticketsInbox?.toasts?.aiErrorDesc ?? 'No s\'ha pogut processar.'),
         variant: 'destructive',
       });
     } finally {
@@ -594,8 +593,8 @@ export function TicketsInbox({
 
       if (!dupSnapshot.empty) {
         toast({
-          title: 'Ticket duplicat',
-          description: 'Ja existeix un ticket amb aquesta imatge.',
+          title: t.ticketsInbox?.toasts?.duplicateTitle ?? 'Ticket duplicat',
+          description: t.ticketsInbox?.toasts?.duplicateDesc ?? 'Ja existeix un ticket amb aquesta imatge.',
           variant: 'destructive',
         });
         setIsUploadingPhoto(false);
@@ -664,14 +663,14 @@ export function TicketsInbox({
       }
 
       toast({
-        title: 'Ticket pujat',
-        description: 'La foto s\'ha pujat correctament.',
+        title: t.ticketsInbox?.toasts?.uploadedTitle ?? 'Ticket pujat',
+        description: t.ticketsInbox?.toasts?.uploadedDesc ?? 'La foto s\'ha pujat correctament.',
       });
     } catch (error) {
       console.error('[handleTicketImageUpload] Error:', error);
       toast({
         title: t.common?.error ?? 'Error',
-        description: 'No s\'ha pogut pujar la foto.',
+        description: t.ticketsInbox?.toasts?.cannotUpload ?? 'No s\'ha pogut pujar la foto.',
         variant: 'destructive',
       });
     } finally {
@@ -683,12 +682,12 @@ export function TicketsInbox({
   const handleArchive = async (ticket: PendingDocument) => {
     try {
       await archivePendingDocument(firestore, organizationId, ticket);
-      toast({ title: 'Ticket arxivat' });
+      toast({ title: t.ticketsInbox?.toasts?.archivedTitle ?? 'Ticket arxivat' });
     } catch (error) {
       console.error('[handleArchive] Error:', error);
       toast({
         title: t.common?.error ?? 'Error',
-        description: 'No s\'ha pogut arxivar.',
+        description: t.ticketsInbox?.toasts?.cannotArchive ?? 'No s\'ha pogut arxivar.',
         variant: 'destructive',
       });
     }
@@ -719,8 +718,8 @@ export function TicketsInbox({
               onClick={() => setFilter('unassigned')}
               className="shrink-0"
             >
-              <span className="sm:hidden">Pendents</span>
-              <span className="hidden sm:inline">Sense liquidació</span>
+              <span className="sm:hidden">{t.ticketsInbox?.filters?.pending ?? 'Pendents'}</span>
+              <span className="hidden sm:inline">{t.ticketsInbox?.filters?.noSettlement ?? 'Sense liquidació'}</span>
               {counts.unassigned > 0 && (
                 <Badge variant="secondary" className="ml-1.5">
                   {counts.unassigned}
@@ -733,7 +732,7 @@ export function TicketsInbox({
               onClick={() => setFilter('assigned')}
               className="shrink-0"
             >
-              Assignats
+              {t.ticketsInbox?.filters?.assigned ?? 'Assignats'}
               {counts.assigned > 0 && (
                 <Badge variant="secondary" className="ml-1.5">
                   {counts.assigned}
@@ -746,7 +745,7 @@ export function TicketsInbox({
               onClick={() => setFilter('all')}
               className="shrink-0"
             >
-              Tots
+              {t.ticketsInbox?.filters?.all ?? 'Tots'}
               <Badge variant="secondary" className="ml-1.5">
                 {counts.all}
               </Badge>
@@ -768,7 +767,7 @@ export function TicketsInbox({
                 ) : (
                   <Camera className="mr-2 h-4 w-4" />
                 )}
-                Fer foto
+                {t.ticketsInbox?.actions?.takePhoto ?? 'Fer foto'}
               </Button>
               {/* Afegir ticket - obre modal genèric */}
               <Button
@@ -778,8 +777,8 @@ export function TicketsInbox({
                 className="shrink-0"
               >
                 <Plus className="mr-2 h-4 w-4" />
-                <span className="sm:hidden">Afegir</span>
-                <span className="hidden sm:inline">Afegir ticket</span>
+                <span className="sm:hidden">{t.ticketsInbox?.actions?.addTicketShort ?? 'Afegir'}</span>
+                <span className="hidden sm:inline">{t.ticketsInbox?.actions?.addTicket ?? 'Afegir ticket'}</span>
               </Button>
             </div>
           )}
@@ -798,16 +797,16 @@ export function TicketsInbox({
                     selectedTicketIds.size === selectableTickets.length
                   }
                   onCheckedChange={handleSelectAll}
-                  aria-label="Seleccionar tots"
+                  aria-label={t.ticketsInbox?.actions?.selectAll ?? 'Seleccionar tots'}
                 />
                 <span className="text-sm font-medium">
-                  {selectedTicketIds.size} ticket{selectedTicketIds.size !== 1 ? 's' : ''} seleccionat{selectedTicketIds.size !== 1 ? 's' : ''}
+                  {t.ticketsInbox?.actions?.selectedCount?.({ count: selectedTicketIds.size }) ?? `${selectedTicketIds.size} seleccionats`}
                 </span>
               </div>
               <div className="flex items-center gap-2">
                 <Button size="sm" onClick={handleOpenAssignModal}>
                   <CheckSquare className="mr-2 h-4 w-4" />
-                  Assignar a liquidació
+                  {t.ticketsInbox?.actions?.assignToSettlement ?? 'Assignar a liquidació'}
                 </Button>
                 <Button
                   size="sm"
@@ -815,7 +814,7 @@ export function TicketsInbox({
                   onClick={handleClearSelection}
                 >
                   <X className="mr-2 h-4 w-4" />
-                  Netejar selecció
+                  {t.ticketsInbox?.actions?.clearSelection ?? 'Netejar selecció'}
                 </Button>
               </div>
             </div>
@@ -830,12 +829,12 @@ export function TicketsInbox({
             <Receipt className="mx-auto h-10 w-10 text-muted-foreground/50" />
             <div>
               <p className="font-medium">
-                {filter === 'unassigned' ? 'Cap ticket pendent' : 'Cap ticket'}
+                {filter === 'unassigned' ? (t.ticketsInbox?.empty?.noUnassigned ?? 'Cap ticket pendent') : (t.ticketsInbox?.empty?.noTickets ?? 'Cap ticket')}
               </p>
               <p className="text-sm text-muted-foreground">
                 {filter === 'unassigned'
-                  ? 'Puja tickets per començar.'
-                  : 'No hi ha tickets en aquest filtre.'}
+                  ? (t.ticketsInbox?.empty?.uploadToStart ?? 'Puja tickets per començar.')
+                  : (t.ticketsInbox?.empty?.noInFilter ?? 'No hi ha tickets en aquest filtre.')}
               </p>
             </div>
             {canOperate && filter === 'unassigned' && (
@@ -850,7 +849,7 @@ export function TicketsInbox({
                   ) : (
                     <Camera className="mr-2 h-4 w-4" />
                   )}
-                  Fer foto
+                  {t.ticketsInbox?.actions?.takePhoto ?? 'Fer foto'}
                 </Button>
                 <Button
                   size="sm"
@@ -858,7 +857,7 @@ export function TicketsInbox({
                   onClick={() => setShowUploadModal(true)}
                 >
                   <Plus className="mr-2 h-4 w-4" />
-                  Afegir ticket
+                  {t.ticketsInbox?.actions?.addTicket ?? 'Afegir ticket'}
                 </Button>
               </div>
             )}
@@ -890,7 +889,7 @@ export function TicketsInbox({
                           <Checkbox
                             disabled
                             className="opacity-50"
-                            aria-label="Ja assignat"
+                            aria-label={t.ticketsInbox?.badges?.assigned ?? 'Ja assignat'}
                           />
                         )}
                       </div>
@@ -900,7 +899,7 @@ export function TicketsInbox({
                     <button
                       onClick={() => handlePreview(ticket)}
                       className="flex-shrink-0 w-12 h-12 rounded bg-muted flex items-center justify-center hover:bg-muted/80 transition-colors"
-                      title="Veure fitxer"
+                      title={t.ticketsInbox?.tooltips?.viewFile ?? 'Veure fitxer'}
                     >
                       {isImageFile(ticket.file.contentType) ? (
                         <ImageIcon className="h-6 w-6 text-blue-500" />
@@ -926,11 +925,11 @@ export function TicketsInbox({
                       <div className="mt-1">
                         {ticket.reportId ? (
                           <Badge variant="outline" className="bg-blue-50 text-blue-700">
-                            Ja assignat
+                            {t.ticketsInbox?.badges?.assigned ?? 'Ja assignat'}
                           </Badge>
                         ) : (
                           <Badge variant="outline" className="bg-amber-50 text-amber-700">
-                            Sense liquidació
+                            {t.ticketsInbox?.badges?.noSettlement ?? 'Sense liquidació'}
                           </Badge>
                         )}
                       </div>
@@ -945,7 +944,7 @@ export function TicketsInbox({
                           size="icon"
                           onClick={() => handleProcessWithAI(ticket)}
                           disabled={processingTicketId === ticket.id}
-                          title="Omplir amb IA"
+                          title={t.ticketsInbox?.tooltips?.fillWithAI ?? 'Omplir amb IA'}
                         >
                           {processingTicketId === ticket.id ? (
                             <Loader2 className="h-4 w-4 animate-spin" />
@@ -959,7 +958,7 @@ export function TicketsInbox({
                           variant="ghost"
                           size="icon"
                           onClick={() => handleEdit(ticket)}
-                          title="Editar"
+                          title={t.ticketsInbox?.tooltips?.edit ?? 'Editar'}
                         >
                           <ExternalLink className="h-4 w-4" />
                         </Button>
@@ -970,7 +969,7 @@ export function TicketsInbox({
                             variant="ghost"
                             size="icon"
                             onClick={() => handleArchive(ticket)}
-                            title="Arxivar"
+                            title={t.ticketsInbox?.tooltips?.archive ?? 'Arxivar'}
                           >
                             <Archive className="h-4 w-4" />
                           </Button>
@@ -989,7 +988,7 @@ export function TicketsInbox({
       <Dialog open={!!editingTicket} onOpenChange={(open) => !open && setEditingTicket(null)}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle>Editar ticket</DialogTitle>
+            <DialogTitle>{t.ticketsInbox?.editModal?.title ?? 'Editar ticket'}</DialogTitle>
             <DialogDescription>
               {editingTicket?.file.filename}
             </DialogDescription>
@@ -997,7 +996,7 @@ export function TicketsInbox({
 
           <div className="space-y-4 py-4">
             <div className="space-y-2">
-              <Label htmlFor="invoiceDate">Data</Label>
+              <Label htmlFor="invoiceDate">{t.ticketsInbox?.editModal?.date ?? 'Data'}</Label>
               <Input
                 id="invoiceDate"
                 type="date"
@@ -1007,7 +1006,7 @@ export function TicketsInbox({
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="amount">Import</Label>
+              <Label htmlFor="amount">{t.ticketsInbox?.editModal?.amount ?? 'Import'}</Label>
               <Input
                 id="amount"
                 type="number"
@@ -1022,7 +1021,7 @@ export function TicketsInbox({
           <DialogFooter>
             <Button variant="outline" onClick={() => setEditingTicket(null)}>
               <X className="mr-2 h-4 w-4" />
-              Cancel·lar
+              {t.common?.cancel ?? 'Cancel·lar'}
             </Button>
             <Button onClick={handleSaveEdit} disabled={isSaving}>
               {isSaving ? (
@@ -1030,7 +1029,7 @@ export function TicketsInbox({
               ) : (
                 <Save className="mr-2 h-4 w-4" />
               )}
-              Guardar
+              {t.common?.save ?? 'Guardar'}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -1040,7 +1039,7 @@ export function TicketsInbox({
       <Dialog open={!!previewUrl} onOpenChange={(open) => !open && setPreviewUrl(null)}>
         <DialogContent className="sm:max-w-2xl">
           <DialogHeader>
-            <DialogTitle>Preview</DialogTitle>
+            <DialogTitle>{t.ticketsInbox?.previewModal?.title ?? 'Preview'}</DialogTitle>
           </DialogHeader>
           {previewLoading ? (
             <div className="flex items-center justify-center h-64">
@@ -1060,9 +1059,9 @@ export function TicketsInbox({
       <Dialog open={showAssignModal} onOpenChange={setShowAssignModal}>
         <DialogContent className="sm:max-w-lg">
           <DialogHeader>
-            <DialogTitle>Assignar a liquidació</DialogTitle>
+            <DialogTitle>{t.ticketsInbox?.assignModal?.title ?? 'Assignar a liquidació'}</DialogTitle>
             <DialogDescription>
-              {selectedTicketIds.size} ticket{selectedTicketIds.size !== 1 ? 's' : ''} seleccionat{selectedTicketIds.size !== 1 ? 's' : ''}
+              {t.ticketsInbox?.assignModal?.selectedCount?.({ count: selectedTicketIds.size }) ?? `${selectedTicketIds.size} seleccionats`}
             </DialogDescription>
           </DialogHeader>
 
@@ -1075,7 +1074,7 @@ export function TicketsInbox({
                 onClick={() => setAssignMode('existing')}
                 className="flex-1"
               >
-                Liquidació existent
+                {t.ticketsInbox?.assignModal?.existingSettlement ?? 'Liquidació existent'}
               </Button>
               <Button
                 variant={assignMode === 'new' ? 'default' : 'outline'}
@@ -1084,19 +1083,19 @@ export function TicketsInbox({
                 className="flex-1"
               >
                 <Plus className="mr-2 h-4 w-4" />
-                Nova liquidació
+                {t.ticketsInbox?.assignModal?.newSettlement ?? 'Nova liquidació'}
               </Button>
             </div>
 
             {assignMode === 'existing' ? (
               /* Selector de liquidació existent */
               <div className="space-y-2">
-                <Label htmlFor="existingReport">Selecciona liquidació</Label>
+                <Label htmlFor="existingReport">{t.ticketsInbox?.assignModal?.selectLabel ?? 'Selecciona liquidació'}</Label>
                 {existingReports.length === 0 ? (
                   <p className="text-sm text-muted-foreground py-4 text-center">
-                    No hi ha liquidacions en esborrany o enviades.
+                    {t.ticketsInbox?.assignModal?.noSettlementsAvailable ?? 'No hi ha liquidacions en esborrany o enviades.'}
                     <br />
-                    Crea una nova liquidació.
+                    {t.ticketsInbox?.assignModal?.createNew ?? 'Crea una nova liquidació.'}
                   </p>
                 ) : (
                   <Select
@@ -1104,18 +1103,18 @@ export function TicketsInbox({
                     onValueChange={setSelectedReportId}
                   >
                     <SelectTrigger>
-                      <SelectValue placeholder="Selecciona una liquidació..." />
+                      <SelectValue placeholder={t.ticketsInbox?.assignModal?.selectPlaceholder ?? 'Selecciona una liquidació...'} />
                     </SelectTrigger>
                     <SelectContent>
                       {existingReports.map((report) => (
                         <SelectItem key={report.id} value={report.id}>
                           <div className="flex items-center gap-2">
-                            <span>{report.title || 'Sense títol'}</span>
+                            <span>{report.title || (t.ticketsInbox?.assignModal?.noTitle ?? 'Sense títol')}</span>
                             <Badge variant="outline" className="text-xs">
-                              {report.status === 'draft' ? 'Esborrany' : 'Enviada'}
+                              {report.status === 'draft' ? (t.ticketsInbox?.badges?.draft ?? 'Esborrany') : (t.ticketsInbox?.badges?.submitted ?? 'Enviada')}
                             </Badge>
                             <span className="text-muted-foreground text-xs">
-                              ({report.receiptDocIds.length} tickets)
+                              {t.ticketsInbox?.assignModal?.ticketCount?.({ count: report.receiptDocIds.length }) ?? `(${report.receiptDocIds.length} tickets)`}
                             </span>
                           </div>
                         </SelectItem>
@@ -1128,10 +1127,10 @@ export function TicketsInbox({
               /* Formulari de nova liquidació */
               <div className="space-y-4">
                 <div className="space-y-2">
-                  <Label htmlFor="newTitle">Títol / Motiu</Label>
+                  <Label htmlFor="newTitle">{t.ticketsInbox?.assignModal?.titleLabel ?? 'Títol / Motiu'}</Label>
                   <Input
                     id="newTitle"
-                    placeholder="Ex: Viatge Barcelona març 2024"
+                    placeholder={t.ticketsInbox?.assignModal?.titlePlaceholder ?? 'Ex: Viatge Barcelona març 2024'}
                     value={newReportForm.title}
                     onChange={(e) =>
                       setNewReportForm((f) => ({ ...f, title: e.target.value }))
@@ -1141,7 +1140,7 @@ export function TicketsInbox({
 
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label htmlFor="newDateFrom">Data inici</Label>
+                    <Label htmlFor="newDateFrom">{t.ticketsInbox?.assignModal?.dateStart ?? 'Data inici'}</Label>
                     <Input
                       id="newDateFrom"
                       type="date"
@@ -1152,7 +1151,7 @@ export function TicketsInbox({
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="newDateTo">Data fi</Label>
+                    <Label htmlFor="newDateTo">{t.ticketsInbox?.assignModal?.dateEnd ?? 'Data fi'}</Label>
                     <Input
                       id="newDateTo"
                       type="date"
@@ -1165,10 +1164,10 @@ export function TicketsInbox({
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="newLocation">Destí (opcional)</Label>
+                  <Label htmlFor="newLocation">{t.ticketsInbox?.assignModal?.destination ?? 'Destí (opcional)'}</Label>
                   <Input
                     id="newLocation"
-                    placeholder="Ex: Barcelona"
+                    placeholder={t.ticketsInbox?.assignModal?.destinationPlaceholder ?? 'Ex: Barcelona'}
                     value={newReportForm.location}
                     onChange={(e) =>
                       setNewReportForm((f) => ({ ...f, location: e.target.value }))
@@ -1177,10 +1176,10 @@ export function TicketsInbox({
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="newNotes">Notes (opcional)</Label>
+                  <Label htmlFor="newNotes">{t.ticketsInbox?.assignModal?.notes ?? 'Notes (opcional)'}</Label>
                   <Textarea
                     id="newNotes"
-                    placeholder="Observacions..."
+                    placeholder={t.ticketsInbox?.assignModal?.notesPlaceholder ?? 'Observacions...'}
                     rows={2}
                     value={newReportForm.notes}
                     onChange={(e) =>
@@ -1198,7 +1197,7 @@ export function TicketsInbox({
               onClick={() => setShowAssignModal(false)}
               disabled={isAssigning}
             >
-              Cancel·lar
+              {t.common?.cancel ?? 'Cancel·lar'}
             </Button>
             <Button
               onClick={handleAssignToReport}
@@ -1210,12 +1209,12 @@ export function TicketsInbox({
               {isAssigning ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Assignant...
+                  {t.ticketsInbox?.assignModal?.assigning ?? 'Assignant...'}
                 </>
               ) : (
                 <>
                   <CheckSquare className="mr-2 h-4 w-4" />
-                  Assignar {selectedTicketIds.size} ticket{selectedTicketIds.size !== 1 ? 's' : ''}
+                  {t.ticketsInbox?.assignModal?.assignCount?.({ count: selectedTicketIds.size }) ?? `Assignar ${selectedTicketIds.size} tickets`}
                 </>
               )}
             </Button>
