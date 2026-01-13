@@ -944,6 +944,20 @@ ${t.dashboard.generatedWith}`;
     activeMembers: prevActiveMembers
   } = previousMetrics;
 
+  // Càlcul d'"Altres ingressos" (residual per reconciliar dashboard amb extracte)
+  // = Ingressos totals - Quotes - Donacions puntuals
+  const otherIncomeEUR = React.useMemo(() => {
+    const residual = totalIncome - memberFees - totalDonations;
+    // DEV-only: validar que la reconciliació quadra
+    if (process.env.NODE_ENV === 'development') {
+      const recon = totalIncome - memberFees - totalDonations - Math.max(0, residual);
+      if (Math.abs(recon) > 0.01) {
+        console.warn('[Dashboard] Income reconciliation diff', recon);
+      }
+    }
+    return Math.max(0, residual);
+  }, [totalIncome, memberFees, totalDonations]);
+
   // Càlcul de despeses per projecte
   const expensesByProject = React.useMemo(() => {
     if (!filteredTransactions) return [];
@@ -1382,6 +1396,26 @@ ${t.dashboard.generatedWith}`;
                 />
               )}
             </Link>
+            {otherIncomeEUR > 0 && (
+              <Link
+                href={createMovementsLink('income')}
+                className="block rounded-lg border p-4 text-left hover:bg-muted/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/70 active:scale-[0.99] cursor-pointer transition-colors"
+              >
+                <div className="flex items-center gap-1">
+                  <p className="text-sm text-muted-foreground">{t.dashboard.otherIncome}</p>
+                  <Tooltip>
+                    <TooltipTrigger asChild onClick={(e) => e.preventDefault()}>
+                      <Info className="h-3.5 w-3.5 text-muted-foreground/60 hover:text-muted-foreground" />
+                    </TooltipTrigger>
+                    <TooltipContent side="top" className="max-w-xs">
+                      <p className="text-xs">{t.dashboard.otherIncomeTooltip}</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </div>
+                <p className="text-2xl font-bold text-emerald-600">{formatCurrencyEU(otherIncomeEUR)}</p>
+                <p className="text-xs text-muted-foreground/70 mt-1">{t.dashboard.otherIncomeDescription}</p>
+              </Link>
+            )}
             <Link
               href={createDonorsLink({ membershipType: 'recurring', viewActive: true })}
               className="block rounded-lg border p-4 text-left hover:bg-muted/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/70 active:scale-[0.99] cursor-pointer transition-colors"
