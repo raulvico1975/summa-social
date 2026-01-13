@@ -1868,7 +1868,7 @@ export function RemittanceSplitter({
               {isPaymentRemittance && (
                 <Button onClick={handleFileClick} disabled={isProcessing} variant="outline" className="w-full">
                   <FileCode className="mr-2 h-4 w-4" />
-                  Importar SEPA (pain.001)
+                  {t.movements.splitter.importSepa}
                 </Button>
               )}
             </div>
@@ -2871,14 +2871,14 @@ export function RemittanceSplitter({
                       disabled={isProcessing || !debtorBankAccount?.iban || !canProcess}
                       title={
                         !debtorBankAccount?.iban
-                          ? 'Cal configurar l\'IBAN del compte bancari'
+                          ? t.movements.splitter.configureIban
                           : !canProcess
-                          ? blockReason || 'Validació fallida'
-                          : 'Exportar fitxer SEPA pain.001'
+                          ? blockReason || t.movements.splitter.validationFailed
+                          : t.movements.splitter.exportSepaTooltip
                       }
                     >
                       <Download className="mr-1 h-3 w-3" />
-                      Exportar SEPA
+                      {t.movements.splitter.exportSepa}
                     </Button>
                   )}
                 </div>

@@ -396,15 +396,15 @@ export default function LiquidacionsPage() {
         <TabsList>
           <TabsTrigger value="liquidacions" className="flex items-center gap-2">
             <FileText className="h-4 w-4" />
-            Liquidacions
+            {t.expenseReports.tabs.settlements}
           </TabsTrigger>
           <TabsTrigger value="tickets" className="flex items-center gap-2">
             <Receipt className="h-4 w-4" />
-            Tickets
+            {t.expenseReports.tabs.tickets}
           </TabsTrigger>
           <TabsTrigger value="quilometratge" className="flex items-center gap-2">
             <Car className="h-4 w-4" />
-            Quilometratge
+            {t.expenseReports.tabs.mileage}
           </TabsTrigger>
         </TabsList>
 
@@ -604,15 +604,15 @@ export default function LiquidacionsPage() {
         <TabsContent value="quilometratge" className="mt-4 space-y-4">
           <Alert>
             <Car className="h-4 w-4" />
-            <AlertTitle>Quilometratge</AlertTitle>
+            <AlertTitle>{t.expenseReports.tabs.mileage}</AlertTitle>
             <AlertDescription>
-              Aquí només gestiones quilometratge. Per editar tickets o capçalera, ves a{' '}
+              {t.expenseReports.mileage.onlyMileageHere}{' '}
               <button
                 type="button"
                 className="underline hover:no-underline font-medium"
                 onClick={() => setMainTab('liquidacions')}
               >
-                Liquidacions
+                {t.expenseReports.tabs.settlements}
               </button>
               .
             </AlertDescription>
@@ -627,8 +627,8 @@ export default function LiquidacionsPage() {
           ) : reports.filter((r) => r.status === 'draft' || r.status === 'submitted').length === 0 ? (
             <EmptyState
               icon={Car}
-              title="Cap liquidació disponible"
-              description="Crea una liquidació per poder afegir quilometratge."
+              title={t.expenseReports.emptyState.noSettlements}
+              description={t.expenseReports.emptyState.createToAddMileage}
             />
           ) : (
             <div className="space-y-2">

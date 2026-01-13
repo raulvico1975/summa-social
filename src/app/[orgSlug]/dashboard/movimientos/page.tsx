@@ -45,13 +45,13 @@ export default function MovimientosPage() {
               <Button variant="outline" asChild>
                 <Link href="movimientos/pendents">
                   <FileStack className="mr-2 h-4 w-4" />
-                  Pendents
+                  {t.movements.buttons.pendingDocs}
                 </Link>
               </Button>
               <Button variant="outline" asChild>
                 <Link href="movimientos/liquidacions">
                   <Receipt className="mr-2 h-4 w-4" />
-                  Liquidacions
+                  {t.movements.buttons.settlements}
                 </Link>
               </Button>
             </>

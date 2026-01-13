@@ -6,8 +6,8 @@ Generat: 2026-01-13
 
 | Mètrica | Valor |
 |---------|-------|
-| Claus a CA (base) | 3143 |
-| Claus a ES | 3143 |
+| Claus a CA (base) | 3156 |
+| Claus a ES | 3156 |
 | Claus missing a ES | 0 |
 | Claus extra a ES | 0 |
 | Claus buides a ES | 0 |
