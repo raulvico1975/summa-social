@@ -1030,13 +1030,21 @@ export function ReturnImporter({
             STEP 4: PROCESSING
             ═══════════════════════════════════════════════════════════════════ */}
         {step === 'processing' && (
-          <div className="flex flex-col items-center justify-center py-12">
-            <Loader2 className="h-12 w-12 animate-spin text-primary mb-4" />
-            <p className="text-lg font-medium">Processant devolucions...</p>
-            <p className="text-sm text-muted-foreground">
-              Assignant donants i actualitzant comptadors
-            </p>
-          </div>
+          <>
+            <DialogHeader>
+              <DialogTitle>Processant devolucions</DialogTitle>
+              <DialogDescription>
+                Assignant donants i actualitzant comptadors
+              </DialogDescription>
+            </DialogHeader>
+            <div className="flex flex-col items-center justify-center py-12">
+              <Loader2 className="h-12 w-12 animate-spin text-primary mb-4" />
+              <p className="text-lg font-medium">Processant devolucions...</p>
+              <p className="text-sm text-muted-foreground">
+                Assignant donants i actualitzant comptadors
+              </p>
+            </div>
+          </>
         )}
 
       </DialogContent>

@@ -466,6 +466,17 @@ service cloud.firestore {
         allow read: if isSuperAdmin() || isMemberOf(orgId) || hasOrgInProfile(orgId);
         allow create, update, delete: if isSuperAdmin() || (isMemberOf(orgId) && getMemberRole(orgId) in ['admin', 'user']);
       }
+
+      // ─────────────────────────────────────────────────────────────────────
+      // PROCESS LOCKS (bloqueig per operacions multiusuari)
+      // Path: /organizations/{orgId}/processLocks/{lockId}
+      // Permisos: admin/user poden crear/llegir/esborrar locks
+      // Viewer NO pot bloquejar processos
+      // ─────────────────────────────────────────────────────────────────────
+
+      match /processLocks/{lockId} {
+        allow read, create, update, delete: if isSuperAdmin() || (isMemberOf(orgId) && getMemberRole(orgId) in ['admin', 'user']);
+      }
     }
   }
 }
