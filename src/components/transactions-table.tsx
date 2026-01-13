@@ -1312,6 +1312,13 @@ export function TransactionsTable({ initialDateFilter = null }: TransactionsTabl
     showArchivedAriaLabel: t.movements.table.showArchivedAriaLabel,
     showArchivedLabel: t.movements.table.showArchivedLabel,
     showArchivedTooltip: t.movements.table.showArchivedTooltip,
+    // Source filter labels
+    sourceAll: t.movements.table.sourceAll,
+    sourceBank: t.movements.table.sourceBank,
+    sourceRemittance: t.movements.table.sourceRemittance,
+    sourceManual: t.movements.table.sourceManual,
+    sourceStripe: t.movements.table.sourceStripe,
+    sourceEmpty: t.movements.table.sourceEmpty,
   }), [t]);
 
   return (
