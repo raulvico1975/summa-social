@@ -158,6 +158,7 @@ interface TransactionRowProps {
     remittanceNotApplicable: string;
     undoRemittance?: string;
     reconcileSepa?: string;
+    moreOptionsAriaLabel?: string;
   };
   getCategoryDisplayName: (category: string | null | undefined) => string;
 }
@@ -809,7 +810,7 @@ export const TransactionRow = React.memo(function TransactionRow({
               variant="ghost"
               size="icon"
               className="h-9 w-9 text-muted-foreground hover:text-foreground hover:bg-muted/40"
-              aria-label="Més opcions"
+              aria-label={t.moreOptionsAriaLabel ?? "Més opcions"}
             >
               <MoreVertical className="h-4 w-4" />
             </Button>

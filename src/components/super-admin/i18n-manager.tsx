@@ -41,6 +41,7 @@ import {
   Compass,
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { useTranslations } from '@/i18n';
 import { getStorage, ref, getDownloadURL, uploadBytes } from 'firebase/storage';
 import { getFirestore, doc, setDoc, getDoc, serverTimestamp } from 'firebase/firestore';
 
@@ -86,6 +87,7 @@ type LanguageStorageStatus = Record<Language, StorageStatus>;
 const ALL_LANGUAGES: Language[] = ['ca', 'es', 'fr', 'pt'];
 
 export function I18nManager() {
+  const { t } = useTranslations();
   const { toast } = useToast();
   const [selectedLanguage, setSelectedLanguage] = React.useState<Language>('ca');
   const [uploadValidation, setUploadValidation] = React.useState<UploadValidation | null>(null);
@@ -826,15 +828,15 @@ export function I18nManager() {
             </AlertDialogTrigger>
             <AlertDialogContent>
               <AlertDialogHeader>
-                <AlertDialogTitle>Inicialitzar Storage?</AlertDialogTitle>
+                <AlertDialogTitle>{t.admin.i18n.initializeStorageTitle}</AlertDialogTitle>
                 <AlertDialogDescription>
-                  Pujarà ca/es/fr/pt i activarà els canvis. Pots repetir-ho quan vulguis.
+                  {t.admin.i18n.initializeStorageDescription}
                 </AlertDialogDescription>
               </AlertDialogHeader>
               <AlertDialogFooter>
-                <AlertDialogCancel>Cancel·lar</AlertDialogCancel>
+                <AlertDialogCancel>{t.common.cancel}</AlertDialogCancel>
                 <AlertDialogAction onClick={handleInitializeStorage}>
-                  Sí, inicialitza
+                  {t.admin.i18n.initializeConfirm}
                 </AlertDialogAction>
               </AlertDialogFooter>
             </AlertDialogContent>

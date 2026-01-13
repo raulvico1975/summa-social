@@ -59,6 +59,7 @@ import {
 } from 'lucide-react';
 import { useSaveExpenseLink } from '@/hooks/use-project-module';
 import { useToast } from '@/hooks/use-toast';
+import { useTranslations } from '@/i18n';
 import { trackUX } from '@/lib/ux/trackUX';
 import type {
   Project,
@@ -220,6 +221,7 @@ export function BalanceProjectModal({
   allExpenses,
   onSuccess,
 }: BalanceProjectModalProps) {
+  const { t } = useTranslations();
   const { toast } = useToast();
   const { save: saveExpenseLink, isSaving } = useSaveExpenseLink();
 
@@ -1259,7 +1261,7 @@ export function BalanceProjectModal({
                       <div className="relative">
                         <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                         <Input
-                          placeholder="Cercar per descripció, proveïdor o categoria..."
+                          placeholder={t.balance.searchPlaceholder}
                           value={searchQuery}
                           onChange={(e) => setSearchQuery(e.target.value)}
                           className="pl-10"

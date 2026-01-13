@@ -1035,16 +1035,15 @@ export default function ProjectBudgetPage() {
       <AlertDialog open={!!deleteConfirm} onOpenChange={(open) => !open && setDeleteConfirm(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Eliminar partida</AlertDialogTitle>
+            <AlertDialogTitle>{t.projectModule.deleteBudgetLine}</AlertDialogTitle>
             <AlertDialogDescription>
-              Estàs segur que vols eliminar la partida &quot;{deleteConfirm?.name}&quot;?
-              Aquesta acció no es pot desfer.
+              {t.projectModule.deleteBudgetLineConfirm.replace('{name}', deleteConfirm?.name || '')}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancel·lar</AlertDialogCancel>
+            <AlertDialogCancel>{t.common.cancel}</AlertDialogCancel>
             <AlertDialogAction onClick={handleDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
-              Eliminar
+              {t.common.delete}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

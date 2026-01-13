@@ -1267,6 +1267,7 @@ export function TransactionsTable({ initialDateFilter = null }: TransactionsTabl
     remittanceProcessedLabel: t.movements.table.remittanceProcessedLabel,
     remittanceNotApplicable: t.movements.table.remittanceNotApplicable,
     undoRemittance: (t.movements.table as any).undoRemittance || 'Desfer remesa',
+    moreOptionsAriaLabel: t.movements.table.moreOptionsAriaLabel,
   }), [t]);
 
   // Memoized filter translations
@@ -1297,6 +1298,20 @@ export function TransactionsTable({ initialDateFilter = null }: TransactionsTabl
     onlyExpenses: t.movements.table.onlyExpenses,
     expensesWithoutDocument: t.movements.table.expensesWithoutDocument,
     expensesWithoutDocumentTooltip: t.movements.table.expensesWithoutDocumentTooltip,
+    // Batch categorization controls
+    stopProcessAriaLabel: t.movements.table.stopProcessAriaLabel,
+    stopButton: t.movements.table.stopButton,
+    stopProcessTooltip: t.movements.table.stopProcessTooltip,
+    suggestCategoriesAriaLabel: t.movements.table.suggestCategoriesAriaLabel,
+    suggestCategoriesTooltip: t.movements.table.suggestCategoriesTooltip,
+    // Bulk mode controls (SuperAdmin)
+    bulkModeAriaLabel: t.movements.table.bulkModeAriaLabel,
+    bulkModeLabel: t.movements.table.bulkModeLabel,
+    bulkModeTooltip: t.movements.table.bulkModeTooltip,
+    // Archived toggle (SuperAdmin)
+    showArchivedAriaLabel: t.movements.table.showArchivedAriaLabel,
+    showArchivedLabel: t.movements.table.showArchivedLabel,
+    showArchivedTooltip: t.movements.table.showArchivedTooltip,
   }), [t]);
 
   return (

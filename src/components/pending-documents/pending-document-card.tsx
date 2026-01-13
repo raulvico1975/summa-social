@@ -669,18 +669,18 @@ export function PendingDocumentCard({
                 </AlertDialogTrigger>
                 <AlertDialogContent>
                   <AlertDialogHeader>
-                    <AlertDialogTitle>Eliminar document?</AlertDialogTitle>
+                    <AlertDialogTitle>{t.pendingDocs.deleteDialog.title}</AlertDialogTitle>
                     <AlertDialogDescription>
-                      S'eliminarà el document i el fitxer pujat. Aquesta acció no es pot desfer.
+                      {t.pendingDocs.deleteDialog.description}
                     </AlertDialogDescription>
                   </AlertDialogHeader>
                   <AlertDialogFooter>
-                    <AlertDialogCancel>Cancel·lar</AlertDialogCancel>
+                    <AlertDialogCancel>{t.pendingDocs.actions.cancel}</AlertDialogCancel>
                     <AlertDialogAction
                       onClick={() => onDelete(doc)}
                       className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
                     >
-                      Eliminar
+                      {t.pendingDocs.actions.delete}
                     </AlertDialogAction>
                   </AlertDialogFooter>
                 </AlertDialogContent>

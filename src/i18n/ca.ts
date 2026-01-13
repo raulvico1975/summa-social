@@ -415,6 +415,21 @@ export const ca = {
       searchDonor: "Buscar per nom o DNI...",
       totalQuotes: "Total",
       viewRemittanceDetail: "Veure detall",
+      moreOptionsAriaLabel: "Més opcions",
+      // Batch categorization controls
+      stopProcessAriaLabel: "Aturar procés",
+      stopButton: "Aturar",
+      stopProcessTooltip: "Prem per aturar el procés. Els canvis aplicats fins ara es mantenen.",
+      suggestCategoriesAriaLabel: "Suggerir categories amb IA",
+      suggestCategoriesTooltip: "Genera suggeriments i els aplica a mesura que avança. Pots revisar i ajustar després.",
+      // Bulk mode controls (SuperAdmin)
+      bulkModeAriaLabel: "Mode ràpid",
+      bulkModeLabel: "Ràpid",
+      bulkModeTooltip: "Accelera el procés reduint el temps entre suggeriments. Pot ser menys precís.",
+      // Archived toggle (SuperAdmin)
+      showArchivedAriaLabel: "Incloure arxivades",
+      showArchivedLabel: "Arxivades",
+      showArchivedTooltip: "Mostra les transaccions fiscals arxivades (soft-deleted). Només visible per SuperAdmin.",
       // Selecció múltiple i accions en bloc
       bulkSelection: {
         selected: (count: number) => `${count} seleccionat${count > 1 ? 's' : ''}`,
@@ -1210,6 +1225,7 @@ export const ca = {
     employeeDeleted: "Treballador eliminat",
     employeeDeletedDescription: (name: string) => `S'ha eliminat "${name}".`,
     errorNameRequired: "El nom és obligatori.",
+    namePlaceholder: "Maria García López",
   },
   suppliers: {
     title: "Proveïdors",
@@ -1523,7 +1539,10 @@ export const ca = {
       signatureUploadedSuccess: "La firma s'ha pujat correctament. Recorda guardar els canvis.",
       errorUploadingSignature: "No s'ha pogut pujar la firma.",
       signatoryName: "Nom del signant",
+      signatoryNamePlaceholder: "Maria Garcia López",
       signatoryRole: "Càrrec del signant",
+      signatoryRolePlaceholder: "Presidenta",
+      namePlaceholder: "Fundació Exemple",
       certificateLanguage: "Idioma dels certificats",
       certificateLanguageDescription: "Idioma dels certificats fiscals i els emails als donants.",
     },
@@ -1820,6 +1839,9 @@ export const ca = {
       employee: "Treballador",
       contact: "Contacte",
       unknownCategory: "Categoria desconeguda",
+      // Undo processing
+      undoing: "Desfent...",
+      undoProcessing: "Desfer processament",
   },
   // Form validation - claus centralitzades
   form: {
@@ -1910,6 +1932,7 @@ export const ca = {
     exportExcel: "Exportar justificació (Excel)",
     editFx: "Editar tipus de canvi",
     deleteBudgetLine: "Eliminar partida",
+    deleteBudgetLineConfirm: "Estàs segur que vols eliminar la partida \"{name}\"? Aquesta acció no es pot desfer.",
     removeRow: "Eliminar fila",
     budgetInfoLabel: "Informació sobre Pressupostat",
     budgetFromLinesTooltip: "Pressupost del projecte = suma de les partides.",
@@ -2591,6 +2614,9 @@ export const ca = {
     difference: "Dif.",
     excess: "Excés",
     missing: "Falta",
+    searchPlaceholder: "Cercar per descripció, proveïdor o categoria...",
+    notePlaceholder: "Afegeix una nota o justificació...",
+    noteLabel: "Nota (opcional)",
   },
   // Onboarding
   onboarding: {
@@ -2766,6 +2792,10 @@ export const ca = {
       clear: "Netejar",
       search: "Cercar...",
       createSupplier: "Nou proveïdor...",
+    },
+    deleteDialog: {
+      title: "Eliminar document?",
+      description: "S'eliminarà el document i el fitxer pujat. Aquesta acció no es pot desfer.",
     },
     upload: {
       title: "Pujar factures o nòmines",
@@ -3295,6 +3325,11 @@ export const ca = {
       backToDashboard: "Tornar al dashboard",
       logout: "Tancar sessió",
     },
+    superAdmins: {
+      deleteTitle: "Eliminar SuperAdmin?",
+      deleteDescription: "deixarà de tenir accés al panell /admin.",
+      deleteSelfWarning: "Atenció: estàs eliminant el teu propi accés!",
+    },
     orgStatus: {
       active: "Activa",
       suspended: "Suspesa",
@@ -3324,6 +3359,11 @@ export const ca = {
         title: "Operativa puntual",
         description: "Accions ràpides de suport.",
       },
+    },
+    i18n: {
+      initializeStorageTitle: "Inicialitzar Storage?",
+      initializeStorageDescription: "Pujarà ca/es/fr/pt i activarà els canvis. Pots repetir-ho quan vulguis.",
+      initializeConfirm: "Sí, inicialitza",
     },
     shell: {
       title: "Panell de Super Admin",

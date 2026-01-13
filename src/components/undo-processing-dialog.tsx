@@ -21,6 +21,7 @@ import {
   getUndoDialogTitle,
   getUndoDialogDescription,
 } from '@/lib/fiscal/undoProcessing';
+import { useTranslations } from '@/i18n';
 
 // =============================================================================
 // TIPUS
@@ -49,6 +50,7 @@ export function UndoProcessingDialog({
   isProcessing,
   onConfirm,
 }: UndoProcessingDialogProps) {
+  const { t } = useTranslations();
   const [confirmationText, setConfirmationText] = React.useState('');
 
   // Reset input quan es tanca o obre
@@ -101,7 +103,7 @@ export function UndoProcessingDialog({
         </div>
 
         <AlertDialogFooter>
-          <AlertDialogCancel disabled={isProcessing}>Cancel·lar</AlertDialogCancel>
+          <AlertDialogCancel disabled={isProcessing}>{t.common.cancel}</AlertDialogCancel>
           <AlertDialogAction
             onClick={handleConfirm}
             disabled={!isConfirmEnabled}
@@ -110,10 +112,10 @@ export function UndoProcessingDialog({
             {isProcessing ? (
               <>
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Desfent...
+                {t.common.undoing}
               </>
             ) : (
-              'Desfer processament'
+              t.common.undoProcessing
             )}
           </AlertDialogAction>
         </AlertDialogFooter>

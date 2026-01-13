@@ -34,6 +34,7 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { useToast } from '@/hooks/use-toast';
+import { useTranslations } from '@/i18n';
 import {
   Shield,
   Plus,
@@ -60,6 +61,7 @@ interface SuperAdminDoc {
 
 export function SuperAdminsManager() {
   const { user, firestore } = useFirebase();
+  const { t } = useTranslations();
   const { toast } = useToast();
 
   // State
@@ -262,26 +264,25 @@ export function SuperAdminsManager() {
       <AlertDialog open={!!deleteTarget} onOpenChange={() => setDeleteTarget(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Eliminar SuperAdmin?</AlertDialogTitle>
+            <AlertDialogTitle>{t.admin.superAdmins.deleteTitle}</AlertDialogTitle>
             <AlertDialogDescription>
-              L'usuari amb UID <code className="font-mono bg-muted px-1 rounded">{deleteTarget?.id}</code> deixarà
-              de tenir accés al panell /admin.
+              L'usuari amb UID <code className="font-mono bg-muted px-1 rounded">{deleteTarget?.id}</code> {t.admin.superAdmins.deleteDescription}
               {deleteTarget?.id === user?.uid && (
                 <span className="block mt-2 text-destructive font-medium">
-                  Atenció: estàs eliminant el teu propi accés!
+                  {t.admin.superAdmins.deleteSelfWarning}
                 </span>
               )}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel disabled={isDeleting}>Cancel·lar</AlertDialogCancel>
+            <AlertDialogCancel disabled={isDeleting}>{t.common.cancel}</AlertDialogCancel>
             <AlertDialogAction
               onClick={handleDelete}
               disabled={isDeleting}
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >
               {isDeleting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              Eliminar
+              {t.common.delete}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

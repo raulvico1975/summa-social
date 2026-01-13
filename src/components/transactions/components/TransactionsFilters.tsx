@@ -105,6 +105,20 @@ interface TransactionsFiltersProps {
     onlyExpenses?: string;
     expensesWithoutDocument?: string;
     expensesWithoutDocumentTooltip?: string;
+    // Batch categorization controls
+    stopProcessAriaLabel?: string;
+    stopButton?: string;
+    stopProcessTooltip?: string;
+    suggestCategoriesAriaLabel?: string;
+    suggestCategoriesTooltip?: string;
+    // Bulk mode controls (SuperAdmin)
+    bulkModeAriaLabel?: string;
+    bulkModeLabel?: string;
+    bulkModeTooltip?: string;
+    // Archived toggle (SuperAdmin)
+    showArchivedAriaLabel?: string;
+    showArchivedLabel?: string;
+    showArchivedTooltip?: string;
   };
 }
 
@@ -239,15 +253,15 @@ export const TransactionsFilters = React.memo(function TransactionsFilters({
                   onClick={onCancelBatch}
                   variant="outline"
                   size="sm"
-                  aria-label="Aturar procés"
+                  aria-label={t.stopProcessAriaLabel ?? "Aturar procés"}
                   className="border-destructive text-destructive hover:bg-destructive/10"
                 >
                   <Square className="mr-2 h-4 w-4" />
-                  Aturar
+                  {t.stopButton ?? "Aturar"}
                 </Button>
               </TooltipTrigger>
               <TooltipContent>
-                <p className="text-xs">Prem per aturar el procés. Els canvis aplicats fins ara es mantenen.</p>
+                <p className="text-xs">{t.stopProcessTooltip ?? "Prem per aturar el procés. Els canvis aplicats fins ara es mantenen."}</p>
               </TooltipContent>
             </Tooltip>
           </div>
@@ -259,7 +273,7 @@ export const TransactionsFilters = React.memo(function TransactionsFilters({
                 disabled={!hasUncategorized}
                 variant="default"
                 size="sm"
-                aria-label="Suggerir categories amb IA"
+                aria-label={t.suggestCategoriesAriaLabel ?? "Suggerir categories amb IA"}
               >
                 <Sparkles className="mr-2 h-4 w-4" />
                 {t.categorizeAll}
@@ -271,7 +285,7 @@ export const TransactionsFilters = React.memo(function TransactionsFilters({
               </Button>
             </TooltipTrigger>
             <TooltipContent className="max-w-xs">
-              <p className="text-xs">Genera suggeriments i els aplica a mesura que avança. Pots revisar i ajustar després.</p>
+              <p className="text-xs">{t.suggestCategoriesTooltip ?? "Genera suggeriments i els aplica a mesura que avança. Pots revisar i ajustar després."}</p>
             </TooltipContent>
           </Tooltip>
         )}
@@ -285,17 +299,17 @@ export const TransactionsFilters = React.memo(function TransactionsFilters({
               onCheckedChange={onBulkModeChange}
               disabled={isBatchCategorizing}
               className="h-4 w-7"
-              aria-label="Mode ràpid"
+              aria-label={t.bulkModeAriaLabel ?? "Mode ràpid"}
             />
             <Label htmlFor="bulk-mode" className="text-xs cursor-pointer whitespace-nowrap text-muted-foreground">
-              Ràpid
+              {t.bulkModeLabel ?? "Ràpid"}
             </Label>
             <Tooltip>
               <TooltipTrigger asChild>
                 <Info className="h-3 w-3 text-muted-foreground/60 cursor-help" aria-hidden="true" />
               </TooltipTrigger>
               <TooltipContent className="max-w-xs" side="bottom">
-                <p className="text-xs">Accelera el procés reduint el temps entre suggeriments. Pot ser menys precís.</p>
+                <p className="text-xs">{t.bulkModeTooltip ?? "Accelera el procés reduint el temps entre suggeriments. Pot ser menys precís."}</p>
               </TooltipContent>
             </Tooltip>
           </div>
@@ -309,17 +323,17 @@ export const TransactionsFilters = React.memo(function TransactionsFilters({
               checked={showArchived ?? false}
               onCheckedChange={onShowArchivedChange}
               className="h-4 w-7"
-              aria-label="Incloure arxivades"
+              aria-label={t.showArchivedAriaLabel ?? "Incloure arxivades"}
             />
             <Label htmlFor="show-archived" className="text-xs cursor-pointer whitespace-nowrap text-muted-foreground">
-              Arxivades
+              {t.showArchivedLabel ?? "Arxivades"}
             </Label>
             <Tooltip>
               <TooltipTrigger asChild>
                 <Info className="h-3 w-3 text-muted-foreground/60 cursor-help" aria-hidden="true" />
               </TooltipTrigger>
               <TooltipContent className="max-w-xs" side="bottom">
-                <p className="text-xs">Mostra les transaccions fiscals arxivades (soft-deleted). Només visible per SuperAdmin.</p>
+                <p className="text-xs">{t.showArchivedTooltip ?? "Mostra les transaccions fiscals arxivades (soft-deleted). Només visible per SuperAdmin."}</p>
               </TooltipContent>
             </Tooltip>
           </div>

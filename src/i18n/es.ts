@@ -415,6 +415,21 @@ export const es = {
       searchDonor: "Buscar por nombre o DNI...",
       totalQuotes: "Total",
       viewRemittanceDetail: "Ver detalle",
+      moreOptionsAriaLabel: "Más opciones",
+      // Batch categorization controls
+      stopProcessAriaLabel: "Detener proceso",
+      stopButton: "Detener",
+      stopProcessTooltip: "Pulsa para detener el proceso. Los cambios aplicados hasta ahora se mantienen.",
+      suggestCategoriesAriaLabel: "Sugerir categorías con IA",
+      suggestCategoriesTooltip: "Genera sugerencias y las aplica a medida que avanza. Puedes revisar y ajustar después.",
+      // Bulk mode controls (SuperAdmin)
+      bulkModeAriaLabel: "Modo rápido",
+      bulkModeLabel: "Rápido",
+      bulkModeTooltip: "Acelera el proceso reduciendo el tiempo entre sugerencias. Puede ser menos preciso.",
+      // Archived toggle (SuperAdmin)
+      showArchivedAriaLabel: "Incluir archivadas",
+      showArchivedLabel: "Archivadas",
+      showArchivedTooltip: "Muestra las transacciones fiscales archivadas (soft-deleted). Solo visible para SuperAdmin.",
       // Selección múltiple y acciones en bloque
       bulkSelection: {
         selected: (count: number) => `${count} seleccionado${count > 1 ? 's' : ''}`,
@@ -1242,6 +1257,7 @@ export const es = {
     employeeDeleted: "Trabajador eliminado",
     employeeDeletedDescription: (name: string) => `Se ha eliminado "${name}".`,
     errorNameRequired: "El nombre es obligatorio.",
+    namePlaceholder: "María García López",
   },
   suppliers: {
     title: "Proveedores",
@@ -1555,7 +1571,10 @@ export const es = {
       signatureUploadedSuccess: "La firma se ha subido correctamente. Recuerda guardar los cambios.",
       errorUploadingSignature: "No se ha podido subir la firma.",
       signatoryName: "Nombre del firmante",
+      signatoryNamePlaceholder: "María García López",
       signatoryRole: "Cargo del firmante",
+      signatoryRolePlaceholder: "Presidenta",
+      namePlaceholder: "Fundación Ejemplo",
       certificateLanguage: "Idioma de los certificados",
       certificateLanguageDescription: "Idioma de los certificados fiscales y los emails a los donantes.",
     },
@@ -1846,6 +1865,9 @@ export const es = {
       employee: "Trabajador",
       contact: "Contacto",
       unknownCategory: "Categoría desconocida",
+      // Undo processing
+      undoing: "Deshaciendo...",
+      undoProcessing: "Deshacer procesamiento",
   },
   // Form validation - claves centralizadas
   form: {
@@ -1936,6 +1958,7 @@ export const es = {
     exportExcel: "Exportar justificación (Excel)",
     editFx: "Editar tipo de cambio",
     deleteBudgetLine: "Eliminar línea presupuestaria",
+    deleteBudgetLineConfirm: "¿Estás seguro de que quieres eliminar la línea \"{name}\"? Esta acción no se puede deshacer.",
     removeRow: "Eliminar fila",
     budgetInfoLabel: "Información sobre Presupuestado",
     budgetFromLinesTooltip: "Presupuesto del proyecto = suma de las partidas.",
@@ -2584,6 +2607,9 @@ export const es = {
     difference: "Dif.",
     excess: "Exceso",
     missing: "Falta",
+    searchPlaceholder: "Buscar por descripción, proveedor o categoría...",
+    notePlaceholder: "Añade una nota o justificación...",
+    noteLabel: "Nota (opcional)",
   },
   // Onboarding
   onboarding: {
@@ -2759,6 +2785,10 @@ export const es = {
       clear: "Limpiar",
       search: "Buscar...",
       createSupplier: "Nuevo proveedor...",
+    },
+    deleteDialog: {
+      title: "¿Eliminar documento?",
+      description: "Se eliminará el documento y el archivo subido. Esta acción no se puede deshacer.",
     },
     upload: {
       title: "Subir facturas o nóminas",
@@ -3288,6 +3318,11 @@ export const es = {
       backToDashboard: "Volver al dashboard",
       logout: "Cerrar sesión",
     },
+    superAdmins: {
+      deleteTitle: "¿Eliminar SuperAdmin?",
+      deleteDescription: "dejará de tener acceso al panel /admin.",
+      deleteSelfWarning: "Atención: ¡estás eliminando tu propio acceso!",
+    },
     orgStatus: {
       active: "Activa",
       suspended: "Suspendida",
@@ -3317,6 +3352,11 @@ export const es = {
         title: "Operativa puntual",
         description: "Acciones rápidas de soporte.",
       },
+    },
+    i18n: {
+      initializeStorageTitle: "¿Inicializar Storage?",
+      initializeStorageDescription: "Subirá ca/es/fr/pt y activará los cambios. Puedes repetirlo cuando quieras.",
+      initializeConfirm: "Sí, inicializar",
     },
     shell: {
       title: "Panel de Super Admin",

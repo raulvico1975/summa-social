@@ -415,6 +415,21 @@ export const fr = {
       searchDonor: "Rechercher par nom ou N° fiscal...",
       totalQuotes: "Total",
       viewRemittanceDetail: "Voir détail",
+      moreOptionsAriaLabel: "Plus d'options",
+      // Batch categorization controls
+      stopProcessAriaLabel: "Arrêter le processus",
+      stopButton: "Arrêter",
+      stopProcessTooltip: "Appuyez pour arrêter le processus. Les modifications appliquées jusqu'à présent sont conservées.",
+      suggestCategoriesAriaLabel: "Suggérer des catégories avec l'IA",
+      suggestCategoriesTooltip: "Génère des suggestions et les applique au fur et à mesure. Vous pouvez réviser et ajuster ensuite.",
+      // Bulk mode controls (SuperAdmin)
+      bulkModeAriaLabel: "Mode rapide",
+      bulkModeLabel: "Rapide",
+      bulkModeTooltip: "Accélère le processus en réduisant le temps entre les suggestions. Peut être moins précis.",
+      // Archived toggle (SuperAdmin)
+      showArchivedAriaLabel: "Inclure archivées",
+      showArchivedLabel: "Archivées",
+      showArchivedTooltip: "Affiche les transactions fiscales archivées (soft-deleted). Visible uniquement pour SuperAdmin.",
       // Sélection multiple et actions en bloc
       bulkSelection: {
         selected: (count: number) => `${count} sélectionné${count > 1 ? 's' : ''}`,
@@ -1210,6 +1225,7 @@ export const fr = {
     employeeDeleted: "Salarié supprimé",
     employeeDeletedDescription: (name: string) => `"${name}" a été supprimé.`,
     errorNameRequired: "Le nom est obligatoire.",
+    namePlaceholder: "Marie García López",
   },
   suppliers: {
     title: "Fournisseurs",
@@ -1524,7 +1540,10 @@ export const fr = {
       signatureUploadedSuccess: "La signature a été téléchargée. N'oubliez pas d'enregistrer les modifications.",
       errorUploadingSignature: "Impossible de télécharger la signature.",
       signatoryName: "Nom du signataire",
+      signatoryNamePlaceholder: "Marie García López",
       signatoryRole: "Fonction du signataire",
+      signatoryRolePlaceholder: "Présidente",
+      namePlaceholder: "Fondation Exemple",
       certificateLanguage: "Langue des certificats",
       certificateLanguageDescription: "Langue des certificats fiscaux et des e-mails aux donateurs.",
     },
@@ -1821,6 +1840,9 @@ export const fr = {
       employee: "Employé",
       contact: "Contact",
       unknownCategory: "Catégorie inconnue",
+      // Undo processing
+      undoing: "Annulation en cours...",
+      undoProcessing: "Annuler le traitement",
   },
   // Form validation - clés centralisées
   form: {
@@ -1910,8 +1932,9 @@ export const fr = {
     backToProjects: "Tornar a projectes",
     exportExcel: "Exportar justificació (Excel)",
     editFx: "Editar tipus de canvi",
-    deleteBudgetLine: "Eliminar partida",
-    removeRow: "Eliminar fila",
+    deleteBudgetLine: "Supprimer le poste",
+    deleteBudgetLineConfirm: "Êtes-vous sûr de vouloir supprimer le poste \"{name}\" ? Cette action est irréversible.",
+    removeRow: "Supprimer la ligne",
     budgetInfoLabel: "Informació sobre Pressupostat",
     budgetFromLinesTooltip: "Pressupost del projecte = suma de les partides.",
     budgetTotalLabel: "Pressupost total del projecte",
@@ -2580,18 +2603,21 @@ export const fr = {
     reports: "Rapports",
   },
   balance: {
-    workingLine: "Treballant aquesta partida",
-    changeLine: "Canviar partida",
-    viewAllLines: "Veure totes les partides",
-    expandSearch: "Ampliar cerca",
-    searchExpanded: "Cerca ampliada",
-    resetExpansion: "Restablir ampliació",
-    expansionHint: "Activa opcions per veure més despeses candidates.",
-    budget: "Pres.",
-    executed: "Exec.",
-    difference: "Dif.",
-    excess: "Excés",
-    missing: "Falta",
+    workingLine: "Travail sur ce poste",
+    changeLine: "Changer de poste",
+    viewAllLines: "Voir tous les postes",
+    expandSearch: "Élargir la recherche",
+    searchExpanded: "Recherche élargie",
+    resetExpansion: "Réinitialiser l'expansion",
+    expansionHint: "Activez les options pour voir plus de dépenses candidates.",
+    budget: "Budg.",
+    executed: "Exéc.",
+    difference: "Diff.",
+    excess: "Excès",
+    missing: "Manque",
+    searchPlaceholder: "Rechercher par description, fournisseur ou catégorie...",
+    notePlaceholder: "Ajoutez une note ou justification...",
+    noteLabel: "Note (optionnel)",
   },
   // Onboarding
   onboarding: {
@@ -2767,6 +2793,10 @@ export const fr = {
       clear: "Effacer",
       search: "Rechercher...",
       createSupplier: "Nouveau fournisseur...",
+    },
+    deleteDialog: {
+      title: "Supprimer le document ?",
+      description: "Le document et le fichier téléchargé seront supprimés. Cette action ne peut pas être annulée.",
     },
     upload: {
       title: "Téléverser des factures ou bulletins de paie",
@@ -3296,6 +3326,11 @@ export const fr = {
       backToDashboard: "Retour au tableau de bord",
       logout: "Déconnexion",
     },
+    superAdmins: {
+      deleteTitle: "Supprimer SuperAdmin ?",
+      deleteDescription: "n'aura plus accès au panneau /admin.",
+      deleteSelfWarning: "Attention : vous supprimez votre propre accès !",
+    },
     orgStatus: {
       active: "Active",
       suspended: "Suspendue",
@@ -3325,6 +3360,11 @@ export const fr = {
         title: "Opérations ponctuelles",
         description: "Actions rapides de support.",
       },
+    },
+    i18n: {
+      initializeStorageTitle: "Initialiser Storage ?",
+      initializeStorageDescription: "Téléchargera ca/es/fr/pt et activera les modifications. Vous pouvez répéter quand vous le souhaitez.",
+      initializeConfirm: "Oui, initialiser",
     },
     shell: {
       title: "Panneau Super Admin",

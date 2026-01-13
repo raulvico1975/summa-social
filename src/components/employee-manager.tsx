@@ -439,7 +439,7 @@ export function EmployeeManager() {
                       id="name"
                       value={formData.name}
                       onChange={(e) => handleFormChange('name', e.target.value)}
-                      placeholder="Maria García López"
+                      placeholder={t.employees.namePlaceholder}
                     />
                   </div>
 
