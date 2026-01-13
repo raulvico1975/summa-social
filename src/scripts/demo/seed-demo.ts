@@ -59,6 +59,16 @@ export type DemoMode = 'short' | 'work';
 const DEMO_ORG_ID = 'demo-org';
 const DEMO_ORG_SLUG = 'demo';
 
+// ─────────────────────────────────────────────────────────────────────────────
+// Constants IDs fixos per casos especials del mode 'work'
+// ─────────────────────────────────────────────────────────────────────────────
+
+/** Donant complet amb donació + devolució assignada (per demo de certificat) */
+const DEMO_WORK_DONOR_ID = `${DEMO_ID_PREFIX}donor_work_001`;
+
+/** Devolució pendent d'assignar (per demo de workflow de resolució) */
+const DEMO_WORK_RETURN_UNASSIGNED_TX_ID = `${DEMO_ID_PREFIX}tx_return_unassigned_001`;
+
 const VOLUMES = {
   donors: 50,
   suppliers: 20,
@@ -556,6 +566,92 @@ export async function runDemoSeed(
       });
     }
     console.log(`[seed-demo]   - Traçabilitat: ${WORK_ANOMALIES.traceability} factura amb 3 moviments`);
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // Cas especial 1: Donant complet amb donació + devolució assignada
+    // Per demo de certificat (mostra net = donació - devolució)
+    // ─────────────────────────────────────────────────────────────────────────
+    const currentYear = new Date().getFullYear();
+    const workDonorCity = { name: 'Barcelona', province: 'Barcelona', zip: '08' };
+
+    // Crear el donant complet
+    const workDonor = {
+      id: DEMO_WORK_DONOR_ID,
+      name: 'Maria García López',
+      type: 'donor' as const,
+      roles: { donor: true },
+      taxId: '12345678Z',
+      email: 'maria.garcia@example.demo',
+      phone: '612345678',
+      address: 'Carrer Major, 15, 2n 1a',
+      city: workDonorCity.name,
+      province: workDonorCity.province,
+      zipCode: '08001',
+      donorType: 'individual' as const,
+      membershipType: 'recurring' as const,
+      monthlyAmount: 50,
+      memberSince: `${currentYear - 2}-03-15`,
+      status: 'active' as const,
+      createdAt: nowStr,
+      updatedAt: nowStr,
+      isDemoData: true as const,
+    };
+    allContacts.push(workDonor);
+
+    // Transacció de donació (100€)
+    const workDonationTx = {
+      id: `${DEMO_ID_PREFIX}tx_work_donation_001`,
+      date: `${currentYear}-03-15`,
+      description: 'Quota mensual Maria García',
+      amount: 100,
+      category: categories.find((c) => c.type === 'income')?.id,
+      contactId: DEMO_WORK_DONOR_ID,
+      contactType: 'donor' as const,
+      source: 'bank',
+      transactionType: 'normal',
+      createdAt: nowStr,
+      isDemoData: true as const,
+    };
+    transactions.push(workDonationTx);
+
+    // Transacció de devolució assignada al mateix donant (-20€)
+    const workReturnAssignedTx = {
+      id: `${DEMO_ID_PREFIX}tx_work_return_assigned_001`,
+      date: `${currentYear}-04-02`,
+      description: 'DEVOLUCIÓN RECIBO - Maria García',
+      amount: -20,
+      category: categories.find((c) => c.type === 'income')?.id,
+      contactId: DEMO_WORK_DONOR_ID,
+      contactType: 'donor' as const,
+      source: 'bank',
+      transactionType: 'return',
+      createdAt: nowStr,
+      isDemoData: true as const,
+    };
+    transactions.push(workReturnAssignedTx);
+
+    console.log(`[seed-demo]   - Donant certificat: 1 donant amb donació (100€) + devolució assignada (-20€) = net 80€`);
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // Cas especial 2: Devolució pendent d'assignar (sense contacte)
+    // Per demo de workflow de resolució de devolucions
+    // ─────────────────────────────────────────────────────────────────────────
+    const workReturnUnassignedTx = {
+      id: DEMO_WORK_RETURN_UNASSIGNED_TX_ID,
+      date: `${currentYear}-04-10`,
+      description: 'DEVOLUCIÓN RECIBO CUOTA SOCIO',
+      amount: -35,
+      category: undefined,
+      contactId: undefined,
+      contactType: undefined,
+      source: 'bank',
+      transactionType: 'return',
+      createdAt: nowStr,
+      isDemoData: true as const,
+    };
+    transactions.push(workReturnUnassignedTx);
+
+    console.log(`[seed-demo]   - Devolució pendent: 1 devolució (-35€) sense contacte assignat`);
   }
 
   // ─────────────────────────────────────────────────────────────────────────
@@ -665,10 +761,51 @@ export async function runDemoSeed(
       invariantErrors.push(`[short] transactions: esperats 100, obtinguts ${counts.transactions}`);
     }
   } else {
-    // Work: 100 base + 3 duplicats + 5 pendents + 3 traçabilitat = 111
-    const expectedWorkTx = 100 + WORK_ANOMALIES.duplicates + WORK_ANOMALIES.pending + 3;
+    // Work: 100 base + 3 duplicats + 5 pendents + 3 traçabilitat + 3 casos especials (1 donació + 2 devolucions) = 114
+    const expectedWorkTx = 100 + WORK_ANOMALIES.duplicates + WORK_ANOMALIES.pending + 3 + 3;
     if (counts.transactions !== expectedWorkTx) {
       invariantErrors.push(`[work] transactions: esperats ${expectedWorkTx}, obtinguts ${counts.transactions}`);
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // Invariants casos especials work (anti-regressió)
+    // ─────────────────────────────────────────────────────────────────────────
+
+    // 1. Donant complet existeix
+    const workDonorExists = allContacts.some((c) => c.id === DEMO_WORK_DONOR_ID);
+    if (!workDonorExists) {
+      invariantErrors.push('[work] donant certificat no existeix');
+    }
+
+    // 2. Transaccions del donant certificat
+    const workDonorTxs = transactions.filter((tx) => tx.contactId === DEMO_WORK_DONOR_ID);
+    const workDonorDonations = workDonorTxs.filter((tx) => tx.amount > 0);
+    const workDonorReturns = workDonorTxs.filter((tx) => tx.amount < 0 && tx.transactionType === 'return');
+
+    if (workDonorDonations.length < 1) {
+      invariantErrors.push('[work] donant certificat: falta donació positiva');
+    }
+    if (workDonorReturns.length < 1) {
+      invariantErrors.push('[work] donant certificat: falta devolució assignada');
+    }
+
+    // Verificar net positiu
+    const workDonorNet = workDonorTxs.reduce((sum, tx) => sum + tx.amount, 0);
+    if (workDonorNet <= 0) {
+      invariantErrors.push(`[work] donant certificat: net ha de ser > 0, obtingut ${workDonorNet}`);
+    }
+
+    // 3. Devolució pendent d'assignar
+    const unassignedReturn = transactions.find((tx) => tx.id === DEMO_WORK_RETURN_UNASSIGNED_TX_ID);
+    if (!unassignedReturn) {
+      invariantErrors.push('[work] devolució pendent: transacció no existeix');
+    } else {
+      if (unassignedReturn.contactId !== undefined) {
+        invariantErrors.push('[work] devolució pendent: ha de tenir contactId undefined');
+      }
+      if (unassignedReturn.transactionType !== 'return') {
+        invariantErrors.push('[work] devolució pendent: transactionType ha de ser return');
+      }
     }
   }
 
