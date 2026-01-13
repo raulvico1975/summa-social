@@ -619,6 +619,7 @@ npm run dev:demo
 | No puc descarregar serviceAccountKey | Google Workspace bloqueja claus privades | Usar ADC: `gcloud auth application-default login` |
 | "Could not load default credentials" | ADC no configurat o expirat | Executar `gcloud auth application-default login` |
 | "Cannot use undefined as Firestore value" | Camp `projectId` buit en algunes despeses | Sanejador a `writeBatch()` filtra camps undefined |
+| Hydration mismatch a `<html>` | Extensions del navegador (Grammarly, LanguageTool, adblock) injecten classes abans d'hidratar | Provar en incògnit. `suppressHydrationWarning` a `<html>` silencia el warning |
 | "No tens accés a aquesta organització" | UID no és membre ni SuperAdmin hardcodejat | `isDemoEnv()` fa bypass a `organization-provider.tsx` |
 | "Slug demo no té organització associada" | Mapping `slugs/demo` tenia camp incorrecte | Seed escriu `orgId` (no `organizationId`) |
 | "Firestore has already been initialized" | `db.settings()` cridat després d'altres operacions | Eliminat `db.settings()`, inicialització cached |

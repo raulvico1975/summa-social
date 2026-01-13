@@ -55,7 +55,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="ca" className={`${inter.variable} h-full overflow-x-hidden`}>
+    <html lang="ca" className={`${inter.variable} h-full overflow-x-hidden`} suppressHydrationWarning>
       <body className="h-full overflow-x-hidden font-sans antialiased" suppressHydrationWarning>
         <FirebaseClientProvider>
           <TranslationsProvider>

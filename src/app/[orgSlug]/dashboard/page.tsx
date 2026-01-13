@@ -138,6 +138,23 @@ function TopCategoriesTable({
     return m;
   }, [categories]);
 
+  // Mapa de categoryId → type (income/expense) per categories de l'org
+  const categoryTypeById = React.useMemo(() => {
+    const m = new Map<string, 'income' | 'expense'>();
+    if (categories) {
+      for (const c of categories) {
+        m.set(c.id, c.type);
+      }
+    }
+    return m;
+  }, [categories]);
+
+  // Categories d'ingrés predefinides (claus que poden aparèixer directament a tx.category)
+  const INCOME_CATEGORY_KEYS = new Set([
+    'donations', 'subsidies', 'memberFees', 'sponsorships',
+    'productSales', 'inheritances', 'events', 'otherIncome',
+  ]);
+
   // Funció per obtenir el nom de la categoria (resol ID → name → traducció)
   const getCategoryName = React.useCallback((categoryKey: string): string => {
     if (categoryKey === 'uncategorized') {
@@ -167,7 +184,21 @@ function TopCategoriesTable({
     return texts.uncategorized;
   }, [categoryNameById, categoryTranslations, texts.uncategorized]);
 
+  // Funció per determinar si una categoria és d'ingrés
+  const isIncomeCategory = React.useCallback((categoryKey: string): boolean => {
+    // 1. Si és una clau predefinida d'ingrés
+    if (INCOME_CATEGORY_KEYS.has(categoryKey)) return true;
+    // 2. Si l'org ha definit aquesta categoria com a income
+    const orgType = categoryTypeById.get(categoryKey);
+    if (orgType === 'income') return true;
+    // 3. Si el nom de la categoria (orgName) és una clau d'ingrés
+    const orgName = categoryNameById.get(categoryKey);
+    if (orgName && INCOME_CATEGORY_KEYS.has(orgName)) return true;
+    return false;
+  }, [categoryTypeById, categoryNameById]);
+
   // Separar despeses categoritzades, no categoritzades i fees
+  // IMPORTANT: Aquesta taula mostra DESPESES, per tant excloem categories d'ingrés
   const { categorizedTxs, uncategorizedTotal } = React.useMemo(() => {
     if (!transactions || transactions.length === 0) {
       return { categorizedTxs: [], uncategorizedTotal: 0 };
@@ -181,6 +212,10 @@ function TopCategoriesTable({
       if (tx.transactionType === 'fee' || tx.transactionType === 'return_fee') {
         continue;
       }
+      // Excloure categories d'ingrés (no són despeses)
+      if (tx.category && isIncomeCategory(tx.category)) {
+        continue;
+      }
       // Separar categoritzades de no categoritzades
       if (tx.category) {
         catTxs.push(tx);
@@ -190,27 +225,36 @@ function TopCategoriesTable({
     }
 
     return { categorizedTxs: catTxs, uncategorizedTotal: uncatTotal };
-  }, [transactions]);
+  }, [transactions, isIncomeCategory]);
 
   const topCategories = React.useMemo(() => {
     if (categorizedTxs.length === 0) return [];
 
-    // Agregar per categoria (només categoritzades)
-    const byCategory = categorizedTxs.reduce((acc, tx) => {
+    // SOLUCIÓ: Agregar per displayName (no per categoryId) per evitar duplicats visuals
+    // Problema: Múltiples categoryId poden tenir el mateix displayName traduït
+    // Ex: ID "salaries" i ID "bCAC7..." amb orgName "salaries" → ambdós mostren "Salarios y seguridad social"
+    const byDisplayName = new Map<string, { amount: number; keys: string[] }>();
+
+    for (const tx of categorizedTxs) {
       const categoryKey = tx.category!;
-      if (!acc[categoryKey]) {
-        acc[categoryKey] = 0;
+      const displayName = getCategoryName(categoryKey);
+      const existing = byDisplayName.get(displayName);
+      if (existing) {
+        existing.amount += Math.abs(tx.amount);
+        if (!existing.keys.includes(categoryKey)) {
+          existing.keys.push(categoryKey);
+        }
+      } else {
+        byDisplayName.set(displayName, { amount: Math.abs(tx.amount), keys: [categoryKey] });
       }
-      acc[categoryKey] += Math.abs(tx.amount);
-      return acc;
-    }, {} as Record<string, number>);
+    }
 
     // Convertir a array i ordenar
-    const sorted = Object.entries(byCategory)
-      .map(([key, amount]) => ({ key, amount }))
+    const sorted = [...byDisplayName.entries()]
+      .map(([name, data]) => ({ name, amount: data.amount, keys: data.keys }))
       .sort((a, b) => b.amount - a.amount);
 
-    // Calcular total (només categoritzades)
+    // Calcular total
     const total = sorted.reduce((sum, item) => sum + item.amount, 0);
     if (total === 0) return [];
 
@@ -218,9 +262,10 @@ function TopCategoriesTable({
     const top5 = sorted.slice(0, 5);
     const restAmount = sorted.slice(5).reduce((sum, item) => sum + item.amount, 0);
 
+    // Per l'enllaç de filtrar, usem el primer key del grup (els altres són sinònims)
     const result = top5.map(item => ({
-      key: item.key,
-      name: getCategoryName(item.key),
+      key: item.keys[0],
+      name: item.name,
       amount: item.amount,
       percent: (item.amount / total) * 100,
     }));
