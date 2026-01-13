@@ -22,7 +22,6 @@ import { Progress } from '@/components/ui/progress';
 import type { SourceFilter } from '@/lib/constants';
 import type { BankAccount } from '@/lib/data';
 import { FiltersSheet } from './FiltersSheet';
-import { TableOptionsMenu } from './TableOptionsMenu';
 
 // =============================================================================
 // TYPES
@@ -39,6 +38,8 @@ export type TableFilter =
   | 'noContact'
   | 'donationsNoContact'
   | 'income'
+  | 'expenses'
+  | 'expensesWithoutDoc'
   | 'operatingExpenses'
   | 'missionTransfers'
   | 'donations'
@@ -61,10 +62,6 @@ interface TransactionsFiltersProps {
   onBatchCategorize: () => void;
   onCancelBatch?: () => void;
   onExportExpensesWithoutDoc: () => void;
-  hideRemittanceItems: boolean;
-  onHideRemittanceItemsChange: (value: boolean) => void;
-  showProjectColumn: boolean;
-  onShowProjectColumnChange: (value: boolean) => void;
   onOpenReturnImporter?: () => void;
   // Source filter
   sourceFilter: SourceFilter;
@@ -78,6 +75,9 @@ interface TransactionsFiltersProps {
   isBulkMode?: boolean;
   onBulkModeChange?: (enabled: boolean) => void;
   batchProgress?: { current: number; total: number } | null;
+  // Show archived transactions (SuperAdmin only)
+  showArchived?: boolean;
+  onShowArchivedChange?: (enabled: boolean) => void;
   t: {
     categorizeAll: string;
     all: string;
@@ -90,7 +90,6 @@ interface TransactionsFiltersProps {
     pendingFilters: string;
     exportTooltip: string;
     searchPlaceholder: string;
-    hideRemittanceItems: string;
     importReturnsFile?: string;
     allAccounts: string;
     // New translations for reorganized UI
@@ -102,8 +101,24 @@ interface TransactionsFiltersProps {
     filterBySource: string;
     filterByAccount: string;
     pendingTasks: string;
-    tableOptions: string;
-    showProjectColumn: string;
+    // Quick filters (shortcuts)
+    onlyExpenses?: string;
+    expensesWithoutDocument?: string;
+    expensesWithoutDocumentTooltip?: string;
+    // Batch categorization controls
+    stopProcessAriaLabel?: string;
+    stopButton?: string;
+    stopProcessTooltip?: string;
+    suggestCategoriesAriaLabel?: string;
+    suggestCategoriesTooltip?: string;
+    // Bulk mode controls (SuperAdmin)
+    bulkModeAriaLabel?: string;
+    bulkModeLabel?: string;
+    bulkModeTooltip?: string;
+    // Archived toggle (SuperAdmin)
+    showArchivedAriaLabel?: string;
+    showArchivedLabel?: string;
+    showArchivedTooltip?: string;
   };
 }
 
@@ -125,10 +140,6 @@ export const TransactionsFilters = React.memo(function TransactionsFilters({
   isBatchCategorizing,
   onBatchCategorize,
   onCancelBatch,
-  hideRemittanceItems,
-  onHideRemittanceItemsChange,
-  showProjectColumn,
-  onShowProjectColumnChange,
   sourceFilter,
   onSourceFilterChange,
   bankAccountFilter,
@@ -138,6 +149,8 @@ export const TransactionsFilters = React.memo(function TransactionsFilters({
   isBulkMode,
   onBulkModeChange,
   batchProgress,
+  showArchived,
+  onShowArchivedChange,
   t,
 }: TransactionsFiltersProps) {
   // Count active filters for badge
@@ -150,13 +163,13 @@ export const TransactionsFilters = React.memo(function TransactionsFilters({
   }, [currentFilter, sourceFilter, bankAccountFilter]);
 
   return (
-    <div className="flex items-center gap-3 w-full flex-wrap">
+    <div className="flex flex-col gap-3 w-full md:flex-row md:flex-wrap md:items-center">
       {/* ═══════════════════════════════════════════════════════════════════
           FRANJA 2: Treball actiu (Cerca + Classificar pendents + Mode ràpid)
           ═══════════════════════════════════════════════════════════════════ */}
 
-      {/* Cercador intel·ligent — protagonista, ~40-50% de l'amplada */}
-      <div className="relative flex-1 min-w-[200px] max-w-[50%]">
+      {/* Cercador intel·ligent — full-width en mòbil, ~40-50% en desktop */}
+      <div className="relative w-full md:flex-1 md:min-w-[200px] md:max-w-[50%]">
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
         <Input
           placeholder={t.searchPlaceholder}
@@ -175,11 +188,51 @@ export const TransactionsFilters = React.memo(function TransactionsFilters({
         )}
       </div>
 
-      {/* Separador visual */}
-      <div className="h-6 w-px bg-border" />
+      {/* Separador visual (només desktop) */}
+      <div className="hidden md:block h-6 w-px bg-border" />
+
+      {/* ═══════════════════════════════════════════════════════════════════
+          FILTRES RÀPIDS (shortcuts per despeses)
+          ═══════════════════════════════════════════════════════════════════ */}
+      <div className="flex items-center gap-1">
+        {/* Només despeses */}
+        <Button
+          variant={currentFilter === 'expenses' ? 'secondary' : 'ghost'}
+          size="sm"
+          onClick={() => onFilterChange(currentFilter === 'expenses' ? 'all' : 'expenses')}
+          className="h-8 text-xs"
+        >
+          {t.onlyExpenses || 'Només despeses'}
+        </Button>
+
+        {/* Despeses sense document (prioritari) */}
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button
+              variant={currentFilter === 'expensesWithoutDoc' ? 'secondary' : 'ghost'}
+              size="sm"
+              onClick={() => onFilterChange(currentFilter === 'expensesWithoutDoc' ? 'all' : 'expensesWithoutDoc')}
+              className="h-8 text-xs"
+            >
+              {t.expensesWithoutDocument || 'Despeses sense document'}
+              {expensesWithoutDocCount > 0 && (
+                <Badge variant="destructive" className="ml-1.5 h-4 px-1 text-[10px]">
+                  {expensesWithoutDocCount}
+                </Badge>
+              )}
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent side="bottom" className="max-w-xs">
+            <p className="text-xs">{t.expensesWithoutDocumentTooltip || 'Mostra només les despeses que encara no tenen comprovant adjunt.'}</p>
+          </TooltipContent>
+        </Tooltip>
+      </div>
+
+      {/* Separador visual (només desktop) */}
+      <div className="hidden md:block h-6 w-px bg-border" />
 
       {/* Suggerir categories + Mode ràpid (junts) */}
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-2 flex-wrap">
         {isBatchCategorizing ? (
           <div className="flex items-center gap-3">
             {/* Progress bar visual */}
@@ -200,15 +253,15 @@ export const TransactionsFilters = React.memo(function TransactionsFilters({
                   onClick={onCancelBatch}
                   variant="outline"
                   size="sm"
-                  aria-label="Aturar procés"
+                  aria-label={t.stopProcessAriaLabel ?? "Aturar procés"}
                   className="border-destructive text-destructive hover:bg-destructive/10"
                 >
                   <Square className="mr-2 h-4 w-4" />
-                  Aturar
+                  {t.stopButton ?? "Aturar"}
                 </Button>
               </TooltipTrigger>
               <TooltipContent>
-                <p className="text-xs">Prem per aturar el procés. Els canvis aplicats fins ara es mantenen.</p>
+                <p className="text-xs">{t.stopProcessTooltip ?? "Prem per aturar el procés. Els canvis aplicats fins ara es mantenen."}</p>
               </TooltipContent>
             </Tooltip>
           </div>
@@ -220,7 +273,7 @@ export const TransactionsFilters = React.memo(function TransactionsFilters({
                 disabled={!hasUncategorized}
                 variant="default"
                 size="sm"
-                aria-label="Suggerir categories amb IA"
+                aria-label={t.suggestCategoriesAriaLabel ?? "Suggerir categories amb IA"}
               >
                 <Sparkles className="mr-2 h-4 w-4" />
                 {t.categorizeAll}
@@ -232,7 +285,7 @@ export const TransactionsFilters = React.memo(function TransactionsFilters({
               </Button>
             </TooltipTrigger>
             <TooltipContent className="max-w-xs">
-              <p className="text-xs">Genera suggeriments i els aplica a mesura que avança. Pots revisar i ajustar després.</p>
+              <p className="text-xs">{t.suggestCategoriesTooltip ?? "Genera suggeriments i els aplica a mesura que avança. Pots revisar i ajustar després."}</p>
             </TooltipContent>
           </Tooltip>
         )}
@@ -246,17 +299,41 @@ export const TransactionsFilters = React.memo(function TransactionsFilters({
               onCheckedChange={onBulkModeChange}
               disabled={isBatchCategorizing}
               className="h-4 w-7"
-              aria-label="Mode ràpid"
+              aria-label={t.bulkModeAriaLabel ?? "Mode ràpid"}
             />
             <Label htmlFor="bulk-mode" className="text-xs cursor-pointer whitespace-nowrap text-muted-foreground">
-              Ràpid
+              {t.bulkModeLabel ?? "Ràpid"}
             </Label>
             <Tooltip>
               <TooltipTrigger asChild>
                 <Info className="h-3 w-3 text-muted-foreground/60 cursor-help" aria-hidden="true" />
               </TooltipTrigger>
               <TooltipContent className="max-w-xs" side="bottom">
-                <p className="text-xs">Accelera el procés reduint el temps entre suggeriments. Pot ser menys precís.</p>
+                <p className="text-xs">{t.bulkModeTooltip ?? "Accelera el procés reduint el temps entre suggeriments. Pot ser menys precís."}</p>
+              </TooltipContent>
+            </Tooltip>
+          </div>
+        )}
+
+        {/* Toggle incloure arxivades (només SuperAdmin) */}
+        {isSuperAdmin && onShowArchivedChange && (
+          <div className="flex items-center gap-1.5 pl-2 border-l border-border/50">
+            <Switch
+              id="show-archived"
+              checked={showArchived ?? false}
+              onCheckedChange={onShowArchivedChange}
+              className="h-4 w-7"
+              aria-label={t.showArchivedAriaLabel ?? "Incloure arxivades"}
+            />
+            <Label htmlFor="show-archived" className="text-xs cursor-pointer whitespace-nowrap text-muted-foreground">
+              {t.showArchivedLabel ?? "Arxivades"}
+            </Label>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Info className="h-3 w-3 text-muted-foreground/60 cursor-help" aria-hidden="true" />
+              </TooltipTrigger>
+              <TooltipContent className="max-w-xs" side="bottom">
+                <p className="text-xs">{t.showArchivedTooltip ?? "Mostra les transaccions fiscals arxivades (soft-deleted). Només visible per SuperAdmin."}</p>
               </TooltipContent>
             </Tooltip>
           </div>
@@ -298,19 +375,6 @@ export const TransactionsFilters = React.memo(function TransactionsFilters({
             filterBySource: t.filterBySource,
             filterByAccount: t.filterByAccount,
             pendingTasks: t.pendingTasks,
-          }}
-        />
-
-        {/* Opcions de taula */}
-        <TableOptionsMenu
-          hideRemittanceItems={hideRemittanceItems}
-          onHideRemittanceItemsChange={onHideRemittanceItemsChange}
-          showProjectColumn={showProjectColumn}
-          onShowProjectColumnChange={onShowProjectColumnChange}
-          t={{
-            tableOptions: t.tableOptions,
-            hideRemittanceItems: t.hideRemittanceItems,
-            showProjectColumn: t.showProjectColumn,
           }}
         />
       </div>

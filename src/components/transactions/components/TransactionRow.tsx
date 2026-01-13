@@ -8,6 +8,7 @@ import {
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { ContactCombobox, Contact } from '@/components/contact-combobox';
+import { SummaTooltip } from '@/components/ui/summa-tooltip';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -61,6 +62,20 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { RowDropTarget } from '@/components/files/row-drop-target';
 
 // =============================================================================
+// HELPERS
+// =============================================================================
+
+/**
+ * Helper: middle ellipsis per a noms llargs
+ * Mostra primers 18 caràcters + … + últims 10
+ */
+function middleEllipsis(s: string, head = 18, tail = 10): string {
+  if (!s) return s;
+  if (s.length <= head + tail + 1) return s;
+  return `${s.slice(0, head)}…${s.slice(-tail)}`;
+}
+
+// =============================================================================
 // TYPES
 // =============================================================================
 
@@ -98,7 +113,7 @@ interface TransactionRowProps {
   onViewRemittanceDetail: (txId: string) => void;
   onUndoRemittance?: (tx: Transaction) => void;
   onCreateNewContact: (txId: string, type: 'donor' | 'supplier') => void;
-  onOpenReturnImporter?: () => void;
+  onOpenReturnImporter?: (parentTx?: Transaction) => void;
   // SEPA reconciliation
   detectedPrebankRemittance?: { id: string; nbOfTxs: number; ctrlSum: number } | null;
   onReconcileSepa?: (tx: Transaction) => void;
@@ -143,6 +158,7 @@ interface TransactionRowProps {
     remittanceNotApplicable: string;
     undoRemittance?: string;
     reconcileSepa?: string;
+    moreOptionsAriaLabel?: string;
   };
   getCategoryDisplayName: (category: string | null | undefined) => string;
 }
@@ -454,7 +470,7 @@ export const TransactionRow = React.memo(function TransactionRow({
       </TableCell>
 
       {/* Concept + Note + Badge + Mobile summary */}
-      <TableCell className="py-1">
+      <TableCell className="min-w-0 py-1">
         <div className="space-y-0.5">
           <div className="flex items-center gap-1 flex-wrap">
             {renderTransactionTypeBadge()}
@@ -479,9 +495,16 @@ export const TransactionRow = React.memo(function TransactionRow({
                     ) : (
                       <Eye className="h-3 w-3" />
                     )}
-                    {isProcessedDonationRemittance && <span className="font-medium">{t.remittanceProcessedLabel}</span>}
-                    <span className={isProcessedDonationRemittance ? 'text-emerald-600/70' : ''}>
-                      {tx.remittanceResolvedCount ?? tx.remittanceItemCount}/{tx.remittanceItemCount} {t.remittanceQuotes}
+                    {isProcessedDonationRemittance && tx.remittanceStatus !== 'partial' && (
+                      <span className="font-medium">{t.remittanceProcessedLabel}</span>
+                    )}
+                    <span className={isProcessedDonationRemittance && tx.remittanceStatus !== 'partial' ? 'text-emerald-600/70' : ''}>
+                      {tx.remittanceResolvedCount ?? tx.remittanceItemCount}/{tx.remittanceItemCount}
+                      {tx.remittanceStatus === 'partial' && tx.remittancePendingCount ? (
+                        <span className="text-orange-600 ml-1">({tx.remittancePendingCount} pend.)</span>
+                      ) : (
+                        <span> {t.remittanceQuotes}</span>
+                      )}
                     </span>
                   </Badge>
                 </TooltipTrigger>
@@ -532,13 +555,21 @@ export const TransactionRow = React.memo(function TransactionRow({
           <div className="lg:hidden mt-1 text-xs text-muted-foreground flex items-center gap-1 flex-wrap">
             <span className="truncate max-w-[120px]">{getCategoryDisplayName(tx.category) || 'Sense categoria'}</span>
             <span className="text-muted-foreground/50">·</span>
-            <span className="truncate max-w-[120px]">{contactName || 'Sense contacte'}</span>
+            {contactName ? (
+              <SummaTooltip content={contactName}>
+                <span className="max-w-[180px]">
+                  {middleEllipsis(contactName)}
+                </span>
+              </SummaTooltip>
+            ) : (
+              <span className="max-w-[180px]">Sense contacte</span>
+            )}
           </div>
         </div>
       </TableCell>
 
-      {/* Contact - hidden on mobile and tablet */}
-      <TableCell className="py-1 hidden lg:table-cell">
+      {/* Contact - hidden on mobile, visible from lg */}
+      <TableCell className="min-w-0 py-1 hidden lg:table-cell">
         {/* Cas 1: Pare de remesa de devolucions - mostrar estat, NO "Assignar donant" */}
         {tx.isRemittance && tx.remittanceType === 'returns' ? (
           <div className="flex items-center gap-1">
@@ -557,7 +588,7 @@ export const TransactionRow = React.memo(function TransactionRow({
                       <Button
                         variant="ghost"
                         size="sm"
-                        onClick={onOpenReturnImporter}
+                        onClick={() => onOpenReturnImporter(tx)}
                         className="text-orange-600 hover:text-orange-800 h-6 text-xs px-1"
                       >
                         <FileUp className="h-3 w-3" />
@@ -580,7 +611,7 @@ export const TransactionRow = React.memo(function TransactionRow({
                       <Button
                         variant="ghost"
                         size="sm"
-                        onClick={onOpenReturnImporter}
+                        onClick={() => onOpenReturnImporter(tx)}
                         className="text-red-600 hover:text-red-800 h-6 text-xs px-1"
                       >
                         <FileUp className="h-3 w-3" />
@@ -622,7 +653,7 @@ export const TransactionRow = React.memo(function TransactionRow({
                   <Button
                     variant="ghost"
                     size="sm"
-                    onClick={onOpenReturnImporter}
+                    onClick={() => onOpenReturnImporter(tx)}
                     className="text-muted-foreground hover:text-foreground h-7 text-xs px-2"
                   >
                     <FileUp className="h-3 w-3" />
@@ -645,8 +676,8 @@ export const TransactionRow = React.memo(function TransactionRow({
         )}
       </TableCell>
 
-      {/* Category - hidden on mobile and tablet */}
-      <TableCell className="py-1 hidden lg:table-cell">
+      {/* Category - hidden on mobile, visible from lg */}
+      <TableCell className="min-w-0 py-1 hidden lg:table-cell">
         <Popover open={isCategoryPopoverOpen} onOpenChange={setIsCategoryPopoverOpen}>
           <PopoverTrigger asChild>
             <Button
@@ -661,7 +692,7 @@ export const TransactionRow = React.memo(function TransactionRow({
                   <span>{t.categorize}...</span>
                 </span>
               ) : (
-                <span className="truncate max-w-[80px]">
+                <span className="truncate max-w-[140px]">
                   {tx.category ? getCategoryDisplayName(tx.category) : t.uncategorized}
                 </span>
               )}
@@ -700,8 +731,8 @@ export const TransactionRow = React.memo(function TransactionRow({
         </Popover>
       </TableCell>
 
-      {/* Project - hidden on tablet and smaller */}
-      {showProjectColumn ? (
+      {/* Project - hidden on mobile, visible from lg */}
+      {showProjectColumn && (
         <TableCell className="py-1 hidden lg:table-cell">
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
@@ -730,23 +761,11 @@ export const TransactionRow = React.memo(function TransactionRow({
             </DropdownMenuContent>
           </DropdownMenu>
         </TableCell>
-      ) : (
-        <TableCell className="text-center py-1">
-          {projectName && (
-            <Tooltip>
-              <TooltipTrigger>
-                <Circle className="h-2 w-2 fill-blue-500 text-blue-500 mx-auto" />
-              </TooltipTrigger>
-              <TooltipContent>{projectName}</TooltipContent>
-            </Tooltip>
-          )}
-        </TableCell>
       )}
 
-      {/* Document + Actions (agrupats al rail dret) */}
-      <TableCell className="text-right py-1 pr-2">
-        <div className="inline-flex items-center justify-end gap-0.5">
-          {/* Document icon */}
+      {/* Document column - always visible */}
+      <TableCell className="w-7 shrink-0 text-center py-1">
+        <div className="flex items-center justify-center">
           {isDocumentLoading ? (
             <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
           ) : hasDocument ? (
@@ -759,7 +778,7 @@ export const TransactionRow = React.memo(function TransactionRow({
                   className="inline-flex items-center justify-center h-8 w-8 rounded-md hover:bg-accent transition-colors"
                   aria-label={t.viewDocument}
                 >
-                  <FileText className="h-4 w-4 text-emerald-600" />
+                  <FileText className="h-4 w-4 fill-current text-muted-foreground" />
                 </a>
               </TooltipTrigger>
               <TooltipContent>{t.viewDocument}</TooltipContent>
@@ -772,7 +791,7 @@ export const TransactionRow = React.memo(function TransactionRow({
                   className="inline-flex items-center justify-center h-8 w-8 rounded-md hover:bg-accent transition-colors"
                   aria-label={isExpense ? t.attachProof : t.attachDocument}
                 >
-                  <FileText className={`h-4 w-4 ${isExpense ? 'text-muted-foreground/60' : 'text-muted-foreground/30'}`} />
+                  <FileText className="h-4 w-4 text-muted-foreground/40" />
                 </button>
               </TooltipTrigger>
               <TooltipContent>
@@ -780,15 +799,18 @@ export const TransactionRow = React.memo(function TransactionRow({
               </TooltipContent>
             </Tooltip>
           )}
+        </div>
+      </TableCell>
 
-          {/* Actions menu */}
-          <DropdownMenu open={isActionsMenuOpen} onOpenChange={setIsActionsMenuOpen}>
+      {/* Actions menu column */}
+      <TableCell className="w-9 shrink-0 text-right py-1 pr-2">
+        <DropdownMenu open={isActionsMenuOpen} onOpenChange={setIsActionsMenuOpen}>
           <DropdownMenuTrigger asChild>
             <Button
               variant="ghost"
               size="icon"
               className="h-9 w-9 text-muted-foreground hover:text-foreground hover:bg-muted/40"
-              aria-label="Més opcions"
+              aria-label={t.moreOptionsAriaLabel ?? "Més opcions"}
             >
               <MoreVertical className="h-4 w-4" />
             </Button>
@@ -869,7 +891,6 @@ export const TransactionRow = React.memo(function TransactionRow({
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
-        </div>
       </TableCell>
     </>
   );

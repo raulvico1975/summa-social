@@ -5,6 +5,7 @@ import * as React from 'react';
 import { useRouter } from 'next/navigation';
 import { useFirebase, useCollection, useMemoFirebase } from '@/firebase';
 import { collection, query, orderBy, doc, updateDoc, getDoc } from 'firebase/firestore';
+import { useTranslations } from '@/i18n';
 import { sendPasswordResetEmail, signInWithEmailAndPassword, signOut } from 'firebase/auth';
 import type { Organization } from '@/lib/data';
 import { Button } from '@/components/ui/button';
@@ -62,6 +63,8 @@ import {
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
+import { useIsMobile } from '@/hooks/use-is-mobile';
+import { MobileListItem } from '@/components/mobile/mobile-list-item';
 import { CreateOrganizationDialog } from '@/components/admin/create-organization-dialog';
 import { SystemHealth } from '@/components/admin/system-health';
 import { ProductUpdatesSection } from '@/components/admin/product-updates-section';
@@ -79,6 +82,8 @@ export default function AdminPage() {
   const router = useRouter();
   const { user, firestore, auth, isUserLoading } = useFirebase();
   const { toast } = useToast();
+  const isMobile = useIsMobile();
+  const { t } = useTranslations();
 
   // ─────────────────────────────────────────────────────────────────────────────
   // GUARD: Verificació SuperAdmin via allowlist d'emails
@@ -203,7 +208,7 @@ export default function AdminPage() {
       // El component es re-renderitzarà automàticament amb el nou user
     } catch (error: unknown) {
       console.error('Login error:', error);
-      setLoginError('Credencials incorrectes');
+      setLoginError(t.admin?.shell?.loginError ?? 'Credencials incorrectes');
     } finally {
       setIsLoggingIn(false);
     }
@@ -233,15 +238,19 @@ export default function AdminPage() {
       );
 
       toast({
-        title: newStatus === 'suspended' ? 'Organització suspesa' : 'Organització reactivada',
-        description: `${org.name} ara està ${newStatus === 'suspended' ? 'suspesa' : 'activa'}.`,
+        title: newStatus === 'suspended'
+          ? (t.admin?.shell?.orgSuspended ?? 'Organització suspesa')
+          : (t.admin?.shell?.orgReactivated ?? 'Organització reactivada'),
+        description: newStatus === 'suspended'
+          ? t.admin?.shell?.orgNowSuspended?.({ org: org.name }) ?? `${org.name} ara està suspesa.`
+          : t.admin?.shell?.orgNowActive?.({ org: org.name }) ?? `${org.name} ara està activa.`,
       });
 
       // Refrescar audit logs
       getRecentAuditLogs(firestore, 15).then(setAuditLogs).catch(console.error);
     } catch (error) {
       console.error('Error updating organization:', error);
-      toast({ variant: 'destructive', title: 'Error', description: 'No s\'ha pogut actualitzar l\'organització.' });
+      toast({ variant: 'destructive', title: t.common?.error ?? 'Error', description: t.admin?.shell?.updateError ?? 'No s\'ha pogut actualitzar l\'organització.' });
     } finally {
       setIsProcessing(false);
       setSuspendDialogOrg(null);
@@ -253,8 +262,8 @@ export default function AdminPage() {
     try {
       const result = await migrateExistingSlugs(firestore);
       toast({
-        title: 'Migració completada',
-        description: `${result.migrated} organitzacions migrades. ${result.errors.length > 0 ? `Errors: ${result.errors.length}` : ''}`,
+        title: t.admin?.migrations?.completed ?? 'Migració completada',
+        description: `${t.admin?.migrations?.migrated?.({ count: result.migrated }) ?? `${result.migrated} organitzacions migrades`}. ${result.errors.length > 0 ? (t.admin?.migrations?.errors?.({ count: result.errors.length }) ?? `Errors: ${result.errors.length}`) : ''}`,
       });
       if (result.errors.length > 0) {
         console.error('Errors de migració:', result.errors);
@@ -263,8 +272,8 @@ export default function AdminPage() {
       console.error('Error durant la migració:', error);
       toast({
         variant: 'destructive',
-        title: 'Error',
-        description: 'No s\'ha pogut completar la migració.',
+        title: t.common?.error ?? 'Error',
+        description: t.admin?.migrations?.failed ?? 'No s\'ha pogut completar la migració.',
       });
     } finally {
       setIsMigrating(false);
@@ -286,8 +295,8 @@ export default function AdminPage() {
     } finally {
       // Sempre mostrar missatge genèric d'èxit
       toast({
-        title: 'Correu enviat',
-        description: 'Si l\'adreça existeix, rebrà un correu per restablir la contrasenya.',
+        title: t.admin?.resetPassword?.sent ?? 'Correu enviat',
+        description: t.admin?.resetPassword?.sentDescription ?? 'Si l\'adreça existeix, rebrà un correu per restablir la contrasenya.',
       });
       setResetEmail('');
       setIsResetting(false);
@@ -326,16 +335,17 @@ export default function AdminPage() {
 
       if (response.ok && data.ok) {
         setSeedResult({ ok: true, demoMode: data.demoMode, counts: data.counts });
+        const countsStr = Object.entries(data.counts || {}).map(([k, v]) => `${k}: ${v}`).join(', ');
         toast({
-          title: 'Demo regenerada',
-          description: `Mode: ${data.demoMode}. Dades creades: ${Object.entries(data.counts || {}).map(([k, v]) => `${k}: ${v}`).join(', ')}`,
+          title: t.admin?.health?.demoRegenerated ?? 'Demo regenerada',
+          description: t.admin?.health?.demoRegeneratedDesc?.({ mode: data.demoMode, counts: countsStr }) ?? `Mode: ${data.demoMode}. Dades creades: ${countsStr}`,
         });
       } else {
-        setSeedResult({ ok: false, error: data.error || 'Error desconegut' });
+        setSeedResult({ ok: false, error: data.error || (t.common?.unknownError ?? 'Error desconegut') });
         toast({
           variant: 'destructive',
-          title: 'Error',
-          description: data.error || 'No s\'ha pogut regenerar la demo',
+          title: t.common?.error ?? 'Error',
+          description: data.error || (t.admin?.health?.demoError ?? 'No s\'ha pogut regenerar la demo'),
         });
       }
     } catch (error) {
@@ -343,8 +353,8 @@ export default function AdminPage() {
       setSeedResult({ ok: false, error: (error as Error).message });
       toast({
         variant: 'destructive',
-        title: 'Error',
-        description: 'Error de connexió regenerant la demo',
+        title: t.common?.error ?? 'Error',
+        description: t.admin?.health?.demoConnectionError ?? 'Error de connexió regenerant la demo',
       });
     } finally {
       setIsSeedingDemo(false);
@@ -393,15 +403,15 @@ export default function AdminPage() {
       document.body.removeChild(a);
 
       toast({
-        title: 'Backup descarregat',
-        description: `S'ha descarregat el backup de ${orgName}.`,
+        title: t.admin?.shell?.backupDownloaded ?? 'Backup descarregat',
+        description: t.admin?.shell?.backupDownloadedDesc?.({ org: orgName }) ?? `S'ha descarregat el backup de ${orgName}.`,
       });
     } catch (error) {
       console.error('Error descarregant backup:', error);
       toast({
         variant: 'destructive',
-        title: 'Error',
-        description: (error as Error).message || 'No s\'ha pogut descarregar el backup.',
+        title: t.common?.error ?? 'Error',
+        description: (error as Error).message || (t.admin?.shell?.backupError ?? 'No s\'ha pogut descarregar el backup.'),
       });
     } finally {
       setBackupOrgId(null);
@@ -411,11 +421,11 @@ export default function AdminPage() {
   const getStatusBadge = (status: Organization['status']) => {
     switch (status) {
       case 'active':
-        return <Badge className="bg-green-100 text-green-800 border-green-300">Activa</Badge>;
+        return <Badge className="bg-green-100 text-green-800 border-green-300">{t.admin?.orgStatus?.active ?? 'Activa'}</Badge>;
       case 'suspended':
-        return <Badge variant="destructive">Suspesa</Badge>;
+        return <Badge variant="destructive">{t.admin?.orgStatus?.suspended ?? 'Suspesa'}</Badge>;
       case 'pending':
-        return <Badge variant="secondary">Pendent</Badge>;
+        return <Badge variant="secondary">{t.admin?.orgStatus?.pending ?? 'Pendent'}</Badge>;
       default:
         return <Badge variant="outline">{status}</Badge>;
     }
@@ -452,8 +462,8 @@ export default function AdminPage() {
             <div className="mx-auto mb-2 flex h-12 w-12 items-center justify-center rounded-full bg-primary/10">
               <Shield className="h-6 w-6 text-primary" />
             </div>
-            <CardTitle>Panell SuperAdmin</CardTitle>
-            <CardDescription>Accés restringit</CardDescription>
+            <CardTitle>{t.admin?.shell?.loginTitle ?? 'Panell SuperAdmin'}</CardTitle>
+            <CardDescription>{t.admin?.access?.restricted ?? 'Accés restringit'}</CardDescription>
           </CardHeader>
           <CardContent>
             <form onSubmit={handleLogin} className="space-y-4">
@@ -516,15 +526,15 @@ export default function AdminPage() {
     return (
       <div className="flex flex-col items-center justify-center min-h-screen gap-4">
         <AlertCircle className="h-12 w-12 text-destructive" />
-        <h1 className="text-xl font-semibold">Accés denegat</h1>
-        <p className="text-muted-foreground">No tens permisos per accedir al panell d'administració.</p>
+        <h1 className="text-xl font-semibold">{t.admin?.access?.deniedTitle ?? 'Accés denegat'}</h1>
+        <p className="text-muted-foreground">{t.admin?.access?.deniedDescription ?? 'No tens permisos per accedir al panell d\'administració.'}</p>
         <div className="flex gap-2">
           <Button variant="outline" onClick={handleLogout}>
-            Tancar sessió
+            {t.admin?.access?.logout ?? 'Tancar sessió'}
           </Button>
           <Button onClick={() => router.push('/dashboard')}>
             <ArrowLeft className="mr-2 h-4 w-4" />
-            Tornar al dashboard
+            {t.admin?.access?.backToDashboard ?? 'Tornar al dashboard'}
           </Button>
         </div>
       </div>
@@ -552,9 +562,9 @@ export default function AdminPage() {
           <div className="container mx-auto flex items-center gap-3">
             <AlertCircle className="h-5 w-5 flex-shrink-0" />
             <div>
-              <span className="font-semibold">Atenció</span>
+              <span className="font-semibold">{t.admin?.health?.registryWarning ?? 'Atenció'}</span>
               <span className="ml-2 text-amber-100">
-                {registryError}. Recarrega la pàgina si cal.
+                {t.admin?.health?.reloadIfNeeded?.({ error: registryError }) ?? `${registryError}. Recarrega la pàgina si cal.`}
               </span>
             </div>
           </div>
@@ -568,8 +578,8 @@ export default function AdminPage() {
             <div className="flex items-center gap-3">
               <Shield className="h-8 w-8 text-primary" />
               <div>
-                <h1 className="text-xl font-bold">Panell de Super Admin</h1>
-                <p className="text-sm text-muted-foreground">Gestió de Summa Social</p>
+                <h1 className="text-xl font-bold">{t.admin?.shell?.title ?? 'Panell de Super Admin'}</h1>
+                <p className="text-sm text-muted-foreground">{t.admin?.shell?.subtitle ?? 'Gestió de Summa Social'}</p>
               </div>
               {/* Estat del sistema */}
               <div className="ml-6 flex items-center gap-3 text-xs text-muted-foreground border-l pl-4">
@@ -586,11 +596,11 @@ export default function AdminPage() {
             <div className="flex gap-2">
               <Button variant="outline" onClick={handleMigrateSlugs} disabled={isMigrating}>
                 {isMigrating && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                Migrar slugs
+                {t.admin?.migrations?.slugs ?? 'Migrar slugs'}
               </Button>
               <Button onClick={() => setIsCreateDialogOpen(true)}>
                 <Plus className="mr-2 h-4 w-4" />
-                Nova organització
+                {t.admin?.shell?.newOrg ?? 'Nova organització'}
               </Button>
             </div>
           </div>
@@ -607,15 +617,15 @@ export default function AdminPage() {
         ═══════════════════════════════════════════════════════════════════════ */}
         <AdminSection
           id="govern"
-          title="Govern del sistema"
-          description="Organitzacions, superadmins i estat global."
+          title={t.admin?.sections?.govern?.title ?? "Govern del sistema"}
+          description={t.admin?.sections?.govern?.description ?? "Organitzacions, superadmins i estat global."}
           tone="neutral"
         >
           {/* Estadístiques globals */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
             <Card>
               <CardHeader className="flex flex-row items-center justify-between pb-2">
-                <CardTitle className="text-sm font-medium">Total Organitzacions</CardTitle>
+                <CardTitle className="text-sm font-medium">{t.admin?.shell?.totalOrgs ?? 'Total Organitzacions'}</CardTitle>
                 <Building2 className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
@@ -624,7 +634,7 @@ export default function AdminPage() {
             </Card>
             <Card>
               <CardHeader className="flex flex-row items-center justify-between pb-2">
-                <CardTitle className="text-sm font-medium">Actives</CardTitle>
+                <CardTitle className="text-sm font-medium">{t.admin?.shell?.activeOrgs ?? 'Actives'}</CardTitle>
                 <Play className="h-4 w-4 text-green-600" />
               </CardHeader>
               <CardContent>
@@ -633,7 +643,7 @@ export default function AdminPage() {
             </Card>
             <Card>
               <CardHeader className="flex flex-row items-center justify-between pb-2">
-                <CardTitle className="text-sm font-medium">Suspeses</CardTitle>
+                <CardTitle className="text-sm font-medium">{t.admin?.shell?.suspendedOrgs ?? 'Suspeses'}</CardTitle>
                 <Pause className="h-4 w-4 text-destructive" />
               </CardHeader>
               <CardContent>
@@ -645,101 +655,52 @@ export default function AdminPage() {
           {/* Llista d'organitzacions */}
           <Card className="mb-6">
             <CardHeader>
-              <CardTitle>Organitzacions</CardTitle>
+              <CardTitle>{t.admin?.shell?.orgsTitle ?? 'Organitzacions'}</CardTitle>
               <CardDescription>
-                Gestiona totes les organitzacions registrades a Summa Social
+                {t.admin?.shell?.orgsDescription ?? 'Gestiona totes les organitzacions registrades a Summa Social'}
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Organització</TableHead>
-                    <TableHead>CIF</TableHead>
-                    <TableHead>Estat</TableHead>
-                    <TableHead>Indicadors</TableHead>
-                    <TableHead>Creada</TableHead>
-                    <TableHead>Accessos</TableHead>
-                    <TableHead className="w-[80px]"></TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
+              {/* Mobile: MobileListItem */}
+              {isMobile ? (
+                <div className="flex flex-col gap-2">
                   {organizations && organizations.length > 0 ? (
                     organizations.map((org) => (
-                      <TableRow key={org.id}>
-                        <TableCell>
-                          <div className="flex items-center gap-2">
-                            <Building2 className="h-4 w-4 text-muted-foreground" />
-                            <div>
-                              <div className="font-medium">{org.name}</div>
-                              <div className="text-xs text-muted-foreground">{org.slug}</div>
-                            </div>
-                          </div>
-                        </TableCell>
-                        <TableCell className="font-mono text-sm">{org.taxId}</TableCell>
-                        <TableCell>{getStatusBadge(org.status)}</TableCell>
-                        <TableCell>
-                          <div className="flex items-center gap-2">
-                            <span
-                              className="flex items-center gap-1"
-                              title={org.onboarding?.welcomeSeenAt ? `Onboarding vist: ${org.onboarding.welcomeSeenAt}` : 'Onboarding pendent'}
-                            >
-                              {org.onboarding?.welcomeSeenAt ? (
-                                <CheckCircle2 className="h-4 w-4 text-green-600" />
-                              ) : (
-                                <XCircle className="h-4 w-4 text-muted-foreground" />
-                              )}
-                            </span>
-                            {org.updatedAt && (
-                              <span className="text-xs text-muted-foreground" title={`Última activitat: ${org.updatedAt}`}>
-                                {formatDate(org.updatedAt)}
-                              </span>
-                            )}
-                          </div>
-                        </TableCell>
-                        <TableCell className="text-sm text-muted-foreground">
-                          {formatDate(org.createdAt)}
-                        </TableCell>
-                        <TableCell>
-                          <div className="flex items-center gap-1">
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              className="h-7 px-2 text-xs"
-                              onClick={() => {
-                                sessionStorage.setItem('adminViewingOrgId', org.id);
-                                router.push(`/${org.slug}/dashboard/movimientos`);
-                              }}
-                              title="Moviments"
-                            >
-                              <ArrowUpRight className="h-3 w-3 mr-1" />
-                              Mov
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              className="h-7 px-2 text-xs"
-                              onClick={() => {
-                                sessionStorage.setItem('adminViewingOrgId', org.id);
-                                router.push(`/${org.slug}/dashboard/configuracion`);
-                              }}
-                              title="Configuració"
-                            >
-                              <Settings className="h-3 w-3" />
-                            </Button>
-                          </div>
-                        </TableCell>
-                        <TableCell>
+                      <MobileListItem
+                        key={org.id}
+                        title={org.name}
+                        leadingIcon={<Building2 className="h-4 w-4" />}
+                        badges={[getStatusBadge(org.status)]}
+                        meta={[
+                          { value: org.slug },
+                          org.taxId && { label: 'CIF', value: org.taxId },
+                          { value: formatDate(org.createdAt) },
+                        ].filter(Boolean) as { label?: string; value: React.ReactNode }[]}
+                        actions={
                           <DropdownMenu>
                             <DropdownMenuTrigger asChild>
-                              <Button variant="ghost" size="sm">
+                              <Button variant="ghost" size="icon" className="h-8 w-8">
                                 <MoreHorizontal className="h-4 w-4" />
                               </Button>
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end">
                               <DropdownMenuItem onClick={() => handleEnterOrganization(org)}>
                                 <LogIn className="mr-2 h-4 w-4" />
-                                Entrar
+                                {t.admin?.shell?.enter ?? 'Entrar'}
+                              </DropdownMenuItem>
+                              <DropdownMenuItem onClick={() => {
+                                sessionStorage.setItem('adminViewingOrgId', org.id);
+                                router.push(`/${org.slug}/dashboard/movimientos`);
+                              }}>
+                                <ArrowUpRight className="mr-2 h-4 w-4" />
+                                {t.admin?.shell?.movements ?? 'Moviments'}
+                              </DropdownMenuItem>
+                              <DropdownMenuItem onClick={() => {
+                                sessionStorage.setItem('adminViewingOrgId', org.id);
+                                router.push(`/${org.slug}/dashboard/configuracion`);
+                              }}>
+                                <Settings className="mr-2 h-4 w-4" />
+                                {t.admin?.shell?.config ?? 'Configuració'}
                               </DropdownMenuItem>
                               <DropdownMenuItem
                                 onClick={() => handleDownloadBackup(org.id, org.name)}
@@ -750,7 +711,7 @@ export default function AdminPage() {
                                 ) : (
                                   <Download className="mr-2 h-4 w-4" />
                                 )}
-                                Backup local
+                                {t.admin?.shell?.backupLocal ?? 'Backup local'}
                               </DropdownMenuItem>
                               <DropdownMenuSeparator />
                               <DropdownMenuItem
@@ -760,29 +721,162 @@ export default function AdminPage() {
                                 {org.status === 'suspended' ? (
                                   <>
                                     <Play className="mr-2 h-4 w-4" />
-                                    Reactivar
+                                    {t.admin?.shell?.reactivate ?? 'Reactivar'}
                                   </>
                                 ) : (
                                   <>
                                     <Pause className="mr-2 h-4 w-4" />
-                                    Suspendre
+                                    {t.admin?.shell?.suspend ?? 'Suspendre'}
                                   </>
                                 )}
                               </DropdownMenuItem>
                             </DropdownMenuContent>
                           </DropdownMenu>
-                        </TableCell>
-                      </TableRow>
+                        }
+                        onClick={() => handleEnterOrganization(org)}
+                      />
                     ))
                   ) : (
-                    <TableRow>
-                      <TableCell colSpan={7} className="text-center text-muted-foreground h-24">
-                        No hi ha organitzacions. Crea'n una per començar.
-                      </TableCell>
-                    </TableRow>
+                    <div className="text-center text-muted-foreground py-12">
+                      {t.admin?.shell?.noOrgs ?? 'No hi ha organitzacions. Crea\'n una per començar.'}
+                    </div>
                   )}
-                </TableBody>
-              </Table>
+                </div>
+              ) : (
+                /* Desktop: Table */
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>{t.admin?.shell?.orgColumn ?? 'Organització'}</TableHead>
+                      <TableHead>{t.admin?.shell?.cifColumn ?? 'CIF'}</TableHead>
+                      <TableHead>{t.admin?.shell?.statusColumn ?? 'Estat'}</TableHead>
+                      <TableHead>{t.admin?.shell?.indicatorsColumn ?? 'Indicadors'}</TableHead>
+                      <TableHead>{t.admin?.shell?.createdColumn ?? 'Creada'}</TableHead>
+                      <TableHead>{t.admin?.shell?.accessColumn ?? 'Accessos'}</TableHead>
+                      <TableHead className="w-[80px]"></TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {organizations && organizations.length > 0 ? (
+                      organizations.map((org) => (
+                        <TableRow key={org.id}>
+                          <TableCell>
+                            <div className="flex items-center gap-2">
+                              <Building2 className="h-4 w-4 text-muted-foreground" />
+                              <div>
+                                <div className="font-medium">{org.name}</div>
+                                <div className="text-xs text-muted-foreground">{org.slug}</div>
+                              </div>
+                            </div>
+                          </TableCell>
+                          <TableCell className="font-mono text-sm">{org.taxId}</TableCell>
+                          <TableCell>{getStatusBadge(org.status)}</TableCell>
+                          <TableCell>
+                            <div className="flex items-center gap-2">
+                              <span
+                                className="flex items-center gap-1"
+                                title={org.onboarding?.welcomeSeenAt ? `Onboarding vist: ${org.onboarding.welcomeSeenAt}` : 'Onboarding pendent'}
+                              >
+                                {org.onboarding?.welcomeSeenAt ? (
+                                  <CheckCircle2 className="h-4 w-4 text-green-600" />
+                                ) : (
+                                  <XCircle className="h-4 w-4 text-muted-foreground" />
+                                )}
+                              </span>
+                              {org.updatedAt && (
+                                <span className="text-xs text-muted-foreground" title={`Última activitat: ${org.updatedAt}`}>
+                                  {formatDate(org.updatedAt)}
+                                </span>
+                              )}
+                            </div>
+                          </TableCell>
+                          <TableCell className="text-sm text-muted-foreground">
+                            {formatDate(org.createdAt)}
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex items-center gap-1">
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="h-7 px-2 text-xs"
+                                onClick={() => {
+                                  sessionStorage.setItem('adminViewingOrgId', org.id);
+                                  router.push(`/${org.slug}/dashboard/movimientos`);
+                                }}
+                                title={t.admin?.shell?.movements ?? 'Moviments'}
+                              >
+                                <ArrowUpRight className="h-3 w-3 mr-1" />
+                                Mov
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="h-7 px-2 text-xs"
+                                onClick={() => {
+                                  sessionStorage.setItem('adminViewingOrgId', org.id);
+                                  router.push(`/${org.slug}/dashboard/configuracion`);
+                                }}
+                                title={t.admin?.shell?.config ?? 'Configuració'}
+                              >
+                                <Settings className="h-3 w-3" />
+                              </Button>
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <Button variant="ghost" size="sm">
+                                  <MoreHorizontal className="h-4 w-4" />
+                                </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="end">
+                                <DropdownMenuItem onClick={() => handleEnterOrganization(org)}>
+                                  <LogIn className="mr-2 h-4 w-4" />
+                                  {t.admin?.shell?.enter ?? 'Entrar'}
+                                </DropdownMenuItem>
+                                <DropdownMenuItem
+                                  onClick={() => handleDownloadBackup(org.id, org.name)}
+                                  disabled={backupOrgId === org.id}
+                                >
+                                  {backupOrgId === org.id ? (
+                                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                  ) : (
+                                    <Download className="mr-2 h-4 w-4" />
+                                  )}
+                                  {t.admin?.shell?.backupLocal ?? 'Backup local'}
+                                </DropdownMenuItem>
+                                <DropdownMenuSeparator />
+                                <DropdownMenuItem
+                                  onClick={() => setSuspendDialogOrg(org)}
+                                  className={org.status === 'suspended' ? 'text-green-600' : 'text-destructive'}
+                                >
+                                  {org.status === 'suspended' ? (
+                                    <>
+                                      <Play className="mr-2 h-4 w-4" />
+                                      {t.admin?.shell?.reactivate ?? 'Reactivar'}
+                                    </>
+                                  ) : (
+                                    <>
+                                      <Pause className="mr-2 h-4 w-4" />
+                                      {t.admin?.shell?.suspend ?? 'Suspendre'}
+                                    </>
+                                  )}
+                                </DropdownMenuItem>
+                              </DropdownMenuContent>
+                            </DropdownMenu>
+                          </TableCell>
+                        </TableRow>
+                      ))
+                    ) : (
+                      <TableRow>
+                        <TableCell colSpan={7} className="text-center text-muted-foreground h-24">
+                          {t.admin?.shell?.noOrgs ?? 'No hi ha organitzacions. Crea\'n una per començar.'}
+                        </TableCell>
+                      </TableRow>
+                    )}
+                  </TableBody>
+                </Table>
+              )}
             </CardContent>
           </Card>
 
@@ -794,20 +888,20 @@ export default function AdminPage() {
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-base">
                 <History className="h-4 w-4" />
-                Activitat SuperAdmin
+                {t.admin?.updates?.title ?? 'Activitat SuperAdmin'}
               </CardTitle>
               <CardDescription>
-                Últimes accions registrades
+                {t.admin?.updates?.description ?? 'Últimes accions registrades'}
               </CardDescription>
             </CardHeader>
             <CardContent>
               {isLoadingAudit ? (
                 <div className="flex items-center gap-2 text-sm text-muted-foreground">
                   <Loader2 className="h-4 w-4 animate-spin" />
-                  Carregant...
+                  {t.common?.loading ?? 'Carregant...'}
                 </div>
               ) : auditLogs.length === 0 ? (
-                <p className="text-sm text-muted-foreground">Cap acció registrada encara.</p>
+                <p className="text-sm text-muted-foreground">{t.admin?.updates?.noActions ?? 'Cap acció registrada encara.'}</p>
               ) : (
                 <div className="space-y-2">
                   {auditLogs.map((log) => (
@@ -844,8 +938,8 @@ export default function AdminPage() {
         ═══════════════════════════════════════════════════════════════════════ */}
         <AdminSection
           id="salut"
-          title="Salut i diagnòstic"
-          description="Detecció d'incidències i verificacions de producció."
+          title={t.admin?.sections?.health?.title ?? "Salut i diagnòstic"}
+          description={t.admin?.sections?.health?.description ?? "Detecció d'incidències i verificacions de producció."}
           tone="info"
         >
           {/* Sentinelles + Semàfor */}
@@ -857,20 +951,20 @@ export default function AdminPage() {
               <CardHeader>
                 <CardTitle className="flex items-center gap-2 text-base">
                   <AlertCircle className="h-4 w-4 text-amber-600" />
-                  <span className="text-amber-800">Entorn DEMO</span>
+                  <span className="text-amber-800">{t.admin?.health?.demoEnv ?? 'Entorn DEMO'}</span>
                   <Badge variant="outline" className="ml-2 bg-amber-100 text-amber-800 border-amber-300">
                     demo
                   </Badge>
                 </CardTitle>
                 <CardDescription className="text-amber-700">
-                  Estàs treballant amb dades de demostració. Les accions aquí no afecten producció.
+                  {t.admin?.health?.demoDescription ?? 'Estàs treballant amb dades de demostració. Les accions aquí no afecten producció.'}
                 </CardDescription>
               </CardHeader>
               <CardContent>
                 <div className="flex flex-col gap-4">
                   {/* Selector de mode */}
                   <div className="flex items-center gap-3">
-                    <span className="text-sm text-amber-800 font-medium">Mode:</span>
+                    <span className="text-sm text-amber-800 font-medium">{t.admin?.health?.demoMode ?? 'Mode:'}</span>
                     <div className="flex gap-2">
                       <Button
                         variant={selectedDemoMode === 'short' ? 'default' : 'outline'}
@@ -893,8 +987,8 @@ export default function AdminPage() {
                     </div>
                     <span className="text-xs text-amber-600">
                       {selectedDemoMode === 'short'
-                        ? 'Dades netes per vídeos/pitch'
-                        : 'Dades amb anomalies per validar workflows'}
+                        ? (t.admin?.health?.demoShort ?? 'Dades netes per vídeos/pitch')
+                        : (t.admin?.health?.demoWork ?? 'Dades amb anomalies per validar workflows')}
                     </span>
                   </div>
 
@@ -908,17 +1002,17 @@ export default function AdminPage() {
                       {isSeedingDemo ? (
                         <>
                           <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                          Regenerant...
+                          {t.admin?.health?.regenerating ?? 'Regenerant...'}
                         </>
                       ) : (
                         <>
                           <Play className="mr-2 h-4 w-4" />
-                          Regenerar demo
+                          {t.admin?.health?.regenerateDemo ?? 'Regenerar demo'}
                         </>
                       )}
                     </Button>
                     <span className="text-sm text-amber-700">
-                      Purga i recrea totes les dades sintètiques
+                      {t.admin?.health?.purgeInfo ?? 'Purga i recrea totes les dades sintètiques'}
                     </span>
                   </div>
 
@@ -926,7 +1020,7 @@ export default function AdminPage() {
                     <div className={`p-3 rounded-lg text-sm ${seedResult.ok ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
                       {seedResult.ok ? (
                         <div>
-                          <span className="font-medium">Seed completat ({seedResult.demoMode})</span>
+                          <span className="font-medium">{t.admin?.health?.seedCompleted?.({ mode: seedResult.demoMode ?? '' }) ?? `Seed completat (${seedResult.demoMode})`}</span>
                           {seedResult.counts && (
                             <div className="mt-1 grid grid-cols-3 gap-2 text-xs">
                               {Object.entries(seedResult.counts).map(([key, value]) => (
@@ -950,10 +1044,10 @@ export default function AdminPage() {
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-base">
                 <FileText className="h-4 w-4" />
-                Diagnòstic
+                {t.admin?.health?.diagTitle ?? 'Diagnòstic'}
               </CardTitle>
               <CardDescription>
-                Si estàs perdut o hi ha una incidència, comença pel manual.
+                {t.admin?.health?.diagDescription ?? 'Si estàs perdut o hi ha una incidència, comença pel manual.'}
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -980,7 +1074,7 @@ export default function AdminPage() {
                   className="flex items-center gap-2 text-sm text-muted-foreground cursor-pointer hover:text-foreground"
                   onClick={() => {
                     navigator.clipboard.writeText('docs/DEV-SOLO-MANUAL.md');
-                    toast({ title: 'Copiat al porta-retalls' });
+                    toast({ title: t.admin?.health?.copiedToClipboard ?? 'Copiat al porta-retalls' });
                   }}
                 >
                   <FileText className="h-4 w-4" />
@@ -997,8 +1091,8 @@ export default function AdminPage() {
         ═══════════════════════════════════════════════════════════════════════ */}
         <AdminSection
           id="contingut"
-          title="Contingut i comunicació"
-          description="Novetats, web i traduccions."
+          title={t.admin?.sections?.content?.title ?? "Contingut i comunicació"}
+          description={t.admin?.sections?.content?.description ?? "Novetats, web i traduccions."}
           tone="content"
         >
           {/* Novetats del producte */}
@@ -1016,8 +1110,8 @@ export default function AdminPage() {
         ═══════════════════════════════════════════════════════════════════════ */}
         <AdminSection
           id="operativa"
-          title="Operativa puntual"
-          description="Accions ràpides de suport."
+          title={t.admin?.sections?.ops?.title ?? "Operativa puntual"}
+          description={t.admin?.sections?.ops?.description ?? "Accions ràpides de suport."}
           tone="warn"
         >
           {/* Reset contrasenya */}
@@ -1025,17 +1119,17 @@ export default function AdminPage() {
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-base">
                 <Mail className="h-4 w-4" />
-                Reset contrasenya
+                {t.admin?.resetPassword?.title ?? 'Reset contrasenya'}
               </CardTitle>
               <CardDescription>
-                Envia un correu per restablir la contrasenya d'un usuari
+                {t.admin?.resetPassword?.description ?? 'Envia un correu per restablir la contrasenya d\'un usuari'}
               </CardDescription>
             </CardHeader>
             <CardContent>
               <div className="flex gap-2">
                 <Input
                   type="email"
-                  placeholder="email@exemple.com"
+                  placeholder={t.admin?.resetPassword?.placeholder ?? "email@exemple.com"}
                   value={resetEmail}
                   onChange={(e) => setResetEmail(e.target.value)}
                   disabled={isResetting}
@@ -1045,7 +1139,7 @@ export default function AdminPage() {
                   disabled={isResetting || !resetEmail.trim()}
                 >
                   {isResetting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                  Enviar correu
+                  {t.admin?.resetPassword?.send ?? 'Enviar correu'}
                 </Button>
               </div>
             </CardContent>
@@ -1064,24 +1158,26 @@ export default function AdminPage() {
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>
-              {suspendDialogOrg?.status === 'suspended' ? 'Reactivar organització?' : 'Suspendre organització?'}
+              {suspendDialogOrg?.status === 'suspended'
+                ? (t.admin?.shell?.reactivateTitle ?? 'Reactivar organització?')
+                : (t.admin?.shell?.suspendTitle ?? 'Suspendre organització?')}
             </AlertDialogTitle>
             <AlertDialogDescription>
               {suspendDialogOrg?.status === 'suspended'
-                ? `L'organització "${suspendDialogOrg?.name}" tornarà a estar activa i els seus membres podran accedir-hi.`
-                : `L'organització "${suspendDialogOrg?.name}" quedarà suspesa i els seus membres no podran accedir-hi.`
+                ? (t.admin?.shell?.reactivateDesc?.({ org: suspendDialogOrg?.name ?? '' }) ?? `L'organització "${suspendDialogOrg?.name}" tornarà a estar activa i els seus membres podran accedir-hi.`)
+                : (t.admin?.shell?.suspendDesc?.({ org: suspendDialogOrg?.name ?? '' }) ?? `L'organització "${suspendDialogOrg?.name}" quedarà suspesa i els seus membres no podran accedir-hi.`)
               }
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel disabled={isProcessing}>Cancel·lar</AlertDialogCancel>
+            <AlertDialogCancel disabled={isProcessing}>{t.common?.cancel ?? 'Cancel·lar'}</AlertDialogCancel>
             <AlertDialogAction
               onClick={() => suspendDialogOrg && handleToggleSuspend(suspendDialogOrg)}
               disabled={isProcessing}
               className={suspendDialogOrg?.status === 'suspended' ? '' : 'bg-destructive text-destructive-foreground hover:bg-destructive/90'}
             >
               {isProcessing && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              {suspendDialogOrg?.status === 'suspended' ? 'Reactivar' : 'Suspendre'}
+              {suspendDialogOrg?.status === 'suspended' ? (t.admin?.shell?.reactivate ?? 'Reactivar') : (t.admin?.shell?.suspend ?? 'Suspendre')}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
@@ -1092,26 +1188,26 @@ export default function AdminPage() {
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle className="text-amber-800">
-              Regenerar dades demo ({selectedDemoMode})?
+              {t.admin?.health?.confirmRegenTitle?.({ mode: selectedDemoMode }) ?? `Regenerar dades demo (${selectedDemoMode})?`}
             </AlertDialogTitle>
             <AlertDialogDescription>
-              Aquesta acció esborrarà totes les dades de demostració existents i en crearà de noves.
+              {t.admin?.health?.confirmRegenDesc ?? 'Aquesta acció esborrarà totes les dades de demostració existents i en crearà de noves.'}
               <br /><br />
-              <strong>Mode seleccionat:</strong>{' '}
+              <strong>{t.admin?.health?.selectedMode ?? 'Mode seleccionat:'}</strong>{' '}
               {selectedDemoMode === 'short'
-                ? 'Short — Dades netes per vídeos i pitch'
-                : 'Work — Dades amb anomalies per validar workflows reals'}
+                ? (t.admin?.health?.shortModeDesc ?? 'Short — Dades netes per vídeos i pitch')
+                : (t.admin?.health?.workModeDesc ?? 'Work — Dades amb anomalies per validar workflows reals')}
               <br /><br />
-              <strong>Només afecta l'organització demo</strong> (slug: demo). Cap dada de producció serà modificada.
+              <strong>{t.admin?.health?.onlyDemo ?? "Només afecta l'organització demo (slug: demo). Cap dada de producció serà modificada."}</strong>
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancel·lar</AlertDialogCancel>
+            <AlertDialogCancel>{t.common?.cancel ?? 'Cancel·lar'}</AlertDialogCancel>
             <AlertDialogAction
               onClick={executeRegenerateDemo}
               className="bg-amber-600 text-white hover:bg-amber-700"
             >
-              Regenerar demo ({selectedDemoMode})
+              {t.admin?.health?.regenerateDemo ?? 'Regenerar demo'} ({selectedDemoMode})
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

@@ -47,7 +47,9 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
-import { PlusCircle, Edit, Trash2, User, Building2, RefreshCw, Heart, Upload, AlertTriangle, Search, X, RotateCcw, Download, Users } from 'lucide-react';
+import { PlusCircle, Edit, Trash2, User, Building2, RefreshCw, Heart, Upload, AlertTriangle, Search, X, RotateCcw, Download, Users, CreditCard, MoreVertical } from 'lucide-react';
+import Link from 'next/link';
+import { useSearchParams } from 'next/navigation';
 import { EmptyState } from '@/components/ui/empty-state';
 import { Skeleton } from '@/components/ui/skeleton';
 import type { Donor, Category, Transaction } from '@/lib/data';
@@ -66,6 +68,15 @@ import { useTranslations } from '@/i18n';
 import { normalizeContact, formatCurrencyEU } from '@/lib/normalize';
 import { cn } from '@/lib/utils';
 import { exportDonorsToExcel } from '@/lib/donors-export';
+import { useIsMobile } from '@/hooks/use-is-mobile';
+import { MobileListItem } from '@/components/mobile/mobile-list-item';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import { MOBILE_ACTIONS_BAR, MOBILE_CTA_PRIMARY } from '@/lib/ui/mobile-actions';
 
 type DonorFormData = Omit<Donor, 'id' | 'createdAt' | 'updatedAt'>;
 
@@ -92,9 +103,12 @@ const emptyFormData: DonorFormData = {
 
 export function DonorManager() {
   const { firestore } = useFirebase();
-  const { organizationId } = useCurrentOrganization();
+  const { organizationId, orgSlug } = useCurrentOrganization();
   const { toast } = useToast();
   const { t } = useTranslations();
+  const isMobile = useIsMobile();
+  const searchParams = useSearchParams();
+  const urlDonorId = searchParams.get('id');
 
   const contactsCollection = useMemoFirebase(
     () => organizationId ? collection(firestore, 'organizations', organizationId, 'contacts') : null,
@@ -193,7 +207,7 @@ export function DonorManager() {
     loadDonorsWithReturns();
   }, [loadDonorsWithReturns]);
 
-  // Llegir paràmetres de la URL (filtre i id de donant)
+  // Llegir paràmetres de la URL (filtres)
   React.useEffect(() => {
     if (typeof window !== 'undefined') {
       const params = new URLSearchParams(window.location.search);
@@ -231,22 +245,26 @@ export function DonorManager() {
         setMembershipTypeFilter(membershipType);
         setHasUrlFilter(true);
       }
+    }
+  }, [t.donors.allPeriods]);
 
-      // Si hi ha un ID de donant a la URL, obrir el drawer
-      const donorId = params.get('id');
-      if (donorId && donors) {
-        const donor = donors.find(d => d.id === donorId);
-        if (donor) {
-          setSelectedDonor(donor);
-          setIsDetailOpen(true);
-          // Netejar el paràmetre id de la URL
-          const url = new URL(window.location.href);
-          url.searchParams.delete('id');
-          window.history.replaceState({}, '', url.toString());
-        }
+  // Efecte separat per obrir el drawer quan hi ha ?id= a la URL (reactiu)
+  // PATRÓ: useSearchParams() + useEffect amb deps [urlParam, data] per drawers controlats per URL
+  React.useEffect(() => {
+    if (urlDonorId && donors !== undefined) {
+      const donor = donors.find(d => d.id === urlDonorId);
+      if (donor) {
+        setSelectedDonor(donor);
+        setIsDetailOpen(true);
+      }
+      // Netejar el paràmetre id de la URL per evitar re-open en refresh/navegació
+      if (typeof window !== 'undefined') {
+        const url = new URL(window.location.href);
+        url.searchParams.delete('id');
+        window.history.replaceState({}, '', url.toString());
       }
     }
-  }, [donors, t.donors.allPeriods]);
+  }, [urlDonorId, donors]);
 
   // Funció per netejar el filtre i actualitzar la URL
   const clearFilter = () => {
@@ -572,7 +590,7 @@ export function DonorManager() {
     <TooltipProvider>
       <Dialog open={isDialogOpen} onOpenChange={handleOpenChange}>
         <Card>
-          <CardHeader className="flex flex-row items-center justify-between">
+          <CardHeader className={cn("flex flex-col gap-4", "sm:flex-row sm:items-center sm:justify-between")}>
             <div>
               <CardTitle className="text-2xl font-bold tracking-tight font-headline">
                 {t.donors.title}
@@ -581,26 +599,37 @@ export function DonorManager() {
                 {t.donors.description}
               </CardDescription>
             </div>
-            <div className="flex gap-2">
-              <Button
-                variant="outline"
-                onClick={() => donors && exportDonorsToExcel(donors, allCategories || [])}
-                disabled={!donors || donors.length === 0}
-                title={t.donors.exportTooltip ?? 'Exportar llista de donants a Excel'}
-              >
-                <Download className="mr-2 h-4 w-4" />
-                {t.donors.export ?? 'Exportar'}
-              </Button>
-              <Button variant="outline" onClick={() => setIsImportOpen(true)}>
-                <Upload className="mr-2 h-4 w-4" />
-                {t.donors.import}
-              </Button>
+            <div className={cn(MOBILE_ACTIONS_BAR, "sm:justify-end")}>
               <DialogTrigger asChild>
-                <Button onClick={handleAddNew}>
+                <Button onClick={handleAddNew} className={MOBILE_CTA_PRIMARY}>
                   <PlusCircle className="mr-2 h-4 w-4" />
                   {t.donors.add}
                 </Button>
               </DialogTrigger>
+              <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  asChild
+                  className="flex-1 sm:flex-none"
+                >
+                  <Link href={`/${orgSlug}/dashboard/donants/remeses-cobrament`}>
+                    <CreditCard className="mr-2 h-4 w-4" />
+                    <span className="sm:inline">{t.sepaCollection?.newCollection ?? 'Remesa SEPA'}</span>
+                  </Link>
+                </Button>
+                <Button
+                  variant="outline"
+                  size="icon"
+                  onClick={() => donors && exportDonorsToExcel(donors, allCategories || [])}
+                  disabled={!donors || donors.length === 0}
+                  title={t.donors.exportTooltip ?? 'Exportar llista de donants a Excel'}
+                >
+                  <Download className="h-4 w-4" />
+                </Button>
+                <Button variant="outline" size="icon" onClick={() => setIsImportOpen(true)} title={t.donors.import}>
+                  <Upload className="h-4 w-4" />
+                </Button>
+              </div>
             </div>
           </CardHeader>
           <CardContent>
@@ -750,192 +779,311 @@ export function DonorManager() {
               </div>
             )}
 
-            <div className="rounded-md border">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>{t.donors.name}</TableHead>
-                    <TableHead>{t.donors.taxId}</TableHead>
-                    <TableHead>{t.donors.donorType}</TableHead>
-                    <TableHead>{t.donors.membershipType}</TableHead>
-                    <TableHead>{t.donors.amount}</TableHead>
-                    {showIncompleteOnly && (
-                      <TableHead className="text-amber-600">{t.donors.missingColumn || 'Falta'}</TableHead>
-                    )}
-                    <TableHead className="text-right">{t.donors.actions}</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filteredDonors && filteredDonors.map((donor) => (
-                    <TableRow key={donor.id} className="h-10">
-                      <TableCell className="font-medium py-1">
-                        <div className="flex items-center gap-2">
-                          {donor.donorType === 'individual' ? (
-                            <User className="h-4 w-4 text-muted-foreground" />
-                          ) : (
-                            <Building2 className="h-4 w-4 text-muted-foreground" />
-                          )}
-                          <button
-                            type="button"
-                            onClick={() => handleViewDetail(donor)}
-                            className="text-blue-600 hover:text-blue-800 hover:underline text-left font-medium cursor-pointer"
-                          >
-                            {donor.name}
-                          </button>
-                          {donor.status === 'inactive' && (
-                            <Badge variant="secondary" className="bg-gray-200 text-gray-600 text-xs py-0 px-1.5">
-                              {t.donors.inactiveBadge}
-                            </Badge>
-                          )}
-                          {donorsWithReturns.has(donor.id) && (
-                            <Tooltip>
-                              <TooltipTrigger asChild>
-                                <Badge variant="secondary" className="ml-1 text-xs bg-orange-100 text-orange-700 border-orange-200">
-                                  Dev.
-                                </Badge>
-                              </TooltipTrigger>
-                              <TooltipContent>
-                                <p>Aquest donant té devolucions assignades</p>
-                              </TooltipContent>
-                            </Tooltip>
-                          )}
-                          {hasIncompleteData(donor) && (
-                            <Tooltip>
-                              <TooltipTrigger>
-                                <AlertTriangle className="h-4 w-4 text-amber-500" />
-                              </TooltipTrigger>
-                              <TooltipContent>
-                                {t.donors.incompleteDataTooltip}
-                              </TooltipContent>
-                            </Tooltip>
-                          )}
-                        </div>
-                      </TableCell>
-                      <TableCell className="py-1 text-xs">{donor.taxId || <span className="text-amber-500">-</span>}</TableCell>
-                      <TableCell className="py-1">
-                        <Badge variant="outline" className="text-xs py-0 px-1.5">
-                          {donor.donorType === 'individual' ? t.donors.types.individual : t.donors.types.company}
+            {/* Vista mòbil */}
+            {isMobile ? (
+              <div className="flex flex-col gap-2">
+                {isLoadingDonors && !donorsRaw && (
+                  Array.from({ length: 4 }).map((_, i) => (
+                    <div key={`skeleton-${i}`} className="border border-border/50 rounded-lg p-3">
+                      <Skeleton className="h-4 w-32 mb-2" />
+                      <Skeleton className="h-3 w-24" />
+                    </div>
+                  ))
+                )}
+                {filteredDonors && filteredDonors.map((donor) => (
+                  <MobileListItem
+                    key={donor.id}
+                    title={
+                      <button
+                        type="button"
+                        onClick={() => handleViewDetail(donor)}
+                        className="text-blue-600 hover:text-blue-800 text-left font-medium"
+                      >
+                        {donor.name}
+                      </button>
+                    }
+                    leadingIcon={
+                      donor.donorType === 'individual' ? (
+                        <User className="h-4 w-4" />
+                      ) : (
+                        <Building2 className="h-4 w-4" />
+                      )
+                    }
+                    meta={[
+                      { label: 'NIF', value: donor.taxId || <span className="text-amber-500">-</span> },
+                      { value: donor.donorType === 'individual' ? t.donors.types.individual : t.donors.types.company },
+                      ...(donor.membershipType === 'recurring' && donor.monthlyAmount
+                        ? [{ value: formatCurrencyEU(donor.monthlyAmount) + `/${t.donors.perMonth}` }]
+                        : []
+                      ),
+                    ]}
+                    badges={[
+                      ...(donor.status === 'inactive' ? [
+                        <Badge key="inactive" variant="secondary" className="bg-gray-200 text-gray-600 text-xs py-0 px-1.5">
+                          {t.donors.inactiveBadge}
                         </Badge>
-                      </TableCell>
-                      <TableCell className="py-1">
-                        {donor.membershipType === 'recurring' ? (
-                          <Badge className="bg-green-100 text-green-800 text-xs py-0 px-1.5">
-                            <RefreshCw className="mr-0.5 h-2.5 w-2.5" />
-                            {t.donors.membership.recurring}
-                          </Badge>
-                        ) : (
-                          <Badge variant="secondary" className="text-xs py-0 px-1.5">{t.donors.membership.oneTime}</Badge>
-                        )}
-                      </TableCell>
-                      <TableCell className="py-1 text-xs">
-                        {donor.membershipType === 'recurring' && donor.monthlyAmount
-                          ? formatCurrencyEU(donor.monthlyAmount) + `/${t.donors.perMonth}`
-                          : '-'
-                        }
-                      </TableCell>
+                      ] : []),
+                      ...(donor.membershipType === 'recurring' ? [
+                        <Badge key="recurring" className="bg-green-100 text-green-800 text-xs py-0 px-1.5">
+                          <RefreshCw className="mr-0.5 h-2.5 w-2.5" />
+                          {t.donors.membership.recurring}
+                        </Badge>
+                      ] : []),
+                      ...(donorsWithReturns.has(donor.id) ? [
+                        <Badge key="returns" variant="secondary" className="text-xs bg-orange-100 text-orange-700 border-orange-200">
+                          Dev.
+                        </Badge>
+                      ] : []),
+                      ...(hasIncompleteData(donor) ? [
+                        <AlertTriangle key="incomplete" className="h-4 w-4 text-amber-500" />
+                      ] : []),
+                    ]}
+                    actions={
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" size="icon" className="h-8 w-8">
+                            <MoreVertical className="h-4 w-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuItem onClick={() => handleViewDetail(donor)}>
+                            <User className="mr-2 h-4 w-4" />
+                            Veure detall
+                          </DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => handleEdit(donor)}>
+                            <Edit className="mr-2 h-4 w-4" />
+                            {t.donors.editDonor ?? 'Editar'}
+                          </DropdownMenuItem>
+                          {donor.status === 'inactive' && (
+                            <DropdownMenuItem onClick={() => handleReactivate(donor)}>
+                              <RotateCcw className="mr-2 h-4 w-4" />
+                              {t.donors.reactivate}
+                            </DropdownMenuItem>
+                          )}
+                          <DropdownMenuItem
+                            onClick={() => handleDeleteRequest(donor)}
+                            className="text-rose-600"
+                          >
+                            <Trash2 className="mr-2 h-4 w-4" />
+                            {t.donors.deleteDonor ?? 'Eliminar'}
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    }
+                  />
+                ))}
+                {!isLoadingDonors && (!filteredDonors || filteredDonors.length === 0) && (
+                  <EmptyState
+                    icon={searchQuery ? Search : Users}
+                    title={
+                      searchQuery
+                        ? (t.emptyStates?.donors?.noResults ?? t.donors.noSearchResults)
+                        : showIncompleteOnly
+                          ? (t.donors.noIncompleteData || "No hi ha donants amb dades incompletes")
+                          : showWithReturnsOnly
+                            ? "No hi ha donants amb devolucions"
+                            : (t.emptyStates?.donors?.noData ?? t.donors.noData)
+                    }
+                    description={
+                      searchQuery
+                        ? (t.emptyStates?.donors?.noResultsDesc ?? undefined)
+                        : !showIncompleteOnly && !showWithReturnsOnly
+                          ? (t.emptyStates?.donors?.noDataDesc ?? undefined)
+                          : undefined
+                    }
+                    className="py-12"
+                  />
+                )}
+              </div>
+            ) : (
+              /* Vista desktop (taula) */
+              <div className="rounded-md border">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>{t.donors.name}</TableHead>
+                      <TableHead>{t.donors.taxId}</TableHead>
+                      <TableHead>{t.donors.donorType}</TableHead>
+                      <TableHead>{t.donors.membershipType}</TableHead>
+                      <TableHead>{t.donors.amount}</TableHead>
                       {showIncompleteOnly && (
-                        <TableCell className="py-1">
-                          <div className="flex flex-wrap gap-1">
-                            {getMissingFields(donor).map(field => (
-                              <Badge key={field} variant="outline" className="text-amber-600 border-amber-300 text-xs py-0 px-1.5">
-                                {field}
+                        <TableHead className="text-amber-600">{t.donors.missingColumn || 'Falta'}</TableHead>
+                      )}
+                      <TableHead className="text-right">{t.donors.actions}</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {filteredDonors && filteredDonors.map((donor) => (
+                      <TableRow key={donor.id} className="h-10">
+                        <TableCell className="font-medium py-1">
+                          <div className="flex items-center gap-2">
+                            {donor.donorType === 'individual' ? (
+                              <User className="h-4 w-4 text-muted-foreground" />
+                            ) : (
+                              <Building2 className="h-4 w-4 text-muted-foreground" />
+                            )}
+                            <button
+                              type="button"
+                              onClick={() => handleViewDetail(donor)}
+                              className="text-blue-600 hover:text-blue-800 hover:underline text-left font-medium cursor-pointer"
+                            >
+                              {donor.name}
+                            </button>
+                            {donor.status === 'inactive' && (
+                              <Badge variant="secondary" className="bg-gray-200 text-gray-600 text-xs py-0 px-1.5">
+                                {t.donors.inactiveBadge}
                               </Badge>
-                            ))}
+                            )}
+                            {donorsWithReturns.has(donor.id) && (
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <Badge variant="secondary" className="ml-1 text-xs bg-orange-100 text-orange-700 border-orange-200">
+                                    Dev.
+                                  </Badge>
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                  <p>Aquest donant té devolucions assignades</p>
+                                </TooltipContent>
+                              </Tooltip>
+                            )}
+                            {hasIncompleteData(donor) && (
+                              <Tooltip>
+                                <TooltipTrigger>
+                                  <AlertTriangle className="h-4 w-4 text-amber-500" />
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                  {t.donors.incompleteDataTooltip}
+                                </TooltipContent>
+                              </Tooltip>
+                            )}
                           </div>
                         </TableCell>
-                      )}
-                      <TableCell className="text-right py-1">
-                        {donor.status === 'inactive' && (
+                        <TableCell className="py-1 text-xs">{donor.taxId || <span className="text-amber-500">-</span>}</TableCell>
+                        <TableCell className="py-1">
+                          <Badge variant="outline" className="text-xs py-0 px-1.5">
+                            {donor.donorType === 'individual' ? t.donors.types.individual : t.donors.types.company}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="py-1">
+                          {donor.membershipType === 'recurring' ? (
+                            <Badge className="bg-green-100 text-green-800 text-xs py-0 px-1.5">
+                              <RefreshCw className="mr-0.5 h-2.5 w-2.5" />
+                              {t.donors.membership.recurring}
+                            </Badge>
+                          ) : (
+                            <Badge variant="secondary" className="text-xs py-0 px-1.5">{t.donors.membership.oneTime}</Badge>
+                          )}
+                        </TableCell>
+                        <TableCell className="py-1 text-xs">
+                          {donor.membershipType === 'recurring' && donor.monthlyAmount
+                            ? formatCurrencyEU(donor.monthlyAmount) + `/${t.donors.perMonth}`
+                            : '-'
+                          }
+                        </TableCell>
+                        {showIncompleteOnly && (
+                          <TableCell className="py-1">
+                            <div className="flex flex-wrap gap-1">
+                              {getMissingFields(donor).map(field => (
+                                <Badge key={field} variant="outline" className="text-amber-600 border-amber-300 text-xs py-0 px-1.5">
+                                  {field}
+                                </Badge>
+                              ))}
+                            </div>
+                          </TableCell>
+                        )}
+                        <TableCell className="text-right py-1">
+                          {donor.status === 'inactive' && (
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-9 w-9 text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50"
+                                  onClick={() => handleReactivate(donor)}
+                                  aria-label={t.donors.reactivate}
+                                >
+                                  <RotateCcw className="h-4 w-4" />
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent>{t.donors.reactivate}</TooltipContent>
+                            </Tooltip>
+                          )}
                           <Tooltip>
                             <TooltipTrigger asChild>
                               <Button
                                 variant="ghost"
                                 size="icon"
-                                className="h-9 w-9 text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50"
-                                onClick={() => handleReactivate(donor)}
-                                aria-label={t.donors.reactivate}
+                                className="h-9 w-9 text-muted-foreground hover:text-foreground hover:bg-muted/40"
+                                onClick={() => handleEdit(donor)}
+                                aria-label={t.donors.editDonor ?? 'Editar donant'}
                               >
-                                <RotateCcw className="h-4 w-4" />
+                                <Edit className="h-4 w-4" />
                               </Button>
                             </TooltipTrigger>
-                            <TooltipContent>{t.donors.reactivate}</TooltipContent>
+                            <TooltipContent>{t.donors.editDonor ?? 'Editar'}</TooltipContent>
                           </Tooltip>
-                        )}
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-9 w-9 text-muted-foreground hover:text-foreground hover:bg-muted/40"
-                              onClick={() => handleEdit(donor)}
-                              aria-label={t.donors.editDonor ?? 'Editar donant'}
-                            >
-                              <Edit className="h-4 w-4" />
-                            </Button>
-                          </TooltipTrigger>
-                          <TooltipContent>{t.donors.editDonor ?? 'Editar'}</TooltipContent>
-                        </Tooltip>
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-9 w-9 text-rose-600 hover:text-rose-700 hover:bg-rose-50"
-                              onClick={() => handleDeleteRequest(donor)}
-                              aria-label={t.donors.deleteDonor ?? 'Eliminar donant'}
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          </TooltipTrigger>
-                          <TooltipContent>{t.donors.deleteDonor ?? 'Eliminar'}</TooltipContent>
-                        </Tooltip>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                  {/* Skeleton loading state */}
-                  {isLoadingDonors && !donorsRaw && (
-                    Array.from({ length: 6 }).map((_, i) => (
-                      <TableRow key={`skeleton-${i}`}>
-                        <TableCell><Skeleton className="h-4 w-32" /></TableCell>
-                        <TableCell><Skeleton className="h-4 w-24" /></TableCell>
-                        <TableCell><Skeleton className="h-4 w-40" /></TableCell>
-                        <TableCell><Skeleton className="h-4 w-28" /></TableCell>
-                        <TableCell><Skeleton className="h-4 w-24" /></TableCell>
-                        {showIncompleteOnly && <TableCell><Skeleton className="h-4 w-20" /></TableCell>}
-                        <TableCell><Skeleton className="h-8 w-16" /></TableCell>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-9 w-9 text-rose-600 hover:text-rose-700 hover:bg-rose-50"
+                                onClick={() => handleDeleteRequest(donor)}
+                                aria-label={t.donors.deleteDonor ?? 'Eliminar donant'}
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>{t.donors.deleteDonor ?? 'Eliminar'}</TooltipContent>
+                          </Tooltip>
+                        </TableCell>
                       </TableRow>
-                    ))
-                  )}
-                  {/* Empty state (only when not loading) */}
-                  {!isLoadingDonors && (!filteredDonors || filteredDonors.length === 0) && (
-                    <TableRow>
-                      <TableCell colSpan={showIncompleteOnly ? 7 : 6} className="p-0">
-                        <EmptyState
-                          icon={searchQuery ? Search : Users}
-                          title={
-                            searchQuery
-                              ? (t.emptyStates?.donors?.noResults ?? t.donors.noSearchResults)
-                              : showIncompleteOnly
-                                ? (t.donors.noIncompleteData || "No hi ha donants amb dades incompletes")
-                                : showWithReturnsOnly
-                                  ? "No hi ha donants amb devolucions"
-                                  : (t.emptyStates?.donors?.noData ?? t.donors.noData)
-                          }
-                          description={
-                            searchQuery
-                              ? (t.emptyStates?.donors?.noResultsDesc ?? undefined)
-                              : !showIncompleteOnly && !showWithReturnsOnly
-                                ? (t.emptyStates?.donors?.noDataDesc ?? undefined)
-                                : undefined
-                          }
-                          className="border-0 rounded-none py-12"
-                        />
-                      </TableCell>
-                    </TableRow>
-                  )}
-                </TableBody>
-              </Table>
-            </div>
+                    ))}
+                    {/* Skeleton loading state */}
+                    {isLoadingDonors && !donorsRaw && (
+                      Array.from({ length: 6 }).map((_, i) => (
+                        <TableRow key={`skeleton-${i}`}>
+                          <TableCell><Skeleton className="h-4 w-32" /></TableCell>
+                          <TableCell><Skeleton className="h-4 w-24" /></TableCell>
+                          <TableCell><Skeleton className="h-4 w-40" /></TableCell>
+                          <TableCell><Skeleton className="h-4 w-28" /></TableCell>
+                          <TableCell><Skeleton className="h-4 w-24" /></TableCell>
+                          {showIncompleteOnly && <TableCell><Skeleton className="h-4 w-20" /></TableCell>}
+                          <TableCell><Skeleton className="h-8 w-16" /></TableCell>
+                        </TableRow>
+                      ))
+                    )}
+                    {/* Empty state (only when not loading) */}
+                    {!isLoadingDonors && (!filteredDonors || filteredDonors.length === 0) && (
+                      <TableRow>
+                        <TableCell colSpan={showIncompleteOnly ? 7 : 6} className="p-0">
+                          <EmptyState
+                            icon={searchQuery ? Search : Users}
+                            title={
+                              searchQuery
+                                ? (t.emptyStates?.donors?.noResults ?? t.donors.noSearchResults)
+                                : showIncompleteOnly
+                                  ? (t.donors.noIncompleteData || "No hi ha donants amb dades incompletes")
+                                  : showWithReturnsOnly
+                                    ? "No hi ha donants amb devolucions"
+                                    : (t.emptyStates?.donors?.noData ?? t.donors.noData)
+                            }
+                            description={
+                              searchQuery
+                                ? (t.emptyStates?.donors?.noResultsDesc ?? undefined)
+                                : !showIncompleteOnly && !showWithReturnsOnly
+                                  ? (t.emptyStates?.donors?.noDataDesc ?? undefined)
+                                  : undefined
+                            }
+                            className="border-0 rounded-none py-12"
+                          />
+                        </TableCell>
+                      </TableRow>
+                    )}
+                  </TableBody>
+                </Table>
+              </div>
+            )}
           </CardContent>
         </Card>
 

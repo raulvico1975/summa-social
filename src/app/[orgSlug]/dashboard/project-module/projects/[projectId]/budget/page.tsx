@@ -71,7 +71,17 @@ import {
   Compass,
   DollarSign,
   Upload,
+  MoreVertical,
+  Hash,
 } from 'lucide-react';
+import { useIsMobile } from '@/hooks/use-is-mobile';
+import { MobileListItem } from '@/components/mobile/mobile-list-item';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { useFirebase } from '@/firebase';
 import { useCurrentOrganization } from '@/hooks/organization-provider';
 import { doc, getDoc } from 'firebase/firestore';
@@ -247,6 +257,7 @@ export default function ProjectBudgetPage() {
   const { t } = useTranslations();
   const { firestore } = useFirebase();
   const { organizationId } = useCurrentOrganization();
+  const isMobile = useIsMobile();
 
   // Track page open
   React.useEffect(() => {
@@ -514,76 +525,139 @@ export default function ProjectBudgetPage() {
   const allowedDeviation = project.allowedDeviationPct ?? 10;
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 pb-24 md:pb-0">
       {/* Header */}
-      <div className="flex items-center gap-4">
-        <Link href={buildUrl('/dashboard/project-module/projects')}>
-          <Button variant="ghost" size="icon" title={t.projectModule?.backToProjects ?? 'Tornar a projectes'}>
-            <ArrowLeft className="h-4 w-4" />
-          </Button>
-        </Link>
-        <div className="flex-1">
-          <h1 className="text-2xl font-bold">Gestió Econòmica</h1>
-          <p className="text-muted-foreground">
-            {project.name} {project.code && `(${project.code})`}
-          </p>
+      <div className="flex flex-col gap-3 md:flex-row md:items-center md:gap-4">
+        <div className="flex items-center gap-3 flex-1 min-w-0">
+          <Link href={buildUrl('/dashboard/project-module/projects')}>
+            <Button variant="ghost" size="icon" title={t.projectModule?.backToProjects ?? 'Tornar a projectes'}>
+              <ArrowLeft className="h-4 w-4" />
+            </Button>
+          </Link>
+          <div className="min-w-0">
+            <h1 className="text-xl md:text-2xl font-bold truncate">Gestió Econòmica</h1>
+            <p className="text-muted-foreground text-sm truncate">
+              {project.name} {project.code && `(${project.code})`}
+            </p>
+          </div>
         </div>
-        <div className="flex gap-2">
-          <Button
-            onClick={() => {
-              trackUX('budget.justification.open', { projectId });
-              setJustificationModalOpen(true);
-            }}
-          >
-            <Compass className="h-4 w-4 mr-2" />
-            Iniciar justificació
-          </Button>
-          <Button
-            variant="outline"
-            size="icon"
-            onClick={handleViewExpenses}
-            title={t.projectModule?.viewExpensesTooltip ?? 'Veure despeses del projecte'}
-          >
-            <Eye className="h-4 w-4" />
-          </Button>
-          <Button
-            variant="outline"
-            size="icon"
-            onClick={handleExportFunding}
-            disabled={isExportingFunding || expensesLoading || projectAssignmentsCount === 0}
-            title={t.projectModule?.exportExcel ?? 'Exportar justificació (Excel)'}
-          >
-            {isExportingFunding ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
-            ) : (
-              <Download className="h-4 w-4" />
-            )}
-          </Button>
-          <Button
-            variant="outline"
-            size="icon"
-            onClick={handleExportZip}
-            disabled={isExportingZip || expensesLoading || projectAssignmentsCount === 0}
-            title={t.projectModule?.downloadAttachments ?? 'Baixar comprovants (ZIP)'}
-          >
-            {isExportingZip ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
-            ) : (
-              <FileArchive className="h-4 w-4" />
-            )}
-          </Button>
-          <Button
-            variant="outline"
-            size="icon"
-            onClick={() => setImportWizardOpen(true)}
-            title={t.projectModule?.importBudget ?? 'Importar pressupost (Excel)'}
-          >
-            <Upload className="h-4 w-4" />
-          </Button>
-          <Button variant="outline" size="icon" onClick={openNew} title={t.projectModule?.addBudgetLine ?? 'Afegir partida'}>
-            <Plus className="h-4 w-4" />
-          </Button>
-        </div>
+
+        {/* Actions - Mobile: stacked, Desktop: row */}
+        {isMobile ? (
+          <div className="flex flex-col gap-2">
+            <Button
+              className="w-full"
+              onClick={() => {
+                trackUX('budget.justification.open', { projectId });
+                setJustificationModalOpen(true);
+              }}
+            >
+              <Compass className="h-4 w-4 mr-2" />
+              Iniciar justificació
+            </Button>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" className="w-full">
+                  <MoreVertical className="h-4 w-4 mr-2" />
+                  Més accions
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-56">
+                <DropdownMenuItem onClick={handleViewExpenses}>
+                  <Eye className="mr-2 h-4 w-4" />
+                  {t.projectModule?.viewExpensesTooltip ?? 'Veure despeses'}
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  onClick={handleExportFunding}
+                  disabled={isExportingFunding || expensesLoading || projectAssignmentsCount === 0}
+                >
+                  {isExportingFunding ? (
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  ) : (
+                    <Download className="mr-2 h-4 w-4" />
+                  )}
+                  {t.projectModule?.exportExcel ?? 'Exportar Excel'}
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  onClick={handleExportZip}
+                  disabled={isExportingZip || expensesLoading || projectAssignmentsCount === 0}
+                >
+                  {isExportingZip ? (
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  ) : (
+                    <FileArchive className="mr-2 h-4 w-4" />
+                  )}
+                  {t.projectModule?.downloadAttachments ?? 'Baixar comprovants'}
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setImportWizardOpen(true)}>
+                  <Upload className="mr-2 h-4 w-4" />
+                  {t.projectModule?.importBudget ?? 'Importar pressupost'}
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={openNew}>
+                  <Plus className="mr-2 h-4 w-4" />
+                  {t.projectModule?.addBudgetLine ?? 'Afegir partida'}
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
+        ) : (
+          <div className="flex gap-2">
+            <Button
+              onClick={() => {
+                trackUX('budget.justification.open', { projectId });
+                setJustificationModalOpen(true);
+              }}
+            >
+              <Compass className="h-4 w-4 mr-2" />
+              Iniciar justificació
+            </Button>
+            <Button
+              variant="outline"
+              size="icon"
+              onClick={handleViewExpenses}
+              title={t.projectModule?.viewExpensesTooltip ?? 'Veure despeses del projecte'}
+            >
+              <Eye className="h-4 w-4" />
+            </Button>
+            <Button
+              variant="outline"
+              size="icon"
+              onClick={handleExportFunding}
+              disabled={isExportingFunding || expensesLoading || projectAssignmentsCount === 0}
+              title={t.projectModule?.exportExcel ?? 'Exportar justificació (Excel)'}
+            >
+              {isExportingFunding ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Download className="h-4 w-4" />
+              )}
+            </Button>
+            <Button
+              variant="outline"
+              size="icon"
+              onClick={handleExportZip}
+              disabled={isExportingZip || expensesLoading || projectAssignmentsCount === 0}
+              title={t.projectModule?.downloadAttachments ?? 'Baixar comprovants (ZIP)'}
+            >
+              {isExportingZip ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <FileArchive className="h-4 w-4" />
+              )}
+            </Button>
+            <Button
+              variant="outline"
+              size="icon"
+              onClick={() => setImportWizardOpen(true)}
+              title={t.projectModule?.importBudget ?? 'Importar pressupost (Excel)'}
+            >
+              <Upload className="h-4 w-4" />
+            </Button>
+            <Button variant="outline" size="icon" onClick={openNew} title={t.projectModule?.addBudgetLine ?? 'Afegir partida'}>
+              <Plus className="h-4 w-4" />
+            </Button>
+          </div>
+        )}
       </div>
 
       {/* Resum */}
@@ -759,6 +833,86 @@ export default function ProjectBudgetPage() {
                 {t.projectModule?.addBudgetLine ?? 'Afegir partida'}
               </Button>
             </div>
+          ) : isMobile ? (
+            <div className="flex flex-col gap-2 p-3">
+              {budgetLines.map((line) => {
+                const executed = executionByLine.get(line.id) ?? 0;
+                const pending = line.budgetedAmountEUR - executed;
+                const percentExec = line.budgetedAmountEUR > 0 ? (executed / line.budgetedAmountEUR) * 100 : 0;
+                const maxAllowed = line.budgetedAmountEUR * (1 + allowedDeviation / 100);
+                const isOverspend = executed > maxAllowed;
+                const hasNoExecution = executed === 0;
+                const showOverspend = pending < 0;
+
+                return (
+                  <MobileListItem
+                    key={line.id}
+                    title={line.name}
+                    leadingIcon={
+                      line.code ? (
+                        <span className="text-xs font-mono text-muted-foreground">{line.code}</span>
+                      ) : (
+                        <Hash className="h-4 w-4 text-muted-foreground" />
+                      )
+                    }
+                    badges={[
+                      hasNoExecution ? (
+                        <Badge key="status" variant="outline" className="bg-blue-50 text-blue-700 border-blue-200 text-xs">
+                          <Info className="h-2.5 w-2.5 mr-0.5" />
+                          Sense exec.
+                        </Badge>
+                      ) : isOverspend ? (
+                        <Badge key="status" variant="outline" className="bg-yellow-50 text-yellow-700 border-yellow-200 text-xs">
+                          <AlertTriangle className="h-2.5 w-2.5 mr-0.5" />
+                          ALERTA
+                        </Badge>
+                      ) : (
+                        <Badge key="status" variant="outline" className="bg-green-50 text-green-700 border-green-200 text-xs">
+                          <CheckCircle className="h-2.5 w-2.5 mr-0.5" />
+                          OK
+                        </Badge>
+                      )
+                    ]}
+                    meta={[
+                      { label: 'Pres.', value: formatAmount(line.budgetedAmountEUR) },
+                      { label: 'Exec.', value: formatAmount(executed) },
+                      { value: formatPercent(percentExec) },
+                      ...(showOverspend
+                        ? [{ value: <span className="text-red-600 font-medium">+{formatAmount(Math.abs(pending))}</span> }]
+                        : []),
+                    ]}
+                    actions={
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8"
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            <MoreVertical className="h-4 w-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuItem onClick={() => openEdit(line)}>
+                            <Pencil className="mr-2 h-4 w-4" />
+                            Editar
+                          </DropdownMenuItem>
+                          <DropdownMenuItem
+                            onClick={() => setDeleteConfirm(line)}
+                            className="text-destructive"
+                          >
+                            <Trash2 className="mr-2 h-4 w-4" />
+                            Eliminar
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    }
+                    onClick={() => handleRowClick(line)}
+                  />
+                );
+              })}
+            </div>
           ) : (
             <Table>
               <TableHeader>
@@ -881,16 +1035,15 @@ export default function ProjectBudgetPage() {
       <AlertDialog open={!!deleteConfirm} onOpenChange={(open) => !open && setDeleteConfirm(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Eliminar partida</AlertDialogTitle>
+            <AlertDialogTitle>{t.projectModule.deleteBudgetLine}</AlertDialogTitle>
             <AlertDialogDescription>
-              Estàs segur que vols eliminar la partida &quot;{deleteConfirm?.name}&quot;?
-              Aquesta acció no es pot desfer.
+              {t.projectModule.deleteBudgetLineConfirm.replace('{name}', deleteConfirm?.name || '')}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancel·lar</AlertDialogCancel>
+            <AlertDialogCancel>{t.common.cancel}</AlertDialogCancel>
             <AlertDialogAction onClick={handleDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
-              Eliminar
+              {t.common.delete}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

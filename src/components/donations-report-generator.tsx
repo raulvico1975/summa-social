@@ -24,7 +24,7 @@ import {
   AlertDescription,
   AlertTitle,
 } from '@/components/ui/alert';
-import { Download, Loader2, Heart, Undo2 } from 'lucide-react';
+import { Download, Loader2, Heart, Undo2, User, MoreVertical } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import {
   Tooltip,
@@ -40,6 +40,11 @@ import { useCollection, useFirebase, useMemoFirebase } from '@/firebase';
 import { collection } from 'firebase/firestore';
 import { useTranslations } from '@/i18n';
 import { useCurrentOrganization } from '@/hooks/organization-provider';
+import { useIsMobile } from '@/hooks/use-is-mobile';
+import { MobileListItem } from '@/components/mobile/mobile-list-item';
+import { Skeleton } from '@/components/ui/skeleton';
+import { cn } from '@/lib/utils';
+import { MOBILE_ACTIONS_BAR, MOBILE_CTA_PRIMARY } from '@/lib/ui/mobile-actions';
 
 // Mapa de codis de província per a Model 182
 const PROVINCE_CODES: Record<string, string> = {
@@ -150,6 +155,7 @@ export function DonationsReportGenerator() {
   const { firestore } = useFirebase();
   const { organizationId } = useCurrentOrganization();
   const { t } = useTranslations();
+  const isMobile = useIsMobile();
 
   const transactionsQuery = useMemoFirebase(
     () => organizationId ? collection(firestore, 'organizations', organizationId, 'transactions') : null,
@@ -389,22 +395,24 @@ export function DonationsReportGenerator() {
                 </CardTitle>
                 <CardDescription>{t.reports.donationsReportDescription}</CardDescription>
               </div>
-              <div className="flex gap-2">
-                <Select value={selectedYear} onValueChange={setSelectedYear}>
-                    <SelectTrigger className="w-[180px]">
-                        <SelectValue placeholder={t.reports.selectYear} />
-                    </SelectTrigger>
-                    <SelectContent>
-                        {availableYears.map(year => (
-                            <SelectItem key={year} value={String(year)}>{year}</SelectItem>
-                        ))}
-                    </SelectContent>
-                </Select>
-                <Button onClick={handleGenerateReport} disabled={isLoading}>
-                    {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                    {t.reports.generate}
-                </Button>
-                <Button variant="outline" onClick={handleExportExcel} disabled={reportData.length === 0}>
+              <div className={cn(MOBILE_ACTIONS_BAR, "sm:justify-end")}>
+                <div className="flex gap-2 w-full sm:w-auto">
+                  <Select value={selectedYear} onValueChange={setSelectedYear}>
+                      <SelectTrigger className="w-[120px] sm:w-[180px]">
+                          <SelectValue placeholder={t.reports.selectYear} />
+                      </SelectTrigger>
+                      <SelectContent>
+                          {availableYears.map(year => (
+                              <SelectItem key={year} value={String(year)}>{year}</SelectItem>
+                          ))}
+                      </SelectContent>
+                  </Select>
+                  <Button onClick={handleGenerateReport} disabled={isLoading} className="flex-1 sm:flex-none">
+                      {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                      {t.reports.generate}
+                  </Button>
+                </div>
+                <Button variant="outline" onClick={handleExportExcel} disabled={reportData.length === 0} className={MOBILE_CTA_PRIMARY}>
                     <Download className="mr-2 h-4 w-4" />
                     {t.reports.exportExcel}
                 </Button>
@@ -454,73 +462,128 @@ export function DonationsReportGenerator() {
             )}
 
             {/* ═══════════════════════════════════════════════════════════════════
-                TAULA DE DONANTS
+                TAULA DE DONANTS (Desktop) / LLISTA (Mobile)
                 ═══════════════════════════════════════════════════════════════════ */}
-            <div className="rounded-md border">
-            <TooltipProvider>
-            <Table>
-                <TableHeader>
-                <TableRow>
-                    <TableHead>{t.reports.donorName}</TableHead>
-                    <TableHead>{t.reports.donorTaxId}</TableHead>
-                    <TableHead>{t.reports.donorZipCode}</TableHead>
-                    <TableHead className="text-right">{t.reports.totalAmount}</TableHead>
-                    {reportStats?.excludedReturns ? (
-                      <TableHead className="text-right text-orange-600">{t.reports.columnDiscounted}</TableHead>
-                    ) : null}
-                </TableRow>
-                </TableHeader>
-                <TableBody>
-                {reportData.map((row) => (
-                    <TableRow key={row.donorTaxId}>
-                      <TableCell className="font-medium">
+            {isMobile ? (
+              <div className="space-y-2">
+                {isLoading ? (
+                  <>
+                    {[1, 2, 3].map((i) => (
+                      <div key={i} className="border border-border/50 rounded-lg p-3">
+                        <Skeleton className="h-4 w-3/4 mb-2" />
+                        <Skeleton className="h-3 w-1/2" />
+                      </div>
+                    ))}
+                  </>
+                ) : reportData.length === 0 ? (
+                  <div className="text-center text-muted-foreground py-8">
+                    {t.reports.noData}
+                  </div>
+                ) : (
+                  reportData.map((row) => (
+                    <MobileListItem
+                      key={row.donorTaxId}
+                      leadingIcon={<User className="h-4 w-4" />}
+                      title={
                         <span className="flex items-center gap-2">
                           {row.donorName}
                           {row.returnedAmount > 0 && (
-                            <Tooltip>
-                              <TooltipTrigger asChild>
-                                <Badge variant="outline" className="text-orange-600 border-orange-300 bg-orange-50 text-xs px-1.5 py-0">
-                                  Dev.
-                                </Badge>
-                              </TooltipTrigger>
-                              <TooltipContent>
-                                <p>Aquest donant té devolucions aquest any.</p>
-                                <p className="text-xs text-muted-foreground">Import net ja ajustat.</p>
-                              </TooltipContent>
-                            </Tooltip>
+                            <Badge variant="outline" className="text-orange-600 border-orange-300 bg-orange-50 text-xs px-1.5 py-0">
+                              Dev.
+                            </Badge>
                           )}
                         </span>
-                      </TableCell>
-                      <TableCell>{row.donorTaxId}</TableCell>
-                      <TableCell>{row.donorZipCode}</TableCell>
-                      <TableCell className="text-right font-mono text-green-600 font-medium">
-                        {formatCurrencyEU(row.totalAmount)}
-                      </TableCell>
-                      {reportStats?.excludedReturns ? (
-                        <TableCell className="text-right font-mono text-orange-500">
-                          {row.returnedAmount > 0 ? (
-                            <span className="flex items-center justify-end gap-1">
+                      }
+                      meta={[
+                        { label: 'NIF', value: row.donorTaxId },
+                        { label: 'CP', value: row.donorZipCode },
+                        {
+                          value: (
+                            <span className="font-mono text-green-600 font-medium">
+                              {formatCurrencyEU(row.totalAmount)}
+                            </span>
+                          )
+                        },
+                        ...(row.returnedAmount > 0 ? [{
+                          value: (
+                            <span className="flex items-center gap-1 font-mono text-orange-500">
                               <Undo2 className="h-3 w-3" />
                               -{formatCurrencyEU(row.returnedAmount)}
                             </span>
-                          ) : (
-                            <span className="text-muted-foreground">—</span>
-                          )}
-                        </TableCell>
-                      ) : null}
-                    </TableRow>
-                ))}
-                {reportData.length === 0 && (
-                    <TableRow>
-                        <TableCell colSpan={reportStats?.excludedReturns ? 5 : 4} className="text-center text-muted-foreground h-24">
-                           {isLoading ? t.reports.generating : t.reports.noData}
-                        </TableCell>
-                    </TableRow>
+                          )
+                        }] : [])
+                      ]}
+                    />
+                  ))
                 )}
-                </TableBody>
-            </Table>
-            </TooltipProvider>
-            </div>
+              </div>
+            ) : (
+              <div className="rounded-md border">
+              <TooltipProvider>
+              <Table>
+                  <TableHeader>
+                  <TableRow>
+                      <TableHead>{t.reports.donorName}</TableHead>
+                      <TableHead>{t.reports.donorTaxId}</TableHead>
+                      <TableHead>{t.reports.donorZipCode}</TableHead>
+                      <TableHead className="text-right">{t.reports.totalAmount}</TableHead>
+                      {reportStats?.excludedReturns ? (
+                        <TableHead className="text-right text-orange-600">{t.reports.columnDiscounted}</TableHead>
+                      ) : null}
+                  </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                  {reportData.map((row) => (
+                      <TableRow key={row.donorTaxId}>
+                        <TableCell className="font-medium">
+                          <span className="flex items-center gap-2">
+                            {row.donorName}
+                            {row.returnedAmount > 0 && (
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <Badge variant="outline" className="text-orange-600 border-orange-300 bg-orange-50 text-xs px-1.5 py-0">
+                                    Dev.
+                                  </Badge>
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                  <p>Aquest donant té devolucions aquest any.</p>
+                                  <p className="text-xs text-muted-foreground">Import net ja ajustat.</p>
+                                </TooltipContent>
+                              </Tooltip>
+                            )}
+                          </span>
+                        </TableCell>
+                        <TableCell>{row.donorTaxId}</TableCell>
+                        <TableCell>{row.donorZipCode}</TableCell>
+                        <TableCell className="text-right font-mono text-green-600 font-medium">
+                          {formatCurrencyEU(row.totalAmount)}
+                        </TableCell>
+                        {reportStats?.excludedReturns ? (
+                          <TableCell className="text-right font-mono text-orange-500">
+                            {row.returnedAmount > 0 ? (
+                              <span className="flex items-center justify-end gap-1">
+                                <Undo2 className="h-3 w-3" />
+                                -{formatCurrencyEU(row.returnedAmount)}
+                              </span>
+                            ) : (
+                              <span className="text-muted-foreground">—</span>
+                            )}
+                          </TableCell>
+                        ) : null}
+                      </TableRow>
+                  ))}
+                  {reportData.length === 0 && (
+                      <TableRow>
+                          <TableCell colSpan={reportStats?.excludedReturns ? 5 : 4} className="text-center text-muted-foreground h-24">
+                             {isLoading ? t.reports.generating : t.reports.noData}
+                          </TableCell>
+                      </TableRow>
+                  )}
+                  </TableBody>
+              </Table>
+              </TooltipProvider>
+              </div>
+            )}
 
             {/* ═══════════════════════════════════════════════════════════════════
                 NOTA LEGAL

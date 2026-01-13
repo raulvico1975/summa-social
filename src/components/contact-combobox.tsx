@@ -4,6 +4,7 @@ import * as React from 'react';
 import { Check, ChevronsUpDown, Heart, Building2, UserPlus, Users } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
+import { SummaTooltip } from '@/components/ui/summa-tooltip';
 import { useTranslations } from '@/i18n';
 import {
   Command,
@@ -19,6 +20,16 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from '@/components/ui/popover';
+
+/**
+ * Helper: middle ellipsis per a noms llargs
+ * Mostra primers 18 caràcters + … + últims 10
+ */
+function middleEllipsis(s: string, head = 18, tail = 10): string {
+  if (!s) return s;
+  if (s.length <= head + tail + 1) return s;
+  return `${s.slice(0, head)}…${s.slice(-tail)}`;
+}
 
 export interface Contact {
   id: string;
@@ -114,9 +125,11 @@ export const ContactCombobox = React.memo(function ContactCombobox({
             ) : (
               <Building2 className="h-3 w-3 text-blue-500 shrink-0" />
             )}
-            <span className="text-[13px] truncate max-w-[90px]" title={selectedContact.name}>
-              {selectedContact.name}
-            </span>
+            <SummaTooltip content={selectedContact.name}>
+              <span className="text-[13px] max-w-[220px]">
+                {middleEllipsis(selectedContact.name)}
+              </span>
+            </SummaTooltip>
             <ChevronsUpDown className="h-3 w-3 text-muted-foreground ml-1" />
           </Button>
         ) : (

@@ -1,6 +1,6 @@
 # ═══════════════════════════════════════════════════════════════════════════════
 # SUMMA SOCIAL - REFERÈNCIA COMPLETA DEL PROJECTE
-# Versió 1.28 - Gener 2026
+# Versió 1.30 - Gener 2026
 # ═══════════════════════════════════════════════════════════════════════════════
 
 
@@ -119,6 +119,16 @@ Per a les properes versions, Summa Social se centra en **dos blocs principals**:
 | **Regles deterministes** | Categorització automàtica per patrons de text (loteria, voluntariat) | ✅ Implementat v1.12 |
 | **Gestió de devolucions** | Importador de fitxers del banc, remeses parcials | ✅ Implementat v1.8 |
 
+#### Invariant de comptes bancaris
+
+- Cada organització ha de tenir sempre almenys 1 compte bancari actiu.
+- El sistema no permet:
+  - eliminar l'últim compte actiu,
+  - desactivar-lo,
+  - importar extractes sense compte assignat.
+- Tots els moviments bancaris pertanyen sempre a un compte (`bankAccountId` obligatori).
+- El dedupe i els avisos de solapament són per compte bancari, no globals.
+
 ### Bloc 2: Fiscalitat Fina Orientada a Gestoria
 
 | Funcionalitat | Descripció | Estat |
@@ -127,6 +137,51 @@ Per a les properes versions, Summa Social se centra en **dos blocs principals**:
 | **Consolidació anual** | Import total per donant/proveïdor amb devolucions aplicades | ✅ Implementat |
 | **Excel net per gestoria** | Format estàndard Model 182 amb recurrència | ✅ Implementat v1.7 |
 | **Importador Stripe** | Dividir remeses Stripe amb traçabilitat completa (donacions + comissions) | ✅ Implementat v1.9 |
+
+### Invariants Fiscals (A1-A3)
+
+El sistema garanteix les següents invariants per assegurar la integritat de les dades fiscals:
+
+#### A1: contactId segons tipus de transacció
+
+| Tipus | contactId |
+|-------|-----------|
+| `transactionType === 'return'` | **OBLIGATORI** |
+| `source === 'remittance'` + `amount > 0` (quotes IN) | **OBLIGATORI** |
+| `source === 'stripe'` + `transactionType === 'donation'` | Opcional (no fiscal fins assignació) |
+| `transactionType === 'fee'` | **MAI** (sempre null) |
+
+**Nota sobre Stripe:** Les donacions Stripe sense `contactId` es creen però queden excloses automàticament de Model 182, certificats de donació i càlcul de net per donant fins que l'usuari assigni un donant manualment.
+
+#### A2: Coherència de signes (amount)
+
+| Tipus | amount |
+|-------|--------|
+| `transactionType === 'return'` | `< 0` (sempre negatiu) |
+| `transactionType === 'donation'` | `> 0` (sempre positiu) |
+| `transactionType === 'fee'` | `< 0` (sempre negatiu) |
+
+#### A3: Estat del donant no bloqueja fiscal
+
+L'estat del donant (`inactive`, `pending_return`, `archived`, `deleted`) **NO bloqueja** la imputació fiscal si existeix `contactId`. L'estat només afecta l'operativa interna, no el dret fiscal.
+
+#### Notes de robustesa
+
+- **Reimports:** Idempotents per `bankAccountId` + `importRuns`
+- **Multiusuari:** Processaments protegits amb lock per `parentTxId`
+- **Eliminació accidental:** Soft-delete per transaccions fiscals (return, remittance)
+
+#### Punts de validació
+
+Les invariants es validen abans d'escriure qualsevol transacció fiscal a Firestore:
+- `useReturnImporter.ts` (creació de filles return)
+- `StripeImporter.tsx` (creació de donacions i comissions)
+- `remittance-splitter.tsx` (divisió de remeses)
+
+**Comportament en violació:**
+1. Llençar Error amb missatge descriptiu
+2. Reportar SystemIncident amb `type='INVARIANT_BROKEN'`, `severity='CRITICAL'`
+3. Abortar l'operació d'escriptura
 
 ### Criteri de Priorització
 
@@ -511,25 +566,35 @@ organizations/
 # 3. FUNCIONALITATS DETALLADES
 # ═══════════════════════════════════════════════════════════════════════════════
 
-## 3.1 DASHBOARD (ACTUALITZAT v1.20)
+## 3.1 DASHBOARD (ACTUALITZAT v1.30)
 
-### 3.1.1 Targetes Principals (StatCards)
+### 3.1.1 Bloc "Diners" (veritat bancària)
+
+Dataset: `filteredTransactions` — només apunts bancaris reals (ledger).
 
 | Targeta | Càlcul |
 |---------|--------|
 | **Ingressos** | Suma moviments amount > 0 |
-| **Despeses operatives** | Suma amount < 0 EXCLOENT contraparts |
-| **Balanç operatiu** | Ingressos - Despeses operatives |
-| **Transferències a contraparts** | Suma isCounterpartTransfer = true |
+| **Despeses operatives** | Suma amount < 0 EXCLOENT transferències a terreny |
+| **Terreny (Transferències)** | Suma `category === 'missionTransfers'` |
+| **Saldo operatiu** | Ingressos + Despeses + Terreny |
 
-### 3.1.2 Bloc Donacions i Socis
+### 3.1.2 Bloc "Qui ens sosté" (veritat relacional) — ACTUALITZAT v1.30
 
-| Mètrica | Comparativa |
-|---------|-------------|
-| Donacions | vs any anterior |
-| Donants actius | vs any anterior |
-| Socis actius | vs any anterior |
-| Quotes socis | vs any anterior |
+Dataset: `socialMetricsTxs` — transaccions amb `contactId`, inclou fills de remesa.
+
+| Mètrica | Descripció | Comparativa |
+|---------|------------|-------------|
+| **Quotes de socis** | Import de contactes `membershipType='recurring'` | vs any anterior |
+| **Donacions puntuals** | Import de contactes `membershipType='one-time'` | vs any anterior |
+| **Altres ingressos** | Residual: Ingressos - Quotes - Donacions | — |
+| **Socis actius** | Contactes recurring amb moviments al període | vs any anterior |
+| **Donants actius** | Contactes one-time amb moviments al període | vs any anterior |
+
+**Nota reconciliació (v1.30):**
+- El KPI "Altres ingressos" només es mostra si el valor és > 0.
+- Inclou: subvencions, loteria, reintegraments, interessos, ingressos sense contacte.
+- Objectiu: el gestor pot reconciliar mentalment Dashboard amb extracte bancari.
 
 ### 3.1.3 Bloc Obligacions Fiscals
 
@@ -850,6 +915,117 @@ Els 4 blocs de resum (Total, Trobats, Nous amb DNI, Nous sense DNI) ara són bad
 - Classes: `w-[95vw] max-w-[1400px] h-[90vh] flex flex-col`
 - Taula: `flex-1 min-h-0 overflow-auto`
 - Header taula: `sticky top-0 bg-background z-10`
+
+### 3.3.8 Matching de Remeses: Criteris, Exclusions i Traçabilitat (NOU v1.28)
+
+#### Problema resolt
+
+Abans de v1.28, el motor de matching de remeses tenia tres problemes:
+
+1. **Donants fantasma**: Contactes arxivats o eliminats apareixien com a match i es recreaven
+2. **Falsos positius numèrics**: Referències bancàries (ex: "123456") feien match per nom amb donants que tenien números al nom
+3. **Manca de traçabilitat**: No era possible saber com s'havia fet el match (IBAN, DNI o Nom)
+
+#### Pre-filtrat obligatori
+
+Abans de fer qualsevol matching, el sistema filtra els candidats amb:
+
+```
+filterActiveContacts(contacts):
+  - Exclou contactes amb archivedAt (arxivats)
+  - Exclou contactes amb deletedAt (eliminats soft)
+  - Exclou contactes amb status === 'inactive'
+```
+
+**Invariant:** Només contactes actius entren al motor de matching.
+
+#### Ordre de matching (prioritat)
+
+| Prioritat | Camp | Criteri | Fiabilitat |
+|-----------|------|---------|------------|
+| **1** | IBAN | Exacte, normalitzat (sense espais, majúscules) | Màxima |
+| **2** | DNI/NIE/CIF | Validació fiscal real (`isValidSpanishTaxId()`) | Alta |
+| **3** | Nom | Tots els tokens del CSV existeixen al donant | Mitjana |
+
+#### Bloqueig de noms numèrics
+
+El matching per nom es desactiva si:
+- El nom del CSV és purament numèric (ex: "123456", "00123")
+- El nom del donant és purament numèric
+
+**Funció:** `isNumericLikeName(str)` → `true` si només conté dígits després d'eliminar espais i guions.
+
+**Exemple:**
+| Valor CSV | Match per nom? |
+|-----------|----------------|
+| "MARIA GARCIA" | ✓ Sí |
+| "123456" | ✗ No (bloquejat) |
+| "GARCIA-123" | ✓ Sí |
+
+#### Traçabilitat del match
+
+Cada match inclou:
+
+| Camp | Tipus | Descripció |
+|------|-------|------------|
+| `matchMethod` | `'iban' \| 'taxId' \| 'name' \| null` | Com s'ha trobat el match |
+| `matchValueMasked` | `string` | Valor emmascarament per auditoria |
+
+**Format del valor emmascarament:**
+
+| Mètode | Format | Exemple |
+|--------|--------|---------|
+| IBAN | Últims 4 dígits | `···1234` |
+| DNI | Últims 3 caràcters | `···78Z` |
+| Nom | Primers 2 tokens | `Maria Garcia` |
+
+#### Visualització a la UI
+
+El badge de match mostra el mètode i el valor:
+
+```
+[✓ Trobat] Maria García López [IBAN ···1234]
+[✓ Trobat] Juan Pérez [DNI ···45X]
+[✓ Trobat] Ana López [Nom Ana López]
+```
+
+Colors del badge:
+- **Verd** (`text-green-600`): Match actiu
+- **Ambre** (`text-amber-600`): Match inactiu (donant de baixa)
+
+#### Comportament amb donants arxivats
+
+- **Mai es fan servir per matching** (pre-filtrat obligatori)
+- Si una remesa antiga apunta a un donant que posteriorment s'ha arxivat:
+  - La filla manté el `contactId` (històric)
+  - Però el Model 182 ja no el compta (donant inactiu)
+- Si es reprocessa una remesa:
+  - El donant arxivat no apareix com a candidat
+  - La fila queda com "pendent" o "nou"
+
+#### Impacte funcional
+
+| Problema | Solució |
+|----------|---------|
+| Duplicats fantasma | Eliminats pel pre-filtrat |
+| Recreació incorrecta de donants | El donant arxivat no fa match |
+| Auditoria impossible | Badge amb mètode + valor emmascarament |
+| Neteges "començar de zero" | Compatible: arxivar tots no afecta futures remeses |
+
+#### Fitxers clau
+
+| Fitxer | Funció |
+|--------|--------|
+| `src/lib/contacts/filterActiveContacts.ts` | Helper centralitzat amb `filterActiveContacts()`, `isNumericLikeName()`, `maskMatchValue()` |
+| `src/components/transactions-table.tsx` | Aplica `filterActiveContacts()` als donants del llistat |
+| `src/components/remittance-splitter.tsx` | Aplica `filterActiveContacts()` abans de matching + UI de badges |
+
+#### Invariants fixats
+
+1. **Només contactes actius** entren al motor de matching
+2. **Cap match per nom** si el valor no és semàntic (numèric)
+3. **Tot match és explicable** visualment amb mètode i valor
+4. **El filtratge és centralitzat** (un sol helper per a tota l'app)
 
 
 ## 3.4 GESTIÓ DE DEVOLUCIONS (NOU v1.8)
@@ -3282,6 +3458,91 @@ Contingut ample (com `TransactionsTable` amb `min-w-[600px]`) pot expandir el co
 - El bloc dreta (`shrink-0`) mai es comprimeix ni desapareix
 - Les icones d'ajuda i notificacions són sempre accessibles
 
+### 7.5.10 Adaptació Mòbil (NOU v1.29)
+
+**Detecció de dispositiu:**
+```tsx
+import { useIsMobile } from '@/hooks/use-mobile';
+const isMobile = useIsMobile();
+```
+
+**Patrons obligatoris per a pantalles mòbils:**
+
+| Situació | Patró Desktop | Patró Mòbil |
+|----------|---------------|-------------|
+| **Barra d'accions amb múltiples botons** | Tots els botons visibles | CTA principal (`w-full`) + DropdownMenu "Més accions" |
+| **Tabs de navegació** | `<TabsList>` amb `<TabsTrigger>` | `<Select>` amb les mateixes opcions |
+| **Taules de dades** | `<Table>` amb columnes | `<MobileListItem>` amb title, badges, meta i actions |
+| **Filtres múltiples** | Botons en línia | `<Select>` per cada grup de filtres |
+| **Zona de perill** | Card sempre visible | `<Accordion>` col·lapsable |
+
+**Exemple - Barra d'accions mòbil:**
+```tsx
+{isMobile ? (
+  <div className="flex flex-col gap-2">
+    <Button onClick={handlePrimaryAction} className="w-full">
+      <Plus className="h-4 w-4 mr-2" />
+      {t.primaryAction}
+    </Button>
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <Button variant="outline" className="w-full">
+          <MoreVertical className="h-4 w-4 mr-2" />
+          Més accions
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end">
+        <DropdownMenuItem onClick={handleSecondaryAction}>
+          {t.secondaryAction}
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
+  </div>
+) : (
+  <div className="flex items-center gap-2">
+    {/* Tots els botons visibles */}
+  </div>
+)}
+```
+
+**Exemple - Tabs → Select:**
+```tsx
+const [activeTab, setActiveTab] = useState<string>('tab1');
+
+<Tabs value={activeTab} onValueChange={setActiveTab}>
+  {isMobile ? (
+    <Select value={activeTab} onValueChange={setActiveTab}>
+      <SelectTrigger className="w-full">
+        <SelectValue />
+      </SelectTrigger>
+      <SelectContent>
+        <SelectItem value="tab1">{t.tab1Label}</SelectItem>
+        <SelectItem value="tab2">{t.tab2Label}</SelectItem>
+      </SelectContent>
+    </Select>
+  ) : (
+    <TabsList>
+      <TabsTrigger value="tab1">{t.tab1Label}</TabsTrigger>
+      <TabsTrigger value="tab2">{t.tab2Label}</TabsTrigger>
+    </TabsList>
+  )}
+  <TabsContent value="tab1">...</TabsContent>
+  <TabsContent value="tab2">...</TabsContent>
+</Tabs>
+```
+
+**Espai per FAB (Floating Action Button):**
+Quan hi ha un FAB a la pàgina, afegir `pb-24 md:pb-0` al contenidor principal per evitar col·lisions amb el contingut.
+
+**Fitxers principals adaptats (v1.29):**
+- `src/app/[orgSlug]/dashboard/project-module/expenses/page.tsx`
+- `src/app/[orgSlug]/dashboard/project-module/projects/[projectId]/budget/page.tsx`
+- `src/app/[orgSlug]/dashboard/super-admin/page.tsx`
+- `src/app/admin/page.tsx`
+- `src/components/danger-zone.tsx`
+- `src/components/admin/product-updates-section.tsx`
+- `src/components/super-admin/i18n-manager.tsx`
+
 ## 7.6 Onboarding / Benvinguda Inicial (ACTUALITZAT v1.20)
 
 ### Objectiu
@@ -3475,6 +3736,15 @@ Indicadors que requeririen intervenció:
 # 10. ROADMAP / FUNCIONALITATS PENDENTS
 # ═══════════════════════════════════════════════════════════════════════════════
 
+## Completades v1.29
+- ✅ Adaptació mòbil completa: patrons normalitzats per a barres d'accions, navegació i taules
+- ✅ CTA + "Més accions" DropdownMenu per a pantalles mòbils
+- ✅ Tabs → Select per a navegació mòbil
+- ✅ MobileListItem per a taules en mòbil
+- ✅ DangerZone col·lapsable amb Accordion
+- ✅ Fix traduccions de categories al Dashboard (TopCategoriesTable)
+- ✅ Pàgines adaptades: expenses, super-admin, admin, configuracio, product-updates, i18n-manager
+
 ## Completades v1.16
 - ✅ Drag & drop de documents a la safata de despeses (per fila)
 - ✅ Auto-naming de documents amb `buildDocumentFilename()` (format YYYY.MM.DD_concepte.ext)
@@ -3547,6 +3817,8 @@ Indicadors que requeririen intervenció:
 | **1.26** | **31 Des 2025** | **Resolució col·lisió `[lang]` vs `[orgSlug]`: arquitectura `public/[lang]` amb middleware rewrite (URL pública intacta). HOME i Funcionalitats multiidioma. x-default hreflang. Slugs reservats (ca/es/fr/pt/public). Rutes canòniques: `/{lang}/funcionalitats`, `/{lang}/privacy`, `/{lang}/contact`. Aliases naturals: FR (`fonctionnalites`, `confidentialite`), ES (`funcionalidades`, `privacidad`, `contacto`), PT (`funcionalidades`, `privacidade`, `contacto`).** |
 | **1.27** | **2 Gen 2026** | **Fix routing Next 15 (`searchParams` Promise), header responsive (icones ajuda/novetats sempre visibles), cercador natural guies amb sinònims i scoring i18n, validador i18n claus de cerca, layout dashboard overflow fix (`min-w-0 + overflow-x-hidden` a SidebarInset). Secció 3.12 Liquidacions de Despeses: model ExpenseReport, quilometratge multilínia (mileageItems[]), generació PDF, tabs Liquidacions/Tickets/Quilometratge, deep linking. Guies: travelExpenseReport, mileageTravel. Fix sidebar mòbil: submenú Projectes ara expandeix correctament (isSidebarCollapsed = !isMobile && collapsed).** |
 | **1.28** | **5 Gen 2026** | **Importadors millorats: plantilla oficial única per Categories/Donants/Proveïdors (detecció 100%), export=import per donants i proveïdors, categoria per defecte agnòstica amb warning d'ambigüitat, dedupe ignora deletedAt/archivedAt. Categories: normalització label, scroll preview, motiu omissió, delete warning + count, Danger Zone esborrar categories. Pendents/Liquidacions: drag & drop com a punt d'entrada per pujar fitxers, validació d'extensions al drop handler (pdf/xml/jpg/png), toast feedback si cap vàlid. Storage observability: detecció i report `storage/unauthorized` com a incident CRITICAL.** |
+| **1.29** | **12 Gen 2026** | **Adaptació mòbil completa: patrons UI normalitzats (CTA + DropdownMenu "Més accions", Tabs → Select, Table → MobileListItem, DangerZone col·lapsable amb Accordion). Pàgines adaptades: expenses, super-admin, admin, configuracio, product-updates-section, i18n-manager. Fix traduccions categories Dashboard (TopCategoriesTable resol category.name → t.categories). Nova secció documentació 7.5.10 Adaptació Mòbil amb exemples de codi.** |
+| **1.30** | **13 Gen 2026** | **Dashboard: reorganització KPIs en dos blocs (Diners/Qui ens sosté), nou KPI "Altres ingressos" per reconciliació visual (subvencions, loteria, interessos), datasets separats per evitar duplicats remesa. Fix hydration warning extensions navegador (`suppressHydrationWarning` a `<html>`). Eliminats logs debug BUILD-SIGNATURE.** |
 
 
 # ═══════════════════════════════════════════════════════════════════════════════

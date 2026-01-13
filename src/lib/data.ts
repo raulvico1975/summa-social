@@ -95,9 +95,24 @@ export type Transaction = {
   remittancePendingCount?: number;
 
   /**
-   * Suma total dels imports pendents (positiu)
+   * Suma total dels imports pendents en cèntims (positiu)
    */
   remittancePendingTotalAmount?: number;
+
+  /**
+   * Import total esperat de la remesa en cèntims (sum de totes les files CSV)
+   */
+  remittanceExpectedTotalCents?: number;
+
+  /**
+   * Import total resolt en cèntims (sum de filles creades)
+   */
+  remittanceResolvedTotalCents?: number;
+
+  /**
+   * Import total pendent en cèntims (sum de pendents)
+   */
+  remittancePendingTotalCents?: number;
 
   /**
    * Tipus de remesa
@@ -177,6 +192,33 @@ export type Transaction = {
    * - string: ID del compte bancari
    */
   bankAccountId?: string | null;
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // CAMPS PER SOFT-DELETE (TRANSACCIONS FISCALS)
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  /**
+   * Timestamp ISO quan la transacció va ser arxivada (soft-delete)
+   * null = no arxivada (activa)
+   */
+  archivedAt?: string | null;
+
+  /**
+   * UID de l'usuari que va arxivar la transacció
+   */
+  archivedByUid?: string | null;
+
+  /**
+   * Motiu de l'arxivat
+   */
+  archivedReason?: string | null;
+
+  /**
+   * Acció que va provocar l'arxivat
+   * - user_delete: L'usuari va intentar eliminar
+   * - superadmin_cleanup: SuperAdmin va fer neteja
+   */
+  archivedFromAction?: 'user_delete' | 'superadmin_cleanup' | null;
 };
 
 export type Category = {
@@ -191,6 +233,39 @@ export type Project = {
   name: string;
   funderId: string | null;
 };
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// TIPUS PER SEPA DIRECT DEBIT (pain.008)
+// ═══════════════════════════════════════════════════════════════════════════════
+
+/**
+ * Esquema SEPA per adeudos directos
+ * - CORE: Particulars i empreses (v1)
+ * - B2B: Empreses (Business-to-Business, v2)
+ */
+export type SepaScheme = 'CORE' | 'B2B';
+
+/**
+ * Tipus de seqüència SEPA
+ * - FRST: Primer cobrament d'un mandat recurrent
+ * - RCUR: Cobraments successius recurrents
+ * - OOFF: Cobrament únic (one-off)
+ * - FNAL: Últim cobrament d'una sèrie
+ */
+export type SepaSequenceType = 'FRST' | 'RCUR' | 'OOFF' | 'FNAL';
+
+/**
+ * Mandat SEPA per a domiciliació bancària.
+ * Permet cobrar directament del compte del donant/soci.
+ */
+export interface SepaMandate {
+  scheme: SepaScheme;                      // CORE (v1) o B2B (v2)
+  umr: string;                             // Unique Mandate Reference (obligatori)
+  signatureDate: string;                   // YYYY-MM-DD (data signatura, obligatori)
+  isActive: boolean;                       // true per defecte
+  lastCollectedAt?: string | null;         // YYYY-MM-DD (última execució, per seqüència)
+  sequenceTypeOverride?: SepaSequenceType | null;  // Override manual si cal
+}
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // SISTEMA DE CONTACTES (Donants + Proveïdors)
@@ -286,6 +361,16 @@ export type Donor = Contact & {
    * Data de l'última devolució
    */
   lastReturnDate?: string;
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // CAMPS PER SEPA DIRECT DEBIT
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  /**
+   * Mandat SEPA per domiciliació bancària
+   * Si existeix i isActive=true, el donant es pot incloure en remeses SEPA
+   */
+  sepaMandate?: SepaMandate | null;
 };
 
 /**
@@ -579,4 +664,87 @@ export type BankAccount = {
   isActive: boolean | null;        // Compte actiu (per soft-delete)
   createdAt: string;               // ISO date
   updatedAt: string;               // ISO date
+  // SEPA Direct Debit
+  creditorId?: string | null;      // Identificador de creditor SEPA (ex: ES21001G70782933)
+};
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// SEPA COLLECTION RUNS (Remeses de cobrament SEPA)
+// ═══════════════════════════════════════════════════════════════════════════════
+
+/**
+ * Estat d'una execució de remesa SEPA
+ */
+export type SepaCollectionRunStatus = 'draft' | 'exported' | 'sent' | 'processed';
+
+/**
+ * Element individual d'una remesa SEPA (un cobrament)
+ */
+export interface SepaCollectionItem {
+  donorId: string;                         // ID del donant/soci
+  donorName: string;                       // Nom del donant (snapshot)
+  donorTaxId: string;                      // DNI/CIF (snapshot)
+  iban: string;                            // IBAN del donant
+  amountCents: number;                     // Import en cèntims
+  umr: string;                             // Unique Mandate Reference
+  signatureDate: string;                   // Data signatura mandat (YYYY-MM-DD)
+  sequenceType: SepaSequenceType;          // FRST, RCUR, OOFF, FNAL
+  endToEndId: string;                      // Identificador únic de la transacció
+}
+
+/**
+ * Execució d'una remesa de cobrament SEPA (pain.008)
+ * S'emmagatzema a: organizations/{orgId}/sepaCollectionRuns/{runId}
+ */
+export interface SepaCollectionRun {
+  id: string;
+  status: SepaCollectionRunStatus;
+  scheme: SepaScheme;                      // CORE o B2B
+  bankAccountId: string;                   // ID del compte bancari creditor
+  creditorId: string;                      // Identificador de creditor SEPA (snapshot)
+  creditorName: string;                    // Nom de l'organització (snapshot)
+  creditorIban: string;                    // IBAN del creditor (snapshot)
+  requestedCollectionDate: string;         // Data de cobrament sol·licitada (YYYY-MM-DD)
+  items: SepaCollectionItem[];             // Cobraments individuals
+  totalAmountCents: number;                // Suma total en cèntims
+  totalCount: number;                      // Nombre de cobraments
+  messageId: string;                       // MsgId del XML (per traçabilitat)
+  createdAt: string;                       // ISO date
+  createdBy: string;                       // UID de l'usuari
+  exportedAt?: string | null;              // Data d'exportació del XML
+  sentAt?: string | null;                  // Data d'enviament al banc
+  processedAt?: string | null;             // Data de processament
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// REMESES - QUOTES PENDENTS
+// ═══════════════════════════════════════════════════════════════════════════════
+
+/**
+ * Motiu pel qual una quota de remesa està pendent
+ */
+export type RemittancePendingReason =
+  | 'NO_TAXID'        // Fila sense DNI/CIF vàlid (legacy mode OUT)
+  | 'INVALID_DATA'    // Dades invàlides (import negatiu, nom buit, etc.)
+  | 'NO_MATCH'        // No s'ha trobat coincidència amb cap donant existent (legacy)
+  | 'DUPLICATE'       // Fila duplicada dins la mateixa remesa
+  // P0: Nous motius per mode IN (IBAN-first)
+  | 'NO_IBAN_MATCH'   // IBAN no trobat a Summa
+  | 'AMBIGUOUS_IBAN'; // IBAN duplicat (>1 donant)
+
+/**
+ * Element pendent d'una remesa IN (quota no processada)
+ * S'emmagatzema a: organizations/{orgId}/remittances/{remittanceId}/pending/{pendingId}
+ */
+export type RemittancePendingItem = {
+  id: string;
+  nameRaw: string;                        // Nom original del CSV
+  taxId: string | null;                   // DNI/CIF (pot ser null o invàlid)
+  iban: string | null;                    // IBAN (pot ser null)
+  amountCents: number;                    // Import en cèntims (sempre positiu per IN)
+  reason: RemittancePendingReason;        // Motiu del pendent
+  sourceRowIndex: number;                 // Índex de la fila original al CSV (per debug)
+  createdAt: string;                      // ISO date
+  // P0: Donants candidats per IBAN ambigu (selecció manual)
+  ambiguousDonorIds?: string[];           // IDs dels donants amb IBAN duplicat
 };

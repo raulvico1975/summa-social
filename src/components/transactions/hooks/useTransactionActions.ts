@@ -1,7 +1,7 @@
 'use client';
 
 import * as React from 'react';
-import { doc, CollectionReference } from 'firebase/firestore';
+import { doc, CollectionReference, type Firestore } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL, deleteObject, FirebaseStorage } from 'firebase/storage';
 import { updateDocumentNonBlocking, deleteDocumentNonBlocking, addDocumentNonBlocking } from '@/firebase';
 import { useToast } from '@/hooks/use-toast';
@@ -9,6 +9,7 @@ import { useTranslations } from '@/i18n';
 import { useAppLog } from '@/hooks/use-app-log';
 import type { Transaction, AnyContact, ContactType } from '@/lib/data';
 import { buildDocumentFilename } from '@/lib/build-document-filename';
+import { handleTransactionDelete, isFiscallyRelevantTransaction } from '@/lib/fiscal/softDeleteTransaction';
 
 // =============================================================================
 // TYPES
@@ -37,6 +38,8 @@ interface UseTransactionActionsParams {
   storage: FirebaseStorage;
   transactions: Transaction[] | null;
   availableContacts: AnyContact[] | null;
+  firestore?: Firestore | null;
+  userId?: string | null;
 }
 
 interface UseTransactionActionsReturn {
@@ -103,6 +106,8 @@ export function useTransactionActions({
   storage,
   transactions,
   availableContacts,
+  firestore,
+  userId,
 }: UseTransactionActionsParams): UseTransactionActionsReturn {
   const { toast } = useToast();
   const { t } = useTranslations();
@@ -383,14 +388,44 @@ export function useTransactionActions({
     setIsDeleteDialogOpen(true);
   }, []);
 
-  const handleDeleteConfirm = React.useCallback(() => {
-    if (transactionToDelete && transactionsCollection) {
+  const handleDeleteConfirm = React.useCallback(async () => {
+    if (!transactionToDelete || !transactionsCollection) {
+      setIsDeleteDialogOpen(false);
+      setTransactionToDelete(null);
+      return;
+    }
+
+    // Soft-delete per transaccions fiscals (returns, remittance IN, stripe donations amb contactId)
+    if (firestore && organizationId && userId && isFiscallyRelevantTransaction(transactionToDelete)) {
+      try {
+        await handleTransactionDelete(transactionToDelete, {
+          firestore,
+          orgId: organizationId,
+          userId,
+          reason: 'user_delete',
+        });
+        // Missatge específic per soft-delete
+        toast({
+          title: 'Transacció arxivada',
+          description: 'La transacció fiscal ha estat arxivada (no eliminada).',
+        });
+      } catch (error) {
+        console.error('[handleDeleteConfirm] Error archiving transaction:', error);
+        toast({
+          variant: 'destructive',
+          title: t.common.error,
+          description: (error as Error).message || 'Error arxivant la transacció',
+        });
+      }
+    } else {
+      // Delete normal per transaccions no fiscals
       deleteDocumentNonBlocking(doc(transactionsCollection, transactionToDelete.id));
       toast({ title: t.movements.table.transactionDeleted });
     }
+
     setIsDeleteDialogOpen(false);
     setTransactionToDelete(null);
-  }, [transactionToDelete, transactionsCollection, toast, t]);
+  }, [transactionToDelete, transactionsCollection, firestore, organizationId, userId, toast, t]);
 
   const handleCloseDeleteDialog = React.useCallback(() => {
     setIsDeleteDialogOpen(false);

@@ -6,6 +6,7 @@
 import * as React from 'react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { SummaTooltip } from '@/components/ui/summa-tooltip';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -27,6 +28,16 @@ import {
 } from 'lucide-react';
 import type { Transaction, ContactType } from '@/lib/data';
 import { formatCurrencyEU, formatDateShort } from '@/lib/normalize';
+
+/**
+ * Helper: middle ellipsis per a noms llargs
+ * Mostra primers 18 caràcters + … + últims 10
+ */
+function middleEllipsis(s: string, head = 18, tail = 10): string {
+  if (!s) return s;
+  if (s.length <= head + tail + 1) return s;
+  return `${s.slice(0, head)}…${s.slice(-tail)}`;
+}
 
 interface TransactionRowMobileProps {
   transaction: Transaction;
@@ -204,28 +215,30 @@ export const TransactionRowMobile = React.memo(function TransactionRowMobile({
         {contactName && (
           <span className="inline-flex items-center gap-1">
             <User className="h-3 w-3" />
-            <span className="truncate max-w-[120px]">{contactName}</span>
+            <SummaTooltip content={contactName}>
+              <span className="max-w-[220px]">{middleEllipsis(contactName)}</span>
+            </SummaTooltip>
           </span>
         )}
         {hasDocument && (
-          <span className="inline-flex items-center gap-1 text-green-600">
-            <FileText className="h-3 w-3" />
+          <span className="inline-flex items-center gap-1 text-muted-foreground">
+            <FileText className="h-3 w-3 fill-current" />
             Doc
           </span>
         )}
       </div>
 
       {/* Actions rail */}
-      <div className="mt-2 flex justify-end gap-1">
+      <div className="mt-2 flex justify-end gap-1 shrink-0">
         {hasDocument && tx.document && (
           <Button
             variant="ghost"
             size="icon"
-            className="h-8 w-8"
+            className="h-8 w-8 shrink-0"
             onClick={() => window.open(tx.document!, '_blank')}
             aria-label={t.viewDocument}
           >
-            <FileText className="h-4 w-4" />
+            <FileText className="h-4 w-4 fill-current text-muted-foreground" />
           </Button>
         )}
         <DropdownMenu open={isMenuOpen} onOpenChange={setIsMenuOpen}>
@@ -245,7 +258,7 @@ export const TransactionRowMobile = React.memo(function TransactionRowMobile({
             </DropdownMenuItem>
             {!hasDocument && onAttachDocument && (
               <DropdownMenuItem onClick={handleAttachDoc}>
-                <FileText className="h-4 w-4 mr-2" />
+                <FileText className="h-4 w-4 mr-2 text-muted-foreground/40" />
                 {t.attachProof}
               </DropdownMenuItem>
             )}

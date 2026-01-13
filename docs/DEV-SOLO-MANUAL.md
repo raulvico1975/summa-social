@@ -121,13 +121,28 @@ No llegeixis tot. Consulta el que necessitis.
 
 ---
 
-### 4.2 Desplegament
+### 4.2 Gate de producció (obligatori)
+
+**Abans de push a master**, si el canvi toca Moviments, Remeses, Devolucions, Donants, Certificats, Imports o Permisos:
+
+```
+□ scripts/verify-ci.sh ✅ (typecheck + tests + build)
+□ docs/QA-P0-FISCAL.md completat amb PASS/FAIL ✅
+```
+
+**Sense això: prohibit push.**
+
+Guia ràpida d'execució: [scripts/verify-p0-fiscal.md](../scripts/verify-p0-fiscal.md)
+
+---
+
+### 4.3 Desplegament
 
 (pendent d'omplir)
 
 ---
 
-### 4.3 Incidències
+### 4.4 Incidències
 
 Consulta la secció 9 (Salut del sistema).
 
@@ -427,6 +442,27 @@ gcloud auth application-default login
 
 ### 4. Arrencada DEMO
 
+> **Per instruccions pas a pas per no-programadors:** [docs/DEMO-PAS-A-PAS.md](./DEMO-PAS-A-PAS.md)
+
+#### DEMO en 1 comandament (recomanat)
+
+```bash
+npm run demo:up        # Mode Short (demo ràpida)
+npm run demo:up:work   # Mode Work (dades realistes)
+```
+
+**Què fa:**
+1. Mata el port 9002 si està ocupat
+2. Arrenca servidor DEMO
+3. Executa seed (Short o Work)
+4. Obre navegador a `/demo`
+
+**Què ha d'aparèixer:**
+- Terminal: `[demo:up] DEMO a punt. (Ctrl+C per aturar)`
+- Browser: http://localhost:9002/demo amb dades
+
+#### Arrencada manual (per debugging)
+
 ```bash
 npm run dev:demo
 ```
@@ -583,6 +619,7 @@ npm run dev:demo
 | No puc descarregar serviceAccountKey | Google Workspace bloqueja claus privades | Usar ADC: `gcloud auth application-default login` |
 | "Could not load default credentials" | ADC no configurat o expirat | Executar `gcloud auth application-default login` |
 | "Cannot use undefined as Firestore value" | Camp `projectId` buit en algunes despeses | Sanejador a `writeBatch()` filtra camps undefined |
+| Hydration mismatch a `<html>` | Extensions del navegador (Grammarly, LanguageTool, adblock) injecten classes abans d'hidratar | Provar en incògnit. `suppressHydrationWarning` a `<html>` silencia el warning |
 | "No tens accés a aquesta organització" | UID no és membre ni SuperAdmin hardcodejat | `isDemoEnv()` fa bypass a `organization-provider.tsx` |
 | "Slug demo no té organització associada" | Mapping `slugs/demo` tenia camp incorrecte | Seed escriu `orgId` (no `organizationId`) |
 | "Firestore has already been initialized" | `db.settings()` cridat després d'altres operacions | Eliminat `db.settings()`, inicialització cached |
@@ -946,4 +983,78 @@ Summa Social/{orgSlug}/backups/{YYYY-MM-DD}/
 
 ---
 
-*Última actualització: 2026-01-04*
+## 17. Dashboard — Datasets separats (v1.30)
+
+### Principi fonamental
+
+**Els KPIs econòmics i socials utilitzen datasets diferents per evitar duplicats i confusions.**
+
+| Bloc | Dataset | Què mostra | Font de veritat |
+|------|---------|------------|-----------------|
+| **Diners** | `filteredTransactions` (ledger) | Ingressos, Despeses, Terreny, Saldo | Extracte bancari |
+| **Qui ens sosté** | `socialMetricsTxs` (contacte) | Quotes, Donacions, Altres ingressos, Socis, Donants | Relacions amb persones |
+
+### Perquè cal separar-ho
+
+Les remeses i Stripe creen **fills desglossats**:
+- El **pare** representa l'apunt bancari real (ex: 1.500 € remesa SEPA)
+- Els **fills** representen qui ha pagat (ex: 50 quotes de 30 €)
+
+Si sumem pares + fills, duplicaríem els imports.
+
+### Regles dels datasets
+
+**Ledger (Bloc Diners):**
+```typescript
+// Exclou:
+if (tx.parentTransactionId) return false;        // fills
+if (tx.isRemittanceItem === true) return false;  // ítems remesa
+if (tx.transactionType === 'donation') return false;  // Stripe donation
+if (tx.transactionType === 'fee') return false;  // Stripe fee
+if (tx.source === 'remittance') return false;    // files remesa
+```
+
+**Social (Bloc Qui ens sosté):**
+```typescript
+// Inclou:
+tx.amount > 0 && tx.contactId && tx.contactType === 'donor'
+// Inclou fills de remesa perquè tenen contactId
+```
+
+### KPI "Altres ingressos" (v1.30)
+
+Reconcilia el Dashboard amb l'extracte bancari mostrant el residual:
+
+```typescript
+otherIncomeEUR = Math.max(0, totalIncome - memberFees - totalDonations)
+```
+
+- **Només es mostra si > 0**
+- **Exemples**: subvencions, loteria, reintegraments, interessos, ingressos sense contacte
+- **Objectiu**: El gestor pot sumar Quotes + Donacions + Altres i veure que quadra amb Ingressos totals
+
+### Test per afegir nous KPIs
+
+Abans d'afegir un KPI al dashboard, verifica:
+
+1. **Pregunta humana**: "Un gestor pot explicar aquest número en una frase?"
+2. **Dataset correcte**: És veritat bancària (ledger) o relacional (social)?
+3. **Reproduïble**: Es pot verificar amb 1-2 filtres a Moviments o Donants?
+
+### Guardrails (DEV-only)
+
+En mode development, el dashboard imprimeix:
+- `[Dashboard] Social metrics: { total, withParent, uniqueContacts }`
+- `[Dashboard] LEDGER CONTAMINATION DETECTED` si el ledger conté ítems que haurien ser exclosos
+- `[Dashboard] Income reconciliation diff` si la reconciliació no quadra (tolerància 0.01 €)
+
+### Fitxers clau
+
+| Fitxer | Funció |
+|--------|--------|
+| `src/app/[orgSlug]/dashboard/page.tsx` | `isBankLedgerTx`, `filteredTransactions`, `socialMetricsTxs` |
+| `src/i18n/ca.ts` | `moneyBlock`, `supportersBlock` i descripcions |
+
+---
+
+*Última actualització: 2026-01-13*

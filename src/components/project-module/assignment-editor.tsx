@@ -397,11 +397,11 @@ export function AssignmentEditor({
 
       {/* Nota */}
       <div className="space-y-1">
-        <Label className="text-xs">Nota (opcional)</Label>
+        <Label className="text-xs">{t.balance.noteLabel}</Label>
         <Textarea
           value={note}
           onChange={(e) => setNote(e.target.value)}
-          placeholder="Afegeix una nota o justificació..."
+          placeholder={t.balance.notePlaceholder}
           rows={2}
         />
       </div>

@@ -57,6 +57,8 @@ interface ReturnImporterProps {
   onOpenChange: (open: boolean) => void;
   onComplete: () => void;
   isSuperAdmin?: boolean;
+  /** Mode contextual: assignar devolucions directament a aquest pare */
+  parentTransaction?: Transaction | null;
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -68,6 +70,7 @@ export function ReturnImporter({
   onOpenChange,
   onComplete,
   isSuperAdmin = false,
+  parentTransaction = null,
 }: ReturnImporterProps) {
   const { t } = useTranslations();
   const { toast } = useToast();
@@ -81,6 +84,8 @@ export function ReturnImporter({
     step,
     setStep,
     isProcessing,
+    isContextMode,
+    parentTransaction: hookParentTx,
     files,
     allRows,
     startRow,
@@ -98,7 +103,7 @@ export function ReturnImporter({
     processReturns,
     reset,
     handleCreateDonorForReturn,
-  } = useReturnImporter();
+  } = useReturnImporter({ parentTransaction });
 
   // Reset quan es tanca
   React.useEffect(() => {
@@ -221,8 +226,8 @@ export function ReturnImporter({
     // Si forceRecreateChildren està activat, requerir confirmació
     if (forceRecreateChildren && !confirmForceRecreate) {
       toast({
-        title: 'Confirmació requerida',
-        description: 'Has de marcar la casella de confirmació per forçar la recreació.',
+        title: t.returnImporter?.confirmRequired || 'Confirmació requerida',
+        description: t.returnImporter?.confirmRequiredDesc || 'Has de marcar la casella de confirmació per forçar la recreació.',
         variant: 'destructive',
       });
       return;
@@ -379,13 +384,15 @@ export function ReturnImporter({
                 {t.returnImporter?.columnMapping || "Configuració de columnes"}
               </DialogTitle>
               <DialogDescription>
-                S'han detectat {allRows.length - startRow} files de dades en {files.length} fitxer(s)
+                {(t.returnImporter?.dataRowsDetected || "S'han detectat {count} files de dades en {files} fitxer(s)")
+                  .replace('{count}', String(allRows.length - startRow))
+                  .replace('{files}', String(files.length))}
               </DialogDescription>
             </DialogHeader>
 
             {/* Configuració fila inicial */}
             <div className="space-y-2">
-              <label className="text-sm font-medium">Fila inicial de dades:</label>
+              <label className="text-sm font-medium">{t.returnImporter?.startRowLabel || "Fila inicial de dades:"}</label>
               <select
                 value={startRow}
                 onChange={(e) => setStartRow(parseInt(e.target.value))}
@@ -393,7 +400,9 @@ export function ReturnImporter({
               >
                 {Array.from({ length: Math.min(allRows.length, 20) }, (_, i) => (
                   <option key={i} value={i}>
-                    Fila {i + 1}: {allRows[i]?.slice(0, 3).join(' | ').substring(0, 60)}...
+                    {(t.returnImporter?.rowPreview || "Fila {n}: {preview}...")
+                      .replace('{n}', String(i + 1))
+                      .replace('{preview}', allRows[i]?.slice(0, 3).join(' | ').substring(0, 60) || '')}
                   </option>
                 ))}
               </select>
@@ -412,10 +421,12 @@ export function ReturnImporter({
                   onChange={(e) => setMapping({ ...mapping, ibanColumn: e.target.value ? parseInt(e.target.value) : null })}
                   className="w-full h-9 px-3 rounded-md border border-input bg-background text-sm"
                 >
-                  <option value="">-- Selecciona --</option>
+                  <option value="">{t.returnImporter?.selectPlaceholder || "-- Selecciona --"}</option>
                   {Array.from({ length: numColumns }, (_, i) => (
                     <option key={i} value={i}>
-                      Col {i + 1}: {previewRows[0]?.[i]?.substring(0, 25) || '-'}
+                      {(t.returnImporter?.columnPreview || "Col {n}: {preview}")
+                        .replace('{n}', String(i + 1))
+                        .replace('{preview}', previewRows[0]?.[i]?.substring(0, 25) || '-')}
                     </option>
                   ))}
                 </select>
@@ -432,10 +443,12 @@ export function ReturnImporter({
                   onChange={(e) => setMapping({ ...mapping, amountColumn: e.target.value ? parseInt(e.target.value) : null })}
                   className="w-full h-9 px-3 rounded-md border border-input bg-background text-sm"
                 >
-                  <option value="">-- Selecciona --</option>
+                  <option value="">{t.returnImporter?.selectPlaceholder || "-- Selecciona --"}</option>
                   {Array.from({ length: numColumns }, (_, i) => (
                     <option key={i} value={i}>
-                      Col {i + 1}: {previewRows[0]?.[i]?.substring(0, 25) || '-'}
+                      {(t.returnImporter?.columnPreview || "Col {n}: {preview}")
+                        .replace('{n}', String(i + 1))
+                        .replace('{preview}', previewRows[0]?.[i]?.substring(0, 25) || '-')}
                     </option>
                   ))}
                 </select>
@@ -452,10 +465,12 @@ export function ReturnImporter({
                   onChange={(e) => setMapping({ ...mapping, dateColumn: e.target.value ? parseInt(e.target.value) : null })}
                   className="w-full h-9 px-3 rounded-md border border-input bg-background text-sm"
                 >
-                  <option value="">-- No disponible --</option>
+                  <option value="">{t.returnImporter?.notAvailable || "-- No disponible --"}</option>
                   {Array.from({ length: numColumns }, (_, i) => (
                     <option key={i} value={i}>
-                      Col {i + 1}: {previewRows[0]?.[i]?.substring(0, 25) || '-'}
+                      {(t.returnImporter?.columnPreview || "Col {n}: {preview}")
+                        .replace('{n}', String(i + 1))
+                        .replace('{preview}', previewRows[0]?.[i]?.substring(0, 25) || '-')}
                     </option>
                   ))}
                 </select>
@@ -472,10 +487,12 @@ export function ReturnImporter({
                   onChange={(e) => setMapping({ ...mapping, dniColumn: e.target.value ? parseInt(e.target.value) : null })}
                   className="w-full h-9 px-3 rounded-md border border-input bg-background text-sm"
                 >
-                  <option value="">-- No disponible --</option>
+                  <option value="">{t.returnImporter?.notAvailable || "-- No disponible --"}</option>
                   {Array.from({ length: numColumns }, (_, i) => (
                     <option key={i} value={i}>
-                      Col {i + 1}: {previewRows[0]?.[i]?.substring(0, 25) || '-'}
+                      {(t.returnImporter?.columnPreview || "Col {n}: {preview}")
+                        .replace('{n}', String(i + 1))
+                        .replace('{preview}', previewRows[0]?.[i]?.substring(0, 25) || '-')}
                     </option>
                   ))}
                 </select>
@@ -484,7 +501,7 @@ export function ReturnImporter({
 
             {/* Preview de dades */}
             <div className="space-y-2">
-              <label className="text-sm font-medium">Vista prèvia (primeres {previewRows.length} files):</label>
+              <label className="text-sm font-medium">{(t.returnImporter?.previewLabel || "Vista prèvia (primeres {n} files):").replace('{n}', String(previewRows.length))}</label>
               <ScrollArea className="h-[180px] rounded-md border">
                 <Table>
                   <TableHeader>
@@ -536,7 +553,7 @@ export function ReturnImporter({
             <DialogFooter className="gap-2 sm:gap-0">
               <Button variant="outline" onClick={() => { reset(); }}>
                 <ArrowLeft className="mr-2 h-4 w-4" />
-                Tornar
+                {t.returnImporter?.back || "Tornar"}
               </Button>
               <Button
                 onClick={performMatching}
@@ -547,7 +564,7 @@ export function ReturnImporter({
                 ) : (
                   <ArrowRight className="mr-2 h-4 w-4" />
                 )}
-                Continuar
+                {t.returnImporter?.continue || "Continuar"}
               </Button>
             </DialogFooter>
           </>
@@ -560,10 +577,21 @@ export function ReturnImporter({
           <>
             <DialogHeader>
               <DialogTitle>
-                {t.returnImporter?.results || "Resultat del matching"}
+                {isContextMode
+                  ? (t.returnImporter?.contextModeTitle || "Assignar devolucions a l'apunt seleccionat")
+                  : (t.returnImporter?.results || "Resultat del matching")}
               </DialogTitle>
               <DialogDescription>
-                Revisa les coincidències i selecciona les devolucions a assignar
+                {isContextMode && hookParentTx ? (
+                  <span className="flex flex-col gap-1">
+                    <span className="font-medium text-foreground">
+                      {hookParentTx.date} · {formatCurrencyEU(Math.abs(hookParentTx.amount))} · {hookParentTx.description?.slice(0, 50)}
+                    </span>
+                    <span>{(t.returnImporter?.contextModeDesc || "Les {count} devolucions del fitxer s'assignaran a aquest apunt").replace('{count}', String(parsedReturns.length))}</span>
+                  </span>
+                ) : (
+                  t.returnImporter?.reviewDesc || "Revisa les coincidències i selecciona les devolucions a assignar"
+                )}
               </DialogDescription>
             </DialogHeader>
 
@@ -576,7 +604,7 @@ export function ReturnImporter({
                     <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-green-50 border border-green-200">
                       <CheckCircle2 className="h-4 w-4 text-green-600" />
                       <span className="text-sm font-medium text-green-800">
-                        {bulkReturnGroups.filter(g => g.status === 'auto').length} liquidacions auto-matched
+                        {bulkReturnGroups.filter(g => g.status === 'auto').length} {t.returnImporter?.autoMatched || "liquidacions auto-matched"}
                       </span>
                     </div>
                   )}
@@ -584,7 +612,7 @@ export function ReturnImporter({
                     <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-orange-50 border border-orange-200">
                       <AlertTriangle className="h-4 w-4 text-orange-600" />
                       <span className="text-sm font-medium text-orange-800">
-                        {bulkReturnGroups.filter(g => g.status === 'needsReview').length} pendents de revisió
+                        {bulkReturnGroups.filter(g => g.status === 'needsReview').length} {t.returnImporter?.pendingReview || "pendents de revisió"}
                       </span>
                     </div>
                   )}
@@ -592,7 +620,7 @@ export function ReturnImporter({
                     <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-red-50 border border-red-200">
                       <X className="h-4 w-4 text-red-600" />
                       <span className="text-sm font-medium text-red-800">
-                        {bulkReturnGroups.filter(g => g.status === 'noMatch').length} sense coincidència
+                        {bulkReturnGroups.filter(g => g.status === 'noMatch').length} {t.returnImporter?.noMatch || "sense coincidència"}
                       </span>
                     </div>
                   )}
@@ -604,7 +632,7 @@ export function ReturnImporter({
                     <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-green-50 border border-green-200">
                       <CheckCircle2 className="h-4 w-4 text-green-600" />
                       <span className="text-sm font-medium text-green-800">
-                        {stats.matched + stats.donorFound} amb donant identificat
+                        {stats.matched + stats.donorFound} {t.returnImporter?.withDonorIdentified || "amb donant identificat"}
                       </span>
                     </div>
                   )}
@@ -662,12 +690,12 @@ export function ReturnImporter({
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>Data Liquidació</TableHead>
-                      <TableHead>Núm. Liquidació</TableHead>
-                      <TableHead className="text-right">Import</TableHead>
-                      <TableHead className="text-center">Devolucions</TableHead>
-                      <TableHead>Estat</TableHead>
-                      <TableHead>Transacció Pare</TableHead>
+                      <TableHead>{t.returnImporter?.settlementDate || "Data Liquidació"}</TableHead>
+                      <TableHead>{t.returnImporter?.settlementNumber || "Núm. Liquidació"}</TableHead>
+                      <TableHead className="text-right">{t.returnImporter?.amount || "Import"}</TableHead>
+                      <TableHead className="text-center">{t.returnImporter?.returnsCount || "Devolucions"}</TableHead>
+                      <TableHead>{t.returnImporter?.status || "Estat"}</TableHead>
+                      <TableHead>{t.returnImporter?.parentTransaction || "Transacció Pare"}</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -703,22 +731,22 @@ export function ReturnImporter({
                               <TooltipTrigger asChild>
                                 <Badge variant="outline" className="bg-orange-100 text-orange-800 border-orange-300 cursor-help">
                                   <AlertTriangle className="mr-1 h-3 w-3" />
-                                  {group.reason === 'multipleCandidates' ? 'Múltiples candidats' :
-                                   group.reason === 'outsideWindow' ? 'Fora finestra' : 'Revisió'}
+                                  {group.reason === 'multipleCandidates' ? (t.returnImporter?.multipleCandidates || 'Múltiples candidats') :
+                                   group.reason === 'outsideWindow' ? (t.returnImporter?.outsideWindow || 'Fora finestra') : (t.returnImporter?.needsReview || 'Revisió')}
                                 </Badge>
                               </TooltipTrigger>
                               <TooltipContent>
                                 {group.reason === 'multipleCandidates'
-                                  ? `${group.candidatesInWindow.length} candidats dins ±2 dies`
+                                  ? (t.returnImporter?.candidatesInWindow || "{n} candidats dins ±2 dies").replace('{n}', String(group.candidatesInWindow.length))
                                   : group.reason === 'outsideWindow'
-                                  ? `${group.candidatesOutsideWindow.length} candidats fora de la finestra ±2 dies`
-                                  : 'Cal revisió manual'}
+                                  ? (t.returnImporter?.candidatesOutsideWindow || "{n} candidats fora de la finestra ±2 dies").replace('{n}', String(group.candidatesOutsideWindow.length))
+                                  : (t.returnImporter?.manualReviewNeeded || 'Cal revisió manual')}
                               </TooltipContent>
                             </Tooltip>
                           ) : (
                             <Badge variant="outline" className="bg-red-100 text-red-800 border-red-300">
                               <X className="mr-1 h-3 w-3" />
-                              Sense coincidència
+                              {t.returnImporter?.noMatchLabel || "Sense coincidència"}
                             </Badge>
                           )}
                         </TableCell>
@@ -734,14 +762,14 @@ export function ReturnImporter({
                             </div>
                           ) : group.candidatesInWindow.length > 0 ? (
                             <span className="text-orange-600 text-xs">
-                              {group.candidatesInWindow.length} candidats disponibles
+                              {(t.returnImporter?.candidatesAvailable || "{n} candidats disponibles").replace('{n}', String(group.candidatesInWindow.length))}
                             </span>
                           ) : group.candidatesOutsideWindow.length > 0 ? (
                             <span className="text-orange-600 text-xs">
-                              {group.candidatesOutsideWindow.length} fora finestra
+                              {(t.returnImporter?.outsideWindowLabel || "{n} fora finestra").replace('{n}', String(group.candidatesOutsideWindow.length))}
                             </span>
                           ) : (
-                            <span className="text-red-500 text-xs">Cap candidat</span>
+                            <span className="text-red-500 text-xs">{t.returnImporter?.noCandidate || "Cap candidat"}</span>
                           )}
                         </TableCell>
                       </TableRow>
@@ -811,17 +839,17 @@ export function ReturnImporter({
                           <div className="flex flex-col gap-1">
                             <Badge variant="outline" className="bg-orange-100 text-orange-800 border-orange-300 w-fit">
                               <UserRoundX className="mr-1 h-3 w-3" />
-                              Pendent d'identificar
+                              {t.returnImporter?.pendingIdentify || "Pendent d'identificar"}
                             </Badge>
                             <div className="flex gap-1">
                               <Button
                                 variant="ghost"
                                 size="sm"
                                 className="h-6 px-2 text-xs text-orange-700 hover:text-orange-900 hover:bg-orange-100"
-                                onClick={() => toast({ title: 'Funcionalitat pendent', description: 'Buscar donant existent - pròximament' })}
+                                onClick={() => toast({ title: t.returnImporter?.featurePending || 'Funcionalitat pendent', description: t.returnImporter?.searchDonorSoon || 'Buscar donant existent - pròximament' })}
                               >
                                 <Search className="mr-1 h-3 w-3" />
-                                Buscar
+                                {t.returnImporter?.searchButton || "Buscar"}
                               </Button>
                               <Button
                                 variant="ghost"
@@ -830,7 +858,7 @@ export function ReturnImporter({
                                 onClick={() => handleOpenCreateDonor(index, item)}
                               >
                                 <UserPlus className="mr-1 h-3 w-3" />
-                                Crear
+                                {t.returnImporter?.createButton || "Crear"}
                               </Button>
                             </div>
                             {item.originalName && (
@@ -843,7 +871,7 @@ export function ReturnImporter({
                           <div className="flex flex-col gap-0.5">
                             <Badge variant="outline" className="bg-red-100 text-red-800 border-red-300 w-fit">
                               <AlertTriangle className="mr-1 h-3 w-3" />
-                              No trobat
+                              {t.returnImporter?.notFoundLabel || "No trobat"}
                             </Badge>
                             {item.dni && (
                               <span className="text-xs text-muted-foreground">
@@ -865,25 +893,25 @@ export function ReturnImporter({
                               <TooltipTrigger asChild>
                                 <Badge variant="outline" className="bg-blue-100 text-blue-800 border-blue-300 cursor-help">
                                   <Layers className="mr-1 h-3 w-3" />
-                                  Agrupada
+                                  {t.returnImporter?.groupedBadge || "Agrupada"}
                                 </Badge>
                               </TooltipTrigger>
-                              <TooltipContent>Forma part d'una remesa de devolucions</TooltipContent>
+                              <TooltipContent>{t.returnImporter?.groupedTooltip || "Forma part d'una remesa de devolucions"}</TooltipContent>
                             </Tooltip>
                           ) : item.matchType === 'individual' ? (
                             <Badge variant="outline" className="bg-green-100 text-green-800 border-green-300">
                               <CheckCircle2 className="mr-1 h-3 w-3" />
-                              Individual
+                              {t.returnImporter?.individualBadge || "Individual"}
                             </Badge>
                           ) : !item.matchedDonor ? (
                             <Tooltip>
                               <TooltipTrigger asChild>
                                 <Badge variant="outline" className="bg-orange-100 text-orange-800 border-orange-300 cursor-help">
                                   <UserRoundX className="mr-1 h-3 w-3" />
-                                  Pendent
+                                  {t.returnImporter?.pendingBadge || "Pendent"}
                                 </Badge>
                               </TooltipTrigger>
-                              <TooltipContent>Pendent d'identificar donant</TooltipContent>
+                              <TooltipContent>{t.returnImporter?.pendingTooltip || "Pendent d'identificar donant"}</TooltipContent>
                             </Tooltip>
                           ) : (
                             <span className="text-muted-foreground">-</span>
@@ -902,36 +930,48 @@ export function ReturnImporter({
               {bulkReturnGroups.length > 0 ? (
                 <>
                   <p>
-                    <strong>{bulkReturnGroups.filter(g => g.status === 'auto').length}</strong> liquidacions es processaran automàticament.
+                    {(t.returnImporter?.settlementsAutoProcess || "{n} liquidacions es processaran automàticament.")
+                      .replace('{n}', `<strong>${bulkReturnGroups.filter(g => g.status === 'auto').length}</strong>`)
+                      .split('<strong>').map((part, i) =>
+                        i === 0 ? part : <><strong key={i}>{part.split('</strong>')[0]}</strong>{part.split('</strong>')[1]}</>
+                      )}
                   </p>
                   {bulkReturnGroups.filter(g => g.status === 'needsReview').length > 0 && (
                     <p className="text-orange-700">
                       <AlertTriangle className="inline h-3 w-3 mr-1" />
-                      {bulkReturnGroups.filter(g => g.status === 'needsReview').length} liquidacions requereixen revisió manual (múltiples candidats o fora de la finestra ±2 dies).
+                      {(t.returnImporter?.settlementsNeedReview || "{n} liquidacions requereixen revisió manual (múltiples candidats o fora de la finestra ±2 dies).")
+                        .replace('{n}', String(bulkReturnGroups.filter(g => g.status === 'needsReview').length))}
                     </p>
                   )}
                   {bulkReturnGroups.filter(g => g.status === 'noMatch').length > 0 && (
                     <p className="text-red-700">
                       <X className="inline h-3 w-3 mr-1" />
-                      {bulkReturnGroups.filter(g => g.status === 'noMatch').length} liquidacions sense cap transacció coincident.
+                      {(t.returnImporter?.settlementsNoMatch || "{n} liquidacions sense cap transacció coincident.")
+                        .replace('{n}', String(bulkReturnGroups.filter(g => g.status === 'noMatch').length))}
                     </p>
                   )}
                 </>
               ) : (
                 <>
                   <p>
-                    <strong>{selectedRows.size}</strong> devolucions seleccionades per assignar.
+                    {(t.returnImporter?.selectedCount || "{n} devolucions seleccionades per assignar.")
+                      .replace('{n}', `<strong>${selectedRows.size}</strong>`)
+                      .split('<strong>').map((part, i) =>
+                        i === 0 ? part : <><strong key={i}>{part.split('</strong>')[0]}</strong>{part.split('</strong>')[1]}</>
+                      )}
                   </p>
                   {stats.grouped > 0 && partialRemittanceStats.resolvedCount > 0 && (
                     <p className="text-blue-700">
                       <Layers className="inline h-3 w-3 mr-1" />
-                      Les {partialRemittanceStats.resolvedCount} devolucions agrupades s'assignaran com a part d'una remesa.
+                      {(t.returnImporter?.groupedAssignInfo || "Les {n} devolucions agrupades s'assignaran com a part d'una remesa.")
+                        .replace('{n}', String(partialRemittanceStats.resolvedCount))}
                     </p>
                   )}
                   {partialRemittanceStats.pendingCount > 0 && (
                     <p className="text-orange-700">
                       <UserRoundX className="inline h-3 w-3 mr-1" />
-                      {partialRemittanceStats.pendingCount} devolucions quedaran pendents d'identificar. La remesa es marcarà com a <strong>parcial</strong> fins que s'identifiquin tots els donants.
+                      {(t.returnImporter?.pendingRemaining || "{n} devolucions quedaran pendents d'identificar. La remesa es marcarà com a parcial fins que s'identifiquin tots els donants.")
+                        .replace('{n}', String(partialRemittanceStats.pendingCount))}
                     </p>
                   )}
                 </>
@@ -952,10 +992,10 @@ export function ReturnImporter({
                   />
                   <div className="flex-1">
                     <Label htmlFor="forceRecreateChildren" className="text-red-800 font-medium cursor-pointer">
-                      Forçar recreació de devolucions (SuperAdmin)
+                      {t.returnImporter?.forceRecreateLabel || "Forçar recreació de devolucions (SuperAdmin)"}
                     </Label>
                     <p className="text-xs text-red-700 mt-0.5">
-                      Elimina i recrea les filles de l'apunt pare seleccionat. Ús només per migracions.
+                      {t.returnImporter?.forceRecreateDesc || "Elimina i recrea les filles de l'apunt pare seleccionat. Ús només per migracions."}
                     </p>
                   </div>
                 </div>
@@ -968,7 +1008,7 @@ export function ReturnImporter({
                       onCheckedChange={(checked) => setConfirmForceRecreate(checked === true)}
                     />
                     <Label htmlFor="confirmForceRecreate" className="text-red-900 text-sm cursor-pointer">
-                      Entenc el risc: les devolucions filles existents s'eliminaran permanentment
+                      {t.returnImporter?.forceRecreateConfirm || "Entenc el risc: les devolucions filles existents s'eliminaran permanentment"}
                     </Label>
                   </div>
                 )}
@@ -978,7 +1018,7 @@ export function ReturnImporter({
             <DialogFooter className="gap-2 sm:gap-0">
               <Button variant="outline" onClick={() => setStep('mapping')}>
                 <ArrowLeft className="mr-2 h-4 w-4" />
-                Tornar
+                {t.returnImporter?.back || "Tornar"}
               </Button>
               {bulkReturnGroups.length > 0 ? (
                 // Mode BULK: botó per processar grups auto-matched
@@ -989,11 +1029,11 @@ export function ReturnImporter({
                   {isProcessing ? (
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                   ) : null}
-                  Processar {bulkReturnGroups.filter(g => g.status === 'auto').length} liquidacions
+                  {(t.returnImporter?.processSettlements || "Processar {n} liquidacions").replace('{n}', String(bulkReturnGroups.filter(g => g.status === 'auto').length))}
                 </Button>
               ) : partialRemittanceStats.allPending ? (
                 <span className="text-sm text-muted-foreground italic">
-                  Identifica almenys un donant per continuar
+                  {t.returnImporter?.identifyAtLeastOne || "Identifica almenys un donant per continuar"}
                 </span>
               ) : (
                 <Button
@@ -1014,13 +1054,21 @@ export function ReturnImporter({
             STEP 4: PROCESSING
             ═══════════════════════════════════════════════════════════════════ */}
         {step === 'processing' && (
-          <div className="flex flex-col items-center justify-center py-12">
-            <Loader2 className="h-12 w-12 animate-spin text-primary mb-4" />
-            <p className="text-lg font-medium">Processant devolucions...</p>
-            <p className="text-sm text-muted-foreground">
-              Assignant donants i actualitzant comptadors
-            </p>
-          </div>
+          <>
+            <DialogHeader>
+              <DialogTitle>{t.returnImporter?.processingTitle || "Processant devolucions"}</DialogTitle>
+              <DialogDescription>
+                {t.returnImporter?.processingDesc || "Assignant donants i actualitzant comptadors"}
+              </DialogDescription>
+            </DialogHeader>
+            <div className="flex flex-col items-center justify-center py-12">
+              <Loader2 className="h-12 w-12 animate-spin text-primary mb-4" />
+              <p className="text-lg font-medium">{t.returnImporter?.processingProgress || "Processant devolucions..."}</p>
+              <p className="text-sm text-muted-foreground">
+                {t.returnImporter?.processingDesc || "Assignant donants i actualitzant comptadors"}
+              </p>
+            </div>
+          </>
         )}
 
       </DialogContent>

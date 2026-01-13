@@ -61,10 +61,23 @@ import {
   Calendar,
   Undo2,
   Send,
+  User,
+  MoreVertical,
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useTranslations } from '@/i18n';
 import { jsPDF } from 'jspdf';
+import { useIsMobile } from '@/hooks/use-is-mobile';
+import { MobileListItem } from '@/components/mobile/mobile-list-item';
+import { Skeleton } from '@/components/ui/skeleton';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import { cn } from '@/lib/utils';
+import { MOBILE_ACTIONS_BAR, MOBILE_CTA_PRIMARY, MOBILE_CTA_TRUNCATE } from '@/lib/ui/mobile-actions';
 
 // Tipus per al resum de donacions per donant
 interface DonorSummary {
@@ -140,6 +153,7 @@ export function DonationCertificateGenerator() {
   const { organizationId, organization } = useCurrentOrganization();
   const { toast } = useToast();
   const { t, language } = useTranslations();
+  const isMobile = useIsMobile();
 
   const [selectedYear, setSelectedYear] = React.useState<string>(String(new Date().getFullYear() - 1));
   const [isLoading, setIsLoading] = React.useState(false);
@@ -903,38 +917,40 @@ export function DonationCertificateGenerator() {
                 {t.certificates.selectDonorsDescription}
               </CardDescription>
             </div>
-            <div className="flex gap-2">
+            <div className={cn(MOBILE_ACTIONS_BAR, "sm:justify-end")}>
               <Button
                 variant="outline"
-                onClick={openEmailConfirmSelected}
-                disabled={isLoading || isSendingEmails || stats.selectedWithEmail === 0}
+                onClick={handleDownloadAll}
+                disabled={isLoading || isGenerating || selectedDonors.size === 0}
+                className={cn(MOBILE_CTA_PRIMARY, MOBILE_CTA_TRUNCATE)}
               >
-                {isSendingEmails ? (
+                {isGenerating ? (
                   <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    {t.certificates.email.sending}
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin flex-shrink-0" />
+                    <span className="truncate">{t.certificates.generating}</span>
                   </>
                 ) : (
                   <>
-                    <Send className="mr-2 h-4 w-4" />
-                    {t.certificates.email.sendSelected(stats.selectedWithEmail)}
+                    <Download className="mr-2 h-4 w-4 flex-shrink-0" />
+                    <span className="truncate">{t.certificates.downloadSelected(stats.selectedDonors)}</span>
                   </>
                 )}
               </Button>
               <Button
                 variant="outline"
-                onClick={handleDownloadAll}
-                disabled={isLoading || isGenerating || selectedDonors.size === 0}
+                onClick={openEmailConfirmSelected}
+                disabled={isLoading || isSendingEmails || stats.selectedWithEmail === 0}
+                className={cn(MOBILE_CTA_PRIMARY, MOBILE_CTA_TRUNCATE)}
               >
-                {isGenerating ? (
+                {isSendingEmails ? (
                   <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    {t.certificates.generating}
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin flex-shrink-0" />
+                    <span className="truncate">{t.certificates.email.sending}</span>
                   </>
                 ) : (
                   <>
-                    <Download className="mr-2 h-4 w-4" />
-                    {t.certificates.downloadSelected(stats.selectedDonors)}
+                    <Send className="mr-2 h-4 w-4 flex-shrink-0" />
+                    <span className="truncate">{t.certificates.email.sendSelected(stats.selectedWithEmail)}</span>
                   </>
                 )}
               </Button>
@@ -946,16 +962,114 @@ export function DonationCertificateGenerator() {
         </CardHeader>
         <CardContent>
           {isLoading ? (
-            <div className="flex items-center justify-center h-40">
-              <Loader2 className="h-8 w-8 animate-spin text-primary" />
-            </div>
+            isMobile ? (
+              <div className="space-y-2">
+                {[1, 2, 3].map((i) => (
+                  <div key={i} className="border border-border/50 rounded-lg p-3">
+                    <Skeleton className="h-4 w-3/4 mb-2" />
+                    <Skeleton className="h-3 w-1/2" />
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="flex items-center justify-center h-40">
+                <Loader2 className="h-8 w-8 animate-spin text-primary" />
+              </div>
+            )
           ) : donorSummaries.length === 0 ? (
             <div className="flex flex-col items-center justify-center h-40 text-muted-foreground">
               <AlertCircle className="h-8 w-8 mb-2" />
               <p>{t.certificates.noDonations(selectedYear)}</p>
               <p className="text-sm">{t.certificates.noDonationsHint}</p>
             </div>
+          ) : isMobile ? (
+            /* ═══════════════════════════════════════════════════════════════════
+               VISTA MÒBIL - MobileListItem
+               ═══════════════════════════════════════════════════════════════════ */
+            <div className="space-y-2">
+              {/* Checkbox per seleccionar tots */}
+              <div className="flex items-center gap-2 p-2 border-b border-border/50">
+                <Checkbox
+                  checked={selectedDonors.size === donorSummaries.length}
+                  onCheckedChange={toggleAll}
+                />
+                <span className="text-sm text-muted-foreground">
+                  {selectedDonors.size === donorSummaries.length ? t.common.deselectAll : t.common.selectAll}
+                </span>
+              </div>
+              {donorSummaries.map(summary => (
+                <MobileListItem
+                  key={summary.donor.id}
+                  leadingIcon={
+                    <Checkbox
+                      checked={selectedDonors.has(summary.donor.id)}
+                      onCheckedChange={() => toggleDonor(summary.donor.id)}
+                      onClick={(e) => e.stopPropagation()}
+                    />
+                  }
+                  title={cleanName(summary.donor.name)}
+                  badges={[
+                    <Badge key="donations" variant="secondary" className="text-xs">
+                      {summary.donationCount} {summary.donationCount === 1 ? 'donació' : 'donacions'}
+                    </Badge>,
+                    summary.hasEmail && (
+                      <Badge key="email" variant="outline" className="text-xs text-green-600 border-green-300">
+                        <Mail className="h-3 w-3 mr-1" />
+                        Email
+                      </Badge>
+                    ),
+                  ].filter(Boolean) as React.ReactNode[]}
+                  meta={[
+                    { label: 'NIF', value: summary.donor.taxId },
+                    {
+                      value: (
+                        <span className="font-mono text-green-600 font-medium">
+                          {formatCurrencyEU(summary.totalAmount)}
+                        </span>
+                      )
+                    },
+                    ...(summary.returnedAmount > 0 ? [{
+                      value: (
+                        <span className="flex items-center gap-1 font-mono text-orange-500">
+                          <Undo2 className="h-3 w-3" />
+                          -{formatCurrencyEU(summary.returnedAmount)}
+                        </span>
+                      )
+                    }] : [])
+                  ]}
+                  actions={
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" size="icon" className="h-8 w-8">
+                          <MoreVertical className="h-4 w-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuItem onClick={() => handlePreview(summary)}>
+                          <Eye className="h-4 w-4 mr-2" />
+                          {t.certificates.preview}
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => handleDownloadOne(summary)}>
+                          <Download className="h-4 w-4 mr-2" />
+                          {t.certificates.download}
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                          onClick={() => openEmailConfirmOne(summary)}
+                          disabled={!summary.hasEmail || isSendingEmails}
+                        >
+                          <Mail className="h-4 w-4 mr-2" />
+                          {t.certificates.email.sendOne}
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  }
+                />
+              ))}
+            </div>
           ) : (
+            /* ═══════════════════════════════════════════════════════════════════
+               VISTA DESKTOP - Taula
+               ═══════════════════════════════════════════════════════════════════ */
             <div className="rounded-md border">
               <Table>
                 <TableHeader>

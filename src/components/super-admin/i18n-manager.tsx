@@ -41,6 +41,7 @@ import {
   Compass,
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { useTranslations } from '@/i18n';
 import { getStorage, ref, getDownloadURL, uploadBytes } from 'firebase/storage';
 import { getFirestore, doc, setDoc, getDoc, serverTimestamp } from 'firebase/firestore';
 
@@ -86,6 +87,7 @@ type LanguageStorageStatus = Record<Language, StorageStatus>;
 const ALL_LANGUAGES: Language[] = ['ca', 'es', 'fr', 'pt'];
 
 export function I18nManager() {
+  const { t } = useTranslations();
   const { toast } = useToast();
   const [selectedLanguage, setSelectedLanguage] = React.useState<Language>('ca');
   const [uploadValidation, setUploadValidation] = React.useState<UploadValidation | null>(null);
@@ -437,8 +439,8 @@ export function I18nManager() {
 
   return (
     <div className="space-y-4">
-      {/* Header amb selector */}
-      <div className="flex items-center justify-between">
+      {/* Header amb selector - stacked on mobile */}
+      <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
         <div className="flex items-center gap-3">
           <Languages className="h-5 w-5 text-blue-500" />
           <div>
@@ -456,7 +458,7 @@ export function I18nManager() {
             handleClearUpload();
           }}
         >
-          <SelectTrigger className="w-[140px]">
+          <SelectTrigger className="w-full md:w-[140px]">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
@@ -826,15 +828,15 @@ export function I18nManager() {
             </AlertDialogTrigger>
             <AlertDialogContent>
               <AlertDialogHeader>
-                <AlertDialogTitle>Inicialitzar Storage?</AlertDialogTitle>
+                <AlertDialogTitle>{t.admin.i18n.initializeStorageTitle}</AlertDialogTitle>
                 <AlertDialogDescription>
-                  Pujarà ca/es/fr/pt i activarà els canvis. Pots repetir-ho quan vulguis.
+                  {t.admin.i18n.initializeStorageDescription}
                 </AlertDialogDescription>
               </AlertDialogHeader>
               <AlertDialogFooter>
-                <AlertDialogCancel>Cancel·lar</AlertDialogCancel>
+                <AlertDialogCancel>{t.common.cancel}</AlertDialogCancel>
                 <AlertDialogAction onClick={handleInitializeStorage}>
-                  Sí, inicialitza
+                  {t.admin.i18n.initializeConfirm}
                 </AlertDialogAction>
               </AlertDialogFooter>
             </AlertDialogContent>

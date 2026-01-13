@@ -9,6 +9,8 @@ import { useCurrentOrganization } from '@/hooks/organization-provider';
 import { collection, query, where, updateDoc, doc, increment, addDoc, getDocs, deleteDoc } from 'firebase/firestore';
 import type { Transaction, Donor } from '@/lib/data';
 import { normalizeIBAN, normalizeTaxId as normalizeLibTaxId } from '@/lib/normalize';
+import { assertFiscalTxCanBeSaved } from '@/lib/fiscal/assertFiscalInvariant';
+import { acquireProcessLock, releaseProcessLock, getLockFailureMessage } from '@/lib/fiscal/processLocks';
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // TIPUS
@@ -49,6 +51,8 @@ export interface ParsedReturn {
   matchedDonorId: string | null;
   matchedDonor: Donor | null;              // Referència completa per conveniència
   matchedBy: 'iban' | 'dni' | 'name' | 'manual' | null;
+  // Camp canònic P0: SI resolvedDonorId té valor, hi ha donant resolt
+  resolvedDonorId: string | null;
   // Matching transacció
   matchType: 'grouped' | 'individual' | 'none';
   noMatchReason: NoMatchReason;
@@ -394,11 +398,20 @@ const detectColumns = (rows: string[][], startRow: number): ColumnMapping => {
 // HOOK
 // ═══════════════════════════════════════════════════════════════════════════════
 
-export function useReturnImporter() {
+interface UseReturnImporterOptions {
+  /** Mode contextual: assignar devolucions directament a aquest pare */
+  parentTransaction?: Transaction | null;
+}
+
+export function useReturnImporter(options: UseReturnImporterOptions = {}) {
+  const { parentTransaction = null } = options;
+  const isContextMode = !!parentTransaction;
+
   const { toast } = useToast();
   const { log } = useAppLog();
-  const { firestore } = useFirebase();
+  const { firestore, user } = useFirebase();
   const { organizationId } = useCurrentOrganization();
+  const userId = user?.uid;
 
   // Estat de navegació
   const [step, setStep] = React.useState<Step>('upload');
@@ -650,6 +663,7 @@ export function useReturnImporter() {
           matchedDonorId: null,
           matchedDonor: null,
           matchedBy: null,
+          resolvedDonorId: null,  // Camp canònic P0
           matchType: 'none',
           noMatchReason: null,
           groupId: null,
@@ -701,10 +715,78 @@ export function useReturnImporter() {
         r.matchedDonor = matchedDonor || null;
         r.matchedDonorId = matchedDonor?.id || null;
         r.matchedBy = matchedBy;
+        // Camp canònic P0: sempre s'omple si hi ha donant
+        r.resolvedDonorId = matchedDonor?.id || null;
       }
 
-      const withDonorCount = results.filter(r => r.matchedDonorId).length;
-      console.log(`[performMatching] FASE 3: ${withDonorCount} amb donant trobat`);
+      // Logs deterministes P0
+      const withDonorCount = results.filter(r => r.resolvedDonorId).length;
+      const donorsWithIban = donors.filter(d => d.iban).length;
+      console.log(`[performMatching] FASE 3: ${withDonorCount}/${results.length} amb donant trobat`);
+      console.log(`[performMatching] FASE 3: ${donorsWithIban} donants tenen IBAN a la BD`);
+      if (withDonorCount === 0 && results.length > 0) {
+        // Mostrar primers 3 IBANs del fitxer per debug
+        const sampleIbans = results.slice(0, 3).map(r => r.iban);
+        console.log(`[performMatching] FASE 3: ⚠️ 0 matches! Primers IBANs del fitxer:`, sampleIbans);
+      }
+
+      // ═══════════════════════════════════════════════════════════════════════
+      // MODE CONTEXTUAL: Assignar directament al pare (saltar matching tx)
+      // ═══════════════════════════════════════════════════════════════════════
+
+      if (isContextMode && parentTransaction) {
+        console.log(`[performMatching] MODE CONTEXTUAL: Assignant ${results.length} devolucions al pare ${parentTransaction.id}`);
+
+        // Validar que l'import quadra (±2 cèntims)
+        const sumReturnsAbsCents = Math.round(results.reduce((sum, r) => sum + r.amount, 0) * 100);
+        const parentAbsCents = Math.round(Math.abs(parentTransaction.amount) * 100);
+        const deltaCents = Math.abs(sumReturnsAbsCents - parentAbsCents);
+
+        if (deltaCents > 2) {
+          const deltaEur = (sumReturnsAbsCents - parentAbsCents) / 100;
+          toast({
+            variant: 'destructive',
+            title: 'Import no quadra',
+            description: `El fitxer suma ${(sumReturnsAbsCents / 100).toFixed(2)}€, però l'apunt és ${(parentAbsCents / 100).toFixed(2)}€ (delta: ${deltaEur > 0 ? '+' : ''}${deltaEur.toFixed(2)}€)`,
+          });
+          setIsProcessing(false);
+          return;
+        }
+
+        // Crear groupId per mode contextual
+        const contextGroupId = `context_${parentTransaction.id}`;
+
+        // Assignar totes les devolucions al pare directament
+        for (const r of results) {
+          r.matchType = 'grouped'; // Tractarem com agrupades
+          r.groupId = contextGroupId;  // P0 FIX: cal groupId per processar!
+          r.matchedTransactionId = parentTransaction.id;
+          r.matchedTransaction = parentTransaction;
+          r.groupedTransactionId = parentTransaction.id;
+          r.groupTotalAmount = parentAbsCents / 100;
+          r.noMatchReason = null;
+          // Status segons si té donant o no (usa camp canònic P0)
+          r.status = r.resolvedDonorId ? 'matched' : 'donor_found';
+        }
+
+        // Crear un grup únic pel pare
+        const contextGroup: GroupedMatch = {
+          originalTransaction: parentTransaction,
+          returns: results,
+          totalAmount: sumReturnsAbsCents / 100,
+          date: new Date(parentTransaction.date),
+          groupId: contextGroupId,
+        };
+
+        setParsedReturns(results);
+        setGroupedMatches([contextGroup]);
+        setBulkReturnGroups([]);
+
+        log(`[ReturnImporter] MODE CONTEXTUAL: ${results.length} devolucions assignades al pare ${parentTransaction.id}`);
+        setStep('preview');
+        setIsProcessing(false);
+        return; // Sortir aquí, no cal el matching normal
+      }
 
       // ═══════════════════════════════════════════════════════════════════════
       // FASE 4: DETECTAR AGRUPACIONS (ABANS del matching individual!)
@@ -934,7 +1016,7 @@ export function useReturnImporter() {
 
       const nonGrouped = results.filter(r =>
         r.matchType !== 'grouped' &&
-        r.matchedDonorId &&
+        r.resolvedDonorId &&  // Camp canònic P0
         r.noMatchReason !== 'ambiguous'
       );
       console.log(`[performMatching] FASE 5: ${nonGrouped.length} devolucions per matching individual`);
@@ -1006,9 +1088,9 @@ export function useReturnImporter() {
         }
       }
 
-      // Actualitzar status per les que no tenen donant
+      // Actualitzar status per les que no tenen donant (usa camp canònic P0)
       results.forEach(r => {
-        if (!r.matchedDonorId) {
+        if (!r.resolvedDonorId) {
           r.status = 'not_found';
         }
       });
@@ -1042,7 +1124,7 @@ export function useReturnImporter() {
     } finally {
       setIsProcessing(false);
     }
-  }, [allRows, startRow, mapping, donors, pendingReturns, files, toast, log]);
+  }, [allRows, startRow, mapping, donors, pendingReturns, files, toast, log, isContextMode, parentTransaction]);
 
   // ═══════════════════════════════════════════════════════════════════════════
   // PROCESSAR DEVOLUCIONS (escriptura a Firestore)
@@ -1056,36 +1138,62 @@ export function useReturnImporter() {
     const { forceRecreateChildren = false } = options;
     if (!organizationId) return;
 
-    // DEBUG: Veure totes les devolucions parsejades
+    // P0: Mapa donorsById per obtenir nom/taxId sense queries
+    const donorsById = new Map(donors.map(d => [d.id, d]));
+
+    // DEBUG P0: Veure estat de resolvedDonorId
     console.log('[processReturns] 🔍 DEBUG parsedReturns:', parsedReturns.map(r => ({
+      iban: r.iban,
       status: r.status,
       matchType: r.matchType,
+      resolvedDonorId: r.resolvedDonorId,  // Camp canònic P0
       matchedDonorId: r.matchedDonorId,
       matchedTransactionId: r.matchedTransactionId,
       amount: r.amount,
     })));
 
+    // Helper P0: usa camp canònic resolvedDonorId
+    const hasDonor = (r: ParsedReturn) => !!r.resolvedDonorId;
+
     // Separar individuals i agrupades
     // INDIVIDUAL = té donant + té transacció + NO és grouped
     const individualReturns = parsedReturns.filter(r => {
-      const isIndividual = r.matchedDonorId && r.matchedTransactionId && r.matchType !== 'grouped';
-      console.log(`[processReturns] Checking: status=${r.status}, matchType=${r.matchType}, donorId=${r.matchedDonorId}, txId=${r.matchedTransactionId} → isIndividual=${isIndividual}`);
+      const isIndividual = hasDonor(r) && r.matchedTransactionId && r.matchType !== 'grouped';
+      console.log(`[processReturns] Individual check: iban=${r.iban}, resolvedDonorId=${r.resolvedDonorId}, txId=${r.matchedTransactionId} → isIndividual=${isIndividual}`);
       return isIndividual;
     });
 
-    const groupedReturnsToProcess = parsedReturns.filter(r =>
-      r.status === 'matched' && r.matchType === 'grouped'
-    );
+    // GROUPED = matchType === 'grouped' + té donant (resolvedDonorId)
+    const groupedReturnsToProcess = parsedReturns.filter(r => {
+      const isGrouped = r.matchType === 'grouped' && hasDonor(r);
+      console.log(`[processReturns] Grouped check: iban=${r.iban}, matchType=${r.matchType}, groupId=${r.groupId}, resolvedDonorId=${r.resolvedDonorId} → isGrouped=${isGrouped}`);
+      return isGrouped;
+    });
 
-    console.log(`[processReturns] 📊 Filtratge: ${individualReturns.length} individuals, ${groupedReturnsToProcess.length} grouped`);
+    // Comptar quantes no tenen donant (per feedback)
+    const withoutDonor = parsedReturns.filter(r => !hasDonor(r));
+
+    console.log(`[processReturns] 📊 Filtratge: ${individualReturns.length} individuals, ${groupedReturnsToProcess.length} grouped, ${withoutDonor.length} sense donant`);
 
     if (individualReturns.length === 0 && groupedReturnsToProcess.length === 0) {
-      toast({ variant: 'destructive', title: 'Res a processar', description: 'No hi ha devolucions per assignar' });
+      // Missatge explicatiu segons el cas
+      if (withoutDonor.length > 0) {
+        toast({
+          variant: 'destructive',
+          title: 'No s\'han pogut assignar',
+          description: `${withoutDonor.length} devolucions no tenen donant identificat. Cal assignar donant manualment.`
+        });
+      } else {
+        toast({ variant: 'destructive', title: 'Res a processar', description: 'No hi ha devolucions per assignar' });
+      }
       return;
     }
 
     setStep('processing');
     setIsProcessing(true);
+
+    // Track locks to release in finally (declarat fora del try per accedir-hi al finally)
+    const acquiredLocks: string[] = [];
 
     try {
       let processedIndividual = 0;
@@ -1138,6 +1246,32 @@ export function useReturnImporter() {
         const parentId = group.originalTransaction.id;
 
         // ═══════════════════════════════════════════════════════════════════
+        // LOCK: Adquirir lock per evitar doble processament concurrent
+        // ═══════════════════════════════════════════════════════════════════
+        if (userId) {
+          const lockResult = await acquireProcessLock({
+            firestore,
+            orgId: organizationId,
+            parentTxId: parentId,
+            operation: 'returnImport',
+            uid: userId,
+          });
+
+          if (!lockResult.ok) {
+            console.warn(`[processReturns] ⚠️ Lock failed for parent ${parentId}:`, lockResult.reason);
+            toast({
+              variant: 'destructive',
+              title: 'Operació bloquejada',
+              description: getLockFailureMessage(lockResult),
+            });
+            continue; // Skip this group, try next
+          }
+
+          acquiredLocks.push(parentId);
+          console.log(`[processReturns] 🔒 Lock adquirit per pare ${parentId}`);
+        }
+
+        // ═══════════════════════════════════════════════════════════════════
         // CARREGAR FILLS EXISTENTS
         // ═══════════════════════════════════════════════════════════════════
         const existingChildrenQuery = query(
@@ -1154,29 +1288,39 @@ export function useReturnImporter() {
         if (forceRecreateChildren) {
           console.log(`[processReturns] 🔴 FORCE RECREATE MODE per pare ${parentId}`);
 
-          // 1. ELIMINAR tots els fills existents
+          // 1. ELIMINAR tots els fills existents (devolucions)
+          let deletedChildrenCount = 0;
           if (existingChildrenCount > 0) {
             console.log(`[processReturns] Eliminant ${existingChildrenCount} fills existents...`);
             for (const childDoc of existingChildrenSnap.docs) {
               await deleteDoc(doc(firestore, 'organizations', organizationId, 'transactions', childDoc.id));
+              deletedChildrenCount++;
               console.log(`[processReturns] ✅ Eliminat fill: ${childDoc.id}`);
             }
           }
+          console.log(`[processReturns] 🗑️ Eliminades ${deletedChildrenCount} filles antigues`);
 
           // 2. CREAR TOTES les filles des de les devolucions parsejades
           const allReturnsInGroup = group.returns;
-          const resolubles = allReturnsInGroup.filter(r => r.matchedDonor);
-          const pendents = allReturnsInGroup.filter(r => !r.matchedDonor);
+          // P0: usar resolvedDonorId com a criteri canònic
+          const resolubles = allReturnsInGroup.filter(r => r.resolvedDonorId);
+          const pendents = allReturnsInGroup.filter(r => !r.resolvedDonorId);
 
           console.log(`[processReturns] Creant ${allReturnsInGroup.length} filles (${resolubles.length} amb donant, ${pendents.length} sense)`);
 
           // Crear filles per TOTES les devolucions (resolubles i pendents)
+          let createdChildrenCount = 0;
           for (const ret of allReturnsInGroup) {
-            const hasContact = !!ret.matchedDonor;
+            // P0: usar camp canònic resolvedDonorId + mapa donorsById
+            const hasContact = !!ret.resolvedDonorId;
+            const donorId = ret.resolvedDonorId;
+            const donor = hasContact ? donorsById.get(donorId!) : null;
+            const donorName = donor?.name ?? 'Donant';
+
             const childTxData: Record<string, unknown> = {
               source: 'remittance',
               parentTransactionId: parentId,
-              amount: -ret.amount,  // Import negatiu (devolució)
+              amount: -Math.abs(ret.amount),  // Import SEMPRE negatiu (devolució)
               date: ret.date?.toISOString().split('T')[0] || group.date.toISOString().split('T')[0],
               transactionType: 'return',
               description: ret.returnReason || group.originalTransaction.description || 'Devolució',
@@ -1185,23 +1329,52 @@ export function useReturnImporter() {
               bankAccountId: group.originalTransaction.bankAccountId ?? null,
             };
 
-            // Si té donant assignat, afegir contactId/contactType
-            if (hasContact) {
-              childTxData.contactId = ret.matchedDonor!.id;
+            // Si té donant assignat: contactId + contactType + contactName + legacy emisor*
+            if (hasContact && donorId) {
+              childTxData.contactId = donorId;
               childTxData.contactType = 'donor';
-              childTxData.emisorId = ret.matchedDonor!.id;
-              childTxData.emisorName = ret.matchedDonor!.name;
+              childTxData.contactName = donorName;
+              // Compat legacy (pantalles que llegeixen emisor*)
+              childTxData.emisorId = donorId;
+              childTxData.emisorName = donorName;
             }
+
+            // P0: Validar invariants fiscals abans d'escriure
+            assertFiscalTxCanBeSaved(
+              {
+                transactionType: childTxData.transactionType as 'return',
+                amount: childTxData.amount as number,
+                contactId: childTxData.contactId as string | null | undefined,
+                source: childTxData.source as 'remittance',
+              },
+              {
+                firestore,
+                orgId: organizationId,
+                operation: 'createReturn',
+                route: '/return-importer',
+              }
+            );
 
             const newChildRef = await addDoc(
               collection(firestore, 'organizations', organizationId, 'transactions'),
               childTxData
             );
-            console.log(`[processReturns] ✅ Creada filla ${newChildRef.id} - contactId: ${hasContact ? ret.matchedDonor!.id : 'null'}`);
+            createdChildrenCount++;
 
-            // Actualitzar donant si té contactId
+            // Log primera filla per debug
+            if (createdChildrenCount === 1) {
+              console.log(`[processReturns] 🔍 Primera filla creada:`, {
+                id: newChildRef.id,
+                contactId: childTxData.contactId ?? 'null',
+                contactName: childTxData.contactName ?? 'null',
+                amount: childTxData.amount,
+              });
+            }
+            console.log(`[processReturns] ✅ Creada filla ${newChildRef.id} - contactId: ${hasContact ? donorId : 'null'}`);
+
+            // Actualitzar donant si té contactId (P0: usar resolvedDonorId)
             if (hasContact) {
-              const donorRef = doc(firestore, 'organizations', organizationId, 'contacts', ret.matchedDonor!.id);
+              const donorRef = doc(firestore, 'organizations', organizationId, 'contacts', ret.resolvedDonorId!);
               await updateDoc(donorRef, {
                 returnCount: increment(1),
                 lastReturnDate: ret.date?.toISOString().split('T')[0] || new Date().toISOString().split('T')[0],
@@ -1258,7 +1431,12 @@ export function useReturnImporter() {
           const parentTxRef = doc(firestore, 'organizations', organizationId, 'transactions', parentId);
           await updateDoc(parentTxRef, parentUpdateData);
 
-          console.log(`[processReturns] ✅ FORCE RECREATE completat per pare ${parentId}`);
+          console.log(`[processReturns] ✅ FORCE RECREATE completat per pare ${parentId}:`, {
+            deletedChildrenCount,
+            createdChildrenCount,
+            resolvedCount,
+            pendingCount,
+          });
           continue; // Passar al següent grup, saltar la lògica normal
         }
 
@@ -1269,9 +1447,9 @@ export function useReturnImporter() {
         // Si ja hi ha fills, només actualitzem el pare (no creem més fills)
         const skipChildCreation = existingChildrenCount > 0;
 
-        // SEPARAR: resolubles (amb donant) vs pendents (sense donant)
-        const resolubles = group.returns.filter(r => r.matchedDonor);
-        const pendents = group.returns.filter(r => !r.matchedDonor);
+        // SEPARAR: resolubles (amb donant) vs pendents (sense donant) - P0: usar resolvedDonorId
+        const resolubles = group.returns.filter(r => r.resolvedDonorId);
+        const pendents = group.returns.filter(r => !r.resolvedDonorId);
 
         // Variables per l'estat del pare
         let remittanceStatus: 'complete' | 'partial' | 'pending';
@@ -1374,30 +1552,52 @@ export function useReturnImporter() {
         // SKIP si ja existeixen fills (idempotency)
         if (!skipChildCreation) {
           for (const ret of resolubles) {
+            // P0: usar camp canònic resolvedDonorId + mapa donorsById
+            const donorId = ret.resolvedDonorId!;
+            const donor = donorsById.get(donorId);
+            const donorName = donor?.name ?? 'Donant';
             const childTxData = {
               // Camps de la filla
               source: 'remittance',
               parentTransactionId: group.originalTransaction.id,
-              amount: -ret.amount,  // Import negatiu (devolució)
+              amount: -Math.abs(ret.amount),  // Import SEMPRE negatiu (devolució)
               date: ret.date?.toISOString().split('T')[0] || group.date.toISOString().split('T')[0],
               transactionType: 'return',
               description: ret.returnReason || group.originalTransaction.description || 'Devolució',
-              // Donant assignat (això fa que compti a Model182)
-              contactId: ret.matchedDonor!.id,
+              // Donant assignat: contactId + contactType + contactName + legacy
+              contactId: donorId,
               contactType: 'donor',
-              emisorId: ret.matchedDonor!.id,
-              emisorName: ret.matchedDonor!.name,
+              contactName: donorName,
+              // Compat legacy (pantalles que llegeixen emisor*)
+              emisorId: donorId,
+              emisorName: donorName,
               // Heretar bankAccountId del pare
               bankAccountId: group.originalTransaction.bankAccountId ?? null,
             };
+
+            // P0: Validar invariants fiscals abans d'escriure
+            assertFiscalTxCanBeSaved(
+              {
+                transactionType: childTxData.transactionType as 'return',
+                amount: childTxData.amount,
+                contactId: childTxData.contactId,
+                source: childTxData.source as 'remittance',
+              },
+              {
+                firestore,
+                orgId: organizationId,
+                operation: 'createReturn',
+                route: '/return-importer',
+              }
+            );
 
             await addDoc(
               collection(firestore, 'organizations', organizationId, 'transactions'),
               childTxData
             );
 
-            // Actualitzar donant
-            const donorRef = doc(firestore, 'organizations', organizationId, 'contacts', ret.matchedDonor!.id);
+            // Actualitzar donant (P0: usar resolvedDonorId)
+            const donorRef = doc(firestore, 'organizations', organizationId, 'contacts', ret.resolvedDonorId!);
             await updateDoc(donorRef, {
               returnCount: increment(1),
               lastReturnDate: ret.date?.toISOString().split('T')[0] || new Date().toISOString().split('T')[0],
@@ -1427,9 +1627,16 @@ export function useReturnImporter() {
       toast({ variant: 'destructive', title: 'Error', description: error.message });
       setStep('preview');
     } finally {
+      // Alliberar tots els locks adquirits
+      if (userId) {
+        for (const parentId of acquiredLocks) {
+          await releaseProcessLock({ firestore, orgId: organizationId, parentTxId: parentId });
+          console.log(`[processReturns] 🔓 Lock alliberat per pare ${parentId}`);
+        }
+      }
       setIsProcessing(false);
     }
-  }, [organizationId, parsedReturns, groupedMatches, firestore, toast, log, reset]);
+  }, [organizationId, parsedReturns, groupedMatches, firestore, userId, toast, log, reset]);
 
   // ═══════════════════════════════════════════════════════════════════════════
   // CREAR DONANT PER A DEVOLUCIÓ PENDENT
@@ -1507,6 +1714,7 @@ export function useReturnImporter() {
             ...item,
             matchedDonor: finalDonor,
             matchedDonorId: finalDonor.id,
+            resolvedDonorId: finalDonor.id,  // Camp canònic P0
             matchedBy: 'manual' as const,
             status: 'matched' as const,
           };
@@ -1541,6 +1749,10 @@ export function useReturnImporter() {
     step,
     setStep,
     isProcessing,
+
+    // Mode contextual
+    isContextMode,
+    parentTransaction,
 
     // Fitxers
     files,

@@ -164,13 +164,33 @@ export async function setDefaultBankAccount(
 }
 
 /**
+ * Compta el nombre de comptes bancaris actius
+ */
+async function countActiveBankAccounts(
+  firestore: Firestore,
+  orgId: string
+): Promise<number> {
+  const col = getBankAccountsCol(firestore, orgId);
+  const q = query(col, where('isActive', '!=', false));
+  const snapshot = await getDocs(q);
+  return snapshot.size;
+}
+
+/**
  * Desactiva un compte bancari (soft delete)
+ * INVARIANT: No permet desactivar l'últim compte actiu
  */
 export async function deactivateBankAccount(
   firestore: Firestore,
   orgId: string,
   bankAccountId: string
 ): Promise<void> {
+  // Guardrail: verificar que no és l'últim compte actiu
+  const activeCount = await countActiveBankAccounts(firestore, orgId);
+  if (activeCount <= 1) {
+    throw new Error('No es pot desactivar l\'últim compte bancari actiu.');
+  }
+
   await updateBankAccount(firestore, orgId, bankAccountId, {
     isActive: false,
   });

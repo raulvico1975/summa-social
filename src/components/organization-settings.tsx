@@ -293,7 +293,7 @@ export function OrganizationSettings() {
               id="name"
               value={formData.name}
               onChange={(e) => handleChange('name', e.target.value)}
-              placeholder="Fundació Exemple"
+              placeholder={t.settings.organization.namePlaceholder}
             />
           </div>
           <div className="space-y-2">
@@ -488,7 +488,7 @@ export function OrganizationSettings() {
                 id="signatoryName"
                 value={formData.signatoryName}
                 onChange={(e) => handleChange('signatoryName', e.target.value)}
-                placeholder="Maria Garcia López"
+                placeholder={t.settings.organization.signatoryNamePlaceholder}
               />
             </div>
             <div className="space-y-2">
@@ -497,7 +497,7 @@ export function OrganizationSettings() {
                 id="signatoryRole"
                 value={formData.signatoryRole}
                 onChange={(e) => handleChange('signatoryRole', e.target.value)}
-                placeholder="Presidenta"
+                placeholder={t.settings.organization.signatoryRolePlaceholder}
               />
             </div>
           </div>

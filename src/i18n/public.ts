@@ -155,6 +155,10 @@ export interface PublicTranslations {
     metaDescription: string;
     skipToContent: string;
     heroTagline: string;
+    hero: {
+      visualAlt: string;
+      bridgeLine: string;
+    };
     nav: {
       conciliation: string;
       remittances: string;
@@ -219,6 +223,10 @@ export interface PublicTranslations {
       step1: { title: string; description: string };
       step2: { title: string; description: string };
       step3: { title: string; description: string };
+    };
+    systemOverview: {
+      title: string;
+      subtitle: string;
     };
     capabilities: {
       title: string;
@@ -550,6 +558,10 @@ const ca: PublicTranslations = {
       "Gestió econòmica i fiscal per a entitats socials petites i mitjanes d'Espanya. Conciliació bancària, Model 182/347, remeses SEPA i més.",
     skipToContent: 'Saltar al contingut',
     heroTagline: 'Gestió econòmica i fiscal per a entitats no lucratives.',
+    hero: {
+      visualAlt: 'Captura de pantalla de Summa Social',
+      bridgeLine: 'Tot queda alineat sense haver-hi de pensar cada vegada.',
+    },
     nav: {
       conciliation: 'Conciliació',
       remittances: 'Remeses i devolucions',
@@ -639,6 +651,10 @@ const ca: PublicTranslations = {
         title: 'Compleix',
         description: 'Genera models fiscals, certificats i justificacions amb un clic.',
       },
+    },
+    systemOverview: {
+      title: "Com s'ordena la gestió amb Summa Social",
+      subtitle: 'Cada part de Summa resol una peça concreta del dia a dia, però totes treballen juntes.',
     },
     capabilities: {
       title: 'Què pots fer amb Summa Social',
@@ -1069,6 +1085,10 @@ const es: PublicTranslations = {
       'Gestión económica y fiscal para entidades sociales pequeñas y medianas de España. Conciliación bancaria, Modelo 182/347, remesas SEPA y más.',
     skipToContent: 'Saltar al contenido',
     heroTagline: 'Gestión económica y fiscal para entidades sin ánimo de lucro.',
+    hero: {
+      visualAlt: 'Captura de pantalla de Summa Social',
+      bridgeLine: 'Todo queda alineado sin tener que pensarlo cada vez.',
+    },
     nav: {
       conciliation: 'Conciliación',
       remittances: 'Remesas y devoluciones',
@@ -1158,6 +1178,10 @@ const es: PublicTranslations = {
         title: 'Cumple',
         description: 'Genera modelos fiscales, certificados y justificaciones con un clic.',
       },
+    },
+    systemOverview: {
+      title: 'Cómo se ordena la gestión con Summa Social',
+      subtitle: 'Cada parte de Summa resuelve una pieza concreta del día a día, pero todas trabajan juntas.',
     },
     capabilities: {
       title: 'Qué puedes hacer con Summa Social',
@@ -1589,6 +1613,10 @@ const fr: PublicTranslations = {
       "Gestion économique et fiscale pour les associations petites et moyennes d'Espagne. Rapprochement bancaire, Modèle 182/347, prélèvements SEPA et plus.",
     skipToContent: 'Aller au contenu',
     heroTagline: 'Gestion économique et fiscale pour les associations à but non lucratif.',
+    hero: {
+      visualAlt: 'Capture d\'écran de Summa Social',
+      bridgeLine: 'Tout reste aligné sans avoir à y penser à chaque fois.',
+    },
     nav: {
       conciliation: 'Rapprochement',
       remittances: 'Prélèvements et rejets',
@@ -1678,6 +1706,10 @@ const fr: PublicTranslations = {
         title: 'Conformez',
         description: "Générez les modèles fiscaux, certificats et justificatifs d'un seul clic.",
       },
+    },
+    systemOverview: {
+      title: "Comment la gestion s'organise avec Summa Social",
+      subtitle: 'Chaque partie de Summa résout une pièce concrète du quotidien, mais toutes travaillent ensemble.',
     },
     capabilities: {
       title: 'Ce que vous pouvez faire avec Summa Social',
@@ -2108,6 +2140,10 @@ const pt: PublicTranslations = {
       'Gestão económica e fiscal para entidades sociais pequenas e médias de Espanha. Reconciliação bancária, Modelo 182/347, remessas SEPA e mais.',
     skipToContent: 'Saltar para o conteúdo',
     heroTagline: 'Gestão económica e fiscal para entidades sem fins lucrativos.',
+    hero: {
+      visualAlt: 'Captura de ecrã de Summa Social',
+      bridgeLine: 'Tudo fica alinhado sem ter de pensar nisso a cada momento.',
+    },
     nav: {
       conciliation: 'Reconciliação',
       remittances: 'Remessas e devoluções',
@@ -2197,6 +2233,10 @@ const pt: PublicTranslations = {
         title: 'Cumpre',
         description: 'Gera modelos fiscais, certificados e justificações com um clique.',
       },
+    },
+    systemOverview: {
+      title: 'Como se organiza a gestão com Summa Social',
+      subtitle: 'Cada parte do Summa resolve uma peça concreta do dia a dia, mas todas trabalham juntas.',
     },
     capabilities: {
       title: 'O que podes fazer com Summa Social',

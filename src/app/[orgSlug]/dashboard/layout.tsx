@@ -171,7 +171,7 @@ function OrganizationDependentLayout({ children }: { children: React.ReactNode }
           <SidebarInset className="flex min-w-0 flex-1 flex-col transition-all duration-300 ease-in-out">
             {/* Header DINS SidebarInset: alineat amb el contingut */}
             <DashboardHeader />
-            <main className="min-w-0 flex-1 overflow-y-auto p-4 md:p-6">{children}</main>
+            <main className="min-w-0 flex-1 overflow-y-auto p-4 pb-24 md:p-6 md:pb-6">{children}</main>
           </SidebarInset>
         </div>
       </SidebarProvider>

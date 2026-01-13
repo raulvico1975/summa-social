@@ -90,6 +90,14 @@ import { SepaReconcileModal } from '@/components/pending-documents/sepa-reconcil
 import type { PrebankRemittance } from '@/lib/pending-documents/sepa-remittance';
 import { prebankRemittancesCollection } from '@/lib/pending-documents/sepa-remittance';
 import { query, where, getDocs } from 'firebase/firestore';
+import { filterActiveContacts } from '@/lib/contacts/filterActiveContacts';
+import { UndoProcessingDialog } from '@/components/undo-processing-dialog';
+import {
+  detectUndoOperationType,
+  countChildTransactions,
+  executeUndo,
+  type UndoOperationType,
+} from '@/lib/fiscal/undoProcessing';
 
 interface TransactionsTableProps {
   initialDateFilter?: DateFilterValue | null;
@@ -194,11 +202,13 @@ export function TransactionsTable({ initialDateFilter = null }: TransactionsTabl
   };
   const [sortDateAsc, setSortDateAsc] = React.useState(false); // false = més recents primer
 
-  // Columna Projecte col·lapsable
-  const [showProjectColumn, setShowProjectColumn] = React.useState(false);
+  // Columna Projecte - sempre oculta a la taula de moviments
+  // (es gestiona a través de filtres i detalls individuals)
+  const showProjectColumn = false;
 
-  // Filtre per amagar desglossament de remeses
-  const [hideRemittanceItems, setHideRemittanceItems] = React.useState(true);
+  // Filtre per amagar desglossament de remeses - sempre actiu (ledger mode)
+  // Els ítems de remesa es gestionen dins els modals de remesa, no a la taula principal
+  const hideRemittanceItems = true;
 
   // Filtre per source
   const [sourceFilter, setSourceFilter] = React.useState<SourceFilter>('all');
@@ -278,8 +288,22 @@ export function TransactionsTable({ initialDateFilter = null }: TransactionsTabl
   const { data: availableContacts } = useCollection<AnyContact>(contactsCollection);
   const { data: availableProjects } = useCollection<Project>(projectsCollection);
 
+  // Estat per toggle SuperAdmin "incloure arxivades"
+  const [showArchived, setShowArchived] = React.useState(false);
+
+  // Filtrar transaccions arxivades (soft-delete) - només SuperAdmin pot veure-les
+  const activeTransactions = React.useMemo(() => {
+    if (!allTransactions) return null;
+    if (showArchived && isSuperAdmin) {
+      // SuperAdmin amb toggle: mostrar totes
+      return allTransactions;
+    }
+    // Filtrar les que tenen archivedAt (soft-deleted)
+    return allTransactions.filter(tx => !tx.archivedAt);
+  }, [allTransactions, showArchived, isSuperAdmin]);
+
   // Aplicar filtre de dates primer
-  const transactions = useTransactionFilters(allTransactions ?? undefined, dateFilter);
+  const transactions = useTransactionFilters(activeTransactions ?? undefined, dateFilter);
 
   // Helper per obtenir el nom traduït d'una categoria (pot ser ID o nom clau)
   const getCategoryDisplayName = React.useCallback((categoryValue: string | null | undefined): string => {
@@ -302,6 +326,7 @@ export function TransactionsTable({ initialDateFilter = null }: TransactionsTabl
 
   // Modal importador devolucions
   const [isReturnImporterOpen, setIsReturnImporterOpen] = React.useState(false);
+  const [returnImporterParentTx, setReturnImporterParentTx] = React.useState<Transaction | null>(null);
 
   // Modal importador Stripe
   const [isStripeImporterOpen, setIsStripeImporterOpen] = React.useState(false);
@@ -314,6 +339,12 @@ export function TransactionsTable({ initialDateFilter = null }: TransactionsTabl
   const [detectedSepaRemittances, setDetectedSepaRemittances] = React.useState<Map<string, PrebankRemittance>>(new Map());
   const [stripeTransactionToSplit, setStripeTransactionToSplit] = React.useState<Transaction | null>(null);
 
+  // Modal undo processament
+  const [isUndoDialogOpen, setIsUndoDialogOpen] = React.useState(false);
+  const [undoTransaction, setUndoTransaction] = React.useState<Transaction | null>(null);
+  const [undoChildCount, setUndoChildCount] = React.useState(0);
+  const [isUndoProcessing, setIsUndoProcessing] = React.useState(false);
+
   // Maps per noms
   const contactMap = React.useMemo(() =>
     availableContacts?.reduce((acc, contact) => {
@@ -323,7 +354,13 @@ export function TransactionsTable({ initialDateFilter = null }: TransactionsTabl
   [availableContacts]);
 
   const donors = React.useMemo(() =>
-    availableContacts?.filter(c => c.type === 'donor') as Donor[] || [],
+    filterActiveContacts(availableContacts?.filter(c => c.type === 'donor') as Donor[] || []),
+  [availableContacts]);
+
+  // P0: TOTS els donants per matching IBAN en remeses (sense filtrar per estat)
+  // Inclou: active, inactive (baixa), archived, deleted
+  const allDonorsForRemittance = React.useMemo(() =>
+    (availableContacts?.filter(c => c.type === 'donor') as Donor[] || []),
   [availableContacts]);
 
   // Map contactId -> membershipType per filtrar donations vs memberFees
@@ -360,6 +397,14 @@ export function TransactionsTable({ initialDateFilter = null }: TransactionsTabl
         return acc;
     }, {} as Record<string, string>) || {},
   [availableProjects]);
+
+  // Mapa de comptes bancaris per ID (per export)
+  const bankAccountMap = React.useMemo(() =>
+    bankAccounts.reduce((acc, account) => {
+      acc[account.id] = account.name;
+      return acc;
+    }, {} as Record<string, string>),
+  [bankAccounts]);
 
   // ═══════════════════════════════════════════════════════════════════════════
   // GESTIÓ DE DEVOLUCIONS (HOOK EXTERN)
@@ -465,6 +510,8 @@ export function TransactionsTable({ initialDateFilter = null }: TransactionsTabl
     storage,
     transactions,
     availableContacts,
+    firestore,
+    userId: user?.uid,
   });
 
   // ═══════════════════════════════════════════════════════════════════════════
@@ -621,6 +668,14 @@ export function TransactionsTable({ initialDateFilter = null }: TransactionsTabl
       case 'income':
         result = transactions.filter(tx => tx.amount > 0);
         break;
+      case 'expenses':
+        // Totes les despeses (amount < 0)
+        result = transactions.filter(tx => tx.amount < 0);
+        break;
+      case 'expensesWithoutDoc':
+        // Despeses sense document adjunt
+        result = transactions.filter(tx => tx.amount < 0 && !tx.document);
+        break;
       case 'operatingExpenses':
         result = transactions.filter(
           tx => tx.amount < 0 && tx.category !== MISSION_TRANSFER_CATEGORY_KEY
@@ -746,18 +801,26 @@ export function TransactionsTable({ initialDateFilter = null }: TransactionsTabl
   // ═══════════════════════════════════════════════════════════════════════════
   // RESUM FILTRAT
   // ═══════════════════════════════════════════════════════════════════════════
-  const hasActiveFilter = tableFilter !== 'all' || searchQuery.trim() !== '' || dateFilter.type !== 'all' || contactIdFilter !== null || sourceFilter !== 'all' || bankAccountFilter !== '__all__';
+  // Filtre de període (dates) és diferent dels filtres secundaris
+  const hasSecondaryFilter = tableFilter !== 'all' || searchQuery.trim() !== '' || contactIdFilter !== null || sourceFilter !== 'all' || bankAccountFilter !== '__all__';
+  // hasActiveFilter inclou també el filtre de dates per a altres usos
+  const hasActiveFilter = hasSecondaryFilter || dateFilter.type !== 'all';
 
   const filteredSummary = React.useMemo(() => {
-    if (!hasActiveFilter || !allTransactions) return null;
+    // Mostrar resum sempre que hi hagi filtres secundaris O filtre de dates actiu
+    if (!hasActiveFilter || !transactions) return null;
+
+    // Total del període = només apunts bancaris (ledger), excloent desglossaments interns
+    const periodTotal = transactions.filter(tx => !tx.isRemittanceItem && tx.source !== 'remittance').length;
+
     const visible = filteredTransactions;
     return {
       showing: visible.length,
-      total: allTransactions.length,
+      total: periodTotal,
       income: visible.filter(tx => tx.amount > 0).reduce((sum, tx) => sum + tx.amount, 0),
       expenses: visible.filter(tx => tx.amount < 0).reduce((sum, tx) => sum + tx.amount, 0),
     };
-  }, [filteredTransactions, allTransactions, hasActiveFilter]);
+  }, [filteredTransactions, transactions, hasActiveFilter]);
 
   const clearAllFilters = React.useCallback(() => {
     setTableFilter('all');
@@ -884,13 +947,60 @@ export function TransactionsTable({ initialDateFilter = null }: TransactionsTabl
       return;
     }
 
-    const excelData = filteredTransactions.map(tx => ({
-      [t.movements.table.date]: formatDate(tx.date),
-      [t.movements.table.amount]: tx.amount,
-      [t.movements.table.concept]: tx.description,
-      [t.movements.table.contact]: tx.contactId && contactMap[tx.contactId] ? contactMap[tx.contactId].name : '',
-      [t.movements.table.category]: tx.category ? getCategoryDisplayName(tx.category) : '',
-    }));
+    // Traduccions de columnes (amb fallback)
+    const exportCols = t.movements.table.exportColumns ?? {
+      date: 'Data',
+      description: 'Descripció',
+      amount: 'Import',
+      category: 'Categoria',
+      contact: 'Contacte',
+      contactType: 'Tipus contacte',
+      project: 'Projecte',
+      bankAccount: 'Compte bancari',
+      source: 'Origen',
+      transactionType: 'Tipus',
+      transactionId: 'ID transacció',
+    };
+
+    // Mapa per traduir source
+    const sourceLabels: Record<string, string> = {
+      bank: t.movements.table.sourceBank ?? 'Banc',
+      remittance: t.movements.table.sourceRemittance ?? 'Remesa',
+      stripe: 'Stripe',
+      manual: t.movements.table.sourceManual ?? 'Manual',
+    };
+
+    // Mapa per traduir contactType
+    const contactTypeLabels: Record<string, string> = {
+      donor: t.common?.donor ?? 'Donant',
+      supplier: t.common?.supplier ?? 'Proveïdor',
+      employee: t.common?.employee ?? 'Empleat',
+    };
+
+    // Mapa per traduir transactionType
+    const txTypeLabels: Record<string, string> = {
+      donation: t.movements.table.typeDonation ?? 'Donació',
+      return: t.movements.table.typeReturn ?? 'Devolució',
+      fee: t.movements.table.typeFee ?? 'Comissió',
+      return_fee: t.movements.table.typeReturnFee ?? 'Comissió devolució',
+    };
+
+    const excelData = filteredTransactions.map(tx => {
+      const contact = tx.contactId ? contactMap[tx.contactId] : null;
+      return {
+        [exportCols.date]: formatDate(tx.date),
+        [exportCols.description]: tx.description || '',
+        [exportCols.amount]: tx.amount,
+        [exportCols.category]: tx.category ? getCategoryDisplayName(tx.category) : '',
+        [exportCols.contact]: contact?.name || '',
+        [exportCols.contactType]: contact?.type ? (contactTypeLabels[contact.type] || contact.type) : '',
+        [exportCols.project]: tx.projectId ? (projectMap[tx.projectId] || '') : '',
+        [exportCols.bankAccount]: tx.bankAccountId ? (bankAccountMap[tx.bankAccountId] || '') : '',
+        [exportCols.source]: tx.source ? (sourceLabels[tx.source] || tx.source) : '',
+        [exportCols.transactionType]: tx.transactionType ? (txTypeLabels[tx.transactionType] || tx.transactionType) : '',
+        [exportCols.transactionId]: tx.id,
+      };
+    });
 
     const worksheet = XLSX.utils.json_to_sheet(excelData);
     const workbook = XLSX.utils.book_new();
@@ -898,11 +1008,17 @@ export function TransactionsTable({ initialDateFilter = null }: TransactionsTabl
 
     // Ajustar amplada de columnes
     const colWidths = [
-      { wch: 12 }, // Data
-      { wch: 12 }, // Import
-      { wch: 40 }, // Concepte
-      { wch: 25 }, // Contacte
-      { wch: 20 }, // Categoria
+      { wch: 12 },  // Data
+      { wch: 45 },  // Descripció
+      { wch: 12 },  // Import
+      { wch: 22 },  // Categoria
+      { wch: 28 },  // Contacte
+      { wch: 12 },  // Tipus contacte
+      { wch: 22 },  // Projecte
+      { wch: 20 },  // Compte bancari
+      { wch: 10 },  // Origen
+      { wch: 14 },  // Tipus
+      { wch: 24 },  // ID transacció
     ];
     worksheet['!cols'] = colWidths;
 
@@ -988,77 +1104,90 @@ export function TransactionsTable({ initialDateFilter = null }: TransactionsTabl
     setIsRemittanceDetailOpen(true);
   };
 
-  // Desfer remesa: elimina fills, document remesa, i neteja el pare
+  // Desfer remesa/Stripe: obre diàleg de confirmació
   const handleUndoRemittance = async (transaction: Transaction) => {
-    if (!organizationId || !transaction.remittanceId) {
+    if (!organizationId) {
       toast({
         variant: 'destructive',
         title: 'Error',
-        description: 'No es pot desfer la remesa: falta informació',
+        description: 'No es pot desfer: falta informació',
       });
       return;
     }
 
-    const confirmed = window.confirm(
-      `Segur que vols desfer aquesta remesa? S'eliminaran ${transaction.remittanceItemCount || 0} transaccions filles i es restaurarà el moviment original.`
-    );
-    if (!confirmed) return;
-
-    try {
-      const batch = writeBatch(firestore);
-      const transactionsRef = collection(firestore, 'organizations', organizationId, 'transactions');
-      const remittanceRef = doc(firestore, 'organizations', organizationId, 'remittances', transaction.remittanceId);
-
-      // 1. Buscar i eliminar totes les transaccions filles amb aquest remittanceId
-      const { getDocs, query, where, deleteField } = await import('firebase/firestore');
-      const childrenQuery = query(
-        transactionsRef,
-        where('remittanceId', '==', transaction.remittanceId)
-      );
-      const childrenSnapshot = await getDocs(childrenQuery);
-
-      let deletedCount = 0;
-      childrenSnapshot.forEach((childDoc) => {
-        // Només eliminar fills (no el pare)
-        if (childDoc.id !== transaction.id) {
-          batch.delete(childDoc.ref);
-          deletedCount++;
-        }
-      });
-
-      // 2. Eliminar document de remesa
-      batch.delete(remittanceRef);
-
-      // 3. Netejar el pare (mantenir import/data/descripció immutables)
-      // Utilitzem deleteField() per eliminar camps opcionals de forma neta
-      const now = new Date().toISOString();
-      batch.update(doc(transactionsRef, transaction.id), {
-        isRemittance: deleteField(),
-        remittanceId: deleteField(),
-        remittanceItemCount: deleteField(),
-        remittanceResolvedCount: deleteField(),
-        remittancePendingCount: deleteField(),
-        remittancePendingTotalAmount: deleteField(),
-        remittanceType: deleteField(),
-        remittanceDirection: deleteField(),
-        remittanceStatus: deleteField(),
-        pendingReturns: deleteField(),
-        updatedAt: now,
-      });
-
-      await batch.commit();
-
-      toast({
-        title: 'Remesa desfeta',
-        description: `S'han eliminat ${deletedCount} transaccions filles i restaurat el moviment original.`,
-      });
-    } catch (error: any) {
-      console.error('Error undoing remittance:', error);
+    // Detectar el tipus d'operació
+    const opType = detectUndoOperationType(transaction);
+    if (!opType) {
       toast({
         variant: 'destructive',
-        title: 'Error desfent remesa',
+        title: 'Error',
+        description: 'No es pot desfer aquesta transacció',
+      });
+      return;
+    }
+
+    // Comptar filles
+    const childCount = await countChildTransactions(
+      firestore,
+      organizationId,
+      transaction.id,
+      transaction.remittanceId
+    );
+
+    if (childCount === 0) {
+      toast({
+        variant: 'destructive',
+        title: 'Error',
+        description: 'No s\'han trobat transaccions filles per desfer',
+      });
+      return;
+    }
+
+    // Obrir diàleg de confirmació
+    setUndoTransaction(transaction);
+    setUndoChildCount(childCount);
+    setIsUndoDialogOpen(true);
+  };
+
+  // Executar l'undo quan l'usuari confirma
+  const handleUndoConfirm = async () => {
+    if (!undoTransaction || !organizationId || !user?.uid) return;
+
+    const opType = detectUndoOperationType(undoTransaction);
+    if (!opType) return;
+
+    setIsUndoProcessing(true);
+
+    try {
+      const result = await executeUndo(undoTransaction, opType, {
+        firestore,
+        orgId: organizationId,
+        userId: user.uid,
+      });
+
+      if (result.success) {
+        toast({
+          title: 'Processament desfet',
+          description: `S'han arxivat ${result.childrenArchived} transaccions fiscals${result.childrenDeleted > 0 ? ` i eliminat ${result.childrenDeleted} no fiscals` : ''}. Pots processar de nou.`,
+        });
+        setIsUndoDialogOpen(false);
+        setUndoTransaction(null);
+      } else {
+        toast({
+          variant: 'destructive',
+          title: 'Error desfent processament',
+          description: result.error || 'Error desconegut',
+        });
+      }
+    } catch (error: any) {
+      console.error('Error undoing processing:', error);
+      toast({
+        variant: 'destructive',
+        title: 'Error desfent processament',
         description: error.message,
       });
+    } finally {
+      setIsUndoProcessing(false);
     }
   };
 
@@ -1138,6 +1267,7 @@ export function TransactionsTable({ initialDateFilter = null }: TransactionsTabl
     remittanceProcessedLabel: t.movements.table.remittanceProcessedLabel,
     remittanceNotApplicable: t.movements.table.remittanceNotApplicable,
     undoRemittance: (t.movements.table as any).undoRemittance || 'Desfer remesa',
+    moreOptionsAriaLabel: t.movements.table.moreOptionsAriaLabel,
   }), [t]);
 
   // Memoized filter translations
@@ -1153,7 +1283,6 @@ export function TransactionsTable({ initialDateFilter = null }: TransactionsTabl
     pendingFilters: t.movements.table.pendingFilters,
     exportTooltip: t.movements.table.exportTooltip,
     searchPlaceholder: t.movements.table.searchPlaceholder,
-    hideRemittanceItems: t.movements.table.hideRemittanceItems,
     importReturnsFile: t.movements.table.uploadBankFile,
     allAccounts: t.settings.bankAccounts.allAccounts,
     // New translations for reorganized UI
@@ -1165,8 +1294,24 @@ export function TransactionsTable({ initialDateFilter = null }: TransactionsTabl
     filterBySource: t.movements.table.filterBySource || 'Origen',
     filterByAccount: t.movements.table.filterByAccount || 'Compte bancari',
     pendingTasks: t.movements.table.pendingTasks || 'Tasques pendents',
-    tableOptions: t.movements.table.tableOptions || 'Opcions de taula',
-    showProjectColumn: t.movements.table.showProjectColumn || 'Mostrar columna Projecte',
+    // Quick filters (shortcuts)
+    onlyExpenses: t.movements.table.onlyExpenses,
+    expensesWithoutDocument: t.movements.table.expensesWithoutDocument,
+    expensesWithoutDocumentTooltip: t.movements.table.expensesWithoutDocumentTooltip,
+    // Batch categorization controls
+    stopProcessAriaLabel: t.movements.table.stopProcessAriaLabel,
+    stopButton: t.movements.table.stopButton,
+    stopProcessTooltip: t.movements.table.stopProcessTooltip,
+    suggestCategoriesAriaLabel: t.movements.table.suggestCategoriesAriaLabel,
+    suggestCategoriesTooltip: t.movements.table.suggestCategoriesTooltip,
+    // Bulk mode controls (SuperAdmin)
+    bulkModeAriaLabel: t.movements.table.bulkModeAriaLabel,
+    bulkModeLabel: t.movements.table.bulkModeLabel,
+    bulkModeTooltip: t.movements.table.bulkModeTooltip,
+    // Archived toggle (SuperAdmin)
+    showArchivedAriaLabel: t.movements.table.showArchivedAriaLabel,
+    showArchivedLabel: t.movements.table.showArchivedLabel,
+    showArchivedTooltip: t.movements.table.showArchivedTooltip,
   }), [t]);
 
   return (
@@ -1199,10 +1344,6 @@ export function TransactionsTable({ initialDateFilter = null }: TransactionsTabl
           onBatchCategorize={handleBatchCategorize}
           onCancelBatch={handleCancelBatch}
           onExportExpensesWithoutDoc={handleExportExpensesWithoutDoc}
-          hideRemittanceItems={hideRemittanceItems}
-          onHideRemittanceItemsChange={setHideRemittanceItems}
-          showProjectColumn={showProjectColumn}
-          onShowProjectColumnChange={setShowProjectColumn}
           onOpenReturnImporter={() => setIsReturnImporterOpen(true)}
           sourceFilter={sourceFilter}
           onSourceFilterChange={setSourceFilter}
@@ -1213,6 +1354,8 @@ export function TransactionsTable({ initialDateFilter = null }: TransactionsTabl
           isBulkMode={isBulkMode}
           onBulkModeChange={handleBulkModeChange}
           batchProgress={batchProgress}
+          showArchived={showArchived}
+          onShowArchivedChange={setShowArchived}
           t={filterTranslations}
         />
       </div>
@@ -1244,8 +1387,8 @@ export function TransactionsTable({ initialDateFilter = null }: TransactionsTabl
 
       {/* Barra de resum quan hi ha filtre actiu */}
       {filteredSummary && (
-        <div className="mb-4 px-4 py-2 bg-muted/50 border rounded-lg flex items-center justify-between gap-4">
-          <div className="flex items-center gap-4 text-sm text-muted-foreground">
+        <div className="mb-4 px-4 py-2 bg-muted/50 border rounded-lg flex flex-col gap-2 md:flex-row md:items-center md:justify-between md:gap-4">
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-muted-foreground">
             {/* Context: filtre per contactId des de fitxa donant */}
             {contactIdFilter && contactMap[contactIdFilter] && (
               <span className="text-orange-600 font-medium">
@@ -1255,16 +1398,16 @@ export function TransactionsTable({ initialDateFilter = null }: TransactionsTabl
             <span>
               {t.movements.table.showingOf(filteredSummary.showing, filteredSummary.total)}
             </span>
-            <span className="text-muted-foreground/50">·</span>
+            <span className="hidden md:inline text-muted-foreground/50">·</span>
             <span>
               {t.movements.table.income}: <span className="text-green-600 font-medium">{formatCurrencyEU(filteredSummary.income)}</span>
             </span>
-            <span className="text-muted-foreground/50">·</span>
+            <span className="hidden md:inline text-muted-foreground/50">·</span>
             <span>
               {t.movements.table.expenses}: <span className="text-red-600 font-medium">{formatCurrencyEU(filteredSummary.expenses)}</span>
             </span>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 shrink-0">
             <Tooltip>
               <TooltipTrigger asChild>
                 <Button
@@ -1410,8 +1553,8 @@ export function TransactionsTable({ initialDateFilter = null }: TransactionsTabl
           TAULA DE TRANSACCIONS (desktop/tablet) - >= 768px
           ═══════════════════════════════════════════════════════════════════════ */}
       {!isMobile && (
-        <div className="rounded-md border">
-          <Table>
+        <div className="w-full rounded-md border table-scroll-stable overflow-x-auto [&>div]:overflow-visible">
+          <Table className="w-full">
             <TableHeader>
               <TableRow className="h-9">
                 {/* Checkbox columna - només visible per admin/user */}
@@ -1430,7 +1573,7 @@ export function TransactionsTable({ initialDateFilter = null }: TransactionsTabl
                     />
                   </TableHead>
                 )}
-                <TableHead className="w-[100px] py-2">
+                <TableHead className="w-[90px] py-2">
                   <button
                     onClick={() => setSortDateAsc(!sortDateAsc)}
                     className="flex items-center gap-1 hover:text-foreground transition-colors text-xs"
@@ -1443,16 +1586,17 @@ export function TransactionsTable({ initialDateFilter = null }: TransactionsTabl
                     )}
                   </button>
                 </TableHead>
-                <TableHead className="text-right w-[100px] py-2 whitespace-nowrap">{t.movements.table.amount}</TableHead>
-                <TableHead className="min-w-[200px] lg:min-w-[360px] py-2">{t.movements.table.concept}</TableHead>
-                <TableHead className="w-[150px] py-2 hidden lg:table-cell">{t.movements.table.contact}</TableHead>
-                <TableHead className="w-[140px] py-2 hidden lg:table-cell">{t.movements.table.category}</TableHead>
+                <TableHead className="w-[110px] text-right py-2 whitespace-nowrap">{t.movements.table.amount}</TableHead>
+                <TableHead className="py-2 min-w-0">{t.movements.table.concept}</TableHead>
+                <TableHead className="w-[180px] py-2 hidden lg:table-cell">{t.movements.table.contact}</TableHead>
+                <TableHead className="w-[160px] py-2 hidden lg:table-cell">{t.movements.table.category}</TableHead>
                 {showProjectColumn && (
                   <TableHead className="w-[100px] py-2 hidden lg:table-cell">
                     {t.movements.table.project}
                   </TableHead>
                 )}
-                <TableHead className="w-[88px] text-right py-2 pr-3"><span className="sr-only">{t.movements.table.actions}</span></TableHead>
+                <TableHead className="w-7 shrink-0 text-center py-2"><span className="sr-only">Document</span></TableHead>
+                <TableHead className="w-9 shrink-0 text-right py-2 pr-2"><span className="sr-only">{t.movements.table.actions}</span></TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -1489,7 +1633,10 @@ export function TransactionsTable({ initialDateFilter = null }: TransactionsTabl
                   onViewRemittanceDetail={handleViewRemittanceDetail}
                   onUndoRemittance={handleUndoRemittance}
                   onCreateNewContact={handleOpenNewContactDialog}
-                  onOpenReturnImporter={() => setIsReturnImporterOpen(true)}
+                  onOpenReturnImporter={(parentTx?: Transaction) => {
+                    setReturnImporterParentTx(parentTx || tx); // Mode contextual: usa la tx actual
+                    setIsReturnImporterOpen(true);
+                  }}
                   detectedPrebankRemittance={detectedSepaRemittances.get(tx.id) ? {
                     id: detectedSepaRemittances.get(tx.id)!.id,
                     nbOfTxs: detectedSepaRemittances.get(tx.id)!.nbOfTxs,
@@ -1753,7 +1900,7 @@ export function TransactionsTable({ initialDateFilter = null }: TransactionsTabl
           open={isSplitterOpen}
           onOpenChange={setIsSplitterOpen}
           transaction={transactionToSplit}
-          existingDonors={donors}
+          existingDonors={allDonorsForRemittance}
           existingSuppliers={suppliers}
           existingEmployees={employees}
           onSplitDone={handleOnSplitDone}
@@ -1773,11 +1920,16 @@ export function TransactionsTable({ initialDateFilter = null }: TransactionsTabl
       {/* Return Importer Modal */}
       <ReturnImporter
         open={isReturnImporterOpen}
-        onOpenChange={setIsReturnImporterOpen}
+        onOpenChange={(open) => {
+          setIsReturnImporterOpen(open);
+          if (!open) setReturnImporterParentTx(null);
+        }}
         onComplete={() => {
           setIsReturnImporterOpen(false);
+          setReturnImporterParentTx(null);
         }}
         isSuperAdmin={isSuperAdmin}
+        parentTransaction={returnImporterParentTx}
       />
 
       {/* Stripe Importer Modal */}
@@ -1822,6 +1974,22 @@ export function TransactionsTable({ initialDateFilter = null }: TransactionsTabl
         transaction={sepaReconcileTx}
         prebankRemittance={sepaReconcileRemittance}
         onComplete={handleSepaReconcileComplete}
+      />
+
+      {/* Undo Processing Dialog */}
+      <UndoProcessingDialog
+        open={isUndoDialogOpen}
+        onOpenChange={(open) => {
+          if (!open && !isUndoProcessing) {
+            setIsUndoDialogOpen(false);
+            setUndoTransaction(null);
+          }
+        }}
+        transaction={undoTransaction}
+        operationType={undoTransaction ? detectUndoOperationType(undoTransaction) : null}
+        childCount={undoChildCount}
+        isProcessing={isUndoProcessing}
+        onConfirm={handleUndoConfirm}
       />
     </TooltipProvider>
   );

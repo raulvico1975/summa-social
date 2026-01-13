@@ -112,8 +112,8 @@ function getStatusInfo(report: ExpenseReport, t: TranslationsContextType['t']): 
       }
       // Submitted sense PDF ni SEPA
       return {
-        badge: <Badge variant="outline" className="bg-yellow-50 text-yellow-700">Enviada</Badge>,
-        tooltip: 'Pendent de conciliació amb pagament bancari',
+        badge: <Badge variant="outline" className="bg-yellow-50 text-yellow-700">{t.expenseReports.status?.submitted ?? t.expenseReports.statuses.submitted}</Badge>,
+        tooltip: t.expenseReports.status?.submittedHelp ?? '',
       };
     case 'matched':
       return {
@@ -272,13 +272,13 @@ export default function LiquidacionsPage() {
     setIsSubmitting(true);
     try {
       await submitExpenseReport(firestore, organizationId, reportToSubmit.id);
-      toast({ title: 'Liquidació marcada com enviada' });
+      toast({ title: t.expenseReports.toasts.submittedSuccess });
       setReportToSubmit(null);
     } catch (error) {
       console.error('[handleSubmit] Error:', error);
       toast({
         title: t.expenseReports.toasts.error,
-        description: 'Error en marcar com enviada',
+        description: t.expenseReports.toasts.submittedError,
         variant: 'destructive',
       });
     } finally {
@@ -396,15 +396,15 @@ export default function LiquidacionsPage() {
         <TabsList>
           <TabsTrigger value="liquidacions" className="flex items-center gap-2">
             <FileText className="h-4 w-4" />
-            Liquidacions
+            {t.expenseReports.tabs.settlements}
           </TabsTrigger>
           <TabsTrigger value="tickets" className="flex items-center gap-2">
             <Receipt className="h-4 w-4" />
-            Tickets
+            {t.expenseReports.tabs.tickets}
           </TabsTrigger>
           <TabsTrigger value="quilometratge" className="flex items-center gap-2">
             <Car className="h-4 w-4" />
-            Quilometratge
+            {t.expenseReports.tabs.mileage}
           </TabsTrigger>
         </TabsList>
 
@@ -528,11 +528,11 @@ export default function LiquidacionsPage() {
                                   e.stopPropagation();
                                   setReportToSubmit(report);
                                 }}
-                                title="Marcar com enviada"
+                                title={t.expenseReports.actions.markAsSubmitted}
                                 className="text-blue-600 border-blue-200 hover:bg-blue-50"
                               >
                                 <Send className="h-4 w-4 mr-1" />
-                                Enviar
+                                {t.expenseReports.actions.submit}
                               </Button>
                             )}
                             {/* Esborrar - draft i submitted (sense SEPA) */}
@@ -604,15 +604,15 @@ export default function LiquidacionsPage() {
         <TabsContent value="quilometratge" className="mt-4 space-y-4">
           <Alert>
             <Car className="h-4 w-4" />
-            <AlertTitle>Quilometratge</AlertTitle>
+            <AlertTitle>{t.expenseReports.tabs.mileage}</AlertTitle>
             <AlertDescription>
-              Aquí només gestiones quilometratge. Per editar tickets o capçalera, ves a{' '}
+              {t.expenseReports.mileage.onlyMileageHere}{' '}
               <button
                 type="button"
                 className="underline hover:no-underline font-medium"
                 onClick={() => setMainTab('liquidacions')}
               >
-                Liquidacions
+                {t.expenseReports.tabs.settlements}
               </button>
               .
             </AlertDescription>
@@ -627,8 +627,8 @@ export default function LiquidacionsPage() {
           ) : reports.filter((r) => r.status === 'draft' || r.status === 'submitted').length === 0 ? (
             <EmptyState
               icon={Car}
-              title="Cap liquidació disponible"
-              description="Crea una liquidació per poder afegir quilometratge."
+              title={t.expenseReports.emptyState.noSettlements}
+              description={t.expenseReports.emptyState.createToAddMileage}
             />
           ) : (
             <div className="space-y-2">
@@ -652,7 +652,7 @@ export default function LiquidacionsPage() {
                                 {formatDateRange(report.dateFrom, report.dateTo)}
                                 {mileageCount > 0 && (
                                   <span className="ml-2">
-                                    · {mileageCount} {mileageCount === 1 ? 'línia' : 'línies'}
+                                    · {t.expenseReports.mileage?.lineCount?.({ count: mileageCount }) ?? `${mileageCount} línies`}
                                   </span>
                                 )}
                               </p>
@@ -673,7 +673,7 @@ export default function LiquidacionsPage() {
                               onClick={() => router.push(buildUrl(`/dashboard/movimientos/liquidacions/${report.id}?tab=kilometratge`))}
                             >
                               <Car className="mr-2 h-4 w-4" />
-                              Gestionar km
+                              {t.expenseReports.actions.manageMileage}
                             </Button>
                           </div>
                         </div>
@@ -690,14 +690,14 @@ export default function LiquidacionsPage() {
       <AlertDialog open={!!reportToSubmit} onOpenChange={(open) => !open && setReportToSubmit(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Marcar com enviada</AlertDialogTitle>
+            <AlertDialogTitle>{t.expenseReports.actions.markAsSubmitted}</AlertDialogTitle>
             <AlertDialogDescription>
-              Això marca la liquidació com enviada (presentada). Passarà a la pestanya "Enviades" pendent de conciliació amb el pagament bancari.
+              {t.expenseReports.confirmSubmit?.description ?? ''}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel disabled={isSubmitting}>
-              Cancel·lar
+              {t.common.cancel}
             </AlertDialogCancel>
             <AlertDialogAction
               onClick={handleSubmit}
@@ -709,7 +709,7 @@ export default function LiquidacionsPage() {
               ) : (
                 <Send className="mr-2 h-4 w-4" />
               )}
-              Confirmar enviament
+              {t.expenseReports.actions.confirmSubmit}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

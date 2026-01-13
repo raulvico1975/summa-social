@@ -24,7 +24,7 @@ import {
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
-import { PlusCircle, Edit, Star, StarOff, Power, PowerOff, Loader2, Download, Upload } from 'lucide-react';
+import { PlusCircle, Edit, Star, StarOff, Power, PowerOff, Loader2, Download, Upload, Building2, MoreVertical } from 'lucide-react';
 import { useBankAccounts } from '@/hooks/use-bank-accounts';
 import { useToast } from '@/hooks/use-toast';
 import { useTranslations } from '@/i18n';
@@ -33,6 +33,18 @@ import type { BankAccount } from '@/lib/data';
 import type { CreateBankAccountData, UpdateBankAccountData } from '@/lib/bank-accounts';
 import { exportBankAccountsToExcel } from '@/lib/bank-accounts-export';
 import { BankAccountImporter } from '@/components/bank-accounts/bank-account-importer';
+import { useIsMobile } from '@/hooks/use-is-mobile';
+import { MobileListItem } from '@/components/mobile/mobile-list-item';
+import { Skeleton } from '@/components/ui/skeleton';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import { cn } from '@/lib/utils';
+import { MOBILE_ACTIONS_BAR, MOBILE_CTA_PRIMARY } from '@/lib/ui/mobile-actions';
 
 interface FormData {
   name: string;
@@ -50,6 +62,7 @@ export function BankAccountsManager() {
   const { userRole } = useCurrentOrganization();
   const { t } = useTranslations();
   const { toast } = useToast();
+  const isMobile = useIsMobile();
   const {
     bankAccounts,
     allBankAccounts,
@@ -74,6 +87,9 @@ export function BankAccountsManager() {
     () => allBankAccounts.filter((acc) => acc.isActive === false),
     [allBankAccounts]
   );
+
+  // Guardrail: detectar si només queda 1 compte actiu
+  const isLastActiveAccount = bankAccounts.length === 1;
 
   const handleOpenChange = (open: boolean) => {
     setIsDialogOpen(open);
@@ -205,49 +221,163 @@ export function BankAccountsManager() {
   return (
     <Dialog open={isDialogOpen} onOpenChange={handleOpenChange}>
       <Card>
-        <CardHeader className="flex flex-row items-center justify-between">
+        <CardHeader className={cn("flex flex-col gap-4", "sm:flex-row sm:items-center sm:justify-between")}>
           <div>
             <CardTitle>{t.settings.bankAccounts.title}</CardTitle>
             <CardDescription>{t.settings.bankAccounts.description}</CardDescription>
           </div>
           {canEdit && (
-            <div className="flex gap-2">
-              <Button
-                variant="outline"
-                size="icon"
-                onClick={() => setIsImportOpen(true)}
-                title="Importar des d'Excel"
-              >
-                <Upload className="h-4 w-4" />
-              </Button>
-              <Button
-                variant="outline"
-                size="icon"
-                onClick={() => allBankAccounts.length > 0 && exportBankAccountsToExcel(allBankAccounts)}
-                disabled={allBankAccounts.length === 0}
-                title="Exportar a Excel"
-              >
-                <Download className="h-4 w-4" />
-              </Button>
+            <div className={cn(MOBILE_ACTIONS_BAR, "sm:justify-end")}>
               <DialogTrigger asChild>
-                <Button size="sm" onClick={handleAddNew}>
+                <Button size="sm" onClick={handleAddNew} className={MOBILE_CTA_PRIMARY}>
                   <PlusCircle className="mr-2 h-4 w-4" />
                   {t.settings.bankAccounts.addAccount}
                 </Button>
               </DialogTrigger>
+              <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  size="icon"
+                  onClick={() => setIsImportOpen(true)}
+                  title="Importar des d'Excel"
+                >
+                  <Upload className="h-4 w-4" />
+                </Button>
+                <Button
+                  variant="outline"
+                  size="icon"
+                  onClick={() => allBankAccounts.length > 0 && exportBankAccountsToExcel(allBankAccounts)}
+                  disabled={allBankAccounts.length === 0}
+                  title="Exportar a Excel"
+                >
+                  <Download className="h-4 w-4" />
+                </Button>
+              </div>
             </div>
           )}
         </CardHeader>
         <CardContent>
           {isLoading ? (
-            <div className="flex items-center justify-center py-8">
-              <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-            </div>
+            isMobile ? (
+              <div className="flex flex-col gap-2">
+                {Array.from({ length: 2 }).map((_, i) => (
+                  <div key={`skeleton-${i}`} className="border border-border/50 rounded-lg p-3">
+                    <Skeleton className="h-4 w-32 mb-2" />
+                    <Skeleton className="h-3 w-24" />
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="flex items-center justify-center py-8">
+                <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+              </div>
+            )
           ) : bankAccounts.length === 0 && inactiveAccounts.length === 0 ? (
             <div className="text-center py-8 text-muted-foreground">
               {t.settings.bankAccounts.noAccounts}
             </div>
+          ) : isMobile ? (
+            /* Vista mòbil */
+            <div className="flex flex-col gap-2">
+              {/* Comptes actius */}
+              {bankAccounts.map((account) => (
+                <MobileListItem
+                  key={account.id}
+                  title={account.name}
+                  leadingIcon={<Building2 className="h-4 w-4" />}
+                  badges={[
+                    account.isDefault && (
+                      <Badge key="default" variant="secondary" className="text-xs">
+                        {t.settings.bankAccounts.default}
+                      </Badge>
+                    ),
+                    <Badge key="status" variant="default" className="text-xs">
+                      {t.settings.bankAccounts.active}
+                    </Badge>
+                  ].filter(Boolean) as React.ReactNode[]}
+                  meta={[
+                    ...(account.iban ? [{ label: 'IBAN', value: account.iban }] : []),
+                    ...(account.bankName ? [{ value: account.bankName }] : []),
+                  ]}
+                  actions={
+                    canEdit ? (
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" size="icon" className="h-8 w-8">
+                            <MoreVertical className="h-4 w-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuItem onClick={() => handleEdit(account)}>
+                            <Edit className="mr-2 h-4 w-4" />
+                            {t.common.edit}
+                          </DropdownMenuItem>
+                          {!account.isDefault && (
+                            <DropdownMenuItem onClick={() => handleSetDefault(account)}>
+                              <Star className="mr-2 h-4 w-4" />
+                              {t.settings.bankAccounts.setAsDefault}
+                            </DropdownMenuItem>
+                          )}
+                          <DropdownMenuSeparator />
+                          <DropdownMenuItem
+                            onClick={() => handleToggleActive(account)}
+                            disabled={isLastActiveAccount}
+                            className="text-orange-600"
+                          >
+                            <PowerOff className="mr-2 h-4 w-4" />
+                            {t.settings.bankAccounts.deactivate}
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    ) : undefined
+                  }
+                />
+              ))}
+              {/* Comptes inactius */}
+              {inactiveAccounts.map((account) => (
+                <MobileListItem
+                  key={account.id}
+                  className="opacity-60"
+                  title={account.name}
+                  leadingIcon={<Building2 className="h-4 w-4" />}
+                  badges={[
+                    <Badge key="status" variant="outline" className="text-xs">
+                      {t.settings.bankAccounts.inactive}
+                    </Badge>
+                  ]}
+                  meta={[
+                    ...(account.iban ? [{ label: 'IBAN', value: account.iban }] : []),
+                    ...(account.bankName ? [{ value: account.bankName }] : []),
+                  ]}
+                  actions={
+                    canEdit ? (
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" size="icon" className="h-8 w-8">
+                            <MoreVertical className="h-4 w-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuItem onClick={() => handleEdit(account)}>
+                            <Edit className="mr-2 h-4 w-4" />
+                            {t.common.edit}
+                          </DropdownMenuItem>
+                          <DropdownMenuItem
+                            onClick={() => handleToggleActive(account)}
+                            className="text-green-600"
+                          >
+                            <Power className="mr-2 h-4 w-4" />
+                            {t.settings.bankAccounts.activate}
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    ) : undefined
+                  }
+                />
+              ))}
+            </div>
           ) : (
+            /* Vista desktop */
             <div className="rounded-md border">
               <Table>
                 <TableHeader>
@@ -302,8 +432,9 @@ export function BankAccountsManager() {
                             variant="ghost"
                             size="icon"
                             onClick={() => handleToggleActive(account)}
-                            title={t.settings.bankAccounts.deactivate}
-                            className="text-orange-500 hover:text-orange-600"
+                            disabled={isLastActiveAccount}
+                            title={isLastActiveAccount ? t.settings.bankAccounts.cannotDeactivateLast : t.settings.bankAccounts.deactivate}
+                            className={isLastActiveAccount ? "text-muted-foreground cursor-not-allowed" : "text-orange-500 hover:text-orange-600"}
                           >
                             <PowerOff className="h-4 w-4" />
                           </Button>

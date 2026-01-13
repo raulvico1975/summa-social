@@ -15,6 +15,7 @@ import { doc, getDoc, setDoc, collection, query, where, getDocs, updateDoc } fro
 import { Loader2, AlertCircle, CheckCircle2 } from 'lucide-react';
 import type { Invitation, UserProfile, OrganizationMember } from '@/lib/data';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { useTranslations } from '@/i18n';
 
 // 👇 AFEGIR AIXÒ per evitar el prerendering estàtic
 export const dynamic = 'force-dynamic';
@@ -28,6 +29,7 @@ function RegistreContent() {
 
   const { auth, firestore } = useFirebase();
   const { toast } = useToast();
+  const { t } = useTranslations();
 
   const [pageState, setPageState] = React.useState<PageState>('loading');
   const [invitation, setInvitation] = React.useState<Invitation | null>(null);
@@ -110,28 +112,28 @@ function RegistreContent() {
   const handleRegister = async () => {
     // Validacions
     if (!displayName || !email || !password || !confirmPassword) {
-      setError('Tots els camps són obligatoris');
+      setError(t.register?.errors?.allFieldsRequired ?? 'Tots els camps són obligatoris');
       return;
     }
 
     if (password !== confirmPassword) {
-      setError('Les contrasenyes no coincideixen');
+      setError(t.register?.errors?.passwordMismatch ?? 'Les contrasenyes no coincideixen');
       return;
     }
 
     if (password.length < 6) {
-      setError('La contrasenya ha de tenir mínim 6 caràcters');
+      setError(t.register?.errors?.passwordTooShort ?? 'La contrasenya ha de tenir mínim 6 caràcters');
       return;
     }
 
     if (!invitation) {
-      setError('Invitació no vàlida');
+      setError(t.register?.errors?.invalidInvitation ?? 'Invitació no vàlida');
       return;
     }
 
     // Si la invitació té email específic, validar que coincideix
     if (invitation.email && invitation.email.toLowerCase() !== email.toLowerCase()) {
-      setError(`Aquesta invitació és només per a ${invitation.email}`);
+      setError((t.register?.errors?.emailMismatch ?? 'Aquesta invitació és només per a {email}').replace('{email}', invitation.email));
       return;
     }
 
@@ -179,8 +181,8 @@ function RegistreContent() {
       setPageState('success');
 
       toast({
-        title: 'Compte creat!',
-        description: `Benvingut/da a ${invitation.organizationName}`,
+        title: t.register?.success?.title ?? 'Compte creat!',
+        description: (t.register?.success?.description ?? 'Benvingut/da a {org}').replace('{org}', invitation.organizationName),
       });
 
       // Obtenir el slug de l'organització per redirigir directament
@@ -214,22 +216,22 @@ function RegistreContent() {
           // Redirigir a login amb la invitació per acceptar-la amb el compte existent
           if (orgSlug && token) {
             toast({
-              title: 'Compte existent',
-              description: 'Redirigint per iniciar sessió i acceptar la invitació...',
+              title: t.register?.errors?.existingAccount ?? 'Compte existent',
+              description: t.register?.errors?.redirectingLogin ?? 'Redirigint per iniciar sessió i acceptar la invitació...',
             });
             router.push(`/${orgSlug}/login?inviteToken=${token}&next=/${orgSlug}/dashboard`);
           } else {
-            setError('Aquest email ja està registrat. Inicia sessió per acceptar la invitació.');
+            setError(t.register?.errors?.emailInUse ?? 'Aquest email ja està registrat. Inicia sessió per acceptar la invitació.');
           }
           break;
         case 'auth/invalid-email':
-          setError('L\'email no és vàlid');
+          setError(t.register?.errors?.invalidEmail ?? "L'email no és vàlid");
           break;
         case 'auth/weak-password':
-          setError('La contrasenya és massa feble');
+          setError(t.register?.errors?.weakPassword ?? 'La contrasenya és massa feble');
           break;
         default:
-          setError('Error creant el compte. Torna-ho a provar.');
+          setError(t.register?.errors?.genericError ?? 'Error creant el compte. Torna-ho a provar.');
       }
     }
   };
@@ -245,7 +247,7 @@ function RegistreContent() {
     return (
       <main className="flex min-h-screen flex-col items-center justify-center bg-background p-4">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
-        <p className="mt-4 text-muted-foreground">Validant invitació...</p>
+        <p className="mt-4 text-muted-foreground">{t.register?.loading?.validating ?? 'Validant invitació...'}</p>
       </main>
     );
   }
@@ -256,14 +258,14 @@ function RegistreContent() {
         <Card className="w-full max-w-md">
           <CardHeader className="text-center">
             <AlertCircle className="mx-auto h-12 w-12 text-destructive" />
-            <CardTitle className="mt-4">Invitació no vàlida</CardTitle>
+            <CardTitle className="mt-4">{t.register?.invalid?.title ?? 'Invitació no vàlida'}</CardTitle>
             <CardDescription>
-              L'enllaç d'invitació no és vàlid o no existeix.
+              {t.register?.invalid?.description ?? "L'enllaç d'invitació no és vàlid o no existeix."}
             </CardDescription>
           </CardHeader>
           <CardContent className="text-center">
             <Button onClick={() => router.push('/')}>
-              Anar a l'inici
+              {t.register?.buttons?.goHome ?? "Anar a l'inici"}
             </Button>
           </CardContent>
         </Card>
@@ -277,14 +279,14 @@ function RegistreContent() {
         <Card className="w-full max-w-md">
           <CardHeader className="text-center">
             <AlertCircle className="mx-auto h-12 w-12 text-orange-500" />
-            <CardTitle className="mt-4">Invitació expirada</CardTitle>
+            <CardTitle className="mt-4">{t.register?.expired?.title ?? 'Invitació expirada'}</CardTitle>
             <CardDescription>
-              Aquesta invitació ha caducat. Contacta amb l'administrador per obtenir una nova.
+              {t.register?.expired?.description ?? "Aquesta invitació ha caducat. Contacta amb l'administrador per obtenir una nova."}
             </CardDescription>
           </CardHeader>
           <CardContent className="text-center">
             <Button onClick={() => router.push('/')}>
-              Anar a l'inici
+              {t.register?.buttons?.goHome ?? "Anar a l'inici"}
             </Button>
           </CardContent>
         </Card>
@@ -298,14 +300,14 @@ function RegistreContent() {
         <Card className="w-full max-w-md">
           <CardHeader className="text-center">
             <AlertCircle className="mx-auto h-12 w-12 text-orange-500" />
-            <CardTitle className="mt-4">Invitació ja utilitzada</CardTitle>
+            <CardTitle className="mt-4">{t.register?.used?.title ?? 'Invitació ja utilitzada'}</CardTitle>
             <CardDescription>
-              Aquesta invitació ja s'ha utilitzat. Si ja tens compte, inicia sessió.
+              {t.register?.used?.description ?? "Aquesta invitació ja s'ha utilitzat. Si ja tens compte, inicia sessió."}
             </CardDescription>
           </CardHeader>
           <CardContent className="text-center">
             <Button onClick={() => router.push('/')}>
-              Iniciar sessió
+              {t.register?.buttons?.login ?? 'Iniciar sessió'}
             </Button>
           </CardContent>
         </Card>
@@ -319,9 +321,9 @@ function RegistreContent() {
         <Card className="w-full max-w-md">
           <CardHeader className="text-center">
             <CheckCircle2 className="mx-auto h-12 w-12 text-green-500" />
-            <CardTitle className="mt-4">Compte creat correctament!</CardTitle>
+            <CardTitle className="mt-4">{t.register?.success?.titleFull ?? 'Compte creat correctament!'}</CardTitle>
             <CardDescription>
-              Benvingut/da a {invitation?.organizationName}. Redirigint al panell...
+              {(t.register?.success?.redirecting ?? 'Benvingut/da a {org}. Redirigint al panell...').replace('{org}', invitation?.organizationName ?? '')}
             </CardDescription>
           </CardHeader>
           <CardContent className="flex justify-center">
@@ -340,68 +342,68 @@ function RegistreContent() {
         
         <Card className="w-full">
           <CardHeader className="text-center">
-            <CardTitle>Crear compte</CardTitle>
+            <CardTitle>{t.register?.form?.title ?? 'Crear compte'}</CardTitle>
             <CardDescription>
-              Has estat convidat a unir-te a <strong>{invitation?.organizationName}</strong>
+              {(t.register?.form?.invitedTo ?? "Has estat convidat a unir-te a {org}").replace('{org}', '')} <strong>{invitation?.organizationName}</strong>
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             {/* Nom */}
             <div className="space-y-2">
-              <Label htmlFor="displayName">Nom complet</Label>
+              <Label htmlFor="displayName">{t.register?.form?.displayName ?? 'Nom complet'}</Label>
               <Input
                 id="displayName"
                 value={displayName}
                 onChange={(e) => setDisplayName(e.target.value)}
                 onKeyPress={handleKeyPress}
-                placeholder="El teu nom"
+                placeholder={t.register?.form?.displayNamePlaceholder ?? 'El teu nom'}
                 disabled={pageState === 'registering'}
               />
             </div>
 
             {/* Email */}
             <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
+              <Label htmlFor="email">{t.register?.form?.email ?? 'Email'}</Label>
               <Input
                 id="email"
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 onKeyPress={handleKeyPress}
-                placeholder="nom@exemple.com"
+                placeholder={t.register?.form?.emailPlaceholder ?? 'nom@exemple.com'}
                 disabled={pageState === 'registering' || !!invitation?.email}
               />
               {invitation?.email && (
                 <p className="text-xs text-muted-foreground">
-                  Aquesta invitació és específica per aquest email
+                  {t.register?.form?.emailRestricted ?? 'Aquesta invitació és específica per aquest email'}
                 </p>
               )}
             </div>
 
             {/* Contrasenya */}
             <div className="space-y-2">
-              <Label htmlFor="password">Contrasenya</Label>
+              <Label htmlFor="password">{t.register?.form?.password ?? 'Contrasenya'}</Label>
               <Input
                 id="password"
                 type="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 onKeyPress={handleKeyPress}
-                placeholder="Mínim 6 caràcters"
+                placeholder={t.register?.form?.passwordPlaceholder ?? 'Mínim 6 caràcters'}
                 disabled={pageState === 'registering'}
               />
             </div>
 
             {/* Confirmar contrasenya */}
             <div className="space-y-2">
-              <Label htmlFor="confirmPassword">Confirmar contrasenya</Label>
+              <Label htmlFor="confirmPassword">{t.register?.form?.confirmPassword ?? 'Confirmar contrasenya'}</Label>
               <Input
                 id="confirmPassword"
                 type="password"
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
                 onKeyPress={handleKeyPress}
-                placeholder="Repeteix la contrasenya"
+                placeholder={t.register?.form?.confirmPasswordPlaceholder ?? 'Repeteix la contrasenya'}
                 disabled={pageState === 'registering'}
               />
             </div>
@@ -410,7 +412,7 @@ function RegistreContent() {
             {error && (
               <Alert variant="destructive">
                 <AlertCircle className="h-4 w-4" />
-                <AlertTitle>Error</AlertTitle>
+                <AlertTitle>{t.register?.form?.error ?? 'Error'}</AlertTitle>
                 <AlertDescription>{error}</AlertDescription>
               </Alert>
             )}
@@ -418,20 +420,20 @@ function RegistreContent() {
             {/* Info del rol */}
             <div className="rounded-lg bg-muted p-3 text-sm">
               <p className="text-muted-foreground">
-                Seràs afegit com a <strong>{invitation?.role}</strong> de l'organització.
+                {(t.register?.form?.roleInfo ?? "Seràs afegit com a {role} de l'organització.").replace('{role}', invitation?.role ?? '')}
               </p>
             </div>
 
             {/* Clàusula informativa de privacitat */}
             <p className="text-xs text-muted-foreground text-center">
-              En registrar-te, declares que has llegit la{' '}
+              {t.register?.privacyNotice ?? 'En registrar-te, declares que has llegit la'}{' '}
               <a
                 href="/privacy"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="text-primary hover:underline"
               >
-                Política de privacitat
+                {t.register?.privacyLink ?? 'Política de privacitat'}
               </a>.
             </p>
 
@@ -444,26 +446,26 @@ function RegistreContent() {
               {pageState === 'registering' ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Creant compte...
+                  {t.register?.buttons?.creating ?? 'Creant compte...'}
                 </>
               ) : (
-                'Crear compte'
+                t.register?.buttons?.createAccount ?? 'Crear compte'
               )}
             </Button>
 
             {/* Enllaç a login */}
             <p className="text-center text-sm text-muted-foreground">
-              Ja tens compte?{' '}
+              {t.register?.form?.haveAccount ?? 'Ja tens compte?'}{' '}
               {orgSlug ? (
                 <a
                   href={`/${orgSlug}/login?inviteToken=${token}&next=/${orgSlug}/dashboard`}
                   className="text-primary hover:underline"
                 >
-                  Inicia sessió
+                  {t.register?.buttons?.login ?? 'Inicia sessió'}
                 </a>
               ) : (
                 <span className="text-muted-foreground">
-                  Inicia sessió a la teva organització.
+                  {t.register?.buttons?.loginAtOrg ?? 'Inicia sessió a la teva organització.'}
                 </span>
               )}
             </p>

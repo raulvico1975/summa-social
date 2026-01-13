@@ -46,7 +46,20 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import { AlertCircle, RefreshCw, ChevronRight, FolderPlus, Check, MoreHorizontal, Split, X, Plus, Landmark, Globe, ArrowLeft, FolderKanban, Filter, Pencil, Trash2, Search, FileText, Upload, Camera } from 'lucide-react';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import { AlertCircle, RefreshCw, ChevronRight, FolderPlus, Check, MoreHorizontal, Split, X, Plus, Landmark, Globe, ArrowLeft, FolderKanban, Filter, Pencil, Trash2, Search, FileText, Upload, Camera, MoreVertical } from 'lucide-react';
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -68,6 +81,8 @@ import type { ExpenseStatus, UnifiedExpenseWithLink, Project, ExpenseAssignment,
 import { useTranslations } from '@/i18n';
 import { OffBankExpenseModal } from '@/components/project-module/add-off-bank-expense-modal';
 import { buildDocumentFilename } from '@/lib/build-document-filename';
+import { useIsMobile } from '@/hooks/use-is-mobile';
+import { MobileListItem } from '@/components/mobile/mobile-list-item';
 
 function formatAmount(amount: number): string {
   return new Intl.NumberFormat('ca-ES', {
@@ -462,6 +477,7 @@ export default function ExpensesInboxPage() {
   const { organizationId } = useCurrentOrganization();
   const { toast } = useToast();
   const storage = useStorage();
+  const isMobile = useIsMobile();
 
   // Llegir filtres de query params
   const projectIdFilter = searchParams.get('projectId');
@@ -882,7 +898,7 @@ export default function ExpensesInboxPage() {
 
   return (
     <TooltipProvider>
-    <div className="space-y-6">
+    <div className="space-y-6 pb-24 md:pb-0">
       {/* Breadcrumb */}
       <Breadcrumb>
         <BreadcrumbList>
@@ -901,59 +917,94 @@ export default function ExpensesInboxPage() {
       </Breadcrumb>
 
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
         <div>
           <h1 className="text-2xl font-bold tracking-tight font-headline">{ep.title}</h1>
           <p className="text-muted-foreground">
             {ep.subtitle}
           </p>
         </div>
-        <div className="flex items-center gap-2">
-          {/* Botó despesa ràpida (només icona amb tooltip) */}
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button
-                onClick={() => router.push(buildUrl('/quick-expense'))}
-                variant="outline"
-                size="icon"
-                className="h-9 w-9"
-              >
-                <Camera className="h-4 w-4" />
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent>
-              {t.projectModule?.quickExpenseTooltip ?? 'Registrar una despesa ràpidament des del mòbil (foto del rebut)'}
-            </TooltipContent>
-          </Tooltip>
-          <Button
-            onClick={() => setAddOffBankOpen(true)}
-            variant="default"
-            size="sm"
-          >
-            <Plus className="h-4 w-4 mr-2" />
-            {t.projectModule?.addExpense ?? 'Afegir despesa'}
-          </Button>
-          <Link href={buildUrl('/dashboard/project-module/projects')}>
-            <Button variant="outline" size="sm">
-              <FolderKanban className="h-4 w-4 mr-2" />
-              {t.breadcrumb?.projects ?? 'Projectes'}
+        {/* Mobile: CTA + dropdown menu */}
+        {isMobile ? (
+          <div className="flex flex-col gap-2">
+            <Button
+              onClick={() => setAddOffBankOpen(true)}
+              className="w-full"
+            >
+              <Plus className="h-4 w-4 mr-2" />
+              {t.projectModule?.addExpense ?? 'Afegir despesa'}
             </Button>
-          </Link>
-          <Button
-            onClick={() => setTableFilter(tableFilter === 'needsReview' ? 'all' : 'needsReview')}
-            variant={tableFilter === 'needsReview' ? 'default' : 'outline'}
-            size="sm"
-          >
-            <AlertCircle className="h-4 w-4 mr-2" />
-            {t.projectModule.pendingReview}
-          </Button>
-        </div>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" className="w-full">
+                  <MoreVertical className="h-4 w-4 mr-2" />
+                  {'Més accions'}
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-56">
+                <DropdownMenuItem onClick={() => router.push(buildUrl('/quick-expense'))}>
+                  <Camera className="h-4 w-4 mr-2" />
+                  {t.projectModule?.quickExpenseTooltip ?? 'Despesa ràpida'}
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => router.push(buildUrl('/dashboard/project-module/projects'))}>
+                  <FolderKanban className="h-4 w-4 mr-2" />
+                  {t.breadcrumb?.projects ?? 'Projectes'}
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setTableFilter(tableFilter === 'needsReview' ? 'all' : 'needsReview')}>
+                  <AlertCircle className="h-4 w-4 mr-2" />
+                  {t.projectModule.pendingReview}
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
+        ) : (
+          /* Desktop: row of buttons */
+          <div className="flex items-center gap-2">
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  onClick={() => router.push(buildUrl('/quick-expense'))}
+                  variant="outline"
+                  size="icon"
+                  className="h-9 w-9"
+                >
+                  <Camera className="h-4 w-4" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>
+                {t.projectModule?.quickExpenseTooltip ?? 'Registrar una despesa ràpidament des del mòbil (foto del rebut)'}
+              </TooltipContent>
+            </Tooltip>
+            <Button
+              onClick={() => setAddOffBankOpen(true)}
+              variant="default"
+              size="sm"
+            >
+              <Plus className="h-4 w-4 mr-2" />
+              {t.projectModule?.addExpense ?? 'Afegir despesa'}
+            </Button>
+            <Link href={buildUrl('/dashboard/project-module/projects')}>
+              <Button variant="outline" size="sm">
+                <FolderKanban className="h-4 w-4 mr-2" />
+                {t.breadcrumb?.projects ?? 'Projectes'}
+              </Button>
+            </Link>
+            <Button
+              onClick={() => setTableFilter(tableFilter === 'needsReview' ? 'all' : 'needsReview')}
+              variant={tableFilter === 'needsReview' ? 'default' : 'outline'}
+              size="sm"
+            >
+              <AlertCircle className="h-4 w-4 mr-2" />
+              {t.projectModule.pendingReview}
+            </Button>
+          </div>
+        )}
       </div>
 
       {/* Barra de cerca i filtres */}
       <div className="flex flex-col gap-3">
         {/* Cercador */}
-        <div className="relative max-w-md">
+        <div className="relative w-full md:max-w-md">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
             placeholder={ep.searchPlaceholder}
@@ -972,53 +1023,73 @@ export default function ExpensesInboxPage() {
           )}
         </div>
 
-        {/* Filtres ràpids */}
-        <div className="flex gap-2 items-center flex-wrap">
-          <Button
-            variant={tableFilter === 'all' ? 'default' : 'outline'}
-            size="sm"
-            onClick={() => setTableFilter('all')}
+        {/* Filtres ràpids - Select on mobile, buttons on desktop */}
+        {isMobile ? (
+          <Select
+            value={tableFilter}
+            onValueChange={(value) => setTableFilter(value as ExpenseTableFilter)}
           >
-            {ep.filterAll} ({expenses.length})
-          </Button>
-          <Button
-            variant={tableFilter === 'withoutDocument' ? 'default' : 'outline'}
-            size="sm"
-            onClick={() => setTableFilter('withoutDocument')}
-          >
-            {ep.filterWithoutDocument}
-          </Button>
-          <Button
-            variant={tableFilter === 'uncategorized' ? 'default' : 'outline'}
-            size="sm"
-            onClick={() => setTableFilter('uncategorized')}
-          >
-            {ep.filterUncategorized}
-          </Button>
-          <Button
-            variant={tableFilter === 'unassigned' ? 'default' : 'outline'}
-            size="sm"
-            onClick={() => setTableFilter('unassigned')}
-          >
-            {ep.filterUnassigned}
-          </Button>
-          <Button
-            variant={tableFilter === 'offBank' ? 'default' : 'outline'}
-            size="sm"
-            onClick={() => setTableFilter('offBank')}
-          >
-            <Globe className="h-4 w-4 mr-1" />
-            {ep.filterOffBank}
-          </Button>
-          <Button
-            variant={tableFilter === 'bank' ? 'default' : 'outline'}
-            size="sm"
-            onClick={() => setTableFilter('bank')}
-          >
-            <Landmark className="h-4 w-4 mr-1" />
-            {ep.filterBank}
-          </Button>
-        </div>
+            <SelectTrigger className="w-full">
+              <Filter className="h-4 w-4 mr-2" />
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">{ep.filterAll} ({expenses.length})</SelectItem>
+              <SelectItem value="withoutDocument">{ep.filterWithoutDocument}</SelectItem>
+              <SelectItem value="uncategorized">{ep.filterUncategorized}</SelectItem>
+              <SelectItem value="unassigned">{ep.filterUnassigned}</SelectItem>
+              <SelectItem value="offBank">{ep.filterOffBank}</SelectItem>
+              <SelectItem value="bank">{ep.filterBank}</SelectItem>
+            </SelectContent>
+          </Select>
+        ) : (
+          <div className="flex gap-2 items-center flex-wrap">
+            <Button
+              variant={tableFilter === 'all' ? 'default' : 'outline'}
+              size="sm"
+              onClick={() => setTableFilter('all')}
+            >
+              {ep.filterAll} ({expenses.length})
+            </Button>
+            <Button
+              variant={tableFilter === 'withoutDocument' ? 'default' : 'outline'}
+              size="sm"
+              onClick={() => setTableFilter('withoutDocument')}
+            >
+              {ep.filterWithoutDocument}
+            </Button>
+            <Button
+              variant={tableFilter === 'uncategorized' ? 'default' : 'outline'}
+              size="sm"
+              onClick={() => setTableFilter('uncategorized')}
+            >
+              {ep.filterUncategorized}
+            </Button>
+            <Button
+              variant={tableFilter === 'unassigned' ? 'default' : 'outline'}
+              size="sm"
+              onClick={() => setTableFilter('unassigned')}
+            >
+              {ep.filterUnassigned}
+            </Button>
+            <Button
+              variant={tableFilter === 'offBank' ? 'default' : 'outline'}
+              size="sm"
+              onClick={() => setTableFilter('offBank')}
+            >
+              <Globe className="h-4 w-4 mr-1" />
+              {ep.filterOffBank}
+            </Button>
+            <Button
+              variant={tableFilter === 'bank' ? 'default' : 'outline'}
+              size="sm"
+              onClick={() => setTableFilter('bank')}
+            >
+              <Landmark className="h-4 w-4 mr-1" />
+              {ep.filterBank}
+            </Button>
+          </div>
+        )}
       </div>
 
       {/* Franja de filtre actiu */}
@@ -1057,208 +1128,351 @@ export default function ExpensesInboxPage() {
         </div>
       )}
 
-      {/* Taula */}
-      <div className="border rounded-lg">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead className="w-[40px]">
-                <Checkbox
-                  checked={allSelected}
-                  onCheckedChange={toggleSelectAll}
-                  aria-label={ep.tableSelectAll}
-                />
-              </TableHead>
-              <TableHead className="w-[50px]">{ep.tableSource}</TableHead>
-              <TableHead className="w-[30px] text-center">{ep.tableDoc}</TableHead>
-              <TableHead className="w-[100px]">{ep.tableDate}</TableHead>
-              <TableHead>{ep.tableDescription}</TableHead>
-              <TableHead>{ep.tableCategory}</TableHead>
-              <TableHead>{ep.tableCounterparty}</TableHead>
-              <TableHead className="text-right">{ep.tableAmount}</TableHead>
-              <TableHead className="w-[80px]">{ep.tableStatus}</TableHead>
-              <TableHead className="w-[120px]"></TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {isLoading && filteredExpenses.length === 0 ? (
-              Array.from({ length: 5 }).map((_, i) => (
-                <TableRow key={i}>
-                  <TableCell><Skeleton className="h-4 w-4" /></TableCell>
-                  <TableCell><Skeleton className="h-4 w-8" /></TableCell>
-                  <TableCell><Skeleton className="h-2.5 w-2.5 rounded-full" /></TableCell>
-                  <TableCell><Skeleton className="h-4 w-20" /></TableCell>
-                  <TableCell><Skeleton className="h-4 w-48" /></TableCell>
-                  <TableCell><Skeleton className="h-4 w-24" /></TableCell>
-                  <TableCell><Skeleton className="h-4 w-32" /></TableCell>
-                  <TableCell><Skeleton className="h-4 w-20 ml-auto" /></TableCell>
-                  <TableCell><Skeleton className="h-6 w-16" /></TableCell>
-                  <TableCell><Skeleton className="h-7 w-20" /></TableCell>
-                </TableRow>
-              ))
-            ) : filteredExpenses.length === 0 ? (
-              <TableRow>
-                <TableCell colSpan={10} className="text-center py-12 text-muted-foreground">
-                  {tableFilter !== 'all' || searchQuery
-                    ? ep.filterNoResults
-                    : t.projectModule.noEligibleExpenses}
-                </TableCell>
-              </TableRow>
-            ) : (
-              filteredExpenses.map((item) => {
-                const { expense, status, assignedAmount } = item;
-                const isSelected = selectedIds.has(expense.txId);
-                const isUploading = uploadingDocTxId === expense.txId;
+      {/* Vista mòbil */}
+      {isMobile ? (
+        <div className="flex flex-col gap-2">
+          {isLoading && filteredExpenses.length === 0 ? (
+            Array.from({ length: 5 }).map((_, i) => (
+              <div key={`skeleton-${i}`} className="border border-border/50 rounded-lg p-3">
+                <Skeleton className="h-4 w-48 mb-2" />
+                <Skeleton className="h-3 w-32" />
+              </div>
+            ))
+          ) : filteredExpenses.length === 0 ? (
+            <div className="text-center text-muted-foreground py-12">
+              {tableFilter !== 'all' || searchQuery
+                ? ep.filterNoResults
+                : t.projectModule.noEligibleExpenses}
+            </div>
+          ) : (
+            filteredExpenses.map((item) => {
+              const { expense, status, assignedAmount } = item;
+              const percentage = Math.abs(expense.amountEUR) > 0
+                ? Math.round((assignedAmount / Math.abs(expense.amountEUR)) * 100)
+                : 0;
 
-                return (
-                  <DroppableExpenseRow
-                    key={expense.txId}
-                    expense={item}
-                    onUploadDocument={handleUploadDocument}
-                    isUploading={isUploading}
-                    isSelected={isSelected}
-                  >
-                    <TableCell>
-                      <Checkbox
-                        checked={isSelected}
-                        onCheckedChange={() => toggleSelect(expense.txId)}
-                        aria-label={`${ep.tableSelectExpense} ${expense.txId}`}
-                      />
-                    </TableCell>
-                    <TableCell>
-                      {expense.source === 'bank' ? (
-                        <span title={t.projectModule?.sourceBank ?? 'Despesa bancària'}>
-                          <Landmark className="h-4 w-4 text-muted-foreground" />
-                        </span>
-                      ) : (
-                        <span title={t.projectModule?.sourceOffBank ?? 'Despesa de terreny'}>
-                          <Globe className="h-4 w-4 text-blue-500" />
-                        </span>
+              return (
+                <MobileListItem
+                  key={expense.txId}
+                  title={expense.description || '-'}
+                  leadingIcon={
+                    expense.source === 'bank'
+                      ? <Landmark className="h-4 w-4" />
+                      : <Globe className="h-4 w-4 text-blue-500" />
+                  }
+                  badges={[
+                    <Badge
+                      key="status"
+                      variant={status === 'assigned' ? 'default' : status === 'partial' ? 'secondary' : 'outline'}
+                      className={
+                        status === 'assigned'
+                          ? 'bg-emerald-600 text-xs'
+                          : status === 'partial'
+                          ? 'bg-amber-500 text-black text-xs'
+                          : 'text-xs'
+                      }
+                    >
+                      {status === 'assigned' ? '100%' : status === 'partial' ? `${percentage}%` : '0%'}
+                    </Badge>,
+                    expense.documentUrl && (
+                      <Badge key="doc" variant="outline" className="text-xs">
+                        <FileText className="h-3 w-3 mr-1" />
+                        Doc
+                      </Badge>
+                    ),
+                  ].filter(Boolean)}
+                  meta={[
+                    { value: formatDateShort(expense.date) },
+                    {
+                      value: expense.pendingConversion || expense.amountEUR === 0
+                        ? <span className="text-amber-600">Import pendent</span>
+                        : <span className="font-mono font-medium text-red-600">{formatAmount(expense.amountEUR)}</span>
+                    },
+                    expense.counterpartyName && { value: expense.counterpartyName },
+                  ].filter(Boolean) as { label?: string; value: React.ReactNode }[]}
+                  actions={
+                    <div className="flex items-center gap-1">
+                      {/* Assignar (només si no té assignació) */}
+                      {!projectsLoading && projects.length > 0 && status === 'unassigned' && (
+                        <QuickAssignPopover
+                          expense={item}
+                          projects={projects}
+                          onAssign100={handleAssign100}
+                          onOpenSplitModal={setSplitModalExpense}
+                          isAssigning={isSaving}
+                          assignTooltip={t.projectModule?.assignToProject ?? 'Assignar a projecte'}
+                        />
                       )}
-                    </TableCell>
-                    <TableCell className="text-center">
-                      {isUploading ? (
-                        <RefreshCw className="h-3 w-3 animate-spin text-primary inline-block" />
-                      ) : deletingDocTxId === expense.txId ? (
-                        <RefreshCw className="h-3 w-3 animate-spin text-muted-foreground inline-block" />
-                      ) : expense.documentUrl ? (
-                        <div className="inline-flex items-center gap-0.5">
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <button
-                                type="button"
-                                onClick={() => window.open(expense.documentUrl!, '_blank', 'noopener,noreferrer')}
-                                className="inline-flex items-center justify-center h-6 w-6 rounded hover:bg-accent transition-colors"
-                              >
-                                <FileText className="h-4 w-4 text-emerald-600" />
-                              </button>
-                            </TooltipTrigger>
-                            <TooltipContent>{ep.tooltipOpenDocument}</TooltipContent>
-                          </Tooltip>
-                          {/* No permetre eliminar docs de despeses bancàries - s'ha de fer des de Moviments */}
-                          {expense.source !== 'bank' && (
+                      {/* Editar despesa off-bank */}
+                      {expense.source === 'offBank' && (
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8"
+                          onClick={() => handleEditOffBank(item)}
+                        >
+                          <Pencil className="h-4 w-4" />
+                        </Button>
+                      )}
+                      {/* Detall despesa bank */}
+                      {expense.source === 'bank' && (
+                        <Link href={buildUrl(`/dashboard/project-module/expenses/${expense.txId}`)}>
+                          <Button variant="ghost" size="icon" className="h-8 w-8">
+                            <ChevronRight className="h-4 w-4" />
+                          </Button>
+                        </Link>
+                      )}
+                    </div>
+                  }
+                  onClick={expense.source === 'bank'
+                    ? () => router.push(buildUrl(`/dashboard/project-module/expenses/${expense.txId}`))
+                    : () => handleEditOffBank(item)
+                  }
+                />
+              );
+            })
+          )}
+        </div>
+      ) : (
+        /* Vista desktop - Taula amb jerarquia de columnes responsive */
+        <div className="border rounded-lg overflow-x-auto">
+          <Table className="min-w-[800px]">
+            <TableHeader>
+              <TableRow>
+                <TableHead className="w-[36px] px-2">
+                  <Checkbox
+                    checked={allSelected}
+                    onCheckedChange={toggleSelectAll}
+                    aria-label={ep.tableSelectAll}
+                  />
+                </TableHead>
+                <TableHead className="w-[28px] px-1 text-center hidden xl:table-cell">{ep.tableDoc}</TableHead>
+                <TableHead className="w-[80px] px-2">{ep.tableDate}</TableHead>
+                <TableHead className="px-2">{ep.tableDescription}</TableHead>
+                <TableHead className="hidden xl:table-cell px-2">{ep.tableCategory}</TableHead>
+                <TableHead className="hidden xl:table-cell px-2">{ep.tableCounterparty}</TableHead>
+                <TableHead className="text-right px-2 w-[100px]">{ep.tableAmount}</TableHead>
+                <TableHead className="w-[70px] px-2">{ep.tableStatus}</TableHead>
+                <TableHead className="w-[90px] px-1"></TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {isLoading && filteredExpenses.length === 0 ? (
+                Array.from({ length: 5 }).map((_, i) => (
+                  <TableRow key={i}>
+                    <TableCell className="px-2"><Skeleton className="h-4 w-4" /></TableCell>
+                    <TableCell className="hidden xl:table-cell px-1"><Skeleton className="h-3 w-3 rounded-full" /></TableCell>
+                    <TableCell className="px-2"><Skeleton className="h-4 w-16" /></TableCell>
+                    <TableCell className="px-2"><Skeleton className="h-4 w-40" /></TableCell>
+                    <TableCell className="hidden xl:table-cell px-2"><Skeleton className="h-4 w-20" /></TableCell>
+                    <TableCell className="hidden xl:table-cell px-2"><Skeleton className="h-4 w-24" /></TableCell>
+                    <TableCell className="px-2"><Skeleton className="h-4 w-16 ml-auto" /></TableCell>
+                    <TableCell className="px-2"><Skeleton className="h-5 w-12" /></TableCell>
+                    <TableCell className="px-1"><Skeleton className="h-7 w-16" /></TableCell>
+                  </TableRow>
+                ))
+              ) : filteredExpenses.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={9} className="text-center py-12 text-muted-foreground">
+                    {tableFilter !== 'all' || searchQuery
+                      ? ep.filterNoResults
+                      : t.projectModule.noEligibleExpenses}
+                  </TableCell>
+                </TableRow>
+              ) : (
+                filteredExpenses.map((item) => {
+                  const { expense, status, assignedAmount } = item;
+                  const isSelected = selectedIds.has(expense.txId);
+                  const isUploading = uploadingDocTxId === expense.txId;
+
+                  return (
+                    <DroppableExpenseRow
+                      key={expense.txId}
+                      expense={item}
+                      onUploadDocument={handleUploadDocument}
+                      isUploading={isUploading}
+                      isSelected={isSelected}
+                    >
+                      {/* Checkbox */}
+                      <TableCell className="px-2">
+                        <Checkbox
+                          checked={isSelected}
+                          onCheckedChange={() => toggleSelect(expense.txId)}
+                          aria-label={`${ep.tableSelectExpense} ${expense.txId}`}
+                        />
+                      </TableCell>
+
+                      {/* Document - visible només en xl+ */}
+                      <TableCell className="hidden xl:table-cell px-1 text-center">
+                        {isUploading ? (
+                          <RefreshCw className="h-3 w-3 animate-spin text-primary inline-block" />
+                        ) : deletingDocTxId === expense.txId ? (
+                          <RefreshCw className="h-3 w-3 animate-spin text-muted-foreground inline-block" />
+                        ) : expense.documentUrl ? (
+                          <div className="inline-flex items-center gap-0.5">
                             <Tooltip>
                               <TooltipTrigger asChild>
                                 <button
                                   type="button"
-                                  onClick={() => handleDeleteDocument(item)}
-                                  className="inline-flex items-center justify-center h-5 w-5 rounded text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors"
+                                  onClick={() => window.open(expense.documentUrl!, '_blank', 'noopener,noreferrer')}
+                                  className="inline-flex items-center justify-center h-5 w-5 rounded hover:bg-accent transition-colors"
                                 >
-                                  <Trash2 className="h-3 w-3" />
+                                  <FileText className="h-3.5 w-3.5 text-emerald-600" />
                                 </button>
                               </TooltipTrigger>
-                              <TooltipContent>{t.movements?.table?.deleteDocument ?? 'Eliminar document'}</TooltipContent>
+                              <TooltipContent>{ep.tooltipOpenDocument}</TooltipContent>
                             </Tooltip>
+                            {expense.source !== 'bank' && (
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <button
+                                    type="button"
+                                    onClick={() => handleDeleteDocument(item)}
+                                    className="inline-flex items-center justify-center h-4 w-4 rounded text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors"
+                                  >
+                                    <Trash2 className="h-2.5 w-2.5" />
+                                  </button>
+                                </TooltipTrigger>
+                                <TooltipContent>{t.movements?.table?.deleteDocument ?? 'Eliminar document'}</TooltipContent>
+                              </Tooltip>
+                            )}
+                          </div>
+                        ) : (
+                          <FileText className="h-3.5 w-3.5 text-muted-foreground/30 inline-block" />
+                        )}
+                      </TableCell>
+
+                      {/* Data */}
+                      <TableCell className="px-2 text-xs text-muted-foreground whitespace-nowrap">
+                        {formatDateShort(expense.date)}
+                      </TableCell>
+
+                      {/* Descripció - amb info secundària inline en < xl */}
+                      <TableCell className="px-2">
+                        <div className="flex items-center gap-1.5 min-w-0">
+                          {/* Icona font */}
+                          {expense.source === 'bank' ? (
+                            <Landmark className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+                          ) : (
+                            <Globe className="h-3.5 w-3.5 text-blue-500 shrink-0" />
                           )}
+                          <div className="min-w-0 flex-1">
+                            <div className="text-[13px] truncate max-w-[220px]" title={expense.description || undefined}>
+                              {expense.description || '-'}
+                            </div>
+                            {/* Categoria i contrapart - visible només en < xl */}
+                            <div className="xl:hidden flex items-center gap-2 text-xs text-muted-foreground mt-0.5">
+                              {expense.categoryName && (
+                                <Badge variant="outline" className="text-[10px] px-1.5 py-0 max-w-[120px] truncate">
+                                  {getCategoryLabel(expense.categoryName)}
+                                </Badge>
+                              )}
+                              {expense.counterpartyName && (
+                                <span className="truncate max-w-[100px]">{expense.counterpartyName}</span>
+                              )}
+                              {/* Icona document inline en < xl */}
+                              {expense.documentUrl && (
+                                <button
+                                  type="button"
+                                  onClick={() => window.open(expense.documentUrl!, '_blank', 'noopener,noreferrer')}
+                                  className="shrink-0"
+                                >
+                                  <FileText className="h-3 w-3 text-emerald-600" />
+                                </button>
+                              )}
+                            </div>
+                          </div>
                         </div>
-                      ) : (
-                        <FileText className="h-4 w-4 text-muted-foreground/30 inline-block" />
-                      )}
-                    </TableCell>
-                    <TableCell className="text-xs text-muted-foreground whitespace-nowrap">
-                      {formatDateShort(expense.date)}
-                    </TableCell>
-                    <TableCell className="max-w-[250px] truncate text-[13px]">
-                      {expense.description || '-'}
-                    </TableCell>
-                    <TableCell className="text-muted-foreground text-[13px]">
-                      {getCategoryLabel(expense.categoryName)}
-                    </TableCell>
-                    <TableCell className="text-muted-foreground text-[13px]">
-                      {expense.counterpartyName || '-'}
-                    </TableCell>
-                    <TableCell className="text-right font-mono font-medium text-[13px] whitespace-nowrap tabular-nums">
-                      {expense.pendingConversion || expense.amountEUR === 0 ? (
-                        <div className="flex flex-col items-end gap-1">
-                          <span className="text-muted-foreground">—</span>
-                          <Badge variant="outline" className="text-[10px] px-1.5 py-0 bg-amber-50 text-amber-700 border-amber-200">
-                            Import pendent
+                      </TableCell>
+
+                      {/* Categoria - visible només en xl+ */}
+                      <TableCell className="hidden xl:table-cell px-2">
+                        {expense.categoryName ? (
+                          <Badge variant="outline" className="text-[11px] px-1.5 py-0 max-w-[140px] truncate">
+                            {getCategoryLabel(expense.categoryName)}
                           </Badge>
-                        </div>
-                      ) : (
-                        <span className="text-red-600">{formatAmount(expense.amountEUR)}</span>
-                      )}
-                    </TableCell>
-                    <TableCell>
-                      <AssignmentStatusPopover
-                        expense={item}
-                        status={status}
-                        assignedAmount={assignedAmount}
-                        totalAmount={Math.abs(expense.amountEUR)}
-                        assignments={item.link?.assignments}
-                        onRemoveAssignment={handleRemoveSingleAssignment}
-                        onUnassignAll={handleUnassignAll}
-                        onEditAssignment={setSplitModalExpense}
-                        isSaving={isSaving}
-                      />
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex items-center gap-1 justify-end">
-                        {/* Assignar (només si no té assignació) */}
-                        {!projectsLoading && projects.length > 0 && status === 'unassigned' && (
-                          <QuickAssignPopover
-                            expense={item}
-                            projects={projects}
-                            onAssign100={handleAssign100}
-                            onOpenSplitModal={setSplitModalExpense}
-                            isAssigning={isSaving}
-                            assignTooltip={t.projectModule?.assignToProject ?? 'Assignar a projecte'}
-                          />
+                        ) : (
+                          <span className="text-muted-foreground text-xs">—</span>
                         )}
-                        {/* Editar despesa off-bank */}
-                        {expense.source === 'offBank' && (
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-9 w-9 text-muted-foreground hover:text-foreground hover:bg-muted/40"
-                            onClick={() => handleEditOffBank(item)}
-                            aria-label={t.projectModule?.editExpense ?? 'Editar despesa'}
-                          >
-                            <Pencil className="h-4 w-4" />
-                          </Button>
+                      </TableCell>
+
+                      {/* Contrapart - visible només en xl+ */}
+                      <TableCell className="hidden xl:table-cell px-2 text-muted-foreground text-[13px] max-w-[160px] truncate">
+                        {expense.counterpartyName || '-'}
+                      </TableCell>
+
+                      {/* Import */}
+                      <TableCell className="px-2 text-right font-mono text-[13px] whitespace-nowrap tabular-nums">
+                        {expense.pendingConversion || expense.amountEUR === 0 ? (
+                          <Badge variant="outline" className="text-[10px] px-1.5 py-0 bg-amber-50 text-amber-700 border-amber-200">
+                            Pendent
+                          </Badge>
+                        ) : (
+                          <span className="text-red-600 font-medium">{formatAmount(expense.amountEUR)}</span>
                         )}
-                        {/* Detall despesa bank */}
-                        {expense.source === 'bank' && (
-                          <Link href={buildUrl(`/dashboard/project-module/expenses/${expense.txId}`)}>
+                      </TableCell>
+
+                      {/* Estat */}
+                      <TableCell className="px-2">
+                        <AssignmentStatusPopover
+                          expense={item}
+                          status={status}
+                          assignedAmount={assignedAmount}
+                          totalAmount={Math.abs(expense.amountEUR)}
+                          assignments={item.link?.assignments}
+                          onRemoveAssignment={handleRemoveSingleAssignment}
+                          onUnassignAll={handleUnassignAll}
+                          onEditAssignment={setSplitModalExpense}
+                          isSaving={isSaving}
+                        />
+                      </TableCell>
+
+                      {/* Accions */}
+                      <TableCell className="px-1">
+                        <div className="flex items-center gap-0.5 justify-end">
+                          {!projectsLoading && projects.length > 0 && status === 'unassigned' && (
+                            <QuickAssignPopover
+                              expense={item}
+                              projects={projects}
+                              onAssign100={handleAssign100}
+                              onOpenSplitModal={setSplitModalExpense}
+                              isAssigning={isSaving}
+                              assignTooltip={t.projectModule?.assignToProject ?? 'Assignar a projecte'}
+                            />
+                          )}
+                          {expense.source === 'offBank' && (
                             <Button
                               variant="ghost"
                               size="icon"
-                              className="h-9 w-9 text-muted-foreground hover:text-foreground hover:bg-muted/40"
-                              aria-label={t.projectModule?.viewDetail ?? 'Veure detall'}
+                              className="h-7 w-7 text-muted-foreground hover:text-foreground"
+                              onClick={() => handleEditOffBank(item)}
+                              aria-label={t.projectModule?.editExpense ?? 'Editar despesa'}
                             >
-                              <ChevronRight className="h-4 w-4" />
+                              <Pencil className="h-3.5 w-3.5" />
                             </Button>
-                          </Link>
-                        )}
-                      </div>
-                    </TableCell>
-                  </DroppableExpenseRow>
-                );
-              })
-            )}
-          </TableBody>
-        </Table>
-      </div>
+                          )}
+                          {expense.source === 'bank' && (
+                            <Link href={buildUrl(`/dashboard/project-module/expenses/${expense.txId}`)}>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-7 w-7 text-muted-foreground hover:text-foreground"
+                                aria-label={t.projectModule?.viewDetail ?? 'Veure detall'}
+                              >
+                                <ChevronRight className="h-3.5 w-3.5" />
+                              </Button>
+                            </Link>
+                          )}
+                        </div>
+                      </TableCell>
+                    </DroppableExpenseRow>
+                  );
+                })
+              )}
+            </TableBody>
+          </Table>
+        </div>
+      )}
 
       {isLoading && expenses.length > 0 && (
         <div className="flex justify-center py-4">

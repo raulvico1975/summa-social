@@ -34,7 +34,7 @@ import {
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { PlusCircle, Edit, Trash2, UserCog, Download, Upload } from 'lucide-react';
+import { PlusCircle, Edit, Trash2, UserCog, Download, Upload, MoreVertical } from 'lucide-react';
 import type { Employee, Category } from '@/lib/data';
 import {
   Select,
@@ -52,6 +52,17 @@ import { useTranslations } from '@/i18n';
 import { normalizeContact, formatIBANDisplay } from '@/lib/normalize';
 import { exportEmployeesToExcel } from '@/lib/employees-export';
 import { EmployeeImporter } from '@/components/employee-importer';
+import { useIsMobile } from '@/hooks/use-is-mobile';
+import { MobileListItem } from '@/components/mobile/mobile-list-item';
+import { Skeleton } from '@/components/ui/skeleton';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import { cn } from '@/lib/utils';
+import { MOBILE_ACTIONS_BAR, MOBILE_CTA_PRIMARY } from '@/lib/ui/mobile-actions';
 
 type EmployeeFormData = Omit<Employee, 'id' | 'createdAt' | 'updatedAt'>;
 
@@ -73,6 +84,7 @@ export function EmployeeManager() {
   const { organizationId } = useCurrentOrganization();
   const { toast } = useToast();
   const { t } = useTranslations();
+  const isMobile = useIsMobile();
 
   const contactsCollection = useMemoFirebase(
     () => organizationId ? collection(firestore, 'organizations', organizationId, 'contacts') : null,
@@ -253,7 +265,7 @@ export function EmployeeManager() {
     <>
       <Dialog open={isDialogOpen} onOpenChange={handleOpenChange}>
         <Card>
-          <CardHeader className="flex flex-row items-center justify-between">
+          <CardHeader className={cn("flex flex-col gap-4", "sm:flex-row sm:items-center sm:justify-between")}>
             <div>
               <CardTitle className="flex items-center gap-2">
                 <UserCog className="h-5 w-5 text-purple-500" />
@@ -263,87 +275,143 @@ export function EmployeeManager() {
                 {t.employees.description}
               </CardDescription>
             </div>
-            <div className="flex gap-2">
-              <Button
-                variant="outline"
-                size="icon"
-                onClick={() => setIsImportOpen(true)}
-                title="Importar des d'Excel"
-              >
-                <Upload className="h-4 w-4" />
-              </Button>
-              <Button
-                variant="outline"
-                size="icon"
-                onClick={() => employees && employees.length > 0 && exportEmployeesToExcel(employees)}
-                disabled={!employees || employees.length === 0}
-                title="Exportar a Excel"
-              >
-                <Download className="h-4 w-4" />
-              </Button>
+            <div className={cn(MOBILE_ACTIONS_BAR, "sm:justify-end")}>
               <DialogTrigger asChild>
-                <Button onClick={handleAddNew}>
+                <Button onClick={handleAddNew} className={MOBILE_CTA_PRIMARY}>
                   <PlusCircle className="mr-2 h-4 w-4" />
                   {t.employees.add}
                 </Button>
               </DialogTrigger>
+              <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  size="icon"
+                  onClick={() => setIsImportOpen(true)}
+                  title="Importar des d'Excel"
+                >
+                  <Upload className="h-4 w-4" />
+                </Button>
+                <Button
+                  variant="outline"
+                  size="icon"
+                  onClick={() => employees && employees.length > 0 && exportEmployeesToExcel(employees)}
+                  disabled={!employees || employees.length === 0}
+                  title="Exportar a Excel"
+                >
+                  <Download className="h-4 w-4" />
+                </Button>
+              </div>
             </div>
           </CardHeader>
           <CardContent>
-            <div className="rounded-md border">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>{t.employees.name}</TableHead>
-                    <TableHead>{t.employees.taxId}</TableHead>
-                    <TableHead>{t.employees.startDate}</TableHead>
-                    <TableHead>{t.employees.contact}</TableHead>
-                    <TableHead className="text-right">{t.employees.actions}</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {employees && employees.map((employee) => (
-                    <TableRow key={employee.id}>
-                      <TableCell className="font-medium">
-                        <div className="flex items-center gap-2">
-                          <UserCog className="h-4 w-4 text-purple-500" />
-                          {employee.name}
-                        </div>
-                      </TableCell>
-                      <TableCell>{employee.taxId || <span className="text-muted-foreground">-</span>}</TableCell>
-                      <TableCell>{formatDate(employee.startDate)}</TableCell>
-                      <TableCell>
-                        <div className="text-sm">
-                          {employee.email && <div>{employee.email}</div>}
-                          {employee.phone && <div className="text-muted-foreground">{employee.phone}</div>}
-                          {!employee.email && !employee.phone && <span className="text-muted-foreground">-</span>}
-                        </div>
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <Button variant="ghost" size="icon" onClick={() => handleEdit(employee)}>
-                          <Edit className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="text-red-500 hover:text-red-600"
-                          onClick={() => handleDeleteRequest(employee)}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                  {(!employees || employees.length === 0) && (
+            {/* Vista mòbil */}
+            {isMobile ? (
+              <div className="flex flex-col gap-2">
+                {!employeesRaw && (
+                  Array.from({ length: 4 }).map((_, i) => (
+                    <div key={`skeleton-${i}`} className="border border-border/50 rounded-lg p-3">
+                      <Skeleton className="h-4 w-32 mb-2" />
+                      <Skeleton className="h-3 w-24" />
+                    </div>
+                  ))
+                )}
+                {employees && employees.map((employee) => (
+                  <MobileListItem
+                    key={employee.id}
+                    title={employee.name}
+                    leadingIcon={<UserCog className="h-4 w-4 text-purple-500" />}
+                    meta={[
+                      { label: 'DNI', value: employee.taxId || <span className="text-muted-foreground">-</span> },
+                      ...(employee.email ? [{ value: employee.email }] : []),
+                      ...(employee.startDate ? [{ label: 'Alta', value: formatDate(employee.startDate) }] : []),
+                    ]}
+                    actions={
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" size="icon" className="h-8 w-8">
+                            <MoreVertical className="h-4 w-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuItem onClick={() => handleEdit(employee)}>
+                            <Edit className="mr-2 h-4 w-4" />
+                            Editar
+                          </DropdownMenuItem>
+                          <DropdownMenuItem
+                            onClick={() => handleDeleteRequest(employee)}
+                            className="text-rose-600"
+                          >
+                            <Trash2 className="mr-2 h-4 w-4" />
+                            Eliminar
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    }
+                  />
+                ))}
+                {(!employees || employees.length === 0) && (
+                  <div className="text-center text-muted-foreground py-12">
+                    {t.employees.noData}
+                  </div>
+                )}
+              </div>
+            ) : (
+              /* Vista desktop (taula) */
+              <div className="rounded-md border">
+                <Table>
+                  <TableHeader>
                     <TableRow>
-                      <TableCell colSpan={5} className="text-center text-muted-foreground h-24">
-                        {t.employees.noData}
-                      </TableCell>
+                      <TableHead>{t.employees.name}</TableHead>
+                      <TableHead>{t.employees.taxId}</TableHead>
+                      <TableHead>{t.employees.startDate}</TableHead>
+                      <TableHead>{t.employees.contact}</TableHead>
+                      <TableHead className="text-right">{t.employees.actions}</TableHead>
                     </TableRow>
-                  )}
-                </TableBody>
-              </Table>
-            </div>
+                  </TableHeader>
+                  <TableBody>
+                    {employees && employees.map((employee) => (
+                      <TableRow key={employee.id}>
+                        <TableCell className="font-medium">
+                          <div className="flex items-center gap-2">
+                            <UserCog className="h-4 w-4 text-purple-500" />
+                            {employee.name}
+                          </div>
+                        </TableCell>
+                        <TableCell>{employee.taxId || <span className="text-muted-foreground">-</span>}</TableCell>
+                        <TableCell>{formatDate(employee.startDate)}</TableCell>
+                        <TableCell>
+                          <div className="text-sm">
+                            {employee.email && <div>{employee.email}</div>}
+                            {employee.phone && <div className="text-muted-foreground">{employee.phone}</div>}
+                            {!employee.email && !employee.phone && <span className="text-muted-foreground">-</span>}
+                          </div>
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <Button variant="ghost" size="icon" onClick={() => handleEdit(employee)}>
+                            <Edit className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="text-red-500 hover:text-red-600"
+                            onClick={() => handleDeleteRequest(employee)}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                    {(!employees || employees.length === 0) && (
+                      <TableRow>
+                        <TableCell colSpan={5} className="text-center text-muted-foreground h-24">
+                          {t.employees.noData}
+                        </TableCell>
+                      </TableRow>
+                    )}
+                  </TableBody>
+                </Table>
+              </div>
+            )}
           </CardContent>
         </Card>
 
@@ -371,7 +439,7 @@ export function EmployeeManager() {
                       id="name"
                       value={formData.name}
                       onChange={(e) => handleFormChange('name', e.target.value)}
-                      placeholder="Maria García López"
+                      placeholder={t.employees.namePlaceholder}
                     />
                   </div>
 
