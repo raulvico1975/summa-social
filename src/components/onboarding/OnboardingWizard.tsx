@@ -118,7 +118,8 @@ interface ImportCheckItem {
 function getImportChecklist(
   categories: Category[] | null,
   bankAccounts: BankAccount[] | null,
-  contacts: Contact[] | null
+  contacts: Contact[] | null,
+  t: typeof import('./../../i18n/ca').ca
 ): ImportCheckItem[] {
   // Separar contactes per tipus (camp type: 'donor' | 'supplier' | 'employee')
   // Font: mateixa que donor-manager.tsx, supplier-manager.tsx, employee-manager.tsx
@@ -129,43 +130,43 @@ function getImportChecklist(
   return [
     {
       id: 'categories',
-      label: 'Categories',
-      description: 'Ingressos i despeses',
+      label: t.onboarding?.steps?.categories ?? 'Categories',
+      description: t.onboarding?.import?.categoriesDesc ?? 'Ingressos i despeses',
       icon: FolderTree,
       isComplete: (categories?.length || 0) > 0,
     },
     {
       id: 'bankAccounts',
-      label: 'Comptes bancaris',
-      description: 'IBAN i noms dels comptes',
+      label: t.onboarding?.import?.bankAccounts ?? 'Comptes bancaris',
+      description: t.onboarding?.import?.bankAccountsDesc ?? 'IBAN i noms dels comptes',
       icon: Landmark,
       isComplete: (bankAccounts?.length || 0) > 0,
     },
     {
       id: 'members',
-      label: 'Membres',
-      description: 'Invitacions massives per email',
+      label: t.onboarding?.import?.members ?? 'Membres',
+      description: t.onboarding?.import?.membersDesc ?? 'Invitacions massives per email',
       icon: UserPlus,
       isComplete: false, // No es pot detectar fàcilment si hi ha invitacions pendents
     },
     {
       id: 'employees',
-      label: 'Treballadors',
-      description: 'Nòmines i dietes',
+      label: t.onboarding?.import?.employees ?? 'Treballadors',
+      description: t.onboarding?.import?.employeesDesc ?? 'Nòmines i dietes',
       icon: Users,
       isComplete: employees.length > 0,
     },
     {
       id: 'suppliers',
-      label: 'Proveïdors',
-      description: 'Contactes de pagament',
+      label: t.onboarding?.import?.suppliers ?? 'Proveïdors',
+      description: t.onboarding?.import?.suppliersDesc ?? 'Contactes de pagament',
       icon: Building2,
       isComplete: suppliers.length > 0,
     },
     {
       id: 'donors',
-      label: 'Donants',
-      description: 'Contactes de donació',
+      label: t.onboarding?.import?.donors ?? 'Donants',
+      description: t.onboarding?.import?.donorsDesc ?? 'Contactes de donació',
       icon: Heart,
       isComplete: donors.length > 0,
     },
@@ -175,39 +176,40 @@ function getImportChecklist(
 function getOnboardingChecks(
   organization: Organization | null,
   contacts: Contact[] | null,
-  categories: Category[] | null
+  categories: Category[] | null,
+  t: typeof import('./../../i18n/ca').ca
 ): OnboardingCheckResult[] {
   return [
     {
       step: 'organization',
       isComplete: !!(organization?.name && organization?.taxId && organization?.address && organization?.city && organization?.zipCode),
       isOptional: false,
-      label: "Dades de l'organització",
-      description: 'Nom, CIF i adreça fiscal',
+      label: t.onboarding?.steps?.organization ?? "Dades de l'organització",
+      description: t.onboarding?.steps?.organizationDesc ?? 'Nom, CIF i adreça fiscal',
       href: '/dashboard/configuracion',
     },
     {
       step: 'signature',
       isComplete: !!(organization?.signatureUrl && organization?.signatoryName && organization?.signatoryRole),
       isOptional: false,
-      label: 'Firma i signant',
-      description: 'Necessaris per emetre certificats',
+      label: t.onboarding?.steps?.signature ?? 'Firma i signant',
+      description: t.onboarding?.steps?.signatureDesc ?? 'Necessaris per emetre certificats',
       href: '/dashboard/configuracion',
     },
     {
       step: 'categories',
       isComplete: !!(categories && categories.length > 0),
       isOptional: false,
-      label: 'Categories',
-      description: 'Crea o personalitza les categories',
+      label: t.onboarding?.steps?.categories ?? 'Categories',
+      description: t.onboarding?.steps?.categoriesDesc ?? 'Crea o personalitza les categories',
       href: '/dashboard/configuracion',
     },
     {
       step: 'contacts',
       isComplete: !!(contacts && contacts.length > 0),
       isOptional: true,
-      label: 'Contactes',
-      description: 'Importa donants o proveïdors',
+      label: t.onboarding?.steps?.contacts ?? 'Contactes',
+      description: t.onboarding?.steps?.contactsDesc ?? 'Importa donants o proveïdors',
       href: '/dashboard/donants',
     },
   ];
@@ -269,13 +271,13 @@ export function OnboardingWizardModal({ open, onOpenChange }: OnboardingWizardMo
   // Igual que fan donor-manager.tsx, supplier-manager.tsx i employee-manager.tsx
 
   const checks = React.useMemo(
-    () => getOnboardingChecks(organization, contacts, categories),
-    [organization, contacts, categories]
+    () => getOnboardingChecks(organization, contacts, categories, t),
+    [organization, contacts, categories, t]
   );
 
   const importChecklist = React.useMemo(
-    () => getImportChecklist(categories, bankAccounts, contacts),
-    [categories, bankAccounts, contacts]
+    () => getImportChecklist(categories, bankAccounts, contacts, t),
+    [categories, bankAccounts, contacts, t]
   );
 
   const progress = React.useMemo(() => computeProgress(checks), [checks]);
@@ -424,7 +426,7 @@ export function OnboardingWizardModal({ open, onOpenChange }: OnboardingWizardMo
               {t.onboarding?.setupTitle ?? "Configuració inicial"}
             </DialogTitle>
             <DialogDescription>
-              Com vols configurar la teva organització?
+              {t.onboarding?.modeSelection?.subtitle ?? "Com vols configurar la teva organització?"}
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-3 pt-4">
@@ -437,9 +439,9 @@ export function OnboardingWizardModal({ open, onOpenChange }: OnboardingWizardMo
                 <ArrowRight className="h-5 w-5 text-blue-600" />
               </div>
               <div>
-                <p className="font-medium">Pas a pas</p>
+                <p className="font-medium">{t.onboarding?.modeSelection?.manual ?? "Pas a pas"}</p>
                 <p className="text-sm text-muted-foreground">
-                  Configura manualment cada secció. Ideal si comences de zero.
+                  {t.onboarding?.modeSelection?.manualDesc ?? "Configura manualment cada secció. Ideal si comences de zero."}
                 </p>
               </div>
             </button>
@@ -453,9 +455,9 @@ export function OnboardingWizardModal({ open, onOpenChange }: OnboardingWizardMo
                 <Upload className="h-5 w-5 text-emerald-600" />
               </div>
               <div>
-                <p className="font-medium">Importar dades</p>
+                <p className="font-medium">{t.onboarding?.modeSelection?.import ?? "Importar dades"}</p>
                 <p className="text-sm text-muted-foreground">
-                  Carrega fitxers Excel amb categories, comptes, contactes i més.
+                  {t.onboarding?.modeSelection?.importDesc ?? "Carrega fitxers Excel amb categories, comptes, contactes i més."}
                 </p>
               </div>
             </button>
@@ -483,10 +485,10 @@ export function OnboardingWizardModal({ open, onOpenChange }: OnboardingWizardMo
           <DialogHeader>
             <DialogTitle className="text-xl font-bold tracking-tight font-headline flex items-center gap-2">
               <FileSpreadsheet className="h-5 w-5" />
-              Importar dades
+              {t.onboarding?.importMode?.title ?? "Importar dades"}
             </DialogTitle>
             <DialogDescription>
-              Carrega fitxers Excel per configurar ràpidament. Pots importar qualsevol combinació.
+              {t.onboarding?.importMode?.subtitle ?? "Carrega fitxers Excel per configurar ràpidament. Pots importar qualsevol combinació."}
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 pt-2">
@@ -526,14 +528,14 @@ export function OnboardingWizardModal({ open, onOpenChange }: OnboardingWizardMo
             {/* Botons d'acció */}
             <div className="pt-2 border-t space-y-2">
               <Button onClick={handleClose} className="w-full">
-                Finalitzar
+                {t.onboarding?.buttons?.finish ?? "Finalitzar"}
               </Button>
               <Button
                 variant="ghost"
                 className="w-full text-muted-foreground"
                 onClick={handleBackToModeSelection}
               >
-                Tornar
+                {t.onboarding?.buttons?.back ?? "Tornar"}
               </Button>
             </div>
           </div>
@@ -608,7 +610,7 @@ export function OnboardingWizardModal({ open, onOpenChange }: OnboardingWizardMo
               className="w-full text-muted-foreground"
               onClick={handleBackToModeSelection}
             >
-              Tornar
+              {t.onboarding?.buttons?.back ?? "Tornar"}
             </Button>
           </div>
         </div>

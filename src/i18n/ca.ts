@@ -2555,6 +2555,49 @@ export const ca = {
     completeDescription: "La configuració inicial s'ha completat. Ja pots començar a gestionar les finances de la teva organització.",
     summaryTitle: "Resum de configuració",
     goToDashboard: "Anar al Dashboard",
+    // Mode selection
+    modeSelection: {
+      subtitle: "Com vols configurar la teva organització?",
+      manual: "Pas a pas",
+      manualDesc: "Configura manualment cada secció. Ideal si comences de zero.",
+      import: "Importar dades",
+      importDesc: "Carrega fitxers Excel amb categories, comptes, contactes i més.",
+    },
+    // Import mode
+    importMode: {
+      title: "Importar dades",
+      subtitle: "Carrega fitxers Excel per configurar ràpidament. Pots importar qualsevol combinació.",
+    },
+    // Import checklist items
+    import: {
+      categoriesDesc: "Ingressos i despeses",
+      bankAccounts: "Comptes bancaris",
+      bankAccountsDesc: "IBAN i noms dels comptes",
+      members: "Membres",
+      membersDesc: "Invitacions massives per email",
+      employees: "Treballadors",
+      employeesDesc: "Nòmines i dietes",
+      suppliers: "Proveïdors",
+      suppliersDesc: "Contactes de pagament",
+      donors: "Donants",
+      donorsDesc: "Contactes de donació",
+    },
+    // Manual mode steps
+    steps: {
+      organization: "Dades de l'organització",
+      organizationDesc: "Nom, CIF i adreça fiscal",
+      signature: "Firma i signant",
+      signatureDesc: "Necessaris per emetre certificats",
+      categories: "Categories",
+      categoriesDesc: "Crea o personalitza les categories",
+      contacts: "Contactes",
+      contactsDesc: "Importa donants o proveïdors",
+    },
+    // Buttons
+    buttons: {
+      back: "Tornar",
+      finish: "Finalitzar",
+    },
   },
   // Empty states - to institucional, sense emojis
   emptyStates: {

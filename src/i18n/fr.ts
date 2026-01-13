@@ -2556,6 +2556,49 @@ export const fr = {
     completeDescription: "La configuration initiale est terminée. Vous pouvez maintenant gérer les finances de votre organisation.",
     summaryTitle: "Résumé de configuration",
     goToDashboard: "Aller au Tableau de bord",
+    // Mode selection
+    modeSelection: {
+      subtitle: "Comment souhaitez-vous configurer votre organisation ?",
+      manual: "Étape par étape",
+      manualDesc: "Configurez manuellement chaque section. Idéal si vous partez de zéro.",
+      import: "Importer des données",
+      importDesc: "Chargez des fichiers Excel avec catégories, comptes, contacts et plus.",
+    },
+    // Import mode
+    importMode: {
+      title: "Importer des données",
+      subtitle: "Chargez des fichiers Excel pour configurer rapidement. Vous pouvez importer n'importe quelle combinaison.",
+    },
+    // Import checklist items
+    import: {
+      categoriesDesc: "Revenus et dépenses",
+      bankAccounts: "Comptes bancaires",
+      bankAccountsDesc: "IBAN et noms des comptes",
+      members: "Membres",
+      membersDesc: "Invitations massives par email",
+      employees: "Employés",
+      employeesDesc: "Salaires et indemnités",
+      suppliers: "Fournisseurs",
+      suppliersDesc: "Contacts de paiement",
+      donors: "Donateurs",
+      donorsDesc: "Contacts de don",
+    },
+    // Manual mode steps
+    steps: {
+      organization: "Données de l'organisation",
+      organizationDesc: "Nom, SIRET et adresse fiscale",
+      signature: "Signature et signataire",
+      signatureDesc: "Nécessaires pour émettre des certificats",
+      categories: "Catégories",
+      categoriesDesc: "Créez ou personnalisez les catégories",
+      contacts: "Contacts",
+      contactsDesc: "Importez des donateurs ou fournisseurs",
+    },
+    // Buttons
+    buttons: {
+      back: "Retour",
+      finish: "Terminer",
+    },
   },
   // Empty states - ton institutionnel, sans emojis
   emptyStates: {
