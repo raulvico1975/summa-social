@@ -1,6 +1,6 @@
 # ═══════════════════════════════════════════════════════════════════════════════
 # SUMMA SOCIAL - REFERÈNCIA COMPLETA DEL PROJECTE
-# Versió 1.29 - Gener 2026
+# Versió 1.30 - Gener 2026
 # ═══════════════════════════════════════════════════════════════════════════════
 
 
@@ -566,25 +566,35 @@ organizations/
 # 3. FUNCIONALITATS DETALLADES
 # ═══════════════════════════════════════════════════════════════════════════════
 
-## 3.1 DASHBOARD (ACTUALITZAT v1.20)
+## 3.1 DASHBOARD (ACTUALITZAT v1.30)
 
-### 3.1.1 Targetes Principals (StatCards)
+### 3.1.1 Bloc "Diners" (veritat bancària)
+
+Dataset: `filteredTransactions` — només apunts bancaris reals (ledger).
 
 | Targeta | Càlcul |
 |---------|--------|
 | **Ingressos** | Suma moviments amount > 0 |
-| **Despeses operatives** | Suma amount < 0 EXCLOENT contraparts |
-| **Balanç operatiu** | Ingressos - Despeses operatives |
-| **Transferències a contraparts** | Suma isCounterpartTransfer = true |
+| **Despeses operatives** | Suma amount < 0 EXCLOENT transferències a terreny |
+| **Terreny (Transferències)** | Suma `category === 'missionTransfers'` |
+| **Saldo operatiu** | Ingressos + Despeses + Terreny |
 
-### 3.1.2 Bloc Donacions i Socis
+### 3.1.2 Bloc "Qui ens sosté" (veritat relacional) — ACTUALITZAT v1.30
 
-| Mètrica | Comparativa |
-|---------|-------------|
-| Donacions | vs any anterior |
-| Donants actius | vs any anterior |
-| Socis actius | vs any anterior |
-| Quotes socis | vs any anterior |
+Dataset: `socialMetricsTxs` — transaccions amb `contactId`, inclou fills de remesa.
+
+| Mètrica | Descripció | Comparativa |
+|---------|------------|-------------|
+| **Quotes de socis** | Import de contactes `membershipType='recurring'` | vs any anterior |
+| **Donacions puntuals** | Import de contactes `membershipType='one-time'` | vs any anterior |
+| **Altres ingressos** | Residual: Ingressos - Quotes - Donacions | — |
+| **Socis actius** | Contactes recurring amb moviments al període | vs any anterior |
+| **Donants actius** | Contactes one-time amb moviments al període | vs any anterior |
+
+**Nota reconciliació (v1.30):**
+- El KPI "Altres ingressos" només es mostra si el valor és > 0.
+- Inclou: subvencions, loteria, reintegraments, interessos, ingressos sense contacte.
+- Objectiu: el gestor pot reconciliar mentalment Dashboard amb extracte bancari.
 
 ### 3.1.3 Bloc Obligacions Fiscals
 
@@ -3808,6 +3818,7 @@ Indicadors que requeririen intervenció:
 | **1.27** | **2 Gen 2026** | **Fix routing Next 15 (`searchParams` Promise), header responsive (icones ajuda/novetats sempre visibles), cercador natural guies amb sinònims i scoring i18n, validador i18n claus de cerca, layout dashboard overflow fix (`min-w-0 + overflow-x-hidden` a SidebarInset). Secció 3.12 Liquidacions de Despeses: model ExpenseReport, quilometratge multilínia (mileageItems[]), generació PDF, tabs Liquidacions/Tickets/Quilometratge, deep linking. Guies: travelExpenseReport, mileageTravel. Fix sidebar mòbil: submenú Projectes ara expandeix correctament (isSidebarCollapsed = !isMobile && collapsed).** |
 | **1.28** | **5 Gen 2026** | **Importadors millorats: plantilla oficial única per Categories/Donants/Proveïdors (detecció 100%), export=import per donants i proveïdors, categoria per defecte agnòstica amb warning d'ambigüitat, dedupe ignora deletedAt/archivedAt. Categories: normalització label, scroll preview, motiu omissió, delete warning + count, Danger Zone esborrar categories. Pendents/Liquidacions: drag & drop com a punt d'entrada per pujar fitxers, validació d'extensions al drop handler (pdf/xml/jpg/png), toast feedback si cap vàlid. Storage observability: detecció i report `storage/unauthorized` com a incident CRITICAL.** |
 | **1.29** | **12 Gen 2026** | **Adaptació mòbil completa: patrons UI normalitzats (CTA + DropdownMenu "Més accions", Tabs → Select, Table → MobileListItem, DangerZone col·lapsable amb Accordion). Pàgines adaptades: expenses, super-admin, admin, configuracio, product-updates-section, i18n-manager. Fix traduccions categories Dashboard (TopCategoriesTable resol category.name → t.categories). Nova secció documentació 7.5.10 Adaptació Mòbil amb exemples de codi.** |
+| **1.30** | **13 Gen 2026** | **Dashboard: reorganització KPIs en dos blocs (Diners/Qui ens sosté), nou KPI "Altres ingressos" per reconciliació visual (subvencions, loteria, interessos), datasets separats per evitar duplicats remesa. Fix hydration warning extensions navegador (`suppressHydrationWarning` a `<html>`). Eliminats logs debug BUILD-SIGNATURE.** |
 
 
 # ═══════════════════════════════════════════════════════════════════════════════

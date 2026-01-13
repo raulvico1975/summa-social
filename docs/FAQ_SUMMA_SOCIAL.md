@@ -818,21 +818,41 @@ El més pràctic és crear una categoria específica anomenada "Transferències 
 
 ---
 
-### 37. Què són les "transferències a contraparts" que veig al Dashboard?
+### 37. Què és el "Terreny" que veig al Dashboard?
 
-**Les contraparts són organitzacions sòcies** amb qui treballeu conjuntament en projectes de cooperació. És un terme molt usat al món de les entitats de cooperació.
+**El Terreny són transferències a organitzacions sòcies** (contraparts) amb qui treballeu conjuntament en projectes de cooperació. És un terme molt usat al món de les entitats de cooperació.
 
 **Exemple pràctic:**
-Si la vostra entitat té un projecte a Guatemala i envieu diners a una organització local perquè executi activitats allà, aquests diners són una "transferència a contrapart".
+Si la vostra entitat té un projecte a Guatemala i envieu diners a una organització local perquè executi activitats allà, aquests diners són "Terreny".
 
-**Per què el Dashboard les mostra per separat?**
-Perquè **no són una despesa operativa vostra** — són part de la vostra missió! No és el mateix gastar 500€ en material d'oficina que enviar 5.000€ a una entitat sòcia perquè faci un projecte educatiu.
+**Per què el Dashboard el mostra per separat?**
+Perquè **no és una despesa operativa vostra** — és part de la vostra missió! No és el mateix gastar 500€ en material d'oficina que enviar 5.000€ a una entitat sòcia perquè faci un projecte educatiu.
 
 Per això el Dashboard diferencia:
 - **Despeses operatives:** El que gasteu vosaltres directament (nòmines, lloguer, subministraments...)
-- **Transferències a contraparts:** El que envieu a les entitats sòcies per executar projectes
+- **Terreny:** El que envieu a les entitats sòcies per executar projectes
 
 Així teniu una visió més real de com es distribueixen els recursos.
+
+---
+
+### 37b. Què són els "Altres ingressos" al Dashboard?
+
+**"Altres ingressos" és tot el que ha entrat al compte i no ve de persones** — ni quotes de socis ni donacions puntuals.
+
+**Exemples típics:**
+- Subvencions d'administracions públiques
+- Ingressos de loteria o rifes
+- Reintegraments (devolucions de factures, etc.)
+- Interessos bancaris
+- Ingressos sense contacte assignat
+
+**Per què apareix?**
+El Dashboard vol ajudar-te a entendre d'on vénen els diners. Si només veus Quotes i Donacions, potser et preguntaràs: "i la subvenció de l'Ajuntament on és?". Amb "Altres ingressos" pots veure que tot quadra:
+
+**Ingressos totals = Quotes + Donacions puntuals + Altres ingressos**
+
+> 💡 Si "Altres ingressos" no apareix, és perquè tots els ingressos vénen de persones (quotes i donacions). Perfecte!
 
 ---
 

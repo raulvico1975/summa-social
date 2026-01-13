@@ -983,7 +983,7 @@ Summa Social/{orgSlug}/backups/{YYYY-MM-DD}/
 
 ---
 
-## 17. Dashboard — Datasets separats (v1.28)
+## 17. Dashboard — Datasets separats (v1.30)
 
 ### Principi fonamental
 
@@ -992,7 +992,7 @@ Summa Social/{orgSlug}/backups/{YYYY-MM-DD}/
 | Bloc | Dataset | Què mostra | Font de veritat |
 |------|---------|------------|-----------------|
 | **Diners** | `filteredTransactions` (ledger) | Ingressos, Despeses, Terreny, Saldo | Extracte bancari |
-| **Qui ens sosté** | `socialMetricsTxs` (contacte) | Quotes, Donacions, Socis, Donants | Relacions amb persones |
+| **Qui ens sosté** | `socialMetricsTxs` (contacte) | Quotes, Donacions, Altres ingressos, Socis, Donants | Relacions amb persones |
 
 ### Perquè cal separar-ho
 
@@ -1021,6 +1021,18 @@ tx.amount > 0 && tx.contactId && tx.contactType === 'donor'
 // Inclou fills de remesa perquè tenen contactId
 ```
 
+### KPI "Altres ingressos" (v1.30)
+
+Reconcilia el Dashboard amb l'extracte bancari mostrant el residual:
+
+```typescript
+otherIncomeEUR = Math.max(0, totalIncome - memberFees - totalDonations)
+```
+
+- **Només es mostra si > 0**
+- **Exemples**: subvencions, loteria, reintegraments, interessos, ingressos sense contacte
+- **Objectiu**: El gestor pot sumar Quotes + Donacions + Altres i veure que quadra amb Ingressos totals
+
 ### Test per afegir nous KPIs
 
 Abans d'afegir un KPI al dashboard, verifica:
@@ -1034,6 +1046,7 @@ Abans d'afegir un KPI al dashboard, verifica:
 En mode development, el dashboard imprimeix:
 - `[Dashboard] Social metrics: { total, withParent, uniqueContacts }`
 - `[Dashboard] LEDGER CONTAMINATION DETECTED` si el ledger conté ítems que haurien ser exclosos
+- `[Dashboard] Income reconciliation diff` si la reconciliació no quadra (tolerància 0.01 €)
 
 ### Fitxers clau
 
@@ -1044,4 +1057,4 @@ En mode development, el dashboard imprimeix:
 
 ---
 
-*Última actualització: 2026-01-12*
+*Última actualització: 2026-01-13*

@@ -116,37 +116,32 @@ A la part esquerra de la pantalla tens el **menú de navegació**. Aquí tens un
 
 El Dashboard és la primera pantalla que veus en entrar. Pensa-hi com el **tauler de control** de les finances de l'entitat.
 
-### 🎉 Bloc de Celebracions
+### 💰 Bloc "Diners"
 
-Quan les coses van bé, veuràs missatges positius:
-- "Totes les transaccions categoritzades"
-- "Balanç positiu"
-- "Tot al dia, bona feina!"
-
-Ens agrada celebrar les petites victòries!
-
-### 📈 Targetes principals
+Mostra la **veritat bancària** — el que diu l'extracte del banc.
 
 | Targeta | Què et diu |
 |---------|------------|
 | **Ingressos** | Tot el que ha entrat al compte |
-| **Despeses operatives** | Tot el que ha sortit (sense comptar transferències a contraparts) |
-| **Balanç operatiu** | La diferència: Ingressos − Despeses |
-| **Transferències a contraparts** | Diners enviats a entitats sòcies |
+| **Despeses operatives** | Tot el que ha sortit (sense comptar terreny) |
+| **Terreny** | Diners enviats a entitats sòcies o projectes de cooperació |
+| **Saldo operatiu** | La suma de tot: Ingressos + Despeses + Terreny |
 
-> 💡 **Què són les contraparts?** Són organitzacions associades amb qui executeu projectes de cooperació. Els diners que els envieu no són "despesa" en el sentit clàssic — són part de la vostra missió.
+> 💡 **Què és el Terreny?** Són transferències a organitzacions associades o projectes internacionals. No són "despesa" en el sentit clàssic — són part de la vostra missió.
 
-### 🔔 Bloc d'Alertes
+### ❤️ Bloc "Qui ens sosté"
 
-Les alertes t'avisen de coses que necessiten la teva atenció:
+Mostra les **persones** que us donen suport — socis i donants.
 
-| Alerta | Què significa |
-|--------|---------------|
-| "X moviments sense categoritzar" | Hi ha transaccions pendents de classificar |
-| "X donants amb dades incompletes" | Falta DNI o codi postal d'alguns donants |
-| "X devolucions pendents" | Hi ha rebuts retornats que cal gestionar |
+| Targeta | Què et diu |
+|---------|------------|
+| **Quotes de socis** | Import de les persones que paguen regularment |
+| **Donacions puntuals** | Import de les persones que fan donatius esporàdics |
+| **Altres ingressos** | Subvencions, loteria, reintegraments... (tot el que no ve de persones) |
+| **Socis actius** | Quants socis han pagat en el període |
+| **Donants actius** | Quants donants han aportat en el període |
 
-> 🧘 **No t'espantis!** És completament normal tenir moltes alertes al principi. A mesura que vagis ordenant les dades, aniran desapareixent. Ningú ho té tot perfecte el primer dia.
+> 🔍 **Nota:** Si sumes Quotes + Donacions + Altres ingressos, el resultat hauria de coincidir amb els Ingressos totals del bloc "Diners". Això et permet reconciliar mentalment el Dashboard amb l'extracte bancari.
 
 ### 📅 Obligacions Fiscals
 
