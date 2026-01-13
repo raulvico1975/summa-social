@@ -211,6 +211,10 @@ export const es = {
     title: "Movimientos",
     description: "Importa, revisa y asigna categorías, contactos y documentos.",
     quickExpenseCta: "+ Gasto rápido",
+    buttons: {
+      pendingDocs: "Pendientes",
+      settlements: "Liquidaciones",
+    },
     import: {
       label: "Importar",
       formatsHelp: "Formatos admitidos: CSV y Excel (.xlsx)",
@@ -631,6 +635,12 @@ export const es = {
         // Navegación rápida
         goToAmbiguous: (count: number) => `Ir a ambiguos (${count})`,
         goToNotFound: (count: number) => `Ir a no encontrados (${count})`,
+        // SEPA
+        importSepa: "Importar SEPA (pain.001)",
+        exportSepa: "Exportar SEPA",
+        exportSepaTooltip: "Exportar archivo SEPA pain.001",
+        configureIban: "Debes configurar el IBAN de la cuenta bancaria",
+        validationFailed: "Validación fallida",
     }
   },
   importers: {
@@ -2403,6 +2413,73 @@ export const es = {
       toastSuccess: "Donante creado",
       toastSuccessDesc: "Se ha creado el donante y se ha asignado a la devolución",
     },
+    // Step mapping
+    dataRowsDetected: "Se han detectado {count} filas de datos en {files} archivo(s)",
+    startRowLabel: "Fila inicial de datos:",
+    rowPreview: "Fila {n}: {preview}...",
+    selectPlaceholder: "-- Selecciona --",
+    columnPreview: "Col {n}: {preview}",
+    notAvailable: "-- No disponible --",
+    previewLabel: "Vista previa (primeras {n} filas):",
+    back: "Volver",
+    continue: "Continuar",
+    // Step preview
+    contextModeTitle: "Asignar devoluciones al apunte seleccionado",
+    contextModeDesc: "Las {count} devoluciones del archivo se asignarán a este apunte",
+    reviewDesc: "Revisa las coincidencias y selecciona las devoluciones a asignar",
+    autoMatched: "liquidaciones auto-matched",
+    pendingReview: "pendientes de revisión",
+    noMatch: "sin coincidencia",
+    withDonorIdentified: "con donante identificado",
+    multipleCandidates: "Múltiples candidatos",
+    outsideWindow: "Fuera de ventana",
+    needsReview: "Revisión",
+    candidatesInWindow: "{n} candidatos en ±2 días",
+    candidatesOutsideWindow: "{n} candidatos fuera de la ventana ±2 días",
+    manualReviewNeeded: "Requiere revisión manual",
+    noMatchLabel: "Sin coincidencia",
+    candidatesAvailable: "{n} candidatos disponibles",
+    outsideWindowLabel: "{n} fuera de ventana",
+    noCandidate: "Sin candidato",
+    pendingIdentify: "Pendiente de identificar",
+    searchButton: "Buscar",
+    createButton: "Crear",
+    notFoundLabel: "No encontrado",
+    groupedBadge: "Agrupada",
+    groupedTooltip: "Forma parte de una remesa de devoluciones",
+    individualBadge: "Individual",
+    pendingBadge: "Pendiente",
+    pendingTooltip: "Pendiente de identificar donante",
+    // Info box
+    settlementsAutoProcess: "{n} liquidaciones se procesarán automáticamente.",
+    settlementsNeedReview: "{n} liquidaciones requieren revisión manual (múltiples candidatos o fuera de la ventana ±2 días).",
+    settlementsNoMatch: "{n} liquidaciones sin ninguna transacción coincidente.",
+    selectedCount: "{n} devoluciones seleccionadas para asignar.",
+    groupedAssignInfo: "Las {n} devoluciones agrupadas se asignarán como parte de una remesa.",
+    pendingRemaining: "{n} devoluciones quedarán pendientes de identificar. La remesa se marcará como parcial hasta que se identifiquen todos los donantes.",
+    // SuperAdmin
+    forceRecreateLabel: "Forzar recreación de devoluciones (SuperAdmin)",
+    forceRecreateDesc: "Elimina y recrea las hijas del apunte padre seleccionado. Uso solo para migraciones.",
+    forceRecreateConfirm: "Entiendo el riesgo: las devoluciones hijas existentes se eliminarán permanentemente",
+    confirmRequired: "Confirmación requerida",
+    confirmRequiredDesc: "Debes marcar la casilla de confirmación para forzar la recreación.",
+    // Buttons & actions
+    identifyAtLeastOne: "Identifica al menos un donante para continuar",
+    processSettlements: "Procesar {n} liquidaciones",
+    // Processing step
+    processingTitle: "Procesando devoluciones",
+    processingDesc: "Asignando donantes y actualizando contadores",
+    processingProgress: "Procesando devoluciones...",
+    // Table headers
+    settlementDate: "Fecha Liquidación",
+    settlementNumber: "Núm. Liquidación",
+    amount: "Importe",
+    returnsCount: "Devoluciones",
+    status: "Estado",
+    parentTransaction: "Transacción Padre",
+    // Feature pending
+    featurePending: "Funcionalidad pendiente",
+    searchDonorSoon: "Buscar donante existente - próximamente",
   },
   // Aviso devoluciones pendientes (transactions-table)
   pendingReturnsAlert: {
@@ -2787,6 +2864,9 @@ export const es = {
       submitted: "Enviadas",
       matched: "Conciliadas",
       archived: "Archivadas",
+      mileage: "Kilometraje",
+      settlements: "Liquidaciones",
+      tickets: "Tickets",
     },
     statuses: {
       draft: "Borrador",
@@ -2839,6 +2919,13 @@ export const es = {
       archived: "Ninguna liquidación archivada",
       archivedDesc: "No hay liquidaciones en este estado.",
       noTitle: "Liquidación sin título",
+    },
+    mileage: {
+      onlyMileageHere: "Aquí solo gestionas kilometraje. Para editar tickets o cabecera, ve a",
+    },
+    emptyState: {
+      noSettlements: "Ninguna liquidación disponible",
+      createToAddMileage: "Crea una liquidación para poder añadir kilometraje.",
     },
     contextHelp: {
       title: "Flujo recomendado",

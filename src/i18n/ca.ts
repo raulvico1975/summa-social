@@ -211,6 +211,10 @@ export const ca = {
     title: "Moviments",
     description: "Importa, revisa i assigna categories, contactes i documents.",
     quickExpenseCta: "+ Despesa ràpida",
+    buttons: {
+      pendingDocs: "Pendents",
+      settlements: "Liquidacions",
+    },
     import: {
       label: "Importar",
       formatsHelp: "Formats admesos: CSV i Excel (.xlsx)",
@@ -631,6 +635,12 @@ export const ca = {
         // Navegació ràpida
         goToAmbiguous: (count: number) => `Anar a ambigus (${count})`,
         goToNotFound: (count: number) => `Anar a no trobats (${count})`,
+        // SEPA
+        importSepa: "Importar SEPA (pain.001)",
+        exportSepa: "Exportar SEPA",
+        exportSepaTooltip: "Exportar arxiu SEPA pain.001",
+        configureIban: "Has de configurar l'IBAN del compte bancari",
+        validationFailed: "Validació fallida",
     }
   },
   importers: {
@@ -2410,6 +2420,73 @@ export const ca = {
       toastSuccess: "Donant creat",
       toastSuccessDesc: "S'ha creat el donant i s'ha assignat a la devolució",
     },
+    // Step mapping
+    dataRowsDetected: "S'han detectat {count} files de dades en {files} fitxer(s)",
+    startRowLabel: "Fila inicial de dades:",
+    rowPreview: "Fila {n}: {preview}...",
+    selectPlaceholder: "-- Selecciona --",
+    columnPreview: "Col {n}: {preview}",
+    notAvailable: "-- No disponible --",
+    previewLabel: "Vista prèvia (primeres {n} files):",
+    back: "Tornar",
+    continue: "Continuar",
+    // Step preview
+    contextModeTitle: "Assignar devolucions a l'apunt seleccionat",
+    contextModeDesc: "Les {count} devolucions del fitxer s'assignaran a aquest apunt",
+    reviewDesc: "Revisa les coincidències i selecciona les devolucions a assignar",
+    autoMatched: "liquidacions auto-matched",
+    pendingReview: "pendents de revisió",
+    noMatch: "sense coincidència",
+    withDonorIdentified: "amb donant identificat",
+    multipleCandidates: "Múltiples candidats",
+    outsideWindow: "Fora finestra",
+    needsReview: "Revisió",
+    candidatesInWindow: "{n} candidats dins ±2 dies",
+    candidatesOutsideWindow: "{n} candidats fora de la finestra ±2 dies",
+    manualReviewNeeded: "Cal revisió manual",
+    noMatchLabel: "Sense coincidència",
+    candidatesAvailable: "{n} candidats disponibles",
+    outsideWindowLabel: "{n} fora finestra",
+    noCandidate: "Cap candidat",
+    pendingIdentify: "Pendent d'identificar",
+    searchButton: "Buscar",
+    createButton: "Crear",
+    notFoundLabel: "No trobat",
+    groupedBadge: "Agrupada",
+    groupedTooltip: "Forma part d'una remesa de devolucions",
+    individualBadge: "Individual",
+    pendingBadge: "Pendent",
+    pendingTooltip: "Pendent d'identificar donant",
+    // Info box
+    settlementsAutoProcess: "{n} liquidacions es processaran automàticament.",
+    settlementsNeedReview: "{n} liquidacions requereixen revisió manual (múltiples candidats o fora de la finestra ±2 dies).",
+    settlementsNoMatch: "{n} liquidacions sense cap transacció coincident.",
+    selectedCount: "{n} devolucions seleccionades per assignar.",
+    groupedAssignInfo: "Les {n} devolucions agrupades s'assignaran com a part d'una remesa.",
+    pendingRemaining: "{n} devolucions quedaran pendents d'identificar. La remesa es marcarà com a parcial fins que s'identifiquin tots els donants.",
+    // SuperAdmin
+    forceRecreateLabel: "Forçar recreació de devolucions (SuperAdmin)",
+    forceRecreateDesc: "Elimina i recrea les filles de l'apunt pare seleccionat. Ús només per migracions.",
+    forceRecreateConfirm: "Entenc el risc: les devolucions filles existents s'eliminaran permanentment",
+    confirmRequired: "Confirmació requerida",
+    confirmRequiredDesc: "Has de marcar la casella de confirmació per forçar la recreació.",
+    // Buttons & actions
+    identifyAtLeastOne: "Identifica almenys un donant per continuar",
+    processSettlements: "Processar {n} liquidacions",
+    // Processing step
+    processingTitle: "Processant devolucions",
+    processingDesc: "Assignant donants i actualitzant comptadors",
+    processingProgress: "Processant devolucions...",
+    // Table headers
+    settlementDate: "Data Liquidació",
+    settlementNumber: "Núm. Liquidació",
+    amount: "Import",
+    returnsCount: "Devolucions",
+    status: "Estat",
+    parentTransaction: "Transacció Pare",
+    // Feature pending
+    featurePending: "Funcionalitat pendent",
+    searchDonorSoon: "Buscar donant existent - pròximament",
   },
   // Avís devolucions pendents (transactions-table)
   pendingReturnsAlert: {
@@ -2794,6 +2871,9 @@ export const ca = {
       submitted: "Enviades",
       matched: "Conciliades",
       archived: "Arxivades",
+      mileage: "Quilometratge",
+      settlements: "Liquidacions",
+      tickets: "Tiquets",
     },
     statuses: {
       draft: "Esborrany",
@@ -2846,6 +2926,13 @@ export const ca = {
       archived: "Cap liquidació arxivada",
       archivedDesc: "No hi ha liquidacions en aquest estat.",
       noTitle: "Liquidació sense títol",
+    },
+    mileage: {
+      onlyMileageHere: "Aquí només gestiones quilometratge. Per editar tiquets o capçalera, ves a",
+    },
+    emptyState: {
+      noSettlements: "Cap liquidació disponible",
+      createToAddMileage: "Crea una liquidació per poder afegir quilometratge.",
     },
     contextHelp: {
       title: "Flux recomanat",

@@ -211,6 +211,10 @@ export const fr = {
     title: "Mouvements",
     description: "Importez, révisez et attribuez catégories, contacts et documents.",
     quickExpenseCta: "+ Dépense rapide",
+    buttons: {
+      pendingDocs: "En attente",
+      settlements: "Règlements",
+    },
     import: {
       label: "Importer",
       formatsHelp: "Formats acceptés : CSV et Excel (.xlsx)",
@@ -631,6 +635,12 @@ export const fr = {
         // Navigation rapide
         goToAmbiguous: (count: number) => `Aller aux ambigus (${count})`,
         goToNotFound: (count: number) => `Aller aux non trouvés (${count})`,
+        // SEPA
+        importSepa: "Importer SEPA (pain.001)",
+        exportSepa: "Exporter SEPA",
+        exportSepaTooltip: "Exporter fichier SEPA pain.001",
+        configureIban: "Vous devez configurer l'IBAN du compte bancaire",
+        validationFailed: "Validation échouée",
     }
   },
   importers: {
@@ -2411,6 +2421,73 @@ export const fr = {
       toastSuccess: "Donateur créé",
       toastSuccessDesc: "Le donateur a été créé et assigné au remboursement",
     },
+    // Step mapping
+    dataRowsDetected: "{count} lignes de données détectées dans {files} fichier(s)",
+    startRowLabel: "Ligne de départ des données :",
+    rowPreview: "Ligne {n}: {preview}...",
+    selectPlaceholder: "-- Sélectionner --",
+    columnPreview: "Col {n}: {preview}",
+    notAvailable: "-- Non disponible --",
+    previewLabel: "Aperçu (premières {n} lignes) :",
+    back: "Retour",
+    continue: "Continuer",
+    // Step preview
+    contextModeTitle: "Attribuer les remboursements à l'écriture sélectionnée",
+    contextModeDesc: "Les {count} remboursements du fichier seront attribués à cette écriture",
+    reviewDesc: "Vérifiez les correspondances et sélectionnez les remboursements à attribuer",
+    autoMatched: "règlements auto-matched",
+    pendingReview: "en attente de révision",
+    noMatch: "sans correspondance",
+    withDonorIdentified: "avec donateur identifié",
+    multipleCandidates: "Candidats multiples",
+    outsideWindow: "Hors fenêtre",
+    needsReview: "Révision",
+    candidatesInWindow: "{n} candidats dans ±2 jours",
+    candidatesOutsideWindow: "{n} candidats hors de la fenêtre ±2 jours",
+    manualReviewNeeded: "Révision manuelle nécessaire",
+    noMatchLabel: "Sans correspondance",
+    candidatesAvailable: "{n} candidats disponibles",
+    outsideWindowLabel: "{n} hors fenêtre",
+    noCandidate: "Aucun candidat",
+    pendingIdentify: "En attente d'identification",
+    searchButton: "Rechercher",
+    createButton: "Créer",
+    notFoundLabel: "Non trouvé",
+    groupedBadge: "Groupé",
+    groupedTooltip: "Fait partie d'une remise de remboursements",
+    individualBadge: "Individuel",
+    pendingBadge: "En attente",
+    pendingTooltip: "En attente d'identification du donateur",
+    // Info box
+    settlementsAutoProcess: "{n} règlements seront traités automatiquement.",
+    settlementsNeedReview: "{n} règlements nécessitent une révision manuelle (candidats multiples ou hors fenêtre ±2 jours).",
+    settlementsNoMatch: "{n} règlements sans transaction correspondante.",
+    selectedCount: "{n} remboursements sélectionnés pour attribution.",
+    groupedAssignInfo: "Les {n} remboursements groupés seront attribués comme partie d'une remise.",
+    pendingRemaining: "{n} remboursements resteront en attente d'identification. La remise sera marquée comme partielle jusqu'à identification de tous les donateurs.",
+    // SuperAdmin
+    forceRecreateLabel: "Forcer la recréation des remboursements (SuperAdmin)",
+    forceRecreateDesc: "Supprime et recrée les enfants de l'écriture parent sélectionnée. Usage uniquement pour migrations.",
+    forceRecreateConfirm: "Je comprends le risque : les remboursements enfants existants seront supprimés définitivement",
+    confirmRequired: "Confirmation requise",
+    confirmRequiredDesc: "Vous devez cocher la case de confirmation pour forcer la recréation.",
+    // Buttons & actions
+    identifyAtLeastOne: "Identifiez au moins un donateur pour continuer",
+    processSettlements: "Traiter {n} règlements",
+    // Processing step
+    processingTitle: "Traitement des remboursements",
+    processingDesc: "Attribution des donateurs et mise à jour des compteurs",
+    processingProgress: "Traitement des remboursements...",
+    // Table headers
+    settlementDate: "Date règlement",
+    settlementNumber: "Nº règlement",
+    amount: "Montant",
+    returnsCount: "Remboursements",
+    status: "Statut",
+    parentTransaction: "Transaction parent",
+    // Feature pending
+    featurePending: "Fonctionnalité en attente",
+    searchDonorSoon: "Rechercher un donateur existant - bientôt disponible",
   },
   // Avís devolucions pendents (transactions-table)
   pendingReturnsAlert: {
@@ -2795,6 +2872,9 @@ export const fr = {
       submitted: "Envoyées",
       matched: "Rapprochées",
       archived: "Archivées",
+      mileage: "Kilométrage",
+      settlements: "Notes de frais",
+      tickets: "Tickets",
     },
     statuses: {
       draft: "Brouillon",
@@ -2847,6 +2927,13 @@ export const fr = {
       archived: "Aucune note de frais archivée",
       archivedDesc: "Aucune note de frais dans cet état.",
       noTitle: "Note de frais sans titre",
+    },
+    mileage: {
+      onlyMileageHere: "Ici vous gérez uniquement le kilométrage. Pour éditer les tickets ou l'en-tête, allez à",
+    },
+    emptyState: {
+      noSettlements: "Aucune note de frais disponible",
+      createToAddMileage: "Créez une note de frais pour ajouter du kilométrage.",
     },
     contextHelp: {
       title: "Flux recommandé",
