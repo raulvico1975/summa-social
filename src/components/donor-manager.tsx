@@ -49,6 +49,7 @@ import {
 import { Textarea } from '@/components/ui/textarea';
 import { PlusCircle, Edit, Trash2, User, Building2, RefreshCw, Heart, Upload, AlertTriangle, Search, X, RotateCcw, Download, Users, CreditCard, MoreVertical } from 'lucide-react';
 import Link from 'next/link';
+import { useSearchParams } from 'next/navigation';
 import { EmptyState } from '@/components/ui/empty-state';
 import { Skeleton } from '@/components/ui/skeleton';
 import type { Donor, Category, Transaction } from '@/lib/data';
@@ -106,6 +107,8 @@ export function DonorManager() {
   const { toast } = useToast();
   const { t } = useTranslations();
   const isMobile = useIsMobile();
+  const searchParams = useSearchParams();
+  const urlDonorId = searchParams.get('id');
 
   const contactsCollection = useMemoFirebase(
     () => organizationId ? collection(firestore, 'organizations', organizationId, 'contacts') : null,
@@ -204,7 +207,7 @@ export function DonorManager() {
     loadDonorsWithReturns();
   }, [loadDonorsWithReturns]);
 
-  // Llegir paràmetres de la URL (filtre i id de donant)
+  // Llegir paràmetres de la URL (filtres)
   React.useEffect(() => {
     if (typeof window !== 'undefined') {
       const params = new URLSearchParams(window.location.search);
@@ -242,22 +245,26 @@ export function DonorManager() {
         setMembershipTypeFilter(membershipType);
         setHasUrlFilter(true);
       }
+    }
+  }, [t.donors.allPeriods]);
 
-      // Si hi ha un ID de donant a la URL, obrir el drawer
-      const donorId = params.get('id');
-      if (donorId && donors) {
-        const donor = donors.find(d => d.id === donorId);
-        if (donor) {
-          setSelectedDonor(donor);
-          setIsDetailOpen(true);
-          // Netejar el paràmetre id de la URL
-          const url = new URL(window.location.href);
-          url.searchParams.delete('id');
-          window.history.replaceState({}, '', url.toString());
-        }
+  // Efecte separat per obrir el drawer quan hi ha ?id= a la URL (reactiu)
+  // PATRÓ: useSearchParams() + useEffect amb deps [urlParam, data] per drawers controlats per URL
+  React.useEffect(() => {
+    if (urlDonorId && donors !== undefined) {
+      const donor = donors.find(d => d.id === urlDonorId);
+      if (donor) {
+        setSelectedDonor(donor);
+        setIsDetailOpen(true);
+      }
+      // Netejar el paràmetre id de la URL per evitar re-open en refresh/navegació
+      if (typeof window !== 'undefined') {
+        const url = new URL(window.location.href);
+        url.searchParams.delete('id');
+        window.history.replaceState({}, '', url.toString());
       }
     }
-  }, [donors, t.donors.allPeriods]);
+  }, [urlDonorId, donors]);
 
   // Funció per netejar el filtre i actualitzar la URL
   const clearFilter = () => {
