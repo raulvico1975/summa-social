@@ -2978,10 +2978,15 @@ export const fr = {
     },
     statuses: {
       draft: "Brouillon",
+      submitted: "Envoyée",
       ready: "Préparée",
       sepaGenerated: "SEPA généré",
       matched: "Rapprochée",
       archived: "Archivée",
+    },
+    status: {
+      submitted: "Envoyée",
+      submittedHelp: "En attente de rapprochement avec le paiement bancaire",
     },
     tooltips: {
       draft: "En préparation. Pas encore de PDF ni de paiement.",
@@ -2994,6 +2999,10 @@ export const fr = {
       create: "Nouvelle note de frais",
       archive: "Archiver",
       restore: "Restaurer",
+      markAsSubmitted: "Marquer comme envoyée",
+      submit: "Envoyer",
+      manageMileage: "Gérer km",
+      confirmSubmit: "Confirmer l'envoi",
     },
     banners: {
       prebank: "Pré-banque",
@@ -3010,6 +3019,8 @@ export const fr = {
       errorArchive: "Impossible d'archiver.",
       errorRestore: "Impossible de restaurer.",
       errorDelete: "Impossible de supprimer la note de frais.",
+      submittedSuccess: "Note de frais marquée comme envoyée",
+      submittedError: "Erreur lors du marquage comme envoyée",
     },
     confirmDelete: {
       title: "Supprimer la note de frais ?",
@@ -3030,6 +3041,10 @@ export const fr = {
     },
     mileage: {
       onlyMileageHere: "Ici vous gérez uniquement le kilométrage. Pour éditer les tickets ou l'en-tête, allez à",
+      lineCount: (params: { count: number }) => `${params.count} ${params.count === 1 ? 'ligne' : 'lignes'}`,
+    },
+    confirmSubmit: {
+      description: "Cela marque la note de frais comme envoyée (présentée). Elle passera à l'onglet « Envoyées » en attente de rapprochement avec le paiement bancaire.",
     },
     emptyState: {
       noSettlements: "Aucune note de frais disponible",

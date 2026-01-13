@@ -2977,10 +2977,15 @@ export const ca = {
     },
     statuses: {
       draft: "Esborrany",
+      submitted: "Enviada",
       ready: "Preparada",
       sepaGenerated: "SEPA generat",
       matched: "Conciliada",
       archived: "Arxivada",
+    },
+    status: {
+      submitted: "Enviada",
+      submittedHelp: "Pendent de conciliació amb pagament bancari",
     },
     tooltips: {
       draft: "En preparació. Encara no hi ha PDF ni pagament.",
@@ -2993,6 +2998,10 @@ export const ca = {
       create: "Nova liquidació",
       archive: "Arxivar",
       restore: "Restaurar",
+      markAsSubmitted: "Marcar com enviada",
+      submit: "Enviar",
+      manageMileage: "Gestionar km",
+      confirmSubmit: "Confirmar enviament",
     },
     banners: {
       prebank: "Pre-banc",
@@ -3004,6 +3013,8 @@ export const ca = {
       archived: "Liquidació arxivada",
       restored: "Liquidació restaurada",
       deleted: "Liquidació esborrada",
+      submittedSuccess: "Liquidació marcada com enviada",
+      submittedError: "Error en marcar com enviada",
       error: "Error",
       errorCreate: "No s'ha pogut crear la liquidació.",
       errorArchive: "No s'ha pogut arxivar.",
@@ -3015,6 +3026,9 @@ export const ca = {
       description: "Aquesta acció no es pot desfer. S'esborraran les dades de la liquidació però els tiquets associats es mantindran.",
       cancel: "Cancel·la",
       confirm: "Esborrar",
+    },
+    confirmSubmit: {
+      description: "Això marca la liquidació com enviada (presentada). Passarà a la pestanya «Enviades» pendent de conciliació amb el pagament bancari.",
     },
     empty: {
       draft: "Cap esborrany",
@@ -3029,6 +3043,7 @@ export const ca = {
     },
     mileage: {
       onlyMileageHere: "Aquí només gestiones quilometratge. Per editar tiquets o capçalera, ves a",
+      lineCount: (params: { count: number }) => `${params.count} ${params.count === 1 ? 'línia' : 'línies'}`,
     },
     emptyState: {
       noSettlements: "Cap liquidació disponible",

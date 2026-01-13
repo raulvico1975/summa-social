@@ -2970,10 +2970,15 @@ export const es = {
     },
     statuses: {
       draft: "Borrador",
+      submitted: "Enviada",
       ready: "Preparada",
       sepaGenerated: "SEPA generado",
       matched: "Conciliada",
       archived: "Archivada",
+    },
+    status: {
+      submitted: "Enviada",
+      submittedHelp: "Pendiente de conciliación con el pago bancario",
     },
     tooltips: {
       draft: "En preparación. Aún no hay PDF ni pago.",
@@ -2986,6 +2991,10 @@ export const es = {
       create: "Nueva liquidación",
       archive: "Archivar",
       restore: "Restaurar",
+      markAsSubmitted: "Marcar como enviada",
+      submit: "Enviar",
+      manageMileage: "Gestionar km",
+      confirmSubmit: "Confirmar envío",
     },
     banners: {
       prebank: "Pre-banco",
@@ -2997,6 +3006,8 @@ export const es = {
       archived: "Liquidación archivada",
       restored: "Liquidación restaurada",
       deleted: "Liquidación eliminada",
+      submittedSuccess: "Liquidación marcada como enviada",
+      submittedError: "Error al marcar como enviada",
       error: "Error",
       errorCreate: "No se ha podido crear la liquidación.",
       errorArchive: "No se ha podido archivar.",
@@ -3008,6 +3019,9 @@ export const es = {
       description: "Esta acción no se puede deshacer. Se eliminarán los datos de la liquidación pero los tickets asociados se mantendrán.",
       cancel: "Cancelar",
       confirm: "Eliminar",
+    },
+    confirmSubmit: {
+      description: "Esto marca la liquidación como enviada (presentada). Pasará a la pestaña «Enviadas» pendiente de conciliación con el pago bancario.",
     },
     empty: {
       draft: "Ningún borrador",
@@ -3022,6 +3036,7 @@ export const es = {
     },
     mileage: {
       onlyMileageHere: "Aquí solo gestionas kilometraje. Para editar tickets o cabecera, ve a",
+      lineCount: (params: { count: number }) => `${params.count} ${params.count === 1 ? 'línea' : 'líneas'}`,
     },
     emptyState: {
       noSettlements: "Ninguna liquidación disponible",
