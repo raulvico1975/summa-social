@@ -872,6 +872,64 @@ Si has processat una remesa incorrectament:
 
 ---
 
+## 6.a Remeses SEPA de cobrament (domiciliacions)
+
+Aquesta funcionalitat serveix per **generar el fitxer SEPA de cobrament (pain.008)** per cobrar quotes de socis per domiciliació bancària.
+
+**És un flux PRE-BANC:** Summa genera un fitxer que després s'ha de **pujar al portal del banc**.
+
+**Ruta del wizard:** Donants → Remeses de cobrament
+(URL típica: `/{orgSlug}/dashboard/donants/remeses-cobrament`)
+
+---
+
+### Abans de començar (requisit obligatori)
+
+Per generar una remesa, el **compte bancari seleccionat** ha de tenir configurat l'**Identificador de creditor SEPA (ICS)**.
+
+1. Ves a **Configuració → Comptes bancaris**
+2. Edita el compte des del qual faràs els cobraments
+3. Omple el camp **"Creditor ID SEPA (ICS)"**
+4. Desa
+
+Si l'ICS no està informat, el wizard mostra l'error:
+> "La cuenta seleccionada no tiene identificador de acreedor SEPA configurado."
+
+i **bloqueja la generació**.
+
+---
+
+### Com generar la remesa (wizard)
+
+1. Ves a **Donants → Remeses de cobrament**
+2. Selecciona:
+   - **Compte bancari** (el que té l'ICS configurat)
+   - **Data de cobrament**
+3. Revisa la previsualització:
+   - nombre de socis inclosos
+   - import total
+4. Clica **"Generar"** i descarrega el fitxer **XML pain.008**
+5. Puja el fitxer al teu banc a l'apartat de **Remeses / Domiciliacions / SEPA Direct Debit**
+
+---
+
+### Validacions i casos habituals
+
+- **Soci sense IBAN**: el soci queda fora de la remesa. Cal editar el soci i informar l'IBAN.
+- **Compte sense ICS**: el wizard bloqueja la generació fins que s'informi l'ICS.
+- **Import de quota = 0**: el soci no es pot incloure (no té sentit bancari).
+
+---
+
+### Després del cobrament (POST-BANC)
+
+Quan el banc executa el cobrament:
+1. Importa l'extracte bancari a **Moviments**
+2. Localitza l'ingrés agregat de la remesa
+3. Utilitza el **Divisor de Remeses** (secció 6) per desagregar quotes i tenir traçabilitat per soci
+
+---
+
 # 6b. Documents Pendents i Remeses SEPA OUT
 
 **Aquesta secció t'ajudarà a...**

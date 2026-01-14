@@ -1028,6 +1028,84 @@ Colors del badge:
 4. **El filtratge és centralitzat** (un sol helper per a tota l'app)
 
 
+## 3.3.9 SEPA DOMICILIACIONS (pain.008) — REMESES DE COBRAMENT (NOU v1.31)
+
+### 3.3.9.1 Visió i límits (contracte)
+
+Aquesta funcionalitat genera fitxers **SEPA Direct Debit** (*pain.008*) per **cobrar quotes de socis per domiciliació bancària**.
+
+**És PRE-BANC**: crea el fitxer que es puja al banc.
+**No és el "divisor de remeses"** (que és POST-BANC i serveix per desagregar un ingrés ja cobrat).
+
+**Fora d'abast (no implementat):**
+- Gestor complet de **mandats SEPA** (referència mandat, data signatura, seqüència FRST/RCUR/FNAL/OOFF)
+- CORE vs B2B avançat
+- Gestió normativa de devolucions SEPA (R-transactions) a nivell de mandat
+
+> Principi: Summa genera un pain.008 operatiu per ONGs petites, amb criteri conservador i sense convertir-se en un gestor bancari.
+
+---
+
+### 3.3.9.2 Requisits (bloquejants)
+
+Per generar una remesa pain.008 cal:
+
+**A) Compte bancari emissor (de l'entitat)**
+- `bankAccounts/{bankAccountId}.iban` → obligatori
+- `bankAccounts/{bankAccountId}.creditorId` (**ICS / SEPA Creditor Identifier**) → obligatori
+
+**B) Socis (deutors)**
+- Cada soci inclòs ha de tenir:
+  - `iban` vàlid
+  - import de quota > 0
+- La UI ha de mostrar quins socis són invàlids i excloure'ls del fitxer.
+
+---
+
+### 3.3.9.3 On es configura l'ICS (Creditor ID)
+
+**Ruta UI:** Configuració → Comptes bancaris → Editar compte
+
+Camp: **"Creditor ID SEPA (ICS)"**
+Persistència: `creditorId: string | null` (mai `undefined`).
+
+---
+
+### 3.3.9.4 Sortida: fitxer XML pain.008
+
+El sistema genera un XML compatible amb el banc per a la càrrega de remeses de cobrament.
+
+**Camps mínims que han d'aparèixer:**
+- Creditor (entitat): nom + IBAN + `creditorId` (ICS)
+- Deutor (soci): nom + IBAN
+- Import i moneda (EUR)
+- Data de cobrament (usuari)
+
+**Nom de fitxer recomanat:**
+`sepa_pain008_{YYYY-MM-DD}_{bankAccountName}.xml`
+
+---
+
+### 3.3.9.5 UX / Errors
+
+Si falta `creditorId` al compte seleccionat:
+- Blocatge de generació (no permet descarregar)
+- Missatge: "La cuenta seleccionada no tiene identificador de acreedor SEPA configurado."
+
+Si hi ha socis sense IBAN:
+- Excloure'ls del fitxer
+- Mostrar llista "invàlids" amb acció ràpida: anar a la fitxa del soci
+
+---
+
+### 3.3.9.6 Diferència amb Remesa IN (POST-BANC)
+
+| Flux | Moment | Objectiu | Fitxer |
+|------|--------|----------|--------|
+| SEPA Domiciliacions | Pre-banc | Generar cobrament | **pain.008** |
+| Divisor de remesa IN | Post-banc | Desagregar ingrés cobrat | cap (es processa CSV/XLSX del banc) |
+
+
 ## 3.4 GESTIÓ DE DEVOLUCIONS (NOU v1.8)
 
 ### 3.4.1 Visió general
