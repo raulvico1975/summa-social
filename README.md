@@ -1,47 +1,97 @@
-# Summa Social: Gestió Financera per a Entitats Socials
+# Summa Social
 
-## Objectiu Principal
+**Gestió financera i fiscal per a entitats sense ànim de lucre**
 
-L'objectiu de Summa Social és **simplificar i revolucionar la gestió financera i administrativa de petites i mitjanes entitats socials**. L'aplicació busca substituir els complexos fulls de càlcul per una eina intuïtiva, intel·ligent i centralitzada, dissenyada específicament per a les necessitats úniques del sector social.
+## Per què existeix Summa Social
 
-## Públic Objectiu
+Les petites i mitjanes entitats espanyoles gestionen les seves finances amb fulls de càlcul. Això provoca errors humans en la categorització, dificultat per generar informes fiscals obligatoris, conciliació bancària manual i propensa a errors, i pèrdua de temps en tasques repetitives.
 
-Està dirigida a **gestors, administradors i tresorers d'entitats socials**, que necessiten una visió clara de les seves finances per a la presa de decisions, la justificació a finançadors i el compliment de les obligacions fiscals, però que no sempre disposen de recursos per a programari de gestió car i complex.
+Summa Social substitueix els fulls de càlcul per una eina centralitzada, dissenyada específicament per a les necessitats del sector social: conciliació bancària real, control de saldos, classificació de moviments i preparació fiscal neta per a gestories.
+
+## Públic objectiu
+
+Gestors, administradors i tresorers d'entitats sense ànim de lucre que necessiten una visió clara de les seves finances per a la presa de decisions, la justificació a finançadors i el compliment de les obligacions fiscals.
 
 ---
 
-## Funcionalitats Desenvolupades
+## Funcionalitats principals
 
-A continuació es detalla l'estat de desenvolupament actual de l'aplicació:
+### Gestió de moviments bancaris
 
-### 1. Gestió de Moviments Centralitzada
-- **Importació d'Extractes Bancaris:** Permet importar fàcilment extractes en formats `.csv` i `.xlsx`. El sistema detecta automàticament les columnes de data, concepte i import.
-- **Taula de Moviments Interactiva:** Visualització de totes les transaccions, amb la capacitat d'editar-les, eliminar-les i adjuntar-hi documents (comprovants, factures) mitjançant Firebase Storage.
-- **Prevenció de Duplicats:** En importar nous moviments, el sistema detecta i omet automàticament aquells que ja existeixen.
+- **Importació d'extractes** en formats CSV i Excel amb detecció automàtica de columnes
+- **Multicomptes bancaris** amb filtre i traçabilitat per compte
+- **Prevenció de duplicats** automàtica en cada importació
+- **Adjunció de documents** (factures, comprovants) amb drag & drop
+- **Selecció múltiple** per aplicar accions en bloc (assignar/treure categoria)
 
-### 2. Intel·ligència Artificial per a l'Automatització
-- **Auto-Categorització Intel·ligent:** Utilitza un model de GenAI (Genkit) per suggerir automàticament la categoria de despesa o ingrés més adequada per a cada moviment, amb un botó per classificar tots els moviments pendents en un sol clic.
-- **Assignació Automàtica d'Emissors:** La IA analitza la descripció dels moviments per identificar i vincular automàticament el donant, proveïdor o soci corresponent des de la base de dades de contactes.
+### Conciliació intel·ligent
 
-### 3. Visió Financera Estratègica (Panell de Control)
-- **Mètriques Clares:** Ofereix targetes amb indicadors clau: Ingressos Totals, Despeses Operatives i Balance Operatiu (`Ingressos - Despeses Operatives`).
-- **Separació de Fons de Missió:** Distingeix clarament les "Transferencias a terreno o socias" de les despeses operatives. Mostra de forma agregada el total de fons enviats a missió en una targeta pròpia.
-- **Gràfic de Despeses:** Visualització intuïtiva de les despeses operatives per categoria, excloent les transferències a terreny.
+- **Auto-assignació de contactes** per nom, DNI o IBAN
+- **Categorització amb IA** (Gemini) amb suggerències que sempre requereixen confirmació
+- **Regles deterministes** per patrons de text (loteria, voluntariat)
+- **Categories per defecte** per contacte
 
-### 4. Comptabilitat per Projectes (Gestió de Fons Finalistes)
-- **Creació i Gestió de Projectes:** Permet donar d'alta projectes específics vinculats a un finançador.
-- **Traçabilitat de Fons:** Els usuaris poden assignar ingressos i despeses a cada projecte des de la taula de moviments.
-- **Balanç per Projecte:** Cada projecte té el seu propi panell de control amb mètriques clau:
-  - **Total Finançat:** Ingressos rebuts per al projecte.
-  - **Total Enviat a Terreny:** Sortides de diners cap a socis locals.
-  - **Despeses a Espanya:** Despeses operatives assignades al projecte.
-  - **Saldo Pendent:** El càlcul precís dels fons restants (`Finançat - Enviat - Despeses`).
+### Divisor de remeses
 
-### 5. Gestió de Donacions i Obligacions Fiscals (Model 182)
-- **Central de Contactes/Emissors:** Permet gestionar una base de dades de donants, proveïdors i voluntaris amb les seves dades fiscals (DNI/CIF, codi postal).
-- **Generador d'Informes de Donacions:** Una secció dedicada a generar l'informe anual de donacions. L'usuari selecciona l'any i el sistema agrega automàticament el total donat per cada persona física o jurídica.
-- **Exportació a CSV:** Amb un sol clic, s'exporta un fitxer CSV llest per ser utilitzat a la declaració del Model 182 a l'Agència Tributària.
-- **Assistent per a Dividir Remeses:** Una eina que soluciona el problema dels ingressos bancaris agrupats. Permet a l'usuari pujar un arxiu CSV amb el detall d'una remesa i l'assistent:
-    1. Desglossa automàticament l'ingrés agrupat en moviments individuals.
-    2. Assigna cada donació al seu soci corresponent mitjançant una cerca intel·ligent per DNI/CIF (prioritari) o per nom (utilitzant normalització per evitar errors amb accents o majúscules).
-    3. Informa a través d'un log de diagnòstic de totes les accions realitzades.
+- **Remeses d'ingressos (quotes de socis):** Desglossa un ingrés agrupat en donacions individuals amb matching per DNI, IBAN o nom
+- **Remeses de devolucions:** Importa fitxers del banc per identificar quotes retornades
+- **Remeses de pagaments (OUT):** Divideix despeses agrupades en pagaments individuals amb generació de fitxer SEPA pain.001
+
+### Gestió de contactes
+
+- **Donants:** Particulars i empreses amb estat actiu/baixa, quota mensual, IBAN
+- **Proveïdors:** Amb categoria per defecte i dades fiscals
+- **Treballadors:** Per a nòmines i pagaments recurrents
+- **Importació massiva** des d'Excel amb plantilla oficial
+- **Exportació a Excel** de la base de donants
+
+### Fiscalitat i informes
+
+- **Model 182:** Exportació Excel per a gestoria amb càlcul automàtic de donacions netes (donacions - devolucions), recurrència i historial de 3 anys
+- **Model 347:** Operacions amb tercers superiors a 3.005,06€
+- **Certificats de donació:** PDF individuals, anuals o massius amb logo i firma digitalitzada
+- **Consolidació automàtica** d'imports per donant amb devolucions aplicades
+
+### Dashboard
+
+- **Bloc "Diners":** Ingressos, despeses operatives, transferències a terreny, saldo operatiu
+- **Bloc "Qui ens sosté":** Quotes de socis, donacions puntuals, socis actius, donants actius
+- **Obligacions fiscals:** Alertes amb dates límit (Model 182: 31 gener, Model 347: 28 febrer)
+- **Filtres temporals:** Any, trimestre, mes, personalitzat
+
+### Projectes i eixos d'actuació
+
+- Assignació de moviments a projectes/finançadors
+- Balanç per projecte: finançat, enviat a terreny, despeses, saldo pendent
+
+### Multi-organització i seguretat
+
+- Suport per múltiples organitzacions amb dades aïllades
+- Sistema de rols: SuperAdmin, Admin, User, Viewer
+- Sessió amb tancament automàtic per inactivitat (30 minuts)
+- Multi-idioma: Català, Espanyol, Francès, Portuguès
+
+---
+
+## Stack tecnològic
+
+| Component | Tecnologia |
+|-----------|------------|
+| Frontend | Next.js 14 (App Router) |
+| Llenguatge | TypeScript |
+| UI | shadcn/ui + Tailwind CSS |
+| Base de dades | Firebase Firestore |
+| Autenticació | Firebase Auth |
+| Emmagatzematge | Firebase Storage |
+| IA | Genkit + Google Gemini |
+| Excel/CSV | SheetJS |
+| PDF | jsPDF |
+
+---
+
+## Documentació
+
+- [Manual de referència complet](docs/SUMMA-SOCIAL-REFERENCIA-COMPLETA.md) — Document mestre del projecte
+- [Catàleg de funcionalitats](docs/CATALEG-FUNCIONALITATS.md) — Referència ràpida
+- [Manual d'usuari](docs/manual-usuari-summa-social.md) — Per a usuaris finals
+- [Changelog](docs/CHANGELOG.md) — Historial de canvis

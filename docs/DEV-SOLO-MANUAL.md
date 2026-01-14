@@ -557,6 +557,13 @@ npm run dev:demo
 | Pendents | 5 | Moviments sense categoria ni contacte |
 | Traçabilitat | 1 factura | 3 moviments compartint 1 PDF |
 
+#### Casos especials demo (només mode Work)
+
+| Cas | Descripció | Ús demo |
+|-----|------------|---------|
+| **Donant certificat** | 1 donant complet ("Maria García López") amb donació (100€) + devolució assignada (-20€) = net 80€ | Demo de certificat fiscal amb devolucions |
+| **Devolució pendent** | 1 devolució (-35€) tipus `transactionType: 'return'` sense contacte assignat | Demo de workflow de resolució de devolucions |
+
 #### Microcopy a la UI
 
 Quan `isDemoEnv() === true`:

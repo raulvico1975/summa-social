@@ -45,6 +45,7 @@ export type CreateBankAccountData = {
   iban?: string | null;
   bankName?: string | null;
   isDefault?: boolean;
+  creditorId?: string | null;
 };
 
 /**
@@ -70,6 +71,7 @@ export async function createBankAccount(
     name: data.name,
     iban: normalizeIban(data.iban) ?? null,
     bankName: data.bankName ?? null,
+    creditorId: data.creditorId ?? null,
     isDefault: isDefault,
     isActive: true,
     createdAt: now,
@@ -88,6 +90,7 @@ export type UpdateBankAccountData = {
   iban?: string | null;
   bankName?: string | null;
   isActive?: boolean;
+  creditorId?: string | null;
 };
 
 /**
@@ -116,6 +119,9 @@ export async function updateBankAccount(
   }
   if (data.isActive !== undefined) {
     updateData.isActive = data.isActive;
+  }
+  if (data.creditorId !== undefined) {
+    updateData.creditorId = data.creditorId ?? null;
   }
 
   await updateDoc(docRef, updateData);

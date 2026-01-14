@@ -64,6 +64,13 @@ interface FiltersSheetProps {
     filterBySource: string;
     filterByAccount: string;
     pendingTasks: string;
+    // Source filter labels
+    sourceAll?: string;
+    sourceBank?: string;
+    sourceRemittance?: string;
+    sourceManual?: string;
+    sourceStripe?: string;
+    sourceEmpty?: string;
   };
 }
 
@@ -113,12 +120,12 @@ export const FiltersSheet = React.memo(function FiltersSheet({
 
   // Source filter options
   const sourceOptions = [
-    { value: 'all', label: 'Tots' },
-    { value: 'bank', label: 'Banc' },
-    { value: 'remittance', label: 'Remesa' },
-    { value: 'manual', label: 'Manual' },
-    { value: 'stripe', label: 'Stripe' },
-    { value: 'null', label: '(buit)' },
+    { value: 'all', label: t.sourceAll ?? 'Tots' },
+    { value: 'bank', label: t.sourceBank ?? 'Banc' },
+    { value: 'remittance', label: t.sourceRemittance ?? 'Remesa' },
+    { value: 'manual', label: t.sourceManual ?? 'Manual' },
+    { value: 'stripe', label: t.sourceStripe ?? 'Stripe' },
+    { value: 'null', label: t.sourceEmpty ?? '(buit)' },
   ];
 
   return (

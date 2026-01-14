@@ -50,12 +50,14 @@ interface FormData {
   name: string;
   iban: string;
   bankName: string;
+  creditorId: string;
 }
 
 const EMPTY_FORM: FormData = {
   name: '',
   iban: '',
   bankName: '',
+  creditorId: '',
 };
 
 export function BankAccountsManager() {
@@ -111,6 +113,7 @@ export function BankAccountsManager() {
       name: account.name,
       iban: account.iban ?? '',
       bankName: account.bankName ?? '',
+      creditorId: account.creditorId ?? '',
     });
     setIsDialogOpen(true);
   };
@@ -137,6 +140,7 @@ export function BankAccountsManager() {
           name: formData.name.trim(),
           iban: formData.iban.trim() || null,
           bankName: formData.bankName.trim() || null,
+          creditorId: formData.creditorId.trim() || null,
         };
         await update(editingAccount.id, updateData);
         toast({
@@ -148,6 +152,7 @@ export function BankAccountsManager() {
           name: formData.name.trim(),
           iban: formData.iban.trim() || null,
           bankName: formData.bankName.trim() || null,
+          creditorId: formData.creditorId.trim() || null,
           isDefault: bankAccounts.length === 0, // Primer compte és default
         };
         await create(createData);
@@ -525,6 +530,23 @@ export function BankAccountsManager() {
                 className="col-span-3"
                 placeholder={t.settings.bankAccounts.bankNamePlaceholder}
               />
+            </div>
+            <div className="grid grid-cols-4 items-start gap-4">
+              <Label htmlFor="creditorId" className="text-right pt-2">
+                {t.settings.creditorId.label}
+              </Label>
+              <div className="col-span-3 space-y-1">
+                <Input
+                  id="creditorId"
+                  value={formData.creditorId}
+                  onChange={handleFormChange}
+                  className="font-mono"
+                  placeholder="ES21001G12345678"
+                />
+                <p className="text-xs text-muted-foreground">
+                  {t.settings.creditorId.hint}
+                </p>
+              </div>
             </div>
           </div>
           <DialogFooter>

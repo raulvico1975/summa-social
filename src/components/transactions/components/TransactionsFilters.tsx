@@ -119,6 +119,13 @@ interface TransactionsFiltersProps {
     showArchivedAriaLabel?: string;
     showArchivedLabel?: string;
     showArchivedTooltip?: string;
+    // Source filter labels
+    sourceAll?: string;
+    sourceBank?: string;
+    sourceRemittance?: string;
+    sourceManual?: string;
+    sourceStripe?: string;
+    sourceEmpty?: string;
   };
 }
 
@@ -375,6 +382,13 @@ export const TransactionsFilters = React.memo(function TransactionsFilters({
             filterBySource: t.filterBySource,
             filterByAccount: t.filterByAccount,
             pendingTasks: t.pendingTasks,
+            // Source filter labels
+            sourceAll: t.sourceAll,
+            sourceBank: t.sourceBank,
+            sourceRemittance: t.sourceRemittance,
+            sourceManual: t.sourceManual,
+            sourceStripe: t.sourceStripe,
+            sourceEmpty: t.sourceEmpty,
           }}
         />
       </div>

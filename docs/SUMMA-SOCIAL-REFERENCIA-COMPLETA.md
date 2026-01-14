@@ -1028,6 +1028,84 @@ Colors del badge:
 4. **El filtratge és centralitzat** (un sol helper per a tota l'app)
 
 
+## 3.3.9 SEPA DOMICILIACIONS (pain.008) — REMESES DE COBRAMENT (NOU v1.31)
+
+### 3.3.9.1 Visió i límits (contracte)
+
+Aquesta funcionalitat genera fitxers **SEPA Direct Debit** (*pain.008*) per **cobrar quotes de socis per domiciliació bancària**.
+
+**És PRE-BANC**: crea el fitxer que es puja al banc.
+**No és el "divisor de remeses"** (que és POST-BANC i serveix per desagregar un ingrés ja cobrat).
+
+**Fora d'abast (no implementat):**
+- Gestor complet de **mandats SEPA** (referència mandat, data signatura, seqüència FRST/RCUR/FNAL/OOFF)
+- CORE vs B2B avançat
+- Gestió normativa de devolucions SEPA (R-transactions) a nivell de mandat
+
+> Principi: Summa genera un pain.008 operatiu per ONGs petites, amb criteri conservador i sense convertir-se en un gestor bancari.
+
+---
+
+### 3.3.9.2 Requisits (bloquejants)
+
+Per generar una remesa pain.008 cal:
+
+**A) Compte bancari emissor (de l'entitat)**
+- `bankAccounts/{bankAccountId}.iban` → obligatori
+- `bankAccounts/{bankAccountId}.creditorId` (**ICS / SEPA Creditor Identifier**) → obligatori
+
+**B) Socis (deutors)**
+- Cada soci inclòs ha de tenir:
+  - `iban` vàlid
+  - import de quota > 0
+- La UI ha de mostrar quins socis són invàlids i excloure'ls del fitxer.
+
+---
+
+### 3.3.9.3 On es configura l'ICS (Creditor ID)
+
+**Ruta UI:** Configuració → Comptes bancaris → Editar compte
+
+Camp: **"Creditor ID SEPA (ICS)"**
+Persistència: `creditorId: string | null` (mai `undefined`).
+
+---
+
+### 3.3.9.4 Sortida: fitxer XML pain.008
+
+El sistema genera un XML compatible amb el banc per a la càrrega de remeses de cobrament.
+
+**Camps mínims que han d'aparèixer:**
+- Creditor (entitat): nom + IBAN + `creditorId` (ICS)
+- Deutor (soci): nom + IBAN
+- Import i moneda (EUR)
+- Data de cobrament (usuari)
+
+**Nom de fitxer recomanat:**
+`sepa_pain008_{YYYY-MM-DD}_{bankAccountName}.xml`
+
+---
+
+### 3.3.9.5 UX / Errors
+
+Si falta `creditorId` al compte seleccionat:
+- Blocatge de generació (no permet descarregar)
+- Missatge: "La cuenta seleccionada no tiene identificador de acreedor SEPA configurado."
+
+Si hi ha socis sense IBAN:
+- Excloure'ls del fitxer
+- Mostrar llista "invàlids" amb acció ràpida: anar a la fitxa del soci
+
+---
+
+### 3.3.9.6 Diferència amb Remesa IN (POST-BANC)
+
+| Flux | Moment | Objectiu | Fitxer |
+|------|--------|----------|--------|
+| SEPA Domiciliacions | Pre-banc | Generar cobrament | **pain.008** |
+| Divisor de remesa IN | Post-banc | Desagregar ingrés cobrat | cap (es processa CSV/XLSX del banc) |
+
+
 ## 3.4 GESTIÓ DE DEVOLUCIONS (NOU v1.8)
 
 ### 3.4.1 Visió general
@@ -3819,6 +3897,7 @@ Indicadors que requeririen intervenció:
 | **1.28** | **5 Gen 2026** | **Importadors millorats: plantilla oficial única per Categories/Donants/Proveïdors (detecció 100%), export=import per donants i proveïdors, categoria per defecte agnòstica amb warning d'ambigüitat, dedupe ignora deletedAt/archivedAt. Categories: normalització label, scroll preview, motiu omissió, delete warning + count, Danger Zone esborrar categories. Pendents/Liquidacions: drag & drop com a punt d'entrada per pujar fitxers, validació d'extensions al drop handler (pdf/xml/jpg/png), toast feedback si cap vàlid. Storage observability: detecció i report `storage/unauthorized` com a incident CRITICAL.** |
 | **1.29** | **12 Gen 2026** | **Adaptació mòbil completa: patrons UI normalitzats (CTA + DropdownMenu "Més accions", Tabs → Select, Table → MobileListItem, DangerZone col·lapsable amb Accordion). Pàgines adaptades: expenses, super-admin, admin, configuracio, product-updates-section, i18n-manager. Fix traduccions categories Dashboard (TopCategoriesTable resol category.name → t.categories). Nova secció documentació 7.5.10 Adaptació Mòbil amb exemples de codi.** |
 | **1.30** | **13 Gen 2026** | **Dashboard: reorganització KPIs en dos blocs (Diners/Qui ens sosté), nou KPI "Altres ingressos" per reconciliació visual (subvencions, loteria, interessos), datasets separats per evitar duplicats remesa. Fix hydration warning extensions navegador (`suppressHydrationWarning` a `<html>`). Eliminats logs debug BUILD-SIGNATURE.** |
+| **1.31** | **14 Gen 2026** | **UX novetats: eliminat toast automàtic de novetats al dashboard (ara només via campaneta/FAB inbox). Reducció soroll logs: console.debug dev-only per i18n listener, org-provider superadmin access. Traça toast DEV-ONLY per debugging. Clarificat accés SuperAdmin sense membership com a comportament esperat. Documentat ERR_BLOCKED_BY_CLIENT com a possible adblocker (no bug).** |
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -4437,15 +4516,23 @@ Les assignacions creades abans de la implementació del camp `budgetLineIds` no 
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
-# ANNEX D: NOVETATS DEL PRODUCTE (v1.26)
+# ANNEX D: NOVETATS DEL PRODUCTE (v1.31)
 # ═══════════════════════════════════════════════════════════════════════════════
 
 ## D.1 Descripció del Sistema
 
 Sistema unificat per comunicar novetats del producte als usuaris a través de múltiples canals:
-- **Campaneta (instància)**: Mostra N últimes novetats dins l'aplicació
+- **Campaneta/FAB (instància)**: Mostra N últimes novetats dins l'aplicació (inbox pull, sense toast automàtic)
 - **Web públic**: Pàgina `/novetats` per SEO i sharing
 - **Social**: Copy per X i LinkedIn (manual)
+
+### Comportament UX (v1.31)
+
+Les novetats es mostren **només via inbox** (campaneta o FAB), mai amb toast automàtic:
+- L'usuari decideix quan vol veure novetats (pull, no push)
+- Badge numèric indica novetats no llegides
+- Zero interrupcions al flux de treball
+- Toast reservat per feedback d'accions explícites (guardar, importar, errors)
 
 ## D.2 Arquitectura
 
