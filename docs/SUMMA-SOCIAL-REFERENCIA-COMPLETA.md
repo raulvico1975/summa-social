@@ -3819,6 +3819,7 @@ Indicadors que requeririen intervenció:
 | **1.28** | **5 Gen 2026** | **Importadors millorats: plantilla oficial única per Categories/Donants/Proveïdors (detecció 100%), export=import per donants i proveïdors, categoria per defecte agnòstica amb warning d'ambigüitat, dedupe ignora deletedAt/archivedAt. Categories: normalització label, scroll preview, motiu omissió, delete warning + count, Danger Zone esborrar categories. Pendents/Liquidacions: drag & drop com a punt d'entrada per pujar fitxers, validació d'extensions al drop handler (pdf/xml/jpg/png), toast feedback si cap vàlid. Storage observability: detecció i report `storage/unauthorized` com a incident CRITICAL.** |
 | **1.29** | **12 Gen 2026** | **Adaptació mòbil completa: patrons UI normalitzats (CTA + DropdownMenu "Més accions", Tabs → Select, Table → MobileListItem, DangerZone col·lapsable amb Accordion). Pàgines adaptades: expenses, super-admin, admin, configuracio, product-updates-section, i18n-manager. Fix traduccions categories Dashboard (TopCategoriesTable resol category.name → t.categories). Nova secció documentació 7.5.10 Adaptació Mòbil amb exemples de codi.** |
 | **1.30** | **13 Gen 2026** | **Dashboard: reorganització KPIs en dos blocs (Diners/Qui ens sosté), nou KPI "Altres ingressos" per reconciliació visual (subvencions, loteria, interessos), datasets separats per evitar duplicats remesa. Fix hydration warning extensions navegador (`suppressHydrationWarning` a `<html>`). Eliminats logs debug BUILD-SIGNATURE.** |
+| **1.31** | **14 Gen 2026** | **UX novetats: eliminat toast automàtic de novetats al dashboard (ara només via campaneta/FAB inbox). Reducció soroll logs: console.debug dev-only per i18n listener, org-provider superadmin access. Traça toast DEV-ONLY per debugging. Clarificat accés SuperAdmin sense membership com a comportament esperat. Documentat ERR_BLOCKED_BY_CLIENT com a possible adblocker (no bug).** |
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -4437,15 +4438,23 @@ Les assignacions creades abans de la implementació del camp `budgetLineIds` no 
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
-# ANNEX D: NOVETATS DEL PRODUCTE (v1.26)
+# ANNEX D: NOVETATS DEL PRODUCTE (v1.31)
 # ═══════════════════════════════════════════════════════════════════════════════
 
 ## D.1 Descripció del Sistema
 
 Sistema unificat per comunicar novetats del producte als usuaris a través de múltiples canals:
-- **Campaneta (instància)**: Mostra N últimes novetats dins l'aplicació
+- **Campaneta/FAB (instància)**: Mostra N últimes novetats dins l'aplicació (inbox pull, sense toast automàtic)
 - **Web públic**: Pàgina `/novetats` per SEO i sharing
 - **Social**: Copy per X i LinkedIn (manual)
+
+### Comportament UX (v1.31)
+
+Les novetats es mostren **només via inbox** (campaneta o FAB), mai amb toast automàtic:
+- L'usuari decideix quan vol veure novetats (pull, no push)
+- Badge numèric indica novetats no llegides
+- Zero interrupcions al flux de treball
+- Toast reservat per feedback d'accions explícites (guardar, importar, errors)
 
 ## D.2 Arquitectura
 

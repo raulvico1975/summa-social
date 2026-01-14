@@ -1,7 +1,7 @@
 # SUMMA SOCIAL - Manual d'Usuari Complet
 
-**Versió**: 1.28
-**Última actualització**: 5 Gener 2026
+**Versió**: 1.31
+**Última actualització**: 14 Gener 2026
 
 ---
 
@@ -1634,6 +1634,6 @@ Molta sort! 🍀
 
 ---
 
-**Summa Social v1.27** — Gener 2026
+**Summa Social v1.31** — Gener 2026
 
 *Gestió financera pensada per a entitats que volen dedicar el seu temps al que realment importa.*

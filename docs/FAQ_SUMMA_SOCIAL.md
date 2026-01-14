@@ -1,7 +1,7 @@
 # SUMMA SOCIAL - Preguntes Freqüents (FAQ)
 
-**Versió**: 1.28
-**Última actualització**: Gener 2026
+**Versió**: 1.31
+**Última actualització**: 14 Gener 2026
 
 ---
 
@@ -17,8 +17,8 @@ Si no trobes la teva pregunta, no et preocupis: mira el Manual d'Usuari complet 
 
 ## Índex de preguntes
 
-**🚀 Primers passos i orientació** (1-7½)
-*T'acabes d'estrenar amb Summa Social i no saps per on agafar-ho? Aquí trobaràs respostes per perdre la por inicial.*
+**🚀 Primers passos i orientació** (1-7¾)
+*T'acabes d'estrenar amb Summa Social i no saps per on agafar-ho? Aquí trobaràs respostes per perdre la por inicial. Inclou com veure les novetats del producte (7¾).*
 
 **📥 Importació de dades** (8-8½, 9-15)
 *Tens dades en Excels antics, extractes del banc, llistes de donants... Com ho poses tot dins de Summa Social sense tornar-te boig/boja? Inclou info sobre la plantilla oficial (8½).*
@@ -211,6 +211,24 @@ No cal que sàpigues els termes tècnics. Pots buscar coses com:
 Escriu el que busques amb les teves paraules. El sistema reconeix sinònims i expressions comunes, així que no et preocupis per encertar el terme exacte.
 
 **Un consell:** Abans de contactar amb suport, fes una ullada al Hub de Guies. Moltes vegades la resposta ja hi és, i et pot estalviar temps d'espera.
+
+---
+
+### 7¾. Com em puc assabentar de les novetats i millores de Summa Social?
+
+**Trobaràs totes les novetats a la campaneta o FAB** que veuràs al header de l'aplicació (a la cantonada superior dreta, prop del teu nom).
+
+**Com funciona:**
+- Quan hi ha novetats noves, veuràs un badge numèric sobre la icona (1, 2, 3...)
+- Clica la icona per obrir l'inbox de novetats
+- Llegeix les que t'interessin, marca-les com llegides, i el badge desapareix
+
+**Sobre les notificacions:**
+- **No t'interromprem** amb popups automàtics mentre treballes
+- Tu decideixes quan vols veure les novetats, al teu ritme
+- Les novetats es queden a l'inbox fins que les llegeixis
+
+**Per què ho fem així:** Sabem que estàs ocupat/da portant els comptes de l'entitat, i no volem interrompre't mentre fas feina important. Les novetats sempre estaran allà esperant-te quan tinguis un moment per mirar-les.
 
 ---
 
