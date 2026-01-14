@@ -32,8 +32,6 @@ import Papa from 'papaparse';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from '@/components/ui/sheet';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { toPeriodQuery } from '@/lib/period-query';
-import { useNotificationToast } from '@/components/notifications/use-notification-toast';
-import { DASHBOARD_NOTIFICATIONS } from '@/lib/notifications';
 import { shouldShowWelcomeModal, isFirstAdmin } from '@/lib/onboarding';
 import { WelcomeOnboardingModal } from '@/components/onboarding/WelcomeOnboardingModal';
 import { OnboardingWizardModal } from '@/components/onboarding/OnboardingWizard';
@@ -351,9 +349,6 @@ export default function DashboardPage() {
   const shareModalTexts = React.useMemo(() => t.dashboard.shareModal, [t]);
   const shareModalExports = shareModalTexts.exports;
   const { buildUrl } = useOrgUrl();
-
-  // Toast de notificacions (només un cop per sessió)
-  useNotificationToast({ notifications: DASHBOARD_NOTIFICATIONS });
 
   // ═══════════════════════════════════════════════════════════════════════════════
   // ONBOARDING: Modal de benvinguda per primer admin

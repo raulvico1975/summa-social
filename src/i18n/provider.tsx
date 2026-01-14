@@ -109,11 +109,14 @@ export const TranslationsProvider = ({ children }: TranslationsProviderProps) =>
             }
           },
           (error) => {
-            // Error listening - probably permissions
-            // Log únic i desactivar listener per evitar spam
+            // Error listening - permission denied o adblocker bloquejant connexió
+            // Log únic (dev-only) i desactivar listener per evitar spam
             if (!listenerDisabledRef.current) {
               listenerDisabledRef.current = true;
-              console.info('[i18n] Version listener disabled (permission denied), using local fallback');
+              if (process.env.NODE_ENV !== 'production') {
+                // eslint-disable-next-line no-console
+                console.debug('[i18n] Version listener disabled, using local fallback. Reason:', error?.message || 'unknown');
+              }
               unsubscribe?.();
             }
             setI18nVersion(0);

@@ -155,12 +155,16 @@ function useOrganizationBySlug(orgSlug?: string) {
               setUserRole(memberData.role as OrganizationRole);
             } else {
               // No és membre directe, però té accés (SuperAdmin o hasOrgInProfile via rules)
-              // Per UI, assignem rol admin (SuperAdmin) o viewer (altres)
+              // Comportament esperat per SuperAdmins: poden accedir a qualsevol org sense membership.
+              // Per UI, assignem rol admin (SuperAdmin) o viewer (altres casos edge).
               if (!isDemoEnv()) {
                 const saRef = doc(firestore, 'systemSuperAdmins', user.uid);
                 const saSnap = await getDoc(saRef);
                 const isSuperAdmin = saSnap.exists();
-                console.log('[ORG_PROVIDER] User has access but not member. isSuperAdmin=', isSuperAdmin, 'uid=', user.uid);
+                if (process.env.NODE_ENV !== 'production') {
+                  // eslint-disable-next-line no-console
+                  console.debug('[ORG_PROVIDER] Access without membership:', isSuperAdmin ? 'SuperAdmin' : 'hasOrgInProfile', 'uid=', user.uid);
+                }
                 setUserRole(isSuperAdmin ? 'admin' : 'viewer');
               } else {
                 // DEMO: assignar admin a tots
@@ -170,7 +174,10 @@ function useOrganizationBySlug(orgSlug?: string) {
           } catch (memberErr) {
             // Si falla la lectura del membre (permission-denied), assumim viewer
             // (l'accés a l'org ja està validat pel canary)
-            console.log('[ORG_PROVIDER] Member read failed, assuming viewer role');
+            if (process.env.NODE_ENV !== 'production') {
+              // eslint-disable-next-line no-console
+              console.debug('[ORG_PROVIDER] Member read failed, assuming viewer role');
+            }
             setUserRole('viewer');
           }
 

@@ -143,6 +143,14 @@ function dispatch(action: Action) {
 type Toast = Omit<ToasterToast, "id">
 
 function toast({ ...props }: Toast) {
+  // DEV-ONLY: Traça per identificar l'origen de cada toast
+  if (process.env.NODE_ENV !== 'production') {
+    // eslint-disable-next-line no-console
+    console.warn('[toast]', props?.title, props?.description);
+    // eslint-disable-next-line no-console
+    console.warn(new Error('[toast stack]').stack);
+  }
+
   const id = genId()
 
   const update = (props: ToasterToast) =>
