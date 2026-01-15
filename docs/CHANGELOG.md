@@ -4,6 +4,38 @@ Historial de canvis del projecte, ordenat de més recent a més antic.
 
 ---
 
+## [1.31.0] - 2026-01-15
+
+### Desactivació Backups al Núvol
+
+Els backups al núvol (Dropbox / Google Drive) han estat **desactivats per defecte**.
+
+**Raó:**
+- Funcionalitat mai verificada en producció
+- Complexitat operativa sense valor afegit demostrat
+- El backup local cobreix les necessitats actuals
+
+**Canvis:**
+- UI de configuració de backups eliminada de `/{orgSlug}/dashboard/configuracion`
+- Banner d'avís de backup eliminat del Dashboard
+- Rutes OAuth retornen 404
+- Scheduler `runWeeklyBackup` fa early-return
+- Documentació actualitzada (secció 3.10.8)
+
+**Mecanisme oficial de backup:** Backup local des de `/admin` (SuperAdmin only)
+
+**Com reactivar:** Canviar constants `CLOUD_BACKUPS_ENABLED` a `true` en els fitxers documentats a la secció 3.10.8.
+
+**Fitxers modificats:**
+- `src/components/backups-settings.tsx`
+- `src/components/backup-alert-banner.tsx` (no renderitzat)
+- `src/app/[orgSlug]/dashboard/page.tsx`
+- `functions/src/backups/runWeeklyBackup.ts`
+- `functions/src/backups/runBackupForOrg.ts`
+- `src/app/api/integrations/backup/*/route.ts` (5 fitxers)
+
+---
+
 ## [1.28.1] - 2026-01-08
 
 ### P0 Fix: Matching de Remeses Robust

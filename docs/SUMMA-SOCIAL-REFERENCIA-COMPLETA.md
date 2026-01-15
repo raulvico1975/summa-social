@@ -1,6 +1,6 @@
 # ═══════════════════════════════════════════════════════════════════════════════
 # SUMMA SOCIAL - REFERÈNCIA COMPLETA DEL PROJECTE
-# Versió 1.30 - Gener 2026
+# Versió 1.31 - Gener 2026
 # ═══════════════════════════════════════════════════════════════════════════════
 
 
@@ -3196,13 +3196,46 @@ Funcionalitat per descarregar un backup complet d'una organització en format JS
 **Nota:** Aquesta funcionalitat és independent de la integració de backups automàtics al núvol. Permet descàrregues manuals puntuals per a migracions o auditories.
 
 
-### 3.10.8 Backups al núvol (Dropbox / Google Drive) — opcional
+### 3.10.8 Backups al núvol (Dropbox / Google Drive) — DESACTIVAT
 
-Funcionalitat **opcional i experimental**. No forma part del nucli del producte. Pot fallar per canvis en APIs externes. Requereix OAuth amb el proveïdor escollit per l'usuari.
+**ESTAT ACTUAL: DESACTIVAT (gener 2026)**
 
-El mecanisme oficial de backup continua sent el **backup local** (secció 3.10.7).
+Aquesta funcionalitat està **desactivada per defecte**. El codi existeix però no és operatiu:
+- La UI no mostra cap secció de backups al núvol a Configuració
+- Les rutes OAuth retornen 404
+- El scheduler setmanal fa early-return sense processar
+- Cap banner ni avís apareix al Dashboard
 
-#### Visió i límits (contracte)
+El mecanisme **oficial i únic** de backup és el **backup local** (secció 3.10.7), accessible només per SuperAdmin des de `/admin`.
+
+#### Per què està desactivat
+
+- Funcionalitat mai verificada en producció
+- Depèn d'APIs de tercers que poden canviar sense avís
+- Complexitat operativa sense valor afegit demostrat
+- El backup local cobreix les necessitats actuals
+
+#### Com reactivar (si cal en el futur)
+
+Canviar les constants `CLOUD_BACKUPS_ENABLED` / `CLOUD_BACKUPS_UI_ENABLED` a `true` en els fitxers següents:
+- `src/components/backups-settings.tsx` (UI)
+- `functions/src/backups/runWeeklyBackup.ts` (scheduler)
+- `functions/src/backups/runBackupForOrg.ts` (executor)
+- `src/app/api/integrations/backup/*/route.ts` (rutes OAuth)
+
+A més, caldria:
+1. Configurar variables d'entorn (DROPBOX_APP_*, GOOGLE_DRIVE_*)
+2. Registrar redirect URIs als proveïdors
+3. Redesplegar Cloud Functions
+4. Verificar el flux complet abans d'oferir-ho a usuaris
+
+---
+
+**La resta d'aquesta secció documenta la implementació per referència futura, però NO és funcionalitat activa.**
+
+---
+
+#### Visió i límits (contracte — si s'activa)
 
 - **Opcional**: cap entitat l'ha de tenir activat per defecte.
 - **No garantit**: depèn d'APIs de tercers (Dropbox, Google) que poden canviar sense avís.
