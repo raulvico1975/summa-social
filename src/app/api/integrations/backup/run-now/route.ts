@@ -13,6 +13,12 @@ import { getFirestore, type Firestore } from 'firebase-admin/firestore';
 import { getAuth, type Auth } from 'firebase-admin/auth';
 import { runBackupForOrg } from '@/lib/backups/run-backup';
 
+/**
+ * Feature flag per activar/desactivar backups al núvol.
+ * Posar a `true` només si es vol reactivar la funcionalitat.
+ */
+const CLOUD_BACKUPS_ENABLED = false;
+
 // ─────────────────────────────────────────────────────────────────────────────
 // Firebase Admin initialization (lazy, cached, idempotent)
 // ─────────────────────────────────────────────────────────────────────────────
@@ -93,6 +99,11 @@ interface RunNowRequest {
 // ─────────────────────────────────────────────────────────────────────────────
 
 export async function POST(request: NextRequest) {
+  // Feature desactivada: retornar 404
+  if (!CLOUD_BACKUPS_ENABLED) {
+    return NextResponse.json({ error: 'Not found' }, { status: 404 });
+  }
+
   try {
     // 1. Verificar autenticació
     const authResult = await verifyIdToken(request);

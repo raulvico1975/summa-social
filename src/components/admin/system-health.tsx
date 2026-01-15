@@ -93,6 +93,7 @@ import {
   Mail,
 } from 'lucide-react';
 import { SUPPORT_EMAIL } from '@/lib/constants';
+import { useIsMobile } from '@/hooks/use-is-mobile';
 
 // ═══════════════════════════════════════════════════════════════════════════
 // DEFINICIÓ DE SENTINELLES
@@ -277,6 +278,7 @@ const SEMAPHORE_STORAGE_KEY = 'systemHealthSemaphore_selectedOrg';
 export function SystemHealth() {
   const { firestore, user } = useFirebase();
   const { toast } = useToast();
+  const isMobile = useIsMobile();
   const [incidents, setIncidents] = React.useState<SystemIncident[]>([]);
   const [incidentCounts, setIncidentCounts] = React.useState<Record<IncidentType, number>>({
     CLIENT_CRASH: 0,
@@ -1058,7 +1060,163 @@ export function SystemHealth() {
               <CheckCircle className="h-12 w-12 mx-auto mb-2 text-green-600" />
               <p>Tot correcte! No hi ha incidents oberts.</p>
             </div>
+          ) : isMobile ? (
+            /* Vista de cards per pantalles estretes */
+            <div className="space-y-3">
+              {incidents.map((incident) => {
+                const currentImpact = incident.impact || getDefaultImpact(incident);
+                const impactConfig = IMPACT_LABELS[currentImpact];
+                const action = getRecommendedAction(incident);
+                const actionConfig = ACTION_LABELS[action];
+                return (
+                  <div
+                    key={incident.id}
+                    className={`p-3 border rounded-lg space-y-2 ${incident.status === 'ACK' ? 'opacity-60' : ''}`}
+                  >
+                    {/* Fila 1: Impacte + Tipus + Cops */}
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <Select
+                        value={currentImpact}
+                        onValueChange={(val) => handleChangeImpact(incident, val as IncidentImpact)}
+                      >
+                        <SelectTrigger className={`h-6 w-[80px] text-xs border-0 ${impactConfig.color}`}>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {(Object.keys(IMPACT_LABELS) as IncidentImpact[]).map((key) => (
+                            <SelectItem key={key} value={key} className="text-xs">
+                              <span className={IMPACT_LABELS[key].color}>{IMPACT_LABELS[key].short}</span>
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <Badge variant="secondary" className="text-[10px]">{incident.type}</Badge>
+                      <Badge variant="outline" className="text-[10px]">{incident.count}x</Badge>
+                      <span className="text-[10px] text-muted-foreground ml-auto">
+                        {incident.lastSeenAt?.toDate?.()?.toLocaleDateString('ca-ES', {
+                          day: '2-digit',
+                          month: '2-digit',
+                          hour: '2-digit',
+                          minute: '2-digit',
+                        }) || '-'}
+                      </span>
+                    </div>
+
+                    {/* Fila 2: Missatge */}
+                    <p className="text-sm font-medium line-clamp-2">{incident.message}</p>
+
+                    {/* Fila 3: Ruta/Org + Build (si existeix) */}
+                    <div className="text-xs text-muted-foreground space-y-0.5">
+                      {(incident.route || incident.orgSlug) && (
+                        <div className="font-mono truncate">
+                          {incident.route} {incident.orgSlug && `(${incident.orgSlug})`}
+                        </div>
+                      )}
+                      {(incident.firstSeenBuildId || incident.lastSeenBuildId) && (
+                        <div className="flex items-center gap-2">
+                          {incident.firstSeenBuildId && (
+                            <span className="font-mono bg-muted px-1 rounded">
+                              1r: {incident.firstSeenBuildId}
+                            </span>
+                          )}
+                          {incident.lastSeenBuildId && incident.lastSeenBuildId !== incident.firstSeenBuildId && (
+                            <span className="font-mono bg-muted px-1 rounded">
+                              últ: {incident.lastSeenBuildId}
+                            </span>
+                          )}
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Fila 4: Acció recomanada */}
+                    <div className="p-2 bg-muted rounded-md">
+                      <div className="text-[10px] text-muted-foreground mb-1">Què fer ara?</div>
+                      <Button
+                        variant="secondary"
+                        size="sm"
+                        className="h-6 text-xs"
+                        onClick={() => {
+                          if (action === 'permissions') {
+                            window.open('https://console.firebase.google.com/project/summa-social/firestore/rules', '_blank');
+                          } else if (action === 'storage') {
+                            window.open('https://console.firebase.google.com/project/summa-social/storage/rules', '_blank');
+                          } else if (action === 'reload') {
+                            toast({
+                              title: 'Chunk error',
+                              description: 'Demana a l\'usuari que recarregui la pàgina en mode incògnit.',
+                            });
+                          } else {
+                            handleCopyPrompt(incident);
+                          }
+                        }}
+                      >
+                        {actionConfig.label}
+                      </Button>
+                    </div>
+
+                    {/* Fila 5: Accions */}
+                    <div className="flex items-center gap-2 pt-1 border-t">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-7 text-xs"
+                        onClick={() => handleCopyPrompt(incident)}
+                      >
+                        <Copy className="h-3 w-3 mr-1" />
+                        Copiar
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-7 text-xs"
+                        onClick={() => setSelectedIncident(incident)}
+                      >
+                        <HelpCircle className="h-3 w-3 mr-1" />
+                        Ajuda
+                      </Button>
+                      <div className="flex-1" />
+                      {incident.status === 'OPEN' && (
+                        <>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="h-7 text-xs"
+                            onClick={() => handleAck(incident)}
+                            disabled={isProcessing}
+                          >
+                            ACK
+                          </Button>
+                          <Button
+                            variant="default"
+                            size="sm"
+                            className="h-7 text-xs"
+                            onClick={() => handleOpenResolveDialog(incident)}
+                            disabled={isProcessing}
+                          >
+                            <Check className="h-3 w-3 mr-1" />
+                            Tancar
+                          </Button>
+                        </>
+                      )}
+                      {incident.status === 'ACK' && (
+                        <Button
+                          variant="default"
+                          size="sm"
+                          className="h-7 text-xs"
+                          onClick={() => handleOpenResolveDialog(incident)}
+                          disabled={isProcessing}
+                        >
+                          <Check className="h-3 w-3 mr-1" />
+                          Tancar
+                        </Button>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
           ) : (
+            /* Vista de taula per desktop */
             <Table>
               <TableHeader>
                 <TableRow>
@@ -1147,7 +1305,7 @@ export function SystemHealth() {
                       </div>
                     </TableCell>
                     <TableCell>
-                      <div className="text-xs">
+                      <div className="text-xs space-y-0.5">
                         {incident.route && (
                           <span className="font-mono text-muted-foreground block truncate max-w-[100px]">
                             {incident.route}
@@ -1155,6 +1313,14 @@ export function SystemHealth() {
                         )}
                         {incident.orgSlug && (
                           <span className="text-muted-foreground">{incident.orgSlug}</span>
+                        )}
+                        {incident.firstSeenBuildId && (
+                          <span className="font-mono text-muted-foreground block text-[10px]">
+                            build: {incident.firstSeenBuildId}
+                            {incident.lastSeenBuildId && incident.lastSeenBuildId !== incident.firstSeenBuildId && (
+                              <> → {incident.lastSeenBuildId}</>
+                            )}
+                          </span>
                         )}
                       </div>
                     </TableCell>

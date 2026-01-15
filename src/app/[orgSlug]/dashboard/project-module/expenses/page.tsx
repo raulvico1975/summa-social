@@ -1235,8 +1235,8 @@ export default function ExpensesInboxPage() {
         </div>
       ) : (
         /* Vista desktop - Taula amb jerarquia de columnes responsive */
-        <div className="border rounded-lg overflow-x-auto">
-          <Table className="min-w-[800px]">
+        <div className="border rounded-lg">
+          <Table>
             <TableHeader>
               <TableRow>
                 <TableHead className="w-[36px] px-2">

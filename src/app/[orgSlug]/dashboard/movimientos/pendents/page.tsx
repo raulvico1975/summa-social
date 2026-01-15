@@ -25,9 +25,11 @@ import {
   TooltipTrigger,
 } from '@/components/ui/tooltip';
 import { Skeleton } from '@/components/ui/skeleton';
+import { cn } from '@/lib/utils';
 import {
   ArrowLeft,
   FileStack,
+  FileText,
   Upload,
   Info,
   Loader2,
@@ -702,55 +704,98 @@ export default function PendingDocsPage() {
                 ))}
               </div>
             ) : (
-              // Taula tradicional per altres pestanyes
-              <div className="overflow-x-auto lg:overflow-x-visible">
-                <Table className="min-w-[900px] lg:min-w-0">
-                  <TableHeader>
-                    <TableRow>
-                      {/* Checkbox per selecció múltiple */}
-                      {selectableDocs.length > 0 && (
-                        <TableHead className="w-[40px] pr-0">
-                          <Checkbox
-                            checked={selectedDocIds.size > 0 && selectedDocIds.size === selectableDocs.length}
-                            onCheckedChange={(checked) => handleSelectAll(!!checked)}
-                            aria-label={t.pendingDocs.selection.selectAll}
-                          />
-                        </TableHead>
-                      )}
-                      <TableHead>{t.pendingDocs.fields.filename}</TableHead>
-                      <TableHead className="text-right">{t.pendingDocs.fields.amount}</TableHead>
-                      <TableHead>{t.pendingDocs.fields.invoiceDate}</TableHead>
-                      <TableHead>{t.pendingDocs.fields.type}</TableHead>
-                      <TableHead>{t.pendingDocs.fields.invoiceNumber}</TableHead>
-                      <TableHead>{t.pendingDocs.fields.supplier}</TableHead>
-                      <TableHead>{t.pendingDocs.fields.category}</TableHead>
-                      <TableHead>{t.pendingDocs.statuses.draft}</TableHead>
-                      <TableHead className="w-[70px]"></TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {filteredDocs.map((doc) => (
-                      <PendingDocumentRow
-                        key={doc.id}
-                        doc={doc}
-                        contacts={contacts || []}
-                        categories={categories || []}
-                        onUpdate={handleFieldUpdate}
-                        onConfirm={handleConfirm}
-                        onArchive={handleArchive}
-                        onRestore={handleRestore}
-                        onReconcile={handleReconcile}
-                        isConfirming={confirmingDocId === doc.id}
-                        isArchiving={archivingDocId === doc.id}
-                        movimentsPath={movimentsPath}
-                        isSelectable={canOperate && doc.status === 'confirmed'}
-                        isSelected={selectedDocIds.has(doc.id)}
-                        onSelect={handleSelectDoc}
-                      />
-                    ))}
-                  </TableBody>
-                </Table>
-              </div>
+              // Vista per altres pestanyes: taula a lg+, llista compacta a < lg
+              <>
+                {/* Taula desktop (lg+) */}
+                <div className="hidden lg:block">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        {/* Checkbox per selecció múltiple */}
+                        {selectableDocs.length > 0 && (
+                          <TableHead className="w-[40px] pr-0">
+                            <Checkbox
+                              checked={selectedDocIds.size > 0 && selectedDocIds.size === selectableDocs.length}
+                              onCheckedChange={(checked) => handleSelectAll(!!checked)}
+                              aria-label={t.pendingDocs.selection.selectAll}
+                            />
+                          </TableHead>
+                        )}
+                        <TableHead>{t.pendingDocs.fields.filename}</TableHead>
+                        <TableHead className="text-right">{t.pendingDocs.fields.amount}</TableHead>
+                        <TableHead>{t.pendingDocs.fields.invoiceDate}</TableHead>
+                        <TableHead>{t.pendingDocs.fields.type}</TableHead>
+                        <TableHead>{t.pendingDocs.fields.invoiceNumber}</TableHead>
+                        <TableHead>{t.pendingDocs.fields.supplier}</TableHead>
+                        <TableHead>{t.pendingDocs.fields.category}</TableHead>
+                        <TableHead>{t.pendingDocs.statuses.draft}</TableHead>
+                        <TableHead className="w-[70px]"></TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {filteredDocs.map((doc) => (
+                        <PendingDocumentRow
+                          key={doc.id}
+                          doc={doc}
+                          contacts={contacts || []}
+                          categories={categories || []}
+                          onUpdate={handleFieldUpdate}
+                          onConfirm={handleConfirm}
+                          onArchive={handleArchive}
+                          onRestore={handleRestore}
+                          onReconcile={handleReconcile}
+                          isConfirming={confirmingDocId === doc.id}
+                          isArchiving={archivingDocId === doc.id}
+                          movimentsPath={movimentsPath}
+                          isSelectable={canOperate && doc.status === 'confirmed'}
+                          isSelected={selectedDocIds.has(doc.id)}
+                          onSelect={handleSelectDoc}
+                        />
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+
+                {/* Llista mòbil (< lg) */}
+                <div className="lg:hidden divide-y">
+                  {filteredDocs.map((doc) => {
+                    const supplierName = doc.supplierId
+                      ? contacts?.find(c => c.id === doc.supplierId)?.name
+                      : null;
+                    return (
+                      <div key={doc.id} className="p-3 flex items-center justify-between gap-3">
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-center gap-2">
+                            <FileText className="h-4 w-4 text-muted-foreground shrink-0" />
+                            <span className="text-sm font-medium truncate">{doc.file.filename}</span>
+                          </div>
+                          <div className="text-xs text-muted-foreground mt-1">
+                            {supplierName && <span>{supplierName} · </span>}
+                            {doc.invoiceDate && <span>{doc.invoiceDate}</span>}
+                          </div>
+                        </div>
+                        <div className="text-right shrink-0">
+                          <div className="text-sm font-medium tabular-nums">
+                            {doc.amount !== null ? `${doc.amount.toFixed(2)} €` : '—'}
+                          </div>
+                          <Badge
+                            variant="outline"
+                            className={cn(
+                              'text-[10px] mt-1',
+                              doc.status === 'confirmed' && 'bg-blue-50 text-blue-700 border-blue-200',
+                              doc.status === 'sepa_generated' && 'bg-purple-50 text-purple-700 border-purple-200',
+                              doc.status === 'matched' && 'bg-green-50 text-green-700 border-green-200',
+                              doc.status === 'archived' && 'bg-amber-50 text-amber-700 border-amber-200'
+                            )}
+                          >
+                            {t.pendingDocs.statuses[doc.status === 'sepa_generated' ? 'sepaGenerated' : doc.status] || doc.status}
+                          </Badge>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </>
             )}
           </CardContent>
         </Card>

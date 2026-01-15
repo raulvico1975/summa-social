@@ -13,6 +13,12 @@ import { initializeApp, getApps, applicationDefault } from 'firebase-admin/app';
 import { getFirestore, type Firestore } from 'firebase-admin/firestore';
 import type { BackupOAuthRequest, BackupIntegration } from '@/lib/backups/types';
 
+/**
+ * Feature flag per activar/desactivar backups al núvol.
+ * Posar a `true` només si es vol reactivar la funcionalitat.
+ */
+const CLOUD_BACKUPS_ENABLED = false;
+
 // ─────────────────────────────────────────────────────────────────────────────
 // Firebase Admin initialization (lazy, cached, idempotent)
 // ─────────────────────────────────────────────────────────────────────────────
@@ -44,6 +50,11 @@ function getAdminDb(): Firestore {
 // ─────────────────────────────────────────────────────────────────────────────
 
 export async function GET(request: NextRequest) {
+  // Feature desactivada: retornar 404
+  if (!CLOUD_BACKUPS_ENABLED) {
+    return NextResponse.json({ error: 'Not found' }, { status: 404 });
+  }
+
   const { searchParams } = new URL(request.url);
   const code = searchParams.get('code');
   const state = searchParams.get('state');

@@ -20,7 +20,7 @@ import {
   TooltipTrigger,
 } from '@/components/ui/tooltip';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Cloud, AlertCircle, CheckCircle2, XCircle, Loader2, Play, Link2, Unlink } from 'lucide-react';
+import { Cloud, AlertCircle, CheckCircle2, XCircle, Loader2, Play, Link2 } from 'lucide-react';
 import { useFirebase, useDoc } from '@/firebase';
 import { useCurrentOrganization } from '@/hooks/organization-provider';
 import { useToast } from '@/hooks/use-toast';
@@ -28,6 +28,12 @@ import { useTranslations } from '@/i18n';
 import { doc, setDoc, updateDoc, collection, query, orderBy, limit, getDocs } from 'firebase/firestore';
 import type { BackupIntegration, BackupProvider, BackupRun } from '@/lib/backups/types';
 import { INITIAL_BACKUP_INTEGRATION } from '@/lib/backups/types';
+
+/**
+ * Feature flag per activar/desactivar la UI de backups al núvol.
+ * Posar a `true` només si es vol reactivar la funcionalitat.
+ */
+const CLOUD_BACKUPS_UI_ENABLED = false;
 
 /**
  * Detecta errors de permisos Firestore (permission-denied)
@@ -52,6 +58,17 @@ export function BackupsSettings() {
   const searchParams = useSearchParams();
 
   const canEdit = userRole === 'admin';
+
+  // ─────────────────────────────────────────────────────────────────────────────
+  // Feature desactivada: no renderitzar res (transparència total)
+  // ─────────────────────────────────────────────────────────────────────────────
+  if (!CLOUD_BACKUPS_UI_ENABLED) {
+    return null;
+  }
+
+  // ─────────────────────────────────────────────────────────────────────────────
+  // Codi original (només s'executa si CLOUD_BACKUPS_UI_ENABLED = true)
+  // ─────────────────────────────────────────────────────────────────────────────
 
   // Mostrar toast si s'ha connectat correctament (després de redirect OAuth)
   React.useEffect(() => {
@@ -317,7 +334,6 @@ export function BackupsSettings() {
   const integration = backupData ?? INITIAL_BACKUP_INTEGRATION;
   const isConnected = integration.status === 'connected';
   const hasError = integration.status === 'error';
-  const isDisconnected = integration.status === 'disconnected';
 
   // Loading state
   if (isLoadingDoc || isInitializing) {

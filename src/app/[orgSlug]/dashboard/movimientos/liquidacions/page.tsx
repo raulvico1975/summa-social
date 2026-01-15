@@ -29,7 +29,6 @@ import {
 import Link from 'next/link';
 import { useToast } from '@/hooks/use-toast';
 import { EmptyState } from '@/components/ui/empty-state';
-import { ContextHelpCard } from '@/components/ui/context-help-card';
 import {
   listenExpenseReports,
   createExpenseReportDraft,
@@ -448,26 +447,11 @@ export default function LiquidacionsPage() {
                   ))}
                 </div>
               ) : filteredReports.length === 0 ? (
-                <div className="space-y-4">
-                  <EmptyState
-                    icon={FileText}
-                    title={(t.expenseReports.empty as Record<string, string>)[activeTab]}
-                    description={(t.expenseReports.empty as Record<string, string>)[`${activeTab}Desc`]}
-                  />
-                  {/* Context help: només al tab draft */}
-                  {activeTab === 'draft' && (
-                    <ContextHelpCard
-                      title={t.expenseReports.contextHelp?.title ?? 'Flux recomanat'}
-                      story={t.expenseReports.contextHelp?.story ?? 'Puja els tiquets durant el viatge, crea la liquidació al tornar, i genera el PDF quan estigui tot.'}
-                      exampleImage={{
-                        src: '/visuals/marca/doodle_captura.png',
-                        alt: 'Flux recomanat: captura de tiquets',
-                      }}
-                      exampleLabel={t.common.viewExample ?? 'Veure exemple'}
-                      className="max-w-lg mx-auto"
-                    />
-                  )}
-                </div>
+                <EmptyState
+                  icon={FileText}
+                  title={(t.expenseReports.empty as Record<string, string>)[activeTab]}
+                  description={(t.expenseReports.empty as Record<string, string>)[`${activeTab}Desc`]}
+                />
               ) : (
                 <div className="space-y-2">
                   {filteredReports.map((report) => (

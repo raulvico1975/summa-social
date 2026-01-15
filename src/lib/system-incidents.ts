@@ -60,6 +60,9 @@ export interface SystemIncident {
   // Nous camps per gestió millorada
   impact?: IncidentImpact; // blocker | functional | cosmetic
   resolution?: IncidentResolution; // dades de resolució
+  // Build tracking
+  firstSeenBuildId?: string; // build on va aparèixer per primera vegada
+  lastSeenBuildId?: string;  // build més recent on s'ha vist
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -183,12 +186,21 @@ export interface ReportIncidentParams {
   orgSlug?: string;
   code?: string;
   meta?: Record<string, unknown>;
+  buildId?: string; // Optional: si no es passa, s'obté de process.env.BUILD_ID
+}
+
+/**
+ * Obté el build ID actual de l'aplicació.
+ * Prioritat: param > env BUILD_ID > 'unknown'
+ */
+function getBuildId(paramBuildId?: string): string {
+  return paramBuildId || process.env.BUILD_ID || 'unknown';
 }
 
 export async function reportSystemIncident(
   params: ReportIncidentParams
 ): Promise<void> {
-  const { firestore, type, message, route, stack, orgId, orgSlug, code, meta } =
+  const { firestore, type, message, route, stack, orgId, orgSlug, code, meta, buildId: paramBuildId } =
     params;
 
   // Filtrar soroll
@@ -198,6 +210,7 @@ export async function reportSystemIncident(
   }
 
   const signature = computeSignature(type, route, message, stack, code);
+  const buildId = getBuildId(paramBuildId);
 
   // Determinar severitat
   const severity: IncidentSeverity =
@@ -217,11 +230,12 @@ export async function reportSystemIncident(
       await updateDoc(docRef, {
         count: (data.count || 1) + 1,
         lastSeenAt: now,
+        lastSeenBuildId: buildId,
         status: data.status === 'RESOLVED' ? 'OPEN' : data.status, // Reobrir si estava RESOLVED
         lastSeenMeta: meta || null,
       });
       console.info(
-        `[SystemIncidents] Updated incident ${signature} (count: ${(data.count || 1) + 1})`
+        `[SystemIncidents] Updated incident ${signature} (count: ${(data.count || 1) + 1}, build: ${buildId})`
       );
     } else {
       // Crear nou incident (filtrant undefined per evitar errors Firestore)
@@ -233,6 +247,8 @@ export async function reportSystemIncident(
         count: 1,
         firstSeenAt: now,
         lastSeenAt: now,
+        firstSeenBuildId: buildId,
+        lastSeenBuildId: buildId,
         status: 'OPEN',
       };
       // Afegir camps opcionals només si tenen valor
@@ -244,7 +260,7 @@ export async function reportSystemIncident(
       if (meta) incident.lastSeenMeta = meta;
 
       await setDoc(docRef, incident);
-      console.info(`[SystemIncidents] Created incident ${signature}: ${message.slice(0, 60)}`);
+      console.info(`[SystemIncidents] Created incident ${signature}: ${message.slice(0, 60)} (build: ${buildId})`);
     }
   } catch (err) {
     // Best-effort: no volem que el sistema de monitorització causi més errors
