@@ -22,6 +22,7 @@ import { acquireProcessLock, releaseProcessLock, getLockFailureMessage } from '@
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
   DialogFooter,
@@ -991,6 +992,9 @@ export function StripeImporter({
             <FileText className="h-5 w-5" />
             {t.importers.stripeImporter.title}
           </DialogTitle>
+          <DialogDescription className="sr-only">
+            Importa i concilia pagaments procedents de Stripe.
+          </DialogDescription>
         </DialogHeader>
 
         {/* Info del moviment bancari */}

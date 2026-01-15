@@ -7,6 +7,7 @@ import * as React from 'react';
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogTitle,
 } from '@/components/ui/dialog';
 import {
@@ -913,6 +914,9 @@ export function BalanceProjectModal({
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
               <DialogTitle className="text-base">Quadrar justificació</DialogTitle>
+              <DialogDescription className="sr-only">
+                Eina per quadrar el projecte assignant imports a les partides.
+              </DialogDescription>
               {guidedModeActive && (
                 <Badge variant="secondary" className="text-xs bg-purple-100 text-purple-700">
                   <Sparkles className="h-3 w-3 mr-1" />
