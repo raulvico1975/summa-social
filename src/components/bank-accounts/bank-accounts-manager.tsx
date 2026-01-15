@@ -533,7 +533,7 @@ export function BankAccountsManager() {
             </div>
             <div className="grid grid-cols-4 items-start gap-4">
               <Label htmlFor="creditorId" className="text-right pt-2">
-                {t.settings.creditorId.label}
+                {t.sepaCollection?.creditorId?.label ?? 'Creditor ID'}
               </Label>
               <div className="col-span-3 space-y-1">
                 <Input
@@ -544,7 +544,7 @@ export function BankAccountsManager() {
                   placeholder="ES21001G12345678"
                 />
                 <p className="text-xs text-muted-foreground">
-                  {t.settings.creditorId.hint}
+                  {t.sepaCollection?.creditorId?.hint ?? ''}
                 </p>
               </div>
             </div>
