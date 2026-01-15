@@ -60,25 +60,10 @@ export function BackupsSettings() {
   const canEdit = userRole === 'admin';
 
   // ─────────────────────────────────────────────────────────────────────────────
-  // Feature desactivada: mostrar missatge informatiu
+  // Feature desactivada: no renderitzar res (transparència total)
   // ─────────────────────────────────────────────────────────────────────────────
   if (!CLOUD_BACKUPS_UI_ENABLED) {
-    return (
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Cloud className="h-5 w-5" />
-            {t.settings.backups.title}
-          </CardTitle>
-          <CardDescription>{t.settings.backups.subtitle}</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <p className="text-sm text-muted-foreground">
-            Les còpies de seguretat al núvol estan desactivades. Contacta l&apos;administrador per obtenir una còpia.
-          </p>
-        </CardContent>
-      </Card>
-    );
+    return null;
   }
 
   // ─────────────────────────────────────────────────────────────────────────────
