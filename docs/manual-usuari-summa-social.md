@@ -75,6 +75,12 @@ Per protegir les dades de l'entitat, hem configurat algunes mesures de seguretat
 
 **Com tancar sessió:** Clica el teu nom (a dalt a la dreta) → "Tancar sessió"
 
+### Sobre les còpies de seguretat
+
+Les còpies de seguretat de les dades de l'entitat les gestiona l'administrador del sistema de Summa Social. No cal que facis res: les teves dades estan protegides.
+
+Si necessites una còpia de les dades de la teva entitat (per exemple, per a una auditoria o migració), contacta amb l'administrador del sistema.
+
 ---
 
 ## 1.2 Canviar l'idioma de l'aplicació
