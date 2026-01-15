@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
@@ -392,6 +393,9 @@ export function RemittanceDetailModal({
       <DialogContent className="sm:max-w-2xl max-h-[85vh] flex flex-col">
         <DialogHeader>
           <DialogTitle>{t.movements.table.remittanceDetail}</DialogTitle>
+          <DialogDescription className="sr-only">
+            Mostra el detall de la remesa i els seus moviments associats.
+          </DialogDescription>
         </DialogHeader>
 
         <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as 'quotes' | 'pending')} className="flex-1 flex flex-col min-h-0">

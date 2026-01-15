@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
@@ -133,6 +134,9 @@ export function ContextHelpCard({
           <DialogContent className="sm:max-w-3xl">
             <DialogHeader>
               <DialogTitle>{title}</DialogTitle>
+              <DialogDescription className="sr-only">
+                Vista prèvia de la imatge d'ajuda.
+              </DialogDescription>
             </DialogHeader>
             <div className="mt-2">
               {/* eslint-disable-next-line @next/next/no-img-element */}
