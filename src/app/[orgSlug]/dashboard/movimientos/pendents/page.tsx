@@ -25,9 +25,11 @@ import {
   TooltipTrigger,
 } from '@/components/ui/tooltip';
 import { Skeleton } from '@/components/ui/skeleton';
+import { cn } from '@/lib/utils';
 import {
   ArrowLeft,
   FileStack,
+  FileText,
   Upload,
   Info,
   Loader2,
@@ -786,7 +788,7 @@ export default function PendingDocsPage() {
                               doc.status === 'archived' && 'bg-amber-50 text-amber-700 border-amber-200'
                             )}
                           >
-                            {t.pendingDocs.statuses[doc.status] || doc.status}
+                            {t.pendingDocs.statuses[doc.status === 'sepa_generated' ? 'sepaGenerated' : doc.status] || doc.status}
                           </Badge>
                         </div>
                       </div>
