@@ -20,6 +20,12 @@ import {
 import { exportFirestoreOrg } from "./exportFirestoreOrg";
 import { buildManifest, calculateChecksum } from "./buildManifest";
 
+/**
+ * Feature flag per activar/desactivar backups al núvol.
+ * Posar a `true` només si es vol reactivar la funcionalitat.
+ */
+const CLOUD_BACKUPS_ENABLED = false;
+
 // ─────────────────────────────────────────────────────────────────────────────
 // Error Sanitization
 // ─────────────────────────────────────────────────────────────────────────────
@@ -141,6 +147,18 @@ function getTodayDate(): string {
 // ─────────────────────────────────────────────────────────────────────────────
 
 export async function runBackupForOrg(orgId: string): Promise<RunBackupResult> {
+  // ─────────────────────────────────────────────────────────────────────────────
+  // Feature desactivada: early-return
+  // ─────────────────────────────────────────────────────────────────────────────
+  if (!CLOUD_BACKUPS_ENABLED) {
+    functions.logger.info(`[BACKUP:runBackupForOrg] Cloud backups disabled, skipping org ${orgId}`);
+    return {
+      success: false,
+      backupId: null,
+      error: "Cloud backups are disabled",
+    };
+  }
+
   const db = admin.firestore();
   const startTime = new Date();
 

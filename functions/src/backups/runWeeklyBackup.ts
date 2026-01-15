@@ -12,6 +12,12 @@ import * as functions from "firebase-functions/v1";
 import { runBackupForOrg } from "./runBackupForOrg";
 import { applyRetention } from "./applyRetention";
 
+/**
+ * Feature flag per activar/desactivar backups al núvol.
+ * Posar a `true` només si es vol reactivar la funcionalitat.
+ */
+const CLOUD_BACKUPS_ENABLED = false;
+
 // ─────────────────────────────────────────────────────────────────────────────
 // Types
 // ─────────────────────────────────────────────────────────────────────────────
@@ -46,6 +52,14 @@ export const runWeeklyBackup = functions
   .pubsub.schedule("0 3 * * 0") // Diumenge 03:00
   .timeZone("Europe/Madrid")
   .onRun(async () => {
+    // ─────────────────────────────────────────────────────────────────────────────
+    // Feature desactivada: early-return
+    // ─────────────────────────────────────────────────────────────────────────────
+    if (!CLOUD_BACKUPS_ENABLED) {
+      functions.logger.info("[BACKUP:runWeeklyBackup] Cloud backups disabled, skipping run");
+      return null;
+    }
+
     const db = admin.firestore();
     const startTime = new Date();
 

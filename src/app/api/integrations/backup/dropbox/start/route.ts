@@ -13,6 +13,12 @@ import { getFirestore, type Firestore, FieldValue } from 'firebase-admin/firesto
 import { getAuth, type Auth } from 'firebase-admin/auth';
 import type { BackupOAuthRequest } from '@/lib/backups/types';
 
+/**
+ * Feature flag per activar/desactivar backups al núvol.
+ * Posar a `true` només si es vol reactivar la funcionalitat.
+ */
+const CLOUD_BACKUPS_ENABLED = false;
+
 // ─────────────────────────────────────────────────────────────────────────────
 // Firebase Admin initialization (lazy, cached, idempotent)
 // ─────────────────────────────────────────────────────────────────────────────
@@ -94,6 +100,11 @@ interface StartRequest {
 // ─────────────────────────────────────────────────────────────────────────────
 
 export async function POST(request: NextRequest) {
+  // Feature desactivada: retornar 404
+  if (!CLOUD_BACKUPS_ENABLED) {
+    return NextResponse.json({ error: 'Not found' }, { status: 404 });
+  }
+
   try {
     // 1. Verificar autenticació
     const authResult = await verifyIdToken(request);

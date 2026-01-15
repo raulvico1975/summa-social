@@ -3193,7 +3193,165 @@ Funcionalitat per descarregar un backup complet d'una organització en format JS
 - `src/app/api/admin/orgs/[orgId]/backup/local/route.ts` — API Route
 - `src/lib/admin/org-backup-export.ts` — Lògica d'exportació
 
-**Nota:** Aquesta funcionalitat és independent de la integració de backups automàtics (Google Drive). Permet descàrregues manuals puntuals per a migracions o auditories.
+**Nota:** Aquesta funcionalitat és independent de la integració de backups automàtics al núvol. Permet descàrregues manuals puntuals per a migracions o auditories.
+
+
+### 3.10.8 Backups al núvol (Dropbox / Google Drive) — opcional
+
+Funcionalitat **opcional i experimental**. No forma part del nucli del producte. Pot fallar per canvis en APIs externes. Requereix OAuth amb el proveïdor escollit per l'usuari.
+
+El mecanisme oficial de backup continua sent el **backup local** (secció 3.10.7).
+
+#### Visió i límits (contracte)
+
+- **Opcional**: cap entitat l'ha de tenir activat per defecte.
+- **No garantit**: depèn d'APIs de tercers (Dropbox, Google) que poden canviar sense avís.
+- **Responsabilitat compartida**: Summa Social puja les dades; la custòdia i permisos de la carpeta són responsabilitat de l'entitat.
+- **Pot fallar**: si el token expira, si el proveïdor revoca accés, si s'excedeix quota, o si hi ha errors de xarxa.
+
+#### Què es guarda (abast de dades)
+
+Segons implementació actual a `functions/src/backups/exportFirestoreOrg.ts`:
+
+| Col·lecció | Inclòs |
+|------------|--------|
+| `organization` | Dades principals de l'org |
+| `categories` | Totes les categories |
+| `contacts` | Donants, proveïdors, empleats (per tipus) |
+| `transactions` | Totes les transaccions |
+| `members` | Tots els membres |
+| `projects` | Tots els projectes |
+| `remittances` | Totes les remeses |
+
+**NO inclou:**
+- Tokens OAuth (ni de backup ni d'altres integracions)
+- Fitxers binaris de Firebase Storage
+- URLs signades
+- Subcol·leccions no llistades (integrations, backupOAuthRequests, etc.)
+
+El dataset és equivalent al backup local (secció 3.10.7).
+
+#### On es configura (UX)
+
+Ruta: `/{orgSlug}/dashboard/configuracion` → secció **Còpies de seguretat**
+
+Flux:
+1. Seleccionar proveïdor (Dropbox o Google Drive)
+2. Clicar **Connectar** → redirecció OAuth al proveïdor
+3. Autoritzar accés a l'app
+4. Retorn automàtic a configuració amb estat "Connectat"
+5. Opció: executar backup manual amb botó "Executar ara"
+6. Alternativa: esperar backup automàtic setmanal
+
+Només usuaris amb rol `admin` poden connectar/desconnectar proveïdors.
+
+#### Proveïdors suportats
+
+| Proveïdor | Estat | Carpeta destí |
+|-----------|-------|---------------|
+| Dropbox | Implementat | `/Summa Social/{orgSlug}/backups/{YYYY-MM-DD}/` |
+| Google Drive | Implementat | Carpeta `Summa Social/{orgSlug}/backups/{YYYY-MM-DD}/` |
+
+#### Requisits tècnics (variables d'entorn)
+
+**Per Dropbox:**
+```
+DROPBOX_APP_KEY=<clau de l'app Dropbox>
+DROPBOX_APP_SECRET=<secret de l'app Dropbox>
+```
+
+**Per Google Drive:**
+```
+GOOGLE_DRIVE_CLIENT_ID=<Client ID de Google Cloud Console>
+GOOGLE_DRIVE_CLIENT_SECRET=<Client Secret de Google Cloud Console>
+```
+
+**Redirect URIs necessàries (registrar a cada proveïdor):**
+- Dropbox: `https://{domini}/api/integrations/backup/dropbox/callback`
+- Google Drive: `https://{domini}/api/integrations/backup/google-drive/callback`
+
+Sense aquestes variables configurades, la funcionalitat no estarà operativa. La UI mostra l'error "integration not configured" si falten.
+
+#### OAuth: flux alt nivell
+
+```
+1. UI crida POST /api/integrations/backup/{provider}/start
+2. API crea BackupOAuthRequest one-shot (expira 10 min)
+3. API retorna URL d'autorització del proveïdor
+4. Usuari autoritza a Dropbox/Google
+5. Proveïdor redirigeix a /api/integrations/backup/{provider}/callback
+6. Callback valida state, intercanvia code per tokens
+7. Refresh token es desa a /organizations/{orgId}/integrations/backup
+8. Estat passa a "connected"
+```
+
+Els tokens es guarden a Firestore, xifrats en repòs per Firebase.
+
+#### Automatització setmanal
+
+Segons implementació a `functions/src/backups/runWeeklyBackup.ts`:
+
+- **Scheduler**: Cloud Function amb cron `0 3 * * 0` (diumenge 03:00 Europe/Madrid)
+- **Abast**: processa totes les organitzacions amb `status: "connected"`
+- **Per cada org**: executa `runBackupForOrg`, que exporta dades i puja a la carpeta del proveïdor
+- **Retenció**: aplica política de 8 setmanes (segons `applyRetention`)
+- **Timeout**: 9 minuts màxim, 512MB memòria
+
+El backup manual des de la UI crida la mateixa lògica via `/api/integrations/backup/run-now`.
+
+#### Operativa i diagnòstic
+
+**On mirar errors:**
+- Google Cloud Console → Cloud Functions → Logs
+- Firestore: `/organizations/{orgId}/integrations/backup` → camp `lastError`
+- Firestore: `/organizations/{orgId}/backups/{backupId}` → camp `error`
+
+**Errors comuns i missatges sanititzats (segons `runBackupForOrg.ts`):**
+| Causa | Missatge a l'usuari |
+|-------|---------------------|
+| Token expirat/revocat | "Error d'autenticació amb el proveïdor. Reconnecta el servei." |
+| Error de xarxa | "Error de connexió amb el proveïdor. Reintenta més tard." |
+| Quota excedida | "Límit del proveïdor excedit. Reintenta més tard." |
+| Permisos/espai | "Error de permisos o espai al proveïdor." |
+
+#### RGPD i custòdia
+
+- Les dades exportades passen a un servei de tercers (Dropbox/Google Drive) sota el control del compte de l'usuari que autoritza.
+- L'entitat és responsable de:
+  - Configurar permisos d'accés a la carpeta destí
+  - Complir amb la seva política de protecció de dades
+  - Gestionar qui té accés al compte autoritzat
+- Summa Social no té accés a les carpetes destí un cop pujat el backup.
+- El refresh token es guarda a Firestore; si es compromet, cal revocar accés des del proveïdor.
+
+#### Com desactivar
+
+**Des de la UI:**
+- No existeix botó "Desconnectar" implementat a la UI actual.
+- Per desconnectar: esborrar manualment el document `/organizations/{orgId}/integrations/backup` o posar `status: "disconnected"`.
+
+**Kill-switch tècnic:**
+- Desactivar la Cloud Function `runWeeklyBackup` des de Google Cloud Console.
+- Eliminar les variables d'entorn `DROPBOX_APP_*` / `GOOGLE_DRIVE_*` per impedir noves connexions.
+
+#### Fitxers principals
+
+| Fitxer | Descripció |
+|--------|------------|
+| `src/components/backups-settings.tsx` | Component UI (panell configuració) |
+| `src/lib/backups/types.ts` | Tipus TypeScript |
+| `src/lib/backups/run-backup.ts` | Executor backup (Next.js API routes) |
+| `src/lib/backups/dropbox-api.ts` | Client HTTP Dropbox |
+| `src/app/api/integrations/backup/dropbox/start/route.ts` | Inici OAuth Dropbox |
+| `src/app/api/integrations/backup/dropbox/callback/route.ts` | Callback OAuth Dropbox |
+| `src/app/api/integrations/backup/google-drive/start/route.ts` | Inici OAuth Google Drive |
+| `src/app/api/integrations/backup/google-drive/callback/route.ts` | Callback OAuth Google Drive |
+| `src/app/api/integrations/backup/run-now/route.ts` | API backup manual |
+| `functions/src/backups/runWeeklyBackup.ts` | Cloud Function scheduler setmanal |
+| `functions/src/backups/runBackupForOrg.ts` | Cloud Function executor principal |
+| `functions/src/backups/exportFirestoreOrg.ts` | Exportació dades Firestore |
+| `functions/src/backups/providers/dropboxProvider.ts` | Provider Dropbox (Cloud Functions) |
+| `functions/src/backups/providers/googleDriveProvider.ts` | Provider Google Drive (Cloud Functions) |
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
