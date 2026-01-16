@@ -135,6 +135,10 @@ export function DonorManager() {
     [firestore, organizationId, contactsLimit]
   );
 
+  // DEBUG: Log query path and type
+  console.log('[DonorManager] donorsQuery path', donorsQuery ? (donorsQuery as any)._query?.path?.canonicalString?.() : null);
+  console.log('[DonorManager] donorsQuery collectionGroup', donorsQuery ? (donorsQuery as any)._query?.collectionGroup : null);
+
   const { data: donorsRaw, isLoading: isLoadingDonors } = useCollection<Donor & { archivedAt?: string }>(donorsQuery);
   // Filtrar donants arxivats (soft-deleted)
   const donors = React.useMemo(
