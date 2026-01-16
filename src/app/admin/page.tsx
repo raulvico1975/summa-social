@@ -69,6 +69,7 @@ import { CreateOrganizationDialog } from '@/components/admin/create-organization
 import { SystemHealth } from '@/components/admin/system-health';
 import { ProductUpdatesSection } from '@/components/admin/product-updates-section';
 import { I18nManager } from '@/components/super-admin/i18n-manager';
+import { HelpAuditSection } from '@/components/admin/help-audit-section';
 import { SuperAdminsManager } from '@/components/admin/super-admins-manager';
 import { AdminSection } from '@/components/admin/admin-section';
 import { AdminNav } from '@/components/admin/admin-nav';
@@ -1097,6 +1098,11 @@ export default function AdminPage() {
         >
           {/* Novetats del producte */}
           <ProductUpdatesSection isSuperAdmin={isSuperAdmin} />
+
+          {/* Ajudes contextuals */}
+          <div className="mt-6">
+            <HelpAuditSection />
+          </div>
 
           {/* Traduccions (i18n) */}
           <div className="mt-6">

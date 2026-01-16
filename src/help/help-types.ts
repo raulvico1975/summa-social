@@ -24,6 +24,7 @@ export type HelpExtraLink = {
 
 export type HelpExtra = {
   order?: HelpExtraSection;
+  flow?: HelpExtraSection;
   pitfalls?: HelpExtraSection;
   whenNot?: HelpExtraSection;
   checks?: HelpExtraSection;
