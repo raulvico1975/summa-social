@@ -104,7 +104,7 @@ const emptyFormData: DonorFormData = {
 // ═══════════════════════════════════════════════════════════════════════════
 // PAGINACIÓ DE DONANTS
 // ═══════════════════════════════════════════════════════════════════════════
-const DONORS_PAGE_SIZE = 200;
+const DONORS_PAGE_SIZE = 500;
 
 export function DonorManager() {
   const { firestore } = useFirebase();
