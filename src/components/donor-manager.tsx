@@ -47,7 +47,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
-import { PlusCircle, Edit, Trash2, User, Building2, RefreshCw, Heart, Upload, AlertTriangle, Search, X, RotateCcw, Download, Users, CreditCard, MoreVertical } from 'lucide-react';
+import { PlusCircle, Edit, Trash2, User, Building2, RefreshCw, Heart, Upload, AlertTriangle, Search, X, RotateCcw, Download, Users, CreditCard, MoreVertical, ChevronDown } from 'lucide-react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import { EmptyState } from '@/components/ui/empty-state';
@@ -60,7 +60,7 @@ import { useToast } from '@/hooks/use-toast';
 import { Badge } from '@/components/ui/badge';
 import { useCollection, useFirebase, useMemoFirebase, addDocumentNonBlocking, archiveDocumentNonBlocking, setDocumentNonBlocking } from '@/firebase';
 import { findExistingContact } from '@/lib/contact-matching';
-import { collection, doc, query, where, getDocs } from 'firebase/firestore';
+import { collection, doc, query, where, getDocs, orderBy, limit } from 'firebase/firestore';
 import { useCurrentOrganization } from '@/hooks/organization-provider';
 import { DonorImporter } from './donor-importer';
 import { DonorDetailDrawer } from './donor-detail-drawer';
@@ -101,23 +101,38 @@ const emptyFormData: DonorFormData = {
   inactiveSince: undefined,
 };
 
+// ═══════════════════════════════════════════════════════════════════════════
+// PAGINACIÓ DE DONANTS
+// ═══════════════════════════════════════════════════════════════════════════
+const DONORS_PAGE_SIZE = 200;
+
 export function DonorManager() {
   const { firestore } = useFirebase();
   const { organizationId, orgSlug } = useCurrentOrganization();
   const { toast } = useToast();
-  const { t } = useTranslations();
+  const { t, language } = useTranslations();
   const isMobile = useIsMobile();
   const searchParams = useSearchParams();
   const urlDonorId = searchParams.get('id');
 
+  // Estat de paginació
+  const [contactsLimit, setContactsLimit] = React.useState(DONORS_PAGE_SIZE);
+  const [hasMoreContacts, setHasMoreContacts] = React.useState(true);
+
+  // Referència base de la col·lecció (per operacions de document)
   const contactsCollection = useMemoFirebase(
     () => organizationId ? collection(firestore, 'organizations', organizationId, 'contacts') : null,
     [firestore, organizationId]
   );
 
+  // Query amb paginació (per carregar dades)
   const donorsQuery = useMemoFirebase(
-    () => contactsCollection ? query(contactsCollection, where('type', '==', 'donor')) : null,
-    [contactsCollection]
+    () => {
+      if (!organizationId) return null;
+      const baseCollection = collection(firestore, 'organizations', organizationId, 'contacts');
+      return query(baseCollection, where('type', '==', 'donor'), orderBy('name', 'asc'), limit(contactsLimit));
+    },
+    [firestore, organizationId, contactsLimit]
   );
 
   const { data: donorsRaw, isLoading: isLoadingDonors } = useCollection<Donor & { archivedAt?: string }>(donorsQuery);
@@ -126,6 +141,19 @@ export function DonorManager() {
     () => donorsRaw?.filter(d => !d.archivedAt),
     [donorsRaw]
   );
+
+  // Detectar si hi ha més contactes per carregar
+  React.useEffect(() => {
+    if (donorsRaw) {
+      // Si hem rebut exactament el límit, probablement n'hi ha més
+      setHasMoreContacts(donorsRaw.length >= contactsLimit);
+    }
+  }, [donorsRaw, contactsLimit]);
+
+  // Funció per carregar més contactes
+  const handleLoadMore = React.useCallback(() => {
+    setContactsLimit(prev => prev + DONORS_PAGE_SIZE);
+  }, []);
 
   // Categories d'ingrés per al selector de categoria per defecte
   const categoriesCollection = useMemoFirebase(
@@ -872,6 +900,19 @@ export function DonorManager() {
                     }
                   />
                 ))}
+                {/* Botó "Carregar més" per mòbil */}
+                {!isLoadingDonors && hasMoreContacts && filteredDonors.length > 0 && (
+                  <div className="mt-4 flex justify-center">
+                    <Button
+                      variant="outline"
+                      onClick={handleLoadMore}
+                      className="gap-2"
+                    >
+                      <ChevronDown className="h-4 w-4" />
+                      {language === 'ca' ? 'Carregar més' : 'Cargar más'}
+                    </Button>
+                  </div>
+                )}
                 {!isLoadingDonors && (!filteredDonors || filteredDonors.length === 0) && (
                   <EmptyState
                     icon={searchQuery ? Search : Users}
@@ -897,6 +938,7 @@ export function DonorManager() {
               </div>
             ) : (
               /* Vista desktop (taula) */
+              <>
               <div className="rounded-md border">
                 <Table>
                   <TableHeader>
@@ -1083,6 +1125,22 @@ export function DonorManager() {
                   </TableBody>
                 </Table>
               </div>
+              {/* ═══════════════════════════════════════════════════════════════════════
+                  PAGINACIÓ: Botó "Carregar més"
+                  ═══════════════════════════════════════════════════════════════════════ */}
+              {!isLoadingDonors && hasMoreContacts && filteredDonors.length > 0 && (
+                <div className="mt-4 flex justify-center">
+                  <Button
+                    variant="outline"
+                    onClick={handleLoadMore}
+                    className="gap-2"
+                  >
+                    <ChevronDown className="h-4 w-4" />
+                    {language === 'ca' ? 'Carregar més' : 'Cargar más'}
+                  </Button>
+                </div>
+              )}
+              </>
             )}
           </CardContent>
         </Card>
