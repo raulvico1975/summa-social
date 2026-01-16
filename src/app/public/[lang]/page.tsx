@@ -413,7 +413,29 @@ export default async function HomePage({ params }: PageProps) {
       </section>
 
       {/* ═══════════════════════════════════════════════════════════════════════
-          F) FINAL CTA
+          F) COM TREBALLEM — Il·lustració doodle
+          ═══════════════════════════════════════════════════════════════════════ */}
+      <section className="px-6 py-20 lg:py-28">
+        <div className="mx-auto max-w-5xl space-y-8 text-center">
+          <h2 className="text-2xl font-semibold">{t.home.howWeWork.title}</h2>
+          <p className="text-muted-foreground max-w-2xl mx-auto">
+            {t.home.howWeWork.description}
+          </p>
+          <div className="pt-4">
+            <Image
+              src={locale === 'es' ? '/visuals/web/web_como_trabajamos.webp' : `/visuals/web/web_com_treballem.webp`}
+              alt={t.home.howWeWork.imageAlt}
+              width={1200}
+              height={600}
+              sizes="(min-width: 1024px) 80vw, 100vw"
+              className="w-full h-auto"
+            />
+          </div>
+        </div>
+      </section>
+
+      {/* ═══════════════════════════════════════════════════════════════════════
+          G) FINAL CTA
           ═══════════════════════════════════════════════════════════════════════ */}
       <section className="bg-primary px-6 py-16 lg:py-20">
         <div className="mx-auto max-w-3xl text-center space-y-6">

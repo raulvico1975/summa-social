@@ -239,6 +239,11 @@ export interface PublicTranslations {
       admin: { title: string; description: string };
       projects: { title: string; description: string };
     };
+    howWeWork: {
+      title: string;
+      description: string;
+      imageAlt: string;
+    };
     finalCta: {
       title: string;
       subtitle: string;
@@ -684,6 +689,11 @@ const ca: PublicTranslations = {
         title: 'Per a gestors de projectes',
         description: "Seguiment de l'execució pressupostària, justificació de subvencions i exportació completa amb un clic. Excel + factures en ZIP.",
       },
+    },
+    howWeWork: {
+      title: 'Com treballem',
+      description: 'Escoltem les entitats, entenem les seves necessitats reals i construïm eines que resolen problemes concrets.',
+      imageAlt: 'Il·lustració del procés de treball de Summa Social',
     },
     finalCta: {
       title: 'Comença avui',
@@ -1211,6 +1221,11 @@ const es: PublicTranslations = {
         title: 'Para gestores de proyectos',
         description: 'Seguimiento de la ejecución presupuestaria, justificación de subvenciones y exportación completa con un clic. Excel + facturas en ZIP.',
       },
+    },
+    howWeWork: {
+      title: 'Cómo trabajamos',
+      description: 'Escuchamos a las entidades, entendemos sus necesidades reales y construimos herramientas que resuelven problemas concretos.',
+      imageAlt: 'Ilustración del proceso de trabajo de Summa Social',
     },
     finalCta: {
       title: 'Empieza hoy',
@@ -1740,6 +1755,11 @@ const fr: PublicTranslations = {
         description: "Suivi de l'exécution budgétaire, justification des subventions et export complet en un clic. Excel + factures en ZIP.",
       },
     },
+    howWeWork: {
+      title: 'Comment nous travaillons',
+      description: 'Nous écoutons les associations, comprenons leurs besoins réels et construisons des outils qui résolvent des problèmes concrets.',
+      imageAlt: 'Illustration du processus de travail de Summa Social',
+    },
     finalCta: {
       title: "Commencez aujourd'hui",
       subtitle: 'Summa Social vous aide à mettre de l\'ordre et du contrôle dans la gestion économique de votre association.',
@@ -2266,6 +2286,11 @@ const pt: PublicTranslations = {
         title: 'Para gestores de projetos',
         description: 'Seguimento da execução orçamental, justificação de subsídios e exportação completa com um clique. Excel + faturas em ZIP.',
       },
+    },
+    howWeWork: {
+      title: 'Como trabalhamos',
+      description: 'Ouvimos as entidades, compreendemos as suas necessidades reais e construímos ferramentas que resolvem problemas concretos.',
+      imageAlt: 'Ilustração do processo de trabalho de Summa Social',
     },
     finalCta: {
       title: 'Começa hoje',
