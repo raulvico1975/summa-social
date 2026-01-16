@@ -1,7 +1,7 @@
 # Govern de Codi i Deploy — Summa Social
 
-**Versió:** 1.1
-**Data:** 2026-01-06
+**Versió:** 2.0
+**Data:** 2026-01-16
 **Autor:** Raül Vico (CEO/CTO)
 
 ---
@@ -11,17 +11,20 @@
 | Branca | Funció | Qui hi treballa |
 |--------|--------|-----------------|
 | `main` | Integració i desenvolupament | Desenvolupador |
-| `master` | Producció (allò desplegat) | Només deploy |
+| `prod` | Producció (branca connectada a App Hosting) | Només deploy |
+| `master` | **OBSOLETA** — No tocar | Ningú |
 | `ui/*`, `fix/*`, `feat/*` | Branques WIP específiques | Desenvolupador |
+
+**IMPORTANT:** App Hosting desplega automàticament només des de `prod`.
 
 ---
 
 ## Flux de treball
 
 ```
-[Branca WIP] → [main] → [master] → [Deploy]
-     ↑            ↑          ↑
-   Codi        Validat    Desplegat
+[Branca WIP] → [main] → [prod] → [Deploy automàtic]
+     ↑            ↑         ↑
+   Codi        Validat   Producció
 ```
 
 1. **Desenvolupar** a `main` o a una branca específica (`ui/xxx`, `fix/xxx`).
@@ -29,29 +32,29 @@
    - `npm run build` passa
    - `npm test` passa
    - Prova manual si és canvi UI
-3. **Desplegar** només des de `master`.
+3. **Desplegar** només des de `prod` (merge des de `main`).
 
 ---
 
-## Ritual de deploy (3 comandes)
+## Ritual de deploy (4 comandes)
 
 ```bash
-git checkout master
+git checkout prod
 git pull --ff-only
-git merge --no-ff main
+git merge --ff-only main
 git push
 ```
 
-Firebase App Hosting desplega automàticament quan `master` rep un push.
+Firebase App Hosting desplega automàticament quan `prod` rep un push.
 
-**Regla:** `master` només es mou amb merge des de `main`. Mai es treballa directament a `master`.
+**Regla:** `prod` només es mou amb merge des de `main`. Mai es treballa directament a `prod`.
 
 ---
 
 ## Rollback (si cal)
 
 ```bash
-git checkout master
+git checkout prod
 git reset --hard <SHA_BON>
 git push --force-with-lease
 ```
@@ -62,10 +65,11 @@ Firebase App Hosting redesplegarà automàticament.
 
 ## Regles d'or
 
-1. **Mai commitejar directament a `master`.**
-2. **Mai desplegar sense passar per `master`.**
-3. **Verificar UI en mòbil abans de mergear canvis visuals.**
-4. **Un commit = un propòsit clar.** No barrejar QA amb UI amb features.
+1. **Mai commitejar directament a `prod`.**
+2. **Mai desplegar sense passar per `prod`.**
+3. **Treballar sempre a `main` o branques WIP.** No tocar `master` (obsoleta).
+4. **Verificar UI en mòbil abans de mergear canvis visuals.**
+5. **Un commit = un propòsit clar.** No barrejar QA amb UI amb features.
 
 ---
 
@@ -101,12 +105,14 @@ Fins llavors: **simplicitat i disciplina > automatització**.
 ┌─────────────────────────────────────────────────────────┐
 │                    DESENVOLUPAMENT                      │
 │  ┌──────────┐    ┌──────────┐    ┌──────────┐          │
-│  │ ui/xxx   │───▶│   main   │───▶│  master  │──▶ DEPLOY│
+│  │ ui/xxx   │───▶│   main   │───▶│   prod   │──▶ DEPLOY│
 │  │ fix/xxx  │    │          │    │          │          │
 │  │ feat/xxx │    │ (validat)│    │(producció)│         │
 │  └──────────┘    └──────────┘    └──────────┘          │
 │                                                         │
-│  Firebase App Hosting desplega automàticament master   │
+│  Firebase App Hosting desplega automàticament prod     │
+│                                                         │
+│  ⚠️  master = OBSOLETA (no tocar)                       │
 └─────────────────────────────────────────────────────────┘
 ```
 
@@ -122,6 +128,23 @@ Model:
 - Claude Code reporta el resultat (SHA abans/després + estat).
 
 Claude Code **no pot** decidir quan desplegar ni fer canvis fora del ritual establert.
+
+Claude Code **treballa sempre a `main`** (o branques WIP). Mai a `prod` ni a `master`.
+
+---
+
+## Acció pendent: Reconfigurar App Hosting
+
+**IMPORTANT:** Cal canviar la branca connectada a Firebase App Hosting de `master` a `prod`.
+
+Passos (a Firebase Console):
+1. Anar a Firebase Console → App Hosting
+2. Seleccionar el backend "studio"
+3. Editar la configuració de la branca
+4. Canviar de `master` a `prod`
+5. Verificar que el proper push a `prod` dispara el deploy
+
+Fins que es faci aquest canvi, els pushes a `master` encara podrien disparar deploys.
 
 ---
 
