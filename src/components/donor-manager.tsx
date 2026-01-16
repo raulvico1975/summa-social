@@ -614,6 +614,28 @@ export function DonorManager() {
     return missing;
   };
 
+  // ═══════════════════════════════════════════════════════════════════════════
+  // GUARDRAIL: Skeleton mentre l'organització no estigui resolta
+  // Prevé errors "Missing or insufficient permissions" per queries prematures
+  // ═══════════════════════════════════════════════════════════════════════════
+  if (!organizationId) {
+    return (
+      <Card>
+        <CardHeader>
+          <Skeleton className="h-8 w-48 mb-2" />
+          <Skeleton className="h-4 w-64" />
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-3">
+            {Array.from({ length: 4 }).map((_, i) => (
+              <Skeleton key={i} className="h-12 w-full" />
+            ))}
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
   return (
     <TooltipProvider>
       <Dialog open={isDialogOpen} onOpenChange={handleOpenChange}>
