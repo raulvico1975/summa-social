@@ -2,7 +2,7 @@
 
 import * as React from 'react';
 import { usePathname, useSearchParams, useRouter } from 'next/navigation';
-import { HelpCircle, BookOpen, Link2, MessageSquare, ExternalLink, Play, AlertTriangle, CheckCircle2, XCircle, ClipboardCheck, RotateCcw, Layers, UserRound, Tag, FileText, Landmark, Sparkles, ListChecks, Upload, Filter, BadgeCheck, Lightbulb } from 'lucide-react';
+import { HelpCircle, BookOpen, Link2, MessageSquare, ExternalLink, Play, AlertTriangle, CheckCircle2, XCircle, ClipboardCheck, RotateCcw, Layers, UserRound, Tag, FileText, Landmark, Sparkles, ListChecks, Upload, Filter, BadgeCheck, Lightbulb, Workflow } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
@@ -22,10 +22,13 @@ import { useTranslations } from '@/i18n';
 import { getManualAnchorForRoute } from '@/help/help-manual-links';
 import { trackUX } from '@/lib/ux/trackUX';
 import { SUPPORT_EMAIL } from '@/lib/constants';
+import { SUPER_ADMIN_UID } from '@/lib/data';
+import { useFirebase } from '@/firebase';
 
 // Extra section icons mapping
 const EXTRA_SECTION_ICONS: Record<string, React.ReactNode> = {
   order: <CheckCircle2 className="h-4 w-4 text-green-600" />,
+  flow: <Workflow className="h-4 w-4 text-blue-600" />,
   pitfalls: <AlertTriangle className="h-4 w-4 text-amber-600" />,
   whenNot: <XCircle className="h-4 w-4 text-slate-500" />,
   checks: <ClipboardCheck className="h-4 w-4 text-blue-600" />,
@@ -43,9 +46,11 @@ const EXTRA_SECTION_ICONS: Record<string, React.ReactNode> = {
 };
 
 // Manual link hrefs (NOT translated - stay in code)
-const MANUAL_HREFS: Record<string, string> = {
+// Exported for use in /admin help audit
+export const MANUAL_HREFS: Record<string, string> = {
   dashboard: '/dashboard/manual#14-entendre-el-dashboard',
   movimientos: '/dashboard/manual#5-gestio-de-moviments',
+  movimientos_pendents: '/dashboard/manual#6b-documents-pendents',
   donants: '/dashboard/manual#3-gestio-de-donants',
   proveidors: '/dashboard/manual#4-gestio-de-proveidors-i-treballadors',
   treballadors: '/dashboard/manual#4-gestio-de-proveidors-i-treballadors',
@@ -165,6 +170,7 @@ export function HelpSheet() {
   const router = useRouter();
   const { toast } = useToast();
   const { language, tr } = useTranslations();
+  const { user } = useFirebase();
   const [query, setQuery] = React.useState('');
   const [open, setOpen] = React.useState(false);
 
@@ -178,6 +184,9 @@ export function HelpSheet() {
   const routeKey = normalizeRouteKey(routeKeyPath);
   const prefix = `help.${routeKey}`;
 
+  // SuperAdmin detection
+  const isSuperAdmin = user?.uid === SUPER_ADMIN_UID;
+
   // Read help content from tr()
   const title = tr(`${prefix}.title`);
   const intro = tr(`${prefix}.intro`);
@@ -187,6 +196,7 @@ export function HelpSheet() {
   // Read extra sections
   const extraSections = [
     'order',
+    'flow',
     'pitfalls',
     'whenNot',
     'checks',
@@ -227,6 +237,8 @@ export function HelpSheet() {
     copyLink: tr('help.ui.copyLink'),
     suggest: tr('help.ui.suggest'),
     noHelp: tr('help.ui.noHelp'),
+    noHelpNotPublished: tr('help.ui.noHelpNotPublished'),
+    noHelpEditButton: tr('help.ui.noHelpEditButton'),
     noSteps: tr('help.ui.noSteps'),
     noResults: tr('help.ui.noResults'),
     linkCopied: tr('help.ui.linkCopied'),
@@ -406,6 +418,28 @@ export function HelpSheet() {
 
         {/* Scrollable content area */}
         <div className="flex-1 min-h-0 overflow-y-auto pb-8">
+          {/* Show message when help not published */}
+          {!hasContent && (
+            <div className="mt-6 p-4 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded-lg">
+              <p className="text-sm text-amber-800 dark:text-amber-200">
+                {ui.noHelpNotPublished}
+              </p>
+              <p className="text-xs text-amber-600 dark:text-amber-400 mt-1 font-mono">
+                {routeKey}
+              </p>
+              {isSuperAdmin && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="mt-3"
+                  onClick={() => router.push('/admin')}
+                >
+                  {ui.noHelpEditButton}
+                </Button>
+              )}
+            </div>
+          )}
+
           {/* Action buttons */}
           <div className="mt-4 flex flex-wrap gap-2">
             <Button size="sm" onClick={handleGuidesClick}>
