@@ -417,19 +417,42 @@ export default async function HomePage({ params }: PageProps) {
           ═══════════════════════════════════════════════════════════════════════ */}
       <section className="px-6 py-20 lg:py-28">
         <div className="mx-auto max-w-5xl space-y-8 text-center">
-          <h2 className="text-2xl font-semibold">{t.home.howWeWork.title}</h2>
-          <p className="text-muted-foreground max-w-2xl mx-auto">
-            {t.home.howWeWork.description}
+          {/* Títol */}
+          <h2 className="text-2xl font-semibold lg:text-3xl">{t.home.howWeWork.title}</h2>
+
+          {/* Lead */}
+          <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
+            {t.home.howWeWork.lead}
           </p>
-          <div className="pt-4">
+
+          {/* Il·lustració */}
+          <div className="py-6">
             <Image
-              src={locale === 'es' ? '/visuals/web/web_como_trabajamos.webp' : `/visuals/web/web_com_treballem.webp`}
+              src={locale === 'es' ? '/visuals/web/web_como_trabajamos.webp' : '/visuals/web/web_com_treballem.webp'}
               alt={t.home.howWeWork.imageAlt}
               width={1200}
               height={600}
               sizes="(min-width: 1024px) 80vw, 100vw"
               className="w-full h-auto"
             />
+          </div>
+
+          {/* Paràgrafs addicionals */}
+          <div className="space-y-4 max-w-3xl mx-auto text-left">
+            <p className="text-muted-foreground">{t.home.howWeWork.paragraph1}</p>
+            <p className="text-muted-foreground">{t.home.howWeWork.paragraph2}</p>
+          </div>
+
+          {/* Nota */}
+          <p className="text-sm text-muted-foreground/70 italic">
+            {t.home.howWeWork.note}
+          </p>
+
+          {/* CTA */}
+          <div className="pt-4">
+            <Button asChild variant="outline" size="lg">
+              <Link href={`/${locale}/contact`}>{t.home.howWeWork.cta}</Link>
+            </Button>
           </div>
         </div>
       </section>

@@ -241,7 +241,11 @@ export interface PublicTranslations {
     };
     howWeWork: {
       title: string;
-      description: string;
+      lead: string;
+      paragraph1: string;
+      paragraph2: string;
+      note: string;
+      cta: string;
       imageAlt: string;
     };
     finalCta: {
@@ -692,7 +696,11 @@ const ca: PublicTranslations = {
     },
     howWeWork: {
       title: 'Com treballem',
-      description: 'Escoltem les entitats, entenem les seves necessitats reals i construïm eines que resolen problemes concrets.',
+      lead: "Summa Social no és una eina d'ús massiu ni d'auto-servei. Funciona millor quan hi ha un referent clar de la gestió econòmica i un marc de treball acordat.",
+      paragraph1: "Abans d'activar Summa Social per a la vostra entitat, valorem conjuntament si encaixa amb la vostra manera de treballar i quins objectius perseguim.",
+      paragraph2: "A partir d'aquí, acompanyem la posada en marxa per deixar l'eina operativa i orientem el seu ús de manera acotada per resoldre dubtes concrets, sense convertir-ho en suport permanent ni consultoria encoberta.",
+      note: 'Treballem amb poques entitats per mantenir qualitat i criteri.',
+      cta: 'Parlem del vostre cas',
       imageAlt: 'Il·lustració del procés de treball de Summa Social',
     },
     finalCta: {
@@ -1224,7 +1232,11 @@ const es: PublicTranslations = {
     },
     howWeWork: {
       title: 'Cómo trabajamos',
-      description: 'Escuchamos a las entidades, entendemos sus necesidades reales y construimos herramientas que resuelven problemas concretos.',
+      lead: 'Summa Social no es una herramienta de uso masivo ni de auto-servicio. Funciona mejor cuando hay un referente claro de la gestión económica y un marco de trabajo acordado.',
+      paragraph1: 'Antes de activar Summa Social para tu entidad, valoramos conjuntamente si encaja con vuestra forma de trabajar y qué objetivos perseguís.',
+      paragraph2: 'A partir de ahí, acompañamos la puesta en marcha para dejar la herramienta operativa y orientamos su uso de forma acotada para resolver dudas concretas, sin convertirlo en soporte permanente ni consultoría encubierta.',
+      note: 'Trabajamos con pocas entidades para mantener calidad y criterio.',
+      cta: 'Hablar de vuestro caso',
       imageAlt: 'Ilustración del proceso de trabajo de Summa Social',
     },
     finalCta: {
@@ -1757,7 +1769,11 @@ const fr: PublicTranslations = {
     },
     howWeWork: {
       title: 'Comment nous travaillons',
-      description: 'Nous écoutons les associations, comprenons leurs besoins réels et construisons des outils qui résolvent des problèmes concrets.',
+      lead: "Summa Social n'est pas un outil de masse ni en libre-service. Il fonctionne mieux lorsqu'il y a un référent clair de la gestion économique et un cadre de travail convenu.",
+      paragraph1: "Avant d'activer Summa Social pour votre association, nous évaluons ensemble si cela correspond à votre façon de travailler et quels objectifs vous poursuivez.",
+      paragraph2: "À partir de là, nous accompagnons la mise en route pour rendre l'outil opérationnel et orientons son utilisation de manière ciblée pour résoudre des doutes concrets, sans en faire un support permanent ni du conseil déguisé.",
+      note: 'Nous travaillons avec peu d\'associations pour maintenir qualité et discernement.',
+      cta: 'Parlons de votre cas',
       imageAlt: 'Illustration du processus de travail de Summa Social',
     },
     finalCta: {
@@ -2289,7 +2305,11 @@ const pt: PublicTranslations = {
     },
     howWeWork: {
       title: 'Como trabalhamos',
-      description: 'Ouvimos as entidades, compreendemos as suas necessidades reais e construímos ferramentas que resolvem problemas concretos.',
+      lead: 'Summa Social não é uma ferramenta de uso massivo nem de auto-serviço. Funciona melhor quando há um referente claro da gestão económica e um quadro de trabalho acordado.',
+      paragraph1: 'Antes de ativar Summa Social para a vossa entidade, avaliamos em conjunto se encaixa com a vossa forma de trabalhar e que objetivos perseguis.',
+      paragraph2: 'A partir daí, acompanhamos a implementação para deixar a ferramenta operacional e orientamos o seu uso de forma limitada para resolver dúvidas concretas, sem o converter em suporte permanente nem consultoria disfarçada.',
+      note: 'Trabalhamos com poucas entidades para manter qualidade e critério.',
+      cta: 'Falemos do vosso caso',
       imageAlt: 'Ilustração do processo de trabalho de Summa Social',
     },
     finalCta: {
