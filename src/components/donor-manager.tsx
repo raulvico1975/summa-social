@@ -135,6 +135,10 @@ export function DonorManager() {
     [firestore, organizationId, contactsLimit]
   );
 
+  // DEBUG: Log query path and type
+  console.log('[DonorManager] donorsQuery path', donorsQuery ? (donorsQuery as any)._query?.path?.canonicalString?.() : null);
+  console.log('[DonorManager] donorsQuery collectionGroup', donorsQuery ? (donorsQuery as any)._query?.collectionGroup : null);
+
   const { data: donorsRaw, isLoading: isLoadingDonors } = useCollection<Donor & { archivedAt?: string }>(donorsQuery);
   // Filtrar donants arxivats (soft-deleted)
   const donors = React.useMemo(
@@ -613,6 +617,28 @@ export function DonorManager() {
     if (donor.membershipType === 'recurring' && !donor.iban) missing.push('IBAN');
     return missing;
   };
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // GUARDRAIL: Skeleton mentre l'organització no estigui resolta
+  // Prevé errors "Missing or insufficient permissions" per queries prematures
+  // ═══════════════════════════════════════════════════════════════════════════
+  if (!organizationId) {
+    return (
+      <Card>
+        <CardHeader>
+          <Skeleton className="h-8 w-48 mb-2" />
+          <Skeleton className="h-4 w-64" />
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-3">
+            {Array.from({ length: 4 }).map((_, i) => (
+              <Skeleton key={i} className="h-12 w-full" />
+            ))}
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
 
   return (
     <TooltipProvider>

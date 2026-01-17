@@ -278,11 +278,25 @@ service cloud.firestore {
 
       // ─────────────────────────────────────────────────────────────────────
       // CONTACTES (unificat: donants + proveïdors)
+      // FIX: Funcions inline per evitar falsos negatius en avaluació de rules
       // ─────────────────────────────────────────────────────────────────────
 
       match /contacts/{contactId} {
-        allow read: if isMemberOf(orgId) || isSuperAdmin();
-        allow create, update, delete: if isMemberOf(orgId) && getMemberRole(orgId) in ['admin', 'user'] || isSuperAdmin();
+        // Funcions inline per evitar problemes d'avaluació en cadena
+        function isOrgMemberDirect() {
+          return request.auth != null &&
+            exists(/databases/$(database)/documents/organizations/$(orgId)/members/$(request.auth.uid));
+        }
+
+        function isSuperAdminDirect() {
+          return request.auth != null &&
+            exists(/databases/$(database)/documents/systemSuperAdmins/$(request.auth.uid));
+        }
+
+        allow read: if isOrgMemberDirect() || isSuperAdminDirect();
+        allow create, update, delete: if isSuperAdminDirect()
+          || (isOrgMemberDirect() &&
+              get(/databases/$(database)/documents/organizations/$(orgId)/members/$(request.auth.uid)).data.role in ['admin', 'user']);
       }
 
       // ─────────────────────────────────────────────────────────────────────
