@@ -47,6 +47,20 @@ export async function loadTransactions(
     // Excloure si té deletedAt
     if (data.deletedAt) continue;
 
+    // Llegir camps per filtre ledger
+    const parentTransactionId = data.parentTransactionId ?? null;
+    const isRemittanceItem = data.isRemittanceItem === true;
+    const source = data.source ?? null;
+    const transactionType = data.transactionType ?? null;
+
+    // LEDGER-ONLY: excloure fills i desglossos
+    // Només volem moviments bancaris reals (pares), no les filles desglossades
+    if (parentTransactionId) continue;
+    if (isRemittanceItem) continue;
+    if (source === 'remittance') continue;
+    if (transactionType === 'donation') continue; // Stripe donation child
+    if (transactionType === 'fee') continue;      // Stripe fee child
+
     transactions.push({
       id: doc.id,
       date: data.date ?? '',
@@ -57,9 +71,12 @@ export async function loadTransactions(
       contactId: data.contactId ?? null,
       contactName: data.contactName ?? null,
       document: data.document ?? null,
-      transactionType: data.transactionType ?? null,
+      transactionType,
       isRemittance: data.isRemittance === true,
       remittanceStatus: data.remittanceStatus ?? null,
+      source,
+      parentTransactionId,
+      isRemittanceItem,
     });
   }
 
@@ -255,15 +272,15 @@ export function buildManifestRows(
     const docInfo = txWithDoc.get(tx.id);
 
     let estat: DocumentStatus = 'FALTA';
-    let documentName = '—';
+    let nomPdf = '—';
 
     if (docInfo) {
       if (failedDownloads.has(tx.id)) {
         estat = 'FALLA_DESCARREGA';
-        documentName = docInfo.fileName;
+        nomPdf = docInfo.fileName;
       } else {
         estat = 'OK';
-        documentName = docInfo.fileName;
+        nomPdf = docInfo.fileName;
       }
     }
 
@@ -276,7 +293,7 @@ export function buildManifestRows(
       categoria: tx.categoryName || '',
       contacte: tx.contactName || '',
       txId: tx.id,
-      document: documentName,
+      nomPdf,
       estat,
     };
   });

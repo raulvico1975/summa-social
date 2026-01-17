@@ -22,7 +22,7 @@ import {
   buildManifestRows,
   buildSummaryText,
 } from './closing-bundle/build-closing-data';
-import { buildManifestXlsx } from './closing-bundle/build-closing-xlsx';
+import { buildManifestXlsx, DebugRow } from './closing-bundle/build-closing-xlsx';
 import { inferExtension, buildDocumentFileName } from './closing-bundle/normalize-filename';
 
 const db = admin.firestore();
@@ -193,6 +193,17 @@ export const exportClosingBundleZip = functions
       const failedDownloads = new Set<string>();
       let downloadedCount = 0;
 
+      // Map per guardar info de debug (documentUrl -> storagePath)
+      const txDocumentUrls = new Map<string, string | null>();
+      const txStoragePaths = new Map<string, string | null>();
+
+      // Guardar URLs originals abans de processar
+      for (const tx of transactions) {
+        txDocumentUrls.set(tx.id, tx.document);
+        const docInfo = txWithDoc.get(tx.id);
+        txStoragePaths.set(tx.id, docInfo?.storagePath || null);
+      }
+
       for (const docInfo of docs) {
         try {
           const file = bucket.file(docInfo.storagePath);
@@ -219,25 +230,43 @@ export const exportClosingBundleZip = functions
           // Actualitzar docInfo per al manifest
           docInfo.fileName = finalFileName;
         } catch (err) {
+          const errorMessage = err instanceof Error ? err.message : 'Unknown';
           functions.logger.warn('[closingBundleZip] Error descarregant document', {
+            orgId,
             txId: docInfo.txId,
+            documentUrl: txDocumentUrls.get(docInfo.txId) || 'N/A',
             storagePath: docInfo.storagePath,
-            error: err instanceof Error ? err.message : 'Unknown',
+            error: errorMessage,
           });
           failedDownloads.add(docInfo.txId);
         }
       }
 
-      // 13. Construir manifest
+      // 13. Construir debug rows per a la sheet tècnica
+      const debugRows: DebugRow[] = transactions.map((tx) => {
+        const docInfo = txWithDoc.get(tx.id);
+        let estat = 'FALTA';
+        if (docInfo) {
+          estat = failedDownloads.has(tx.id) ? 'FALLA_DESCARREGA' : 'OK';
+        }
+        return {
+          txId: tx.id,
+          documentUrl: tx.document,
+          storagePath: docInfo?.storagePath || null,
+          estat,
+        };
+      });
+
+      // 14. Construir manifest amb sheet Debug
       const manifestRows = buildManifestRows(transactions, txWithDoc, failedDownloads);
-      const manifestBuffer = buildManifestXlsx(manifestRows);
+      const manifestBuffer = buildManifestXlsx(manifestRows, debugRows);
       archive.append(manifestBuffer, { name: 'manifest.xlsx' });
 
-      // 14. Calcular estadístiques
+      // 15. Calcular estadístiques
       const totalIncome = transactions.filter((t) => t.amount > 0).reduce((sum, t) => sum + t.amount, 0);
       const totalExpense = transactions.filter((t) => t.amount < 0).reduce((sum, t) => sum + t.amount, 0);
 
-      // 15. Construir resum
+      // 16. Construir resum
       const summaryText = buildSummaryText({
         orgSlug,
         dateFrom,
@@ -253,7 +282,7 @@ export const exportClosingBundleZip = functions
 
       archive.append(summaryText, { name: 'resum.txt' });
 
-      // 16. Finalitzar ZIP
+      // 17. Finalitzar ZIP
       await archive.finalize();
 
       functions.logger.info('[closingBundleZip] Generat amb èxit', {
