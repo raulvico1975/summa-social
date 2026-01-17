@@ -80,6 +80,18 @@ interface DemoTransaction {
   document?: string; // URL del document
   source?: string;
   transactionType?: string;
+  // Camps per remeses
+  isRemittance?: boolean;
+  isRemittanceItem?: boolean;
+  remittanceId?: string;
+  remittanceType?: 'returns' | 'donations' | 'payments';
+  remittanceDirection?: 'IN' | 'OUT';
+  remittanceStatus?: 'complete' | 'partial' | 'pending';
+  remittanceItemCount?: number;
+  remittanceResolvedCount?: number;
+  remittancePendingCount?: number;
+  // Camps per Stripe
+  stripeTransferId?: string;
   createdAt: string;
   [DEMO_DATA_MARKER]: true;
 }

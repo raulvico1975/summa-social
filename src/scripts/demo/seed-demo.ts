@@ -69,6 +69,19 @@ const DEMO_WORK_DONOR_ID = `${DEMO_ID_PREFIX}donor_work_001`;
 /** Devolució pendent d'assignar (per demo de workflow de resolució) */
 const DEMO_WORK_RETURN_UNASSIGNED_TX_ID = `${DEMO_ID_PREFIX}tx_return_unassigned_001`;
 
+// ─────────────────────────────────────────────────────────────────────────────
+// Constants IDs per SEPA IN remesa demo (mode 'work')
+// ─────────────────────────────────────────────────────────────────────────────
+const DEMO_WORK_SEPA_PARENT_ID = `${DEMO_ID_PREFIX}tx_sepa_in_parent_001`;
+const DEMO_WORK_SEPA_LINE_PREFIX = `${DEMO_ID_PREFIX}tx_sepa_in_line_`;
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Constants IDs per Stripe payout demo (mode 'work')
+// ─────────────────────────────────────────────────────────────────────────────
+const DEMO_WORK_STRIPE_PAYOUT_PARENT_ID = `${DEMO_ID_PREFIX}tx_stripe_payout_parent_001`;
+const DEMO_WORK_STRIPE_DON_PREFIX = `${DEMO_ID_PREFIX}tx_stripe_don_`;
+const DEMO_WORK_STRIPE_FEE_ID = `${DEMO_ID_PREFIX}tx_stripe_fee_001`;
+
 const VOLUMES = {
   donors: 50,
   suppliers: 20,
@@ -652,6 +665,130 @@ export async function runDemoSeed(
     transactions.push(workReturnUnassignedTx);
 
     console.log(`[seed-demo]   - Devolució pendent: 1 devolució (-35€) sense contacte assignat`);
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // Cas especial 3: Remesa SEPA IN (1 pare + 8 línies assignades a donants)
+    // ─────────────────────────────────────────────────────────────────────────
+
+    // Seleccionar 8 donants deterministes (els primers 8 del seed)
+    const sepaDonors = donors.slice(0, 8);
+    const sepaLineAmounts = [10, 12, 15, 20, 25, 30, 35, 50]; // Imports variats (total 197€)
+    const sepaTotal = sepaLineAmounts.reduce((sum, a) => sum + a, 0);
+
+    // Crear les 8 línies filles (donacions individuals)
+    for (let i = 0; i < 8; i++) {
+      const donor = sepaDonors[i];
+      const amount = sepaLineAmounts[i];
+      const sepaLineTx = {
+        id: `${DEMO_WORK_SEPA_LINE_PREFIX}${String(i + 1).padStart(3, '0')}`,
+        date: `${currentYear}-05-15`,
+        description: `Quota mensual ${donor.name}`,
+        amount: amount, // Positiu (ingrés)
+        category: categories.find((c) => c.type === 'income')?.id,
+        contactId: donor.id,
+        contactType: 'donor' as const,
+        source: 'remittance' as const,
+        transactionType: 'donation' as const,
+        isRemittanceItem: true,
+        remittanceId: DEMO_WORK_SEPA_PARENT_ID,
+        createdAt: nowStr,
+        isDemoData: true as const,
+      };
+      transactions.push(sepaLineTx);
+    }
+
+    // Crear el pare (resum remesa)
+    const sepaParentTx = {
+      id: DEMO_WORK_SEPA_PARENT_ID,
+      date: `${currentYear}-05-15`,
+      description: 'REMESA SEPA QUOTES SOCIS MAIG',
+      amount: sepaTotal, // Suma de les línies (positiu)
+      category: categories.find((c) => c.type === 'income')?.id,
+      contactId: undefined,
+      contactType: undefined,
+      source: 'bank' as const,
+      transactionType: 'normal' as const,
+      isRemittance: true,
+      remittanceType: 'donations' as const,
+      remittanceDirection: 'IN' as const,
+      remittanceStatus: 'complete' as const,
+      remittanceItemCount: 8,
+      remittanceResolvedCount: 8,
+      remittancePendingCount: 0,
+      createdAt: nowStr,
+      isDemoData: true as const,
+    };
+    transactions.push(sepaParentTx);
+
+    console.log(`[seed-demo]   - Remesa SEPA IN: 1 pare (${sepaTotal}€) + 8 línies (totes assignades a donants)`);
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // Cas especial 4: Stripe payout (1 pare + 6 donacions + 1 fee)
+    // ─────────────────────────────────────────────────────────────────────────
+
+    // Seleccionar 6 donants deterministes (9-14, no coincideixen amb SEPA)
+    const stripeDonors = donors.slice(8, 14);
+    const stripeDonationAmounts = [25, 50, 75, 100, 150, 200]; // Imports variats (total 600€)
+    const stripeDonationsTotal = stripeDonationAmounts.reduce((sum, a) => sum + a, 0);
+    const stripeFeeAmount = -18; // Fee negatiu (3% de 600€)
+    const stripePayoutNet = stripeDonationsTotal + stripeFeeAmount; // 582€
+
+    // Crear les 6 donacions Stripe
+    for (let i = 0; i < 6; i++) {
+      const donor = stripeDonors[i];
+      const amount = stripeDonationAmounts[i];
+      const stripeDonTx = {
+        id: `${DEMO_WORK_STRIPE_DON_PREFIX}${String(i + 1).padStart(3, '0')}`,
+        date: `${currentYear}-06-01`,
+        description: `Donació online ${donor.name}`,
+        amount: amount, // Positiu (ingrés)
+        category: categories.find((c) => c.type === 'income')?.id,
+        contactId: donor.id,
+        contactType: 'donor' as const,
+        source: 'stripe' as const,
+        transactionType: 'donation' as const,
+        stripeTransferId: DEMO_WORK_STRIPE_PAYOUT_PARENT_ID,
+        createdAt: nowStr,
+        isDemoData: true as const,
+      };
+      transactions.push(stripeDonTx);
+    }
+
+    // Crear la fee Stripe (sense contactId)
+    const stripeFeeTx = {
+      id: DEMO_WORK_STRIPE_FEE_ID,
+      date: `${currentYear}-06-01`,
+      description: 'Comissió Stripe payout',
+      amount: stripeFeeAmount, // Negatiu (despesa)
+      category: categories.find((c) => c.type === 'expense')?.id,
+      contactId: undefined,
+      contactType: undefined,
+      source: 'stripe' as const,
+      transactionType: 'fee' as const,
+      stripeTransferId: DEMO_WORK_STRIPE_PAYOUT_PARENT_ID,
+      createdAt: nowStr,
+      isDemoData: true as const,
+    };
+    transactions.push(stripeFeeTx);
+
+    // Crear el pare (payout)
+    const stripePayoutTx = {
+      id: DEMO_WORK_STRIPE_PAYOUT_PARENT_ID,
+      date: `${currentYear}-06-03`, // Payout arriba 2 dies després
+      description: 'Stripe payout (demo)',
+      amount: stripePayoutNet, // Net = donacions - fee
+      category: categories.find((c) => c.type === 'income')?.id,
+      contactId: undefined,
+      contactType: undefined,
+      source: 'bank' as const,
+      transactionType: 'normal' as const,
+      note: 'Payout Stripe: 6 donacions - comissió',
+      createdAt: nowStr,
+      isDemoData: true as const,
+    };
+    transactions.push(stripePayoutTx);
+
+    console.log(`[seed-demo]   - Stripe payout: 1 pare (${stripePayoutNet}€) + 6 donacions (${stripeDonationsTotal}€) + 1 fee (${stripeFeeAmount}€)`);
   }
 
   // ─────────────────────────────────────────────────────────────────────────
@@ -761,8 +898,9 @@ export async function runDemoSeed(
       invariantErrors.push(`[short] transactions: esperats 100, obtinguts ${counts.transactions}`);
     }
   } else {
-    // Work: 100 base + 3 duplicats + 5 pendents + 3 traçabilitat + 3 casos especials (1 donació + 2 devolucions) = 114
-    const expectedWorkTx = 100 + WORK_ANOMALIES.duplicates + WORK_ANOMALIES.pending + 3 + 3;
+    // Work: 100 base + 3 duplicats + 5 pendents + 3 traçabilitat + 3 casos especials (1 donació + 2 devolucions)
+    //       + 9 SEPA IN (1 pare + 8 línies) + 8 Stripe (1 pare + 6 donacions + 1 fee) = 131
+    const expectedWorkTx = 100 + WORK_ANOMALIES.duplicates + WORK_ANOMALIES.pending + 3 + 3 + 9 + 8;
     if (counts.transactions !== expectedWorkTx) {
       invariantErrors.push(`[work] transactions: esperats ${expectedWorkTx}, obtinguts ${counts.transactions}`);
     }
@@ -805,6 +943,69 @@ export async function runDemoSeed(
       }
       if (unassignedReturn.transactionType !== 'return') {
         invariantErrors.push('[work] devolució pendent: transactionType ha de ser return');
+      }
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // 4. Invariants SEPA IN remesa
+    // ─────────────────────────────────────────────────────────────────────────
+    const sepaParent = transactions.find((tx) => tx.id === DEMO_WORK_SEPA_PARENT_ID);
+    if (!sepaParent) {
+      invariantErrors.push('[work] SEPA IN: pare no existeix');
+    } else {
+      if (!sepaParent.isRemittance) {
+        invariantErrors.push('[work] SEPA IN: pare ha de tenir isRemittance=true');
+      }
+    }
+
+    const sepaLines = transactions.filter((tx) => tx.id.startsWith(DEMO_WORK_SEPA_LINE_PREFIX));
+    if (sepaLines.length !== 8) {
+      invariantErrors.push(`[work] SEPA IN: esperats 8 línies, obtinguts ${sepaLines.length}`);
+    }
+
+    // Totes les línies han de tenir contactId
+    const sepaLinesWithContact = sepaLines.filter((tx) => tx.contactId !== undefined);
+    if (sepaLinesWithContact.length !== 8) {
+      invariantErrors.push(`[work] SEPA IN: totes les línies han de tenir contactId, només ${sepaLinesWithContact.length}/8`);
+    }
+
+    // Suma de línies == import pare (tolerància 0.01)
+    const sepaLinesSum = sepaLines.reduce((sum, tx) => sum + tx.amount, 0);
+    if (sepaParent && Math.abs(sepaLinesSum - sepaParent.amount) > 0.01) {
+      invariantErrors.push(`[work] SEPA IN: suma línies (${sepaLinesSum}) != pare (${sepaParent.amount})`);
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // 5. Invariants Stripe payout
+    // ─────────────────────────────────────────────────────────────────────────
+    const stripePayoutParent = transactions.find((tx) => tx.id === DEMO_WORK_STRIPE_PAYOUT_PARENT_ID);
+    if (!stripePayoutParent) {
+      invariantErrors.push('[work] Stripe payout: pare no existeix');
+    }
+
+    const stripeDonations = transactions.filter((tx) => tx.id.startsWith(DEMO_WORK_STRIPE_DON_PREFIX));
+    if (stripeDonations.length !== 6) {
+      invariantErrors.push(`[work] Stripe payout: esperats 6 donacions, obtinguts ${stripeDonations.length}`);
+    }
+
+    // Totes les donacions han de tenir contactId
+    const stripeDonationsWithContact = stripeDonations.filter((tx) => tx.contactId !== undefined);
+    if (stripeDonationsWithContact.length !== 6) {
+      invariantErrors.push(`[work] Stripe payout: totes les donacions han de tenir contactId, només ${stripeDonationsWithContact.length}/6`);
+    }
+
+    const stripeFee = transactions.find((tx) => tx.id === DEMO_WORK_STRIPE_FEE_ID);
+    if (!stripeFee) {
+      invariantErrors.push('[work] Stripe payout: fee no existeix');
+    } else {
+      if (stripeFee.contactId !== undefined) {
+        invariantErrors.push('[work] Stripe payout: fee ha de tenir contactId undefined');
+      }
+      if (stripeFee.amount >= 0) {
+        invariantErrors.push('[work] Stripe payout: fee ha de tenir amount negatiu');
+      }
+      if (stripeFee.transactionType !== 'fee') {
+        invariantErrors.push('[work] Stripe payout: fee ha de tenir transactionType=fee');
       }
     }
   }
