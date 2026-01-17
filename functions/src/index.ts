@@ -5,6 +5,7 @@ if (admin.apps.length === 0) {
 }
 
 export { exportProjectExpenses } from "./exports/projectExpenses";
+export { exportClosingBundleZip } from "./exports/closingBundleZip";
 export { migrateProjectModulePaths } from "./migrations/migrateProjectModulePaths";
 export { sendIncidentAlert } from "./alerts/sendIncidentAlert";
 export { runWeeklyBackup } from "./backups/runWeeklyBackup";
