@@ -396,22 +396,20 @@ export function DonationsReportGenerator() {
                 <CardDescription>{t.reports.donationsReportDescription}</CardDescription>
               </div>
               <div className={cn(MOBILE_ACTIONS_BAR, "sm:justify-end")}>
-                <div className="flex gap-2 w-full sm:w-auto">
-                  <Select value={selectedYear} onValueChange={setSelectedYear}>
-                      <SelectTrigger className="w-[120px] sm:w-[180px]">
-                          <SelectValue placeholder={t.reports.selectYear} />
-                      </SelectTrigger>
-                      <SelectContent>
-                          {availableYears.map(year => (
-                              <SelectItem key={year} value={String(year)}>{year}</SelectItem>
-                          ))}
-                      </SelectContent>
-                  </Select>
-                  <Button onClick={handleGenerateReport} disabled={isLoading} className="flex-1 sm:flex-none">
-                      {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                      {t.reports.generate}
-                  </Button>
-                </div>
+                <Select value={selectedYear} onValueChange={setSelectedYear}>
+                    <SelectTrigger className={MOBILE_CTA_PRIMARY}>
+                        <SelectValue placeholder={t.reports.selectYear} />
+                    </SelectTrigger>
+                    <SelectContent>
+                        {availableYears.map(year => (
+                            <SelectItem key={year} value={String(year)}>{year}</SelectItem>
+                        ))}
+                    </SelectContent>
+                </Select>
+                <Button onClick={handleGenerateReport} disabled={isLoading} className={MOBILE_CTA_PRIMARY}>
+                    {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                    {t.reports.generate}
+                </Button>
                 <Button variant="outline" onClick={handleExportExcel} disabled={reportData.length === 0} className={MOBILE_CTA_PRIMARY}>
                     <Download className="mr-2 h-4 w-4" />
                     {t.reports.exportExcel}
