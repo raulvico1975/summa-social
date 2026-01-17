@@ -84,6 +84,7 @@ interface DemoTransaction {
   isRemittance?: boolean;
   isRemittanceItem?: boolean;
   remittanceId?: string;
+  parentTransactionId?: string; // ID del pare (per filles de remesa)
   remittanceType?: 'returns' | 'donations' | 'payments';
   remittanceDirection?: 'IN' | 'OUT';
   remittanceStatus?: 'complete' | 'partial' | 'pending';

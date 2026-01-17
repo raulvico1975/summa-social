@@ -653,6 +653,64 @@ npm run dev:demo
 | `src/app/admin/page.tsx` | Selector Short/Work, diàleg confirmació |
 | `scripts/run-demo-dev.mjs` | Neteja `GOOGLE_APPLICATION_CREDENTIALS` |
 
+### 10. Fitxers d'importació (DEMO)
+
+Per a demos i formació, el projecte inclou fitxers CSV de mostra que es poden importar amb els importadors existents.
+
+#### Ubicació
+
+```
+public/demo-files/
+├── remesa-quotes-demo.csv      # Remesa SEPA IN (8 socis)
+├── devolucions-banc-demo.csv   # Devolucions del banc (3 files)
+└── stripe-payout-demo.csv      # Payout Stripe (6 donacions)
+```
+
+#### Regenerar fitxers
+
+```bash
+npx tsx src/scripts/demo/generate-demo-files.ts
+```
+
+#### Fitxers disponibles
+
+| Fitxer | Importador | Contingut | Ús demo |
+|--------|------------|-----------|---------|
+| `remesa-quotes-demo.csv` | Remittance Splitter | 8 socis amb IBAN, DNI, import | "Importo una remesa" |
+| `devolucions-banc-demo.csv` | Return Importer | 3 devolucions amb IBAN, motiu | "Importo devolucions del banc" |
+| `stripe-payout-demo.csv` | Stripe Importer | 6 donacions + transfer ID | "Importo donacions Stripe" |
+
+#### Format dels fitxers
+
+**remesa-quotes-demo.csv** (separador `;`):
+```csv
+Nom;DNI/CIF;IBAN;Import
+Marc Ribas Vidal;52659254H;ES2427326247864723170551;10,00
+...
+```
+
+**devolucions-banc-demo.csv** (separador `;`):
+```csv
+cuenta de adeudo;importe;fecha;nombre cliente;motivo devolucion
+ES2427326247864723170551;25,50;15/01/2026;Marc Ribas Vidal;MS02 - Insuficient saldo
+...
+```
+
+**stripe-payout-demo.csv** (separador `,`):
+```csv
+id,Created date (UTC),Amount,Fee,Net,Status,Transfer,Customer Email,Description,Amount Refunded
+ch_demo_charge_001,2026-06-01 10:00:00,25.00,0.98,24.02,succeeded,po_demo_payout_001,iris.prats.ferrer@example.demo,Donacio online,0
+...
+```
+
+#### Coherència amb el seed
+
+Els fitxers es generen amb el mateix **SEED=42** que el seed de la demo. Això significa:
+- Els noms, DNIs i IBANs coincideixen amb els donants generats pel seed
+- Es poden importar i els importadors trobaran match automàtic
+
+**Nota**: Si regeneres el seed amb mode Work, les dades ja inclouen transaccions de remesa i Stripe. Els fitxers CSV serveixen per demostrar el flux d'importació, no per crear dades noves.
+
 ---
 
 ## 12. Mode Rescat (admin)

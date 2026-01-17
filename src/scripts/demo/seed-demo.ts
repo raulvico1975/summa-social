@@ -690,7 +690,7 @@ export async function runDemoSeed(
         source: 'remittance' as const,
         transactionType: 'donation' as const,
         isRemittanceItem: true,
-        remittanceId: DEMO_WORK_SEPA_PARENT_ID,
+        parentTransactionId: DEMO_WORK_SEPA_PARENT_ID, // Camp usat pel modal
         createdAt: nowStr,
         isDemoData: true as const,
       };
