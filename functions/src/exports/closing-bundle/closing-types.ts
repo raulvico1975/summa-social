@@ -33,6 +33,10 @@ export interface ClosingTransaction {
   transactionType: string | null;
   isRemittance: boolean;
   remittanceStatus: string | null;
+  // Camps per filtre ledger-only
+  source: string | null;
+  parentTransactionId: string | null;
+  isRemittanceItem: boolean;
 }
 
 export interface ClosingManifestRow {
@@ -44,7 +48,7 @@ export interface ClosingManifestRow {
   categoria: string;
   contacte: string;
   txId: string;
-  document: string; // Nom del PDF dins el ZIP o "—"
+  nomPdf: string; // Nom del PDF dins el ZIP o "—"
   estat: DocumentStatus;
 }
 
