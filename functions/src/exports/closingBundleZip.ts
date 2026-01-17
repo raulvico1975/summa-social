@@ -189,7 +189,24 @@ export const exportClosingBundleZip = functions
       archive.pipe(res);
 
       // 12. Descarregar documents i afegir al ZIP
-      const bucket = admin.storage().bucket();
+      // Fix: usar bucket explícit per evitar mismatch amb download URLs
+      const bucketName =
+        (admin.app().options as { storageBucket?: string }).storageBucket ||
+        process.env.FIREBASE_STORAGE_BUCKET;
+
+      functions.logger.info('[closingBundleZip] storageBucket', {
+        storageBucket: bucketName,
+        appOptions: (admin.app().options as { storageBucket?: string }).storageBucket,
+        envBucket: process.env.FIREBASE_STORAGE_BUCKET,
+      });
+
+      if (!bucketName) {
+        functions.logger.error('[closingBundleZip] Missing storageBucket config');
+        sendError(res, 500, { code: 'INTERNAL_ERROR', message: 'Storage bucket no configurat' });
+        return;
+      }
+
+      const bucket = admin.storage().bucket(bucketName);
       const failedDownloads = new Set<string>();
       let downloadedCount = 0;
 

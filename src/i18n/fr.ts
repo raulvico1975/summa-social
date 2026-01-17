@@ -1473,6 +1473,10 @@ export const fr = {
       errorNoEmail: "Aquest donant no té email configurat.",
       errorSending: "Error enviant el certificat.",
     },
+    // Lazy load
+    loadDonorsTitle: "Certificats de don",
+    loadDonorsDescription: "Sélectionnez l'année fiscale et chargez la liste des donateurs pour générer les certificats.",
+    loadDonorsButton: "Charger les donateurs",
   },
   settings: {
     title: "Configuration",

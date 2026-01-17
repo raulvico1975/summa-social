@@ -1473,6 +1473,10 @@ export const ca = {
       errorNoEmail: "Aquest donant no té email configurat.",
       errorSending: "Error enviant el certificat.",
     },
+    // Lazy load
+    loadDonorsTitle: "Certificats de donació",
+    loadDonorsDescription: "Selecciona l'any fiscal i carrega el llistat de donants per generar els certificats.",
+    loadDonorsButton: "Carregar donants",
   },
   settings: {
     title: "Configuració",

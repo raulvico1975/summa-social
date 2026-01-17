@@ -155,7 +155,16 @@ export function DonationCertificateGenerator() {
   const { t, language } = useTranslations();
   const isMobile = useIsMobile();
 
-  const [selectedYear, setSelectedYear] = React.useState<string>(String(new Date().getFullYear() - 1));
+  // Lògica per any per defecte: si estem a gener, any anterior; altrament any actual - 1
+  // (normalment es generen certificats de l'any anterior)
+  const getDefaultYear = () => {
+    const now = new Date();
+    // L'any anterior és sempre el default per certificats
+    return String(now.getFullYear() - 1);
+  };
+
+  const [selectedYear, setSelectedYear] = React.useState<string>(getDefaultYear());
+  const [hasLoadedList, setHasLoadedList] = React.useState(false);
   const [isLoading, setIsLoading] = React.useState(false);
   const [donorSummaries, setDonorSummaries] = React.useState<DonorSummary[]>([]);
   const [selectedDonors, setSelectedDonors] = React.useState<Set<string>>(new Set());
@@ -374,9 +383,12 @@ export function DonationCertificateGenerator() {
     }
   }, [firestore, organizationId, selectedYear, toast, t]);
 
+  // Només carregar donacions quan l'usuari ho demana explícitament
   React.useEffect(() => {
-    loadDonations();
-  }, [loadDonations]);
+    if (hasLoadedList) {
+      loadDonations();
+    }
+  }, [hasLoadedList, loadDonations]);
 
   const stats = React.useMemo(() => {
     const selected = donorSummaries.filter(s => selectedDonors.has(s.donor.id));
@@ -824,6 +836,47 @@ export function DonationCertificateGenerator() {
 
   const previewAddress = buildFullAddress();
   const previewContact = [orgData?.phone ? `Tel: ${orgData.phone}` : null, orgData?.email].filter(Boolean).join(' | ');
+
+  // UI inicial (lazy load): només mostra selector d'any i botó per carregar
+  if (!hasLoadedList) {
+    return (
+      <div className="space-y-6">
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <FileText className="h-5 w-5" />
+              {t.certificates.loadDonorsTitle}
+            </CardTitle>
+            <CardDescription>
+              {t.certificates.loadDonorsDescription}
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="flex items-center gap-4">
+              <div className="flex items-center gap-2">
+                <Calendar className="h-4 w-4 text-muted-foreground" />
+                <span className="text-sm font-medium">{t.certificates.fiscalYear}:</span>
+              </div>
+              <Select value={selectedYear} onValueChange={setSelectedYear}>
+                <SelectTrigger className="w-32">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {availableYears.map(year => (
+                    <SelectItem key={year} value={year}>{year}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <Button onClick={() => setHasLoadedList(true)}>
+              <Users className="mr-2 h-4 w-4" />
+              {t.certificates.loadDonorsButton}
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">

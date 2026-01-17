@@ -1505,6 +1505,10 @@ export const es = {
       errorNoEmail: "Este donante no tiene email configurado.",
       errorSending: "Error enviando el certificado.",
     },
+    // Lazy load
+    loadDonorsTitle: "Certificados de donación",
+    loadDonorsDescription: "Selecciona el año fiscal y carga la lista de donantes para generar los certificados.",
+    loadDonorsButton: "Cargar donantes",
   },
   settings: {
     title: "Configuración",

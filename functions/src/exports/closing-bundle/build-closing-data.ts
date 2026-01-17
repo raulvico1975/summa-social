@@ -61,6 +61,13 @@ export async function loadTransactions(
     if (transactionType === 'donation') continue; // Stripe donation child
     if (transactionType === 'fee') continue;      // Stripe fee child
 
+    // Lectura robusta de l'URL del document (pot estar a diferents camps)
+    const documentUrl: string | null =
+      (typeof data.document === 'string' ? data.document : null) ??
+      data.documentUrl ??
+      (typeof data.document === 'object' && data.document?.url ? data.document.url : null) ??
+      null;
+
     transactions.push({
       id: doc.id,
       date: data.date ?? '',
@@ -70,7 +77,7 @@ export async function loadTransactions(
       categoryName: data.categoryName ?? data.category ?? null,
       contactId: data.contactId ?? null,
       contactName: data.contactName ?? null,
-      document: data.document ?? null,
+      document: documentUrl,
       transactionType,
       isRemittance: data.isRemittance === true,
       remittanceStatus: data.remittanceStatus ?? null,
