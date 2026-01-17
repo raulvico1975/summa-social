@@ -3104,6 +3104,8 @@ export const es = {
       archived: "Liquidación archivada",
       restored: "Liquidación restaurada",
       deleted: "Liquidación eliminada",
+      ticketsReleased: (params: { count: number }) =>
+        `${params.count} ticket${params.count !== 1 ? 's' : ''} recuperado${params.count !== 1 ? 's' : ''}.`,
       submittedSuccess: "Liquidación marcada como enviada",
       submittedError: "Error al marcar como enviada",
       error: "Error",
@@ -3114,7 +3116,9 @@ export const es = {
     },
     confirmDelete: {
       title: "¿Eliminar liquidación?",
-      description: "Esta acción no se puede deshacer. Se eliminarán los datos de la liquidación pero los tickets asociados se mantendrán.",
+      description: "Esta acción no se puede deshacer. Se eliminarán los datos de la liquidación.",
+      ticketsWarning: (params: { count: number }) =>
+        `Esta liquidación tiene ${params.count} ticket${params.count !== 1 ? 's' : ''} vinculado${params.count !== 1 ? 's' : ''}. Volverán a estar disponibles para asignar.`,
       cancel: "Cancelar",
       confirm: "Eliminar",
     },

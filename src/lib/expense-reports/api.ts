@@ -8,13 +8,15 @@ import {
   orderBy,
   addDoc,
   updateDoc,
-  deleteDoc,
+  getDoc,
+  writeBatch,
   serverTimestamp,
   type Firestore,
   type Unsubscribe,
   type FieldValue,
 } from 'firebase/firestore';
 import { expenseReportsRef, expenseReportsRefUntyped, expenseReportRef } from './refs';
+import { pendingDocumentDoc } from '../pending-documents/refs';
 import type {
   ExpenseReport,
   ExpenseReportStatus,
@@ -163,11 +165,87 @@ export async function restoreExpenseReport(
   });
 }
 
+export type DeleteExpenseReportResult = {
+  releasedTicketCount: number;
+};
+
+/** Màxim d'operacions per batch (Firestore limit 500, usem 50 per seguretat) */
+const BATCH_LIMIT = 50;
+
+/**
+ * Divideix un array en chunks de mida màxima.
+ */
+function chunk<T>(arr: T[], size: number): T[][] {
+  const result: T[][] = [];
+  for (let i = 0; i < arr.length; i += size) {
+    result.push(arr.slice(i, i + size));
+  }
+  return result;
+}
+
+/**
+ * Esborra una liquidació i allibera els tiquets assignats (tornen a pendent).
+ * Operació en batches de màxim 50 operacions.
+ *
+ * @throws Error si la liquidació està en estat 'matched' (conciliada)
+ */
 export async function deleteExpenseReport(
   firestore: Firestore,
   orgId: string,
   reportId: string
-): Promise<void> {
+): Promise<DeleteExpenseReportResult> {
   const ref = expenseReportRef(firestore, orgId, reportId);
-  await deleteDoc(ref);
+
+  // 1. Llegir la liquidació per obtenir status i receiptDocIds
+  const reportSnap = await getDoc(ref);
+  if (!reportSnap.exists()) {
+    // Ja no existeix, res a fer
+    return { releasedTicketCount: 0 };
+  }
+
+  const report = reportSnap.data();
+
+  // 2. Guardrail: bloquejar si està conciliada
+  if (report.status === 'matched') {
+    throw new Error('Una liquidació conciliada no es pot esborrar.');
+  }
+
+  const receiptDocIds = report.receiptDocIds ?? [];
+
+  // 3. Batches amb chunking (màx 50 operacions per batch)
+  // Reservem 1 operació per l'últim batch pel delete del report
+  const chunks = chunk(receiptDocIds, BATCH_LIMIT - 1);
+
+  if (chunks.length === 0) {
+    // No hi ha tiquets, només esborrar la liquidació
+    const batch = writeBatch(firestore);
+    batch.delete(ref);
+    await batch.commit();
+    return { releasedTicketCount: 0 };
+  }
+
+  // Processar tots els chunks
+  for (let i = 0; i < chunks.length; i++) {
+    const ticketChunk = chunks[i];
+    const isLastChunk = i === chunks.length - 1;
+    const batch = writeBatch(firestore);
+
+    // Alliberar tiquets d'aquest chunk
+    for (const docId of ticketChunk) {
+      const ticketRef = pendingDocumentDoc(firestore, orgId, docId);
+      batch.update(ticketRef, {
+        reportId: null,
+        updatedAt: serverTimestamp(),
+      });
+    }
+
+    // Només l'últim batch esborra la liquidació
+    if (isLastChunk) {
+      batch.delete(ref);
+    }
+
+    await batch.commit();
+  }
+
+  return { releasedTicketCount: receiptDocIds.length };
 }
