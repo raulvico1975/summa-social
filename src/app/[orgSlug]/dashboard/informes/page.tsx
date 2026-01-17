@@ -3,6 +3,7 @@
 import { DonationsReportGenerator } from '@/components/donations-report-generator';
 import { SuppliersReportGenerator } from '@/components/suppliers-report-generator';
 import { DonationCertificateGenerator } from '@/components/donation-certificate-generator';
+import { ClosingBundleCard } from '@/components/reports/closing-bundle-card';
 import { useTranslations } from '@/i18n';
 
 export default function ReportsPage() {
@@ -16,6 +17,7 @@ export default function ReportsPage() {
       <DonationsReportGenerator />
       <SuppliersReportGenerator />
       <DonationCertificateGenerator />
+      <ClosingBundleCard />
     </div>
   );
 }
