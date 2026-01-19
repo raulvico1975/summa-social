@@ -1288,54 +1288,90 @@ export function DonationCertificateGenerator() {
                 <p className="text-gray-600">{t.certificates.pdf.fiscalYear(selectedYear)}</p>
               </div>
 
-              {/* Cos */}
+              {/* Cos - Alineat amb el PDF real */}
               <div className="space-y-4 text-sm">
+                {/* Introducció signant/entitat */}
                 <p>
-                  {t.certificates.pdf.orgIntro(orgData?.name || organization?.name || '', orgData?.taxId || organization?.taxId || 'N/A')}
-                  {' '}{t.certificates.pdf.nonProfit}
+                  {(() => {
+                    const orgName = orgData?.name || organization?.name || '';
+                    const orgTaxId = orgData?.taxId || organization?.taxId || 'N/A';
+                    const signerName = orgData?.signatoryName;
+                    const signerRole = orgData?.signatoryRole;
+                    const fullAddress = previewAddress;
+                    if (signerName && signerRole) {
+                      return fullAddress
+                        ? t.certificates.pdf.signerIntroWithAddress(signerName, signerRole, orgName, orgTaxId, fullAddress)
+                        : t.certificates.pdf.signerIntro(signerName, signerRole, orgName, orgTaxId);
+                    }
+                    return fullAddress
+                      ? t.certificates.pdf.orgIntroWithAddress(orgName, orgTaxId, fullAddress)
+                      : t.certificates.pdf.orgIntro(orgName, orgTaxId);
+                  })()}
                 </p>
-                
-                <p className="font-bold">{t.certificates.pdf.certifies}</p>
-                
+
+                <p className="font-bold text-center">{t.certificates.pdf.certifies}</p>
+
+                {/* Cos principal: donant + import + nombre de donacions */}
                 <p>
                   {(() => {
                     const donorName = cleanName(previewDonor.donor.name);
+                    const donorTaxId = previewDonor.donor.taxId || 'N/A';
                     const donorLocation = buildLocationString(previewDonor.donor.zipCode, previewDonor.donor.city, previewDonor.donor.province);
+                    const amountFormatted = formatCurrencyEU(previewDonor.totalAmount);
                     return donorLocation
-                      ? t.certificates.pdf.donorIntroWithAddress(donorName, previewDonor.donor.taxId, donorLocation)
-                      : t.certificates.pdf.donorIntro(donorName, previewDonor.donor.taxId);
+                      ? t.certificates.pdf.donorBodyWithAddress(donorName, donorTaxId, donorLocation, selectedYear, amountFormatted, previewDonor.donationCount)
+                      : t.certificates.pdf.donorBody(donorName, donorTaxId, selectedYear, amountFormatted, previewDonor.donationCount);
                   })()}
-                  {' '}{t.certificates.pdf.hasDonated(selectedYear)}
-                  {' '}{t.certificates.pdf.totalAmountIntro}
                 </p>
 
-                {/* Import total */}
-                <div className="text-center py-6">
-                  <p className="text-2xl font-bold text-green-600">
-                    {formatCurrencyEU(previewDonor.totalAmount)}
-                  </p>
-                  <p className="text-gray-500 italic">
-                    ({numberToWords(previewDonor.totalAmount)})
-                  </p>
-                </div>
+                {/* Clàusula d'irrevocabilitat */}
+                <p>{t.certificates.pdf.irrevocableClause}</p>
 
-                {/* Nota legal */}
-                <p className="text-xs italic text-gray-500 mt-6">
-                  {t.certificates.pdf.legalNote}
-                </p>
-
-                {/* Data i signatura */}
-                <div className="mt-8">
-                  <p>{t.certificates.pdf.dateLocation(
-                    orgData?.city || organization?.city || 'Lleida',
-                    new Date().getDate(),
-                    getMonthName(new Date().getMonth()),
-                    new Date().getFullYear()
-                  )}</p>
-                  <div className="mt-8">
-                    <p>{t.certificates.pdf.signature}</p>
-                    <div className="border-b border-gray-400 w-48 mt-8"></div>
+                {/* Bloc resum fiscal (només si hi ha devolucions) */}
+                {previewDonor.returnedAmount > 0 && (
+                  <div className="bg-gray-50 border border-gray-200 rounded p-3 text-xs">
+                    <p className="font-bold mb-1">{language === 'ca' ? 'Resum fiscal:' : 'Resumen fiscal:'}</p>
+                    <div className="flex justify-between">
+                      <span>{language === 'ca' ? 'Donacions rebudes:' : 'Donaciones recibidas:'}</span>
+                      <span>{formatCurrencyEU(previewDonor.grossAmount)}</span>
+                    </div>
+                    <div className="flex justify-between text-orange-600">
+                      <span>{language === 'ca' ? 'Devolucions efectuades:' : 'Devoluciones efectuadas:'}</span>
+                      <span>-{formatCurrencyEU(previewDonor.returnedAmount)}</span>
+                    </div>
+                    <div className="flex justify-between font-bold mt-1 pt-1 border-t border-gray-200">
+                      <span>{language === 'ca' ? 'Import net certificat:' : 'Importe neto certificado:'}</span>
+                      <span>{formatCurrencyEU(previewDonor.totalAmount)}</span>
+                    </div>
                   </div>
+                )}
+
+                {/* Fórmula d'expedició */}
+                <p>
+                  {(() => {
+                    const today = new Date();
+                    const dateFormatted = t.certificates.pdf.dateLocation(
+                      '',
+                      today.getDate(),
+                      getMonthName(today.getMonth()),
+                      today.getFullYear()
+                    ).replace(/^,\s*/, '');
+                    const issuePlace = orgData?.city || organization?.city;
+                    return issuePlace
+                      ? t.certificates.pdf.issuedForWithPlace(issuePlace, dateFormatted)
+                      : t.certificates.pdf.issuedFor(dateFormatted);
+                  })()}
+                </p>
+
+                {/* Nota legal Llei 49/2002 */}
+                <p className="text-xs italic text-gray-500 mt-4">
+                  {t.certificates.pdf.law49Note}
+                </p>
+
+                {/* Signatura */}
+                <div className="mt-6">
+                  <p>{t.certificates.pdf.signature}</p>
+                  <div className="border-b border-gray-400 w-48 mt-8"></div>
                 </div>
               </div>
 
