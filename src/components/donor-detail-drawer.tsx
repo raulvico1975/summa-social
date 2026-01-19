@@ -758,15 +758,17 @@ export function DonorDetailDrawer({ donor, open, onOpenChange, onEdit }: DonorDe
       if (donor.address) donorAddressParts.push(donor.address);
       const donorLocationPart = [donor.zipCode, donor.city, donor.province].filter(Boolean).join(' ');
       if (donorLocationPart) donorAddressParts.push(donorLocationPart);
-      const donorAddress = donorAddressParts.length > 0 ? donorAddressParts.join(', ') : '[Domicili no informat]';
-      const donationsText = yearDonations.length === 1 ? t.donorDetail.donation : t.donorDetail.donations;
-      const paragraph1 = `${t.donorDetail.certificate.thatDonor} ${donor.name} ${t.donorDetail.certificate.withNifCif} ${donor.taxId} ${t.donorDetail.certificate.andDomicile} ${donorAddress}, ${t.donorDetail.certificate.donatedAmount} ${formatCurrencyEU(netAmount)} (${yearDonations.length} ${donationsText}) ${t.donorDetail.certificate.hasDonatedYear} ${year} ${t.donorDetail.certificate.toTheEntity}`;
+      const donorAddress = donorAddressParts.length > 0 ? donorAddressParts.join(', ') : '';
+      // Usar plantilla institucional consistent amb el certificat massiu
+      const paragraph1 = donorAddress
+        ? t.certificates.pdf.donorBodyWithAddress(donor.name, donor.taxId || 'N/A', donorAddress, year, formatCurrencyEU(netAmount), yearDonations.length)
+        : t.certificates.pdf.donorBody(donor.name, donor.taxId || 'N/A', year, formatCurrencyEU(netAmount), yearDonations.length);
       const paragraph1Wrapped = doc.splitTextToSize(paragraph1, contentWidth);
       doc.text(paragraph1Wrapped, margin, y);
       y += paragraph1Wrapped.length * lineHeight + 6;
 
       // Segon paràgraf: Clàusula irrevocable
-      const paragraph2 = t.donorDetail.certificate.irrevocableClause;
+      const paragraph2 = t.certificates.pdf.irrevocableClause;
       const paragraph2Wrapped = doc.splitTextToSize(paragraph2, contentWidth);
       doc.text(paragraph2Wrapped, margin, y);
       y += paragraph2Wrapped.length * lineHeight + 6;
@@ -1260,14 +1262,16 @@ export function DonorDetailDrawer({ donor, open, onOpenChange, onEdit }: DonorDe
       if (donor.address) donorAddressParts.push(donor.address);
       const donorLocationPart = [donor.zipCode, donor.city, donor.province].filter(Boolean).join(' ');
       if (donorLocationPart) donorAddressParts.push(donorLocationPart);
-      const donorAddress = donorAddressParts.length > 0 ? donorAddressParts.join(', ') : '[Domicili no informat]';
-      const donationsText = yearDonations.length === 1 ? t.donorDetail.donation : t.donorDetail.donations;
-      const paragraph1 = `${t.donorDetail.certificate.thatDonor} ${donor.name} ${t.donorDetail.certificate.withNifCif} ${donor.taxId} ${t.donorDetail.certificate.andDomicile} ${donorAddress}, ${t.donorDetail.certificate.donatedAmount} ${formatCurrencyEU(netAmount)} (${yearDonations.length} ${donationsText}) ${t.donorDetail.certificate.hasDonatedYear} ${year} ${t.donorDetail.certificate.toTheEntity}`;
+      const donorAddress = donorAddressParts.length > 0 ? donorAddressParts.join(', ') : '';
+      // Usar plantilla institucional consistent amb el certificat massiu
+      const paragraph1 = donorAddress
+        ? t.certificates.pdf.donorBodyWithAddress(donor.name, donor.taxId || 'N/A', donorAddress, year, formatCurrencyEU(netAmount), yearDonations.length)
+        : t.certificates.pdf.donorBody(donor.name, donor.taxId || 'N/A', year, formatCurrencyEU(netAmount), yearDonations.length);
       const paragraph1Wrapped = doc.splitTextToSize(paragraph1, contentWidth);
       doc.text(paragraph1Wrapped, margin, y);
       y += paragraph1Wrapped.length * lineHeight + 6;
 
-      const paragraph2 = t.donorDetail.certificate.irrevocableClause;
+      const paragraph2 = t.certificates.pdf.irrevocableClause;
       const paragraph2Wrapped = doc.splitTextToSize(paragraph2, contentWidth);
       doc.text(paragraph2Wrapped, margin, y);
       y += paragraph2Wrapped.length * lineHeight + 6;
