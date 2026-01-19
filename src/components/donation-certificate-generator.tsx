@@ -434,6 +434,7 @@ export function DonationCertificateGenerator() {
     const pageWidth = doc.internal.pageSize.getWidth();
     const pageHeight = doc.internal.pageSize.getHeight();
     const margin = 20;
+    const textWidth = pageWidth - margin * 2;
     let y = margin;
 
     // Logo
@@ -491,7 +492,9 @@ export function DonationCertificateGenerator() {
     doc.line(margin, y, pageWidth - margin, y);
     y += 15;
 
-    // Títol del certificat
+    // ═══════════════════════════════════════════════════════════════════════════
+    // TÍTOL I SUBTÍTOL
+    // ═══════════════════════════════════════════════════════════════════════════
     doc.setFontSize(16);
     doc.setFont('helvetica', 'bold');
     doc.text(t.certificates.pdf.title, pageWidth / 2, y, { align: 'center' });
@@ -499,59 +502,72 @@ export function DonationCertificateGenerator() {
     doc.setFontSize(12);
     doc.setFont('helvetica', 'normal');
     doc.text(t.certificates.pdf.fiscalYear(selectedYear), pageWidth / 2, y, { align: 'center' });
-    y += 20;
+    y += 18;
 
-    // Cos del certificat
-    doc.setFontSize(11);
-    const lineHeight = 7;
+    // ═══════════════════════════════════════════════════════════════════════════
+    // COS DEL CERTIFICAT - Nova estructura institucional
+    // ═══════════════════════════════════════════════════════════════════════════
+    const lineHeight = 6;
     const orgName = orgData?.name || organization?.name || '';
     const orgTaxId = orgData?.taxId || organization?.taxId || 'N/A';
+    const signerName = orgData?.signatoryName;
+    const signerRole = orgData?.signatoryRole;
     const donorName = cleanName(summary.donor.name);
-
-    doc.text(t.certificates.pdf.orgIntro(orgName, orgTaxId), margin, y);
-    y += lineHeight;
-    doc.text(t.certificates.pdf.nonProfit, margin, y);
-    y += lineHeight * 2;
-
-    doc.setFont('helvetica', 'bold');
-    doc.text(t.certificates.pdf.certifies, margin, y);
-    y += lineHeight * 2;
-
-    doc.setFont('helvetica', 'normal');
-    // Construir adreça completa del donant (CP + ciutat + província, sense duplicats)
+    const donorTaxId = summary.donor.taxId || 'N/A';
     const donorLocation = buildLocationString(summary.donor.zipCode, summary.donor.city, summary.donor.province);
-    const donorIntroText = donorLocation
-      ? t.certificates.pdf.donorIntroWithAddress(donorName, summary.donor.taxId, donorLocation)
-      : t.certificates.pdf.donorIntro(donorName, summary.donor.taxId);
-    doc.text(donorIntroText, margin, y);
-    y += lineHeight;
-    doc.text(t.certificates.pdf.hasDonated(selectedYear), margin, y);
-    y += lineHeight;
-    doc.text(t.certificates.pdf.totalAmountIntro, margin, y);
-    y += lineHeight * 2;
+    const amountFormatted = formatCurrencyEU(summary.totalAmount);
 
-    // Import total (en gran)
-    doc.setFontSize(14);
+    // 1. Introducció del signant/entitat
+    doc.setFontSize(11);
+    doc.setFont('helvetica', 'normal');
+
+    let introText: string;
+    if (signerName && signerRole) {
+      // Amb signant i domicili social
+      introText = fullAddress
+        ? t.certificates.pdf.signerIntroWithAddress(signerName, signerRole, orgName, orgTaxId, fullAddress)
+        : t.certificates.pdf.signerIntro(signerName, signerRole, orgName, orgTaxId);
+    } else {
+      // Sense signant (fallback)
+      introText = fullAddress
+        ? t.certificates.pdf.orgIntroWithAddress(orgName, orgTaxId, fullAddress)
+        : t.certificates.pdf.orgIntro(orgName, orgTaxId);
+    }
+    const introLines = doc.splitTextToSize(introText, textWidth);
+    doc.text(introLines, margin, y);
+    y += introLines.length * lineHeight + 8;
+
+    // 2. CERTIFICA
+    doc.setFontSize(12);
     doc.setFont('helvetica', 'bold');
-    doc.text(formatCurrencyEU(summary.totalAmount), pageWidth / 2, y, { align: 'center' });
-    y += lineHeight;
-    doc.setFontSize(10);
-    doc.setFont('helvetica', 'italic');
-    doc.text(`(${numberToWords(summary.totalAmount)})`, pageWidth / 2, y, { align: 'center' });
-    y += lineHeight * 2;
+    doc.text(t.certificates.pdf.certifies, pageWidth / 2, y, { align: 'center' });
+    y += 10;
+
+    // 3. Cos principal: donant + import + nombre de donacions
+    doc.setFontSize(11);
+    doc.setFont('helvetica', 'normal');
+    const donorBodyText = donorLocation
+      ? t.certificates.pdf.donorBodyWithAddress(donorName, donorTaxId, donorLocation, selectedYear, amountFormatted, summary.donationCount)
+      : t.certificates.pdf.donorBody(donorName, donorTaxId, selectedYear, amountFormatted, summary.donationCount);
+    const donorBodyLines = doc.splitTextToSize(donorBodyText, textWidth);
+    doc.text(donorBodyLines, margin, y);
+    y += donorBodyLines.length * lineHeight + 6;
+
+    // 4. Clàusula d'irrevocabilitat
+    const irrevocableLines = doc.splitTextToSize(t.certificates.pdf.irrevocableClause, textWidth);
+    doc.text(irrevocableLines, margin, y);
+    y += irrevocableLines.length * lineHeight + 6;
 
     // ═══════════════════════════════════════════════════════════════════════════
     // BLOC DE RESUM FISCAL (només si hi ha devolucions)
-    // Mostra explícitament: Brut - Devolucions = Net
     // ═══════════════════════════════════════════════════════════════════════════
     if (summary.returnedAmount > 0) {
-      y += lineHeight;
+      y += 4;
       doc.setFontSize(9);
       doc.setFont('helvetica', 'normal');
       doc.setDrawColor(200);
       doc.setFillColor(250, 250, 250);
 
-      // Requadre del resum
       const boxX = margin + 20;
       const boxWidth = pageWidth - margin * 2 - 40;
       const boxHeight = 32;
@@ -559,52 +575,64 @@ export function DonationCertificateGenerator() {
 
       y += 6;
       doc.setFont('helvetica', 'bold');
-      doc.text('Resum fiscal:', boxX + 5, y);
+      doc.text(language === 'ca' ? 'Resum fiscal:' : 'Resumen fiscal:', boxX + 5, y);
       y += lineHeight;
 
       doc.setFont('helvetica', 'normal');
       const col1 = boxX + 5;
       const col2 = boxX + boxWidth - 5;
 
-      doc.text('Donacions rebudes:', col1, y);
+      doc.text(language === 'ca' ? 'Donacions rebudes:' : 'Donaciones recibidas:', col1, y);
       doc.text(formatCurrencyEU(summary.grossAmount), col2, y, { align: 'right' });
       y += lineHeight;
 
-      doc.text('Devolucions efectuades:', col1, y);
+      doc.text(language === 'ca' ? 'Devolucions efectuades:' : 'Devoluciones efectuadas:', col1, y);
       doc.text(`-${formatCurrencyEU(summary.returnedAmount)}`, col2, y, { align: 'right' });
       y += lineHeight;
 
       doc.setFont('helvetica', 'bold');
-      doc.text('Import net certificat:', col1, y);
+      doc.text(language === 'ca' ? 'Import net certificat:' : 'Importe neto certificado:', col1, y);
       doc.text(formatCurrencyEU(summary.totalAmount), col2, y, { align: 'right' });
 
-      y += lineHeight * 2;
-    } else {
-      y += lineHeight;
+      y += lineHeight + 8;
     }
 
-    // Nota legal
-    doc.setFontSize(9);
-    doc.setFont('helvetica', 'italic');
-    const notaLines = doc.splitTextToSize(t.certificates.pdf.legalNote, pageWidth - margin * 2);
-    doc.text(notaLines, margin, y);
-    y += notaLines.length * 5 + 15;
-
-    // Data i lloc
-    const today = new Date();
-    const city = orgData?.city || organization?.city || 'Lleida';
-    const dateText = t.certificates.pdf.dateLocation(city, today.getDate(), getMonthName(today.getMonth()), today.getFullYear());
+    // 5. Fórmula d'expedició (data i lloc)
     doc.setFontSize(11);
     doc.setFont('helvetica', 'normal');
-    doc.text(dateText, margin, y);
-    y += lineHeight * 3;
+    const today = new Date();
+    const dateFormatted = t.certificates.pdf.dateLocation(
+      '',
+      today.getDate(),
+      getMonthName(today.getMonth()),
+      today.getFullYear()
+    ).replace(/^,\s*/, ''); // Treure la coma inicial si no hi ha ciutat
 
-    // Signatura
+    const issuePlace = orgData?.city || organization?.city;
+    const issuedForText = issuePlace
+      ? t.certificates.pdf.issuedForWithPlace(issuePlace, dateFormatted)
+      : t.certificates.pdf.issuedFor(dateFormatted);
+    const issuedForLines = doc.splitTextToSize(issuedForText, textWidth);
+    doc.text(issuedForLines, margin, y);
+    y += issuedForLines.length * lineHeight + 8;
+
+    // 6. Nota legal Llei 49/2002
+    doc.setFontSize(9);
+    doc.setFont('helvetica', 'italic');
+    const law49Lines = doc.splitTextToSize(t.certificates.pdf.law49Note, textWidth);
+    doc.text(law49Lines, margin, y);
+    y += law49Lines.length * 5 + 12;
+
+    // 7. Signatura
+    doc.setFontSize(11);
+    doc.setFont('helvetica', 'normal');
     doc.text(t.certificates.pdf.signature, margin, y);
     y += lineHeight * 4;
     doc.line(margin, y, margin + 60, y);
 
-    // Peu de pàgina
+    // ═══════════════════════════════════════════════════════════════════════════
+    // PEU DE PÀGINA
+    // ═══════════════════════════════════════════════════════════════════════════
     const footerY = pageHeight - 15;
     doc.setFontSize(8);
     doc.setFont('helvetica', 'normal');
