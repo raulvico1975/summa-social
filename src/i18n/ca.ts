@@ -332,6 +332,16 @@ export const ca = {
       exportFiltered: "Exportar filtrats",
       exportSuccess: "Excel exportat",
       exportedCount: (count: number) => `S'han exportat ${count} moviments.`,
+      // Verificació de saldo bancari
+      balanceCheck: {
+        initialBalance: "Saldo inicial (banc)",
+        variation: "Variació (moviments)",
+        finalBalance: "Saldo final (banc)",
+        balanced: "Quadrat",
+        discrepancy: (amount: string) => `Desquadrament: ${amount}`,
+        incomplete: "Saldo parcial",
+        incompleteTooltip: "El banc no declara saldo per totes les files del període. No es pot verificar el quadre.",
+      },
       // Columnes export Excel
       exportColumns: {
         date: "Data",
@@ -830,6 +840,8 @@ export const ca = {
         cannotProcessContent: "No s'ha pogut processar el contingut de l'arxiu.",
         aiQuotaExceeded: "Límit d'IA excedit",
         aiQuotaExceededDescription: "S'ha superat el límit de peticions a la IA. La importació continuarà sense assignació automàtica de contactes. Hauràs de categoritzar manualment. Contacta amb l'administrador si aquest problema persisteix.",
+        balanceInconsistent: "L'extracte no és consistent",
+        balanceInconsistentRow: (row: number, detail: string) => `Fila ${row}: ${detail}`,
       },
       importSuccess: "Importació Exitosa",
       importSuccessDescription: (imported: number, mode: string, duplicates: number) =>
@@ -1418,24 +1430,53 @@ export const ca = {
     allCertificatesGeneratedDescription: (count: number) => `S'han descarregat ${count} certificats.`,
     errorNoDonorSelected: "Selecciona almenys un donant.",
     pdf: {
-      title: "CERTIFICAT DE DONACIÓ",
-      fiscalYear: (year: string) => `Any fiscal ${year}`,
+      // Títol i subtítol
+      title: "CERTIFICAT ANUAL DE DONACIONS",
+      fiscalYear: (year: string) => `Exercici fiscal ${year}`,
+      // Introducció signant (amb domicili social)
+      signerIntroWithAddress: (signerName: string, signerRole: string, orgName: string, taxId: string, address: string) =>
+        `${signerName}, en qualitat de ${signerRole} de ${orgName}, amb CIF ${taxId} i domicili social a ${address},`,
+      // Introducció signant (sense domicili social)
+      signerIntro: (signerName: string, signerRole: string, orgName: string, taxId: string) =>
+        `${signerName}, en qualitat de ${signerRole} de ${orgName}, amb CIF ${taxId},`,
+      // Fallback sense signant
+      orgIntroWithAddress: (orgName: string, taxId: string, address: string) =>
+        `${orgName}, amb CIF ${taxId} i domicili social a ${address},`,
       orgIntro: (orgName: string, taxId: string) => `${orgName}, amb CIF ${taxId},`,
+      // CERTIFICA
+      certifies: "CERTIFICA",
+      // Cos principal: donant amb adreça
+      donorBodyWithAddress: (donorName: string, donorTaxId: string, donorAddress: string, year: string, amount: string, count: number) =>
+        `Que ${donorName}, amb NIF/CIF ${donorTaxId} i domicili a ${donorAddress}, ha efectuat donacions dineràries a favor d'aquesta entitat durant l'exercici fiscal ${year}, per un import total de ${amount}, corresponent a ${count} ${count === 1 ? 'donació' : 'donacions'}.`,
+      // Cos principal: donant sense adreça
+      donorBody: (donorName: string, donorTaxId: string, year: string, amount: string, count: number) =>
+        `Que ${donorName}, amb NIF/CIF ${donorTaxId}, ha efectuat donacions dineràries a favor d'aquesta entitat durant l'exercici fiscal ${year}, per un import total de ${amount}, corresponent a ${count} ${count === 1 ? 'donació' : 'donacions'}.`,
+      // Clàusula d'irrevocabilitat
+      irrevocableClause: "Que aquestes donacions han estat realitzades amb caràcter irrevocable, sense contraprestació, i s'han destinat íntegrament al compliment dels fins socials de l'entitat.",
+      // Fórmula d'expedició (amb lloc)
+      issuedForWithPlace: (place: string, date: string) =>
+        `I perquè així consti, als efectes previstos a la normativa fiscal vigent, s'expedeix el present certificat a ${place}, a ${date}.`,
+      // Fórmula d'expedició (sense lloc)
+      issuedFor: (date: string) =>
+        `I perquè així consti, als efectes previstos a la normativa fiscal vigent, s'expedeix el present certificat a ${date}.`,
+      // Nota legal Llei 49/2002
+      law49Note: "Aquesta entitat està acollida al règim fiscal especial previst a la Llei 49/2002, de 23 de desembre, de règim fiscal de les entitats sense finalitats lucratives i dels incentius fiscals al mecenatge, motiu pel qual les donacions indicades donen dret a les deduccions fiscals establertes en aquesta llei.",
+      // Signatura
+      signature: "Signatura:",
+      // Camps legacy (per compatibilitat amb preview i altres usos)
       nonProfit: "entitat sense ànim de lucre,",
-      certifies: "CERTIFICA:",
       donorIntro: (donorName: string, taxId: string) =>
         `Que ${donorName}, amb DNI/CIF ${taxId},`,
       donorIntroWithAddress: (donorName: string, taxId: string, location: string) =>
         `Que ${donorName}, amb DNI/CIF ${taxId}, domiciliat/da a ${location},`,
-      hasDonated: (year: string) => 
+      hasDonated: (year: string) =>
         `ha realitzat donacions a aquesta entitat durant l'any ${year}`,
       totalAmountIntro: "per un import total de:",
       donationDetails: "Detall de les donacions:",
       returnsDiscounted: "Devolucions descomptades:",
       legalNote: "Aquest certificat s'emet a efectes de la deducció prevista a l'article 68.3 de la Llei 35/2006, de l'Impost sobre la Renda de les Persones Físiques, i a l'article 20 de la Llei 49/2002, de Règim fiscal de les entitats sense fins lucratius.",
-      dateLocation: (city: string, day: number, month: string, year: number) => 
+      dateLocation: (city: string, day: number, month: string, year: number) =>
         `${city}, ${day} de ${month} de ${year}`,
-      signature: "Signatura i segell:",
     },
     returnsDetected: "Devolucions detectades",
     returnsDetectedDescription: (count: number) => 

@@ -332,6 +332,16 @@ export const es = {
       exportFiltered: "Exportar filtrados",
       exportSuccess: "Excel exportado",
       exportedCount: (count: number) => `Se han exportado ${count} movimientos.`,
+      // Verificació de saldo bancari
+      balanceCheck: {
+        initialBalance: "Saldo inicial (banco)",
+        variation: "Variación (movimientos)",
+        finalBalance: "Saldo final (banco)",
+        balanced: "Cuadrado",
+        discrepancy: (amount: string) => `Descuadre: ${amount}`,
+        incomplete: "Saldo parcial",
+        incompleteTooltip: "El banco no declara saldo para todas las filas del período. No se puede verificar el cuadre.",
+      },
       // Columnas export Excel
       exportColumns: {
         date: "Fecha",
@@ -830,6 +840,8 @@ export const es = {
         cannotProcessContent: "No se pudo procesar el contenido del archivo.",
         aiQuotaExceeded: "Límite de IA excedido",
         aiQuotaExceededDescription: "Se ha superado el límite de peticiones a la IA. La importación continuará sin asignación automática de contactos. Deberás categorizar manualmente. Contacta con el administrador si este problema persiste.",
+        balanceInconsistent: "El extracto no es consistente",
+        balanceInconsistentRow: (row: number, detail: string) => `Fila ${row}: ${detail}`,
       },
       importSuccess: "Importación Exitosa",
       importSuccessDescription: (imported: number, mode: string, duplicates: number) =>
@@ -1450,24 +1462,53 @@ export const es = {
     allCertificatesGeneratedDescription: (count: number) => `Se han descargado ${count} certificados.`,
     errorNoDonorSelected: "Selecciona al menos un donante.",
     pdf: {
-      title: "CERTIFICADO DE DONACIÓN",
-      fiscalYear: (year: string) => `Año fiscal ${year}`,
+      // Títol i subtítol
+      title: "CERTIFICADO ANUAL DE DONACIONES",
+      fiscalYear: (year: string) => `Ejercicio fiscal ${year}`,
+      // Introducció signant (amb domicili social)
+      signerIntroWithAddress: (signerName: string, signerRole: string, orgName: string, taxId: string, address: string) =>
+        `${signerName}, en calidad de ${signerRole} de ${orgName}, con CIF ${taxId} y domicilio social en ${address},`,
+      // Introducció signant (sense domicili social)
+      signerIntro: (signerName: string, signerRole: string, orgName: string, taxId: string) =>
+        `${signerName}, en calidad de ${signerRole} de ${orgName}, con CIF ${taxId},`,
+      // Fallback sense signant
+      orgIntroWithAddress: (orgName: string, taxId: string, address: string) =>
+        `${orgName}, con CIF ${taxId} y domicilio social en ${address},`,
       orgIntro: (orgName: string, taxId: string) => `${orgName}, con CIF ${taxId},`,
+      // CERTIFICA
+      certifies: "CERTIFICA",
+      // Cos principal: donant amb adreça
+      donorBodyWithAddress: (donorName: string, donorTaxId: string, donorAddress: string, year: string, amount: string, count: number) =>
+        `Que ${donorName}, con NIF/CIF ${donorTaxId} y domicilio en ${donorAddress}, ha realizado donaciones dinerarias a favor de esta entidad durante el ejercicio fiscal ${year}, por un importe total de ${amount}, correspondiente a ${count} ${count === 1 ? 'donación' : 'donaciones'}.`,
+      // Cos principal: donant sense adreça
+      donorBody: (donorName: string, donorTaxId: string, year: string, amount: string, count: number) =>
+        `Que ${donorName}, con NIF/CIF ${donorTaxId}, ha realizado donaciones dinerarias a favor de esta entidad durante el ejercicio fiscal ${year}, por un importe total de ${amount}, correspondiente a ${count} ${count === 1 ? 'donación' : 'donaciones'}.`,
+      // Clàusula d'irrevocabilitat
+      irrevocableClause: "Que dichas donaciones han sido efectuadas con carácter irrevocable, sin contraprestación, y han sido destinadas íntegramente al cumplimiento de los fines sociales de la entidad.",
+      // Fórmula d'expedició (amb lloc)
+      issuedForWithPlace: (place: string, date: string) =>
+        `Y para que así conste, a los efectos previstos en la normativa fiscal vigente, se expide el presente certificado en ${place}, a ${date}.`,
+      // Fórmula d'expedició (sense lloc)
+      issuedFor: (date: string) =>
+        `Y para que así conste, a los efectos previstos en la normativa fiscal vigente, se expide el presente certificado a ${date}.`,
+      // Nota legal Llei 49/2002
+      law49Note: "Esta entidad se encuentra acogida al régimen fiscal especial previsto en la Ley 49/2002, de 23 de diciembre, de régimen fiscal de las entidades sin fines lucrativos y de los incentivos fiscales al mecenazgo, por lo que las donaciones indicadas dan derecho a las deducciones fiscales establecidas en dicha ley.",
+      // Signatura
+      signature: "Firma:",
+      // Camps legacy (per compatibilitat amb preview i altres usos)
       nonProfit: "entidad sin ánimo de lucro,",
-      certifies: "CERTIFICA:",
       donorIntro: (donorName: string, taxId: string) =>
         `Que ${donorName}, con DNI/CIF ${taxId},`,
       donorIntroWithAddress: (donorName: string, taxId: string, location: string) =>
         `Que ${donorName}, con DNI/CIF ${taxId}, domiciliado/a en ${location},`,
-      hasDonated: (year: string) => 
+      hasDonated: (year: string) =>
         `ha realizado donaciones a esta entidad durante el año ${year}`,
       totalAmountIntro: "por un importe total de:",
       donationDetails: "Detalle de las donaciones:",
       returnsDiscounted: "Devoluciones descontadas:",
       legalNote: "Este certificado se emite a efectos de la deducción prevista en el artículo 68.3 de la Ley 35/2006, del Impuesto sobre la Renta de las Personas Físicas, y en el artículo 20 de la Ley 49/2002, de Régimen fiscal de las entidades sin fines lucrativos.",
-      dateLocation: (city: string, day: number, month: string, year: number) => 
+      dateLocation: (city: string, day: number, month: string, year: number) =>
         `${city}, a ${day} de ${month} de ${year}`,
-      signature: "Firma y sello:",
     },
     returnsDetected: "Devoluciones detectadas",
     returnsDetectedDescription: (count: number) => 
