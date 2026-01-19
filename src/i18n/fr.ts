@@ -3075,6 +3075,8 @@ export const fr = {
       archived: "Note de frais archivée",
       restored: "Note de frais restaurée",
       deleted: "Note de frais supprimée",
+      ticketsReleased: (params: { count: number }) =>
+        `${params.count} ticket${params.count !== 1 ? 's' : ''} récupéré${params.count !== 1 ? 's' : ''}.`,
       error: "Erreur",
       errorCreate: "Impossible de créer la note de frais.",
       errorArchive: "Impossible d'archiver.",
@@ -3085,7 +3087,9 @@ export const fr = {
     },
     confirmDelete: {
       title: "Supprimer la note de frais ?",
-      description: "Cette action est irréversible. Les données de la note de frais seront supprimées mais les tickets associés seront conservés.",
+      description: "Cette action est irréversible. Les données de la note de frais seront supprimées.",
+      ticketsWarning: (params: { count: number }) =>
+        `Cette note de frais a ${params.count} ticket${params.count !== 1 ? 's' : ''} lié${params.count !== 1 ? 's' : ''}. Ils redeviendront disponibles pour attribution.`,
       cancel: "Annuler",
       confirm: "Supprimer",
     },

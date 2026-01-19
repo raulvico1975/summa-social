@@ -24,6 +24,21 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/tooltip';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import { useIsMobile } from '@/hooks/use-is-mobile';
+import { MOBILE_CTA_PRIMARY } from '@/lib/ui/mobile-actions';
 import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
 import {
@@ -35,6 +50,7 @@ import {
   Loader2,
   CheckCheck,
   CreditCard,
+  MoreVertical,
 } from 'lucide-react';
 import { Checkbox } from '@/components/ui/checkbox';
 import Link from 'next/link';
@@ -74,6 +90,7 @@ export default function PendingDocsPage() {
   const router = useRouter();
   const { toast } = useToast();
   const { t } = useTranslations();
+  const isMobile = useIsMobile();
 
   // Feature flag check - redirect if not enabled
   const isPendingDocsEnabled = organization?.features?.pendingDocs ?? false;
@@ -500,7 +517,7 @@ export default function PendingDocsPage() {
     <TooltipProvider>
       <div
         ref={topRef}
-        className="w-full flex flex-col gap-6 relative"
+        className="w-full flex flex-col gap-6 relative pb-24 md:pb-0"
         onDragOver={handlePageDragOver}
         onDragLeave={handlePageDragLeave}
         onDrop={handlePageDrop}
@@ -529,9 +546,9 @@ export default function PendingDocsPage() {
               </Link>
             </Button>
           </div>
-          <div className="flex items-center justify-between">
+          <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
             <div>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 flex-wrap">
                 <h1 className="text-2xl font-bold tracking-tight font-headline">
                   {t.pendingDocs.title}
                 </h1>
@@ -545,35 +562,75 @@ export default function PendingDocsPage() {
             </div>
             {canOperate && (
               <div className="flex items-center gap-2">
-                {/* Botó SEPA quan hi ha selecció */}
-                {selectedDocs.length > 0 && (
-                  <Button
-                    onClick={() => setIsSepaModalOpen(true)}
-                    className="bg-purple-600 hover:bg-purple-700"
-                  >
-                    <CreditCard className="mr-2 h-4 w-4" />
-                    {t.pendingDocs.actions.generateSepa} ({selectedDocs.length})
-                  </Button>
-                )}
-                {/* Botó "Confirmar totes" només a la pestanya "Per revisar" */}
-                {isFilterActive(DRAFTS_FILTER) && readyDrafts.length > 0 && selectedDocs.length === 0 && (
-                  <Button
-                    variant="outline"
-                    onClick={handleBulkConfirm}
-                    disabled={isBulkConfirming}
-                  >
-                    {isBulkConfirming ? (
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    ) : (
-                      <CheckCheck className="mr-2 h-4 w-4" />
+                {isMobile ? (
+                  <>
+                    {/* CTA principal en mòbil */}
+                    <Button onClick={() => setIsUploadModalOpen(true)} className={MOBILE_CTA_PRIMARY}>
+                      <Upload className="mr-2 h-4 w-4" />
+                      {t.pendingDocs.actions.upload}
+                    </Button>
+                    {/* Accions secundàries a overflow menu */}
+                    {(selectedDocs.length > 0 || (isFilterActive(DRAFTS_FILTER) && readyDrafts.length > 0)) && (
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="outline" size="icon">
+                            <MoreVertical className="h-4 w-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          {selectedDocs.length > 0 && (
+                            <DropdownMenuItem onClick={() => setIsSepaModalOpen(true)}>
+                              <CreditCard className="mr-2 h-4 w-4" />
+                              {t.pendingDocs.actions.generateSepa} ({selectedDocs.length})
+                            </DropdownMenuItem>
+                          )}
+                          {isFilterActive(DRAFTS_FILTER) && readyDrafts.length > 0 && selectedDocs.length === 0 && (
+                            <DropdownMenuItem onClick={handleBulkConfirm} disabled={isBulkConfirming}>
+                              {isBulkConfirming ? (
+                                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                              ) : (
+                                <CheckCheck className="mr-2 h-4 w-4" />
+                              )}
+                              {t.pendingDocs.actions.confirmAll} ({readyDrafts.length})
+                            </DropdownMenuItem>
+                          )}
+                        </DropdownMenuContent>
+                      </DropdownMenu>
                     )}
-                    {t.pendingDocs.actions.confirmAll} ({readyDrafts.length})
-                  </Button>
+                  </>
+                ) : (
+                  <>
+                    {/* Botó SEPA quan hi ha selecció */}
+                    {selectedDocs.length > 0 && (
+                      <Button
+                        onClick={() => setIsSepaModalOpen(true)}
+                        className="bg-purple-600 hover:bg-purple-700"
+                      >
+                        <CreditCard className="mr-2 h-4 w-4" />
+                        {t.pendingDocs.actions.generateSepa} ({selectedDocs.length})
+                      </Button>
+                    )}
+                    {/* Botó "Confirmar totes" només a la pestanya "Per revisar" */}
+                    {isFilterActive(DRAFTS_FILTER) && readyDrafts.length > 0 && selectedDocs.length === 0 && (
+                      <Button
+                        variant="outline"
+                        onClick={handleBulkConfirm}
+                        disabled={isBulkConfirming}
+                      >
+                        {isBulkConfirming ? (
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        ) : (
+                          <CheckCheck className="mr-2 h-4 w-4" />
+                        )}
+                        {t.pendingDocs.actions.confirmAll} ({readyDrafts.length})
+                      </Button>
+                    )}
+                    <Button onClick={() => setIsUploadModalOpen(true)}>
+                      <Upload className="mr-2 h-4 w-4" />
+                      {t.pendingDocs.actions.upload}
+                    </Button>
+                  </>
                 )}
-                <Button onClick={() => setIsUploadModalOpen(true)}>
-                  <Upload className="mr-2 h-4 w-4" />
-                  {t.pendingDocs.actions.upload}
-                </Button>
               </div>
             )}
           </div>
@@ -609,39 +666,70 @@ export default function PendingDocsPage() {
         )}
 
         {/* Tabs de filtre (exclusius) */}
-        <div className="flex items-center gap-2 border-b pb-2">
-          <Button
-            variant={isFilterActive(DRAFTS_FILTER) ? 'secondary' : 'ghost'}
-            size="sm"
-            onClick={() => setStatusFilter(DRAFTS_FILTER)}
+        {isMobile ? (
+          <Select
+            value={
+              isFilterActive(DRAFTS_FILTER) ? 'drafts' :
+              isFilterActive(PENDING_FILTER) ? 'pending' :
+              isFilterActive('matched') ? 'matched' : 'archived'
+            }
+            onValueChange={(value) => {
+              switch (value) {
+                case 'drafts': setStatusFilter(DRAFTS_FILTER); break;
+                case 'pending': setStatusFilter(PENDING_FILTER); break;
+                case 'matched': setStatusFilter('matched'); break;
+                case 'archived': setStatusFilter('archived'); break;
+              }
+            }}
           >
-            {t.pendingDocs.tabs.review}
-            {drafts.length > 0 && (
-              <Badge variant="outline" className="ml-2">{drafts.length}</Badge>
-            )}
-          </Button>
-          <Button
-            variant={isFilterActive(PENDING_FILTER) ? 'secondary' : 'ghost'}
-            size="sm"
-            onClick={() => setStatusFilter(PENDING_FILTER)}
-          >
-            {t.pendingDocs.tabs.bankPending}
-          </Button>
-          <Button
-            variant={isFilterActive('matched') ? 'secondary' : 'ghost'}
-            size="sm"
-            onClick={() => setStatusFilter('matched')}
-          >
-            {t.pendingDocs.tabs.reconciled}
-          </Button>
-          <Button
-            variant={isFilterActive('archived') ? 'secondary' : 'ghost'}
-            size="sm"
-            onClick={() => setStatusFilter('archived')}
-          >
-            {t.pendingDocs.tabs.archived}
-          </Button>
-        </div>
+            <SelectTrigger className="w-full">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="drafts">
+                {t.pendingDocs.tabs.review}
+                {drafts.length > 0 && ` (${drafts.length})`}
+              </SelectItem>
+              <SelectItem value="pending">{t.pendingDocs.tabs.bankPending}</SelectItem>
+              <SelectItem value="matched">{t.pendingDocs.tabs.reconciled}</SelectItem>
+              <SelectItem value="archived">{t.pendingDocs.tabs.archived}</SelectItem>
+            </SelectContent>
+          </Select>
+        ) : (
+          <div className="flex items-center gap-2 border-b pb-2">
+            <Button
+              variant={isFilterActive(DRAFTS_FILTER) ? 'secondary' : 'ghost'}
+              size="sm"
+              onClick={() => setStatusFilter(DRAFTS_FILTER)}
+            >
+              {t.pendingDocs.tabs.review}
+              {drafts.length > 0 && (
+                <Badge variant="outline" className="ml-2">{drafts.length}</Badge>
+              )}
+            </Button>
+            <Button
+              variant={isFilterActive(PENDING_FILTER) ? 'secondary' : 'ghost'}
+              size="sm"
+              onClick={() => setStatusFilter(PENDING_FILTER)}
+            >
+              {t.pendingDocs.tabs.bankPending}
+            </Button>
+            <Button
+              variant={isFilterActive('matched') ? 'secondary' : 'ghost'}
+              size="sm"
+              onClick={() => setStatusFilter('matched')}
+            >
+              {t.pendingDocs.tabs.reconciled}
+            </Button>
+            <Button
+              variant={isFilterActive('archived') ? 'secondary' : 'ghost'}
+              size="sm"
+              onClick={() => setStatusFilter('archived')}
+            >
+              {t.pendingDocs.tabs.archived}
+            </Button>
+          </div>
+        )}
 
         {/* Panell de filtres */}
         <PendingDocumentsFilterPanel

@@ -3115,6 +3115,8 @@ export const ca = {
       archived: "Liquidació arxivada",
       restored: "Liquidació restaurada",
       deleted: "Liquidació esborrada",
+      ticketsReleased: (params: { count: number }) =>
+        `${params.count} tiquet${params.count !== 1 ? 's' : ''} recuperat${params.count !== 1 ? 's' : ''}.`,
       submittedSuccess: "Liquidació marcada com enviada",
       submittedError: "Error en marcar com enviada",
       error: "Error",
@@ -3125,7 +3127,9 @@ export const ca = {
     },
     confirmDelete: {
       title: "Esborrar liquidació?",
-      description: "Aquesta acció no es pot desfer. S'esborraran les dades de la liquidació però els tiquets associats es mantindran.",
+      description: "Aquesta acció no es pot desfer. S'esborraran les dades de la liquidació.",
+      ticketsWarning: (params: { count: number }) =>
+        `Aquesta liquidació té ${params.count} tiquet${params.count !== 1 ? 's' : ''} vinculat${params.count !== 1 ? 's' : ''}. Tornaran a estar disponibles per assignar.`,
       cancel: "Cancel·la",
       confirm: "Esborrar",
     },

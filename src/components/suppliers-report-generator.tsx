@@ -33,6 +33,10 @@ import { useCollection, useFirebase, useMemoFirebase } from '@/firebase';
 import { collection } from 'firebase/firestore';
 import { useTranslations } from '@/i18n';
 import { useCurrentOrganization } from '@/hooks/organization-provider';
+import { useIsMobile } from '@/hooks/use-is-mobile';
+import { MobileListItem } from '@/components/mobile/mobile-list-item';
+import { cn } from '@/lib/utils';
+import { MOBILE_ACTIONS_BAR, MOBILE_CTA_PRIMARY } from '@/lib/ui/mobile-actions';
 
 // Llindar legal del Model 347: 3.005,06€
 const THRESHOLD_347 = 3005.06;
@@ -53,6 +57,7 @@ export function SuppliersReportGenerator() {
   const { firestore } = useFirebase();
   const { organizationId } = useCurrentOrganization();
   const { t } = useTranslations();
+  const isMobile = useIsMobile();
 
   const transactionsQuery = useMemoFirebase(
     () => organizationId ? collection(firestore, 'organizations', organizationId, 'transactions') : null,
@@ -225,9 +230,9 @@ export function SuppliersReportGenerator() {
                 </CardTitle>
                 <CardDescription>{t.reports.suppliersReportDescription}</CardDescription>
               </div>
-              <div className="flex gap-2">
+              <div className={cn(MOBILE_ACTIONS_BAR, "sm:justify-end")}>
                 <Select value={selectedYear} onValueChange={setSelectedYear}>
-                    <SelectTrigger className="w-[180px]">
+                    <SelectTrigger className={MOBILE_CTA_PRIMARY}>
                         <SelectValue placeholder={t.reports.selectYear} />
                     </SelectTrigger>
                     <SelectContent>
@@ -236,11 +241,11 @@ export function SuppliersReportGenerator() {
                         ))}
                     </SelectContent>
                 </Select>
-                <Button onClick={handleGenerateReport} disabled={isLoading}>
+                <Button onClick={handleGenerateReport} disabled={isLoading} className={MOBILE_CTA_PRIMARY}>
                     {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                     {t.reports.generate}
                 </Button>
-                <Button variant="outline" onClick={handleExportCSV} disabled={includedReportData.length === 0}>
+                <Button variant="outline" onClick={handleExportCSV} disabled={includedReportData.length === 0} className={MOBILE_CTA_PRIMARY}>
                     <Download className="mr-2 h-4 w-4" />
                     {t.reports.exportCsv}
                 </Button>
@@ -288,52 +293,108 @@ export function SuppliersReportGenerator() {
               </div>
             )}
 
-            {/* Taula de proveïdors */}
-            <div className="rounded-md border">
-            <Table>
-                <TableHeader>
-                <TableRow>
-                    <TableHead className="w-[50px]">{t.reports.include}</TableHead>
-                    <TableHead>{t.reports.supplierTaxId}</TableHead>
-                    <TableHead>{t.reports.supplierName}</TableHead>
-                    <TableHead className="text-right">{t.reports.totalAmount}</TableHead>
-                </TableRow>
-                </TableHeader>
-                <TableBody>
-                {reportData.map((row) => {
+            {/* Llista de proveïdors (Mobile) / Taula (Desktop) */}
+            {isMobile ? (
+              <div className="space-y-2">
+                {reportData.length === 0 ? (
+                  <div className="text-center text-muted-foreground py-8">
+                    {isLoading ? t.reports.generating : t.reports.noSuppliersAboveThreshold}
+                  </div>
+                ) : (
+                  reportData.map((row) => {
                     const isExcluded = excludedSuppliers.has(row.supplierName);
                     return (
-                    <TableRow key={row.supplierName} className={isExcluded ? 'opacity-50 bg-muted/30' : ''}>
-                      <TableCell>
-                        <Checkbox
-                          checked={!isExcluded}
-                          onCheckedChange={() => toggleSupplierExclusion(row.supplierName)}
-                          aria-label={isExcluded ? t.reports.includeSupplier : t.reports.excludeSupplier}
-                        />
-                      </TableCell>
-                      <TableCell className={!row.supplierTaxId ? 'text-red-500' : ''}>
-                        {row.supplierTaxId || <span className="flex items-center gap-1"><AlertTriangle className="h-3 w-3" /> {t.reports.missingTaxId}</span>}
-                      </TableCell>
-                      <TableCell className="font-medium">
-                        {row.supplierName}
-                        {isExcluded && <Ban className="inline ml-2 h-3 w-3 text-orange-500" />}
-                      </TableCell>
-                      <TableCell className={`text-right font-mono font-medium ${isExcluded ? 'text-muted-foreground line-through' : 'text-blue-600'}`}>
-                        {formatCurrencyEU(row.totalAmount)}
-                      </TableCell>
-                    </TableRow>
+                      <MobileListItem
+                        key={row.supplierName}
+                        leadingIcon={
+                          <Checkbox
+                            checked={!isExcluded}
+                            onCheckedChange={() => toggleSupplierExclusion(row.supplierName)}
+                            aria-label={isExcluded ? t.reports.includeSupplier : t.reports.excludeSupplier}
+                          />
+                        }
+                        title={
+                          <span className={cn(isExcluded && 'opacity-50')}>
+                            {row.supplierName}
+                            {isExcluded && <Ban className="inline ml-2 h-3 w-3 text-orange-500" />}
+                          </span>
+                        }
+                        className={isExcluded ? 'opacity-60 bg-muted/30' : ''}
+                        meta={[
+                          {
+                            label: 'NIF',
+                            value: row.supplierTaxId ? (
+                              row.supplierTaxId
+                            ) : (
+                              <span className="text-red-500 flex items-center gap-1">
+                                <AlertTriangle className="h-3 w-3" />
+                                {t.reports.missingTaxId}
+                              </span>
+                            )
+                          },
+                          {
+                            value: (
+                              <span className={cn(
+                                'font-mono font-medium',
+                                isExcluded ? 'text-muted-foreground line-through' : 'text-blue-600'
+                              )}>
+                                {formatCurrencyEU(row.totalAmount)}
+                              </span>
+                            )
+                          }
+                        ]}
+                      />
                     );
-                })}
-                {reportData.length === 0 && (
-                    <TableRow>
-                        <TableCell colSpan={4} className="text-center text-muted-foreground h-24">
-                           {isLoading ? t.reports.generating : t.reports.noSuppliersAboveThreshold}
-                        </TableCell>
-                    </TableRow>
+                  })
                 )}
-                </TableBody>
-            </Table>
-            </div>
+              </div>
+            ) : (
+              <div className="rounded-md border">
+              <Table>
+                  <TableHeader>
+                  <TableRow>
+                      <TableHead className="w-[50px]">{t.reports.include}</TableHead>
+                      <TableHead>{t.reports.supplierTaxId}</TableHead>
+                      <TableHead>{t.reports.supplierName}</TableHead>
+                      <TableHead className="text-right">{t.reports.totalAmount}</TableHead>
+                  </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                  {reportData.map((row) => {
+                      const isExcluded = excludedSuppliers.has(row.supplierName);
+                      return (
+                      <TableRow key={row.supplierName} className={isExcluded ? 'opacity-50 bg-muted/30' : ''}>
+                        <TableCell>
+                          <Checkbox
+                            checked={!isExcluded}
+                            onCheckedChange={() => toggleSupplierExclusion(row.supplierName)}
+                            aria-label={isExcluded ? t.reports.includeSupplier : t.reports.excludeSupplier}
+                          />
+                        </TableCell>
+                        <TableCell className={!row.supplierTaxId ? 'text-red-500' : ''}>
+                          {row.supplierTaxId || <span className="flex items-center gap-1"><AlertTriangle className="h-3 w-3" /> {t.reports.missingTaxId}</span>}
+                        </TableCell>
+                        <TableCell className="font-medium">
+                          {row.supplierName}
+                          {isExcluded && <Ban className="inline ml-2 h-3 w-3 text-orange-500" />}
+                        </TableCell>
+                        <TableCell className={`text-right font-mono font-medium ${isExcluded ? 'text-muted-foreground line-through' : 'text-blue-600'}`}>
+                          {formatCurrencyEU(row.totalAmount)}
+                        </TableCell>
+                      </TableRow>
+                      );
+                  })}
+                  {reportData.length === 0 && (
+                      <TableRow>
+                          <TableCell colSpan={4} className="text-center text-muted-foreground h-24">
+                             {isLoading ? t.reports.generating : t.reports.noSuppliersAboveThreshold}
+                          </TableCell>
+                      </TableRow>
+                  )}
+                  </TableBody>
+              </Table>
+              </div>
+            )}
 
             {/* Nota informativa */}
             {reportData.length > 0 && (

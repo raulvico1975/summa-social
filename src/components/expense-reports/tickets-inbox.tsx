@@ -169,6 +169,71 @@ export function TicketsInbox({
   const cameraInputRef = React.useRef<HTMLInputElement>(null);
   const [isUploadingPhoto, setIsUploadingPhoto] = React.useState(false);
 
+  // Ref per evitar múltiples execucions d'auto-reparació
+  const didRepairRef = React.useRef(false);
+
+  // Auto-reparació de tiquets orfes (reportId apunta a liquidació inexistent)
+  // Només s'executa si canOperate (admin) i un cop per muntatge
+  const repairOrphanedTickets = React.useCallback(
+    async (docs: PendingDocument[]) => {
+      // Guardrails: només admins i un cop per muntatge
+      if (!canOperate || didRepairRef.current) return;
+      if (!firestore || !organizationId) return;
+
+      didRepairRef.current = true;
+
+      // Filtrar tiquets amb reportId
+      const assignedTickets = docs.filter((t) => t.reportId);
+      if (assignedTickets.length === 0) return;
+
+      // Obtenir IDs únics de liquidacions referenciades
+      const reportIds = [...new Set(assignedTickets.map((t) => t.reportId!))];
+
+      // Verificar quines liquidacions existeixen
+      const orphanedTicketIds: string[] = [];
+
+      for (const reportId of reportIds) {
+        try {
+          const reportRef = expenseReportRef(firestore, organizationId, reportId);
+          const reportSnap = await getDoc(reportRef);
+          if (!reportSnap.exists()) {
+            // Liquidació no existeix → els tiquets són orfes
+            const orphans = assignedTickets.filter((t) => t.reportId === reportId);
+            orphanedTicketIds.push(...orphans.map((t) => t.id));
+          }
+        } catch {
+          // Error de lectura → no fer res (pot ser permisos)
+        }
+      }
+
+      if (orphanedTicketIds.length === 0) return;
+
+      // Reparar amb chunking (màx 50 operacions per batch)
+      const BATCH_LIMIT = 50;
+      try {
+        for (let i = 0; i < orphanedTicketIds.length; i += BATCH_LIMIT) {
+          const chunk = orphanedTicketIds.slice(i, i + BATCH_LIMIT);
+          const batch = writeBatch(firestore);
+
+          for (const ticketId of chunk) {
+            const ticketRef = pendingDocumentDoc(firestore, organizationId, ticketId);
+            batch.update(ticketRef, {
+              reportId: null,
+              updatedAt: serverTimestamp(),
+            });
+          }
+
+          await batch.commit();
+        }
+
+        console.info(`[TicketsInbox] Auto-repaired ${orphanedTicketIds.length} orphaned ticket(s)`);
+      } catch {
+        // Silenciós: no bloquejar l'usuari
+      }
+    },
+    [firestore, organizationId, canOperate]
+  );
+
   // Subscripció a tickets (type: 'receipt', status no arxivat)
   React.useEffect(() => {
     if (!organizationId || !firestore) {
@@ -196,6 +261,9 @@ export function TicketsInbox({
         });
         setTickets(docs);
         setIsLoading(false);
+
+        // Auto-reparació silenciosa (no bloquejant)
+        repairOrphanedTickets(docs);
       },
       (error) => {
         console.error('[TicketsInbox] Error:', error);
@@ -204,7 +272,7 @@ export function TicketsInbox({
     );
 
     return () => unsubscribe();
-  }, [organizationId, firestore]);
+  }, [organizationId, firestore, repairOrphanedTickets]);
 
   // Subscripció a liquidacions existents (draft/submitted) quan s'obre el modal
   React.useEffect(() => {

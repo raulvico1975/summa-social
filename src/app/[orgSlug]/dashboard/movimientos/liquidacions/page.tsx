@@ -10,7 +10,23 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Skeleton } from '@/components/ui/skeleton';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { useTranslations, type TranslationsContextType } from '@/i18n';
+import { useIsMobile } from '@/hooks/use-is-mobile';
+import { cn } from '@/lib/utils';
+import { MOBILE_CTA_PRIMARY } from '@/lib/ui/mobile-actions';
 import {
   ArrowLeft,
   FileText,
@@ -25,6 +41,7 @@ import {
   Trash2,
   Car,
   Send,
+  MoreVertical,
 } from 'lucide-react';
 import Link from 'next/link';
 import { useToast } from '@/hooks/use-toast';
@@ -143,6 +160,7 @@ export default function LiquidacionsPage() {
   const { buildUrl } = useOrgUrl();
   const { toast } = useToast();
   const { t, tr } = useTranslations();
+  const isMobile = useIsMobile();
 
   // Helper defensiu per traduccions JSON (evita mostrar claus literals)
   const trSafe = React.useCallback(
@@ -308,14 +326,21 @@ export default function LiquidacionsPage() {
 
     setIsDeleting(true);
     try {
-      await deleteExpenseReport(firestore, organizationId, reportToDelete.id);
-      toast({ title: t.expenseReports.toasts.deleted });
+      const result = await deleteExpenseReport(firestore, organizationId, reportToDelete.id);
+      const ticketCount = result.releasedTicketCount;
+      toast({
+        title: t.expenseReports.toasts.deleted,
+        description: ticketCount > 0
+          ? t.expenseReports.toasts.ticketsReleased({ count: ticketCount })
+          : undefined,
+      });
       setReportToDelete(null);
     } catch (error) {
       console.error('[handleDelete] Error:', error);
+      const errorMessage = error instanceof Error ? error.message : t.expenseReports.toasts.errorDelete;
       toast({
         title: t.expenseReports.toasts.error,
-        description: t.expenseReports.toasts.errorDelete,
+        description: errorMessage,
         variant: 'destructive',
       });
     } finally {
@@ -350,9 +375,9 @@ export default function LiquidacionsPage() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 pb-24 md:pb-0">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
         <div className="flex items-center gap-4">
           <Link href={buildUrl('/dashboard/movimientos')}>
             <Button variant="ghost" size="icon">
@@ -379,7 +404,7 @@ export default function LiquidacionsPage() {
           </div>
         </div>
         {canOperate && mainTab === 'liquidacions' && (
-          <Button onClick={handleCreate} disabled={isCreating}>
+          <Button onClick={handleCreate} disabled={isCreating} className={MOBILE_CTA_PRIMARY}>
             {isCreating ? (
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
             ) : (
@@ -392,20 +417,49 @@ export default function LiquidacionsPage() {
 
       {/* Tabs principals: Liquidacions / Tickets */}
       <Tabs value={mainTab} onValueChange={(v) => setMainTab(v as typeof mainTab)}>
-        <TabsList>
-          <TabsTrigger value="liquidacions" className="flex items-center gap-2">
-            <FileText className="h-4 w-4" />
-            {t.expenseReports.tabs.settlements}
-          </TabsTrigger>
-          <TabsTrigger value="tickets" className="flex items-center gap-2">
-            <Receipt className="h-4 w-4" />
-            {t.expenseReports.tabs.tickets}
-          </TabsTrigger>
-          <TabsTrigger value="quilometratge" className="flex items-center gap-2">
-            <Car className="h-4 w-4" />
-            {t.expenseReports.tabs.mileage}
-          </TabsTrigger>
-        </TabsList>
+        {/* Mobile: Select | Desktop: TabsList */}
+        {isMobile ? (
+          <Select value={mainTab} onValueChange={(v) => setMainTab(v as typeof mainTab)}>
+            <SelectTrigger className="w-full">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="liquidacions">
+                <span className="flex items-center gap-2">
+                  <FileText className="h-4 w-4" />
+                  {t.expenseReports.tabs.settlements}
+                </span>
+              </SelectItem>
+              <SelectItem value="tickets">
+                <span className="flex items-center gap-2">
+                  <Receipt className="h-4 w-4" />
+                  {t.expenseReports.tabs.tickets}
+                </span>
+              </SelectItem>
+              <SelectItem value="quilometratge">
+                <span className="flex items-center gap-2">
+                  <Car className="h-4 w-4" />
+                  {t.expenseReports.tabs.mileage}
+                </span>
+              </SelectItem>
+            </SelectContent>
+          </Select>
+        ) : (
+          <TabsList>
+            <TabsTrigger value="liquidacions" className="flex items-center gap-2">
+              <FileText className="h-4 w-4" />
+              {t.expenseReports.tabs.settlements}
+            </TabsTrigger>
+            <TabsTrigger value="tickets" className="flex items-center gap-2">
+              <Receipt className="h-4 w-4" />
+              {t.expenseReports.tabs.tickets}
+            </TabsTrigger>
+            <TabsTrigger value="quilometratge" className="flex items-center gap-2">
+              <Car className="h-4 w-4" />
+              {t.expenseReports.tabs.mileage}
+            </TabsTrigger>
+          </TabsList>
+        )}
 
         {/* Tab Liquidacions */}
         <TabsContent value="liquidacions" className="mt-4 space-y-4">
@@ -420,24 +474,59 @@ export default function LiquidacionsPage() {
 
           {/* Subtabs de liquidacions */}
           <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as typeof activeTab)}>
-            <TabsList>
-              <TabsTrigger value="draft">
-                {t.expenseReports.tabs.draft}
-                {counts.draft > 0 && <Badge variant="outline" className="ml-2">{counts.draft}</Badge>}
-              </TabsTrigger>
-              <TabsTrigger value="submitted">
-                {t.expenseReports.tabs.submitted}
-                {counts.submitted > 0 && <Badge variant="outline" className="ml-2">{counts.submitted}</Badge>}
-              </TabsTrigger>
-              <TabsTrigger value="matched">
-                {t.expenseReports.tabs.matched}
-                {counts.matched > 0 && <Badge variant="outline" className="ml-2">{counts.matched}</Badge>}
-              </TabsTrigger>
-              <TabsTrigger value="archived">
-                {t.expenseReports.tabs.archived}
-                {counts.archived > 0 && <Badge variant="outline" className="ml-2">{counts.archived}</Badge>}
-              </TabsTrigger>
-            </TabsList>
+            {/* Mobile: Select | Desktop: TabsList */}
+            {isMobile ? (
+              <Select value={activeTab} onValueChange={(v) => setActiveTab(v as typeof activeTab)}>
+                <SelectTrigger className="w-full">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="draft">
+                    <span className="flex items-center gap-2">
+                      {t.expenseReports.tabs.draft}
+                      {counts.draft > 0 && <Badge variant="outline">{counts.draft}</Badge>}
+                    </span>
+                  </SelectItem>
+                  <SelectItem value="submitted">
+                    <span className="flex items-center gap-2">
+                      {t.expenseReports.tabs.submitted}
+                      {counts.submitted > 0 && <Badge variant="outline">{counts.submitted}</Badge>}
+                    </span>
+                  </SelectItem>
+                  <SelectItem value="matched">
+                    <span className="flex items-center gap-2">
+                      {t.expenseReports.tabs.matched}
+                      {counts.matched > 0 && <Badge variant="outline">{counts.matched}</Badge>}
+                    </span>
+                  </SelectItem>
+                  <SelectItem value="archived">
+                    <span className="flex items-center gap-2">
+                      {t.expenseReports.tabs.archived}
+                      {counts.archived > 0 && <Badge variant="outline">{counts.archived}</Badge>}
+                    </span>
+                  </SelectItem>
+                </SelectContent>
+              </Select>
+            ) : (
+              <TabsList>
+                <TabsTrigger value="draft">
+                  {t.expenseReports.tabs.draft}
+                  {counts.draft > 0 && <Badge variant="outline" className="ml-2">{counts.draft}</Badge>}
+                </TabsTrigger>
+                <TabsTrigger value="submitted">
+                  {t.expenseReports.tabs.submitted}
+                  {counts.submitted > 0 && <Badge variant="outline" className="ml-2">{counts.submitted}</Badge>}
+                </TabsTrigger>
+                <TabsTrigger value="matched">
+                  {t.expenseReports.tabs.matched}
+                  {counts.matched > 0 && <Badge variant="outline" className="ml-2">{counts.matched}</Badge>}
+                </TabsTrigger>
+                <TabsTrigger value="archived">
+                  {t.expenseReports.tabs.archived}
+                  {counts.archived > 0 && <Badge variant="outline" className="ml-2">{counts.archived}</Badge>}
+                </TabsTrigger>
+              </TabsList>
+            )}
 
             <TabsContent value={activeTab} className="mt-4">
               {isLoading ? (
@@ -482,83 +571,166 @@ export default function LiquidacionsPage() {
                               </p>
                             </div>
                           </div>
-                          <div className="flex items-center gap-3">
-                            <span className="font-semibold">
+                          <div className="flex items-center gap-2 md:gap-3">
+                            <span className="font-semibold text-sm md:text-base">
                               {formatCurrencyEU(report.totalAmount)}
                             </span>
-                            <div className="flex items-center gap-1" title={getStatusInfo(report, t).tooltip}>
+                            <div className="hidden md:flex items-center gap-1" title={getStatusInfo(report, t).tooltip}>
                               {getStatusInfo(report, t).badge}
                             </div>
-                            {/* Editar - draft i submitted */}
-                            {(report.status === 'draft' || report.status === 'submitted') && (
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  handleEdit(report);
-                                }}
-                                title={t.common.edit}
-                              >
-                                <Pencil className="h-4 w-4" />
-                              </Button>
-                            )}
-                            {/* Marcar com enviada - només draft */}
-                            {report.status === 'draft' && (
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  setReportToSubmit(report);
-                                }}
-                                title={t.expenseReports.actions.markAsSubmitted}
-                                className="text-blue-600 border-blue-200 hover:bg-blue-50"
-                              >
-                                <Send className="h-4 w-4 mr-1" />
-                                {t.expenseReports.actions.submit}
-                              </Button>
-                            )}
-                            {/* Esborrar - draft i submitted (sense SEPA) */}
-                            {(report.status === 'draft' || report.status === 'submitted') && !report.sepa && (
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  setReportToDelete(report);
-                                }}
-                                title={t.common.delete}
-                              >
-                                <Trash2 className="h-4 w-4" />
-                              </Button>
-                            )}
-                            {/* Arxivar - draft sense SEPA */}
-                            {report.status === 'draft' && !report.sepa && (
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  handleArchive(report);
-                                }}
-                                title={t.common.archive}
-                              >
-                                <Archive className="h-4 w-4" />
-                              </Button>
-                            )}
-                            {report.status === 'archived' && (
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  handleRestore(report);
-                                }}
-                                title={t.common.restore}
-                              >
-                                <RotateCcw className="h-4 w-4" />
-                              </Button>
+
+                            {/* Mobile: DropdownMenu amb totes les accions */}
+                            {isMobile ? (
+                              <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    onClick={(e) => e.stopPropagation()}
+                                  >
+                                    <MoreVertical className="h-4 w-4" />
+                                  </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="end">
+                                  {/* Editar - draft i submitted */}
+                                  {(report.status === 'draft' || report.status === 'submitted') && (
+                                    <DropdownMenuItem
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        handleEdit(report);
+                                      }}
+                                    >
+                                      <Pencil className="mr-2 h-4 w-4" />
+                                      {t.common.edit}
+                                    </DropdownMenuItem>
+                                  )}
+                                  {/* Marcar com enviada - només draft */}
+                                  {report.status === 'draft' && (
+                                    <DropdownMenuItem
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        setReportToSubmit(report);
+                                      }}
+                                      className="text-blue-600"
+                                    >
+                                      <Send className="mr-2 h-4 w-4" />
+                                      {t.expenseReports.actions.submit}
+                                    </DropdownMenuItem>
+                                  )}
+                                  {/* Arxivar - draft sense SEPA */}
+                                  {report.status === 'draft' && !report.sepa && (
+                                    <DropdownMenuItem
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        handleArchive(report);
+                                      }}
+                                    >
+                                      <Archive className="mr-2 h-4 w-4" />
+                                      {t.common.archive}
+                                    </DropdownMenuItem>
+                                  )}
+                                  {/* Restaurar - archived */}
+                                  {report.status === 'archived' && (
+                                    <DropdownMenuItem
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        handleRestore(report);
+                                      }}
+                                    >
+                                      <RotateCcw className="mr-2 h-4 w-4" />
+                                      {t.common.restore}
+                                    </DropdownMenuItem>
+                                  )}
+                                  {/* Esborrar - draft i submitted (sense SEPA) */}
+                                  {(report.status === 'draft' || report.status === 'submitted') && !report.sepa && (
+                                    <DropdownMenuItem
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        setReportToDelete(report);
+                                      }}
+                                      className="text-destructive"
+                                    >
+                                      <Trash2 className="mr-2 h-4 w-4" />
+                                      {t.common.delete}
+                                    </DropdownMenuItem>
+                                  )}
+                                </DropdownMenuContent>
+                              </DropdownMenu>
+                            ) : (
+                              /* Desktop: botons inline */
+                              <>
+                                {/* Editar - draft i submitted */}
+                                {(report.status === 'draft' || report.status === 'submitted') && (
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      handleEdit(report);
+                                    }}
+                                    title={t.common.edit}
+                                  >
+                                    <Pencil className="h-4 w-4" />
+                                  </Button>
+                                )}
+                                {/* Marcar com enviada - només draft */}
+                                {report.status === 'draft' && (
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      setReportToSubmit(report);
+                                    }}
+                                    title={t.expenseReports.actions.markAsSubmitted}
+                                    className="text-blue-600 border-blue-200 hover:bg-blue-50"
+                                  >
+                                    <Send className="h-4 w-4 mr-1" />
+                                    {t.expenseReports.actions.submit}
+                                  </Button>
+                                )}
+                                {/* Esborrar - draft i submitted (sense SEPA) */}
+                                {(report.status === 'draft' || report.status === 'submitted') && !report.sepa && (
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      setReportToDelete(report);
+                                    }}
+                                    title={t.common.delete}
+                                  >
+                                    <Trash2 className="h-4 w-4" />
+                                  </Button>
+                                )}
+                                {/* Arxivar - draft sense SEPA */}
+                                {report.status === 'draft' && !report.sepa && (
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      handleArchive(report);
+                                    }}
+                                    title={t.common.archive}
+                                  >
+                                    <Archive className="h-4 w-4" />
+                                  </Button>
+                                )}
+                                {report.status === 'archived' && (
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      handleRestore(report);
+                                    }}
+                                    title={t.common.restore}
+                                  >
+                                    <RotateCcw className="h-4 w-4" />
+                                  </Button>
+                                )}
+                              </>
                             )}
                             <ChevronRight className="h-4 w-4 text-muted-foreground" />
                           </div>
@@ -704,8 +876,13 @@ export default function LiquidacionsPage() {
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>{t.expenseReports.confirmDelete.title}</AlertDialogTitle>
-            <AlertDialogDescription>
-              {t.expenseReports.confirmDelete.description}
+            <AlertDialogDescription className="space-y-2">
+              <span className="block">{t.expenseReports.confirmDelete.description}</span>
+              {reportToDelete && reportToDelete.receiptDocIds.length > 0 && (
+                <span className="block text-amber-600">
+                  {t.expenseReports.confirmDelete.ticketsWarning({ count: reportToDelete.receiptDocIds.length })}
+                </span>
+              )}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
