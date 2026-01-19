@@ -1,7 +1,7 @@
 # Govern de Codi i Deploy — Summa Social
 
-**Versió:** 2.0
-**Data:** 2026-01-16
+**Versió:** 2.1
+**Data:** 2026-01-19
 **Autor:** Raül Vico (CEO/CTO)
 
 ---
@@ -11,8 +11,8 @@
 | Branca | Funció | Qui hi treballa |
 |--------|--------|-----------------|
 | `main` | Integració i desenvolupament | Desenvolupador |
-| `prod` | Producció (branca connectada a App Hosting) | Només deploy |
-| `master` | **OBSOLETA** — No tocar | Ningú |
+| `master` | Branca intermèdia / historial net | Només merge des de main |
+| `prod` | Producció (branca connectada a App Hosting) | Només sync des de master |
 | `ui/*`, `fix/*`, `feat/*` | Branques WIP específiques | Desenvolupador |
 
 **IMPORTANT:** App Hosting desplega automàticament només des de `prod`.
@@ -22,9 +22,9 @@
 ## Flux de treball
 
 ```
-[Branca WIP] → [main] → [prod] → [Deploy automàtic]
-     ↑            ↑         ↑
-   Codi        Validat   Producció
+[Branca WIP] → [main] → [master] → [prod] → [Deploy automàtic]
+     ↑            ↑          ↑          ↑
+   Codi        Validat   Intermèdia  Producció
 ```
 
 1. **Desenvolupar** a `main` o a una branca específica (`ui/xxx`, `fix/xxx`).
@@ -32,22 +32,29 @@
    - `npm run build` passa
    - `npm test` passa
    - Prova manual si és canvi UI
-3. **Desplegar** només des de `prod` (merge des de `main`).
+3. **Desplegar** en dos passos: `main → master`, després `master → prod`.
 
 ---
 
-## Ritual de deploy (4 comandes)
+## Ritual de deploy (6 comandes)
 
 ```bash
+# 1) main → master
+git checkout master
+git pull --ff-only
+git merge --no-ff main
+git push origin master
+
+# 2) master → prod (sync)
 git checkout prod
 git pull --ff-only
-git merge --ff-only main
-git push
+git merge --ff-only master
+git push origin prod
 ```
 
 Firebase App Hosting desplega automàticament quan `prod` rep un push.
 
-**Regla:** `prod` només es mou amb merge des de `main`. Mai es treballa directament a `prod`.
+**Regla:** `prod` només es mou amb merge des de `master`. Mai es treballa directament a `prod` ni a `master`.
 
 ---
 
@@ -66,10 +73,11 @@ Firebase App Hosting redesplegarà automàticament.
 ## Regles d'or
 
 1. **Mai commitejar directament a `prod`.**
-2. **Mai desplegar sense passar per `prod`.**
-3. **Treballar sempre a `main` o branques WIP.** No tocar `master` (obsoleta).
-4. **Verificar UI en mòbil abans de mergear canvis visuals.**
-5. **Un commit = un propòsit clar.** No barrejar QA amb UI amb features.
+2. **Mai commitejar directament a `master`.** Només merge des de `main`.
+3. **Mai desplegar sense passar per `prod`.**
+4. **Treballar sempre a `main` o branques WIP.**
+5. **Verificar UI en mòbil abans de mergear canvis visuals.**
+6. **Un commit = un propòsit clar.** No barrejar QA amb UI amb features.
 
 ---
 
@@ -93,7 +101,7 @@ Per canvis importants, executar també:
 Només si:
 - L'equip creix a 3+ desenvolupadors → afegir PRs obligatoris
 - Hi ha CI/CD automatitzat → afegir protecció de branques
-- Es necessita staging → afegir branca `staging` entre `main` i `master`
+- Es necessita staging → afegir branca `staging` entre `main` i `master` (nota: `master` ja actua com a intermèdia)
 
 Fins llavors: **simplicitat i disciplina > automatització**.
 
@@ -102,18 +110,16 @@ Fins llavors: **simplicitat i disciplina > automatització**.
 ## Resum visual
 
 ```
-┌─────────────────────────────────────────────────────────┐
-│                    DESENVOLUPAMENT                      │
-│  ┌──────────┐    ┌──────────┐    ┌──────────┐          │
-│  │ ui/xxx   │───▶│   main   │───▶│   prod   │──▶ DEPLOY│
-│  │ fix/xxx  │    │          │    │          │          │
-│  │ feat/xxx │    │ (validat)│    │(producció)│         │
-│  └──────────┘    └──────────┘    └──────────┘          │
-│                                                         │
-│  Firebase App Hosting desplega automàticament prod     │
-│                                                         │
-│  ⚠️  master = OBSOLETA (no tocar)                       │
-└─────────────────────────────────────────────────────────┘
+┌───────────────────────────────────────────────────────────────┐
+│                      DESENVOLUPAMENT                           │
+│  ┌──────────┐    ┌──────────┐    ┌──────────┐    ┌──────────┐ │
+│  │ ui/xxx   │───▶│   main   │───▶│  master  │───▶│   prod   │─▶DEPLOY
+│  │ fix/xxx  │    │          │    │          │    │          │ │
+│  │ feat/xxx │    │ (validat)│    │(intermèdia)│  │(producció)│ │
+│  └──────────┘    └──────────┘    └──────────┘    └──────────┘ │
+│                                                                │
+│  Firebase App Hosting desplega automàticament prod            │
+└───────────────────────────────────────────────────────────────┘
 ```
 
 ---
@@ -130,21 +136,6 @@ Model:
 Claude Code **no pot** decidir quan desplegar ni fer canvis fora del ritual establert.
 
 Claude Code **treballa sempre a `main`** (o branques WIP). Mai a `prod` ni a `master`.
-
----
-
-## Acció pendent: Reconfigurar App Hosting
-
-**IMPORTANT:** Cal canviar la branca connectada a Firebase App Hosting de `master` a `prod`.
-
-Passos (a Firebase Console):
-1. Anar a Firebase Console → App Hosting
-2. Seleccionar el backend "studio"
-3. Editar la configuració de la branca
-4. Canviar de `master` a `prod`
-5. Verificar que el proper push a `prod` dispara el deploy
-
-Fins que es faci aquest canvi, els pushes a `master` encara podrien disparar deploys.
 
 ---
 
