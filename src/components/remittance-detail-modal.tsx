@@ -26,7 +26,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Search, X, ExternalLink, Calendar, Coins, User, AlertCircle, RefreshCw, CheckCircle2 } from 'lucide-react';
+import { Search, X, ExternalLink, Calendar, Coins, User, AlertCircle, RefreshCw, CheckCircle2, Wrench, AlertTriangle } from 'lucide-react';
 import { formatCurrencyEU, formatIBANDisplay } from '@/lib/normalize';
 import { useTranslations } from '@/i18n';
 import { useFirebase, useCollection, useMemoFirebase } from '@/firebase';
@@ -42,6 +42,20 @@ interface RemittanceDetailModalProps {
   organizationId: string;
   parentTransaction?: Transaction | null;
   onReprocessComplete?: () => void;
+  onOpenRepairFlow?: () => void;
+}
+
+// Tipus per la resposta del check
+interface ConsistencyCheckResult {
+  consistent: boolean;
+  issues: string[];
+  details?: {
+    expectedCount?: number;
+    activeCount?: number;
+    parentAmountCents?: number;
+    childrenSumCents?: number;
+    deltaCents?: number;
+  };
 }
 
 // Helper per traduir motius de pendent
@@ -130,8 +144,9 @@ export function RemittanceDetailModal({
   organizationId,
   parentTransaction,
   onReprocessComplete,
+  onOpenRepairFlow,
 }: RemittanceDetailModalProps) {
-  const { firestore } = useFirebase();
+  const { firestore, user } = useFirebase();
   const { t } = useTranslations();
   const { toast } = useToast();
   const router = useRouter();
@@ -140,6 +155,10 @@ export function RemittanceDetailModal({
   const [activeTab, setActiveTab] = React.useState<'quotes' | 'pending'>('quotes');
   const [isReprocessing, setIsReprocessing] = React.useState(false);
   const [pendingItems, setPendingItems] = React.useState<RemittancePendingItem[]>([]);
+
+  // Estat per verificació de consistència
+  const [consistencyCheck, setConsistencyCheck] = React.useState<ConsistencyCheckResult | null>(null);
+  const [isCheckingConsistency, setIsCheckingConsistency] = React.useState(false);
 
   // Query per obtenir les transaccions filles de la remesa
   const remittanceItemsQuery = useMemoFirebase(
@@ -205,8 +224,42 @@ export function RemittanceDetailModal({
   React.useEffect(() => {
     if (!open) {
       setSearchQuery('');
+      setConsistencyCheck(null);
     }
   }, [open]);
+
+  // Verificar consistència quan s'obre el modal
+  React.useEffect(() => {
+    if (!open || !organizationId || !parentTransaction?.id || !user) {
+      return;
+    }
+
+    const checkConsistency = async () => {
+      setIsCheckingConsistency(true);
+      try {
+        const idToken = await user.getIdToken();
+        const response = await fetch(
+          `/api/remittances/in/check?orgId=${organizationId}&parentTxId=${parentTransaction.id}`,
+          {
+            headers: {
+              Authorization: `Bearer ${idToken}`,
+            },
+          }
+        );
+
+        if (response.ok) {
+          const result = await response.json();
+          setConsistencyCheck(result);
+        }
+      } catch (error) {
+        console.error('[RemittanceDetailModal] Error checking consistency:', error);
+      } finally {
+        setIsCheckingConsistency(false);
+      }
+    };
+
+    checkConsistency();
+  }, [open, organizationId, parentTransaction?.id, user]);
 
   // Navegar al perfil del donant
   const handleDonorClick = (contactId: string) => {
@@ -397,6 +450,55 @@ export function RemittanceDetailModal({
             Mostra el detall de la remesa i els seus moviments associats.
           </DialogDescription>
         </DialogHeader>
+
+        {/* Banner d'inconsistència */}
+        {consistencyCheck && !consistencyCheck.consistent && (
+          <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-4">
+            <div className="flex items-start gap-3">
+              <AlertTriangle className="h-5 w-5 text-red-600 flex-shrink-0 mt-0.5" />
+              <div className="flex-1">
+                <h4 className="font-medium text-red-800">
+                  Inconsistència detectada
+                </h4>
+                <p className="text-sm text-red-700 mt-1">
+                  {consistencyCheck.issues.includes('COUNT_MISMATCH') && (
+                    <>El nombre de filles actives ({consistencyCheck.details?.activeCount}) no coincideix amb l&apos;esperat ({consistencyCheck.details?.expectedCount}). </>
+                  )}
+                  {consistencyCheck.issues.includes('SUM_MISMATCH') && (
+                    <>La suma de les filles no quadra amb l&apos;import del pare (diferència: {((consistencyCheck.details?.deltaCents ?? 0) / 100).toFixed(2)}€). </>
+                  )}
+                  {consistencyCheck.issues.includes('PARENT_IS_REM_BUT_NO_ACTIVE_CHILDREN') && (
+                    <>El pare està marcat com a remesa però no té filles actives. </>
+                  )}
+                  {consistencyCheck.issues.includes('NO_REM_DOC') && (
+                    <>No existeix el document de remesa. </>
+                  )}
+                </p>
+                {onOpenRepairFlow && (
+                  <Button
+                    onClick={() => {
+                      onOpenChange(false);
+                      onOpenRepairFlow();
+                    }}
+                    variant="destructive"
+                    size="sm"
+                    className="mt-3"
+                  >
+                    <Wrench className="mr-2 h-4 w-4" />
+                    Reparar remesa
+                  </Button>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Loading check */}
+        {isCheckingConsistency && (
+          <div className="text-sm text-muted-foreground mb-2">
+            Verificant consistència...
+          </div>
+        )}
 
         <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as 'quotes' | 'pending')} className="flex-1 flex flex-col min-h-0">
           <TabsList className="grid w-full grid-cols-2">

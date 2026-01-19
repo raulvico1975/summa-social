@@ -110,7 +110,7 @@ interface TransactionRowProps {
   onOpenReturnDialog: (tx: Transaction) => void;
   onSplitRemittance: (tx: Transaction) => void;
   onSplitStripeRemittance?: (tx: Transaction) => void;
-  onViewRemittanceDetail: (txId: string) => void;
+  onViewRemittanceDetail: (txId: string, parentTx?: Transaction) => void;
   onUndoRemittance?: (tx: Transaction) => void;
   onCreateNewContact: (txId: string, type: 'donor' | 'supplier') => void;
   onOpenReturnImporter?: (parentTx?: Transaction) => void;
@@ -349,8 +349,8 @@ export const TransactionRow = React.memo(function TransactionRow({
   }, [tx, onSplitStripeRemittance]);
 
   const handleViewRemittanceDetail = React.useCallback(() => {
-    onViewRemittanceDetail(tx.id);
-  }, [tx.id, onViewRemittanceDetail]);
+    onViewRemittanceDetail(tx.id, tx);
+  }, [tx, onViewRemittanceDetail]);
 
   const handleUndoRemittance = React.useCallback(() => {
     if (!onUndoRemittance) return;
@@ -859,13 +859,13 @@ export const TransactionRow = React.memo(function TransactionRow({
                 {t.splitStripeRemittance}
               </DropdownMenuItem>
             )}
-            {tx.amount > 0 && !isReturn && !isReturnFee && !tx.isRemittance && !isFromStripe && (
+            {tx.amount > 0 && !isReturn && !isReturnFee && !tx.isRemittance && !tx.isRemittanceItem && !isFromStripe && (
               <DropdownMenuItem onClick={handleSplitRemittance}>
                 <GitMerge className="mr-2 h-4 w-4" />
                 {t.splitRemittance}
               </DropdownMenuItem>
             )}
-            {tx.amount < 0 && !isReturn && !isReturnFee && !tx.isRemittance && !isFromStripe && (
+            {tx.amount < 0 && !isReturn && !isReturnFee && !tx.isRemittance && !tx.isRemittanceItem && !isFromStripe && (
               <DropdownMenuItem onClick={handleSplitRemittance}>
                 <GitMerge className="mr-2 h-4 w-4 text-orange-600" />
                 {t.splitPaymentRemittance || 'Dividir remesa pagaments'}
@@ -885,10 +885,17 @@ export const TransactionRow = React.memo(function TransactionRow({
               </DropdownMenuItem>
             )}
             <DropdownMenuSeparator />
-            <DropdownMenuItem className="text-rose-600 focus:text-rose-600" onClick={handleDelete}>
-              <Trash2 className="mr-2 h-4 w-4" />
-              {t.delete}
-            </DropdownMenuItem>
+            {tx.isRemittance || tx.isRemittanceItem ? (
+              <DropdownMenuItem disabled className="text-muted-foreground cursor-not-allowed">
+                <Trash2 className="mr-2 h-4 w-4" />
+                {tx.isRemittance ? 'Primer desfés la remesa' : 'Forma part d\'una remesa'}
+              </DropdownMenuItem>
+            ) : (
+              <DropdownMenuItem className="text-rose-600 focus:text-rose-600" onClick={handleDelete}>
+                <Trash2 className="mr-2 h-4 w-4" />
+                {t.delete}
+              </DropdownMenuItem>
+            )}
           </DropdownMenuContent>
         </DropdownMenu>
       </TableCell>

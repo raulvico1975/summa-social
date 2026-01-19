@@ -79,6 +79,8 @@ interface RemittanceSplitterProps {
   existingSuppliers?: Supplier[];
   existingEmployees?: Employee[];
   onSplitDone: () => void;
+  /** Mode reparació: crida /api/remittances/in/repair en lloc de process */
+  isRepairMode?: boolean;
 }
 
 // Tipus de remesa: IN (donacions) o OUT (pagaments)
@@ -339,6 +341,7 @@ export function RemittanceSplitter({
   existingSuppliers = [],
   existingEmployees = [],
   onSplitDone,
+  isRepairMode = false,
 }: RemittanceSplitterProps) {
   // Detectar direcció: IN (donacions, amount > 0) o OUT (pagaments, amount < 0)
   const direction: RemittanceDirection = transaction.amount >= 0 ? 'IN' : 'OUT';
@@ -1442,6 +1445,204 @@ export function RemittanceSplitter({
       return;
     }
 
+    // ═══════════════════════════════════════════════════════════════════════
+    // MODE IN: Cridar API server-side (atòmic, idempotent, amb invariants)
+    // MODE OUT: Mantenir comportament client-side (pendent migració futura)
+    // ═══════════════════════════════════════════════════════════════════════
+    if (!isPaymentRemittance) {
+      await handleProcessServerSide();
+    } else {
+      await handleProcessClientSide();
+    }
+  };
+
+  /**
+   * Processament server-side per remeses IN (donacions)
+   * Crida POST /api/remittances/in/process amb payload construït del parsing
+   */
+  const handleProcessServerSide = async () => {
+    if (!organizationId || !user) return;
+
+    const parentTxId = transaction.id;
+
+    setStep('processing');
+    setIsProcessing(true);
+    log(`[Splitter] Iniciant ${isRepairMode ? 'reparació' : 'processament'} server-side per remesa IN...`);
+
+    try {
+      // ═══════════════════════════════════════════════════════════════════════
+      // Construir payload per l'API
+      // ═══════════════════════════════════════════════════════════════════════
+
+      // Filtrar items resolubles (amb contactId)
+      const resolvableDonations = parsedDonations.filter(d =>
+        d.status === 'found' ||
+        d.status === 'found_inactive' ||
+        d.status === 'found_archived' ||
+        d.status === 'found_deleted' ||
+        (d.status === 'ambiguous_iban' && !!d.manualMatchContactId) ||
+        (d.status === 'no_iban_match' && !!d.manualMatchContactId)
+      );
+
+      // Filtrar pendents
+      const pendingDonations = parsedDonations.filter(d =>
+        (d.status === 'no_iban_match' && !d.manualMatchContactId) ||
+        (d.status === 'ambiguous_iban' && !d.manualMatchContactId)
+      );
+
+      // Construir items per l'API
+      const items = resolvableDonations.map(d => {
+        const contactId = d.manualMatchContactId || d.matchedDonor?.id;
+        if (!contactId) {
+          throw new Error(`Item sense contactId a rowIndex ${d.rowIndex}`);
+        }
+        return {
+          contactId,
+          amountCents: Math.round(Math.abs(d.amount) * 100),
+          iban: d.iban || d.matchedDonor?.iban || null,
+          name: d.name || d.matchedDonor?.name || null,
+          taxId: d.taxId || d.matchedDonor?.taxId || null,
+          sourceRowIndex: d.rowIndex,
+        };
+      });
+
+      // Construir pendingItems per l'API
+      const pendingItems = pendingDonations.map(d => ({
+        nameRaw: d.name || '',
+        taxId: d.taxId || null,
+        iban: d.iban || null,
+        amountCents: Math.round(Math.abs(d.amount) * 100),
+        reason: d.status === 'ambiguous_iban' ? 'AMBIGUOUS_IBAN' : 'NO_IBAN_MATCH',
+        sourceRowIndex: d.rowIndex,
+        ambiguousDonorIds: d.ambiguousDonors?.map(ad => ad.id),
+      }));
+
+      log(`[Splitter] Payload: ${items.length} items, ${pendingItems.length} pendents`);
+
+      // ═══════════════════════════════════════════════════════════════════════
+      // Cridar API server-side (process o repair segons mode)
+      // ═══════════════════════════════════════════════════════════════════════
+      const idToken = await user.getIdToken();
+      const apiEndpoint = isRepairMode
+        ? '/api/remittances/in/repair'
+        : '/api/remittances/in/process';
+
+      log(`[Splitter] Cridant ${apiEndpoint}...`);
+
+      const response = await fetch(apiEndpoint, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${idToken}`,
+        },
+        body: JSON.stringify({
+          orgId: organizationId,
+          parentTxId,
+          items,
+          pendingItems: pendingItems.length > 0 ? pendingItems : undefined,
+          category: transaction.category || null,
+          bankAccountId: transaction.bankAccountId || null,
+        }),
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        // Error del servidor
+        const errorMessage = result.error || 'Error processant remesa';
+        const errorCode = result.code || 'UNKNOWN_ERROR';
+
+        log(`[Splitter] ERROR server: ${errorCode} - ${errorMessage}`);
+
+        // Missatges específics per invariants
+        if (errorCode === 'R-SUM-1') {
+          toast({
+            variant: 'destructive',
+            title: 'Error de validació',
+            description: 'La suma dels items no coincideix amb l\'import del pare. Revisa les dades.',
+            duration: 9000,
+          });
+        } else if (errorCode === 'LOCKED_BY_OTHER') {
+          toast({
+            variant: 'destructive',
+            title: 'Operació bloquejada',
+            description: errorMessage,
+            duration: 5000,
+          });
+        } else {
+          toast({
+            variant: 'destructive',
+            title: t.movements.splitter.error,
+            description: errorMessage,
+            duration: 9000,
+          });
+        }
+
+        setStep('preview');
+        setIsProcessing(false);
+        return;
+      }
+
+      // ═══════════════════════════════════════════════════════════════════════
+      // Èxit
+      // ═══════════════════════════════════════════════════════════════════════
+      if (result.idempotent) {
+        log(`[Splitter] ✅ Idempotent: remesa ja ${isRepairMode ? 'reparada' : 'processada'}`);
+        toast({
+          title: isRepairMode ? 'Remesa ja reparada' : 'Remesa ja processada',
+          description: isRepairMode
+            ? 'Aquesta remesa ja s\'havia reparat anteriorment amb les mateixes dades.'
+            : 'Aquesta remesa ja s\'havia processat anteriorment.',
+          variant: 'default',
+        });
+      } else {
+        const actionVerb = isRepairMode ? 'Reparació' : 'Processament';
+        log(`[Splitter] ✅ ${actionVerb} completat! remittanceId=${result.remittanceId}, created=${result.createdCount}, pending=${result.pendingCount}`);
+
+        if (result.pendingCount && result.pendingCount > 0) {
+          toast({
+            title: isRepairMode ? 'Remesa reparada (parcial)' : (t.movements.splitter.remittancePartial ?? 'Remesa parcial'),
+            description: typeof t.movements.splitter.remittancePartialDescription === 'function'
+              ? t.movements.splitter.remittancePartialDescription(result.pendingCount)
+              : `S'han creat ${result.createdCount} quotes. ${result.pendingCount} han quedat pendents.`,
+            variant: 'default',
+          });
+        } else {
+          toast({
+            title: isRepairMode ? 'Remesa reparada' : t.movements.splitter.remittanceProcessed,
+            description: isRepairMode
+              ? `S'han recreat ${result.createdCount || 0} quotes correctament.`
+              : t.movements.splitter.remittanceProcessedDescription(result.createdCount || 0, 0),
+          });
+        }
+      }
+
+      setIsProcessing(false);
+      setStep('upload');
+      await new Promise(resolve => setTimeout(resolve, 100));
+      onSplitDone();
+
+    } catch (error: any) {
+      console.error('[Splitter] Error processant remesa:', error);
+      log(`[Splitter] ERROR: ${error.message}`);
+      toast({
+        variant: 'destructive',
+        title: t.movements.splitter.error,
+        description: error.message,
+        duration: 9000,
+      });
+      setStep('preview');
+      setIsProcessing(false);
+    }
+  };
+
+  /**
+   * Processament client-side per remeses OUT (pagaments)
+   * Manté el comportament original fins a migració futura
+   */
+  const handleProcessClientSide = async () => {
+    if (!organizationId) return;
+
     const parentTxId = transaction.id;
     const userId = user?.uid;
     let lockAcquired = false;
@@ -1474,7 +1675,7 @@ export function RemittanceSplitter({
 
     setStep('processing');
     setIsProcessing(true);
-    log(`[Splitter] Iniciant processament...`);
+    log(`[Splitter] Iniciant processament client-side per remesa OUT...`);
 
     try {
       const transactionsRef = collection(firestore, 'organizations', organizationId, 'transactions');
@@ -1491,52 +1692,23 @@ export function RemittanceSplitter({
 
       log(`[Splitter] Creant document de remesa ${remittanceId}...`);
 
-      // ═══════════════════════════════════════════════════════════════════════
-      // P0: REGLA FIXA per remeses IN (IBAN-first)
-      // - Resoluble: found, found_inactive, found_archived, found_deleted
-      //              + ambiguous_iban AMB manualMatchContactId (compte conjunta resolta)
-      // - Pendent: no_iban_match, ambiguous_iban SENSE manualMatchContactId
-      // Mode OUT: manté comportament original
-      // ═══════════════════════════════════════════════════════════════════════
-      const resolvableDonations = parsedDonations.filter(d => {
-        if (isPaymentRemittance) {
-          // Mode OUT: comportament original
-          return d.status === 'found' ||
-                 d.status === 'found_inactive' ||
-                 (d.status === 'new_with_taxid' && d.name && d.amount > 0);
-        } else {
-          // Mode IN: TOTS els found* són resolubles (IBAN match)
-          // + ambiguous_iban AMB selecció manual (compte conjunta resolta)
-          // + no_iban_match AMB selecció manual (assignat manualment)
-          return d.status === 'found' ||
-                 d.status === 'found_inactive' ||
-                 d.status === 'found_archived' ||
-                 d.status === 'found_deleted' ||
-                 (d.status === 'ambiguous_iban' && !!d.manualMatchContactId) ||
-                 (d.status === 'no_iban_match' && !!d.manualMatchContactId);
-        }
-      });
+      // Mode OUT: comportament original
+      const resolvableDonations = parsedDonations.filter(d =>
+        d.status === 'found' ||
+        d.status === 'found_inactive' ||
+        (d.status === 'new_with_taxid' && d.name && d.amount > 0)
+      );
 
-      const pendingDonations = parsedDonations.filter(d => {
-        if (isPaymentRemittance) {
-          // Mode OUT: comportament original
-          return d.status === 'new_without_taxid' ||
-                 (d.status === 'new_with_taxid' && (!d.name || d.amount <= 0));
-        } else {
-          // Mode IN: pendents per IBAN no trobat o ambigu sense resoldre
-          return (d.status === 'no_iban_match' && !d.manualMatchContactId) ||
-                 (d.status === 'ambiguous_iban' && !d.manualMatchContactId);
-        }
-      });
+      const pendingDonations = parsedDonations.filter(d =>
+        d.status === 'new_without_taxid' ||
+        (d.status === 'new_with_taxid' && (!d.name || d.amount <= 0))
+      );
 
       log(`[Splitter] Resoluble: ${resolvableDonations.length}, Pendents: ${pendingDonations.length}`);
 
-      // 1. Crear nous contactes (mode OUT només - mode IN no crea per IBAN)
-      const contactsToCreate = isPaymentRemittance
-        ? resolvableDonations.filter(d => d.status === 'new_with_taxid')
-        : []; // Mode IN: MAI crear donants nous - tot via IBAN
-      const contactTypeName = isPaymentRemittance ? 'proveïdors' : 'donants';
-      log(`[Splitter] Creant ${contactsToCreate.length} nous ${contactTypeName}...`);
+      // 1. Crear nous contactes (mode OUT)
+      const contactsToCreate = resolvableDonations.filter(d => d.status === 'new_with_taxid');
+      log(`[Splitter] Creant ${contactsToCreate.length} nous proveïdors...`);
 
       for (let i = 0; i < contactsToCreate.length; i += CHUNK_SIZE) {
         const chunk = contactsToCreate.slice(i, i + CHUNK_SIZE);
@@ -1544,23 +1716,13 @@ export function RemittanceSplitter({
 
         for (const item of chunk) {
           const newContactRef = doc(contactsRef);
-          const newContactData = isPaymentRemittance
-            ? {
-                type: 'supplier' as const,
-                name: item.name || `Proveïdor ${item.taxId}`,
-                taxId: item.taxId,
-                zipCode: '',
-                createdAt: now,
-              }
-            : {
-                type: 'donor' as const,
-                name: item.name || `Donant ${item.taxId}`,
-                taxId: item.taxId,
-                zipCode: item.zipCode,
-                donorType: 'individual' as const,
-                membershipType: 'recurring' as const,
-                createdAt: now,
-              };
+          const newContactData = {
+            type: 'supplier' as const,
+            name: item.name || `Proveïdor ${item.taxId}`,
+            taxId: item.taxId,
+            zipCode: '',
+            createdAt: now,
+          };
 
           batch.set(newContactRef, newContactData);
           newDonorIds.set(item.rowIndex, newContactRef.id);
@@ -1568,7 +1730,7 @@ export function RemittanceSplitter({
 
         await batch.commit();
         await new Promise(resolve => setTimeout(resolve, 100));
-        log(`[Splitter] ${contactTypeName} creats: ${Math.min(i + CHUNK_SIZE, contactsToCreate.length)}/${contactsToCreate.length}`);
+        log(`[Splitter] Proveïdors creats: ${Math.min(i + CHUNK_SIZE, contactsToCreate.length)}/${contactsToCreate.length}`);
       }
 
       // 2. Crear transaccions filles NOMÉS per resoluble
@@ -1585,7 +1747,6 @@ export function RemittanceSplitter({
           childTransactionIds.push(newTxRef.id);
 
           let contactId: string | null = null;
-          // Prioritat: manualMatchContactId (compte conjunta) > matchedDonor > nou creat
           if (item.manualMatchContactId) {
             contactId = item.manualMatchContactId;
           } else if (item.matchedDonor) {
@@ -1595,21 +1756,9 @@ export function RemittanceSplitter({
           }
 
           const displayName = item.name || item.taxId || 'Anònim';
-
-          let category: string;
-          let finalAmount: number;
-          let description: string;
-
-          if (isPaymentRemittance) {
-            category = transaction.category || 'supplierPayments';
-            finalAmount = -Math.abs(item.amount);
-            description = `Pagament: ${displayName}`;
-          } else {
-            const membershipType = item.matchedDonor?.membershipType ?? 'recurring';
-            category = membershipType === 'recurring' ? 'memberFees' : 'donations';
-            finalAmount = Math.abs(item.amount);
-            description = `${t.movements.splitter.donationDescription}: ${displayName}`;
-          }
+          const category = transaction.category || 'supplierPayments';
+          const finalAmount = -Math.abs(item.amount);
+          const description = `Pagament: ${displayName}`;
 
           resolvedTotalCents += Math.round(Math.abs(item.amount) * 100);
 
@@ -1629,27 +1778,7 @@ export function RemittanceSplitter({
             remittanceId,
           };
           if (contactId) {
-            (newTxData as any).contactType = isPaymentRemittance ? 'supplier' : 'donor';
-          }
-
-          // P0: Validar invariants fiscals abans d'escriure
-          // Nota: Per remittance IN (amount > 0, donacions), contactId és obligatori (A1)
-          // Per remittance OUT (amount < 0, pagaments), no aplica l'invariant fiscal
-          if (newTxData.amount > 0) {
-            assertFiscalTxCanBeSaved(
-              {
-                transactionType: undefined, // No és return/donation/fee explícit
-                amount: newTxData.amount,
-                contactId: newTxData.contactId,
-                source: newTxData.source,
-              },
-              {
-                firestore,
-                orgId: organizationId,
-                operation: 'splitRemittance',
-                route: '/remittance-splitter',
-              }
-            );
+            (newTxData as any).contactType = 'supplier';
           }
 
           batch.set(newTxRef, newTxData);
@@ -1672,18 +1801,9 @@ export function RemittanceSplitter({
 
           for (const item of chunk) {
             const pendingDocRef = doc(pendingRef);
-
-            // P0: Nous motius de pendent per mode IN (IBAN-first)
-            let reason: import('@/lib/data').RemittancePendingReason;
-            if (!isPaymentRemittance) {
-              // Mode IN: només 2 motius possibles
-              reason = item.status === 'ambiguous_iban' ? 'AMBIGUOUS_IBAN' : 'NO_IBAN_MATCH';
-            } else {
-              // Mode OUT: comportament original
-              reason = !item.taxId ? 'NO_TAXID' :
-                       !item.name || item.amount <= 0 ? 'INVALID_DATA' :
-                       'NO_MATCH';
-            }
+            const reason: import('@/lib/data').RemittancePendingReason = !item.taxId ? 'NO_TAXID' :
+                     !item.name || item.amount <= 0 ? 'INVALID_DATA' :
+                     'NO_MATCH';
 
             pendingTotalCents += Math.round(Math.abs(item.amount) * 100);
 
@@ -1696,10 +1816,6 @@ export function RemittanceSplitter({
               reason,
               sourceRowIndex: item.rowIndex,
               createdAt: now,
-              // P0: Guardar donants candidats per IBAN ambigu
-              ...(item.ambiguousDonors && {
-                ambiguousDonorIds: item.ambiguousDonors.map(d => d.id),
-              }),
             });
           }
 
@@ -1714,10 +1830,9 @@ export function RemittanceSplitter({
       const remittanceStatus = pendingDonations.length > 0 ? 'partial' : 'complete';
 
       // 4. Crear document de remesa amb totals
-      const remittanceType = isPaymentRemittance ? 'payments' : 'donations';
       await setDoc(remittanceRef, {
         direction: direction.toLowerCase(),
-        type: remittanceType,
+        type: 'payments',
         parentTransactionId: transaction.id,
         transactionIds: childTransactionIds,
         totalAmount: Math.abs(totalAmount),
@@ -1725,7 +1840,6 @@ export function RemittanceSplitter({
         createdAt: now,
         createdBy: user?.uid ?? null,
         bankAccountId: transaction.bankAccountId ?? null,
-        // Nous camps per traçabilitat
         resolvedCount: resolvableDonations.length,
         pendingCount: pendingDonations.length,
         expectedTotalCents,
@@ -1739,18 +1853,15 @@ export function RemittanceSplitter({
           validatedByUid: user?.uid ?? null,
         },
       });
-      log(`[Splitter] Document de remesa creat: ${remittanceId} (status: ${remittanceStatus}, resolved: ${resolvableDonations.length}, pending: ${pendingDonations.length})`);
+      log(`[Splitter] Document de remesa creat: ${remittanceId}`);
 
-      // 5. Marcar transacció pare amb estat correcte
+      // 5. Marcar transacció pare
       const updateBatch = writeBatch(firestore);
-      const remittanceCategory = isPaymentRemittance
-        ? (transaction.category || 'supplierPayments')
-        : 'memberFees';
       updateBatch.update(doc(transactionsRef, transaction.id), {
         isRemittance: true,
         remittanceItemCount: parsedDonations.length,
         remittanceDirection: direction,
-        remittanceType,
+        remittanceType: 'payments',
         remittanceId,
         remittanceStatus,
         remittanceResolvedCount: resolvableDonations.length,
@@ -1758,7 +1869,7 @@ export function RemittanceSplitter({
         remittanceExpectedTotalCents: expectedTotalCents,
         remittanceResolvedTotalCents: resolvedTotalCents,
         remittancePendingTotalCents: pendingTotalCents,
-        category: remittanceCategory,
+        category: transaction.category || 'supplierPayments',
         contactId: null,
         contactType: null,
       });
@@ -1766,7 +1877,6 @@ export function RemittanceSplitter({
 
       log(`[Splitter] ✅ Processament completat!`);
 
-      // Toast diferent segons si hi ha pendents
       if (pendingDonations.length > 0) {
         toast({
           title: t.movements.splitter.remittancePartial ?? 'Remesa parcial',
@@ -1777,12 +1887,8 @@ export function RemittanceSplitter({
         });
       } else {
         toast({
-          title: isPaymentRemittance
-            ? t.movements.splitter.paymentsRemittanceProcessed
-            : t.movements.splitter.remittanceProcessed,
-          description: isPaymentRemittance
-            ? t.movements.splitter.paymentsRemittanceProcessedDescription(parsedDonations.length, contactsToCreate.length)
-            : t.movements.splitter.remittanceProcessedDescription(parsedDonations.length, contactsToCreate.length),
+          title: t.movements.splitter.paymentsRemittanceProcessed,
+          description: t.movements.splitter.paymentsRemittanceProcessedDescription(parsedDonations.length, contactsToCreate.length),
         });
       }
 

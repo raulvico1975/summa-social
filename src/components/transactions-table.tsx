@@ -351,6 +351,11 @@ export function TransactionsTable({ initialDateFilter = null }: TransactionsTabl
   // Modal detall remesa
   const [isRemittanceDetailOpen, setIsRemittanceDetailOpen] = React.useState(false);
   const [selectedRemittanceId, setSelectedRemittanceId] = React.useState<string | null>(null);
+  const [remittanceDetailParentTx, setRemittanceDetailParentTx] = React.useState<Transaction | null>(null);
+
+  // Modal repair remesa (usa RemittanceSplitter amb isRepairMode)
+  const [isRepairSplitterOpen, setIsRepairSplitterOpen] = React.useState(false);
+  const [repairTransaction, setRepairTransaction] = React.useState<Transaction | null>(null);
 
   // Modal importador devolucions
   const [isReturnImporterOpen, setIsReturnImporterOpen] = React.useState(false);
@@ -1127,9 +1132,24 @@ export function TransactionsTable({ initialDateFilter = null }: TransactionsTabl
     setTransactionToSplit(null);
   };
 
-  const handleViewRemittanceDetail = (remittanceId: string) => {
+  const handleViewRemittanceDetail = (remittanceId: string, parentTx?: Transaction) => {
     setSelectedRemittanceId(remittanceId);
+    setRemittanceDetailParentTx(parentTx || null);
     setIsRemittanceDetailOpen(true);
+  };
+
+  // Obrir el flow de repair (RemittanceSplitter en mode repair)
+  const handleOpenRepairFlow = () => {
+    if (remittanceDetailParentTx) {
+      setRepairTransaction(remittanceDetailParentTx);
+      setIsRemittanceDetailOpen(false);
+      setIsRepairSplitterOpen(true);
+    }
+  };
+
+  const handleRepairDone = () => {
+    setIsRepairSplitterOpen(false);
+    setRepairTransaction(null);
   };
 
   // Desfer remesa/Stripe: obre diàleg de confirmació
@@ -1187,6 +1207,78 @@ export function TransactionsTable({ initialDateFilter = null }: TransactionsTabl
     setIsUndoProcessing(true);
 
     try {
+      // Per remeses IN (amount > 0), usar API server-side
+      // Per Stripe i devolucions, mantenir flux client-side
+      if (opType === 'remittance_in' && undoTransaction.amount > 0) {
+        await handleUndoServerSide();
+      } else {
+        await handleUndoClientSide(opType);
+      }
+    } finally {
+      setIsUndoProcessing(false);
+    }
+  };
+
+  // Undo server-side per remeses IN
+  const handleUndoServerSide = async () => {
+    if (!undoTransaction || !organizationId || !user) return;
+
+    try {
+      const idToken = await user.getIdToken();
+
+      const response = await fetch('/api/remittances/in/undo', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${idToken}`,
+        },
+        body: JSON.stringify({
+          orgId: organizationId,
+          parentTxId: undoTransaction.id,
+        }),
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        toast({
+          variant: 'destructive',
+          title: 'Error desfent processament',
+          description: result.error || 'Error desconegut',
+        });
+        return;
+      }
+
+      if (result.idempotent) {
+        toast({
+          title: 'Ja estava desfet',
+          description: 'Aquesta remesa ja s\'havia desfet anteriorment.',
+        });
+      } else {
+        toast({
+          title: 'Processament desfet',
+          description: `S'han arxivat ${result.archivedCount} transaccions. Pots processar de nou.`,
+        });
+      }
+
+      setIsUndoDialogOpen(false);
+      setUndoTransaction(null);
+
+    } catch (error: any) {
+      console.error('Error undoing processing (server-side):', error);
+      toast({
+        variant: 'destructive',
+        title: 'Error desfent processament',
+        description: error.message,
+      });
+    }
+  };
+
+  // Undo client-side per Stripe, devolucions i remeses OUT
+  const handleUndoClientSide = async (opType: UndoOperationType) => {
+    if (!undoTransaction || !organizationId || !user?.uid) return;
+
+    try {
       const result = await executeUndo(undoTransaction, opType, {
         firestore,
         orgId: organizationId,
@@ -1214,8 +1306,6 @@ export function TransactionsTable({ initialDateFilter = null }: TransactionsTabl
         title: 'Error desfent processament',
         description: error.message,
       });
-    } finally {
-      setIsUndoProcessing(false);
     }
   };
 
@@ -1979,6 +2069,22 @@ export function TransactionsTable({ initialDateFilter = null }: TransactionsTabl
           onOpenChange={setIsRemittanceDetailOpen}
           remittanceId={selectedRemittanceId}
           organizationId={organizationId}
+          parentTransaction={remittanceDetailParentTx}
+          onOpenRepairFlow={handleOpenRepairFlow}
+        />
+      )}
+
+      {/* Repair Splitter (RemittanceSplitter en mode repair) */}
+      {repairTransaction && availableContacts && (
+        <RemittanceSplitter
+          open={isRepairSplitterOpen}
+          onOpenChange={setIsRepairSplitterOpen}
+          transaction={repairTransaction}
+          existingDonors={allDonorsForRemittance}
+          existingSuppliers={suppliers}
+          existingEmployees={employees}
+          onSplitDone={handleRepairDone}
+          isRepairMode={true}
         />
       )}
 

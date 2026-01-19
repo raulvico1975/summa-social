@@ -129,6 +129,101 @@ Aquest checklist assegura que els fluxos fiscals crítics no tenen regressions a
 
 ---
 
+### P0-8 REPAIR recrea filles correctament
+
+**Passos:**
+1. Localitzar remesa pare processada amb inconsistència (o simular-ne una)
+2. Obrir "Veure detall" de la remesa
+3. Verificar que apareix banner vermell "Inconsistència detectada"
+4. Clicar botó "Reparar remesa"
+5. Pujar el mateix fitxer CSV/XLSX
+6. Processar en mode repair
+
+**Expected:**
+- [ ] Filles antigues passen a `archivedAt` (soft-delete)
+- [ ] Filles noves creades correctament
+- [ ] Comptadors del pare actualitzats
+- [ ] No hi ha filles duplicades actives
+- [ ] Net del donant és correcte (suma noves, no suma arxivades)
+
+---
+
+### P0-9 UNDO idempotent
+
+**Passos:**
+1. Localitzar remesa pare processada
+2. Executar "Desfer remesa" (1a vegada)
+3. Esperar confirmació d'èxit
+4. Executar "Desfer remesa" una 2a vegada (simular reintent)
+
+**Expected:**
+- [ ] 1a execució: desfà correctament, retorna èxit
+- [ ] 2a execució: retorna `idempotent: true` sense errors
+- [ ] No hi ha canvis addicionals a Firestore a la 2a execució
+- [ ] Pare queda en estat net (sense `isRemittance`)
+
+---
+
+### P0-10 PROCESS idempotent
+
+**Passos:**
+1. Preparar CSV amb 3 ítems
+2. Processar remesa (1a vegada)
+3. Tornar a obrir el splitter amb el mateix pare
+4. Pujar exactament el mateix CSV
+5. Processar (2a vegada)
+
+**Expected:**
+- [ ] 1a execució: crea filles correctament
+- [ ] 2a execució: retorna `idempotent: true` sense crear filles noves
+- [ ] No hi ha filles duplicades
+- [ ] Toast informa "Remesa ja processada"
+
+---
+
+### P0-11 INVARIANT bloqueja (R-SUM-1)
+
+**Passos:**
+1. Preparar CSV amb ítems que sumen diferent del pare (diferència > 2 cèntims)
+2. Intentar processar remesa
+
+**Expected:**
+- [ ] Server retorna error codi `R-SUM-1`
+- [ ] Toast mostra "Error de validació: la suma no coincideix"
+- [ ] NO es creen filles (abort abans d'escriure)
+- [ ] Pare queda intacte
+
+---
+
+### P0-12 LOCK impedeix doble processament
+
+**Passos:**
+1. Obrir dues pestanyes amb el mateix usuari
+2. A pestanya A: iniciar processament d'una remesa
+3. A pestanya B: intentar processar la mateixa remesa simultàniament
+
+**Expected:**
+- [ ] Una pestanya guanya i processa
+- [ ] L'altra rep error `LOCKED_BY_OTHER`
+- [ ] No hi ha corrupció de dades
+- [ ] El lock s'allibera correctament (TTL 5min)
+
+---
+
+### P0-13 UI bloqueja eliminar fill de remesa
+
+**Passos:**
+1. Localitzar una transacció filla d'una remesa (`isRemittanceItem: true`)
+2. Obrir menú d'accions (3 punts)
+3. Intentar clicar "Eliminar"
+
+**Expected:**
+- [ ] Botó "Eliminar" està desactivat (disabled)
+- [ ] Mostra text "Forma part d'una remesa"
+- [ ] No es pot eliminar la filla individualment
+
+---
+
 ### P0-14 archivedAt exclòs fiscalment (CRÍTIC)
 
 **Passos:**
@@ -149,9 +244,9 @@ Aquest checklist assegura que els fluxos fiscals crítics no tenen regressions a
 
 ## 3. Resultat de la sessió
 
-| Data | Executor | P0-1 | P0-2 | P0-3 | P0-4 | P0-5 | P0-6 | P0-7 | P0-14 | Notes |
-|------|----------|------|------|------|------|------|------|------|-------|-------|
-| YYYY-MM-DD | Nom | PASS/FAIL | PASS/FAIL | PASS/FAIL | PASS/FAIL | PASS/FAIL | PASS/FAIL | PASS/FAIL | PASS/FAIL | |
+| Data | Executor | P0-1 | P0-2 | P0-3 | P0-4 | P0-5 | P0-6 | P0-7 | P0-8 | P0-9 | P0-10 | P0-11 | P0-12 | P0-13 | P0-14 | Notes |
+|------|----------|------|------|------|------|------|------|------|------|------|-------|-------|-------|-------|-------|-------|
+| YYYY-MM-DD | Nom | - | - | - | - | - | - | - | - | - | - | - | - | - | - | |
 
 ---
 
