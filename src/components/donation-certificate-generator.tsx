@@ -312,17 +312,20 @@ export function DonationCertificateGenerator() {
       
       // CRITERI CONSERVADOR: totes les donacions positives del donant dins l'any
       // No usem donationStatus perquè el returnedAmount ja cobreix les devolucions
+      // P0: Excloure transaccions arxivades (soft-delete) - no compten fiscalment
       const yearDonations = allTransactions.filter(tx => {
         const txDate = tx.date.substring(0, 10);
         return tx.amount > 0 &&
                tx.contactId &&
                tx.contactType === 'donor' &&
                txDate >= yearStart &&
-               txDate <= yearEnd;
+               txDate <= yearEnd &&
+               tx.archivedAt == null;
       });
 
       // CRITERI CONSERVADOR: totes les devolucions (transactionType==='return') del donant dins l'any
       // Exclou return_fee. No requereix linkedTransactionId - qualsevol devolució assignada compta.
+      // P0: Excloure transaccions arxivades (soft-delete) - no compten fiscalment
       const yearReturns = allTransactions.filter(tx => {
         const txDate = tx.date.substring(0, 10);
         return tx.amount < 0 &&
@@ -330,7 +333,8 @@ export function DonationCertificateGenerator() {
                tx.contactId &&
                tx.contactType === 'donor' &&
                txDate >= yearStart &&
-               txDate <= yearEnd;
+               txDate <= yearEnd &&
+               tx.archivedAt == null;
       });
 
       const summaries: DonorSummary[] = [];

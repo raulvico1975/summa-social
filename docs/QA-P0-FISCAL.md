@@ -129,11 +129,29 @@ Aquest checklist assegura que els fluxos fiscals crítics no tenen regressions a
 
 ---
 
+### P0-14 archivedAt exclòs fiscalment (CRÍTIC)
+
+**Passos:**
+1. Localitzar un donant amb donacions (anotar net actual)
+2. Processar una remesa que crea filles assignades a aquest donant
+3. Verificar que el net del donant ha augmentat
+4. Executar "Desfer remesa" (Undo)
+5. Tornar a obrir fitxa donant
+6. Generar certificat de donació (si aplica)
+
+**Expected:**
+- [ ] Després de l'undo, les filles tenen `archivedAt` amb timestamp
+- [ ] Fitxa donant NO mostra les filles arxivades
+- [ ] Net del donant torna a l'import original (abans de processar)
+- [ ] Certificat NO inclou les quotes arxivades
+
+---
+
 ## 3. Resultat de la sessió
 
-| Data | Executor | P0-1 | P0-2 | P0-3 | P0-4 | P0-5 | P0-6 | P0-7 | Notes |
-|------|----------|------|------|------|------|------|------|------|-------|
-| YYYY-MM-DD | Nom | PASS/FAIL | PASS/FAIL | PASS/FAIL | PASS/FAIL | PASS/FAIL | PASS/FAIL | PASS/FAIL | |
+| Data | Executor | P0-1 | P0-2 | P0-3 | P0-4 | P0-5 | P0-6 | P0-7 | P0-14 | Notes |
+|------|----------|------|------|------|------|------|------|------|-------|-------|
+| YYYY-MM-DD | Nom | PASS/FAIL | PASS/FAIL | PASS/FAIL | PASS/FAIL | PASS/FAIL | PASS/FAIL | PASS/FAIL | PASS/FAIL | |
 
 ---
 
@@ -146,4 +164,4 @@ Aquest checklist assegura que els fluxos fiscals crítics no tenen regressions a
 
 ---
 
-*Última actualització: 2026-01-11*
+*Última actualització: 2026-01-19*

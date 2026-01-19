@@ -151,11 +151,13 @@ export function DonorDetailDrawer({ donor, open, onOpenChange, onEdit }: DonorDe
 
     // P0: Query directa per contactId (no carregar globals i filtrar al client)
     // Això garanteix que totes les transaccions del donant apareixen independentment
-    // del volum global. Necessita índex: contactId + date (desc)
+    // del volum global. Necessita índex: contactId + archivedAt + date (desc)
+    // P0: Excloure transaccions arxivades (soft-delete) a query-side per eficiència
     const txRef = collection(firestore, 'organizations', organizationId, 'transactions');
     const txQuery = query(
       txRef,
       where('contactId', '==', donor.id),
+      where('archivedAt', '==', null),
       orderBy('date', 'desc'),
       limit(1000)
     );
@@ -163,10 +165,9 @@ export function DonorDetailDrawer({ donor, open, onOpenChange, onEdit }: DonorDe
     const unsubscribe = onSnapshot(
       txQuery,
       (snapshot) => {
+        // P0: archivedAt ja filtrat a query-side, no cal filtre client
         const donorTxs = snapshot.docs
-          .map(doc => ({ id: doc.id, ...doc.data() } as Transaction))
-          // Filtrar transaccions arxivades (soft-delete) - no mostrar a fitxa donant
-          .filter(tx => !tx.archivedAt);
+          .map(doc => ({ id: doc.id, ...doc.data() } as Transaction));
         setTransactions(donorTxs);
         setIsLoading(false);
         setPermissionError(false);
