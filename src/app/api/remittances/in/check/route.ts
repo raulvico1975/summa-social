@@ -45,6 +45,10 @@ interface RemittanceCheckResponse {
     childrenSumCents?: number;
     deltaCents?: number;
   };
+  /** Si true, el check s'ha saltat perquè no aplica (ex: remesa OUT) */
+  skipped?: boolean;
+  /** Motiu pel qual s'ha saltat el check */
+  skipReason?: 'OUT_REMITTANCE';
   error?: string;
   code?: string;
 }
@@ -118,10 +122,25 @@ export async function GET(request: NextRequest): Promise<NextResponse<Remittance
     }
 
     const parentData = parentSnap.data();
-    const parentAmountCents = Math.round(Math.abs(parentData?.amount ?? 0) * 100);
+    const parentAmount = parentData?.amount ?? 0;
+    const parentAmountCents = Math.round(Math.abs(parentAmount) * 100);
     const isRemittance = parentData?.isRemittance === true;
     const remittanceId = parentData?.remittanceId as string | undefined;
     const expectedCount = parentData?.remittanceItemCount as number | undefined;
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // 3b. Exclusió de remeses OUT (imports negatius / devolucions)
+    // ─────────────────────────────────────────────────────────────────────────
+    // El sistema de consistència només s'aplica a remeses IN (cobrament).
+    // Remeses OUT / devolucions queden fora: no tenen invariants de filles actives.
+    if (parentAmount < 0) {
+      return NextResponse.json({
+        consistent: true,
+        issues: [],
+        skipped: true,
+        skipReason: 'OUT_REMITTANCE',
+      });
+    }
 
     const issues: RemittanceIssue[] = [];
     const details: RemittanceCheckResponse['details'] = {

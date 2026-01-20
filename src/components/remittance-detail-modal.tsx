@@ -55,6 +55,10 @@ interface ConsistencyCheckResult {
     childrenSumCents?: number;
     deltaCents?: number;
   };
+  /** Si true, el check s'ha saltat perquè no aplica (ex: remesa OUT) */
+  skipped?: boolean;
+  /** Motiu pel qual s'ha saltat el check */
+  skipReason?: 'OUT_REMITTANCE';
 }
 
 // Helper per traduir motius de pendent
@@ -538,8 +542,8 @@ export function RemittanceDetailModal({
           </DialogDescription>
         </DialogHeader>
 
-        {/* Banner d'inconsistència */}
-        {consistencyCheck && !consistencyCheck.consistent && (
+        {/* Banner d'inconsistència (només per remeses IN, no OUT/devolucions) */}
+        {consistencyCheck && !consistencyCheck.consistent && !consistencyCheck.skipped && (
           <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-4">
             <div className="flex items-start gap-3">
               <AlertTriangle className="h-5 w-5 text-red-600 flex-shrink-0 mt-0.5" />
