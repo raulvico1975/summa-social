@@ -79,8 +79,6 @@ interface RemittanceSplitterProps {
   existingSuppliers?: Supplier[];
   existingEmployees?: Employee[];
   onSplitDone: () => void;
-  /** Mode reparació: crida /api/remittances/in/repair en lloc de process */
-  isRepairMode?: boolean;
 }
 
 // Tipus de remesa: IN (donacions) o OUT (pagaments)
@@ -341,7 +339,6 @@ export function RemittanceSplitter({
   existingSuppliers = [],
   existingEmployees = [],
   onSplitDone,
-  isRepairMode = false,
 }: RemittanceSplitterProps) {
   // Detectar direcció: IN (donacions, amount > 0) o OUT (pagaments, amount < 0)
   const direction: RemittanceDirection = transaction.amount >= 0 ? 'IN' : 'OUT';
@@ -478,51 +475,39 @@ export function RemittanceSplitter({
 
   // Validació per permetre processar: imports quadren i hi ha dades
   const canProcess = React.useMemo(() => {
-    // 🛑 GUARDRAIL: No permetre reprocessar una remesa ja processada
-    // Per tornar a processar, cal usar mode repair (isRepairMode=true)
-    if (transaction.isRemittance && !isRepairMode) return false;
+    // 🛑 GUARDRAIL: No permetre processar si ja és remesa
+    // El flux de recuperació és: Desfer → Processar (no hi ha "Reparar")
+    if (transaction.isRemittance) return false;
     if (parsedDonations.length === 0) return false;
     // Verificar que tots els imports són vàlids (> 0)
     if (validationDetails.invalidAmounts > 0) return false;
-    // Remeses IN: el total ha de quadrar EXACTAMENT amb el pare (tolerància 0)
-    // Remeses OUT: tolerància ±2 cèntims (arrodoniments bancaris)
-    if (!isPaymentRemittance) {
-      // Mode IN: tolerància 0
-      if (validationDetails.deltaCents !== 0) return false;
-    } else {
-      // Mode OUT: tolerància ±2 cèntims
-      if (Math.abs(validationDetails.deltaCents) > 2) return false;
-    }
+    // Verificar que el total quadra amb el pare (±2 cèntims)
+    if (Math.abs(validationDetails.deltaCents) > 2) return false;
     // P0: Bloquejar si hi ha IBAN ambigus sense resoldre (mode IN)
     if (!isPaymentRemittance && stats.ambiguousIban > 0) return false;
     return true;
-  }, [transaction.isRemittance, isRepairMode, parsedDonations.length, validationDetails, isPaymentRemittance, stats.ambiguousIban]);
+  }, [transaction.isRemittance, parsedDonations.length, validationDetails, isPaymentRemittance, stats.ambiguousIban]);
 
   // Motiu de bloqueig per mostrar a l'usuari
   const blockReason = React.useMemo((): string | null => {
     // 🛑 GUARDRAIL: Remesa ja processada
-    if (transaction.isRemittance && !isRepairMode) {
-      return 'Aquesta remesa ja està processada. Per tornar-la a generar, utilitza "Desfer" o "Reparar".';
+    if (transaction.isRemittance) {
+      return 'Aquesta remesa ja està processada. Desfés-la abans de tornar-la a processar.';
     }
     if (parsedDonations.length === 0) return 'No hi ha dades per processar';
     if (validationDetails.invalidAmounts > 0) {
       return `${validationDetails.invalidAmounts} element(s) amb import invàlid (≤0)`;
     }
-    // Remeses IN: tolerància 0; Remeses OUT: tolerància ±2 cèntims
-    if (!isPaymentRemittance && validationDetails.deltaCents !== 0) {
-      const delta = validationDetails.deltaCents / 100;
-      return `La suma ha de quadrar exactament (delta actual: ${delta > 0 ? '+' : ''}${delta.toFixed(2)}€)`;
-    }
-    if (isPaymentRemittance && Math.abs(validationDetails.deltaCents) > 2) {
-      const delta = validationDetails.deltaCents / 100;
-      return `Delta ${delta > 0 ? '+' : ''}${delta.toFixed(2)}€ (màx ±0.02€)`;
+    if (Math.abs(validationDetails.deltaCents) > 2) {
+      const deltaCentsAbs = Math.abs(validationDetails.deltaCents);
+      return `Delta ${deltaCentsAbs > 0 ? '+' : ''}${validationDetails.deltaCents / 100}€ (màx ±0.02€)`;
     }
     // P0: Bloqueig per IBAN ambigu
     if (!isPaymentRemittance && stats.ambiguousIban > 0) {
       return `${stats.ambiguousIban} IBAN(s) ambigu(s) - cal selecció manual`;
     }
     return null;
-  }, [transaction.isRemittance, isRepairMode, parsedDonations.length, validationDetails, isPaymentRemittance, stats.ambiguousIban]);
+  }, [transaction.isRemittance, parsedDonations.length, validationDetails, isPaymentRemittance, stats.ambiguousIban]);
 
   // Files visibles per al preview del mapejat
   const previewRows = React.useMemo(() => {
@@ -1486,7 +1471,7 @@ export function RemittanceSplitter({
 
     setStep('processing');
     setIsProcessing(true);
-    log(`[Splitter] Iniciant ${isRepairMode ? 'reparació' : 'processament'} server-side per remesa IN...`);
+    log(`[Splitter] Iniciant processament server-side per remesa IN...`);
 
     try {
       // ═══════════════════════════════════════════════════════════════════════
@@ -1539,12 +1524,10 @@ export function RemittanceSplitter({
       log(`[Splitter] Payload: ${items.length} items, ${pendingItems.length} pendents`);
 
       // ═══════════════════════════════════════════════════════════════════════
-      // Cridar API server-side (process o repair segons mode)
+      // Cridar API server-side
       // ═══════════════════════════════════════════════════════════════════════
       const idToken = await user.getIdToken();
-      const apiEndpoint = isRepairMode
-        ? '/api/remittances/in/repair'
-        : '/api/remittances/in/process';
+      const apiEndpoint = '/api/remittances/in/process';
 
       log(`[Splitter] Cridant ${apiEndpoint}...`);
 
@@ -1606,21 +1589,18 @@ export function RemittanceSplitter({
       // Èxit
       // ═══════════════════════════════════════════════════════════════════════
       if (result.idempotent) {
-        log(`[Splitter] ✅ Idempotent: remesa ja ${isRepairMode ? 'reparada' : 'processada'}`);
+        log(`[Splitter] ✅ Idempotent: remesa ja processada`);
         toast({
-          title: isRepairMode ? 'Remesa ja reparada' : 'Remesa ja processada',
-          description: isRepairMode
-            ? 'Aquesta remesa ja s\'havia reparat anteriorment amb les mateixes dades.'
-            : 'Aquesta remesa ja s\'havia processat anteriorment.',
+          title: 'Remesa ja processada',
+          description: 'Aquesta remesa ja s\'havia processat anteriorment.',
           variant: 'default',
         });
       } else {
-        const actionVerb = isRepairMode ? 'Reparació' : 'Processament';
-        log(`[Splitter] ✅ ${actionVerb} completat! remittanceId=${result.remittanceId}, created=${result.createdCount}, pending=${result.pendingCount}`);
+        log(`[Splitter] ✅ Processament completat! remittanceId=${result.remittanceId}, created=${result.createdCount}, pending=${result.pendingCount}`);
 
         if (result.pendingCount && result.pendingCount > 0) {
           toast({
-            title: isRepairMode ? 'Remesa reparada (parcial)' : (t.movements.splitter.remittancePartial ?? 'Remesa parcial'),
+            title: t.movements.splitter.remittancePartial ?? 'Remesa parcial',
             description: typeof t.movements.splitter.remittancePartialDescription === 'function'
               ? t.movements.splitter.remittancePartialDescription(result.pendingCount)
               : `S'han creat ${result.createdCount} quotes. ${result.pendingCount} han quedat pendents.`,
@@ -1628,10 +1608,8 @@ export function RemittanceSplitter({
           });
         } else {
           toast({
-            title: isRepairMode ? 'Remesa reparada' : t.movements.splitter.remittanceProcessed,
-            description: isRepairMode
-              ? `S'han recreat ${result.createdCount || 0} quotes correctament.`
-              : t.movements.splitter.remittanceProcessedDescription(result.createdCount || 0, 0),
+            title: t.movements.splitter.remittanceProcessed,
+            description: t.movements.splitter.remittanceProcessedDescription(result.createdCount || 0, 0),
           });
         }
       }
@@ -2975,14 +2953,6 @@ export function RemittanceSplitter({
                 </TableBody>
               </Table>
             </div>
-
-            {/* Alerta visible quan el processament està bloquejat */}
-            {blockReason && !canProcess && (
-              <Alert variant="destructive" className="mt-3">
-                <AlertCircle className="h-4 w-4" />
-                <AlertDescription>{blockReason}</AlertDescription>
-              </Alert>
-            )}
 
             {/* ─────────────────────────────────────────────────────────────────
                 FOOTER FIX: Resum + Accions
