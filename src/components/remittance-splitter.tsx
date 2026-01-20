@@ -478,6 +478,9 @@ export function RemittanceSplitter({
 
   // Validació per permetre processar: imports quadren i hi ha dades
   const canProcess = React.useMemo(() => {
+    // 🛑 GUARDRAIL: No permetre reprocessar una remesa ja processada
+    // Per tornar a processar, cal usar mode repair (isRepairMode=true)
+    if (transaction.isRemittance && !isRepairMode) return false;
     if (parsedDonations.length === 0) return false;
     // Verificar que tots els imports són vàlids (> 0)
     if (validationDetails.invalidAmounts > 0) return false;
@@ -493,10 +496,14 @@ export function RemittanceSplitter({
     // P0: Bloquejar si hi ha IBAN ambigus sense resoldre (mode IN)
     if (!isPaymentRemittance && stats.ambiguousIban > 0) return false;
     return true;
-  }, [parsedDonations.length, validationDetails, isPaymentRemittance, stats.ambiguousIban]);
+  }, [transaction.isRemittance, isRepairMode, parsedDonations.length, validationDetails, isPaymentRemittance, stats.ambiguousIban]);
 
   // Motiu de bloqueig per mostrar a l'usuari
   const blockReason = React.useMemo((): string | null => {
+    // 🛑 GUARDRAIL: Remesa ja processada
+    if (transaction.isRemittance && !isRepairMode) {
+      return 'Aquesta remesa ja està processada. Per tornar-la a generar, utilitza "Desfer" o "Reparar".';
+    }
     if (parsedDonations.length === 0) return 'No hi ha dades per processar';
     if (validationDetails.invalidAmounts > 0) {
       return `${validationDetails.invalidAmounts} element(s) amb import invàlid (≤0)`;
@@ -515,7 +522,7 @@ export function RemittanceSplitter({
       return `${stats.ambiguousIban} IBAN(s) ambigu(s) - cal selecció manual`;
     }
     return null;
-  }, [parsedDonations.length, validationDetails, isPaymentRemittance, stats.ambiguousIban]);
+  }, [transaction.isRemittance, isRepairMode, parsedDonations.length, validationDetails, isPaymentRemittance, stats.ambiguousIban]);
 
   // Files visibles per al preview del mapejat
   const previewRows = React.useMemo(() => {

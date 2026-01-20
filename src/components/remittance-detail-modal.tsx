@@ -201,13 +201,16 @@ export function RemittanceDetailModal({
     [t.categories]
   );
 
-  // Filtrar per cerca
+  // Filtrar per cerca i excloure arxivades
   const filteredItems = React.useMemo(() => {
     if (!remittanceItems) return [];
-    if (!searchQuery.trim()) return remittanceItems;
+    // 🛑 OBLIGATORI: Excloure transaccions arxivades (soft-delete)
+    // Usem !tx.archivedAt perquè cobreix null, undefined, i camp inexistent
+    const activeItems = remittanceItems.filter(tx => !tx.archivedAt);
+    if (!searchQuery.trim()) return activeItems;
 
     const q = searchQuery.toLowerCase().trim();
-    return remittanceItems.filter(item => {
+    return activeItems.filter(item => {
       const contact = item.contactId ? contactMap[item.contactId] : null;
       const name = contact?.name?.toLowerCase() || '';
       const taxId = contact?.taxId?.toLowerCase() || '';

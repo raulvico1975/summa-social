@@ -512,6 +512,22 @@ export async function POST(request: NextRequest): Promise<NextResponse<ProcessRe
     const parentAmountCents = Math.round(parentData.amount * 100);
 
     // ─────────────────────────────────────────────────────────────────────────
+    // 4b. 🛑 GUARDRAIL: No permetre reprocessar
+    // ─────────────────────────────────────────────────────────────────────────
+    if (parentData.isRemittance === true) {
+      console.warn(`[remittances/in/process] Attempted reprocess of already processed remittance: ${parentTxId}`);
+      return NextResponse.json(
+        {
+          success: false,
+          idempotent: false,
+          error: 'Aquesta remesa ja està processada. Utilitza /undo o /repair.',
+          code: 'REMITTANCE_ALREADY_PROCESSED',
+        },
+        { status: 409 }
+      );
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
     // 5. Computar inputHash (SHA-256 server-side)
     // ─────────────────────────────────────────────────────────────────────────
     const hashableItems: HashableItem[] = items.map((item) => ({
