@@ -200,12 +200,12 @@ export function RemittanceDetailModal({
     [t.categories]
   );
 
-  // Filtrar per cerca i excloure arxivades
+  // Filtrar per cerca (i excloure arxivades)
   const filteredItems = React.useMemo(() => {
     if (!remittanceItems) return [];
-    // 🛑 OBLIGATORI: Excloure transaccions arxivades (soft-delete)
-    // Usem !tx.archivedAt perquè cobreix null, undefined, i camp inexistent
-    const activeItems = remittanceItems.filter(tx => !tx.archivedAt);
+
+    // Primer: excloure filles arxivades (tolerant a legacy: null/undefined/"")
+    const activeItems = remittanceItems.filter(item => !item.archivedAt);
     if (!searchQuery.trim()) return activeItems;
 
     const q = searchQuery.toLowerCase().trim();
