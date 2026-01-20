@@ -252,6 +252,69 @@ export async function POST(request: NextRequest): Promise<NextResponse<UndoRemit
     }
 
     // ─────────────────────────────────────────────────────────────────────────
+    // 6b. Fallback legacy: arxivar filles restants per parentTransactionId
+    // ─────────────────────────────────────────────────────────────────────────
+    // Això cobreix casos on el doc remittances no existeix o està desfasat
+    const txCollection = db.collection(`organizations/${orgId}/transactions`);
+    const remainingSnap = await txCollection
+      .where('parentTransactionId', '==', parentTxId)
+      .get();
+
+    const remainingActiveIds = remainingSnap.docs
+      .filter(doc => {
+        const data = doc.data();
+        return !data.archivedAt; // tolerant: null/undefined/""
+      })
+      .map(doc => doc.id);
+
+    if (remainingActiveIds.length > 0) {
+      console.log(`[remittances/in/undo] Fallback legacy: arxivant ${remainingActiveIds.length} filles restants`);
+
+      for (let i = 0; i < remainingActiveIds.length; i += BATCH_SIZE) {
+        const chunk = remainingActiveIds.slice(i, i + BATCH_SIZE);
+        const batch = db.batch();
+
+        for (const txId of chunk) {
+          const childRef = db.doc(`organizations/${orgId}/transactions/${txId}`);
+          batch.update(childRef, {
+            archivedAt: now,
+            archivedByUid: uid,
+            archivedReason: 'undo_remittance',
+            archivedFromAction: 'undo_remittance_in_legacy_fallback',
+          });
+          archivedCount++;
+        }
+
+        await batch.commit();
+      }
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // 6c. Post-check: exigir 0 filles actives (determinista)
+    // ─────────────────────────────────────────────────────────────────────────
+    const verifySnap = await txCollection
+      .where('parentTransactionId', '==', parentTxId)
+      .get();
+
+    const stillActive = verifySnap.docs.filter(doc => !doc.data().archivedAt);
+
+    if (stillActive.length > 0) {
+      console.error(
+        `[remittances/in/undo] UNDO_INCOMPLETE: ${stillActive.length} filles encara actives`,
+        stillActive.map(d => d.id)
+      );
+      return NextResponse.json(
+        {
+          success: false,
+          idempotent: false,
+          error: `Undo incomplet: ${stillActive.length} filles encara actives`,
+          code: 'UNDO_INCOMPLETE_ACTIVE_CHILDREN',
+        },
+        { status: 500 }
+      );
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
     // 7. Eliminar pendents (hard-delete OK, no són fiscals)
     // ─────────────────────────────────────────────────────────────────────────
     let pendingDeletedCount = 0;
