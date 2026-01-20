@@ -25,7 +25,7 @@ import {
 import { getAuth, type Auth } from 'firebase-admin/auth';
 import {
   computeInputHashServer,
-  assertSumInvariant,
+  assertSumInvariantExact,
   assertCountInvariant,
   checkIdempotence,
   sumCents,
@@ -584,7 +584,8 @@ export async function POST(request: NextRequest): Promise<NextResponse<ProcessRe
     const totalSumCents = itemsSumCents + pendingSumCents;
 
     try {
-      assertSumInvariant(parentAmountCents, totalSumCents);
+      // Remeses IN: tolerància 0 (quadrament exacte)
+      assertSumInvariantExact(parentAmountCents, totalSumCents);
     } catch (error) {
       if (error instanceof RemittanceInvariantError) {
         console.error(`[remittances/in/process] R-SUM-1 failed:`, error.details);

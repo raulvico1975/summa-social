@@ -5,7 +5,9 @@
  * i són BLOQUEJANTS: si fallen, l'operació s'aborta.
  *
  * Invariants implementats:
- * - R-SUM-1: Suma de filles ≈ amount del pare (±0.02€)
+ * - R-SUM-1: Suma de filles === amount del pare
+ *   - assertSumInvariantExact: tolerància 0 (per remeses IN)
+ *   - assertSumInvariant: tolerància ±2 cèntims (legacy, per altres fluxos)
  * - R-COUNT-1: transactionIds.length === filles actives reals
  * - R-IDEMP-1: Si inputHash coincideix, operació és idempotent
  */
@@ -130,6 +132,36 @@ export function assertSumInvariant(
         childrenSumCents: childrenAbs,
         deltaCents,
         tolerance: SUM_TOLERANCE_CENTS,
+      }
+    );
+  }
+}
+
+/**
+ * R-SUM-1 (ESTRICTE): Suma de filles === amount del pare (tolerància 0)
+ *
+ * Per remeses IN (cobraments/quotes/donacions) no acceptem cap desquadrament.
+ * El pare és la veritat bancària i les filles han de quadrar exactament.
+ *
+ * @throws RemittanceInvariantError si la suma no és exactament igual
+ */
+export function assertSumInvariantExact(
+  parentAmountCents: number,
+  childrenSumCents: number
+): void {
+  const parentAbs = Math.abs(parentAmountCents);
+  const childrenAbs = Math.abs(childrenSumCents);
+  const deltaCents = Math.abs(parentAbs - childrenAbs);
+
+  if (deltaCents !== 0) {
+    throw new RemittanceInvariantError(
+      'R-SUM-1',
+      `Delta ${deltaCents} cèntims. En remeses IN s'exigeix quadrament exacte (0 cèntims).`,
+      {
+        parentAmountCents: parentAbs,
+        childrenSumCents: childrenAbs,
+        deltaCents,
+        tolerance: 0,
       }
     );
   }

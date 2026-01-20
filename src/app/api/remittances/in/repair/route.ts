@@ -35,7 +35,7 @@ import {
 } from '../../../../../lib/fiscal/remittances/children-ops';
 import {
   computeInputHashServer,
-  assertSumInvariant,
+  assertSumInvariantExact,
   assertCountInvariant,
   sumCents,
   toEuros,
@@ -354,7 +354,8 @@ export async function POST(request: NextRequest): Promise<NextResponse<RepairRem
     const totalSumCents = itemsSumCents + pendingSumCents;
 
     try {
-      assertSumInvariant(parentAmountCents, totalSumCents);
+      // Remeses IN: tolerància 0 (quadrament exacte)
+      assertSumInvariantExact(parentAmountCents, totalSumCents);
     } catch (error) {
       if (error instanceof RemittanceInvariantError) {
         console.error(`[remittances/in/repair] R-SUM-1 failed:`, error.details);

@@ -481,8 +481,15 @@ export function RemittanceSplitter({
     if (parsedDonations.length === 0) return false;
     // Verificar que tots els imports són vàlids (> 0)
     if (validationDetails.invalidAmounts > 0) return false;
-    // Verificar que el total quadra amb el pare (±2 cèntims)
-    if (Math.abs(validationDetails.deltaCents) > 2) return false;
+    // Remeses IN: el total ha de quadrar EXACTAMENT amb el pare (tolerància 0)
+    // Remeses OUT: tolerància ±2 cèntims (arrodoniments bancaris)
+    if (!isPaymentRemittance) {
+      // Mode IN: tolerància 0
+      if (validationDetails.deltaCents !== 0) return false;
+    } else {
+      // Mode OUT: tolerància ±2 cèntims
+      if (Math.abs(validationDetails.deltaCents) > 2) return false;
+    }
     // P0: Bloquejar si hi ha IBAN ambigus sense resoldre (mode IN)
     if (!isPaymentRemittance && stats.ambiguousIban > 0) return false;
     return true;
@@ -494,9 +501,14 @@ export function RemittanceSplitter({
     if (validationDetails.invalidAmounts > 0) {
       return `${validationDetails.invalidAmounts} element(s) amb import invàlid (≤0)`;
     }
-    if (Math.abs(validationDetails.deltaCents) > 2) {
-      const deltaCentsAbs = Math.abs(validationDetails.deltaCents);
-      return `Delta ${deltaCentsAbs > 0 ? '+' : ''}${validationDetails.deltaCents / 100}€ (màx ±0.02€)`;
+    // Remeses IN: tolerància 0; Remeses OUT: tolerància ±2 cèntims
+    if (!isPaymentRemittance && validationDetails.deltaCents !== 0) {
+      const delta = validationDetails.deltaCents / 100;
+      return `La suma ha de quadrar exactament (delta actual: ${delta > 0 ? '+' : ''}${delta.toFixed(2)}€)`;
+    }
+    if (isPaymentRemittance && Math.abs(validationDetails.deltaCents) > 2) {
+      const delta = validationDetails.deltaCents / 100;
+      return `Delta ${delta > 0 ? '+' : ''}${delta.toFixed(2)}€ (màx ±0.02€)`;
     }
     // P0: Bloqueig per IBAN ambigu
     if (!isPaymentRemittance && stats.ambiguousIban > 0) {
