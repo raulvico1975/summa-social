@@ -2969,6 +2969,14 @@ export function RemittanceSplitter({
               </Table>
             </div>
 
+            {/* Alerta visible quan el processament està bloquejat */}
+            {blockReason && !canProcess && (
+              <Alert variant="destructive" className="mt-3">
+                <AlertCircle className="h-4 w-4" />
+                <AlertDescription>{blockReason}</AlertDescription>
+              </Alert>
+            )}
+
             {/* ─────────────────────────────────────────────────────────────────
                 FOOTER FIX: Resum + Accions
                 ───────────────────────────────────────────────────────────────── */}
