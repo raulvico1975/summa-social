@@ -37,7 +37,7 @@ import { formatCurrencyEU } from '@/lib/normalize';
 import { useToast } from '@/hooks/use-toast';
 import * as XLSX from 'xlsx';
 import { useCollection, useFirebase, useMemoFirebase } from '@/firebase';
-import { collection, query, where } from 'firebase/firestore';
+import { collection } from 'firebase/firestore';
 import { useTranslations } from '@/i18n';
 import { useCurrentOrganization } from '@/hooks/organization-provider';
 import { useIsMobile } from '@/hooks/use-is-mobile';
@@ -157,12 +157,11 @@ export function DonationsReportGenerator() {
   const { t } = useTranslations();
   const isMobile = useIsMobile();
 
+  // HOTFIX: Treure where('archivedAt','==',null) de query perquè moltes tx legacy
+  // no tenen el camp archivedAt. Filtrem client-side amb tolerància (!tx.archivedAt).
   const transactionsQuery = useMemoFirebase(
     () => organizationId
-      ? query(
-          collection(firestore, 'organizations', organizationId, 'transactions'),
-          where('archivedAt', '==', null)
-        )
+      ? collection(firestore, 'organizations', organizationId, 'transactions')
       : null,
     [firestore, organizationId]
   );
@@ -184,16 +183,23 @@ export function DonationsReportGenerator() {
   const [isLoading, setIsLoading] = React.useState(false);
   const { toast } = useToast();
 
-  const availableYears = React.useMemo(() => {
+  // HOTFIX: Filtre client-side tolerant (inclou null, undefined, "")
+  const activeTxs = React.useMemo(() => {
     if (!transactions) return [];
-    const years = new Set(transactions.map(tx => new Date(tx.date).getFullYear()));
-    return Array.from(years).sort((a, b) => b - a);
+    return transactions.filter(tx => !tx.archivedAt);
   }, [transactions]);
+
+  const availableYears = React.useMemo(() => {
+    if (!activeTxs.length) return [];
+    const years = new Set(activeTxs.map(tx => new Date(tx.date).getFullYear()));
+    return Array.from(years).sort((a, b) => b - a);
+  }, [activeTxs]);
   
   const handleGenerateReport = () => {
     setIsLoading(true);
 
-    if (!transactions || !contacts) {
+    // HOTFIX: Usar activeTxs (filtrat client-side) en lloc de transactions raw
+    if (!activeTxs.length || !contacts) {
       toast({ variant: 'destructive', title: t.reports.dataNotAvailable, description: t.reports.dataNotAvailableDescription });
       setIsLoading(false);
       return;
@@ -219,9 +225,10 @@ export function DonationsReportGenerator() {
     let excludedAmount = 0;
 
     // ═══════════════════════════════════════════════════════════════════════════
-    // PROCESSAR TOTES LES TRANSACCIONS (any actual + històric)
+    // PROCESSAR TOTES LES TRANSACCIONS ACTIVES (any actual + històric)
+    // HOTFIX: Usar activeTxs (filtrat client-side amb tolerància !tx.archivedAt)
     // ═══════════════════════════════════════════════════════════════════════════
-    transactions.forEach(tx => {
+    activeTxs.forEach(tx => {
       const txYear = new Date(tx.date).getFullYear();
 
       // Només processar transaccions amb donant assignat
