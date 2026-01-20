@@ -31,7 +31,8 @@ type RemittanceIssue =
   | 'COUNT_MISMATCH'
   | 'SUM_MISMATCH'
   | 'HAS_ACTIVE_CHILDREN_BUT_PARENT_NOT_REM'
-  | 'PARENT_IS_REM_BUT_NO_ACTIVE_CHILDREN';
+  | 'PARENT_IS_REM_BUT_NO_ACTIVE_CHILDREN'
+  | 'DOC_TXIDS_OUT_OF_SYNC'; // transactionIds[] no coincideix amb filles actives reals
 
 interface RemittanceCheckResponse {
   consistent: boolean;
@@ -173,13 +174,29 @@ export async function GET(request: NextRequest): Promise<NextResponse<Remittance
       issues.push('NO_REM_ID');
     }
 
-    // Verificar document de remesa
+    // Verificar document de remesa i sincronització de transactionIds
     if (remittanceId) {
       const remittanceRef = db.doc(`organizations/${orgId}/remittances/${remittanceId}`);
       const remittanceSnap = await remittanceRef.get();
 
       if (!remittanceSnap.exists) {
         issues.push('NO_REM_DOC');
+      } else {
+        // Issue: DOC_TXIDS_OUT_OF_SYNC - transactionIds[] no coincideix amb filles actives
+        const remittanceData = remittanceSnap.data();
+        const docTransactionIds = (remittanceData?.transactionIds as string[]) ?? [];
+        const activeChildIds = activeChildren.map(doc => doc.id);
+
+        // Comparar sets (no només length)
+        const docSet = new Set(docTransactionIds);
+        const activeSet = new Set(activeChildIds);
+        const setsMatch =
+          docSet.size === activeSet.size &&
+          [...docSet].every(id => activeSet.has(id));
+
+        if (!setsMatch) {
+          issues.push('DOC_TXIDS_OUT_OF_SYNC');
+        }
       }
     }
 

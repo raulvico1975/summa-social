@@ -26,7 +26,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Search, X, ExternalLink, Calendar, Coins, User, AlertCircle, RefreshCw, CheckCircle2, AlertTriangle } from 'lucide-react';
+import { Search, X, ExternalLink, Calendar, Coins, User, AlertCircle, RefreshCw, CheckCircle2, AlertTriangle, Loader2 } from 'lucide-react';
 import { formatCurrencyEU, formatIBANDisplay } from '@/lib/normalize';
 import { useTranslations } from '@/i18n';
 import { useFirebase, useCollection, useMemoFirebase } from '@/firebase';
@@ -157,6 +157,7 @@ export function RemittanceDetailModal({
   // Estat per verificació de consistència
   const [consistencyCheck, setConsistencyCheck] = React.useState<ConsistencyCheckResult | null>(null);
   const [isCheckingConsistency, setIsCheckingConsistency] = React.useState(false);
+  const [isSanitizing, setIsSanitizing] = React.useState(false);
 
   // Query per obtenir les transaccions filles de la remesa
   const remittanceItemsQuery = useMemoFirebase(
@@ -263,6 +264,91 @@ export function RemittanceDetailModal({
   const handleDonorClick = (contactId: string) => {
     onOpenChange(false); // Tancar modal
     router.push(buildUrl(`/dashboard/donants?id=${contactId}`));
+  };
+
+  // Refrescar check de consistència
+  const refreshConsistencyCheck = React.useCallback(async () => {
+    if (!organizationId || !parentTransaction?.id || !user) return;
+
+    setIsCheckingConsistency(true);
+    try {
+      const idToken = await user.getIdToken();
+      const response = await fetch(
+        `/api/remittances/in/check?orgId=${organizationId}&parentTxId=${parentTransaction.id}`,
+        {
+          headers: {
+            Authorization: `Bearer ${idToken}`,
+          },
+        }
+      );
+
+      if (response.ok) {
+        const result = await response.json();
+        setConsistencyCheck(result);
+      }
+    } catch (error) {
+      console.error('[RemittanceDetailModal] Error refreshing consistency:', error);
+    } finally {
+      setIsCheckingConsistency(false);
+    }
+  }, [organizationId, parentTransaction?.id, user]);
+
+  // Handler per sanejar remesa legacy
+  const handleSanitize = async () => {
+    if (!organizationId || !parentTransaction?.id || !user) return;
+
+    setIsSanitizing(true);
+    try {
+      const idToken = await user.getIdToken();
+      const response = await fetch('/api/remittances/in/sanitize', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${idToken}`,
+        },
+        body: JSON.stringify({
+          orgId: organizationId,
+          parentTxId: parentTransaction.id,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        if (data.action === 'REBUILT_DOC') {
+          toast({
+            title: 'Remesa reconstruïda',
+            description: `${data.activeCount} quotes actives verificades`,
+          });
+        } else if (data.action === 'MARKED_UNDONE_LEGACY') {
+          toast({
+            title: 'Remesa marcada com a pendent',
+            description: 'Ara pots tornar-la a processar',
+          });
+          // Tancar modal perquè el pare ja no és remesa
+          onOpenChange(false);
+          onReprocessComplete?.();
+          return;
+        }
+        // Refrescar check
+        await refreshConsistencyCheck();
+      } else {
+        toast({
+          title: 'Error',
+          description: data.error || 'No s\'ha pogut sanejar la remesa',
+          variant: 'destructive',
+        });
+      }
+    } catch (error) {
+      console.error('[RemittanceDetailModal] Error sanitizing:', error);
+      toast({
+        title: 'Error',
+        description: 'Error de connexió',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsSanitizing(false);
+    }
   };
 
   // Carregar pendents quan s'obre el modal o canvia el remittanceId
@@ -471,10 +557,22 @@ export function RemittanceDetailModal({
                   {consistencyCheck.issues.includes('NO_REM_DOC') && (
                     <>No existeix el document de remesa. </>
                   )}
+                  {consistencyCheck.issues.includes('DOC_TXIDS_OUT_OF_SYNC') && (
+                    <>Les dades internes de la remesa estan desincronitzades. </>
+                  )}
                 </p>
-                <p className="text-sm text-red-700 mt-2 font-medium">
-                  Per recuperar aquesta remesa, desfés-la primer i torna-la a processar.
-                </p>
+                <div className="flex gap-2 mt-3">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleSanitize}
+                    disabled={isSanitizing}
+                    className="text-red-700 border-red-300 hover:bg-red-100"
+                  >
+                    {isSanitizing && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+                    Resoldre inconsistència
+                  </Button>
+                </div>
               </div>
             </div>
           </div>
