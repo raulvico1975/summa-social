@@ -200,13 +200,17 @@ export function RemittanceDetailModal({
     [t.categories]
   );
 
-  // Filtrar per cerca
+  // Filtrar per cerca (i excloure arxivades)
   const filteredItems = React.useMemo(() => {
     if (!remittanceItems) return [];
-    if (!searchQuery.trim()) return remittanceItems;
+
+    // Primer: excloure filles arxivades (tolerant a legacy: null/undefined/"")
+    const activeItems = remittanceItems.filter(item => !item.archivedAt);
+
+    if (!searchQuery.trim()) return activeItems;
 
     const q = searchQuery.toLowerCase().trim();
-    return remittanceItems.filter(item => {
+    return activeItems.filter(item => {
       const contact = item.contactId ? contactMap[item.contactId] : null;
       const name = contact?.name?.toLowerCase() || '';
       const taxId = contact?.taxId?.toLowerCase() || '';
