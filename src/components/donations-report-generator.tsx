@@ -37,7 +37,7 @@ import { formatCurrencyEU } from '@/lib/normalize';
 import { useToast } from '@/hooks/use-toast';
 import * as XLSX from 'xlsx';
 import { useCollection, useFirebase, useMemoFirebase } from '@/firebase';
-import { collection } from 'firebase/firestore';
+import { collection, query, where } from 'firebase/firestore';
 import { useTranslations } from '@/i18n';
 import { useCurrentOrganization } from '@/hooks/organization-provider';
 import { useIsMobile } from '@/hooks/use-is-mobile';
@@ -158,7 +158,12 @@ export function DonationsReportGenerator() {
   const isMobile = useIsMobile();
 
   const transactionsQuery = useMemoFirebase(
-    () => organizationId ? collection(firestore, 'organizations', organizationId, 'transactions') : null,
+    () => organizationId
+      ? query(
+          collection(firestore, 'organizations', organizationId, 'transactions'),
+          where('archivedAt', '==', null)
+        )
+      : null,
     [firestore, organizationId]
   );
   const contactsQuery = useMemoFirebase(
