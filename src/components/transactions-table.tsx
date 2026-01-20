@@ -65,7 +65,7 @@ import { RemittanceDetailModal } from '@/components/remittance-detail-modal';
 import { ReturnImporter } from '@/components/return-importer';
 import { StripeImporter } from '@/components/stripe-importer';
 import { useCollection, useFirebase, useMemoFirebase } from '@/firebase';
-import { collection, doc, writeBatch, query, orderBy, limit } from 'firebase/firestore';
+import { collection, doc, writeBatch, query, orderBy } from 'firebase/firestore';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Minus, Tag, XCircle, Search, FileX, Undo } from 'lucide-react';
 import { EmptyState } from '@/components/ui/empty-state';
@@ -263,27 +263,23 @@ export function TransactionsTable({ initialDateFilter = null }: TransactionsTabl
   }, []);
 
   // ═══════════════════════════════════════════════════════════════════════════
-  // PAGINACIÓ DE TRANSACCIONS
+  // COL·LECCIONS DE TRANSACCIONS
   // ═══════════════════════════════════════════════════════════════════════════
-  const TRANSACTIONS_PAGE_SIZE = 200;
-  const [transactionsLimit, setTransactionsLimit] = React.useState(TRANSACTIONS_PAGE_SIZE);
-  const [hasMoreTransactions, setHasMoreTransactions] = React.useState(true);
 
-  // Col·leccions
   // Referència base de la col·lecció (per operacions de document)
   const transactionsCollection = useMemoFirebase(
     () => organizationId ? collection(firestore, 'organizations', organizationId, 'transactions') : null,
     [firestore, organizationId]
   );
 
-  // Query amb paginació (per carregar dades)
-  const transactionsPaginatedQuery = useMemoFirebase(
+  // Query ordenada per data (carrega totes les transaccions)
+  const transactionsQuery = useMemoFirebase(
     () => {
       if (!organizationId) return null;
       const baseCollection = collection(firestore, 'organizations', organizationId, 'transactions');
-      return query(baseCollection, orderBy('date', 'desc'), limit(transactionsLimit));
+      return query(baseCollection, orderBy('date', 'desc'));
     },
-    [firestore, organizationId, transactionsLimit]
+    [firestore, organizationId]
   );
   const categoriesCollection = useMemoFirebase(
     () => organizationId ? collection(firestore, 'organizations', organizationId, 'categories') : null,
@@ -298,23 +294,10 @@ export function TransactionsTable({ initialDateFilter = null }: TransactionsTabl
     [firestore, organizationId]
   );
   
-  const { data: allTransactions, isLoading: isLoadingTransactions } = useCollection<Transaction>(transactionsPaginatedQuery);
+  const { data: allTransactions, isLoading: isLoadingTransactions } = useCollection<Transaction>(transactionsQuery);
   const { data: availableCategories } = useCollection<Category>(categoriesCollection);
   const { data: availableContacts } = useCollection<AnyContact>(contactsCollection);
   const { data: availableProjects } = useCollection<Project>(projectsCollection);
-
-  // Detectar si hi ha més transaccions per carregar
-  React.useEffect(() => {
-    if (allTransactions) {
-      // Si hem rebut exactament el límit, probablement n'hi ha més
-      setHasMoreTransactions(allTransactions.length >= transactionsLimit);
-    }
-  }, [allTransactions, transactionsLimit]);
-
-  // Funció per carregar més transaccions
-  const handleLoadMore = React.useCallback(() => {
-    setTransactionsLimit(prev => prev + TRANSACTIONS_PAGE_SIZE);
-  }, []);
 
   // Estat per toggle SuperAdmin "incloure arxivades"
   const [showArchived, setShowArchived] = React.useState(false);
@@ -1672,19 +1655,6 @@ export function TransactionsTable({ initialDateFilter = null }: TransactionsTabl
             />
           )}
 
-          {/* Botó "Carregar més" per mòbil */}
-          {!isLoadingTransactions && hasMoreTransactions && filteredTransactions.length > 0 && (
-            <div className="mt-4 flex justify-center">
-              <Button
-                variant="outline"
-                onClick={handleLoadMore}
-                className="gap-2"
-              >
-                <ChevronDown className="h-4 w-4" />
-                {language === 'ca' ? 'Carregar més' : 'Cargar más'}
-              </Button>
-            </div>
-          )}
         </div>
       )}
 
@@ -1827,22 +1797,6 @@ export function TransactionsTable({ initialDateFilter = null }: TransactionsTabl
                )}
             </TableBody>
           </Table>
-        </div>
-      )}
-
-      {/* ═══════════════════════════════════════════════════════════════════════
-          PAGINACIÓ: Botó "Carregar més"
-          ═══════════════════════════════════════════════════════════════════════ */}
-      {!isLoadingTransactions && hasMoreTransactions && filteredTransactions.length > 0 && (
-        <div className="mt-4 flex justify-center">
-          <Button
-            variant="outline"
-            onClick={handleLoadMore}
-            className="gap-2"
-          >
-            <ChevronDown className="h-4 w-4" />
-            {language === 'ca' ? 'Carregar més' : 'Cargar más'}
-          </Button>
         </div>
       )}
 
