@@ -66,6 +66,7 @@ import { parsePain001, isPain001File, downloadPain001 } from '@/lib/sepa';
 import { filterMatchableContacts, filterAllForIbanMatching, isNumericLikeName, maskMatchValue } from '@/lib/contacts/filterActiveContacts';
 import { assertFiscalTxCanBeSaved } from '@/lib/fiscal/assertFiscalInvariant';
 import { acquireProcessLock, releaseProcessLock, getLockFailureMessage } from '@/lib/fiscal/processLocks';
+import { normalizeForMatching } from '@/lib/auto-match';
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // TIPUS
@@ -367,6 +368,7 @@ export function RemittanceSplitter({
   const [defaultZipCode, setDefaultZipCode] = React.useState('08001');
   // Selector expandit de donants per IBAN no trobat
   const [showDonorSelectorForRow, setShowDonorSelectorForRow] = React.useState<number | null>(null);
+  const [donorSearchTerm, setDonorSearchTerm] = React.useState('');
 
   // Refs i hooks
   const fileInputRef = React.useRef<HTMLInputElement>(null);
@@ -2878,10 +2880,22 @@ export function RemittanceSplitter({
                                     <div className="text-[11px] text-muted-foreground mb-2">
                                       {t.movements.splitter.ibanNotFoundSelectDonor}
                                     </div>
+                                    <Input
+                                      placeholder="Cerca per nom o DNI..."
+                                      value={donorSearchTerm}
+                                      onChange={(e) => setDonorSearchTerm(e.target.value)}
+                                      className="mb-2 h-7 text-xs"
+                                      autoFocus
+                                    />
                                     <div className="max-h-32 overflow-y-auto space-y-1">
                                       {existingDonors
-                                        .filter(d => d.status === 'active')
-                                        .slice(0, 20)
+                                        .filter(d => {
+                                          if (!donorSearchTerm.trim()) return true;
+                                          const search = normalizeForMatching(donorSearchTerm);
+                                          return normalizeForMatching(d.name).includes(search) ||
+                                                 normalizeForMatching(d.taxId ?? '').includes(search);
+                                        })
+                                        .slice(0, 50)
                                         .map(donor => (
                                           <button
                                             key={donor.id}
@@ -2889,6 +2903,7 @@ export function RemittanceSplitter({
                                             onClick={() => {
                                               handleAssignDonorToLine(donation.rowIndex, donor.id);
                                               setShowDonorSelectorForRow(null);
+                                              setDonorSearchTerm('');
                                             }}
                                             className="w-full px-2 py-1.5 text-left text-[11px] bg-white hover:bg-primary/5 rounded border transition-colors"
                                           >
@@ -2901,7 +2916,10 @@ export function RemittanceSplitter({
                                     </div>
                                     <button
                                       type="button"
-                                      onClick={() => setShowDonorSelectorForRow(null)}
+                                      onClick={() => {
+                                        setShowDonorSelectorForRow(null);
+                                        setDonorSearchTerm('');
+                                      }}
                                       className="mt-2 text-[10px] text-muted-foreground hover:underline"
                                     >
                                       {t.common.cancel}
