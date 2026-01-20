@@ -36,10 +36,47 @@ El sistema antic de processament de remeses IN tenia deficiències:
 | **Repair ≠ reprocess** | Reparar és corregir quotes existents, no crear-ne de noves. |
 | **Dades bones no es toquen** | Si una remesa funciona, no s'hi aplica cap script ni sanitize. |
 | **Control humà** | Les remeses legacy es resolen cas a cas, mai en massa. |
+| **Només IN** | El sistema de consistència només s'aplica a remeses IN (cobrament). |
 
 ---
 
-## 3. Flux actual de remeses IN
+## 3. Exclusió de remeses OUT
+
+### Àmbit d'aplicació
+
+Tot el sistema de consistència (check, sanitize, banner d'inconsistència) **només s'aplica a remeses IN** (cobrament):
+
+- Imports positius
+- `isRemittanceItem = true`
+- Impacte fiscal (Model 182, certificats)
+
+### Què queda fora
+
+Les remeses OUT / devolucions **no** tenen:
+
+- Banner d'inconsistència
+- Botó "Resoldre inconsistència"
+- Invariants de filles actives
+- Checks de consistència
+
+### Implementació
+
+`/api/remittances/in/check` retorna early si `parentAmount < 0`:
+
+```json
+{
+  "consistent": true,
+  "issues": [],
+  "skipped": true,
+  "skipReason": "OUT_REMITTANCE"
+}
+```
+
+La UI no mostra el banner si `skipped === true`.
+
+---
+
+## 4. Flux actual de remeses IN
 
 ### Components
 
@@ -72,7 +109,7 @@ El sistema antic de processament de remeses IN tenia deficiències:
 
 ---
 
-## 4. Què és una remesa "legacy corrupta"
+## 5. Què és una remesa "legacy corrupta"
 
 ### Definició
 
@@ -93,7 +130,7 @@ Remesa processada amb el sistema antic que presenta incoherències de dades.
 
 ---
 
-## 5. Procediment oficial per remesa legacy
+## 6. Procediment oficial per remesa legacy
 
 ### Prerequisits
 
@@ -159,7 +196,7 @@ A la UI:
 
 ---
 
-## 6. Scripts disponibles
+## 7. Scripts disponibles
 
 ### `scripts/archive-orphan-remittance-children.ts`
 
@@ -197,7 +234,7 @@ node --import tsx scripts/archive-orphan-remittance-children.ts \
 
 ---
 
-## 7. Decisions conscients
+## 8. Decisions conscients
 
 ### Per què NO hi ha migració massiva
 
@@ -219,7 +256,7 @@ node --import tsx scripts/archive-orphan-remittance-children.ts \
 
 ---
 
-## 8. Estat final del sistema
+## 9. Estat final del sistema
 
 | Àmbit | Estat |
 |-------|-------|
