@@ -336,10 +336,6 @@ export function TransactionsTable({ initialDateFilter = null }: TransactionsTabl
   const [selectedRemittanceId, setSelectedRemittanceId] = React.useState<string | null>(null);
   const [remittanceDetailParentTx, setRemittanceDetailParentTx] = React.useState<Transaction | null>(null);
 
-  // Modal repair remesa (usa RemittanceSplitter amb isRepairMode)
-  const [isRepairSplitterOpen, setIsRepairSplitterOpen] = React.useState(false);
-  const [repairTransaction, setRepairTransaction] = React.useState<Transaction | null>(null);
-
   // Modal importador devolucions
   const [isReturnImporterOpen, setIsReturnImporterOpen] = React.useState(false);
   const [returnImporterParentTx, setReturnImporterParentTx] = React.useState<Transaction | null>(null);
@@ -1119,20 +1115,6 @@ export function TransactionsTable({ initialDateFilter = null }: TransactionsTabl
     setSelectedRemittanceId(remittanceId);
     setRemittanceDetailParentTx(parentTx || null);
     setIsRemittanceDetailOpen(true);
-  };
-
-  // Obrir el flow de repair (RemittanceSplitter en mode repair)
-  const handleOpenRepairFlow = () => {
-    if (remittanceDetailParentTx) {
-      setRepairTransaction(remittanceDetailParentTx);
-      setIsRemittanceDetailOpen(false);
-      setIsRepairSplitterOpen(true);
-    }
-  };
-
-  const handleRepairDone = () => {
-    setIsRepairSplitterOpen(false);
-    setRepairTransaction(null);
   };
 
   // Desfer remesa/Stripe: obre diàleg de confirmació
@@ -2024,21 +2006,6 @@ export function TransactionsTable({ initialDateFilter = null }: TransactionsTabl
           remittanceId={selectedRemittanceId}
           organizationId={organizationId}
           parentTransaction={remittanceDetailParentTx}
-          onOpenRepairFlow={handleOpenRepairFlow}
-        />
-      )}
-
-      {/* Repair Splitter (RemittanceSplitter en mode repair) */}
-      {repairTransaction && availableContacts && (
-        <RemittanceSplitter
-          open={isRepairSplitterOpen}
-          onOpenChange={setIsRepairSplitterOpen}
-          transaction={repairTransaction}
-          existingDonors={allDonorsForRemittance}
-          existingSuppliers={suppliers}
-          existingEmployees={employees}
-          onSplitDone={handleRepairDone}
-          isRepairMode={true}
         />
       )}
 

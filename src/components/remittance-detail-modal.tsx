@@ -26,7 +26,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Search, X, ExternalLink, Calendar, Coins, User, AlertCircle, RefreshCw, CheckCircle2, Wrench, AlertTriangle } from 'lucide-react';
+import { Search, X, ExternalLink, Calendar, Coins, User, AlertCircle, RefreshCw, CheckCircle2, AlertTriangle } from 'lucide-react';
 import { formatCurrencyEU, formatIBANDisplay } from '@/lib/normalize';
 import { useTranslations } from '@/i18n';
 import { useFirebase, useCollection, useMemoFirebase } from '@/firebase';
@@ -42,7 +42,6 @@ interface RemittanceDetailModalProps {
   organizationId: string;
   parentTransaction?: Transaction | null;
   onReprocessComplete?: () => void;
-  onOpenRepairFlow?: () => void;
 }
 
 // Tipus per la resposta del check
@@ -144,7 +143,6 @@ export function RemittanceDetailModal({
   organizationId,
   parentTransaction,
   onReprocessComplete,
-  onOpenRepairFlow,
 }: RemittanceDetailModalProps) {
   const { firestore, user } = useFirebase();
   const { t } = useTranslations();
@@ -474,20 +472,9 @@ export function RemittanceDetailModal({
                     <>No existeix el document de remesa. </>
                   )}
                 </p>
-                {onOpenRepairFlow && (
-                  <Button
-                    onClick={() => {
-                      onOpenChange(false);
-                      onOpenRepairFlow();
-                    }}
-                    variant="destructive"
-                    size="sm"
-                    className="mt-3"
-                  >
-                    <Wrench className="mr-2 h-4 w-4" />
-                    Reparar remesa
-                  </Button>
-                )}
+                <p className="text-sm text-red-700 mt-2 font-medium">
+                  Per recuperar aquesta remesa, desfés-la primer i torna-la a processar.
+                </p>
               </div>
             </div>
           </div>

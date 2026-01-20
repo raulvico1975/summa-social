@@ -129,20 +129,25 @@ Aquest checklist assegura que els fluxos fiscals crítics no tenen regressions a
 
 ---
 
-### P0-8 REPAIR recrea filles correctament
+### P0-8 Recuperació via Desfer → Processar
+
+**Context:**
+No existeix "Reparar" com a operació separada. El flux de recuperació és sempre: Desfer → Processar.
 
 **Passos:**
 1. Localitzar remesa pare processada amb inconsistència (o simular-ne una)
 2. Obrir "Veure detall" de la remesa
 3. Verificar que apareix banner vermell "Inconsistència detectada"
-4. Clicar botó "Reparar remesa"
-5. Pujar el mateix fitxer CSV/XLSX
-6. Processar en mode repair
+4. Llegir missatge: "Per recuperar aquesta remesa, desfés-la primer i torna-la a processar."
+5. Tancar modal i clicar "Desfer remesa" (Undo)
+6. Tornar a obrir el splitter i pujar el fitxer CSV/XLSX corregit
+7. Processar normalment
 
 **Expected:**
-- [ ] Filles antigues passen a `archivedAt` (soft-delete)
-- [ ] Filles noves creades correctament
-- [ ] Comptadors del pare actualitzats
+- [ ] Modal d'inconsistència NO té botó "Reparar" (no existeix)
+- [ ] Undo: filles antigues passen a `archivedAt` (soft-delete)
+- [ ] Undo: pare torna a estat inicial (sense `isRemittance`)
+- [ ] Process: filles noves creades correctament
 - [ ] No hi ha filles duplicades actives
 - [ ] Net del donant és correcte (suma noves, no suma arxivades)
 
@@ -259,4 +264,4 @@ Aquest checklist assegura que els fluxos fiscals crítics no tenen regressions a
 
 ---
 
-*Última actualització: 2026-01-19*
+*Última actualització: 2026-01-20*
