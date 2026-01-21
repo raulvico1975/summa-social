@@ -378,12 +378,37 @@ export default function DashboardPage() {
     [user?.uid, members]
   );
 
+  // Llegir estat del wizard des de Firestore
+  const wizardStatus = (organization?.onboarding as any)?.wizard?.status as string | undefined;
+
+  // Ref per evitar bucles de reobrir
+  const hasCheckedWizard = React.useRef(false);
+
   // Obrir la welcome modal automàticament si cal
+  // O reobrir el wizard si status === 'in_progress'
   React.useEffect(() => {
+    // Evitar múltiples checks
+    if (hasCheckedWizard.current) return;
+
+    // Si wizard.status === 'completed', no fer res
+    if (wizardStatus === 'completed') {
+      hasCheckedWizard.current = true;
+      return;
+    }
+
+    // Si wizard.status === 'in_progress' i el modal no està obert, reobrir
+    if (wizardStatus === 'in_progress' && !showWizardModal) {
+      hasCheckedWizard.current = true;
+      setShowWizardModal(true);
+      return;
+    }
+
+    // Si cal mostrar welcome i no està obert cap modal
     if (shouldShowWelcome && !showWelcomeModal && !showWizardModal) {
+      hasCheckedWizard.current = true;
       setShowWelcomeModal(true);
     }
-  }, [shouldShowWelcome, showWelcomeModal, showWizardModal]);
+  }, [shouldShowWelcome, showWelcomeModal, showWizardModal, wizardStatus]);
 
   // Gestionar "Guia'm" des de la welcome modal
   const handleStartGuide = () => {
