@@ -868,13 +868,91 @@ Agrupació de múltiples quotes de socis en un únic ingrés bancari.
 ```
 isRemittance: true
 remittanceItemCount: 303
+remittanceId: string          // Referència al doc remittances/{id}
+remittanceStatus: 'complete' | 'partial' | 'pending'
 ```
 
 **Transaccions filles (quotes):**
 ```
 source: 'remittance'
 parentTransactionId: '{id_remesa}'
+contactId: string             // ID del donant
+contactType: 'donor'
+archivedAt: null | string     // null = activa, ISO timestamp = arxivada
 ```
+
+**Document remesa (`/organizations/{orgId}/remittances/{remittanceId}`):**
+```
+direction: 'IN'
+parentTransactionId: string
+transactionIds: string[]      // Llista de filles actives
+inputHash: string             // SHA-256 del input per idempotència
+totalAmount: number           // Cèntims
+status: 'active' | 'undone'
+createdAt: string
+updatedAt: string
+```
+
+### 3.3.5b Flux de Vida d'una Remesa IN (NOU v1.31)
+
+El flux correcte per gestionar remeses IN és:
+
+```
+┌─────────────┐     ┌─────────────┐     ┌─────────────┐
+│  PROCESSAR  │ ──► │   DESFER    │ ──► │ REPROCESSAR │
+│  /process   │     │   /undo     │     │  /process   │
+└─────────────┘     └─────────────┘     └─────────────┘
+       │                   │                   │
+       ▼                   ▼                   ▼
+  Crea filles        Arxiva filles       Crea filles
+  + doc remesa       (archivedAt)        noves
+```
+
+**Regles fonamentals:**
+- Mai processar dues vegades sense desfer
+- Desfer sempre arxiva (soft-delete), mai esborra
+- Reprocessar parteix de zero (filles noves)
+- Les filles arxivades no compten per Model 182 ni certificats
+
+### 3.3.5c Guardrails del Sistema (NOU v1.31)
+
+**Client (UI):**
+- Bloqueja si `isRemittance === true`
+- Missatge: "Aquesta remesa ja està processada. Desfés-la abans de tornar-la a processar."
+- Mostra banner d'inconsistència si `/check` detecta problemes
+
+**Servidor (`/api/remittances/in/process`):**
+- Rebutja amb `409 REMITTANCE_ALREADY_PROCESSED` si `isRemittance === true`
+- Valida invariants: suma filles = import pare (±2 cèntims)
+- Hash SHA-256 del input per detectar reintents tècnics vs reprocessaments
+
+**Servidor (`/api/remittances/in/undo`):**
+1. Arxiva filles per `transactionIds[]` del doc remesa
+2. Fallback: arxiva per `parentTransactionId` (dades legacy)
+3. Post-check: exigeix 0 filles actives al final
+4. Marca doc remesa com `status: 'undone'`
+
+**Servidor (`/api/remittances/in/check`):**
+- Verifica consistència: filles actives = `transactionIds[]`
+- Només per remeses IN (import positiu)
+- Retorna issues detectades (COUNT_MISMATCH, SUM_MISMATCH, etc.)
+
+### 3.3.5d Desfer una Remesa (Pas a Pas)
+
+1. Ves a **Moviments** → Localitza la remesa processada (badge verd)
+2. Clica el badge → S'obre el modal de detall
+3. Clica **"Desfer remesa"** (a la part inferior del modal)
+4. Confirma l'acció
+5. Les quotes individuals s'arxiven (archivedAt = timestamp)
+6. El pare torna a l'estat original (isRemittance = false)
+7. Ja pots tornar a processar amb un fitxer diferent si cal
+
+**Quan desfer una remesa:**
+- Has carregat el fitxer equivocat (d'un altre mes)
+- Hi ha errors en el matching de donants
+- Vols tornar a processar amb dades corregides
+
+**Important:** Desfer NO esborra res. Les filles queden arxivades per traçabilitat.
 
 ### 3.3.6 Guardar Configuració
 Es pot guardar el mapejat per banc (Triodos, La Caixa, Santander, etc.)
@@ -1371,6 +1449,58 @@ Eina **excepcional** per a migracions o correcció de dades històriques.
 | Assignació amb confirmació | Assignació automàtica |
 | Remeses parcials | Forçar remesa completa |
 | Crear donant nou | Inventar dades |
+
+### 3.4.11 Guardrail per Remeses de Devolucions (OUT) (NOU v1.31)
+
+Les remeses de devolucions (OUT) tenen **impacte fiscal directe** perquè redueixen el total de donacions declarades al Model 182.
+
+**Flux permès:**
+
+| Acció | Permès |
+|-------|--------|
+| Processar | ✅ |
+| Tornar a processar sense desfer | ❌ Bloquejat |
+| Desfer | ✅ |
+| Desfer + tornar a processar | ✅ |
+
+**Comportament del servidor:**
+- `POST /api/remittances/in/process` amb import negatiu (OUT) → `409 REMITTANCE_ALREADY_PROCESSED` si ja està processada
+- No hi ha endpoint de `sanitize` ni `check` per OUT
+- Qualsevol correcció passa per: **Desfer → Processar**
+
+**Per què aquesta restricció?**
+- Les remeses OUT creen devolucions que resten del total fiscal del donant
+- Reprocessar sense desfer podria duplicar devolucions (impacte fiscal)
+- El flux controlat (desfer primer) garanteix integritat de dades
+
+**Exemple pràctic:**
+1. Has processat una remesa de devolucions però has assignat un donant malament
+2. Clica el badge de la remesa → Modal de detall
+3. Clica "Desfer remesa"
+4. Les filles s'arxiven (soft-delete)
+5. Torna a processar el fitxer amb l'assignació correcta
+
+> **Nota:** El banner d'inconsistència (que apareix per remeses IN) NO es mostra per OUT. Això és intencionat perquè OUT no té invariants de consistència equivalents.
+
+### 3.4.12 Checklist de Gestió de Devolucions
+
+**Flux mensual recomanat:**
+
+1. ☐ Importa l'extracte del banc amb les devolucions
+2. ☐ Revisa el banner "Devolucions pendents" a Moviments
+3. ☐ Descarrega el fitxer de detall de devolucions del banc
+4. ☐ Importa el fitxer per fer matching automàtic
+5. ☐ Revisa les devolucions no identificades
+6. ☐ Actualitza IBAN dels donants si cal
+7. ☐ Processa el fitxer
+8. ☐ Verifica que les devolucions apareixen a la fitxa dels donants afectats
+
+**Abans del gener (Model 182):**
+
+1. ☐ Assegura't que totes les devolucions de l'any estan assignades
+2. ☐ Verifica que no hi ha devolucions pendents
+3. ☐ Comprova que el total de cada donant és correcte (donacions - devolucions)
+4. ☐ Si un donant té total ≤ 0, confirma que no apareix al Model 182
 
 
 ## 3.5 REMESES OUT / PAGAMENTS (NOU v1.17)
