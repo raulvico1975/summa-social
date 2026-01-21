@@ -38,7 +38,7 @@ Si una decisió no és òbvia, ATURA'T i demana aclariments.
 
 La font d'autoritat absoluta és el document mestre:
 
-- `/docs/SUMMA-SOCIAL-REFERENCIA-COMPLETA.md` (versió actual: v1.10)
+- `/docs/SUMMA-SOCIAL-REFERENCIA-COMPLETA.md` (versió actual: v1.31)
 
 Cap altra documentació pot contradir-lo.
 
@@ -102,7 +102,47 @@ Aquest projecte prioritza **estabilitat, senzillesa, criteri i control** per sob
 - NO bloquejar desviacions
 - NO obligar a quadrar al cèntim
 
-## 7) Actualitzar novetats del producte
+## 7) Remeses de Rebuts i Devolucions
+
+### Flux de remeses IN (quotes de socis)
+
+```
+PROCESSAR → DESFER → REPROCESSAR
+```
+
+- Mai processar dues vegades sense desfer
+- El sistema bloqueja si `isRemittance === true`
+- Les filles arxivades (`archivedAt`) no compten per Model 182
+
+### Guardrails
+
+| Capa | Comportament |
+|------|--------------|
+| Client (UI) | Bloqueja si ja processada, mostra missatge |
+| Servidor | `409 REMITTANCE_ALREADY_PROCESSED` |
+
+### Desfer una remesa
+
+1. Modal de detall → "Desfer remesa"
+2. Les filles queden amb `archivedAt` (soft-delete)
+3. El pare torna a `isRemittance = false`
+4. Es pot reprocessar amb fitxer diferent
+
+### Fitxers clau
+
+- `src/app/api/remittances/in/process/route.ts` — Processament
+- `src/app/api/remittances/in/undo/route.ts` — Desfer
+- `src/app/api/remittances/in/check/route.ts` — Verificació consistència
+- `src/components/remittance-splitter.tsx` — UI divisor
+- `src/components/remittance-detail-modal.tsx` — UI detall
+
+### Què NO fer
+
+- NO permetre processar si `isRemittance === true`
+- NO fer hard-delete de filles (sempre soft-delete)
+- NO modificar el flux sense permís explícit
+
+## 8) Actualitzar novetats del producte
 
 Quan es tanca una funcionalitat significativa (nova pantalla, nou flux, millora visible):
 
@@ -114,7 +154,7 @@ Quan es tanca una funcionalitat significativa (nova pantalla, nou flux, millora 
 
 3. Format del text: curt, informatiu, sense exclamacions.
 
-## 8) Deploy a producció
+## 9) Deploy a producció
 
 Claude Code **només pot desplegar** quan el CEO dona una ordre explícita amb el text:
 "Autoritzo deploy".
