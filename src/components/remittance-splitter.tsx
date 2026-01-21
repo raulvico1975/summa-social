@@ -2499,17 +2499,17 @@ export function RemittanceSplitter({
               <Table>
                 <TableHeader className="sticky top-0 bg-background z-10">
                   <TableRow>
-                    <TableHead>
+                    <TableHead className="px-2 py-1.5 text-[11px] font-medium uppercase tracking-wide">
                       {isPaymentRemittance ? t.movements.splitter.beneficiary : t.movements.splitter.name}
                     </TableHead>
-                    <TableHead>{t.movements.splitter.taxId}</TableHead>
-                    <TableHead>IBAN</TableHead>
-                    <TableHead className="text-right">{t.movements.splitter.amount}</TableHead>
-                    <TableHead>{t.movements.splitter.status}</TableHead>
-                    <TableHead>{t.movements.splitter.inDatabase}</TableHead>
+                    <TableHead className="px-2 py-1.5 text-[11px] font-medium uppercase tracking-wide">{t.movements.splitter.taxId}</TableHead>
+                    <TableHead className="px-2 py-1.5 text-[11px] font-medium uppercase tracking-wide">IBAN</TableHead>
+                    <TableHead className="px-2 py-1.5 text-[11px] font-medium uppercase tracking-wide text-right">{t.movements.splitter.amount}</TableHead>
+                    <TableHead className="px-2 py-1.5 text-[11px] font-medium uppercase tracking-wide">{t.movements.splitter.status}</TableHead>
+                    <TableHead className="px-2 py-1.5 text-[11px] font-medium uppercase tracking-wide">{t.movements.splitter.inDatabase}</TableHead>
                     {/* CP només per mode IN (donants) */}
                     {!isPaymentRemittance && (
-                      <TableHead className="w-[100px]">{t.movements.splitter.zipCode}</TableHead>
+                      <TableHead className="w-[100px] px-2 py-1.5 text-[11px] font-medium uppercase tracking-wide">{t.movements.splitter.zipCode}</TableHead>
                     )}
                   </TableRow>
                 </TableHeader>
@@ -2531,8 +2531,8 @@ export function RemittanceSplitter({
                         'bg-orange-50/50'
                       }
                     >
-                      <TableCell className="font-medium">{donation.name || '-'}</TableCell>
-                      <TableCell className="font-mono text-xs">
+                      <TableCell className="px-2 py-1.5 text-xs font-medium">{donation.name || '-'}</TableCell>
+                      <TableCell className="px-2 py-1.5 font-mono text-xs">
                         {donation.taxIdValid ? (
                           <span className="text-green-700" title={`${donation.taxIdType}: ${donation.taxId}`}>
                             {donation.taxId}
@@ -2546,7 +2546,7 @@ export function RemittanceSplitter({
                         ) : '-'}
                       </TableCell>
                       {/* IBAN - P0: SEMPRE visible, criteri principal per mode IN */}
-                      <TableCell className="font-mono text-xs">
+                      <TableCell className="px-2 py-1.5 font-mono text-xs">
                         {donation.iban ? (
                           <span className={
                             // P0: Color segons estat de matching IBAN
@@ -2565,56 +2565,56 @@ export function RemittanceSplitter({
                           <span className="text-orange-600 italic">sense IBAN</span>
                         )}
                       </TableCell>
-                      <TableCell className="text-right font-mono">
+                      <TableCell className="px-2 py-1.5 text-right text-xs font-mono whitespace-nowrap tabular-nums">
                         {formatCurrencyEU(donation.amount)}
                       </TableCell>
-                      <TableCell>
+                      <TableCell className="px-2 py-1.5 text-xs">
                         {/* P0: Columna Estat amb nous badges */}
                         {donation.status === 'found' && (
-                          <Badge variant="outline" className="bg-green-100 text-green-800 border-green-300">
+                          <Badge variant="outline" className="text-[11px] px-2 py-0.5 bg-green-100 text-green-800 border-green-300">
                             <CheckCircle2 className="mr-1 h-3 w-3" />
                             Trobat per IBAN
                           </Badge>
                         )}
                         {donation.status === 'found_inactive' && (
-                          <Badge variant="outline" className="bg-amber-100 text-amber-800 border-amber-300">
+                          <Badge variant="outline" className="text-[11px] px-2 py-0.5 bg-amber-100 text-amber-800 border-amber-300">
                             <AlertTriangle className="mr-1 h-3 w-3" />
                             Baixa
                           </Badge>
                         )}
                         {donation.status === 'found_archived' && (
-                          <Badge variant="outline" className="bg-gray-100 text-gray-800 border-gray-300">
+                          <Badge variant="outline" className="text-[11px] px-2 py-0.5 bg-gray-100 text-gray-800 border-gray-300">
                             <AlertTriangle className="mr-1 h-3 w-3" />
                             Arxivat
                           </Badge>
                         )}
                         {donation.status === 'found_deleted' && (
-                          <Badge variant="outline" className="bg-red-100 text-red-800 border-red-300">
+                          <Badge variant="outline" className="text-[11px] px-2 py-0.5 bg-red-100 text-red-800 border-red-300">
                             <AlertTriangle className="mr-1 h-3 w-3" />
                             Eliminat
                           </Badge>
                         )}
                         {donation.status === 'ambiguous_iban' && (
-                          <Badge variant="outline" className="bg-red-100 text-red-800 border-red-300">
+                          <Badge variant="outline" className="text-[11px] px-2 py-0.5 bg-red-100 text-red-800 border-red-300">
                             <AlertCircle className="mr-1 h-3 w-3" />
                             IBAN ambigu
                           </Badge>
                         )}
                         {donation.status === 'no_iban_match' && (
-                          <Badge variant="outline" className="bg-orange-100 text-orange-800 border-orange-300">
+                          <Badge variant="outline" className="text-[11px] px-2 py-0.5 bg-orange-100 text-orange-800 border-orange-300">
                             <AlertCircle className="mr-1 h-3 w-3" />
                             IBAN no trobat
                           </Badge>
                         )}
                         {/* Mode OUT legacy */}
                         {donation.status === 'new_with_taxid' && (
-                          <Badge variant="outline" className="bg-blue-100 text-blue-800 border-blue-300">
+                          <Badge variant="outline" className="text-[11px] px-2 py-0.5 bg-blue-100 text-blue-800 border-blue-300">
                             <UserPlus className="mr-1 h-3 w-3" />
                             {t.movements.splitter.newValidTaxIdLabel ?? `Nou (${donation.taxIdType} vàlid)`}
                           </Badge>
                         )}
                         {donation.status === 'new_without_taxid' && (
-                          <Badge variant="outline" className="bg-orange-100 text-orange-800 border-orange-300">
+                          <Badge variant="outline" className="text-[11px] px-2 py-0.5 bg-orange-100 text-orange-800 border-orange-300">
                             <AlertCircle className="mr-1 h-3 w-3" />
                             {donation.idCandidate
                               ? (t.movements.splitter.nonFiscalIdLabel ?? 'ID no fiscal')
@@ -2623,7 +2623,7 @@ export function RemittanceSplitter({
                         )}
                       </TableCell>
                       {/* P0: Columna Nota explicativa */}
-                      <TableCell className="text-sm">
+                      <TableCell className="px-2 py-1.5 text-xs">
                         {/* Donant trobat (qualsevol estat) */}
                         {donation.matchedDonor ? (
                           <div className="space-y-0.5">
@@ -2955,7 +2955,7 @@ export function RemittanceSplitter({
                       </TableCell>
                       {/* CP només per mode IN (donants) i només per nous amb taxId */}
                       {!isPaymentRemittance && (
-                        <TableCell>
+                        <TableCell className="px-2 py-1.5 text-xs">
                           {donation.status === 'new_with_taxid' && (
                             <Input
                               value={donation.zipCode}
