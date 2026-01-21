@@ -9,16 +9,26 @@ import { FeatureFlagsSettings } from '@/components/feature-flags-settings';
 import { BankAccountsManager } from '@/components/bank-accounts/bank-accounts-manager';
 import { BackupsSettings } from '@/components/backups-settings';
 import { DangerZone } from '@/components/danger-zone';
-import { useCurrentOrganization } from '@/hooks/organization-provider';
+import { useCurrentOrganization, useOrgUrl } from '@/hooks/organization-provider';
 import { useTranslations } from '@/i18n';
 import { useFirebase } from '@/firebase';
 import { SUPER_ADMIN_UID } from '@/lib/data';
 import { isAllowlistedSuperAdmin } from '@/lib/admin/superadmin-allowlist';
+import { useSearchParams, useRouter } from 'next/navigation';
+import { Button } from '@/components/ui/button';
+import { ArrowLeft, Info } from 'lucide-react';
 
 export default function SettingsPage() {
   const { userRole } = useCurrentOrganization();
   const { t } = useTranslations();
   const { user } = useFirebase();
+  const { buildUrl } = useOrgUrl();
+  const searchParams = useSearchParams();
+  const router = useRouter();
+
+  // Detectar si venim de l'onboarding
+  const isOnboarding = searchParams.get('onboarding') === '1';
+  const returnUrl = searchParams.get('return') || buildUrl('/dashboard');
 
   // Només admins poden gestionar l'organització, categories i membres
   const canManageOrganization = userRole === 'admin';
@@ -30,8 +40,39 @@ export default function SettingsPage() {
   // Usem allowlist d'emails (més robust que UID hardcoded)
   const isSuperAdmin = user?.uid === SUPER_ADMIN_UID || isAllowlistedSuperAdmin(user?.email);
 
+  // Handler per tornar a l'onboarding
+  const handleReturnToOnboarding = () => {
+    router.push(returnUrl);
+  };
+
   return (
     <div className="space-y-6">
+      {/* Banner d'onboarding (si venim del wizard) */}
+      {isOnboarding && (
+        <div className="flex items-center justify-between gap-4 p-4 rounded-lg border border-blue-200 bg-blue-50/50">
+          <div className="flex items-center gap-3">
+            <Info className="h-5 w-5 text-blue-600 flex-shrink-0" />
+            <div>
+              <p className="text-sm font-medium text-blue-900">
+                {(t.onboarding as any)?.settingsBanner?.title ?? "Configuració inicial"}
+              </p>
+              <p className="text-xs text-blue-700">
+                {(t.onboarding as any)?.settingsBanner?.description ?? "Completa aquest pas i torna a l'assistent."}
+              </p>
+            </div>
+          </div>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleReturnToOnboarding}
+            className="border-blue-300 text-blue-700 hover:bg-blue-100 flex-shrink-0"
+          >
+            <ArrowLeft className="h-4 w-4 mr-2" />
+            {(t.onboarding as any)?.settingsBanner?.returnButton ?? "Tornar"}
+          </Button>
+        </div>
+      )}
+
       {/* Títol de la pàgina */}
       <div>
         <h1 className="text-2xl font-bold tracking-tight font-headline">{t.settings.title}</h1>
