@@ -86,12 +86,29 @@ Per a OUT / devolucions:
 - Desfer sempre arxiva, mai esborra
 - Reprocessar parteix de zero (filles noves)
 
-### Remeses OUT: sense flux de reparació
+### Remeses OUT (devolucions)
 
-Les devolucions (imports negatius) es reflecteixen directament:
-- No es "reparen"
-- No es reprocessen
-- Simplement es registren com a sortida
+Les remeses OUT tenen **impacte fiscal directe** (redueixen donacions).
+
+**Regles:**
+- No admeten reprocessament directe
+- L'únic flux permès és: **Desfer → Processar**
+- No hi ha repair ni sanitize per OUT
+- Qualsevol altra opció introdueix risc de duplicació fiscal
+
+**Aquesta decisió és intencional, no un límit tècnic.**
+
+| Acció | Permès |
+|-------|--------|
+| Processar | ✅ |
+| Tornar a processar | ❌ |
+| Desfer | ✅ |
+| Desfer + tornar a processar | ✅ |
+| Reparar / sanejar | ❌ |
+
+**Si t'has equivocat identificant un donant o import:**
+1. Desfés la remesa
+2. Torna-la a processar correctament
 
 ---
 
@@ -184,9 +201,15 @@ Verificar:
 
 ### Guardrails
 
-**Client:**
-- Bloqueja si `isRemittance === true` i hi ha filles actives
+**Client (`remittance-splitter.tsx`):**
+- Bloqueja si `isRemittance === true` (IN o OUT)
+- Missatge: "Aquesta remesa ja està processada. Desfés-la abans de tornar-la a processar."
 - Mostra banner si `/check` detecta problemes (només IN)
+
+**Server (`/process`):**
+- Rebutja amb `409 REMITTANCE_ALREADY_PROCESSED` si `isRemittance === true`
+- No hi ha excepcions ni idempotència per reprocessament
+- La idempotència només és per reintents tècnics, no per decisions humanes
 
 **Server (`/undo`):**
 1. Arxiva per `transactionIds[]` si existeix doc
