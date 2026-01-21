@@ -1,231 +1,254 @@
 # Remeses IN: Legacy i Robustesa
 
-**Versió:** 1.0
-**Data:** 2026-01-20
+**Versió:** 1.1
+**Data:** 2026-01-21
 **Autor:** Raül Vico (CEO/CTO)
 
 ---
 
-## 1. Context i problema històric
+## 1. Context i causa
 
-### Què va passar
+### Diferència entre remeses IN i remeses OUT
 
-El sistema antic de processament de remeses IN tenia deficiències:
+| Tipus | Descripció | Import | Impacte fiscal |
+|-------|------------|--------|----------------|
+| **IN (cobrament)** | Quotes de socis via SEPA | Positiu | Model 182, certificats donació |
+| **OUT (devolució)** | Devolucions de quotes | Negatiu | Cap (es reflecteix com a devolució) |
 
-- **Duplicació de quotes**: processar dues vegades una remesa podia crear filles duplicades
-- **Desalineació de dades**: incoherència entre:
-  - `transactions` (filles reals a Firestore)
-  - `remittances/{id}.transactionIds[]` (llista de referència)
-  - `transactions/{parentId}.remittanceItemCount` (comptador del pare)
-- **Soft-delete incomplet**: l'undo no sempre arxivava totes les filles
+### Dades legacy amb desalineació
 
-### Impacte
+El sistema antic podia generar incoherències entre:
 
-- Fitxa donant amb imports inflats
+- `transactions` (filles reals a Firestore)
+- `remittances/{id}.transactionIds[]` (llista de referència al doc)
+- `transactions/{parentId}.remittanceItemCount` (comptador del pare)
+
+**Causes:**
+- Undo incomplet (no arxivava totes les filles)
+- Reprocessament sense undo previ
+- Camp `archivedAt` absent o mal format
+
+**Impacte:**
+- Fitxa donant amb imports inflats (duplicats)
 - Model 182 incorrecte
-- Duplicats visibles al modal de detall de remesa
+- Duplicats visibles al modal de detall
 
 ---
 
-## 2. Principis NO negociables
+## 2. Criteris de veritat
 
-| Principi | Descripció |
-|----------|------------|
-| **Una vegada** | Una remesa només es processa una vegada. Mai acumula. |
-| **Undo = soft-delete** | Desfer una remesa arxiva filles (`archivedAt`), no les esborra. |
-| **Repair ≠ reprocess** | Reparar és corregir quotes existents, no crear-ne de noves. |
-| **Dades bones no es toquen** | Si una remesa funciona, no s'hi aplica cap script ni sanitize. |
-| **Control humà** | Les remeses legacy es resolen cas a cas, mai en massa. |
-| **Només IN** | El sistema de consistència només s'aplica a remeses IN (cobrament). |
+### Definició de "filla activa"
 
----
+Una transacció filla és **activa** si:
 
-## 3. Exclusió de remeses OUT
-
-### Àmbit d'aplicació
-
-Tot el sistema de consistència (check, sanitize, banner d'inconsistència) **només s'aplica a remeses IN** (cobrament):
-
-- Imports positius
-- `isRemittanceItem = true`
-- Impacte fiscal (Model 182, certificats)
-
-### Què queda fora
-
-Les remeses OUT / devolucions **no** tenen:
-
-- Banner d'inconsistència
-- Botó "Resoldre inconsistència"
-- Invariants de filles actives
-- Checks de consistència
-
-### Implementació
-
-`/api/remittances/in/check` retorna early si `parentAmount < 0`:
-
-```json
-{
-  "consistent": true,
-  "issues": [],
-  "skipped": true,
-  "skipReason": "OUT_REMITTANCE"
-}
+```
+archivedAt == null || archivedAt == undefined || archivedAt == ""
 ```
 
-La UI no mostra el banner si `skipped === true`.
+Tota altra filla (amb `archivedAt` vàlid) es considera **arxivada** i s'exclou.
+
+### Model 182 i certificats
+
+Només compten les filles **actives**:
+
+- La suma de donacions d'un donant és la suma de filles actives amb `contactId` del donant
+- Les devolucions (`transactionType === 'return'`) resten del total
+- Filles arxivades **no** apareixen ni sumen
+
+### Remeses OUT excloses
+
+El sistema de consistència (check, sanitize, banner) **només s'aplica a remeses IN**.
+
+Per a OUT / devolucions:
+- No hi ha invariants de filles actives
+- No es mostra banner d'inconsistència
+- No hi ha "reparació" possible ni necessària
 
 ---
 
-## 4. Flux actual de remeses IN
+## 3. Flux correcte
 
-### Components
+### Remeses IN: Processar → Desfer → Reprocessar
+
+```
+┌─────────────┐     ┌─────────────┐     ┌─────────────┐
+│  PROCESSAR  │ ──► │   DESFER    │ ──► │ REPROCESSAR │
+│  /process   │     │   /undo     │     │  /process   │
+└─────────────┘     └─────────────┘     └─────────────┘
+       │                   │                   │
+       ▼                   ▼                   ▼
+  Crea filles        Arxiva filles       Crea filles
+  + doc remesa       (archivedAt)        noves
+```
+
+**Regles:**
+- Mai processar dues vegades sense desfer
+- Desfer sempre arxiva, mai esborra
+- Reprocessar parteix de zero (filles noves)
+
+### Remeses OUT (devolucions)
+
+Les remeses OUT tenen **impacte fiscal directe** (redueixen donacions).
+
+**Regles:**
+- No admeten reprocessament directe
+- L'únic flux permès és: **Desfer → Processar**
+- No hi ha repair ni sanitize per OUT
+- Qualsevol altra opció introdueix risc de duplicació fiscal
+
+**Aquesta decisió és intencional, no un límit tècnic.**
+
+| Acció | Permès |
+|-------|--------|
+| Processar | ✅ |
+| Tornar a processar | ❌ |
+| Desfer | ✅ |
+| Desfer + tornar a processar | ✅ |
+| Reparar / sanejar | ❌ |
+
+**Si t'has equivocat identificant un donant o import:**
+1. Desfés la remesa
+2. Torna-la a processar correctament
+
+---
+
+## 4. Sanejament legacy
+
+### Quan usar `/sanitize` (endpoint)
+
+L'endpoint `/api/remittances/in/sanitize` serveix per reconstruir metadades d'una remesa legacy **sense crear quotes noves**.
+
+**Casos d'ús:**
+- `remittances/{id}.transactionIds[]` desalineat amb filles reals
+- Doc remesa absent però filles existents
+- Comptadors (`remittanceItemCount`, `totalAmount`) incorrectes
+
+### Resultats esperats
+
+| Acció | Descripció |
+|-------|------------|
+| `REBUILT_DOC` | S'ha reconstruït el doc remesa amb les filles actives reals |
+| `MARKED_UNDONE_LEGACY` | No hi havia filles actives; s'ha marcat la remesa com a `undone` |
+
+### Quan usar l'script (CLI)
+
+L'script `scripts/archive-orphan-remittance-children.ts` serveix per arxivar filles òrfenes **quan el doc remesa no existeix o és irrecuperable**.
+
+**Casos d'ús:**
+- Filles actives sense doc `remittances/{id}`
+- Filles que haurien d'estar arxivades però no ho estan
+- Neteja prèvia a un reprocessament
+
+### Logs i traçabilitat
+
+Totes les accions deixen traça:
+
+| Camp | Valor |
+|------|-------|
+| `archivedAt` | ISO timestamp |
+| `archivedReason` | `'undo_remittance'` o `'legacy_orphan_cleanup'` |
+| `archivedFromAction` | `'undo_remittance_in'`, `'undo_remittance_in_legacy_fallback'`, `'script_orphan_cleanup'` |
+| `archivedByUid` | UID de l'usuari o `'script'` |
+
+---
+
+## 5. QA de validació
+
+### Checks mínims abans de donar per bo
+
+#### 1. Fitxa donant
+
+- [ ] Import total de l'any correcte (sense duplicats)
+- [ ] Nombre de donacions coherent
+- [ ] Devolucions reflectides correctament
+
+#### 2. Model 182
+
+- [ ] Suma de donacions = suma de filles actives
+- [ ] Donants amb DNI vàlid apareixen
+- [ ] Recurrència calculada correctament (2 anys anteriors)
+
+#### 3. Moviments (UI)
+
+- [ ] Modal de remesa mostra quotes úniques (no duplicats)
+- [ ] Total del modal coincideix amb import del pare
+- [ ] No apareix banner d'inconsistència (si és IN) o no aplica (si és OUT)
+
+#### 4. Firestore (si cal verificar)
+
+```
+Query: organizations/{orgId}/transactions
+  where parentTransactionId == {parentTxId}
+
+Verificar:
+- Filles actives (sense archivedAt): 0 si està desfeta, N si processada
+- Filles arxivades: totes tenen archivedAt vàlid
+- No hi ha duplicats (mateix contactId + date + amount actius)
+```
+
+---
+
+## 6. Components del sistema
 
 | Component | Funció |
 |-----------|--------|
 | `remittance-splitter.tsx` | UI client per processar remeses |
 | `/api/remittances/in/process` | Crea filles i doc remesa |
 | `/api/remittances/in/undo` | Soft-delete de totes les filles + reset pare |
-| `/api/remittances/in/repair` | No implementat (recuperació via Desfer → Processar) |
-| `/api/remittances/in/check` | Read-only, verifica consistència |
-| `/api/remittances/in/sanitize` | Només legacy: reconstrueix metadades sense crear quotes |
+| `/api/remittances/in/check` | Read-only, verifica consistència (només IN) |
+| `/api/remittances/in/sanitize` | Reconstrueix metadades sense crear quotes |
+| `archive-orphan-remittance-children.ts` | Script CLI per arxivar filles òrfenes |
 
 ### Guardrails
 
 **Client (`remittance-splitter.tsx`):**
-- Bloqueja si `isRemittance === true` i hi ha filles actives
-- Mostra banner d'inconsistència si `/check` detecta problemes
+- Bloqueja si `isRemittance === true` (IN o OUT)
+- Missatge: "Aquesta remesa ja està processada. Desfés-la abans de tornar-la a processar."
+- Mostra banner si `/check` detecta problemes (només IN)
+
+**Server (`/process`):**
+- Rebutja amb `409 REMITTANCE_ALREADY_PROCESSED` si `isRemittance === true`
+- No hi ha excepcions ni idempotència per reprocessament
+- La idempotència només és per reintents tècnics, no per decisions humanes
 
 **Server (`/undo`):**
-1. Arxiva per `transactionIds[]` si existeix doc remesa
-2. **Fallback legacy**: arxiva qualsevol filla activa per `parentTransactionId`
-3. **Post-check**: verifica 0 filles actives o retorna error `UNDO_INCOMPLETE_ACTIVE_CHILDREN`
+1. Arxiva per `transactionIds[]` si existeix doc
+2. Fallback: arxiva per `parentTransactionId`
+3. Post-check: exigeix 0 filles actives
 
-### Invariants
-
-| Codi | Descripció |
-|------|------------|
-| R-SUM-1 | Suma filles ≈ import pare (tolerància 2 cèntims) |
-| R-COUNT-1 | Nombre filles = `remittanceItemCount` |
+**Server (`/check`):**
+- Retorna `skipped: true` per imports negatius (OUT)
+- Només valida invariants per IN
 
 ---
 
-## 5. Què és una remesa "legacy corrupta"
-
-### Definició
-
-Remesa processada amb el sistema antic que presenta incoherències de dades.
-
-### Símptomes
-
-- **Duplicats visibles**: el modal mostra la mateixa quota dues vegades
-- **Import inflat**: fitxa donant mostra el doble del que hauria de ser
-- **`/check` inconsistent**: pot dir "consistent" però UI mostra duplicats (per filles arxivades sense `archivedAt`)
-- **Doc `remittances/{id}` absent**: les filles existeixen però no hi ha document de referència
-
-### Causa comuna
-
-- Undo incomplet (no va arxivar totes les filles)
-- Reprocessament sense undo previ
-- Camp `archivedAt` absent o mal format (legacy)
-
----
-
-## 6. Procediment oficial per remesa legacy
+## 7. Procediment per remesa legacy
 
 ### Prerequisits
 
 - Accés admin a l'organització
-- `gcloud auth application-default login` executat
-- Identificar `orgId` i `parentTxId` de la remesa afectada
+- `gcloud auth application-default login` (per script CLI)
+- Identificar `orgId` i `parentTxId`
 
 ### Passos
 
-#### 1. Verificar estat actual
+1. **Verificar símptomes**: duplicats, import inflat, banner d'inconsistència
+2. **Dry-run script**: `--dry-run` per veure què s'arxivarà
+3. **Aplicar neteja**: `--apply` si dry-run és correcte
+4. **Verificar**: filles actives = 0
+5. **Reprocessar** (si cal): des de la UI
+6. **QA final**: fitxa donant, Model 182, UI sense duplicats
 
-A Firestore, comprovar quantes filles actives hi ha:
-
-```
-organizations/{orgId}/transactions
-  where parentTransactionId == {parentTxId}
-  where archivedAt == null (o absent)
-```
-
-#### 2. Executar script de neteja (dry-run)
+### Exemple
 
 ```bash
-node --import tsx scripts/archive-orphan-remittance-children.ts \
-  --org {orgId} \
-  --parent {parentTxId} \
-  --dry-run
-```
-
-Revisar sortida:
-- `activeCount` total
-- Exemples de filles (verificar que són les correctes)
-- Guardrail OK (`isRemittanceItem === true`, `source === "remittance"`)
-
-#### 3. Aplicar neteja
-
-```bash
-node --import tsx scripts/archive-orphan-remittance-children.ts \
-  --org {orgId} \
-  --parent {parentTxId} \
-  --apply
-```
-
-#### 4. Verificar post-neteja
-
-- Filles actives = 0
-- Pare ja no té `isRemittance === true` (o si el té, és coherent)
-
-#### 5. Reprocessar (si cal)
-
-A la UI:
-1. Moviments → seleccionar la transacció pare
-2. Processar com a remesa IN
-3. Verificar:
-   - Modal mostra quotes úniques
-   - Fitxa donant amb import correcte
-   - Total coherent amb import pare
-
-#### 6. Validació final
-
-- Model 182 (si aplica)
-- Cap duplicat visible
-- `/check` retorna `consistent: true`
-
----
-
-## 7. Scripts disponibles
-
-### `scripts/archive-orphan-remittance-children.ts`
-
-**Finalitat**: Arxivar (soft-delete) filles òrfenes d'una remesa legacy.
-
-**Quan usar**:
-- Remesa legacy amb filles actives que no haurien d'existir
-- Després d'un undo incomplet
-- Abans de reprocessar una remesa corrupta
-
-**Quan NO usar**:
-- Remeses noves (el sistema ja és robust)
-- Remeses sense problemes visibles
-- En massa (sempre cas a cas)
-
-**Exemple real**:
-
-```bash
-# Cas: Remesa Febrer 2025 - Flores de Kiskeya
-# orgId: SkQjWvCRDJhSf1OeJAw9
-# parentTxId: 0giJNWxjd9XjRZOMJW7L
-
-# 1. Dry-run
+# Dry-run
 node --import tsx scripts/archive-orphan-remittance-children.ts \
   --org SkQjWvCRDJhSf1OeJAw9 \
   --parent 0giJNWxjd9XjRZOMJW7L \
   --dry-run
 
-# 2. Apply (després de verificar dry-run)
+# Apply
 node --import tsx scripts/archive-orphan-remittance-children.ts \
   --org SkQjWvCRDJhSf1OeJAw9 \
   --parent 0giJNWxjd9XjRZOMJW7L \
@@ -236,23 +259,12 @@ node --import tsx scripts/archive-orphan-remittance-children.ts \
 
 ## 8. Decisions conscients
 
-### Per què NO hi ha migració massiva
-
-- Risc alt d'efectes secundaris
-- Cada remesa legacy té un context diferent
-- Preferim control humà sobre automatització cega
-
-### Per què `/sanitize` no és automàtic
-
-- Només reconstrueix metadades, no arregla filles duplicades
-- Útil per casos concrets, no com a solució universal
-- Requereix verificació manual post-execució
-
-### Per què preferim control humà
-
-- Les dades fiscals són crítiques
-- Un error massiu és pitjor que resoldre cas a cas
-- El volum de remeses legacy és finit i manejable
+| Decisió | Motiu |
+|---------|-------|
+| **No migració massiva** | Risc alt, cada cas és diferent |
+| **`/sanitize` no automàtic** | Requereix verificació humana |
+| **Control cas a cas** | Dades fiscals són crítiques |
+| **OUT exclòs** | No té invariants de filles actives |
 
 ---
 
@@ -260,31 +272,30 @@ node --import tsx scripts/archive-orphan-remittance-children.ts \
 
 | Àmbit | Estat |
 |-------|-------|
-| **Remeses noves** | Robustes. Guardrails client + server. Post-check obligatori. |
-| **Remeses legacy** | Es resolen manualment cas a cas amb script + verificació. |
-| **Risc residual** | Nul per a remeses noves. Controlat per a legacy. |
-| **Documentació** | Aquest document. |
+| **Remeses IN noves** | Robustes. Guardrails + post-check. |
+| **Remeses IN legacy** | Resoltes cas a cas amb script/sanitize. |
+| **Remeses OUT** | Excloses del sistema de consistència. |
+| **Risc residual** | Nul per a noves. Controlat per a legacy. |
 
 ---
 
-## Checklist ràpida (1 pàgina)
+## Checklist ràpida
 
 ```
-REMESA LEGACY CORRUPTA - CHECKLIST
+REMESA LEGACY - VALIDACIÓ
 
 [ ] 1. Identificar orgId i parentTxId
 [ ] 2. Verificar símptomes (duplicats, import inflat)
-[ ] 3. gcloud auth application-default login
-[ ] 4. Executar dry-run del script
-[ ] 5. Revisar sortida (activeCount, exemples, guardrail OK)
-[ ] 6. Executar --apply
-[ ] 7. Verificar filles actives = 0
-[ ] 8. Reprocessar remesa (si cal)
-[ ] 9. Verificar fitxa donant
-[ ] 10. Verificar Model 182 (si aplica)
-[ ] 11. Confirmar: cap duplicat, /check consistent
+[ ] 3. Executar dry-run (script o /check)
+[ ] 4. Aplicar neteja si cal
+[ ] 5. Verificar filles actives = 0 (o coherent)
+[ ] 6. Reprocessar si cal
+[ ] 7. QA: fitxa donant correcta
+[ ] 8. QA: Model 182 correcte
+[ ] 9. QA: UI sense duplicats
+[ ] 10. Confirmar: /check consistent (només IN)
 ```
 
 ---
 
-**Aquest document és norma del projecte per a remeses IN.**
+**Aquest document és norma del projecte per a remeses.**

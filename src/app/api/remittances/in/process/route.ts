@@ -512,15 +512,16 @@ export async function POST(request: NextRequest): Promise<NextResponse<ProcessRe
     const parentAmountCents = Math.round(parentData.amount * 100);
 
     // ─────────────────────────────────────────────────────────────────────────
-    // 4b. 🛑 GUARDRAIL: No permetre reprocessar
+    // 4b. GUARDRAIL: Rebutjar si ja és remesa processada
     // ─────────────────────────────────────────────────────────────────────────
+    // No es permet reprocessar directament. El flux és: Desfer → Processar.
+    // Això aplica tant a IN com a OUT per evitar duplicats fiscals.
     if (parentData.isRemittance === true) {
-      console.warn(`[remittances/in/process] Attempted reprocess of already processed remittance: ${parentTxId}`);
       return NextResponse.json(
         {
           success: false,
           idempotent: false,
-          error: 'Aquesta remesa ja està processada. Utilitza /undo o /repair.',
+          error: 'Remesa ja processada. Cal desfer abans de tornar a processar.',
           code: 'REMITTANCE_ALREADY_PROCESSED',
         },
         { status: 409 }
