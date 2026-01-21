@@ -8,18 +8,26 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
 import { useFirebase } from '@/firebase';
-import { useCurrentOrganization } from '@/hooks/organization-provider';
-import { doc, getDoc, updateDoc } from 'firebase/firestore';
+import { useCurrentOrganization, useOrgUrl } from '@/hooks/organization-provider';
+import { doc, getDoc, updateDoc, serverTimestamp } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { Building2, Save, Upload, Loader2, Image as ImageIcon, PenTool, Trash2 } from 'lucide-react';
 import type { Organization } from '@/lib/data';
 import { useTranslations } from '@/i18n';
+import { useSearchParams, useRouter } from 'next/navigation';
 
 export function OrganizationSettings() {
   const { firestore, storage } = useFirebase();
-  const { organizationId } = useCurrentOrganization();
+  const { organizationId, organization } = useCurrentOrganization();
   const { toast } = useToast();
   const { t } = useTranslations();
+  const { buildUrl } = useOrgUrl();
+  const searchParams = useSearchParams();
+  const router = useRouter();
+
+  // Detectar si venim de l'onboarding
+  const isOnboarding = searchParams.get('onboarding') === '1';
+  const returnUrl = searchParams.get('return') || buildUrl('/dashboard');
 
   const [loading, setLoading] = React.useState(true);
   const [saving, setSaving] = React.useState(false);
@@ -135,6 +143,37 @@ export function OrganizationSettings() {
       };
 
       await updateDoc(orgRef, dataToSave);
+
+      // Si estem en onboarding, marcar pas complet i redirigir
+      if (isOnboarding) {
+        // Verificar si orgSettings està complet (taxId + address + zipCode)
+        const isOrgSettingsComplete = !!(formData.taxId && formData.address && formData.zipCode);
+
+        if (isOrgSettingsComplete) {
+          // Llegir estat actual del wizard
+          const wizardState = (organization?.onboarding as any)?.wizard;
+          const completedSteps = wizardState?.completedSteps || [];
+
+          // Afegir 'orgSettings' a completedSteps si no hi és
+          if (!completedSteps.includes('orgSettings')) {
+            completedSteps.push('orgSettings');
+          }
+
+          // Actualitzar wizard state a Firestore
+          await updateDoc(orgRef, {
+            'onboarding.wizard.completedSteps': completedSteps,
+            'onboarding.wizard.updatedAt': serverTimestamp(),
+          });
+        }
+
+        // Redirigir al dashboard (el wizard s'obrirà automàticament)
+        toast({
+          title: t.settings.organization.saved,
+          description: t.settings.organization.savedDescription,
+        });
+        router.push(returnUrl);
+        return;
+      }
 
       toast({
         title: t.settings.organization.saved,

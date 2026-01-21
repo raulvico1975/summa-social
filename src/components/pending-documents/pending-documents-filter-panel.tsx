@@ -218,15 +218,15 @@ export function PendingDocumentsFilterPanel({
   const hasFilters = hasActiveFilters(filters);
 
   return (
-    <div className="flex flex-wrap items-center gap-2">
+    <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
       {/* Search */}
-      <div className="relative">
+      <div className="relative w-full sm:w-auto">
         <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
         <Input
           placeholder={t.pendingDocs.filters.search}
           value={localSearch}
           onChange={(e) => handleSearchChange(e.target.value)}
-          className="pl-8 w-[200px] h-9"
+          className="pl-8 w-full sm:w-[200px] h-9"
         />
       </div>
 
@@ -238,7 +238,7 @@ export function PendingDocumentsFilterPanel({
             role="combobox"
             size="sm"
             className={cn(
-              'w-[150px] justify-between h-9',
+              'flex-1 sm:flex-none sm:w-[150px] justify-between h-9',
               !filters.supplierId && 'text-muted-foreground'
             )}
           >
@@ -289,7 +289,7 @@ export function PendingDocumentsFilterPanel({
             role="combobox"
             size="sm"
             className={cn(
-              'w-[140px] justify-between h-9',
+              'flex-1 sm:flex-none sm:w-[140px] justify-between h-9',
               !filters.categoryId && 'text-muted-foreground'
             )}
           >

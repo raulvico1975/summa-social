@@ -850,8 +850,20 @@ export default function PendingDocsPage() {
                     const supplierName = doc.supplierId
                       ? contacts?.find(c => c.id === doc.supplierId)?.name
                       : null;
+                    const isSelectable = canOperate && doc.status === 'confirmed';
+                    const isSelected = selectedDocIds.has(doc.id);
+                    const canReconcile = doc.status === 'confirmed' && doc.suggestedTransactionIds && doc.suggestedTransactionIds.length > 0;
                     return (
-                      <div key={doc.id} className="p-3 flex items-center justify-between gap-3">
+                      <div key={doc.id} className="p-3 flex items-center gap-3">
+                        {/* Checkbox per selecció (només confirmed) */}
+                        {isSelectable && (
+                          <Checkbox
+                            checked={isSelected}
+                            onCheckedChange={(checked) => handleSelectDoc(doc.id, !!checked)}
+                            aria-label={t.pendingDocs.selection.selectAll}
+                            className="shrink-0"
+                          />
+                        )}
                         <div className="min-w-0 flex-1">
                           <div className="flex items-center gap-2">
                             <FileText className="h-4 w-4 text-muted-foreground shrink-0" />
@@ -879,6 +891,50 @@ export default function PendingDocsPage() {
                             {t.pendingDocs.statuses[doc.status === 'sepa_generated' ? 'sepaGenerated' : doc.status] || doc.status}
                           </Badge>
                         </div>
+                        {/* Menú d'accions */}
+                        {canOperate && (
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0">
+                                <MoreVertical className="h-4 w-4" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                              {/* Conciliar (només si té suggeriments) */}
+                              {canReconcile && (
+                                <DropdownMenuItem onClick={() => handleReconcile(doc)}>
+                                  {t.pendingDocs.actions.reconcile}
+                                </DropdownMenuItem>
+                              )}
+                              {/* Veure transacció (només matched) */}
+                              {doc.status === 'matched' && doc.matchedTransactionId && (
+                                <DropdownMenuItem asChild>
+                                  <Link href={`${movimentsPath}?txId=${doc.matchedTransactionId}`}>
+                                    {t.pendingDocs.actions.viewTransaction}
+                                  </Link>
+                                </DropdownMenuItem>
+                              )}
+                              {/* Arxivar (no arxivats) */}
+                              {doc.status !== 'archived' && doc.status !== 'matched' && (
+                                <DropdownMenuItem
+                                  onClick={() => handleArchive(doc)}
+                                  disabled={archivingDocId === doc.id}
+                                >
+                                  {t.pendingDocs.actions.archive}
+                                </DropdownMenuItem>
+                              )}
+                              {/* Restaurar (només arxivats) */}
+                              {doc.status === 'archived' && (
+                                <DropdownMenuItem
+                                  onClick={() => handleRestore(doc)}
+                                  disabled={archivingDocId === doc.id}
+                                >
+                                  {t.pendingDocs.actions.restore}
+                                </DropdownMenuItem>
+                              )}
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        )}
                       </div>
                     );
                   })}

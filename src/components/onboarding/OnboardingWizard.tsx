@@ -30,7 +30,7 @@ import {
 import { useTranslations } from '@/i18n';
 import { useCurrentOrganization, useOrgUrl } from '@/hooks/organization-provider';
 import { useFirebase, useCollection, useMemoFirebase, setDocumentNonBlocking } from '@/firebase';
-import { collection, doc } from 'firebase/firestore';
+import { collection, doc, updateDoc, serverTimestamp } from 'firebase/firestore';
 import type { Contact, Category, Organization, BankAccount } from '@/lib/data';
 
 // Importadors
@@ -42,17 +42,32 @@ import { SupplierImporter } from '@/components/supplier-importer';
 import { DonorImporter } from '@/components/donor-importer';
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// PERSISTÈNCIA D'ONBOARDING
+// PERSISTÈNCIA D'ONBOARDING (Firestore com source of truth)
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const ONBOARDING_STORAGE_KEY = 'summa.onboarding';
 
 type SetupMode = 'manual' | 'import';
 
+// Tipus local per l'estat del wizard (no tocar data.ts)
+type WizardStep = 'orgSettings' | 'bankAccount' | 'categories' | 'done';
+type WizardStatus = 'not_started' | 'in_progress' | 'completed';
+
+interface WizardState {
+  status: WizardStatus;
+  currentStep: WizardStep;
+  completedSteps: string[];
+  updatedAt?: any; // Firestore Timestamp
+}
+
+// Interfície antiga per compatibilitat localStorage (només fallback lectura)
 interface OnboardingState {
   inProgress: boolean;
   startedAt: string;
   setupMode?: SetupMode;
+  // Nous camps per compatibilitat
+  currentStep?: WizardStep;
+  completedSteps?: string[];
 }
 
 function getOnboardingState(orgId: string, userId: string): OnboardingState | null {
@@ -283,44 +298,92 @@ export function OnboardingWizardModal({ open, onOpenChange }: OnboardingWizardMo
   const progress = React.useMemo(() => computeProgress(checks), [checks]);
   const isComplete = React.useMemo(() => isOnboardingComplete(checks), [checks]);
 
+  // Llegir estat del wizard des de Firestore (source of truth)
+  // Nota: usem `as any` perquè no volem modificar data.ts
+  const wizardState = (organization?.onboarding as any)?.wizard as WizardState | undefined;
+
   // Detectar si venim de configuració amb onboarding=1
   const isReturningFromOnboarding = searchParams.get('onboarding') === '1';
 
-  // Reobrir modal automàticament si venim de configuració amb onboarding actiu
+  // Ref per evitar bucles de reobrir
+  const hasAutoOpened = React.useRef(false);
+
+  // Funció per guardar estat a Firestore (escriptures mínimes)
+  const saveWizardToFirestore = React.useCallback(async (state: Partial<WizardState>) => {
+    if (!organizationId) return;
+    try {
+      const orgRef = doc(firestore, 'organizations', organizationId);
+      await updateDoc(orgRef, {
+        'onboarding.wizard': {
+          ...wizardState,
+          ...state,
+          updatedAt: serverTimestamp(),
+        },
+      });
+    } catch (error) {
+      console.error('[OnboardingWizard] Error saving wizard state:', error);
+    }
+  }, [firestore, organizationId, wizardState]);
+
+  // Reobrir modal si wizard.status === 'in_progress' (només una vegada)
   React.useEffect(() => {
     if (!organizationId || !user?.uid) return;
+    if (hasAutoOpened.current) return; // Evitar bucles
+    if (open) return; // Si ja està obert, no fer res
 
     // Si venim amb ?onboarding=1, reobrir la modal
-    if (isReturningFromOnboarding && !open) {
+    if (isReturningFromOnboarding) {
+      hasAutoOpened.current = true;
       onOpenChange(true);
+      // Restaurar setupMode si el wizard estava en mode manual
+      if (wizardState?.status === 'in_progress') {
+        setSetupMode('manual');
+      }
       return;
     }
 
-    // Si hi ha estat d'onboarding persistent i no està obert, reobrir
-    const savedState = getOnboardingState(organizationId, user.uid);
-    if (savedState?.inProgress && !open && !isComplete) {
+    // Si wizard.status === 'in_progress' a Firestore, reobrir
+    if (wizardState?.status === 'in_progress' && !isComplete) {
+      hasAutoOpened.current = true;
       onOpenChange(true);
-      // Restaurar setupMode si estava guardat
+      setSetupMode('manual');
+      return;
+    }
+
+    // Fallback: localStorage (només lectura)
+    const savedState = getOnboardingState(organizationId, user.uid);
+    if (savedState?.inProgress && !isComplete) {
+      hasAutoOpened.current = true;
+      onOpenChange(true);
       if (savedState.setupMode) {
         setSetupMode(savedState.setupMode);
       }
     }
-  }, [organizationId, user?.uid, isReturningFromOnboarding, open, isComplete, onOpenChange]);
+  }, [organizationId, user?.uid, isReturningFromOnboarding, open, isComplete, onOpenChange, wizardState?.status]);
 
-  // Netejar estat quan l'onboarding es completa
+  // Quan l'onboarding es completa, marcar status='completed' a Firestore
   React.useEffect(() => {
     if (isComplete && organizationId && user?.uid) {
+      // Netejar localStorage
       setOnboardingState(organizationId, user.uid, null);
+      // Marcar complet a Firestore (només si estava in_progress)
+      if (wizardState?.status === 'in_progress') {
+        saveWizardToFirestore({
+          status: 'completed',
+          currentStep: 'done',
+        });
+      }
     }
-  }, [isComplete, organizationId, user?.uid]);
+  }, [isComplete, organizationId, user?.uid, wizardState?.status, saveWizardToFirestore]);
 
   // Tancar modal
   const handleClose = () => {
-    // Netejar estat persistent quan l'usuari tanca manualment
+    // Netejar localStorage
     if (organizationId && user?.uid) {
       setOnboardingState(organizationId, user.uid, null);
     }
     setSetupMode(null);
+    hasAutoOpened.current = false;
     onOpenChange(false);
   };
 
@@ -328,7 +391,7 @@ export function OnboardingWizardModal({ open, onOpenChange }: OnboardingWizardMo
   const handleSelectMode = (mode: SetupMode) => {
     setSetupMode(mode);
 
-    // Guardar a localStorage
+    // Guardar a localStorage (fallback)
     if (organizationId && user?.uid) {
       setOnboardingState(organizationId, user.uid, {
         inProgress: true,
@@ -337,26 +400,63 @@ export function OnboardingWizardModal({ open, onOpenChange }: OnboardingWizardMo
       });
     }
 
-    // Guardar a Firestore (opcional, per tracking)
-    if (organizationId) {
-      setDocumentNonBlocking(
-        doc(firestore, 'organizations', organizationId, 'onboarding', 'settings'),
-        { setupMode: mode, updatedAt: new Date().toISOString() },
-        { merge: true }
-      );
+    // Guardar estat inicial a Firestore (només si és mode manual)
+    if (mode === 'manual') {
+      saveWizardToFirestore({
+        status: 'in_progress',
+        currentStep: 'orgSettings',
+        completedSteps: wizardState?.completedSteps || [],
+      });
     }
   };
 
-  // Navegar a una secció i guardar estat
-  const handleNavigate = (href: string) => {
-    // Guardar estat abans de navegar
+  // Determinar el currentStep basat en checks (per navegar al pas correcte)
+  const getCurrentStep = React.useCallback((): WizardStep => {
+    // Ordre dels passos segons el pla
+    const stepOrder: { step: WizardStep; check: OnboardingStep }[] = [
+      { step: 'orgSettings', check: 'organization' },
+      { step: 'bankAccount', check: 'signature' }, // Usem signature com a proxy per bankAccount (està a config)
+      { step: 'categories', check: 'categories' },
+    ];
+
+    for (const { step, check } of stepOrder) {
+      const checkResult = checks.find(c => c.step === check);
+      if (checkResult && !checkResult.isComplete) {
+        return step;
+      }
+    }
+    return 'done';
+  }, [checks]);
+
+  // Navegar a una secció i guardar estat a Firestore
+  const handleNavigate = (href: string, step: OnboardingStep) => {
+    // Mappejar OnboardingStep a WizardStep
+    const stepMapping: Record<OnboardingStep, WizardStep> = {
+      'organization': 'orgSettings',
+      'signature': 'orgSettings', // Ambdós van a configuració
+      'categories': 'categories',
+      'contacts': 'categories', // Contacts és opcional, no té pas separat
+    };
+    const wizardStep = stepMapping[step] || 'orgSettings';
+
+    // Guardar estat a Firestore abans de navegar
+    saveWizardToFirestore({
+      status: 'in_progress',
+      currentStep: wizardStep,
+      completedSteps: wizardState?.completedSteps || [],
+    });
+
+    // Guardar a localStorage (fallback)
     if (organizationId && user?.uid) {
       setOnboardingState(organizationId, user.uid, {
         inProgress: true,
         startedAt: new Date().toISOString(),
         setupMode: setupMode ?? undefined,
+        currentStep: wizardStep,
+        completedSteps: wizardState?.completedSteps || [],
       });
     }
+
     // Tancar el modal abans de navegar
     onOpenChange(false);
     // La navegació es fa via Link, no cal fer res més
@@ -573,7 +673,7 @@ export function OnboardingWizardModal({ open, onOpenChange }: OnboardingWizardMo
               <li key={check.step}>
                 <Link
                   href={hrefWithOnboarding}
-                  onClick={() => handleNavigate(check.href)}
+                  onClick={() => handleNavigate(check.href, check.step)}
                   className="flex items-center gap-3 p-3 rounded-lg border hover:bg-muted/50 transition-colors group"
                 >
                   {check.isComplete ? (
