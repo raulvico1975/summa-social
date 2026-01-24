@@ -301,8 +301,8 @@ export async function createSepaRemittance(
   };
 
   // 9. Batch: remesa + actualitzar tots els pendingDocuments
-  // Firestore batch limit: 500
-  const BATCH_SIZE = 499; // Deixar espai per la remesa
+  // Firestore batch limit: max 50 operacions per batch
+  const BATCH_SIZE = 49; // 49 docs + 1 remesa = 50 al primer batch
 
   // Primer batch: remesa + primers docs
   const firstBatchDocs = valid.slice(0, BATCH_SIZE);
@@ -336,18 +336,14 @@ export async function createSepaRemittance(
 
   // Processar batches addicionals si cal
   if (remainingDocs.length > 0) {
-    const chunks: ValidDocInfo[][] = [];
-    for (let i = 0; i < remainingDocs.length; i += 500) {
-      chunks.push(remainingDocs.slice(i, i + 500));
-    }
-
-    for (const chunk of chunks) {
+    for (let i = 0; i < remainingDocs.length; i += 50) {
+      const chunk = remainingDocs.slice(i, i + 50);
       const chunkBatch = writeBatch(firestore);
-      const startIndex = firstBatchDocs.length + chunks.indexOf(chunk) * 500;
+      const startIndex = firstBatchDocs.length + i;
 
-      for (let i = 0; i < chunk.length; i++) {
-        const { doc: pendingDoc } = chunk[i];
-        const paymentIndex = startIndex + i;
+      for (let j = 0; j < chunk.length; j++) {
+        const { doc: pendingDoc } = chunk[j];
+        const paymentIndex = startIndex + j;
         const endToEndId = payments[paymentIndex].endToEndId!;
 
         const sepaInfo: PendingDocumentSepa = {

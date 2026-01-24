@@ -230,8 +230,8 @@ export async function confirmManyPendingDocuments(
     };
   }
 
-  // Firestore batch limit és 500
-  const BATCH_SIZE = 500;
+  // Firestore batch limit: max 50 operacions per batch
+  const BATCH_SIZE = 50;
   const chunks: PendingDocument[][] = [];
 
   for (let i = 0; i < readyDocs.length; i += BATCH_SIZE) {

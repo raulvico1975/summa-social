@@ -192,7 +192,7 @@ export async function executeUndo(
   }
 
   try {
-    const batch = writeBatch(firestore);
+    const BATCH_SIZE = 50;
     const transactionsRef = collection(firestore, 'organizations', orgId, 'transactions');
     const now = new Date().toISOString();
 
@@ -226,55 +226,99 @@ export async function executeUndo(
     let archivedCount = 0;
     let deletedCount = 0;
 
-    // Processar cada filla
-    for (const child of children) {
-      const childRef = doc(transactionsRef, child.id);
+    // Processar filles en chunks de 50
+    // Reservem operacions per l'últim batch (reset pare + delete remesa)
+    const extraOps = parentTx.remittanceId ? 2 : 1;
+    const lastChunkMaxSize = BATCH_SIZE - extraOps;
 
-      // Decidir: soft-delete (arxivar) o hard-delete
-      if (isFiscallyRelevantTransaction(child.data)) {
-        // Soft-delete per transaccions fiscals
-        batch.update(childRef, {
-          archivedAt: now,
-          archivedByUid: userId,
-          archivedReason: 'undo_process',
-          archivedFromAction: `undo_${operationType}`,
-        });
-        archivedCount++;
-      } else {
-        // Hard-delete per transaccions no fiscals
-        batch.delete(childRef);
-        deletedCount++;
+    let cursor = 0;
+    while (cursor < children.length) {
+      const remaining = children.length - cursor;
+      const isLastChunk = remaining <= BATCH_SIZE;
+      const take = isLastChunk ? Math.min(lastChunkMaxSize, remaining) : BATCH_SIZE;
+      const chunk = children.slice(cursor, cursor + take);
+      cursor += take;
+      const batch = writeBatch(firestore);
+
+      for (const child of chunk) {
+        const childRef = doc(transactionsRef, child.id);
+
+        // Decidir: soft-delete (arxivar) o hard-delete
+        if (isFiscallyRelevantTransaction(child.data)) {
+          // Soft-delete per transaccions fiscals
+          batch.update(childRef, {
+            archivedAt: now,
+            archivedByUid: userId,
+            archivedReason: 'undo_process',
+            archivedFromAction: `undo_${operationType}`,
+          });
+          archivedCount++;
+        } else {
+          // Hard-delete per transaccions no fiscals
+          batch.delete(childRef);
+          deletedCount++;
+        }
       }
+
+      // Afegir reset pare i delete remesa NOMÉS a l'últim batch
+      if (cursor >= children.length) {
+        // Eliminar document de remesa si existeix
+        if (parentTx.remittanceId) {
+          const remittanceRef = doc(firestore, 'organizations', orgId, 'remittances', parentTx.remittanceId);
+          batch.delete(remittanceRef);
+        }
+
+        // Resetejar el pare
+        batch.update(doc(transactionsRef, parentTxId), {
+          // Camps de remesa
+          isRemittance: deleteField(),
+          remittanceId: deleteField(),
+          remittanceItemCount: deleteField(),
+          remittanceResolvedCount: deleteField(),
+          remittancePendingCount: deleteField(),
+          remittancePendingTotalAmount: deleteField(),
+          remittanceType: deleteField(),
+          remittanceDirection: deleteField(),
+          remittanceStatus: deleteField(),
+          pendingReturns: deleteField(),
+          // Camps Stripe (si aplica)
+          stripeTransferId: deleteField(),
+          stripePayoutId: deleteField(),
+          // Metadata
+          updatedAt: now,
+        });
+      }
+
+      await batch.commit();
     }
 
-    // Eliminar document de remesa si existeix
-    if (parentTx.remittanceId) {
-      const remittanceRef = doc(firestore, 'organizations', orgId, 'remittances', parentTx.remittanceId);
-      batch.delete(remittanceRef);
+    // Cas edge: 0 filles (només reset pare)
+    if (children.length === 0) {
+      const batch = writeBatch(firestore);
+
+      if (parentTx.remittanceId) {
+        const remittanceRef = doc(firestore, 'organizations', orgId, 'remittances', parentTx.remittanceId);
+        batch.delete(remittanceRef);
+      }
+
+      batch.update(doc(transactionsRef, parentTxId), {
+        isRemittance: deleteField(),
+        remittanceId: deleteField(),
+        remittanceItemCount: deleteField(),
+        remittanceResolvedCount: deleteField(),
+        remittancePendingCount: deleteField(),
+        remittancePendingTotalAmount: deleteField(),
+        remittanceType: deleteField(),
+        remittanceDirection: deleteField(),
+        remittanceStatus: deleteField(),
+        pendingReturns: deleteField(),
+        stripeTransferId: deleteField(),
+        stripePayoutId: deleteField(),
+        updatedAt: now,
+      });
+
+      await batch.commit();
     }
-
-    // Resetejar el pare
-    batch.update(doc(transactionsRef, parentTxId), {
-      // Camps de remesa
-      isRemittance: deleteField(),
-      remittanceId: deleteField(),
-      remittanceItemCount: deleteField(),
-      remittanceResolvedCount: deleteField(),
-      remittancePendingCount: deleteField(),
-      remittancePendingTotalAmount: deleteField(),
-      remittanceType: deleteField(),
-      remittanceDirection: deleteField(),
-      remittanceStatus: deleteField(),
-      pendingReturns: deleteField(),
-      // Camps Stripe (si aplica)
-      stripeTransferId: deleteField(),
-      stripePayoutId: deleteField(),
-      // Metadata
-      updatedAt: now,
-    });
-
-    // Commit
-    await batch.commit();
 
     // Escriure audit log
     await writeUndoAuditLog(firestore, orgId, {

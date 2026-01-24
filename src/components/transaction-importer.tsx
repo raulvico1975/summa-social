@@ -58,8 +58,8 @@ import { createDedupeKey, type DedupeTransaction } from '@/lib/transaction-dedup
 
 type ImportMode = 'append' | 'replace';
 
-// Firestore batch limit is 500, use 450 for safety margin
-const BATCH_LIMIT = 450;
+// Firestore batch limit: max 50 operacions per batch
+const BATCH_LIMIT = 50;
 
 /**
  * Divideix un array en chunks de mida màxima
