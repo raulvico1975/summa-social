@@ -553,7 +553,6 @@ export function TransactionImporter({ existingTransactions }: TransactionImporte
                 category: null,
                 document: null,
                 contactId: null,
-                contactType: undefined,
                 transactionType,
                 bankAccountId: bankAccountId ?? null,
                 source: 'bank' as const,
