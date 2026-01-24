@@ -1775,10 +1775,8 @@ export function RemittanceSplitter({
             bankAccountId: transaction.bankAccountId ?? null,
             isRemittanceItem: true,
             remittanceId,
+            contactType: contactId ? 'supplier' : null,
           };
-          if (contactId) {
-            (newTxData as any).contactType = 'supplier';
-          }
 
           batch.set(newTxRef, newTxData);
         }

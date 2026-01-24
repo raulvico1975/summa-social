@@ -293,7 +293,7 @@ export async function suggestPendingDocumentMatches(
 
   // 7. Batch update: documents amb suggeriments
   if (updates.length > 0 || remittanceMatches.length > 0) {
-    const BATCH_SIZE = 500;
+    const BATCH_SIZE = 50;
 
     // Processar updates de documents
     for (let i = 0; i < updates.length; i += BATCH_SIZE) {

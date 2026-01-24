@@ -1337,6 +1337,12 @@ export function useReturnImporter(options: UseReturnImporterOptions = {}) {
               // Compat legacy (pantalles que llegeixen emisor*)
               childTxData.emisorId = donorId;
               childTxData.emisorName = donorName;
+            } else {
+              childTxData.contactId = null;
+              childTxData.contactType = null;
+              childTxData.contactName = null;
+              childTxData.emisorId = null;
+              childTxData.emisorName = null;
             }
 
             // P0: Validar invariants fiscals abans d'escriure
