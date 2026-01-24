@@ -146,13 +146,21 @@ PROCESSAR → DESFER → REPROCESSAR
 
 Quan es tanca una funcionalitat significativa (nova pantalla, nou flux, millora visible):
 
-1. Actualitza `src/content/product-updates.ts`:
-   - `FEATURE_ANNOUNCEMENT`: Canvia `id` (ex: `v1.18-onboarding`), `text` i `cta.href`
-   - `WORKING_ON`: Actualitza la llista amb el que queda pendent
+1. La font de veritat és la col·lecció Firestore `productUpdates` (gestionada des del panell SuperAdmin).
 
-2. L'`id` ha de canviar per forçar que el banner es mostri als usuaris que ja l'havien vist.
+2. El fitxer `src/lib/notifications.ts` conté definicions locals (`PRODUCT_UPDATES`, `ROADMAP_ITEMS`) que serveixen com a **fallback** i estan marcades `@deprecated`.
 
-3. Format del text: curt, informatiu, sense exclamacions.
+3. Per afegir una novetat:
+   - Accedeix al panell SuperAdmin → Product Updates
+   - Crea l'entrada amb `id`, `title`, `body`, `href` i `createdAt`
+   - L'`id` ha de ser únic per forçar que el badge es mostri als usuaris
+
+4. Format del text: curt, informatiu, sense exclamacions.
+
+5. Fitxers relacionats:
+   - `src/lib/notifications.ts` — Definicions locals (fallback deprecated)
+   - `src/hooks/use-product-updates.ts` — Hook que carrega des de Firestore
+   - `src/components/notifications/product-updates-fab.tsx` — FAB de novetats
 
 ## 9) Deploy a producció
 
