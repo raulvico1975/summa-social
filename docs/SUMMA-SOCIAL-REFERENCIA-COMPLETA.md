@@ -88,7 +88,7 @@ Eina centralitzada amb:
 
 | Component | Tecnologia | Versió |
 |-----------|------------|--------|
-| Frontend | Next.js (App Router) | 14.x |
+| Frontend | Next.js (App Router) | 15.x |
 | Llenguatge | TypeScript | 5.x |
 | UI Components | shadcn/ui | - |
 | Estils | Tailwind CSS | 3.x |
@@ -4725,7 +4725,7 @@ function normalizedName(name: string): string {
 | 1 | **Base de dades**: Firestore | 🔒 TANCAT |
 | 2 | **Model de dades**: Collections estables | 🔒 TANCAT |
 | 3 | **Rol**: Conciliació + Fiscalitat | 🔒 TANCAT |
-| 4 | **Arquitectura**: Next.js 14 + Firebase | 🔒 TANCAT |
+| 4 | **Arquitectura**: Next.js 15 + Firebase | 🔒 TANCAT |
 | 5 | **IA**: Només Genkit + Gemini | 🔒 TANCAT |
 | 6 | **Àmbit**: No ERP, CRM, facturació | 🔒 TANCAT |
 | 7 | **Matching**: Només exacte (IBAN/DNI/Nom) | 🔒 TANCAT |
