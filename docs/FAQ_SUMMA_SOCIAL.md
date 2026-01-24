@@ -1019,9 +1019,39 @@ TOTAL           →  3.000€
 
 ### 43. He dividit una remesa i m'he equivocat. Es pot desfer?
 
-**Sí, té solució!** Contacta amb el suport de l'app i podran restaurar la remesa a l'estat original, com si mai l'haguessis dividit.
+**Sí, i ara ho pots fer tu mateix/a!** Ja no cal contactar amb el suport.
 
-Després podràs tornar-la a processar correctament amb el fitxer adequat.
+**Pas a pas:**
+
+1. Ves a **Moviments**
+2. Localitza la remesa processada (té un badge verd "✓ Remesa processada · X quotes")
+3. Clica el badge → S'obre el modal de detall
+4. A la part inferior del modal, clica **"Desfer remesa"**
+5. Confirma l'acció
+6. La remesa es restaura a l'estat original
+7. Ja pots tornar-la a processar amb el fitxer correcte
+
+**Tranquil/a:** Les quotes no s'esborren, queden arxivades (soft-delete) per traçabilitat. Però de cara als informes i al Model 182, és com si mai s'hagués processat.
+
+**Quan usar-ho:**
+- Has carregat el fitxer del mes equivocat
+- El matching de donants no ha funcionat bé
+- Vols corregir dades abans de tornar a processar
+
+---
+
+### 43b. M'apareix un missatge que diu "Aquesta remesa ja està processada". Què faig?
+
+**Això és un guardrail de seguretat** — el sistema no et deixa processar una remesa que ja ho està per evitar duplicats.
+
+**La solució és senzilla:** Primer desfà la remesa i després torna a processar-la.
+
+1. Clica el badge de la remesa
+2. Obre el modal de detall
+3. Clica "Desfer remesa"
+4. Ara ja podràs tornar a dividir-la
+
+**Per què passa?** Summa Social protegeix les teves dades fiscals. Si permetés processar dues vegades sense desfer, podries tenir quotes duplicades que inflarien el Model 182.
 
 ---
 
@@ -1346,15 +1376,59 @@ Import del certificat = Total donacions − Total devolucions
 
 ### 61. He assignat una devolució al donant equivocat. Com ho corregeixo?
 
-**No et preocupis, és fàcil de corregir!**
+**No et preocupis, és fàcil de corregir!** Depèn de si és una devolució individual o part d'una remesa.
 
+**Si és una devolució individual:**
 1. Ves a Moviments
-2. Localitza el moviment de la devolució (pots filtrar per "devolucions" o buscar per data/import)
-3. Edita el moviment
-4. Canvia el contacte assignat: treu el que està malament i posa el correcte
+2. Localitza el moviment de la devolució
+3. Edita el moviment directament
+4. Canvia el contacte assignat al correcte
 5. Guarda
 
+**Si forma part d'una remesa de devolucions:**
+1. Localitza la remesa de devolucions
+2. Clica el badge → S'obre el modal de detall
+3. Clica "Desfer remesa"
+4. Torna a importar el fitxer del banc amb les dades corregides
+
 Els informes es recalcularan automàticament amb l'assignació correcta.
+
+---
+
+### 61b. Per què no puc processar directament una remesa de devolucions que ja estava processada?
+
+**Això és un guardrail de seguretat** per protegir les teves dades fiscals.
+
+**El motiu:** Les devolucions resten de les donacions al Model 182. Si el sistema permetés processar-les dues vegades sense desfer, podries acabar amb devolucions duplicades que farien que els donants apareguessin amb menys import del que realment han donat.
+
+**La solució és senzilla:** Primer desfà la remesa i després torna a processar-la.
+
+1. Clica el badge de la remesa
+2. Obre el modal de detall
+3. Clica "Desfer remesa"
+4. Ara ja podràs tornar a processar-la
+
+**Exemple del problema que evitem:**
+- Soci A ha donat 180€ i ha tingut 30€ de devolucions
+- Import real: 150€
+- Si processessis dues vegades les devolucions sense desfer: 180€ - 30€ - 30€ = 120€ ❌
+- Amb el guardrail: sempre tens 180€ - 30€ = 150€ ✅
+
+---
+
+### 61c. Per què no apareix el banner d'inconsistència a les remeses de devolucions?
+
+**Perquè les remeses de devolucions (OUT) funcionen diferent de les de quotes (IN).**
+
+El sistema de verificació de consistència (el banner que diu "Hi ha problemes amb aquesta remesa") **només s'aplica a les remeses de quotes (IN)**, no a les de devolucions.
+
+**Per què?**
+- Les remeses de quotes tenen invariants clars: la suma de les filles ha de coincidir amb l'import del pare
+- Les remeses de devolucions no tenen aquests invariants perquè el banc pot agrupar-les de maneres diferents
+
+**Què fer si creus que hi ha un problema amb una remesa de devolucions?**
+1. Desfà la remesa
+2. Torna a processar-la amb el fitxer correcte
 
 ---
 

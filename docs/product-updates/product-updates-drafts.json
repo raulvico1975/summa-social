@@ -1,97 +1,107 @@
 {
-  "generatedAt": "2025-12-31T18:54:45.916Z",
+  "generatedAt": "2026-01-21T12:46:30.483Z",
   "range": "last50",
   "drafts": [
     {
-      "id": "draft-20251231-ui-1",
-      "title": "Correccions d'interfície",
-      "description": "prevent raw translation keys from rendering in Guides Hub i 5 millores més.",
-      "link": null,
-      "evidence": [
-        "fix(i18n): prevent raw translation keys from rendering in Guides Hub",
-        "fix(i18n): add reserved segments + x-default hreflang",
-        "fix(auth): idle logout redirects to org-specific login + friendly /login page",
-        "fix(routing): simplify /quick delegation and protect middleware routes",
-        "fix(rules): add explicit get/list permissions for productUpdates",
-        "fix(admin): respect React hooks rules in ProductUpdatesSection"
-      ]
-    },
-    {
-      "id": "draft-20251231-ui-2",
-      "title": "Noves funcionalitats d'interfície",
-      "description": "surface 5 new documented guides in hub i 11 millores més.",
-      "link": null,
-      "evidence": [
-        "feat(guides): surface 5 new documented guides in hub",
-        "feat(guides): surface 5 new procedure guides in hub",
-        "feat(guides): surface 5 new guides in hub",
-        "feat(guides): surface generateDonorCertificate guide in hub",
-        "feat(guides): surface importDonors guide in hub",
-        "feat(guides): surface changeLanguage guide in hub",
-        "feat(admin): make system health checks actionable and non-fake",
-        "feat(guides): surface selectBankAccount guide in hub",
-        "feat(guides): surface changePeriod guide in hub",
-        "feat(admin): add actionable fixes and human explanations to system health checks",
-        "feat(admin): improve incidents with recommended action and resolution commit",
-        "feat(admin): add system health semaphore checks"
-      ]
-    },
-    {
-      "id": "draft-20251231-general-3",
+      "id": "draft-20260121-general-1",
       "title": "Noves funcionalitats generals",
-      "description": "add FR/ES/PT aliases for privacy and contact. add localized feature page aliases. multilingual public pages with /public/[lang] rewrite.",
+      "description": "add server guardrail to reject reprocessing. add /api/remittances/in/process endpoint.",
       "link": null,
       "evidence": [
-        "feat(public): add FR/ES/PT aliases for privacy and contact",
-        "feat(public): add localized feature page aliases",
-        "feat(i18n): multilingual public pages with /public/[lang] rewrite"
+        "feat(remittances): add server guardrail to reject reprocessing",
+        "feat(api): add /api/remittances/in/process endpoint"
       ]
     },
     {
-      "id": "draft-20251231-general-4",
+      "id": "draft-20260121-general-2",
       "title": "Correccions generals",
-      "description": "allow pendingDocuments upload when documentsEnabled is true. add missing rules for productUpdates and system collections.",
+      "description": "add legacy fallback and post-check to /undo endpoint. inline functions for contacts to avoid evaluation issues. inline functions for contacts to avoid evaluation issues.",
       "link": null,
       "evidence": [
-        "fix(storage): allow pendingDocuments upload when documentsEnabled is true",
-        "fix(rules): add missing rules for productUpdates and system collections"
+        "fix(remittances): add legacy fallback and post-check to /undo endpoint",
+        "fix(rules): inline functions for contacts to avoid evaluation issues",
+        "fix(rules): inline functions for contacts to avoid evaluation issues"
       ]
     },
     {
-      "id": "draft-20251231-i18n-5",
-      "title": "Noves funcionalitats de traduccions",
-      "description": "add 5 documented procedure guides translations (CA/ES/FR/PT) i 10 millores més.",
+      "id": "draft-20260121-ui-3",
+      "title": "Correccions d'interfície",
+      "description": "exclude OUT remittances from consistency checks i 11 millores més.",
       "link": null,
       "evidence": [
-        "feat(guides): add 5 documented procedure guides translations (CA/ES/FR/PT)",
-        "feat(guides): add 5 movement/remittance/access procedure guides translations (CA/ES/FR/PT)",
-        "feat(guides): add 5 procedural guides (models/certificates/donor-status) translations (CA/ES/FR/PT)",
-        "feat(guides): add generateDonorCertificate procedure guide (CA/ES/FR/PT)",
-        "feat(guides): add importDonors procedure guide (CA/ES/FR/PT)",
-        "feat(guides): add changeLanguage procedure guide (CA/ES/FR/PT)",
-        "feat(guides): add select bank account procedure guide (CA/ES/FR/PT)",
-        "feat(guides): add change period procedure guide (CA/ES/FR/PT)",
-        "feat(admin): add i18n Storage initialization and per-language status",
-        "feat(guides): add importMovements guide matching actual Import UI (CA/ES/FR/PT)",
-        "feat: UI polish + guides + admin translations section"
+        "fix(remittances): exclude OUT remittances from consistency checks",
+        "fix(remittances): filter archived transactions in detail modal",
+        "fix(182): exclude archived transactions from Model 182",
+        "fix(certificates): use institutional template for annual cert in donor drawer",
+        "fix(certificates): use institutional template for annual cert in donor drawer",
+        "fix(certificates): align preview dialog with actual PDF output",
+        "fix(certificates): align preview dialog with actual PDF output",
+        "fix(mobile): simplify reports UI (stack controls, remove tables, use list/empty states)",
+        "fix(certificates): improve annual donation certificate copy (ES/CA)",
+        "fix(closing-bundle): robust document URL reading (document/documentUrl/document.url)",
+        "fix(reports): closing bundle uses ledger-only + human manifest + debug sheet",
+        "fix(donors): add guardrail to prevent Firestore queries before org context ready"
       ]
     },
     {
-      "id": "draft-20251231-i18n-6",
-      "title": "Correccions de traduccions",
-      "description": "silence expected Storage errors (404, permission-denied)",
+      "id": "draft-20260121-ui-4",
+      "title": "Noves funcionalitats d'interfície",
+      "description": "add sanitize endpoint for legacy data recovery. add donor search in IBAN assignment selector. add closing bundle export (ZIP with transactions + documents).",
       "link": null,
       "evidence": [
-        "fix(i18n): silence expected Storage errors (404, permission-denied)"
+        "feat(remittances): add sanitize endpoint for legacy data recovery",
+        "feat(remittances): add donor search in IBAN assignment selector",
+        "feat(reports): add closing bundle export (ZIP with transactions + documents)"
       ]
     },
     {
-      "id": "draft-20251231-ajuda-7",
+      "id": "draft-20260121-informes-5",
+      "title": "Millores internes en informes",
+      "description": "eliminar flux Reparar — recuperació via Desfer → Processar",
+      "link": null,
+      "evidence": [
+        "refactor(remittances): eliminar flux Reparar — recuperació via Desfer → Processar"
+      ]
+    },
+    {
+      "id": "draft-20260121-informes-6",
+      "title": "Noves funcionalitats en informes",
+      "description": "complete UI guardrails, repair flow and QA docs (5b) i 3 millores més.",
+      "link": null,
+      "evidence": [
+        "feat(remittances): complete UI guardrails, repair flow and QA docs (5b)",
+        "feat(api): add /api/remittances/in/repair endpoint (purge + reprocess)",
+        "feat(api): add /api/remittances/in/undo endpoint + shared helpers",
+        "feat(fiscal): add remittance invariants with SHA-256 hash"
+      ]
+    },
+    {
+      "id": "draft-20260121-informes-7",
+      "title": "Correccions en informes",
+      "description": "exclude archivedAt from fiscal calculations (P0). release tickets on delete + auto-repair orphaned tickets.",
+      "link": null,
+      "evidence": [
+        "fix(fiscal): exclude archivedAt from fiscal calculations (P0)",
+        "fix(expense-reports): release tickets on delete + auto-repair orphaned tickets"
+      ]
+    },
+    {
+      "id": "draft-20260121-moviments-8",
+      "title": "Correccions en moviments",
+      "description": "simplify pending docs UI (collapse tabs, move actions to overflow menu). simplify liquidations UI (collapse tabs and move actions to overflow menu).",
+      "link": null,
+      "evidence": [
+        "fix(mobile): simplify pending docs UI (collapse tabs, move actions to overflow menu)",
+        "fix(mobile): simplify liquidations UI (collapse tabs and move actions to overflow menu)"
+      ]
+    },
+    {
+      "id": "draft-20260121-ajuda-9",
       "title": "Noves funcionalitats en ajuda",
-      "description": "add stripe and travel capture procedure guides",
+      "description": "inline help editor (P2)",
       "link": null,
       "evidence": [
-        "feat(guides): add stripe and travel capture procedure guides"
+        "feat(admin): inline help editor (P2)"
       ]
     }
   ]
