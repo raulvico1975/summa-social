@@ -1,6 +1,6 @@
 # Certificats de Donació: Criteri de Càlcul
 
-> Versió 1.0 — Desembre 2025
+> Versió 1.1 — Gener 2026
 
 Aquest document defineix el criteri fiscal que Summa Social aplica per calcular l'import dels certificats de donació anuals i el Model 182.
 
@@ -15,6 +15,10 @@ Una donació certificable és qualsevol transacció que compleix:
 - `amount > 0` (ingrés positiu)
 - `contactId` = ID del donant
 - `date` dins l'any fiscal seleccionat
+- `archivedAt` = `null` o `undefined` (transacció activa)
+
+**S'exclouen (no compten):**
+- Transaccions amb `archivedAt` (arxivades per soft-delete)
 
 **No es filtra per:**
 - `donationStatus` (irrellevant pel càlcul)
@@ -33,9 +37,11 @@ Les devolucions **resten** del total certificable.
 - `transactionType === 'return'`
 - `contactId` = ID del donant
 - `date` dins l'any fiscal
+- `archivedAt` = `null` o `undefined` (devolució activa)
 
 **S'exclouen:**
 - `transactionType === 'return_fee'` (comissions bancàries no resten)
+- Devolucions amb `archivedAt` (arxivades per soft-delete)
 
 **Fórmula:**
 
@@ -81,6 +87,8 @@ Utilitzen **exactament el mateix criteri de càlcul**:
 | **Devolució no vinculada** (`contactId = null`) | No afecta cap donant fins que s'assigni. |
 | **Devolució assignada a donant diferent** | Resta del donant al qual s'assigna la devolució. Summa Social no infereix relacions automàtiques entre donacions i devolucions; la responsabilitat d'assignació correcta és de l'entitat. |
 | **Múltiples devolucions mateix donant** | Es sumen totes i resten del total brut. |
+| **Transacció arxivada** (`archivedAt` present) | No compta. Ni donacions ni devolucions arxivades afecten el càlcul. |
+| **Remesa desfeta** | Les filles de la remesa queden amb `archivedAt` → no compten. |
 
 ---
 
@@ -104,4 +112,5 @@ Aquest criteri garanteix coherència entre certificats emesos a donants i la inf
 
 | Versió | Data | Canvis |
 |--------|------|--------|
+| 1.1 | Gener 2026 | Afegit criteri `archivedAt`: transaccions arxivades no compten |
 | 1.0 | Desembre 2025 | Versió inicial |

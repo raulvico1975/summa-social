@@ -685,8 +685,8 @@ export async function POST(request: NextRequest): Promise<NextResponse<ProcessRe
           batch.set(pendingRef, {
             id: pendingRef.id,
             nameRaw: pending.nameRaw,
-            taxId: pending.taxId,
-            iban: pending.iban,
+            taxId: pending.taxId ?? null,
+            iban: pending.iban ?? null,
             amountCents: pending.amountCents,
             reason: pending.reason,
             sourceRowIndex: pending.sourceRowIndex,

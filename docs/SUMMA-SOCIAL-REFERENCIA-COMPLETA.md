@@ -88,7 +88,7 @@ Eina centralitzada amb:
 
 | Component | Tecnologia | Versió |
 |-----------|------------|--------|
-| Frontend | Next.js (App Router) | 14.x |
+| Frontend | Next.js (App Router) | 15.x |
 | Llenguatge | TypeScript | 5.x |
 | UI Components | shadcn/ui | - |
 | Estils | Tailwind CSS | 3.x |
@@ -296,10 +296,19 @@ El sistema de categorització IA genera logs estructurats per facilitar el diagn
 ```
 /src
   /app                          → Pàgines (Next.js App Router)
-    /[lang]                      → Rutes públiques multiidioma (NOU v1.25)
-      /login                     → Login públic (/ca/login, /es/login, etc.)
-      /privacy                   → Política de privacitat
-      /contact                   → Pàgina de contacte
+    /public/[lang]               → Rutes públiques multiidioma (segment real `public`)
+      /page.tsx                  → HOME multiidioma
+      /funcionalitats/page.tsx   → Funcionalitats (CA)
+      /funcionalidades/page.tsx  → Funcionalitats (ES)
+      /fonctionnalites/page.tsx  → Funcionalitats (FR)
+      /privacy/page.tsx          → Política de privacitat (CA/EN)
+      /privacidad/page.tsx       → Política de privacitat (ES)
+      /confidentialite/page.tsx  → Política de privacitat (FR)
+      /privacidade/page.tsx      → Política de privacitat (PT)
+      /contact/page.tsx          → Contacte (CA/EN)
+      /contacto/page.tsx         → Contacte (ES)
+      /novetats/page.tsx         → Novetats del producte
+      /novetats/[slug]/page.tsx  → Detall novetat
       layout.tsx                 → Validació idioma + generateStaticParams
     /[orgSlug]                   → Rutes per organització (app privada)
       /dashboard
@@ -314,10 +323,12 @@ El sistema de categorització IA genera logs estructurats per facilitar el diagn
         /configuracion           → Configuració de l'organització
       /login                     → Login per organització
     /admin                       → Panel SuperAdmin global
-    /login                       → Redirect stub → /[lang]/login
-    /privacy                     → Redirect stub → /[lang]/privacy
-    /contacte                    → Redirect stub → /[lang]/contact
-    /privacitat                  → Redirect stub → /[lang]/privacy (legacy)
+    /login                       → Redirect stub → /{lang}/login (via middleware)
+    /privacy                     → Redirect stub → /{lang}/privacy
+    /contacte                    → Redirect stub → /{lang}/contact
+    /privacitat                  → Redirect stub → /{lang}/privacy (legacy)
+    /funcionalitats              → Redirect stub → /{lang}/funcionalitats
+    /registre                    → Pàgina de registre
   /components                    → Components React reutilitzables
     /ui                          → Components shadcn/ui
     /return-importer             → Importador de devolucions (NOU v1.8)
@@ -345,19 +356,27 @@ El sistema de categorització IA genera logs estructurats per facilitar el diagn
     dashboard-*.tsx              → Components del dashboard
   /firebase                      → Configuració i hooks de Firebase
   /hooks                         → Hooks personalitzats de React
+  /services                      → Serveis (admin.ts, auth.ts)
   /lib                           → Utilitats, tipus i dades
-    /data.ts                     → Definicions de tipus (Donor, Supplier, etc.)
-    /__tests__                   → Tests unitaris (NOU v1.8)
-      normalize.test.ts          → 35 tests
-      auto-match.test.ts         → 24 tests
-      model182.test.ts           → 18 tests
+    /data.ts                     → Definicions de tipus (Transaction, Contact, etc.)
+    /fiscal                      → Lògica fiscal (invariants, locks, softDelete)
+    /contacts                    → Helpers de contactes (filterActiveContacts)
+    /sepa                        → Generadors SEPA (pain.001, pain.008)
+    /files                       → Gestió de fitxers (attach-document, sha256)
+    /notifications.ts            → Product updates (deprecated, fallback local)
+    /__tests__                   → Tests unitaris (7 fitxers)
+  /scripts                       → Scripts d'utilitat i demo
+  /help                          → Contingut d'ajuda per idioma (ca/, es/, fr/)
   /i18n                          → Traduccions
     /ca.ts                       → Català (idioma base, app privada)
     /es.ts                       → Espanyol (app privada)
     /fr.ts                       → Francès (app privada)
-    /public.ts                   → Traduccions pàgines públiques CA/ES/FR/PT (NOU v1.25)
+    # pt NO té .ts — és JSON-only (veure secció 3.9.7)
+    /public.ts                   → Traduccions pàgines públiques CA/ES/FR/PT
     /locales/*.json              → Bundles JSON per runtime (ca, es, fr, pt)
-    # Criteri: fr.ts conté totes les claus; si falta traducció, es manté text CA
+    /provider.tsx                → Provider, listener versió, carrega JSON
+    /json-runtime.ts             → Loader Storage/local, cache, trFactory
+    /index.ts                    → Tipus Language, context, hook
   /ai                            → Fluxos de Genkit (IA)
 ```
 
@@ -370,29 +389,37 @@ organizations/
       ├── name: string                    # Nom de l'organització
       ├── taxId: string                   # CIF de l'entitat
       ├── slug: string                    # Identificador URL únic
+      ├── status: 'active' | 'suspended' | 'pending'  # Estat de l'org
       ├── address: string                 # Adreça fiscal
       ├── city: string                    # Ciutat
+      ├── province: string               # Província
       ├── zipCode: string                 # Codi postal
       ├── phone: string                   # Telèfon
       ├── email: string                   # Email de contacte
       ├── website: string                 # Pàgina web
       ├── logoUrl: string | null          # URL del logo
       ├── signatureUrl: string | null     # URL de la firma digitalitzada
-      ├── signerName: string | null       # Nom del signant
-      ├── signerRole: string | null       # Càrrec del signant
+      ├── signatoryName: string | null    # Nom del signant
+      ├── signatoryRole: string | null    # Càrrec del signant
+      ├── language: 'ca' | 'es' | null   # Idioma per defecte de l'org
+      ├── features?: OrganizationFeatures # Feature flags (projectModule, etc.)
+      ├── isDemo?: boolean                # Organització demo?
+      ├── contactAlertThreshold: number   # Llindar alertes contacte (default: 50)
       │
-      ├── onboarding/                     # Estat onboarding (NOU v1.20)
+      ├── onboarding/                     # Estat onboarding
       │   └── welcomeSeenAt: string | null  # YYYY-MM-DD quan primer admin ha vist modal
       │
-      ├── settings/
-      │   └── preferences/
-      │       └── contactAlertThreshold: number
+      ├── createdAt: string
+      ├── createdBy: string               # UID del creador
+      ├── updatedAt: string
       │
       ├── members/
       │   └── {userId}/
-      │       ├── role: "superadmin" | "admin" | "user" | "viewer"
+      │       ├── role: "admin" | "user" | "viewer"
       │       ├── email: string
-      │       └── displayName: string
+      │       ├── displayName: string
+      │       ├── joinedAt: string
+      │       └── invitedBy?: string
       │
       ├── transactions/
       │   └── {transactionId}/
@@ -410,41 +437,85 @@ organizations/
       │       ├── projectName: string | null      # Nom (desnormalitzat)
       │       ├── documentUrl: string | null      # URL document adjunt
       │       ├── notes: string | null            # Notes internes
-      │       ├── isCounterpartTransfer: boolean  # Transferència a contrapart?
-      │       ├── transactionType: string | null  # 'return' si és devolució
+      │       ├── transactionType: string | null  # 'normal' | 'return' | 'return_fee' | 'donation' | 'fee'
       │       ├── donationStatus: string | null   # 'returned' si marcada
       │       │
       │       # Camps de remeses:
       │       ├── isRemittance: boolean | null    # És una remesa agrupada?
+      │       ├── isRemittanceItem: boolean       # És una filla de remesa?
+      │       ├── remittanceId: string | null     # Ref a doc remittances/{id}
       │       ├── remittanceItemCount: number | null  # Nombre total de quotes
+      │       ├── remittanceDirection: 'IN' | 'OUT' | null  # Direcció de la remesa
       │       ├── source: 'bank' | 'remittance' | 'manual' | 'stripe' | null  # Origen
       │       ├── parentTransactionId: string | null  # ID remesa pare
-      │       ├── bankAccountId: string | null        # ID compte bancari (NOU v1.12)
+      │       ├── bankAccountId: string | null        # ID compte bancari
       │       │
-      │       # Camps de remeses de devolucions (NOU v1.8):
-      │       ├── remittanceType: 'returns' | null    # Tipus de remesa
+      │       # Camps de remeses de devolucions:
+      │       ├── remittanceType: 'returns' | 'donations' | 'payments' | null
       │       ├── remittanceStatus: 'complete' | 'partial' | 'pending' | null
       │       ├── remittanceResolvedCount: number | null   # Filles creades
       │       ├── remittancePendingCount: number | null    # Pendents d'identificar
       │       ├── remittancePendingTotalAmount: number | null  # Import pendent €
+      │       ├── remittanceExpectedTotalCents: number | null
+      │       ├── remittanceResolvedTotalCents: number | null
+      │       ├── remittancePendingTotalCents: number | null
       │       │
-      │       # Camps de donacions Stripe (NOU v1.9):
+      │       # Camps de donacions Stripe:
       │       ├── stripePaymentId: string | null      # ID pagament (ch_xxx)
       │       ├── stripeTransferId: string | null     # ID payout (po_xxx)
-      │       ├── transactionType: 'donation' | 'fee' | 'return' | null  # Tipus específic
+      │       │
+      │       # Camps de splits i links:
+      │       ├── isSplit: boolean                    # Transacció dividida?
+      │       ├── linkedTransactionId: string | null  # Link a devolució/donació
+      │       ├── linkedTransactionIds: string[]      # Links múltiples
+      │       │
+      │       # Soft-delete (arxivament):
+      │       ├── archivedAt: string | null           # ISO timestamp si arxivada
+      │       ├── archivedByUid: string | null        # UID de qui va arxivar
+      │       ├── archivedReason: string | null       # Motiu
+      │       ├── archivedFromAction: 'user_delete' | 'superadmin_cleanup' | null
       │       │
       │       ├── createdAt: timestamp
       │       └── updatedAt: timestamp
       │
-      ├── bankAccounts/                       # (NOU v1.12)
+      ├── bankAccounts/
       │   └── {bankAccountId}/
       │       ├── name: string                   # Nom identificatiu
       │       ├── iban: string | null            # IBAN del compte
       │       ├── bankName: string | null        # Nom del banc
       │       ├── isDefault: boolean             # Compte per defecte?
       │       ├── isActive: boolean              # Actiu/Inactiu
+      │       ├── creditorId: string | null      # ICS / SEPA Creditor Identifier (pain.008)
       │       ├── createdAt: string
       │       └── updatedAt: string
+      │
+      ├── remittances/
+      │   └── {remittanceId}/
+      │       ├── direction: 'IN' | 'OUT'         # Direcció
+      │       ├── type: 'donations' | 'returns' | 'payments'
+      │       ├── parentTransactionId: string     # Ref a transacció pare
+      │       ├── transactionIds: string[]        # Llista de filles actives
+      │       ├── inputHash: string               # SHA-256 del input (idempotència)
+      │       ├── status: 'active' | 'undone'     # Estat del doc
+      │       ├── itemCount: number
+      │       ├── resolvedCount: number
+      │       ├── pendingCount: number
+      │       ├── expectedTotalCents: number
+      │       ├── resolvedTotalCents: number
+      │       ├── pendingTotalCents: number
+      │       ├── bankAccountId: string | null
+      │       ├── createdAt: string
+      │       ├── createdBy: string
+      │       │
+      │       └── pending/                        # Filles pendents d'assignar
+      │           └── {pendingId}/
+      │               ├── nameRaw: string
+      │               ├── taxId: string | null
+      │               ├── iban: string | null
+      │               ├── amountCents: number
+      │               ├── reason: string
+      │               ├── sourceRowIndex: number
+      │               └── createdAt: string
       │
       ├── categories/
       │   └── {categoryId}/
@@ -464,16 +535,19 @@ organizations/
       │       ├── phone: string                   # Telèfon
       │       ├── iban: string                    # IBAN
       │       ├── type: "donor" | "supplier" | "employee"
+      │       ├── roles: ContactRoles | null      # Sistema progressiu de rols
+      │       ├── archivedAt: string | null       # Soft-delete (ISO timestamp)
       │       │
       │       # Camps específics per DONANTS:
       │       ├── donorType: "individual" | "company"
       │       ├── membershipType: "one-time" | "recurring"
       │       ├── monthlyAmount: number           # Quota mensual
       │       ├── memberSince: string             # Data alta soci
-      │       ├── status: "active" | "inactive"   # Estat
+      │       ├── status: "active" | "pending_return" | "inactive"
       │       ├── inactiveSince: string | null    # Data de baixa
       │       ├── returnCount: number             # Comptador devolucions
       │       ├── lastReturnDate: string          # Última devolució
+      │       ├── sepaMandate: SepaMandate | null # Mandat SEPA (pain.008)
       │       │
       │       # Camps comuns:
       │       ├── defaultCategoryId: string | null
@@ -493,14 +567,22 @@ organizations/
 
 ## 2.3 Sistema d'Autenticació i Rols
 
-### Rols disponibles
+### Rols d'organització (`OrganizationRole`)
 
 | Rol | Descripció | Permisos |
 |-----|------------|----------|
-| **SuperAdmin** | Creador de l'organització | Tot + Zona de Perill |
-| **Admin** | Administrador | Tot excepte Zona de Perill |
+| **Admin** | Administrador de l'organització | Tot excepte Zona de Perill |
 | **User** | Usuari estàndard | Crear i editar, no eliminar ni configurar |
 | **Viewer** | Només lectura | Veure dades, no modificar |
+
+### SuperAdmin (global, fora d'organització)
+
+El SuperAdmin **no és un rol d'organització**. Es gestiona globalment:
+
+- **Ruta Firestore:** `systemSuperAdmins/{uid}` (si el document existeix, l'usuari és SuperAdmin)
+- **Constant:** `SUPER_ADMIN_UID` a `src/lib/admin/is-superadmin.ts`
+- **Helper:** `isSuperAdmin(uid)` — comprova existència del document
+- **Permisos:** Tot + Zona de Perill + Panell `/admin` + Gestió traduccions + Product Updates
 
 ### Permisos detallats
 
@@ -551,13 +633,17 @@ organizations/
 
 ## 2.5 Tests Unitaris (NOU v1.8)
 
-**77 tests unitaris** per funcions pures:
+Tests unitaris per funcions pures a `src/lib/__tests__/`:
 
-| Fitxer | Tests | Cobertura |
-|--------|-------|-----------|
-| `normalize.test.ts` | 35 | normalizeTaxId, normalizeIBAN, normalizeZipCode, formatNumberEU, parseNumberEU |
-| `auto-match.test.ts` | 24 | normalizeForMatching, extractNameTokens, findMatchingContact |
-| `model182.test.ts` | 18 | calculateModel182Totals, calculateTransactionNetAmount, isReturnTransaction |
+| Fitxer | Cobertura |
+|--------|-----------|
+| `normalize.test.ts` | normalizeTaxId, normalizeIBAN, normalizeZipCode, formatNumberEU, parseNumberEU |
+| `auto-match.test.ts` | normalizeForMatching, extractNameTokens, findMatchingContact |
+| `model182.test.ts` | calculateModel182Totals, calculateTransactionNetAmount, isReturnTransaction |
+| `stripe-importer.test.ts` | Parsing i matching Stripe |
+| `build-document-filename.test.ts` | Generació de noms de fitxer |
+| `calculate-donor-net.test.ts` | Càlcul net per donant (donacions - devolucions) |
+| `fiscal-invariant.test.ts` | Validació invariants fiscals A1-A3 |
 
 **Hook pre-commit (Husky):** Els tests s'executen automàticament abans de cada commit.
 
@@ -756,12 +842,15 @@ Nova estructura visual en 3 franges horitzontals:
 | Component | Fitxer | Descripció |
 |-----------|--------|------------|
 | `FiltersSheet` | `src/components/transactions/components/FiltersSheet.tsx` | Sheet lateral amb tots els filtres consolidats (tipus, origen, compte) |
-| `TableOptionsMenu` | `src/components/transactions/components/TableOptionsMenu.tsx` | Menú desplegable amb opcions de visualització (ocultar desglose remeses, mostrar columna projecte) |
+| `TransactionsFilters` | `src/components/transactions/components/TransactionsFilters.tsx` | Barra de filtres actius amb pills |
+
+**Opcions de visualització (hardcoded a `transactions-table.tsx`):**
+- `hideRemittanceItems = true` — Els ítems de remesa no es mostren a la taula principal (ledger mode)
+- `showProjectColumn = false` — La columna de projecte està sempre oculta
 
 **Comportament:**
 - El botó "Filtres" obre un Sheet lateral des de la dreta
 - Els filtres aplicats apareixen com a "pills" sota el header
-- El menú d'opcions (icona ⋮ o Settings) controla opcions de la taula
 
 ### 3.2.8 Drag & Drop de Documents (NOU v1.14)
 
@@ -868,13 +957,91 @@ Agrupació de múltiples quotes de socis en un únic ingrés bancari.
 ```
 isRemittance: true
 remittanceItemCount: 303
+remittanceId: string          // Referència al doc remittances/{id}
+remittanceStatus: 'complete' | 'partial' | 'pending'
 ```
 
 **Transaccions filles (quotes):**
 ```
 source: 'remittance'
 parentTransactionId: '{id_remesa}'
+contactId: string             // ID del donant
+contactType: 'donor'
+archivedAt: null | string     // null = activa, ISO timestamp = arxivada
 ```
+
+**Document remesa (`/organizations/{orgId}/remittances/{remittanceId}`):**
+```
+direction: 'IN'
+parentTransactionId: string
+transactionIds: string[]      // Llista de filles actives
+inputHash: string             // SHA-256 del input per idempotència
+totalAmount: number           // Cèntims
+status: 'active' | 'undone'
+createdAt: string
+updatedAt: string
+```
+
+### 3.3.5b Flux de Vida d'una Remesa IN (NOU v1.31)
+
+El flux correcte per gestionar remeses IN és:
+
+```
+┌─────────────┐     ┌─────────────┐     ┌─────────────┐
+│  PROCESSAR  │ ──► │   DESFER    │ ──► │ REPROCESSAR │
+│  /process   │     │   /undo     │     │  /process   │
+└─────────────┘     └─────────────┘     └─────────────┘
+       │                   │                   │
+       ▼                   ▼                   ▼
+  Crea filles        Arxiva filles       Crea filles
+  + doc remesa       (archivedAt)        noves
+```
+
+**Regles fonamentals:**
+- Mai processar dues vegades sense desfer
+- Desfer sempre arxiva (soft-delete), mai esborra
+- Reprocessar parteix de zero (filles noves)
+- Les filles arxivades no compten per Model 182 ni certificats
+
+### 3.3.5c Guardrails del Sistema (NOU v1.31)
+
+**Client (UI):**
+- Bloqueja si `isRemittance === true`
+- Missatge: "Aquesta remesa ja està processada. Desfés-la abans de tornar-la a processar."
+- Mostra banner d'inconsistència si `/check` detecta problemes
+
+**Servidor (`/api/remittances/in/process`):**
+- Rebutja amb `409 REMITTANCE_ALREADY_PROCESSED` si `isRemittance === true`
+- Valida invariants: suma filles = import pare (±2 cèntims)
+- Hash SHA-256 del input per detectar reintents tècnics vs reprocessaments
+
+**Servidor (`/api/remittances/in/undo`):**
+1. Arxiva filles per `transactionIds[]` del doc remesa
+2. Fallback: arxiva per `parentTransactionId` (dades legacy)
+3. Post-check: exigeix 0 filles actives al final
+4. Marca doc remesa com `status: 'undone'`
+
+**Servidor (`/api/remittances/in/check`):**
+- Verifica consistència: filles actives = `transactionIds[]`
+- Només per remeses IN (import positiu)
+- Retorna issues detectades (COUNT_MISMATCH, SUM_MISMATCH, etc.)
+
+### 3.3.5d Desfer una Remesa (Pas a Pas)
+
+1. Ves a **Moviments** → Localitza la remesa processada (badge verd)
+2. Clica el badge → S'obre el modal de detall
+3. Clica **"Desfer remesa"** (a la part inferior del modal)
+4. Confirma l'acció
+5. Les quotes individuals s'arxiven (archivedAt = timestamp)
+6. El pare torna a l'estat original (isRemittance = false)
+7. Ja pots tornar a processar amb un fitxer diferent si cal
+
+**Quan desfer una remesa:**
+- Has carregat el fitxer equivocat (d'un altre mes)
+- Hi ha errors en el matching de donants
+- Vols tornar a processar amb dades corregides
+
+**Important:** Desfer NO esborra res. Les filles queden arxivades per traçabilitat.
 
 ### 3.3.6 Guardar Configuració
 Es pot guardar el mapejat per banc (Triodos, La Caixa, Santander, etc.)
@@ -1371,6 +1538,58 @@ Eina **excepcional** per a migracions o correcció de dades històriques.
 | Assignació amb confirmació | Assignació automàtica |
 | Remeses parcials | Forçar remesa completa |
 | Crear donant nou | Inventar dades |
+
+### 3.4.11 Guardrail per Remeses de Devolucions (OUT) (NOU v1.31)
+
+Les remeses de devolucions (OUT) tenen **impacte fiscal directe** perquè redueixen el total de donacions declarades al Model 182.
+
+**Flux permès:**
+
+| Acció | Permès |
+|-------|--------|
+| Processar | ✅ |
+| Tornar a processar sense desfer | ❌ Bloquejat |
+| Desfer | ✅ |
+| Desfer + tornar a processar | ✅ |
+
+**Comportament del servidor:**
+- `POST /api/remittances/in/process` amb import negatiu (OUT) → `409 REMITTANCE_ALREADY_PROCESSED` si ja està processada
+- No hi ha endpoint de `sanitize` ni `check` per OUT
+- Qualsevol correcció passa per: **Desfer → Processar**
+
+**Per què aquesta restricció?**
+- Les remeses OUT creen devolucions que resten del total fiscal del donant
+- Reprocessar sense desfer podria duplicar devolucions (impacte fiscal)
+- El flux controlat (desfer primer) garanteix integritat de dades
+
+**Exemple pràctic:**
+1. Has processat una remesa de devolucions però has assignat un donant malament
+2. Clica el badge de la remesa → Modal de detall
+3. Clica "Desfer remesa"
+4. Les filles s'arxiven (soft-delete)
+5. Torna a processar el fitxer amb l'assignació correcta
+
+> **Nota:** El banner d'inconsistència (que apareix per remeses IN) NO es mostra per OUT. Això és intencionat perquè OUT no té invariants de consistència equivalents.
+
+### 3.4.12 Checklist de Gestió de Devolucions
+
+**Flux mensual recomanat:**
+
+1. ☐ Importa l'extracte del banc amb les devolucions
+2. ☐ Revisa el banner "Devolucions pendents" a Moviments
+3. ☐ Descarrega el fitxer de detall de devolucions del banc
+4. ☐ Importa el fitxer per fer matching automàtic
+5. ☐ Revisa les devolucions no identificades
+6. ☐ Actualitza IBAN dels donants si cal
+7. ☐ Processa el fitxer
+8. ☐ Verifica que les devolucions apareixen a la fitxa dels donants afectats
+
+**Abans del gener (Model 182):**
+
+1. ☐ Assegura't que totes les devolucions de l'any estan assignades
+2. ☐ Verifica que no hi ha devolucions pendents
+3. ☐ Comprova que el total de cada donant és correcte (donacions - devolucions)
+4. ☐ Si un donant té total ≤ 0, confirma que no apareix al Model 182
 
 
 ## 3.5 REMESES OUT / PAGAMENTS (NOU v1.17)
@@ -2059,7 +2278,7 @@ export const publicTranslations: Record<PublicLocale, PublicTranslations> = {
 #### Ús a les pàgines
 
 ```tsx
-// src/app/[lang]/login/page.tsx
+// src/app/public/[lang]/login/page.tsx (URL pública: /{lang}/login)
 import { getPublicTranslations } from '@/i18n/public';
 import { isValidPublicLocale } from '@/lib/public-locale';
 
@@ -3995,8 +4214,8 @@ Indicadors que requeririen intervenció:
 - Producció: https://summasocial.app
 - Firebase: https://studio--summa-social.us-central1.hosted.app
 
-## 9.4 Tests (NOU v1.8)
-- 77 tests unitaris
+## 9.4 Tests
+- Tests unitaris a `src/lib/__tests__/` (7 fitxers)
 - Hook pre-commit amb Husky
 - `npm test` abans de cada commit
 
@@ -4004,6 +4223,11 @@ Indicadors que requeririen intervenció:
 # ═══════════════════════════════════════════════════════════════════════════════
 # 10. ROADMAP / FUNCIONALITATS PENDENTS
 # ═══════════════════════════════════════════════════════════════════════════════
+
+## Pendents (deute menor)
+
+- ⚠️ **i18n PT**: `guides.importDonors.steps` longitud diferent (base=5, pt=6) + clau extra `.steps.5`
+- ⚠️ **i18n FR**: `help.dashboard.steps` longitud diferent (base=5, fr=4) + `help.dashboard.extra.order.items` (base=4, fr=3)
 
 ## Completades v1.29
 - ✅ Adaptació mòbil completa: patrons normalitzats per a barres d'accions, navegació i taules
@@ -4071,7 +4295,7 @@ Indicadors que requeririen intervenció:
 | **1.11** | **Des 2025** | **Captura de despeses de terreny (quickMode, pujada ràpida <10s), i18n Francès complet (fr.ts), selector d'idioma amb 3 opcions** |
 | **1.12** | **Des 2025** | **Multicomptes bancaris (CRUD, filtre per compte, traçabilitat bankAccountId), filtre per origen (source), diàleg crear donant a importador devolucions, mode bulk NET** |
 | **1.13** | **Des 2025** | **Selecció múltiple a Moviments (checkboxes + accions en bloc), assignar/treure categoria massivament, batched writes Firestore (50 ops/batch), traduccions CA/ES/FR** |
-| **1.14** | **Des 2025** | **Reorganització UX Moviments (FiltersSheet, TableOptionsMenu), drag & drop documents, indicadors visuals remeses processades, modal RemittanceSplitter redissenyat (wide layout), sidebar Projectes col·lapsable** |
+| **1.14** | **Des 2025** | **Reorganització UX Moviments (FiltersSheet, TransactionsFilters), drag & drop documents, indicadors visuals remeses processades, modal RemittanceSplitter redissenyat (wide layout), sidebar Projectes col·lapsable** |
 | **1.15** | **Des 2025** | **Documentació completa de regles de normalització de dades (noms, NIF/NIE/CIF, IBAN, email, telèfon E.164, adreces, normalizedName per deduplicació)** |
 | **1.16** | **Des 2025** | **Importador de pressupost Excel (wizard 5 passos, agrupació subpartides, columna finançador principal), fix redirect-to-org O(1) amb collectionGroup, fix idle logout redirecció a login d'org** |
 | **1.17** | **Des 2025** | **Polish UX: convencions UI documentades (contracte cromàtic, capçaleres estàndard, densitat taules, breadcrumbs, accessibilitat, empty states, tooltips IA, confirmacions destructives)** |
@@ -4501,7 +4725,7 @@ function normalizedName(name: string): string {
 | 1 | **Base de dades**: Firestore | 🔒 TANCAT |
 | 2 | **Model de dades**: Collections estables | 🔒 TANCAT |
 | 3 | **Rol**: Conciliació + Fiscalitat | 🔒 TANCAT |
-| 4 | **Arquitectura**: Next.js 14 + Firebase | 🔒 TANCAT |
+| 4 | **Arquitectura**: Next.js 15 + Firebase | 🔒 TANCAT |
 | 5 | **IA**: Només Genkit + Gemini | 🔒 TANCAT |
 | 6 | **Àmbit**: No ERP, CRM, facturació | 🔒 TANCAT |
 | 7 | **Matching**: Només exacte (IBAN/DNI/Nom) | 🔒 TANCAT |
@@ -4877,6 +5101,20 @@ Ha de mostrar com a mínim:
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
+# INVARIANTS DE DOCUMENTACIÓ
+# ═══════════════════════════════════════════════════════════════════════════════
+
+Les següents regles han de ser certes en tot moment. Si es trenca alguna, cal corregir la documentació:
+
+1. **Cap path citat pot ser inexistent** — Tot fitxer referenciat ha d'existir al repositori.
+2. **Cap camp al model 2.2 pot ser inventat** — Cada camp ha de correspondre a un camp real del tipus TypeScript (`src/lib/data.ts` o fitxers de tipus associats).
+3. **SuperAdmin és global, no rol d'organització** — `OrganizationRole = 'admin' | 'user' | 'viewer'`. SuperAdmin es gestiona via `systemSuperAdmins/{uid}`.
+4. **Rutes públiques sota `/public/[lang]/`** — El segment `public` és real (no virtual). El middleware reescriu `/{lang}/...` → `/public/{lang}/...`.
+5. **Portuguès (pt) és JSON-only** — No existeix `src/i18n/pt.ts`. Les traduccions pt viuen exclusivament a `src/i18n/locales/pt.json`.
+6. **Remittances és subcol·lecció** — `organizations/{orgId}/remittances/{remittanceId}` existeix amb subcol·lecció `pending/`.
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
 # FI DEL DOCUMENT
-# Última actualització: Gener 2026 - Versió 1.27
+# Última actualització: Gener 2026 - Versió 1.31
 # ═══════════════════════════════════════════════════════════════════════════════

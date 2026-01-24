@@ -469,7 +469,7 @@ export function StripeImporter({
           category: match?.defaultCategoryId || 'donations',
           document: null,
           contactId: match?.contactId || null,
-          contactType: match ? 'donor' : undefined,
+          ...(match ? { contactType: 'donor' as const } : {}),
           // CAMPS OBLIGATORIS STRIPE
           source: 'stripe',
           transactionType: 'donation',

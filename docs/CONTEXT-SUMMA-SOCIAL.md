@@ -1,6 +1,6 @@
 # Context Complet: SUMMA SOCIAL — Aplicació Sencera
 
-**Document per a ChatGPT — Versió actualitzada: 2 Gener 2026**
+**Document per a ChatGPT — Versió actualitzada: 21 Gener 2026**
 
 > **NOTA:** Aquest document cobreix TOTA l'aplicació Summa Social, no només el mòdul de projectes.
 
@@ -787,6 +787,38 @@ trackUX('expenses.offBank.edit.save', { expenseId });
 - Afecta qualsevol `page.tsx` que usi searchParams
 - Error típic: `TS2344: Type '{ searchParams: Record<...> }' does not satisfy the constraint 'PageProps'`
 
+### 12.11 Guardrails de Remeses (v1.31 - Gener 2026)
+
+**Problema resolt:** Les remeses es podien processar múltiples vegades, creant quotes duplicades amb impacte fiscal.
+
+**Solució implementada:**
+
+| Tipus | Guardrail | Comportament |
+|-------|-----------|--------------|
+| **Client (UI)** | Bloqueig si `isRemittance === true` | Missatge: "Desfés-la abans de tornar-la a processar" |
+| **Servidor IN** | `409 REMITTANCE_ALREADY_PROCESSED` | Rebutja si ja processada |
+| **Servidor OUT** | `409 REMITTANCE_ALREADY_PROCESSED` | Rebutja si ja processada (sense bypass) |
+
+**Flux correcte:** Processar → Desfer → Reprocessar
+
+**Fitxers clau:**
+- `src/app/api/remittances/in/process/route.ts` — Guardrail servidor
+- `src/app/api/remittances/in/undo/route.ts` — Desfer amb soft-delete
+- `src/components/remittance-splitter.tsx` — Guardrail client
+
+### 12.12 Sistema de Consistència de Remeses (v1.31 - Gener 2026)
+
+**Endpoints nous:**
+- `GET /api/remittances/in/check` — Verifica consistència (només IN)
+- `POST /api/remittances/in/sanitize` — Repara remeses legacy
+
+**Verificacions:**
+- `COUNT_MISMATCH` — transactionIds.length ≠ filles actives
+- `SUM_MISMATCH` — Suma filles ≠ import pare (> 2 cèntims)
+- `PARENT_IS_REM_BUT_NO_ACTIVE_CHILDREN` — Marcat remesa però 0 fills
+
+**Banner UI:** Si `/check` detecta problemes, es mostra banner amb botó "Resoldre".
+
 ### Històric (Desembre 2024)
 
 #### 12.1 Paginació Implementada
@@ -1523,10 +1555,26 @@ interface Transaction {
   returnOf?: string | null; // txId de la transacció original
   returnedBy?: string | null; // txId de la devolució
 
-  // Remeses
-  isRemittance?: boolean;
-  isRemittanceItem?: boolean;
-  remittanceId?: string | null;
+  // Remeses (pare)
+  isRemittance?: boolean; // true si és una remesa processada
+  remittanceId?: string | null; // Referència al doc remittances/{id}
+  remittanceItemCount?: number; // Nombre de quotes
+  remittanceStatus?: 'complete' | 'partial' | 'pending';
+  remittanceType?: 'returns' | 'donations' | 'payments';
+  remittanceDirection?: 'IN' | 'OUT';
+
+  // Remeses (filla)
+  isRemittanceItem?: boolean; // true si és filla d'una remesa
+  parentTransactionId?: string | null; // ID del pare
+
+  // Soft-delete (per desfer remeses)
+  archivedAt?: string | null; // null = activa, ISO timestamp = arxivada
+  archivedByUid?: string | null;
+  archivedReason?: string | null; // ex: "undo_remittance"
+
+  // Devolucions
+  transactionType?: 'normal' | 'return' | 'return_fee' | 'donation';
+  linkedTransactionId?: string | null; // Per vincular devolucions
 
   // Metadades
   importSource?: string | null; // "csv", "xlsx", "stripe"
@@ -1732,24 +1780,60 @@ interface Remittance {
   id: string;
   orgId: string;
 
+  // Direcció de la remesa
+  direction: 'IN' | 'OUT'; // IN = quotes socis, OUT = devolucions
+
   date: string; // YYYY-MM-DD
   description: string;
-  totalAmount: number;
+  totalAmount: number; // Cèntims
   itemCount: number;
 
-  // IDs de les transaccions incloses
+  // IDs de les transaccions filles creades
   transactionIds: string[];
 
   // Transacció pare (el moviment agregat del banc)
-  parentTransactionId?: string | null;
+  parentTransactionId: string;
 
-  status: 'pending' | 'processed' | 'failed';
+  // Idempotència i control
+  inputHash: string; // SHA-256 del input per detectar reprocessaments
+  status: 'active' | 'undone'; // undone = desfeta
+
+  // Pendents no resolts
+  pendingItems?: RemittancePendingItem[];
 
   createdBy: string;
   createdAt: Timestamp;
   updatedAt: Timestamp;
 }
+
+// Filles de remesa
+interface RemittanceChild {
+  // ... camps de Transaction ...
+  isRemittanceItem: true;
+  parentTransactionId: string; // ID del pare
+  contactId: string; // ID del donant
+  contactType: 'donor';
+
+  // Soft-delete (quan es desfà la remesa)
+  archivedAt?: string | null; // null = activa, ISO timestamp = arxivada
+  archivedByUid?: string | null;
+  archivedReason?: string | null; // ex: "undo_remittance"
+}
 ```
+
+#### Flux de vida d'una remesa IN
+
+```
+PROCESSAR → DESFER → REPROCESSAR
+    ↓           ↓           ↓
+Crea filles  Arxiva     Crea filles
++ doc        (archivedAt) noves
+```
+
+**Invariants:**
+- Mai processar dues vegades sense desfer
+- Les filles arxivades no compten per Model 182 ni certificats
+- `archivedAt = null | undefined | ""` → filla activa
 
 ---
 

@@ -867,14 +867,41 @@ La propera vegada es detectarà automàticament.
 
 ---
 
-## 6.7 Què fer si surt malament
+## 6.7 Què fer si surt malament (desfer una remesa)
 
-Si has processat una remesa incorrectament:
+Si has processat una remesa incorrectament (fitxer equivocat, matching incorrecte, mes equivocat...), **ara pots desfer-la directament des del modal de detall**:
 
-1. Ves a ⚙️ **Configuració > Zona de Perill** (cal ser SuperAdmin)
-2. Clica **"Esborrar última remesa processada"**
-3. Escriu "BORRAR" per confirmar
-4. La remesa es restaura i pots tornar-la a processar
+### Pas a pas
+
+1. Ves a 💰 **Moviments**
+2. Localitza la remesa processada (té un badge verd "✓ Remesa processada · X quotes")
+3. **Clica el badge** → S'obre el modal de detall de la remesa
+4. A la part inferior del modal, clica **"Desfer remesa"**
+5. Confirma l'acció quan el sistema t'ho demani
+6. La remesa es restaura a l'estat original
+7. Ja pots tornar a processar-la amb el fitxer correcte
+
+### Què passa quan desfàs una remesa?
+
+- Les quotes individuals **no s'esborren** — queden arxivades (soft-delete)
+- El moviment pare torna a l'estat de "remesa sense processar"
+- Pots tornar a processar-la amb un fitxer diferent
+- Les dades històriques es conserven per traçabilitat
+
+### Quan cal desfer una remesa?
+
+| Situació | Acció |
+|----------|-------|
+| Has carregat el fitxer del mes equivocat | Desfer → Processar amb el fitxer correcte |
+| Alguns socis no s'han identificat bé | Actualitza les seves dades → Desfer → Processar |
+| Hi ha errors en els imports | Desfer → Processar amb el fitxer corregit |
+| Has triat el moviment equivocat | Desfer |
+
+> 💡 **Consell de seguretat:** El sistema no permet processar una remesa que ja està processada. Si intentes dividir-la de nou, veuràs el missatge "Aquesta remesa ja està processada. Desfés-la abans de tornar-la a processar."
+
+### Mètode alternatiu (Zona de Perill)
+
+Si no pots accedir al modal de detall, els SuperAdmin també poden desfer remeses des de **Configuració → Zona de Perill → Esborrar última remesa**.
 
 ---
 
@@ -1211,6 +1238,51 @@ Import al Model 182 = Donacions − Devolucions
 ```
 
 Si el total és ≤ 0, el donant **no apareix** al Model 182.
+
+---
+
+## 7.8 Desfer una remesa de devolucions
+
+Si t'has equivocat processant una remesa de devolucions (per exemple, has assignat un donant incorrecte), pots desfer-la i tornar-la a processar:
+
+### Pas a pas
+
+1. Ves a 💰 **Moviments**
+2. Localitza la remesa de devolucions processada
+3. Clica el badge de la remesa → S'obre el modal de detall
+4. Clica **"Desfer remesa"**
+5. Confirma l'acció
+6. Les filles s'arxiven (no s'esborren)
+7. Pots tornar a processar amb les correccions
+
+> ⚠️ **Important:** El sistema no permet processar directament una remesa de devolucions que ja està processada. Has de desfer-la primer. Això és per seguretat: les devolucions tenen impacte fiscal i el sistema vol evitar duplicacions accidentals.
+
+---
+
+## 7.9 Checklist mensual de devolucions
+
+Per tenir les devolucions ben gestionades, segueix aquest flux cada mes:
+
+### Flux mensual
+
+1. ☐ Importa l'extracte del banc del mes
+2. ☐ Mira si apareix el banner "Devolucions pendents d'assignar"
+3. ☐ Si hi ha devolucions, descarrega el fitxer de detall del banc
+4. ☐ Importa el fitxer per fer matching automàtic
+5. ☐ Revisa les devolucions que no s'han identificat
+6. ☐ Actualitza l'IBAN dels donants si cal
+7. ☐ Processa el fitxer
+8. ☐ Comprova que les devolucions apareixen a la fitxa dels donants
+
+### Abans del gener (Model 182)
+
+**Molt important:** Abans de generar el Model 182, assegura't que:
+
+1. ☐ Totes les devolucions de l'any estan assignades
+2. ☐ No queden devolucions pendents
+3. ☐ El total de cada donant és correcte (donacions − devolucions)
+
+> 💡 Si un donant té més devolucions que donacions (total ≤ 0), no apareixerà al Model 182. Això és correcte: si no ha aportat res efectivament, no cal declarar-lo.
 
 ---
 
