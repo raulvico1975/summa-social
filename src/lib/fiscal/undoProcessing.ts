@@ -21,7 +21,7 @@ import { acquireProcessLock, releaseProcessLock, type LockOperation } from './pr
 // TIPUS
 // =============================================================================
 
-export type UndoOperationType = 'remittance_in' | 'returns' | 'stripe';
+export type UndoOperationType = 'remittance_in' | 'returns' | 'payments' | 'stripe';
 
 export interface UndoContext {
   firestore: Firestore;
@@ -60,14 +60,19 @@ export function detectUndoOperationType(tx: Transaction): UndoOperationType | nu
     return 'returns';
   }
 
+  // Remesa de pagaments
+  if (tx.remittanceType === 'payments') {
+    return 'payments';
+  }
+
   // Remesa IN (quotes/donacions)
   if (tx.amount > 0) {
     return 'remittance_in';
   }
 
-  // Remesa OUT (pagaments) - també suportada
+  // Fallback OUT sense remittanceType explícit
   if (tx.amount < 0) {
-    return 'remittance_in'; // Usem el mateix flux
+    return 'payments';
   }
 
   return null;
@@ -82,6 +87,8 @@ export function getUndoConfirmationText(type: UndoOperationType): string {
       return 'DESFER QUOTES';
     case 'returns':
       return 'DESFER DEVOLUCIONS';
+    case 'payments':
+      return 'DESFER PAGAMENTS';
     case 'stripe':
       return 'DESFER STRIPE';
   }
@@ -96,6 +103,8 @@ export function getUndoDialogTitle(type: UndoOperationType): string {
       return 'Desfer remesa de quotes';
     case 'returns':
       return 'Desfer remesa de devolucions';
+    case 'payments':
+      return 'Desfer remesa de pagaments';
     case 'stripe':
       return 'Desfer import Stripe';
   }
@@ -112,6 +121,8 @@ export function getUndoDialogDescription(type: UndoOperationType, childCount: nu
       return `Això NO esborra el moviment bancari. ${baseText}`;
     case 'returns':
       return `Això NO esborra el moviment bancari. ${baseText} Les devolucions s'arxivaran (no s'eliminaran).`;
+    case 'payments':
+      return `Això ELIMINARÀ permanentment ${childCount} transacció${childCount !== 1 ? 'ns' : ''} filla${childCount !== 1 ? 'es' : ''} i el document de remesa.`;
     case 'stripe':
       return `Això NO esborra el moviment bancari. ${baseText} Les donacions Stripe s'arxivaran.`;
   }
@@ -243,9 +254,12 @@ export async function executeUndo(
       for (const child of chunk) {
         const childRef = doc(transactionsRef, child.id);
 
-        // Decidir: soft-delete (arxivar) o hard-delete
-        if (isFiscallyRelevantTransaction(child.data)) {
-          // Soft-delete per transaccions fiscals
+        if (operationType === 'payments') {
+          // Pagaments OUT: sempre hard-delete
+          batch.delete(childRef);
+          deletedCount++;
+        } else if (operationType === 'returns') {
+          // Devolucions OUT: sempre soft-delete (arxivar)
           batch.update(childRef, {
             archivedAt: now,
             archivedByUid: userId,
@@ -254,9 +268,19 @@ export async function executeUndo(
           });
           archivedCount++;
         } else {
-          // Hard-delete per transaccions no fiscals
-          batch.delete(childRef);
-          deletedCount++;
+          // Stripe / remittance_in: decidir per fiscalitat
+          if (isFiscallyRelevantTransaction(child.data)) {
+            batch.update(childRef, {
+              archivedAt: now,
+              archivedByUid: userId,
+              archivedReason: 'undo_process',
+              archivedFromAction: `undo_${operationType}`,
+            });
+            archivedCount++;
+          } else {
+            batch.delete(childRef);
+            deletedCount++;
+          }
         }
       }
 
