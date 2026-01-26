@@ -8,6 +8,7 @@ import {
   encodeLatin1,
   sanitizeAlpha,
   invertName,
+  normalizeLegalSuffixes,
   formatNIF,
   formatPhone,
   formatAmount,
@@ -200,6 +201,37 @@ describe('sanitizeAlpha', () => {
     const result = sanitizeAlpha(undefined, 5);
     assert.strictEqual(result, '     ');
     assert.strictEqual(result.length, 5);
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// HELPERS - normalizeLegalSuffixes (error 20701 AEAT)
+// ═══════════════════════════════════════════════════════════════════════════════
+
+describe('normalizeLegalSuffixes', () => {
+  it('normalitza "S A" → "SA"', () => {
+    const result = sanitizeAlpha(normalizeLegalSuffixes('THINK4SALES S A'), 40);
+    assert.ok(result.includes('THINK4SALES SA'), `Esperat "THINK4SALES SA", rebut: ${result}`);
+  });
+
+  it('normalitza "S L" → "SL"', () => {
+    const result = sanitizeAlpha(normalizeLegalSuffixes('MARMOTTE S L PETITE'), 40);
+    assert.ok(result.includes('MARMOTTE SL PETITE'), `Esperat "MARMOTTE SL PETITE", rebut: ${result}`);
+  });
+
+  it('normalitza "S L U" → "SLU"', () => {
+    const result = sanitizeAlpha(normalizeLegalSuffixes('CAR S L U BROOM'), 40);
+    assert.ok(result.includes('CAR SLU BROOM'), `Esperat "CAR SLU BROOM", rebut: ${result}`);
+  });
+
+  it('gestiona minúscules', () => {
+    const result = normalizeLegalSuffixes('empresa s l');
+    assert.strictEqual(result, 'empresa SL');
+  });
+
+  it('no modifica text sense sufixos legals', () => {
+    const result = normalizeLegalSuffixes('EMPRESA NORMAL');
+    assert.strictEqual(result, 'EMPRESA NORMAL');
   });
 });
 

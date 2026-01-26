@@ -97,6 +97,18 @@ export function invertName(name: string | undefined | null): string {
 }
 
 /**
+ * Normalitza sufixos legals de persones jurídiques
+ * "S A" → "SA", "S L" → "SL", "S L U" → "SLU"
+ * Evita error 20701 AEAT per separacions artificials
+ */
+export function normalizeLegalSuffixes(name: string): string {
+  return name
+    .replace(/\bS\s+L\s+U\b/gi, 'SLU')
+    .replace(/\bS\s+L\b/gi, 'SL')
+    .replace(/\bS\s+A\b/gi, 'SA');
+}
+
+/**
  * Formata NIF a 9 posicions
  * Retorna { value, error } per validació estricta
  * MAI "arregla" longitud incorrecta (no maquilla errors)
@@ -305,11 +317,12 @@ function generateType2Record(
   const donorType = row.donor.donorType === 'company' ? 'company' : 'individual';
   const naturalesa = donorType === 'company' ? 'J' : 'F';
 
-  // Nom: PJ → denominació social tal qual, PF → cognoms + nom (invertit)
-  const nameForAEAT =
+  // Nom: PJ → denominació social (amb sufixos normalitzats), PF → cognoms + nom (invertit)
+  const rawName =
     donorType === 'company'
-      ? sanitizeAlpha(row.donor.name, 40)
-      : sanitizeAlpha(invertName(row.donor.name), 40);
+      ? normalizeLegalSuffixes(row.donor.name)
+      : invertName(row.donor.name);
+  const nameForAEAT = sanitizeAlpha(rawName, 40);
 
   builder
     .setRange(1, '2') // Tipus registre
