@@ -1,0 +1,547 @@
+// ═══════════════════════════════════════════════════════════════════════════════
+// TESTS - Model 182 AEAT Format
+// ═══════════════════════════════════════════════════════════════════════════════
+
+import { describe, it } from 'node:test';
+import assert from 'node:assert';
+import {
+  encodeLatin1,
+  sanitizeAlpha,
+  invertName,
+  formatNIF,
+  formatPhone,
+  formatAmount,
+  padZeros,
+  calculateDeductionPct,
+  calculateRecurrence,
+  generateModel182AEATFile,
+  RecordBuilder,
+  type DonationReportRow,
+} from '../model182-aeat';
+import type { Organization } from '../data';
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// HELPERS - formatNIF (validació estricta, mai maquilla)
+// ═══════════════════════════════════════════════════════════════════════════════
+
+describe('formatNIF', () => {
+  it('retorna value correcte per NIF de 9 chars vàlid (CIF)', () => {
+    const result = formatNIF('B12345678');
+    assert.strictEqual(result.value, 'B12345678');
+    assert.strictEqual(result.error, null);
+  });
+
+  it('retorna value correcte per NIF de 9 chars vàlid (DNI)', () => {
+    const result = formatNIF('12345678A');
+    assert.strictEqual(result.value, '12345678A');
+    assert.strictEqual(result.error, null);
+  });
+
+  it('retorna error per NIF de 8 chars (massa curt)', () => {
+    const result = formatNIF('B1234567');
+    assert.strictEqual(result.value, '000000000');
+    assert.ok(result.error?.includes('longitud incorrecta (8)'));
+  });
+
+  it('neteja guions i retorna correctament si longitud final és 9', () => {
+    const result = formatNIF('B-12345678');
+    assert.strictEqual(result.value, 'B12345678');
+    assert.strictEqual(result.error, null);
+  });
+
+  it('neteja punts i retorna correctament si longitud final és 9', () => {
+    const result = formatNIF('B.1234.5678');
+    assert.strictEqual(result.value, 'B12345678');
+    assert.strictEqual(result.error, null);
+  });
+
+  it('retorna error per NIF buit', () => {
+    const result = formatNIF('');
+    assert.strictEqual(result.value, '000000000');
+    assert.strictEqual(result.error, 'NIF buit');
+  });
+
+  it('retorna error per NIF amb només espais', () => {
+    const result = formatNIF('   ');
+    assert.strictEqual(result.value, '000000000');
+    assert.strictEqual(result.error, 'NIF buit');
+  });
+
+  it('retorna error per NIF amb caràcters invàlids', () => {
+    const result = formatNIF('B1234567ñ');
+    assert.strictEqual(result.value, '000000000');
+    assert.ok(result.error?.includes('caràcters invàlids'));
+  });
+
+  it('retorna error per undefined', () => {
+    const result = formatNIF(undefined);
+    assert.strictEqual(result.value, '000000000');
+    assert.strictEqual(result.error, 'NIF buit');
+  });
+
+  it('retorna error per null', () => {
+    const result = formatNIF(null);
+    assert.strictEqual(result.value, '000000000');
+    assert.strictEqual(result.error, 'NIF buit');
+  });
+
+  it('converteix a majúscules', () => {
+    const result = formatNIF('b12345678');
+    assert.strictEqual(result.value, 'B12345678');
+    assert.strictEqual(result.error, null);
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// HELPERS - formatPhone (robust amb prefixos)
+// ═══════════════════════════════════════════════════════════════════════════════
+
+describe('formatPhone', () => {
+  it('retorna telèfon de 9 dígits directament', () => {
+    assert.strictEqual(formatPhone('612345678'), '612345678');
+  });
+
+  it('elimina prefix +34', () => {
+    assert.strictEqual(formatPhone('+34612345678'), '612345678');
+  });
+
+  it('elimina prefix 34 (11 dígits)', () => {
+    assert.strictEqual(formatPhone('34612345678'), '612345678');
+  });
+
+  it('elimina espais i prefix 0034', () => {
+    assert.strictEqual(formatPhone('0034 612 345 678'), '612345678');
+  });
+
+  it('elimina espais entre dígits', () => {
+    assert.strictEqual(formatPhone('612 34 56 78'), '612345678');
+  });
+
+  it('retorna zeros per telèfon massa curt', () => {
+    assert.strictEqual(formatPhone('12345'), '000000000');
+  });
+
+  it('retorna zeros per telèfon buit', () => {
+    assert.strictEqual(formatPhone(''), '000000000');
+  });
+
+  it('retorna zeros per undefined', () => {
+    assert.strictEqual(formatPhone(undefined), '000000000');
+  });
+
+  it('retorna zeros per null', () => {
+    assert.strictEqual(formatPhone(null), '000000000');
+  });
+
+  it('elimina guions i parèntesis', () => {
+    assert.strictEqual(formatPhone('(612) 345-678'), '612345678');
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// HELPERS - invertName
+// ═══════════════════════════════════════════════════════════════════════════════
+
+describe('invertName', () => {
+  it('inverteix "Maria Garcia López" a "Garcia López Maria"', () => {
+    assert.strictEqual(invertName('Maria Garcia López'), 'Garcia López Maria');
+  });
+
+  it('retorna nom sense canvis si només té una paraula', () => {
+    assert.strictEqual(invertName('Joan'), 'Joan');
+  });
+
+  it('retorna string buit per undefined', () => {
+    assert.strictEqual(invertName(undefined), '');
+  });
+
+  it('retorna string buit per null', () => {
+    assert.strictEqual(invertName(null), '');
+  });
+
+  it('gestiona múltiples espais', () => {
+    assert.strictEqual(invertName('Maria   Garcia   López'), 'Garcia López Maria');
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// HELPERS - sanitizeAlpha
+// ═══════════════════════════════════════════════════════════════════════════════
+
+describe('sanitizeAlpha', () => {
+  it('elimina accents: "García" → "GARCIA"', () => {
+    const result = sanitizeAlpha('García', 10);
+    assert.strictEqual(result.trim(), 'GARCIA');
+  });
+
+  it('converteix a majúscules i elimina caràcters especials', () => {
+    const result = sanitizeAlpha('Núñez-Pérez', 15);
+    assert.strictEqual(result.trim(), 'NUNEZ PEREZ');
+  });
+
+  it('només permet A-Z 0-9 espai', () => {
+    const result = sanitizeAlpha('Test@123#', 10);
+    assert.strictEqual(result.trim(), 'TEST 123');
+  });
+
+  it('talla a maxLen i fa padding amb espais', () => {
+    const result = sanitizeAlpha('ABCDEFGHIJ', 5);
+    assert.strictEqual(result, 'ABCDE');
+    assert.strictEqual(result.length, 5);
+  });
+
+  it('fa padding amb espais si és més curt', () => {
+    const result = sanitizeAlpha('AB', 5);
+    assert.strictEqual(result, 'AB   ');
+    assert.strictEqual(result.length, 5);
+  });
+
+  it('retorna espais per undefined', () => {
+    const result = sanitizeAlpha(undefined, 5);
+    assert.strictEqual(result, '     ');
+    assert.strictEqual(result.length, 5);
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// HELPERS - calculateDeductionPct
+// ═══════════════════════════════════════════════════════════════════════════════
+
+describe('calculateDeductionPct', () => {
+  it('retorna 80% per imports <= 250€', () => {
+    assert.strictEqual(calculateDeductionPct(250, false), '08000');
+    assert.strictEqual(calculateDeductionPct(100, false), '08000');
+  });
+
+  it('retorna 40% per imports > 250€ no recurrents', () => {
+    assert.strictEqual(calculateDeductionPct(251, false), '04000');
+    assert.strictEqual(calculateDeductionPct(1000, false), '04000');
+  });
+
+  it('retorna 45% per imports > 250€ recurrents', () => {
+    assert.strictEqual(calculateDeductionPct(251, true), '04500');
+    assert.strictEqual(calculateDeductionPct(1000, true), '04500');
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// HELPERS - calculateRecurrence
+// ═══════════════════════════════════════════════════════════════════════════════
+
+describe('calculateRecurrence', () => {
+  it('retorna "1" si valor1>0 i valor2>0 (recurrent)', () => {
+    assert.strictEqual(calculateRecurrence(100, 100), '1');
+  });
+
+  it('retorna "2" si valor1=0 i valor2=0 (no recurrent)', () => {
+    assert.strictEqual(calculateRecurrence(0, 0), '2');
+  });
+
+  it('retorna " " si només un any té import', () => {
+    assert.strictEqual(calculateRecurrence(100, 0), ' ');
+    assert.strictEqual(calculateRecurrence(0, 100), ' ');
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// HELPERS - formatAmount
+// ═══════════════════════════════════════════════════════════════════════════════
+
+describe('formatAmount', () => {
+  it('formata import amb decimals implícits', () => {
+    assert.strictEqual(formatAmount(1234.56, 15), '000000000123456');
+  });
+
+  it('formata import enter', () => {
+    assert.strictEqual(formatAmount(100, 13), '0000000010000');
+  });
+
+  it('arrodoneix correctament', () => {
+    assert.strictEqual(formatAmount(99.999, 10), '0000010000');
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// HELPERS - padZeros
+// ═══════════════════════════════════════════════════════════════════════════════
+
+describe('padZeros', () => {
+  it("afegeix zeros a l'esquerra", () => {
+    assert.strictEqual(padZeros(42, 5), '00042');
+  });
+
+  it('no talla si ja té la longitud', () => {
+    assert.strictEqual(padZeros(12345, 5), '12345');
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// HELPERS - encodeLatin1
+// ═══════════════════════════════════════════════════════════════════════════════
+
+describe('encodeLatin1', () => {
+  it('converteix caràcter a caràcter a bytes', () => {
+    const result = encodeLatin1('ABC');
+    assert.strictEqual(result.error, null);
+    assert.strictEqual(result.bytes.length, 3);
+    assert.strictEqual(result.bytes[0], 65); // A
+    assert.strictEqual(result.bytes[1], 66); // B
+    assert.strictEqual(result.bytes[2], 67); // C
+  });
+
+  it('falla amb error si char > 255 (emoji)', () => {
+    const result = encodeLatin1('Test 😀');
+    assert.notStrictEqual(result.error, null);
+    assert.ok(result.error?.includes('no vàlid per ISO-8859-1'));
+    assert.strictEqual(result.bytes.length, 0);
+  });
+
+  it('accepta caràcters Latin-1 vàlids (ñ, ü, etc.)', () => {
+    const result = encodeLatin1('ñüé');
+    assert.strictEqual(result.error, null);
+    assert.strictEqual(result.bytes.length, 3);
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// GENERACIÓ FITXER COMPLET
+// ═══════════════════════════════════════════════════════════════════════════════
+
+describe('generateModel182AEATFile', () => {
+  const validOrganization: Organization = {
+    id: 'test-org',
+    name: 'Entitat Test S.L.',
+    slug: 'test',
+    taxId: 'G12345678',
+    status: 'active',
+    createdAt: '2024-01-01',
+    createdBy: 'admin',
+    phone: '612345678',
+    signatoryName: 'Maria Garcia López',
+    signatoryRole: 'Presidenta',
+  };
+
+  const validDonors: DonationReportRow[] = [
+    {
+      donor: {
+        name: 'Joan Prat Soler',
+        taxId: '12345678A',
+        zipCode: '08001',
+        donorType: 'individual',
+      },
+      totalAmount: 500,
+      previousYearAmount: 300,
+      twoYearsAgoAmount: 200,
+    },
+    {
+      donor: {
+        name: 'Empresa Example S.L.',
+        taxId: 'B87654321',
+        zipCode: '28001',
+        donorType: 'company',
+      },
+      totalAmount: 1000,
+      previousYearAmount: 0,
+      twoYearsAgoAmount: 0,
+    },
+  ];
+
+  // ─────────────────────────────────────────────────────────────────────────────
+  // LONGITUD REGISTRES
+  // ─────────────────────────────────────────────────────────────────────────────
+
+  it('genera registre tipus 1 de exactament 250 caràcters', () => {
+    const result = generateModel182AEATFile(validOrganization, validDonors, 2024);
+    assert.strictEqual(result.errors.length, 0);
+
+    const lines = result.content.split('\r\n').filter((l) => l.length > 0);
+    assert.strictEqual(lines[0].length, 250);
+    assert.strictEqual(lines[0].startsWith('1182'), true);
+  });
+
+  it('genera registre tipus 2 de exactament 250 caràcters', () => {
+    const result = generateModel182AEATFile(validOrganization, validDonors, 2024);
+    assert.strictEqual(result.errors.length, 0);
+
+    const lines = result.content.split('\r\n').filter((l) => l.length > 0);
+    assert.strictEqual(lines[1].length, 250);
+    assert.strictEqual(lines[1].startsWith('2182'), true);
+  });
+
+  it('fitxer complet amb 2 donants: 3 línies de 250 chars + CRLF', () => {
+    const result = generateModel182AEATFile(validOrganization, validDonors, 2024);
+    assert.strictEqual(result.errors.length, 0);
+
+    const lines = result.content.split('\r\n');
+    // 3 línies + 1 buit al final (per l'últim CRLF)
+    assert.strictEqual(lines.length, 4);
+    assert.strictEqual(lines[0].length, 250);
+    assert.strictEqual(lines[1].length, 250);
+    assert.strictEqual(lines[2].length, 250);
+    assert.strictEqual(lines[3], ''); // Després de l'últim CRLF
+  });
+
+  // ─────────────────────────────────────────────────────────────────────────────
+  // NATURALESA F/J
+  // ─────────────────────────────────────────────────────────────────────────────
+
+  it('donorType "individual" genera "F" a posició 105', () => {
+    const result = generateModel182AEATFile(validOrganization, [validDonors[0]], 2024);
+    assert.strictEqual(result.errors.length, 0);
+
+    const lines = result.content.split('\r\n').filter((l) => l.length > 0);
+    // Posició 105 (1-indexed) = índex 104 (0-indexed)
+    assert.strictEqual(lines[1][104], 'F');
+  });
+
+  it('donorType "company" genera "J" a posició 105', () => {
+    const result = generateModel182AEATFile(validOrganization, [validDonors[1]], 2024);
+    assert.strictEqual(result.errors.length, 0);
+
+    const lines = result.content.split('\r\n').filter((l) => l.length > 0);
+    assert.strictEqual(lines[1][104], 'J');
+  });
+
+  // ─────────────────────────────────────────────────────────────────────────────
+  // VALIDACIÓ BLOQUEJANT (política: TOT és error, no warnings)
+  // ─────────────────────────────────────────────────────────────────────────────
+
+  it('error bloquejant si org.taxId invàlid', () => {
+    const invalidOrg = { ...validOrganization, taxId: 'B123' };
+    const result = generateModel182AEATFile(invalidOrg, validDonors, 2024);
+    assert.ok(result.errors.length > 0);
+    assert.ok(result.errors[0].includes('CIF'));
+    assert.strictEqual(result.content, '');
+  });
+
+  it('error bloquejant si org.name buit', () => {
+    const invalidOrg = { ...validOrganization, name: '' };
+    const result = generateModel182AEATFile(invalidOrg, validDonors, 2024);
+    assert.ok(result.errors.length > 0);
+    assert.ok(result.errors.some((e) => e.includes('denominació')));
+    assert.strictEqual(result.content, '');
+  });
+
+  it('error bloquejant si org.signatoryName buit', () => {
+    const invalidOrg = { ...validOrganization, signatoryName: '' };
+    const result = generateModel182AEATFile(invalidOrg, validDonors, 2024);
+    assert.ok(result.errors.length > 0);
+    assert.ok(result.errors.some((e) => e.includes('contacte')));
+    assert.strictEqual(result.content, '');
+  });
+
+  it('error bloquejant si qualsevol donant té NIF invàlid', () => {
+    const invalidDonors: DonationReportRow[] = [
+      {
+        donor: {
+          name: 'Donant Invalid',
+          taxId: 'ABC', // NIF invàlid
+          zipCode: '08001',
+          donorType: 'individual',
+        },
+        totalAmount: 100,
+      },
+    ];
+    const result = generateModel182AEATFile(validOrganization, invalidDonors, 2024);
+    assert.ok(result.errors.length > 0);
+    assert.ok(result.errors.some((e) => e.includes('NIF invàlid')));
+    assert.strictEqual(result.content, '');
+  });
+
+  it('error bloquejant si qualsevol donant sense codi postal', () => {
+    const invalidDonors: DonationReportRow[] = [
+      {
+        donor: {
+          name: 'Donant Sense CP',
+          taxId: '12345678A',
+          zipCode: '',
+          donorType: 'individual',
+        },
+        totalAmount: 100,
+      },
+    ];
+    const result = generateModel182AEATFile(validOrganization, invalidDonors, 2024);
+    assert.ok(result.errors.length > 0);
+    assert.ok(result.errors.some((e) => e.includes('codi postal')));
+    assert.strictEqual(result.content, '');
+  });
+
+  it('error bloquejant si qualsevol donant sense donorType', () => {
+    const invalidDonors: DonationReportRow[] = [
+      {
+        donor: {
+          name: 'Donant Sense Tipus',
+          taxId: '12345678A',
+          zipCode: '08001',
+          // donorType absent
+        },
+        totalAmount: 100,
+      },
+    ];
+    const result = generateModel182AEATFile(validOrganization, invalidDonors, 2024);
+    assert.ok(result.errors.length > 0);
+    assert.ok(result.errors.some((e) => e.includes('tipus (F/J)')));
+    assert.strictEqual(result.content, '');
+  });
+
+  it('genera fitxer NOMÉS si 0 errors', () => {
+    const result = generateModel182AEATFile(validOrganization, validDonors, 2024);
+    assert.strictEqual(result.errors.length, 0);
+    assert.ok(result.content.length > 0);
+    assert.ok(result.content.includes('1182'));
+  });
+
+  // ─────────────────────────────────────────────────────────────────────────────
+  // CAMPS ESPECÍFICS
+  // ─────────────────────────────────────────────────────────────────────────────
+
+  it("inclou el NIF de l'organització al registre tipus 1", () => {
+    const result = generateModel182AEATFile(validOrganization, validDonors, 2024);
+    assert.strictEqual(result.errors.length, 0);
+
+    const lines = result.content.split('\r\n').filter((l) => l.length > 0);
+    // Posicions 9-17 (1-indexed) = índexs 8-16 (0-indexed)
+    const nifDeclarant = lines[0].substring(8, 17);
+    assert.strictEqual(nifDeclarant, 'G12345678');
+  });
+
+  it('inclou el total de donants al registre tipus 1', () => {
+    const result = generateModel182AEATFile(validOrganization, validDonors, 2024);
+    assert.strictEqual(result.errors.length, 0);
+
+    const lines = result.content.split('\r\n').filter((l) => l.length > 0);
+    // Posicions 136-144 (1-indexed) = índexs 135-143 (0-indexed)
+    const totalDonants = lines[0].substring(135, 144);
+    assert.strictEqual(totalDonants, '000000002');
+  });
+
+  it("inclou l'any d'exercici correctament", () => {
+    const result = generateModel182AEATFile(validOrganization, validDonors, 2024);
+    assert.strictEqual(result.errors.length, 0);
+
+    const lines = result.content.split('\r\n').filter((l) => l.length > 0);
+    // Posicions 5-8 (1-indexed) = índexs 4-7 (0-indexed)
+    const exercici = lines[0].substring(4, 8);
+    assert.strictEqual(exercici, '2024');
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// RECORD BUILDER - Asserts de rang
+// ═══════════════════════════════════════════════════════════════════════════════
+
+describe('RecordBuilder', () => {
+  it('llença error si startPos < 1', () => {
+    assert.throws(() => new RecordBuilder().setRange(0, 'test'));
+  });
+
+  it('llença error si valor excedeix 250', () => {
+    // Posició 248 + 4 chars = posicions 248-251 (excedeix 250)
+    assert.throws(() => new RecordBuilder().setRange(248, '1234'));
+  });
+
+  it('accepta valor que acaba exactament a posició 250', () => {
+    // Posició 248 + 3 chars = posicions 248-250 (exacte)
+    assert.doesNotThrow(() => new RecordBuilder().setRange(248, '123'));
+  });
+});

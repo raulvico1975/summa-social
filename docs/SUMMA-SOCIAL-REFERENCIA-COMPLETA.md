@@ -1971,6 +1971,59 @@ Format simplificat amb 7 columnes per enviar directament a la gestoria. **No sub
 - `2` → valor1 === 0 AND valor2 === 0
 - Buit → només un dels dos anys té import > 0
 
+#### Export AEAT (fitxer oficial) — NOU v1.32
+
+Format de longitud fixa per a "Presentació mitjançant fitxer" a la Seu Electrònica de l'AEAT. **No substitueix els altres exports** — és un tercer botó addicional.
+
+**Característiques tècniques:**
+- Registres de 250 caràcters exactes per línia
+- Separador de línia: CRLF (`\r\n`)
+- Codificació: ISO-8859-1 (Latin-1)
+- 1 registre Tipus 1 (declarant) + N registres Tipus 2 (declarats)
+
+**Registre Tipus 1 (posicions principals):**
+| Pos | Camp | Font |
+|-----|------|------|
+| 1-4 | Tipus + Model | `1182` |
+| 5-8 | Exercici | Any seleccionat |
+| 9-17 | NIF declarant | `org.taxId` |
+| 18-57 | Denominació | `org.name` |
+| 59-67 | Telèfon | `org.phone` |
+| 68-107 | Contacte | `org.signatoryName` (invertit) |
+| 136-144 | Total registres | Comptador donants |
+| 145-159 | Import total | Suma imports |
+| 160 | Naturalesa declarant | `1` (Llei 49/2002) |
+
+**Registre Tipus 2 (posicions principals):**
+| Pos | Camp | Font |
+|-----|------|------|
+| 1-4 | Tipus + Model | `2182` |
+| 18-26 | NIF declarat | `donor.taxId` |
+| 36-75 | Cognoms i nom | `donor.name` (invertit) |
+| 76-77 | Codi província | `donor.zipCode.substring(0,2)` |
+| 78 | Clau | `A` (Llei 49/2002) |
+| 79-83 | % deducció | `08000` / `04000` / `04500` |
+| 84-96 | Import | Cèntims sense decimals visibles |
+| 105 | Naturalesa | `F` (individual) / `J` (company) |
+| 132 | Recurrència | `1` / `2` / ` ` |
+
+**Validació bloquejant (NO genera fitxer si falta):**
+- `org.taxId` → CIF de 9 caràcters vàlid
+- `org.name` → Denominació
+- `org.signatoryName` → Persona de contacte
+- `donor.taxId` → NIF de 9 caràcters vàlid per a TOTS els donants
+- `donor.zipCode` → Mínim 2 dígits per a TOTS
+- `donor.donorType` → `individual` o `company` per a TOTS
+
+**Fitxer generat:** `modelo182_{any}.txt`
+
+**Ús:**
+1. Generar informe per l'any desitjat
+2. Clic "Export AEAT (fitxer oficial)"
+3. Si hi ha errors de validació → toast amb llista d'errors
+4. Si tot OK → descàrrega automàtica del fitxer `.txt`
+5. Pujar a Seu Electrònica AEAT → "Presentació mitjançant fitxer"
+
 ### 3.8.2 Model 347 - Operacions amb Tercers
 
 **Data límit:** 28 de febrer
