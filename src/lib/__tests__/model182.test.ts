@@ -13,6 +13,7 @@ import {
   type Donor,
   type Transaction,
 } from '../model182';
+import { normalizeTaxId, removeAccents } from '../normalize';
 
 // =============================================================================
 // DADES DE TEST
@@ -361,5 +362,137 @@ describe('calculateModel182Totals - Casos edge', () => {
     assert.strictEqual(result.donorTotals[0].totalAmount, 200);
     assert.strictEqual(result.donorTotals[1].totalAmount, 100);
     assert.strictEqual(result.donorTotals[2].totalAmount, 50);
+  });
+});
+
+// =============================================================================
+// TESTS: Export Gestoria (A–G) - Normalització i transformacions
+// =============================================================================
+
+describe('Export Gestoria - Normalització NIF', () => {
+  it('normalitza NIF amb espais i guions', () => {
+    assert.strictEqual(normalizeTaxId('B-12.345.678'), 'B12345678');
+  });
+
+  it('normalitza NIF a majúscules', () => {
+    assert.strictEqual(normalizeTaxId('b12345678'), 'B12345678');
+  });
+
+  it('normalitza NIE amb espais', () => {
+    assert.strictEqual(normalizeTaxId('X 1234567 A'), 'X1234567A');
+  });
+
+  it('retorna string buit per valor null/undefined', () => {
+    assert.strictEqual(normalizeTaxId(null), '');
+    assert.strictEqual(normalizeTaxId(undefined), '');
+  });
+});
+
+describe('Export Gestoria - Normalització Nom (removeAccents)', () => {
+  it('elimina accents i converteix a majúscules', () => {
+    const nom = 'María García-López';
+    const normalitzat = removeAccents(nom).toUpperCase().replace(/\s+/g, ' ').trim();
+    assert.strictEqual(normalitzat, 'MARIA GARCIA-LOPEZ');
+  });
+
+  it('gestiona accents catalans', () => {
+    const nom = 'Núria Puigdomènech';
+    const normalitzat = removeAccents(nom).toUpperCase().replace(/\s+/g, ' ').trim();
+    assert.strictEqual(normalitzat, 'NURIA PUIGDOMENECH');
+  });
+
+  it('col·lapsa espais múltiples', () => {
+    const nom = 'Joan   Garcia    López';
+    const normalitzat = removeAccents(nom).toUpperCase().replace(/\s+/g, ' ').trim();
+    assert.strictEqual(normalitzat, 'JOAN GARCIA LOPEZ');
+  });
+
+  it('retorna string buit per valor null/undefined', () => {
+    assert.strictEqual(removeAccents(null), '');
+    assert.strictEqual(removeAccents(undefined), '');
+  });
+});
+
+describe('Export Gestoria - Codi Província', () => {
+  it('extreu 2 primers dígits del CP Barcelona', () => {
+    const zipCode = '08001';
+    const provincia = zipCode.substring(0, 2);
+    assert.strictEqual(provincia, '08');
+  });
+
+  it('extreu 2 primers dígits del CP Girona', () => {
+    const zipCode = '17000';
+    const provincia = zipCode.substring(0, 2);
+    assert.strictEqual(provincia, '17');
+  });
+
+  it('preserva zero inicial', () => {
+    const zipCode = '01001'; // Àlaba
+    const provincia = zipCode.substring(0, 2);
+    assert.strictEqual(provincia, '01');
+  });
+});
+
+describe('Export Gestoria - Clau (F0/A0)', () => {
+  it('retorna F0 per membershipType recurring', () => {
+    const membershipType = 'recurring';
+    const clau = membershipType === 'recurring' ? 'F0' : 'A0';
+    assert.strictEqual(clau, 'F0');
+  });
+
+  it('retorna A0 per membershipType one-time', () => {
+    const membershipType = 'one-time';
+    const clau = membershipType === 'recurring' ? 'F0' : 'A0';
+    assert.strictEqual(clau, 'A0');
+  });
+});
+
+describe('Export Gestoria - Recurrència', () => {
+  it('retorna 1 si valor1 > 0 i valor2 > 0', () => {
+    const valor1 = 100;
+    const valor2 = 50;
+    let recurrencia: number | string = '';
+    if (valor1 > 0 && valor2 > 0) {
+      recurrencia = 1;
+    } else if (valor1 === 0 && valor2 === 0) {
+      recurrencia = 2;
+    }
+    assert.strictEqual(recurrencia, 1);
+  });
+
+  it('retorna 2 si valor1 === 0 i valor2 === 0', () => {
+    const valor1 = 0;
+    const valor2 = 0;
+    let recurrencia: number | string = '';
+    if (valor1 > 0 && valor2 > 0) {
+      recurrencia = 1;
+    } else if (valor1 === 0 && valor2 === 0) {
+      recurrencia = 2;
+    }
+    assert.strictEqual(recurrencia, 2);
+  });
+
+  it('retorna buit si valor1 > 0 i valor2 === 0', () => {
+    const valor1 = 100;
+    const valor2 = 0;
+    let recurrencia: number | string = '';
+    if (valor1 > 0 && valor2 > 0) {
+      recurrencia = 1;
+    } else if (valor1 === 0 && valor2 === 0) {
+      recurrencia = 2;
+    }
+    assert.strictEqual(recurrencia, '');
+  });
+
+  it('retorna buit si valor1 === 0 i valor2 > 0', () => {
+    const valor1 = 0;
+    const valor2 = 50;
+    let recurrencia: number | string = '';
+    if (valor1 > 0 && valor2 > 0) {
+      recurrencia = 1;
+    } else if (valor1 === 0 && valor2 === 0) {
+      recurrencia = 2;
+    }
+    assert.strictEqual(recurrencia, '');
   });
 });

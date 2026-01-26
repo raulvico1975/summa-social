@@ -33,7 +33,7 @@ import {
   TooltipTrigger,
 } from '@/components/ui/tooltip';
 import type { Donor, Transaction, AnyContact } from '@/lib/data';
-import { formatCurrencyEU } from '@/lib/normalize';
+import { formatCurrencyEU, normalizeTaxId, removeAccents } from '@/lib/normalize';
 import { useToast } from '@/hooks/use-toast';
 import * as XLSX from 'xlsx';
 import { useCollection, useFirebase, useMemoFirebase } from '@/firebase';
@@ -137,6 +137,7 @@ interface DonationReportRow {
   donorZipCode: string;
   donorProvince: string;       // Codi província (2 dígits)
   donorNaturaleza: 'F' | 'J';  // F = persona física, J = persona jurídica
+  donorMembershipType: 'one-time' | 'recurring';  // Per export gestoria (F0/A0)
   totalAmount: number;
   returnedAmount: number;
   valor1: number;              // Donacions any anterior (year-1)
@@ -294,6 +295,7 @@ export function DonationsReportGenerator() {
           donorZipCode: donor.zipCode,
           donorProvince: getProvinceCode(donor.province, donor.zipCode),
           donorNaturaleza: donor.donorType === 'company' ? 'J' as const : 'F' as const,
+          donorMembershipType: donor.membershipType,
           totalAmount: netAmount,
           returnedAmount: returned,
           valor1,
@@ -387,7 +389,65 @@ export function DonationsReportGenerator() {
 
     toast({ title: t.reports.exportComplete, description: t.reports.exportCompleteDescription });
   };
-  
+
+  /**
+   * Export format simplificat per gestories (7 columnes A–G)
+   * No substitueix l'export estàndard
+   */
+  const handleExportGestoria = () => {
+    if (reportData.length === 0) {
+      toast({ variant: 'destructive', title: t.reports.noDataToExport, description: t.reports.noDataToExportDescription });
+      return;
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════════
+    // FORMAT GESTORIA (A–G)
+    // Columnes: NIF, COGNOMS_NOM, PROVINCIA, CLAVE, PORCENTAJE, IMPORTE, RECURRENCIA
+    // ═══════════════════════════════════════════════════════════════════════════
+    const excelData = reportData.map(row => {
+      // Calcular recurrència segons criteri validat
+      let recurrencia: number | string = '';
+      if (row.valor1 > 0 && row.valor2 > 0) {
+        recurrencia = 1;
+      } else if (row.valor1 === 0 && row.valor2 === 0) {
+        recurrencia = 2;
+      }
+      // Si només un any té import > 0, queda buit
+
+      return {
+        'NIF': normalizeTaxId(row.donorTaxId),
+        'COGNOMS_NOM': removeAccents(row.donorName).toUpperCase().replace(/\s+/g, ' ').trim(),
+        'PROVINCIA': row.donorZipCode?.substring(0, 2) || '',
+        'CLAVE': row.donorMembershipType === 'recurring' ? 'F0' : 'A0',
+        'PORCENTAJE': '',  // Sempre buit - la gestoria ho calcula
+        'IMPORTE': Math.round(row.totalAmount * 100) / 100,  // Numèric amb 2 decimals
+        'RECURRENCIA': recurrencia,
+      };
+    });
+
+    // Crear workbook i worksheet
+    const ws = XLSX.utils.json_to_sheet(excelData);
+
+    // Ajustar amplada de columnes
+    ws['!cols'] = [
+      { wch: 12 },  // NIF
+      { wch: 40 },  // COGNOMS_NOM
+      { wch: 10 },  // PROVINCIA
+      { wch: 8 },   // CLAVE
+      { wch: 12 },  // PORCENTAJE
+      { wch: 12 },  // IMPORTE
+      { wch: 12 },  // RECURRENCIA
+    ];
+
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Model 182 Gestoria');
+
+    // Descarregar arxiu amb nom diferenciat
+    XLSX.writeFile(wb, `model182_gestoria_A-G_${selectedYear}.xlsx`);
+
+    toast({ title: t.reports.exportComplete, description: t.reports.exportGestoriaTooltip });
+  };
+
 
   return (
       <Card>
@@ -419,6 +479,19 @@ export function DonationsReportGenerator() {
                     <Download className="mr-2 h-4 w-4" />
                     {t.reports.exportExcel}
                 </Button>
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button variant="outline" onClick={handleExportGestoria} disabled={reportData.length === 0} className={MOBILE_CTA_PRIMARY}>
+                          <Download className="mr-2 h-4 w-4" />
+                          {t.reports.exportGestoria}
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>{t.reports.exportGestoriaTooltip}</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
               </div>
           </div>
         </CardHeader>

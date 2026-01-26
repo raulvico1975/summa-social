@@ -1327,6 +1327,8 @@ export const ca = {
     selectYear: "Selecciona un any",
     generate: "Generar Informe",
     exportExcel: "Exportar Excel (Model 182)",
+    exportGestoria: "Exportar plantilla gestoria (A–G)",
+    exportGestoriaTooltip: "Format simplificat per gestoria. No substitueix l'export estàndard.",
     exportCsv: "Exportar a CSV",
     donorName: "Nom del Donant",
     donorTaxId: "DNI/CIF",
