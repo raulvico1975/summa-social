@@ -332,6 +332,16 @@ export const fr = {
       exportFiltered: "Exporter filtrés",
       exportSuccess: "Excel exporté",
       exportedCount: (count: number) => `${count} mouvement(s) exporté(s).`,
+      // Vérification du solde bancaire
+      balanceCheck: {
+        initialBalance: "Solde initial (banque)",
+        variation: "Variation (mouvements)",
+        finalBalance: "Solde final (banque)",
+        balanced: "Équilibré",
+        discrepancy: (amount: string) => `Écart: ${amount}`,
+        incomplete: "Solde partiel",
+        incompleteTooltip: "La banque ne déclare pas de solde pour toutes les lignes de la période. Impossible de vérifier l'équilibre.",
+      },
       // Colonnes export Excel
       exportColumns: {
         date: "Date",
@@ -830,6 +840,8 @@ export const fr = {
         cannotProcessContent: "Impossible de traiter le contenu du fichier.",
         aiQuotaExceeded: "Limite IA dépassée",
         aiQuotaExceededDescription: "La limite de requêtes IA a été dépassée. L'importation continuera sans attribution automatique des contacts. Vous devrez catégoriser manuellement. Contactez l'administrateur si ce problème persiste.",
+        balanceInconsistent: "L'extrait n'est pas cohérent",
+        balanceInconsistentRow: (row: number, detail: string) => `Ligne ${row}: ${detail}`,
       },
       importSuccess: "Importation réussie",
       importSuccessDescription: (imported: number, mode: string, duplicates: number) =>
@@ -1317,6 +1329,10 @@ export const fr = {
     exportExcel: "Exporter Excel (déclaration)",
     exportGestoria: "Exporter modèle comptable (A–G)",
     exportGestoriaTooltip: "Format simplifié pour cabinet comptable. Ne remplace pas l'export standard.",
+    exportAEAT: "Export AEAT (fichier officiel)",
+    exportAEATTooltip: "Fichier .txt pour télécharger sur le portail fiscal AEAT (présentation par fichier).",
+    exportAEATMissingData: "Données manquantes pour l'export AEAT",
+    exportAEATEncodingError: "Erreur d'encodage ISO-8859-1",
     exportCsv: "Exporter en CSV",
     donorName: "Nom du donateur",
     donorTaxId: "N° fiscal",
