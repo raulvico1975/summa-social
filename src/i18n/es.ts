@@ -1373,9 +1373,13 @@ export const es = {
     aeatExcludedDialogTitle: "Hay donantes excluidos",
     aeatExcludedDialogDesc: (included: number, excluded: number) =>
       `El fichero AEAT contendrá ${included} donante${included > 1 ? 's' : ''}. ${excluded} donante${excluded > 1 ? 's' : ''} ${excluded > 1 ? 'serán' : 'será'} excluido${excluded > 1 ? 's' : ''} por datos incompletos.`,
+    aeatExcludedHelp: "Puedes descargar el listado para contactar y corregirlos antes de presentar el 182.",
+    aeatExcludedNoNif: "sin NIF",
+    aeatExcludedPreviewMore: (n: number) => `… y ${n} más`,
     downloadExcludedCsv: "Descargar excluidos (CSV)",
     exportExcludedCsvDesc: "Se ha descargado el CSV con los donantes excluidos.",
     exportAnyway: "Exportar de todos modos",
+    aeatCancelToFix: "Cancelar y revisar datos",
     exportCsv: "Exportar a CSV",
     donorName: "Nombre del Donante",
     donorTaxId: "DNI/CIF",

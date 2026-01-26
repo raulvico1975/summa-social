@@ -889,21 +889,27 @@ export function DonationsReportGenerator() {
               <div className="max-h-48 overflow-y-auto border rounded-md p-2 bg-muted/30">
                 <ul className="space-y-1 text-sm">
                   {aeatPendingExport.excluded.slice(0, 5).map((exc, i) => (
-                    <li key={i} className="flex flex-col">
-                      <span className="font-medium">{exc.name}</span>
-                      <span className="text-xs text-muted-foreground">
-                        {exc.taxIdRaw || '(sense NIF)'} — {exc.reasons.join('; ')}
-                      </span>
+                    <li key={i} className="text-muted-foreground">
+                      <span className="font-medium text-foreground">{exc.name}</span>
+                      {' — '}
+                      {exc.taxIdRaw || t.reports.aeatExcludedNoNif}
+                      {' — '}
+                      {exc.reasons.join('; ')}
                     </li>
                   ))}
                   {aeatPendingExport.excludedCount > 5 && (
-                    <li className="text-muted-foreground">
-                      ... i {aeatPendingExport.excludedCount - 5} més
+                    <li className="text-muted-foreground italic">
+                      {t.reports.aeatExcludedPreviewMore(aeatPendingExport.excludedCount - 5)}
                     </li>
                   )}
                 </ul>
               </div>
             )}
+
+            {/* Help text */}
+            <p className="text-sm text-muted-foreground">
+              {t.reports.aeatExcludedHelp}
+            </p>
 
             <DialogFooter className="flex-col sm:flex-row gap-2">
               <Button
@@ -929,7 +935,7 @@ export function DonationsReportGenerator() {
                 }}
                 className="w-full sm:w-auto"
               >
-                {t.common.cancel}
+                {t.reports.aeatCancelToFix}
               </Button>
             </DialogFooter>
           </DialogContent>

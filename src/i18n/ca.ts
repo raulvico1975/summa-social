@@ -1341,9 +1341,13 @@ export const ca = {
     aeatExcludedDialogTitle: "Hi ha donants exclosos",
     aeatExcludedDialogDesc: (included: number, excluded: number) =>
       `El fitxer AEAT contindrà ${included} donant${included > 1 ? 's' : ''}. ${excluded} donant${excluded > 1 ? 's' : ''} ${excluded > 1 ? 'seran' : 'serà'} exclòs${excluded > 1 ? 'os' : ''} per dades incompletes.`,
+    aeatExcludedHelp: "Pots descarregar el llistat per contactar-los i corregir-los abans de presentar el 182.",
+    aeatExcludedNoNif: "sense NIF",
+    aeatExcludedPreviewMore: (n: number) => `… i ${n} més`,
     downloadExcludedCsv: "Descarregar exclosos (CSV)",
     exportExcludedCsvDesc: "S'ha descarregat el CSV amb els donants exclosos.",
     exportAnyway: "Exportar igualment",
+    aeatCancelToFix: "Cancel·lar i revisar dades",
     exportCsv: "Exportar a CSV",
     donorName: "Nom del Donant",
     donorTaxId: "DNI/CIF",
