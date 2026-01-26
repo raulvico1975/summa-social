@@ -156,13 +156,33 @@ export function padZeros(num: number, length: number): string {
 }
 
 /**
- * Calcula percentatge deducció: 80% (≤250€), 40% (>250€), 45% (>250€ recurrent)
+ * Percentatge deducció AEAT (camp 79–83)
+ *
+ * PERSONA FÍSICA (IRPF):
+ * - primers 250€ → 80%
+ * - resta:
+ *   - 40% normal
+ *   - 45% si recurrent (>2 anys seguits)
+ *
+ * PERSONA JURÍDICA (IS):
+ * - 40% normal
+ * - 50% si recurrent (>2 anys mateix o superior import)
+ *
  * Retorna string 5 posicions: 3 enters + 2 decimals
  */
-export function calculateDeductionPct(amount: number, isRecurrent: boolean): string {
-  if (amount <= 250) return '08000'; // 80.00%
-  if (isRecurrent) return '04500'; // 45.00%
-  return '04000'; // 40.00%
+export function calculateDeductionPct(
+  amount: number,
+  donorType: 'individual' | 'company',
+  isRecurrent: boolean
+): string {
+  // PERSONA FÍSICA (IRPF)
+  if (donorType === 'individual') {
+    if (amount <= 250) return '08000'; // 80.00%
+    return isRecurrent ? '04500' : '04000'; // 45% o 40%
+  }
+
+  // PERSONA JURÍDICA (IS)
+  return isRecurrent ? '05000' : '04000'; // 50% o 40%
 }
 
 /**
@@ -282,7 +302,14 @@ function generateType2Record(
   const provinceCode = zipCode.replace(/\D/g, '').substring(0, 2).padStart(2, '0');
 
   // Naturalesa: F = persona física, J = persona jurídica
-  const naturalesa = row.donor.donorType === 'company' ? 'J' : 'F';
+  const donorType = row.donor.donorType === 'company' ? 'company' : 'individual';
+  const naturalesa = donorType === 'company' ? 'J' : 'F';
+
+  // Nom: PJ → denominació social tal qual, PF → cognoms + nom (invertit)
+  const nameForAEAT =
+    donorType === 'company'
+      ? sanitizeAlpha(row.donor.name, 40)
+      : sanitizeAlpha(invertName(row.donor.name), 40);
 
   builder
     .setRange(1, '2') // Tipus registre
@@ -291,10 +318,10 @@ function generateType2Record(
     .setRange(9, orgNIF) // NIF declarant
     .setRange(18, donorNIF) // NIF declarat
     .setRange(27, ' '.repeat(9)) // NIF representant (buit)
-    .setRange(36, sanitizeAlpha(invertName(row.donor.name), 40)) // Cognoms i nom
+    .setRange(36, nameForAEAT) // Cognoms i nom (PF) o denominació (PJ)
     .setRange(76, provinceCode) // Codi província
     .setRange(78, 'A') // Clau (A = Llei 49/2002, donació no prioritària)
-    .setRange(79, calculateDeductionPct(row.totalAmount, isRecurrent)) // % deducció
+    .setRange(79, calculateDeductionPct(row.totalAmount, donorType, isRecurrent)) // % deducció
     .setRange(84, formatAmount(row.totalAmount, 13)) // Import donació
     .setRange(97, ' ') // En espècie (no)
     .setRange(98, '00') // Codi autonòmic

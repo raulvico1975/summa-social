@@ -204,23 +204,54 @@ describe('sanitizeAlpha', () => {
 });
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// HELPERS - calculateDeductionPct
+// HELPERS - calculateDeductionPct (IRPF vs IS)
 // ═══════════════════════════════════════════════════════════════════════════════
 
 describe('calculateDeductionPct', () => {
-  it('retorna 80% per imports <= 250€', () => {
-    assert.strictEqual(calculateDeductionPct(250, false), '08000');
-    assert.strictEqual(calculateDeductionPct(100, false), '08000');
+  // ─────────────────────────────────────────────────────────────────────────────
+  // PERSONA FÍSICA (IRPF)
+  // ─────────────────────────────────────────────────────────────────────────────
+  it('PF: 200€ → 80% (primers 250€)', () => {
+    assert.strictEqual(calculateDeductionPct(200, 'individual', false), '08000');
   });
 
-  it('retorna 40% per imports > 250€ no recurrents', () => {
-    assert.strictEqual(calculateDeductionPct(251, false), '04000');
-    assert.strictEqual(calculateDeductionPct(1000, false), '04000');
+  it('PF: 250€ → 80% (límit exacte)', () => {
+    assert.strictEqual(calculateDeductionPct(250, 'individual', false), '08000');
   });
 
-  it('retorna 45% per imports > 250€ recurrents', () => {
-    assert.strictEqual(calculateDeductionPct(251, true), '04500');
-    assert.strictEqual(calculateDeductionPct(1000, true), '04500');
+  it('PF: 300€ no recurrent → 40%', () => {
+    assert.strictEqual(calculateDeductionPct(300, 'individual', false), '04000');
+  });
+
+  it('PF: 300€ recurrent → 45%', () => {
+    assert.strictEqual(calculateDeductionPct(300, 'individual', true), '04500');
+  });
+
+  it('PF: 1000€ no recurrent → 40%', () => {
+    assert.strictEqual(calculateDeductionPct(1000, 'individual', false), '04000');
+  });
+
+  it('PF: 1000€ recurrent → 45%', () => {
+    assert.strictEqual(calculateDeductionPct(1000, 'individual', true), '04500');
+  });
+
+  // ─────────────────────────────────────────────────────────────────────────────
+  // PERSONA JURÍDICA (IS)
+  // ─────────────────────────────────────────────────────────────────────────────
+  it('PJ: 1000€ no recurrent → 40%', () => {
+    assert.strictEqual(calculateDeductionPct(1000, 'company', false), '04000');
+  });
+
+  it('PJ: 1000€ recurrent → 50%', () => {
+    assert.strictEqual(calculateDeductionPct(1000, 'company', true), '05000');
+  });
+
+  it('PJ: 200€ no recurrent → 40% (no aplica 80% a PJ)', () => {
+    assert.strictEqual(calculateDeductionPct(200, 'company', false), '04000');
+  });
+
+  it('PJ: 200€ recurrent → 50%', () => {
+    assert.strictEqual(calculateDeductionPct(200, 'company', true), '05000');
   });
 });
 
@@ -400,6 +431,53 @@ describe('generateModel182AEATFile', () => {
 
     const lines = result.content.split('\r\n').filter((l) => l.length > 0);
     assert.strictEqual(lines[1][104], 'J');
+  });
+
+  // ─────────────────────────────────────────────────────────────────────────────
+  // NOM DECLARAT - PF invertit, PJ tal qual
+  // ─────────────────────────────────────────────────────────────────────────────
+
+  it('PF: nom invertit (cognoms + nom)', () => {
+    const pfDonor: DonationReportRow = {
+      donor: {
+        name: 'Maria García López',
+        taxId: '12345678A',
+        zipCode: '08001',
+        donorType: 'individual',
+      },
+      totalAmount: 100,
+    };
+    const result = generateModel182AEATFile(validOrganization, [pfDonor], 2024);
+    assert.strictEqual(result.errors.length, 0);
+
+    const lines = result.content.split('\r\n').filter((l) => l.length > 0);
+    // Posicions 36-75 (1-indexed) = índexs 35-74 (0-indexed)
+    const nomDeclarat = lines[1].substring(35, 75).trim();
+    // Ha de ser "GARCIA LOPEZ MARIA" (invertit)
+    assert.ok(nomDeclarat.startsWith('GARCIA LOPEZ'), `Esperat cognoms primer, rebut: ${nomDeclarat}`);
+    assert.ok(nomDeclarat.includes('MARIA'), `Esperat nom al final, rebut: ${nomDeclarat}`);
+  });
+
+  it('PJ: nom NO invertit (denominació social tal qual)', () => {
+    const pjDonor: DonationReportRow = {
+      donor: {
+        name: 'Marmotte Petite S.L.',
+        taxId: 'B12345678',
+        zipCode: '08001',
+        donorType: 'company',
+      },
+      totalAmount: 1000,
+    };
+    const result = generateModel182AEATFile(validOrganization, [pjDonor], 2024);
+    assert.strictEqual(result.errors.length, 0);
+
+    const lines = result.content.split('\r\n').filter((l) => l.length > 0);
+    const nomDeclarat = lines[1].substring(35, 75).trim();
+    // Ha de ser "MARMOTTE PETITE S L" (tal qual, sense invertir)
+    // NO ha de tenir "S L" al mig com si fos cognom
+    assert.ok(nomDeclarat.startsWith('MARMOTTE'), `Esperat denominació sense invertir, rebut: ${nomDeclarat}`);
+    assert.ok(!nomDeclarat.startsWith('S L'), `NO ha d'estar invertit, rebut: ${nomDeclarat}`);
+    assert.ok(!nomDeclarat.startsWith('PETITE'), `NO ha d'estar invertit, rebut: ${nomDeclarat}`);
   });
 
   // ─────────────────────────────────────────────────────────────────────────────
