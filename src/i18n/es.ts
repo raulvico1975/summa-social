@@ -1365,6 +1365,11 @@ export const es = {
     exportAEATTooltip: "Fichero .txt para subir a la Sede Electrónica de la AEAT (presentación mediante fichero).",
     exportAEATMissingData: "Faltan datos para el export AEAT",
     exportAEATEncodingError: "Error de codificación ISO-8859-1",
+    exportAEATExcludedTitle: (count: number) => `${count} donante${count > 1 ? 's' : ''} excluido${count > 1 ? 's' : ''} del export`,
+    exportAEATExcludedDesc: (included: number, excluded: number) =>
+      `El fichero contiene ${included} donante${included > 1 ? 's' : ''}. ${excluded} ${excluded > 1 ? 'han' : 'ha'} sido excluido${excluded > 1 ? 's' : ''} por datos incompletos.`,
+    exportAEATZeroValid: "Ningún donante válido para exportar",
+    exportAEATZeroValidDesc: "Todos los donantes tienen datos incompletos (NIF, CP o tipo). Corrígelos antes de exportar.",
     exportCsv: "Exportar a CSV",
     donorName: "Nombre del Donante",
     donorTaxId: "DNI/CIF",

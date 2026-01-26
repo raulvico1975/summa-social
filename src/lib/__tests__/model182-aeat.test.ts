@@ -403,7 +403,7 @@ describe('generateModel182AEATFile', () => {
   });
 
   // ─────────────────────────────────────────────────────────────────────────────
-  // VALIDACIÓ BLOQUEJANT (política: TOT és error, no warnings)
+  // VALIDACIÓ BLOQUEJANT - ORGANITZACIÓ
   // ─────────────────────────────────────────────────────────────────────────────
 
   it('error bloquejant si org.taxId invàlid', () => {
@@ -424,69 +424,125 @@ describe('generateModel182AEATFile', () => {
 
   it('error bloquejant si org.signatoryName buit', () => {
     const invalidOrg = { ...validOrganization, signatoryName: '' };
-    const result = generateModel182AEATFile(invalidOrg, validDonors, 2024);
-    assert.ok(result.errors.length > 0);
-    assert.ok(result.errors.some((e) => e.includes('contacte')));
-    assert.strictEqual(result.content, '');
+    const result = generateModel182AEATFile(validOrganization, validDonors, 2024);
+    // Arreglo: usar invalidOrg, no validOrganization
+    const result2 = generateModel182AEATFile(invalidOrg, validDonors, 2024);
+    assert.ok(result2.errors.length > 0);
+    assert.ok(result2.errors.some((e) => e.includes('contacte')));
+    assert.strictEqual(result2.content, '');
   });
 
-  it('error bloquejant si qualsevol donant té NIF invàlid', () => {
-    const invalidDonors: DonationReportRow[] = [
+  // ─────────────────────────────────────────────────────────────────────────────
+  // EXPORT PARCIAL AMB EXCLUSIONS - Donants invàlids s'exclouen
+  // ─────────────────────────────────────────────────────────────────────────────
+
+  it('2 donants, 1 invàlid → fitxer amb 1 registre tipus 2, excludedCount=1', () => {
+    const mixedDonors: DonationReportRow[] = [
+      {
+        donor: {
+          name: 'Donant Valid',
+          taxId: '12345678A',
+          zipCode: '08001',
+          donorType: 'individual',
+        },
+        totalAmount: 100,
+      },
       {
         donor: {
           name: 'Donant Invalid',
-          taxId: 'ABC', // NIF invàlid
+          taxId: '', // NIF buit
           zipCode: '08001',
           donorType: 'individual',
         },
-        totalAmount: 100,
+        totalAmount: 50,
       },
     ];
-    const result = generateModel182AEATFile(validOrganization, invalidDonors, 2024);
-    assert.ok(result.errors.length > 0);
-    assert.ok(result.errors.some((e) => e.includes('NIF invàlid')));
-    assert.strictEqual(result.content, '');
+    const result = generateModel182AEATFile(validOrganization, mixedDonors, 2024);
+
+    // No hi ha errors bloquejants (org és vàlida)
+    assert.strictEqual(result.errors.length, 0);
+    // Hi ha 1 donant inclòs i 1 exclòs
+    assert.strictEqual(result.includedCount, 1);
+    assert.strictEqual(result.excludedCount, 1);
+    // L'exclòs ha de contenir el nom i el motiu
+    assert.ok(result.excluded.some((e) => e.includes('Donant Invalid') && e.includes('NIF buit')));
+    // El fitxer conté registre tipus 2
+    assert.ok(result.content.includes('2182'));
+    // Només 1 registre tipus 2 (1 línia tipus 2)
+    const lines = result.content.split('\r\n').filter((l) => l.startsWith('2182'));
+    assert.strictEqual(lines.length, 1);
   });
 
-  it('error bloquejant si qualsevol donant sense codi postal', () => {
-    const invalidDonors: DonationReportRow[] = [
+  it('donant amb múltiples errors → tots els motius a excluded', () => {
+    const donorWithMultipleErrors: DonationReportRow[] = [
       {
         donor: {
-          name: 'Donant Sense CP',
-          taxId: '12345678A',
-          zipCode: '',
-          donorType: 'individual',
-        },
-        totalAmount: 100,
-      },
-    ];
-    const result = generateModel182AEATFile(validOrganization, invalidDonors, 2024);
-    assert.ok(result.errors.length > 0);
-    assert.ok(result.errors.some((e) => e.includes('codi postal')));
-    assert.strictEqual(result.content, '');
-  });
-
-  it('error bloquejant si qualsevol donant sense donorType', () => {
-    const invalidDonors: DonationReportRow[] = [
-      {
-        donor: {
-          name: 'Donant Sense Tipus',
-          taxId: '12345678A',
-          zipCode: '08001',
+          name: 'Donant Molt Invàlid',
+          taxId: '', // NIF buit
+          zipCode: '', // CP incomplet
           // donorType absent
         },
         totalAmount: 100,
       },
     ];
-    const result = generateModel182AEATFile(validOrganization, invalidDonors, 2024);
-    assert.ok(result.errors.length > 0);
-    assert.ok(result.errors.some((e) => e.includes('tipus (F/J)')));
+    const result = generateModel182AEATFile(validOrganization, donorWithMultipleErrors, 2024);
+
+    // Cap donant vàlid → error
+    assert.ok(result.errors.some((e) => e.includes('Cap donant vàlid')));
+    assert.strictEqual(result.content, '');
+    assert.strictEqual(result.includedCount, 0);
+    assert.strictEqual(result.excludedCount, 1);
+    // L'exclusió ha de contenir els 3 motius
+    const exclusionMsg = result.excluded[0];
+    assert.ok(exclusionMsg.includes('NIF buit'));
+    assert.ok(exclusionMsg.includes('codi postal incomplet'));
+    assert.ok(exclusionMsg.includes('tipus (F/J) absent'));
+  });
+
+  it('tots invàlids → includedCount=0, error "Cap donant vàlid"', () => {
+    const allInvalidDonors: DonationReportRow[] = [
+      {
+        donor: {
+          name: 'Bad1',
+          taxId: '',
+          zipCode: '08001',
+          donorType: 'individual',
+        },
+        totalAmount: 100,
+      },
+      {
+        donor: {
+          name: 'Bad2',
+          taxId: '123', // longitud incorrecta
+          zipCode: '',
+          donorType: 'individual',
+        },
+        totalAmount: 50,
+      },
+    ];
+    const result = generateModel182AEATFile(validOrganization, allInvalidDonors, 2024);
+
+    assert.strictEqual(result.includedCount, 0);
+    assert.strictEqual(result.excludedCount, 2);
+    assert.ok(result.errors.some((e) => e.includes('Cap donant vàlid per exportar')));
     assert.strictEqual(result.content, '');
   });
 
-  it('genera fitxer NOMÉS si 0 errors', () => {
+  it('error org → bloquejant, no processa donants', () => {
+    const badOrg = { ...validOrganization, taxId: 'invalid' };
+    const result = generateModel182AEATFile(badOrg, validDonors, 2024);
+
+    assert.ok(result.errors.length > 0);
+    assert.strictEqual(result.content, '');
+    // Els excluded han de ser 0 perquè no es processen donants si org és invàlida
+    assert.strictEqual(result.excludedCount, 0);
+  });
+
+  it('genera fitxer amb tots els donants vàlids si no hi ha errors', () => {
     const result = generateModel182AEATFile(validOrganization, validDonors, 2024);
     assert.strictEqual(result.errors.length, 0);
+    assert.strictEqual(result.excludedCount, 0);
+    assert.strictEqual(result.includedCount, 2);
     assert.ok(result.content.length > 0);
     assert.ok(result.content.includes('1182'));
   });

@@ -1333,6 +1333,11 @@ export const ca = {
     exportAEATTooltip: "Fitxer .txt per pujar a la Seu Electrònica de l'AEAT (presentació mitjançant fitxer).",
     exportAEATMissingData: "Falten dades per a l'export AEAT",
     exportAEATEncodingError: "Error de codificació ISO-8859-1",
+    exportAEATExcludedTitle: (count: number) => `${count} donant${count > 1 ? 's' : ''} exclòs${count > 1 ? 'os' : ''} de l'export`,
+    exportAEATExcludedDesc: (included: number, excluded: number) =>
+      `El fitxer conté ${included} donant${included > 1 ? 's' : ''}. ${excluded} ${excluded > 1 ? 'han' : 'ha'} estat exclòs${excluded > 1 ? 'os' : ''} per dades incompletes.`,
+    exportAEATZeroValid: "Cap donant vàlid per exportar",
+    exportAEATZeroValidDesc: "Tots els donants tenen dades incompletes (NIF, CP o tipus). Corregeix-les abans d'exportar.",
     exportCsv: "Exportar a CSV",
     donorName: "Nom del Donant",
     donorTaxId: "DNI/CIF",

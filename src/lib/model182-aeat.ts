@@ -26,7 +26,10 @@ export interface DonationReportRow {
 
 export interface AEATExportResult {
   content: string;
-  errors: string[];
+  errors: string[];           // Errors bloquejants (org o cap donant vàlid)
+  excluded: string[];         // Donants exclosos (informatiu): "Nom" (motiu1; motiu2)
+  includedCount: number;      // Donants inclosos al fitxer
+  excludedCount: number;      // Donants exclosos
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -318,7 +321,12 @@ function generateType2Record(
  * @param organization Dades de l'organització
  * @param reportData Dades dels donants
  * @param year Any de l'exercici
- * @returns { content: string, errors: string[] }
+ * @returns { content, errors, excluded, includedCount, excludedCount }
+ *
+ * Comportament:
+ * - Errors d'organització → bloquejants (no es pot generar registre tipus 1 vàlid)
+ * - Errors de donants → exclusions (s'exclouen del fitxer, però es genera igualment)
+ * - Si 0 donants vàlids → error (no té sentit generar fitxer buit)
  */
 export function generateModel182AEATFile(
   organization: Organization,
@@ -326,9 +334,10 @@ export function generateModel182AEATFile(
   year: number
 ): AEATExportResult {
   const errors: string[] = [];
+  const excluded: string[] = [];
 
   // ───────────────────────────────────────────────────────────────────────────
-  // VALIDACIÓ ORGANITZACIÓ
+  // VALIDACIÓ ORGANITZACIÓ (BLOQUEJANT)
   // ───────────────────────────────────────────────────────────────────────────
 
   const orgNIFResult = formatNIF(organization.taxId);
@@ -344,83 +353,73 @@ export function generateModel182AEATFile(
     errors.push('Falta persona de contacte (Configuració > Signant)');
   }
 
+  // Si hi ha errors d'organització → retornar immediatament (no processa donants)
+  if (errors.length > 0) {
+    return {
+      content: '',
+      errors,
+      excluded: [],
+      includedCount: 0,
+      excludedCount: 0,
+    };
+  }
+
   // ───────────────────────────────────────────────────────────────────────────
-  // VALIDACIÓ DONANTS
+  // VALIDACIÓ DONANTS (NO BLOQUEJANT - EXCLUSIONS)
   // ───────────────────────────────────────────────────────────────────────────
 
-  const donorsWithInvalidNIF: { name: string; error: string }[] = [];
-  const donorsWithoutZipCode: string[] = [];
-  const donorsWithoutDonorType: string[] = [];
-
-  // Pre-validar tots els donants i guardar NIFs vàlids
   const validatedDonors: { row: DonationReportRow; nif: string }[] = [];
 
   for (const row of reportData) {
     const donorName = row.donor.name || 'Sense nom';
+    const reasons: string[] = [];
 
     // Validar NIF
     const nifResult = formatNIF(row.donor.taxId);
     if (nifResult.error) {
-      donorsWithInvalidNIF.push({ name: donorName, error: nifResult.error });
+      reasons.push(nifResult.error);
     }
 
     // Validar codi postal (mínim 2 dígits)
     const zipDigits = (row.donor.zipCode || '').replace(/\D/g, '');
     if (zipDigits.length < 2) {
-      donorsWithoutZipCode.push(donorName);
+      reasons.push('codi postal incomplet');
     }
 
     // Validar donorType
     if (row.donor.donorType !== 'individual' && row.donor.donorType !== 'company') {
-      donorsWithoutDonorType.push(donorName);
+      reasons.push('tipus (F/J) absent');
     }
 
-    validatedDonors.push({ row, nif: nifResult.value });
-  }
-
-  // Afegir errors de donants (màxim 5 exemples)
-  if (donorsWithInvalidNIF.length > 0) {
-    const examples = donorsWithInvalidNIF
-      .slice(0, 5)
-      .map((d) => `"${d.name}" (${d.error})`)
-      .join(', ');
-    const suffix = donorsWithInvalidNIF.length > 5 ? '...' : '';
-    errors.push(
-      `${donorsWithInvalidNIF.length} donant(s) amb NIF invàlid: ${examples}${suffix}`
-    );
-  }
-
-  if (donorsWithoutZipCode.length > 0) {
-    const examples = donorsWithoutZipCode.slice(0, 5).map((n) => `"${n}"`).join(', ');
-    const suffix = donorsWithoutZipCode.length > 5 ? '...' : '';
-    errors.push(
-      `${donorsWithoutZipCode.length} donant(s) sense codi postal: ${examples}${suffix}`
-    );
-  }
-
-  if (donorsWithoutDonorType.length > 0) {
-    const examples = donorsWithoutDonorType.slice(0, 5).map((n) => `"${n}"`).join(', ');
-    const suffix = donorsWithoutDonorType.length > 5 ? '...' : '';
-    errors.push(
-      `${donorsWithoutDonorType.length} donant(s) sense tipus (F/J): ${examples}${suffix}`
-    );
+    // Si té errors → excloure, si no → afegir a vàlids
+    if (reasons.length > 0) {
+      excluded.push(`"${donorName}" (${reasons.join('; ')})`);
+    } else {
+      validatedDonors.push({ row, nif: nifResult.value });
+    }
   }
 
   // ───────────────────────────────────────────────────────────────────────────
-  // SI HI HA ERRORS → NO GENERAR
+  // SI 0 DONANTS VÀLIDS → ERROR
   // ───────────────────────────────────────────────────────────────────────────
 
-  if (errors.length > 0) {
-    return { content: '', errors };
+  if (validatedDonors.length === 0) {
+    return {
+      content: '',
+      errors: ['Cap donant vàlid per exportar'],
+      excluded,
+      includedCount: 0,
+      excludedCount: excluded.length,
+    };
   }
 
   // ───────────────────────────────────────────────────────────────────────────
-  // GENERAR FITXER
+  // GENERAR FITXER (NOMÉS AMB DONANTS VÀLIDS)
   // ───────────────────────────────────────────────────────────────────────────
 
   const lines: string[] = [];
 
-  // Calcular totals
+  // Calcular totals (només dels vàlids)
   const donorCount = validatedDonors.length;
   const totalAmount = validatedDonors.reduce((sum, d) => sum + d.row.totalAmount, 0);
 
@@ -435,5 +434,11 @@ export function generateModel182AEATFile(
   // Unir amb CRLF
   const content = lines.join(CRLF) + CRLF;
 
-  return { content, errors: [] };
+  return {
+    content,
+    errors: [],
+    excluded,
+    includedCount: validatedDonors.length,
+    excludedCount: excluded.length,
+  };
 }

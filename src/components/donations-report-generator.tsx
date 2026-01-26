@@ -459,6 +459,11 @@ export function DonationsReportGenerator() {
   /**
    * Export format AEAT oficial (fitxer .txt de longitud fixa)
    * Per a "Presentació mitjançant fitxer" a la Seu Electrònica
+   *
+   * Comportament:
+   * - Errors d'organització → bloquejants
+   * - Errors de donants → exclusions (es genera fitxer amb els vàlids)
+   * - Si 0 donants vàlids → error
    */
   const handleExportAEAT = () => {
     if (reportData.length === 0) {
@@ -487,7 +492,7 @@ export function DonationsReportGenerator() {
     // Generar fitxer AEAT
     const result = generateModel182AEATFile(organization, aeatReportData, parseInt(selectedYear, 10));
 
-    // Si hi ha errors de validació → toast destructiu i no generar
+    // 1. Errors d'organització o cap donant vàlid → bloquejants
     if (result.errors.length > 0) {
       toast({
         variant: 'destructive',
@@ -504,7 +509,19 @@ export function DonationsReportGenerator() {
       return;
     }
 
-    // Codificar a ISO-8859-1 (Latin-1)
+    // 2. Hi ha donants exclosos → avís informatiu (no bloquejant)
+    if (result.excludedCount > 0) {
+      const examples = result.excluded.slice(0, 3).map(ex => `• ${ex}`).join('\n');
+      const suffix = result.excludedCount > 3 ? '\n...' : '';
+      toast({
+        variant: 'default',
+        title: t.reports.exportAEATExcludedTitle(result.excludedCount),
+        description: `${t.reports.exportAEATExcludedDesc(result.includedCount, result.excludedCount)}\n${examples}${suffix}`,
+        duration: 8000,
+      });
+    }
+
+    // 3. Codificar a ISO-8859-1 (Latin-1)
     const encoded = encodeLatin1(result.content);
     if (encoded.error) {
       toast({
@@ -515,7 +532,7 @@ export function DonationsReportGenerator() {
       return;
     }
 
-    // Crear Blob i descarregar
+    // 4. Crear Blob i descarregar (amb els donants vàlids)
     const blob = new Blob([encoded.bytes], { type: 'application/octet-stream' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -526,7 +543,10 @@ export function DonationsReportGenerator() {
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
 
-    toast({ title: t.reports.exportComplete, description: t.reports.exportAEATTooltip });
+    // Si no hi havia exclosos, mostrar toast d'èxit normal
+    if (result.excludedCount === 0) {
+      toast({ title: t.reports.exportComplete, description: t.reports.exportAEATTooltip });
+    }
   };
 
 

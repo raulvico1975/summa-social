@@ -1333,6 +1333,11 @@ export const fr = {
     exportAEATTooltip: "Fichier .txt pour télécharger sur le portail fiscal AEAT (présentation par fichier).",
     exportAEATMissingData: "Données manquantes pour l'export AEAT",
     exportAEATEncodingError: "Erreur d'encodage ISO-8859-1",
+    exportAEATExcludedTitle: (count: number) => `${count} donateur${count > 1 ? 's' : ''} exclu${count > 1 ? 's' : ''} de l'export`,
+    exportAEATExcludedDesc: (included: number, excluded: number) =>
+      `Le fichier contient ${included} donateur${included > 1 ? 's' : ''}. ${excluded} ${excluded > 1 ? 'ont' : 'a'} été exclu${excluded > 1 ? 's' : ''} pour données incomplètes.`,
+    exportAEATZeroValid: "Aucun donateur valide à exporter",
+    exportAEATZeroValidDesc: "Tous les donateurs ont des données incomplètes (NIF, CP ou type). Corrigez-les avant d'exporter.",
     exportCsv: "Exporter en CSV",
     donorName: "Nom du donateur",
     donorTaxId: "N° fiscal",
