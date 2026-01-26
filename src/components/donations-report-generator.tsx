@@ -24,7 +24,15 @@ import {
   AlertDescription,
   AlertTitle,
 } from '@/components/ui/alert';
-import { Download, Loader2, Heart, Undo2, User, MoreVertical } from 'lucide-react';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import { Download, Loader2, Heart, Undo2, User, MoreVertical, AlertTriangle } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import {
   Tooltip,
@@ -36,7 +44,7 @@ import type { Donor, Transaction, AnyContact } from '@/lib/data';
 import { formatCurrencyEU, normalizeTaxId, removeAccents } from '@/lib/normalize';
 import { useToast } from '@/hooks/use-toast';
 import * as XLSX from 'xlsx';
-import { generateModel182AEATFile, encodeLatin1 } from '@/lib/model182-aeat';
+import { generateModel182AEATFile, encodeLatin1, type AEATExcludedDonor } from '@/lib/model182-aeat';
 import { useCollection, useFirebase, useMemoFirebase } from '@/firebase';
 import { collection } from 'firebase/firestore';
 import { useTranslations } from '@/i18n';
@@ -184,6 +192,17 @@ export function DonationsReportGenerator() {
   const [selectedYear, setSelectedYear] = React.useState<string>(String(new Date().getFullYear()));
   const [isLoading, setIsLoading] = React.useState(false);
   const { toast } = useToast();
+
+  // ─────────────────────────────────────────────────────────────────────────────
+  // STATE PER DIALOG D'EXCLOSOS AEAT
+  // ─────────────────────────────────────────────────────────────────────────────
+  const [aeatExcludedDialogOpen, setAeatExcludedDialogOpen] = React.useState(false);
+  const [aeatPendingExport, setAeatPendingExport] = React.useState<{
+    content: string;
+    excluded: AEATExcludedDonor[];
+    includedCount: number;
+    excludedCount: number;
+  } | null>(null);
 
   // HOTFIX: Filtre client-side tolerant (inclou null, undefined, "")
   const activeTxs = React.useMemo(() => {
@@ -462,7 +481,7 @@ export function DonationsReportGenerator() {
    *
    * Comportament:
    * - Errors d'organització → bloquejants
-   * - Errors de donants → exclusions (es genera fitxer amb els vàlids)
+   * - Errors de donants → Dialog amb opcions (CSV exclosos, exportar igualment, cancel·lar)
    * - Si 0 donants vàlids → error
    */
   const handleExportAEAT = () => {
@@ -509,20 +528,28 @@ export function DonationsReportGenerator() {
       return;
     }
 
-    // 2. Hi ha donants exclosos → avís informatiu (no bloquejant)
+    // 2. Hi ha donants exclosos → mostrar Dialog amb opcions
     if (result.excludedCount > 0) {
-      const examples = result.excluded.slice(0, 3).map(ex => `• ${ex}`).join('\n');
-      const suffix = result.excludedCount > 3 ? '\n...' : '';
-      toast({
-        variant: 'default',
-        title: t.reports.exportAEATExcludedTitle(result.excludedCount),
-        description: `${t.reports.exportAEATExcludedDesc(result.includedCount, result.excludedCount)}\n${examples}${suffix}`,
-        duration: 8000,
+      setAeatPendingExport({
+        content: result.content,
+        excluded: result.excluded,
+        includedCount: result.includedCount,
+        excludedCount: result.excludedCount,
       });
+      setAeatExcludedDialogOpen(true);
+      return;
     }
 
-    // 3. Codificar a ISO-8859-1 (Latin-1)
-    const encoded = encodeLatin1(result.content);
+    // 3. Cap exclòs → exportar directament
+    downloadAEATFile(result.content);
+    toast({ title: t.reports.exportComplete, description: t.reports.exportAEATTooltip });
+  };
+
+  /**
+   * Helper per descarregar el fitxer AEAT (codificat a Latin-1)
+   */
+  const downloadAEATFile = (content: string) => {
+    const encoded = encodeLatin1(content);
     if (encoded.error) {
       toast({
         variant: 'destructive',
@@ -532,7 +559,6 @@ export function DonationsReportGenerator() {
       return;
     }
 
-    // 4. Crear Blob i descarregar (amb els donants vàlids)
     const blob = new Blob([encoded.bytes], { type: 'application/octet-stream' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -542,11 +568,66 @@ export function DonationsReportGenerator() {
     a.click();
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
+  };
 
-    // Si no hi havia exclosos, mostrar toast d'èxit normal
-    if (result.excludedCount === 0) {
-      toast({ title: t.reports.exportComplete, description: t.reports.exportAEATTooltip });
-    }
+  /**
+   * Helper per escapar valors CSV
+   */
+  const toCsvValue = (v: string | undefined | null): string => {
+    const s = (v ?? '').toString();
+    return `"${s.replace(/"/g, '""')}"`;
+  };
+
+  /**
+   * Descarregar CSV d'exclosos
+   */
+  const handleDownloadExcludedCsv = () => {
+    if (!aeatPendingExport) return;
+
+    // Crear mapa de donants per buscar email/telèfon si existeix
+    const donorMap = new Map(donors.map(d => [d.taxId?.toLowerCase().trim(), d]));
+
+    const headers = ['name', 'taxId', 'issue', 'email', 'phone'];
+    const rows = aeatPendingExport.excluded.map(exc => {
+      // Buscar email/telèfon al donant original (si existeix)
+      const donor = donorMap.get(exc.taxIdRaw?.toLowerCase().trim());
+      return [
+        toCsvValue(exc.name),
+        toCsvValue(exc.taxIdRaw),
+        toCsvValue(exc.reasons.join('; ')),
+        toCsvValue(donor?.email ?? ''),
+        toCsvValue(donor?.phone ?? ''),
+      ].join(',');
+    });
+
+    const csvContent = [headers.join(','), ...rows].join('\n');
+    const blob = new Blob(['\uFEFF' + csvContent], { type: 'text/csv;charset=utf-8' }); // BOM per Excel
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `model182_exclosos_${selectedYear}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+
+    toast({ title: t.reports.exportComplete, description: t.reports.exportExcludedCsvDesc });
+  };
+
+  /**
+   * Confirmar exportació AEAT (després del Dialog)
+   */
+  const handleConfirmAEATExport = () => {
+    if (!aeatPendingExport) return;
+
+    downloadAEATFile(aeatPendingExport.content);
+    setAeatExcludedDialogOpen(false);
+    setAeatPendingExport(null);
+
+    toast({
+      title: t.reports.exportComplete,
+      description: t.reports.exportAEATExcludedDesc(aeatPendingExport.includedCount, aeatPendingExport.excludedCount),
+    });
   };
 
 
@@ -784,6 +865,81 @@ export function DonationsReportGenerator() {
               </p>
             )}
         </CardContent>
+
+        {/* ═══════════════════════════════════════════════════════════════════════
+            DIALOG EXCLOSOS AEAT
+            ═══════════════════════════════════════════════════════════════════════ */}
+        <Dialog open={aeatExcludedDialogOpen} onOpenChange={setAeatExcludedDialogOpen}>
+          <DialogContent className="sm:max-w-lg">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <AlertTriangle className="h-5 w-5 text-amber-500" />
+                {t.reports.aeatExcludedDialogTitle}
+              </DialogTitle>
+              <DialogDescription>
+                {aeatPendingExport && t.reports.aeatExcludedDialogDesc(
+                  aeatPendingExport.includedCount,
+                  aeatPendingExport.excludedCount
+                )}
+              </DialogDescription>
+            </DialogHeader>
+
+            {/* Llista d'exclosos (màxim 5) */}
+            {aeatPendingExport && aeatPendingExport.excludedCount > 0 && (
+              <div className="max-h-48 overflow-y-auto border rounded-md p-2 bg-muted/30">
+                <ul className="space-y-1 text-sm">
+                  {aeatPendingExport.excluded.slice(0, 5).map((exc, i) => (
+                    <li key={i} className="text-muted-foreground">
+                      <span className="font-medium text-foreground">{exc.name}</span>
+                      {' — '}
+                      {exc.taxIdRaw || t.reports.aeatExcludedNoNif}
+                      {' — '}
+                      {exc.reasons.join('; ')}
+                    </li>
+                  ))}
+                  {aeatPendingExport.excludedCount > 5 && (
+                    <li className="text-muted-foreground italic">
+                      {t.reports.aeatExcludedPreviewMore(aeatPendingExport.excludedCount - 5)}
+                    </li>
+                  )}
+                </ul>
+              </div>
+            )}
+
+            {/* Help text */}
+            <p className="text-sm text-muted-foreground">
+              {t.reports.aeatExcludedHelp}
+            </p>
+
+            <DialogFooter className="flex-col sm:flex-row gap-2">
+              <Button
+                variant="outline"
+                onClick={handleDownloadExcludedCsv}
+                className="w-full sm:w-auto"
+              >
+                <Download className="mr-2 h-4 w-4" />
+                {t.reports.downloadExcludedCsv}
+              </Button>
+              <Button
+                variant="default"
+                onClick={handleConfirmAEATExport}
+                className="w-full sm:w-auto"
+              >
+                {t.reports.exportAnyway}
+              </Button>
+              <Button
+                variant="ghost"
+                onClick={() => {
+                  setAeatExcludedDialogOpen(false);
+                  setAeatPendingExport(null);
+                }}
+                className="w-full sm:w-auto"
+              >
+                {t.reports.aeatCancelToFix}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </Card>
   );
 }
