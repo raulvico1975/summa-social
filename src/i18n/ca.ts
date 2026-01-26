@@ -1338,6 +1338,12 @@ export const ca = {
       `El fitxer conté ${included} donant${included > 1 ? 's' : ''}. ${excluded} ${excluded > 1 ? 'han' : 'ha'} estat exclòs${excluded > 1 ? 'os' : ''} per dades incompletes.`,
     exportAEATZeroValid: "Cap donant vàlid per exportar",
     exportAEATZeroValidDesc: "Tots els donants tenen dades incompletes (NIF, CP o tipus). Corregeix-les abans d'exportar.",
+    aeatExcludedDialogTitle: "Hi ha donants exclosos",
+    aeatExcludedDialogDesc: (included: number, excluded: number) =>
+      `El fitxer AEAT contindrà ${included} donant${included > 1 ? 's' : ''}. ${excluded} donant${excluded > 1 ? 's' : ''} ${excluded > 1 ? 'seran' : 'serà'} exclòs${excluded > 1 ? 'os' : ''} per dades incompletes.`,
+    downloadExcludedCsv: "Descarregar exclosos (CSV)",
+    exportExcludedCsvDesc: "S'ha descarregat el CSV amb els donants exclosos.",
+    exportAnyway: "Exportar igualment",
     exportCsv: "Exportar a CSV",
     donorName: "Nom del Donant",
     donorTaxId: "DNI/CIF",

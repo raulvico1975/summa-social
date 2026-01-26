@@ -24,12 +24,22 @@ export interface DonationReportRow {
   twoYearsAgoAmount?: number;
 }
 
+/**
+ * Donant exclòs de l'export AEAT amb dades estructurades
+ * (permet generar CSV d'exclosos amb informació útil)
+ */
+export interface AEATExcludedDonor {
+  name: string;
+  taxIdRaw: string;      // NIF original (abans de netejar)
+  reasons: string[];     // ["NIF buit", "CP incomplet", ...]
+}
+
 export interface AEATExportResult {
   content: string;
-  errors: string[];           // Errors bloquejants (org o cap donant vàlid)
-  excluded: string[];         // Donants exclosos (informatiu): "Nom" (motiu1; motiu2)
-  includedCount: number;      // Donants inclosos al fitxer
-  excludedCount: number;      // Donants exclosos
+  errors: string[];              // Errors bloquejants (org o cap donant vàlid)
+  excluded: AEATExcludedDonor[]; // Donants exclosos (estructurat)
+  includedCount: number;         // Donants inclosos al fitxer
+  excludedCount: number;         // Donants exclosos
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -375,7 +385,7 @@ export function generateModel182AEATFile(
   year: number
 ): AEATExportResult {
   const errors: string[] = [];
-  const excluded: string[] = [];
+  const excluded: AEATExcludedDonor[] = [];
 
   // ───────────────────────────────────────────────────────────────────────────
   // VALIDACIÓ ORGANITZACIÓ (BLOQUEJANT)
@@ -434,7 +444,11 @@ export function generateModel182AEATFile(
 
     // Si té errors → excloure, si no → afegir a vàlids
     if (reasons.length > 0) {
-      excluded.push(`"${donorName}" (${reasons.join('; ')})`);
+      excluded.push({
+        name: donorName,
+        taxIdRaw: row.donor.taxId ?? '',
+        reasons,
+      });
     } else {
       validatedDonors.push({ row, nif: nifResult.value });
     }

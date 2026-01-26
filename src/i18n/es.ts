@@ -1370,6 +1370,12 @@ export const es = {
       `El fichero contiene ${included} donante${included > 1 ? 's' : ''}. ${excluded} ${excluded > 1 ? 'han' : 'ha'} sido excluido${excluded > 1 ? 's' : ''} por datos incompletos.`,
     exportAEATZeroValid: "Ningún donante válido para exportar",
     exportAEATZeroValidDesc: "Todos los donantes tienen datos incompletos (NIF, CP o tipo). Corrígelos antes de exportar.",
+    aeatExcludedDialogTitle: "Hay donantes excluidos",
+    aeatExcludedDialogDesc: (included: number, excluded: number) =>
+      `El fichero AEAT contendrá ${included} donante${included > 1 ? 's' : ''}. ${excluded} donante${excluded > 1 ? 's' : ''} ${excluded > 1 ? 'serán' : 'será'} excluido${excluded > 1 ? 's' : ''} por datos incompletos.`,
+    downloadExcludedCsv: "Descargar excluidos (CSV)",
+    exportExcludedCsvDesc: "Se ha descargado el CSV con los donantes excluidos.",
+    exportAnyway: "Exportar de todos modos",
     exportCsv: "Exportar a CSV",
     donorName: "Nombre del Donante",
     donorTaxId: "DNI/CIF",
