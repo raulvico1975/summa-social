@@ -1,107 +1,128 @@
 {
-  "generatedAt": "2026-01-21T12:46:30.483Z",
+  "generatedAt": "2026-01-19T07:59:24.669Z",
   "range": "last50",
   "drafts": [
     {
-      "id": "draft-20260121-general-1",
-      "title": "Noves funcionalitats generals",
-      "description": "add server guardrail to reject reprocessing. add /api/remittances/in/process endpoint.",
+      "id": "draft-20260119-moviments-1",
+      "title": "Correccions en moviments",
+      "description": "simplify pending docs UI (collapse tabs, move actions to overflow menu) i 3 millores més.",
       "link": null,
       "evidence": [
-        "feat(remittances): add server guardrail to reject reprocessing",
-        "feat(api): add /api/remittances/in/process endpoint"
+        "fix(mobile): simplify pending docs UI (collapse tabs, move actions to overflow menu)",
+        "fix(mobile): simplify liquidations UI (collapse tabs and move actions to overflow menu)",
+        "fix(moviments): prevent crash (FileText) + cn import + sepaGenerated mapping",
+        "fix(ui): remove horizontal overflow patterns and add responsive layouts"
       ]
     },
     {
-      "id": "draft-20260121-general-2",
-      "title": "Correccions generals",
-      "description": "add legacy fallback and post-check to /undo endpoint. inline functions for contacts to avoid evaluation issues. inline functions for contacts to avoid evaluation issues.",
+      "id": "draft-20260119-moviments-2",
+      "title": "Millores de rendiment en moviments",
+      "description": "paginate transactions list (limit 200 + load more)",
       "link": null,
       "evidence": [
-        "fix(remittances): add legacy fallback and post-check to /undo endpoint",
-        "fix(rules): inline functions for contacts to avoid evaluation issues",
-        "fix(rules): inline functions for contacts to avoid evaluation issues"
+        "perf(movimientos): paginate transactions list (limit 200 + load more)"
       ]
     },
     {
-      "id": "draft-20260121-ui-3",
-      "title": "Correccions d'interfície",
-      "description": "exclude OUT remittances from consistency checks i 11 millores més.",
-      "link": null,
-      "evidence": [
-        "fix(remittances): exclude OUT remittances from consistency checks",
-        "fix(remittances): filter archived transactions in detail modal",
-        "fix(182): exclude archived transactions from Model 182",
-        "fix(certificates): use institutional template for annual cert in donor drawer",
-        "fix(certificates): use institutional template for annual cert in donor drawer",
-        "fix(certificates): align preview dialog with actual PDF output",
-        "fix(certificates): align preview dialog with actual PDF output",
-        "fix(mobile): simplify reports UI (stack controls, remove tables, use list/empty states)",
-        "fix(certificates): improve annual donation certificate copy (ES/CA)",
-        "fix(closing-bundle): robust document URL reading (document/documentUrl/document.url)",
-        "fix(reports): closing bundle uses ledger-only + human manifest + debug sheet",
-        "fix(donors): add guardrail to prevent Firestore queries before org context ready"
-      ]
-    },
-    {
-      "id": "draft-20260121-ui-4",
-      "title": "Noves funcionalitats d'interfície",
-      "description": "add sanitize endpoint for legacy data recovery. add donor search in IBAN assignment selector. add closing bundle export (ZIP with transactions + documents).",
-      "link": null,
-      "evidence": [
-        "feat(remittances): add sanitize endpoint for legacy data recovery",
-        "feat(remittances): add donor search in IBAN assignment selector",
-        "feat(reports): add closing bundle export (ZIP with transactions + documents)"
-      ]
-    },
-    {
-      "id": "draft-20260121-informes-5",
-      "title": "Millores internes en informes",
-      "description": "eliminar flux Reparar — recuperació via Desfer → Processar",
-      "link": null,
-      "evidence": [
-        "refactor(remittances): eliminar flux Reparar — recuperació via Desfer → Processar"
-      ]
-    },
-    {
-      "id": "draft-20260121-informes-6",
-      "title": "Noves funcionalitats en informes",
-      "description": "complete UI guardrails, repair flow and QA docs (5b) i 3 millores més.",
-      "link": null,
-      "evidence": [
-        "feat(remittances): complete UI guardrails, repair flow and QA docs (5b)",
-        "feat(api): add /api/remittances/in/repair endpoint (purge + reprocess)",
-        "feat(api): add /api/remittances/in/undo endpoint + shared helpers",
-        "feat(fiscal): add remittance invariants with SHA-256 hash"
-      ]
-    },
-    {
-      "id": "draft-20260121-informes-7",
+      "id": "draft-20260119-informes-3",
       "title": "Correccions en informes",
-      "description": "exclude archivedAt from fiscal calculations (P0). release tickets on delete + auto-repair orphaned tickets.",
+      "description": "release tickets on delete + auto-repair orphaned tickets",
       "link": null,
       "evidence": [
-        "fix(fiscal): exclude archivedAt from fiscal calculations (P0)",
         "fix(expense-reports): release tickets on delete + auto-repair orphaned tickets"
       ]
     },
     {
-      "id": "draft-20260121-moviments-8",
-      "title": "Correccions en moviments",
-      "description": "simplify pending docs UI (collapse tabs, move actions to overflow menu). simplify liquidations UI (collapse tabs and move actions to overflow menu).",
+      "id": "draft-20260119-ui-4",
+      "title": "Correccions d'interfície",
+      "description": "simplify reports UI (stack controls, remove tables, use list/empty states) i 6 millores més.",
       "link": null,
       "evidence": [
-        "fix(mobile): simplify pending docs UI (collapse tabs, move actions to overflow menu)",
-        "fix(mobile): simplify liquidations UI (collapse tabs and move actions to overflow menu)"
+        "fix(mobile): simplify reports UI (stack controls, remove tables, use list/empty states)",
+        "fix(closing-bundle): robust document URL reading (document/documentUrl/document.url)",
+        "fix(reports): closing bundle uses ledger-only + human manifest + debug sheet",
+        "fix(donors): add guardrail to prevent Firestore queries before org context ready",
+        "fix(configuracion): guard missing sepaCollection creditorId i18n",
+        "fix(configuracion): guard missing sepaCollection creditorId i18n",
+        "fix(admin): improve incidents modal for narrow screens + add build tracking"
       ]
     },
     {
-      "id": "draft-20260121-ajuda-9",
-      "title": "Noves funcionalitats en ajuda",
-      "description": "inline help editor (P2)",
+      "id": "draft-20260119-ui-5",
+      "title": "Noves funcionalitats d'interfície",
+      "description": "add closing bundle export (ZIP with transactions + documents)",
       "link": null,
       "evidence": [
-        "feat(admin): inline help editor (P2)"
+        "feat(reports): add closing bundle export (ZIP with transactions + documents)"
+      ]
+    },
+    {
+      "id": "draft-20260119-ui-6",
+      "title": "Millores de rendiment d'interfície",
+      "description": "increase initial page size to 500. paginate donors list (limit 200 + load more).",
+      "link": null,
+      "evidence": [
+        "perf(donors): increase initial page size to 500",
+        "perf(donors): paginate donors list (limit 200 + load more)"
+      ]
+    },
+    {
+      "id": "draft-20260119-general-7",
+      "title": "Correccions generals",
+      "description": "inline functions for contacts to avoid evaluation issues. inline functions for contacts to avoid evaluation issues. remove cloud backup warning banner from dashboard.",
+      "link": null,
+      "evidence": [
+        "fix(rules): inline functions for contacts to avoid evaluation issues",
+        "fix(rules): inline functions for contacts to avoid evaluation issues",
+        "fix(backups): remove cloud backup warning banner from dashboard"
+      ]
+    },
+    {
+      "id": "draft-20260119-ajuda-8",
+      "title": "Noves funcionalitats en ajuda",
+      "description": "inline help editor (P2). add creditorId (ICS) field for SEPA pain.008.",
+      "link": null,
+      "evidence": [
+        "feat(admin): inline help editor (P2)",
+        "feat(bank-accounts): add creditorId (ICS) field for SEPA pain.008"
+      ]
+    },
+    {
+      "id": "draft-20260119-i18n-9",
+      "title": "Correccions de traduccions",
+      "description": "update howWeWork copy with improved messaging. remove auto-toast for product updates, reduce noisy logs.",
+      "link": null,
+      "evidence": [
+        "fix(landing): update howWeWork copy with improved messaging",
+        "fix(ui): remove auto-toast for product updates, reduce noisy logs"
+      ]
+    },
+    {
+      "id": "draft-20260119-i18n-10",
+      "title": "Noves funcionalitats de traduccions",
+      "description": "expand \"Com treballem\" section with full editorial content. add \"Com treballem / Cómo trabajamos\" section.",
+      "link": null,
+      "evidence": [
+        "feat(landing): expand \"Com treballem\" section with full editorial content",
+        "feat(landing): add \"Com treballem / Cómo trabajamos\" section"
+      ]
+    },
+    {
+      "id": "draft-20260119-projectes-11",
+      "title": "Correccions en mòdul projectes",
+      "description": "add sr-only DialogDescription to dialogs",
+      "link": null,
+      "evidence": [
+        "fix(a11y): add sr-only DialogDescription to dialogs"
+      ]
+    },
+    {
+      "id": "draft-20260119-configuracio-12",
+      "title": "Correccions en configuració",
+      "description": "hide cloud backups section completely from org settings",
+      "link": null,
+      "evidence": [
+        "fix(backups): hide cloud backups section completely from org settings"
       ]
     }
   ]
