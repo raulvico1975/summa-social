@@ -580,6 +580,41 @@ describe('generateModel182AEATFile', () => {
     const exercici = lines[0].substring(4, 8);
     assert.strictEqual(exercici, '2024');
   });
+
+  // ─────────────────────────────────────────────────────────────────────────────
+  // JUSTIFICANT - Format 182 + any + 6 dígits aleatoris (error 1011 AEAT)
+  // ─────────────────────────────────────────────────────────────────────────────
+
+  it('justificant NO és tot zeros (error 1011 AEAT)', () => {
+    const result = generateModel182AEATFile(validOrganization, validDonors, 2024);
+    assert.strictEqual(result.errors.length, 0);
+
+    const lines = result.content.split('\r\n').filter((l) => l.length > 0);
+    // Posicions 108-120 (1-indexed) = índexs 107-119 (0-indexed)
+    const justificant = lines[0].substring(107, 120);
+    assert.notStrictEqual(justificant, '0000000000000', 'El justificant no pot ser tot zeros');
+  });
+
+  it('justificant comença per "182" i té 13 caràcters', () => {
+    const result = generateModel182AEATFile(validOrganization, validDonors, 2024);
+    assert.strictEqual(result.errors.length, 0);
+
+    const lines = result.content.split('\r\n').filter((l) => l.length > 0);
+    const justificant = lines[0].substring(107, 120);
+    assert.strictEqual(justificant.length, 13);
+    assert.ok(justificant.startsWith('182'), `El justificant ha de començar per "182", rebut: ${justificant}`);
+  });
+
+  it("justificant conté l'any d'exercici (posicions 4-7)", () => {
+    const result = generateModel182AEATFile(validOrganization, validDonors, 2024);
+    assert.strictEqual(result.errors.length, 0);
+
+    const lines = result.content.split('\r\n').filter((l) => l.length > 0);
+    const justificant = lines[0].substring(107, 120);
+    // Format: 182 + YYYY + 6 dígits → l'any és a posicions 3-6 (0-indexed dins justificant)
+    const anyJustificant = justificant.substring(3, 7);
+    assert.strictEqual(anyJustificant, '2024');
+  });
 });
 
 // ═══════════════════════════════════════════════════════════════════════════════

@@ -235,7 +235,8 @@ function generateType1Record(
   year: number,
   donorCount: number,
   totalAmount: number,
-  orgNIF: string
+  orgNIF: string,
+  justificante13: string
 ): string {
   const builder = new RecordBuilder();
 
@@ -248,7 +249,7 @@ function generateType1Record(
     .setRange(58, 'T') // Tipus suport (Telemàtic)
     .setRange(59, formatPhone(org.phone)) // Telèfon
     .setRange(68, sanitizeAlpha(invertName(org.signatoryName), 40)) // Cognoms i nom contacte
-    .setRange(108, '0000000000000') // Nº justificant (zeros, AEAT l'assigna)
+    .setRange(108, justificante13) // Nº justificant (182 + any + 6 dígits aleatoris)
     .setRange(121, ' ') // Complementària
     .setRange(122, ' ') // Substitutiva
     .setRange(123, '0000000000000') // Justificant anterior
@@ -423,8 +424,12 @@ export function generateModel182AEATFile(
   const donorCount = validatedDonors.length;
   const totalAmount = validatedDonors.reduce((sum, d) => sum + d.row.totalAmount, 0);
 
+  // Generar justificant: 182 + any (4 dígits) + 6 dígits aleatoris = 13 caràcters
+  const rand6 = Math.floor(Math.random() * 1_000_000).toString().padStart(6, '0');
+  const justificante13 = `182${padZeros(year, 4)}${rand6}`;
+
   // Registre Tipus 1 (Declarant)
-  lines.push(generateType1Record(organization, year, donorCount, totalAmount, orgNIFResult.value));
+  lines.push(generateType1Record(organization, year, donorCount, totalAmount, orgNIFResult.value, justificante13));
 
   // Registres Tipus 2 (Declarats)
   for (const { row, nif } of validatedDonors) {
