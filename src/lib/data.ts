@@ -193,6 +193,22 @@ export type Transaction = {
    */
   bankAccountId?: string | null;
 
+  /**
+   * Saldo bancari després d'aquesta transacció (segons extracte del banc)
+   * Permet validar si un període està "quadrat"
+   * null = sense dades de saldo (extracte sense columna saldo)
+   */
+  bankBalanceAfter?: number | null;
+
+  /**
+   * Ordre de la transacció dins l'extracte d'importació
+   * Preserva l'ordre original del fitxer (el saldo del banc depèn d'aquest ordre, no de la data)
+   * null = transaccions antigues sense seqüència
+   * IMPORTANT: Sense importRunId explícit, només garantim coherència
+   * dins la seqüència contínua de importSequence del mateix compte.
+   */
+  importSequence?: number | null;
+
   // ═══════════════════════════════════════════════════════════════════════════
   // CAMPS PER SOFT-DELETE (TRANSACCIONS FISCALS)
   // ═══════════════════════════════════════════════════════════════════════════

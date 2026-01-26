@@ -53,6 +53,7 @@ import {
   Undo2,
   Download,
   X,
+  Info,
 } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import type { Transaction, Category, Project, AnyContact, Donor, Supplier, Employee, ContactType } from '@/lib/data';
@@ -834,6 +835,78 @@ export function TransactionsTable({ initialDateFilter = null }: TransactionsTabl
     };
   }, [filteredTransactions, transactions, hasActiveFilter]);
 
+  // Tolerància per verificació de saldos (mateixa que a l'importador)
+  const BALANCE_EPSILON = 0.02;
+
+  /**
+   * Verificació de saldo bancari per al període filtrat
+   * Només es mostra si:
+   * - Hi ha un compte bancari específic seleccionat (no '__all__')
+   * - Hi ha transaccions visibles
+   * - Hi ha dades de saldo (bankBalanceAfter) disponibles
+   */
+  const balanceVerification = React.useMemo(() => {
+    if (!filteredTransactions || filteredTransactions.length === 0) return null;
+    if (bankAccountFilter === '__all__') return null; // Només per compte específic
+
+    // Ordenar per importSequence (ordre del fitxer), amb fallback a date
+    const sortedTx = [...filteredTransactions].sort((a, b) => {
+      if (a.importSequence != null && b.importSequence != null) {
+        return a.importSequence - b.importSequence;
+      }
+      return new Date(a.date).getTime() - new Date(b.date).getTime();
+    });
+
+    const firstVisible = sortedTx[0];
+    const lastVisible = sortedTx[sortedTx.length - 1];
+
+    // Saldo final: bankBalanceAfter de l'últim moviment visible
+    const finalBalance = lastVisible.bankBalanceAfter ?? null;
+
+    // Saldo inicial: buscar el moviment anterior al primer visible
+    // IMPORTANT: Sense importRunId explícit, només garantim coherència
+    // dins la seqüència contínua de importSequence del mateix compte.
+    let initialBalance: number | null = null;
+    if (transactions && firstVisible.importSequence != null && firstVisible.importSequence > 0) {
+      const sameAccountTx = transactions
+        .filter(tx =>
+          tx.bankAccountId === bankAccountFilter &&
+          tx.importSequence != null &&
+          tx.importSequence < firstVisible.importSequence!
+        )
+        .sort((a, b) => b.importSequence! - a.importSequence!); // Més recent primer
+
+      if (sameAccountTx.length > 0 && sameAccountTx[0].bankBalanceAfter != null) {
+        initialBalance = sameAccountTx[0].bankBalanceAfter;
+      }
+    }
+
+    // Variació calculada
+    const deltaMovements = sortedTx.reduce((sum, tx) => sum + tx.amount, 0);
+
+    // Verificar continuïtat: totes les files han de tenir bankBalanceAfter
+    const hasContinuousBalance = sortedTx.every(tx => tx.bankBalanceAfter != null);
+
+    // Verificació
+    const hasBothBalances = initialBalance !== null && finalBalance !== null;
+    const deltaBank = hasBothBalances ? finalBalance! - initialBalance! : null;
+
+    // Només "Quadrat" si tenim saldos i continuïtat
+    const canAssertBalanced = hasBothBalances && hasContinuousBalance;
+    const isBalanced = canAssertBalanced ? Math.abs(deltaBank! - deltaMovements) <= BALANCE_EPSILON : null;
+    const discrepancy = canAssertBalanced ? deltaBank! - deltaMovements : null;
+
+    return {
+      initialBalance,
+      finalBalance,
+      deltaMovements,
+      isBalanced,
+      discrepancy,
+      hasData: hasBothBalances,
+      hasContinuousBalance,
+    };
+  }, [filteredTransactions, transactions, bankAccountFilter]);
+
   const clearAllFilters = React.useCallback(() => {
     setTableFilter('all');
     setSearchQuery('');
@@ -1524,6 +1597,56 @@ export function TransactionsTable({ initialDateFilter = null }: TransactionsTabl
               </TooltipTrigger>
               <TooltipContent>{t.movements.table.clearFilters}</TooltipContent>
             </Tooltip>
+          </div>
+        </div>
+      )}
+
+      {/* ═══════════════════════════════════════════════════════════════════════
+          VERIFICACIÓ DE SALDO BANCARI
+          ═══════════════════════════════════════════════════════════════════════ */}
+      {balanceVerification && balanceVerification.hasData && (
+        <div className="mb-4 px-4 py-2 bg-blue-50 border border-blue-200 rounded-lg flex flex-col gap-1 md:flex-row md:items-center md:justify-between">
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm">
+            <span className="text-muted-foreground">
+              {t.movements.table.balanceCheck?.initialBalance ?? 'Saldo inicial (banc)'}:{' '}
+              <span className="font-medium">{formatCurrencyEU(balanceVerification.initialBalance)}</span>
+            </span>
+            <span className="hidden md:inline text-muted-foreground/50">→</span>
+            <span className="text-muted-foreground">
+              {t.movements.table.balanceCheck?.variation ?? 'Variació (moviments)'}:{' '}
+              <span className="font-medium">{formatCurrencyEU(balanceVerification.deltaMovements)}</span>
+            </span>
+            <span className="hidden md:inline text-muted-foreground/50">→</span>
+            <span className="text-muted-foreground">
+              {t.movements.table.balanceCheck?.finalBalance ?? 'Saldo final (banc)'}:{' '}
+              <span className="font-medium">{formatCurrencyEU(balanceVerification.finalBalance)}</span>
+            </span>
+          </div>
+          <div className="flex items-center gap-2">
+            {balanceVerification.isBalanced === true ? (
+              <span className="flex items-center gap-1 text-green-600 text-sm font-medium">
+                <Check className="h-4 w-4" />
+                {t.movements.table.balanceCheck?.balanced ?? 'Quadrat'}
+              </span>
+            ) : balanceVerification.isBalanced === false ? (
+              <span className="flex items-center gap-1 text-amber-600 text-sm font-medium">
+                <AlertTriangle className="h-4 w-4" />
+                {t.movements.table.balanceCheck?.discrepancy?.(formatCurrencyEU(balanceVerification.discrepancy!)) ?? `Desquadrament: ${formatCurrencyEU(balanceVerification.discrepancy!)}`}
+              </span>
+            ) : (
+              /* hasBothBalances però NO hasContinuousBalance → no afirmar res */
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <span className="flex items-center gap-1 text-muted-foreground text-sm cursor-help">
+                    <Info className="h-4 w-4" />
+                    {t.movements.table.balanceCheck?.incomplete ?? 'Saldo parcial'}
+                  </span>
+                </TooltipTrigger>
+                <TooltipContent>
+                  {t.movements.table.balanceCheck?.incompleteTooltip ?? 'El banc no declara saldo per totes les files del període. No es pot verificar el quadre.'}
+                </TooltipContent>
+              </Tooltip>
+            )}
           </div>
         </div>
       )}

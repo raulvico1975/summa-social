@@ -61,6 +61,45 @@ type ImportMode = 'append' | 'replace';
 // Firestore batch limit: max 50 operacions per batch
 const BATCH_LIMIT = 50;
 
+// Tolerància per validació de saldos bancaris (en euros)
+// Reutilitzada a validació d'importació i verificació UI
+const BALANCE_EPSILON = 0.02;
+
+/**
+ * Valida que els saldos siguin consistents entre files consecutives.
+ * IMPORTANT: Usa importSequence, NO date (el saldo depèn de l'ordre del fitxer)
+ * Invariant: |prevBalance + amount - currBalance| <= BALANCE_EPSILON
+ */
+function validateBalanceConsistency(
+  rows: Array<{ amount: number; bankBalanceAfter: number | null; importSequence: number; rowIndex: number }>
+): { valid: true } | { valid: false; error: string; rowIndex: number } {
+  // Ordenar per importSequence (ordre del fitxer)
+  const sorted = [...rows].sort((a, b) => a.importSequence - b.importSequence);
+
+  let prevBalance: number | null = null;
+
+  for (const row of sorted) {
+    if (row.bankBalanceAfter === null) continue;
+
+    if (prevBalance !== null) {
+      const expectedBalance = prevBalance + row.amount;
+      const diff = Math.abs(expectedBalance - row.bankBalanceAfter);
+
+      if (diff > BALANCE_EPSILON) {
+        return {
+          valid: false,
+          error: `Saldo anterior (${prevBalance.toFixed(2)}) + import (${row.amount.toFixed(2)}) = ${expectedBalance.toFixed(2)}, però el saldo declarat és ${row.bankBalanceAfter.toFixed(2)} (diferència: ${diff.toFixed(2)}€)`,
+          rowIndex: row.rowIndex
+        };
+      }
+    }
+
+    prevBalance = row.bankBalanceAfter;
+  }
+
+  return { valid: true };
+}
+
 /**
  * Divideix un array en chunks de mida màxima
  */
@@ -341,6 +380,11 @@ export function TransactionImporter({ existingTransactions }: TransactionImporte
         const dateIndex = findColumnIndex(header, ['fecha operación', 'fecha', 'data']);
         const conceptIndex = findColumnIndex(header, ['concepto', 'descripció', 'description']);
         const amountIndex = findColumnIndex(header, ['importe', 'import', 'amount', 'quantitat']);
+        // Detectar columna de saldo bancari (opcional)
+        const balanceIndex = findColumnIndex(header, [
+          'saldo', 'balance', 'running balance', 'saldo contable',
+          'saldo disponible', 'saldo consolidado'
+        ]);
 
         if (dateIndex === -1 || conceptIndex === -1 || amountIndex === -1) {
             const missing = [
@@ -351,11 +395,17 @@ export function TransactionImporter({ existingTransactions }: TransactionImporte
             throw new Error(t.importers.transaction.errors.requiredColumnsNotFound(missing));
         }
 
+        if (balanceIndex !== -1) {
+            log(`Columna de saldo detectada: "${header[balanceIndex]}"`);
+        }
+
         const dataRows = json.slice(headerRowIndex + 1);
-        const parsedData = dataRows.map((row: any) => ({
+        const parsedData = dataRows.map((row: any, index: number) => ({
             Fecha: row[dateIndex],
             Concepto: row[conceptIndex],
-            Importe: row[amountIndex]
+            Importe: row[amountIndex],
+            Saldo: balanceIndex !== -1 ? row[balanceIndex] : null,
+            _rowIndex: index,  // Preservar ordre del fitxer
         }));
 
         checkOverlapAndConfirm(parsedData, mode, bankAccountId, file.name);
@@ -509,6 +559,23 @@ export function TransactionImporter({ existingTransactions }: TransactionImporte
                 amountValue = amountValue.replace(/\./g, '').replace(',', '.');
             }
             const amount = parseFloat(amountValue);
+
+            // Parsejar saldo bancari (mateix format EU)
+            let balanceValue = row.Saldo || row.saldo || row.Balance || row.balance ||
+                               row['Saldo contable'] || row['Saldo disponible'];
+            let bankBalanceAfter: number | null = null;
+            if (balanceValue !== null && balanceValue !== undefined && balanceValue !== '') {
+                if (typeof balanceValue === 'string') {
+                    balanceValue = balanceValue.replace(/\./g, '').replace(',', '.');
+                }
+                const parsed = parseFloat(balanceValue);
+                if (!isNaN(parsed)) {
+                    bankBalanceAfter = parsed;
+                }
+            }
+
+            // Preservar ordre del fitxer (el saldo depèn d'aquest ordre, no de la data)
+            const importSequence = row._rowIndex ?? index;
             
             if (!dateValue || !descriptionValue || isNaN(amount)) {
                 log(`Fila ${index + 2} inválida o vacía, saltando: ${JSON.stringify(row)}`);
@@ -556,10 +623,37 @@ export function TransactionImporter({ existingTransactions }: TransactionImporte
                 transactionType,
                 bankAccountId: bankAccountId ?? null,
                 source: 'bank' as const,
+                bankBalanceAfter,
+                importSequence,
             } as Omit<Transaction, 'id'>;
         })
         .filter((tx): tx is Omit<Transaction, 'id'> => tx !== null);
-        
+
+        // Validar consistència de saldos (si n'hi ha)
+        const rowsWithBalance = allParsedRows
+            .map((tx, index) => ({
+                amount: tx.amount,
+                bankBalanceAfter: tx.bankBalanceAfter ?? null,
+                importSequence: tx.importSequence ?? index,
+                rowIndex: index + 2 // +2 per header + 1-based
+            }))
+            .filter(r => r.bankBalanceAfter !== null);
+
+        if (rowsWithBalance.length > 0) {
+            const validation = validateBalanceConsistency(rowsWithBalance);
+            if (!validation.valid) {
+                toast({
+                    variant: 'destructive',
+                    title: t.importers.transaction.errors.balanceInconsistent,
+                    description: t.importers.transaction.errors.balanceInconsistentRow(validation.rowIndex, validation.error),
+                    duration: 15000,
+                });
+                setIsImporting(false);
+                return;
+            }
+            log(`✓ Validació de saldos correcta (${rowsWithBalance.length} files amb saldo)`);
+        }
+
         let transactionsToProcess = allParsedRows;
         let duplicatesFound = 0;
 
