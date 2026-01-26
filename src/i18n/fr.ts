@@ -1315,6 +1315,8 @@ export const fr = {
     selectYear: "Sélectionnez une année",
     generate: "Générer le rapport",
     exportExcel: "Exporter Excel (déclaration)",
+    exportGestoria: "Exporter modèle comptable (A–G)",
+    exportGestoriaTooltip: "Format simplifié pour cabinet comptable. Ne remplace pas l'export standard.",
     exportCsv: "Exporter en CSV",
     donorName: "Nom du donateur",
     donorTaxId: "N° fiscal",
