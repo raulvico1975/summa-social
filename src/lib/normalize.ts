@@ -5,6 +5,15 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 /**
+ * Elimina accents d'un text (per export Model 182 gestoria)
+ * Exemple: "García López" → "Garcia Lopez"
+ */
+export function removeAccents(text: string | null | undefined): string {
+  if (!text) return '';
+  return text.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+}
+
+/**
  * Title Case: Primera lletra de cada paraula en majúscula
  * Usos: Noms de persones, adreces, noms d'organitzacions
  * Exemple: "maria garcía lópez" → "Maria García López"

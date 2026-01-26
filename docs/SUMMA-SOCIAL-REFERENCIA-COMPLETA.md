@@ -1948,7 +1948,28 @@ Estadístiques per projecte:
 - Les filles de remeses amb `contactId` → Es compten
 - Els pares de remeses sense `contactId` → S'ignoren
 
-**Fitxer generat:** `Model182_{org}_{any}.xlsx`
+**Fitxer generat:** `model182_{any}.xlsx`
+
+#### Export addicional: plantilla gestoria (A–G)
+
+Format simplificat amb 7 columnes per enviar directament a la gestoria. **No substitueix l'export estàndard.**
+
+| Columna | Nom | Descripció | Font |
+|---------|-----|------------|------|
+| A | NIF | DNI/CIF normalitzat (sense espais ni guions, majúscules) | `normalizeTaxId(donor.taxId)` |
+| B | COGNOMS_NOM | Majúscules, sense accents, espais col·lapsats | `removeAccents(donor.name).toUpperCase()` |
+| C | PROVINCIA | 2 dígits del CP (preserva zero inicial) | `donor.zipCode.substring(0,2)` |
+| D | CLAVE | F0 (soci recurrent) / A0 (donatiu puntual) | `donor.membershipType` |
+| E | PORCENTAJE | Sempre buit (la gestoria ho calcula) | — |
+| F | IMPORTE | Import anual en euros (numèric, 2 decimals) | Suma donacions - devolucions |
+| G | RECURRENCIA | 1 si ha donat els 2 anys anteriors; 2 si no ha donat cap; buit si només 1 any | `valor1` i `valor2` |
+
+**Fitxer generat:** `model182_gestoria_A-G_{any}.xlsx`
+
+**Criteri de recurrència (columna G):**
+- `1` → valor1 > 0 AND valor2 > 0
+- `2` → valor1 === 0 AND valor2 === 0
+- Buit → només un dels dos anys té import > 0
 
 ### 3.8.2 Model 347 - Operacions amb Tercers
 
