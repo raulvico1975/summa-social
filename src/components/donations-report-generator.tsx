@@ -36,6 +36,7 @@ import type { Donor, Transaction, AnyContact } from '@/lib/data';
 import { formatCurrencyEU, normalizeTaxId, removeAccents } from '@/lib/normalize';
 import { useToast } from '@/hooks/use-toast';
 import * as XLSX from 'xlsx';
+import { generateModel182AEATFile, encodeLatin1 } from '@/lib/model182-aeat';
 import { useCollection, useFirebase, useMemoFirebase } from '@/firebase';
 import { collection } from 'firebase/firestore';
 import { useTranslations } from '@/i18n';
@@ -154,7 +155,7 @@ interface ReportStats {
 
 export function DonationsReportGenerator() {
   const { firestore } = useFirebase();
-  const { organizationId } = useCurrentOrganization();
+  const { organizationId, organization } = useCurrentOrganization();
   const { t } = useTranslations();
   const isMobile = useIsMobile();
 
@@ -455,6 +456,79 @@ export function DonationsReportGenerator() {
     toast({ title: t.reports.exportComplete, description: t.reports.exportGestoriaTooltip });
   };
 
+  /**
+   * Export format AEAT oficial (fitxer .txt de longitud fixa)
+   * Per a "Presentació mitjançant fitxer" a la Seu Electrònica
+   */
+  const handleExportAEAT = () => {
+    if (reportData.length === 0) {
+      toast({ variant: 'destructive', title: t.reports.noDataToExport, description: t.reports.noDataToExportDescription });
+      return;
+    }
+
+    if (!organization) {
+      toast({ variant: 'destructive', title: t.reports.exportAEATMissingData, description: "No s'ha pogut carregar l'organització." });
+      return;
+    }
+
+    // Transformar reportData al format esperat per generateModel182AEATFile
+    const aeatReportData = reportData.map(row => ({
+      donor: {
+        name: row.donorName,
+        taxId: row.donorTaxId,
+        zipCode: row.donorZipCode,
+        donorType: row.donorNaturaleza === 'J' ? 'company' as const : 'individual' as const,
+      },
+      totalAmount: row.totalAmount,
+      previousYearAmount: row.valor1,
+      twoYearsAgoAmount: row.valor2,
+    }));
+
+    // Generar fitxer AEAT
+    const result = generateModel182AEATFile(organization, aeatReportData, parseInt(selectedYear, 10));
+
+    // Si hi ha errors de validació → toast destructiu i no generar
+    if (result.errors.length > 0) {
+      toast({
+        variant: 'destructive',
+        title: t.reports.exportAEATMissingData,
+        description: (
+          <div className="space-y-1">
+            {result.errors.map((err, i) => (
+              <p key={i}>• {err}</p>
+            ))}
+          </div>
+        ),
+        duration: 10000,
+      });
+      return;
+    }
+
+    // Codificar a ISO-8859-1 (Latin-1)
+    const encoded = encodeLatin1(result.content);
+    if (encoded.error) {
+      toast({
+        variant: 'destructive',
+        title: t.reports.exportAEATEncodingError,
+        description: encoded.error,
+      });
+      return;
+    }
+
+    // Crear Blob i descarregar
+    const blob = new Blob([encoded.bytes], { type: 'application/octet-stream' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `modelo182_${selectedYear}.txt`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+
+    toast({ title: t.reports.exportComplete, description: t.reports.exportAEATTooltip });
+  };
+
 
   return (
       <Card>
@@ -496,6 +570,19 @@ export function DonationsReportGenerator() {
                     </TooltipTrigger>
                     <TooltipContent>
                       <p>{t.reports.exportGestoriaTooltip}</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button variant="outline" onClick={handleExportAEAT} disabled={reportData.length === 0} className={MOBILE_CTA_PRIMARY}>
+                          <Download className="mr-2 h-4 w-4" />
+                          {t.reports.exportAEAT}
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>{t.reports.exportAEATTooltip}</p>
                     </TooltipContent>
                   </Tooltip>
                 </TooltipProvider>
