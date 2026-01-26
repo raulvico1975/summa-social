@@ -19,6 +19,7 @@
     "demo:up:work": "node scripts/demo/up.mjs --mode work",
     "prepare": "husky",
     "updates:drafts": "npx tsx scripts/generate-product-update-drafts.ts",
+    "updates:public": "node scripts/product-updates/generate-public-updates.mjs",
     "i18n:export": "node --import tsx scripts/i18n/export-all.ts",
     "i18n:validate-guides": "node --import tsx scripts/i18n/validate-guides-translations.ts",
     "i18n:validate-help": "node --import tsx scripts/i18n/validate-help-translations.ts",
