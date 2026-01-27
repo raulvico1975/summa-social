@@ -1402,7 +1402,7 @@ El Model 182 és la declaració informativa de donatius rebuts. És obligatori s
 | **DNI/CIF** | No apareix al model |
 | **Codi postal** | Error de província |
 
-### Pas a pas
+### Pas a pas (Excel per gestoria)
 
 1. Ves a 📄 **Informes > Model 182**
 2. Selecciona l'any
@@ -1412,6 +1412,39 @@ El Model 182 és la declaració informativa de donatius rebuts. És obligatori s
 6. Envia el fitxer a la teva gestoria
 
 > 💡 Les devolucions es resten automàticament.
+
+### Exportació directa a l'AEAT (fitxer oficial)
+
+A més de l'Excel per a la gestoria, Summa permet exportar el Model 182 en **format oficial AEAT** (.txt). Aquest fitxer es pot pujar directament a la Seu Electrònica de l'AEAT.
+
+**Pas a pas:**
+
+1. Genera l'informe (selecciona l'any)
+2. Clica **"Export AEAT (fitxer oficial)"**
+3. Si tot està correcte → Es descarrega el fitxer `.txt`
+4. Puja el fitxer a la Seu Electrònica de l'AEAT → "Presentació mitjançant fitxer"
+
+**Què passa si hi ha donants amb dades incompletes?**
+
+Summa detecta automàticament els donants que no es poden declarar (per exemple: sense DNI, sense codi postal, o sense tipus de donant informat). Quan això passa:
+
+1. Apareix una finestra d'avís amb el resum
+2. Pots triar entre:
+   - **Descarregar CSV d'exclosos** → Per contactar-los i corregir les dades
+   - **Exportar igualment** → Genera el fitxer sense els donants amb errors
+   - **Cancel·lar i revisar dades** → Torna enrere per corregir
+
+**Què conté el CSV d'exclosos?**
+
+| Camp | Descripció |
+|------|------------|
+| Nom | Nom del donant |
+| NIF/CIF | El que tingui informat (pot estar buit o incorrecte) |
+| Incidència | Què falta o està malament |
+| Email | Si el tens registrat, per contactar |
+| Telèfon | Si el tens registrat, per contactar |
+
+> ⚠️ **Important:** Els donants exclosos **no seran declarats a l'AEAT**. És responsabilitat de l'entitat corregir les dades i regenerar el fitxer abans de presentar-lo.
 
 ---
 

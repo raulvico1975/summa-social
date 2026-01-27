@@ -1708,7 +1708,29 @@ Normalment no cal fer cap adaptació, però cada gestoria té les seves preferè
 
 ---
 
-### 77. Puc generar certificats de donació d'anys anteriors?
+### 77. Puc presentar el Model 182 directament a l'AEAT sense passar per la gestoria?
+
+**Sí!** Summa Social permet exportar el Model 182 en **format oficial AEAT** (fitxer `.txt`). Aquest fitxer es pot pujar directament a la Seu Electrònica de l'AEAT mitjançant l'opció "Presentació mitjançant fitxer".
+
+**Pas a pas:**
+1. Ves a Informes > Model 182
+2. Genera l'informe de l'any
+3. Clica **"Export AEAT (fitxer oficial)"**
+4. Si tot està correcte, es descarrega el fitxer `.txt`
+5. Entra a la Seu Electrònica de l'AEAT i puja el fitxer
+
+**Què passa si hi ha donants amb dades incompletes?**
+
+El sistema detecta automàticament els donants que no es poden declarar (sense DNI, sense codi postal, etc.). Quan això passa, apareix una finestra que et permet:
+- **Descarregar un CSV** amb els donants exclosos (per contactar-los i corregir les dades)
+- **Exportar igualment** el fitxer sense aquests donants
+- **Cancel·lar** per revisar i corregir les dades primer
+
+**Important:** Els donants exclosos no apareixeran a la declaració. És responsabilitat de l'entitat corregir les dades abans de presentar.
+
+---
+
+### 78. Puc generar certificats de donació d'anys anteriors?
 
 **Sí!** Sempre que tinguis les dades d'aquell any a Summa Social.
 
