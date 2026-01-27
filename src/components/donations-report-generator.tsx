@@ -661,33 +661,43 @@ export function DonationsReportGenerator() {
                     {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                     {t.reports.generate}
                 </Button>
-                <Button variant="outline" onClick={handleExportExcel} disabled={reportData.length === 0} className={MOBILE_CTA_PRIMARY}>
-                    <Download className="mr-2 h-4 w-4" />
-                    {t.reports.exportExcel}
-                </Button>
+                {/* Botons d'export amb jerarquia: AEAT (primari) > Excel (secundari) > Gestoria (terciari) */}
                 <TooltipProvider>
                   <Tooltip>
                     <TooltipTrigger asChild>
-                      <Button variant="outline" onClick={handleExportGestoria} disabled={reportData.length === 0} className={MOBILE_CTA_PRIMARY}>
-                          <Download className="mr-2 h-4 w-4" />
-                          {t.reports.exportGestoria}
-                      </Button>
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      <p>{t.reports.exportGestoriaTooltip}</p>
-                    </TooltipContent>
-                  </Tooltip>
-                </TooltipProvider>
-                <TooltipProvider>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Button variant="outline" onClick={handleExportAEAT} disabled={reportData.length === 0} className={MOBILE_CTA_PRIMARY}>
+                      <Button onClick={handleExportAEAT} disabled={reportData.length === 0} className={MOBILE_CTA_PRIMARY}>
                           <Download className="mr-2 h-4 w-4" />
                           {t.reports.exportAEAT}
                       </Button>
                     </TooltipTrigger>
                     <TooltipContent>
                       <p>{t.reports.exportAEATTooltip}</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button variant="outline" onClick={handleExportExcel} disabled={reportData.length === 0} className={MOBILE_CTA_PRIMARY}>
+                          <Download className="mr-2 h-4 w-4" />
+                          {t.reports.exportExcel}
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>{t.reports.exportExcelTooltip}</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button variant="ghost" size="sm" onClick={handleExportGestoria} disabled={reportData.length === 0} className="text-muted-foreground">
+                          <Download className="mr-2 h-4 w-4" />
+                          {t.reports.exportGestoria}
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>{t.reports.exportGestoriaTooltip}</p>
                     </TooltipContent>
                   </Tooltip>
                 </TooltipProvider>
