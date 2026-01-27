@@ -18,7 +18,33 @@ export type IncidentType =
 
 export type IncidentSeverity = 'alta' | 'mitjana' | 'baixa';
 
+/** @deprecated Usar DocumentDiagnosticStatus per a Debug */
 export type DocumentStatus = 'OK' | 'FALTA' | 'FALLA_DESCARREGA';
+
+/**
+ * Estat de diagnòstic per a la pestanya Debug del manifest.
+ * NO usar a la pestanya d'usuari.
+ */
+export type DocumentDiagnosticStatus =
+  | 'OK'               // Descarregat correctament
+  | 'NO_DOCUMENT'      // Transacció sense document referenciat
+  | 'URL_NOT_PARSEABLE' // No s'ha pogut extreure path
+  | 'BUCKET_MISMATCH'  // Bucket de la URL != bucket configurat
+  | 'NOT_FOUND'        // Path vàlid però fitxer no existeix
+  | 'DOWNLOAD_ERROR';  // Error de xarxa/timeout
+
+/**
+ * Diagnòstic complet d'un document per a Debug.
+ */
+export interface DocumentDiagnostic {
+  txId: string;
+  rawDocumentValue: string | null;
+  extractedPath: string | null;
+  bucketConfigured: string | null;
+  bucketInUrl: string | null;
+  status: DocumentDiagnosticStatus;
+  kind?: string | null;
+}
 
 export interface ClosingTransaction {
   id: string;
@@ -48,8 +74,8 @@ export interface ClosingManifestRow {
   categoria: string;
   contacte: string;
   txId: string;
-  nomPdf: string; // Nom del PDF dins el ZIP o "—"
-  estat: DocumentStatus;
+  teDocument: boolean;       // Té document referenciat?
+  nomDocument: string;       // Nom del fitxer al ZIP (buit si no inclòs)
 }
 
 export interface ClosingIncident {

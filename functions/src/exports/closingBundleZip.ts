@@ -12,20 +12,36 @@ import * as functions from 'firebase-functions/v1';
 import archiver from 'archiver';
 import type { Response } from 'express';
 
-import { ClosingBundleRequest, ClosingBundleError } from './closing-bundle/closing-types';
+import {
+  ClosingBundleRequest,
+  ClosingBundleError,
+} from './closing-bundle/closing-types';
 import {
   loadTransactions,
   sortTransactions,
   detectIncidents,
   prepareDocuments,
+  prepareDiagnostics,
   validateLimits,
   buildManifestRows,
   buildSummaryText,
+  DocumentStatusCounts,
 } from './closing-bundle/build-closing-data';
 import { buildManifestXlsx, DebugRow } from './closing-bundle/build-closing-xlsx';
 import { inferExtension, buildDocumentFileName } from './closing-bundle/normalize-filename';
 
 const db = admin.firestore();
+
+/**
+ * Genera un ID únic per a aquesta execució (per correlacionar logs).
+ */
+function generateRunId(): string {
+  const now = new Date();
+  const date = now.toISOString().slice(0, 10).replace(/-/g, '');
+  const time = now.toISOString().slice(11, 19).replace(/:/g, '');
+  const random = Math.random().toString(36).slice(2, 6).toUpperCase();
+  return `${date}-${time}-${random}`;
+}
 
 /**
  * Envia una resposta d'error JSON.
@@ -146,7 +162,10 @@ export const exportClosingBundleZip = functions
       // Usar orgId com a fallback
     }
 
-    functions.logger.info('[closingBundleZip] Iniciant generació', { orgId, dateFrom, dateTo, uid });
+    // Generar runId per correlació de logs
+    const runId = generateRunId();
+
+    functions.logger.info(`[closingBundleZip][${runId}] Iniciant generació`, { orgId, dateFrom, dateTo, uid });
 
     try {
       // 6. Carregar transaccions
@@ -163,17 +182,37 @@ export const exportClosingBundleZip = functions
       // 8. Detectar incidències
       const incidents = detectIncidents(transactions);
 
-      // 9. Preparar documents
-      const { docs, txWithDoc } = prepareDocuments(transactions);
+      // 9. Obtenir bucket configurat
+      const bucketName =
+        (admin.app().options as { storageBucket?: string }).storageBucket ||
+        process.env.FIREBASE_STORAGE_BUCKET;
 
-      // 10. Validar límits
+      functions.logger.info(`[closingBundleZip][${runId}] storageBucket`, {
+        storageBucket: bucketName,
+        appOptions: (admin.app().options as { storageBucket?: string }).storageBucket,
+        envBucket: process.env.FIREBASE_STORAGE_BUCKET,
+      });
+
+      if (!bucketName) {
+        functions.logger.error(`[closingBundleZip][${runId}] Missing storageBucket config`);
+        sendError(res, 500, { code: 'INTERNAL_ERROR', message: 'Storage bucket no configurat' });
+        return;
+      }
+
+      // 10. Preparar diagnòstics per a totes les transaccions
+      const diagnostics = prepareDiagnostics(transactions, bucketName);
+
+      // 11. Preparar documents (només els que tenen path vàlid i no bucket mismatch)
+      const { docs, txWithDoc } = prepareDocuments(transactions, diagnostics);
+
+      // 12. Validar límits
       const { error: limitError } = await validateLimits(docs);
       if (limitError) {
         sendError(res, 400, { code: 'LIMIT_EXCEEDED', message: limitError });
         return;
       }
 
-      // 11. Iniciar streaming del ZIP
+      // 13. Iniciar streaming del ZIP
       const fileName = `summa_tancament_${orgSlug}_${dateFrom}_${dateTo}.zip`;
 
       res.setHeader('Content-Type', 'application/zip');
@@ -182,55 +221,40 @@ export const exportClosingBundleZip = functions
       const archive = archiver('zip', { zlib: { level: 9 } });
 
       archive.on('error', (err) => {
-        functions.logger.error('[closingBundleZip] Error archiver', err);
-        // Si ja hem començat a enviar, no podem enviar error JSON
+        functions.logger.error(`[closingBundleZip][${runId}] Error archiver`, err);
       });
 
       archive.pipe(res);
 
-      // 12. Descarregar documents i afegir al ZIP
-      // Fix: usar bucket explícit per evitar mismatch amb download URLs
-      const bucketName =
-        (admin.app().options as { storageBucket?: string }).storageBucket ||
-        process.env.FIREBASE_STORAGE_BUCKET;
-
-      functions.logger.info('[closingBundleZip] storageBucket', {
-        storageBucket: bucketName,
-        appOptions: (admin.app().options as { storageBucket?: string }).storageBucket,
-        envBucket: process.env.FIREBASE_STORAGE_BUCKET,
-      });
-
-      if (!bucketName) {
-        functions.logger.error('[closingBundleZip] Missing storageBucket config');
-        sendError(res, 500, { code: 'INTERNAL_ERROR', message: 'Storage bucket no configurat' });
-        return;
-      }
-
       const bucket = admin.storage().bucket(bucketName);
-      const failedDownloads = new Set<string>();
-      let downloadedCount = 0;
+      const downloadedTxIds = new Set<string>();
 
-      // Map per guardar info de debug (documentUrl -> storagePath)
-      const txDocumentUrls = new Map<string, string | null>();
-      const txStoragePaths = new Map<string, string | null>();
-
-      // Guardar URLs originals abans de processar
-      for (const tx of transactions) {
-        txDocumentUrls.set(tx.id, tx.document);
-        const docInfo = txWithDoc.get(tx.id);
-        txStoragePaths.set(tx.id, docInfo?.storagePath || null);
-      }
-
+      // 14. Descarregar documents amb exists() previ
       for (const docInfo of docs) {
+        const diagnostic = diagnostics.get(docInfo.txId);
+        if (!diagnostic) continue;
+
         try {
           const file = bucket.file(docInfo.storagePath);
+
+          // Verificar existència abans de descarregar
+          const [exists] = await file.exists();
+          if (!exists) {
+            diagnostic.status = 'NOT_FOUND';
+            functions.logger.warn(`[closingBundleZip][${runId}] Fitxer no existeix`, {
+              txId: docInfo.txId,
+              storagePath: docInfo.storagePath,
+            });
+            continue;
+          }
+
+          // Descarregar
           const [buffer] = await file.download();
 
           // Actualitzar extensió si tenim contentType
           let finalFileName = docInfo.fileName;
           if (docInfo.contentType) {
             const ext = inferExtension(docInfo.contentType, docInfo.storagePath);
-            // Reconstruir nom amb extensió correcta
             finalFileName = buildDocumentFileName({
               ordre: docInfo.ordre,
               date: transactions.find((t) => t.id === docInfo.txId)?.date || '',
@@ -242,77 +266,107 @@ export const exportClosingBundleZip = functions
           }
 
           archive.append(buffer, { name: `documents/${finalFileName}` });
-          downloadedCount++;
-
-          // Actualitzar docInfo per al manifest
+          downloadedTxIds.add(docInfo.txId);
           docInfo.fileName = finalFileName;
+          diagnostic.status = 'OK';
         } catch (err) {
           const errorMessage = err instanceof Error ? err.message : 'Unknown';
-          functions.logger.warn('[closingBundleZip] Error descarregant document', {
-            orgId,
+          diagnostic.status = 'DOWNLOAD_ERROR';
+          functions.logger.warn(`[closingBundleZip][${runId}] Error descarregant document`, {
             txId: docInfo.txId,
-            documentUrl: txDocumentUrls.get(docInfo.txId) || 'N/A',
             storagePath: docInfo.storagePath,
+            rawDocumentValue: diagnostic.rawDocumentValue,
             error: errorMessage,
           });
-          failedDownloads.add(docInfo.txId);
         }
       }
 
-      // 13. Construir debug rows per a la sheet tècnica
+      // 15. Construir debug rows amb els diagnòstics complets
       const debugRows: DebugRow[] = transactions.map((tx) => {
-        const docInfo = txWithDoc.get(tx.id);
-        let estat = 'FALTA';
-        if (docInfo) {
-          estat = failedDownloads.has(tx.id) ? 'FALLA_DESCARREGA' : 'OK';
-        }
+        const diagnostic = diagnostics.get(tx.id);
         return {
           txId: tx.id,
-          documentUrl: tx.document,
-          storagePath: docInfo?.storagePath || null,
-          estat,
+          rawDocumentValue: diagnostic?.rawDocumentValue || null,
+          extractedPath: diagnostic?.extractedPath || null,
+          bucketConfigured: diagnostic?.bucketConfigured || null,
+          bucketInUrl: diagnostic?.bucketInUrl || null,
+          status: diagnostic?.status || 'NO_DOCUMENT',
+          kind: diagnostic?.kind || null,
         };
       });
 
-      // 14. Construir manifest amb sheet Debug
-      const manifestRows = buildManifestRows(transactions, txWithDoc, failedDownloads);
+      // 16. Construir manifest amb sheet Debug
+      const manifestRows = buildManifestRows(transactions, txWithDoc, downloadedTxIds);
       const manifestBuffer = buildManifestXlsx(manifestRows, debugRows);
       archive.append(manifestBuffer, { name: 'manifest.xlsx' });
 
-      // 15. Calcular estadístiques
+      // 17. Calcular estadístiques per status
+      const statusCounts: DocumentStatusCounts = {
+        ok: 0,
+        noDocument: 0,
+        urlNotParseable: 0,
+        bucketMismatch: 0,
+        notFound: 0,
+        downloadError: 0,
+      };
+
+      for (const diagnostic of diagnostics.values()) {
+        switch (diagnostic.status) {
+          case 'OK':
+            statusCounts.ok++;
+            break;
+          case 'NO_DOCUMENT':
+            statusCounts.noDocument++;
+            break;
+          case 'URL_NOT_PARSEABLE':
+            statusCounts.urlNotParseable++;
+            break;
+          case 'BUCKET_MISMATCH':
+            statusCounts.bucketMismatch++;
+            break;
+          case 'NOT_FOUND':
+            statusCounts.notFound++;
+            break;
+          case 'DOWNLOAD_ERROR':
+            statusCounts.downloadError++;
+            break;
+        }
+      }
+
       const totalIncome = transactions.filter((t) => t.amount > 0).reduce((sum, t) => sum + t.amount, 0);
       const totalExpense = transactions.filter((t) => t.amount < 0).reduce((sum, t) => sum + t.amount, 0);
+      const totalWithDocRef = transactions.filter((t) => t.document).length;
 
-      // 16. Construir resum
+      // 18. Construir resum
       const summaryText = buildSummaryText({
+        runId,
         orgSlug,
         dateFrom,
         dateTo,
         totalTransactions: transactions.length,
         totalIncome,
         totalExpense,
-        totalWithDoc: docs.length,
-        totalDownloaded: downloadedCount,
-        totalFailed: failedDownloads.size,
+        totalWithDocRef,
+        totalIncluded: downloadedTxIds.size,
+        statusCounts,
         totalIncidents: incidents.length,
       });
 
       archive.append(summaryText, { name: 'resum.txt' });
 
-      // 17. Finalitzar ZIP
+      // 19. Finalitzar ZIP
       await archive.finalize();
 
-      functions.logger.info('[closingBundleZip] Generat amb èxit', {
+      functions.logger.info(`[closingBundleZip][${runId}] Generat amb èxit`, {
         orgId,
         transactions: transactions.length,
-        documents: downloadedCount,
-        failed: failedDownloads.size,
+        documentsIncluded: downloadedTxIds.size,
+        statusCounts,
         incidents: incidents.length,
       });
     } catch (err) {
-      functions.logger.error('[closingBundleZip] Error intern', err);
+      functions.logger.error(`[closingBundleZip][${runId}] Error intern`, err);
 
-      // Si no hem enviat headers encara
       if (!res.headersSent) {
         sendError(res, 500, { code: 'INTERNAL_ERROR', message: 'Error intern generant el paquet' });
       }

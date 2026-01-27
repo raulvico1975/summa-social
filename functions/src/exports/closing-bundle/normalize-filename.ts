@@ -79,18 +79,90 @@ export function inferExtension(contentType: string | null, originalName: string 
 }
 
 /**
+ * Tipus de referència de Storage detectada.
+ */
+export type StorageRefKind = 'v0' | 'app' | 'gs' | 'gcs' | 'direct' | 'generic' | 'unknown';
+
+/**
+ * Resultat de l'extracció d'una referència de Storage.
+ */
+export interface StorageRef {
+  path: string | null;
+  bucket: string | null;
+  kind: StorageRefKind;
+}
+
+/**
+ * Extreu path i bucket d'una referència de Firebase Storage.
+ * Suporta múltiples formats:
+ * - gs://bucket/path
+ * - https://firebasestorage.googleapis.com/v0/b/{bucket}/o/{path}
+ * - https://{bucket}.firebasestorage.app/o/{path}
+ * - https://storage.googleapis.com/{bucket}/{path}
+ * - Rutes directes: organizations/... o users/...
+ * - URLs signades amb /o/{path}
+ */
+export function extractStorageRef(input: string): StorageRef {
+  // Cas 1: gs://bucket/path
+  const gsMatch = input.match(/^gs:\/\/([^/]+)\/(.+)$/);
+  if (gsMatch) {
+    return { bucket: gsMatch[1], path: gsMatch[2], kind: 'gs' };
+  }
+
+  // Cas 2: URL Firebase Storage v0
+  // https://firebasestorage.googleapis.com/v0/b/{bucket}/o/{path}?...
+  const v0Match = input.match(/firebasestorage\.googleapis\.com\/v0\/b\/([^/]+)\/o\/([^?]+)/);
+  if (v0Match) {
+    try {
+      return { bucket: v0Match[1], path: decodeURIComponent(v0Match[2]), kind: 'v0' };
+    } catch {
+      return { bucket: v0Match[1], path: v0Match[2], kind: 'v0' };
+    }
+  }
+
+  // Cas 3: URL firebasestorage.app (nou format)
+  // https://{bucket}.firebasestorage.app/o/{path}?...
+  const appMatch = input.match(/([^/]+)\.firebasestorage\.app\/o\/([^?]+)/);
+  if (appMatch) {
+    try {
+      return { bucket: appMatch[1], path: decodeURIComponent(appMatch[2]), kind: 'app' };
+    } catch {
+      return { bucket: appMatch[1], path: appMatch[2], kind: 'app' };
+    }
+  }
+
+  // Cas 4: URL storage.googleapis.com/{bucket}/{path}
+  const gcsMatch = input.match(/storage\.googleapis\.com\/([^/]+)\/(.+?)(?:\?|$)/);
+  if (gcsMatch) {
+    try {
+      return { bucket: gcsMatch[1], path: decodeURIComponent(gcsMatch[2]), kind: 'gcs' };
+    } catch {
+      return { bucket: gcsMatch[1], path: gcsMatch[2], kind: 'gcs' };
+    }
+  }
+
+  // Cas 5: Ruta directa de Storage (sense bucket)
+  if (input.startsWith('organizations/') || input.startsWith('users/')) {
+    return { bucket: null, path: input, kind: 'direct' };
+  }
+
+  // Cas 6: Qualsevol altra cosa amb /o/ (URL signada, etc.)
+  const genericMatch = input.match(/\/o\/([^?]+)/);
+  if (genericMatch) {
+    try {
+      return { bucket: null, path: decodeURIComponent(genericMatch[1]), kind: 'generic' };
+    } catch {
+      return { bucket: null, path: genericMatch[1], kind: 'generic' };
+    }
+  }
+
+  return { path: null, bucket: null, kind: 'unknown' };
+}
+
+/**
  * Extreu el storagePath d'una URL de Firebase Storage.
- * Reutilitzat de projectExpenses.ts
+ * @deprecated Usar extractStorageRef per obtenir també bucket i kind
  */
 export function extractStoragePathFromUrl(url: string): string | null {
-  if (!url.includes('/o/')) return null;
-
-  const match = url.match(/\/o\/([^?]+)/);
-  if (!match?.[1]) return null;
-
-  try {
-    return decodeURIComponent(match[1]);
-  } catch {
-    return null;
-  }
+  return extractStorageRef(url).path;
 }
