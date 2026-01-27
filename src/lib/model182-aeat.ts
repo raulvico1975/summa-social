@@ -25,13 +25,26 @@ export interface DonationReportRow {
 }
 
 /**
+ * Codis d'error per donants exclosos (sense textos, traduïbles via i18n)
+ */
+export type AEATDonorIssueCode =
+  | 'TAXID_EMPTY'
+  | 'TAXID_INVALID_CHARS'
+  | 'TAXID_INVALID_LENGTH'
+  | 'ZIPCODE_INCOMPLETE'
+  | 'DONOR_TYPE_MISSING';
+
+/**
  * Donant exclòs de l'export AEAT amb dades estructurades
  * (permet generar CSV d'exclosos amb informació útil)
  */
 export interface AEATExcludedDonor {
   name: string;
-  taxIdRaw: string;      // NIF original (abans de netejar)
-  reasons: string[];     // ["NIF buit", "CP incomplet", ...]
+  taxIdRaw: string;               // NIF original (abans de netejar)
+  issueCodes: AEATDonorIssueCode[]; // Codis d'error (traduïbles)
+  issueMeta?: {                   // Metadades opcionals per traduccions
+    taxIdLength?: number;         // Longitud del NIF si és incorrecta
+  };
 }
 
 export interface AEATExportResult {
@@ -423,31 +436,44 @@ export function generateModel182AEATFile(
 
   for (const row of reportData) {
     const donorName = row.donor.name || 'Sense nom';
-    const reasons: string[] = [];
+    const issueCodes: AEATDonorIssueCode[] = [];
+    const issueMeta: { taxIdLength?: number } = {};
 
     // Validar NIF
     const nifResult = formatNIF(row.donor.taxId);
     if (nifResult.error) {
-      reasons.push(nifResult.error);
+      // Determinar el codi d'error específic
+      if (!row.donor.taxId || !row.donor.taxId.trim()) {
+        issueCodes.push('TAXID_EMPTY');
+      } else {
+        const clean = row.donor.taxId.replace(/[\s\-\.]/g, '');
+        if (!/^[A-Za-z0-9]+$/.test(clean)) {
+          issueCodes.push('TAXID_INVALID_CHARS');
+        } else if (clean.length !== 9) {
+          issueCodes.push('TAXID_INVALID_LENGTH');
+          issueMeta.taxIdLength = clean.length;
+        }
+      }
     }
 
     // Validar codi postal (mínim 2 dígits)
     const zipDigits = (row.donor.zipCode || '').replace(/\D/g, '');
     if (zipDigits.length < 2) {
-      reasons.push('codi postal incomplet');
+      issueCodes.push('ZIPCODE_INCOMPLETE');
     }
 
     // Validar donorType
     if (row.donor.donorType !== 'individual' && row.donor.donorType !== 'company') {
-      reasons.push('tipus (F/J) absent');
+      issueCodes.push('DONOR_TYPE_MISSING');
     }
 
     // Si té errors → excloure, si no → afegir a vàlids
-    if (reasons.length > 0) {
+    if (issueCodes.length > 0) {
       excluded.push({
         name: donorName,
         taxIdRaw: row.donor.taxId ?? '',
-        reasons,
+        issueCodes,
+        ...(Object.keys(issueMeta).length > 0 ? { issueMeta } : {}),
       });
     } else {
       validatedDonors.push({ row, nif: nifResult.value });

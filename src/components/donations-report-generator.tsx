@@ -591,10 +591,14 @@ export function DonationsReportGenerator() {
     const rows = aeatPendingExport.excluded.map(exc => {
       // Buscar email/telèfon al donant original (si existeix)
       const donor = donorMap.get(exc.taxIdRaw?.toLowerCase().trim());
+      // Traduir issueCodes a text localitzat
+      const issuesText = exc.issueCodes
+        .map(code => t.reports.aeatIssueLabel(code, exc.issueMeta))
+        .join('; ');
       return [
         toCsvValue(exc.name),
         toCsvValue(exc.taxIdRaw),
-        toCsvValue(exc.reasons.join('; ')),
+        toCsvValue(issuesText),
         toCsvValue(donor?.email ?? ''),
         toCsvValue(donor?.phone ?? ''),
       ].join(',');
@@ -870,7 +874,7 @@ export function DonationsReportGenerator() {
             DIALOG EXCLOSOS AEAT
             ═══════════════════════════════════════════════════════════════════════ */}
         <Dialog open={aeatExcludedDialogOpen} onOpenChange={setAeatExcludedDialogOpen}>
-          <DialogContent className="sm:max-w-lg">
+          <DialogContent className="w-[calc(100vw-2rem)] max-w-3xl sm:max-w-3xl max-h-[80vh] overflow-hidden">
             <DialogHeader>
               <DialogTitle className="flex items-center gap-2">
                 <AlertTriangle className="h-5 w-5 text-amber-500" />
@@ -886,19 +890,25 @@ export function DonationsReportGenerator() {
 
             {/* Llista d'exclosos (màxim 5) */}
             {aeatPendingExport && aeatPendingExport.excludedCount > 0 && (
-              <div className="max-h-48 overflow-y-auto border rounded-md p-2 bg-muted/30">
-                <ul className="space-y-1 text-sm">
-                  {aeatPendingExport.excluded.slice(0, 5).map((exc, i) => (
-                    <li key={i} className="text-muted-foreground">
-                      <span className="font-medium text-foreground">{exc.name}</span>
-                      {' — '}
-                      {exc.taxIdRaw || t.reports.aeatExcludedNoNif}
-                      {' — '}
-                      {exc.reasons.join('; ')}
-                    </li>
-                  ))}
+              <div className="max-h-[45vh] overflow-auto pr-2 border rounded-md p-2 bg-muted/30">
+                <ul className="space-y-2">
+                  {aeatPendingExport.excluded.slice(0, 5).map((exc, i) => {
+                    const issuesText = exc.issueCodes
+                      .map(code => t.reports.aeatIssueLabel(code, exc.issueMeta))
+                      .join('; ');
+                    const taxIdOrLabel = exc.taxIdRaw?.trim() || t.reports.aeatExcludedNoNif;
+                    return (
+                      <li key={i} className="text-sm break-words whitespace-normal min-w-0">
+                        <span className="font-medium text-foreground">{exc.name}</span>
+                        {' — '}
+                        <span className="font-mono break-all">{taxIdOrLabel}</span>
+                        {' — '}
+                        <span className="text-muted-foreground">{issuesText}</span>
+                      </li>
+                    );
+                  })}
                   {aeatPendingExport.excludedCount > 5 && (
-                    <li className="text-muted-foreground italic">
+                    <li className="text-sm text-muted-foreground italic">
                       {t.reports.aeatExcludedPreviewMore(aeatPendingExport.excludedCount - 5)}
                     </li>
                   )}

@@ -574,11 +574,11 @@ describe('generateModel182AEATFile', () => {
     // Hi ha 1 donant inclòs i 1 exclòs
     assert.strictEqual(result.includedCount, 1);
     assert.strictEqual(result.excludedCount, 1);
-    // L'exclòs ha de contenir el nom, taxIdRaw i motiu estructurat
+    // L'exclòs ha de contenir el nom, taxIdRaw i issueCodes
     const exc = result.excluded[0];
     assert.strictEqual(exc.name, 'Donant Invalid');
     assert.strictEqual(exc.taxIdRaw, '');
-    assert.ok(exc.reasons.some((r) => r.includes('NIF buit')));
+    assert.ok(exc.issueCodes.includes('TAXID_EMPTY'));
     // El fitxer conté registre tipus 2
     assert.ok(result.content.includes('2182'));
     // Només 1 registre tipus 2 (1 línia tipus 2)
@@ -605,12 +605,12 @@ describe('generateModel182AEATFile', () => {
     assert.strictEqual(result.content, '');
     assert.strictEqual(result.includedCount, 0);
     assert.strictEqual(result.excludedCount, 1);
-    // L'exclusió ha de contenir els 3 motius estructurats
+    // L'exclusió ha de contenir els 3 issueCodes
     const exc = result.excluded[0];
     assert.strictEqual(exc.name, 'Donant Molt Invàlid');
-    assert.ok(exc.reasons.some((r) => r.includes('NIF buit')));
-    assert.ok(exc.reasons.some((r) => r.includes('codi postal incomplet')));
-    assert.ok(exc.reasons.some((r) => r.includes('tipus (F/J) absent')));
+    assert.ok(exc.issueCodes.includes('TAXID_EMPTY'));
+    assert.ok(exc.issueCodes.includes('ZIPCODE_INCOMPLETE'));
+    assert.ok(exc.issueCodes.includes('DONOR_TYPE_MISSING'));
   });
 
   it('tots invàlids → includedCount=0, error "Cap donant vàlid"', () => {

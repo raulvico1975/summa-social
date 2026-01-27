@@ -1344,6 +1344,16 @@ export const fr = {
     aeatExcludedHelp: "Vous pouvez télécharger la liste pour les contacter et corriger leurs données avant de soumettre le 182.",
     aeatExcludedNoNif: "sans NIF",
     aeatExcludedPreviewMore: (n: number) => `… et ${n} de plus`,
+    aeatIssueLabel: (code: string, meta?: { taxIdLength?: number }) => {
+      switch (code) {
+        case 'TAXID_EMPTY': return 'NIF/CIF vide';
+        case 'TAXID_INVALID_CHARS': return 'NIF/CIF avec caractères invalides';
+        case 'TAXID_INVALID_LENGTH': return `NIF/CIF avec longueur incorrecte (${meta?.taxIdLength ?? '?'})`;
+        case 'ZIPCODE_INCOMPLETE': return 'code postal incomplet';
+        case 'DONOR_TYPE_MISSING': return 'type de donateur (F/J) non renseigné';
+        default: return 'donnée invalide';
+      }
+    },
     downloadExcludedCsv: "Télécharger les exclus (CSV)",
     exportExcludedCsvDesc: "Le CSV avec les donateurs exclus a été téléchargé.",
     exportAnyway: "Exporter quand même",
