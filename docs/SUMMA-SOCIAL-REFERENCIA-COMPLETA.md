@@ -2024,6 +2024,82 @@ Format de longitud fixa per a "Presentació mitjançant fitxer" a la Seu Electr�
 4. Si tot OK → descàrrega automàtica del fitxer `.txt`
 5. Pujar a Seu Electrònica AEAT → "Presentació mitjançant fitxer"
 
+#### Criteris fiscals aplicats per Summa
+
+**1) Què declara Summa al Model 182**
+
+Només donacions fiscalment vàlides:
+- Voluntàries i sense contraprestació
+- Amb `contactId` assignat
+- No arxivades (`archivedAt` absent)
+- Netes de devolucions (transactionType: 'return' o donationStatus: 'returned')
+
+**2) Càlcul de recurrència (criteri AEAT)**
+
+- **Recurrent** = ha donat a N-1 i N-2 (anys anteriors a l'exercici)
+- No importa import ni periodicitat, només que hi hagi donatiu registrat
+
+Aplicació fiscal del percentatge de deducció:
+
+| Tipus | Primers 250€ | Resta (no recurrent) | Resta (recurrent) |
+|-------|--------------|----------------------|-------------------|
+| Persona Física (IRPF) | 80% | 40% | 45% |
+| Persona Jurídica (IS) | 40% | 40% | 50% |
+
+**3) Validacions prèvies a l'export AEAT**
+
+*Errors bloquejants (NO es pot generar fitxer):*
+- CIF/NIF de l'organització invàlid o absent
+- Denominació social absent
+- Persona signant absent (Configuració > Signant)
+
+*Errors de donants (EXCLUSIONS, no bloquegen):*
+- NIF/CIF buit
+- NIF/CIF amb caràcters invàlids
+- NIF/CIF amb longitud incorrecta (ha de ser exactament 9)
+- Codi postal incomplet (mínim 2 dígits)
+- Tipus de donant no informat (F/J)
+
+**4) Export parcial amb exclosos**
+
+Si hi ha donants amb errors:
+- NO bloqueja l'export
+- Es mostra una modal de confirmació amb els exclosos
+- L'usuari pot:
+  - **Descarregar CSV d'exclosos** → per contactar i corregir
+  - **Exportar igualment** → genera fitxer sense els exclosos
+  - **Cancel·lar i revisar dades** → torna a la pantalla per corregir
+
+**5) CSV de donants exclosos**
+
+| Camp | Descripció |
+|------|------------|
+| name | Nom del donant |
+| taxId | NIF/CIF informat (pot estar buit o incorrecte) |
+| issue | Incidència detectada (traduïda a l'idioma de l'usuari) |
+| email | Email del contacte (si existeix) |
+| phone | Telèfon del contacte (si existeix) |
+
+Objectiu: contactar els donants abans de presentar el 182 definitiu.
+
+**6) Format del nom (persones jurídiques)**
+
+Summa normalitza sufixos legals:
+- `S A` → `SA`
+- `S L` → `SL`
+- `S L U` → `SLU`
+
+Evita errors AEAT 20701 per separacions artificials en denominacions socials.
+
+**7) Responsabilitat de l'usuari**
+
+- Summa no inventa ni infereix dades fiscals
+- Donants exclosos:
+  - No són declarats al fitxer AEAT
+  - No generen dret a deducció fiscal
+- Corregir dades incompletes o incorrectes és responsabilitat de l'entitat abans de presentar el 182 final
+- L'entitat ha de verificar que el fitxer generat és coherent amb la seva comptabilitat
+
 ### 3.8.2 Model 347 - Operacions amb Tercers
 
 **Data límit:** 28 de febrer
