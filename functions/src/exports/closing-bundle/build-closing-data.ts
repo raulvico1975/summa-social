@@ -11,17 +11,150 @@ import {
   ClosingIncident,
   ClosingManifestRow,
   ClosingDocumentInfo,
-  DocumentStatus,
+  DocumentDiagnostic,
   MAX_DOCUMENTS,
   MAX_TOTAL_SIZE_MB,
 } from './closing-types';
 import {
-  extractStoragePathFromUrl,
+  extractStorageRef,
   buildDocumentFileName,
   inferExtension,
 } from './normalize-filename';
 
 const db = admin.firestore();
+
+/**
+ * Extreu la URL/path del document d'una transacció.
+ * Suporta múltiples formats històrics:
+ * - document: string (URL o path directe)
+ * - documentUrl: string (camp legacy)
+ * - document: { url: string } (objecte historic)
+ * - document: { storagePath: string } (si existeix)
+ */
+export function getDocumentUrlFromTx(tx: {
+  document?: unknown;
+  documentUrl?: string | null;
+}): string | null {
+  // 1. Camp document com a string
+  if (typeof tx.document === 'string' && tx.document.length > 0) {
+    return tx.document;
+  }
+
+  // 2. Camp documentUrl (legacy)
+  if (typeof tx.documentUrl === 'string' && tx.documentUrl.length > 0) {
+    return tx.documentUrl;
+  }
+
+  // 3. Camp document com a objecte
+  if (tx.document && typeof tx.document === 'object') {
+    const obj = tx.document as Record<string, unknown>;
+
+    // 3a. Objecte amb .url
+    if (typeof obj.url === 'string' && obj.url.length > 0) {
+      return obj.url;
+    }
+
+    // 3b. Objecte amb .storagePath (si existeix)
+    if (typeof obj.storagePath === 'string' && obj.storagePath.length > 0) {
+      return obj.storagePath;
+    }
+  }
+
+  return null;
+}
+
+/**
+ * Versió interna per dades de Firestore (abans de parsejar a ClosingTransaction).
+ */
+function getDocumentUrlFromTxData(data: FirebaseFirestore.DocumentData): string | null {
+  return getDocumentUrlFromTx({
+    document: data.document,
+    documentUrl: data.documentUrl,
+  });
+}
+
+/**
+ * Diagnostica l'estat d'un document per a una transacció.
+ * Retorna informació completa per a la pestanya Debug.
+ *
+ * NOTA: El status 'OK' aquí significa "ready per descarregar".
+ * L'estat final (OK/NOT_FOUND/DOWNLOAD_ERROR) es determina després de la descàrrega.
+ */
+export function diagnoseTxDocument(
+  tx: ClosingTransaction,
+  configuredBucket: string | null
+): DocumentDiagnostic {
+  const rawValue = tx.document;
+
+  // Sense document
+  if (!rawValue) {
+    return {
+      txId: tx.id,
+      rawDocumentValue: null,
+      extractedPath: null,
+      bucketConfigured: configuredBucket,
+      bucketInUrl: null,
+      status: 'NO_DOCUMENT',
+      kind: null,
+    };
+  }
+
+  const ref = extractStorageRef(rawValue);
+
+  // No parsejable
+  if (!ref.path) {
+    return {
+      txId: tx.id,
+      rawDocumentValue: rawValue,
+      extractedPath: null,
+      bucketConfigured: configuredBucket,
+      bucketInUrl: ref.bucket,
+      status: 'URL_NOT_PARSEABLE',
+      kind: ref.kind,
+    };
+  }
+
+  // Bucket mismatch (no intentar descarregar)
+  if (ref.bucket && configuredBucket && ref.bucket !== configuredBucket) {
+    return {
+      txId: tx.id,
+      rawDocumentValue: rawValue,
+      extractedPath: ref.path,
+      bucketConfigured: configuredBucket,
+      bucketInUrl: ref.bucket,
+      status: 'BUCKET_MISMATCH',
+      kind: ref.kind,
+    };
+  }
+
+  // Ready per descarregar
+  return {
+    txId: tx.id,
+    rawDocumentValue: rawValue,
+    extractedPath: ref.path,
+    bucketConfigured: configuredBucket,
+    bucketInUrl: ref.bucket,
+    status: 'OK', // provisional, s'actualitza després de download
+    kind: ref.kind,
+  };
+}
+
+/**
+ * Prepara diagnòstics per a totes les transaccions.
+ * Sempre genera una fila Debug per cada transacció (no perd docs silenciosament).
+ */
+export function prepareDiagnostics(
+  transactions: ClosingTransaction[],
+  configuredBucket: string | null
+): Map<string, DocumentDiagnostic> {
+  const diagnostics = new Map<string, DocumentDiagnostic>();
+
+  for (const tx of transactions) {
+    diagnostics.set(tx.id, diagnoseTxDocument(tx, configuredBucket));
+  }
+
+  return diagnostics;
+}
 
 /**
  * Carrega les transaccions del període per a una organització.
@@ -62,11 +195,7 @@ export async function loadTransactions(
     if (transactionType === 'fee') continue;      // Stripe fee child
 
     // Lectura robusta de l'URL del document (pot estar a diferents camps)
-    const documentUrl: string | null =
-      (typeof data.document === 'string' ? data.document : null) ??
-      data.documentUrl ??
-      (typeof data.document === 'object' && data.document?.url ? data.document.url : null) ??
-      null;
+    const documentUrl = getDocumentUrlFromTxData(data);
 
     transactions.push({
       id: doc.id,
@@ -181,20 +310,24 @@ export function detectIncidents(transactions: ClosingTransaction[]): ClosingInci
 /**
  * Prepara la llista de documents a descarregar.
  * Retorna info de cada document amb el seu nom final.
+ * Usa extractStorageRef per suportar tots els formats.
  */
 export function prepareDocuments(
-  transactions: ClosingTransaction[]
+  transactions: ClosingTransaction[],
+  diagnostics: Map<string, DocumentDiagnostic>
 ): { docs: ClosingDocumentInfo[]; txWithDoc: Map<string, ClosingDocumentInfo> } {
   const docs: ClosingDocumentInfo[] = [];
   const txWithDoc = new Map<string, ClosingDocumentInfo>();
 
   for (let i = 0; i < transactions.length; i++) {
     const tx = transactions[i];
-    if (!tx.document) continue;
+    const diagnostic = diagnostics.get(tx.id);
 
-    const storagePath = extractStoragePathFromUrl(tx.document);
-    if (!storagePath) continue;
+    // Només incloure si té path extret i no és BUCKET_MISMATCH/URL_NOT_PARSEABLE/NO_DOCUMENT
+    if (!diagnostic || !diagnostic.extractedPath) continue;
+    if (diagnostic.status !== 'OK') continue;
 
+    const storagePath = diagnostic.extractedPath;
     const ordre = i + 1;
     const extension = inferExtension(null, storagePath);
     const fileName = buildDocumentFileName({
@@ -267,29 +400,18 @@ export async function validateLimits(
 }
 
 /**
- * Construeix les files del manifest Excel.
+ * Construeix les files del manifest Excel (pestanya usuari).
+ * Usa camps observables: teDocument (Sí/No) + nomDocument (nom al ZIP o buit).
  */
 export function buildManifestRows(
   transactions: ClosingTransaction[],
   txWithDoc: Map<string, ClosingDocumentInfo>,
-  failedDownloads: Set<string>
+  downloadedTxIds: Set<string>
 ): ClosingManifestRow[] {
   return transactions.map((tx, index) => {
     const ordre = index + 1;
     const docInfo = txWithDoc.get(tx.id);
-
-    let estat: DocumentStatus = 'FALTA';
-    let nomPdf = '—';
-
-    if (docInfo) {
-      if (failedDownloads.has(tx.id)) {
-        estat = 'FALLA_DESCARREGA';
-        nomPdf = docInfo.fileName;
-      } else {
-        estat = 'OK';
-        nomPdf = docInfo.fileName;
-      }
-    }
+    const wasDownloaded = downloadedTxIds.has(tx.id);
 
     return {
       ordre,
@@ -300,44 +422,70 @@ export function buildManifestRows(
       categoria: tx.categoryName || '',
       contacte: tx.contactName || '',
       txId: tx.id,
-      nomPdf,
-      estat,
+      teDocument: !!tx.document,
+      nomDocument: wasDownloaded && docInfo ? docInfo.fileName : '',
     };
   });
+}
+
+/**
+ * Comptadors per status de documents (per al resum).
+ */
+export interface DocumentStatusCounts {
+  ok: number;
+  noDocument: number;
+  urlNotParseable: number;
+  bucketMismatch: number;
+  notFound: number;
+  downloadError: number;
 }
 
 /**
  * Genera el text del resum.
  */
 export function buildSummaryText(params: {
+  runId: string;
   orgSlug: string;
   dateFrom: string;
   dateTo: string;
   totalTransactions: number;
   totalIncome: number;
   totalExpense: number;
-  totalWithDoc: number;
-  totalDownloaded: number;
-  totalFailed: number;
+  totalWithDocRef: number;
+  totalIncluded: number;
+  statusCounts: DocumentStatusCounts;
   totalIncidents: number;
 }): string {
   const {
+    runId,
     orgSlug,
     dateFrom,
     dateTo,
     totalTransactions,
     totalIncome,
     totalExpense,
-    totalWithDoc,
-    totalDownloaded,
-    totalFailed,
+    totalWithDocRef,
+    totalIncluded,
+    statusCounts,
     totalIncidents,
   } = params;
 
   const saldo = totalIncome + totalExpense;
+  const totalNotIncluded = totalWithDocRef - totalIncluded;
+
+  let statusBreakdown = '';
+  if (totalNotIncluded > 0) {
+    statusBreakdown = `
+Documents no inclosos per status:
+  - URL_NOT_PARSEABLE: ${statusCounts.urlNotParseable}
+  - BUCKET_MISMATCH: ${statusCounts.bucketMismatch}
+  - NOT_FOUND: ${statusCounts.notFound}
+  - DOWNLOAD_ERROR: ${statusCounts.downloadError}`;
+  }
 
   return `PAQUET DE TANCAMENT - SUMMA SOCIAL
 =====================================
+Run ID: ${runId}
 
 Organització: ${orgSlug}
 Període: ${dateFrom} a ${dateTo}
@@ -352,9 +500,9 @@ Saldo: ${saldo.toFixed(2)} EUR
 
 DOCUMENTS
 ---------
-Moviments amb document: ${totalWithDoc}
-Documents descarregats: ${totalDownloaded}
-Documents fallits: ${totalFailed}
+Moviments amb document referenciat: ${totalWithDocRef}
+Documents inclosos al ZIP: ${totalIncluded}
+Moviments sense document: ${statusCounts.noDocument}${statusBreakdown}
 
 INCIDÈNCIES
 -----------
@@ -364,6 +512,6 @@ NOTA
 ----
 Els documents inclosos corresponen als adjunts vinculats a moviments.
 Els noms dels fitxers segueixen el format: ORDRE_DATA_IMPORT_CONCEPTE_TXID.ext
-La columna "Ordre" del manifest.xlsx correspon al prefix del nom del PDF.
+La columna "Ordre" del manifest.xlsx correspon al prefix del nom del document.
 `;
 }
