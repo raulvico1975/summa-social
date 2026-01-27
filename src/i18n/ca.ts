@@ -1344,6 +1344,16 @@ export const ca = {
     aeatExcludedHelp: "Pots descarregar el llistat per contactar-los i corregir-los abans de presentar el 182.",
     aeatExcludedNoNif: "sense NIF",
     aeatExcludedPreviewMore: (n: number) => `… i ${n} més`,
+    aeatIssueLabel: (code: string, meta?: { taxIdLength?: number }) => {
+      switch (code) {
+        case 'TAXID_EMPTY': return 'NIF/CIF buit';
+        case 'TAXID_INVALID_CHARS': return 'NIF/CIF amb caràcters invàlids';
+        case 'TAXID_INVALID_LENGTH': return `NIF/CIF amb longitud incorrecta (${meta?.taxIdLength ?? '?'})`;
+        case 'ZIPCODE_INCOMPLETE': return 'codi postal incomplet';
+        case 'DONOR_TYPE_MISSING': return 'tipus de donant (F/J) no informat';
+        default: return 'dada invàlida';
+      }
+    },
     downloadExcludedCsv: "Descarregar exclosos (CSV)",
     exportExcludedCsvDesc: "S'ha descarregat el CSV amb els donants exclosos.",
     exportAnyway: "Exportar igualment",
