@@ -441,7 +441,47 @@ export interface DocumentStatusCounts {
 }
 
 /**
- * Genera el text del resum.
+ * Genera el README.txt (arrel del ZIP).
+ * Explicació breu del contingut del paquet.
+ */
+export function buildReadmeText(
+  orgSlug: string,
+  dateFrom: string,
+  dateTo: string
+): string {
+  return `PAQUET DE TANCAMENT - SUMMA SOCIAL
+=====================================
+
+Organització: ${orgSlug}
+Període: ${dateFrom} a ${dateTo}
+
+CONTINGUT DEL PAQUET
+--------------------
+
+📄 moviments.xlsx
+   Llistat de tots els moviments del període amb:
+   Ordre, Data, Import, Concepte, Categoria, Contacte, Document
+
+📄 resum.txt
+   Resum econòmic: totals d'ingressos, despeses i saldo
+
+📁 documents/
+   Fitxers adjunts vinculats als moviments
+   Format del nom: ORDRE_DATA_IMPORT_CONCEPTE_TXID.ext
+
+📁 debug/
+   Informació tècnica per a diagnòstic (només si cal revisar problemes)
+
+NOTA
+----
+La columna "Ordre" de moviments.xlsx correspon al prefix numèric
+del nom dels fitxers a la carpeta documents/.
+`;
+}
+
+/**
+ * Genera el text del resum (arrel del ZIP).
+ * Versió humana sense detalls tècnics.
  */
 export function buildSummaryText(params: {
   runId: string;
@@ -457,7 +497,6 @@ export function buildSummaryText(params: {
   totalIncidents: number;
 }): string {
   const {
-    runId,
     orgSlug,
     dateFrom,
     dateTo,
@@ -467,32 +506,20 @@ export function buildSummaryText(params: {
     totalWithDocRef,
     totalIncluded,
     statusCounts,
-    totalIncidents,
   } = params;
 
   const saldo = totalIncome + totalExpense;
-  const totalNotIncluded = totalWithDocRef - totalIncluded;
+  const movimentsSenseDoc = statusCounts.noDocument;
 
-  let statusBreakdown = '';
-  if (totalNotIncluded > 0) {
-    statusBreakdown = `
-Documents no inclosos per status:
-  - URL_NOT_PARSEABLE: ${statusCounts.urlNotParseable}
-  - BUCKET_MISMATCH: ${statusCounts.bucketMismatch}
-  - NOT_FOUND: ${statusCounts.notFound}
-  - DOWNLOAD_ERROR: ${statusCounts.downloadError}`;
-  }
-
-  return `PAQUET DE TANCAMENT - SUMMA SOCIAL
-=====================================
-Run ID: ${runId}
+  return `RESUM ECONÒMIC
+==============
 
 Organització: ${orgSlug}
 Període: ${dateFrom} a ${dateTo}
 Generat: ${new Date().toISOString().slice(0, 19).replace('T', ' ')}
 
-RESUM DE MOVIMENTS
-------------------
+MOVIMENTS
+---------
 Total moviments: ${totalTransactions}
 Total ingressos: ${totalIncome.toFixed(2)} EUR
 Total despeses: ${totalExpense.toFixed(2)} EUR
@@ -500,18 +527,68 @@ Saldo: ${saldo.toFixed(2)} EUR
 
 DOCUMENTS
 ---------
+Moviments amb document adjunt: ${totalWithDocRef}
+Documents inclosos al ZIP: ${totalIncluded}
+Moviments sense document: ${movimentsSenseDoc}
+`;
+}
+
+/**
+ * Genera el resum_debug.txt (carpeta debug/).
+ * Versió tècnica amb breakdown per status.
+ */
+export function buildDebugSummaryText(params: {
+  runId: string;
+  orgSlug: string;
+  dateFrom: string;
+  dateTo: string;
+  totalTransactions: number;
+  totalWithDocRef: number;
+  totalIncluded: number;
+  statusCounts: DocumentStatusCounts;
+}): string {
+  const {
+    runId,
+    orgSlug,
+    dateFrom,
+    dateTo,
+    totalTransactions,
+    totalWithDocRef,
+    totalIncluded,
+    statusCounts,
+  } = params;
+
+  const totalNotIncluded = totalWithDocRef - totalIncluded;
+
+  return `DIAGNÒSTIC TÈCNIC - PAQUET DE TANCAMENT
+========================================
+Run ID: ${runId}
+
+Organització: ${orgSlug}
+Període: ${dateFrom} a ${dateTo}
+Generat: ${new Date().toISOString().slice(0, 19).replace('T', ' ')}
+
+TRANSACCIONS
+------------
+Total transaccions: ${totalTransactions}
+
+DOCUMENTS - BREAKDOWN PER STATUS
+--------------------------------
+OK (descarregats): ${statusCounts.ok}
+NO_DOCUMENT (sense referència): ${statusCounts.noDocument}
+URL_NOT_PARSEABLE (URL no reconeguda): ${statusCounts.urlNotParseable}
+BUCKET_MISMATCH (bucket diferent): ${statusCounts.bucketMismatch}
+NOT_FOUND (fitxer no existeix): ${statusCounts.notFound}
+DOWNLOAD_ERROR (error de xarxa): ${statusCounts.downloadError}
+
+RESUM
+-----
 Moviments amb document referenciat: ${totalWithDocRef}
 Documents inclosos al ZIP: ${totalIncluded}
-Moviments sense document: ${statusCounts.noDocument}${statusBreakdown}
-
-INCIDÈNCIES
------------
-Total incidències: ${totalIncidents}
+Documents no inclosos: ${totalNotIncluded}
 
 NOTA
 ----
-Els documents inclosos corresponen als adjunts vinculats a moviments.
-Els noms dels fitxers segueixen el format: ORDRE_DATA_IMPORT_CONCEPTE_TXID.ext
-La columna "Ordre" del manifest.xlsx correspon al prefix del nom del document.
+Consulteu debug.xlsx per al detall complet de cada transacció.
 `;
 }
