@@ -76,6 +76,7 @@ function normalizePathname(pathname: string): string {
  * Normalitza el routeKey per clau JSON
  * /dashboard/movimientos → movimientos
  * /dashboard/project-module/expenses → project_expenses
+ * /dashboard/project-module/projects/abc123/budget → project_projects_id_budget
  */
 function normalizeRouteKey(route: string): string {
   let key = route.replace(/^\/dashboard\//, '').replace(/^\//, '');
@@ -83,6 +84,10 @@ function normalizeRouteKey(route: string): string {
   if (key.startsWith('project-module/')) {
     key = key.replace('project-module/', 'project_');
   }
+
+  // Substituir segments dinàmics (IDs) per 'id'
+  // Patró: segment entre 'projects/' i el següent '/'
+  key = key.replace(/projects\/[^/]+/g, 'projects/id');
 
   key = key.replace(/-/g, '_').replace(/\//g, '_');
 

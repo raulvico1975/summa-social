@@ -19,6 +19,8 @@ export interface ParsedBudgetRow {
   isSubline: boolean;       // Si és subpartida (codi amb 3+ nivells)
   parentCode: string | null; // Codi de la partida pare (2 nivells)
   isTotal: boolean;         // Si sembla un total/subtotal (excloure per defecte)
+  isChapter: boolean;       // Si és capítol (codi sola lletra: A, B, ...)
+  isParentLabelOnly: boolean; // Si és fila pare sense import (només per nom)
 }
 
 export interface ConsolidatedBudgetLine {
@@ -27,6 +29,7 @@ export interface ConsolidatedBudgetLine {
   budgetedAmountEUR: number;
   order: number;
   include: boolean; // L'usuari pot excloure manualment
+  isChapter: boolean; // Si és capítol (per UI)
 }
 
 export interface BudgetImportResult {
@@ -39,6 +42,7 @@ export interface ColumnMapping {
   nameColumn: string | null;
   amountColumn: string | null;
   codeColumn: string | null;
+  extractCodeFromName: boolean; // Extreure codi del text (PARTIDES)
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -138,6 +142,65 @@ export function getParentCode(code: string | null): string | null {
  */
 export function isSublineCode(code: string | null): boolean {
   return getCodeLevel(code) > 2;
+}
+
+/**
+ * Determina si un codi és capítol (sola lletra: A, B, C...)
+ */
+export function isChapterCode(code: string | null): boolean {
+  if (!code) return false;
+  return /^[A-Za-z]$/.test(code.trim());
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// EXTRACCIÓ DE CODI DEL TEXT
+// ═══════════════════════════════════════════════════════════════════════════════
+
+/**
+ * Extreu codi i nom net d'un text com "a.1) Remuneració personal"
+ * Patrons suportats:
+ * - A) / B) (capítol)
+ * - a.1) / a.10) (partida)
+ * - a.1.1) / a.1.10) (subpartida)
+ * - Variants amb espais: a.1 ), a.1.1 )
+ *
+ * NOTA: El codi es retorna TAL QUAL (preservant majúscules/minúscules de l'original)
+ */
+export function extractCodeFromText(text: string): { code: string | null; name: string } {
+  if (!text) return { code: null, name: '' };
+
+  const trimmed = text.trim();
+
+  // Patró 1: lletra sola amb parèntesi - A) Capítol
+  const chapterMatch = trimmed.match(/^([A-Za-z])\s*\)\s*(.*)$/);
+  if (chapterMatch) {
+    return {
+      code: chapterMatch[1], // Preservar case original
+      name: chapterMatch[2].trim(),
+    };
+  }
+
+  // Patró 2: lletra.número(.número)* amb parèntesi - a.1) o a.1.1)
+  // Suporta: a.1), a.10), a.1.1), a.1.10), amb o sense espais abans del )
+  const partidaMatch = trimmed.match(/^([a-zA-Z](?:\.\d+)+)\s*\)\s*(.*)$/);
+  if (partidaMatch) {
+    return {
+      code: partidaMatch[1], // Preservar case original
+      name: partidaMatch[2].trim(),
+    };
+  }
+
+  // Patró 3: lletra+número amb parèntesi - a1) (menys comú)
+  const altMatch = trimmed.match(/^([a-zA-Z]\d+(?:\.\d+)*)\s*\)\s*(.*)$/);
+  if (altMatch) {
+    return {
+      code: altMatch[1], // Preservar case original
+      name: altMatch[2].trim(),
+    };
+  }
+
+  // No s'ha trobat codi
+  return { code: null, name: trimmed };
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -246,11 +309,13 @@ export function detectHeaders(data: unknown[][], startRow: number = 0): { header
 
 /**
  * Parseja les files del pressupost segons el mapping
+ * @param allowParentLabels - Si true, permet files pare sense import (per grouping)
  */
 export function parseRows(
   data: unknown[][],
   headerRow: number,
-  mapping: ColumnMapping
+  mapping: ColumnMapping,
+  allowParentLabels: boolean = false
 ): ParsedBudgetRow[] {
   const rows: ParsedBudgetRow[] = [];
 
@@ -277,26 +342,45 @@ export function parseRows(
     const amountValue = row[amountIdx];
     const codeValue = codeIdx >= 0 ? row[codeIdx] : null;
 
-    // Saltar files sense nom o import
-    const name = typeof nameValue === 'string' ? nameValue.trim() : '';
-    if (!name) continue;
+    // Saltar files sense nom
+    let rawName = typeof nameValue === 'string' ? nameValue.trim() : '';
+    if (!rawName) continue;
+
+    // Extreure codi del text si està activat i no hi ha columna de codi
+    let code: string | null = typeof codeValue === 'string' ? codeValue.trim() : null;
+    let name = rawName;
+
+    if (mapping.extractCodeFromName && !code) {
+      const extracted = extractCodeFromText(rawName);
+      code = extracted.code;
+      name = extracted.name || rawName; // Fallback al nom original si queda buit
+    }
 
     const amount = parseEuroAmount(amountValue);
-    if (amount === null || amount <= 0) continue;
+    const hasValidAmount = amount !== null && amount > 0;
 
-    const code = typeof codeValue === 'string' ? codeValue.trim() : null;
+    // Si no té import vàlid i no permetem etiquetes pare, saltar
+    if (!hasValidAmount && !allowParentLabels) continue;
+
+    // Si no té import vàlid i no té codi, saltar (no pot ser etiqueta pare)
+    if (!hasValidAmount && !code) continue;
+
+    const isChapter = isChapterCode(code);
     const isSubline = isSublineCode(code);
-    const parentCode = isSubline ? getParentCode(code) : code;
+    const parentCode = isSubline ? getParentCode(code) : null;
     const isTotal = isTotalRow(name, code);
+    const isParentLabelOnly = !hasValidAmount && !!code;
 
     rows.push({
       rowIndex: i + 1, // 1-indexed per mostrar a l'usuari
       code: code || null,
       name,
-      amount,
+      amount: hasValidAmount ? amount : 0,
       isSubline,
       parentCode,
       isTotal,
+      isChapter,
+      isParentLabelOnly,
     });
   }
 
@@ -309,10 +393,12 @@ export function parseRows(
 
 /**
  * Consolida files agrupant subpartides a partida
+ * @param useContextGrouping - Si true, files sense codi s'assignen al darrer parentCode detectat
  */
 export function consolidateRows(
   rows: ParsedBudgetRow[],
-  groupSublines: boolean
+  groupSublines: boolean,
+  useContextGrouping: boolean = false
 ): BudgetImportResult {
   const warnings: string[] = [];
 
@@ -327,55 +413,145 @@ export function consolidateRows(
 
   if (!groupSublines) {
     // Mode "tal qual": importar totes les línies sense agrupar
-    const lines: ConsolidatedBudgetLine[] = filteredRows.map((row, idx) => ({
-      code: row.code,
-      name: row.name,
-      budgetedAmountEUR: row.amount,
-      order: idx + 1,
-      include: true,
-    }));
+    // Excloure files pare sense import (isParentLabelOnly)
+    const lines: ConsolidatedBudgetLine[] = filteredRows
+      .filter(row => !row.isParentLabelOnly)
+      .map((row, idx) => ({
+        code: row.code,
+        name: row.name,
+        budgetedAmountEUR: row.amount,
+        order: idx + 1,
+        include: !row.isChapter, // Capítols desactivats per defecte
+        isChapter: row.isChapter,
+      }));
 
-    const totalAmount = lines.reduce((sum, line) => sum + line.budgetedAmountEUR, 0);
+    const totalAmount = lines
+      .filter(line => line.include)
+      .reduce((sum, line) => sum + line.budgetedAmountEUR, 0);
 
     return { lines, warnings, totalAmount };
   }
 
   // Mode "Agrupar": sumar subpartides a partida pare
-  const groupMap = new Map<string, { name: string; amount: number; codes: string[] }>();
+  // Mapa: codi partida → { name, amount, hasSublines }
+  const groupMap = new Map<string, { name: string; amount: number; codes: string[]; hasSublines: boolean }>();
   const standaloneLines: ParsedBudgetRow[] = [];
+  const chapterLines: ParsedBudgetRow[] = [];
 
+  // Primera passada: recollir etiquetes pare per tenir els noms
+  const parentLabels = new Map<string, string>();
   for (const row of filteredRows) {
+    if (row.isParentLabelOnly && row.code) {
+      parentLabels.set(row.code.toLowerCase(), row.name);
+    }
+  }
+
+  // Context per agrupació de files sense codi (mode ACCD/Fons Català)
+  // Només s'activa quan useContextGrouping = true
+  let currentParentCode: string | null = null;
+
+  // Segona passada: agrupar (ordre original important per context)
+  for (const row of filteredRows) {
+    // Saltar files que només són etiquetes (les processarem després per noms)
+    if (row.isParentLabelOnly) {
+      // Actualitzar context si és partida (no capítol)
+      if (row.code && !row.isChapter) {
+        currentParentCode = row.code.toLowerCase();
+      }
+      continue;
+    }
+
+    // Capítols: tractar apart (no s'inclouen per defecte)
+    // IMPORTANT: Els capítols NO actualitzen currentParentCode
+    if (row.isChapter) {
+      chapterLines.push(row);
+      continue;
+    }
+
     if (row.isSubline && row.parentCode) {
-      // És subpartida: agrupar per parentCode
+      // És subpartida amb codi explícit (a.1.1): agrupar per parentCode
       const key = row.parentCode.toLowerCase();
       const existing = groupMap.get(key);
 
       if (existing) {
         existing.amount += row.amount;
         existing.codes.push(row.code || '');
+        existing.hasSublines = true;
       } else {
-        // Primera subpartida del grup: usar el codi pare com a nom provisional
+        // Primera subpartida del grup: buscar nom a parentLabels o usar codi
+        const parentName = parentLabels.get(key) || row.parentCode;
         groupMap.set(key, {
-          name: row.parentCode, // Es pot millorar si trobem el nom del pare
+          name: parentName,
           amount: row.amount,
           codes: [row.code || ''],
+          hasSublines: true,
         });
       }
-    } else {
-      // No és subpartida: afegir com a línia independent
-      // Però si el seu codi coincideix amb un grup existent, és un total de grup (excloure)
-      if (row.code) {
-        const key = row.code.toLowerCase();
-        if (groupMap.has(key)) {
-          // Aquest és el total de grup, ja hem sumat les subpartides
-          // Actualitzar el nom del grup amb el nom d'aquesta fila
-          const group = groupMap.get(key)!;
-          group.name = row.name;
-          warnings.push(`Fila ${row.rowIndex} usada per nom de partida (import ignorat, suma subpartides): "${row.name}"`);
-          continue;
+      // Actualitzar context al pare
+      currentParentCode = key;
+    } else if (row.code) {
+      // Té codi (partida independent o pare amb import)
+      const key = row.code.toLowerCase();
+      const existing = groupMap.get(key);
+
+      if (existing && existing.hasSublines) {
+        // Ja existeix un grup amb sublínies: ignorar import d'aquesta fila (és total)
+        // Però actualitzar nom si és millor que el provisional
+        if (row.name && row.name !== row.code) {
+          existing.name = row.name;
         }
+        warnings.push(`Fila ${row.rowIndex}: import ignorat (prioritzada suma sublínies): "${row.name}"`);
+      } else if (existing) {
+        // Existeix però no té sublínies: sumar
+        existing.amount += row.amount;
+        existing.codes.push(row.code);
+      } else {
+        // No existeix: crear grup nou (pot rebre sublínies després)
+        groupMap.set(key, {
+          name: row.name,
+          amount: row.amount,
+          codes: [row.code],
+          hasSublines: false,
+        });
       }
-      standaloneLines.push(row);
+      // Actualitzar context
+      currentParentCode = key;
+    } else {
+      // Fila SENSE codi però AMB import
+      // Mode context: assignar al darrer parentCode detectat
+      if (useContextGrouping && currentParentCode && row.amount > 0) {
+        const key = currentParentCode;
+        const existing = groupMap.get(key);
+
+        if (existing) {
+          existing.amount += row.amount;
+          existing.codes.push(`[${row.name.slice(0, 20)}...]`);
+          existing.hasSublines = true;
+        } else {
+          // Crear grup amb el parentCode
+          const parentName = parentLabels.get(key) || key;
+          groupMap.set(key, {
+            name: parentName,
+            amount: row.amount,
+            codes: [`[${row.name.slice(0, 20)}...]`],
+            hasSublines: true,
+          });
+        }
+      } else if (row.amount > 0) {
+        // Mode normal o sense context: línia independent
+        if (useContextGrouping && !currentParentCode) {
+          warnings.push(`Fila ${row.rowIndex}: import sense partida pare detectada: "${row.name}"`);
+        }
+        standaloneLines.push(row);
+      }
+    }
+  }
+
+  // Tercera passada: actualitzar noms de grups amb etiquetes pare
+  for (const [key, label] of parentLabels) {
+    const group = groupMap.get(key);
+    if (group && (group.name === key || !group.name)) {
+      group.name = label;
     }
   }
 
@@ -391,10 +567,11 @@ export function consolidateRows(
       budgetedAmountEUR: group.amount,
       order: order++,
       include: true,
+      isChapter: false,
     });
   }
 
-  // Després afegir línies independents
+  // Després afegir línies independents (sense codi)
   for (const row of standaloneLines) {
     lines.push({
       code: row.code,
@@ -402,6 +579,19 @@ export function consolidateRows(
       budgetedAmountEUR: row.amount,
       order: order++,
       include: true,
+      isChapter: false,
+    });
+  }
+
+  // Finalment afegir capítols (desactivats per defecte)
+  for (const row of chapterLines) {
+    lines.push({
+      code: row.code,
+      name: row.name,
+      budgetedAmountEUR: row.amount,
+      order: order++,
+      include: false, // Capítols desactivats per defecte
+      isChapter: true,
     });
   }
 
@@ -449,6 +639,7 @@ export function autoDetectMapping(headers: string[]): ColumnMapping {
     nameColumn: null,
     amountColumn: null,
     codeColumn: null,
+    extractCodeFromName: false,
   };
 
   for (const header of headers) {
