@@ -18,14 +18,52 @@ export interface DebugRow {
   bucketInUrl: string | null;
   status: DocumentDiagnosticStatus;
   kind: string | null;
+  // Camps d'error per a DOWNLOAD_ERROR
+  errorCode: string | null;
+  errorMessage: string | null;
+  errorAt: string | null;
 }
 
 /**
- * Formata una data YYYY-MM-DD a DD/MM/YYYY.
+ * Formata una data a DD/MM/YYYY.
+ * Accepta:
+ * - YYYY-MM-DD (format esperat)
+ * - YYYY-MM-DDTHH:mm:ss... (ISO complet)
+ * - Timestamp de Firestore (objecte amb seconds/nanoseconds)
  */
-function formatDateEU(isoDate: string): string {
-  if (!isoDate || isoDate.length < 10) return isoDate;
-  const [year, month, day] = isoDate.split('-');
+function formatDateEU(isoDate: string | unknown): string {
+  if (!isoDate) return '';
+
+  // Si és un objecte Timestamp de Firestore
+  if (typeof isoDate === 'object' && isoDate !== null) {
+    const ts = isoDate as { seconds?: number; toDate?: () => Date };
+    if (typeof ts.toDate === 'function') {
+      const d = ts.toDate();
+      const day = String(d.getDate()).padStart(2, '0');
+      const month = String(d.getMonth() + 1).padStart(2, '0');
+      const year = d.getFullYear();
+      return `${day}/${month}/${year}`;
+    }
+    if (typeof ts.seconds === 'number') {
+      const d = new Date(ts.seconds * 1000);
+      const day = String(d.getDate()).padStart(2, '0');
+      const month = String(d.getMonth() + 1).padStart(2, '0');
+      const year = d.getFullYear();
+      return `${day}/${month}/${year}`;
+    }
+  }
+
+  if (typeof isoDate !== 'string') return '';
+
+  // Extreure només la part YYYY-MM-DD (abans de T si existeix)
+  const dateOnly = isoDate.split('T')[0];
+
+  if (!dateOnly || dateOnly.length < 10) return isoDate;
+
+  const parts = dateOnly.split('-');
+  if (parts.length !== 3) return isoDate;
+
+  const [year, month, day] = parts;
   return `${day}/${month}/${year}`;
 }
 
@@ -84,6 +122,9 @@ export function buildDebugXlsx(debugRows: DebugRow[]): Buffer {
     bucketInUrl: row.bucketInUrl || '—',
     status: row.status,
     kind: row.kind || '—',
+    errorCode: row.errorCode || '—',
+    errorMessage: row.errorMessage || '—',
+    errorAt: row.errorAt || '—',
   }));
 
   const ws = XLSX.utils.json_to_sheet(data);
@@ -96,6 +137,9 @@ export function buildDebugXlsx(debugRows: DebugRow[]): Buffer {
     { wch: 30 },  // bucketInUrl
     { wch: 18 },  // status
     { wch: 10 },  // kind
+    { wch: 15 },  // errorCode
+    { wch: 50 },  // errorMessage
+    { wch: 20 },  // errorAt
   ];
 
   const wb = XLSX.utils.book_new();

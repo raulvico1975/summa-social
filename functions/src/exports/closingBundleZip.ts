@@ -28,6 +28,8 @@ import {
   buildSummaryText,
   buildDebugSummaryText,
   DocumentStatusCounts,
+  loadCategoryMap,
+  loadContactMap,
 } from './closing-bundle/build-closing-data';
 import { buildMovimentsXlsx, buildDebugXlsx, DebugRow } from './closing-bundle/build-closing-xlsx';
 import { inferExtension, buildDocumentFileName } from './closing-bundle/normalize-filename';
@@ -170,8 +172,12 @@ export const exportClosingBundleZip = functions
     functions.logger.info(`[closingBundleZip][${runId}] Iniciant generació`, { orgId, dateFrom, dateTo, uid });
 
     try {
-      // 6. Carregar transaccions
-      const rawTransactions = await loadTransactions(orgId, dateFrom, dateTo);
+      // 6. Carregar transaccions i mapes de resolució en paral·lel
+      const [rawTransactions, categoryMap, contactMap] = await Promise.all([
+        loadTransactions(orgId, dateFrom, dateTo),
+        loadCategoryMap(orgId),
+        loadContactMap(orgId),
+      ]);
 
       if (rawTransactions.length === 0) {
         sendError(res, 400, { code: 'NO_TRANSACTIONS', message: 'No hi ha moviments en aquest període' });
@@ -243,6 +249,9 @@ export const exportClosingBundleZip = functions
           const [exists] = await file.exists();
           if (!exists) {
             diagnostic.status = 'NOT_FOUND';
+            diagnostic.errorCode = 'FILE_NOT_EXISTS';
+            diagnostic.errorMessage = 'El fitxer no existeix al bucket';
+            diagnostic.errorAt = new Date().toISOString();
             functions.logger.warn(`[closingBundleZip][${runId}] Fitxer no existeix`, {
               txId: docInfo.txId,
               storagePath: docInfo.storagePath,
@@ -273,12 +282,17 @@ export const exportClosingBundleZip = functions
           diagnostic.status = 'OK';
         } catch (err) {
           const errorMessage = err instanceof Error ? err.message : 'Unknown';
+          const errorCode = err instanceof Error && 'code' in err ? String(err.code) : 'UNKNOWN';
           diagnostic.status = 'DOWNLOAD_ERROR';
+          diagnostic.errorCode = errorCode;
+          diagnostic.errorMessage = errorMessage;
+          diagnostic.errorAt = new Date().toISOString();
           functions.logger.warn(`[closingBundleZip][${runId}] Error descarregant document`, {
             txId: docInfo.txId,
             storagePath: docInfo.storagePath,
             rawDocumentValue: diagnostic.rawDocumentValue,
-            error: errorMessage,
+            errorCode,
+            errorMessage,
           });
         }
       }
@@ -325,7 +339,7 @@ export const exportClosingBundleZip = functions
       archive.append(readmeText, { name: 'README.txt' });
 
       // 17. moviments.xlsx (arrel) — simplificat per a l'entitat
-      const manifestRows = buildManifestRows(transactions, txWithDoc, downloadedTxIds);
+      const manifestRows = buildManifestRows(transactions, txWithDoc, downloadedTxIds, categoryMap, contactMap);
       const movimentsBuffer = buildMovimentsXlsx(manifestRows);
       archive.append(movimentsBuffer, { name: 'moviments.xlsx' });
 
@@ -369,6 +383,9 @@ export const exportClosingBundleZip = functions
           bucketInUrl: diagnostic?.bucketInUrl || null,
           status: diagnostic?.status || 'NO_DOCUMENT',
           kind: diagnostic?.kind || null,
+          errorCode: diagnostic?.errorCode || null,
+          errorMessage: diagnostic?.errorMessage || null,
+          errorAt: diagnostic?.errorAt || null,
         };
       });
       const debugBuffer = buildDebugXlsx(debugRows);

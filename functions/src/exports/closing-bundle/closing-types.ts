@@ -44,6 +44,10 @@ export interface DocumentDiagnostic {
   bucketInUrl: string | null;
   status: DocumentDiagnosticStatus;
   kind?: string | null;
+  // Camps d'error (només per a DOWNLOAD_ERROR o NOT_FOUND)
+  errorCode?: string | null;
+  errorMessage?: string | null;
+  errorAt?: string | null;
 }
 
 export interface ClosingTransaction {
