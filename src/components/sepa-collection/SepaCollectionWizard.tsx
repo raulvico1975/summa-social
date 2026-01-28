@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { useTranslations } from '@/i18n';
 import { useCurrentOrganization } from '@/hooks/organization-provider';
 import { useFirebase, useCollection, useMemoFirebase, addDocumentNonBlocking } from '@/firebase';
-import { collection, query, where } from 'firebase/firestore';
+import { collection, query, where, doc, addDoc, writeBatch, serverTimestamp } from 'firebase/firestore';
 import type { Donor, BankAccount, SepaCollectionRun, SepaCollectionItem, SepaSequenceType } from '@/lib/data';
 import { generatePain008Xml, generateMessageId, validateCollectionRun, filterEligibleDonors, determineSequenceType } from '@/lib/sepa/pain008';
 import { ArrowLeft, ArrowRight, Download, AlertTriangle, CheckCircle2, XCircle } from 'lucide-react';
@@ -28,7 +28,7 @@ export function SepaCollectionWizard() {
   const { firestore, auth } = useFirebase();
   const { organizationId, organization, orgSlug } = useCurrentOrganization();
   const { toast } = useToast();
-  const { t } = useTranslations();
+  const { t, tr } = useTranslations();
 
   // Current step
   const [currentStep, setCurrentStep] = React.useState<WizardStep>('config');
@@ -235,6 +235,52 @@ export function SepaCollectionWizard() {
       };
 
       addDocumentNonBlocking(runsCollection, runForDb);
+
+      // ═══════════════════════════════════════════════════════════════════════════
+      // CREAR REGISTRE OPERATIU sepaPain008Runs (memòria de runs)
+      // ═══════════════════════════════════════════════════════════════════════════
+      const pain008RunsCollection = collection(firestore, 'organizations', organizationId, 'sepaPain008Runs');
+
+      const pain008RunData = {
+        createdAt: serverTimestamp(),
+        createdByUid: auth.currentUser.uid,
+        bankAccountId: configData.bankAccountId,
+        executionDate: configData.collectionDate,
+        includedDonorIds: selectedDonors.map(d => d.id),
+        counts: {
+          shown: eligible.length,
+          selected: selectedDonors.length,
+          included: selectedDonors.length,
+          invalidIban: excluded.filter(e => e.reason.toLowerCase().includes('iban')).length,
+          invalidAmount: selectedDonors.filter(d => !d.monthlyAmount || d.monthlyAmount <= 0).length,
+        },
+        totalAmountCents,
+        filtersSnapshot: null, // No tenim accés als filtres aquí, es podria afegir si cal
+      };
+
+      const pain008RunRef = await addDoc(pain008RunsCollection, pain008RunData);
+      const pain008RunId = pain008RunRef.id;
+
+      // ═══════════════════════════════════════════════════════════════════════════
+      // ACTUALITZAR DONANTS AMB TRACKING (batches de 50)
+      // ═══════════════════════════════════════════════════════════════════════════
+      const BATCH_SIZE = 50;
+      const donorIds = selectedDonors.map(d => d.id);
+
+      for (let i = 0; i < donorIds.length; i += BATCH_SIZE) {
+        const chunk = donorIds.slice(i, i + BATCH_SIZE);
+        const batch = writeBatch(firestore);
+
+        for (const donorId of chunk) {
+          const donorRef = doc(contactsCollection!, donorId);
+          batch.update(donorRef, {
+            sepaPain008LastRunAt: configData.collectionDate,
+            sepaPain008LastRunId: pain008RunId,
+          });
+        }
+
+        await batch.commit();
+      }
 
       // Download XML file
       const blob = new Blob([xml], { type: 'application/xml' });

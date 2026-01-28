@@ -99,6 +99,7 @@ const emptyFormData: DonorFormData = {
   defaultCategoryId: undefined,
   status: 'active',
   inactiveSince: undefined,
+  periodicityQuota: null,
 };
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -110,7 +111,7 @@ export function DonorManager() {
   const { firestore } = useFirebase();
   const { organizationId, orgSlug } = useCurrentOrganization();
   const { toast } = useToast();
-  const { t, language } = useTranslations();
+  const { t, tr, language } = useTranslations();
   const isMobile = useIsMobile();
   const searchParams = useSearchParams();
   const urlDonorId = searchParams.get('id');
@@ -436,6 +437,7 @@ export function DonorManager() {
       defaultCategoryId: donor.defaultCategoryId,
       status: donor.status || 'active',
       inactiveSince: donor.inactiveSince,
+      periodicityQuota: donor.periodicityQuota ?? null,
     });
     setIsDialogOpen(true);
   };
@@ -533,6 +535,7 @@ export function DonorManager() {
       iban: normalized.iban || null,
       status: formData.status || 'active',
       inactiveSince: inactiveSince,
+      periodicityQuota: formData.periodicityQuota ?? null,
       updatedAt: now,
     };
 
@@ -1382,7 +1385,7 @@ export function DonorManager() {
                   <div className="space-y-3">
                     <div className="grid grid-cols-2 gap-3">
                       <div className="space-y-1.5">
-                        <Label htmlFor="monthlyAmount">{t.donors.amountMonth}</Label>
+                        <Label htmlFor="monthlyAmount">{tr('donors.quotaAmountPerCharge.label', 'Import de quota (per cobrament)')}</Label>
                         <Input
                           id="monthlyAmount"
                           type="number"
@@ -1391,7 +1394,31 @@ export function DonorManager() {
                           onChange={(e) => handleFormChange('monthlyAmount', parseFloat(e.target.value) || undefined)}
                           placeholder="10.00"
                         />
+                        <p className="text-xs text-muted-foreground">
+                          {tr('donors.quotaAmountPerCharge.hint', "L'import es cobra segons la periodicitat seleccionada. No s'apliquen multiplicadors.")}
+                        </p>
                       </div>
+                      <div className="space-y-1.5">
+                        <Label htmlFor="periodicityQuota">{tr('donors.periodicityQuota.label', 'Periodicitat de cobrament')}</Label>
+                        <Select
+                          value={formData.periodicityQuota || 'monthly'}
+                          onValueChange={(v) => handleFormChange('periodicityQuota', v === 'monthly' ? null : v)}
+                        >
+                          <SelectTrigger id="periodicityQuota">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="monthly">{tr('donors.periodicityQuota.monthly', 'Mensual')}</SelectItem>
+                            <SelectItem value="quarterly">{tr('donors.periodicityQuota.quarterly', 'Trimestral')}</SelectItem>
+                            <SelectItem value="semiannual">{tr('donors.periodicityQuota.semiannual', 'Semestral')}</SelectItem>
+                            <SelectItem value="annual">{tr('donors.periodicityQuota.annual', 'Anual')}</SelectItem>
+                            <SelectItem value="manual">{tr('donors.periodicityQuota.manual', 'Manual')}</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-3">
                       <div className="space-y-1.5">
                         <Label htmlFor="memberSince">{t.donors.memberSince}</Label>
                         <Input
@@ -1401,16 +1428,15 @@ export function DonorManager() {
                           onChange={(e) => handleFormChange('memberSince', e.target.value)}
                         />
                       </div>
-                    </div>
-
-                    <div className="space-y-1.5">
-                      <Label htmlFor="iban">{t.donors.iban}</Label>
-                      <Input
-                        id="iban"
-                        value={formData.iban || ''}
-                        onChange={(e) => handleFormChange('iban', e.target.value.toUpperCase().replace(/\s/g, ''))}
-                        placeholder="ES00 0000 0000 0000 0000 0000"
-                      />
+                      <div className="space-y-1.5">
+                        <Label htmlFor="iban">{t.donors.iban}</Label>
+                        <Input
+                          id="iban"
+                          value={formData.iban || ''}
+                          onChange={(e) => handleFormChange('iban', e.target.value.toUpperCase().replace(/\s/g, ''))}
+                          placeholder="ES00 0000 0000 0000 0000 0000"
+                        />
+                      </div>
                     </div>
                   </div>
                 )}

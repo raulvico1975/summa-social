@@ -34,7 +34,7 @@ export function StepReview({
   creditorName,
   creditorIban,
 }: StepReviewProps) {
-  const { t } = useTranslations();
+  const { t, tr } = useTranslations();
 
   const formatCurrency = (cents: number) => {
     return new Intl.NumberFormat('ca-ES', {
@@ -65,6 +65,14 @@ export function StepReview({
   return (
     <div className="space-y-6">
       <h3 className="text-lg font-semibold">{t.sepaCollection.review.title}</h3>
+
+      {/* Microcopy PRE-banc */}
+      <Alert className="bg-amber-50 border-amber-300">
+        <AlertTriangle className="h-4 w-4 text-amber-600" />
+        <AlertDescription className="text-amber-800 font-medium">
+          {tr('sepaPain008.review.preBankWarning', 'Això genera un fitxer SEPA (PRE-banc). No crea ingressos ni moviments comptables a Summa.')}
+        </AlertDescription>
+      </Alert>
 
       {/* Summary card */}
       <div className="rounded-lg border bg-muted/50 p-6 space-y-4">
