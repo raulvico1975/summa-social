@@ -313,16 +313,35 @@ export default function ProjectBudgetPage() {
 
   // Calcular totals
   const totals = React.useMemo(() => {
-    let budgeted = 0;
-    let executed = 0;
+    // Suma de partides (per Estat B)
+    let budgetedFromLines = 0;
+    let executedByLines = 0;
 
     for (const line of budgetLines) {
-      budgeted += line.budgetedAmountEUR;
-      executed += executionByLine.get(line.id) ?? 0;
+      budgetedFromLines += line.budgetedAmountEUR;
+      executedByLines += executionByLine.get(line.id) ?? 0;
     }
 
-    return { budgeted, executed, difference: executed - budgeted };
-  }, [budgetLines, executionByLine]);
+    // Execució total del projecte (per Estat A i resum B)
+    let totalProjectExecution = 0;
+    for (const link of expenseLinks) {
+      for (const assignment of link.assignments) {
+        if (assignment.projectId === projectId) {
+          totalProjectExecution += Math.abs(assignment.amountEUR);
+        }
+      }
+    }
+
+    return {
+      budgetedFromLines,
+      executedByLines,
+      totalProjectExecution,
+      globalBudget: project?.budgetEUR ?? null,
+    };
+  }, [budgetLines, executionByLine, expenseLinks, projectId, project?.budgetEUR]);
+
+  // Detecció d'estat
+  const hasBudgetLines = budgetLines.length > 0;
 
   const handleSave = async (data: BudgetLineFormData) => {
     try {
@@ -593,10 +612,6 @@ export default function ProjectBudgetPage() {
                   <Upload className="mr-2 h-4 w-4" />
                   {t.projectModule?.importBudget ?? 'Importar pressupost'}
                 </DropdownMenuItem>
-                <DropdownMenuItem onClick={openNew}>
-                  <Plus className="mr-2 h-4 w-4" />
-                  {t.projectModule?.addBudgetLine ?? 'Afegir partida'}
-                </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
           </div>
@@ -653,51 +668,94 @@ export default function ProjectBudgetPage() {
             >
               <Upload className="h-4 w-4" />
             </Button>
-            <Button variant="outline" size="icon" onClick={openNew} title={t.projectModule?.addBudgetLine ?? 'Afegir partida'}>
-              <Plus className="h-4 w-4" />
-            </Button>
           </div>
         )}
       </div>
 
-      {/* Resum */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <Card>
-          <CardHeader className="pb-2">
-            <CardDescription>{t.projectModule?.budgetTotalLabel ?? 'Pressupost total del projecte'}</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <p className="text-2xl font-bold">{formatAmount(totals.budgeted)}</p>
-            {budgetLines.length > 0 && totals.budgeted > 0 && (
-              <p className="text-xs text-muted-foreground mt-1">
-                {t.projectModule?.budgetTotalHintFromLines ?? 'Calculat automàticament a partir de les partides.'}
+      {/* Resum — Estat A (sense partides) o Estat B (amb partides) */}
+      {!hasBudgetLines ? (
+        /* Estat A: Seguiment global */
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <Card>
+            <CardHeader className="pb-2">
+              <CardDescription>Pressupost global</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <p className="text-2xl font-bold">
+                {totals.globalBudget !== null ? formatAmount(totals.globalBudget) : '—'}
               </p>
-            )}
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="pb-2">
-            <CardDescription>{t.projectModule?.executed ?? 'Executat'}</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <p className="text-2xl font-bold">{formatAmount(totals.executed)}</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="pb-2">
-            <CardDescription>
-              {totals.difference > 0
-                ? (t.projectModule?.overspend ?? 'Sobreexecució')
-                : (t.projectModule?.pending ?? 'Pendent')}
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <p className={`text-2xl font-bold ${totals.difference > 0 ? 'text-red-600' : ''}`}>
-              {formatAmount(Math.abs(totals.budgeted - totals.executed))}
-            </p>
-          </CardContent>
-        </Card>
-      </div>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader className="pb-2">
+              <CardDescription>{t.projectModule?.executed ?? 'Executat'}</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <p className="text-2xl font-bold">{formatAmount(totals.totalProjectExecution)}</p>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader className="pb-2">
+              <CardDescription>
+                {totals.globalBudget !== null && totals.totalProjectExecution > totals.globalBudget
+                  ? (t.projectModule?.overspend ?? 'Sobreexecució')
+                  : (t.projectModule?.pending ?? 'Pendent')}
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              {totals.globalBudget !== null ? (
+                <>
+                  <p className={`text-2xl font-bold ${totals.totalProjectExecution > totals.globalBudget ? 'text-red-600' : ''}`}>
+                    {formatAmount(Math.abs(totals.globalBudget - totals.totalProjectExecution))}
+                  </p>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    {formatPercent((totals.totalProjectExecution / totals.globalBudget) * 100)} executat
+                  </p>
+                </>
+              ) : (
+                <p className="text-2xl font-bold">—</p>
+              )}
+            </CardContent>
+          </Card>
+        </div>
+      ) : (
+        /* Estat B: Seguiment per partides + referència global */
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <Card>
+            <CardHeader className="pb-2">
+              <CardDescription>{t.projectModule?.budgetTotalLabel ?? 'Pressupost total del projecte'}</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <p className="text-2xl font-bold">{formatAmount(totals.budgetedFromLines)}</p>
+              <p className="text-xs text-muted-foreground mt-1">
+                Calculat a partir de les partides
+              </p>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader className="pb-2">
+              <CardDescription>{t.projectModule?.executed ?? 'Executat'}</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <p className="text-2xl font-bold">{formatAmount(totals.executedByLines)}</p>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader className="pb-2">
+              <CardDescription>
+                {totals.executedByLines > totals.budgetedFromLines
+                  ? (t.projectModule?.overspend ?? 'Sobreexecució')
+                  : (t.projectModule?.pending ?? 'Pendent')}
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <p className={`text-2xl font-bold ${totals.executedByLines > totals.budgetedFromLines ? 'text-red-600' : ''}`}>
+                {formatAmount(Math.abs(totals.budgetedFromLines - totals.executedByLines))}
+              </p>
+            </CardContent>
+          </Card>
+        </div>
+      )}
 
       {/* Configuració FX per despeses off-bank (fila compacta) */}
       <div className="rounded-lg border bg-muted/20 px-4 py-3">
@@ -809,31 +867,74 @@ export default function ProjectBudgetPage() {
         )}
       </div>
 
-      {/* Taula de partides */}
-      <Card>
-        <CardHeader>
-          <CardTitle>{t.projectModule?.budgetLines ?? 'Seguiment Econòmic'}</CardTitle>
-        </CardHeader>
-        <CardContent>
-          {linesLoading || linksLoading ? (
-            <div className="space-y-2">
-              {Array.from({ length: 3 }).map((_, i) => (
-                <Skeleton key={i} className="h-12 w-full" />
-              ))}
+      {/* Estat A: CTA per desglossar en partides */}
+      {!hasBudgetLines && !linesLoading && (
+        <Card>
+          <CardContent className="pt-6">
+            <div className="text-center space-y-4">
+              <p className="text-muted-foreground">
+                Només cal crear partides si necessites control detallat per justificar el projecte.
+              </p>
+              <div className="flex flex-col sm:flex-row gap-2 justify-center">
+                <Button onClick={openNew} variant="outline">
+                  <Plus className="h-4 w-4 mr-2" />
+                  Crear partida manualment
+                </Button>
+                <Button onClick={() => setImportWizardOpen(true)} variant="outline">
+                  <Upload className="h-4 w-4 mr-2" />
+                  Importar partides (Excel)
+                </Button>
+              </div>
             </div>
-          ) : linesError ? (
-            <div className="text-center py-8 text-destructive">
-              Error carregant partides: {linesError.message}
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Estat B: Taula de partides */}
+      {hasBudgetLines && (
+        <>
+          {/* Resum superior: referència al pressupost global */}
+          {totals.globalBudget !== null && (
+            <div className="rounded-lg border bg-muted/30 px-4 py-3">
+              <div className="flex flex-wrap items-center gap-x-6 gap-y-2 text-sm">
+                <div>
+                  <span className="text-muted-foreground">Pressupost global:</span>{' '}
+                  <span className="font-medium">{formatAmount(totals.globalBudget)}</span>
+                </div>
+                <div>
+                  <span className="text-muted-foreground">Suma de partides:</span>{' '}
+                  <span className="font-medium">{formatAmount(totals.budgetedFromLines)}</span>
+                </div>
+                {totals.budgetedFromLines !== totals.globalBudget && (
+                  <Badge variant="outline" className="bg-yellow-50 text-yellow-700 border-yellow-200">
+                    <Info className="h-3 w-3 mr-1" />
+                    La suma de partides no coincideix amb el pressupost global
+                  </Badge>
+                )}
+              </div>
             </div>
-          ) : budgetLines.length === 0 ? (
-            <div className="text-center py-8 text-muted-foreground">
-              <p>{t.projectModule?.noBudgetDefined ?? 'Aquest projecte encara no té pressupost.'}</p>
-              <Button onClick={openNew} variant="outline" className="mt-4">
+          )}
+
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
+              <CardTitle>{t.projectModule?.budgetLines ?? 'Seguiment Econòmic'}</CardTitle>
+              <Button variant="outline" size="sm" onClick={openNew}>
                 <Plus className="h-4 w-4 mr-2" />
                 {t.projectModule?.addBudgetLine ?? 'Afegir partida'}
               </Button>
-            </div>
-          ) : isMobile ? (
+            </CardHeader>
+            <CardContent>
+              {linesLoading || linksLoading ? (
+                <div className="space-y-2">
+                  {Array.from({ length: 3 }).map((_, i) => (
+                    <Skeleton key={i} className="h-12 w-full" />
+                  ))}
+                </div>
+              ) : linesError ? (
+                <div className="text-center py-8 text-destructive">
+                  Error carregant partides: {linesError.message}
+                </div>
+              ) : isMobile ? (
             <div className="flex flex-col gap-2 p-3">
               {budgetLines.map((line) => {
                 const executed = executionByLine.get(line.id) ?? 0;
@@ -1016,8 +1117,10 @@ export default function ProjectBudgetPage() {
               </TableBody>
             </Table>
           )}
-        </CardContent>
-      </Card>
+            </CardContent>
+          </Card>
+        </>
+      )}
 
       {/* Form Modal */}
       <BudgetLineForm

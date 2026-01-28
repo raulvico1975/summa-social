@@ -118,6 +118,7 @@ export function BudgetImportWizard({
     nameColumn: null,
     amountColumn: null,
     codeColumn: null,
+    extractCodeFromName: false,
   });
 
   // Pas 4: Agrupació
@@ -144,7 +145,7 @@ export function BudgetImportWizard({
         setSheetData([]);
         setHeaderRow(0);
         setHeaders([]);
-        setMapping({ nameColumn: null, amountColumn: null, codeColumn: null });
+        setMapping({ nameColumn: null, amountColumn: null, codeColumn: null, extractCodeFromName: false });
         setGroupSublines(true);
         setPreviewLines([]);
         setWarnings([]);
@@ -256,8 +257,16 @@ export function BudgetImportWizard({
 
   const handleNextFromGrouping = () => {
     // Processar les dades
-    const parsedRows = parseRows(sheetData, headerRow, mapping);
-    const result = consolidateRows(parsedRows, groupSublines);
+    // Permetre files pare (sense import) quan grouping està activat i tenim codis
+    const allowParentLabels = groupSublines && (!!mapping.codeColumn || mapping.extractCodeFromName);
+    const parsedRows = parseRows(sheetData, headerRow, mapping, allowParentLabels);
+
+    // Activar agrupació per context quan:
+    // - extractCodeFromName = true (codis incrustats al text)
+    // - groupSublines = true (mode agrupació)
+    // Això permet consolidar pressupostos ACCD/Fons Català on les subpartides no tenen codi
+    const useContextGrouping = mapping.extractCodeFromName && groupSublines;
+    const result = consolidateRows(parsedRows, groupSublines, useContextGrouping);
 
     setPreviewLines(result.lines);
     setWarnings(result.warnings);
@@ -598,7 +607,7 @@ export function BudgetImportWizard({
           <Label>Columna de Codi (opcional)</Label>
           <Select
             value={mapping.codeColumn ?? '__none__'}
-            onValueChange={(v) => setMapping(prev => ({ ...prev, codeColumn: v === '__none__' ? null : v }))}
+            onValueChange={(v) => setMapping(prev => ({ ...prev, codeColumn: v === '__none__' ? null : v, extractCodeFromName: v === '__none__' ? prev.extractCodeFromName : false }))}
           >
             <SelectTrigger>
               <SelectValue placeholder="Cap" />
@@ -613,6 +622,26 @@ export function BudgetImportWizard({
             </SelectContent>
           </Select>
         </div>
+
+        {/* Toggle per extreure codi del text (només si no hi ha columna de codi) */}
+        {!mapping.codeColumn && (
+          <div className="flex items-start space-x-3 p-3 border rounded-lg bg-muted/30">
+            <Checkbox
+              id="extractCode"
+              checked={mapping.extractCodeFromName}
+              onCheckedChange={(checked) => setMapping(prev => ({ ...prev, extractCodeFromName: !!checked }))}
+              className="mt-0.5"
+            />
+            <div className="space-y-1">
+              <Label htmlFor="extractCode" className="font-medium cursor-pointer">
+                Extreure codi del text (PARTIDES)
+              </Label>
+              <p className="text-xs text-muted-foreground">
+                Detecta codis com &quot;a.1)&quot;, &quot;A)&quot; o &quot;a.1.1)&quot; dins del camp de nom i els separa automàticament.
+              </p>
+            </div>
+          </div>
+        )}
       </div>
 
       <div className="space-y-2">
@@ -729,7 +758,7 @@ export function BudgetImportWizard({
             </TableHeader>
             <TableBody>
               {previewLines.map((line, i) => (
-                <TableRow key={i} className={!line.include ? 'opacity-50' : ''}>
+                <TableRow key={i} className={!line.include ? 'opacity-50 bg-muted/30' : line.isChapter ? 'bg-amber-50' : ''}>
                   <TableCell className="py-2">
                     <Checkbox
                       checked={line.include}
@@ -737,7 +766,12 @@ export function BudgetImportWizard({
                     />
                   </TableCell>
                   <TableCell className="py-2 text-xs font-mono">
-                    {line.code || '-'}
+                    <span className={line.isChapter ? 'font-bold' : ''}>
+                      {line.code || '-'}
+                    </span>
+                    {line.isChapter && (
+                      <span className="ml-1 text-[10px] text-amber-600 font-normal">(capítol)</span>
+                    )}
                   </TableCell>
                   <TableCell className="py-2 text-sm">
                     {line.name}
