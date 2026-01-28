@@ -24,6 +24,120 @@ import {
 const db = admin.firestore();
 
 /**
+ * Traduccions de categories per defecte (claus → noms catalans).
+ * Aquestes categories es creen amb el camp `name` igual a la clau.
+ */
+const DEFAULT_CATEGORY_NAMES: Record<string, string> = {
+  donations: 'Donacions',
+  subsidies: 'Subvencions',
+  memberFees: 'Quotes de socis',
+  sponsorships: 'Patrocinis',
+  productSales: 'Venda de productes/serveis',
+  inheritances: 'Herències i llegats',
+  events: 'Esdeveniments i campanyes',
+  otherIncome: 'Altres ingressos',
+  rent: 'Lloguer',
+  officeSupplies: "Subministraments d'oficina",
+  utilities: 'Serveis públics',
+  salaries: 'Salaris i seguretat social',
+  travel: 'Viatges i dietes',
+  marketing: 'Comunicació i màrqueting',
+  professionalServices: 'Serveis professionals',
+  insurance: 'Assegurances',
+  projectMaterials: 'Material de projectes',
+  training: 'Formació',
+  bankFees: 'Despeses bancàries',
+  missionTransfers: 'Transferències a terreny o sòcies',
+  otherExpenses: 'Altres despeses',
+};
+
+/**
+ * Carrega les categories d'una organització i retorna un mapa ID → nom.
+ */
+export async function loadCategoryMap(orgId: string): Promise<Map<string, string>> {
+  const categoriesRef = db.collection(`organizations/${orgId}/categories`);
+  const snapshot = await categoriesRef.get();
+
+  const categoryMap = new Map<string, string>();
+
+  for (const doc of snapshot.docs) {
+    const data = doc.data();
+    const name = data.name as string | undefined;
+
+    if (name) {
+      // L'ID del document és la clau
+      categoryMap.set(doc.id, name);
+
+      // Si el nom és una clau per defecte (donations, etc.), també mapejar-lo
+      if (DEFAULT_CATEGORY_NAMES[name]) {
+        categoryMap.set(name, DEFAULT_CATEGORY_NAMES[name]);
+      }
+    }
+  }
+
+  return categoryMap;
+}
+
+/**
+ * Carrega els contactes d'una organització i retorna un mapa ID → nom.
+ */
+export async function loadContactMap(orgId: string): Promise<Map<string, string>> {
+  const contactsRef = db.collection(`organizations/${orgId}/contacts`);
+  const snapshot = await contactsRef.get();
+
+  const contactMap = new Map<string, string>();
+
+  for (const doc of snapshot.docs) {
+    const data = doc.data();
+    const displayName = data.displayName as string | undefined;
+    const name = data.name as string | undefined;
+    const fullName = displayName || name;
+
+    if (fullName) {
+      contactMap.set(doc.id, fullName);
+    }
+  }
+
+  return contactMap;
+}
+
+/**
+ * Resol el nom d'una categoria a partir de l'ID o clau.
+ */
+export function resolveCategoryName(
+  categoryId: string | null,
+  categoryMap: Map<string, string>
+): string {
+  if (!categoryId) return '';
+
+  // 1. Buscar a les categories carregades de Firestore
+  const fromMap = categoryMap.get(categoryId);
+  if (fromMap) {
+    // Si el que tenim és una clau per defecte, traduir-la
+    return DEFAULT_CATEGORY_NAMES[fromMap] || fromMap;
+  }
+
+  // 2. Potser l'ID ja és una clau per defecte
+  if (DEFAULT_CATEGORY_NAMES[categoryId]) {
+    return DEFAULT_CATEGORY_NAMES[categoryId];
+  }
+
+  // 3. Retornar buit si no es pot resoldre (mai mostrar IDs)
+  return '';
+}
+
+/**
+ * Resol el nom d'un contacte a partir de l'ID.
+ */
+export function resolveContactName(
+  contactId: string | null,
+  contactMap: Map<string, string>
+): string {
+  if (!contactId) return '';
+  return contactMap.get(contactId) || '';
+}
+
+/**
  * Extreu la URL/path del document d'una transacció.
  * Suporta múltiples formats històrics:
  * - document: string (URL o path directe)
@@ -402,16 +516,47 @@ export async function validateLimits(
 /**
  * Construeix les files del manifest Excel (pestanya usuari).
  * Usa camps observables: teDocument (Sí/No) + nomDocument (nom al ZIP o buit).
+ * Resol categories i contactes a noms humans.
  */
 export function buildManifestRows(
   transactions: ClosingTransaction[],
   txWithDoc: Map<string, ClosingDocumentInfo>,
-  downloadedTxIds: Set<string>
+  downloadedTxIds: Set<string>,
+  categoryMap: Map<string, string>,
+  contactMap: Map<string, string>
 ): ClosingManifestRow[] {
   return transactions.map((tx, index) => {
     const ordre = index + 1;
     const docInfo = txWithDoc.get(tx.id);
     const wasDownloaded = downloadedTxIds.has(tx.id);
+
+    // Resolució de categoria: prioritzar categoryName si ja és un nom vàlid
+    let categoria = '';
+    if (tx.categoryName) {
+      // Primer mirar si categoryName ja és un nom humà (no una clau/ID)
+      if (DEFAULT_CATEGORY_NAMES[tx.categoryName]) {
+        categoria = DEFAULT_CATEGORY_NAMES[tx.categoryName];
+      } else if (!tx.categoryName.match(/^[a-zA-Z0-9]{10,}$/)) {
+        // Si no sembla un ID de Firestore (20+ chars alfanumèrics), usar-lo directament
+        categoria = tx.categoryName;
+      } else {
+        // És un ID, intentar resoldre'l
+        categoria = resolveCategoryName(tx.categoryName, categoryMap);
+      }
+    }
+    // Si encara no tenim categoria, provar amb tx.category
+    if (!categoria && tx.category) {
+      categoria = resolveCategoryName(tx.category, categoryMap);
+    }
+
+    // Resolució de contacte: prioritzar contactName si existeix
+    let contacte = '';
+    if (tx.contactName && !tx.contactName.match(/^[a-zA-Z0-9]{15,}$/)) {
+      // Si no sembla un ID, usar-lo directament
+      contacte = tx.contactName;
+    } else if (tx.contactId) {
+      contacte = resolveContactName(tx.contactId, contactMap);
+    }
 
     return {
       ordre,
@@ -419,8 +564,8 @@ export function buildManifestRows(
       import: tx.amount,
       moneda: 'EUR',
       concepte: tx.description,
-      categoria: tx.categoryName || '',
-      contacte: tx.contactName || '',
+      categoria,
+      contacte,
       txId: tx.id,
       teDocument: !!tx.document,
       nomDocument: wasDownloaded && docInfo ? docInfo.fileName : '',
@@ -441,7 +586,47 @@ export interface DocumentStatusCounts {
 }
 
 /**
- * Genera el text del resum.
+ * Genera el README.txt (arrel del ZIP).
+ * Explicació breu del contingut del paquet.
+ */
+export function buildReadmeText(
+  orgSlug: string,
+  dateFrom: string,
+  dateTo: string
+): string {
+  return `PAQUET DE TANCAMENT - SUMMA SOCIAL
+=====================================
+
+Organització: ${orgSlug}
+Període: ${dateFrom} a ${dateTo}
+
+CONTINGUT DEL PAQUET
+--------------------
+
+📄 moviments.xlsx
+   Llistat de tots els moviments del període amb:
+   Ordre, Data, Import, Concepte, Categoria, Contacte, Document
+
+📄 resum.txt
+   Resum econòmic: totals d'ingressos, despeses i saldo
+
+📁 documents/
+   Fitxers adjunts vinculats als moviments
+   Format del nom: ORDRE_DATA_IMPORT_CONCEPTE_TXID.ext
+
+📁 debug/
+   Informació tècnica per a diagnòstic (només si cal revisar problemes)
+
+NOTA
+----
+La columna "Ordre" de moviments.xlsx correspon al prefix numèric
+del nom dels fitxers a la carpeta documents/.
+`;
+}
+
+/**
+ * Genera el text del resum (arrel del ZIP).
+ * Versió humana sense detalls tècnics.
  */
 export function buildSummaryText(params: {
   runId: string;
@@ -457,7 +642,6 @@ export function buildSummaryText(params: {
   totalIncidents: number;
 }): string {
   const {
-    runId,
     orgSlug,
     dateFrom,
     dateTo,
@@ -467,32 +651,20 @@ export function buildSummaryText(params: {
     totalWithDocRef,
     totalIncluded,
     statusCounts,
-    totalIncidents,
   } = params;
 
   const saldo = totalIncome + totalExpense;
-  const totalNotIncluded = totalWithDocRef - totalIncluded;
+  const movimentsSenseDoc = statusCounts.noDocument;
 
-  let statusBreakdown = '';
-  if (totalNotIncluded > 0) {
-    statusBreakdown = `
-Documents no inclosos per status:
-  - URL_NOT_PARSEABLE: ${statusCounts.urlNotParseable}
-  - BUCKET_MISMATCH: ${statusCounts.bucketMismatch}
-  - NOT_FOUND: ${statusCounts.notFound}
-  - DOWNLOAD_ERROR: ${statusCounts.downloadError}`;
-  }
-
-  return `PAQUET DE TANCAMENT - SUMMA SOCIAL
-=====================================
-Run ID: ${runId}
+  return `RESUM ECONÒMIC
+==============
 
 Organització: ${orgSlug}
 Període: ${dateFrom} a ${dateTo}
 Generat: ${new Date().toISOString().slice(0, 19).replace('T', ' ')}
 
-RESUM DE MOVIMENTS
-------------------
+MOVIMENTS
+---------
 Total moviments: ${totalTransactions}
 Total ingressos: ${totalIncome.toFixed(2)} EUR
 Total despeses: ${totalExpense.toFixed(2)} EUR
@@ -500,18 +672,68 @@ Saldo: ${saldo.toFixed(2)} EUR
 
 DOCUMENTS
 ---------
+Moviments amb document adjunt: ${totalWithDocRef}
+Documents inclosos al ZIP: ${totalIncluded}
+Moviments sense document: ${movimentsSenseDoc}
+`;
+}
+
+/**
+ * Genera el resum_debug.txt (carpeta debug/).
+ * Versió tècnica amb breakdown per status.
+ */
+export function buildDebugSummaryText(params: {
+  runId: string;
+  orgSlug: string;
+  dateFrom: string;
+  dateTo: string;
+  totalTransactions: number;
+  totalWithDocRef: number;
+  totalIncluded: number;
+  statusCounts: DocumentStatusCounts;
+}): string {
+  const {
+    runId,
+    orgSlug,
+    dateFrom,
+    dateTo,
+    totalTransactions,
+    totalWithDocRef,
+    totalIncluded,
+    statusCounts,
+  } = params;
+
+  const totalNotIncluded = totalWithDocRef - totalIncluded;
+
+  return `DIAGNÒSTIC TÈCNIC - PAQUET DE TANCAMENT
+========================================
+Run ID: ${runId}
+
+Organització: ${orgSlug}
+Període: ${dateFrom} a ${dateTo}
+Generat: ${new Date().toISOString().slice(0, 19).replace('T', ' ')}
+
+TRANSACCIONS
+------------
+Total transaccions: ${totalTransactions}
+
+DOCUMENTS - BREAKDOWN PER STATUS
+--------------------------------
+OK (descarregats): ${statusCounts.ok}
+NO_DOCUMENT (sense referència): ${statusCounts.noDocument}
+URL_NOT_PARSEABLE (URL no reconeguda): ${statusCounts.urlNotParseable}
+BUCKET_MISMATCH (bucket diferent): ${statusCounts.bucketMismatch}
+NOT_FOUND (fitxer no existeix): ${statusCounts.notFound}
+DOWNLOAD_ERROR (error de xarxa): ${statusCounts.downloadError}
+
+RESUM
+-----
 Moviments amb document referenciat: ${totalWithDocRef}
 Documents inclosos al ZIP: ${totalIncluded}
-Moviments sense document: ${statusCounts.noDocument}${statusBreakdown}
-
-INCIDÈNCIES
------------
-Total incidències: ${totalIncidents}
+Documents no inclosos: ${totalNotIncluded}
 
 NOTA
 ----
-Els documents inclosos corresponen als adjunts vinculats a moviments.
-Els noms dels fitxers segueixen el format: ORDRE_DATA_IMPORT_CONCEPTE_TXID.ext
-La columna "Ordre" del manifest.xlsx correspon al prefix del nom del document.
+Consulteu debug.xlsx per al detall complet de cada transacció.
 `;
 }

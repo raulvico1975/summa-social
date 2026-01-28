@@ -1,7 +1,7 @@
 # SUMMA SOCIAL - Manual d'Usuari Complet
 
-**Versió**: 1.31
-**Última actualització**: 14 Gener 2026
+**Versió**: 1.32
+**Última actualització**: 27 Gener 2026
 
 ---
 
@@ -33,6 +33,7 @@ Endavant!
 8. [Donacions via Stripe](#8-donacions-via-stripe)
 9. [Informes Fiscals](#9-informes-fiscals)
 10. [Projectes i Justificació de Subvencions](#10-projectes-i-justificació-de-subvencions)
+10b. [Paquet de Tancament](#10b-paquet-de-tancament)
 11. [Zona de Perill](#11-zona-de-perill)
 12. [Resolució de Problemes](#12-resolució-de-problemes)
 13. [Glossari](#13-glossari)
@@ -1634,6 +1635,147 @@ El PDF inclou:
 
 ---
 
+# 10b. Paquet de Tancament
+
+**Aquesta secció t'ajudarà a...**
+
+Generar un paquet complet amb tots els moviments i documents d'un període. És ideal per a tancaments d'exercici, auditories, o per enviar a comptabilitat extern un recull ordenat de tota l'activitat econòmica.
+
+---
+
+## 10b.1 Què és el Paquet de Tancament?
+
+És un ZIP que conté:
+- Un Excel amb tots els moviments del període
+- Els documents adjunts (factures, tiquets) numerats
+- Un resum econòmic
+
+**Cas d'ús típic:** Al final de l'any, generes el paquet i l'envies a comptabilitat. Ells tenen tot el que necessiten sense haver d'accedir a Summa Social.
+
+---
+
+## 10b.2 Com generar-lo
+
+### Pas a pas
+
+1. Ves a 💰 **Moviments**
+2. Clica el menú **⋮** → **"Paquet de tancament"**
+3. Selecciona el **període** (data inici i data fi)
+4. Clica **"Generar"**
+5. Es descarrega un fitxer ZIP
+
+### Límits
+
+| Límit | Valor |
+|-------|-------|
+| Màxim de documents | 120 |
+| Mida total màxima | 350 MB |
+
+Si superes els límits, prova amb un període més curt (trimestre o mes).
+
+---
+
+## 10b.3 Contingut del ZIP
+
+El paquet té una estructura pensada per ser autoexplicativa:
+
+```
+paquet_tancament_{org}_{periode}.zip
+├── README.txt          ← Què conté el paquet
+├── resum.txt           ← Resum econòmic
+├── moviments.xlsx      ← Llistat de moviments
+├── documents/          ← Fitxers adjunts
+│   ├── 0001_2025-01-15_150,00_quota_soci_abc12345.pdf
+│   ├── 0002_2025-01-16_75,50_factura_xyz98765.pdf
+│   └── ...
+└── debug/              ← Diagnòstic tècnic (només si cal)
+    ├── resum_debug.txt
+    └── debug.xlsx
+```
+
+---
+
+## 10b.4 moviments.xlsx (el fitxer principal)
+
+L'Excel conté una fila per cada moviment del període:
+
+| Columna | Descripció |
+|---------|------------|
+| **Ordre** | Número correlatiu (1, 2, 3...) |
+| **Data** | Data del moviment (DD/MM/YYYY) |
+| **Import** | Quantitat amb format europeu (coma decimal) |
+| **Concepte** | Descripció del moviment |
+| **Categoria** | Nom de la categoria (no IDs) |
+| **Contacte** | Nom del donant/proveïdor (no IDs) |
+| **Document** | Nom del fitxer a documents/ (o buit) |
+
+### Com relacionar moviments amb documents
+
+La columna **Ordre** correspon al **prefix numèric** del nom dels fitxers a la carpeta `documents/`.
+
+**Exemple:**
+- Fila amb Ordre = 1 → El document és `0001_...`
+- Fila amb Ordre = 15 → El document és `0015_...`
+
+Si la columna "Document" està buida, significa que el moviment no té document adjunt.
+
+---
+
+## 10b.5 La carpeta debug/
+
+Aquesta carpeta conté informació tècnica per diagnosticar problemes. **Normalment no cal mirar-la.**
+
+Quan sí que és útil:
+- Si veus que falten documents que esperaves
+- Si vols entendre per què un document no s'ha inclòs
+
+El fitxer `debug.xlsx` mostra per cada transacció:
+- L'estat del document (OK, NO_DOCUMENT, NOT_FOUND...)
+- La URL original del document
+- El path extret
+
+---
+
+## 10b.6 Què enviar a comptabilitat
+
+Per a un tancament normal, envia:
+1. ✅ `moviments.xlsx` → El llistat de moviments
+2. ✅ `resum.txt` → El resum econòmic
+3. ✅ Carpeta `documents/` → Els justificants
+
+**NO cal enviar:**
+- ❌ `README.txt` (és explicatiu per a tu)
+- ❌ Carpeta `debug/` (és tècnic)
+
+---
+
+## 10b.7 Preguntes freqüents
+
+### Per què falten documents?
+
+Mira la columna "Document" a l'Excel. Si està buida, és que:
+- El moviment no té document adjunt a Summa Social
+- O el document no s'ha pogut descarregar
+
+Per saber el motiu exacte, consulta `debug/debug.xlsx`.
+
+### Puc generar paquets de períodes anteriors?
+
+Sí. El sistema guarda tots els documents històrics. Pots generar un paquet de qualsevol any passat.
+
+### El ZIP triga molt a generar-se
+
+És normal si tens molts documents. El sistema ha de descarregar cada fitxer i comprimir-lo. Per a un any complet amb 100+ documents, pot trigar 1-2 minuts.
+
+### Els imports apareixen com a text a Excel
+
+El format europeu (coma decimal) pot fer que Excel no els reconegui com a números. Si necessites fer càlculs, pots convertir-los amb:
+- Selecciona la columna
+- "Trobar i substituir": `,` per `.`
+- Canvia el format a "Número"
+
+---
+
 # 11. Zona de Perill
 
 **Aquesta secció t'ajudarà a...**
@@ -1803,6 +1945,6 @@ Molta sort! 🍀
 
 ---
 
-**Summa Social v1.31** — Gener 2026
+**Summa Social v1.32** — Gener 2026
 
 *Gestió financera pensada per a entitats que volen dedicar el seu temps al que realment importa.*

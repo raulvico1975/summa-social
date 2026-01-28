@@ -24,10 +24,14 @@ import {
   prepareDiagnostics,
   validateLimits,
   buildManifestRows,
+  buildReadmeText,
   buildSummaryText,
+  buildDebugSummaryText,
   DocumentStatusCounts,
+  loadCategoryMap,
+  loadContactMap,
 } from './closing-bundle/build-closing-data';
-import { buildManifestXlsx, DebugRow } from './closing-bundle/build-closing-xlsx';
+import { buildMovimentsXlsx, buildDebugXlsx, DebugRow } from './closing-bundle/build-closing-xlsx';
 import { inferExtension, buildDocumentFileName } from './closing-bundle/normalize-filename';
 
 const db = admin.firestore();
@@ -168,8 +172,12 @@ export const exportClosingBundleZip = functions
     functions.logger.info(`[closingBundleZip][${runId}] Iniciant generació`, { orgId, dateFrom, dateTo, uid });
 
     try {
-      // 6. Carregar transaccions
-      const rawTransactions = await loadTransactions(orgId, dateFrom, dateTo);
+      // 6. Carregar transaccions i mapes de resolució en paral·lel
+      const [rawTransactions, categoryMap, contactMap] = await Promise.all([
+        loadTransactions(orgId, dateFrom, dateTo),
+        loadCategoryMap(orgId),
+        loadContactMap(orgId),
+      ]);
 
       if (rawTransactions.length === 0) {
         sendError(res, 400, { code: 'NO_TRANSACTIONS', message: 'No hi ha moviments en aquest període' });
@@ -241,6 +249,9 @@ export const exportClosingBundleZip = functions
           const [exists] = await file.exists();
           if (!exists) {
             diagnostic.status = 'NOT_FOUND';
+            diagnostic.errorCode = 'FILE_NOT_EXISTS';
+            diagnostic.errorMessage = 'El fitxer no existeix al bucket';
+            diagnostic.errorAt = new Date().toISOString();
             functions.logger.warn(`[closingBundleZip][${runId}] Fitxer no existeix`, {
               txId: docInfo.txId,
               storagePath: docInfo.storagePath,
@@ -271,36 +282,22 @@ export const exportClosingBundleZip = functions
           diagnostic.status = 'OK';
         } catch (err) {
           const errorMessage = err instanceof Error ? err.message : 'Unknown';
+          const errorCode = err instanceof Error && 'code' in err ? String(err.code) : 'UNKNOWN';
           diagnostic.status = 'DOWNLOAD_ERROR';
+          diagnostic.errorCode = errorCode;
+          diagnostic.errorMessage = errorMessage;
+          diagnostic.errorAt = new Date().toISOString();
           functions.logger.warn(`[closingBundleZip][${runId}] Error descarregant document`, {
             txId: docInfo.txId,
             storagePath: docInfo.storagePath,
             rawDocumentValue: diagnostic.rawDocumentValue,
-            error: errorMessage,
+            errorCode,
+            errorMessage,
           });
         }
       }
 
-      // 15. Construir debug rows amb els diagnòstics complets
-      const debugRows: DebugRow[] = transactions.map((tx) => {
-        const diagnostic = diagnostics.get(tx.id);
-        return {
-          txId: tx.id,
-          rawDocumentValue: diagnostic?.rawDocumentValue || null,
-          extractedPath: diagnostic?.extractedPath || null,
-          bucketConfigured: diagnostic?.bucketConfigured || null,
-          bucketInUrl: diagnostic?.bucketInUrl || null,
-          status: diagnostic?.status || 'NO_DOCUMENT',
-          kind: diagnostic?.kind || null,
-        };
-      });
-
-      // 16. Construir manifest amb sheet Debug
-      const manifestRows = buildManifestRows(transactions, txWithDoc, downloadedTxIds);
-      const manifestBuffer = buildManifestXlsx(manifestRows, debugRows);
-      archive.append(manifestBuffer, { name: 'manifest.xlsx' });
-
-      // 17. Calcular estadístiques per status
+      // 15. Calcular estadístiques per status
       const statusCounts: DocumentStatusCounts = {
         ok: 0,
         noDocument: 0,
@@ -337,7 +334,16 @@ export const exportClosingBundleZip = functions
       const totalExpense = transactions.filter((t) => t.amount < 0).reduce((sum, t) => sum + t.amount, 0);
       const totalWithDocRef = transactions.filter((t) => t.document).length;
 
-      // 18. Construir resum
+      // 16. README.txt (arrel) — explicació del paquet
+      const readmeText = buildReadmeText(orgSlug, dateFrom, dateTo);
+      archive.append(readmeText, { name: 'README.txt' });
+
+      // 17. moviments.xlsx (arrel) — simplificat per a l'entitat
+      const manifestRows = buildManifestRows(transactions, txWithDoc, downloadedTxIds, categoryMap, contactMap);
+      const movimentsBuffer = buildMovimentsXlsx(manifestRows);
+      archive.append(movimentsBuffer, { name: 'moviments.xlsx' });
+
+      // 18. resum.txt (arrel) — resum humà sense detalls tècnics
       const summaryText = buildSummaryText({
         runId,
         orgSlug,
@@ -351,8 +357,39 @@ export const exportClosingBundleZip = functions
         statusCounts,
         totalIncidents: incidents.length,
       });
-
       archive.append(summaryText, { name: 'resum.txt' });
+
+      // 19. debug/resum_debug.txt — resum tècnic amb breakdown per status
+      const debugSummaryText = buildDebugSummaryText({
+        runId,
+        orgSlug,
+        dateFrom,
+        dateTo,
+        totalTransactions: transactions.length,
+        totalWithDocRef,
+        totalIncluded: downloadedTxIds.size,
+        statusCounts,
+      });
+      archive.append(debugSummaryText, { name: 'debug/resum_debug.txt' });
+
+      // 20. debug/debug.xlsx — diagnòstics tècnics complets
+      const debugRows: DebugRow[] = transactions.map((tx) => {
+        const diagnostic = diagnostics.get(tx.id);
+        return {
+          txId: tx.id,
+          rawDocumentValue: diagnostic?.rawDocumentValue || null,
+          extractedPath: diagnostic?.extractedPath || null,
+          bucketConfigured: diagnostic?.bucketConfigured || null,
+          bucketInUrl: diagnostic?.bucketInUrl || null,
+          status: diagnostic?.status || 'NO_DOCUMENT',
+          kind: diagnostic?.kind || null,
+          errorCode: diagnostic?.errorCode || null,
+          errorMessage: diagnostic?.errorMessage || null,
+          errorAt: diagnostic?.errorAt || null,
+        };
+      });
+      const debugBuffer = buildDebugXlsx(debugRows);
+      archive.append(debugBuffer, { name: 'debug/debug.xlsx' });
 
       // 19. Finalitzar ZIP
       await archive.finalize();
