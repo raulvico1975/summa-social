@@ -1,6 +1,6 @@
 # ═══════════════════════════════════════════════════════════════════════════════
 # SUMMA SOCIAL - REFERÈNCIA COMPLETA DEL PROJECTE
-# Versió 1.31 - Gener 2026
+# Versió 1.32 - Gener 2026
 # ═══════════════════════════════════════════════════════════════════════════════
 
 
@@ -1272,6 +1272,56 @@ Si hi ha socis sense IBAN:
 | SEPA Domiciliacions | Pre-banc | Generar cobrament | **pain.008** |
 | Divisor de remesa IN | Post-banc | Desagregar ingrés cobrat | cap (es processa CSV/XLSX del banc) |
 
+### 3.3.9.7 Wizard SEPA pain.008 (ACTUALITZAT v1.32)
+
+**Accés:** Donants → Remeses de cobrament
+
+**Passos del wizard:**
+
+| Pas | Nom | Funció |
+|-----|-----|--------|
+| 1 | Configuració | Seleccionar compte bancari, data cobrament, periodicitat |
+| 2 | Selecció | Triar socis a incloure (bulk selection, cerca, filtre) |
+| 3 | Revisió | Validar i descarregar XML |
+
+**Periodicitat de quota (NOU v1.32):**
+
+Camp `periodicityQuota` al contacte:
+
+| Valor | Descripció |
+|-------|------------|
+| `monthly` | Mensual |
+| `quarterly` | Trimestral |
+| `semiannual` | Semestral |
+| `annual` | Anual |
+| `manual` | Cobrament manual (no domiciliat) |
+| `null` | No definit |
+
+**Filtre per periodicitat:** El wizard permet filtrar socis per periodicitat per generar remeses segmentades.
+
+**Memòria d'execució (run memory):**
+
+- Camp `lastSepaRunDate` al contacte: data de l'última execució pain.008 que va incloure aquest donant
+- Permet identificar quins socis ja s'han cobrat recentment
+- Útil per evitar duplicitats en remeses parcials
+
+**Col·lecció `sepaCollectionRuns`:**
+
+Cada execució del wizard crea un document amb:
+- `status`: draft | exported | sent | processed
+- `scheme`: CORE | B2B
+- `bankAccountId`, `creditorId`, `creditorName`, `creditorIban`
+- `collectionDate`, `totalAmount`, `itemCount`
+- `items[]`: array amb detall de cada cobrament
+- `selectionCriteria`: periodicitat i cerca aplicats
+
+**Fitxers:**
+- `src/components/sepa-collection/SepaCollectionWizard.tsx` — Wizard principal
+- `src/components/sepa-collection/StepConfig.tsx` — Pas configuració
+- `src/components/sepa-collection/StepSelection.tsx` — Pas selecció
+- `src/components/sepa-collection/StepReview.tsx` — Pas revisió
+- `src/lib/sepa/pain008/generate-pain008.ts` — Generador XML
+
 
 ## 3.4 GESTIÓ DE DEVOLUCIONS (NOU v1.8)
 
@@ -1904,6 +1954,42 @@ Panel lateral que s'obre clicant el nom d'un donant:
 - **Historial de devolucions** (NOU v1.8)
 - Resum per any
 - Generació de certificats
+
+### 3.6.8 Dinàmica de Donants (NOU v1.32)
+
+Panell d'anàlisi que mostra l'evolució dels donants segons el període seleccionat.
+
+**Accés:** Donants → Bloc "Dinàmica de donants" (part inferior de la pantalla)
+
+**Categories d'anàlisi:**
+
+| Categoria | Definició | Ordenació |
+|-----------|-----------|-----------|
+| **Altes** | Primer moviment dins el període (sense històric anterior) | Per data primer moviment (desc) |
+| **Sense moviments** | Tenia històric però zero dins el període actual | Per data últim moviment (desc) |
+| **Reactivacions** | Zero al període anterior, sí al actual (amb vida abans del prev) | Per data primer moviment (desc) |
+| **Amb devolucions** | Té almenys una devolució dins el període | Per suma devolucions (desc) |
+| **Aportació decreixent** | Import al període actual < import al període anterior | Per delta negatiu (asc) |
+
+**Transaccions elegibles:**
+- Té `contactId` (vinculat a donant)
+- No arxivada (`archivedAt` buit)
+- No és pare de remesa (`isRemittance=true` sense `isRemittanceItem`)
+
+**Període anterior:**
+- Any → any -1
+- Trimestre → trimestre anterior (Q1 → Q4 any -1)
+- Mes → mes anterior (Gen → Des any -1)
+- Rang personalitzat → mateixa durada abans del `from`
+- "Tot el període" → No té anterior definit (algunes mètriques no disponibles)
+
+**API tolerant (nullable):**
+- Si el rang no és computable, retorna `null` (UI mostra "no hi ha dades suficients")
+- Cap throw, cap data inventada
+
+**Fitxers:**
+- `src/lib/donor-dynamics.ts` — Càlcul de dinàmiques
+- `src/components/donor-manager.tsx` — UI del panell
 
 
 ## 3.7 PROJECTES / EIXOS D'ACTUACIÓ
@@ -2777,7 +2863,7 @@ const budgeted = budgetLinesData?.hasLines
   : (project.budgetEUR ?? 0);
 ```
 
-#### Importador de pressupost (NOU v1.16)
+#### Importador de pressupost (ACTUALITZAT v1.32)
 
 Wizard d'importació de partides des d'Excel (.xlsx) amb 5 passos:
 
@@ -2796,13 +2882,38 @@ Wizard d'importació de partides des d'Excel (.xlsx) amb 5 passos:
 - Mode "Agrupar" suma subpartides al seu pare (evita duplicitats)
 - Substitueix completament el pressupost existent (batch delete + batch create)
 
+**Extracció de codi del text (NOU v1.32):**
+
+Opció toggle "Extreure codi del text" que detecta patrons de codi al nom de la partida:
+
+| Patró | Exemple | Codi extret |
+|-------|---------|-------------|
+| `X)` | `A) Personal` | `A` |
+| `x.n)` | `a.1) Salaris` | `a.1` |
+| `x.n.m)` | `a.1.1) Tècnics` | `a.1.1` |
+| `n.m)` | `1.2) Desplaçaments` | `1.2` |
+
+**Agrupació contextual:**
+
+Quan "Extreure codi del text" està activat:
+- Els capítols (codi sola lletra: A, B, C...) es destaquen visualment (ambre)
+- Les subpartides s'agrupen automàticament sota el seu pare segons nivell de codi
+- Mode `useContextGrouping`: consolida files intel·ligentment per jerarquia
+
+**Pantalla de pressupost (millores v1.32):**
+
+| Estat | Vista |
+|-------|-------|
+| **Sense partides** | Resum global del projecte amb totals agregats |
+| **Amb partides** | Taula detallada amb resum superior + desviacions per partida |
+
 **Important:**
 - Només importa la columna del finançador principal (p.ex. ACCD)
 - No suport multi-finançador ni contrapartida
 - No suport PDF (només Excel)
 
 **Fitxers:**
-- `src/lib/budget-import.ts`: Utilitats de parsing
+- `src/lib/budget-import.ts`: Utilitats de parsing (`extractCodeFromText`, `consolidateRows`)
 - `src/components/project-module/budget-import-wizard.tsx`: Wizard UI
 
 ### 3.11.4 Mode "Quadrar justificació del projecte"
@@ -4463,6 +4574,7 @@ Indicadors que requeririen intervenció:
 | **1.29** | **12 Gen 2026** | **Adaptació mòbil completa: patrons UI normalitzats (CTA + DropdownMenu "Més accions", Tabs → Select, Table → MobileListItem, DangerZone col·lapsable amb Accordion). Pàgines adaptades: expenses, super-admin, admin, configuracio, product-updates-section, i18n-manager. Fix traduccions categories Dashboard (TopCategoriesTable resol category.name → t.categories). Nova secció documentació 7.5.10 Adaptació Mòbil amb exemples de codi.** |
 | **1.30** | **13 Gen 2026** | **Dashboard: reorganització KPIs en dos blocs (Diners/Qui ens sosté), nou KPI "Altres ingressos" per reconciliació visual (subvencions, loteria, interessos), datasets separats per evitar duplicats remesa. Fix hydration warning extensions navegador (`suppressHydrationWarning` a `<html>`). Eliminats logs debug BUILD-SIGNATURE.** |
 | **1.31** | **14 Gen 2026** | **UX novetats: eliminat toast automàtic de novetats al dashboard (ara només via campaneta/FAB inbox). Reducció soroll logs: console.debug dev-only per i18n listener, org-provider superadmin access. Traça toast DEV-ONLY per debugging. Clarificat accés SuperAdmin sense membership com a comportament esperat. Documentat ERR_BLOCKED_BY_CLIENT com a possible adblocker (no bug).** |
+| **1.32** | **29 Gen 2026** | **Dinàmica de donants: nou panell d'anàlisi per període (altes, baixes, reactivacions, devolucions, aportació decreixent). Wizard SEPA pain.008 complet: 3 passos (config, selecció, revisió), periodicitat de quota (monthly/quarterly/semiannual/annual/manual), memòria d'execució (lastSepaRunDate), bulk selection amb filtre, col·lecció sepaCollectionRuns. Importador pressupost millorat: extracció codi del text amb patrons (A), a.1), a.1.1)), agrupació contextual per jerarquia, capítols destacats (ambre), vista sense/amb partides. Traduccions i18n donorDynamics (CA/ES). Doc GOVERN-DE-CODI-I-DEPLOY v3.0: classificació risc (BAIX/MITJÀ/ALT), ritual deploy per nivell, gate humà únic.** |
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
