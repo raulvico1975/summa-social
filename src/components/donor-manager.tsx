@@ -47,7 +47,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
-import { PlusCircle, Edit, Trash2, User, Building2, RefreshCw, Heart, Upload, AlertTriangle, Search, X, RotateCcw, Download, Users, CreditCard, MoreVertical, ChevronDown } from 'lucide-react';
+import { PlusCircle, Edit, Trash2, User, Building2, RefreshCw, Heart, Upload, AlertTriangle, Search, X, RotateCcw, Download, Users, CreditCard, MoreVertical, ChevronDown, TrendingDown, TrendingUp, UserPlus, UserMinus, RotateCw } from 'lucide-react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import { EmptyState } from '@/components/ui/empty-state';
@@ -76,6 +76,13 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from '@/components/ui/collapsible';
+import { DateFilter } from '@/components/date-filter';
+import { computeDonorDynamics, type DonorWithMeta, type DonorDynamicsResult } from '@/lib/donor-dynamics';
 import { MOBILE_ACTIONS_BAR, MOBILE_CTA_PRIMARY } from '@/lib/ui/mobile-actions';
 
 type DonorFormData = Omit<Donor, 'id' | 'createdAt' | 'updatedAt'>;
@@ -99,7 +106,89 @@ const emptyFormData: DonorFormData = {
   defaultCategoryId: undefined,
   status: 'active',
   inactiveSince: undefined,
+  periodicityQuota: null,
 };
+
+// ═══════════════════════════════════════════════════════════════════════════
+// DYNAMICS BLOCK - Component intern per mostrar llistes de dinàmica
+// ═══════════════════════════════════════════════════════════════════════════
+function DynamicsBlock({
+  title,
+  help,
+  items,
+  onDonorClick,
+  tr,
+  icon,
+  showAmount = false,
+  showDelta = false
+}: {
+  title: string;
+  help: string;
+  items: DonorWithMeta[];
+  onDonorClick: (donor: Donor) => void;
+  tr: (key: string, fallback?: string) => string;
+  icon?: React.ReactNode;
+  showAmount?: boolean;
+  showDelta?: boolean;
+}) {
+  const [showAll, setShowAll] = React.useState(false);
+  const displayItems = showAll ? items : items.slice(0, 20);
+
+  return (
+    <div className="border rounded-lg p-3">
+      <div className="flex items-center justify-between mb-2">
+        <div className="flex items-center gap-2">
+          {icon}
+          <div>
+            <h4 className="font-medium text-sm">{title}</h4>
+            <p className="text-xs text-muted-foreground">{help}</p>
+          </div>
+        </div>
+        <Badge variant="secondary">{items.length}</Badge>
+      </div>
+
+      {items.length === 0 ? (
+        <p className="text-sm text-muted-foreground">{tr('donors.dynamics.empty', 'Cap donant en aquesta categoria')}</p>
+      ) : (
+        <>
+          <ul className="space-y-1 max-h-48 overflow-y-auto">
+            {displayItems.map(item => (
+              <li key={item.donor.id}>
+                <button
+                  type="button"
+                  onClick={() => onDonorClick(item.donor)}
+                  className="text-sm text-blue-600 hover:underline text-left w-full flex justify-between items-center py-0.5"
+                >
+                  <span className="truncate">{item.donor.name}</span>
+                  {showAmount && item.returnsSum !== undefined && (
+                    <span className="text-muted-foreground ml-2 text-xs">
+                      {formatCurrencyEU(item.returnsSum)}
+                    </span>
+                  )}
+                  {showDelta && item.delta !== undefined && (
+                    <span className="text-muted-foreground ml-2 text-xs">
+                      {formatCurrencyEU(item.delta)} ({tr('donors.dynamics.deltaLabel', 'vs anterior')})
+                    </span>
+                  )}
+                </button>
+              </li>
+            ))}
+          </ul>
+          {items.length > 20 && !showAll && (
+            <Button
+              variant="ghost"
+              size="sm"
+              className="mt-2 w-full"
+              onClick={() => setShowAll(true)}
+            >
+              {tr('donors.dynamics.actions.viewAll', 'Veure tots')} ({items.length})
+            </Button>
+          )}
+        </>
+      )}
+    </div>
+  );
+}
 
 // ═══════════════════════════════════════════════════════════════════════════
 // PAGINACIÓ DE DONANTS
@@ -110,7 +199,7 @@ export function DonorManager() {
   const { firestore } = useFirebase();
   const { organizationId, orgSlug } = useCurrentOrganization();
   const { toast } = useToast();
-  const { t, language } = useTranslations();
+  const { t, tr, language } = useTranslations();
   const isMobile = useIsMobile();
   const searchParams = useSearchParams();
   const urlDonorId = searchParams.get('id');
@@ -206,6 +295,35 @@ export function DonorManager() {
   const [membershipTypeFilter, setMembershipTypeFilter] = React.useState<'all' | 'one-time' | 'recurring'>('all');
   const [periodFilter, setPeriodFilter] = React.useState<DateFilterValue | null>(null);
   const [periodLabel, setPeriodLabel] = React.useState<string>('');
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // DINÀMICA DE DONANTS
+  // ═══════════════════════════════════════════════════════════════════════════
+  const [dynamicsOpen, setDynamicsOpen] = React.useState(false);
+  const [dynamicsPeriod, setDynamicsPeriod] = React.useState<DateFilterValue>({
+    type: 'year',
+    year: new Date().getFullYear()
+  });
+
+  // Càlcul lazy: només quan dynamicsOpen és true
+  const dynamics = React.useMemo(() => {
+    if (!dynamicsOpen || !donors || !allTransactions) return null;
+    return computeDonorDynamics(donors, allTransactions, dynamicsPeriod);
+  }, [dynamicsOpen, donors, allTransactions, dynamicsPeriod]);
+
+  // Detectar si no hi ha dades
+  const hasNoData = dynamics &&
+    dynamics.newDonors.length === 0 &&
+    dynamics.inactiveDonors.length === 0 &&
+    dynamics.reactivatedDonors.length === 0 &&
+    dynamics.withReturns.length === 0 &&
+    dynamics.decreasing.length === 0;
+
+  // Handler per obrir drawer des de dinàmica
+  const handleDynamicsDonorClick = React.useCallback((donor: Donor) => {
+    setSelectedDonor(donor);
+    setIsDetailOpen(true);
+  }, []);
 
   // ═══════════════════════════════════════════════════════════════════════════
   // DEVOLUCIONS: Estat i càrrega
@@ -436,6 +554,7 @@ export function DonorManager() {
       defaultCategoryId: donor.defaultCategoryId,
       status: donor.status || 'active',
       inactiveSince: donor.inactiveSince,
+      periodicityQuota: donor.periodicityQuota ?? null,
     });
     setIsDialogOpen(true);
   };
@@ -533,6 +652,7 @@ export function DonorManager() {
       iban: normalized.iban || null,
       status: formData.status || 'active',
       inactiveSince: inactiveSince,
+      periodicityQuota: formData.periodicityQuota ?? null,
       updatedAt: now,
     };
 
@@ -832,6 +952,96 @@ export function DonorManager() {
                 </Button>
               </div>
             )}
+
+            {/* ═══════════════════════════════════════════════════════════════════════
+                DINÀMICA DE DONANTS - Secció col·lapsable
+            ═══════════════════════════════════════════════════════════════════════ */}
+            <Collapsible open={dynamicsOpen} onOpenChange={setDynamicsOpen}>
+              <div className="mb-4 border rounded-lg">
+                <CollapsibleTrigger asChild>
+                  <button
+                    type="button"
+                    className="flex items-center justify-between w-full p-4 hover:bg-muted/50 transition-colors"
+                  >
+                    <div className="text-left">
+                      <h3 className="font-medium text-base">
+                        {tr('donors.dynamics.title', 'Dinàmica de donants')}
+                      </h3>
+                      <p className="text-sm text-muted-foreground">
+                        {tr('donors.dynamics.subtitle', 'Lectura basada en moviments reals del període seleccionat.')}
+                      </p>
+                    </div>
+                    <ChevronDown className={cn("h-5 w-5 text-muted-foreground transition-transform", dynamicsOpen && "rotate-180")} />
+                  </button>
+                </CollapsibleTrigger>
+                <CollapsibleContent>
+                  <div className="px-4 pb-4 space-y-4">
+                    {/* Selector de període */}
+                    <div>
+                      <Label className="text-sm text-muted-foreground mb-2 block">
+                        {tr('donors.dynamics.period.title', "Període d'anàlisi")}
+                      </Label>
+                      <DateFilter value={dynamicsPeriod} onChange={setDynamicsPeriod} />
+                    </div>
+
+                    {/* Estat "no hi ha dades" */}
+                    {hasNoData && (
+                      <p className="text-sm text-muted-foreground py-4">
+                        {tr('donors.dynamics.noData', 'No hi ha dades suficients per calcular la dinàmica amb aquest període.')}
+                      </p>
+                    )}
+
+                    {/* 5 blocs de llistes */}
+                    {dynamics && !hasNoData && (
+                      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                        <DynamicsBlock
+                          title={tr('donors.dynamics.blocks.new.title', 'Altes')}
+                          help={tr('donors.dynamics.blocks.new.help', 'Primer moviment dins el període seleccionat')}
+                          items={dynamics.newDonors}
+                          onDonorClick={handleDynamicsDonorClick}
+                          tr={tr}
+                          icon={<UserPlus className="h-4 w-4 text-green-600" />}
+                        />
+                        <DynamicsBlock
+                          title={tr('donors.dynamics.blocks.noActivity.title', 'Sense moviments')}
+                          help={tr('donors.dynamics.blocks.noActivity.help', 'Tenia històric però cap moviment al període. No implica baixa administrativa.')}
+                          items={dynamics.inactiveDonors}
+                          onDonorClick={handleDynamicsDonorClick}
+                          tr={tr}
+                          icon={<UserMinus className="h-4 w-4 text-gray-500" />}
+                        />
+                        <DynamicsBlock
+                          title={tr('donors.dynamics.blocks.reactivated.title', 'Reactivacions')}
+                          help={tr('donors.dynamics.blocks.reactivated.help', 'Zero al període anterior, amb moviment al període actual')}
+                          items={dynamics.reactivatedDonors}
+                          onDonorClick={handleDynamicsDonorClick}
+                          tr={tr}
+                          icon={<RotateCw className="h-4 w-4 text-blue-600" />}
+                        />
+                        <DynamicsBlock
+                          title={tr('donors.dynamics.blocks.returns.title', 'Amb devolucions')}
+                          help={tr('donors.dynamics.blocks.returns.help', 'Tenen almenys una devolució dins el període')}
+                          items={dynamics.withReturns}
+                          onDonorClick={handleDynamicsDonorClick}
+                          tr={tr}
+                          icon={<RefreshCw className="h-4 w-4 text-orange-500" />}
+                          showAmount
+                        />
+                        <DynamicsBlock
+                          title={tr('donors.dynamics.blocks.decreasing.title', 'Aportació decreixent')}
+                          help={tr('donors.dynamics.blocks.decreasing.help', 'Import inferior al període anterior')}
+                          items={dynamics.decreasing}
+                          onDonorClick={handleDynamicsDonorClick}
+                          tr={tr}
+                          icon={<TrendingDown className="h-4 w-4 text-amber-600" />}
+                          showDelta
+                        />
+                      </div>
+                    )}
+                  </div>
+                </CollapsibleContent>
+              </div>
+            </Collapsible>
 
             {/* Vista mòbil */}
             {isMobile ? (
@@ -1171,269 +1381,314 @@ export function DonorManager() {
           </CardContent>
         </Card>
 
-        <DialogContent className="sm:max-w-3xl max-h-[90vh] flex flex-col">
+        <DialogContent className="w-[95vw] sm:max-w-4xl lg:max-w-5xl max-h-[90vh] p-0 flex flex-col">
           {/* Header fix */}
-          <DialogHeader className="flex-shrink-0">
+          <DialogHeader className="flex-shrink-0 px-6 py-5 border-b">
             <DialogTitle>{dialogTitle}</DialogTitle>
             <DialogDescription>{dialogDescription}</DialogDescription>
           </DialogHeader>
 
-          {/* Cos amb scroll si cal */}
-          <div className="flex-1 min-h-0 overflow-y-auto py-4">
-            {/* ═══════════════════════════════════════════════════════════════════
-                BLOC 1: Dades bàsiques i fiscals (2 columnes)
-                ═══════════════════════════════════════════════════════════════════ */}
-            <div className="space-y-4">
-              <h4 className="text-sm font-medium text-muted-foreground">{t.donors.basicData}</h4>
+          {/* Cos amb scroll */}
+          <div className="flex-1 min-h-0 overflow-y-auto px-6 py-5">
+            {/* Grid principal 2 columnes */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {/* Columna esquerra: Identificació */}
-                <div className="space-y-3">
-                  <div className="space-y-1.5">
-                    <Label htmlFor="name">{t.donors.name}<span className="ml-1 text-muted-foreground">*</span></Label>
-                    <Input
-                      id="name"
-                      value={formData.name}
-                      onChange={(e) => handleFormChange('name', e.target.value)}
-                      placeholder={t.donors.namePlaceholder}
-                    />
-                  </div>
+              {/* ══════════════════════════════════════════════════════════════
+                  COLUMNA ESQUERRA
+                  ══════════════════════════════════════════════════════════════ */}
+              <div className="space-y-6">
 
-                  <div className="space-y-1.5">
-                    <Label htmlFor="taxId">
-                      {t.donors.taxId}
-                      <span className="ml-1 text-muted-foreground">*</span>
-                      <span className="ml-1.5 text-xs font-normal text-amber-600">(Model 182)</span>
-                    </Label>
-                    <Input
-                      id="taxId"
-                      value={formData.taxId}
-                      onChange={(e) => handleFormChange('taxId', e.target.value.toUpperCase())}
-                      placeholder="12345678A o B12345678"
-                    />
-                    <p className="text-xs text-muted-foreground">
-                      {t.form?.taxIdHelp ?? "8 dígits + lletra (DNI) o lletra + 7 dígits + lletra (NIE/CIF)."}
-                    </p>
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-3">
+                {/* Secció: Dades fiscals */}
+                <div className="rounded-lg border bg-background px-4 py-4">
+                  <h4 className="text-sm font-semibold">{tr('donors.form.section.fiscal', 'Dades fiscals')}</h4>
+                  <div className="mt-3 space-y-4">
                     <div className="space-y-1.5">
-                      <Label htmlFor="donorType">{t.donors.donorType}</Label>
-                      <Select
-                        value={formData.donorType}
-                        onValueChange={(v) => handleFormChange('donorType', v)}
-                      >
-                        <SelectTrigger>
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="individual">{t.donors.types.individual}</SelectItem>
-                          <SelectItem value="company">{t.donors.types.company}</SelectItem>
-                        </SelectContent>
-                      </Select>
+                      <Label htmlFor="name">{t.donors.name}<span className="ml-1 text-muted-foreground">*</span></Label>
+                      <Input
+                        id="name"
+                        value={formData.name}
+                        onChange={(e) => handleFormChange('name', e.target.value)}
+                        placeholder={t.donors.namePlaceholder}
+                      />
                     </div>
+
                     <div className="space-y-1.5">
-                      <Label htmlFor="status">{t.donors.statusField}</Label>
-                      <Select
-                        value={formData.status || 'active'}
-                        onValueChange={(v) => handleFormChange('status', v)}
-                      >
-                        <SelectTrigger>
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="active">{t.donors.statusActive}</SelectItem>
-                          <SelectItem value="inactive">{t.donors.statusInactive}</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  </div>
-
-                  {formData.status === 'inactive' && formData.inactiveSince && (
-                    <div className="text-sm text-muted-foreground">
-                      {t.donors.inactiveSinceLabel}: {new Date(formData.inactiveSince).toLocaleDateString()}
-                    </div>
-                  )}
-                </div>
-
-                {/* Columna dreta: Contacte i ubicació */}
-                <div className="space-y-3">
-                  <div className="space-y-1.5">
-                    <Label htmlFor="email">{t.donors.email}</Label>
-                    <Input
-                      id="email"
-                      type="email"
-                      value={formData.email || ''}
-                      onChange={(e) => handleFormChange('email', e.target.value)}
-                      placeholder="correu@exemple.com"
-                    />
-                  </div>
-
-                  <div className="space-y-1.5">
-                    <Label htmlFor="phone">{t.donors.phone}</Label>
-                    <Input
-                      id="phone"
-                      value={formData.phone || ''}
-                      onChange={(e) => handleFormChange('phone', e.target.value)}
-                      placeholder="600 000 000"
-                    />
-                  </div>
-
-                  <div className="grid grid-cols-3 gap-3">
-                    <div className="space-y-1.5">
-                      <Label htmlFor="zipCode">
-                        {t.donors.zipCode}
+                      <Label htmlFor="taxId">
+                        {t.donors.taxId}
                         <span className="ml-1 text-muted-foreground">*</span>
+                        <span className="ml-1.5 text-xs font-normal text-amber-600">(Model 182)</span>
                       </Label>
                       <Input
-                        id="zipCode"
-                        value={formData.zipCode}
-                        onChange={(e) => handleFormChange('zipCode', e.target.value)}
-                        placeholder="08001"
-                        maxLength={5}
+                        id="taxId"
+                        value={formData.taxId}
+                        onChange={(e) => handleFormChange('taxId', e.target.value.toUpperCase())}
+                        placeholder="12345678A o B12345678"
                       />
-                      <p className="text-xs text-muted-foreground">
-                        {t.form?.zipCodeHelp ?? "5 dígits. Obligatori per al Model 182."}
+                      <p className="text-xs text-muted-foreground leading-4">
+                        {t.form?.taxIdHelp ?? "8 dígits + lletra (DNI) o lletra + 7 dígits + lletra (NIE/CIF)."}
                       </p>
                     </div>
-                    <div className="space-y-1.5">
-                      <Label htmlFor="city">{t.donors.city}</Label>
-                      <Input
-                        id="city"
-                        value={formData.city || ''}
-                        onChange={(e) => handleFormChange('city', e.target.value)}
-                        placeholder="Barcelona"
-                      />
-                    </div>
-                    <div className="space-y-1.5">
-                      <Label htmlFor="province">{t.donors.province}</Label>
-                      <Input
-                        id="province"
-                        value={formData.province || ''}
-                        onChange={(e) => handleFormChange('province', e.target.value)}
-                        placeholder="Barcelona"
-                      />
-                    </div>
-                  </div>
-                </div>
-              </div>
 
-              {/* Adreça a tota amplada */}
-              <div className="space-y-1.5">
-                <Label htmlFor="address">{t.donors.address}</Label>
-                <Input
-                  id="address"
-                  value={formData.address || ''}
-                  onChange={(e) => handleFormChange('address', e.target.value)}
-                  placeholder="Carrer Major, 15, 2n 1a"
-                />
-              </div>
-            </div>
-
-            {/* ═══════════════════════════════════════════════════════════════════
-                BLOC 2: Tipus de donació i recurrència (2 columnes)
-                ═══════════════════════════════════════════════════════════════════ */}
-            <div className="space-y-4 pt-4 mt-4 border-t">
-              <h4 className="text-sm font-medium text-muted-foreground">{t.donors.donationType}</h4>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {/* Columna esquerra: Tipus i categoria */}
-                <div className="space-y-3">
-                  <div className="space-y-1.5">
-                    <Label htmlFor="membershipType">{t.donors.membershipType}</Label>
-                    <Select
-                      value={formData.membershipType}
-                      onValueChange={(v) => handleFormChange('membershipType', v)}
-                    >
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="one-time">{t.donors.membership.oneTime}</SelectItem>
-                        <SelectItem value="recurring">{t.donors.membership.recurring}</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  <div className="space-y-1.5">
-                    <Label htmlFor="defaultCategoryId">
-                      {t.contacts.defaultCategory}
-                      <span className="block text-xs font-normal text-muted-foreground">{t.contacts.defaultCategoryHint}</span>
-                    </Label>
-                    <Select
-                      value={formData.defaultCategoryId || '__none__'}
-                      onValueChange={(v) => handleFormChange('defaultCategoryId', v === '__none__' ? undefined : v)}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder={t.contacts.selectDefaultCategory} />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="__none__">{t.contacts.noDefaultCategory}</SelectItem>
-                        {incomeCategories.map(cat => (
-                          <SelectItem key={cat.id} value={cat.id}>{categoryTranslations[cat.name] || cat.name}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-
-                {/* Columna dreta: Camps recurrents (només si aplica) */}
-                {formData.membershipType === 'recurring' && (
-                  <div className="space-y-3">
                     <div className="grid grid-cols-2 gap-3">
                       <div className="space-y-1.5">
-                        <Label htmlFor="monthlyAmount">{t.donors.amountMonth}</Label>
+                        <Label htmlFor="donorType">{t.donors.donorType}</Label>
+                        <Select
+                          value={formData.donorType}
+                          onValueChange={(v) => handleFormChange('donorType', v)}
+                        >
+                          <SelectTrigger>
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="individual">{t.donors.types.individual}</SelectItem>
+                            <SelectItem value="company">{t.donors.types.company}</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="space-y-1.5">
+                        <Label htmlFor="status">{t.donors.statusField}</Label>
+                        <Select
+                          value={formData.status || 'active'}
+                          onValueChange={(v) => handleFormChange('status', v)}
+                        >
+                          <SelectTrigger>
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="active">{t.donors.statusActive}</SelectItem>
+                            <SelectItem value="inactive">{t.donors.statusInactive}</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
+
+                    {formData.status === 'inactive' && formData.inactiveSince && (
+                      <div className="text-sm text-muted-foreground">
+                        {t.donors.inactiveSinceLabel}: {new Date(formData.inactiveSince).toLocaleDateString()}
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Secció: Contacte */}
+                <div className="rounded-lg border bg-background px-4 py-4">
+                  <h4 className="text-sm font-semibold">{tr('donors.form.section.contact', 'Contacte')}</h4>
+                  <div className="mt-3 space-y-4">
+                    <div className="space-y-1.5">
+                      <Label htmlFor="email">{t.donors.email}</Label>
+                      <Input
+                        id="email"
+                        type="email"
+                        value={formData.email || ''}
+                        onChange={(e) => handleFormChange('email', e.target.value)}
+                        placeholder="correu@exemple.com"
+                      />
+                    </div>
+
+                    <div className="space-y-1.5">
+                      <Label htmlFor="phone">{t.donors.phone}</Label>
+                      <Input
+                        id="phone"
+                        value={formData.phone || ''}
+                        onChange={(e) => handleFormChange('phone', e.target.value)}
+                        placeholder="600 000 000"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Secció: Adreça */}
+                <div className="rounded-lg border bg-background px-4 py-4">
+                  <h4 className="text-sm font-semibold">{tr('donors.form.section.address', 'Adreça')}</h4>
+                  <div className="mt-3 space-y-4">
+                    <div className="grid grid-cols-3 gap-3">
+                      <div className="space-y-1.5">
+                        <Label htmlFor="zipCode">
+                          {t.donors.zipCode}
+                          <span className="ml-1 text-muted-foreground">*</span>
+                        </Label>
                         <Input
-                          id="monthlyAmount"
-                          type="number"
-                          step="0.01"
-                          value={formData.monthlyAmount || ''}
-                          onChange={(e) => handleFormChange('monthlyAmount', parseFloat(e.target.value) || undefined)}
-                          placeholder="10.00"
+                          id="zipCode"
+                          value={formData.zipCode}
+                          onChange={(e) => handleFormChange('zipCode', e.target.value)}
+                          placeholder="08001"
+                          maxLength={5}
+                        />
+                        <p className="text-xs text-muted-foreground leading-4">
+                          {t.form?.zipCodeHelp ?? "5 dígits. Model 182."}
+                        </p>
+                      </div>
+                      <div className="space-y-1.5">
+                        <Label htmlFor="city">{t.donors.city}</Label>
+                        <Input
+                          id="city"
+                          value={formData.city || ''}
+                          onChange={(e) => handleFormChange('city', e.target.value)}
+                          placeholder="Barcelona"
                         />
                       </div>
                       <div className="space-y-1.5">
-                        <Label htmlFor="memberSince">{t.donors.memberSince}</Label>
+                        <Label htmlFor="province">{t.donors.province}</Label>
                         <Input
-                          id="memberSince"
-                          type="date"
-                          value={formData.memberSince || ''}
-                          onChange={(e) => handleFormChange('memberSince', e.target.value)}
+                          id="province"
+                          value={formData.province || ''}
+                          onChange={(e) => handleFormChange('province', e.target.value)}
+                          placeholder="Barcelona"
                         />
                       </div>
                     </div>
 
                     <div className="space-y-1.5">
-                      <Label htmlFor="iban">{t.donors.iban}</Label>
+                      <Label htmlFor="address">{t.donors.address}</Label>
                       <Input
-                        id="iban"
-                        value={formData.iban || ''}
-                        onChange={(e) => handleFormChange('iban', e.target.value.toUpperCase().replace(/\s/g, ''))}
-                        placeholder="ES00 0000 0000 0000 0000 0000"
+                        id="address"
+                        value={formData.address || ''}
+                        onChange={(e) => handleFormChange('address', e.target.value)}
+                        placeholder="Carrer Major, 15, 2n 1a"
                       />
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* ══════════════════════════════════════════════════════════════
+                  COLUMNA DRETA
+                  ══════════════════════════════════════════════════════════════ */}
+              <div className="space-y-6">
+
+                {/* Secció: Quota / Donació */}
+                <div className="rounded-lg border bg-background px-4 py-4">
+                  <h4 className="text-sm font-semibold">{tr('donors.form.section.donation', 'Quota / Donació')}</h4>
+                  <div className="mt-3 space-y-4">
+                    <div className="space-y-1.5">
+                      <Label htmlFor="membershipType">{t.donors.membershipType}</Label>
+                      <Select
+                        value={formData.membershipType}
+                        onValueChange={(v) => handleFormChange('membershipType', v)}
+                      >
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="one-time">{t.donors.membership.oneTime}</SelectItem>
+                          <SelectItem value="recurring">{t.donors.membership.recurring}</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    <div className="space-y-1.5">
+                      <Label htmlFor="defaultCategoryId">
+                        {t.contacts.defaultCategory}
+                        <span className="block text-xs font-normal text-muted-foreground">{t.contacts.defaultCategoryHint}</span>
+                      </Label>
+                      <Select
+                        value={formData.defaultCategoryId || '__none__'}
+                        onValueChange={(v) => handleFormChange('defaultCategoryId', v === '__none__' ? undefined : v)}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder={t.contacts.selectDefaultCategory} />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="__none__">{t.contacts.noDefaultCategory}</SelectItem>
+                          {incomeCategories.map(cat => (
+                            <SelectItem key={cat.id} value={cat.id}>{categoryTranslations[cat.name] || cat.name}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    {/* Camps recurrents (només si aplica) */}
+                    {formData.membershipType === 'recurring' && (
+                      <>
+                        <div className="grid grid-cols-2 gap-3">
+                          <div className="space-y-1.5">
+                            <Label htmlFor="monthlyAmount">{tr('donors.quotaAmountPerCharge.label', 'Import de quota')}</Label>
+                            <Input
+                              id="monthlyAmount"
+                              type="number"
+                              step="0.01"
+                              value={formData.monthlyAmount || ''}
+                              onChange={(e) => handleFormChange('monthlyAmount', parseFloat(e.target.value) || undefined)}
+                              placeholder="10.00"
+                            />
+                            <p className="text-xs text-muted-foreground leading-4">
+                              {tr('donors.quotaAmountPerCharge.hint', "Import per cobrament segons periodicitat.")}
+                            </p>
+                          </div>
+                          <div className="space-y-1.5">
+                            <Label htmlFor="periodicityQuota">{tr('donors.periodicityQuota.label', 'Periodicitat')}</Label>
+                            <Select
+                              value={formData.periodicityQuota || 'monthly'}
+                              onValueChange={(v) => handleFormChange('periodicityQuota', v === 'monthly' ? null : v)}
+                            >
+                              <SelectTrigger id="periodicityQuota">
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="monthly">{tr('donors.periodicityQuota.monthly', 'Mensual')}</SelectItem>
+                                <SelectItem value="quarterly">{tr('donors.periodicityQuota.quarterly', 'Trimestral')}</SelectItem>
+                                <SelectItem value="semiannual">{tr('donors.periodicityQuota.semiannual', 'Semestral')}</SelectItem>
+                                <SelectItem value="annual">{tr('donors.periodicityQuota.annual', 'Anual')}</SelectItem>
+                                <SelectItem value="manual">{tr('donors.periodicityQuota.manual', 'Manual')}</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
+                        </div>
+
+                        <div className="space-y-1.5">
+                          <Label htmlFor="memberSince">{t.donors.memberSince}</Label>
+                          <Input
+                            id="memberSince"
+                            type="date"
+                            value={formData.memberSince || ''}
+                            onChange={(e) => handleFormChange('memberSince', e.target.value)}
+                          />
+                        </div>
+                      </>
+                    )}
+                  </div>
+                </div>
+
+                {/* Secció: Banc (només si recurring) */}
+                {formData.membershipType === 'recurring' && (
+                  <div className="rounded-lg border bg-background px-4 py-4">
+                    <h4 className="text-sm font-semibold">{tr('donors.form.section.bank', 'Banc')}</h4>
+                    <div className="mt-3 space-y-4">
+                      <div className="space-y-1.5">
+                        <Label htmlFor="iban">{t.donors.iban}</Label>
+                        <Input
+                          id="iban"
+                          value={formData.iban || ''}
+                          onChange={(e) => handleFormChange('iban', e.target.value.toUpperCase().replace(/\s/g, ''))}
+                          placeholder="ES00 0000 0000 0000 0000 0000"
+                          className="font-mono"
+                        />
+                      </div>
                     </div>
                   </div>
                 )}
               </div>
             </div>
 
-            {/* ═══════════════════════════════════════════════════════════════════
-                BLOC 3: Notes (tota amplada, col·lapsable visualment)
-                ═══════════════════════════════════════════════════════════════════ */}
-            <div className="space-y-3 pt-4 mt-4 border-t">
-              <h4 className="text-sm font-medium text-muted-foreground">{t.donors.notes}</h4>
-              <Textarea
-                id="notes"
-                value={formData.notes || ''}
-                onChange={(e) => handleFormChange('notes', e.target.value)}
-                placeholder={t.donors.notesPlaceholder}
-                rows={2}
-              />
+            {/* ══════════════════════════════════════════════════════════════
+                SECCIÓ NOTES (full width, fora del grid)
+                ══════════════════════════════════════════════════════════════ */}
+            <div className="mt-6 rounded-lg border bg-background px-4 py-4">
+              <h4 className="text-sm font-semibold">{t.donors.notes}</h4>
+              <div className="mt-3">
+                <Textarea
+                  id="notes"
+                  value={formData.notes || ''}
+                  onChange={(e) => handleFormChange('notes', e.target.value)}
+                  placeholder={t.donors.notesPlaceholder}
+                  rows={2}
+                />
+              </div>
             </div>
           </div>
 
           {/* Footer fix */}
-          <DialogFooter className="flex-shrink-0 pt-4 border-t">
+          <DialogFooter className="flex-shrink-0 px-6 py-4 border-t flex justify-end gap-2">
             <DialogClose asChild>
               <Button variant="outline">{t.common.cancel}</Button>
             </DialogClose>

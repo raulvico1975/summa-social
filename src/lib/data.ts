@@ -371,6 +371,32 @@ export type Donor = Contact & {
    * Si existeix i isActive=true, el donant es pot incloure en remeses SEPA
    */
   sepaMandate?: SepaMandate | null;
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // CAMPS PER PERIODICITAT I TRACKING PAIN.008
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  /**
+   * Periodicitat de la quota del soci (només per membershipType === 'recurring')
+   * - monthly: Mensual
+   * - quarterly: Trimestral
+   * - semiannual: Semestral
+   * - annual: Anual
+   * - manual: L'entitat decideix quan cobrar
+   * - null: No definida (es tracta com monthly per defecte)
+   */
+  periodicityQuota?: 'monthly' | 'quarterly' | 'semiannual' | 'annual' | 'manual' | null;
+
+  /**
+   * Data de l'última execució pain.008 que va incloure aquest donant
+   * Format: YYYY-MM-DD
+   */
+  sepaPain008LastRunAt?: string | null;
+
+  /**
+   * ID del document sepaPain008Runs que va incloure aquest donant
+   */
+  sepaPain008LastRunId?: string | null;
 };
 
 /**
@@ -714,6 +740,34 @@ export interface SepaCollectionRun {
   exportedAt?: string | null;              // Data d'exportació del XML
   sentAt?: string | null;                  // Data d'enviament al banc
   processedAt?: string | null;             // Data de processament
+}
+
+/**
+ * Registre operatiu d'una execució pain.008 (memòria de runs)
+ * S'emmagatzema a: organizations/{orgId}/sepaPain008Runs/{runId}
+ *
+ * Objectiu: traçabilitat de "quins donants van entrar en aquest pain"
+ * NO crea transactions ni afecta fiscalitat/conciliació
+ */
+export interface SepaPain008Run {
+  id: string;
+  createdAt: import('firebase/firestore').Timestamp;  // serverTimestamp()
+  createdByUid: string;                               // UID de l'usuari
+  bankAccountId: string;                              // ID del compte bancari creditor
+  executionDate: string;                              // Data de cobrament (YYYY-MM-DD)
+  includedDonorIds: string[];                         // IDs dels donants inclosos
+  counts: {
+    shown: number;                                    // Mostrats al wizard
+    selected: number;                                 // Seleccionats per l'usuari
+    included: number;                                 // Inclosos al fitxer final
+    invalidIban: number;                              // Exclosos per IBAN invàlid
+    invalidAmount: number;                            // Exclosos per import invàlid
+  };
+  totalAmountCents: number;                           // Import total en cèntims
+  filtersSnapshot?: {                                 // Filtres aplicats (per auditoria)
+    periodicity?: string | null;
+    search?: string | null;
+  } | null;
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
