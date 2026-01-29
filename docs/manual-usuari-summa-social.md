@@ -534,6 +534,41 @@ Si necessites les dades fora de Summa Social:
 
 ---
 
+## 3.8 Dinàmica de donants
+
+La secció **Dinàmica de donants** a la pantalla de Donants permet analitzar el comportament de la base social per períodes.
+
+### Com funciona
+
+1. Ves a ❤️ **Donants**
+2. Desplega la secció **"Dinàmica de donants"** (és col·lapsable)
+3. Selecciona un període (Tot, Any, Trimestre, Mes o rang lliure)
+4. El sistema calcula automàticament cinc llistes basades en moviments reals
+
+**Nota sobre "Tot":** Quan selecciones "Tot", el rang es calcula automàticament com el mínim i màxim de les dates de les transaccions carregades. Si no hi ha moviments amb donant, la secció no mostrarà resultats.
+
+### Llistes disponibles
+
+| Llista | Descripció |
+|--------|------------|
+| **Altes** | Donants que han fet el seu primer moviment dins el període |
+| **Sense moviments** | Donants amb històric previ que no han fet cap aportació al període. El text informatiu indica que això no implica baixa administrativa |
+| **Reactivacions** | Donants que no van aportar al període anterior però sí al període actual |
+| **Amb devolucions** | Donants amb almenys una devolució dins el període |
+| **Aportació decreixent** | Donants que han aportat menys que al període anterior |
+
+### Ús pràctic
+
+- **Preparació del Model 182:** Identificar donants actius per any fiscal
+- **Seguiment intern:** Detectar canvis de comportament de la base social
+- **Informes fiscals:** Preparar dades abans de tancar l'any
+
+### Com funciona cada llista
+
+Clica el nom de qualsevol donant de les llistes per obrir la seva fitxa lateral. Les llistes mostren un màxim de 20 elements per defecte; clica "Veure tots" per expandir-les.
+
+---
+
 # 4. Gestió de Proveïdors i Treballadors
 
 **Aquesta secció t'ajudarà a...**
