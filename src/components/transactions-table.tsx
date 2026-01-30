@@ -98,6 +98,7 @@ import {
   executeUndo,
   type UndoOperationType,
 } from '@/lib/fiscal/undoProcessing';
+import { detectLegacyCategoryTransactions, logLegacyCategorySummary } from '@/lib/category-health';
 
 interface TransactionsTableProps {
   initialDateFilter?: DateFilterValue | null;
@@ -315,6 +316,15 @@ export function TransactionsTable({ initialDateFilter = null }: TransactionsTabl
 
   // Aplicar filtre de dates primer
   const transactions = useTransactionFilters(activeTransactions ?? undefined, dateFilter);
+
+  // Detectar categories legacy (docIds en lloc de nameKeys)
+  React.useEffect(() => {
+    if (!transactions || transactions.length === 0 || !organizationId) return;
+    const legacyTxs = detectLegacyCategoryTransactions(transactions);
+    if (legacyTxs.length > 0) {
+      logLegacyCategorySummary(organizationId, legacyTxs);
+    }
+  }, [transactions, organizationId]);
 
   // Helper per obtenir el nom traduït d'una categoria (pot ser ID o nom clau)
   const getCategoryDisplayName = React.useCallback((categoryValue: string | null | undefined): string => {
