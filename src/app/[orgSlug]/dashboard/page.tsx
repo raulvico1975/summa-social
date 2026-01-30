@@ -449,6 +449,13 @@ export default function DashboardPage() {
   const [dateFilter, setDateFilter] = React.useState<DateFilterValue>({ type: 'all' });
   const dateFilteredTransactions = useTransactionFilters(transactions || undefined, dateFilter);
 
+  // Base dataset: exclou transaccions arxivades (soft-deleted)
+  // Tots els KPIs i agregats han de partir d'aquest conjunt
+  const baseTransactions = React.useMemo(
+    () => (dateFilteredTransactions || []).filter(tx => tx.archivedAt == null),
+    [dateFilteredTransactions]
+  );
+
   // Predicate: moviment bancari real (ledger)
   // Exclou desglossaments interns encara que no tinguin parentTransactionId
   const isBankLedgerTx = React.useCallback((tx: Transaction) => {
@@ -468,8 +475,8 @@ export default function DashboardPage() {
   // KPIs econòmics: només transaccions que representen el ledger bancari real
   // (per Ingressos, Despeses, Balance)
   const filteredTransactions = React.useMemo(() => {
-    if (!dateFilteredTransactions) return [];
-    const ledgerTxs = dateFilteredTransactions.filter(isBankLedgerTx);
+    if (baseTransactions.length === 0) return [];
+    const ledgerTxs = baseTransactions.filter(isBankLedgerTx);
 
     // DEV-only: validar que el ledger no conté transaccions que haurien de ser excloses
     if (process.env.NODE_ENV === 'development' && ledgerTxs.length > 0) {
@@ -485,7 +492,7 @@ export default function DashboardPage() {
     }
 
     return ledgerTxs;
-  }, [dateFilteredTransactions, isBankLedgerTx]);
+  }, [baseTransactions, isBankLedgerTx]);
 
   // Detectar categories legacy (docIds en lloc de nameKeys) - només log a consola
   React.useEffect(() => {
@@ -532,10 +539,10 @@ export default function DashboardPage() {
   // (per Donants actius, Socis actius, Quotes)
   // Aquí SÍ usem fills perquè són l'única manera de saber quin contacte ha pagat
   const socialMetricsTxs = React.useMemo(() => {
-    if (!dateFilteredTransactions) return [];
+    if (baseTransactions.length === 0) return [];
     // Incloure totes les transaccions positives amb contactId
     // (fills de remesa tenen contactId, pares de remesa no)
-    const socialTxs = dateFilteredTransactions.filter(tx =>
+    const socialTxs = baseTransactions.filter(tx =>
       tx.amount > 0 &&
       tx.contactId &&
       tx.contactType === 'donor'
@@ -552,7 +559,7 @@ export default function DashboardPage() {
     }
 
     return socialTxs;
-  }, [dateFilteredTransactions]);
+  }, [baseTransactions]);
 
   const MISSION_TRANSFER_CATEGORY_KEY = 'missionTransfers';
   const incomeAggregates = React.useMemo(
