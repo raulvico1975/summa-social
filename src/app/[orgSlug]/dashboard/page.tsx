@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Textarea } from '@/components/ui/textarea';
 import Link from 'next/link';
-import { DollarSign, TrendingUp, TrendingDown, Rocket, Heart, AlertTriangle, FolderKanban, CalendarClock, Share2, Copy, Mail, PartyPopper, Info, FileSpreadsheet, FileText, RefreshCcw, Pencil, Settings } from 'lucide-react';
+import { DollarSign, TrendingUp, TrendingDown, Rocket, Heart, AlertTriangle, FolderKanban, CalendarClock, Share2, Copy, Mail, PartyPopper, Info, FileSpreadsheet, FileText, RefreshCcw, Pencil, Settings, Activity, CheckCircle2, AlertCircle } from 'lucide-react';
 import type { Transaction, Contact, Project, Donor, Category, OrganizationMember } from '@/lib/data';
 import { useCollection, useFirebase, useMemoFirebase } from '@/firebase';
 import { collection } from 'firebase/firestore';
@@ -35,6 +35,7 @@ import { toPeriodQuery } from '@/lib/period-query';
 import { shouldShowWelcomeModal, isFirstAdmin } from '@/lib/onboarding';
 import { WelcomeOnboardingModal } from '@/components/onboarding/WelcomeOnboardingModal';
 import { OnboardingWizardModal } from '@/components/onboarding/OnboardingWizard';
+import { detectLegacyCategoryTransactions, logLegacyCategorySummary, runHealthCheck as runHealthCheckFn, type LegacyCategoryTransaction, type HealthCheckResult } from '@/lib/category-health';
 
 interface TaxObligation {
   id: string;
@@ -486,6 +487,47 @@ export default function DashboardPage() {
     return ledgerTxs;
   }, [dateFilteredTransactions, isBankLedgerTx]);
 
+  // Detectar categories legacy (docIds en lloc de nameKeys) - només log a consola
+  React.useEffect(() => {
+    if (!filteredTransactions || filteredTransactions.length === 0 || !organizationId) return;
+    const legacyTxs = detectLegacyCategoryTransactions(filteredTransactions);
+    if (legacyTxs.length > 0) {
+      logLegacyCategorySummary(organizationId, legacyTxs);
+    }
+  }, [filteredTransactions, organizationId]);
+
+  // Health check: funció per executar diagnòstic complet (només admin)
+  const runHealthCheck = React.useCallback(() => {
+    if (!filteredTransactions || filteredTransactions.length === 0) {
+      setHealthCheckResults({
+        categories: { hasIssues: false, count: 0, examples: [] },
+        dates: { hasIssues: false, invalidCount: 0, hasMixedFormats: false, formatCounts: { 'YYYY-MM-DD': 0, 'ISO_WITH_T': 0, 'INVALID': 0 }, examples: [] },
+        bankSource: { hasIssues: false, count: 0, examples: [] },
+        archived: { hasIssues: false, count: 0, examples: [] },
+        signs: { hasIssues: false, count: 0, examples: [] },
+        totalIssues: 0,
+      });
+      setHealthCheckDialogOpen(true);
+      return;
+    }
+    const results = runHealthCheckFn(filteredTransactions);
+    setHealthCheckResults(results);
+    setHealthCheckDialogOpen(true);
+
+    // Log discret si hi ha incidències
+    if (results.totalIssues > 0 && organizationId) {
+      console.warn('[HEALTH-CHECK] Incidències detectades', {
+        orgId: organizationId,
+        total: results.totalIssues,
+        categories: results.categories.count,
+        dates: results.dates.invalidCount,
+        bankSource: results.bankSource.count,
+        archived: results.archived.count,
+        signs: results.signs.count,
+      });
+    }
+  }, [filteredTransactions, organizationId]);
+
   // KPIs socials: transaccions amb contacte (incloent fills de remesa)
   // (per Donants actius, Socis actius, Quotes)
   // Aquí SÍ usem fills perquè són l'única manera de saber quin contacte ha pagat
@@ -574,6 +616,10 @@ export default function DashboardPage() {
   const [editingField, setEditingField] = React.useState<keyof NarrativeDraft | null>(null);
   const [editingValue, setEditingValue] = React.useState('');
   const [isNarrativeEditorOpen, setNarrativeEditorOpen] = React.useState(false);
+  // Health check (només admin)
+  const [healthCheckDialogOpen, setHealthCheckDialogOpen] = React.useState(false);
+  const [healthCheckResults, setHealthCheckResults] = React.useState<HealthCheckResult | null>(null);
+  const isAdmin = userRole === 'admin';
   const isMobile = useIsMobile();
   const periodQuery = React.useMemo(() => toPeriodQuery(dateFilter), [dateFilter]);
   const createMovementsLink = React.useCallback(
@@ -1645,6 +1691,315 @@ ${t.dashboard.generatedWith}`;
         }}
         buildUrl={buildUrl}
       />
+
+      {/* ═══════════════════════════════════════════════════════════════════════════════
+          BLOC ADMIN — Diagnòstic d'integritat de dades (només admin)
+          ═══════════════════════════════════════════════════════════════════════════════ */}
+      {isAdmin && (
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="flex items-center gap-2">
+              <Activity className="h-5 w-5 text-muted-foreground" />
+              {t.dashboard.dataIntegrity ?? 'Integritat de dades'}
+            </CardTitle>
+            <p className="text-xs text-muted-foreground">
+              {t.dashboard.dataIntegrityDescription ?? 'Diagnòstic de la qualitat de les dades de l\'organització.'}
+            </p>
+          </CardHeader>
+          <CardContent>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={runHealthCheck}
+              className="gap-2"
+            >
+              <Activity className="h-4 w-4" />
+              {t.dashboard.runDiagnostic ?? 'Executar diagnòstic'}
+            </Button>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Dialog resultats diagnòstic P0 (5 blocs) */}
+      <Dialog open={healthCheckDialogOpen} onOpenChange={setHealthCheckDialogOpen}>
+        <DialogContent className="max-w-3xl max-h-[85vh] overflow-hidden flex flex-col">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Activity className="h-5 w-5" />
+              {t.dashboard.diagnosticResults ?? 'Resultats del diagnòstic'}
+              {healthCheckResults && (
+                <Badge variant={healthCheckResults.totalIssues > 0 ? 'destructive' : 'secondary'} className="ml-2">
+                  {healthCheckResults.totalIssues > 0
+                    ? `${healthCheckResults.totalIssues} incidències`
+                    : 'Tot correcte'}
+                </Badge>
+              )}
+            </DialogTitle>
+            <DialogDescription>
+              {t.dashboard.diagnosticResultsDescription ?? 'Anàlisi de les dades del període seleccionat.'}
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-3 py-4 overflow-y-auto flex-1">
+            {healthCheckResults === null ? (
+              <p className="text-sm text-muted-foreground text-center py-8">
+                {t.dashboard.runDiagnosticFirst ?? 'Executa el diagnòstic per veure els resultats.'}
+              </p>
+            ) : (
+              <>
+                {/* A) Categories legacy */}
+                <details className="rounded-lg border" open={healthCheckResults.categories.hasIssues}>
+                  <summary className="flex items-center gap-2 p-3 cursor-pointer hover:bg-muted/30">
+                    {healthCheckResults.categories.hasIssues ? (
+                      <AlertCircle className="h-5 w-5 text-amber-500 flex-shrink-0" />
+                    ) : (
+                      <CheckCircle2 className="h-5 w-5 text-emerald-600 flex-shrink-0" />
+                    )}
+                    <span className="font-medium flex-1">Categories amb format antic</span>
+                    <Badge variant={healthCheckResults.categories.hasIssues ? 'outline' : 'secondary'}>
+                      {healthCheckResults.categories.count}
+                    </Badge>
+                  </summary>
+                  {healthCheckResults.categories.hasIssues && (
+                    <div className="px-3 pb-3 pt-1 border-t">
+                      <p className="text-xs text-muted-foreground mb-2">
+                        Transaccions amb categoria guardada com a docId antic.
+                      </p>
+                      <div className="max-h-40 overflow-y-auto">
+                        <table className="w-full text-xs">
+                          <thead>
+                            <tr className="border-b bg-muted/50">
+                              <th className="text-left p-1.5">Data</th>
+                              <th className="text-right p-1.5">Import</th>
+                              <th className="text-left p-1.5">Categoria (raw)</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {healthCheckResults.categories.examples.map((tx) => (
+                              <tr key={tx.id} className="border-b last:border-0">
+                                <td className="p-1.5">{tx.date}</td>
+                                <td className="p-1.5 text-right tabular-nums">{formatCurrencyEU(tx.amount)}</td>
+                                <td className="p-1.5 font-mono truncate max-w-[150px]" title={tx.category}>
+                                  {tx.category}
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                  )}
+                </details>
+
+                {/* B) Dates: barreja de formats */}
+                <details className="rounded-lg border" open={healthCheckResults.dates.hasIssues}>
+                  <summary className="flex items-center gap-2 p-3 cursor-pointer hover:bg-muted/30">
+                    {healthCheckResults.dates.hasIssues ? (
+                      <AlertCircle className="h-5 w-5 text-amber-500 flex-shrink-0" />
+                    ) : (
+                      <CheckCircle2 className="h-5 w-5 text-emerald-600 flex-shrink-0" />
+                    )}
+                    <span className="font-medium flex-1">Format de dates</span>
+                    <Badge variant={healthCheckResults.dates.hasIssues ? 'outline' : 'secondary'}>
+                      {healthCheckResults.dates.invalidCount > 0
+                        ? `${healthCheckResults.dates.invalidCount} invàlides`
+                        : healthCheckResults.dates.hasMixedFormats
+                        ? 'Barreja'
+                        : 'OK'}
+                    </Badge>
+                  </summary>
+                  {healthCheckResults.dates.hasIssues && (
+                    <div className="px-3 pb-3 pt-1 border-t">
+                      <div className="text-xs text-muted-foreground mb-2 space-y-1">
+                        <p>Formats detectats:</p>
+                        <ul className="list-disc list-inside">
+                          {healthCheckResults.dates.formatCounts['YYYY-MM-DD'] > 0 && (
+                            <li>YYYY-MM-DD: {healthCheckResults.dates.formatCounts['YYYY-MM-DD']}</li>
+                          )}
+                          {healthCheckResults.dates.formatCounts['ISO_WITH_T'] > 0 && (
+                            <li>ISO amb T: {healthCheckResults.dates.formatCounts['ISO_WITH_T']}</li>
+                          )}
+                          {healthCheckResults.dates.formatCounts['INVALID'] > 0 && (
+                            <li className="text-amber-600">Invàlides: {healthCheckResults.dates.formatCounts['INVALID']}</li>
+                          )}
+                        </ul>
+                      </div>
+                      {healthCheckResults.dates.examples.length > 0 && (
+                        <div className="max-h-40 overflow-y-auto">
+                          <table className="w-full text-xs">
+                            <thead>
+                              <tr className="border-b bg-muted/50">
+                                <th className="text-left p-1.5">Data (raw)</th>
+                                <th className="text-left p-1.5">Format</th>
+                                <th className="text-right p-1.5">Import</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {healthCheckResults.dates.examples.map((tx) => (
+                                <tr key={tx.id} className="border-b last:border-0">
+                                  <td className="p-1.5 font-mono">{tx.date}</td>
+                                  <td className="p-1.5">{tx.format}</td>
+                                  <td className="p-1.5 text-right tabular-nums">{formatCurrencyEU(tx.amount)}</td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </details>
+
+                {/* C) Origen bancari coherent */}
+                <details className="rounded-lg border" open={healthCheckResults.bankSource.hasIssues}>
+                  <summary className="flex items-center gap-2 p-3 cursor-pointer hover:bg-muted/30">
+                    {healthCheckResults.bankSource.hasIssues ? (
+                      <AlertCircle className="h-5 w-5 text-amber-500 flex-shrink-0" />
+                    ) : (
+                      <CheckCircle2 className="h-5 w-5 text-emerald-600 flex-shrink-0" />
+                    )}
+                    <span className="font-medium flex-1">Coherència origen bancari</span>
+                    <Badge variant={healthCheckResults.bankSource.hasIssues ? 'outline' : 'secondary'}>
+                      {healthCheckResults.bankSource.count}
+                    </Badge>
+                  </summary>
+                  {healthCheckResults.bankSource.hasIssues && (
+                    <div className="px-3 pb-3 pt-1 border-t">
+                      <p className="text-xs text-muted-foreground mb-2">
+                        Incoherències entre source i bankAccountId.
+                      </p>
+                      <div className="max-h-40 overflow-y-auto">
+                        <table className="w-full text-xs">
+                          <thead>
+                            <tr className="border-b bg-muted/50">
+                              <th className="text-left p-1.5">Data</th>
+                              <th className="text-left p-1.5">Source</th>
+                              <th className="text-left p-1.5">BankAccountId</th>
+                              <th className="text-left p-1.5">Problema</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {healthCheckResults.bankSource.examples.map((tx) => (
+                              <tr key={tx.id} className="border-b last:border-0">
+                                <td className="p-1.5">{tx.date}</td>
+                                <td className="p-1.5 font-mono">{tx.source ?? '(null)'}</td>
+                                <td className="p-1.5 font-mono truncate max-w-[100px]">{tx.bankAccountId ?? '(null)'}</td>
+                                <td className="p-1.5 text-amber-600 text-xs">
+                                  {tx.issue === 'source_bank_no_bankAccountId'
+                                    ? 'source=bank sense bankAccountId'
+                                    : 'bankAccountId sense source=bank'}
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                  )}
+                </details>
+
+                {/* D) ArchivedAt on no toca */}
+                <details className="rounded-lg border" open={healthCheckResults.archived.hasIssues}>
+                  <summary className="flex items-center gap-2 p-3 cursor-pointer hover:bg-muted/30">
+                    {healthCheckResults.archived.hasIssues ? (
+                      <AlertCircle className="h-5 w-5 text-amber-500 flex-shrink-0" />
+                    ) : (
+                      <CheckCircle2 className="h-5 w-5 text-emerald-600 flex-shrink-0" />
+                    )}
+                    <span className="font-medium flex-1">Transaccions arxivades</span>
+                    <Badge variant={healthCheckResults.archived.hasIssues ? 'outline' : 'secondary'}>
+                      {healthCheckResults.archived.count}
+                    </Badge>
+                  </summary>
+                  {healthCheckResults.archived.hasIssues && (
+                    <div className="px-3 pb-3 pt-1 border-t">
+                      <p className="text-xs text-muted-foreground mb-2">
+                        Transaccions amb archivedAt que apareixen al conjunt "normal" (possible error de query).
+                      </p>
+                      <div className="max-h-40 overflow-y-auto">
+                        <table className="w-full text-xs">
+                          <thead>
+                            <tr className="border-b bg-muted/50">
+                              <th className="text-left p-1.5">Data</th>
+                              <th className="text-right p-1.5">Import</th>
+                              <th className="text-left p-1.5">ArchivedAt</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {healthCheckResults.archived.examples.map((tx) => (
+                              <tr key={tx.id} className="border-b last:border-0">
+                                <td className="p-1.5">{tx.date}</td>
+                                <td className="p-1.5 text-right tabular-nums">{formatCurrencyEU(tx.amount)}</td>
+                                <td className="p-1.5 font-mono text-xs truncate max-w-[150px]">
+                                  {String(tx.archivedAt)}
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                  )}
+                </details>
+
+                {/* E) Signs per tipus */}
+                <details className="rounded-lg border" open={healthCheckResults.signs.hasIssues}>
+                  <summary className="flex items-center gap-2 p-3 cursor-pointer hover:bg-muted/30">
+                    {healthCheckResults.signs.hasIssues ? (
+                      <AlertCircle className="h-5 w-5 text-amber-500 flex-shrink-0" />
+                    ) : (
+                      <CheckCircle2 className="h-5 w-5 text-emerald-600 flex-shrink-0" />
+                    )}
+                    <span className="font-medium flex-1">Coherència de signes</span>
+                    <Badge variant={healthCheckResults.signs.hasIssues ? 'outline' : 'secondary'}>
+                      {healthCheckResults.signs.count}
+                    </Badge>
+                  </summary>
+                  {healthCheckResults.signs.hasIssues && (
+                    <div className="px-3 pb-3 pt-1 border-t">
+                      <p className="text-xs text-muted-foreground mb-2">
+                        Transaccions amb amount que no correspon al seu transactionType.
+                      </p>
+                      <div className="max-h-40 overflow-y-auto">
+                        <table className="w-full text-xs">
+                          <thead>
+                            <tr className="border-b bg-muted/50">
+                              <th className="text-left p-1.5">Data</th>
+                              <th className="text-left p-1.5">Tipus</th>
+                              <th className="text-right p-1.5">Import</th>
+                              <th className="text-left p-1.5">Esperat</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {healthCheckResults.signs.examples.map((tx) => (
+                              <tr key={tx.id} className="border-b last:border-0">
+                                <td className="p-1.5">{tx.date}</td>
+                                <td className="p-1.5 font-mono">{tx.transactionType}</td>
+                                <td className="p-1.5 text-right tabular-nums text-amber-600">
+                                  {formatCurrencyEU(tx.amount)}
+                                </td>
+                                <td className="p-1.5 text-xs">
+                                  {tx.expectedSign === 'positive' ? '> 0' : '< 0'}
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                  )}
+                </details>
+              </>
+            )}
+          </div>
+
+          <DialogFooter className="border-t pt-4">
+            <Button variant="outline" onClick={() => setHealthCheckDialogOpen(false)}>
+              {t.common?.close ?? 'Tancar'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <Dialog open={shareDialogOpen} onOpenChange={setShareDialogOpen}>
         <DialogContent className="max-w-5xl w-full max-h-[85vh] overflow-hidden">
