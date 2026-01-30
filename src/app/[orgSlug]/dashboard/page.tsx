@@ -513,7 +513,20 @@ export default function DashboardPage() {
     const results = runHealthCheckFn(filteredTransactions);
     setHealthCheckResults(results);
     setHealthCheckDialogOpen(true);
-  }, [filteredTransactions]);
+
+    // Log discret si hi ha incidències
+    if (results.totalIssues > 0 && organizationId) {
+      console.warn('[HEALTH-CHECK] Incidències detectades', {
+        orgId: organizationId,
+        total: results.totalIssues,
+        categories: results.categories.count,
+        dates: results.dates.invalidCount,
+        bankSource: results.bankSource.count,
+        archived: results.archived.count,
+        signs: results.signs.count,
+      });
+    }
+  }, [filteredTransactions, organizationId]);
 
   // KPIs socials: transaccions amb contacte (incloent fills de remesa)
   // (per Donants actius, Socis actius, Quotes)

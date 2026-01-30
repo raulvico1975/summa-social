@@ -3619,6 +3619,32 @@ Errors ignorats automàticament (no creen incidents):
 - Només visible per SuperAdmin a `/admin`
 - S6–S8 requereixen implementació de consultes específiques
 
+### 3.10.5b Integritat de Dades - Diagnòstic P0 (NOU v1.33)
+
+Panell de diagnòstic d'integritat de dades accessible per administradors d'organització al Dashboard.
+
+**Ubicació:** Dashboard → secció "Integritat de dades" (només visible per `userRole === 'admin'`)
+
+**Blocs de verificació (deterministes, sense heurístiques):**
+
+| Bloc | Què detecta | Criteri |
+|------|-------------|---------|
+| **A) Categories legacy** | Categories guardades com docId antic | `^[A-Za-z0-9]{20,}$` i no és nameKey conegut |
+| **B) Dates: formats** | Barreja de formats o dates invàlides | Classifica YYYY-MM-DD, ISO_WITH_T, INVALID |
+| **C) Origen bancari** | Incoherències source ↔ bankAccountId | `source=bank` sense bankAccountId o viceversa |
+| **D) ArchivedAt** | Transaccions arxivades al conjunt normal | `archivedAt != null` en queries no filtrades |
+| **E) Signs per tipus** | Amount incompatible amb transactionType | donation→>0, return→<0, fee→<0, etc. |
+
+**Comportament:**
+- Diagnòstic només (no corregeix automàticament)
+- Mostra recompte i màxim 5 exemples per bloc
+- Blocs amb issues s'obren automàticament (HTML `<details>`)
+- Log a consola si `totalIssues > 0` amb orgId i counts
+
+**Fitxers:**
+- `src/lib/category-health.ts` — Checks i funció `runHealthCheck()`
+- `src/app/[orgSlug]/dashboard/page.tsx` — UI Card + Dialog
+
 ### 3.10.6 Fitxers principals
 
 | Fitxer | Funció |
@@ -4575,6 +4601,7 @@ Indicadors que requeririen intervenció:
 | **1.30** | **13 Gen 2026** | **Dashboard: reorganització KPIs en dos blocs (Diners/Qui ens sosté), nou KPI "Altres ingressos" per reconciliació visual (subvencions, loteria, interessos), datasets separats per evitar duplicats remesa. Fix hydration warning extensions navegador (`suppressHydrationWarning` a `<html>`). Eliminats logs debug BUILD-SIGNATURE.** |
 | **1.31** | **14 Gen 2026** | **UX novetats: eliminat toast automàtic de novetats al dashboard (ara només via campaneta/FAB inbox). Reducció soroll logs: console.debug dev-only per i18n listener, org-provider superadmin access. Traça toast DEV-ONLY per debugging. Clarificat accés SuperAdmin sense membership com a comportament esperat. Documentat ERR_BLOCKED_BY_CLIENT com a possible adblocker (no bug).** |
 | **1.32** | **29 Gen 2026** | **Dinàmica de donants: nou panell d'anàlisi per període (altes, baixes, reactivacions, devolucions, aportació decreixent). Wizard SEPA pain.008 complet: 3 passos (config, selecció, revisió), periodicitat de quota (monthly/quarterly/semiannual/annual/manual), memòria d'execució (lastSepaRunDate), bulk selection amb filtre, col·lecció sepaCollectionRuns. Importador pressupost millorat: extracció codi del text amb patrons (A), a.1), a.1.1)), agrupació contextual per jerarquia, capítols destacats (ambre), vista sense/amb partides. Traduccions i18n donorDynamics (CA/ES). Doc GOVERN-DE-CODI-I-DEPLOY v3.0: classificació risc (BAIX/MITJÀ/ALT), ritual deploy per nivell, gate humà únic.** |
+| **1.33** | **30 Gen 2026** | **Health Check P0: panell d'integritat de dades al Dashboard (només admin). 5 blocs deterministes: A) categories legacy (docIds), B) dates formats mixtos/invàlids, C) coherència origen bancari (source↔bankAccountId), D) archivedAt en queries normals, E) signs per transactionType. UI amb details expandibles, badge recompte, taula exemples (max 5). Deduplicació global importació bancària (per rang dates), guardrails UX solapament extractes, camps bancaris readonly (description/amount) per moviments importats. Fitxer category-health.ts amb runHealthCheck().** |
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
