@@ -824,6 +824,15 @@ export const es = {
       lastImportCreated: "Creadas:",
       lastImportSkipped: "Duplicados omitidos:",
       overlapWarningNote: "Nota: Summa solo omitirá duplicados exactos (misma fecha, importe y descripción normalizada). Si el banco cambia el texto o la fecha valor, puede no detectar algún duplicado.",
+      // Aviso inline recomendación
+      importRecommendationTitle: "Recomendación de importación",
+      importRecommendationText: "Para garantizar un registro limpio y rápido, recomendamos importar solo extractos no solapados.",
+      dedupeNote: "Summa detecta y evita duplicados, pero no es la forma óptima de trabajar.",
+      lastImportedUntil: "Último import registrado hasta:",
+      recommendedFrom: "Extracto recomendado: a partir del",
+      // Checkbox fricción
+      overlapAcknowledge: "Entiendo que este extracto puede solapar periodos ya importados y que solo lo estoy importando porque es necesario.",
+      overlapAcknowledgeNote: "Esto puede aumentar el tiempo de importación y generar avisos innecesarios.",
       errors: {
         unsupportedFormat: "Formato no soportado",
         unsupportedFormatDescription: "Por favor, sube un archivo .csv o .xlsx",

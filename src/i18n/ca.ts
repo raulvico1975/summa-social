@@ -824,6 +824,15 @@ export const ca = {
       lastImportCreated: "Creades:",
       lastImportSkipped: "Duplicats omesos:",
       overlapWarningNote: "Nota: Summa només ometrà duplicats exactes (mateixa data, import i descripció normalitzada). Si el banc canvia el text o la data valor, pot no detectar algun duplicat.",
+      // Avís inline recomanació
+      importRecommendationTitle: "Recomanació d'importació",
+      importRecommendationText: "Per garantir un registre net i ràpid, recomanem importar només extractes no solapats.",
+      dedupeNote: "Summa detecta i evita duplicats, però no és la manera òptima de treballar.",
+      lastImportedUntil: "Últim import registrat fins al:",
+      recommendedFrom: "Extracte recomanat: a partir del",
+      // Checkbox fricció
+      overlapAcknowledge: "Entenc que aquest extracte pot solapar períodes ja importats i que només l'estic important perquè és necessari.",
+      overlapAcknowledgeNote: "Això pot augmentar el temps d'importació i generar avisos innecessaris.",
       errors: {
         unsupportedFormat: "Format no suportat",
         unsupportedFormatDescription: "Si us plau, puja un arxiu .csv o .xlsx",
