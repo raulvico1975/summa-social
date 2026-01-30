@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Textarea } from '@/components/ui/textarea';
 import Link from 'next/link';
-import { DollarSign, TrendingUp, TrendingDown, Rocket, Heart, AlertTriangle, FolderKanban, CalendarClock, Share2, Copy, Mail, PartyPopper, Info, FileSpreadsheet, FileText, RefreshCcw, Pencil, Settings } from 'lucide-react';
+import { DollarSign, TrendingUp, TrendingDown, Rocket, Heart, AlertTriangle, FolderKanban, CalendarClock, Share2, Copy, Mail, PartyPopper, Info, FileSpreadsheet, FileText, RefreshCcw, Pencil, Settings, Activity, CheckCircle2, AlertCircle } from 'lucide-react';
 import type { Transaction, Contact, Project, Donor, Category, OrganizationMember } from '@/lib/data';
 import { useCollection, useFirebase, useMemoFirebase } from '@/firebase';
 import { collection } from 'firebase/firestore';
@@ -35,6 +35,7 @@ import { toPeriodQuery } from '@/lib/period-query';
 import { shouldShowWelcomeModal, isFirstAdmin } from '@/lib/onboarding';
 import { WelcomeOnboardingModal } from '@/components/onboarding/WelcomeOnboardingModal';
 import { OnboardingWizardModal } from '@/components/onboarding/OnboardingWizard';
+import { detectLegacyCategoryTransactions, logLegacyCategorySummary, type LegacyCategoryTransaction } from '@/lib/category-health';
 
 interface TaxObligation {
   id: string;
@@ -486,6 +487,26 @@ export default function DashboardPage() {
     return ledgerTxs;
   }, [dateFilteredTransactions, isBankLedgerTx]);
 
+  // Detectar categories legacy (docIds en lloc de nameKeys) - només log a consola
+  React.useEffect(() => {
+    if (!filteredTransactions || filteredTransactions.length === 0 || !organizationId) return;
+    const legacyTxs = detectLegacyCategoryTransactions(filteredTransactions);
+    if (legacyTxs.length > 0) {
+      logLegacyCategorySummary(organizationId, legacyTxs);
+    }
+  }, [filteredTransactions, organizationId]);
+
+  // Health check: funció per executar diagnòstic (només admin)
+  const runHealthCheck = React.useCallback(() => {
+    if (!filteredTransactions || filteredTransactions.length === 0) {
+      setLegacyCategoryResults([]);
+      return;
+    }
+    const legacyTxs = detectLegacyCategoryTransactions(filteredTransactions);
+    setLegacyCategoryResults(legacyTxs);
+    setHealthCheckDialogOpen(true);
+  }, [filteredTransactions]);
+
   // KPIs socials: transaccions amb contacte (incloent fills de remesa)
   // (per Donants actius, Socis actius, Quotes)
   // Aquí SÍ usem fills perquè són l'única manera de saber quin contacte ha pagat
@@ -574,6 +595,10 @@ export default function DashboardPage() {
   const [editingField, setEditingField] = React.useState<keyof NarrativeDraft | null>(null);
   const [editingValue, setEditingValue] = React.useState('');
   const [isNarrativeEditorOpen, setNarrativeEditorOpen] = React.useState(false);
+  // Health check (només admin)
+  const [healthCheckDialogOpen, setHealthCheckDialogOpen] = React.useState(false);
+  const [legacyCategoryResults, setLegacyCategoryResults] = React.useState<LegacyCategoryTransaction[] | null>(null);
+  const isAdmin = userRole === 'admin';
   const isMobile = useIsMobile();
   const periodQuery = React.useMemo(() => toPeriodQuery(dateFilter), [dateFilter]);
   const createMovementsLink = React.useCallback(
@@ -1645,6 +1670,117 @@ ${t.dashboard.generatedWith}`;
         }}
         buildUrl={buildUrl}
       />
+
+      {/* ═══════════════════════════════════════════════════════════════════════════════
+          BLOC ADMIN — Diagnòstic d'integritat de dades (només admin)
+          ═══════════════════════════════════════════════════════════════════════════════ */}
+      {isAdmin && (
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="flex items-center gap-2">
+              <Activity className="h-5 w-5 text-muted-foreground" />
+              {t.dashboard.dataIntegrity ?? 'Integritat de dades'}
+            </CardTitle>
+            <p className="text-xs text-muted-foreground">
+              {t.dashboard.dataIntegrityDescription ?? 'Diagnòstic de la qualitat de les dades de l\'organització.'}
+            </p>
+          </CardHeader>
+          <CardContent>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={runHealthCheck}
+              className="gap-2"
+            >
+              <Activity className="h-4 w-4" />
+              {t.dashboard.runDiagnostic ?? 'Executar diagnòstic'}
+            </Button>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Dialog resultats diagnòstic */}
+      <Dialog open={healthCheckDialogOpen} onOpenChange={setHealthCheckDialogOpen}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Activity className="h-5 w-5" />
+              {t.dashboard.diagnosticResults ?? 'Resultats del diagnòstic'}
+            </DialogTitle>
+            <DialogDescription>
+              {t.dashboard.diagnosticResultsDescription ?? 'Anàlisi de les dades del període seleccionat.'}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            {/* Categories legacy */}
+            <div className="rounded-lg border p-4">
+              <div className="flex items-center gap-2 mb-2">
+                {legacyCategoryResults && legacyCategoryResults.length === 0 ? (
+                  <CheckCircle2 className="h-5 w-5 text-emerald-600" />
+                ) : (
+                  <AlertCircle className="h-5 w-5 text-amber-500" />
+                )}
+                <h4 className="font-medium">
+                  {t.dashboard.legacyCategoryCheck ?? 'Categories amb format antic'}
+                </h4>
+              </div>
+              {legacyCategoryResults === null ? (
+                <p className="text-sm text-muted-foreground">
+                  {t.dashboard.runDiagnosticFirst ?? 'Executa el diagnòstic per veure els resultats.'}
+                </p>
+              ) : legacyCategoryResults.length === 0 ? (
+                <p className="text-sm text-emerald-600">
+                  {t.dashboard.noLegacyCategories ?? 'Totes les categories tenen el format correcte.'}
+                </p>
+              ) : (
+                <div className="space-y-3">
+                  <p className="text-sm text-amber-600">
+                    {(t.dashboard.legacyCategoriesFound as any)?.({ count: legacyCategoryResults.length }) ??
+                      `S'han detectat ${legacyCategoryResults.length} transaccions amb categories en format antic (docId).`}
+                  </p>
+                  <div className="max-h-60 overflow-y-auto">
+                    <table className="w-full text-sm">
+                      <thead>
+                        <tr className="border-b bg-muted/50">
+                          <th className="text-left font-medium p-2">{t.common?.date ?? 'Data'}</th>
+                          <th className="text-right font-medium p-2">{t.common?.amount ?? 'Import'}</th>
+                          <th className="text-left font-medium p-2">{t.common?.category ?? 'Categoria (raw)'}</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {legacyCategoryResults.slice(0, 10).map((tx) => (
+                          <tr key={tx.id} className="border-b last:border-0">
+                            <td className="p-2">{tx.date}</td>
+                            <td className="p-2 text-right tabular-nums">{formatCurrencyEU(tx.amount)}</td>
+                            <td className="p-2 font-mono text-xs truncate max-w-[200px]" title={tx.category}>
+                              {tx.category}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                    {legacyCategoryResults.length > 10 && (
+                      <p className="text-xs text-muted-foreground mt-2 text-center">
+                        {t.dashboard.andMoreTransactions?.({ count: legacyCategoryResults.length - 10 }) ??
+                          `... i ${legacyCategoryResults.length - 10} més`}
+                      </p>
+                    )}
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    {t.dashboard.legacyCategoryNote ??
+                      'Aquestes transaccions tenen la categoria guardada com a ID de document antic. Contacta amb suport si necessites una migració.'}
+                  </p>
+                </div>
+              )}
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setHealthCheckDialogOpen(false)}>
+              {t.common?.close ?? 'Tancar'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <Dialog open={shareDialogOpen} onOpenChange={setShareDialogOpen}>
         <DialogContent className="max-w-5xl w-full max-h-[85vh] overflow-hidden">
