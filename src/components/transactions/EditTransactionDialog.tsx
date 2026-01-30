@@ -55,6 +55,9 @@ export const EditTransactionDialog = React.memo(function EditTransactionDialog({
 }: EditTransactionDialogProps) {
   const { t } = useTranslations();
 
+  // Moviments importats (amb bankAccountId) tenen camps bancaris bloquejats
+  const isBankTransaction = transaction?.bankAccountId != null;
+
   // Local state for form - only synced when dialog opens
   const [formData, setFormData] = React.useState<EditFormData>({
     description: '',
@@ -106,6 +109,7 @@ export const EditTransactionDialog = React.memo(function EditTransactionDialog({
               value={formData.description}
               onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
               className="col-span-3"
+              disabled={isBankTransaction}
             />
           </div>
           <div className="grid grid-cols-4 items-center gap-4">
@@ -130,6 +134,7 @@ export const EditTransactionDialog = React.memo(function EditTransactionDialog({
               value={formData.amount}
               onChange={(e) => setFormData(prev => ({ ...prev, amount: e.target.value }))}
               className="col-span-3"
+              disabled={isBankTransaction}
             />
           </div>
           <div className="grid grid-cols-4 items-center gap-4">
