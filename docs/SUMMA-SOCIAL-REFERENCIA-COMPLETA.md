@@ -1,6 +1,6 @@
 # ═══════════════════════════════════════════════════════════════════════════════
 # SUMMA SOCIAL - REFERÈNCIA COMPLETA DEL PROJECTE
-# Versió 1.32 - Gener 2026
+# Versió 1.34 - Gener 2026
 # ═══════════════════════════════════════════════════════════════════════════════
 
 
@@ -164,6 +164,24 @@ El sistema garanteix les següents invariants per assegurar la integritat de les
 #### A3: Estat del donant no bloqueja fiscal
 
 L'estat del donant (`inactive`, `pending_return`, `archived`, `deleted`) **NO bloqueja** la imputació fiscal si existeix `contactId`. L'estat només afecta l'operativa interna, no el dret fiscal.
+
+#### A4: Coherència source ↔ bankAccountId (NOU v1.34)
+
+| source | bankAccountId | Camps bloquejats (date, amount, description) |
+|--------|---------------|----------------------------------------------|
+| `bank` | **obligatori** | 🔒 Bloquejats |
+| `stripe` | **obligatori** | 🔒 Bloquejats |
+| `remittance` | heretat del pare | 🔒 Bloquejats |
+| `manual` | `null` | ✏️ Editables |
+
+**Comportament:**
+- Transaccions amb `bankAccountId != null` tenen `date`, `amount` i `description` desactivats al diàleg d'edició.
+- Les filles de remesa hereten automàticament el `bankAccountId` del pare.
+- Les despeses off-bank (mòdul projectes) van a col·lecció separada (`offBankExpenses`), no afectades per aquesta regla.
+
+**Health Check P0:**
+- `source='bank'` o `source='stripe'` sense `bankAccountId` → ERROR
+- `bankAccountId` present amb `source` diferent de `bank`/`stripe`/`remittance` → ERROR
 
 #### Notes de robustesa
 
@@ -448,7 +466,7 @@ organizations/
       │       ├── remittanceDirection: 'IN' | 'OUT' | null  # Direcció de la remesa
       │       ├── source: 'bank' | 'remittance' | 'manual' | 'stripe' | null  # Origen
       │       ├── parentTransactionId: string | null  # ID remesa pare
-      │       ├── bankAccountId: string | null        # ID compte bancari
+      │       ├── bankAccountId: string | null        # ID compte bancari (obligatori si source=bank|stripe)
       │       │
       │       # Camps de remeses de devolucions:
       │       ├── remittanceType: 'returns' | 'donations' | 'payments' | null
@@ -3631,7 +3649,7 @@ Panell de diagnòstic d'integritat de dades accessible per administradors d'orga
 |------|-------------|---------|
 | **A) Categories legacy** | Categories guardades com docId antic | `^[A-Za-z0-9]{20,}$` i no és nameKey conegut |
 | **B) Dates: formats** | Barreja de formats o dates invàlides | Classifica YYYY-MM-DD, ISO_WITH_T, INVALID |
-| **C) Origen bancari** | Incoherències source ↔ bankAccountId | `source=bank` sense bankAccountId o viceversa |
+| **C) Origen bancari** | Incoherències source ↔ bankAccountId | `source=bank\|stripe` sense bankAccountId (P0 error) |
 | **D) ArchivedAt** | Transaccions arxivades al conjunt normal | `archivedAt != null` en queries no filtrades |
 | **E) Signs per tipus** | Amount incompatible amb transactionType | donation→>0, return→<0, fee→<0, etc. |
 
@@ -4602,6 +4620,7 @@ Indicadors que requeririen intervenció:
 | **1.31** | **14 Gen 2026** | **UX novetats: eliminat toast automàtic de novetats al dashboard (ara només via campaneta/FAB inbox). Reducció soroll logs: console.debug dev-only per i18n listener, org-provider superadmin access. Traça toast DEV-ONLY per debugging. Clarificat accés SuperAdmin sense membership com a comportament esperat. Documentat ERR_BLOCKED_BY_CLIENT com a possible adblocker (no bug).** |
 | **1.32** | **29 Gen 2026** | **Dinàmica de donants: nou panell d'anàlisi per període (altes, baixes, reactivacions, devolucions, aportació decreixent). Wizard SEPA pain.008 complet: 3 passos (config, selecció, revisió), periodicitat de quota (monthly/quarterly/semiannual/annual/manual), memòria d'execució (lastSepaRunDate), bulk selection amb filtre, col·lecció sepaCollectionRuns. Importador pressupost millorat: extracció codi del text amb patrons (A), a.1), a.1.1)), agrupació contextual per jerarquia, capítols destacats (ambre), vista sense/amb partides. Traduccions i18n donorDynamics (CA/ES). Doc GOVERN-DE-CODI-I-DEPLOY v3.0: classificació risc (BAIX/MITJÀ/ALT), ritual deploy per nivell, gate humà únic.** |
 | **1.33** | **30 Gen 2026** | **Health Check P0: panell d'integritat de dades al Dashboard (només admin). 5 blocs deterministes: A) categories legacy (docIds), B) dates formats mixtos/invàlids, C) coherència origen bancari (source↔bankAccountId), D) archivedAt en queries normals, E) signs per transactionType. UI amb details expandibles, badge recompte, taula exemples (max 5). Deduplicació global importació bancària (per rang dates), guardrails UX solapament extractes, camps bancaris readonly (description/amount) per moviments importats. Fitxer category-health.ts amb runHealthCheck().** |
+| **1.34** | **31 Gen 2026** | **Invariant A4 source↔bankAccountId: `bank`/`stripe` requereixen bankAccountId (P0 error si absent), `remittance` hereta del pare, `manual` no aplica. Health check actualitzat per detectar stripe sense bankAccountId. Camps (date/amount/description) bloquejats si bankAccountId present. Backfill dades legacy Flores (363 transaccions: 340 bank + 23 remittance).** |
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
