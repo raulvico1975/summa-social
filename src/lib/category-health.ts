@@ -213,8 +213,8 @@ export function checkBankSourceCoherence<T extends {
   const issues: BankSourceIssue[] = [];
 
   for (const tx of transactions) {
-    // source === "bank" però no té bankAccountId
-    if (tx.source === 'bank' && !tx.bankAccountId) {
+    // source === "bank" o "stripe" però no té bankAccountId → ERROR P0
+    if ((tx.source === 'bank' || tx.source === 'stripe') && !tx.bankAccountId) {
       if (issues.length < 5) {
         issues.push({
           id: tx.id,
@@ -227,8 +227,9 @@ export function checkBankSourceCoherence<T extends {
         });
       }
     }
-    // Té bankAccountId però source !== "bank"
-    else if (tx.bankAccountId && tx.source !== 'bank') {
+    // Té bankAccountId però source no és bank/stripe/remittance
+    // (remittance hereta bankAccountId del pare, és vàlid)
+    else if (tx.bankAccountId && tx.source !== 'bank' && tx.source !== 'stripe' && tx.source !== 'remittance') {
       if (issues.length < 5) {
         issues.push({
           id: tx.id,
