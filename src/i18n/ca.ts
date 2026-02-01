@@ -2477,6 +2477,11 @@ export const ca = {
     cannotArchiveWithTransactions: (name: string, count: number) =>
       `El contacte "${name}" té ${count} moviments associats. No es pot arxivar.`,
     hasTransactionsError: (count: number) => `Aquest contacte té ${count} moviments associats. No es pot arxivar.`,
+    // v1.36.2: Desglossament actius vs arxivats
+    cannotArchiveIntro: (name: string) => `El contacte "${name}" té moviments associats:`,
+    activeMovementsLabel: "Moviments actius",
+    archivedMovementsLabel: "Moviments arxivats (històric)",
+    blocksArchive: "bloqueja l'arxivat",
   },
   months: {
     january: "gener",

@@ -2480,6 +2480,11 @@ export const fr = {
     cannotArchiveTitle: "Impossible d'archiver",
     cannotArchiveWithTransactions: (name: string, count: number) =>
       `Le contact "${name}" a ${count} mouvements associés. Impossible de l'archiver.`,
+    // v1.36.2: Décomposition actifs vs archivés
+    cannotArchiveIntro: (name: string) => `Le contact "${name}" a des mouvements associés :`,
+    activeMovementsLabel: "Mouvements actifs",
+    archivedMovementsLabel: "Mouvements archivés (historique)",
+    blocksArchive: "bloque l'archivage",
   },
   months: {
     january: "gener",
