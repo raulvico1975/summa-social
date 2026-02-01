@@ -2473,6 +2473,9 @@ export const ca = {
     noDefaultCategory: "Cap (assignar manualment)",
     // v1.36: Guardrails d'arxivat
     cannotArchive: "No es pot arxivar",
+    cannotArchiveTitle: "No es pot arxivar",
+    cannotArchiveWithTransactions: (name: string, count: number) =>
+      `El contacte "${name}" té ${count} moviments associats. No es pot arxivar.`,
     hasTransactionsError: (count: number) => `Aquest contacte té ${count} moviments associats. No es pot arxivar.`,
   },
   months: {

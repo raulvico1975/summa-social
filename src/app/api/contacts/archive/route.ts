@@ -97,6 +97,7 @@ async function verifyIdToken(request: NextRequest): Promise<AuthResult | null> {
 interface ArchiveContactRequest {
   orgId: string;
   contactId: string;
+  dryRun?: boolean;  // Si true, només compta transaccions sense arxivar
 }
 
 interface ArchiveContactResponse {
@@ -105,6 +106,7 @@ interface ArchiveContactResponse {
   error?: string;
   code?: string;
   transactionCount?: number;
+  canArchive?: boolean;  // En mode dryRun, indica si es pot arxivar
 }
 
 // =============================================================================
@@ -230,9 +232,27 @@ export async function POST(
   const transactionsSnap = await contactTransactionsQuery.get();
   const txCount = transactionsSnap.size;
 
-  console.log(`[contacts/archive] Contacte ${contactId} (${contactData?.name || 'sense nom'}) té ${txCount} transaccions (total)`);
+  console.log(`[contacts/archive] Contacte ${contactId} (${contactData?.name || 'sense nom'}) té ${txCount} transaccions (total)${body.dryRun ? ' [dryRun]' : ''}`);
 
-  // 8. Si count > 0, error
+  // 8. Mode dryRun: només retornem el comptatge sense arxivar
+  if (body.dryRun) {
+    if (txCount > 0) {
+      return NextResponse.json({
+        success: false,
+        code: 'HAS_TRANSACTIONS',
+        transactionCount: txCount,
+        canArchive: false,
+      });
+    }
+    return NextResponse.json({
+      success: true,
+      code: 'OK_TO_ARCHIVE',
+      transactionCount: 0,
+      canArchive: true,
+    });
+  }
+
+  // 9. Si count > 0, error
   // NOTA: NO oferim reassignació per contactes (diferent de categories)
   if (txCount > 0) {
     return NextResponse.json(
@@ -246,7 +266,7 @@ export async function POST(
     );
   }
 
-  // 9. Arxivar el contacte
+  // 10. Arxivar el contacte
   await contactRef.update({
     archivedAt: FieldValue.serverTimestamp(),
     archivedByUid: uid,
