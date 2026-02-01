@@ -13,16 +13,7 @@ import {
   DialogTrigger,
   DialogClose,
 } from '@/components/ui/dialog';
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from '@/components/ui/alert-dialog';
+// AlertDialog ja no s'utilitza - l'API arxiva directe si count==0
 
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -38,7 +29,7 @@ import type { Project, Emisor, Transaction } from '@/lib/data';
 import { useToast } from '@/hooks/use-toast';
 import { StatCard } from './stat-card';
 import { useCollection, useFirebase, useMemoFirebase, addDocumentNonBlocking, setDocumentNonBlocking } from '@/firebase';
-import { collection, doc, query, where, getDocs } from 'firebase/firestore';
+import { collection, doc } from 'firebase/firestore';
 import { ReassignModal } from './reassign-modal';
 import { useTranslations } from '@/i18n';
 import { useCurrentOrganization } from '@/hooks/organization-provider';
@@ -72,14 +63,12 @@ export function ProjectManager() {
   const { data: transactions } = useCollection<Transaction>(transactionsCollection);
 
   const [isDialogOpen, setIsDialogOpen] = React.useState(false);
-  const [isAlertOpen, setIsAlertOpen] = React.useState(false);
   const [isReassignOpen, setIsReassignOpen] = React.useState(false);
   const [isFunderDialogOpen, setIsFunderDialogOpen] = React.useState(false);
   const [editingProject, setEditingProject] = React.useState<Project | null>(null);
   const [projectToArchive, setProjectToArchive] = React.useState<Project | null>(null);
   const [affectedTransactionsCount, setAffectedTransactionsCount] = React.useState<number | null>(null);
   const [isCountingTransactions, setIsCountingTransactions] = React.useState(false);
-  const [isArchiving, setIsArchiving] = React.useState(false);
   const [formData, setFormData] = React.useState<Omit<Project, 'id'>>({ name: '', funderId: null });
   const [newFunderName, setNewFunderName] = React.useState('');
   const { toast } = useToast();
@@ -126,52 +115,18 @@ export function ProjectManager() {
   };
   
   // ═══════════════════════════════════════════════════════════════════════════
-  // ARXIVAT (v1.35): Flux amb reassignació via API
+  // ═══════════════════════════════════════════════════════════════════════════
+  // API-FIRST: La UI crida sempre l'API per arxivar.
+  // L'API decideix si té moviments (i retorna activeCount) o arxiva directe.
+  // Això evita problemes de permisos amb queries Firestore client.
   // ═══════════════════════════════════════════════════════════════════════════
 
   const handleArchiveRequest = async (project: Project) => {
-    if (!organizationId) return;
+    if (!organizationId || !user) return;
     setProjectToArchive(project);
     setAffectedTransactionsCount(null);
     setIsCountingTransactions(true);
 
-    try {
-      // Comptar moviments actius amb aquest projectId
-      // NOTA: No podem usar where('archivedAt', '==', null) perquè Firestore
-      // no troba documents on el camp no existeix (dades legacy sense archivedAt)
-      const transactionsRef = collection(firestore, 'organizations', organizationId, 'transactions');
-      const q = query(
-        transactionsRef,
-        where('projectId', '==', project.id)
-      );
-      const snapshot = await getDocs(q);
-      // Filtrar actives a codi (archivedAt == null o undefined/absent)
-      const count = snapshot.docs.filter(doc => {
-        const data = doc.data();
-        return data.archivedAt == null; // Cobreix null i undefined
-      }).length;
-      setAffectedTransactionsCount(count);
-
-      if (count > 0) {
-        // Hi ha moviments actius → obrir modal de reassignació
-        setIsReassignOpen(true);
-      } else {
-        // No hi ha moviments → confirmació simple per arxivar
-        setIsAlertOpen(true);
-      }
-    } catch (error) {
-      console.error('Error comptant transaccions:', error);
-      setAffectedTransactionsCount(0);
-      setIsAlertOpen(true);
-    } finally {
-      setIsCountingTransactions(false);
-    }
-  };
-
-  const handleArchiveConfirm = async () => {
-    if (!projectToArchive || !user) return;
-
-    setIsArchiving(true);
     try {
       const idToken = await user.getIdToken();
       const response = await fetch('/api/projects/archive', {
@@ -182,23 +137,32 @@ export function ProjectManager() {
         },
         body: JSON.stringify({
           orgId: organizationId,
-          fromProjectId: projectToArchive.id,
+          fromProjectId: project.id,
+          // NO enviem toProjectId → l'API decidirà si cal reassignar
         }),
       });
 
       const result = await response.json();
 
       if (result.success) {
+        // Arxivat directe (no tenia moviments actius)
         toast({
           title: t.projects?.projectArchivedToast ?? 'Eix arxivat',
-          description: t.projects?.projectArchivedToastDescription?.(projectToArchive.name) ?? `L'eix "${projectToArchive.name}" ha estat arxivat.`,
+          description: t.projects?.projectArchivedToastDescription?.(project.name) ?? `L'eix "${project.name}" ha estat arxivat.`,
         });
+        setProjectToArchive(null);
+      } else if (result.code === 'HAS_ACTIVE_TRANSACTIONS') {
+        // Té moviments actius → obrir modal de reassignació
+        setAffectedTransactionsCount(result.activeCount || 0);
+        setIsReassignOpen(true);
       } else {
+        // Error genèric
         toast({
           variant: 'destructive',
           title: t.projects?.archiveError ?? 'Error en arxivar',
           description: result.error || 'Error desconegut',
         });
+        setProjectToArchive(null);
       }
     } catch (error) {
       console.error('Error arxivant eix:', error);
@@ -207,10 +171,9 @@ export function ProjectManager() {
         title: t.projects?.archiveError ?? 'Error en arxivar',
         description: error instanceof Error ? error.message : 'Error desconegut',
       });
-    } finally {
-      setIsArchiving(false);
-      setIsAlertOpen(false);
       setProjectToArchive(null);
+    } finally {
+      setIsCountingTransactions(false);
     }
   };
 
@@ -474,38 +437,9 @@ export function ProjectManager() {
       </DialogContent>
     </Dialog>
 
-    {/* Modal de confirmació per arxivar (sense moviments) */}
-    <AlertDialog open={isAlertOpen} onOpenChange={(open) => {
-      setIsAlertOpen(open);
-      if (!open) {
-        setProjectToArchive(null);
-        setAffectedTransactionsCount(null);
-      }
-    }}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>{t.projects?.archiveProjectTitle ?? "Arxivar eix"}</AlertDialogTitle>
-            <AlertDialogDescription asChild>
-              <div className="space-y-2">
-                <p>{t.projects?.archiveProjectDescription ?? "Aquest eix no té moviments actius. Es pot arxivar directament."}</p>
-                {projectToArchive && (
-                  <p className="text-sm font-medium">{projectToArchive.name}</p>
-                )}
-              </div>
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel onClick={() => setProjectToArchive(null)} disabled={isArchiving}>
-              {t.common.cancel}
-            </AlertDialogCancel>
-            <AlertDialogAction onClick={handleArchiveConfirm} disabled={isArchiving || isCountingTransactions}>
-              {isArchiving ? 'Arxivant...' : (t.projects?.archiveProjectConfirm ?? 'Arxivar')}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-
     {/* Modal de reassignació (amb moviments) */}
+    {/* NOTA: Ja no hi ha AlertDialog de confirmació simple.
+        L'API arxiva directe si count==0, o retorna HAS_ACTIVE_TRANSACTIONS si count>0. */}
     {projectToArchive && (
       <ReassignModal
         open={isReassignOpen}

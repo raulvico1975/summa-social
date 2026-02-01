@@ -278,12 +278,14 @@ export async function POST(
   console.log(`[projects/archive] Eix ${fromProjectId} té ${activeCount} transaccions actives`);
 
   // 8. Si count > 0 i no hi ha toProjectId, error
+  // NOTA: Retornem activeCount perquè la UI pugui mostrar-lo al ReassignModal
   if (activeCount > 0 && !toProjectId) {
     return NextResponse.json(
       {
         success: false,
         error: `Eix té ${activeCount} moviments actius. Cal reassignar-los primer.`,
         code: 'HAS_ACTIVE_TRANSACTIONS',
+        activeCount,
       },
       { status: 400 }
     );
