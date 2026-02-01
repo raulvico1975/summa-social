@@ -3267,6 +3267,14 @@ export const ca = {
     },
     featureDisabled: "Funcionalitat no activada",
     featureDisabledDesc: "Contacta amb l'administrador per activar el mòdul de documents pendents.",
+    // Archive guardrails (v1.36)
+    cannotArchiveTitle: "No es pot arxivar",
+    cannotArchiveIntro: (title: string) => `Aquesta liquidació${title ? ` "${title}"` : ''} té tiquets associats:`,
+    cannotArchiveMatched: "Una liquidació conciliada no es pot arxivar.",
+    pendingTicketsLabel: "Tiquets pendents",
+    matchedTicketsLabel: "Tiquets conciliats",
+    blocksArchive: "bloqueja l'arxivat",
+    cannotArchiveHelp: "Cal treure els tiquets pendents de la liquidació abans d'arxivar-la.",
     // PDF labels
     pdf: {
       title: "Liquidacio de despeses",

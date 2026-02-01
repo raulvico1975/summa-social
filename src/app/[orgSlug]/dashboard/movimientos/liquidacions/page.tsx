@@ -38,7 +38,6 @@ import {
   ChevronRight,
   Receipt,
   Pencil,
-  Trash2,
   Car,
   Send,
   MoreVertical,
@@ -50,9 +49,7 @@ import {
   listenExpenseReports,
   createExpenseReportDraft,
   submitExpenseReport,
-  archiveExpenseReport,
   restoreExpenseReport,
-  deleteExpenseReport,
   type ExpenseReport,
 } from '@/lib/expense-reports';
 import {
@@ -156,7 +153,7 @@ function getStatusInfo(report: ExpenseReport, t: TranslationsContextType['t']): 
 export default function LiquidacionsPage() {
   const router = useRouter();
   const { organization, organizationId, userRole } = useCurrentOrganization();
-  const { firestore, storage } = useFirebase();
+  const { firestore, storage, user } = useFirebase();
   const { buildUrl } = useOrgUrl();
   const { toast } = useToast();
   const { t, tr } = useTranslations();
@@ -190,9 +187,15 @@ export default function LiquidacionsPage() {
   // Creació
   const [isCreating, setIsCreating] = React.useState(false);
 
-  // Modal confirmació esborrar
-  const [reportToDelete, setReportToDelete] = React.useState<ExpenseReport | null>(null);
-  const [isDeleting, setIsDeleting] = React.useState(false);
+  // Modal confirmació arxivar
+  const [reportToArchive, setReportToArchive] = React.useState<ExpenseReport | null>(null);
+  const [isArchiving, setIsArchiving] = React.useState(false);
+  const [isCheckingArchive, setIsCheckingArchive] = React.useState(false);
+
+  // Modal "no es pot arxivar" (té tiquets pendents)
+  const [cannotArchiveOpen, setCannotArchiveOpen] = React.useState(false);
+  const [cannotArchivePendingCount, setCannotArchivePendingCount] = React.useState(0);
+  const [cannotArchiveMatchedCount, setCannotArchiveMatchedCount] = React.useState(0);
 
   // Modal confirmació enviar
   const [reportToSubmit, setReportToSubmit] = React.useState<ExpenseReport | null>(null);
@@ -265,20 +268,114 @@ export default function LiquidacionsPage() {
     }
   };
 
-  // Arxivar
-  const handleArchive = async (report: ExpenseReport) => {
-    if (!organizationId || !firestore) return;
+  // ═══════════════════════════════════════════════════════════════════════════
+  // ARXIVAR (v1.36): Flux via API-first per garantir integritat referencial
+  // Pre-check amb dryRun per detectar tiquets pendents
+  // ═══════════════════════════════════════════════════════════════════════════
+  const handleArchiveRequest = async (report: ExpenseReport) => {
+    if (!organizationId || !user) return;
+
+    setReportToArchive(report);
+    setIsCheckingArchive(true);
 
     try {
-      await archiveExpenseReport(firestore, organizationId, report.id);
-      toast({ title: t.expenseReports.toasts.archived });
-    } catch (error) {
-      console.error('[handleArchive] Error:', error);
-      toast({
-        title: t.expenseReports.toasts.error,
-        description: t.expenseReports.toasts.errorArchive,
-        variant: 'destructive',
+      const idToken = await user.getIdToken();
+      const response = await fetch('/api/expense-reports/archive', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${idToken}`,
+        },
+        body: JSON.stringify({
+          orgId: organizationId,
+          reportId: report.id,
+          dryRun: true,
+        }),
       });
+
+      const result = await response.json();
+
+      if (result.success || result.code === 'OK_TO_ARCHIVE') {
+        // OK: arxivar directament via API
+        await handleArchiveConfirm(report);
+      } else if (result.code === 'HAS_PENDING_TICKETS') {
+        // Té tiquets pendents: mostrar modal informatiu
+        setCannotArchivePendingCount(result.pendingCount || 0);
+        setCannotArchiveMatchedCount(result.matchedCount || 0);
+        setCannotArchiveOpen(true);
+      } else if (result.code === 'IS_MATCHED') {
+        // Liquidació conciliada: no es pot arxivar
+        toast({
+          variant: 'destructive',
+          title: t.expenseReports.toasts.error,
+          description: t.expenseReports?.cannotArchiveMatched ?? 'Una liquidació conciliada no es pot arxivar.',
+        });
+        setReportToArchive(null);
+      } else {
+        // Error genèric
+        toast({
+          variant: 'destructive',
+          title: t.expenseReports.toasts.error,
+          description: result.error || t.expenseReports.toasts.errorArchive,
+        });
+        setReportToArchive(null);
+      }
+    } catch (err) {
+      console.error('[handleArchiveRequest] Error:', err);
+      toast({
+        variant: 'destructive',
+        title: t.expenseReports.toasts.error,
+        description: t.common.dbConnectionError,
+      });
+      setReportToArchive(null);
+    } finally {
+      setIsCheckingArchive(false);
+    }
+  };
+
+  // Arxivar via API (sense dryRun)
+  const handleArchiveConfirm = async (report: ExpenseReport) => {
+    if (!organizationId || !user) {
+      setReportToArchive(null);
+      return;
+    }
+
+    setIsArchiving(true);
+    try {
+      const idToken = await user.getIdToken();
+      const response = await fetch('/api/expense-reports/archive', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${idToken}`,
+        },
+        body: JSON.stringify({
+          orgId: organizationId,
+          reportId: report.id,
+        }),
+      });
+
+      const result = await response.json();
+
+      if (result.success) {
+        toast({ title: t.expenseReports.toasts.archived });
+      } else {
+        toast({
+          variant: 'destructive',
+          title: t.expenseReports.toasts.error,
+          description: result.error || t.expenseReports.toasts.errorArchive,
+        });
+      }
+    } catch (err) {
+      console.error('[handleArchiveConfirm] Error:', err);
+      toast({
+        variant: 'destructive',
+        title: t.expenseReports.toasts.error,
+        description: t.common.dbConnectionError,
+      });
+    } finally {
+      setIsArchiving(false);
+      setReportToArchive(null);
     }
   };
 
@@ -317,34 +414,6 @@ export default function LiquidacionsPage() {
         description: t.expenseReports.toasts.errorRestore,
         variant: 'destructive',
       });
-    }
-  };
-
-  // Esborrar (amb confirmació)
-  const handleDelete = async () => {
-    if (!organizationId || !firestore || !reportToDelete) return;
-
-    setIsDeleting(true);
-    try {
-      const result = await deleteExpenseReport(firestore, organizationId, reportToDelete.id);
-      const ticketCount = result.releasedTicketCount;
-      toast({
-        title: t.expenseReports.toasts.deleted,
-        description: ticketCount > 0
-          ? t.expenseReports.toasts.ticketsReleased({ count: ticketCount })
-          : undefined,
-      });
-      setReportToDelete(null);
-    } catch (error) {
-      console.error('[handleDelete] Error:', error);
-      const errorMessage = error instanceof Error ? error.message : t.expenseReports.toasts.errorDelete;
-      toast({
-        title: t.expenseReports.toasts.error,
-        description: errorMessage,
-        variant: 'destructive',
-      });
-    } finally {
-      setIsDeleting(false);
     }
   };
 
@@ -617,13 +686,14 @@ export default function LiquidacionsPage() {
                                       {t.expenseReports.actions.submit}
                                     </DropdownMenuItem>
                                   )}
-                                  {/* Arxivar - draft sense SEPA */}
-                                  {report.status === 'draft' && !report.sepa && (
+                                  {/* Arxivar - draft i submitted sense SEPA (v1.36: via API) */}
+                                  {(report.status === 'draft' || report.status === 'submitted') && !report.sepa && (
                                     <DropdownMenuItem
                                       onClick={(e) => {
                                         e.stopPropagation();
-                                        handleArchive(report);
+                                        handleArchiveRequest(report);
                                       }}
+                                      disabled={isCheckingArchive || isArchiving}
                                     >
                                       <Archive className="mr-2 h-4 w-4" />
                                       {t.common.archive}
@@ -639,19 +709,6 @@ export default function LiquidacionsPage() {
                                     >
                                       <RotateCcw className="mr-2 h-4 w-4" />
                                       {t.common.restore}
-                                    </DropdownMenuItem>
-                                  )}
-                                  {/* Esborrar - draft i submitted (sense SEPA) */}
-                                  {(report.status === 'draft' || report.status === 'submitted') && !report.sepa && (
-                                    <DropdownMenuItem
-                                      onClick={(e) => {
-                                        e.stopPropagation();
-                                        setReportToDelete(report);
-                                      }}
-                                      className="text-destructive"
-                                    >
-                                      <Trash2 className="mr-2 h-4 w-4" />
-                                      {t.common.delete}
                                     </DropdownMenuItem>
                                   )}
                                 </DropdownMenuContent>
@@ -689,30 +746,17 @@ export default function LiquidacionsPage() {
                                     {t.expenseReports.actions.submit}
                                   </Button>
                                 )}
-                                {/* Esborrar - draft i submitted (sense SEPA) */}
+                                {/* Arxivar - draft i submitted sense SEPA (v1.36: via API) */}
                                 {(report.status === 'draft' || report.status === 'submitted') && !report.sepa && (
                                   <Button
                                     variant="ghost"
                                     size="sm"
                                     onClick={(e) => {
                                       e.stopPropagation();
-                                      setReportToDelete(report);
-                                    }}
-                                    title={t.common.delete}
-                                  >
-                                    <Trash2 className="h-4 w-4" />
-                                  </Button>
-                                )}
-                                {/* Arxivar - draft sense SEPA */}
-                                {report.status === 'draft' && !report.sepa && (
-                                  <Button
-                                    variant="ghost"
-                                    size="sm"
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      handleArchive(report);
+                                      handleArchiveRequest(report);
                                     }}
                                     title={t.common.archive}
+                                    disabled={isCheckingArchive || isArchiving}
                                   >
                                     <Archive className="h-4 w-4" />
                                   </Button>
@@ -871,33 +915,47 @@ export default function LiquidacionsPage() {
         </AlertDialogContent>
       </AlertDialog>
 
-      {/* Modal confirmació esborrar */}
-      <AlertDialog open={!!reportToDelete} onOpenChange={(open) => !open && setReportToDelete(null)}>
+      {/* Modal informatiu: no es pot arxivar (té tiquets pendents) */}
+      <AlertDialog open={cannotArchiveOpen} onOpenChange={(open) => {
+        setCannotArchiveOpen(open);
+        if (!open) setReportToArchive(null);
+      }}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>{t.expenseReports.confirmDelete.title}</AlertDialogTitle>
+            <AlertDialogTitle>
+              {t.expenseReports?.cannotArchiveTitle ?? 'No es pot arxivar'}
+            </AlertDialogTitle>
             <AlertDialogDescription className="space-y-2">
-              <span className="block">{t.expenseReports.confirmDelete.description}</span>
-              {reportToDelete && reportToDelete.receiptDocIds.length > 0 && (
-                <span className="block text-amber-600">
-                  {t.expenseReports.confirmDelete.ticketsWarning({ count: reportToDelete.receiptDocIds.length })}
-                </span>
-              )}
+              <p>
+                {t.expenseReports?.cannotArchiveIntro?.(reportToArchive?.title || '') ??
+                  `Aquesta liquidació té tiquets associats:`}
+              </p>
+              <ul className="list-disc pl-5 space-y-1">
+                <li>
+                  <strong>{t.expenseReports?.pendingTicketsLabel ?? 'Tiquets pendents'}:</strong> {cannotArchivePendingCount}
+                  {cannotArchivePendingCount > 0 && (
+                    <span className="text-destructive ml-1">
+                      ({t.expenseReports?.blocksArchive ?? "bloqueja l'arxivat"})
+                    </span>
+                  )}
+                </li>
+                {cannotArchiveMatchedCount > 0 && (
+                  <li>
+                    <strong>{t.expenseReports?.matchedTicketsLabel ?? 'Tiquets conciliats'}:</strong> {cannotArchiveMatchedCount}
+                  </li>
+                )}
+              </ul>
+              <p className="text-sm text-muted-foreground mt-2">
+                {t.expenseReports?.cannotArchiveHelp ?? "Cal treure els tiquets pendents de la liquidació abans d'arxivar-la."}
+              </p>
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel disabled={isDeleting}>
-              {t.expenseReports.confirmDelete.cancel}
-            </AlertDialogCancel>
-            <AlertDialogAction
-              onClick={handleDelete}
-              disabled={isDeleting}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-            >
-              {isDeleting ? (
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              ) : null}
-              {t.expenseReports.confirmDelete.confirm}
+            <AlertDialogAction onClick={() => {
+              setCannotArchiveOpen(false);
+              setReportToArchive(null);
+            }}>
+              {t.common?.close ?? 'Tancar'}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

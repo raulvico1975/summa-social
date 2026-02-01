@@ -465,12 +465,29 @@ service cloud.firestore {
       // ─────────────────────────────────────────────────────────────────────
       // LIQUIDACIONS (expense reports)
       // Path: /organizations/{orgId}/expenseReports/{reportId}
-      // Updated: 2025-12-28
+      // Updated: 2026-02-01 - FASE 2C: Guardrails d'integritat
       // ─────────────────────────────────────────────────────────────────────
 
       match /expenseReports/{reportId} {
         allow read: if isSuperAdmin() || isMemberOf(orgId) || hasOrgInProfile(orgId);
-        allow create, update, delete: if isSuperAdmin() || (isMemberOf(orgId) && getMemberRole(orgId) in ['admin', 'user']);
+        allow create: if isSuperAdmin() || (isMemberOf(orgId) && getMemberRole(orgId) in ['admin', 'user']);
+
+        // UPDATE: bloquejar transició a 'archived' i camps de traça des de client
+        // Només l'API (Admin SDK) pot arxivar amb validació de tiquets
+        allow update: if (isSuperAdmin() || (isMemberOf(orgId) && getMemberRole(orgId) in ['admin', 'user']))
+          && (
+            // Si l'estat canvia a 'archived', només via API
+            request.resource.data.status != 'archived' || resource.data.status == 'archived'
+          )
+          && (
+            // Camps de traça d'arxivat: no es poden modificar des de client
+            request.resource.data.archivedAt == resource.data.archivedAt
+            && request.resource.data.archivedByUid == resource.data.archivedByUid
+            && request.resource.data.archivedFromAction == resource.data.archivedFromAction
+          );
+
+        // DELETE FÍSIC: PROHIBIT (v1.36)
+        allow delete: if false;
       }
 
       // ─────────────────────────────────────────────────────────────────────

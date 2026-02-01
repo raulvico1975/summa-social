@@ -3270,6 +3270,14 @@ export const fr = {
     },
     featureDisabled: "Fonctionnalité non activée",
     featureDisabledDesc: "Contactez l'administrateur pour activer le module de documents en attente.",
+    // Archive guardrails (v1.36)
+    cannotArchiveTitle: "Impossible d'archiver",
+    cannotArchiveIntro: (title: string) => `Cette note de frais${title ? ` "${title}"` : ''} a des tickets associés :`,
+    cannotArchiveMatched: "Une note de frais conciliée ne peut pas être archivée.",
+    pendingTicketsLabel: "Tickets en attente",
+    matchedTicketsLabel: "Tickets conciliés",
+    blocksArchive: "bloque l'archivage",
+    cannotArchiveHelp: "Il faut retirer les tickets en attente de la note de frais avant de l'archiver.",
     // PDF labels
     pdf: {
       title: "Note de frais",
