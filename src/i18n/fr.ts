@@ -1782,6 +1782,8 @@ export const fr = {
       noAccountsWarning: "Aucun compte créé. Créez-en un dans les Paramètres.",
       goToSettings: "Aller aux Paramètres",
       cannotDeactivateLast: "Vous devez conserver au moins un compte bancaire actif.",
+      cannotDeactivate: "Impossible de désactiver",
+      hasTransactionsError: (count: number) => `Ce compte a ${count} mouvements associés. Il ne peut pas être archivé.`,
     }
   },
   members: {

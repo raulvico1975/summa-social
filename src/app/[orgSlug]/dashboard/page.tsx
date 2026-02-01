@@ -514,6 +514,7 @@ export default function DashboardPage() {
         signs: { hasIssues: false, count: 0, examples: [] },
         orphanCategories: { hasIssues: false, count: 0, examples: [] },
         orphanProjects: { hasIssues: false, count: 0, examples: [] },
+        orphanBankAccounts: { hasIssues: false, count: 0, examples: [] },
         totalIssues: 0,
       });
       setHealthCheckDialogOpen(true);

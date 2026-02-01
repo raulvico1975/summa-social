@@ -1780,6 +1780,8 @@ export const ca = {
       noAccountsWarning: "No tens cap compte creat. Crea'n un a Configuració.",
       goToSettings: "Anar a Configuració",
       cannotDeactivateLast: "Cal mantenir almenys un compte bancari actiu.",
+      cannotDeactivate: "No es pot desactivar",
+      hasTransactionsError: (count: number) => `Aquest compte té ${count} moviments associats. No es pot arxivar.`,
     }
   },
   members: {

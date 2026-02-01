@@ -711,11 +711,15 @@ export type BankAccount = {
   iban: string | null;             // IBAN normalitzat (opcional)
   bankName: string | null;         // Nom del banc (opcional)
   isDefault: boolean | null;       // Compte per defecte
-  isActive: boolean | null;        // Compte actiu (per soft-delete)
+  isActive: boolean | null;        // Compte actiu (per soft-delete legacy)
   createdAt: string;               // ISO date
   updatedAt: string;               // ISO date
   // SEPA Direct Debit
   creditorId?: string | null;      // Identificador de creditor SEPA (ex: ES21001G70782933)
+  // Camps d'arxivat (v1.36 - guardrails integritat)
+  archivedAt?: import('firebase/firestore').Timestamp | null;
+  archivedByUid?: string | null;
+  archivedFromAction?: string | null;
 };
 
 // ═══════════════════════════════════════════════════════════════════════════════
