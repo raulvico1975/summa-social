@@ -469,27 +469,35 @@ export function CategoryManager() {
     {/* Modal de reassignació (amb moviments) */}
     {/* NOTA: Ja no hi ha AlertDialog de confirmació simple.
         L'API arxiva directe si count==0, o retorna HAS_ACTIVE_TRANSACTIONS si count>0. */}
-    {canEdit && categoryToArchive && (
+    {/* IMPORTANT: NO condicionar a categoryToArchive per evitar desmuntatge prematur
+        que causa dead-lock d'estat. El modal sempre existeix però amb open={false}. */}
+    {canEdit && (
       <ReassignModal
-        open={isReassignOpen}
+        open={isReassignOpen && categoryToArchive !== null}
         onOpenChange={(open) => {
-          setIsReassignOpen(open);
           if (!open) {
-            setCategoryToArchive(null);
-            setAffectedTransactionsCount(null);
+            // Reset complet de l'estat quan es tanca el modal
+            setIsReassignOpen(false);
+            // Donem temps al Dialog per tancar-se visualment abans de netejar l'estat
+            setTimeout(() => {
+              setCategoryToArchive(null);
+              setAffectedTransactionsCount(null);
+            }, 100);
+          } else {
+            setIsReassignOpen(open);
           }
         }}
         type="category"
-        sourceItem={{
+        sourceItem={categoryToArchive ? {
           id: categoryToArchive.id,
           name: categoryTranslations[categoryToArchive.name] || categoryToArchive.name,
-        }}
-        targetItems={activeCategories
+        } : { id: '', name: '' }}
+        targetItems={categoryToArchive ? activeCategories
           .filter(c => c.id !== categoryToArchive.id && c.type === categoryToArchive.type)
           .map(c => ({
             id: c.id,
             name: categoryTranslations[c.name] || c.name,
-          }))
+          })) : []
         }
         affectedCount={affectedTransactionsCount || 0}
         onConfirm={handleReassignConfirm}

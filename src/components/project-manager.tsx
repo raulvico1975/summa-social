@@ -440,32 +440,38 @@ export function ProjectManager() {
     {/* Modal de reassignació (amb moviments) */}
     {/* NOTA: Ja no hi ha AlertDialog de confirmació simple.
         L'API arxiva directe si count==0, o retorna HAS_ACTIVE_TRANSACTIONS si count>0. */}
-    {projectToArchive && (
-      <ReassignModal
-        open={isReassignOpen}
-        onOpenChange={(open) => {
-          setIsReassignOpen(open);
-          if (!open) {
+    {/* IMPORTANT: NO condicionar a projectToArchive per evitar desmuntatge prematur
+        que causa dead-lock d'estat. El modal sempre existeix però amb open={false}. */}
+    <ReassignModal
+      open={isReassignOpen && projectToArchive !== null}
+      onOpenChange={(open) => {
+        if (!open) {
+          // Reset complet de l'estat quan es tanca el modal
+          setIsReassignOpen(false);
+          // Donem temps al Dialog per tancar-se visualment abans de netejar l'estat
+          setTimeout(() => {
             setProjectToArchive(null);
             setAffectedTransactionsCount(null);
-          }
-        }}
-        type="project"
-        sourceItem={{
-          id: projectToArchive.id,
-          name: projectToArchive.name,
-        }}
-        targetItems={activeProjects
-          .filter(p => p.id !== projectToArchive.id)
-          .map(p => ({
-            id: p.id,
-            name: p.name,
-          }))
+          }, 100);
+        } else {
+          setIsReassignOpen(open);
         }
-        affectedCount={affectedTransactionsCount || 0}
-        onConfirm={handleReassignConfirm}
-      />
-    )}
+      }}
+      type="project"
+      sourceItem={projectToArchive ? {
+        id: projectToArchive.id,
+        name: projectToArchive.name,
+      } : { id: '', name: '' }}
+      targetItems={projectToArchive ? activeProjects
+        .filter(p => p.id !== projectToArchive.id)
+        .map(p => ({
+          id: p.id,
+          name: p.name,
+        })) : []
+      }
+      affectedCount={affectedTransactionsCount || 0}
+      onConfirm={handleReassignConfirm}
+    />
 
       <Dialog open={isFunderDialogOpen} onOpenChange={setIsFunderDialogOpen}>
         <DialogContent className="sm:max-w-md">
