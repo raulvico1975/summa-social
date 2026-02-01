@@ -206,6 +206,17 @@ export function CategoryManager() {
   // Això evita problemes de permisos amb queries Firestore client.
   // ═══════════════════════════════════════════════════════════════════════════
 
+  /**
+   * Reset complet de l'estat d'arxivat quan es cancel·la o tanca el modal.
+   * Evita dead-lock d'estat UI.
+   */
+  const resetArchiveFlow = React.useCallback(() => {
+    setIsReassignOpen(false);
+    setCategoryToArchive(null);
+    setAffectedTransactionsCount(null);
+    setIsCountingTransactions(false);
+  }, []);
+
   const handleArchiveRequest = async (category: Category) => {
     if (!canEdit || !organizationId || !user) return;
     setCategoryToArchive(category);
@@ -476,15 +487,9 @@ export function CategoryManager() {
         open={isReassignOpen && categoryToArchive !== null}
         onOpenChange={(open) => {
           if (!open) {
-            // Reset complet de l'estat quan es tanca el modal
-            setIsReassignOpen(false);
-            // Donem temps al Dialog per tancar-se visualment abans de netejar l'estat
-            setTimeout(() => {
-              setCategoryToArchive(null);
-              setAffectedTransactionsCount(null);
-            }, 100);
+            resetArchiveFlow();
           } else {
-            setIsReassignOpen(open);
+            setIsReassignOpen(true);
           }
         }}
         type="category"
