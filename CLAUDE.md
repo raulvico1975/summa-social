@@ -1,176 +1,80 @@
-# CLAUDE — Context i criteri del projecte Summa Social
+# CLAUDE — Com Claude treballa dins Summa Social
 
-Aquest repositori correspon al projecte **Summa Social**.
+## 1. Contracte operatiu
 
-## 1) Què és Summa Social
+**Prohibit:**
+- ❌ Inventar comportaments, camps, fluxos o dades no definides
+- ❌ Refactoritzar "per millorar" sense petició explícita
+- ❌ Afegir dependències o llibreries sense preguntar
+- ❌ Modificar estructures crítiques de Firestore sense permís
+- ❌ Fer migracions destructives o canvis massius de dades
 
-Summa Social és una aplicació de gestió econòmica i fiscal per a entitats petites i mitjanes d'Espanya.
+**Jerarquia de documents (ordre de prioritat):**
+1. `docs/SUMMA-SOCIAL-REFERENCIA-COMPLETA.md` — Font de veritat absoluta (v1.36)
+2. `docs/QA-P0-FISCAL.md` — Checklist fiscal obligatòria
+3. `docs/GOVERN-DE-CODI-I-DEPLOY.md` — Ritual de deploy
+4. `docs/PATRONS-CODI-OBLIGATORIS.md` — Patrons de codi
+5. `docs/DEV-SOLO-MANUAL.md` — Manual operatiu de suport
 
-NO és un ERP genèric ni un gestor de projectes.
+Si hi ha conflicte entre documents: **aturar-se i demanar aclariment**.
 
-El producte se centra exclusivament en:
-- conciliació bancària real
-- control de saldos i desquadraments
-- classificació determinista de moviments
-- fiscalitat (Model 182, 347, certificats de donació)
-- exports nets per a gestories
+## 2. Mode de treball
 
-La simplicitat, l'estabilitat i la previsibilitat són prioritàries.
+**Plan mode obligatori per:**
+- Qualsevol tasca >3 passos
+- Qualsevol canvi de dades, fiscalitat o conciliació
+- Qualsevol modificació d'estructures crítiques
 
-## 2) El teu rol com a Claude
+**Ús de subagents:**
+- Lectura de documents → subagent
+- Exploració de codi → subagent
+- Anàlisi paral·lela → subagents múltiples
+- El context principal només conté decisions i ordres finals
 
-El teu rol és **executar canvis petits i segurs**, no dissenyar el producte.
+**Si el pla falla → STOP + replantejar. Prohibit "empènyer".**
 
-**Respon sempre en català, excepte codi, noms de fitxers, comandes de terminal i literals.**
+## 3. Execució i verificació
 
-NO has de:
-- prendre decisions arquitectòniques
-- refactoritzar codi "per millorar-lo"
-- afegir funcionalitats fora de l'abast definit
-- introduir dependències noves
-- afegir noves llibreries sense preguntar
+No marcar res com a fet sense:
+- Tests passats (si n'hi ha)
+- Build correcte
+- Validació contra invariants (ledger, remeses, fiscal)
 
-Prohibit sobreanginyeria: no creis una funció complexa si una solució simple fuciona.
+**Pregunta obligatòria abans de tancar qualsevol tasca no trivial:**
+> "Això passaria una revisió d'un staff engineer?"
 
-Si una decisió no és òbvia, ATURA'T i demana aclariments.
+## 4. Principis de codi
 
-## 3) Autoritat del projecte
+- Canvi mínim viable sempre
+- Codi explícit, llegible i previsible
+- Si una solució simple funciona, no crear-ne una de complexa
+- **Firestore batch ≤ 50 operacions** (invariant operatiu)
+- Consultar `docs/PATRONS-CODI-OBLIGATORIS.md` per a patrons específics
 
-La font d'autoritat absoluta és el document mestre:
+## 5. Àrees crítiques
 
-- `/docs/SUMMA-SOCIAL-REFERENCIA-COMPLETA.md` (versió actual: v1.31)
-
-Cap altra documentació pot contradir-lo.
-
-Si detectes una contradicció, indica-ho explícitament i proposa una alternativa coherent amb aquest document.
-
-## 4) Criteris no negociables
-
-- Prioritza sempre el canvi mínim viable.
-- Mantén el codi explícit, llegible i previsible.
-- No modifiquis estructures crítiques de Firestore (transactions, contacts, organizations, members).
-- No facis migracions destructives ni canvis massius de dades.
-- No reorganitzis carpetes ni moguis fitxers sense permís explícit.
-- No canviïs Firestore Rules ni índexos sense permís explícit.
-
-## 5) Com treballar correctament
-
-Quan se't demani una modificació:
-
-1. Confirma l'abast abans de tocar codi.
-2. Indica quins fitxers tocaràs i quins NO.
-3. Genera sempre codi complet amb paths exactes.
-4. Inclou passos de verificació (comandes de terminal o accions a la UI).
-
-Aquest projecte prioritza **estabilitat, senzillesa, criteri i control** per sobre de velocitat.
-
-## 6) Mòdul Projectes — Justificació Assistida
-
-### Pantalla base
-- `Gestió Econòmica` és la pantalla central del mòdul
-- Cap flux obliga a sortir d'aquesta pantalla
-- Ruta: `/dashboard/project-module/projects/[projectId]/budget`
-
-### Mode justificació
-- És **partida-cèntric**, no despesa-cèntric
-- Prioritza **criteri** per sobre de completitud
+### Mòdul Projectes (Justificació Assistida)
+- Mode **partida-cèntric**, no despesa-cèntric
 - Tot es fa en **memòria** fins a "Aplicar"
-- No es modifica cap dada fins que l'usuari confirma
+- Suggerències automàtiques = heurístiques, mai bloquegen
 
-### Suggerències automàtiques
-- Són heurístiques (scoring per ressonància semàntica)
-- Mai bloquegen el flux
-- Mai escriuen dades sense confirmació explícita
-- Fitxer: `src/lib/project-module-suggestions.ts`
+### Remeses de Rebuts
+- Flux: `PROCESSAR → DESFER → REPROCESSAR`
+- Mai processar si `isRemittance === true`
+- Desfer = soft-delete (archivedAt), mai hard-delete
 
-### Split parcial
-- És funcionalitat clau, **no** un edge case
-- Permet treure part d'una despesa d'una partida
-- La part treta queda al projecte sense partida assignada
-- Cas d'ús habitual: quadrar justificacions amb import exacte
+### Fiscalitat
+- **Obligatori:** Executar `docs/QA-P0-FISCAL.md` abans de push a master que toqui fiscal
+- Invariants A1-A4 definits a REFERENCIA-COMPLETA.md
 
-### Fitxers principals
-- `src/app/[orgSlug]/dashboard/project-module/projects/[projectId]/budget/page.tsx`
-- `src/components/project-module/balance-project-modal.tsx`
-- `src/lib/project-module-suggestions.ts`
-- `src/lib/project-module-types.ts`
+## 6. Deploy a producció
 
-### Què NO fer
-- NO afegir workflows d'aprovació
-- NO crear entitats noves per simular
-- NO forçar classificació prèvia de despeses
-- NO bloquejar desviacions
-- NO obligar a quadrar al cèntim
+Claude Code **només pot desplegar** quan el CEO dona ordre explícita:
+> "Autoritzo deploy"
 
-## 7) Remeses de Rebuts i Devolucions
+Ritual complet a `docs/GOVERN-DE-CODI-I-DEPLOY.md`. No modificar el flux.
 
-### Flux de remeses IN (quotes de socis)
+## 7. Idioma
 
-```
-PROCESSAR → DESFER → REPROCESSAR
-```
-
-- Mai processar dues vegades sense desfer
-- El sistema bloqueja si `isRemittance === true`
-- Les filles arxivades (`archivedAt`) no compten per Model 182
-
-### Guardrails
-
-| Capa | Comportament |
-|------|--------------|
-| Client (UI) | Bloqueja si ja processada, mostra missatge |
-| Servidor | `409 REMITTANCE_ALREADY_PROCESSED` |
-
-### Desfer una remesa
-
-1. Modal de detall → "Desfer remesa"
-2. Les filles queden amb `archivedAt` (soft-delete)
-3. El pare torna a `isRemittance = false`
-4. Es pot reprocessar amb fitxer diferent
-
-### Fitxers clau
-
-- `src/app/api/remittances/in/process/route.ts` — Processament
-- `src/app/api/remittances/in/undo/route.ts` — Desfer
-- `src/app/api/remittances/in/check/route.ts` — Verificació consistència
-- `src/components/remittance-splitter.tsx` — UI divisor
-- `src/components/remittance-detail-modal.tsx` — UI detall
-
-### Què NO fer
-
-- NO permetre processar si `isRemittance === true`
-- NO fer hard-delete de filles (sempre soft-delete)
-- NO modificar el flux sense permís explícit
-
-## 8) Actualitzar novetats del producte
-
-Quan es tanca una funcionalitat significativa (nova pantalla, nou flux, millora visible):
-
-1. La font de veritat és la col·lecció Firestore `productUpdates` (gestionada des del panell SuperAdmin).
-
-2. El fitxer `src/lib/notifications.ts` conté definicions locals (`PRODUCT_UPDATES`, `ROADMAP_ITEMS`) que serveixen com a **fallback** i estan marcades `@deprecated`.
-
-3. Per afegir una novetat:
-   - Accedeix al panell SuperAdmin → Product Updates
-   - Crea l'entrada amb `id`, `title`, `body`, `href` i `createdAt`
-   - L'`id` ha de ser únic per forçar que el badge es mostri als usuaris
-
-4. Format del text: curt, informatiu, sense exclamacions.
-
-5. Fitxers relacionats:
-   - `src/lib/notifications.ts` — Definicions locals (fallback deprecated)
-   - `src/hooks/use-product-updates.ts` — Hook que carrega des de Firestore
-   - `src/components/notifications/product-updates-fab.tsx` — FAB de novetats
-
-## 9) Deploy a producció
-
-Claude Code **només pot desplegar** quan el CEO dona una ordre explícita amb el text:
-"Autoritzo deploy".
-
-En aquest cas, Claude Code executarà exclusivament:
-- El ritual documentat a `docs/GOVERN-DE-CODI-I-DEPLOY.md`
-- Sense modificar el flux
-- Sense prendre decisions
-
-Qualsevol altra acció sobre `prod` requereix ordre explícita del CEO.
-
+- Resposta **sempre en català**
+- Excepcions: codi, noms de fitxers, comandes de terminal, literals

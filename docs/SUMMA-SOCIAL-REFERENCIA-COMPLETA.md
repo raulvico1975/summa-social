@@ -3647,7 +3647,7 @@ Panell de diagnòstic d'integritat de dades accessible per administradors d'orga
 
 | Bloc | Què detecta | Criteri |
 |------|-------------|---------|
-| **A) Categories legacy** | Categories guardades com docId antic | `^[A-Za-z0-9]{20,}$` i no és nameKey conegut |
+| **A) Categories legacy** | Categories guardades com nameKey (format pre-FASE0) | `category` és un nameKey conegut (ex: "donations_general") en lloc de docId |
 | **B) Dates: formats** | Barreja de formats o dates invàlides | Classifica YYYY-MM-DD, ISO_WITH_T, INVALID |
 | **C) Origen bancari** | Incoherències source ↔ bankAccountId | `source=bank\|stripe` sense bankAccountId (P0 error) |
 | **D) ArchivedAt** | Transaccions arxivades al conjunt normal | `archivedAt != null` en queries no filtrades |
