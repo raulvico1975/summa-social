@@ -2102,7 +2102,7 @@
   "movements.table.pendingReturns": "Rejets en attente",
   "movements.table.pendingReturnsWarningDescription": "Attribuez le donateur concerné pour exclure le don du Modèle 182.",
   "movements.table.pendingTasks": "Tâches en attente",
-  "movements.table.project": "Projet",
+  "movements.table.project": "Axe d'intervention",
   "movements.table.projects": "Axes d'action",
   "movements.table.proof": "Justificatif",
   "movements.table.remittanceDetail": "Détail du virement",

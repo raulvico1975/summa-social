@@ -1780,6 +1780,8 @@ export const ca = {
       noAccountsWarning: "No tens cap compte creat. Crea'n un a Configuració.",
       goToSettings: "Anar a Configuració",
       cannotDeactivateLast: "Cal mantenir almenys un compte bancari actiu.",
+      cannotDeactivate: "No es pot desactivar",
+      hasTransactionsError: (count: number) => `Aquest compte té ${count} moviments associats. No es pot arxivar.`,
     }
   },
   members: {
@@ -2469,6 +2471,9 @@ export const ca = {
     defaultCategoryHint: "S'assignarà automàticament",
     selectDefaultCategory: "Selecciona categoria",
     noDefaultCategory: "Cap (assignar manualment)",
+    // v1.36: Guardrails d'arxivat
+    cannotArchive: "No es pot arxivar",
+    hasTransactionsError: (count: number) => `Aquest contacte té ${count} moviments associats. No es pot arxivar.`,
   },
   months: {
     january: "gener",
