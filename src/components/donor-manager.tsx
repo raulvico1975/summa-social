@@ -84,6 +84,7 @@ import {
 import { DateFilter } from '@/components/date-filter';
 import { computeDonorDynamics, type DonorWithMeta, type DonorDynamicsResult } from '@/lib/donor-dynamics';
 import { MOBILE_ACTIONS_BAR, MOBILE_CTA_PRIMARY } from '@/lib/ui/mobile-actions';
+import { CannotArchiveContactDialog } from '@/components/contacts/cannot-archive-contact-dialog';
 
 type DonorFormData = Omit<Donor, 'id' | 'createdAt' | 'updatedAt'>;
 
@@ -559,9 +560,62 @@ export function DonorManager() {
     setIsDialogOpen(true);
   };
 
-  const handleDeleteRequest = (donor: Donor) => {
+  // Estat per modal informatiu "no es pot arxivar"
+  const [cannotArchiveOpen, setCannotArchiveOpen] = React.useState(false);
+  const [cannotArchiveCount, setCannotArchiveCount] = React.useState(0);
+  const [isCheckingArchive, setIsCheckingArchive] = React.useState(false);
+
+  // Pre-check via API amb dryRun abans d'obrir modal
+  const handleDeleteRequest = async (donor: Donor) => {
+    if (!organizationId || !user) return;
+
     setDonorToDelete(donor);
-    setIsAlertOpen(true);
+    setIsCheckingArchive(true);
+
+    try {
+      const idToken = await user.getIdToken();
+      const response = await fetch('/api/contacts/archive', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${idToken}`,
+        },
+        body: JSON.stringify({
+          orgId: organizationId,
+          contactId: donor.id,
+          dryRun: true,
+        }),
+      });
+
+      const result = await response.json();
+
+      if (result.canArchive) {
+        // OK: obrir modal de confirmació
+        setIsAlertOpen(true);
+      } else if (result.code === 'HAS_TRANSACTIONS') {
+        // Té moviments: obrir modal informatiu
+        setCannotArchiveCount(result.transactionCount || 0);
+        setCannotArchiveOpen(true);
+      } else {
+        // Error genèric
+        toast({
+          variant: 'destructive',
+          title: t.common.error,
+          description: result.error || 'Error desconegut',
+        });
+        setDonorToDelete(null);
+      }
+    } catch (err) {
+      console.error('[DonorManager] Error checking archive:', err);
+      toast({
+        variant: 'destructive',
+        title: t.common.error,
+        description: t.common.dbConnectionError,
+      });
+      setDonorToDelete(null);
+    } finally {
+      setIsCheckingArchive(false);
+    }
   };
 
   // ═══════════════════════════════════════════════════════════════════════════
@@ -1748,6 +1802,16 @@ export function DonorManager() {
         open={isDetailOpen}
         onOpenChange={setIsDetailOpen}
         onEdit={handleEditFromDrawer}
+      />
+
+      <CannotArchiveContactDialog
+        open={cannotArchiveOpen}
+        onOpenChange={(open) => {
+          setCannotArchiveOpen(open);
+          if (!open) setDonorToDelete(null);
+        }}
+        contactName={donorToDelete?.name || ''}
+        transactionCount={cannotArchiveCount}
       />
     </TooltipProvider>
   );

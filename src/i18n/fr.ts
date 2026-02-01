@@ -2476,6 +2476,10 @@ export const fr = {
     // v1.36: Guardrails d'archivage
     cannotArchive: "Impossible d'archiver",
     hasTransactionsError: (count: number) => `Ce contact a ${count} mouvements associés. Il ne peut pas être archivé.`,
+    // v1.36.1: Modal informatif pre-check
+    cannotArchiveTitle: "Impossible d'archiver",
+    cannotArchiveWithTransactions: (name: string, count: number) =>
+      `Le contact "${name}" a ${count} mouvements associés. Impossible de l'archiver.`,
   },
   months: {
     january: "gener",

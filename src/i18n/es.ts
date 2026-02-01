@@ -2501,6 +2501,10 @@ export const es = {
     // v1.36: Guardrails de archivado
     cannotArchive: "No se puede archivar",
     hasTransactionsError: (count: number) => `Este contacto tiene ${count} movimientos asociados. No se puede archivar.`,
+    // v1.36.1: Modal informatiu pre-check
+    cannotArchiveTitle: "No se puede archivar",
+    cannotArchiveWithTransactions: (name: string, count: number) =>
+      `El contacto "${name}" tiene ${count} movimientos asociados. No se puede archivar.`,
   },
   months: {
     january: "enero",
