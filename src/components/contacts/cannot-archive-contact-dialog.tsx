@@ -15,14 +15,16 @@ interface CannotArchiveContactDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   contactName: string;
-  transactionCount: number;
+  activeCount: number;
+  archivedCount: number;
 }
 
 export function CannotArchiveContactDialog({
   open,
   onOpenChange,
   contactName,
-  transactionCount,
+  activeCount,
+  archivedCount,
 }: CannotArchiveContactDialogProps) {
   const { t } = useTranslations();
 
@@ -33,9 +35,26 @@ export function CannotArchiveContactDialog({
           <AlertDialogTitle>
             {t.contacts?.cannotArchiveTitle ?? 'No es pot arxivar'}
           </AlertDialogTitle>
-          <AlertDialogDescription>
-            {t.contacts?.cannotArchiveWithTransactions?.(contactName, transactionCount)
-              ?? `El contacte "${contactName}" té ${transactionCount} moviments associats. No es pot arxivar.`}
+          <AlertDialogDescription className="space-y-2">
+            <p>
+              {t.contacts?.cannotArchiveIntro?.(contactName)
+                ?? `El contacte "${contactName}" té moviments associats:`}
+            </p>
+            <ul className="list-disc pl-5 space-y-1">
+              <li>
+                <strong>{t.contacts?.activeMovementsLabel ?? 'Moviments actius'}:</strong> {activeCount}
+                {activeCount > 0 && (
+                  <span className="text-destructive ml-1">
+                    ({t.contacts?.blocksArchive ?? "bloqueja l'arxivat"})
+                  </span>
+                )}
+              </li>
+              {archivedCount > 0 && (
+                <li>
+                  <strong>{t.contacts?.archivedMovementsLabel ?? 'Moviments arxivats (històric)'}:</strong> {archivedCount}
+                </li>
+              )}
+            </ul>
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>

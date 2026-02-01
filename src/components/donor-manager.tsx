@@ -562,7 +562,8 @@ export function DonorManager() {
 
   // Estat per modal informatiu "no es pot arxivar"
   const [cannotArchiveOpen, setCannotArchiveOpen] = React.useState(false);
-  const [cannotArchiveCount, setCannotArchiveCount] = React.useState(0);
+  const [cannotArchiveActiveCount, setCannotArchiveActiveCount] = React.useState(0);
+  const [cannotArchiveArchivedCount, setCannotArchiveArchivedCount] = React.useState(0);
   const [isCheckingArchive, setIsCheckingArchive] = React.useState(false);
 
   // Pre-check via API amb dryRun abans d'obrir modal
@@ -593,8 +594,9 @@ export function DonorManager() {
         // OK: obrir modal de confirmació
         setIsAlertOpen(true);
       } else if (result.code === 'HAS_TRANSACTIONS') {
-        // Té moviments: obrir modal informatiu
-        setCannotArchiveCount(result.transactionCount || 0);
+        // Té moviments actius: obrir modal informatiu
+        setCannotArchiveActiveCount(result.activeCount || 0);
+        setCannotArchiveArchivedCount(result.archivedCount || 0);
         setCannotArchiveOpen(true);
       } else {
         // Error genèric
@@ -1811,7 +1813,8 @@ export function DonorManager() {
           if (!open) setDonorToDelete(null);
         }}
         contactName={donorToDelete?.name || ''}
-        transactionCount={cannotArchiveCount}
+        activeCount={cannotArchiveActiveCount}
+        archivedCount={cannotArchiveArchivedCount}
       />
     </TooltipProvider>
   );

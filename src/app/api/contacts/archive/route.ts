@@ -105,7 +105,10 @@ interface ArchiveContactResponse {
   idempotent?: boolean;
   error?: string;
   code?: string;
-  transactionCount?: number;
+  // Desglossat per transparència UX
+  activeCount?: number;
+  archivedCount?: number;
+  transactionCount?: number;  // Mantenim per retrocompatibilitat
   canArchive?: boolean;  // En mode dryRun, indica si es pot arxivar
 }
 
@@ -230,36 +233,56 @@ export async function POST(
     .where('contactId', '==', contactId);
 
   const transactionsSnap = await contactTransactionsQuery.get();
-  const txCount = transactionsSnap.size;
 
-  console.log(`[contacts/archive] Contacte ${contactId} (${contactData?.name || 'sense nom'}) té ${txCount} transaccions (total)${body.dryRun ? ' [dryRun]' : ''}`);
+  // Desglossar actius vs arxivats per transparència UX
+  let activeCount = 0;
+  let archivedCount = 0;
+  for (const doc of transactionsSnap.docs) {
+    const data = doc.data();
+    if (data.archivedAt == null) {
+      activeCount++;
+    } else {
+      archivedCount++;
+    }
+  }
+  const txCount = activeCount + archivedCount;
+
+  console.log(`[contacts/archive] Contacte ${contactId} (${contactData?.name || 'sense nom'}) té ${activeCount} actius + ${archivedCount} arxivats${body.dryRun ? ' [dryRun]' : ''}`);
 
   // 8. Mode dryRun: només retornem el comptatge sense arxivar
   if (body.dryRun) {
-    if (txCount > 0) {
+    // Bloquejar només si hi ha ACTIUS
+    if (activeCount > 0) {
       return NextResponse.json({
         success: false,
         code: 'HAS_TRANSACTIONS',
+        activeCount,
+        archivedCount,
         transactionCount: txCount,
         canArchive: false,
       });
     }
+    // Permetre arxivar (pot tenir arxivats com a historial)
     return NextResponse.json({
       success: true,
       code: 'OK_TO_ARCHIVE',
-      transactionCount: 0,
+      activeCount: 0,
+      archivedCount,
+      transactionCount: txCount,
       canArchive: true,
     });
   }
 
-  // 9. Si count > 0, error
+  // 9. ENFORCE: bloquejar només per actius
   // NOTA: NO oferim reassignació per contactes (diferent de categories)
-  if (txCount > 0) {
+  if (activeCount > 0) {
     return NextResponse.json(
       {
         success: false,
-        error: `Aquest contacte té ${txCount} moviments associats. No es pot arxivar.`,
+        error: `Aquest contacte té ${activeCount} moviments actius. No es pot arxivar.`,
         code: 'HAS_TRANSACTIONS',
+        activeCount,
+        archivedCount,
         transactionCount: txCount,
       },
       { status: 400 }
