@@ -327,7 +327,10 @@ export type Contact = {
   createdAt: string;
   updatedAt?: string;
   defaultCategoryId?: string;      // Categoria per defecte per auto-assignar a transaccions
-  archivedAt?: string;             // Soft-delete timestamp
+  // v1.36 archive fields
+  archivedAt?: string;             // Soft-delete timestamp (ISO date)
+  archivedByUid?: string;          // UID de qui ha arxivat
+  archivedFromAction?: string;     // Traça: 'archive-contact-api'
 };
 
 /**

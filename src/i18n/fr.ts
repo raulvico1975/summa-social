@@ -2473,6 +2473,9 @@ export const fr = {
     defaultCategoryHint: "S'assignarà automàticament",
     selectDefaultCategory: "Selecciona categoria",
     noDefaultCategory: "Cap (assignar manualment)",
+    // v1.36: Guardrails d'archivage
+    cannotArchive: "Impossible d'archiver",
+    hasTransactionsError: (count: number) => `Ce contact a ${count} mouvements associés. Il ne peut pas être archivé.`,
   },
   months: {
     january: "gener",

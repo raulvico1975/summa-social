@@ -196,7 +196,7 @@ function DynamicsBlock({
 const DONORS_PAGE_SIZE = 500;
 
 export function DonorManager() {
-  const { firestore } = useFirebase();
+  const { firestore, user } = useFirebase();
   const { organizationId, orgSlug } = useCurrentOrganization();
   const { toast } = useToast();
   const { t, tr, language } = useTranslations();
@@ -564,15 +564,60 @@ export function DonorManager() {
     setIsAlertOpen(true);
   };
 
-  const handleDeleteConfirm = () => {
-    if (donorToDelete && contactsCollection) {
-      // Soft-delete: arxiva en lloc d'eliminar per preservar integritat referencial
-      archiveDocumentNonBlocking(doc(contactsCollection, donorToDelete.id));
+  // ═══════════════════════════════════════════════════════════════════════════
+  // ARXIVAT (v1.36): Flux via API-first per garantir integritat referencial
+  // ═══════════════════════════════════════════════════════════════════════════
+  const handleDeleteConfirm = async () => {
+    if (!donorToDelete || !organizationId || !user) {
+      setIsAlertOpen(false);
+      setDonorToDelete(null);
+      return;
+    }
+
+    try {
+      const idToken = await user.getIdToken();
+      const response = await fetch('/api/contacts/archive', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${idToken}`,
+        },
+        body: JSON.stringify({
+          orgId: organizationId,
+          contactId: donorToDelete.id,
+        }),
+      });
+
+      const result = await response.json();
+
+      if (result.success) {
+        toast({
+          title: t.donors.donorDeleted,
+          description: t.donors.donorDeletedDescription(donorToDelete.name),
+        });
+      } else if (result.code === 'HAS_TRANSACTIONS') {
+        toast({
+          variant: 'destructive',
+          title: t.contacts?.cannotArchive ?? 'No es pot arxivar',
+          description: t.contacts?.hasTransactionsError?.(result.transactionCount)
+            ?? `Aquest contacte té ${result.transactionCount} moviments associats. No es pot arxivar.`,
+        });
+      } else {
+        toast({
+          variant: 'destructive',
+          title: t.common.error,
+          description: result.error || 'Error desconegut',
+        });
+      }
+    } catch (err) {
+      console.error('[DonorManager] Error arxivant contacte:', err);
       toast({
-        title: t.donors.donorDeleted,
-        description: t.donors.donorDeletedDescription(donorToDelete.name),
+        variant: 'destructive',
+        title: t.common.error,
+        description: t.common.dbConnectionError,
       });
     }
+
     setIsAlertOpen(false);
     setDonorToDelete(null);
   };

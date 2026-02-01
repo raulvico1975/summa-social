@@ -2498,6 +2498,9 @@ export const es = {
     defaultCategoryHint: "Se asignará automáticamente",
     selectDefaultCategory: "Seleccionar categoría",
     noDefaultCategory: "Ninguna (asignar manualmente)",
+    // v1.36: Guardrails de archivado
+    cannotArchive: "No se puede archivar",
+    hasTransactionsError: (count: number) => `Este contacto tiene ${count} movimientos asociados. No se puede archivar.`,
   },
   months: {
     january: "enero",
