@@ -1813,6 +1813,8 @@ export const es = {
       noAccountsWarning: "No tienes ninguna cuenta creada. Crea una en Configuración.",
       goToSettings: "Ir a Configuración",
       cannotDeactivateLast: "Debes mantener al menos una cuenta bancaria activa.",
+      cannotDeactivate: "No se puede desactivar",
+      hasTransactionsError: (count: number) => `Esta cuenta tiene ${count} movimientos asociados. No se puede archivar.`,
     }
   },
   members: {
@@ -2496,6 +2498,9 @@ export const es = {
     defaultCategoryHint: "Se asignará automáticamente",
     selectDefaultCategory: "Seleccionar categoría",
     noDefaultCategory: "Ninguna (asignar manualmente)",
+    // v1.36: Guardrails de archivado
+    cannotArchive: "No se puede archivar",
+    hasTransactionsError: (count: number) => `Este contacto tiene ${count} movimientos asociados. No se puede archivar.`,
   },
   months: {
     january: "enero",

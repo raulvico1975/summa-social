@@ -29,6 +29,7 @@ import { useBankAccounts } from '@/hooks/use-bank-accounts';
 import { useToast } from '@/hooks/use-toast';
 import { useTranslations } from '@/i18n';
 import { useCurrentOrganization } from '@/hooks/organization-provider';
+import { useFirebase } from '@/firebase';
 import type { BankAccount } from '@/lib/data';
 import type { CreateBankAccountData, UpdateBankAccountData } from '@/lib/bank-accounts';
 import { exportBankAccountsToExcel } from '@/lib/bank-accounts-export';
@@ -61,9 +62,10 @@ const EMPTY_FORM: FormData = {
 };
 
 export function BankAccountsManager() {
-  const { userRole } = useCurrentOrganization();
+  const { userRole, organizationId } = useCurrentOrganization();
   const { t } = useTranslations();
   const { toast } = useToast();
+  const { user } = useFirebase();
   const isMobile = useIsMobile();
   const {
     bankAccounts,
@@ -72,7 +74,6 @@ export function BankAccountsManager() {
     create,
     update,
     setDefault,
-    deactivate,
     activate,
   } = useBankAccounts();
 
@@ -191,20 +192,63 @@ export function BankAccountsManager() {
     }
   };
 
+  // ═══════════════════════════════════════════════════════════════════════════
+  // ARXIVAT (v1.36): Flux via API-first
+  // ═══════════════════════════════════════════════════════════════════════════
+
   const handleToggleActive = async (account: BankAccount) => {
+    if (!user || !organizationId) return;
+
     try {
       if (account.isActive === false) {
+        // Reactivar: via hook (Firestore client)
         await activate(account.id);
         toast({
           title: t.settings.bankAccounts.accountActivated,
           description: t.settings.bankAccounts.accountActivatedDescription(account.name),
         });
       } else {
-        await deactivate(account.id);
-        toast({
-          title: t.settings.bankAccounts.accountDeactivated,
-          description: t.settings.bankAccounts.accountDeactivatedDescription(account.name),
+        // Desactivar/Arxivar: via API-first
+        const idToken = await user.getIdToken();
+        const response = await fetch('/api/bank-accounts/archive', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${idToken}`,
+          },
+          body: JSON.stringify({
+            orgId: organizationId,
+            bankAccountId: account.id,
+          }),
         });
+
+        const result = await response.json();
+
+        if (result.success) {
+          toast({
+            title: t.settings.bankAccounts.accountDeactivated,
+            description: t.settings.bankAccounts.accountDeactivatedDescription(account.name),
+          });
+        } else if (result.code === 'HAS_TRANSACTIONS') {
+          toast({
+            variant: 'destructive',
+            title: t.settings.bankAccounts.cannotDeactivate ?? 'No es pot desactivar',
+            description: t.settings.bankAccounts.hasTransactionsError?.(result.transactionCount)
+              ?? `Aquest compte té ${result.transactionCount} moviments associats. No es pot arxivar.`,
+          });
+        } else if (result.code === 'LAST_ACTIVE_ACCOUNT') {
+          toast({
+            variant: 'destructive',
+            title: t.settings.bankAccounts.cannotDeactivate ?? 'No es pot desactivar',
+            description: t.settings.bankAccounts.cannotDeactivateLast,
+          });
+        } else {
+          toast({
+            variant: 'destructive',
+            title: t.common.error,
+            description: result.error || 'Error desconegut',
+          });
+        }
       }
     } catch (err) {
       console.error('[BankAccountsManager] Error toggling active:', err);

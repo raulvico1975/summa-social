@@ -523,6 +523,136 @@ export function checkOrphanProjects<T extends {
 }
 
 // =============================================================================
+// BLOC H: Comptes bancaris orfes (referència a compte inexistent)
+// v1.36 - Detecta transaccions amb bankAccountId que no existeix
+// =============================================================================
+
+export interface OrphanBankAccountIssue {
+  id: string;
+  date: string;
+  amount: number;
+  bankAccountId: string;
+  description?: string;
+}
+
+export interface OrphanBankAccountCheckResult {
+  hasIssues: boolean;
+  count: number;
+  examples: OrphanBankAccountIssue[];
+}
+
+/**
+ * Detecta transaccions amb bankAccountId que no existeix a la llista de comptes vàlids
+ * (incloent arxivats/inactius)
+ *
+ * IMPORTANT: Un compte arxivat NO és orfe (el doc existeix).
+ * validBankAccountIds ha d'incloure TOTS els IDs (actius + arxivats).
+ */
+export function checkOrphanBankAccounts<T extends {
+  id: string;
+  date: string;
+  amount: number;
+  bankAccountId?: string | null;
+  description?: string;
+}>(
+  transactions: T[],
+  validBankAccountIds: Set<string>
+): OrphanBankAccountCheckResult {
+  const issues: OrphanBankAccountIssue[] = [];
+  let totalIssues = 0;
+
+  for (const tx of transactions) {
+    // Ignorar si no té bankAccountId assignat
+    if (!tx.bankAccountId) continue;
+
+    // Si el bankAccountId no existeix a la llista vàlida -> orfe
+    if (!validBankAccountIds.has(tx.bankAccountId)) {
+      totalIssues++;
+      if (issues.length < 5) {
+        issues.push({
+          id: tx.id,
+          date: tx.date,
+          amount: tx.amount,
+          bankAccountId: tx.bankAccountId,
+          description: tx.description,
+        });
+      }
+    }
+  }
+
+  return {
+    hasIssues: totalIssues > 0,
+    count: totalIssues,
+    examples: issues,
+  };
+}
+
+// =============================================================================
+// BLOC I: Contactes orfes (referència a contacte inexistent)
+// v1.36 - Detecta transaccions amb contactId que no existeix
+// =============================================================================
+
+export interface OrphanContactIssue {
+  id: string;
+  date: string;
+  amount: number;
+  contactId: string;
+  description?: string;
+}
+
+export interface OrphanContactCheckResult {
+  hasIssues: boolean;
+  count: number;
+  examples: OrphanContactIssue[];
+}
+
+/**
+ * Detecta transaccions amb contactId que no existeix a la llista de contactes vàlids
+ * (incloent arxivats)
+ *
+ * IMPORTANT: Un contacte arxivat NO és orfe (el doc existeix).
+ * validContactIds ha d'incloure TOTS els IDs (actius + arxivats).
+ */
+export function checkOrphanContacts<T extends {
+  id: string;
+  date: string;
+  amount: number;
+  contactId?: string | null;
+  description?: string;
+}>(
+  transactions: T[],
+  validContactIds: Set<string>
+): OrphanContactCheckResult {
+  const issues: OrphanContactIssue[] = [];
+  let totalIssues = 0;
+
+  for (const tx of transactions) {
+    // Ignorar si no té contactId assignat
+    if (!tx.contactId) continue;
+
+    // Si el contactId no existeix a la llista vàlida -> orfe
+    if (!validContactIds.has(tx.contactId)) {
+      totalIssues++;
+      if (issues.length < 5) {
+        issues.push({
+          id: tx.id,
+          date: tx.date,
+          amount: tx.amount,
+          contactId: tx.contactId,
+          description: tx.description,
+        });
+      }
+    }
+  }
+
+  return {
+    hasIssues: totalIssues > 0,
+    count: totalIssues,
+    examples: issues,
+  };
+}
+
+// =============================================================================
 // HEALTH CHECK COMPLET
 // =============================================================================
 
@@ -539,6 +669,9 @@ export interface HealthCheckResult {
   // v1.35: Nous blocs d'orfes
   orphanCategories: OrphanCategoryCheckResult;
   orphanProjects: OrphanProjectCheckResult;
+  // v1.36: Comptes bancaris i contactes orfes
+  orphanBankAccounts: OrphanBankAccountCheckResult;
+  orphanContacts: OrphanContactCheckResult;
   totalIssues: number;
 }
 
@@ -550,6 +683,10 @@ export interface HealthCheckResult {
  *                           Si no es proporciona, el check d'orfes categories es salta
  * @param validProjectIds - Set d'IDs de projects vàlids (actius + arxivats)
  *                          Si no es proporciona, el check d'orfes projects es salta
+ * @param validBankAccountIds - Set d'IDs de comptes bancaris vàlids (actius + arxivats)
+ *                              Si no es proporciona, el check d'orfes bankAccounts es salta
+ * @param validContactIds - Set d'IDs de contactes vàlids (actius + arxivats)
+ *                          Si no es proporciona, el check d'orfes contacts es salta
  */
 export function runHealthCheck<T extends {
   id: string;
@@ -557,6 +694,7 @@ export function runHealthCheck<T extends {
   amount: number;
   category?: string | null;
   projectId?: string | null;
+  contactId?: string | null;
   source?: string | null;
   bankAccountId?: string | null;
   archivedAt?: unknown;
@@ -565,7 +703,9 @@ export function runHealthCheck<T extends {
 }>(
   transactions: T[],
   validCategoryIds?: Set<string>,
-  validProjectIds?: Set<string>
+  validProjectIds?: Set<string>,
+  validBankAccountIds?: Set<string>,
+  validContactIds?: Set<string>
 ): HealthCheckResult {
   // A) Categories legacy
   const legacyCategories = detectLegacyCategoryTransactions(
@@ -594,6 +734,16 @@ export function runHealthCheck<T extends {
     ? checkOrphanProjects(transactions, validProjectIds)
     : { hasIssues: false, count: 0, examples: [] };
 
+  // H) Orphan bank accounts (v1.36)
+  const orphanBankAccounts = validBankAccountIds
+    ? checkOrphanBankAccounts(transactions, validBankAccountIds)
+    : { hasIssues: false, count: 0, examples: [] };
+
+  // I) Orphan contacts (v1.36)
+  const orphanContacts = validContactIds
+    ? checkOrphanContacts(transactions, validContactIds)
+    : { hasIssues: false, count: 0, examples: [] };
+
   const totalIssues =
     legacyCategories.length +
     dates.invalidCount +
@@ -602,7 +752,9 @@ export function runHealthCheck<T extends {
     archived.count +
     signs.count +
     orphanCategories.count +
-    orphanProjects.count;
+    orphanProjects.count +
+    orphanBankAccounts.count +
+    orphanContacts.count;
 
   return {
     categories: {
@@ -616,6 +768,8 @@ export function runHealthCheck<T extends {
     signs,
     orphanCategories,
     orphanProjects,
+    orphanBankAccounts,
+    orphanContacts,
     totalIssues,
   };
 }

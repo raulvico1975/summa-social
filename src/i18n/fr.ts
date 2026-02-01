@@ -1782,6 +1782,8 @@ export const fr = {
       noAccountsWarning: "Aucun compte créé. Créez-en un dans les Paramètres.",
       goToSettings: "Aller aux Paramètres",
       cannotDeactivateLast: "Vous devez conserver au moins un compte bancaire actif.",
+      cannotDeactivate: "Impossible de désactiver",
+      hasTransactionsError: (count: number) => `Ce compte a ${count} mouvements associés. Il ne peut pas être archivé.`,
     }
   },
   members: {
@@ -2471,6 +2473,9 @@ export const fr = {
     defaultCategoryHint: "S'assignarà automàticament",
     selectDefaultCategory: "Selecciona categoria",
     noDefaultCategory: "Cap (assignar manualment)",
+    // v1.36: Guardrails d'archivage
+    cannotArchive: "Impossible d'archiver",
+    hasTransactionsError: (count: number) => `Ce contact a ${count} mouvements associés. Il ne peut pas être archivé.`,
   },
   months: {
     january: "gener",

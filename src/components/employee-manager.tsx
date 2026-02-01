@@ -80,7 +80,7 @@ const emptyFormData: EmployeeFormData = {
 };
 
 export function EmployeeManager() {
-  const { firestore } = useFirebase();
+  const { firestore, user } = useFirebase();
   const { organizationId } = useCurrentOrganization();
   const { toast } = useToast();
   const { t } = useTranslations();
@@ -144,15 +144,60 @@ export function EmployeeManager() {
     setIsAlertOpen(true);
   };
 
-  const handleDeleteConfirm = () => {
-    if (employeeToDelete && contactsCollection) {
-      // Soft-delete: arxiva en lloc d'eliminar per preservar integritat referencial
-      archiveDocumentNonBlocking(doc(contactsCollection, employeeToDelete.id));
+  // ═══════════════════════════════════════════════════════════════════════════
+  // ARXIVAT (v1.36): Flux via API-first per garantir integritat referencial
+  // ═══════════════════════════════════════════════════════════════════════════
+  const handleDeleteConfirm = async () => {
+    if (!employeeToDelete || !organizationId || !user) {
+      setIsAlertOpen(false);
+      setEmployeeToDelete(null);
+      return;
+    }
+
+    try {
+      const idToken = await user.getIdToken();
+      const response = await fetch('/api/contacts/archive', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${idToken}`,
+        },
+        body: JSON.stringify({
+          orgId: organizationId,
+          contactId: employeeToDelete.id,
+        }),
+      });
+
+      const result = await response.json();
+
+      if (result.success) {
+        toast({
+          title: t.employees.employeeDeleted,
+          description: t.employees.employeeDeletedDescription(employeeToDelete.name),
+        });
+      } else if (result.code === 'HAS_TRANSACTIONS') {
+        toast({
+          variant: 'destructive',
+          title: t.contacts?.cannotArchive ?? 'No es pot arxivar',
+          description: t.contacts?.hasTransactionsError?.(result.transactionCount)
+            ?? `Aquest contacte té ${result.transactionCount} moviments associats. No es pot arxivar.`,
+        });
+      } else {
+        toast({
+          variant: 'destructive',
+          title: t.common.error,
+          description: result.error || 'Error desconegut',
+        });
+      }
+    } catch (err) {
+      console.error('[EmployeeManager] Error arxivant contacte:', err);
       toast({
-        title: t.employees.employeeDeleted,
-        description: t.employees.employeeDeletedDescription(employeeToDelete.name),
+        variant: 'destructive',
+        title: t.common.error,
+        description: t.common.dbConnectionError,
       });
     }
+
     setIsAlertOpen(false);
     setEmployeeToDelete(null);
   };
