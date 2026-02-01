@@ -275,12 +275,14 @@ export async function POST(
   console.log(`[categories/archive] Categoria ${fromCategoryId} té ${activeCount} transaccions actives`);
 
   // 8. Si count > 0 i no hi ha toCategoryId, error
+  // NOTA: Retornem activeCount perquè la UI pugui mostrar-lo al ReassignModal
   if (activeCount > 0 && !toCategoryId) {
     return NextResponse.json(
       {
         success: false,
         error: `Categoria té ${activeCount} moviments actius. Cal reassignar-los primer.`,
         code: 'HAS_ACTIVE_TRANSACTIONS',
+        activeCount,
       },
       { status: 400 }
     );
