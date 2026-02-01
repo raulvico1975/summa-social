@@ -7,6 +7,11 @@
  * C) Origen bancari coherent
  * D) ArchivedAt on no toca
  * E) Signs per tipus
+ * F) Categories òrfenes
+ * G) Projects/Eixos orfes
+ * H) Comptes bancaris orfes
+ * I) Contactes orfes
+ * J) Tiquets orfes (pendingDocuments amb reportId inexistent)
  */
 
 import { CATEGORY_TRANSLATION_KEYS } from './default-data';
@@ -653,6 +658,70 @@ export function checkOrphanContacts<T extends {
 }
 
 // =============================================================================
+// BLOC J: Tiquets orfes (pendingDocuments amb reportId inexistent)
+// v1.36 - Detecta tiquets assignats a liquidacions que ja no existeixen
+// =============================================================================
+
+export interface OrphanTicketIssue {
+  id: string;
+  date: string;
+  amount: number;
+  reportId: string;
+  filename?: string;
+}
+
+export interface OrphanTicketCheckResult {
+  hasIssues: boolean;
+  count: number;
+  examples: OrphanTicketIssue[];
+}
+
+/**
+ * Detecta tiquets (pendingDocuments) amb reportId que no existeix a la llista de liquidacions
+ *
+ * IMPORTANT: Una liquidació arxivada NO fa que els seus tiquets siguin orfes (el doc existeix).
+ * validReportIds ha d'incloure TOTS els IDs (actius + arxivats).
+ */
+export function checkOrphanTickets<T extends {
+  id: string;
+  invoiceDate?: string | null;
+  amount?: number | null;
+  reportId?: string | null;
+  file?: { filename?: string } | null;
+}>(
+  tickets: T[],
+  validReportIds: Set<string>
+): OrphanTicketCheckResult {
+  const issues: OrphanTicketIssue[] = [];
+  let totalIssues = 0;
+
+  for (const ticket of tickets) {
+    // Ignorar si no té reportId assignat
+    if (!ticket.reportId) continue;
+
+    // Si el reportId no existeix a la llista vàlida -> orfe
+    if (!validReportIds.has(ticket.reportId)) {
+      totalIssues++;
+      if (issues.length < 5) {
+        issues.push({
+          id: ticket.id,
+          date: ticket.invoiceDate || 'N/A',
+          amount: ticket.amount || 0,
+          reportId: ticket.reportId,
+          filename: ticket.file?.filename,
+        });
+      }
+    }
+  }
+
+  return {
+    hasIssues: totalIssues > 0,
+    count: totalIssues,
+    examples: issues,
+  };
+}
+
+// =============================================================================
 // HEALTH CHECK COMPLET
 // =============================================================================
 
@@ -674,6 +743,9 @@ export interface HealthCheckResult {
   orphanContacts: OrphanContactCheckResult;
   totalIssues: number;
 }
+
+// Nota: checkOrphanTickets s'exporta per separat perquè opera sobre pendingDocuments,
+// no sobre transactions. La UI de Health Check pot cridar-lo independentment.
 
 /**
  * Executa tots els checks d'integritat de dades

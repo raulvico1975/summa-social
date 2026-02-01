@@ -3262,6 +3262,14 @@ export const es = {
     },
     featureDisabled: "Funcionalidad no activada",
     featureDisabledDesc: "Contacta con el administrador para activar el módulo de documentos pendientes.",
+    // Archive guardrails (v1.36)
+    cannotArchiveTitle: "No se puede archivar",
+    cannotArchiveIntro: (title: string) => `Esta liquidación${title ? ` "${title}"` : ''} tiene tickets asociados:`,
+    cannotArchiveMatched: "Una liquidación conciliada no se puede archivar.",
+    pendingTicketsLabel: "Tickets pendientes",
+    matchedTicketsLabel: "Tickets conciliados",
+    blocksArchive: "bloquea el archivado",
+    cannotArchiveHelp: "Hay que quitar los tickets pendientes de la liquidación antes de archivarla.",
     // PDF labels
     pdf: {
       title: "Liquidacion de gastos",
