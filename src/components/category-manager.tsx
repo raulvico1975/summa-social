@@ -45,7 +45,7 @@ import type { Category } from '@/lib/data';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
 import { useCollection, useFirebase, useMemoFirebase, addDocumentNonBlocking, setDocumentNonBlocking } from '@/firebase';
-import { collection, doc, query, where, getCountFromServer } from 'firebase/firestore';
+import { collection, doc, query, where, getDocs } from 'firebase/firestore';
 import { ReassignModal, type ReassignItem } from './reassign-modal';
 import { useTranslations } from '@/i18n';
 import { useCurrentOrganization } from '@/hooks/organization-provider';
@@ -219,14 +219,19 @@ export function CategoryManager() {
 
     try {
       // Comptar moviments actius amb aquesta categoria (per docId)
+      // NOTA: No podem usar where('archivedAt', '==', null) perquè Firestore
+      // no troba documents on el camp no existeix (dades legacy sense archivedAt)
       const transactionsRef = collection(firestore, 'organizations', organizationId, 'transactions');
       const q = query(
         transactionsRef,
-        where('category', '==', category.id),
-        where('archivedAt', '==', null)
+        where('category', '==', category.id)
       );
-      const snapshot = await getCountFromServer(q);
-      const count = snapshot.data().count;
+      const snapshot = await getDocs(q);
+      // Filtrar actives a codi (archivedAt == null o undefined/absent)
+      const count = snapshot.docs.filter(doc => {
+        const data = doc.data();
+        return data.archivedAt == null; // Cobreix null i undefined
+      }).length;
       setAffectedTransactionsCount(count);
 
       if (count > 0) {
