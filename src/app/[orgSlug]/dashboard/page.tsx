@@ -1766,7 +1766,7 @@ ${t.dashboard.generatedWith}`;
                     ) : (
                       <CheckCircle2 className="h-5 w-5 text-emerald-600 flex-shrink-0" />
                     )}
-                    <span className="font-medium flex-1">Categories amb format antic</span>
+                    <span className="font-medium flex-1">Categories amb nameKey (format antic)</span>
                     <Badge variant={healthCheckResults.categories.hasIssues ? 'outline' : 'secondary'}>
                       {healthCheckResults.categories.count}
                     </Badge>
@@ -1774,7 +1774,7 @@ ${t.dashboard.generatedWith}`;
                   {healthCheckResults.categories.hasIssues && (
                     <div className="px-3 pb-3 pt-1 border-t">
                       <p className="text-xs text-muted-foreground mb-2">
-                        Transaccions amb categoria guardada com a docId antic.
+                        Transaccions amb categoria guardada com a nameKey en lloc de docId.
                       </p>
                       <div className="max-h-40 overflow-y-auto">
                         <table className="w-full text-xs">

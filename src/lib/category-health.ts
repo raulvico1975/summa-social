@@ -31,17 +31,18 @@ export function isKnownCategoryKey(category: string | null | undefined): boolean
 }
 
 /**
- * Heurística per detectar si una categoria té pinta de docId legacy
- * (string llarg alfanumèric, típicament >= 20 chars)
+ * Detecta si una categoria està en format legacy (nameKey en lloc de docId).
+ *
+ * Després de FASE 0 (nameKey → docId), el camp tx.category ha de contenir
+ * el docId de la categoria, no el nameKey de traducció.
+ *
+ * Un nameKey legacy és qualsevol valor que estigui a KNOWN_CATEGORY_KEYS
+ * (ex: "donations_general", "Revisar", etc.)
  */
-export function looksLikeLegacyDocId(category: string | null | undefined): boolean {
+export function isLegacyNameKey(category: string | null | undefined): boolean {
   if (!category) return false;
-  // DocIds de Firestore són típicament 20+ chars alfanumèrics
-  if (category.length < 20) return false;
-  // Si és un nameKey conegut, no és legacy
-  if (isKnownCategoryKey(category)) return false;
-  // Comprova si té pinta de docId (alfanumèric)
-  return /^[a-zA-Z0-9]+$/.test(category);
+  // Si és un nameKey conegut → és format legacy (hauria de ser docId)
+  return KNOWN_CATEGORY_KEYS.has(category);
 }
 
 /**
@@ -56,13 +57,16 @@ export interface LegacyCategoryTransaction {
 }
 
 /**
- * Analitza un array de transaccions i retorna les que tenen categories legacy
+ * Analitza un array de transaccions i retorna les que tenen categories en format legacy (nameKey).
+ *
+ * Després de FASE 0, tx.category ha de ser un docId, no un nameKey.
+ * Aquesta funció detecta les transaccions que encara tenen nameKey.
  */
 export function detectLegacyCategoryTransactions<T extends { id: string; date: string; amount: number; category: string | null; description?: string }>(
   transactions: T[]
 ): LegacyCategoryTransaction[] {
   return transactions
-    .filter(tx => tx.category && looksLikeLegacyDocId(tx.category))
+    .filter(tx => tx.category && isLegacyNameKey(tx.category))
     .map(tx => ({
       id: tx.id,
       date: tx.date,
@@ -84,7 +88,7 @@ export function logLegacyCategorySummary(
   const examples = legacyTransactions.slice(0, 5);
 
   console.warn(
-    `[CATEGORY-HEALTH] ⚠️ Detectades ${legacyTransactions.length} transaccions amb category legacy (docId)`,
+    `[CATEGORY-HEALTH] ⚠️ Detectades ${legacyTransactions.length} transaccions amb category legacy (nameKey)`,
     {
       orgId,
       count: legacyTransactions.length,
