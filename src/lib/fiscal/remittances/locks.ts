@@ -25,7 +25,8 @@ export const HEARTBEAT_INTERVAL_MS = 60_000;
 export type RemittanceLockOperation =
   | 'remittance_process'
   | 'remittance_undo'
-  | 'remittance_repair';
+  | 'remittance_repair'
+  | 'remittance_sanitize';
 
 export interface LockState {
   lockRef: FirebaseFirestore.DocumentReference;

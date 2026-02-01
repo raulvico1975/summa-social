@@ -213,8 +213,8 @@ export function checkBankSourceCoherence<T extends {
   const issues: BankSourceIssue[] = [];
 
   for (const tx of transactions) {
-    // source === "bank" però no té bankAccountId
-    if (tx.source === 'bank' && !tx.bankAccountId) {
+    // source === "bank" o "stripe" però no té bankAccountId → ERROR P0
+    if ((tx.source === 'bank' || tx.source === 'stripe') && !tx.bankAccountId) {
       if (issues.length < 5) {
         issues.push({
           id: tx.id,
@@ -227,8 +227,9 @@ export function checkBankSourceCoherence<T extends {
         });
       }
     }
-    // Té bankAccountId però source !== "bank"
-    else if (tx.bankAccountId && tx.source !== 'bank') {
+    // Té bankAccountId però source no és bank/stripe/remittance
+    // (remittance hereta bankAccountId del pare, és vàlid)
+    else if (tx.bankAccountId && tx.source !== 'bank' && tx.source !== 'stripe' && tx.source !== 'remittance') {
       if (issues.length < 5) {
         issues.push({
           id: tx.id,
@@ -389,6 +390,139 @@ export function checkSignCoherence<T extends {
 }
 
 // =============================================================================
+// BLOC F: Categories òrfenes (referència a entitat eliminada/inexistent)
+// v1.35 - Només detecta si el DOCUMENT no existeix (arxivat NO és orfe)
+// =============================================================================
+
+export interface OrphanCategoryIssue {
+  id: string;
+  date: string;
+  amount: number;
+  category: string;
+  description?: string;
+}
+
+export interface OrphanCategoryCheckResult {
+  hasIssues: boolean;
+  count: number;
+  examples: OrphanCategoryIssue[];
+}
+
+/**
+ * Detecta transaccions amb category que no existeix a la llista de categories vàlides
+ * (ni predefinides ni customs de l'org, incloent arxivades)
+ *
+ * IMPORTANT: Una categoria arxivada NO és òrfena (el doc existeix).
+ * validCategoryIds ha d'incloure TOTS els IDs (actius + arxivats).
+ */
+export function checkOrphanCategories<T extends {
+  id: string;
+  date: string;
+  amount: number;
+  category?: string | null;
+  description?: string;
+}>(
+  transactions: T[],
+  validCategoryIds: Set<string>
+): OrphanCategoryCheckResult {
+  const issues: OrphanCategoryIssue[] = [];
+  let totalIssues = 0;
+
+  for (const tx of transactions) {
+    // Ignorar si no té categoria assignada
+    if (!tx.category) continue;
+
+    // Ignorar si és un nameKey conegut (categoria predefinida)
+    if (KNOWN_CATEGORY_KEYS.has(tx.category)) continue;
+
+    // Si no és ni nameKey ni ID vàlid de l'org -> orfe
+    if (!validCategoryIds.has(tx.category)) {
+      totalIssues++;
+      if (issues.length < 5) {
+        issues.push({
+          id: tx.id,
+          date: tx.date,
+          amount: tx.amount,
+          category: tx.category,
+          description: tx.description,
+        });
+      }
+    }
+  }
+
+  return {
+    hasIssues: totalIssues > 0,
+    count: totalIssues,
+    examples: issues,
+  };
+}
+
+// =============================================================================
+// BLOC G: Projects/Eixos òrfans (referència a entitat eliminada/inexistent)
+// v1.35 - Només detecta si el DOCUMENT no existeix (arxivat NO és orfe)
+// =============================================================================
+
+export interface OrphanProjectIssue {
+  id: string;
+  date: string;
+  amount: number;
+  projectId: string;
+  description?: string;
+}
+
+export interface OrphanProjectCheckResult {
+  hasIssues: boolean;
+  count: number;
+  examples: OrphanProjectIssue[];
+}
+
+/**
+ * Detecta transaccions amb projectId que no existeix a la llista de projects vàlids
+ * (incloent arxivats)
+ *
+ * IMPORTANT: Un project arxivat NO és orfe (el doc existeix).
+ * validProjectIds ha d'incloure TOTS els IDs (actius + arxivats).
+ */
+export function checkOrphanProjects<T extends {
+  id: string;
+  date: string;
+  amount: number;
+  projectId?: string | null;
+  description?: string;
+}>(
+  transactions: T[],
+  validProjectIds: Set<string>
+): OrphanProjectCheckResult {
+  const issues: OrphanProjectIssue[] = [];
+  let totalIssues = 0;
+
+  for (const tx of transactions) {
+    // Ignorar si no té projectId assignat
+    if (!tx.projectId) continue;
+
+    // Si el projectId no existeix a la llista vàlida -> orfe
+    if (!validProjectIds.has(tx.projectId)) {
+      totalIssues++;
+      if (issues.length < 5) {
+        issues.push({
+          id: tx.id,
+          date: tx.date,
+          amount: tx.amount,
+          projectId: tx.projectId,
+          description: tx.description,
+        });
+      }
+    }
+  }
+
+  return {
+    hasIssues: totalIssues > 0,
+    count: totalIssues,
+    examples: issues,
+  };
+}
+
+// =============================================================================
 // HEALTH CHECK COMPLET
 // =============================================================================
 
@@ -402,24 +536,36 @@ export interface HealthCheckResult {
   bankSource: BankSourceCheckResult;
   archived: ArchivedCheckResult;
   signs: SignCheckResult;
+  // v1.35: Nous blocs d'orfes
+  orphanCategories: OrphanCategoryCheckResult;
+  orphanProjects: OrphanProjectCheckResult;
   totalIssues: number;
 }
 
 /**
  * Executa tots els checks d'integritat de dades
+ *
+ * @param transactions - Array de transaccions a validar
+ * @param validCategoryIds - Set d'IDs de categories vàlides (actives + arxivades)
+ *                           Si no es proporciona, el check d'orfes categories es salta
+ * @param validProjectIds - Set d'IDs de projects vàlids (actius + arxivats)
+ *                          Si no es proporciona, el check d'orfes projects es salta
  */
 export function runHealthCheck<T extends {
   id: string;
   date: string;
   amount: number;
   category?: string | null;
+  projectId?: string | null;
   source?: string | null;
   bankAccountId?: string | null;
   archivedAt?: unknown;
   transactionType?: string | null;
   description?: string;
 }>(
-  transactions: T[]
+  transactions: T[],
+  validCategoryIds?: Set<string>,
+  validProjectIds?: Set<string>
 ): HealthCheckResult {
   // A) Categories legacy
   const legacyCategories = detectLegacyCategoryTransactions(
@@ -438,13 +584,25 @@ export function runHealthCheck<T extends {
   // E) Signs
   const signs = checkSignCoherence(transactions);
 
+  // F) Orphan categories (v1.35)
+  const orphanCategories = validCategoryIds
+    ? checkOrphanCategories(transactions, validCategoryIds)
+    : { hasIssues: false, count: 0, examples: [] };
+
+  // G) Orphan projects (v1.35)
+  const orphanProjects = validProjectIds
+    ? checkOrphanProjects(transactions, validProjectIds)
+    : { hasIssues: false, count: 0, examples: [] };
+
   const totalIssues =
     legacyCategories.length +
     dates.invalidCount +
     (dates.hasMixedFormats ? 1 : 0) +
     bankSource.count +
     archived.count +
-    signs.count;
+    signs.count +
+    orphanCategories.count +
+    orphanProjects.count;
 
   return {
     categories: {
@@ -456,6 +614,8 @@ export function runHealthCheck<T extends {
     bankSource,
     archived,
     signs,
+    orphanCategories,
+    orphanProjects,
     totalIssues,
   };
 }

@@ -512,6 +512,8 @@ export default function DashboardPage() {
         bankSource: { hasIssues: false, count: 0, examples: [] },
         archived: { hasIssues: false, count: 0, examples: [] },
         signs: { hasIssues: false, count: 0, examples: [] },
+        orphanCategories: { hasIssues: false, count: 0, examples: [] },
+        orphanProjects: { hasIssues: false, count: 0, examples: [] },
         totalIssues: 0,
       });
       setHealthCheckDialogOpen(true);

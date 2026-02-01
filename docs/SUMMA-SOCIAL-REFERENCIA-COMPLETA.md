@@ -1,6 +1,6 @@
 # ═══════════════════════════════════════════════════════════════════════════════
 # SUMMA SOCIAL - REFERÈNCIA COMPLETA DEL PROJECTE
-# Versió 1.32 - Gener 2026
+# Versió 1.34 - Gener 2026
 # ═══════════════════════════════════════════════════════════════════════════════
 
 
@@ -164,6 +164,24 @@ El sistema garanteix les següents invariants per assegurar la integritat de les
 #### A3: Estat del donant no bloqueja fiscal
 
 L'estat del donant (`inactive`, `pending_return`, `archived`, `deleted`) **NO bloqueja** la imputació fiscal si existeix `contactId`. L'estat només afecta l'operativa interna, no el dret fiscal.
+
+#### A4: Coherència source ↔ bankAccountId (NOU v1.34)
+
+| source | bankAccountId | Camps bloquejats (date, amount, description) |
+|--------|---------------|----------------------------------------------|
+| `bank` | **obligatori** | 🔒 Bloquejats |
+| `stripe` | **obligatori** | 🔒 Bloquejats |
+| `remittance` | heretat del pare | 🔒 Bloquejats |
+| `manual` | `null` | ✏️ Editables |
+
+**Comportament:**
+- Transaccions amb `bankAccountId != null` tenen `date`, `amount` i `description` desactivats al diàleg d'edició.
+- Les filles de remesa hereten automàticament el `bankAccountId` del pare.
+- Les despeses off-bank (mòdul projectes) van a col·lecció separada (`offBankExpenses`), no afectades per aquesta regla.
+
+**Health Check P0:**
+- `source='bank'` o `source='stripe'` sense `bankAccountId` → ERROR
+- `bankAccountId` present amb `source` diferent de `bank`/`stripe`/`remittance` → ERROR
 
 #### Notes de robustesa
 
@@ -448,7 +466,7 @@ organizations/
       │       ├── remittanceDirection: 'IN' | 'OUT' | null  # Direcció de la remesa
       │       ├── source: 'bank' | 'remittance' | 'manual' | 'stripe' | null  # Origen
       │       ├── parentTransactionId: string | null  # ID remesa pare
-      │       ├── bankAccountId: string | null        # ID compte bancari
+      │       ├── bankAccountId: string | null        # ID compte bancari (obligatori si source=bank|stripe)
       │       │
       │       # Camps de remeses de devolucions:
       │       ├── remittanceType: 'returns' | 'donations' | 'payments' | null
@@ -3631,7 +3649,7 @@ Panell de diagnòstic d'integritat de dades accessible per administradors d'orga
 |------|-------------|---------|
 | **A) Categories legacy** | Categories guardades com docId antic | `^[A-Za-z0-9]{20,}$` i no és nameKey conegut |
 | **B) Dates: formats** | Barreja de formats o dates invàlides | Classifica YYYY-MM-DD, ISO_WITH_T, INVALID |
-| **C) Origen bancari** | Incoherències source ↔ bankAccountId | `source=bank` sense bankAccountId o viceversa |
+| **C) Origen bancari** | Incoherències source ↔ bankAccountId | `source=bank\|stripe` sense bankAccountId (P0 error) |
 | **D) ArchivedAt** | Transaccions arxivades al conjunt normal | `archivedAt != null` en queries no filtrades |
 | **E) Signs per tipus** | Amount incompatible amb transactionType | donation→>0, return→<0, fee→<0, etc. |
 
@@ -3644,6 +3662,69 @@ Panell de diagnòstic d'integritat de dades accessible per administradors d'orga
 **Fitxers:**
 - `src/lib/category-health.ts` — Checks i funció `runHealthCheck()`
 - `src/app/[orgSlug]/dashboard/page.tsx` — UI Card + Dialog
+
+### 3.10.5c Guardrails d'Integritat: Categories i Eixos (NOU v1.35)
+
+Guardrails per evitar inconsistències referenciàries quan s'arxiven categories o eixos d'actuació.
+
+**Invariants:**
+
+| ID | Descripció | Enforce |
+|----|------------|---------|
+| I1 | Prohibit delete físic de categories | `allow delete: if false` (Firestore Rules) |
+| I2 | Prohibit delete físic de projects (eixos) | `allow delete: if false` (Firestore Rules) |
+| I3 | Client no pot escriure archivedAt/ByUid/FromAction | Rules bloquegen modificació de camps arxivat |
+| I4 | Arxivat requereix 0 referències actives | API `/api/categories/archive` i `/api/projects/archive` |
+| I5 | Traça obligatòria | `archivedByUid` + `archivedFromAction` sempre presents |
+
+**Flux d'arxivat:**
+
+1. Usuari clica "Arxivar" a UI (icona Archive, no Trash)
+2. Sistema compta transaccions actives (`archivedAt == null`) amb referència
+3. Si count > 0 → Modal de reassignació obligatori
+4. Si count == 0 → Confirmació directa
+5. API escriu `archivedAt` (serverTimestamp), `archivedByUid`, `archivedFromAction`
+
+**Camps afegits als tipus:**
+
+```typescript
+// Category i Project
+archivedAt?: Timestamp | null;      // Quan arxivat (serverTimestamp)
+archivedByUid?: string | null;      // UID de qui ha arxivat
+archivedFromAction?: string | null; // 'archive-category-api' | 'archive-project-api'
+```
+
+**APIs:**
+
+| Endpoint | Funció |
+|----------|--------|
+| `POST /api/categories/archive` | Arxiva categoria amb reassignació opcional |
+| `POST /api/projects/archive` | Arxiva eix amb reassignació opcional |
+
+**Validacions de les APIs:**
+- Auth: token vàlid requerit
+- orgId: derivat de membership (no del body)
+- Rol: admin per categories, admin/user per projects
+- fromId: ha d'existir i no estar ja arxivat (idempotent si ja ho està)
+- toId (si present): ha d'existir, no arxivat, diferent de fromId
+- Count actiu: query real `where('category/projectId', '==', fromId) AND archivedAt == null`
+- Si count > 0 sense toId → error 400
+
+**Health Check (orfes):**
+
+Nous blocs al diagnòstic P0:
+- **F) Categories òrfenes**: `tx.category` apunta a doc inexistent
+- **G) Projects orfes**: `tx.projectId` apunta a doc inexistent
+
+Nota: Una categoria/eix arxivat NO és orfe (el doc existeix). Orfe = el document no existeix.
+
+**Fitxers:**
+- `src/app/api/categories/archive/route.ts` — API arxivar categories
+- `src/app/api/projects/archive/route.ts` — API arxivar eixos
+- `src/components/reassign-modal.tsx` — Modal reassignació
+- `src/components/category-manager.tsx` — UI categories (flux arxivat)
+- `src/components/project-manager.tsx` — UI eixos (flux arxivat)
+- `firestore.rules` — Rules actualitzades
 
 ### 3.10.6 Fitxers principals
 
@@ -4602,6 +4683,8 @@ Indicadors que requeririen intervenció:
 | **1.31** | **14 Gen 2026** | **UX novetats: eliminat toast automàtic de novetats al dashboard (ara només via campaneta/FAB inbox). Reducció soroll logs: console.debug dev-only per i18n listener, org-provider superadmin access. Traça toast DEV-ONLY per debugging. Clarificat accés SuperAdmin sense membership com a comportament esperat. Documentat ERR_BLOCKED_BY_CLIENT com a possible adblocker (no bug).** |
 | **1.32** | **29 Gen 2026** | **Dinàmica de donants: nou panell d'anàlisi per període (altes, baixes, reactivacions, devolucions, aportació decreixent). Wizard SEPA pain.008 complet: 3 passos (config, selecció, revisió), periodicitat de quota (monthly/quarterly/semiannual/annual/manual), memòria d'execució (lastSepaRunDate), bulk selection amb filtre, col·lecció sepaCollectionRuns. Importador pressupost millorat: extracció codi del text amb patrons (A), a.1), a.1.1)), agrupació contextual per jerarquia, capítols destacats (ambre), vista sense/amb partides. Traduccions i18n donorDynamics (CA/ES). Doc GOVERN-DE-CODI-I-DEPLOY v3.0: classificació risc (BAIX/MITJÀ/ALT), ritual deploy per nivell, gate humà únic.** |
 | **1.33** | **30 Gen 2026** | **Health Check P0: panell d'integritat de dades al Dashboard (només admin). 5 blocs deterministes: A) categories legacy (docIds), B) dates formats mixtos/invàlids, C) coherència origen bancari (source↔bankAccountId), D) archivedAt en queries normals, E) signs per transactionType. UI amb details expandibles, badge recompte, taula exemples (max 5). Deduplicació global importació bancària (per rang dates), guardrails UX solapament extractes, camps bancaris readonly (description/amount) per moviments importats. Fitxer category-health.ts amb runHealthCheck().** |
+| **1.34** | **31 Gen 2026** | **Invariant A4 source↔bankAccountId: `bank`/`stripe` requereixen bankAccountId (P0 error si absent), `remittance` hereta del pare, `manual` no aplica. Health check actualitzat per detectar stripe sense bankAccountId. Camps (date/amount/description) bloquejats si bankAccountId present. Backfill dades legacy Flores (363 transaccions: 340 bank + 23 remittance).** |
+| **1.35** | **1 Feb 2026** | **Guardrails integritat Categories i Eixos: prohibit delete físic (Firestore Rules), arxivat només via API amb reassignació obligatòria si count > 0, camps archivedAt/ByUid/FromAction protegits contra escriptura client. APIs `/api/categories/archive` i `/api/projects/archive` amb validació orgId derivat de membership. Health Check nou: blocs F (categories òrfenes) i G (projects orfes). UI: icona Archive, ReassignModal, traduccions CA/ES/FR.** |
 
 
 # ═══════════════════════════════════════════════════════════════════════════════

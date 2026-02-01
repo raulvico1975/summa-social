@@ -205,7 +205,14 @@ export const fr = {
     noAlerts: "Tout est à jour, bravo !",
     firstDonationMonth: "Premier don du mois reçu !",
     noProjectsAssigned: "Vous n'avez encore attribué de dépenses à aucun axe d'intervention",
-    assignProjectsToTransactions: "Attribuer des axes aux mouvements"
+    assignProjectsToTransactions: "Attribuer des axes aux mouvements",
+    // Diagnostic intégrité (v1.35)
+    dataIntegrity: "Intégrité des données",
+    dataIntegrityDescription: "Diagnostic de la qualité des données de l'organisation.",
+    runDiagnostic: "Exécuter le diagnostic",
+    diagnosticResults: "Résultats du diagnostic",
+    diagnosticResultsDescription: "Analyse des données de la période sélectionnée.",
+    runDiagnosticFirst: "Exécutez le diagnostic pour voir les résultats.",
   },
   movements: {
     title: "Mouvements",
@@ -824,6 +831,15 @@ export const fr = {
       lastImportCreated: "Créées :",
       lastImportSkipped: "Doublons omis :",
       overlapWarningNote: "Note : Summa n'ignore que les doublons exacts (même date, montant et description normalisée). Si la banque modifie le texte ou la date valeur, certains doublons peuvent ne pas être détectés.",
+      // Avís inline recomanació
+      importRecommendationTitle: "Recommandation d'importation",
+      importRecommendationText: "Pour garantir un enregistrement propre et rapide, nous recommandons d'importer uniquement des relevés non chevauchés.",
+      dedupeNote: "Summa détecte et évite les doublons, mais ce n'est pas la manière optimale de travailler.",
+      lastImportedUntil: "Dernière importation enregistrée jusqu'au :",
+      recommendedFrom: "Extrait recommandé : à partir du",
+      // Checkbox friction
+      overlapAcknowledge: "Je comprends que cet extrait peut chevaucher des périodes déjà importées et que je l'importe uniquement parce que c'est nécessaire.",
+      overlapAcknowledgeNote: "Cela peut augmenter le temps d'importation et générer des avertissements inutiles.",
       errors: {
         unsupportedFormat: "Format non supporté",
         unsupportedFormatDescription: "Veuillez télécharger un fichier .csv ou .xlsx",
@@ -1031,6 +1047,23 @@ export const fr = {
     projectDeleted: "Axe d'intervention supprimé",
     projectDeletedDescription: (name: string) => `L'axe d'intervention "${name}" a été supprimé.`,
     errorNameEmpty: "Le nom de l'axe d'intervention ne peut pas être vide.",
+
+    // ═══════════════════════════════════════════════════════════════════════════
+    // ARCHIVAGE DES AXES (v1.35)
+    // ═══════════════════════════════════════════════════════════════════════════
+    axis: "axe",
+    archiveProjectTitle: "Archiver l'axe",
+    archiveProjectDescription: "Cet axe n'a pas de mouvements actifs. Il peut être archivé directement.",
+    archiveProjectConfirm: "Archiver",
+    projectArchivedToast: "Axe archivé",
+    projectArchivedToastDescription: (name: string) => `L'axe "${name}" a été archivé.`,
+    archiveError: "Erreur lors de l'archivage",
+    // Réassignation
+    reassignTitle: "Réassigner les mouvements",
+    reassignDescription: "Cet axe a des mouvements associés. Vous devez les réassigner avant d'archiver.",
+    reassignTarget: "Axe cible",
+    reassignSelectPlaceholder: "Sélectionnez un axe...",
+    noAvailableTargets: "Aucun axe disponible",
   },
   donors: {
     title: "Donateurs",
@@ -1462,24 +1495,53 @@ export const fr = {
     allCertificatesGeneratedDescription: (count: number) => `S'han descarregat ${count} certificats.`,
     errorNoDonorSelected: "Selecciona almenys un donant.",
     pdf: {
-      title: "CERTIFICAT DE DONACIÓ",
-      fiscalYear: (year: string) => `Any fiscal ${year}`,
-      orgIntro: (orgName: string, taxId: string) => `${orgName}, amb CIF ${taxId},`,
-      nonProfit: "entitat sense ànim de lucre,",
-      certifies: "CERTIFICA:",
+      // Titre et sous-titre
+      title: "CERTIFICAT ANNUEL DE DONS",
+      fiscalYear: (year: string) => `Exercice fiscal ${year}`,
+      // Introduction signataire (avec siège social)
+      signerIntroWithAddress: (signerName: string, signerRole: string, orgName: string, taxId: string, address: string) =>
+        `${signerName}, en qualité de ${signerRole} de ${orgName}, avec NIF ${taxId} et siège social à ${address},`,
+      // Introduction signataire (sans siège social)
+      signerIntro: (signerName: string, signerRole: string, orgName: string, taxId: string) =>
+        `${signerName}, en qualité de ${signerRole} de ${orgName}, avec NIF ${taxId},`,
+      // Fallback sans signataire
+      orgIntroWithAddress: (orgName: string, taxId: string, address: string) =>
+        `${orgName}, avec NIF ${taxId} et siège social à ${address},`,
+      orgIntro: (orgName: string, taxId: string) => `${orgName}, avec NIF ${taxId},`,
+      // CERTIFIE
+      certifies: "CERTIFIE",
+      // Corps principal : donateur avec adresse
+      donorBodyWithAddress: (donorName: string, donorTaxId: string, donorAddress: string, year: string, amount: string, count: number) =>
+        `Que ${donorName}, avec NIF/CIF ${donorTaxId} et domicilié à ${donorAddress}, a effectué des dons en faveur de cette entité durant l'exercice fiscal ${year}, pour un montant total de ${amount}, correspondant à ${count} ${count === 1 ? 'don' : 'dons'}.`,
+      // Corps principal : donateur sans adresse
+      donorBody: (donorName: string, donorTaxId: string, year: string, amount: string, count: number) =>
+        `Que ${donorName}, avec NIF/CIF ${donorTaxId}, a effectué des dons en faveur de cette entité durant l'exercice fiscal ${year}, pour un montant total de ${amount}, correspondant à ${count} ${count === 1 ? 'don' : 'dons'}.`,
+      // Clause d'irrévocabilité
+      irrevocableClause: "Ces dons ont été effectués de manière irrévocable, sans contrepartie, et ont été intégralement destinés à l'accomplissement des objectifs sociaux de l'entité.",
+      // Formule d'émission (avec lieu)
+      issuedForWithPlace: (place: string, date: string) =>
+        `Et pour que cela soit connu, aux effets prévus par la réglementation fiscale en vigueur, le présent certificat est délivré à ${place}, le ${date}.`,
+      // Formule d'émission (sans lieu)
+      issuedFor: (date: string) =>
+        `Et pour que cela soit connu, aux effets prévus par la réglementation fiscale en vigueur, le présent certificat est délivré le ${date}.`,
+      // Note légale Loi 49/2002
+      law49Note: "Cette entité bénéficie du régime fiscal spécial prévu par la Loi 49/2002 du 23 décembre, relative au régime fiscal des entités sans but lucratif et aux incitations fiscales au mécénat, raison pour laquelle les dons indiqués ouvrent droit aux déductions fiscales établies par cette loi.",
+      // Signature
+      signature: "Signature :",
+      // Champs legacy (pour compatibilité avec preview et autres utilisations)
+      nonProfit: "entité sans but lucratif,",
       donorIntro: (donorName: string, taxId: string) =>
-        `Que ${donorName}, amb DNI/CIF ${taxId},`,
+        `Que ${donorName}, avec DNI/CIF ${taxId},`,
       donorIntroWithAddress: (donorName: string, taxId: string, location: string) =>
-        `Que ${donorName}, amb DNI/CIF ${taxId}, domiciliat/da a ${location},`,
-      hasDonated: (year: string) => 
-        `ha realitzat donacions a aquesta entitat durant l'any ${year}`,
-      totalAmountIntro: "per un import total de:",
-      donationDetails: "Detall de les donacions:",
-      returnsDiscounted: "Devolucions descomptades:",
-      legalNote: "Aquest certificat s'emet a efectes de la deducció prevista a l'article 68.3 de la Llei 35/2006, de l'Impost sobre la Renda de les Persones Físiques, i a l'article 20 de la Llei 49/2002, de Règim fiscal de les entitats sense fins lucratius.",
-      dateLocation: (city: string, day: number, month: string, year: number) => 
-        `${city}, ${day} de ${month} de ${year}`,
-      signature: "Signatura i segell:",
+        `Que ${donorName}, avec DNI/CIF ${taxId}, domicilié(e) à ${location},`,
+      hasDonated: (year: string) =>
+        `a effectué des dons à cette entité durant l'année ${year}`,
+      totalAmountIntro: "pour un montant total de :",
+      donationDetails: "Détail des dons :",
+      returnsDiscounted: "Remboursements déduits :",
+      legalNote: "Ce certificat est émis aux fins de la déduction prévue à l'article 68.3 de la Loi 35/2006, relative à l'Impôt sur le Revenu des Personnes Physiques, et à l'article 20 de la Loi 49/2002, relative au Régime fiscal des entités sans but lucratif.",
+      dateLocation: (city: string, day: number, month: string, year: number) =>
+        `${city}, le ${day} ${month} ${year}`,
     },
     returnsDetected: "Devolucions detectades",
     returnsDetectedDescription: (count: number) => 
@@ -1561,6 +1623,27 @@ export const fr = {
     categoryCreatedToast: "Catégorie créée",
     categoryCreatedToastDescription: (name: string) => `La catégorie "${name}" a été créée.`,
     errorNameEmpty: "Le nom de la catégorie ne peut pas être vide.",
+
+    // ═══════════════════════════════════════════════════════════════════════════
+    // ARCHIVAGE DES CATÉGORIES (v1.35)
+    // ═══════════════════════════════════════════════════════════════════════════
+    category: "catégorie",
+    archiveCategoryTitle: "Archiver la catégorie",
+    archiveCategoryDescription: "Cette catégorie n'a pas de mouvements actifs. Elle peut être archivée directement.",
+    archiveCategoryConfirm: "Archiver",
+    categoryArchivedToast: "Catégorie archivée",
+    categoryArchivedToastDescription: (name: string) => `La catégorie "${name}" a été archivée.`,
+    archiveError: "Erreur lors de l'archivage",
+    // Réassignation
+    reassignTitle: "Réassigner les mouvements",
+    reassignDescription: "Cette catégorie a des mouvements associés. Vous devez les réassigner avant d'archiver.",
+    reassignTarget: "Catégorie cible",
+    reassignSelectPlaceholder: "Sélectionnez une catégorie...",
+    reassignConfirmDescription: "Confirmez que vous souhaitez déplacer les mouvements.",
+    reassignConfirmButton: (count: number) => `Réassigner ${count} mouvements`,
+    noAvailableTargets: "Aucune catégorie disponible",
+    invalidTargetCategory: "La catégorie cible n'est pas valide.",
+
     password: {
       title: "Changer le mot de passe",
       description: "Mettez à jour votre mot de passe d'accès.",
@@ -1909,6 +1992,11 @@ export const fr = {
       unknownError: "Erreur inconnue",
       archive: "Archiver",
       restore: "Restaurer",
+      // Réaffectation (v1.35)
+      from: "De",
+      to: "À",
+      movements: "Mouvements",
+      movementsWillBeMoved: "mouvements seront déplacés",
       // Types de contact (pour badges et labels)
       supplier: "Fournisseur",
       donor: "Donateur",

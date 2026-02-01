@@ -205,7 +205,14 @@ export const es = {
     noAlerts: "¡Todo al día, buen trabajo!",
     firstDonationMonth: "¡Primera donación del mes recibida!",
     noProjectsAssigned: "Aún no has asignado gastos a ningún eje de actuación",
-    assignProjectsToTransactions: "Asignar ejes a los movimientos"
+    assignProjectsToTransactions: "Asignar ejes a los movimientos",
+    // Diagnóstico integridad (v1.35)
+    dataIntegrity: "Integridad de datos",
+    dataIntegrityDescription: "Diagnóstico de la calidad de los datos de la organización.",
+    runDiagnostic: "Ejecutar diagnóstico",
+    diagnosticResults: "Resultados del diagnóstico",
+    diagnosticResultsDescription: "Análisis de los datos del período seleccionado.",
+    runDiagnosticFirst: "Ejecuta el diagnóstico para ver los resultados.",
   },
   movements: {
     title: "Movimientos",
@@ -1039,6 +1046,23 @@ export const es = {
     projectDeleted: "Eje de actuación Eliminado",
     projectDeletedDescription: (name: string) => `El eje de actuación "${name}" ha sido eliminado.`,
     errorNameEmpty: "El nombre del eje de actuación no puede estar vacío.",
+
+    // ═══════════════════════════════════════════════════════════════════════════
+    // ARCHIVO DE EJES (v1.35)
+    // ═══════════════════════════════════════════════════════════════════════════
+    axis: "eje",
+    archiveProjectTitle: "Archivar eje",
+    archiveProjectDescription: "Este eje no tiene movimientos activos. Se puede archivar directamente.",
+    archiveProjectConfirm: "Archivar",
+    projectArchivedToast: "Eje archivado",
+    projectArchivedToastDescription: (name: string) => `El eje "${name}" ha sido archivado.`,
+    archiveError: "Error al archivar",
+    // Reasignación
+    reassignTitle: "Reasignar movimientos",
+    reassignDescription: "Este eje tiene movimientos asociados. Debes reasignarlos antes de archivar.",
+    reassignTarget: "Eje destino",
+    reassignSelectPlaceholder: "Selecciona un eje...",
+    noAvailableTargets: "No hay ejes disponibles",
   },
   emissors: {
     title: "Emisores",
@@ -1630,6 +1654,27 @@ export const es = {
     categoryCreatedToast: "Categoría Creada",
     categoryCreatedToastDescription: (name: string) => `La categoría "${name}" ha sido creada.`,
     errorNameEmpty: "El nombre de la categoría no puede estar vacío.",
+
+    // ═══════════════════════════════════════════════════════════════════════════
+    // ARCHIVO DE CATEGORÍAS (v1.35)
+    // ═══════════════════════════════════════════════════════════════════════════
+    category: "categoría",
+    archiveCategoryTitle: "Archivar categoría",
+    archiveCategoryDescription: "Esta categoría no tiene movimientos activos. Se puede archivar directamente.",
+    archiveCategoryConfirm: "Archivar",
+    categoryArchivedToast: "Categoría archivada",
+    categoryArchivedToastDescription: (name: string) => `La categoría "${name}" ha sido archivada.`,
+    archiveError: "Error al archivar",
+    // Reasignación
+    reassignTitle: "Reasignar movimientos",
+    reassignDescription: "Esta categoría tiene movimientos asociados. Debes reasignarlos antes de archivar.",
+    reassignTarget: "Categoría destino",
+    reassignSelectPlaceholder: "Selecciona una categoría...",
+    reassignConfirmDescription: "Confirma que quieres mover los movimientos.",
+    reassignConfirmButton: (count: number) => `Reasignar ${count} movimientos`,
+    noAvailableTargets: "No hay categorías disponibles",
+    invalidTargetCategory: "La categoría destino no es válida.",
+
     password: {
       title: "Cambiar Contraseña",
       description: "Actualiza tu contraseña de acceso.",
@@ -1972,6 +2017,11 @@ export const es = {
       unknownError: "Error desconocido",
       archive: "Archivar",
       restore: "Restaurar",
+      // Reasignación (v1.35)
+      from: "De",
+      to: "A",
+      movements: "Movimientos",
+      movementsWillBeMoved: "movimientos serán movidos",
       // Tipos de contacto (para badges y labels)
       supplier: "Proveedor",
       donor: "Donante",

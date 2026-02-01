@@ -40,12 +40,13 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { PlusCircle, Edit, Trash2, Download, Upload, Tag, MoreVertical } from 'lucide-react';
+import { PlusCircle, Edit, Archive, Download, Upload, Tag, MoreVertical } from 'lucide-react';
 import type { Category } from '@/lib/data';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
-import { useCollection, useFirebase, useMemoFirebase, addDocumentNonBlocking, deleteDocumentNonBlocking, setDocumentNonBlocking } from '@/firebase';
+import { useCollection, useFirebase, useMemoFirebase, addDocumentNonBlocking, setDocumentNonBlocking } from '@/firebase';
 import { collection, doc, query, where, getCountFromServer } from 'firebase/firestore';
+import { ReassignModal, type ReassignItem } from './reassign-modal';
 import { useTranslations } from '@/i18n';
 import { useCurrentOrganization } from '@/hooks/organization-provider';
 import { CategoryImporter } from './category-importer';
@@ -100,10 +101,10 @@ function CategoryTable({
                     </DropdownMenuItem>
                     <DropdownMenuItem
                       onClick={() => onDelete(category)}
-                      className="text-rose-600"
+                      className="text-amber-600"
                     >
-                      <Trash2 className="mr-2 h-4 w-4" />
-                      Eliminar
+                      <Archive className="mr-2 h-4 w-4" />
+                      Arxivar
                     </DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>
@@ -141,10 +142,11 @@ function CategoryTable({
                   <Button
                     variant="ghost"
                     size="icon"
-                    className="text-red-500 hover:text-red-600"
+                    className="text-amber-500 hover:text-amber-600"
                     onClick={() => onDelete(category)}
+                    title="Arxivar"
                   >
-                    <Trash2 className="h-4 w-4" />
+                    <Archive className="h-4 w-4" />
                   </Button>
                 </TableCell>
               )}
@@ -164,7 +166,7 @@ function CategoryTable({
 }
 
 export function CategoryManager() {
-  const { firestore } = useFirebase();
+  const { firestore, user } = useFirebase();
   const { organizationId, userRole } = useCurrentOrganization();
   const { t } = useTranslations();
   const categoryTranslations = t.categories as Record<string, string>;
@@ -180,16 +182,23 @@ export function CategoryManager() {
 
   const [isDialogOpen, setIsDialogOpen] = React.useState(false);
   const [isAlertOpen, setIsAlertOpen] = React.useState(false);
+  const [isReassignOpen, setIsReassignOpen] = React.useState(false);
   const [isImporterOpen, setIsImporterOpen] = React.useState(false);
   const [editingCategory, setEditingCategory] = React.useState<Category | null>(null);
-  const [categoryToDelete, setCategoryToDelete] = React.useState<Category | null>(null);
+  const [categoryToArchive, setCategoryToArchive] = React.useState<Category | null>(null);
   const [affectedTransactionsCount, setAffectedTransactionsCount] = React.useState<number | null>(null);
   const [isCountingTransactions, setIsCountingTransactions] = React.useState(false);
+  const [isArchiving, setIsArchiving] = React.useState(false);
   const [formData, setFormData] = React.useState<{ name: string; type: Category['type'] }>({ name: '', type: 'expense' });
   const { toast } = useToast();
 
-  const incomeCategories = React.useMemo(() => categories?.filter((c) => c.type === 'income') || [], [categories]);
-  const expenseCategories = React.useMemo(() => categories?.filter((c) => c.type === 'expense') || [], [categories]);
+  // Filtrar categories actives (no arxivades)
+  const activeCategories = React.useMemo(() =>
+    categories?.filter((c) => !c.archivedAt) || [],
+    [categories]
+  );
+  const incomeCategories = React.useMemo(() => activeCategories.filter((c) => c.type === 'income'), [activeCategories]);
+  const expenseCategories = React.useMemo(() => activeCategories.filter((c) => c.type === 'expense'), [activeCategories]);
 
   const handleEdit = (category: Category) => {
     if (!canEdit) return;
@@ -198,41 +207,129 @@ export function CategoryManager() {
     setIsDialogOpen(true);
   };
   
-  const handleDeleteRequest = async (category: Category) => {
+  // ═══════════════════════════════════════════════════════════════════════════
+  // ARXIVAT (v1.35): Flux amb reassignació via API
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  const handleArchiveRequest = async (category: Category) => {
     if (!canEdit || !organizationId) return;
-    setCategoryToDelete(category);
+    setCategoryToArchive(category);
     setAffectedTransactionsCount(null);
     setIsCountingTransactions(true);
-    setIsAlertOpen(true);
 
     try {
-      // Comptar moviments que tenen aquesta categoria
+      // Comptar moviments actius amb aquesta categoria (per docId)
       const transactionsRef = collection(firestore, 'organizations', organizationId, 'transactions');
-      const q = query(transactionsRef, where('category', '==', category.name));
+      const q = query(
+        transactionsRef,
+        where('category', '==', category.id),
+        where('archivedAt', '==', null)
+      );
       const snapshot = await getCountFromServer(q);
-      setAffectedTransactionsCount(snapshot.data().count);
+      const count = snapshot.data().count;
+      setAffectedTransactionsCount(count);
+
+      if (count > 0) {
+        // Hi ha moviments actius → obrir modal de reassignació
+        setIsReassignOpen(true);
+      } else {
+        // No hi ha moviments → confirmació simple per arxivar
+        setIsAlertOpen(true);
+      }
     } catch (error) {
       console.error('Error comptant transaccions:', error);
       setAffectedTransactionsCount(0);
+      setIsAlertOpen(true);
     } finally {
       setIsCountingTransactions(false);
     }
-  }
-
-  const handleDeleteConfirm = () => {
-    if (!canEdit) return;
-    if (categoryToDelete && categoriesCollection) {
-      deleteDocumentNonBlocking(doc(categoriesCollection, categoryToDelete.id));
-      const categoryName = categoryTranslations[categoryToDelete.name] || categoryToDelete.name;
-      toast({
-        title: t.settings.categoryDeletedToast,
-        description: t.settings.categoryDeletedToastDescription(categoryName),
-      });
-    }
-    setIsAlertOpen(false);
-    setCategoryToDelete(null);
   };
-  
+
+  const handleArchiveConfirm = async () => {
+    if (!canEdit || !categoryToArchive || !user) return;
+
+    setIsArchiving(true);
+    try {
+      const idToken = await user.getIdToken();
+      const response = await fetch('/api/categories/archive', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${idToken}`,
+        },
+        body: JSON.stringify({
+          orgId: organizationId,
+          fromCategoryId: categoryToArchive.id,
+        }),
+      });
+
+      const result = await response.json();
+
+      if (result.success) {
+        const categoryName = categoryTranslations[categoryToArchive.name] || categoryToArchive.name;
+        toast({
+          title: t.settings?.categoryArchivedToast ?? 'Categoria arxivada',
+          description: t.settings?.categoryArchivedToastDescription?.(categoryName) ?? `La categoria "${categoryName}" ha estat arxivada.`,
+        });
+      } else {
+        toast({
+          variant: 'destructive',
+          title: t.settings?.archiveError ?? 'Error en arxivar',
+          description: result.error || 'Error desconegut',
+        });
+      }
+    } catch (error) {
+      console.error('Error arxivant categoria:', error);
+      toast({
+        variant: 'destructive',
+        title: t.settings?.archiveError ?? 'Error en arxivar',
+        description: error instanceof Error ? error.message : 'Error desconegut',
+      });
+    } finally {
+      setIsArchiving(false);
+      setIsAlertOpen(false);
+      setCategoryToArchive(null);
+    }
+  };
+
+  const handleReassignConfirm = async (toCategoryId: string): Promise<{ success: boolean; error?: string }> => {
+    if (!categoryToArchive || !user) {
+      return { success: false, error: 'No hi ha categoria seleccionada' };
+    }
+
+    try {
+      const idToken = await user.getIdToken();
+      const response = await fetch('/api/categories/archive', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${idToken}`,
+        },
+        body: JSON.stringify({
+          orgId: organizationId,
+          fromCategoryId: categoryToArchive.id,
+          toCategoryId,
+        }),
+      });
+
+      const result = await response.json();
+
+      if (result.success) {
+        const categoryName = categoryTranslations[categoryToArchive.name] || categoryToArchive.name;
+        toast({
+          title: t.settings?.categoryArchivedToast ?? 'Categoria arxivada',
+          description: `${result.reassignedCount ?? 0} moviments reassignats. "${categoryName}" arxivada.`,
+        });
+        setCategoryToArchive(null);
+        return { success: true };
+      } else {
+        return { success: false, error: result.error || 'Error desconegut' };
+      }
+    } catch (error) {
+      return { success: false, error: error instanceof Error ? error.message : 'Error desconegut' };
+    }
+  };
+
   const handleOpenChange = (open: boolean) => {
     setIsDialogOpen(open);
     if (!open) {
@@ -342,7 +439,7 @@ export function CategoryManager() {
               <CategoryTable
                 categories={expenseCategories}
                 onEdit={handleEdit}
-                onDelete={handleDeleteRequest}
+                onDelete={handleArchiveRequest}
                 canEdit={canEdit}
                 isMobile={isMobile}
               />
@@ -351,7 +448,7 @@ export function CategoryManager() {
               <CategoryTable
                 categories={incomeCategories}
                 onEdit={handleEdit}
-                onDelete={handleDeleteRequest}
+                onDelete={handleArchiveRequest}
                 canEdit={canEdit}
                 isMobile={isMobile}
               />
@@ -398,38 +495,67 @@ export function CategoryManager() {
       )}
     </Dialog>
 
+    {/* Modal de confirmació per arxivar (sense moviments) */}
     {canEdit && (
         <AlertDialog open={isAlertOpen} onOpenChange={(open) => {
           setIsAlertOpen(open);
           if (!open) {
-            setCategoryToDelete(null);
+            setCategoryToArchive(null);
             setAffectedTransactionsCount(null);
           }
         }}>
             <AlertDialogContent>
             <AlertDialogHeader>
-                <AlertDialogTitle>{t.settings.confirmDeleteTitle}</AlertDialogTitle>
+                <AlertDialogTitle>{t.settings?.archiveCategoryTitle ?? 'Arxivar categoria'}</AlertDialogTitle>
                 <AlertDialogDescription asChild>
                   <div className="space-y-2">
-                    <p>{t.settings.confirmDeleteDescription}</p>
-                    {isCountingTransactions ? (
-                      <p className="text-sm text-muted-foreground">Comptant moviments afectats...</p>
-                    ) : affectedTransactionsCount !== null && affectedTransactionsCount > 0 ? (
-                      <p className="text-sm font-medium text-amber-600">
-                        {affectedTransactionsCount} {affectedTransactionsCount === 1 ? 'moviment quedarà' : 'moviments quedaran'} sense categoria.
+                    <p>{t.settings?.archiveCategoryDescription ?? 'Aquesta categoria no té moviments actius. Es pot arxivar directament.'}</p>
+                    {categoryToArchive && (
+                      <p className="text-sm font-medium">
+                        {categoryTranslations[categoryToArchive.name] || categoryToArchive.name}
                       </p>
-                    ) : null}
+                    )}
                   </div>
                 </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
-                <AlertDialogCancel onClick={() => setCategoryToDelete(null)}>{t.common.cancel}</AlertDialogCancel>
-                <AlertDialogAction onClick={handleDeleteConfirm} disabled={isCountingTransactions}>
-                {t.common.delete}
+                <AlertDialogCancel onClick={() => setCategoryToArchive(null)} disabled={isArchiving}>
+                  {t.common.cancel}
+                </AlertDialogCancel>
+                <AlertDialogAction onClick={handleArchiveConfirm} disabled={isArchiving || isCountingTransactions}>
+                  {isArchiving ? 'Arxivant...' : (t.settings?.archiveCategoryConfirm ?? 'Arxivar')}
                 </AlertDialogAction>
             </AlertDialogFooter>
             </AlertDialogContent>
         </AlertDialog>
+    )}
+
+    {/* Modal de reassignació (amb moviments) */}
+    {canEdit && categoryToArchive && (
+      <ReassignModal
+        open={isReassignOpen}
+        onOpenChange={(open) => {
+          setIsReassignOpen(open);
+          if (!open) {
+            setCategoryToArchive(null);
+            setAffectedTransactionsCount(null);
+          }
+        }}
+        type="category"
+        sourceItem={{
+          id: categoryToArchive.id,
+          name: categoryTranslations[categoryToArchive.name] || categoryToArchive.name,
+        }}
+        targetItems={activeCategories
+          .filter(c => c.id !== categoryToArchive.id && c.type === categoryToArchive.type)
+          .map(c => ({
+            id: c.id,
+            name: categoryTranslations[c.name] || c.name,
+          }))
+        }
+        affectedCount={affectedTransactionsCount || 0}
+        onConfirm={handleReassignConfirm}
+      />
     )}
 
     {/* Importador de categories */}

@@ -435,13 +435,13 @@ describe('Export Gestoria - Codi Província', () => {
 
 describe('Export Gestoria - Clau (F0/A0)', () => {
   it('retorna F0 per membershipType recurring', () => {
-    const membershipType = 'recurring';
+    const membershipType: string = 'recurring';
     const clau = membershipType === 'recurring' ? 'F0' : 'A0';
     assert.strictEqual(clau, 'F0');
   });
 
   it('retorna A0 per membershipType one-time', () => {
-    const membershipType = 'one-time';
+    const membershipType: string = 'one-time';
     const clau = membershipType === 'recurring' ? 'F0' : 'A0';
     assert.strictEqual(clau, 'A0');
   });
@@ -449,8 +449,8 @@ describe('Export Gestoria - Clau (F0/A0)', () => {
 
 describe('Export Gestoria - Recurrència', () => {
   it('retorna 1 si valor1 > 0 i valor2 > 0', () => {
-    const valor1 = 100;
-    const valor2 = 50;
+    const valor1: number = 100;
+    const valor2: number = 50;
     let recurrencia: number | string = '';
     if (valor1 > 0 && valor2 > 0) {
       recurrencia = 1;
@@ -461,8 +461,8 @@ describe('Export Gestoria - Recurrència', () => {
   });
 
   it('retorna 2 si valor1 === 0 i valor2 === 0', () => {
-    const valor1 = 0;
-    const valor2 = 0;
+    const valor1: number = 0;
+    const valor2: number = 0;
     let recurrencia: number | string = '';
     if (valor1 > 0 && valor2 > 0) {
       recurrencia = 1;
@@ -473,8 +473,8 @@ describe('Export Gestoria - Recurrència', () => {
   });
 
   it('retorna buit si valor1 > 0 i valor2 === 0', () => {
-    const valor1 = 100;
-    const valor2 = 0;
+    const valor1: number = 100;
+    const valor2: number = 0;
     let recurrencia: number | string = '';
     if (valor1 > 0 && valor2 > 0) {
       recurrencia = 1;
@@ -485,8 +485,8 @@ describe('Export Gestoria - Recurrència', () => {
   });
 
   it('retorna buit si valor1 === 0 i valor2 > 0', () => {
-    const valor1 = 0;
-    const valor2 = 50;
+    const valor1: number = 0;
+    const valor2: number = 50;
     let recurrencia: number | string = '';
     if (valor1 > 0 && valor2 > 0) {
       recurrencia = 1;
