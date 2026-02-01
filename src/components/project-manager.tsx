@@ -115,11 +115,21 @@ export function ProjectManager() {
   };
   
   // ═══════════════════════════════════════════════════════════════════════════
-  // ═══════════════════════════════════════════════════════════════════════════
   // API-FIRST: La UI crida sempre l'API per arxivar.
   // L'API decideix si té moviments (i retorna activeCount) o arxiva directe.
   // Això evita problemes de permisos amb queries Firestore client.
   // ═══════════════════════════════════════════════════════════════════════════
+
+  /**
+   * Reset complet de l'estat d'arxivat quan es cancel·la o tanca el modal.
+   * Evita dead-lock d'estat UI.
+   */
+  const resetArchiveFlow = React.useCallback(() => {
+    setIsReassignOpen(false);
+    setProjectToArchive(null);
+    setAffectedTransactionsCount(null);
+    setIsCountingTransactions(false);
+  }, []);
 
   const handleArchiveRequest = async (project: Project) => {
     if (!organizationId || !user) return;
@@ -446,15 +456,9 @@ export function ProjectManager() {
       open={isReassignOpen && projectToArchive !== null}
       onOpenChange={(open) => {
         if (!open) {
-          // Reset complet de l'estat quan es tanca el modal
-          setIsReassignOpen(false);
-          // Donem temps al Dialog per tancar-se visualment abans de netejar l'estat
-          setTimeout(() => {
-            setProjectToArchive(null);
-            setAffectedTransactionsCount(null);
-          }, 100);
+          resetArchiveFlow();
         } else {
-          setIsReassignOpen(open);
+          setIsReassignOpen(true);
         }
       }}
       type="project"
