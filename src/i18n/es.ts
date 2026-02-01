@@ -2505,11 +2505,10 @@ export const es = {
     cannotArchiveTitle: "No se puede archivar",
     cannotArchiveWithTransactions: (name: string, count: number) =>
       `El contacto "${name}" tiene ${count} movimientos asociados. No se puede archivar.`,
-    // v1.36.2: Desglossament actius vs arxivats
-    cannotArchiveIntro: (name: string) => `El contacto "${name}" tiene movimientos asociados:`,
-    activeMovementsLabel: "Movimientos activos",
-    archivedMovementsLabel: "Movimientos archivados (histórico)",
-    blocksArchive: "bloquea el archivado",
+    // v1.36.3: Missatge simplificat
+    cannotDeleteTitle: "No se puede eliminar",
+    cannotDeleteMessage: (name: string, count: number) =>
+      `El contacto "${name}" tiene ${count} movimientos asociados.`,
   },
   months: {
     january: "enero",
