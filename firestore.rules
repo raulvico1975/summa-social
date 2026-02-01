@@ -260,20 +260,48 @@ service cloud.firestore {
 
       // ─────────────────────────────────────────────────────────────────────
       // CATEGORIES
+      // GUARDRAIL v1.35: Prohibit delete físic, camps d'arxivat només via API
       // ─────────────────────────────────────────────────────────────────────
 
       match /categories/{categoryId} {
         allow read: if isMemberOf(orgId) || isSuperAdmin();
-        allow create, update, delete: if isAdminOf(orgId) || isSuperAdmin();
+        allow create: if isAdminOf(orgId) || isSuperAdmin();
+
+        // UPDATE: bloquejar modificació directa de camps d'arxivat
+        // Només l'API (Admin SDK) pot escriure aquests camps
+        // GUARDRAIL: Ni tan sols SuperAdmin pot via client (arxivat sempre via API)
+        allow update: if (isAdminOf(orgId) || isSuperAdmin())
+          && (
+            // Camps d'arxivat NO poden canviar MAI via client
+            request.resource.data.archivedAt == resource.data.archivedAt
+            && request.resource.data.archivedByUid == resource.data.archivedByUid
+            && request.resource.data.archivedFromAction == resource.data.archivedFromAction
+          );
+
+        // DELETE FÍSIC: PROHIBIT (integritat referencial)
+        allow delete: if false;
       }
 
       // ─────────────────────────────────────────────────────────────────────
-      // PROJECTES
+      // PROJECTES (Eixos d'actuació)
+      // GUARDRAIL v1.35: Prohibit delete físic, camps d'arxivat només via API
       // ─────────────────────────────────────────────────────────────────────
 
       match /projects/{projectId} {
         allow read: if isMemberOf(orgId) || isSuperAdmin();
-        allow create, update, delete: if isMemberOf(orgId) && getMemberRole(orgId) in ['admin', 'user'] || isSuperAdmin();
+        allow create: if isMemberOf(orgId) && getMemberRole(orgId) in ['admin', 'user'] || isSuperAdmin();
+
+        // UPDATE: només admin (no user) + bloquejar modificació directa de camps d'arxivat
+        // GUARDRAIL: Ni tan sols SuperAdmin pot via client (arxivat sempre via API)
+        allow update: if (isAdminOf(orgId) || isSuperAdmin())
+          && (
+            request.resource.data.archivedAt == resource.data.archivedAt
+            && request.resource.data.archivedByUid == resource.data.archivedByUid
+            && request.resource.data.archivedFromAction == resource.data.archivedFromAction
+          );
+
+        // DELETE FÍSIC: PROHIBIT (integritat referencial)
+        allow delete: if false;
       }
 
       // ─────────────────────────────────────────────────────────────────────

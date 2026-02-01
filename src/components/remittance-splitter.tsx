@@ -1037,7 +1037,7 @@ export function RemittanceSplitter({
     name: string,
     taxId: string,
     iban: string
-  ): { contact: Donor | null; contactType: 'supplier' | 'employee' | null } => {
+  ): { contact: Donor | null; contactType: 'supplier' | 'employee' | undefined } => {
     const normalizedCsvName = normalizeString(name);
 
     // 1. Buscar per IBAN (màxima prioritat per pagaments)
@@ -1077,7 +1077,7 @@ export function RemittanceSplitter({
       if (foundSupplier) return { contact: foundSupplier as unknown as Donor, contactType: 'supplier' };
     }
 
-    return { contact: null, contactType: null };
+    return { contact: null, contactType: undefined };
   };
 
   const handleContinueToPreview = () => {
@@ -1775,7 +1775,7 @@ export function RemittanceSplitter({
             bankAccountId: transaction.bankAccountId ?? null,
             isRemittanceItem: true,
             remittanceId,
-            contactType: contactId ? 'supplier' : null,
+            contactType: contactId ? 'supplier' : undefined,
           };
 
           batch.set(newTxRef, newTxData);
@@ -1868,7 +1868,7 @@ export function RemittanceSplitter({
         remittancePendingTotalCents: pendingTotalCents,
         category: transaction.category || 'supplierPayments',
         contactId: null,
-        contactType: null,
+        contactType: undefined,
       });
       await updateBatch.commit();
 
