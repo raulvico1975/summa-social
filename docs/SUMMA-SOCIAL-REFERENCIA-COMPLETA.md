@@ -1,6 +1,6 @@
 # ═══════════════════════════════════════════════════════════════════════════════
 # SUMMA SOCIAL - REFERÈNCIA COMPLETA DEL PROJECTE
-# Versió 1.34 - Gener 2026
+# Versió 1.36 - Febrer 2026
 # ═══════════════════════════════════════════════════════════════════════════════
 
 
@@ -3726,6 +3726,130 @@ Nota: Una categoria/eix arxivat NO és orfe (el doc existeix). Orfe = el documen
 - `src/components/project-manager.tsx` — UI eixos (flux arxivat)
 - `firestore.rules` — Rules actualitzades
 
+### 3.10.5d Guardrails d'Integritat: Comptes Bancaris (NOU v1.36 - FASE 2A)
+
+Guardrails per evitar desactivar comptes bancaris que tenen moviments associats.
+
+**Invariants:**
+
+| ID | Descripció | Enforce |
+|----|------------|---------|
+| B1 | Prohibit delete físic de bankAccounts | `allow delete: if false` (Firestore Rules) |
+| B2 | Client no pot escriure isActive/deactivatedAt/ByUid/FromAction | Rules bloquegen |
+| B3 | Desactivació requereix 0 transaccions | API `/api/bank-accounts/deactivate` |
+| B4 | Traça obligatòria | `deactivatedByUid` + `deactivatedFromAction` |
+
+**Diferència amb Categories/Eixos:** NO hi ha reassignació possible. Si el compte té moviments, simplement no es pot desactivar.
+
+**Flux:**
+1. Usuari clica "Desactivar" compte
+2. API compta TOTES les transaccions (actives + arxivades) amb `bankAccountId == accountId`
+3. Si count > 0 → Error amb toast "Compte té X moviments"
+4. Si count == 0 → Desactiva (`isActive: false`)
+
+**API:** `POST /api/bank-accounts/deactivate`
+- Body: `{ orgId, bankAccountId }`
+- Resposta error: `{ code: 'HAS_TRANSACTIONS', transactionCount }`
+
+**Health Check:** Bloc H detecta transaccions amb `bankAccountId` que no existeix a la col·lecció bankAccounts.
+
+### 3.10.5e Guardrails d'Integritat: Contactes (NOU v1.36 - FASE 2B)
+
+Guardrails per evitar arxivar contactes (donants/proveïdors/treballadors) amb moviments actius.
+
+**Invariants:**
+
+| ID | Descripció | Enforce |
+|----|------------|---------|
+| C1 | Prohibit delete físic de contactes | `allow delete: if false` (Firestore Rules) |
+| C2 | Client no pot escriure archivedAt/ByUid/FromAction | Rules bloquegen |
+| C3 | Arxivat bloqueig per moviments ACTIUS | API `/api/contacts/archive` |
+| C4 | Moviments arxivats NO bloquegen | Només `activeCount > 0` bloqueja |
+
+**Diferència clau:** Un contacte amb 0 moviments actius + N moviments arxivats (historial) SÍ es pot arxivar.
+
+**Flux amb dryRun:**
+1. Usuari clica "Eliminar" contacte
+2. UI crida API amb `dryRun: true`
+3. API retorna `{ activeCount, archivedCount, canArchive }`
+4. Si `canArchive: false` → Modal informatiu amb desglossament
+5. Si `canArchive: true` → Modal confirmació → API sense dryRun
+
+**API:** `POST /api/contacts/archive`
+- Body: `{ orgId, contactId, dryRun?: boolean }`
+- Resposta dryRun: `{ activeCount, archivedCount, canArchive }`
+- Resposta error: `{ code: 'HAS_TRANSACTIONS', activeCount, archivedCount }`
+
+**Health Check:** Bloc I detecta transaccions amb `contactId` que no existeix a la col·lecció contacts.
+
+### 3.10.5f Guardrails d'Integritat: Liquidacions (NOU v1.36 - FASE 2C)
+
+Guardrails per evitar arxivar liquidacions (ExpenseReports) que tenen tiquets pendents.
+
+**Invariants:**
+
+| ID | Descripció | Enforce |
+|----|------------|---------|
+| L1 | Prohibit delete físic de expenseReports | `allow delete: if false` (Firestore Rules) |
+| L2 | Client no pot canviar status a 'archived' | Rules bloquegen transició |
+| L3 | Client no pot escriure archivedAt/ByUid/FromAction | Rules bloquegen |
+| L4 | Arxivat bloqueig per tiquets PENDENTS | API `/api/expense-reports/archive` |
+| L5 | Tiquets `matched` NO bloquegen | Només `status !== 'matched'` compta |
+| L6 | Liquidacions `matched` NO es poden arxivar | Conciliades són immutables |
+
+**Què pot fer l'usuari:**
+
+| Acció | Permès? | Condicions |
+|-------|---------|------------|
+| Crear liquidació | ✅ | Sempre |
+| Editar liquidació | ✅ | Si `status = draft` o `submitted` |
+| Enviar liquidació | ✅ | Si `status = draft` |
+| Arxivar liquidació | ✅ | Si NO té tiquets pendents |
+| Restaurar liquidació | ✅ | Si `status = archived` |
+| Esborrar liquidació | ❌ | PROHIBIT |
+
+**Flux amb dryRun:**
+1. Usuari clica "Arxivar" liquidació
+2. UI crida API amb `dryRun: true`
+3. API retorna `{ pendingCount, matchedCount, canArchive }`
+4. Si `pendingCount > 0` → Modal informatiu
+5. Si `pendingCount == 0` → Arxiva directament
+
+**API:** `POST /api/expense-reports/archive`
+- Body: `{ orgId, reportId, dryRun?: boolean }`
+- Resposta dryRun: `{ pendingCount, matchedCount, canArchive, code }`
+- Resposta error: `{ code: 'HAS_PENDING_TICKETS', pendingCount, matchedCount }`
+- Resposta error: `{ code: 'IS_MATCHED' }` (liquidació conciliada)
+
+**Health Check:** Bloc J detecta tiquets (`pendingDocuments`) amb `reportId` que no existeix a `expenseReports`.
+
+**Fitxers:**
+- `src/app/api/expense-reports/archive/route.ts` — API arxivar liquidacions
+- `src/app/[orgSlug]/dashboard/movimientos/liquidacions/page.tsx` — UI liquidacions
+- `src/lib/category-health.ts` — checkOrphanTickets()
+
+### 3.10.5g Resum Complet de Guardrails d'Integritat (v1.36)
+
+**Taula resum de totes les entitats protegides:**
+
+| Entitat | Delete físic | Arxivat/Desactivat | Condició bloqueig | Reassignació |
+|---------|--------------|--------------------|--------------------|--------------|
+| Categories | ❌ Prohibit | Via API | Moviments actius > 0 | ✅ Obligatòria |
+| Eixos (Projects) | ❌ Prohibit | Via API | Moviments actius > 0 | ✅ Obligatòria |
+| Comptes bancaris | ❌ Prohibit | Via API | Qualsevol moviment | ❌ No aplica |
+| Contactes | ❌ Prohibit | Via API | Moviments actius > 0 | ❌ No aplica |
+| Liquidacions | ❌ Prohibit | Via API | Tiquets pendents > 0 | ❌ No aplica |
+
+**Health Check blocs d'integritat referencial:**
+
+| Bloc | Detecta | Severitat |
+|------|---------|-----------|
+| F | Categories òrfenes (`tx.category` → doc inexistent) | Warning |
+| G | Projects orfes (`tx.projectId` → doc inexistent) | Warning |
+| H | BankAccounts orfes (`tx.bankAccountId` → doc inexistent) | Warning |
+| I | Contactes orfes (`tx.contactId` → doc inexistent) | Warning |
+| J | Tiquets orfes (`pendingDoc.reportId` → doc inexistent) | Warning |
+
 ### 3.10.6 Fitxers principals
 
 | Fitxer | Funció |
@@ -4685,6 +4809,7 @@ Indicadors que requeririen intervenció:
 | **1.33** | **30 Gen 2026** | **Health Check P0: panell d'integritat de dades al Dashboard (només admin). 5 blocs deterministes: A) categories legacy (docIds), B) dates formats mixtos/invàlids, C) coherència origen bancari (source↔bankAccountId), D) archivedAt en queries normals, E) signs per transactionType. UI amb details expandibles, badge recompte, taula exemples (max 5). Deduplicació global importació bancària (per rang dates), guardrails UX solapament extractes, camps bancaris readonly (description/amount) per moviments importats. Fitxer category-health.ts amb runHealthCheck().** |
 | **1.34** | **31 Gen 2026** | **Invariant A4 source↔bankAccountId: `bank`/`stripe` requereixen bankAccountId (P0 error si absent), `remittance` hereta del pare, `manual` no aplica. Health check actualitzat per detectar stripe sense bankAccountId. Camps (date/amount/description) bloquejats si bankAccountId present. Backfill dades legacy Flores (363 transaccions: 340 bank + 23 remittance).** |
 | **1.35** | **1 Feb 2026** | **Guardrails integritat Categories i Eixos: prohibit delete físic (Firestore Rules), arxivat només via API amb reassignació obligatòria si count > 0, camps archivedAt/ByUid/FromAction protegits contra escriptura client. APIs `/api/categories/archive` i `/api/projects/archive` amb validació orgId derivat de membership. Health Check nou: blocs F (categories òrfenes) i G (projects orfes). UI: icona Archive, ReassignModal, traduccions CA/ES/FR.** |
+| **1.36** | **1 Feb 2026** | **Guardrails integritat FASE 2 completa: (2A) Comptes bancaris - desactivació via API, bloqueig si té moviments, prohibit delete. (2B) Contactes - arxivat via API amb dryRun, bloqueig només si moviments actius (permet arxivar amb historial arxivat), modal desglossament actius/arxivats. (2C) Liquidacions - arxivat via API, bloqueig si tiquets pendents (status≠matched), prohibit delete. Health Check: blocs H (bankAccounts orfes), I (contactes orfes), J (tiquets orfes). Nou endpoint `/api/expense-reports/archive`. Traduccions CA/ES/FR per modals "no es pot arxivar".** |
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
