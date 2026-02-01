@@ -249,7 +249,7 @@ export const es = {
       contact: "Contacto",
       emisor: "Emisor",
       category: "Categoría",
-      project: "Proyecto",
+      project: "Eje de actuación",
       proof: "Justificante",
       actions: "Acciones",
       categorize: "Sugerir categoría",
