@@ -1945,7 +1945,7 @@ export function TransactionsTable({ initialDateFilter = null }: TransactionsTabl
         transaction={editingTransaction}
         donors={donors}
         suppliers={suppliers}
-        projects={availableProjects}
+        projects={availableProjects?.filter(p => !p.archivedAt) ?? null}
         availableContacts={availableContacts}
         onSave={handleSaveEdit}
         onClose={handleCloseEditDialog}
