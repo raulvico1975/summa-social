@@ -64,6 +64,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { cn } from '@/lib/utils';
 import { MOBILE_ACTIONS_BAR, MOBILE_CTA_PRIMARY } from '@/lib/ui/mobile-actions';
+import { CannotArchiveContactDialog } from '@/components/contacts/cannot-archive-contact-dialog';
 
 type SupplierFormData = Omit<Supplier, 'id' | 'createdAt' | 'updatedAt'>;
 
@@ -167,9 +168,62 @@ export function SupplierManager() {
     setIsDialogOpen(true);
   };
 
-  const handleDeleteRequest = (supplier: Supplier) => {
+  // Estat per modal informatiu "no es pot arxivar"
+  const [cannotArchiveOpen, setCannotArchiveOpen] = React.useState(false);
+  const [cannotArchiveCount, setCannotArchiveCount] = React.useState(0);
+  const [isCheckingArchive, setIsCheckingArchive] = React.useState(false);
+
+  // Pre-check via API amb dryRun abans d'obrir modal
+  const handleDeleteRequest = async (supplier: Supplier) => {
+    if (!organizationId || !user) return;
+
     setSupplierToDelete(supplier);
-    setIsAlertOpen(true);
+    setIsCheckingArchive(true);
+
+    try {
+      const idToken = await user.getIdToken();
+      const response = await fetch('/api/contacts/archive', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${idToken}`,
+        },
+        body: JSON.stringify({
+          orgId: organizationId,
+          contactId: supplier.id,
+          dryRun: true,
+        }),
+      });
+
+      const result = await response.json();
+
+      if (result.canArchive) {
+        // OK: obrir modal de confirmació
+        setIsAlertOpen(true);
+      } else if (result.code === 'HAS_TRANSACTIONS') {
+        // Té moviments: obrir modal informatiu
+        setCannotArchiveCount(result.transactionCount || 0);
+        setCannotArchiveOpen(true);
+      } else {
+        // Error genèric
+        toast({
+          variant: 'destructive',
+          title: t.common.error,
+          description: result.error || 'Error desconegut',
+        });
+        setSupplierToDelete(null);
+      }
+    } catch (err) {
+      console.error('[SupplierManager] Error checking archive:', err);
+      toast({
+        variant: 'destructive',
+        title: t.common.error,
+        description: t.common.dbConnectionError,
+      });
+      setSupplierToDelete(null);
+    } finally {
+      setIsCheckingArchive(false);
+    }
   };
 
   // ═══════════════════════════════════════════════════════════════════════════
@@ -714,10 +768,20 @@ export function SupplierManager() {
         </AlertDialogContent>
       </AlertDialog>
 
-      <SupplierImporter 
-        open={isImportOpen} 
+      <SupplierImporter
+        open={isImportOpen}
         onOpenChange={setIsImportOpen}
         onImportComplete={handleImportComplete}
+      />
+
+      <CannotArchiveContactDialog
+        open={cannotArchiveOpen}
+        onOpenChange={(open) => {
+          setCannotArchiveOpen(open);
+          if (!open) setSupplierToDelete(null);
+        }}
+        contactName={supplierToDelete?.name || ''}
+        transactionCount={cannotArchiveCount}
       />
     </>
   );

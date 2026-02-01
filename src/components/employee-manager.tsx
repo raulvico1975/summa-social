@@ -63,6 +63,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { cn } from '@/lib/utils';
 import { MOBILE_ACTIONS_BAR, MOBILE_CTA_PRIMARY } from '@/lib/ui/mobile-actions';
+import { CannotArchiveContactDialog } from '@/components/contacts/cannot-archive-contact-dialog';
 
 type EmployeeFormData = Omit<Employee, 'id' | 'createdAt' | 'updatedAt'>;
 
@@ -139,9 +140,62 @@ export function EmployeeManager() {
     setIsDialogOpen(true);
   };
 
-  const handleDeleteRequest = (employee: Employee) => {
+  // Estat per modal informatiu "no es pot arxivar"
+  const [cannotArchiveOpen, setCannotArchiveOpen] = React.useState(false);
+  const [cannotArchiveCount, setCannotArchiveCount] = React.useState(0);
+  const [isCheckingArchive, setIsCheckingArchive] = React.useState(false);
+
+  // Pre-check via API amb dryRun abans d'obrir modal
+  const handleDeleteRequest = async (employee: Employee) => {
+    if (!organizationId || !user) return;
+
     setEmployeeToDelete(employee);
-    setIsAlertOpen(true);
+    setIsCheckingArchive(true);
+
+    try {
+      const idToken = await user.getIdToken();
+      const response = await fetch('/api/contacts/archive', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${idToken}`,
+        },
+        body: JSON.stringify({
+          orgId: organizationId,
+          contactId: employee.id,
+          dryRun: true,
+        }),
+      });
+
+      const result = await response.json();
+
+      if (result.canArchive) {
+        // OK: obrir modal de confirmació
+        setIsAlertOpen(true);
+      } else if (result.code === 'HAS_TRANSACTIONS') {
+        // Té moviments: obrir modal informatiu
+        setCannotArchiveCount(result.transactionCount || 0);
+        setCannotArchiveOpen(true);
+      } else {
+        // Error genèric
+        toast({
+          variant: 'destructive',
+          title: t.common.error,
+          description: result.error || 'Error desconegut',
+        });
+        setEmployeeToDelete(null);
+      }
+    } catch (err) {
+      console.error('[EmployeeManager] Error checking archive:', err);
+      toast({
+        variant: 'destructive',
+        title: t.common.error,
+        description: t.common.dbConnectionError,
+      });
+      setEmployeeToDelete(null);
+    } finally {
+      setIsCheckingArchive(false);
+    }
   };
 
   // ═══════════════════════════════════════════════════════════════════════════
@@ -627,6 +681,16 @@ export function EmployeeManager() {
       <EmployeeImporter
         open={isImportOpen}
         onOpenChange={setIsImportOpen}
+      />
+
+      <CannotArchiveContactDialog
+        open={cannotArchiveOpen}
+        onOpenChange={(open) => {
+          setCannotArchiveOpen(open);
+          if (!open) setEmployeeToDelete(null);
+        }}
+        contactName={employeeToDelete?.name || ''}
+        transactionCount={cannotArchiveCount}
       />
     </>
   );
