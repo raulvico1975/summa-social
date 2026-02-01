@@ -256,14 +256,21 @@ export async function POST(
     }
   }
 
-  // 7. Query real: comptar transaccions amb category == fromCategoryId i archivedAt == null
+  // 7. Query transaccions amb category == fromCategoryId
+  // NOTA: No podem usar where('archivedAt', '==', null) perquè Firestore
+  // no troba documents on el camp no existeix (dades legacy sense archivedAt)
   const transactionsRef = db.collection(`organizations/${orgId}/transactions`);
-  const activeTransactionsQuery = transactionsRef
-    .where('category', '==', fromCategoryId)
-    .where('archivedAt', '==', null);
+  const categoryTransactionsQuery = transactionsRef
+    .where('category', '==', fromCategoryId);
 
-  const activeTransactionsSnap = await activeTransactionsQuery.get();
-  const activeCount = activeTransactionsSnap.size;
+  const categoryTransactionsSnap = await categoryTransactionsQuery.get();
+
+  // Filtrar actives a codi (archivedAt == null o undefined/absent)
+  const activeDocs = categoryTransactionsSnap.docs.filter(doc => {
+    const data = doc.data();
+    return data.archivedAt == null; // Cobreix null i undefined
+  });
+  const activeCount = activeDocs.length;
 
   console.log(`[categories/archive] Categoria ${fromCategoryId} té ${activeCount} transaccions actives`);
 
@@ -282,11 +289,9 @@ export async function POST(
   // 9. Si count > 0 i toCategoryId, fer batch reassign
   let reassignedCount = 0;
   if (activeCount > 0 && toCategoryId) {
-    const docs = activeTransactionsSnap.docs;
-
-    for (let i = 0; i < docs.length; i += BATCH_SIZE) {
+    for (let i = 0; i < activeDocs.length; i += BATCH_SIZE) {
       const batch = db.batch();
-      const chunk = docs.slice(i, i + BATCH_SIZE);
+      const chunk = activeDocs.slice(i, i + BATCH_SIZE);
 
       for (const doc of chunk) {
         batch.update(doc.ref, { category: toCategoryId });
@@ -294,7 +299,7 @@ export async function POST(
 
       await batch.commit();
       reassignedCount += chunk.length;
-      console.log(`[categories/archive] Reassignades ${reassignedCount}/${docs.length} transaccions`);
+      console.log(`[categories/archive] Reassignades ${reassignedCount}/${activeDocs.length} transaccions`);
     }
   }
 

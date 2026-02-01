@@ -38,7 +38,7 @@ import type { Project, Emisor, Transaction } from '@/lib/data';
 import { useToast } from '@/hooks/use-toast';
 import { StatCard } from './stat-card';
 import { useCollection, useFirebase, useMemoFirebase, addDocumentNonBlocking, setDocumentNonBlocking } from '@/firebase';
-import { collection, doc, query, where, getCountFromServer } from 'firebase/firestore';
+import { collection, doc, query, where, getDocs } from 'firebase/firestore';
 import { ReassignModal } from './reassign-modal';
 import { useTranslations } from '@/i18n';
 import { useCurrentOrganization } from '@/hooks/organization-provider';
@@ -137,14 +137,19 @@ export function ProjectManager() {
 
     try {
       // Comptar moviments actius amb aquest projectId
+      // NOTA: No podem usar where('archivedAt', '==', null) perquè Firestore
+      // no troba documents on el camp no existeix (dades legacy sense archivedAt)
       const transactionsRef = collection(firestore, 'organizations', organizationId, 'transactions');
       const q = query(
         transactionsRef,
-        where('projectId', '==', project.id),
-        where('archivedAt', '==', null)
+        where('projectId', '==', project.id)
       );
-      const snapshot = await getCountFromServer(q);
-      const count = snapshot.data().count;
+      const snapshot = await getDocs(q);
+      // Filtrar actives a codi (archivedAt == null o undefined/absent)
+      const count = snapshot.docs.filter(doc => {
+        const data = doc.data();
+        return data.archivedAt == null; // Cobreix null i undefined
+      }).length;
       setAffectedTransactionsCount(count);
 
       if (count > 0) {
