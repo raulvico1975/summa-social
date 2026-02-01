@@ -205,7 +205,14 @@ export const ca = {
     noAlerts: "Tot al dia, bona feina!",
     firstDonationMonth: "Primera donació del mes rebuda!",
     noProjectsAssigned: "Encara no has assignat despeses a cap eix d'actuació",
-    assignProjectsToTransactions: "Assignar eixos als moviments"
+    assignProjectsToTransactions: "Assignar eixos als moviments",
+    // Diagnòstic integritat (v1.35)
+    dataIntegrity: "Integritat de dades",
+    dataIntegrityDescription: "Diagnòstic de la qualitat de les dades de l'organització.",
+    runDiagnostic: "Executar diagnòstic",
+    diagnosticResults: "Resultats del diagnòstic",
+    diagnosticResultsDescription: "Anàlisi de les dades del període seleccionat.",
+    runDiagnosticFirst: "Executa el diagnòstic per veure els resultats.",
   },
   movements: {
     title: "Moviments",
@@ -1040,6 +1047,23 @@ export const ca = {
     projectDeleted: "Eix d'actuació Eliminat",
     projectDeletedDescription: (name: string) => `L'eix d'actuació "${name}" ha estat eliminat.`,
     errorNameEmpty: "El nom de l'eix d'actuació no pot estar buit.",
+
+    // ═══════════════════════════════════════════════════════════════════════════
+    // ARXIVAT D'EIXOS (v1.35)
+    // ═══════════════════════════════════════════════════════════════════════════
+    axis: "eix",
+    archiveProjectTitle: "Arxivar eix",
+    archiveProjectDescription: "Aquest eix no té moviments actius. Es pot arxivar directament.",
+    archiveProjectConfirm: "Arxivar",
+    projectArchivedToast: "Eix arxivat",
+    projectArchivedToastDescription: (name: string) => `L'eix "${name}" ha estat arxivat.`,
+    archiveError: "Error en arxivar",
+    // Reassignació
+    reassignTitle: "Reassignar moviments",
+    reassignDescription: "Aquest eix té moviments associats. Has de reassignar-los abans d'arxivar.",
+    reassignTarget: "Eix destí",
+    reassignSelectPlaceholder: "Selecciona un eix...",
+    noAvailableTargets: "No hi ha eixos disponibles",
   },
   donors: {
     title: "Donants",
@@ -1598,6 +1622,26 @@ export const ca = {
     categoryCreatedToast: "Categoria Creada",
     categoryCreatedToastDescription: (name: string) => `La categoria "${name}" ha estat creada.`,
     errorNameEmpty: "El nom de la categoria no pot estar buit.",
+
+    // ═══════════════════════════════════════════════════════════════════════════
+    // ARXIVAT DE CATEGORIES (v1.35)
+    // ═══════════════════════════════════════════════════════════════════════════
+    category: "categoria",
+    archiveCategoryTitle: "Arxivar categoria",
+    archiveCategoryDescription: "Aquesta categoria no té moviments actius. Es pot arxivar directament.",
+    archiveCategoryConfirm: "Arxivar",
+    categoryArchivedToast: "Categoria arxivada",
+    categoryArchivedToastDescription: (name: string) => `La categoria "${name}" ha estat arxivada.`,
+    archiveError: "Error en arxivar",
+    // Reassignació
+    reassignTitle: "Reassignar moviments",
+    reassignDescription: "Aquesta categoria té moviments associats. Has de reassignar-los abans d'arxivar.",
+    reassignTarget: "Categoria destí",
+    reassignSelectPlaceholder: "Selecciona una categoria...",
+    reassignConfirmDescription: "Confirma que vols moure els moviments.",
+    reassignConfirmButton: (count: number) => `Reassignar ${count} moviments`,
+    noAvailableTargets: "No hi ha categories disponibles",
+    invalidTargetCategory: "La categoria destí no és vàlida.",
     password: {
       title: "Canviar Contrasenya",
       description: "Actualitza la teva contrasenya d'accés.",
@@ -1946,6 +1990,11 @@ export const ca = {
       unknownError: "Error desconegut",
       archive: "Arxivar",
       restore: "Restaurar",
+      // Reassignació (v1.35)
+      from: "De",
+      to: "A",
+      movements: "Moviments",
+      movementsWillBeMoved: "moviments seran moguts",
       // Tipus de contacte (per badges i labels)
       supplier: "Proveïdor",
       donor: "Donant",

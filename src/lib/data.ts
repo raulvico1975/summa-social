@@ -226,12 +226,36 @@ export type Category = {
   name: string;
   type: 'income' | 'expense';
   order?: number;  // Ordre de visualització (opcional)
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // CAMPS D'ARXIVAT (soft-delete) — v1.35
+  // Només escriptura via API /api/categories/archive (Admin SDK)
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  /** Timestamp quan arxivada (null = activa) */
+  archivedAt?: FirebaseFirestore.Timestamp | null;
+  /** UID de l'usuari que va arxivar */
+  archivedByUid?: string | null;
+  /** Traça de l'acció que va provocar l'arxivat */
+  archivedFromAction?: 'archive-category-api' | null;
 };
 
 export type Project = {
   id: string;
   name: string;
   funderId: string | null;
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // CAMPS D'ARXIVAT (soft-delete) — v1.35
+  // Només escriptura via API /api/projects/archive (Admin SDK)
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  /** Timestamp quan arxivat (null = actiu) */
+  archivedAt?: FirebaseFirestore.Timestamp | null;
+  /** UID de l'usuari que va arxivar */
+  archivedByUid?: string | null;
+  /** Traça de l'acció que va provocar l'arxivat */
+  archivedFromAction?: 'archive-project-api' | null;
 };
 
 // ═══════════════════════════════════════════════════════════════════════════════
