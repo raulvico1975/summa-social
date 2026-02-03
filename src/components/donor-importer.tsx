@@ -702,7 +702,7 @@ const executeImport = async () => {
             }
             if (row.parsed.memberSince) updateData.memberSince = row.parsed.memberSince;
 
-            batch.update(existingDocRef, updateData);
+            batch.set(existingDocRef, updateData, { merge: true });
             updated++;
           }
         } else {
