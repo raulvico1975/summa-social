@@ -44,7 +44,7 @@ import {
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import type { Donor, Category } from '@/lib/data';
-import { collection, query, where, getDocs, getDoc, writeBatch, doc, limit } from 'firebase/firestore';
+import { collection, query, where, getDocs, writeBatch, doc, limit } from 'firebase/firestore';
 import { useFirebase, useCollection, useMemoFirebase } from '@/firebase';
 import { useCurrentOrganization } from '@/hooks/organization-provider';
 import { useTranslations } from '@/i18n';
@@ -668,7 +668,37 @@ export function DonorImporter({
     setStep('preview');
   };
 
-const executeImport = async () => {
+  const commitUpdatesViaAdmin = React.useCallback(async (
+    orgId: string,
+    updates: Array<{ docId: string; data: Record<string, any> }>
+  ) => {
+    const idToken = await auth.currentUser?.getIdToken();
+    if (!idToken) {
+      throw new Error('No autenticat');
+    }
+
+    const response = await fetch('/api/contacts/import', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${idToken}`,
+      },
+      body: JSON.stringify({ orgId, updates }),
+    });
+
+    if (!response.ok) {
+      let errorMessage = 'Import fallat';
+      try {
+        const payload = await response.json();
+        if (payload?.error) errorMessage = payload.error;
+      } catch {
+        // ignore
+      }
+      throw new Error(errorMessage);
+    }
+  }, [auth]);
+
+  const executeImport = async () => {
   if (!organizationId || !firestore) return;
 
   setStep('importing');
@@ -688,13 +718,10 @@ const executeImport = async () => {
   const batches = Math.ceil(totalRows.length / batchSize);
 
   try {
-    const has = (o: any, k: string) => Object.prototype.hasOwnProperty.call(o, k);
-
     for (let i = 0; i < batches; i++) {
       const batchCreates = writeBatch(firestore);
-      const batchUpdates = writeBatch(firestore);
       let batchHasCreates = false;
-      let batchHasUpdates = false;
+      const updatesPayload: Array<{ docId: string; data: Record<string, any> }> = [];
       const start = i * batchSize;
       const end = Math.min(start + batchSize, totalRows.length);
 
@@ -707,8 +734,6 @@ const executeImport = async () => {
           const existingInfo = existingDonorIds.get(row.parsed.taxId);
           if (existingInfo) {
             const existingDocRef = doc(contactsRef, existingInfo.docId);
-            const existingSnap = await getDoc(existingDocRef);
-            const existingData = existingSnap.exists() ? existingSnap.data() : null;
 
             // Només actualitzar camps que tenen valor al CSV (no sobreescriure amb buits)
             const updateData: Record<string, any> = {
@@ -737,31 +762,7 @@ const executeImport = async () => {
             const prunedUpdate = pruneNullish(updateData);
             const safeUpdate = stripArchiveFields(prunedUpdate);
 
-            // Preservar camps d'arxivat EXACTES del doc actual
-            // (Firestore Rules exigeix que no canviïn)
-            if (existingData && Object.prototype.hasOwnProperty.call(existingData, 'archivedAt')) {
-              (safeUpdate as any).archivedAt = (existingData as any).archivedAt;
-            }
-            if (existingData && Object.prototype.hasOwnProperty.call(existingData, 'archivedByUid')) {
-              (safeUpdate as any).archivedByUid = (existingData as any).archivedByUid;
-            }
-            if (existingData && Object.prototype.hasOwnProperty.call(existingData, 'archivedFromAction')) {
-              (safeUpdate as any).archivedFromAction = (existingData as any).archivedFromAction;
-            }
-
-            // Log determinista: primer update del batch
-            if (updated === 0) {
-              console.log('[DonorImporter] update payload archive fields', {
-                docId: existingDocRef.id,
-                has_archivedAt: has(safeUpdate, 'archivedAt'),
-                has_archivedByUid: has(safeUpdate, 'archivedByUid'),
-                has_archivedFromAction: has(safeUpdate, 'archivedFromAction'),
-                allKeys: Object.keys(safeUpdate),
-              });
-            }
-
-            batchUpdates.set(existingDocRef, safeUpdate, { merge: true });
-            batchHasUpdates = true;
+            updatesPayload.push({ docId: existingDocRef.id, data: safeUpdate });
             updated++;
           }
         } else {
@@ -828,35 +829,12 @@ const executeImport = async () => {
         }
       }
 
-      // Diagnòstic temporal: verificar rol efectiu abans del commit
-      if (i === 0 && auth.currentUser?.uid && organizationId) {
-        try {
-          const memberRef = doc(firestore, 'organizations', organizationId, 'members', auth.currentUser.uid);
-          const memberSnap = await getDoc(memberRef);
-          console.log('[DonorImporter] member diagnostic', {
-            uid: auth.currentUser.uid,
-            organizationId,
-            memberExists: memberSnap.exists(),
-            memberRole: memberSnap.exists() ? (memberSnap.data() as any)?.role : 'N/A',
-          });
-        } catch (diagErr) {
-          console.error('[DonorImporter] member read failed', {
-            uid: auth.currentUser?.uid,
-            organizationId,
-            message: (diagErr as any)?.message,
-            code: (diagErr as any)?.code,
-          });
-        }
-      }
-
       // Commit separat: creates primer, updates després
       if (batchHasCreates) {
-        console.log('[DonorImporter] committing creates batch', i);
         await batchCreates.commit();
       }
-      if (batchHasUpdates) {
-        console.log('[DonorImporter] committing updates batch', i);
-        await batchUpdates.commit();
+      if (updatesPayload.length > 0) {
+        await commitUpdatesViaAdmin(organizationId, updatesPayload);
       }
       setImportProgress(Math.round(((imported + updated) / totalRows.length) * 100));
     }
@@ -871,12 +849,7 @@ const executeImport = async () => {
       description: t.importers.donor.importSuccessDescription(imported + updated),
     });
   } catch (error: any) {
-    console.error('[DonorImporter] commit failed', {
-      code: (error as any)?.code,
-      message: (error as any)?.message,
-      uid: auth.currentUser?.uid,
-      organizationId,
-    });
+    console.error('[DonorImporter] import failed:', error?.message);
     toast({
       variant: 'destructive',
       title: 'Error',
