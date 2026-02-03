@@ -74,6 +74,7 @@ type ColumnMapping = {
   phone: string | null;
   defaultCategory: string | null;
   status: string | null;
+  memberSince: string | null;
 };
 
 type ImportRow = {
@@ -107,6 +108,7 @@ const emptyMapping: ColumnMapping = {
   phone: null,
   defaultCategory: null,
   status: null,
+  memberSince: null,
 };
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -157,6 +159,7 @@ function autoDetectColumn(header: string): keyof ColumnMapping | null {
     phone: ['telefon', 'telefono', 'phone', 'mobil', 'movil'],
     defaultCategory: ['categoria', 'category', 'categoría'],
     status: ['estado', 'estat', 'status', 'activo', 'actiu', 'baja', 'baixa'],
+    memberSince: ['membersince', 'dataalta', 'fechaalta', 'dateadhesion', 'socides', 'sociodesde', 'dataadesao'],
   };
 
   for (const [field, keywords] of Object.entries(patterns)) {
@@ -211,6 +214,46 @@ function cleanIban(value: any): string {
   return String(value).toUpperCase().replace(/\s/g, '');
 }
 
+function parseDateToISO(value: unknown): string | null {
+  if (!value) return null;
+
+  const str = String(value).trim();
+  if (!str) return null;
+
+  // Excel serial date (número)
+  if (typeof value === 'number') {
+    const excelEpoch = new Date(1899, 11, 30);
+    const date = new Date(excelEpoch.getTime() + value * 86400000);
+    if (!isNaN(date.getTime())) {
+      const year = date.getFullYear();
+      const month = (date.getMonth() + 1).toString().padStart(2, '0');
+      const day = date.getDate().toString().padStart(2, '0');
+      return `${year}-${month}-${day}`;
+    }
+    return null;
+  }
+
+  // Format DD/MM/YYYY o DD-MM-YYYY o DD.MM.YYYY
+  const euMatch = str.match(/^(\d{1,2})[\/\-.](\d{1,2})[\/\-.](\d{4})$/);
+  if (euMatch) {
+    const day = euMatch[1].padStart(2, '0');
+    const month = euMatch[2].padStart(2, '0');
+    const year = euMatch[3];
+    return `${year}-${month}-${day}`;
+  }
+
+  // Format YYYY-MM-DD
+  const isoMatch = str.match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/);
+  if (isoMatch) {
+    const year = isoMatch[1];
+    const month = isoMatch[2].padStart(2, '0');
+    const day = isoMatch[3].padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  }
+
+  return null;
+}
+
 // ═══════════════════════════════════════════════════════════════════════════════
 // COMPONENT PRINCIPAL
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -248,6 +291,7 @@ export function DonorImporter({
     phone: t.importers.donor.fields.phone,
     defaultCategory: t.importers.donor.fields.defaultCategory,
     status: t.importers.donor.fields.status,
+    memberSince: t.importers.donor.fields.memberSince,
   };
 
   // Carregar categories d'ingrés
@@ -462,6 +506,18 @@ export function DonorImporter({
         status: currentMapping.status ? parseStatus(row[currentMapping.status]) : 'active',
       };
 
+      // Parsejar memberSince si la columna està mapejada
+      const memberSinceRaw = currentMapping.memberSince ? row[currentMapping.memberSince] : undefined;
+      if (memberSinceRaw && String(memberSinceRaw).trim()) {
+        const memberSinceISO = parseDateToISO(memberSinceRaw);
+        if (memberSinceISO) {
+          parsed.memberSince = memberSinceISO;
+        } else {
+          // Marcar com invàlid més avall
+          parsed.memberSince = '__invalid__' as any;
+        }
+      }
+
       let status: ImportRow['status'] = 'new';
       let error: string | undefined;
 
@@ -474,6 +530,10 @@ export function DonorImporter({
       } else if (!parsed.zipCode) {
         status = 'invalid';
         error = t.importers.donor.errors.missingZipCode;
+      } else if (parsed.memberSince === '__invalid__') {
+        status = 'invalid';
+        error = t.importers.donor.errors.memberSinceInvalid;
+        parsed.memberSince = undefined;
       } else if (existingDonorIds.has(parsed.taxId)) {
         if (updateExisting) {
           status = 'update';
@@ -526,6 +586,17 @@ export function DonorImporter({
         status: mapping.status ? parseStatus(row[mapping.status]) : 'active',
       };
 
+      // Parsejar memberSince si la columna està mapejada
+      const memberSinceRaw = mapping.memberSince ? row[mapping.memberSince] : undefined;
+      if (memberSinceRaw && String(memberSinceRaw).trim()) {
+        const memberSinceISO = parseDateToISO(memberSinceRaw);
+        if (memberSinceISO) {
+          parsed.memberSince = memberSinceISO;
+        } else {
+          parsed.memberSince = '__invalid__' as any;
+        }
+      }
+
       let status: ImportRow['status'] = 'new';
       let error: string | undefined;
 
@@ -538,6 +609,10 @@ export function DonorImporter({
       } else if (!parsed.zipCode) {
         status = 'invalid';
         error = t.importers.donor.errors.missingZipCode;
+      } else if (parsed.memberSince === '__invalid__') {
+        status = 'invalid';
+        error = t.importers.donor.errors.memberSinceInvalid;
+        parsed.memberSince = undefined;
       } else if (existingDonorIds.has(parsed.taxId)) {
         // Si existeix, decidir si actualitzar o marcar com duplicat
         if (updateExisting) {
@@ -625,6 +700,7 @@ const executeImport = async () => {
                 updateData.inactiveSince = now;
               }
             }
+            if (row.parsed.memberSince) updateData.memberSince = row.parsed.memberSince;
 
             batch.update(existingDocRef, updateData);
             updated++;
@@ -660,6 +736,7 @@ const executeImport = async () => {
               cleanData.inactiveSince = now;
             }
           }
+          if (row.parsed.memberSince) cleanData.memberSince = row.parsed.memberSince;
 
           // Determinar defaultCategoryId
           let defaultCategoryId: string | null = null;
@@ -792,6 +869,8 @@ const executeImport = async () => {
               <div className="pt-2 border-t border-muted space-y-1 text-muted-foreground">
                 <p>💡 {t.importers.donor.modalityTip}</p>
                 <p>📁 {t.importers.donor.categoryTip}</p>
+                <p>📅 {t.importers.donor.memberSinceTip}</p>
+                <p>📝 {t.importers.donor.updateFlowTip}</p>
               </div>
             </div>
           </div>

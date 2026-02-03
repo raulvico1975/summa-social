@@ -16,6 +16,20 @@ function formatAmount(amount: number | undefined | null): string {
   return amount.toString();
 }
 
+function formatDateEU(dateString?: string): string {
+  if (!dateString) return '';
+  try {
+    const date = new Date(dateString);
+    if (isNaN(date.getTime())) return '';
+    const day = date.getDate().toString().padStart(2, '0');
+    const month = (date.getMonth() + 1).toString().padStart(2, '0');
+    const year = date.getFullYear();
+    return `${day}/${month}/${year}`;
+  } catch {
+    return '';
+  }
+}
+
 function getStatusLabel(donor: Donor): string {
   if (donor.status === 'inactive') {
     return 'Baixa';
@@ -81,6 +95,7 @@ export function exportDonorsToExcel(
       donor.email || '',                            // Email
       donor.iban ? formatIBANDisplay(donor.iban) : '', // IBAN
       formatAmount(donor.monthlyAmount),            // Quota mensual
+      formatDateEU(donor.memberSince),               // Data d'alta
     ];
   });
 
@@ -108,6 +123,7 @@ export function exportDonorsToExcel(
     { wch: 25 },  // Email
     { wch: 28 },  // IBAN
     { wch: 14 },  // Quota mensual
+    { wch: 14 },  // Data d'alta
   ];
 
   // Crear workbook
