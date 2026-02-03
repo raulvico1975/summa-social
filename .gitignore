@@ -51,3 +51,6 @@ firestore-debug.log
 
 # audit outputs (scripts)
 /tmp/
+
+# temporary migration scripts
+scripts/migrate-legacy-category.ts
