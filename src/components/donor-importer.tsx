@@ -677,8 +677,13 @@ const executeImport = async () => {
   const batches = Math.ceil(totalRows.length / batchSize);
 
   try {
+    const has = (o: any, k: string) => Object.prototype.hasOwnProperty.call(o, k);
+
     for (let i = 0; i < batches; i++) {
-      const batch = writeBatch(firestore);
+      const batchCreates = writeBatch(firestore);
+      const batchUpdates = writeBatch(firestore);
+      let batchHasCreates = false;
+      let batchHasUpdates = false;
       const start = i * batchSize;
       const end = Math.min(start + batchSize, totalRows.length);
 
@@ -718,7 +723,26 @@ const executeImport = async () => {
 
             const prunedUpdate = pruneNullish(updateData);
             const safeUpdate = stripArchiveFields(prunedUpdate);
-            batch.set(existingDocRef, safeUpdate, { merge: true });
+
+            // Log determinista: primer update del batch
+            if (updated === 0) {
+              console.log('[DonorImporter] update payload archive fields', {
+                docId: existingDocRef.id,
+                has_archivedAt: has(safeUpdate, 'archivedAt'),
+                has_archivedByUid: has(safeUpdate, 'archivedByUid'),
+                has_archivedFromAction: has(safeUpdate, 'archivedFromAction'),
+                archivedAt: (safeUpdate as any).archivedAt,
+                archivedByUid: (safeUpdate as any).archivedByUid,
+                archivedFromAction: (safeUpdate as any).archivedFromAction,
+                type_archivedAt: typeof (safeUpdate as any).archivedAt,
+                type_archivedByUid: typeof (safeUpdate as any).archivedByUid,
+                type_archivedFromAction: typeof (safeUpdate as any).archivedFromAction,
+                allKeys: Object.keys(safeUpdate),
+              });
+            }
+
+            batchUpdates.set(existingDocRef, safeUpdate, { merge: true });
+            batchHasUpdates = true;
             updated++;
           }
         } else {
@@ -779,7 +803,8 @@ const executeImport = async () => {
 
           const prunedCreate = pruneNullish(cleanData);
           const safeCreate = stripArchiveFields(prunedCreate);
-          batch.set(newDocRef, safeCreate);
+          batchCreates.set(newDocRef, safeCreate);
+          batchHasCreates = true;
           imported++;
         }
       }
@@ -805,7 +830,15 @@ const executeImport = async () => {
         }
       }
 
-      await batch.commit();
+      // Commit separat: creates primer, updates després
+      if (batchHasCreates) {
+        console.log('[DonorImporter] committing creates batch', i);
+        await batchCreates.commit();
+      }
+      if (batchHasUpdates) {
+        console.log('[DonorImporter] committing updates batch', i);
+        await batchUpdates.commit();
+      }
       setImportProgress(Math.round(((imported + updated) / totalRows.length) * 100));
     }
 
