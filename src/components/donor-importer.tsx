@@ -263,6 +263,11 @@ function pruneNullish<T extends Record<string, any>>(obj: T): Partial<T> {
   return out as Partial<T>;
 }
 
+function stripArchiveFields<T extends Record<string, any>>(obj: T): T {
+  const { archivedAt, archivedByUid, archivedFromAction, ...rest } = obj;
+  return rest as T;
+}
+
 // ═══════════════════════════════════════════════════════════════════════════════
 // COMPONENT PRINCIPAL
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -712,7 +717,8 @@ const executeImport = async () => {
             if (row.parsed.memberSince) updateData.memberSince = row.parsed.memberSince;
 
             const prunedUpdate = pruneNullish(updateData);
-            batch.set(existingDocRef, prunedUpdate, { merge: true });
+            const safeUpdate = stripArchiveFields(prunedUpdate);
+            batch.set(existingDocRef, safeUpdate, { merge: true });
             updated++;
           }
         } else {
@@ -772,7 +778,8 @@ const executeImport = async () => {
           }
 
           const prunedCreate = pruneNullish(cleanData);
-          batch.set(newDocRef, prunedCreate);
+          const safeCreate = stripArchiveFields(prunedCreate);
+          batch.set(newDocRef, safeCreate);
           imported++;
         }
       }
