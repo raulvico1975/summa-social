@@ -58,9 +58,10 @@ import type { DateFilterValue } from '@/components/date-filter';
 import { useTransactionFilters } from '@/hooks/use-transaction-filters';
 import { useToast } from '@/hooks/use-toast';
 import { Badge } from '@/components/ui/badge';
-import { useCollection, useFirebase, useMemoFirebase, addDocumentNonBlocking, archiveDocumentNonBlocking, setDocumentNonBlocking } from '@/firebase';
+import { useCollection, useFirebase, useMemoFirebase, addDocumentNonBlocking } from '@/firebase';
+import { updateContactViaApi } from '@/services/contacts';
 import { findExistingContact } from '@/lib/contact-matching';
-import { collection, doc, query, where, getDocs, orderBy, limit } from 'firebase/firestore';
+import { collection, query, where, getDocs, orderBy, limit } from 'firebase/firestore';
 import { useCurrentOrganization } from '@/hooks/organization-provider';
 import { DonorImporter } from './donor-importer';
 import { DonorDetailDrawer } from './donor-detail-drawer';
@@ -197,7 +198,7 @@ function DynamicsBlock({
 const DONORS_PAGE_SIZE = 500;
 
 export function DonorManager() {
-  const { firestore, user } = useFirebase();
+  const { firestore, auth, user } = useFirebase();
   const { organizationId, orgSlug } = useCurrentOrganization();
   const { toast } = useToast();
   const { t, tr, language } = useTranslations();
@@ -696,7 +697,7 @@ export function DonorManager() {
     setFormData(prev => ({ ...prev, [field]: value }));
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!formData.name.trim()) {
       toast({
         variant: 'destructive',
@@ -758,11 +759,21 @@ export function DonorManager() {
     };
 
     if (editingDonor) {
-      setDocumentNonBlocking(doc(contactsCollection, editingDonor.id), dataToSave, { merge: true });
-      toast({
-        title: t.donors.donorUpdated,
-        description: t.donors.donorUpdatedDescription(normalized.name)
-      });
+      try {
+        await updateContactViaApi({
+          orgId: organizationId!,
+          docId: editingDonor.id,
+          data: dataToSave,
+          auth,
+        });
+        toast({
+          title: t.donors.donorUpdated,
+          description: t.donors.donorUpdatedDescription(normalized.name)
+        });
+      } catch (err: any) {
+        toast({ variant: 'destructive', title: 'Error', description: err?.message || 'No s\'ha pogut desar' });
+        return;
+      }
     } else {
       // Validar si ja existeix un contacte amb el mateix NIF/IBAN/email
       const existingMatch = findExistingContact(
@@ -801,20 +812,24 @@ export function DonorManager() {
     setIsDetailOpen(true);
   };
 
-  const handleReactivate = (donor: Donor) => {
-    if (!contactsCollection) return;
+  const handleReactivate = async (donor: Donor) => {
+    if (!organizationId) return;
 
     const now = new Date().toISOString();
-    setDocumentNonBlocking(doc(contactsCollection, donor.id), {
-      status: 'active',
-      inactiveSince: null,
-      updatedAt: now,
-    }, { merge: true });
-
-    toast({
-      title: t.donors.donorReactivated,
-      description: t.donors.donorReactivatedDescription(donor.name),
-    });
+    try {
+      await updateContactViaApi({
+        orgId: organizationId,
+        docId: donor.id,
+        data: { status: 'active', inactiveSince: null, updatedAt: now },
+        auth,
+      });
+      toast({
+        title: t.donors.donorReactivated,
+        description: t.donors.donorReactivatedDescription(donor.name),
+      });
+    } catch (err: any) {
+      toast({ variant: 'destructive', title: 'Error', description: err?.message || 'No s\'ha pogut reactivar' });
+    }
   };
 
   const handleEditFromDrawer = (donor: Donor) => {
