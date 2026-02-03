@@ -333,8 +333,14 @@ export function DonorImporter({
   const [importProgress, setImportProgress] = React.useState(0);
   const [importedCount, setImportedCount] = React.useState(0);
   const [updatedCount, setUpdatedCount] = React.useState(0);
-  // Map de taxId -> docId per poder fer updates
-  const [existingDonorIds, setExistingDonorIds] = React.useState<Map<string, string>>(new Map());
+  // Map de taxId -> info del doc existent (docId + camps d'arxiu)
+  type ExistingDonorInfo = {
+    docId: string;
+    archivedAt?: any;
+    archivedByUid?: string;
+    archivedFromAction?: string;
+  };
+  const [existingDonorIds, setExistingDonorIds] = React.useState<Map<string, ExistingDonorInfo>>(new Map());
   // Checkbox per actualitzar existents
   const [updateExisting, setUpdateExisting] = React.useState(false);
   // Detectar si el fitxer és la plantilla oficial
@@ -431,11 +437,16 @@ export function DonorImporter({
       // Limitar a 5000 per rendiment - suficient per detectar duplicats
       const q = query(contactsRef, where('type', '==', 'donor'), limit(5000));
       const snapshot = await getDocs(q);
-      const ids = new Map<string, string>();
+      const ids = new Map<string, ExistingDonorInfo>();
       snapshot.forEach(docSnap => {
         const data = docSnap.data();
         if (data.taxId) {
-          ids.set(cleanTaxId(data.taxId), docSnap.id);
+          ids.set(cleanTaxId(data.taxId), {
+            docId: docSnap.id,
+            archivedAt: data.archivedAt,
+            archivedByUid: data.archivedByUid,
+            archivedFromAction: data.archivedFromAction,
+          });
         }
       });
       setExistingDonorIds(ids);
@@ -693,9 +704,9 @@ const executeImport = async () => {
 
         if (isUpdate && row.parsed.taxId) {
           // ACTUALITZAR donant existent
-          const existingDocId = existingDonorIds.get(row.parsed.taxId);
-          if (existingDocId) {
-            const existingDocRef = doc(contactsRef, existingDocId);
+          const existingInfo = existingDonorIds.get(row.parsed.taxId);
+          if (existingInfo) {
+            const existingDocRef = doc(contactsRef, existingInfo.docId);
 
             // Només actualitzar camps que tenen valor al CSV (no sobreescriure amb buits)
             const updateData: Record<string, any> = {
@@ -724,6 +735,12 @@ const executeImport = async () => {
             const prunedUpdate = pruneNullish(updateData);
             const safeUpdate = stripArchiveFields(prunedUpdate);
 
+            // Preservar camps d'arxivat NOMÉS si ja existeixen al document
+            // (batch.set merge: Firestore rules compara request.resource.data vs resource.data)
+            if (existingInfo.archivedAt !== undefined) (safeUpdate as any).archivedAt = existingInfo.archivedAt;
+            if (existingInfo.archivedByUid !== undefined) (safeUpdate as any).archivedByUid = existingInfo.archivedByUid;
+            if (existingInfo.archivedFromAction !== undefined) (safeUpdate as any).archivedFromAction = existingInfo.archivedFromAction;
+
             // Log determinista: primer update del batch
             if (updated === 0) {
               console.log('[DonorImporter] update payload archive fields', {
@@ -731,12 +748,6 @@ const executeImport = async () => {
                 has_archivedAt: has(safeUpdate, 'archivedAt'),
                 has_archivedByUid: has(safeUpdate, 'archivedByUid'),
                 has_archivedFromAction: has(safeUpdate, 'archivedFromAction'),
-                archivedAt: (safeUpdate as any).archivedAt,
-                archivedByUid: (safeUpdate as any).archivedByUid,
-                archivedFromAction: (safeUpdate as any).archivedFromAction,
-                type_archivedAt: typeof (safeUpdate as any).archivedAt,
-                type_archivedByUid: typeof (safeUpdate as any).archivedByUid,
-                type_archivedFromAction: typeof (safeUpdate as any).archivedFromAction,
                 allKeys: Object.keys(safeUpdate),
               });
             }
