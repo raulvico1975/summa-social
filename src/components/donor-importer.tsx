@@ -707,6 +707,8 @@ const executeImport = async () => {
           const existingInfo = existingDonorIds.get(row.parsed.taxId);
           if (existingInfo) {
             const existingDocRef = doc(contactsRef, existingInfo.docId);
+            const existingSnap = await getDoc(existingDocRef);
+            const existingData = existingSnap.exists() ? existingSnap.data() : null;
 
             // Només actualitzar camps que tenen valor al CSV (no sobreescriure amb buits)
             const updateData: Record<string, any> = {
@@ -735,11 +737,17 @@ const executeImport = async () => {
             const prunedUpdate = pruneNullish(updateData);
             const safeUpdate = stripArchiveFields(prunedUpdate);
 
-            // Preservar camps d'arxivat NOMÉS si ja existeixen al document
-            // (batch.set merge: Firestore rules compara request.resource.data vs resource.data)
-            if (existingInfo.archivedAt !== undefined) (safeUpdate as any).archivedAt = existingInfo.archivedAt;
-            if (existingInfo.archivedByUid !== undefined) (safeUpdate as any).archivedByUid = existingInfo.archivedByUid;
-            if (existingInfo.archivedFromAction !== undefined) (safeUpdate as any).archivedFromAction = existingInfo.archivedFromAction;
+            // Preservar camps d'arxivat EXACTES del doc actual
+            // (Firestore Rules exigeix que no canviïn)
+            if (existingData && Object.prototype.hasOwnProperty.call(existingData, 'archivedAt')) {
+              (safeUpdate as any).archivedAt = (existingData as any).archivedAt;
+            }
+            if (existingData && Object.prototype.hasOwnProperty.call(existingData, 'archivedByUid')) {
+              (safeUpdate as any).archivedByUid = (existingData as any).archivedByUid;
+            }
+            if (existingData && Object.prototype.hasOwnProperty.call(existingData, 'archivedFromAction')) {
+              (safeUpdate as any).archivedFromAction = (existingData as any).archivedFromAction;
+            }
 
             // Log determinista: primer update del batch
             if (updated === 0) {
