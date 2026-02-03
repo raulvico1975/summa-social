@@ -254,6 +254,15 @@ function parseDateToISO(value: unknown): string | null {
   return null;
 }
 
+function pruneNullish<T extends Record<string, any>>(obj: T): Partial<T> {
+  const out: Record<string, any> = {};
+  for (const [k, v] of Object.entries(obj)) {
+    if (v === null || v === undefined) continue;
+    out[k] = v;
+  }
+  return out as Partial<T>;
+}
+
 // ═══════════════════════════════════════════════════════════════════════════════
 // COMPONENT PRINCIPAL
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -702,7 +711,8 @@ const executeImport = async () => {
             }
             if (row.parsed.memberSince) updateData.memberSince = row.parsed.memberSince;
 
-            batch.set(existingDocRef, updateData, { merge: true });
+            const prunedUpdate = pruneNullish(updateData);
+            batch.set(existingDocRef, prunedUpdate, { merge: true });
             updated++;
           }
         } else {
@@ -761,7 +771,8 @@ const executeImport = async () => {
             cleanData.defaultCategoryId = defaultCategoryId;
           }
 
-          batch.set(newDocRef, cleanData);
+          const prunedCreate = pruneNullish(cleanData);
+          batch.set(newDocRef, prunedCreate);
           imported++;
         }
       }
