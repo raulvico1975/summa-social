@@ -3440,10 +3440,6 @@ export const ca = {
       noEligible: "No hi ha socis elegibles per aquesta remesa.",
       reasons: {
         noIban: "Sense IBAN",
-        noMandate: "Sense mandat SEPA",
-        mandateInactive: "Mandat inactiu",
-        noUmr: "Sense referència de mandat",
-        noSignatureDate: "Sense data de signatura",
         donorInactive: "Soci inactiu",
       },
     },

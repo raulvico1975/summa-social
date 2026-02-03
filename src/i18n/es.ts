@@ -3435,10 +3435,6 @@ export const es = {
       noEligible: "No hay socios elegibles para esta remesa.",
       reasons: {
         noIban: "Sin IBAN",
-        noMandate: "Sin mandato SEPA",
-        mandateInactive: "Mandato inactivo",
-        noUmr: "Sin referencia de mandato",
-        noSignatureDate: "Sin fecha de firma",
         donorInactive: "Socio inactivo",
       },
     },

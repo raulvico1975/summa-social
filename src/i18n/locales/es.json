@@ -3551,5 +3551,8 @@
   "sepaPain008.selection.orientativeNote": "Orientativo. No selecciona automáticamente.",
   "sepaPain008.selection.invalidIban": "IBAN inválido",
   "sepaPain008.selection.invalidAmount": "Importe inválido",
-  "sepaPain008.review.preBankWarning": "Esto genera un fichero SEPA (PRE-banco). No crea ingresos ni movimientos contables en Summa."
+  "sepaPain008.review.preBankWarning": "Esto genera un fichero SEPA (PRE-banco). No crea ingresos ni movimientos contables en Summa.",
+  "sepaCollection.selection.reasons.notRecurring": "No es recurrente",
+  "sepaCollection.selection.reasons.noTaxId": "Sin NIF",
+  "sepaCollection.selection.reasons.noMemberSince": "Sin fecha de alta"
 }

@@ -3443,10 +3443,6 @@ export const fr = {
       noEligible: "Aucun adhérent éligible pour ce prélèvement.",
       reasons: {
         noIban: "Sans IBAN",
-        noMandate: "Sans mandat SEPA",
-        mandateInactive: "Mandat inactif",
-        noUmr: "Sans référence de mandat",
-        noSignatureDate: "Sans date de signature",
         donorInactive: "Adhérent inactif",
       },
     },
