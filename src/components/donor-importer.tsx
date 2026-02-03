@@ -44,7 +44,7 @@ import {
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import type { Donor, Category } from '@/lib/data';
-import { collection, query, where, getDocs, writeBatch, doc, limit } from 'firebase/firestore';
+import { collection, query, where, getDocs, getDoc, writeBatch, doc, limit } from 'firebase/firestore';
 import { useFirebase, useCollection, useMemoFirebase } from '@/firebase';
 import { useCurrentOrganization } from '@/hooks/organization-provider';
 import { useTranslations } from '@/i18n';
@@ -271,7 +271,7 @@ export function DonorImporter({
   onImportComplete,
   existingTaxIds = []
 }: DonorImporterProps) {
-  const { firestore } = useFirebase();
+  const { firestore, auth } = useFirebase();
   const { organizationId } = useCurrentOrganization();
   const { toast } = useToast();
   const { t } = useTranslations();
@@ -766,6 +766,27 @@ const executeImport = async () => {
         }
       }
 
+      // Diagnòstic temporal: verificar rol efectiu abans del commit
+      if (i === 0 && auth.currentUser?.uid && organizationId) {
+        try {
+          const memberRef = doc(firestore, 'organizations', organizationId, 'members', auth.currentUser.uid);
+          const memberSnap = await getDoc(memberRef);
+          console.log('[DonorImporter] member diagnostic', {
+            uid: auth.currentUser.uid,
+            organizationId,
+            memberExists: memberSnap.exists(),
+            memberRole: memberSnap.exists() ? (memberSnap.data() as any)?.role : 'N/A',
+          });
+        } catch (diagErr) {
+          console.error('[DonorImporter] member read failed', {
+            uid: auth.currentUser?.uid,
+            organizationId,
+            message: (diagErr as any)?.message,
+            code: (diagErr as any)?.code,
+          });
+        }
+      }
+
       await batch.commit();
       setImportProgress(Math.round(((imported + updated) / totalRows.length) * 100));
     }
@@ -780,7 +801,12 @@ const executeImport = async () => {
       description: t.importers.donor.importSuccessDescription(imported + updated),
     });
   } catch (error: any) {
-    console.error('Error important:', error);
+    console.error('[DonorImporter] commit failed', {
+      code: (error as any)?.code,
+      message: (error as any)?.message,
+      uid: auth.currentUser?.uid,
+      organizationId,
+    });
     toast({
       variant: 'destructive',
       title: 'Error',
