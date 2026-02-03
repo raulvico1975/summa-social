@@ -197,6 +197,27 @@ src/
 3. **Tipus a `data.ts`**: Si canvies un tipus, pot trencar moltes coses
 4. **Cloud Functions**: Són backend real — errors aquí no es veuen a la UI
 
+### Writes de contactes (UPDATE) via API
+
+**Per què:** Les Firestore Rules d'immutabilitat dels camps `archivedAt`/`archivedByUid`/`archivedFromAction` (guardrails C2/C3) bloquegen qualsevol `setDoc(merge: true)` client-side que no inclogui explícitament aquests camps. Amb `merge: true`, Firestore interpreta un camp absent com a `null`, que difereix del valor existent → `permission-denied`.
+
+**Norma:** El client **no fa updates directes** a `organizations/{orgId}/contacts/{contactId}`. Tots els updates passen per API Admin SDK.
+
+**Endpoint:** `POST /api/contacts/import`
+- Valida `Authorization: Bearer <idToken>` + member role `admin|user`
+- Descarta `archived*` del payload client
+- Preserva `archived*` del document existent
+- Escriu amb Admin SDK `batch.set(merge: true)` (bypassa Firestore Rules)
+
+**Fitxers:**
+- API: `src/app/api/contacts/import/route.ts`
+- Helper client: `src/services/contacts.ts` → `updateContactViaApi()`
+- Commits: `d9c7ae0` (import), `9c3be85` (edicions donants)
+
+**Creates** (nous contactes) sí que poden ser client-side (`addDocumentNonBlocking`) perquè no tenen camps d'arxivat.
+
+**Roadmap:** Migrar `supplier-manager.tsx` i `employee-manager.tsx` al mateix helper.
+
 ---
 
 ## 7. SuperAdmin global: què pot fer i què NO
