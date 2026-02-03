@@ -194,10 +194,9 @@ export function StepSelection({
   const getReasonLabel = (reason: string): string => {
     const reasonMap: Record<string, string> = {
       'Sense IBAN': t.sepaCollection.selection.reasons.noIban,
-      'Sense mandat SEPA': t.sepaCollection.selection.reasons.noMandate,
-      'Mandat SEPA inactiu': t.sepaCollection.selection.reasons.mandateInactive,
-      'Sense UMR': t.sepaCollection.selection.reasons.noUmr,
-      'Sense data signatura': t.sepaCollection.selection.reasons.noSignatureDate,
+      'No és recurrent': tr('sepaCollection.selection.reasons.notRecurring', 'No és recurrent'),
+      'Sense NIF': tr('sepaCollection.selection.reasons.noTaxId', 'Sense NIF'),
+      "Sense data d'alta": tr('sepaCollection.selection.reasons.noMemberSince', "Sense data d'alta"),
       'Donant inactiu': t.sepaCollection.selection.reasons.donorInactive,
     };
     return reasonMap[reason] || reason;
@@ -358,7 +357,7 @@ export function StepSelection({
               ) : (
                 filteredEligible.map((donor) => {
                   const isSelected = selectedIds.has(donor.id);
-                  const seqType = donor.sepaMandate ? determineSequenceType(donor) : '-';
+                  const seqType = determineSequenceType(donor);
                   const hasInvalidAmount = !donor.monthlyAmount || donor.monthlyAmount <= 0;
                   return (
                     <TableRow

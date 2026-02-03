@@ -3551,5 +3551,8 @@
   "sepaPain008.selection.orientativeNote": "Orientatiu. No selecciona automàticament.",
   "sepaPain008.selection.invalidIban": "IBAN invàlid",
   "sepaPain008.selection.invalidAmount": "Import invàlid",
-  "sepaPain008.review.preBankWarning": "Això genera un fitxer SEPA (PRE-banc). No crea ingressos ni moviments comptables a Summa."
+  "sepaPain008.review.preBankWarning": "Això genera un fitxer SEPA (PRE-banc). No crea ingressos ni moviments comptables a Summa.",
+  "sepaCollection.selection.reasons.notRecurring": "No és recurrent",
+  "sepaCollection.selection.reasons.noTaxId": "Sense NIF",
+  "sepaCollection.selection.reasons.noMemberSince": "Sense data d'alta"
 }

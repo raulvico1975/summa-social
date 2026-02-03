@@ -51,9 +51,9 @@ export function SepaCollectionWizard() {
   );
   const { data: donorsRaw, isLoading: isLoadingDonors } = useCollection<Donor & { archivedAt?: string }>(donorsQuery);
 
-  // Filter active donors only
+  // Filter active recurring donors only
   const donors = React.useMemo(
-    () => donorsRaw?.filter(d => !d.archivedAt && d.status !== 'inactive') || [],
+    () => donorsRaw?.filter(d => !d.archivedAt && d.status !== 'inactive' && d.membershipType === 'recurring') || [],
     [donorsRaw]
   );
 
@@ -102,8 +102,8 @@ export function SepaCollectionWizard() {
       donorTaxId: donor.taxId || '',
       iban: donor.iban || '',
       amountCents: donor.monthlyAmount ? Math.round(donor.monthlyAmount * 100) : 0,
-      umr: donor.sepaMandate?.umr || '',
-      signatureDate: donor.sepaMandate?.signatureDate || '',
+      umr: donor.sepaMandate?.umr ?? donor.taxId ?? '',
+      signatureDate: donor.sepaMandate?.signatureDate ?? donor.memberSince ?? '',
       sequenceType: determineSequenceType(donor),
       endToEndId: 'NOTPROVIDED',
     }));

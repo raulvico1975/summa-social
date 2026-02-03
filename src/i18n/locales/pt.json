@@ -3200,5 +3200,8 @@
   "sepaPain008.selection.orientativeNote": "Orientativo. Não seleciona automaticamente.",
   "sepaPain008.selection.invalidIban": "IBAN inválido",
   "sepaPain008.selection.invalidAmount": "Valor inválido",
-  "sepaPain008.review.preBankWarning": "Isto gera um ficheiro SEPA (PRÉ-banco). Não cria receitas nem movimentos contabilísticos no Summa."
+  "sepaPain008.review.preBankWarning": "Isto gera um ficheiro SEPA (PRÉ-banco). Não cria receitas nem movimentos contabilísticos no Summa.",
+  "sepaCollection.selection.reasons.notRecurring": "Não é recorrente",
+  "sepaCollection.selection.reasons.noTaxId": "Sem NIF",
+  "sepaCollection.selection.reasons.noMemberSince": "Sem data de inscrição"
 }
