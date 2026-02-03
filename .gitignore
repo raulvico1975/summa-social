@@ -45,6 +45,7 @@ secrets/
 secrets/*.json
 
 # firebase
+.firebase/
 firebase-debug.log
 firestore-debug.log
 
