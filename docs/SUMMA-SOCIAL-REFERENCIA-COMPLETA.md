@@ -3782,6 +3782,24 @@ Guardrails per evitar arxivar contactes (donants/proveïdors/treballadors) amb m
 
 **Health Check:** Bloc I detecta transaccions amb `contactId` que no existeix a la col·lecció contacts.
 
+**Updates de contactes via Admin API (v1.36+):**
+
+Les Firestore Rules exigeixen immutabilitat de `archivedAt`/`archivedByUid`/`archivedFromAction` en updates. Amb `setDoc(merge: true)` client-side, un camp absent s'interpreta com `null` ≠ valor existent → `permission-denied`.
+
+Solució: tots els updates de contactes passen per `POST /api/contacts/import` (Admin SDK), que:
+1. Valida auth + membership (role `admin|user`)
+2. Descarta `archived*` del payload client
+3. Preserva `archived*` del document existent
+4. Escriu amb Admin SDK (bypassa rules)
+
+Flux d'edició de donant: UI → `updateContactViaApi()` (`src/services/contacts.ts`) → `/api/contacts/import` → Admin SDK.
+
+**Creates** (nous contactes) continuen client-side (`addDocumentNonBlocking`).
+
+Fitxers: `src/app/api/contacts/import/route.ts`, `src/services/contacts.ts`.
+
+Migrat: `donor-manager.tsx` (commits `d9c7ae0`, `9c3be85`). Pendent: `supplier-manager.tsx`, `employee-manager.tsx`.
+
 ### 3.10.5f Guardrails d'Integritat: Liquidacions (NOU v1.36 - FASE 2C)
 
 Guardrails per evitar arxivar liquidacions (ExpenseReports) que tenen tiquets pendents.

@@ -9,6 +9,7 @@
  */
 
 import type { Donor, SepaSequenceType } from '@/lib/data';
+import { getIbanLengthIssue } from './iban-length';
 
 /**
  * Determina el tipus de seqüència SEPA per un donant
@@ -60,6 +61,15 @@ export function filterEligibleDonors(donors: Donor[]): {
   for (const donor of donors) {
     if (!donor.iban) {
       excluded.push({ donor, reason: 'Sense IBAN' });
+      continue;
+    }
+
+    const ibanIssue = getIbanLengthIssue(donor.iban);
+    if (ibanIssue) {
+      excluded.push({
+        donor,
+        reason: `IBAN_INCOMPLET:${ibanIssue.country}:${ibanIssue.length}:${ibanIssue.expected}`,
+      });
       continue;
     }
 

@@ -3228,6 +3228,7 @@
   "sepaPain008.selection.invalidIban": "IBAN invalide",
   "sepaPain008.selection.invalidAmount": "Montant invalide",
   "sepaPain008.review.preBankWarning": "Ceci génère un fichier SEPA (PRÉ-banque). Ne crée pas de recettes ni de mouvements comptables dans Summa.",
+  "sepaCollection.selection.reasons.ibanIncomplete": "IBAN {country} incomplet ({length}/{expected})",
   "sepaCollection.selection.reasons.notRecurring": "Non récurrent",
   "sepaCollection.selection.reasons.noTaxId": "Sans NIF",
   "sepaCollection.selection.reasons.noMemberSince": "Sans date d'inscription"
