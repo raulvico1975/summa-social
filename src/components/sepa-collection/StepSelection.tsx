@@ -324,7 +324,6 @@ export function StepSelection({
           <div className="flex items-center gap-3">
             <Checkbox
               checked={allFilteredSelected}
-              // @ts-expect-error - Radix UI Checkbox suporta indeterminate però TypeScript no ho veu
               indeterminate={someFilteredSelected && !allFilteredSelected}
               onCheckedChange={handleToggleAllFiltered}
             />
