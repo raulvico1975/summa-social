@@ -18,6 +18,10 @@ import { getIbanLengthIssue } from './iban-length';
  * @returns El tipus de seqüència a usar
  */
 export function determineSequenceType(donor: Donor): SepaSequenceType {
+  // TEMP (2025-02-04 Santander diag): force all to RCUR
+  // TODO: revertir després de confirmar amb el banc
+  return 'RCUR';
+
   // Override manual del mandat té prioritat (si existeix)
   if (donor.sepaMandate?.sequenceTypeOverride) {
     return donor.sepaMandate.sequenceTypeOverride;

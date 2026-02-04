@@ -1,6 +1,6 @@
 /**
  * Generador de fitxers XML SEPA pain.008 (Direct Debit Initiation)
- * Format: ISO 20022 pain.008.001.08
+ * Format: ISO 20022 pain.008.001.02
  *
  * Referència: Golden sample analitzat del client real
  */
@@ -15,7 +15,7 @@ import type {
 // CONSTANTS
 // ═══════════════════════════════════════════════════════════════════════════════
 
-const PAIN008_NAMESPACE = 'urn:iso:std:iso:20022:tech:xsd:pain.008.001.08';
+const PAIN008_NAMESPACE = 'urn:iso:std:iso:20022:tech:xsd:pain.008.001.02';
 const PAYMENT_METHOD = 'DD'; // Direct Debit
 const SERVICE_LEVEL = 'SEPA';
 const CHARGE_BEARER = 'SLEV'; // Service Level
@@ -51,7 +51,9 @@ function formatDateTime(date: Date = new Date()): string {
   const sign = offset >= 0 ? '+' : '-';
   const hours = String(Math.floor(Math.abs(offset) / 60)).padStart(2, '0');
   const minutes = String(Math.abs(offset) % 60).padStart(2, '0');
-  return date.toISOString().slice(0, -1) + sign + hours + ':' + minutes;
+  // Format sense mil·lisegons: YYYY-MM-DDTHH:MM:SS+HH:MM
+  const iso = date.toISOString().slice(0, 19); // "YYYY-MM-DDTHH:MM:SS"
+  return iso + sign + hours + ':' + minutes;
 }
 
 /**
@@ -71,6 +73,15 @@ export function generateMessageId(date: Date = new Date()): string {
   // Padding per arribar a 35 caràcters (màxim SEPA)
   const padding = '000000000000000';
   return `PRE${datePart}${millis}${padding}`.slice(0, 35);
+}
+
+/**
+ * Assegura que un identificador SEPA no superi els 35 caràcters
+ * Només permet: A-Z, a-z, 0-9, - (guió)
+ */
+function ensureMax35(id: string): string {
+  const clean = id.replace(/[^A-Za-z0-9\-]/g, '');
+  return clean.length <= 35 ? clean : clean.slice(0, 35);
 }
 
 /**
@@ -168,7 +179,7 @@ export function generatePain008Xml(
   const itemsBySequence = groupBySequenceType(run.items);
 
   const xml = `<?xml version="1.0" encoding="UTF-8"?>
-<Document xmlns="${PAIN008_NAMESPACE}">
+<Document xmlns="${PAIN008_NAMESPACE}" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="${PAIN008_NAMESPACE} pain.008.001.02.xsd">
   <CstmrDrctDbtInitn>
     ${buildGroupHeader(run, messageId, creationDateTime)}
     ${buildPaymentInfoBlocks(run, itemsBySequence, includeBic)}
@@ -210,6 +221,13 @@ function buildGroupHeader(
       <CtrlSum>${formatAmount(run.totalAmountCents)}</CtrlSum>
       <InitgPty>
         <Nm>${escapeXml(run.creditorName)}</Nm>
+        <Id>
+          <OrgId>
+            <Othr>
+              <Id>${escapeXml(run.creditorId)}</Id>
+            </Othr>
+          </OrgId>
+        </Id>
       </InitgPty>
     </GrpHdr>`;
 }
@@ -228,7 +246,7 @@ function buildPaymentInfoBlocks(
 
   for (const [seqType, items] of itemsBySequence) {
     const totalCents = items.reduce((sum, i) => sum + i.amountCents, 0);
-    const pmtInfId = `${run.messageId}-${pmtInfCounter}`;
+    const pmtInfId = ensureMax35(`${run.messageId}-${pmtInfCounter}`);
 
     blocks.push(buildPaymentInfoBlock(
       run,
@@ -257,12 +275,13 @@ function buildPaymentInfoBlock(
   includeBic: boolean
 ): string {
   const transactions = items
-    .map((item, idx) => buildTransaction(item, run.requestedCollectionDate, run.messageId, idx, includeBic))
+    .map((item, idx) => buildTransaction(item, run.requestedCollectionDate, run.creditorName, includeBic))
     .join('\n      ');
 
   return `<PmtInf>
       <PmtInfId>${escapeXml(pmtInfId)}</PmtInfId>
       <PmtMtd>${PAYMENT_METHOD}</PmtMtd>
+      <BtchBookg>true</BtchBookg>
       <NbOfTxs>${items.length}</NbOfTxs>
       <CtrlSum>${formatAmount(totalCents)}</CtrlSum>
       <PmtTpInf>
@@ -313,12 +332,9 @@ function buildPaymentInfoBlock(
 function buildTransaction(
   item: SepaCollectionItem,
   collectionDate: string,
-  messageId: string,
-  index: number,
+  creditorName: string,
   includeBic: boolean
 ): string {
-  const fallbackSuffix = `${messageId.slice(-10)}-${index}`;
-  const endToEndId = generateEndToEndId(item, collectionDate, fallbackSuffix);
   const bic = includeBic ? getBicFromIban(item.iban) : null;
 
   const dbtrAgtContent = bic
@@ -331,9 +347,11 @@ function buildTransaction(
             </Othr>
           </FinInstnId>`;
 
+  const ustrd = 'Cuota Socio/a';
+
   return `<DrctDbtTxInf>
         <PmtId>
-          <EndToEndId>${escapeXml(endToEndId)}</EndToEndId>
+          <EndToEndId>NOTPROVIDED</EndToEndId>
         </PmtId>
         <InstdAmt Ccy="EUR">${formatAmount(item.amountCents)}</InstdAmt>
         <DrctDbtTx>
@@ -347,16 +365,6 @@ function buildTransaction(
         </DbtrAgt>
         <Dbtr>
           <Nm>${escapeXml(item.donorName)}</Nm>
-          <Id>
-            <PrvtId>
-              <Othr>
-                <Id>${escapeXml(item.donorTaxId)}</Id>
-                <SchmeNm>
-                  <Prtry>CUST</Prtry>
-                </SchmeNm>
-              </Othr>
-            </PrvtId>
-          </Id>
         </Dbtr>
         <DbtrAcct>
           <Id>
@@ -364,7 +372,7 @@ function buildTransaction(
           </Id>
         </DbtrAcct>
         <RmtInf>
-          <Ustrd>${escapeXml(item.umr)}</Ustrd>
+          <Ustrd>${escapeXml(ustrd)}</Ustrd>
         </RmtInf>
       </DrctDbtTxInf>`;
 }
