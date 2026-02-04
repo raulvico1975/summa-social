@@ -558,17 +558,6 @@ service cloud.firestore {
       }
 
       // ─────────────────────────────────────────────────────────────────────
-      // SEPA COLLECTION RUNS (log operatiu de remeses pain.008)
-      // Path: /organizations/{orgId}/sepaCollectionRuns/{runId}
-      // ─────────────────────────────────────────────────────────────────────
-
-      match /sepaCollectionRuns/{runId} {
-        allow read: if isSuperAdmin() || (isMemberOf(orgId) && getMemberRole(orgId) in ['admin', 'user']);
-        allow create: if isSuperAdmin() || (isMemberOf(orgId) && getMemberRole(orgId) in ['admin', 'user']);
-        allow update, delete: if false;
-      }
-
-      // ─────────────────────────────────────────────────────────────────────
       // PROCESS LOCKS (bloqueig per operacions multiusuari)
       // Path: /organizations/{orgId}/processLocks/{lockId}
       // Permisos: admin/user poden crear/llegir/esborrar locks
