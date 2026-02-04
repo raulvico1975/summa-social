@@ -982,6 +982,13 @@ i **bloqueja la generació**.
 
 ---
 
+### Compatibilitat bancària
+
+Summa genera fitxers SEPA compatibles amb banca espanyola.
+Si el teu banc rebutja un fitxer, contacta amb suport indicant el missatge exacte d'error.
+
+---
+
 ### Validacions i casos habituals
 
 - **Soci sense IBAN**: el soci queda fora de la remesa. Cal editar el soci i informar l'IBAN.

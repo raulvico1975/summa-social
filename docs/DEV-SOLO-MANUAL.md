@@ -1143,4 +1143,62 @@ En mode development, el dashboard imprimeix:
 
 ---
 
-*Última actualització: 2026-01-13*
+## 18. SEPA pain.008 — Guia operativa per al mantenidor (v1.36)
+
+### Fitxers implicats
+
+| Fitxer | Funció |
+|--------|--------|
+| `src/lib/sepa/pain008/generate-pain008.ts` | Generador XML pain.008.001.02 |
+| `src/lib/sepa/pain008/sequence-type.ts` | Lògica SeqTp (FRST/RCUR/OOFF/FNAL) |
+| `src/lib/sepa/pain008/iban-length.ts` | Validació longitud IBAN per país |
+| `src/components/sepa-collection/SepaCollectionWizard.tsx` | Wizard UI (3 passos) |
+
+### Dialecte Santander (coneixement crític)
+
+El Santander NO accepta el format ISO 20022 genèric. Peculiaritats documentades:
+
+| Aspecte | Què vol Santander | Què passava abans |
+|---------|-------------------|-------------------|
+| Namespace | `pain.008.001.02` | `.08` → "Formato no válido" |
+| `CreDtTm` | Sense mil·lisegons | Amb `.046` → "Formato de fecha incorrecto" |
+| `BtchBookg` | `true` obligatori | No s'emetia |
+| `InitgPty/OrgId` | Amb `creditorId` | No s'emetia |
+| `Dbtr/PrvtId` | NO incloure NIF deutor | S'incloïa → possible rebuig |
+| `EndToEndId` | `NOTPROVIDED` | Valor generat (no útil perquè Santander no el retorna) |
+| `PmtInfId` | ≤ 35 chars | 37 chars → "excede longitud máxima" |
+| `SeqTp` | `RCUR` per mandats ja cobrats | `FRST` per migrats → rebuig massiu |
+
+### Regles SeqTp per migracions
+
+**Problema:** Donants migrats d'un altre sistema no tenen `sepaPain008LastRunAt` ni `sepaMandate.lastCollectedAt` a Firestore. La lògica els marca com `FRST`. Santander rebutja perquè ja els coneix com `RCUR`.
+
+**Solució permanent:** Informar `sepaMandate.lastCollectedAt` amb data de migració o última remesa del sistema antic.
+
+**Solució temporal (activa feb 2026):** `determineSequenceType()` retorna `'RCUR'` fix. Buscar `// TEMP` a `sequence-type.ts`.
+
+**Quan revertir el TEMP:**
+1. Confirmar amb Santander que accepta el fitxer amb tots RCUR
+2. Executar script de migració per informar `lastCollectedAt` als donants existents
+3. Eliminar el `return 'RCUR'` fix i deixar la lògica original
+
+### Límits d'identificadors (invariant)
+
+Tots els identificadors SEPA han de ser ≤ 35 caràcters, només `[A-Za-z0-9-]`.
+
+El helper `ensureMax35()` a `generate-pain008.ts` s'aplica a `PmtInfId`. `MsgId` ja es genera amb `.slice(0, 35)`. `EndToEndId` és `NOTPROVIDED` (11 chars).
+
+**Si s'afegeix un nou identificador al XML, SEMPRE aplicar `ensureMax35()` o equivalent.**
+
+### Errors reals (referència ràpida)
+
+| Símptoma | Buscar | Solució |
+|----------|--------|---------|
+| "excede longitud máxima: 35" | Identificador > 35 chars | `ensureMax35()` |
+| Rebuig massiu sense error clar | SeqTp FRST en migrats | Forçar RCUR o informar `lastCollectedAt` |
+| "Formato de fichero no válido" | Namespace `.08` | Namespace `.02` |
+| "Formato de fecha incorrecto" | Mil·lisegons a `CreDtTm` | `.slice(0, 19)` al timestamp |
+
+---
+
+*Última actualització: 2026-02-04*
