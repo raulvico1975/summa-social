@@ -558,6 +558,28 @@ service cloud.firestore {
       }
 
       // ─────────────────────────────────────────────────────────────────────
+      // SEPA COLLECTION RUNS (log operatiu de remeses pain.008)
+      // Path: /organizations/{orgId}/sepaCollectionRuns/{runId}
+      // ─────────────────────────────────────────────────────────────────────
+
+      match /sepaCollectionRuns/{runId} {
+        allow read: if isSuperAdmin() || isMemberOf(orgId);
+        allow create: if isSuperAdmin() || (isMemberOf(orgId) && getMemberRole(orgId) in ['admin', 'user']);
+        allow update, delete: if false;
+      }
+
+      // ─────────────────────────────────────────────────────────────────────
+      // SEPA PAIN.008 RUNS (registre operatiu de remeses pain.008)
+      // Path: /organizations/{orgId}/sepaPain008Runs/{runId}
+      // ─────────────────────────────────────────────────────────────────────
+
+      match /sepaPain008Runs/{runId} {
+        allow read: if isSuperAdmin() || isMemberOf(orgId);
+        allow create: if isSuperAdmin() || (isMemberOf(orgId) && getMemberRole(orgId) in ['admin', 'user']);
+        allow update, delete: if false;
+      }
+
+      // ─────────────────────────────────────────────────────────────────────
       // PROCESS LOCKS (bloqueig per operacions multiusuari)
       // Path: /organizations/{orgId}/processLocks/{lockId}
       // Permisos: admin/user poden crear/llegir/esborrar locks
