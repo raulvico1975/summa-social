@@ -192,6 +192,15 @@ export function StepSelection({
 
   // Map reason to i18n key
   const getReasonLabel = (reason: string): string => {
+    // Motiu dinàmic: IBAN_INCOMPLET:FR:24:27
+    if (reason.startsWith('IBAN_INCOMPLET:')) {
+      const [, country, length, expected] = reason.split(':');
+      return tr('sepaCollection.selection.reasons.ibanIncomplete', 'IBAN {country} incomplet ({length}/{expected})')
+        .replace('{country}', country)
+        .replace('{length}', length)
+        .replace('{expected}', expected);
+    }
+
     const reasonMap: Record<string, string> = {
       'Sense IBAN': t.sepaCollection.selection.reasons.noIban,
       'No és recurrent': tr('sepaCollection.selection.reasons.notRecurring', 'No és recurrent'),
