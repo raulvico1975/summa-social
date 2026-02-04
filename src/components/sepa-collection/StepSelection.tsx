@@ -192,12 +192,20 @@ export function StepSelection({
 
   // Map reason to i18n key
   const getReasonLabel = (reason: string): string => {
+    // Motiu dinàmic: IBAN_INCOMPLET:FR:24:27
+    if (reason.startsWith('IBAN_INCOMPLET:')) {
+      const [, country, length, expected] = reason.split(':');
+      return tr('sepaCollection.selection.reasons.ibanIncomplete', 'IBAN {country} incomplet ({length}/{expected})')
+        .replace('{country}', country)
+        .replace('{length}', length)
+        .replace('{expected}', expected);
+    }
+
     const reasonMap: Record<string, string> = {
       'Sense IBAN': t.sepaCollection.selection.reasons.noIban,
-      'Sense mandat SEPA': t.sepaCollection.selection.reasons.noMandate,
-      'Mandat SEPA inactiu': t.sepaCollection.selection.reasons.mandateInactive,
-      'Sense UMR': t.sepaCollection.selection.reasons.noUmr,
-      'Sense data signatura': t.sepaCollection.selection.reasons.noSignatureDate,
+      'No és recurrent': tr('sepaCollection.selection.reasons.notRecurring', 'No és recurrent'),
+      'Sense NIF': tr('sepaCollection.selection.reasons.noTaxId', 'Sense NIF'),
+      "Sense data d'alta": tr('sepaCollection.selection.reasons.noMemberSince', "Sense data d'alta"),
       'Donant inactiu': t.sepaCollection.selection.reasons.donorInactive,
     };
     return reasonMap[reason] || reason;
@@ -316,7 +324,6 @@ export function StepSelection({
           <div className="flex items-center gap-3">
             <Checkbox
               checked={allFilteredSelected}
-              // @ts-expect-error - Radix UI Checkbox suporta indeterminate però TypeScript no ho veu
               indeterminate={someFilteredSelected && !allFilteredSelected}
               onCheckedChange={handleToggleAllFiltered}
             />
@@ -358,7 +365,7 @@ export function StepSelection({
               ) : (
                 filteredEligible.map((donor) => {
                   const isSelected = selectedIds.has(donor.id);
-                  const seqType = donor.sepaMandate ? determineSequenceType(donor) : '-';
+                  const seqType = determineSequenceType(donor);
                   const hasInvalidAmount = !donor.monthlyAmount || donor.monthlyAmount <= 0;
                   return (
                     <TableRow

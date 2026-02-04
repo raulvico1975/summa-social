@@ -11,3 +11,8 @@ export {
   isEligibleForSepaCollection,
   filterEligibleDonors,
 } from './sequence-type';
+
+export {
+  getIbanLengthIssue,
+  IBAN_LENGTHS_BY_COUNTRY,
+} from './iban-length';

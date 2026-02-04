@@ -51,9 +51,9 @@ export function SepaCollectionWizard() {
   );
   const { data: donorsRaw, isLoading: isLoadingDonors } = useCollection<Donor & { archivedAt?: string }>(donorsQuery);
 
-  // Filter active donors only
+  // Filter active recurring donors only
   const donors = React.useMemo(
-    () => donorsRaw?.filter(d => !d.archivedAt && d.status !== 'inactive') || [],
+    () => donorsRaw?.filter(d => !d.archivedAt && d.status !== 'inactive' && d.membershipType === 'recurring') || [],
     [donorsRaw]
   );
 
@@ -102,8 +102,8 @@ export function SepaCollectionWizard() {
       donorTaxId: donor.taxId || '',
       iban: donor.iban || '',
       amountCents: donor.monthlyAmount ? Math.round(donor.monthlyAmount * 100) : 0,
-      umr: donor.sepaMandate?.umr || '',
-      signatureDate: donor.sepaMandate?.signatureDate || '',
+      umr: donor.sepaMandate?.umr ?? donor.taxId ?? '',
+      signatureDate: donor.sepaMandate?.signatureDate ?? donor.memberSince ?? '',
       sequenceType: determineSequenceType(donor),
       endToEndId: 'NOTPROVIDED',
     }));
@@ -207,82 +207,88 @@ export function SepaCollectionWizard() {
       // Generate XML
       const xml = generatePain008Xml(run);
 
-      // Persist to Firestore
-      const runsCollection = collection(firestore, 'organizations', organizationId, 'sepaCollectionRuns');
+      // Persist to Firestore (best-effort: no bloqueja l'export XML)
+      let persistFailed = false;
+      try {
+        const runsCollection = collection(firestore, 'organizations', organizationId, 'sepaCollectionRuns');
 
-      // Build run data for persistence (without items array for Firestore)
-      const runForDb = {
-        type: 'SEPA_COLLECTION',
-        scheme: 'CORE' as const,
-        bankAccountId: configData.bankAccountId,
-        collectionDate: configData.collectionDate,
-        createdAt: run.createdAt,
-        createdBy: run.createdBy,
-        exportedAt: run.exportedAt,
-        messageId,
-        itemCount: collectionItems.length,
-        totalCents: totalAmountCents,
-        included: collectionItems.map(item => ({
-          contactId: item.donorId,
-          amountCents: item.amountCents,
-          umr: item.umr,
-          sequenceType: item.sequenceType,
-        })),
-        excluded: excluded.map(ex => ({
-          contactId: ex.donor.id,
-          reason: ex.reason,
-        })),
-      };
+        // Build run data for persistence (without items array for Firestore)
+        const runForDb = {
+          type: 'SEPA_COLLECTION',
+          scheme: 'CORE' as const,
+          bankAccountId: configData.bankAccountId,
+          collectionDate: configData.collectionDate,
+          createdAt: run.createdAt,
+          createdBy: run.createdBy,
+          exportedAt: run.exportedAt,
+          messageId,
+          itemCount: collectionItems.length,
+          totalCents: totalAmountCents,
+          included: collectionItems.map(item => ({
+            contactId: item.donorId,
+            amountCents: item.amountCents,
+            umr: item.umr,
+            sequenceType: item.sequenceType,
+          })),
+          excluded: excluded.map(ex => ({
+            contactId: ex.donor.id,
+            reason: ex.reason,
+          })),
+        };
 
-      addDocumentNonBlocking(runsCollection, runForDb);
+        addDocumentNonBlocking(runsCollection, runForDb);
 
-      // ═══════════════════════════════════════════════════════════════════════════
-      // CREAR REGISTRE OPERATIU sepaPain008Runs (memòria de runs)
-      // ═══════════════════════════════════════════════════════════════════════════
-      const pain008RunsCollection = collection(firestore, 'organizations', organizationId, 'sepaPain008Runs');
+        // ═══════════════════════════════════════════════════════════════════════════
+        // CREAR REGISTRE OPERATIU sepaPain008Runs (memòria de runs)
+        // ═══════════════════════════════════════════════════════════════════════════
+        const pain008RunsCollection = collection(firestore, 'organizations', organizationId, 'sepaPain008Runs');
 
-      const pain008RunData = {
-        createdAt: serverTimestamp(),
-        createdByUid: auth.currentUser.uid,
-        bankAccountId: configData.bankAccountId,
-        executionDate: configData.collectionDate,
-        includedDonorIds: selectedDonors.map(d => d.id),
-        counts: {
-          shown: eligible.length,
-          selected: selectedDonors.length,
-          included: selectedDonors.length,
-          invalidIban: excluded.filter(e => e.reason.toLowerCase().includes('iban')).length,
-          invalidAmount: selectedDonors.filter(d => !d.monthlyAmount || d.monthlyAmount <= 0).length,
-        },
-        totalAmountCents,
-        filtersSnapshot: null, // No tenim accés als filtres aquí, es podria afegir si cal
-      };
+        const pain008RunData = {
+          createdAt: serverTimestamp(),
+          createdByUid: auth.currentUser.uid,
+          bankAccountId: configData.bankAccountId,
+          executionDate: configData.collectionDate,
+          includedDonorIds: selectedDonors.map(d => d.id),
+          counts: {
+            shown: eligible.length,
+            selected: selectedDonors.length,
+            included: selectedDonors.length,
+            invalidIban: excluded.filter(e => e.reason.toLowerCase().includes('iban')).length,
+            invalidAmount: selectedDonors.filter(d => !d.monthlyAmount || d.monthlyAmount <= 0).length,
+          },
+          totalAmountCents,
+          filtersSnapshot: null, // No tenim accés als filtres aquí, es podria afegir si cal
+        };
 
-      const pain008RunRef = await addDoc(pain008RunsCollection, pain008RunData);
-      const pain008RunId = pain008RunRef.id;
+        const pain008RunRef = await addDoc(pain008RunsCollection, pain008RunData);
+        const pain008RunId = pain008RunRef.id;
 
-      // ═══════════════════════════════════════════════════════════════════════════
-      // ACTUALITZAR DONANTS AMB TRACKING (batches de 50)
-      // ═══════════════════════════════════════════════════════════════════════════
-      const BATCH_SIZE = 50;
-      const donorIds = selectedDonors.map(d => d.id);
+        // ═══════════════════════════════════════════════════════════════════════════
+        // ACTUALITZAR DONANTS AMB TRACKING (batches de 50)
+        // ═══════════════════════════════════════════════════════════════════════════
+        const BATCH_SIZE = 50;
+        const donorIds = selectedDonors.map(d => d.id);
 
-      for (let i = 0; i < donorIds.length; i += BATCH_SIZE) {
-        const chunk = donorIds.slice(i, i + BATCH_SIZE);
-        const batch = writeBatch(firestore);
+        for (let i = 0; i < donorIds.length; i += BATCH_SIZE) {
+          const chunk = donorIds.slice(i, i + BATCH_SIZE);
+          const batch = writeBatch(firestore);
 
-        for (const donorId of chunk) {
-          const donorRef = doc(contactsCollection!, donorId);
-          batch.update(donorRef, {
-            sepaPain008LastRunAt: configData.collectionDate,
-            sepaPain008LastRunId: pain008RunId,
-          });
+          for (const donorId of chunk) {
+            const donorRef = doc(contactsCollection!, donorId);
+            batch.update(donorRef, {
+              sepaPain008LastRunAt: configData.collectionDate,
+              sepaPain008LastRunId: pain008RunId,
+            });
+          }
+
+          await batch.commit();
         }
-
-        await batch.commit();
+      } catch (persistError) {
+        persistFailed = true;
+        console.warn('SEPA_RUN_PERSIST_FAILED', { orgId: organizationId, code: (persistError as any)?.code });
       }
 
-      // Download XML file
+      // Download XML file (always — even if persist failed)
       const blob = new Blob([xml], { type: 'application/xml' });
       const url = URL.createObjectURL(blob);
       const link = document.createElement('a');
@@ -296,7 +302,9 @@ export function SepaCollectionWizard() {
 
       toast({
         title: t.sepaCollection.toasts.exported,
-        description: `${collectionItems.length} cobraments · ${(totalAmountCents / 100).toFixed(2)} €`,
+        description: persistFailed
+          ? tr('sepaPain008.toasts.exportedButNotSaved', "S'ha descarregat el fitxer, però no s'ha pogut guardar l'historial de l'execució.")
+          : `${collectionItems.length} cobraments · ${(totalAmountCents / 100).toFixed(2)} €`,
       });
 
       // Navigate back to donors

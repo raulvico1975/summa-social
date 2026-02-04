@@ -66,6 +66,12 @@ Aquesta classificació determina els requisits de validació (secció 4).
 | **MITJÀ** | build + smoke tests (`docs/QA/SMOKE-TESTS.md`) |
 | **ALT** | build + smoke + checklist manual (`tests/CHECKLIST-MANUAL.md`) |
 
+### Verificació post-deploy: contactes
+
+Si el deploy toca `donor-manager`, `supplier-manager`, `employee-manager` o `src/app/api/contacts/import/`:
+- Editar un donant existent → desar → verificar que no apareix `permission-denied`
+- Comprovar Network tab: `/api/contacts/import` respon 200
+
 ### Comandes de deploy (invariants)
 
 ```bash

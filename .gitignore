@@ -45,8 +45,12 @@ secrets/
 secrets/*.json
 
 # firebase
+.firebase/
 firebase-debug.log
 firestore-debug.log
 
 # audit outputs (scripts)
 /tmp/
+
+# temporary migration scripts
+scripts/migrate-legacy-category.ts

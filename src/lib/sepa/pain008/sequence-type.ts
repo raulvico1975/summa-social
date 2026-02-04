@@ -9,6 +9,7 @@
  */
 
 import type { Donor, SepaSequenceType } from '@/lib/data';
+import { getIbanLengthIssue } from './iban-length';
 
 /**
  * Determina el tipus de seqüència SEPA per un donant
@@ -17,16 +18,9 @@ import type { Donor, SepaSequenceType } from '@/lib/data';
  * @returns El tipus de seqüència a usar
  */
 export function determineSequenceType(donor: Donor): SepaSequenceType {
-  const mandate = donor.sepaMandate;
-
-  // Si no té mandat, no hauria d'arribar aquí, però per seguretat
-  if (!mandate) {
-    throw new Error(`Donant ${donor.id} no té mandat SEPA actiu`);
-  }
-
-  // Override manual té prioritat
-  if (mandate.sequenceTypeOverride) {
-    return mandate.sequenceTypeOverride;
+  // Override manual del mandat té prioritat (si existeix)
+  if (donor.sepaMandate?.sequenceTypeOverride) {
+    return donor.sepaMandate.sequenceTypeOverride;
   }
 
   // OOFF per donacions puntuals
@@ -34,8 +28,8 @@ export function determineSequenceType(donor: Donor): SepaSequenceType {
     return 'OOFF';
   }
 
-  // Recurrents: FRST o RCUR segons historial
-  if (!mandate.lastCollectedAt) {
+  // FRST si mai s'ha cobrat, RCUR si ja s'ha cobrat
+  if (!donor.sepaPain008LastRunAt && !donor.sepaMandate?.lastCollectedAt) {
     return 'FRST';
   }
 
@@ -46,26 +40,11 @@ export function determineSequenceType(donor: Donor): SepaSequenceType {
  * Comprova si un donant és elegible per incloure en una remesa SEPA
  */
 export function isEligibleForSepaCollection(donor: Donor): boolean {
-  // Ha de tenir IBAN
-  if (!donor.iban) {
-    return false;
-  }
-
-  // Ha de tenir mandat SEPA actiu
-  if (!donor.sepaMandate?.isActive) {
-    return false;
-  }
-
-  // Ha de tenir UMR i data de signatura
-  if (!donor.sepaMandate.umr || !donor.sepaMandate.signatureDate) {
-    return false;
-  }
-
-  // Ha d'estar actiu (no donat de baixa)
-  if (donor.status === 'inactive') {
-    return false;
-  }
-
+  if (!donor.iban) return false;
+  if (donor.membershipType !== 'recurring') return false;
+  if (!donor.taxId) return false;
+  if (!donor.memberSince) return false;
+  if (donor.status === 'inactive') return false;
   return true;
 }
 
@@ -85,23 +64,27 @@ export function filterEligibleDonors(donors: Donor[]): {
       continue;
     }
 
-    if (!donor.sepaMandate) {
-      excluded.push({ donor, reason: 'Sense mandat SEPA' });
+    const ibanIssue = getIbanLengthIssue(donor.iban);
+    if (ibanIssue) {
+      excluded.push({
+        donor,
+        reason: `IBAN_INCOMPLET:${ibanIssue.country}:${ibanIssue.length}:${ibanIssue.expected}`,
+      });
       continue;
     }
 
-    if (!donor.sepaMandate.isActive) {
-      excluded.push({ donor, reason: 'Mandat SEPA inactiu' });
+    if (donor.membershipType !== 'recurring') {
+      excluded.push({ donor, reason: 'No és recurrent' });
       continue;
     }
 
-    if (!donor.sepaMandate.umr) {
-      excluded.push({ donor, reason: 'Sense UMR' });
+    if (!donor.taxId) {
+      excluded.push({ donor, reason: 'Sense NIF' });
       continue;
     }
 
-    if (!donor.sepaMandate.signatureDate) {
-      excluded.push({ donor, reason: 'Sense data signatura' });
+    if (!donor.memberSince) {
+      excluded.push({ donor, reason: "Sense data d'alta" });
       continue;
     }
 
@@ -110,7 +93,6 @@ export function filterEligibleDonors(donors: Donor[]): {
       continue;
     }
 
-    // Tot OK
     eligible.push(donor);
   }
 
