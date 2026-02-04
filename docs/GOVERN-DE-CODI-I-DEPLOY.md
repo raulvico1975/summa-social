@@ -38,7 +38,7 @@
 |------|-----------------|----------|--------------|
 | **BAIX** | i18n, docs, microcopy | Labels, traduccions, README | `src/i18n/*`, `docs/*`, `*.md` |
 | **MITJÀ** | UI, filtres, exports | Dashboards, CSV, Excel | `src/components/*`, `src/app/*/dashboard/*` |
-| **ALT** | Dades, fiscal, conciliació | Remeses, Model 182, ledger | `src/lib/remittances/*`, `src/lib/model182/*`, `src/app/api/*` |
+| **ALT** | Dades, fiscal, conciliació, SEPA | Remeses, Model 182, ledger, pain.008 | `src/lib/remittances/*`, `src/lib/model182/*`, `src/lib/sepa/*`, `src/app/api/*` |
 
 Aquesta classificació determina els requisits de validació (secció 4).
 
@@ -150,6 +150,7 @@ Firebase App Hosting redesplegarà automàticament.
 | Novetats producte (Firestore `productUpdates`) | Fora d'aquest protocol (SuperAdmin) |
 | DEMO | Mai tocar `prod` |
 | Canvis visuals | Verificar en mòbil abans de merge |
+| Generador pain.008 (`src/lib/sepa/pain008/*`) | Risc ALT — Verificar compatibilitat amb Mode Santander (veure `DEV-SOLO-MANUAL.md` §18) |
 
 ---
 

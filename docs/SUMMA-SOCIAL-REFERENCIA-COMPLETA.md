@@ -1339,6 +1339,74 @@ Cada execució del wizard crea un document amb:
 - `src/components/sepa-collection/StepSelection.tsx` — Pas selecció
 - `src/components/sepa-collection/StepReview.tsx` — Pas revisió
 - `src/lib/sepa/pain008/generate-pain008.ts` — Generador XML
+- `src/lib/sepa/pain008/sequence-type.ts` — Lògica SeqTp (FRST/RCUR/OOFF/FNAL)
+- `src/lib/sepa/pain008/iban-length.ts` — Validació longitud IBAN per país
+
+### 3.3.9.8 Dialecte Santander — pain.008 (NOU v1.36)
+
+Documentació del comportament real del Santander al processar fitxers pain.008.
+Coneixement acumulat per proves reals (febrer 2026).
+
+#### A) Encoding i format
+
+| Aspecte | Requeriment Santander |
+|---------|----------------------|
+| Namespace | `urn:iso:std:iso:20022:tech:xsd:pain.008.001.02` (NO `.08`) |
+| Encoding XML | UTF-8 |
+| `CreDtTm` | Format `YYYY-MM-DDTHH:MM:SS+HH:MM` (sense mil·lisegons) |
+| `BtchBookg` | `true` (obligatori, tot i que ISO no l'exigeix) |
+| `xsi:schemaLocation` | Obligatori a l'element `<Document>` |
+
+#### B) Camps obligatoris (encara que ISO no els exigeixi)
+
+| Camp | Ubicació | Valor |
+|------|----------|-------|
+| `OrgId/Othr/Id` | Dins `InitgPty` (GrpHdr) | `creditorId` de l'organització |
+| `BtchBookg` | Dins `PmtInf` | `true` |
+| `CdtrSchmeId` | Dins `PmtInf` | `creditorId` amb `<Prtry>SEPA</Prtry>` |
+
+#### C) Camps prohibits o ignorats pel Santander
+
+| Camp | Ubicació | Problema |
+|------|----------|----------|
+| `Dbtr/Id/PrvtId` | Dins `DrctDbtTxInf` | NIF del deutor dins XML — Santander l'ignora i pot causar rebuig |
+| `EndToEndId` amb valor generat | Dins `PmtId` | Usar `NOTPROVIDED` (Santander no retorna l'E2E als extractes) |
+
+#### D) Regles SeqTp (Sequence Type)
+
+| SeqTp | Quan usar |
+|-------|-----------|
+| `RCUR` | **Per defecte** per tots els mandats recurrents amb historial de cobrament |
+| `FRST` | Només per mandats nous creats dins Summa **que mai s'han cobrat a cap sistema** |
+| `OOFF` | Cobraments puntuals (`membershipType === 'one-time'`) |
+| `FNAL` | Últim cobrament d'un mandat (override manual) |
+
+**Risc amb FRST en migracions:**
+Si els donants ja es cobraven per domiciliació amb un altre sistema i es migren a Summa sense historial (`sepaPain008LastRunAt = null`, `sepaMandate.lastCollectedAt = null`), la lògica els marca com FRST. El Santander **rebutja** perquè ja coneix els mandats com a recurrents.
+
+**Solució permanent:** Informar `sepaMandate.lastCollectedAt` amb la data de l'última remesa del sistema antic, o amb la data de migració.
+
+**Solució temporal (activa feb 2026):** `determineSequenceType()` retorna `'RCUR'` fix. Marcat com `// TEMP` i `// TODO` al codi.
+
+#### E) Límits d'identificadors SEPA (max 35 caràcters)
+
+| Camp | Restricció | Caràcters permesos |
+|------|------------|-------------------|
+| `MsgId` | ≤ 35 chars | A-Z, a-z, 0-9, `-` |
+| `PmtInfId` | ≤ 35 chars | A-Z, a-z, 0-9, `-` |
+| `EndToEndId` | ≤ 35 chars | A-Z, a-z, 0-9, `-` |
+| `MndtId` (UMR) | ≤ 35 chars | A-Z, a-z, 0-9, `-` |
+
+El helper `ensureMax35()` a `generate-pain008.ts` neteja i retalla qualsevol identificador.
+
+#### F) Errors reals trobats (taula de referència)
+
+| Error banc (Santander) | Causa real | Solució Summa |
+|------------------------|------------|---------------|
+| "Línea 21 - El valor 'PRE2026...0-1' excede la longitud máxima permitida: '35'" | `PmtInfId` = `messageId` (35 chars) + `-1` = 37 chars | Aplicar `ensureMax35()` al `PmtInfId` |
+| Rebuig massiu de tots els rebuts sense error clar | `SeqTp = FRST` per donants migrats que Santander ja coneix com RCUR | Forçar `RCUR` o informar `lastCollectedAt` |
+| "Formato de fichero no válido" | Namespace `pain.008.001.08` (versió incorrecta) | Usar namespace `pain.008.001.02` |
+| "Formato de fecha incorrecto" | `CreDtTm` amb mil·lisegons (`2026-02-04T13:15:29.046+01:00`) | Eliminar mil·lisegons del timestamp |
 
 
 ## 3.4 GESTIÓ DE DEVOLUCIONS (NOU v1.8)
