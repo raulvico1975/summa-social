@@ -570,20 +570,30 @@ export async function deleteMatchedPendingDocument(
     throw new Error('El document indica status matched però no té matchedTransactionId');
   }
 
-  // 3. Preparar batch per atomicitat
+  // 3. Comprovar si la transacció existeix
+  const txRef = firestoreDoc(firestore, `organizations/${orgId}/transactions/${matchedTxId}`);
+  const txSnap = await getDoc(txRef);
+  const txExists = txSnap.exists();
+
+  if (!txExists) {
+    console.warn(`[deleteMatchedPendingDocument] Transacció ${matchedTxId} ja no existeix (orphan reference)`);
+  }
+
+  // 4. Preparar batch per atomicitat
   const batch = writeBatch(firestore);
 
-  // 3a. Actualitzar la transacció per treure referència al document
-  const txRef = firestoreDoc(firestore, `organizations/${orgId}/transactions/${matchedTxId}`);
-  batch.update(txRef, {
-    document: null,
-    updatedAt: serverTimestamp(),
-  });
+  // 4a. Actualitzar la transacció per treure referència al document (només si existeix)
+  if (txExists) {
+    batch.update(txRef, {
+      document: null,
+      updatedAt: serverTimestamp(),
+    });
+  }
 
-  // 3b. Eliminar el pending document
+  // 4b. Eliminar el pending document
   batch.delete(pendingRef);
 
-  // 4. Executar batch
+  // 5. Executar batch
   await batch.commit();
 
   // 5. Eliminar fitxers de Storage (best-effort, fora del batch)
