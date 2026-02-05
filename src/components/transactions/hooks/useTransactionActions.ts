@@ -4,6 +4,7 @@ import * as React from 'react';
 import { doc, CollectionReference, type Firestore } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL, deleteObject, FirebaseStorage } from 'firebase/storage';
 import { updateDocumentNonBlocking, deleteDocumentNonBlocking, addDocumentNonBlocking } from '@/firebase';
+import { assertUploadContext } from '@/lib/storage-upload-guard';
 import { useToast } from '@/hooks/use-toast';
 import { useTranslations } from '@/i18n';
 import { useAppLog } from '@/hooks/use-app-log';
@@ -229,6 +230,14 @@ export function useTransactionActions({
 
         const storagePath = `organizations/${organizationId}/documents/${transactionId}/${finalName}`;
         log(`[${transactionId}] Ruta de subida en Storage: ${storagePath}`);
+
+        // Diagnòstic diferencial: verificar context d'upload
+        assertUploadContext({
+          contextLabel: 'moviments',
+          orgId: organizationId,
+          path: storagePath,
+        });
+
         const storageRef = ref(storage, storagePath);
 
         try {

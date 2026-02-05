@@ -30,6 +30,7 @@ import { ref, uploadBytes } from 'firebase/storage';
 import { doc, collection, serverTimestamp, setDoc, query, where, getDocs } from 'firebase/firestore';
 import { computeSha256 } from '@/lib/files/sha256';
 import { pendingDocumentsCollection } from '@/lib/pending-documents/refs';
+import { assertUploadContext } from '@/lib/storage-upload-guard';
 import { isStorageUnauthorizedError, reportStorageUnauthorized } from '@/lib/system-incidents';
 import { extractXmlData } from '@/lib/pending-documents/extract-xml';
 import { extractPdfData } from '@/lib/pending-documents/extract-pdf';
@@ -290,6 +291,14 @@ export function PendingDocumentsUploadModal({
       // 4. Pujar a Storage
       updateFileStatus(item.id, { status: 'uploading', progress: 60 });
       const storagePath = `organizations/${organizationId}/pendingDocuments/${docId}/${item.file.name}`;
+
+      // Diagnòstic diferencial: verificar context d'upload
+      assertUploadContext({
+        contextLabel: 'pendents',
+        orgId: organizationId,
+        path: storagePath,
+      });
+
       const storageRef = ref(storage, storagePath);
       const contentType = getContentType(item.file);
 
