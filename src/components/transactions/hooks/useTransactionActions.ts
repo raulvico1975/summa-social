@@ -232,11 +232,23 @@ export function useTransactionActions({
         log(`[${transactionId}] Ruta de subida en Storage: ${storagePath}`);
 
         // Diagnòstic diferencial: verificar context d'upload
-        assertUploadContext({
+        const uploadCheck = assertUploadContext({
           contextLabel: 'moviments',
           orgId: organizationId,
           path: storagePath,
         });
+
+        if (!uploadCheck.ok) {
+          const msg = uploadCheck.reason === 'NO_AUTH'
+            ? 'Sessió no preparada. Torna-ho a intentar en 2 segons.'
+            : 'Organització no identificada.';
+          toast({ variant: 'destructive', title: t.common.error, description: msg });
+          setDocLoadingStates(prev => ({ ...prev, [transactionId]: false }));
+          if (fileInput.parentElement) {
+            document.body.removeChild(fileInput);
+          }
+          return;
+        }
 
         const storageRef = ref(storage, storagePath);
 

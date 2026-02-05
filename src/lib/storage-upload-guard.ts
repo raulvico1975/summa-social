@@ -17,15 +17,32 @@ export interface UploadContext {
   path: string;
 }
 
+export type UploadBlockedReason = 'NO_AUTH' | 'NO_ORG';
+
+export interface UploadContextResult {
+  ok: true;
+  ctx: UploadContext;
+}
+
+export interface UploadContextError {
+  ok: false;
+  reason: UploadBlockedReason;
+  ctx: UploadContext;
+}
+
 /**
  * Diagnòstic i guard per uploads a Firebase Storage.
  *
- * - Log complet del context d'upload
- * - Throw si uid o orgId no estan disponibles
+ * - Log complet del context d'upload (només en development)
+ * - Retorna { ok: false, reason } si uid o orgId no estan disponibles
  *
  * Utilitza la mateixa instància d'app/auth/storage que el projecte (singleton).
  */
-export function assertUploadContext({ contextLabel, orgId, path }: UploadContextParams): UploadContext {
+export function assertUploadContext({
+  contextLabel,
+  orgId,
+  path,
+}: UploadContextParams): UploadContextResult | UploadContextError {
   const app = getApp();
   const auth = getAuth(app);
   const storage = getStorage(app);
@@ -43,19 +60,25 @@ export function assertUploadContext({ contextLabel, orgId, path }: UploadContext
     path,
   };
 
-  // Log per diagnòstic diferencial
-  console.log('[UPLOAD_CTX]', JSON.stringify(ctx, null, 2));
+  // Log només en development
+  if (process.env.NODE_ENV !== 'production') {
+    console.log('[UPLOAD_CTX]', JSON.stringify(ctx, null, 2));
+  }
 
-  // Guards
+  // Guards - retornem error en lloc de throw
   if (!uid) {
-    console.error('[UPLOAD_CTX] BLOCKED: No auth.currentUser.uid');
-    throw new Error('UPLOAD_BLOCKED_NO_AUTH');
+    if (process.env.NODE_ENV !== 'production') {
+      console.warn('[UPLOAD_CTX] BLOCKED: No auth.currentUser.uid');
+    }
+    return { ok: false, reason: 'NO_AUTH', ctx };
   }
 
   if (!orgId) {
-    console.error('[UPLOAD_CTX] BLOCKED: No orgId');
-    throw new Error('UPLOAD_BLOCKED_NO_ORG');
+    if (process.env.NODE_ENV !== 'production') {
+      console.warn('[UPLOAD_CTX] BLOCKED: No orgId');
+    }
+    return { ok: false, reason: 'NO_ORG', ctx };
   }
 
-  return ctx;
+  return { ok: true, ctx };
 }

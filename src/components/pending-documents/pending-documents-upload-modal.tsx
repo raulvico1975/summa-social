@@ -293,11 +293,19 @@ export function PendingDocumentsUploadModal({
       const storagePath = `organizations/${organizationId}/pendingDocuments/${docId}/${item.file.name}`;
 
       // Diagnòstic diferencial: verificar context d'upload
-      assertUploadContext({
+      const uploadCheck = assertUploadContext({
         contextLabel: 'pendents',
         orgId: organizationId,
         path: storagePath,
       });
+
+      if (!uploadCheck.ok) {
+        const msg = uploadCheck.reason === 'NO_AUTH'
+          ? 'Sessió no preparada. Torna-ho a intentar en 2 segons.'
+          : 'Organització no identificada.';
+        updateFileStatus(item.id, { status: 'error', error: msg });
+        return false;
+      }
 
       const storageRef = ref(storage, storagePath);
       const contentType = getContentType(item.file);
