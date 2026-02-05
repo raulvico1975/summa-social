@@ -117,13 +117,13 @@ export function StepConfig({ bankAccounts, configData, onChange, isLoading }: St
         <div className="rounded-lg border bg-muted/50 p-4 space-y-2">
           <div className="flex items-center gap-2 text-sm">
             <CreditCard className="h-4 w-4 text-muted-foreground" />
-            <span className="text-muted-foreground">Creditor ID:</span>
+            <span className="text-muted-foreground">{t.sepaCollection.config.creditorIdLabel}</span>
             <span className="font-mono font-medium">{selectedAccount.creditorId}</span>
           </div>
           {selectedAccount.iban && (
             <div className="flex items-center gap-2 text-sm">
               <Building2 className="h-4 w-4 text-muted-foreground" />
-              <span className="text-muted-foreground">IBAN:</span>
+              <span className="text-muted-foreground">{t.sepaCollection.config.ibanLabel}</span>
               <span className="font-mono font-medium">{selectedAccount.iban}</span>
             </div>
           )}
