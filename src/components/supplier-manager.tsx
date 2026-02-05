@@ -46,9 +46,10 @@ import { EmptyState } from '@/components/ui/empty-state';
 import type { Supplier, Category } from '@/lib/data';
 import { useToast } from '@/hooks/use-toast';
 import { Badge } from '@/components/ui/badge';
-import { useCollection, useFirebase, useMemoFirebase, addDocumentNonBlocking, archiveDocumentNonBlocking, setDocumentNonBlocking } from '@/firebase';
+import { useCollection, useFirebase, useMemoFirebase, addDocumentNonBlocking } from '@/firebase';
 import { findExistingContact } from '@/lib/contact-matching';
-import { collection, doc, query, where } from 'firebase/firestore';
+import { collection, query, where } from 'firebase/firestore';
+import { updateContactViaApi } from '@/services/contacts';
 import { useCurrentOrganization } from '@/hooks/organization-provider';
 import { SupplierImporter } from './supplier-importer';
 import { useTranslations } from '@/i18n';
@@ -84,7 +85,7 @@ const emptyFormData: SupplierFormData = {
 };
 
 export function SupplierManager() {
-  const { firestore, user } = useFirebase();
+  const { firestore, auth, user } = useFirebase();
   const { organizationId } = useCurrentOrganization();
   const { toast } = useToast();
   const { t } = useTranslations();
@@ -304,10 +305,10 @@ export function SupplierManager() {
     setFormData(prev => ({ ...prev, [field]: value }));
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!formData.name || !formData.taxId) {
-      toast({ 
-        variant: 'destructive', 
+      toast({
+        variant: 'destructive',
         title: t.common.error,
         description: t.suppliers.errorRequiredFields
       });
@@ -335,8 +336,19 @@ export function SupplierManager() {
     };
 
     if (editingSupplier) {
-      setDocumentNonBlocking(doc(contactsCollection, editingSupplier.id), dataToSave, { merge: true });
-      toast({ title: t.suppliers.supplierUpdated, description: t.suppliers.supplierUpdatedDescription(formData.name) });
+      // Update via Admin API (bypass archived field guardrails)
+      try {
+        await updateContactViaApi({
+          orgId: organizationId!,
+          docId: editingSupplier.id,
+          data: dataToSave,
+          auth,
+        });
+        toast({ title: t.suppliers.supplierUpdated, description: t.suppliers.supplierUpdatedDescription(formData.name) });
+      } catch (err) {
+        toast({ variant: 'destructive', title: t.common.error, description: err instanceof Error ? err.message : 'Error desconegut' });
+        return;
+      }
     } else {
       // Validar si ja existeix un contacte amb el mateix NIF/IBAN/email
       const existingMatch = findExistingContact(
