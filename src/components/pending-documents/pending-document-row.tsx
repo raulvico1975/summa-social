@@ -46,6 +46,7 @@ import {
   MoreHorizontal,
   ArrowUpRight,
   Link2,
+  RefreshCw,
 } from 'lucide-react';
 import {
   DropdownMenu,
@@ -87,6 +88,9 @@ interface PendingDocumentRowProps {
   onSelect?: (docId: string, selected: boolean) => void;
   /** Reconciliation */
   onReconcile?: (doc: PendingDocument) => void;
+  /** Re-link document to matched transaction */
+  onRelinkDocument?: (doc: PendingDocument) => void;
+  isRelinking?: boolean;
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -168,6 +172,8 @@ export function PendingDocumentRow({
   isSelected = false,
   onSelect,
   onReconcile,
+  onRelinkDocument,
+  isRelinking = false,
 }: PendingDocumentRowProps) {
   const { storage } = useFirebase();
   const { t } = useTranslations();
@@ -642,6 +648,21 @@ export function PendingDocumentRow({
                     </a>
                   </DropdownMenuItem>
                 </>
+              )}
+
+              {/* Re-link document to matched transaction */}
+              {doc.status === 'matched' && doc.matchedTransactionId && onRelinkDocument && (
+                <DropdownMenuItem
+                  onClick={() => onRelinkDocument(doc)}
+                  disabled={isRelinking}
+                >
+                  {isRelinking ? (
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  ) : (
+                    <RefreshCw className="mr-2 h-4 w-4" />
+                  )}
+                  {t.pendingDocs.actions.relinkDocument}
+                </DropdownMenuItem>
               )}
 
               {/* Archive (for draft, confirmed, sepa_generated) */}
