@@ -27,6 +27,31 @@ let cachedDb: Firestore | null = null;
 let cachedBucket: Bucket | null = null;
 let cachedAuth: Auth | null = null;
 
+/**
+ * Resol el nom del bucket de Storage amb fallback chain:
+ * 1. NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET
+ * 2. FIREBASE_STORAGE_BUCKET
+ * 3. admin.app().options.storageBucket
+ */
+function getBucketName(): string {
+  // 1. Variable d'entorn pública
+  const envPublic = process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET;
+  if (envPublic) return envPublic;
+
+  // 2. Variable d'entorn privada
+  const envPrivate = process.env.FIREBASE_STORAGE_BUCKET;
+  if (envPrivate) return envPrivate;
+
+  // 3. Configuració de l'app Admin
+  const apps = getApps();
+  if (apps.length > 0) {
+    const appOptions = apps[0].options as { storageBucket?: string };
+    if (appOptions.storageBucket) return appOptions.storageBucket;
+  }
+
+  throw new Error('[relink-document] No s\'ha pogut determinar el bucket de Storage. Configura NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET.');
+}
+
 function getAdminDb(): Firestore {
   if (cachedDb) return cachedDb;
 
@@ -52,7 +77,9 @@ function getAdminDb(): Firestore {
 function getAdminStorage(): Bucket {
   if (cachedBucket) return cachedBucket;
   getAdminDb();
-  cachedBucket = getStorage().bucket();
+  // Bucket EXPLÍCIT per evitar defaults incorrectes
+  const bucketName = getBucketName();
+  cachedBucket = getStorage().bucket(bucketName);
   return cachedBucket;
 }
 
@@ -200,15 +227,13 @@ export async function POST(
     );
   }
 
-  // 7. Validar que té document (storagePath)
-  const storagePath = pendingData?.file?.storagePath;
+  // 7. Validar que té filename
   const filename = pendingData?.file?.filename;
 
-  if (!storagePath || !filename) {
-    // Incidència: document pendent sense fitxer
-    console.error(`${logPrefix} INCIDENT_MISSING_DOCUMENT: pendingId=${pendingId}, orgId=${orgId}`);
+  if (!filename) {
+    console.error(`${logPrefix} INCIDENT_MISSING_FILENAME: pendingId=${pendingId}, orgId=${orgId}`);
     return NextResponse.json(
-      { success: false, error: 'Incidència: document del pendent no trobat', code: 'MISSING_DOCUMENT' },
+      { success: false, error: 'Incidència: document del pendent no té filename', code: 'MISSING_DOCUMENT' },
       { status: 400 }
     );
   }
@@ -236,24 +261,65 @@ export async function POST(
     });
   }
 
-  // 10. Copiar fitxer a la ubicació de la transacció
-  const destPath = `organizations/${orgId}/documents/${bankTxId}/${filename}`;
+  // 10. Cercar fitxer origen amb path determinista (sense heurístiques)
+  // candidateA: storagePath guardat a Firestore (si existeix)
+  // candidateB: path canònic construït a partir de {orgId, pendingId, filename}
+  const candidateA = pendingData?.file?.storagePath || null;
+  const candidateB = `organizations/${orgId}/pendingDocuments/${pendingId}/${filename}`;
 
-  console.log(`${logPrefix} Copiant: ${storagePath} -> ${destPath}`);
+  // Log diagnòstic (només en dev)
+  if (process.env.NODE_ENV !== 'production') {
+    console.log(`${logPrefix} [DIAG] bucket: ${bucket.name}`);
+    console.log(`${logPrefix} [DIAG] pendingData.file:`, JSON.stringify(pendingData?.file, null, 2));
+    console.log(`${logPrefix} [DIAG] candidateA (storagePath): "${candidateA}"`);
+    console.log(`${logPrefix} [DIAG] candidateB (canònic): "${candidateB}"`);
+  }
+
+  let sourceStoragePath: string | null = null;
 
   try {
-    const sourceFile = bucket.file(storagePath);
-    const destFile = bucket.file(destPath);
+    // Provar candidateA primer (si existeix)
+    if (candidateA) {
+      const fileA = bucket.file(candidateA);
+      const [existsA] = await fileA.exists();
+      if (existsA) {
+        sourceStoragePath = candidateA;
+        if (process.env.NODE_ENV !== 'production') {
+          console.log(`${logPrefix} [DIAG] Trobat a candidateA: ${candidateA}`);
+        }
+      }
+    }
 
-    // Comprovar que el fitxer origen existeix
-    const [sourceExists] = await sourceFile.exists();
-    if (!sourceExists) {
-      console.error(`${logPrefix} INCIDENT_MISSING_DOCUMENT: fitxer no existeix a Storage: ${storagePath}`);
+    // Si candidateA no existeix o no s'ha trobat, provar candidateB
+    if (!sourceStoragePath && candidateB !== candidateA) {
+      const fileB = bucket.file(candidateB);
+      const [existsB] = await fileB.exists();
+      if (existsB) {
+        sourceStoragePath = candidateB;
+        if (process.env.NODE_ENV !== 'production') {
+          console.log(`${logPrefix} [DIAG] Trobat a candidateB: ${candidateB}`);
+        }
+      }
+    }
+
+    // Si cap candidat existeix, retornar error amb diagnòstic
+    if (!sourceStoragePath) {
+      console.error(`${logPrefix} INCIDENT_MISSING_DOCUMENT:`);
+      console.error(`${logPrefix}   bucket: ${bucket.name}`);
+      console.error(`${logPrefix}   candidateA: "${candidateA}" (no trobat)`);
+      console.error(`${logPrefix}   candidateB: "${candidateB}" (no trobat)`);
       return NextResponse.json(
         { success: false, error: 'Incidència: document del pendent no trobat a Storage', code: 'MISSING_DOCUMENT' },
         { status: 400 }
       );
     }
+
+    // 11. Copiar fitxer a la ubicació de la transacció
+    const destPath = `organizations/${orgId}/documents/${bankTxId}/${filename}`;
+    const sourceFile = bucket.file(sourceStoragePath);
+    const destFile = bucket.file(destPath);
+
+    console.log(`${logPrefix} Copiant: ${sourceStoragePath} -> ${destPath}`);
 
     // Copiar
     await sourceFile.copy(destFile);
@@ -264,7 +330,7 @@ export async function POST(
       expires: '03-01-2500', // URL de llarga durada
     });
 
-    // 11. Actualitzar la transacció amb el document
+    // 12. Actualitzar la transacció amb el document
     await txRef.update({
       document: signedUrl,
       updatedAt: FieldValue.serverTimestamp(),
