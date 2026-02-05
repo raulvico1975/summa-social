@@ -64,6 +64,7 @@ import {
   archivePendingDocument,
   restorePendingDocument,
   deletePendingDocument,
+  deleteMatchedPendingDocument,
   isDocumentReadyToConfirm,
   type PendingDocument,
   type PendingDocumentStatus,
@@ -111,6 +112,7 @@ export default function PendingDocsPage() {
   const [archivingDocId, setArchivingDocId] = React.useState<string | null>(null);
   const [deletingDocId, setDeletingDocId] = React.useState<string | null>(null);
   const [relinkingDocId, setRelinkingDocId] = React.useState<string | null>(null);
+  const [deletingMatchedDocId, setDeletingMatchedDocId] = React.useState<string | null>(null);
 
   // Filtres client-side
   const [filters, setFilters] = React.useState<PendingDocumentsFilters>(EMPTY_FILTERS);
@@ -349,6 +351,44 @@ export default function PendingDocsPage() {
       setDeletingDocId(null);
     }
   }, [firestore, storage, organizationId, toast, expandedDocId]);
+
+  // Handler per eliminar un document matched (desfer conciliació)
+  const handleDeleteMatched = React.useCallback(async (doc: PendingDocument) => {
+    if (!firestore || !storage || !organizationId) return;
+
+    if (doc.status !== 'matched') {
+      toast({
+        variant: 'destructive',
+        title: t.pendingDocs.toasts.error,
+        description: 'Aquest document no està conciliat',
+      });
+      return;
+    }
+
+    setDeletingMatchedDocId(doc.id);
+    try {
+      await deleteMatchedPendingDocument(firestore, storage, organizationId, doc.id);
+
+      // Tancar expansió si estava obert
+      if (expandedDocId === doc.id) {
+        setExpandedDocId(null);
+      }
+
+      toast({
+        title: t.pendingDocs.toasts.matchedDeleted || 'Conciliació desfeta',
+        description: t.pendingDocs.toasts.matchedDeletedDesc || 'El moviment bancari torna a estar lliure per conciliar.',
+      });
+    } catch (error) {
+      console.error('Error deleting matched document:', error);
+      toast({
+        variant: 'destructive',
+        title: t.pendingDocs.toasts.error,
+        description: error instanceof Error ? error.message : t.pendingDocs.toasts.errorDelete,
+      });
+    } finally {
+      setDeletingMatchedDocId(null);
+    }
+  }, [firestore, storage, organizationId, toast, expandedDocId, t]);
 
   // Handler per re-vincular document a transacció
   const handleRelinkDocument = React.useCallback(async (doc: PendingDocument) => {
@@ -884,9 +924,11 @@ export default function PendingDocsPage() {
                           onRestore={handleRestore}
                           onReconcile={handleReconcile}
                           onRelinkDocument={handleRelinkDocument}
+                          onDeleteMatched={handleDeleteMatched}
                           isConfirming={confirmingDocId === doc.id}
                           isArchiving={archivingDocId === doc.id}
                           isRelinking={relinkingDocId === doc.id}
+                          isDeletingMatched={deletingMatchedDocId === doc.id}
                           movimentsPath={movimentsPath}
                           isSelectable={canOperate && doc.status === 'confirmed'}
                           isSelected={selectedDocIds.has(doc.id)}

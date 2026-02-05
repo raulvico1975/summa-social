@@ -5,13 +5,16 @@ import {
   query,
   where,
   orderBy,
+  limit as firestoreLimit,
   Timestamp,
   addDoc,
   updateDoc,
   deleteDoc,
   getDoc,
+  getDocs,
   serverTimestamp,
   writeBatch,
+  doc as firestoreDoc,
   type Firestore,
   type Query,
 } from 'firebase/firestore';
@@ -477,4 +480,125 @@ export function getEditableFields(status: PendingDocumentStatus): {
         editableFields: [],
       };
   }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// PENDING DOC MATCHED - CONSULTES I ELIMINACIÓ
+// ═══════════════════════════════════════════════════════════════════════════
+
+/**
+ * Comprova si una transacció té un document pendent conciliat (matched) associat.
+ *
+ * @param firestore - Instància de Firestore
+ * @param orgId - ID de l'organització
+ * @param transactionId - ID de la transacció a comprovar
+ * @returns L'ID del pending document si existeix, o null si no
+ */
+export async function getMatchedPendingDocumentId(
+  firestore: Firestore,
+  orgId: string,
+  transactionId: string
+): Promise<string | null> {
+  const collectionRef = pendingDocumentsCollection(firestore, orgId);
+
+  const matchedQuery = query(
+    collectionRef,
+    where('matchedTransactionId', '==', transactionId),
+    where('status', '==', 'matched'),
+    firestoreLimit(1)
+  );
+
+  const snapshot = await getDocs(matchedQuery);
+
+  if (snapshot.empty) {
+    return null;
+  }
+
+  return snapshot.docs[0].id;
+}
+
+/**
+ * Elimina un document pendent matched i desfà la conciliació amb la transacció.
+ *
+ * Efectes:
+ * - Elimina el pending document de Firestore
+ * - Elimina el fitxer de Storage (best-effort)
+ * - Neteja els camps de conciliació de la transacció (document, category, contactId si provenen del pendent)
+ *
+ * @param firestore - Instància de Firestore
+ * @param storage - Instància de Firebase Storage
+ * @param orgId - ID de l'organització
+ * @param pendingDocId - ID del document pendent a eliminar
+ * @returns Resultat amb info sobre l'operació
+ */
+export async function deleteMatchedPendingDocument(
+  firestore: Firestore,
+  storage: FirebaseStorage,
+  orgId: string,
+  pendingDocId: string
+): Promise<{ success: boolean; fileDeleted: boolean; fileError?: string }> {
+  // 1. Llegir el pending document
+  const pendingRef = pendingDocumentDoc(firestore, orgId, pendingDocId);
+  const pendingSnap = await getDoc(pendingRef);
+
+  if (!pendingSnap.exists()) {
+    throw new Error('El document pendent no existeix');
+  }
+
+  const pendingData = pendingSnap.data() as PendingDocument;
+
+  // 2. Validar que està matched
+  if (pendingData.status !== 'matched') {
+    throw new Error('El document no està conciliat. Usa la funció d\'eliminació normal.');
+  }
+
+  const matchedTxId = pendingData.matchedTransactionId;
+  if (!matchedTxId) {
+    throw new Error('El document indica status matched però no té matchedTransactionId');
+  }
+
+  // 3. Preparar batch per atomicitat
+  const batch = writeBatch(firestore);
+
+  // 3a. Actualitzar la transacció per treure referència al document
+  const txRef = firestoreDoc(firestore, `organizations/${orgId}/transactions/${matchedTxId}`);
+  batch.update(txRef, {
+    document: null,
+    updatedAt: serverTimestamp(),
+  });
+
+  // 3b. Eliminar el pending document
+  batch.delete(pendingRef);
+
+  // 4. Executar batch
+  await batch.commit();
+
+  // 5. Eliminar fitxers de Storage (best-effort, fora del batch)
+  let fileDeleted = true;
+  let fileError: string | undefined;
+
+  // Eliminar fitxer original (pendingDocuments path)
+  if (pendingData.file?.storagePath) {
+    try {
+      const storageRef = ref(storage, pendingData.file.storagePath);
+      await deleteObject(storageRef);
+    } catch (error) {
+      console.warn('[deleteMatchedPendingDocument] No s\'ha pogut esborrar storagePath:', error);
+      // No és error crític - pot ser que ja s'hagi eliminat
+    }
+  }
+
+  // Eliminar còpia al destí final (documents path)
+  if (pendingData.file?.finalStoragePath) {
+    try {
+      const finalRef = ref(storage, pendingData.file.finalStoragePath);
+      await deleteObject(finalRef);
+    } catch (error) {
+      console.warn('[deleteMatchedPendingDocument] No s\'ha pogut esborrar finalStoragePath:', error);
+      fileDeleted = false;
+      fileError = error instanceof Error ? error.message : 'Error desconegut';
+    }
+  }
+
+  return { success: true, fileDeleted, fileError };
 }

@@ -2,6 +2,7 @@
 
 import * as React from 'react';
 import { doc, CollectionReference, type Firestore } from 'firebase/firestore';
+import { getMatchedPendingDocumentId } from '@/lib/pending-documents/api';
 import { ref, uploadBytes, getDownloadURL, deleteObject, FirebaseStorage } from 'firebase/storage';
 import { updateDocumentNonBlocking, deleteDocumentNonBlocking, addDocumentNonBlocking } from '@/firebase';
 import { assertUploadContext } from '@/lib/storage-upload-guard';
@@ -302,7 +303,7 @@ export function useTransactionActions({
   }, []);
 
   const handleDeleteDocConfirm = React.useCallback(async () => {
-    if (!transactionToDeleteDoc || !transactionsCollection || !organizationId) {
+    if (!transactionToDeleteDoc || !transactionsCollection || !organizationId || !firestore) {
       setIsDeleteDocDialogOpen(false);
       setTransactionToDeleteDoc(null);
       return;
@@ -315,6 +316,21 @@ export function useTransactionActions({
     log(`[${transactionId}] Iniciant eliminació de document...`);
 
     try {
+      // GUARDRAIL: Comprovar si el document prové d'un pendent conciliat
+      const matchedPendingId = await getMatchedPendingDocumentId(firestore, organizationId, transactionId);
+      if (matchedPendingId) {
+        toast({
+          variant: 'destructive',
+          title: t.movements.table.deleteDocFromPendingError || 'No es pot eliminar',
+          description: t.movements.table.deleteDocFromPendingHint || 'Aquest document prové d\'un moviment pendent conciliat. Elimina el pendent per desfer la conciliació.',
+        });
+        log(`[${transactionId}] BLOQUEJAT: document prové de pending ${matchedPendingId}`);
+        setDocLoadingStates(prev => ({ ...prev, [transactionId]: false }));
+        setIsDeleteDocDialogOpen(false);
+        setTransactionToDeleteDoc(null);
+        return;
+      }
+
       // Intentar eliminar el fitxer de Storage si tenim la URL
       if (documentUrl) {
         try {
@@ -351,7 +367,7 @@ export function useTransactionActions({
       setIsDeleteDocDialogOpen(false);
       setTransactionToDeleteDoc(null);
     }
-  }, [transactionToDeleteDoc, transactionsCollection, organizationId, storage, toast, t, log]);
+  }, [transactionToDeleteDoc, transactionsCollection, organizationId, firestore, storage, toast, t, log]);
 
   const handleCloseDeleteDocDialog = React.useCallback(() => {
     setIsDeleteDocDialogOpen(false);
