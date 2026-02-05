@@ -122,10 +122,19 @@ export async function updatePendingDocument(
 ): Promise<void> {
   const docRef = pendingDocumentDoc(firestore, orgId, docId);
 
-  await updateDoc(docRef, {
-    ...patch,
-    updatedAt: serverTimestamp(),
-  });
+  try {
+    await updateDoc(docRef, {
+      ...patch,
+      updatedAt: serverTimestamp(),
+    });
+  } catch (error) {
+    // Idempotent: si el document no existeix, loguem i ignorem
+    if (error instanceof Error && error.message.includes('No document to update')) {
+      console.warn(`[updatePendingDocument] Document ${docId} ja no existeix (idempotent)`);
+      return;
+    }
+    throw error;
+  }
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -395,8 +404,10 @@ export async function deletePendingDocument(
   const docRef = pendingDocumentDoc(firestore, orgId, docId);
   const docSnap = await getDoc(docRef);
 
+  // Idempotent: si el document ja no existeix, considerem èxit
   if (!docSnap.exists()) {
-    throw new Error('El document no existeix');
+    console.warn(`[deletePendingDocument] Document ${docId} ja no existeix (idempotent)`);
+    return { fileDeleted: true, fileError: undefined };
   }
 
   const docData = docSnap.data() as PendingDocument;
@@ -541,8 +552,10 @@ export async function deleteMatchedPendingDocument(
   const pendingRef = pendingDocumentDoc(firestore, orgId, pendingDocId);
   const pendingSnap = await getDoc(pendingRef);
 
+  // Idempotent: si el document ja no existeix, considerem èxit
   if (!pendingSnap.exists()) {
-    throw new Error('El document pendent no existeix');
+    console.warn(`[deleteMatchedPendingDocument] Document ${pendingDocId} ja no existeix (idempotent)`);
+    return { success: true, fileDeleted: true, fileError: undefined };
   }
 
   const pendingData = pendingSnap.data() as PendingDocument;
