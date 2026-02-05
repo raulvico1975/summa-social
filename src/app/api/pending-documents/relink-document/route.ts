@@ -261,9 +261,13 @@ export async function POST(
     });
   }
 
-  // 10. Cercar fitxer origen amb path determinista (sense heurístiques)
-  // candidateA: storagePath guardat a Firestore (si existeix)
+  // 10. Cercar fitxer origen amb path determinista (ordre de prioritat)
+  // destPath: ubicació final on ha d'estar el document (font estable)
+  // candidateFinal: finalStoragePath guardat prèviament (si existeix)
+  // candidateA: storagePath original guardat a Firestore
   // candidateB: path canònic construït a partir de {orgId, pendingId, filename}
+  const destPath = `organizations/${orgId}/documents/${bankTxId}/${filename}`;
+  const candidateFinal = pendingData?.file?.finalStoragePath || null;
   const candidateA = pendingData?.file?.storagePath || null;
   const candidateB = `organizations/${orgId}/pendingDocuments/${pendingId}/${filename}`;
 
@@ -271,15 +275,41 @@ export async function POST(
   if (process.env.NODE_ENV !== 'production') {
     console.log(`${logPrefix} [DIAG] bucket: ${bucket.name}`);
     console.log(`${logPrefix} [DIAG] pendingData.file:`, JSON.stringify(pendingData?.file, null, 2));
+    console.log(`${logPrefix} [DIAG] destPath: "${destPath}"`);
+    console.log(`${logPrefix} [DIAG] candidateFinal (finalStoragePath): "${candidateFinal}"`);
     console.log(`${logPrefix} [DIAG] candidateA (storagePath): "${candidateA}"`);
     console.log(`${logPrefix} [DIAG] candidateB (canònic): "${candidateB}"`);
   }
 
   let sourceStoragePath: string | null = null;
+  let alreadyAtDestination = false;
 
   try {
-    // Provar candidateA primer (si existeix)
-    if (candidateA) {
+    // 1. Primer comprovar si el fitxer ja existeix al destí final (ruta estable)
+    const destFile = bucket.file(destPath);
+    const [destExists] = await destFile.exists();
+    if (destExists) {
+      sourceStoragePath = destPath;
+      alreadyAtDestination = true;
+      if (process.env.NODE_ENV !== 'production') {
+        console.log(`${logPrefix} [DIAG] Ja existeix al destí: ${destPath}`);
+      }
+    }
+
+    // 2. Provar candidateFinal (finalStoragePath guardat prèviament)
+    if (!sourceStoragePath && candidateFinal && candidateFinal !== destPath) {
+      const fileFinal = bucket.file(candidateFinal);
+      const [existsFinal] = await fileFinal.exists();
+      if (existsFinal) {
+        sourceStoragePath = candidateFinal;
+        if (process.env.NODE_ENV !== 'production') {
+          console.log(`${logPrefix} [DIAG] Trobat a candidateFinal: ${candidateFinal}`);
+        }
+      }
+    }
+
+    // 3. Provar candidateA (storagePath original)
+    if (!sourceStoragePath && candidateA && candidateA !== destPath && candidateA !== candidateFinal) {
       const fileA = bucket.file(candidateA);
       const [existsA] = await fileA.exists();
       if (existsA) {
@@ -290,8 +320,8 @@ export async function POST(
       }
     }
 
-    // Si candidateA no existeix o no s'ha trobat, provar candidateB
-    if (!sourceStoragePath && candidateB !== candidateA) {
+    // 4. Provar candidateB (path canònic)
+    if (!sourceStoragePath && candidateB !== destPath && candidateB !== candidateFinal && candidateB !== candidateA) {
       const fileB = bucket.file(candidateB);
       const [existsB] = await fileB.exists();
       if (existsB) {
@@ -306,6 +336,8 @@ export async function POST(
     if (!sourceStoragePath) {
       console.error(`${logPrefix} INCIDENT_MISSING_DOCUMENT:`);
       console.error(`${logPrefix}   bucket: ${bucket.name}`);
+      console.error(`${logPrefix}   destPath: "${destPath}" (no trobat)`);
+      console.error(`${logPrefix}   candidateFinal: "${candidateFinal}" (no trobat)`);
       console.error(`${logPrefix}   candidateA: "${candidateA}" (no trobat)`);
       console.error(`${logPrefix}   candidateB: "${candidateB}" (no trobat)`);
       return NextResponse.json(
@@ -314,15 +346,14 @@ export async function POST(
       );
     }
 
-    // 11. Copiar fitxer a la ubicació de la transacció
-    const destPath = `organizations/${orgId}/documents/${bankTxId}/${filename}`;
-    const sourceFile = bucket.file(sourceStoragePath);
-    const destFile = bucket.file(destPath);
-
-    console.log(`${logPrefix} Copiant: ${sourceStoragePath} -> ${destPath}`);
-
-    // Copiar
-    await sourceFile.copy(destFile);
+    // 11. Copiar fitxer a la ubicació de la transacció (si no ja hi és)
+    if (!alreadyAtDestination) {
+      const sourceFile = bucket.file(sourceStoragePath);
+      console.log(`${logPrefix} Copiant: ${sourceStoragePath} -> ${destPath}`);
+      await sourceFile.copy(destFile);
+    } else {
+      console.log(`${logPrefix} Fitxer ja existeix al destí, no cal copiar`);
+    }
 
     // Obtenir URL pública (signada)
     const [signedUrl] = await destFile.getSignedUrl({
@@ -335,6 +366,14 @@ export async function POST(
       document: signedUrl,
       updatedAt: FieldValue.serverTimestamp(),
     });
+
+    // 13. Guardar finalStoragePath al pending document (font estable per futures operacions)
+    if (!alreadyAtDestination || !pendingData?.file?.finalStoragePath) {
+      await pendingRef.update({
+        'file.finalStoragePath': destPath,
+      });
+      console.log(`${logPrefix} Guardat file.finalStoragePath: ${destPath}`);
+    }
 
     console.log(`${logPrefix} Document re-vinculat: pendingId=${pendingId}, bankTxId=${bankTxId}, filename=${filename}`);
 
