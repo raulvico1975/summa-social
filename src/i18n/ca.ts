@@ -3430,6 +3430,8 @@ export const ca = {
       schemeB2B: "B2B (empreses)",
       noCreditorId: "El compte seleccionat no té identificador de creditor SEPA configurat.",
       configureCreditorId: "Configura el creditorId a la configuració del compte bancari.",
+      creditorIdLabel: "ID Creditor:",
+      ibanLabel: "IBAN:",
     },
     // Step 2: Selection
     selection: {

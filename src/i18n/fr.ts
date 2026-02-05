@@ -3433,6 +3433,8 @@ export const fr = {
       schemeB2B: "B2B (entreprises)",
       noCreditorId: "Le compte sélectionné n'a pas d'identifiant créancier SEPA configuré.",
       configureCreditorId: "Configurez le creditorId dans les paramètres du compte bancaire.",
+      creditorIdLabel: "ID Créancier :",
+      ibanLabel: "IBAN :",
     },
     // Step 2: Selection
     selection: {
