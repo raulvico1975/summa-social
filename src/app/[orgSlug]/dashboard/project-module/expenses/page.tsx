@@ -1679,10 +1679,10 @@ export default function ExpensesInboxPage() {
           counterpartyName: editOffBankExpense.expense.counterpartyName ?? '',
           categoryName: editOffBankExpense.expense.categoryName ?? '',
           // FX
-          currency: editOffBankExpense.expense.currency ?? undefined,
-          amountOriginal: editOffBankExpense.expense.amountOriginal?.toString().replace('.', ',') ?? undefined,
-          fxRateOverride: editOffBankExpense.expense.fxRateUsed?.toString() ?? undefined,
-          useFxOverride: !!editOffBankExpense.expense.fxRateUsed,
+          currency: editOffBankExpense.expense.originalCurrency ?? undefined,
+          amountOriginal: editOffBankExpense.expense.originalAmount?.toString().replace('.', ',') ?? undefined,
+          fxRateOverride: editOffBankExpense.expense.fxRate?.toString() ?? undefined,
+          useFxOverride: !!editOffBankExpense.expense.fxRate,
           // Justificació
           invoiceNumber: editOffBankExpense.expense.invoiceNumber ?? undefined,
           issuerTaxId: editOffBankExpense.expense.issuerTaxId ?? undefined,
