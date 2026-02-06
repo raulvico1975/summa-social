@@ -34,6 +34,14 @@ function formatAmount(amount: number | null): string {
   }).format(amount);
 }
 
+/** Format compacte sense símbol: "24.107,00" */
+function formatAmountCompact(amount: number): string {
+  return new Intl.NumberFormat('ca-ES', {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  }).format(amount);
+}
+
 interface ProjectCardProps {
   project: Project;
   executedAmount: number;
@@ -78,49 +86,43 @@ function ProjectCard({ project, executedAmount }: ProjectCardProps) {
       onClick={handleCardClick}
     >
       <CardHeader className="pb-2">
-        <div className="flex items-start justify-between">
-          <div className="flex items-center gap-2">
-            <FolderKanban className="h-5 w-5 text-muted-foreground" />
-            <CardTitle className="text-lg">{project.name}</CardTitle>
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0">
+            {project.code && (
+              <div className="text-xs font-mono text-muted-foreground">
+                {project.code}
+              </div>
+            )}
+            <CardTitle className="mt-0.5 text-sm font-medium truncate" title={project.name}>
+              {project.name}
+            </CardTitle>
           </div>
           <Badge variant={project.status === 'active' ? 'default' : 'secondary'}>
             {project.status === 'active' ? 'Actiu' : 'Tancat'}
           </Badge>
         </div>
-        {project.code && (
-          <CardDescription className="font-mono text-xs">
-            {project.code}
-          </CardDescription>
-        )}
       </CardHeader>
       <CardContent className="space-y-3">
-        <div className="grid grid-cols-2 gap-4 text-sm">
-          <div className="flex items-center gap-2 text-muted-foreground">
-            <Calendar className="h-4 w-4" />
-            <span>Inici: {formatDate(project.startDate)}</span>
-          </div>
-          <div className="flex items-center gap-2 text-muted-foreground">
-            <Calendar className="h-4 w-4" />
-            <span>Fi: {formatDate(project.endDate)}</span>
-          </div>
+        {/* Dates — línia compacta */}
+        <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+          <Calendar className="h-3.5 w-3.5 shrink-0" />
+          <span>{formatDate(project.startDate)} – {formatDate(project.endDate)}</span>
         </div>
 
-        {/* Info econòmica */}
-        <div className="grid grid-cols-3 gap-2 text-sm border-t pt-3">
-          <div>
-            <span className="text-muted-foreground text-xs block">
-              Pressupostat
-            </span>
-            <span className="font-medium">{formatAmount(budgeted)}</span>
+        {/* Info econòmica — llista vertical etiqueta/valor */}
+        <div className="border-t pt-3 space-y-1">
+          <div className="flex justify-between items-baseline">
+            <span className="text-xs text-muted-foreground">Pressupost</span>
+            <span className="text-sm font-medium font-mono tabular-nums">{formatAmountCompact(budgeted)} €</span>
           </div>
-          <div>
-            <span className="text-muted-foreground text-xs block">Executat</span>
-            <span className="font-medium">{formatAmount(executedAmount)}</span>
+          <div className="flex justify-between items-baseline">
+            <span className="text-xs text-muted-foreground">Executat</span>
+            <span className="text-sm font-medium font-mono tabular-nums">{formatAmountCompact(executedAmount)} €</span>
           </div>
-          <div>
-            <span className="text-muted-foreground text-xs block">Pendent</span>
-            <span className={`font-medium ${pending < 0 ? 'text-red-600' : ''}`}>
-              {formatAmount(pending)}
+          <div className="flex justify-between items-baseline">
+            <span className="text-xs text-muted-foreground">Pendent</span>
+            <span className={`text-sm font-medium font-mono tabular-nums ${pending < 0 ? 'text-red-600' : ''}`}>
+              {formatAmountCompact(pending)} €
             </span>
           </div>
         </div>
@@ -191,7 +193,7 @@ export default function ProjectsListPage() {
           const assignments = data.assignments as ExpenseAssignment[] ?? [];
           for (const assignment of assignments) {
             const current = map.get(assignment.projectId) ?? 0;
-            map.set(assignment.projectId, current + Math.abs(assignment.amountEUR));
+            map.set(assignment.projectId, current + (assignment.amountEUR != null ? Math.abs(assignment.amountEUR) : 0));
           }
         }
         setExecutionByProject(map);

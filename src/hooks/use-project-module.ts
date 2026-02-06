@@ -43,6 +43,9 @@ import type {
   UnifiedExpenseWithLink,
   BudgetLine,
   BudgetLineFormData,
+  FxTransfer,
+  FxTransferFormData,
+  OffBankAttachment,
 } from '@/lib/project-module-types';
 
 const PAGE_SIZE = 50;
@@ -202,14 +205,20 @@ export function useExpenseFeed(): UseExpenseFeedResult {
         const link = linksMap.get(d.id) ?? null;
 
         const assignedAmount = link
-          ? link.assignments.reduce((sum, a) => sum + Math.abs(a.amountEUR), 0)
+          ? link.assignments.reduce((sum, a) => sum + (a.amountEUR != null ? Math.abs(a.amountEUR) : 0), 0)
           : 0;
         const totalAmount = Math.abs(expense.amountEUR);
         const remainingAmount = totalAmount - assignedAmount;
 
         let status: ExpenseStatus = 'unassigned';
         if (link && link.assignments.length > 0) {
-          status = remainingAmount <= 0.01 ? 'assigned' : 'partial';
+          const hasLocalPct = link.assignments.some(a => a.localPct != null);
+          if (hasLocalPct) {
+            const totalPct = link.assignments.reduce((s, a) => s + (a.localPct ?? 0), 0);
+            status = totalPct >= 100 ? 'assigned' : 'partial';
+          } else {
+            status = remainingAmount <= 0.01 ? 'assigned' : 'partial';
+          }
         }
 
         return {
@@ -488,14 +497,21 @@ export function useUnifiedExpenseFeed(options?: UseUnifiedExpenseFeedOptions): U
       const link = linksMap.get(expense.txId) ?? null;
 
       const assignedAmount = link
-        ? link.assignments.reduce((sum, a) => sum + Math.abs(a.amountEUR), 0)
+        ? link.assignments.reduce((sum, a) => sum + (a.amountEUR != null ? Math.abs(a.amountEUR) : 0), 0)
         : 0;
       const totalAmount = Math.abs(expense.amountEUR);
       const remainingAmount = totalAmount - assignedAmount;
 
       let status: ExpenseStatus = 'unassigned';
       if (link && link.assignments.length > 0) {
-        status = remainingAmount <= 0.01 ? 'assigned' : 'partial';
+        // Per FX amb localPct: usar suma de percentatges per determinar estat
+        const hasLocalPct = link.assignments.some(a => a.localPct != null);
+        if (hasLocalPct) {
+          const totalPct = link.assignments.reduce((s, a) => s + (a.localPct ?? 0), 0);
+          status = totalPct >= 100 ? 'assigned' : 'partial';
+        } else {
+          status = remainingAmount <= 0.01 ? 'assigned' : 'partial';
+        }
       }
 
       return {
@@ -655,14 +671,20 @@ export function useUnifiedExpenseFeed(options?: UseUnifiedExpenseFeedOptions): U
         const link = linksMap.get(expense.txId) ?? null;
 
         const assignedAmount = link
-          ? link.assignments.reduce((sum, a) => sum + Math.abs(a.amountEUR), 0)
+          ? link.assignments.reduce((sum, a) => sum + (a.amountEUR != null ? Math.abs(a.amountEUR) : 0), 0)
           : 0;
         const totalAmount = Math.abs(expense.amountEUR);
         const remainingAmount = totalAmount - assignedAmount;
 
         let status: ExpenseStatus = 'unassigned';
         if (link && link.assignments.length > 0) {
-          status = remainingAmount <= 0.01 ? 'assigned' : 'partial';
+          const hasLocalPct = link.assignments.some(a => a.localPct != null);
+          if (hasLocalPct) {
+            const totalPct = link.assignments.reduce((s, a) => s + (a.localPct ?? 0), 0);
+            status = totalPct >= 100 ? 'assigned' : 'partial';
+          } else {
+            status = remainingAmount <= 0.01 ? 'assigned' : 'partial';
+          }
         }
 
         return {
@@ -1594,6 +1616,286 @@ export function useSaveProjectFx(): UseSaveProjectFxResult {
 
   return {
     saveFx,
+    isSaving,
+    error,
+  };
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// FUNCIONS PURES: Càlcul TC ponderat (EUR per 1 unitat local)
+// ═══════════════════════════════════════════════════════════════════════════
+
+/**
+ * Calcula el TC ponderat del projecte com EUR per 1 unitat local.
+ * Fórmula: Σ eurSent / Σ localReceived
+ * Compatible amb expense.fxRate (amountEUR = originalAmount × fxRate)
+ */
+export function computeWeightedFxRate(transfers: FxTransfer[]): number | null {
+  if (transfers.length === 0) return null;
+  const totalEur = transfers.reduce((s, t) => s + t.eurSent, 0);
+  const totalLocal = transfers.reduce((s, t) => s + t.localReceived, 0);
+  if (totalLocal <= 0) return null;
+  return totalEur / totalLocal;
+}
+
+/**
+ * Retorna la moneda local del projecte si totes les transferències usen la mateixa.
+ * Si hi ha múltiples monedes → null.
+ */
+export function computeFxCurrency(transfers: FxTransfer[]): string | null {
+  if (transfers.length === 0) return null;
+  const currencies = new Set(transfers.map(t => t.localCurrency));
+  return currencies.size === 1 ? [...currencies][0] : null;
+}
+
+/**
+ * Retorna el TC efectiu del projecte (EUR per 1 unitat local).
+ * Fallback chain: TC ponderat de transferències > project.fxRate (invertit) > null.
+ * NOTA: project.fxRate = "X local = 1 EUR" (convenci inversa), cal invertir.
+ */
+export function getEffectiveProjectTC(
+  fxTransfers: FxTransfer[],
+  project: Project
+): number | null {
+  const weighted = computeWeightedFxRate(fxTransfers);
+  if (weighted !== null) return weighted;
+  if (project.fxRate && project.fxRate > 0) return 1 / project.fxRate;
+  return null;
+}
+
+/**
+ * Detecta si una despesa off-bank és FX i té originalAmount per computar EUR.
+ * Només aquestes despeses usen TC del projecte (o TC manual) per calcular EUR.
+ */
+export function isFxExpenseNeedingProjectTC(expense: UnifiedExpense): boolean {
+  return (
+    expense.source === 'offBank' &&
+    expense.originalAmount != null &&
+    expense.originalAmount > 0 &&
+    expense.originalCurrency != null &&
+    expense.originalCurrency !== 'EUR'
+  );
+}
+
+/**
+ * Resol el TC per una despesa FX, amb prioritat:
+ * 1. TC manual per despesa (expense.fxRate) — PRIORITAT ABSOLUTA
+ * 2. TC projecte (ponderat o legacy invertit)
+ * Retorna EUR per 1 unitat local, o null si no hi ha TC disponible.
+ */
+export function resolveExpenseTC(
+  expense: UnifiedExpense,
+  fxTransfers: FxTransfer[],
+  project: Project
+): number | null {
+  if (expense.fxRate != null && expense.fxRate > 0) return expense.fxRate;
+  return getEffectiveProjectTC(fxTransfers, project);
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// HOOK: Transferències FX d'un projecte
+// ═══════════════════════════════════════════════════════════════════════════
+
+interface UseProjectFxTransfersResult {
+  fxTransfers: FxTransfer[];
+  isLoading: boolean;
+  error: Error | null;
+  refresh: () => Promise<void>;
+}
+
+export function useProjectFxTransfers(projectId: string): UseProjectFxTransfersResult {
+  const { firestore } = useFirebase();
+  const { organizationId } = useCurrentOrganization();
+
+  const [fxTransfers, setFxTransfers] = useState<FxTransfer[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<Error | null>(null);
+
+  const load = useCallback(async () => {
+    if (!organizationId || !projectId) {
+      setFxTransfers([]);
+      setIsLoading(false);
+      return;
+    }
+
+    setIsLoading(true);
+    setError(null);
+
+    try {
+      const transfersRef = collection(
+        firestore,
+        'organizations',
+        organizationId,
+        'projectModule',
+        '_',
+        'projects',
+        projectId,
+        'fxTransfers'
+      );
+
+      const snapshot = await getDocs(transfersRef);
+
+      const transfers: FxTransfer[] = snapshot.docs.map((d) => ({
+        id: d.id,
+        ...d.data(),
+      } as FxTransfer));
+
+      // Ordenar per date ascendent
+      transfers.sort((a, b) => a.date.localeCompare(b.date));
+
+      setFxTransfers(transfers);
+
+    } catch (err) {
+      console.error('Error loading fxTransfers:', err);
+      setError(err instanceof Error ? err : new Error('Error desconegut'));
+    } finally {
+      setIsLoading(false);
+    }
+  }, [firestore, organizationId, projectId]);
+
+  useEffect(() => {
+    load();
+  }, [load]);
+
+  return {
+    fxTransfers,
+    isLoading,
+    error,
+    refresh: load,
+  };
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// HOOK: CRUD de transferències FX
+// ═══════════════════════════════════════════════════════════════════════════
+
+interface UseSaveFxTransferResult {
+  save: (projectId: string, data: FxTransferFormData, transferId?: string) => Promise<string>;
+  remove: (projectId: string, transferId: string) => Promise<void>;
+  isSaving: boolean;
+  error: Error | null;
+}
+
+export function useSaveFxTransfer(): UseSaveFxTransferResult {
+  const { firestore } = useFirebase();
+  const { organizationId } = useCurrentOrganization();
+
+  const [isSaving, setIsSaving] = useState(false);
+  const [error, setError] = useState<Error | null>(null);
+
+  const save = useCallback(async (
+    projectId: string,
+    data: FxTransferFormData,
+    transferId?: string
+  ): Promise<string> => {
+    if (!organizationId) {
+      throw new Error('No autenticat');
+    }
+
+    const date = data.date.trim();
+    if (!date) {
+      throw new Error('La data és obligatòria');
+    }
+
+    const eurSent = parseFloat(data.eurSent.replace(',', '.'));
+    if (isNaN(eurSent) || eurSent <= 0) {
+      throw new Error('L\'import en EUR ha de ser positiu');
+    }
+
+    const localReceived = parseFloat(data.localReceived.replace(',', '.'));
+    if (isNaN(localReceived) || localReceived <= 0) {
+      throw new Error('L\'import en moneda local ha de ser positiu');
+    }
+
+    const localCurrency = data.localCurrency.trim().toUpperCase();
+    if (!localCurrency) {
+      throw new Error('La moneda és obligatòria');
+    }
+
+    setIsSaving(true);
+    setError(null);
+
+    try {
+      const transfersRef = collection(
+        firestore,
+        'organizations',
+        organizationId,
+        'projectModule',
+        '_',
+        'projects',
+        projectId,
+        'fxTransfers'
+      );
+
+      const transferData: Omit<FxTransfer, 'id'> = {
+        date,
+        eurSent,
+        localCurrency,
+        localReceived,
+        bankTxRef: data.bankTxRef?.trim() ? { txId: data.bankTxRef.trim() } : null,
+        notes: data.notes?.trim() || null,
+      };
+
+      let finalId: string;
+
+      if (transferId) {
+        const transferRef = doc(transfersRef, transferId);
+        await setDoc(transferRef, transferData, { merge: true });
+        finalId = transferId;
+      } else {
+        const newRef = doc(transfersRef);
+        await setDoc(newRef, transferData);
+        finalId = newRef.id;
+      }
+
+      return finalId;
+
+    } catch (err) {
+      console.error('Error saving fxTransfer:', err);
+      const e = err instanceof Error ? err : new Error('Error desant transferència');
+      setError(e);
+      throw e;
+    } finally {
+      setIsSaving(false);
+    }
+  }, [firestore, organizationId]);
+
+  const remove = useCallback(async (projectId: string, transferId: string) => {
+    if (!organizationId) {
+      throw new Error('No autenticat');
+    }
+
+    setIsSaving(true);
+    setError(null);
+
+    try {
+      const transferRef = doc(
+        firestore,
+        'organizations',
+        organizationId,
+        'projectModule',
+        '_',
+        'projects',
+        projectId,
+        'fxTransfers',
+        transferId
+      );
+
+      await deleteDoc(transferRef);
+
+    } catch (err) {
+      console.error('Error removing fxTransfer:', err);
+      const e = err instanceof Error ? err : new Error('Error eliminant transferència');
+      setError(e);
+      throw e;
+    } finally {
+      setIsSaving(false);
+    }
+  }, [firestore, organizationId]);
+
+  return {
+    save,
+    remove,
     isSaving,
     error,
   };

@@ -336,7 +336,7 @@ export function BalanceProjectModal({
       for (const assignment of link.assignments) {
         if (assignment.projectId === project.id && assignment.budgetLineId) {
           const current = map.get(assignment.budgetLineId) ?? 0;
-          map.set(assignment.budgetLineId, current + Math.abs(assignment.amountEUR));
+          map.set(assignment.budgetLineId, current + (assignment.amountEUR != null ? Math.abs(assignment.amountEUR) : 0));
         }
       }
     }
@@ -474,7 +474,7 @@ export function BalanceProjectModal({
           assignedToOtherProject: otherProjectAssignment?.projectName ?? null,
           currentBudgetLineId: thisProjectAssignment?.budgetLineId ?? null,
           currentBudgetLineName: thisProjectAssignment?.budgetLineName ?? null,
-          currentAssignmentAmount: thisProjectAssignment ? Math.abs(thisProjectAssignment.amountEUR) : 0,
+          currentAssignmentAmount: thisProjectAssignment && thisProjectAssignment.amountEUR != null ? Math.abs(thisProjectAssignment.amountEUR) : 0,
           matchScore,
           labels,
         };

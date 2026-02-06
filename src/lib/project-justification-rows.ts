@@ -42,8 +42,8 @@ export interface JustificationRow {
   /** Import total de la despesa en EUR (null si no disponible) */
   amountTotalEUR: number | null;
 
-  /** Import assignat a aquesta partida en EUR */
-  amountAssignedEUR: number;
+  /** Import assignat a aquesta partida en EUR (null si no hi ha TC) */
+  amountAssignedEUR: number | null;
 
   /** Nom del document (per Excel i ZIP) */
   documentName: string;
@@ -211,7 +211,7 @@ export function buildJustificationRows(params: BuildJustificationRowsParams): Ju
     budgetLineCode: string;
     budgetLineName: string;
     budgetLineId: string | null;
-    amountAssignedEUR: number;
+    amountAssignedEUR: number | null;
   }
 
   const preRows: PreRow[] = [];
@@ -237,7 +237,7 @@ export function buildJustificationRows(params: BuildJustificationRowsParams): Ju
         budgetLineCode,
         budgetLineName,
         budgetLineId: assignment.budgetLineId ?? null,
-        amountAssignedEUR: Math.abs(assignment.amountEUR),
+        amountAssignedEUR: assignment.amountEUR != null ? Math.abs(assignment.amountEUR) : null,
       });
     }
   }
@@ -257,6 +257,18 @@ export function buildJustificationRows(params: BuildJustificationRowsParams): Ju
     return a.txId.localeCompare(b.txId);
   });
 
+  // Mapa txId -> suma de assignments EUR (per amountTotalEUR)
+  const totalEurByTxId = new Map<string, number | null>();
+  for (const link of expenseLinks) {
+    const assignmentsForProject = link.assignments.filter(a => a.projectId === projectId);
+    const eurValues = assignmentsForProject.map(a => a.amountEUR).filter((v): v is number => v != null);
+    if (eurValues.length > 0) {
+      totalEurByTxId.set(link.id, eurValues.reduce((s, v) => s + Math.abs(v), 0));
+    } else {
+      totalEurByTxId.set(link.id, null);
+    }
+  }
+
   // 3. Assignar ordre (1..N) i generar noms amb prefix d'ordre
   // IMPORTANT: L'ordre és la CLAU MESTRA per traçabilitat Excel ↔ ZIP ↔ manifest
   const finalRows: JustificationRow[] = preRows.map((preRow, index) => {
@@ -264,12 +276,18 @@ export function buildJustificationRows(params: BuildJustificationRowsParams): Ju
     const { expense, budgetLineCode, budgetLineName, budgetLineId, amountAssignedEUR, txId } = preRow;
 
     // Generar nom del document AMB prefix d'ordre
-    const documentName = generateDocumentNameWithOrder(order, expense, amountAssignedEUR);
+    const documentName = generateDocumentNameWithOrder(order, expense, amountAssignedEUR ?? 0);
 
     // Generar nom de carpeta de partida
     const budgetFolderName = generateBudgetFolderName(
       budgetLineId ? budgetLineMap.get(budgetLineId) ?? null : null
     );
+
+    // amountTotalEUR: preferir suma d'assignacions EUR (per FX), fallback a expense.amountEUR
+    const sumFromAssignments = totalEurByTxId.get(txId);
+    const amountTotalEUR = sumFromAssignments != null
+      ? sumFromAssignments
+      : (expense.amountEUR !== 0 ? Math.abs(expense.amountEUR) : null);
 
     // ZIP paths:
     // - 01_per_partida: subcarpeta per partida
@@ -285,7 +303,7 @@ export function buildJustificationRows(params: BuildJustificationRowsParams): Ju
       budgetLineCode,
       budgetLineName,
       budgetLineId,
-      amountTotalEUR: expense.amountEUR !== 0 ? Math.abs(expense.amountEUR) : null,
+      amountTotalEUR,
       amountAssignedEUR,
       documentName,
       documentUrl: expense.documentUrl ?? expense.attachments?.[0]?.url ?? null,

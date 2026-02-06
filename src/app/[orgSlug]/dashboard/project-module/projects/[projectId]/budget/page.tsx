@@ -13,6 +13,10 @@ import {
   useProjectExpenseLinks,
   useUnifiedExpenseFeed,
   useSaveProjectFx,
+  useProjectFxTransfers,
+  useSaveFxTransfer,
+  computeWeightedFxRate,
+  computeFxCurrency,
 } from '@/hooks/use-project-module';
 import { useOrgUrl } from '@/hooks/organization-provider';
 import { useToast } from '@/hooks/use-toast';
@@ -56,6 +60,11 @@ import { Label } from '@/components/ui/label';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
 import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from '@/components/ui/popover';
+import {
   AlertCircle,
   ArrowLeft,
   Plus,
@@ -73,6 +82,7 @@ import {
   Upload,
   MoreVertical,
   Hash,
+  ChevronDown,
 } from 'lucide-react';
 import { useIsMobile } from '@/hooks/use-is-mobile';
 import { MobileListItem } from '@/components/mobile/mobile-list-item';
@@ -89,7 +99,8 @@ import { buildProjectJustificationFundingXlsx } from '@/lib/project-justificatio
 import { exportProjectJustificationZip } from '@/lib/project-justification-attachments-zip';
 import { trackUX } from '@/lib/ux/trackUX';
 import { useRouter } from 'next/navigation';
-import type { BudgetLine, BudgetLineFormData } from '@/lib/project-module-types';
+import type { BudgetLine, BudgetLineFormData, FxTransfer, FxTransferFormData } from '@/lib/project-module-types';
+import { Textarea } from '@/components/ui/textarea';
 import { BalanceProjectModal } from '@/components/project-module/balance-project-modal';
 import { BudgetImportWizard } from '@/components/project-module/budget-import-wizard';
 
@@ -106,6 +117,212 @@ function formatPercent(value: number): string {
     minimumFractionDigits: 0,
     maximumFractionDigits: 1,
   }).format(value / 100);
+}
+
+// Component per al formulari de transferència FX
+function FxTransferForm({
+  open,
+  onOpenChange,
+  onSave,
+  isSaving,
+  initialData,
+}: {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  onSave: (data: FxTransferFormData) => Promise<void>;
+  isSaving: boolean;
+  initialData?: FxTransfer | null;
+}) {
+  const { t } = useTranslations();
+  const [date, setDate] = React.useState('');
+  const [eurSent, setEurSent] = React.useState('');
+  const [localCurrency, setLocalCurrency] = React.useState('');
+  const [localReceived, setLocalReceived] = React.useState('');
+  const [bankTxRef, setBankTxRef] = React.useState('');
+  const [notes, setNotes] = React.useState('');
+  const [errors, setErrors] = React.useState<Record<string, string>>({});
+
+  React.useEffect(() => {
+    if (open) {
+      if (initialData) {
+        setDate(initialData.date);
+        setEurSent(initialData.eurSent.toString());
+        setLocalCurrency(initialData.localCurrency);
+        setLocalReceived(initialData.localReceived.toString());
+        setBankTxRef(initialData.bankTxRef?.txId ?? '');
+        setNotes(initialData.notes ?? '');
+      } else {
+        setDate('');
+        setEurSent('');
+        setLocalCurrency('');
+        setLocalReceived('');
+        setBankTxRef('');
+        setNotes('');
+      }
+      setErrors({});
+    }
+  }, [open, initialData]);
+
+  // TC implícit preview
+  const eurVal = parseFloat(eurSent.replace(',', '.'));
+  const localVal = parseFloat(localReceived.replace(',', '.'));
+  const implicitRate = !isNaN(eurVal) && !isNaN(localVal) && localVal > 0 ? eurVal / localVal : null;
+
+  const validate = (): boolean => {
+    const newErrors: Record<string, string> = {};
+
+    if (!date.trim()) {
+      newErrors.date = t.projectModule?.fxTransfersDateRequired ?? 'La data és obligatòria';
+    }
+
+    const eur = parseFloat(eurSent.replace(',', '.'));
+    if (isNaN(eur) || eur <= 0) {
+      newErrors.eurSent = t.projectModule?.fxTransfersAmountPositive ?? "L'import ha de ser positiu";
+    }
+
+    const local = parseFloat(localReceived.replace(',', '.'));
+    if (isNaN(local) || local <= 0) {
+      newErrors.localReceived = t.projectModule?.fxTransfersAmountPositive ?? "L'import ha de ser positiu";
+    }
+
+    if (!localCurrency.trim()) {
+      newErrors.localCurrency = t.projectModule?.fxTransfersCurrencyRequired ?? 'La moneda és obligatòria';
+    }
+
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!validate()) return;
+
+    await onSave({
+      date: date.trim(),
+      eurSent: eurSent.replace(',', '.'),
+      localCurrency: localCurrency.trim().toUpperCase(),
+      localReceived: localReceived.replace(',', '.'),
+      bankTxRef: bankTxRef.trim() || undefined,
+      notes: notes.trim() || undefined,
+    });
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle>
+            {initialData
+              ? (t.projectModule?.fxTransfersEdit ?? 'Editar transferència')
+              : (t.projectModule?.fxTransfersAdd ?? 'Afegir transferència')}
+          </DialogTitle>
+          <DialogDescription>
+            {t.projectModule?.fxTransfersHelp ?? 'Registra els canvis de moneda reals per calcular el TC ponderat del projecte.'}
+          </DialogDescription>
+        </DialogHeader>
+
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div className="space-y-2">
+            <Label htmlFor="fxDate">{t.projectModule?.fxTransfersDate ?? 'Data'}</Label>
+            <Input
+              id="fxDate"
+              type="date"
+              value={date}
+              onChange={(e) => setDate(e.target.value)}
+              className="h-9"
+            />
+            {errors.date && <p className="text-sm text-destructive">{errors.date}</p>}
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="fxEurSent">{t.projectModule?.fxTransfersEurSent ?? 'EUR enviats'}</Label>
+              <Input
+                id="fxEurSent"
+                type="text"
+                inputMode="decimal"
+                value={eurSent}
+                onChange={(e) => setEurSent(e.target.value)}
+                placeholder="1000"
+                className="h-9"
+              />
+              {errors.eurSent && <p className="text-sm text-destructive">{errors.eurSent}</p>}
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="fxCurrency">{t.projectModule?.currency ?? 'Moneda'}</Label>
+              <Input
+                id="fxCurrency"
+                type="text"
+                value={localCurrency}
+                onChange={(e) => setLocalCurrency(e.target.value.toUpperCase())}
+                placeholder="XOF"
+                maxLength={3}
+                className="h-9 font-mono"
+              />
+              {errors.localCurrency && <p className="text-sm text-destructive">{errors.localCurrency}</p>}
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="fxLocalReceived">{t.projectModule?.fxTransfersLocalReceived ?? 'Import local rebut'}</Label>
+            <Input
+              id="fxLocalReceived"
+              type="text"
+              inputMode="decimal"
+              value={localReceived}
+              onChange={(e) => setLocalReceived(e.target.value)}
+              placeholder="650000"
+              className="h-9"
+            />
+            {errors.localReceived && <p className="text-sm text-destructive">{errors.localReceived}</p>}
+          </div>
+
+          {/* Preview TC implícit */}
+          {implicitRate !== null && (
+            <div className="rounded-md bg-muted/50 px-3 py-2 text-sm">
+              <span className="text-muted-foreground">{t.projectModule?.fxTransfersImplicitRate ?? 'TC implícit'}:</span>{' '}
+              <span className="font-mono font-medium">{implicitRate.toFixed(6)}</span>{' '}
+              <span className="text-muted-foreground">{t.projectModule?.fxTransfersEurPerLocal ?? 'EUR/local'}</span>
+            </div>
+          )}
+
+          <div className="space-y-2">
+            <Label htmlFor="fxBankRef">{t.projectModule?.fxTransfersBankRef ?? 'Ref. bancària'}</Label>
+            <Input
+              id="fxBankRef"
+              type="text"
+              value={bankTxRef}
+              onChange={(e) => setBankTxRef(e.target.value)}
+              placeholder="Opcional"
+              className="h-9"
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="fxNotes">{t.projectModule?.fxTransfersNotes ?? 'Notes'}</Label>
+            <Textarea
+              id="fxNotes"
+              value={notes}
+              onChange={(e) => setNotes(e.target.value)}
+              placeholder="Opcional"
+              rows={2}
+              className="text-sm"
+            />
+          </div>
+
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={isSaving}>
+              {t.common?.cancel ?? 'Cancel·lar'}
+            </Button>
+            <Button type="submit" disabled={isSaving}>
+              {isSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : (t.common?.save ?? 'Desar')}
+            </Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
+  );
 }
 
 // Component per al formulari de partida
@@ -272,6 +489,12 @@ export default function ProjectBudgetPage() {
   const { expenses: allExpensesForModal, isLoading: allExpensesLoading } = useUnifiedExpenseFeed();
   const { save, remove, isSaving } = useSaveBudgetLine();
   const { saveFx, isSaving: isSavingFx } = useSaveProjectFx();
+  const { fxTransfers, isLoading: fxTransfersLoading, refresh: refreshFxTransfers } = useProjectFxTransfers(projectId);
+  const { save: saveFxTransfer, remove: removeFxTransfer, isSaving: isSavingFxTransfer } = useSaveFxTransfer();
+
+  // Derivats FX
+  const weightedFxRate = React.useMemo(() => computeWeightedFxRate(fxTransfers), [fxTransfers]);
+  const weightedFxCurrency = React.useMemo(() => computeFxCurrency(fxTransfers), [fxTransfers]);
 
   const [formOpen, setFormOpen] = React.useState(false);
   const [editingLine, setEditingLine] = React.useState<BudgetLine | null>(null);
@@ -282,7 +505,12 @@ export default function ProjectBudgetPage() {
   const [zipProgress, setZipProgress] = React.useState<{ current: number; total: number } | null>(null);
   const [justificationModalOpen, setJustificationModalOpen] = React.useState(false);
 
-  // Estat per edició FX
+  // Estat per fxTransfers
+  const [fxTransferFormOpen, setFxTransferFormOpen] = React.useState(false);
+  const [editingFxTransfer, setEditingFxTransfer] = React.useState<FxTransfer | null>(null);
+  const [deleteFxTransferConfirm, setDeleteFxTransferConfirm] = React.useState<FxTransfer | null>(null);
+
+  // Estat per edició FX legacy
   const [fxEditMode, setFxEditMode] = React.useState(false);
   const [fxRateInput, setFxRateInput] = React.useState('');
   const [fxCurrencyInput, setFxCurrencyInput] = React.useState('');
@@ -303,7 +531,7 @@ export default function ProjectBudgetPage() {
       for (const assignment of link.assignments) {
         if (assignment.budgetLineId) {
           const current = map.get(assignment.budgetLineId) ?? 0;
-          map.set(assignment.budgetLineId, current + Math.abs(assignment.amountEUR));
+          map.set(assignment.budgetLineId, current + (assignment.amountEUR != null ? Math.abs(assignment.amountEUR) : 0));
         }
       }
     }
@@ -327,7 +555,7 @@ export default function ProjectBudgetPage() {
     for (const link of expenseLinks) {
       for (const assignment of link.assignments) {
         if (assignment.projectId === projectId) {
-          totalProjectExecution += Math.abs(assignment.amountEUR);
+          totalProjectExecution += assignment.amountEUR != null ? Math.abs(assignment.amountEUR) : 0;
         }
       }
     }
@@ -757,115 +985,255 @@ export default function ProjectBudgetPage() {
         </div>
       )}
 
-      {/* Configuració FX per despeses off-bank (fila compacta) */}
-      <div className="rounded-lg border bg-muted/20 px-4 py-3">
-        {fxEditMode ? (
-          <div className="flex flex-wrap items-end gap-4">
-            <div className="flex items-center gap-2 text-sm">
-              <DollarSign className="h-4 w-4 text-muted-foreground" />
-              <span className="font-medium">{t.projectModule?.fxConfigShort ?? 'Tipus de canvi'}</span>
-            </div>
-            <div className="flex-1 min-w-[120px] max-w-[160px]">
-              <Input
-                id="fxRate"
-                type="text"
-                inputMode="decimal"
-                value={fxRateInput}
-                onChange={(e) => setFxRateInput(e.target.value)}
-                placeholder="655.957"
-                className="h-8 text-sm"
-              />
-            </div>
-            <div className="w-20">
-              <Input
-                id="fxCurrency"
-                type="text"
-                value={fxCurrencyInput}
-                onChange={(e) => setFxCurrencyInput(e.target.value.toUpperCase())}
-                placeholder="XOF"
-                maxLength={3}
-                className="h-8 text-sm font-mono"
-              />
-            </div>
-            <span className="text-sm text-muted-foreground">= 1 EUR</span>
-            <div className="flex gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                className="h-8"
-                onClick={() => {
-                  setFxEditMode(false);
-                  setFxRateInput(project.fxRate?.toString() ?? '');
-                  setFxCurrencyInput(project.fxCurrency ?? '');
-                }}
-                disabled={isSavingFx}
-              >
-                {t.common?.cancel ?? 'Cancel·lar'}
-              </Button>
-              <Button
-                size="sm"
-                className="h-8"
-                onClick={async () => {
-                  const rate = fxRateInput ? parseFloat(fxRateInput.replace(',', '.')) : null;
-                  if (fxRateInput && (isNaN(rate!) || rate! <= 0)) {
-                    toast({
-                      variant: 'destructive',
-                      title: 'Error',
-                      description: t.projectModule?.fxRatePositive ?? 'El tipus de canvi ha de ser positiu',
-                    });
-                    return;
-                  }
-                  try {
-                    await saveFx(projectId, rate, fxCurrencyInput || null);
-                    toast({
-                      title: t.projectModule?.fxSaved ?? 'Tipus de canvi desat',
-                      description: rate ? `${rate} ${fxCurrencyInput} = 1 EUR` : 'Tipus de canvi eliminat',
-                    });
-                    setFxEditMode(false);
-                    await refreshProject();
-                  } catch (err) {
-                    toast({
-                      variant: 'destructive',
-                      title: 'Error',
-                      description: err instanceof Error ? err.message : 'Error desant tipus de canvi',
-                    });
-                  }
-                }}
-                disabled={isSavingFx}
-              >
-                {isSavingFx ? <Loader2 className="h-4 w-4 animate-spin" /> : (t.common?.save ?? 'Desar')}
-              </Button>
-            </div>
+      {/* Secció FX: Col·lapsable */}
+      <details className="group rounded-lg border bg-background">
+        <summary className="flex cursor-pointer items-center justify-between px-4 py-3 text-sm font-medium list-none [&::-webkit-details-marker]:hidden">
+          <div className="flex items-center gap-2">
+            <span>{t.projectModule?.fxSectionTitle ?? 'Transferències i tipus de canvi'}</span>
+            <Popover>
+              <PopoverTrigger asChild>
+                <button
+                  type="button"
+                  onClick={(e) => e.stopPropagation()}
+                  className="inline-flex h-5 w-5 items-center justify-center rounded-full border text-xs text-muted-foreground hover:bg-muted"
+                  aria-label={t.projectModule?.fxHelpAria ?? 'Ajuda sobre transferències i tipus de canvi'}
+                >
+                  ?
+                </button>
+              </PopoverTrigger>
+              <PopoverContent className="max-w-sm text-sm leading-relaxed" onClick={(e) => e.stopPropagation()}>
+                <div className="space-y-3">
+                  <p className="font-medium">{t.projectModule?.fxHelpTitle ?? 'Com s\'aplica el tipus de canvi'}</p>
+                  <ul className="space-y-2 list-none p-0">
+                    <li>
+                      <strong>{t.projectModule?.fxHelpModeExpenseTitle ?? 'TC forçat a la despesa'}</strong><br />
+                      {t.projectModule?.fxHelpModeExpenseText ?? 'Si una despesa té un tipus de canvi propi, s\'aplica sempre aquest valor.'}
+                    </li>
+                    <li>
+                      <strong>{t.projectModule?.fxHelpModeTransfersTitle ?? 'TC calculat per transferències'}</strong><br />
+                      {t.projectModule?.fxHelpModeTransfersText ?? 'Quan hi ha transferències, Summa calcula automàticament un tipus de canvi ponderat a partir de les dades reals.'}
+                    </li>
+                    <li>
+                      <strong>{t.projectModule?.fxHelpModeManualTitle ?? 'TC manual del projecte'}</strong><br />
+                      {t.projectModule?.fxHelpModeManualText ?? 'Valor global que només s\'utilitza si no hi ha transferències.'}
+                    </li>
+                  </ul>
+                  <div className="text-xs text-muted-foreground">
+                    {t.projectModule?.fxHelpPriority ?? 'Prioritat: despesa → transferències → valor manual.'}
+                  </div>
+                </div>
+              </PopoverContent>
+            </Popover>
           </div>
-        ) : (
-          <div className="flex items-center justify-between gap-4">
-            <div className="flex items-center gap-3 min-w-0">
-              <DollarSign className="h-4 w-4 text-muted-foreground shrink-0" />
-              <div className="min-w-0">
-                <span className="text-sm font-medium">{t.projectModule?.fxConfigShort ?? 'Tipus de canvi'}</span>
-                <span className="text-sm text-muted-foreground ml-2">
+          <ChevronDown className="h-4 w-4 text-muted-foreground transition-transform duration-200 group-open:rotate-180" />
+        </summary>
+
+        <div className="space-y-4 px-4 pb-4">
+
+        {/* Bloc 1: TC calculat (ponderat) */}
+        <div className="rounded-md bg-muted/30 p-3 text-sm">
+          <div className="text-muted-foreground">{t.projectModule?.fxTransfersWeightedRate ?? 'TC projecte (ponderat)'}</div>
+          <div className="mt-1 font-mono">
+            {weightedFxRate !== null ? (
+              <>
+                {new Intl.NumberFormat('ca-ES', { minimumFractionDigits: 6, maximumFractionDigits: 6 }).format(weightedFxRate)} {t.projectModule?.fxTransfersEurPerLocal ?? 'EUR/local'}
+                {weightedFxCurrency && <span className="ml-1">({weightedFxCurrency})</span>}
+              </>
+            ) : project.fxRate ? (
+              <>
+                {new Intl.NumberFormat('ca-ES', { minimumFractionDigits: 2, maximumFractionDigits: 6 }).format(project.fxRate)} {project.fxCurrency ?? ''} = 1 EUR
+                <span className="ml-2 not-italic text-xs text-muted-foreground font-sans">({t.projectModule?.fxLegacyTitle ?? 'TC manual'})</span>
+              </>
+            ) : (
+              <span className="italic font-sans text-muted-foreground">{t.projectModule?.notConfigured ?? 'No configurat'}</span>
+            )}
+          </div>
+        </div>
+
+        {/* Bloc 2: Transferències */}
+        <div className="flex items-center justify-between">
+          <h4 className="text-sm font-medium">{t.projectModule?.fxTransfersTitle ?? 'Transferències'}</h4>
+          <Button
+            variant="outline"
+            size="sm"
+            className="h-8"
+            onClick={() => {
+              setEditingFxTransfer(null);
+              setFxTransferFormOpen(true);
+            }}
+          >
+            <Plus className="h-4 w-4 mr-1" />
+            {t.projectModule?.fxTransfersAdd ?? 'Afegir transferència'}
+          </Button>
+        </div>
+        {fxTransfers.length > 0 && (
+          <div className="rounded-lg border">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="text-xs">{t.projectModule?.fxTransfersDate ?? 'Data'}</TableHead>
+                  <TableHead className="text-xs text-right">{t.projectModule?.fxTransfersEurSent ?? 'EUR enviats'}</TableHead>
+                  <TableHead className="text-xs">{t.projectModule?.currency ?? 'Moneda'}</TableHead>
+                  <TableHead className="text-xs text-right">{t.projectModule?.fxTransfersLocalReceived ?? 'Import local rebut'}</TableHead>
+                  <TableHead className="text-xs text-right">{t.projectModule?.fxTransfersImplicitRate ?? 'TC implícit'}</TableHead>
+                  <TableHead className="text-xs w-[80px]"></TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {fxTransfers.map((transfer) => {
+                  const implicitRate = transfer.localReceived > 0 ? transfer.eurSent / transfer.localReceived : 0;
+                  return (
+                    <TableRow key={transfer.id}>
+                      <TableCell className="text-sm">{transfer.date.replace(/^(\d{4})-(\d{2})-(\d{2}).*/, '$3/$2/$1')}</TableCell>
+                      <TableCell className="text-sm text-right font-mono">{formatAmount(transfer.eurSent)}</TableCell>
+                      <TableCell className="text-sm font-mono">{transfer.localCurrency}</TableCell>
+                      <TableCell className="text-sm text-right font-mono">
+                        {new Intl.NumberFormat('ca-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(transfer.localReceived)}
+                      </TableCell>
+                      <TableCell className="text-sm text-right font-mono">{new Intl.NumberFormat('ca-ES', { minimumFractionDigits: 6, maximumFractionDigits: 6 }).format(implicitRate)}</TableCell>
+                      <TableCell className="text-right">
+                        <div className="flex justify-end gap-1">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-7 w-7"
+                            onClick={() => {
+                              setEditingFxTransfer(transfer);
+                              setFxTransferFormOpen(true);
+                            }}
+                          >
+                            <Pencil className="h-3 w-3" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-7 w-7 text-destructive"
+                            onClick={() => setDeleteFxTransferConfirm(transfer)}
+                          >
+                            <Trash2 className="h-3 w-3" />
+                          </Button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
+              </TableBody>
+            </Table>
+          </div>
+        )}
+
+        {fxTransfers.length === 0 && !fxTransfersLoading && (
+          <p className="text-sm text-muted-foreground italic px-1">
+            {t.projectModule?.fxTransfersNoTransfers ?? 'Sense transferències registrades'}
+          </p>
+        )}
+
+        {/* Bloc 3: TC manual (fallback global) */}
+        <div className="rounded-md border border-dashed p-3 text-sm">
+          <div className="text-muted-foreground">{t.projectModule?.fxLegacyTitle ?? 'TC manual (fallback)'}</div>
+          <div className="mt-2">
+            {fxEditMode ? (
+              <div className="flex flex-wrap items-end gap-4">
+                <div className="flex-1 min-w-[120px] max-w-[160px]">
+                  <Input
+                    id="fxRate"
+                    type="text"
+                    inputMode="decimal"
+                    value={fxRateInput}
+                    onChange={(e) => setFxRateInput(e.target.value)}
+                    placeholder="655.957"
+                    className="h-8 text-sm"
+                  />
+                </div>
+                <div className="w-20">
+                  <Input
+                    id="fxCurrency"
+                    type="text"
+                    value={fxCurrencyInput}
+                    onChange={(e) => setFxCurrencyInput(e.target.value.toUpperCase())}
+                    placeholder="XOF"
+                    maxLength={3}
+                    className="h-8 text-sm font-mono"
+                  />
+                </div>
+                <span className="text-sm text-muted-foreground">= 1 EUR</span>
+                <div className="flex gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="h-8"
+                    onClick={() => {
+                      setFxEditMode(false);
+                      setFxRateInput(project.fxRate?.toString() ?? '');
+                      setFxCurrencyInput(project.fxCurrency ?? '');
+                    }}
+                    disabled={isSavingFx}
+                  >
+                    {t.common?.cancel ?? 'Cancel·lar'}
+                  </Button>
+                  <Button
+                    size="sm"
+                    className="h-8"
+                    onClick={async () => {
+                      const rate = fxRateInput ? parseFloat(fxRateInput.replace(',', '.')) : null;
+                      if (fxRateInput && (isNaN(rate!) || rate! <= 0)) {
+                        toast({
+                          variant: 'destructive',
+                          title: 'Error',
+                          description: t.projectModule?.fxRatePositive ?? 'El tipus de canvi ha de ser positiu',
+                        });
+                        return;
+                      }
+                      try {
+                        await saveFx(projectId, rate, fxCurrencyInput || null);
+                        toast({
+                          title: t.projectModule?.fxSaved ?? 'Tipus de canvi desat',
+                          description: rate ? `${rate} ${fxCurrencyInput} = 1 EUR` : 'Tipus de canvi eliminat',
+                        });
+                        setFxEditMode(false);
+                        await refreshProject();
+                      } catch (err) {
+                        toast({
+                          variant: 'destructive',
+                          title: 'Error',
+                          description: err instanceof Error ? err.message : 'Error desant tipus de canvi',
+                        });
+                      }
+                    }}
+                    disabled={isSavingFx}
+                  >
+                    {isSavingFx ? <Loader2 className="h-4 w-4 animate-spin" /> : (t.common?.save ?? 'Desar')}
+                  </Button>
+                </div>
+              </div>
+            ) : (
+              <div className="flex items-center justify-between gap-4">
+                <span className="text-sm text-muted-foreground">
                   {project.fxRate ? (
-                    <>
-                      <span className="font-mono">{project.fxRate} {project.fxCurrency ?? ''}</span> = 1 EUR
-                    </>
+                    <><span className="font-mono">{new Intl.NumberFormat('ca-ES', { minimumFractionDigits: 2, maximumFractionDigits: 6 }).format(project.fxRate)} {project.fxCurrency ?? ''}</span> = 1 EUR</>
                   ) : (
                     <span className="italic">{t.projectModule?.notConfigured ?? 'No configurat'}</span>
                   )}
                 </span>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8 shrink-0"
+                  onClick={() => setFxEditMode(true)}
+                  title={t.projectModule?.editFx ?? 'Editar tipus de canvi'}
+                >
+                  <Pencil className="h-4 w-4" />
+                </Button>
               </div>
-            </div>
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-8 w-8 shrink-0"
-              onClick={() => setFxEditMode(true)}
-              title={t.projectModule?.editFx ?? 'Editar tipus de canvi'}
-            >
-              <Pencil className="h-4 w-4" />
-            </Button>
+            )}
           </div>
-        )}
-      </div>
+          <div className="mt-1 text-xs text-muted-foreground">
+            {t.projectModule?.fxLegacyHelp ?? "S'aplica a tot el projecte si no hi ha transferències."}
+          </div>
+        </div>
+
+        </div>{/* /space-y-4 */}
+      </details>
 
       {/* Estat A: CTA per desglossar en partides */}
       {!hasBudgetLines && !linesLoading && (
@@ -1175,6 +1543,74 @@ export default function ProjectBudgetPage() {
           refreshLines();
         }}
       />
+
+      {/* Form alta/edició FX Transfer */}
+      <FxTransferForm
+        open={fxTransferFormOpen}
+        onOpenChange={(open) => {
+          setFxTransferFormOpen(open);
+          if (!open) setEditingFxTransfer(null);
+        }}
+        onSave={async (data) => {
+          try {
+            await saveFxTransfer(projectId, data, editingFxTransfer?.id);
+            toast({
+              title: t.projectModule?.fxTransfersSaved ?? 'Transferència desada',
+            });
+            setFxTransferFormOpen(false);
+            setEditingFxTransfer(null);
+            await refreshFxTransfers();
+          } catch (err) {
+            toast({
+              variant: 'destructive',
+              title: 'Error',
+              description: err instanceof Error ? err.message : 'Error desant transferència',
+            });
+          }
+        }}
+        isSaving={isSavingFxTransfer}
+        initialData={editingFxTransfer}
+      />
+
+      {/* Confirmació eliminació FX Transfer */}
+      <AlertDialog
+        open={!!deleteFxTransferConfirm}
+        onOpenChange={(open) => !open && setDeleteFxTransferConfirm(null)}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{t.projectModule?.fxTransfersDeleteTitle ?? 'Eliminar transferència'}</AlertDialogTitle>
+            <AlertDialogDescription>
+              {t.projectModule?.fxTransfersDeleteConfirm ?? 'Estàs segur que vols eliminar aquesta transferència? Aquesta acció no es pot desfer.'}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>{t.common?.cancel ?? 'Cancel·lar'}</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={async () => {
+                if (!deleteFxTransferConfirm) return;
+                try {
+                  await removeFxTransfer(projectId, deleteFxTransferConfirm.id);
+                  toast({
+                    title: t.projectModule?.fxTransfersDeleted ?? 'Transferència eliminada',
+                  });
+                  setDeleteFxTransferConfirm(null);
+                  await refreshFxTransfers();
+                } catch (err) {
+                  toast({
+                    variant: 'destructive',
+                    title: 'Error',
+                    description: err instanceof Error ? err.message : 'Error eliminant transferència',
+                  });
+                }
+              }}
+            >
+              {t.common?.delete ?? 'Eliminar'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
