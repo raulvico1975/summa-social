@@ -36,7 +36,6 @@ import {
   linkDocumentToTransaction,
   ignoreMatchSuggestion,
 } from '@/lib/pending-documents/suggest-matches';
-import { CATEGORY_TRANSLATION_KEYS } from '@/lib/default-data';
 
 // ═══════════════════════════════════════════════════════════════════════════
 // TYPES
@@ -56,19 +55,10 @@ interface ReconciliationModalProps {
 // HELPERS
 // ═══════════════════════════════════════════════════════════════════════════
 
-const categoryTranslations = CATEGORY_TRANSLATION_KEYS as Record<string, string>;
-
 function getContactName(contactId: string | null | undefined, contacts: Contact[]): string {
   if (!contactId) return '—';
   const contact = contacts.find(c => c.id === contactId);
   return contact?.name || '—';
-}
-
-function getCategoryName(categoryId: string | null | undefined, categories: Category[]): string {
-  if (!categoryId) return '—';
-  const category = categories.find(c => c.id === categoryId);
-  if (!category) return '—';
-  return categoryTranslations[category.name] || category.name;
 }
 
 function formatDate(dateStr: string | null | undefined): string {
@@ -97,6 +87,14 @@ export function ReconciliationModal({
   const { organizationId } = useCurrentOrganization();
   const { toast } = useToast();
   const { t } = useTranslations();
+  const categoryTranslations = t.categories as Record<string, string>;
+
+  const getCategoryName = (categoryId: string | null | undefined) => {
+    if (!categoryId) return '—';
+    const category = categories.find(c => c.id === categoryId);
+    if (!category) return '—';
+    return categoryTranslations[category.name] ?? category.name;
+  };
 
   const [isLinking, setIsLinking] = React.useState(false);
   const [isIgnoring, setIsIgnoring] = React.useState(false);
@@ -236,7 +234,7 @@ export function ReconciliationModal({
 
               <div className="flex items-center gap-2 text-sm">
                 <FolderOpen className="h-4 w-4 text-muted-foreground" />
-                <span>{getCategoryName(pendingDoc.categoryId, categories)}</span>
+                <span>{getCategoryName(pendingDoc.categoryId)}</span>
               </div>
 
               <div className="pt-2">
@@ -275,7 +273,7 @@ export function ReconciliationModal({
 
               <div className="flex items-center gap-2 text-sm">
                 <FolderOpen className="h-4 w-4 text-muted-foreground" />
-                <span>{getCategoryName(transaction.category, categories)}</span>
+                <span>{getCategoryName(transaction.category)}</span>
               </div>
 
               <div className="pt-2">
