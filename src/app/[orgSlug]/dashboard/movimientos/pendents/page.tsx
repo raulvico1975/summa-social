@@ -159,8 +159,29 @@ export default function PendingDocsPage() {
     [firestore, organizationId, isPendingDocsEnabled, statusFilter]
   );
 
-  // Subscriure a la col·lecció
+  // Subscriure a la col·lecció (filtrada per tab actiu)
   const { data: pendingDocs, isLoading, error } = useCollection<PendingDocument>(pendingDocsQuery);
+
+  // Query extra per comptar tots els docs (sense filtre de status)
+  const allDocsQuery = useMemoFirebase(
+    () => {
+      if (!organizationId || !firestore || !isPendingDocsEnabled) return null;
+      return buildPendingDocumentsQuery(firestore, organizationId);
+    },
+    [firestore, organizationId, isPendingDocsEnabled]
+  );
+  const { data: allDocs } = useCollection<PendingDocument>(allDocsQuery);
+
+  // Recomptes per tab (derivats d'allDocs, mateixa lògica que les constants de filtre)
+  const tabCounts = React.useMemo(() => {
+    if (!allDocs) return { drafts: 0, pending: 0, matched: 0, archived: 0 };
+    return {
+      drafts: allDocs.filter(d => DRAFTS_FILTER.includes(d.status)).length,
+      pending: allDocs.filter(d => PENDING_FILTER.includes(d.status)).length,
+      matched: allDocs.filter(d => d.status === 'matched').length,
+      archived: allDocs.filter(d => d.status === 'archived').length,
+    };
+  }, [allDocs]);
 
   // Carregar contactes
   const contactsQuery = useMemoFirebase(
@@ -447,9 +468,11 @@ export default function PendingDocsPage() {
     return filterPendingDocuments(pendingDocs, filters, contacts || []);
   }, [pendingDocs, filters, contacts]);
 
-  // Comptar drafts (sense filtres, per el botó bulk confirm)
-  const drafts = pendingDocs?.filter(d => d.status === 'draft') || [];
-  const readyDrafts = drafts.filter(isDocumentReadyToConfirm);
+  // Drafts per bulk confirm (derivats d'allDocs per disponibilitat cross-tab)
+  const readyDrafts = React.useMemo(
+    () => (allDocs || []).filter(d => d.status === 'draft').filter(isDocumentReadyToConfirm),
+    [allDocs]
+  );
 
   // Documents seleccionables: només confirmed (per generar SEPA)
   const selectableDocs = filteredDocs.filter(d => d.status === 'confirmed');
@@ -705,11 +728,20 @@ export default function PendingDocsPage() {
             <SelectContent>
               <SelectItem value="drafts">
                 {t.pendingDocs.tabs.review}
-                {drafts.length > 0 && ` (${drafts.length})`}
+                {tabCounts.drafts > 0 && ` (${tabCounts.drafts})`}
               </SelectItem>
-              <SelectItem value="pending">{t.pendingDocs.tabs.bankPending}</SelectItem>
-              <SelectItem value="matched">{t.pendingDocs.tabs.reconciled}</SelectItem>
-              <SelectItem value="archived">{t.pendingDocs.tabs.archived}</SelectItem>
+              <SelectItem value="pending">
+                {t.pendingDocs.tabs.bankPending}
+                {tabCounts.pending > 0 && ` (${tabCounts.pending})`}
+              </SelectItem>
+              <SelectItem value="matched">
+                {t.pendingDocs.tabs.reconciled}
+                {tabCounts.matched > 0 && ` (${tabCounts.matched})`}
+              </SelectItem>
+              <SelectItem value="archived">
+                {t.pendingDocs.tabs.archived}
+                {tabCounts.archived > 0 && ` (${tabCounts.archived})`}
+              </SelectItem>
             </SelectContent>
           </Select>
         ) : (
@@ -720,8 +752,8 @@ export default function PendingDocsPage() {
               onClick={() => setStatusFilter(DRAFTS_FILTER)}
             >
               {t.pendingDocs.tabs.review}
-              {drafts.length > 0 && (
-                <Badge variant="outline" className="ml-2">{drafts.length}</Badge>
+              {tabCounts.drafts > 0 && (
+                <Badge variant="outline" className="ml-2">{tabCounts.drafts}</Badge>
               )}
             </Button>
             <Button
@@ -730,6 +762,9 @@ export default function PendingDocsPage() {
               onClick={() => setStatusFilter(PENDING_FILTER)}
             >
               {t.pendingDocs.tabs.bankPending}
+              {tabCounts.pending > 0 && (
+                <Badge variant="outline" className="ml-2">{tabCounts.pending}</Badge>
+              )}
             </Button>
             <Button
               variant={isFilterActive('matched') ? 'secondary' : 'ghost'}
@@ -737,6 +772,9 @@ export default function PendingDocsPage() {
               onClick={() => setStatusFilter('matched')}
             >
               {t.pendingDocs.tabs.reconciled}
+              {tabCounts.matched > 0 && (
+                <Badge variant="outline" className="ml-2">{tabCounts.matched}</Badge>
+              )}
             </Button>
             <Button
               variant={isFilterActive('archived') ? 'secondary' : 'ghost'}
@@ -744,6 +782,9 @@ export default function PendingDocsPage() {
               onClick={() => setStatusFilter('archived')}
             >
               {t.pendingDocs.tabs.archived}
+              {tabCounts.archived > 0 && (
+                <Badge variant="outline" className="ml-2">{tabCounts.archived}</Badge>
+              )}
             </Button>
           </div>
         )}
