@@ -2093,6 +2093,9 @@ export const ca = {
     fxComputedEur: "EUR calculat amb TC projecte",
     fxBulkSkipped: "excloses per falta de TC",
     fxPctOver100: "El total de percentatges no pot superar 100%",
+    fxNoTcSaved: "sense TC (EUR pendent)",
+    fxNoTcWarningShort: "Sense TC",
+    multiAssignmentRecalcNotice: "Aquesta despesa està imputada a diversos projectes. Si canvies l'import, els imports imputats es recalcularan automàticament segons els percentatges definits.",
     fxPartialFallback: "Parcial",
     editAssignment: "Editar assignació",
     removeAssignment: "Eliminar assignació",
@@ -2109,8 +2112,18 @@ export const ca = {
     backToProjects: "Tornar a projectes",
     exportExcel: "Exportar justificació (Excel)",
     editFx: "Editar tipus de canvi",
+    fxSectionTitle: "Transferències i tipus de canvi",
+    fxHelpAria: "Ajuda sobre transferències i tipus de canvi",
+    fxHelpTitle: "Com s'aplica el tipus de canvi",
+    fxHelpModeExpenseTitle: "TC forçat a la despesa",
+    fxHelpModeExpenseText: "Si una despesa té un tipus de canvi propi, s'aplica sempre aquest valor.",
+    fxHelpModeTransfersTitle: "TC calculat per transferències",
+    fxHelpModeTransfersText: "Quan hi ha transferències, Summa calcula automàticament un tipus de canvi ponderat a partir de les dades reals.",
+    fxHelpModeManualTitle: "TC manual del projecte",
+    fxHelpModeManualText: "Valor global que només s'utilitza si no hi ha transferències.",
+    fxHelpPriority: "Prioritat: despesa → transferències → valor manual.",
     // FX Transfers
-    fxTransfersTitle: "Transferències a terreny",
+    fxTransfersTitle: "Transferències",
     fxTransfersHelp: "Registra els canvis de moneda reals per calcular el TC ponderat del projecte.",
     fxTransfersAdd: "Afegir transferència",
     fxTransfersEdit: "Editar transferència",
@@ -2129,8 +2142,8 @@ export const ca = {
     fxTransfersMultipleCurrencies: "Múltiples monedes",
     fxTransfersNoTransfers: "Sense transferències registrades",
     fxTransfersEurPerLocal: "EUR/local",
-    fxLegacyTitle: "TC manual (fallback)",
-    fxLegacyHelp: "S'aplica quan no hi ha transferències registrades.",
+    fxLegacyTitle: "TC manual",
+    fxLegacyHelp: "S'aplica a tot el projecte si no hi ha transferències.",
     fxTransfersDateRequired: "La data és obligatòria",
     fxTransfersAmountPositive: "L'import ha de ser positiu",
     fxTransfersCurrencyRequired: "La moneda és obligatòria",
@@ -2215,6 +2228,21 @@ export const ca = {
       // Tooltips
       tooltipOpenDocument: "Obrir comprovant",
       tooltipNoDocument: "Sense comprovant",
+      // Status badges
+      statusUnassigned: "No imputada",
+      statusPartial: "Parcial",
+      statusAssigned: "Imputada",
+      // Breakdown badge
+      breakdownNProjects: (n: number) => `${n} projectes`,
+      breakdownNProjectsPcts: (n: number, pcts: string) => `${n} proj. (${pcts})`,
+      breakdownInThisProject: (pct: number) => `En aquest: ${pct}%`,
+      // Popover header
+      popoverAssigned: "Imputat",
+      popoverFree: "Lliure",
+      // Toast imputació parcial
+      toastPartialTitle: "Imputació parcial",
+      toastPartialDesc: (remainingLocal: string, currency: string, remainingPct: number) =>
+        `Queda lliure ${remainingLocal} ${currency} (${remainingPct}%) per imputar a un altre projecte.`,
     },
     // Captura (terreny)
     capture: {

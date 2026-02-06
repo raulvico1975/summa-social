@@ -101,7 +101,56 @@ function formatAmount(amount: number): string {
   }).format(amount);
 }
 
-// Component per mostrar i gestionar assignacions amb popover
+// ═══════════════════════════════════════════════════════════════════════════
+// HELPERS: Desglossament d'assignacions per badges
+// ═══════════════════════════════════════════════════════════════════════════
+
+function getAssignmentPct(a: ExpenseAssignment, totalAmount: number): number {
+  if (a.localPct != null) return Math.round(a.localPct);
+  if (a.amountEUR == null || totalAmount <= 0) return 0;
+  return Math.round((Math.abs(a.amountEUR) / totalAmount) * 100);
+}
+
+function computeBreakdownInfo(
+  assignments: ExpenseAssignment[] | undefined,
+  totalAmount: number,
+  projectIdFilter: string | null,
+  ep: { breakdownNProjects: (n: number) => string; breakdownNProjectsPcts: (n: number, pcts: string) => string; breakdownInThisProject: (pct: number) => string },
+): { label: string; tooltipLines: string[] } | null {
+  if (!assignments || assignments.length === 0) return null;
+
+  const withPct = assignments.map(a => ({
+    name: a.projectName,
+    projectId: a.projectId,
+    pct: getAssignmentPct(a, totalAmount),
+  }));
+
+  const tooltipLines = withPct.map(p => `${p.name} — ${p.pct}%`);
+
+  if (projectIdFilter) {
+    const pctInProject = withPct
+      .filter(p => p.projectId === projectIdFilter)
+      .reduce((s, p) => s + p.pct, 0);
+    return { label: ep.breakdownInThisProject(pctInProject), tooltipLines };
+  }
+
+  if (assignments.length === 1) {
+    const p = withPct[0];
+    return { label: ep.breakdownNProjectsPcts(1, `${p.pct}`), tooltipLines };
+  }
+
+  if (assignments.length === 2) {
+    const pcts = withPct.map(p => `${p.pct}`).join('/');
+    return { label: ep.breakdownNProjectsPcts(assignments.length, pcts), tooltipLines };
+  }
+
+  return { label: ep.breakdownNProjects(assignments.length), tooltipLines };
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// Component per mostrar i gestionar assignacions amb popover + doble badge
+// ═══════════════════════════════════════════════════════════════════════════
+
 function AssignmentStatusPopover({
   expense,
   status,
@@ -112,6 +161,8 @@ function AssignmentStatusPopover({
   onUnassignAll,
   onEditAssignment,
   isSaving,
+  projectIdFilter,
+  ep,
 }: {
   expense: UnifiedExpenseWithLink;
   status: ExpenseStatus;
@@ -122,113 +173,167 @@ function AssignmentStatusPopover({
   onUnassignAll: (txId: string) => Promise<void>;
   onEditAssignment: (expense: UnifiedExpenseWithLink) => void;
   isSaving: boolean;
+  projectIdFilter?: string | null;
+  ep: { statusUnassigned: string; statusPartial: string; statusAssigned: string; popoverAssigned: string; popoverFree: string; breakdownNProjects: (n: number) => string; breakdownNProjectsPcts: (n: number, pcts: string) => string; breakdownInThisProject: (pct: number) => string };
 }) {
   const [open, setOpen] = React.useState(false);
 
-  // Per despeses FX amb localPct, usar la suma de localPct
-  const hasLocalPct = assignments?.some(a => a.localPct != null);
-  const totalLocalPct = hasLocalPct
-    ? (assignments?.reduce((s, a) => s + (a.localPct ?? 0), 0) ?? 0)
-    : null;
-  const percentage = totalLocalPct != null
-    ? Math.round(totalLocalPct)
-    : (totalAmount > 0 ? Math.round((assignedAmount / totalAmount) * 100) : 0);
-
   // Si no té assignacions, mostrar badge simple
   if (status === 'unassigned' || !assignments || assignments.length === 0) {
-    return <Badge variant="outline">0%</Badge>;
+    return <Badge variant="outline" className="text-xs">{ep.statusUnassigned}</Badge>;
   }
 
-  // Mapping segons contracte: 0%=neutral, parcial=ambre, 100%=verd
+  // Badge 1: Estat
+  const statusLabel = status === 'assigned' ? ep.statusAssigned : ep.statusPartial;
   const badgeClass = status === 'assigned'
     ? 'bg-emerald-600 hover:bg-emerald-700 cursor-pointer'
-    : 'bg-amber-500 text-black hover:bg-amber-600 cursor-pointer';
+    : 'bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100 cursor-pointer';
+
+  // Badge 2: Desglossament
+  const breakdown = computeBreakdownInfo(assignments, totalAmount, projectIdFilter ?? null, ep);
 
   return (
-    <Popover open={open} onOpenChange={setOpen}>
-      <PopoverTrigger asChild>
-        <Badge variant="default" className={badgeClass}>
-          {status === 'assigned' ? '100%' : `${percentage}%`}
-        </Badge>
-      </PopoverTrigger>
-      <PopoverContent className="w-72 p-0" align="end">
-        <div className="p-3 border-b">
-          <div className="flex items-center justify-between">
-            <span className="font-medium text-sm">Assignacions</span>
-            <span className="text-xs text-muted-foreground font-mono">
-              {formatAmount(assignedAmount)} / {formatAmount(totalAmount)}
-            </span>
+    <div className="flex items-center gap-1">
+      {/* Badge 1: Estat — obre el popover */}
+      <Popover open={open} onOpenChange={setOpen}>
+        <PopoverTrigger asChild>
+          <Badge variant={status === 'assigned' ? 'default' : 'outline'} className={`${badgeClass} text-xs`}>
+            {statusLabel}
+          </Badge>
+        </PopoverTrigger>
+        <PopoverContent className="w-72 p-0" align="end">
+          <div className="p-3 border-b">
+            {(() => {
+              const isFx = expense.expense.originalAmount != null && expense.expense.originalCurrency;
+              const fmt = (v: number) => new Intl.NumberFormat('ca-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(v);
+              if (isFx) {
+                const localTotal = Math.abs(expense.expense.originalAmount!);
+                const cur = expense.expense.originalCurrency!;
+                const totalPct = (assignments ?? []).reduce((s, a) => s + getAssignmentPct(a, totalAmount), 0);
+                const assignedLocal = localTotal * Math.min(totalPct, 100) / 100;
+                const freeLocal = localTotal - assignedLocal;
+                return (
+                  <div className="flex items-center justify-between text-xs font-mono gap-2">
+                    <span className="text-emerald-700">{ep.popoverAssigned} = {fmt(assignedLocal)} {cur}</span>
+                    <span className="text-muted-foreground">{ep.popoverFree} = {fmt(freeLocal)} {cur}</span>
+                  </div>
+                );
+              }
+              const freeEur = totalAmount - assignedAmount;
+              return (
+                <div className="flex items-center justify-between text-xs font-mono gap-2">
+                  <span className="text-emerald-700">{ep.popoverAssigned} = {formatAmount(assignedAmount)}</span>
+                  <span className="text-muted-foreground">{ep.popoverFree} = {formatAmount(Math.max(freeEur, 0))}</span>
+                </div>
+              );
+            })()}
           </div>
-        </div>
-        <div className="p-2 space-y-1 max-h-48 overflow-y-auto">
-          {assignments.map((assignment, index) => (
-            <div
-              key={`${assignment.projectId}-${assignment.budgetLineId ?? 'none'}-${index}`}
-              className="flex items-center justify-between gap-2 p-2 rounded hover:bg-muted/50 group"
-            >
-              <div className="flex-1 min-w-0">
-                <div className="text-sm font-medium truncate">{assignment.projectName}</div>
+          <div className="p-2 space-y-1 max-h-48 overflow-y-auto">
+            {assignments.map((assignment, index) => {
+              // Per FX: mostrar en moneda local
+              const isFx = expense.expense.originalAmount != null && expense.expense.originalCurrency;
+              const localCurrency = expense.expense.originalCurrency ?? '';
+              const localTotal = Math.abs(expense.expense.originalAmount ?? 0);
+
+              let displayAmount: string;
+              if (isFx) {
+                // Calcular import local per assignació
+                const pct = assignment.localPct ?? (assignment.amountEUR != null && totalAmount > 0 ? Math.round((Math.abs(assignment.amountEUR) / totalAmount) * 100) : 0);
+                const localForAssignment = localTotal * pct / 100;
+                const localFormatted = new Intl.NumberFormat('ca-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(localForAssignment);
+                displayAmount = `${pct}% · ${localFormatted} ${localCurrency}`;
+              } else if (assignment.amountEUR == null) {
+                displayAmount = assignment.localPct != null ? `${assignment.localPct}%` : 'Sense TC';
+              } else if (assignment.localPct != null) {
+                displayAmount = `${assignment.localPct}% · ${formatAmount(Math.abs(assignment.amountEUR))}`;
+              } else {
+                displayAmount = formatAmount(Math.abs(assignment.amountEUR));
+              }
+
+              return (
+              <div
+                key={`${assignment.projectId}-${assignment.budgetLineId ?? 'none'}-${index}`}
+                className="p-2 rounded hover:bg-muted/50 group"
+              >
+                <div className="flex items-center justify-between gap-1">
+                  <div className="text-sm font-medium truncate flex-1 min-w-0">{assignment.projectName}</div>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-6 w-6 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground hover:text-destructive"
+                    onClick={async (e) => {
+                      e.stopPropagation();
+                      await onRemoveAssignment(expense.expense.txId, index);
+                      if (assignments.length === 1) {
+                        setOpen(false);
+                      }
+                    }}
+                    disabled={isSaving}
+                    aria-label="Eliminar aquesta assignació"
+                  >
+                    <X className="h-3 w-3" />
+                  </Button>
+                </div>
                 {assignment.budgetLineName && (
                   <div className="text-xs text-muted-foreground truncate">
                     {assignment.budgetLineName}
                   </div>
                 )}
+                <div className="text-xs font-mono text-muted-foreground mt-0.5">
+                  {displayAmount}
+                </div>
               </div>
-              <div className="flex items-center gap-2 shrink-0">
-                <span className="text-xs font-mono text-muted-foreground">
-                  {assignment.localPct != null
-                    ? `${assignment.localPct}% · ${formatAmount(Math.abs(assignment.amountEUR))}`
-                    : formatAmount(Math.abs(assignment.amountEUR))}
-                </span>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground hover:text-destructive"
-                  onClick={async (e) => {
-                    e.stopPropagation();
-                    await onRemoveAssignment(expense.expense.txId, index);
-                    if (assignments.length === 1) {
-                      setOpen(false);
-                    }
-                  }}
-                  disabled={isSaving}
-                  aria-label="Eliminar aquesta assignació"
-                >
-                  <X className="h-3 w-3" />
-                </Button>
-              </div>
+              );
+            })}
+          </div>
+          <div className="p-2 border-t flex gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              className="flex-1 text-xs"
+              onClick={() => {
+                setOpen(false);
+                onEditAssignment(expense);
+              }}
+            >
+              <Split className="h-3 w-3 mr-1" />
+              Editar
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              className="flex-1 text-xs text-destructive hover:text-destructive"
+              onClick={async () => {
+                await onUnassignAll(expense.expense.txId);
+                setOpen(false);
+              }}
+              disabled={isSaving}
+            >
+              <Trash2 className="h-3 w-3 mr-1" />
+              Eliminar tot
+            </Button>
+          </div>
+        </PopoverContent>
+      </Popover>
+
+      {/* Badge 2: Desglossament — amb tooltip */}
+      {breakdown && (
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Badge variant="outline" className="text-xs max-w-[140px] truncate cursor-default">
+              {breakdown.label}
+            </Badge>
+          </TooltipTrigger>
+          <TooltipContent side="bottom" className="max-w-[250px]">
+            <div className="space-y-0.5 text-xs">
+              {breakdown.tooltipLines.map((line, i) => (
+                <div key={i}>{line}</div>
+              ))}
             </div>
-          ))}
-        </div>
-        <div className="p-2 border-t flex gap-2">
-          <Button
-            variant="outline"
-            size="sm"
-            className="flex-1 text-xs"
-            onClick={() => {
-              setOpen(false);
-              onEditAssignment(expense);
-            }}
-          >
-            <Split className="h-3 w-3 mr-1" />
-            Editar
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            className="flex-1 text-xs text-destructive hover:text-destructive"
-            onClick={async () => {
-              await onUnassignAll(expense.expense.txId);
-              setOpen(false);
-            }}
-            disabled={isSaving}
-          >
-            <Trash2 className="h-3 w-3 mr-1" />
-            Eliminar tot
-          </Button>
-        </div>
-      </PopoverContent>
-    </Popover>
+          </TooltipContent>
+        </Tooltip>
+      )}
+    </div>
   );
 }
 
@@ -273,17 +378,10 @@ function QuickAssignPopover({
   const handleSelectBudgetLine = async (budgetLine: BudgetLine | null) => {
     if (!selectedProject) return;
 
-    // Si la despesa és FX, computar EUR amb TC (manual o projecte)
+    // Si la despesa és FX, computar EUR amb TC (manual o projecte), o null si no n'hi ha
     if (isFxExpense) {
       const tc = resolveExpenseTC(expense.expense, fxTransfers, selectedProject);
-      if (tc === null) {
-        setOpen(false);
-        setSelectedProject(null);
-        setSearch('');
-        onTcMissing?.(selectedProject);
-        return;
-      }
-      const fxAmountEUR = expense.expense.originalAmount! * tc;
+      const fxAmountEUR = tc !== null ? expense.expense.originalAmount! * tc : undefined;
       setOpen(false);
       setSelectedProject(null);
       setSearch('');
@@ -683,20 +781,15 @@ export default function ExpensesInboxPage() {
     const expense = expenses.find(e => e.expense.txId === txId);
     if (!expense) return;
 
-    // Determinar amountEUR
-    let amountEUR: number;
+    // Determinar amountEUR (pot ser null per FX sense TC)
+    let amountEUR: number | null;
 
     if (fxAmountEUR !== undefined) {
       // Despesa FX: EUR precomputat pel QuickAssignPopover amb TC (manual o projecte)
       amountEUR = -Math.abs(fxAmountEUR);
     } else if (isFxExpenseNeedingProjectTC(expense.expense)) {
-      // Guardrail: despesa FX sense EUR precomputat (no hauria de passar)
-      toast({
-        variant: 'destructive',
-        title: t.common?.error ?? 'Error',
-        description: t.projectModule?.fxNoTcForProject ?? "El projecte no té TC configurat",
-      });
-      return;
+      // Despesa FX sense TC disponible: guardar amb amountEUR = null
+      amountEUR = null;
     } else {
       // Despesa EUR normal (bank o off-bank sense FX)
       if (expense.expense.amountEUR === null) {
@@ -743,6 +836,27 @@ export default function ExpensesInboxPage() {
     try {
       await save(splitModalExpense.expense.txId, assignments, note);
       await refresh();
+
+      // Toast parcial per FX: si la suma de localPct < 100
+      const originalAmount = splitModalExpense.expense.originalAmount;
+      const originalCurrency = splitModalExpense.expense.originalCurrency;
+      if (originalAmount != null && originalCurrency && assignments.length > 0) {
+        const totalPct = assignments.reduce((s, a) => s + (a.localPct ?? 0), 0);
+        if (totalPct > 0 && totalPct < 100) {
+          const remainingPct = 100 - totalPct;
+          const remainingLocal = Math.abs(originalAmount) * remainingPct / 100;
+          const remainingFormatted = new Intl.NumberFormat('ca-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(remainingLocal);
+          setSplitModalExpense(null);
+          toast({
+            title: ep.toastPartialTitle ?? 'Imputació parcial',
+            description: ep.toastPartialDesc
+              ? ep.toastPartialDesc(remainingFormatted, originalCurrency, remainingPct)
+              : `Queda lliure ${remainingFormatted} ${originalCurrency} (${remainingPct}%) per imputar a un altre projecte.`,
+          });
+          return;
+        }
+      }
+
       setSplitModalExpense(null);
       toast({
         title: ep.toastAssignmentSaved,
@@ -780,24 +894,26 @@ export default function ExpensesInboxPage() {
         fxTransfers = snapshot.docs.map(d => ({ id: d.id, ...d.data() } as FxTransfer));
       }
 
-      let skippedCount = 0;
+      let noTcCount = 0;
 
       for (const expense of selectedExpenses) {
-        let amountEUR: number;
+        let amountEUR: number | null;
 
         if (isFxExpenseNeedingProjectTC(expense.expense)) {
           const tc = resolveExpenseTC(expense.expense, fxTransfers, project);
-          if (tc === null) {
-            skippedCount++;
-            continue;
+          if (tc !== null) {
+            amountEUR = -Math.abs(expense.expense.originalAmount! * tc);
+          } else {
+            amountEUR = null;
+            noTcCount++;
           }
-          amountEUR = -Math.abs(expense.expense.originalAmount! * tc);
         } else {
           if (expense.expense.amountEUR === null) {
-            skippedCount++;
-            continue;
+            amountEUR = null;
+            noTcCount++;
+          } else {
+            amountEUR = expense.expense.amountEUR;
           }
-          amountEUR = expense.expense.amountEUR;
         }
 
         const assignments: ExpenseAssignment[] = [{
@@ -812,11 +928,10 @@ export default function ExpensesInboxPage() {
       setSelectedIds(new Set());
       setBulkAssignOpen(false);
 
-      const assignedCount = selectedExpenses.length - skippedCount;
       toast({
         title: ep.toastBulkAssigned,
-        description: ep.toastBulkAssignedDesc(assignedCount, project.name) +
-          (skippedCount > 0 ? ` ${skippedCount} ${t.projectModule?.fxBulkSkipped ?? 'excloses per falta de TC.'}` : ''),
+        description: ep.toastBulkAssignedDesc(selectedExpenses.length, project.name) +
+          (noTcCount > 0 ? ` ${noTcCount} ${t.projectModule?.fxNoTcSaved ?? 'sense TC (EUR pendent).'}` : ''),
       });
     } catch (err) {
       toast({
@@ -1309,9 +1424,10 @@ export default function ExpensesInboxPage() {
           ) : (
             filteredExpenses.map((item) => {
               const { expense, status, assignedAmount } = item;
-              const percentage = Math.abs(expense.amountEUR) > 0
-                ? Math.round((assignedAmount / Math.abs(expense.amountEUR)) * 100)
-                : 0;
+              const mobileEffectiveTotal = isFxExpenseNeedingProjectTC(expense) && Math.abs(expense.amountEUR) === 0 && item.link?.assignments
+                ? item.link.assignments.reduce((s, a) => s + (a.amountEUR != null ? Math.abs(a.amountEUR) : 0), 0)
+                : Math.abs(expense.amountEUR);
+              const mobileBreakdown = computeBreakdownInfo(item.link?.assignments, mobileEffectiveTotal, projectIdFilter, ep);
 
               return (
                 <MobileListItem
@@ -1325,17 +1441,22 @@ export default function ExpensesInboxPage() {
                   badges={[
                     <Badge
                       key="status"
-                      variant={status === 'assigned' ? 'default' : status === 'partial' ? 'secondary' : 'outline'}
+                      variant={status === 'assigned' ? 'default' : 'outline'}
                       className={
                         status === 'assigned'
                           ? 'bg-emerald-600 text-xs'
                           : status === 'partial'
-                          ? 'bg-amber-500 text-black text-xs'
+                          ? 'bg-emerald-50 text-emerald-700 border-emerald-200 text-xs'
                           : 'text-xs'
                       }
                     >
-                      {status === 'assigned' ? '100%' : status === 'partial' ? `${percentage}%` : '0%'}
+                      {status === 'assigned' ? ep.statusAssigned : status === 'partial' ? ep.statusPartial : ep.statusUnassigned}
                     </Badge>,
+                    mobileBreakdown && (
+                      <Badge key="breakdown" variant="outline" className="text-xs max-w-[120px] truncate">
+                        {mobileBreakdown.label}
+                      </Badge>
+                    ),
                     expense.documentUrl && (
                       <Badge key="doc" variant="outline" className="text-xs">
                         <FileText className="h-3 w-3 mr-1" />
@@ -1346,9 +1467,11 @@ export default function ExpensesInboxPage() {
                   meta={[
                     { value: formatDateShort(expense.date) },
                     {
-                      value: expense.pendingConversion || expense.amountEUR === 0
-                        ? <span className="text-amber-600">Import pendent</span>
-                        : <span className="font-mono font-medium text-red-600">{formatAmount(expense.amountEUR)}</span>
+                      value: isFxExpenseNeedingProjectTC(expense) && expense.originalAmount
+                        ? <span className="font-mono font-medium text-red-600">{expense.originalAmount.toLocaleString('ca-ES')} {expense.originalCurrency}</span>
+                        : expense.amountEUR !== 0
+                          ? <span className="font-mono font-medium text-red-600">{formatAmount(expense.amountEUR)}</span>
+                          : <span className="text-amber-600">Import pendent</span>
                     },
                     expense.counterpartyName && { value: expense.counterpartyName },
                   ].filter(Boolean) as { label?: string; value: React.ReactNode }[]}
@@ -1586,12 +1709,16 @@ export default function ExpensesInboxPage() {
 
                       {/* Import */}
                       <TableCell className="px-2 text-right font-mono text-[13px] whitespace-nowrap tabular-nums">
-                        {expense.pendingConversion || expense.amountEUR === 0 ? (
+                        {isFxExpenseNeedingProjectTC(expense) && expense.originalAmount ? (
+                          <span className="text-red-600 font-medium">
+                            {expense.originalAmount.toLocaleString('ca-ES')} {expense.originalCurrency}
+                          </span>
+                        ) : expense.amountEUR !== 0 ? (
+                          <span className="text-red-600 font-medium">{formatAmount(expense.amountEUR)}</span>
+                        ) : (
                           <Badge variant="outline" className="text-[10px] px-1.5 py-0 bg-amber-50 text-amber-700 border-amber-200">
                             Pendent
                           </Badge>
-                        ) : (
-                          <span className="text-red-600 font-medium">{formatAmount(expense.amountEUR)}</span>
                         )}
                       </TableCell>
 
@@ -1603,7 +1730,7 @@ export default function ExpensesInboxPage() {
                           assignedAmount={assignedAmount}
                           totalAmount={
                             isFxExpenseNeedingProjectTC(expense) && Math.abs(expense.amountEUR) === 0 && item.link?.assignments
-                              ? item.link.assignments.reduce((s, a) => s + Math.abs(a.amountEUR), 0)
+                              ? item.link.assignments.reduce((s, a) => s + (a.amountEUR != null ? Math.abs(a.amountEUR) : 0), 0)
                               : Math.abs(expense.amountEUR)
                           }
                           assignments={item.link?.assignments}
@@ -1611,6 +1738,8 @@ export default function ExpensesInboxPage() {
                           onUnassignAll={handleUnassignAll}
                           onEditAssignment={setSplitModalExpense}
                           isSaving={isSaving}
+                          projectIdFilter={projectIdFilter}
+                          ep={ep}
                         />
                       </TableCell>
 
@@ -1831,7 +1960,9 @@ export default function ExpensesInboxPage() {
         organizationId={organizationId ?? ''}
         initialValues={editOffBankExpense ? {
           date: editOffBankExpense.expense.date,
-          amountEUR: Math.abs(editOffBankExpense.expense.amountEUR).toString().replace('.', ','),
+          amountEUR: editOffBankExpense.expense.amountEUR !== 0
+            ? Math.abs(editOffBankExpense.expense.amountEUR).toString().replace('.', ',')
+            : '',
           concept: editOffBankExpense.expense.description ?? '',
           counterpartyName: editOffBankExpense.expense.counterpartyName ?? '',
           categoryName: editOffBankExpense.expense.categoryName ?? '',

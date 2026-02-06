@@ -140,7 +140,7 @@ export interface FxTransferFormData {
 export interface ExpenseAssignment {
   projectId: string;
   projectName: string; // denormalitzat
-  amountEUR: number; // part assignada (amb signe -)
+  amountEUR: number | null; // part assignada (amb signe -), null si no hi ha TC
   budgetLineId?: string | null; // opcional
   budgetLineName?: string | null; // denormalitzat, opcional
   localPct?: number; // 0-100, per despeses FX assignades per percentatge

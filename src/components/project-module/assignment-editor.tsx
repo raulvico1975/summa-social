@@ -140,7 +140,7 @@ export function AssignmentEditor({
         projectName: a.projectName,
         amountStr: fxMode
           ? (a.localPct != null ? a.localPct.toString() : '0')
-          : Math.abs(a.amountEUR).toFixed(2),
+          : (a.amountEUR != null ? Math.abs(a.amountEUR).toFixed(2) : '0.00'),
         budgetLineId: a.budgetLineId ?? null,
         budgetLineName: a.budgetLineName ?? null,
       }));
@@ -256,19 +256,10 @@ export function AssignmentEditor({
           tc = await resolveProjectTC(row.projectId);
         }
 
-        if (tc === null) {
-          const projectName = row.projectName || row.projectId;
-          setFxSaveError(
-            t.projectModule?.fxNoTcForProject
-              ?? `El projecte "${projectName}" no té TC configurat. Afegeix transferències FX al pressupost.`
-          );
-          return;
-        }
-
         assignments.push({
           projectId: row.projectId,
           projectName: row.projectName,
-          amountEUR: -Math.abs(localPerRow * tc),
+          amountEUR: tc !== null ? -Math.abs(localPerRow * tc) : null,
           budgetLineId: row.budgetLineId,
           budgetLineName: row.budgetLineName,
           localPct: pct,

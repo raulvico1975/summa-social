@@ -90,7 +90,7 @@ export default function ExpenseDetailPage() {
   React.useEffect(() => {
     if (!isLoading && expense && !hasAutoOpened) {
       const assignedAmt = link
-        ? link.assignments.reduce((sum, a) => sum + Math.abs(a.amountEUR), 0)
+        ? link.assignments.reduce((sum, a) => sum + (a.amountEUR != null ? Math.abs(a.amountEUR) : 0), 0)
         : 0;
       const totalAmt = Math.abs(expense.amountEUR);
       const fullyAssigned = (totalAmt - assignedAmt) <= 0.01;
@@ -219,7 +219,7 @@ export default function ExpenseDetailPage() {
   }
 
   const assignedAmount = link
-    ? link.assignments.reduce((sum, a) => sum + Math.abs(a.amountEUR), 0)
+    ? link.assignments.reduce((sum, a) => sum + (a.amountEUR != null ? Math.abs(a.amountEUR) : 0), 0)
     : 0;
   const totalAmount = Math.abs(expense.amountEUR);
   const remainingAmount = totalAmount - assignedAmount;
@@ -388,7 +388,7 @@ export default function ExpenseDetailPage() {
                       <p className="font-medium">{assignment.projectName}</p>
                     </div>
                     <span className="font-mono font-medium text-red-600">
-                      {formatAmount(assignment.amountEUR)}
+                      {assignment.amountEUR != null ? formatAmount(assignment.amountEUR) : '—'}
                     </span>
                   </div>
                 ))}

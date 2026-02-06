@@ -29,7 +29,6 @@ import { trackUX } from '@/lib/ux/trackUX';
 import { ChevronDown, ChevronUp, Info, AlertTriangle } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { ExpenseAttachmentsDropzone } from './expense-attachments-dropzone';
-import { suggestCategory } from '@/lib/expense-category-suggestions';
 import { buildDocumentFilename } from '@/lib/build-document-filename';
 
 interface OffBankExpenseInitialValues {
@@ -103,11 +102,14 @@ export function OffBankExpenseModal({
   const [counterpartyName, setCounterpartyName] = useState('');
   const [categoryName, setCategoryName] = useState('');
 
-  // Camps FX (moneda local)
-  const [useForeignCurrency, setUseForeignCurrency] = useState(false);
+  // Camps FX (moneda local) — per defecte ON en despeses de terreny
+  const [useForeignCurrency, setUseForeignCurrency] = useState(true);
   const [currency, setCurrency] = useState('');
   const [amountOriginal, setAmountOriginal] = useState('');
   const [fxRateOverride, setFxRateOverride] = useState('');
+
+  // EUR manual (cas especial, col·lapsat per defecte)
+  const [eurManualEnabled, setEurManualEnabled] = useState(false);
 
   // Camps justificació (collapsible)
   const [justificationOpen, setJustificationOpen] = useState(false);
@@ -122,9 +124,6 @@ export function OffBankExpenseModal({
   // Revisió (nou)
   const [needsReview, setNeedsReview] = useState(quickMode);
 
-  // Control categoria: per defecte readonly, només editable si l'usuari ho demana
-  const [allowManualCategory, setAllowManualCategory] = useState(false);
-
   const [errors, setErrors] = useState<Record<string, string>>({});
 
   // Generador de noms de fitxer per attachments
@@ -136,26 +135,7 @@ export function OffBankExpenseModal({
     });
   }, [date, concept]);
 
-  // Calcular import EUR automàticament quan s'usa moneda estrangera
-  // Fórmula: amountEUR = originalAmount * fxRate (on fxRate és "1 moneda → EUR")
-  const calculateEurAmount = useCallback(() => {
-    if (!useForeignCurrency || !amountOriginal || !fxRateOverride) return '';
-    const originalAmount = parseFloat(amountOriginal.replace(',', '.'));
-    const fxRate = parseFloat(fxRateOverride.replace(',', '.'));
-    if (isNaN(originalAmount) || isNaN(fxRate) || fxRate <= 0) return '';
-    const eurAmount = originalAmount * fxRate;
-    return eurAmount.toFixed(2);
-  }, [useForeignCurrency, amountOriginal, fxRateOverride]);
-
-  // Actualitzar amountEUR quan canvia l'import original o el FX
-  useEffect(() => {
-    if (useForeignCurrency) {
-      const calculated = calculateEurAmount();
-      if (calculated) {
-        setAmountEUR(calculated);
-      }
-    }
-  }, [useForeignCurrency, calculateEurAmount]);
+  // Nota: El TC s'aplica al imputar la despesa a un projecte, no aquí.
 
   // Carregar valors inicials quan s'obre en mode edit
   useEffect(() => {
@@ -171,11 +151,22 @@ export function OffBankExpenseModal({
         setCurrency(initialValues.currency);
         setAmountOriginal(initialValues.amountOriginal ?? '');
         setFxRateOverride(initialValues.fxRateOverride ?? '');
-      } else {
+        // Si té amountEUR amb moneda local, vol dir que hi havia EUR manual
+        setEurManualEnabled(!!initialValues.amountEUR && parseFloat(initialValues.amountEUR) > 0);
+      } else if (initialValues.amountEUR && parseFloat(initialValues.amountEUR) > 0) {
+        // Despesa EUR real: mostrar camp EUR directe
         setUseForeignCurrency(false);
         setCurrency('');
         setAmountOriginal('');
         setFxRateOverride('');
+        setEurManualEnabled(false);
+      } else {
+        // Sense moneda ni EUR (ex: quick-expense incompleta): default moneda local ON
+        setUseForeignCurrency(true);
+        setCurrency(projectFxCurrency ?? '');
+        setAmountOriginal('');
+        setFxRateOverride('');
+        setEurManualEnabled(false);
       }
       // Justificació
       setInvoiceNumber(initialValues.invoiceNumber ?? '');
@@ -202,20 +193,7 @@ export function OffBankExpenseModal({
     }
   }, [open, isEditMode, projectFxCurrency]);
 
-  // Suggerir categoria automàticament quan canvia el concepte
-  // Si no troba suggeriment, posa "Revisar" i marca needsReview
-  useEffect(() => {
-    if (!isEditMode && concept.length >= 3 && !allowManualCategory) {
-      const suggested = suggestCategory(concept, counterpartyName);
-      if (suggested) {
-        setCategoryName(suggested);
-      } else if (!categoryName || categoryName === 'Revisar') {
-        // No s'ha trobat suggeriment: marcar per revisió
-        setCategoryName('Revisar');
-        setNeedsReview(true);
-      }
-    }
-  }, [concept, counterpartyName, isEditMode, allowManualCategory, categoryName]);
+  // Categoria: no s'usa en despeses off-bank (la classificació real és la partida del projecte)
 
   const resetForm = () => {
     const today = new Date();
@@ -223,12 +201,13 @@ export function OffBankExpenseModal({
     setAmountEUR('');
     setConcept('');
     setCounterpartyName('');
-    setCategoryName('');
-    // FX
-    setUseForeignCurrency(false);
+    // FX — per defecte ON
+    setUseForeignCurrency(true);
     setCurrency(projectFxCurrency ?? '');
     setAmountOriginal('');
     setFxRateOverride('');
+    // EUR manual
+    setEurManualEnabled(false);
     // Justificació
     setJustificationOpen(false);
     setInvoiceNumber('');
@@ -239,8 +218,6 @@ export function OffBankExpenseModal({
     setAttachments([]);
     // Revisió
     setNeedsReview(quickMode);
-    // Categoria manual
-    setAllowManualCategory(false);
     setErrors({});
   };
 
@@ -262,15 +239,15 @@ export function OffBankExpenseModal({
       if (isNaN(origAmount) || origAmount <= 0) {
         newErrors.amountOriginal = 'Import ha de ser positiu';
       }
-      // fxRate és OPCIONAL - no validar si està buit
-      if (fxRateOverride.trim()) {
-        const fxRate = parseFloat(fxRateOverride.replace(',', '.'));
-        if (isNaN(fxRate) || fxRate <= 0) {
-          newErrors.fxRate = 'Tipus de canvi ha de ser positiu';
+      // EUR manual: només validar si l'usuari l'ha activat i ha escrit quelcom
+      if (eurManualEnabled && amountEUR.trim()) {
+        const eurVal = parseFloat(amountEUR.replace(',', '.'));
+        if (isNaN(eurVal) || eurVal <= 0) {
+          newErrors.amountEUR = 'Import ha de ser positiu';
         }
       }
     } else {
-      // Import EUR obligatori només si NO és moneda local
+      // Import EUR obligatori si NO és moneda local
       const amount = parseFloat(amountEUR.replace(',', '.'));
       if (isNaN(amount) || amount <= 0) {
         newErrors.amountEUR = 'Import ha de ser positiu';
@@ -291,22 +268,18 @@ export function OffBankExpenseModal({
 
     if (!validate()) return;
 
-    // Determinar si cal marcar per revisió:
-    // - Si categoria és "Revisar"
-    // - Si l'usuari ha canviat la categoria manualment
-    // - Si ja estava marcat needsReview
-    const shouldNeedReview = needsReview || categoryName === 'Revisar' || allowManualCategory;
+    const shouldNeedReview = needsReview;
 
     // Determinar amountEUR
-    // - Si moneda local sense fxRate → null
-    // - Si moneda local amb fxRate → calculat
-    // - Si EUR → valor introduït
+    // - Si moneda local + EUR manual amb valor → valor introduït
+    // - Si moneda local sense EUR manual → null (es calcularà al imputar)
+    // - Si EUR directe → valor introduït
     let finalAmountEUR: string | null = null;
     if (useForeignCurrency) {
-      if (fxRateOverride.trim()) {
-        finalAmountEUR = calculateEurAmount() || null;
+      if (eurManualEnabled && amountEUR.trim()) {
+        finalAmountEUR = amountEUR.replace(',', '.');
       }
-      // Si no hi ha fxRate, queda null
+      // Altrament queda null
     } else {
       finalAmountEUR = amountEUR.replace(',', '.');
     }
@@ -317,11 +290,11 @@ export function OffBankExpenseModal({
       amountEUR: finalAmountEUR,
       concept,
       counterpartyName,
-      categoryName: categoryName || 'Revisar', // Fallback a "Revisar" si està buit
+      categoryName: categoryName || '',
       // Moneda local (nous camps)
       originalCurrency: useForeignCurrency ? currency.trim().toUpperCase() : null,
       originalAmount: useForeignCurrency ? amountOriginal.replace(',', '.') : null,
-      fxRate: useForeignCurrency && fxRateOverride.trim() ? fxRateOverride.replace(',', '.') : null,
+      fxRate: null, // El TC s'aplica en imputar, no al crear
       // Justificació
       invoiceNumber: invoiceNumber.trim() || undefined,
       issuerTaxId: issuerTaxId.trim() || undefined,
@@ -403,6 +376,9 @@ export function OffBankExpenseModal({
               ? 'Modifica les dades de la despesa'
               : 'Registra una despesa fora del circuit bancari'}
           </DialogDescription>
+          <p className="text-xs text-muted-foreground mt-1">
+            Aquesta despesa es justificarà per projecte. No cal categoritzar-la ni convertir-la a EUR aquí.
+          </p>
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-4">
@@ -411,49 +387,27 @@ export function OffBankExpenseModal({
             <Alert variant="default" className="border-amber-500/50 bg-amber-50 dark:bg-amber-950/20">
               <AlertTriangle className="h-4 w-4 text-amber-600" />
               <AlertDescription className="text-sm text-amber-800 dark:text-amber-200">
-                Aquesta despesa té {existingAssignments.length} imputacions a projectes.
-                Si canvies l&apos;import, hauràs d&apos;ajustar les imputacions manualment.
+                Aquesta despesa està imputada a diversos projectes. Si canvies l&apos;import, els imports imputats es recalcularan automàticament segons els percentatges definits.
               </AlertDescription>
             </Alert>
           )}
 
-          {/* Grid 2 columnes per camps bàsics */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {/* Data */}
-            <div className="space-y-2">
-              <Label htmlFor="date">Data *</Label>
-              <Input
-                id="date"
-                type="date"
-                value={date}
-                onChange={(e) => setDate(e.target.value)}
-                className={errors.date ? 'border-destructive' : ''}
-              />
-              {errors.date && (
-                <p className="text-sm text-destructive">{errors.date}</p>
-              )}
-            </div>
-
-            {/* Import EUR */}
-            <div className="space-y-2">
-              <Label htmlFor="amountEUR">Import (EUR) *</Label>
-              <Input
-                id="amountEUR"
-                type="text"
-                inputMode="decimal"
-                placeholder="0,00"
-                value={amountEUR}
-                onChange={(e) => setAmountEUR(e.target.value)}
-                disabled={useForeignCurrency}
-                className={`${errors.amountEUR ? 'border-destructive' : ''} ${useForeignCurrency ? 'bg-muted' : ''}`}
-              />
-              {errors.amountEUR && (
-                <p className="text-sm text-destructive">{errors.amountEUR}</p>
-              )}
-            </div>
+          {/* Data */}
+          <div className="space-y-2">
+            <Label htmlFor="date">Data *</Label>
+            <Input
+              id="date"
+              type="date"
+              value={date}
+              onChange={(e) => setDate(e.target.value)}
+              className={errors.date ? 'border-destructive' : ''}
+            />
+            {errors.date && (
+              <p className="text-sm text-destructive">{errors.date}</p>
+            )}
           </div>
 
-          {/* Toggle moneda estrangera - sempre disponible */}
+          {/* Toggle moneda local */}
           <div className="flex items-center justify-between py-2 px-3 bg-muted/50 rounded-lg">
             <div className="flex items-center gap-2">
               <Label htmlFor="useForeignCurrency" className="text-sm font-normal cursor-pointer">
@@ -470,51 +424,49 @@ export function OffBankExpenseModal({
               checked={useForeignCurrency}
               onCheckedChange={(checked) => {
                 setUseForeignCurrency(checked);
-                // Si desactiva, netejar camps FX
                 if (!checked) {
                   setCurrency('');
                   setAmountOriginal('');
                   setFxRateOverride('');
+                  setEurManualEnabled(false);
                 }
               }}
             />
           </div>
 
-          {/* Camps FX si s'usa moneda estrangera */}
+          {/* Bloc moneda local (visible quan toggle ON) */}
           {useForeignCurrency && (
             <div className="space-y-3 p-3 border rounded-lg bg-muted/30">
-              {/* Fila 1: Moneda (select) */}
-              <div className="space-y-1">
-                <Label htmlFor="currency" className="text-xs">Moneda *</Label>
-                <select
-                  id="currency"
-                  value={currency}
-                  onChange={(e) => {
-                    const val = e.target.value;
-                    setCurrency(val);
-                    // Si trien EUR, desactivar toggle automàticament
-                    if (val === 'EUR') {
-                      setUseForeignCurrency(false);
-                      setAmountOriginal('');
-                      setFxRateOverride('');
-                    }
-                  }}
-                  className={`flex h-9 w-full rounded-md border bg-background px-3 py-1 text-sm font-mono ${errors.currency ? 'border-destructive' : 'border-input'}`}
-                >
-                  <option value="">Selecciona...</option>
-                  <option value="XOF">XOF - Franc CFA</option>
-                  <option value="USD">USD - Dòlar US</option>
-                  <option value="GBP">GBP - Lliura esterlina</option>
-                </select>
-                {errors.currency && (
-                  <p className="text-sm text-destructive">{errors.currency}</p>
-                )}
-              </div>
-
-              {/* Fila 2: Import local + Tipus de canvi */}
-              <div className="grid grid-cols-2 gap-2">
+              <div className="grid grid-cols-2 gap-3">
+                {/* Moneda */}
                 <div className="space-y-1">
-                  <Label htmlFor="amountOriginal" className="text-xs">Import (moneda local) *</Label>
+                  <Label htmlFor="currency" className="text-xs">Moneda *</Label>
+                  <select
+                    id="currency"
+                    value={currency}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      setCurrency(val);
+                      if (val === 'EUR') {
+                        setUseForeignCurrency(false);
+                        setAmountOriginal('');
+                        setFxRateOverride('');
+                      }
+                    }}
+                    className={`flex h-9 w-full rounded-md border bg-background px-3 py-1 text-sm font-mono ${errors.currency ? 'border-destructive' : 'border-input'}`}
+                  >
+                    <option value="">Selecciona...</option>
+                    <option value="XOF">XOF - Franc CFA</option>
+                    <option value="USD">USD - Dòlar US</option>
+                    <option value="GBP">GBP - Lliura esterlina</option>
+                  </select>
+                  {errors.currency && (
+                    <p className="text-sm text-destructive">{errors.currency}</p>
+                  )}
+                </div>
+                {/* Import */}
+                <div className="space-y-1">
+                  <Label htmlFor="amountOriginal" className="text-xs">Import *</Label>
                   <Input
                     id="amountOriginal"
                     type="text"
@@ -528,33 +480,63 @@ export function OffBankExpenseModal({
                     <p className="text-sm text-destructive">{errors.amountOriginal}</p>
                   )}
                 </div>
-                <div className="space-y-1">
-                  <Label htmlFor="fxRate" className="text-xs">Tipus de canvi (1 {currency || 'moneda'} → EUR)</Label>
+              </div>
+              <p className="text-xs text-muted-foreground flex items-center gap-1.5">
+                <Info className="h-3 w-3 shrink-0" />
+                El tipus de canvi s&apos;aplicarà automàticament quan imputis la despesa a un projecte.
+              </p>
+            </div>
+          )}
+
+          {/* Import EUR: directe si NO moneda local, col·lapsat si SÍ moneda local */}
+          {useForeignCurrency ? (
+            <Collapsible open={eurManualEnabled} onOpenChange={setEurManualEnabled}>
+              <CollapsibleTrigger asChild>
+                <Button variant="ghost" type="button" className="w-full justify-between px-3 py-2 h-auto">
+                  <span className="text-sm text-muted-foreground">Introduir EUR manualment (cas especial)</span>
+                  {eurManualEnabled ? (
+                    <ChevronUp className="h-4 w-4" />
+                  ) : (
+                    <ChevronDown className="h-4 w-4" />
+                  )}
+                </Button>
+              </CollapsibleTrigger>
+              <CollapsibleContent className="space-y-2 pt-1">
+                <div className="space-y-1 px-3">
+                  <Label htmlFor="amountEUR" className="text-xs">Import en EUR</Label>
                   <Input
-                    id="fxRate"
+                    id="amountEUR"
                     type="text"
                     inputMode="decimal"
-                    placeholder="0,001525"
-                    value={fxRateOverride}
-                    onChange={(e) => setFxRateOverride(e.target.value)}
-                    className={errors.fxRate ? 'border-destructive h-9 font-mono' : 'h-9 font-mono'}
+                    placeholder="0,00"
+                    value={amountEUR}
+                    onChange={(e) => setAmountEUR(e.target.value)}
+                    className={errors.amountEUR ? 'border-destructive h-9' : 'h-9'}
                   />
-                  {errors.fxRate && (
-                    <p className="text-sm text-destructive">{errors.fxRate}</p>
+                  {errors.amountEUR && (
+                    <p className="text-sm text-destructive">{errors.amountEUR}</p>
                   )}
+                  <p className="text-xs text-muted-foreground">
+                    Si ho deixes buit, l&apos;EUR es calcularà en imputar la despesa a un projecte.
+                  </p>
                 </div>
-              </div>
-
-              {/* Preview: Import EUR calculat o pendent */}
-              <div className="flex items-center gap-2 pt-2 border-t text-sm">
-                <Info className="h-3 w-3 text-muted-foreground" />
-                <span className="text-muted-foreground">Import (EUR):</span>
-                {calculateEurAmount() ? (
-                  <span className="font-medium">{calculateEurAmount()} €</span>
-                ) : (
-                  <span className="text-amber-600 italic">Pendent de conversió</span>
-                )}
-              </div>
+              </CollapsibleContent>
+            </Collapsible>
+          ) : (
+            <div className="space-y-2">
+              <Label htmlFor="amountEUR">Import (EUR) *</Label>
+              <Input
+                id="amountEUR"
+                type="text"
+                inputMode="decimal"
+                placeholder="0,00"
+                value={amountEUR}
+                onChange={(e) => setAmountEUR(e.target.value)}
+                className={errors.amountEUR ? 'border-destructive' : ''}
+              />
+              {errors.amountEUR && (
+                <p className="text-sm text-destructive">{errors.amountEUR}</p>
+              )}
             </div>
           )}
 
@@ -574,52 +556,16 @@ export function OffBankExpenseModal({
             )}
           </div>
 
-          {/* Grid 2 columnes per contrapart i categoria */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {/* Origen/Destinatari */}
-            <div className="space-y-2">
-              <Label htmlFor="counterpartyName">Origen / Destinatari</Label>
-              <Input
-                id="counterpartyName"
-                type="text"
-                placeholder="Nom del proveïdor o persona"
-                value={counterpartyName}
-                onChange={(e) => setCounterpartyName(e.target.value)}
-              />
-            </div>
-
-            {/* Categoria - readonly per defecte */}
-            <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <Label htmlFor="categoryName">Categoria</Label>
-                {!allowManualCategory && (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setAllowManualCategory(true);
-                      setNeedsReview(true); // Marcar per revisió si es canvia manualment
-                    }}
-                    className="text-xs text-primary hover:underline"
-                  >
-                    Canviar
-                  </button>
-                )}
-              </div>
-              {allowManualCategory ? (
-                <Input
-                  id="categoryName"
-                  type="text"
-                  placeholder="p.ex. Transport, Material, etc."
-                  value={categoryName}
-                  onChange={(e) => setCategoryName(e.target.value)}
-                  autoFocus
-                />
-              ) : (
-                <div className="flex items-center h-10 px-3 rounded-md border bg-muted/50 text-sm">
-                  {categoryName || <span className="text-muted-foreground">Pendent de suggeriment...</span>}
-                </div>
-              )}
-            </div>
+          {/* Origen/Destinatari */}
+          <div className="space-y-2">
+            <Label htmlFor="counterpartyName">Origen / Destinatari</Label>
+            <Input
+              id="counterpartyName"
+              type="text"
+              placeholder="Nom del proveïdor o persona"
+              value={counterpartyName}
+              onChange={(e) => setCounterpartyName(e.target.value)}
+            />
           </div>
 
           {/* Comprovants (Attachments) */}

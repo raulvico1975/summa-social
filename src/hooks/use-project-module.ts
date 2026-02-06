@@ -205,14 +205,20 @@ export function useExpenseFeed(): UseExpenseFeedResult {
         const link = linksMap.get(d.id) ?? null;
 
         const assignedAmount = link
-          ? link.assignments.reduce((sum, a) => sum + Math.abs(a.amountEUR), 0)
+          ? link.assignments.reduce((sum, a) => sum + (a.amountEUR != null ? Math.abs(a.amountEUR) : 0), 0)
           : 0;
         const totalAmount = Math.abs(expense.amountEUR);
         const remainingAmount = totalAmount - assignedAmount;
 
         let status: ExpenseStatus = 'unassigned';
         if (link && link.assignments.length > 0) {
-          status = remainingAmount <= 0.01 ? 'assigned' : 'partial';
+          const hasLocalPct = link.assignments.some(a => a.localPct != null);
+          if (hasLocalPct) {
+            const totalPct = link.assignments.reduce((s, a) => s + (a.localPct ?? 0), 0);
+            status = totalPct >= 100 ? 'assigned' : 'partial';
+          } else {
+            status = remainingAmount <= 0.01 ? 'assigned' : 'partial';
+          }
         }
 
         return {
@@ -491,14 +497,21 @@ export function useUnifiedExpenseFeed(options?: UseUnifiedExpenseFeedOptions): U
       const link = linksMap.get(expense.txId) ?? null;
 
       const assignedAmount = link
-        ? link.assignments.reduce((sum, a) => sum + Math.abs(a.amountEUR), 0)
+        ? link.assignments.reduce((sum, a) => sum + (a.amountEUR != null ? Math.abs(a.amountEUR) : 0), 0)
         : 0;
       const totalAmount = Math.abs(expense.amountEUR);
       const remainingAmount = totalAmount - assignedAmount;
 
       let status: ExpenseStatus = 'unassigned';
       if (link && link.assignments.length > 0) {
-        status = remainingAmount <= 0.01 ? 'assigned' : 'partial';
+        // Per FX amb localPct: usar suma de percentatges per determinar estat
+        const hasLocalPct = link.assignments.some(a => a.localPct != null);
+        if (hasLocalPct) {
+          const totalPct = link.assignments.reduce((s, a) => s + (a.localPct ?? 0), 0);
+          status = totalPct >= 100 ? 'assigned' : 'partial';
+        } else {
+          status = remainingAmount <= 0.01 ? 'assigned' : 'partial';
+        }
       }
 
       return {
@@ -658,14 +671,20 @@ export function useUnifiedExpenseFeed(options?: UseUnifiedExpenseFeedOptions): U
         const link = linksMap.get(expense.txId) ?? null;
 
         const assignedAmount = link
-          ? link.assignments.reduce((sum, a) => sum + Math.abs(a.amountEUR), 0)
+          ? link.assignments.reduce((sum, a) => sum + (a.amountEUR != null ? Math.abs(a.amountEUR) : 0), 0)
           : 0;
         const totalAmount = Math.abs(expense.amountEUR);
         const remainingAmount = totalAmount - assignedAmount;
 
         let status: ExpenseStatus = 'unassigned';
         if (link && link.assignments.length > 0) {
-          status = remainingAmount <= 0.01 ? 'assigned' : 'partial';
+          const hasLocalPct = link.assignments.some(a => a.localPct != null);
+          if (hasLocalPct) {
+            const totalPct = link.assignments.reduce((s, a) => s + (a.localPct ?? 0), 0);
+            status = totalPct >= 100 ? 'assigned' : 'partial';
+          } else {
+            status = remainingAmount <= 0.01 ? 'assigned' : 'partial';
+          }
         }
 
         return {

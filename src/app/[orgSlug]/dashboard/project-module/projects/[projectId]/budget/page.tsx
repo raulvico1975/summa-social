@@ -60,6 +60,11 @@ import { Label } from '@/components/ui/label';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
 import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from '@/components/ui/popover';
+import {
   AlertCircle,
   ArrowLeft,
   Plus,
@@ -77,6 +82,7 @@ import {
   Upload,
   MoreVertical,
   Hash,
+  ChevronDown,
 } from 'lucide-react';
 import { useIsMobile } from '@/hooks/use-is-mobile';
 import { MobileListItem } from '@/components/mobile/mobile-list-item';
@@ -525,7 +531,7 @@ export default function ProjectBudgetPage() {
       for (const assignment of link.assignments) {
         if (assignment.budgetLineId) {
           const current = map.get(assignment.budgetLineId) ?? 0;
-          map.set(assignment.budgetLineId, current + Math.abs(assignment.amountEUR));
+          map.set(assignment.budgetLineId, current + (assignment.amountEUR != null ? Math.abs(assignment.amountEUR) : 0));
         }
       }
     }
@@ -549,7 +555,7 @@ export default function ProjectBudgetPage() {
     for (const link of expenseLinks) {
       for (const assignment of link.assignments) {
         if (assignment.projectId === projectId) {
-          totalProjectExecution += Math.abs(assignment.amountEUR);
+          totalProjectExecution += assignment.amountEUR != null ? Math.abs(assignment.amountEUR) : 0;
         }
       }
     }
@@ -979,50 +985,87 @@ export default function ProjectBudgetPage() {
         </div>
       )}
 
-      {/* Secció FX: Transferències a terreny + TC ponderat */}
-      <div className="space-y-3">
-        {/* TC ponderat del projecte */}
-        <div className="rounded-lg border bg-muted/20 px-4 py-3">
-          <div className="flex items-center justify-between gap-4">
-            <div className="flex items-center gap-3 min-w-0">
-              <DollarSign className="h-4 w-4 text-muted-foreground shrink-0" />
-              <div className="min-w-0">
-                <span className="text-sm font-medium">{t.projectModule?.fxTransfersWeightedRate ?? 'TC projecte (ponderat)'}</span>
-                <span className="text-sm text-muted-foreground ml-2">
-                  {weightedFxRate !== null ? (
-                    <>
-                      <span className="font-mono">{weightedFxRate.toFixed(6)}</span>{' '}
-                      <span>{t.projectModule?.fxTransfersEurPerLocal ?? 'EUR/local'}</span>
-                      {weightedFxCurrency && <span className="ml-1">({weightedFxCurrency})</span>}
-                    </>
-                  ) : project.fxRate ? (
-                    <>
-                      <span className="font-mono">{project.fxRate} {project.fxCurrency ?? ''}</span>
-                      {' '}
-                      <span className="italic text-xs">({t.projectModule?.fxLegacyTitle ?? 'TC manual (fallback)'})</span>
-                    </>
-                  ) : (
-                    <span className="italic">{t.projectModule?.notConfigured ?? 'No configurat'}</span>
-                  )}
-                </span>
-              </div>
-            </div>
-            <Button
-              variant="outline"
-              size="sm"
-              className="h-8 shrink-0"
-              onClick={() => {
-                setEditingFxTransfer(null);
-                setFxTransferFormOpen(true);
-              }}
-            >
-              <Plus className="h-4 w-4 mr-1" />
-              {t.projectModule?.fxTransfersAdd ?? 'Afegir transferència'}
-            </Button>
+      {/* Secció FX: Col·lapsable */}
+      <details className="group rounded-lg border bg-background">
+        <summary className="flex cursor-pointer items-center justify-between px-4 py-3 text-sm font-medium list-none [&::-webkit-details-marker]:hidden">
+          <div className="flex items-center gap-2">
+            <span>{t.projectModule?.fxSectionTitle ?? 'Transferències i tipus de canvi'}</span>
+            <Popover>
+              <PopoverTrigger asChild>
+                <button
+                  type="button"
+                  onClick={(e) => e.stopPropagation()}
+                  className="inline-flex h-5 w-5 items-center justify-center rounded-full border text-xs text-muted-foreground hover:bg-muted"
+                  aria-label={t.projectModule?.fxHelpAria ?? 'Ajuda sobre transferències i tipus de canvi'}
+                >
+                  ?
+                </button>
+              </PopoverTrigger>
+              <PopoverContent className="max-w-sm text-sm leading-relaxed" onClick={(e) => e.stopPropagation()}>
+                <div className="space-y-3">
+                  <p className="font-medium">{t.projectModule?.fxHelpTitle ?? 'Com s\'aplica el tipus de canvi'}</p>
+                  <ul className="space-y-2 list-none p-0">
+                    <li>
+                      <strong>{t.projectModule?.fxHelpModeExpenseTitle ?? 'TC forçat a la despesa'}</strong><br />
+                      {t.projectModule?.fxHelpModeExpenseText ?? 'Si una despesa té un tipus de canvi propi, s\'aplica sempre aquest valor.'}
+                    </li>
+                    <li>
+                      <strong>{t.projectModule?.fxHelpModeTransfersTitle ?? 'TC calculat per transferències'}</strong><br />
+                      {t.projectModule?.fxHelpModeTransfersText ?? 'Quan hi ha transferències, Summa calcula automàticament un tipus de canvi ponderat a partir de les dades reals.'}
+                    </li>
+                    <li>
+                      <strong>{t.projectModule?.fxHelpModeManualTitle ?? 'TC manual del projecte'}</strong><br />
+                      {t.projectModule?.fxHelpModeManualText ?? 'Valor global que només s\'utilitza si no hi ha transferències.'}
+                    </li>
+                  </ul>
+                  <div className="text-xs text-muted-foreground">
+                    {t.projectModule?.fxHelpPriority ?? 'Prioritat: despesa → transferències → valor manual.'}
+                  </div>
+                </div>
+              </PopoverContent>
+            </Popover>
+          </div>
+          <ChevronDown className="h-4 w-4 text-muted-foreground transition-transform duration-200 group-open:rotate-180" />
+        </summary>
+
+        <div className="space-y-4 px-4 pb-4">
+
+        {/* Bloc 1: TC calculat (ponderat) */}
+        <div className="rounded-md bg-muted/30 p-3 text-sm">
+          <div className="text-muted-foreground">{t.projectModule?.fxTransfersWeightedRate ?? 'TC projecte (ponderat)'}</div>
+          <div className="mt-1 font-mono">
+            {weightedFxRate !== null ? (
+              <>
+                {new Intl.NumberFormat('ca-ES', { minimumFractionDigits: 6, maximumFractionDigits: 6 }).format(weightedFxRate)} {t.projectModule?.fxTransfersEurPerLocal ?? 'EUR/local'}
+                {weightedFxCurrency && <span className="ml-1">({weightedFxCurrency})</span>}
+              </>
+            ) : project.fxRate ? (
+              <>
+                {new Intl.NumberFormat('ca-ES', { minimumFractionDigits: 2, maximumFractionDigits: 6 }).format(project.fxRate)} {project.fxCurrency ?? ''} = 1 EUR
+                <span className="ml-2 not-italic text-xs text-muted-foreground font-sans">({t.projectModule?.fxLegacyTitle ?? 'TC manual'})</span>
+              </>
+            ) : (
+              <span className="italic font-sans text-muted-foreground">{t.projectModule?.notConfigured ?? 'No configurat'}</span>
+            )}
           </div>
         </div>
 
-        {/* Taula de transferències */}
+        {/* Bloc 2: Transferències */}
+        <div className="flex items-center justify-between">
+          <h4 className="text-sm font-medium">{t.projectModule?.fxTransfersTitle ?? 'Transferències'}</h4>
+          <Button
+            variant="outline"
+            size="sm"
+            className="h-8"
+            onClick={() => {
+              setEditingFxTransfer(null);
+              setFxTransferFormOpen(true);
+            }}
+          >
+            <Plus className="h-4 w-4 mr-1" />
+            {t.projectModule?.fxTransfersAdd ?? 'Afegir transferència'}
+          </Button>
+        </div>
         {fxTransfers.length > 0 && (
           <div className="rounded-lg border">
             <Table>
@@ -1041,13 +1084,13 @@ export default function ProjectBudgetPage() {
                   const implicitRate = transfer.localReceived > 0 ? transfer.eurSent / transfer.localReceived : 0;
                   return (
                     <TableRow key={transfer.id}>
-                      <TableCell className="text-sm">{transfer.date}</TableCell>
+                      <TableCell className="text-sm">{transfer.date.replace(/^(\d{4})-(\d{2})-(\d{2}).*/, '$3/$2/$1')}</TableCell>
                       <TableCell className="text-sm text-right font-mono">{formatAmount(transfer.eurSent)}</TableCell>
                       <TableCell className="text-sm font-mono">{transfer.localCurrency}</TableCell>
                       <TableCell className="text-sm text-right font-mono">
-                        {new Intl.NumberFormat('ca-ES', { maximumFractionDigits: 2 }).format(transfer.localReceived)}
+                        {new Intl.NumberFormat('ca-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(transfer.localReceived)}
                       </TableCell>
-                      <TableCell className="text-sm text-right font-mono">{implicitRate.toFixed(6)}</TableCell>
+                      <TableCell className="text-sm text-right font-mono">{new Intl.NumberFormat('ca-ES', { minimumFractionDigits: 6, maximumFractionDigits: 6 }).format(implicitRate)}</TableCell>
                       <TableCell className="text-right">
                         <div className="flex justify-end gap-1">
                           <Button
@@ -1085,13 +1128,10 @@ export default function ProjectBudgetPage() {
           </p>
         )}
 
-        {/* TC manual legacy (fallback) */}
-        <details className="rounded-lg border bg-muted/10 px-4 py-2">
-          <summary className="cursor-pointer text-sm text-muted-foreground">
-            {t.projectModule?.fxLegacyTitle ?? 'TC manual (fallback)'}{' — '}
-            <span className="italic text-xs">{t.projectModule?.fxLegacyHelp ?? "S'aplica quan no hi ha transferències registrades."}</span>
-          </summary>
-          <div className="mt-3 pb-1">
+        {/* Bloc 3: TC manual (fallback global) */}
+        <div className="rounded-md border border-dashed p-3 text-sm">
+          <div className="text-muted-foreground">{t.projectModule?.fxLegacyTitle ?? 'TC manual (fallback)'}</div>
+          <div className="mt-2">
             {fxEditMode ? (
               <div className="flex flex-wrap items-end gap-4">
                 <div className="flex-1 min-w-[120px] max-w-[160px]">
@@ -1168,19 +1208,13 @@ export default function ProjectBudgetPage() {
               </div>
             ) : (
               <div className="flex items-center justify-between gap-4">
-                <div className="flex items-center gap-3 min-w-0">
-                  <div className="min-w-0">
-                    <span className="text-sm text-muted-foreground">
-                      {project.fxRate ? (
-                        <>
-                          <span className="font-mono">{project.fxRate} {project.fxCurrency ?? ''}</span> = 1 EUR
-                        </>
-                      ) : (
-                        <span className="italic">{t.projectModule?.notConfigured ?? 'No configurat'}</span>
-                      )}
-                    </span>
-                  </div>
-                </div>
+                <span className="text-sm text-muted-foreground">
+                  {project.fxRate ? (
+                    <><span className="font-mono">{new Intl.NumberFormat('ca-ES', { minimumFractionDigits: 2, maximumFractionDigits: 6 }).format(project.fxRate)} {project.fxCurrency ?? ''}</span> = 1 EUR</>
+                  ) : (
+                    <span className="italic">{t.projectModule?.notConfigured ?? 'No configurat'}</span>
+                  )}
+                </span>
                 <Button
                   variant="ghost"
                   size="icon"
@@ -1193,8 +1227,13 @@ export default function ProjectBudgetPage() {
               </div>
             )}
           </div>
-        </details>
-      </div>
+          <div className="mt-1 text-xs text-muted-foreground">
+            {t.projectModule?.fxLegacyHelp ?? "S'aplica a tot el projecte si no hi ha transferències."}
+          </div>
+        </div>
+
+        </div>{/* /space-y-4 */}
+      </details>
 
       {/* Estat A: CTA per desglossar en partides */}
       {!hasBudgetLines && !linesLoading && (

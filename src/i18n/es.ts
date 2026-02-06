@@ -2120,6 +2120,9 @@ export const es = {
     fxComputedEur: "EUR calculado con TC proyecto",
     fxBulkSkipped: "excluidas por falta de TC",
     fxPctOver100: "El total de porcentajes no puede superar 100%",
+    fxNoTcSaved: "sin TC (EUR pendiente)",
+    fxNoTcWarningShort: "Sin TC",
+    multiAssignmentRecalcNotice: "Este gasto está imputado a varios proyectos. Si cambias el importe, los importes imputados se recalcularán automáticamente según los porcentajes definidos.",
     fxPartialFallback: "Parcial",
     editAssignment: "Editar asignación",
     removeAssignment: "Eliminar asignación",
@@ -2136,8 +2139,18 @@ export const es = {
     backToProjects: "Volver a proyectos",
     exportExcel: "Exportar justificación (Excel)",
     editFx: "Editar tipo de cambio",
+    fxSectionTitle: "Transferencias y tipo de cambio",
+    fxHelpAria: "Ayuda sobre transferencias y tipo de cambio",
+    fxHelpTitle: "Cómo se aplica el tipo de cambio",
+    fxHelpModeExpenseTitle: "TC forzado en el gasto",
+    fxHelpModeExpenseText: "Si un gasto tiene un tipo de cambio propio, se aplica siempre ese valor.",
+    fxHelpModeTransfersTitle: "TC calculado por transferencias",
+    fxHelpModeTransfersText: "Cuando hay transferencias, Summa calcula automáticamente un tipo de cambio ponderado a partir de los datos reales.",
+    fxHelpModeManualTitle: "TC manual del proyecto",
+    fxHelpModeManualText: "Valor global que solo se utiliza si no hay transferencias.",
+    fxHelpPriority: "Prioridad: gasto → transferencias → valor manual.",
     // FX Transfers
-    fxTransfersTitle: "Transferencias a terreno",
+    fxTransfersTitle: "Transferencias",
     fxTransfersHelp: "Registra los cambios de moneda reales para calcular el TC ponderado del proyecto.",
     fxTransfersAdd: "Añadir transferencia",
     fxTransfersEdit: "Editar transferencia",
@@ -2156,8 +2169,8 @@ export const es = {
     fxTransfersMultipleCurrencies: "Múltiples monedas",
     fxTransfersNoTransfers: "Sin transferencias registradas",
     fxTransfersEurPerLocal: "EUR/local",
-    fxLegacyTitle: "TC manual (fallback)",
-    fxLegacyHelp: "Se aplica cuando no hay transferencias registradas.",
+    fxLegacyTitle: "TC manual",
+    fxLegacyHelp: "Se aplica a todo el proyecto si no hay transferencias.",
     fxTransfersDateRequired: "La fecha es obligatoria",
     fxTransfersAmountPositive: "El importe debe ser positivo",
     fxTransfersCurrencyRequired: "La moneda es obligatoria",
@@ -2242,6 +2255,21 @@ export const es = {
       // Tooltips
       tooltipOpenDocument: "Abrir justificante",
       tooltipNoDocument: "Sin justificante",
+      // Status badges
+      statusUnassigned: "No imputado",
+      statusPartial: "Parcial",
+      statusAssigned: "Imputado",
+      // Breakdown badge
+      breakdownNProjects: (n: number) => `${n} proyectos`,
+      breakdownNProjectsPcts: (n: number, pcts: string) => `${n} proy. (${pcts})`,
+      breakdownInThisProject: (pct: number) => `En este: ${pct}%`,
+      // Popover header
+      popoverAssigned: "Imputado",
+      popoverFree: "Libre",
+      // Toast imputación parcial
+      toastPartialTitle: "Imputación parcial",
+      toastPartialDesc: (remainingLocal: string, currency: string, remainingPct: number) =>
+        `Queda libre ${remainingLocal} ${currency} (${remainingPct}%) para imputar a otro proyecto.`,
     },
     // Captura (terreno)
     capture: {

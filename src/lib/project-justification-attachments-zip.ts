@@ -32,7 +32,7 @@ interface ManifestEntry {
   projectName: string;
   budgetCode: string;
   budgetName: string;
-  amountAssignedEUR: number;
+  amountAssignedEUR: number | null;
   category: string;
   counterparty: string;
   description: string;
@@ -100,7 +100,7 @@ function generateManifestCsv(entries: ManifestEntry[]): string {
     e.projectName,
     e.budgetCode,
     e.budgetName,
-    e.amountAssignedEUR.toFixed(2),
+    e.amountAssignedEUR != null ? e.amountAssignedEUR.toFixed(2) : '',
     e.category,
     e.counterparty,
     e.description,
