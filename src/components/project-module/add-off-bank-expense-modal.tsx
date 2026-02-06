@@ -368,7 +368,7 @@ export function OffBankExpenseModal({
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogContent className="sm:max-w-4xl max-h-[85vh] overflow-y-auto">
+      <DialogContent className="sm:max-w-2xl max-h-[90vh] flex flex-col overflow-hidden">
         <DialogHeader>
           <DialogTitle>
             {isEditMode ? tr('projectModule.offBank.editTitle', 'Editar despesa de terreny') : tr('projectModule.offBank.addTitle', 'Afegir despesa de terreny')}
@@ -383,7 +383,7 @@ export function OffBankExpenseModal({
           </p>
         </DialogHeader>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form id="offbank-form" onSubmit={handleSubmit} className="flex-1 min-h-0 overflow-y-auto space-y-4 px-1">
           {/* Avís si hi ha múltiples imputacions */}
           {isEditMode && existingAssignments && existingAssignments.length > 1 && (
             <Alert variant="default" className="border-amber-500/50 bg-amber-50 dark:bg-amber-950/20">
@@ -394,18 +394,39 @@ export function OffBankExpenseModal({
             </Alert>
           )}
 
-          {/* Data */}
-          <div className="space-y-2">
-            <Label htmlFor="date">{tr('projectModule.offBank.dateLabel', 'Data *')}</Label>
-            <Input
-              id="date"
-              type="date"
-              value={date}
-              onChange={(e) => setDate(e.target.value)}
-              className={errors.date ? 'border-destructive' : ''}
-            />
-            {errors.date && (
-              <p className="text-sm text-destructive">{errors.date}</p>
+          {/* Data + Import EUR (quan no és FX) — 2 columnes en desktop */}
+          <div className={`grid gap-3 ${!useForeignCurrency ? 'grid-cols-1 sm:grid-cols-2' : ''}`}>
+            <div className="space-y-2">
+              <Label htmlFor="date">{tr('projectModule.offBank.dateLabel', 'Data *')}</Label>
+              <Input
+                id="date"
+                type="date"
+                value={date}
+                onChange={(e) => setDate(e.target.value)}
+                className={errors.date ? 'border-destructive' : ''}
+              />
+              {errors.date && (
+                <p className="text-sm text-destructive">{errors.date}</p>
+              )}
+            </div>
+
+            {/* Import EUR directe (inline quan no FX) */}
+            {!useForeignCurrency && (
+              <div className="space-y-2">
+                <Label htmlFor="amountEUR">{tr('projectModule.eurAmount', 'Import (EUR) *')}</Label>
+                <Input
+                  id="amountEUR"
+                  type="text"
+                  inputMode="decimal"
+                  placeholder="0,00"
+                  value={amountEUR}
+                  onChange={(e) => setAmountEUR(e.target.value)}
+                  className={errors.amountEUR ? 'border-destructive' : ''}
+                />
+                {errors.amountEUR && (
+                  <p className="text-sm text-destructive">{errors.amountEUR}</p>
+                )}
+              </div>
             )}
           </div>
 
@@ -490,8 +511,8 @@ export function OffBankExpenseModal({
             </div>
           )}
 
-          {/* Import EUR: directe si NO moneda local, col·lapsat si SÍ moneda local */}
-          {useForeignCurrency ? (
+          {/* EUR manual col·lapsat (només visible quan moneda local ON) */}
+          {useForeignCurrency && (
             <Collapsible open={eurManualEnabled} onOpenChange={setEurManualEnabled}>
               <CollapsibleTrigger asChild>
                 <Button variant="ghost" type="button" className="w-full justify-between px-3 py-2 h-auto">
@@ -524,22 +545,6 @@ export function OffBankExpenseModal({
                 </div>
               </CollapsibleContent>
             </Collapsible>
-          ) : (
-            <div className="space-y-2">
-              <Label htmlFor="amountEUR">{tr('projectModule.eurAmount', 'Import (EUR) *')}</Label>
-              <Input
-                id="amountEUR"
-                type="text"
-                inputMode="decimal"
-                placeholder="0,00"
-                value={amountEUR}
-                onChange={(e) => setAmountEUR(e.target.value)}
-                className={errors.amountEUR ? 'border-destructive' : ''}
-              />
-              {errors.amountEUR && (
-                <p className="text-sm text-destructive">{errors.amountEUR}</p>
-              )}
-            </div>
           )}
 
           {/* Concepte - full width */}
@@ -651,24 +656,25 @@ export function OffBankExpenseModal({
             </CollapsibleContent>
           </Collapsible>
 
-          <DialogFooter className="pt-4">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => handleOpenChange(false)}
-              disabled={isProcessing}
-            >
-              {tr('projectModule.offBank.cancel', 'Cancel·lar')}
-            </Button>
-            <Button type="submit" disabled={isProcessing}>
-              {isProcessing
-                ? tr('projectModule.offBank.saving', 'Guardant...')
-                : isEditMode
-                  ? tr('projectModule.offBank.saveChanges', 'Desar canvis')
-                  : tr('projectModule.offBank.addExpense', 'Afegir despesa')}
-            </Button>
-          </DialogFooter>
         </form>
+
+        <DialogFooter className="pt-4 border-t">
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => handleOpenChange(false)}
+            disabled={isProcessing}
+          >
+            {tr('projectModule.offBank.cancel', 'Cancel·lar')}
+          </Button>
+          <Button type="submit" form="offbank-form" disabled={isProcessing}>
+            {isProcessing
+              ? tr('projectModule.offBank.saving', 'Guardant...')
+              : isEditMode
+                ? tr('projectModule.offBank.saveChanges', 'Desar canvis')
+                : tr('projectModule.offBank.addExpense', 'Afegir despesa')}
+          </Button>
+        </DialogFooter>
       </DialogContent>
     </Dialog>
   );
