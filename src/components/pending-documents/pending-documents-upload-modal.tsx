@@ -30,6 +30,7 @@ import { ref, uploadBytes } from 'firebase/storage';
 import { doc, collection, serverTimestamp, setDoc, query, where, getDocs } from 'firebase/firestore';
 import { computeSha256 } from '@/lib/files/sha256';
 import { pendingDocumentsCollection } from '@/lib/pending-documents/refs';
+import { assertUploadContext } from '@/lib/storage-upload-guard';
 import { isStorageUnauthorizedError, reportStorageUnauthorized } from '@/lib/system-incidents';
 import { extractXmlData } from '@/lib/pending-documents/extract-xml';
 import { extractPdfData } from '@/lib/pending-documents/extract-pdf';
@@ -290,6 +291,22 @@ export function PendingDocumentsUploadModal({
       // 4. Pujar a Storage
       updateFileStatus(item.id, { status: 'uploading', progress: 60 });
       const storagePath = `organizations/${organizationId}/pendingDocuments/${docId}/${item.file.name}`;
+
+      // Diagnòstic diferencial: verificar context d'upload
+      const uploadCheck = assertUploadContext({
+        contextLabel: 'pendents',
+        orgId: organizationId,
+        path: storagePath,
+      });
+
+      if (!uploadCheck.ok) {
+        const msg = uploadCheck.reason === 'NO_AUTH'
+          ? 'Sessió no preparada. Torna-ho a intentar en 2 segons.'
+          : 'Organització no identificada.';
+        updateFileStatus(item.id, { status: 'error', error: msg });
+        return false;
+      }
+
       const storageRef = ref(storage, storagePath);
       const contentType = getContentType(item.file);
 
@@ -421,51 +438,53 @@ export function PendingDocumentsUploadModal({
     let duplicateCount = 0;
     let errorCount = 0;
 
-    // Processar en sèrie per evitar sobrecàrrega
-    for (const item of files) {
-      if (item.status !== 'queued') continue;
+    try {
+      // Processar en sèrie per evitar sobrecàrrega
+      for (const item of files) {
+        if (item.status !== 'queued') continue;
 
-      const success = await processFile(item);
-      if (success) {
-        successCount++;
-      } else {
-        // Verificar si era duplicat
-        const updatedItem = files.find(f => f.id === item.id);
-        if (updatedItem?.status === 'duplicate') {
-          duplicateCount++;
+        const success = await processFile(item);
+        if (success) {
+          successCount++;
         } else {
-          errorCount++;
+          // Verificar si era duplicat
+          const updatedItem = files.find(f => f.id === item.id);
+          if (updatedItem?.status === 'duplicate') {
+            duplicateCount++;
+          } else {
+            errorCount++;
+          }
         }
       }
-    }
 
-    setIsUploading(false);
+      // Toast de resum
+      if (successCount > 0) {
+        toast({
+          title: t.pendingDocs.toasts.uploaded({ count: successCount }),
+          description: duplicateCount > 0
+            ? t.pendingDocs.toasts.uploadedWithDuplicates({ duplicates: duplicateCount })
+            : undefined,
+        });
+        onUploadComplete?.(successCount);
+      } else if (duplicateCount > 0 && errorCount === 0) {
+        toast({
+          title: t.pendingDocs.toasts.allDuplicates,
+          description: t.pendingDocs.toasts.allDuplicatesDesc,
+        });
+      } else if (errorCount > 0) {
+        toast({
+          variant: 'destructive',
+          title: t.pendingDocs.toasts.uploadFailed,
+          description: t.pendingDocs.upload.stats.errors({ count: errorCount }),
+        });
+      }
 
-    // Toast de resum
-    if (successCount > 0) {
-      toast({
-        title: t.pendingDocs.toasts.uploaded({ count: successCount }),
-        description: duplicateCount > 0
-          ? t.pendingDocs.toasts.uploadedWithDuplicates({ duplicates: duplicateCount })
-          : undefined,
-      });
-      onUploadComplete?.(successCount);
-    } else if (duplicateCount > 0 && errorCount === 0) {
-      toast({
-        title: t.pendingDocs.toasts.allDuplicates,
-        description: t.pendingDocs.toasts.allDuplicatesDesc,
-      });
-    } else if (errorCount > 0) {
-      toast({
-        variant: 'destructive',
-        title: t.pendingDocs.toasts.uploadFailed,
-        description: t.pendingDocs.upload.stats.errors({ count: errorCount }),
-      });
-    }
-
-    // Tancar modal si tot ok
-    if (errorCount === 0) {
-      setTimeout(() => onOpenChange(false), 500);
+      // Tancar modal si tot ok
+      if (errorCount === 0) {
+        setTimeout(() => onOpenChange(false), 500);
+      }
+    } finally {
+      setIsUploading(false);
     }
   }, [files, processFile, toast, onOpenChange, onUploadComplete]);
 

@@ -332,6 +332,8 @@ export const ca = {
       confirmDeleteDocument: "Eliminar justificant adjunt?",
       confirmDeleteDocumentDescription: "Aquesta acció eliminarà el justificant adjunt d'aquest moviment. El fitxer també s'eliminarà de l'emmagatzematge.",
       documentDeleted: "Justificant eliminat correctament",
+      deleteDocFromPendingError: "No es pot eliminar",
+      deleteDocFromPendingHint: "Aquest document prové d'un moviment pendent conciliat. Elimina el pendent per desfer la conciliació.",
       // Barra de resum filtrat
       showingOf: (showing: number, total: number) => `Mostrant ${showing} de ${total}`,
       income: "Ingressos",
@@ -2970,6 +2972,7 @@ export const ca = {
       clear: "Netejar",
       search: "Cercar...",
       createSupplier: "Nou proveïdor...",
+      deleteMatched: "Eliminar pendent",
     },
     deleteDialog: {
       title: "Eliminar document?",
@@ -3024,6 +3027,9 @@ export const ca = {
       errorLink: "No s'ha pogut vincular el document.",
       errorIgnore: "No s'ha pogut ignorar el suggeriment.",
       errorUnknown: "Error desconegut",
+      relinked: "Document re-vinculat",
+      matchedDeleted: "Conciliació desfeta",
+      matchedDeletedDesc: "El moviment bancari torna a estar lliure per conciliar.",
     },
     modals: {
       deleteTitle: "Eliminar document?",

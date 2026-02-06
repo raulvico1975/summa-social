@@ -43,6 +43,7 @@ export interface PendingDocumentFile {
   sizeBytes: number;        // Mida en bytes
   sha256: string | null;    // Hash per dedupe (calculat al client)
   url?: string;             // URL signada (generada runtime, no persistida)
+  finalStoragePath?: string; // Path estable després de match (organizations/{orgId}/documents/{txId}/{filename})
 }
 
 /**
