@@ -66,7 +66,6 @@ import { useFirebase } from '@/firebase';
 import type { PendingDocument, PendingDocumentStatus } from '@/lib/pending-documents/types';
 import type { Contact, Category } from '@/lib/data';
 import { isDocumentReadyToConfirm, getMissingFields } from '@/lib/pending-documents/api';
-import { CATEGORY_TRANSLATION_KEYS } from '@/lib/default-data';
 import { CreateSupplierModal } from '@/components/contacts/create-supplier-modal';
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -97,19 +96,10 @@ interface PendingDocumentCardProps {
 // HELPERS
 // ═══════════════════════════════════════════════════════════════════════════
 
-const categoryTranslations = CATEGORY_TRANSLATION_KEYS as Record<string, string>;
-
 function getContactName(contactId: string | null, contacts: Contact[]): string {
   if (!contactId) return '';
   const contact = contacts.find(c => c.id === contactId);
   return contact?.name || '';
-}
-
-function getCategoryName(categoryId: string | null, categories: Category[]): string {
-  if (!categoryId) return '';
-  const category = categories.find(c => c.id === categoryId);
-  if (!category) return '';
-  return categoryTranslations[category.name] || category.name;
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -162,6 +152,15 @@ export function PendingDocumentCard({
 }: PendingDocumentCardProps) {
   const { storage } = useFirebase();
   const { t } = useTranslations();
+  const categoryTranslations = t.categories as Record<string, string>;
+
+  const getCategoryName = (categoryId: string | null) => {
+    if (!categoryId) return '';
+    const category = categories.find(c => c.id === categoryId);
+    if (!category) return '';
+    return categoryTranslations[category.name] ?? category.name;
+  };
+
   const [fileUrl, setFileUrl] = React.useState<string | null>(null);
   const [isLoadingUrl, setIsLoadingUrl] = React.useState(false);
 
@@ -612,7 +611,7 @@ export function PendingDocumentCard({
                     )}
                   >
                     <span className="truncate">
-                      {doc.categoryId ? getCategoryName(doc.categoryId, categories) : `${t.pendingDocs.filters.category}...`}
+                      {doc.categoryId ? getCategoryName(doc.categoryId) : `${t.pendingDocs.filters.category}...`}
                     </span>
                     <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                   </Button>

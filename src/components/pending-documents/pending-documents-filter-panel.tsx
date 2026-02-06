@@ -23,7 +23,6 @@ import { format, parseISO, isValid } from 'date-fns';
 import { ca } from 'date-fns/locale';
 import type { Contact, Category } from '@/lib/data';
 import type { PendingDocument } from '@/lib/pending-documents/types';
-import { CATEGORY_TRANSLATION_KEYS } from '@/lib/default-data';
 import { useTranslations } from '@/i18n';
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -60,8 +59,6 @@ interface PendingDocumentsFilterPanelProps {
 // ═══════════════════════════════════════════════════════════════════════════
 // HELPERS
 // ═══════════════════════════════════════════════════════════════════════════
-
-const categoryTranslations = CATEGORY_TRANSLATION_KEYS as Record<string, string>;
 
 function hasActiveFilters(filters: PendingDocumentsFilters): boolean {
   return (
@@ -152,6 +149,7 @@ export function PendingDocumentsFilterPanel({
   categories,
 }: PendingDocumentsFilterPanelProps) {
   const { t } = useTranslations();
+  const categoryTranslations = t.categories as Record<string, string>;
 
   // Combobox open states
   const [supplierOpen, setSupplierOpen] = React.useState(false);
