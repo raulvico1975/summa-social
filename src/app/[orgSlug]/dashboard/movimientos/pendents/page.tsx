@@ -105,6 +105,9 @@ export default function PendingDocsPage() {
   const [isUploadModalOpen, setIsUploadModalOpen] = React.useState(false);
   const [initialUploadFiles, setInitialUploadFiles] = React.useState<File[] | undefined>(undefined);
 
+  // Clau per forçar remount de la llista després d'upload
+  const [refreshKey, setRefreshKey] = React.useState(0);
+
   // Estats de càrrega
   const [confirmingDocId, setConfirmingDocId] = React.useState<string | null>(null);
   const [isBulkConfirming, setIsBulkConfirming] = React.useState(false);
@@ -129,6 +132,7 @@ export default function PendingDocsPage() {
 
   // Drag & drop extern (per obrir modal amb fitxers)
   const [isDraggingOver, setIsDraggingOver] = React.useState(false);
+  const dragCounter = React.useRef(0);
 
   // Ref per scroll a dalt després d'upload
   const topRef = React.useRef<HTMLDivElement>(null);
@@ -366,34 +370,44 @@ export default function PendingDocsPage() {
     return filter === statusFilter;
   };
 
+  // Reset complet de l'estat d'upload/drag (funció normal, no useCallback)
+  const resetUploadUI = () => {
+    setIsUploadModalOpen(false);
+    setInitialUploadFiles(undefined);
+    setIsDraggingOver(false);
+    dragCounter.current = 0;
+    setRefreshKey((k) => k + 1);
+  };
+
   // Callback quan es completa l'upload
   const handleUploadComplete = (count: number) => {
-    // Scroll a dalt per veure els nous documents
     topRef.current?.scrollIntoView({ behavior: 'smooth' });
-    // Anar a "Per revisar" per veure els nous drafts
     setStatusFilter(DRAFTS_FILTER);
-    // Netejar fitxers inicials
-    setInitialUploadFiles(undefined);
+    resetUploadUI();
   };
 
   // Handlers de drag & drop extern (zona de la pàgina)
-  const handlePageDragOver = React.useCallback((e: React.DragEvent) => {
+  // Usem dragCounter ref per evitar falsos dragLeave de fills interns
+  const handlePageDragEnter = React.useCallback((e: React.DragEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    // Només activar si hi ha fitxers
+    dragCounter.current++;
     if (e.dataTransfer.types.includes('Files')) {
       setIsDraggingOver(true);
     }
   }, []);
 
+  const handlePageDragOver = React.useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+  }, []);
+
   const handlePageDragLeave = React.useCallback((e: React.DragEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    // Només desactivar si sortim de la zona principal
-    const rect = e.currentTarget.getBoundingClientRect();
-    const x = e.clientX;
-    const y = e.clientY;
-    if (x < rect.left || x > rect.right || y < rect.top || y > rect.bottom) {
+    dragCounter.current--;
+    if (dragCounter.current <= 0) {
+      dragCounter.current = 0;
       setIsDraggingOver(false);
     }
   }, []);
@@ -401,6 +415,7 @@ export default function PendingDocsPage() {
   const handlePageDrop = React.useCallback((e: React.DragEvent) => {
     e.preventDefault();
     e.stopPropagation();
+    dragCounter.current = 0;
     setIsDraggingOver(false);
 
     if (e.dataTransfer.files.length > 0) {
@@ -518,9 +533,11 @@ export default function PendingDocsPage() {
       <div
         ref={topRef}
         className="w-full flex flex-col gap-6 relative pb-24 md:pb-0"
+        onDragEnter={handlePageDragEnter}
         onDragOver={handlePageDragOver}
         onDragLeave={handlePageDragLeave}
         onDrop={handlePageDrop}
+        onDragEnd={() => { setIsDraggingOver(false); dragCounter.current = 0; }}
       >
         {/* Overlay de drag & drop */}
         {isDraggingOver && (
@@ -741,7 +758,7 @@ export default function PendingDocsPage() {
 
         {/* Llista de documents */}
         <Card>
-          <CardContent className="p-0">
+          <CardContent key={refreshKey} className="p-0">
             {isLoading ? (
               // Skeleton loading
               <div className="p-4 space-y-3">
@@ -953,8 +970,11 @@ export default function PendingDocsPage() {
         <PendingDocumentsUploadModal
           open={isUploadModalOpen}
           onOpenChange={(open) => {
-            setIsUploadModalOpen(open);
-            if (!open) setInitialUploadFiles(undefined);
+            if (open) {
+              setIsUploadModalOpen(true);
+              return;
+            }
+            resetUploadUI();
           }}
           onUploadComplete={handleUploadComplete}
           contacts={contacts || []}

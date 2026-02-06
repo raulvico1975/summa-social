@@ -421,51 +421,53 @@ export function PendingDocumentsUploadModal({
     let duplicateCount = 0;
     let errorCount = 0;
 
-    // Processar en sèrie per evitar sobrecàrrega
-    for (const item of files) {
-      if (item.status !== 'queued') continue;
+    try {
+      // Processar en sèrie per evitar sobrecàrrega
+      for (const item of files) {
+        if (item.status !== 'queued') continue;
 
-      const success = await processFile(item);
-      if (success) {
-        successCount++;
-      } else {
-        // Verificar si era duplicat
-        const updatedItem = files.find(f => f.id === item.id);
-        if (updatedItem?.status === 'duplicate') {
-          duplicateCount++;
+        const success = await processFile(item);
+        if (success) {
+          successCount++;
         } else {
-          errorCount++;
+          // Verificar si era duplicat
+          const updatedItem = files.find(f => f.id === item.id);
+          if (updatedItem?.status === 'duplicate') {
+            duplicateCount++;
+          } else {
+            errorCount++;
+          }
         }
       }
-    }
 
-    setIsUploading(false);
+      // Toast de resum
+      if (successCount > 0) {
+        toast({
+          title: t.pendingDocs.toasts.uploaded({ count: successCount }),
+          description: duplicateCount > 0
+            ? t.pendingDocs.toasts.uploadedWithDuplicates({ duplicates: duplicateCount })
+            : undefined,
+        });
+        onUploadComplete?.(successCount);
+      } else if (duplicateCount > 0 && errorCount === 0) {
+        toast({
+          title: t.pendingDocs.toasts.allDuplicates,
+          description: t.pendingDocs.toasts.allDuplicatesDesc,
+        });
+      } else if (errorCount > 0) {
+        toast({
+          variant: 'destructive',
+          title: t.pendingDocs.toasts.uploadFailed,
+          description: t.pendingDocs.upload.stats.errors({ count: errorCount }),
+        });
+      }
 
-    // Toast de resum
-    if (successCount > 0) {
-      toast({
-        title: t.pendingDocs.toasts.uploaded({ count: successCount }),
-        description: duplicateCount > 0
-          ? t.pendingDocs.toasts.uploadedWithDuplicates({ duplicates: duplicateCount })
-          : undefined,
-      });
-      onUploadComplete?.(successCount);
-    } else if (duplicateCount > 0 && errorCount === 0) {
-      toast({
-        title: t.pendingDocs.toasts.allDuplicates,
-        description: t.pendingDocs.toasts.allDuplicatesDesc,
-      });
-    } else if (errorCount > 0) {
-      toast({
-        variant: 'destructive',
-        title: t.pendingDocs.toasts.uploadFailed,
-        description: t.pendingDocs.upload.stats.errors({ count: errorCount }),
-      });
-    }
-
-    // Tancar modal si tot ok
-    if (errorCount === 0) {
-      setTimeout(() => onOpenChange(false), 500);
+      // Tancar modal si tot ok
+      if (errorCount === 0) {
+        setTimeout(() => onOpenChange(false), 500);
+      }
+    } finally {
+      setIsUploading(false);
     }
   }, [files, processFile, toast, onOpenChange, onUploadComplete]);
 
