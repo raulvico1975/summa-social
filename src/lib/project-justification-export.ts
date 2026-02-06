@@ -271,7 +271,7 @@ function buildResumSheet(data: JustificationData): XLSX.WorkSheet {
     for (const assignment of link.assignments) {
       if (assignment.projectId === project.id && assignment.budgetLineId) {
         const current = executionByLine.get(assignment.budgetLineId) ?? 0;
-        executionByLine.set(assignment.budgetLineId, current + Math.abs(assignment.amountEUR));
+        executionByLine.set(assignment.budgetLineId, current + (assignment.amountEUR != null ? Math.abs(assignment.amountEUR) : 0));
       }
     }
   }
@@ -409,7 +409,7 @@ function buildDespesesSheet(data: JustificationData): XLSX.WorkSheet {
         expense.currency ?? 'EUR',
         expense.amountOriginal ?? '',
         expense.fxRateUsed ?? '',
-        Math.abs(assignment.amountEUR),
+        assignment.amountEUR != null ? Math.abs(assignment.amountEUR) : '',
         expense.invoiceNumber ?? '',
         expense.issuerTaxId ?? '',
         expense.invoiceDate ? formatDateDMY(expense.invoiceDate) : '',
@@ -618,7 +618,7 @@ export function buildProjectJustificationFundingXlsx(
       row.budgetLineName,
       row.amountTotalEUR ?? '',
       localAmountDisplay,                           // Nova columna moneda local
-      row.amountAssignedEUR,
+      row.amountAssignedEUR ?? '',
       row.documentName,
       row.zipPathCronologic,
       '', // Observacions (buit per defecte)
@@ -626,7 +626,7 @@ export function buildProjectJustificationFundingXlsx(
   }
 
   // Fila de totals
-  const totalAssigned = rows.reduce((sum, r) => sum + r.amountAssignedEUR, 0);
+  const totalAssigned = rows.reduce((sum, r) => sum + (r.amountAssignedEUR ?? 0), 0);
   wsData.push([
     '',
     null,
