@@ -1629,6 +1629,50 @@ export function computeFxCurrency(transfers: FxTransfer[]): string | null {
   return currencies.size === 1 ? [...currencies][0] : null;
 }
 
+/**
+ * Retorna el TC efectiu del projecte (EUR per 1 unitat local).
+ * Fallback chain: TC ponderat de transferències > project.fxRate (invertit) > null.
+ * NOTA: project.fxRate = "X local = 1 EUR" (convenci inversa), cal invertir.
+ */
+export function getEffectiveProjectTC(
+  fxTransfers: FxTransfer[],
+  project: Project
+): number | null {
+  const weighted = computeWeightedFxRate(fxTransfers);
+  if (weighted !== null) return weighted;
+  if (project.fxRate && project.fxRate > 0) return 1 / project.fxRate;
+  return null;
+}
+
+/**
+ * Detecta si una despesa off-bank és FX i té originalAmount per computar EUR.
+ * Només aquestes despeses usen TC del projecte (o TC manual) per calcular EUR.
+ */
+export function isFxExpenseNeedingProjectTC(expense: UnifiedExpense): boolean {
+  return (
+    expense.source === 'offBank' &&
+    expense.originalAmount != null &&
+    expense.originalAmount > 0 &&
+    expense.originalCurrency != null &&
+    expense.originalCurrency !== 'EUR'
+  );
+}
+
+/**
+ * Resol el TC per una despesa FX, amb prioritat:
+ * 1. TC manual per despesa (expense.fxRate) — PRIORITAT ABSOLUTA
+ * 2. TC projecte (ponderat o legacy invertit)
+ * Retorna EUR per 1 unitat local, o null si no hi ha TC disponible.
+ */
+export function resolveExpenseTC(
+  expense: UnifiedExpense,
+  fxTransfers: FxTransfer[],
+  project: Project
+): number | null {
+  if (expense.fxRate != null && expense.fxRate > 0) return expense.fxRate;
+  return getEffectiveProjectTC(fxTransfers, project);
+}
+
 // ═══════════════════════════════════════════════════════════════════════════
 // HOOK: Transferències FX d'un projecte
 // ═══════════════════════════════════════════════════════════════════════════

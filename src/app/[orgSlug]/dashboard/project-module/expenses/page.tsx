@@ -6,8 +6,8 @@
 import * as React from 'react';
 import Link from 'next/link';
 import { useSearchParams, useRouter } from 'next/navigation';
-import { useUnifiedExpenseFeed, useProjects, useSaveExpenseLink, useProjectBudgetLines, useUpdateOffBankExpense, useHardDeleteOffBankExpense } from '@/hooks/use-project-module';
-import { doc, updateDoc, getDoc } from 'firebase/firestore';
+import { useUnifiedExpenseFeed, useProjects, useSaveExpenseLink, useProjectBudgetLines, useUpdateOffBankExpense, useHardDeleteOffBankExpense, useProjectFxTransfers, getEffectiveProjectTC, isFxExpenseNeedingProjectTC, resolveExpenseTC } from '@/hooks/use-project-module';
+import { collection, doc, updateDoc, getDoc, getDocs } from 'firebase/firestore';
 import { useFirebase, useStorage } from '@/firebase/provider';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { useOrgUrl, useCurrentOrganization } from '@/hooks/organization-provider';
@@ -87,7 +87,7 @@ import {
 import { Input } from '@/components/ui/input';
 import { formatDateDMY, formatDateShort } from '@/lib/normalize';
 import { AssignmentEditor } from '@/components/project-module/assignment-editor';
-import type { ExpenseStatus, UnifiedExpenseWithLink, Project, ExpenseAssignment, BudgetLine, OffBankAttachment } from '@/lib/project-module-types';
+import type { ExpenseStatus, UnifiedExpenseWithLink, Project, ExpenseAssignment, BudgetLine, OffBankAttachment, FxTransfer } from '@/lib/project-module-types';
 import { useTranslations } from '@/i18n';
 import { OffBankExpenseModal } from '@/components/project-module/add-off-bank-expense-modal';
 import { buildDocumentFilename } from '@/lib/build-document-filename';
@@ -124,7 +124,15 @@ function AssignmentStatusPopover({
   isSaving: boolean;
 }) {
   const [open, setOpen] = React.useState(false);
-  const percentage = totalAmount > 0 ? Math.round((assignedAmount / totalAmount) * 100) : 0;
+
+  // Per despeses FX amb localPct, usar la suma de localPct
+  const hasLocalPct = assignments?.some(a => a.localPct != null);
+  const totalLocalPct = hasLocalPct
+    ? (assignments?.reduce((s, a) => s + (a.localPct ?? 0), 0) ?? 0)
+    : null;
+  const percentage = totalLocalPct != null
+    ? Math.round(totalLocalPct)
+    : (totalAmount > 0 ? Math.round((assignedAmount / totalAmount) * 100) : 0);
 
   // Si no té assignacions, mostrar badge simple
   if (status === 'unassigned' || !assignments || assignments.length === 0) {
@@ -168,7 +176,9 @@ function AssignmentStatusPopover({
               </div>
               <div className="flex items-center gap-2 shrink-0">
                 <span className="text-xs font-mono text-muted-foreground">
-                  {formatAmount(Math.abs(assignment.amountEUR))}
+                  {assignment.localPct != null
+                    ? `${assignment.localPct}% · ${formatAmount(Math.abs(assignment.amountEUR))}`
+                    : formatAmount(Math.abs(assignment.amountEUR))}
                 </span>
                 <Button
                   variant="ghost"
@@ -228,13 +238,15 @@ function QuickAssignPopover({
   projects,
   onAssign100,
   onOpenSplitModal,
+  onTcMissing,
   isAssigning,
   assignTooltip,
 }: {
   expense: UnifiedExpenseWithLink;
   projects: Project[];
-  onAssign100: (txId: string, project: Project, budgetLine?: BudgetLine | null) => Promise<void>;
+  onAssign100: (txId: string, project: Project, budgetLine?: BudgetLine | null, fxAmountEUR?: number) => Promise<void>;
   onOpenSplitModal: (expense: UnifiedExpenseWithLink) => void;
+  onTcMissing?: (project: Project) => void;
   isAssigning: boolean;
   assignTooltip: string;
 }) {
@@ -242,8 +254,11 @@ function QuickAssignPopover({
   const [search, setSearch] = React.useState('');
   const [selectedProject, setSelectedProject] = React.useState<Project | null>(null);
 
-  // Carregar partides quan es selecciona un projecte
+  // Carregar partides i fxTransfers quan es selecciona un projecte
   const { budgetLines, isLoading: budgetLinesLoading } = useProjectBudgetLines(selectedProject?.id ?? '');
+  const { fxTransfers, isLoading: fxLoading } = useProjectFxTransfers(selectedProject?.id ?? '');
+
+  const isFxExpense = isFxExpenseNeedingProjectTC(expense.expense);
 
   const filteredProjects = projects.filter(p =>
     p.name.toLowerCase().includes(search.toLowerCase()) ||
@@ -257,6 +272,25 @@ function QuickAssignPopover({
 
   const handleSelectBudgetLine = async (budgetLine: BudgetLine | null) => {
     if (!selectedProject) return;
+
+    // Si la despesa és FX, computar EUR amb TC (manual o projecte)
+    if (isFxExpense) {
+      const tc = resolveExpenseTC(expense.expense, fxTransfers, selectedProject);
+      if (tc === null) {
+        setOpen(false);
+        setSelectedProject(null);
+        setSearch('');
+        onTcMissing?.(selectedProject);
+        return;
+      }
+      const fxAmountEUR = expense.expense.originalAmount! * tc;
+      setOpen(false);
+      setSelectedProject(null);
+      setSearch('');
+      await onAssign100(expense.expense.txId, selectedProject, budgetLine, fxAmountEUR);
+      return;
+    }
+
     setOpen(false);
     setSelectedProject(null);
     setSearch('');
@@ -347,9 +381,9 @@ function QuickAssignPopover({
               <span className="text-sm font-medium truncate">{selectedProject.name}</span>
             </div>
             <CommandList>
-              {budgetLinesLoading ? (
+              {(budgetLinesLoading || (isFxExpense && fxLoading)) ? (
                 <div className="p-4 text-center text-sm text-muted-foreground">
-                  Carregant partides...
+                  Carregant...
                 </div>
               ) : budgetLines.length === 0 ? (
                 <CommandGroup heading="Sense partides">
@@ -503,6 +537,32 @@ export default function ExpensesInboxPage() {
   const { hardDelete: hardDeleteOffBank, isDeleting: isDeletingOffBank } = useHardDeleteOffBankExpense();
   const { firestore } = useFirebase();
 
+  // Callback: projecte sense TC per despesa FX
+  const handleTcMissing = React.useCallback((project: Project) => {
+    toast({
+      variant: 'destructive',
+      title: t.common?.error ?? 'Error',
+      description: t.projectModule?.fxNoTcForProject ?? "El projecte no té TC configurat. Afegeix transferències FX al pressupost del projecte.",
+    });
+  }, [toast, t]);
+
+  // Callback: resolver TC per projecte (one-shot, per al split modal)
+  const resolveProjectTC = React.useCallback(async (projectId: string): Promise<number | null> => {
+    if (!organizationId) return null;
+    const transfersRef = collection(
+      firestore,
+      'organizations', organizationId,
+      'projectModule', '_',
+      'projects', projectId,
+      'fxTransfers'
+    );
+    const snapshot = await getDocs(transfersRef);
+    const transfers: FxTransfer[] = snapshot.docs.map(d => ({ id: d.id, ...d.data() } as FxTransfer));
+    const project = projects.find(p => p.id === projectId);
+    if (!project) return null;
+    return getEffectiveProjectTC(transfers, project);
+  }, [firestore, organizationId, projects]);
+
   // Estat per controlar loading d'eliminació de document
   const [deletingDocTxId, setDeletingDocTxId] = React.useState<string | null>(null);
   // Estat per controlar uploading de document per drag & drop
@@ -619,25 +679,42 @@ export default function ExpensesInboxPage() {
   }, [expenses, tableFilter, searchQuery]);
 
   // Quick Assign 100%
-  const handleAssign100 = async (txId: string, project: Project, budgetLine?: BudgetLine | null) => {
+  const handleAssign100 = async (txId: string, project: Project, budgetLine?: BudgetLine | null, fxAmountEUR?: number) => {
     const expense = expenses.find(e => e.expense.txId === txId);
     if (!expense) return;
 
-    // Guardrail: bloquejar si pendent de conversió FX
-    if (expense.expense.pendingConversion || expense.expense.amountEUR === null) {
+    // Determinar amountEUR
+    let amountEUR: number;
+
+    if (fxAmountEUR !== undefined) {
+      // Despesa FX: EUR precomputat pel QuickAssignPopover amb TC (manual o projecte)
+      amountEUR = -Math.abs(fxAmountEUR);
+    } else if (isFxExpenseNeedingProjectTC(expense.expense)) {
+      // Guardrail: despesa FX sense EUR precomputat (no hauria de passar)
       toast({
         variant: 'destructive',
         title: t.common?.error ?? 'Error',
-        description: t.projectModule?.fxRequiredToAssign ?? "Cal definir el tipus de canvi abans d'assignar",
+        description: t.projectModule?.fxNoTcForProject ?? "El projecte no té TC configurat",
       });
       return;
+    } else {
+      // Despesa EUR normal (bank o off-bank sense FX)
+      if (expense.expense.amountEUR === null) {
+        toast({
+          variant: 'destructive',
+          title: t.common?.error ?? 'Error',
+          description: t.projectModule?.fxRequiredToAssign ?? "Cal definir l'import EUR",
+        });
+        return;
+      }
+      amountEUR = expense.expense.amountEUR; // ja és negatiu
     }
 
     try {
       const assignments: ExpenseAssignment[] = [{
         projectId: project.id,
         projectName: project.name,
-        amountEUR: expense.expense.amountEUR, // ja és negatiu
+        amountEUR,
         budgetLineId: budgetLine?.id ?? null,
         budgetLineName: budgetLine?.name ?? null,
       }];
@@ -687,11 +764,46 @@ export default function ExpensesInboxPage() {
     try {
       const selectedExpenses = expenses.filter(e => selectedIds.has(e.expense.txId));
 
+      // Carregar fxTransfers del projecte si hi ha despeses FX
+      const hasFxExpenses = selectedExpenses.some(e => isFxExpenseNeedingProjectTC(e.expense));
+      let fxTransfers: FxTransfer[] = [];
+
+      if (hasFxExpenses && organizationId) {
+        const transfersRef = collection(
+          firestore,
+          'organizations', organizationId,
+          'projectModule', '_',
+          'projects', project.id,
+          'fxTransfers'
+        );
+        const snapshot = await getDocs(transfersRef);
+        fxTransfers = snapshot.docs.map(d => ({ id: d.id, ...d.data() } as FxTransfer));
+      }
+
+      let skippedCount = 0;
+
       for (const expense of selectedExpenses) {
+        let amountEUR: number;
+
+        if (isFxExpenseNeedingProjectTC(expense.expense)) {
+          const tc = resolveExpenseTC(expense.expense, fxTransfers, project);
+          if (tc === null) {
+            skippedCount++;
+            continue;
+          }
+          amountEUR = -Math.abs(expense.expense.originalAmount! * tc);
+        } else {
+          if (expense.expense.amountEUR === null) {
+            skippedCount++;
+            continue;
+          }
+          amountEUR = expense.expense.amountEUR;
+        }
+
         const assignments: ExpenseAssignment[] = [{
           projectId: project.id,
           projectName: project.name,
-          amountEUR: expense.expense.amountEUR,
+          amountEUR,
         }];
         await save(expense.expense.txId, assignments, null);
       }
@@ -699,9 +811,12 @@ export default function ExpensesInboxPage() {
       await refresh();
       setSelectedIds(new Set());
       setBulkAssignOpen(false);
+
+      const assignedCount = selectedExpenses.length - skippedCount;
       toast({
         title: ep.toastBulkAssigned,
-        description: ep.toastBulkAssignedDesc(selectedExpenses.length, project.name),
+        description: ep.toastBulkAssignedDesc(assignedCount, project.name) +
+          (skippedCount > 0 ? ` ${skippedCount} ${t.projectModule?.fxBulkSkipped ?? 'excloses per falta de TC.'}` : ''),
       });
     } catch (err) {
       toast({
@@ -1239,24 +1354,24 @@ export default function ExpensesInboxPage() {
                   ].filter(Boolean) as { label?: string; value: React.ReactNode }[]}
                   actions={
                     <div className="flex items-center gap-1">
-                      {/* Assignar (només si no té assignació i no pendent de conversió) */}
-                      {!projectsLoading && projects.length > 0 && status === 'unassigned' && !expense.pendingConversion && expense.amountEUR !== null && (
+                      {/* Assignar (per-projecte TC check al popover) */}
+                      {!projectsLoading && projects.length > 0 && status === 'unassigned' && (
+                        expense.amountEUR !== null || isFxExpenseNeedingProjectTC(expense)
+                      ) && (
                         <QuickAssignPopover
                           expense={item}
                           projects={projects}
                           onAssign100={handleAssign100}
                           onOpenSplitModal={setSplitModalExpense}
+                          onTcMissing={handleTcMissing}
                           isAssigning={isSaving}
                           assignTooltip={t.projectModule?.assignToProject ?? 'Assignar a projecte'}
                         />
                       )}
-                      {/* Indicador pendent FX — no assignable */}
-                      {status === 'unassigned' && (expense.pendingConversion || expense.amountEUR === null) && (
-                        <span
-                          className="text-xs text-amber-600 px-1"
-                          title={t.projectModule?.fxRequiredToAssign ?? "Cal definir el tipus de canvi abans d'assignar"}
-                        >
-                          TC
+                      {/* Indicador moneda FX (informatiu, no bloquejant) */}
+                      {status === 'unassigned' && isFxExpenseNeedingProjectTC(expense) && expense.amountEUR === null && (
+                        <span className="text-[10px] text-blue-600 px-1 font-medium">
+                          {expense.originalCurrency}
                         </span>
                       )}
                       {/* Editar despesa off-bank */}
@@ -1486,7 +1601,11 @@ export default function ExpensesInboxPage() {
                           expense={item}
                           status={status}
                           assignedAmount={assignedAmount}
-                          totalAmount={Math.abs(expense.amountEUR)}
+                          totalAmount={
+                            isFxExpenseNeedingProjectTC(expense) && Math.abs(expense.amountEUR) === 0 && item.link?.assignments
+                              ? item.link.assignments.reduce((s, a) => s + Math.abs(a.amountEUR), 0)
+                              : Math.abs(expense.amountEUR)
+                          }
                           assignments={item.link?.assignments}
                           onRemoveAssignment={handleRemoveSingleAssignment}
                           onUnassignAll={handleUnassignAll}
@@ -1498,23 +1617,23 @@ export default function ExpensesInboxPage() {
                       {/* Accions */}
                       <TableCell className="px-1">
                         <div className="flex items-center gap-0.5 justify-end">
-                          {!projectsLoading && projects.length > 0 && status === 'unassigned' && !expense.pendingConversion && expense.amountEUR !== null && (
+                          {!projectsLoading && projects.length > 0 && status === 'unassigned' && (
+                            expense.amountEUR !== null || isFxExpenseNeedingProjectTC(expense)
+                          ) && (
                             <QuickAssignPopover
                               expense={item}
                               projects={projects}
                               onAssign100={handleAssign100}
                               onOpenSplitModal={setSplitModalExpense}
+                              onTcMissing={handleTcMissing}
                               isAssigning={isSaving}
                               assignTooltip={t.projectModule?.assignToProject ?? 'Assignar a projecte'}
                             />
                           )}
-                          {/* Indicador pendent FX — no assignable */}
-                          {status === 'unassigned' && (expense.pendingConversion || expense.amountEUR === null) && (
-                            <span
-                              className="text-xs text-amber-600 px-1"
-                              title={t.projectModule?.fxRequiredToAssign ?? "Cal definir el tipus de canvi abans d'assignar"}
-                            >
-                              TC
+                          {/* Indicador moneda FX (informatiu, no bloquejant) */}
+                          {status === 'unassigned' && isFxExpenseNeedingProjectTC(expense) && expense.amountEUR === null && (
+                            <span className="text-[10px] text-blue-600 px-1 font-medium">
+                              {expense.originalCurrency}
                             </span>
                           )}
                           {expense.source === 'offBank' && (
@@ -1650,33 +1769,43 @@ export default function ExpensesInboxPage() {
               Distribueix la despesa entre diversos projectes
             </DialogDescription>
           </DialogHeader>
-          {splitModalExpense && (
-            <div className="space-y-4">
-              <div className="p-3 bg-muted rounded-lg">
-                <div className="flex justify-between text-sm">
-                  <span className="text-muted-foreground">Import total</span>
-                  <span className="font-mono font-medium text-red-600">
-                    {formatAmount(splitModalExpense.expense.amountEUR)}
-                  </span>
+          {splitModalExpense && (() => {
+            const isFx = isFxExpenseNeedingProjectTC(splitModalExpense.expense);
+            return (
+              <div className="space-y-4">
+                <div className="p-3 bg-muted rounded-lg">
+                  <div className="flex justify-between text-sm">
+                    <span className="text-muted-foreground">Import total</span>
+                    <span className="font-mono font-medium text-red-600">
+                      {isFx
+                        ? `${splitModalExpense.expense.originalAmount?.toLocaleString('ca-ES')} ${splitModalExpense.expense.originalCurrency}`
+                        : formatAmount(splitModalExpense.expense.amountEUR)}
+                    </span>
+                  </div>
+                  <div className="text-xs text-muted-foreground mt-1">
+                    {formatDateDMY(splitModalExpense.expense.date)} · {splitModalExpense.expense.description || '-'}
+                  </div>
                 </div>
-                <div className="text-xs text-muted-foreground mt-1">
-                  {formatDateDMY(splitModalExpense.expense.date)} · {splitModalExpense.expense.description || '-'}
-                </div>
+                <AssignmentEditor
+                  projects={projects}
+                  projectsLoading={projectsLoading}
+                  projectsError={projectsError}
+                  currentAssignments={splitModalExpense.link?.assignments ?? []}
+                  currentNote={splitModalExpense.link?.note ?? null}
+                  totalAmount={Math.abs(splitModalExpense.expense.amountEUR)}
+                  onSave={handleSplitSave}
+                  onCancel={() => setSplitModalExpense(null)}
+                  isSaving={isSaving}
+                  createProjectUrl={buildUrl('/dashboard/project-module/projects/new')}
+                  fxMode={isFx}
+                  originalAmount={isFx ? (splitModalExpense.expense.originalAmount ?? undefined) : undefined}
+                  originalCurrency={isFx ? (splitModalExpense.expense.originalCurrency ?? undefined) : undefined}
+                  expenseFxRate={isFx ? (splitModalExpense.expense.fxRate ?? null) : undefined}
+                  resolveProjectTC={isFx ? resolveProjectTC : undefined}
+                />
               </div>
-              <AssignmentEditor
-                projects={projects}
-                projectsLoading={projectsLoading}
-                projectsError={projectsError}
-                currentAssignments={splitModalExpense.link?.assignments ?? []}
-                currentNote={splitModalExpense.link?.note ?? null}
-                totalAmount={Math.abs(splitModalExpense.expense.amountEUR)}
-                onSave={handleSplitSave}
-                onCancel={() => setSplitModalExpense(null)}
-                isSaving={isSaving}
-                createProjectUrl={buildUrl('/dashboard/project-module/projects/new')}
-              />
-            </div>
-          )}
+            );
+          })()}
         </DialogContent>
       </Dialog>
 

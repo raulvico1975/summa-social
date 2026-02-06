@@ -143,6 +143,7 @@ export interface ExpenseAssignment {
   amountEUR: number; // part assignada (amb signe -)
   budgetLineId?: string | null; // opcional
   budgetLineName?: string | null; // denormalitzat, opcional
+  localPct?: number; // 0-100, per despeses FX assignades per percentatge
 }
 
 // Dades de justificació opcionals (per bank expenses)

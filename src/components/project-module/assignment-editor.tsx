@@ -16,7 +16,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Plus, Trash2, AlertCircle, Check, X, FolderPlus } from 'lucide-react';
+import { Plus, Trash2, AlertCircle, Check, X, FolderPlus, Loader2 } from 'lucide-react';
 import Link from 'next/link';
 import { useTranslations } from '@/i18n';
 import { useProjectBudgetLines } from '@/hooks/use-project-module';
@@ -28,18 +28,24 @@ interface AssignmentEditorProps {
   projectsError?: Error | null;
   currentAssignments: ExpenseAssignment[];
   currentNote: string | null;
-  totalAmount: number; // valor absolut de la despesa
+  totalAmount: number; // valor absolut de la despesa (EUR)
   onSave: (assignments: ExpenseAssignment[], note: string | null) => Promise<void>;
   onCancel: () => void;
   isSaving: boolean;
   createProjectUrl?: string;
+  // Mode FX: distribució per percentatge sobre originalAmount
+  fxMode?: boolean;
+  originalAmount?: number; // import en moneda local (positiu)
+  originalCurrency?: string; // ex: "XOF"
+  expenseFxRate?: number | null; // TC manual de la despesa (prioritat absoluta)
+  resolveProjectTC?: (projectId: string) => Promise<number | null>;
 }
 
 interface AssignmentRow {
   id: string;
   projectId: string;
   projectName: string;
-  amountStr: string;
+  amountStr: string; // EUR en mode normal, % en mode FX
   budgetLineId: string | null;
   budgetLineName: string | null;
 }
@@ -117,6 +123,11 @@ export function AssignmentEditor({
   onCancel,
   isSaving,
   createProjectUrl,
+  fxMode,
+  originalAmount,
+  originalCurrency,
+  expenseFxRate,
+  resolveProjectTC,
 }: AssignmentEditorProps) {
   const { t } = useTranslations();
 
@@ -127,7 +138,9 @@ export function AssignmentEditor({
         id: generateRowId(),
         projectId: a.projectId,
         projectName: a.projectName,
-        amountStr: Math.abs(a.amountEUR).toFixed(2),
+        amountStr: fxMode
+          ? (a.localPct != null ? a.localPct.toString() : '0')
+          : Math.abs(a.amountEUR).toFixed(2),
         budgetLineId: a.budgetLineId ?? null,
         budgetLineName: a.budgetLineName ?? null,
       }));
@@ -137,7 +150,7 @@ export function AssignmentEditor({
         id: generateRowId(),
         projectId: '',
         projectName: '',
-        amountStr: totalAmount.toFixed(2),
+        amountStr: fxMode ? '100' : totalAmount.toFixed(2),
         budgetLineId: null,
         budgetLineName: null,
       },
@@ -145,6 +158,7 @@ export function AssignmentEditor({
   });
 
   const [note, setNote] = React.useState(currentNote ?? '');
+  const [fxSaveError, setFxSaveError] = React.useState<string | null>(null);
 
   // Calcular totals
   const assignedTotal = rows.reduce((sum, row) => {
@@ -152,10 +166,15 @@ export function AssignmentEditor({
     return sum + val;
   }, 0);
 
-  const remaining = totalAmount - assignedTotal;
-  // Vàlid si: (a) no hi ha files (desvincular) o (b) totes les files tenen projecte i import > 0
+  // En mode FX: total = 100%, remaining = 100 - assignat
+  // En mode normal: total = totalAmount, remaining = totalAmount - assignat
+  const effectiveTotal = fxMode ? 100 : totalAmount;
+  const remaining = effectiveTotal - assignedTotal;
+
+  // Validació
   const isValid = rows.length === 0 || rows.every((r) => r.projectId && parseFloat(r.amountStr) > 0);
-  const isBalanced = Math.abs(remaining) <= 0.01;
+  const isBalanced = fxMode ? Math.abs(remaining) <= 0.01 : Math.abs(remaining) <= 0.01;
+  const isOverLimit = fxMode && assignedTotal > 100.01;
 
   const addRow = () => {
     setRows((prev) => [
@@ -164,7 +183,9 @@ export function AssignmentEditor({
         id: generateRowId(),
         projectId: '',
         projectName: '',
-        amountStr: remaining > 0 ? remaining.toFixed(2) : '0.00',
+        amountStr: fxMode
+          ? (remaining > 0 ? remaining.toFixed(0) : '0')
+          : (remaining > 0 ? remaining.toFixed(2) : '0.00'),
         budgetLineId: null,
         budgetLineName: null,
       },
@@ -195,6 +216,7 @@ export function AssignmentEditor({
         return { ...row, [field]: value };
       })
     );
+    setFxSaveError(null);
   };
 
   const updateBudgetLine = (id: string, budgetLineId: string | null, budgetLineName: string | null) => {
@@ -209,7 +231,55 @@ export function AssignmentEditor({
   const handleSave = async () => {
     if (!isValid) return;
 
-    // Si no hi ha files, enviar array buit (desvincular)
+    // Mode FX: computar EUR per cada fila
+    if (fxMode && originalAmount && originalAmount > 0) {
+      // Guardrail: no permetre > 100%
+      const totalPct = rows.reduce((s, r) => s + (parseFloat(r.amountStr) || 0), 0);
+      if (totalPct > 100.01) {
+        setFxSaveError(t.projectModule?.fxPctOver100 ?? 'El total de percentatges no pot superar 100%');
+        return;
+      }
+
+      const assignments: ExpenseAssignment[] = [];
+
+      for (const row of rows) {
+        const pct = parseFloat(row.amountStr);
+        if (isNaN(pct) || pct <= 0) continue; // ignora files amb % <= 0
+
+        const localPerRow = originalAmount * (pct / 100);
+
+        // TC: prioritat manual per despesa, després projecte
+        let tc: number | null = null;
+        if (expenseFxRate != null && expenseFxRate > 0) {
+          tc = expenseFxRate;
+        } else if (resolveProjectTC) {
+          tc = await resolveProjectTC(row.projectId);
+        }
+
+        if (tc === null) {
+          const projectName = row.projectName || row.projectId;
+          setFxSaveError(
+            t.projectModule?.fxNoTcForProject
+              ?? `El projecte "${projectName}" no té TC configurat. Afegeix transferències FX al pressupost.`
+          );
+          return;
+        }
+
+        assignments.push({
+          projectId: row.projectId,
+          projectName: row.projectName,
+          amountEUR: -Math.abs(localPerRow * tc),
+          budgetLineId: row.budgetLineId,
+          budgetLineName: row.budgetLineName,
+          localPct: pct,
+        });
+      }
+
+      await onSave(assignments, note.trim() || null);
+      return;
+    }
+
+    // Mode normal (EUR)
     const assignments: ExpenseAssignment[] = rows.map((row) => ({
       projectId: row.projectId,
       projectName: row.projectName,
@@ -322,11 +392,18 @@ export function AssignmentEditor({
             </div>
 
             <div className="w-32 space-y-1">
-              {index === 0 && <Label className="text-xs">Import (€)</Label>}
+              {index === 0 && (
+                <Label className="text-xs">
+                  {fxMode
+                    ? (t.projectModule?.fxPercentLabel ?? '%')
+                    : 'Import (€)'}
+                </Label>
+              )}
               <Input
                 type="number"
-                step="0.01"
+                step={fxMode ? '1' : '0.01'}
                 min="0"
+                max={fxMode ? '100' : undefined}
                 value={row.amountStr}
                 onChange={(e) => updateRow(row.id, 'amountStr', e.target.value)}
                 className="text-right font-mono"
@@ -371,28 +448,81 @@ export function AssignmentEditor({
 
       {/* Resum (només si hi ha files) */}
       {rows.length > 0 && (
-      <div className="bg-muted/50 p-3 rounded-lg space-y-2 text-sm">
-        <div className="flex justify-between">
-          <span className="text-muted-foreground">Total despesa</span>
-          <span className="font-mono">{totalAmount.toFixed(2)} €</span>
+        <div className="bg-muted/50 p-3 rounded-lg space-y-2 text-sm">
+          {fxMode ? (
+            // Mode FX: mostrar percentatges
+            <>
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">
+                  {t.projectModule?.fxTotalOriginal
+                    ? t.projectModule.fxTotalOriginal.replace('{currency}', originalCurrency ?? '')
+                    : `Total (${originalCurrency ?? ''})`}
+                </span>
+                <span className="font-mono">
+                  {originalAmount?.toLocaleString('ca-ES')} {originalCurrency}
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">
+                  {t.projectModule?.fxPctAssigned ?? '% assignat'}
+                </span>
+                <span className="font-mono">{assignedTotal.toFixed(0)}%</span>
+              </div>
+              <div className="flex justify-between font-medium">
+                <span>{t.projectModule?.fxPctPending ?? '% pendent'}</span>
+                <span className={`font-mono ${
+                  isOverLimit ? 'text-red-600' : isBalanced ? 'text-green-600' : 'text-amber-600'
+                }`}>
+                  {remaining.toFixed(0)}%
+                </span>
+              </div>
+              {isOverLimit && (
+                <p className="text-xs text-red-600 flex items-center gap-1">
+                  <AlertCircle className="h-3 w-3" />
+                  {t.projectModule?.fxPctOver100 ?? 'El total de percentatges no pot superar 100%'}
+                </p>
+              )}
+              {!isOverLimit && !isBalanced && remaining > 0 && (
+                <p className="text-xs text-amber-600 flex items-center gap-1">
+                  <AlertCircle className="h-3 w-3" />
+                  {t.projectModule?.fxPctPending ?? 'Queda percentatge sense imputar'}
+                </p>
+              )}
+            </>
+          ) : (
+            // Mode normal: mostrar EUR
+            <>
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Total despesa</span>
+                <span className="font-mono">{totalAmount.toFixed(2)} €</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Assignat</span>
+                <span className="font-mono">{assignedTotal.toFixed(2)} €</span>
+              </div>
+              <div className="flex justify-between font-medium">
+                <span>Pendent</span>
+                <span className={`font-mono ${isBalanced ? 'text-green-600' : 'text-yellow-600'}`}>
+                  {remaining.toFixed(2)} €
+                </span>
+              </div>
+              {!isBalanced && (
+                <p className="text-xs text-yellow-600 flex items-center gap-1">
+                  <AlertCircle className="h-3 w-3" />
+                  Els imports no quadren amb el total de la despesa
+                </p>
+              )}
+            </>
+          )}
         </div>
-        <div className="flex justify-between">
-          <span className="text-muted-foreground">Assignat</span>
-          <span className="font-mono">{assignedTotal.toFixed(2)} €</span>
-        </div>
-        <div className="flex justify-between font-medium">
-          <span>Pendent</span>
-          <span className={`font-mono ${isBalanced ? 'text-green-600' : 'text-yellow-600'}`}>
-            {remaining.toFixed(2)} €
-          </span>
-        </div>
-        {!isBalanced && (
-          <p className="text-xs text-yellow-600 flex items-center gap-1">
-            <AlertCircle className="h-3 w-3" />
-            Els imports no quadren amb el total de la despesa
-          </p>
-        )}
-      </div>
+      )}
+
+      {/* Error FX */}
+      {fxSaveError && (
+        <p className="text-xs text-red-600 flex items-center gap-1">
+          <AlertCircle className="h-3 w-3" />
+          {fxSaveError}
+        </p>
       )}
 
       {/* Nota */}
@@ -412,8 +542,15 @@ export function AssignmentEditor({
           <X className="h-4 w-4 mr-1" />
           Cancel·lar
         </Button>
-        <Button onClick={handleSave} disabled={!isValid || isSaving}>
-          <Check className="h-4 w-4 mr-1" />
+        <Button
+          onClick={handleSave}
+          disabled={!isValid || isSaving || isOverLimit}
+        >
+          {isSaving ? (
+            <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+          ) : (
+            <Check className="h-4 w-4 mr-1" />
+          )}
           {isSaving ? 'Desant...' : rows.length === 0 ? 'Eliminar vinculació' : 'Desar assignació'}
         </Button>
       </div>
