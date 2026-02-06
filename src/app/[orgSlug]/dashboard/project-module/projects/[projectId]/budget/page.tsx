@@ -15,6 +15,8 @@ import {
   useSaveProjectFx,
   useProjectFxTransfers,
   useSaveFxTransfer,
+  useReapplyProjectFx,
+  getEffectiveProjectTC,
   computeWeightedFxRate,
   computeFxCurrency,
 } from '@/hooks/use-project-module';
@@ -54,6 +56,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -83,6 +86,7 @@ import {
   MoreVertical,
   Hash,
   ChevronDown,
+  RefreshCcw,
 } from 'lucide-react';
 import { useIsMobile } from '@/hooks/use-is-mobile';
 import { MobileListItem } from '@/components/mobile/mobile-list-item';
@@ -483,7 +487,7 @@ export default function ProjectBudgetPage() {
 
   const { project, isLoading: projectLoading, error: projectError, refresh: refreshProject } = useProjectDetail(projectId);
   const { budgetLines, isLoading: linesLoading, error: linesError, refresh: refreshLines } = useProjectBudgetLines(projectId);
-  const { expenseLinks, isLoading: linksLoading } = useProjectExpenseLinks(projectId);
+  const { expenseLinks, isLoading: linksLoading, refresh: refreshExpenseLinks } = useProjectExpenseLinks(projectId);
   const { expenses: allExpenses, isLoading: expensesLoading } = useUnifiedExpenseFeed({ projectId });
   // Pool complet per al modal de justificació (inclou TOTES les despeses, no només les linkades al projecte)
   const { expenses: allExpensesForModal, isLoading: allExpensesLoading } = useUnifiedExpenseFeed();
@@ -491,6 +495,7 @@ export default function ProjectBudgetPage() {
   const { saveFx, isSaving: isSavingFx } = useSaveProjectFx();
   const { fxTransfers, isLoading: fxTransfersLoading, refresh: refreshFxTransfers } = useProjectFxTransfers(projectId);
   const { save: saveFxTransfer, remove: removeFxTransfer, isSaving: isSavingFxTransfer } = useSaveFxTransfer();
+  const { reapply: reapplyFx, isRunning: isReapplying } = useReapplyProjectFx();
 
   // Derivats FX
   const weightedFxRate = React.useMemo(() => computeWeightedFxRate(fxTransfers), [fxTransfers]);
@@ -509,6 +514,7 @@ export default function ProjectBudgetPage() {
   const [fxTransferFormOpen, setFxTransferFormOpen] = React.useState(false);
   const [editingFxTransfer, setEditingFxTransfer] = React.useState<FxTransfer | null>(null);
   const [deleteFxTransferConfirm, setDeleteFxTransferConfirm] = React.useState<FxTransfer | null>(null);
+  const [reapplyConfirmOpen, setReapplyConfirmOpen] = React.useState(false);
 
   // Estat per edició FX legacy
   const [fxEditMode, setFxEditMode] = React.useState(false);
@@ -522,6 +528,82 @@ export default function ProjectBudgetPage() {
       setFxCurrencyInput(project.fxCurrency ?? '');
     }
   }, [project]);
+
+  // Detectar si hi ha assignacions FX que realment necessiten recàlcul
+  // Compara l'amountEUR actual de cada assignment amb el que donaria el TC vigent
+  const hasFxAssignmentsNeedingRecalc = React.useMemo(() => {
+    if (!project) return false;
+    if (fxTransfers.length === 0 && !(project.fxRate && project.fxRate > 0)) return false;
+
+    const currentTC = getEffectiveProjectTC(fxTransfers, project);
+
+    // Mapa txId -> UnifiedExpense per lookup ràpid
+    const expenseMap = new Map(allExpenses.map(e => [e.expense.txId, e.expense]));
+
+    for (const link of expenseLinks) {
+      if (!link.id.startsWith('off_')) continue;
+      const expense = expenseMap.get(link.id);
+      if (!expense) continue;
+
+      // Si la despesa té TC manual → no es recalcularà, skip
+      if (expense.fxRate != null && expense.fxRate > 0) continue;
+
+      // Si no té originalAmount → skip
+      const originalAmount = expense.originalAmount;
+      if (originalAmount == null) continue;
+
+      for (const a of link.assignments) {
+        if (a.projectId !== projectId) continue;
+
+        const pct = a.localPct ?? 100;
+        const expectedEUR = currentTC !== null
+          ? -Math.abs(originalAmount * (pct / 100) * currentTC)
+          : null;
+
+        // Comparar amb l'actual
+        if (expectedEUR === null && a.amountEUR === null) continue;
+        if (
+          expectedEUR !== null &&
+          a.amountEUR !== null &&
+          Math.abs(expectedEUR - a.amountEUR) < 0.01
+        ) continue;
+
+        // Hi ha diferència → cal recàlcul
+        return true;
+      }
+    }
+    return false;
+  }, [fxTransfers, project, expenseLinks, allExpenses, projectId]);
+
+  // Handler per re-aplicar TC
+  const handleReapplyFx = React.useCallback(async () => {
+    if (!project) return;
+    setReapplyConfirmOpen(false);
+    try {
+      const result = await reapplyFx(projectId, fxTransfers, project);
+      if (result.updated > 0) {
+        const fxReapplyDoneText = t.projectModule?.fxReapplyDoneText;
+        toast({
+          title: t.projectModule?.fxReapplyDoneTitle ?? 'Assignacions recalculades',
+          description: typeof fxReapplyDoneText === 'function'
+            ? fxReapplyDoneText(result.updated)
+            : `S'han actualitzat ${result.updated} imputacions.`,
+        });
+        await refreshExpenseLinks();
+      } else {
+        toast({
+          title: t.projectModule?.fxReapplyNothingTitle ?? 'No cal recalcular',
+          description: t.projectModule?.fxReapplyNothingText ?? "No s'han trobat imputacions que necessitin actualització.",
+        });
+      }
+    } catch (err) {
+      toast({
+        variant: 'destructive',
+        title: 'Error',
+        description: err instanceof Error ? err.message : 'Error recalculant',
+      });
+    }
+  }, [project, projectId, fxTransfers, reapplyFx, toast, t, refreshExpenseLinks]);
 
   // Calcular execució per partida
   const executionByLine = React.useMemo(() => {
@@ -1029,6 +1111,32 @@ export default function ProjectBudgetPage() {
         </summary>
 
         <div className="space-y-4 px-4 pb-4">
+
+        {/* Banner re-aplicar TC */}
+        {hasFxAssignmentsNeedingRecalc && (
+          <Alert variant="default" className="border-blue-200 bg-blue-50">
+            <RefreshCcw className="h-4 w-4 text-blue-600" />
+            <AlertDescription className="flex items-center justify-between">
+              <span className="text-sm text-blue-800">
+                {t.projectModule?.fxReapplyNoticeText ?? "Hi ha despeses imputades amb un tipus de canvi anterior."}
+              </span>
+              <Button
+                variant="outline"
+                size="sm"
+                className="ml-3 shrink-0"
+                onClick={() => setReapplyConfirmOpen(true)}
+                disabled={isReapplying}
+              >
+                {isReapplying ? (
+                  <Loader2 className="h-3 w-3 mr-1 animate-spin" />
+                ) : (
+                  <RefreshCcw className="h-3 w-3 mr-1" />
+                )}
+                {t.projectModule?.fxReapplyButton ?? "Re-aplicar tipus de canvi"}
+              </Button>
+            </AlertDescription>
+          </Alert>
+        )}
 
         {/* Bloc 1: TC calculat (ponderat) */}
         <div className="rounded-md bg-muted/30 p-3 text-sm">
@@ -1607,6 +1715,28 @@ export default function ProjectBudgetPage() {
               }}
             >
               {t.common?.delete ?? 'Eliminar'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Confirmació re-aplicar TC */}
+      <AlertDialog open={reapplyConfirmOpen} onOpenChange={setReapplyConfirmOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              {t.projectModule?.fxReapplyConfirmTitle ?? "Re-aplicar tipus de canvi"}
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              {t.projectModule?.fxReapplyConfirmText ?? "Aquesta acció recalcularà els imports en EUR segons el tipus de canvi actual del projecte. Les despeses amb TC manual no es modificaran."}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>{t.common?.cancel ?? 'Cancel·lar'}</AlertDialogCancel>
+            <AlertDialogAction onClick={handleReapplyFx} disabled={isReapplying}>
+              {isReapplying
+                ? (t.projectModule?.fxReapplyRunning ?? 'Recalculant...')
+                : (t.projectModule?.fxReapplyButton ?? 'Re-aplicar')}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

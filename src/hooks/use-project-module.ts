@@ -1902,6 +1902,150 @@ export function useSaveFxTransfer(): UseSaveFxTransferResult {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
+// HOOK: Re-aplicar TC a assignacions FX d'un projecte
+// ═══════════════════════════════════════════════════════════════════════════
+
+interface UseReapplyProjectFxResult {
+  reapply: (
+    projectId: string,
+    fxTransfers: FxTransfer[],
+    project: Project
+  ) => Promise<{ updated: number; skippedManualTC: number }>;
+  isRunning: boolean;
+}
+
+export function useReapplyProjectFx(): UseReapplyProjectFxResult {
+  const { firestore } = useFirebase();
+  const { organizationId } = useCurrentOrganization();
+  const [isRunning, setIsRunning] = useState(false);
+
+  const reapply = useCallback(async (
+    projectId: string,
+    fxTransfers: FxTransfer[],
+    project: Project
+  ): Promise<{ updated: number; skippedManualTC: number }> => {
+    if (!organizationId) throw new Error('No autenticat');
+
+    setIsRunning(true);
+    try {
+      // 1. Calcular el TC actual del projecte
+      const newTC = getEffectiveProjectTC(fxTransfers, project);
+
+      // 2. Carregar expenseLinks del projecte
+      const linksRef = collection(
+        firestore, 'organizations', organizationId, 'projectModule', '_', 'expenseLinks'
+      );
+      const q = query(linksRef, where('projectIds', 'array-contains', projectId));
+      const snapshot = await getDocs(q);
+
+      const links: ExpenseLink[] = snapshot.docs.map((d) => ({
+        id: d.id,
+        ...d.data(),
+      } as ExpenseLink));
+
+      // 3. Cache de docs off-bank per evitar recàrregues
+      const offBankCache = new Map<string, OffBankExpense | null>();
+
+      async function getOffBankDoc(expenseId: string): Promise<OffBankExpense | null> {
+        if (offBankCache.has(expenseId)) return offBankCache.get(expenseId)!;
+        const docRef = doc(
+          firestore, 'organizations', organizationId!, 'projectModule', '_', 'offBankExpenses', expenseId
+        );
+        const snap = await getDoc(docRef);
+        const data = snap.exists() ? { id: snap.id, ...snap.data() } as OffBankExpense : null;
+        offBankCache.set(expenseId, data);
+        return data;
+      }
+
+      // 4. Iterar links i calcular updates
+      let updated = 0;
+      let skippedManualTC = 0;
+
+      // Acumular updates: linkId -> { ref, newAssignments }
+      const pendingUpdates: Array<{
+        linkRef: ReturnType<typeof doc>;
+        assignments: ExpenseAssignment[];
+      }> = [];
+
+      for (const link of links) {
+        let linkModified = false;
+        const newAssignments = [...link.assignments];
+
+        for (let i = 0; i < newAssignments.length; i++) {
+          const assignment = newAssignments[i];
+          if (assignment.projectId !== projectId) continue;
+
+          // Només off-bank (txId comença amb "off_")
+          if (!link.id.startsWith('off_')) continue;
+
+          // Carregar doc off-bank
+          const expenseId = link.id.slice(4); // treure "off_"
+          const offBank = await getOffBankDoc(expenseId);
+          if (!offBank) continue;
+
+          // Si la despesa té TC manual (fxRate o fxRateUsed) → skip
+          const expenseFxRate = offBank.fxRate ?? offBank.fxRateUsed ?? null;
+          if (expenseFxRate != null && expenseFxRate > 0) {
+            skippedManualTC++;
+            continue;
+          }
+
+          // Si no té originalAmount → skip
+          const originalAmount = offBank.originalAmount ?? offBank.amountOriginal ?? null;
+          if (originalAmount == null) continue;
+
+          // Calcular nou amountEUR
+          const pct = assignment.localPct ?? 100;
+          const newAmountEUR = newTC !== null
+            ? -Math.abs(originalAmount * (pct / 100) * newTC)
+            : null;
+
+          // Comparar amb l'actual (tolerància 0.01 EUR)
+          const oldAmountEUR = assignment.amountEUR;
+          if (newAmountEUR === null && oldAmountEUR === null) continue;
+          if (
+            newAmountEUR !== null &&
+            oldAmountEUR !== null &&
+            Math.abs(newAmountEUR - oldAmountEUR) < 0.01
+          ) continue;
+
+          // Actualitzar
+          newAssignments[i] = { ...assignment, amountEUR: newAmountEUR };
+          linkModified = true;
+          updated++;
+        }
+
+        if (linkModified) {
+          const linkRef = doc(linksRef, link.id);
+          pendingUpdates.push({ linkRef, assignments: newAssignments });
+        }
+      }
+
+      // 5. Escriure amb writeBatch (chunks de 50)
+      if (pendingUpdates.length > 0) {
+        const chunks = chunkArray(pendingUpdates, 50);
+        for (const chunk of chunks) {
+          const batch = writeBatch(firestore);
+          for (const { linkRef, assignments } of chunk) {
+            batch.update(linkRef, {
+              assignments,
+              updatedAt: serverTimestamp(),
+            });
+          }
+          await batch.commit();
+        }
+      }
+
+      return { updated, skippedManualTC };
+    } finally {
+      setIsRunning(false);
+    }
+  }, [firestore, organizationId]);
+
+  return { reapply, isRunning };
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
 // HOOK: Partides de pressupost d'un projecte
 // ═══════════════════════════════════════════════════════════════════════════
 
