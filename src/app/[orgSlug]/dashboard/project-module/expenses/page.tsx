@@ -623,6 +623,16 @@ export default function ExpensesInboxPage() {
     const expense = expenses.find(e => e.expense.txId === txId);
     if (!expense) return;
 
+    // Guardrail: bloquejar si pendent de conversió FX
+    if (expense.expense.pendingConversion || expense.expense.amountEUR === null) {
+      toast({
+        variant: 'destructive',
+        title: t.common?.error ?? 'Error',
+        description: t.projectModule?.fxRequiredToAssign ?? "Cal definir el tipus de canvi abans d'assignar",
+      });
+      return;
+    }
+
     try {
       const assignments: ExpenseAssignment[] = [{
         projectId: project.id,
@@ -1229,8 +1239,8 @@ export default function ExpensesInboxPage() {
                   ].filter(Boolean) as { label?: string; value: React.ReactNode }[]}
                   actions={
                     <div className="flex items-center gap-1">
-                      {/* Assignar (només si no té assignació) */}
-                      {!projectsLoading && projects.length > 0 && status === 'unassigned' && (
+                      {/* Assignar (només si no té assignació i no pendent de conversió) */}
+                      {!projectsLoading && projects.length > 0 && status === 'unassigned' && !expense.pendingConversion && expense.amountEUR !== null && (
                         <QuickAssignPopover
                           expense={item}
                           projects={projects}
@@ -1239,6 +1249,15 @@ export default function ExpensesInboxPage() {
                           isAssigning={isSaving}
                           assignTooltip={t.projectModule?.assignToProject ?? 'Assignar a projecte'}
                         />
+                      )}
+                      {/* Indicador pendent FX — no assignable */}
+                      {status === 'unassigned' && (expense.pendingConversion || expense.amountEUR === null) && (
+                        <span
+                          className="text-xs text-amber-600 px-1"
+                          title={t.projectModule?.fxRequiredToAssign ?? "Cal definir el tipus de canvi abans d'assignar"}
+                        >
+                          TC
+                        </span>
                       )}
                       {/* Editar despesa off-bank */}
                       {expense.source === 'offBank' && (
@@ -1479,7 +1498,7 @@ export default function ExpensesInboxPage() {
                       {/* Accions */}
                       <TableCell className="px-1">
                         <div className="flex items-center gap-0.5 justify-end">
-                          {!projectsLoading && projects.length > 0 && status === 'unassigned' && (
+                          {!projectsLoading && projects.length > 0 && status === 'unassigned' && !expense.pendingConversion && expense.amountEUR !== null && (
                             <QuickAssignPopover
                               expense={item}
                               projects={projects}
@@ -1488,6 +1507,15 @@ export default function ExpensesInboxPage() {
                               isAssigning={isSaving}
                               assignTooltip={t.projectModule?.assignToProject ?? 'Assignar a projecte'}
                             />
+                          )}
+                          {/* Indicador pendent FX — no assignable */}
+                          {status === 'unassigned' && (expense.pendingConversion || expense.amountEUR === null) && (
+                            <span
+                              className="text-xs text-amber-600 px-1"
+                              title={t.projectModule?.fxRequiredToAssign ?? "Cal definir el tipus de canvi abans d'assignar"}
+                            >
+                              TC
+                            </span>
                           )}
                           {expense.source === 'offBank' && (
                             <Button

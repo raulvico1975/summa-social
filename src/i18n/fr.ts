@@ -2086,6 +2086,7 @@ export const fr = {
     justificationDesc: "Informació per a la justificació econòmica del projecte",
     // Tooltips botons
     assignToProject: "Assignar a projecte",
+    fxRequiredToAssign: "Il faut définir le taux de change avant d'assigner",
     editAssignment: "Editar assignació",
     removeAssignment: "Eliminar assignació",
     editExpense: "Editar despesa",

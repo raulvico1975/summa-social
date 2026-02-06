@@ -2111,6 +2111,7 @@ export const es = {
     justificationDesc: "Información para la justificación económica del proyecto",
     // Tooltips botones
     assignToProject: "Asignar a proyecto",
+    fxRequiredToAssign: "Es necesario definir el tipo de cambio antes de asignar",
     editAssignment: "Editar asignación",
     removeAssignment: "Eliminar asignación",
     editExpense: "Editar gasto",
