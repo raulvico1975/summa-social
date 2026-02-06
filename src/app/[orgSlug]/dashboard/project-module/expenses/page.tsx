@@ -6,7 +6,7 @@
 import * as React from 'react';
 import Link from 'next/link';
 import { useSearchParams, useRouter } from 'next/navigation';
-import { useUnifiedExpenseFeed, useProjects, useSaveExpenseLink, useProjectBudgetLines, useUpdateOffBankExpense } from '@/hooks/use-project-module';
+import { useUnifiedExpenseFeed, useProjects, useSaveExpenseLink, useProjectBudgetLines, useUpdateOffBankExpense, useHardDeleteOffBankExpense } from '@/hooks/use-project-module';
 import { doc, updateDoc, getDoc } from 'firebase/firestore';
 import { useFirebase, useStorage } from '@/firebase/provider';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
@@ -46,6 +46,16 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -490,6 +500,7 @@ export default function ExpensesInboxPage() {
   const { projects, isLoading: projectsLoading, error: projectsError } = useProjects(true);
   const { save, remove, isSaving } = useSaveExpenseLink();
   const { update: updateOffBankExpense } = useUpdateOffBankExpense();
+  const { hardDelete: hardDeleteOffBank, isDeleting: isDeletingOffBank } = useHardDeleteOffBankExpense();
   const { firestore } = useFirebase();
 
   // Estat per controlar loading d'eliminació de document
@@ -538,6 +549,7 @@ export default function ExpensesInboxPage() {
   const [isBulkAssigning, setIsBulkAssigning] = React.useState(false);
   const [addOffBankOpen, setAddOffBankOpen] = React.useState(false);
   const [editOffBankExpense, setEditOffBankExpense] = React.useState<UnifiedExpenseWithLink | null>(null);
+  const [deleteConfirmExpense, setDeleteConfirmExpense] = React.useState<UnifiedExpenseWithLink | null>(null);
 
   // Filtres locals (cerca + filtre ràpid)
   const [searchQuery, setSearchQuery] = React.useState('');
@@ -707,6 +719,31 @@ export default function ExpensesInboxPage() {
   const handleEditOffBank = (expense: UnifiedExpenseWithLink) => {
     trackUX('expenses.offBank.edit.open', { expenseId: expense.expense.txId });
     setEditOffBankExpense(expense);
+  };
+
+  // Handler per confirmar i executar eliminació definitiva de despesa off-bank
+  const handleConfirmDeleteOffBank = async () => {
+    if (!deleteConfirmExpense) return;
+    const expense = deleteConfirmExpense.expense;
+    const offBankId = expense.txId.replace('off_', '');
+
+    try {
+      await hardDeleteOffBank({
+        id: offBankId,
+        attachments: expense.attachments,
+        documentUrl: expense.documentUrl,
+      });
+      setDeleteConfirmExpense(null);
+      await refresh();
+      trackUX('expenses.offBank.hardDelete', { expenseId: expense.txId });
+      toast({ title: 'Despesa eliminada definitivament' });
+    } catch (err) {
+      toast({
+        variant: 'destructive',
+        title: ep.toastError,
+        description: err instanceof Error ? err.message : 'Error eliminant despesa',
+      });
+    }
   };
 
   // Handler per eliminar document/attachments d'una despesa
@@ -1214,6 +1251,18 @@ export default function ExpensesInboxPage() {
                           <Pencil className="h-4 w-4" />
                         </Button>
                       )}
+                      {/* Eliminar despesa off-bank */}
+                      {expense.source === 'offBank' && (
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 text-muted-foreground hover:text-destructive"
+                          onClick={() => setDeleteConfirmExpense(item)}
+                          disabled={isDeletingOffBank}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      )}
                       {/* Detall despesa bank */}
                       {expense.source === 'bank' && (
                         <Link href={buildUrl(`/dashboard/project-module/expenses/${expense.txId}`)}>
@@ -1451,6 +1500,18 @@ export default function ExpensesInboxPage() {
                               <Pencil className="h-3.5 w-3.5" />
                             </Button>
                           )}
+                          {expense.source === 'offBank' && (
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-7 w-7 text-muted-foreground hover:text-destructive"
+                              onClick={() => setDeleteConfirmExpense(item)}
+                              disabled={isDeletingOffBank}
+                              aria-label="Eliminar despesa definitivament"
+                            >
+                              <Trash2 className="h-3.5 w-3.5" />
+                            </Button>
+                          )}
                           {expense.source === 'bank' && (
                             <Link href={buildUrl(`/dashboard/project-module/expenses/${expense.txId}`)}>
                               <Button
@@ -1633,6 +1694,28 @@ export default function ExpensesInboxPage() {
         } : undefined}
         existingAssignments={editOffBankExpense?.link?.assignments}
       />
+
+      {/* Confirmació eliminació definitiva off-bank */}
+      <AlertDialog open={!!deleteConfirmExpense} onOpenChange={() => setDeleteConfirmExpense(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Eliminar despesa definitivament?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Aquesta acció és irreversible. S&apos;eliminaran la despesa, les assignacions a projectes i els documents adjunts.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isDeletingOffBank}>Cancel·lar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleConfirmDeleteOffBank}
+              disabled={isDeletingOffBank}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {isDeletingOffBank ? 'Eliminant…' : 'Eliminar definitivament'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
     </TooltipProvider>
   );

@@ -23,7 +23,9 @@ import {
   DocumentData,
   QueryConstraint,
   UpdateData,
+  writeBatch,
 } from 'firebase/firestore';
+import { ref, deleteObject } from 'firebase/storage';
 import { useFirebase } from '@/firebase';
 import { useCurrentOrganization } from '@/hooks/organization-provider';
 import type {
@@ -1006,6 +1008,101 @@ export function useUpdateOffBankExpense(): UseUpdateOffBankExpenseResult {
   return {
     update,
     isUpdating,
+    error,
+  };
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// HOOK: Eliminar despesa off-bank (hard delete)
+// ═══════════════════════════════════════════════════════════════════════════
+
+interface HardDeleteTarget {
+  id: string;
+  attachments?: OffBankAttachment[] | null;
+  documentUrl?: string | null;
+}
+
+interface UseHardDeleteOffBankExpenseResult {
+  hardDelete: (target: HardDeleteTarget) => Promise<void>;
+  isDeleting: boolean;
+  error: Error | null;
+}
+
+export function useHardDeleteOffBankExpense(): UseHardDeleteOffBankExpenseResult {
+  const { firestore, storage } = useFirebase();
+  const { organizationId } = useCurrentOrganization();
+
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [error, setError] = useState<Error | null>(null);
+
+  const hardDelete = useCallback(async (target: HardDeleteTarget): Promise<void> => {
+    if (!organizationId) {
+      throw new Error('No autenticat');
+    }
+
+    setIsDeleting(true);
+    setError(null);
+
+    try {
+      // 1. Batch atòmic: eliminar despesa + link
+      const batch = writeBatch(firestore);
+
+      const expenseRef = doc(
+        firestore,
+        'organizations',
+        organizationId,
+        'projectModule',
+        '_',
+        'offBankExpenses',
+        target.id
+      );
+      batch.delete(expenseRef);
+
+      const linkRef = doc(
+        firestore,
+        'organizations',
+        organizationId,
+        'projectModule',
+        '_',
+        'expenseLinks',
+        `off_${target.id}`
+      );
+      batch.delete(linkRef); // idempotent si no existeix
+
+      await batch.commit();
+
+      // 2. Neteja Storage (post-batch, no bloquejant)
+      const urls: string[] = [];
+      if (target.attachments) {
+        for (const att of target.attachments) {
+          if (att.url) urls.push(att.url);
+        }
+      }
+      if (target.documentUrl) {
+        urls.push(target.documentUrl);
+      }
+
+      for (const url of urls) {
+        try {
+          await deleteObject(ref(storage, url));
+        } catch {
+          console.warn(`Storage cleanup: no s'ha pogut eliminar ${url}`);
+        }
+      }
+
+    } catch (err) {
+      console.error('Error deleting off-bank expense:', err);
+      const e = err instanceof Error ? err : new Error('Error eliminant despesa');
+      setError(e);
+      throw e;
+    } finally {
+      setIsDeleting(false);
+    }
+  }, [firestore, storage, organizationId]);
+
+  return {
+    hardDelete,
+    isDeleting,
     error,
   };
 }
