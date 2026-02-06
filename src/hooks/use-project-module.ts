@@ -43,6 +43,9 @@ import type {
   UnifiedExpenseWithLink,
   BudgetLine,
   BudgetLineFormData,
+  FxTransfer,
+  FxTransferFormData,
+  OffBankAttachment,
 } from '@/lib/project-module-types';
 
 const PAGE_SIZE = 50;
@@ -1594,6 +1597,242 @@ export function useSaveProjectFx(): UseSaveProjectFxResult {
 
   return {
     saveFx,
+    isSaving,
+    error,
+  };
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// FUNCIONS PURES: Càlcul TC ponderat (EUR per 1 unitat local)
+// ═══════════════════════════════════════════════════════════════════════════
+
+/**
+ * Calcula el TC ponderat del projecte com EUR per 1 unitat local.
+ * Fórmula: Σ eurSent / Σ localReceived
+ * Compatible amb expense.fxRate (amountEUR = originalAmount × fxRate)
+ */
+export function computeWeightedFxRate(transfers: FxTransfer[]): number | null {
+  if (transfers.length === 0) return null;
+  const totalEur = transfers.reduce((s, t) => s + t.eurSent, 0);
+  const totalLocal = transfers.reduce((s, t) => s + t.localReceived, 0);
+  if (totalLocal <= 0) return null;
+  return totalEur / totalLocal;
+}
+
+/**
+ * Retorna la moneda local del projecte si totes les transferències usen la mateixa.
+ * Si hi ha múltiples monedes → null.
+ */
+export function computeFxCurrency(transfers: FxTransfer[]): string | null {
+  if (transfers.length === 0) return null;
+  const currencies = new Set(transfers.map(t => t.localCurrency));
+  return currencies.size === 1 ? [...currencies][0] : null;
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// HOOK: Transferències FX d'un projecte
+// ═══════════════════════════════════════════════════════════════════════════
+
+interface UseProjectFxTransfersResult {
+  fxTransfers: FxTransfer[];
+  isLoading: boolean;
+  error: Error | null;
+  refresh: () => Promise<void>;
+}
+
+export function useProjectFxTransfers(projectId: string): UseProjectFxTransfersResult {
+  const { firestore } = useFirebase();
+  const { organizationId } = useCurrentOrganization();
+
+  const [fxTransfers, setFxTransfers] = useState<FxTransfer[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<Error | null>(null);
+
+  const load = useCallback(async () => {
+    if (!organizationId || !projectId) {
+      setFxTransfers([]);
+      setIsLoading(false);
+      return;
+    }
+
+    setIsLoading(true);
+    setError(null);
+
+    try {
+      const transfersRef = collection(
+        firestore,
+        'organizations',
+        organizationId,
+        'projectModule',
+        '_',
+        'projects',
+        projectId,
+        'fxTransfers'
+      );
+
+      const snapshot = await getDocs(transfersRef);
+
+      const transfers: FxTransfer[] = snapshot.docs.map((d) => ({
+        id: d.id,
+        ...d.data(),
+      } as FxTransfer));
+
+      // Ordenar per date ascendent
+      transfers.sort((a, b) => a.date.localeCompare(b.date));
+
+      setFxTransfers(transfers);
+
+    } catch (err) {
+      console.error('Error loading fxTransfers:', err);
+      setError(err instanceof Error ? err : new Error('Error desconegut'));
+    } finally {
+      setIsLoading(false);
+    }
+  }, [firestore, organizationId, projectId]);
+
+  useEffect(() => {
+    load();
+  }, [load]);
+
+  return {
+    fxTransfers,
+    isLoading,
+    error,
+    refresh: load,
+  };
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// HOOK: CRUD de transferències FX
+// ═══════════════════════════════════════════════════════════════════════════
+
+interface UseSaveFxTransferResult {
+  save: (projectId: string, data: FxTransferFormData, transferId?: string) => Promise<string>;
+  remove: (projectId: string, transferId: string) => Promise<void>;
+  isSaving: boolean;
+  error: Error | null;
+}
+
+export function useSaveFxTransfer(): UseSaveFxTransferResult {
+  const { firestore } = useFirebase();
+  const { organizationId } = useCurrentOrganization();
+
+  const [isSaving, setIsSaving] = useState(false);
+  const [error, setError] = useState<Error | null>(null);
+
+  const save = useCallback(async (
+    projectId: string,
+    data: FxTransferFormData,
+    transferId?: string
+  ): Promise<string> => {
+    if (!organizationId) {
+      throw new Error('No autenticat');
+    }
+
+    const date = data.date.trim();
+    if (!date) {
+      throw new Error('La data és obligatòria');
+    }
+
+    const eurSent = parseFloat(data.eurSent.replace(',', '.'));
+    if (isNaN(eurSent) || eurSent <= 0) {
+      throw new Error('L\'import en EUR ha de ser positiu');
+    }
+
+    const localReceived = parseFloat(data.localReceived.replace(',', '.'));
+    if (isNaN(localReceived) || localReceived <= 0) {
+      throw new Error('L\'import en moneda local ha de ser positiu');
+    }
+
+    const localCurrency = data.localCurrency.trim().toUpperCase();
+    if (!localCurrency) {
+      throw new Error('La moneda és obligatòria');
+    }
+
+    setIsSaving(true);
+    setError(null);
+
+    try {
+      const transfersRef = collection(
+        firestore,
+        'organizations',
+        organizationId,
+        'projectModule',
+        '_',
+        'projects',
+        projectId,
+        'fxTransfers'
+      );
+
+      const transferData: Omit<FxTransfer, 'id'> = {
+        date,
+        eurSent,
+        localCurrency,
+        localReceived,
+        bankTxRef: data.bankTxRef?.trim() ? { txId: data.bankTxRef.trim() } : null,
+        notes: data.notes?.trim() || null,
+      };
+
+      let finalId: string;
+
+      if (transferId) {
+        const transferRef = doc(transfersRef, transferId);
+        await setDoc(transferRef, transferData, { merge: true });
+        finalId = transferId;
+      } else {
+        const newRef = doc(transfersRef);
+        await setDoc(newRef, transferData);
+        finalId = newRef.id;
+      }
+
+      return finalId;
+
+    } catch (err) {
+      console.error('Error saving fxTransfer:', err);
+      const e = err instanceof Error ? err : new Error('Error desant transferència');
+      setError(e);
+      throw e;
+    } finally {
+      setIsSaving(false);
+    }
+  }, [firestore, organizationId]);
+
+  const remove = useCallback(async (projectId: string, transferId: string) => {
+    if (!organizationId) {
+      throw new Error('No autenticat');
+    }
+
+    setIsSaving(true);
+    setError(null);
+
+    try {
+      const transferRef = doc(
+        firestore,
+        'organizations',
+        organizationId,
+        'projectModule',
+        '_',
+        'projects',
+        projectId,
+        'fxTransfers',
+        transferId
+      );
+
+      await deleteDoc(transferRef);
+
+    } catch (err) {
+      console.error('Error removing fxTransfer:', err);
+      const e = err instanceof Error ? err : new Error('Error eliminant transferència');
+      setError(e);
+      throw e;
+    } finally {
+      setIsSaving(false);
+    }
+  }, [firestore, organizationId]);
+
+  return {
+    save,
+    remove,
     isSaving,
     error,
   };

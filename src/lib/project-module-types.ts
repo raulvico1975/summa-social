@@ -109,6 +109,30 @@ export interface BudgetLineFormData {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
+// TRANSFERÈNCIES DE CANVI DE MONEDA (FX)
+// Path: /organizations/{orgId}/projectModule/_/projects/{projectId}/fxTransfers/{transferId}
+// ═══════════════════════════════════════════════════════════════════════════
+
+export interface FxTransfer {
+  id: string;
+  date: string; // YYYY-MM-DD
+  eurSent: number;
+  localCurrency: string; // ex: "XOF", "USD"
+  localReceived: number;
+  bankTxRef?: { txId: string; accountId?: string } | null;
+  notes?: string | null;
+}
+
+export interface FxTransferFormData {
+  date: string;
+  eurSent: string;
+  localCurrency: string;
+  localReceived: string;
+  bankTxRef?: string; // text lliure per ara
+  notes?: string;
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
 // ASSIGNACIONS DE DESPESES A PROJECTES
 // Path: /organizations/{orgId}/projectModule/_/expenseLinks/{txId}
 // ═══════════════════════════════════════════════════════════════════════════
