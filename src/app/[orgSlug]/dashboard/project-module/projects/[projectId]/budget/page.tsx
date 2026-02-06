@@ -137,7 +137,7 @@ function FxTransferForm({
   isSaving: boolean;
   initialData?: FxTransfer | null;
 }) {
-  const { t } = useTranslations();
+  const { t, tr } = useTranslations();
   const [date, setDate] = React.useState('');
   const [eurSent, setEurSent] = React.useState('');
   const [localCurrency, setLocalCurrency] = React.useState('');
@@ -343,7 +343,7 @@ function BudgetLineForm({
   isSaving: boolean;
   initialData?: BudgetLine | null;
 }) {
-  const { t } = useTranslations();
+  const { t, tr } = useTranslations();
   const [name, setName] = React.useState('');
   const [code, setCode] = React.useState('');
   const [budgetedAmountEUR, setBudgetedAmountEUR] = React.useState('');
@@ -475,7 +475,7 @@ export default function ProjectBudgetPage() {
   const router = useRouter();
   const { buildUrl } = useOrgUrl();
   const { toast } = useToast();
-  const { t } = useTranslations();
+  const { t, tr } = useTranslations();
   const { firestore } = useFirebase();
   const { organizationId } = useCurrentOrganization();
   const isMobile = useIsMobile();
@@ -599,8 +599,8 @@ export default function ProjectBudgetPage() {
     } catch (err) {
       toast({
         variant: 'destructive',
-        title: 'Error',
-        description: err instanceof Error ? err.message : 'Error recalculant',
+        title: tr('projectModule.budget.error', 'Error'),
+        description: err instanceof Error ? err.message : tr('projectModule.budget.errorRecalculating', 'Error recalculant'),
       });
     }
   }, [project, projectId, fxTransfers, reapplyFx, toast, t, refreshExpenseLinks]);
@@ -657,8 +657,8 @@ export default function ProjectBudgetPage() {
     try {
       await save(projectId, data, editingLine?.id);
       toast({
-        title: editingLine ? 'Partida actualitzada' : 'Partida creada',
-        description: `La partida "${data.name}" s'ha desat correctament.`,
+        title: editingLine ? tr('projectModule.budget.lineUpdated', 'Partida actualitzada') : tr('projectModule.budget.lineCreated', 'Partida creada'),
+        description: tr('projectModule.budget.lineSavedDesc', `La partida "${data.name}" s'ha desat correctament.`),
       });
       setFormOpen(false);
       setEditingLine(null);
@@ -666,8 +666,8 @@ export default function ProjectBudgetPage() {
     } catch (err) {
       toast({
         variant: 'destructive',
-        title: 'Error',
-        description: err instanceof Error ? err.message : 'Error desant partida',
+        title: tr('projectModule.budget.error', 'Error'),
+        description: err instanceof Error ? err.message : tr('projectModule.budget.errorSavingLine', 'Error desant partida'),
       });
     }
   };
@@ -678,16 +678,16 @@ export default function ProjectBudgetPage() {
     try {
       await remove(projectId, deleteConfirm.id);
       toast({
-        title: 'Partida eliminada',
-        description: `La partida "${deleteConfirm.name}" s'ha eliminat.`,
+        title: tr('projectModule.budget.lineDeleted', 'Partida eliminada'),
+        description: tr('projectModule.budget.lineDeletedDesc', `La partida "${deleteConfirm.name}" s'ha eliminat.`),
       });
       setDeleteConfirm(null);
       await refreshLines();
     } catch (err) {
       toast({
         variant: 'destructive',
-        title: 'Error',
-        description: err instanceof Error ? err.message : 'Error eliminant partida',
+        title: tr('projectModule.budget.error', 'Error'),
+        description: err instanceof Error ? err.message : tr('projectModule.budget.errorDeletingLine', 'Error eliminant partida'),
       });
     }
   };
@@ -744,15 +744,15 @@ export default function ProjectBudgetPage() {
       URL.revokeObjectURL(url);
 
       toast({
-        title: 'Excel generat',
-        description: `S'ha descarregat el fitxer ${filename}`,
+        title: tr('projectModule.budget.excelGenerated', 'Excel generat'),
+        description: tr('projectModule.budget.excelDownloaded', `S'ha descarregat el fitxer ${filename}`),
       });
     } catch (err) {
       console.error('Error exporting funding:', err);
       toast({
         variant: 'destructive',
         title: 'Error',
-        description: err instanceof Error ? err.message : 'Error generant Excel',
+        description: err instanceof Error ? err.message : tr('projectModule.budget.errorGeneratingExcel', 'Error generant Excel'),
       });
     } finally {
       setIsExportingFunding(false);
@@ -821,7 +821,7 @@ export default function ProjectBudgetPage() {
       toast({
         variant: 'destructive',
         title: 'Error',
-        description: err instanceof Error ? err.message : 'Error generant ZIP',
+        description: err instanceof Error ? err.message : tr('projectModule.budget.errorGeneratingZip', 'Error generant ZIP'),
       });
     } finally {
       setIsExportingZip(false);
@@ -842,10 +842,10 @@ export default function ProjectBudgetPage() {
     return (
       <div className="flex flex-col items-center justify-center py-12 gap-4">
         <AlertCircle className="h-12 w-12 text-destructive" />
-        <p className="text-destructive font-medium">Error carregant projecte</p>
-        <p className="text-muted-foreground text-sm">{projectError?.message ?? 'Projecte no trobat'}</p>
+        <p className="text-destructive font-medium">{tr('projectModule.budget.errorLoading', 'Error carregant projecte')}</p>
+        <p className="text-muted-foreground text-sm">{projectError?.message ?? tr('projectModule.budget.notFound', 'Projecte no trobat')}</p>
         <Link href={buildUrl('/dashboard/project-module/projects')}>
-          <Button variant="outline">Tornar a projectes</Button>
+          <Button variant="outline">{tr('projectModule.budget.backToProjects', 'Tornar a projectes')}</Button>
         </Link>
       </div>
     );
@@ -864,7 +864,7 @@ export default function ProjectBudgetPage() {
             </Button>
           </Link>
           <div className="min-w-0">
-            <h1 className="text-xl md:text-2xl font-bold truncate">Gestió Econòmica</h1>
+            <h1 className="text-xl md:text-2xl font-bold truncate">{tr('projectModule.budget.title', 'Gestió Econòmica')}</h1>
             <p className="text-muted-foreground text-sm truncate">
               {project.name} {project.code && `(${project.code})`}
             </p>
@@ -882,13 +882,13 @@ export default function ProjectBudgetPage() {
               }}
             >
               <Compass className="h-4 w-4 mr-2" />
-              Iniciar justificació
+              {tr('projectModule.budget.startJustification', 'Iniciar justificació')}
             </Button>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="outline" className="w-full">
                   <MoreVertical className="h-4 w-4 mr-2" />
-                  Més accions
+                  {tr('projectModule.budget.moreActions', 'Més accions')}
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-56">
@@ -934,7 +934,7 @@ export default function ProjectBudgetPage() {
               }}
             >
               <Compass className="h-4 w-4 mr-2" />
-              Iniciar justificació
+              {tr('projectModule.budget.startJustification', 'Iniciar justificació')}
             </Button>
             <Button
               variant="outline"
@@ -988,7 +988,7 @@ export default function ProjectBudgetPage() {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <Card>
             <CardHeader className="pb-2">
-              <CardDescription>Pressupost global</CardDescription>
+              <CardDescription>{tr('projectModule.budget.globalBudget', 'Pressupost global')}</CardDescription>
             </CardHeader>
             <CardContent>
               <p className="text-2xl font-bold">
@@ -1019,7 +1019,7 @@ export default function ProjectBudgetPage() {
                     {formatAmount(Math.abs(totals.globalBudget - totals.totalProjectExecution))}
                   </p>
                   <p className="text-xs text-muted-foreground mt-1">
-                    {formatPercent((totals.totalProjectExecution / totals.globalBudget) * 100)} executat
+                    {formatPercent((totals.totalProjectExecution / totals.globalBudget) * 100)} {tr('projectModule.budget.executedLabel', 'executat')}
                   </p>
                 </>
               ) : (
@@ -1038,7 +1038,7 @@ export default function ProjectBudgetPage() {
             <CardContent>
               <p className="text-2xl font-bold">{formatAmount(totals.budgetedFromLines)}</p>
               <p className="text-xs text-muted-foreground mt-1">
-                Calculat a partir de les partides
+                {tr('projectModule.budget.calculatedFromLines', 'Calculat a partir de les partides')}
               </p>
             </CardContent>
           </Card>
@@ -1296,7 +1296,7 @@ export default function ProjectBudgetPage() {
                         await saveFx(projectId, rate, fxCurrencyInput || null);
                         toast({
                           title: t.projectModule?.fxSaved ?? 'Tipus de canvi desat',
-                          description: rate ? `${rate} ${fxCurrencyInput} = 1 EUR` : 'Tipus de canvi eliminat',
+                          description: rate ? `${rate} ${fxCurrencyInput} = 1 EUR` : tr('projectModule.budget.fxRateRemoved', 'Tipus de canvi eliminat'),
                         });
                         setFxEditMode(false);
                         await refreshProject();
@@ -1304,7 +1304,7 @@ export default function ProjectBudgetPage() {
                         toast({
                           variant: 'destructive',
                           title: 'Error',
-                          description: err instanceof Error ? err.message : 'Error desant tipus de canvi',
+                          description: err instanceof Error ? err.message : tr('projectModule.budget.errorSavingFxRate', 'Error desant tipus de canvi'),
                         });
                       }
                     }}
@@ -1349,16 +1349,16 @@ export default function ProjectBudgetPage() {
           <CardContent className="pt-6">
             <div className="text-center space-y-4">
               <p className="text-muted-foreground">
-                Només cal crear partides si necessites control detallat per justificar el projecte.
+                {tr('projectModule.budget.noBudgetLinesHint', 'Només cal crear partides si necessites control detallat per justificar el projecte.')}
               </p>
               <div className="flex flex-col sm:flex-row gap-2 justify-center">
                 <Button onClick={openNew} variant="outline">
                   <Plus className="h-4 w-4 mr-2" />
-                  Crear partida manualment
+                  {tr('projectModule.budget.createLineManually', 'Crear partida manualment')}
                 </Button>
                 <Button onClick={() => setImportWizardOpen(true)} variant="outline">
                   <Upload className="h-4 w-4 mr-2" />
-                  Importar partides (Excel)
+                  {tr('projectModule.budget.importLinesExcel', 'Importar partides (Excel)')}
                 </Button>
               </div>
             </div>
@@ -1374,17 +1374,17 @@ export default function ProjectBudgetPage() {
             <div className="rounded-lg border bg-muted/30 px-4 py-3">
               <div className="flex flex-wrap items-center gap-x-6 gap-y-2 text-sm">
                 <div>
-                  <span className="text-muted-foreground">Pressupost global:</span>{' '}
+                  <span className="text-muted-foreground">{tr('projectModule.budget.globalBudgetLabel', 'Pressupost global')}:</span>{' '}
                   <span className="font-medium">{formatAmount(totals.globalBudget)}</span>
                 </div>
                 <div>
-                  <span className="text-muted-foreground">Suma de partides:</span>{' '}
+                  <span className="text-muted-foreground">{tr('projectModule.budget.linesTotalLabel', 'Suma de partides')}:</span>{' '}
                   <span className="font-medium">{formatAmount(totals.budgetedFromLines)}</span>
                 </div>
                 {totals.budgetedFromLines !== totals.globalBudget && (
                   <Badge variant="outline" className="bg-yellow-50 text-yellow-700 border-yellow-200">
                     <Info className="h-3 w-3 mr-1" />
-                    La suma de partides no coincideix amb el pressupost global
+                    {tr('projectModule.budget.linesTotalMismatch', 'La suma de partides no coincideix amb el pressupost global')}
                   </Badge>
                 )}
               </div>
@@ -1408,7 +1408,7 @@ export default function ProjectBudgetPage() {
                 </div>
               ) : linesError ? (
                 <div className="text-center py-8 text-destructive">
-                  Error carregant partides: {linesError.message}
+                  {tr('projectModule.budget.errorLoadingLines', 'Error carregant partides')}: {linesError.message}
                 </div>
               ) : isMobile ? (
             <div className="flex flex-col gap-2 p-3">
@@ -1436,12 +1436,12 @@ export default function ProjectBudgetPage() {
                       hasNoExecution ? (
                         <Badge key="status" variant="outline" className="bg-blue-50 text-blue-700 border-blue-200 text-xs">
                           <Info className="h-2.5 w-2.5 mr-0.5" />
-                          Sense exec.
+                          {tr('projectModule.budget.noExecShort', 'Sense exec.')}
                         </Badge>
                       ) : isOverspend ? (
                         <Badge key="status" variant="outline" className="bg-yellow-50 text-yellow-700 border-yellow-200 text-xs">
                           <AlertTriangle className="h-2.5 w-2.5 mr-0.5" />
-                          ALERTA
+                          {tr('projectModule.budget.alert', 'ALERTA')}
                         </Badge>
                       ) : (
                         <Badge key="status" variant="outline" className="bg-green-50 text-green-700 border-green-200 text-xs">
@@ -1451,8 +1451,8 @@ export default function ProjectBudgetPage() {
                       )
                     ]}
                     meta={[
-                      { label: 'Pres.', value: formatAmount(line.budgetedAmountEUR) },
-                      { label: 'Exec.', value: formatAmount(executed) },
+                      { label: tr('projectModule.budget.budgetedShort', 'Pres.'), value: formatAmount(line.budgetedAmountEUR) },
+                      { label: tr('projectModule.budget.executedShort', 'Exec.'), value: formatAmount(executed) },
                       { value: formatPercent(percentExec) },
                       ...(showOverspend
                         ? [{ value: <span className="text-red-600 font-medium">+{formatAmount(Math.abs(pending))}</span> }]
@@ -1473,14 +1473,14 @@ export default function ProjectBudgetPage() {
                         <DropdownMenuContent align="end">
                           <DropdownMenuItem onClick={() => openEdit(line)}>
                             <Pencil className="mr-2 h-4 w-4" />
-                            Editar
+                            {tr('projectModule.budget.edit', 'Editar')}
                           </DropdownMenuItem>
                           <DropdownMenuItem
                             onClick={() => setDeleteConfirm(line)}
                             className="text-destructive"
                           >
                             <Trash2 className="mr-2 h-4 w-4" />
-                            Eliminar
+                            {tr('projectModule.budget.delete', 'Eliminar')}
                           </DropdownMenuItem>
                         </DropdownMenuContent>
                       </DropdownMenu>
@@ -1553,7 +1553,7 @@ export default function ProjectBudgetPage() {
                         ) : isOverspend ? (
                           <Badge variant="outline" className="bg-yellow-50 text-yellow-700 border-yellow-200">
                             <AlertTriangle className="h-3 w-3 mr-1" />
-                            ALERTA
+                            {tr('projectModule.budget.alert', 'ALERTA')}
                           </Badge>
                         ) : (
                           <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
@@ -1671,8 +1671,8 @@ export default function ProjectBudgetPage() {
           } catch (err) {
             toast({
               variant: 'destructive',
-              title: 'Error',
-              description: err instanceof Error ? err.message : 'Error desant transferència',
+              title: tr('projectModule.budget.error', 'Error'),
+              description: err instanceof Error ? err.message : tr('projectModule.budget.errorSavingTransfer', 'Error desant transferència'),
             });
           }
         }}
@@ -1709,7 +1709,7 @@ export default function ProjectBudgetPage() {
                   toast({
                     variant: 'destructive',
                     title: 'Error',
-                    description: err instanceof Error ? err.message : 'Error eliminant transferència',
+                    description: err instanceof Error ? err.message : tr('projectModule.budget.errorDeletingTransfer', 'Error eliminant transferència'),
                   });
                 }
               }}

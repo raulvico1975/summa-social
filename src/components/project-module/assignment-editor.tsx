@@ -129,7 +129,7 @@ export function AssignmentEditor({
   expenseFxRate,
   resolveProjectTC,
 }: AssignmentEditorProps) {
-  const { t } = useTranslations();
+  const { t, tr } = useTranslations();
 
   // Inicialitzar amb les assignacions actuals o una fila buida
   const [rows, setRows] = React.useState<AssignmentRow[]>(() => {
@@ -299,17 +299,17 @@ export function AssignmentEditor({
         <AlertCircle className="h-8 w-8 mx-auto text-destructive mb-2" />
         <p className="text-destructive font-medium">
           {isIndexError
-            ? 'Falta un índex de Firestore per carregar projectes.'
-            : 'Error carregant projectes'}
+            ? tr('projectModule.assignment.firestoreIndexError', 'Falta un índex de Firestore per carregar projectes.')
+            : tr('projectModule.assignment.errorLoadingProjects', 'Error carregant projectes')}
         </p>
         <p className="text-sm text-muted-foreground mt-1">
           {isIndexError
-            ? "Contacta amb l'administrador."
+            ? tr('projectModule.assignment.contactAdmin', "Contacta amb l'administrador.")
             : projectsError.message}
         </p>
         <div className="flex justify-center gap-2 mt-4">
           <Button variant="outline" onClick={onCancel}>
-            Cancel·lar
+            {tr('projectModule.assignment.cancel', 'Cancel·lar')}
           </Button>
         </div>
       </div>
@@ -320,19 +320,19 @@ export function AssignmentEditor({
     return (
       <div className="text-center py-6">
         <FolderPlus className="h-8 w-8 mx-auto text-muted-foreground mb-2" />
-        <p className="text-muted-foreground">No hi ha projectes actius.</p>
+        <p className="text-muted-foreground">{tr('projectModule.assignment.noActiveProjects', 'No hi ha projectes actius.')}</p>
         <p className="text-sm text-muted-foreground mt-1">
-          Crea un projecte primer per poder assignar despeses.
+          {tr('projectModule.assignment.createProjectFirst', 'Crea un projecte primer per poder assignar despeses.')}
         </p>
         <div className="flex justify-center gap-2 mt-4">
           <Button variant="outline" onClick={onCancel}>
-            Cancel·lar
+            {tr('projectModule.assignment.cancel', 'Cancel·lar')}
           </Button>
           {createProjectUrl && (
             <Link href={createProjectUrl}>
               <Button>
                 <FolderPlus className="h-4 w-4 mr-2" />
-                Crear projecte
+                {tr('projectModule.assignment.createProject', 'Crear projecte')}
               </Button>
             </Link>
           )}
@@ -347,11 +347,11 @@ export function AssignmentEditor({
       {rows.length === 0 && (
         <div className="p-4 border border-dashed rounded-lg text-center">
           <p className="text-sm text-muted-foreground mb-2">
-            Sense assignacions. La despesa quedarà desvinculada de qualsevol projecte.
+            {tr('projectModule.assignment.noAssignments', 'Sense assignacions. La despesa quedarà desvinculada de qualsevol projecte.')}
           </p>
           <Button type="button" variant="outline" size="sm" onClick={addRow}>
             <Plus className="h-4 w-4 mr-1" />
-            Afegir assignació
+            {tr('projectModule.assignment.addAssignment', 'Afegir assignació')}
           </Button>
         </div>
       )}
@@ -361,13 +361,13 @@ export function AssignmentEditor({
         <div key={row.id} className="space-y-2 pb-3 border-b last:border-b-0">
           <div className="flex gap-2 items-end">
             <div className="flex-1 space-y-1">
-              {index === 0 && <Label className="text-xs">Projecte</Label>}
+              {index === 0 && <Label className="text-xs">{tr('projectModule.assignment.projectLabel', 'Projecte')}</Label>}
               <Select
                 value={row.projectId}
                 onValueChange={(val) => updateRow(row.id, 'projectId', val)}
               >
                 <SelectTrigger>
-                  <SelectValue placeholder="Selecciona projecte..." />
+                  <SelectValue placeholder={tr('projectModule.assignment.selectProject', 'Selecciona projecte...')} />
                 </SelectTrigger>
                 <SelectContent>
                   {projects.map((project) => (
@@ -387,7 +387,7 @@ export function AssignmentEditor({
                 <Label className="text-xs">
                   {fxMode
                     ? (t.projectModule?.fxPercentLabel ?? '%')
-                    : 'Import (€)'}
+                    : tr('projectModule.assignment.amountLabel', 'Import (€)')}
                 </Label>
               )}
               <Input
@@ -416,7 +416,7 @@ export function AssignmentEditor({
           {/* Selector de partida (opcional) */}
           {row.projectId && (
             <div className="ml-4 flex items-center gap-2">
-              <span className="text-xs text-muted-foreground">Partida:</span>
+              <span className="text-xs text-muted-foreground">{tr('projectModule.assignment.budgetLineLabel', 'Partida:')}</span>
               <div className="w-48">
                 <BudgetLineSelector
                   projectId={row.projectId}
@@ -433,7 +433,7 @@ export function AssignmentEditor({
       {rows.length > 0 && (
         <Button type="button" variant="outline" size="sm" onClick={addRow}>
           <Plus className="h-4 w-4 mr-1" />
-          Afegir projecte
+          {tr('projectModule.assignment.addProject', 'Afegir projecte')}
         </Button>
       )}
 
@@ -484,15 +484,15 @@ export function AssignmentEditor({
             // Mode normal: mostrar EUR
             <>
               <div className="flex justify-between">
-                <span className="text-muted-foreground">Total despesa</span>
+                <span className="text-muted-foreground">{tr('projectModule.assignment.totalExpense', 'Total despesa')}</span>
                 <span className="font-mono">{totalAmount.toFixed(2)} €</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-muted-foreground">Assignat</span>
+                <span className="text-muted-foreground">{tr('projectModule.assignment.assigned', 'Assignat')}</span>
                 <span className="font-mono">{assignedTotal.toFixed(2)} €</span>
               </div>
               <div className="flex justify-between font-medium">
-                <span>Pendent</span>
+                <span>{tr('projectModule.assignment.pending', 'Pendent')}</span>
                 <span className={`font-mono ${isBalanced ? 'text-green-600' : 'text-yellow-600'}`}>
                   {remaining.toFixed(2)} €
                 </span>
@@ -500,7 +500,7 @@ export function AssignmentEditor({
               {!isBalanced && (
                 <p className="text-xs text-yellow-600 flex items-center gap-1">
                   <AlertCircle className="h-3 w-3" />
-                  Els imports no quadren amb el total de la despesa
+                  {tr('projectModule.assignment.amountsNotBalanced', 'Els imports no quadren amb el total de la despesa')}
                 </p>
               )}
             </>
@@ -531,7 +531,7 @@ export function AssignmentEditor({
       <div className="flex justify-end gap-2 pt-2">
         <Button variant="outline" onClick={onCancel} disabled={isSaving}>
           <X className="h-4 w-4 mr-1" />
-          Cancel·lar
+          {tr('projectModule.assignment.cancel', 'Cancel·lar')}
         </Button>
         <Button
           onClick={handleSave}
@@ -542,7 +542,7 @@ export function AssignmentEditor({
           ) : (
             <Check className="h-4 w-4 mr-1" />
           )}
-          {isSaving ? 'Desant...' : rows.length === 0 ? 'Eliminar vinculació' : 'Desar assignació'}
+          {isSaving ? tr('projectModule.assignment.saving', 'Desant...') : rows.length === 0 ? tr('projectModule.assignment.removeLink', 'Eliminar vinculació') : tr('projectModule.assignment.saveAssignment', 'Desar assignació')}
         </Button>
       </div>
     </div>
