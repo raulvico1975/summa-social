@@ -4,6 +4,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
+import { computeFxAmountEUR } from '@/lib/project-module/fx';
 import {
   collection,
   query,
@@ -1996,9 +1997,7 @@ export function useReapplyProjectFx(): UseReapplyProjectFxResult {
 
           // Calcular nou amountEUR
           const pct = assignment.localPct ?? 100;
-          const newAmountEUR = newTC !== null
-            ? -Math.abs(originalAmount * (pct / 100) * newTC)
-            : null;
+          const newAmountEUR = computeFxAmountEUR(originalAmount, pct, newTC);
 
           // Comparar amb l'actual (tolerància 0.01 EUR)
           const oldAmountEUR = assignment.amountEUR;

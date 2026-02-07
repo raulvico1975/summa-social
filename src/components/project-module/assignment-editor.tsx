@@ -4,6 +4,7 @@
 'use client';
 
 import * as React from 'react';
+import { computeFxAmountEUR } from '@/lib/project-module/fx';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -259,7 +260,7 @@ export function AssignmentEditor({
         assignments.push({
           projectId: row.projectId,
           projectName: row.projectName,
-          amountEUR: tc !== null ? -Math.abs(localPerRow * tc) : null,
+          amountEUR: computeFxAmountEUR(localPerRow, 100, tc),
           budgetLineId: row.budgetLineId,
           budgetLineName: row.budgetLineName,
           localPct: pct,
