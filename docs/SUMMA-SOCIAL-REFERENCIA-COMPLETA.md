@@ -1,6 +1,6 @@
 # ═══════════════════════════════════════════════════════════════════════════════
 # SUMMA SOCIAL - REFERÈNCIA COMPLETA DEL PROJECTE
-# Versió 1.36 - Febrer 2026
+# Versió 1.37 - Febrer 2026
 # ═══════════════════════════════════════════════════════════════════════════════
 
 
@@ -907,6 +907,27 @@ La pàgina de Documents Pendents (`/movimientos/pendents`) accepta drag & drop c
 - `PendingDocumentsUploadModal` amb prop `initialFiles`
 
 **Traduccions:** `pendingDocs.upload.dropHere`, `invalidFiles`, `invalidFilesDesc` (CA/ES/FR/PT)
+
+### 3.2.8.2 Documents Pendents — Robustesa i Relink (NOU v1.33)
+
+Millores de robustesa al mòdul de documents pendents:
+
+| Millora | Descripció |
+|---------|------------|
+| **Acció "Re-vincular"** | Permet re-vincular un document que havia perdut l'storage path a la seva transacció original |
+| **Upload diagnostic guard** | Diagnòstic contextual d'errors de pujada amb informació de depuració |
+| **Gestió idempotent** | Si un document ja no existeix a Firestore, l'operació d'eliminació no falla |
+| **Transaccions orfenes** | `deleteMatchedPendingDocument` gestiona correctament transaccions que ja no tenen document associat |
+| **Bloqueig eliminació** | No es pot eliminar un document si prové de la safata de pendents; es permet desfer la conciliació |
+| **Hard reset drag/upload** | L'estat de drag & drop es reinicia completament entre operacions (force remount) |
+| **Comptadors per tab** | Cada tab mostra el nombre de documents que conté |
+| **Etiquetes de categoria i18n** | Les categories es mostren amb traduccions en lloc de claus internes |
+
+**Fitxers principals:**
+- `src/app/[orgSlug]/dashboard/movimientos/pendents/page.tsx`
+- `src/components/pending-documents/pending-document-card.tsx`
+- `src/components/pending-documents/pending-document-row.tsx`
+- `src/components/pending-documents/reconciliation-modal.tsx`
 
 ### 3.2.9 Indicadors Visuals de Remeses Processades (NOU v1.14)
 
@@ -3030,6 +3051,8 @@ L'usuari pot:
 
 **Les suggerències són heurístiques, mai bloquegen, mai escriuen dades.**
 
+> ⚠️ **Bloqueig FX (v1.33):** Les despeses off-bank amb `pendingConversion: true` (moneda local sense TC disponible) no es poden assignar. L'usuari ha de registrar un TC (manual a la despesa, o via fxTransfers del projecte) abans de poder incloure-les a cap partida.
+
 #### Algorisme de scoring (v1.12)
 
 | Factor | Punts | Descripció |
@@ -3096,15 +3119,72 @@ La part treta queda:
 | Visualització | Execució abans / després, efecte per partida |
 | Aplicar | Usa els hooks existents (`useSaveExpenseLink`) |
 
-### 3.11.8 Tipus de canvi i justificació
+### 3.11.8 Tipus de canvi i justificació (ACTUALITZAT v1.33)
 
-- El projecte defineix un tipus de canvi de referència
-- Les despeses de terreny poden tenir moneda original
-- La justificació sempre es quadra en EUR
-- Camps de justificació:
-  - No són obligatoris
-  - S'editen només quan cal justificar
-  - Existeixen per respondre al finançador, no per comptabilitat
+#### Sistema FX: conversió de moneda estrangera
+
+Molts projectes operen en moneda local (XOF, USD, VES, DOP, etc.) però la justificació es quadra sempre en EUR. El sistema FX gestiona la conversió.
+
+**Nivells de TC (tipus de canvi):**
+
+| Nivell | Camp | Significat |
+|--------|------|------------|
+| **Despesa** | `OffBankExpense.fxRate` | TC manual assignat a una despesa concreta |
+| **Projecte (ponderat)** | Calculat de `fxTransfers` | `Σ eurSent / Σ localReceived` = EUR per 1 unitat moneda local |
+| **Projecte (referència)** | `Project.fxRate` | TC per defecte del projecte (legacy) |
+
+**Fallback chain** (en ordre de prioritat):
+1. TC manual de la despesa (`OffBankExpense.fxRate`)
+2. TC ponderat del projecte (calculat de la sub-col·lecció `fxTransfers`)
+3. TC de referència del projecte (`Project.fxRate`)
+4. `null` → la despesa queda amb `pendingConversion: true`
+
+**Fórmula de conversió:**
+```
+amountEUR = originalAmount × fxRate
+```
+On `fxRate` = EUR per 1 unitat de moneda local.
+
+#### Sub-col·lecció fxTransfers (NOU v1.33)
+
+Registre de transferències bancàries EUR → moneda local associades a un projecte.
+
+**Path Firestore:** `/organizations/{orgId}/projectModule/_/projects/{projectId}/fxTransfers/{transferId}`
+
+```typescript
+interface FxTransfer {
+  id: string;
+  date: string;              // YYYY-MM-DD
+  eurSent: number;           // EUR enviats (positiu)
+  localCurrency: string;     // ex: "XOF", "USD"
+  localReceived: number;     // moneda local rebuda
+  bankTxRef?: {              // referència transacció bancària (opcional)
+    txId: string;
+    accountId?: string;
+  } | null;
+  notes?: string | null;
+}
+```
+
+**TC ponderat** = `Σ eurSent / Σ localReceived` (de totes les transferències del projecte).
+
+La UI de fxTransfers es mostra a la pantalla de pressupost del projecte (`budget/page.tsx`) amb CRUD complet (afegir, editar, eliminar transferències).
+
+#### Conversió EUR en assignació (NOU v1.33)
+
+Quan s'assigna una despesa off-bank en moneda local a una partida:
+- El sistema calcula `amountEUR` en el moment de l'assignació usant el TC disponible
+- Si l'assignació és parcial (split), la conversió és proporcional via `localPct` (0-100)
+- `amountEUR = originalAmount × (localPct / 100) × fxRate`
+
+**Bloqueig d'assignació:** Si una despesa té `pendingConversion: true` (no hi ha cap TC disponible), el botó d'assignació es desactiva amb missatge informatiu.
+
+#### Camps de justificació
+
+- No són obligatoris
+- S'editen només quan cal justificar davant del finançador
+- Existeixen per respondre al finançador, no per comptabilitat
+- Camps: `invoiceNumber`, `issuerTaxId`, `invoiceDate`, `paymentDate`, `supportDocNumber`
 
 ### 3.11.9 Què NO fa Summa (explícit)
 
@@ -3142,6 +3222,8 @@ La part treta queda:
   └── page.tsx                          # Shortcut global → detecta org → landing
 
 /src/components/project-module/
+  ├── add-off-bank-expense-modal.tsx    # Modal creació/edició despesa off-bank (FX integrat v1.33)
+  ├── assignment-editor.tsx             # Editor d'assignació amb FX split (v1.33)
   ├── balance-project-modal.tsx         # Modal "Quadrar justificació"
   ├── quick-expense-screen.tsx          # Component UI de captura ràpida
   └── ...
@@ -3212,7 +3294,7 @@ Permet pujar documents arrossegant-los directament sobre cada fila de despesa a 
 - Exemple: `PROJ001_2025-01-15_Material_oficina_125.50.pdf`
 - S'aplica a despeses off-bank i documents adjunts a transaccions
 
-### 3.11.13 Model de dades
+### 3.11.13 Model de dades (ACTUALITZAT v1.33)
 
 **Veure Annex C.3** per l'estructura Firestore completa del mòdul projectes.
 
@@ -3222,6 +3304,30 @@ Camps afegits v1.10:
 |------------|------|-------|------------|
 | `projects` | `budgetEUR` | `number \| null` | Pressupost global (fallback si no hi ha partides) |
 | `budgetLines` | `budgetedAmountEUR` | `number` | Import pressupostat de la partida |
+
+Camps FX afegits v1.33:
+
+| Col·lecció | Camp | Tipus | Descripció |
+|------------|------|-------|------------|
+| `projects` | `fxRate` | `number \| null` | TC de referència per defecte (EUR per 1 moneda local) |
+| `projects` | `fxCurrency` | `string \| null` | Codi moneda local (ex: "XOF") |
+| `offBankExpenses` | `originalCurrency` | `string \| null` | Moneda original (null = EUR) |
+| `offBankExpenses` | `originalAmount` | `number \| null` | Import en moneda local |
+| `offBankExpenses` | `fxRate` | `number \| null` | TC manual (1 moneda → EUR) |
+| `offBankExpenses` | `fxDate` | `string \| null` | Data del TC (opcional) |
+| `expenseLinks.assignments[]` | `localPct` | `number` | Percentatge assignat (0-100) per FX split |
+
+Sub-col·lecció afegida v1.33:
+
+| Sub-col·lecció | Path | Descripció |
+|----------------|------|------------|
+| `fxTransfers` | `projects/{projectId}/fxTransfers/{transferId}` | Transferències EUR→moneda local |
+
+Flag a `UnifiedExpense`:
+
+| Camp | Tipus | Descripció |
+|------|-------|------------|
+| `pendingConversion` | `boolean` | `true` si `originalAmount` existeix però no hi ha TC disponible |
 
 ### 3.11.14 Quick Expense Landing (NOU v1.22)
 
@@ -5431,6 +5537,14 @@ Aquests feeds serveixen perquè mòduls externs consumeixin dades sense afectar 
 /organizations/{orgId}/projectModule/_/projects/{projectId}
 ```
 
+**Transferències FX del projecte (NOU v1.33):**
+
+```
+/organizations/{orgId}/projectModule/_/projects/{projectId}/fxTransfers/{transferId}
+```
+
+Camps: `date`, `eurSent`, `localCurrency`, `localReceived`, `bankTxRef?`, `notes?`
+
 > Nota: El document `_` és un placeholder tècnic necessari per complir l'estructura de Firestore (segments alterns col·lecció/document).
 
 ### Join Client-Side
@@ -5514,7 +5628,7 @@ Les assignacions creades abans de la implementació del camp `budgetLineIds` no 
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
-# ANNEX D: NOVETATS DEL PRODUCTE (v1.31)
+# ANNEX D: NOVETATS DEL PRODUCTE (v1.33)
 # ═══════════════════════════════════════════════════════════════════════════════
 
 ## D.1 Descripció del Sistema
@@ -5699,5 +5813,5 @@ Les següents regles han de ser certes en tot moment. Si es trenca alguna, cal c
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # FI DEL DOCUMENT
-# Última actualització: Gener 2026 - Versió 1.31
+# Última actualització: Febrer 2026 - Versió 1.37
 # ═══════════════════════════════════════════════════════════════════════════════
