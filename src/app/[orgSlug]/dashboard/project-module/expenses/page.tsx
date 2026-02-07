@@ -105,46 +105,166 @@ function formatAmount(amount: number): string {
 // HELPERS: Desglossament d'assignacions per badges
 // ═══════════════════════════════════════════════════════════════════════════
 
-function getAssignmentPct(a: ExpenseAssignment, totalAmount: number): number {
-  if (a.localPct != null) return Math.round(a.localPct);
-  if (a.amountEUR == null || totalAmount <= 0) return 0;
-  return Math.round((Math.abs(a.amountEUR) / totalAmount) * 100);
+interface AssignmentBreakdownProject {
+  projectId: string;
+  projectName: string;
+  budgetLineName?: string | null;
+  pctInt: number;           // 0..100
+  assignedAbsProject: number;
 }
 
-function computeBreakdownInfo(
+interface AssignmentBreakdown {
+  totalAbs: number;
+  assignedAbs: number;
+  freeAbs: number;
+  perProject: AssignmentBreakdownProject[];
+  isFxMode: boolean;
+  corruptData: boolean;
+}
+
+/**
+ * Normalitza localPct al rang 0..100.
+ * - 0 < v <= 1   → v * 100  (assumint que estava en format 0..1)
+ * - 1 < v <= 100 → v directament
+ * - v > 100 o v < 0 → null (invàlid, es recalcularà per import)
+ */
+function normalizeLocalPct(v: number | undefined | null, txId?: string): number | null {
+  if (v == null) return null;
+  if (v < 0 || v > 100) {
+    if (process.env.NODE_ENV === 'development') {
+      console.error(`[P0-DEBUG] localPct fora de rang: ${v} (txId=${txId})`);
+    }
+    return null;
+  }
+  if (v > 0 && v <= 1) {
+    return Math.round(v * 100);
+  }
+  return Math.round(v);
+}
+
+function computeAssignmentBreakdown(
+  expense: { amountEUR: number; originalAmount?: number | null; originalCurrency?: string | null; txId: string },
   assignments: ExpenseAssignment[] | undefined,
-  totalAmount: number,
+): AssignmentBreakdown {
+  const isFxMode = expense.originalAmount != null && expense.originalCurrency != null && expense.originalCurrency !== 'EUR';
+  const totalAbs = Math.abs(expense.amountEUR);
+
+  if (!assignments || assignments.length === 0) {
+    return { totalAbs, assignedAbs: 0, freeAbs: totalAbs, perProject: [], isFxMode, corruptData: false };
+  }
+
+  // Intentar usar localPct si totes les assignacions en tenen de fiable
+  const normalizedPcts = assignments.map(a => normalizeLocalPct(a.localPct, expense.txId));
+  const allHaveLocalPct = normalizedPcts.every(p => p !== null);
+
+  // Calcular assignedAbs per EUR (ignorant nulls)
+  const assignedAbs = assignments.reduce((s, a) => s + (a.amountEUR != null ? Math.abs(a.amountEUR) : 0), 0);
+
+  // Decidir denominador per percentatges
+  let useDenominator: number;
+  let useLocalPct = false;
+
+  if (allHaveLocalPct && isFxMode) {
+    // Mode FX amb localPct fiable: usar localPct directament per percentatges
+    useLocalPct = true;
+    useDenominator = 0; // no cal
+  } else if (totalAbs > 0) {
+    useDenominator = totalAbs;
+  } else if (assignedAbs > 0) {
+    // totalAbs === 0 però hi ha assignacions amb EUR: usar assignedAbs com a denominador
+    if (process.env.NODE_ENV === 'development') {
+      console.error(`[P0-DEBUG] totalAbs=0 però assignedAbs=${assignedAbs} (txId=${expense.txId})`);
+    }
+    useDenominator = assignedAbs;
+  } else {
+    // Ni totalAbs ni assignedAbs: dada corrupta
+    if (process.env.NODE_ENV === 'development') {
+      console.error(`[P0-DEBUG] totalAbs=0, assignedAbs=0 amb ${assignments.length} assignacions (txId=${expense.txId})`, assignments);
+    }
+    // Última opció: si tenim localPct (fins i tot sense isFxMode), usar-lo
+    if (allHaveLocalPct) {
+      useLocalPct = true;
+      useDenominator = 0;
+    } else {
+      return { totalAbs, assignedAbs, freeAbs: 0, perProject: [], isFxMode, corruptData: true };
+    }
+  }
+
+  // Detectar assignedAbs > totalAbs
+  if (!useLocalPct && totalAbs > 0 && assignedAbs > totalAbs + 0.01) {
+    if (process.env.NODE_ENV === 'development') {
+      console.error(`[P0-DEBUG] assignedAbs (${assignedAbs}) > totalAbs (${totalAbs}) (txId=${expense.txId})`);
+    }
+    // Usar assignedAbs com a denominador per obtenir percentatges relatius
+    useDenominator = assignedAbs;
+  }
+
+  const perProject: AssignmentBreakdownProject[] = assignments.map((a, i) => {
+    let pctInt: number;
+    let assignedAbsProject: number;
+
+    if (useLocalPct) {
+      pctInt = normalizedPcts[i]!;
+      assignedAbsProject = a.amountEUR != null ? Math.abs(a.amountEUR) : 0;
+    } else {
+      assignedAbsProject = a.amountEUR != null ? Math.abs(a.amountEUR) : 0;
+      pctInt = useDenominator > 0 ? Math.round((assignedAbsProject / useDenominator) * 100) : 0;
+    }
+
+    return {
+      projectId: a.projectId,
+      projectName: a.projectName,
+      budgetLineName: a.budgetLineName,
+      pctInt,
+      assignedAbsProject,
+    };
+  });
+
+  const freeAbs = Math.max(0, totalAbs - assignedAbs);
+
+  return { totalAbs, assignedAbs, freeAbs, perProject, isFxMode, corruptData: false };
+}
+
+function computeBreakdownLabel(
+  breakdown: AssignmentBreakdown,
   projectIdFilter: string | null,
   ep: { breakdownNProjects: (n: number) => string; breakdownNProjectsPcts: (n: number, pcts: string) => string; breakdownInThisProject: (pct: number) => string },
 ): { label: string; tooltipLines: string[] } | null {
-  if (!assignments || assignments.length === 0) return null;
+  const { perProject, corruptData } = breakdown;
+  if (perProject.length === 0 || corruptData) return null;
 
-  const withPct = assignments.map(a => ({
-    name: a.projectName,
-    projectId: a.projectId,
-    pct: getAssignmentPct(a, totalAmount),
-  }));
+  // Si tots els percentatges són 0 (TC pendent), no mostrar parèntesi amb 0
+  const allZeroPct = perProject.every(p => p.pctInt === 0);
 
-  const tooltipLines = withPct.map(p => `${p.name} — ${p.pct}%`);
+  const tooltipLines = perProject.map(p =>
+    allZeroPct ? p.projectName : `${p.projectName} — ${p.pctInt}%`
+  );
 
   if (projectIdFilter) {
-    const pctInProject = withPct
+    const pctInProject = perProject
       .filter(p => p.projectId === projectIdFilter)
-      .reduce((s, p) => s + p.pct, 0);
+      .reduce((s, p) => s + p.pctInt, 0);
+    if (pctInProject === 0 && allZeroPct) {
+      return { label: ep.breakdownInThisProject(0), tooltipLines };
+    }
     return { label: ep.breakdownInThisProject(pctInProject), tooltipLines };
   }
 
-  if (assignments.length === 1) {
-    const p = withPct[0];
-    return { label: ep.breakdownNProjectsPcts(1, `${p.pct}`), tooltipLines };
+  // Si tots 0: mostrar "N proy." sense parèntesi de percentatge
+  if (allZeroPct) {
+    return { label: ep.breakdownNProjects(perProject.length), tooltipLines };
   }
 
-  if (assignments.length === 2) {
-    const pcts = withPct.map(p => `${p.pct}`).join('/');
-    return { label: ep.breakdownNProjectsPcts(assignments.length, pcts), tooltipLines };
+  if (perProject.length === 1) {
+    return { label: ep.breakdownNProjectsPcts(1, `${perProject[0].pctInt}`), tooltipLines };
   }
 
-  return { label: ep.breakdownNProjects(assignments.length), tooltipLines };
+  if (perProject.length === 2) {
+    const pcts = perProject.map(p => `${p.pctInt}`).join('/');
+    return { label: ep.breakdownNProjectsPcts(perProject.length, pcts), tooltipLines };
+  }
+
+  return { label: ep.breakdownNProjects(perProject.length), tooltipLines };
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -154,8 +274,6 @@ function computeBreakdownInfo(
 function AssignmentStatusPopover({
   expense,
   status,
-  assignedAmount,
-  totalAmount,
   assignments,
   onRemoveAssignment,
   onUnassignAll,
@@ -166,8 +284,6 @@ function AssignmentStatusPopover({
 }: {
   expense: UnifiedExpenseWithLink;
   status: ExpenseStatus;
-  assignedAmount: number;
-  totalAmount: number;
   assignments?: ExpenseAssignment[];
   onRemoveAssignment: (txId: string, assignmentIndex: number) => Promise<void>;
   onUnassignAll: (txId: string) => Promise<void>;
@@ -178,8 +294,11 @@ function AssignmentStatusPopover({
 }) {
   const [open, setOpen] = React.useState(false);
 
-  // Si no té assignacions, mostrar badge simple
-  if (status === 'unassigned' || !assignments || assignments.length === 0) {
+  // Calcular breakdown centralitzat
+  const bd = computeAssignmentBreakdown(expense.expense, assignments);
+
+  // Si no té assignacions o dada corrupta sense percentatges
+  if (status === 'unassigned' || !assignments || assignments.length === 0 || (bd.corruptData && bd.perProject.length === 0)) {
     return <Badge variant="outline" className="text-xs">{ep.statusUnassigned}</Badge>;
   }
 
@@ -190,7 +309,7 @@ function AssignmentStatusPopover({
     : 'bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100 cursor-pointer';
 
   // Badge 2: Desglossament
-  const breakdown = computeBreakdownInfo(assignments, totalAmount, projectIdFilter ?? null, ep);
+  const breakdownLabel = computeBreakdownLabel(bd, projectIdFilter ?? null, ep);
 
   return (
     <div className="flex items-center gap-1">
@@ -209,7 +328,7 @@ function AssignmentStatusPopover({
               if (isFx) {
                 const localTotal = Math.abs(expense.expense.originalAmount!);
                 const cur = expense.expense.originalCurrency!;
-                const totalPct = (assignments ?? []).reduce((s, a) => s + getAssignmentPct(a, totalAmount), 0);
+                const totalPct = bd.perProject.reduce((s, p) => s + p.pctInt, 0);
                 const assignedLocal = localTotal * Math.min(totalPct, 100) / 100;
                 const freeLocal = localTotal - assignedLocal;
                 return (
@@ -219,33 +338,32 @@ function AssignmentStatusPopover({
                   </div>
                 );
               }
-              const freeEur = totalAmount - assignedAmount;
               return (
                 <div className="flex items-center justify-between text-xs font-mono gap-2">
-                  <span className="text-emerald-700">{ep.popoverAssigned} = {formatAmount(assignedAmount)}</span>
-                  <span className="text-muted-foreground">{ep.popoverFree} = {formatAmount(Math.max(freeEur, 0))}</span>
+                  <span className="text-emerald-700">{ep.popoverAssigned} = {formatAmount(bd.assignedAbs)}</span>
+                  <span className="text-muted-foreground">{ep.popoverFree} = {formatAmount(bd.freeAbs)}</span>
                 </div>
               );
             })()}
           </div>
           <div className="p-2 space-y-1 max-h-48 overflow-y-auto">
             {assignments.map((assignment, index) => {
-              // Per FX: mostrar en moneda local
               const isFx = expense.expense.originalAmount != null && expense.expense.originalCurrency;
               const localCurrency = expense.expense.originalCurrency ?? '';
               const localTotal = Math.abs(expense.expense.originalAmount ?? 0);
+              const bdProject = bd.perProject[index];
 
               let displayAmount: string;
-              if (isFx) {
-                // Calcular import local per assignació
-                const pct = assignment.localPct ?? (assignment.amountEUR != null && totalAmount > 0 ? Math.round((Math.abs(assignment.amountEUR) / totalAmount) * 100) : 0);
+              if (isFx && bdProject) {
+                const pct = bdProject.pctInt;
                 const localForAssignment = localTotal * pct / 100;
                 const localFormatted = new Intl.NumberFormat('ca-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(localForAssignment);
-                displayAmount = `${pct}% · ${localFormatted} ${localCurrency}`;
+                displayAmount = pct > 0 ? `${pct}% · ${localFormatted} ${localCurrency}` : `${localFormatted} ${localCurrency}`;
               } else if (assignment.amountEUR == null) {
-                displayAmount = assignment.localPct != null ? `${assignment.localPct}%` : 'Sense TC';
-              } else if (assignment.localPct != null) {
-                displayAmount = `${assignment.localPct}% · ${formatAmount(Math.abs(assignment.amountEUR))}`;
+                const normPct = normalizeLocalPct(assignment.localPct, expense.expense.txId);
+                displayAmount = normPct != null ? `${normPct}%` : 'Sense TC';
+              } else if (bdProject && bdProject.pctInt > 0) {
+                displayAmount = `${bdProject.pctInt}% · ${formatAmount(Math.abs(assignment.amountEUR))}`;
               } else {
                 displayAmount = formatAmount(Math.abs(assignment.amountEUR));
               }
@@ -317,16 +435,16 @@ function AssignmentStatusPopover({
       </Popover>
 
       {/* Badge 2: Desglossament — amb tooltip */}
-      {breakdown && (
+      {breakdownLabel && (
         <Tooltip>
           <TooltipTrigger asChild>
             <Badge variant="outline" className="text-xs max-w-[140px] truncate cursor-default">
-              {breakdown.label}
+              {breakdownLabel.label}
             </Badge>
           </TooltipTrigger>
           <TooltipContent side="bottom" className="max-w-[250px]">
             <div className="space-y-0.5 text-xs">
-              {breakdown.tooltipLines.map((line, i) => (
+              {breakdownLabel.tooltipLines.map((line, i) => (
                 <div key={i}>{line}</div>
               ))}
             </div>
@@ -1423,11 +1541,9 @@ export default function ExpensesInboxPage() {
             </div>
           ) : (
             filteredExpenses.map((item) => {
-              const { expense, status, assignedAmount } = item;
-              const mobileEffectiveTotal = isFxExpenseNeedingProjectTC(expense) && Math.abs(expense.amountEUR) === 0 && item.link?.assignments
-                ? item.link.assignments.reduce((s, a) => s + (a.amountEUR != null ? Math.abs(a.amountEUR) : 0), 0)
-                : Math.abs(expense.amountEUR);
-              const mobileBreakdown = computeBreakdownInfo(item.link?.assignments, mobileEffectiveTotal, projectIdFilter, ep);
+              const { expense, status } = item;
+              const mobileBd = computeAssignmentBreakdown(expense, item.link?.assignments);
+              const mobileBreakdown = computeBreakdownLabel(mobileBd, projectIdFilter, ep);
 
               return (
                 <MobileListItem
@@ -1587,7 +1703,7 @@ export default function ExpensesInboxPage() {
                 </TableRow>
               ) : (
                 filteredExpenses.map((item) => {
-                  const { expense, status, assignedAmount } = item;
+                  const { expense, status } = item;
                   const isSelected = selectedIds.has(expense.txId);
                   const isUploading = uploadingDocTxId === expense.txId;
 
@@ -1727,12 +1843,6 @@ export default function ExpensesInboxPage() {
                         <AssignmentStatusPopover
                           expense={item}
                           status={status}
-                          assignedAmount={assignedAmount}
-                          totalAmount={
-                            isFxExpenseNeedingProjectTC(expense) && Math.abs(expense.amountEUR) === 0 && item.link?.assignments
-                              ? item.link.assignments.reduce((s, a) => s + (a.amountEUR != null ? Math.abs(a.amountEUR) : 0), 0)
-                              : Math.abs(expense.amountEUR)
-                          }
                           assignments={item.link?.assignments}
                           onRemoveAssignment={handleRemoveSingleAssignment}
                           onUnassignAll={handleUnassignAll}
