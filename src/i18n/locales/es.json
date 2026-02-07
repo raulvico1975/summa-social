@@ -2480,6 +2480,7 @@
   "projectModule.expensesPage.toastErrorAssigning": "Error asignando gasto",
   "projectModule.expensesPage.toastErrorBulk": "Error en asignación masiva",
   "projectModule.expensesPage.toastErrorRemoving": "Error eliminando asignación",
+  "projectModule.expensesPage.invalidAssignmentToast": "La imputación no es coherente. Revisa los porcentajes y vuelve a intentarlo.",
   "projectModule.expensesPage.toastErrorSaving": "Error guardando asignación",
   "projectModule.expensesPage.toastUnassigned": "Asignación eliminada",
   "projectModule.expensesPage.toastUnassignedDesc": "El gasto ya no está asignado a ningún proyecto.",

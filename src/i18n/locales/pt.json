@@ -2405,6 +2405,7 @@
   "projectModule.expensesPage.toastErrorAssigning": "Error assignant despesa",
   "projectModule.expensesPage.toastErrorBulk": "Error en assignació massiva",
   "projectModule.expensesPage.toastErrorRemoving": "Error eliminant assignació",
+  "projectModule.expensesPage.invalidAssignmentToast": "A imputação não é coerente. Revê as percentagens e tenta novamente.",
   "projectModule.expensesPage.toastErrorSaving": "Error desant assignació",
   "projectModule.expensesPage.toastUnassigned": "Assignació eliminada",
   "projectModule.expensesPage.toastUnassignedDesc": "La despesa ja no està assignada a cap projecte.",

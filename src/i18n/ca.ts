@@ -2237,6 +2237,7 @@ export const ca = {
       toastErrorSaving: "Error desant assignació",
       toastErrorBulk: "Error en assignació massiva",
       toastErrorRemoving: "Error eliminant assignació",
+      invalidAssignmentToast: "La imputació no és coherent. Revisa els percentatges i torna-ho a provar.",
       // Confirmació
       confirmUnassign: "Segur que vols eliminar l'assignació d'aquesta despesa?",
       // Tooltips
