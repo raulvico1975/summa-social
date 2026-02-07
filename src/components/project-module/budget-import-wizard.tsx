@@ -94,7 +94,7 @@ export function BudgetImportWizard({
   projectId,
   onComplete,
 }: BudgetImportWizardProps) {
-  const { t } = useTranslations();
+  const { t, tr } = useTranslations();
   const { toast } = useToast();
   const { firestore, user } = useFirebase();
   const { organizationId } = useCurrentOrganization();
@@ -166,8 +166,8 @@ export function BudgetImportWizard({
 
     if (!selectedFile.name.endsWith('.xlsx') && !selectedFile.name.endsWith('.xls')) {
       toast({
-        title: 'Format no vàlid',
-        description: 'Selecciona un fitxer Excel (.xlsx o .xls)',
+        title: tr('projectModule.import.invalidFormat', 'Format no vàlid'),
+        description: tr('projectModule.import.selectExcelFile', 'Selecciona un fitxer Excel (.xlsx o .xls)'),
         variant: 'destructive',
       });
       return;
@@ -189,8 +189,8 @@ export function BudgetImportWizard({
     } catch (err) {
       console.error('Error llegint Excel:', err);
       toast({
-        title: 'Error llegint fitxer',
-        description: 'No s\'ha pogut llegir el fitxer Excel',
+        title: tr('projectModule.import.errorReadingFile', 'Error llegint fitxer'),
+        description: tr('projectModule.import.errorReadingFileDesc', "No s'ha pogut llegir el fitxer Excel"),
         variant: 'destructive',
       });
       setFile(null);
@@ -242,8 +242,8 @@ export function BudgetImportWizard({
   const handleNextFromMapping = () => {
     if (!mapping.nameColumn || !mapping.amountColumn) {
       toast({
-        title: 'Mapping incomplet',
-        description: 'Cal seleccionar les columnes de nom i import',
+        title: tr('projectModule.import.incompleteMapping', 'Mapping incomplet'),
+        description: tr('projectModule.import.selectColumns', 'Cal seleccionar les columnes de nom i import'),
         variant: 'destructive',
       });
       return;
@@ -300,8 +300,8 @@ export function BudgetImportWizard({
     const linesToImport = previewLines.filter(line => line.include);
     if (linesToImport.length === 0) {
       toast({
-        title: 'Cap línia seleccionada',
-        description: 'Selecciona almenys una partida per importar',
+        title: tr('projectModule.import.noLinesSelected', 'Cap línia seleccionada'),
+        description: tr('projectModule.import.selectAtLeastOneLine', 'Selecciona almenys una partida per importar'),
         variant: 'destructive',
       });
       return;
@@ -394,8 +394,8 @@ export function BudgetImportWizard({
       setImportProgress(100);
 
       toast({
-        title: 'Importació completada',
-        description: `${linesToImport.length} partides importades correctament`,
+        title: tr('projectModule.import.importCompleted', 'Importació completada'),
+        description: `${linesToImport.length} ${tr('projectModule.import.linesImported', 'partides importades correctament')}`,
       });
 
       onComplete();
@@ -404,8 +404,8 @@ export function BudgetImportWizard({
     } catch (err) {
       console.error('Error important pressupost:', err);
       toast({
-        title: 'Error d\'importació',
-        description: 'No s\'ha pogut completar la importació',
+        title: tr('projectModule.import.importError', "Error d'importació"),
+        description: tr('projectModule.import.importErrorDesc', "No s'ha pogut completar la importació"),
         variant: 'destructive',
       });
       setStep('preview');
@@ -427,11 +427,11 @@ export function BudgetImportWizard({
 
   const renderStepIndicator = () => {
     const steps: { key: ImportStep; label: string }[] = [
-      { key: 'upload', label: '1. Fitxer' },
-      { key: 'sheet', label: '2. Pestanya' },
-      { key: 'mapping', label: '3. Columnes' },
-      { key: 'grouping', label: '4. Agrupació' },
-      { key: 'preview', label: '5. Revisió' },
+      { key: 'upload', label: `1. ${tr('projectModule.import.stepFile', 'Fitxer')}` },
+      { key: 'sheet', label: `2. ${tr('projectModule.import.stepSheet', 'Pestanya')}` },
+      { key: 'mapping', label: `3. ${tr('projectModule.import.stepColumns', 'Columnes')}` },
+      { key: 'grouping', label: `4. ${tr('projectModule.import.stepGrouping', 'Agrupació')}` },
+      { key: 'preview', label: `5. ${tr('projectModule.import.stepReview', 'Revisió')}` },
     ];
 
     // Si només hi ha una sheet, amagar el pas 2
@@ -491,13 +491,13 @@ export function BudgetImportWizard({
             <div className="flex flex-col items-center gap-2">
               <FileSpreadsheet className="w-12 h-12 text-primary" />
               <p className="font-medium">{file.name}</p>
-              <p className="text-sm text-muted-foreground">Clica per canviar el fitxer</p>
+              <p className="text-sm text-muted-foreground">{tr('projectModule.import.changeFile', 'Clica per canviar el fitxer')}</p>
             </div>
           ) : (
             <div className="flex flex-col items-center gap-2">
               <Upload className="w-12 h-12 text-muted-foreground" />
-              <p className="font-medium">Arrossega o clica per seleccionar</p>
-              <p className="text-sm text-muted-foreground">Fitxer Excel (.xlsx)</p>
+              <p className="font-medium">{tr('projectModule.import.dragOrClick', 'Arrossega o clica per seleccionar')}</p>
+              <p className="text-sm text-muted-foreground">{tr('projectModule.import.excelFileHint', 'Fitxer Excel (.xlsx)')}</p>
             </div>
           )}
         </label>
@@ -508,10 +508,10 @@ export function BudgetImportWizard({
   const renderSheetStep = () => (
     <div className="space-y-4">
       <div className="space-y-2">
-        <Label>Selecciona la pestanya amb el pressupost</Label>
+        <Label>{tr('projectModule.import.selectSheet', 'Selecciona la pestanya amb el pressupost')}</Label>
         <Select value={selectedSheet} onValueChange={setSelectedSheet}>
           <SelectTrigger>
-            <SelectValue placeholder="Selecciona una pestanya..." />
+            <SelectValue placeholder={tr('projectModule.import.selectSheetPlaceholder', 'Selecciona una pestanya...')} />
           </SelectTrigger>
           <SelectContent>
             {sheetNames.map(name => (
@@ -526,7 +526,7 @@ export function BudgetImportWizard({
       {selectedSheet && sheetData.length > 0 && (
         <div className="border rounded-lg overflow-hidden">
           <div className="text-sm text-muted-foreground p-2 bg-muted">
-            Previsualització (primeres 10 files)
+            {tr('projectModule.import.preview10Rows', 'Previsualització (primeres 10 files)')}
           </div>
           <div className="overflow-x-auto max-h-48">
             <Table>
@@ -553,13 +553,13 @@ export function BudgetImportWizard({
       <Alert>
         <AlertCircle className="h-4 w-4" />
         <AlertDescription>
-          Selecciona la columna del finançador principal (p.ex. ACCD). No seleccionis "TOTAL PROJECTE".
+          {tr('projectModule.import.selectFunderColumn', 'Selecciona la columna del finançador principal (p.ex. ACCD). No seleccionis "TOTAL PROJECTE".')}
         </AlertDescription>
       </Alert>
 
       <div className="grid gap-4">
         <div className="space-y-2">
-          <Label>Columna de Nom/Descripció *</Label>
+          <Label>{tr('projectModule.import.nameColumnLabel', 'Columna de Nom/Descripció *')}</Label>
           <Select
             value={mapping.nameColumn ?? ''}
             onValueChange={(v) => setMapping(prev => ({ ...prev, nameColumn: v || null }))}
@@ -578,7 +578,7 @@ export function BudgetImportWizard({
         </div>
 
         <div className="space-y-2">
-          <Label>Columna d'Import (EUR) *</Label>
+          <Label>{tr('projectModule.import.amountColumnLabel', "Columna d'Import (EUR) *")}</Label>
           <Select
             value={mapping.amountColumn ?? ''}
             onValueChange={(v) => setMapping(prev => ({ ...prev, amountColumn: v || null }))}
@@ -595,7 +595,7 @@ export function BudgetImportWizard({
                   <SelectItem key={h} value={h}>
                     {h}
                     {isAmount && !isTotalLike && ' ✓'}
-                    {isTotalLike && ' (no recomanat)'}
+                    {isTotalLike && ` ${tr('projectModule.import.notRecommended', '(no recomanat)')}`}
                   </SelectItem>
                 );
               })}
@@ -604,7 +604,7 @@ export function BudgetImportWizard({
         </div>
 
         <div className="space-y-2">
-          <Label>Columna de Codi (opcional)</Label>
+          <Label>{tr('projectModule.import.codeColumnLabel', 'Columna de Codi (opcional)')}</Label>
           <Select
             value={mapping.codeColumn ?? '__none__'}
             onValueChange={(v) => setMapping(prev => ({ ...prev, codeColumn: v === '__none__' ? null : v, extractCodeFromName: v === '__none__' ? prev.extractCodeFromName : false }))}
@@ -613,7 +613,7 @@ export function BudgetImportWizard({
               <SelectValue placeholder="Cap" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="__none__">Cap</SelectItem>
+              <SelectItem value="__none__">{tr('projectModule.import.none', 'Cap')}</SelectItem>
               {headers.map(h => (
                 <SelectItem key={h} value={h}>
                   {h}
@@ -634,10 +634,10 @@ export function BudgetImportWizard({
             />
             <div className="space-y-1">
               <Label htmlFor="extractCode" className="font-medium cursor-pointer">
-                Extreure codi del text (PARTIDES)
+                {tr('projectModule.import.extractCodeLabel', 'Extreure codi del text (PARTIDES)')}
               </Label>
               <p className="text-xs text-muted-foreground">
-                Detecta codis com &quot;a.1)&quot;, &quot;A)&quot; o &quot;a.1.1)&quot; dins del camp de nom i els separa automàticament.
+                {tr('projectModule.import.extractCodeHint', 'Detecta codis com "a.1)", "A)" o "a.1.1)" dins del camp de nom i els separa automàticament.')}
               </p>
             </div>
           </div>
@@ -645,7 +645,7 @@ export function BudgetImportWizard({
       </div>
 
       <div className="space-y-2">
-        <Label>Fila de capçalera</Label>
+        <Label>{tr('projectModule.import.headerRowLabel', 'Fila de capçalera')}</Label>
         <Input
           type="number"
           min={1}
@@ -661,7 +661,7 @@ export function BudgetImportWizard({
           }}
           className="w-24"
         />
-        <p className="text-xs text-muted-foreground">Fila que conté els noms de les columnes</p>
+        <p className="text-xs text-muted-foreground">{tr('projectModule.import.headerRowHint', 'Fila que conté els noms de les columnes')}</p>
       </div>
     </div>
   );
@@ -669,7 +669,7 @@ export function BudgetImportWizard({
   const renderGroupingStep = () => (
     <div className="space-y-4">
       <p className="text-sm text-muted-foreground">
-        Com vols importar les línies del pressupost?
+        {tr('projectModule.import.groupingQuestion', 'Com vols importar les línies del pressupost?')}
       </p>
 
       <RadioGroup
@@ -681,11 +681,10 @@ export function BudgetImportWizard({
           <RadioGroupItem value="group" id="group" className="mt-1" />
           <div className="space-y-1">
             <Label htmlFor="group" className="font-medium cursor-pointer">
-              Agrupar subpartides a partida (recomanat)
+              {tr('projectModule.import.groupSublines', 'Agrupar subpartides a partida (recomanat)')}
             </Label>
             <p className="text-sm text-muted-foreground">
-              Les subpartides (a1.1, a1.2...) es sumen a la seva partida (a1).
-              Evita duplicitats amb totals de grup.
+              {tr('projectModule.import.groupSublinesDesc', 'Les subpartides (a1.1, a1.2...) es sumen a la seva partida (a1). Evita duplicitats amb totals de grup.')}
             </p>
           </div>
         </div>
@@ -694,11 +693,10 @@ export function BudgetImportWizard({
           <RadioGroupItem value="all" id="all" className="mt-1" />
           <div className="space-y-1">
             <Label htmlFor="all" className="font-medium cursor-pointer">
-              Importar totes les línies tal qual
+              {tr('projectModule.import.importAll', 'Importar totes les línies tal qual')}
             </Label>
             <p className="text-sm text-muted-foreground">
-              Cada fila amb import positiu es converteix en una partida.
-              Pot causar duplicitats si hi ha totals.
+              {tr('projectModule.import.importAllDesc', 'Cada fila amb import positiu es converteix en una partida. Pot causar duplicitats si hi ha totals.')}
             </p>
           </div>
         </div>
@@ -707,7 +705,7 @@ export function BudgetImportWizard({
       <Alert variant="default">
         <AlertTriangle className="h-4 w-4" />
         <AlertDescription>
-          Les files detectades com a "Total" s'exclouen automàticament per evitar dobles comptatges.
+          {tr('projectModule.import.totalExcluded', 'Les files detectades com a "Total" s\'exclouen automàticament per evitar dobles comptatges.')}
         </AlertDescription>
       </Alert>
     </div>
@@ -723,7 +721,7 @@ export function BudgetImportWizard({
       <div className="space-y-4">
         <div className="flex items-center justify-between">
           <p className="text-sm text-muted-foreground">
-            {includedCount} partides seleccionades
+            {includedCount} {tr('projectModule.import.linesSelected', 'partides seleccionades')}
           </p>
           <p className="font-medium">
             Total: {formatAmount(includedTotal)}
@@ -751,9 +749,9 @@ export function BudgetImportWizard({
             <TableHeader>
               <TableRow>
                 <TableHead className="w-8"></TableHead>
-                <TableHead className="w-20">Codi</TableHead>
-                <TableHead>Partida</TableHead>
-                <TableHead className="text-right w-32">Import</TableHead>
+                <TableHead className="w-20">{tr('projectModule.import.codeHeader', 'Codi')}</TableHead>
+                <TableHead>{tr('projectModule.import.lineHeader', 'Partida')}</TableHead>
+                <TableHead className="text-right w-32">{tr('projectModule.import.amountHeader', 'Import')}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -770,7 +768,7 @@ export function BudgetImportWizard({
                       {line.code || '-'}
                     </span>
                     {line.isChapter && (
-                      <span className="ml-1 text-[10px] text-amber-600 font-normal">(capítol)</span>
+                      <span className="ml-1 text-[10px] text-amber-600 font-normal">{tr('projectModule.import.chapter', '(capítol)')}</span>
                     )}
                   </TableCell>
                   <TableCell className="py-2 text-sm">
@@ -788,7 +786,7 @@ export function BudgetImportWizard({
         <Alert variant="destructive">
           <AlertCircle className="h-4 w-4" />
           <AlertDescription>
-            Aquesta acció substituirà completament el pressupost actual del projecte.
+            {tr('projectModule.import.replaceWarning', 'Aquesta acció substituirà completament el pressupost actual del projecte.')}
           </AlertDescription>
         </Alert>
       </div>
@@ -799,14 +797,14 @@ export function BudgetImportWizard({
     <div className="space-y-4 py-8">
       <div className="flex flex-col items-center gap-4">
         <Loader2 className="w-12 h-12 animate-spin text-primary" />
-        <p className="font-medium">Important pressupost...</p>
+        <p className="font-medium">{tr('projectModule.import.importing', 'Important pressupost...')}</p>
         <Progress value={importProgress} className="w-full max-w-xs" />
         <p className="text-sm text-muted-foreground">
           {importProgress < 30
-            ? 'Esborrant partides anteriors...'
+            ? tr('projectModule.import.deletingOld', 'Esborrant partides anteriors...')
             : importProgress < 100
-              ? 'Creant noves partides...'
-              : 'Completat!'}
+              ? tr('projectModule.import.creatingNew', 'Creant noves partides...')
+              : tr('projectModule.import.completed', 'Completat!')}
         </p>
       </div>
     </div>
@@ -872,10 +870,10 @@ export function BudgetImportWizard({
         <DialogHeader>
           <DialogTitle>
             <FileSpreadsheet className="inline-block w-5 h-5 mr-2" />
-            Importar pressupost (Excel)
+            {tr('projectModule.import.wizardTitle', 'Importar pressupost (Excel)')}
           </DialogTitle>
           <DialogDescription>
-            Carrega el pressupost del finançador principal des d'un fitxer Excel
+            {tr('projectModule.import.wizardDescription', "Carrega el pressupost del finançador principal des d'un fitxer Excel")}
           </DialogDescription>
         </DialogHeader>
 
@@ -895,22 +893,22 @@ export function BudgetImportWizard({
             {step !== 'upload' && (
               <Button variant="outline" onClick={handleBack}>
                 <ArrowLeft className="w-4 h-4 mr-2" />
-                Enrere
+                {tr('projectModule.import.back', 'Enrere')}
               </Button>
             )}
             <div className="flex-1" />
             <Button variant="outline" onClick={() => onOpenChange(false)}>
-              Cancel·lar
+              {tr('projectModule.import.cancel', 'Cancel·lar')}
             </Button>
             <Button onClick={handleNext} disabled={!canGoNext()}>
               {step === 'preview' ? (
                 <>
-                  Importar i substituir
+                  {tr('projectModule.import.importAndReplace', 'Importar i substituir')}
                   <CheckCircle2 className="w-4 h-4 ml-2" />
                 </>
               ) : (
                 <>
-                  Següent
+                  {tr('projectModule.import.next', 'Següent')}
                   <ArrowRight className="w-4 h-4 ml-2" />
                 </>
               )}
