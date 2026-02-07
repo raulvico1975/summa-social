@@ -4,6 +4,45 @@ Historial de canvis del projecte, ordenat de més recent a més antic.
 
 ---
 
+## [1.33.0] - 2026-02-06
+
+### Documents Pendents — Relink i Robustesa
+
+- **Acció "Re-vincular document"** per documents que havien perdut l'storage path (`relink-document`)
+- Upload context diagnostic guard per diagnòstic d'errors de pujada
+- Gestió idempotent de documents no existents a Firestore
+- Gestió de transaccions orfenes en `deleteMatchedPendingDocument`
+- Bloqueig eliminació de document si prové de pendent + permetre desfer conciliació
+- Hard reset d'estat drag/upload amb force remount de la llista
+- Comptadors per tab a la pantalla de pendents + etiquetes de categoria i18n
+
+### Mòdul Projectes — Hard Delete Off-Bank
+
+- **Eliminació permanent** de despeses off-bank de forma atòmica (batch Firestore ≤50 ops + cleanup Storage)
+- Confirmació destructiva amb `AlertDialog` abans d'eliminar
+
+### Sistema FX Complet (Mòdul Projectes)
+
+- **Sub-col·lecció `fxTransfers`** per projecte: registre de transferències EUR→moneda local
+- **TC ponderat** calculat automàticament (`Σ eurSent / Σ localReceived`)
+- **Fallback chain** per tipus de canvi: TC manual despesa → TC ponderat projecte → project.fxRate → null
+- **Conversió EUR en moment d'assignació** amb prioritat TC manual i FX split proporcional
+- Bloqueig d'assignació per despeses off-bank amb `pendingConversion` (falta TC)
+- Modal de creació/edició off-bank simplificat amb camps FX nous (migrat de deprecated)
+- **Doble badge** a llistat despeses: estat (assignada/pendent) + desglossament (moneda/EUR)
+- Popover millorat amb detall FX a cada despesa
+- UI fxTransfers integrada a la pantalla de pressupost del projecte
+
+**Fitxers principals modificats:**
+- `src/hooks/use-project-module.ts` (hooks fxTransfers, hard delete, TC ponderat)
+- `src/lib/project-module-types.ts` (FxTransfer interface, camps FX)
+- `src/app/[orgSlug]/dashboard/project-module/expenses/page.tsx` (llistat + assignació)
+- `src/components/project-module/assignment-editor.tsx` (FX split + conversió)
+- `src/components/project-module/add-off-bank-expense-modal.tsx` (modal simplificat)
+- `src/app/[orgSlug]/dashboard/project-module/projects/[projectId]/budget/page.tsx` (UI fxTransfers)
+
+---
+
 ## [1.31.0] - 2026-01-15
 
 ### Desactivació Backups al Núvol

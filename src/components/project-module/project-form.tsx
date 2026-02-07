@@ -30,7 +30,7 @@ interface ProjectFormProps {
 }
 
 export function ProjectForm({ project, mode }: ProjectFormProps) {
-  const { t } = useTranslations();
+  const { t, tr } = useTranslations();
   const router = useRouter();
   const { buildUrl } = useOrgUrl();
   const { toast } = useToast();
@@ -52,15 +52,15 @@ export function ProjectForm({ project, mode }: ProjectFormProps) {
     const newErrors: Partial<Record<keyof ProjectFormData, string>> = {};
 
     if (!formData.name.trim()) {
-      newErrors.name = 'El nom és obligatori';
+      newErrors.name = tr('projectModule.nameRequired', 'El nom és obligatori');
     }
 
     if (formData.budgetEUR && isNaN(parseFloat(formData.budgetEUR))) {
-      newErrors.budgetEUR = 'El pressupost ha de ser un número';
+      newErrors.budgetEUR = tr('projectModule.form.budgetMustBeNumber', 'El pressupost ha de ser un número');
     }
 
     if (formData.startDate && formData.endDate && formData.startDate > formData.endDate) {
-      newErrors.endDate = 'La data de fi ha de ser posterior a la d\'inici';
+      newErrors.endDate = tr('projectModule.form.endDateAfterStart', "La data de fi ha de ser posterior a la d'inici");
     }
 
     setErrors(newErrors);
@@ -75,15 +75,15 @@ export function ProjectForm({ project, mode }: ProjectFormProps) {
     try {
       await save(formData, project?.id);
       toast({
-        title: mode === 'create' ? 'Projecte creat' : 'Projecte actualitzat',
-        description: `El projecte "${formData.name}" s'ha desat correctament.`,
+        title: mode === 'create' ? tr('projectModule.form.projectCreated', 'Projecte creat') : tr('projectModule.form.projectUpdated', 'Projecte actualitzat'),
+        description: tr('projectModule.form.projectSavedDesc', "El projecte s'ha desat correctament."),
       });
       router.push(buildUrl('/dashboard/project-module/projects'));
     } catch (err) {
       toast({
         variant: 'destructive',
-        title: 'Error',
-        description: err instanceof Error ? err.message : 'Error desant projecte',
+        title: tr('projectModule.form.errorTitle', 'Error'),
+        description: err instanceof Error ? err.message : tr('projectModule.form.errorSaving', 'Error desant projecte'),
       });
     }
   };
@@ -106,32 +106,32 @@ export function ProjectForm({ project, mode }: ProjectFormProps) {
         </Link>
         <div>
           <h1 className="text-2xl font-bold">
-            {mode === 'create' ? 'Nou projecte' : 'Editar projecte'}
+            {mode === 'create' ? tr('projectModule.form.newProjectTitle', 'Nou projecte') : tr('projectModule.form.editProjectTitle', 'Editar projecte')}
           </h1>
           <p className="text-muted-foreground">
             {mode === 'create'
-              ? 'Crea un projecte per assignar-hi despeses'
-              : 'Modifica les dades del projecte'}
+              ? tr('projectModule.form.newProjectSubtitle', 'Crea un projecte per assignar-hi despeses')
+              : tr('projectModule.form.editProjectSubtitle', 'Modifica les dades del projecte')}
           </p>
         </div>
       </div>
 
       <Card>
         <CardHeader>
-          <CardTitle>Informació del projecte</CardTitle>
+          <CardTitle>{tr('projectModule.form.projectInfoTitle', 'Informació del projecte')}</CardTitle>
           <CardDescription>
-            Camps obligatoris marcats amb *
+            {tr('projectModule.form.requiredFieldsHint', 'Camps obligatoris marcats amb *')}
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           {/* Nom */}
           <div className="space-y-2">
-            <Label htmlFor="name">Nom del projecte *</Label>
+            <Label htmlFor="name">{tr('projectModule.form.nameLabel', 'Nom del projecte *')}</Label>
             <Input
               id="name"
               value={formData.name}
               onChange={(e) => handleChange('name', e.target.value)}
-              placeholder="Nom del projecte"
+              placeholder={tr('projectModule.form.namePlaceholder', 'Nom del projecte')}
               className={errors.name ? 'border-destructive' : ''}
             />
             {errors.name && (
@@ -141,7 +141,7 @@ export function ProjectForm({ project, mode }: ProjectFormProps) {
 
           {/* Codi */}
           <div className="space-y-2">
-            <Label htmlFor="code">Codi intern</Label>
+            <Label htmlFor="code">{tr('projectModule.form.codeLabel', 'Codi intern')}</Label>
             <Input
               id="code"
               value={formData.code}
@@ -153,7 +153,7 @@ export function ProjectForm({ project, mode }: ProjectFormProps) {
 
           {/* Estat */}
           <div className="space-y-2">
-            <Label htmlFor="status">Estat</Label>
+            <Label htmlFor="status">{tr('projectModule.status', 'Estat')}</Label>
             <Select
               value={formData.status}
               onValueChange={(val) => handleChange('status', val as 'active' | 'closed')}
@@ -162,15 +162,15 @@ export function ProjectForm({ project, mode }: ProjectFormProps) {
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="active">Actiu</SelectItem>
-                <SelectItem value="closed">Tancat</SelectItem>
+                <SelectItem value="active">{tr('projectModule.form.statusActive', 'Actiu')}</SelectItem>
+                <SelectItem value="closed">{tr('projectModule.form.statusClosed', 'Tancat')}</SelectItem>
               </SelectContent>
             </Select>
           </div>
 
           {/* Pressupost */}
           <div className="space-y-2">
-            <Label htmlFor="budgetEUR">Pressupost (EUR)</Label>
+            <Label htmlFor="budgetEUR">{tr('projectModule.form.budgetLabel', 'Pressupost (EUR)')}</Label>
             <Input
               id="budgetEUR"
               type="number"
@@ -189,7 +189,7 @@ export function ProjectForm({ project, mode }: ProjectFormProps) {
           {/* Dates */}
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="startDate">Data d'inici</Label>
+              <Label htmlFor="startDate">{tr('projectModule.form.startDateLabel', "Data d'inici")}</Label>
               <Input
                 id="startDate"
                 type="date"
@@ -198,7 +198,7 @@ export function ProjectForm({ project, mode }: ProjectFormProps) {
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="endDate">Data de fi</Label>
+              <Label htmlFor="endDate">{tr('projectModule.form.endDateLabel', 'Data de fi')}</Label>
               <Input
                 id="endDate"
                 type="date"
@@ -218,19 +218,19 @@ export function ProjectForm({ project, mode }: ProjectFormProps) {
       <div className="flex justify-end gap-2">
         <Link href={buildUrl('/dashboard/project-module/projects')}>
           <Button type="button" variant="outline">
-            Cancel·lar
+            {tr('projectModule.form.cancel', 'Cancel·lar')}
           </Button>
         </Link>
         <Button type="submit" disabled={isSaving}>
           {isSaving ? (
             <>
               <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-              Desant...
+              {tr('projectModule.form.saving', 'Desant...')}
             </>
           ) : (
             <>
               <Save className="h-4 w-4 mr-2" />
-              {mode === 'create' ? 'Crear projecte' : 'Desar canvis'}
+              {mode === 'create' ? tr('projectModule.form.createButton', 'Crear projecte') : tr('projectModule.form.saveButton', 'Desar canvis')}
             </>
           )}
         </Button>
