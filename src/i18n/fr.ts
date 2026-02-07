@@ -2237,6 +2237,7 @@ export const fr = {
       toastErrorSaving: "Erreur lors de l'enregistrement de l'attribution",
       toastErrorBulk: "Erreur lors de l'attribution en masse",
       toastErrorRemoving: "Erreur lors de la suppression de l'attribution",
+      invalidAssignmentToast: "L'attribution n'est pas cohérente. Vérifie les pourcentages et réessaie.",
       // Confirmation
       confirmUnassign: "Êtes-vous sûr de vouloir supprimer l'attribution de cette dépense ?",
       // Tooltips

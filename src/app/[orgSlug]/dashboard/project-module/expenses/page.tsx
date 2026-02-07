@@ -7,6 +7,7 @@ import * as React from 'react';
 import Link from 'next/link';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { computeFxAmountEUR } from '@/lib/project-module/fx';
+import { normalizeAssignments } from '@/lib/project-module/normalize-assignments';
 import { useUnifiedExpenseFeed, useProjects, useSaveExpenseLink, useProjectBudgetLines, useUpdateOffBankExpense, useHardDeleteOffBankExpense, useProjectFxTransfers, getEffectiveProjectTC, isFxExpenseNeedingProjectTC, resolveExpenseTC } from '@/hooks/use-project-module';
 import { collection, doc, updateDoc, getDoc, getDocs } from 'firebase/firestore';
 import { useFirebase, useStorage } from '@/firebase/provider';
@@ -932,12 +933,14 @@ export default function ExpensesInboxPage() {
     }
 
     try {
+      const isFx = isFxExpenseNeedingProjectTC(expense.expense);
       const assignments: ExpenseAssignment[] = [{
         projectId: project.id,
         projectName: project.name,
         amountEUR,
         budgetLineId: budgetLine?.id ?? null,
         budgetLineName: budgetLine?.name ?? null,
+        ...(isFx ? { localPct: 100 } : {}),
       }];
 
       await save(txId, assignments, null);
@@ -961,15 +964,37 @@ export default function ExpensesInboxPage() {
   const handleSplitSave = async (assignments: ExpenseAssignment[], note: string | null) => {
     if (!splitModalExpense) return;
 
+    // Normalitzar i validar abans de persistir
+    const expData = splitModalExpense.expense;
+    const isFx = expData.originalAmount != null
+      && expData.originalCurrency != null
+      && expData.originalCurrency !== 'EUR';
+    const { assignments: normalized, isValid, errors } = normalizeAssignments(assignments, {
+      isFx,
+      totalAmountEURAbs: Math.abs(expData.amountEUR),
+    }, 'preservePartial');
+
+    if (!isValid) {
+      if (process.env.NODE_ENV === 'development') {
+        console.error('[normalizeAssignments] errors:', errors);
+      }
+      toast({
+        variant: 'destructive',
+        title: ep.toastError,
+        description: ep.invalidAssignmentToast,
+      });
+      return;
+    }
+
     try {
-      await save(splitModalExpense.expense.txId, assignments, note);
+      await save(splitModalExpense.expense.txId, normalized, note);
       await refresh();
 
       // Toast parcial per FX: si la suma de localPct < 100
       const originalAmount = splitModalExpense.expense.originalAmount;
       const originalCurrency = splitModalExpense.expense.originalCurrency;
-      if (originalAmount != null && originalCurrency && assignments.length > 0) {
-        const totalPct = assignments.reduce((s, a) => s + (a.localPct ?? 0), 0);
+      if (originalAmount != null && originalCurrency && normalized.length > 0) {
+        const totalPct = normalized.reduce((s, a) => s + (a.localPct ?? 0), 0);
         if (totalPct > 0 && totalPct < 100) {
           const remainingPct = 100 - totalPct;
           const remainingLocal = Math.abs(originalAmount) * remainingPct / 100;
@@ -1044,10 +1069,14 @@ export default function ExpensesInboxPage() {
           }
         }
 
+        const isFx = isFxExpenseNeedingProjectTC(expense.expense);
         const assignments: ExpenseAssignment[] = [{
           projectId: project.id,
           projectName: project.name,
           amountEUR,
+          budgetLineId: null,
+          budgetLineName: null,
+          ...(isFx ? { localPct: 100 } : {}),
         }];
         await save(expense.expense.txId, assignments, null);
       }
@@ -1260,8 +1289,30 @@ export default function ExpensesInboxPage() {
     // Filtrar l'assignació per índex
     const newAssignments = currentAssignments.filter((_, idx) => idx !== assignmentIndex);
 
+    // Normalitzar: preservar parcial (no redistribuir), validar coherència
+    const expData = expenseItem.expense;
+    const isFx = expData.originalAmount != null
+      && expData.originalCurrency != null
+      && expData.originalCurrency !== 'EUR';
+    const { assignments: normalized, isValid, errors } = normalizeAssignments(newAssignments, {
+      isFx,
+      totalAmountEURAbs: Math.abs(expData.amountEUR),
+    }, 'preservePartial');
+
+    if (!isValid) {
+      if (process.env.NODE_ENV === 'development') {
+        console.error('[normalizeAssignments] errors:', errors);
+      }
+      toast({
+        variant: 'destructive',
+        title: ep.toastError,
+        description: ep.invalidAssignmentToast,
+      });
+      return;
+    }
+
     try {
-      await save(txId, newAssignments, expenseItem.link.note, expenseItem.link.justification);
+      await save(txId, normalized, expenseItem.link.note, expenseItem.link.justification);
       await refresh();
       trackUX('expenses.removeAssignment', { txId, assignmentIndex });
       toast({
