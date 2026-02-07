@@ -1795,7 +1795,7 @@ export default function ExpensesInboxPage() {
                       </TableCell>
 
                       {/* Import */}
-                      <TableCell className="px-2 text-right font-mono text-[13px] whitespace-nowrap tabular-nums">
+                      <TableCell className="px-2 text-right text-[13px] whitespace-nowrap tabular-nums">
                         {isFxExpenseNeedingProjectTC(expense) && expense.originalAmount ? (
                           <span className="text-red-600 font-medium">
                             {expense.originalAmount.toLocaleString('ca-ES')} {expense.originalCurrency}

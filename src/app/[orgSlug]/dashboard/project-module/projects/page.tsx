@@ -113,15 +113,15 @@ function ProjectCard({ project, executedAmount }: ProjectCardProps) {
         <div className="border-t pt-3 space-y-1">
           <div className="flex justify-between items-baseline">
             <span className="text-xs text-muted-foreground">{tr('projectModule.budget', 'Pressupost')}</span>
-            <span className="text-sm font-medium font-mono tabular-nums">{formatAmountCompact(budgeted)} €</span>
+            <span className="text-sm font-medium tabular-nums">{formatAmountCompact(budgeted)} €</span>
           </div>
           <div className="flex justify-between items-baseline">
             <span className="text-xs text-muted-foreground">{tr('projectModule.executed', 'Executat')}</span>
-            <span className="text-sm font-medium font-mono tabular-nums">{formatAmountCompact(executedAmount)} €</span>
+            <span className="text-sm font-medium tabular-nums">{formatAmountCompact(executedAmount)} €</span>
           </div>
           <div className="flex justify-between items-baseline">
             <span className="text-xs text-muted-foreground">{tr('projectModule.pending', 'Pendent')}</span>
-            <span className={`text-sm font-medium font-mono tabular-nums ${pending < 0 ? 'text-red-600' : ''}`}>
+            <span className={`text-sm font-medium tabular-nums ${pending < 0 ? 'text-red-600' : ''}`}>
               {formatAmountCompact(pending)} €
             </span>
           </div>
