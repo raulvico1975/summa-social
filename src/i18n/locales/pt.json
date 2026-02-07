@@ -2372,7 +2372,7 @@
   "projectModule.expensesPage.subtitle": "Assigna despeses a projectes i controla l'execució.",
   "projectModule.expensesPage.tableAmount": "Import",
   "projectModule.expensesPage.tableCategory": "Categoria",
-  "projectModule.expensesPage.tableCounterparty": "Origen / Destinatari",
+  "projectModule.expensesPage.tableCounterparty": "Fornecedor",
   "projectModule.expensesPage.tableDate": "Data",
   "projectModule.expensesPage.tableDescription": "Descripció",
   "projectModule.expensesPage.tableDoc": "Doc",

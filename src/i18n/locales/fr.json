@@ -2392,7 +2392,7 @@
   "projectModule.expensesPage.subtitle": "Attribuez les dépenses aux projets et contrôlez l'exécution.",
   "projectModule.expensesPage.tableAmount": "Montant",
   "projectModule.expensesPage.tableCategory": "Catégorie",
-  "projectModule.expensesPage.tableCounterparty": "Origine / Destinataire",
+  "projectModule.expensesPage.tableCounterparty": "Fournisseur",
   "projectModule.expensesPage.tableDate": "Date",
   "projectModule.expensesPage.tableDescription": "Description",
   "projectModule.expensesPage.tableDoc": "Doc",

@@ -729,7 +729,7 @@ function DroppableExpenseRow({
 }
 
 export default function ExpensesInboxPage() {
-  const { t } = useTranslations();
+  const { t, tr } = useTranslations();
   const ep = t.projectModule.expensesPage;
   const searchParams = useSearchParams();
   const router = useRouter();
@@ -833,7 +833,6 @@ export default function ExpensesInboxPage() {
     | 'all'
     | 'withDocument'
     | 'withoutDocument'
-    | 'uncategorized'
     | 'noContact'
     | 'bank'
     | 'offBank'
@@ -857,8 +856,6 @@ export default function ExpensesInboxPage() {
             return !!exp.documentUrl;
           case 'withoutDocument':
             return !exp.documentUrl;
-          case 'uncategorized':
-            return !exp.categoryName;
           case 'noContact':
             return !exp.counterpartyName;
           case 'bank':
@@ -1431,7 +1428,6 @@ export default function ExpensesInboxPage() {
             <SelectContent>
               <SelectItem value="all">{ep.filterAll} ({expenses.length})</SelectItem>
               <SelectItem value="withoutDocument">{ep.filterWithoutDocument}</SelectItem>
-              <SelectItem value="uncategorized">{ep.filterUncategorized}</SelectItem>
               <SelectItem value="unassigned">{ep.filterUnassigned}</SelectItem>
               <SelectItem value="offBank">{ep.filterOffBank}</SelectItem>
               <SelectItem value="bank">{ep.filterBank}</SelectItem>
@@ -1452,13 +1448,6 @@ export default function ExpensesInboxPage() {
               onClick={() => setTableFilter('withoutDocument')}
             >
               {ep.filterWithoutDocument}
-            </Button>
-            <Button
-              variant={tableFilter === 'uncategorized' ? 'default' : 'outline'}
-              size="sm"
-              onClick={() => setTableFilter('uncategorized')}
-            >
-              {ep.filterUncategorized}
             </Button>
             <Button
               variant={tableFilter === 'unassigned' ? 'default' : 'outline'}
@@ -1671,8 +1660,7 @@ export default function ExpensesInboxPage() {
                 <TableHead className="w-[28px] px-1 text-center hidden xl:table-cell">{ep.tableDoc}</TableHead>
                 <TableHead className="w-[80px] px-2">{ep.tableDate}</TableHead>
                 <TableHead className="px-2">{ep.tableDescription}</TableHead>
-                <TableHead className="hidden xl:table-cell px-2">{ep.tableCategory}</TableHead>
-                <TableHead className="hidden xl:table-cell px-2">{ep.tableCounterparty}</TableHead>
+                <TableHead className="hidden xl:table-cell px-2">{tr('projectModule.expensesPage.tableCounterparty', 'Proveïdor')}</TableHead>
                 <TableHead className="text-right px-2 w-[100px]">{ep.tableAmount}</TableHead>
                 <TableHead className="w-[70px] px-2">{ep.tableStatus}</TableHead>
                 <TableHead className="w-[90px] px-1"></TableHead>
@@ -1686,7 +1674,6 @@ export default function ExpensesInboxPage() {
                     <TableCell className="hidden xl:table-cell px-1"><Skeleton className="h-3 w-3 rounded-full" /></TableCell>
                     <TableCell className="px-2"><Skeleton className="h-4 w-16" /></TableCell>
                     <TableCell className="px-2"><Skeleton className="h-4 w-40" /></TableCell>
-                    <TableCell className="hidden xl:table-cell px-2"><Skeleton className="h-4 w-20" /></TableCell>
                     <TableCell className="hidden xl:table-cell px-2"><Skeleton className="h-4 w-24" /></TableCell>
                     <TableCell className="px-2"><Skeleton className="h-4 w-16 ml-auto" /></TableCell>
                     <TableCell className="px-2"><Skeleton className="h-5 w-12" /></TableCell>
@@ -1695,7 +1682,7 @@ export default function ExpensesInboxPage() {
                 ))
               ) : filteredExpenses.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={9} className="text-center py-12 text-muted-foreground">
+                  <TableCell colSpan={8} className="text-center py-12 text-muted-foreground">
                     {tableFilter !== 'all' || searchQuery
                       ? ep.filterNoResults
                       : t.projectModule.noEligibleExpenses}
@@ -1784,11 +1771,6 @@ export default function ExpensesInboxPage() {
                             </div>
                             {/* Categoria i contrapart - visible només en < xl */}
                             <div className="xl:hidden flex items-center gap-2 text-xs text-muted-foreground mt-0.5">
-                              {expense.categoryName && (
-                                <Badge variant="outline" className="text-[10px] px-1.5 py-0 max-w-[120px] truncate">
-                                  {getCategoryLabel(expense.categoryName)}
-                                </Badge>
-                              )}
                               {expense.counterpartyName && (
                                 <span className="truncate max-w-[100px]">{expense.counterpartyName}</span>
                               )}
@@ -1807,18 +1789,7 @@ export default function ExpensesInboxPage() {
                         </div>
                       </TableCell>
 
-                      {/* Categoria - visible només en xl+ */}
-                      <TableCell className="hidden xl:table-cell px-2">
-                        {expense.categoryName ? (
-                          <Badge variant="outline" className="text-[11px] px-1.5 py-0 max-w-[140px] truncate">
-                            {getCategoryLabel(expense.categoryName)}
-                          </Badge>
-                        ) : (
-                          <span className="text-muted-foreground text-xs">—</span>
-                        )}
-                      </TableCell>
-
-                      {/* Contrapart - visible només en xl+ */}
+                      {/* Proveïdor - visible només en xl+ */}
                       <TableCell className="hidden xl:table-cell px-2 text-muted-foreground text-[13px] max-w-[160px] truncate">
                         {expense.counterpartyName || '-'}
                       </TableCell>

@@ -2458,7 +2458,7 @@
   "projectModule.expensesPage.subtitle": "Asigna gastos a proyectos y controla la ejecución.",
   "projectModule.expensesPage.tableAmount": "Importe",
   "projectModule.expensesPage.tableCategory": "Categoría",
-  "projectModule.expensesPage.tableCounterparty": "Origen / Destinatario",
+  "projectModule.expensesPage.tableCounterparty": "Proveedor",
   "projectModule.expensesPage.tableDate": "Fecha",
   "projectModule.expensesPage.tableDescription": "Descripción",
   "projectModule.expensesPage.tableDoc": "Doc",
