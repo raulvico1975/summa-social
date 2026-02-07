@@ -6,6 +6,7 @@
 import * as React from 'react';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
+import { computeFxAmountEUR } from '@/lib/project-module/fx';
 import {
   useProjectDetail,
   useProjectBudgetLines,
@@ -556,9 +557,7 @@ export default function ProjectBudgetPage() {
         if (a.projectId !== projectId) continue;
 
         const pct = a.localPct ?? 100;
-        const expectedEUR = currentTC !== null
-          ? -Math.abs(originalAmount * (pct / 100) * currentTC)
-          : null;
+        const expectedEUR = computeFxAmountEUR(originalAmount, pct, currentTC);
 
         // Comparar amb l'actual
         if (expectedEUR === null && a.amountEUR === null) continue;
@@ -574,6 +573,38 @@ export default function ProjectBudgetPage() {
     }
     return false;
   }, [fxTransfers, project, expenseLinks, allExpenses, projectId]);
+
+  // Detectar si el projecte té context FX (moneda local configurada o despeses off-bank en moneda local)
+  const projectHasFxContext = React.useMemo(() => {
+    if (project?.fxCurrency) return true;
+    const expenseMap = new Map(allExpenses.map(e => [e.expense.txId, e.expense]));
+    for (const link of expenseLinks) {
+      if (!link.id.startsWith('off_')) continue;
+      const expense = expenseMap.get(link.id);
+      if (expense?.originalCurrency && expense.originalCurrency !== 'EUR') return true;
+    }
+    return false;
+  }, [project, expenseLinks, allExpenses]);
+
+  // TC efectiu del projecte (ponderat > legacy > null)
+  const effectiveTC = React.useMemo(
+    () => project ? getEffectiveProjectTC(fxTransfers, project) : null,
+    [fxTransfers, project]
+  );
+
+  // Banner "sense TC": projecte FX sense TC definit
+  const showNoTcBanner = projectHasFxContext && effectiveTC === null;
+
+  // Comptador d'imputacions amb amountEUR === null (pendents de conversió)
+  const pendingFxCount = React.useMemo(() => {
+    let count = 0;
+    for (const link of expenseLinks) {
+      for (const a of link.assignments) {
+        if (a.projectId === projectId && a.amountEUR === null) count++;
+      }
+    }
+    return count;
+  }, [expenseLinks, projectId]);
 
   // Handler per re-aplicar TC
   const handleReapplyFx = React.useCallback(async () => {
@@ -982,6 +1013,16 @@ export default function ProjectBudgetPage() {
         )}
       </div>
 
+      {/* Banner "Sense TC" (R2) — no dismissible */}
+      {showNoTcBanner && (
+        <Alert variant="default" className="border-amber-200 bg-amber-50">
+          <AlertTriangle className="h-4 w-4 text-amber-600" />
+          <AlertDescription className="text-sm text-amber-800">
+            {t.projectModule.fxNoTcBanner}
+          </AlertDescription>
+        </Alert>
+      )}
+
       {/* Resum — Estat A (sense partides) o Estat B (amb partides) */}
       {!hasBudgetLines ? (
         /* Estat A: Seguiment global */
@@ -1002,6 +1043,13 @@ export default function ProjectBudgetPage() {
             </CardHeader>
             <CardContent>
               <p className="text-2xl font-bold">{formatAmount(totals.totalProjectExecution)}</p>
+              {pendingFxCount > 0 && (
+                <p className="text-xs text-amber-600 mt-1">
+                  {pendingFxCount === 1
+                    ? t.projectModule.fxPendingCountSingular
+                    : t.projectModule.fxPendingCountPlural.replace('{{count}}', String(pendingFxCount))}
+                </p>
+              )}
             </CardContent>
           </Card>
           <Card>
@@ -1048,6 +1096,13 @@ export default function ProjectBudgetPage() {
             </CardHeader>
             <CardContent>
               <p className="text-2xl font-bold">{formatAmount(totals.executedByLines)}</p>
+              {pendingFxCount > 0 && (
+                <p className="text-xs text-amber-600 mt-1">
+                  {pendingFxCount === 1
+                    ? t.projectModule.fxPendingCountSingular
+                    : t.projectModule.fxPendingCountPlural.replace('{{count}}', String(pendingFxCount))}
+                </p>
+              )}
             </CardContent>
           </Card>
           <Card>

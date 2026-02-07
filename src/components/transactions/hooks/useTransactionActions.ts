@@ -1,9 +1,9 @@
 'use client';
 
 import * as React from 'react';
-import { doc, CollectionReference, type Firestore } from 'firebase/firestore';
-import { getMatchedPendingDocumentId } from '@/lib/pending-documents/api';
+import { doc, CollectionReference, type Firestore, writeBatch, deleteField, query, where, getDocs, limit } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL, deleteObject, FirebaseStorage } from 'firebase/storage';
+import { pendingDocumentsCollection } from '@/lib/pending-documents/refs';
 import { updateDocumentNonBlocking, deleteDocumentNonBlocking, addDocumentNonBlocking } from '@/firebase';
 import { assertUploadContext } from '@/lib/storage-upload-guard';
 import { useToast } from '@/hooks/use-toast';
@@ -95,6 +95,40 @@ interface UseTransactionActionsReturn {
   handleOpenNewContactDialog: (txId: string, type: 'donor' | 'supplier') => void;
   handleSaveNewContact: (formData: NewContactFormData) => void;
   handleCloseNewContactDialog: () => void;
+}
+
+// =============================================================================
+// HELPERS
+// =============================================================================
+
+/**
+ * Reverteix tots els PendingDocuments conciliats amb una transacció a 'confirmed'.
+ * Retorna el nombre de documents revertits (0 si no n'hi ha cap).
+ */
+async function unmatchPendingDocuments(
+  firestore: Firestore,
+  orgId: string,
+  txId: string
+): Promise<number> {
+  const q = query(
+    pendingDocumentsCollection(firestore, orgId),
+    where('matchedTransactionId', '==', txId),
+    where('status', '==', 'matched')
+  );
+
+  const snap = await getDocs(q);
+  if (snap.empty) return 0;
+
+  const batch = writeBatch(firestore);
+  for (const docSnap of snap.docs) {
+    batch.update(docSnap.ref, {
+      status: 'confirmed',
+      matchedTransactionId: deleteField(),
+    });
+  }
+
+  await batch.commit();
+  return snap.size;
 }
 
 // =============================================================================
@@ -315,6 +349,29 @@ export function useTransactionActions({
     setDocLoadingStates(prev => ({ ...prev, [transactionId]: true }));
     log(`[${transactionId}] Iniciant eliminació de document...`);
 
+    // ── GUARDRAIL: bloquejar si el document prové d'un pendent conciliat ──
+    if (firestore && organizationId && transactionId) {
+      const pdQuery = query(
+        pendingDocumentsCollection(firestore, organizationId),
+        where('matchedTransactionId', '==', transactionId),
+        where('status', '==', 'matched'),
+        limit(1)
+      );
+
+      const pdSnap = await getDocs(pdQuery);
+      if (!pdSnap.empty) {
+        toast({
+          variant: 'destructive',
+          title: t.pendingDocs.toasts.deleteDocBlockedTitle,
+          description: t.pendingDocs.toasts.deleteDocBlockedDesc,
+        });
+        setDocLoadingStates(prev => ({ ...prev, [transactionId]: false }));
+        setIsDeleteDocDialogOpen(false);
+        setTransactionToDeleteDoc(null);
+        return;
+      }
+    }
+
     try {
       // GUARDRAIL: Comprovar si el document prové d'un pendent conciliat
       const matchedPendingId = await getMatchedPendingDocumentId(firestore, organizationId, transactionId);
@@ -432,6 +489,28 @@ export function useTransactionActions({
       return;
     }
 
+    // ── AUTO-UNMATCH: revertir pending documents conciliats ──
+    let unmatchedCount = 0;
+    if (firestore && organizationId) {
+      try {
+        unmatchedCount = await unmatchPendingDocuments(
+          firestore,
+          organizationId,
+          transactionToDelete.id
+        );
+      } catch (error) {
+        console.error('[handleDeleteConfirm] Error unmatching pending documents:', error);
+        toast({
+          variant: 'destructive',
+          title: t.pendingDocs.toasts.autoUnmatchErrorTitle,
+          description: t.pendingDocs.toasts.autoUnmatchErrorDesc,
+        });
+        setIsDeleteDialogOpen(false);
+        setTransactionToDelete(null);
+        return; // NO eliminar la transacció si falla l'unmatch
+      }
+    }
+
     // Soft-delete per transaccions fiscals (returns, remittance IN, stripe donations amb contactId)
     if (firestore && organizationId && userId && isFiscallyRelevantTransaction(transactionToDelete)) {
       try {
@@ -458,6 +537,14 @@ export function useTransactionActions({
       // Delete normal per transaccions no fiscals
       deleteDocumentNonBlocking(doc(transactionsCollection, transactionToDelete.id));
       toast({ title: t.movements.table.transactionDeleted });
+    }
+
+    // Toast informatiu si s'ha desfet alguna conciliació
+    if (unmatchedCount > 0) {
+      toast({
+        title: t.pendingDocs.toasts.autoUnmatchTitle,
+        description: t.pendingDocs.toasts.autoUnmatchDesc,
+      });
     }
 
     setIsDeleteDialogOpen(false);
