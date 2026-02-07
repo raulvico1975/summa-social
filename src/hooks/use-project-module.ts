@@ -5,6 +5,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { computeFxAmountEUR } from '@/lib/project-module/fx';
+import { validateAssignments } from '@/lib/project-module/normalize-assignments';
 import {
   collection,
   query,
@@ -1241,6 +1242,14 @@ export function useSaveExpenseLink(): UseSaveExpenseLinkResult {
   ) => {
     if (!organizationId || !user) {
       throw new Error('No autenticat');
+    }
+
+    // Guardrail estructural: rebutjar dades invàlides ABANS d'escriure a Firestore
+    if (assignments.length > 0) {
+      const validation = validateAssignments(assignments);
+      if (!validation.isValid) {
+        throw new Error(`Invalid assignment state: ${validation.errors.join(', ')}`);
+      }
     }
 
     setIsSaving(true);

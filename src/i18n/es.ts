@@ -2264,6 +2264,7 @@ export const es = {
       toastErrorSaving: "Error guardando asignación",
       toastErrorBulk: "Error en asignación masiva",
       toastErrorRemoving: "Error eliminando asignación",
+      invalidAssignmentToast: "La imputación no es coherente. Revisa los porcentajes y vuelve a intentarlo.",
       // Confirmación
       confirmUnassign: "¿Seguro que quieres eliminar la asignación de este gasto?",
       // Tooltips

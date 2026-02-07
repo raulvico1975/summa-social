@@ -2425,6 +2425,7 @@
   "projectModule.expensesPage.toastErrorAssigning": "Erreur lors de l'attribution de la dépense",
   "projectModule.expensesPage.toastErrorBulk": "Erreur lors de l'attribution en masse",
   "projectModule.expensesPage.toastErrorRemoving": "Erreur lors de la suppression de l'attribution",
+  "projectModule.expensesPage.invalidAssignmentToast": "L'attribution n'est pas cohérente. Vérifie les pourcentages et réessaie.",
   "projectModule.expensesPage.toastErrorSaving": "Erreur lors de l'enregistrement de l'attribution",
   "projectModule.expensesPage.toastUnassigned": "Attribution supprimée",
   "projectModule.expensesPage.toastUnassignedDesc": "La dépense n'est plus attribuée à aucun projet.",
