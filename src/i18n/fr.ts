@@ -3099,6 +3099,10 @@ export const fr = {
       errorLink: "Impossible de lier le document.",
       errorIgnore: "Impossible d'ignorer la suggestion.",
       errorUnknown: "Erreur inconnue",
+      autoUnmatchTitle: "Rapprochement annulé",
+      autoUnmatchDesc: "Le rapprochement du document en attente lié a été annulé avant la suppression du mouvement.",
+      autoUnmatchErrorTitle: "Impossible d'annuler le rapprochement",
+      autoUnmatchErrorDesc: "Le rapprochement du document en attente n'a pas pu être annulé. Le mouvement n'a pas été supprimé afin d'éviter des incohérences.",
     },
     modals: {
       deleteTitle: "Supprimer le document ?",

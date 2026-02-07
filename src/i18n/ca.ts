@@ -3096,6 +3096,10 @@ export const ca = {
       errorLink: "No s'ha pogut vincular el document.",
       errorIgnore: "No s'ha pogut ignorar el suggeriment.",
       errorUnknown: "Error desconegut",
+      autoUnmatchTitle: "Conciliació desfeta",
+      autoUnmatchDesc: "S'ha desfet la conciliació del document pendent vinculat abans d'eliminar el moviment.",
+      autoUnmatchErrorTitle: "No s'ha pogut desfer la conciliació",
+      autoUnmatchErrorDesc: "No s'ha pogut desfer la conciliació del document pendent. El moviment no s'ha eliminat per evitar inconsistències.",
     },
     modals: {
       deleteTitle: "Eliminar document?",

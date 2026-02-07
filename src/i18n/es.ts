@@ -3091,6 +3091,10 @@ export const es = {
       errorLink: "No se ha podido vincular el documento.",
       errorIgnore: "No se ha podido ignorar la sugerencia.",
       errorUnknown: "Error desconocido",
+      autoUnmatchTitle: "Conciliación deshecha",
+      autoUnmatchDesc: "Se ha deshecho la conciliación del documento pendiente vinculado antes de eliminar el movimiento.",
+      autoUnmatchErrorTitle: "No se ha podido deshacer la conciliación",
+      autoUnmatchErrorDesc: "No se ha podido deshacer la conciliación del documento pendiente. El movimiento no se ha eliminado para evitar inconsistencias.",
     },
     modals: {
       deleteTitle: "¿Eliminar documento?",
