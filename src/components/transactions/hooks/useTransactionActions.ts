@@ -1,7 +1,7 @@
 'use client';
 
 import * as React from 'react';
-import { doc, CollectionReference, type Firestore, writeBatch, deleteField, query, where, getDocs } from 'firebase/firestore';
+import { doc, CollectionReference, type Firestore, writeBatch, deleteField, query, where, getDocs, limit } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL, deleteObject, FirebaseStorage } from 'firebase/storage';
 import { pendingDocumentsCollection } from '@/lib/pending-documents/refs';
 import { updateDocumentNonBlocking, deleteDocumentNonBlocking, addDocumentNonBlocking } from '@/firebase';
@@ -327,6 +327,29 @@ export function useTransactionActions({
 
     setDocLoadingStates(prev => ({ ...prev, [transactionId]: true }));
     log(`[${transactionId}] Iniciant eliminació de document...`);
+
+    // ── GUARDRAIL: bloquejar si el document prové d'un pendent conciliat ──
+    if (firestore && organizationId && transactionId) {
+      const pdQuery = query(
+        pendingDocumentsCollection(firestore, organizationId),
+        where('matchedTransactionId', '==', transactionId),
+        where('status', '==', 'matched'),
+        limit(1)
+      );
+
+      const pdSnap = await getDocs(pdQuery);
+      if (!pdSnap.empty) {
+        toast({
+          variant: 'destructive',
+          title: t.pendingDocs.toasts.deleteDocBlockedTitle,
+          description: t.pendingDocs.toasts.deleteDocBlockedDesc,
+        });
+        setDocLoadingStates(prev => ({ ...prev, [transactionId]: false }));
+        setIsDeleteDocDialogOpen(false);
+        setTransactionToDeleteDoc(null);
+        return;
+      }
+    }
 
     try {
       // Intentar eliminar el fitxer de Storage si tenim la URL
