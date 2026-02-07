@@ -48,7 +48,7 @@ interface ProjectCardProps {
 }
 
 function ProjectCard({ project, executedAmount }: ProjectCardProps) {
-  const { t } = useTranslations();
+  const { t, tr } = useTranslations();
   const { buildUrl } = useOrgUrl();
   const router = useRouter();
 
@@ -98,7 +98,7 @@ function ProjectCard({ project, executedAmount }: ProjectCardProps) {
             </CardTitle>
           </div>
           <Badge variant={project.status === 'active' ? 'default' : 'secondary'}>
-            {project.status === 'active' ? 'Actiu' : 'Tancat'}
+            {project.status === 'active' ? tr('projectModule.form.statusActive', 'Actiu') : tr('projectModule.form.statusClosed', 'Tancat')}
           </Badge>
         </div>
       </CardHeader>
@@ -112,15 +112,15 @@ function ProjectCard({ project, executedAmount }: ProjectCardProps) {
         {/* Info econòmica — llista vertical etiqueta/valor */}
         <div className="border-t pt-3 space-y-1">
           <div className="flex justify-between items-baseline">
-            <span className="text-xs text-muted-foreground">Pressupost</span>
+            <span className="text-xs text-muted-foreground">{tr('projectModule.budget', 'Pressupost')}</span>
             <span className="text-sm font-medium font-mono tabular-nums">{formatAmountCompact(budgeted)} €</span>
           </div>
           <div className="flex justify-between items-baseline">
-            <span className="text-xs text-muted-foreground">Executat</span>
+            <span className="text-xs text-muted-foreground">{tr('projectModule.executed', 'Executat')}</span>
             <span className="text-sm font-medium font-mono tabular-nums">{formatAmountCompact(executedAmount)} €</span>
           </div>
           <div className="flex justify-between items-baseline">
-            <span className="text-xs text-muted-foreground">Pendent</span>
+            <span className="text-xs text-muted-foreground">{tr('projectModule.pending', 'Pendent')}</span>
             <span className={`text-sm font-medium font-mono tabular-nums ${pending < 0 ? 'text-red-600' : ''}`}>
               {formatAmountCompact(pending)} €
             </span>
@@ -135,7 +135,7 @@ function ProjectCard({ project, executedAmount }: ProjectCardProps) {
           >
             <Button variant="outline" size="sm" className="w-full">
               <Euro className="h-4 w-4 mr-1" />
-              Gestió Econòmica
+              {tr('projectModule.budgetManagement', 'Gestió Econòmica')}
             </Button>
           </Link>
           <Link
@@ -165,7 +165,7 @@ export default function ProjectsListPage() {
   const { buildUrl } = useOrgUrl();
   const { firestore } = useFirebase();
   const { organizationId } = useCurrentOrganization();
-  const { t } = useTranslations();
+  const { t, tr } = useTranslations();
 
   // Carregar tots els expenseLinks per calcular execució per projecte
   const [executionByProject, setExecutionByProject] = React.useState<Map<string, number>>(new Map());
@@ -216,10 +216,10 @@ export default function ProjectsListPage() {
     return (
       <div className="flex flex-col items-center justify-center py-12 gap-4">
         <AlertCircle className="h-12 w-12 text-destructive" />
-        <p className="text-destructive font-medium">Error carregant projectes</p>
+        <p className="text-destructive font-medium">{tr('projectModule.errorLoadingProjects', 'Error carregant projectes')}</p>
         <p className="text-muted-foreground text-sm">{error.message}</p>
         <Button onClick={refresh} variant="outline">
-          Reintentar
+          {tr('projectModule.retry', 'Reintentar')}
         </Button>
       </div>
     );
@@ -230,15 +230,15 @@ export default function ProjectsListPage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold">Projectes</h1>
+          <h1 className="text-2xl font-bold">{tr('projectModule.projectsTitle', 'Projectes')}</h1>
           <p className="text-muted-foreground">
-            Gestiona els projectes per assignar despeses
+            {tr('projectModule.projectsDescription', 'Gestiona els projectes per assignar despeses')}
           </p>
         </div>
         <Link href={buildUrl('/dashboard/project-module/projects/new')}>
           <Button>
             <Plus className="h-4 w-4 mr-2" />
-            Nou projecte
+            {tr('projectModule.newProject', 'Nou projecte')}
           </Button>
         </Link>
       </div>
