@@ -6,6 +6,7 @@
 import * as React from 'react';
 import Link from 'next/link';
 import { useSearchParams, useRouter } from 'next/navigation';
+import { computeFxAmountEUR } from '@/lib/project-module/fx';
 import { useUnifiedExpenseFeed, useProjects, useSaveExpenseLink, useProjectBudgetLines, useUpdateOffBankExpense, useHardDeleteOffBankExpense, useProjectFxTransfers, getEffectiveProjectTC, isFxExpenseNeedingProjectTC, resolveExpenseTC } from '@/hooks/use-project-module';
 import { collection, doc, updateDoc, getDoc, getDocs } from 'firebase/firestore';
 import { useFirebase, useStorage } from '@/firebase/provider';
@@ -827,6 +828,18 @@ export default function ExpensesInboxPage() {
   const [editOffBankExpense, setEditOffBankExpense] = React.useState<UnifiedExpenseWithLink | null>(null);
   const [deleteConfirmExpense, setDeleteConfirmExpense] = React.useState<UnifiedExpenseWithLink | null>(null);
 
+  // TC del projecte per recàlcul d'edició off-bank FX (R5)
+  const [editProjectTC, setEditProjectTC] = React.useState<number | null>(null);
+
+  React.useEffect(() => {
+    if (!editOffBankExpense?.link?.assignments?.length) {
+      setEditProjectTC(null);
+      return;
+    }
+    const projectId = editOffBankExpense.link.assignments[0].projectId;
+    resolveProjectTC(projectId).then(tc => setEditProjectTC(tc));
+  }, [editOffBankExpense?.link?.assignments, resolveProjectTC]);
+
   // Filtres locals (cerca + filtre ràpid)
   const [searchQuery, setSearchQuery] = React.useState('');
   type ExpenseTableFilter =
@@ -1017,7 +1030,7 @@ export default function ExpensesInboxPage() {
         if (isFxExpenseNeedingProjectTC(expense.expense)) {
           const tc = resolveExpenseTC(expense.expense, fxTransfers, project);
           if (tc !== null) {
-            amountEUR = -Math.abs(expense.expense.originalAmount! * tc);
+            amountEUR = computeFxAmountEUR(expense.expense.originalAmount!, 100, tc);
           } else {
             amountEUR = null;
             noTcCount++;
@@ -2062,6 +2075,7 @@ export default function ExpensesInboxPage() {
           needsReview: editOffBankExpense.expense.needsReview ?? undefined,
         } : undefined}
         existingAssignments={editOffBankExpense?.link?.assignments}
+        projectFxRate={editProjectTC}
       />
 
       {/* Confirmació eliminació definitiva off-bank */}

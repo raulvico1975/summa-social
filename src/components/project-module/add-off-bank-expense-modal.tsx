@@ -22,6 +22,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
+import { computeFxAmountEUR } from '@/lib/project-module/fx';
 import { useSaveOffBankExpense, useUpdateOffBankExpense, useSaveExpenseLink } from '@/hooks/use-project-module';
 import type { ExpenseAssignment, OffBankAttachment } from '@/lib/project-module-types';
 import { useToast } from '@/hooks/use-toast';
@@ -313,19 +314,56 @@ export function OffBankExpenseModal({
         // Mode edició
         await update(expenseId, formData);
 
-        // Si l'import ha canviat i hi ha una única imputació al 100%, actualitzar-la
-        const newAmountEUR = parseFloat(amountEUR.replace(',', '.'));
-        const oldAmountEUR = initialValues ? parseFloat(initialValues.amountEUR.replace(',', '.')) : 0;
-        const amountChanged = Math.abs(newAmountEUR - oldAmountEUR) > 0.001;
-
-        if (amountChanged && existingAssignments && existingAssignments.length === 1) {
-          // Única imputació - actualitzar automàticament al nou import
+        // Recàlcul d'assignacions si l'import ha canviat (R5)
+        if (existingAssignments && existingAssignments.length === 1) {
           const assignment = existingAssignments[0];
-          const updatedAssignment: ExpenseAssignment = {
-            ...assignment,
-            amountEUR: -newAmountEUR, // negatiu per convenci
-          };
-          await saveExpenseLink(`off_${expenseId}`, [updatedAssignment], null);
+
+          if (useForeignCurrency) {
+            // FX: recalcular amb funció pura compartida
+            const newOriginalAmountStr = amountOriginal.replace(',', '.');
+            const newOriginalAmount = parseFloat(newOriginalAmountStr);
+            if (!isNaN(newOriginalAmount) && newOriginalAmount > 0) {
+              const oldOriginalStr = initialValues?.amountOriginal ?? '0';
+              const oldOriginalAmount = parseFloat(oldOriginalStr.replace(',', '.'));
+              const amountChanged = isNaN(oldOriginalAmount) || Math.abs(newOriginalAmount - oldOriginalAmount) > 0.001;
+
+              if (amountChanged) {
+                // TC forçat a la despesa > TC del projecte > null
+                const expenseTcStr = initialValues?.fxRateOverride;
+                const expenseTc = expenseTcStr ? parseFloat(expenseTcStr) : NaN;
+                const tc = (!isNaN(expenseTc) && expenseTc > 0) ? expenseTc : projectFxRate;
+
+                const newAmountEUR = computeFxAmountEUR(
+                  newOriginalAmount,
+                  assignment.localPct ?? 100,
+                  tc ?? null
+                );
+
+                if (newAmountEUR !== null) {
+                  await saveExpenseLink(`off_${expenseId}`, [{
+                    ...assignment,
+                    amountEUR: newAmountEUR,
+                  }], null);
+                }
+                // Si tc null → no tocar amountEUR
+              }
+            }
+            // Si amountOriginal invàlid → no tocar res
+          } else {
+            // EUR directe: recàlcul simple
+            const newAmountEUR = parseFloat(amountEUR.replace(',', '.'));
+            if (!isNaN(newAmountEUR) && newAmountEUR > 0) {
+              const oldAmountEUR = initialValues ? parseFloat(initialValues.amountEUR.replace(',', '.')) : 0;
+              const amountChanged = isNaN(oldAmountEUR) || Math.abs(newAmountEUR - oldAmountEUR) > 0.001;
+
+              if (amountChanged) {
+                await saveExpenseLink(`off_${expenseId}`, [{
+                  ...assignment,
+                  amountEUR: -newAmountEUR,
+                }], null);
+              }
+            }
+          }
         }
 
         trackUX('expenses.offBank.edit.save', { expenseId });

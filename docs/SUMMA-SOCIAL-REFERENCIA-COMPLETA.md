@@ -922,6 +922,7 @@ Millores de robustesa al mòdul de documents pendents:
 | **Hard reset drag/upload** | L'estat de drag & drop es reinicia completament entre operacions (force remount) |
 | **Comptadors per tab** | Cada tab mostra el nombre de documents que conté |
 | **Etiquetes de categoria i18n** | Les categories es mostren amb traduccions en lloc de claus internes |
+| **Auto-unmatch en eliminar transacció** | Eliminar un moviment conciliat desfà automàticament la conciliació del document pendent vinculat (torna a Confirmat). Si això falla, no s'elimina el moviment. |
 
 **Fitxers principals:**
 - `src/app/[orgSlug]/dashboard/movimientos/pendents/page.tsx`
