@@ -100,7 +100,8 @@ import {
 import { useFirebase } from '@/firebase';
 import { useCurrentOrganization } from '@/hooks/organization-provider';
 import { doc, getDoc } from 'firebase/firestore';
-import { buildProjectJustificationFundingXlsx } from '@/lib/project-justification-export';
+import { buildProjectJustificationFundingXlsx, type FundingOrderMode } from '@/lib/project-justification-export';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { exportProjectJustificationZip } from '@/lib/project-justification-attachments-zip';
 import { trackUX } from '@/lib/ux/trackUX';
 import { useRouter } from 'next/navigation';
@@ -507,6 +508,8 @@ export default function ProjectBudgetPage() {
   const [deleteConfirm, setDeleteConfirm] = React.useState<BudgetLine | null>(null);
   const [importWizardOpen, setImportWizardOpen] = React.useState(false);
   const [isExportingFunding, setIsExportingFunding] = React.useState(false);
+  const [exportDialogOpen, setExportDialogOpen] = React.useState(false);
+  const [exportOrderMode, setExportOrderMode] = React.useState<FundingOrderMode>('budgetLineThenChronological');
   const [isExportingZip, setIsExportingZip] = React.useState(false);
   const [zipProgress, setZipProgress] = React.useState<{ current: number; total: number } | null>(null);
   const [justificationModalOpen, setJustificationModalOpen] = React.useState(false);
@@ -747,12 +750,18 @@ export default function ProjectBudgetPage() {
     router.push(url);
   };
 
-  const handleExportFunding = async () => {
+  const handleOpenExportDialog = () => {
+    if (!organizationId || !project) return;
+    setExportOrderMode('budgetLineThenChronological');
+    setExportDialogOpen(true);
+  };
+
+  const handleConfirmExportFunding = async () => {
     if (!organizationId || !project) return;
 
+    setExportDialogOpen(false);
     setIsExportingFunding(true);
     try {
-      // Construir mapa de despeses per buildJustificationRows
       const expenseMap = new Map(allExpenses.map((e) => [e.expense.txId, e.expense]));
 
       const { blob, filename } = buildProjectJustificationFundingXlsx({
@@ -762,6 +771,7 @@ export default function ProjectBudgetPage() {
         budgetLines,
         expenseLinks,
         expenses: expenseMap,
+        orderMode: exportOrderMode,
       });
 
       // Descarregar fitxer
@@ -928,7 +938,7 @@ export default function ProjectBudgetPage() {
                   {t.projectModule?.viewExpensesTooltip ?? 'Veure despeses'}
                 </DropdownMenuItem>
                 <DropdownMenuItem
-                  onClick={handleExportFunding}
+                  onClick={handleOpenExportDialog}
                   disabled={isExportingFunding || expensesLoading || projectAssignmentsCount === 0}
                 >
                   {isExportingFunding ? (
@@ -978,7 +988,7 @@ export default function ProjectBudgetPage() {
             <Button
               variant="outline"
               size="icon"
-              onClick={handleExportFunding}
+              onClick={handleOpenExportDialog}
               disabled={isExportingFunding || expensesLoading || projectAssignmentsCount === 0}
               title={t.projectModule?.exportExcel ?? 'Exportar justificació (Excel)'}
             >
@@ -1696,6 +1706,50 @@ export default function ProjectBudgetPage() {
           await refreshLines();
         }}
       />
+
+      {/* Dialog selecció ordre Excel */}
+      <Dialog open={exportDialogOpen} onOpenChange={setExportDialogOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>
+              {tr('projectModule.exportExcel', 'Exportar justificació (Excel)')}
+            </DialogTitle>
+            <DialogDescription>
+              {tr('projectModule.export.orderMode.label', 'Ordre de les files')}
+            </DialogDescription>
+          </DialogHeader>
+
+          <RadioGroup
+            value={exportOrderMode}
+            onValueChange={(v) => setExportOrderMode(v as FundingOrderMode)}
+            className="space-y-3"
+          >
+            <div className="flex items-start space-x-3 p-3 border rounded-lg hover:bg-muted/50">
+              <RadioGroupItem value="budgetLineThenChronological" id="order-budget" className="mt-1" />
+              <Label htmlFor="order-budget" className="font-medium cursor-pointer">
+                {tr('projectModule.export.orderMode.byBudgetLine', 'Per partida i data')}
+              </Label>
+            </div>
+
+            <div className="flex items-start space-x-3 p-3 border rounded-lg hover:bg-muted/50">
+              <RadioGroupItem value="chronological" id="order-chrono" className="mt-1" />
+              <Label htmlFor="order-chrono" className="font-medium cursor-pointer">
+                {tr('projectModule.export.orderMode.chronological', 'Cronològic')}
+              </Label>
+            </div>
+          </RadioGroup>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setExportDialogOpen(false)}>
+              {t.common?.cancel ?? 'Cancel·lar'}
+            </Button>
+            <Button onClick={handleConfirmExportFunding}>
+              <Download className="h-4 w-4 mr-2" />
+              {tr('projectModule.export.download', 'Descarregar')}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Wizard d'importació de pressupost */}
       <BudgetImportWizard
