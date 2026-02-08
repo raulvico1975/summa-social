@@ -1199,7 +1199,7 @@ export default function ProjectBudgetPage() {
           <div className="mt-1 font-mono">
             {weightedFxRate !== null ? (
               <>
-                {new Intl.NumberFormat('ca-ES', { minimumFractionDigits: 6, maximumFractionDigits: 6 }).format(weightedFxRate)} {t.projectModule?.fxTransfersEurPerLocal ?? 'EUR/local'}
+                {new Intl.NumberFormat('ca-ES', { minimumFractionDigits: 10, maximumFractionDigits: 10 }).format(weightedFxRate)} {t.projectModule?.fxTransfersEurPerLocal ?? 'EUR/local'}
                 {weightedFxCurrency && <span className="ml-1">({weightedFxCurrency})</span>}
               </>
             ) : project.fxRate ? (
