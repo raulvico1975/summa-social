@@ -23,6 +23,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { computeFxAmountEUR } from '@/lib/project-module/fx';
+import { normalizeAssignments } from '@/lib/project-module/normalize-assignments';
 import { useSaveOffBankExpense, useUpdateOffBankExpense, useSaveExpenseLink } from '@/hooks/use-project-module';
 import type { ExpenseAssignment, OffBankAttachment } from '@/lib/project-module-types';
 import { useToast } from '@/hooks/use-toast';
@@ -363,6 +364,102 @@ export function OffBankExpenseModal({
                 }], null);
               }
             }
+          }
+        } else if (existingAssignments && existingAssignments.length > 1) {
+          // ===== B2: multi-assignació =====
+
+          // 1) Detectar canvi d'import
+          // FX: comparem import original
+          // EUR: comparem import EUR
+          if (useForeignCurrency) {
+            const newOriginalStr = amountOriginal.replace(',', '.');
+            const newOriginalAmount = parseFloat(newOriginalStr);
+            const oldOriginalStr = initialValues?.amountOriginal ?? '0';
+            const oldOriginalAmount = parseFloat(oldOriginalStr.replace(',', '.'));
+
+            if (isNaN(newOriginalAmount) || newOriginalAmount <= 0) return;
+            const amountChanged =
+              isNaN(oldOriginalAmount) ||
+              Math.abs(newOriginalAmount - oldOriginalAmount) > 0.001;
+            if (!amountChanged) return;
+
+            // 2) Resoldre TC (forçat > projecte)
+            const expenseTcStr = initialValues?.fxRateOverride;
+            const expenseTc = expenseTcStr ? parseFloat(expenseTcStr) : NaN;
+            const tc = (!isNaN(expenseTc) && expenseTc > 0) ? expenseTc : projectFxRate;
+
+            // Guardrail: si no hi ha TC resolt, no tocar res
+            if (!tc || tc <= 0) return;
+
+            // 3) Recalcular només assignacions amb amountEUR !== null
+            const updated = existingAssignments.map(a => {
+              if (a.amountEUR === null) return a; // preservar pendents
+              const pct = a.localPct ?? 0;
+              const eur = computeFxAmountEUR(newOriginalAmount, pct, tc);
+              // eur no pot ser NaN; si fos null, ja hauríem retornat abans
+              return { ...a, amountEUR: eur };
+            });
+
+            // 4) Normalitzar i desar (preserva parcialitats)
+            const totalAmountEURAbs = updated.reduce(
+              (s, a) => s + Math.abs(a.amountEUR ?? 0),
+              0
+            );
+            const normalized = normalizeAssignments(
+              updated,
+              { isFx: true, totalAmountEURAbs },
+              'preservePartial'
+            );
+
+            await saveExpenseLink(`off_${expenseId}`, normalized.assignments, null);
+          } else {
+            // ===== EUR (no FX) =====
+            const newAmountEUR = parseFloat(amountEUR.replace(',', '.'));
+            const oldAmountEUR = initialValues
+              ? parseFloat(initialValues.amountEUR.replace(',', '.'))
+              : 0;
+
+            if (isNaN(newAmountEUR) || newAmountEUR <= 0) return;
+            const amountChanged =
+              isNaN(oldAmountEUR) || Math.abs(newAmountEUR - oldAmountEUR) > 0.001;
+            if (!amountChanged) return;
+
+            // Guardrail: totes les assignacions han de tenir amountEUR vàlid
+            if (existingAssignments.some(a => a.amountEUR === null)) return;
+
+            const weights = existingAssignments.map(a => Math.abs(a.amountEUR ?? 0));
+            const totalWeight = weights.reduce((s, v) => s + v, 0);
+            if (totalWeight <= 0) return;
+
+            // Repartiment proporcional
+            let acc = 0;
+            const updated = existingAssignments.map((a, idx) => {
+              const share = (weights[idx] / totalWeight) * newAmountEUR;
+              const rounded = Math.round(share * 100) / 100;
+              acc += rounded;
+              return { ...a, amountEUR: -Math.abs(rounded) };
+            });
+
+            // Ajust de cèntims a l'última assignació
+            const delta = Math.round((newAmountEUR - acc) * 100) / 100;
+            if (delta !== 0 && updated.length > 0) {
+              const last = updated[updated.length - 1];
+              last.amountEUR = -Math.abs(
+                Math.round((Math.abs(last.amountEUR) + delta) * 100) / 100
+              );
+            }
+
+            const totalAmountEURAbs = updated.reduce(
+              (s, a) => s + Math.abs(a.amountEUR ?? 0),
+              0
+            );
+            const normalized = normalizeAssignments(
+              updated,
+              { isFx: false, totalAmountEURAbs },
+              'preservePartial'
+            );
+
+            await saveExpenseLink(`off_${expenseId}`, normalized.assignments, null);
           }
         }
 
