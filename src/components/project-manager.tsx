@@ -25,7 +25,8 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { PlusCircle, Edit, Archive, TrendingUp, TrendingDown, DollarSign, Briefcase } from 'lucide-react';
-import type { Project, Emisor, Transaction } from '@/lib/data';
+import type { Project, Emisor, Transaction, Category } from '@/lib/data';
+import { findSystemCategoryId } from '@/lib/constants';
 import { useToast } from '@/hooks/use-toast';
 import { StatCard } from './stat-card';
 import { useCollection, useFirebase, useMemoFirebase, addDocumentNonBlocking, setDocumentNonBlocking } from '@/firebase';
@@ -40,8 +41,6 @@ export function ProjectManager() {
   const { firestore, user } = useFirebase();
   const { organizationId } = useCurrentOrganization();
   const { t } = useTranslations();
-  const MISSION_TRANSFER_CATEGORY_KEY = 'missionTransfers';
-
   // ═══════════════════════════════════════════════════════════════════════════
   // CANVI: Ara les col·leccions apunten a organizations/{orgId}/...
   // ═══════════════════════════════════════════════════════════════════════════
@@ -57,10 +56,20 @@ export function ProjectManager() {
     () => organizationId ? collection(firestore, 'organizations', organizationId, 'transactions') : null,
     [firestore, organizationId]
   );
+  const categoriesCollection = useMemoFirebase(
+    () => organizationId ? collection(firestore, 'organizations', organizationId, 'categories') : null,
+    [firestore, organizationId]
+  );
 
   const { data: projects } = useCollection<Project>(projectsCollection);
   const { data: emissors } = useCollection<Emisor>(emissorsCollection);
   const { data: transactions } = useCollection<Transaction>(transactionsCollection);
+  const { data: categories } = useCollection<Category>(categoriesCollection);
+
+  const missionTransferCategoryId = React.useMemo(
+    () => categories ? findSystemCategoryId(categories, 'missionTransfers') : null,
+    [categories]
+  );
 
   const [isDialogOpen, setIsDialogOpen] = React.useState(false);
   const [isReassignOpen, setIsReassignOpen] = React.useState(false);
@@ -97,7 +106,7 @@ export function ProjectManager() {
             if (tx.amount > 0) {
                 balances[tx.projectId].funded += tx.amount;
             } else {
-                 if (tx.category === MISSION_TRANSFER_CATEGORY_KEY) {
+                 if (missionTransferCategoryId && tx.category === missionTransferCategoryId) {
                     balances[tx.projectId].sent += Math.abs(tx.amount);
                 } else {
                     balances[tx.projectId].expenses += Math.abs(tx.amount);
@@ -106,7 +115,7 @@ export function ProjectManager() {
         }
     });
     return balances;
-  }, [projects, transactions, MISSION_TRANSFER_CATEGORY_KEY]);
+  }, [projects, transactions, missionTransferCategoryId]);
 
   const handleEdit = (project: Project) => {
     setEditingProject(project);

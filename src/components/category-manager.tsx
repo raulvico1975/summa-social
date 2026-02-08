@@ -79,7 +79,7 @@ function CategoryTable({
             title={categoryTranslations[category.name] || category.name}
             leadingIcon={<Tag className="h-4 w-4" />}
             actions={
-              canEdit ? (
+              canEdit && !category.systemKey ? (
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
                     <Button variant="ghost" size="icon" className="h-8 w-8">
@@ -128,18 +128,22 @@ function CategoryTable({
               <TableCell className="font-medium">{categoryTranslations[category.name] || category.name}</TableCell>
               {canEdit && (
                 <TableCell className="text-right">
-                  <Button variant="ghost" size="icon" onClick={() => onEdit(category)}>
-                    <Edit className="h-4 w-4" />
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="text-amber-500 hover:text-amber-600"
-                    onClick={() => onDelete(category)}
-                    title="Arxivar"
-                  >
-                    <Archive className="h-4 w-4" />
-                  </Button>
+                  {!category.systemKey && (
+                    <>
+                      <Button variant="ghost" size="icon" onClick={() => onEdit(category)}>
+                        <Edit className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="text-amber-500 hover:text-amber-600"
+                        onClick={() => onDelete(category)}
+                        title="Arxivar"
+                      >
+                        <Archive className="h-4 w-4" />
+                      </Button>
+                    </>
+                  )}
                 </TableCell>
               )}
             </TableRow>
@@ -242,19 +246,15 @@ export function CategoryManager() {
       const result = await response.json();
 
       if (result.success) {
-        // Arxivat directe (no tenia moviments actius)
+        // Arxivat directe (no tenia moviments assignats)
         const categoryName = categoryTranslations[category.name] || category.name;
         toast({
           title: t.settings?.categoryArchivedToast ?? 'Categoria arxivada',
           description: t.settings?.categoryArchivedToastDescription?.(categoryName) ?? `La categoria "${categoryName}" ha estat arxivada.`,
         });
         setCategoryToArchive(null);
-      } else if (result.code === 'HAS_ACTIVE_TRANSACTIONS') {
-        // Té moviments actius → obrir modal de reassignació
-        setAffectedTransactionsCount(result.activeCount || 0);
-        setIsReassignOpen(true);
       } else {
-        // Error genèric
+        // Error: CATEGORY_IN_USE, SYSTEM_CATEGORY_LOCKED, o error genèric
         toast({
           variant: 'destructive',
           title: t.settings?.archiveError ?? 'Error en arxivar',

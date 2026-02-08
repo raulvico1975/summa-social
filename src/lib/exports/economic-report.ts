@@ -1,6 +1,5 @@
 import type { Transaction, Category, Project, Contact } from '@/lib/data';
 import { formatCurrencyEU } from '@/lib/normalize';
-import { MISSION_TRANSFER_CATEGORY_KEY } from '@/lib/constants';
 
 export interface AggregateRow {
   id: string;
@@ -123,7 +122,7 @@ export function aggregateOperationalExpensesByProject({
   transactions,
   projects,
   topN = DEFAULT_TOP_N,
-  missionKey = MISSION_TRANSFER_CATEGORY_KEY,
+  missionKey,
   labels,
 }: ExpenseAggregationParams): AggregateResult {
   const projectMap = new Map<string, Project & { id: string }>();
@@ -160,7 +159,7 @@ export function aggregateMissionTransfersByContact({
   transactions,
   contacts,
   topN = DEFAULT_TOP_N,
-  missionKey = MISSION_TRANSFER_CATEGORY_KEY,
+  missionKey,
   labels,
 }: TransferAggregationParams): AggregateResult {
   const contactMap = new Map<string, Contact & { id: string }>();

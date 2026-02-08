@@ -3490,6 +3490,63 @@ Comprova:
 - Claus extra que no existeixen al base (CA)
 
 
+### 3.11.16 Exportació Excel de justificació per finançadors (NOU v1.37)
+
+Excel amb totes les despeses assignades a un projecte, pensat per entregar al finançador.
+
+**Punt d'entrada:** Pantalla de pressupost del projecte → botó descàrrega o menú ⋮ → "Exportar justificació (Excel)"
+
+**Diàleg de selecció d'ordre:**
+
+Abans de generar l'Excel, l'usuari escull com ordenar les files:
+
+| Mode | Valor intern | Comportament |
+|------|-------------|--------------|
+| Per partida i data | `budgetLineThenChronological` | Agrupa per `budgetLineId`, dins de cada partida ordena per data. Per defecte. |
+| Cronològic | `chronological` | Ordena totes les files per `dateExpense` ascendent, sense agrupació. |
+
+**Columnes (A-L):**
+
+| Col. | Capçalera | Contingut | Format |
+|------|-----------|-----------|--------|
+| A | Núm. | Número correlatiu (recalculat segons ordre escollit) | Enter |
+| B | Data | Data de la despesa | Date (Excel) |
+| C | Concepte / Descripció | `concept` o `description` | Text |
+| D | Proveïdor | `counterpartyName` | Text |
+| E | Núm. factura | `invoiceNumber` (offBank directe, bank via `justification`) | Text |
+| F | Partida | `budgetLineCode - budgetLineName` | Text |
+| G | Tipus de canvi aplicat | `fxRate` de la despesa → `projectFxRate` → buit. 6 decimals. | `0.000000` |
+| H | Import total (moneda despesa) | `|originalAmount|` si FX, `|amountEUR|` si EUR | `#,##0.00` |
+| I | Moneda | `originalCurrency` o `EUR` | Text |
+| J | Import total (EUR) | `|amountEUR|` | `#,##0.00` |
+| K | Import imputat (moneda local) | `|originalAmount| × localPct / 100` (només si FX) | `#,##0.00` |
+| L | Import imputat (EUR) | `amountAssignedEUR` de l'assignment | `#,##0.00` |
+
+**Fila de totals:** Suma de columnes H, J, K, L.
+
+**Capçaleres traduïdes:** Les etiquetes de columna es passen via `FundingColumnLabels` i es resolen amb `tr()` → surten en l'idioma de l'usuari (ca/es/fr/pt).
+
+**Fitxers:**
+
+| Fitxer | Funció |
+|--------|--------|
+| `src/lib/project-justification-export.ts` | `buildProjectJustificationFundingXlsx()` — generació de l'Excel |
+| `src/lib/project-justification-rows.ts` | `buildJustificationRows()` — base de files (compartida amb ZIP) |
+| `src/app/[orgSlug]/dashboard/project-module/projects/[projectId]/budget/page.tsx` | UI del diàleg + invocació |
+
+**Tipus rellevants:**
+
+```typescript
+type FundingOrderMode = 'chronological' | 'budgetLineThenChronological';
+
+interface FundingColumnLabels {
+  order: string; date: string; concept: string; supplier: string;
+  invoiceNumber: string; budgetLine: string; fxRateApplied: string;
+  totalOriginalAmount: string; currency: string; totalEurAmount: string;
+  assignedOriginalAmount: string; assignedEurAmount: string;
+}
+```
+
 ## 3.12 LIQUIDACIONS DE DESPESES (NOU v1.27)
 
 Sistema per gestionar liquidacions de despeses de viatge i desplaçaments amb tiquets, quilometratge i generació de PDF.

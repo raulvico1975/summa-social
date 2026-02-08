@@ -3,6 +3,7 @@
 type DefaultCategory = {
     nameKey: string;
     type: 'income' | 'expense';
+    systemKey?: string;
 }
 
 /**
@@ -33,14 +34,14 @@ export const DEFAULT_EXPENSE_CATEGORIES: DefaultCategory[] = [
   { nameKey: 'projectMaterials', type: 'expense' },
   { nameKey: 'training', type: 'expense' },
   { nameKey: 'bankFees', type: 'expense' },
-  { nameKey: 'missionTransfers', type: 'expense' },
+  { nameKey: 'missionTransfers', type: 'expense', systemKey: 'missionTransfers' },
   { nameKey: 'otherExpenses', type: 'expense' },
 ];
 
 export const ALL_DEFAULT_CATEGORIES = [
   ...DEFAULT_INCOME_CATEGORIES,
   ...DEFAULT_EXPENSE_CATEGORIES,
-].map(c => ({ name: c.nameKey, type: c.type })); // Adapt for the initialization hook
+].map(c => ({ name: c.nameKey, type: c.type, ...(c.systemKey && { systemKey: c.systemKey }) }));
 
 // We keep the mapping for translation files
 export const CATEGORY_TRANSLATION_KEYS = {

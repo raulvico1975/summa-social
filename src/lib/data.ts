@@ -227,6 +227,9 @@ export type Category = {
   type: 'income' | 'expense';
   order?: number;  // Ordre de visualització (opcional)
 
+  /** Clau invariant per categories de sistema (ex: 'missionTransfers'). No editable. */
+  systemKey?: string | null;
+
   // ═══════════════════════════════════════════════════════════════════════════
   // CAMPS D'ARXIVAT (soft-delete) — v1.35
   // Només escriptura via API /api/categories/archive (Admin SDK)
