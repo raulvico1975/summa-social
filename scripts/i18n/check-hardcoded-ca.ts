@@ -147,6 +147,8 @@ for (const dir of SCAN_DIRS) {
 
 // Baseline: known pre-existing hardcoded strings that will be migrated in future tasks.
 // When adding new strings, the count should NOT increase — that's the guardrail.
+// Objectiu: reduir BASELINE_COUNT a 0 progressivament migrant cada literal a tr().
+// Cada vegada que migris literals, actualitza el comptador aquí.
 const BASELINE_COUNT = 54; // As of 2026-02-08
 
 if (allFindings.length > BASELINE_COUNT) {
