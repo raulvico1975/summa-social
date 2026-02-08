@@ -85,7 +85,7 @@ import { attachDocumentToTransaction } from '@/lib/files/attach-document';
 import { DateFilter, type DateFilterValue } from '@/components/date-filter';
 import { useTransactionFilters } from '@/hooks/use-transaction-filters';
 import { useBankAccounts } from '@/hooks/use-bank-accounts';
-import { MISSION_TRANSFER_CATEGORY_KEY, TRANSACTION_URL_FILTERS, type TransactionUrlFilter, type SourceFilter } from '@/lib/constants';
+import { TRANSACTION_URL_FILTERS, type TransactionUrlFilter, type SourceFilter, findSystemCategoryId } from '@/lib/constants';
 import { SepaReconcileModal } from '@/components/pending-documents/sepa-reconcile-modal';
 import type { PrebankRemittance } from '@/lib/pending-documents/sepa-remittance';
 import { prebankRemittancesCollection } from '@/lib/pending-documents/sepa-remittance';
@@ -299,6 +299,11 @@ export function TransactionsTable({ initialDateFilter = null }: TransactionsTabl
   const { data: availableCategories } = useCollection<Category>(categoriesCollection);
   const { data: availableContacts } = useCollection<AnyContact>(contactsCollection);
   const { data: availableProjects } = useCollection<Project>(projectsCollection);
+
+  const missionTransferCategoryId = React.useMemo(
+    () => availableCategories ? findSystemCategoryId(availableCategories, 'missionTransfers') : null,
+    [availableCategories]
+  );
 
   // Estat per toggle SuperAdmin "incloure arxivades"
   const [showArchived, setShowArchived] = React.useState(false);
@@ -700,11 +705,11 @@ export function TransactionsTable({ initialDateFilter = null }: TransactionsTabl
         break;
       case 'operatingExpenses':
         result = transactions.filter(
-          tx => tx.amount < 0 && tx.category !== MISSION_TRANSFER_CATEGORY_KEY
+          tx => tx.amount < 0 && tx.category !== missionTransferCategoryId
         );
         break;
       case 'missionTransfers':
-        result = transactions.filter(tx => tx.category === MISSION_TRANSFER_CATEGORY_KEY);
+        result = transactions.filter(tx => missionTransferCategoryId && tx.category === missionTransferCategoryId);
         break;
       case 'donations':
         // Donacions: ingressos de contactType donor amb membershipType one-time
