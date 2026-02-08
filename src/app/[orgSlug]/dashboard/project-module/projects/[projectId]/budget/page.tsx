@@ -100,7 +100,7 @@ import {
 import { useFirebase } from '@/firebase';
 import { useCurrentOrganization } from '@/hooks/organization-provider';
 import { doc, getDoc } from 'firebase/firestore';
-import { buildProjectJustificationFundingXlsx, type FundingOrderMode } from '@/lib/project-justification-export';
+import { buildProjectJustificationFundingXlsx, type FundingOrderMode, type FundingColumnLabels } from '@/lib/project-justification-export';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { exportProjectJustificationZip } from '@/lib/project-justification-attachments-zip';
 import { trackUX } from '@/lib/ux/trackUX';
@@ -764,6 +764,21 @@ export default function ProjectBudgetPage() {
     try {
       const expenseMap = new Map(allExpenses.map((e) => [e.expense.txId, e.expense]));
 
+      const columnLabels: FundingColumnLabels = {
+        order: tr('projectModule.export.columns.order', 'Núm.'),
+        date: tr('projectModule.export.columns.date', 'Data'),
+        concept: tr('projectModule.export.columns.concept', 'Concepte / Descripció'),
+        supplier: tr('projectModule.export.columns.supplier', 'Proveïdor'),
+        invoiceNumber: tr('projectModule.export.columns.invoiceNumber', 'Núm. factura'),
+        budgetLine: tr('projectModule.export.columns.budgetLine', 'Partida'),
+        fxRateApplied: tr('projectModule.export.columns.fxRateApplied', 'Tipus de canvi aplicat'),
+        totalOriginalAmount: tr('projectModule.export.columns.totalOriginalAmount', 'Import total (moneda despesa)'),
+        currency: tr('projectModule.export.columns.currency', 'Moneda'),
+        totalEurAmount: tr('projectModule.export.columns.totalEurAmount', 'Import total (EUR)'),
+        assignedOriginalAmount: tr('projectModule.export.columns.assignedOriginalAmount', 'Import imputat (moneda local)'),
+        assignedEurAmount: tr('projectModule.export.columns.assignedEurAmount', 'Import imputat (EUR)'),
+      };
+
       const { blob, filename } = buildProjectJustificationFundingXlsx({
         projectId,
         projectCode: project.code ?? '',
@@ -772,6 +787,8 @@ export default function ProjectBudgetPage() {
         expenseLinks,
         expenses: expenseMap,
         orderMode: exportOrderMode,
+        projectFxRate: project.fxRate ?? null,
+        columnLabels,
       });
 
       // Descarregar fitxer
