@@ -39,6 +39,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { AssignmentEditor } from '@/components/project-module/assignment-editor';
 import { formatDateDMY } from '@/lib/normalize';
+import { useTranslations } from '@/i18n';
 import type { ExpenseAssignment, ExpenseJustification } from '@/lib/project-module-types';
 
 function formatAmount(amount: number): string {
@@ -55,6 +56,7 @@ export default function ExpenseDetailPage() {
   const { buildUrl } = useOrgUrl();
   const { toast } = useToast();
 
+  const { tr } = useTranslations();
   const { expense, link, isLoading, error, refresh } = useExpenseDetail(txId);
   const { projects, isLoading: projectsLoading, error: projectsError } = useProjects(true);
   const { save, remove, isSaving } = useSaveExpenseLink();
@@ -109,14 +111,14 @@ export default function ExpenseDetailPage() {
       await refresh();
       setIsEditing(false);
       toast({
-        title: 'Assignació desada',
-        description: 'La despesa s\'ha assignat correctament.',
+        title: tr('projectModule.assignment.savedTitle'),
+        description: tr('projectModule.assignment.savedDesc'),
       });
     } catch (err) {
       toast({
         variant: 'destructive',
-        title: 'Error',
-        description: err instanceof Error ? err.message : 'Error desant assignació',
+        title: tr('common.error'),
+        description: err instanceof Error ? err.message : tr('projectModule.assignment.saveError'),
       });
     }
   };
@@ -137,14 +139,14 @@ export default function ExpenseDetailPage() {
       await refresh();
       setIsEditingJustification(false);
       toast({
-        title: 'Justificació desada',
-        description: 'Les dades de justificació s\'han actualitzat.',
+        title: tr('projectModule.justification.savedTitle'),
+        description: tr('projectModule.justification.savedDesc'),
       });
     } catch (err) {
       toast({
         variant: 'destructive',
-        title: 'Error',
-        description: err instanceof Error ? err.message : 'Error desant justificació',
+        title: tr('common.error'),
+        description: err instanceof Error ? err.message : tr('projectModule.justification.saveError'),
       });
     }
   };
@@ -168,20 +170,20 @@ export default function ExpenseDetailPage() {
   };
 
   const handleRemove = async () => {
-    if (!confirm('Segur que vols eliminar l\'assignació?')) return;
+    if (!confirm(tr('projectModule.assignment.confirmRemove'))) return;
 
     try {
       await remove(txId);
       await refresh();
       toast({
-        title: 'Assignació eliminada',
-        description: 'La despesa ja no està assignada a cap projecte.',
+        title: tr('projectModule.assignment.removedTitle'),
+        description: tr('projectModule.assignment.removedDesc'),
       });
     } catch (err) {
       toast({
         variant: 'destructive',
-        title: 'Error',
-        description: err instanceof Error ? err.message : 'Error eliminant assignació',
+        title: tr('common.error'),
+        description: err instanceof Error ? err.message : tr('projectModule.assignment.removeError'),
       });
     }
   };
@@ -190,10 +192,10 @@ export default function ExpenseDetailPage() {
     return (
       <div className="flex flex-col items-center justify-center py-12 gap-4">
         <AlertCircle className="h-12 w-12 text-destructive" />
-        <p className="text-destructive font-medium">Error carregant despesa</p>
+        <p className="text-destructive font-medium">{tr('projectModule.expensesPage.loadError')}</p>
         <p className="text-muted-foreground text-sm">{error.message}</p>
         <Button onClick={() => router.back()} variant="outline">
-          Tornar
+          {tr('common.back')}
         </Button>
       </div>
     );
@@ -235,7 +237,7 @@ export default function ExpenseDetailPage() {
           </Button>
         </Link>
         <div>
-          <h1 className="text-2xl font-bold">Detall de despesa</h1>
+          <h1 className="text-2xl font-bold">{tr('projectModule.expenseDetail.title')}</h1>
         </div>
       </div>
 
@@ -245,23 +247,23 @@ export default function ExpenseDetailPage() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <FileText className="h-5 w-5" />
-              Informació de la despesa
+              {tr('projectModule.expenseDetail.infoTitle')}
             </CardTitle>
             <CardDescription>
-              Informació sincronitzada automàticament
+              {tr('projectModule.expenseDetail.infoDesc')}
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="flex items-center justify-between">
               <span className="text-muted-foreground flex items-center gap-2">
                 <Calendar className="h-4 w-4" />
-                Data
+                {tr('projectModule.expenseDetail.dateLabel')}
               </span>
               <span className="font-medium">{formatDateDMY(expense.date)}</span>
             </div>
 
             <div className="flex items-center justify-between">
-              <span className="text-muted-foreground">Import</span>
+              <span className="text-muted-foreground">{tr('projectModule.expenseDetail.amountLabel')}</span>
               <span className="font-mono font-bold text-lg text-red-600">
                 {formatAmount(expense.amountEUR)}
               </span>
@@ -270,7 +272,7 @@ export default function ExpenseDetailPage() {
             <Separator />
 
             <div className="space-y-2">
-              <span className="text-muted-foreground text-sm">Descripció</span>
+              <span className="text-muted-foreground text-sm">{tr('projectModule.expenseDetail.descriptionLabel')}</span>
               <p className="text-sm">{expense.description || '-'}</p>
             </div>
 
@@ -295,7 +297,7 @@ export default function ExpenseDetailPage() {
 
             {expense.documents.length > 0 && (
               <div className="space-y-2">
-                <span className="text-muted-foreground text-sm">Documents</span>
+                <span className="text-muted-foreground text-sm">{tr('projectModule.expenseDetail.documentsLabel')}</span>
                 {expense.documents.map((doc, i) => (
                   <a
                     key={i}
@@ -318,9 +320,9 @@ export default function ExpenseDetailPage() {
           <CardHeader>
             <div className="flex items-center justify-between">
               <div>
-                <CardTitle>Assignació a projectes</CardTitle>
+                <CardTitle>{tr('projectModule.expenseDetail.assignmentTitle')}</CardTitle>
                 <CardDescription>
-                  Vincula aquesta despesa a un o més projectes
+                  {tr('projectModule.expenseDetail.assignmentDesc')}
                 </CardDescription>
               </div>
               {!isEditing && (
@@ -331,7 +333,7 @@ export default function ExpenseDetailPage() {
                       size="icon"
                       onClick={handleRemove}
                       disabled={isSaving}
-                      title="Eliminar assignació"
+                      title={tr('projectModule.expenseDetail.deleteAssignment')}
                     >
                       <Trash2 className="h-4 w-4" />
                     </Button>
@@ -340,7 +342,7 @@ export default function ExpenseDetailPage() {
                     variant="default"
                     size="icon"
                     onClick={() => setIsEditing(true)}
-                    title={link ? 'Editar assignació' : 'Assignar a projecte'}
+                    title={link ? tr('projectModule.expenseDetail.editAssignment') : tr('projectModule.expenseDetail.assignToProject')}
                   >
                     {link ? (
                       <Edit className="h-4 w-4" />
@@ -371,7 +373,7 @@ export default function ExpenseDetailPage() {
                 {/* Pendent d'assignar (si no complet) */}
                 {!isFullyAssigned && (
                   <div className="flex items-center justify-between p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
-                    <span className="text-yellow-800 font-medium">Pendent d'assignar</span>
+                    <span className="text-yellow-800 font-medium">{tr('projectModule.expenseDetail.pendingAssign')}</span>
                     <span className="font-mono font-medium text-yellow-700">
                       {formatAmount(-remainingAmount)}
                     </span>
@@ -396,7 +398,7 @@ export default function ExpenseDetailPage() {
                 <Separator />
 
                 <div className="flex items-center justify-between text-sm">
-                  <span className="text-muted-foreground">Total assignat</span>
+                  <span className="text-muted-foreground">{tr('projectModule.expenseDetail.totalAssigned')}</span>
                   <span className="font-mono font-medium">
                     {formatAmount(-assignedAmount)}
                   </span>
@@ -404,7 +406,7 @@ export default function ExpenseDetailPage() {
 
                 {isFullyAssigned && (
                   <div className="flex items-center justify-between text-sm">
-                    <span className="text-green-600 font-medium">Completament assignada</span>
+                    <span className="text-green-600 font-medium">{tr('projectModule.expenseDetail.fullyAssigned')}</span>
                   </div>
                 )}
 
@@ -412,7 +414,7 @@ export default function ExpenseDetailPage() {
                   <>
                     <Separator />
                     <div className="space-y-1">
-                      <span className="text-muted-foreground text-sm">Nota</span>
+                      <span className="text-muted-foreground text-sm">{tr('projectModule.expenseDetail.noteLabel')}</span>
                       <p className="text-sm">{link.note}</p>
                     </div>
                   </>
@@ -420,9 +422,9 @@ export default function ExpenseDetailPage() {
               </div>
             ) : (
               <div className="text-center py-8 text-muted-foreground">
-                <p>Aquesta despesa no està assignada a cap projecte.</p>
+                <p>{tr('projectModule.expenseDetail.noAssignment')}</p>
                 <p className="text-sm mt-1">
-                  Fes clic al botó + per vincular-la.
+                  {tr('projectModule.expenseDetail.noAssignmentHint')}
                 </p>
               </div>
             )}
@@ -439,7 +441,7 @@ export default function ExpenseDetailPage() {
                 <Button variant="ghost" className="w-full justify-between p-0 h-auto hover:bg-transparent">
                   <CardTitle className="text-lg flex items-center gap-2">
                     <FileText className="h-5 w-5" />
-                    Dades de justificació
+                    {tr('projectModule.justificationData')}
                   </CardTitle>
                   {justificationOpen ? (
                     <ChevronUp className="h-5 w-5 text-muted-foreground" />
@@ -449,7 +451,7 @@ export default function ExpenseDetailPage() {
                 </Button>
               </CollapsibleTrigger>
               <CardDescription>
-                Informació per a la justificació econòmica del projecte
+                {tr('projectModule.justificationDesc')}
               </CardDescription>
             </CardHeader>
             <CollapsibleContent>
@@ -458,7 +460,7 @@ export default function ExpenseDetailPage() {
                   <>
                     <div className="grid grid-cols-2 gap-4">
                       <div className="space-y-1">
-                        <Label htmlFor="invoiceNumber" className="text-sm">Núm. factura</Label>
+                        <Label htmlFor="invoiceNumber" className="text-sm">{tr('projectModule.invoiceNumber')}</Label>
                         <Input
                           id="invoiceNumber"
                           type="text"
@@ -468,7 +470,7 @@ export default function ExpenseDetailPage() {
                         />
                       </div>
                       <div className="space-y-1">
-                        <Label htmlFor="issuerTaxId" className="text-sm">NIF emissor</Label>
+                        <Label htmlFor="issuerTaxId" className="text-sm">{tr('projectModule.issuerTaxId')}</Label>
                         <Input
                           id="issuerTaxId"
                           type="text"
@@ -480,7 +482,7 @@ export default function ExpenseDetailPage() {
                     </div>
                     <div className="grid grid-cols-2 gap-4">
                       <div className="space-y-1">
-                        <Label htmlFor="invoiceDate" className="text-sm">Data factura</Label>
+                        <Label htmlFor="invoiceDate" className="text-sm">{tr('projectModule.invoiceDate')}</Label>
                         <Input
                           id="invoiceDate"
                           type="date"
@@ -489,7 +491,7 @@ export default function ExpenseDetailPage() {
                         />
                       </div>
                       <div className="space-y-1">
-                        <Label htmlFor="paymentDate" className="text-sm">Data pagament</Label>
+                        <Label htmlFor="paymentDate" className="text-sm">{tr('projectModule.paymentDate')}</Label>
                         <Input
                           id="paymentDate"
                           type="date"
@@ -499,7 +501,7 @@ export default function ExpenseDetailPage() {
                       </div>
                     </div>
                     <div className="space-y-1">
-                      <Label htmlFor="supportDocNumber" className="text-sm">Núm. justificant</Label>
+                      <Label htmlFor="supportDocNumber" className="text-sm">{tr('projectModule.expenseDetail.supportDocNumber')}</Label>
                       <Input
                         id="supportDocNumber"
                         type="text"
@@ -516,7 +518,7 @@ export default function ExpenseDetailPage() {
                         disabled={isSaving}
                       >
                         <X className="h-4 w-4 mr-1" />
-                        Cancel·lar
+                        {tr('projectModule.expenseDetail.cancel')}
                       </Button>
                       <Button
                         size="sm"
@@ -524,7 +526,7 @@ export default function ExpenseDetailPage() {
                         disabled={isSaving}
                       >
                         <Save className="h-4 w-4 mr-1" />
-                        Desar
+                        {tr('projectModule.expenseDetail.save')}
                       </Button>
                     </div>
                   </>
@@ -532,24 +534,24 @@ export default function ExpenseDetailPage() {
                   <>
                     <div className="grid grid-cols-2 gap-4 text-sm">
                       <div>
-                        <span className="text-muted-foreground">Núm. factura</span>
+                        <span className="text-muted-foreground">{tr('projectModule.invoiceNumber')}</span>
                         <p className="font-medium">{link.justification?.invoiceNumber || '-'}</p>
                       </div>
                       <div>
-                        <span className="text-muted-foreground">NIF emissor</span>
+                        <span className="text-muted-foreground">{tr('projectModule.issuerTaxId')}</span>
                         <p className="font-medium">{link.justification?.issuerTaxId || '-'}</p>
                       </div>
                       <div>
-                        <span className="text-muted-foreground">Data factura</span>
+                        <span className="text-muted-foreground">{tr('projectModule.invoiceDate')}</span>
                         <p className="font-medium">{link.justification?.invoiceDate ? formatDateDMY(link.justification.invoiceDate) : '-'}</p>
                       </div>
                       <div>
-                        <span className="text-muted-foreground">Data pagament</span>
+                        <span className="text-muted-foreground">{tr('projectModule.paymentDate')}</span>
                         <p className="font-medium">{link.justification?.paymentDate ? formatDateDMY(link.justification.paymentDate) : '-'}</p>
                       </div>
                     </div>
                     <div className="text-sm">
-                      <span className="text-muted-foreground">Núm. justificant</span>
+                      <span className="text-muted-foreground">{tr('projectModule.expenseDetail.supportDocNumber')}</span>
                       <p className="font-medium">{link.justification?.supportDocNumber || '-'}</p>
                     </div>
                     <div className="flex justify-end pt-2">
@@ -559,7 +561,7 @@ export default function ExpenseDetailPage() {
                         onClick={() => setIsEditingJustification(true)}
                       >
                         <Edit className="h-4 w-4 mr-1" />
-                        Editar
+                        {tr('projectModule.expenseDetail.edit')}
                       </Button>
                     </div>
                   </>
