@@ -527,6 +527,21 @@ export async function buildProjectJustificationXlsx(
 
 export type FundingOrderMode = 'chronological' | 'budgetLineThenChronological';
 
+export interface FundingColumnLabels {
+  order: string;
+  date: string;
+  concept: string;
+  supplier: string;
+  invoiceNumber: string;
+  budgetLine: string;
+  fxRateApplied: string;
+  totalOriginalAmount: string;
+  currency: string;
+  totalEurAmount: string;
+  assignedOriginalAmount: string;
+  assignedEurAmount: string;
+}
+
 export interface FundingExportParams {
   projectId: string;
   projectCode: string;
@@ -535,6 +550,8 @@ export interface FundingExportParams {
   expenseLinks: ExpenseLink[];
   expenses: Map<string, UnifiedExpense>;
   orderMode?: FundingOrderMode;
+  projectFxRate?: number | null;
+  columnLabels?: FundingColumnLabels;
 }
 
 /**
@@ -559,18 +576,18 @@ function parseDateForExcel(dateStr: string | null): Date | null {
  * C. Concepte / Descripció
  * D. Proveïdor
  * E. Núm. factura
- * F. Tipus de canvi aplicat
- * G. Import total (EUR)
- * H. Partida (codi + nom)
- * I. Import imputat al projecte (EUR)
- * J. Moneda local
- * K. Import total (moneda local)
- * L. Import imputat al projecte (moneda local)
+ * F. Partida (codi + nom)
+ * G. Tipus de canvi aplicat
+ * H. Import total de la despesa (moneda de la despesa)
+ * I. Moneda de la despesa
+ * J. Import total de la despesa (en EUR)
+ * K. Import imputat al projecte (en moneda local)
+ * L. Import imputat al projecte (en EUR)
  */
 export function buildProjectJustificationFundingXlsx(
   params: FundingExportParams
 ): ExportResult {
-  const { projectCode, budgetLines, expenseLinks, expenses, projectId, orderMode = 'budgetLineThenChronological' } = params;
+  const { projectCode, budgetLines, expenseLinks, expenses, projectId, orderMode = 'budgetLineThenChronological', projectFxRate, columnLabels } = params;
 
   // 1. Obtenir files base (ordre per partida, usat també per ZIP)
   const baseRows = buildJustificationRows({
@@ -604,26 +621,27 @@ export function buildProjectJustificationFundingXlsx(
 
   // 4. Construir full de despeses
   const wsData: (string | number | Date | null)[][] = [];
+  const labels = columnLabels;
 
-  // Header (A-L)
+  // Header (A-L) — nou ordre
   wsData.push([
-    'Núm.',
-    'Data',
-    'Concepte / Descripció',
-    'Proveïdor',
-    'Núm. factura',
-    'Tipus de canvi aplicat',
-    'Import total (EUR)',
-    'Partida',
-    'Import imputat al projecte (EUR)',
-    'Moneda local',
-    'Import total (moneda local)',
-    'Import imputat al projecte (moneda local)',
+    labels?.order ?? 'Núm.',
+    labels?.date ?? 'Data',
+    labels?.concept ?? 'Concepte / Descripció',
+    labels?.supplier ?? 'Proveïdor',
+    labels?.invoiceNumber ?? 'Núm. factura',
+    labels?.budgetLine ?? 'Partida',
+    labels?.fxRateApplied ?? 'Tipus de canvi aplicat',
+    labels?.totalOriginalAmount ?? 'Import total (moneda despesa)',
+    labels?.currency ?? 'Moneda',
+    labels?.totalEurAmount ?? 'Import total (EUR)',
+    labels?.assignedOriginalAmount ?? 'Import imputat (moneda local)',
+    labels?.assignedEurAmount ?? 'Import imputat (EUR)',
   ]);
 
-  // Acumuladors per fila TOTAL
-  let totalG = 0;
-  let totalI = 0;
+  // Acumuladors per fila TOTAL (cols H=7, J=9, K=10, L=11)
+  let totalH = 0;
+  let totalJ = 0;
   let totalK = 0;
   let totalL = 0;
 
@@ -643,14 +661,7 @@ export function buildProjectJustificationFundingXlsx(
       ? (expense.invoiceNumber ?? '')
       : (link?.justification?.invoiceNumber ?? '');
 
-    // F: Tipus de canvi aplicat
-    const fxRate = hasFX ? (expense?.fxRate ?? '') : '';
-
-    // G: Import total EUR
-    const totalEUR = row.amountTotalEUR ?? '';
-    if (typeof totalEUR === 'number') totalG += totalEUR;
-
-    // H: Partida (codi + nom)
+    // F: Partida (codi + nom)
     let partida = '';
     if (row.budgetLineCode !== 'ZZ_NO_PARTIDA') {
       const code = row.budgetLineCode;
@@ -658,25 +669,37 @@ export function buildProjectJustificationFundingXlsx(
       partida = code && code !== '' ? `${code} - ${name}` : name;
     }
 
-    // I: Import imputat EUR
-    const assignedEUR = row.amountAssignedEUR ?? '';
-    if (typeof assignedEUR === 'number') totalI += assignedEUR;
-
-    // J: Moneda local (codi)
-    const localCurrency = hasFX ? (expense?.originalCurrency ?? '') : '';
-
-    // K: Import total (moneda local)
-    const totalLocal = hasFX && expense?.originalAmount != null
-      ? Math.abs(expense.originalAmount)
+    // G: Tipus de canvi aplicat (despesa > projecte > buit)
+    const fxRateApplied: number | string = hasFX
+      ? (expense?.fxRate ?? expense?.fxRateUsed ?? projectFxRate ?? '')
       : '';
-    if (typeof totalLocal === 'number') totalK += totalLocal;
 
-    // L: Import imputat (moneda local)
-    let assignedLocal: number | string = '';
-    if (hasFX && expense?.originalAmount != null && assignment?.localPct != null && assignment.localPct > 0) {
-      assignedLocal = Math.abs(expense.originalAmount) * (assignment.localPct / 100);
-      totalL += assignedLocal;
+    // H: Import total de la despesa (moneda de la despesa)
+    let totalOriginal: number | string = '';
+    if (hasFX && expense?.originalAmount != null) {
+      totalOriginal = Math.abs(expense.originalAmount);
+    } else if (expense?.amountEUR != null) {
+      totalOriginal = Math.abs(expense.amountEUR);
     }
+    if (typeof totalOriginal === 'number') totalH += totalOriginal;
+
+    // I: Moneda de la despesa
+    const currency = hasFX ? (expense?.originalCurrency ?? 'EUR') : 'EUR';
+
+    // J: Import total de la despesa (en EUR)
+    const totalEUR: number | string = expense?.amountEUR != null ? Math.abs(expense.amountEUR) : '';
+    if (typeof totalEUR === 'number') totalJ += totalEUR;
+
+    // K: Import imputat al projecte (moneda local)
+    let assignedOriginal: number | string = '';
+    if (hasFX && expense?.originalAmount != null && assignment?.localPct != null && assignment.localPct > 0) {
+      assignedOriginal = Math.abs(expense.originalAmount) * (assignment.localPct / 100);
+      totalK += assignedOriginal;
+    }
+
+    // L: Import imputat al projecte (EUR)
+    const assignedEUR: number | string = row.amountAssignedEUR ?? '';
+    if (typeof assignedEUR === 'number') totalL += assignedEUR;
 
     wsData.push([
       newOrder,
@@ -684,13 +707,13 @@ export function buildProjectJustificationFundingXlsx(
       row.concept,
       row.counterpartyName,
       invoiceNumber,
-      fxRate,
-      totalEUR,
       partida,
+      fxRateApplied,
+      totalOriginal,
+      currency,
+      totalEUR,
+      assignedOriginal,
       assignedEUR,
-      localCurrency,
-      totalLocal,
-      assignedLocal,
     ]);
   }
 
@@ -701,22 +724,29 @@ export function buildProjectJustificationFundingXlsx(
     '',
     '',
     '',
-    '',
-    totalG || '',
     'TOTAL',
-    totalI || '',
     '',
+    totalH || '',
+    '',
+    totalJ || '',
     totalK || '',
     totalL || '',
   ]);
 
   const ws = XLSX.utils.aoa_to_sheet(wsData, { cellDates: true });
 
-  // Format numèric europeu per columnes G(6), I(8), K(10), L(11)
+  // Format numèric: col G(6) = TC 6 decimals, cols H(7), J(9), K(10), L(11) = #,##0.00
+  const fxFormat = '0.000000';
   const numberFormat = '#,##0.00';
-  const numberCols = [6, 8, 10, 11];
+  const amountCols = [7, 9, 10, 11];
   for (let r = 1; r <= sortedRows.length + 1; r++) { // +1 per fila totals
-    for (const c of numberCols) {
+    // TC (col 6)
+    const fxCellRef = XLSX.utils.encode_cell({ r, c: 6 });
+    if (ws[fxCellRef] && typeof ws[fxCellRef].v === 'number') {
+      ws[fxCellRef].z = fxFormat;
+    }
+    // Import cols
+    for (const c of amountCols) {
       const cellRef = XLSX.utils.encode_cell({ r, c });
       if (ws[cellRef] && typeof ws[cellRef].v === 'number') {
         ws[cellRef].z = numberFormat;
@@ -731,13 +761,13 @@ export function buildProjectJustificationFundingXlsx(
     { wch: 35 },  // C: Concepte
     { wch: 25 },  // D: Proveïdor
     { wch: 15 },  // E: Núm. factura
-    { wch: 12 },  // F: TC
-    { wch: 16 },  // G: Import total EUR
-    { wch: 30 },  // H: Partida
-    { wch: 18 },  // I: Import imputat EUR
-    { wch: 10 },  // J: Moneda local
-    { wch: 18 },  // K: Import total local
-    { wch: 18 },  // L: Import imputat local
+    { wch: 30 },  // F: Partida
+    { wch: 14 },  // G: TC aplicat
+    { wch: 20 },  // H: Import total (moneda despesa)
+    { wch: 10 },  // I: Moneda
+    { wch: 16 },  // J: Import total (EUR)
+    { wch: 20 },  // K: Import imputat (local)
+    { wch: 18 },  // L: Import imputat (EUR)
   ];
 
   // 5. Crear workbook
