@@ -525,6 +525,8 @@ export async function buildProjectJustificationXlsx(
 // FUNDING EXCEL EXPORT (NOVA FUNCIÓ - USA buildJustificationRows)
 // ═══════════════════════════════════════════════════════════════════════════
 
+export type FundingOrderMode = 'chronological' | 'budgetLineThenChronological';
+
 export interface FundingExportParams {
   projectId: string;
   projectCode: string;
@@ -532,6 +534,7 @@ export interface FundingExportParams {
   budgetLines: BudgetLine[];
   expenseLinks: ExpenseLink[];
   expenses: Map<string, UnifiedExpense>;
+  orderMode?: FundingOrderMode;
 }
 
 /**
@@ -548,30 +551,29 @@ function parseDateForExcel(dateStr: string | null): Date | null {
 
 /**
  * Construeix l'Excel de justificació per finançadors (format unificat).
- * Utilitza buildJustificationRows com a single source of truth per l'ordre.
+ * Utilitza buildJustificationRows com a base i re-ordena segons orderMode.
  *
- * Columnes:
- * 1. Número d'ordre
- * 2. Data despesa (Date object)
- * 3. Data de pagament (Date object)
- * 4. Proveïdor/destinatari
- * 5. Concepte
- * 6. Codi partida
- * 7. Nom partida
- * 8. Import total (EUR)
- * 9. Import total (moneda local) - si aplica
- * 10. Import imputat (EUR)
- * 11. Nom del comprovant
- * 12. Ruta dins ZIP (cronològic)
- * 13. Observacions (buit)
+ * Columnes (A-L):
+ * A. Núm. correlatiu
+ * B. Data
+ * C. Concepte / Descripció
+ * D. Proveïdor
+ * E. Núm. factura
+ * F. Tipus de canvi aplicat
+ * G. Import total (EUR)
+ * H. Partida (codi + nom)
+ * I. Import imputat al projecte (EUR)
+ * J. Moneda local
+ * K. Import total (moneda local)
+ * L. Import imputat al projecte (moneda local)
  */
 export function buildProjectJustificationFundingXlsx(
   params: FundingExportParams
 ): ExportResult {
-  const { projectCode, budgetLines, expenseLinks, expenses, projectId } = params;
+  const { projectCode, budgetLines, expenseLinks, expenses, projectId, orderMode = 'budgetLineThenChronological' } = params;
 
-  // 1. Obtenir files ordenades
-  const rows = buildJustificationRows({
+  // 1. Obtenir files base (ordre per partida, usat també per ZIP)
+  const baseRows = buildJustificationRows({
     projectId,
     projectCode: projectCode ?? '',
     budgetLines,
@@ -579,98 +581,174 @@ export function buildProjectJustificationFundingXlsx(
     expenses,
   });
 
-  // 2. Construir full de despeses amb tipus mixtos (Date | string | number | null)
+  // 2. Re-ordenar segons orderMode (no afecta ZIP)
+  const sortedRows = [...baseRows];
+  if (orderMode === 'chronological') {
+    sortedRows.sort((a, b) => {
+      const dateCompare = a.dateExpense.localeCompare(b.dateExpense);
+      if (dateCompare !== 0) return dateCompare;
+      return a.txId.localeCompare(b.txId);
+    });
+  }
+  // 'budgetLineThenChronological' ja ve ordenat correctament de buildJustificationRows
+
+  // 3. Lookup assignment per obtenir localPct
+  const assignmentLookup = new Map<string, import('@/lib/project-module-types').ExpenseAssignment>();
+  for (const link of expenseLinks) {
+    for (const a of link.assignments) {
+      if (a.projectId !== projectId) continue;
+      const key = `${link.id}__${a.budgetLineId ?? 'none'}`;
+      assignmentLookup.set(key, a);
+    }
+  }
+
+  // 4. Construir full de despeses
   const wsData: (string | number | Date | null)[][] = [];
 
-  // Header
+  // Header (A-L)
   wsData.push([
-    'Núm. ordre',
-    'Data despesa',
-    'Data pagament',
-    'Proveïdor/destinatari',
-    'Concepte',
-    'Codi partida',
-    'Nom partida',
+    'Núm.',
+    'Data',
+    'Concepte / Descripció',
+    'Proveïdor',
+    'Núm. factura',
+    'Tipus de canvi aplicat',
     'Import total (EUR)',
+    'Partida',
+    'Import imputat al projecte (EUR)',
+    'Moneda local',
     'Import total (moneda local)',
-    'Import imputat (EUR)',
-    'Nom del comprovant',
-    'Ruta dins ZIP',
-    'Observacions',
+    'Import imputat al projecte (moneda local)',
   ]);
 
+  // Acumuladors per fila TOTAL
+  let totalG = 0;
+  let totalI = 0;
+  let totalK = 0;
+  let totalL = 0;
+
   // Files de dades
-  for (const row of rows) {
-    // Buscar dades de moneda local des de l'expense original
+  for (let i = 0; i < sortedRows.length; i++) {
+    const row = sortedRows[i];
+    const newOrder = i + 1;
     const expense = expenses.get(row.txId);
-    const hasLocalCurrency = expense?.originalCurrency && expense?.originalCurrency !== 'EUR';
-    const localAmountDisplay = hasLocalCurrency && expense?.originalAmount
-      ? `${Math.abs(expense.originalAmount).toFixed(2)} ${expense.originalCurrency}`
+    const link = expenseLinks.find(l => l.id === row.txId);
+    const assignKey = `${row.txId}__${row.budgetLineId ?? 'none'}`;
+    const assignment = assignmentLookup.get(assignKey);
+
+    const hasFX = !!(expense?.originalCurrency && expense.originalCurrency !== 'EUR');
+
+    // E: Núm. factura
+    const invoiceNumber = expense?.source === 'offBank'
+      ? (expense.invoiceNumber ?? '')
+      : (link?.justification?.invoiceNumber ?? '');
+
+    // F: Tipus de canvi aplicat
+    const fxRate = hasFX ? (expense?.fxRate ?? '') : '';
+
+    // G: Import total EUR
+    const totalEUR = row.amountTotalEUR ?? '';
+    if (typeof totalEUR === 'number') totalG += totalEUR;
+
+    // H: Partida (codi + nom)
+    let partida = '';
+    if (row.budgetLineCode !== 'ZZ_NO_PARTIDA') {
+      const code = row.budgetLineCode;
+      const name = row.budgetLineName;
+      partida = code && code !== '' ? `${code} - ${name}` : name;
+    }
+
+    // I: Import imputat EUR
+    const assignedEUR = row.amountAssignedEUR ?? '';
+    if (typeof assignedEUR === 'number') totalI += assignedEUR;
+
+    // J: Moneda local (codi)
+    const localCurrency = hasFX ? (expense?.originalCurrency ?? '') : '';
+
+    // K: Import total (moneda local)
+    const totalLocal = hasFX && expense?.originalAmount != null
+      ? Math.abs(expense.originalAmount)
       : '';
+    if (typeof totalLocal === 'number') totalK += totalLocal;
+
+    // L: Import imputat (moneda local)
+    let assignedLocal: number | string = '';
+    if (hasFX && expense?.originalAmount != null && assignment?.localPct != null && assignment.localPct > 0) {
+      assignedLocal = Math.abs(expense.originalAmount) * (assignment.localPct / 100);
+      totalL += assignedLocal;
+    }
 
     wsData.push([
-      row.order,
-      parseDateForExcel(row.dateExpense),           // Date object o null
-      parseDateForExcel(row.paymentDate),           // Date object o null
-      row.counterpartyName,
+      newOrder,
+      parseDateForExcel(row.dateExpense),
       row.concept,
-      row.budgetLineCode,
-      row.budgetLineName,
-      row.amountTotalEUR ?? '',
-      localAmountDisplay,                           // Nova columna moneda local
-      row.amountAssignedEUR ?? '',
-      row.documentName,
-      row.zipPathCronologic,
-      '', // Observacions (buit per defecte)
+      row.counterpartyName,
+      invoiceNumber,
+      fxRate,
+      totalEUR,
+      partida,
+      assignedEUR,
+      localCurrency,
+      totalLocal,
+      assignedLocal,
     ]);
   }
 
   // Fila de totals
-  const totalAssigned = rows.reduce((sum, r) => sum + (r.amountAssignedEUR ?? 0), 0);
   wsData.push([
     '',
     null,
-    null,
     '',
     '',
     '',
+    '',
+    totalG || '',
     'TOTAL',
+    totalI || '',
     '',
-    '',
-    totalAssigned,
-    '',
-    '',
-    '',
+    totalK || '',
+    totalL || '',
   ]);
 
   const ws = XLSX.utils.aoa_to_sheet(wsData, { cellDates: true });
 
-  // Amplades de columna
+  // Format numèric europeu per columnes G(6), I(8), K(10), L(11)
+  const numberFormat = '#,##0.00';
+  const numberCols = [6, 8, 10, 11];
+  for (let r = 1; r <= sortedRows.length + 1; r++) { // +1 per fila totals
+    for (const c of numberCols) {
+      const cellRef = XLSX.utils.encode_cell({ r, c });
+      if (ws[cellRef] && typeof ws[cellRef].v === 'number') {
+        ws[cellRef].z = numberFormat;
+      }
+    }
+  }
+
+  // Amplades de columna (A-L)
   ws['!cols'] = [
-    { wch: 10 },  // Núm. ordre
-    { wch: 12 },  // Data despesa
-    { wch: 12 },  // Data pagament
-    { wch: 25 },  // Proveïdor
-    { wch: 35 },  // Concepte
-    { wch: 12 },  // Codi partida
-    { wch: 25 },  // Nom partida
-    { wch: 15 },  // Import total EUR
-    { wch: 20 },  // Import total moneda local
-    { wch: 15 },  // Import imputat
-    { wch: 40 },  // Nom comprovant
-    { wch: 35 },  // Ruta ZIP
-    { wch: 20 },  // Observacions
+    { wch: 8 },   // A: Núm.
+    { wch: 12 },  // B: Data
+    { wch: 35 },  // C: Concepte
+    { wch: 25 },  // D: Proveïdor
+    { wch: 15 },  // E: Núm. factura
+    { wch: 12 },  // F: TC
+    { wch: 16 },  // G: Import total EUR
+    { wch: 30 },  // H: Partida
+    { wch: 18 },  // I: Import imputat EUR
+    { wch: 10 },  // J: Moneda local
+    { wch: 18 },  // K: Import total local
+    { wch: 18 },  // L: Import imputat local
   ];
 
-  // 3. Crear workbook
+  // 5. Crear workbook
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, ws, 'Justificació');
 
-  // 4. Generar fitxer
+  // 6. Generar fitxer
   const wbout = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
   const blob = new Blob([wbout], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
 
-  // 5. Generar nom de fitxer
+  // 7. Generar nom de fitxer
   const dateStr = new Date().toISOString().slice(0, 10).replace(/-/g, '');
   const safeProjectCode = (projectCode ?? 'projecte').replace(/[^a-zA-Z0-9]/g, '');
   const filename = `justificacio_financador_${safeProjectCode}_${dateStr}.xlsx`;
