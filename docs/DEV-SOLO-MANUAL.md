@@ -137,6 +137,7 @@ El hook Husky (`.husky/pre-commit`) bloqueja `git commit` si estàs a la branca 
 
 ```
 □ scripts/verify-ci.sh ✅ (typecheck + tests + build)
+□ scripts/verify-local.sh ✅ (build + checks fiables i18n / undefined)
 □ docs/QA-P0-FISCAL.md completat amb PASS/FAIL ✅
 ```
 
