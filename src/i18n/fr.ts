@@ -1638,6 +1638,8 @@ export const fr = {
     categoryArchivedToast: "Catégorie archivée",
     categoryArchivedToastDescription: (name: string) => `La catégorie "${name}" a été archivée.`,
     archiveError: "Erreur lors de l'archivage",
+    systemCategoryLocked: "Catégorie système protégée. Impossible de l'archiver.",
+    categoryInUse: "Impossible d'archiver cette catégorie car elle a des mouvements assignés.",
     // Réassignation
     reassignTitle: "Réassigner les mouvements",
     reassignDescription: "Cette catégorie a des mouvements associés. Vous devez les réassigner avant d'archiver.",
