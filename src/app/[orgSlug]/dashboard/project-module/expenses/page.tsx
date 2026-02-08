@@ -1001,10 +1001,11 @@ export default function ExpensesInboxPage() {
           const remainingFormatted = new Intl.NumberFormat('ca-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(remainingLocal);
           setSplitModalExpense(null);
           toast({
-            title: ep.toastPartialTitle ?? 'Imputació parcial',
-            description: ep.toastPartialDesc
-              ? ep.toastPartialDesc(remainingFormatted, originalCurrency, remainingPct)
-              : `Queda lliure ${remainingFormatted} ${originalCurrency} (${remainingPct}%) per imputar a un altre projecte.`,
+            title: tr('projectModule.expensesPage.toastPartialTitle'),
+            description: tr('projectModule.expensesPage.toastPartialDesc')
+              .replace('{amount}', remainingFormatted)
+              .replace('{currency}', originalCurrency)
+              .replace('{pct}', String(remainingPct)),
           });
           return;
         }

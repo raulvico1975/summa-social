@@ -231,36 +231,36 @@ export function OffBankExpenseModal({
     // Data
     const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
     if (!dateRegex.test(date)) {
-      newErrors.date = tr('projectModule.offBank.invalidDate', 'Data invàlida');
+      newErrors.date = tr('projectModule.offBank.invalidDate');
     }
 
     // Validació FX si s'usa moneda estrangera
     if (useForeignCurrency) {
       if (!currency.trim()) {
-        newErrors.currency = tr('projectModule.offBank.selectCurrency', 'Selecciona una moneda');
+        newErrors.currency = tr('projectModule.offBank.selectCurrency');
       }
       const origAmount = parseFloat(amountOriginal.replace(',', '.'));
       if (isNaN(origAmount) || origAmount <= 0) {
-        newErrors.amountOriginal = tr('projectModule.amountPositive', 'Import ha de ser positiu');
+        newErrors.amountOriginal = tr('projectModule.amountPositive');
       }
       // EUR manual: només validar si l'usuari l'ha activat i ha escrit quelcom
       if (eurManualEnabled && amountEUR.trim()) {
         const eurVal = parseFloat(amountEUR.replace(',', '.'));
         if (isNaN(eurVal) || eurVal <= 0) {
-          newErrors.amountEUR = tr('projectModule.amountPositive', 'Import ha de ser positiu');
+          newErrors.amountEUR = tr('projectModule.amountPositive');
         }
       }
     } else {
       // Import EUR obligatori si NO és moneda local
       const amount = parseFloat(amountEUR.replace(',', '.'));
       if (isNaN(amount) || amount <= 0) {
-        newErrors.amountEUR = tr('projectModule.amountPositive', 'Import ha de ser positiu');
+        newErrors.amountEUR = tr('projectModule.amountPositive');
       }
     }
 
     // Concepte
     if (concept.trim().length === 0) {
-      newErrors.concept = tr('projectModule.offBank.conceptRequired', 'El concepte és obligatori');
+      newErrors.concept = tr('projectModule.offBank.conceptRequired');
     }
 
     setErrors(newErrors);
@@ -466,8 +466,8 @@ export function OffBankExpenseModal({
         trackUX('expenses.offBank.edit.save', { expenseId });
 
         toast({
-          title: tr('projectModule.offBank.expenseUpdated', 'Despesa actualitzada'),
-          description: tr('projectModule.offBank.expenseUpdatedDesc', "La despesa de terreny s'ha actualitzat correctament."),
+          title: tr('projectModule.offBank.expenseUpdated'),
+          description: tr('projectModule.offBank.expenseUpdatedDesc'),
         });
       } else {
         // Mode creació
@@ -476,8 +476,8 @@ export function OffBankExpenseModal({
         trackUX('expenses.offBank.create', { expenseId: newId });
 
         toast({
-          title: tr('projectModule.offBank.expenseAdded', 'Despesa afegida'),
-          description: tr('projectModule.offBank.expenseAddedDesc', "La despesa de terreny s'ha creat correctament."),
+          title: tr('projectModule.offBank.expenseAdded'),
+          description: tr('projectModule.offBank.expenseAddedDesc'),
         });
       }
 
@@ -488,8 +488,8 @@ export function OffBankExpenseModal({
     } catch (err) {
       toast({
         variant: 'destructive',
-        title: tr('projectModule.offBank.errorTitle', 'Error'),
-        description: err instanceof Error ? err.message : (isEditMode ? tr('projectModule.offBank.errorUpdating', 'Error actualitzant despesa') : tr('projectModule.offBank.errorCreating', 'Error creant despesa')),
+        title: tr('projectModule.offBank.errorTitle'),
+        description: err instanceof Error ? err.message : (isEditMode ? tr('projectModule.offBank.errorUpdating') : tr('projectModule.offBank.errorCreating')),
       });
     }
   };
@@ -506,15 +506,15 @@ export function OffBankExpenseModal({
       <DialogContent className="sm:max-w-2xl max-h-[90vh] flex flex-col overflow-hidden">
         <DialogHeader>
           <DialogTitle>
-            {isEditMode ? tr('projectModule.offBank.editTitle', 'Editar despesa de terreny') : tr('projectModule.offBank.addTitle', 'Afegir despesa de terreny')}
+            {isEditMode ? tr('projectModule.offBank.editTitle') : tr('projectModule.offBank.addTitle')}
           </DialogTitle>
           <DialogDescription>
             {isEditMode
-              ? tr('projectModule.offBank.editDescription', 'Modifica les dades de la despesa')
-              : tr('projectModule.offBank.addDescription', 'Registra una despesa fora del circuit bancari')}
+              ? tr('projectModule.offBank.editDescription')
+              : tr('projectModule.offBank.addDescription')}
           </DialogDescription>
           <p className="text-xs text-muted-foreground mt-1">
-            {tr('projectModule.offBank.justificationHint', 'Aquesta despesa es justificarà per projecte. No cal categoritzar-la ni convertir-la a EUR aquí.')}
+            {tr('projectModule.offBank.justificationHint')}
           </p>
         </DialogHeader>
 
@@ -524,7 +524,7 @@ export function OffBankExpenseModal({
             <Alert variant="default" className="border-amber-500/50 bg-amber-50 dark:bg-amber-950/20">
               <AlertTriangle className="h-4 w-4 text-amber-600" />
               <AlertDescription className="text-sm text-amber-800 dark:text-amber-200">
-                {tr('projectModule.offBank.multiAssignmentWarning', "Aquesta despesa està imputada a diversos projectes. Si canvies l'import, els imports imputats es recalcularan automàticament segons els percentatges definits.")}
+                {tr('projectModule.offBank.multiAssignmentWarning')}
               </AlertDescription>
             </Alert>
           )}
@@ -532,7 +532,7 @@ export function OffBankExpenseModal({
           {/* Data + Import EUR (quan no és FX) — 2 columnes en desktop */}
           <div className={`grid gap-3 ${!useForeignCurrency ? 'grid-cols-1 sm:grid-cols-2' : ''}`}>
             <div className="space-y-2">
-              <Label htmlFor="date">{tr('projectModule.offBank.dateLabel', 'Data *')}</Label>
+              <Label htmlFor="date">{tr('projectModule.offBank.dateLabel')}</Label>
               <Input
                 id="date"
                 type="date"
@@ -548,7 +548,7 @@ export function OffBankExpenseModal({
             {/* Import EUR directe (inline quan no FX) */}
             {!useForeignCurrency && (
               <div className="space-y-2">
-                <Label htmlFor="amountEUR">{tr('projectModule.eurAmount', 'Import (EUR) *')}</Label>
+                <Label htmlFor="amountEUR">{tr('projectModule.eurAmount')}</Label>
                 <Input
                   id="amountEUR"
                   type="text"
@@ -569,7 +569,7 @@ export function OffBankExpenseModal({
           <div className="flex items-center justify-between py-2 px-3 bg-muted/50 rounded-lg">
             <div className="flex items-center gap-2">
               <Label htmlFor="useForeignCurrency" className="text-sm font-normal cursor-pointer">
-                {tr('projectModule.localCurrencyExpense', 'Despesa en moneda local')}
+                {tr('projectModule.localCurrencyExpense')}
               </Label>
               {useForeignCurrency && currency && (
                 <span className="text-xs text-muted-foreground">
@@ -598,7 +598,7 @@ export function OffBankExpenseModal({
               <div className="grid grid-cols-2 gap-3">
                 {/* Moneda */}
                 <div className="space-y-1">
-                  <Label htmlFor="currency" className="text-xs">{tr('projectModule.offBank.currencyLabel', 'Moneda *')}</Label>
+                  <Label htmlFor="currency" className="text-xs">{tr('projectModule.offBank.currencyLabel')}</Label>
                   <select
                     id="currency"
                     value={currency}
@@ -613,10 +613,10 @@ export function OffBankExpenseModal({
                     }}
                     className={`flex h-9 w-full rounded-md border bg-background px-3 py-1 text-sm font-mono ${errors.currency ? 'border-destructive' : 'border-input'}`}
                   >
-                    <option value="">{tr('projectModule.offBank.selectPlaceholder', 'Selecciona...')}</option>
-                    <option value="XOF">{tr('projectModule.offBank.currencyXOF', 'XOF - Franc CFA')}</option>
-                    <option value="USD">{tr('projectModule.offBank.currencyUSD', 'USD - Dòlar US')}</option>
-                    <option value="GBP">{tr('projectModule.offBank.currencyGBP', 'GBP - Lliura esterlina')}</option>
+                    <option value="">{tr('projectModule.offBank.selectPlaceholder')}</option>
+                    <option value="XOF">{tr('projectModule.offBank.currencyXOF')}</option>
+                    <option value="USD">{tr('projectModule.offBank.currencyUSD')}</option>
+                    <option value="GBP">{tr('projectModule.offBank.currencyGBP')}</option>
                   </select>
                   {errors.currency && (
                     <p className="text-sm text-destructive">{errors.currency}</p>
@@ -624,7 +624,7 @@ export function OffBankExpenseModal({
                 </div>
                 {/* Import */}
                 <div className="space-y-1">
-                  <Label htmlFor="amountOriginal" className="text-xs">{tr('projectModule.offBank.amountLabel', 'Import *')}</Label>
+                  <Label htmlFor="amountOriginal" className="text-xs">{tr('projectModule.offBank.amountLabel')}</Label>
                   <Input
                     id="amountOriginal"
                     type="text"
@@ -641,7 +641,7 @@ export function OffBankExpenseModal({
               </div>
               <p className="text-xs text-muted-foreground flex items-center gap-1.5">
                 <Info className="h-3 w-3 shrink-0" />
-                {tr('projectModule.offBank.fxAutoHint', "El tipus de canvi s'aplicarà automàticament quan imputis la despesa a un projecte.")}
+                {tr('projectModule.offBank.fxAutoHint')}
               </p>
             </div>
           )}
@@ -651,7 +651,7 @@ export function OffBankExpenseModal({
             <Collapsible open={eurManualEnabled} onOpenChange={setEurManualEnabled}>
               <CollapsibleTrigger asChild>
                 <Button variant="ghost" type="button" className="w-full justify-between px-3 py-2 h-auto">
-                  <span className="text-sm text-muted-foreground">{tr('projectModule.offBank.eurManualToggle', 'Introduir EUR manualment (cas especial)')}</span>
+                  <span className="text-sm text-muted-foreground">{tr('projectModule.offBank.eurManualToggle')}</span>
                   {eurManualEnabled ? (
                     <ChevronUp className="h-4 w-4" />
                   ) : (
@@ -661,7 +661,7 @@ export function OffBankExpenseModal({
               </CollapsibleTrigger>
               <CollapsibleContent className="space-y-2 pt-1">
                 <div className="space-y-1 px-3">
-                  <Label htmlFor="amountEUR" className="text-xs">{tr('projectModule.offBank.eurAmountLabel', 'Import en EUR')}</Label>
+                  <Label htmlFor="amountEUR" className="text-xs">{tr('projectModule.offBank.eurAmountLabel')}</Label>
                   <Input
                     id="amountEUR"
                     type="text"
@@ -675,7 +675,7 @@ export function OffBankExpenseModal({
                     <p className="text-sm text-destructive">{errors.amountEUR}</p>
                   )}
                   <p className="text-xs text-muted-foreground">
-                    {tr('projectModule.offBank.eurAutoHint', "Si ho deixes buit, l'EUR es calcularà en imputar la despesa a un projecte.")}
+                    {tr('projectModule.offBank.eurAutoHint')}
                   </p>
                 </div>
               </CollapsibleContent>
@@ -684,11 +684,11 @@ export function OffBankExpenseModal({
 
           {/* Concepte - full width */}
           <div className="space-y-2">
-            <Label htmlFor="concept">{tr('projectModule.offBank.conceptLabel', 'Concepte *')}</Label>
+            <Label htmlFor="concept">{tr('projectModule.offBank.conceptLabel')}</Label>
             <Input
               id="concept"
               type="text"
-              placeholder={tr('projectModule.offBank.conceptPlaceholder', 'Descripció de la despesa')}
+              placeholder={tr('projectModule.offBank.conceptPlaceholder')}
               value={concept}
               onChange={(e) => setConcept(e.target.value)}
               className={errors.concept ? 'border-destructive' : ''}
@@ -700,11 +700,11 @@ export function OffBankExpenseModal({
 
           {/* Origen/Destinatari */}
           <div className="space-y-2">
-            <Label htmlFor="counterpartyName">{tr('projectModule.offBank.counterpartyLabel', 'Origen / Destinatari')}</Label>
+            <Label htmlFor="counterpartyName">{tr('projectModule.offBank.counterpartyLabel')}</Label>
             <Input
               id="counterpartyName"
               type="text"
-              placeholder={tr('projectModule.offBank.counterpartyPlaceholder', 'Nom del proveïdor o persona')}
+              placeholder={tr('projectModule.offBank.counterpartyPlaceholder')}
               value={counterpartyName}
               onChange={(e) => setCounterpartyName(e.target.value)}
             />
@@ -712,7 +712,7 @@ export function OffBankExpenseModal({
 
           {/* Comprovants (Attachments) */}
           <div className="space-y-2">
-            <Label>{tr('projectModule.offBank.attachmentsLabel', 'Comprovants')}</Label>
+            <Label>{tr('projectModule.offBank.attachmentsLabel')}</Label>
             <ExpenseAttachmentsDropzone
               organizationId={organizationId}
               expenseId={isEditMode ? expenseId ?? null : null}
@@ -733,7 +733,7 @@ export function OffBankExpenseModal({
           }}>
             <CollapsibleTrigger asChild>
               <Button variant="ghost" type="button" className="w-full justify-between px-3 py-2 h-auto">
-                <span className="text-sm font-medium">{tr('projectModule.justificationData', 'Dades de justificació')}</span>
+                <span className="text-sm font-medium">{tr('projectModule.justificationData')}</span>
                 {justificationOpen ? (
                   <ChevronUp className="h-4 w-4" />
                 ) : (
@@ -744,7 +744,7 @@ export function OffBankExpenseModal({
             <CollapsibleContent className="space-y-3 pt-2">
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1">
-                  <Label htmlFor="invoiceNumber" className="text-xs">{tr('projectModule.invoiceNumber', 'Núm. factura')}</Label>
+                  <Label htmlFor="invoiceNumber" className="text-xs">{tr('projectModule.invoiceNumber')}</Label>
                   <Input
                     id="invoiceNumber"
                     type="text"
@@ -755,7 +755,7 @@ export function OffBankExpenseModal({
                   />
                 </div>
                 <div className="space-y-1">
-                  <Label htmlFor="issuerTaxId" className="text-xs">{tr('projectModule.issuerTaxId', 'NIF emissor')}</Label>
+                  <Label htmlFor="issuerTaxId" className="text-xs">{tr('projectModule.issuerTaxId')}</Label>
                   <Input
                     id="issuerTaxId"
                     type="text"
@@ -768,7 +768,7 @@ export function OffBankExpenseModal({
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1">
-                  <Label htmlFor="invoiceDate" className="text-xs">{tr('projectModule.invoiceDate', 'Data factura')}</Label>
+                  <Label htmlFor="invoiceDate" className="text-xs">{tr('projectModule.invoiceDate')}</Label>
                   <Input
                     id="invoiceDate"
                     type="date"
@@ -778,7 +778,7 @@ export function OffBankExpenseModal({
                   />
                 </div>
                 <div className="space-y-1">
-                  <Label htmlFor="paymentDate" className="text-xs">{tr('projectModule.paymentDate', 'Data pagament')}</Label>
+                  <Label htmlFor="paymentDate" className="text-xs">{tr('projectModule.paymentDate')}</Label>
                   <Input
                     id="paymentDate"
                     type="date"
@@ -800,14 +800,14 @@ export function OffBankExpenseModal({
             onClick={() => handleOpenChange(false)}
             disabled={isProcessing}
           >
-            {tr('projectModule.offBank.cancel', 'Cancel·lar')}
+            {tr('projectModule.offBank.cancel')}
           </Button>
           <Button type="submit" form="offbank-form" disabled={isProcessing}>
             {isProcessing
-              ? tr('projectModule.offBank.saving', 'Guardant...')
+              ? tr('projectModule.offBank.saving')
               : isEditMode
-                ? tr('projectModule.offBank.saveChanges', 'Desar canvis')
-                : tr('projectModule.offBank.addExpense', 'Afegir despesa')}
+                ? tr('projectModule.offBank.saveChanges')
+                : tr('projectModule.offBank.addExpense')}
           </Button>
         </DialogFooter>
       </DialogContent>

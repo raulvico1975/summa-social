@@ -98,7 +98,7 @@ function ProjectCard({ project, executedAmount }: ProjectCardProps) {
             </CardTitle>
           </div>
           <Badge variant={project.status === 'active' ? 'default' : 'secondary'}>
-            {project.status === 'active' ? tr('projectModule.form.statusActive', 'Actiu') : tr('projectModule.form.statusClosed', 'Tancat')}
+            {project.status === 'active' ? tr('projectModule.form.statusActive') : tr('projectModule.form.statusClosed')}
           </Badge>
         </div>
       </CardHeader>
@@ -112,15 +112,15 @@ function ProjectCard({ project, executedAmount }: ProjectCardProps) {
         {/* Info econòmica — llista vertical etiqueta/valor */}
         <div className="border-t pt-3 space-y-1">
           <div className="flex justify-between items-baseline">
-            <span className="text-xs text-muted-foreground">{tr('projectModule.budget', 'Pressupost')}</span>
+            <span className="text-xs text-muted-foreground">{tr('projectModule.budget')}</span>
             <span className="text-sm font-medium tabular-nums">{formatAmountCompact(budgeted)} €</span>
           </div>
           <div className="flex justify-between items-baseline">
-            <span className="text-xs text-muted-foreground">{tr('projectModule.executed', 'Executat')}</span>
+            <span className="text-xs text-muted-foreground">{tr('projectModule.executed')}</span>
             <span className="text-sm font-medium tabular-nums">{formatAmountCompact(executedAmount)} €</span>
           </div>
           <div className="flex justify-between items-baseline">
-            <span className="text-xs text-muted-foreground">{tr('projectModule.pending', 'Pendent')}</span>
+            <span className="text-xs text-muted-foreground">{tr('projectModule.pending')}</span>
             <span className={`text-sm font-medium tabular-nums ${pending < 0 ? 'text-red-600' : ''}`}>
               {formatAmountCompact(pending)} €
             </span>
@@ -135,14 +135,14 @@ function ProjectCard({ project, executedAmount }: ProjectCardProps) {
           >
             <Button variant="outline" size="sm" className="w-full">
               <Euro className="h-4 w-4 mr-1" />
-              {tr('projectModule.budgetManagement', 'Gestió Econòmica')}
+              {tr('projectModule.budgetManagement')}
             </Button>
           </Link>
           <Link
             href={buildUrl(`/dashboard/project-module/expenses?projectId=${project.id}`)}
             onClick={handleViewExpensesClick}
           >
-            <Button variant="ghost" size="sm" title={t.projectModule?.viewProjectExpenses ?? 'Veure despeses del projecte'}>
+            <Button variant="ghost" size="sm" title={tr('projectModule.viewProjectExpenses')}>
               <Eye className="h-4 w-4" />
             </Button>
           </Link>
@@ -150,7 +150,7 @@ function ProjectCard({ project, executedAmount }: ProjectCardProps) {
             href={buildUrl(`/dashboard/project-module/projects/${project.id}/edit`)}
             onClick={handleEditClick}
           >
-            <Button variant="ghost" size="sm" title={t.projectModule?.editProject ?? 'Editar projecte'}>
+            <Button variant="ghost" size="sm" title={tr('projectModule.editProject')}>
               <Pencil className="h-4 w-4" />
             </Button>
           </Link>
@@ -216,10 +216,10 @@ export default function ProjectsListPage() {
     return (
       <div className="flex flex-col items-center justify-center py-12 gap-4">
         <AlertCircle className="h-12 w-12 text-destructive" />
-        <p className="text-destructive font-medium">{tr('projectModule.errorLoadingProjects', 'Error carregant projectes')}</p>
+        <p className="text-destructive font-medium">{tr('projectModule.errorLoadingProjects')}</p>
         <p className="text-muted-foreground text-sm">{error.message}</p>
         <Button onClick={refresh} variant="outline">
-          {tr('projectModule.retry', 'Reintentar')}
+          {tr('projectModule.retry')}
         </Button>
       </div>
     );
@@ -230,15 +230,15 @@ export default function ProjectsListPage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold">{tr('projectModule.projectsTitle', 'Projectes')}</h1>
+          <h1 className="text-2xl font-bold">{tr('projectModule.projectsTitle')}</h1>
           <p className="text-muted-foreground">
-            {tr('projectModule.projectsDescription', 'Gestiona els projectes per assignar despeses')}
+            {tr('projectModule.projectsDescription')}
           </p>
         </div>
         <Link href={buildUrl('/dashboard/project-module/projects/new')}>
           <Button>
             <Plus className="h-4 w-4 mr-2" />
-            {tr('projectModule.newProject', 'Nou projecte')}
+            {tr('projectModule.newProject')}
           </Button>
         </Link>
       </div>
@@ -263,13 +263,13 @@ export default function ProjectsListPage() {
       ) : projects.length === 0 ? (
         <EmptyState
           icon={FolderKanban}
-          title={t.emptyStates?.projects?.noData ?? "Encara no hi ha projectes"}
-          description={t.emptyStates?.projects?.noDataDesc ?? "Crea un projecte per poder assignar despeses i veure execució."}
+          title={tr('emptyStates.projects.noData')}
+          description={tr('emptyStates.projects.noDataDesc')}
         >
           <Link href={buildUrl('/dashboard/project-module/projects/new')}>
             <Button>
               <Plus className="h-4 w-4 mr-2" />
-              {t.emptyStates?.projects?.addNew ?? "Crear projecte"}
+              {tr('emptyStates.projects.addNew')}
             </Button>
           </Link>
         </EmptyState>
