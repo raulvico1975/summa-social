@@ -1,3 +1,11 @@
+# Bloqueig de commits directes a master/prod
+branch=$(git rev-parse --abbrev-ref HEAD)
+if [ "$branch" = "master" ] || [ "$branch" = "prod" ]; then
+  echo "ERROR: Commits directes a '$branch' estan prohibits."
+  echo "Treballa a 'main' o una branca WIP (ui/*, fix/*, feat/*)."
+  exit 1
+fi
+
 npm test
 npm run i18n:validate-guides
 npm run i18n:validate-help
