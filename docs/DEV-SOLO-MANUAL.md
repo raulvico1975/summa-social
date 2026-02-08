@@ -121,12 +121,23 @@ No llegeixis tot. Consulta el que necessitis.
 
 ---
 
+### 4.1b Hook: bloqueig de commits a master/prod
+
+El hook Husky (`.husky/pre-commit`) bloqueja `git commit` si estàs a la branca `master` o `prod`. Això s'aplica automàticament perquè el projecte ja usa Husky (`core.hooksPath = .husky/_`).
+
+**Desactivar temporalment:** `git commit --no-verify` — NOMÉS per emergències amb autorització explícita del CEO.
+
+**Per què no s'hauria de desactivar:** El model de branques `main → master → prod` és invariant. Commits directes a `master` o `prod` salten el ritual de govern i poden corrompre l'historial.
+
+---
+
 ### 4.2 Gate de producció (obligatori)
 
 **Abans de push a master**, si el canvi toca Moviments, Remeses, Devolucions, Donants, Certificats, Imports o Permisos:
 
 ```
 □ scripts/verify-ci.sh ✅ (typecheck + tests + build)
+□ scripts/verify-local.sh ✅ (build + checks fiables i18n / undefined)
 □ docs/QA-P0-FISCAL.md completat amb PASS/FAIL ✅
 ```
 

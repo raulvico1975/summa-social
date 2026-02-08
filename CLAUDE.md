@@ -1,5 +1,29 @@
 # CLAUDE — Com Claude treballa dins Summa Social
 
+## BLOC 0 — Guardrails de realitat (llegir abans de proposar res)
+
+1) Deploy / Hosting
+- Producció es desplega AUTOMÀTICAMENT només des de la branca `prod` (Firebase App Hosting).
+- "Push a git" NO és sinònim de "ja està en producció". El deploy és quan App Hosting serveix el commit.
+
+2) Govern de branques (invariant)
+- Model: `main → master → prod`
+- Prohibit: commits directes a `master` o `prod`.
+- Qualsevol deploy requereix el ritual de `docs/GOVERN-DE-CODI-I-DEPLOY.md` i autorització explícita del CEO: "Autoritzo deploy".
+
+3) i18n (regla única)
+- Text nou: usar `tr("...")` (JSON). Prohibit afegir text nou a `t.xxx.yyy` (legacy).
+- Prohibit hardcode de strings UI.
+- Si afegeixes claus noves: han d'existir com a mínim a `src/i18n/locales/ca.json`, `es.json`, `fr.json`, `pt.json`.
+
+4) Firestore (anti-bugs)
+- Prohibit escriure `undefined` a Firestore: o omets camp o usa `null`.
+- En updates sensibles de contactes: usar API Admin SDK existent (no update client-side si pot tocar camps d'arxivat).
+
+5) Mètode (anti-parxes)
+- Primer: causa arrel + reproducció + fix mínim.
+- No introduir "guards" o "clamps" com a substitut de la causa arrel.
+
 ## 1. Contracte operatiu
 
 **Prohibit:**
