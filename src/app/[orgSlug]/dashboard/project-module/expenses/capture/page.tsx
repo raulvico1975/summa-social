@@ -50,7 +50,7 @@ export default function CaptureExpensesPage() {
   const { firestore, user } = useFirebase();
   const { organizationId, userRole, firebaseUser } = useCurrentOrganization();
   const { buildUrl } = useOrgUrl();
-  const { t } = useTranslations();
+  const { t, tr } = useTranslations();
   const searchParams = useSearchParams();
   const isMobile = useIsMobile();
 
@@ -171,7 +171,7 @@ export default function CaptureExpensesPage() {
 
     } catch (err) {
       console.error('Error loading off-bank expenses:', err);
-      setError(err instanceof Error ? err : new Error('Sense connexió. Torna-ho a provar quan tinguis cobertura.'));
+      setError(err instanceof Error ? err : new Error(tr('projectModule.capture.offlineError')));
     } finally {
       setIsLoading(false);
       setIsLoadingMore(false);

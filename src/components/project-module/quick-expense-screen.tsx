@@ -94,7 +94,7 @@ export function QuickExpenseScreen({ organizationId, isLandingMode = false }: Qu
   const storage = useStorage();
   const { save, isSaving } = useSaveOffBankExpense();
   const { toast } = useToast();
-  const { t } = useTranslations();
+  const { t, tr } = useTranslations();
   const { buildUrl } = useOrgUrl();
   const { organization } = useCurrentOrganization();
 
@@ -332,7 +332,7 @@ export function QuickExpenseScreen({ organizationId, isLandingMode = false }: Qu
       const finalDate = date || new Date().toISOString().split('T')[0];
 
       // Concepte per defecte si buit
-      const finalConcept = concept.trim() || 'Despesa ràpida';
+      const finalConcept = concept.trim() || tr('projectModule.quickExpense.defaultConcept');
 
       // Suggerir categoria basada en concepte
       const suggestedCategory = suggestCategory(finalConcept);
@@ -350,8 +350,8 @@ export function QuickExpenseScreen({ organizationId, isLandingMode = false }: Qu
 
         if (parsedOriginal !== null && parsedOriginal <= 0) {
           toast({
-            title: 'Import no vàlid',
-            description: 'L\'import ha de ser positiu o deixar-lo buit.',
+            title: tr('projectModule.quickExpense.invalidAmountTitle'),
+            description: tr('projectModule.quickExpense.invalidAmountDesc'),
             variant: 'destructive',
           });
           setIsSubmitting(false);
@@ -371,8 +371,8 @@ export function QuickExpenseScreen({ organizationId, isLandingMode = false }: Qu
 
         if (parsedAmount !== null && parsedAmount <= 0) {
           toast({
-            title: 'Import no vàlid',
-            description: 'L\'import ha de ser positiu o deixar-lo buit.',
+            title: tr('projectModule.quickExpense.invalidAmountTitle'),
+            description: tr('projectModule.quickExpense.invalidAmountDesc'),
             variant: 'destructive',
           });
           setIsSubmitting(false);
@@ -397,8 +397,8 @@ export function QuickExpenseScreen({ organizationId, isLandingMode = false }: Qu
 
       // Èxit
       toast({
-        title: q?.successTitle ?? 'Despesa guardada',
-        description: q?.successBody ?? 'Pots continuar afegint més despeses.',
+        title: tr('projectModule.quickExpense.successTitle'),
+        description: tr('projectModule.quickExpense.successBody'),
       });
 
       // Reset form per encadenar
@@ -417,8 +417,8 @@ export function QuickExpenseScreen({ organizationId, isLandingMode = false }: Qu
     } catch (error) {
       console.error('[QuickExpense] Save error:', error);
       toast({
-        title: q?.errorTitle ?? 'Error',
-        description: q?.errorBody ?? 'No s\'ha pogut guardar. Torna-ho a provar.',
+        title: tr('projectModule.quickExpense.errorTitle'),
+        description: tr('projectModule.quickExpense.errorBody'),
         variant: 'destructive',
       });
     } finally {
@@ -447,11 +447,11 @@ export function QuickExpenseScreen({ organizationId, isLandingMode = false }: Qu
         <Link href={buildUrl('/project-module/expenses')}>
           <Button variant="ghost" size="sm" className="text-muted-foreground">
             <ArrowLeft className="h-4 w-4 mr-1" />
-            {t.common?.back ?? 'Tornar'}
+            {tr('common.back')}
           </Button>
         </Link>
         <h1 className="font-semibold text-lg">
-          {q?.title ?? 'Despesa ràpida'}
+          {tr('projectModule.quickExpense.title')}
         </h1>
         <div className="w-20" /> {/* Spacer per centrar títol */}
       </div>
@@ -468,7 +468,7 @@ export function QuickExpenseScreen({ organizationId, isLandingMode = false }: Qu
         {/* Secció 1: Captura foto/fitxer */}
         <div className="space-y-3">
           <Label className="text-base font-medium">
-            {q?.attachmentLabel ?? 'Comprovant *'}
+            {tr('projectModule.quickExpense.attachmentLabel')}
           </Label>
 
           {/* Botons captura */}
@@ -483,7 +483,7 @@ export function QuickExpenseScreen({ organizationId, isLandingMode = false }: Qu
               disabled={isUploading}
             >
               <Camera className="h-6 w-6" />
-              <span className="text-sm">{q?.cameraButton ?? 'Fer foto'}</span>
+              <span className="text-sm">{tr('projectModule.quickExpense.cameraButton')}</span>
             </Button>
 
             {/* Botó fitxer (secundari) */}
@@ -496,7 +496,7 @@ export function QuickExpenseScreen({ organizationId, isLandingMode = false }: Qu
               disabled={isUploading}
             >
               <Upload className="h-6 w-6" />
-              <span className="text-sm">{q?.uploadButton ?? 'Pujar fitxer'}</span>
+              <span className="text-sm">{tr('projectModule.quickExpense.uploadButton')}</span>
             </Button>
           </div>
 
@@ -538,7 +538,7 @@ export function QuickExpenseScreen({ organizationId, isLandingMode = false }: Qu
                     <p className="text-sm font-medium truncate">{upload.file.name}</p>
                     <p className="text-xs text-muted-foreground">
                       {upload.uploading
-                        ? (q?.uploading ?? 'Pujant...')
+                        ? (tr('projectModule.quickExpense.uploading'))
                         : upload.error
                           ? upload.error
                           : formatFileSize(upload.file.size)}
@@ -568,13 +568,13 @@ export function QuickExpenseScreen({ organizationId, isLandingMode = false }: Qu
               {aiState === 'extracting' && (
                 <div className="flex items-center gap-2 text-sm text-muted-foreground">
                   <Loader2 className="h-4 w-4 animate-spin" />
-                  <span>Analitzant amb IA...</span>
+                  <span>{tr('projectModule.quickExpense.aiExtracting')}</span>
                 </div>
               )}
               {aiState === 'done' && aiExtraction && aiExtraction.confidence > 0 && (
                 <Badge variant="secondary" className="gap-1">
                   <Sparkles className="h-3 w-3" />
-                  Suggerit per IA
+                  {tr('projectModule.quickExpense.aiSuggested')}
                 </Badge>
               )}
             </div>
@@ -585,7 +585,7 @@ export function QuickExpenseScreen({ organizationId, isLandingMode = false }: Qu
         <div className="space-y-2">
           <div className="flex items-center justify-between">
             <Label htmlFor="amount" className="text-base font-medium">
-              {q?.amountLabel ?? 'Import'}
+              {tr('projectModule.quickExpense.amountLabel')}
             </Label>
             {/* Mostrar moneda detectada si no és EUR */}
             {currency !== 'EUR' && (
@@ -649,19 +649,19 @@ export function QuickExpenseScreen({ organizationId, isLandingMode = false }: Qu
           )}
 
           <p className="text-xs text-muted-foreground text-center">
-            {q?.amountHint ?? 'Opcional — pots afegir-ho després'}
+            {tr('projectModule.quickExpense.amountHint')}
           </p>
         </div>
 
         {/* Secció 3: Nota/concepte (opcional) */}
         <div className="space-y-2">
           <Label htmlFor="concept" className="text-base font-medium">
-            {q?.conceptLabel ?? 'Nota (opcional)'}
+            {tr('projectModule.quickExpense.conceptLabel')}
           </Label>
           <Input
             id="concept"
             type="text"
-            placeholder={q?.conceptPlaceholder ?? 'Ex: Taxi aeroport, Material oficina...'}
+            placeholder={tr('projectModule.quickExpense.conceptPlaceholder')}
             value={concept}
             onChange={(e) => {
               userEditedConcept.current = true;
@@ -695,19 +695,19 @@ export function QuickExpenseScreen({ organizationId, isLandingMode = false }: Qu
             {isSubmitting ? (
               <>
                 <Loader2 className="h-5 w-5 mr-2 animate-spin" />
-                {q?.saving ?? 'Guardant...'}
+                {tr('projectModule.quickExpense.saving')}
               </>
             ) : (
               <>
                 <Check className="h-5 w-5 mr-2" />
-                {q?.saveButton ?? 'Guardar despesa'}
+                {tr('projectModule.quickExpense.saveButton')}
               </>
             )}
           </Button>
 
           {!hasAttachments && (
             <p className="text-center text-sm text-muted-foreground mt-2">
-              {q?.attachmentRequired ?? 'Cal afegir almenys un comprovant'}
+              {tr('projectModule.quickExpense.attachmentRequired')}
             </p>
           )}
         </div>
