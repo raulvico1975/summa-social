@@ -18,7 +18,7 @@ import { formatCurrencyEU } from '@/lib/normalize';
 import { DateFilter, type DateFilterValue } from '@/components/date-filter';
 import { useTransactionFilters } from '@/hooks/use-transaction-filters';
 import { useIsMobile } from '@/hooks/use-mobile';
-import { MISSION_TRANSFER_CATEGORY_KEY } from '@/lib/constants';
+import { findSystemCategoryId } from '@/lib/constants';
 import {
   aggregateIncomeByCategory,
   aggregateMissionTransfersByContact,
@@ -565,7 +565,10 @@ export default function DashboardPage() {
     return socialTxs;
   }, [baseTransactions]);
 
-  const MISSION_TRANSFER_CATEGORY_KEY = 'missionTransfers';
+  const missionTransferCategoryId = React.useMemo(
+    () => categories ? findSystemCategoryId(categories, 'missionTransfers') : null,
+    [categories]
+  );
   const incomeAggregates = React.useMemo(
     () =>
       aggregateIncomeByCategory({
@@ -582,10 +585,10 @@ export default function DashboardPage() {
         transactions: filteredTransactions,
         projects,
         topN: 3,
-        missionKey: MISSION_TRANSFER_CATEGORY_KEY,
+        missionKey: missionTransferCategoryId ?? '',
         labels: shareModalTexts.labels,
       }),
-    [filteredTransactions, projects, shareModalTexts]
+    [filteredTransactions, projects, shareModalTexts, missionTransferCategoryId]
   );
   const transferAggregates = React.useMemo(
     () =>
@@ -593,28 +596,28 @@ export default function DashboardPage() {
         transactions: filteredTransactions,
         contacts,
         topN: 3,
-        missionKey: MISSION_TRANSFER_CATEGORY_KEY,
+        missionKey: missionTransferCategoryId ?? '',
         labels: shareModalTexts.labels,
       }),
-    [filteredTransactions, contacts, shareModalTexts]
+    [filteredTransactions, contacts, shareModalTexts, missionTransferCategoryId]
   );
   const { totalIncome, totalExpenses, totalMissionTransfers } = React.useMemo(() => {
     if (!filteredTransactions) return { totalIncome: 0, totalExpenses: 0, totalMissionTransfers: 0 };
     return filteredTransactions.reduce((acc, tx) => {
       if (tx.amount > 0) {
         acc.totalIncome += tx.amount;
-      } else if (tx.category === MISSION_TRANSFER_CATEGORY_KEY) {
+      } else if (missionTransferCategoryId && tx.category === missionTransferCategoryId) {
         acc.totalMissionTransfers += tx.amount;
       } else {
         acc.totalExpenses += tx.amount;
       }
       return acc;
     }, { totalIncome: 0, totalExpenses: 0, totalMissionTransfers: 0 });
-  }, [filteredTransactions]);
+  }, [filteredTransactions, missionTransferCategoryId]);
 
   const expenseTransactions = React.useMemo(
-    () => filteredTransactions?.filter((tx) => tx.amount < 0 && tx.category !== MISSION_TRANSFER_CATEGORY_KEY) || [],
-    [filteredTransactions]
+    () => filteredTransactions?.filter((tx) => tx.amount < 0 && tx.category !== missionTransferCategoryId) || [],
+    [filteredTransactions, missionTransferCategoryId]
   );
   // Saldo = Ingressos + Despeses + Terreny (tots tres ja amb signe: despeses i terreny són negatius)
   const netBalance = totalIncome + totalExpenses + totalMissionTransfers;
@@ -1043,7 +1046,7 @@ ${t.dashboard.generatedWith}`;
 
     // Procesar totes les despeses (excloses transferències de missió)
     filteredTransactions.forEach(tx => {
-      if (tx.amount < 0 && tx.category !== MISSION_TRANSFER_CATEGORY_KEY) {
+      if (tx.amount < 0 && tx.category !== missionTransferCategoryId) {
         const projectId = tx.projectId || null;
         const current = projectMap.get(projectId) || { name: '', total: 0 };
         current.total += Math.abs(tx.amount);

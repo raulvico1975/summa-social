@@ -5,11 +5,12 @@ import { StatCard } from '@/components/stat-card';
 import { ExpensesChart } from '@/components/expenses-chart';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { DollarSign, TrendingUp, TrendingDown, Rocket } from 'lucide-react';
-import type { Transaction } from '@/lib/data';
+import type { Transaction, Category } from '@/lib/data';
 import { useCollection, useFirebase, useMemoFirebase } from '@/firebase';
 import { collection } from 'firebase/firestore';
 import { useTranslations } from '@/i18n';
 import { useCurrentOrganization } from '@/hooks/organization-provider';
+import { findSystemCategoryId } from '@/lib/constants';
 
 const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('es-ES', { style: 'currency', currency: 'EUR' }).format(amount);
@@ -26,7 +27,16 @@ export default function DashboardPage() {
   );
   const { data: transactions } = useCollection<Transaction>(transactionsQuery);
 
-  const MISSION_TRANSFER_CATEGORY_KEY = 'missionTransfers';
+  const categoriesQuery = useMemoFirebase(
+    () => organizationId ? collection(firestore, 'organizations', organizationId, 'categories') : null,
+    [firestore, organizationId]
+  );
+  const { data: categories } = useCollection<Category>(categoriesQuery);
+
+  const missionTransferCategoryId = React.useMemo(
+    () => categories ? findSystemCategoryId(categories, 'missionTransfers') : null,
+    [categories]
+  );
 
   const { totalIncome, totalExpenses, totalMissionTransfers } = React.useMemo(() => {
     if (!transactions) return { totalIncome: 0, totalExpenses: 0, totalMissionTransfers: 0 };
@@ -34,7 +44,7 @@ export default function DashboardPage() {
       if (tx.amount > 0) {
         acc.totalIncome += tx.amount;
       } else {
-        if (tx.category === MISSION_TRANSFER_CATEGORY_KEY) {
+        if (missionTransferCategoryId && tx.category === missionTransferCategoryId) {
             acc.totalMissionTransfers += tx.amount;
         } else {
             acc.totalExpenses += tx.amount;
@@ -42,11 +52,11 @@ export default function DashboardPage() {
       }
       return acc;
     }, { totalIncome: 0, totalExpenses: 0, totalMissionTransfers: 0 });
-  }, [transactions]);
-  
-  const expenseTransactions = React.useMemo(() => 
-    transactions?.filter(tx => tx.amount < 0 && tx.category !== MISSION_TRANSFER_CATEGORY_KEY) || [],
-  [transactions]);
+  }, [transactions, missionTransferCategoryId]);
+
+  const expenseTransactions = React.useMemo(() =>
+    transactions?.filter(tx => tx.amount < 0 && tx.category !== missionTransferCategoryId) || [],
+  [transactions, missionTransferCategoryId]);
   
   const netBalance = totalIncome + totalExpenses;
 

@@ -218,6 +218,14 @@ export async function POST(
 
   const fromCategoryData = fromCategorySnap.data();
 
+  // Guardrail: categories de sistema no es poden arxivar
+  if (fromCategoryData?.systemKey) {
+    return NextResponse.json(
+      { success: false, error: 'Categoria de sistema protegida. No es pot arxivar.', code: 'SYSTEM_CATEGORY_LOCKED' },
+      { status: 400 }
+    );
+  }
+
   // Idempotència: si ja està arxivada, retornem success
   if (fromCategoryData?.archivedAt != null) {
     console.log(`[categories/archive] Categoria ${fromCategoryId} ja arxivada (idempotent)`);
@@ -256,56 +264,26 @@ export async function POST(
     }
   }
 
-  // 7. Query transaccions amb category == fromCategoryId
-  // NOTA: No podem usar where('archivedAt', '==', null) perquè Firestore
-  // no troba documents on el camp no existeix (dades legacy sense archivedAt)
+  // 7. Guardrail: no es pot arxivar si té transaccions assignades
   const transactionsRef = db.collection(`organizations/${orgId}/transactions`);
-  const categoryTransactionsQuery = transactionsRef
-    .where('category', '==', fromCategoryId);
+  const usageCheck = await transactionsRef
+    .where('category', '==', fromCategoryId)
+    .limit(1)
+    .get();
 
-  const categoryTransactionsSnap = await categoryTransactionsQuery.get();
-
-  // Filtrar actives a codi (archivedAt == null o undefined/absent)
-  const activeDocs = categoryTransactionsSnap.docs.filter(doc => {
-    const data = doc.data();
-    return data.archivedAt == null; // Cobreix null i undefined
-  });
-  const activeCount = activeDocs.length;
-
-  console.log(`[categories/archive] Categoria ${fromCategoryId} té ${activeCount} transaccions actives`);
-
-  // 8. Si count > 0 i no hi ha toCategoryId, error
-  // NOTA: Retornem activeCount perquè la UI pugui mostrar-lo al ReassignModal
-  if (activeCount > 0 && !toCategoryId) {
+  if (!usageCheck.empty) {
+    console.log(`[categories/archive] Categoria ${fromCategoryId} té transaccions assignades — bloqueig`);
     return NextResponse.json(
       {
         success: false,
-        error: `Categoria té ${activeCount} moviments actius. Cal reassignar-los primer.`,
-        code: 'HAS_ACTIVE_TRANSACTIONS',
-        activeCount,
+        error: 'No es pot arxivar aquesta categoria perquè ja té moviments assignats.',
+        code: 'CATEGORY_IN_USE',
       },
       { status: 400 }
     );
   }
 
-  // 9. Si count > 0 i toCategoryId, fer batch reassign
-  let reassignedCount = 0;
-  if (activeCount > 0 && toCategoryId) {
-    for (let i = 0; i < activeDocs.length; i += BATCH_SIZE) {
-      const batch = db.batch();
-      const chunk = activeDocs.slice(i, i + BATCH_SIZE);
-
-      for (const doc of chunk) {
-        batch.update(doc.ref, { category: toCategoryId });
-      }
-
-      await batch.commit();
-      reassignedCount += chunk.length;
-      console.log(`[categories/archive] Reassignades ${reassignedCount}/${activeDocs.length} transaccions`);
-    }
-  }
-
-  // 10. Arxivar la categoria origen
+  // 8. Arxivar la categoria origen
   await fromCategoryRef.update({
     archivedAt: FieldValue.serverTimestamp(),
     archivedByUid: uid,
@@ -313,10 +291,9 @@ export async function POST(
   });
 
   const elapsed = Date.now() - startTime;
-  console.log(`[categories/archive] Categoria ${fromCategoryId} arxivada. Reassignades: ${reassignedCount}. Temps: ${elapsed}ms`);
+  console.log(`[categories/archive] Categoria ${fromCategoryId} arxivada. Temps: ${elapsed}ms`);
 
   return NextResponse.json({
     success: true,
-    reassignedCount,
   });
 }

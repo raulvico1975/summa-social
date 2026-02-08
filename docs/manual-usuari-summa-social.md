@@ -1623,13 +1623,55 @@ L'administració revisa i categoritza després.
 
 ---
 
-## 10.6 Drag & Drop de documents
+## 10.6 Exportar justificació a Excel
+
+Des de la pantalla de pressupost d'un projecte, pots descarregar un Excel amb totes les despeses assignades.
+
+### Com fer-ho
+
+1. Ves a **Projectes > (el teu projecte) > Gestió Econòmica**
+2. Clica el botó d'exportació Excel (icona de descàrrega o menú **⋮** → **"Exportar justificació (Excel)"**)
+3. S'obre un diàleg on pots triar l'ordre de les files:
+
+| Opció | Què fa |
+|-------|--------|
+| **Per partida i data** | Agrupa les despeses per partida pressupostària, i dins de cada partida les ordena per data |
+| **Cronològic** | Ordena totes les despeses per data, sense agrupar per partida |
+
+4. Clica **"Descarregar"**
+
+### Què conté l'Excel
+
+Cada fila és una despesa assignada al projecte. Les columnes són:
+
+| Columna | Què mostra |
+|---------|------------|
+| Núm. | Número correlatiu |
+| Data | Data de la despesa |
+| Concepte | Descripció de la despesa |
+| Proveïdor | Nom del proveïdor o contrapart |
+| Núm. factura | Número de factura (si s'ha introduït) |
+| Partida | Codi i nom de la partida pressupostària |
+| Tipus de canvi aplicat | Si la despesa és en moneda estrangera, el TC usat per convertir a EUR |
+| Import total (moneda despesa) | Import original de la despesa, en la seva moneda |
+| Moneda | Codi de la moneda (EUR, XOF, USD...) |
+| Import total (EUR) | Import total convertit a euros |
+| Import imputat (moneda local) | Part imputada al projecte, en moneda local |
+| Import imputat (EUR) | Part imputada al projecte, en euros |
+
+Les capçaleres de l'Excel surten traduïdes a l'idioma que tinguis configurat.
+
+Al final del document hi ha una fila de **totals**.
+
+---
+
+## 10.7 Drag & Drop de documents
 
 A la pantalla d'assignació de despeses, pots arrossegar fitxers directament sobre cada fila per adjuntar justificants.
 
 ---
 
-## 10.7 Liquidacions de Despeses de Viatge (v1.28)
+## 10.8 Liquidacions de Despeses de Viatge (v1.28)
 
 Per gestionar despeses de viatge: tiquets, quilometratge i reemborsaments.
 
