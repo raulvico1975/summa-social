@@ -253,11 +253,17 @@ export function CategoryManager() {
         });
         setCategoryToArchive(null);
       } else {
-        // Error: CATEGORY_IN_USE, SYSTEM_CATEGORY_LOCKED, o error genèric
+        // Mapejar code de l'API → clau i18n
+        const errorDescription =
+          result.code === 'SYSTEM_CATEGORY_LOCKED'
+            ? (t.settings?.systemCategoryLocked ?? result.error)
+            : result.code === 'CATEGORY_IN_USE'
+              ? (t.settings?.categoryInUse ?? result.error)
+              : (t.settings?.archiveError ?? result.error ?? 'Error desconegut');
         toast({
           variant: 'destructive',
           title: t.settings?.archiveError ?? 'Error en arxivar',
-          description: result.error || 'Error desconegut',
+          description: errorDescription,
         });
         setCategoryToArchive(null);
       }
