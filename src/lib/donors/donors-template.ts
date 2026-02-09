@@ -31,6 +31,7 @@ export const DONORS_TEMPLATE_HEADERS = [
   'IBAN',
   'Quota mensual',
   "Data d'alta",
+  'Periodicitat quota',
 ] as const;
 
 export type DonorTemplateHeader = typeof DONORS_TEMPLATE_HEADERS[number];
@@ -54,6 +55,7 @@ export const HEADER_TO_FIELD: Record<DonorTemplateHeader, string> = {
   'IBAN': 'iban',
   'Quota mensual': 'monthlyAmount',
   "Data d'alta": 'memberSince',
+  'Periodicitat quota': 'periodicityQuota',
 };
 
 /**
@@ -150,6 +152,7 @@ export function downloadDonorsTemplate(): void {
       'ES1234567890123456789012',
       '10',
       '15/01/2023',
+      'Mensual',
     ],
     // Fila d'exemple 2: Particular puntual
     [
@@ -168,6 +171,7 @@ export function downloadDonorsTemplate(): void {
       '',
       '',
       '',
+      'Puntual',
     ],
     // Fila d'exemple 3: Empresa soci
     [
@@ -186,6 +190,7 @@ export function downloadDonorsTemplate(): void {
       'ES0987654321098765432109',
       '50',
       '01/06/2024',
+      'Trimestral',
     ],
   ];
 
@@ -214,6 +219,7 @@ export function downloadDonorsTemplate(): void {
     { wch: 28 },  // IBAN
     { wch: 14 },  // Quota mensual
     { wch: 14 },  // Data d'alta
+    { wch: 18 },  // Periodicitat quota
   ];
 
   const wb = XLSX.utils.book_new();

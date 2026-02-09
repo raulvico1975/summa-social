@@ -75,6 +75,7 @@ type ColumnMapping = {
   defaultCategory: string | null;
   status: string | null;
   memberSince: string | null;
+  periodicityQuota: string | null;
 };
 
 type ImportRow = {
@@ -109,6 +110,7 @@ const emptyMapping: ColumnMapping = {
   defaultCategory: null,
   status: null,
   memberSince: null,
+  periodicityQuota: null,
 };
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -160,6 +162,7 @@ function autoDetectColumn(header: string): keyof ColumnMapping | null {
     defaultCategory: ['categoria', 'category', 'categoría'],
     status: ['estado', 'estat', 'status', 'activo', 'actiu', 'baja', 'baixa'],
     memberSince: ['membersince', 'dataalta', 'fechaalta', 'dateadhesion', 'socides', 'sociodesde', 'dataadesao'],
+    periodicityQuota: ['periodicitat', 'periodicidad', 'periodicite', 'periodicidade', 'periodicity', 'frequencia', 'frequence'],
   };
 
   for (const [field, keywords] of Object.entries(patterns)) {
@@ -254,6 +257,50 @@ function parseDateToISO(value: unknown): string | null {
   return null;
 }
 
+const PERIODICITY_MAP: Record<string, string> = {
+  // ca
+  mensual: 'monthly',
+  trimestral: 'quarterly',
+  semestral: 'semiannual',
+  anual: 'annual',
+  puntual: 'manual',
+  // es (same as ca for most)
+  // en
+  monthly: 'monthly',
+  quarterly: 'quarterly',
+  semiannual: 'semiannual',
+  annual: 'annual',
+  manual: 'manual',
+  // fr
+  mensuel: 'monthly',
+  trimestriel: 'quarterly',
+  semestriel: 'semiannual',
+  annuel: 'annual',
+  ponctuel: 'manual',
+  // pt
+  mensal: 'monthly',
+};
+
+function parsePeriodicityQuota(value: any): { value: string | null; valid: boolean } {
+  if (!value) return { value: null, valid: true };
+  const str = String(value).trim().toLowerCase();
+  if (!str) return { value: null, valid: true };
+  const mapped = PERIODICITY_MAP[str];
+  if (mapped) return { value: mapped, valid: true };
+  return { value: null, valid: false };
+}
+
+function getPeriodicityHumanLabel(code: string | null | undefined): string {
+  switch (code) {
+    case 'monthly': return 'Mensual';
+    case 'quarterly': return 'Trimestral';
+    case 'semiannual': return 'Semestral';
+    case 'annual': return 'Anual';
+    case 'manual': return 'Puntual';
+    default: return '';
+  }
+}
+
 function pruneNullish<T extends Record<string, any>>(obj: T): Partial<T> {
   const out: Record<string, any> = {};
   for (const [k, v] of Object.entries(obj)) {
@@ -306,6 +353,7 @@ export function DonorImporter({
     defaultCategory: t.importers.donor.fields.defaultCategory,
     status: t.importers.donor.fields.status,
     memberSince: t.importers.donor.fields.memberSince,
+    periodicityQuota: t.importers.donor.fields.periodicityQuota,
   };
 
   // Carregar categories d'ingrés
@@ -543,6 +591,18 @@ export function DonorImporter({
         }
       }
 
+      // Parsejar periodicityQuota
+      let periodicityInvalid = false;
+      const periodicityRaw = currentMapping.periodicityQuota ? row[currentMapping.periodicityQuota] : undefined;
+      if (periodicityRaw && String(periodicityRaw).trim()) {
+        const periodicityResult = parsePeriodicityQuota(periodicityRaw);
+        if (periodicityResult.valid && periodicityResult.value) {
+          (parsed as any).periodicityQuota = periodicityResult.value;
+        } else if (!periodicityResult.valid) {
+          periodicityInvalid = true;
+        }
+      }
+
       let status: ImportRow['status'] = 'new';
       let error: string | undefined;
 
@@ -559,6 +619,9 @@ export function DonorImporter({
         status = 'invalid';
         error = t.importers.donor.errors.memberSinceInvalid;
         parsed.memberSince = undefined;
+      } else if (periodicityInvalid) {
+        status = 'invalid';
+        error = t.importers.donor.errors.invalidPeriodicity;
       } else if (existingDonorIds.has(parsed.taxId)) {
         if (updateExisting) {
           status = 'update';
@@ -622,6 +685,18 @@ export function DonorImporter({
         }
       }
 
+      // Parsejar periodicityQuota
+      let periodicityInvalid = false;
+      const periodicityRaw = mapping.periodicityQuota ? row[mapping.periodicityQuota] : undefined;
+      if (periodicityRaw && String(periodicityRaw).trim()) {
+        const periodicityResult = parsePeriodicityQuota(periodicityRaw);
+        if (periodicityResult.valid && periodicityResult.value) {
+          (parsed as any).periodicityQuota = periodicityResult.value;
+        } else if (!periodicityResult.valid) {
+          periodicityInvalid = true;
+        }
+      }
+
       let status: ImportRow['status'] = 'new';
       let error: string | undefined;
 
@@ -638,6 +713,9 @@ export function DonorImporter({
         status = 'invalid';
         error = t.importers.donor.errors.memberSinceInvalid;
         parsed.memberSince = undefined;
+      } else if (periodicityInvalid) {
+        status = 'invalid';
+        error = t.importers.donor.errors.invalidPeriodicity;
       } else if (existingDonorIds.has(parsed.taxId)) {
         // Si existeix, decidir si actualitzar o marcar com duplicat
         if (updateExisting) {
@@ -758,6 +836,7 @@ export function DonorImporter({
               }
             }
             if (row.parsed.memberSince) updateData.memberSince = row.parsed.memberSince;
+            if ((row.parsed as any).periodicityQuota) updateData.periodicityQuota = (row.parsed as any).periodicityQuota;
 
             const prunedUpdate = pruneNullish(updateData);
             const safeUpdate = stripArchiveFields(prunedUpdate);
@@ -797,6 +876,7 @@ export function DonorImporter({
             }
           }
           if (row.parsed.memberSince) cleanData.memberSince = row.parsed.memberSince;
+          if ((row.parsed as any).periodicityQuota) cleanData.periodicityQuota = (row.parsed as any).periodicityQuota;
 
           // Determinar defaultCategoryId
           let defaultCategoryId: string | null = null;
@@ -870,6 +950,12 @@ export function DonorImporter({
   const updateCount = importRows.filter(r => r.status === 'update').length;
   const duplicateCount = importRows.filter(r => r.status === 'duplicate').length;
   const invalidCount = importRows.filter(r => r.status === 'invalid').length;
+
+  // Bloqueig global: altes noves sense periodicitat
+  const newWithoutPeriodicity = importRows.filter(
+    r => r.status === 'new' && !(r.parsed as any).periodicityQuota
+  ).length;
+  const periodicityBlocked = newWithoutPeriodicity > 0;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -1046,6 +1132,7 @@ export function DonorImporter({
                     <TableHead>{t.importers.donor.fields.taxId}</TableHead>
                     <TableHead>{t.importers.donor.tableHeaders.zipCode}</TableHead>
                     <TableHead>{t.importers.donor.tableHeaders.modality}</TableHead>
+                    <TableHead>{t.importers.donor.tableHeaders.periodicity}</TableHead>
                     <TableHead className="w-24">{t.importers.common.status}</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -1069,6 +1156,9 @@ export function DonorImporter({
                         ) : (
                           <Badge variant="secondary">{t.importers.donor.modality.oneTime}</Badge>
                         )}
+                      </TableCell>
+                      <TableCell className="text-sm text-muted-foreground">
+                        {getPeriodicityHumanLabel((row.parsed as any).periodicityQuota) || '-'}
                       </TableCell>
                       <TableCell>
                         {row.status === 'new' && (
@@ -1111,6 +1201,13 @@ export function DonorImporter({
               <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 text-sm text-yellow-800">
                 <AlertTriangle className="h-4 w-4 inline mr-2" />
                 {t.importers.common.duplicatesWillNotImport(duplicateCount)}
+              </div>
+            )}
+
+            {periodicityBlocked && (
+              <div className="bg-red-50 border border-red-200 rounded-lg p-3 text-sm text-red-800">
+                <AlertCircle className="h-4 w-4 inline mr-2" />
+                {t.importers.donor.errors.missingPeriodicityGlobal(newWithoutPeriodicity)}
               </div>
             )}
 
@@ -1162,7 +1259,7 @@ export function DonorImporter({
               </Button>
               <Button
                 onClick={executeImport}
-                disabled={newCount + updateCount === 0}
+                disabled={newCount + updateCount === 0 || periodicityBlocked}
               >
                 {t.importers.donor.importButton(newCount + updateCount)}
                 <ArrowRight className="h-4 w-4 ml-2" />
