@@ -788,6 +788,7 @@ export default function ProjectBudgetPage() {
         totalOriginalAmount: tr('projectModule.export.columns.totalOriginalAmount', 'Import total (moneda despesa)'),
         currency: tr('projectModule.export.columns.currency', 'Moneda'),
         totalEurAmount: tr('projectModule.export.columns.totalEurAmount', 'Import total (EUR)'),
+        assignedPct: tr('projectModule.export.columns.assignedPct', '% imputat'),
         assignedOriginalAmount: tr('projectModule.export.columns.assignedOriginalAmount', 'Import imputat (moneda local)'),
         assignedEurAmount: tr('projectModule.export.columns.assignedEurAmount', 'Import imputat (EUR)'),
       };
