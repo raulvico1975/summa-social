@@ -48,6 +48,17 @@ function getMembershipTypeLabel(donor: Donor): string {
   return donor.membershipType === 'recurring' ? 'Soci' : 'Puntual';
 }
 
+function getPeriodicityLabel(donor: Donor): string {
+  switch (donor.periodicityQuota) {
+    case 'monthly': return 'Mensual';
+    case 'quarterly': return 'Trimestral';
+    case 'semiannual': return 'Semestral';
+    case 'annual': return 'Anual';
+    case 'manual': return 'Puntual';
+    default: return 'Mensual';
+  }
+}
+
 // ═══════════════════════════════════════════════════════════════════════════
 // FUNCIÓ PRINCIPAL
 // ═══════════════════════════════════════════════════════════════════════════
@@ -96,6 +107,7 @@ export function exportDonorsToExcel(
       donor.iban ? formatIBANDisplay(donor.iban) : '', // IBAN
       formatAmount(donor.monthlyAmount),            // Quota mensual
       formatDateEU(donor.memberSince),               // Data d'alta
+      getPeriodicityLabel(donor),                    // Periodicitat quota
     ];
   });
 
@@ -124,6 +136,7 @@ export function exportDonorsToExcel(
     { wch: 28 },  // IBAN
     { wch: 14 },  // Quota mensual
     { wch: 14 },  // Data d'alta
+    { wch: 18 },  // Periodicitat quota
   ];
 
   // Crear workbook
