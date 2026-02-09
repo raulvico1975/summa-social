@@ -2828,6 +2828,7 @@
   "projectModule.expensesPage.tooltipOpenDocument": "Ouvrir le justificatif",
   "projectModule.export.columns.assignedEurAmount": "Montant imputé (EUR)",
   "projectModule.export.columns.assignedOriginalAmount": "Montant imputé (devise locale)",
+  "projectModule.export.columns.assignedPct": "% imputé",
   "projectModule.export.columns.budgetLine": "Poste budgétaire",
   "projectModule.export.columns.concept": "Concept / Description",
   "projectModule.export.columns.currency": "Devise",
