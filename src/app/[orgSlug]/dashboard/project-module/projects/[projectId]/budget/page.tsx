@@ -787,7 +787,7 @@ export default function ProjectBudgetPage() {
         expenseLinks,
         expenses: expenseMap,
         orderMode: exportOrderMode,
-        projectFxRate: project.fxRate ?? null,
+        projectFxRate: getEffectiveProjectTC(fxTransfers, project),
         columnLabels,
       });
 
