@@ -178,16 +178,16 @@ export function ProjectManager() {
         // Error genèric
         toast({
           variant: 'destructive',
-          title: t.projects?.archiveError ?? 'Error en arxivar',
+          title: t.projects?.archiveError ?? "No s'ha pogut eliminar",
           description: result.error || 'Error desconegut',
         });
         setProjectToArchive(null);
       }
     } catch (error) {
-      console.error('Error arxivant eix:', error);
+      console.error('Error eliminant eix:', error);
       toast({
         variant: 'destructive',
-        title: t.projects?.archiveError ?? 'Error en arxivar',
+        title: t.projects?.archiveError ?? "No s'ha pogut eliminar",
         description: error instanceof Error ? error.message : 'Error desconegut',
       });
       setProjectToArchive(null);
@@ -369,7 +369,7 @@ export function ProjectManager() {
                                             size="icon"
                                             className="text-amber-500 hover:text-amber-600"
                                             onClick={() => handleArchiveRequest(project)}
-                                            title="Arxivar"
+                                            title={t.common?.actions?.archive ?? 'Eliminar'}
                                             >
                                             <Archive className="h-4 w-4" />
                                         </Button>
