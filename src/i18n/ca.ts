@@ -471,7 +471,16 @@ export const ca = {
         errorPartial: (success: number, failed: number) =>
           `Completat parcialment: ${success} actualitzats, ${failed} amb errors.`,
         errorAll: "No s'ha pogut actualitzar cap moviment.",
+        mixedTypesWarning: "La selecció inclou ingressos i despeses. Desselecciona per assignar categoria.",
+        skippedIncompatible: (count: number) =>
+          `No s'han assignat ${count} moviment${count > 1 ? 's' : ''} per incompatibilitat de tipus.`,
       },
+      categoryTypeMismatch: {
+        title: "Tipus incompatible",
+        description: "Aquesta categoria no és compatible amb el signe del moviment.",
+        loading: "Carregant categories… torna-ho a provar.",
+      },
+      legacyCategory: "Cal recategoritzar",
     },
     splitter: {
         title: "Dividir Remesa",

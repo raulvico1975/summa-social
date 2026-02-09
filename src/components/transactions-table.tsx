@@ -85,7 +85,7 @@ import { attachDocumentToTransaction } from '@/lib/files/attach-document';
 import { DateFilter, type DateFilterValue } from '@/components/date-filter';
 import { useTransactionFilters } from '@/hooks/use-transaction-filters';
 import { useBankAccounts } from '@/hooks/use-bank-accounts';
-import { TRANSACTION_URL_FILTERS, type TransactionUrlFilter, type SourceFilter, findSystemCategoryId } from '@/lib/constants';
+import { TRANSACTION_URL_FILTERS, type TransactionUrlFilter, type SourceFilter, findSystemCategoryId, isCategoryIdCompatibleStrict } from '@/lib/constants';
 import { SepaReconcileModal } from '@/components/pending-documents/sepa-reconcile-modal';
 import type { PrebankRemittance } from '@/lib/pending-documents/sepa-remittance';
 import { prebankRemittancesCollection } from '@/lib/pending-documents/sepa-remittance';
@@ -537,6 +537,7 @@ export function TransactionsTable({ initialDateFilter = null }: TransactionsTabl
     storage,
     transactions,
     availableContacts,
+    availableCategories,
     firestore,
     userId: user?.uid,
   });
@@ -877,8 +878,24 @@ export function TransactionsTable({ initialDateFilter = null }: TransactionsTabl
   const someVisibleSelected = visibleIds.some(id => selectedIds.has(id));
   const checkboxState = allVisibleSelected ? 'checked' : someVisibleSelected ? 'indeterminate' : 'unchecked';
 
+  // Determinar tipus de la selecció bulk (per filtrar categories i bloquejar mixed)
+  const bulkSelectionType = React.useMemo(() => {
+    if (selectedIds.size === 0) return 'none' as const;
+    const selectedTxs = transactions?.filter(tx => selectedIds.has(tx.id)) || [];
+    const allPositive = selectedTxs.every(tx => tx.amount > 0);
+    const allNegative = selectedTxs.every(tx => tx.amount < 0);
+    if (allPositive) return 'income' as const;
+    if (allNegative) return 'expense' as const;
+    return 'mixed' as const;
+  }, [selectedIds, transactions]);
+
+  const bulkAvailableCategories = React.useMemo(() => {
+    if (!availableCategories || bulkSelectionType === 'mixed' || bulkSelectionType === 'none') return [];
+    return availableCategories.filter(c => c.type === bulkSelectionType);
+  }, [availableCategories, bulkSelectionType]);
+
   // Bulk update amb batching (màx 50 per batch)
-  const handleBulkUpdateCategory = React.useCallback(async (categoryName: string | null) => {
+  const handleBulkUpdateCategory = React.useCallback(async (categoryId: string | null) => {
     if (!organizationId || selectedIds.size === 0) return;
 
     setIsBulkUpdating(true);
@@ -886,49 +903,68 @@ export function TransactionsTable({ initialDateFilter = null }: TransactionsTabl
     const BATCH_SIZE = 50;
     let successCount = 0;
     let failCount = 0;
+    let skippedCount = 0;
 
-    trackUX('bulk.category.start', { count: idsToUpdate.length, action: categoryName ? 'assign' : 'remove' });
+    trackUX('bulk.category.start', { count: idsToUpdate.length, action: categoryId ? 'assign' : 'remove' });
 
     try {
       // Dividir en chunks de 50
       for (let i = 0; i < idsToUpdate.length; i += BATCH_SIZE) {
         const chunk = idsToUpdate.slice(i, i + BATCH_SIZE);
         const batch = writeBatch(firestore);
+        let batchCount = 0;
 
         for (const txId of chunk) {
           const txRef = doc(firestore, 'organizations', organizationId, 'transactions', txId);
-          if (categoryName) {
-            batch.update(txRef, { category: categoryName });
+          if (categoryId) {
+            // Guardrail: validar compatibilitat signe ↔ tipus
+            const tx = transactions?.find(tr => tr.id === txId);
+            if (tx && availableCategories && !isCategoryIdCompatibleStrict(tx.amount, categoryId, availableCategories)) {
+              skippedCount++;
+              continue;
+            }
+            batch.update(txRef, { category: categoryId });
           } else {
             batch.update(txRef, { category: null });
           }
+          batchCount++;
         }
 
-        try {
-          await batch.commit();
-          successCount += chunk.length;
-        } catch (error) {
-          console.error('[BulkUpdate] Batch error:', error);
-          failCount += chunk.length;
+        if (batchCount > 0) {
+          try {
+            await batch.commit();
+            successCount += batchCount;
+          } catch (error) {
+            console.error('[BulkUpdate] Batch error:', error);
+            failCount += batchCount;
+          }
         }
       }
 
+      // Feedback: skipped per incompatibilitat
+      if (skippedCount > 0) {
+        const msg = bulkT?.skippedIncompatible
+          ? (typeof bulkT.skippedIncompatible === 'function' ? bulkT.skippedIncompatible(skippedCount) : String(bulkT.skippedIncompatible).replace('{{count}}', String(skippedCount)))
+          : `No s'han assignat ${skippedCount} moviments per incompatibilitat de tipus.`;
+        toast({ variant: 'destructive', title: msg });
+      }
+
       // Feedback
-      if (failCount === 0) {
-        const categoryDisplayName = categoryName ? getCategoryDisplayName(categoryName) : '';
+      if (failCount === 0 && successCount > 0) {
+        const categoryDisplayName = categoryId ? getCategoryDisplayName(categoryId) : '';
         toast({
-          title: categoryName
+          title: categoryId
             ? bulkT?.successAssigned(successCount, categoryDisplayName) ?? `Categoria assignada a ${successCount} moviments.`
             : bulkT?.successRemoved(successCount) ?? `Categoria treta de ${successCount} moviments.`,
         });
-        trackUX('bulk.category.success', { count: successCount, action: categoryName ? 'assign' : 'remove' });
+        trackUX('bulk.category.success', { count: successCount, action: categoryId ? 'assign' : 'remove' });
       } else if (successCount > 0) {
         toast({
           title: bulkT?.errorPartial(successCount, failCount) ?? `Completat parcialment: ${successCount} actualitzats, ${failCount} amb errors.`,
           variant: 'destructive',
         });
         trackUX('bulk.category.partial', { success: successCount, failed: failCount });
-      } else {
+      } else if (failCount > 0) {
         toast({
           title: bulkT?.errorAll ?? "No s'ha pogut actualitzar cap moviment.",
           variant: 'destructive',
@@ -944,7 +980,7 @@ export function TransactionsTable({ initialDateFilter = null }: TransactionsTabl
     } finally {
       setIsBulkUpdating(false);
     }
-  }, [organizationId, selectedIds, firestore, getCategoryDisplayName, toast, bulkT, clearSelection]);
+  }, [organizationId, selectedIds, transactions, availableCategories, firestore, getCategoryDisplayName, toast, bulkT, clearSelection]);
 
   const handleOpenBulkCategoryDialog = React.useCallback(() => {
     setBulkCategoryId(null);
@@ -957,12 +993,8 @@ export function TransactionsTable({ initialDateFilter = null }: TransactionsTabl
 
   const handleApplyBulkCategory = React.useCallback(() => {
     if (!bulkCategoryId) return;
-    // Buscar el nom de la categoria per ID
-    const category = availableCategories?.find(c => c.id === bulkCategoryId);
-    if (category) {
-      handleBulkUpdateCategory(category.name);
-    }
-  }, [bulkCategoryId, availableCategories, handleBulkUpdateCategory]);
+    handleBulkUpdateCategory(bulkCategoryId);
+  }, [bulkCategoryId, handleBulkUpdateCategory]);
 
   // ═══════════════════════════════════════════════════════════════════════════
   // EXPORTAR EXCEL
@@ -1366,6 +1398,7 @@ export function TransactionsTable({ initialDateFilter = null }: TransactionsTabl
     remittanceNotApplicable: t.movements.table.remittanceNotApplicable,
     undoRemittance: (t.movements.table as any).undoRemittance || 'Desfer remesa',
     moreOptionsAriaLabel: t.movements.table.moreOptionsAriaLabel,
+    legacyCategory: t.movements?.table?.legacyCategory ?? 'Cal recategoritzar',
   }), [t]);
 
   // Memoized filter translations
@@ -1567,12 +1600,15 @@ export function TransactionsTable({ initialDateFilter = null }: TransactionsTabl
               variant="outline"
               size="sm"
               onClick={handleOpenBulkCategoryDialog}
-              disabled={isBulkUpdating}
+              disabled={isBulkUpdating || bulkSelectionType === 'mixed' || !availableCategories}
               className="h-8"
               aria-label={`Assignar categoria a ${selectedCount} moviments`}
+              title={bulkSelectionType === 'mixed' ? (bulkT?.mixedTypesWarning ?? 'La selecció inclou ingressos i despeses. Desselecciona per assignar categoria.') : undefined}
             >
               <Tag className="h-3.5 w-3.5 mr-1.5" />
-              {bulkT?.assignCategory ?? 'Assignar categoria...'}
+              {bulkSelectionType === 'mixed'
+                ? (bulkT?.mixedTypesWarning ?? 'Ingressos i despeses barrejats')
+                : (bulkT?.assignCategory ?? 'Assignar categoria...')}
             </Button>
             <Button
               variant="ghost"
@@ -1714,6 +1750,7 @@ export function TransactionsTable({ initialDateFilter = null }: TransactionsTabl
                   contactType={tx.contactId ? contactMap[tx.contactId]?.type || null : null}
                   projectName={tx.projectId ? projectMap[tx.projectId] || null : null}
                   relevantCategories={tx.amount > 0 ? categoriesByType.income : categoriesByType.expense}
+                  isLegacyCategory={!!tx.category && !availableCategories?.some(c => c.id === tx.category)}
                   categoryTranslations={categoryTranslations}
                   comboboxContacts={comboboxContacts}
                   availableProjects={availableProjects}
@@ -1820,7 +1857,7 @@ export function TransactionsTable({ initialDateFilter = null }: TransactionsTabl
                 <SelectValue placeholder={bulkT?.selectCategoryPlaceholder ?? 'Selecciona una categoria...'} />
               </SelectTrigger>
               <SelectContent>
-                {availableCategories?.map((cat) => (
+                {bulkAvailableCategories.map((cat) => (
                   <SelectItem key={cat.id} value={cat.id}>
                     {categoryTranslations[cat.name] || cat.name}
                   </SelectItem>
