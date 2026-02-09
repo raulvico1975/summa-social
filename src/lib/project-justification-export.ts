@@ -678,7 +678,7 @@ export function buildProjectJustificationFundingXlsx(
     let totalOriginal: number | string = '';
     if (hasFX && expense?.originalAmount != null) {
       totalOriginal = Math.abs(expense.originalAmount);
-    } else if (expense?.amountEUR != null) {
+    } else if (!hasFX && expense?.amountEUR != null && expense.amountEUR !== 0) {
       totalOriginal = Math.abs(expense.amountEUR);
     }
     if (typeof totalOriginal === 'number') totalH += totalOriginal;
@@ -687,7 +687,21 @@ export function buildProjectJustificationFundingXlsx(
     const currency = hasFX ? (expense?.originalCurrency ?? 'EUR') : 'EUR';
 
     // J: Import total de la despesa (en EUR)
-    const totalEUR: number | string = expense?.amountEUR != null ? Math.abs(expense.amountEUR) : '';
+    // Per despeses FX: si amountEUR > 0 l'usem; sinó calculem amb originalAmount × fxRateApplied
+    let totalEUR: number | string = '';
+    if (!hasFX) {
+      // EUR: directe
+      if (expense?.amountEUR != null && expense.amountEUR !== 0) {
+        totalEUR = Math.abs(expense.amountEUR);
+      }
+    } else {
+      // FX: preferir amountEUR si és fiable (no 0), sinó calcular
+      if (expense?.amountEUR != null && expense.amountEUR !== 0) {
+        totalEUR = Math.abs(expense.amountEUR);
+      } else if (expense?.originalAmount != null && typeof fxRateApplied === 'number' && fxRateApplied > 0) {
+        totalEUR = Math.abs(expense.originalAmount) * fxRateApplied;
+      }
+    }
     if (typeof totalEUR === 'number') totalJ += totalEUR;
 
     // K: Import imputat al projecte (moneda local)
