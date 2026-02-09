@@ -25,7 +25,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useTranslations } from '@/i18n';
 import { useFirebase } from '@/firebase';
 import { useCurrentOrganization } from '@/hooks/organization-provider';
-import { collection, getDocs, writeBatch, query, where, doc } from 'firebase/firestore';
+import { collection, getDocs, getDoc, writeBatch, query, where, doc, type Firestore, type DocumentReference } from 'firebase/firestore';
 import { AlertTriangle, Trash2, Users, Truck, Briefcase, ArrowRightLeft, Loader2, GitMerge, Calendar, FileText, Coins, Hash, Tags } from 'lucide-react';
 import { formatCurrencyEU } from '@/lib/normalize';
 
@@ -46,6 +46,21 @@ type RemittanceInfo = {
   itemCount: number;
   childCount: number; // Transaccions filles reals trobades
 };
+
+/** Retorna els txIds que tenen un expenseLink al mòdul de projectes */
+async function findLinkedTxIds(
+  firestore: Firestore,
+  organizationId: string,
+  txIds: string[],
+): Promise<string[]> {
+  const linksBase = collection(firestore, 'organizations', organizationId, 'projectModule', '_', 'expenseLinks');
+  const linked: string[] = [];
+  for (const txId of txIds) {
+    const snap = await getDoc(doc(linksBase, txId));
+    if (snap.exists()) linked.push(txId);
+  }
+  return linked;
+}
 
 export function DangerZone() {
   const { t } = useTranslations();
@@ -102,29 +117,44 @@ export function DangerZone() {
         return;
       }
 
+      // 1. Pre-carregar pares + fills
+      const remittanceData: Array<{ parentRef: DocumentReference; childRefs: DocumentReference[] }> = [];
+      const allTxIds: string[] = [];
+
+      for (const remittanceDoc of incomeRemittances) {
+        allTxIds.push(remittanceDoc.id);
+        const childQuery = query(transactionsRef, where('parentTransactionId', '==', remittanceDoc.id));
+        const childSnapshot = await getDocs(childQuery);
+        const childRefs = childSnapshot.docs.map(d => d.ref);
+        childSnapshot.docs.forEach(d => allTxIds.push(d.id));
+        remittanceData.push({ parentRef: remittanceDoc.ref, childRefs });
+      }
+
+      // 2. Guardrail: bloquejar si alguna tx té vincle amb projectes
+      const linkedIds = await findLinkedTxIds(firestore, organizationId, allTxIds);
+      if (linkedIds.length > 0) {
+        toast({
+          variant: 'destructive',
+          title: t.dangerZone.blockedByProjectLinks ?? 'Moviments assignats a projectes',
+          description: (t.dangerZone.blockedByProjectLinksCount ?? '{{count}} moviments tenen assignacions a projectes.').replace('{{count}}', String(linkedIds.length)),
+        });
+        setShowIncomeRemittanceDialog(false);
+        setIncomeRemittanceConfirmText('');
+        return;
+      }
+
+      // 3. Eliminar
       let deletedRemittanceCount = 0;
       let deletedChildCount = 0;
 
-      // Esborrar cada remesa i les seves filles
-      for (const remittanceDoc of incomeRemittances) {
-        const remittanceId = remittanceDoc.id;
-
-        // Buscar i esborrar transaccions filles
-        const childQuery = query(transactionsRef, where('parentTransactionId', '==', remittanceId));
-        const childSnapshot = await getDocs(childQuery);
-
+      for (const { parentRef, childRefs } of remittanceData) {
         const batch = writeBatch(firestore);
-
-        // Esborrar filles
-        childSnapshot.docs.forEach(childDoc => {
-          batch.delete(childDoc.ref);
+        childRefs.forEach(ref => {
+          batch.delete(ref);
           deletedChildCount++;
         });
-
-        // Esborrar pare
-        batch.delete(remittanceDoc.ref);
+        batch.delete(parentRef);
         deletedRemittanceCount++;
-
         await batch.commit();
       }
 
@@ -176,29 +206,44 @@ export function DangerZone() {
         return;
       }
 
+      // 1. Pre-carregar pares + fills
+      const remittanceData: Array<{ parentRef: DocumentReference; childRefs: DocumentReference[] }> = [];
+      const allTxIds: string[] = [];
+
+      for (const remittanceDoc of remittanceSnapshot.docs) {
+        allTxIds.push(remittanceDoc.id);
+        const childQuery = query(transactionsRef, where('parentTransactionId', '==', remittanceDoc.id));
+        const childSnapshot = await getDocs(childQuery);
+        const childRefs = childSnapshot.docs.map(d => d.ref);
+        childSnapshot.docs.forEach(d => allTxIds.push(d.id));
+        remittanceData.push({ parentRef: remittanceDoc.ref, childRefs });
+      }
+
+      // 2. Guardrail: bloquejar si alguna tx té vincle amb projectes
+      const linkedIds = await findLinkedTxIds(firestore, organizationId, allTxIds);
+      if (linkedIds.length > 0) {
+        toast({
+          variant: 'destructive',
+          title: t.dangerZone.blockedByProjectLinks ?? 'Moviments assignats a projectes',
+          description: (t.dangerZone.blockedByProjectLinksCount ?? '{{count}} moviments tenen assignacions a projectes.').replace('{{count}}', String(linkedIds.length)),
+        });
+        setShowReturnsRemittanceDialog(false);
+        setReturnsRemittanceConfirmText('');
+        return;
+      }
+
+      // 3. Eliminar
       let deletedRemittanceCount = 0;
       let deletedChildCount = 0;
 
-      // Esborrar cada remesa i les seves filles
-      for (const remittanceDoc of remittanceSnapshot.docs) {
-        const remittanceId = remittanceDoc.id;
-
-        // Buscar i esborrar transaccions filles
-        const childQuery = query(transactionsRef, where('parentTransactionId', '==', remittanceId));
-        const childSnapshot = await getDocs(childQuery);
-
+      for (const { parentRef, childRefs } of remittanceData) {
         const batch = writeBatch(firestore);
-
-        // Esborrar filles
-        childSnapshot.docs.forEach(childDoc => {
-          batch.delete(childDoc.ref);
+        childRefs.forEach(ref => {
+          batch.delete(ref);
           deletedChildCount++;
         });
-
-        // Esborrar pare
-        batch.delete(remittanceDoc.ref);
+        batch.delete(parentRef);
         deletedRemittanceCount++;
-
         await batch.commit();
       }
 
@@ -259,6 +304,23 @@ export function DangerZone() {
         setConfirmText('');
         setIsDeleting(false);
         return;
+      }
+
+      // Guardrail: bloquejar delete de transaccions amb vincle a projectes
+      if (deleteType === 'transactions') {
+        const txIds = snapshot.docs.map(d => d.id);
+        const linkedIds = await findLinkedTxIds(firestore, organizationId, txIds);
+        if (linkedIds.length > 0) {
+          toast({
+            variant: 'destructive',
+            title: t.dangerZone.blockedByProjectLinks ?? 'Moviments assignats a projectes',
+            description: (t.dangerZone.blockedByProjectLinksCount ?? '{{count}} moviments tenen assignacions a projectes.').replace('{{count}}', String(linkedIds.length)),
+          });
+          setDeleteType(null);
+          setConfirmText('');
+          setIsDeleting(false);
+          return;
+        }
       }
 
       // Esborrar en batches de 500 (límit de Firestore)

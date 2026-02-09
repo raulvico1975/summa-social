@@ -2683,6 +2683,8 @@ export const fr = {
     deleteSuccessDescription: (count: number, type: string) => `S'han esborrat ${count} ${type} correctament.`,
     deleteError: "Error en l'esborrat",
     deleteErrorDescription: "Hi ha hagut un error en esborrar les dades. Torna-ho a intentar.",
+    blockedByProjectLinks: "Impossible de supprimer car certains mouvements sont assignés à des projets. Désassignez-les d'abord depuis le module projets.",
+    blockedByProjectLinksCount: "{{count}} mouvements ont des assignations à des projets.",
     noDataToDelete: "No hi ha dades",
     noDataToDeleteDescription: "No s'han trobat registres per esborrar.",
     // Remittance deletion
