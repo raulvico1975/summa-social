@@ -5,7 +5,7 @@ import { TransactionImporter } from '@/components/transaction-importer';
 import { TransactionsTable } from '@/components/transactions-table';
 import { useCollection, useFirebase, useMemoFirebase } from '@/firebase';
 import { collection } from 'firebase/firestore';
-import type { Transaction } from '@/lib/data';
+import type { Transaction, Category } from '@/lib/data';
 import { useTranslations } from '@/i18n';
 import { useCurrentOrganization } from '@/hooks/organization-provider';
 import { useSearchParams } from 'next/navigation';
@@ -31,6 +31,12 @@ export default function MovimientosPage() {
   );
   const { data: transactions, isLoading } = useCollection<Transaction>(transactionsQuery);
 
+  const categoriesQuery = useMemoFirebase(
+    () => organizationId ? collection(firestore, 'organizations', organizationId, 'categories') : null,
+    [firestore, organizationId]
+  );
+  const { data: categories } = useCollection<Category>(categoriesQuery);
+
   return (
     <div className="w-full flex flex-col gap-6">
       <div className="flex flex-col gap-4">
@@ -39,7 +45,7 @@ export default function MovimientosPage() {
           <p className="text-muted-foreground">{t.movements.description}</p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          <TransactionImporter existingTransactions={transactions || []} />
+          <TransactionImporter existingTransactions={transactions || []} availableCategories={categories} />
           {isPendingDocsEnabled && (
             <>
               <Button variant="outline" asChild>

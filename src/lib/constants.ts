@@ -37,3 +37,19 @@ export type TransactionUrlFilter = (typeof TRANSACTION_URL_FILTERS)[number];
 
 // Filtre per source de transacció
 export type SourceFilter = 'all' | 'bank' | 'remittance' | 'manual' | 'stripe' | 'null';
+
+/**
+ * Comprova si una categoria (per docId) és compatible amb el signe d'una transacció.
+ * ESTRICTE: categoria desconeguda = false, amount === 0 = false.
+ */
+export function isCategoryIdCompatibleStrict(
+  amount: number,
+  categoryId: string,
+  categories: Array<{ id: string; type: 'income' | 'expense' }>,
+): boolean {
+  const cat = categories.find(c => c.id === categoryId);
+  if (!cat) return false;
+  if (amount > 0) return cat.type === 'income';
+  if (amount < 0) return cat.type === 'expense';
+  return false;
+}

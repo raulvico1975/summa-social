@@ -8,9 +8,10 @@ import { updateDocumentNonBlocking, deleteDocumentNonBlocking, addDocumentNonBlo
 import { useToast } from '@/hooks/use-toast';
 import { useTranslations } from '@/i18n';
 import { useAppLog } from '@/hooks/use-app-log';
-import type { Transaction, AnyContact, ContactType } from '@/lib/data';
+import type { Transaction, AnyContact, ContactType, Category } from '@/lib/data';
 import { buildDocumentFilename } from '@/lib/build-document-filename';
 import { handleTransactionDelete, isFiscallyRelevantTransaction } from '@/lib/fiscal/softDeleteTransaction';
+import { isCategoryIdCompatibleStrict } from '@/lib/constants';
 
 // =============================================================================
 // TYPES
@@ -39,6 +40,7 @@ interface UseTransactionActionsParams {
   storage: FirebaseStorage;
   transactions: Transaction[] | null;
   availableContacts: AnyContact[] | null;
+  availableCategories?: Category[] | null;
   firestore?: Firestore | null;
   userId?: string | null;
 }
@@ -141,6 +143,7 @@ export function useTransactionActions({
   storage,
   transactions,
   availableContacts,
+  availableCategories,
   firestore,
   userId,
 }: UseTransactionActionsParams): UseTransactionActionsReturn {
@@ -187,10 +190,30 @@ export function useTransactionActions({
   // PROPERTY SETTERS
   // ═══════════════════════════════════════════════════════════════════════════
 
-  const handleSetCategory = React.useCallback((txId: string, newCategory: string) => {
+  const handleSetCategory = React.useCallback((txId: string, categoryId: string) => {
     if (!transactionsCollection) return;
-    updateDocumentNonBlocking(doc(transactionsCollection, txId), { category: newCategory });
-  }, [transactionsCollection]);
+
+    if (!availableCategories) {
+      toast({
+        variant: 'destructive',
+        title: t.movements?.table?.categoryTypeMismatch?.title ?? 'Error',
+        description: t.movements?.table?.categoryTypeMismatch?.loading ?? 'Carregant categories… torna-ho a provar.',
+      });
+      return;
+    }
+
+    const tx = transactions?.find(tr => tr.id === txId);
+    if (tx && !isCategoryIdCompatibleStrict(tx.amount, categoryId, availableCategories)) {
+      toast({
+        variant: 'destructive',
+        title: t.movements?.table?.categoryTypeMismatch?.title ?? 'Tipus incompatible',
+        description: t.movements?.table?.categoryTypeMismatch?.description ?? 'Aquesta categoria no és compatible amb el signe del moviment.',
+      });
+      return;
+    }
+
+    updateDocumentNonBlocking(doc(transactionsCollection, txId), { category: categoryId });
+  }, [transactionsCollection, transactions, availableCategories, toast, t]);
 
   const handleSetContact = React.useCallback((txId: string, newContactId: string | null, contactType?: ContactType) => {
     if (!transactionsCollection) return;
@@ -205,12 +228,15 @@ export function useTransactionActions({
       const contact = availableContacts?.find(c => c.id === newContactId);
       const tx = transactions?.find(t => t.id === txId);
       if (contact?.defaultCategoryId && !tx?.category) {
-        updates.category = contact.defaultCategoryId;
+        // Guardrail: només assignar si categories carregades i tipus compatible
+        if (availableCategories && isCategoryIdCompatibleStrict(tx!.amount, contact.defaultCategoryId, availableCategories)) {
+          updates.category = contact.defaultCategoryId;
+        }
       }
     }
 
     updateDocumentNonBlocking(doc(transactionsCollection, txId), updates);
-  }, [transactionsCollection, availableContacts, transactions]);
+  }, [transactionsCollection, availableContacts, availableCategories, transactions]);
 
   const handleSetProject = React.useCallback((txId: string, newProjectId: string | null) => {
     if (!transactionsCollection) return;

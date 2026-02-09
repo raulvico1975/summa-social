@@ -469,7 +469,16 @@ export const fr = {
         errorPartial: (success: number, failed: number) =>
           `Partiellement complété : ${success} mis à jour, ${failed} en erreur.`,
         errorAll: "Aucun mouvement n'a pu être mis à jour.",
+        mixedTypesWarning: "La sélection comprend des revenus et des dépenses. Désélectionnez pour attribuer une catégorie.",
+        skippedIncompatible: (count: number) =>
+          `${count} mouvement${count > 1 ? 's' : ''} non attribué${count > 1 ? 's' : ''} pour incompatibilité de type.`,
       },
+      categoryTypeMismatch: {
+        title: "Type incompatible",
+        description: "Cette catégorie n'est pas compatible avec le signe du mouvement.",
+        loading: "Chargement des catégories… réessayez.",
+      },
+      legacyCategory: "Recatégorisation nécessaire",
     },
     splitter: {
         title: "Ventiler virement",
