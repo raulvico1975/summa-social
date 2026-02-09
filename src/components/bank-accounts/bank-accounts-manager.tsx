@@ -208,7 +208,7 @@ export function BankAccountsManager() {
           description: t.settings.bankAccounts.accountActivatedDescription(account.name),
         });
       } else {
-        // Desactivar/Arxivar: via API-first
+        // Eliminar: via API-first
         const idToken = await user.getIdToken();
         const response = await fetch('/api/bank-accounts/archive', {
           method: 'POST',
@@ -232,14 +232,14 @@ export function BankAccountsManager() {
         } else if (result.code === 'HAS_TRANSACTIONS') {
           toast({
             variant: 'destructive',
-            title: t.settings.bankAccounts.cannotDeactivate ?? 'No es pot desactivar',
+            title: t.settings.bankAccounts.cannotDeactivate ?? 'No es pot eliminar',
             description: t.settings.bankAccounts.hasTransactionsError?.(result.transactionCount)
-              ?? `Aquest compte té ${result.transactionCount} moviments associats. No es pot arxivar.`,
+              ?? `No es pot eliminar perquè té ${result.transactionCount} moviments associats.`,
           });
         } else if (result.code === 'LAST_ACTIVE_ACCOUNT') {
           toast({
             variant: 'destructive',
-            title: t.settings.bankAccounts.cannotDeactivate ?? 'No es pot desactivar',
+            title: t.settings.bankAccounts.cannotDeactivate ?? 'No es pot eliminar',
             description: t.settings.bankAccounts.cannotDeactivateLast,
           });
         } else {

@@ -1061,18 +1061,18 @@ export const es = {
     errorNameEmpty: "El nombre del eje de actuación no puede estar vacío.",
 
     // ═══════════════════════════════════════════════════════════════════════════
-    // ARCHIVO DE EJES (v1.35)
+    // ELIMINACIÓN DE EJES (v1.35 → v1.40 rename)
     // ═══════════════════════════════════════════════════════════════════════════
     axis: "eje",
-    archiveProjectTitle: "Archivar eje",
-    archiveProjectDescription: "Este eje no tiene movimientos activos. Se puede archivar directamente.",
-    archiveProjectConfirm: "Archivar",
-    projectArchivedToast: "Eje archivado",
-    projectArchivedToastDescription: (name: string) => `El eje "${name}" ha sido archivado.`,
-    archiveError: "Error al archivar",
+    archiveProjectTitle: "Eliminar eje",
+    archiveProjectDescription: "Este eje no tiene movimientos asociados. Se puede eliminar.",
+    archiveProjectConfirm: "Eliminar",
+    projectArchivedToast: "Eje eliminado",
+    projectArchivedToastDescription: (name: string) => `El eje "${name}" ha sido eliminado.`,
+    archiveError: "No se ha podido eliminar",
     // Reasignación
     reassignTitle: "Reasignar movimientos",
-    reassignDescription: "Este eje tiene movimientos asociados. Debes reasignarlos antes de archivar.",
+    reassignDescription: "Este eje tiene movimientos asociados. Reasígnalos primero.",
     reassignTarget: "Eje destino",
     reassignSelectPlaceholder: "Selecciona un eje...",
     noAvailableTargets: "No hay ejes disponibles",
@@ -1669,20 +1669,20 @@ export const es = {
     errorNameEmpty: "El nombre de la categoría no puede estar vacío.",
 
     // ═══════════════════════════════════════════════════════════════════════════
-    // ARCHIVO DE CATEGORÍAS (v1.35)
+    // ELIMINACIÓN DE CATEGORÍAS (v1.35 → v1.40 rename)
     // ═══════════════════════════════════════════════════════════════════════════
     category: "categoría",
-    archiveCategoryTitle: "Archivar categoría",
-    archiveCategoryDescription: "Esta categoría no tiene movimientos activos. Se puede archivar directamente.",
-    archiveCategoryConfirm: "Archivar",
-    categoryArchivedToast: "Categoría archivada",
-    categoryArchivedToastDescription: (name: string) => `La categoría "${name}" ha sido archivada.`,
-    archiveError: "Error al archivar",
-    systemCategoryLocked: "Categoría de sistema protegida. No se puede archivar.",
-    categoryInUse: "No se puede archivar esta categoría porque ya tiene movimientos asignados.",
+    archiveCategoryTitle: "Eliminar categoría",
+    archiveCategoryDescription: "Esta categoría no tiene movimientos asociados. Se puede eliminar.",
+    archiveCategoryConfirm: "Eliminar",
+    categoryArchivedToast: "Categoría eliminada",
+    categoryArchivedToastDescription: (name: string) => `La categoría "${name}" ha sido eliminada.`,
+    archiveError: "No se ha podido eliminar",
+    systemCategoryLocked: "Categoría del sistema. No se puede eliminar.",
+    categoryInUse: "No se puede eliminar porque tiene movimientos asociados. Recategorízalos primero.",
     // Reasignación
     reassignTitle: "Reasignar movimientos",
-    reassignDescription: "Esta categoría tiene movimientos asociados. Debes reasignarlos antes de archivar.",
+    reassignDescription: "Esta categoría tiene movimientos asociados. Reasígnalos primero.",
     reassignTarget: "Categoría destino",
     reassignSelectPlaceholder: "Selecciona una categoría...",
     reassignConfirmDescription: "Confirma que quieres mover los movimientos.",
@@ -1816,10 +1816,10 @@ export const es = {
       setAsDefault: "Establecer como predeterminada",
       defaultSet: "Cuenta predeterminada",
       defaultSetDescription: (name: string) => `La cuenta "${name}" es ahora la cuenta predeterminada.`,
-      deactivate: "Desactivar",
+      deactivate: "Eliminar",
       activate: "Activar",
-      accountDeactivated: "Cuenta desactivada",
-      accountDeactivatedDescription: (name: string) => `La cuenta "${name}" se ha desactivado.`,
+      accountDeactivated: "Cuenta eliminada",
+      accountDeactivatedDescription: (name: string) => `La cuenta "${name}" ha sido eliminada.`,
       accountActivated: "Cuenta activada",
       accountActivatedDescription: (name: string) => `La cuenta "${name}" se ha reactivado.`,
       allAccounts: "Todas las cuentas",
@@ -1827,9 +1827,9 @@ export const es = {
       selectAccountRequired: "Es necesario seleccionar una cuenta para importar el extracto.",
       noAccountsWarning: "No tienes ninguna cuenta creada. Crea una en Configuración.",
       goToSettings: "Ir a Configuración",
-      cannotDeactivateLast: "Debes mantener al menos una cuenta bancaria activa.",
-      cannotDeactivate: "No se puede desactivar",
-      hasTransactionsError: (count: number) => `Esta cuenta tiene ${count} movimientos asociados. No se puede archivar.`,
+      cannotDeactivateLast: "No se puede eliminar la última cuenta bancaria activa.",
+      cannotDeactivate: "No se puede eliminar",
+      hasTransactionsError: (count: number) => `No se puede eliminar porque tiene ${count} movimientos asociados.`,
     }
   },
   members: {
@@ -2032,7 +2032,7 @@ export const es = {
       stoppedPartial: (count: number) => `Proceso detenido. ${count} cambios aplicados.`,
       actionError: "No hemos podido completar la acción. Vuelve a intentarlo.",
       unknownError: "Error desconocido",
-      archive: "Archivar",
+      archive: "Eliminar",
       restore: "Restaurar",
       // Reasignación (v1.35)
       from: "De",
@@ -2591,13 +2591,13 @@ export const es = {
     defaultCategoryHint: "Se asignará automáticamente",
     selectDefaultCategory: "Seleccionar categoría",
     noDefaultCategory: "Ninguna (asignar manualmente)",
-    // v1.36: Guardrails de archivado
-    cannotArchive: "No se puede archivar",
-    hasTransactionsError: (count: number) => `Este contacto tiene ${count} movimientos asociados. No se puede archivar.`,
+    // v1.36 → v1.40: Guardrails d'eliminació
+    cannotArchive: "No se puede eliminar",
+    hasTransactionsError: (count: number) => `No se puede eliminar porque tiene ${count} movimientos asociados.`,
     // v1.36.1: Modal informatiu pre-check
-    cannotArchiveTitle: "No se puede archivar",
+    cannotArchiveTitle: "No se puede eliminar el contacto",
     cannotArchiveWithTransactions: (name: string, count: number) =>
-      `El contacto "${name}" tiene ${count} movimientos asociados. No se puede archivar.`,
+      `El contacto "${name}" tiene ${count} movimientos asociados. No se puede eliminar.`,
     // v1.36.3: Missatge simplificat
     cannotDeleteTitle: "No se puede eliminar",
     cannotDeleteMessage: (name: string, count: number) =>

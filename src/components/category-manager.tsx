@@ -95,7 +95,7 @@ function CategoryTable({
                       className="text-amber-600"
                     >
                       <Archive className="mr-2 h-4 w-4" />
-                      Arxivar
+                      {t.common?.actions?.archive ?? 'Eliminar'}
                     </DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>
@@ -137,7 +137,7 @@ function CategoryTable({
                         size="icon"
                         className="text-amber-500 hover:text-amber-600"
                         onClick={() => onDelete(category)}
-                        title="Arxivar"
+                        title={t.common?.actions?.archive ?? 'Eliminar'}
                       >
                         <Archive className="h-4 w-4" />
                       </Button>
@@ -262,16 +262,16 @@ export function CategoryManager() {
               : (t.settings?.archiveError ?? result.error ?? 'Error desconegut');
         toast({
           variant: 'destructive',
-          title: t.settings?.archiveError ?? 'Error en arxivar',
+          title: t.settings?.archiveError ?? "No s'ha pogut eliminar",
           description: errorDescription,
         });
         setCategoryToArchive(null);
       }
     } catch (error) {
-      console.error('Error arxivant categoria:', error);
+      console.error('Error eliminant categoria:', error);
       toast({
         variant: 'destructive',
-        title: t.settings?.archiveError ?? 'Error en arxivar',
+        title: t.settings?.archiveError ?? "No s'ha pogut eliminar",
         description: error instanceof Error ? error.message : 'Error desconegut',
       });
       setCategoryToArchive(null);
