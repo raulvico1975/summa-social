@@ -2883,6 +2883,7 @@
   "projectModule.expensesPage.tooltipOpenDocument": "Obrir comprovant",
   "projectModule.export.columns.assignedEurAmount": "Valor imputado (EUR)",
   "projectModule.export.columns.assignedOriginalAmount": "Valor imputado (moeda local)",
+  "projectModule.export.columns.assignedPct": "% imputado",
   "projectModule.export.columns.budgetLine": "Rubrica",
   "projectModule.export.columns.concept": "Conceito / Descrição",
   "projectModule.export.columns.currency": "Moeda",

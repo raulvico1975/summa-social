@@ -2831,6 +2831,7 @@
   "projectModule.expensesPage.tooltipOpenDocument": "Obrir comprovant",
   "projectModule.export.columns.assignedEurAmount": "Import imputat (EUR)",
   "projectModule.export.columns.assignedOriginalAmount": "Import imputat (moneda local)",
+  "projectModule.export.columns.assignedPct": "% imputat",
   "projectModule.export.columns.budgetLine": "Partida",
   "projectModule.export.columns.concept": "Concepte / Descripció",
   "projectModule.export.columns.currency": "Moneda",

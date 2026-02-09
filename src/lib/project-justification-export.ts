@@ -538,6 +538,7 @@ export interface FundingColumnLabels {
   totalOriginalAmount: string;
   currency: string;
   totalEurAmount: string;
+  assignedPct: string;
   assignedOriginalAmount: string;
   assignedEurAmount: string;
 }
@@ -570,7 +571,7 @@ function parseDateForExcel(dateStr: string | null): Date | null {
  * Construeix l'Excel de justificació per finançadors (format unificat).
  * Utilitza buildJustificationRows com a base i re-ordena segons orderMode.
  *
- * Columnes (A-L):
+ * Columnes (A-M):
  * A. Núm. correlatiu
  * B. Data
  * C. Concepte / Descripció
@@ -581,8 +582,9 @@ function parseDateForExcel(dateStr: string | null): Date | null {
  * H. Import total de la despesa (moneda de la despesa)
  * I. Moneda de la despesa
  * J. Import total de la despesa (en EUR)
- * K. Import imputat al projecte (en moneda local)
- * L. Import imputat al projecte (en EUR)
+ * K. % imputat
+ * L. Import imputat al projecte (en moneda local)
+ * M. Import imputat al projecte (en EUR)
  */
 export function buildProjectJustificationFundingXlsx(
   params: FundingExportParams
@@ -623,7 +625,7 @@ export function buildProjectJustificationFundingXlsx(
   const wsData: (string | number | Date | null)[][] = [];
   const labels = columnLabels;
 
-  // Header (A-L) — nou ordre
+  // Header (A-M) — nou ordre
   wsData.push([
     labels?.order ?? 'Núm.',
     labels?.date ?? 'Data',
@@ -635,6 +637,7 @@ export function buildProjectJustificationFundingXlsx(
     labels?.totalOriginalAmount ?? 'Import total (moneda despesa)',
     labels?.currency ?? 'Moneda',
     labels?.totalEurAmount ?? 'Import total (EUR)',
+    labels?.assignedPct ?? '% imputat',
     labels?.assignedOriginalAmount ?? 'Import imputat (moneda local)',
     labels?.assignedEurAmount ?? 'Import imputat (EUR)',
   ]);
@@ -704,16 +707,24 @@ export function buildProjectJustificationFundingXlsx(
     }
     if (typeof totalEUR === 'number') totalJ += totalEUR;
 
-    // K: Import imputat al projecte (moneda local)
+    // M: Import imputat al projecte (EUR) — calculat primer per usar al % imputat
+    const assignedEUR: number | string = row.amountAssignedEUR ?? '';
+    if (typeof assignedEUR === 'number') totalL += assignedEUR;
+
+    // K: % imputat (valor intern 0..1 per format Excel percentual)
+    let assignedPct: number | string = '';
+    if (assignment?.localPct != null) {
+      assignedPct = assignment.localPct / 100;
+    } else if (typeof assignedEUR === 'number' && typeof totalEUR === 'number' && totalEUR > 0) {
+      assignedPct = assignedEUR / totalEUR;
+    }
+
+    // L: Import imputat al projecte (moneda local)
     let assignedOriginal: number | string = '';
     if (hasFX && expense?.originalAmount != null && assignment?.localPct != null && assignment.localPct > 0) {
       assignedOriginal = Math.abs(expense.originalAmount) * (assignment.localPct / 100);
       totalK += assignedOriginal;
     }
-
-    // L: Import imputat al projecte (EUR)
-    const assignedEUR: number | string = row.amountAssignedEUR ?? '';
-    if (typeof assignedEUR === 'number') totalL += assignedEUR;
 
     wsData.push([
       newOrder,
@@ -726,6 +737,7 @@ export function buildProjectJustificationFundingXlsx(
       totalOriginal,
       currency,
       totalEUR,
+      assignedPct,
       assignedOriginal,
       assignedEUR,
     ]);
@@ -743,21 +755,28 @@ export function buildProjectJustificationFundingXlsx(
     totalH || '',
     '',
     totalJ || '',
+    '',
     totalK || '',
     totalL || '',
   ]);
 
   const ws = XLSX.utils.aoa_to_sheet(wsData, { cellDates: true });
 
-  // Format numèric: col G(6) = TC 6 decimals, cols H(7), J(9), K(10), L(11) = #,##0.00
+  // Format numèric: col G(6) = TC, K(10) = %, cols H(7), J(9), L(11), M(12) = imports
   const fxFormat = '0.000000';
+  const pctFormat = '0.00%';
   const numberFormat = '#,##0.00';
-  const amountCols = [7, 9, 10, 11];
+  const amountCols = [7, 9, 11, 12];
   for (let r = 1; r <= sortedRows.length + 1; r++) { // +1 per fila totals
     // TC (col 6)
     const fxCellRef = XLSX.utils.encode_cell({ r, c: 6 });
     if (ws[fxCellRef] && typeof ws[fxCellRef].v === 'number') {
       ws[fxCellRef].z = fxFormat;
+    }
+    // % imputat (col 10)
+    const pctCellRef = XLSX.utils.encode_cell({ r, c: 10 });
+    if (ws[pctCellRef] && typeof ws[pctCellRef].v === 'number') {
+      ws[pctCellRef].z = pctFormat;
     }
     // Import cols
     for (const c of amountCols) {
@@ -768,7 +787,7 @@ export function buildProjectJustificationFundingXlsx(
     }
   }
 
-  // Amplades de columna (A-L)
+  // Amplades de columna (A-M)
   ws['!cols'] = [
     { wch: 8 },   // A: Núm.
     { wch: 12 },  // B: Data
@@ -780,8 +799,9 @@ export function buildProjectJustificationFundingXlsx(
     { wch: 20 },  // H: Import total (moneda despesa)
     { wch: 10 },  // I: Moneda
     { wch: 16 },  // J: Import total (EUR)
-    { wch: 20 },  // K: Import imputat (local)
-    { wch: 18 },  // L: Import imputat (EUR)
+    { wch: 12 },  // K: % imputat
+    { wch: 20 },  // L: Import imputat (local)
+    { wch: 18 },  // M: Import imputat (EUR)
   ];
 
   // 5. Crear workbook

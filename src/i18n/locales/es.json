@@ -2831,6 +2831,7 @@
   "projectModule.expensesPage.tooltipOpenDocument": "Abrir justificante",
   "projectModule.export.columns.assignedEurAmount": "Importe imputado (EUR)",
   "projectModule.export.columns.assignedOriginalAmount": "Importe imputado (moneda local)",
+  "projectModule.export.columns.assignedPct": "% imputado",
   "projectModule.export.columns.budgetLine": "Partida",
   "projectModule.export.columns.concept": "Concepto / Descripción",
   "projectModule.export.columns.currency": "Moneda",
