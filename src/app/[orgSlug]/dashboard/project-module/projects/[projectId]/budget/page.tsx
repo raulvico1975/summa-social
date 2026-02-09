@@ -709,6 +709,19 @@ export default function ProjectBudgetPage() {
   const handleDelete = async () => {
     if (!deleteConfirm) return;
 
+    // Guardrail: bloquejar si la partida té despeses assignades
+    const hasLinkedExpenses = expenseLinks.some(link =>
+      link.budgetLineIds?.includes(deleteConfirm.id)
+    );
+    if (hasLinkedExpenses) {
+      toast({
+        variant: 'destructive',
+        title: tr('projectModule.budget.error', 'Error'),
+        description: tr('projectModule.budget.cannotDeleteLineHasExpenses', 'No es pot eliminar aquesta partida perquè té despeses assignades. Desassigna-les primer.'),
+      });
+      return;
+    }
+
     try {
       await remove(projectId, deleteConfirm.id);
       toast({
@@ -1815,7 +1828,7 @@ export default function ProjectBudgetPage() {
           <AlertDialogHeader>
             <AlertDialogTitle>{t.projectModule?.fxTransfersDeleteTitle ?? 'Eliminar transferència'}</AlertDialogTitle>
             <AlertDialogDescription>
-              {t.projectModule?.fxTransfersDeleteConfirm ?? 'Estàs segur que vols eliminar aquesta transferència? Aquesta acció no es pot desfer.'}
+              {t.projectModule?.fxTransfersDeleteWarning ?? 'Eliminar aquesta transferència canviarà el tipus de canvi ponderat del projecte i pot afectar els imports EUR de les despeses assignades.'}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
