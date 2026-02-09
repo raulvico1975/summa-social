@@ -2677,6 +2677,8 @@ export const es = {
     deleteSuccessDescription: (count: number, type: string) => `Se han borrado ${count} ${type} correctamente.`,
     deleteError: "Error en el borrado",
     deleteErrorDescription: "Ha habido un error al borrar los datos. Inténtalo de nuevo.",
+    blockedByProjectLinks: "No se pueden eliminar porque hay movimientos asignados a proyectos. Desasígnalos primero desde el módulo de proyectos.",
+    blockedByProjectLinksCount: "{{count}} movimientos tienen asignaciones a proyectos.",
     noDataToDelete: "No hay datos",
     noDataToDeleteDescription: "No se han encontrado registros para borrar.",
     // Remittance deletion

@@ -271,6 +271,8 @@
   "contacts.defaultCategoryHint": "Será atribuída automaticamente",
   "contacts.noDefaultCategory": "Nenhuma (atribuir manualmente)",
   "contacts.selectDefaultCategory": "Selecionar categoria",
+  "dangerZone.blockedByProjectLinks": "Não é possível eliminar porque existem movimentos atribuídos a projetos. Desatribua-os primeiro no módulo de projetos.",
+  "dangerZone.blockedByProjectLinksCount": "{{count}} movimentos têm atribuições a projetos.",
   "dangerZone.cancel": "Cancel·lar",
   "dangerZone.childTransactions": "transaccions filles",
   "dangerZone.confirmLabel": "Escriu la paraula per confirmar:",
