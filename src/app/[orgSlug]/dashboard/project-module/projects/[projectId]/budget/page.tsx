@@ -955,6 +955,7 @@ export default function ProjectBudgetPage() {
             >
               <Compass className="h-4 w-4 mr-2" />
               {tr('projectModule.budget.startJustification', 'Iniciar justificació')}
+              <Badge variant="secondary" className="ml-2 text-[10px] px-1.5 py-0">Beta</Badge>
             </Button>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
@@ -1007,6 +1008,7 @@ export default function ProjectBudgetPage() {
             >
               <Compass className="h-4 w-4 mr-2" />
               {tr('projectModule.budget.startJustification', 'Iniciar justificació')}
+              <Badge variant="secondary" className="ml-2 text-[10px] px-1.5 py-0">Beta</Badge>
             </Button>
             <Button
               variant="outline"
