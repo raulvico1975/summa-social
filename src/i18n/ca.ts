@@ -1064,18 +1064,18 @@ export const ca = {
     errorNameEmpty: "El nom de l'eix d'actuació no pot estar buit.",
 
     // ═══════════════════════════════════════════════════════════════════════════
-    // ARXIVAT D'EIXOS (v1.35)
+    // ELIMINACIÓ D'EIXOS (v1.35 → v1.40 rename)
     // ═══════════════════════════════════════════════════════════════════════════
     axis: "eix",
-    archiveProjectTitle: "Arxivar eix",
-    archiveProjectDescription: "Aquest eix no té moviments actius. Es pot arxivar directament.",
-    archiveProjectConfirm: "Arxivar",
-    projectArchivedToast: "Eix arxivat",
-    projectArchivedToastDescription: (name: string) => `L'eix "${name}" ha estat arxivat.`,
-    archiveError: "Error en arxivar",
+    archiveProjectTitle: "Eliminar eix",
+    archiveProjectDescription: "Aquest eix no té moviments associats. Es pot eliminar.",
+    archiveProjectConfirm: "Eliminar",
+    projectArchivedToast: "Eix eliminat",
+    projectArchivedToastDescription: (name: string) => `L'eix "${name}" ha estat eliminat.`,
+    archiveError: "No s'ha pogut eliminar",
     // Reassignació
     reassignTitle: "Reassignar moviments",
-    reassignDescription: "Aquest eix té moviments associats. Has de reassignar-los abans d'arxivar.",
+    reassignDescription: "Aquest eix té moviments associats. Reassigna'ls primer.",
     reassignTarget: "Eix destí",
     reassignSelectPlaceholder: "Selecciona un eix...",
     noAvailableTargets: "No hi ha eixos disponibles",
@@ -1639,20 +1639,20 @@ export const ca = {
     errorNameEmpty: "El nom de la categoria no pot estar buit.",
 
     // ═══════════════════════════════════════════════════════════════════════════
-    // ARXIVAT DE CATEGORIES (v1.35)
+    // ELIMINACIÓ DE CATEGORIES (v1.35 → v1.40 rename)
     // ═══════════════════════════════════════════════════════════════════════════
     category: "categoria",
-    archiveCategoryTitle: "Arxivar categoria",
-    archiveCategoryDescription: "Aquesta categoria no té moviments actius. Es pot arxivar directament.",
-    archiveCategoryConfirm: "Arxivar",
-    categoryArchivedToast: "Categoria arxivada",
-    categoryArchivedToastDescription: (name: string) => `La categoria "${name}" ha estat arxivada.`,
-    archiveError: "Error en arxivar",
-    systemCategoryLocked: "Categoria de sistema protegida. No es pot arxivar.",
-    categoryInUse: "No es pot arxivar aquesta categoria perquè ja té moviments assignats.",
+    archiveCategoryTitle: "Eliminar categoria",
+    archiveCategoryDescription: "Aquesta categoria no té moviments associats. Es pot eliminar.",
+    archiveCategoryConfirm: "Eliminar",
+    categoryArchivedToast: "Categoria eliminada",
+    categoryArchivedToastDescription: (name: string) => `La categoria "${name}" ha estat eliminada.`,
+    archiveError: "No s'ha pogut eliminar",
+    systemCategoryLocked: "Categoria del sistema. No es pot eliminar.",
+    categoryInUse: "No es pot eliminar perquè té moviments associats. Recategoritza'ls primer.",
     // Reassignació
     reassignTitle: "Reassignar moviments",
-    reassignDescription: "Aquesta categoria té moviments associats. Has de reassignar-los abans d'arxivar.",
+    reassignDescription: "Aquesta categoria té moviments associats. Reassigna'ls primer.",
     reassignTarget: "Categoria destí",
     reassignSelectPlaceholder: "Selecciona una categoria...",
     reassignConfirmDescription: "Confirma que vols moure els moviments.",
@@ -1785,10 +1785,10 @@ export const ca = {
       setAsDefault: "Establir com a defecte",
       defaultSet: "Compte per defecte",
       defaultSetDescription: (name: string) => `El compte "${name}" és ara el compte per defecte.`,
-      deactivate: "Desactivar",
+      deactivate: "Eliminar",
       activate: "Activar",
-      accountDeactivated: "Compte desactivat",
-      accountDeactivatedDescription: (name: string) => `El compte "${name}" s'ha desactivat.`,
+      accountDeactivated: "Compte eliminat",
+      accountDeactivatedDescription: (name: string) => `El compte "${name}" ha estat eliminat.`,
       accountActivated: "Compte activat",
       accountActivatedDescription: (name: string) => `El compte "${name}" s'ha reactivat.`,
       allAccounts: "Tots els comptes",
@@ -1796,9 +1796,9 @@ export const ca = {
       selectAccountRequired: "Cal seleccionar un compte per importar l'extracte.",
       noAccountsWarning: "No tens cap compte creat. Crea'n un a Configuració.",
       goToSettings: "Anar a Configuració",
-      cannotDeactivateLast: "Cal mantenir almenys un compte bancari actiu.",
-      cannotDeactivate: "No es pot desactivar",
-      hasTransactionsError: (count: number) => `Aquest compte té ${count} moviments associats. No es pot arxivar.`,
+      cannotDeactivateLast: "No es pot eliminar l'últim compte bancari actiu.",
+      cannotDeactivate: "No es pot eliminar",
+      hasTransactionsError: (count: number) => `No es pot eliminar perquè té ${count} moviments associats.`,
     }
   },
   members: {
@@ -2007,7 +2007,7 @@ export const ca = {
       stoppedPartial: (count: number) => `Procés aturat. ${count} canvis aplicats.`,
       actionError: "No hem pogut completar l'acció. Torna-ho a provar.",
       unknownError: "Error desconegut",
-      archive: "Arxivar",
+      archive: "Eliminar",
       restore: "Restaurar",
       // Reassignació (v1.35)
       from: "De",
@@ -2566,12 +2566,12 @@ export const ca = {
     defaultCategoryHint: "S'assignarà automàticament",
     selectDefaultCategory: "Selecciona categoria",
     noDefaultCategory: "Cap (assignar manualment)",
-    // v1.36: Guardrails d'arxivat
-    cannotArchive: "No es pot arxivar",
-    cannotArchiveTitle: "No es pot arxivar",
+    // v1.36 → v1.40: Guardrails d'eliminació
+    cannotArchive: "No es pot eliminar",
+    cannotArchiveTitle: "No es pot eliminar el contacte",
     cannotArchiveWithTransactions: (name: string, count: number) =>
-      `El contacte "${name}" té ${count} moviments associats. No es pot arxivar.`,
-    hasTransactionsError: (count: number) => `Aquest contacte té ${count} moviments associats. No es pot arxivar.`,
+      `El contacte "${name}" té ${count} moviments associats. No es pot eliminar.`,
+    hasTransactionsError: (count: number) => `No es pot eliminar perquè té ${count} moviments associats.`,
     // v1.36.3: Missatge simplificat
     cannotDeleteTitle: "No es pot eliminar",
     cannotDeleteMessage: (name: string, count: number) =>

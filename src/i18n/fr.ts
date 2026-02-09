@@ -1062,18 +1062,18 @@ export const fr = {
     errorNameEmpty: "Le nom de l'axe d'intervention ne peut pas être vide.",
 
     // ═══════════════════════════════════════════════════════════════════════════
-    // ARCHIVAGE DES AXES (v1.35)
+    // SUPPRESSION DES AXES (v1.35 → v1.40 rename)
     // ═══════════════════════════════════════════════════════════════════════════
     axis: "axe",
-    archiveProjectTitle: "Archiver l'axe",
-    archiveProjectDescription: "Cet axe n'a pas de mouvements actifs. Il peut être archivé directement.",
-    archiveProjectConfirm: "Archiver",
-    projectArchivedToast: "Axe archivé",
-    projectArchivedToastDescription: (name: string) => `L'axe "${name}" a été archivé.`,
-    archiveError: "Erreur lors de l'archivage",
+    archiveProjectTitle: "Supprimer l'axe",
+    archiveProjectDescription: "Cet axe n'a pas de mouvements associés. Il peut être supprimé.",
+    archiveProjectConfirm: "Supprimer",
+    projectArchivedToast: "Axe supprimé",
+    projectArchivedToastDescription: (name: string) => `L'axe "${name}" a été supprimé.`,
+    archiveError: "Impossible de supprimer",
     // Réassignation
     reassignTitle: "Réassigner les mouvements",
-    reassignDescription: "Cet axe a des mouvements associés. Vous devez les réassigner avant d'archiver.",
+    reassignDescription: "Cet axe a des mouvements associés. Réassignez-les d'abord.",
     reassignTarget: "Axe cible",
     reassignSelectPlaceholder: "Sélectionnez un axe...",
     noAvailableTargets: "Aucun axe disponible",
@@ -1638,20 +1638,20 @@ export const fr = {
     errorNameEmpty: "Le nom de la catégorie ne peut pas être vide.",
 
     // ═══════════════════════════════════════════════════════════════════════════
-    // ARCHIVAGE DES CATÉGORIES (v1.35)
+    // SUPPRESSION DES CATÉGORIES (v1.35 → v1.40 rename)
     // ═══════════════════════════════════════════════════════════════════════════
     category: "catégorie",
-    archiveCategoryTitle: "Archiver la catégorie",
-    archiveCategoryDescription: "Cette catégorie n'a pas de mouvements actifs. Elle peut être archivée directement.",
-    archiveCategoryConfirm: "Archiver",
-    categoryArchivedToast: "Catégorie archivée",
-    categoryArchivedToastDescription: (name: string) => `La catégorie "${name}" a été archivée.`,
-    archiveError: "Erreur lors de l'archivage",
-    systemCategoryLocked: "Catégorie système protégée. Impossible de l'archiver.",
-    categoryInUse: "Impossible d'archiver cette catégorie car elle a des mouvements assignés.",
+    archiveCategoryTitle: "Supprimer la catégorie",
+    archiveCategoryDescription: "Cette catégorie n'a pas de mouvements associés. Elle peut être supprimée.",
+    archiveCategoryConfirm: "Supprimer",
+    categoryArchivedToast: "Catégorie supprimée",
+    categoryArchivedToastDescription: (name: string) => `La catégorie "${name}" a été supprimée.`,
+    archiveError: "Impossible de supprimer",
+    systemCategoryLocked: "Catégorie système protégée. Impossible de la supprimer.",
+    categoryInUse: "Impossible de supprimer cette catégorie car elle a des mouvements associés. Réassignez-les d'abord.",
     // Réassignation
     reassignTitle: "Réassigner les mouvements",
-    reassignDescription: "Cette catégorie a des mouvements associés. Vous devez les réassigner avant d'archiver.",
+    reassignDescription: "Cette catégorie a des mouvements associés. Réassignez-les d'abord.",
     reassignTarget: "Catégorie cible",
     reassignSelectPlaceholder: "Sélectionnez une catégorie...",
     reassignConfirmDescription: "Confirmez que vous souhaitez déplacer les mouvements.",
@@ -1785,10 +1785,10 @@ export const fr = {
       setAsDefault: "Définir par défaut",
       defaultSet: "Compte par défaut",
       defaultSetDescription: (name: string) => `Le compte "${name}" est maintenant le compte par défaut.`,
-      deactivate: "Désactiver",
+      deactivate: "Supprimer",
       activate: "Activer",
-      accountDeactivated: "Compte désactivé",
-      accountDeactivatedDescription: (name: string) => `Le compte "${name}" a été désactivé.`,
+      accountDeactivated: "Compte supprimé",
+      accountDeactivatedDescription: (name: string) => `Le compte "${name}" a été supprimé.`,
       accountActivated: "Compte activé",
       accountActivatedDescription: (name: string) => `Le compte "${name}" a été réactivé.`,
       allAccounts: "Tous les comptes",
@@ -1796,9 +1796,9 @@ export const fr = {
       selectAccountRequired: "Vous devez sélectionner un compte pour importer le relevé.",
       noAccountsWarning: "Aucun compte créé. Créez-en un dans les Paramètres.",
       goToSettings: "Aller aux Paramètres",
-      cannotDeactivateLast: "Vous devez conserver au moins un compte bancaire actif.",
-      cannotDeactivate: "Impossible de désactiver",
-      hasTransactionsError: (count: number) => `Ce compte a ${count} mouvements associés. Il ne peut pas être archivé.`,
+      cannotDeactivateLast: "Impossible de supprimer le dernier compte bancaire actif.",
+      cannotDeactivate: "Impossible de supprimer",
+      hasTransactionsError: (count: number) => `Impossible de supprimer car ce compte a ${count} mouvements associés.`,
     }
   },
   members: {
@@ -2007,7 +2007,7 @@ export const fr = {
       stoppedPartial: (count: number) => `Processus arrêté. ${count} modifications appliquées.`,
       actionError: "Impossible de terminer l'action. Réessayer.",
       unknownError: "Erreur inconnue",
-      archive: "Archiver",
+      archive: "Supprimer",
       restore: "Restaurer",
       // Réaffectation (v1.35)
       from: "De",
@@ -2566,13 +2566,13 @@ export const fr = {
     defaultCategoryHint: "S'assignarà automàticament",
     selectDefaultCategory: "Selecciona categoria",
     noDefaultCategory: "Cap (assignar manualment)",
-    // v1.36: Guardrails d'archivage
-    cannotArchive: "Impossible d'archiver",
-    hasTransactionsError: (count: number) => `Ce contact a ${count} mouvements associés. Il ne peut pas être archivé.`,
+    // v1.36 → v1.40: Guardrails de suppression
+    cannotArchive: "Impossible de supprimer",
+    hasTransactionsError: (count: number) => `Impossible de supprimer car il a ${count} mouvements associés.`,
     // v1.36.1: Modal informatif pre-check
-    cannotArchiveTitle: "Impossible d'archiver",
+    cannotArchiveTitle: "Impossible de supprimer le contact",
     cannotArchiveWithTransactions: (name: string, count: number) =>
-      `Le contact "${name}" a ${count} mouvements associés. Impossible de l'archiver.`,
+      `Le contact "${name}" a ${count} mouvements associés. Impossible de le supprimer.`,
     // v1.36.3: Message simplifié
     cannotDeleteTitle: "Impossible de supprimer",
     cannotDeleteMessage: (name: string, count: number) =>
