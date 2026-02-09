@@ -85,6 +85,7 @@ interface TransactionRowProps {
   contactType: ContactType | null;
   projectName: string | null;
   relevantCategories: Category[];
+  isLegacyCategory?: boolean;
   categoryTranslations: Record<string, string>;
   comboboxContacts: Contact[];
   availableProjects: Project[] | null;
@@ -159,6 +160,7 @@ interface TransactionRowProps {
     undoRemittance?: string;
     reconcileSepa?: string;
     moreOptionsAriaLabel?: string;
+    legacyCategory?: string;
   };
   getCategoryDisplayName: (category: string | null | undefined) => string;
 }
@@ -178,6 +180,7 @@ export const TransactionRow = React.memo(function TransactionRow({
   contactType,
   projectName,
   relevantCategories,
+  isLegacyCategory,
   categoryTranslations,
   comboboxContacts,
   availableProjects,
@@ -266,8 +269,8 @@ export const TransactionRow = React.memo(function TransactionRow({
     onSetNote(tx.id, note);
   }, [tx.id, onSetNote]);
 
-  const handleCategorySelect = React.useCallback((categoryName: string) => {
-    onSetCategory(tx.id, categoryName);
+  const handleCategorySelect = React.useCallback((categoryId: string) => {
+    onSetCategory(tx.id, categoryId);
     setIsCategoryPopoverOpen(false);
   }, [tx.id, onSetCategory]);
 
@@ -553,7 +556,7 @@ export const TransactionRow = React.memo(function TransactionRow({
           )}
           {/* Mobile/tablet summary: categoria i contacte sota el concepte */}
           <div className="lg:hidden mt-1 text-xs text-muted-foreground flex items-center gap-1 flex-wrap">
-            <span className="truncate max-w-[120px]">{getCategoryDisplayName(tx.category) || 'Sense categoria'}</span>
+            <span className="truncate max-w-[120px]">{getCategoryDisplayName(tx.category) || 'Sense categoria'}{isLegacyCategory && <span className="text-amber-600 ml-0.5" title={t.legacyCategory ?? 'Cal recategoritzar'}>⚠</span>}</span>
             <span className="text-muted-foreground/50">·</span>
             {contactName ? (
               <SummaTooltip content={contactName}>
@@ -692,8 +695,9 @@ export const TransactionRow = React.memo(function TransactionRow({
                   <span>{t.categorize}...</span>
                 </span>
               ) : (
-                <span className="truncate max-w-[140px]">
+                <span className="truncate max-w-[140px] flex items-center gap-1">
                   {tx.category ? getCategoryDisplayName(tx.category) : t.uncategorized}
+                  {isLegacyCategory && <span className="text-[10px] text-amber-600" title={t.legacyCategory ?? 'Cal recategoritzar'}>⚠</span>}
                 </span>
               )}
               <ChevronDown className="ml-0.5 h-3 w-3 shrink-0 opacity-70" />
@@ -709,7 +713,7 @@ export const TransactionRow = React.memo(function TransactionRow({
                     <CommandItem
                       key={cat.id}
                       value={categoryTranslations[cat.name] || cat.name}
-                      onSelect={() => handleCategorySelect(cat.name)}
+                      onSelect={() => handleCategorySelect(cat.id)}
                     >
                       {categoryTranslations[cat.name] || cat.name}
                     </CommandItem>

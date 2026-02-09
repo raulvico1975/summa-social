@@ -4,8 +4,9 @@ import * as React from 'react';
 import { Button } from '@/components/ui/button';
 import { FileUp, Loader2, ChevronDown, Trash2, ListPlus, AlertTriangle } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import type { Transaction, AnyContact } from '@/lib/data';
+import type { Transaction, AnyContact, Category } from '@/lib/data';
 import { detectReturnType } from '@/lib/data';
+import { isCategoryIdCompatibleStrict } from '@/lib/constants';
 import Papa from 'papaparse';
 import * as XLSX from 'xlsx';
 import { inferContact } from '@/ai/flows/infer-contact';
@@ -75,6 +76,7 @@ function chunk<T>(arr: T[], size: number): T[][] {
 
 interface TransactionImporterProps {
   existingTransactions: Transaction[];
+  availableCategories?: Category[] | null;
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -157,7 +159,7 @@ const isHeaderRow = (row: any[]): boolean => {
 };
 
 
-export function TransactionImporter({ existingTransactions }: TransactionImporterProps) {
+export function TransactionImporter({ existingTransactions, availableCategories }: TransactionImporterProps) {
   const fileInputRef = React.useRef<HTMLInputElement>(null);
   const [isImporting, setIsImporting] = React.useState(false);
   const [importMode, setImportMode] = React.useState<ImportMode>('append');
@@ -643,13 +645,15 @@ export function TransactionImporter({ existingTransactions }: TransactionImporte
                     // Obtenir el contacte complet per accedir a defaultCategoryId
                     const contact = availableContacts.find(c => c.id === match.contactId);
                     const defaultCategory = contact?.defaultCategoryId;
-                    const willAssignCategory = defaultCategory && !tx.category;
-                    log(`✅ [Fila ${index + 1}] Match per nom: "${match.contactName}" (${match.contactType})${willAssignCategory ? ` → categoria: ${defaultCategory}` : defaultCategory ? ' (ja té categoria)' : ' (sense cat. defecte)'} - confiança ${Math.round(match.confidence * 100)}% - "${tx.description.substring(0, 40)}..."`);
+                    const willAssignCategory = defaultCategory && !tx.category
+                      && availableCategories
+                      && isCategoryIdCompatibleStrict(tx.amount, defaultCategory, availableCategories);
+                    log(`✅ [Fila ${index + 1}] Match per nom: "${match.contactName}" (${match.contactType})${willAssignCategory ? ` → categoria: ${defaultCategory}` : defaultCategory ? ' (ja té categoria o incompatible)' : ' (sense cat. defecte)'} - confiança ${Math.round(match.confidence * 100)}% - "${tx.description.substring(0, 40)}..."`);
                     return {
                         ...tx,
                         contactId: match.contactId,
                         contactType: match.contactType,
-                        // Auto-assignar categoria si el contacte en té i la transacció no
+                        // Auto-assignar categoria si el contacte en té, la tx no, i és compatible
                         ...(willAssignCategory ? { category: defaultCategory } : {}),
                     };
                 } else {
@@ -697,13 +701,15 @@ export function TransactionImporter({ existingTransactions }: TransactionImporte
                                 if (contact) {
                                     aiMatchedCount++;
                                     const defaultCategory = contact.defaultCategoryId;
-                                    const willAssignCategory = defaultCategory && !tx.category;
-                                    log(`✅ [Fila ${index + 1}] Match IA: ${contact.name} (${contact.type})${willAssignCategory ? ` → categoria: ${defaultCategory}` : defaultCategory ? ' (ja té categoria)' : ' (sense cat. defecte)'} - "${tx.description.substring(0, 30)}..."`);
+                                    const willAssignCategory = defaultCategory && !tx.category
+                                      && availableCategories
+                                      && isCategoryIdCompatibleStrict(tx.amount, defaultCategory, availableCategories);
+                                    log(`✅ [Fila ${index + 1}] Match IA: ${contact.name} (${contact.type})${willAssignCategory ? ` → categoria: ${defaultCategory}` : defaultCategory ? ' (ja té categoria o incompatible)' : ' (sense cat. defecte)'} - "${tx.description.substring(0, 30)}..."`);
                                     transactionsWithContacts[index] = {
                                         ...tx,
                                         contactId: result.contactId,
                                         contactType: contact.type,
-                                        // Auto-assignar categoria si el contacte en té i la transacció no
+                                        // Auto-assignar categoria si el contacte en té, la tx no, i és compatible
                                         ...(willAssignCategory ? { category: defaultCategory } : {}),
                                     };
                                 }

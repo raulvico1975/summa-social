@@ -471,7 +471,16 @@ export const es = {
         errorPartial: (success: number, failed: number) =>
           `Completado parcialmente: ${success} actualizados, ${failed} con errores.`,
         errorAll: "No se ha podido actualizar ningún movimiento.",
+        mixedTypesWarning: "La selección incluye ingresos y gastos. Deselecciona para asignar categoría.",
+        skippedIncompatible: (count: number) =>
+          `No se han asignado ${count} movimiento${count > 1 ? 's' : ''} por incompatibilidad de tipo.`,
       },
+      categoryTypeMismatch: {
+        title: "Tipo incompatible",
+        description: "Esta categoría no es compatible con el signo del movimiento.",
+        loading: "Cargando categorías… inténtalo de nuevo.",
+      },
+      legacyCategory: "Requiere recategorizar",
     },
      splitter: {
         title: "Dividir Remesa",
