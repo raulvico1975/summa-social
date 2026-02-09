@@ -9,7 +9,7 @@ import { useCurrentOrganization } from '@/hooks/organization-provider';
 import { useFirebase, useCollection, useMemoFirebase, addDocumentNonBlocking } from '@/firebase';
 import { collection, query, where, doc, addDoc, writeBatch, serverTimestamp } from 'firebase/firestore';
 import type { Donor, BankAccount, SepaCollectionRun, SepaCollectionItem, SepaSequenceType } from '@/lib/data';
-import { generatePain008Xml, generateMessageId, validateCollectionRun, filterEligibleDonors, determineSequenceType } from '@/lib/sepa/pain008';
+import { generatePain008Xml, generateMessageId, validateCollectionRun, filterEligibleDonors, determineSequenceType, computeDonorCollectionStatus, type DonorCollectionStatus } from '@/lib/sepa/pain008';
 import { ArrowLeft, ArrowRight, Download, AlertTriangle, CheckCircle2, XCircle } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
@@ -76,13 +76,38 @@ export function SepaCollectionWizard() {
   }, [donors]);
 
   const [selectedDonorIds, setSelectedDonorIds] = React.useState<Set<string>>(new Set());
+  const [hasUserEditedSelection, setHasUserEditedSelection] = React.useState(false);
 
-  // Initialize selection when eligible changes
-  React.useEffect(() => {
-    if (eligible.length > 0 && selectedDonorIds.size === 0) {
-      setSelectedDonorIds(new Set(eligible.map(d => d.id)));
+  // Compute collection status for each eligible donor (pure, memoized)
+  const donorStatuses = React.useMemo(() => {
+    const map = new Map<string, DonorCollectionStatus>();
+    if (!eligible.length || !configData.collectionDate) return map;
+    for (const donor of eligible) {
+      map.set(donor.id, computeDonorCollectionStatus(donor, configData.collectionDate));
     }
-  }, [eligible, selectedDonorIds.size]);
+    return map;
+  }, [eligible, configData.collectionDate]);
+
+  // Wrapper: when the user changes selection via UI, mark as edited
+  const handleSelectionChange = React.useCallback((ids: Set<string>) => {
+    setHasUserEditedSelection(true);
+    setSelectedDonorIds(ids);
+  }, []);
+
+  // Auto-preselect once: when selection is empty AND user hasn't touched it
+  React.useEffect(() => {
+    if (!eligible.length || !configData.collectionDate || !donorStatuses.size) return;
+    if (selectedDonorIds.size > 0 || hasUserEditedSelection) return;
+
+    const preselected = new Set<string>();
+    for (const donor of eligible) {
+      const st = donorStatuses.get(donor.id);
+      if (st && (st.type === 'due' || st.type === 'overdue')) {
+        preselected.add(donor.id);
+      }
+    }
+    setSelectedDonorIds(preselected);
+  }, [eligible, configData.collectionDate, donorStatuses, selectedDonorIds.size, hasUserEditedSelection]);
 
   // Selected donors with sequence type
   const selectedDonors = React.useMemo(() => {
@@ -393,8 +418,9 @@ export function SepaCollectionWizard() {
               eligible={eligible}
               excluded={excluded}
               selectedIds={selectedDonorIds}
-              onSelectionChange={setSelectedDonorIds}
+              onSelectionChange={handleSelectionChange}
               totalAmountCents={totalAmountCents}
+              donorStatuses={donorStatuses}
             />
           )}
 

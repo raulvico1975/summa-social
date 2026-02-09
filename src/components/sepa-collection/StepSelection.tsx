@@ -27,7 +27,7 @@ import { CheckCircle2, XCircle, AlertTriangle, Users, Search, Info } from 'lucid
 import { useTranslations } from '@/i18n';
 import { cn } from '@/lib/utils';
 import type { Donor } from '@/lib/data';
-import { determineSequenceType } from '@/lib/sepa/pain008';
+import { determineSequenceType, type DonorCollectionStatus } from '@/lib/sepa/pain008';
 
 export interface SelectionData {
   selectedIds: Set<string>;
@@ -41,15 +41,8 @@ interface StepSelectionProps {
   selectedIds: Set<string>;
   onSelectionChange: (ids: Set<string>) => void;
   totalAmountCents: number;
+  donorStatuses: Map<string, DonorCollectionStatus>;
 }
-
-// Periodicitat en mesos per calcular "Següent recomanat"
-const PERIODICITY_MONTHS: Record<string, number> = {
-  monthly: 1,
-  quarterly: 3,
-  semiannual: 6,
-  annual: 12,
-};
 
 export function StepSelection({
   eligible,
@@ -57,6 +50,7 @@ export function StepSelection({
   selectedIds,
   onSelectionChange,
   totalAmountCents,
+  donorStatuses,
 }: StepSelectionProps) {
   const { t, tr } = useTranslations();
   const [showExcludedOnly, setShowExcludedOnly] = React.useState(false);
@@ -92,30 +86,24 @@ export function StepSelection({
     return result;
   }, [eligible, searchQuery, periodicityFilter]);
 
-  // Calcular estat del checkbox global
-  const allFilteredSelected = filteredEligible.length > 0 && filteredEligible.every(d => selectedIds.has(d.id));
-  const someFilteredSelected = filteredEligible.some(d => selectedIds.has(d.id));
-
-  // Quan canvien els filtres, netejar seleccionats que ja no són visibles
-  React.useEffect(() => {
-    const filteredIds = new Set(filteredEligible.map(d => d.id));
-    const newSelected = new Set<string>();
-    selectedIds.forEach(id => {
-      if (filteredIds.has(id)) {
-        newSelected.add(id);
-      }
-    });
-    // Només actualitzar si hi ha canvis
-    if (newSelected.size !== selectedIds.size) {
-      onSelectionChange(newSelected);
-    }
-  }, [filteredEligible, selectedIds, onSelectionChange]);
+  // Calcular estat del checkbox global (excloure bloquejats del càlcul)
+  const selectableFiltered = filteredEligible.filter(d => {
+    const st = donorStatuses.get(d.id);
+    return st?.type !== 'blocked' && st?.type !== 'noPeriodicity';
+  });
+  const allFilteredSelected = selectableFiltered.length > 0 && selectableFiltered.every(d => selectedIds.has(d.id));
+  const someFilteredSelected = selectableFiltered.some(d => selectedIds.has(d.id));
 
   const handleToggleAllFiltered = (checked: boolean) => {
     if (checked) {
-      // Afegir tots els filtrats a la selecció
+      // Afegir tots els filtrats NO bloquejats a la selecció
       const newSet = new Set(selectedIds);
-      filteredEligible.forEach(d => newSet.add(d.id));
+      filteredEligible.forEach(d => {
+        const st = donorStatuses.get(d.id);
+        if (st?.type !== 'blocked' && st?.type !== 'noPeriodicity') {
+          newSet.add(d.id);
+        }
+      });
       onSelectionChange(newSet);
     } else {
       // Treure tots els filtrats de la selecció
@@ -130,6 +118,9 @@ export function StepSelection({
   };
 
   const handleToggle = (donorId: string) => {
+    const st = donorStatuses.get(donorId);
+    if (st?.type === 'blocked' || st?.type === 'noPeriodicity') return;
+
     const newSet = new Set(selectedIds);
     if (newSet.has(donorId)) {
       newSet.delete(donorId);
@@ -162,31 +153,6 @@ export function StepSelection({
       return d.toLocaleDateString('ca-ES', { month: 'short', year: 'numeric' });
     } catch {
       return tr('sepaPain008.selection.neverRun', 'Sense historial');
-    }
-  };
-
-  // Calcular "Següent recomanat" segons periodicitat
-  const formatNextRecommended = (donor: Donor): string => {
-    const periodicity = donor.periodicityQuota || 'monthly';
-
-    // Manual: no mostrar recomanació
-    if (periodicity === 'manual') {
-      return tr('sepaPain008.selection.manualPeriodicity', 'Manual');
-    }
-
-    // Si no ha estat mai cobrat, recomanat ara
-    if (!donor.sepaPain008LastRunAt) {
-      return '—';
-    }
-
-    const monthsToAdd = PERIODICITY_MONTHS[periodicity] || 1;
-    try {
-      const lastRun = new Date(donor.sepaPain008LastRunAt);
-      const nextDate = new Date(lastRun);
-      nextDate.setMonth(nextDate.getMonth() + monthsToAdd);
-      return nextDate.toLocaleDateString('ca-ES', { month: 'short', year: 'numeric' });
-    } catch {
-      return '—';
     }
   };
 
@@ -227,7 +193,7 @@ export function StepSelection({
       <Alert className="bg-blue-50 border-blue-200">
         <Info className="h-4 w-4 text-blue-600" />
         <AlertDescription className="text-blue-700 text-sm">
-          {tr('sepaPain008.selection.orientativeNote', 'Orientatiu. No selecciona automàticament.')}
+          {tr('sepaPain008.selection.autoPreselectionNote', 'Preselecció automàtica segons periodicitat. Pots modificar la selecció lliurement.')}
         </AlertDescription>
       </Alert>
 
@@ -350,7 +316,7 @@ export function StepSelection({
                 <TableHead>{t.sepaCollection.review.itemsTable.name}</TableHead>
                 <TableHead>{t.sepaCollection.review.itemsTable.amount}</TableHead>
                 <TableHead>{tr('sepaPain008.selection.lastRun', 'Últim pain')}</TableHead>
-                <TableHead>{tr('sepaPain008.selection.nextRecommended', 'Següent recomanat')}</TableHead>
+                <TableHead>{tr('sepaPain008.selection.statusColumn', 'Estat')}</TableHead>
                 <TableHead>{t.sepaCollection.review.itemsTable.iban}</TableHead>
                 <TableHead>{t.sepaCollection.review.itemsTable.sequence}</TableHead>
               </TableRow>
@@ -367,19 +333,23 @@ export function StepSelection({
                   const isSelected = selectedIds.has(donor.id);
                   const seqType = determineSequenceType(donor);
                   const hasInvalidAmount = !donor.monthlyAmount || donor.monthlyAmount <= 0;
+                  const st = donorStatuses.get(donor.id);
+                  const isBlocked = st?.type === 'blocked' || st?.type === 'noPeriodicity';
                   return (
                     <TableRow
                       key={donor.id}
                       className={cn(
-                        'cursor-pointer transition-colors',
-                        isSelected ? 'bg-primary/5' : 'hover:bg-muted/50',
-                        hasInvalidAmount && 'opacity-60'
+                        'transition-colors',
+                        isBlocked ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer',
+                        isSelected ? 'bg-primary/5' : !isBlocked && 'hover:bg-muted/50',
+                        hasInvalidAmount && !isBlocked && 'opacity-60'
                       )}
                       onClick={() => handleToggle(donor.id)}
                     >
                       <TableCell>
                         <Checkbox
                           checked={isSelected}
+                          disabled={isBlocked}
                           onCheckedChange={() => handleToggle(donor.id)}
                           onClick={(e) => e.stopPropagation()}
                         />
@@ -397,8 +367,59 @@ export function StepSelection({
                       <TableCell className="text-sm text-muted-foreground">
                         {formatLastRun(donor.sepaPain008LastRunAt)}
                       </TableCell>
-                      <TableCell className="text-sm text-muted-foreground">
-                        {formatNextRecommended(donor)}
+                      <TableCell>
+                        {(() => {
+                          if (!st) return '—';
+
+                          if (st.type === 'blocked') {
+                            return (
+                              <Badge variant="outline" className="text-orange-600 border-orange-300 font-normal">
+                                {tr('sepaPain008.selection.blockedBadge', 'No toca encara · últim rebut {lastRun}')
+                                  .replace('{lastRun}', st.lastRunLabel ?? '—')}
+                              </Badge>
+                            );
+                          }
+
+                          if (st.type === 'overdue') {
+                            return (
+                              <Badge variant="outline" className="text-red-600 border-red-300 font-normal">
+                                {tr('sepaPain008.selection.overdueBadge', 'Endarrerit · fa {months} mesos')
+                                  .replace('{months}', String(st.monthsOverdue ?? 0))}
+                              </Badge>
+                            );
+                          }
+
+                          if (st.type === 'manual') {
+                            return (
+                              <Badge variant="outline" className="text-gray-500 font-normal">
+                                {tr('sepaPain008.selection.manualPeriodicity', 'Manual')}
+                              </Badge>
+                            );
+                          }
+
+                          if (st.type === 'noPeriodicity') {
+                            return (
+                              <Badge variant="outline" className="text-gray-500 font-normal">
+                                {tr('sepaPain008.selection.noPeriodicityBadge', 'Sense periodicitat')}
+                              </Badge>
+                            );
+                          }
+
+                          // type === 'due'
+                          if (st.periodicityMonths && st.periodicityMonths > 1) {
+                            // Non-monthly due donor: show periodicity + optional last run
+                            const periodicityKey = `donors.periodicityQuota.${st.periodicity}`;
+                            const label = tr(periodicityKey, st.periodicity ?? '');
+                            return (
+                              <span className="text-sm text-muted-foreground">
+                                {label}{st.lastRunLabel ? ` · ${st.lastRunLabel}` : ''}
+                              </span>
+                            );
+                          }
+
+                          // Monthly due: no special badge
+                          return null;
+                        })()}
                       </TableCell>
                       <TableCell className="font-mono text-sm">
                         {donor.iban ? formatIban(donor.iban) : '-'}

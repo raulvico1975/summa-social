@@ -16,3 +16,10 @@ export {
   getIbanLengthIssue,
   IBAN_LENGTHS_BY_COUNTRY,
 } from './iban-length';
+
+export {
+  computeDonorCollectionStatus,
+  PERIODICITY_MONTHS,
+  type DonorCollectionStatus,
+  type CollectionStatusType,
+} from './donor-collection-status';
