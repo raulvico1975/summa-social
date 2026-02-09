@@ -1,13 +1,14 @@
 /**
  * POST /api/categories/archive
  *
- * Arxiva una categoria amb reassignació opcional de transaccions.
+ * Arxiva una categoria si no té moviments assignats.
  *
  * Característiques:
  * - Només escriptura via Admin SDK (bypassant Firestore Rules)
  * - orgId derivat de la membership de l'usuari (no del body)
  * - Validació de rol admin
- * - Reassignació atòmica amb batch (450 docs/batch)
+ * - Bloqueig si la categoria té transaccions (CATEGORY_IN_USE)
+ * - Bloqueig si la categoria és de sistema (SYSTEM_CATEGORY_LOCKED)
  * - Idempotent: si ja està arxivada, retorna success
  *
  * @see CLAUDE.md secció 7 per context d'integritat
@@ -21,13 +22,6 @@ import {
   type Firestore,
 } from 'firebase-admin/firestore';
 import { getAuth, type Auth } from 'firebase-admin/auth';
-
-// =============================================================================
-// CONSTANTS
-// =============================================================================
-
-/** Grandària dels batches per evitar límits de Firestore (500 max, usem 450 per seguretat) */
-const BATCH_SIZE = 450;
 
 // =============================================================================
 // FIREBASE ADMIN INITIALIZATION
@@ -102,13 +96,11 @@ async function verifyIdToken(request: NextRequest): Promise<AuthResult | null> {
 interface ArchiveCategoryRequest {
   orgId: string;
   fromCategoryId: string;
-  toCategoryId?: string | null;
 }
 
 interface ArchiveCategoryResponse {
   success: boolean;
   idempotent?: boolean;
-  reassignedCount?: number;
   error?: string;
   code?: string;
 }
@@ -171,7 +163,7 @@ export async function POST(
     );
   }
 
-  const { orgId, fromCategoryId, toCategoryId } = body;
+  const { orgId, fromCategoryId } = body;
 
   // 3. Validar orgId obligatori
   if (!orgId) {
@@ -232,36 +224,7 @@ export async function POST(
     return NextResponse.json({
       success: true,
       idempotent: true,
-      reassignedCount: 0,
     });
-  }
-
-  // 6. Si hi ha toCategoryId, validar que existeix, no està arxivada, i no és la mateixa
-  if (toCategoryId) {
-    if (toCategoryId === fromCategoryId) {
-      return NextResponse.json(
-        { success: false, error: 'Categoria destí no pot ser la mateixa que origen', code: 'SAME_CATEGORY' },
-        { status: 400 }
-      );
-    }
-
-    const toCategoryRef = db.doc(`organizations/${orgId}/categories/${toCategoryId}`);
-    const toCategorySnap = await toCategoryRef.get();
-
-    if (!toCategorySnap.exists) {
-      return NextResponse.json(
-        { success: false, error: 'Categoria destí no existeix', code: 'TO_NOT_FOUND' },
-        { status: 400 }
-      );
-    }
-
-    const toCategoryData = toCategorySnap.data();
-    if (toCategoryData?.archivedAt != null) {
-      return NextResponse.json(
-        { success: false, error: 'Categoria destí està arxivada', code: 'TO_ARCHIVED' },
-        { status: 400 }
-      );
-    }
   }
 
   // 7. Guardrail: no es pot arxivar si té transaccions assignades
