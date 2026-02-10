@@ -2,19 +2,17 @@
  * Pure function to compute whether a donor is due for SEPA collection
  * based on their periodicity and last collection date.
  *
- * Rules:
+ * Rules (natural periods):
  *  - periodicityQuota null/undefined → noPeriodicity
  *  - periodicityQuota === 'manual'  → manual
  *  - No lastRun                     → due (never collected = always due)
- *  - collectionDate < nextDue       → blocked
- *  - collectionDate === nextDue     → due
- *  - collectionDate > nextDue       → overdue
+ *  - Same period as lastRun         → blocked (already collected this period)
+ *  - Different (later) period       → due
  */
 
 export type CollectionStatusType =
   | 'due'
   | 'blocked'
-  | 'overdue'
   | 'manual'
   | 'noPeriodicity';
 
@@ -26,10 +24,6 @@ export interface DonorCollectionStatus {
   periodicity: string | null;
   /** Months between collections (1, 3, 6, 12), or null for manual/noPeriodicity */
   periodicityMonths: number | null;
-  /** How many months overdue (only present when type === 'overdue') */
-  monthsOverdue?: number;
-  /** How many months until due (only present when type === 'blocked') */
-  monthsUntilDue?: number;
 }
 
 export const PERIODICITY_MONTHS: Record<string, number> = {
@@ -49,29 +43,6 @@ function parseDate(s: string): Date {
   return new Date(Date.UTC(y, m - 1, d));
 }
 
-/** Add N calendar months (clamp day to month-end if needed) */
-function addMonths(date: Date, months: number): Date {
-  const result = new Date(date);
-  const targetMonth = result.getUTCMonth() + months;
-  result.setUTCMonth(targetMonth);
-  // If the day overflowed (e.g. Jan 31 + 1 month → Mar 3), clamp to last day
-  if (result.getUTCDate() !== date.getUTCDate()) {
-    result.setUTCDate(0); // last day of previous month
-  }
-  return result;
-}
-
-/**
- * Whole-month difference (floor).
- * Positive when `to` is after `from`.
- */
-function monthsBetween(from: Date, to: Date): number {
-  return (
-    (to.getUTCFullYear() - from.getUTCFullYear()) * 12 +
-    (to.getUTCMonth() - from.getUTCMonth())
-  );
-}
-
 /** Format YYYY-MM-DD as short month + year in Catalan locale, e.g. "gen. 2025" */
 function formatDateLabel(dateStr: string): string | null {
   if (!dateStr) return null;
@@ -81,6 +52,27 @@ function formatDateLabel(dateStr: string): string | null {
   } catch {
     return null;
   }
+}
+
+/**
+ * Get a natural period key for a given date and periodicity.
+ * Lexicographic comparison works because year comes first.
+ *
+ *  monthly    → "2026-02"
+ *  quarterly  → "2026-Q1" (jan-mar), "2026-Q2" (apr-jun), etc.
+ *  semiannual → "2026-H1" (jan-jun), "2026-H2" (jul-dec)
+ *  annual     → "2026"
+ */
+function getPeriodKey(dateStr: string, months: number): string {
+  const d = parseDate(dateStr);
+  const y = d.getUTCFullYear();
+  const m = d.getUTCMonth() + 1; // 1-12
+
+  if (months === 1) return `${y}-${String(m).padStart(2, '0')}`;
+  if (months === 3) return `${y}-Q${Math.ceil(m / 3)}`;
+  if (months === 6) return `${y}-H${m <= 6 ? 1 : 2}`;
+  if (months === 12) return `${y}`;
+  return `${y}-${String(m).padStart(2, '0')}`; // fallback: monthly
 }
 
 // ---------------------------------------------------------------------------
@@ -139,36 +131,21 @@ export function computeDonorCollectionStatus(
     };
   }
 
-  const lastRun = parseDate(donor.sepaPain008LastRunAt);
-  const collection = parseDate(collectionDate);
-  const nextDue = addMonths(lastRun, months);
+  // Compare natural periods
+  const lastPeriod = getPeriodKey(donor.sepaPain008LastRunAt, months);
+  const currentPeriod = getPeriodKey(collectionDate, months);
 
-  // Compare dates (day precision)
-  if (collection < nextDue) {
-    // Blocked: too early
-    const mUntil = monthsBetween(collection, nextDue);
+  if (currentPeriod === lastPeriod) {
+    // Already collected in this period
     return {
       type: 'blocked',
       lastRunLabel,
       periodicity,
       periodicityMonths: months,
-      monthsUntilDue: Math.max(mUntil, 0),
     };
   }
 
-  if (collection > nextDue) {
-    // Overdue
-    const mOver = monthsBetween(nextDue, collection);
-    return {
-      type: 'overdue',
-      lastRunLabel,
-      periodicity,
-      periodicityMonths: months,
-      monthsOverdue: Math.max(mOver, 0),
-    };
-  }
-
-  // Exactly on due date
+  // Different period (currentPeriod > lastPeriod) → due
   return {
     type: 'due',
     lastRunLabel,

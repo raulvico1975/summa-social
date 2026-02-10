@@ -102,7 +102,7 @@ export function SepaCollectionWizard() {
     const preselected = new Set<string>();
     for (const donor of eligible) {
       const st = donorStatuses.get(donor.id);
-      if (st && (st.type === 'due' || st.type === 'overdue')) {
+      if (st && st.type === 'due') {
         preselected.add(donor.id);
       }
     }
