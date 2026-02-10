@@ -3247,6 +3247,9 @@ export const fr = {
     linkPendingDocs: "Lier les documents en attente aux filles",
     attachInvoices: "Joindre les factures à chaque transaction",
     applyCategories: "Appliquer catégories et fournisseurs",
+    filenamePrefix: "remise",
+    filenamePayments: "paiements",
+    organizationFallback: "Organisation",
   },
   // ═══════════════════════════════════════════════════════════════════════════
   // MODULE PRÉ-BANQUE : RAPPROCHEMENT

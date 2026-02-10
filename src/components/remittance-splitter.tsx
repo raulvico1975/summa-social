@@ -728,7 +728,7 @@ export function RemittanceSplitter({
 
       // Generar i descarregar
       downloadPain001({
-        debtorName: debtorBankAccount.name || 'Organització',
+        debtorName: debtorBankAccount.name || t.sepa.organizationFallback,
         debtorIban: debtorBankAccount.iban,
         executionDate: new Date().toISOString().split('T')[0],
         payments,

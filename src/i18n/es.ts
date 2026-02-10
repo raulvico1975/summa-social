@@ -3245,6 +3245,9 @@ export const es = {
     linkPendingDocs: "Vincular documentos pendientes a hijas",
     attachInvoices: "Adjuntar facturas a cada transacción",
     applyCategories: "Aplicar categorías y proveedores",
+    filenamePrefix: "remesa",
+    filenamePayments: "pagos",
+    organizationFallback: "Organización",
   },
   // ═══════════════════════════════════════════════════════════════════════════
   // MÓDULO PRE-BANCO: CONCILIACIÓN
