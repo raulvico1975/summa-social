@@ -64,6 +64,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { cn } from '@/lib/utils';
 import { MOBILE_ACTIONS_BAR, MOBILE_CTA_PRIMARY } from '@/lib/ui/mobile-actions';
+import { filterValidSelectItems } from '@/lib/ui/safe-select-options';
 import { CannotArchiveContactDialog } from '@/components/contacts/cannot-archive-contact-dialog';
 
 type EmployeeFormData = Omit<Employee, 'id' | 'createdAt' | 'updatedAt'>;
@@ -112,7 +113,10 @@ export function EmployeeManager() {
   );
   const { data: allCategories } = useCollection<Category>(categoriesCollection);
   const expenseCategories = React.useMemo(
-    () => allCategories?.filter(c => c.type === 'expense') || [],
+    () => filterValidSelectItems(
+      allCategories?.filter(c => c.type === 'expense') || [],
+      'employee-manager.expenseCategories'
+    ),
     [allCategories]
   );
   const categoryTranslations = t.categories as Record<string, string>;

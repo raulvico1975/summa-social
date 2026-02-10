@@ -85,6 +85,7 @@ import {
 import { DateFilter } from '@/components/date-filter';
 import { computeDonorDynamics, type DonorWithMeta, type DonorDynamicsResult } from '@/lib/donor-dynamics';
 import { MOBILE_ACTIONS_BAR, MOBILE_CTA_PRIMARY } from '@/lib/ui/mobile-actions';
+import { filterValidSelectItems } from '@/lib/ui/safe-select-options';
 import { CannotArchiveContactDialog } from '@/components/contacts/cannot-archive-contact-dialog';
 
 type DonorFormData = Omit<Donor, 'id' | 'createdAt' | 'updatedAt'>;
@@ -258,7 +259,10 @@ export function DonorManager() {
   );
   const { data: allCategories } = useCollection<Category>(categoriesCollection);
   const incomeCategories = React.useMemo(
-    () => allCategories?.filter(c => c.type === 'income') || [],
+    () => filterValidSelectItems(
+      allCategories?.filter(c => c.type === 'income') || [],
+      'donor-manager.incomeCategories'
+    ),
     [allCategories]
   );
 
