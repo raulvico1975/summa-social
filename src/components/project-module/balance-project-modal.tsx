@@ -569,20 +569,12 @@ export function BalanceProjectModal({
         return false;
       });
 
-      // DEBUG: Veure basePool
-      console.log(`[candidatesForSelectedLine] 📊 basePool: ${basePool.length}, selectedLineId: ${selectedLineId}`);
-      basePool.slice(0, 5).forEach((c, i) => {
-        console.log(`  [${i}] ${c.expense.description?.slice(0, 30)} | source=${c.expense.source} | assignedToThis=${c.assignedToThisProject} | currentLine=${c.currentBudgetLineId} | otherProject=${c.assignedToOtherProject}`);
-      });
-
       // Nivell 1: Criteri estricte (offBank + no altres projectes)
       const nivel1 = basePool.filter(c => {
         if (c.assignedToOtherProject && !expandOptions.includeOtherProjects) return false;
         if (!expandOptions.includeBankExpenses && c.expense.source === 'bank') return false;
         return true;
       });
-
-      console.log(`[candidatesForSelectedLine] 📊 nivel1: ${nivel1.length} (offBank, no altres projectes)`);
 
       // Si Nivell 1 té resultats, usar-los
       if (nivel1.length > 0) {
@@ -595,8 +587,6 @@ export function BalanceProjectModal({
           return true;
         });
 
-        console.log(`[candidatesForSelectedLine] 📊 nivel2: ${nivel2.length} (inclou bank)`);
-
         if (nivel2.length > 0) {
           filtered = nivel2;
           currentFallbackLevel = 2;
@@ -604,7 +594,7 @@ export function BalanceProjectModal({
           // Nivell 3: Totes les despeses del període (incloent altres projectes)
           filtered = basePool;
           currentFallbackLevel = 3;
-          console.log(`[candidatesForSelectedLine] 📊 nivel3: ${basePool.length} (totes)`);
+
         }
       }
     }
@@ -888,7 +878,7 @@ export function BalanceProjectModal({
       onOpenChange(false);
 
     } catch (err) {
-      console.error('Error applying changes:', err);
+
       trackUX('balance.applyChanges.error', { message: err instanceof Error ? err.message : 'Error' });
 
       toast({
