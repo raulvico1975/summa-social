@@ -11,9 +11,9 @@ import { Logo } from '@/components/logo';
 import { useFirebase } from '@/firebase';
 import { useToast } from '@/hooks/use-toast';
 import { createUserWithEmailAndPassword, updateProfile } from 'firebase/auth';
-import { doc, getDoc, setDoc, updateDoc } from 'firebase/firestore';
+import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { Loader2, AlertCircle, CheckCircle2 } from 'lucide-react';
-import type { Invitation, UserProfile, OrganizationMember } from '@/lib/data';
+import type { Invitation, UserProfile } from '@/lib/data';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { useTranslations } from '@/i18n';
 
@@ -165,31 +165,31 @@ function RegistreContent() {
       await setDoc(doc(firestore, 'users', user.uid), userProfile);
       console.log('[registre] Step 4: OK');
 
-      // 5. Afegir l'usuari com a membre de l'organització
-      // IMPORTANT: invitationId és obligatori per validar a Firestore Rules
-      const memberData: OrganizationMember = {
-        userId: user.uid,
-        email: email,
-        displayName: displayName,
-        role: invitation.role,
-        joinedAt: new Date().toISOString(),
-        invitationId: invitation.id,
-      };
-      console.log('[registre] Step 5: writing members/' + user.uid, { orgId: invitation.organizationId, invitationId: invitation.id, role: invitation.role, email });
-      await setDoc(
-        doc(firestore, 'organizations', invitation.organizationId, 'members', user.uid),
-        memberData
-      );
-      console.log('[registre] Step 5: OK');
-
-      // 6. Marcar la invitació com a usada
-      const invitationRef = doc(firestore, 'invitations', invitation.id);
-      console.log('[registre] Step 6: updating invitation/' + invitation.id);
-      await updateDoc(invitationRef, {
-        usedAt: new Date().toISOString(),
-        usedBy: user.uid,
+      // 5. Acceptar invitació via API (crear membre + marcar usada)
+      // Usa Admin SDK server-side per evitar problemes de token.email timing
+      const idToken = await user.getIdToken();
+      console.log('[registre] Step 5: calling /api/invitations/accept');
+      const acceptRes = await fetch('/api/invitations/accept', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${idToken}`,
+        },
+        body: JSON.stringify({
+          invitationId: invitation.id,
+          organizationId: invitation.organizationId,
+          displayName,
+          email,
+          role: invitation.role,
+        }),
       });
-      console.log('[registre] Step 6: OK');
+
+      if (!acceptRes.ok) {
+        const errBody = await acceptRes.json().catch(() => ({}));
+        console.error('[registre] Step 5 failed:', acceptRes.status, errBody);
+        throw new Error(errBody.error || 'accept_failed');
+      }
+      console.log('[registre] Step 5: OK');
 
       setPageState('success');
 
