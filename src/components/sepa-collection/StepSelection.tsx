@@ -218,7 +218,7 @@ export function StepSelection({
         <div className="h-4 w-px bg-border" />
         <div className="flex items-center gap-2">
           <XCircle className="h-5 w-5 text-orange-500" />
-          <span>{excluded.length} exclosos</span>
+          <span>{tr('sepaPain008.selection.excludedCount', '{count} exclosos').replace('{count}', String(excluded.length))}</span>
         </div>
         {invalidAmountCount > 0 && (
           <>
@@ -233,7 +233,7 @@ export function StepSelection({
         )}
         <div className="h-4 w-px bg-border" />
         <div className="flex items-center gap-2">
-          <span className="text-muted-foreground">Total:</span>
+          <span className="text-muted-foreground">{tr('sepaPain008.selection.total', 'Total:')}</span>
           <span className="font-bold text-lg">{formatCurrency(totalAmountCents)}</span>
         </div>
       </div>
@@ -279,7 +279,7 @@ export function StepSelection({
             onCheckedChange={setShowExcludedOnly}
           />
           <Label htmlFor="show-excluded" className="text-sm">
-            Mostrar només exclosos
+            {tr('sepaPain008.selection.showExcludedOnly', 'Mostrar només exclosos')}
           </Label>
         </div>
       </div>
@@ -444,14 +444,14 @@ export function StepSelection({
               <TableRow>
                 <TableHead className="w-8"></TableHead>
                 <TableHead>{t.sepaCollection.review.itemsTable.name}</TableHead>
-                <TableHead>Motiu</TableHead>
+                <TableHead>{tr('sepaPain008.selection.reasonColumn', 'Motiu')}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {excluded.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={3} className="h-24 text-center text-muted-foreground">
-                    Tots els socis són elegibles
+                    {tr('sepaPain008.selection.allEligible', 'Tots els socis són elegibles')}
                   </TableCell>
                 </TableRow>
               ) : (
