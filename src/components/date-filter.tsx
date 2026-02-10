@@ -42,7 +42,7 @@ type DateFilterProps = {
 };
 
 export function DateFilter({ value, onChange }: DateFilterProps) {
-  const { t, language } = useTranslations();
+  const { t, tr, language } = useTranslations();
   const dateLocale = language === 'ca' ? ca : es;
 
   const currentYear = new Date().getFullYear();
@@ -86,11 +86,11 @@ export function DateFilter({ value, onChange }: DateFilterProps) {
           <SelectValue />
         </SelectTrigger>
         <SelectContent>
-          <SelectItem value="all">{t.dashboard.filterAll}</SelectItem>
-          <SelectItem value="year">{t.dashboard.filterYear}</SelectItem>
-          <SelectItem value="quarter">{t.dashboard.filterQuarter}</SelectItem>
-          <SelectItem value="month">{t.dashboard.filterMonth}</SelectItem>
-          <SelectItem value="custom">{t.dashboard.filterCustom}</SelectItem>
+          <SelectItem value="all">{tr("dashboard.filterAll")}</SelectItem>
+          <SelectItem value="year">{tr("dashboard.filterYear")}</SelectItem>
+          <SelectItem value="quarter">{tr("dashboard.filterQuarter")}</SelectItem>
+          <SelectItem value="month">{tr("dashboard.filterMonth")}</SelectItem>
+          <SelectItem value="custom">{tr("dashboard.filterCustom")}</SelectItem>
         </SelectContent>
       </Select>
 
@@ -196,7 +196,7 @@ export function DateFilter({ value, onChange }: DateFilterProps) {
                 {value.customRange?.from ? (
                   format(value.customRange.from, 'dd/MM/yyyy')
                 ) : (
-                  <span>{t.dashboard.filterFrom}</span>
+                  <span>{tr("dashboard.filterFrom")}</span>
                 )}
               </Button>
             </PopoverTrigger>
@@ -231,7 +231,7 @@ export function DateFilter({ value, onChange }: DateFilterProps) {
                 {value.customRange?.to ? (
                   format(value.customRange.to, 'dd/MM/yyyy')
                 ) : (
-                  <span>{t.dashboard.filterTo}</span>
+                  <span>{tr("dashboard.filterTo")}</span>
                 )}
               </Button>
             </PopoverTrigger>
