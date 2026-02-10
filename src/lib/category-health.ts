@@ -726,6 +726,132 @@ export function checkOrphanTickets<T extends {
 }
 
 // =============================================================================
+// BLOC K: Remeses òrfenes (isRemittanceItem amb parentTransactionId inexistent)
+// v1.40 - Detecta fills de remesa que apunten a una transacció pare inexistent
+// =============================================================================
+
+export interface OrphanRemittanceIssue {
+  id: string;
+  date: string;
+  amount: number;
+  parentTransactionId: string;
+  description?: string;
+}
+
+export interface OrphanRemittanceCheckResult {
+  hasIssues: boolean;
+  count: number;
+  examples: OrphanRemittanceIssue[];
+}
+
+/**
+ * Detecta transaccions remesa (isRemittanceItem === true) amb parentTransactionId
+ * que no existeix dins el conjunt de transaccions vàlides.
+ *
+ * S'exporta per separat (com checkOrphanTickets) perquè requereix
+ * un Set de tots els txIds, que la UI ja té disponible.
+ */
+export function checkOrphanRemittances<T extends {
+  id: string;
+  date: string;
+  amount: number;
+  isRemittanceItem?: boolean;
+  parentTransactionId?: string | null;
+  description?: string;
+}>(
+  transactions: T[],
+  validTransactionIds: Set<string>
+): OrphanRemittanceCheckResult {
+  const issues: OrphanRemittanceIssue[] = [];
+  let totalIssues = 0;
+
+  for (const tx of transactions) {
+    // Només mirem fills de remesa
+    if (!tx.isRemittanceItem) continue;
+
+    // Si no té parentTransactionId, ja és un problema
+    if (!tx.parentTransactionId) {
+      totalIssues++;
+      if (issues.length < 5) {
+        issues.push({
+          id: tx.id,
+          date: tx.date,
+          amount: tx.amount,
+          parentTransactionId: '(buit)',
+          description: tx.description,
+        });
+      }
+      continue;
+    }
+
+    // Si el pare no existeix a la llista vàlida -> orfe
+    if (!validTransactionIds.has(tx.parentTransactionId)) {
+      totalIssues++;
+      if (issues.length < 5) {
+        issues.push({
+          id: tx.id,
+          date: tx.date,
+          amount: tx.amount,
+          parentTransactionId: tx.parentTransactionId,
+          description: tx.description,
+        });
+      }
+    }
+  }
+
+  return {
+    hasIssues: totalIssues > 0,
+    count: totalIssues,
+    examples: issues,
+  };
+}
+
+// =============================================================================
+// BLOC L: ExpenseLinks orfes (expenseLinks/{txId} amb txId inexistent)
+// v1.40 - Detecta expense links que apunten a transaccions inexistents
+// =============================================================================
+
+export interface OrphanExpenseLinkIssue {
+  txId: string;
+}
+
+export interface OrphanExpenseLinkCheckResult {
+  hasIssues: boolean;
+  count: number;
+  examples: OrphanExpenseLinkIssue[];
+}
+
+/**
+ * Detecta expenseLinks on el txId (docId del link) no correspon
+ * a cap transacció existent.
+ *
+ * S'exporta per separat perquè requereix la llista d'expenseLink txIds
+ * i el Set de transaccions vàlides.
+ */
+export function checkOrphanExpenseLinks(
+  expenseLinkTxIds: string[],
+  validTransactionIds: Set<string>
+): OrphanExpenseLinkCheckResult {
+  const issues: OrphanExpenseLinkIssue[] = [];
+  let totalIssues = 0;
+
+  for (const txId of expenseLinkTxIds) {
+    if (!validTransactionIds.has(txId)) {
+      totalIssues++;
+      if (issues.length < 5) {
+        issues.push({ txId });
+      }
+    }
+  }
+
+  return {
+    hasIssues: totalIssues > 0,
+    count: totalIssues,
+    examples: issues,
+  };
+}
+
+// =============================================================================
 // HEALTH CHECK COMPLET
 // =============================================================================
 

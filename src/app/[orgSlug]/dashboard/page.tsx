@@ -35,7 +35,7 @@ import { toPeriodQuery } from '@/lib/period-query';
 import { shouldShowWelcomeModal, isFirstAdmin } from '@/lib/onboarding';
 import { WelcomeOnboardingModal } from '@/components/onboarding/WelcomeOnboardingModal';
 import { OnboardingWizardModal } from '@/components/onboarding/OnboardingWizard';
-import { detectLegacyCategoryTransactions, logLegacyCategorySummary, runHealthCheck as runHealthCheckFn, type LegacyCategoryTransaction, type HealthCheckResult } from '@/lib/category-health';
+import { detectLegacyCategoryTransactions, logLegacyCategorySummary, runHealthCheck as runHealthCheckFn, checkOrphanRemittances, type LegacyCategoryTransaction, type HealthCheckResult, type OrphanRemittanceCheckResult } from '@/lib/category-health';
 
 interface TaxObligation {
   id: string;
@@ -622,11 +622,18 @@ export default function DashboardPage() {
         orphanContacts: { hasIssues: false, count: 0, examples: [] },
         totalIssues: 0,
       });
+      setOrphanRemittanceResults({ hasIssues: false, count: 0, examples: [] });
       setHealthCheckDialogOpen(true);
       return;
     }
     const results = runHealthCheckFn(filteredTransactions);
     setHealthCheckResults(results);
+
+    // Bloc K: remeses òrfenes (usem baseTransactions per incloure fills)
+    const allTxIds = new Set(baseTransactions.map(tx => tx.id));
+    const remittanceResults = checkOrphanRemittances(baseTransactions, allTxIds);
+    setOrphanRemittanceResults(remittanceResults);
+
     setHealthCheckDialogOpen(true);
 
     // Log discret si hi ha incidències
@@ -639,9 +646,10 @@ export default function DashboardPage() {
         bankSource: results.bankSource.count,
         archived: results.archived.count,
         signs: results.signs.count,
+        orphanRemittances: remittanceResults.count,
       });
     }
-  }, [filteredTransactions, organizationId]);
+  }, [filteredTransactions, baseTransactions, organizationId]);
 
   // KPIs socials: transaccions amb contacte (incloent fills de remesa)
   // (per Donants actius, Socis actius, Quotes)
@@ -737,6 +745,7 @@ export default function DashboardPage() {
   // Health check (només admin)
   const [healthCheckDialogOpen, setHealthCheckDialogOpen] = React.useState(false);
   const [healthCheckResults, setHealthCheckResults] = React.useState<HealthCheckResult | null>(null);
+  const [orphanRemittanceResults, setOrphanRemittanceResults] = React.useState<OrphanRemittanceCheckResult | null>(null);
   const isAdmin = userRole === 'admin';
   const isMobile = useIsMobile();
   const periodQuery = React.useMemo(() => toPeriodQuery(dateFilter), [dateFilter]);
@@ -2118,6 +2127,51 @@ ${tr("dashboard.generatedWith")}`;
                     </div>
                   )}
                 </details>
+
+                {/* Bloc K: Remeses òrfenes */}
+                {orphanRemittanceResults && (
+                  <details className="rounded-lg border" open={orphanRemittanceResults.hasIssues}>
+                    <summary className="flex items-center gap-2 p-3 cursor-pointer">
+                      {orphanRemittanceResults.hasIssues ? (
+                        <span className="text-amber-500">K) Remeses òrfenes</span>
+                      ) : (
+                        <span className="text-muted-foreground">K) Remeses òrfenes</span>
+                      )}
+                      <Badge variant={orphanRemittanceResults.hasIssues ? 'outline' : 'secondary'}>
+                        {orphanRemittanceResults.count}
+                      </Badge>
+                    </summary>
+                    {orphanRemittanceResults.hasIssues && (
+                      <div className="px-3 pb-3 space-y-2">
+                        <p className="text-sm text-muted-foreground">
+                          Fills de remesa (isRemittanceItem) que apunten a un pare inexistent.
+                        </p>
+                        <div className="overflow-x-auto">
+                          <table className="w-full text-sm">
+                            <thead>
+                              <tr className="border-b text-muted-foreground text-xs">
+                                <th className="text-left p-1.5">Data</th>
+                                <th className="text-left p-1.5">parentTxId</th>
+                                <th className="text-right p-1.5">Import</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {orphanRemittanceResults.examples.map((tx) => (
+                                <tr key={tx.id} className="border-b last:border-0">
+                                  <td className="p-1.5">{tx.date}</td>
+                                  <td className="p-1.5 font-mono text-xs">{tx.parentTransactionId}</td>
+                                  <td className="p-1.5 text-right tabular-nums text-amber-600">
+                                    {formatCurrencyEU(tx.amount)}
+                                  </td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
+                      </div>
+                    )}
+                  </details>
+                )}
               </>
             )}
           </div>

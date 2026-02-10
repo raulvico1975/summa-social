@@ -7,78 +7,24 @@
  * - Only updates existing contacts (or creates if docId missing in org)
  * - Validates membership and role (admin/user)
  * - Preserves archive fields from existing docs
+ * - Writes in chunks of BATCH_SIZE (50) for safety
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { initializeApp, getApps, applicationDefault } from 'firebase-admin/app';
-import { getFirestore, type Firestore } from 'firebase-admin/firestore';
-import { getAuth, type Auth } from 'firebase-admin/auth';
+import type { DocumentReference } from 'firebase-admin/firestore';
+import {
+  getAdminDb,
+  verifyIdToken,
+  validateUserMembership,
+  BATCH_SIZE,
+} from '@/lib/api/admin-sdk';
 
 // =============================================================================
-// FIREBASE ADMIN INITIALIZATION
+// CONSTANTS
 // =============================================================================
 
-let cachedDb: Firestore | null = null;
-let cachedAuth: Auth | null = null;
-
-function getAdminDb(): Firestore {
-  if (cachedDb) return cachedDb;
-
-  if (getApps().length === 0) {
-    const projectId = process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID;
-    if (!projectId) {
-      throw new Error('Firebase config incompleta per Admin SDK');
-    }
-
-    initializeApp({
-      credential: applicationDefault(),
-      projectId,
-    });
-  }
-
-  cachedDb = getFirestore();
-  return cachedDb;
-}
-
-function getAdminAuth(): Auth {
-  if (cachedAuth) return cachedAuth;
-  getAdminDb();
-  cachedAuth = getAuth();
-  return cachedAuth;
-}
-
-// =============================================================================
-// AUTH
-// =============================================================================
-
-interface AuthResult {
-  uid: string;
-  email?: string;
-}
-
-async function verifyIdToken(request: NextRequest): Promise<AuthResult | null> {
-  const authHeader = request.headers.get('Authorization');
-  if (!authHeader?.startsWith('Bearer ')) {
-    return null;
-  }
-
-  const idToken = authHeader.substring(7);
-  if (!idToken) {
-    return null;
-  }
-
-  try {
-    const auth = getAdminAuth();
-    const decodedToken = await auth.verifyIdToken(idToken);
-    return {
-      uid: decodedToken.uid,
-      email: decodedToken.email,
-    };
-  } catch (error) {
-    console.error('[contacts/import] Error verifying token:', error);
-    return null;
-  }
-}
+/** Límit dur per protegir contra abusos (no és batch size, és total per request) */
+const MAX_UPDATES = 500;
 
 // =============================================================================
 // TYPES
@@ -101,30 +47,14 @@ interface ImportContactsResponse {
   code?: string;
 }
 
+interface PreparedWrite {
+  ref: DocumentReference;
+  dataToWrite: Record<string, any>;
+}
+
 // =============================================================================
 // HELPERS
 // =============================================================================
-
-interface MembershipValidation {
-  valid: boolean;
-  role: string | null;
-}
-
-async function validateUserMembership(
-  db: Firestore,
-  uid: string,
-  orgId: string
-): Promise<MembershipValidation> {
-  const memberRef = db.doc(`organizations/${orgId}/members/${uid}`);
-  const memberSnap = await memberRef.get();
-
-  if (!memberSnap.exists) {
-    return { valid: false, role: null };
-  }
-
-  const data = memberSnap.data();
-  return { valid: true, role: data?.role as string };
-}
 
 function stripArchiveFields(data: Record<string, any>): Record<string, any> {
   const { archivedAt, archivedByUid, archivedFromAction, ...rest } = data;
@@ -147,7 +77,6 @@ export async function POST(
     );
   }
 
-  const { uid } = authResult;
   const db = getAdminDb();
 
   // 2. Parse body
@@ -176,15 +105,15 @@ export async function POST(
       { status: 400 }
     );
   }
-  if (updates.length > 50) {
+  if (updates.length > MAX_UPDATES) {
     return NextResponse.json(
-      { success: false, error: 'Too many updates', code: 'TOO_MANY_UPDATES' },
+      { success: false, error: `Màxim ${MAX_UPDATES} contactes per request`, code: 'TOO_MANY_UPDATES' },
       { status: 400 }
     );
   }
 
   // 4. Membership check
-  const membership = await validateUserMembership(db, uid, orgId);
+  const membership = await validateUserMembership(db, authResult.uid, orgId);
   if (!membership.valid) {
     return NextResponse.json(
       { success: false, error: 'No ets membre d\'aquesta organitzacio', code: 'NOT_MEMBER' },
@@ -198,9 +127,8 @@ export async function POST(
     );
   }
 
-  // 5. Apply updates
-  const batch = db.batch();
-  let updatedCount = 0;
+  // 5. Pre-validació: llegir tots els docs i preparar writes
+  const prepared: PreparedWrite[] = [];
 
   for (const item of updates) {
     if (!item?.docId || !item?.data) {
@@ -218,8 +146,10 @@ export async function POST(
         { status: 404 }
       );
     }
+
     const data = stripArchiveFields(item.data);
 
+    // Preservar camps d'arxivat existents
     const existing = snap.data() || {};
     if (Object.prototype.hasOwnProperty.call(existing, 'archivedAt')) {
       (data as any).archivedAt = (existing as any).archivedAt;
@@ -231,11 +161,22 @@ export async function POST(
       (data as any).archivedFromAction = (existing as any).archivedFromAction;
     }
 
-    batch.set(docRef, data, { merge: true });
-    updatedCount++;
+    prepared.push({ ref: docRef, dataToWrite: data });
   }
 
-  await batch.commit();
+  // 6. Writes en chunks de BATCH_SIZE (50)
+  let updatedCount = 0;
+  for (let i = 0; i < prepared.length; i += BATCH_SIZE) {
+    const chunk = prepared.slice(i, i + BATCH_SIZE);
+    const batch = db.batch();
+
+    for (const item of chunk) {
+      batch.set(item.ref, item.dataToWrite, { merge: true });
+    }
+
+    await batch.commit();
+    updatedCount += chunk.length;
+  }
 
   return NextResponse.json({ success: true, updatedCount });
 }
