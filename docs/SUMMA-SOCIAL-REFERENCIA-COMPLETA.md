@@ -1,6 +1,6 @@
 # ═══════════════════════════════════════════════════════════════════════════════
 # SUMMA SOCIAL - REFERÈNCIA COMPLETA DEL PROJECTE
-# Versió 1.37 - Febrer 2026
+# Versió 1.40 - Febrer 2026
 # ═══════════════════════════════════════════════════════════════════════════════
 
 
@@ -1312,7 +1312,7 @@ Si hi ha socis sense IBAN:
 | SEPA Domiciliacions | Pre-banc | Generar cobrament | **pain.008** |
 | Divisor de remesa IN | Post-banc | Desagregar ingrés cobrat | cap (es processa CSV/XLSX del banc) |
 
-### 3.3.9.7 Wizard SEPA pain.008 (ACTUALITZAT v1.32)
+### 3.3.9.7 Wizard SEPA pain.008 (ACTUALITZAT v1.40)
 
 **Accés:** Donants → Remeses de cobrament
 
@@ -1321,7 +1321,7 @@ Si hi ha socis sense IBAN:
 | Pas | Nom | Funció |
 |-----|-----|--------|
 | 1 | Configuració | Seleccionar compte bancari, data cobrament, periodicitat |
-| 2 | Selecció | Triar socis a incloure (bulk selection, cerca, filtre) |
+| 2 | Selecció | Triar socis a incloure (pre-selecció automàtica, bulk, cerca, filtre) |
 | 3 | Revisió | Validar i descarregar XML |
 
 **Periodicitat de quota (NOU v1.32):**
@@ -1338,6 +1338,24 @@ Camp `periodicityQuota` al contacte:
 | `null` | No definit |
 
 **Filtre per periodicitat:** El wizard permet filtrar socis per periodicitat per generar remeses segmentades.
+
+**Pre-selecció automàtica per periodicitat (NOU v1.40):**
+
+Quan l'usuari selecciona una periodicitat al Pas 1, el sistema pre-marca automàticament els socis que "toca cobrar" al Pas 2, basant-se en:
+
+1. **Períodes naturals:** El càlcul usa els períodes naturals del calendari (mes, trimestre, semestre, any), no intervals arbitraris
+2. **Última execució (`lastSepaRunDate`):** Si el soci ja ha estat inclòs en una remesa dins del període natural actual, NO es pre-selecciona
+3. **Periodicitat del soci:** Només es pre-seleccionen els socis que tenen la periodicitat corresponent al filtre
+
+**Exemples de períodes naturals:**
+- `monthly`: Gen = 1-31 gen, Feb = 1-28/29 feb, etc.
+- `quarterly`: Q1 = gen-mar, Q2 = abr-jun, Q3 = jul-set, Q4 = oct-des
+- `semiannual`: H1 = gen-jun, H2 = jul-des
+- `annual`: gen-des
+
+**Simplificació v1.40:** S'ha eliminat el concepte "overdue" (vençut). Un soci es marca com a candidat si NO ha estat cobrat al període natural actual; no es distingeix entre "toca cobrar ara" i "ja tocava cobrar abans".
+
+**Lògica:** `src/lib/sepa/donor-collection-status.ts` — mòdul `isDueForCollection()` que calcula si un donant toca cobrar.
 
 **Memòria d'execució (run memory):**
 
@@ -2063,21 +2081,28 @@ Panel lateral que s'obre clicant el nom d'un donant:
 - Resum per any
 - Generació de certificats
 
-### 3.6.8 Dinàmica de Donants (NOU v1.32)
+### 3.6.8 Dinàmica de Donants (ACTUALITZAT v1.40)
 
 Panell d'anàlisi que mostra l'evolució dels donants segons el període seleccionat.
 
 **Accés:** Donants → Bloc "Dinàmica de donants" (part inferior de la pantalla)
+
+**Redisseny v1.40:** 5 blocs uniformes amb separació Persones Físiques (PF) / Persones Jurídiques (PJ):
 
 **Categories d'anàlisi:**
 
 | Categoria | Definició | Ordenació |
 |-----------|-----------|-----------|
 | **Altes** | Primer moviment dins el període (sense històric anterior) | Per data primer moviment (desc) |
-| **Sense moviments** | Tenia històric però zero dins el període actual | Per data últim moviment (desc) |
-| **Reactivacions** | Zero al període anterior, sí al actual (amb vida abans del prev) | Per data primer moviment (desc) |
-| **Amb devolucions** | Té almenys una devolució dins el període | Per suma devolucions (desc) |
-| **Aportació decreixent** | Import al període actual < import al període anterior | Per delta negatiu (asc) |
+| **Baixes** | Donants que tenien històric però zero moviments dins el període actual | Per data últim moviment (desc) |
+| **Aportació a l'alça** | Import al període actual > import al període anterior | Per delta positiu (desc) |
+| **Aportació a la baixa** | Import al període actual < import al període anterior | Per delta negatiu (asc) |
+| **Top 15** | 15 donants amb major aportació al període, amb split PF / PJ | Per import total (desc) |
+
+**Distincions PF / PJ (NOU v1.40):**
+- **Persona Física (PF):** `contactType === 'individual'` o NIF comença per dígit / X / Y / Z
+- **Persona Jurídica (PJ):** `contactType === 'company'` o resta de patrons NIF
+- Top 15 mostra dues llistes separades quan hi ha ambdós tipus
 
 **Transaccions elegibles:**
 - Té `contactId` (vinculat a donant)
@@ -4078,7 +4103,7 @@ Guardrails per evitar arxivar liquidacions (ExpenseReports) que tenen tiquets pe
 - `src/app/[orgSlug]/dashboard/movimientos/liquidacions/page.tsx` — UI liquidacions
 - `src/lib/category-health.ts` — checkOrphanTickets()
 
-### 3.10.5g Resum Complet de Guardrails d'Integritat (v1.36)
+### 3.10.5g Resum Complet de Guardrails d'Integritat (ACTUALITZAT v1.40)
 
 **Taula resum de totes les entitats protegides:**
 
@@ -4099,6 +4124,10 @@ Guardrails per evitar arxivar liquidacions (ExpenseReports) que tenen tiquets pe
 | H | BankAccounts orfes (`tx.bankAccountId` → doc inexistent) | Warning |
 | I | Contactes orfes (`tx.contactId` → doc inexistent) | Warning |
 | J | Tiquets orfes (`pendingDoc.reportId` → doc inexistent) | Warning |
+| K | Remeses òrfenes (fills amb `parentTransactionId` inexistent) | Warning |
+| L | ExpenseLinks orfes (`txId` inexistent a transactions) | Warning |
+
+**Nota v1.40:** Blocs K i L afegits. K integrat al dashboard de health; L exportat com a funció independent (`checkOrphanExpenseLinks()`) però no integrat al dashboard general perquè `expenseLinks` no es carreguen a la vista principal.
 
 ### 3.10.6 Fitxers principals
 
