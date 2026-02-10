@@ -21,14 +21,21 @@ export type DonorWithMeta = {
   delta?: number;
   deltaPercent?: number;
   returnsSum?: number;
+  netAmount?: number;
+};
+
+export type CompanySummary = {
+  count: number;
+  totalNet: number;
 };
 
 export type DonorDynamicsResult = {
   newDonors: DonorWithMeta[];
   inactiveDonors: DonorWithMeta[];
-  reactivatedDonors: DonorWithMeta[];
   withReturns: DonorWithMeta[];
-  decreasing: DonorWithMeta[];
+  leavers: DonorWithMeta[];
+  companies: CompanySummary;
+  topDonors: DonorWithMeta[];
 };
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -171,18 +178,15 @@ export function computeDonorDynamics(
   const emptyResult: DonorDynamicsResult = {
     newDonors: [],
     inactiveDonors: [],
-    reactivatedDonors: [],
     withReturns: [],
-    decreasing: []
+    leavers: [],
+    companies: { count: 0, totalNet: 0 },
+    topDonors: []
   };
 
   // Obtenir rang actual
   const currRange = getDateRange(currentPeriod, transactions);
   if (!currRange) return emptyResult;
-
-  // Obtenir rang anterior (pot ser null)
-  const prevFilter = getPreviousPeriod(currentPeriod);
-  const prevRange = prevFilter ? getDateRange(prevFilter, transactions) : null;
 
   // Filtrar transaccions elegibles
   const eligibleTxs = transactions.filter(isEligibleDonorTx);
@@ -207,9 +211,12 @@ export function computeDonorDynamics(
   // Resultats
   const newDonors: DonorWithMeta[] = [];
   const inactiveDonors: DonorWithMeta[] = [];
-  const reactivatedDonors: DonorWithMeta[] = [];
   const withReturns: DonorWithMeta[] = [];
-  const decreasing: DonorWithMeta[] = [];
+
+  // Per Top 15 i Empreses: acumulem net per donant
+  const donorNets: DonorWithMeta[] = [];
+  let companiesCount = 0;
+  let companiesTotalNet = 0;
 
   // Processar cada donant amb transaccions
   for (const [donorId, txs] of txByDonorId) {
@@ -219,28 +226,22 @@ export function computeDonorDynamics(
     // Classificar transaccions
     const beforeTxs = txs.filter(tx => tx.date < currRange.from);
     const currTxs = txs.filter(tx => isInRange(tx.date, currRange.from, currRange.to));
-    const prevTxs = prevRange
-      ? txs.filter(tx => isInRange(tx.date, prevRange.from, prevRange.to))
-      : [];
 
     // Calcular mètriques
     const hasAnyBefore = beforeTxs.length > 0;
     const hasAnyInCurr = currTxs.length > 0;
-    const hasAnyInPrev = prevTxs.length > 0;
 
     // Suma donacions (amount > 0) dins rang actual
     const sumCurr = currTxs
       .filter(tx => tx.amount > 0)
       .reduce((sum, tx) => sum + tx.amount, 0);
 
-    // Suma donacions dins rang anterior
-    const sumPrev = prevTxs
-      .filter(tx => tx.amount > 0)
-      .reduce((sum, tx) => sum + tx.amount, 0);
-
     // Suma devolucions dins rang actual
     const returnsInCurr = currTxs.filter(tx => tx.transactionType === 'return');
     const returnsSum = returnsInCurr.reduce((sum, tx) => sum + Math.abs(tx.amount), 0);
+
+    // Import net dins període (donacions - devolucions)
+    const netAmount = sumCurr - returnsSum;
 
     // Dates per ordenació
     const firstDateInPeriod = currTxs.length > 0
@@ -271,19 +272,6 @@ export function computeDonorDynamics(
       });
     }
 
-    // REACTIVACIONS: zero al període anterior, sí al actual (i tenia vida abans del prev)
-    // Requereix prevRange vàlid
-    if (prevRange) {
-      const hasAnyBeforePrev = txs.some(tx => tx.date < prevRange.from);
-      if (hasAnyBeforePrev && !hasAnyInPrev && hasAnyInCurr) {
-        reactivatedDonors.push({
-          donor,
-          firstDateInPeriod,
-          sumCurrent: sumCurr
-        });
-      }
-    }
-
     // AMB DEVOLUCIONS: té almenys una devolució dins el període
     if (returnsInCurr.length > 0) {
       withReturns.push({
@@ -293,18 +281,34 @@ export function computeDonorDynamics(
       });
     }
 
-    // APORTACIÓ DECREIXENT: sumCurr > 0 && sumPrev > 0 && sumCurr < sumPrev
-    // Requereix prevRange vàlid
-    if (prevRange && sumCurr > 0 && sumPrev > 0 && sumCurr < sumPrev) {
-      const delta = sumCurr - sumPrev; // negatiu
-      const deltaPercent = ((sumCurr - sumPrev) / sumPrev) * 100;
-      decreasing.push({
+    // EMPRESES COL·LABORADORES: company amb almenys 1 moviment elegible dins període
+    if (hasAnyInCurr && donor.donorType === 'company') {
+      companiesCount++;
+      companiesTotalNet += netAmount;
+    }
+
+    // TOP DONANTS: acumular net per tots els donants amb activitat al període
+    if (hasAnyInCurr) {
+      donorNets.push({
         donor,
+        netAmount,
         sumCurrent: sumCurr,
-        sumPrevious: sumPrev,
-        delta,
-        deltaPercent
+        returnsSum: returnsSum > 0 ? returnsSum : undefined
       });
+    }
+  }
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // BAIXES: donants amb status === 'inactive' i inactiveSince dins el període
+  // ═══════════════════════════════════════════════════════════════════════════
+  const leavers: DonorWithMeta[] = [];
+  for (const donor of donors) {
+    if (
+      donor.status === 'inactive' &&
+      donor.inactiveSince &&
+      isInRange(donor.inactiveSince.slice(0, 10), currRange.from, currRange.to)
+    ) {
+      leavers.push({ donor });
     }
   }
 
@@ -318,20 +322,28 @@ export function computeDonorDynamics(
   // Sense moviments: per data últim moviment abans del període (desc)
   inactiveDonors.sort((a, b) => (b.lastDateBeforePeriod || '').localeCompare(a.lastDateBeforePeriod || ''));
 
-  // Reactivacions: per data primer moviment dins període (desc)
-  reactivatedDonors.sort((a, b) => (b.firstDateInPeriod || '').localeCompare(a.firstDateInPeriod || ''));
-
   // Devolucions: per suma absoluta returns (desc)
   withReturns.sort((a, b) => (b.returnsSum || 0) - (a.returnsSum || 0));
 
-  // Decreixent: per delta negatiu (asc, més caiguda primer)
-  decreasing.sort((a, b) => (a.delta || 0) - (b.delta || 0));
+  // Baixes: per data inactiveSince (desc, més recent primer)
+  leavers.sort((a, b) =>
+    (b.donor.inactiveSince || '').localeCompare(a.donor.inactiveSince || '')
+  );
+
+  // Top 15: per netAmount desc, desempat per name asc
+  donorNets.sort((a, b) => {
+    const diff = (b.netAmount || 0) - (a.netAmount || 0);
+    if (diff !== 0) return diff;
+    return a.donor.name.localeCompare(b.donor.name);
+  });
+  const topDonors = donorNets.slice(0, 15);
 
   return {
     newDonors,
     inactiveDonors,
-    reactivatedDonors,
     withReturns,
-    decreasing
+    leavers,
+    companies: { count: companiesCount, totalNet: companiesTotalNet },
+    topDonors
   };
 }
