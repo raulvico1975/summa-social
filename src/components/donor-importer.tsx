@@ -43,6 +43,7 @@ import {
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
+import { filterValidSelectItems } from '@/lib/ui/safe-select-options';
 import type { Donor, Category } from '@/lib/data';
 import { collection, query, where, getDocs, writeBatch, doc, limit } from 'firebase/firestore';
 import { useFirebase, useCollection, useMemoFirebase } from '@/firebase';
@@ -363,7 +364,10 @@ export function DonorImporter({
   );
   const { data: allCategories } = useCollection<Category>(categoriesQuery);
   const incomeCategories = React.useMemo(
-    () => allCategories?.filter(c => c.type === 'income') || [],
+    () => filterValidSelectItems(
+      allCategories?.filter(c => c.type === 'income') || [],
+      'donor-importer.incomeCategories'
+    ),
     [allCategories]
   );
   const categoryTranslations = t.categories as Record<string, string>;
