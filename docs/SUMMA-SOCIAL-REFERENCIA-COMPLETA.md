@@ -5087,6 +5087,19 @@ Helper centralitzat per filtrar valors invàlids abans de renderitzar `Select.It
 - ⚠️ **i18n PT**: `guides.importDonors.steps` longitud diferent (base=5, pt=6) + clau extra `.steps.5`
 - ⚠️ **i18n FR**: `help.dashboard.steps` longitud diferent (base=5, fr=4) + `help.dashboard.extra.order.items` (base=4, fr=3)
 
+## Completades v1.40
+- ✅ Pre-selecció automàtica de donants al wizard SEPA pain.008 per periodicitat natural
+- ✅ Dinàmica de donants redissenyada: 5 blocs, separació PF/PJ, Top 15
+- ✅ Admin SDK compartit centralitzat (`admin-sdk.ts`), -500 línies duplicades
+- ✅ Registre/invitacions migrat a Admin API (bypass Firestore Rules)
+- ✅ Health Check blocs K (remeses òrfenes) i L (expenseLinks orfes)
+- ✅ Gate i18n pre-commit: hard block si falten claus `tr()` a ca.json
+- ✅ Dashboard i SEPA 100% traduïbles via `tr()` (PT complet)
+- ✅ Merge Storage + local per i18n amb fallback correcte
+- ✅ SafeSelect guard per evitar crash Radix UI amb valors buits
+- ✅ Periodicitat donants: mostra "sense periodicitat" quan null, persisteix monthly explícitament
+- ✅ Neteja massiva de console.logs en producció
+
 ## Completades v1.29
 - ✅ Adaptació mòbil completa: patrons normalitzats per a barres d'accions, navegació i taules
 - ✅ CTA + "Més accions" DropdownMenu per a pantalles mòbils
@@ -5987,5 +6000,5 @@ Les següents regles han de ser certes en tot moment. Si es trenca alguna, cal c
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # FI DEL DOCUMENT
-# Última actualització: Febrer 2026 - Versió 1.37
+# Última actualització: 10 Febrer 2026 - Versió 1.40
 # ═══════════════════════════════════════════════════════════════════════════════
