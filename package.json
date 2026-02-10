@@ -24,6 +24,7 @@
     "i18n:validate-help": "node --import tsx scripts/i18n/validate-help-translations.ts",
     "i18n:audit-es": "node scripts/i18n/audit-es-coverage.mjs",
     "i18n:check": "node scripts/i18n/validate-locales.mjs",
+    "i18n:check-tr-keys": "node scripts/i18n/validate-tr-keys-exist-in-ca.mjs",
     "check": "bash scripts/check.sh",
     "prepush": "bash scripts/prepush.sh",
     "verify:ci": "bash scripts/verify-ci.sh"

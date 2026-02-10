@@ -4,6 +4,9 @@ set -euo pipefail
 echo "[verify-local] Checking i18n locale completeness..."
 npm run i18n:check
 
+echo "[verify-local] Checking tr() keys exist in ca.json..."
+npm run i18n:check-tr-keys
+
 echo "[verify-local] Build..."
 npm run build
 
