@@ -344,10 +344,114 @@ function TopCategoriesTable({
 export default function DashboardPage() {
   const { firestore, user } = useFirebase();
   const { organizationId, organization, userRole } = useCurrentOrganization();
-  const { t, language } = useTranslations();
+  const { t, tr, language } = useTranslations();
   const locale = language === 'es' ? 'es-ES' : 'ca-ES';
-  const shareModalTexts = React.useMemo(() => t.dashboard.shareModal, [t]);
-  const shareModalExports = shareModalTexts.exports;
+  // Helper local per interpolació de placeholders {key} en claus JSON
+  const tri = React.useCallback(
+    (key: string, params: Record<string, string | number>) =>
+      tr(key).replace(/\{(\w+)\}/g, (_, k) => String(params[k] ?? `{${k}}`)),
+    [tr]
+  );
+  // Adaptador shareModal: mateixa forma que t.dashboard.shareModal però via tr()/tri()
+  const shareModalTexts = React.useMemo(() => ({
+    summaryHeader: (p: { organization: string; period: string }) => tri("dashboard.shareModal.summaryHeader", p),
+    summaryBlockTitle: tr("dashboard.shareModal.summaryBlockTitle"),
+    summaryFallbackOrg: tr("dashboard.shareModal.summaryFallbackOrg"),
+    summaryOrgPeriod: (p: { organization: string; period: string }) => tri("dashboard.shareModal.summaryOrgPeriod", p),
+    emailSubject: (p: { organization: string }) => tri("dashboard.shareModal.emailSubject", p),
+    actions: {
+      copy: tr("dashboard.shareModal.actions.copy"),
+      edit: tr("dashboard.shareModal.actions.edit"),
+      reset: tr("dashboard.shareModal.actions.reset"),
+      exportExcel: tr("dashboard.shareModal.actions.exportExcel"),
+      exportCsv: tr("dashboard.shareModal.actions.exportCsv"),
+    },
+    narrativesHeading: tr("dashboard.shareModal.narrativesHeading"),
+    narrativesDescription: tr("dashboard.shareModal.narrativesDescription"),
+    cards: {
+      summary: { title: tr("dashboard.shareModal.cards.summary.title"), label: tr("dashboard.shareModal.cards.summary.label") },
+      income: { title: tr("dashboard.shareModal.cards.income.title"), label: tr("dashboard.shareModal.cards.income.label") },
+      expenses: { title: tr("dashboard.shareModal.cards.expenses.title"), label: tr("dashboard.shareModal.cards.expenses.label") },
+      transfers: { title: tr("dashboard.shareModal.cards.transfers.title"), label: tr("dashboard.shareModal.cards.transfers.label") },
+    },
+    editor: {
+      title: (p: { section: string }) => tri("dashboard.shareModal.editor.title", p),
+      description: (p: { section: string }) => tri("dashboard.shareModal.editor.description", p),
+    },
+    labels: {
+      uncategorized: tr("dashboard.shareModal.labels.uncategorized"),
+      generalProject: tr("dashboard.shareModal.labels.generalProject"),
+      generalProjectDescriptor: tr("dashboard.shareModal.labels.generalProjectDescriptor"),
+      noCounterpart: tr("dashboard.shareModal.labels.noCounterpart"),
+      others: tr("dashboard.shareModal.labels.others"),
+    },
+    narratives: {
+      summary: {
+        noMovements: (p: { period: string }) => tri("dashboard.shareModal.narratives.summary.noMovements", p),
+        general: (p: { period: string; income: string; expenses: string; balance: string }) => tri("dashboard.shareModal.narratives.summary.general", p),
+      },
+      income: {
+        noData: tr("dashboard.shareModal.narratives.income.noData"),
+        primary: (p: { source: string; percentage: string }) => tri("dashboard.shareModal.narratives.income.primary", p),
+        fallbackPrimary: (p: { percentage: string }) => tri("dashboard.shareModal.narratives.income.fallbackPrimary", p),
+        secondary: (p: { source: string; percentage: string }) => tri("dashboard.shareModal.narratives.income.secondary", p),
+        fallbackSecondary: (p: { percentage: string }) => tri("dashboard.shareModal.narratives.income.fallbackSecondary", p),
+      },
+      expenses: {
+        noData: tr("dashboard.shareModal.narratives.expenses.noData"),
+        allGeneral: (p: { label: string }) => tri("dashboard.shareModal.narratives.expenses.allGeneral", p),
+        generalDescriptor: (p: { label: string; descriptor: string }) => tri("dashboard.shareModal.narratives.expenses.generalDescriptor", p),
+        primary: (p: { area: string; percentage: string }) => tri("dashboard.shareModal.narratives.expenses.primary", p),
+        secondary: (p: { area: string; percentage: string }) => tri("dashboard.shareModal.narratives.expenses.secondary", p),
+        others: (p: { percentage: string }) => tri("dashboard.shareModal.narratives.expenses.others", p),
+      },
+      transfers: {
+        noData: tr("dashboard.shareModal.narratives.transfers.noData"),
+        primary: (p: { counterpart: string; percentage: string }) => tri("dashboard.shareModal.narratives.transfers.primary", p),
+        fallbackPrimary: (p: { percentage: string }) => tri("dashboard.shareModal.narratives.transfers.fallbackPrimary", p),
+        secondary: (p: { counterpart: string; percentage: string }) => tri("dashboard.shareModal.narratives.transfers.secondary", p),
+        fallbackSecondary: (p: { percentage: string }) => tri("dashboard.shareModal.narratives.transfers.fallbackSecondary", p),
+        others: (p: { percentage: string }) => tri("dashboard.shareModal.narratives.transfers.others", p),
+      },
+    },
+  }), [tr, tri]);
+  const shareModalExports = React.useMemo(() => ({
+    summarySheet: {
+      name: tr("dashboard.shareModal.exports.summarySheet.name"),
+      columns: {
+        indicator: tr("dashboard.shareModal.exports.summarySheet.columns.indicator"),
+        value: tr("dashboard.shareModal.exports.summarySheet.columns.value"),
+      },
+      rows: {
+        period: tr("dashboard.shareModal.exports.summarySheet.rows.period"),
+        income: tr("dashboard.shareModal.exports.summarySheet.rows.income"),
+        expenses: tr("dashboard.shareModal.exports.summarySheet.rows.expenses"),
+        transfers: tr("dashboard.shareModal.exports.summarySheet.rows.transfers"),
+        balance: tr("dashboard.shareModal.exports.summarySheet.rows.balance"),
+      },
+    },
+    sheets: {
+      incomeTop: tr("dashboard.shareModal.exports.sheets.incomeTop"),
+      expensesTop: tr("dashboard.shareModal.exports.sheets.expensesTop"),
+      transfersTop: tr("dashboard.shareModal.exports.sheets.transfersTop"),
+      incomeComplete: tr("dashboard.shareModal.exports.sheets.incomeComplete"),
+      expensesComplete: tr("dashboard.shareModal.exports.sheets.expensesComplete"),
+      transfersComplete: tr("dashboard.shareModal.exports.sheets.transfersComplete"),
+    },
+    columns: {
+      id: tr("dashboard.shareModal.exports.columns.id"),
+      name: tr("dashboard.shareModal.exports.columns.name"),
+      amount: tr("dashboard.shareModal.exports.columns.amount"),
+      percentage: tr("dashboard.shareModal.exports.columns.percentage"),
+      operations: tr("dashboard.shareModal.exports.columns.operations"),
+    },
+    excelFileName: (p: { organizationSlug: string; date: string }) => tri("dashboard.shareModal.exports.excelFileName", p),
+    csvFileNames: {
+      income: (p: { organizationSlug: string; date: string }) => tri("dashboard.shareModal.exports.csvFileNames.income", p),
+      expenses: (p: { organizationSlug: string; date: string }) => tri("dashboard.shareModal.exports.csvFileNames.expenses", p),
+      transfers: (p: { organizationSlug: string; date: string }) => tri("dashboard.shareModal.exports.csvFileNames.transfers", p),
+    },
+  }), [tr, tri]);
   const { buildUrl } = useOrgUrl();
 
   // ═══════════════════════════════════════════════════════════════════════════════
@@ -699,22 +803,22 @@ export default function DashboardPage() {
       const monthLabel = t.months[key];
       return monthLabel ? monthLabel.charAt(0).toUpperCase() + monthLabel.slice(1) : '';
     };
-    if (filter.type === 'all') return t.dashboard.allPeriods;
-    if (filter.type === 'year' && filter.year) return `${t.dashboard.filterYear} ${filter.year}`;
+    if (filter.type === 'all') return tr("dashboard.allPeriods");
+    if (filter.type === 'year' && filter.year) return `${tr("dashboard.filterYear")} ${filter.year}`;
     if (filter.type === 'month' && filter.year && filter.month) {
       const monthName = formatMonthName(filter.month - 1);
       return `${monthName} ${filter.year}`.trim();
     }
     if (filter.type === 'quarter' && filter.year && filter.quarter) {
-      return t.dashboard.periodLabels.quarter({ quarter: filter.quarter, year: filter.year });
+      return tri("dashboard.periodLabels.quarter", { quarter: filter.quarter, year: filter.year });
     }
     if (filter.type === 'custom' && filter.customRange?.from && filter.customRange?.to) {
       const formatter = new Intl.DateTimeFormat(locale, { day: '2-digit', month: '2-digit', year: 'numeric' });
       const start = formatter.format(filter.customRange.from);
       const end = formatter.format(filter.customRange.to);
-      return t.dashboard.periodLabels.customRange({ start, end });
+      return tri("dashboard.periodLabels.customRange", { start, end });
     }
-    return t.dashboard.allPeriods;
+    return tr("dashboard.allPeriods");
   };
   const periodLabel = formatPeriodLabel(dateFilter);
   const organizationName = organization?.name || shareModalTexts.summaryFallbackOrg;
@@ -729,30 +833,30 @@ export default function DashboardPage() {
 
     // Comparativa amb any anterior
     const donorsComparison = canShowComparison
-      ? ` (${prevUniqueDonors} ${t.dashboard.vsPreviousYear})`
+      ? ` (${prevUniqueDonors} ${tr("dashboard.vsPreviousYear")})`
       : '';
     const donationsComparison = canShowComparison
-      ? ` (${formatCurrencyEU(prevTotalDonations)} ${t.dashboard.vsPreviousYear})`
+      ? ` (${formatCurrencyEU(prevTotalDonations)} ${tr("dashboard.vsPreviousYear")})`
       : '';
     const membersComparison = canShowComparison
-      ? ` (${prevActiveMembers} ${t.dashboard.vsPreviousYear})`
+      ? ` (${prevActiveMembers} ${tr("dashboard.vsPreviousYear")})`
       : '';
     const feesComparison = canShowComparison
-      ? ` (${formatCurrencyEU(prevMemberFees)} ${t.dashboard.vsPreviousYear})`
+      ? ` (${formatCurrencyEU(prevMemberFees)} ${tr("dashboard.vsPreviousYear")})`
       : '';
 
     return `${summaryHeaderText}
 
-💰 ${t.dashboard.totalIncome}: ${formatCurrencyEU(totalIncome)}
-💸 ${t.dashboard.operatingExpenses}: ${formatCurrencyEU(Math.abs(totalExpenses))}
-📈 ${t.dashboard.operatingBalance}: ${formatCurrencyEU(netBalance)}
+💰 ${tr("dashboard.totalIncome")}: ${formatCurrencyEU(totalIncome)}
+💸 ${tr("dashboard.operatingExpenses")}: ${formatCurrencyEU(Math.abs(totalExpenses))}
+📈 ${tr("dashboard.operatingBalance")}: ${formatCurrencyEU(netBalance)}
 
-❤️ ${t.dashboard.activeDonors}: ${uniqueDonors}${donorsComparison}
-🎁 ${t.dashboard.donations}: ${formatCurrencyEU(totalDonations)}${donationsComparison}
-👥 ${t.dashboard.activeMembers}: ${activeMembers}${membersComparison}
-💳 ${t.dashboard.memberFees}: ${formatCurrencyEU(memberFees)}${feesComparison}
+❤️ ${tr("dashboard.activeDonors")}: ${uniqueDonors}${donorsComparison}
+🎁 ${tr("dashboard.donations")}: ${formatCurrencyEU(totalDonations)}${donationsComparison}
+👥 ${tr("dashboard.activeMembers")}: ${activeMembers}${membersComparison}
+💳 ${tr("dashboard.memberFees")}: ${formatCurrencyEU(memberFees)}${feesComparison}
 
-${t.dashboard.generatedWith}`;
+${tr("dashboard.generatedWith")}`;
   };
 
   // Funció per copiar al portapapers
@@ -1057,10 +1161,10 @@ ${t.dashboard.generatedWith}`;
     // Assignar noms de projectes
     projectMap.forEach((value, key) => {
       if (key === null) {
-        value.name = t.dashboard.unassigned;
+        value.name = tr("dashboard.unassigned");
       } else {
         const project = projects?.find(p => p.id === key);
-        value.name = project?.name || t.dashboard.unassigned;
+        value.name = project?.name || tr("dashboard.unassigned");
       }
     });
 
@@ -1082,7 +1186,7 @@ ${t.dashboard.generatedWith}`;
       // La resta ordenats per import descendent
       return b.totalExpense - a.totalExpense;
     });
-  }, [filteredTransactions, projects, t.dashboard.unassigned]);
+  }, [filteredTransactions, projects, tr]);
 
   const totalProjectExpenses = React.useMemo(() => {
     return expensesByProject.reduce((sum, p) => sum + p.totalExpense, 0);
@@ -1118,14 +1222,14 @@ ${t.dashboard.generatedWith}`;
     if (restAmount > 0) {
       result.push({
         projectId: '_others',
-        projectName: t.dashboard.topCategoriesOthers ?? 'Altres',
+        projectName: tr("dashboard.topCategoriesOthers"),
         totalExpense: restAmount,
         percentage: (restAmount / totalAssignedProjectExpenses) * 100,
       });
     }
 
     return result;
-  }, [expensesByProject, totalAssignedProjectExpenses, t.dashboard.topCategoriesOthers]);
+  }, [expensesByProject, totalAssignedProjectExpenses, tr]);
 
   // Condicions per mostrar el bloc de "Despesa per Eix"
   const hasProjectModule = organization?.features?.projectModule === true;
@@ -1147,7 +1251,7 @@ ${t.dashboard.generatedWith}`;
       result.push({
         type: 'uncategorized' as const,
         count: uncategorizedCount,
-        label: t.dashboard.uncategorizedMovements,
+        label: tr("dashboard.uncategorizedMovements"),
         variant: 'destructive' as const,
         href: buildUrl('/dashboard/movimientos') + '?filter=uncategorized',
       });
@@ -1162,7 +1266,7 @@ ${t.dashboard.generatedWith}`;
       result.push({
         type: 'incomplete_donors' as const,
         count: incompleteDonorsCount,
-        label: t.dashboard.incompleteDonors,
+        label: tr("dashboard.incompleteDonors"),
         variant: 'default' as const,
         href: buildUrl('/dashboard/donants') + '?filter=incomplete',
       });
@@ -1178,15 +1282,15 @@ ${t.dashboard.generatedWith}`;
       result.push({
         type: 'no_contact' as const,
         count: noContactCount,
-        label: t.dashboard.movementsWithoutContact,
+        label: tr("dashboard.movementsWithoutContact"),
         variant: 'secondary' as const,
         href: buildUrl('/dashboard/movimientos') + '?filter=noContact',
-        info: threshold > 0 ? t.dashboard.onlyMovementsAbove({ amount: threshold }) : undefined,
+        info: threshold > 0 ? tri("dashboard.onlyMovementsAbove", { amount: threshold }) : undefined,
       });
     }
 
     return result;
-  }, [filteredTransactions, contacts, t, buildUrl, organization]);
+  }, [filteredTransactions, contacts, tr, tri, buildUrl, organization]);
 
   // Càlcul d'obligacions fiscals
   const taxObligations = React.useMemo(() => {
@@ -1314,8 +1418,8 @@ ${t.dashboard.generatedWith}`;
       {/* Capçalera amb botó de sessió opcional */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight font-headline">{t.dashboard.title}</h1>
-          <p className="text-muted-foreground">{t.dashboard.description}</p>
+          <h1 className="text-2xl font-bold tracking-tight font-headline">{tr("dashboard.title")}</h1>
+          <p className="text-muted-foreground">{tr("dashboard.description")}</p>
         </div>
         {/* Botó "Configuració inicial" - només durant la sessió si ha declinat */}
         {showSessionButton && isUserFirstAdmin && (
@@ -1335,7 +1439,7 @@ ${t.dashboard.generatedWith}`;
         <DateFilter value={dateFilter} onChange={setDateFilter} />
         <Button variant="outline" onClick={handleShareClick}>
           <Share2 className="h-4 w-4 mr-2" />
-          <span className="hidden sm:inline">{t.dashboard.shareSummary}</span>
+          <span className="hidden sm:inline">{tr("dashboard.shareSummary")}</span>
         </Button>
       </div>
 
@@ -1345,16 +1449,15 @@ ${t.dashboard.generatedWith}`;
           <CardHeader className="pb-3">
             <CardTitle className="flex items-center gap-2 text-base font-medium">
               <PartyPopper className="h-4 w-4 text-emerald-600" />
-              {t.dashboard.celebrations}
+              {tr("dashboard.celebrations")}
             </CardTitle>
           </CardHeader>
           <CardContent className="pt-0">
             <div className="flex flex-wrap gap-2">
               {celebrations.slice(0, 3).map((celebration) => {
-                const message = t.dashboard[celebration.messageKey as keyof typeof t.dashboard];
-                const displayMessage = celebration.messageParams && typeof message === 'function'
-                  ? message(celebration.messageParams as any)
-                  : message as string;
+                const displayMessage = celebration.messageParams
+                  ? tri(`dashboard.${celebration.messageKey}`, celebration.messageParams as Record<string, string | number>)
+                  : tr(`dashboard.${celebration.messageKey}`);
 
                 return (
                   <Badge
@@ -1381,9 +1484,9 @@ ${t.dashboard.generatedWith}`;
         <CardHeader className="pb-2">
           <CardTitle className="flex items-center gap-2">
             <DollarSign className="h-5 w-5 text-muted-foreground" />
-            {t.dashboard.moneyBlock}
+            {tr("dashboard.moneyBlock")}
           </CardTitle>
-          <p className="text-xs text-muted-foreground">{t.dashboard.moneyBlockDescription}</p>
+          <p className="text-xs text-muted-foreground">{tr("dashboard.moneyBlockDescription")}</p>
         </CardHeader>
         <CardContent>
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
@@ -1391,32 +1494,32 @@ ${t.dashboard.generatedWith}`;
               href={createMovementsLink('income')}
               className="block rounded-lg border p-4 text-left hover:bg-muted/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/70 active:scale-[0.99] cursor-pointer transition-colors"
             >
-              <p className="text-sm text-muted-foreground">{t.dashboard.totalIncome}</p>
+              <p className="text-sm text-muted-foreground">{tr("dashboard.totalIncome")}</p>
               <p className="text-2xl font-bold text-emerald-600">{formatCurrencyEU(totalIncome)}</p>
-              <p className="text-xs text-muted-foreground/70 mt-1">{t.dashboard.totalIncomeDescription}</p>
+              <p className="text-xs text-muted-foreground/70 mt-1">{tr("dashboard.totalIncomeDescription")}</p>
             </Link>
             <Link
               href={createMovementsLink('operatingExpenses')}
               className="block rounded-lg border p-4 text-left hover:bg-muted/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/70 active:scale-[0.99] cursor-pointer transition-colors"
             >
-              <p className="text-sm text-muted-foreground">{t.dashboard.operatingExpenses}</p>
+              <p className="text-sm text-muted-foreground">{tr("dashboard.operatingExpenses")}</p>
               <p className="text-2xl font-bold text-rose-600">{formatCurrencyEU(totalExpenses)}</p>
-              <p className="text-xs text-muted-foreground/70 mt-1">{t.dashboard.operatingExpensesDescription}</p>
+              <p className="text-xs text-muted-foreground/70 mt-1">{tr("dashboard.operatingExpensesDescription")}</p>
             </Link>
             <Link
               href={createMovementsLink('missionTransfers')}
               className="block rounded-lg border p-4 text-left hover:bg-muted/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/70 active:scale-[0.99] cursor-pointer transition-colors"
             >
-              <p className="text-sm text-muted-foreground">{t.dashboard.missionTransfers}</p>
+              <p className="text-sm text-muted-foreground">{tr("dashboard.missionTransfers")}</p>
               <p className="text-2xl font-bold text-blue-600">{formatCurrencyEU(totalMissionTransfers)}</p>
-              <p className="text-xs text-muted-foreground/70 mt-1">{t.dashboard.missionTransfersDescription}</p>
+              <p className="text-xs text-muted-foreground/70 mt-1">{tr("dashboard.missionTransfersDescription")}</p>
             </Link>
             <div className="rounded-lg border p-4 bg-muted/20">
-              <p className="text-sm text-muted-foreground">{t.dashboard.operatingBalance}</p>
+              <p className="text-sm text-muted-foreground">{tr("dashboard.operatingBalance")}</p>
               <p className={`text-2xl font-bold ${netBalance >= 0 ? 'text-emerald-600' : 'text-rose-600'}`}>
                 {formatCurrencyEU(netBalance)}
               </p>
-              <p className="text-xs text-muted-foreground/70 mt-1">{t.dashboard.operatingBalanceDescription}</p>
+              <p className="text-xs text-muted-foreground/70 mt-1">{tr("dashboard.operatingBalanceDescription")}</p>
             </div>
           </div>
         </CardContent>
@@ -1430,9 +1533,9 @@ ${t.dashboard.generatedWith}`;
         <CardHeader className="pb-2">
           <CardTitle className="flex items-center gap-2">
             <Heart className="h-5 w-5 text-muted-foreground" />
-            {t.dashboard.supportersBlock}
+            {tr("dashboard.supportersBlock")}
           </CardTitle>
-          <p className="text-xs text-muted-foreground">{t.dashboard.supportersBlockDescription}</p>
+          <p className="text-xs text-muted-foreground">{tr("dashboard.supportersBlockDescription")}</p>
         </CardHeader>
         <CardContent>
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
@@ -1440,9 +1543,9 @@ ${t.dashboard.generatedWith}`;
               href={createMovementsLink('memberFees')}
               className="block rounded-lg border p-4 text-left hover:bg-muted/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/70 active:scale-[0.99] cursor-pointer transition-colors"
             >
-              <p className="text-sm text-muted-foreground">{t.dashboard.memberFees}</p>
+              <p className="text-sm text-muted-foreground">{tr("dashboard.memberFees")}</p>
               <p className="text-2xl font-bold text-emerald-600">{formatCurrencyEU(memberFees)}</p>
-              <p className="text-xs text-muted-foreground/70 mt-1">{t.dashboard.memberFeesDescription}</p>
+              <p className="text-xs text-muted-foreground/70 mt-1">{tr("dashboard.memberFeesDescription")}</p>
               {canShowComparison && (
                 <ComparisonBadge
                   current={memberFees}
@@ -1450,7 +1553,10 @@ ${t.dashboard.generatedWith}`;
                   previousYear={previousYear}
                   isCurrency
                   formatFn={formatCurrencyEU}
-                  texts={t.dashboard.comparison}
+                  texts={{
+                    equal: (p) => tri("dashboard.comparison.equal", p),
+                    delta: (p) => tri("dashboard.comparison.delta", p),
+                  }}
                 />
               )}
             </Link>
@@ -1458,9 +1564,9 @@ ${t.dashboard.generatedWith}`;
               href={createMovementsLink('donations')}
               className="block rounded-lg border p-4 text-left hover:bg-muted/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/70 active:scale-[0.99] cursor-pointer transition-colors"
             >
-              <p className="text-sm text-muted-foreground">{t.dashboard.oneTimeDonations}</p>
+              <p className="text-sm text-muted-foreground">{tr("dashboard.oneTimeDonations")}</p>
               <p className="text-2xl font-bold text-emerald-600">{formatCurrencyEU(totalDonations)}</p>
-              <p className="text-xs text-muted-foreground/70 mt-1">{t.dashboard.oneTimeDonationsDescription}</p>
+              <p className="text-xs text-muted-foreground/70 mt-1">{tr("dashboard.oneTimeDonationsDescription")}</p>
               {canShowComparison && (
                 <ComparisonBadge
                   current={totalDonations}
@@ -1468,7 +1574,10 @@ ${t.dashboard.generatedWith}`;
                   previousYear={previousYear}
                   isCurrency
                   formatFn={formatCurrencyEU}
-                  texts={t.dashboard.comparison}
+                  texts={{
+                    equal: (p) => tri("dashboard.comparison.equal", p),
+                    delta: (p) => tri("dashboard.comparison.delta", p),
+                  }}
                 />
               )}
             </Link>
@@ -1478,18 +1587,18 @@ ${t.dashboard.generatedWith}`;
                 className="block rounded-lg border p-4 text-left hover:bg-muted/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/70 active:scale-[0.99] cursor-pointer transition-colors"
               >
                 <div className="flex items-center gap-1">
-                  <p className="text-sm text-muted-foreground">{t.dashboard.otherIncome}</p>
+                  <p className="text-sm text-muted-foreground">{tr("dashboard.otherIncome")}</p>
                   <Tooltip>
                     <TooltipTrigger asChild onClick={(e) => e.preventDefault()}>
                       <Info className="h-3.5 w-3.5 text-muted-foreground/60 hover:text-muted-foreground" />
                     </TooltipTrigger>
                     <TooltipContent side="top" className="max-w-xs">
-                      <p className="text-xs">{t.dashboard.otherIncomeTooltip}</p>
+                      <p className="text-xs">{tr("dashboard.otherIncomeTooltip")}</p>
                     </TooltipContent>
                   </Tooltip>
                 </div>
                 <p className="text-2xl font-bold text-emerald-600">{formatCurrencyEU(otherIncomeEUR)}</p>
-                <p className="text-xs text-muted-foreground/70 mt-1">{t.dashboard.otherIncomeDescription}</p>
+                <p className="text-xs text-muted-foreground/70 mt-1">{tr("dashboard.otherIncomeDescription")}</p>
               </Link>
             )}
             <Link
@@ -1497,24 +1606,27 @@ ${t.dashboard.generatedWith}`;
               className="block rounded-lg border p-4 text-left hover:bg-muted/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/70 active:scale-[0.99] cursor-pointer transition-colors"
             >
               <div className="flex items-center gap-1">
-                <p className="text-sm text-muted-foreground">{t.dashboard.activeMembers}</p>
+                <p className="text-sm text-muted-foreground">{tr("dashboard.activeMembers")}</p>
                 <Tooltip>
                   <TooltipTrigger asChild onClick={(e) => e.preventDefault()}>
                     <Info className="h-3.5 w-3.5 text-muted-foreground/60 hover:text-muted-foreground" />
                   </TooltipTrigger>
                   <TooltipContent side="top" className="max-w-xs">
-                    <p className="text-xs">{t.dashboard.activeMembersTooltip}</p>
+                    <p className="text-xs">{tr("dashboard.activeMembersTooltip")}</p>
                   </TooltipContent>
                 </Tooltip>
               </div>
               <p className="text-2xl font-bold">{activeMembers}</p>
-              <p className="text-xs text-muted-foreground/70 mt-1">{t.dashboard.activeMembersDescription}</p>
+              <p className="text-xs text-muted-foreground/70 mt-1">{tr("dashboard.activeMembersDescription")}</p>
               {canShowComparison && (
                 <ComparisonBadge
                   current={activeMembers}
                   previous={prevActiveMembers}
                   previousYear={previousYear}
-                  texts={t.dashboard.comparison}
+                  texts={{
+                    equal: (p) => tri("dashboard.comparison.equal", p),
+                    delta: (p) => tri("dashboard.comparison.delta", p),
+                  }}
                 />
               )}
             </Link>
@@ -1523,24 +1635,27 @@ ${t.dashboard.generatedWith}`;
               className="block rounded-lg border p-4 text-left hover:bg-muted/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/70 active:scale-[0.99] cursor-pointer transition-colors"
             >
               <div className="flex items-center gap-1">
-                <p className="text-sm text-muted-foreground">{t.dashboard.activeDonors}</p>
+                <p className="text-sm text-muted-foreground">{tr("dashboard.activeDonors")}</p>
                 <Tooltip>
                   <TooltipTrigger asChild onClick={(e) => e.preventDefault()}>
                     <Info className="h-3.5 w-3.5 text-muted-foreground/60 hover:text-muted-foreground" />
                   </TooltipTrigger>
                   <TooltipContent side="top" className="max-w-xs">
-                    <p className="text-xs">{t.dashboard.activeDonorsTooltip}</p>
+                    <p className="text-xs">{tr("dashboard.activeDonorsTooltip")}</p>
                   </TooltipContent>
                 </Tooltip>
               </div>
               <p className="text-2xl font-bold">{uniqueDonors}</p>
-              <p className="text-xs text-muted-foreground/70 mt-1">{t.dashboard.activeDonorsDescription}</p>
+              <p className="text-xs text-muted-foreground/70 mt-1">{tr("dashboard.activeDonorsDescription")}</p>
               {canShowComparison && (
                 <ComparisonBadge
                   current={uniqueDonors}
                   previous={prevUniqueDonors}
                   previousYear={previousYear}
-                  texts={t.dashboard.comparison}
+                  texts={{
+                    equal: (p) => tri("dashboard.comparison.equal", p),
+                    delta: (p) => tri("dashboard.comparison.delta", p),
+                  }}
                 />
               )}
             </Link>
@@ -1553,10 +1668,10 @@ ${t.dashboard.generatedWith}`;
           <CardHeader className="pb-2">
             <CardTitle className="flex items-center gap-2">
               <FolderKanban className="h-5 w-5 text-muted-foreground" />
-              {t.dashboard.assignedExpensesByProject ?? "Despesa assignada per eix"}
+              {tr("dashboard.assignedExpensesByProject")}
             </CardTitle>
             <p className="text-xs text-muted-foreground">
-              {t.dashboard.assignedExpensesDescription ?? "Només inclou despeses ja assignades a projectes dins del període."}
+              {tr("dashboard.assignedExpensesDescription")}
             </p>
           </CardHeader>
           <CardContent>
@@ -1584,12 +1699,12 @@ ${t.dashboard.generatedWith}`;
               ))}
               <div className="pt-4 mt-4 border-t space-y-3">
                 <div className="flex items-center justify-between">
-                  <span className="text-sm font-bold">{t.dashboard.totalAssigned ?? "Total assignat"}</span>
+                  <span className="text-sm font-bold">{tr("dashboard.totalAssigned")}</span>
                   <span className="text-sm font-bold tabular-nums">{formatCurrencyEU(totalAssignedProjectExpenses)}</span>
                 </div>
                 <Link href={buildUrl('/dashboard/project-module/projects')}>
                   <Button variant="outline" size="sm" className="w-full">
-                    {t.dashboard.viewProjectDetails ?? "Veure detall"}
+                    {tr("dashboard.viewProjectDetails")}
                   </Button>
                 </Link>
               </div>
@@ -1602,7 +1717,7 @@ ${t.dashboard.generatedWith}`;
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <CalendarClock className="h-5 w-5 text-muted-foreground" />
-            {t.dashboard.taxObligations}
+            {tr("dashboard.taxObligations")}
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -1625,15 +1740,15 @@ ${t.dashboard.generatedWith}`;
                       {obligation.daysRemaining}d
                     </Badge>
                     <div>
-                      <p className="font-medium text-sm">{t.dashboard[obligation.nameKey as keyof typeof t.dashboard] as string}</p>
+                      <p className="font-medium text-sm">{tr(`dashboard.${obligation.nameKey}`)}</p>
                       <p className="text-xs text-muted-foreground">
-                        {obligation.daysRemaining} {t.dashboard.daysRemaining}
+                        {obligation.daysRemaining} {tr("dashboard.daysRemaining")}
                       </p>
                     </div>
                   </div>
                   <Link href={buildUrl(obligation.reportPath)}>
                     <Button variant="outline" size="sm">
-                      {t.dashboard.prepare}
+                      {tr("dashboard.prepare")}
                     </Button>
                   </Link>
                 </div>
@@ -1648,14 +1763,14 @@ ${t.dashboard.generatedWith}`;
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <AlertTriangle className="h-5 w-5 text-muted-foreground" />
-            {t.dashboard.alerts}
+            {tr("dashboard.alerts")}
           </CardTitle>
         </CardHeader>
         <CardContent>
           {alerts.length === 0 ? (
             <div className="flex items-center gap-1.5 py-2 text-muted-foreground">
               <span className="text-sm text-emerald-600">✓</span>
-              <span className="text-sm">{t.dashboard.allClear}</span>
+              <span className="text-sm">{tr("dashboard.allClear")}</span>
             </div>
           ) : (
             <div className="flex flex-col gap-3">
@@ -1693,15 +1808,15 @@ ${t.dashboard.generatedWith}`;
         categories={categories}
         categoryTranslations={t.categories as Record<string, string>}
         texts={{
-          title: t.dashboard.topCategoriesTitle,
-          category: t.dashboard.topCategoriesCategory,
-          amount: t.dashboard.topCategoriesAmount,
-          percent: t.dashboard.topCategoriesPercent,
-          delta: t.dashboard.topCategoriesDelta,
-          viewExpenses: t.dashboard.topCategoriesViewExpenses,
-          others: t.dashboard.topCategoriesOthers,
-          noData: t.dashboard.noExpenseData,
-          uncategorized: t.common?.uncategorized ?? 'Sense categoria',
+          title: tr("dashboard.topCategoriesTitle"),
+          category: tr("dashboard.topCategoriesCategory"),
+          amount: tr("dashboard.topCategoriesAmount"),
+          percent: tr("dashboard.topCategoriesPercent"),
+          delta: tr("dashboard.topCategoriesDelta"),
+          viewExpenses: tr("dashboard.topCategoriesViewExpenses"),
+          others: tr("dashboard.topCategoriesOthers"),
+          noData: tr("dashboard.noExpenseData"),
+          uncategorized: tr("common.uncategorized"),
         }}
         buildUrl={buildUrl}
       />
@@ -1714,10 +1829,10 @@ ${t.dashboard.generatedWith}`;
           <CardHeader className="pb-2">
             <CardTitle className="flex items-center gap-2">
               <Activity className="h-5 w-5 text-muted-foreground" />
-              {t.dashboard.dataIntegrity ?? 'Integritat de dades'}
+              {tr("dashboard.dataIntegrity")}
             </CardTitle>
             <p className="text-xs text-muted-foreground">
-              {t.dashboard.dataIntegrityDescription ?? 'Diagnòstic de la qualitat de les dades de l\'organització.'}
+              {tr("dashboard.dataIntegrityDescription")}
             </p>
           </CardHeader>
           <CardContent>
@@ -1728,7 +1843,7 @@ ${t.dashboard.generatedWith}`;
               className="gap-2"
             >
               <Activity className="h-4 w-4" />
-              {t.dashboard.runDiagnostic ?? 'Executar diagnòstic'}
+              {tr("dashboard.runDiagnostic")}
             </Button>
           </CardContent>
         </Card>
@@ -1740,7 +1855,7 @@ ${t.dashboard.generatedWith}`;
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Activity className="h-5 w-5" />
-              {t.dashboard.diagnosticResults ?? 'Resultats del diagnòstic'}
+              {tr("dashboard.diagnosticResults")}
               {healthCheckResults && (
                 <Badge variant={healthCheckResults.totalIssues > 0 ? 'destructive' : 'secondary'} className="ml-2">
                   {healthCheckResults.totalIssues > 0
@@ -1750,14 +1865,14 @@ ${t.dashboard.generatedWith}`;
               )}
             </DialogTitle>
             <DialogDescription>
-              {t.dashboard.diagnosticResultsDescription ?? 'Anàlisi de les dades del període seleccionat.'}
+              {tr("dashboard.diagnosticResultsDescription")}
             </DialogDescription>
           </DialogHeader>
 
           <div className="space-y-3 py-4 overflow-y-auto flex-1">
             {healthCheckResults === null ? (
               <p className="text-sm text-muted-foreground text-center py-8">
-                {t.dashboard.runDiagnosticFirst ?? 'Executa el diagnòstic per veure els resultats.'}
+                {tr("dashboard.runDiagnosticFirst")}
               </p>
             ) : (
               <>
@@ -2019,8 +2134,8 @@ ${t.dashboard.generatedWith}`;
         <DialogContent className="max-w-5xl w-full max-h-[85vh] overflow-hidden">
           <div className="flex h-full flex-col">
             <DialogHeader>
-              <DialogTitle>{t.dashboard.shareSummary}</DialogTitle>
-              <DialogDescription>{t.dashboard.shareSummaryDescription}</DialogDescription>
+              <DialogTitle>{tr("dashboard.shareSummary")}</DialogTitle>
+              <DialogDescription>{tr("dashboard.shareSummaryDescription")}</DialogDescription>
             </DialogHeader>
 
             <div className="flex flex-1 flex-col gap-6 overflow-y-auto md:flex-row">
@@ -2039,7 +2154,7 @@ ${t.dashboard.generatedWith}`;
                 <div className="grid grid-cols-2 gap-2">
                   <Button variant="outline" onClick={handleCopy}>
                     <Copy className="h-4 w-4 mr-2" />
-                    {copySuccess ? t.dashboard.copied : t.dashboard.copy}
+                    {copySuccess ? tr("dashboard.copied") : tr("dashboard.copy")}
                   </Button>
                   <Button variant="outline" onClick={handleResetNarratives} disabled={!defaultNarratives}>
                     <RefreshCcw className="h-4 w-4 mr-2" />
@@ -2101,7 +2216,7 @@ ${t.dashboard.generatedWith}`;
             <DialogFooter className="mt-4">
               <Button variant="default" onClick={handleEmailShare}>
                 <Mail className="h-4 w-4 mr-2" />
-                {t.dashboard.sendByEmail}
+                {tr("dashboard.sendByEmail")}
               </Button>
             </DialogFooter>
           </div>
