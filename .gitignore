@@ -44,6 +44,9 @@ next-env.d.ts
 secrets/
 secrets/*.json
 
+# IDX (Project IDX config)
+.idx/
+
 # firebase
 .firebase/
 firebase-debug.log

@@ -7,7 +7,7 @@
  * - Només escriptura via Admin SDK (bypassant Firestore Rules)
  * - orgId derivat de la membership de l'usuari (no del body)
  * - Validació de rol admin/user
- * - Reassignació atòmica amb batch (450 docs/batch)
+ * - Reassignació atòmica amb batch (50 docs/batch)
  * - Idempotent: si ja està arxivat, retorna success
  *
  * NOTA: Aquesta API NO afecta projectModule/* (mòdul de projectes modern)
@@ -17,86 +17,13 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { initializeApp, getApps, applicationDefault } from 'firebase-admin/app';
+import { FieldValue } from 'firebase-admin/firestore';
 import {
-  getFirestore,
-  FieldValue,
-  type Firestore,
-} from 'firebase-admin/firestore';
-import { getAuth, type Auth } from 'firebase-admin/auth';
-
-// =============================================================================
-// CONSTANTS
-// =============================================================================
-
-/** Grandària dels batches per evitar límits de Firestore (500 max, usem 450 per seguretat) */
-const BATCH_SIZE = 450;
-
-// =============================================================================
-// FIREBASE ADMIN INITIALIZATION
-// =============================================================================
-
-let cachedDb: Firestore | null = null;
-let cachedAuth: Auth | null = null;
-
-function getAdminDb(): Firestore {
-  if (cachedDb) return cachedDb;
-
-  if (getApps().length === 0) {
-    const projectId = process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID;
-    if (!projectId) {
-      throw new Error('Firebase config incompleta per Admin SDK');
-    }
-
-    initializeApp({
-      credential: applicationDefault(),
-      projectId,
-    });
-  }
-
-  cachedDb = getFirestore();
-  return cachedDb;
-}
-
-function getAdminAuth(): Auth {
-  if (cachedAuth) return cachedAuth;
-  getAdminDb();
-  cachedAuth = getAuth();
-  return cachedAuth;
-}
-
-// =============================================================================
-// AUTENTICACIÓ
-// =============================================================================
-
-interface AuthResult {
-  uid: string;
-  email?: string;
-}
-
-async function verifyIdToken(request: NextRequest): Promise<AuthResult | null> {
-  const authHeader = request.headers.get('Authorization');
-  if (!authHeader?.startsWith('Bearer ')) {
-    return null;
-  }
-
-  const idToken = authHeader.substring(7);
-  if (!idToken) {
-    return null;
-  }
-
-  try {
-    const auth = getAdminAuth();
-    const decodedToken = await auth.verifyIdToken(idToken);
-    return {
-      uid: decodedToken.uid,
-      email: decodedToken.email,
-    };
-  } catch (error) {
-    console.error('[projects/archive] Error verificant token:', error);
-    return null;
-  }
-}
+  getAdminDb,
+  verifyIdToken,
+  validateUserMembership,
+  BATCH_SIZE,
+} from '@/lib/api/admin-sdk';
 
 // =============================================================================
 // TIPUS
@@ -114,32 +41,6 @@ interface ArchiveProjectResponse {
   reassignedCount?: number;
   error?: string;
   code?: string;
-}
-
-// =============================================================================
-// HELPER: Validar membership de l'usuari a una org específica
-// =============================================================================
-
-interface MembershipValidation {
-  valid: boolean;
-  role: string | null;
-}
-
-async function validateUserMembership(
-  db: Firestore,
-  uid: string,
-  orgId: string
-): Promise<MembershipValidation> {
-  // Lookup directe per doc (no collectionGroup)
-  const memberRef = db.doc(`organizations/${orgId}/members/${uid}`);
-  const memberSnap = await memberRef.get();
-
-  if (!memberSnap.exists) {
-    return { valid: false, role: null };
-  }
-
-  const data = memberSnap.data();
-  return { valid: true, role: data?.role as string };
 }
 
 // =============================================================================
@@ -291,7 +192,7 @@ export async function POST(
     );
   }
 
-  // 9. Si count > 0 i toProjectId, fer batch reassign
+  // 9. Si count > 0 i toProjectId, fer batch reassign (chunks de BATCH_SIZE=50)
   let reassignedCount = 0;
   if (activeCount > 0 && toProjectId) {
     for (let i = 0; i < activeDocs.length; i += BATCH_SIZE) {

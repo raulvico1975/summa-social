@@ -1,0 +1,127 @@
+/**
+ * Helpers compartits per a rutes API que usen Firebase Admin SDK.
+ *
+ * Centralitza: inicialització cached, verificació de token, validació de membership.
+ *
+ * @see CLAUDE.md secció 2.b — paths `src/app/api/**` són RISC ALT
+ */
+
+import { type NextRequest } from 'next/server';
+import { initializeApp, getApps, applicationDefault, type App } from 'firebase-admin/app';
+import { getFirestore, type Firestore } from 'firebase-admin/firestore';
+import { getAuth, type Auth } from 'firebase-admin/auth';
+
+// =============================================================================
+// CONSTANTS
+// =============================================================================
+
+/** Grandària dels batches — invariant Summa: ≤ 50 operacions per batch */
+export const BATCH_SIZE = 50;
+
+// =============================================================================
+// FIREBASE ADMIN INITIALIZATION (singleton cached)
+// =============================================================================
+
+let cachedApp: App | null = null;
+let cachedDb: Firestore | null = null;
+let cachedAuth: Auth | null = null;
+
+export function getAdminApp(): App {
+  if (cachedApp) return cachedApp;
+
+  if (getApps().length === 0) {
+    const projectId = process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID;
+    if (!projectId) {
+      throw new Error('Firebase config incompleta per Admin SDK');
+    }
+
+    cachedApp = initializeApp({
+      credential: applicationDefault(),
+      projectId,
+    });
+  } else {
+    cachedApp = getApps()[0];
+  }
+
+  return cachedApp;
+}
+
+export function getAdminDb(): Firestore {
+  if (cachedDb) return cachedDb;
+  getAdminApp();
+  cachedDb = getFirestore();
+  return cachedDb;
+}
+
+export function getAdminAuth(): Auth {
+  if (cachedAuth) return cachedAuth;
+  getAdminApp();
+  cachedAuth = getAuth();
+  return cachedAuth;
+}
+
+// =============================================================================
+// AUTENTICACIÓ
+// =============================================================================
+
+export interface AuthResult {
+  uid: string;
+  email?: string;
+}
+
+/**
+ * Verifica el Bearer token d'una request i retorna uid + email.
+ * Retorna null si no hi ha token o és invàlid.
+ */
+export async function verifyIdToken(request: NextRequest): Promise<AuthResult | null> {
+  const authHeader = request.headers.get('Authorization');
+  if (!authHeader?.startsWith('Bearer ')) {
+    return null;
+  }
+
+  const idToken = authHeader.substring(7);
+  if (!idToken) {
+    return null;
+  }
+
+  try {
+    const auth = getAdminAuth();
+    const decodedToken = await auth.verifyIdToken(idToken);
+    return {
+      uid: decodedToken.uid,
+      email: decodedToken.email,
+    };
+  } catch (error) {
+    console.error('[admin-sdk] Error verificant token:', error);
+    return null;
+  }
+}
+
+// =============================================================================
+// MEMBERSHIP
+// =============================================================================
+
+export interface MembershipValidation {
+  valid: boolean;
+  role: string | null;
+}
+
+/**
+ * Valida que un usuari és membre d'una organització.
+ * Retorna el rol si és vàlid, null si no és membre.
+ */
+export async function validateUserMembership(
+  db: Firestore,
+  uid: string,
+  orgId: string
+): Promise<MembershipValidation> {
+  const memberRef = db.doc(`organizations/${orgId}/members/${uid}`);
+  const memberSnap = await memberRef.get();
+
+  if (!memberSnap.exists) {
+    return { valid: false, role: null };
+  }
+
+  const data = memberSnap.data();
+  return { valid: true, role: data?.role as string };
+}

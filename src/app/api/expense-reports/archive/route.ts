@@ -14,79 +14,12 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { initializeApp, getApps, applicationDefault } from 'firebase-admin/app';
+import { FieldValue } from 'firebase-admin/firestore';
 import {
-  getFirestore,
-  FieldValue,
-  type Firestore,
-} from 'firebase-admin/firestore';
-import { getAuth, type Auth } from 'firebase-admin/auth';
-
-// =============================================================================
-// FIREBASE ADMIN INITIALIZATION
-// =============================================================================
-
-let cachedDb: Firestore | null = null;
-let cachedAuth: Auth | null = null;
-
-function getAdminDb(): Firestore {
-  if (cachedDb) return cachedDb;
-
-  if (getApps().length === 0) {
-    const projectId = process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID;
-    if (!projectId) {
-      throw new Error('Firebase config incompleta per Admin SDK');
-    }
-
-    initializeApp({
-      credential: applicationDefault(),
-      projectId,
-    });
-  }
-
-  cachedDb = getFirestore();
-  return cachedDb;
-}
-
-function getAdminAuth(): Auth {
-  if (cachedAuth) return cachedAuth;
-  getAdminDb();
-  cachedAuth = getAuth();
-  return cachedAuth;
-}
-
-// =============================================================================
-// AUTENTICACIÓ
-// =============================================================================
-
-interface AuthResult {
-  uid: string;
-  email?: string;
-}
-
-async function verifyIdToken(request: NextRequest): Promise<AuthResult | null> {
-  const authHeader = request.headers.get('Authorization');
-  if (!authHeader?.startsWith('Bearer ')) {
-    return null;
-  }
-
-  const idToken = authHeader.substring(7);
-  if (!idToken) {
-    return null;
-  }
-
-  try {
-    const auth = getAdminAuth();
-    const decodedToken = await auth.verifyIdToken(idToken);
-    return {
-      uid: decodedToken.uid,
-      email: decodedToken.email,
-    };
-  } catch (error) {
-    console.error('[expense-reports/archive] Error verificant token:', error);
-    return null;
-  }
-}
+  getAdminDb,
+  verifyIdToken,
+  validateUserMembership,
+} from '@/lib/api/admin-sdk';
 
 // =============================================================================
 // TIPUS
@@ -106,31 +39,6 @@ interface ArchiveExpenseReportResponse {
   pendingCount?: number;
   matchedCount?: number;
   canArchive?: boolean;
-}
-
-// =============================================================================
-// HELPER: Validar membership de l'usuari a una org específica
-// =============================================================================
-
-interface MembershipValidation {
-  valid: boolean;
-  role: string | null;
-}
-
-async function validateUserMembership(
-  db: Firestore,
-  uid: string,
-  orgId: string
-): Promise<MembershipValidation> {
-  const memberRef = db.doc(`organizations/${orgId}/members/${uid}`);
-  const memberSnap = await memberRef.get();
-
-  if (!memberSnap.exists) {
-    return { valid: false, role: null };
-  }
-
-  const data = memberSnap.data();
-  return { valid: true, role: data?.role as string };
 }
 
 // =============================================================================
