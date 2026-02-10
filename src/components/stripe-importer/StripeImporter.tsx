@@ -297,16 +297,7 @@ export function StripeImporter({
   // STEP 1: Preparar confirmació (NO escriu a Firestore)
   // ════════════════════════════════════════════════════════════════════════════
   const handlePrepareImport = () => {
-    console.group('[STRIPE IMPORT] 🎯 handlePrepareImport');
-    console.log('Preparing confirmation with current state');
-    console.log('displayRows.length:', displayRows.length);
-    console.log('totalNet:', totalNet);
-    console.log('selectedGroup.fees:', selectedGroup?.fees);
-    console.log('selectedGroup.transferId:', selectedGroup?.transferId);
-    console.groupEnd();
-
     if (!selectedGroup) {
-      console.error('[STRIPE IMPORT] ❌ No selectedGroup');
       return;
     }
 
@@ -323,24 +314,7 @@ export function StripeImporter({
   // STEP 2: Executar import (escriu a Firestore)
   // ════════════════════════════════════════════════════════════════════════════
   const handleConfirmImport = async () => {
-    console.group('[STRIPE IMPORT] 🚀 handleConfirmImport STARTED');
-    console.log('Timestamp:', new Date().toISOString());
-    console.log('selectedGroup:', selectedGroup);
-    console.log('organizationId:', organizationId);
-    console.log('firestore:', !!firestore);
-    console.log('bankTransaction:', bankTransaction);
-    console.log('donorMatches:', donorMatches);
-    console.log('categories:', categories?.map(c => ({ id: c.id, name: c.name, type: c.type })));
-    console.log('pendingConfirmation:', pendingConfirmation);
-    console.groupEnd();
-
     if (!selectedGroup || !organizationId || !firestore || !pendingConfirmation) {
-      console.error('[STRIPE IMPORT] ❌ Early return: missing dependencies', {
-        selectedGroup: !!selectedGroup,
-        organizationId: !!organizationId,
-        firestore: !!firestore,
-        pendingConfirmation: !!pendingConfirmation,
-      });
       return;
     }
 
@@ -374,15 +348,12 @@ export function StripeImporter({
     try {
       // 1. Obtenir categoria bankFees
       const bankFeesCategory = categories?.find(c => c.name === BANK_FEES_KEY && c.type === 'expense');
-      console.log('[STRIPE IMPORT] bankFeesCategory:', bankFeesCategory);
       if (!bankFeesCategory) {
         throw new Error(t.importers.stripeImporter.errors.noBankFeesCategory);
       }
 
       // 2. Validar límits
       const stripeIds = selectedGroup.rows.map(r => r.id);
-      console.log('[STRIPE IMPORT] Total rows:', selectedGroup.rows.length);
-      console.log('[STRIPE IMPORT] Stripe IDs:', stripeIds);
 
       // 2a. Massa files per un sol batch (Firestore limit ~500 ops/batch, deixem marge)
       if (stripeIds.length + 1 > 450) {
@@ -396,14 +367,6 @@ export function StripeImporter({
 
       // 3. Validar idempotència: comprovar si ja existeixen transaccions amb aquests stripePaymentId
       const transactionsRef = collection(firestore, 'organizations', organizationId, 'transactions');
-
-      // 🔥 INSTRUMENTACIÓ CRÍTICA - PATH VERIFICATION
-      console.log('[StripeImporter] transactionsRef.path', transactionsRef.path);
-      console.log('[StripeImporter] organizationId', organizationId);
-      console.log('[StripeImporter] bankTransaction.id', bankTransaction.id);
-
-      const originalTxRefForLog = doc(transactionsRef, bankTransaction.id);
-      console.log('[StripeImporter] originalTxRef.path', originalTxRefForLog.path);
 
       // Firestore 'in' té límit de 30, fer en batches si cal
       const existingIds: string[] = [];
@@ -431,31 +394,10 @@ export function StripeImporter({
       const batch = writeBatch(firestore);
       let docsCreated = 0;
 
-      console.log('[STRIPE IMPORT] 📝 Construint batch...');
-      console.log('[STRIPE IMPORT] transactionsRef path:', transactionsRef.path);
-      console.log('[STRIPE IMPORT] selectedGroup.rows.length:', selectedGroup.rows.length);
-      console.log('[STRIPE IMPORT] donorMatches keys:', Object.keys(donorMatches));
-
-      // Verificar estabilitat row.id vs donorMatches keys
-      console.log('🔍 [CRITICAL] Row IDs stability check:');
-      console.log('  selectedGroup.rows IDs:', selectedGroup.rows.map(r => r.id));
-      console.log('  donorMatches keys:', Object.keys(donorMatches));
-      console.log('  Matched rows:', selectedGroup.rows.filter(r => donorMatches[r.id]).length);
-      console.log('  Unmatched rows:', selectedGroup.rows.filter(r => !donorMatches[r.id]).length);
-
       // 3a. Crear N transaccions d'ingrés (donacions)
       for (const row of selectedGroup.rows) {
         const match = donorMatches[row.id];
         const newTxRef = doc(transactionsRef);
-
-        console.log(`[STRIPE IMPORT] 📦 Processing donation ${docsCreated + 1}/${selectedGroup.rows.length}`, {
-          rowId: row.id,
-          customerEmail: row.customerEmail,
-          amount: row.amount,
-          matchFound: !!match,
-          contactId: match?.contactId || null,
-          contactName: match?.contactName || null,
-        });
 
         // Assegurar que la descripció conté "Stripe" per cercabilitat
         const baseDesc = row.description || `Donació - ${row.customerEmail}`;
@@ -480,16 +422,6 @@ export function StripeImporter({
           bankAccountId: bankTransaction.bankAccountId ?? null,
         };
 
-        console.log(`[STRIPE IMPORT] 📝 Transaction data:`, {
-          newTxRefId: newTxRef.id,
-          contactId: txData.contactId,
-          contactType: txData.contactType,
-          category: txData.category,
-          amount: txData.amount,
-          stripePaymentId: txData.stripePaymentId,
-          parentTransactionId: txData.parentTransactionId,
-        });
-
         // P0: Validar invariants fiscals abans d'escriure
         // Nota: Stripe donations contactId és opcional (excepció controlada A1)
         assertFiscalTxCanBeSaved(
@@ -511,11 +443,8 @@ export function StripeImporter({
         docsCreated++;
       }
 
-      console.log('[STRIPE IMPORT] ✅ All donations added to batch. Total donations:', docsCreated);
-
       // 3b. Crear 1 transacció de despesa (comissions agregades)
       if (selectedGroup.fees > 0) {
-        console.log('[STRIPE IMPORT] 💰 Adding fee transaction...');
         const feeTxRef = doc(transactionsRef);
         const feeDate = bankTransaction.date || new Date().toISOString().split('T')[0];
 
@@ -534,14 +463,6 @@ export function StripeImporter({
           // Heretar bankAccountId del pare
           bankAccountId: bankTransaction.bankAccountId ?? null,
         };
-
-        console.log('[STRIPE IMPORT] 📝 Fee transaction data:', {
-          newTxRefId: feeTxRef.id,
-          amount: feeTxData.amount,
-          date: feeTxData.date,
-          category: feeTxData.category,
-          parentTransactionId: feeTxData.parentTransactionId,
-        });
 
         // P0: Validar invariants fiscals abans d'escriure
         // Nota: Fees mai han de tenir contactId (A1) i amount ha de ser negatiu (A2)
@@ -562,51 +483,20 @@ export function StripeImporter({
 
         batch.set(feeTxRef, feeTxData);
         docsCreated++;
-        console.log('[STRIPE IMPORT] ✅ Fee transaction added to batch');
-      } else {
-        console.log('[STRIPE IMPORT] ⚠️ No fees to process (fees = 0)');
       }
 
       // 3c. Eliminar el moviment bancari original
       const originalTxRef = doc(transactionsRef, bankTransaction.id);
-      console.log('[STRIPE IMPORT] 🗑️ Deleting original bank transaction:', {
-        id: bankTransaction.id,
-        path: originalTxRef.path,
-      });
       batch.delete(originalTxRef);
 
-      console.log('[STRIPE IMPORT] 💾 Total operations in batch:', docsCreated + 1, `(${docsCreated} creates + 1 delete)`);
+      await batch.commit();
 
-      // 🔥 CRITICAL PRE-COMMIT SUMMARY
-      console.group('🔥 [CRITICAL] PRE-COMMIT SUMMARY');
-      console.log('transactionsRef.path:', transactionsRef.path);
-      console.log('organizationId:', organizationId);
-      console.log('bankTransaction.id:', bankTransaction.id);
-      console.log('Donations to create:', docsCreated - (selectedGroup.fees > 0 ? 1 : 0));
-      console.log('Fee transaction:', selectedGroup.fees > 0 ? 'YES' : 'NO');
-      console.log('Original transaction to delete:', bankTransaction.id);
-      console.log('Total batch operations:', docsCreated + 1);
-      console.groupEnd();
-
-      // 🔥 INSTRUMENTACIÓ CRÍTICA - COMMIT
-      console.log('[StripeImporter] COMMIT START');
-      try {
-        await batch.commit();
-        console.log('[StripeImporter] COMMIT OK');
-      } catch (e) {
-        console.error('[StripeImporter] COMMIT ERROR', e);
-        throw e;
-      }
-
-      // 🔥 VERIFICACIÓ POST-COMMIT OBLIGATÒRIA
-      console.group('🔥 [POST-COMMIT VERIFICATION] Validant integritat');
-
+      // VERIFICACIÓ POST-COMMIT OBLIGATÒRIA
       const q = query(
         transactionsRef,
         where('parentTransactionId', '==', bankTransaction.id)
       );
       const snap = await getDocs(q);
-      console.log('Total documents creats:', snap.size);
 
       // Comptar donacions i comissions
       let donationCount = 0;
@@ -615,32 +505,19 @@ export function StripeImporter({
 
       snap.forEach(doc => {
         const tx = doc.data() as Transaction;
-        console.log(`  - ${doc.id}:`, {
-          type: tx.transactionType,
-          amount: tx.amount,
-          source: tx.source,
-          stripePaymentId: tx.stripePaymentId,
-          stripeTransferId: tx.stripeTransferId,
-        });
 
         if (tx.transactionType === 'donation') {
           donationCount++;
-          // Validar camps obligatoris per donacions
           if (!tx.source || tx.source !== 'stripe') errors.push(`Donation ${doc.id} missing source='stripe'`);
           if (!tx.stripePaymentId) errors.push(`Donation ${doc.id} missing stripePaymentId`);
           if (!tx.stripeTransferId) errors.push(`Donation ${doc.id} missing stripeTransferId`);
         } else if (tx.transactionType === 'fee') {
           feeCount++;
-          // Validar camps obligatoris per comissions
           if (!tx.source || tx.source !== 'stripe') errors.push(`Fee ${doc.id} missing source='stripe'`);
           if (!tx.stripeTransferId) errors.push(`Fee ${doc.id} missing stripeTransferId`);
           if (tx.amount >= 0) errors.push(`Fee ${doc.id} has non-negative amount: ${tx.amount}`);
         }
       });
-
-      console.log('\nRESULTAT VALIDACIÓ:');
-      console.log(`  Donacions (type='donation'): ${donationCount}`);
-      console.log(`  Comissions (type='fee'): ${feeCount}`);
 
       // REGLES D'INTEGRITAT
       const expectedDonations = selectedGroup.rows.length;
@@ -654,17 +531,8 @@ export function StripeImporter({
       }
 
       if (errors.length > 0) {
-        console.error('❌ ERRORS DE VALIDACIÓ:');
-        errors.forEach(err => console.error(`  - ${err}`));
-        console.groupEnd();
         throw new Error(`Validació post-commit fallida: ${errors.join('; ')}`);
       }
-
-      console.log('✅ Validació post-commit OK');
-      console.groupEnd();
-
-      // 6. Èxit
-      console.log('[STRIPE IMPORT] 🎉 Import completat, tancant modals...');
 
       // Toast d'èxit actualitzat
       toast({
@@ -675,30 +543,18 @@ export function StripeImporter({
         )} ${t.importers.stripeImporter.success.reviewHint}`,
       });
 
-      console.log('[STRIPE IMPORT] 📢 Showing toast notification');
-
-      // 🔥 WAIT for Firestore listeners to sync BEFORE closing modal
-      console.log('[STRIPE IMPORT] ⏳ Waiting 500ms for Firestore listeners to sync...');
+      // Wait for Firestore listeners to sync before closing modal
       await new Promise(resolve => setTimeout(resolve, 500));
-
-      console.log('[STRIPE IMPORT] 🔄 Calling onImportDone callback...');
-      console.log('[STRIPE IMPORT] onImportDone is defined?', !!onImportDone);
 
       // Tancar confirmació i modal
       setPendingConfirmation(null);
       onOpenChange(false);
 
       if (onImportDone) {
-        console.log('[STRIPE IMPORT] 🚀 Executing onImportDone()...');
         onImportDone();
-        console.log('[STRIPE IMPORT] ✅ onImportDone() executed');
-      } else {
-        console.warn('[STRIPE IMPORT] ⚠️ onImportDone callback is undefined - UI may not refresh!');
       }
 
     } catch (err) {
-      console.error('[STRIPE IMPORT] ❌ Error durant import:', err);
-      console.error('[STRIPE IMPORT] Error stack:', err instanceof Error ? err.stack : 'No stack');
       const message = err instanceof Error ? err.message : t.importers.stripeImporter.errors.processingFile;
       setErrorMessage(message);
       // En cas d'error, també tanquem la confirmació per permetre reintent
@@ -725,26 +581,7 @@ export function StripeImporter({
     (rowId: string, contactId: string, contactName: string, email: string | null) => {
       if (!selectedGroup) return;
 
-      console.group('[DONOR MATCH] 📝 Applying donor match for email');
-      console.log('rowId:', rowId);
-      console.log('contactId:', contactId);
-      console.log('contactName:', contactName);
-      console.log('email:', email);
-
       setDonorMatches((prev) => {
-        console.log('[DONOR MATCH] BEFORE update - donorMatches:', { ...prev });
-
-        // Calculate counts BEFORE
-        const displayRows = selectedGroup.rows;
-        const matchedBefore = displayRows.filter(row => prev[row.id] !== null && prev[row.id] !== undefined).length;
-        const pendingBefore = displayRows.length - matchedBefore;
-
-        console.log('[DONOR MATCH] BEFORE counts:', {
-          totalRows: displayRows.length,
-          matchedCount: matchedBefore,
-          pendingCount: pendingBefore,
-        });
-
         const updated = { ...prev };
 
         // Sempre assigna la fila especificada
@@ -757,7 +594,6 @@ export function StripeImporter({
         // Si hi ha email, auto-matcheja totes les altres files amb el mateix email
         if (email) {
           const emailLower = email.toLowerCase().trim();
-          console.log('[DONOR MATCH] Auto-matching by email:', emailLower);
 
           for (const row of selectedGroup.rows) {
             // Skip la fila ja assignada
@@ -765,13 +601,11 @@ export function StripeImporter({
 
             // Skip files que ja tenen un match manual diferent (no override)
             if (prev[row.id] && prev[row.id]?.contactId !== contactId) {
-              console.log(`[DONOR MATCH] Skipping ${row.id} - already has different manual match`);
               continue;
             }
 
             // Auto-match si el email coincideix
             if (row.customerEmail?.toLowerCase().trim() === emailLower) {
-              console.log(`[DONOR MATCH] Auto-matched ${row.id} (email: ${row.customerEmail})`);
               updated[row.id] = {
                 contactId,
                 contactName,
@@ -780,25 +614,6 @@ export function StripeImporter({
             }
           }
         }
-
-        console.log('[DONOR MATCH] AFTER update - donorMatches:', { ...updated });
-
-        // Calculate counts AFTER
-        const matchedAfter = displayRows.filter(row => updated[row.id] !== null && updated[row.id] !== undefined).length;
-        const pendingAfter = displayRows.length - matchedAfter;
-
-        console.log('[DONOR MATCH] AFTER counts:', {
-          totalRows: displayRows.length,
-          matchedCount: matchedAfter,
-          pendingCount: pendingAfter,
-        });
-
-        console.log('[DONOR MATCH] DELTA:', {
-          matchedDelta: matchedAfter - matchedBefore,
-          pendingDelta: pendingAfter - pendingBefore,
-        });
-
-        console.groupEnd();
 
         return updated;
       });
@@ -936,7 +751,6 @@ export function StripeImporter({
 
         return null;
       } catch (err) {
-        console.error('Error creating donor:', err);
         const message = err instanceof Error ? err.message : 'Error desconegut';
         toast({
           variant: 'destructive',
@@ -968,20 +782,6 @@ export function StripeImporter({
 
   // Botó Continuar només s'habilita si quadra i totes les files tenen match
   const canContinue = amountMatches && allMatched && selectedGroup !== null;
-
-  // Log reactive state changes
-  React.useEffect(() => {
-    console.log('[REACTIVE STATE] 🔄 State recalculated:', {
-      displayRowsCount: displayRows.length,
-      matchedCount,
-      pendingCount,
-      allMatched,
-      isMatchingDonors,
-      amountMatches,
-      canContinue,
-      selectedGroup: selectedGroup ? selectedGroup.transferId : null,
-    });
-  }, [matchedCount, pendingCount, allMatched, canContinue, displayRows.length, isMatchingDonors, amountMatches, selectedGroup]);
 
   return (
     <>
