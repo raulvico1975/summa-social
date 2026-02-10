@@ -47,7 +47,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
-import { PlusCircle, Edit, Trash2, User, Building2, RefreshCw, Heart, Upload, AlertTriangle, Search, X, RotateCcw, Download, Users, CreditCard, MoreVertical, ChevronDown, TrendingDown, TrendingUp, UserPlus, UserMinus, RotateCw } from 'lucide-react';
+import { PlusCircle, Edit, Trash2, User, Building2, RefreshCw, Heart, Upload, AlertTriangle, Search, X, RotateCcw, Download, Users, CreditCard, MoreVertical, ChevronDown, TrendingDown, TrendingUp, UserPlus, UserMinus, RotateCw, Trophy, UserX } from 'lucide-react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import { EmptyState } from '@/components/ui/empty-state';
@@ -83,7 +83,7 @@ import {
   CollapsibleTrigger,
 } from '@/components/ui/collapsible';
 import { DateFilter } from '@/components/date-filter';
-import { computeDonorDynamics, type DonorWithMeta, type DonorDynamicsResult } from '@/lib/donor-dynamics';
+import { computeDonorDynamics, type DonorWithMeta, type DonorDynamicsResult, type CompanySummary } from '@/lib/donor-dynamics';
 import { MOBILE_ACTIONS_BAR, MOBILE_CTA_PRIMARY } from '@/lib/ui/mobile-actions';
 import { CannotArchiveContactDialog } from '@/components/contacts/cannot-archive-contact-dialog';
 
@@ -226,10 +226,6 @@ export function DonorManager() {
     [firestore, organizationId, contactsLimit]
   );
 
-  // DEBUG: Log query path and type
-  console.log('[DonorManager] donorsQuery path', donorsQuery ? (donorsQuery as any)._query?.path?.canonicalString?.() : null);
-  console.log('[DonorManager] donorsQuery collectionGroup', donorsQuery ? (donorsQuery as any)._query?.collectionGroup : null);
-
   const { data: donorsRaw, isLoading: isLoadingDonors } = useCollection<Donor & { archivedAt?: string }>(donorsQuery);
   // Filtrar donants arxivats (soft-deleted)
   const donors = React.useMemo(
@@ -317,9 +313,10 @@ export function DonorManager() {
   const hasNoData = dynamics &&
     dynamics.newDonors.length === 0 &&
     dynamics.inactiveDonors.length === 0 &&
-    dynamics.reactivatedDonors.length === 0 &&
     dynamics.withReturns.length === 0 &&
-    dynamics.decreasing.length === 0;
+    dynamics.leavers.length === 0 &&
+    dynamics.companies.count === 0 &&
+    dynamics.topDonors.length === 0;
 
   // Handler per obrir drawer des de dinàmica
   const handleDynamicsDonorClick = React.useCallback((donor: Donor) => {
@@ -1107,51 +1104,107 @@ export function DonorManager() {
                       </p>
                     )}
 
-                    {/* 5 blocs de llistes */}
+                    {/* Blocs de dinàmica + cards resum */}
                     {dynamics && !hasNoData && (
-                      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                        <DynamicsBlock
-                          title={tr('donors.dynamics.blocks.new.title', 'Altes')}
-                          help={tr('donors.dynamics.blocks.new.help', 'Primer moviment dins el període seleccionat')}
-                          items={dynamics.newDonors}
-                          onDonorClick={handleDynamicsDonorClick}
-                          tr={tr}
-                          icon={<UserPlus className="h-4 w-4 text-green-600" />}
-                        />
-                        <DynamicsBlock
-                          title={tr('donors.dynamics.blocks.noActivity.title', 'Sense moviments')}
-                          help={tr('donors.dynamics.blocks.noActivity.help', 'Tenia històric però cap moviment al període. No implica baixa administrativa.')}
-                          items={dynamics.inactiveDonors}
-                          onDonorClick={handleDynamicsDonorClick}
-                          tr={tr}
-                          icon={<UserMinus className="h-4 w-4 text-gray-500" />}
-                        />
-                        <DynamicsBlock
-                          title={tr('donors.dynamics.blocks.reactivated.title', 'Reactivacions')}
-                          help={tr('donors.dynamics.blocks.reactivated.help', 'Zero al període anterior, amb moviment al període actual')}
-                          items={dynamics.reactivatedDonors}
-                          onDonorClick={handleDynamicsDonorClick}
-                          tr={tr}
-                          icon={<RotateCw className="h-4 w-4 text-blue-600" />}
-                        />
-                        <DynamicsBlock
-                          title={tr('donors.dynamics.blocks.returns.title', 'Amb devolucions')}
-                          help={tr('donors.dynamics.blocks.returns.help', 'Tenen almenys una devolució dins el període')}
-                          items={dynamics.withReturns}
-                          onDonorClick={handleDynamicsDonorClick}
-                          tr={tr}
-                          icon={<RefreshCw className="h-4 w-4 text-orange-500" />}
-                          showAmount
-                        />
-                        <DynamicsBlock
-                          title={tr('donors.dynamics.blocks.decreasing.title', 'Aportació decreixent')}
-                          help={tr('donors.dynamics.blocks.decreasing.help', 'Import inferior al període anterior')}
-                          items={dynamics.decreasing}
-                          onDonorClick={handleDynamicsDonorClick}
-                          tr={tr}
-                          icon={<TrendingDown className="h-4 w-4 text-amber-600" />}
-                          showDelta
-                        />
+                      <div className="space-y-4">
+                        {/* Llistes de dinàmica */}
+                        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                          <DynamicsBlock
+                            title={tr('donors.dynamics.blocks.new.title', 'Altes')}
+                            help={tr('donors.dynamics.blocks.new.help', 'Primer moviment dins el període seleccionat')}
+                            items={dynamics.newDonors}
+                            onDonorClick={handleDynamicsDonorClick}
+                            tr={tr}
+                            icon={<UserPlus className="h-4 w-4 text-green-600" />}
+                          />
+                          <DynamicsBlock
+                            title={tr('donors.dynamics.blocks.noActivity.title', 'Sense moviments')}
+                            help={tr('donors.dynamics.blocks.noActivity.help', 'Tenia històric però cap moviment al període. No implica baixa administrativa.')}
+                            items={dynamics.inactiveDonors}
+                            onDonorClick={handleDynamicsDonorClick}
+                            tr={tr}
+                            icon={<UserMinus className="h-4 w-4 text-gray-500" />}
+                          />
+                          <DynamicsBlock
+                            title={tr('donors.dynamics.blocks.returns.title', 'Amb devolucions')}
+                            help={tr('donors.dynamics.blocks.returns.help', 'Tenen almenys una devolució dins el període')}
+                            items={dynamics.withReturns}
+                            onDonorClick={handleDynamicsDonorClick}
+                            tr={tr}
+                            icon={<RefreshCw className="h-4 w-4 text-orange-500" />}
+                            showAmount
+                          />
+                          <DynamicsBlock
+                            title={tr('donors.dynamics.blocks.leavers.title', 'Baixes')}
+                            help={tr('donors.dynamics.blocks.leavers.help', 'Donants donats de baixa dins el període')}
+                            items={dynamics.leavers}
+                            onDonorClick={handleDynamicsDonorClick}
+                            tr={tr}
+                            icon={<UserX className="h-4 w-4 text-red-500" />}
+                          />
+                        </div>
+
+                        {/* Card resum: Empreses col·laboradores */}
+                        <div className="grid gap-4 md:grid-cols-2">
+                          <div className="border rounded-lg p-3">
+                            <div className="flex items-center gap-2 mb-2">
+                              <Building2 className="h-4 w-4 text-indigo-600" />
+                              <h4 className="font-medium text-sm">
+                                {tr('donors.dynamics.blocks.companies.title', 'Empreses col·laboradores')}
+                              </h4>
+                            </div>
+                            <div className="flex items-baseline gap-6">
+                              <div>
+                                <p className="text-2xl font-semibold">{dynamics.companies.count}</p>
+                                <p className="text-xs text-muted-foreground">
+                                  {tr('donors.dynamics.blocks.companies.countLabel', 'Empreses actives')}
+                                </p>
+                              </div>
+                              <div>
+                                <p className="text-2xl font-semibold">{formatCurrencyEU(dynamics.companies.totalNet)}</p>
+                                <p className="text-xs text-muted-foreground">
+                                  {tr('donors.dynamics.blocks.companies.totalLabel', 'Import net total')}
+                                </p>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Llista Top 15 donants */}
+                        {dynamics.topDonors.length > 0 && (
+                          <div className="border rounded-lg p-3">
+                            <div className="flex items-center gap-2 mb-2">
+                              <Trophy className="h-4 w-4 text-yellow-600" />
+                              <div>
+                                <h4 className="font-medium text-sm">
+                                  {tr('donors.dynamics.blocks.topDonors.title', 'Donants principals')}
+                                </h4>
+                                <p className="text-xs text-muted-foreground">
+                                  {tr('donors.dynamics.blocks.topDonors.help', 'Top 15 donants per import net dins el període')}
+                                </p>
+                              </div>
+                            </div>
+                            <ul className="space-y-1 max-h-64 overflow-y-auto">
+                              {dynamics.topDonors.map((item, idx) => (
+                                <li key={item.donor.id}>
+                                  <button
+                                    type="button"
+                                    onClick={() => handleDynamicsDonorClick(item.donor)}
+                                    className="text-sm text-blue-600 hover:underline text-left w-full flex justify-between items-center py-0.5"
+                                  >
+                                    <span className="truncate">
+                                      <span className="text-muted-foreground mr-1.5 text-xs">{idx + 1}.</span>
+                                      {item.donor.name}
+                                    </span>
+                                    <span className="text-muted-foreground ml-2 text-xs whitespace-nowrap">
+                                      {formatCurrencyEU(item.netAmount || 0)}
+                                    </span>
+                                  </button>
+                                </li>
+                              ))}
+                            </ul>
+                          </div>
+                        )}
                       </div>
                     )}
                   </div>
