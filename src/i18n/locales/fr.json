@@ -572,6 +572,7 @@
   "donors.periodicityQuota.label": "Périodicité de prélèvement",
   "donors.periodicityQuota.manual": "Manuel",
   "donors.periodicityQuota.monthly": "Mensuel",
+  "donors.periodicityQuota.none": "Sans périodicité",
   "donors.periodicityQuota.quarterly": "Trimestriel",
   "donors.periodicityQuota.semiannual": "Semestriel",
   "donors.phone": "Téléphone",
