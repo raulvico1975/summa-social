@@ -161,7 +161,9 @@ function RegistreContent() {
         role: invitation.role,
         displayName: displayName,
       };
+      console.log('[registre] Step 4: writing users/' + user.uid, userProfile);
       await setDoc(doc(firestore, 'users', user.uid), userProfile);
+      console.log('[registre] Step 4: OK');
 
       // 5. Afegir l'usuari com a membre de l'organització
       // IMPORTANT: invitationId és obligatori per validar a Firestore Rules
@@ -173,17 +175,21 @@ function RegistreContent() {
         joinedAt: new Date().toISOString(),
         invitationId: invitation.id,
       };
+      console.log('[registre] Step 5: writing members/' + user.uid, { orgId: invitation.organizationId, invitationId: invitation.id, role: invitation.role, email });
       await setDoc(
         doc(firestore, 'organizations', invitation.organizationId, 'members', user.uid),
         memberData
       );
+      console.log('[registre] Step 5: OK');
 
       // 6. Marcar la invitació com a usada
       const invitationRef = doc(firestore, 'invitations', invitation.id);
+      console.log('[registre] Step 6: updating invitation/' + invitation.id);
       await updateDoc(invitationRef, {
         usedAt: new Date().toISOString(),
         usedBy: user.uid,
       });
+      console.log('[registre] Step 6: OK');
 
       setPageState('success');
 
