@@ -1734,13 +1734,14 @@ export function DonorManager() {
                           <div className="space-y-1.5">
                             <Label htmlFor="periodicityQuota">{tr('donors.periodicityQuota.label', 'Periodicitat')}</Label>
                             <Select
-                              value={formData.periodicityQuota || 'monthly'}
-                              onValueChange={(v) => handleFormChange('periodicityQuota', v === 'monthly' ? null : v)}
+                              value={formData.periodicityQuota ?? ""}
+                              onValueChange={(v) => handleFormChange('periodicityQuota', v === "" ? null : v)}
                             >
                               <SelectTrigger id="periodicityQuota">
                                 <SelectValue />
                               </SelectTrigger>
                               <SelectContent>
+                                <SelectItem value="">{tr('donors.periodicityQuota.none', 'Sense periodicitat')}</SelectItem>
                                 <SelectItem value="monthly">{tr('donors.periodicityQuota.monthly', 'Mensual')}</SelectItem>
                                 <SelectItem value="quarterly">{tr('donors.periodicityQuota.quarterly', 'Trimestral')}</SelectItem>
                                 <SelectItem value="semiannual">{tr('donors.periodicityQuota.semiannual', 'Semestral')}</SelectItem>

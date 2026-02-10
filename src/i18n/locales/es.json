@@ -572,6 +572,7 @@
   "donors.periodicityQuota.label": "Periodicidad de cobro",
   "donors.periodicityQuota.manual": "Manual",
   "donors.periodicityQuota.monthly": "Mensual",
+  "donors.periodicityQuota.none": "Sin periodicidad",
   "donors.periodicityQuota.quarterly": "Trimestral",
   "donors.periodicityQuota.semiannual": "Semestral",
   "donors.phone": "Teléfono",
