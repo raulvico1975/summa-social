@@ -3250,6 +3250,9 @@ export const ca = {
     linkPendingDocs: "Vincular documents pendents als fills",
     attachInvoices: "Adjuntar factures a cada transacció",
     applyCategories: "Aplicar categories i proveïdors",
+    filenamePrefix: "remesa",
+    filenamePayments: "pagaments",
+    organizationFallback: "Organització",
   },
   // ═══════════════════════════════════════════════════════════════════════════
   // MÒDUL PRE-BANC: CONCILIACIÓ
