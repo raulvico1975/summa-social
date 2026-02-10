@@ -16,6 +16,7 @@ CHANGED_FILES=""
 CHANGED_COUNT=0
 RISK_LEVEL="BAIX"
 IS_P0=false
+P0_TRIGGER_FILES=""
 MAIN_SHA=""
 MASTER_SHA=""
 PROD_SHA=""
@@ -141,7 +142,9 @@ detect_changed_files() {
   CHANGED_COUNT=$(echo "$CHANGED_FILES" | wc -l | tr -d ' ')
   echo "  $CHANGED_COUNT fitxers canviats:"
   echo ""
-  echo "$CHANGED_FILES" | head -20 | while read -r f; do echo "    $f"; done
+  while IFS= read -r f; do
+    echo "    $f"
+  done <<< "$(echo "$CHANGED_FILES" | head -20)"
   if [ "$CHANGED_COUNT" -gt 20 ]; then
     echo "    ... i $((CHANGED_COUNT - 20)) mes."
   fi
@@ -154,13 +157,23 @@ detect_changed_files() {
 classify_risk() {
   echo "[3/9] Classificant nivell de risc..."
 
-  # Detectar P0
+  # Detectar P0 i guardar fitxers que el disparen
+  local p0_matches=""
   for pattern in "${P0_PATTERNS[@]}"; do
-    if echo "$CHANGED_FILES" | grep -q "$pattern"; then
-      IS_P0=true
-      break
+    local hits
+    hits=$(echo "$CHANGED_FILES" | grep "$pattern" || true)
+    if [ -n "$hits" ]; then
+      if [ -n "$p0_matches" ]; then
+        p0_matches="$p0_matches"$'\n'"$hits"
+      else
+        p0_matches="$hits"
+      fi
     fi
   done
+  if [ -n "$p0_matches" ]; then
+    IS_P0=true
+    P0_TRIGGER_FILES=$(echo "$p0_matches" | sort -u)
+  fi
 
   # Detectar HIGH RISK
   local is_high=false
@@ -222,9 +235,9 @@ p0_fiscal_gate() {
   echo "    docs/QA-P0-FISCAL.md"
   echo ""
   echo "  Fitxers que han activat el gate P0:"
-  for pattern in "${P0_PATTERNS[@]}"; do
-    echo "$CHANGED_FILES" | grep "$pattern" | while read -r f; do echo "    - $f"; done
-  done
+  while IFS= read -r f; do
+    echo "    - $f"
+  done <<< "$P0_TRIGGER_FILES"
   echo ""
 
   read -r -p "  Has completat QA-P0-FISCAL amb PASS als punts aplicables? (s/n): " answer
