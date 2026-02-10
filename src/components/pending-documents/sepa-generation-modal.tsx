@@ -118,7 +118,7 @@ export function SepaGenerationModal({
 
       // Auto-generate filename
       const dateStr = format(new Date(), 'yyyy-MM-dd');
-      setFilename(`remesa_${dateStr}_${valid.length}pagaments.xml`);
+      setFilename(`${t.sepa.filenamePrefix}_${dateStr}_${valid.length}${t.sepa.filenamePayments}.xml`);
 
       // Select default bank account
       const defaultAccount = bankAccounts.find(a => a.isDefault);
@@ -192,7 +192,7 @@ export function SepaGenerationModal({
         {
           bankAccount,
           executionDate: format(executionDate, 'yyyy-MM-dd'),
-          debtorName: organization.name || 'Organització',
+          debtorName: organization.name || t.sepa.organizationFallback,
           documents: validDocs.map(v => v.doc),
           contacts,
         }
@@ -421,7 +421,7 @@ export function SepaGenerationModal({
                         setExecutionDate(date);
                         // Update filename with new date
                         const dateStr = format(date, 'yyyy-MM-dd');
-                        setFilename(`remesa_${dateStr}_${validDocs.length}pagaments.xml`);
+                        setFilename(`${t.sepa.filenamePrefix}_${dateStr}_${validDocs.length}${t.sepa.filenamePayments}.xml`);
                       }
                       setDatePickerOpen(false);
                     }}
