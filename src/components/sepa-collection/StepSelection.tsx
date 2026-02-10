@@ -374,17 +374,7 @@ export function StepSelection({
                           if (st.type === 'blocked') {
                             return (
                               <Badge variant="outline" className="text-orange-600 border-orange-300 font-normal">
-                                {tr('sepaPain008.selection.blockedBadge', 'No toca encara · últim rebut {lastRun}')
-                                  .replace('{lastRun}', st.lastRunLabel ?? '—')}
-                              </Badge>
-                            );
-                          }
-
-                          if (st.type === 'overdue') {
-                            return (
-                              <Badge variant="outline" className="text-red-600 border-red-300 font-normal">
-                                {tr('sepaPain008.selection.overdueBadge', 'Endarrerit · fa {months} mesos')
-                                  .replace('{months}', String(st.monthsOverdue ?? 0))}
+                                {tr('sepaPain008.selection.blockedBadge', 'No toca encara (ja cobrat aquest període)')}
                               </Badge>
                             );
                           }

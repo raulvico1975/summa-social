@@ -3393,7 +3393,7 @@
   "sepaPain008.selection.showingOf": "Mostrant {shown} de {total} socis",
   "sepaPain008.selection.autoPreselectionNote": "Preselecció automàtica segons periodicitat. Pots modificar la selecció lliurement.",
   "sepaPain008.selection.statusColumn": "Estat",
-  "sepaPain008.selection.blockedBadge": "No toca encara · últim rebut {lastRun}",
+  "sepaPain008.selection.blockedBadge": "No toca encara (ja cobrat aquest període)",
   "sepaPain008.selection.overdueBadge": "Endarrerit · fa {months} mesos",
   "sepaPain008.selection.noPeriodicityBadge": "Sense periodicitat",
   "sepaPain008.selection.excludedCount": "{count} exclosos",
