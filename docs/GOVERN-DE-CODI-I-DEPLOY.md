@@ -94,24 +94,36 @@ git push origin prod
 
 **Un sol punt de decisió humana:** abans de `master → prod`.
 
+### Execució
+
+El ritual de deploy s'executa via script determinista:
+
+```bash
+npm run deploy    # o: bash scripts/deploy.sh
+```
+
+El script (`scripts/deploy.sh`) fa tots els passos de forma seqüencial i bloquejant:
+1. Preflight git (branca=main, working tree net, pull ff-only)
+2. Detectar fitxers canviats (main vs master)
+3. Classificar risc (ALT/MITJÀ/BAIX) per patrons de path
+4. **Gate P0 fiscal** — si el canvi toca àrea fiscal, exigeix confirmació explícita de QA P0 (`docs/QA-P0-FISCAL.md`). Si no s'ha fet, el deploy s'atura.
+5. Verificacions locals (`verify-local.sh` + `verify-ci.sh`)
+6. Resum i confirmació final
+7. Merge ritual (main→master→prod + push)
+8. Post-deploy check bloquejant (SHA servit + smoke test)
+9. Registre a `docs/DEPLOY-LOG.md` (staged, commit manual)
+
 ### Autorització
 
-- **Trigger:** El CEO escriu `"Autoritzo deploy"`
-- Claude Code detecta el nivell de risc automàticament segons els paths modificats
-- Claude Code executa únicament el ritual definit (sense improvisar)
-- Claude Code reporta: SHA abans/després + estat
-
-### Flux segons risc
-
-| Risc | Flux |
-|------|------|
-| BAIX/MITJÀ | CEO: "Autoritzo deploy" → Claude executa |
-| ALT | CEO: "Autoritzo deploy" → Claude: "Risc ALT detectat. Confirmes?" → CEO: "Confirmo" → Claude executa |
+- **Trigger:** El CEO escriu `"Autoritzo deploy"` → Claude executa `npm run deploy`
+- El script detecta el nivell de risc automàticament
+- El script s'atura si les verificacions fallen o el gate P0 no es confirma
 
 ### Restriccions Claude Code
 
 - **NO pot** decidir quan desplegar
 - **NO pot** fer canvis fora del ritual establert
+- **NO pot** usar `--no-verify` en cap cas
 - **Treballa sempre** a `main` (o branques WIP), mai a `prod` ni `master`
 
 ---
