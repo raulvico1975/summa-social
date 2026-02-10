@@ -1083,6 +1083,7 @@
   "guides.importDonors.steps.3": "Vérifiez le mapping des colonnes et l'aperçu.",
   "guides.importDonors.steps.4": "Cliquez sur « Importer ».",
   "guides.importDonors.summary": "Charger une liste de donateurs depuis un fichier au lieu de les créer manuellement.",
+  "guides.importDonors.tip.0": "Le modèle officiel garantit la détection automatique de toutes les colonnes.",
   "guides.importDonors.title": "Importer des donateurs (Excel/CSV)",
   "guides.importDonors.whatIs": "Procédure pour charger une liste de donateurs dans l'application.",
   "guides.importMovements.avoid.0": "N'utilisez pas « Tout remplacer » si vous ne voulez pas perdre les mouvements existants.",

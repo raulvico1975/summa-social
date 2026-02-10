@@ -9,3 +9,4 @@ fi
 npm test
 npm run i18n:validate-guides
 npm run i18n:validate-help
+npm run i18n:check

@@ -1,6 +1,9 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+echo "[verify-local] Checking i18n locale completeness..."
+npm run i18n:check
+
 echo "[verify-local] Build..."
 npm run build
 
