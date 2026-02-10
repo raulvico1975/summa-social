@@ -151,9 +151,21 @@ Només pot fer deploy quan Raül escriu literalment:
 
 > "Autoritzo deploy"
 
-I seguint estrictament:
-- `GOVERN-DE-CODI-I-DEPLOY.md`
-- detecció automàtica de risc pels paths tocats
+Quan ho fa, Claude Code executa:
+
+```bash
+npm run deploy
+```
+
+Això llança `scripts/deploy.sh`, que és un script determinista i bloquejant que:
+- verifica git, detecta canvis, classifica risc
+- aplica gate P0 fiscal si cal (confirmació explícita de QA)
+- executa verificacions locals
+- fa el merge ritual (main→master→prod) i push
+- força post-deploy check (SHA + smoke test)
+- registra el deploy a `docs/DEPLOY-LOG.md`
+
+Claude Code **NO pot** saltar cap pas del script ni usar `--no-verify`.
 
 ────────────────────────────────────────────────────────────
 ## 4. Regla d'or

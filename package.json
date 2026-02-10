@@ -27,7 +27,8 @@
     "i18n:check-tr-keys": "node scripts/i18n/validate-tr-keys-exist-in-ca.mjs",
     "check": "bash scripts/check.sh",
     "prepush": "bash scripts/prepush.sh",
-    "verify:ci": "bash scripts/verify-ci.sh"
+    "verify:ci": "bash scripts/verify-ci.sh",
+    "deploy": "bash scripts/deploy.sh"
   },
   "dependencies": {
     "@genkit-ai/googleai": "^1.14.1",

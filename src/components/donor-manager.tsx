@@ -921,9 +921,9 @@ export function DonorManager() {
           </CardHeader>
           <CardContent>
             {/* Cercador i botons de filtre */}
-            <div className="mb-4 flex flex-col sm:flex-row sm:items-center gap-3">
+            <div className="mb-4 flex flex-col gap-3">
               {/* Cercador intel·ligent */}
-              <div className="relative flex-1 max-w-md">
+              <div className="relative w-full">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input
                   placeholder={t.donors.searchPlaceholder}

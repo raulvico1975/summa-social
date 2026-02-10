@@ -77,6 +77,12 @@ function RegistreContent() {
           return;
         }
 
+        // Bloqueig: invitació sense email → invàlida (invitacions sempre amb email)
+        if (!invitationData.email) {
+          setPageState('invalid');
+          return;
+        }
+
         // Tot correcte!
         setInvitation(invitationData);
 
@@ -126,7 +132,7 @@ function RegistreContent() {
       return;
     }
 
-    if (!invitation) {
+    if (!invitation || !invitation.email) {
       setError(t.register?.errors?.invalidInvitation ?? 'Invitació no vàlida');
       return;
     }
@@ -148,7 +154,11 @@ function RegistreContent() {
       // 2. Actualitzar el perfil amb el nom
       await updateProfile(user, { displayName });
 
-      // 3. Crear el perfil d'usuari a Firestore
+      // 3. Refrescar el token perquè request.auth.token.email estigui populat
+      // (necessari perquè Firestore Rules valida invitation.email == token.email)
+      await user.getIdToken(true);
+
+      // 4. Crear el perfil d'usuari a Firestore
       const userProfile: UserProfile = {
         organizationId: invitation.organizationId,
         role: invitation.role,
@@ -156,7 +166,7 @@ function RegistreContent() {
       };
       await setDoc(doc(firestore, 'users', user.uid), userProfile);
 
-      // 4. Afegir l'usuari com a membre de l'organització
+      // 5. Afegir l'usuari com a membre de l'organització
       // IMPORTANT: invitationId és obligatori per validar a Firestore Rules
       const memberData: OrganizationMember = {
         userId: user.uid,
@@ -171,7 +181,7 @@ function RegistreContent() {
         memberData
       );
 
-      // 5. Marcar la invitació com a usada
+      // 6. Marcar la invitació com a usada
       const invitationRef = doc(firestore, 'invitations', invitation.id);
       await updateDoc(invitationRef, {
         usedAt: new Date().toISOString(),

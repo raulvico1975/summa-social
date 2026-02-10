@@ -7,35 +7,25 @@ Un **deploy verificat** és un commit servit per Firebase App Hosting des de la 
 
 ---
 
-## Ritual (main → master → prod)
+## Execució
 
 **Requisit previ:** el CEO ha donat l'ordre explícita `"Autoritzo deploy"`.
 
 ```bash
-# 1) main → master
-git checkout master
-git pull --ff-only
-git merge --no-ff main
-git push origin master
-
-# 2) master → prod
-git checkout prod
-git pull --ff-only
-git merge master
-git push origin prod
+npm run deploy
 ```
 
-Tornar a `main` després:
-```bash
-git checkout main
-```
+Això executa `scripts/deploy.sh`, un script determinista que fa tot el ritual:
+1. Preflight git (branca=main, working tree net, pull ff-only)
+2. Detectar canvis i classificar risc
+3. Gate P0 fiscal (bloquejant si toca àrea fiscal)
+4. Verificacions locals (verify-local.sh + verify-ci.sh)
+5. Confirmació final
+6. Merge main→master→prod + push
+7. Post-deploy check bloquejant (SHA + smoke test)
+8. Registre a `docs/DEPLOY-LOG.md`
 
----
-
-## Post-deploy check (obligatori)
-
-1. **Confirmar SHA servit:** verificar a la consola de Firebase App Hosting que el commit desplegat coincideix amb el SHA pushejat a `prod`.
-2. **Smoke test:** carregar l'app al navegador — una ruta pública + una ruta de dashboard (si hi ha accés) i confirmar que respon correctament.
+El script gestiona conflictes de merge, verificacions fallides i abort net.
 
 ---
 
