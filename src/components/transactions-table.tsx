@@ -87,6 +87,7 @@ import { useTransactionFilters } from '@/hooks/use-transaction-filters';
 import { useBankAccounts } from '@/hooks/use-bank-accounts';
 import { TRANSACTION_URL_FILTERS, type TransactionUrlFilter, type SourceFilter, findSystemCategoryId, isCategoryIdCompatibleStrict } from '@/lib/constants';
 import { SepaReconcileModal } from '@/components/pending-documents/sepa-reconcile-modal';
+import { filterValidSelectItems } from '@/lib/ui/safe-select-options';
 import type { PrebankRemittance } from '@/lib/pending-documents/sepa-remittance';
 import { prebankRemittancesCollection } from '@/lib/pending-documents/sepa-remittance';
 import { where, getDocs } from 'firebase/firestore';
@@ -891,7 +892,10 @@ export function TransactionsTable({ initialDateFilter = null }: TransactionsTabl
 
   const bulkAvailableCategories = React.useMemo(() => {
     if (!availableCategories || bulkSelectionType === 'mixed' || bulkSelectionType === 'none') return [];
-    return availableCategories.filter(c => c.type === bulkSelectionType);
+    return filterValidSelectItems(
+      availableCategories.filter(c => c.type === bulkSelectionType),
+      'transactions-table.bulkCategories'
+    );
   }, [availableCategories, bulkSelectionType]);
 
   // Bulk update amb batching (màx 50 per batch)
@@ -1852,7 +1856,7 @@ export function TransactionsTable({ initialDateFilter = null }: TransactionsTabl
           </DialogHeader>
 
           <div className="py-4">
-            <Select value={bulkCategoryId ?? ''} onValueChange={setBulkCategoryId}>
+            <Select value={bulkCategoryId ?? undefined} onValueChange={setBulkCategoryId}>
               <SelectTrigger>
                 <SelectValue placeholder={bulkT?.selectCategoryPlaceholder ?? 'Selecciona una categoria...'} />
               </SelectTrigger>

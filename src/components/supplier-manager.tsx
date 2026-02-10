@@ -65,6 +65,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { cn } from '@/lib/utils';
 import { MOBILE_ACTIONS_BAR, MOBILE_CTA_PRIMARY } from '@/lib/ui/mobile-actions';
+import { filterValidSelectItems } from '@/lib/ui/safe-select-options';
 import { CannotArchiveContactDialog } from '@/components/contacts/cannot-archive-contact-dialog';
 
 type SupplierFormData = Omit<Supplier, 'id' | 'createdAt' | 'updatedAt'>;
@@ -115,7 +116,10 @@ export function SupplierManager() {
   );
   const { data: allCategories } = useCollection<Category>(categoriesCollection);
   const expenseCategories = React.useMemo(
-    () => allCategories?.filter(c => c.type === 'expense') || [],
+    () => filterValidSelectItems(
+      allCategories?.filter(c => c.type === 'expense') || [],
+      'supplier-manager.expenseCategories'
+    ),
     [allCategories]
   );
   const categoryTranslations = t.categories as Record<string, string>;
