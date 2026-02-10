@@ -11,7 +11,7 @@ import { Logo } from '@/components/logo';
 import { useFirebase } from '@/firebase';
 import { useToast } from '@/hooks/use-toast';
 import { createUserWithEmailAndPassword, updateProfile } from 'firebase/auth';
-import { doc, getDoc, setDoc, collection, query, where, getDocs, updateDoc } from 'firebase/firestore';
+import { doc, getDoc, setDoc, updateDoc } from 'firebase/firestore';
 import { Loader2, AlertCircle, CheckCircle2 } from 'lucide-react';
 import type { Invitation, UserProfile, OrganizationMember } from '@/lib/data';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
@@ -41,69 +41,66 @@ function RegistreContent() {
   const [confirmPassword, setConfirmPassword] = React.useState('');
   const [error, setError] = React.useState('');
 
-  // Validar la invitació quan es carrega la pàgina
+  // Validar la invitació via API server-side (no requereix autenticació)
   React.useEffect(() => {
     const validateInvitation = async () => {
-      if (!token || !firestore) {
+      if (!token) {
         setPageState('invalid');
         return;
       }
 
       try {
-        // Buscar la invitació pel token
-        const invitationsRef = collection(firestore, 'invitations');
-        const q = query(invitationsRef, where('token', '==', token));
-        const querySnapshot = await getDocs(q);
+        const res = await fetch(`/api/invitations/resolve?token=${encodeURIComponent(token)}`);
 
-        if (querySnapshot.empty) {
+        if (res.status === 410) {
+          const body = await res.json();
+          if (body.error === 'already_used') {
+            setPageState('used');
+          } else if (body.error === 'expired') {
+            setPageState('expired');
+          } else {
+            setPageState('invalid');
+          }
+          return;
+        }
+
+        if (!res.ok) {
           setPageState('invalid');
           return;
         }
 
-        const invitationDoc = querySnapshot.docs[0];
-        const invitationData = { id: invitationDoc.id, ...invitationDoc.data() } as Invitation;
+        const resolved = await res.json();
 
-        // Comprovar si ja s'ha usat
-        if (invitationData.usedAt) {
-          setPageState('used');
-          return;
-        }
+        // Construir objecte invitation compatible amb la resta del flux
+        const invitationData = {
+          id: resolved.invitationId,
+          organizationId: resolved.organizationId,
+          organizationName: resolved.organizationName ?? '',
+          email: resolved.email,
+          role: resolved.role,
+          expiresAt: resolved.expiresAt,
+        } as Invitation;
 
-        // Comprovar si ha expirat
-        const now = new Date();
-        const expiresAt = new Date(invitationData.expiresAt);
-        if (now > expiresAt) {
-          setPageState('expired');
-          return;
-        }
-
-        // Bloqueig: invitació sense email → invàlida (invitacions sempre amb email)
-        if (!invitationData.email) {
-          setPageState('invalid');
-          return;
-        }
-
-        // Tot correcte!
         setInvitation(invitationData);
 
         // Carregar el slug de l'organització per l'enllaç d'inici de sessió
-        try {
-          const orgRef = doc(firestore, 'organizations', invitationData.organizationId);
-          const orgSnap = await getDoc(orgRef);
-          if (orgSnap.exists()) {
-            const slug = orgSnap.data().slug;
-            if (slug) {
-              setOrgSlug(slug);
+        if (firestore) {
+          try {
+            const orgRef = doc(firestore, 'organizations', resolved.organizationId);
+            const orgSnap = await getDoc(orgRef);
+            if (orgSnap.exists()) {
+              const slug = orgSnap.data().slug;
+              if (slug) {
+                setOrgSlug(slug);
+              }
             }
+          } catch {
+            // Si no podem carregar el slug, l'enllaç d'inici sessió mostrarà text alternatiu
           }
-        } catch {
-          // Si no podem carregar el slug, l'enllaç d'inici sessió mostrarà text alternatiu
         }
 
-        // Si la invitació té un email específic, pre-omplir-lo
-        if (invitationData.email) {
-          setEmail(invitationData.email);
-        }
+        // Pre-omplir l'email de la invitació
+        setEmail(resolved.email);
 
         setPageState('ready');
       } catch (err) {
