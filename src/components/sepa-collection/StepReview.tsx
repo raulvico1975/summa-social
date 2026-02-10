@@ -103,7 +103,7 @@ export function StepReview({
         <div className="border-t pt-4 mt-4 space-y-2">
           <div className="flex items-center gap-2 text-sm">
             <Building2 className="h-4 w-4 text-muted-foreground" />
-            <span className="text-muted-foreground">Creditor:</span>
+            <span className="text-muted-foreground">{tr('sepaPain008.review.creditorLabel', 'Creditor:')}</span>
             <span className="font-medium">{creditorName}</span>
           </div>
           <div className="flex items-center gap-2 text-sm">
@@ -144,7 +144,7 @@ export function StepReview({
       {/* Items table (collapsed by default for large lists) */}
       <details className="rounded-lg border">
         <summary className="px-4 py-3 cursor-pointer hover:bg-muted/50 font-medium">
-          Detall de cobraments ({collectionItems.length})
+          {tr('sepaPain008.review.itemsDetail', 'Detall de cobraments ({count})').replace('{count}', String(collectionItems.length))}
         </summary>
         <div className="border-t">
           <Table>

@@ -29,7 +29,7 @@ interface StepConfigProps {
 }
 
 export function StepConfig({ bankAccounts, configData, onChange, isLoading }: StepConfigProps) {
-  const { t } = useTranslations();
+  const { t, tr } = useTranslations();
 
   // Filter active accounts
   const activeAccounts = React.useMemo(
@@ -88,7 +88,7 @@ export function StepConfig({ bankAccounts, configData, onChange, isLoading }: St
                   <Building2 className="h-4 w-4 text-muted-foreground" />
                   <span>{account.name}</span>
                   {account.isDefault && (
-                    <span className="text-xs text-muted-foreground">(defecte)</span>
+                    <span className="text-xs text-muted-foreground">{tr('sepaPain008.config.defaultAccount', '(defecte)')}</span>
                   )}
                 </div>
               </SelectItem>
