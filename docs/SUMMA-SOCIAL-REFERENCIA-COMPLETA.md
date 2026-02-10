@@ -4129,6 +4129,61 @@ Guardrails per evitar arxivar liquidacions (ExpenseReports) que tenen tiquets pe
 
 **Nota v1.40:** Blocs K i L afegits. K integrat al dashboard de health; L exportat com a funció independent (`checkOrphanExpenseLinks()`) però no integrat al dashboard general perquè `expenseLinks` no es carreguen a la vista principal.
 
+### 3.10.5h Admin SDK Compartit (NOU v1.40)
+
+Centralització de la inicialització de Firebase Admin SDK en un únic helper, eliminant ~500 línies de codi duplicat a les rutes API.
+
+**Helper centralitzat:** `src/lib/api/admin-sdk.ts`
+
+**Exports:**
+
+| Export | Funció |
+|--------|--------|
+| `getAdminApp()` | Instància singleton de l'app Admin |
+| `getAdminDb()` | Referència a Firestore Admin |
+| `getAdminAuth()` | Referència a Auth Admin |
+| `verifyIdToken(token)` | Verifica i retorna el decoded token |
+| `validateUserMembership(orgId, uid, roles?)` | Valida que l'usuari pertany a l'org amb rol adequat |
+| `BATCH_SIZE` | Constant = 50 (màxim ops per batch Firestore) |
+
+**INVARIANT:** `BATCH_SIZE = 50` — Firestore limita a 500 ops per batch, però per seguretat s'usa 50. No negociable.
+
+**Inicialització:** Singleton cached (no reinit per request). Si ja existeix una app inicialitzada, la reutilitza.
+
+**Rutes migrades a Admin SDK:**
+- `POST /api/categories/archive`
+- `POST /api/projects/archive`
+- `POST /api/bank-accounts/archive`
+- `POST /api/expense-reports/archive`
+- `POST /api/contacts/archive`
+- `POST /api/contacts/import`
+- `POST /api/invitations/resolve` (NOU v1.40)
+- `POST /api/invitations/accept` (NOU v1.40)
+
+### 3.10.5i Registre i Invitacions via Admin API (NOU v1.40)
+
+El flux de registre d'usuaris convidats ha estat migrat a Admin SDK per resoldre problemes amb les Firestore Rules que bloquejaven l'escriptura client.
+
+**Problema:** Les Firestore Rules impedien que un usuari acabat de crear (sense document `members/{uid}` encara) pogués escriure el seu propi document de membre.
+
+**Solució:** Dues noves rutes API que operen amb Admin SDK:
+
+| Ruta | Funció |
+|------|--------|
+| `POST /api/invitations/resolve` | Llegeix la invitació per codi (Admin SDK, bypassa rules de lectura) |
+| `POST /api/invitations/accept` | Crea el document `members/{uid}`, marca invitació com `accepted`, assigna `organizationId` al perfil |
+
+**Flux complet:**
+1. Usuari obre link d'invitació → pàgina `/registre?code=XXX`
+2. UI crida `/api/invitations/resolve` amb el codi → retorna dades de la invitació (orgId, email, role)
+3. Usuari crea compte Firebase Auth (email + password)
+4. UI crida `/api/invitations/accept` amb `{ orgId, invitationId, uid, email, role }` → Admin SDK crea membre + actualitza invitació
+
+**Fitxers:**
+- `src/app/api/invitations/resolve/route.ts` — Resolve invitació
+- `src/app/api/invitations/accept/route.ts` — Acceptar invitació
+- `src/app/registre/page.tsx` — Pàgina de registre
+
 ### 3.10.6 Fitxers principals
 
 | Fitxer | Funció |
@@ -4136,6 +4191,7 @@ Guardrails per evitar arxivar liquidacions (ExpenseReports) que tenen tiquets pe
 | `src/app/admin/page.tsx` | Pàgina del panell SuperAdmin |
 | `src/components/admin/create-organization-dialog.tsx` | Modal crear organització |
 | `src/lib/data.ts` | Constant `SUPER_ADMIN_UID` |
+| `src/lib/api/admin-sdk.ts` | Helper centralitzat Admin SDK (NOU v1.40) |
 
 ### 3.10.7 Backup Local d'Organitzacions (NOU v1.28)
 
@@ -4989,6 +5045,37 @@ Indicadors que requeririen intervenció:
 - Tests unitaris a `src/lib/__tests__/` (7 fitxers)
 - Hook pre-commit amb Husky
 - `npm test` abans de cada commit
+
+## 9.5 Gate i18n pre-commit (NOU v1.40)
+
+Validació automàtica que bloqueja commits si falten claus `tr()` a `ca.json` (idioma base).
+
+**Funcionament:**
+1. Script `scripts/i18n/validate-tr-keys-exist-in-ca.mjs` escaneja el codi font buscant crides `tr("clau")` i `tr('clau')`
+2. Comprova que cada clau existeix a `src/i18n/locales/ca.json`
+3. Si falten claus → llista les absents i bloqueja el commit (exit 1)
+
+**Integració:**
+- Executat al hook pre-commit (`.husky/pre-commit`)
+- Executat a `scripts/verify-local.sh` (verificació local pre-deploy)
+- Comanda: `npm run i18n:check`
+
+**Merge Storage + local (NOU v1.40):**
+- `src/i18n/json-runtime.ts` fa merge entre traduccions remotes (Firebase Storage, editades per SuperAdmin) i el bundle local
+- Si una clau existeix a Storage, té prioritat; si no, cau al bundle local
+- Correcció: abans el merge podia perdre claus locals noves si Storage no les tenia
+
+## 9.6 SafeSelect — Guard per SelectItem (NOU v1.40)
+
+Helper centralitzat per filtrar valors invàlids abans de renderitzar `Select.Item` (Radix UI), que llança error si `value` és buit.
+
+**Helper:** `src/lib/ui/safe-select-options.ts` — `safeSelectOptions(items)`
+
+**Què fa:** Filtra items on `value` és `""`, `null`, `undefined` o `false` abans de passar-los al `Select.Root`.
+
+**Usat a:** `donor-importer.tsx`, `donor-manager.tsx`, `employee-manager.tsx`, `supplier-manager.tsx`, `transactions-table.tsx`
+
+**Problema que resol:** Categories amb ID invàlid (buit o null) provocaven crash de Radix UI. Pot passar amb dades legacy o importacions parcials.
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
