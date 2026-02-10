@@ -13,7 +13,7 @@ import { useTranslations } from '@/i18n';
 import { getCategoryDisplayLabel } from '@/lib/ui/display-labels';
 
 export function ExpensesChart({ transactions }: { transactions: Transaction[] }) {
-  const { t } = useTranslations();
+  const { t, tr } = useTranslations();
   // Memoitzar per evitar re-renders innecessaris
   const categoryTranslations = React.useMemo(
     () => t.categories as Record<string, string>,
@@ -22,7 +22,7 @@ export function ExpensesChart({ transactions }: { transactions: Transaction[] })
 
   const chartConfig = {
     expenses: {
-      label: t.dashboard.expensesByCategory,
+      label: tr("dashboard.expensesByCategory"),
       color: 'hsl(var(--primary))',
     },
   } satisfies ChartConfig;
@@ -56,7 +56,7 @@ export function ExpensesChart({ transactions }: { transactions: Transaction[] })
   if (chartData.length === 0) {
     return (
         <div className="flex items-center justify-center h-[200px] w-full text-muted-foreground">
-            {t.dashboard.noExpenseData}
+            {tr("dashboard.noExpenseData")}
         </div>
     )
   }

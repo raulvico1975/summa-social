@@ -15,7 +15,7 @@ import { SUPER_ADMIN_UID } from '@/lib/data';
 
 export function LogPanel() {
   const { logs, clearLogs } = useAppLog();
-  const { t } = useTranslations();
+  const { t, tr } = useTranslations();
   const { toast } = useToast();
   const { user } = useFirebase();
   const [isOpen, setIsOpen] = React.useState(false);
@@ -44,7 +44,7 @@ export function LogPanel() {
     try {
       await navigator.clipboard.writeText(logText);
       setCopied(true);
-      toast({ title: t.dashboard.copied });
+      toast({ title: tr("dashboard.copied") });
       // Netejar timeout anterior si existeix
       if (copyTimeoutRef.current) {
         clearTimeout(copyTimeoutRef.current);
