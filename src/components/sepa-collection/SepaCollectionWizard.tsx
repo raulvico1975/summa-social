@@ -328,8 +328,10 @@ export function SepaCollectionWizard() {
       toast({
         title: t.sepaCollection.toasts.exported,
         description: persistFailed
-          ? tr('sepaPain008.toasts.exportedButNotSaved', "S'ha descarregat el fitxer, però no s'ha pogut guardar l'historial de l'execució.")
-          : `${collectionItems.length} cobraments · ${(totalAmountCents / 100).toFixed(2)} €`,
+          ? tr('sepaPain008.toasts.exportedButNotSaved', "Fitxer exportat, però no s'ha pogut desar.")
+          : tr('sepaPain008.toasts.exportedDescription', '{count} cobraments · {amount} €')
+              .replace('{count}', String(collectionItems.length))
+              .replace('{amount}', (totalAmountCents / 100).toFixed(2)),
       });
 
       // Navigate back to donors
@@ -340,7 +342,7 @@ export function SepaCollectionWizard() {
       toast({
         variant: 'destructive',
         title: t.sepaCollection.toasts.error,
-        description: error instanceof Error ? error.message : 'Error desconegut',
+        description: error instanceof Error ? error.message : tr('sepaPain008.errors.unknown', 'Error desconegut'),
       });
     } finally {
       setIsExporting(false);
@@ -452,7 +454,7 @@ export function SepaCollectionWizard() {
           ) : (
             <Button onClick={handleExport} disabled={isExporting || !canProceed()}>
               <Download className="mr-2 h-4 w-4" />
-              {isExporting ? 'Exportant...' : t.sepaCollection.review.export}
+              {isExporting ? tr('sepaPain008.review.exporting', 'Exportant...') : t.sepaCollection.review.export}
             </Button>
           )}
         </div>
