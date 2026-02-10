@@ -256,7 +256,6 @@ const extractGlobalDateFromHeaders = (rows: string[][]): Date | null => {
           if (val) {
             const parsed = parseDate(val);
             if (parsed) {
-              console.log('[extractGlobalDate] Data trobada:', parsed.toISOString().split('T')[0]);
               return parsed;
             }
           }
@@ -265,7 +264,6 @@ const extractGlobalDateFromHeaders = (rows: string[][]): Date | null => {
     }
   }
 
-  console.log('[extractGlobalDate] Cap data global trobada');
   return null;
 };
 
@@ -472,7 +470,6 @@ export function useReturnImporter(options: UseReturnImporterOptions = {}) {
   // - Exclou splits i transferències internes
   const pendingReturns = React.useMemo(() => {
     if (!pendingReturnsRaw) return null;
-    console.log(`[pendingReturns] 🔍 RAW count: ${pendingReturnsRaw.length}`);
     const filtered = pendingReturnsRaw.filter(tx => {
       // Excloure remeses completes
       if (tx.remittanceStatus === 'complete') return false;
@@ -484,12 +481,6 @@ export function useReturnImporter(options: UseReturnImporterOptions = {}) {
       if (tx.source === 'remittance') return false;
       return true;
     });
-    console.log(`[pendingReturns] 🔍 FILTERED count: ${filtered.length}`, filtered.slice(0, 5).map(tx => ({
-      id: tx.id.slice(0, 8),
-      amount: tx.amount,
-      date: tx.date,
-      desc: tx.description?.slice(0, 30),
-    })));
     return filtered;
   }, [pendingReturnsRaw]);
 
@@ -571,7 +562,6 @@ export function useReturnImporter(options: UseReturnImporterOptions = {}) {
       log(`[ReturnImporter] Fitxers carregats: ${inputFiles.length}, files: ${allParsedRows.length}`);
       setStep('mapping');
     } catch (error: any) {
-      console.error('Error parsing files:', error);
       toast({ variant: 'destructive', title: 'Error', description: error.message });
     } finally {
       setIsProcessing(false);
@@ -678,12 +668,6 @@ export function useReturnImporter(options: UseReturnImporterOptions = {}) {
         });
       }
 
-      // Log: breakdown per dateConfidence
-      const lineCount = results.filter(r => r.dateConfidence === 'line').length;
-      const fileCount = results.filter(r => r.dateConfidence === 'file').length;
-      const noneCount = results.filter(r => r.dateConfidence === 'none').length;
-      console.log(`[performMatching] FASE 1-2: ${results.length} parsejades (line:${lineCount}, file:${fileCount}, none:${noneCount})`);
-
       // ═══════════════════════════════════════════════════════════════════════
       // FASE 3: MATCHING DONANTS (sense tocar transaccions)
       // ═══════════════════════════════════════════════════════════════════════
@@ -719,24 +703,11 @@ export function useReturnImporter(options: UseReturnImporterOptions = {}) {
         r.resolvedDonorId = matchedDonor?.id || null;
       }
 
-      // Logs deterministes P0
-      const withDonorCount = results.filter(r => r.resolvedDonorId).length;
-      const donorsWithIban = donors.filter(d => d.iban).length;
-      console.log(`[performMatching] FASE 3: ${withDonorCount}/${results.length} amb donant trobat`);
-      console.log(`[performMatching] FASE 3: ${donorsWithIban} donants tenen IBAN a la BD`);
-      if (withDonorCount === 0 && results.length > 0) {
-        // Mostrar primers 3 IBANs del fitxer per debug
-        const sampleIbans = results.slice(0, 3).map(r => r.iban);
-        console.log(`[performMatching] FASE 3: ⚠️ 0 matches! Primers IBANs del fitxer:`, sampleIbans);
-      }
-
       // ═══════════════════════════════════════════════════════════════════════
       // MODE CONTEXTUAL: Assignar directament al pare (saltar matching tx)
       // ═══════════════════════════════════════════════════════════════════════
 
       if (isContextMode && parentTransaction) {
-        console.log(`[performMatching] MODE CONTEXTUAL: Assignant ${results.length} devolucions al pare ${parentTransaction.id}`);
-
         // Validar que l'import quadra (±2 cèntims)
         const sumReturnsAbsCents = Math.round(results.reduce((sum, r) => sum + r.amount, 0) * 100);
         const parentAbsCents = Math.round(Math.abs(parentTransaction.amount) * 100);
@@ -805,8 +776,6 @@ export function useReturnImporter(options: UseReturnImporterOptions = {}) {
         // ═══════════════════════════════════════════════════════════════════
         // MODE BULK: Agrupar per liquidationDateISO|liquidationNumber
         // ═══════════════════════════════════════════════════════════════════
-        console.log('[performMatching] FASE 4: Mode BULK detectat');
-
         const DAY_MS = 24 * 60 * 60 * 1000;
         const BULK_WINDOW_DAYS = 2; // ±2 dies per bulk mode
 
@@ -819,8 +788,6 @@ export function useReturnImporter(options: UseReturnImporterOptions = {}) {
             liquidationGroups.get(key)!.push(r);
           }
         }
-
-        console.log(`[performMatching] BULK: ${liquidationGroups.size} grups de liquidació`);
 
         let bulkGroupCounter = 0;
         for (const [key, returns] of liquidationGroups) {
@@ -919,10 +886,7 @@ export function useReturnImporter(options: UseReturnImporterOptions = {}) {
             matchedParent,
           });
 
-          console.log(`[BULK] Grup ${key}: ${returns.length} devolucions, suma=${totalAmount.toFixed(2)}€, inWindow=${candidatesInWindow.length}, outWindow=${candidatesOutsideWindow.length}, status=${status}`);
         }
-
-        console.log(`[performMatching] FASE 4 BULK: ${bulkGroups.filter(g => g.status === 'auto').length} auto, ${bulkGroups.filter(g => g.status === 'needsReview').length} needsReview, ${bulkGroups.filter(g => g.status === 'noMatch').length} noMatch`);
 
       } else {
         // ═══════════════════════════════════════════════════════════════════
@@ -969,8 +933,6 @@ export function useReturnImporter(options: UseReturnImporterOptions = {}) {
             return true;
           });
 
-          console.log(`[detectGrouped] Grup ${dateKey}: ${returns.length} devolucions, suma=${totalAmount.toFixed(2)}€, candidates=${candidates.length}`);
-
           if (candidates.length === 1) {
             // Match únic -> assignar
             const matchingTx = candidates[0];
@@ -996,19 +958,15 @@ export function useReturnImporter(options: UseReturnImporterOptions = {}) {
             });
 
             usedTransactionIds.add(matchingTx.id);
-            console.log(`[detectGrouped] ✅ Grup ${groupId} assignat a tx ${matchingTx.id}`);
           } else if (candidates.length > 1) {
             // Ambigüitat -> no assignar, marcar
             returns.forEach(r => {
               r.noMatchReason = 'ambiguous';
             });
-            console.log(`[detectGrouped] ⚠️ Grup ${dateKey} ambiguo (${candidates.length} candidates)`);
           }
           // Si candidates.length === 0, no fem res (les devolucions queden per matching individual)
         }
       }
-
-      console.log(`[performMatching] FASE 4: ${foundGroups.length} grups trobats`);
 
       // ═══════════════════════════════════════════════════════════════════════
       // FASE 5: MATCHING INDIVIDUAL (només per les NO agrupades)
@@ -1019,16 +977,12 @@ export function useReturnImporter(options: UseReturnImporterOptions = {}) {
         r.resolvedDonorId &&  // Camp canònic P0
         r.noMatchReason !== 'ambiguous'
       );
-      console.log(`[performMatching] FASE 5: ${nonGrouped.length} devolucions per matching individual`);
 
       const DAY_MS = 24 * 60 * 60 * 1000;
       const MAX_DATE_DIFF_DAYS = 20;
 
       for (const r of nonGrouped) {
         const targetAmount = r.amount;
-
-        console.log(`[performMatching] 🔍 Buscant tx per return: amount=${targetAmount}, date=${r.date?.toISOString()?.slice(0, 10)}, dateConfidence=${r.dateConfidence}`);
-        console.log(`[performMatching] 🔍 pendingReturns disponibles: ${(pendingReturns || []).length}`);
 
         // Buscar transaccions candidates
         const candidates = (pendingReturns || []).filter(tx => {
@@ -1047,17 +1001,13 @@ export function useReturnImporter(options: UseReturnImporterOptions = {}) {
             const diffMs = Math.abs(txDate.getTime() - r.date.getTime());
             const diffDays = diffMs / DAY_MS;
             if (diffDays > MAX_DATE_DIFF_DAYS) {
-              console.log(`[performMatching] ❌ Data massa lluny: tx ${tx.id.slice(0, 8)} date=${tx.date} vs return date=${r.date?.toISOString()?.slice(0, 10)}, diff=${diffDays.toFixed(1)} dies`);
               return false;
             }
           }
           // Si dateConfidence === 'none', NO apliquem filtre de data
 
-          console.log(`[performMatching] ✅ Candidat trobat: tx ${tx.id.slice(0, 8)} amount=${tx.amount} date=${tx.date}`);
           return true;
         });
-
-        console.log(`[performMatching] 📊 Candidats trobats: ${candidates.length}`);
 
         if (candidates.length >= 1) {
           // Si hi ha múltiples candidats, ordenar per proximitat de data (el més proper primer)
@@ -1070,7 +1020,6 @@ export function useReturnImporter(options: UseReturnImporterOptions = {}) {
               return diffA - diffB; // El més proper primer
             });
             matchingTx = candidates[0];
-            console.log(`[performMatching] 🎯 Resolent ambigüitat: ${candidates.length} candidats, agafant el més proper: tx ${matchingTx.id} (date=${matchingTx.date})`);
           }
 
           r.matchType = 'individual';
@@ -1078,13 +1027,11 @@ export function useReturnImporter(options: UseReturnImporterOptions = {}) {
           r.matchedTransaction = matchingTx;
           r.status = 'matched';
           usedTransactionIds.add(matchingTx.id);
-          console.log(`[performMatching] ✅ MATCH INDIVIDUAL: return → tx ${matchingTx.id}`);
         } else {
           // Cap candidat
           r.matchType = 'none';
           r.noMatchReason = r.dateConfidence === 'none' ? 'no-date' : 'no-match';
           r.status = 'donor_found';
-          console.log(`[performMatching] ❌ CAP CANDIDAT: noMatchReason=${r.noMatchReason}`);
         }
       }
 
@@ -1119,7 +1066,6 @@ export function useReturnImporter(options: UseReturnImporterOptions = {}) {
       setStep('preview');
 
     } catch (error: any) {
-      console.error('Error in matching:', error);
       toast({ variant: 'destructive', title: 'Error', description: error.message });
     } finally {
       setIsProcessing(false);
@@ -1141,17 +1087,6 @@ export function useReturnImporter(options: UseReturnImporterOptions = {}) {
     // P0: Mapa donorsById per obtenir nom/taxId sense queries
     const donorsById = new Map(donors.map(d => [d.id, d]));
 
-    // DEBUG P0: Veure estat de resolvedDonorId
-    console.log('[processReturns] 🔍 DEBUG parsedReturns:', parsedReturns.map(r => ({
-      iban: r.iban,
-      status: r.status,
-      matchType: r.matchType,
-      resolvedDonorId: r.resolvedDonorId,  // Camp canònic P0
-      matchedDonorId: r.matchedDonorId,
-      matchedTransactionId: r.matchedTransactionId,
-      amount: r.amount,
-    })));
-
     // Helper P0: usa camp canònic resolvedDonorId
     const hasDonor = (r: ParsedReturn) => !!r.resolvedDonorId;
 
@@ -1159,21 +1094,17 @@ export function useReturnImporter(options: UseReturnImporterOptions = {}) {
     // INDIVIDUAL = té donant + té transacció + NO és grouped
     const individualReturns = parsedReturns.filter(r => {
       const isIndividual = hasDonor(r) && r.matchedTransactionId && r.matchType !== 'grouped';
-      console.log(`[processReturns] Individual check: iban=${r.iban}, resolvedDonorId=${r.resolvedDonorId}, txId=${r.matchedTransactionId} → isIndividual=${isIndividual}`);
       return isIndividual;
     });
 
     // GROUPED = matchType === 'grouped' + té donant (resolvedDonorId)
     const groupedReturnsToProcess = parsedReturns.filter(r => {
       const isGrouped = r.matchType === 'grouped' && hasDonor(r);
-      console.log(`[processReturns] Grouped check: iban=${r.iban}, matchType=${r.matchType}, groupId=${r.groupId}, resolvedDonorId=${r.resolvedDonorId} → isGrouped=${isGrouped}`);
       return isGrouped;
     });
 
     // Comptar quantes no tenen donant (per feedback)
     const withoutDonor = parsedReturns.filter(r => !hasDonor(r));
-
-    console.log(`[processReturns] 📊 Filtratge: ${individualReturns.length} individuals, ${groupedReturnsToProcess.length} grouped, ${withoutDonor.length} sense donant`);
 
     if (individualReturns.length === 0 && groupedReturnsToProcess.length === 0) {
       // Missatge explicatiu segons el cas
@@ -1207,7 +1138,6 @@ export function useReturnImporter(options: UseReturnImporterOptions = {}) {
       for (const returnItem of individualReturns) {
         // Només processar si tenim donant I transacció
         if (!returnItem.matchedDonor || !returnItem.matchedTransactionId) {
-          console.log(`[processReturns] ⏭️ Individual skip - donant: ${!!returnItem.matchedDonor}, txId: ${returnItem.matchedTransactionId}`);
           continue;
         }
 
@@ -1218,7 +1148,6 @@ export function useReturnImporter(options: UseReturnImporterOptions = {}) {
           contactId: returnItem.matchedDonor.id,
           contactType: 'donor',
         });
-        console.log(`[processReturns] ✅ Individual: tx ${returnItem.matchedTransactionId} → contactId ${returnItem.matchedDonor.id}`);
 
         // Actualitzar donant
         const donorRef = doc(firestore, 'organizations', organizationId, 'contacts', returnItem.matchedDonor.id);
@@ -1230,8 +1159,6 @@ export function useReturnImporter(options: UseReturnImporterOptions = {}) {
 
         processedIndividual++;
       }
-
-      console.log(`[processReturns] 📊 Individuals processats: ${processedIndividual}`);
 
       // 2. Processar devolucions agrupades (patró remeses: pare + filles)
       const processedGroupIds = new Set<string>();
@@ -1258,7 +1185,6 @@ export function useReturnImporter(options: UseReturnImporterOptions = {}) {
           });
 
           if (!lockResult.ok) {
-            console.warn(`[processReturns] ⚠️ Lock failed for parent ${parentId}:`, lockResult.reason);
             toast({
               variant: 'destructive',
               title: 'Operació bloquejada',
@@ -1268,7 +1194,6 @@ export function useReturnImporter(options: UseReturnImporterOptions = {}) {
           }
 
           acquiredLocks.push(parentId);
-          console.log(`[processReturns] 🔒 Lock adquirit per pare ${parentId}`);
         }
 
         // ═══════════════════════════════════════════════════════════════════
@@ -1286,27 +1211,19 @@ export function useReturnImporter(options: UseReturnImporterOptions = {}) {
         // Aquest és el mode determinista per migracions - garanteix consistència
         // ═══════════════════════════════════════════════════════════════════
         if (forceRecreateChildren) {
-          console.log(`[processReturns] 🔴 FORCE RECREATE MODE per pare ${parentId}`);
-
           // 1. ELIMINAR tots els fills existents (devolucions)
           let deletedChildrenCount = 0;
           if (existingChildrenCount > 0) {
-            console.log(`[processReturns] Eliminant ${existingChildrenCount} fills existents...`);
             for (const childDoc of existingChildrenSnap.docs) {
               await deleteDoc(doc(firestore, 'organizations', organizationId, 'transactions', childDoc.id));
               deletedChildrenCount++;
-              console.log(`[processReturns] ✅ Eliminat fill: ${childDoc.id}`);
             }
           }
-          console.log(`[processReturns] 🗑️ Eliminades ${deletedChildrenCount} filles antigues`);
-
           // 2. CREAR TOTES les filles des de les devolucions parsejades
           const allReturnsInGroup = group.returns;
           // P0: usar resolvedDonorId com a criteri canònic
           const resolubles = allReturnsInGroup.filter(r => r.resolvedDonorId);
           const pendents = allReturnsInGroup.filter(r => !r.resolvedDonorId);
-
-          console.log(`[processReturns] Creant ${allReturnsInGroup.length} filles (${resolubles.length} amb donant, ${pendents.length} sense)`);
 
           // Crear filles per TOTES les devolucions (resolubles i pendents)
           let createdChildrenCount = 0;
@@ -1367,17 +1284,6 @@ export function useReturnImporter(options: UseReturnImporterOptions = {}) {
             );
             createdChildrenCount++;
 
-            // Log primera filla per debug
-            if (createdChildrenCount === 1) {
-              console.log(`[processReturns] 🔍 Primera filla creada:`, {
-                id: newChildRef.id,
-                contactId: childTxData.contactId ?? 'null',
-                contactName: childTxData.contactName ?? 'null',
-                amount: childTxData.amount,
-              });
-            }
-            console.log(`[processReturns] ✅ Creada filla ${newChildRef.id} - contactId: ${hasContact ? donorId : 'null'}`);
-
             // Actualitzar donant si té contactId (P0: usar resolvedDonorId)
             if (hasContact) {
               const donorRef = doc(firestore, 'organizations', organizationId, 'contacts', ret.resolvedDonorId!);
@@ -1433,16 +1339,9 @@ export function useReturnImporter(options: UseReturnImporterOptions = {}) {
             pendingReturns: pendingReturnsData,
           };
 
-          console.log('[processReturns] FORCE RECREATE - parent update:', parentUpdateData);
           const parentTxRef = doc(firestore, 'organizations', organizationId, 'transactions', parentId);
           await updateDoc(parentTxRef, parentUpdateData);
 
-          console.log(`[processReturns] ✅ FORCE RECREATE completat per pare ${parentId}:`, {
-            deletedChildrenCount,
-            createdChildrenCount,
-            resolvedCount,
-            pendingCount,
-          });
           continue; // Passar al següent grup, saltar la lògica normal
         }
 
@@ -1473,8 +1372,6 @@ export function useReturnImporter(options: UseReturnImporterOptions = {}) {
 
         if (skipChildCreation) {
           // Ja hi ha fills - recalcular estat des de Firestore
-          console.log(`[processReturns] Grup ${group.groupId} ja té ${existingChildrenCount} fills (pare: ${parentId}) - mode idempotent`);
-
           const existingChildren = existingChildrenSnap.docs.map(d => d.data());
           resolvedCount = existingChildren.filter(c => c.contactId).length;
           itemCount = group.originalTransaction.remittanceItemCount ?? existingChildrenCount;
@@ -1551,7 +1448,6 @@ export function useReturnImporter(options: UseReturnImporterOptions = {}) {
           pendingReturns: pendingReturnsData,
         };
 
-        console.log('[processReturns] parent update payload', parentUpdateData);
         await updateDoc(parentTxRef, parentUpdateData);
 
         // Crear transaccions FILLES NOMÉS per resolubles (amb donant)
@@ -1615,12 +1511,8 @@ export function useReturnImporter(options: UseReturnImporterOptions = {}) {
         }
 
         // Log de l'estat de la remesa
-        if (remittanceStatus === 'partial') {
-          console.log(`[processReturns] Remesa ${group.groupId} PARCIAL: ${resolubles.length} resoltes, ${pendents.length} pendents (${pendents.reduce((s, r) => s + r.amount, 0).toFixed(2)}€)`);
-        }
       }
 
-      console.log(`[processReturns] 📊 RESUM FINAL: ${processedIndividual} individuals, ${processedGrouped} agrupades`);
       log(`[ReturnImporter] ${processedIndividual} individuals + ${processedGrouped} agrupades processades`);
       toast({
         title: 'Devolucions assignades',
@@ -1629,7 +1521,6 @@ export function useReturnImporter(options: UseReturnImporterOptions = {}) {
 
       reset();
     } catch (error: any) {
-      console.error('Error processing returns:', error);
       toast({ variant: 'destructive', title: 'Error', description: error.message });
       setStep('preview');
     } finally {
@@ -1637,7 +1528,6 @@ export function useReturnImporter(options: UseReturnImporterOptions = {}) {
       if (userId) {
         for (const parentId of acquiredLocks) {
           await releaseProcessLock({ firestore, orgId: organizationId, parentTxId: parentId });
-          console.log(`[processReturns] 🔓 Lock alliberat per pare ${parentId}`);
         }
       }
       setIsProcessing(false);
@@ -1730,7 +1620,6 @@ export function useReturnImporter(options: UseReturnImporterOptions = {}) {
 
       return { success: true, donorId: finalDonor.id };
     } catch (error) {
-      console.error('Error creating donor:', error);
       return {
         success: false,
         error: error instanceof Error ? error.message : 'Unknown error'

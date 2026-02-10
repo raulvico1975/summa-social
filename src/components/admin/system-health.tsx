@@ -340,7 +340,7 @@ export function SystemHealth() {
       setIncidents(allIncidents);
       setIncidentCounts(counts);
     } catch (err) {
-      console.error('Error loading incidents:', err);
+
     } finally {
       setIsLoading(false);
     }
@@ -383,7 +383,7 @@ export function SystemHealth() {
       await acknowledgeIncident(firestore, incident.id);
       await loadIncidents();
     } catch (err) {
-      console.error('Error acknowledging incident:', err);
+
     } finally {
       setIsProcessing(false);
     }
@@ -432,7 +432,7 @@ export function SystemHealth() {
           : `Resolt amb commit: ${resolveCommit}`,
       });
     } catch (err) {
-      console.error('Error resolving incident:', err);
+
       setResolveError('No s\'ha pogut tancar l\'incident.');
     } finally {
       setIsProcessing(false);
@@ -467,13 +467,13 @@ export function SystemHealth() {
             description: 'S\'ha enviat un email d\'alerta per aquest incident crític.',
           });
         } catch (emailErr) {
-          console.error('Error sending incident alert email:', emailErr);
+
         }
       }
 
       await loadIncidents();
     } catch (err) {
-      console.error('Error updating impact:', err);
+
     }
   };
 
@@ -485,7 +485,7 @@ export function SystemHealth() {
       await reopenIncident(firestore, incident.id);
       await loadIncidents();
     } catch (err) {
-      console.error('Error reopening incident:', err);
+
     } finally {
       setIsProcessing(false);
     }
@@ -501,7 +501,7 @@ export function SystemHealth() {
         description: 'Enganxa el text a Claude Code per reparar l\'error.',
       });
     } catch (err) {
-      console.error('Error copying prompt:', err);
+
       toast({
         title: 'Error copiant',
         description: 'No s\'ha pogut copiar al portapapers.',
@@ -651,7 +651,7 @@ export function SystemHealth() {
             status: 'error',
             message: 'Rules Storage incorrectes',
           });
-          console.log('[Semàfor] pendingDocuments error:', { testPath, uid: user.uid, orgId: selectedOrgId });
+
         } else {
           updateCheck('storage-upload', { status: 'error', message: (err as Error).message });
         }
@@ -719,7 +719,7 @@ export function SystemHealth() {
         description: 'Pots enganxar-lo on vulguis.',
       });
     } catch (err) {
-      console.error('Error copying report:', err);
+
       toast({
         title: 'Error copiant',
         description: 'No s\'ha pogut copiar al portapapers.',
