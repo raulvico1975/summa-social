@@ -3513,7 +3513,7 @@
   "sepaPain008.selection.showingOf": "Mostrando {shown} de {total} sócios",
   "sepaPain008.selection.autoPreselectionNote": "Pré-seleção automática segundo periodicidade. Pode modificar a seleção livremente.",
   "sepaPain008.selection.statusColumn": "Estado",
-  "sepaPain008.selection.blockedBadge": "Ainda não é devido · último cobro {lastRun}",
+  "sepaPain008.selection.blockedBadge": "Ainda não é devido (já cobrado neste período)",
   "sepaPain008.selection.overdueBadge": "Atrasado · há {months} meses",
   "sepaPain008.selection.noPeriodicityBadge": "Sem periodicidade",
   "sepaPain008.selection.excludedCount": "{count} excluídos",
