@@ -161,14 +161,11 @@ function RegistreContent() {
         role: invitation.role,
         displayName: displayName,
       };
-      console.log('[registre] Step 4: writing users/' + user.uid, userProfile);
       await setDoc(doc(firestore, 'users', user.uid), userProfile);
-      console.log('[registre] Step 4: OK');
 
       // 5. Acceptar invitació via API (crear membre + marcar usada)
       // Usa Admin SDK server-side per evitar problemes de token.email timing
       const idToken = await user.getIdToken();
-      console.log('[registre] Step 5: calling /api/invitations/accept');
       const acceptRes = await fetch('/api/invitations/accept', {
         method: 'POST',
         headers: {
@@ -186,10 +183,8 @@ function RegistreContent() {
 
       if (!acceptRes.ok) {
         const errBody = await acceptRes.json().catch(() => ({}));
-        console.error('[registre] Step 5 failed:', acceptRes.status, errBody);
         throw new Error(errBody.error || 'accept_failed');
       }
-      console.log('[registre] Step 5: OK');
 
       setPageState('success');
 
