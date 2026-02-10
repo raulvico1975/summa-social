@@ -130,19 +130,17 @@ export async function loadTranslations(
     return cached.messages;
   }
 
-  // 2. Intent carregar des de Storage
-  const storageMessages = await loadFromStorage(language);
-
-  if (storageMessages) {
-    // Guardar a cache amb la versió actual
-    cache.set(language, { version, messages: storageMessages });
-    return storageMessages;
-  }
-
-  // 3. Fallback a bundle local
+  // 2. Bundle local (base)
   const localMessages = getLocalBundle(language);
-  cache.set(language, { version, messages: localMessages });
-  return localMessages;
+
+  // 3. Intent carregar des de Storage (merge: Storage sobreescriu clau a clau)
+  const storageMessages = await loadFromStorage(language);
+  const messages = storageMessages
+    ? { ...localMessages, ...storageMessages }
+    : localMessages;
+
+  cache.set(language, { version, messages });
+  return messages;
 }
 
 /**
