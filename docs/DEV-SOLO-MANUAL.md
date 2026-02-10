@@ -149,7 +149,27 @@ Guia ràpida d'execució: [scripts/verify-p0-fiscal.md](../scripts/verify-p0-fis
 
 ### 4.3 Desplegament
 
-(pendent d'omplir)
+```bash
+npm run deploy
+```
+
+Això executa `scripts/deploy.sh`, un script que fa tot el ritual de deploy de forma seqüencial i bloquejant. No cal recordar comandes git ni passos manuals.
+
+**Què fa el script (en ordre):**
+1. Comprova que estàs a `main` i que no hi ha canvis pendents
+2. Actualitza totes les branques (`main`, `master`, `prod`)
+3. Mostra els fitxers canviats i el nivell de risc
+4. Si el canvi toca àrea fiscal → et demana si has fet QA P0
+5. Executa verificacions (i18n, typecheck, tests, build)
+6. Demana confirmació final
+7. Fa els merges i push (main→master→prod)
+8. Demana confirmació de post-deploy (SHA servit + smoke test)
+9. Registra el deploy a `docs/DEPLOY-LOG.md`
+
+**Si falla:**
+- Conflicte de merge → el script aborta i torna a `main`. Resol el conflicte manualment.
+- Verificació falla → corregeix els errors i torna a executar `npm run deploy`.
+- Gate P0 → fes QA P0 (`docs/QA-P0-FISCAL.md`) i torna a executar.
 
 ---
 
