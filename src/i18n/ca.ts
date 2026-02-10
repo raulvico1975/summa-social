@@ -687,6 +687,16 @@ export const ca = {
         exportSepaTooltip: "Exportar arxiu SEPA pain.001",
         configureIban: "Has de configurar l'IBAN del compte bancari",
         validationFailed: "Validació fallida",
+        alreadyProcessed: "Aquesta remesa ja està processada. Desfés-la abans de tornar-la a processar.",
+        unknownFormat: "Format no reconegut",
+        invalidPain001: "El fitxer XML no és un pain.001 vàlid",
+        sepaOnlyImport: "Els fitxers SEPA només es poden importar des del flux corresponent",
+        invalidAmounts: "Imports invàlids",
+        emptyExcel: "El fitxer Excel està buit",
+        validationError: "Error de validació",
+        operationBlocked: "Operació bloquejada",
+        cannotProcess: "No es pot processar",
+        anonymous: "Anònim",
     }
   },
   importers: {

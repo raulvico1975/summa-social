@@ -494,7 +494,7 @@ export function RemittanceSplitter({
   const blockReason = React.useMemo((): string | null => {
     // 🛑 GUARDRAIL: Remesa ja processada
     if (transaction.isRemittance) {
-      return 'Aquesta remesa ja està processada. Desfés-la abans de tornar-la a processar.';
+      return t.movements.splitter.alreadyProcessed;
     }
     if (parsedDonations.length === 0) return 'No hi ha dades per processar';
     if (validationDetails.invalidAmounts > 0) {
@@ -577,7 +577,7 @@ export function RemittanceSplitter({
           if (isPain001File(text)) {
             parseSepaFile(text);
           } else {
-            toast({ variant: 'destructive', title: 'Format no reconegut', description: 'El fitxer XML no és un pain.001 vàlid' });
+            toast({ variant: 'destructive', title: t.movements.splitter.unknownFormat, description: t.movements.splitter.invalidPain001 });
           }
         };
         reader.readAsText(file, 'UTF-8');
@@ -601,7 +601,7 @@ export function RemittanceSplitter({
   // Parser per fitxers SEPA pain.001 (només mode OUT)
   const parseSepaFile = (xmlContent: string) => {
     if (!isPaymentRemittance) {
-      toast({ variant: 'destructive', title: 'Error', description: 'Els fitxers SEPA només es poden importar per remeses de pagaments' });
+      toast({ variant: 'destructive', title: t.movements.splitter.error, description: t.movements.splitter.sepaOnlyImport });
       return;
     }
 
@@ -690,7 +690,7 @@ export function RemittanceSplitter({
     if (invalidAmounts.length > 0) {
       toast({
         variant: 'destructive',
-        title: 'Imports invàlids',
+        title: t.movements.splitter.invalidAmounts,
         description: `${invalidAmounts.length} element(s) tenen import ≤ 0`,
       });
       return;
@@ -772,7 +772,7 @@ export function RemittanceSplitter({
         );
 
         if (filteredRows.length === 0) {
-          toast({ variant: 'destructive', title: t.movements.splitter.error, description: 'El fitxer Excel està buit' });
+          toast({ variant: 'destructive', title: t.movements.splitter.error, description: t.movements.splitter.emptyExcel });
           return;
         }
 
@@ -1445,8 +1445,8 @@ export function RemittanceSplitter({
     if (!canProcess) {
       toast({
         variant: 'destructive',
-        title: 'No es pot processar',
-        description: blockReason || 'Validació fallida',
+        title: t.movements.splitter.cannotProcess,
+        description: blockReason || t.movements.splitter.validationFailed,
       });
       return;
     }
@@ -1562,14 +1562,14 @@ export function RemittanceSplitter({
         if (errorCode === 'R-SUM-1') {
           toast({
             variant: 'destructive',
-            title: 'Error de validació',
+            title: t.movements.splitter.validationError,
             description: 'La suma dels items no coincideix amb l\'import del pare. Revisa les dades.',
             duration: 9000,
           });
         } else if (errorCode === 'LOCKED_BY_OTHER') {
           toast({
             variant: 'destructive',
-            title: 'Operació bloquejada',
+            title: t.movements.splitter.operationBlocked,
             description: errorMessage,
             duration: 5000,
           });
@@ -1662,7 +1662,7 @@ export function RemittanceSplitter({
         console.warn(`[Splitter] ⚠️ Lock failed for parent ${parentTxId}:`, lockResult.reason);
         toast({
           variant: 'destructive',
-          title: 'Operació bloquejada',
+          title: t.movements.splitter.operationBlocked,
           description: getLockFailureMessage(lockResult),
         });
         return;
@@ -1754,7 +1754,7 @@ export function RemittanceSplitter({
             contactId = newDonorIds.get(item.rowIndex) || null;
           }
 
-          const displayName = item.name || item.taxId || 'Anònim';
+          const displayName = item.name || item.taxId || t.movements.splitter.anonymous;
           const category = transaction.category || 'supplierPayments';
           const finalAmount = -Math.abs(item.amount);
           const description = `Pagament: ${displayName}`;
