@@ -685,6 +685,16 @@ export const fr = {
         exportSepaTooltip: "Exporter fichier SEPA pain.001",
         configureIban: "Vous devez configurer l'IBAN du compte bancaire",
         validationFailed: "Validation échouée",
+        alreadyProcessed: "Cette remise est déjà traitée. Annulez-la avant de la retraiter.",
+        unknownFormat: "Format non reconnu",
+        invalidPain001: "Le fichier XML n'est pas un pain.001 valide",
+        sepaOnlyImport: "Les fichiers SEPA ne peuvent être importés que depuis le flux correspondant",
+        invalidAmounts: "Montants invalides",
+        emptyExcel: "Le fichier Excel est vide",
+        validationError: "Erreur de validation",
+        operationBlocked: "Opération bloquée",
+        cannotProcess: "Impossible de traiter",
+        anonymous: "Anonyme",
     }
   },
   importers: {
