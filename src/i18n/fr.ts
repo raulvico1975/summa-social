@@ -754,6 +754,7 @@ export const fr = {
         status: "Statut (Actif/Inactif)",
         memberSince: "Date d'adhésion",
         periodicityQuota: "Périodicité cotisation",
+        contactPersonName: "Nom du contact",
       },
       defaultCategoryLabel: "Catégorie par défaut (appliquée seulement si l'Excel n'indique pas de catégorie) :",
       defaultCategoryAuto: "Automatique selon type",
@@ -1193,6 +1194,8 @@ export const fr = {
     amountMonth: "Montant mensuel",
     perMonth: "mois",
     memberSince: "Adhérent depuis",
+    contactPersonName: "Nom du contact",
+    contactPersonNamePlaceholder: "Personne responsable de l'entreprise",
     iban: "IBAN",
     errorRequiredFields: "Nom, N° fiscal et code postal sont obligatoires.",
     // Clés pour filtres donateurs/adhérents actifs

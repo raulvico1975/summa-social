@@ -754,6 +754,7 @@ export const ca = {
         status: "Estat (Actiu/Baixa)",
         memberSince: "Data d'alta",
         periodicityQuota: "Periodicitat quota",
+        contactPersonName: "Nom de contacte",
       },
       defaultCategoryLabel: "Categoria per defecte (s'aplica només si l'Excel no indica categoria):",
       defaultCategoryAuto: "Automàtic segons tipus",
@@ -1193,6 +1194,8 @@ export const ca = {
     amountMonth: "Import mensual",
     perMonth: "mes",
     memberSince: "Soci des de",
+    contactPersonName: "Nom de contacte",
+    contactPersonNamePlaceholder: "Persona responsable de l'empresa",
     iban: "IBAN",
     errorRequiredFields: "Els camps Nom, DNI/CIF i Codi Postal són obligatoris.",
     // Claus per filtres de donants/socis actius
