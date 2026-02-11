@@ -2873,6 +2873,22 @@ export const fr = {
   // Filtre donants amb devolucions
   donorsFilter: {
     withReturns: "Amb devolucions",
+    donorTypeLabel: "Type",
+    allTypes: "Tous",
+    individual: "Particuliers",
+    company: "Entreprises",
+    modalityLabel: "Modalité",
+    allModalities: "Tous",
+    oneTime: "Ponctuels",
+    recurring: "Membres",
+    periodicityLabel: "Périodicité",
+    allPeriodicity: "Toutes",
+    periodicityMonthly: "Mensuel",
+    periodicityQuarterly: "Trimestriel",
+    periodicitySemiannual: "Semestriel",
+    periodicityAnnual: "Annuel",
+    periodicityManual: "Ponctuel",
+    noPeriodicity: "Sans périodicité",
   },
   // Breadcrumb
   breadcrumb: {

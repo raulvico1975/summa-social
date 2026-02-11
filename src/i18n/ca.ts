@@ -2872,6 +2872,22 @@ export const ca = {
   // Filtre donants amb devolucions
   donorsFilter: {
     withReturns: "Amb devolucions",
+    donorTypeLabel: "Tipus",
+    allTypes: "Tots",
+    individual: "Particulars",
+    company: "Empreses",
+    modalityLabel: "Modalitat",
+    allModalities: "Tots",
+    oneTime: "Puntuals",
+    recurring: "Socis",
+    periodicityLabel: "Periodicitat",
+    allPeriodicity: "Totes",
+    periodicityMonthly: "Mensual",
+    periodicityQuarterly: "Trimestral",
+    periodicitySemiannual: "Semestral",
+    periodicityAnnual: "Anual",
+    periodicityManual: "Puntual",
+    noPeriodicity: "Sense periodicitat",
   },
   // Breadcrumb
   breadcrumb: {
