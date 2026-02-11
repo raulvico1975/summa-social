@@ -108,6 +108,7 @@ export function exportDonorsToExcel(
       formatAmount(donor.monthlyAmount),            // Quota mensual
       formatDateEU(donor.memberSince),               // Data d'alta
       getPeriodicityLabel(donor),                    // Periodicitat quota
+      donor.donorType === 'company' ? (donor.contactPersonName ?? '') : '', // Nom de contacte
     ];
   });
 
@@ -137,6 +138,7 @@ export function exportDonorsToExcel(
     { wch: 14 },  // Quota mensual
     { wch: 14 },  // Data d'alta
     { wch: 18 },  // Periodicitat quota
+    { wch: 25 },  // Nom de contacte
   ];
 
   // Crear workbook

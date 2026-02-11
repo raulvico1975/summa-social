@@ -1,7 +1,7 @@
 # SUMMA SOCIAL - Preguntes Freqüents (FAQ)
 
-**Versió**: 1.31
-**Última actualització**: 14 Gener 2026
+**Versió**: 1.40
+**Última actualització**: 10 Febrer 2026
 
 ---
 
@@ -23,14 +23,17 @@ Si no trobes la teva pregunta, no et preocupis: mira el Manual d'Usuari complet 
 **📥 Importació de dades** (8-8½, 9-15)
 *Tens dades en Excels antics, extractes del banc, llistes de donants... Com ho poses tot dins de Summa Social sense tornar-te boig/boja? Inclou info sobre la plantilla oficial (8½).*
 
-**❤️ Donants i contactes** (16-27)
-*Els donants són el cor de l'entitat. Aquí resolem dubtes sobre com gestionar les seves dades, baixes, canvis de DNI i tot el que pugui sorgir.*
+**❤️ Donants i contactes** (16-27b)
+*Els donants són el cor de l'entitat. Aquí resolem dubtes sobre com gestionar les seves dades, baixes, canvis de DNI i tot el que pugui sorgir. Inclou la dinàmica de donants (27a-27b).*
 
 **💰 Moviments i categorització** (28-39½, 40-41)
 *El dia a dia de la gestió econòmica: com classificar moviments, adjuntar factures, corregir errors sense estrès. Inclou Documents Pendents amb drag & drop (39½).*
 
 **📦 Remeses de quotes** (42-53)
 *Les remeses són un dels conceptes que més confonen. Aquí t'expliquem què són, com dividir-les i què fer si algo surt malament.*
+
+**📤 Remeses SEPA de cobrament** (53a-53e)
+*Genera el fitxer SEPA per cobrar quotes automàticament des del banc, amb pre-selecció intel·ligent de socis.*
 
 **↩️ Devolucions** (54-61)
 *Quan el banc no pot cobrar un rebut, el retorna. T'expliquem com gestionar-ho perquè els informes surtin bé i no t'emportis sorpreses al gener.*
@@ -651,6 +654,35 @@ Quan assignes una categoria per defecte a un donant, tots els seus moviments fut
 
 ---
 
+### 27a. Què és la "Dinàmica de donants"? Per a què serveix?
+
+**És una eina d'anàlisi que et mostra com evoluciona la teva base de donants.** La trobaràs a la pantalla de Donants, en un bloc desplegable a la part inferior.
+
+**Pots veure 5 coses importants:**
+1. **Altes:** Nous donants que han fet la seva primera aportació durant el període
+2. **Baixes:** Donants que abans aportaven i ara no ho fan (no vol dir que s'hagin donat de baixa formalment; simplement no s'ha registrat cap moviment)
+3. **Aportació a l'alça:** Donants que aporten més que al període anterior
+4. **Aportació a la baixa:** Donants que aporten menys que al període anterior
+5. **Top 15:** Els 15 donants que més han aportat, amb una separació entre persones físiques i empreses/entitats
+
+**Quan és útil:**
+- Per preparar el tancament d'any i el Model 182
+- Per detectar donants que potser necessiten una trucada d'agraïment (Top 15)
+- Per identificar socis que han deixat de col·laborar i potser caldria contactar
+
+---
+
+### 27b. La dinàmica em diu que tinc "Baixes" però jo no he donat de baixa ningú. Què vol dir?
+
+**Tranquil/a, no vol dir que ningú s'hagi donat de baixa formalment.** El sistema simplement mira els moviments bancaris:
+
+- Si un soci tenia moviments al període anterior (per exemple, l'any passat) i NO en té cap al període actual → apareix com a "Baixa"
+- Això pot ser per moltes raons: encara no s'ha cobrat la quota d'aquest mes, el soci ha canviat de compte, o sí que ha deixat de col·laborar
+
+**Consell:** Revisa la llista de baixes periòdicament (un cop al trimestre, per exemple). Si hi veus socis que saps que segueixen actius, probablement és qüestió de temps i desapareixeran de la llista quan es registri el proper moviment.
+
+---
+
 ## 💰 Moviments i categorització
 
 ---
@@ -1229,6 +1261,82 @@ El flux ideal és:
 5. Divideix-la amb aquell altre fitxer
 
 **El més important:** No barregis els fitxers! Cada fitxer de detall correspon a una remesa concreta.
+
+---
+
+## 📤 Remeses SEPA de cobrament (domiciliacions)
+
+*Genera el fitxer SEPA per cobrar quotes automàticament des del banc.*
+
+---
+
+### 53a. Quina diferència hi ha entre "Dividir una remesa" i "Generar una remesa SEPA"?
+
+**Són dues coses completament oposades:**
+
+- **Dividir una remesa** (seccions anteriors): és quan el banc **ja ha cobrat** les quotes i tu necessites separar aquell ingrés gran en les quotes individuals de cada soci. És **POST-banc**: primer el banc cobra, després tu divideixes.
+
+- **Generar una remesa SEPA** (pain.008): és quan tu generes un fitxer que **envies al banc perquè cobri** les quotes. És **PRE-banc**: primer tu generes el fitxer, després el banc cobra.
+
+**El flux complet seria:**
+1. Tu generes la remesa SEPA (fitxer XML) a Summa Social
+2. Puges el fitxer al portal del banc
+3. El banc cobra les quotes als socis
+4. El banc t'ingressa l'import total com una remesa
+5. Tu importes l'extracte bancari a Summa Social
+6. Divideixes la remesa per identificar cada quota
+
+---
+
+### 53b. Com genero una remesa SEPA per cobrar quotes?
+
+**Requisit previ:** El teu compte bancari ha de tenir configurat l'ICS (Identificador de Creditor SEPA). Si no el tens, ves a Configuració → Comptes bancaris → Edita el compte i omple el camp "Creditor ID SEPA".
+
+**Pasos:**
+1. Ves a **Donants → Remeses de cobrament**
+2. Selecciona el compte bancari, la data de cobrament i la periodicitat (mensual, trimestral...)
+3. El sistema **pre-selecciona automàticament** els socis que "toca cobrar" segons la periodicitat. Per exemple, si selecciones "Mensual" al febrer, es marcaran els socis mensuals que encara no s'hagin cobrat aquest mes
+4. Revisa la llista i ajusta si cal (pots afegir o treure socis)
+5. A la pantalla de revisió, verifica l'import total i el nombre de socis
+6. Clica "Generar" i descarrega el fitxer XML
+7. Puja el fitxer al portal del teu banc (secció de domiciliacions o remeses SEPA)
+
+---
+
+### 53c. El sistema em pre-selecciona socis automàticament. Com sap quins "toca cobrar"?
+
+**El sistema mira dues coses per decidir:**
+
+1. **La periodicitat del soci:** Si un soci té configurada la periodicitat "Mensual", el sistema sap que cal cobrar-li cada mes. Si és "Trimestral", cada tres mesos. I així amb semestral i anual.
+
+2. **L'última vegada que es va cobrar:** Si ja s'ha generat una remesa SEPA per a aquest soci dins del període actual (per exemple, dins del mes de febrer), el sistema NO el pre-selecciona perquè ja s'ha cobrat.
+
+**Exemple pràctic:**
+- Estem al febrer
+- La Maria és sòcia mensual i la seva última remesa SEPA va ser al gener → **es marca** perquè toca cobrar-li el febrer
+- En Joan és soci mensual i ja va ser inclòs en una remesa del 3 de febrer → **no es marca** perquè ja s'ha cobrat aquest mes
+- L'Anna és sòcia trimestral i es va cobrar al gener (Q1) → **no es marca** perquè el Q1 ja està cobert
+
+**Important:** La pre-selecció és una ajuda, no una obligació. Sempre pots afegir o treure socis manualment.
+
+---
+
+### 53d. Alguns socis no tenen la periodicitat informada. Què faig?
+
+**Si un soci no té periodicitat configurada**, no apareixerà a la pre-selecció automàtica. Pots:
+
+1. **Editar el soci** i informar la periodicitat correcta (mensual, trimestral, etc.)
+2. **Afegir-lo manualment** a la remesa des del pas de selecció
+
+**Consell:** Val la pena dedicar una estona a configurar la periodicitat de tots els socis. Un cop fet, les remeses futures seran molt més ràpides perquè el sistema ja sabrà qui cal cobrar.
+
+---
+
+### 53e. He generat el fitxer SEPA però no l'he pujat al banc. Passa alguna cosa?
+
+**No, tranquil/a.** El fitxer XML que generes a Summa Social és simplement un document que tens al teu ordinador. No s'envia sol a cap lloc.
+
+Fins que no el pugis manualment al portal del teu banc, no es cobrarà res a ningú. Si decideixes no usar-lo, simplement ignora'l.
 
 ---
 
@@ -2066,6 +2174,6 @@ Molta sort! 🍀
 
 ---
 
-**Summa Social v1.27** — Gener 2026
+**Summa Social v1.40** — Febrer 2026
 
 *Si tens dubtes, contacta amb el suport de l'app.*

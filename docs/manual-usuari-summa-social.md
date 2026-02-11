@@ -1,7 +1,7 @@
 # SUMMA SOCIAL - Manual d'Usuari Complet
 
-**Versió**: 1.32
-**Última actualització**: 27 Gener 2026
+**Versió**: 1.40
+**Última actualització**: 10 Febrer 2026
 
 ---
 
@@ -552,20 +552,23 @@ La secció **Dinàmica de donants** a la pantalla de Donants permet analitzar el
 | Llista | Descripció |
 |--------|------------|
 | **Altes** | Donants que han fet el seu primer moviment dins el període |
-| **Sense moviments** | Donants amb històric previ que no han fet cap aportació al període. El text informatiu indica que això no implica baixa administrativa |
-| **Reactivacions** | Donants que no van aportar al període anterior però sí al període actual |
-| **Amb devolucions** | Donants amb almenys una devolució dins el període |
-| **Aportació decreixent** | Donants que han aportat menys que al període anterior |
+| **Baixes** | Donants amb històric previ que no han fet cap aportació al període actual. Això no implica una baixa administrativa; simplement no s'ha registrat cap moviment |
+| **Aportació a l'alça** | Donants que han aportat més que al període anterior |
+| **Aportació a la baixa** | Donants que han aportat menys que al període anterior |
+| **Top 15** | Els 15 donants amb major aportació al període, separant persones físiques i empreses/entitats |
 
 ### Ús pràctic
 
 - **Preparació del Model 182:** Identificar donants actius per any fiscal
 - **Seguiment intern:** Detectar canvis de comportament de la base social
 - **Informes fiscals:** Preparar dades abans de tancar l'any
+- **Agraïment personalitzat:** El Top 15 facilita identificar els donants principals per agrair-los personalment
 
 ### Com funciona cada llista
 
 Clica el nom de qualsevol donant de les llistes per obrir la seva fitxa lateral. Les llistes mostren un màxim de 20 elements per defecte; clica "Veure tots" per expandir-les.
+
+> **Persones físiques vs empreses:** El Top 15 separa automàticament les persones físiques de les persones jurídiques (empreses, fundacions, associacions) per donar-te una visió més clara de la composició de la base social.
 
 ---
 
@@ -971,14 +974,19 @@ i **bloqueja la generació**.
 ### Com generar la remesa (wizard)
 
 1. Ves a **Donants → Remeses de cobrament**
-2. Selecciona:
+2. **Pas 1 — Configuració:** Selecciona:
    - **Compte bancari** (el que té l'ICS configurat)
    - **Data de cobrament**
-3. Revisa la previsualització:
-   - nombre de socis inclosos
-   - import total
-4. Clica **"Generar"** i descarrega el fitxer **XML pain.008**
-5. Puja el fitxer al teu banc a l'apartat de **Remeses / Domiciliacions / SEPA Direct Debit**
+   - **Periodicitat** (mensual, trimestral, semestral, anual o totes)
+3. **Pas 2 — Selecció de socis:**
+   - El sistema **pre-selecciona automàticament** els socis que "toca cobrar" segons la periodicitat escollida. Per exemple, si selecciones "Mensual", es marcaran els socis mensuals que encara no s'hagin cobrat aquest mes.
+   - Pots afegir o treure socis manualment de la selecció
+   - Els socis sense IBAN o amb quota = 0 queden fora automàticament
+4. **Pas 3 — Revisió:** Revisa el nombre de socis inclosos i l'import total
+5. Clica **"Generar"** i descarrega el fitxer **XML pain.008**
+6. Puja el fitxer al teu banc a l'apartat de **Remeses / Domiciliacions / SEPA Direct Debit**
+
+> **Com sap el sistema quins socis "toca cobrar"?** Mira la periodicitat de cada soci i la data del seu últim cobrament via SEPA. Si encara no s'ha cobrat dins el període natural actual (per exemple, el mes de febrer per a socis mensuals), el marca com a candidat.
 
 ---
 
@@ -1965,6 +1973,16 @@ El sistema reconeix sinònims i expressions comunes, així que no et preocupis p
 | No troba socis | Actualitza IBAN o DNI dels donants |
 | He processat malament | Zona de Perill → Esborrar última remesa |
 
+## 12.3b Problemes amb remeses SEPA (pain.008)
+
+| Problema | Solució |
+|----------|---------|
+| No puc generar la remesa SEPA | Comprova que el compte bancari té l'ICS (Identificador de creditor SEPA) configurat. Ves a Configuració → Comptes bancaris → Edita el compte |
+| Cap soci apareix pre-seleccionat | Comprova que els socis tenen periodicitat informada (mensual, trimestral...) i que no s'han cobrat ja dins el període actual |
+| Un soci no apareix a la llista | El soci necessita IBAN vàlid i import de quota > 0. Edita el soci i completa les dades |
+| El banc rebutja el fitxer XML | Contacta amb suport indicant el missatge exacte d'error del banc. Els motius més freqüents: IBAN incorrecte d'algun soci, ICS no vàlid, o format incompatible |
+| He generat la remesa però no la vull enviar | No passa res. El fitxer XML no s'envia sol; l'has de pujar tu manualment al banc. Si no el puges, no es cobra res |
+
 ---
 
 ## 12.4 Problemes amb informes
@@ -2029,6 +2047,6 @@ Molta sort! 🍀
 
 ---
 
-**Summa Social v1.32** — Gener 2026
+**Summa Social v1.40** — Febrer 2026
 
 *Gestió financera pensada per a entitats que volen dedicar el seu temps al que realment importa.*

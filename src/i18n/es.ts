@@ -756,6 +756,7 @@ export const es = {
         status: "Estado (Activo/Baja)",
         memberSince: "Fecha de alta",
         periodicityQuota: "Periodicidad cuota",
+        contactPersonName: "Nombre de contacto",
       },
       defaultCategoryLabel: "Categoría por defecto (se aplica solo si el Excel no indica categoría):",
       defaultCategoryAuto: "Automático según tipo",
@@ -1227,6 +1228,8 @@ export const es = {
     amountMonth: "Importe mensual",
     perMonth: "mes",
     memberSince: "Socio desde",
+    contactPersonName: "Nombre de contacto",
+    contactPersonNamePlaceholder: "Persona responsable de la empresa",
     iban: "IBAN",
     errorRequiredFields: "Los campos Nombre, DNI/CIF y Código Postal son obligatorios.",
     // Claves para filtros de donantes/socios activos

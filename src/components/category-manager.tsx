@@ -96,7 +96,7 @@ function CategoryTable({
                       className="text-amber-600"
                     >
                       <Archive className="mr-2 h-4 w-4" />
-                      {t.common?.actions?.archive ?? 'Eliminar'}
+                      {t.common?.archive ?? 'Eliminar'}
                     </DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>
@@ -138,7 +138,7 @@ function CategoryTable({
                         size="icon"
                         className="text-amber-500 hover:text-amber-600"
                         onClick={() => onDelete(category)}
-                        title={t.common?.actions?.archive ?? 'Eliminar'}
+                        title={t.common?.archive ?? 'Eliminar'}
                       >
                         <Archive className="h-4 w-4" />
                       </Button>
