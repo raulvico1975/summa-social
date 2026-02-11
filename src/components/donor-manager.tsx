@@ -301,10 +301,10 @@ export function DonorManager() {
 
   // Nous filtres: view=active i membershipType
   const [activeViewFilter, setActiveViewFilter] = React.useState(false);
-  const [membershipTypeFilter, setMembershipTypeFilter] = React.useState<'all' | 'one-time' | 'recurring'>('all');
+  const [membershipTypeFilter, setMembershipTypeFilter] = React.useState<'one-time' | 'recurring' | null>(null);
 
   // Filtre per tipus de donant (persona física / jurídica)
-  const [donorTypeFilter, setDonorTypeFilter] = React.useState<'all' | 'individual' | 'company'>('all');
+  const [donorTypeFilter, setDonorTypeFilter] = React.useState<'individual' | 'company' | null>(null);
 
   // Filtre per periodicitat de quota
   const [periodicityFilter, setPeriodicityFilter] = React.useState<'all' | 'monthly' | 'quarterly' | 'semiannual' | 'annual' | 'manual' | 'none'>('all');
@@ -436,7 +436,7 @@ export function DonorManager() {
     setShowIncompleteOnly(false);
     setShowWithReturnsOnly(false);
     setActiveViewFilter(false);
-    setMembershipTypeFilter('all');
+    setMembershipTypeFilter(null);
     setPeriodFilter(null);
     setPeriodLabel('');
     setHasUrlFilter(false);
@@ -580,12 +580,12 @@ export function DonorManager() {
     let result = baseFilteredDonors;
 
     // Filtre per tipus de membre (donant puntual vs soci recurrent)
-    if (membershipTypeFilter !== 'all') {
+    if (membershipTypeFilter) {
       result = result.filter(donor => (donor.membershipType || 'one-time') === membershipTypeFilter);
     }
 
     // Filtre per tipus de donant (persona física / jurídica)
-    if (donorTypeFilter !== 'all') {
+    if (donorTypeFilter) {
       result = result.filter(donor => donor.donorType === donorTypeFilter);
     }
 
@@ -1098,81 +1098,61 @@ export function DonorManager() {
                 )}
               </div>
 
-              {/* Filtres per tipus de donant i modalitat */}
-              <div className="flex flex-wrap items-center gap-4">
+              {/* Filtres secundaris: tipus, modalitat, periodicitat */}
+              <div className="flex flex-wrap items-center gap-3">
                 {/* Bloc Tipus */}
-                <div className="flex items-center gap-1.5">
-                  <span className="text-xs text-muted-foreground">{t.donorsFilter.donorTypeLabel}:</span>
-                  <Button
-                    variant={donorTypeFilter === 'all' ? 'default' : 'outline'}
-                    size="sm"
-                    onClick={() => setDonorTypeFilter('all')}
-                  >
-                    {t.donorsFilter.allTypes} ({donorTypeCounts.all})
-                  </Button>
-                  <Button
-                    variant={donorTypeFilter === 'individual' ? 'default' : 'outline'}
-                    size="sm"
-                    onClick={() => setDonorTypeFilter('individual')}
-                  >
-                    <User className="mr-1.5 h-3 w-3" />
-                    {t.donorsFilter.individual} ({donorTypeCounts.individual})
-                  </Button>
-                  <Button
-                    variant={donorTypeFilter === 'company' ? 'default' : 'outline'}
-                    size="sm"
-                    onClick={() => setDonorTypeFilter('company')}
-                  >
-                    <Building2 className="mr-1.5 h-3 w-3" />
-                    {t.donorsFilter.company} ({donorTypeCounts.company})
-                  </Button>
-                </div>
+                <span className="text-xs text-muted-foreground mr-1">{t.donorsFilter.donorTypeLabel}</span>
+                <Button
+                  variant={donorTypeFilter === 'individual' ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => setDonorTypeFilter(donorTypeFilter === 'individual' ? null : 'individual')}
+                >
+                  <User className="mr-1.5 h-3 w-3" />
+                  {t.donorsFilter.individual} ({donorTypeCounts.individual})
+                </Button>
+                <Button
+                  variant={donorTypeFilter === 'company' ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => setDonorTypeFilter(donorTypeFilter === 'company' ? null : 'company')}
+                >
+                  <Building2 className="mr-1.5 h-3 w-3" />
+                  {t.donorsFilter.company} ({donorTypeCounts.company})
+                </Button>
 
                 {/* Bloc Modalitat */}
-                <div className="flex items-center gap-1.5">
-                  <span className="text-xs text-muted-foreground">{t.donorsFilter.modalityLabel}:</span>
-                  <Button
-                    variant={membershipTypeFilter === 'all' ? 'default' : 'outline'}
-                    size="sm"
-                    onClick={() => setMembershipTypeFilter('all')}
-                  >
-                    {t.donorsFilter.allModalities} ({membershipTypeCounts.all})
-                  </Button>
-                  <Button
-                    variant={membershipTypeFilter === 'one-time' ? 'default' : 'outline'}
-                    size="sm"
-                    onClick={() => setMembershipTypeFilter('one-time')}
-                  >
-                    {t.donorsFilter.oneTime} ({membershipTypeCounts['one-time']})
-                  </Button>
-                  <Button
-                    variant={membershipTypeFilter === 'recurring' ? 'default' : 'outline'}
-                    size="sm"
-                    onClick={() => setMembershipTypeFilter('recurring')}
-                  >
-                    <Heart className="mr-1.5 h-3 w-3" />
-                    {t.donorsFilter.recurring} ({membershipTypeCounts.recurring})
-                  </Button>
-                </div>
+                <span className="text-xs text-muted-foreground mr-1 ml-2">{t.donorsFilter.modalityLabel}</span>
+                <Button
+                  variant={membershipTypeFilter === 'one-time' ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => setMembershipTypeFilter(membershipTypeFilter === 'one-time' ? null : 'one-time')}
+                >
+                  {t.donorsFilter.oneTime} ({membershipTypeCounts['one-time']})
+                </Button>
+                <Button
+                  variant={membershipTypeFilter === 'recurring' ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => setMembershipTypeFilter(membershipTypeFilter === 'recurring' ? null : 'recurring')}
+                >
+                  <Heart className="mr-1.5 h-3 w-3" />
+                  {t.donorsFilter.recurring} ({membershipTypeCounts.recurring})
+                </Button>
 
                 {/* Bloc Periodicitat */}
-                <div className="flex items-center gap-1.5">
-                  <span className="text-xs text-muted-foreground">{t.donorsFilter.periodicityLabel}:</span>
-                  <Select value={periodicityFilter} onValueChange={(v) => setPeriodicityFilter(v as typeof periodicityFilter)}>
-                    <SelectTrigger className="h-8 w-[220px] text-sm">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">{t.donorsFilter.allPeriodicity} ({periodicityCounts.all})</SelectItem>
-                      <SelectItem value="monthly">{t.donorsFilter.periodicityMonthly} ({periodicityCounts.monthly})</SelectItem>
-                      <SelectItem value="quarterly">{t.donorsFilter.periodicityQuarterly} ({periodicityCounts.quarterly})</SelectItem>
-                      <SelectItem value="semiannual">{t.donorsFilter.periodicitySemiannual} ({periodicityCounts.semiannual})</SelectItem>
-                      <SelectItem value="annual">{t.donorsFilter.periodicityAnnual} ({periodicityCounts.annual})</SelectItem>
-                      <SelectItem value="manual">{t.donorsFilter.periodicityManual} ({periodicityCounts.manual})</SelectItem>
-                      <SelectItem value="none">{t.donorsFilter.noPeriodicity} ({periodicityCounts.none})</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
+                <span className="text-xs text-muted-foreground mr-1 ml-2">{t.donorsFilter.periodicityLabel}</span>
+                <Select value={periodicityFilter} onValueChange={(v) => setPeriodicityFilter(v as typeof periodicityFilter)}>
+                  <SelectTrigger className="h-8 w-[180px] text-sm">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">{t.donorsFilter.allPeriodicity}</SelectItem>
+                    <SelectItem value="monthly">{t.donorsFilter.periodicityMonthly} ({periodicityCounts.monthly})</SelectItem>
+                    <SelectItem value="quarterly">{t.donorsFilter.periodicityQuarterly} ({periodicityCounts.quarterly})</SelectItem>
+                    <SelectItem value="semiannual">{t.donorsFilter.periodicitySemiannual} ({periodicityCounts.semiannual})</SelectItem>
+                    <SelectItem value="annual">{t.donorsFilter.periodicityAnnual} ({periodicityCounts.annual})</SelectItem>
+                    <SelectItem value="manual">{t.donorsFilter.periodicityManual} ({periodicityCounts.manual})</SelectItem>
+                    <SelectItem value="none">{t.donorsFilter.noPeriodicity} ({periodicityCounts.none})</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
             </div>
 
@@ -1200,7 +1180,7 @@ export function DonorManager() {
             )}
 
             {/* Avís de filtre actiu: donants/socis actius al període */}
-            {hasUrlFilter && (activeViewFilter || membershipTypeFilter !== 'all') && !showIncompleteOnly && (
+            {hasUrlFilter && (activeViewFilter || membershipTypeFilter !== null) && !showIncompleteOnly && (
               <div className="mb-4 p-3 bg-violet-50 border border-violet-200 rounded-lg flex items-center gap-3">
                 <Heart className="h-5 w-5 text-violet-500 flex-shrink-0" />
                 <div className="flex-1">
