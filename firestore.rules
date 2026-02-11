@@ -270,12 +270,12 @@ service cloud.firestore {
         // UPDATE: bloquejar modificació directa de camps d'arxivat
         // Només l'API (Admin SDK) pot escriure aquests camps
         // GUARDRAIL: Ni tan sols SuperAdmin pot via client (arxivat sempre via API)
+        // NOTA: .get(field, null) per documents antics que no tenen camps d'arxivat
         allow update: if (isAdminOf(orgId) || isSuperAdmin())
           && (
-            // Camps d'arxivat NO poden canviar MAI via client
-            request.resource.data.archivedAt == resource.data.archivedAt
-            && request.resource.data.archivedByUid == resource.data.archivedByUid
-            && request.resource.data.archivedFromAction == resource.data.archivedFromAction
+            request.resource.data.get('archivedAt', null) == resource.data.get('archivedAt', null)
+            && request.resource.data.get('archivedByUid', null) == resource.data.get('archivedByUid', null)
+            && request.resource.data.get('archivedFromAction', null) == resource.data.get('archivedFromAction', null)
           );
 
         // DELETE FÍSIC: PROHIBIT (integritat referencial)
@@ -293,11 +293,12 @@ service cloud.firestore {
 
         // UPDATE: només admin (no user) + bloquejar modificació directa de camps d'arxivat
         // GUARDRAIL: Ni tan sols SuperAdmin pot via client (arxivat sempre via API)
+        // NOTA: .get(field, null) per documents antics que no tenen camps d'arxivat
         allow update: if (isAdminOf(orgId) || isSuperAdmin())
           && (
-            request.resource.data.archivedAt == resource.data.archivedAt
-            && request.resource.data.archivedByUid == resource.data.archivedByUid
-            && request.resource.data.archivedFromAction == resource.data.archivedFromAction
+            request.resource.data.get('archivedAt', null) == resource.data.get('archivedAt', null)
+            && request.resource.data.get('archivedByUid', null) == resource.data.get('archivedByUid', null)
+            && request.resource.data.get('archivedFromAction', null) == resource.data.get('archivedFromAction', null)
           );
 
         // DELETE FÍSIC: PROHIBIT (integritat referencial)
@@ -333,11 +334,12 @@ service cloud.firestore {
         // UPDATE: bloquejar modificació directa de camps de desactivació
         // Només l'API (Admin SDK) pot escriure aquests camps
         // GUARDRAIL v1.36: evitar desactivació directa via client
+        // NOTA: .get(field, null) per documents antics que no tenen camps d'arxivat
         allow update: if canWriteContacts()
           && (
-            request.resource.data.archivedAt == resource.data.archivedAt
-            && request.resource.data.archivedByUid == resource.data.archivedByUid
-            && request.resource.data.archivedFromAction == resource.data.archivedFromAction
+            request.resource.data.get('archivedAt', null) == resource.data.get('archivedAt', null)
+            && request.resource.data.get('archivedByUid', null) == resource.data.get('archivedByUid', null)
+            && request.resource.data.get('archivedFromAction', null) == resource.data.get('archivedFromAction', null)
           );
 
         // DELETE FÍSIC: PROHIBIT (integritat referencial)
@@ -383,11 +385,12 @@ service cloud.firestore {
         // UPDATE: bloquejar modificació directa de camps d'arxivat
         // Només l'API (Admin SDK) pot escriure aquests camps
         // GUARDRAIL: Ni tan sols SuperAdmin pot via client (arxivat sempre via API)
+        // NOTA: .get(field, null) per documents antics que no tenen camps d'arxivat
         allow update: if (isAdminOf(orgId) || isSuperAdmin())
           && (
-            request.resource.data.archivedAt == resource.data.archivedAt
-            && request.resource.data.archivedByUid == resource.data.archivedByUid
-            && request.resource.data.archivedFromAction == resource.data.archivedFromAction
+            request.resource.data.get('archivedAt', null) == resource.data.get('archivedAt', null)
+            && request.resource.data.get('archivedByUid', null) == resource.data.get('archivedByUid', null)
+            && request.resource.data.get('archivedFromAction', null) == resource.data.get('archivedFromAction', null)
           );
 
         // DELETE FÍSIC: PROHIBIT (integritat referencial)
@@ -481,9 +484,10 @@ service cloud.firestore {
           )
           && (
             // Camps de traça d'arxivat: no es poden modificar des de client
-            request.resource.data.archivedAt == resource.data.archivedAt
-            && request.resource.data.archivedByUid == resource.data.archivedByUid
-            && request.resource.data.archivedFromAction == resource.data.archivedFromAction
+            // NOTA: .get(field, null) per documents antics que no tenen camps d'arxivat
+            request.resource.data.get('archivedAt', null) == resource.data.get('archivedAt', null)
+            && request.resource.data.get('archivedByUid', null) == resource.data.get('archivedByUid', null)
+            && request.resource.data.get('archivedFromAction', null) == resource.data.get('archivedFromAction', null)
           );
 
         // DELETE FÍSIC: PROHIBIT (v1.36)

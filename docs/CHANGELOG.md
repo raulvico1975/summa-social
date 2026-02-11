@@ -4,6 +4,17 @@ Historial de canvis del projecte, ordenat de més recent a més antic.
 
 ---
 
+## [1.41.0] - 2026-02-11
+
+### Donants: filtres per Tipus i Modalitat
+
+- Filtres per Tipus (Particular / Empresa) i Modalitat (Puntual / Soci) al dashboard de donants
+- Lògica AND amb tots els filtres existents (estat, cerca, incomplets, devolucions)
+- Comptadors visibles per cada opció de filtre
+- i18n complet (ca, es, fr)
+
+---
+
 ## [1.40.0] - 2026-02-10
 
 ### Admin SDK Compartit + Registre via API
