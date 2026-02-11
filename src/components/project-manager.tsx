@@ -369,7 +369,7 @@ export function ProjectManager() {
                                             size="icon"
                                             className="text-amber-500 hover:text-amber-600"
                                             onClick={() => handleArchiveRequest(project)}
-                                            title={t.common?.actions?.archive ?? 'Eliminar'}
+                                            title={t.common?.archive ?? 'Eliminar'}
                                             >
                                             <Archive className="h-4 w-4" />
                                         </Button>

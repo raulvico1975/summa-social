@@ -363,7 +363,10 @@ export type Donor = Contact & {
   phone?: string;
   // Notes
   notes?: string;
-  
+
+  // Persona de contacte (només per empreses)
+  contactPersonName?: string | null;
+
   // ═══════════════════════════════════════════════════════════════════════════
   // CAMPS PER GESTIÓ DE DEVOLUCIONS
   // ═══════════════════════════════════════════════════════════════════════════

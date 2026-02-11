@@ -110,6 +110,7 @@ const emptyFormData: DonorFormData = {
   status: 'active',
   inactiveSince: undefined,
   periodicityQuota: null,
+  contactPersonName: null,
 };
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -699,7 +700,14 @@ export function DonorManager() {
   };
 
   const handleFormChange = (field: keyof DonorFormData, value: any) => {
-    setFormData(prev => ({ ...prev, [field]: value }));
+    setFormData(prev => {
+      const next = { ...prev, [field]: value };
+      // Netejar contactPersonName si canvia a individual
+      if (field === 'donorType' && value === 'individual') {
+        next.contactPersonName = null;
+      }
+      return next;
+    });
   };
 
   const handleSave = async () => {
@@ -760,6 +768,9 @@ export function DonorManager() {
       status: formData.status || 'active',
       inactiveSince: inactiveSince,
       periodicityQuota: formData.periodicityQuota ?? null,
+      contactPersonName: formData.donorType === 'company'
+        ? (formData.contactPersonName?.trim() || null)
+        : null,
       updatedAt: now,
     };
 
@@ -1591,6 +1602,18 @@ export function DonorManager() {
                         {t.donors.inactiveSinceLabel}: {new Date(formData.inactiveSince).toLocaleDateString()}
                       </div>
                     )}
+
+                    {formData.donorType === 'company' && (
+                      <div className="space-y-1.5">
+                        <Label htmlFor="contactPersonName">{t.donors.contactPersonName}</Label>
+                        <Input
+                          id="contactPersonName"
+                          value={formData.contactPersonName || ''}
+                          onChange={(e) => handleFormChange('contactPersonName', e.target.value)}
+                          placeholder={t.donors.contactPersonNamePlaceholder}
+                        />
+                      </div>
+                    )}
                   </div>
                 </div>
 
@@ -1618,6 +1641,18 @@ export function DonorManager() {
                         placeholder="600 000 000"
                       />
                     </div>
+
+                    {formData.donorType === 'company' && (
+                      <div className="space-y-1.5">
+                        <Label htmlFor="contactPersonName">{t.donors.contactPersonName}</Label>
+                        <Input
+                          id="contactPersonName"
+                          value={formData.contactPersonName || ''}
+                          onChange={(e) => handleFormChange('contactPersonName', e.target.value)}
+                          placeholder={t.donors.contactPersonNamePlaceholder}
+                        />
+                      </div>
+                    )}
                   </div>
                 </div>
 

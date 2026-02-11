@@ -1,6 +1,6 @@
 # ═══════════════════════════════════════════════════════════════════════════════
 # SUMMA SOCIAL - REFERÈNCIA COMPLETA DEL PROJECTE
-# Versió 1.37 - Febrer 2026
+# Versió 1.40 - Febrer 2026
 # ═══════════════════════════════════════════════════════════════════════════════
 
 
@@ -1312,7 +1312,7 @@ Si hi ha socis sense IBAN:
 | SEPA Domiciliacions | Pre-banc | Generar cobrament | **pain.008** |
 | Divisor de remesa IN | Post-banc | Desagregar ingrés cobrat | cap (es processa CSV/XLSX del banc) |
 
-### 3.3.9.7 Wizard SEPA pain.008 (ACTUALITZAT v1.32)
+### 3.3.9.7 Wizard SEPA pain.008 (ACTUALITZAT v1.40)
 
 **Accés:** Donants → Remeses de cobrament
 
@@ -1321,7 +1321,7 @@ Si hi ha socis sense IBAN:
 | Pas | Nom | Funció |
 |-----|-----|--------|
 | 1 | Configuració | Seleccionar compte bancari, data cobrament, periodicitat |
-| 2 | Selecció | Triar socis a incloure (bulk selection, cerca, filtre) |
+| 2 | Selecció | Triar socis a incloure (pre-selecció automàtica, bulk, cerca, filtre) |
 | 3 | Revisió | Validar i descarregar XML |
 
 **Periodicitat de quota (NOU v1.32):**
@@ -1338,6 +1338,24 @@ Camp `periodicityQuota` al contacte:
 | `null` | No definit |
 
 **Filtre per periodicitat:** El wizard permet filtrar socis per periodicitat per generar remeses segmentades.
+
+**Pre-selecció automàtica per periodicitat (NOU v1.40):**
+
+Quan l'usuari selecciona una periodicitat al Pas 1, el sistema pre-marca automàticament els socis que "toca cobrar" al Pas 2, basant-se en:
+
+1. **Períodes naturals:** El càlcul usa els períodes naturals del calendari (mes, trimestre, semestre, any), no intervals arbitraris
+2. **Última execució (`lastSepaRunDate`):** Si el soci ja ha estat inclòs en una remesa dins del període natural actual, NO es pre-selecciona
+3. **Periodicitat del soci:** Només es pre-seleccionen els socis que tenen la periodicitat corresponent al filtre
+
+**Exemples de períodes naturals:**
+- `monthly`: Gen = 1-31 gen, Feb = 1-28/29 feb, etc.
+- `quarterly`: Q1 = gen-mar, Q2 = abr-jun, Q3 = jul-set, Q4 = oct-des
+- `semiannual`: H1 = gen-jun, H2 = jul-des
+- `annual`: gen-des
+
+**Simplificació v1.40:** S'ha eliminat el concepte "overdue" (vençut). Un soci es marca com a candidat si NO ha estat cobrat al període natural actual; no es distingeix entre "toca cobrar ara" i "ja tocava cobrar abans".
+
+**Lògica:** `src/lib/sepa/donor-collection-status.ts` — mòdul `isDueForCollection()` que calcula si un donant toca cobrar.
 
 **Memòria d'execució (run memory):**
 
@@ -2063,21 +2081,28 @@ Panel lateral que s'obre clicant el nom d'un donant:
 - Resum per any
 - Generació de certificats
 
-### 3.6.8 Dinàmica de Donants (NOU v1.32)
+### 3.6.8 Dinàmica de Donants (ACTUALITZAT v1.40)
 
 Panell d'anàlisi que mostra l'evolució dels donants segons el període seleccionat.
 
 **Accés:** Donants → Bloc "Dinàmica de donants" (part inferior de la pantalla)
+
+**Redisseny v1.40:** 5 blocs uniformes amb separació Persones Físiques (PF) / Persones Jurídiques (PJ):
 
 **Categories d'anàlisi:**
 
 | Categoria | Definició | Ordenació |
 |-----------|-----------|-----------|
 | **Altes** | Primer moviment dins el període (sense històric anterior) | Per data primer moviment (desc) |
-| **Sense moviments** | Tenia històric però zero dins el període actual | Per data últim moviment (desc) |
-| **Reactivacions** | Zero al període anterior, sí al actual (amb vida abans del prev) | Per data primer moviment (desc) |
-| **Amb devolucions** | Té almenys una devolució dins el període | Per suma devolucions (desc) |
-| **Aportació decreixent** | Import al període actual < import al període anterior | Per delta negatiu (asc) |
+| **Baixes** | Donants que tenien històric però zero moviments dins el període actual | Per data últim moviment (desc) |
+| **Aportació a l'alça** | Import al període actual > import al període anterior | Per delta positiu (desc) |
+| **Aportació a la baixa** | Import al període actual < import al període anterior | Per delta negatiu (asc) |
+| **Top 15** | 15 donants amb major aportació al període, amb split PF / PJ | Per import total (desc) |
+
+**Distincions PF / PJ (NOU v1.40):**
+- **Persona Física (PF):** `contactType === 'individual'` o NIF comença per dígit / X / Y / Z
+- **Persona Jurídica (PJ):** `contactType === 'company'` o resta de patrons NIF
+- Top 15 mostra dues llistes separades quan hi ha ambdós tipus
 
 **Transaccions elegibles:**
 - Té `contactId` (vinculat a donant)
@@ -4078,7 +4103,7 @@ Guardrails per evitar arxivar liquidacions (ExpenseReports) que tenen tiquets pe
 - `src/app/[orgSlug]/dashboard/movimientos/liquidacions/page.tsx` — UI liquidacions
 - `src/lib/category-health.ts` — checkOrphanTickets()
 
-### 3.10.5g Resum Complet de Guardrails d'Integritat (v1.36)
+### 3.10.5g Resum Complet de Guardrails d'Integritat (ACTUALITZAT v1.40)
 
 **Taula resum de totes les entitats protegides:**
 
@@ -4099,6 +4124,65 @@ Guardrails per evitar arxivar liquidacions (ExpenseReports) que tenen tiquets pe
 | H | BankAccounts orfes (`tx.bankAccountId` → doc inexistent) | Warning |
 | I | Contactes orfes (`tx.contactId` → doc inexistent) | Warning |
 | J | Tiquets orfes (`pendingDoc.reportId` → doc inexistent) | Warning |
+| K | Remeses òrfenes (fills amb `parentTransactionId` inexistent) | Warning |
+| L | ExpenseLinks orfes (`txId` inexistent a transactions) | Warning |
+
+**Nota v1.40:** Blocs K i L afegits. K integrat al dashboard de health; L exportat com a funció independent (`checkOrphanExpenseLinks()`) però no integrat al dashboard general perquè `expenseLinks` no es carreguen a la vista principal.
+
+### 3.10.5h Admin SDK Compartit (NOU v1.40)
+
+Centralització de la inicialització de Firebase Admin SDK en un únic helper, eliminant ~500 línies de codi duplicat a les rutes API.
+
+**Helper centralitzat:** `src/lib/api/admin-sdk.ts`
+
+**Exports:**
+
+| Export | Funció |
+|--------|--------|
+| `getAdminApp()` | Instància singleton de l'app Admin |
+| `getAdminDb()` | Referència a Firestore Admin |
+| `getAdminAuth()` | Referència a Auth Admin |
+| `verifyIdToken(token)` | Verifica i retorna el decoded token |
+| `validateUserMembership(orgId, uid, roles?)` | Valida que l'usuari pertany a l'org amb rol adequat |
+| `BATCH_SIZE` | Constant = 50 (màxim ops per batch Firestore) |
+
+**INVARIANT:** `BATCH_SIZE = 50` — Firestore limita a 500 ops per batch, però per seguretat s'usa 50. No negociable.
+
+**Inicialització:** Singleton cached (no reinit per request). Si ja existeix una app inicialitzada, la reutilitza.
+
+**Rutes migrades a Admin SDK:**
+- `POST /api/categories/archive`
+- `POST /api/projects/archive`
+- `POST /api/bank-accounts/archive`
+- `POST /api/expense-reports/archive`
+- `POST /api/contacts/archive`
+- `POST /api/contacts/import`
+- `POST /api/invitations/resolve` (NOU v1.40)
+- `POST /api/invitations/accept` (NOU v1.40)
+
+### 3.10.5i Registre i Invitacions via Admin API (NOU v1.40)
+
+El flux de registre d'usuaris convidats ha estat migrat a Admin SDK per resoldre problemes amb les Firestore Rules que bloquejaven l'escriptura client.
+
+**Problema:** Les Firestore Rules impedien que un usuari acabat de crear (sense document `members/{uid}` encara) pogués escriure el seu propi document de membre.
+
+**Solució:** Dues noves rutes API que operen amb Admin SDK:
+
+| Ruta | Funció |
+|------|--------|
+| `POST /api/invitations/resolve` | Llegeix la invitació per codi (Admin SDK, bypassa rules de lectura) |
+| `POST /api/invitations/accept` | Crea el document `members/{uid}`, marca invitació com `accepted`, assigna `organizationId` al perfil |
+
+**Flux complet:**
+1. Usuari obre link d'invitació → pàgina `/registre?code=XXX`
+2. UI crida `/api/invitations/resolve` amb el codi → retorna dades de la invitació (orgId, email, role)
+3. Usuari crea compte Firebase Auth (email + password)
+4. UI crida `/api/invitations/accept` amb `{ orgId, invitationId, uid, email, role }` → Admin SDK crea membre + actualitza invitació
+
+**Fitxers:**
+- `src/app/api/invitations/resolve/route.ts` — Resolve invitació
+- `src/app/api/invitations/accept/route.ts` — Acceptar invitació
+- `src/app/registre/page.tsx` — Pàgina de registre
 
 ### 3.10.6 Fitxers principals
 
@@ -4107,6 +4191,7 @@ Guardrails per evitar arxivar liquidacions (ExpenseReports) que tenen tiquets pe
 | `src/app/admin/page.tsx` | Pàgina del panell SuperAdmin |
 | `src/components/admin/create-organization-dialog.tsx` | Modal crear organització |
 | `src/lib/data.ts` | Constant `SUPER_ADMIN_UID` |
+| `src/lib/api/admin-sdk.ts` | Helper centralitzat Admin SDK (NOU v1.40) |
 
 ### 3.10.7 Backup Local d'Organitzacions (NOU v1.28)
 
@@ -4961,6 +5046,37 @@ Indicadors que requeririen intervenció:
 - Hook pre-commit amb Husky
 - `npm test` abans de cada commit
 
+## 9.5 Gate i18n pre-commit (NOU v1.40)
+
+Validació automàtica que bloqueja commits si falten claus `tr()` a `ca.json` (idioma base).
+
+**Funcionament:**
+1. Script `scripts/i18n/validate-tr-keys-exist-in-ca.mjs` escaneja el codi font buscant crides `tr("clau")` i `tr('clau')`
+2. Comprova que cada clau existeix a `src/i18n/locales/ca.json`
+3. Si falten claus → llista les absents i bloqueja el commit (exit 1)
+
+**Integració:**
+- Executat al hook pre-commit (`.husky/pre-commit`)
+- Executat a `scripts/verify-local.sh` (verificació local pre-deploy)
+- Comanda: `npm run i18n:check`
+
+**Merge Storage + local (NOU v1.40):**
+- `src/i18n/json-runtime.ts` fa merge entre traduccions remotes (Firebase Storage, editades per SuperAdmin) i el bundle local
+- Si una clau existeix a Storage, té prioritat; si no, cau al bundle local
+- Correcció: abans el merge podia perdre claus locals noves si Storage no les tenia
+
+## 9.6 SafeSelect — Guard per SelectItem (NOU v1.40)
+
+Helper centralitzat per filtrar valors invàlids abans de renderitzar `Select.Item` (Radix UI), que llança error si `value` és buit.
+
+**Helper:** `src/lib/ui/safe-select-options.ts` — `safeSelectOptions(items)`
+
+**Què fa:** Filtra items on `value` és `""`, `null`, `undefined` o `false` abans de passar-los al `Select.Root`.
+
+**Usat a:** `donor-importer.tsx`, `donor-manager.tsx`, `employee-manager.tsx`, `supplier-manager.tsx`, `transactions-table.tsx`
+
+**Problema que resol:** Categories amb ID invàlid (buit o null) provocaven crash de Radix UI. Pot passar amb dades legacy o importacions parcials.
+
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # 10. ROADMAP / FUNCIONALITATS PENDENTS
@@ -4970,6 +5086,19 @@ Indicadors que requeririen intervenció:
 
 - ⚠️ **i18n PT**: `guides.importDonors.steps` longitud diferent (base=5, pt=6) + clau extra `.steps.5`
 - ⚠️ **i18n FR**: `help.dashboard.steps` longitud diferent (base=5, fr=4) + `help.dashboard.extra.order.items` (base=4, fr=3)
+
+## Completades v1.40
+- ✅ Pre-selecció automàtica de donants al wizard SEPA pain.008 per periodicitat natural
+- ✅ Dinàmica de donants redissenyada: 5 blocs, separació PF/PJ, Top 15
+- ✅ Admin SDK compartit centralitzat (`admin-sdk.ts`), -500 línies duplicades
+- ✅ Registre/invitacions migrat a Admin API (bypass Firestore Rules)
+- ✅ Health Check blocs K (remeses òrfenes) i L (expenseLinks orfes)
+- ✅ Gate i18n pre-commit: hard block si falten claus `tr()` a ca.json
+- ✅ Dashboard i SEPA 100% traduïbles via `tr()` (PT complet)
+- ✅ Merge Storage + local per i18n amb fallback correcte
+- ✅ SafeSelect guard per evitar crash Radix UI amb valors buits
+- ✅ Periodicitat donants: mostra "sense periodicitat" quan null, persisteix monthly explícitament
+- ✅ Neteja massiva de console.logs en producció
 
 ## Completades v1.29
 - ✅ Adaptació mòbil completa: patrons normalitzats per a barres d'accions, navegació i taules
@@ -5871,5 +6000,5 @@ Les següents regles han de ser certes en tot moment. Si es trenca alguna, cal c
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # FI DEL DOCUMENT
-# Última actualització: Febrer 2026 - Versió 1.37
+# Última actualització: 10 Febrer 2026 - Versió 1.40
 # ═══════════════════════════════════════════════════════════════════════════════

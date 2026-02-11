@@ -4,6 +4,74 @@ Historial de canvis del projecte, ordenat de més recent a més antic.
 
 ---
 
+## [1.40.0] - 2026-02-10
+
+### Admin SDK Compartit + Registre via API
+
+- **Helper centralitzat** `src/lib/api/admin-sdk.ts`: singleton cached amb `getAdminApp()`, `getAdminDb()`, `getAdminAuth()`, `verifyIdToken()`, `validateUserMembership()`, `BATCH_SIZE`
+- ~500 línies de codi duplicat eliminades de 6 rutes API existents
+- **Noves rutes API per registre:**
+  - `POST /api/invitations/resolve` — llegeix invitació per codi (Admin SDK)
+  - `POST /api/invitations/accept` — crea membre + accepta invitació (Admin SDK)
+- Resolució del bug de registre on les Firestore Rules bloquejaven l'escriptura del document `members/{uid}` per a usuaris acabats de crear
+
+### SEPA pain.008 — Pre-selecció automàtica per periodicitat
+
+- **Pre-selecció automàtica** de donants al wizard SEPA basada en períodes naturals del calendari
+- Nou mòdul `src/lib/sepa/donor-collection-status.ts` amb `isDueForCollection()` que determina si un donant "toca cobrar" segons la seva periodicitat i `lastSepaRunDate`
+- Períodes naturals: mes, trimestre (Q1-Q4), semestre (H1-H2), any
+- Eliminat el concepte "overdue" (vençut) — simplificació: si no s'ha cobrat al període actual, es marca
+
+### Dinàmica de Donants — Redisseny complet
+
+- **5 blocs uniformes:** Altes, Baixes, Aportació a l'alça, Aportació a la baixa, Top 15
+- **Separació PF/PJ:** Top 15 mostra dues llistes (Persones Físiques / Persones Jurídiques)
+- Detecció de baixes (donants amb històric previ sense moviments al període)
+- Periodicitat: mostra "sense periodicitat" quan null, persisteix monthly explícitament
+
+### i18n — Gate pre-commit + Dashboard/SEPA traduïbles
+
+- **Gate hard-block:** Script `validate-tr-keys-exist-in-ca.mjs` bloqueja commits si falten claus `tr()` a `ca.json`
+- Integrat a `.husky/pre-commit` i `scripts/verify-local.sh`
+- Dashboard migrat a `tr()` complet (31 claus noves, suport PT)
+- Components SEPA wizard migrats a `tr()` (12 claus noves)
+- Strings residuals del splitter de remeses i SEPA traduïts
+- Merge Storage + local corregit: fallback correcte quan clau local nova no existeix a Storage
+
+### Health Check — Blocs K i L
+
+- **Bloc K:** `checkOrphanRemittances()` — fills de remesa amb `parentTransactionId` inexistent
+- **Bloc L:** `checkOrphanExpenseLinks()` — expenseLinks amb `txId` inexistent
+- K integrat al dashboard de health; L exportat com a funció independent
+
+### UI — SafeSelect guard
+
+- Nou helper `safeSelectOptions()` a `src/lib/ui/safe-select-options.ts`
+- Filtra valors invàlids (`""`, null, undefined) abans de renderitzar `Select.Item` (Radix UI)
+- Aplicat a: donor-importer, donor-manager, employee-manager, supplier-manager, transactions-table
+- Fix periodicitat quota: evita `Select.Item` amb valor buit
+
+### Higiene
+
+- Neteja massiva de `console.log` en producció (~336 línies eliminades)
+- Eliminació de debug logs temporals del registre
+- Documentació evidència smoke tests cross-org Storage
+
+**Fitxers principals modificats:**
+- `src/lib/api/admin-sdk.ts` (NOU)
+- `src/app/api/invitations/resolve/route.ts` (NOU)
+- `src/app/api/invitations/accept/route.ts` (NOU)
+- `src/lib/sepa/donor-collection-status.ts` (NOU)
+- `src/lib/ui/safe-select-options.ts` (NOU)
+- `src/lib/donor-dynamics.ts` (redisseny)
+- `src/components/donor-manager.tsx` (dinàmica + periodicitat)
+- `src/components/sepa-collection/SepaCollectionWizard.tsx` (pre-selecció)
+- `src/components/sepa-collection/StepSelection.tsx` (pre-selecció)
+- `src/i18n/json-runtime.ts` (merge fix)
+- `src/app/registre/page.tsx` (migració Admin API)
+
+---
+
 ## [1.33.0] - 2026-02-06
 
 ### Documents Pendents — Relink i Robustesa

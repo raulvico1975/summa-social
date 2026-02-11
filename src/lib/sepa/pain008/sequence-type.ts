@@ -23,8 +23,9 @@ export function determineSequenceType(donor: Donor): SepaSequenceType {
   return 'RCUR';
 
   // Override manual del mandat té prioritat (si existeix)
-  if (donor.sepaMandate?.sequenceTypeOverride) {
-    return donor.sepaMandate.sequenceTypeOverride;
+  const seqOverride = donor.sepaMandate?.sequenceTypeOverride;
+  if (seqOverride) {
+    return seqOverride as SepaSequenceType;
   }
 
   // OOFF per donacions puntuals

@@ -77,6 +77,7 @@ type ColumnMapping = {
   status: string | null;
   memberSince: string | null;
   periodicityQuota: string | null;
+  contactPersonName: string | null;
 };
 
 type ImportRow = {
@@ -112,6 +113,7 @@ const emptyMapping: ColumnMapping = {
   status: null,
   memberSince: null,
   periodicityQuota: null,
+  contactPersonName: null,
 };
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -164,6 +166,7 @@ function autoDetectColumn(header: string): keyof ColumnMapping | null {
     status: ['estado', 'estat', 'status', 'activo', 'actiu', 'baja', 'baixa'],
     memberSince: ['membersince', 'dataalta', 'fechaalta', 'dateadhesion', 'socides', 'sociodesde', 'dataadesao'],
     periodicityQuota: ['periodicitat', 'periodicidad', 'periodicite', 'periodicidade', 'periodicity', 'frequencia', 'frequence'],
+    contactPersonName: ['personacontacte', 'nomcontacte', 'personadecontacto', 'contactperson', 'nomducontact', 'personacontacto'],
   };
 
   for (const [field, keywords] of Object.entries(patterns)) {
@@ -355,6 +358,7 @@ export function DonorImporter({
     status: t.importers.donor.fields.status,
     memberSince: t.importers.donor.fields.memberSince,
     periodicityQuota: t.importers.donor.fields.periodicityQuota,
+    contactPersonName: t.importers.donor.fields.contactPersonName,
   };
 
   // Carregar categories d'ingrés
@@ -583,6 +587,12 @@ export function DonorImporter({
         status: currentMapping.status ? parseStatus(row[currentMapping.status]) : 'active',
       };
 
+      // contactPersonName: només per empreses
+      const contactPersonRaw = currentMapping.contactPersonName ? String(row[currentMapping.contactPersonName] || '').trim() : '';
+      if (contactPersonRaw && parsed.donorType === 'company') {
+        parsed.contactPersonName = contactPersonRaw;
+      }
+
       // Parsejar memberSince si la columna està mapejada
       const memberSinceRaw = currentMapping.memberSince ? row[currentMapping.memberSince] : undefined;
       if (memberSinceRaw && String(memberSinceRaw).trim()) {
@@ -677,6 +687,12 @@ export function DonorImporter({
         phone: mapping.phone ? String(row[mapping.phone] || '').trim() : undefined,
         status: mapping.status ? parseStatus(row[mapping.status]) : 'active',
       };
+
+      // contactPersonName: només per empreses
+      const contactPersonRawManual = mapping.contactPersonName ? String(row[mapping.contactPersonName] || '').trim() : '';
+      if (contactPersonRawManual && parsed.donorType === 'company') {
+        parsed.contactPersonName = contactPersonRawManual;
+      }
 
       // Parsejar memberSince si la columna està mapejada
       const memberSinceRaw = mapping.memberSince ? row[mapping.memberSince] : undefined;
@@ -841,6 +857,7 @@ export function DonorImporter({
             }
             if (row.parsed.memberSince) updateData.memberSince = row.parsed.memberSince;
             if ((row.parsed as any).periodicityQuota) updateData.periodicityQuota = (row.parsed as any).periodicityQuota;
+            if (row.parsed.contactPersonName) updateData.contactPersonName = row.parsed.contactPersonName;
 
             const prunedUpdate = pruneNullish(updateData);
             const safeUpdate = stripArchiveFields(prunedUpdate);
@@ -881,6 +898,7 @@ export function DonorImporter({
           }
           if (row.parsed.memberSince) cleanData.memberSince = row.parsed.memberSince;
           if ((row.parsed as any).periodicityQuota) cleanData.periodicityQuota = (row.parsed as any).periodicityQuota;
+          if (row.parsed.contactPersonName) cleanData.contactPersonName = row.parsed.contactPersonName;
 
           // Determinar defaultCategoryId
           let defaultCategoryId: string | null = null;
