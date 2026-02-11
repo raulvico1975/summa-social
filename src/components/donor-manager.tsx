@@ -87,6 +87,7 @@ import { computeDonorDynamics, type DonorWithMeta, type DonorDynamicsResult } fr
 import { MOBILE_ACTIONS_BAR, MOBILE_CTA_PRIMARY } from '@/lib/ui/mobile-actions';
 import { filterValidSelectItems } from '@/lib/ui/safe-select-options';
 import { CannotArchiveContactDialog } from '@/components/contacts/cannot-archive-contact-dialog';
+import { getPeriodicitySuffix } from '@/lib/donors/periodicity-suffix';
 
 type DonorFormData = Omit<Donor, 'id' | 'createdAt' | 'updatedAt'>;
 
@@ -1212,7 +1213,7 @@ export function DonorManager() {
                       { label: 'NIF', value: donor.taxId || <span className="text-amber-500">-</span> },
                       { value: donor.donorType === 'individual' ? t.donors.types.individual : t.donors.types.company },
                       ...(donor.membershipType === 'recurring' && donor.monthlyAmount
-                        ? [{ value: formatCurrencyEU(donor.monthlyAmount) + `/${t.donors.perMonth}` }]
+                        ? [{ value: formatCurrencyEU(donor.monthlyAmount) + `/${getPeriodicitySuffix(donor.periodicityQuota, t)}` }]
                         : []
                       ),
                     ]}
@@ -1389,7 +1390,7 @@ export function DonorManager() {
                         </TableCell>
                         <TableCell className="py-1 text-xs">
                           {donor.membershipType === 'recurring' && donor.monthlyAmount
-                            ? formatCurrencyEU(donor.monthlyAmount) + `/${t.donors.perMonth}`
+                            ? formatCurrencyEU(donor.monthlyAmount) + `/${getPeriodicitySuffix(donor.periodicityQuota, t)}`
                             : '-'
                           }
                         </TableCell>
