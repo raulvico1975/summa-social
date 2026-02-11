@@ -10,6 +10,7 @@ import { formatCurrencyEU } from '@/lib/normalize';
 import { useTranslations } from '@/i18n';
 import { useToast } from '@/hooks/use-toast';
 import { jsPDF } from 'jspdf';
+import { getPeriodicitySuffix } from '@/lib/donors/periodicity-suffix';
 
 // UI Components
 import {
@@ -1393,7 +1394,7 @@ export function DonorDetailDrawer({ donor, open, onOpenChange, onEdit }: DonorDe
               <Badge className="bg-green-100 text-green-800">
                 <RefreshCw className="mr-1 h-3 w-3" />
                 {t.donors.membership.recurring}
-                {donor.monthlyAmount && ` (${formatCurrencyEU(donor.monthlyAmount)}/${t.donors.perMonth})`}
+                {donor.monthlyAmount && ` (${formatCurrencyEU(donor.monthlyAmount)}/${getPeriodicitySuffix(donor.periodicityQuota, t)})`}
               </Badge>
             ) : (
               <Badge variant="secondary">{t.donors.membership.oneTime}</Badge>
