@@ -302,6 +302,9 @@ export function DonorManager() {
   // Nous filtres: view=active i membershipType
   const [activeViewFilter, setActiveViewFilter] = React.useState(false);
   const [membershipTypeFilter, setMembershipTypeFilter] = React.useState<'all' | 'one-time' | 'recurring'>('all');
+
+  // Filtre per tipus de donant (persona física / jurídica)
+  const [donorTypeFilter, setDonorTypeFilter] = React.useState<'all' | 'individual' | 'company'>('all');
   const [periodFilter, setPeriodFilter] = React.useState<DateFilterValue | null>(null);
   const [periodLabel, setPeriodLabel] = React.useState<string>('');
 
@@ -472,8 +475,9 @@ export function DonorManager() {
     return { active, inactive, total: donors.length };
   }, [donors]);
 
-  // Filtrar donants (cerca + incomplets + estat + devolucions)
-  const filteredDonors = React.useMemo(() => {
+  // Base filtrada: estat + cerca + incomplets + devolucions + activeView
+  // (abans d'aplicar donorType i membershipType, per calcular comptadors)
+  const baseFilteredDonors = React.useMemo(() => {
     if (!donors) return [];
 
     let result = donors;
@@ -529,13 +533,46 @@ export function DonorManager() {
       result = result.filter(donor => activeContactIds.has(donor.id));
     }
 
+    return result;
+  }, [donors, showIncompleteOnly, showWithReturnsOnly, searchQuery, statusFilter, donorsWithReturns, activeViewFilter, activeContactIds]);
+
+  // Comptadors per tipus de donant i modalitat (sobre baseFilteredDonors)
+  const donorTypeCounts = React.useMemo(() => {
+    let individual = 0;
+    let company = 0;
+    for (const d of baseFilteredDonors) {
+      if (d.donorType === 'company') company++;
+      else individual++;
+    }
+    return { all: baseFilteredDonors.length, individual, company };
+  }, [baseFilteredDonors]);
+
+  const membershipTypeCounts = React.useMemo(() => {
+    let oneTime = 0;
+    let recurring = 0;
+    for (const d of baseFilteredDonors) {
+      if ((d.membershipType || 'one-time') === 'recurring') recurring++;
+      else oneTime++;
+    }
+    return { all: baseFilteredDonors.length, 'one-time': oneTime, recurring };
+  }, [baseFilteredDonors]);
+
+  // Filtrar donants (aplica donorType + membershipType sobre la base)
+  const filteredDonors = React.useMemo(() => {
+    let result = baseFilteredDonors;
+
     // Filtre per tipus de membre (donant puntual vs soci recurrent)
     if (membershipTypeFilter !== 'all') {
       result = result.filter(donor => (donor.membershipType || 'one-time') === membershipTypeFilter);
     }
 
+    // Filtre per tipus de donant (persona física / jurídica)
+    if (donorTypeFilter !== 'all') {
+      result = result.filter(donor => donor.donorType === donorTypeFilter);
+    }
+
     return result;
-  }, [donors, showIncompleteOnly, showWithReturnsOnly, searchQuery, statusFilter, donorsWithReturns, activeViewFilter, activeContactIds, membershipTypeFilter]);
+  }, [baseFilteredDonors, membershipTypeFilter, donorTypeFilter]);
 
   const incompleteDonorsCount = React.useMemo(() => {
     if (!donors) return 0;
@@ -1031,6 +1068,64 @@ export function DonorManager() {
                     </Button>
                   </>
                 )}
+              </div>
+
+              {/* Filtres per tipus de donant i modalitat */}
+              <div className="flex flex-wrap items-center gap-4">
+                {/* Bloc Tipus */}
+                <div className="flex items-center gap-1.5">
+                  <span className="text-xs text-muted-foreground">{t.donorsFilter.donorTypeLabel}:</span>
+                  <Button
+                    variant={donorTypeFilter === 'all' ? 'default' : 'outline'}
+                    size="sm"
+                    onClick={() => setDonorTypeFilter('all')}
+                  >
+                    {t.donorsFilter.allTypes} ({donorTypeCounts.all})
+                  </Button>
+                  <Button
+                    variant={donorTypeFilter === 'individual' ? 'default' : 'outline'}
+                    size="sm"
+                    onClick={() => setDonorTypeFilter('individual')}
+                  >
+                    <User className="mr-1.5 h-3 w-3" />
+                    {t.donorsFilter.individual} ({donorTypeCounts.individual})
+                  </Button>
+                  <Button
+                    variant={donorTypeFilter === 'company' ? 'default' : 'outline'}
+                    size="sm"
+                    onClick={() => setDonorTypeFilter('company')}
+                  >
+                    <Building2 className="mr-1.5 h-3 w-3" />
+                    {t.donorsFilter.company} ({donorTypeCounts.company})
+                  </Button>
+                </div>
+
+                {/* Bloc Modalitat */}
+                <div className="flex items-center gap-1.5">
+                  <span className="text-xs text-muted-foreground">{t.donorsFilter.modalityLabel}:</span>
+                  <Button
+                    variant={membershipTypeFilter === 'all' ? 'default' : 'outline'}
+                    size="sm"
+                    onClick={() => setMembershipTypeFilter('all')}
+                  >
+                    {t.donorsFilter.allModalities} ({membershipTypeCounts.all})
+                  </Button>
+                  <Button
+                    variant={membershipTypeFilter === 'one-time' ? 'default' : 'outline'}
+                    size="sm"
+                    onClick={() => setMembershipTypeFilter('one-time')}
+                  >
+                    {t.donorsFilter.oneTime} ({membershipTypeCounts['one-time']})
+                  </Button>
+                  <Button
+                    variant={membershipTypeFilter === 'recurring' ? 'default' : 'outline'}
+                    size="sm"
+                    onClick={() => setMembershipTypeFilter('recurring')}
+                  >
+                    <Heart className="mr-1.5 h-3 w-3" />
+                    {t.donorsFilter.recurring} ({membershipTypeCounts.recurring})
+                  </Button>
+                </div>
               </div>
             </div>
 

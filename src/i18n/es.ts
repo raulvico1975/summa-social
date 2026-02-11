@@ -2865,6 +2865,14 @@ export const es = {
   // Filtro donantes con devoluciones
   donorsFilter: {
     withReturns: "Con devoluciones",
+    donorTypeLabel: "Tipo",
+    allTypes: "Todos",
+    individual: "Particulares",
+    company: "Empresas",
+    modalityLabel: "Modalidad",
+    allModalities: "Todos",
+    oneTime: "Puntuales",
+    recurring: "Socios",
   },
   // Breadcrumb
   breadcrumb: {

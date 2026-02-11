@@ -2870,6 +2870,14 @@ export const ca = {
   // Filtre donants amb devolucions
   donorsFilter: {
     withReturns: "Amb devolucions",
+    donorTypeLabel: "Tipus",
+    allTypes: "Tots",
+    individual: "Particulars",
+    company: "Empreses",
+    modalityLabel: "Modalitat",
+    allModalities: "Tots",
+    oneTime: "Puntuals",
+    recurring: "Socis",
   },
   // Breadcrumb
   breadcrumb: {
