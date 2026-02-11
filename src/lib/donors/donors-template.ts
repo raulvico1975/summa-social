@@ -29,7 +29,7 @@ export const DONORS_TEMPLATE_HEADERS = [
   'Telèfon',
   'Email',
   'IBAN',
-  'Quota mensual',
+  'Quota',
   "Data d'alta",
   'Periodicitat quota',
   'Nom de contacte',
@@ -54,7 +54,7 @@ export const HEADER_TO_FIELD: Record<DonorTemplateHeader, string> = {
   'Telèfon': 'phone',
   'Email': 'email',
   'IBAN': 'iban',
-  'Quota mensual': 'monthlyAmount',
+  'Quota': 'monthlyAmount',
   "Data d'alta": 'memberSince',
   'Periodicitat quota': 'periodicityQuota',
   'Nom de contacte': 'contactPersonName',
@@ -83,9 +83,17 @@ function normalizeHeader(header: string): string {
 }
 
 /**
- * Comprova si les capçaleres del fitxer corresponen EXACTAMENT a la plantilla oficial.
- * Requisits estrictes:
- * - Mateixes columnes
+ * Capçaleres anteriors acceptades per compatibilitat.
+ * Clau = capçalera antiga (normalitzada), valor = capçalera oficial actual (normalitzada).
+ */
+const LEGACY_HEADER_ALIASES: Record<string, string> = {
+  'quota mensual': 'quota',
+};
+
+/**
+ * Comprova si les capçaleres del fitxer corresponen a la plantilla oficial.
+ * Requisits:
+ * - Mateixes columnes (o equivalents legacy)
  * - Mateix ordre
  * - Mateixa longitud
  * Comparació case-insensitive + trim + col·lapse espais.
@@ -100,9 +108,10 @@ export function isOfficialTemplate(headers: string[]): boolean {
   const normalizedHeaders = headers.map(normalizeHeader);
   const officialNormalized = DONORS_TEMPLATE_HEADERS.map(normalizeHeader);
 
-  // Comparar cada índex exactament
+  // Comparar cada índex (acceptant aliases legacy)
   for (let i = 0; i < officialNormalized.length; i++) {
-    if (normalizedHeaders[i] !== officialNormalized[i]) {
+    const h = normalizedHeaders[i];
+    if (h !== officialNormalized[i] && LEGACY_HEADER_ALIASES[h] !== officialNormalized[i]) {
       return false;
     }
   }
@@ -116,10 +125,20 @@ export function isOfficialTemplate(headers: string[]): boolean {
  */
 export function getOfficialTemplateMapping(headers: string[]): Record<string, number> {
   const mapping: Record<string, number> = {};
-  const normalizedHeaders = headers.map(h => h.trim().toLowerCase());
+  const normalizedHeaders = headers.map(normalizeHeader);
 
   for (const [header, field] of Object.entries(HEADER_TO_FIELD)) {
-    const idx = normalizedHeaders.indexOf(header.toLowerCase());
+    const normalizedOfficial = normalizeHeader(header);
+    let idx = normalizedHeaders.indexOf(normalizedOfficial);
+    // Fallback: buscar aliases legacy que apuntin a aquesta capçalera oficial
+    if (idx === -1) {
+      for (const [legacy, official] of Object.entries(LEGACY_HEADER_ALIASES)) {
+        if (official === normalizedOfficial) {
+          idx = normalizedHeaders.indexOf(legacy);
+          if (idx !== -1) break;
+        }
+      }
+    }
     if (idx !== -1) {
       mapping[field] = idx;
     }
@@ -222,7 +241,7 @@ export function downloadDonorsTemplate(): void {
     { wch: 12 },  // Telèfon
     { wch: 25 },  // Email
     { wch: 28 },  // IBAN
-    { wch: 14 },  // Quota mensual
+    { wch: 14 },  // Quota
     { wch: 14 },  // Data d'alta
     { wch: 18 },  // Periodicitat quota
     { wch: 25 },  // Nom de contacte

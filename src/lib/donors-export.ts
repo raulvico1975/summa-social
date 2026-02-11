@@ -105,7 +105,7 @@ export function exportDonorsToExcel(
       donor.phone || '',                            // Telèfon
       donor.email || '',                            // Email
       donor.iban ? formatIBANDisplay(donor.iban) : '', // IBAN
-      formatAmount(donor.monthlyAmount),            // Quota mensual
+      formatAmount(donor.monthlyAmount),            // Quota
       formatDateEU(donor.memberSince),               // Data d'alta
       getPeriodicityLabel(donor),                    // Periodicitat quota
       donor.donorType === 'company' ? (donor.contactPersonName ?? '') : '', // Nom de contacte
@@ -135,7 +135,7 @@ export function exportDonorsToExcel(
     { wch: 12 },  // Telèfon
     { wch: 25 },  // Email
     { wch: 28 },  // IBAN
-    { wch: 14 },  // Quota mensual
+    { wch: 14 },  // Quota
     { wch: 14 },  // Data d'alta
     { wch: 18 },  // Periodicitat quota
     { wch: 25 },  // Nom de contacte
