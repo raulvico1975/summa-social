@@ -161,6 +161,7 @@ export interface ExpenseLink {
 
   assignments: ExpenseAssignment[];
   projectIds: string[]; // per queries ràpides (array-contains)
+  budgetLineIds?: string[];
 
   note: string | null;
 
