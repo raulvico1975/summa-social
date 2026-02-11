@@ -564,6 +564,7 @@ export function DonorManager() {
       status: donor.status || 'active',
       inactiveSince: donor.inactiveSince,
       periodicityQuota: donor.periodicityQuota ?? null,
+      contactPersonName: donor.contactPersonName ?? null,
     });
     setIsDialogOpen(true);
   };
@@ -1604,17 +1605,6 @@ export function DonorManager() {
                       </div>
                     )}
 
-                    {formData.donorType === 'company' && (
-                      <div className="space-y-1.5">
-                        <Label htmlFor="contactPersonName">{t.donors.contactPersonName}</Label>
-                        <Input
-                          id="contactPersonName"
-                          value={formData.contactPersonName || ''}
-                          onChange={(e) => handleFormChange('contactPersonName', e.target.value)}
-                          placeholder={t.donors.contactPersonNamePlaceholder}
-                        />
-                      </div>
-                    )}
                   </div>
                 </div>
 
