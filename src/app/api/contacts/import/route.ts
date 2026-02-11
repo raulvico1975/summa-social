@@ -18,6 +18,7 @@ import {
   validateUserMembership,
   BATCH_SIZE,
 } from '@/lib/api/admin-sdk';
+import { requireOperationalAccess } from '@/lib/api/require-operational-access';
 
 // =============================================================================
 // CONSTANTS
@@ -112,20 +113,10 @@ export async function POST(
     );
   }
 
-  // 4. Membership check
+  // 4. Membership + accés operatiu (admin/user)
   const membership = await validateUserMembership(db, authResult.uid, orgId);
-  if (!membership.valid) {
-    return NextResponse.json(
-      { success: false, error: 'No ets membre d\'aquesta organitzacio', code: 'NOT_MEMBER' },
-      { status: 403 }
-    );
-  }
-  if (membership.role !== 'admin' && membership.role !== 'user') {
-    return NextResponse.json(
-      { success: false, error: 'No tens permisos per actualitzar contactes', code: 'FORBIDDEN' },
-      { status: 403 }
-    );
-  }
+  const accessError = requireOperationalAccess(membership);
+  if (accessError) return accessError;
 
   // 5. Pre-validació: llegir tots els docs i preparar writes
   const prepared: PreparedWrite[] = [];

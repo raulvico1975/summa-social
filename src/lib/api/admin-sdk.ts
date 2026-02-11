@@ -103,25 +103,39 @@ export async function verifyIdToken(request: NextRequest): Promise<AuthResult | 
 
 export interface MembershipValidation {
   valid: boolean;
-  role: string | null;
+  role: 'admin' | 'user' | 'viewer' | null;
 }
 
 /**
- * Valida que un usuari és membre d'una organització.
- * Retorna el rol si és vàlid, null si no és membre.
+ * Valida que un usuari és membre d'una organització o és SuperAdmin.
+ *
+ * Ordre de verificació:
+ * 1. Comprova si és membre de l'organització → retorna rol real
+ * 2. Comprova si és SuperAdmin (systemSuperAdmins/{uid}) → retorna 'admin'
+ * 3. Si cap dels dos → retorna invalid
  */
 export async function validateUserMembership(
   db: Firestore,
   uid: string,
   orgId: string
 ): Promise<MembershipValidation> {
-  const memberRef = db.doc(`organizations/${orgId}/members/${uid}`);
-  const memberSnap = await memberRef.get();
+  const memberSnap = await db
+    .doc(`organizations/${orgId}/members/${uid}`)
+    .get();
 
-  if (!memberSnap.exists) {
-    return { valid: false, role: null };
+  if (memberSnap.exists) {
+    const data = memberSnap.data();
+    return {
+      valid: true,
+      role: (data?.role as 'admin' | 'user' | 'viewer') ?? 'viewer',
+    };
   }
 
-  const data = memberSnap.data();
-  return { valid: true, role: data?.role as string };
+  // SuperAdmin bypass: accés admin a totes les organitzacions
+  const superAdminSnap = await db.doc(`systemSuperAdmins/${uid}`).get();
+  if (superAdminSnap.exists) {
+    return { valid: true, role: 'admin' };
+  }
+
+  return { valid: false, role: null };
 }

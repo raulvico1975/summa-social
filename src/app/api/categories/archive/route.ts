@@ -21,6 +21,7 @@ import {
   verifyIdToken,
   validateUserMembership,
 } from '@/lib/api/admin-sdk';
+import { requireOperationalAccess } from '@/lib/api/require-operational-access';
 
 // =============================================================================
 // TIPUS
@@ -87,22 +88,10 @@ export async function POST(
     );
   }
 
-  // 4. Validar membership de l'usuari a l'org especificada
+  // 4. Validar membership + accés operatiu (admin/user)
   const membership = await validateUserMembership(db, uid, orgId);
-  if (!membership.valid) {
-    return NextResponse.json(
-      { success: false, error: 'No ets membre d\'aquesta organització', code: 'NOT_MEMBER' },
-      { status: 403 }
-    );
-  }
-
-  // 5. Validar rol admin
-  if (membership.role !== 'admin') {
-    return NextResponse.json(
-      { success: false, error: 'Cal ser admin per arxivar categories', code: 'FORBIDDEN' },
-      { status: 403 }
-    );
-  }
+  const accessError = requireOperationalAccess(membership);
+  if (accessError) return accessError;
 
   // 6. Validar que fromCategory existeix i no està arxivada
   const fromCategoryRef = db.doc(`organizations/${orgId}/categories/${fromCategoryId}`);
