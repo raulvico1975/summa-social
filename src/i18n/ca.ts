@@ -2878,6 +2878,14 @@ export const ca = {
     allModalities: "Tots",
     oneTime: "Puntuals",
     recurring: "Socis",
+    periodicityLabel: "Periodicitat",
+    allPeriodicity: "Totes",
+    periodicityMonthly: "Mensual",
+    periodicityQuarterly: "Trimestral",
+    periodicitySemiannual: "Semestral",
+    periodicityAnnual: "Anual",
+    periodicityManual: "Puntual",
+    noPeriodicity: "Sense periodicitat",
   },
   // Breadcrumb
   breadcrumb: {

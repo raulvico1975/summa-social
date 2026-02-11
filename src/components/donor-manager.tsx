@@ -305,6 +305,9 @@ export function DonorManager() {
 
   // Filtre per tipus de donant (persona física / jurídica)
   const [donorTypeFilter, setDonorTypeFilter] = React.useState<'all' | 'individual' | 'company'>('all');
+
+  // Filtre per periodicitat de quota
+  const [periodicityFilter, setPeriodicityFilter] = React.useState<'all' | 'monthly' | 'quarterly' | 'semiannual' | 'annual' | 'manual' | 'none'>('all');
   const [periodFilter, setPeriodFilter] = React.useState<DateFilterValue | null>(null);
   const [periodLabel, setPeriodLabel] = React.useState<string>('');
 
@@ -557,6 +560,21 @@ export function DonorManager() {
     return { all: baseFilteredDonors.length, 'one-time': oneTime, recurring };
   }, [baseFilteredDonors]);
 
+  const periodicityCounts = React.useMemo(() => {
+    let monthly = 0, quarterly = 0, semiannual = 0, annual = 0, manual = 0, none = 0;
+    for (const d of baseFilteredDonors) {
+      switch (d.periodicityQuota) {
+        case 'monthly':    monthly++; break;
+        case 'quarterly':  quarterly++; break;
+        case 'semiannual': semiannual++; break;
+        case 'annual':     annual++; break;
+        case 'manual':     manual++; break;
+        default:           none++; break;
+      }
+    }
+    return { all: baseFilteredDonors.length, monthly, quarterly, semiannual, annual, manual, none };
+  }, [baseFilteredDonors]);
+
   // Filtrar donants (aplica donorType + membershipType sobre la base)
   const filteredDonors = React.useMemo(() => {
     let result = baseFilteredDonors;
@@ -571,8 +589,18 @@ export function DonorManager() {
       result = result.filter(donor => donor.donorType === donorTypeFilter);
     }
 
+    // Filtre per periodicitat de quota
+    if (periodicityFilter !== 'all') {
+      result = result.filter(d => {
+        if (periodicityFilter === 'none') {
+          return !d.periodicityQuota;
+        }
+        return d.periodicityQuota === periodicityFilter;
+      });
+    }
+
     return result;
-  }, [baseFilteredDonors, membershipTypeFilter, donorTypeFilter]);
+  }, [baseFilteredDonors, membershipTypeFilter, donorTypeFilter, periodicityFilter]);
 
   const incompleteDonorsCount = React.useMemo(() => {
     if (!donors) return 0;
@@ -1125,6 +1153,25 @@ export function DonorManager() {
                     <Heart className="mr-1.5 h-3 w-3" />
                     {t.donorsFilter.recurring} ({membershipTypeCounts.recurring})
                   </Button>
+                </div>
+
+                {/* Bloc Periodicitat */}
+                <div className="flex items-center gap-1.5">
+                  <span className="text-xs text-muted-foreground">{t.donorsFilter.periodicityLabel}:</span>
+                  <Select value={periodicityFilter} onValueChange={(v) => setPeriodicityFilter(v as typeof periodicityFilter)}>
+                    <SelectTrigger className="h-8 w-[220px] text-sm">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">{t.donorsFilter.allPeriodicity} ({periodicityCounts.all})</SelectItem>
+                      <SelectItem value="monthly">{t.donorsFilter.periodicityMonthly} ({periodicityCounts.monthly})</SelectItem>
+                      <SelectItem value="quarterly">{t.donorsFilter.periodicityQuarterly} ({periodicityCounts.quarterly})</SelectItem>
+                      <SelectItem value="semiannual">{t.donorsFilter.periodicitySemiannual} ({periodicityCounts.semiannual})</SelectItem>
+                      <SelectItem value="annual">{t.donorsFilter.periodicityAnnual} ({periodicityCounts.annual})</SelectItem>
+                      <SelectItem value="manual">{t.donorsFilter.periodicityManual} ({periodicityCounts.manual})</SelectItem>
+                      <SelectItem value="none">{t.donorsFilter.noPeriodicity} ({periodicityCounts.none})</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
               </div>
             </div>

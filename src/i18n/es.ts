@@ -2873,6 +2873,14 @@ export const es = {
     allModalities: "Todos",
     oneTime: "Puntuales",
     recurring: "Socios",
+    periodicityLabel: "Periodicidad",
+    allPeriodicity: "Todas",
+    periodicityMonthly: "Mensual",
+    periodicityQuarterly: "Trimestral",
+    periodicitySemiannual: "Semestral",
+    periodicityAnnual: "Anual",
+    periodicityManual: "Puntual",
+    noPeriodicity: "Sin periodicidad",
   },
   // Breadcrumb
   breadcrumb: {
