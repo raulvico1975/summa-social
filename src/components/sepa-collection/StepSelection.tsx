@@ -23,9 +23,10 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { CheckCircle2, XCircle, AlertTriangle, Users, Search, Info } from 'lucide-react';
+import { CheckCircle2, XCircle, AlertTriangle, Users, Search, Info, ExternalLink } from 'lucide-react';
 import { useTranslations } from '@/i18n';
 import { cn } from '@/lib/utils';
+import { useCurrentOrganization } from '@/hooks/organization-provider';
 import type { Donor } from '@/lib/data';
 import { determineSequenceType, type DonorCollectionStatus } from '@/lib/sepa/pain008';
 
@@ -53,11 +54,22 @@ export function StepSelection({
   donorStatuses,
 }: StepSelectionProps) {
   const { t, tr } = useTranslations();
+  const { orgSlug } = useCurrentOrganization();
   const [showExcludedOnly, setShowExcludedOnly] = React.useState(false);
+  const [showAllMissing, setShowAllMissing] = React.useState(false);
 
   // Nous filtres
   const [searchQuery, setSearchQuery] = React.useState('');
   const [periodicityFilter, setPeriodicityFilter] = React.useState<string | null>(null);
+
+  // Detecció de socis no mensuals sense sepaPain008LastRunAt (risc duplicat migració)
+  const missingLastRun = React.useMemo(
+    () => eligible.filter(d =>
+      ['quarterly', 'semiannual', 'annual'].includes(d.periodicityQuota || '') &&
+      !d.sepaPain008LastRunAt
+    ),
+    [eligible]
+  );
 
   // Filtrar elegibles segons cerca i periodicitat
   const filteredEligible = React.useMemo(() => {
@@ -188,6 +200,62 @@ export function StepSelection({
   return (
     <div className="space-y-6">
       <h3 className="text-lg font-semibold">{t.sepaCollection.selection.title}</h3>
+
+      {/* Warning: socis no mensuals sense últim cobrament (risc duplicat migració) */}
+      {missingLastRun.length > 0 && (
+        <div className="space-y-3">
+          <Alert className="bg-amber-50 border-amber-200">
+            <AlertTriangle className="h-4 w-4 text-amber-600" />
+            <AlertDescription className="text-amber-800 text-sm">
+              <p className="font-medium">
+                {tr('sepaPain008.selection.migrationWarningTitle', 'Atenció: risc de duplicar cobrament')}
+              </p>
+              <p className="mt-1">
+                {tr('sepaPain008.selection.migrationWarningDesc',
+                  'Hi ha {count} socis trimestrals/semestrals/anuals sense registre d\'últim cobrament SEPA. Si ja es van cobrar fora de Summa, podries duplicar el cobrament. Revisa\'ls des de Donants abans de continuar.'
+                ).replace('{count}', String(missingLastRun.length))}
+              </p>
+            </AlertDescription>
+          </Alert>
+
+          {/* Llista compacta dels afectats */}
+          <div className="rounded-lg border border-amber-200 bg-amber-50/50 p-3 space-y-2">
+            {(showAllMissing ? missingLastRun : missingLastRun.slice(0, 10)).map(donor => {
+              const periodicityKey = `donors.periodicityQuota.${donor.periodicityQuota}`;
+              const periodicityLabel = tr(periodicityKey, donor.periodicityQuota ?? '');
+              return (
+                <div key={donor.id} className="flex items-center justify-between text-sm">
+                  <div className="flex items-center gap-2">
+                    <span className="font-medium">{donor.name}</span>
+                    <Badge variant="outline" className="text-xs">{periodicityLabel}</Badge>
+                    <span className="text-muted-foreground">
+                      {tr('sepaPain008.selection.noLastRun', 'Sense data')}
+                    </span>
+                  </div>
+                  <a
+                    href={`/${orgSlug}/dashboard/donants`}
+                    className="text-xs text-amber-700 hover:text-amber-900 underline flex items-center gap-1"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    {tr('sepaPain008.selection.editDonor', 'Editar')}
+                    <ExternalLink className="h-3 w-3" />
+                  </a>
+                </div>
+              );
+            })}
+            {missingLastRun.length > 10 && !showAllMissing && (
+              <Button
+                variant="ghost"
+                size="sm"
+                className="text-amber-700 hover:text-amber-900 p-0 h-auto"
+                onClick={() => setShowAllMissing(true)}
+              >
+                {tr('sepaPain008.selection.showAll', 'Veure tots')} ({missingLastRun.length})
+              </Button>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* Microcopy informatiu */}
       <Alert className="bg-blue-50 border-blue-200">

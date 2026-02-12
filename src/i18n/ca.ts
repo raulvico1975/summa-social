@@ -755,6 +755,7 @@ export const ca = {
         memberSince: "Data d'alta",
         periodicityQuota: "Periodicitat quota",
         contactPersonName: "Nom de contacte",
+        sepaPain008LastRunAt: "Últim cobrament SEPA",
       },
       defaultCategoryLabel: "Categoria per defecte (s'aplica només si l'Excel no indica categoria):",
       defaultCategoryAuto: "Automàtic segons tipus",

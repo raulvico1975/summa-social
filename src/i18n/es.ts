@@ -755,6 +755,7 @@ export const es = {
         memberSince: "Fecha de alta",
         periodicityQuota: "Periodicidad cuota",
         contactPersonName: "Nombre de contacto",
+        sepaPain008LastRunAt: "Último cobro SEPA",
       },
       defaultCategoryLabel: "Categoría por defecto (se aplica solo si el Excel no indica categoría):",
       defaultCategoryAuto: "Automático según tipo",

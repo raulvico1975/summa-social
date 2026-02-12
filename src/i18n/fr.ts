@@ -755,6 +755,7 @@ export const fr = {
         memberSince: "Date d'adhésion",
         periodicityQuota: "Périodicité cotisation",
         contactPersonName: "Nom du contact",
+        sepaPain008LastRunAt: "Dernier encaissement SEPA",
       },
       defaultCategoryLabel: "Catégorie par défaut (appliquée seulement si l'Excel n'indique pas de catégorie) :",
       defaultCategoryAuto: "Automatique selon type",

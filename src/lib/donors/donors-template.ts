@@ -33,6 +33,7 @@ export const DONORS_TEMPLATE_HEADERS = [
   "Data d'alta",
   'Periodicitat quota',
   'Nom de contacte',
+  'Últim cobrament SEPA',
 ] as const;
 
 export type DonorTemplateHeader = typeof DONORS_TEMPLATE_HEADERS[number];
@@ -58,6 +59,7 @@ export const HEADER_TO_FIELD: Record<DonorTemplateHeader, string> = {
   "Data d'alta": 'memberSince',
   'Periodicitat quota': 'periodicityQuota',
   'Nom de contacte': 'contactPersonName',
+  'Últim cobrament SEPA': 'sepaPain008LastRunAt',
 };
 
 /**
@@ -175,6 +177,7 @@ export function downloadDonorsTemplate(): void {
       '15/01/2023',
       'Mensual',
       '',
+      '15/09/2025',
     ],
     // Fila d'exemple 2: Particular puntual
     [
@@ -194,6 +197,7 @@ export function downloadDonorsTemplate(): void {
       '',
       '',
       'Puntual',
+      '',
       '',
     ],
     // Fila d'exemple 3: Empresa soci
@@ -215,6 +219,7 @@ export function downloadDonorsTemplate(): void {
       '01/06/2024',
       'Trimestral',
       'Pere Vila',
+      '',
     ],
   ];
 
@@ -245,6 +250,7 @@ export function downloadDonorsTemplate(): void {
     { wch: 14 },  // Data d'alta
     { wch: 18 },  // Periodicitat quota
     { wch: 25 },  // Nom de contacte
+    { wch: 20 },  // Últim cobrament SEPA
   ];
 
   const wb = XLSX.utils.book_new();
