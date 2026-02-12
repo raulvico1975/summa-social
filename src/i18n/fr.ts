@@ -334,6 +334,12 @@ export const fr = {
       documentDeleted: "Justificatif supprimé",
       deleteDocFromPendingError: "Impossible de supprimer",
       deleteDocFromPendingHint: "Ce document provient d'un mouvement en attente concilié. Supprimez le mouvement en attente pour annuler la conciliation.",
+      // Rename dialog
+      renameDocument: "Renommer le document",
+      renameSuggestion: ({ original, suggested }: { original: string; suggested: string }) =>
+        `Le fichier « ${original} » peut être renommé « ${suggested} » pour suivre le format standard.`,
+      keepOriginal: "Garder l'original",
+      renameAndAttach: "Renommer et joindre",
       // Barra de resum filtrat
       showingOf: (showing: number, total: number) => `Affichage ${showing} sur ${total}`,
       income: "Recettes",

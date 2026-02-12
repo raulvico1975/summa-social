@@ -12,6 +12,7 @@ import { useTranslations } from '@/i18n';
 import { useAppLog } from '@/hooks/use-app-log';
 import type { Transaction, AnyContact, ContactType, Category } from '@/lib/data';
 import { buildDocumentFilename } from '@/lib/build-document-filename';
+import { attachDocumentToTransaction } from '@/lib/files/attach-document';
 import { handleTransactionDelete, isFiscallyRelevantTransaction } from '@/lib/fiscal/softDeleteTransaction';
 import { isCategoryIdCompatibleStrict } from '@/lib/constants';
 
@@ -65,6 +66,8 @@ interface UseTransactionActionsReturn {
   // ─────────────────────────────────────────────────────────────────────────
   docLoadingStates: Record<string, boolean>;
   handleAttachDocument: (transactionId: string) => void;
+  /** Adjunta un fitxer ja seleccionat amb un nom explicit (overrideFilename). */
+  handleAttachDocumentWithName: (transactionId: string, file: File, overrideFilename: string) => Promise<void>;
   handleDeleteDocument: (transactionId: string) => void;
   isDeleteDocDialogOpen: boolean;
   transactionToDeleteDoc: Transaction | null;
@@ -353,6 +356,64 @@ export function useTransactionActions({
       fileInput.click();
     }, 100);
   }, [organizationId, transactionsCollection, storage, toast, t, log]);
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // DOCUMENT ATTACH WITH EXPLICIT FILENAME (called from TransactionsTable dialog)
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  const handleAttachDocumentWithName = React.useCallback(async (
+    transactionId: string,
+    file: File,
+    overrideFilename: string,
+  ) => {
+    if (!organizationId || !firestore) {
+      toast({ variant: 'destructive', title: t.common.error, description: t.movements.table.organizationNotIdentified });
+      return;
+    }
+
+    setDocLoadingStates(prev => ({ ...prev, [transactionId]: true }));
+    const tx = transactions?.find(tx => tx.id === transactionId) ?? null;
+
+    toast({
+      title: t.movements.table.uploadingDocument,
+      description: `Adjuntant "${overrideFilename}"...`,
+    });
+
+    try {
+      const result = await attachDocumentToTransaction({
+        firestore,
+        storage,
+        organizationId,
+        transactionId,
+        file,
+        transactionDate: tx?.date,
+        transactionConcept: tx?.note || tx?.description,
+        overrideFilename,
+      });
+
+      if (result.success) {
+        toast({
+          title: t.movements.table.uploadSuccess,
+          description: t.movements.table.documentUploadedSuccessfully,
+        });
+      } else {
+        toast({
+          variant: 'destructive',
+          title: t.movements.table.uploadError,
+          description: result.error || t.movements.table.unexpectedError('UNKNOWN'),
+        });
+      }
+    } catch (error) {
+      console.error('[handleAttachDocumentWithName] Error:', error);
+      toast({
+        variant: 'destructive',
+        title: t.movements.table.uploadError,
+        description: error instanceof Error ? error.message : t.movements.table.unexpectedError('UNKNOWN'),
+      });
+    } finally {
+      setDocLoadingStates(prev => ({ ...prev, [transactionId]: false }));
+    }
+  }, [organizationId, firestore, storage, transactions, toast, t]);
 
   // ═══════════════════════════════════════════════════════════════════════════
   // DOCUMENT DELETE
@@ -675,6 +736,7 @@ export function useTransactionActions({
     // Document Upload / Delete
     docLoadingStates,
     handleAttachDocument,
+    handleAttachDocumentWithName,
     handleDeleteDocument,
     isDeleteDocDialogOpen,
     transactionToDeleteDoc,
