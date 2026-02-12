@@ -14,74 +14,114 @@ function statusType(
 }
 
 // -----------------------------------------------------------------------
-// Annual (interval: 12 months from lastRun)
+// Annual (year-month interval: 12 months, day ignored)
 // -----------------------------------------------------------------------
-describe('annual — interval-based', () => {
-  it('blocked: lastRun oct-2025, collection feb-2026 (only 4 months)', () => {
-    expect(statusType('annual', '2025-10-15', '2026-02-10')).toBe('blocked');
+describe('annual — month-based interval', () => {
+  it('blocked: lastRun oct-2025, collection mar-2026 (only 5 months)', () => {
+    expect(statusType('annual', '2025-10-15', '2026-03-01')).toBe('blocked');
   });
 
-  it('due: lastRun oct-2025, collection oct-2026 (exactly 12 months)', () => {
-    expect(statusType('annual', '2025-10-15', '2026-10-15')).toBe('due');
+  it('due: lastRun oct-2025, collection oct-2026 (first day of due month)', () => {
+    expect(statusType('annual', '2025-10-15', '2026-10-01')).toBe('due');
   });
 
-  it('due: lastRun oct-2025, collection nov-2026 (13 months)', () => {
+  it('due: lastRun oct-2025, collection oct-2026 (any day, same month)', () => {
+    expect(statusType('annual', '2025-10-15', '2026-10-31')).toBe('due');
+  });
+
+  it('blocked: lastRun oct-2025, collection sep-2026 (month before due)', () => {
+    expect(statusType('annual', '2025-10-15', '2026-09-30')).toBe('blocked');
+  });
+
+  it('due: lastRun oct-2025, collection nov-2026 (past due month)', () => {
     expect(statusType('annual', '2025-10-15', '2026-11-01')).toBe('due');
-  });
-
-  it('blocked: lastRun oct-2025, collection oct-2026 minus 1 day', () => {
-    expect(statusType('annual', '2025-10-15', '2026-10-14')).toBe('blocked');
   });
 });
 
 // -----------------------------------------------------------------------
-// Semiannual (interval: 6 months from lastRun)
+// Semiannual (year-month interval: 6 months, day ignored)
 // -----------------------------------------------------------------------
-describe('semiannual — interval-based', () => {
-  it('blocked: lastRun aug-2025, collection jan-2026 (5 months + 30 days)', () => {
+describe('semiannual — month-based interval', () => {
+  it('blocked: lastRun aug-2025, collection jan-2026 (5 months)', () => {
     expect(statusType('semiannual', '2025-08-01', '2026-01-31')).toBe('blocked');
   });
 
-  it('due: lastRun aug-2025, collection feb-2026 (exactly 6 months)', () => {
+  it('due: lastRun aug-2025, collection feb-2026 (6 months)', () => {
     expect(statusType('semiannual', '2025-08-01', '2026-02-01')).toBe('due');
   });
 
-  it('due: lastRun aug-2025, collection mar-2026', () => {
-    expect(statusType('semiannual', '2025-08-01', '2026-03-15')).toBe('due');
+  it('due: lastRun sep-2025, collection mar-2026 (6 months)', () => {
+    expect(statusType('semiannual', '2025-09-20', '2026-03-01')).toBe('due');
+  });
+
+  it('blocked: lastRun sep-2025, collection feb-2026 (5 months)', () => {
+    expect(statusType('semiannual', '2025-09-20', '2026-02-28')).toBe('blocked');
   });
 });
 
 // -----------------------------------------------------------------------
-// Quarterly (interval: 3 months from lastRun)
+// Quarterly (year-month interval: 3 months, day ignored)
 // -----------------------------------------------------------------------
-describe('quarterly — interval-based', () => {
-  it('blocked: lastRun dec-2025, collection mar-2026 minus 1 day', () => {
-    expect(statusType('quarterly', '2025-12-05', '2026-03-04')).toBe('blocked');
+describe('quarterly — month-based interval', () => {
+  it('blocked: lastRun dec-2025, collection feb-2026 (2 months)', () => {
+    expect(statusType('quarterly', '2025-12-01', '2026-02-28')).toBe('blocked');
   });
 
-  it('due: lastRun dec-2025, collection mar-2026 (exactly 3 months)', () => {
-    expect(statusType('quarterly', '2025-12-05', '2026-03-05')).toBe('due');
+  it('due: lastRun dec-2025, collection mar-2026 (3 months)', () => {
+    expect(statusType('quarterly', '2025-12-01', '2026-03-01')).toBe('due');
   });
 
-  it('due: lastRun dec-2025, collection apr-2026', () => {
+  it('due: lastRun nov-2025, collection feb-2026 (3 months)', () => {
+    expect(statusType('quarterly', '2025-11-30', '2026-02-01')).toBe('due');
+  });
+
+  it('due: lastRun dec-2025, collection apr-2026 (4 months)', () => {
     expect(statusType('quarterly', '2025-12-05', '2026-04-01')).toBe('due');
   });
 });
 
 // -----------------------------------------------------------------------
-// Monthly (natural month — preserved behaviour)
+// Monthly (year-month interval: 1 month, day ignored)
 // -----------------------------------------------------------------------
-describe('monthly — natural month', () => {
-  it('blocked: same month', () => {
+describe('monthly — month-based interval', () => {
+  it('blocked: same month (any days)', () => {
     expect(statusType('monthly', '2026-02-01', '2026-02-28')).toBe('blocked');
   });
 
   it('due: next month', () => {
-    expect(statusType('monthly', '2026-02-01', '2026-03-01')).toBe('due');
+    expect(statusType('monthly', '2026-02-28', '2026-03-01')).toBe('due');
   });
 
-  it('due: month after next', () => {
+  it('due: two months later', () => {
     expect(statusType('monthly', '2026-01-15', '2026-03-01')).toBe('due');
+  });
+
+  it('blocked: lastRun later day same month still blocked', () => {
+    expect(statusType('monthly', '2026-02-28', '2026-02-01')).toBe('blocked');
+  });
+});
+
+// -----------------------------------------------------------------------
+// Day is ignored: same month regardless of day
+// -----------------------------------------------------------------------
+describe('day ignored — month boundary matters, not day', () => {
+  it('annual: first day of due month is already due', () => {
+    // lastRun oct-2025, nextDueMonth = oct-2026
+    // collection oct-2026 day 1 → due (same month as nextDue)
+    expect(statusType('annual', '2025-10-15', '2026-10-01')).toBe('due');
+  });
+
+  it('annual: last day before due month is still blocked', () => {
+    expect(statusType('annual', '2025-10-15', '2026-09-30')).toBe('blocked');
+  });
+
+  it('quarterly: day within month does not matter', () => {
+    // lastRun dec-2025, nextDueMonth = mar-2026
+    // Any day in mar-2026 is due
+    expect(statusType('quarterly', '2025-12-31', '2026-03-01')).toBe('due');
+    expect(statusType('quarterly', '2025-12-01', '2026-03-31')).toBe('due');
+    // Any day in feb-2026 is blocked
+    expect(statusType('quarterly', '2025-12-15', '2026-02-15')).toBe('blocked');
   });
 });
 
@@ -93,6 +133,7 @@ describe('edge cases', () => {
     expect(statusType('annual', null, '2026-02-10')).toBe('due');
     expect(statusType('quarterly', null, '2026-02-10')).toBe('due');
     expect(statusType('monthly', null, '2026-02-10')).toBe('due');
+    expect(statusType('semiannual', null, '2026-02-10')).toBe('due');
   });
 
   it('noPeriodicity when periodicityQuota is null', () => {
@@ -105,33 +146,10 @@ describe('edge cases', () => {
 });
 
 // -----------------------------------------------------------------------
-// Day clamping (addMonthsUTC correctness)
-// -----------------------------------------------------------------------
-describe('day clamping for interval calculation', () => {
-  it('quarterly from Jan 31 → next due Apr 30 (clamped)', () => {
-    // Jan 31 + 3 months = Apr 31 → clamped to Apr 30
-    expect(statusType('quarterly', '2026-01-31', '2026-04-29')).toBe('blocked');
-    expect(statusType('quarterly', '2026-01-31', '2026-04-30')).toBe('due');
-  });
-
-  it('semiannual from Aug 31 → next due Feb 28 (non-leap clamped)', () => {
-    // Aug 31 + 6 months = Feb 31 → clamped to Feb 28 (2027 non-leap)
-    expect(statusType('semiannual', '2026-08-31', '2027-02-27')).toBe('blocked');
-    expect(statusType('semiannual', '2026-08-31', '2027-02-28')).toBe('due');
-  });
-
-  it('annual from Feb 29 (leap) → next due Feb 28 (non-leap clamped)', () => {
-    // 2024-02-29 + 12 months = 2025-02-29 → clamped to 2025-02-28
-    expect(statusType('annual', '2024-02-29', '2025-02-27')).toBe('blocked');
-    expect(statusType('annual', '2024-02-29', '2025-02-28')).toBe('due');
-  });
-});
-
-// -----------------------------------------------------------------------
 // Full result object shape
 // -----------------------------------------------------------------------
 describe('result object shape', () => {
-  it('returns complete status object for interval-based due', () => {
+  it('returns complete status object for due', () => {
     const result = computeDonorCollectionStatus(
       { periodicityQuota: 'annual', sepaPain008LastRunAt: '2025-01-15' },
       '2026-01-15',
