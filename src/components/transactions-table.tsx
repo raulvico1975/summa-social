@@ -81,7 +81,7 @@ import { TransactionRow } from '@/components/transactions/components/Transaction
 import { TransactionRowMobile } from '@/components/transactions/components/TransactionRowMobile';
 import { TransactionsFilters, TableFilter } from '@/components/transactions/components/TransactionsFilters';
 import { useIsMobile } from '@/hooks/use-is-mobile';
-import { attachDocumentToTransaction } from '@/lib/files/attach-document';
+import { buildDocumentFilename } from '@/lib/build-document-filename';
 import { DateFilter, type DateFilterValue } from '@/components/date-filter';
 import { useTransactionFilters } from '@/hooks/use-transaction-filters';
 import { useBankAccounts } from '@/hooks/use-bank-accounts';
@@ -508,6 +508,7 @@ export function TransactionsTable({ initialDateFilter = null }: TransactionsTabl
     // Document Upload / Delete
     docLoadingStates,
     handleAttachDocument,
+    handleAttachDocumentWithName,
     handleDeleteDocument,
     isDeleteDocDialogOpen,
     transactionToDeleteDoc,
@@ -544,41 +545,82 @@ export function TransactionsTable({ initialDateFilter = null }: TransactionsTabl
   });
 
   // ═══════════════════════════════════════════════════════════════════════════
+  // RENAME DIALOG STATE & HELPERS
+  // ═══════════════════════════════════════════════════════════════════════════
+  const [pendingUpload, setPendingUpload] = React.useState<{
+    txId: string;
+    file: File;
+    suggestedName: string;
+  } | null>(null);
+
+  /** Calcula el "concepte" per al nom de fitxer: contacte > note > description > 'moviment' */
+  const getConceptForFilename = React.useCallback((tx: { contactId?: string | null; note?: string | null; description?: string | null }) => {
+    const contactName = tx.contactId ? contactMap[tx.contactId]?.name : null;
+    return contactName || tx.note?.trim() || tx.description?.trim() || 'moviment';
+  }, [contactMap]);
+
+  /** Punt únic de "prepare upload": obre diàleg si cal, sinó puja directe */
+  const prepareUpload = React.useCallback((txId: string, file: File) => {
+    const tx = transactions?.find(t => t.id === txId);
+    if (!tx) return;
+
+    const suggestedName = buildDocumentFilename({
+      dateISO: tx.date ?? new Date().toISOString().split('T')[0],
+      concept: getConceptForFilename(tx),
+      originalName: file.name,
+    });
+
+    if (suggestedName !== file.name) {
+      setPendingUpload({ txId, file, suggestedName });
+    } else {
+      // Noms iguals → puja directament
+      handleAttachDocumentWithName(txId, file, file.name);
+    }
+  }, [transactions, getConceptForFilename, handleAttachDocumentWithName]);
+
+  /** Confirma upload des del diàleg: useOriginal=true → nom original, false → suggerit */
+  const handleConfirmUpload = React.useCallback((useOriginal: boolean) => {
+    if (!pendingUpload) return;
+    const { txId, file, suggestedName } = pendingUpload;
+    const finalName = useOriginal ? file.name : suggestedName;
+    handleAttachDocumentWithName(txId, file, finalName);
+    setPendingUpload(null);
+  }, [pendingUpload, handleAttachDocumentWithName]);
+
+  // ═══════════════════════════════════════════════════════════════════════════
   // DRAG & DROP DOCUMENT HANDLER
   // ═══════════════════════════════════════════════════════════════════════════
   const handleDropFile = React.useCallback(async (txId: string, file: File) => {
     if (!firestore || !storage || !organizationId) return;
+    prepareUpload(txId, file);
+  }, [firestore, storage, organizationId, prepareUpload]);
 
-    const tx = transactions?.find(t => t.id === txId);
+  // ═══════════════════════════════════════════════════════════════════════════
+  // CLICK-TO-ATTACH WITH RENAME (substitueix handleAttachDocument del hook)
+  // ═══════════════════════════════════════════════════════════════════════════
+  const handleAttachDocumentWithRename = React.useCallback((txId: string) => {
+    if (!organizationId) return;
 
-    toast({
-      title: t.movements.table.uploadingDocument || 'Pujant document...',
-      description: file.name
-    });
+    setTimeout(() => {
+      const fileInput = document.createElement('input');
+      fileInput.type = 'file';
+      fileInput.accept = 'application/pdf,image/*,.doc,.docx,.xls,.xlsx';
+      fileInput.style.display = 'none';
 
-    const result = await attachDocumentToTransaction({
-      firestore,
-      storage,
-      organizationId,
-      transactionId: txId,
-      file,
-      transactionDate: tx?.date,
-      transactionConcept: tx?.note || tx?.description,
-    });
+      fileInput.onchange = (e) => {
+        const target = e.target as HTMLInputElement;
+        const file = target.files?.[0];
+        if (fileInput.parentElement) {
+          document.body.removeChild(fileInput);
+        }
+        if (!file) return;
+        prepareUpload(txId, file);
+      };
 
-    if (result.success) {
-      toast({
-        title: t.movements.table.uploadSuccess || 'Document adjuntat',
-        description: t.movements.table.documentUploadedSuccessfully || 'El document s\'ha adjuntat correctament.'
-      });
-    } else {
-      toast({
-        variant: 'destructive',
-        title: t.movements.table.uploadError || 'Error',
-        description: result.error || 'No s\'ha pogut adjuntar el document.'
-      });
-    }
-  }, [firestore, storage, organizationId, transactions, toast, t]);
+      document.body.appendChild(fileInput);
+      fileInput.click();
+    }, 100);
+  }, [organizationId, prepareUpload]);
 
   // ═══════════════════════════════════════════════════════════════════════════
   // ESTADÍSTIQUES
@@ -1667,7 +1709,7 @@ export function TransactionsTable({ initialDateFilter = null }: TransactionsTabl
               onDelete={handleDeleteClick}
               onOpenReturnDialog={handleOpenReturnDialog}
               onViewRemittanceDetail={handleViewRemittanceDetail}
-              onAttachDocument={handleAttachDocument}
+              onAttachDocument={handleAttachDocumentWithRename}
               t={rowTranslations}
             />
           ))}
@@ -1769,7 +1811,7 @@ export function TransactionsTable({ initialDateFilter = null }: TransactionsTabl
                   onSetCategory={handleSetCategory}
                   onSetContact={handleSetContact}
                   onSetProject={handleSetProject}
-                  onAttachDocument={handleAttachDocument}
+                  onAttachDocument={handleAttachDocumentWithRename}
                   onDeleteDocument={handleDeleteDocument}
                   onCategorize={handleCategorize}
                   onEdit={handleEditClick}
@@ -2139,6 +2181,28 @@ export function TransactionsTable({ initialDateFilter = null }: TransactionsTabl
         isProcessing={isUndoProcessing}
         onConfirm={handleUndoConfirm}
       />
+      {/* Rename Suggestion Dialog */}
+      <AlertDialog open={!!pendingUpload} onOpenChange={(open) => { if (!open) setPendingUpload(null); }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{t.movements.table.renameDocument}</AlertDialogTitle>
+            <AlertDialogDescription>
+              {pendingUpload && t.movements.table.renameSuggestion({
+                original: pendingUpload.file.name,
+                suggested: pendingUpload.suggestedName,
+              })}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => handleConfirmUpload(true)}>
+              {t.movements.table.keepOriginal}
+            </AlertDialogCancel>
+            <AlertDialogAction onClick={() => handleConfirmUpload(false)}>
+              {t.movements.table.renameAndAttach}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </TooltipProvider>
   );
 }

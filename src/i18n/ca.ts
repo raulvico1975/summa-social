@@ -334,6 +334,12 @@ export const ca = {
       documentDeleted: "Justificant eliminat correctament",
       deleteDocFromPendingError: "No es pot eliminar",
       deleteDocFromPendingHint: "Aquest document prové d'un moviment pendent conciliat. Elimina el pendent per desfer la conciliació.",
+      // Rename dialog
+      renameDocument: "Renombrar document",
+      renameSuggestion: ({ original, suggested }: { original: string; suggested: string }) =>
+        `El fitxer "${original}" es pot renombrar a "${suggested}" per seguir el format estàndard.`,
+      keepOriginal: "Manté original",
+      renameAndAttach: "Renombra i adjunta",
       // Barra de resum filtrat
       showingOf: (showing: number, total: number) => `Mostrant ${showing} de ${total}`,
       income: "Ingressos",

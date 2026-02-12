@@ -334,6 +334,12 @@ export const es = {
       documentDeleted: "Justificante eliminado correctamente",
       deleteDocFromPendingError: "No se puede eliminar",
       deleteDocFromPendingHint: "Este documento proviene de un movimiento pendiente conciliado. Elimina el pendiente para deshacer la conciliación.",
+      // Rename dialog
+      renameDocument: "Renombrar documento",
+      renameSuggestion: ({ original, suggested }: { original: string; suggested: string }) =>
+        `El archivo "${original}" se puede renombrar a "${suggested}" para seguir el formato estándar.`,
+      keepOriginal: "Mantener original",
+      renameAndAttach: "Renombrar y adjuntar",
       // Barra de resum filtrat
       showingOf: (showing: number, total: number) => `Mostrando ${showing} de ${total}`,
       income: "Ingresos",
