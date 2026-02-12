@@ -554,7 +554,7 @@ export function TransactionsTable({ initialDateFilter = null }: TransactionsTabl
   } | null>(null);
 
   /** Calcula el "concepte" per al nom de fitxer: contacte > note > description > 'moviment' */
-  const getConceptForFilename = React.useCallback((tx: { contactId?: string | null; note?: string; description?: string }) => {
+  const getConceptForFilename = React.useCallback((tx: { contactId?: string | null; note?: string | null; description?: string | null }) => {
     const contactName = tx.contactId ? contactMap[tx.contactId]?.name : null;
     return contactName || tx.note?.trim() || tx.description?.trim() || 'moviment';
   }, [contactMap]);
