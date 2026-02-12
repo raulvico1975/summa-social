@@ -2,12 +2,14 @@
  * Pure function to compute whether a donor is due for SEPA collection
  * based on their periodicity and last collection date.
  *
- * Rules (natural periods):
+ * Rules:
  *  - periodicityQuota null/undefined → noPeriodicity
  *  - periodicityQuota === 'manual'  → manual
  *  - No lastRun                     → due (never collected = always due)
- *  - Same period as lastRun         → blocked (already collected this period)
- *  - Different (later) period       → due
+ *  - monthly: natural month comparison (same month = blocked, different = due)
+ *  - quarterly/semiannual/annual: interval-based from sepaPain008LastRunAt
+ *    → nextDue = addMonths(lastRunAt, N) where N = 3/6/12
+ *    → due if collectionDate >= nextDue, blocked otherwise
  */
 
 export type CollectionStatusType =
@@ -55,24 +57,29 @@ function formatDateLabel(dateStr: string): string | null {
 }
 
 /**
- * Get a natural period key for a given date and periodicity.
- * Lexicographic comparison works because year comes first.
- *
- *  monthly    → "2026-02"
- *  quarterly  → "2026-Q1" (jan-mar), "2026-Q2" (apr-jun), etc.
- *  semiannual → "2026-H1" (jan-jun), "2026-H2" (jul-dec)
- *  annual     → "2026"
+ * Get a natural month key: "YYYY-MM". Used only for monthly periodicity.
  */
-function getPeriodKey(dateStr: string, months: number): string {
+function getMonthKey(dateStr: string): string {
   const d = parseDate(dateStr);
   const y = d.getUTCFullYear();
-  const m = d.getUTCMonth() + 1; // 1-12
+  const m = d.getUTCMonth() + 1;
+  return `${y}-${String(m).padStart(2, '0')}`;
+}
 
-  if (months === 1) return `${y}-${String(m).padStart(2, '0')}`;
-  if (months === 3) return `${y}-Q${Math.ceil(m / 3)}`;
-  if (months === 6) return `${y}-H${m <= 6 ? 1 : 2}`;
-  if (months === 12) return `${y}`;
-  return `${y}-${String(m).padStart(2, '0')}`; // fallback: monthly
+/**
+ * Add N months to a YYYY-MM-DD date, clamping the day if needed.
+ * E.g. addMonthsUTC("2025-01-31", 1) → Date for 2025-02-28 (not Mar 3).
+ * No external dependencies.
+ */
+function addMonthsUTC(dateStr: string, n: number): Date {
+  const d = parseDate(dateStr);
+  const originalDay = d.getUTCDate();
+  d.setUTCMonth(d.getUTCMonth() + n);
+  // If day changed, JS overflowed into the next month → clamp to last day
+  if (d.getUTCDate() !== originalDay) {
+    d.setUTCDate(0); // last day of the intended month
+  }
+  return d;
 }
 
 // ---------------------------------------------------------------------------
@@ -131,23 +138,23 @@ export function computeDonorCollectionStatus(
     };
   }
 
-  // Compare natural periods
-  const lastPeriod = getPeriodKey(donor.sepaPain008LastRunAt, months);
-  const currentPeriod = getPeriodKey(collectionDate, months);
-
-  if (currentPeriod === lastPeriod) {
-    // Already collected in this period
+  // Monthly: natural month comparison (avoids drift, matches user expectation)
+  if (months === 1) {
+    const lastMonth = getMonthKey(donor.sepaPain008LastRunAt);
+    const currentMonth = getMonthKey(collectionDate);
     return {
-      type: 'blocked',
+      type: currentMonth === lastMonth ? 'blocked' : 'due',
       lastRunLabel,
       periodicity,
       periodicityMonths: months,
     };
   }
 
-  // Different period (currentPeriod > lastPeriod) → due
+  // Quarterly / Semiannual / Annual: interval anchored to last run
+  const nextDue = addMonthsUTC(donor.sepaPain008LastRunAt, months);
+  const collection = parseDate(collectionDate);
   return {
-    type: 'due',
+    type: collection >= nextDue ? 'due' : 'blocked',
     lastRunLabel,
     periodicity,
     periodicityMonths: months,
