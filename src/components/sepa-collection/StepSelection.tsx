@@ -23,6 +23,16 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { CheckCircle2, XCircle, AlertTriangle, Users, Search, Info, ExternalLink } from 'lucide-react';
 import { useTranslations } from '@/i18n';
 import { cn } from '@/lib/utils';
@@ -57,6 +67,7 @@ export function StepSelection({
   const { orgSlug } = useCurrentOrganization();
   const [showExcludedOnly, setShowExcludedOnly] = React.useState(false);
   const [showAllMissing, setShowAllMissing] = React.useState(false);
+  const [confirmBlockedId, setConfirmBlockedId] = React.useState<string | null>(null);
 
   // Nous filtres
   const [searchQuery, setSearchQuery] = React.useState('');
@@ -131,7 +142,19 @@ export function StepSelection({
 
   const handleToggle = (donorId: string) => {
     const st = donorStatuses.get(donorId);
-    if (st?.type === 'blocked' || st?.type === 'noPeriodicity') return;
+    if (st?.type === 'noPeriodicity') return;
+
+    // Blocked: si ja seleccionat → deseleccionar directament; si no → demanar confirmació
+    if (st?.type === 'blocked') {
+      if (selectedIds.has(donorId)) {
+        const newSet = new Set(selectedIds);
+        newSet.delete(donorId);
+        onSelectionChange(newSet);
+      } else {
+        setConfirmBlockedId(donorId);
+      }
+      return;
+    }
 
     const newSet = new Set(selectedIds);
     if (newSet.has(donorId)) {
@@ -140,6 +163,14 @@ export function StepSelection({
       newSet.add(donorId);
     }
     onSelectionChange(newSet);
+  };
+
+  const handleConfirmBlocked = () => {
+    if (!confirmBlockedId) return;
+    const newSet = new Set(selectedIds);
+    newSet.add(confirmBlockedId);
+    onSelectionChange(newSet);
+    setConfirmBlockedId(null);
   };
 
   const formatCurrency = (cents: number) => {
@@ -404,22 +435,24 @@ export function StepSelection({
                   const seqType = determineSequenceType(donor);
                   const hasInvalidAmount = !donor.monthlyAmount || donor.monthlyAmount <= 0;
                   const st = donorStatuses.get(donor.id);
-                  const isBlocked = st?.type === 'blocked' || st?.type === 'noPeriodicity';
+                  const isNoPeriodicity = st?.type === 'noPeriodicity';
+                  const isBlocked = st?.type === 'blocked';
                   return (
                     <TableRow
                       key={donor.id}
                       className={cn(
-                        'transition-colors',
-                        isBlocked ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer',
-                        isSelected ? 'bg-primary/5' : !isBlocked && 'hover:bg-muted/50',
-                        hasInvalidAmount && !isBlocked && 'opacity-60'
+                        'transition-colors cursor-pointer',
+                        isNoPeriodicity && 'opacity-50 cursor-not-allowed',
+                        isSelected && isBlocked ? 'bg-orange-50' : isSelected ? 'bg-primary/5' : '',
+                        !isSelected && !isNoPeriodicity && 'hover:bg-muted/50',
+                        hasInvalidAmount && !isNoPeriodicity && 'opacity-60'
                       )}
                       onClick={() => handleToggle(donor.id)}
                     >
                       <TableCell>
                         <Checkbox
                           checked={isSelected}
-                          disabled={isBlocked}
+                          disabled={isNoPeriodicity}
                           onCheckedChange={() => handleToggle(donor.id)}
                           onClick={(e) => e.stopPropagation()}
                         />
@@ -527,6 +560,29 @@ export function StepSelection({
           </Table>
         </div>
       )}
+
+      {/* Confirmació per seleccionar soci blocked */}
+      <AlertDialog open={!!confirmBlockedId} onOpenChange={(open) => !open && setConfirmBlockedId(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              {tr('sepaPain008.selection.confirmBlockedTitle', 'Incloure soci abans d\'hora?')}
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              {tr('sepaPain008.selection.confirmBlockedDesc',
+                'Confirmes que vols incloure aquest soci a la remesa actual? (Segons el càlcul de periodicitat, encara no li tocaria.)')}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>
+              {tr('sepaPain008.selection.confirmBlockedCancel', 'Cancel·lar')}
+            </AlertDialogCancel>
+            <AlertDialogAction onClick={handleConfirmBlocked}>
+              {tr('sepaPain008.selection.confirmBlockedAction', 'Sí, incloure igualment')}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
