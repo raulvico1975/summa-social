@@ -59,6 +59,7 @@ import { EmptyState } from '@/components/ui/empty-state';
 import {
   buildPendingDocumentsQuery,
   updatePendingDocument,
+  renamePendingDocument,
   confirmPendingDocument,
   confirmManyPendingDocuments,
   archivePendingDocument,
@@ -422,7 +423,6 @@ export default function PendingDocsPage() {
     setRelinkingDocId(doc.id);
     try {
       // Obtenir token d'autenticació
-      const { auth } = await import('firebase/auth');
       const { getAuth } = await import('firebase/auth');
       const authInstance = getAuth();
       const user = authInstance.currentUser;
@@ -464,6 +464,25 @@ export default function PendingDocsPage() {
       setRelinkingDocId(null);
     }
   }, [organizationId, toast, t]);
+
+  // Handler per renombrar un document (cosmètic, Firestore only)
+  const handleRename = React.useCallback(async (docId: string, newFilename: string) => {
+    if (!firestore || !organizationId) return;
+
+    try {
+      await renamePendingDocument(firestore, organizationId, docId, newFilename);
+      toast({
+        title: t.pendingDocs.rename.success,
+      });
+    } catch (error) {
+      console.error('Error renaming document:', error);
+      toast({
+        variant: 'destructive',
+        title: t.pendingDocs.toasts.error,
+        description: error instanceof Error ? error.message : t.pendingDocs.toasts.errorUnknown,
+      });
+    }
+  }, [firestore, organizationId, toast]);
 
   // Si encara no tenim l'organització o el flag no està actiu, mostrar loading
   if (!organization || !isPendingDocsEnabled) {
@@ -932,6 +951,7 @@ export default function PendingDocsPage() {
                     onConfirm={handleConfirm}
                     onArchive={handleArchive}
                     onDelete={handleDelete}
+                    onRename={handleRename}
                     isConfirming={confirmingDocId === doc.id}
                     isArchiving={archivingDocId === doc.id}
                     isDeleting={deletingDocId === doc.id}

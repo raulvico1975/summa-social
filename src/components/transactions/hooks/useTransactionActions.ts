@@ -4,6 +4,7 @@ import * as React from 'react';
 import { doc, CollectionReference, type Firestore, writeBatch, deleteField, query, where, getDocs, limit } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL, deleteObject, FirebaseStorage } from 'firebase/storage';
 import { pendingDocumentsCollection } from '@/lib/pending-documents/refs';
+import { getMatchedPendingDocumentId } from '@/lib/pending-documents';
 import { updateDocumentNonBlocking, deleteDocumentNonBlocking, addDocumentNonBlocking } from '@/firebase';
 import { assertUploadContext } from '@/lib/storage-upload-guard';
 import { useToast } from '@/hooks/use-toast';

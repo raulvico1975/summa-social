@@ -3211,6 +3211,12 @@ export const es = {
     suggested: "Sugerido",
     suggestedTooltip: "Conciliar con movimiento sugerido",
     missing: "Faltan",
+    rename: {
+      suggestion: (params: { filename: string }) => `Renombrar a "${params.filename}"?`,
+      accept: "Sí",
+      dismiss: "No",
+      success: "Nombre actualizado",
+    },
     featureDisabled: "Funcionalidad no activada",
     featureDisabledDesc: "Contacta con el administrador para activar el módulo de documentos pendientes.",
   },

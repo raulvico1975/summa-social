@@ -332,6 +332,8 @@ export const fr = {
       confirmDeleteDocument: "Supprimer le justificatif joint ?",
       confirmDeleteDocumentDescription: "Le justificatif sera supprimé du mouvement et du stockage.",
       documentDeleted: "Justificatif supprimé",
+      deleteDocFromPendingError: "Impossible de supprimer",
+      deleteDocFromPendingHint: "Ce document provient d'un mouvement en attente concilié. Supprimez le mouvement en attente pour annuler la conciliation.",
       // Barra de resum filtrat
       showingOf: (showing: number, total: number) => `Affichage ${showing} sur ${total}`,
       income: "Recettes",
@@ -3105,6 +3107,7 @@ export const fr = {
       clear: "Effacer",
       search: "Rechercher...",
       createSupplier: "Nouveau fournisseur...",
+      deleteMatched: "Supprimer en attente",
     },
     deleteDialog: {
       title: "Supprimer le document ?",
@@ -3165,6 +3168,9 @@ export const fr = {
       autoUnmatchErrorDesc: "Le rapprochement du document en attente n'a pas pu être annulé. Le mouvement n'a pas été supprimé afin d'éviter des incohérences.",
       deleteDocBlockedTitle: "Impossible de supprimer",
       deleteDocBlockedDesc: "Ce document provient d'un document en attente rapproché. Annulez d'abord le rapprochement.",
+      relinked: "Document re-lié",
+      matchedDeleted: "Rapprochement annulé",
+      matchedDeletedDesc: "Le mouvement bancaire est à nouveau disponible pour le rapprochement.",
     },
     modals: {
       deleteTitle: "Supprimer le document ?",
@@ -3213,6 +3219,12 @@ export const fr = {
     suggested: "Suggéré",
     suggestedTooltip: "Rapprocher avec le mouvement suggéré",
     missing: "Manquent",
+    rename: {
+      suggestion: (params: { filename: string }) => `Renommer en "${params.filename}" ?`,
+      accept: "Oui",
+      dismiss: "Non",
+      success: "Nom mis à jour",
+    },
     featureDisabled: "Fonctionnalité non activée",
     featureDisabledDesc: "Contactez l'administrateur pour activer le module de documents en attente.",
   },
