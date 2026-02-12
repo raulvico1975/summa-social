@@ -78,6 +78,7 @@ type ColumnMapping = {
   memberSince: string | null;
   periodicityQuota: string | null;
   contactPersonName: string | null;
+  sepaPain008LastRunAt: string | null;
 };
 
 type ImportRow = {
@@ -85,7 +86,7 @@ type ImportRow = {
   data: Record<string, any>;
   parsed: Partial<Donor>;
   status: 'new' | 'update' | 'duplicate' | 'invalid';
-  error?: string;
+  error?: string | null;
 };
 
 type ImportStep = 'upload' | 'mapping' | 'preview' | 'importing' | 'complete';
@@ -114,6 +115,7 @@ const emptyMapping: ColumnMapping = {
   memberSince: null,
   periodicityQuota: null,
   contactPersonName: null,
+  sepaPain008LastRunAt: null,
 };
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -167,6 +169,7 @@ function autoDetectColumn(header: string): keyof ColumnMapping | null {
     memberSince: ['membersince', 'dataalta', 'fechaalta', 'dateadhesion', 'socides', 'sociodesde', 'dataadesao'],
     periodicityQuota: ['periodicitat', 'periodicidad', 'periodicite', 'periodicidade', 'periodicity', 'frequencia', 'frequence'],
     contactPersonName: ['personacontacte', 'nomcontacte', 'personadecontacto', 'contactperson', 'nomducontact', 'personacontacto'],
+    sepaPain008LastRunAt: ['ultimcobrament', 'ultimocobro', 'lastsepa', 'lastcollected', 'lastrun', 'ultimcobramentsepa'],
   };
 
   for (const [field, keywords] of Object.entries(patterns)) {
@@ -359,6 +362,7 @@ export function DonorImporter({
     memberSince: t.importers.donor.fields.memberSince,
     periodicityQuota: t.importers.donor.fields.periodicityQuota,
     contactPersonName: t.importers.donor.fields.contactPersonName,
+    sepaPain008LastRunAt: t.importers.donor.fields.sepaPain008LastRunAt ?? 'Últim cobrament SEPA',
   };
 
   // Carregar categories d'ingrés
@@ -414,7 +418,7 @@ export function DonorImporter({
       }
       // Si estava duplicate i ara volem actualitzar → update
       if (row.status === 'duplicate' && updateExisting && !row.error?.includes(t.importers.common.duplicateInFile)) {
-        return { ...row, status: 'update', error: undefined };
+        return { ...row, status: 'update', error: null };
       }
       // Si estava update i ara NO volem actualitzar → duplicate
       if (row.status === 'update' && !updateExisting) {
@@ -575,15 +579,15 @@ export function DonorImporter({
         name: currentMapping.name ? toTitleCase(String(row[currentMapping.name] || '')) : '',
         taxId: currentMapping.taxId ? cleanTaxId(row[currentMapping.taxId]) : '',
         zipCode: currentMapping.zipCode ? String(row[currentMapping.zipCode] || '').trim() : '',
-        address: currentMapping.address ? String(row[currentMapping.address] || '').trim() : undefined,
-        city: currentMapping.city ? String(row[currentMapping.city] || '').trim() : undefined,
-        province: currentMapping.province ? String(row[currentMapping.province] || '').trim() : undefined,
+        ...(currentMapping.address ? { address: String(row[currentMapping.address] || '').trim() } : {}),
+        ...(currentMapping.city ? { city: String(row[currentMapping.city] || '').trim() } : {}),
+        ...(currentMapping.province ? { province: String(row[currentMapping.province] || '').trim() } : {}),
         donorType: currentMapping.donorType ? parseDonorType(row[currentMapping.donorType]) : 'individual',
         membershipType: currentMapping.membershipType ? parseMembershipType(row[currentMapping.membershipType]) : 'one-time',
-        monthlyAmount: currentMapping.monthlyAmount ? parseAmount(row[currentMapping.monthlyAmount]) : undefined,
-        iban: currentMapping.iban ? cleanIban(row[currentMapping.iban]) : undefined,
-        email: currentMapping.email ? String(row[currentMapping.email] || '').trim() : undefined,
-        phone: currentMapping.phone ? String(row[currentMapping.phone] || '').trim() : undefined,
+        ...(currentMapping.monthlyAmount ? { monthlyAmount: parseAmount(row[currentMapping.monthlyAmount]) } : {}),
+        ...(currentMapping.iban ? { iban: cleanIban(row[currentMapping.iban]) } : {}),
+        ...(currentMapping.email ? { email: String(row[currentMapping.email] || '').trim() } : {}),
+        ...(currentMapping.phone ? { phone: String(row[currentMapping.phone] || '').trim() } : {}),
         status: currentMapping.status ? parseStatus(row[currentMapping.status]) : 'active',
       };
 
@@ -594,7 +598,7 @@ export function DonorImporter({
       }
 
       // Parsejar memberSince si la columna està mapejada
-      const memberSinceRaw = currentMapping.memberSince ? row[currentMapping.memberSince] : undefined;
+      const memberSinceRaw = currentMapping.memberSince ? row[currentMapping.memberSince] : null;
       if (memberSinceRaw && String(memberSinceRaw).trim()) {
         const memberSinceISO = parseDateToISO(memberSinceRaw);
         if (memberSinceISO) {
@@ -607,7 +611,7 @@ export function DonorImporter({
 
       // Parsejar periodicityQuota
       let periodicityInvalid = false;
-      const periodicityRaw = currentMapping.periodicityQuota ? row[currentMapping.periodicityQuota] : undefined;
+      const periodicityRaw = currentMapping.periodicityQuota ? row[currentMapping.periodicityQuota] : null;
       if (periodicityRaw && String(periodicityRaw).trim()) {
         const periodicityResult = parsePeriodicityQuota(periodicityRaw);
         if (periodicityResult.valid && periodicityResult.value) {
@@ -615,6 +619,16 @@ export function DonorImporter({
         } else if (!periodicityResult.valid) {
           periodicityInvalid = true;
         }
+      }
+
+      // Parsejar sepaPain008LastRunAt (últim cobrament SEPA)
+      const lastRunRaw = currentMapping.sepaPain008LastRunAt ? row[currentMapping.sepaPain008LastRunAt] : null;
+      if (lastRunRaw && String(lastRunRaw).trim()) {
+        const lastRunISO = parseDateToISO(lastRunRaw);
+        if (lastRunISO) {
+          (parsed as any).sepaPain008LastRunAt = lastRunISO;
+        }
+        // Si invàlid, simplement no escriure el camp (warning no bloquejant)
       }
 
       let status: ImportRow['status'] = 'new';
@@ -676,15 +690,15 @@ export function DonorImporter({
         name: mapping.name ? toTitleCase(String(row[mapping.name] || '')) : '',
         taxId: mapping.taxId ? cleanTaxId(row[mapping.taxId]) : '',
         zipCode: mapping.zipCode ? String(row[mapping.zipCode] || '').trim() : '',
-        address: mapping.address ? String(row[mapping.address] || '').trim() : undefined,
-        city: mapping.city ? String(row[mapping.city] || '').trim() : undefined,
-        province: mapping.province ? String(row[mapping.province] || '').trim() : undefined,
+        ...(mapping.address ? { address: String(row[mapping.address] || '').trim() } : {}),
+        ...(mapping.city ? { city: String(row[mapping.city] || '').trim() } : {}),
+        ...(mapping.province ? { province: String(row[mapping.province] || '').trim() } : {}),
         donorType: mapping.donorType ? parseDonorType(row[mapping.donorType]) : 'individual',
         membershipType: mapping.membershipType ? parseMembershipType(row[mapping.membershipType]) : 'one-time',
-        monthlyAmount: mapping.monthlyAmount ? parseAmount(row[mapping.monthlyAmount]) : undefined,
-        iban: mapping.iban ? cleanIban(row[mapping.iban]) : undefined,
-        email: mapping.email ? String(row[mapping.email] || '').trim() : undefined,
-        phone: mapping.phone ? String(row[mapping.phone] || '').trim() : undefined,
+        ...(mapping.monthlyAmount ? { monthlyAmount: parseAmount(row[mapping.monthlyAmount]) } : {}),
+        ...(mapping.iban ? { iban: cleanIban(row[mapping.iban]) } : {}),
+        ...(mapping.email ? { email: String(row[mapping.email] || '').trim() } : {}),
+        ...(mapping.phone ? { phone: String(row[mapping.phone] || '').trim() } : {}),
         status: mapping.status ? parseStatus(row[mapping.status]) : 'active',
       };
 
@@ -695,7 +709,7 @@ export function DonorImporter({
       }
 
       // Parsejar memberSince si la columna està mapejada
-      const memberSinceRaw = mapping.memberSince ? row[mapping.memberSince] : undefined;
+      const memberSinceRaw = mapping.memberSince ? row[mapping.memberSince] : null;
       if (memberSinceRaw && String(memberSinceRaw).trim()) {
         const memberSinceISO = parseDateToISO(memberSinceRaw);
         if (memberSinceISO) {
@@ -707,13 +721,22 @@ export function DonorImporter({
 
       // Parsejar periodicityQuota
       let periodicityInvalid = false;
-      const periodicityRaw = mapping.periodicityQuota ? row[mapping.periodicityQuota] : undefined;
+      const periodicityRaw = mapping.periodicityQuota ? row[mapping.periodicityQuota] : null;
       if (periodicityRaw && String(periodicityRaw).trim()) {
         const periodicityResult = parsePeriodicityQuota(periodicityRaw);
         if (periodicityResult.valid && periodicityResult.value) {
           (parsed as any).periodicityQuota = periodicityResult.value;
         } else if (!periodicityResult.valid) {
           periodicityInvalid = true;
+        }
+      }
+
+      // Parsejar sepaPain008LastRunAt (últim cobrament SEPA)
+      const lastRunRawManual = mapping.sepaPain008LastRunAt ? row[mapping.sepaPain008LastRunAt] : null;
+      if (lastRunRawManual && String(lastRunRawManual).trim()) {
+        const lastRunISO = parseDateToISO(lastRunRawManual);
+        if (lastRunISO) {
+          (parsed as any).sepaPain008LastRunAt = lastRunISO;
         }
       }
 
@@ -858,6 +881,7 @@ export function DonorImporter({
             if (row.parsed.memberSince) updateData.memberSince = row.parsed.memberSince;
             if ((row.parsed as any).periodicityQuota) updateData.periodicityQuota = (row.parsed as any).periodicityQuota;
             if (row.parsed.contactPersonName) updateData.contactPersonName = row.parsed.contactPersonName;
+            if ((row.parsed as any).sepaPain008LastRunAt) updateData.sepaPain008LastRunAt = (row.parsed as any).sepaPain008LastRunAt;
 
             const prunedUpdate = pruneNullish(updateData);
             const safeUpdate = stripArchiveFields(prunedUpdate);
@@ -899,6 +923,7 @@ export function DonorImporter({
           if (row.parsed.memberSince) cleanData.memberSince = row.parsed.memberSince;
           if ((row.parsed as any).periodicityQuota) cleanData.periodicityQuota = (row.parsed as any).periodicityQuota;
           if (row.parsed.contactPersonName) cleanData.contactPersonName = row.parsed.contactPersonName;
+          if ((row.parsed as any).sepaPain008LastRunAt) cleanData.sepaPain008LastRunAt = (row.parsed as any).sepaPain008LastRunAt;
 
           // Determinar defaultCategoryId
           let defaultCategoryId: string | null = null;

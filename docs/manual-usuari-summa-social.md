@@ -1,7 +1,7 @@
 # SUMMA SOCIAL - Manual d'Usuari Complet
 
-**Versió**: 1.40
-**Última actualització**: 10 Febrer 2026
+**Versió**: 1.41
+**Última actualització**: 11 Febrer 2026
 
 ---
 
@@ -418,10 +418,16 @@ El Model 182 (la declaració de donatius) exigeix certes dades de cada donant. S
 | IBAN | Recomanat | ES12 3456 7890... |
 | **Tipus** | ✅ | Particular o Empresa |
 | **Modalitat** | ✅ | Soci o Puntual |
-| Quota mensual | Si és soci | 15,00 € |
+| Quota | Si és soci | 15,00 € |
+| Periodicitat | Si és soci | Mensual, Trimestral, Semestral o Anual |
+| Persona de contacte | No (només Empresa) | Pere Martí |
 | Categoria per defecte | Opcional | Quotes de socis |
 
 4. Clica **"Guardar"**
+
+### Persona de contacte (v1.41)
+
+Quan el donant és de tipus **Empresa**, apareix un camp addicional: **Persona de contacte**. Serveix per apuntar el nom de la persona amb qui tracteu dins l'empresa (per exemple, la responsable de RSC). És un camp opcional i purament informatiu — no afecta cap càlcul ni informe fiscal.
 
 ### Què és la "Categoria per defecte"?
 
@@ -457,7 +463,9 @@ Si ja tens una llista de donants en un full de càlcul, no cal que els introduei
 | Tipus | Particular o Empresa | ✅ |
 | Modalitat | Puntual o Soci | ✅ |
 | Estat | Alta o Baixa | Opcional |
-| Quota mensual | Import en € | Opcional |
+| Quota | Import en € | Opcional |
+| Periodicitat | Mensual, Trimestral, Semestral, Anual | Opcional |
+| Persona de contacte | Nom (només per empreses) | Opcional |
 | IBAN | Compte bancari | Opcional |
 | Adreça | Domicili | Opcional |
 | Codi postal | CP | Per Model 182 |
@@ -530,11 +538,39 @@ Si necessites les dades fora de Summa Social:
 
 1. Ves a ❤️ **Donants**
 2. Clica **"Exportar"**
-3. Es descarrega un Excel amb: Nom, NIF, Quota, IBAN, Estat
+3. Es descarrega un Excel amb: Nom, NIF, Quota, IBAN, Estat, Persona de contacte (si és empresa), etc.
 
 ---
 
-## 3.8 Dinàmica de donants
+## 3.8 Filtrar donants al dashboard (v1.41)
+
+A la llista de donants pots combinar diversos filtres per trobar exactament el que busques. Els filtres funcionen amb lògica "i" — és a dir, si actives dos filtres, es mostren els donants que compleixen **tots dos** alhora.
+
+### Filtres disponibles
+
+| Filtre | Opcions | Per a què serveix |
+|--------|---------|-------------------|
+| **Estat** | Alta / Baixa | Veure donants actius o donats de baixa |
+| **Tipus** | Particular / Empresa | Separar persones físiques de jurídiques |
+| **Modalitat** | Soci / Puntual | Distingir socis recurrents de donants puntuals |
+| **Periodicitat** | Mensual / Trimestral / Semestral / Anual | Filtrar socis segons la freqüència de quota |
+| **Cerca** | Text lliure | Buscar per nom, NIF o qualsevol dada |
+| **Incomplets** | Sí / No | Veure donants als quals els falta alguna dada per al Model 182 |
+| **Devolucions** | Sí / No | Veure donants amb devolucions bancàries |
+
+Cada opció de filtre mostra un **comptador** amb el nombre de donants que coincideixen, perquè sempre sàpigues quants n'hi ha sense haver de comptar.
+
+### Com funciona
+
+1. Ves a ❤️ **Donants**
+2. Clica les opcions de filtre que vulguis (es poden combinar)
+3. Per desactivar un filtre, clica'l de nou
+
+> 💡 **Consell:** El filtre de Periodicitat és útil per preparar remeses SEPA: pots filtrar els socis mensuals, trimestrals, etc. segons el que toqui cobrar.
+
+---
+
+## 3.9 Dinàmica de donants
 
 La secció **Dinàmica de donants** a la pantalla de Donants permet analitzar el comportament de la base social per períodes.
 
