@@ -909,7 +909,7 @@ export default function PendingDocsPage() {
 
         {/* Llista de documents */}
         <Card>
-          <CardContent key={refreshKey} className="p-0">
+          <CardContent key={refreshKey} className="p-0 overflow-hidden">
             {isLoading ? (
               // Skeleton loading
               <div className="p-4 space-y-3">
