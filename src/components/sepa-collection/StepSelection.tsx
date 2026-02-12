@@ -157,14 +157,16 @@ export function StepSelection({
     return iban;
   };
 
-  // Formatar data "Últim pain" com MMM YYYY
+  // Formatar data "Darrer cobrament" com "feb25" (mes curt + any 2 dígits)
   const formatLastRun = (date: string | null | undefined): string => {
-    if (!date) return tr('sepaPain008.selection.neverRun', 'Sense historial');
+    if (!date) return '—';
     try {
       const d = new Date(date);
-      return d.toLocaleDateString('ca-ES', { month: 'short', year: 'numeric' });
+      const mon = d.toLocaleDateString('ca-ES', { month: 'short', timeZone: 'UTC' }).replace('.', '');
+      const yr = String(d.getUTCFullYear()).slice(2);
+      return `${mon}${yr}`;
     } catch {
-      return tr('sepaPain008.selection.neverRun', 'Sense historial');
+      return '—';
     }
   };
 
@@ -383,8 +385,8 @@ export function StepSelection({
                 <TableHead className="w-12"></TableHead>
                 <TableHead>{t.sepaCollection.review.itemsTable.name}</TableHead>
                 <TableHead>{t.sepaCollection.review.itemsTable.amount}</TableHead>
-                <TableHead>{tr('sepaPain008.selection.lastRun', 'Últim pain')}</TableHead>
-                <TableHead>{tr('sepaPain008.selection.statusColumn', 'Estat')}</TableHead>
+                <TableHead>{tr('sepaPain008.selection.lastRun', 'Darrer cobrament')}</TableHead>
+                <TableHead>{tr('sepaPain008.selection.statusColumn', 'Periodicitat')}</TableHead>
                 <TableHead>{t.sepaCollection.review.itemsTable.iban}</TableHead>
                 <TableHead>{t.sepaCollection.review.itemsTable.sequence}</TableHead>
               </TableRow>
@@ -442,7 +444,7 @@ export function StepSelection({
                           if (st.type === 'blocked') {
                             return (
                               <Badge variant="outline" className="text-orange-600 border-orange-300 font-normal">
-                                {tr('sepaPain008.selection.blockedBadge', 'No toca encara (ja cobrat aquest període)')}
+                                {tr('sepaPain008.selection.blockedBadge', 'No toca encara')}
                               </Badge>
                             );
                           }
@@ -463,23 +465,17 @@ export function StepSelection({
                             );
                           }
 
-                          // type === 'due'
-                          if (st.periodicityMonths && st.periodicityMonths > 1) {
-                            // Non-monthly due donor: show periodicity + optional last run
-                            const periodicityKey = `donors.periodicityQuota.${st.periodicity}`;
-                            const label = tr(periodicityKey, st.periodicity ?? '');
-                            return (
-                              <span className="text-sm text-muted-foreground">
-                                {label}{st.lastRunLabel ? ` · ${st.lastRunLabel}` : ''}
-                              </span>
-                            );
-                          }
-
-                          // Monthly due: no special badge
-                          return null;
+                          // type === 'due': show periodicity label
+                          const periodicityKey = `donors.periodicityQuota.${st.periodicity}`;
+                          const label = tr(periodicityKey, st.periodicity ?? '');
+                          return (
+                            <span className="text-sm text-muted-foreground">
+                              {label}
+                            </span>
+                          );
                         })()}
                       </TableCell>
-                      <TableCell className="font-mono text-sm">
+                      <TableCell className="font-mono text-sm whitespace-nowrap">
                         {donor.iban ? formatIban(donor.iban) : '-'}
                       </TableCell>
                       <TableCell>
