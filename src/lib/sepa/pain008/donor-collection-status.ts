@@ -6,10 +6,9 @@
  *  - periodicityQuota null/undefined → noPeriodicity
  *  - periodicityQuota === 'manual'  → manual
  *  - No lastRun                     → due (never collected = always due)
- *  - monthly: natural month comparison (same month = blocked, different = due)
- *  - quarterly/semiannual/annual: interval-based from sepaPain008LastRunAt
- *    → nextDue = addMonths(lastRunAt, N) where N = 3/6/12
- *    → due if collectionDate >= nextDue, blocked otherwise
+ *  - All periodicities: year-month comparison (day is ignored)
+ *    → nextDueMonth = addMonths(YYYY-MM(lastRun), N) where N = 1/3/6/12
+ *    → due if YYYY-MM(collectionDate) >= nextDueMonth, blocked otherwise
  */
 
 export type CollectionStatusType =
@@ -56,30 +55,25 @@ function formatDateLabel(dateStr: string): string | null {
   }
 }
 
-/**
- * Get a natural month key: "YYYY-MM". Used only for monthly periodicity.
- */
-function getMonthKey(dateStr: string): string {
-  const d = parseDate(dateStr);
-  const y = d.getUTCFullYear();
-  const m = d.getUTCMonth() + 1;
-  return `${y}-${String(m).padStart(2, '0')}`;
+type YearMonth = { y: number; m: number }; // m: 1..12
+
+/** Extract year and month (1..12) from YYYY-MM-DD, ignoring the day */
+function toYearMonth(isoDate: string): YearMonth {
+  const d = parseDate(isoDate);
+  return { y: d.getUTCFullYear(), m: d.getUTCMonth() + 1 };
 }
 
-/**
- * Add N months to a YYYY-MM-DD date, clamping the day if needed.
- * E.g. addMonthsUTC("2025-01-31", 1) → Date for 2025-02-28 (not Mar 3).
- * No external dependencies.
- */
-function addMonthsUTC(dateStr: string, n: number): Date {
-  const d = parseDate(dateStr);
-  const originalDay = d.getUTCDate();
-  d.setUTCMonth(d.getUTCMonth() + n);
-  // If day changed, JS overflowed into the next month → clamp to last day
-  if (d.getUTCDate() !== originalDay) {
-    d.setUTCDate(0); // last day of the intended month
-  }
-  return d;
+/** Add delta months to a YearMonth */
+function addMonthsYM(ym: YearMonth, delta: number): YearMonth {
+  const total = ym.y * 12 + (ym.m - 1) + delta;
+  return { y: Math.floor(total / 12), m: (total % 12) + 1 };
+}
+
+/** Compare two YearMonths: -1 if a<b, 0 if equal, 1 if a>b */
+function cmpYM(a: YearMonth, b: YearMonth): number {
+  if (a.y !== b.y) return a.y < b.y ? -1 : 1;
+  if (a.m !== b.m) return a.m < b.m ? -1 : 1;
+  return 0;
 }
 
 // ---------------------------------------------------------------------------
@@ -138,23 +132,12 @@ export function computeDonorCollectionStatus(
     };
   }
 
-  // Monthly: natural month comparison (avoids drift, matches user expectation)
-  if (months === 1) {
-    const lastMonth = getMonthKey(donor.sepaPain008LastRunAt);
-    const currentMonth = getMonthKey(collectionDate);
-    return {
-      type: currentMonth === lastMonth ? 'blocked' : 'due',
-      lastRunLabel,
-      periodicity,
-      periodicityMonths: months,
-    };
-  }
-
-  // Quarterly / Semiannual / Annual: interval anchored to last run
-  const nextDue = addMonthsUTC(donor.sepaPain008LastRunAt, months);
-  const collection = parseDate(collectionDate);
+  // Year-month comparison (day ignored) for all periodicities
+  const lastYM = toYearMonth(donor.sepaPain008LastRunAt);
+  const colYM = toYearMonth(collectionDate);
+  const nextYM = addMonthsYM(lastYM, months);
   return {
-    type: collection >= nextDue ? 'due' : 'blocked',
+    type: cmpYM(colYM, nextYM) >= 0 ? 'due' : 'blocked',
     lastRunLabel,
     periodicity,
     periodicityMonths: months,
