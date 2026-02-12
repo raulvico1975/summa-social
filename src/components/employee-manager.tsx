@@ -44,9 +44,10 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
-import { useCollection, useFirebase, useMemoFirebase, addDocumentNonBlocking, archiveDocumentNonBlocking, setDocumentNonBlocking } from '@/firebase';
+import { useCollection, useFirebase, useMemoFirebase, addDocumentNonBlocking } from '@/firebase';
 import { findExistingContact } from '@/lib/contact-matching';
-import { collection, doc, query, where } from 'firebase/firestore';
+import { collection, query, where } from 'firebase/firestore';
+import { updateContactViaApi } from '@/services/contacts';
 import { useCurrentOrganization } from '@/hooks/organization-provider';
 import { useTranslations } from '@/i18n';
 import { normalizeContact, formatIBANDisplay } from '@/lib/normalize';
@@ -82,7 +83,7 @@ const emptyFormData: EmployeeFormData = {
 };
 
 export function EmployeeManager() {
-  const { firestore, user } = useFirebase();
+  const { firestore, auth, user } = useFirebase();
   const { organizationId } = useCurrentOrganization();
   const { toast } = useToast();
   const { t } = useTranslations();
@@ -280,7 +281,7 @@ export function EmployeeManager() {
     setFormData(prev => ({ ...prev, [field]: value }));
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!formData.name.trim()) {
       toast({
         variant: 'destructive',
@@ -316,11 +317,22 @@ export function EmployeeManager() {
     };
 
     if (editingEmployee) {
-      setDocumentNonBlocking(doc(contactsCollection, editingEmployee.id), dataToSave, { merge: true });
-      toast({
-        title: t.employees.employeeUpdated,
-        description: t.employees.employeeUpdatedDescription(normalized.name)
-      });
+      // Update via Admin API (bypass archived field guardrails)
+      try {
+        await updateContactViaApi({
+          orgId: organizationId!,
+          docId: editingEmployee.id,
+          data: dataToSave,
+          auth,
+        });
+        toast({
+          title: t.employees.employeeUpdated,
+          description: t.employees.employeeUpdatedDescription(normalized.name)
+        });
+      } catch (err) {
+        toast({ variant: 'destructive', title: t.common.error, description: err instanceof Error ? err.message : 'Error desconegut' });
+        return;
+      }
     } else {
       // Validar si ja existeix un contacte amb el mateix NIF/IBAN/email
       const existingMatch = findExistingContact(

@@ -332,6 +332,8 @@ export const es = {
       confirmDeleteDocument: "¿Eliminar justificante adjunto?",
       confirmDeleteDocumentDescription: "Esta acción eliminará el justificante adjunto de este movimiento. El archivo también se eliminará del almacenamiento.",
       documentDeleted: "Justificante eliminado correctamente",
+      deleteDocFromPendingError: "No se puede eliminar",
+      deleteDocFromPendingHint: "Este documento proviene de un movimiento pendiente conciliado. Elimina el pendiente para deshacer la conciliación.",
       // Barra de resum filtrat
       showingOf: (showing: number, total: number) => `Mostrando ${showing} de ${total}`,
       income: "Ingresos",
@@ -3097,6 +3099,7 @@ export const es = {
       clear: "Limpiar",
       search: "Buscar...",
       createSupplier: "Nuevo proveedor...",
+      deleteMatched: "Eliminar pendiente",
     },
     deleteDialog: {
       title: "¿Eliminar documento?",
@@ -3151,6 +3154,9 @@ export const es = {
       errorLink: "No se ha podido vincular el documento.",
       errorIgnore: "No se ha podido ignorar la sugerencia.",
       errorUnknown: "Error desconocido",
+      relinked: "Documento re-vinculado",
+      matchedDeleted: "Conciliación deshecha",
+      matchedDeletedDesc: "El movimiento bancario vuelve a estar libre para conciliar.",
       autoUnmatchTitle: "Conciliación deshecha",
       autoUnmatchDesc: "Se ha deshecho la conciliación del documento pendiente vinculado antes de eliminar el movimiento.",
       autoUnmatchErrorTitle: "No se ha podido deshacer la conciliación",
@@ -3572,6 +3578,8 @@ export const es = {
       schemeB2B: "B2B (empresas)",
       noCreditorId: "La cuenta seleccionada no tiene identificador de acreedor SEPA configurado.",
       configureCreditorId: "Configura el creditorId en la configuración de la cuenta bancaria.",
+      creditorIdLabel: "ID Acreedor:",
+      ibanLabel: "IBAN:",
     },
     // Step 2: Selection
     selection: {

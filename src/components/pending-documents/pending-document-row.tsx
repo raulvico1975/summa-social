@@ -46,6 +46,8 @@ import {
   MoreHorizontal,
   ArrowUpRight,
   Link2,
+  RefreshCw,
+  Trash2,
 } from 'lucide-react';
 import {
   DropdownMenu,
@@ -86,6 +88,12 @@ interface PendingDocumentRowProps {
   onSelect?: (docId: string, selected: boolean) => void;
   /** Reconciliation */
   onReconcile?: (doc: PendingDocument) => void;
+  /** Re-link document to matched transaction */
+  onRelinkDocument?: (doc: PendingDocument) => void;
+  isRelinking?: boolean;
+  /** Delete matched document (undo reconciliation) */
+  onDeleteMatched?: (doc: PendingDocument) => void;
+  isDeletingMatched?: boolean;
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -158,6 +166,10 @@ export function PendingDocumentRow({
   isSelected = false,
   onSelect,
   onReconcile,
+  onRelinkDocument,
+  isRelinking = false,
+  onDeleteMatched,
+  isDeletingMatched = false,
 }: PendingDocumentRowProps) {
   const { storage } = useFirebase();
   const { t } = useTranslations();
@@ -639,6 +651,41 @@ export function PendingDocumentRow({
                       <ArrowUpRight className="mr-2 h-4 w-4" />
                       {t.pendingDocs.actions.viewTransaction}
                     </a>
+                  </DropdownMenuItem>
+                </>
+              )}
+
+              {/* Re-link document: HIDDEN - funcionalitat obsoleta
+              {doc.status === 'matched' && doc.matchedTransactionId && onRelinkDocument && (
+                <DropdownMenuItem
+                  onClick={() => onRelinkDocument(doc)}
+                  disabled={isRelinking}
+                >
+                  {isRelinking ? (
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  ) : (
+                    <RefreshCw className="mr-2 h-4 w-4" />
+                  )}
+                  {t.pendingDocs.actions.relinkDocument}
+                </DropdownMenuItem>
+              )}
+              */}
+
+              {/* Delete matched (undo reconciliation) */}
+              {doc.status === 'matched' && onDeleteMatched && (
+                <>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem
+                    onClick={() => onDeleteMatched(doc)}
+                    disabled={isDeletingMatched}
+                    className="text-destructive"
+                  >
+                    {isDeletingMatched ? (
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    ) : (
+                      <Trash2 className="mr-2 h-4 w-4" />
+                    )}
+                    {t.pendingDocs.actions.deleteMatched || 'Eliminar pendent'}
                   </DropdownMenuItem>
                 </>
               )}

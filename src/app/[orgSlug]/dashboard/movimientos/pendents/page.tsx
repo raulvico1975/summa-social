@@ -65,6 +65,7 @@ import {
   archivePendingDocument,
   restorePendingDocument,
   deletePendingDocument,
+  deleteMatchedPendingDocument,
   isDocumentReadyToConfirm,
   type PendingDocument,
   type PendingDocumentStatus,
@@ -114,6 +115,8 @@ export default function PendingDocsPage() {
   const [isBulkConfirming, setIsBulkConfirming] = React.useState(false);
   const [archivingDocId, setArchivingDocId] = React.useState<string | null>(null);
   const [deletingDocId, setDeletingDocId] = React.useState<string | null>(null);
+  const [relinkingDocId, setRelinkingDocId] = React.useState<string | null>(null);
+  const [deletingMatchedDocId, setDeletingMatchedDocId] = React.useState<string | null>(null);
 
   // Filtres client-side
   const [filters, setFilters] = React.useState<PendingDocumentsFilters>(EMPTY_FILTERS);
@@ -374,6 +377,94 @@ export default function PendingDocsPage() {
       setDeletingDocId(null);
     }
   }, [firestore, storage, organizationId, toast, expandedDocId]);
+
+  // Handler per eliminar un document matched (desfer conciliació)
+  const handleDeleteMatched = React.useCallback(async (doc: PendingDocument) => {
+    if (!firestore || !storage || !organizationId) return;
+
+    if (doc.status !== 'matched') {
+      toast({
+        variant: 'destructive',
+        title: t.pendingDocs.toasts.error,
+        description: 'Aquest document no està conciliat',
+      });
+      return;
+    }
+
+    setDeletingMatchedDocId(doc.id);
+    try {
+      await deleteMatchedPendingDocument(firestore, storage, organizationId, doc.id);
+
+      // Tancar expansió si estava obert
+      if (expandedDocId === doc.id) {
+        setExpandedDocId(null);
+      }
+
+      toast({
+        title: t.pendingDocs.toasts.matchedDeleted || 'Conciliació desfeta',
+        description: t.pendingDocs.toasts.matchedDeletedDesc || 'El moviment bancari torna a estar lliure per conciliar.',
+      });
+    } catch (error) {
+      console.error('Error deleting matched document:', error);
+      toast({
+        variant: 'destructive',
+        title: t.pendingDocs.toasts.error,
+        description: error instanceof Error ? error.message : t.pendingDocs.toasts.errorDelete,
+      });
+    } finally {
+      setDeletingMatchedDocId(null);
+    }
+  }, [firestore, storage, organizationId, toast, expandedDocId, t]);
+
+  // Handler per re-vincular document a transacció
+  const handleRelinkDocument = React.useCallback(async (doc: PendingDocument) => {
+    if (!organizationId) return;
+
+    setRelinkingDocId(doc.id);
+    try {
+      // Obtenir token d'autenticació
+      const { auth } = await import('firebase/auth');
+      const { getAuth } = await import('firebase/auth');
+      const authInstance = getAuth();
+      const user = authInstance.currentUser;
+      if (!user) {
+        throw new Error('No autenticat');
+      }
+      const idToken = await user.getIdToken();
+
+      const response = await fetch('/api/pending-documents/relink-document', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${idToken}`,
+        },
+        body: JSON.stringify({
+          orgId: organizationId,
+          pendingId: doc.id,
+        }),
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error || 'Error re-vinculant document');
+      }
+
+      toast({
+        title: t.pendingDocs.toasts.relinked || 'Document re-vinculat',
+        description: doc.file.filename,
+      });
+    } catch (error) {
+      console.error('Error relinking document:', error);
+      toast({
+        variant: 'destructive',
+        title: t.pendingDocs.toasts.error,
+        description: error instanceof Error ? error.message : 'Error re-vinculant document',
+      });
+    } finally {
+      setRelinkingDocId(null);
+    }
+  }, [organizationId, toast, t]);
 
   // Handler per renombrar un document (cosmètic, Firestore only)
   const handleRename = React.useCallback(async (docId: string, newFilename: string) => {
@@ -911,8 +1002,12 @@ export default function PendingDocsPage() {
                           onArchive={handleArchive}
                           onRestore={handleRestore}
                           onReconcile={handleReconcile}
+                          onRelinkDocument={handleRelinkDocument}
+                          onDeleteMatched={handleDeleteMatched}
                           isConfirming={confirmingDocId === doc.id}
                           isArchiving={archivingDocId === doc.id}
+                          isRelinking={relinkingDocId === doc.id}
+                          isDeletingMatched={deletingMatchedDocId === doc.id}
                           movimentsPath={movimentsPath}
                           isSelectable={canOperate && doc.status === 'confirmed'}
                           isSelected={selectedDocIds.has(doc.id)}

@@ -5,13 +5,16 @@ import {
   query,
   where,
   orderBy,
+  limit as firestoreLimit,
   Timestamp,
   addDoc,
   updateDoc,
   deleteDoc,
   getDoc,
+  getDocs,
   serverTimestamp,
   writeBatch,
+  doc as firestoreDoc,
   type Firestore,
   type Query,
 } from 'firebase/firestore';
@@ -119,10 +122,19 @@ export async function updatePendingDocument(
 ): Promise<void> {
   const docRef = pendingDocumentDoc(firestore, orgId, docId);
 
-  await updateDoc(docRef, {
-    ...patch,
-    updatedAt: serverTimestamp(),
-  });
+  try {
+    await updateDoc(docRef, {
+      ...patch,
+      updatedAt: serverTimestamp(),
+    });
+  } catch (error) {
+    // Idempotent: si el document no existeix, loguem i ignorem
+    if (error instanceof Error && error.message.includes('No document to update')) {
+      console.warn(`[updatePendingDocument] Document ${docId} ja no existeix (idempotent)`);
+      return;
+    }
+    throw error;
+  }
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -392,8 +404,10 @@ export async function deletePendingDocument(
   const docRef = pendingDocumentDoc(firestore, orgId, docId);
   const docSnap = await getDoc(docRef);
 
+  // Idempotent: si el document ja no existeix, considerem èxit
   if (!docSnap.exists()) {
-    throw new Error('El document no existeix');
+    console.warn(`[deletePendingDocument] Document ${docId} ja no existeix (idempotent)`);
+    return { fileDeleted: true, fileError: undefined };
   }
 
   const docData = docSnap.data() as PendingDocument;
@@ -504,4 +518,137 @@ export function getEditableFields(status: PendingDocumentStatus): {
         editableFields: [],
       };
   }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// PENDING DOC MATCHED - CONSULTES I ELIMINACIÓ
+// ═══════════════════════════════════════════════════════════════════════════
+
+/**
+ * Comprova si una transacció té un document pendent conciliat (matched) associat.
+ *
+ * @param firestore - Instància de Firestore
+ * @param orgId - ID de l'organització
+ * @param transactionId - ID de la transacció a comprovar
+ * @returns L'ID del pending document si existeix, o null si no
+ */
+export async function getMatchedPendingDocumentId(
+  firestore: Firestore,
+  orgId: string,
+  transactionId: string
+): Promise<string | null> {
+  const collectionRef = pendingDocumentsCollection(firestore, orgId);
+
+  const matchedQuery = query(
+    collectionRef,
+    where('matchedTransactionId', '==', transactionId),
+    where('status', '==', 'matched'),
+    firestoreLimit(1)
+  );
+
+  const snapshot = await getDocs(matchedQuery);
+
+  if (snapshot.empty) {
+    return null;
+  }
+
+  return snapshot.docs[0].id;
+}
+
+/**
+ * Elimina un document pendent matched i desfà la conciliació amb la transacció.
+ *
+ * Efectes:
+ * - Elimina el pending document de Firestore
+ * - Elimina el fitxer de Storage (best-effort)
+ * - Neteja els camps de conciliació de la transacció (document, category, contactId si provenen del pendent)
+ *
+ * @param firestore - Instància de Firestore
+ * @param storage - Instància de Firebase Storage
+ * @param orgId - ID de l'organització
+ * @param pendingDocId - ID del document pendent a eliminar
+ * @returns Resultat amb info sobre l'operació
+ */
+export async function deleteMatchedPendingDocument(
+  firestore: Firestore,
+  storage: FirebaseStorage,
+  orgId: string,
+  pendingDocId: string
+): Promise<{ success: boolean; fileDeleted: boolean; fileError?: string }> {
+  // 1. Llegir el pending document
+  const pendingRef = pendingDocumentDoc(firestore, orgId, pendingDocId);
+  const pendingSnap = await getDoc(pendingRef);
+
+  // Idempotent: si el document ja no existeix, considerem èxit
+  if (!pendingSnap.exists()) {
+    console.warn(`[deleteMatchedPendingDocument] Document ${pendingDocId} ja no existeix (idempotent)`);
+    return { success: true, fileDeleted: true, fileError: undefined };
+  }
+
+  const pendingData = pendingSnap.data() as PendingDocument;
+
+  // 2. Validar que està matched
+  if (pendingData.status !== 'matched') {
+    throw new Error('El document no està conciliat. Usa la funció d\'eliminació normal.');
+  }
+
+  const matchedTxId = pendingData.matchedTransactionId;
+  if (!matchedTxId) {
+    throw new Error('El document indica status matched però no té matchedTransactionId');
+  }
+
+  // 3. Comprovar si la transacció existeix
+  const txRef = firestoreDoc(firestore, `organizations/${orgId}/transactions/${matchedTxId}`);
+  const txSnap = await getDoc(txRef);
+  const txExists = txSnap.exists();
+
+  if (!txExists) {
+    console.warn(`[deleteMatchedPendingDocument] Transacció ${matchedTxId} ja no existeix (orphan reference)`);
+  }
+
+  // 4. Preparar batch per atomicitat
+  const batch = writeBatch(firestore);
+
+  // 4a. Actualitzar la transacció per treure referència al document (només si existeix)
+  if (txExists) {
+    batch.update(txRef, {
+      document: null,
+      updatedAt: serverTimestamp(),
+    });
+  }
+
+  // 4b. Eliminar el pending document
+  batch.delete(pendingRef);
+
+  // 5. Executar batch
+  await batch.commit();
+
+  // 5. Eliminar fitxers de Storage (best-effort, fora del batch)
+  let fileDeleted = true;
+  let fileError: string | undefined;
+
+  // Eliminar fitxer original (pendingDocuments path)
+  if (pendingData.file?.storagePath) {
+    try {
+      const storageRef = ref(storage, pendingData.file.storagePath);
+      await deleteObject(storageRef);
+    } catch (error) {
+      console.warn('[deleteMatchedPendingDocument] No s\'ha pogut esborrar storagePath:', error);
+      // No és error crític - pot ser que ja s'hagi eliminat
+    }
+  }
+
+  // Eliminar còpia al destí final (documents path)
+  if (pendingData.file?.finalStoragePath) {
+    try {
+      const finalRef = ref(storage, pendingData.file.finalStoragePath);
+      await deleteObject(finalRef);
+    } catch (error) {
+      console.warn('[deleteMatchedPendingDocument] No s\'ha pogut esborrar finalStoragePath:', error);
+      fileDeleted = false;
+      fileError = error instanceof Error ? error.message : 'Error desconegut';
+    }
+  }
+
+  return { success: true, fileDeleted, fileError };
 }

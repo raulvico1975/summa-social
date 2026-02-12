@@ -35,8 +35,9 @@ import { PlusCircle, Edit, Archive, Download, Upload, Tag, MoreVertical } from '
 import type { Category } from '@/lib/data';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
-import { useCollection, useFirebase, useMemoFirebase, addDocumentNonBlocking, setDocumentNonBlocking } from '@/firebase';
-import { collection, doc } from 'firebase/firestore';
+import { useCollection, useFirebase, useMemoFirebase, addDocumentNonBlocking } from '@/firebase';
+import { collection } from 'firebase/firestore';
+import { updateCategoryViaApi } from '@/services/categories';
 import { ReassignModal, type ReassignItem } from './reassign-modal';
 import { useTranslations } from '@/i18n';
 import { useCurrentOrganization } from '@/hooks/organization-provider';
@@ -161,7 +162,7 @@ function CategoryTable({
 }
 
 export function CategoryManager() {
-  const { firestore, user } = useFirebase();
+  const { firestore, auth, user } = useFirebase();
   const { organizationId, userRole } = useCurrentOrganization();
   const { t } = useTranslations();
   const categoryTranslations = t.categories as Record<string, string>;
@@ -341,7 +342,7 @@ export function CategoryManager() {
     setFormData({ ...formData, type: value });
   }
   
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!canEdit) return;
 
     if (!formData.name) {
@@ -353,18 +354,28 @@ export function CategoryManager() {
       toast({ variant: 'destructive', title: t.common.error, description: t.common.dbConnectionError });
       return;
     }
-    
+
     // For new categories, we treat the name as a key if it doesn't have spaces
     const nameKey = editingCategory ? formData.name : formData.name.trim().replace(/\s+/g, '-').toLowerCase();
     const finalData = { ...formData, name: nameKey };
 
 
     if (editingCategory) {
-      // Update
-      setDocumentNonBlocking(doc(categoriesCollection, editingCategory.id), finalData, { merge: true });
-      toast({ title: t.settings.categoryUpdatedToast, description: t.settings.categoryUpdatedToastDescription(formData.name) });
+      // Update via Admin API (bypass archived field guardrails)
+      try {
+        await updateCategoryViaApi({
+          orgId: organizationId!,
+          categoryId: editingCategory.id,
+          data: finalData,
+          auth,
+        });
+        toast({ title: t.settings.categoryUpdatedToast, description: t.settings.categoryUpdatedToastDescription(formData.name) });
+      } catch (err) {
+        toast({ variant: 'destructive', title: t.common.error, description: err instanceof Error ? err.message : 'Error desconegut' });
+        return;
+      }
     } else {
-      // Create
+      // Create (client-side, no archived fields involved)
       addDocumentNonBlocking(categoriesCollection, finalData);
       toast({ title: t.settings.categoryCreatedToast, description: t.settings.categoryCreatedToastDescription(formData.name) });
     }

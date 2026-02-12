@@ -332,6 +332,8 @@ export const ca = {
       confirmDeleteDocument: "Eliminar justificant adjunt?",
       confirmDeleteDocumentDescription: "Aquesta acció eliminarà el justificant adjunt d'aquest moviment. El fitxer també s'eliminarà de l'emmagatzematge.",
       documentDeleted: "Justificant eliminat correctament",
+      deleteDocFromPendingError: "No es pot eliminar",
+      deleteDocFromPendingHint: "Aquest document prové d'un moviment pendent conciliat. Elimina el pendent per desfer la conciliació.",
       // Barra de resum filtrat
       showingOf: (showing: number, total: number) => `Mostrant ${showing} de ${total}`,
       income: "Ingressos",
@@ -3102,6 +3104,7 @@ export const ca = {
       clear: "Netejar",
       search: "Cercar...",
       createSupplier: "Nou proveïdor...",
+      deleteMatched: "Eliminar pendent",
     },
     deleteDialog: {
       title: "Eliminar document?",
@@ -3156,6 +3159,9 @@ export const ca = {
       errorLink: "No s'ha pogut vincular el document.",
       errorIgnore: "No s'ha pogut ignorar el suggeriment.",
       errorUnknown: "Error desconegut",
+      relinked: "Document re-vinculat",
+      matchedDeleted: "Conciliació desfeta",
+      matchedDeletedDesc: "El moviment bancari torna a estar lliure per conciliar.",
       autoUnmatchTitle: "Conciliació desfeta",
       autoUnmatchDesc: "S'ha desfet la conciliació del document pendent vinculat abans d'eliminar el moviment.",
       autoUnmatchErrorTitle: "No s'ha pogut desfer la conciliació",
@@ -3577,6 +3583,8 @@ export const ca = {
       schemeB2B: "B2B (empreses)",
       noCreditorId: "El compte seleccionat no té identificador de creditor SEPA configurat.",
       configureCreditorId: "Configura el creditorId a la configuració del compte bancari.",
+      creditorIdLabel: "ID Creditor:",
+      ibanLabel: "IBAN:",
     },
     // Step 2: Selection
     selection: {
