@@ -68,6 +68,7 @@ import type { PendingDocument, PendingDocumentStatus } from '@/lib/pending-docum
 import type { Contact, Category } from '@/lib/data';
 import { isDocumentReadyToConfirm, getMissingFields } from '@/lib/pending-documents/api';
 import { buildDocumentFilename } from '@/lib/build-document-filename';
+import { formatCurrencyEU } from '@/lib/normalize';
 import { CreateSupplierModal } from '@/components/contacts/create-supplier-modal';
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -263,7 +264,7 @@ export function PendingDocumentCard({
   const confidence = doc.extracted?.confidence;
 
   // Format amount for display
-  const formattedAmount = doc.amount !== null ? `${doc.amount.toFixed(2)} €` : '—';
+  const formattedAmount = doc.amount !== null ? formatCurrencyEU(doc.amount) : '—';
 
   // Format date for display
   const formattedDate = validInvoiceDate ? format(validInvoiceDate, 'dd/MM/yy') : '—';
@@ -310,12 +311,12 @@ export function PendingDocumentCard({
 
   return (
     <div className={cn(
-      'border-b last:border-b-0',
+      'border-b last:border-b-0 overflow-hidden',
       !isReady && 'bg-amber-50/30',
       isSelected && 'bg-primary/5'
     )}>
       {/* FILA COMPACTA */}
-      <div className="flex items-center gap-2 p-3">
+      <div className="flex items-center gap-2 p-3 min-w-0">
         {/* Checkbox de selecció */}
         {isSelectable && (
           <Checkbox
@@ -430,7 +431,7 @@ export function PendingDocumentCard({
 
       {/* BLOC EXPANDIT */}
       {isExpanded && (
-        <div className="px-3 pb-4 pt-1 border-t bg-muted/50 space-y-4">
+        <div className="px-3 pb-4 pt-1 border-t bg-muted/50 space-y-4 overflow-hidden">
           {/* Fila 1: Import + Data + Tipus */}
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             {/* Import */}
@@ -463,13 +464,13 @@ export function PendingDocumentCard({
                   <Button
                     variant="outline"
                     className={cn(
-                      'w-full justify-start text-left font-normal h-9',
+                      'w-full justify-start text-left font-normal h-9 overflow-hidden',
                       !validInvoiceDate && 'text-muted-foreground',
                       missingFields.includes('invoiceDate') && 'border-amber-400 bg-amber-50'
                     )}
                   >
-                    <CalendarIcon className="mr-2 h-4 w-4" />
-                    {validInvoiceDate ? format(validInvoiceDate, 'dd/MM/yyyy') : t.pendingDocs.filters.dateFrom}
+                    <CalendarIcon className="mr-2 h-4 w-4 flex-shrink-0" />
+                    <span className="truncate">{validInvoiceDate ? format(validInvoiceDate, 'dd/MM/yyyy') : t.pendingDocs.filters.dateFrom}</span>
                   </Button>
                 </PopoverTrigger>
                 <PopoverContent className="w-auto p-0" align="start">

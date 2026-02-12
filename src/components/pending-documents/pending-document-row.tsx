@@ -65,6 +65,7 @@ import { useFirebase } from '@/firebase';
 import type { PendingDocument, PendingDocumentStatus } from '@/lib/pending-documents/types';
 import type { Contact, Category } from '@/lib/data';
 import { isDocumentReadyToConfirm, getMissingFields, getEditableFields } from '@/lib/pending-documents/api';
+import { formatCurrencyEU } from '@/lib/normalize';
 
 // ═══════════════════════════════════════════════════════════════════════════
 // TYPES
@@ -355,7 +356,7 @@ export function PendingDocumentRow({
             <span className="text-sm text-muted-foreground">€</span>
           </div>
         ) : (
-          <span>{doc.amount !== null ? `${doc.amount.toFixed(2)} €` : '—'}</span>
+          <span>{doc.amount !== null ? formatCurrencyEU(doc.amount) : '—'}</span>
         )}
       </TableCell>
 
