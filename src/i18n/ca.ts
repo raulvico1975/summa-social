@@ -3216,6 +3216,12 @@ export const ca = {
     suggested: "Suggerit",
     suggestedTooltip: "Conciliar amb moviment suggerit",
     missing: "Falten",
+    rename: {
+      suggestion: (params: { filename: string }) => `Renombrar a "${params.filename}"?`,
+      accept: "Sí",
+      dismiss: "No",
+      success: "Nom actualitzat",
+    },
     featureDisabled: "Funcionalitat no activada",
     featureDisabledDesc: "Contacta amb l'administrador per activar el mòdul de documents pendents.",
   },

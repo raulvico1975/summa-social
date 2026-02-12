@@ -458,6 +458,33 @@ export function canDeletePendingDocument(status: PendingDocumentStatus): boolean
 }
 
 /**
+ * Renombra un document pendent (cosmètic, Firestore only).
+ * Actualitza només `file.filename`, NO toca `file.storagePath`.
+ *
+ * @param firestore - Instància de Firestore
+ * @param orgId - ID de l'organització
+ * @param docId - ID del document
+ * @param newFilename - Nou nom del fitxer (amb extensió)
+ */
+export async function renamePendingDocument(
+  firestore: Firestore,
+  orgId: string,
+  docId: string,
+  newFilename: string
+): Promise<void> {
+  if (!newFilename || !newFilename.trim()) {
+    throw new Error('El nom del fitxer no pot ser buit');
+  }
+
+  const docRef = pendingDocumentDoc(firestore, orgId, docId);
+
+  await updateDoc(docRef, {
+    'file.filename': newFilename.trim(),
+    updatedAt: serverTimestamp(),
+  });
+}
+
+/**
  * Comprova si un document es pot editar completament segons el seu estat.
  * - draft/confirmed: tots els camps editables
  * - sepa_generated: només categoryId editable (camps de pagament bloquejats)

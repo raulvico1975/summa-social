@@ -325,7 +325,7 @@ export function TransactionImporter({ existingTransactions, availableCategories 
         const header = (json[headerRowIndex] as string[]).map(h => String(h || '').trim());
         log(`Cabecera encontrada en la fila ${headerRowIndex + 1}: ${header.join(', ')}`);
 
-        const dateIndex = findColumnIndex(header, ['fecha operación', 'fecha', 'data']);
+        const dateIndex = findColumnIndex(header, ['f. valor', 'fecha operación', 'fecha', 'f. ejecución', 'data']);
         const conceptIndex = findColumnIndex(header, ['concepto', 'descripció', 'description']);
         const amountIndex = findColumnIndex(header, ['importe', 'import', 'amount', 'quantitat']);
 
