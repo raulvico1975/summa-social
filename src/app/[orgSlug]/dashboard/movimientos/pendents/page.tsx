@@ -423,7 +423,6 @@ export default function PendingDocsPage() {
     setRelinkingDocId(doc.id);
     try {
       // Obtenir token d'autenticació
-      const { auth } = await import('firebase/auth');
       const { getAuth } = await import('firebase/auth');
       const authInstance = getAuth();
       const user = authInstance.currentUser;
