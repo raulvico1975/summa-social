@@ -3213,6 +3213,12 @@ export const fr = {
     suggested: "Suggéré",
     suggestedTooltip: "Rapprocher avec le mouvement suggéré",
     missing: "Manquent",
+    rename: {
+      suggestion: (params: { filename: string }) => `Renommer en "${params.filename}" ?`,
+      accept: "Oui",
+      dismiss: "Non",
+      success: "Nom mis à jour",
+    },
     featureDisabled: "Fonctionnalité non activée",
     featureDisabledDesc: "Contactez l'administrateur pour activer le module de documents en attente.",
   },

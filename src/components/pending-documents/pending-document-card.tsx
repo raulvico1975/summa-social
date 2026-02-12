@@ -45,6 +45,7 @@ import {
   ChevronUp,
   Trash2,
   Plus,
+  PenLine,
 } from 'lucide-react';
 import {
   AlertDialog,
@@ -66,6 +67,7 @@ import { useFirebase } from '@/firebase';
 import type { PendingDocument, PendingDocumentStatus } from '@/lib/pending-documents/types';
 import type { Contact, Category } from '@/lib/data';
 import { isDocumentReadyToConfirm, getMissingFields } from '@/lib/pending-documents/api';
+import { buildDocumentFilename } from '@/lib/build-document-filename';
 import { CreateSupplierModal } from '@/components/contacts/create-supplier-modal';
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -80,6 +82,7 @@ interface PendingDocumentCardProps {
   onConfirm: (doc: PendingDocument) => void;
   onArchive: (doc: PendingDocument) => void;
   onDelete: (doc: PendingDocument) => void;
+  onRename?: (docId: string, newFilename: string) => Promise<void>;
   isConfirming?: boolean;
   isArchiving?: boolean;
   isDeleting?: boolean;
@@ -141,6 +144,7 @@ export function PendingDocumentCard({
   onConfirm,
   onArchive,
   onDelete,
+  onRename,
   isConfirming = false,
   isArchiving = false,
   isDeleting = false,
@@ -263,6 +267,46 @@ export function PendingDocumentCard({
 
   // Format date for display
   const formattedDate = validInvoiceDate ? format(validInvoiceDate, 'dd/MM/yy') : '—';
+
+  // Rename suggestion state
+  const [dismissedRenameSuggestion, setDismissedRenameSuggestion] = React.useState(false);
+  const [isRenaming, setIsRenaming] = React.useState(false);
+
+  // Compute suggested filename
+  const suggestedFilename = React.useMemo(() => {
+    if (!doc.invoiceDate) return null;
+
+    // Prioritze contact name (if supplierId matched), else AI-extracted supplier name
+    let supplierDisplayName: string | null = null;
+    if (doc.supplierId) {
+      const contact = contacts.find(c => c.id === doc.supplierId);
+      if (contact?.name) supplierDisplayName = contact.name;
+    }
+    if (!supplierDisplayName && doc.extracted?.evidence?.supplierName) {
+      supplierDisplayName = doc.extracted.evidence.supplierName;
+    }
+
+    if (!supplierDisplayName) return null;
+
+    const suggested = buildDocumentFilename({
+      dateISO: doc.invoiceDate,
+      concept: supplierDisplayName,
+      originalName: doc.file.filename,
+    });
+
+    // Only suggest if different from current
+    return suggested !== doc.file.filename ? suggested : null;
+  }, [doc.invoiceDate, doc.supplierId, doc.extracted?.evidence?.supplierName, doc.file.filename, contacts]);
+
+  const handleAcceptRename = React.useCallback(async () => {
+    if (!onRename || !suggestedFilename) return;
+    setIsRenaming(true);
+    try {
+      await onRename(doc.id, suggestedFilename);
+    } finally {
+      setIsRenaming(false);
+    }
+  }, [onRename, suggestedFilename, doc.id]);
 
   return (
     <div className={cn(
@@ -646,6 +690,38 @@ export function PendingDocumentCard({
                 </PopoverContent>
               </Popover>
             </div>
+
+            {/* Suggeriment de renom */}
+            {suggestedFilename && !dismissedRenameSuggestion && onRename && (
+              <div className="col-span-full flex items-center gap-2 rounded-md border border-blue-200 bg-blue-50 px-3 py-2">
+                <PenLine className="h-4 w-4 text-blue-600 flex-shrink-0" />
+                <span className="text-sm text-blue-800 flex-1 min-w-0 truncate">
+                  {t.pendingDocs.rename.suggestion({ filename: suggestedFilename })}
+                </span>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-7 text-blue-700 hover:text-blue-900 hover:bg-blue-100"
+                  onClick={handleAcceptRename}
+                  disabled={isRenaming}
+                >
+                  {isRenaming ? (
+                    <Loader2 className="h-3 w-3 animate-spin" />
+                  ) : (
+                    t.pendingDocs.rename.accept
+                  )}
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-7 text-blue-500 hover:text-blue-700 hover:bg-blue-100"
+                  onClick={() => setDismissedRenameSuggestion(true)}
+                  disabled={isRenaming}
+                >
+                  {t.pendingDocs.rename.dismiss}
+                </Button>
+              </div>
+            )}
 
             {/* Accions */}
             <div className="flex items-end justify-end gap-2">
