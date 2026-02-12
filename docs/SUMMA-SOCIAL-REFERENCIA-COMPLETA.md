@@ -1,6 +1,6 @@
 # ═══════════════════════════════════════════════════════════════════════════════
 # SUMMA SOCIAL - REFERÈNCIA COMPLETA DEL PROJECTE
-# Versió 1.40 - Febrer 2026
+# Versió 1.41 - Febrer 2026
 # ═══════════════════════════════════════════════════════════════════════════════
 
 
@@ -559,7 +559,9 @@ organizations/
       │       # Camps específics per DONANTS:
       │       ├── donorType: "individual" | "company"
       │       ├── membershipType: "one-time" | "recurring"
-      │       ├── monthlyAmount: number           # Quota mensual
+      │       ├── monthlyAmount: number           # Quota
+      │       ├── periodicityQuota: 'monthly' | 'quarterly' | 'semiannual' | 'annual' | null  # Periodicitat quota
+      │       ├── contactPersonName: string | null   # Persona de contacte (només PJ)
       │       ├── memberSince: string             # Data alta soci
       │       ├── status: "active" | "pending_return" | "inactive"
       │       ├── inactiveSince: string | null    # Data de baixa
@@ -1953,9 +1955,11 @@ Acció disponible al menú ⋮ del moviment pare si `isRemittance === true`.
 | Adreça | ❌ | ❌ |
 | Tipus (Particular/Empresa) | ✅ | ✅ NATURALEZA |
 | Modalitat (Puntual/Soci) | ✅ | ❌ |
+| Periodicitat (Mensual/Trimestral/Semestral/Anual) | ❌ | ❌ |
+| Persona de contacte (només Empresa) | ❌ | ❌ |
 | Estat (Actiu/Baixa) | ❌ | ❌ |
 | Data de baixa | ❌ | ❌ |
-| Quota mensual | ❌ | ❌ |
+| Quota | ❌ | ❌ |
 | IBAN | ❌ | ❌ |
 | Email | ❌ | ❌ |
 | Telèfon | ❌ | ❌ |
@@ -1970,6 +1974,51 @@ Acció disponible al menú ⋮ del moviment pare si `isRemittance === true`.
 - **Reactivar**: Botó per tornar a donar d'alta un soci
 - **Edició**: Es pot canviar l'estat des del formulari d'edició
 - **Importador**: Detecta columna "Estado/Estat" automàticament
+
+### 3.6.3b Filtres al Dashboard de Donants (NOU v1.41)
+
+El dashboard de donants disposa de filtres combinables amb lògica AND:
+
+| Filtre | Valors | Camp Firestore |
+|--------|--------|----------------|
+| **Estat** | Alta / Baixa | `status` |
+| **Tipus** | Particular / Empresa | `donorType` |
+| **Modalitat** | Soci / Puntual | `membershipType` |
+| **Periodicitat** | Mensual / Trimestral / Semestral / Anual | `periodicityQuota` |
+| **Cerca** | Text lliure | Nom, NIF (client-side) |
+| **Incomplets** | Sí / No | Falten dades Model 182 |
+| **Devolucions** | Sí / No | `returnCount > 0` |
+
+**Comportament:**
+- Cada opció mostra comptador de donants que hi coincideixen
+- Tots els filtres es combinen amb AND
+- UI: botons toggle sense botó "Tots" explícit (desseleccionar = sense filtre)
+- i18n complet (ca, es, fr)
+
+**Fitxer:** `src/components/donor-manager.tsx`
+
+### 3.6.3c Persona de Contacte per Empreses (NOU v1.41)
+
+Camp opcional `contactPersonName` visible només quan `donorType === 'company'`. Purament informatiu, no afecta càlculs fiscals ni remeses.
+
+- UI: camp de text al formulari d'edició (condicional per tipus Empresa)
+- Import/Export: columna "Persona de contacte" a la plantilla Excel
+- Fitxer tipus: `src/lib/data.ts` (Donor interface)
+
+### 3.6.3d Quota amb Sufix de Periodicitat (NOU v1.41)
+
+La quota ara mostra el sufix de periodicitat al llistat i al detall:
+
+| Periodicitat | Sufix |
+|--------------|-------|
+| Mensual | /mes |
+| Trimestral | /trim |
+| Semestral | /sem |
+| Anual | /any |
+
+**Helper:** `src/lib/donors/periodicity-suffix.ts` — `getPeriodicitySuffix(periodicityQuota)`
+
+La plantilla d'importació ara usa el header "Quota" (abans "Quota mensual").
 
 ### 3.6.4 Importador de Donants (ACTUALITZAT v1.28)
 
@@ -1987,7 +2036,9 @@ Acció disponible al menú ⋮ del moviment pare si `isRemittance === true`.
 | Tipus | donorType | ✅ |
 | Modalitat | membershipType | ✅ |
 | Estat | status | ❌ |
-| Quota mensual | monthlyAmount | ❌ |
+| Quota | monthlyAmount | ❌ |
+| Periodicitat | periodicityQuota | ❌ |
+| Persona de contacte | contactPersonName | ❌ |
 | IBAN | iban | ❌ |
 | Adreça | address | ❌ |
 | Codi postal | zipCode | ⚠️ Per Model 182 |
@@ -2006,7 +2057,7 @@ Acció disponible al menú ⋮ del moviment pare si `isRemittance === true`.
 
 - Checkbox opcional a la previsualització
 - Si un DNI ja existeix i el checkbox està activat → Actualitza en lloc d'ometre
-- Camps actualitzables: status, zipCode, address, email, phone, iban, membershipType, donorType
+- Camps actualitzables: status, zipCode, address, email, phone, iban, membershipType, donorType, periodicityQuota, contactPersonName
 - NO actualitza: name, taxId, createdAt (per seguretat)
 
 ### 3.6.5 Proveïdors - Camps
@@ -2061,7 +2112,9 @@ Botó "Exportar" a la llista de donants per descarregar un fitxer Excel.
 |---------|------|
 | Nom | `donor.name` |
 | NIF | `donor.taxId` |
-| Quota mensual | `donor.monthlyAmount` (formatat €) |
+| Quota | `donor.monthlyAmount` (formatat €) + sufix periodicitat |
+| Periodicitat | `donor.periodicityQuota` (Mensual/Trimestral/Semestral/Anual) |
+| Persona de contacte | `donor.contactPersonName` (només PJ) |
 | IBAN | `donor.iban` (formatat amb espais) |
 | Estat | "Alta", "Baixa" o "Pendent devolució" |
 
@@ -4057,6 +4110,10 @@ Fitxers: `src/app/api/contacts/import/route.ts`, `src/services/contacts.ts`.
 
 Migrat: `donor-manager.tsx` (commits `d9c7ae0`, `9c3be85`). Pendent: `supplier-manager.tsx`, `employee-manager.tsx`.
 
+**Fix Firestore Rules `.get()` per camps archived (v1.41):**
+
+Les regles d'update accedien directament a `resource.data.archived`, que llançava error si el camp no existia al document (documents creats abans del sistema d'arxivat). Ara s'utilitza `resource.data.get('archived', null)` per defecte segur. Afecta totes les regles d'update que comprovaven el camp `archived`.
+
 ### 3.10.5f Guardrails d'Integritat: Liquidacions (NOU v1.36 - FASE 2C)
 
 Guardrails per evitar arxivar liquidacions (ExpenseReports) que tenen tiquets pendents.
@@ -4145,6 +4202,7 @@ Centralització de la inicialització de Firebase Admin SDK en un únic helper, 
 | `verifyIdToken(token)` | Verifica i retorna el decoded token |
 | `validateUserMembership(orgId, uid, roles?)` | Valida que l'usuari pertany a l'org amb rol adequat |
 | `BATCH_SIZE` | Constant = 50 (màxim ops per batch Firestore) |
+| `requireOperationalAccess(req)` | Valida accés admin/user + superadmin bypass (NOU v1.41) |
 
 **INVARIANT:** `BATCH_SIZE = 50` — Firestore limita a 500 ops per batch, però per seguretat s'usa 50. No negociable.
 
@@ -4159,6 +4217,29 @@ Centralització de la inicialització de Firebase Admin SDK en un únic helper, 
 - `POST /api/contacts/import`
 - `POST /api/invitations/resolve` (NOU v1.40)
 - `POST /api/invitations/accept` (NOU v1.40)
+
+### 3.10.5h2 Accés Operatiu Unificat (NOU v1.41)
+
+Helper centralitzat que valida accés operatiu (admin + user) amb bypass per superadmin, eliminant codi duplicat a les rutes API d'arxivat.
+
+**Helper:** `src/lib/api/require-operational-access.ts`
+
+**Signatura:** `requireOperationalAccess(req: NextRequest): Promise<{ orgId, uid, memberDoc }>`
+
+**Què fa:**
+1. Extreu i verifica el token d'autenticació (`Authorization: Bearer`)
+2. Extreu `orgId` del body
+3. Comprova membership amb rol `admin` o `user`
+4. Si l'usuari és superadmin → bypass (no cal membership)
+5. Retorna `{ orgId, uid, memberDoc }` per ús de la ruta
+
+**Rutes que l'usen:**
+- `POST /api/categories/archive`
+- `POST /api/projects/archive`
+- `POST /api/bank-accounts/archive`
+- `POST /api/expense-reports/archive`
+- `POST /api/contacts/archive`
+- `POST /api/contacts/import`
 
 ### 3.10.5i Registre i Invitacions via Admin API (NOU v1.40)
 
@@ -4192,6 +4273,8 @@ El flux de registre d'usuaris convidats ha estat migrat a Admin SDK per resoldre
 | `src/components/admin/create-organization-dialog.tsx` | Modal crear organització |
 | `src/lib/data.ts` | Constant `SUPER_ADMIN_UID` |
 | `src/lib/api/admin-sdk.ts` | Helper centralitzat Admin SDK (NOU v1.40) |
+| `src/lib/api/require-operational-access.ts` | Validació accés operatiu unificat (NOU v1.41) |
+| `src/lib/donors/periodicity-suffix.ts` | Sufix periodicitat quota (NOU v1.41) |
 
 ### 3.10.7 Backup Local d'Organitzacions (NOU v1.28)
 
@@ -5087,6 +5170,15 @@ Helper centralitzat per filtrar valors invàlids abans de renderitzar `Select.It
 - ⚠️ **i18n PT**: `guides.importDonors.steps` longitud diferent (base=5, pt=6) + clau extra `.steps.5`
 - ⚠️ **i18n FR**: `help.dashboard.steps` longitud diferent (base=5, fr=4) + `help.dashboard.extra.order.items` (base=4, fr=3)
 
+## Completades v1.41
+- ✅ Persona de contacte per empreses (`contactPersonName`): camp, import, export, UI
+- ✅ Filtres dashboard donants: Tipus, Modalitat, Periodicitat (lògica AND, comptadors)
+- ✅ Quota amb sufix de periodicitat (/mes, /trim, /sem, /any)
+- ✅ Accés operatiu unificat (`require-operational-access.ts`), superadmin bypass
+- ✅ Fix Firestore Rules: `.get('archived', null)` per docs sense camp archived
+- ✅ Fix i18n clau botó arxivar categories/projectes
+- ✅ Fix typecheck: ExpenseLink type + guard seqüència SEPA
+
 ## Completades v1.40
 - ✅ Pre-selecció automàtica de donants al wizard SEPA pain.008 per periodicitat natural
 - ✅ Dinàmica de donants redissenyada: 5 blocs, separació PF/PJ, Top 15
@@ -5188,6 +5280,11 @@ Helper centralitzat per filtrar valors invàlids abans de renderitzar `Select.It
 | **1.33** | **30 Gen 2026** | **Health Check P0: panell d'integritat de dades al Dashboard (només admin). 5 blocs deterministes: A) categories legacy (docIds), B) dates formats mixtos/invàlids, C) coherència origen bancari (source↔bankAccountId), D) archivedAt en queries normals, E) signs per transactionType. UI amb details expandibles, badge recompte, taula exemples (max 5). Deduplicació global importació bancària (per rang dates), guardrails UX solapament extractes, camps bancaris readonly (description/amount) per moviments importats. Fitxer category-health.ts amb runHealthCheck().** |
 | **1.34** | **31 Gen 2026** | **Invariant A4 source↔bankAccountId: `bank`/`stripe` requereixen bankAccountId (P0 error si absent), `remittance` hereta del pare, `manual` no aplica. Health check actualitzat per detectar stripe sense bankAccountId. Camps (date/amount/description) bloquejats si bankAccountId present. Backfill dades legacy Flores (363 transaccions: 340 bank + 23 remittance).** |
 | **1.35** | **1 Feb 2026** | **Guardrails integritat Categories i Eixos: prohibit delete físic (Firestore Rules), arxivat només via API amb reassignació obligatòria si count > 0, camps archivedAt/ByUid/FromAction protegits contra escriptura client. APIs `/api/categories/archive` i `/api/projects/archive` amb validació orgId derivat de membership. Health Check nou: blocs F (categories òrfenes) i G (projects orfes). UI: icona Archive, ReassignModal, traduccions CA/ES/FR.** |
+| **1.41** | **11 Feb 2026** | **Donants: persona de contacte per empreses (contactPersonName), 3 filtres dashboard (Tipus/Modalitat/Periodicitat) amb comptadors i lògica AND, quota amb sufix periodicitat. Accés operatiu unificat (require-operational-access.ts) amb superadmin bypass. Fix Firestore Rules `.get('archived', null)` per docs legacy. Fixes menors i18n i typecheck.** |
+| **1.40** | **10 Feb 2026** | **Admin SDK compartit centralitzat (admin-sdk.ts, -500 línies). Registre/invitacions via Admin API. Pre-selecció SEPA pain.008 per periodicitat natural. Dinàmica donants redissenyada (5 blocs, PF/PJ). Health Check K/L. Gate i18n pre-commit. SafeSelect guard. Neteja console.logs.** |
+| **1.39** | **9 Feb 2026** | **Delete guardrails complets: budget lines bloquejades si linkades, expense links bloquejats si amb assignacions, FX transfers amb AlertDialog. Danger zone: findLinkedTxIds per remeses i bulk delete. i18n blockedByProjectLinks.** |
+| **1.38** | **8 Feb 2026** | **tx.category = docId (invariant): helper centralitzat isCategoryIdCompatibleStrict, guardrails a handleSetCategory/handleSetContact/handleBulkUpdateCategory/transaction-importer. Badge legacy "Cal recategoritzar". Bulk desactivat si selecció mixed.** |
+| **1.37** | **7 Feb 2026** | **Mòdul Projectes: off-bank hard delete amb batch Firestore + cleanup Storage. Conversió EUR en moment d'assignació amb FX split proporcional. Bloqueig assignació si pendingConversion.** |
 | **1.36** | **1 Feb 2026** | **Guardrails integritat FASE 2 completa: (2A) Comptes bancaris - desactivació via API, bloqueig si té moviments, prohibit delete. (2B) Contactes - arxivat via API amb dryRun, bloqueig només si moviments actius (permet arxivar amb historial arxivat), modal desglossament actius/arxivats. (2C) Liquidacions - arxivat via API, bloqueig si tiquets pendents (status≠matched), prohibit delete. Health Check: blocs H (bankAccounts orfes), I (contactes orfes), J (tiquets orfes). Nou endpoint `/api/expense-reports/archive`. Traduccions CA/ES/FR per modals "no es pot arxivar".** |
 
 

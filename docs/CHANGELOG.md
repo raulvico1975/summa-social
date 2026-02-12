@@ -6,12 +6,42 @@ Historial de canvis del projecte, ordenat de més recent a més antic.
 
 ## [1.41.0] - 2026-02-11
 
-### Donants: filtres per Tipus i Modalitat
+### Donants: persona de contacte per empreses
 
-- Filtres per Tipus (Particular / Empresa) i Modalitat (Puntual / Soci) al dashboard de donants
+- Nou camp opcional **Persona de contacte** per a donants de tipus Empresa
+- Visible només quan el donant és Persona Jurídica
+- Suport complet a importació i exportació Excel (columna "Persona de contacte")
+- i18n complet (ca, es, fr)
+
+### Donants: filtres al dashboard
+
+- **3 filtres nous:** Tipus (Particular / Empresa), Modalitat (Puntual / Soci), Periodicitat (Mensual / Trimestral / Semestral / Anual)
 - Lògica AND amb tots els filtres existents (estat, cerca, incomplets, devolucions)
 - Comptadors visibles per cada opció de filtre
+- UI simplificada: selecció directa sense botons "tots" redundants
 - i18n complet (ca, es, fr)
+
+### Donants: quota amb sufix de periodicitat
+
+- La quota ara mostra el sufix de periodicitat: /mes, /trimestre, /semestre, /any
+- Header de la plantilla d'importació renombrat a "Quota"
+- Sufix visible al llistat de donants i al detall
+
+### Accés operatiu unificat
+
+- **Nou helper** `src/lib/api/require-operational-access.ts`: centralitza validació d'accés (admin + user) amb bypass per superadmin
+- ~100 línies duplicades eliminades de 6 rutes API d'arxivat
+- Simplificació del codi a `admin-sdk.ts`
+
+### Firestore Rules: fix camps archived
+
+- Les regles d'update ara usen `.get('archived', null)` en lloc d'accés directe
+- Evita errors quan el camp `archived` no existeix al document (documents creats abans d'afegir la funcionalitat d'arxivat)
+
+### Fixes menors
+
+- i18n: correcció clau de traducció del botó d'arxivar a categories i projectes
+- Typecheck: alineació tipus `ExpenseLink` i guard per override seqüència SEPA
 
 ---
 
