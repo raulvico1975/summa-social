@@ -12,3 +12,4 @@ Registre cronologic de desplegaments a produccio.
 | 2026-02-12 10:26 | 6d919c9 | ALT | Si | 17 | PENDENT |
 | 2026-02-12 10:55 | 5e9ec15 | ALT | Si | 17 | PENDENT |
 | 2026-02-12 12:08 | 6b4e59b | MITJA | Si | 20 | PENDENT |
+| 2026-02-12 13:38 | 39220a5 | ALT | Si | 21 | PENDENT |
