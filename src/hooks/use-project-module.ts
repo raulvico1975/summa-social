@@ -472,6 +472,7 @@ export function useUnifiedExpenseFeed(options?: UseUnifiedExpenseFeedOptions): U
             invoiceDate: data.invoiceDate ?? null,
             paymentDate: data.paymentDate ?? null,
             supportDocNumber: data.supportDocNumber ?? null,
+            needsReview: data.needsReview ?? null,
           });
         }
       } else {
@@ -640,6 +641,7 @@ export function useUnifiedExpenseFeed(options?: UseUnifiedExpenseFeedOptions): U
           invoiceDate: data.invoiceDate ?? null,
           paymentDate: data.paymentDate ?? null,
           supportDocNumber: data.supportDocNumber ?? null,
+          needsReview: data.needsReview ?? null,
         };
       });
 
