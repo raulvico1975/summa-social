@@ -16,6 +16,8 @@ export interface AttachDocumentToTransactionParams {
   transactionDate?: string;
   /** Concepte del moviment. Usat per construir el nom del fitxer. */
   transactionConcept?: string;
+  /** Nom de fitxer explícit. Si present, s'usa en lloc d'auto-generar amb buildDocumentFilename(). */
+  overrideFilename?: string;
 }
 
 export interface AttachDocumentToExpenseParams {
@@ -79,12 +81,13 @@ export async function attachDocumentToTransaction({
   file,
   transactionDate,
   transactionConcept,
+  overrideFilename,
 }: AttachDocumentToTransactionParams): Promise<AttachDocumentResult> {
   try {
     // Construir nom de fitxer estandarditzat
     const dateISO = transactionDate ?? new Date().toISOString().split('T')[0];
     const concept = transactionConcept?.trim() || 'moviment';
-    const finalName = buildDocumentFilename({ dateISO, concept, originalName: file.name });
+    const finalName = overrideFilename ?? buildDocumentFilename({ dateISO, concept, originalName: file.name });
 
     // Path a Storage: organizations/{orgId}/documents/{transactionId}/{filename}
     const storagePath = `organizations/${organizationId}/documents/${transactionId}/${finalName}`;
