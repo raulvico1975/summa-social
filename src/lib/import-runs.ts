@@ -42,6 +42,15 @@ export interface ImportRun {
 
   /** ID del compte bancari (només per bankTransactions) */
   bankAccountId?: string | null;
+
+  /** Nombre de candidats a duplicat presentats a l'usuari */
+  candidateCount?: number;
+
+  /** Nombre de candidats que l'usuari ha decidit importar */
+  candidateUserImportedCount?: number;
+
+  /** Nombre de candidats que l'usuari ha decidit ometre */
+  candidateUserSkippedCount?: number;
 }
 
 /**
@@ -58,6 +67,9 @@ export function createImportRunDoc(params: {
   duplicateSkippedCount: number;
   createdBy: string;
   bankAccountId?: string | null;
+  candidateCount?: number;
+  candidateUserImportedCount?: number;
+  candidateUserSkippedCount?: number;
 }): Omit<ImportRun, 'id' | 'createdAt'> {
   return {
     type: params.type,
@@ -70,5 +82,8 @@ export function createImportRunDoc(params: {
     duplicateSkippedCount: params.duplicateSkippedCount,
     createdBy: params.createdBy,
     bankAccountId: params.bankAccountId,
+    ...(params.candidateCount !== undefined && { candidateCount: params.candidateCount }),
+    ...(params.candidateUserImportedCount !== undefined && { candidateUserImportedCount: params.candidateUserImportedCount }),
+    ...(params.candidateUserSkippedCount !== undefined && { candidateUserSkippedCount: params.candidateUserSkippedCount }),
   };
 }

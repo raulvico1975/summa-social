@@ -872,14 +872,26 @@ Nova estructura visual en 3 franges horitzontals:
 - El botó "Filtres" obre un Sheet lateral des de la dreta
 - Els filtres aplicats apareixen com a "pills" sota el header
 
-### 3.2.8 Drag & Drop de Documents (NOU v1.14)
+### 3.2.8 Drag & Drop de Documents (ACTUALITZAT v1.42)
 
-Permet adjuntar documents arrossegant fitxers directament sobre una fila de moviment.
+Permet adjuntar documents arrossegant fitxers directament sobre una fila de moviment, o clicant la icona de document.
 
 **Funcionament:**
 - Arrossegar un fitxer sobre qualsevol fila activa el mode "drop"
 - La fila mostra un overlay amb "Deixa anar per adjuntar"
-- En deixar anar, el fitxer es puja a Storage i s'assigna al moviment
+- En deixar anar (o clicar la icona), es mostra un **AlertDialog amb suggeriment de renom** (v1.42)
+- L'usuari pot acceptar el nom suggerit o mantenir l'original
+- El fitxer es puja a Storage i s'assigna al moviment
+
+**Renom suggerit en adjuntar (NOU v1.42):**
+
+Format: `YYYY.MM.DD_contacte.ext` (ex: `2026.02.10_Vodafone.pdf`)
+
+Prioritat per construir el nom:
+1. Nom del contacte del moviment
+2. Nota del moviment
+3. Descripció del moviment
+4. Fallback: "moviment"
 
 **Tipus acceptats:**
 - PDF, imatges (JPG, PNG, GIF, WEBP), XML
@@ -891,8 +903,9 @@ Permet adjuntar documents arrossegant fitxers directament sobre una fila de movi
 |-----------|--------|------------|
 | `RowDropTarget` | `src/components/files/row-drop-target.tsx` | Wrapper que afegeix drag & drop a files de taula |
 | `attachDocumentToTransaction` | `src/lib/files/attach-document.ts` | Helper per pujar fitxer a Storage i actualitzar Firestore |
+| `transactions-table.tsx` | `src/components/transactions-table.tsx` | AlertDialog de renom (v1.42) |
 
-**Traduccions:** `movements.table.dropToAttach` (CA/ES/FR)
+**Traduccions:** `movements.table.dropToAttach`, `movements.table.renameBeforeAttach.*` (CA/ES/FR)
 
 ### 3.2.8.1 Documents Pendents - Drag & Drop (NOU v1.28)
 
@@ -931,6 +944,29 @@ Millores de robustesa al mòdul de documents pendents:
 - `src/components/pending-documents/pending-document-card.tsx`
 - `src/components/pending-documents/pending-document-row.tsx`
 - `src/components/pending-documents/reconciliation-modal.tsx`
+
+### 3.2.8.3 Documents Pendents — Renom suggerit post-extracció (NOU v1.42)
+
+Quan un document pendent té data de factura i proveïdor extrets per IA, el sistema suggereix renombrar el fitxer amb un format estandarditzat.
+
+**Format suggerit:** `YYYY.MM.DD_proveïdor.ext` (ex: `2026.01.15_Vodafone.pdf`)
+
+**Funcionament:**
+- El suggeriment apareix dins la targeta expandida del document (botó "Renombrar")
+- Es basa en `extractedData.invoiceDate` i `extractedData.supplierName`
+- Si falta la data o el proveïdor, no es mostra suggeriment
+- El nom del proveïdor es normalitza: lowercase, sense accents, espais → guió baix
+
+**Abast del renom:**
+- **Cosmètic:** Actualitza `file.filename` a Firestore via `updateDoc`
+- **NO modifica** el fitxer original a Firebase Storage (l'URL es manté)
+- El nom nou es reflecteix a la UI i als exports, però l'objecte a Storage conserva el nom original
+
+**Fitxers:**
+- `src/components/pending-documents/pending-document-card.tsx` — UI del suggeriment
+- `src/lib/pending-documents/api.ts` — `renamePendingDocumentFile()` helper
+
+**Traduccions:** `pendingDocs.rename.*` (CA/ES/FR)
 
 ### 3.2.9 Indicadors Visuals de Remeses Processades (NOU v1.14)
 
@@ -1314,7 +1350,7 @@ Si hi ha socis sense IBAN:
 | SEPA Domiciliacions | Pre-banc | Generar cobrament | **pain.008** |
 | Divisor de remesa IN | Post-banc | Desagregar ingrés cobrat | cap (es processa CSV/XLSX del banc) |
 
-### 3.3.9.7 Wizard SEPA pain.008 (ACTUALITZAT v1.40)
+### 3.3.9.7 Wizard SEPA pain.008 (ACTUALITZAT v1.42)
 
 **Accés:** Donants → Remeses de cobrament
 
@@ -1341,27 +1377,58 @@ Camp `periodicityQuota` al contacte:
 
 **Filtre per periodicitat:** El wizard permet filtrar socis per periodicitat per generar remeses segmentades.
 
-**Pre-selecció automàtica per periodicitat (NOU v1.40):**
+**Pre-selecció automàtica per periodicitat (ACTUALITZAT v1.42):**
 
 Quan l'usuari selecciona una periodicitat al Pas 1, el sistema pre-marca automàticament els socis que "toca cobrar" al Pas 2, basant-se en:
 
-1. **Períodes naturals:** El càlcul usa els períodes naturals del calendari (mes, trimestre, semestre, any), no intervals arbitraris
-2. **Última execució (`lastSepaRunDate`):** Si el soci ja ha estat inclòs en una remesa dins del període natural actual, NO es pre-selecciona
-3. **Periodicitat del soci:** Només es pre-seleccionen els socis que tenen la periodicitat corresponent al filtre
+1. **Camp `sepaPain008LastRunAt`:** Data de l'últim cobrament SEPA de cada donant (substitut de l'antic `lastSepaRunDate`)
+2. **Periodicitat del soci:** Només es pre-seleccionen els socis que tenen la periodicitat corresponent al filtre
 
-**Exemples de períodes naturals:**
-- `monthly`: Gen = 1-31 gen, Feb = 1-28/29 feb, etc.
-- `quarterly`: Q1 = gen-mar, Q2 = abr-jun, Q3 = jul-set, Q4 = oct-des
-- `semiannual`: H1 = gen-jun, H2 = jul-des
-- `annual`: gen-des
+**Lògica d'intervals (v1.42):**
 
-**Simplificació v1.40:** S'ha eliminat el concepte "overdue" (vençut). Un soci es marca com a candidat si NO ha estat cobrat al període natural actual; no es distingeix entre "toca cobrar ara" i "ja tocava cobrar abans".
+- **Mensual:** Comparació a nivell de mes natural. Si `YYYY-MM(lastRunAt) == YYYY-MM(collectionDate)` → ja cobrat, no toca. Altrament → toca cobrar.
+- **Trimestral / Semestral / Anual:** Interval des de l'últim cobrament. `nextDue = addMonths(lastRunAt, N)` on N = 3 / 6 / 12. Toca cobrar si `YYYY-MM(collectionDate) >= YYYY-MM(nextDue)`.
+- **Comparació any-mes:** El dia s'ignora en tots els casos. Un donant anual cobrat el 15-oct-2025 venç qualsevol dia d'octubre de 2026 (no cal esperar al dia 15).
+- **Clamping de dies:** `addMonths` fa clamping automàtic (31 gen + 3m = 30 abr).
+- **Sense `lastRunAt`:** El donant es considera candidat (toca cobrar). Per a no-mensuals, es mostra un avís recomanant informar la data.
 
-**Lògica:** `src/lib/sepa/donor-collection-status.ts` — mòdul `isDueForCollection()` que calcula si un donant toca cobrar.
+**Exemples:**
+
+| Periodicitat | Últim cobrament | Data remesa | Resultat |
+|--------------|-----------------|-------------|----------|
+| Mensual | 2026-01-15 | 2026-02-01 | ✅ Toca cobrar |
+| Mensual | 2026-02-03 | 2026-02-28 | ❌ Ja cobrat (mateix mes) |
+| Trimestral | 2026-01-15 | 2026-03-01 | ❌ No toca (nextDue = abr-2026) |
+| Trimestral | 2026-01-15 | 2026-04-10 | ✅ Toca cobrar (abr >= abr) |
+| Anual | 2025-10-15 | 2026-10-01 | ✅ Toca cobrar (oct >= oct) |
+| Anual | 2025-10-15 | 2026-09-30 | ❌ No toca (set < oct) |
+
+**Tests:** 25 tests unitaris a `tests/sepa-pain008/donor-collection-status.test.ts`
+
+**Lògica:** `src/lib/sepa/pain008/donor-collection-status.ts` — mòdul `isDueForCollection()` que calcula si un donant toca cobrar.
+
+**Selecció forçada amb revisió (NOU v1.42):**
+
+- Els donants marcats com **"No toca encara"** (badge gris) es poden seleccionar manualment
+- En fer-ho, apareix un **AlertDialog de confirmació** amb el recompte de donants forçats
+- Els donants forçats es marquen amb **`needsReview: true`** al XML generat
+- Permet cobrar excepcions (nou soci, canvi de periodicitat) sense perdre la traçabilitat
+
+**UI del Pas 2 — Selecció (ACTUALITZAT v1.42):**
+
+| Columna | Contingut | Notes |
+|---------|-----------|-------|
+| Checkbox | Selecció individual | Donants bloquejats seleccionables amb confirmació |
+| Nom | Nom del soci | — |
+| IBAN | IBAN formatat | `whitespace-nowrap` |
+| Quota | Import € | — |
+| Darrer cobrament | Data curta ("des25") | Abans "Últim pain" |
+| Periodicitat | Label (Mensual, Trimestral...) | Abans "Estat" amb badge complex |
 
 **Memòria d'execució (run memory):**
 
-- Camp `lastSepaRunDate` al contacte: data de l'última execució pain.008 que va incloure aquest donant
+- Camp `sepaPain008LastRunAt` al contacte: data de l'última execució pain.008 que va incloure aquest donant
+- Import/export Excel: columna "Últim cobrament SEPA"
 - Permet identificar quins socis ja s'han cobrat recentment
 - Útil per evitar duplicitats en remeses parcials
 
@@ -1372,7 +1439,7 @@ Cada execució del wizard crea un document amb:
 - `scheme`: CORE | B2B
 - `bankAccountId`, `creditorId`, `creditorName`, `creditorIban`
 - `collectionDate`, `totalAmount`, `itemCount`
-- `items[]`: array amb detall de cada cobrament
+- `items[]`: array amb detall de cada cobrament (amb `needsReview` si forçat)
 - `selectionCriteria`: periodicitat i cerca aplicats
 
 **Fitxers:**
@@ -1381,6 +1448,7 @@ Cada execució del wizard crea un document amb:
 - `src/components/sepa-collection/StepSelection.tsx` — Pas selecció
 - `src/components/sepa-collection/StepReview.tsx` — Pas revisió
 - `src/lib/sepa/pain008/generate-pain008.ts` — Generador XML
+- `src/lib/sepa/pain008/donor-collection-status.ts` — Lògica isDueForCollection
 - `src/lib/sepa/pain008/sequence-type.ts` — Lògica SeqTp (FRST/RCUR/OOFF/FNAL)
 - `src/lib/sepa/pain008/iban-length.ts` — Validació longitud IBAN per país
 
@@ -1964,6 +2032,7 @@ Acció disponible al menú ⋮ del moviment pare si `isRemittance === true`.
 | Email | ❌ | ❌ |
 | Telèfon | ❌ | ❌ |
 | Categoria per defecte | ❌ | ❌ |
+| **Últim cobrament SEPA** (`sepaPain008LastRunAt`) | ❌ | ❌ |
 | **Comptador devolucions** | ❌ | ❌ |
 | **Data última devolució** | ❌ | ❌ |
 
@@ -2047,6 +2116,7 @@ La plantilla d'importació ara usa el header "Quota" (abans "Quota mensual").
 | Telèfon | phone | ❌ |
 | Email | email | ❌ |
 | Categoria | defaultCategoryId | ❌ |
+| Últim cobrament SEPA | sepaPain008LastRunAt | ❌ |
 
 **Categoria per defecte:**
 - Si l'Excel porta columna "Categoria", es fa matching amb categories existents
@@ -2117,6 +2187,7 @@ Botó "Exportar" a la llista de donants per descarregar un fitxer Excel.
 | Persona de contacte | `donor.contactPersonName` (només PJ) |
 | IBAN | `donor.iban` (formatat amb espais) |
 | Estat | "Alta", "Baixa" o "Pendent devolució" |
+| Últim cobrament SEPA | `donor.sepaPain008LastRunAt` (data formatada) |
 
 **Comportament:**
 - Llista ordenada alfabèticament per nom

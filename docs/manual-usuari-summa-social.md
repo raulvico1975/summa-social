@@ -780,12 +780,13 @@ Pots arrossegar fitxers (factures, tiquets) directament sobre una fila de la tau
 ### Pas a pas
 
 1. Localitza el moviment a la taula
-2. Arrossega el fitxer sobre la fila
+2. Arrossega el fitxer sobre la fila (o clica la icona de document)
 3. Apareix un overlay: "Deixa anar per adjuntar"
 4. Deixa anar el fitxer
-5. El document es puja i s'assigna
+5. El sistema et suggerirà un **nom estandarditzat** per al fitxer (per exemple, `2026.01.15_Vodafone.pdf`), construït a partir de la data i el contacte del moviment. Pots acceptar-lo o mantenir el nom original.
+6. El document es puja i s'assigna
 
-**Tipus acceptats:** PDF, JPG, PNG, GIF, WEBP, XML  
+**Tipus acceptats:** PDF, JPG, PNG, GIF, WEBP, XML
 **Mida màxima:** 15 MB
 
 ---
@@ -1016,13 +1017,17 @@ i **bloqueja la generació**.
    - **Periodicitat** (mensual, trimestral, semestral, anual o totes)
 3. **Pas 2 — Selecció de socis:**
    - El sistema **pre-selecciona automàticament** els socis que "toca cobrar" segons la periodicitat escollida. Per exemple, si selecciones "Mensual", es marcaran els socis mensuals que encara no s'hagin cobrat aquest mes.
+   - Els socis que **no toca cobrar encara** apareixen amb un badge gris "No toca encara". Pots seleccionar-los igualment si ho necessites: el sistema et demanarà confirmació i els marcarà per revisió al fitxer generat.
    - Pots afegir o treure socis manualment de la selecció
    - Els socis sense IBAN o amb quota = 0 queden fora automàticament
+   - Si hi ha socis no-mensuals (trimestrals, semestrals, anuals) sense data d'últim cobrament, veuràs un avís recomanant informar-la a la fitxa del donant o via importació Excel.
 4. **Pas 3 — Revisió:** Revisa el nombre de socis inclosos i l'import total
 5. Clica **"Generar"** i descarrega el fitxer **XML pain.008**
 6. Puja el fitxer al teu banc a l'apartat de **Remeses / Domiciliacions / SEPA Direct Debit**
 
-> **Com sap el sistema quins socis "toca cobrar"?** Mira la periodicitat de cada soci i la data del seu últim cobrament via SEPA. Si encara no s'ha cobrat dins el període natural actual (per exemple, el mes de febrer per a socis mensuals), el marca com a candidat.
+> **Com sap el sistema quins socis "toca cobrar"?** Per a socis **mensuals**, mira si ja s'ha cobrat aquest mes: si no, el marca com a candidat. Per a socis **trimestrals, semestrals o anuals**, calcula quan tocaria el proper cobrament a partir de la data de l'últim (per exemple, un soci trimestral cobrat al gener no tornarà a aparèixer fins a l'abril). Es compara per mes, sense importar el dia exacte.
+>
+> **Últim cobrament SEPA:** Pots informar la data de l'últim cobrament de cada donant a la seva fitxa, o importar-la massivament amb la columna "Últim cobrament SEPA" de l'Excel de donants.
 
 ---
 
@@ -1102,6 +1107,16 @@ Hi ha **dues maneres** de pujar documents pendents:
 **Formats admesos:** PDF, XML, JPG, JPEG, PNG
 
 > 💡 Si arrossegues fitxers d'un format no admès (ex: .doc, .txt), veuràs un missatge d'error i no s'obrirà el modal.
+
+### Renom suggerit de documents (v1.42)
+
+Quan el sistema extreu automàticament la data de factura i el nom del proveïdor d'un document pendent, et suggerirà **renombrar el fitxer** amb un format estàndard: `YYYY.MM.DD_proveïdor.ext` (per exemple, `2026.01.15_Vodafone.pdf`).
+
+- El suggeriment apareix dins la targeta expandida del document
+- Pots acceptar-lo o ignorar-lo
+- El renom és cosmètic: canvia el nom que veus a la llista, però no modifica el fitxer original al servidor
+
+> 💡 Renombrar els documents amb un format consistent ajuda a localitzar-los ràpidament.
 
 ### Estats d'un document
 

@@ -4,6 +4,7 @@ import * as React from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
+import { Badge } from '@/components/ui/badge';
 import {
   Table,
   TableBody,
@@ -24,8 +25,16 @@ import {
   AlertDescription,
   AlertTitle,
 } from '@/components/ui/alert';
-import { Download, Loader2, Building2, AlertTriangle, Ban } from 'lucide-react';
-import type { Supplier, Transaction, AnyContact } from '@/lib/data';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import { Download, Loader2, Building2, AlertTriangle, Ban, FileText, Eye } from 'lucide-react';
+import type { Supplier, Transaction, AnyContact, Category } from '@/lib/data';
 import { formatCurrencyEU } from '@/lib/normalize';
 import { useToast } from '@/hooks/use-toast';
 import Papa from 'papaparse';
@@ -37,28 +46,31 @@ import { useIsMobile } from '@/hooks/use-is-mobile';
 import { MobileListItem } from '@/components/mobile/mobile-list-item';
 import { cn } from '@/lib/utils';
 import { MOBILE_ACTIONS_BAR, MOBILE_CTA_PRIMARY } from '@/lib/ui/mobile-actions';
+import {
+  computeModel347,
+  THRESHOLD_347,
+  type Model347Result,
+  type SupplierAggregate,
+  type CandidateTransaction,
+} from '@/lib/reports/model347';
+import {
+  generateModel347AEATFile,
+  encodeLatin1,
+  type AEAT347ExcludedSupplier,
+  type AEAT347ExportResult,
+} from '@/lib/reports/model347-aeat';
 
-// Llindar legal del Model 347: 3.005,06€
-const THRESHOLD_347 = 3005.06;
-
-interface SupplierReportRow {
-  supplierName: string;
-  supplierTaxId: string;
-  totalAmount: number;
-}
-
-interface ReportStats {
-  totalSuppliers: number;
-  totalAmount: number;
-  suppliersWithoutTaxId: number;
-}
+// ═══════════════════════════════════════════════════════════════════════════════
+// COMPONENT PRINCIPAL
+// ═══════════════════════════════════════════════════════════════════════════════
 
 export function SuppliersReportGenerator() {
   const { firestore } = useFirebase();
-  const { organizationId } = useCurrentOrganization();
+  const { organizationId, organization } = useCurrentOrganization();
   const { t } = useTranslations();
   const isMobile = useIsMobile();
 
+  // ── Queries Firestore ──
   const transactionsQuery = useMemoFirebase(
     () => organizationId ? collection(firestore, 'organizations', organizationId, 'transactions') : null,
     [firestore, organizationId]
@@ -67,141 +79,136 @@ export function SuppliersReportGenerator() {
     () => organizationId ? collection(firestore, 'organizations', organizationId, 'contacts') : null,
     [firestore, organizationId]
   );
+  const categoriesQuery = useMemoFirebase(
+    () => organizationId ? collection(firestore, 'organizations', organizationId, 'categories') : null,
+    [firestore, organizationId]
+  );
   const { data: transactions } = useCollection<Transaction>(transactionsQuery);
   const { data: contacts } = useCollection<AnyContact>(contactsQuery);
+  const { data: categories } = useCollection<Category>(categoriesQuery);
 
-  // Filtrar només els proveïdors
+  // Filtrar proveïdors + transaccions actives (sense archivedAt)
   const suppliers = React.useMemo(() =>
     (contacts?.filter(c => c.type === 'supplier') as Supplier[]) || [],
   [contacts]);
 
-  const [reportData, setReportData] = React.useState<SupplierReportRow[]>([]);
-  const [reportStats, setReportStats] = React.useState<ReportStats | null>(null);
-  const [suppliersWithoutTaxId, setSuppliersWithoutTaxId] = React.useState<string[]>([]);
+  const activeTxs = React.useMemo(() =>
+    transactions?.filter(tx => !tx.archivedAt) || [],
+  [transactions]);
+
+  // ── Estat ──
   const [selectedYear, setSelectedYear] = React.useState<string>(String(new Date().getFullYear() - 1));
-  const [isLoading, setIsLoading] = React.useState(false);
-  const [excludedSuppliers, setExcludedSuppliers] = React.useState<Set<string>>(new Set());
+  const [isGenerated, setIsGenerated] = React.useState(false);
+  const [excludedTxIds, setExcludedTxIds] = React.useState<Set<string>>(new Set());
+  const [excludedSupplierKeys, setExcludedSupplierKeys] = React.useState<Set<string>>(new Set());
+  const [detailAggregate, setDetailAggregate] = React.useState<SupplierAggregate | null>(null);
+  const [detailDialogOpen, setDetailDialogOpen] = React.useState(false);
+  const [aeatExcludedDialogOpen, setAeatExcludedDialogOpen] = React.useState(false);
+  const [aeatPendingExport, setAeatPendingExport] = React.useState<AEAT347ExportResult | null>(null);
   const { toast } = useToast();
 
-  // Proveïdors inclosos (no exclosos manualment)
-  const includedReportData = React.useMemo(() =>
-    reportData.filter(row => !excludedSuppliers.has(row.supplierName)),
-    [reportData, excludedSuppliers]
-  );
+  // ── Anys disponibles ──
+  const availableYears = React.useMemo(() => {
+    if (!activeTxs.length) return [];
+    const years = new Set(activeTxs.map(tx => new Date(tx.date).getFullYear()));
+    return Array.from(years).sort((a, b) => b - a);
+  }, [activeTxs]);
 
-  // Estadístiques actualitzades basades en proveïdors inclosos
-  const effectiveStats = React.useMemo(() => {
-    if (!reportStats || includedReportData.length === 0) return null;
+  // ── Càlcul del Model 347 ──
+  const model347: Model347Result | null = React.useMemo(() => {
+    if (!isGenerated) return null;
+    const year = parseInt(selectedYear, 10);
+    return computeModel347(activeTxs, suppliers, categories || [], year, excludedTxIds);
+  }, [isGenerated, selectedYear, activeTxs, suppliers, categories, excludedTxIds]);
+
+  // Filtrar per proveïdors exclosos manualment
+  const effectiveExpenses = React.useMemo(() =>
+    model347?.expenses.filter(a => !excludedSupplierKeys.has(`${a.contactId}:expense`)) || [],
+  [model347, excludedSupplierKeys]);
+
+  const effectiveIncome = React.useMemo(() =>
+    model347?.income.filter(a => !excludedSupplierKeys.has(`${a.contactId}:income`)) || [],
+  [model347, excludedSupplierKeys]);
+
+  // Stats
+  const stats = React.useMemo(() => {
+    if (!model347) return null;
     return {
-      totalSuppliers: includedReportData.length,
-      totalAmount: includedReportData.reduce((sum, row) => sum + row.totalAmount, 0),
-      suppliersWithoutTaxId: includedReportData.filter(row => !row.supplierTaxId).length,
-      excludedCount: excludedSuppliers.size,
+      expenseSuppliers: effectiveExpenses.length,
+      expenseTotal: effectiveExpenses.reduce((s, a) => s + a.quarters.total, 0),
+      incomeSuppliers: effectiveIncome.length,
+      incomeTotal: effectiveIncome.reduce((s, a) => s + a.quarters.total, 0),
+      excludedCount: excludedSupplierKeys.size,
+      suppliersWithoutTaxId: [
+        ...effectiveExpenses.filter(a => !a.taxId),
+        ...effectiveIncome.filter(a => !a.taxId),
+      ],
     };
-  }, [reportStats, includedReportData, excludedSuppliers]);
+  }, [model347, effectiveExpenses, effectiveIncome, excludedSupplierKeys]);
 
-  const toggleSupplierExclusion = (supplierName: string) => {
-    setExcludedSuppliers(prev => {
+  // ── Handlers ──
+  const handleGenerate = () => {
+    if (!activeTxs.length || !contacts) {
+      toast({ variant: 'destructive', title: t.reports.dataNotAvailable, description: t.reports.dataNotAvailableDescription });
+      return;
+    }
+    setExcludedTxIds(new Set());
+    setExcludedSupplierKeys(new Set());
+    setIsGenerated(true);
+    toast({
+      title: t.reports.reportGenerated,
+      description: t.reports.suppliersReportGeneratedDescription(
+        selectedYear,
+        (model347?.expenses.length || 0) + (model347?.income.length || 0)
+      ),
+    });
+  };
+
+  const toggleSupplierExclusion = (contactId: string, direction: string) => {
+    const key = `${contactId}:${direction}`;
+    setExcludedSupplierKeys(prev => {
       const next = new Set(prev);
-      if (next.has(supplierName)) {
-        next.delete(supplierName);
-      } else {
-        next.add(supplierName);
-      }
+      if (next.has(key)) next.delete(key); else next.add(key);
       return next;
     });
   };
 
-  const availableYears = React.useMemo(() => {
-    if (!transactions) return [];
-    const years = new Set(transactions.map(tx => new Date(tx.date).getFullYear()));
-    return Array.from(years).sort((a, b) => b - a);
-  }, [transactions]);
-
-  const handleGenerateReport = () => {
-    setIsLoading(true);
-
-    if (!transactions || !contacts) {
-      toast({ variant: 'destructive', title: t.reports.dataNotAvailable, description: t.reports.dataNotAvailableDescription });
-      setIsLoading(false);
-      return;
-    }
-
-    const year = parseInt(selectedYear, 10);
-
-    // Crear mapa de proveïdors per ID
-    const supplierMap = new Map(suppliers.map(s => [s.id, s]));
-
-    const paymentsBySupplier: Record<string, {
-      supplier: Supplier,
-      total: number
-    }> = {};
-
-    // Processar totes les transaccions negatives (despeses)
-    transactions.forEach(tx => {
-      const txYear = new Date(tx.date).getFullYear();
-
-      // Només processar despeses de l'any seleccionat amb proveïdor assignat
-      if (txYear === year && tx.amount < 0 && tx.contactId && tx.contactType === 'supplier' && supplierMap.has(tx.contactId)) {
-
-        // Inicialitzar si no existeix
-        if (!paymentsBySupplier[tx.contactId]) {
-          paymentsBySupplier[tx.contactId] = {
-            supplier: supplierMap.get(tx.contactId)!,
-            total: 0
-          };
-        }
-
-        // Sumar l'import absolut (les despeses són negatives)
-        paymentsBySupplier[tx.contactId].total += Math.abs(tx.amount);
-      }
-    });
-
-    // Filtrar proveïdors per sobre del llindar
-    const generatedReportData: SupplierReportRow[] = Object.values(paymentsBySupplier)
-      .filter(({ total }) => total > THRESHOLD_347)
-      .map(({ supplier, total }) => ({
-        supplierName: supplier.name,
-        supplierTaxId: supplier.taxId || '',
-        totalAmount: total,
-      }))
-      .sort((a, b) => b.totalAmount - a.totalAmount);
-
-    // Identificar proveïdors sense NIF
-    const withoutTaxId = generatedReportData
-      .filter(row => !row.supplierTaxId)
-      .map(row => row.supplierName);
-
-    // Calcular estadístiques
-    const stats: ReportStats = {
-      totalSuppliers: generatedReportData.length,
-      totalAmount: generatedReportData.reduce((sum, row) => sum + row.totalAmount, 0),
-      suppliersWithoutTaxId: withoutTaxId.length,
-    };
-
-    setReportData(generatedReportData);
-    setReportStats(stats);
-    setSuppliersWithoutTaxId(withoutTaxId);
-    setIsLoading(false);
-
-    toast({
-      title: t.reports.reportGenerated,
-      description: t.reports.suppliersReportGeneratedDescription(selectedYear, generatedReportData.length)
+  const toggleTxExclusion = (txId: string) => {
+    setExcludedTxIds(prev => {
+      const next = new Set(prev);
+      if (next.has(txId)) next.delete(txId); else next.add(txId);
+      return next;
     });
   };
 
+  const openDetail = (aggregate: SupplierAggregate) => {
+    setDetailAggregate(aggregate);
+    setDetailDialogOpen(true);
+  };
+
+  // ── Export CSV ──
   const handleExportCSV = () => {
-    if (includedReportData.length === 0) {
+    const allRows = [
+      ...effectiveExpenses.map(a => ({ ...a, tipo: t.reports.model347TypeExpense })),
+      ...effectiveIncome.map(a => ({ ...a, tipo: t.reports.model347TypeIncome })),
+    ];
+
+    if (allRows.length === 0) {
       toast({ variant: 'destructive', title: t.reports.noDataToExport, description: t.reports.noDataToExportDescription });
       return;
     }
 
-    const csvData = includedReportData
-      .filter(row => row.supplierTaxId) // Només exportar els que tenen NIF
+    const csvData = allRows
+      .filter(row => row.taxId)
       .map(row => ({
-        [t.reports.supplierTaxId]: row.supplierTaxId,
-        [t.reports.supplierName]: row.supplierName,
-        [t.reports.totalAmount]: row.totalAmount.toFixed(2),
+        [t.reports.supplierTaxId]: row.taxId,
+        [t.reports.supplierName]: row.name,
+        [t.reports.model347Q1]: row.quarters.q1.toFixed(2),
+        [t.reports.model347Q2]: row.quarters.q2.toFixed(2),
+        [t.reports.model347Q3]: row.quarters.q3.toFixed(2),
+        [t.reports.model347Q4]: row.quarters.q4.toFixed(2),
+        [t.reports.totalAmount]: row.quarters.total.toFixed(2),
+        'Tipus': row.tipo,
       }));
 
     const csv = Papa.unparse(csvData);
@@ -209,200 +216,526 @@ export function SuppliersReportGenerator() {
     const link = document.createElement('a');
     const url = URL.createObjectURL(blob);
     link.setAttribute('href', url);
-    link.setAttribute('download', t.reports.suppliersCsvFileName({ year: selectedYear }));
+    link.setAttribute('download', t.reports.model347CsvFileName({ year: selectedYear }));
     link.style.visibility = 'hidden';
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
+    URL.revokeObjectURL(url);
 
     toast({ title: t.reports.exportComplete, description: t.reports.exportCompleteDescription });
   };
 
+  // ── Export AEAT ──
+  const handleExportAEAT = () => {
+    if (!organization) return;
+
+    const result = generateModel347AEATFile(
+      organization,
+      effectiveExpenses,
+      effectiveIncome,
+      parseInt(selectedYear, 10)
+    );
+
+    // Errors bloquejants
+    if (result.errors.length > 0) {
+      toast({
+        variant: 'destructive',
+        title: t.reports.model347AEATMissingData,
+        description: result.errors.join('\n'),
+      });
+      return;
+    }
+
+    // Si hi ha exclosos → dialog
+    if (result.excludedCount > 0) {
+      setAeatPendingExport(result);
+      setAeatExcludedDialogOpen(true);
+      return;
+    }
+
+    // Download directe
+    downloadAEATFile(result.content);
+  };
+
+  const downloadAEATFile = (content: string) => {
+    const encoded = encodeLatin1(content);
+    if (encoded.error) {
+      toast({ variant: 'destructive', title: t.reports.model347AEATEncodingError, description: encoded.error });
+      return;
+    }
+
+    const blob = new Blob([encoded.bytes], { type: 'application/octet-stream' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = t.reports.model347AEATFileName({ year: selectedYear });
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+
+    toast({
+      title: t.reports.exportComplete,
+      description: t.reports.model347AEATExcludedTitle(aeatPendingExport?.includedCount ?? 0),
+    });
+
+    setAeatExcludedDialogOpen(false);
+    setAeatPendingExport(null);
+  };
+
+  const handleConfirmAEATExport = () => {
+    if (!aeatPendingExport) return;
+    downloadAEATFile(aeatPendingExport.content);
+  };
+
+  const handleDownloadExcludedCsv = () => {
+    if (!aeatPendingExport?.excluded.length) return;
+
+    const headers = ['Nom', 'NIF', 'Problema'];
+    const rows = aeatPendingExport.excluded.map(exc => [
+      exc.name,
+      exc.taxIdRaw || '',
+      exc.issueCodes.map(code => t.reports.model347AEATIssueLabel(code, exc.issueMeta)).join('; '),
+    ]);
+
+    const csvContent = '\uFEFF' + [headers, ...rows].map(r => r.map(c => `"${c}"`).join(',')).join('\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `model347_exclosos_${selectedYear}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
+
+  const hasData = model347 && (model347.expenses.length > 0 || model347.income.length > 0);
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // RENDER
+  // ═══════════════════════════════════════════════════════════════════════════
 
   return (
-      <Card>
-        <CardHeader>
-          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-              <div>
-                <CardTitle className="flex items-center gap-2">
-                  <Building2 className="h-5 w-5 text-blue-500" />
-                  {t.reports.suppliersReportTitle}
-                </CardTitle>
-                <CardDescription>{t.reports.suppliersReportDescription}</CardDescription>
-              </div>
-              <div className={cn(MOBILE_ACTIONS_BAR, "sm:justify-end")}>
-                <Select value={selectedYear} onValueChange={setSelectedYear}>
-                    <SelectTrigger className={MOBILE_CTA_PRIMARY}>
-                        <SelectValue placeholder={t.reports.selectYear} />
-                    </SelectTrigger>
-                    <SelectContent>
-                        {availableYears.map(year => (
-                            <SelectItem key={year} value={String(year)}>{year}</SelectItem>
-                        ))}
-                    </SelectContent>
-                </Select>
-                <Button onClick={handleGenerateReport} disabled={isLoading} className={MOBILE_CTA_PRIMARY}>
-                    {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                    {t.reports.generate}
-                </Button>
-                <Button variant="outline" onClick={handleExportCSV} disabled={includedReportData.length === 0} className={MOBILE_CTA_PRIMARY}>
-                    <Download className="mr-2 h-4 w-4" />
-                    {t.reports.exportCsv}
-                </Button>
-              </div>
+    <Card>
+      <CardHeader>
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <CardTitle className="flex items-center gap-2">
+              <Building2 className="h-5 w-5 text-blue-500" />
+              {t.reports.suppliersReportTitle}
+            </CardTitle>
+            <CardDescription>{t.reports.suppliersReportDescription}</CardDescription>
           </div>
-        </CardHeader>
-        <CardContent className="space-y-4">
-            {/* Avís de proveïdors sense NIF */}
-            {suppliersWithoutTaxId.length > 0 && (
-              <Alert variant="destructive">
-                <AlertTriangle className="h-4 w-4" />
-                <AlertTitle>{t.reports.suppliersWithoutTaxId}</AlertTitle>
-                <AlertDescription>
-                  {t.reports.suppliersWithoutTaxIdDescription}
-                  <ul className="mt-2 list-disc list-inside">
-                    {suppliersWithoutTaxId.map(name => (
-                      <li key={name}>{name}</li>
-                    ))}
-                  </ul>
-                </AlertDescription>
-              </Alert>
-            )}
+          <div className={cn(MOBILE_ACTIONS_BAR, "sm:justify-end")}>
+            <Select value={selectedYear} onValueChange={v => { setSelectedYear(v); setIsGenerated(false); }}>
+              <SelectTrigger className={MOBILE_CTA_PRIMARY}>
+                <SelectValue placeholder={t.reports.selectYear} />
+              </SelectTrigger>
+              <SelectContent>
+                {availableYears.map(year => (
+                  <SelectItem key={year} value={String(year)}>{year}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Button onClick={handleGenerate} className={MOBILE_CTA_PRIMARY}>
+              {t.reports.generate}
+            </Button>
+            <Button variant="outline" onClick={handleExportCSV} disabled={!hasData} className={MOBILE_CTA_PRIMARY}>
+              <Download className="mr-2 h-4 w-4" />
+              {t.reports.exportCsv}
+            </Button>
+            <Button variant="outline" onClick={handleExportAEAT} disabled={!hasData} className={MOBILE_CTA_PRIMARY} title={t.reports.model347ExportAEATTooltip}>
+              <FileText className="mr-2 h-4 w-4" />
+              {t.reports.model347ExportAEAT}
+            </Button>
+          </div>
+        </div>
+      </CardHeader>
 
-            {/* Resum d'estadístiques */}
-            {effectiveStats && (
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
-                  <p className="text-xs text-blue-600 font-medium">{t.reports.includedSuppliers}</p>
-                  <p className="text-2xl font-bold text-blue-700">{effectiveStats.totalSuppliers}</p>
-                </div>
-                <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
-                  <p className="text-xs text-blue-600 font-medium">{t.reports.totalAmount}</p>
-                  <p className="text-2xl font-bold text-blue-700">{formatCurrencyEU(effectiveStats.totalAmount)}</p>
-                </div>
-                {effectiveStats.excludedCount > 0 && (
-                  <div className="bg-orange-50 border border-orange-200 rounded-lg p-3">
-                    <p className="text-xs text-orange-600 font-medium">{t.reports.excludedSuppliers}</p>
-                    <p className="text-2xl font-bold text-orange-700">{effectiveStats.excludedCount}</p>
-                  </div>
-                )}
-                <div className="bg-gray-50 border border-gray-200 rounded-lg p-3">
-                  <p className="text-xs text-gray-600 font-medium">{t.reports.threshold347}</p>
-                  <p className="text-2xl font-bold text-gray-700">{formatCurrencyEU(THRESHOLD_347)}</p>
-                </div>
+      <CardContent className="space-y-4">
+        {/* ── Avís de retencions ── */}
+        {hasData && (
+          <Alert>
+            <AlertTriangle className="h-4 w-4" />
+            <AlertTitle>Model 347</AlertTitle>
+            <AlertDescription>
+              {t.reports.model347WithholdingWarning}
+            </AlertDescription>
+          </Alert>
+        )}
+
+        {/* ── Proveïdors sense NIF ── */}
+        {stats && stats.suppliersWithoutTaxId.length > 0 && (
+          <Alert variant="destructive">
+            <AlertTriangle className="h-4 w-4" />
+            <AlertTitle>{t.reports.suppliersWithoutTaxId}</AlertTitle>
+            <AlertDescription>
+              {t.reports.suppliersWithoutTaxIdDescription}
+              <ul className="mt-2 list-disc list-inside">
+                {stats.suppliersWithoutTaxId.map(a => (
+                  <li key={a.contactId}>{a.name}</li>
+                ))}
+              </ul>
+            </AlertDescription>
+          </Alert>
+        )}
+
+        {/* ── Stats ── */}
+        {stats && (
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+              <p className="text-xs text-blue-600 font-medium">{t.reports.includedSuppliers}</p>
+              <p className="text-2xl font-bold text-blue-700">{stats.expenseSuppliers}</p>
+            </div>
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+              <p className="text-xs text-blue-600 font-medium">{t.reports.totalAmount}</p>
+              <p className="text-2xl font-bold text-blue-700">{formatCurrencyEU(stats.expenseTotal)}</p>
+            </div>
+            {stats.incomeSuppliers > 0 && (
+              <div className="bg-green-50 border border-green-200 rounded-lg p-3">
+                <p className="text-xs text-green-600 font-medium">{t.reports.model347SectionIncome}</p>
+                <p className="text-2xl font-bold text-green-700">{stats.incomeSuppliers} — {formatCurrencyEU(stats.incomeTotal)}</p>
               </div>
             )}
-
-            {/* Llista de proveïdors (Mobile) / Taula (Desktop) */}
-            {isMobile ? (
-              <div className="space-y-2">
-                {reportData.length === 0 ? (
-                  <div className="text-center text-muted-foreground py-8">
-                    {isLoading ? t.reports.generating : t.reports.noSuppliersAboveThreshold}
-                  </div>
-                ) : (
-                  reportData.map((row) => {
-                    const isExcluded = excludedSuppliers.has(row.supplierName);
-                    return (
-                      <MobileListItem
-                        key={row.supplierName}
-                        leadingIcon={
-                          <Checkbox
-                            checked={!isExcluded}
-                            onCheckedChange={() => toggleSupplierExclusion(row.supplierName)}
-                            aria-label={isExcluded ? t.reports.includeSupplier : t.reports.excludeSupplier}
-                          />
-                        }
-                        title={
-                          <span className={cn(isExcluded && 'opacity-50')}>
-                            {row.supplierName}
-                            {isExcluded && <Ban className="inline ml-2 h-3 w-3 text-orange-500" />}
-                          </span>
-                        }
-                        className={isExcluded ? 'opacity-60 bg-muted/30' : ''}
-                        meta={[
-                          {
-                            label: 'NIF',
-                            value: row.supplierTaxId ? (
-                              row.supplierTaxId
-                            ) : (
-                              <span className="text-red-500 flex items-center gap-1">
-                                <AlertTriangle className="h-3 w-3" />
-                                {t.reports.missingTaxId}
-                              </span>
-                            )
-                          },
-                          {
-                            value: (
-                              <span className={cn(
-                                'font-mono font-medium',
-                                isExcluded ? 'text-muted-foreground line-through' : 'text-blue-600'
-                              )}>
-                                {formatCurrencyEU(row.totalAmount)}
-                              </span>
-                            )
-                          }
-                        ]}
-                      />
-                    );
-                  })
-                )}
+            {stats.excludedCount > 0 && (
+              <div className="bg-orange-50 border border-orange-200 rounded-lg p-3">
+                <p className="text-xs text-orange-600 font-medium">{t.reports.excludedSuppliers}</p>
+                <p className="text-2xl font-bold text-orange-700">{stats.excludedCount}</p>
               </div>
-            ) : (
-              <div className="rounded-md border">
+            )}
+            <div className="bg-gray-50 border border-gray-200 rounded-lg p-3">
+              <p className="text-xs text-gray-600 font-medium">{t.reports.threshold347}</p>
+              <p className="text-2xl font-bold text-gray-700">{formatCurrencyEU(THRESHOLD_347)}</p>
+            </div>
+          </div>
+        )}
+
+        {/* ── Secció: Pagaments a proveïdors ── */}
+        {model347 && (
+          <SupplierSection
+            title={t.reports.model347SectionExpenses}
+            aggregates={model347.expenses}
+            effectiveAggregates={effectiveExpenses}
+            direction="expense"
+            excludedKeys={excludedSupplierKeys}
+            toggleExclusion={toggleSupplierExclusion}
+            onOpenDetail={openDetail}
+            isMobile={isMobile}
+            t={t}
+          />
+        )}
+
+        {/* ── Secció: Ingressos ── */}
+        {model347 && model347.income.length > 0 && (
+          <SupplierSection
+            title={t.reports.model347SectionIncome}
+            aggregates={model347.income}
+            effectiveAggregates={effectiveIncome}
+            direction="income"
+            excludedKeys={excludedSupplierKeys}
+            toggleExclusion={toggleSupplierExclusion}
+            onOpenDetail={openDetail}
+            isMobile={isMobile}
+            t={t}
+          />
+        )}
+
+        {/* ── Estat buit ── */}
+        {model347 && model347.expenses.length === 0 && model347.income.length === 0 && (
+          <div className="text-center text-muted-foreground py-8">
+            {t.reports.noSuppliersAboveThreshold}
+          </div>
+        )}
+
+        {!isGenerated && (
+          <div className="text-center text-muted-foreground py-8">
+            {t.reports.noData}
+          </div>
+        )}
+
+        {/* ── Nota informativa ── */}
+        {hasData && (
+          <p className="text-xs text-muted-foreground">
+            {t.reports.model347Note}
+          </p>
+        )}
+      </CardContent>
+
+      {/* ═══════════════════════════════════════════════════════════════════════
+          DIALOG DETALL TRANSACCIONS
+          ═══════════════════════════════════════════════════════════════════════ */}
+      <Dialog open={detailDialogOpen} onOpenChange={setDetailDialogOpen}>
+        <DialogContent className="w-[calc(100vw-2rem)] max-w-3xl sm:max-w-3xl max-h-[80vh] overflow-hidden">
+          <DialogHeader>
+            <DialogTitle>
+              {detailAggregate && t.reports.model347DetailTitle(detailAggregate.name)}
+            </DialogTitle>
+            <DialogDescription>
+              {t.reports.model347DetailDescription}
+            </DialogDescription>
+          </DialogHeader>
+
+          {detailAggregate && (
+            <div className="max-h-[55vh] overflow-auto">
               <Table>
-                  <TableHeader>
+                <TableHeader>
                   <TableRow>
-                      <TableHead className="w-[50px]">{t.reports.include}</TableHead>
-                      <TableHead>{t.reports.supplierTaxId}</TableHead>
-                      <TableHead>{t.reports.supplierName}</TableHead>
-                      <TableHead className="text-right">{t.reports.totalAmount}</TableHead>
+                    <TableHead className="w-[40px]">{t.reports.include}</TableHead>
+                    <TableHead className="w-[90px]">Data</TableHead>
+                    <TableHead>Concepte</TableHead>
+                    <TableHead className="text-right w-[100px]">Import</TableHead>
+                    <TableHead className="w-[120px]">Categoria</TableHead>
                   </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                  {reportData.map((row) => {
-                      const isExcluded = excludedSuppliers.has(row.supplierName);
-                      return (
-                      <TableRow key={row.supplierName} className={isExcluded ? 'opacity-50 bg-muted/30' : ''}>
+                </TableHeader>
+                <TableBody>
+                  {detailAggregate.transactions.map(tx => {
+                    const isExcluded = excludedTxIds.has(tx.id);
+                    return (
+                      <TableRow key={tx.id} className={isExcluded ? 'opacity-50 bg-muted/30' : ''}>
                         <TableCell>
                           <Checkbox
                             checked={!isExcluded}
-                            onCheckedChange={() => toggleSupplierExclusion(row.supplierName)}
-                            aria-label={isExcluded ? t.reports.includeSupplier : t.reports.excludeSupplier}
+                            onCheckedChange={() => toggleTxExclusion(tx.id)}
                           />
                         </TableCell>
-                        <TableCell className={!row.supplierTaxId ? 'text-red-500' : ''}>
-                          {row.supplierTaxId || <span className="flex items-center gap-1"><AlertTriangle className="h-3 w-3" /> {t.reports.missingTaxId}</span>}
+                        <TableCell className="text-xs font-mono">
+                          {new Date(tx.date).toLocaleDateString('ca-ES', { day: '2-digit', month: '2-digit', year: '2-digit' })}
                         </TableCell>
-                        <TableCell className="font-medium">
-                          {row.supplierName}
-                          {isExcluded && <Ban className="inline ml-2 h-3 w-3 text-orange-500" />}
+                        <TableCell className="text-sm max-w-[200px] truncate">{tx.description}</TableCell>
+                        <TableCell className={cn('text-right font-mono text-sm', isExcluded && 'line-through')}>
+                          {formatCurrencyEU(tx.amount)}
                         </TableCell>
-                        <TableCell className={`text-right font-mono font-medium ${isExcluded ? 'text-muted-foreground line-through' : 'text-blue-600'}`}>
-                          {formatCurrencyEU(row.totalAmount)}
+                        <TableCell>
+                          <Badge variant="outline" className="text-xs">
+                            {tx.categoryName ?? t.reports.model347NoCategory}
+                          </Badge>
                         </TableCell>
                       </TableRow>
-                      );
+                    );
                   })}
-                  {reportData.length === 0 && (
-                      <TableRow>
-                          <TableCell colSpan={4} className="text-center text-muted-foreground h-24">
-                             {isLoading ? t.reports.generating : t.reports.noSuppliersAboveThreshold}
-                          </TableCell>
-                      </TableRow>
-                  )}
-                  </TableBody>
+                </TableBody>
               </Table>
-              </div>
-            )}
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
 
-            {/* Nota informativa */}
-            {reportData.length > 0 && (
-              <p className="text-xs text-muted-foreground">
-                {t.reports.model347Note}
-              </p>
-            )}
-        </CardContent>
-      </Card>
+      {/* ═══════════════════════════════════════════════════════════════════════
+          DIALOG EXCLOSOS AEAT
+          ═══════════════════════════════════════════════════════════════════════ */}
+      <Dialog open={aeatExcludedDialogOpen} onOpenChange={setAeatExcludedDialogOpen}>
+        <DialogContent className="w-[calc(100vw-2rem)] max-w-3xl sm:max-w-3xl max-h-[80vh] overflow-hidden">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <AlertTriangle className="h-5 w-5 text-amber-500" />
+              {t.reports.model347AEATExcludedDialogTitle}
+            </DialogTitle>
+            <DialogDescription>
+              {aeatPendingExport && t.reports.model347AEATExcludedDialogDesc(
+                aeatPendingExport.includedCount,
+                aeatPendingExport.excludedCount
+              )}
+            </DialogDescription>
+          </DialogHeader>
+
+          {aeatPendingExport && aeatPendingExport.excludedCount > 0 && (
+            <div className="max-h-[45vh] overflow-auto pr-2 border rounded-md p-2 bg-muted/30">
+              <ul className="space-y-2">
+                {aeatPendingExport.excluded.slice(0, 5).map((exc, i) => {
+                  const issuesText = exc.issueCodes
+                    .map(code => t.reports.model347AEATIssueLabel(code, exc.issueMeta))
+                    .join('; ');
+                  return (
+                    <li key={i} className="text-sm break-words whitespace-normal min-w-0">
+                      <span className="font-medium text-foreground">{exc.name}</span>
+                      {' — '}
+                      <span className="font-mono break-all">{exc.taxIdRaw || t.reports.missingTaxId}</span>
+                      {' — '}
+                      <span className="text-muted-foreground">{issuesText}</span>
+                    </li>
+                  );
+                })}
+                {aeatPendingExport.excludedCount > 5 && (
+                  <li className="text-sm text-muted-foreground italic">
+                    … i {aeatPendingExport.excludedCount - 5} més
+                  </li>
+                )}
+              </ul>
+            </div>
+          )}
+
+          <p className="text-sm text-muted-foreground">
+            {t.reports.model347AEATExcludedHelp}
+          </p>
+
+          <DialogFooter className="flex-col sm:flex-row gap-2">
+            <Button variant="outline" onClick={handleDownloadExcludedCsv} className="w-full sm:w-auto">
+              <Download className="mr-2 h-4 w-4" />
+              {t.reports.model347DownloadExcludedCsv}
+            </Button>
+            <Button variant="default" onClick={handleConfirmAEATExport} className="w-full sm:w-auto">
+              {t.reports.model347ExportAnyway}
+            </Button>
+            <Button variant="ghost" onClick={() => { setAeatExcludedDialogOpen(false); setAeatPendingExport(null); }} className="w-full sm:w-auto">
+              {t.reports.model347CancelToFix}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </Card>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// SUB-COMPONENT: Secció de proveïdors (expenses o income)
+// ═══════════════════════════════════════════════════════════════════════════════
+
+function SupplierSection({
+  title,
+  aggregates,
+  effectiveAggregates,
+  direction,
+  excludedKeys,
+  toggleExclusion,
+  onOpenDetail,
+  isMobile,
+  t,
+}: {
+  title: string;
+  aggregates: SupplierAggregate[];
+  effectiveAggregates: SupplierAggregate[];
+  direction: string;
+  excludedKeys: Set<string>;
+  toggleExclusion: (contactId: string, direction: string) => void;
+  onOpenDetail: (aggregate: SupplierAggregate) => void;
+  isMobile: boolean;
+  t: ReturnType<typeof useTranslations>['t'];
+}) {
+  if (aggregates.length === 0) return null;
+
+  return (
+    <div className="space-y-2">
+      <h3 className="font-semibold text-sm text-muted-foreground uppercase tracking-wider">
+        {title}
+      </h3>
+
+      {isMobile ? (
+        <div className="space-y-2">
+          {aggregates.map(agg => {
+            const key = `${agg.contactId}:${direction}`;
+            const isExcluded = excludedKeys.has(key);
+            return (
+              <MobileListItem
+                key={key}
+                leadingIcon={
+                  <Checkbox
+                    checked={!isExcluded}
+                    onCheckedChange={() => toggleExclusion(agg.contactId, direction)}
+                  />
+                }
+                title={
+                  <span className={cn(isExcluded && 'opacity-50')}>
+                    {agg.name}
+                    {isExcluded && <Ban className="inline ml-2 h-3 w-3 text-orange-500" />}
+                  </span>
+                }
+                className={isExcluded ? 'opacity-60 bg-muted/30' : ''}
+                meta={[
+                  {
+                    label: 'NIF',
+                    value: agg.taxId ? agg.taxId : (
+                      <span className="text-red-500 flex items-center gap-1">
+                        <AlertTriangle className="h-3 w-3" />
+                        {t.reports.missingTaxId}
+                      </span>
+                    ),
+                  },
+                  {
+                    value: (
+                      <span className={cn('font-mono font-medium', isExcluded ? 'text-muted-foreground line-through' : 'text-blue-600')}>
+                        {formatCurrencyEU(agg.quarters.total)}
+                      </span>
+                    ),
+                  },
+                ]}
+                actions={
+                  <Button variant="ghost" size="icon" onClick={() => onOpenDetail(agg)} className="h-8 w-8">
+                    <Eye className="h-4 w-4" />
+                  </Button>
+                }
+              />
+            );
+          })}
+        </div>
+      ) : (
+        <div className="rounded-md border">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead className="w-[40px]">{t.reports.include}</TableHead>
+                <TableHead>{t.reports.supplierTaxId}</TableHead>
+                <TableHead>{t.reports.supplierName}</TableHead>
+                <TableHead className="text-right w-[80px]">{t.reports.model347Q1}</TableHead>
+                <TableHead className="text-right w-[80px]">{t.reports.model347Q2}</TableHead>
+                <TableHead className="text-right w-[80px]">{t.reports.model347Q3}</TableHead>
+                <TableHead className="text-right w-[80px]">{t.reports.model347Q4}</TableHead>
+                <TableHead className="text-right w-[100px]">{t.reports.totalAmount}</TableHead>
+                <TableHead className="w-[50px]">{t.reports.model347Detail}</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {aggregates.map(agg => {
+                const key = `${agg.contactId}:${direction}`;
+                const isExcluded = excludedKeys.has(key);
+                return (
+                  <TableRow key={key} className={isExcluded ? 'opacity-50 bg-muted/30' : ''}>
+                    <TableCell>
+                      <Checkbox
+                        checked={!isExcluded}
+                        onCheckedChange={() => toggleExclusion(agg.contactId, direction)}
+                      />
+                    </TableCell>
+                    <TableCell className={!agg.taxId ? 'text-red-500' : ''}>
+                      {agg.taxId || (
+                        <span className="flex items-center gap-1">
+                          <AlertTriangle className="h-3 w-3" />
+                          {t.reports.missingTaxId}
+                        </span>
+                      )}
+                    </TableCell>
+                    <TableCell className="font-medium">
+                      {agg.name}
+                      {isExcluded && <Ban className="inline ml-2 h-3 w-3 text-orange-500" />}
+                    </TableCell>
+                    <TableCell className={cn('text-right font-mono text-sm', isExcluded && 'line-through text-muted-foreground')}>
+                      {agg.quarters.q1 > 0 ? formatCurrencyEU(agg.quarters.q1) : '—'}
+                    </TableCell>
+                    <TableCell className={cn('text-right font-mono text-sm', isExcluded && 'line-through text-muted-foreground')}>
+                      {agg.quarters.q2 > 0 ? formatCurrencyEU(agg.quarters.q2) : '—'}
+                    </TableCell>
+                    <TableCell className={cn('text-right font-mono text-sm', isExcluded && 'line-through text-muted-foreground')}>
+                      {agg.quarters.q3 > 0 ? formatCurrencyEU(agg.quarters.q3) : '—'}
+                    </TableCell>
+                    <TableCell className={cn('text-right font-mono text-sm', isExcluded && 'line-through text-muted-foreground')}>
+                      {agg.quarters.q4 > 0 ? formatCurrencyEU(agg.quarters.q4) : '—'}
+                    </TableCell>
+                    <TableCell className={cn('text-right font-mono font-medium', isExcluded ? 'text-muted-foreground line-through' : 'text-blue-600')}>
+                      {formatCurrencyEU(agg.quarters.total)}
+                    </TableCell>
+                    <TableCell>
+                      <Button variant="ghost" size="icon" onClick={() => onOpenDetail(agg)} className="h-8 w-8">
+                        <Eye className="h-4 w-4" />
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                );
+              })}
+            </TableBody>
+          </Table>
+        </div>
+      )}
+    </div>
   );
 }
