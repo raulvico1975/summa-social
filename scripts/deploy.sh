@@ -15,15 +15,15 @@ PROJECT_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 CHANGED_FILES=""
 CHANGED_COUNT=0
 RISK_LEVEL="BAIX"
-IS_P0=false
-P0_TRIGGER_FILES=""
+IS_FISCAL=false
+FISCAL_TRIGGER_FILES=""
 MAIN_SHA=""
 MASTER_SHA=""
 PROD_SHA=""
 DEPLOY_RESULT="OK"
 
-# Patrons P0 (area fiscal — gate bloquejant)
-P0_PATTERNS=(
+# Patrons area fiscal (gate bloquejant)
+FISCAL_PATTERNS=(
   "src/lib/remittances/"
   "src/lib/sepa/"
   "src/lib/fiscal/"
@@ -157,22 +157,22 @@ detect_changed_files() {
 classify_risk() {
   echo "[3/9] Classificant nivell de risc..."
 
-  # Detectar P0 i guardar fitxers que el disparen
-  local p0_matches=""
-  for pattern in "${P0_PATTERNS[@]}"; do
+  # Detectar area fiscal i guardar fitxers que la disparen
+  local fiscal_matches=""
+  for pattern in "${FISCAL_PATTERNS[@]}"; do
     local hits
     hits=$(echo "$CHANGED_FILES" | grep "$pattern" || true)
     if [ -n "$hits" ]; then
-      if [ -n "$p0_matches" ]; then
-        p0_matches="$p0_matches"$'\n'"$hits"
+      if [ -n "$fiscal_matches" ]; then
+        fiscal_matches="$fiscal_matches"$'\n'"$hits"
       else
-        p0_matches="$hits"
+        fiscal_matches="$hits"
       fi
     fi
   done
-  if [ -n "$p0_matches" ]; then
-    IS_P0=true
-    P0_TRIGGER_FILES=$(echo "$p0_matches" | sort -u)
+  if [ -n "$fiscal_matches" ]; then
+    IS_FISCAL=true
+    FISCAL_TRIGGER_FILES=$(echo "$fiscal_matches" | sort -u)
   fi
 
   # Detectar HIGH RISK
@@ -211,19 +211,19 @@ classify_risk() {
   fi
 
   echo "  Risc detectat: $RISK_LEVEL"
-  echo "  Area P0: $([ "$IS_P0" = true ] && echo "Si" || echo "No")"
+  echo "  Area fiscal: $([ "$IS_FISCAL" = true ] && echo "Si" || echo "No")"
   echo ""
 }
 
 # ============================================================
-# PAS 4 — Gate P0 fiscal (BLOQUEJANT)
+# PAS 4 — Verificacio area fiscal (BLOQUEJANT)
 # ============================================================
-p0_fiscal_gate() {
-  if [ "$IS_P0" != true ]; then
+fiscal_impact_gate() {
+  if [ "$IS_FISCAL" != true ]; then
     return 0
   fi
 
-  echo "[4/9] Gate P0 fiscal..."
+  echo "[4/9] Verificacio area fiscal..."
   echo ""
   echo "  ATENCIO: AREA FISCAL DETECTADA"
   echo ""
@@ -231,19 +231,19 @@ p0_fiscal_gate() {
   echo "  remeses, donants, certificats o imports fiscals."
   echo ""
   echo "  Abans de continuar, cal haver executat la"
-  echo "  verificacio manual QA P0 descrita a:"
-  echo "    docs/QA-P0-FISCAL.md"
+  echo "  verificacio manual descrita a:"
+  echo "    docs/QA-FISCAL.md"
   echo ""
-  echo "  Fitxers que han activat el gate P0:"
+  echo "  Fitxers que han activat la verificacio:"
   while IFS= read -r f; do
     echo "    - $f"
-  done <<< "$P0_TRIGGER_FILES"
+  done <<< "$FISCAL_TRIGGER_FILES"
   echo ""
 
-  read -r -p "  Has completat QA-P0-FISCAL amb PASS als punts aplicables? (s/n): " answer
+  read -r -p "  Has completat la verificacio fiscal amb PASS als punts aplicables? (s/n): " answer
   if [ "$answer" != "s" ]; then
     echo ""
-    echo "  Deploy aturat. Executa QA P0 primer i torna a executar el deploy."
+    echo "  Deploy aturat. Completa la verificacio fiscal primer i torna a executar el deploy."
     exit 1
   fi
   echo ""
@@ -294,7 +294,7 @@ display_deploy_summary() {
   echo "    prod:   $PROD_SHA"
   echo ""
   echo "  Risc:     $RISK_LEVEL"
-  echo "  Area P0:  $([ "$IS_P0" = true ] && echo "Si" || echo "No")"
+  echo "  Fiscal:   $([ "$IS_FISCAL" = true ] && echo "Si" || echo "No")"
   echo "  Fitxers:  $CHANGED_COUNT"
   echo ""
 
@@ -386,10 +386,10 @@ append_deploy_log() {
   deploy_date=$(TZ="Europe/Madrid" date '+%Y-%m-%d %H:%M')
   local deploy_sha
   deploy_sha=$(git rev-parse --short prod)
-  local p0_str
-  p0_str=$([ "$IS_P0" = true ] && echo "Si" || echo "No")
+  local fiscal_str
+  fiscal_str=$([ "$IS_FISCAL" = true ] && echo "Si" || echo "No")
 
-  local log_line="| $deploy_date | $deploy_sha | $RISK_LEVEL | $p0_str | $CHANGED_COUNT | $DEPLOY_RESULT |"
+  local log_line="| $deploy_date | $deploy_sha | $RISK_LEVEL | $fiscal_str | $CHANGED_COUNT | $DEPLOY_RESULT |"
 
   # Crear DEPLOY-LOG.md si no existeix
   if [ ! -f "$PROJECT_DIR/$DEPLOY_LOG" ]; then
@@ -399,8 +399,8 @@ append_deploy_log() {
 
 Registre cronologic de desplegaments a produccio.
 
-| Data | SHA | Risc | P0 | Fitxers | Resultat |
-|------|-----|------|----|---------|----------|
+| Data | SHA | Risc | Fiscal | Fitxers | Resultat |
+|------|-----|------|--------|---------|----------|
 HEADER
   fi
 
@@ -430,7 +430,7 @@ main() {
   preflight_git_checks      # Pas 1
   detect_changed_files       # Pas 2
   classify_risk              # Pas 3
-  p0_fiscal_gate             # Pas 4
+  fiscal_impact_gate         # Pas 4
   run_verifications          # Pas 5
   display_deploy_summary     # Pas 6
   execute_merge_ritual       # Pas 7

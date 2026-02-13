@@ -61,7 +61,7 @@ si detecta qualsevol canvi de **RISC ALT**.
   - pain.008
 - Invariants definits a:
   - `SUMMA-SOCIAL-REFERENCIA-COMPLETA.md`
-  - `QA-P0-FISCAL.md`
+  - `docs/QA-FISCAL.md`
 
 ### 2.2 Mòdul Projectes — CRÍTIC (RISC ALT)
 Qualsevol canvi que afecti **imports, conversions o coherència econòmica**:
@@ -147,6 +147,33 @@ Claude Code HA de classificar el risc segons els **fitxers modificats**.
 
 Claude Code **NO pot desplegar mai** per iniciativa pròpia.
 
+### 3.1 Bloc d'impacte obligatori (ABANS de demanar autorització)
+
+Abans de proposar un deploy, Claude Code **HA de presentar** aquest bloc:
+
+```
+IMPACTE DEL CANVI
+
+1. Pot afectar diners, saldos o fiscalitat?
+   Resposta: Sí/No + frase clara en llenguatge no tècnic.
+
+2. Si hi hagués un error, què podria passar?
+   Resposta: conseqüència real sobre l'ús de Summa Social.
+
+3. Recomanació:
+   🟢 Desplegar
+   🟡 Provar abans amb un cas real
+   🔴 No desplegar encara
+```
+
+**Regles del bloc:**
+- Si el canvi afecta càlculs, remeses, conciliació o fiscalitat, la resposta 1 ha d'explicar **exactament** quin càlcul o flux s'està modificant.
+- Si no afecta diners, ha de dir explícitament: **"No es modifica cap càlcul ni saldo."**
+- La classificació de risc interna es manté per lògica, però **no s'exposa** a Raül.
+- No s'usa terminologia tècnica (P0, gate, risk level, etc.) en cap missatge destinat a Raül.
+
+### 3.2 Autorització i execució
+
 Només pot fer deploy quan Raül escriu literalment:
 
 > "Autoritzo deploy"
@@ -158,8 +185,8 @@ npm run deploy
 ```
 
 Això llança `scripts/deploy.sh`, que és un script determinista i bloquejant que:
-- verifica git, detecta canvis, classifica risc
-- aplica gate P0 fiscal si cal (confirmació explícita de QA)
+- verifica git, detecta canvis
+- si toca àrea fiscal, demana confirmació de la verificació manual (`docs/QA-FISCAL.md`)
 - executa verificacions locals
 - fa el merge ritual (main→master→prod) i push
 - força post-deploy check (SHA + smoke test)
