@@ -386,10 +386,10 @@ append_deploy_log() {
   deploy_date=$(TZ="Europe/Madrid" date '+%Y-%m-%d %H:%M')
   local deploy_sha
   deploy_sha=$(git rev-parse --short prod)
-  local p0_str
-  p0_str=$([ "$IS_P0" = true ] && echo "Si" || echo "No")
+  local fiscal_str
+  fiscal_str=$([ "$IS_FISCAL" = true ] && echo "Si" || echo "No")
 
-  local log_line="| $deploy_date | $deploy_sha | $RISK_LEVEL | $p0_str | $CHANGED_COUNT | $DEPLOY_RESULT |"
+  local log_line="| $deploy_date | $deploy_sha | $RISK_LEVEL | $fiscal_str | $CHANGED_COUNT | $DEPLOY_RESULT |"
 
   # Crear DEPLOY-LOG.md si no existeix
   if [ ! -f "$PROJECT_DIR/$DEPLOY_LOG" ]; then
@@ -399,8 +399,8 @@ append_deploy_log() {
 
 Registre cronologic de desplegaments a produccio.
 
-| Data | SHA | Risc | P0 | Fitxers | Resultat |
-|------|-----|------|----|---------|----------|
+| Data | SHA | Risc | Fiscal | Fitxers | Resultat |
+|------|-----|------|--------|---------|----------|
 HEADER
   fi
 
@@ -430,7 +430,7 @@ main() {
   preflight_git_checks      # Pas 1
   detect_changed_files       # Pas 2
   classify_risk              # Pas 3
-  p0_fiscal_gate             # Pas 4
+  fiscal_impact_gate         # Pas 4
   run_verifications          # Pas 5
   display_deploy_summary     # Pas 6
   execute_merge_ritual       # Pas 7
