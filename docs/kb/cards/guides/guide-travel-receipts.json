@@ -1,0 +1,39 @@
+{
+  "id": "guide-travel-receipts",
+  "type": "howto",
+  "domain": "documents",
+  "risk": "safe",
+  "guardrail": "none",
+  "answerMode": "full",
+  "title": {
+    "ca": "Liquidacions de despeses de viatge",
+    "es": "Liquidaciones de gastos de viaje"
+  },
+  "intents": {
+    "ca": [
+      "com faig una liquidació de viatge",
+      "despeses de viatge",
+      "tiquets de viatge",
+      "reemborsament de despeses",
+      "quilometratge"
+    ],
+    "es": [
+      "cómo hago una liquidación de viaje",
+      "gastos de viaje",
+      "tickets de viaje",
+      "reembolso de gastos",
+      "kilometraje"
+    ]
+  },
+  "guideId": "travelReceipts",
+  "answer": null,
+  "uiPaths": ["Liquidacions"],
+  "needsSnapshot": false,
+  "keywords": ["viatge", "liquidació", "tiquets", "quilometratge", "despeses", "reemborsament"],
+  "source_faq": ["Q84½"],
+  "source_manual": ["6c", "10.8"],
+  "source_guides": ["travelReceipts"],
+  "related": ["guide-projects", "guide-attach-document"],
+  "error_key": null,
+  "symptom": { "ca": null, "es": null }
+}

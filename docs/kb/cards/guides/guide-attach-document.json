@@ -1,0 +1,39 @@
+{
+  "id": "guide-attach-document",
+  "type": "howto",
+  "domain": "documents",
+  "risk": "safe",
+  "guardrail": "none",
+  "answerMode": "full",
+  "title": {
+    "ca": "Adjuntar documents a moviments",
+    "es": "Adjuntar documentos a movimientos"
+  },
+  "intents": {
+    "ca": [
+      "com adjunto un document",
+      "com poso una factura a un moviment",
+      "adjuntar justificant",
+      "com arrossego un document",
+      "vincular factura"
+    ],
+    "es": [
+      "cómo adjunto un documento",
+      "cómo pongo una factura a un movimiento",
+      "adjuntar justificante",
+      "cómo arrastro un documento",
+      "vincular factura"
+    ]
+  },
+  "guideId": "attachDocument",
+  "answer": null,
+  "uiPaths": ["Moviments > Arrossegar document"],
+  "needsSnapshot": false,
+  "keywords": ["adjuntar", "document", "factura", "justificant", "arrossegar", "drag"],
+  "source_faq": ["Q31"],
+  "source_manual": ["5.5"],
+  "source_guides": ["attachDocument"],
+  "related": ["guide-movements"],
+  "error_key": null,
+  "symptom": { "ca": null, "es": null }
+}

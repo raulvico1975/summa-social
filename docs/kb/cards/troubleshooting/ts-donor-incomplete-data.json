@@ -1,0 +1,42 @@
+{
+  "id": "ts-donor-incomplete-data",
+  "type": "troubleshooting",
+  "domain": "donors",
+  "risk": "safe",
+  "guardrail": "none",
+  "answerMode": "full",
+  "title": {
+    "ca": "Donant amb dades incompletes (badge d'avís)",
+    "es": "Donante con datos incompletos (badge de aviso)"
+  },
+  "intents": {
+    "ca": [
+      "un donant té dades incompletes",
+      "badge de dades incompletes",
+      "donant sense NIF",
+      "donant sense codi postal",
+      "el donant no sortirà al 182"
+    ],
+    "es": [
+      "un donante tiene datos incompletos",
+      "badge de datos incompletos",
+      "donante sin NIF",
+      "donante sin código postal",
+      "el donante no saldrá en el 182"
+    ]
+  },
+  "guideId": null,
+  "answer": {
+    "ca": "El badge 'Dades incompletes' indica que al donant li falten dades necessàries per al Model 182.\n\n**Dades obligatòries per al 182:** Nom complet, DNI/CIF i Codi Postal.\n\n**Què fer:**\n1. Ves a Donants i clica sobre el donant amb l'avís.\n2. Completa les dades que falten (veuràs els camps marcats).\n3. Guarda els canvis.\n\n**Per trobar tots els donants incomplets:**\n- Ves a Donants > Filtrar per 'Dades incompletes'\n- O bé, a Informes > Model 182, veuràs el llistat de donants exclosos amb el motiu.",
+    "es": "El badge 'Datos incompletos' indica que al donante le faltan datos necesarios para el Modelo 182.\n\n**Datos obligatorios para el 182:** Nombre completo, DNI/CIF y Código Postal.\n\n**Qué hacer:**\n1. Ve a Donantes y haz clic sobre el donante con el aviso.\n2. Completa los datos que faltan (verás los campos marcados).\n3. Guarda los cambios.\n\n**Para encontrar todos los donantes incompletos:**\n- Ve a Donantes > Filtrar por 'Datos incompletos'\n- O bien, en Informes > Modelo 182, verás el listado de donantes excluidos con el motivo."
+  },
+  "uiPaths": ["Donants > Fitxa donant", "Informes > Model 182"],
+  "needsSnapshot": false,
+  "keywords": ["incomplet", "dades", "NIF", "CIF", "codi postal", "badge", "avís", "182"],
+  "source_faq": ["Q19"],
+  "source_manual": ["3.6"],
+  "source_guides": ["model182HasErrors"],
+  "related": ["guide-donors", "guide-model-182", "guide-reports"],
+  "error_key": "incompleteDataWarning",
+  "symptom": { "ca": "Veig el badge 'Dades incompletes' a un donant", "es": "Veo el badge 'Datos incompletos' en un donante" }
+}

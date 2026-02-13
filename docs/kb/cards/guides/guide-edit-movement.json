@@ -1,0 +1,37 @@
+{
+  "id": "guide-edit-movement",
+  "type": "howto",
+  "domain": "transactions",
+  "risk": "safe",
+  "guardrail": "none",
+  "answerMode": "full",
+  "title": {
+    "ca": "Editar un moviment",
+    "es": "Editar un movimiento"
+  },
+  "intents": {
+    "ca": [
+      "com edito un moviment",
+      "canviar categoria d'un moviment",
+      "canviar contacte d'un moviment",
+      "modificar un moviment"
+    ],
+    "es": [
+      "cómo edito un movimiento",
+      "cambiar categoría de un movimiento",
+      "cambiar contacto de un movimiento",
+      "modificar un movimiento"
+    ]
+  },
+  "guideId": "editMovement",
+  "answer": null,
+  "uiPaths": ["Moviments > Clic sobre el moviment"],
+  "needsSnapshot": false,
+  "keywords": ["editar", "moviment", "categoria", "contacte", "modificar"],
+  "source_faq": ["Q30"],
+  "source_manual": ["5.4"],
+  "source_guides": ["editMovement"],
+  "related": ["guide-movements", "guide-bulk-categorize", "guide-attach-document"],
+  "error_key": null,
+  "symptom": { "ca": null, "es": null }
+}

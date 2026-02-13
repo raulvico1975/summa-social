@@ -1,0 +1,154 @@
+{
+  "$comment": "Schema contracte per KB cards de Summa Social. No és JSON Schema formal — és referència humana + validada per validate-kb.ts",
+  "version": "1.0",
+  "cardFields": {
+    "id": {
+      "type": "string",
+      "required": true,
+      "description": "Identificador únic, kebab-case (ex: guide-first-day)",
+      "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$"
+    },
+    "type": {
+      "type": "string",
+      "required": true,
+      "enum": ["howto", "concept", "troubleshooting", "glossary", "fallback"],
+      "description": "Tipus de fitxa"
+    },
+    "domain": {
+      "type": "string",
+      "required": true,
+      "enum": [
+        "general",
+        "config",
+        "donors",
+        "transactions",
+        "remittances",
+        "sepa",
+        "fiscal",
+        "documents",
+        "projects",
+        "superadmin"
+      ],
+      "description": "Àmbit funcional"
+    },
+    "risk": {
+      "type": "string",
+      "required": true,
+      "enum": ["safe", "guarded"],
+      "description": "safe = el bot pot donar passos complets; guarded = restriccions B1"
+    },
+    "guardrail": {
+      "type": "string",
+      "required": true,
+      "enum": ["none", "b1_fiscal", "b1_sepa", "b1_remittances", "b1_danger"],
+      "description": "Tipus de guardrail aplicat"
+    },
+    "answerMode": {
+      "type": "string",
+      "required": true,
+      "enum": ["full", "limited"],
+      "description": "full = passos operatius permesos; limited = només orientació i verificacions observables"
+    },
+    "title": {
+      "type": "object",
+      "required": true,
+      "fields": { "ca": "string", "es": "string" },
+      "description": "Títol curt de la fitxa en CA i ES"
+    },
+    "intents": {
+      "type": "object",
+      "required": true,
+      "fields": { "ca": "string[]", "es": "string[]" },
+      "description": "Frases reals que l'usuari podria dir (mínim 1 per idioma)",
+      "minItems": 1
+    },
+    "guideId": {
+      "type": "string | null",
+      "required": false,
+      "description": "Si la fitxa referencia una guia existent del Hub de Guies. Quan existeix, el bot renderitza el contingut de la guia (no cal answer)."
+    },
+    "answer": {
+      "type": "object | null",
+      "required": false,
+      "fields": { "ca": "string", "es": "string" },
+      "description": "Resposta literal. Obligatòria si guideId és null."
+    },
+    "uiPaths": {
+      "type": "string[]",
+      "required": true,
+      "description": "Rutes de navegació dins l'app (ex: ['Donants > Importar']). Pot ser buit."
+    },
+    "needsSnapshot": {
+      "type": "boolean",
+      "required": true,
+      "description": "MVP: sempre false. Futur: si true, el bot consulta SupportSnapshot."
+    },
+    "snapshotClaims": {
+      "type": "string[]",
+      "required": false,
+      "description": "Obligatori si needsSnapshot=true. Claims permesos del SupportSnapshot."
+    },
+    "keywords": {
+      "type": "string[]",
+      "required": true,
+      "description": "Paraules clau per retrieval"
+    },
+    "source_faq": {
+      "type": "string[]",
+      "required": true,
+      "description": "Preguntes FAQ d'origen (ex: ['Q10', 'Q11']). Pot ser buit."
+    },
+    "source_manual": {
+      "type": "string[]",
+      "required": true,
+      "description": "Seccions del manual d'origen (ex: ['3.3']). Pot ser buit."
+    },
+    "source_guides": {
+      "type": "string[]",
+      "required": true,
+      "description": "GuideIds referenciats (ex: ['importDonors']). Pot ser buit."
+    },
+    "related": {
+      "type": "string[]",
+      "required": true,
+      "description": "IDs d'altres cards relacionades. Pot ser buit."
+    },
+    "error_key": {
+      "type": "string | null",
+      "required": true,
+      "description": "Clau i18n de l'error (per troubleshooting). null si no aplica."
+    },
+    "symptom": {
+      "type": "object",
+      "required": true,
+      "fields": { "ca": "string | null", "es": "string | null" },
+      "description": "Què veu l'usuari a la pantalla (per troubleshooting). null si no aplica."
+    }
+  },
+  "coherenceRules": [
+    {
+      "rule": "GUARDED_DOMAIN",
+      "description": "Si domain ∈ {fiscal, sepa, remittances, superadmin} → risk ha de ser 'guarded' i guardrail != 'none'"
+    },
+    {
+      "rule": "CONTENT_REQUIRED",
+      "description": "Cada card ha de tenir guideId o answer (com a mínim un dels dos)"
+    },
+    {
+      "rule": "LIMITED_NO_RISKY_VERBS",
+      "description": "Si answerMode='limited' i answer existeix, el text no pot contenir verbs operatius de risc: processa, desfés, reprocessa, genera, exporta, esborra, elimina, confirma (check best-effort per regex)"
+    },
+    {
+      "rule": "SNAPSHOT_CLAIMS",
+      "description": "Si needsSnapshot=true → snapshotClaims ha de ser array no buit"
+    },
+    {
+      "rule": "GUARDED_FULL_NEEDS_SOURCE",
+      "description": "Si risk='guarded' i answerMode='full' i no hi ha guideId → source_faq o source_manual ha de ser no buit (procediment documentat)"
+    },
+    {
+      "rule": "INTENTS_MIN",
+      "description": "intents.ca i intents.es han de tenir mínim 1 element cadascun"
+    }
+  ]
+}

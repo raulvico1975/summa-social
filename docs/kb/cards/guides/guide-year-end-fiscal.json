@@ -1,0 +1,39 @@
+{
+  "id": "guide-year-end-fiscal",
+  "type": "howto",
+  "domain": "fiscal",
+  "risk": "guarded",
+  "guardrail": "b1_fiscal",
+  "answerMode": "full",
+  "title": {
+    "ca": "Tancament d'any fiscal",
+    "es": "Cierre de año fiscal"
+  },
+  "intents": {
+    "ca": [
+      "com tanco l'any fiscal",
+      "tancament anual",
+      "fi d'any comptable",
+      "paquet de tancament",
+      "preparar Model 182 de fi d'any"
+    ],
+    "es": [
+      "cómo cierro el año fiscal",
+      "cierre anual",
+      "fin de año contable",
+      "paquete de cierre",
+      "preparar Modelo 182 de fin de año"
+    ]
+  },
+  "guideId": "yearEndFiscal",
+  "answer": null,
+  "uiPaths": ["Informes", "Dashboard"],
+  "needsSnapshot": false,
+  "keywords": ["tancament", "any", "fiscal", "anual", "paquet"],
+  "source_faq": ["Q69"],
+  "source_manual": ["10b"],
+  "source_guides": ["yearEndFiscal"],
+  "related": ["guide-reports", "guide-donor-certificate"],
+  "error_key": null,
+  "symptom": { "ca": null, "es": null }
+}

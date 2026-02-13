@@ -1,0 +1,42 @@
+{
+  "id": "ts-offline-error",
+  "type": "troubleshooting",
+  "domain": "general",
+  "risk": "safe",
+  "guardrail": "none",
+  "answerMode": "full",
+  "title": {
+    "ca": "Error: sense connexió",
+    "es": "Error: sin conexión"
+  },
+  "intents": {
+    "ca": [
+      "sense connexió",
+      "no tinc connexió",
+      "l'app no carrega",
+      "error de xarxa",
+      "offline"
+    ],
+    "es": [
+      "sin conexión",
+      "no tengo conexión",
+      "la app no carga",
+      "error de red",
+      "offline"
+    ]
+  },
+  "guideId": null,
+  "answer": {
+    "ca": "L'app necessita connexió a internet per funcionar.\n\n**Què fer:**\n1. Verifica la teva connexió a internet (obre una altra pàgina web per comprovar-ho).\n2. Si tens connexió però l'app no respon, espera uns segons i torna-ho a intentar.\n3. Si el problema persisteix, tanca la pestanya i torna a obrir l'app.\n\n**Si estàs en mòbil:** Assegura't de tenir cobertura o WiFi actiu.",
+    "es": "La app necesita conexión a internet para funcionar.\n\n**Qué hacer:**\n1. Verifica tu conexión a internet (abre otra página web para comprobarlo).\n2. Si tienes conexión pero la app no responde, espera unos segundos y vuelve a intentarlo.\n3. Si el problema persiste, cierra la pestaña y vuelve a abrir la app.\n\n**Si estás en móvil:** Asegúrate de tener cobertura o WiFi activo."
+  },
+  "uiPaths": [],
+  "needsSnapshot": false,
+  "keywords": ["connexió", "offline", "xarxa", "internet", "carrega"],
+  "source_faq": ["Q87"],
+  "source_manual": ["12.1"],
+  "source_guides": [],
+  "related": [],
+  "error_key": "errorOffline",
+  "symptom": { "ca": "Veig el missatge 'Sense connexió'", "es": "Veo el mensaje 'Sin conexión'" }
+}

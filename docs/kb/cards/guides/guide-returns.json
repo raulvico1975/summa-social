@@ -1,0 +1,39 @@
+{
+  "id": "guide-returns",
+  "type": "howto",
+  "domain": "remittances",
+  "risk": "guarded",
+  "guardrail": "b1_remittances",
+  "answerMode": "full",
+  "title": {
+    "ca": "Gestionar devolucions bancàries",
+    "es": "Gestionar devoluciones bancarias"
+  },
+  "intents": {
+    "ca": [
+      "com gestiono devolucions",
+      "tinc devolucions al banc",
+      "rebuts retornats",
+      "impagats de socis",
+      "devolucions de quotes"
+    ],
+    "es": [
+      "cómo gestiono devoluciones",
+      "tengo devoluciones en el banco",
+      "recibos devueltos",
+      "impagados de socios",
+      "devoluciones de cuotas"
+    ]
+  },
+  "guideId": "returns",
+  "answer": null,
+  "uiPaths": ["Moviments > Devolucions"],
+  "needsSnapshot": false,
+  "keywords": ["devolucions", "retorns", "impagats", "rebuts", "retornats"],
+  "source_faq": ["Q54", "Q55", "Q56"],
+  "source_manual": ["7.1", "7.3"],
+  "source_guides": ["returns"],
+  "related": ["guide-remittances", "guide-split-remittance", "guide-reports"],
+  "error_key": null,
+  "symptom": { "ca": null, "es": null }
+}

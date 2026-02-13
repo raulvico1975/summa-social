@@ -1,0 +1,37 @@
+{
+  "id": "guide-initial-load",
+  "type": "howto",
+  "domain": "general",
+  "risk": "safe",
+  "guardrail": "none",
+  "answerMode": "full",
+  "title": {
+    "ca": "Càrrega inicial de dades",
+    "es": "Carga inicial de datos"
+  },
+  "intents": {
+    "ca": [
+      "com faig la càrrega inicial",
+      "com importo totes les dades",
+      "migrar dades d'un altre programa",
+      "pujar tot al principi"
+    ],
+    "es": [
+      "cómo hago la carga inicial",
+      "cómo importo todos los datos",
+      "migrar datos de otro programa",
+      "subir todo al principio"
+    ]
+  },
+  "guideId": "initialLoad",
+  "answer": null,
+  "uiPaths": ["Donants > Importar", "Moviments > Importar"],
+  "needsSnapshot": false,
+  "keywords": ["càrrega", "inicial", "migrar", "importar", "tot", "dades"],
+  "source_faq": ["Q8", "Q14"],
+  "source_manual": ["1.5"],
+  "source_guides": ["initialLoad"],
+  "related": ["guide-first-day", "guide-import-movements", "guide-donors"],
+  "error_key": null,
+  "symptom": { "ca": null, "es": null }
+}

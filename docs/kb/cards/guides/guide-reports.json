@@ -1,0 +1,41 @@
+{
+  "id": "guide-reports",
+  "type": "howto",
+  "domain": "fiscal",
+  "risk": "guarded",
+  "guardrail": "b1_fiscal",
+  "answerMode": "full",
+  "title": {
+    "ca": "Informes fiscals (Model 182, 347, certificats)",
+    "es": "Informes fiscales (Modelo 182, 347, certificados)"
+  },
+  "intents": {
+    "ca": [
+      "com genero informes fiscals",
+      "Model 182",
+      "Model 347",
+      "on són els informes",
+      "declaració de donatius",
+      "informes per hisenda"
+    ],
+    "es": [
+      "cómo genero informes fiscales",
+      "Modelo 182",
+      "Modelo 347",
+      "dónde están los informes",
+      "declaración de donativos",
+      "informes para hacienda"
+    ]
+  },
+  "guideId": "reports",
+  "answer": null,
+  "uiPaths": ["Informes"],
+  "needsSnapshot": false,
+  "keywords": ["informes", "fiscal", "182", "347", "AEAT", "hisenda", "certificats"],
+  "source_faq": ["Q69", "Q70", "Q76"],
+  "source_manual": ["9.1", "9.2", "9.3"],
+  "source_guides": ["reports"],
+  "related": ["guide-donor-certificate", "guide-returns"],
+  "error_key": null,
+  "symptom": { "ca": null, "es": null }
+}

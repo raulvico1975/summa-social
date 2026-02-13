@@ -1,0 +1,37 @@
+{
+  "id": "guide-danger-delete-remittance",
+  "type": "howto",
+  "domain": "superadmin",
+  "risk": "guarded",
+  "guardrail": "b1_danger",
+  "answerMode": "full",
+  "title": {
+    "ca": "Esborrar l'última remesa (Zona de Perill)",
+    "es": "Borrar la última remesa (Zona de Peligro)"
+  },
+  "intents": {
+    "ca": [
+      "com esborro l'última remesa",
+      "desfer la remesa completament",
+      "eliminar remesa de la zona de perill",
+      "zona de perill remesa"
+    ],
+    "es": [
+      "cómo borro la última remesa",
+      "deshacer la remesa completamente",
+      "eliminar remesa de la zona de peligro",
+      "zona de peligro remesa"
+    ]
+  },
+  "guideId": "dangerDeleteLastRemittance",
+  "answer": null,
+  "uiPaths": ["Configuració > Zona de Perill"],
+  "needsSnapshot": false,
+  "keywords": ["esborrar", "remesa", "perill", "zona", "eliminar", "última"],
+  "source_faq": [],
+  "source_manual": ["11.3"],
+  "source_guides": ["dangerDeleteLastRemittance"],
+  "related": ["guide-remittances", "guide-split-remittance"],
+  "error_key": null,
+  "symptom": { "ca": null, "es": null }
+}

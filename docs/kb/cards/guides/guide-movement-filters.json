@@ -1,0 +1,39 @@
+{
+  "id": "guide-movement-filters",
+  "type": "howto",
+  "domain": "transactions",
+  "risk": "safe",
+  "guardrail": "none",
+  "answerMode": "full",
+  "title": {
+    "ca": "Filtrar moviments",
+    "es": "Filtrar movimientos"
+  },
+  "intents": {
+    "ca": [
+      "com filtro moviments",
+      "buscar un moviment concret",
+      "trobar una transacció",
+      "filtres de moviments",
+      "cercar per data o import"
+    ],
+    "es": [
+      "cómo filtro movimientos",
+      "buscar un movimiento concreto",
+      "encontrar una transacción",
+      "filtros de movimientos",
+      "buscar por fecha o importe"
+    ]
+  },
+  "guideId": "movementFilters",
+  "answer": null,
+  "uiPaths": ["Moviments > Filtres"],
+  "needsSnapshot": false,
+  "keywords": ["filtrar", "buscar", "cercar", "trobar", "filtre", "data", "import"],
+  "source_faq": ["Q33"],
+  "source_manual": ["5.3"],
+  "source_guides": ["movementFilters"],
+  "related": ["guide-movements", "guide-change-period"],
+  "error_key": null,
+  "symptom": { "ca": null, "es": null }
+}

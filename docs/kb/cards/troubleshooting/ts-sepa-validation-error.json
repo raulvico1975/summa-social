@@ -1,0 +1,40 @@
+{
+  "id": "ts-sepa-validation-error",
+  "type": "troubleshooting",
+  "domain": "sepa",
+  "risk": "guarded",
+  "guardrail": "b1_sepa",
+  "answerMode": "full",
+  "title": {
+    "ca": "Error de validació SEPA",
+    "es": "Error de validación SEPA"
+  },
+  "intents": {
+    "ca": [
+      "error SEPA",
+      "no puc generar el fitxer SEPA",
+      "validació SEPA falla",
+      "error al crear la remesa SEPA"
+    ],
+    "es": [
+      "error SEPA",
+      "no puedo generar el archivo SEPA",
+      "validación SEPA falla",
+      "error al crear la remesa SEPA"
+    ]
+  },
+  "guideId": null,
+  "answer": {
+    "ca": "Un error de validació SEPA normalment indica que alguna dada obligatòria és incorrecta o incompleta.\n\n**Verificacions a fer:**\n1. Revisa que l'entitat tingui configurat el CIF i l'ICS (Identificador de Creditor SEPA) a Configuració.\n2. Verifica que tots els donants inclosos tinguin IBAN vàlid.\n3. Comprova que els imports siguin positius i correctes.\n4. Si el missatge d'error és específic, apunta'l i reporta'l amb el formulari.\n\n**Important:** No intentis generar el fitxer SEPA fins que tots els avisos estiguin resolts. Un fitxer SEPA amb errors pot ser rebutjat pel banc.",
+    "es": "Un error de validación SEPA normalmente indica que algún dato obligatorio es incorrecto o incompleto.\n\n**Verificaciones a hacer:**\n1. Revisa que la entidad tenga configurado el CIF y el ICS (Identificador de Acreedor SEPA) en Configuración.\n2. Verifica que todos los donantes incluidos tengan IBAN válido.\n3. Comprueba que los importes sean positivos y correctos.\n4. Si el mensaje de error es específico, apúntalo y repórtalo con el formulario.\n\n**Importante:** No intentes generar el archivo SEPA hasta que todos los avisos estén resueltos. Un archivo SEPA con errores puede ser rechazado por el banco."
+  },
+  "uiPaths": ["Moviments > Remeses SEPA"],
+  "needsSnapshot": false,
+  "keywords": ["SEPA", "validació", "error", "pain008", "ICS", "IBAN"],
+  "source_faq": ["Q53b"],
+  "source_manual": ["6.a"],
+  "source_guides": [],
+  "related": ["guide-remittances", "guide-split-remittance"],
+  "error_key": "validationError",
+  "symptom": { "ca": "Veig el missatge 'Error de validació' en generar SEPA", "es": "Veo el mensaje 'Error de validación' al generar SEPA" }
+}

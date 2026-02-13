@@ -1,0 +1,37 @@
+{
+  "id": "guide-donor-reactivate",
+  "type": "howto",
+  "domain": "donors",
+  "risk": "safe",
+  "guardrail": "none",
+  "answerMode": "full",
+  "title": {
+    "ca": "Reactivar un soci donat de baixa",
+    "es": "Reactivar un socio dado de baja"
+  },
+  "intents": {
+    "ca": [
+      "com reactivo un soci",
+      "tornar a donar d'alta un soci",
+      "soci de baixa que vol tornar",
+      "reactivar donant"
+    ],
+    "es": [
+      "cómo reactivo un socio",
+      "volver a dar de alta a un socio",
+      "socio de baja que quiere volver",
+      "reactivar donante"
+    ]
+  },
+  "guideId": "donorReactivate",
+  "answer": null,
+  "uiPaths": ["Donants > Fitxa donant > Estat"],
+  "needsSnapshot": false,
+  "keywords": ["reactivar", "alta", "tornar", "soci", "baixa"],
+  "source_faq": ["Q21"],
+  "source_manual": ["3.5"],
+  "source_guides": ["donorReactivate"],
+  "related": ["guide-donors", "guide-donor-inactive"],
+  "error_key": null,
+  "symptom": { "ca": null, "es": null }
+}
