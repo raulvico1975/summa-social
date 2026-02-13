@@ -1,6 +1,6 @@
 // src/components/notifications/product-updates-fab.tsx
 // FAB (Floating Action Button) per Novetats a Summa
-// Estil coherent amb LogPanel FAB
+// FAB flotant
 
 'use client';
 
@@ -84,7 +84,7 @@ export function ProductUpdatesFab() {
   // Si no hi ha cap update, no mostrar res
   if (updates.length === 0) return null;
 
-  // FAB obert: panel complet (estil Card com LogPanel)
+  // FAB obert: panel complet
   return (
     <>
       {/* FAB tancat: només el botó flotant */}

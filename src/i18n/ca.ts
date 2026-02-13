@@ -2427,12 +2427,6 @@ export const ca = {
       errorBody: "No s'ha pogut guardar. Torna-ho a provar.",
     },
   },
-  logPanel: {
-    title: "Log de Diagnòstic",
-    waiting: "Esperant accions...",
-    errorBadge: "ERROR",
-    successBadge: "ÈXIT",
-  },
   categories: {
     donations: "Donacions",
     subsidies: "Subvencions",

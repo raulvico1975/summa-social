@@ -2454,12 +2454,6 @@ export const es = {
       errorBody: "No se ha podido guardar. Inténtalo de nuevo.",
     },
   },
-  logPanel: {
-    title: "Log de Diagnóstico",
-    waiting: "Esperando acciones...",
-    errorBadge: "ERROR",
-    successBadge: "ÉXITO",
-  },
   categories: {
     donations: "Donaciones",
     subsidies: "Subvenciones",

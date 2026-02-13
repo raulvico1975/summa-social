@@ -7,11 +7,8 @@ import { useParams, usePathname } from 'next/navigation';
 import { Sidebar, SidebarProvider, SidebarInset } from '@/components/ui/sidebar';
 import { DashboardSidebarContent } from '@/components/dashboard-sidebar-content';
 import { DashboardHeader } from '@/components/dashboard-header';
-import { LogPanel } from '@/components/log-panel';
 import { ProductUpdatesFab } from '@/components/notifications/product-updates-fab';
 import { BotFab } from '@/components/help/BotFab';
-import { AppLogContext } from '@/hooks/use-app-log';
-import type { LogMessage } from '@/hooks/use-app-log';
 import { OrganizationProvider, useCurrentOrganization } from '@/hooks/organization-provider';
 import { useInitializeOrganizationData } from '@/hooks/use-initialize-user-data';
 
@@ -138,31 +135,8 @@ function OrganizationDependentLayout({ children }: { children: React.ReactNode }
     };
   }, []);
 
-  const [logs, setLogs] = React.useState<LogMessage[]>([]);
-  const logCounterRef = React.useRef(0);
-
-  const log = React.useCallback((message: string) => {
-    const timestamp = new Date().toLocaleTimeString('es-ES', {
-      hour: '2-digit',
-      minute: '2-digit',
-      second: '2-digit',
-    });
-    const newLog: LogMessage = {
-      id: logCounterRef.current++,
-      timestamp,
-      message,
-    };
-    setLogs((prevLogs) => [...prevLogs, newLog]);
-  }, []);
-
-  const clearLogs = React.useCallback(() => {
-    setLogs([]);
-  }, []);
-
-  const appLogValue = React.useMemo(() => ({ logs, log, clearLogs }), [logs, log, clearLogs]);
-
   return (
-    <AppLogContext.Provider value={appLogValue}>
+    <>
       <SidebarProvider open={sidebarOpen} onOpenChange={handleOpenChange}>
         {/* Shell: sidebar + contingut (header+main) en flex horitzontal */}
         <div className="flex h-screen overflow-hidden">
@@ -181,9 +155,8 @@ function OrganizationDependentLayout({ children }: { children: React.ReactNode }
       <div className="fixed bottom-6 right-6 z-50 flex flex-col items-end gap-3">
         <ProductUpdatesFab />
         <BotFab />
-        <LogPanel />
       </div>
-    </AppLogContext.Provider>
+    </>
   );
 }
 
