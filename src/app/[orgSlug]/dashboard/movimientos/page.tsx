@@ -45,7 +45,7 @@ export default function MovimientosPage() {
           <p className="text-muted-foreground">{t.movements.description}</p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          <TransactionImporter existingTransactions={transactions || []} availableCategories={categories} />
+          <TransactionImporter availableCategories={categories} />
           {isPendingDocsEnabled && (
             <>
               <Button variant="outline" asChild>

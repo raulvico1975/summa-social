@@ -236,10 +236,6 @@ export const ca = {
     importer: {
       button: "Importar",
       add: "Afegir moviments",
-      replace: "Reemplaçar tot",
-      confirmReplaceTitle: "Estàs a punt de reemplaçar-ho tot?",
-      confirmReplaceDescription: "Aquesta acció esborrarà permanentment tots els moviments actuals i els substituirà pels del nou arxiu. Aquesta operació no es pot desfer.",
-      confirm: "Sí, reemplaça-ho tot",
     },
     table: {
       date: "Data",
@@ -854,11 +850,7 @@ export const ca = {
     transaction: {
       title: "Importar",
       addMovements: "Afegir moviments",
-      replaceAll: "Reemplaçar tot",
-      replaceAllWarning: "Estàs a punt de reemplaçar tot?",
-      replaceAllDescription: "Aquesta acció esborrarà permanentment tots els moviments actuals i els reemplaçarà pels del nou arxiu. Aquesta operació no es pot desfer.",
       cancel: "Cancel·lar",
-      confirmReplace: "Sí, reemplaçar-ho tot",
       confirmImport: "Continuar importació",
       overlapWarningTitle: "Dates solapades amb importacions existents",
       overlapWarningDescription: "Aquest fitxer conté transaccions en un rang de dates que solapa amb dades ja importades.",
@@ -897,8 +889,8 @@ export const ca = {
         balanceInconsistentRow: (row: number, detail: string) => `Fila ${row}: ${detail}`,
       },
       importSuccess: "Importació Exitosa",
-      importSuccessDescription: (imported: number, mode: string, duplicates: number) =>
-        `S'han importat ${imported} transaccions.${mode === 'append' ? ` S'han omès ${duplicates} duplicats.` : ''}`,
+      importSuccessDescription: (imported: number, duplicates: number) =>
+        `S'han importat ${imported} transaccions.${duplicates > 0 ? ` S'han omès ${duplicates} duplicats.` : ''}`,
       noNewTransactions: "No hi ha transaccions noves",
       noTransactionsFound: "No s'han trobat transaccions",
       duplicatesOmitted: (count: number) => `S'han trobat i omès ${count} transaccions duplicades.`,

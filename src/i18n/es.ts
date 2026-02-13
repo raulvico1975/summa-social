@@ -236,10 +236,6 @@ export const es = {
     importer: {
       button: "Importar",
       add: "Añadir movimientos",
-      replace: "Reemplazar todo",
-      confirmReplaceTitle: "¿Estás a punto de reemplazarlo todo?",
-      confirmReplaceDescription: "Esta acción borrará permanentemente todos los movimientos actuales y los reemplazará por los del nuevo archivo. Esta operación no se puede deshacer.",
-      confirm: "Sí, reemplazarlo todo",
     },
     table: {
       date: "Fecha",
@@ -854,11 +850,7 @@ export const es = {
     transaction: {
       title: "Importar",
       addMovements: "Añadir movimientos",
-      replaceAll: "Reemplazar todo",
-      replaceAllWarning: "¿Estás a punto de reemplazar todo?",
-      replaceAllDescription: "Esta acción borrará permanentemente todos los movimientos actuales y los reemplazará por los del nuevo archivo. Esta operación no se puede deshacer.",
       cancel: "Cancelar",
-      confirmReplace: "Sí, reemplazarlo todo",
       confirmImport: "Continuar importación",
       overlapWarningTitle: "Fechas solapadas con importaciones existentes",
       overlapWarningDescription: "Este archivo contiene transacciones en un rango de fechas que solapa con datos ya importados.",
@@ -897,8 +889,8 @@ export const es = {
         balanceInconsistentRow: (row: number, detail: string) => `Fila ${row}: ${detail}`,
       },
       importSuccess: "Importación Exitosa",
-      importSuccessDescription: (imported: number, mode: string, duplicates: number) =>
-        `Se han importado ${imported} transacciones.${mode === 'append' ? ` Se omitieron ${duplicates} duplicados.` : ''}`,
+      importSuccessDescription: (imported: number, duplicates: number) =>
+        `Se han importado ${imported} transacciones.${duplicates > 0 ? ` Se omitieron ${duplicates} duplicados.` : ''}`,
       noNewTransactions: "No hay transacciones nuevas",
       noTransactionsFound: "No se encontraron transacciones",
       duplicatesOmitted: (count: number) => `Se encontraron y omitieron ${count} transacciones duplicadas.`,
