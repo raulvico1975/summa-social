@@ -1,4 +1,4 @@
-# QA P0 — Verificació Fiscal Pre-Deploy
+# Verificació Fiscal Pre-Deploy
 
 > **Obligatori** abans de qualsevol push a master que toqui:
 > Moviments, Remeses, Devolucions, Donants, Certificats, Imports, Permisos
@@ -16,9 +16,9 @@ Aquest checklist assegura que els fluxos fiscals crítics no tenen regressions a
 
 ---
 
-## 2. Checklist P0 (PASS/FAIL)
+## 2. Checklist de verificació (PASS/FAIL)
 
-### P0-1 Remesa IN amb IBAN ambigu
+### VF-1 Remesa IN amb IBAN ambigu
 
 **Passos:**
 1. Obrir `/{org}/dashboard/movimientos`
@@ -36,7 +36,7 @@ Aquest checklist assegura que els fluxos fiscals crítics no tenen regressions a
 
 ---
 
-### P0-2 Remesa IN amb IBAN no trobat
+### VF-2 Remesa IN amb IBAN no trobat
 
 **Passos:**
 1. Obrir remesa pare amb IBAN desconegut
@@ -53,7 +53,7 @@ Aquest checklist assegura que els fluxos fiscals crítics no tenen regressions a
 
 ---
 
-### P0-3 Devolucions conjuntes (ReturnImporter contextual)
+### VF-3 Devolucions conjuntes (ReturnImporter contextual)
 
 **Passos:**
 1. Obrir remesa pare amb devolucions associades
@@ -71,7 +71,7 @@ Aquest checklist assegura que els fluxos fiscals crítics no tenen regressions a
 
 ---
 
-### P0-4 Fitxa donant (query per contactId) + net correcte
+### VF-4 Fitxa donant (query per contactId) + net correcte
 
 **Passos:**
 1. Obrir fitxa d'un donant amb donacions i devolucions
@@ -85,7 +85,7 @@ Aquest checklist assegura que els fluxos fiscals crítics no tenen regressions a
 
 ---
 
-### P0-5 Certificat 2025
+### VF-5 Certificat 2025
 
 **Passos:**
 1. Generar certificat de donació per a un donant amb moviments
@@ -98,7 +98,7 @@ Aquest checklist assegura que els fluxos fiscals crítics no tenen regressions a
 
 ---
 
-### P0-6 Undo de processament
+### VF-6 Undo de processament
 
 **Passos:**
 1. Localitzar remesa pare processada
@@ -114,7 +114,7 @@ Aquest checklist assegura que els fluxos fiscals crítics no tenen regressions a
 
 ---
 
-### P0-7 Locks multiusuari
+### VF-7 Locks multiusuari
 
 **Passos:**
 1. Obrir dues pestanyes/navegadors amb el mateix usuari o usuaris diferents
@@ -129,7 +129,7 @@ Aquest checklist assegura que els fluxos fiscals crítics no tenen regressions a
 
 ---
 
-### P0-8 Recuperació via Desfer → Processar
+### VF-8 Recuperació via Desfer → Processar
 
 **Context:**
 No existeix "Reparar" com a operació separada. El flux de recuperació és sempre: Desfer → Processar.
@@ -153,7 +153,7 @@ No existeix "Reparar" com a operació separada. El flux de recuperació és semp
 
 ---
 
-### P0-9 UNDO idempotent
+### VF-9 UNDO idempotent
 
 **Passos:**
 1. Localitzar remesa pare processada
@@ -169,7 +169,7 @@ No existeix "Reparar" com a operació separada. El flux de recuperació és semp
 
 ---
 
-### P0-10 PROCESS idempotent
+### VF-10 PROCESS idempotent
 
 **Passos:**
 1. Preparar CSV amb 3 ítems
@@ -186,7 +186,7 @@ No existeix "Reparar" com a operació separada. El flux de recuperació és semp
 
 ---
 
-### P0-11 INVARIANT bloqueja (R-SUM-1)
+### VF-11 INVARIANT bloqueja (R-SUM-1)
 
 **Passos:**
 1. Preparar CSV amb ítems que sumen diferent del pare (diferència > 2 cèntims)
@@ -200,7 +200,7 @@ No existeix "Reparar" com a operació separada. El flux de recuperació és semp
 
 ---
 
-### P0-12 LOCK impedeix doble processament
+### VF-12 LOCK impedeix doble processament
 
 **Passos:**
 1. Obrir dues pestanyes amb el mateix usuari
@@ -215,7 +215,7 @@ No existeix "Reparar" com a operació separada. El flux de recuperació és semp
 
 ---
 
-### P0-13 UI bloqueja eliminar fill de remesa
+### VF-13 UI bloqueja eliminar fill de remesa
 
 **Passos:**
 1. Localitzar una transacció filla d'una remesa (`isRemittanceItem: true`)
@@ -229,7 +229,7 @@ No existeix "Reparar" com a operació separada. El flux de recuperació és semp
 
 ---
 
-### P0-14 archivedAt exclòs fiscalment (CRÍTIC)
+### VF-14 archivedAt exclòs fiscalment (CRÍTIC)
 
 **Passos:**
 1. Localitzar un donant amb donacions (anotar net actual)
@@ -249,7 +249,7 @@ No existeix "Reparar" com a operació separada. El flux de recuperació és semp
 
 ## 3. Resultat de la sessió
 
-| Data | Executor | P0-1 | P0-2 | P0-3 | P0-4 | P0-5 | P0-6 | P0-7 | P0-8 | P0-9 | P0-10 | P0-11 | P0-12 | P0-13 | P0-14 | Notes |
+| Data | Executor | VF-1 | VF-2 | VF-3 | VF-4 | VF-5 | VF-6 | VF-7 | VF-8 | VF-9 | VF-10 | VF-11 | VF-12 | VF-13 | VF-14 | Notes |
 |------|----------|------|------|------|------|------|------|------|------|------|-------|-------|-------|-------|-------|-------|
 | YYYY-MM-DD | Nom | - | - | - | - | - | - | - | - | - | - | - | - | - | - | |
 
@@ -260,8 +260,8 @@ No existeix "Reparar" com a operació separada. El flux de recuperació és semp
 1. **NO fer push** a master
 2. Documentar el FAIL amb detall (passos, error, screenshot)
 3. Obrir issue o fix directe
-4. Tornar a executar tot el checklist P0 després del fix
+4. Tornar a executar tot el checklist després del fix
 
 ---
 
-*Última actualització: 2026-01-20*
+*Última actualització: 2026-02-13*
