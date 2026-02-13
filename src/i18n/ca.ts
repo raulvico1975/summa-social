@@ -903,6 +903,28 @@ export const ca = {
       noTransactionsFound: "No s'han trobat transaccions",
       duplicatesOmitted: (count: number) => `S'han trobat i omès ${count} transaccions duplicades.`,
       noValidTransactions: "No s'han trobat transaccions vàlides per importar.",
+      // Dedupe 3 estats
+      dedupe: {
+        candidateDialogTitle: "Possibles duplicats trobats",
+        candidateDialogDescription: (count: number) =>
+          `S'han trobat ${count} moviments que coincideixen amb transaccions existents (mateixa data, import i descripció). Revisa cada un i decideix si s'ha d'importar o ometre.`,
+        columnDate: "Data",
+        columnDescription: "Descripció",
+        columnAmount: "Import",
+        columnExisting: "Ja existent",
+        columnDecision: "Decisió",
+        importAction: "Importar",
+        skipAction: "Ometre",
+        importAll: "Importar tots",
+        skipAll: "Ometre tots",
+        clearAll: "Netejar",
+        resolvedCount: (resolved: number, total: number) => `${resolved} de ${total} resolts`,
+        continueButton: (toImport: number, toSkip: number) =>
+          `Continuar (${toImport} per importar, ${toSkip} per ometre)`,
+        cancelImport: "Cancel·lar importació",
+        noDecision: "Sense decisió",
+        safeDupesSkipped: (count: number) => `${count} duplicats segurs omesos automàticament.`,
+      },
     },
 
     // Importador de Stripe
@@ -1484,6 +1506,47 @@ export const ca = {
     excludedSuppliers: "Exclosos manualment",
     includeSupplier: "Incloure proveïdor",
     excludeSupplier: "Excloure proveïdor",
+    // Model 347 — Millores v1.43
+    model347WithholdingWarning: "Les operacions subjectes a retenció (com factures de lloguer o de professionals autònoms) no s'han d'incloure al 347 perquè ja es declaren al Model 190 o 180. Revisa les transaccions mostrades i exclou o inclou aquelles que cumpleixin els requisits pel 347.",
+    model347SectionExpenses: "Pagaments a proveïdors",
+    model347SectionIncome: "Ingressos",
+    model347Q1: "T1",
+    model347Q2: "T2",
+    model347Q3: "T3",
+    model347Q4: "T4",
+    model347Detail: "Detall",
+    model347DetailTitle: (name: string) => `Transaccions de ${name}`,
+    model347DetailDescription: "Desmarca les transaccions que no s'han d'incloure al Model 347.",
+    model347NoCategory: "Sense categoria",
+    model347ExportAEAT: "Generar fitxer AEAT (.txt)",
+    model347ExportAEATTooltip: "Fitxer .txt per pujar a la Seu Electrònica de l'AEAT.",
+    model347AEATFileName: ({ year }: { year: string }) => `modelo347_${year}.txt`,
+    model347CsvFileName: ({ year }: { year: string }) => `informe_model347_${year}.csv`,
+    model347TypeExpense: "Compra",
+    model347TypeIncome: "Ingrés",
+    model347AEATMissingData: "Falten dades per a l'export AEAT",
+    model347AEATEncodingError: "Error de codificació ISO-8859-1",
+    model347AEATExcludedTitle: (count: number) => `${count} proveïdor${count > 1 ? 's' : ''} exclòs${count > 1 ? 'os' : ''} de l'export`,
+    model347AEATExcludedDesc: (included: number, excluded: number) =>
+      `El fitxer conté ${included} proveïdor${included > 1 ? 's' : ''}. ${excluded} ${excluded > 1 ? 'han' : 'ha'} estat exclòs${excluded > 1 ? 'os' : ''} per dades incompletes.`,
+    model347AEATZeroValid: "Cap proveïdor vàlid per exportar",
+    model347AEATZeroValidDesc: "Tots els proveïdors tenen dades incompletes (NIF). Corregeix-les abans d'exportar.",
+    model347AEATExcludedDialogTitle: "Hi ha proveïdors exclosos",
+    model347AEATExcludedDialogDesc: (included: number, excluded: number) =>
+      `El fitxer AEAT contindrà ${included} proveïdor${included > 1 ? 's' : ''}. ${excluded} proveïdor${excluded > 1 ? 's' : ''} ${excluded > 1 ? 'seran' : 'serà'} exclòs${excluded > 1 ? 'os' : ''} per dades incompletes.`,
+    model347AEATExcludedHelp: "Pots descarregar el llistat per corregir les dades dels proveïdors abans de presentar el 347.",
+    model347AEATIssueLabel: (code: string, meta?: { taxIdLength?: number }) => {
+      switch (code) {
+        case 'TAXID_EMPTY': return 'NIF/CIF buit';
+        case 'TAXID_INVALID_CHARS': return 'NIF/CIF amb caràcters invàlids';
+        case 'TAXID_INVALID_LENGTH': return `NIF/CIF amb longitud incorrecta (${meta?.taxIdLength ?? '?'})`;
+        default: return 'dada invàlida';
+      }
+    },
+    model347DownloadExcludedCsv: "Descarregar exclosos (CSV)",
+    model347ExportAnyway: "Exportar igualment",
+    model347CancelToFix: "Cancel·lar i revisar dades",
+    model347NoIncomeAboveThreshold: "No hi ha ingressos de proveïdors per sobre del llindar.",
     // Paquet de tancament
     closingBundle: {
       title: "Paquet de tancament",
