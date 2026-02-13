@@ -231,8 +231,14 @@ export function classifyTransactions(
       bankAccountId,
     });
 
-    // 1. Intra-fitxer: si la mateixa clau ja s'ha vist al fitxer → DUPLICATE_SAFE
-    if (seenInFileKeys.has(effectiveKey)) {
+    // Enrichment signature (calculada aviat per usar-la també a intra-fitxer)
+    const incomingSig = getExtraSignature(rawRow, extraFields);
+
+    // 1. Intra-fitxer: si la mateixa clau+enrichment ja s'ha vist al fitxer → DUPLICATE_SAFE
+    //    Si tenim enrichment, dos moviments amb mateixa base key però diferent
+    //    opDate/balance NO són intra-file duplicats (són moviments reals diferents)
+    const intraFileKey = incomingSig ? `${effectiveKey}||${incomingSig}` : effectiveKey;
+    if (seenInFileKeys.has(intraFileKey)) {
       results.push({
         tx,
         status: 'DUPLICATE_SAFE',
@@ -244,7 +250,7 @@ export function classifyTransactions(
       });
       continue;
     }
-    seenInFileKeys.add(effectiveKey);
+    seenInFileKeys.add(intraFileKey);
 
     // 2. Match amb bankRef
     if (isRefKey(effectiveKey)) {
@@ -296,7 +302,6 @@ export function classifyTransactions(
     }
 
     // Hi ha match base. Intentar enrichment per reduir falsos candidats.
-    const incomingSig = getExtraSignature(rawRow, extraFields);
 
     if (incomingSig !== '') {
       // Tenim signatura extra: comprovar si algun existing coincideix
