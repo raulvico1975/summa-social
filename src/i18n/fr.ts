@@ -924,6 +924,8 @@ export const fr = {
         cancelImport: "Annuler l'importation",
         noDecision: "Sans décision",
         safeDupesSkipped: (count: number) => `${count} doublon(s) sûr(s) ignoré(s) automatiquement.`,
+        executionDate: "F. exéc.",
+        balance: "Solde",
       },
     },
 

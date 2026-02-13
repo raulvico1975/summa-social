@@ -156,9 +156,15 @@ export function getExtraSignature(
   for (const field of [...fields].sort()) {
     const val = obj[field];
     if (val !== undefined && val !== null && val !== '') {
-      const normalized = typeof val === 'string'
-        ? val.trim().replace(/\s+/g, ' ').toUpperCase()
-        : String(val);
+      let normalized: string;
+      if (typeof val === 'number') {
+        // Arrodonir a cèntims per evitar floating point (1234.5600001 → 123456)
+        normalized = String(Math.round(val * 100));
+      } else if (typeof val === 'string') {
+        normalized = val.trim().replace(/\s+/g, ' ').toUpperCase();
+      } else {
+        normalized = String(val);
+      }
       parts.push(`${field}=${normalized}`);
     }
   }
@@ -294,17 +300,21 @@ export function classifyTransactions(
 
     if (incomingSig !== '') {
       // Tenim signatura extra: comprovar si algun existing coincideix
-      let anyExistingMatches = false;
+      let anyExistingExactMatch = false;
+      let anyExistingMissingSig = false;
       for (const m of baseMatches) {
         const existingSig = getExtraSignature(m.tx as unknown as Record<string, any>, extraFields);
-        if (existingSig === incomingSig) {
-          anyExistingMatches = true;
+        if (existingSig === '') {
+          // L'existent no té els camps extra → no es pot distingir per enrichment
+          anyExistingMissingSig = true;
+        } else if (existingSig === incomingSig) {
+          anyExistingExactMatch = true;
           break;
         }
       }
 
-      if (!anyExistingMatches) {
-        // Extra sig disponible i no coincideix → NEW (enrichment guanya)
+      if (!anyExistingExactMatch && !anyExistingMissingSig) {
+        // Tots els existents tenen signatura i cap coincideix → NEW (enrichment guanya)
         results.push({
           tx,
           status: 'NEW',
