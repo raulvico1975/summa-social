@@ -90,7 +90,9 @@ export function DedupeCandidateResolver({
 
   const formatDate = (dateStr: string) => {
     try {
-      return new Date(dateStr).toLocaleDateString('ca-ES');
+      // Afegir hora per evitar desplaçament timezone en dates YYYY-MM-DD
+      const d = dateStr.includes('T') ? new Date(dateStr) : new Date(dateStr + 'T12:00:00');
+      return d.toLocaleDateString('ca-ES');
     } catch {
       return dateStr;
     }
@@ -105,11 +107,15 @@ export function DedupeCandidateResolver({
     return str.slice(0, max) + '…';
   };
 
+  // Columnes opcionals: només mostrar si algun candidat les té
+  const hasOpDate = candidates.some(c => c.rawRow._opDate);
+  const hasBalance = candidates.some(c => typeof c.rawRow._balance === 'number');
+
   if (totalCandidates === 0) return null;
 
   return (
     <Dialog open={open} onOpenChange={(isOpen) => { if (!isOpen) onCancel(); }}>
-      <DialogContent className="max-w-4xl">
+      <DialogContent className={hasOpDate || hasBalance ? 'max-w-5xl' : 'max-w-4xl'}>
         <DialogHeader>
           <DialogTitle>
             {t.importers?.transaction?.dedupe?.candidateDialogTitle ?? 'Possibles duplicats trobats'}
@@ -137,9 +143,19 @@ export function DedupeCandidateResolver({
                 <TableHead className="w-[90px]">
                   {t.importers?.transaction?.dedupe?.columnDate ?? 'Data'}
                 </TableHead>
+                {hasOpDate && (
+                  <TableHead className="w-[80px]">
+                    {t.importers?.transaction?.dedupe?.executionDate ?? 'F. exec.'}
+                  </TableHead>
+                )}
                 <TableHead className="w-[90px] text-right">
                   {t.importers?.transaction?.dedupe?.columnAmount ?? 'Import'}
                 </TableHead>
+                {hasBalance && (
+                  <TableHead className="w-[100px] text-right">
+                    {t.importers?.transaction?.dedupe?.balance ?? 'Saldo'}
+                  </TableHead>
+                )}
                 <TableHead>
                   {t.importers?.transaction?.dedupe?.columnDescription ?? 'Descripció'}
                 </TableHead>
@@ -171,9 +187,21 @@ export function DedupeCandidateResolver({
                     <TableCell className="text-xs">
                       {formatDate(candidate.tx.date)}
                     </TableCell>
+                    {hasOpDate && (
+                      <TableCell className="text-xs">
+                        {candidate.rawRow._opDate ? formatDate(candidate.rawRow._opDate) : ''}
+                      </TableCell>
+                    )}
                     <TableCell className="text-right text-xs font-mono">
                       {formatAmount(candidate.tx.amount)}
                     </TableCell>
+                    {hasBalance && (
+                      <TableCell className="text-right text-xs font-mono">
+                        {typeof candidate.rawRow._balance === 'number'
+                          ? formatAmount(candidate.rawRow._balance)
+                          : ''}
+                      </TableCell>
+                    )}
                     <TableCell className="text-xs" title={candidate.tx.description}>
                       {truncate(candidate.tx.description, 50)}
                     </TableCell>
