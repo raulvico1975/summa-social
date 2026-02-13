@@ -1,0 +1,41 @@
+{
+  "id": "guide-first-day",
+  "type": "howto",
+  "domain": "general",
+  "risk": "safe",
+  "guardrail": "none",
+  "answerMode": "full",
+  "title": {
+    "ca": "Primer dia a Summa Social",
+    "es": "Primer día en Summa Social"
+  },
+  "intents": {
+    "ca": [
+      "com començo",
+      "primer dia",
+      "per on començo",
+      "acabo d'entrar per primer cop",
+      "no sé per on començar",
+      "com funciona això"
+    ],
+    "es": [
+      "cómo empiezo",
+      "primer día",
+      "por dónde empiezo",
+      "acabo de entrar por primera vez",
+      "no sé por dónde empezar",
+      "cómo funciona esto"
+    ]
+  },
+  "guideId": "firstDay",
+  "answer": null,
+  "uiPaths": ["Dashboard > Configuració"],
+  "needsSnapshot": false,
+  "keywords": ["primer", "dia", "començar", "inici", "onboarding", "nou"],
+  "source_faq": ["Q1", "Q2"],
+  "source_manual": ["1.1", "1.5"],
+  "source_guides": ["firstDay"],
+  "related": ["guide-first-month", "guide-initial-load"],
+  "error_key": null,
+  "symptom": { "ca": null, "es": null }
+}

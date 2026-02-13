@@ -1,0 +1,37 @@
+{
+  "id": "guide-donor-certificate",
+  "type": "howto",
+  "domain": "fiscal",
+  "risk": "guarded",
+  "guardrail": "b1_fiscal",
+  "answerMode": "full",
+  "title": {
+    "ca": "Generar certificats de donació",
+    "es": "Generar certificados de donación"
+  },
+  "intents": {
+    "ca": [
+      "com genero certificats de donació",
+      "certificat fiscal per donants",
+      "enviar certificats als socis",
+      "certificat de donatius"
+    ],
+    "es": [
+      "cómo genero certificados de donación",
+      "certificado fiscal para donantes",
+      "enviar certificados a los socios",
+      "certificado de donativos"
+    ]
+  },
+  "guideId": "generateDonorCertificate",
+  "answer": null,
+  "uiPaths": ["Informes > Certificats"],
+  "needsSnapshot": false,
+  "keywords": ["certificat", "donació", "fiscal", "PDF", "enviar"],
+  "source_faq": ["Q73", "Q74"],
+  "source_manual": ["9.3"],
+  "source_guides": ["generateDonorCertificate"],
+  "related": ["guide-reports", "guide-model-182"],
+  "error_key": null,
+  "symptom": { "ca": null, "es": null }
+}

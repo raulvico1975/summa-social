@@ -1,0 +1,40 @@
+{
+  "id": "ts-blocked-by-project-links",
+  "type": "troubleshooting",
+  "domain": "projects",
+  "risk": "safe",
+  "guardrail": "none",
+  "answerMode": "full",
+  "title": {
+    "ca": "No es pot eliminar: moviments assignats a projectes",
+    "es": "No se puede eliminar: movimientos asignados a proyectos"
+  },
+  "intents": {
+    "ca": [
+      "no puc esborrar uns moviments",
+      "bloquejat per assignacions a projectes",
+      "moviments tenen assignacions",
+      "desassignar moviments de projectes"
+    ],
+    "es": [
+      "no puedo borrar unos movimientos",
+      "bloqueado por asignaciones a proyectos",
+      "movimientos tienen asignaciones",
+      "desasignar movimientos de proyectos"
+    ]
+  },
+  "guideId": null,
+  "answer": {
+    "ca": "Aquest bloqueig apareix quan intentes esborrar moviments que estan assignats a un projecte.\n\n**Què fer:**\n1. Ves al mòdul de Projectes.\n2. Obre el projecte on estan assignats els moviments.\n3. Desassigna els moviments que vols esborrar.\n4. Torna a la Zona de Perill i intenta esborrar-los de nou.\n\n**Per què existeix aquest bloqueig:** Evita esborrar moviments que formen part de la justificació d'una subvenció, cosa que podria generar inconsistències.",
+    "es": "Este bloqueo aparece cuando intentas borrar movimientos que están asignados a un proyecto.\n\n**Qué hacer:**\n1. Ve al módulo de Proyectos.\n2. Abre el proyecto donde están asignados los movimientos.\n3. Desasigna los movimientos que quieres borrar.\n4. Vuelve a la Zona de Peligro e intenta borrarlos de nuevo.\n\n**Por qué existe este bloqueo:** Evita borrar movimientos que forman parte de la justificación de una subvención, lo que podría generar inconsistencias."
+  },
+  "uiPaths": ["Projectes > Projecte > Assignacions", "Configuració > Zona de Perill"],
+  "needsSnapshot": false,
+  "keywords": ["bloqueig", "projectes", "assignació", "esborrar", "desassignar"],
+  "source_faq": [],
+  "source_manual": ["11.2"],
+  "source_guides": [],
+  "related": ["guide-projects", "manual-danger-zone"],
+  "error_key": "blockedByProjectLinks",
+  "symptom": { "ca": "Veig el missatge 'No es poden eliminar perquè hi ha moviments assignats a projectes'", "es": "Veo el mensaje 'No se pueden eliminar porque hay movimientos asignados a proyectos'" }
+}

@@ -1,0 +1,37 @@
+{
+  "id": "guide-split-remittance",
+  "type": "howto",
+  "domain": "remittances",
+  "risk": "guarded",
+  "guardrail": "b1_remittances",
+  "answerMode": "full",
+  "title": {
+    "ca": "Dividir una remesa en quotes individuals",
+    "es": "Dividir una remesa en cuotas individuales"
+  },
+  "intents": {
+    "ca": [
+      "com divideixo una remesa",
+      "separar remesa en quotes",
+      "split de remesa",
+      "dividir pagament de quotes"
+    ],
+    "es": [
+      "cómo divido una remesa",
+      "separar remesa en cuotas",
+      "split de remesa",
+      "dividir pago de cuotas"
+    ]
+  },
+  "guideId": "splitRemittance",
+  "answer": null,
+  "uiPaths": ["Moviments > Seleccionar remesa > Dividir"],
+  "needsSnapshot": false,
+  "keywords": ["dividir", "remesa", "split", "quotes", "individuals"],
+  "source_faq": ["Q42", "Q43"],
+  "source_manual": ["6.3"],
+  "source_guides": ["splitRemittance"],
+  "related": ["guide-remittances", "guide-returns"],
+  "error_key": null,
+  "symptom": { "ca": null, "es": null }
+}

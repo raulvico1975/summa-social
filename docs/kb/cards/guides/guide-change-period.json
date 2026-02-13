@@ -1,0 +1,37 @@
+{
+  "id": "guide-change-period",
+  "type": "howto",
+  "domain": "transactions",
+  "risk": "safe",
+  "guardrail": "none",
+  "answerMode": "full",
+  "title": {
+    "ca": "Canviar el període de visualització",
+    "es": "Cambiar el período de visualización"
+  },
+  "intents": {
+    "ca": [
+      "com canvio el mes",
+      "veure moviments d'un altre mes",
+      "canviar període",
+      "no veig els moviments del mes passat"
+    ],
+    "es": [
+      "cómo cambio el mes",
+      "ver movimientos de otro mes",
+      "cambiar período",
+      "no veo los movimientos del mes pasado"
+    ]
+  },
+  "guideId": "changePeriod",
+  "answer": null,
+  "uiPaths": ["Moviments > Selector de període (a dalt)"],
+  "needsSnapshot": false,
+  "keywords": ["període", "mes", "canviar", "data", "visualització"],
+  "source_faq": ["Q33"],
+  "source_manual": ["5.3"],
+  "source_guides": ["changePeriod"],
+  "related": ["guide-movements", "guide-movement-filters"],
+  "error_key": null,
+  "symptom": { "ca": "No veig moviments (potser estàs en un altre mes)", "es": "No veo movimientos (quizás estás en otro mes)" }
+}

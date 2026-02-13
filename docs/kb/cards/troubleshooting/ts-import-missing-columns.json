@@ -1,0 +1,40 @@
+{
+  "id": "ts-import-missing-columns",
+  "type": "troubleshooting",
+  "domain": "donors",
+  "risk": "safe",
+  "guardrail": "none",
+  "answerMode": "full",
+  "title": {
+    "ca": "Error: falten columnes obligatòries a l'import",
+    "es": "Error: faltan columnas obligatorias en la importación"
+  },
+  "intents": {
+    "ca": [
+      "error falten columnes",
+      "l'import diu que falten columnes",
+      "no puc importar l'Excel de donants",
+      "columnes obligatòries"
+    ],
+    "es": [
+      "error faltan columnas",
+      "la importación dice que faltan columnas",
+      "no puedo importar el Excel de donantes",
+      "columnas obligatorias"
+    ]
+  },
+  "guideId": null,
+  "answer": {
+    "ca": "Aquest error apareix quan el fitxer no segueix el format de la plantilla oficial de 18 columnes.\n\n**Què fer:**\n1. Descarrega la plantilla oficial des de Donants > Importar > Descarregar plantilla.\n2. Copia les teves dades a la plantilla descarregada, respectant l'ordre de columnes.\n3. Les columnes mínimes obligatòries són: **Nom**, **Tipus** i **Modalitat**.\n4. NIF/DNI i Codi Postal no bloquegen la importació, però són necessaris per generar el Model 182.\n5. Assegura't que la primera fila conté els noms de les columnes (no dades).\n\n**Formats acceptats:** .xlsx, .xls, .csv",
+    "es": "Este error aparece cuando el archivo no sigue el formato de la plantilla oficial de 18 columnas.\n\n**Qué hacer:**\n1. Descarga la plantilla oficial desde Donantes > Importar > Descargar plantilla.\n2. Copia tus datos en la plantilla descargada, respetando el orden de columnas.\n3. Las columnas mínimas obligatorias son: **Nombre**, **Tipo** y **Modalidad**.\n4. NIF/DNI y Código Postal no bloquean la importación, pero son necesarios para generar el Modelo 182.\n5. Asegúrate de que la primera fila contiene los nombres de las columnas (no datos).\n\n**Formatos aceptados:** .xlsx, .xls, .csv"
+  },
+  "uiPaths": ["Donants > Importar"],
+  "needsSnapshot": false,
+  "keywords": ["error", "columnes", "importar", "excel", "CSV", "falten", "plantilla"],
+  "source_faq": ["Q10"],
+  "source_manual": ["3.3"],
+  "source_guides": ["importDonors"],
+  "related": ["guide-import-donors", "ts-import-invalid-format"],
+  "error_key": "errorMissingColumns",
+  "symptom": { "ca": "Veig el missatge 'Falten columnes obligatòries'", "es": "Veo el mensaje 'Faltan columnas obligatorias'" }
+}

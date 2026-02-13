@@ -1,0 +1,37 @@
+{
+  "id": "guide-change-language",
+  "type": "howto",
+  "domain": "config",
+  "risk": "safe",
+  "guardrail": "none",
+  "answerMode": "full",
+  "title": {
+    "ca": "Canviar l'idioma de l'app",
+    "es": "Cambiar el idioma de la app"
+  },
+  "intents": {
+    "ca": [
+      "com canvio l'idioma",
+      "posar en castellà",
+      "canviar a català",
+      "l'app està en un altre idioma"
+    ],
+    "es": [
+      "cómo cambio el idioma",
+      "poner en catalán",
+      "cambiar a castellano",
+      "la app está en otro idioma"
+    ]
+  },
+  "guideId": "changeLanguage",
+  "answer": null,
+  "uiPaths": ["Configuració > Idioma"],
+  "needsSnapshot": false,
+  "keywords": ["idioma", "llengua", "canviar", "català", "castellà", "language"],
+  "source_faq": [],
+  "source_manual": ["1.2"],
+  "source_guides": ["changeLanguage"],
+  "related": [],
+  "error_key": null,
+  "symptom": { "ca": null, "es": null }
+}

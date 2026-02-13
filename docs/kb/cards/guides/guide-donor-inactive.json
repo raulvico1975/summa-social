@@ -1,0 +1,37 @@
+{
+  "id": "guide-donor-inactive",
+  "type": "howto",
+  "domain": "donors",
+  "risk": "safe",
+  "guardrail": "none",
+  "answerMode": "full",
+  "title": {
+    "ca": "Donar de baixa un soci",
+    "es": "Dar de baja a un socio"
+  },
+  "intents": {
+    "ca": [
+      "com dono de baixa un soci",
+      "soci que vol marxar",
+      "desactivar donant",
+      "baixa de soci"
+    ],
+    "es": [
+      "cómo doy de baja a un socio",
+      "socio que quiere irse",
+      "desactivar donante",
+      "baja de socio"
+    ]
+  },
+  "guideId": "donorSetInactive",
+  "answer": null,
+  "uiPaths": ["Donants > Fitxa donant > Estat"],
+  "needsSnapshot": false,
+  "keywords": ["baixa", "inactiu", "desactivar", "soci", "marxar"],
+  "source_faq": ["Q21"],
+  "source_manual": ["3.5"],
+  "source_guides": ["donorSetInactive"],
+  "related": ["guide-donors", "guide-donor-reactivate"],
+  "error_key": null,
+  "symptom": { "ca": null, "es": null }
+}

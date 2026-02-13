@@ -1,0 +1,42 @@
+{
+  "id": "manual-danger-zone",
+  "type": "concept",
+  "domain": "superadmin",
+  "risk": "guarded",
+  "guardrail": "b1_danger",
+  "answerMode": "full",
+  "title": {
+    "ca": "Zona de Perill: accions irreversibles",
+    "es": "Zona de Peligro: acciones irreversibles"
+  },
+  "intents": {
+    "ca": [
+      "què és la zona de perill",
+      "accions irreversibles",
+      "on esborro coses permanentment",
+      "esborrar moviments definitiu",
+      "zona de perill què puc fer"
+    ],
+    "es": [
+      "qué es la zona de peligro",
+      "acciones irreversibles",
+      "dónde borro cosas permanentemente",
+      "borrar movimientos definitivo",
+      "zona de peligro qué puedo hacer"
+    ]
+  },
+  "guideId": null,
+  "answer": {
+    "ca": "La Zona de Perill conté accions que NO es poden desfer. Només hi pot accedir el SuperAdmin de l'organització.\n\nAccions disponibles:\n1. **Esborrar tots els donants** — elimina permanentment tots els donants de l'organització.\n2. **Esborrar tots els proveïdors** — elimina permanentment tots els contactes de tipus proveïdor.\n3. **Esborrar tots els treballadors** — elimina permanentment tots els contactes de tipus treballador.\n4. **Esborrar tots els moviments** — elimina permanentment tots els moviments bancaris importats.\n5. **Esborrar última remesa** — esborra l'última remesa, els seus fills, i restaura la transacció original per poder-la reprocessar.\n\n**Confirmació obligatòria:** cada acció requereix escriure \"ESBORRAR\" per confirmar.\n\n**Avís:** un cop confirmat, les dades s'esborren permanentment i no es poden recuperar.",
+    "es": "La Zona de Peligro contiene acciones que NO se pueden deshacer. Solo puede acceder el SuperAdmin de la organización.\n\nAcciones disponibles:\n1. **Borrar todos los donantes** — elimina permanentemente todos los donantes de la organización.\n2. **Borrar todos los proveedores** — elimina permanentemente todos los contactos de tipo proveedor.\n3. **Borrar todos los trabajadores** — elimina permanentemente todos los contactos de tipo trabajador.\n4. **Borrar todos los movimientos** — elimina permanentemente todos los movimientos bancarios importados.\n5. **Borrar última remesa** — borra la última remesa, sus hijos, y restaura la transacción original para poder reprocesarla.\n\n**Confirmación obligatoria:** cada acción requiere escribir \"BORRAR\" para confirmar.\n\n**Aviso:** una vez confirmado, los datos se borran permanentemente y no se pueden recuperar."
+  },
+  "uiPaths": ["Configuració > Zona de Perill"],
+  "needsSnapshot": false,
+  "keywords": ["perill", "esborrar", "irreversible", "superadmin", "eliminar", "danger"],
+  "source_faq": ["Q97"],
+  "source_manual": ["11.1", "11.2", "11.3"],
+  "source_guides": ["dangerDeleteLastRemittance"],
+  "related": ["guide-danger-delete-remittance"],
+  "error_key": null,
+  "symptom": { "ca": null, "es": null }
+}

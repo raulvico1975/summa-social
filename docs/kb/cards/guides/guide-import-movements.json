@@ -1,0 +1,41 @@
+{
+  "id": "guide-import-movements",
+  "type": "howto",
+  "domain": "transactions",
+  "risk": "safe",
+  "guardrail": "none",
+  "answerMode": "full",
+  "title": {
+    "ca": "Importar extracte bancari",
+    "es": "Importar extracto bancario"
+  },
+  "intents": {
+    "ca": [
+      "com importo l'extracte",
+      "pujar extracte bancari",
+      "importar moviments",
+      "carregar fitxer del banc",
+      "importar CSV del banc",
+      "com passo els moviments del banc"
+    ],
+    "es": [
+      "cómo importo el extracto",
+      "subir extracto bancario",
+      "importar movimientos",
+      "cargar archivo del banco",
+      "importar CSV del banco",
+      "cómo paso los movimientos del banco"
+    ]
+  },
+  "guideId": "importMovements",
+  "answer": null,
+  "uiPaths": ["Moviments > Importar"],
+  "needsSnapshot": false,
+  "keywords": ["importar", "extracte", "bancari", "CSV", "Excel", "moviments", "banc"],
+  "source_faq": ["Q28", "Q29"],
+  "source_manual": ["5.1"],
+  "source_guides": ["importMovements"],
+  "related": ["guide-movements", "guide-attach-document", "guide-bulk-categorize"],
+  "error_key": null,
+  "symptom": { "ca": null, "es": null }
+}

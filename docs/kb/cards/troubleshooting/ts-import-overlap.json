@@ -1,0 +1,40 @@
+{
+  "id": "ts-import-overlap",
+  "type": "troubleshooting",
+  "domain": "transactions",
+  "risk": "safe",
+  "guardrail": "none",
+  "answerMode": "full",
+  "title": {
+    "ca": "Avís: dates solapades amb importacions existents",
+    "es": "Aviso: fechas solapadas con importaciones existentes"
+  },
+  "intents": {
+    "ca": [
+      "dates solapades",
+      "l'import diu que hi ha solapament",
+      "duplicats a l'importar",
+      "ja tinc aquests moviments importats"
+    ],
+    "es": [
+      "fechas solapadas",
+      "la importación dice que hay solapamiento",
+      "duplicados al importar",
+      "ya tengo estos movimientos importados"
+    ]
+  },
+  "guideId": null,
+  "answer": {
+    "ca": "Aquest avís apareix quan importes un extracte que cobreix dates que ja tens importades.\n\n**No cal preocupar-se:** Summa detecta i omet duplicats exactes (mateixa data, import i descripció).\n\n**Quan pot fallar:** Si el banc canvia el text descriptiu o la data valor entre descàrregues, és possible que algun moviment no es detecti com a duplicat.\n\n**Què fer:**\n1. Pots continuar amb la importació — els duplicats exactes s'ometran.\n2. Després, revisa que no hi hagi moviments repetits al llistat.\n3. Si en trobes, pots esborrar-los manualment.",
+    "es": "Este aviso aparece cuando importas un extracto que cubre fechas que ya tienes importadas.\n\n**No hay que preocuparse:** Summa detecta y omite duplicados exactos (misma fecha, importe y descripción).\n\n**Cuándo puede fallar:** Si el banco cambia el texto descriptivo o la fecha valor entre descargas, es posible que algún movimiento no se detecte como duplicado.\n\n**Qué hacer:**\n1. Puedes continuar con la importación — los duplicados exactos se omitirán.\n2. Después, revisa que no haya movimientos repetidos en el listado.\n3. Si encuentras alguno, puedes borrarlo manualmente."
+  },
+  "uiPaths": ["Moviments > Importar"],
+  "needsSnapshot": false,
+  "keywords": ["solapament", "duplicats", "dates", "importar", "repetits"],
+  "source_faq": ["Q9"],
+  "source_manual": ["5.1"],
+  "source_guides": ["importMovements"],
+  "related": ["guide-import-movements"],
+  "error_key": "overlapWarningTitle",
+  "symptom": { "ca": "Veig l'avís 'Dates solapades amb importacions existents'", "es": "Veo el aviso 'Fechas solapadas con importaciones existentes'" }
+}

@@ -1,0 +1,39 @@
+{
+  "id": "guide-update-donors",
+  "type": "howto",
+  "domain": "donors",
+  "risk": "safe",
+  "guardrail": "none",
+  "answerMode": "full",
+  "title": {
+    "ca": "Actualitzar donants existents",
+    "es": "Actualizar donantes existentes"
+  },
+  "intents": {
+    "ca": [
+      "com actualitzo donants",
+      "canviar dades d'un soci",
+      "actualitzar IBAN d'un donant",
+      "modificar donant existent",
+      "reimportar donants amb canvis"
+    ],
+    "es": [
+      "cómo actualizo donantes",
+      "cambiar datos de un socio",
+      "actualizar IBAN de un donante",
+      "modificar donante existente",
+      "reimportar donantes con cambios"
+    ]
+  },
+  "guideId": "updateExistingDonors",
+  "answer": null,
+  "uiPaths": ["Donants > Importar (actualització)"],
+  "needsSnapshot": false,
+  "keywords": ["actualitzar", "donants", "canviar", "IBAN", "modificar", "reimportar"],
+  "source_faq": ["Q22"],
+  "source_manual": ["3.4"],
+  "source_guides": ["updateExistingDonors"],
+  "related": ["guide-donors", "guide-import-donors"],
+  "error_key": null,
+  "symptom": { "ca": null, "es": null }
+}

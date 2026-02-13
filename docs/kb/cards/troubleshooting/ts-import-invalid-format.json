@@ -1,0 +1,40 @@
+{
+  "id": "ts-import-invalid-format",
+  "type": "troubleshooting",
+  "domain": "transactions",
+  "risk": "safe",
+  "guardrail": "none",
+  "answerMode": "full",
+  "title": {
+    "ca": "Error: format de fitxer no vàlid",
+    "es": "Error: formato de archivo no válido"
+  },
+  "intents": {
+    "ca": [
+      "format no vàlid",
+      "el fitxer no és vàlid",
+      "no accepta el meu fitxer",
+      "quin format necessito"
+    ],
+    "es": [
+      "formato no válido",
+      "el archivo no es válido",
+      "no acepta mi archivo",
+      "qué formato necesito"
+    ]
+  },
+  "guideId": null,
+  "answer": {
+    "ca": "L'app només accepta fitxers en format .xlsx, .xls o .csv.\n\n**Què fer:**\n1. Verifica que el fitxer té una d'aquestes extensions.\n2. Si tens un PDF o un altre format, hauràs de convertir-lo primer a Excel o CSV.\n3. Si el fitxer és .csv, verifica que estigui delimitat per comes o punt i coma.\n\n**Consell:** Si el teu banc genera OFX o QIF, primer converteix-lo a CSV amb un programa de fulls de càlcul.",
+    "es": "La app solo acepta archivos en formato .xlsx, .xls o .csv.\n\n**Qué hacer:**\n1. Verifica que el archivo tiene una de estas extensiones.\n2. Si tienes un PDF u otro formato, tendrás que convertirlo primero a Excel o CSV.\n3. Si el archivo es .csv, verifica que esté delimitado por comas o punto y coma.\n\n**Consejo:** Si tu banco genera OFX o QIF, primero conviértelo a CSV con un programa de hojas de cálculo."
+  },
+  "uiPaths": ["Moviments > Importar"],
+  "needsSnapshot": false,
+  "keywords": ["format", "fitxer", "invàlid", "xlsx", "csv", "extensió"],
+  "source_faq": ["Q8"],
+  "source_manual": ["5.1"],
+  "source_guides": ["importMovements"],
+  "related": ["guide-import-movements", "ts-import-missing-columns"],
+  "error_key": "errorInvalidFormat",
+  "symptom": { "ca": "Veig el missatge 'Format d'arxiu no vàlid'", "es": "Veo el mensaje 'Formato de archivo no válido'" }
+}

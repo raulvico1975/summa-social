@@ -1,0 +1,37 @@
+{
+  "id": "guide-bulk-ai-categorize",
+  "type": "howto",
+  "domain": "transactions",
+  "risk": "safe",
+  "guardrail": "none",
+  "answerMode": "full",
+  "title": {
+    "ca": "Categorització automàtica amb IA",
+    "es": "Categorización automática con IA"
+  },
+  "intents": {
+    "ca": [
+      "com funciona la categorització automàtica",
+      "categoritzar amb intel·ligència artificial",
+      "IA per categoritzar",
+      "auto-categoritzar moviments"
+    ],
+    "es": [
+      "cómo funciona la categorización automática",
+      "categorizar con inteligencia artificial",
+      "IA para categorizar",
+      "auto-categorizar movimientos"
+    ]
+  },
+  "guideId": "bulkAICategorize",
+  "answer": null,
+  "uiPaths": ["Moviments > Seleccionar > Categoritzar amb IA"],
+  "needsSnapshot": false,
+  "keywords": ["IA", "automàtic", "categoritzar", "intel·ligència", "artificial", "auto"],
+  "source_faq": [],
+  "source_manual": [],
+  "source_guides": ["bulkAICategorize"],
+  "related": ["guide-bulk-categorize", "guide-movements"],
+  "error_key": null,
+  "symptom": { "ca": null, "es": null }
+}
