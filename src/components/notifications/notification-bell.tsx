@@ -107,7 +107,7 @@ export function ProductUpdatesInbox() {
       </PopoverTrigger>
 
       <PopoverContent align="end" className="w-full max-w-lg p-0 shadow-2xl">
-        {/* Header - alineat amb LogPanel */}
+        {/* Header */}
         <div className="flex flex-row items-center justify-between p-4 border-b">
           <div className="flex items-center gap-2">
             <Sparkles className="h-5 w-5 text-amber-500" />
@@ -126,7 +126,7 @@ export function ProductUpdatesInbox() {
           )}
         </div>
 
-        {/* Updates List - ScrollArea com LogPanel amb h-64 */}
+        {/* Updates List */}
         <ScrollArea className="h-64">
           <div className="p-4 pt-0">
             {updates.length > 0 ? (

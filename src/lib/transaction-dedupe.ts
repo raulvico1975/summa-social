@@ -234,11 +234,15 @@ export function classifyTransactions(
     // Enrichment signature (calculada aviat per usar-la també a intra-fitxer)
     const incomingSig = getExtraSignature(rawRow, extraFields);
 
-    // 1. Intra-fitxer: si la mateixa clau+enrichment ja s'ha vist al fitxer → DUPLICATE_SAFE
-    //    Si tenim enrichment, dos moviments amb mateixa base key però diferent
-    //    opDate/balance NO són intra-file duplicats (són moviments reals diferents)
+    // 1. Intra-fitxer: DUPLICATE_SAFE només si podem distingir amb certesa.
+    //    - Amb bankRef (ref key): mateixa ref al fitxer = segur duplicat
+    //    - Amb enrichment: mateixa key+signatura = segur duplicat
+    //    - Sense cap dels dos: NO auto-skip (podrien ser transaccions legítimes
+    //      amb mateixa data/import/descripció, com passa amb Triodos)
     const intraFileKey = incomingSig ? `${effectiveKey}||${incomingSig}` : effectiveKey;
-    if (seenInFileKeys.has(intraFileKey)) {
+    const canSafeSkipIntraFile = isRefKey(effectiveKey) || incomingSig !== '';
+
+    if (canSafeSkipIntraFile && seenInFileKeys.has(intraFileKey)) {
       results.push({
         tx,
         status: 'DUPLICATE_SAFE',

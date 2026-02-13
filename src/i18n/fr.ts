@@ -2429,12 +2429,6 @@ export const fr = {
       errorBody: "Impossible d'enregistrer. Réessayez.",
     },
   },
-  logPanel: {
-    title: "Log de Diagnòstic",
-    waiting: "Esperant accions...",
-    errorBadge: "ERROR",
-    successBadge: "ÈXIT",
-  },
   categories: {
     donations: "Donacions",
     subsidies: "Subvencions",
