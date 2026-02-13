@@ -1,0 +1,39 @@
+{
+  "id": "guide-monthly-flow",
+  "type": "howto",
+  "domain": "general",
+  "risk": "safe",
+  "guardrail": "none",
+  "answerMode": "full",
+  "title": {
+    "ca": "Flux mensual recomanat",
+    "es": "Flujo mensual recomendado"
+  },
+  "intents": {
+    "ca": [
+      "què he de fer cada mes",
+      "flux mensual",
+      "rutina mensual",
+      "tasques del mes",
+      "checklist mensual"
+    ],
+    "es": [
+      "qué tengo que hacer cada mes",
+      "flujo mensual",
+      "rutina mensual",
+      "tareas del mes",
+      "checklist mensual"
+    ]
+  },
+  "guideId": "monthlyFlow",
+  "answer": null,
+  "uiPaths": ["Dashboard"],
+  "needsSnapshot": false,
+  "keywords": ["mensual", "flux", "rutina", "tasques", "checklist", "mes"],
+  "source_faq": ["Q3"],
+  "source_manual": [],
+  "source_guides": ["monthlyFlow"],
+  "related": ["guide-first-month", "guide-month-close", "guide-year-end-fiscal"],
+  "error_key": null,
+  "symptom": { "ca": null, "es": null }
+}

@@ -1,0 +1,39 @@
+{
+  "id": "guide-stripe-donations",
+  "type": "howto",
+  "domain": "transactions",
+  "risk": "safe",
+  "guardrail": "none",
+  "answerMode": "full",
+  "title": {
+    "ca": "Donacions via Stripe",
+    "es": "Donaciones vía Stripe"
+  },
+  "intents": {
+    "ca": [
+      "com gestiono Stripe",
+      "donacions online",
+      "dividir pagament de Stripe",
+      "Stripe no quadra",
+      "payout de Stripe"
+    ],
+    "es": [
+      "cómo gestiono Stripe",
+      "donaciones online",
+      "dividir pago de Stripe",
+      "Stripe no cuadra",
+      "payout de Stripe"
+    ]
+  },
+  "guideId": "stripeDonations",
+  "answer": null,
+  "uiPaths": ["Moviments > Stripe"],
+  "needsSnapshot": false,
+  "keywords": ["stripe", "donacions", "online", "payout", "dividir", "comissions"],
+  "source_faq": ["Q62", "Q63", "Q64"],
+  "source_manual": ["8.1", "8.2"],
+  "source_guides": ["stripeDonations"],
+  "related": ["guide-movements"],
+  "error_key": null,
+  "symptom": { "ca": null, "es": null }
+}

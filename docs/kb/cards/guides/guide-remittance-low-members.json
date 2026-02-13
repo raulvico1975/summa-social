@@ -1,0 +1,37 @@
+{
+  "id": "guide-remittance-low-members",
+  "type": "troubleshooting",
+  "domain": "remittances",
+  "risk": "guarded",
+  "guardrail": "b1_remittances",
+  "answerMode": "full",
+  "title": {
+    "ca": "La remesa té menys socis del que esperava",
+    "es": "La remesa tiene menos socios de lo esperado"
+  },
+  "intents": {
+    "ca": [
+      "la remesa té pocs socis",
+      "falten socis a la remesa",
+      "no surten tots els socis a la remesa",
+      "remesa amb menys membres"
+    ],
+    "es": [
+      "la remesa tiene pocos socios",
+      "faltan socios en la remesa",
+      "no salen todos los socios en la remesa",
+      "remesa con menos miembros"
+    ]
+  },
+  "guideId": "remittanceLowMembers",
+  "answer": null,
+  "uiPaths": ["Moviments > Remeses"],
+  "needsSnapshot": false,
+  "keywords": ["remesa", "pocs", "socis", "falten", "membres", "menys"],
+  "source_faq": ["Q44", "Q45"],
+  "source_manual": ["6.4"],
+  "source_guides": ["remittanceLowMembers"],
+  "related": ["guide-remittances", "guide-split-remittance", "guide-donor-inactive"],
+  "error_key": null,
+  "symptom": { "ca": "La remesa no inclou tots els socis esperats", "es": "La remesa no incluye todos los socios esperados" }
+}

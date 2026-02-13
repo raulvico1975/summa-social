@@ -1,0 +1,39 @@
+{
+  "id": "guide-projects",
+  "type": "howto",
+  "domain": "projects",
+  "risk": "safe",
+  "guardrail": "none",
+  "answerMode": "full",
+  "title": {
+    "ca": "Gestionar projectes i subvencions",
+    "es": "Gestionar proyectos y subvenciones"
+  },
+  "intents": {
+    "ca": [
+      "com gestiono projectes",
+      "crear un projecte",
+      "justificar una subvenció",
+      "mòdul de projectes",
+      "assignar despeses a un projecte"
+    ],
+    "es": [
+      "cómo gestiono proyectos",
+      "crear un proyecto",
+      "justificar una subvención",
+      "módulo de proyectos",
+      "asignar gastos a un proyecto"
+    ]
+  },
+  "guideId": "projects",
+  "answer": null,
+  "uiPaths": ["Projectes"],
+  "needsSnapshot": false,
+  "keywords": ["projectes", "subvencions", "justificar", "pressupost", "assignar"],
+  "source_faq": ["Q79", "Q80"],
+  "source_manual": ["10.1", "10.2"],
+  "source_guides": ["projects"],
+  "related": ["guide-travel-receipts"],
+  "error_key": null,
+  "symptom": { "ca": null, "es": null }
+}

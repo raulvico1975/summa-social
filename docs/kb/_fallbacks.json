@@ -1,0 +1,152 @@
+[
+  {
+    "id": "fallback-no-answer",
+    "type": "fallback",
+    "domain": "general",
+    "risk": "safe",
+    "guardrail": "none",
+    "answerMode": "full",
+    "title": {
+      "ca": "No he trobat informació exacta",
+      "es": "No he encontrado información exacta"
+    },
+    "intents": {
+      "ca": ["cap fitxa coincideix"],
+      "es": ["ninguna ficha coincide"]
+    },
+    "guideId": null,
+    "answer": {
+      "ca": "No tinc informació exacta sobre això.\n\nPots fer el següent:\n1. Consulta el Hub de Guies dins l'app (icona ? a dalt a la dreta). Té un cercador per paraules clau.\n2. Consulta el Manual (/dashboard/manual) per documentació completa.\n3. Prova a reformular la pregunta amb paraules clau o el text d'error exacte.",
+      "es": "No tengo información exacta sobre esto.\n\nPuedes hacer lo siguiente:\n1. Consulta el Hub de Guías dentro de la app (icono ? arriba a la derecha). Tiene un buscador por palabras clave.\n2. Consulta el Manual (/dashboard/manual) para documentación completa.\n3. Prueba a reformular la pregunta con palabras clave o el texto de error exacto."
+    },
+    "uiPaths": ["Dashboard > ? (Hub de Guies)", "Dashboard > Manual"],
+    "needsSnapshot": false,
+    "keywords": ["no trobo", "no sé", "ajuda", "help"],
+    "source_faq": [],
+    "source_manual": [],
+    "source_guides": [],
+    "related": [],
+    "error_key": null,
+    "symptom": { "ca": null, "es": null }
+  },
+  {
+    "id": "fallback-fiscal-unclear",
+    "type": "fallback",
+    "domain": "fiscal",
+    "risk": "guarded",
+    "guardrail": "b1_fiscal",
+    "answerMode": "limited",
+    "title": {
+      "ca": "Consulta fiscal sense resposta exacta",
+      "es": "Consulta fiscal sin respuesta exacta"
+    },
+    "intents": {
+      "ca": ["tema fiscal sense fitxa exacta"],
+      "es": ["tema fiscal sin ficha exacta"]
+    },
+    "guideId": null,
+    "answer": {
+      "ca": "Aquesta consulta afecta dades fiscals i no puc donar instruccions concretes sense estar segur de la resposta.\n\nEl que puc dir-te:\n1. Ves a Informes i verifica que tot estigui marcat amb 🟢 (dades completes).\n2. Si hi ha avisos 🟡 o errors 🔴, resol-los primer seguint les indicacions de la pantalla.\n3. Per dubtes sobre interpretació fiscal, consulta amb el teu assessor.\n4. Consulta el Hub de Guies (icona ?) o el Manual (/dashboard/manual) per instruccions detallades.",
+      "es": "Esta consulta afecta datos fiscales y no puedo dar instrucciones concretas sin estar seguro de la respuesta.\n\nLo que puedo decirte:\n1. Ve a Informes y verifica que todo esté marcado con 🟢 (datos completos).\n2. Si hay avisos 🟡 o errores 🔴, resuélvelos primero siguiendo las indicaciones de la pantalla.\n3. Para dudas sobre interpretación fiscal, consulta con tu asesor.\n4. Consulta el Hub de Guías (icono ?) o el Manual (/dashboard/manual) para instrucciones detalladas."
+    },
+    "uiPaths": ["Informes"],
+    "needsSnapshot": false,
+    "keywords": ["fiscal", "model", "182", "347", "certificat", "hisenda", "AEAT"],
+    "source_faq": [],
+    "source_manual": [],
+    "source_guides": [],
+    "related": [],
+    "error_key": null,
+    "symptom": { "ca": null, "es": null }
+  },
+  {
+    "id": "fallback-sepa-unclear",
+    "type": "fallback",
+    "domain": "sepa",
+    "risk": "guarded",
+    "guardrail": "b1_sepa",
+    "answerMode": "limited",
+    "title": {
+      "ca": "Consulta SEPA sense resposta exacta",
+      "es": "Consulta SEPA sin respuesta exacta"
+    },
+    "intents": {
+      "ca": ["tema SEPA sense fitxa exacta"],
+      "es": ["tema SEPA sin ficha exacta"]
+    },
+    "guideId": null,
+    "answer": {
+      "ca": "Aquesta consulta afecta fitxers bancaris (SEPA) i no puc donar instruccions sense estar 100% segur de la resposta.\n\nAbans de fer res:\n1. NO generis cap fitxer SEPA fins que tinguis clar el procés.\n2. Verifica a la pantalla de remeses que les dades siguin correctes (IBAN, imports, estat).\n3. Consulta el Hub de Guies (icona ?) per la guia de remeses SEPA.\n4. Consulta el Manual (/dashboard/manual) per documentació completa.",
+      "es": "Esta consulta afecta archivos bancarios (SEPA) y no puedo dar instrucciones sin estar 100% seguro de la respuesta.\n\nAntes de hacer nada:\n1. NO generes ningún archivo SEPA hasta que tengas claro el proceso.\n2. Verifica en la pantalla de remesas que los datos sean correctos (IBAN, importes, estado).\n3. Consulta el Hub de Guías (icono ?) para la guía de remesas SEPA.\n4. Consulta el Manual (/dashboard/manual) para documentación completa."
+    },
+    "uiPaths": ["Moviments > Remeses"],
+    "needsSnapshot": false,
+    "keywords": ["sepa", "pain", "pain008", "pain001", "domiciliació", "XML", "banc"],
+    "source_faq": [],
+    "source_manual": [],
+    "source_guides": [],
+    "related": [],
+    "error_key": null,
+    "symptom": { "ca": null, "es": null }
+  },
+  {
+    "id": "fallback-remittances-unclear",
+    "type": "fallback",
+    "domain": "remittances",
+    "risk": "guarded",
+    "guardrail": "b1_remittances",
+    "answerMode": "limited",
+    "title": {
+      "ca": "Consulta de remeses sense resposta exacta",
+      "es": "Consulta de remesas sin respuesta exacta"
+    },
+    "intents": {
+      "ca": ["tema remeses sense fitxa exacta"],
+      "es": ["tema remesas sin ficha exacta"]
+    },
+    "guideId": null,
+    "answer": {
+      "ca": "Aquesta consulta afecta remeses i no puc donar instruccions concretes sense estar segur de la resposta.\n\nEl que puc dir-te:\n1. Verifica l'estat de les remeses a la pantalla de Moviments (imports, socis, estat).\n2. Si necessites desfer una remesa, assegura't de seguir l'ordre correcte: primer desfer, després corregir, després reprocessar.\n3. Consulta el Hub de Guies (icona ?) per la guia de remeses.\n4. Consulta el Manual (/dashboard/manual) per documentació completa.",
+      "es": "Esta consulta afecta remesas y no puedo dar instrucciones concretas sin estar seguro de la respuesta.\n\nLo que puedo decirte:\n1. Verifica el estado de las remesas en la pantalla de Movimientos (importes, socios, estado).\n2. Si necesitas deshacer una remesa, asegúrate de seguir el orden correcto: primero deshacer, después corregir, después reprocesar.\n3. Consulta el Hub de Guías (icono ?) para la guía de remesas.\n4. Consulta el Manual (/dashboard/manual) para documentación completa."
+    },
+    "uiPaths": ["Moviments > Remeses"],
+    "needsSnapshot": false,
+    "keywords": ["remesa", "quotes", "dividir", "processar", "desfer"],
+    "source_faq": [],
+    "source_manual": [],
+    "source_guides": [],
+    "related": [],
+    "error_key": null,
+    "symptom": { "ca": null, "es": null }
+  },
+  {
+    "id": "fallback-danger-unclear",
+    "type": "fallback",
+    "domain": "superadmin",
+    "risk": "guarded",
+    "guardrail": "b1_danger",
+    "answerMode": "limited",
+    "title": {
+      "ca": "Acció irreversible sense resposta exacta",
+      "es": "Acción irreversible sin respuesta exacta"
+    },
+    "intents": {
+      "ca": ["tema zona de perill sense fitxa exacta"],
+      "es": ["tema zona de peligro sin ficha exacta"]
+    },
+    "guideId": null,
+    "answer": {
+      "ca": "Aquesta consulta implica accions potencialment irreversibles i no puc donar instruccions sense estar completament segur.\n\nImportant:\n1. La Zona de Perill conté accions que NO es poden desfer.\n2. No facis cap acció a la Zona de Perill si no estàs segur del que farà.\n3. Consulta el Hub de Guies (icona ?) per instruccions específiques.\n4. Consulta el Manual (/dashboard/manual) per documentació completa.",
+      "es": "Esta consulta implica acciones potencialmente irreversibles y no puedo dar instrucciones sin estar completamente seguro.\n\nImportante:\n1. La Zona de Peligro contiene acciones que NO se pueden deshacer.\n2. No hagas ninguna acción en la Zona de Peligro si no estás seguro de lo que hará.\n3. Consulta el Hub de Guías (icono ?) para instrucciones específicas.\n4. Consulta el Manual (/dashboard/manual) para documentación completa."
+    },
+    "uiPaths": ["Configuració > Zona de Perill"],
+    "needsSnapshot": false,
+    "keywords": ["esborrar", "eliminar", "perill", "irreversible", "superadmin"],
+    "source_faq": [],
+    "source_manual": [],
+    "source_guides": [],
+    "related": [],
+    "error_key": null,
+    "symptom": { "ca": null, "es": null }
+  }
+]

@@ -1,0 +1,39 @@
+{
+  "id": "guide-access-security",
+  "type": "howto",
+  "domain": "config",
+  "risk": "safe",
+  "guardrail": "none",
+  "answerMode": "full",
+  "title": {
+    "ca": "Seguretat i accessos",
+    "es": "Seguridad y accesos"
+  },
+  "intents": {
+    "ca": [
+      "com gestiono els accessos",
+      "canviar contrasenya",
+      "rols d'usuari",
+      "qui pot veure què",
+      "seguretat del compte"
+    ],
+    "es": [
+      "cómo gestiono los accesos",
+      "cambiar contraseña",
+      "roles de usuario",
+      "quién puede ver qué",
+      "seguridad de la cuenta"
+    ]
+  },
+  "guideId": "accessSecurity",
+  "answer": null,
+  "uiPaths": ["Configuració > Equip"],
+  "needsSnapshot": false,
+  "keywords": ["seguretat", "accessos", "contrasenya", "rols", "permisos", "equip"],
+  "source_faq": ["Q93", "Q94", "Q95"],
+  "source_manual": ["2.6"],
+  "source_guides": ["accessSecurity"],
+  "related": ["guide-reset-password"],
+  "error_key": null,
+  "symptom": { "ca": null, "es": null }
+}

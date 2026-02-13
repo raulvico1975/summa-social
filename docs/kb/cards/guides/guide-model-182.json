@@ -1,0 +1,37 @@
+{
+  "id": "guide-model-182",
+  "type": "troubleshooting",
+  "domain": "fiscal",
+  "risk": "guarded",
+  "guardrail": "b1_fiscal",
+  "answerMode": "full",
+  "title": {
+    "ca": "Problemes amb el Model 182",
+    "es": "Problemas con el Modelo 182"
+  },
+  "intents": {
+    "ca": [
+      "el Model 182 dóna errors",
+      "donants que no surten al 182",
+      "errors al generar el 182",
+      "182 no quadra"
+    ],
+    "es": [
+      "el Modelo 182 da errores",
+      "donantes que no salen en el 182",
+      "errores al generar el 182",
+      "182 no cuadra"
+    ]
+  },
+  "guideId": "model182HasErrors",
+  "answer": null,
+  "uiPaths": ["Informes > Model 182"],
+  "needsSnapshot": false,
+  "keywords": ["182", "model", "errors", "fiscal", "AEAT", "donants"],
+  "source_faq": ["Q70", "Q71"],
+  "source_manual": ["9.1"],
+  "source_guides": ["model182HasErrors"],
+  "related": ["guide-reports", "guide-donor-certificate", "guide-returns"],
+  "error_key": null,
+  "symptom": { "ca": "Veig avisos o errors a la pantalla del Model 182", "es": "Veo avisos o errores en la pantalla del Modelo 182" }
+}

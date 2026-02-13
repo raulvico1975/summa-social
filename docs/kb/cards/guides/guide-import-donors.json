@@ -1,0 +1,39 @@
+{
+  "id": "guide-import-donors",
+  "type": "howto",
+  "domain": "donors",
+  "risk": "safe",
+  "guardrail": "none",
+  "answerMode": "full",
+  "title": {
+    "ca": "Importar donants des d'Excel",
+    "es": "Importar donantes desde Excel"
+  },
+  "intents": {
+    "ca": [
+      "com importo donants",
+      "pujar excel de socis",
+      "importar llista de socis",
+      "carregar donants des d'un fitxer",
+      "importar donants CSV"
+    ],
+    "es": [
+      "cómo importo donantes",
+      "subir excel de socios",
+      "importar lista de socios",
+      "cargar donantes desde un archivo",
+      "importar donantes CSV"
+    ]
+  },
+  "guideId": "importDonors",
+  "answer": null,
+  "uiPaths": ["Donants > Importar"],
+  "needsSnapshot": false,
+  "keywords": ["importar", "donants", "excel", "CSV", "socis", "fitxer", "pujar"],
+  "source_faq": ["Q10", "Q11"],
+  "source_manual": ["3.3"],
+  "source_guides": ["importDonors"],
+  "related": ["guide-donors", "guide-update-donors"],
+  "error_key": null,
+  "symptom": { "ca": null, "es": null }
+}

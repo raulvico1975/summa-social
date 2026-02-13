@@ -1,0 +1,37 @@
+{
+  "id": "guide-month-close",
+  "type": "howto",
+  "domain": "general",
+  "risk": "safe",
+  "guardrail": "none",
+  "answerMode": "full",
+  "title": {
+    "ca": "Tancament de mes",
+    "es": "Cierre de mes"
+  },
+  "intents": {
+    "ca": [
+      "com tanco el mes",
+      "tancament mensual",
+      "acabar el mes",
+      "tancar comptabilitat del mes"
+    ],
+    "es": [
+      "cómo cierro el mes",
+      "cierre mensual",
+      "acabar el mes",
+      "cerrar contabilidad del mes"
+    ]
+  },
+  "guideId": "monthClose",
+  "answer": null,
+  "uiPaths": ["Dashboard"],
+  "needsSnapshot": false,
+  "keywords": ["tancar", "mes", "tancament", "mensual"],
+  "source_faq": [],
+  "source_manual": [],
+  "source_guides": ["monthClose"],
+  "related": ["guide-monthly-flow", "guide-year-end-fiscal"],
+  "error_key": null,
+  "symptom": { "ca": null, "es": null }
+}

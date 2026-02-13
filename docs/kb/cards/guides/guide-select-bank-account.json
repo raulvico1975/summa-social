@@ -1,0 +1,37 @@
+{
+  "id": "guide-select-bank-account",
+  "type": "howto",
+  "domain": "transactions",
+  "risk": "safe",
+  "guardrail": "none",
+  "answerMode": "full",
+  "title": {
+    "ca": "Seleccionar compte bancari",
+    "es": "Seleccionar cuenta bancaria"
+  },
+  "intents": {
+    "ca": [
+      "com selecciono el compte bancari",
+      "canviar de compte",
+      "tinc més d'un compte",
+      "on trio el compte bancari"
+    ],
+    "es": [
+      "cómo selecciono la cuenta bancaria",
+      "cambiar de cuenta",
+      "tengo más de una cuenta",
+      "dónde elijo la cuenta bancaria"
+    ]
+  },
+  "guideId": "selectBankAccount",
+  "answer": null,
+  "uiPaths": ["Moviments > Selector de compte (a dalt)"],
+  "needsSnapshot": false,
+  "keywords": ["compte", "bancari", "seleccionar", "canviar", "IBAN"],
+  "source_faq": [],
+  "source_manual": ["2.5"],
+  "source_guides": ["selectBankAccount"],
+  "related": ["guide-movements", "guide-change-period"],
+  "error_key": null,
+  "symptom": { "ca": null, "es": null }
+}

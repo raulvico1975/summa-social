@@ -1,0 +1,37 @@
+{
+  "id": "guide-model-347",
+  "type": "howto",
+  "domain": "fiscal",
+  "risk": "guarded",
+  "guardrail": "b1_fiscal",
+  "answerMode": "full",
+  "title": {
+    "ca": "Generar el Model 347",
+    "es": "Generar el Modelo 347"
+  },
+  "intents": {
+    "ca": [
+      "com genero el Model 347",
+      "Model 347",
+      "declaració d'operacions amb tercers",
+      "proveïdors de més de 3000 euros"
+    ],
+    "es": [
+      "cómo genero el Modelo 347",
+      "Modelo 347",
+      "declaración de operaciones con terceros",
+      "proveedores de más de 3000 euros"
+    ]
+  },
+  "guideId": "model347",
+  "answer": null,
+  "uiPaths": ["Informes > Model 347"],
+  "needsSnapshot": false,
+  "keywords": ["347", "model", "tercers", "operacions", "proveïdors", "3005"],
+  "source_faq": ["Q76"],
+  "source_manual": ["9.2"],
+  "source_guides": ["model347"],
+  "related": ["guide-reports", "guide-model-182-generate"],
+  "error_key": null,
+  "symptom": { "ca": null, "es": null }
+}

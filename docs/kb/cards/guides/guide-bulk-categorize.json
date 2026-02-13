@@ -1,0 +1,39 @@
+{
+  "id": "guide-bulk-categorize",
+  "type": "howto",
+  "domain": "transactions",
+  "risk": "safe",
+  "guardrail": "none",
+  "answerMode": "full",
+  "title": {
+    "ca": "Categoritzar moviments en bloc",
+    "es": "Categorizar movimientos en bloque"
+  },
+  "intents": {
+    "ca": [
+      "com categorizo molts moviments alhora",
+      "categorització massiva",
+      "assignar categoria a tots",
+      "categoritzar en bloc",
+      "selecció múltiple per categoritzar"
+    ],
+    "es": [
+      "cómo categorizo muchos movimientos a la vez",
+      "categorización masiva",
+      "asignar categoría a todos",
+      "categorizar en bloque",
+      "selección múltiple para categorizar"
+    ]
+  },
+  "guideId": "bulkCategory",
+  "answer": null,
+  "uiPaths": ["Moviments > Seleccionar > Categoria"],
+  "needsSnapshot": false,
+  "keywords": ["categoritzar", "bloc", "massiu", "múltiple", "bulk", "categoria"],
+  "source_faq": ["Q30"],
+  "source_manual": ["5.6"],
+  "source_guides": ["bulkCategory"],
+  "related": ["guide-movements", "guide-bulk-ai-categorize"],
+  "error_key": null,
+  "symptom": { "ca": null, "es": null }
+}

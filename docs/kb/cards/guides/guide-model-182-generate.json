@@ -1,0 +1,37 @@
+{
+  "id": "guide-model-182-generate",
+  "type": "howto",
+  "domain": "fiscal",
+  "risk": "guarded",
+  "guardrail": "b1_fiscal",
+  "answerMode": "full",
+  "title": {
+    "ca": "Generar el Model 182",
+    "es": "Generar el Modelo 182"
+  },
+  "intents": {
+    "ca": [
+      "com genero el Model 182",
+      "com presento el 182",
+      "generar fitxer per hisenda",
+      "exportar Model 182"
+    ],
+    "es": [
+      "cómo genero el Modelo 182",
+      "cómo presento el 182",
+      "generar archivo para hacienda",
+      "exportar Modelo 182"
+    ]
+  },
+  "guideId": "model182",
+  "answer": null,
+  "uiPaths": ["Informes > Model 182"],
+  "needsSnapshot": false,
+  "keywords": ["generar", "182", "model", "AEAT", "exportar", "txt"],
+  "source_faq": ["Q69", "Q70"],
+  "source_manual": ["9.1"],
+  "source_guides": ["model182"],
+  "related": ["guide-model-182", "guide-reports", "guide-donor-certificate"],
+  "error_key": null,
+  "symptom": { "ca": null, "es": null }
+}

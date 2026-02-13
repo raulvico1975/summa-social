@@ -1,0 +1,37 @@
+{
+  "id": "guide-remittances",
+  "type": "howto",
+  "domain": "remittances",
+  "risk": "guarded",
+  "guardrail": "b1_remittances",
+  "answerMode": "full",
+  "title": {
+    "ca": "Què són les remeses de quotes",
+    "es": "Qué son las remesas de cuotas"
+  },
+  "intents": {
+    "ca": [
+      "què és una remesa",
+      "com funcionen les remeses",
+      "remesa de quotes",
+      "cobrar quotes dels socis"
+    ],
+    "es": [
+      "qué es una remesa",
+      "cómo funcionan las remesas",
+      "remesa de cuotas",
+      "cobrar cuotas de los socios"
+    ]
+  },
+  "guideId": "remittances",
+  "answer": null,
+  "uiPaths": ["Moviments > Remeses"],
+  "needsSnapshot": false,
+  "keywords": ["remesa", "quotes", "cobrar", "socis", "domiciliació"],
+  "source_faq": ["Q42", "Q44"],
+  "source_manual": ["6.1", "6.2"],
+  "source_guides": ["remittances"],
+  "related": ["guide-split-remittance", "guide-returns"],
+  "error_key": null,
+  "symptom": { "ca": null, "es": null }
+}

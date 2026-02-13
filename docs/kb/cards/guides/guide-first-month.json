@@ -1,0 +1,39 @@
+{
+  "id": "guide-first-month",
+  "type": "howto",
+  "domain": "general",
+  "risk": "safe",
+  "guardrail": "none",
+  "answerMode": "full",
+  "title": {
+    "ca": "Pla del primer mes",
+    "es": "Plan del primer mes"
+  },
+  "intents": {
+    "ca": [
+      "què he de fer el primer mes",
+      "pla primer mes",
+      "com organitzo el primer mes",
+      "quant temps necessito al principi",
+      "passos per arrencar"
+    ],
+    "es": [
+      "qué tengo que hacer el primer mes",
+      "plan primer mes",
+      "cómo organizo el primer mes",
+      "cuánto tiempo necesito al principio",
+      "pasos para arrancar"
+    ]
+  },
+  "guideId": "firstMonth",
+  "answer": null,
+  "uiPaths": ["Dashboard"],
+  "needsSnapshot": false,
+  "keywords": ["primer", "mes", "pla", "arrencar", "organitzar", "temps"],
+  "source_faq": ["Q2", "Q3"],
+  "source_manual": ["1.5"],
+  "source_guides": ["firstMonth"],
+  "related": ["guide-first-day", "guide-initial-load", "guide-monthly-flow"],
+  "error_key": null,
+  "symptom": { "ca": null, "es": null }
+}

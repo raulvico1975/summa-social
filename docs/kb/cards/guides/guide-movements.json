@@ -1,0 +1,39 @@
+{
+  "id": "guide-movements",
+  "type": "howto",
+  "domain": "transactions",
+  "risk": "safe",
+  "guardrail": "none",
+  "answerMode": "full",
+  "title": {
+    "ca": "Gestionar moviments",
+    "es": "Gestionar movimientos"
+  },
+  "intents": {
+    "ca": [
+      "com funcionen els moviments",
+      "com gestiono els moviments",
+      "pantalla de moviments",
+      "on veig les transaccions",
+      "com edito un moviment"
+    ],
+    "es": [
+      "cómo funcionan los movimientos",
+      "cómo gestiono los movimientos",
+      "pantalla de movimientos",
+      "dónde veo las transacciones",
+      "cómo edito un movimiento"
+    ]
+  },
+  "guideId": "movements",
+  "answer": null,
+  "uiPaths": ["Moviments"],
+  "needsSnapshot": false,
+  "keywords": ["moviments", "transaccions", "gestionar", "editar", "pantalla"],
+  "source_faq": ["Q28", "Q30"],
+  "source_manual": ["5.1", "5.3", "5.4"],
+  "source_guides": ["movements"],
+  "related": ["guide-import-movements", "guide-attach-document", "guide-edit-movement", "guide-movement-filters"],
+  "error_key": null,
+  "symptom": { "ca": null, "es": null }
+}
