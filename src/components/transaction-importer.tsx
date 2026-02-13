@@ -160,6 +160,43 @@ const isHeaderRow = (row: any[]): boolean => {
 };
 
 
+/**
+ * Cerca un valor en rawRow per nom de columna (fuzzy, case-insensitive substring)
+ */
+const findRawValue = (rawRow: Record<string, any>, potentialNames: string[]): any => {
+  for (const name of potentialNames) {
+    if (rawRow[name] !== undefined && rawRow[name] !== null && rawRow[name] !== '') return rawRow[name];
+  }
+  const keys = Object.keys(rawRow);
+  for (const name of potentialNames) {
+    const key = keys.find(k => k.toLowerCase().includes(name.toLowerCase()));
+    if (key && rawRow[key] !== undefined && rawRow[key] !== null && rawRow[key] !== '') return rawRow[key];
+  }
+  return null;
+};
+
+/**
+ * Parseja un valor de data (Date, DD/MM/YYYY, YYYY-MM-DD) a YYYY-MM-DD string
+ */
+const parseSingleDate = (val: any): string | null => {
+  if (!val) return null;
+  let d: Date;
+  if (val instanceof Date) {
+    d = val;
+  } else {
+    const s = String(val);
+    const parts = s.match(/(\d{1,2})[/-](\d{1,2})[/-](\d{2,4})/);
+    if (parts) {
+      let year = parseInt(parts[3], 10);
+      if (year < 100) year += 2000;
+      d = new Date(year, parseInt(parts[2], 10) - 1, parseInt(parts[1], 10));
+    } else {
+      d = new Date(s);
+    }
+  }
+  return isNaN(d.getTime()) ? null : d.toISOString().split('T')[0];
+};
+
 export function TransactionImporter({ existingTransactions, availableCategories }: TransactionImporterProps) {
   const fileInputRef = React.useRef<HTMLInputElement>(null);
   const [isImporting, setIsImporting] = React.useState(false);
@@ -508,11 +545,14 @@ export function TransactionImporter({ existingTransactions, availableCategories 
         // Parsejar files a transaccions, preservant rawRow per enrichment
         const allParsedWithRaw = data
         .map((row: any, index: number) => {
-            // rawRow: per XLSX ve a _rawRow, per CSV la row ja té totes les columnes
-            const rawRow: Record<string, any> = row._rawRow || row;
+            // rawRow: còpia per poder afegir _opDate/_valueDate sense mutar l'original
+            const rawRow: Record<string, any> = { ...(row._rawRow || row) };
 
-            const dateValue = row['F. valor'] || row['F. Valor'] || row['F. ejecución'] || row['F. Ejecución'] ||
-                              row.Fecha || row.fecha || row['Fecha Operación'] || row['fecha operación'];
+            // Detectar ambdues dates per separat (enrichment E1)
+            const valueDateRaw = findRawValue(rawRow, ['f. valor', 'fecha valor']);
+            const opDateRaw = findRawValue(rawRow, ['f. ejecución', 'fecha ejecución', 'fecha operación']);
+            const genericDateRaw = findRawValue(rawRow, ['fecha', 'data', 'date']);
+            const dateValue = valueDateRaw || opDateRaw || genericDateRaw;
             const descriptionValue = row.Concepto || row.concepto || row.description || row.descripción;
             let amountValue = row.Importe || row.importe || row.amount;
 
@@ -553,6 +593,25 @@ export function TransactionImporter({ existingTransactions, availableCategories 
                 return null;
             }
 
+            // Enrichment: executionDate (F. ejecución) — sempre que existeixi
+            if (opDateRaw) {
+              const normalizedOpDate = parseSingleDate(opDateRaw);
+              if (normalizedOpDate) rawRow._opDate = normalizedOpDate;
+            }
+
+            // Enrichment: saldo/balance — parsejar format EU a number
+            const balanceRaw = findRawValue(rawRow, ['saldo', 'balance']);
+            if (balanceRaw !== null) {
+              let balanceNum: number;
+              if (typeof balanceRaw === 'number') {
+                balanceNum = balanceRaw;
+              } else {
+                const cleaned = String(balanceRaw).replace(/\./g, '').replace(',', '.');
+                balanceNum = parseFloat(cleaned);
+              }
+              if (!isNaN(balanceNum)) rawRow._balance = balanceNum;
+            }
+
             const transactionType = detectReturnType(descriptionValue) || 'normal';
 
             const tx = {
@@ -589,6 +648,15 @@ export function TransactionImporter({ existingTransactions, availableCategories 
             return;
         }
 
+        // E4: Ampliar rang amb opDate si cau fora del rang de valueDate
+        for (const { rawRow } of allParsedWithRaw) {
+          const opDate = rawRow._opDate;
+          if (opDate && typeof opDate === 'string') {
+            if (opDate < dateRange.minDate) dateRange.minDate = opDate;
+            if (opDate > dateRange.maxDate) dateRange.maxDate = opDate;
+          }
+        }
+
         log(`🔍 [DEDUPE] Rang de dates del fitxer: ${dateRange.minDate} - ${dateRange.maxDate}`);
 
         const existingInRange = await fetchExistingTransactionsForDedupe(
@@ -600,8 +668,9 @@ export function TransactionImporter({ existingTransactions, availableCategories 
         );
         log(`🔍 [DEDUPE] Carregades ${existingInRange.length} transaccions existents del rang`);
 
-        // Classificar: 3 estats (extraFields buit per ara — no hi ha camps extra compartits)
-        const classified = classifyTransactions(allParsedWithRaw, existingInRange, bankAccountId, []);
+        // Classificar: 3 estats amb enrichment F. ejecución + Saldo
+        const extraFields = ['_opDate', '_balance'];
+        const classified = classifyTransactions(allParsedWithRaw, existingInRange, bankAccountId, extraFields);
 
         const safeDupes = classified.filter(c => c.status === 'DUPLICATE_SAFE');
         const candidates = classified.filter(c => c.status === 'DUPLICATE_CANDIDATE');

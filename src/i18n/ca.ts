@@ -924,6 +924,8 @@ export const ca = {
         cancelImport: "Cancel·lar importació",
         noDecision: "Sense decisió",
         safeDupesSkipped: (count: number) => `${count} duplicats segurs omesos automàticament.`,
+        executionDate: "F. exec.",
+        balance: "Saldo",
       },
     },
 
