@@ -2,7 +2,7 @@
 
 import * as React from 'react';
 import { Button } from '@/components/ui/button';
-import { FileUp, Loader2, ChevronDown, Trash2, ListPlus, AlertTriangle } from 'lucide-react';
+import { FileUp, Loader2, AlertTriangle } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import type { Transaction, AnyContact, Category } from '@/lib/data';
 import { detectReturnType } from '@/lib/data';
@@ -12,12 +12,6 @@ import * as XLSX from 'xlsx';
 import { inferContact } from '@/ai/flows/infer-contact';
 import { findMatchingContact } from '@/lib/auto-match';
 import { normalizeTransaction } from '@/lib/normalize';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
 import {
   Dialog,
   DialogContent,
@@ -33,16 +27,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from '@/components/ui/alert-dialog';
 import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
 import { useCollection, useFirebase, useMemoFirebase } from '@/firebase';
@@ -58,7 +42,6 @@ import { classifyTransactions, type ClassifiedRow } from '@/lib/transaction-dedu
 import { DedupeCandidateResolver } from '@/components/dedupe-candidate-resolver';
 
 
-type ImportMode = 'append' | 'replace';
 
 // Firestore batch limit: max 50 operacions per batch
 const BATCH_LIMIT = 50;
@@ -75,7 +58,6 @@ function chunk<T>(arr: T[], size: number): T[][] {
 }
 
 interface TransactionImporterProps {
-  existingTransactions: Transaction[];
   availableCategories?: Category[] | null;
 }
 
@@ -196,11 +178,9 @@ const parseSingleDate = (val: any): string | null => {
   return isNaN(d.getTime()) ? null : d.toISOString().split('T')[0];
 };
 
-export function TransactionImporter({ existingTransactions, availableCategories }: TransactionImporterProps) {
+export function TransactionImporter({ availableCategories }: TransactionImporterProps) {
   const fileInputRef = React.useRef<HTMLInputElement>(null);
   const [isImporting, setIsImporting] = React.useState(false);
-  const [importMode, setImportMode] = React.useState<ImportMode>('append');
-  const [isAlertOpen, setIsAlertOpen] = React.useState(false);
   const [isAccountDialogOpen, setIsAccountDialogOpen] = React.useState(false);
   const [pendingFile, setPendingFile] = React.useState<File | null>(null);
   const [selectedBankAccountId, setSelectedBankAccountId] = React.useState<string | null>(null);
@@ -211,7 +191,6 @@ export function TransactionImporter({ existingTransactions, availableCategories 
   const [classifiedResults, setClassifiedResults] = React.useState<ClassifiedRow[] | null>(null);
   const [isCandidateDialogOpen, setIsCandidateDialogOpen] = React.useState(false);
   const [pendingImportContext, setPendingImportContext] = React.useState<{
-    mode: ImportMode;
     bankAccountId: string;
     fileName: string | null;
     rawData: any[];
@@ -298,29 +277,16 @@ export function TransactionImporter({ existingTransactions, availableCategories 
   const handleAccountSelected = () => {
     setIsAccountDialogOpen(false);
     if (!pendingFile) return;
-
-    if (importMode === 'replace') {
-        setIsAlertOpen(true);
-    } else {
-        startImportProcess(pendingFile, 'append', selectedBankAccountId);
-        setPendingFile(null);
-    }
+    startImportProcess(pendingFile, selectedBankAccountId);
+    setPendingFile(null);
   };
 
-  const handleConfirmReplace = () => {
-    setIsAlertOpen(false);
-    if (pendingFile) {
-        startImportProcess(pendingFile, 'replace', selectedBankAccountId);
-        setPendingFile(null);
-    }
-  }
-
-  const startImportProcess = (file: File, mode: ImportMode, bankAccountId: string | null) => {
+  const startImportProcess = (file: File, bankAccountId: string | null) => {
     setIsImporting(true);
     if (file.name.endsWith('.csv')) {
-        parseCsv(file, mode, bankAccountId);
+        parseCsv(file, bankAccountId);
     } else if (file.name.endsWith('.xlsx')) {
-        parseXlsx(file, mode, bankAccountId);
+        parseXlsx(file, bankAccountId);
     } else {
         toast({
             variant: 'destructive',
@@ -336,11 +302,11 @@ export function TransactionImporter({ existingTransactions, availableCategories 
    */
   // La fricció de solapament ja es gestiona al diàleg de selecció de compte
   // Aquesta funció ara simplement passa les dades a processar
-  const checkOverlapAndConfirm = async (parsedData: any[], mode: ImportMode, bankAccountId: string | null, fileName: string | null) => {
-    classifyParsedData(parsedData, mode, bankAccountId, fileName);
+  const checkOverlapAndConfirm = async (parsedData: any[], bankAccountId: string | null, fileName: string | null) => {
+    classifyParsedData(parsedData, bankAccountId, fileName);
   };
 
-  const parseXlsx = (file: File, mode: ImportMode, bankAccountId: string | null) => {
+  const parseXlsx = (file: File, bankAccountId: string | null) => {
     const reader = new FileReader();
     reader.onload = (e) => {
       try {
@@ -394,7 +360,7 @@ export function TransactionImporter({ existingTransactions, availableCategories 
             };
         });
 
-        checkOverlapAndConfirm(parsedData, mode, bankAccountId, file.name);
+        checkOverlapAndConfirm(parsedData, bankAccountId, file.name);
       } catch (error: any) {
         console.error("Error processing XLSX data:", error);
         toast({
@@ -433,7 +399,7 @@ export function TransactionImporter({ existingTransactions, availableCategories 
    * - Separador: `;` o `,` (autodetectat)
    * - Headers alternatius: F. ejecución, F. valor, Concepto, Importe
    */
-  const parseCsv = async (file: File, mode: ImportMode, bankAccountId: string | null) => {
+  const parseCsv = async (file: File, bankAccountId: string | null) => {
     // Funció auxiliar per llegir amb un encoding específic
     const readWithEncoding = (encoding: string): Promise<string> => {
       return new Promise((resolve, reject) => {
@@ -493,7 +459,7 @@ export function TransactionImporter({ existingTransactions, availableCategories 
       }
 
       if (hasValidTransactions(data)) {
-        checkOverlapAndConfirm(data, mode, bankAccountId, file.name);
+        checkOverlapAndConfirm(data, bankAccountId, file.name);
       } else {
         toast({
           variant: 'destructive',
@@ -517,7 +483,7 @@ export function TransactionImporter({ existingTransactions, availableCategories 
   // FASE 1: CLASSIFICACIÓ (parse + dedupe 3 estats)
   // ═══════════════════════════════════════════════════════════════════════════════
 
-  const classifyParsedData = async (data: any[], mode: ImportMode, bankAccountId: string | null, fileName: string | null) => {
+  const classifyParsedData = async (data: any[], bankAccountId: string | null, fileName: string | null) => {
      if (!organizationId) {
         toast({ variant: 'destructive', title: t.importers.transaction.errors.processingError, description: t.importers.transaction.errors.cannotIdentifyOrg });
         setIsImporting(false);
@@ -619,16 +585,7 @@ export function TransactionImporter({ existingTransactions, availableCategories 
         })
         .filter((item): item is { tx: Omit<Transaction, 'id'>; rawRow: Record<string, any> } => item !== null);
 
-        // Mode replace: no dedupe, executar directament
-        if (mode === 'replace') {
-            const txsToImport = allParsedWithRaw.map(r => r.tx);
-            executeImport(txsToImport, mode, bankAccountId, fileName, data.length, {
-                duplicateSkippedCount: 0,
-            });
-            return;
-        }
-
-        // Mode append: classificar amb dedupe 3 estats
+        // Classificar amb dedupe 3 estats
         const dateRange = getDateRangeFromParsedRows(allParsedWithRaw.map(r => r.tx));
         if (!dateRange) {
             toast({ variant: 'destructive', title: t.importers.transaction.errors.processingError, description: 'No s\'han trobat dates vàlides al fitxer' });
@@ -665,7 +622,7 @@ export function TransactionImporter({ existingTransactions, availableCategories 
         if (candidates.length > 0) {
             // Guardar context i obrir diàleg de resolució
             setClassifiedResults(classified);
-            setPendingImportContext({ mode, bankAccountId, fileName, rawData: data });
+            setPendingImportContext({ bankAccountId, fileName, rawData: data });
             setIsCandidateDialogOpen(true);
             // NO setIsImporting(false) — mantenim loading fins que l'usuari resolgui
             return;
@@ -674,7 +631,7 @@ export function TransactionImporter({ existingTransactions, availableCategories 
         // Sense candidats: executar directament amb les NEW
         const duplicateSkippedCount = safeDupes.length;
         if (newTxs.length > 0) {
-            executeImport(newTxs.map(c => c.tx), mode, bankAccountId, fileName, data.length, {
+            executeImport(newTxs.map(c => c.tx), bankAccountId, fileName, data.length, {
                 duplicateSkippedCount,
             });
         } else {
@@ -726,7 +683,6 @@ export function TransactionImporter({ existingTransactions, availableCategories 
     if (transactionsToImport.length > 0) {
       executeImport(
         transactionsToImport,
-        pendingImportContext.mode,
         pendingImportContext.bankAccountId,
         pendingImportContext.fileName,
         pendingImportContext.rawData.length,
@@ -757,7 +713,6 @@ export function TransactionImporter({ existingTransactions, availableCategories 
 
   const executeImport = async (
     transactionsToProcess: Array<Omit<Transaction, 'id'>>,
-    mode: ImportMode,
     bankAccountId: string,
     fileName: string | null,
     totalRawRows: number,
@@ -887,10 +842,6 @@ export function TransactionImporter({ existingTransactions, availableCategories 
         // CHUNKING: Dividir operacions en lots de màxim 50
         // ═══════════════════════════════════════════════════════════════════
 
-        const deleteOperations: string[] = mode === 'replace'
-            ? existingTransactions.map(tx => tx.id)
-            : [];
-
         const newTransactions: Transaction[] = [];
         const createOperations: { ref: ReturnType<typeof doc>; data: ReturnType<typeof normalizeTransaction> }[] = [];
 
@@ -901,26 +852,11 @@ export function TransactionImporter({ existingTransactions, availableCategories 
             newTransactions.push({ ...tx, id: newDocRef.id } as Transaction);
         });
 
-        const totalOperations = deleteOperations.length + createOperations.length;
-        const totalChunks = Math.ceil(totalOperations / BATCH_LIMIT);
-
+        const totalChunks = Math.ceil(createOperations.length / BATCH_LIMIT);
         let operationsProcessed = 0;
         let chunksCompleted = 0;
 
         try {
-            if (deleteOperations.length > 0) {
-                const deleteChunks = chunk(deleteOperations, BATCH_LIMIT);
-                for (let i = 0; i < deleteChunks.length; i++) {
-                    const fbBatch = writeBatch(firestore);
-                    deleteChunks[i].forEach(txId => {
-                        fbBatch.delete(doc(transactionsCollectionRef, txId));
-                    });
-                    await fbBatch.commit();
-                    operationsProcessed += deleteChunks[i].length;
-                    chunksCompleted++;
-                }
-            }
-
             const createChunks = chunk(createOperations, BATCH_LIMIT);
             for (let i = 0; i < createChunks.length; i++) {
                 const fbBatch = writeBatch(firestore);
@@ -963,7 +899,7 @@ export function TransactionImporter({ existingTransactions, availableCategories 
         const totalDuplicatesSkipped = stats.duplicateSkippedCount + (stats.candidateUserSkippedCount ?? 0);
         toast({
             title: t.importers.transaction.importSuccess,
-            description: t.importers.transaction.importSuccessDescription(transactionsToProcess.length, mode, totalDuplicatesSkipped),
+            description: t.importers.transaction.importSuccessDescription(transactionsToProcess.length, totalDuplicatesSkipped),
         });
 
         // Escriure importRun
@@ -1015,10 +951,6 @@ export function TransactionImporter({ existingTransactions, availableCategories 
   }
 
 
-  const handleMenuClick = (mode: ImportMode) => {
-    setImportMode(mode);
-    fileInputRef.current?.click();
-  };
 
   return (
     <>
@@ -1030,31 +962,14 @@ export function TransactionImporter({ existingTransactions, availableCategories 
         className="hidden"
         disabled={isImporting}
       />
-      <div className="flex items-center rounded-md">
-        <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-                 <Button disabled={isImporting} className="rounded-r-none">
-                    {isImporting ? (
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    ) : (
-                        <FileUp className="mr-2 h-4 w-4" />
-                    )}
-                    {t.importers.transaction.title}
-                    <ChevronDown className="ml-2 h-4 w-4" />
-                </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-                <DropdownMenuItem onClick={() => handleMenuClick('append')}>
-                    <ListPlus className="mr-2 h-4 w-4" />
-                    <span>{t.importers.transaction.addMovements}</span>
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => handleMenuClick('replace')} className="text-red-500">
-                     <Trash2 className="mr-2 h-4 w-4" />
-                    <span>{t.importers.transaction.replaceAll}</span>
-                </DropdownMenuItem>
-            </DropdownMenuContent>
-        </DropdownMenu>
-      </div>
+      <Button disabled={isImporting} onClick={() => fileInputRef.current?.click()}>
+        {isImporting ? (
+          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+        ) : (
+          <FileUp className="mr-2 h-4 w-4" />
+        )}
+        {t.importers.transaction.title}
+      </Button>
 
       {/* Diàleg de selecció de compte bancari */}
       <Dialog open={isAccountDialogOpen} onOpenChange={(open) => {
@@ -1190,23 +1105,6 @@ export function TransactionImporter({ existingTransactions, availableCategories 
           )}
         </DialogContent>
       </Dialog>
-
-      <AlertDialog open={isAlertOpen} onOpenChange={setIsAlertOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>{t.importers.transaction.replaceAllWarning}</AlertDialogTitle>
-            <AlertDialogDescription>
-              {t.importers.transaction.replaceAllDescription}
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel onClick={() => setPendingFile(null)}>{t.importers.transaction.cancel}</AlertDialogCancel>
-            <AlertDialogAction onClick={handleConfirmReplace}>
-              {t.importers.transaction.confirmReplace}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
 
       {/* Diàleg de resolució de candidats a duplicat */}
       <DedupeCandidateResolver

@@ -236,10 +236,6 @@ export const fr = {
     importer: {
       button: "Importer",
       add: "Ajouter mouvements",
-      replace: "Tout remplacer",
-      confirmReplaceTitle: "Remplacer toutes les données ?",
-      confirmReplaceDescription: "Cette action supprimera définitivement tous les mouvements actuels et les remplacera par ceux du nouveau fichier. Cette opération ne peut pas être annulée.",
-      confirm: "Oui, tout remplacer",
     },
     table: {
       date: "Date",
@@ -854,11 +850,7 @@ export const fr = {
     transaction: {
       title: "Importer",
       addMovements: "Ajouter mouvements",
-      replaceAll: "Tout remplacer",
-      replaceAllWarning: "Remplacer toutes les données ?",
-      replaceAllDescription: "Cette action supprimera définitivement tous les mouvements actuels et les remplacera par ceux du nouveau fichier. Cette opération ne peut pas être annulée.",
       cancel: "Annuler",
-      confirmReplace: "Oui, tout remplacer",
       confirmImport: "Continuer l'importation",
       overlapWarningTitle: "Dates chevauchées avec des importations existantes",
       overlapWarningDescription: "Ce fichier contient des transactions dans une plage de dates qui chevauche des données déjà importées.",
@@ -897,8 +889,8 @@ export const fr = {
         balanceInconsistentRow: (row: number, detail: string) => `Ligne ${row}: ${detail}`,
       },
       importSuccess: "Importation réussie",
-      importSuccessDescription: (imported: number, mode: string, duplicates: number) =>
-        `${imported} transaction(s) importée(s).${mode === 'append' ? ` ${duplicates} doublon(s) ignoré(s).` : ''}`,
+      importSuccessDescription: (imported: number, duplicates: number) =>
+        `${imported} transaction(s) importée(s).${duplicates > 0 ? ` ${duplicates} doublon(s) ignoré(s).` : ''}`,
       noNewTransactions: "Aucune nouvelle transaction",
       noTransactionsFound: "Aucune transaction trouvée",
       duplicatesOmitted: (count: number) => `${count} transaction(s) en doublon ignorée(s).`,
