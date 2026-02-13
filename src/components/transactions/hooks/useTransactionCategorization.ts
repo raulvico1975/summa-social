@@ -5,7 +5,6 @@ import { doc, CollectionReference } from 'firebase/firestore';
 import { updateDocumentNonBlocking } from '@/firebase';
 import { useToast } from '@/hooks/use-toast';
 import { useTranslations } from '@/i18n';
-import { useAppLog } from '@/hooks/use-app-log';
 import { trackUX } from '@/lib/ux/trackUX';
 import type { Transaction, Category } from '@/lib/data';
 import { getForcedIncomeCategoryIdByBankDescription } from '@/lib/auto-match';
@@ -190,8 +189,6 @@ export function useTransactionCategorization({
 }: UseTransactionCategorizationParams): UseTransactionCategorizationReturn {
   const { toast } = useToast();
   const { t, language } = useTranslations();
-  const { log } = useAppLog();
-
   // pt fa fallback a ca per missatges d'error (getErrorMessage només té ca/es/fr)
   const errorLang = language === 'pt' ? 'ca' : language;
 
@@ -233,8 +230,7 @@ export function useTransactionCategorization({
 
   const handleCancelBatch = React.useCallback(() => {
     cancelRef.current = true;
-    log('[IA] Cancel·lació sol·licitada per l\'usuari');
-  }, [log]);
+  }, []);
 
   // ---------------------------------------------------------------------------
   // CATEGORIZE SINGLE TRANSACTION (via Route Handler)
@@ -247,8 +243,6 @@ export function useTransactionCategorization({
 
     setLoadingStates((prev) => ({ ...prev, [txId]: true }));
     try {
-      log(`[IA] Iniciant categoritzacio per: "${transaction.description.substring(0, 40)}..."`);
-
       // 1. Comprovar si hi ha categoria forçada per descripció (loteria, voluntariat)
       const forcedCategoryId = getForcedIncomeCategoryIdByBankDescription(
         transaction.description,
@@ -265,7 +259,6 @@ export function useTransactionCategorization({
             ? `Transacció classificada com "${categoryName}" per paraules clau.`
             : `Transacción clasificada como "${categoryName}" por palabras clave.`,
         });
-        log(`[AUTO] Categoria forçada: "${categoryName}" per descripció bancària`);
         trackUX('ai.categorize.forced', { categoryId: forcedCategoryId, categoryName });
         return;
       }
@@ -290,8 +283,6 @@ export function useTransactionCategorization({
           description: errorMsg.description,
         });
 
-        // Log estructurat
-        log(`[IA] ERROR: code=${result.code} reason="${result.message}" model=gemini-2.0-flash`);
         trackUX('ai.categorize.error', { code: result.code, reason: result.message, model: 'gemini-2.0-flash' });
         return;
       }
@@ -307,7 +298,6 @@ export function useTransactionCategorization({
           ? `Transacció classificada com "${categoryName}" amb una confiança del ${Math.round(result.confidence * 100)}%.`
           : `Transacción clasificada como "${categoryName}" con una confianza del ${Math.round(result.confidence * 100)}%.`,
       });
-      log(`[IA] OK: category="${categoryName}" confidence=${(result.confidence * 100).toFixed(0)}% model=gemini-2.0-flash`);
     } catch (error) {
       // Error de xarxa - marcar com Revisar
       console.error('Error categorizing transaction:', error);
@@ -319,7 +309,6 @@ export function useTransactionCategorization({
         title: errorMsg.title,
         description: errorMsg.description,
       });
-      log(`[IA] ERROR: code=NETWORK reason="${error}" model=gemini-2.0-flash`);
       trackUX('ai.categorize.error', { code: 'NETWORK', reason: String(error), model: 'gemini-2.0-flash' });
     } finally {
       setLoadingStates((prev) => ({ ...prev, [txId]: false }));
@@ -334,7 +323,6 @@ export function useTransactionCategorization({
     language,
     toast,
     t,
-    log,
   ]);
 
   // ---------------------------------------------------------------------------
@@ -344,7 +332,6 @@ export function useTransactionCategorization({
   const handleBatchCategorize = React.useCallback(async () => {
     // Bloquejar si ja s'està executant
     if (isBatchCategorizing) {
-      log('[IA] Batch ja en execució - ignorant');
       return;
     }
 
@@ -368,7 +355,6 @@ export function useTransactionCategorization({
     setIsBatchCategorizing(true);
     setBatchProgress({ current: 0, total: transactionsToCategorize.length });
     const startTime = Date.now();
-    log(`[IA] Iniciant classificacio SEQÜENCIAL de ${transactionsToCategorize.length} moviments${bulkMode ? ' (MODE RÀPID)' : ''}.`);
     trackUX('ai.bulk.run.start', { count: transactionsToCategorize.length, bulkMode, sequential: true });
 
     let successCount = 0;
@@ -381,7 +367,6 @@ export function useTransactionCategorization({
       // Check cancel
       if (cancelRef.current) {
         cancelled = true;
-        log('[IA] Batch cancel·lat per l\'usuari');
         break;
       }
 
@@ -389,8 +374,6 @@ export function useTransactionCategorization({
 
       const tx = transactionsToCategorize[i];
       setBatchProgress({ current: i + 1, total: transactionsToCategorize.length });
-
-      log(`[IA] Classificant ${i + 1}/${transactionsToCategorize.length}: "${tx.description.substring(0, 30)}..."`);
 
       try {
         // 1. Comprovar si hi ha categoria forçada per descripció (loteria, voluntariat)
@@ -403,7 +386,6 @@ export function useTransactionCategorization({
           // Categoria forçada - no cal cridar IA
           updateDocumentNonBlocking(doc(transactionsCollection, tx.id), { category: forcedCategoryId });
           const categoryName = getCategoryDisplayName(forcedCategoryId);
-          log(`[AUTO] ✓ ${tx.id} → "${categoryName}" (forçada)`);
           successCount++;
           continue; // No cal delay, no hem cridat l'API
         }
@@ -418,7 +400,6 @@ export function useTransactionCategorization({
 
         if (!result.ok) {
           // Error controlat de l'API
-          log(`[IA] ✗ ${tx.id}: ${result.code} - ${result.message}`);
           errorCount++;
 
           // Marcar com Revisar
@@ -427,7 +408,6 @@ export function useTransactionCategorization({
           // Manejar segons tipus d'error
           if (result.code === 'QUOTA_EXCEEDED') {
             quotaExceeded = true;
-            log('[IA] QUOTA EXCEDIDA - Aturant procés');
             onQuotaExceeded?.();
             break;
           }
@@ -435,7 +415,6 @@ export function useTransactionCategorization({
           if (result.code === 'RATE_LIMITED' || result.code === 'TRANSIENT') {
             // Backoff adaptatiu
             currentDelay = Math.min(currentDelay * BACKOFF_MULTIPLIER, MAX_DELAY_MS);
-            log(`[IA] Backoff: nou delay = ${currentDelay}ms`);
           }
 
           // Continuar amb la següent
@@ -446,7 +425,6 @@ export function useTransactionCategorization({
         const categoryToSave = result.categoryId ?? 'Revisar';
         updateDocumentNonBlocking(doc(transactionsCollection, tx.id), { category: categoryToSave });
         const categoryName = result.categoryId ? getCategoryDisplayName(result.categoryId) : 'Revisar';
-        log(`[IA] ✓ ${tx.id} → "${categoryName}"`);
         successCount++;
 
         // Reset delay si èxit (opcional: podríem mantenir-lo)
@@ -455,7 +433,6 @@ export function useTransactionCategorization({
       } catch (error: any) {
         // Error de xarxa o inesperada
         console.error('Error categorizing transaction:', error);
-        log(`[IA] ✗ ERROR ${tx.id}: ${error?.message || error}`);
         errorCount++;
 
         // Marcar com Revisar
@@ -463,7 +440,6 @@ export function useTransactionCategorization({
 
         // Backoff per errors de xarxa
         currentDelay = Math.min(currentDelay * BACKOFF_MULTIPLIER, MAX_DELAY_MS);
-        log(`[IA] Backoff per error xarxa: nou delay = ${currentDelay}ms`);
       }
 
       // Delay entre crides (excepte l'última)
@@ -476,8 +452,6 @@ export function useTransactionCategorization({
     setIsBatchCategorizing(false);
     setBatchProgress(null);
 
-    const status = cancelled ? 'CANCEL·LAT' : quotaExceeded ? 'QUOTA' : 'COMPLETAT';
-    log(`[IA] ${status}: ${successCount} OK, ${errorCount} errors en ${Math.round(durationMs / 1000)}s.`);
     trackUX('ai.bulk.run.done', {
       processedCount: successCount,
       errorCount,
@@ -523,7 +497,6 @@ export function useTransactionCategorization({
     language,
     toast,
     t,
-    log,
   ]);
 
   // ---------------------------------------------------------------------------

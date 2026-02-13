@@ -11,7 +11,6 @@ import Papa from 'papaparse';
 import * as XLSX from 'xlsx';
 import { inferContact } from '@/ai/flows/infer-contact';
 import { findMatchingContact } from '@/lib/auto-match';
-import { useAppLog } from '@/hooks/use-app-log';
 import { normalizeTransaction } from '@/lib/normalize';
 import {
   DropdownMenu,
@@ -218,7 +217,6 @@ export function TransactionImporter({ existingTransactions, availableCategories 
     rawData: any[];
   } | null>(null);
   const { toast } = useToast();
-  const { log } = useAppLog();
   const { firestore } = useFirebase();
   const { organizationId } = useCurrentOrganization();
   const { buildUrl } = useOrgUrl();
@@ -319,7 +317,6 @@ export function TransactionImporter({ existingTransactions, availableCategories 
 
   const startImportProcess = (file: File, mode: ImportMode, bankAccountId: string | null) => {
     setIsImporting(true);
-    log(`Iniciando importación en modo: ${mode}, cuenta bancaria: ${bankAccountId || 'ninguna'}`);
     if (file.name.endsWith('.csv')) {
         parseCsv(file, mode, bankAccountId);
     } else if (file.name.endsWith('.xlsx')) {
@@ -370,7 +367,6 @@ export function TransactionImporter({ existingTransactions, availableCategories 
         }
 
         const header = (json[headerRowIndex] as string[]).map(h => String(h || '').trim());
-        log(`Cabecera encontrada en la fila ${headerRowIndex + 1}: ${header.join(', ')}`);
 
         const dateIndex = findColumnIndex(header, ['f. valor', 'fecha operación', 'fecha', 'f. ejecución', 'data']);
         const conceptIndex = findColumnIndex(header, ['concepto', 'descripció', 'description']);
@@ -452,7 +448,6 @@ export function TransactionImporter({ existingTransactions, availableCategories 
     const parseText = (text: string): Promise<any[]> => {
       return new Promise((resolve) => {
         const delimiter = detectCsvDelimiter(text);
-        log(`Delimitador detectat: "${delimiter}"`);
 
         Papa.parse(text, {
           header: true,
@@ -492,17 +487,14 @@ export function TransactionImporter({ existingTransactions, availableCategories 
       let data = await parseText(text);
 
       if (!hasValidTransactions(data)) {
-        log('UTF-8 no ha trobat transaccions vàlides, provant ISO-8859-1...');
         // Intent 2: ISO-8859-1 (latin1) - comú en bancs espanyols com Triodos
         text = await readWithEncoding('ISO-8859-1');
         data = await parseText(text);
       }
 
       if (hasValidTransactions(data)) {
-        log(`CSV parsejat correctament: ${data.length} files`);
         checkOverlapAndConfirm(data, mode, bankAccountId, file.name);
       } else {
-        log('No s\'han trobat transaccions vàlides en cap encoding');
         toast({
           variant: 'destructive',
           title: t.importers.transaction.errors.importError,
@@ -539,8 +531,6 @@ export function TransactionImporter({ existingTransactions, availableCategories 
         return;
      }
 
-    log(`Iniciando procesamiento de ${data.length} filas con cuenta bancaria: ${bankAccountId}.`);
-
     try {
         // Parsejar files a transaccions, preservant rawRow per enrichment
         const allParsedWithRaw = data
@@ -562,7 +552,6 @@ export function TransactionImporter({ existingTransactions, availableCategories 
             const amount = parseFloat(amountValue);
 
             if (!dateValue || !descriptionValue || isNaN(amount)) {
-                log(`Fila ${index + 2} inválida o vacía, saltando: ${JSON.stringify(row)}`);
                 return null;
             }
 
@@ -589,7 +578,6 @@ export function TransactionImporter({ existingTransactions, availableCategories 
             }
 
             if (isNaN(date.getTime())) {
-                log(`Fila ${index + 2} con fecha inválida, saltando: ${JSON.stringify(row)}`);
                 return null;
             }
 
@@ -657,8 +645,6 @@ export function TransactionImporter({ existingTransactions, availableCategories 
           }
         }
 
-        log(`🔍 [DEDUPE] Rang de dates del fitxer: ${dateRange.minDate} - ${dateRange.maxDate}`);
-
         const existingInRange = await fetchExistingTransactionsForDedupe(
             firestore,
             organizationId,
@@ -666,17 +652,15 @@ export function TransactionImporter({ existingTransactions, availableCategories 
             dateRange.minDate,
             dateRange.maxDate
         );
-        log(`🔍 [DEDUPE] Carregades ${existingInRange.length} transaccions existents del rang`);
 
         // Classificar: 3 estats amb enrichment F. ejecución + Saldo
         const extraFields = ['_opDate', '_balance'];
+
         const classified = classifyTransactions(allParsedWithRaw, existingInRange, bankAccountId, extraFields);
 
         const safeDupes = classified.filter(c => c.status === 'DUPLICATE_SAFE');
         const candidates = classified.filter(c => c.status === 'DUPLICATE_CANDIDATE');
         const newTxs = classified.filter(c => c.status === 'NEW');
-
-        log(`🔍 [DEDUPE] Resultat: ${newTxs.length} noves, ${safeDupes.length} duplicats segurs, ${candidates.length} candidats`);
 
         if (candidates.length > 0) {
             // Guardar context i obrir diàleg de resolució
@@ -700,7 +684,6 @@ export function TransactionImporter({ existingTransactions, availableCategories 
                     ? t.importers.transaction.duplicatesOmitted(duplicateSkippedCount)
                     : t.importers.transaction.noValidTransactions,
             });
-            log('No se encontraron transacciones nuevas para importar.');
             setIsImporting(false);
         }
     } catch (error: any) {
@@ -710,7 +693,6 @@ export function TransactionImporter({ existingTransactions, availableCategories 
           title: t.importers.transaction.errors.processingError,
           description: error.message || t.importers.transaction.errors.cannotProcessContent,
         });
-        log(`ERROR: ${error.message}`);
         setIsImporting(false);
     }
   };
@@ -741,8 +723,6 @@ export function TransactionImporter({ existingTransactions, availableCategories 
       candidateUserSkippedCount: userSkipped.length,
     };
 
-    log(`🔍 [DEDUPE] Resolució: ${userImported.length} importar, ${userSkipped.length} ometre, ${safeDupes.length} auto-skip`);
-
     if (transactionsToImport.length > 0) {
       executeImport(
         transactionsToImport,
@@ -758,7 +738,6 @@ export function TransactionImporter({ existingTransactions, availableCategories 
         title: t.importers.transaction.noNewTransactions,
         description: t.importers.transaction.duplicatesOmitted(totalSkipped),
       });
-      log('No se encontraron transacciones nuevas para importar.');
       setClassifiedResults(null);
       setPendingImportContext(null);
       setIsImporting(false);
@@ -799,13 +778,9 @@ export function TransactionImporter({ existingTransactions, availableCategories 
     }
 
     try {
-        log(`📊 Transacciones a procesar: ${transactionsToProcess.length}`);
-        log(`👥 Contactos disponibles: ${availableContacts?.length || 0}`);
-
         // ═══════════════════════════════════════════════════════════════════
         // MATCHING PER NOM (instantani, sense IA)
         // ═══════════════════════════════════════════════════════════════════
-        log('🔍 FASE 1: Matching per nom de contacte...');
 
         let matchedCount = 0;
         let unmatchedTransactions: Array<{ tx: any; index: number }> = [];
@@ -825,7 +800,6 @@ export function TransactionImporter({ existingTransactions, availableCategories 
                 const willAssignCategory = defaultCategory && !tx.category
                   && availableCategories
                   && isCategoryIdCompatibleStrict(tx.amount, defaultCategory, availableCategories);
-                log(`✅ [Fila ${index + 1}] Match per nom: "${match.contactName}" (${match.contactType})${willAssignCategory ? ` → categoria: ${defaultCategory}` : defaultCategory ? ' (ja té categoria o incompatible)' : ' (sense cat. defecte)'} - confiança ${Math.round(match.confidence * 100)}% - "${tx.description.substring(0, 40)}..."`);
                 return {
                     ...tx,
                     contactId: match.contactId,
@@ -838,21 +812,15 @@ export function TransactionImporter({ existingTransactions, availableCategories 
             }
         });
 
-        const matchPercentage = Math.round((matchedCount / transactionsToProcess.length) * 100);
-        log(`📈 Resultat FASE 1: ${matchedCount}/${transactionsToProcess.length} (${matchPercentage}%) transaccions amb match per nom`);
-
         // ═══════════════════════════════════════════════════════════════════
         // IA com a fallback (només per les no matchejades, si són poques)
         // ═══════════════════════════════════════════════════════════════════
         const AI_THRESHOLD = 20;
         const useAI = unmatchedTransactions.length > 0 && unmatchedTransactions.length <= AI_THRESHOLD;
 
-        log(`🤖 FASE 2 (IA): ${useAI ? `ACTIVADA per ${unmatchedTransactions.length} transaccions sense match` : `DESACTIVADA (${unmatchedTransactions.length} > ${AI_THRESHOLD} o ja totes matchejades)`}`);
-
         let transactionsWithContacts = [...transactionsAfterNameMatch];
 
         if (useAI && unmatchedTransactions.length > 0) {
-            log('🔍 Iniciando inferencia con IA para transacciones sin match...');
             const contactsForAI = availableContacts?.map(c => ({ id: c.id, name: c.name })) || [];
 
             const BATCH_SIZE = 10;
@@ -864,7 +832,6 @@ export function TransactionImporter({ existingTransactions, availableCategories 
                 if (quotaExceeded) break;
 
                 const batch = unmatchedTransactions.slice(i, i + BATCH_SIZE);
-                log(`Procesando lote IA ${Math.floor(i / BATCH_SIZE) + 1}/${Math.ceil(unmatchedTransactions.length / BATCH_SIZE)} (${batch.length} transacciones)...`);
 
                 await Promise.all(batch.map(async ({ tx, index }) => {
                     if (quotaExceeded) return;
@@ -879,7 +846,6 @@ export function TransactionImporter({ existingTransactions, availableCategories 
                                 const willAssignCategory = defaultCategory && !tx.category
                                   && availableCategories
                                   && isCategoryIdCompatibleStrict(tx.amount, defaultCategory, availableCategories);
-                                log(`✅ [Fila ${index + 1}] Match IA: ${contact.name} (${contact.type})${willAssignCategory ? ` → categoria: ${defaultCategory}` : defaultCategory ? ' (ja té categoria o incompatible)' : ' (sense cat. defecte)'} - "${tx.description.substring(0, 30)}..."`);
                                 transactionsWithContacts[index] = {
                                     ...tx,
                                     contactId: result.contactId,
@@ -887,16 +853,12 @@ export function TransactionImporter({ existingTransactions, availableCategories 
                                     ...(willAssignCategory ? { category: defaultCategory } : {}),
                                 };
                             }
-                        } else {
-                            log(`⚠️ [Fila ${index + 1}] IA no troba match - "${tx.description.substring(0, 40)}..."`);
                         }
                     } catch (error: any) {
                         console.error("Error inferring contact:", error);
-                        log(`❌ ERROR IA fila ${index + 1}: ${error}`);
 
                         const errorMsg = error?.message || error?.toString() || '';
                         if (!quotaExceeded && (errorMsg.includes('429') || errorMsg.toLowerCase().includes('quota') || errorMsg.toLowerCase().includes('rate limit'))) {
-                            log('⚠️ QUOTA EXCEDIDA - Desactivando IA');
                             quotaExceeded = true;
                             toast({
                                 variant: 'destructive',
@@ -909,20 +871,15 @@ export function TransactionImporter({ existingTransactions, availableCategories 
                 }));
 
                 if (!quotaExceeded && i + BATCH_SIZE < unmatchedTransactions.length) {
-                    log(`Esperando ${DELAY_MS / 1000}s antes del siguiente lote...`);
                     await new Promise(resolve => setTimeout(resolve, DELAY_MS));
                 }
             }
 
-            log(`📈 Resultat FASE 2 (IA): ${aiMatchedCount} transaccions addicionals amb match`);
         }
 
         // ═══════════════════════════════════════════════════════════════════
         // RESUM FINAL
         // ═══════════════════════════════════════════════════════════════════
-        const finalMatched = transactionsWithContacts.filter(tx => tx.contactId).length;
-        const finalPercentage = Math.round((finalMatched / transactionsToProcess.length) * 100);
-        log(`🎯 RESUM FINAL: ${finalMatched}/${transactionsToProcess.length} (${finalPercentage}%) transaccions amb contacte assignat`)
 
         const transactionsCollectionRef = collection(firestore, 'organizations', organizationId, 'transactions');
 
@@ -947,8 +904,6 @@ export function TransactionImporter({ existingTransactions, availableCategories 
         const totalOperations = deleteOperations.length + createOperations.length;
         const totalChunks = Math.ceil(totalOperations / BATCH_LIMIT);
 
-        log(`📦 Import: ${totalOperations} operacions totals (${deleteOperations.length} deletes, ${createOperations.length} creates) → ${totalChunks} lots`);
-
         let operationsProcessed = 0;
         let chunksCompleted = 0;
 
@@ -963,7 +918,6 @@ export function TransactionImporter({ existingTransactions, availableCategories 
                     await fbBatch.commit();
                     operationsProcessed += deleteChunks[i].length;
                     chunksCompleted++;
-                    log(`🗑️ Lot ${chunksCompleted}/${totalChunks}: ${deleteChunks[i].length} transaccions eliminades`);
                 }
             }
 
@@ -976,10 +930,7 @@ export function TransactionImporter({ existingTransactions, availableCategories 
                 await fbBatch.commit();
                 operationsProcessed += createChunks[i].length;
                 chunksCompleted++;
-                log(`✅ Lot ${chunksCompleted}/${totalChunks}: ${createChunks[i].length} transaccions creades`);
             }
-
-            log(`🎉 Import complet: ${operationsProcessed} operacions en ${chunksCompleted} lots`);
 
         } catch (batchError: any) {
             console.error('Error during batch commit:', batchError);
@@ -991,7 +942,6 @@ export function TransactionImporter({ existingTransactions, availableCategories 
                 description: errorMessage,
                 duration: 15000,
             });
-            log(`❌ ERROR al lot ${chunksCompleted + 1}: ${batchError.message}`);
             throw batchError;
         }
 
@@ -1004,9 +954,6 @@ export function TransactionImporter({ existingTransactions, availableCategories 
               newTransactions,
               availableContacts
             );
-            if (result.suggestedCount > 0 || result.linkedRemittanceCount > 0) {
-              log(`🔗 Conciliació: ${result.suggestedCount} docs suggerits, ${result.linkedRemittanceCount} remeses vinculades`);
-            }
           } catch (error) {
             console.error('Error suggesting matches:', error);
           }
@@ -1018,7 +965,6 @@ export function TransactionImporter({ existingTransactions, availableCategories 
             title: t.importers.transaction.importSuccess,
             description: t.importers.transaction.importSuccessDescription(transactionsToProcess.length, mode, totalDuplicatesSkipped),
         });
-        log('¡Éxito! Importación completada.');
 
         // Escriure importRun
         try {
@@ -1051,11 +997,9 @@ export function TransactionImporter({ existingTransactions, availableCategories 
               createdAt: serverTimestamp(),
             });
 
-            log(`📝 ImportRun creat: ${importRunRef.id} (${dateMin} → ${dateMax})`);
           }
         } catch (importRunError) {
           console.error('Error escrivint importRun (no crític):', importRunError);
-          log(`⚠️ No s'ha pogut guardar l'històric d'importació (no afecta les transaccions)`);
         }
 
     } catch (error: any) {
@@ -1065,7 +1009,6 @@ export function TransactionImporter({ existingTransactions, availableCategories 
           title: t.importers.transaction.errors.processingError,
           description: error.message || t.importers.transaction.errors.cannotProcessContent,
         });
-        log(`ERROR: ${error.message}`);
     } finally {
       setIsImporting(false);
     }

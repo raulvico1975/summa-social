@@ -3,7 +3,6 @@
 import * as React from 'react';
 import * as XLSX from 'xlsx';
 import { useToast } from '@/hooks/use-toast';
-import { useAppLog } from '@/hooks/use-app-log';
 import { useFirebase, useCollection, useMemoFirebase } from '@/firebase';
 import { useCurrentOrganization } from '@/hooks/organization-provider';
 import { collection, query, where, updateDoc, doc, increment, addDoc, getDocs, deleteDoc } from 'firebase/firestore';
@@ -406,7 +405,6 @@ export function useReturnImporter(options: UseReturnImporterOptions = {}) {
   const isContextMode = !!parentTransaction;
 
   const { toast } = useToast();
-  const { log } = useAppLog();
   const { firestore, user } = useFirebase();
   const { organizationId } = useCurrentOrganization();
   const userId = user?.uid;
@@ -559,14 +557,13 @@ export function useReturnImporter(options: UseReturnImporterOptions = {}) {
       const detectedMapping = detectColumns(allParsedRows, detectedStartRow);
       setMapping(detectedMapping);
 
-      log(`[ReturnImporter] Fitxers carregats: ${inputFiles.length}, files: ${allParsedRows.length}`);
       setStep('mapping');
     } catch (error: any) {
       toast({ variant: 'destructive', title: 'Error', description: error.message });
     } finally {
       setIsProcessing(false);
     }
-  }, [toast, log]);
+  }, [toast]);
 
   // ═══════════════════════════════════════════════════════════════════════════
   // MATCHING - FLUX COMPLET REFACTORITZAT
@@ -753,7 +750,6 @@ export function useReturnImporter(options: UseReturnImporterOptions = {}) {
         setGroupedMatches([contextGroup]);
         setBulkReturnGroups([]);
 
-        log(`[ReturnImporter] MODE CONTEXTUAL: ${results.length} devolucions assignades al pare ${parentTransaction.id}`);
         setStep('preview');
         setIsProcessing(false);
         return; // Sortir aquí, no cal el matching normal
@@ -1050,19 +1046,6 @@ export function useReturnImporter(options: UseReturnImporterOptions = {}) {
       setGroupedMatches(foundGroups);
       setBulkReturnGroups(bulkGroups);
 
-      const individualMatched = results.filter(r => r.matchType === 'individual').length;
-      const groupedCount = results.filter(r => r.matchType === 'grouped').length;
-      const ambiguousCount = results.filter(r => r.noMatchReason === 'ambiguous').length;
-
-      if (isBulkNetFormat) {
-        const autoCount = bulkGroups.filter(g => g.status === 'auto').length;
-        const reviewCount = bulkGroups.filter(g => g.status === 'needsReview').length;
-        const noMatchCount = bulkGroups.filter(g => g.status === 'noMatch').length;
-        log(`[ReturnImporter] BULK Matching: ${bulkGroups.length} grups | auto:${autoCount} | needsReview:${reviewCount} | noMatch:${noMatchCount}`);
-      } else {
-        log(`[ReturnImporter] Matching completat: ${results.length} devolucions | grouped:${groupedCount} (${foundGroups.length} grups) | individual:${individualMatched} | ambiguous:${ambiguousCount}`);
-      }
-
       setStep('preview');
 
     } catch (error: any) {
@@ -1070,7 +1053,7 @@ export function useReturnImporter(options: UseReturnImporterOptions = {}) {
     } finally {
       setIsProcessing(false);
     }
-  }, [allRows, startRow, mapping, donors, pendingReturns, files, toast, log, isContextMode, parentTransaction]);
+  }, [allRows, startRow, mapping, donors, pendingReturns, files, toast, isContextMode, parentTransaction]);
 
   // ═══════════════════════════════════════════════════════════════════════════
   // PROCESSAR DEVOLUCIONS (escriptura a Firestore)
@@ -1513,7 +1496,6 @@ export function useReturnImporter(options: UseReturnImporterOptions = {}) {
         // Log de l'estat de la remesa
       }
 
-      log(`[ReturnImporter] ${processedIndividual} individuals + ${processedGrouped} agrupades processades`);
       toast({
         title: 'Devolucions assignades',
         description: `S'han assignat ${processedIndividual + processedGrouped} devolucions correctament`
@@ -1532,7 +1514,7 @@ export function useReturnImporter(options: UseReturnImporterOptions = {}) {
       }
       setIsProcessing(false);
     }
-  }, [organizationId, parsedReturns, groupedMatches, firestore, userId, toast, log, reset]);
+  }, [organizationId, parsedReturns, groupedMatches, firestore, userId, toast, reset]);
 
   // ═══════════════════════════════════════════════════════════════════════════
   // CREAR DONANT PER A DEVOLUCIÓ PENDENT

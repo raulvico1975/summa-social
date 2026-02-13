@@ -33,7 +33,6 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
-import { useAppLog } from '@/hooks/use-app-log';
 import type { Transaction, Donor, Supplier, Employee } from '@/lib/data';
 import { formatCurrencyEU, isValidSpanishTaxId, getSpanishTaxIdType, normalizeTaxId, formatIBANDisplay, normalizeIBAN } from '@/lib/normalize';
 import type { SpanishTaxIdType } from '@/lib/normalize';
@@ -374,7 +373,6 @@ export function RemittanceSplitter({
   const fileInputRef = React.useRef<HTMLInputElement>(null);
   const tableContainerRef = React.useRef<HTMLDivElement>(null);
   const { toast } = useToast();
-  const { log } = useAppLog();
   const { firestore, user } = useFirebase();
   const { organizationId } = useCurrentOrganization();
   const { t } = useTranslations();
@@ -650,11 +648,6 @@ export function RemittanceSplitter({
         };
       });
 
-      // Mostrar avisos si n'hi ha
-      if (result.warnings.length > 0) {
-        log(`[Splitter] Avisos SEPA: ${result.warnings.join(', ')}`);
-      }
-
       setParsedDonations(donations);
       setTotalAmount(result.totalAmount);
       setStep('preview');
@@ -664,7 +657,6 @@ export function RemittanceSplitter({
         description: `${result.payments.length} pagaments carregats`,
       });
 
-      log(`[Splitter] SEPA pain.001 carregat: ${result.payments.length} pagaments, total ${result.totalAmount.toFixed(2)} €`);
     } catch (error: any) {
       console.error('Error parsing SEPA:', error);
       toast({ variant: 'destructive', title: 'Error llegint SEPA', description: error.message });
@@ -739,7 +731,6 @@ export function RemittanceSplitter({
         description: `S'ha descarregat el fitxer pain.001 amb ${payments.length} pagaments`,
       });
 
-      log(`[Splitter] SEPA pain.001 exportat: ${payments.length} pagaments`);
     } catch (error: any) {
       console.error('Error generating SEPA:', error);
       toast({ variant: 'destructive', title: 'Error generant SEPA', description: error.message });
@@ -790,9 +781,6 @@ export function RemittanceSplitter({
         setTaxIdColumn(detected.taxId);
         setIbanColumn(detected.iban);
 
-        log(`[Splitter] Excel carregat: ${filteredRows.length} files`);
-        log(`[Splitter] Detecció automàtica - Fila inicial: ${detectedStartRow}, Import: col ${detected.amount}, Nom: col ${detected.name}, DNI: col ${detected.taxId}, IBAN: col ${detected.iban}`);
-
         setStep('mapping');
       } catch (error: any) {
         console.error('Error parsing Excel:', error);
@@ -825,9 +813,6 @@ export function RemittanceSplitter({
     setNameColumn(detected.name);
     setTaxIdColumn(detected.taxId);
     setIbanColumn(detected.iban);
-
-    log(`[Splitter] Arxiu carregat: ${rows.length} files, delimitador: "${detectedDelimiter}"`);
-    log(`[Splitter] Detecció automàtica - Fila inicial: ${detectedStartRow}, Import: col ${detected.amount}, Nom: col ${detected.name}, DNI: col ${detected.taxId}, IBAN: col ${detected.iban}`);
 
     setStep('mapping');
   };
@@ -1272,7 +1257,6 @@ export function RemittanceSplitter({
       setParsedDonations(donations);
       setTotalAmount(total);
       setStep('preview');
-      log(`[Splitter] Anàlisi completada. ${donations.length} donacions processades.`);
 
     } catch (error: any) {
       console.error('Error processing data:', error);
@@ -1373,7 +1357,6 @@ export function RemittanceSplitter({
         description: t.movements.splitter.donorReactivatedDescription(donation.matchedDonor.name),
       });
 
-      log(`[Splitter] Donant reactivat: ${donation.matchedDonor.name}`);
     } catch (error: any) {
       console.error('Error reactivating donor:', error);
       toast({ variant: 'destructive', title: t.movements.splitter.error, description: error.message });
@@ -1429,7 +1412,6 @@ export function RemittanceSplitter({
         description: t.movements.splitter.allDonorsReactivatedDescription(inactiveDonations.length),
       });
 
-      log(`[Splitter] ${inactiveDonations.length} donants reactivats`);
     } catch (error: any) {
       console.error('Error reactivating donors:', error);
       toast({ variant: 'destructive', title: t.movements.splitter.error, description: error.message });
@@ -1473,8 +1455,6 @@ export function RemittanceSplitter({
 
     setStep('processing');
     setIsProcessing(true);
-    log(`[Splitter] Iniciant processament server-side per remesa IN...`);
-
     try {
       // ═══════════════════════════════════════════════════════════════════════
       // Construir payload per l'API
@@ -1523,15 +1503,11 @@ export function RemittanceSplitter({
         ambiguousDonorIds: d.ambiguousDonors?.map(ad => ad.id),
       }));
 
-      log(`[Splitter] Payload: ${items.length} items, ${pendingItems.length} pendents`);
-
       // ═══════════════════════════════════════════════════════════════════════
       // Cridar API server-side
       // ═══════════════════════════════════════════════════════════════════════
       const idToken = await user.getIdToken();
       const apiEndpoint = '/api/remittances/in/process';
-
-      log(`[Splitter] Cridant ${apiEndpoint}...`);
 
       const response = await fetch(apiEndpoint, {
         method: 'POST',
@@ -1555,8 +1531,6 @@ export function RemittanceSplitter({
         // Error del servidor
         const errorMessage = result.error || 'Error processant remesa';
         const errorCode = result.code || 'UNKNOWN_ERROR';
-
-        log(`[Splitter] ERROR server: ${errorCode} - ${errorMessage}`);
 
         // Missatges específics per invariants
         if (errorCode === 'R-SUM-1') {
@@ -1591,15 +1565,12 @@ export function RemittanceSplitter({
       // Èxit
       // ═══════════════════════════════════════════════════════════════════════
       if (result.idempotent) {
-        log(`[Splitter] ✅ Idempotent: remesa ja processada`);
         toast({
           title: 'Remesa ja processada',
           description: 'Aquesta remesa ja s\'havia processat anteriorment.',
           variant: 'default',
         });
       } else {
-        log(`[Splitter] ✅ Processament completat! remittanceId=${result.remittanceId}, created=${result.createdCount}, pending=${result.pendingCount}`);
-
         if (result.pendingCount && result.pendingCount > 0) {
           toast({
             title: t.movements.splitter.remittancePartial ?? 'Remesa parcial',
@@ -1623,7 +1594,6 @@ export function RemittanceSplitter({
 
     } catch (error: any) {
       console.error('[Splitter] Error processant remesa:', error);
-      log(`[Splitter] ERROR: ${error.message}`);
       toast({
         variant: 'destructive',
         title: t.movements.splitter.error,
@@ -1669,13 +1639,10 @@ export function RemittanceSplitter({
       }
 
       lockAcquired = true;
-      log(`[Splitter] 🔒 Lock adquirit per pare ${parentTxId}`);
     }
 
     setStep('processing');
     setIsProcessing(true);
-    log(`[Splitter] Iniciant processament client-side per remesa OUT...`);
-
     try {
       const transactionsRef = collection(firestore, 'organizations', organizationId, 'transactions');
       const contactsRef = collection(firestore, 'organizations', organizationId, 'contacts');
@@ -1689,8 +1656,6 @@ export function RemittanceSplitter({
       const remittanceId = remittanceRef.id;
       const now = new Date().toISOString();
 
-      log(`[Splitter] Creant document de remesa ${remittanceId}...`);
-
       // Mode OUT: comportament original
       const resolvableDonations = parsedDonations.filter(d =>
         d.status === 'found' ||
@@ -1703,11 +1668,8 @@ export function RemittanceSplitter({
         (d.status === 'new_with_taxid' && (!d.name || d.amount <= 0))
       );
 
-      log(`[Splitter] Resoluble: ${resolvableDonations.length}, Pendents: ${pendingDonations.length}`);
-
       // 1. Crear nous contactes (mode OUT)
       const contactsToCreate = resolvableDonations.filter(d => d.status === 'new_with_taxid');
-      log(`[Splitter] Creant ${contactsToCreate.length} nous proveïdors...`);
 
       for (let i = 0; i < contactsToCreate.length; i += CHUNK_SIZE) {
         const chunk = contactsToCreate.slice(i, i + CHUNK_SIZE);
@@ -1729,13 +1691,11 @@ export function RemittanceSplitter({
 
         await batch.commit();
         await new Promise(resolve => setTimeout(resolve, 100));
-        log(`[Splitter] Proveïdors creats: ${Math.min(i + CHUNK_SIZE, contactsToCreate.length)}/${contactsToCreate.length}`);
       }
 
       // 2. Crear transaccions filles NOMÉS per resoluble
       const childTransactionIds: string[] = [];
       let resolvedTotalCents = 0;
-      log(`[Splitter] Creant ${resolvableDonations.length} transaccions...`);
 
       for (let i = 0; i < resolvableDonations.length; i += CHUNK_SIZE) {
         const chunk = resolvableDonations.slice(i, i + CHUNK_SIZE);
@@ -1783,13 +1743,11 @@ export function RemittanceSplitter({
 
         await batch.commit();
         await new Promise(resolve => setTimeout(resolve, 100));
-        log(`[Splitter] Transaccions creades: ${Math.min(i + CHUNK_SIZE, resolvableDonations.length)}/${resolvableDonations.length}`);
       }
 
       // 3. Guardar pendents a subcol·lecció
       let pendingTotalCents = 0;
       if (pendingDonations.length > 0) {
-        log(`[Splitter] Guardant ${pendingDonations.length} pendents...`);
         const pendingRef = collection(firestore, 'organizations', organizationId, 'remittances', remittanceId, 'pending');
 
         for (let i = 0; i < pendingDonations.length; i += CHUNK_SIZE) {
@@ -1819,7 +1777,6 @@ export function RemittanceSplitter({
           await batch.commit();
           await new Promise(resolve => setTimeout(resolve, 100));
         }
-        log(`[Splitter] Pendents guardats: ${pendingDonations.length}`);
       }
 
       // Calcular totals en cèntims
@@ -1850,8 +1807,6 @@ export function RemittanceSplitter({
           validatedByUid: user?.uid ?? null,
         },
       });
-      log(`[Splitter] Document de remesa creat: ${remittanceId}`);
-
       // 5. Marcar transacció pare
       const updateBatch = writeBatch(firestore);
       updateBatch.update(doc(transactionsRef, transaction.id), {
@@ -1871,8 +1826,6 @@ export function RemittanceSplitter({
         contactType: undefined,
       });
       await updateBatch.commit();
-
-      log(`[Splitter] ✅ Processament completat!`);
 
       if (pendingDonations.length > 0) {
         toast({
@@ -1896,7 +1849,6 @@ export function RemittanceSplitter({
 
     } catch (error: any) {
       console.error("Error processing remittance:", error);
-      log(`[Splitter] ERROR: ${error.message}`);
       toast({ variant: 'destructive', title: t.movements.splitter.error, description: error.message, duration: 9000 });
       setStep('preview');
       setIsProcessing(false);
@@ -1904,7 +1856,6 @@ export function RemittanceSplitter({
       // Alliberar lock sempre (encara que hi hagi error)
       if (lockAcquired && userId) {
         await releaseProcessLock({ firestore, orgId: organizationId, parentTxId });
-        log(`[Splitter] 🔓 Lock alliberat per pare ${parentTxId}`);
       }
     }
   };
