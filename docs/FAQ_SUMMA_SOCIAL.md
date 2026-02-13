@@ -1,7 +1,7 @@
 # SUMMA SOCIAL - Preguntes Freqüents (FAQ)
 
-**Versió**: 1.40
-**Última actualització**: 10 Febrer 2026
+**Versió**: 1.42
+**Última actualització**: 12 Febrer 2026
 
 ---
 
@@ -33,7 +33,7 @@ Si no trobes la teva pregunta, no et preocupis: mira el Manual d'Usuari complet 
 *Les remeses són un dels conceptes que més confonen. Aquí t'expliquem què són, com dividir-les i què fer si algo surt malament.*
 
 **📤 Remeses SEPA de cobrament** (53a-53e)
-*Genera el fitxer SEPA per cobrar quotes automàticament des del banc, amb pre-selecció intel·ligent de socis.*
+*Genera el fitxer SEPA per cobrar quotes automàticament des del banc, amb pre-selecció intel·ligent de socis. Inclou com forçar socis "no toca encara" (53d½).*
 
 **↩️ Devolucions** (54-61)
 *Quan el banc no pot cobrar un rebut, el retorna. T'expliquem com gestionar-ho perquè els informes surtin bé i no t'emportis sorpreses al gener.*
@@ -752,13 +752,15 @@ Moltes transaccions del banc tenen descripcions similars. Aprofita-ho:
 2. Agafa el fitxer de la factura (del teu ordinador)
 3. Arrossega'l i deixa'l anar sobre la fila del moviment
 4. Veuràs un missatge: "Deixa anar per adjuntar"
-5. Fet! La factura queda vinculada
+5. El sistema et suggerirà un **nom estandarditzat** per al fitxer (per exemple, `2026.01.15_Vodafone.pdf`), basat en la data i el contacte del moviment. Pots acceptar-lo o mantenir el nom original
+6. Fet! La factura queda vinculada
 
 **Opció 2: Clicant la icona de document**
 1. Localitza el moviment
 2. Clica la icona de document que veuràs a la fila
 3. Selecciona el fitxer
-4. Es puja i s'adjunta automàticament
+4. El sistema et suggerirà un nom estandarditzat (igual que amb drag & drop)
+5. Es puja i s'adjunta automàticament
 
 **Formats acceptats:** PDF, JPG, PNG, GIF, WEBP, XML
 **Mida màxima:** 15 MB per fitxer
@@ -963,7 +965,7 @@ Clica sobre la icona de document i s'obrirà o es descarregarà directament.
 
 **Formats admesos:** PDF, XML, JPG, JPEG, PNG
 
-**Després de pujar:** Revisa les dades extretes automàticament (proveïdor, import, data) i quan tinguis el moviment bancari corresponent, concilia'ls amb un clic.
+**Després de pujar:** Revisa les dades extretes automàticament (proveïdor, import, data). Si el sistema ha detectat la data i el proveïdor, et suggerirà renombrar el fitxer amb un format estàndard (per exemple, `2026.01.15_Vodafone.pdf`) per tenir-lo tot ordenat. Quan tinguis el moviment bancari corresponent, concilia'ls amb un clic.
 
 ---
 
@@ -1295,7 +1297,7 @@ El flux ideal és:
 **Pasos:**
 1. Ves a **Donants → Remeses de cobrament**
 2. Selecciona el compte bancari, la data de cobrament i la periodicitat (mensual, trimestral...)
-3. El sistema **pre-selecciona automàticament** els socis que "toca cobrar" segons la periodicitat. Per exemple, si selecciones "Mensual" al febrer, es marcaran els socis mensuals que encara no s'hagin cobrat aquest mes
+3. El sistema **pre-selecciona automàticament** els socis que "toca cobrar" segons la periodicitat. Per exemple, si selecciones "Mensual" al febrer, es marcaran els socis mensuals que encara no s'hagin cobrat aquest mes. Els que no toca cobrar apareixen amb badge "No toca encara" (però els pots incloure si vols, veure pregunta 53d½)
 4. Revisa la llista i ajusta si cal (pots afegir o treure socis)
 5. A la pantalla de revisió, verifica l'import total i el nombre de socis
 6. Clica "Generar" i descarrega el fitxer XML
@@ -1309,15 +1311,24 @@ El flux ideal és:
 
 1. **La periodicitat del soci:** Si un soci té configurada la periodicitat "Mensual", el sistema sap que cal cobrar-li cada mes. Si és "Trimestral", cada tres mesos. I així amb semestral i anual.
 
-2. **L'última vegada que es va cobrar:** Si ja s'ha generat una remesa SEPA per a aquest soci dins del període actual (per exemple, dins del mes de febrer), el sistema NO el pre-selecciona perquè ja s'ha cobrat.
+2. **La data de l'últim cobrament SEPA:** El sistema compara quan es va cobrar per última vegada i calcula quan toca el proper cobrament.
+
+**Com funciona per cada periodicitat:**
+- **Mensual:** Si ja s'ha cobrat aquest mes → no toca. Si no → toca cobrar.
+- **Trimestral:** Toca cobrar quan han passat 3 mesos des de l'últim cobrament.
+- **Semestral:** Toca cobrar quan han passat 6 mesos.
+- **Anual:** Toca cobrar quan han passat 12 mesos.
 
 **Exemple pràctic:**
-- Estem al febrer
+- Estem al febrer de 2026
 - La Maria és sòcia mensual i la seva última remesa SEPA va ser al gener → **es marca** perquè toca cobrar-li el febrer
 - En Joan és soci mensual i ja va ser inclòs en una remesa del 3 de febrer → **no es marca** perquè ja s'ha cobrat aquest mes
-- L'Anna és sòcia trimestral i es va cobrar al gener (Q1) → **no es marca** perquè el Q1 ja està cobert
+- L'Anna és sòcia trimestral i l'últim cobrament va ser al gener → **no es marca** perquè el proper cobrament seria a l'abril (gener + 3 mesos)
+- En Pere és soci anual i l'últim cobrament va ser a l'octubre de 2025 → **no es marca** fins a l'octubre de 2026
 
-**Important:** La pre-selecció és una ajuda, no una obligació. Sempre pots afegir o treure socis manualment.
+**I si un soci no té data d'últim cobrament?** El sistema el considera candidat (toca cobrar), però mostra un avís recomanant informar la data. Pots fer-ho editant el soci o important-la amb l'Excel (columna "Últim cobrament SEPA").
+
+**Important:** La pre-selecció és una ajuda, no una obligació. Sempre pots afegir o treure socis manualment. De fet, si un soci apareix com "No toca encara" però saps que sí que cal cobrar-lo, el pots seleccionar igualment — el sistema et demanarà confirmació (veure pregunta 53d½).
 
 ---
 
@@ -1328,7 +1339,30 @@ El flux ideal és:
 1. **Editar el soci** i informar la periodicitat correcta (mensual, trimestral, etc.)
 2. **Afegir-lo manualment** a la remesa des del pas de selecció
 
-**Consell:** Val la pena dedicar una estona a configurar la periodicitat de tots els socis. Un cop fet, les remeses futures seran molt més ràpides perquè el sistema ja sabrà qui cal cobrar.
+**I si no tenen data d'últim cobrament SEPA?** Per a socis mensuals no és greu: el sistema simplement comprova si ja s'ha cobrat el mes actual. Però per a trimestrals, semestrals i anuals, **sí que és important** informar la data perquè el sistema pugui calcular bé quan toca el proper cobrament.
+
+**Com informar la data d'últim cobrament:**
+- **Un a un:** Edita el soci i busca el camp "Últim cobrament SEPA"
+- **En bloc:** Exporta la llista de donants a Excel, omple la columna "Últim cobrament SEPA" i reimporta
+
+**Consell:** Val la pena dedicar una estona a configurar la periodicitat i la data d'últim cobrament de tots els socis. Un cop fet, les remeses futures seran molt més ràpides perquè el sistema ja sabrà qui cal cobrar i quan.
+
+---
+
+### 53d½. Un soci apareix com "No toca encara" però sí que el vull cobrar. Puc incloure'l a la remesa?
+
+**Sí, pots!** A vegades hi ha situacions on el sistema calcula que un soci no toca cobrar, però tu saps que sí que cal. Per exemple:
+- Un soci nou que tot just comença i vols cobrar-li el primer mes
+- Un soci que ha canviat de periodicitat recentment
+- Qualsevol excepció que tu decideixis
+
+**Com fer-ho:**
+1. Al pas de selecció de la remesa, veuràs que el soci apareix amb un badge gris "No toca encara"
+2. Selecciona'l igualment marcant la casella
+3. El sistema et mostrarà un diàleg de confirmació explicant que estàs incloent socis fora de termini
+4. Confirma i el soci s'afegirà a la remesa
+
+**Important:** Aquests socis es marquen com a "revisió necessària" al fitxer generat, perquè quedi constància que s'han inclòs excepcionalment. No afecta el cobrament al banc.
 
 ---
 

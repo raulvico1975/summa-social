@@ -4,6 +4,54 @@ Historial de canvis del projecte, ordenat de més recent a més antic.
 
 ---
 
+## [1.42.0] - 2026-02-12
+
+### SEPA pain.008 — Periodicitat intel·ligent
+
+- Nou camp **sepaPain008LastRunAt** (data de l'últim cobrament SEPA) per a cada donant
+- Suport complet a **importació i exportació Excel** (columna "Últim cobrament SEPA")
+- **Lògica d'intervals per periodicitats no-mensuals:**
+  - Trimestral: venciment a +3 mesos de l'últim cobrament
+  - Semestral: venciment a +6 mesos
+  - Anual: venciment a +12 mesos
+- Comparació a nivell **any-mes** (ignora el dia): qualsevol dia del mes de venciment és vàlid
+- Mensual: comparació natural de mes (si ja s'ha cobrat aquest mes → bloquejat)
+- Avís no bloquejant al wizard per a membres no-mensuals que no tenen data d'últim cobrament
+- 25 tests unitaris cobrint totes les periodicitats i casos límit (clamping de dies, any bixest)
+
+### SEPA pain.008 — UI wizard millorada
+
+- Columnes reanomenades: **"Darrer cobrament"** i **"Periodicitat"**
+- Dates curtes: "des25" en lloc de "des. del 2025" (una sola línia)
+- Periodicitat simplificada: només mostra el label (Mensual, Trimestral, Semestral, Anual)
+- Badge curt per donants bloquejats: **"No toca encara"**
+- IBAN amb `whitespace-nowrap` per evitar salts de línia
+
+### SEPA pain.008 — Selecció forçada amb revisió
+
+- Els donants marcats com **"No toca encara"** ara es poden seleccionar manualment
+- Es mostra un **diàleg de confirmació** abans d'incloure'ls, indicant el recompte
+- Nou camp **`needsReview`** al XML generat per marcar cobraments forçats fora de període
+
+### Documents pendents — Renom suggerit
+
+- Quan un document pendent té data de factura i proveïdor extrets per IA, es mostra un **suggeriment de renom** amb format `YYYY.MM.DD_proveïdor.ext`
+- Renom cosmètic: actualitza el nom a Firestore sense tocar el fitxer a Storage
+- Micro-ajustos UI: mida del toast, truncat de dates, format EU, correcció d'overflow
+
+### Moviments — Renom en adjuntar documents
+
+- Al **adjuntar un document a un moviment** (arrossegant o clicant), es mostra un AlertDialog suggerint un nom estandarditzat: `YYYY.MM.DD_contacte.ext`
+- Prioritat del nom: contacte > nota > descripció > "moviment"
+
+### Fixes tècnics
+
+- Correcció d'errors TypeScript preexistents (import no usat + import faltant)
+- Noves columnes a l'importador bancari: "f. valor" i "f. ejecución"
+- i18n complet (ca, es, fr, pt) per a totes les noves funcionalitats
+
+---
+
 ## [1.41.0] - 2026-02-11
 
 ### Donants: persona de contacte per empreses

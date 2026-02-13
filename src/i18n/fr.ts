@@ -903,6 +903,28 @@ export const fr = {
       noTransactionsFound: "Aucune transaction trouvée",
       duplicatesOmitted: (count: number) => `${count} transaction(s) en doublon ignorée(s).`,
       noValidTransactions: "Aucune transaction valide à importer.",
+      // Dédupe 3 états
+      dedupe: {
+        candidateDialogTitle: "Doublons potentiels trouvés",
+        candidateDialogDescription: (count: number) =>
+          `${count} mouvement(s) correspondant à des transactions existantes (même date, montant et description). Vérifiez chacun et décidez s'il faut l'importer ou l'ignorer.`,
+        columnDate: "Date",
+        columnDescription: "Description",
+        columnAmount: "Montant",
+        columnExisting: "Déjà existant",
+        columnDecision: "Décision",
+        importAction: "Importer",
+        skipAction: "Ignorer",
+        importAll: "Tout importer",
+        skipAll: "Tout ignorer",
+        clearAll: "Effacer",
+        resolvedCount: (resolved: number, total: number) => `${resolved} sur ${total} résolus`,
+        continueButton: (toImport: number, toSkip: number) =>
+          `Continuer (${toImport} à importer, ${toSkip} à ignorer)`,
+        cancelImport: "Annuler l'importation",
+        noDecision: "Sans décision",
+        safeDupesSkipped: (count: number) => `${count} doublon(s) sûr(s) ignoré(s) automatiquement.`,
+      },
     },
 
     // Importateur Stripe
@@ -1484,6 +1506,47 @@ export const fr = {
     excludedSuppliers: "Exclosos manualment",
     includeSupplier: "Incloure proveïdor",
     excludeSupplier: "Excloure proveïdor",
+    // Model 347 — Améliorations v1.43
+    model347WithholdingWarning: "Les opérations soumises à retenue (comme les factures de location ou de professionnels indépendants) ne doivent pas être incluses dans le 347 car elles sont déjà déclarées dans le Modèle 190 ou 180. Vérifiez les transactions affichées et excluez ou incluez celles qui remplissent les conditions du 347.",
+    model347SectionExpenses: "Paiements aux fournisseurs",
+    model347SectionIncome: "Revenus",
+    model347Q1: "T1",
+    model347Q2: "T2",
+    model347Q3: "T3",
+    model347Q4: "T4",
+    model347Detail: "Détail",
+    model347DetailTitle: (name: string) => `Transactions de ${name}`,
+    model347DetailDescription: "Décochez les transactions qui ne doivent pas être incluses dans le Modèle 347.",
+    model347NoCategory: "Sans catégorie",
+    model347ExportAEAT: "Générer fichier AEAT (.txt)",
+    model347ExportAEATTooltip: "Fichier .txt à téléverser sur le Siège Électronique de l'AEAT.",
+    model347AEATFileName: ({ year }: { year: string }) => `modelo347_${year}.txt`,
+    model347CsvFileName: ({ year }: { year: string }) => `informe_model347_${year}.csv`,
+    model347TypeExpense: "Achat",
+    model347TypeIncome: "Revenu",
+    model347AEATMissingData: "Données manquantes pour l'export AEAT",
+    model347AEATEncodingError: "Erreur d'encodage ISO-8859-1",
+    model347AEATExcludedTitle: (count: number) => `${count} fournisseur${count > 1 ? 's' : ''} exclu${count > 1 ? 's' : ''} de l'export`,
+    model347AEATExcludedDesc: (included: number, excluded: number) =>
+      `Le fichier contient ${included} fournisseur${included > 1 ? 's' : ''}. ${excluded} ${excluded > 1 ? 'ont' : 'a'} été exclu${excluded > 1 ? 's' : ''} pour données incomplètes.`,
+    model347AEATZeroValid: "Aucun fournisseur valide à exporter",
+    model347AEATZeroValidDesc: "Tous les fournisseurs ont des données incomplètes (NIF). Corrigez-les avant d'exporter.",
+    model347AEATExcludedDialogTitle: "Il y a des fournisseurs exclus",
+    model347AEATExcludedDialogDesc: (included: number, excluded: number) =>
+      `Le fichier AEAT contiendra ${included} fournisseur${included > 1 ? 's' : ''}. ${excluded} fournisseur${excluded > 1 ? 's' : ''} ${excluded > 1 ? 'seront' : 'sera'} exclu${excluded > 1 ? 's' : ''} pour données incomplètes.`,
+    model347AEATExcludedHelp: "Vous pouvez télécharger la liste pour corriger les données des fournisseurs avant de présenter le 347.",
+    model347AEATIssueLabel: (code: string, meta?: { taxIdLength?: number }) => {
+      switch (code) {
+        case 'TAXID_EMPTY': return 'NIF/CIF vide';
+        case 'TAXID_INVALID_CHARS': return 'NIF/CIF avec caractères invalides';
+        case 'TAXID_INVALID_LENGTH': return `NIF/CIF avec longueur incorrecte (${meta?.taxIdLength ?? '?'})`;
+        default: return 'donnée invalide';
+      }
+    },
+    model347DownloadExcludedCsv: "Télécharger exclus (CSV)",
+    model347ExportAnyway: "Exporter quand même",
+    model347CancelToFix: "Annuler et vérifier les données",
+    model347NoIncomeAboveThreshold: "Pas de revenus de fournisseurs au-dessus du seuil.",
     // Paquet de clôture
     closingBundle: {
       title: "Paquet de clôture",
