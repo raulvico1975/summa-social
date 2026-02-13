@@ -18,7 +18,7 @@ npm run deploy
 Això executa `scripts/deploy.sh`, un script determinista que fa tot el ritual:
 1. Preflight git (branca=main, working tree net, pull ff-only)
 2. Detectar canvis i classificar risc
-3. Gate P0 fiscal (bloquejant si toca àrea fiscal)
+3. Verificació fiscal (bloquejant si toca àrea fiscal)
 4. Verificacions locals (verify-local.sh + verify-ci.sh)
 5. Confirmació final
 6. Merge main→master→prod + push

@@ -106,7 +106,7 @@ El script (`scripts/deploy.sh`) fa tots els passos de forma seqüencial i bloque
 1. Preflight git (branca=main, working tree net, pull ff-only)
 2. Detectar fitxers canviats (main vs master)
 3. Classificar risc (ALT/MITJÀ/BAIX) per patrons de path
-4. **Gate P0 fiscal** — si el canvi toca àrea fiscal, exigeix confirmació explícita de QA P0 (`docs/QA-P0-FISCAL.md`). Si no s'ha fet, el deploy s'atura.
+4. **Verificació fiscal** — si el canvi toca àrea fiscal, exigeix confirmació explícita de la verificació (`docs/QA-FISCAL.md`). Si no s'ha fet, el deploy s'atura.
 5. Verificacions locals (`verify-local.sh` + `verify-ci.sh`)
 6. Resum i confirmació final
 7. Merge ritual (main→master→prod + push)
@@ -117,7 +117,7 @@ El script (`scripts/deploy.sh`) fa tots els passos de forma seqüencial i bloque
 
 - **Trigger:** El CEO escriu `"Autoritzo deploy"` → Claude executa `npm run deploy`
 - El script detecta el nivell de risc automàticament
-- El script s'atura si les verificacions fallen o el gate P0 no es confirma
+- El script s'atura si les verificacions fallen o la verificació fiscal no es confirma
 
 ### Restriccions Claude Code
 
