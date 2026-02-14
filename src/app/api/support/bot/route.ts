@@ -15,37 +15,17 @@ import { requireOperationalAccess } from '@/lib/api/require-operational-access'
 import { loadGuideContent, type KBCard } from '@/lib/support/load-kb'
 import { loadKbCards } from '@/lib/support/load-kb-runtime'
 import { logBotQuestion } from '@/lib/support/bot-question-log'
+import { retrieveCard, type KbLang, type RetrievalResult } from '@/lib/support/bot-retrieval'
 
-// =============================================================================
-// DEFAULT FALLBACK (hardcoded)
-// =============================================================================
+const DEFAULT_REFORMAT_TIMEOUT_MS = 3500
+const MIN_REFORMAT_TIMEOUT_MS = 1500
+const MAX_REFORMAT_TIMEOUT_MS = 8000
 
-const DEFAULT_FALLBACK_NO_ANSWER: KBCard = {
-  id: 'fallback-no-answer',
-  type: 'fallback',
-  domain: 'general',
-  risk: 'safe',
-  guardrail: 'none',
-  answerMode: 'full',
-  title: {
-    ca: 'No he trobat informació exacta',
-    es: 'No he encontrado información exacta',
-  },
-  intents: {
-    ca: ['cap fitxa coincideix'],
-    es: ['ninguna ficha coincide'],
-  },
-  guideId: null,
-  answer: {
-    ca: "No tinc informació exacta sobre això. Consulta el Hub de Guies (icona ? a dalt a la dreta) i el Manual. Prova amb paraules clau o el text exacte de l'error.",
-    es: "No tengo información exacta sobre esto. Consulta el Hub de Guías (icono ? arriba a la derecha) y el Manual. Prueba con palabras clave o el texto exacto del error.",
-  },
-  uiPaths: ['Dashboard > ? (Hub de Guies)'],
-  needsSnapshot: false,
-  keywords: ['no trobo', 'no sé', 'ajuda', 'help'],
-  related: [],
-  error_key: null,
-  symptom: { ca: null, es: null },
+type InputLang = 'ca' | 'es' | 'fr' | 'pt'
+type ClarifyOption = {
+  index: 1 | 2
+  cardId: string
+  label: string
 }
 
 // =============================================================================
@@ -98,120 +78,6 @@ Respon de forma clara i concisa.`,
 })
 
 // =============================================================================
-// RETRIEVAL — Deterministic scoring
-// =============================================================================
-
-function normalize(text: string): string[] {
-  return text
-    .toLowerCase()
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '') // strip diacritics
-    .split(/[\s,;:.!?¿¡()\[\]{}"']+/)
-    .filter(t => t.length > 1)
-}
-
-function scoreCard(tokens: string[], card: KBCard, lang: 'ca' | 'es'): number {
-  let score = 0
-  const intents = card.intents?.[lang] ?? []
-  const title = card.title?.[lang] ?? ''
-  const keywords = card.keywords ?? []
-  const errorKey = card.error_key ?? ''
-
-  for (const token of tokens) {
-    // Intent match: substring within any intent string
-    for (const intent of intents) {
-      const normIntent = intent.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '')
-      if (normIntent.includes(token)) {
-        score += 50
-        break // one match per token per category
-      }
-    }
-
-    // Keyword match
-    for (const kw of keywords) {
-      const normKw = kw.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '')
-      if (normKw === token || token.includes(normKw) || normKw.includes(token)) {
-        score += 20
-        break
-      }
-    }
-
-    // Title match
-    const normTitle = title.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '')
-    if (normTitle.includes(token)) {
-      score += 10
-    }
-
-    // Error key match
-    if (errorKey) {
-      const normError = errorKey.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '')
-      if (normError.includes(token) || token.includes(normError)) {
-        score += 5
-      }
-    }
-  }
-
-  return score
-}
-
-function detectFallbackDomain(tokens: string[]): string {
-  const joined = tokens.join(' ')
-
-  // Fiscal
-  if (/fiscal|182|347|aeat|hisenda|hacienda|certificat|certificado|model|modelo/.test(joined)) {
-    return 'fallback-fiscal-unclear'
-  }
-  // SEPA
-  if (/sepa|pain|pain008|pain001|domiciliacio|xml|banc|banco/.test(joined)) {
-    return 'fallback-sepa-unclear'
-  }
-  // Remittances
-  if (/remesa|remesas|quotes|cuotas|dividir|processar|procesar|desfer|deshacer/.test(joined)) {
-    return 'fallback-remittances-unclear'
-  }
-  // Danger
-  if (/esborrar|borrar|eliminar|perill|peligro|irreversible|superadmin/.test(joined)) {
-    return 'fallback-danger-unclear'
-  }
-
-  return 'fallback-no-answer'
-}
-
-async function retrieveCard(message: string, lang: 'ca' | 'es', version: number): Promise<{ card: KBCard; mode: 'card' | 'fallback' }> {
-  const cards = await loadKbCards(version)
-  const tokens = normalize(message)
-
-  // Score all non-fallback cards
-  const regularCards = cards.filter(c => c.type !== 'fallback')
-  let bestCard: KBCard | null = null
-  let bestScore = 0
-
-  for (const card of regularCards) {
-    const s = scoreCard(tokens, card, lang)
-    if (s > bestScore) {
-      bestScore = s
-      bestCard = card
-    }
-  }
-
-  // Threshold: >= 30
-  if (bestCard && bestScore >= 30) {
-    return { card: bestCard, mode: 'card' }
-  }
-
-  // Fallback: detect domain
-  const fallbackId = detectFallbackDomain(tokens)
-  const fallbackCard = cards.find(c => c.id === fallbackId)
-  if (fallbackCard) {
-    return { card: fallbackCard, mode: 'fallback' }
-  }
-
-  // Last resort
-  const genericFallback = (cards.find(c => c.id === 'fallback-no-answer') as KBCard | undefined) ?? DEFAULT_FALLBACK_NO_ANSWER
-  return { card: genericFallback, mode: 'fallback' }
-}
-
-// =============================================================================
 // RESPONSE TYPES
 // =============================================================================
 
@@ -222,6 +88,7 @@ type SuccessResponse = {
   answer: string
   guideId: string | null
   uiPaths: string[]
+  clarifyOptions?: ClarifyOption[]
 }
 
 type ErrorResponse = {
@@ -232,11 +99,123 @@ type ErrorResponse = {
 
 type ApiResponse = SuccessResponse | ErrorResponse
 
+function normalizeLang(rawLang: unknown): { inputLang: InputLang; kbLang: KbLang } {
+  const allowedLangs = ['ca', 'es', 'fr', 'pt'] as const
+  const inputLang = allowedLangs.includes(rawLang as InputLang)
+    ? (rawLang as InputLang)
+    : 'ca'
+
+  // La KB actual encara està en ca/es. mapegem fr -> ca i pt -> es.
+  const kbLang: KbLang = inputLang === 'es' || inputLang === 'pt' ? 'es' : 'ca'
+  return { inputLang, kbLang }
+}
+
+function getReformatTimeoutMs(rawValue: unknown): number {
+  const parsed = Number(rawValue)
+  if (!Number.isFinite(parsed)) return DEFAULT_REFORMAT_TIMEOUT_MS
+  return Math.min(MAX_REFORMAT_TIMEOUT_MS, Math.max(MIN_REFORMAT_TIMEOUT_MS, Math.round(parsed)))
+}
+
+async function withTimeout<T>(promise: Promise<T>, timeoutMs: number): Promise<T> {
+  let timeoutId: ReturnType<typeof setTimeout> | null = null
+
+  const timeoutPromise = new Promise<T>((_, reject) => {
+    timeoutId = setTimeout(() => reject(new Error(`Timeout after ${timeoutMs}ms`)), timeoutMs)
+  })
+
+  try {
+    return await Promise.race([promise, timeoutPromise])
+  } finally {
+    if (timeoutId) clearTimeout(timeoutId)
+  }
+}
+
+function buildEmergencyFallbackResponse(lang: KbLang, cardId = 'emergency-fallback'): SuccessResponse {
+  return {
+    ok: true,
+    mode: 'fallback',
+    cardId,
+    answer: lang === 'es'
+      ? 'No he encontrado información sobre esto. Consulta el Hub de Guías (icono ? arriba a la derecha).'
+      : 'No he trobat informació sobre això. Consulta el Hub de Guies (icona ? a dalt a la dreta).',
+    guideId: null,
+    uiPaths: [],
+  }
+}
+
+function getCardLabel(card: KBCard, lang: KbLang): string {
+  return (
+    card.title?.[lang] ??
+    card.title?.ca ??
+    card.title?.es ??
+    card.id
+  )
+}
+
+function buildClarifyAnswer(lang: KbLang, options: KBCard[]): string {
+  const intro = lang === 'es'
+    ? 'No quiero darte una respuesta equivocada. ¿Cuál de estas dos situaciones se parece más a la tuya?'
+    : 'No vull donar-te una resposta equivocada. Quina d’aquestes dues situacions s’assembla més al teu cas?'
+
+  const lines = options.slice(0, 2).map((card, i) => {
+    const label = getCardLabel(card, lang)
+    const pathHint = card.uiPaths?.[0]
+    return pathHint ? `${i + 1}. ${label} (${pathHint})` : `${i + 1}. ${label}`
+  })
+
+  const outro = lang === 'es'
+    ? 'Respóndeme con "1" o "2", o pega el texto exacto del error que te sale.'
+    : 'Respon-me amb "1" o "2", o enganxa el text exacte de l’error que et surt.'
+
+  return [intro, ...lines, outro].join('\n')
+}
+
+function buildClarifyOptionsPayload(lang: KbLang, options: KBCard[]): ClarifyOption[] {
+  return options.slice(0, 2).map((card, i) => ({
+    index: (i + 1) as 1 | 2,
+    cardId: card.id,
+    label: getCardLabel(card, lang),
+  }))
+}
+
+function parseClarifyOptionIds(raw: unknown): string[] {
+  if (!Array.isArray(raw)) return []
+  return Array.from(
+    new Set(
+      raw
+        .filter(v => typeof v === 'string')
+        .map(v => v.trim())
+        .filter(Boolean)
+    )
+  ).slice(0, 2)
+}
+
+function resolveClarifyChoice(
+  message: string,
+  clarifyOptionIds: string[],
+  cards: KBCard[]
+): KBCard | null {
+  const normalized = message.trim()
+  if (normalized !== '1' && normalized !== '2') return null
+  if (clarifyOptionIds.length < 2) return null
+
+  const selectedIndex = Number(normalized) - 1
+  const selectedId = clarifyOptionIds[selectedIndex]
+  if (!selectedId) return null
+
+  const selectedCard = cards.find(c => c.id === selectedId && c.type !== 'fallback')
+  return selectedCard ?? null
+}
+
 // =============================================================================
 // ROUTE HANDLER
 // =============================================================================
 
 export async function POST(request: NextRequest): Promise<NextResponse<ApiResponse>> {
+  let kbLang: KbLang = 'ca'
+  let inputLang: InputLang = 'ca'
+  let hasOperationalAccess = false
+
   try {
     // --- Auth ---
     const authResult = await verifyIdToken(request)
@@ -245,24 +224,21 @@ export async function POST(request: NextRequest): Promise<NextResponse<ApiRespon
     }
 
     const body = await request.json()
-    const { message, lang: rawLang } = body as { message?: string; lang?: string }
+    const { message, lang: rawLang, clarifyOptionIds: rawClarifyOptionIds } = body as {
+      message?: string
+      lang?: string
+      clarifyOptionIds?: unknown
+    }
 
     if (!message || typeof message !== 'string') {
       return NextResponse.json({ ok: false, code: 'INVALID_INPUT', message: 'message obligatori' }, { status: 400 })
     }
+    const clarifyOptionIds = parseClarifyOptionIds(rawClarifyOptionIds)
 
-    // Normalització idioma: accepta ca/es/fr/pt, mapeja a ca/es (només suportats per KB)
-    const allowedLangs = ['ca', 'es', 'fr', 'pt'] as const
-    let lang: 'ca' | 'es' = 'ca'
-
-    if (allowedLangs.includes(rawLang as any)) {
-      // Mapeja fr → ca, pt → es (idiomes suportats per KB)
-      if (rawLang === 'es' || rawLang === 'pt') {
-        lang = 'es'
-      } else {
-        lang = 'ca'
-      }
-    }
+    // Normalització idioma: accepta ca/es/fr/pt, mapeja a ca/es (KB actual).
+    const normalizedLang = normalizeLang(rawLang)
+    inputLang = normalizedLang.inputLang
+    kbLang = normalizedLang.kbLang
 
     // Derive orgId from user profile (INVARIANT: never from client input)
     const db = getAdminDb()
@@ -278,17 +254,31 @@ export async function POST(request: NextRequest): Promise<NextResponse<ApiRespon
     if (accessDenied) {
       return NextResponse.json({ ok: false, code: 'FORBIDDEN' as const, message: 'Accés denegat' }, { status: 403 })
     }
+    hasOperationalAccess = true
 
     // --- Load KB version + cards ---
     const snap = await db.doc('system/supportKb').get()
     const version = snap.exists ? (snap.data()?.version ?? 0) : 0
-    const cards = await loadKbCards(version)
+    const aiReformatEnabled = snap.exists ? (snap.data()?.aiReformatEnabled !== false) : true
+    const reformatTimeoutMs = getReformatTimeoutMs(snap.data()?.reformatTimeoutMs)
+
+    let cards: KBCard[] = []
+    try {
+      cards = await loadKbCards(version)
+    } catch (cardsError) {
+      console.error('[bot] loadKbCards error:', cardsError)
+    }
 
     // --- Retrieval with hard fallback ---
-    let result: { card: KBCard; mode: 'card' | 'fallback' } | null = null
+    let result: RetrievalResult | null = null
 
     try {
-      result = await retrieveCard(message, lang, version)
+      const selectedByClarify = resolveClarifyChoice(message, clarifyOptionIds, cards)
+      if (selectedByClarify) {
+        result = { card: selectedByClarify, mode: 'card' }
+      } else {
+        result = retrieveCard(message, kbLang, cards)
+      }
     } catch (err) {
       console.error('[bot] retrieveCard error:', err)
       result = null
@@ -302,17 +292,7 @@ export async function POST(request: NextRequest): Promise<NextResponse<ApiRespon
       const fallback = cards.find(c => c.id === 'fallback-no-answer')
 
       if (!fallback) {
-        // Última línia de defensa: si ni tan sols tenim fallback-no-answer
-        return NextResponse.json({
-          ok: true,
-          mode: 'fallback',
-          cardId: 'emergency-fallback',
-          answer: lang === 'es'
-            ? 'No he encontrado información sobre esto. Consulta el Hub de Guías (icono ? arriba a la derecha).'
-            : 'No he trobat informació sobre això. Consulta el Hub de Guies (icona ? a dalt a la dreta).',
-          guideId: null,
-          uiPaths: [],
-        })
+        return NextResponse.json(buildEmergencyFallbackResponse(kbLang))
       }
 
       card = fallback
@@ -322,17 +302,43 @@ export async function POST(request: NextRequest): Promise<NextResponse<ApiRespon
       mode = result.mode
     }
 
+    if (result?.clarifyOptions?.length) {
+      const clarifyCardId = 'clarify-disambiguation'
+      const clarifyUiPaths = Array.from(new Set(result.clarifyOptions.flatMap(c => c.uiPaths ?? []))).slice(0, 4)
+      const clarifyAnswer = buildClarifyAnswer(kbLang, result.clarifyOptions)
+      const clarifyOptionsPayload = buildClarifyOptionsPayload(kbLang, result.clarifyOptions)
+
+      void logBotQuestion(db, orgId, message, inputLang, 'fallback', clarifyCardId).catch(e =>
+        console.error('[bot] log error:', e)
+      )
+
+      return NextResponse.json({
+        ok: true,
+        mode: 'fallback',
+        cardId: clarifyCardId,
+        answer: clarifyAnswer,
+        guideId: null,
+        uiPaths: clarifyUiPaths,
+        clarifyOptions: clarifyOptionsPayload,
+      })
+    }
+
     // --- Log question (fire-and-forget) ---
-    void logBotQuestion(db, orgId, message, lang, mode, card.id).catch(e =>
+    void logBotQuestion(db, orgId, message, inputLang, mode, card.id).catch(e =>
       console.error('[bot] log error:', e)
     )
 
     // --- Build raw answer ---
     let rawAnswer: string
     if (card.guideId) {
-      rawAnswer = loadGuideContent(card.guideId, lang)
-    } else if (card.answer?.[lang]) {
-      rawAnswer = card.answer[lang] ?? ''
+      rawAnswer = loadGuideContent(card.guideId, kbLang)
+    } else if (card.id.startsWith('guide-')) {
+      console.error('[bot] invalid guide card without guideId:', card.id)
+      rawAnswer = kbLang === 'es'
+        ? 'No he encontrado una guía válida para esta consulta. Consulta el Hub de Guías (icono ? arriba a la derecha).'
+        : 'No he trobat una guia vàlida per a aquesta consulta. Consulta el Hub de Guies (icona ? a dalt a la dreta).'
+    } else if (card.answer?.[kbLang]) {
+      rawAnswer = card.answer[kbLang] ?? ''
     } else {
       rawAnswer = card.answer?.ca ?? card.answer?.es ?? ''
     }
@@ -342,19 +348,22 @@ export async function POST(request: NextRequest): Promise<NextResponse<ApiRespon
 
     let finalAnswer = rawAnswer
 
-    if (apiKey) {
+    if (apiKey && aiReformatEnabled) {
       // Precompute boolean flags to avoid Handlebars helper issues
       const isGuarded = card.risk === 'guarded'
       const isLimited = card.answerMode === 'limited'
 
       try {
-        const { output } = await reformatPrompt({
-          userQuestion: message,
-          rawAnswer,
-          isGuarded,
-          isLimited,
-          lang,
-        })
+        const { output } = await withTimeout(
+          reformatPrompt({
+            userQuestion: message,
+            rawAnswer,
+            isGuarded,
+            isLimited,
+            lang: kbLang,
+          }),
+          reformatTimeoutMs
+        )
 
         finalAnswer = output?.answer ?? rawAnswer
       } catch (reformatError) {
@@ -373,22 +382,12 @@ export async function POST(request: NextRequest): Promise<NextResponse<ApiRespon
     })
   } catch (error: unknown) {
     console.error('[API] support/bot error:', error)
-
-    const errorMsg = (error as Error)?.message || String(error)
-    const errorMsgLower = errorMsg.toLowerCase()
-
-    if (errorMsg.includes('429') || errorMsgLower.includes('quota') || errorMsgLower.includes('resource_exhausted') || errorMsgLower.includes('exceeded')) {
-      return NextResponse.json({ ok: false, code: 'QUOTA_EXCEEDED', message: "Quota d'IA esgotada. Torna-ho a provar més tard." })
+    if (!hasOperationalAccess) {
+      return NextResponse.json(
+        { ok: false, code: 'AI_ERROR', message: 'Error intern abans de validar accés' },
+        { status: 500 }
+      )
     }
-
-    if (errorMsgLower.includes('rate limit') || errorMsgLower.includes('rate_limit')) {
-      return NextResponse.json({ ok: false, code: 'RATE_LIMITED', message: 'Massa peticions. Espera uns segons.' })
-    }
-
-    if (errorMsg.includes('503') || errorMsg.includes('504') || errorMsgLower.includes('timeout') || errorMsgLower.includes('unavailable')) {
-      return NextResponse.json({ ok: false, code: 'TRANSIENT', message: 'Error temporal. Torna-ho a provar.' })
-    }
-
-    return NextResponse.json({ ok: false, code: 'AI_ERROR', message: errorMsg.substring(0, 200) })
+    return NextResponse.json(buildEmergencyFallbackResponse(kbLang, 'runtime-fallback'))
   }
 }

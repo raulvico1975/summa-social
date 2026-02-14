@@ -26,6 +26,11 @@ interface BotMessage {
   uiPaths?: string[];
   cardId?: string;
   mode?: 'card' | 'fallback';
+  clarifyOptions?: Array<{
+    index: 1 | 2;
+    cardId: string;
+    label: string;
+  }>;
 }
 
 interface BotSheetProps {
@@ -44,6 +49,7 @@ export function BotSheet({ open, onOpenChange }: BotSheetProps) {
   const [messages, setMessages] = React.useState<BotMessage[]>([]);
   const [input, setInput] = React.useState('');
   const [loading, setLoading] = React.useState(false);
+  const [pendingClarifyOptionIds, setPendingClarifyOptionIds] = React.useState<string[]>([]);
 
   const scrollRef = React.useRef<HTMLDivElement>(null);
   const inputRef = React.useRef<HTMLInputElement>(null);
@@ -68,15 +74,15 @@ export function BotSheet({ open, onOpenChange }: BotSheetProps) {
     }
   }, [open]);
 
-  const handleSend = React.useCallback(async () => {
-    const text = input.trim();
+  const sendMessage = React.useCallback(async (rawText: string) => {
+    const text = rawText.trim();
     if (!text || loading || !user) return;
 
     setInput('');
     setMessages(prev => [...prev, { role: 'user', text }]);
     setLoading(true);
 
-    const lang = language === 'es' ? 'es' : 'ca';
+    const lang = language;
 
     trackUX('bot.send', { lang });
 
@@ -88,32 +94,61 @@ export function BotSheet({ open, onOpenChange }: BotSheetProps) {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${idToken}`,
         },
-        body: JSON.stringify({ message: text, lang }),
+        body: JSON.stringify({
+          message: text,
+          lang,
+          clarifyOptionIds: pendingClarifyOptionIds.length ? pendingClarifyOptionIds : undefined,
+        }),
       });
 
       const data = await res.json();
 
       if (data.ok) {
+        const clarifyOptions = Array.isArray(data.clarifyOptions) ? data.clarifyOptions : undefined;
+
         setMessages(prev => [...prev, {
           role: 'bot',
           text: data.answer,
           uiPaths: data.uiPaths,
           cardId: data.cardId,
           mode: data.mode,
+          clarifyOptions,
         }]);
+
+        if (data.cardId === 'clarify-disambiguation' && clarifyOptions?.length) {
+          setPendingClarifyOptionIds(
+            clarifyOptions
+              .map((option: { cardId?: string }) => option.cardId)
+              .filter((id: unknown): id is string => typeof id === 'string')
+              .slice(0, 2)
+          );
+        } else {
+          setPendingClarifyOptionIds([]);
+        }
 
         if (data.mode === 'fallback') {
           trackUX('bot.fallback', { cardId: data.cardId, lang });
         }
       } else {
+        setPendingClarifyOptionIds([]);
         setMessages(prev => [...prev, { role: 'bot', text: errorGeneric }]);
       }
     } catch {
+      setPendingClarifyOptionIds([]);
       setMessages(prev => [...prev, { role: 'bot', text: errorGeneric }]);
     } finally {
       setLoading(false);
     }
-  }, [input, loading, user, language, errorGeneric]);
+  }, [loading, user, language, errorGeneric, pendingClarifyOptionIds]);
+
+  const handleSend = React.useCallback(() => {
+    void sendMessage(input);
+  }, [input, sendMessage]);
+
+  const handleClarifyClick = React.useCallback((index: 1 | 2) => {
+    trackUX('bot.clarify.select', { option: index, lang: language });
+    void sendMessage(String(index));
+  }, [sendMessage, language]);
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && !e.shiftKey) {
@@ -162,6 +197,22 @@ export function BotSheet({ open, onOpenChange }: BotSheetProps) {
                       ))}
                     </div>
                   )}
+                  {msg.role === 'bot' && msg.cardId === 'clarify-disambiguation' && msg.clarifyOptions?.length ? (
+                    <div className="mt-2 flex flex-col gap-1.5">
+                      {msg.clarifyOptions.map((option) => (
+                        <Button
+                          key={`${option.cardId}-${option.index}`}
+                          variant="outline"
+                          size="sm"
+                          className="justify-start h-auto py-1.5 px-2 text-left whitespace-normal"
+                          onClick={() => handleClarifyClick(option.index)}
+                          disabled={loading}
+                        >
+                          {option.index}. {option.label}
+                        </Button>
+                      ))}
+                    </div>
+                  ) : null}
                 </div>
                 {msg.role === 'user' && (
                   <div className="h-7 w-7 rounded-full bg-primary/10 flex items-center justify-center shrink-0 mt-1">

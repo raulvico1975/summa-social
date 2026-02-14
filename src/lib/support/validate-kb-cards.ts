@@ -125,6 +125,16 @@ export function validateKbCards(cards: KBCard[]): ValidationResult {
       }
     }
 
+    // Reliability rule: guide cards must stay linked to real guides.
+    if (card.id.startsWith('guide-')) {
+      if (!hasGuide) {
+        errors.push(`${cardLabel}: guide-* cards must define guideId`)
+      }
+      if (hasAnswer) {
+        errors.push(`${cardLabel}: guide-* cards must not define answer text (use guideId content)`)
+      }
+    }
+
     // --- uiPaths ---
 
     if (!Array.isArray(card.uiPaths)) {

@@ -12,7 +12,13 @@ import { getStorage } from 'firebase-admin/storage'
 import { verifyIdToken, getAdminDb } from '@/lib/api/admin-sdk'
 
 type ApiResponse =
-  | { ok: true; storageExists: boolean; version: number }
+  | {
+      ok: true
+      storageExists: boolean
+      version: number
+      aiReformatEnabled: boolean
+      reformatTimeoutMs: number | null
+    }
   | { ok: false; error: string }
 
 export async function GET(request: NextRequest): Promise<NextResponse<ApiResponse>> {
@@ -55,11 +61,16 @@ export async function GET(request: NextRequest): Promise<NextResponse<ApiRespons
     // --- Get version ---
     const snap = await db.doc('system/supportKb').get()
     const version = snap.exists ? (snap.data()?.version ?? 0) : 0
+    const aiReformatEnabled = snap.exists ? (snap.data()?.aiReformatEnabled !== false) : true
+    const rawTimeout = snap.data()?.reformatTimeoutMs
+    const reformatTimeoutMs = Number.isFinite(Number(rawTimeout)) ? Number(rawTimeout) : null
 
     return NextResponse.json({
       ok: true,
       storageExists,
       version,
+      aiReformatEnabled,
+      reformatTimeoutMs,
     })
   } catch (error: unknown) {
     console.error('[diagnostics] Unhandled error:', error)

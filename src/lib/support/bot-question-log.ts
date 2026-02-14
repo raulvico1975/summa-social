@@ -80,7 +80,7 @@ export function maskPII(text: string): string {
  * @param db - Firestore Admin SDK instance
  * @param orgId - Organization ID
  * @param message - Raw user message
- * @param lang - Language code ('ca' | 'es')
+ * @param lang - Language code ('ca' | 'es' | 'fr' | 'pt')
  * @param resultMode - 'card' | 'fallback'
  * @param cardIdOrFallbackId - Matched card ID or fallback ID
  */
