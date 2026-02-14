@@ -22,6 +22,7 @@ const MIN_REFORMAT_TIMEOUT_MS = 1500
 const MAX_REFORMAT_TIMEOUT_MS = 8000
 
 type InputLang = 'ca' | 'es' | 'fr' | 'pt'
+type AssistantTone = 'neutral' | 'warm'
 type ClarifyOption = {
   index: 1 | 2
   cardId: string
@@ -37,6 +38,7 @@ const BotInputSchema = z.object({
   rawAnswer: z.string().describe('The raw KB answer content to reformulate.'),
   isGuarded: z.boolean().describe('True if the question is about a sensitive topic (risk=guarded).'),
   isLimited: z.boolean().describe('True if only general guidance should be given (answerMode=limited).'),
+  isWarm: z.boolean().describe('True to use a warmer, more human tone.'),
   lang: z.string().describe('Response language: ca or es.'),
   uiPathHint: z.string().describe('Best UI location hint in Summa for this answer.'),
 })
@@ -63,6 +65,10 @@ REGLES ESTRICTES:
 - Pots reordenar, simplificar i fer més llegible el text original.
 - Respon sempre en l'idioma indicat ({{lang}}).
 - Prioritza la utilitat pràctica: primer què ha de fer ara mateix l'usuari.
+{{#if isWarm}}
+- Usa un to proper i empàtic, sense ser informal en excés.
+- Pots començar amb una frase curta que faci sentir acompanyada la persona usuària.
+{{/if}}
 {{#if isGuarded}}
 - IMPORTANT: Aquesta és una consulta sobre un tema sensible.
 {{#if isLimited}}
@@ -126,6 +132,10 @@ function getReformatTimeoutMs(rawValue: unknown): number {
   return Math.min(MAX_REFORMAT_TIMEOUT_MS, Math.max(MIN_REFORMAT_TIMEOUT_MS, Math.round(parsed)))
 }
 
+function normalizeAssistantTone(rawTone: unknown): AssistantTone {
+  return rawTone === 'neutral' ? 'neutral' : 'warm'
+}
+
 async function withTimeout<T>(promise: Promise<T>, timeoutMs: number): Promise<T> {
   let timeoutId: ReturnType<typeof setTimeout> | null = null
 
@@ -146,8 +156,8 @@ function buildEmergencyFallbackResponse(lang: KbLang, cardId = 'emergency-fallba
     mode: 'fallback',
     cardId,
     answer: lang === 'es'
-      ? 'No he encontrado información sobre esto. Consulta el Hub de Guías (icono ? arriba a la derecha).'
-      : 'No he trobat informació sobre això. Consulta el Hub de Guies (icona ? a dalt a la dreta).',
+      ? 'Entiendo tu duda. Ahora mismo no he encontrado información exacta sobre esto. Consulta el Hub de Guías (icono ? arriba a la derecha).'
+      : 'Entenc el teu dubte. Ara mateix no he trobat informació exacta sobre això. Consulta el Hub de Guies (icona ? a dalt a la dreta).',
     guideId: null,
     uiPaths: [],
   }
@@ -183,10 +193,30 @@ function withUiPathFooter(answer: string, card: KBCard, lang: KbLang): string {
   return `${trimmed}\n\n${footerLabel} ${uiPathHint}`
 }
 
+function withWarmOpening(answer: string, lang: KbLang): string {
+  const trimmed = (answer ?? '').trim()
+  if (!trimmed) return trimmed
+
+  const lower = trimmed.toLowerCase()
+  if (
+    lower.startsWith('perfecte') ||
+    lower.startsWith('entenc') ||
+    lower.startsWith('cap problema') ||
+    lower.startsWith('perfecto') ||
+    lower.startsWith('entiendo') ||
+    lower.startsWith('sin problema')
+  ) {
+    return trimmed
+  }
+
+  const opening = lang === 'es' ? 'Perfecto, vamos paso a paso.' : 'Perfecte, anem pas a pas.'
+  return `${opening}\n\n${trimmed}`
+}
+
 function buildClarifyAnswer(lang: KbLang, options: KBCard[]): string {
   const intro = lang === 'es'
-    ? 'No quiero darte una respuesta equivocada. ¿Cuál de estas dos situaciones se parece más a la tuya?'
-    : 'No vull donar-te una resposta equivocada. Quina d’aquestes dues situacions s’assembla més al teu cas?'
+    ? 'Quiero ayudarte bien sin confundirte. ¿Cuál de estas dos situaciones se parece más a la tuya?'
+    : 'Vull ajudar-te bé sense confondre’t. Quina d’aquestes dues situacions s’assembla més al teu cas?'
 
   const lines = options.slice(0, 2).map((card, i) => {
     const label = getCardLabel(card, lang)
@@ -245,6 +275,7 @@ function resolveClarifyChoice(
 export async function POST(request: NextRequest): Promise<NextResponse<ApiResponse>> {
   let kbLang: KbLang = 'ca'
   let inputLang: InputLang = 'ca'
+  let assistantTone: AssistantTone = 'warm'
   let hasOperationalAccess = false
 
   try {
@@ -293,6 +324,7 @@ export async function POST(request: NextRequest): Promise<NextResponse<ApiRespon
     const storageVersion = snap.exists ? (snap.data()?.storageVersion ?? null) : null
     const aiReformatEnabled = snap.exists ? (snap.data()?.aiReformatEnabled !== false) : true
     const reformatTimeoutMs = getReformatTimeoutMs(snap.data()?.reformatTimeoutMs)
+    assistantTone = normalizeAssistantTone(snap.data()?.assistantTone)
 
     let cards: KBCard[] = []
     try {
@@ -397,6 +429,7 @@ export async function POST(request: NextRequest): Promise<NextResponse<ApiRespon
       // Precompute boolean flags to avoid Handlebars helper issues
       const isGuarded = card.risk === 'guarded'
       const isLimited = card.answerMode === 'limited'
+      const isWarm = assistantTone === 'warm'
 
       try {
         const { output } = await withTimeout(
@@ -405,6 +438,7 @@ export async function POST(request: NextRequest): Promise<NextResponse<ApiRespon
             rawAnswer,
             isGuarded,
             isLimited,
+            isWarm,
             lang: kbLang,
             uiPathHint,
           }),
@@ -418,6 +452,9 @@ export async function POST(request: NextRequest): Promise<NextResponse<ApiRespon
       }
     }
 
+    if (assistantTone === 'warm') {
+      finalAnswer = withWarmOpening(finalAnswer, kbLang)
+    }
     finalAnswer = withUiPathFooter(finalAnswer, card, kbLang)
 
     return NextResponse.json({
