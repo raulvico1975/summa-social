@@ -15,7 +15,7 @@ import { requireOperationalAccess } from '@/lib/api/require-operational-access'
 import { loadGuideContent, type KBCard } from '@/lib/support/load-kb'
 import { loadKbCards } from '@/lib/support/load-kb-runtime'
 import { logBotQuestion } from '@/lib/support/bot-question-log'
-import { detectSmallTalkResponse, retrieveCard, type KbLang, type RetrievalResult } from '@/lib/support/bot-retrieval'
+import { detectSmallTalkResponse, inferQuestionDomain, retrieveCard, suggestKeywordsFromMessage, type KbLang, type RetrievalResult } from '@/lib/support/bot-retrieval'
 
 const DEFAULT_REFORMAT_TIMEOUT_MS = 3500
 const MIN_REFORMAT_TIMEOUT_MS = 1500
@@ -86,10 +86,10 @@ Ubicació útil dins Summa (si aplica):
 {{{uiPathHint}}}
 
 FORMAT:
-1) Una frase inicial breu i clara.
-2) Passos accionables numerats (màxim 5), només si existeixen al contingut.
-3) Frase final curta de verificació.
-4) Si hi ha ubicació, acaba amb: "On anar a Summa: <ubicació>".
+1) Secció "Què passa" (o "Qué pasa" en castellà): 1 frase curta.
+2) Secció "Què fer ara" (o "Qué hacer ahora"): passos accionables numerats (màxim 5), només si existeixen al contingut.
+3) Secció "Com comprovar-ho" (o "Cómo comprobarlo"): una comprovació curta.
+4) Si hi ha ubicació, acaba amb: "On anar a Summa: <ubicació>" (o "Dónde ir en Summa: <ubicación>").
 `,
 })
 
@@ -234,6 +234,74 @@ function withWarmOpening(answer: string, lang: KbLang): string {
 
   const opening = lang === 'es' ? 'Perfecto, vamos paso a paso.' : 'Perfecte, anem pas a pas.'
   return `${opening}\n\n${trimmed}`
+}
+
+function buildFallbackSuggestions(message: string, lang: KbLang): string[] {
+  const domain = inferQuestionDomain(message)
+  if (domain === 'remittances') {
+    return lang === 'es'
+      ? [
+          'cómo dividir una remesa paso a paso',
+          'la remesa no cuadra con el banco',
+          'cómo deshacer la última remesa',
+        ]
+      : [
+          'com dividir una remesa pas a pas',
+          'la remesa no quadra amb el banc',
+          'com desfer l’última remesa',
+        ]
+  }
+  if (domain === 'fiscal') {
+    return lang === 'es'
+      ? [
+          'cómo enviar certificado de donación',
+          'modelo 182: qué revisar antes de exportar',
+          'diferencia entre donación y devolución fiscal',
+        ]
+      : [
+          'com enviar certificat de donació',
+          'model 182: què revisar abans d’exportar',
+          'diferència entre donació i devolució fiscal',
+        ]
+  }
+  if (domain === 'sepa') {
+    return lang === 'es'
+      ? [
+          'cómo generar remesa SEPA',
+          'error al generar pain008',
+          'cómo validar IBAN antes de la remesa',
+        ]
+      : [
+          'com generar remesa SEPA',
+          'error en generar pain008',
+          'com validar IBAN abans de la remesa',
+        ]
+  }
+
+  const keywords = suggestKeywordsFromMessage(message, 3)
+  if (keywords.length >= 2) {
+    return lang === 'es'
+      ? [`${keywords.join(' ')} en summa social`, `paso a paso ${keywords[0]}`, `error ${keywords[0]} ${keywords[1]}`]
+      : [`${keywords.join(' ')} a summa social`, `pas a pas ${keywords[0]}`, `error ${keywords[0]} ${keywords[1]}`]
+  }
+
+  return lang === 'es'
+    ? ['cómo hacerlo paso a paso', 'dónde está esta opción en Summa', 'qué revisar si no cuadra']
+    : ['com fer-ho pas a pas', 'on és aquesta opció a Summa', 'què revisar si no quadra']
+}
+
+function withGuidedFallback(answer: string, message: string, lang: KbLang): string {
+  const base = (answer ?? '').trim()
+  const suggestions = buildFallbackSuggestions(message, lang)
+  const suggestionTitle = lang === 'es'
+    ? 'Si quieres, prueba una de estas preguntas:'
+    : 'Si vols, prova una d’aquestes preguntes:'
+  const copyError = lang === 'es'
+    ? 'Si te sale un error, copia el texto exacto y te guío mejor.'
+    : 'Si et surt un error, copia el text exacte i et guio millor.'
+
+  const lines = suggestions.slice(0, 3).map((s, i) => `${i + 1}. ${s}`)
+  return [base, suggestionTitle, ...lines, copyError].filter(Boolean).join('\n')
 }
 
 function buildClarifyAnswer(lang: KbLang, options: KBCard[]): string {
@@ -479,13 +547,17 @@ export async function POST(request: NextRequest): Promise<NextResponse<ApiRespon
       rawAnswer = card.answer?.ca ?? card.answer?.es ?? ''
     }
 
+    if (mode === 'fallback' && card.id.startsWith('fallback-')) {
+      rawAnswer = withGuidedFallback(rawAnswer, message, kbLang)
+    }
+
     // --- LLM Reformat with hard fallback ---
     const apiKey = process.env.GOOGLE_API_KEY || process.env.GOOGLE_GENAI_API_KEY
 
     let finalAnswer = rawAnswer
     const uiPathHint = buildUiPathHint(card)
 
-    if (apiKey && aiReformatEnabled) {
+    if (apiKey && aiReformatEnabled && mode === 'card') {
       // Precompute boolean flags to avoid Handlebars helper issues
       const isGuarded = card.risk === 'guarded'
       const isLimited = card.answerMode === 'limited'
