@@ -13,6 +13,7 @@ import { z } from 'genkit'
 import { verifyIdToken, getAdminDb, validateUserMembership } from '@/lib/api/admin-sdk'
 import { requireOperationalAccess } from '@/lib/api/require-operational-access'
 import { loadAllCards, loadGuideContent, type KBCard } from '@/lib/support/load-kb'
+import { logBotQuestion } from '@/lib/support/bot-question-log'
 
 // =============================================================================
 // SCHEMAS
@@ -229,6 +230,11 @@ export async function POST(request: NextRequest): Promise<NextResponse<ApiRespon
 
     // --- Retrieval ---
     const { card, mode } = retrieveCard(message, lang)
+
+    // --- Log question (fire-and-forget) ---
+    void logBotQuestion(db, orgId, message, lang, mode, card.id).catch(e =>
+      console.error('[bot] log error:', e)
+    )
 
     // --- Build raw answer ---
     let rawAnswer: string

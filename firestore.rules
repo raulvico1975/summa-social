@@ -593,6 +593,19 @@ service cloud.firestore {
       match /processLocks/{lockId} {
         allow read, create, update, delete: if isSuperAdmin() || (isMemberOf(orgId) && getMemberRole(orgId) in ['admin', 'user']);
       }
+
+      // ─────────────────────────────────────────────────────────────────────
+      // SUPPORT BOT QUESTIONS (learning system)
+      // Path: /organizations/{orgId}/supportBotQuestions/{questionId}
+      // INVARIANT: escriptura NOMÉS via Admin SDK (API routes), mai client-side
+      // ─────────────────────────────────────────────────────────────────────
+
+      match /supportBotQuestions/{questionId} {
+        allow read: if isSuperAdmin() ||
+                     (isMemberOf(orgId) &&
+                      getMemberRole(orgId) in ['admin', 'user']);
+        allow write: if false;
+      }
     }
   }
 }
