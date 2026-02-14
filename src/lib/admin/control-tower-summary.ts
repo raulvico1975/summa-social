@@ -121,9 +121,10 @@ function toIsoOrNull(value: unknown): string | null {
   }
 
   if (typeof value === 'object' && value !== null && 'toDate' in value) {
-    const maybeToDate = (value as { toDate?: () => Date }).toDate
-    if (typeof maybeToDate === 'function') {
-      const d = maybeToDate()
+    const maybeTimestamp = value as { toDate?: () => Date }
+    if (typeof maybeTimestamp.toDate === 'function') {
+      // Important: call as method to preserve `this` on Firestore Timestamp.
+      const d = maybeTimestamp.toDate()
       return isFiniteDate(d) ? d.toISOString() : null
     }
   }

@@ -159,17 +159,22 @@ Això executa `scripts/deploy.sh`, un script que fa tot el ritual de deploy de f
 1. Comprova que estàs a `main` i que no hi ha canvis pendents
 2. Actualitza totes les branques (`main`, `master`, `prod`)
 3. Mostra els fitxers canviats i el nivell de risc
-4. Si el canvi toca àrea fiscal → et demana si has fet la verificació fiscal
+4. Analitza impacte fiscal/econòmic del canvi
 5. Executa verificacions (i18n, typecheck, tests, build)
-6. Demana confirmació final
-7. Fa els merges i push (main→master→prod)
-8. Demana confirmació de post-deploy (SHA servit + smoke test)
-9. Registra el deploy a `docs/DEPLOY-LOG.md`
+6. Si el risc és BAIX/MITJÀ: continua automàticament
+7. Si el risc és ALT residual: pot demanar **decisió de negoci** (mai tècnica)
+8. Fa els merges i push (main→master→prod)
+9. Fa post-check automàtic (SHA remot + smoke opcional per URL)
+10. Registra el deploy a `docs/DEPLOY-LOG.md` (inclou decisió humana si n'hi ha)
 
 **Si falla:**
 - Conflicte de merge → el script aborta i torna a `main`. Resol el conflicte manualment.
 - Verificació falla → corregeix els errors i torna a executar `npm run deploy`.
-- Verificació fiscal → completa `docs/QA-FISCAL.md` i torna a executar.
+- Si no es pot expressar impacte en llenguatge de negoci → bloqueja `BLOCKED_SAFE`.
+
+**Important (preguntes humanes):**
+- MAI preguntes tècniques (comandes, flags, branques, merge, logs).
+- Sempre en format impacte d'entitat: què pot veure malament i quina decisió de negoci cal prendre.
 
 ---
 

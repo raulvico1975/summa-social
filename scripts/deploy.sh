@@ -21,6 +21,9 @@ MAIN_SHA=""
 MASTER_SHA=""
 PROD_SHA=""
 DEPLOY_RESULT="OK"
+HUMAN_QUESTION_REASON=""
+BUSINESS_IMPACT=""
+DECISION_TAKEN="NONE"
 
 # Patrons area fiscal (gate bloquejant)
 FISCAL_PATTERNS=(
@@ -233,6 +236,147 @@ FISCAL_IMPACT_TYPE=""
 FISCAL_AFFECTS_MONEY=""
 FISCAL_RECOMMENDATION=""
 FISCAL_KEY_DETAILS=""
+FISCAL_HAS_CALC=false
+FISCAL_HAS_AMOUNT=false
+FISCAL_HAS_WRITE=false
+FISCAL_HAS_FIELD=false
+FISCAL_HAS_PERM=false
+FISCAL_HAS_SEPA=false
+FISCAL_UNCLASSIFIABLE=false
+
+contains_technical_terms() {
+  local text_lower
+  text_lower=$(printf '%s' "$1" | tr '[:upper:]' '[:lower:]')
+  local banned=(
+    "git"
+    "merge"
+    "flag"
+    "--no-verify"
+    "branca"
+    "branch"
+    "commit"
+    "push"
+    "sha"
+    "log tecnic"
+  )
+  local term
+  for term in "${banned[@]}"; do
+    if printf '%s' "$text_lower" | grep -q -- "$term"; then
+      return 0
+    fi
+  done
+  return 1
+}
+
+derive_business_impact_message() {
+  if [ "$FISCAL_HAS_CALC" = true ] || [ "$FISCAL_HAS_AMOUNT" = true ]; then
+    printf '%s' "podria alterar imports de donacions o devolucions, i l'entitat podria veure totals incorrectes en certificats o informes fiscals."
+    return
+  fi
+  if [ "$FISCAL_HAS_SEPA" = true ]; then
+    printf '%s' "podria afectar el processament de remeses, i l'entitat podria veure cobraments o assignacions que no toquen."
+    return
+  fi
+  if [ "$FISCAL_HAS_WRITE" = true ] || [ "$FISCAL_HAS_FIELD" = true ]; then
+    printf '%s' "podria desalinear dades econòmiques sensibles, i l'entitat podria veure informació inconsistent en moviments o fitxes."
+    return
+  fi
+  if [ "$FISCAL_HAS_PERM" = true ]; then
+    printf '%s' "podria canviar qui veu o edita informació sensible, i l'entitat podria tenir accessos no esperats."
+    return
+  fi
+  if echo "$CHANGED_FILES" | grep -q "firestore.rules\|storage.rules"; then
+    printf '%s' "podria afectar l'accés a dades sensibles, i l'entitat podria veure restriccions incorrectes o exposició de dades."
+    return
+  fi
+  if echo "$CHANGED_FILES" | grep -q "project-module\|fx\|exchange\|budget"; then
+    printf '%s' "podria afectar càlculs econòmics de projectes, i l'entitat podria veure imports o desviacions incorrectes."
+    return
+  fi
+  printf '%s' ""
+}
+
+assess_residual_alt_risk() {
+  if [ "$RISK_LEVEL" != "ALT" ]; then
+    return 1
+  fi
+  if [ "$FISCAL_RECOMMENDATION" = "red" ] || [ "$FISCAL_UNCLASSIFIABLE" = true ]; then
+    return 0
+  fi
+  if echo "$CHANGED_FILES" | grep -q "firestore.rules\|storage.rules\|project-module\|fx\|exchange\|budget"; then
+    return 0
+  fi
+  return 1
+}
+
+handle_business_decision_for_residual_risk() {
+  if ! assess_residual_alt_risk; then
+    return 0
+  fi
+
+  HUMAN_QUESTION_REASON="Risc ALT residual després de verificacions automàtiques."
+  BUSINESS_IMPACT=$(derive_business_impact_message)
+
+  if [ -z "$BUSINESS_IMPACT" ]; then
+    DECISION_TAKEN="AUTO_BLOCKED_NO_BUSINESS_MESSAGE"
+    DEPLOY_RESULT="BLOCKED_SAFE"
+    echo "ERROR: No es pot formular impacte de negoci clar. Deploy bloquejat per seguretat (BLOCKED_SAFE)."
+    append_deploy_log
+    exit 1
+  fi
+
+  local line1
+  local line2
+  local line3
+  local line4
+  line1="Hem detectat un canvi que podria afectar dades sensibles o fiscals."
+  line2="Impacte possible: $BUSINESS_IMPACT"
+  line3="Opcio A (recomanada): no publicar encara i validar amb un cas real."
+  line4="Opcio B: publicar igual assumint un risc temporal visible per l'entitat."
+
+  local full_question
+  full_question="$line1 $line2 $line3 $line4"
+  if contains_technical_terms "$full_question"; then
+    DECISION_TAKEN="AUTO_BLOCKED_TECHNICAL_QUESTION"
+    DEPLOY_RESULT="BLOCKED_SAFE"
+    echo "ERROR: La pregunta inclou termes tècnics. Deploy bloquejat per seguretat (BLOCKED_SAFE)."
+    append_deploy_log
+    exit 1
+  fi
+
+  echo "[6b/9] Decisio de negoci requerida (nomes risc ALT residual)..."
+  echo ""
+  echo "  $line1"
+  echo "  $line2"
+  echo "  Si falla, l'entitat podria veure dades econòmiques o fiscals incorrectes."
+  echo "  $line3"
+  echo "  $line4"
+  echo ""
+  read -r -p "  Quina opcio prefereixes? (A/B): " business_answer
+
+  case "$business_answer" in
+    B|b)
+      DECISION_TAKEN="B_DEPLOY_WITH_VISIBLE_RISK"
+      ;;
+    A|a|"")
+      DECISION_TAKEN="A_BLOCK_UNTIL_REAL_CASE"
+      DEPLOY_RESULT="BLOCKED_SAFE"
+      echo ""
+      echo "  Deploy bloquejat segons decisio de negoci (BLOCKED_SAFE)."
+      append_deploy_log
+      exit 1
+      ;;
+    *)
+      DECISION_TAKEN="A_BLOCK_INVALID_INPUT"
+      DEPLOY_RESULT="BLOCKED_SAFE"
+      echo ""
+      echo "  Opcio no valida. Per seguretat, deploy bloquejat (BLOCKED_SAFE)."
+      append_deploy_log
+      exit 1
+      ;;
+  esac
+  echo ""
+}
 
 classify_fiscal_impact() {
   local has_calc=false has_amount=false has_write=false
@@ -284,6 +428,14 @@ classify_fiscal_impact() {
   done <<< "$FISCAL_TRIGGER_FILES"
 
   # Tipus d'impacte
+  FISCAL_HAS_CALC=$has_calc
+  FISCAL_HAS_AMOUNT=$has_amount
+  FISCAL_HAS_WRITE=$has_write
+  FISCAL_HAS_FIELD=$has_field
+  FISCAL_HAS_PERM=$has_perm
+  FISCAL_HAS_SEPA=$has_sepa
+  FISCAL_UNCLASSIFIABLE=$unclassifiable
+
   if [ "$FISCAL_IS_UI_ONLY" = true ]; then
     FISCAL_IMPACT_TYPE="UI"
   else
@@ -370,18 +522,8 @@ fiscal_impact_gate() {
     return 0
   fi
 
-  # Bloqueig per canvis no-UI
-  echo "  Verificacio fiscal requerida."
-  echo "  Mes detalls a: docs/QA-FISCAL.md"
-  echo ""
-
-  read -r -p "  Has completat la verificacio fiscal amb PASS als punts aplicables? (s/n): " answer
-  if [ "$answer" != "s" ]; then
-    echo ""
-    echo "  Deploy aturat. Completa la verificacio fiscal primer"
-    echo "  i torna a executar el deploy."
-    exit 1
-  fi
+  # No es pregunta aquí: la decisió humana, si cal, es formula en clau de negoci
+  # només per risc ALT residual (després de verificacions automàtiques).
   echo ""
 }
 
@@ -419,7 +561,7 @@ run_verifications() {
 }
 
 # ============================================================
-# PAS 6 — Resum final + confirmacio (BLOQUEJANT)
+# PAS 6 — Resum + decisio de negoci si hi ha risc ALT residual
 # ============================================================
 display_deploy_summary() {
   echo "[6/9] Resum del deploy..."
@@ -432,14 +574,6 @@ display_deploy_summary() {
   echo "  Risc:     $RISK_LEVEL"
   echo "  Fiscal:   $([ "$IS_FISCAL" = true ] && echo "Si" || echo "No")"
   echo "  Fitxers:  $CHANGED_COUNT"
-  echo ""
-
-  read -r -p "  Confirmes executar deploy main -> master -> prod i push a produccio? (s/n): " answer
-  if [ "$answer" != "s" ]; then
-    echo ""
-    echo "  Deploy cancel·lat."
-    exit 1
-  fi
   echo ""
 }
 
@@ -484,26 +618,42 @@ execute_merge_ritual() {
 }
 
 # ============================================================
-# PAS 8 — Post-deploy check (BLOQUEJANT)
+# PAS 8 — Post-deploy check (automatic; sense preguntes tecniques)
 # ============================================================
 post_deploy_check() {
   local prod_sha
+  local remote_sha
   prod_sha=$(git rev-parse --short prod)
 
   echo "[8/9] Post-deploy check..."
   echo ""
-
-  read -r -p "  Has verificat a Firebase App Hosting que el SHA $prod_sha s'ha desplegat? (s/n): " answer1
-  if [ "$answer1" != "s" ]; then
+  echo "  Verificant publicacio remota..."
+  remote_sha=$(git ls-remote origin prod | awk '{print substr($1,1,7)}')
+  if [ "$remote_sha" != "$prod_sha" ]; then
     DEPLOY_RESULT="PENDENT"
+    echo "  SHA remot no confirmat encara. Estat: PENDENT."
+  else
+    echo "  SHA remot confirmat: $prod_sha"
   fi
-
-  read -r -p "  Has fet smoke test (1 ruta publica + 1 ruta dashboard) i tot respon correctament? (s/n): " answer2
-  if [ "$answer2" != "s" ]; then
-    DEPLOY_RESULT="PENDENT"
-  fi
-
   echo ""
+
+  if [ -n "${DEPLOY_SMOKE_PUBLIC_URL:-}" ] && [ -n "${DEPLOY_SMOKE_DASHBOARD_URL:-}" ]; then
+    echo "  Executant smoke checks automatitzats..."
+    if ! curl -fsS --max-time 20 "$DEPLOY_SMOKE_PUBLIC_URL" >/dev/null; then
+      DEPLOY_RESULT="PENDENT"
+      echo "  Smoke públic no confirmat. Estat: PENDENT."
+    fi
+    if ! curl -fsS --max-time 20 "$DEPLOY_SMOKE_DASHBOARD_URL" >/dev/null; then
+      DEPLOY_RESULT="PENDENT"
+      echo "  Smoke dashboard no confirmat. Estat: PENDENT."
+    fi
+  else
+    DEPLOY_RESULT="PENDENT"
+    echo "  Smoke automàtic no configurat (DEPLOY_SMOKE_PUBLIC_URL / DEPLOY_SMOKE_DASHBOARD_URL)."
+    echo "  Estat del deploy: PENDENT."
+  fi
+  echo ""
+
   if [ "$DEPLOY_RESULT" = "PENDENT" ]; then
     echo "  Post-deploy no confirmat. El log es registrara com a PENDENT."
   else
@@ -540,8 +690,41 @@ Registre cronologic de desplegaments a produccio.
 HEADER
   fi
 
-  # Afegir linia
-  echo "$log_line" >> "$PROJECT_DIR/$DEPLOY_LOG"
+  # Afegir línia a la taula principal. Si existeix secció de decisions,
+  # inserim la línia abans d'aquesta secció per no trencar la taula.
+  if grep -q "^## Decisions humanes (negoci)" "$PROJECT_DIR/$DEPLOY_LOG"; then
+    local tmp_file
+    tmp_file=$(mktemp)
+    awk -v line="$log_line" '
+      BEGIN { inserted = 0 }
+      /^## Decisions humanes \(negoci\)/ && inserted == 0 {
+        print line
+        inserted = 1
+      }
+      { print }
+      END {
+        if (inserted == 0) print line
+      }
+    ' "$PROJECT_DIR/$DEPLOY_LOG" > "$tmp_file"
+    mv "$tmp_file" "$PROJECT_DIR/$DEPLOY_LOG"
+  else
+    echo "$log_line" >> "$PROJECT_DIR/$DEPLOY_LOG"
+  fi
+
+  if [ "$DECISION_TAKEN" != "NONE" ]; then
+    if ! grep -q "^## Decisions humanes (negoci)" "$PROJECT_DIR/$DEPLOY_LOG"; then
+      cat >> "$PROJECT_DIR/$DEPLOY_LOG" << 'HUMAN_HEADER'
+
+## Decisions humanes (negoci)
+
+| Data | SHA | human_question_reason | business_impact | decision_taken |
+|------|-----|-----------------------|-----------------|----------------|
+HUMAN_HEADER
+    fi
+    local human_line
+    human_line="| $deploy_date | $deploy_sha | $HUMAN_QUESTION_REASON | $BUSINESS_IMPACT | $DECISION_TAKEN |"
+    echo "$human_line" >> "$PROJECT_DIR/$DEPLOY_LOG"
+  fi
 
   # Stage (no commit)
   git add "$PROJECT_DIR/$DEPLOY_LOG"
@@ -569,6 +752,7 @@ main() {
   fiscal_impact_gate         # Pas 4
   run_verifications          # Pas 5
   display_deploy_summary     # Pas 6
+  handle_business_decision_for_residual_risk
   execute_merge_ritual       # Pas 7
   post_deploy_check          # Pas 8
   append_deploy_log          # Pas 9
