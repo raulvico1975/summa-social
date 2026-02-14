@@ -12,7 +12,41 @@ import { ai } from '@/ai/genkit'
 import { z } from 'genkit'
 import { verifyIdToken, getAdminDb, validateUserMembership } from '@/lib/api/admin-sdk'
 import { requireOperationalAccess } from '@/lib/api/require-operational-access'
-import { loadAllCards, loadGuideContent, type KBCard } from '@/lib/support/load-kb'
+import { loadGuideContent, type KBCard } from '@/lib/support/load-kb'
+import { loadKbCards } from '@/lib/support/load-kb-runtime'
+import { logBotQuestion } from '@/lib/support/bot-question-log'
+
+// =============================================================================
+// DEFAULT FALLBACK (hardcoded)
+// =============================================================================
+
+const DEFAULT_FALLBACK_NO_ANSWER: KBCard = {
+  id: 'fallback-no-answer',
+  type: 'fallback',
+  domain: 'general',
+  risk: 'safe',
+  guardrail: 'none',
+  answerMode: 'full',
+  title: {
+    ca: 'No he trobat informació exacta',
+    es: 'No he encontrado información exacta',
+  },
+  intents: {
+    ca: ['cap fitxa coincideix'],
+    es: ['ninguna ficha coincide'],
+  },
+  guideId: null,
+  answer: {
+    ca: "No tinc informació exacta sobre això. Consulta el Hub de Guies (icona ? a dalt a la dreta) i el Manual. Prova amb paraules clau o el text exacte de l'error.",
+    es: "No tengo información exacta sobre esto. Consulta el Hub de Guías (icono ? arriba a la derecha) y el Manual. Prueba con palabras clave o el texto exacto del error.",
+  },
+  uiPaths: ['Dashboard > ? (Hub de Guies)'],
+  needsSnapshot: false,
+  keywords: ['no trobo', 'no sé', 'ajuda', 'help'],
+  related: [],
+  error_key: null,
+  symptom: { ca: null, es: null },
+}
 
 // =============================================================================
 // SCHEMAS
@@ -21,8 +55,8 @@ import { loadAllCards, loadGuideContent, type KBCard } from '@/lib/support/load-
 const BotInputSchema = z.object({
   userQuestion: z.string().describe('The user question in natural language.'),
   rawAnswer: z.string().describe('The raw KB answer content to reformulate.'),
-  risk: z.string().describe('Risk level: safe or guarded.'),
-  answerMode: z.string().describe('Answer mode: full or limited.'),
+  isGuarded: z.boolean().describe('True if the question is about a sensitive topic (risk=guarded).'),
+  isLimited: z.boolean().describe('True if only general guidance should be given (answerMode=limited).'),
   lang: z.string().describe('Response language: ca or es.'),
 })
 
@@ -47,9 +81,9 @@ REGLES ESTRICTES:
 - NO donis consells fiscals; només mostra els procediments documentats.
 - Pots reordenar, simplificar i fer més llegible el text original.
 - Respon sempre en l'idioma indicat ({{lang}}).
-{{#if (eq risk "guarded")}}
-- IMPORTANT: Aquesta és una consulta sobre un tema sensible ({{risk}}).
-{{#if (eq answerMode "limited")}}
+{{#if isGuarded}}
+- IMPORTANT: Aquesta és una consulta sobre un tema sensible.
+{{#if isLimited}}
 - Dona NOMÉS orientació general. MAI donis passos operatius concrets.
 {{/if}}
 {{/if}}
@@ -143,8 +177,8 @@ function detectFallbackDomain(tokens: string[]): string {
   return 'fallback-no-answer'
 }
 
-function retrieveCard(message: string, lang: 'ca' | 'es'): { card: KBCard; mode: 'card' | 'fallback' } {
-  const cards = loadAllCards()
+async function retrieveCard(message: string, lang: 'ca' | 'es', version: number): Promise<{ card: KBCard; mode: 'card' | 'fallback' }> {
+  const cards = await loadKbCards(version)
   const tokens = normalize(message)
 
   // Score all non-fallback cards
@@ -173,7 +207,7 @@ function retrieveCard(message: string, lang: 'ca' | 'es'): { card: KBCard; mode:
   }
 
   // Last resort
-  const genericFallback = cards.find(c => c.id === 'fallback-no-answer')!
+  const genericFallback = (cards.find(c => c.id === 'fallback-no-answer') as KBCard | undefined) ?? DEFAULT_FALLBACK_NO_ANSWER
   return { card: genericFallback, mode: 'fallback' }
 }
 
@@ -211,62 +245,129 @@ export async function POST(request: NextRequest): Promise<NextResponse<ApiRespon
     }
 
     const body = await request.json()
-    const { message, lang: rawLang, orgId } = body as { message?: string; lang?: string; orgId?: string }
+    const { message, lang: rawLang } = body as { message?: string; lang?: string }
 
-    if (!message || typeof message !== 'string' || !orgId || typeof orgId !== 'string') {
-      return NextResponse.json({ ok: false, code: 'INVALID_INPUT', message: 'message i orgId obligatoris' }, { status: 400 })
+    if (!message || typeof message !== 'string') {
+      return NextResponse.json({ ok: false, code: 'INVALID_INPUT', message: 'message obligatori' }, { status: 400 })
     }
 
-    const lang = (rawLang === 'es' ? 'es' : 'ca') as 'ca' | 'es'
+    // Normalització idioma: accepta ca/es/fr/pt, mapeja a ca/es (només suportats per KB)
+    const allowedLangs = ['ca', 'es', 'fr', 'pt'] as const
+    let lang: 'ca' | 'es' = 'ca'
+
+    if (allowedLangs.includes(rawLang as any)) {
+      // Mapeja fr → ca, pt → es (idiomes suportats per KB)
+      if (rawLang === 'es' || rawLang === 'pt') {
+        lang = 'es'
+      } else {
+        lang = 'ca'
+      }
+    }
+
+    // Derive orgId from user profile (INVARIANT: never from client input)
+    const db = getAdminDb()
+    const userDoc = await db.doc(`users/${authResult.uid}`).get()
+    const orgId = userDoc.data()?.organizationId as string | undefined
+    if (!orgId) {
+      return NextResponse.json({ ok: false, code: 'INVALID_INPUT', message: 'Usuari sense organització assignada' }, { status: 400 })
+    }
 
     // Validate membership
-    const db = getAdminDb()
     const membership = await validateUserMembership(db, authResult.uid, orgId)
     const accessDenied = requireOperationalAccess(membership)
     if (accessDenied) {
       return NextResponse.json({ ok: false, code: 'FORBIDDEN' as const, message: 'Accés denegat' }, { status: 403 })
     }
 
-    // --- Retrieval ---
-    const { card, mode } = retrieveCard(message, lang)
+    // --- Load KB version + cards ---
+    const snap = await db.doc('system/supportKb').get()
+    const version = snap.exists ? (snap.data()?.version ?? 0) : 0
+    const cards = await loadKbCards(version)
+
+    // --- Retrieval with hard fallback ---
+    let result: { card: KBCard; mode: 'card' | 'fallback' } | null = null
+
+    try {
+      result = await retrieveCard(message, lang, version)
+    } catch (err) {
+      console.error('[bot] retrieveCard error:', err)
+      result = null
+    }
+
+    let card: KBCard
+    let mode: 'card' | 'fallback'
+
+    if (!result || !result.card) {
+      // Hard fallback: si retrieveCard falla o retorna null
+      const fallback = cards.find(c => c.id === 'fallback-no-answer')
+
+      if (!fallback) {
+        // Última línia de defensa: si ni tan sols tenim fallback-no-answer
+        return NextResponse.json({
+          ok: true,
+          mode: 'fallback',
+          cardId: 'emergency-fallback',
+          answer: lang === 'es'
+            ? 'No he encontrado información sobre esto. Consulta el Hub de Guías (icono ? arriba a la derecha).'
+            : 'No he trobat informació sobre això. Consulta el Hub de Guies (icona ? a dalt a la dreta).',
+          guideId: null,
+          uiPaths: [],
+        })
+      }
+
+      card = fallback
+      mode = 'fallback'
+    } else {
+      card = result.card
+      mode = result.mode
+    }
+
+    // --- Log question (fire-and-forget) ---
+    void logBotQuestion(db, orgId, message, lang, mode, card.id).catch(e =>
+      console.error('[bot] log error:', e)
+    )
 
     // --- Build raw answer ---
     let rawAnswer: string
     if (card.guideId) {
       rawAnswer = loadGuideContent(card.guideId, lang)
     } else if (card.answer?.[lang]) {
-      rawAnswer = card.answer[lang]!
+      rawAnswer = card.answer[lang] ?? ''
     } else {
       rawAnswer = card.answer?.ca ?? card.answer?.es ?? ''
     }
 
-    // --- LLM Reformat ---
+    // --- LLM Reformat with hard fallback ---
     const apiKey = process.env.GOOGLE_API_KEY || process.env.GOOGLE_GENAI_API_KEY
-    if (!apiKey) {
-      // No LLM available: return raw answer
-      return NextResponse.json({
-        ok: true,
-        mode,
-        cardId: card.id,
-        answer: rawAnswer,
-        guideId: card.guideId ?? null,
-        uiPaths: card.uiPaths,
-      })
-    }
 
-    const { output } = await reformatPrompt({
-      userQuestion: message,
-      rawAnswer,
-      risk: card.risk,
-      answerMode: card.answerMode,
-      lang,
-    })
+    let finalAnswer = rawAnswer
+
+    if (apiKey) {
+      // Precompute boolean flags to avoid Handlebars helper issues
+      const isGuarded = card.risk === 'guarded'
+      const isLimited = card.answerMode === 'limited'
+
+      try {
+        const { output } = await reformatPrompt({
+          userQuestion: message,
+          rawAnswer,
+          isGuarded,
+          isLimited,
+          lang,
+        })
+
+        finalAnswer = output?.answer ?? rawAnswer
+      } catch (reformatError) {
+        console.warn('[bot] reformatter failed, using raw answer:', (reformatError as Error)?.message)
+        // finalAnswer = rawAnswer (ja assignat)
+      }
+    }
 
     return NextResponse.json({
       ok: true,
       mode,
       cardId: card.id,
-      answer: output?.answer ?? rawAnswer,
+      answer: finalAnswer,
       guideId: card.guideId ?? null,
       uiPaths: card.uiPaths,
     })

@@ -35,7 +35,7 @@ FISCAL_PATTERNS=(
   "/movimientos/"
 )
 
-# Patrons RISC ALT (superset de P0)
+# Patrons RISC ALT (superset fiscal)
 HIGH_RISK_PATTERNS=(
   "src/app/api/"
   "src/lib/fiscal/"
@@ -218,32 +218,168 @@ classify_risk() {
 # ============================================================
 # PAS 4 — Verificacio area fiscal (BLOQUEJANT)
 # ============================================================
+
+# Heuristica: patrons que indiquen logica de negoci (NO UI-only)
+CALC_RE="calculate|compute|total|sum|balance|ledger|reconcil|model182|model347|certificat"
+AMOUNT_RE="amount|currency|rate|fx|tax|iva|irpf"
+WRITE_RE="\.set\(|\.update\(|\.add\(|\.delete\(|batch|runTransaction|writeBatch"
+FIELD_RE="archivedAt|parentTransactionId|donorId|contactId|bankAccountId|categoryId|isRemittance"
+PERM_RE="permission|\.rules|getAuth|verifyIdToken|validateUser"
+SEPA_RE="sepa|pain001|pain008|remittance|generateXml"
+
+# Globals de classificacio (set per classify_fiscal_impact)
+FISCAL_IS_UI_ONLY=true
+FISCAL_IMPACT_TYPE=""
+FISCAL_AFFECTS_MONEY=""
+FISCAL_RECOMMENDATION=""
+FISCAL_KEY_DETAILS=""
+
+classify_fiscal_impact() {
+  local has_calc=false has_amount=false has_write=false
+  local has_field=false has_perm=false has_sepa=false
+  local unclassifiable=false
+  FISCAL_IS_UI_ONLY=true
+  FISCAL_KEY_DETAILS=""
+
+  while IFS= read -r file; do
+    [ -z "$file" ] && continue
+
+    local diff_content changes line_count tags
+    diff_content=$(git diff master..main -- "$file" 2>/dev/null)
+    [ -z "$diff_content" ] && continue
+
+    # Nomes linies canviades (exclou headers de diff)
+    changes=$(printf '%s\n' "$diff_content" | grep -E '^[+-]' | grep -vE '^\+\+\+|^---')
+
+    line_count=$(printf '%s\n' "$changes" | wc -l | tr -d ' ')
+    if [ "$line_count" -gt 500 ]; then
+      unclassifiable=true
+      FISCAL_IS_UI_ONLY=false
+      FISCAL_KEY_DETAILS="$FISCAL_KEY_DETAILS    - $file (canvi gran, revisio manual)"$'\n'
+      continue
+    fi
+
+    tags=""
+    if printf '%s\n' "$changes" | grep -qEi "$CALC_RE"; then
+      has_calc=true; FISCAL_IS_UI_ONLY=false; tags="${tags}calcul "
+    fi
+    if printf '%s\n' "$changes" | grep -qEi "$AMOUNT_RE"; then
+      has_amount=true; FISCAL_IS_UI_ONLY=false; tags="${tags}imports "
+    fi
+    if printf '%s\n' "$changes" | grep -qEi "$WRITE_RE"; then
+      has_write=true; FISCAL_IS_UI_ONLY=false; tags="${tags}escriptura "
+    fi
+    if printf '%s\n' "$changes" | grep -qEi "$FIELD_RE"; then
+      has_field=true; FISCAL_IS_UI_ONLY=false; tags="${tags}camps-critics "
+    fi
+    if printf '%s\n' "$changes" | grep -qEi "$PERM_RE"; then
+      has_perm=true; FISCAL_IS_UI_ONLY=false; tags="${tags}permisos "
+    fi
+    if printf '%s\n' "$changes" | grep -qEi "$SEPA_RE"; then
+      has_sepa=true; FISCAL_IS_UI_ONLY=false; tags="${tags}SEPA "
+    fi
+
+    [ -z "$tags" ] && tags="UI"
+    FISCAL_KEY_DETAILS="$FISCAL_KEY_DETAILS    - $file ($tags)"$'\n'
+  done <<< "$FISCAL_TRIGGER_FILES"
+
+  # Tipus d'impacte
+  if [ "$FISCAL_IS_UI_ONLY" = true ]; then
+    FISCAL_IMPACT_TYPE="UI"
+  else
+    local types=""
+    if [ "$has_calc" = true ] || [ "$has_amount" = true ]; then
+      types="Calcul"
+    fi
+    if [ "$has_write" = true ] || [ "$has_field" = true ]; then
+      types="${types:+$types / }Dades"
+    fi
+    if [ "$has_perm" = true ]; then
+      types="${types:+$types / }Permisos"
+    fi
+    if [ "$has_sepa" = true ]; then
+      types="${types:+$types / }SEPA-Remeses"
+    fi
+    if [ "$unclassifiable" = true ]; then
+      types="${types:+$types / }No classificable"
+    fi
+    [ -z "$types" ] && types="Indeterminat"
+    FISCAL_IMPACT_TYPE="$types"
+  fi
+
+  # Pot afectar diners?
+  if [ "$FISCAL_IS_UI_ONLY" = true ]; then
+    FISCAL_AFFECTS_MONEY="No. Canvi visual/presentacio. No es modifica cap calcul ni saldo."
+  elif [ "$has_calc" = true ] || [ "$has_amount" = true ]; then
+    FISCAL_AFFECTS_MONEY="Si. Es modifiquen calculs o imports."
+  elif [ "$has_sepa" = true ]; then
+    FISCAL_AFFECTS_MONEY="Si. Es modifica logica de remeses o SEPA."
+  elif [ "$has_write" = true ] || [ "$has_field" = true ]; then
+    FISCAL_AFFECTS_MONEY="Possible. Es modifiquen dades o camps critics."
+  elif [ "$has_perm" = true ]; then
+    FISCAL_AFFECTS_MONEY="No directament. Es modifiquen permisos."
+  else
+    FISCAL_AFFECTS_MONEY="No classificable. Revisar manualment."
+  fi
+
+  # Recomanacio
+  if [ "$FISCAL_IS_UI_ONLY" = true ]; then
+    FISCAL_RECOMMENDATION="green"
+  elif [ "$has_calc" = true ] || [ "$has_sepa" = true ] || [ "$has_amount" = true ] || [ "$unclassifiable" = true ]; then
+    FISCAL_RECOMMENDATION="red"
+  else
+    FISCAL_RECOMMENDATION="yellow"
+  fi
+}
+
 fiscal_impact_gate() {
   if [ "$IS_FISCAL" != true ]; then
     return 0
   fi
 
-  echo "[4/9] Verificacio area fiscal..."
+  echo "[4/9] Analitzant area fiscal..."
   echo ""
-  echo "  ATENCIO: AREA FISCAL DETECTADA"
+
+  classify_fiscal_impact
+
+  # Resum huma (sempre)
+  echo "  ┌─────────────────────────────────────────────┐"
+  echo "  │         IMPACTE DEL CANVI (RESUM)           │"
+  echo "  └─────────────────────────────────────────────┘"
   echo ""
-  echo "  Aquest deploy toca codi que afecta moviments,"
-  echo "  remeses, donants, certificats o imports fiscals."
+  echo "  Tipus: $FISCAL_IMPACT_TYPE"
+  echo "  Pot afectar diners, saldos o fiscalitat?"
+  echo "    $FISCAL_AFFECTS_MONEY"
+  if [ "$FISCAL_RECOMMENDATION" = "green" ]; then
+    echo "  Recomanacio: 🟢 Desplegar"
+  elif [ "$FISCAL_RECOMMENDATION" = "yellow" ]; then
+    echo "  Recomanacio: 🟡 Provar abans amb un cas real"
+  else
+    echo "  Recomanacio: 🔴 Verificar amb docs/QA-FISCAL.md abans de desplegar"
+  fi
   echo ""
-  echo "  Abans de continuar, cal haver executat la"
-  echo "  verificacio manual descrita a:"
-  echo "    docs/QA-FISCAL.md"
+  echo "  Fitxers clau:"
+  printf '%s' "$FISCAL_KEY_DETAILS"
   echo ""
-  echo "  Fitxers que han activat la verificacio:"
-  while IFS= read -r f; do
-    echo "    - $f"
-  done <<< "$FISCAL_TRIGGER_FILES"
+
+  # Si UI-only → no bloquejar
+  if [ "$FISCAL_IS_UI_ONLY" = true ]; then
+    echo "  Detectat fitxer en zona sensible, pero canvi UI-only."
+    echo "  Continuo sense bloquejar."
+    echo ""
+    return 0
+  fi
+
+  # Bloqueig per canvis no-UI
+  echo "  Verificacio fiscal requerida."
+  echo "  Mes detalls a: docs/QA-FISCAL.md"
   echo ""
 
   read -r -p "  Has completat la verificacio fiscal amb PASS als punts aplicables? (s/n): " answer
   if [ "$answer" != "s" ]; then
     echo ""
-    echo "  Deploy aturat. Completa la verificacio fiscal primer i torna a executar el deploy."
+    echo "  Deploy aturat. Completa la verificacio fiscal primer"
+    echo "  i torna a executar el deploy."
     exit 1
   fi
   echo ""
