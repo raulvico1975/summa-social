@@ -14,6 +14,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { initializeApp, getApps, applicationDefault } from 'firebase-admin/app';
 import { getFirestore, type Firestore } from 'firebase-admin/firestore';
 import { getAuth, type Auth } from 'firebase-admin/auth';
+import { verifyAdminMembership } from '@/lib/fiscal/remittances/admin-auth';
 
 // =============================================================================
 // FIREBASE ADMIN INITIALIZATION
@@ -101,22 +102,6 @@ interface UpdateCategoryResponse {
 // HELPERS
 // =============================================================================
 
-async function validateUserMembership(
-  db: Firestore,
-  uid: string,
-  orgId: string
-): Promise<{ valid: boolean; role: string | null }> {
-  const memberRef = db.doc(`organizations/${orgId}/members/${uid}`);
-  const memberSnap = await memberRef.get();
-
-  if (!memberSnap.exists) {
-    return { valid: false, role: null };
-  }
-
-  const data = memberSnap.data();
-  return { valid: true, role: data?.role as string };
-}
-
 /** Only allow known editable fields through */
 function pickEditableFields(data: Record<string, any>): Record<string, any> {
   const result: Record<string, any> = {};
@@ -141,7 +126,6 @@ export async function POST(
     );
   }
 
-  const { uid } = authResult;
   const db = getAdminDb();
 
   // 2. Parse body
@@ -177,18 +161,24 @@ export async function POST(
     );
   }
 
-  // 4. Membership check — admin only (same as create rule)
-  const membership = await validateUserMembership(db, uid, orgId);
-  if (!membership.valid) {
+  // 4. Membership check — admin only (amb bypass SuperAdmin global)
+  const membership = await verifyAdminMembership(request, orgId);
+  if (!membership.success) {
+    if (membership.code === 'NOT_MEMBER') {
+      return NextResponse.json(
+        { success: false, error: 'No ets membre d\'aquesta organitzacio', code: 'NOT_MEMBER' },
+        { status: 403 }
+      );
+    }
+    if (membership.code === 'NOT_ADMIN') {
+      return NextResponse.json(
+        { success: false, error: 'Només administradors poden editar categories', code: 'FORBIDDEN' },
+        { status: 403 }
+      );
+    }
     return NextResponse.json(
-      { success: false, error: 'No ets membre d\'aquesta organitzacio', code: 'NOT_MEMBER' },
-      { status: 403 }
-    );
-  }
-  if (membership.role !== 'admin') {
-    return NextResponse.json(
-      { success: false, error: 'Només administradors poden editar categories', code: 'FORBIDDEN' },
-      { status: 403 }
+      { success: false, error: membership.error, code: membership.code },
+      { status: membership.status }
     );
   }
 

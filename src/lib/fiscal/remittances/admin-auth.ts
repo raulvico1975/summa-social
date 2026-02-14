@@ -67,6 +67,59 @@ export interface AdminAuthError {
   status: number;
 }
 
+type MemberData = Record<string, unknown> | null;
+
+function isAdminLikeRole(role: unknown): boolean {
+  if (typeof role !== 'string') return false;
+  const normalized = role.trim().toLowerCase();
+  return normalized === 'admin' || normalized === 'superadmin';
+}
+
+async function isGlobalSuperAdmin(db: Firestore, uid: string): Promise<boolean> {
+  const envSuperAdminUid = process.env.SUPER_ADMIN_UID;
+  if (envSuperAdminUid && uid === envSuperAdminUid) {
+    return true;
+  }
+
+  const superAdminSnap = await db.doc(`systemSuperAdmins/${uid}`).get();
+  return superAdminSnap.exists;
+}
+
+async function loadMemberData(
+  db: Firestore,
+  orgId: string,
+  uid: string
+): Promise<MemberData> {
+  const memberRef = db.doc(`organizations/${orgId}/members/${uid}`);
+  const memberSnap = await memberRef.get();
+
+  let memberData: MemberData = memberSnap.exists
+    ? ((memberSnap.data() as Record<string, unknown> | undefined) ?? null)
+    : null;
+
+  // Fallback: buscar per userId (compatibilitat)
+  if (!memberData) {
+    const membersQuery = db
+      .collection(`organizations/${orgId}/members`)
+      .where('userId', '==', uid)
+      .limit(1);
+    const membersSnap = await membersQuery.get();
+
+    if (!membersSnap.empty) {
+      memberData = (membersSnap.docs[0].data() as Record<string, unknown> | undefined) ?? null;
+    }
+  }
+
+  return memberData;
+}
+
+export interface VerifyAdminMembershipDeps {
+  verifyIdTokenFn?: (request: NextRequest) => Promise<AuthResult | null>;
+  getAdminDbFn?: () => Firestore;
+  loadMemberDataFn?: (db: Firestore, orgId: string, uid: string) => Promise<MemberData>;
+  isGlobalSuperAdminFn?: (db: Firestore, uid: string) => Promise<boolean>;
+}
+
 // =============================================================================
 // FUNCIONS
 // =============================================================================
@@ -107,10 +160,16 @@ export async function verifyIdToken(request: NextRequest): Promise<AuthResult | 
  */
 export async function verifyAdminMembership(
   request: NextRequest,
-  orgId: string
+  orgId: string,
+  deps: VerifyAdminMembershipDeps = {}
 ): Promise<AdminAuthResult | AdminAuthError> {
+  const verifyIdTokenFn = deps.verifyIdTokenFn ?? verifyIdToken;
+  const getAdminDbFn = deps.getAdminDbFn ?? getAdminDb;
+  const loadMemberDataFn = deps.loadMemberDataFn ?? loadMemberData;
+  const isGlobalSuperAdminFn = deps.isGlobalSuperAdminFn ?? isGlobalSuperAdmin;
+
   // 1. Verificar token
-  const authResult = await verifyIdToken(request);
+  const authResult = await verifyIdTokenFn(request);
   if (!authResult) {
     return {
       success: false,
@@ -121,35 +180,20 @@ export async function verifyAdminMembership(
   }
 
   // 2. Verificar membre admin
-  const db = getAdminDb();
-  const memberRef = db.doc(`organizations/${orgId}/members/${authResult.uid}`);
-  const memberSnap = await memberRef.get();
+  const db = getAdminDbFn();
+  const memberData = await loadMemberDataFn(db, orgId, authResult.uid);
 
-  let memberData = memberSnap.exists ? memberSnap.data() : null;
-
-  // Fallback: buscar per userId (compatibilitat)
-  if (!memberData) {
-    const membersQuery = db
-      .collection(`organizations/${orgId}/members`)
-      .where('userId', '==', authResult.uid)
-      .limit(1);
-    const membersSnap = await membersQuery.get();
-
-    if (!membersSnap.empty) {
-      memberData = membersSnap.docs[0].data();
-    }
-  }
-
-  if (!memberData) {
+  const hasAdminMembership = isAdminLikeRole(memberData?.role);
+  if (hasAdminMembership || (await isGlobalSuperAdminFn(db, authResult.uid))) {
     return {
-      success: false,
-      error: "No ets membre d'aquesta organització",
-      code: 'NOT_MEMBER',
-      status: 403,
+      success: true,
+      uid: authResult.uid,
+      email: authResult.email,
+      db,
     };
   }
 
-  if (memberData.role !== 'admin') {
+  if (memberData) {
     return {
       success: false,
       error: 'Només els admins poden fer aquesta operació',
@@ -159,9 +203,9 @@ export async function verifyAdminMembership(
   }
 
   return {
-    success: true,
-    uid: authResult.uid,
-    email: authResult.email,
-    db,
+    success: false,
+    error: "No ets membre d'aquesta organització",
+    code: 'NOT_MEMBER',
+    status: 403,
   };
 }

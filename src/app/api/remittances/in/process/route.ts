@@ -33,6 +33,7 @@ import {
   RemittanceInvariantError,
   type HashableItem,
 } from '../../../../../lib/fiscal/remittance-invariants';
+import { verifyAdminMembership } from '../../../../../lib/fiscal/remittances/admin-auth';
 
 // =============================================================================
 // CONSTANTS
@@ -420,54 +421,20 @@ export async function POST(request: NextRequest): Promise<NextResponse<ProcessRe
     // 3. Verificar que l'usuari és admin de l'org
     // ─────────────────────────────────────────────────────────────────────────
     const db = getAdminDb();
-    const memberRef = db.doc(`organizations/${orgId}/members/${authResult.uid}`);
-    const memberSnap = await memberRef.get();
-
-    if (!memberSnap.exists) {
-      // Fallback: buscar per userId
-      const membersQuery = db
-        .collection(`organizations/${orgId}/members`)
-        .where('userId', '==', authResult.uid)
-        .limit(1);
-      const membersSnap = await membersQuery.get();
-
-      if (membersSnap.empty) {
-        return NextResponse.json(
-          {
-            success: false,
-            idempotent: false,
-            error: 'No ets membre d\'aquesta organització',
-            code: 'NOT_MEMBER',
-          },
-          { status: 403 }
-        );
-      }
-
-      const memberData = membersSnap.docs[0].data();
-      if (memberData?.role !== 'admin') {
-        return NextResponse.json(
-          {
-            success: false,
-            idempotent: false,
-            error: 'Només els admins poden processar remeses',
-            code: 'NOT_ADMIN',
-          },
-          { status: 403 }
-        );
-      }
-    } else {
-      const memberData = memberSnap.data();
-      if (memberData?.role !== 'admin') {
-        return NextResponse.json(
-          {
-            success: false,
-            idempotent: false,
-            error: 'Només els admins poden processar remeses',
-            code: 'NOT_ADMIN',
-          },
-          { status: 403 }
-        );
-      }
+    const membership = await verifyAdminMembership(request, orgId);
+    if (!membership.success) {
+      return NextResponse.json(
+        {
+          success: false,
+          idempotent: false,
+          error:
+            membership.code === 'NOT_ADMIN'
+              ? 'Només els admins poden processar remeses'
+              : membership.error,
+          code: membership.code,
+        },
+        { status: membership.status }
+      );
     }
 
     // ─────────────────────────────────────────────────────────────────────────

@@ -12,6 +12,10 @@ import { initializeApp, getApps, applicationDefault } from 'firebase-admin/app';
 import { getFirestore, type Firestore } from 'firebase-admin/firestore';
 import { getAuth, type Auth } from 'firebase-admin/auth';
 import { runBackupForOrg } from '@/lib/backups/run-backup';
+import {
+  verifyAdminMembership,
+  type AdminAuthResult,
+} from '@/lib/fiscal/remittances/admin-auth';
 
 /**
  * Feature flag per activar/desactivar backups al núvol.
@@ -119,28 +123,32 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Missing orgId' }, { status: 400 });
     }
 
-    // 3. Verificar que l'usuari és admin de l'org
-    const db = getAdminDb();
-    const memberRef = db.doc(`organizations/${orgId}/members/${authResult.uid}`);
-    const memberSnap = await memberRef.get();
+    // 3. Verificar que l'usuari és admin (o SuperAdmin global) de l'org
+    const authCheck = await verifyAdminMembership(request, orgId);
+    if (!authCheck.success) {
+      if (authCheck.code === 'NOT_MEMBER') {
+        return NextResponse.json(
+          { error: 'Not a member of this organization', code: 'NOT_MEMBER' },
+          { status: 403 }
+        );
+      }
 
-    if (!memberSnap.exists) {
+      if (authCheck.code === 'NOT_ADMIN') {
+        return NextResponse.json(
+          { error: 'Only admins can run backups', code: 'NOT_ADMIN' },
+          { status: 403 }
+        );
+      }
+
       return NextResponse.json(
-        { error: 'Not a member of this organization' },
-        { status: 403 }
+        { error: authCheck.error, code: authCheck.code },
+        { status: authCheck.status }
       );
     }
-
-    const memberData = memberSnap.data();
-    if (memberData?.role !== 'admin') {
-      return NextResponse.json(
-        { error: 'Only admins can run backups' },
-        { status: 403 }
-      );
-    }
+    const { uid, db } = authCheck as AdminAuthResult;
 
     // 4. Executar backup
-    console.log(`[backup/run-now] Starting backup for org ${orgId} by user ${authResult.uid}`);
+    console.log(`[backup/run-now] Starting backup for org ${orgId} by user ${uid}`);
 
     const result = await runBackupForOrg(db, orgId);
 
