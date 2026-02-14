@@ -10,9 +10,11 @@
 import { getStorage } from 'firebase-admin/storage'
 import type { KBCard } from './load-kb'
 import { loadAllCards } from './load-kb'
+import { runKbQualityGate } from './kb-quality-gate'
 
 type CachedKB = {
   version: number
+  storageVersion: number | null
   cards: KBCard[]
 }
 
@@ -23,11 +25,12 @@ let cached: CachedKB | null = null
  * Cache per version: only reload if version changes.
  *
  * @param version - Current KB version from Firestore (system/supportKb.version)
- * @returns Merged KB cards (Storage overrides filesystem by ID)
+ * @param storageVersion - Published storage version (must match version to use Storage)
+ * @returns Merged KB cards (Storage published overrides filesystem by ID)
  */
-export async function loadKbCards(version: number): Promise<KBCard[]> {
+export async function loadKbCards(version: number, storageVersion: number | null = null): Promise<KBCard[]> {
   // Cache hit: return if version hasn't changed
-  if (cached && cached.version === version) {
+  if (cached && cached.version === version && cached.storageVersion === storageVersion) {
     return cached.cards
   }
 
@@ -35,13 +38,38 @@ export async function loadKbCards(version: number): Promise<KBCard[]> {
   const fsCards = await loadAllCards()
 
   // 2. Storage (override)
-  const storageCards = await loadKbFromStorage()
+  const shouldUseStoragePublished = storageVersion === version
+  const storageCards = shouldUseStoragePublished ? await loadKbFromStorage() : null
 
   // 3. Merge: Storage overrides filesystem by ID
   const merged = mergeKbCards(fsCards, storageCards ?? [])
 
+  // Runtime safety net:
+  // if published KB is corrupt, keep serving a safe dataset instead of crashing/derailing answers.
+  if (shouldUseStoragePublished && storageCards) {
+    const mergedGate = runKbQualityGate(merged)
+    if (!mergedGate.ok) {
+      console.error('[load-kb-runtime] Published KB failed quality gate, using fallback dataset', {
+        errors: mergedGate.errors.slice(0, 5),
+        cards: merged.length,
+      })
+
+      const fsGate = fsCards.length > 0 ? runKbQualityGate(fsCards) : null
+      if (fsGate?.ok) {
+        cached = { version, storageVersion, cards: fsCards }
+        return fsCards
+      }
+
+      const storageGate = storageCards.length > 0 ? runKbQualityGate(storageCards) : null
+      if (storageGate?.ok) {
+        cached = { version, storageVersion, cards: storageCards }
+        return storageCards
+      }
+    }
+  }
+
   // 4. Cache per version
-  cached = { version, cards: merged }
+  cached = { version, storageVersion, cards: merged }
   return merged
 }
 

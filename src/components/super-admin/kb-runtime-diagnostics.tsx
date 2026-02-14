@@ -10,6 +10,7 @@ export function KbRuntimeDiagnostics() {
   const { toast } = useToast();
   const [isMounted, setIsMounted] = React.useState(false);
   const [version, setVersion] = React.useState<number | null>(null);
+  const [storageVersion, setStorageVersion] = React.useState<number | null>(null);
   const [updatedAt, setUpdatedAt] = React.useState<string | null>(null);
   const [updatedBy, setUpdatedBy] = React.useState<string | null>(null);
   const [storageExists, setStorageExists] = React.useState<boolean | null>(null);
@@ -59,6 +60,7 @@ export function KbRuntimeDiagnostics() {
         if (res.ok) {
           const diagnostics = await res.json();
           setVersion(diagnostics.version ?? 0);
+          setStorageVersion(diagnostics.storageVersion ?? null);
           setStorageExists(diagnostics.storageExists ?? false);
           setAiReformatEnabled(diagnostics.aiReformatEnabled !== false);
           setReformatTimeoutMs(diagnostics.reformatTimeoutMs ?? null);
@@ -164,6 +166,11 @@ export function KbRuntimeDiagnostics() {
                   <span className="text-sm text-muted-foreground">Desconegut</span>
                 )}
               </div>
+              {storageExists === true ? (
+                <p className="text-xs text-muted-foreground mt-1">
+                  Versió publicada a Storage: {storageVersion ?? 'no definida'} · Runtime: v{version ?? 0}
+                </p>
+              ) : null}
             </div>
 
             <div className="pt-2 border-t">
