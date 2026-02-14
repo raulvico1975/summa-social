@@ -1,0 +1,59 @@
+{
+  "id": "manual-sepa-out-reconcile",
+  "type": "howto",
+  "domain": "sepa",
+  "risk": "guarded",
+  "guardrail": "b1_sepa",
+  "answerMode": "full",
+  "title": {
+    "ca": "Desagregar i conciliar una remesa SEPA OUT",
+    "es": "Desagregar y conciliar una remesa SEPA OUT"
+  },
+  "intents": {
+    "ca": [
+      "com faig desagregar i conciliar una remesa sepa out",
+      "desagregar i conciliar remesa out",
+      "com concilio una remesa sepa de pagaments"
+    ],
+    "es": [
+      "como hago desagregar y conciliar una remesa sepa out",
+      "desagregar y conciliar remesa out",
+      "como concilio una remesa sepa de pagos"
+    ]
+  },
+  "guideId": null,
+  "answer": {
+    "ca": "Per conciliar una remesa SEPA OUT executada pel banc:\n1. Importa l'extracte bancari normalment.\n2. Localitza el moviment agregat de remesa (sortida única).\n3. Si veus el badge de remesa detectada, obre el menú ⋮ i clica \"Desagregar i conciliar\".\n4. Revisa imports i nombre de pagaments.\n5. Confirma només si quadra.\n\nEn confirmar, el sistema crea els pagaments individuals, vincula documents i deixa el moviment pare com a remesa agregada.",
+    "es": "Para conciliar una remesa SEPA OUT ejecutada por el banco:\n1. Importa el extracto bancario normalmente.\n2. Localiza el movimiento agregado de remesa (salida única).\n3. Si ves el badge de remesa detectada, abre el menú ⋮ y pulsa \"Desagregar y conciliar\".\n4. Revisa importes y número de pagos.\n5. Confirma solo si cuadra.\n\nAl confirmar, el sistema crea los pagos individuales, vincula documentos y deja el movimiento padre como remesa agregada."
+  },
+  "uiPaths": [
+    "Moviments > Fila remesa OUT > ⋮ > Desagregar i conciliar"
+  ],
+  "needsSnapshot": false,
+  "keywords": [
+    "sepa out",
+    "desagregar",
+    "conciliar",
+    "remesa pagaments",
+    "pain001"
+  ],
+  "source_faq": [
+    "Q53a",
+    "Q53b"
+  ],
+  "source_manual": [
+    "6b.4"
+  ],
+  "source_guides": [
+    "splitRemittance"
+  ],
+  "related": [
+    "guide-split-remittance",
+    "ts-sepa-validation-error"
+  ],
+  "error_key": null,
+  "symptom": {
+    "ca": null,
+    "es": null
+  }
+}

@@ -15,21 +15,29 @@
       "com poso una factura a un moviment",
       "adjuntar justificant",
       "com arrossego un document",
-      "vincular factura"
+      "vincular factura",
+      "com pujo una factura o rebut o nomina",
+      "pujar factura a summa",
+      "com pujo un rebut",
+      "adjuntar una nomina"
     ],
     "es": [
       "cómo adjunto un documento",
       "cómo pongo una factura a un movimiento",
       "adjuntar justificante",
       "cómo arrastro un documento",
-      "vincular factura"
+      "vincular factura",
+      "como subo una factura o recibo o nomina",
+      "subir factura a summa",
+      "como subo un recibo",
+      "adjuntar una nomina"
     ]
   },
   "guideId": "attachDocument",
   "answer": null,
-  "uiPaths": ["Moviments > Arrossegar document"],
+  "uiPaths": ["Moviments > Arrossegar document", "Moviments > Pendents > Pujar documents"],
   "needsSnapshot": false,
-  "keywords": ["adjuntar", "document", "factura", "justificant", "arrossegar", "drag"],
+  "keywords": ["adjuntar", "document", "factura", "justificant", "arrossegar", "drag", "pujar", "rebut", "nomina", "pendents"],
   "source_faq": ["Q31"],
   "source_manual": ["5.5"],
   "source_guides": ["attachDocument"],

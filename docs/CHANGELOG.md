@@ -4,6 +4,36 @@ Historial de canvis del projecte, ordenat de més recent a més antic.
 
 ---
 
+## [1.43.0] - 2026-02-14
+
+### Hub de Guies / Assistent — millor comprensió real de preguntes
+
+- Millora de recuperació semàntica per entendre millor preguntes naturals en català i castellà
+- Cobertura ampliada de consultes freqüents (logo, novetats, organitzacions, transferències internes, errors comuns, historial de quotes, etc.)
+- Millora d'encaix entre preguntes i guies procedimentals (moviments, projectes, documents, remeses)
+- En preguntes ambigües, el bot pot oferir desambiguació en 2 opcions per evitar respostes incorrectes
+
+### Hub de Guies / Assistent — navegació més accionable
+
+- Les rutes suggerides a la resposta es mostren com a badges clicables (navegació directa a pantalla)
+- Eliminat el peu de navegació inline dins del text per reduir soroll
+- Fallback més guiat: quan no hi ha resposta exacta, proposa preguntes alternatives útils per continuar
+
+### SuperAdmin `/admin` — redisseny de Torre de Control
+
+- Nova estructura en 5 blocs: Estat global, Entitats, Coneixement/Bot, Comunicació i Configuració avançada
+- Estat global amb targetes de salut (sistema, incidències, contingut i traduccions)
+- Resum operatiu de coneixement: data última actualització KB, volum de preguntes del bot i temes més freqüents
+- Secció de comunicació amb darreres publicacions i esborranys pendents
+- Navegació sticky per seccions i millor usabilitat en mòbil
+
+### Fixes operatives
+
+- Correcció del càlcul de dates al resum de Control Tower (evita crash amb timestamps tipus `_seconds`)
+- Unificació de bypass SuperAdmin a rutes sensibles de remeses
+
+---
+
 ## [1.42.0] - 2026-02-12
 
 ### SEPA pain.008 — Periodicitat intel·ligent

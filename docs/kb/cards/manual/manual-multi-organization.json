@@ -1,0 +1,54 @@
+{
+  "id": "manual-multi-organization",
+  "type": "concept",
+  "domain": "config",
+  "risk": "safe",
+  "guardrail": "none",
+  "answerMode": "full",
+  "title": {
+    "ca": "Treballar amb diverses organitzacions",
+    "es": "Trabajar con varias organizaciones"
+  },
+  "intents": {
+    "ca": [
+      "puc tenir diverses organitzacions",
+      "treballo amb mes d una organitzacio",
+      "com canvio d organitzacio"
+    ],
+    "es": [
+      "puedo tener varias organizaciones",
+      "trabajo con mas de una organizacion",
+      "como cambio de organizacion"
+    ]
+  },
+  "guideId": null,
+  "answer": {
+    "ca": "Sí, pots tenir accés a diverses organitzacions.\n\nEn entrar, podràs seleccionar amb quina vols treballar. Comprova sempre que estàs a l'organització correcta abans d'importar moviments o generar informes.",
+    "es": "Sí, puedes tener acceso a varias organizaciones.\n\nAl entrar, podrás seleccionar con cuál quieres trabajar. Comprueba siempre que estás en la organización correcta antes de importar movimientos o generar informes."
+  },
+  "uiPaths": [
+    "Selector d'organització"
+  ],
+  "needsSnapshot": false,
+  "keywords": [
+    "organitzacions",
+    "organizaciones",
+    "multi",
+    "canviar org"
+  ],
+  "source_faq": [
+    "Q100"
+  ],
+  "source_manual": [],
+  "source_guides": [
+    "accessSecurity"
+  ],
+  "related": [
+    "guide-access-security"
+  ],
+  "error_key": null,
+  "symptom": {
+    "ca": null,
+    "es": null
+  }
+}

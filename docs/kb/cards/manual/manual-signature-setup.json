@@ -1,0 +1,52 @@
+{
+  "id": "manual-signature-setup",
+  "type": "howto",
+  "domain": "config",
+  "risk": "safe",
+  "guardrail": "none",
+  "answerMode": "full",
+  "title": {
+    "ca": "Configurar la firma digitalitzada",
+    "es": "Configurar la firma digitalizada"
+  },
+  "intents": {
+    "ca": [
+      "com configuro la firma digitalitzada",
+      "configurar signatura per certificats",
+      "pujar firma digital"
+    ],
+    "es": [
+      "como configuro la firma digitalizada",
+      "configurar firma para certificados",
+      "subir firma digital"
+    ]
+  },
+  "guideId": null,
+  "answer": {
+    "ca": "Per configurar la firma:\n1. Ves a Configuració.\n2. Obre la secció de firma digitalitzada.\n3. Puja la imatge de la firma (idealment PNG), informa nom i càrrec del signant.\n4. Guarda els canvis.\n\nAquesta firma s'inserirà als certificats de donació.",
+    "es": "Para configurar la firma:\n1. Ve a Configuración.\n2. Abre la sección de firma digitalizada.\n3. Sube la imagen de la firma (idealmente PNG), informa nombre y cargo del firmante.\n4. Guarda los cambios.\n\nEsta firma se insertará en los certificados de donación."
+  },
+  "uiPaths": [
+    "Configuració > Firma digitalitzada"
+  ],
+  "needsSnapshot": false,
+  "keywords": [
+    "firma",
+    "signatura",
+    "digitalitzada",
+    "certificats"
+  ],
+  "source_faq": [],
+  "source_manual": [
+    "2.3"
+  ],
+  "source_guides": [],
+  "related": [
+    "guide-donor-certificate"
+  ],
+  "error_key": null,
+  "symptom": {
+    "ca": null,
+    "es": null
+  }
+}

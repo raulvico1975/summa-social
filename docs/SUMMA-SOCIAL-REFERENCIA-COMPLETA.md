@@ -3575,6 +3575,19 @@ Centre d'ajuda contextual amb guies pas-a-pas per a les operacions més freqüen
 - Indicadors visuals: `lookFirst`, `doNext`, `avoid`, `costlyError`
 - Validador i18n automatitzat (`npm run i18n:validate-guides`)
 
+**Millores de recuperació i navegació (NOU v1.43):**
+- Recuperació semàntica reforçada per entendre millor preguntes naturals (ca/es) i variants habituals
+- Desambiguació en 2 opcions quan la consulta és ambigua (evita portar l'usuari a una guia incorrecta)
+- Fallback guiat amb preguntes suggerides quan no hi ha match exacte
+- Les rutes `uiPaths` es renderitzen com badges clicables (navegació directa)
+- Eliminat el peu de navegació inline dins del text de resposta del bot (menys soroll visual)
+
+**Fitxers clau v1.43:**
+- `src/lib/support/bot-retrieval.ts` — scoring, sinònims, domini i desambiguació
+- `src/app/api/support/bot/route.ts` — format de resposta, fallback guiat i controls de to
+- `src/components/help/BotSheet.tsx` — render de badges clicables i UX de conversa
+- `docs/kb/cards/**/*.json` + `docs/kb/_eval/expected*.json` — cobertura de preguntes reals i validació esperada
+
 **Guies disponibles:**
 
 | ID | Títol | Contingut |
@@ -3921,13 +3934,19 @@ Panell de control exclusiu per al SuperAdmin del sistema, accessible des de `/ad
 
 ### 3.10.2 Funcionalitats
 
-| Secció | Descripció |
-|--------|------------|
-| **Estadístiques** | Total organitzacions, actives, suspeses |
-| **Llista d'organitzacions** | Taula amb nom, CIF, estat, data creació |
-| **Accions per organització** | Entrar (impersonar), suspendre/reactivar |
-| **Nova organització** | Crear organització manualment |
-| **Migrar slugs** | Migració d'organitzacions sense slug |
+**Redisseny Torre de Control (NOU v1.43):**
+
+| Bloc | Descripció |
+|------|------------|
+| **1. Estat global** | Visió executiva amb targetes de sistema, incidències, contingut i traduccions |
+| **2. Entitats** | Govern de totes les organitzacions (entrar, suspendre/reactivar, accessos ràpids) |
+| **3. Coneixement i Bot** | Data d'actualització KB, volum de preguntes i temes freqüents + eines avançades |
+| **4. Comunicació** | Darreres publicacions, esborranys pendents i estat editorial |
+| **5. Configuració avançada** | Operacions sensibles (nova org, migracions, reset, secció demo) en bloc col·lapsat |
+
+**Navegació:** barra sticky per seccions (`estat`, `entitats`, `coneixement`, `comunicacio`, `configuracio`) amb scroll suau.
+
+**Origen del resum executiu:** endpoint `GET /api/admin/control-tower/summary`.
 
 ### 3.10.3 Reset de Contrasenya (NOU v1.20)
 
@@ -5241,6 +5260,15 @@ Helper centralitzat per filtrar valors invàlids abans de renderitzar `Select.It
 - ⚠️ **i18n PT**: `guides.importDonors.steps` longitud diferent (base=5, pt=6) + clau extra `.steps.5`
 - ⚠️ **i18n FR**: `help.dashboard.steps` longitud diferent (base=5, fr=4) + `help.dashboard.extra.order.items` (base=4, fr=3)
 
+## Completades v1.43
+- ✅ Hub de Guies/Bot: recuperació semàntica ampliada amb consultes reals (ca/es)
+- ✅ Hub de Guies/Bot: desambiguació guiada (opcions 1/2) en preguntes ambigües
+- ✅ Hub de Guies/Bot: uiPaths com enllaços clicables a pantalla dins del xat
+- ✅ Hub de Guies/Bot: fallback guiat amb suggeriments accionables
+- ✅ SuperAdmin `/admin`: redisseny "Torre de Control" en 5 blocs operatius
+- ✅ Control Tower: correcció parse dates/timestamps per evitar crash en resum
+- ✅ Unificació bypass SuperAdmin en rutes de remeses sensibles
+
 ## Completades v1.41
 - ✅ Persona de contacte per empreses (`contactPersonName`): camp, import, export, UI
 - ✅ Filtres dashboard donants: Tipus, Modalitat, Periodicitat (lògica AND, comptadors)
@@ -5351,6 +5379,7 @@ Helper centralitzat per filtrar valors invàlids abans de renderitzar `Select.It
 | **1.33** | **30 Gen 2026** | **Health Check P0: panell d'integritat de dades al Dashboard (només admin). 5 blocs deterministes: A) categories legacy (docIds), B) dates formats mixtos/invàlids, C) coherència origen bancari (source↔bankAccountId), D) archivedAt en queries normals, E) signs per transactionType. UI amb details expandibles, badge recompte, taula exemples (max 5). Deduplicació global importació bancària (per rang dates), guardrails UX solapament extractes, camps bancaris readonly (description/amount) per moviments importats. Fitxer category-health.ts amb runHealthCheck().** |
 | **1.34** | **31 Gen 2026** | **Invariant A4 source↔bankAccountId: `bank`/`stripe` requereixen bankAccountId (P0 error si absent), `remittance` hereta del pare, `manual` no aplica. Health check actualitzat per detectar stripe sense bankAccountId. Camps (date/amount/description) bloquejats si bankAccountId present. Backfill dades legacy Flores (363 transaccions: 340 bank + 23 remittance).** |
 | **1.35** | **1 Feb 2026** | **Guardrails integritat Categories i Eixos: prohibit delete físic (Firestore Rules), arxivat només via API amb reassignació obligatòria si count > 0, camps archivedAt/ByUid/FromAction protegits contra escriptura client. APIs `/api/categories/archive` i `/api/projects/archive` amb validació orgId derivat de membership. Health Check nou: blocs F (categories òrfenes) i G (projects orfes). UI: icona Archive, ReassignModal, traduccions CA/ES/FR.** |
+| **1.43** | **14 Feb 2026** | **Hub de Guies/Bot: recuperació semàntica reforçada (més intents reals coberts), desambiguació 1/2 en consultes ambigües, fallback guiat i badges de navegació clicables. SuperAdmin `/admin`: redisseny "Torre de Control" en 5 blocs (Estat, Entitats, Coneixement/Bot, Comunicació, Configuració), resum executiu via `/api/admin/control-tower/summary` i fix de robustesa de timestamps.** |
 | **1.41** | **11 Feb 2026** | **Donants: persona de contacte per empreses (contactPersonName), 3 filtres dashboard (Tipus/Modalitat/Periodicitat) amb comptadors i lògica AND, quota amb sufix periodicitat. Accés operatiu unificat (require-operational-access.ts) amb superadmin bypass. Fix Firestore Rules `.get('archived', null)` per docs legacy. Fixes menors i18n i typecheck.** |
 | **1.40** | **10 Feb 2026** | **Admin SDK compartit centralitzat (admin-sdk.ts, -500 línies). Registre/invitacions via Admin API. Pre-selecció SEPA pain.008 per periodicitat natural. Dinàmica donants redissenyada (5 blocs, PF/PJ). Health Check K/L. Gate i18n pre-commit. SafeSelect guard. Neteja console.logs.** |
 | **1.39** | **9 Feb 2026** | **Delete guardrails complets: budget lines bloquejades si linkades, expense links bloquejats si amb assignacions, FX transfers amb AlertDialog. Danger zone: findLinkedTxIds per remeses i bulk delete. i18n blockedByProjectLinks.** |

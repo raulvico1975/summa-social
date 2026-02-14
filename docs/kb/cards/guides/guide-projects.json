@@ -15,21 +15,29 @@
       "crear un projecte",
       "justificar una subvenció",
       "mòdul de projectes",
-      "assignar despeses a un projecte"
+      "assignar despeses a un projecte",
+      "imputar una despesa a diversos projectes",
+      "com reparto una despesa entre projectes",
+      "necessito fer servir projectes o puc ignorar-los",
+      "puc veure quant hem gastat en un projecte concret"
     ],
     "es": [
       "cómo gestiono proyectos",
       "crear un proyecto",
       "justificar una subvención",
       "módulo de proyectos",
-      "asignar gastos a un proyecto"
+      "asignar gastos a un proyecto",
+      "imputar un gasto a varios proyectos",
+      "como reparto un gasto entre proyectos",
+      "necesito usar proyectos o puedo ignorarlos",
+      "puedo ver cuanto hemos gastado en un proyecto concreto"
     ]
   },
   "guideId": "projects",
   "answer": null,
   "uiPaths": ["Projectes"],
   "needsSnapshot": false,
-  "keywords": ["projectes", "subvencions", "justificar", "pressupost", "assignar"],
+  "keywords": ["projectes", "subvencions", "justificar", "pressupost", "assignar", "despesa", "executat", "gastat", "imputar", "repartir", "diversos"],
   "source_faq": ["Q79", "Q80"],
   "source_manual": ["10.1", "10.2"],
   "source_guides": ["projects"],

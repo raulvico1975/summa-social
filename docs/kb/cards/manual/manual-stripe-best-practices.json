@@ -1,0 +1,62 @@
+{
+  "id": "manual-stripe-best-practices",
+  "type": "concept",
+  "domain": "documents",
+  "risk": "safe",
+  "guardrail": "none",
+  "answerMode": "full",
+  "title": {
+    "ca": "Bones pràctiques amb Stripe",
+    "es": "Buenas prácticas con Stripe"
+  },
+  "intents": {
+    "ca": [
+      "bones practiques amb stripe",
+      "bones pràctiques amb stripe",
+      "consells per stripe a summa",
+      "stripe comissions i csv"
+    ],
+    "es": [
+      "buenas practicas con stripe",
+      "consejos para stripe en summa",
+      "stripe comisiones y csv"
+    ]
+  },
+  "guideId": null,
+  "answer": {
+    "ca": "Per treballar bé amb Stripe a Summa:\n1. Exporta CSV amb columnes predeterminades de Stripe.\n2. No obris ni modifiquis el CSV amb Excel abans d'importar-lo.\n3. Processa cada payout per separat perquè quadri amb el banc.\n4. Revisa els donants no identificats per email abans de tancar l'any fiscal.\n\nAixò evita la majoria d'errors en conciliació i informes.",
+    "es": "Para trabajar bien con Stripe en Summa:\n1. Exporta CSV con columnas predeterminadas de Stripe.\n2. No abras ni modifiques el CSV con Excel antes de importarlo.\n3. Procesa cada payout por separado para que cuadre con el banco.\n4. Revisa los donantes no identificados por email antes de cerrar el año fiscal.\n\nEsto evita la mayoría de errores en conciliación e informes."
+  },
+  "uiPaths": [
+    "Moviments > Dividir remesa Stripe"
+  ],
+  "needsSnapshot": false,
+  "keywords": [
+    "stripe",
+    "csv",
+    "payout",
+    "comissions",
+    "bones practiques"
+  ],
+  "source_faq": [
+    "Q62",
+    "Q64",
+    "Q65"
+  ],
+  "source_manual": [
+    "8.1",
+    "8.2",
+    "8.3"
+  ],
+  "source_guides": [
+    "stripeDonations"
+  ],
+  "related": [
+    "guide-stripe-donations"
+  ],
+  "error_key": null,
+  "symptom": {
+    "ca": null,
+    "es": null
+  }
+}

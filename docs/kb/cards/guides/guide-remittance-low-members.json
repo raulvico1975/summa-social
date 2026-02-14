@@ -14,22 +14,34 @@
       "la remesa té pocs socis",
       "falten socis a la remesa",
       "no surten tots els socis a la remesa",
-      "remesa amb menys membres"
+      "remesa amb menys membres",
+      "aquesta remesa ja esta processada",
+      "la remesa no quadra",
+      "remesa parcial",
+      "alguns socis no tenen periodicitat informada",
+      "soci no apareix a la remesa",
+      "problemes amb remeses"
     ],
     "es": [
       "la remesa tiene pocos socios",
       "faltan socios en la remesa",
       "no salen todos los socios en la remesa",
-      "remesa con menos miembros"
+      "remesa con menos miembros",
+      "esta remesa ya esta procesada",
+      "la remesa no cuadra",
+      "remesa parcial",
+      "algunos socios no tienen periodicidad informada",
+      "socio no aparece en la remesa",
+      "problemas con remesas"
     ]
   },
   "guideId": "remittanceLowMembers",
   "answer": null,
   "uiPaths": ["Moviments > Remeses"],
   "needsSnapshot": false,
-  "keywords": ["remesa", "pocs", "socis", "falten", "membres", "menys"],
+  "keywords": ["remesa", "pocs", "socis", "falten", "membres", "menys", "processada", "quadra", "periodicitat", "parcial"],
   "source_faq": ["Q44", "Q45"],
-  "source_manual": ["6.4"],
+  "source_manual": ["6.4", "7.6"],
   "source_guides": ["remittanceLowMembers"],
   "related": ["guide-remittances", "guide-split-remittance", "guide-donor-inactive"],
   "error_key": null,

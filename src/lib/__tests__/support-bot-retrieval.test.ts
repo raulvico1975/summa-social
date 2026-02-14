@@ -29,6 +29,60 @@ test('retrieveCard understands expense allocation variants', () => {
   assert.equal(result.mode, 'card')
 })
 
+test('retrieveCard resolves logo change question', () => {
+  const result = retrieveCard("vull canviar el logo de l'entitat", 'ca', cards)
+  assert.equal(result.card.id, 'manual-change-logo')
+  assert.equal(result.mode, 'card')
+})
+
+test('retrieveCard resolves product updates inbox question', () => {
+  const result = retrieveCard('com em puc assabentar de les novetats de Summa?', 'ca', cards)
+  assert.equal(result.card.id, 'manual-product-updates')
+  assert.equal(result.mode, 'card')
+})
+
+test('retrieveCard resolves multi-organization question', () => {
+  const result = retrieveCard('puc tenir diverses organitzacions?', 'ca', cards)
+  assert.equal(result.card.id, 'manual-multi-organization')
+  assert.equal(result.mode, 'card')
+})
+
+test('retrieveCard resolves internal transfer categorization question', () => {
+  const result = retrieveCard("tinc una transferència interna entre comptes de l'entitat, com la categorizo?", 'ca', cards)
+  assert.equal(result.card.id, 'manual-internal-transfer')
+  assert.equal(result.mode, 'card')
+})
+
+test('retrieveCard resolves generic error message question', () => {
+  const result = retrieveCard("m'apareix un missatge d'error que no entenc", 'ca', cards)
+  assert.equal(result.card.id, 'manual-common-errors')
+  assert.equal(result.mode, 'card')
+})
+
+test('retrieveCard resolves guides hub question', () => {
+  const result = retrieveCard("on trobo les guies d'ajuda dins l'app?", 'ca', cards)
+  assert.equal(result.card.id, 'manual-guides-hub')
+  assert.equal(result.mode, 'card')
+})
+
+test('retrieveCard resolves expense split across projects question', () => {
+  const result = retrieveCard('Com imputo una despesa a diversos projectes?', 'ca', cards)
+  assert.equal(result.card.id, 'guide-projects')
+  assert.equal(result.mode, 'card')
+})
+
+test('retrieveCard resolves upload invoice/receipt/payroll question', () => {
+  const result = retrieveCard('Com pujo una factura o rebut o nòmina?', 'ca', cards)
+  assert.equal(result.card.id, 'guide-attach-document')
+  assert.equal(result.mode, 'card')
+})
+
+test('retrieveCard resolves member paid fees history question', () => {
+  const result = retrieveCard('Com puc saber les quotes que un soci ha pagat?', 'ca', cards)
+  assert.equal(result.card.id, 'manual-member-paid-quotas')
+  assert.equal(result.mode, 'card')
+})
+
 test('inferQuestionDomain detects fiscal and remittances', () => {
   assert.equal(inferQuestionDomain('Com envio certificat de donació model 182?'), 'fiscal')
   assert.equal(inferQuestionDomain('Puc desfer una remesa de rebuts?'), 'remittances')

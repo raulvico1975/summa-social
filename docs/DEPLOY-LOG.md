@@ -32,3 +32,5 @@ Registre cronologic de desplegaments a produccio.
 | 2026-02-14 18:35 | 6ea4e4c | ALT | No | 3 | OK |
 | 2026-02-14 18:44 | 8dabb1b | ALT | No | 5 | OK |
 | 2026-02-14 19:44 | 10767b1 | ALT | Si | 8 | OK |
+| 2026-02-14 20:45 | c2e28ec | ALT | No | 11 | PENDENT |
+| 2026-02-14 21:19 | 9138509 | MITJA | No | 5 | PENDENT |

@@ -1,0 +1,55 @@
+{
+  "id": "manual-dashboard-terrain",
+  "type": "concept",
+  "domain": "general",
+  "risk": "safe",
+  "guardrail": "none",
+  "answerMode": "full",
+  "title": {
+    "ca": "Què és el Terreny al Dashboard",
+    "es": "Qué es Terreno en el Dashboard"
+  },
+  "intents": {
+    "ca": [
+      "que es el terreny que veig al dashboard",
+      "que vol dir terreny al dashboard",
+      "terreny dashboard"
+    ],
+    "es": [
+      "que es el terreno que veo en el dashboard",
+      "que significa terreno en el dashboard",
+      "terreno dashboard"
+    ]
+  },
+  "guideId": null,
+  "answer": {
+    "ca": "Al Dashboard, \"Terreny\" són transferències a entitats sòcies o contraparts de projectes.\n\nNo és la mateixa cosa que despesa operativa interna (lloguer, nòmines, subministraments). Per això es mostra separat: ajuda a entendre millor com es distribueixen els recursos de la missió.",
+    "es": "En el Dashboard, \"Terreno\" son transferencias a entidades socias o contrapartes de proyectos.\n\nNo es lo mismo que gasto operativo interno (alquiler, nóminas, suministros). Por eso se muestra separado: ayuda a entender mejor cómo se distribuyen los recursos de la misión."
+  },
+  "uiPaths": [
+    "Dashboard > Bloc Diners"
+  ],
+  "needsSnapshot": false,
+  "keywords": [
+    "terreny",
+    "terreno",
+    "dashboard",
+    "transferencies",
+    "contrapart"
+  ],
+  "source_faq": [
+    "Q37"
+  ],
+  "source_manual": [
+    "1.4"
+  ],
+  "source_guides": [],
+  "related": [
+    "guide-projects"
+  ],
+  "error_key": null,
+  "symptom": {
+    "ca": null,
+    "es": null
+  }
+}

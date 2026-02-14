@@ -1,0 +1,60 @@
+{
+  "id": "manual-guides-hub",
+  "type": "howto",
+  "domain": "general",
+  "risk": "safe",
+  "guardrail": "none",
+  "answerMode": "full",
+  "title": {
+    "ca": "On trobar el Hub de Guies i com aprofitar-lo",
+    "es": "Dónde encontrar el Hub de Guías y cómo aprovecharlo"
+  },
+  "intents": {
+    "ca": [
+      "on trobo les guies d ajuda dins l app",
+      "on trobo les guies d'ajuda dins l'app",
+      "com obro el hub de guies",
+      "no trobo ajuda dins summa"
+    ],
+    "es": [
+      "donde encuentro las guias de ayuda dentro de la app",
+      "dónde encuentro las guías de ayuda dentro de la app",
+      "como abro el hub de guias",
+      "no encuentro ayuda dentro de summa"
+    ]
+  },
+  "guideId": null,
+  "answer": {
+    "ca": "El Hub de Guies és el primer lloc on buscar ajuda dins Summa.\n\nCom obrir-lo:\n1. Clica la icona ? del header.\n2. Escriu el dubte amb paraules naturals.\n3. Obre la guia recomanada o segueix els enllaços clicables de ruta.\n\nSi la pregunta és ambigua, el bot et pot demanar triar entre 2 opcions per portar-te al flux correcte.",
+    "es": "El Hub de Guías es el primer lugar donde buscar ayuda dentro de Summa.\n\nCómo abrirlo:\n1. Haz clic en el icono ? del header.\n2. Escribe la duda con palabras naturales.\n3. Abre la guía recomendada o sigue los enlaces clicables de ruta.\n\nSi la pregunta es ambigua, el bot puede pedirte elegir entre 2 opciones para llevarte al flujo correcto."
+  },
+  "uiPaths": [
+    "Header > ? > Hub de Guies"
+  ],
+  "needsSnapshot": false,
+  "keywords": [
+    "hub",
+    "guies",
+    "ajuda",
+    "icona ?",
+    "cercador"
+  ],
+  "source_faq": [
+    "Q7½"
+  ],
+  "source_manual": [
+    "12.0"
+  ],
+  "source_guides": [
+    "firstDay"
+  ],
+  "related": [
+    "guide-first-day",
+    "manual-common-errors"
+  ],
+  "error_key": null,
+  "symptom": {
+    "ca": null,
+    "es": null
+  }
+}

@@ -1,0 +1,55 @@
+{
+  "id": "manual-product-updates",
+  "type": "concept",
+  "domain": "general",
+  "risk": "safe",
+  "guardrail": "none",
+  "answerMode": "full",
+  "title": {
+    "ca": "Com veure les novetats de Summa Social",
+    "es": "Cómo ver las novedades de Summa Social"
+  },
+  "intents": {
+    "ca": [
+      "com em puc assabentar de les novetats i millores de summa social",
+      "com em puc assabentar de les novetats de summa",
+      "on veig les novetats de l app",
+      "inbox de novetats"
+    ],
+    "es": [
+      "como me entero de las novedades y mejoras de summa social",
+      "como me entero de las novedades de summa",
+      "donde veo las novedades de la app",
+      "inbox de novedades"
+    ]
+  },
+  "guideId": null,
+  "answer": {
+    "ca": "Les novetats es consulten a la campaneta (o FAB) del header.\n\nQuè fer:\n1. Mira si hi ha badge numèric a la icona.\n2. Clica la icona per obrir la safata de novetats.\n3. Llegeix-les i marca-les com a llegides.\n\nNo apareixen pop-ups automàtics mentre treballes: tu decideixes quan revisar-les.",
+    "es": "Las novedades se consultan en la campanita (o FAB) del header.\n\nQué hacer:\n1. Mira si hay badge numérico en el icono.\n2. Haz clic en el icono para abrir la bandeja de novedades.\n3. Léelas y márcalas como leídas.\n\nNo aparecen pop-ups automáticos mientras trabajas: tú decides cuándo revisarlas."
+  },
+  "uiPaths": [
+    "Header > Campaneta/FAB de novetats"
+  ],
+  "needsSnapshot": false,
+  "keywords": [
+    "novetats",
+    "millores",
+    "campaneta",
+    "inbox",
+    "notificacions"
+  ],
+  "source_faq": [
+    "Q7¾"
+  ],
+  "source_manual": [],
+  "source_guides": [],
+  "related": [
+    "manual-guides-hub"
+  ],
+  "error_key": null,
+  "symptom": {
+    "ca": null,
+    "es": null
+  }
+}

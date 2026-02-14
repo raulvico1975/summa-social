@@ -1,0 +1,56 @@
+{
+  "id": "manual-change-logo",
+  "type": "howto",
+  "domain": "config",
+  "risk": "safe",
+  "guardrail": "none",
+  "answerMode": "full",
+  "title": {
+    "ca": "Canviar el logo de l'entitat",
+    "es": "Cambiar el logo de la entidad"
+  },
+  "intents": {
+    "ca": [
+      "vull canviar el logo de l'entitat",
+      "com canvio el logo",
+      "pujar logo",
+      "on cambio el logo"
+    ],
+    "es": [
+      "quiero cambiar el logo de la entidad",
+      "como cambio el logo",
+      "subir logo",
+      "donde cambio el logo"
+    ]
+  },
+  "guideId": null,
+  "answer": {
+    "ca": "Per canviar el logo:\n1. Ves a Configuració.\n2. Busca la secció \"Logo\".\n3. Clica \"Pujar logo\" i selecciona la imatge (PNG o JPG).\n4. Revisa la previsualització.\n\nAquest logo s'utilitza als certificats de donació i altres documents de l'entitat.",
+    "es": "Para cambiar el logo:\n1. Ve a Configuración.\n2. Busca la sección \"Logo\".\n3. Haz clic en \"Subir logo\" y selecciona la imagen (PNG o JPG).\n4. Revisa la previsualización.\n\nEste logo se utiliza en los certificados de donación y otros documentos de la entidad."
+  },
+  "uiPaths": [
+    "Configuració > Logo"
+  ],
+  "needsSnapshot": false,
+  "keywords": [
+    "logo",
+    "imatge",
+    "configuracio",
+    "pujar"
+  ],
+  "source_faq": [
+    "Q99"
+  ],
+  "source_manual": [
+    "2.2"
+  ],
+  "source_guides": [],
+  "related": [
+    "guide-first-day"
+  ],
+  "error_key": null,
+  "symptom": {
+    "ca": null,
+    "es": null
+  }
+}

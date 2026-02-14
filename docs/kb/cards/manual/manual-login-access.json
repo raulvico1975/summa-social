@@ -1,0 +1,56 @@
+{
+  "id": "manual-login-access",
+  "type": "howto",
+  "domain": "config",
+  "risk": "safe",
+  "guardrail": "none",
+  "answerMode": "full",
+  "title": {
+    "ca": "Com accedir a l'aplicació",
+    "es": "Cómo acceder a la aplicación"
+  },
+  "intents": {
+    "ca": [
+      "com accedeixo a l aplicacio",
+      "com entro a summa social",
+      "iniciar sessio summa"
+    ],
+    "es": [
+      "como accedo a la aplicacion",
+      "como entro a summa social",
+      "iniciar sesion summa"
+    ]
+  },
+  "guideId": null,
+  "answer": {
+    "ca": "Per entrar a Summa Social:\n1. Obre https://summasocial.app\n2. Escriu email i contrasenya.\n3. Clica \"Iniciar sessió\".\n\nSi és el primer accés, busca el correu d'invitació i segueix l'alta. Si no el trobes, revisa spam o demana reenviament.",
+    "es": "Para entrar en Summa Social:\n1. Abre https://summasocial.app\n2. Escribe email y contraseña.\n3. Haz clic en \"Iniciar sesión\".\n\nSi es tu primer acceso, busca el correo de invitación y sigue el alta. Si no lo encuentras, revisa spam o pide reenvío."
+  },
+  "uiPaths": [
+    "Pantalla de login"
+  ],
+  "needsSnapshot": false,
+  "keywords": [
+    "acces",
+    "login",
+    "iniciar sessio",
+    "contrasenya",
+    "invitacio"
+  ],
+  "source_faq": [],
+  "source_manual": [
+    "1.1"
+  ],
+  "source_guides": [
+    "accessSecurity"
+  ],
+  "related": [
+    "guide-access-security",
+    "guide-reset-password"
+  ],
+  "error_key": null,
+  "symptom": {
+    "ca": null,
+    "es": null
+  }
+}

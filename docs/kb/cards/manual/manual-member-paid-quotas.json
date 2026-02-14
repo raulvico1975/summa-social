@@ -1,0 +1,60 @@
+{
+  "id": "manual-member-paid-quotas",
+  "type": "howto",
+  "domain": "donors",
+  "risk": "safe",
+  "guardrail": "none",
+  "answerMode": "full",
+  "title": {
+    "ca": "Com veure les quotes que ha pagat un soci",
+    "es": "Cómo ver las cuotas pagadas por un socio"
+  },
+  "intents": {
+    "ca": [
+      "com puc saber les quotes que un soci ha pagat",
+      "veure historial de quotes d un soci",
+      "on veig el que ha pagat un soci"
+    ],
+    "es": [
+      "como puedo saber las cuotas que un socio ha pagado",
+      "ver historial de cuotas de un socio",
+      "donde veo lo que ha pagado un socio"
+    ]
+  },
+  "guideId": null,
+  "answer": {
+    "ca": "Pots veure-ho des de la fitxa del donant:\n1. Ves a Donants.\n2. Busca el soci i obre'n el detall.\n3. Revisa l'historial de moviments/quotes associades.\n\nSi la remesa s'ha dividit correctament, hi veuràs cada quota individual amb data i import.",
+    "es": "Puedes verlo desde la ficha del donante:\n1. Ve a Donantes.\n2. Busca al socio y abre su detalle.\n3. Revisa el historial de movimientos/cuotas asociadas.\n\nSi la remesa se ha dividido correctamente, verás cada cuota individual con fecha e importe."
+  },
+  "uiPaths": [
+    "Donants > Fitxa del donant"
+  ],
+  "needsSnapshot": false,
+  "keywords": [
+    "quotes",
+    "soci",
+    "pagat",
+    "historial",
+    "fitxa donant"
+  ],
+  "source_faq": [
+    "Q48"
+  ],
+  "source_manual": [
+    "3.6",
+    "6.2"
+  ],
+  "source_guides": [
+    "donors",
+    "remittances"
+  ],
+  "related": [
+    "guide-donors",
+    "guide-remittances"
+  ],
+  "error_key": null,
+  "symptom": {
+    "ca": null,
+    "es": null
+  }
+}
