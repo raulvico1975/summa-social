@@ -21,7 +21,7 @@ Això executa `scripts/deploy.sh`, un script determinista que fa tot el ritual:
 3. Verificació fiscal (bloquejant si toca àrea fiscal)
 4. Verificacions locals (verify-local.sh + verify-ci.sh)
 5. Confirmació final
-6. Merge main→master→prod + push
+6. Merge main→prod + push
 7. Post-deploy check bloquejant (SHA + smoke test)
 8. Registre a `docs/DEPLOY-LOG.md`
 
@@ -39,7 +39,7 @@ git push --force-with-lease
 
 Firebase App Hosting redesplegarà automàticament.
 
-**Regla:** Rollback sempre des de `prod`, mai des de `master`.
+**Regla:** Rollback sempre des de `prod`.
 
 ---
 

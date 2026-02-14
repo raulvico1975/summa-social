@@ -188,7 +188,7 @@ Això llança `scripts/deploy.sh`, que és un script determinista i bloquejant q
 - verifica git, detecta canvis
 - si toca àrea fiscal, demana confirmació de la verificació manual (`docs/QA-FISCAL.md`)
 - executa verificacions locals
-- fa el merge ritual (main→master→prod) i push
+- fa el merge ritual (main→prod) i push
 - força post-deploy check (SHA + smoke test)
 - registra el deploy a `docs/DEPLOY-LOG.md`
 

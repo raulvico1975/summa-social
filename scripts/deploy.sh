@@ -18,7 +18,6 @@ RISK_LEVEL="BAIX"
 IS_FISCAL=false
 FISCAL_TRIGGER_FILES=""
 MAIN_SHA=""
-MASTER_SHA=""
 PROD_SHA=""
 DEPLOY_RESULT="OK"
 HUMAN_QUESTION_REASON=""
@@ -98,17 +97,7 @@ preflight_git_checks() {
     exit 1
   fi
 
-  # 1e. Pull ff-only a master
-  echo "  Actualitzant master..."
-  git checkout master --quiet
-  if ! git pull --ff-only origin master 2>/dev/null; then
-    echo "ERROR: La branca 'master' ha divergit del remot."
-    echo "  Cal resoldre manualment abans de desplegar."
-    git checkout main --quiet
-    exit 1
-  fi
-
-  # 1f. Pull ff-only a prod
+  # 1e. Pull ff-only a prod
   echo "  Actualitzant prod..."
   git checkout prod --quiet
   if ! git pull --ff-only origin prod 2>/dev/null; then
@@ -122,7 +111,6 @@ preflight_git_checks() {
   git checkout main --quiet
 
   MAIN_SHA=$(git rev-parse --short HEAD)
-  MASTER_SHA=$(git rev-parse --short master)
   PROD_SHA=$(git rev-parse --short prod)
 
   echo "  Comprovacions OK."
@@ -133,12 +121,12 @@ preflight_git_checks() {
 # PAS 2 — Detectar canvis (BLOQUEJANT si 0)
 # ============================================================
 detect_changed_files() {
-  echo "[2/9] Detectant fitxers canviats (main vs master)..."
+  echo "[2/9] Detectant fitxers canviats (main vs prod)..."
 
-  CHANGED_FILES=$(git diff --name-only master..main --diff-filter=ACMRT)
+  CHANGED_FILES=$(git diff --name-only prod..main --diff-filter=ACMRT)
 
   if [ -z "$CHANGED_FILES" ]; then
-    echo "  Res a desplegar (main == master)."
+    echo "  Res a desplegar (main == prod)."
     exit 0
   fi
 
@@ -389,7 +377,7 @@ classify_fiscal_impact() {
     [ -z "$file" ] && continue
 
     local diff_content changes line_count tags
-    diff_content=$(git diff master..main -- "$file" 2>/dev/null)
+    diff_content=$(git diff prod..main -- "$file" 2>/dev/null)
     [ -z "$diff_content" ] && continue
 
     # Nomes linies canviades (exclou headers de diff)
@@ -568,7 +556,6 @@ display_deploy_summary() {
   echo ""
   echo "  Branques:"
   echo "    main:   $MAIN_SHA"
-  echo "    master: $MASTER_SHA"
   echo "    prod:   $PROD_SHA"
   echo ""
   echo "  Risc:     $RISK_LEVEL"
@@ -583,24 +570,10 @@ display_deploy_summary() {
 execute_merge_ritual() {
   echo "[7/9] Executant merge ritual..."
 
-  # main -> master (--no-ff per preservar historial)
-  echo "  main -> master..."
-  git checkout master --quiet
-  if ! git merge --no-ff main -m "chore(deploy): merge main -> master"; then
-    echo ""
-    echo "ERROR: Conflicte de merge a master."
-    git merge --abort || true
-    git checkout main --quiet
-    echo "  Resol el conflicte manualment i torna a executar el deploy."
-    exit 1
-  fi
-  git push origin master
-  echo "  master actualitzat i pujat."
-
-  # master -> prod
-  echo "  master -> prod..."
+  # main -> prod
+  echo "  main -> prod..."
   git checkout prod --quiet
-  if ! git merge master -m "chore(deploy): merge master -> prod"; then
+  if ! git merge --no-ff main -m "chore(deploy): merge main -> prod"; then
     echo ""
     echo "ERROR: Conflicte de merge a prod."
     git merge --abort || true
