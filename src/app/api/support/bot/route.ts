@@ -541,7 +541,9 @@ export async function POST(request: NextRequest): Promise<NextResponse<ApiRespon
     let finalAnswer = rawAnswer
     const uiPathHint = buildUiPathHint(card)
 
-    if (apiKey && aiReformatEnabled && mode === 'card') {
+    // Guide cards ja surten estructurades "pas a pas" des del loader.
+    // Evitem reformatejar-les amb LLM per prioritzar exactitud i consistència.
+    if (apiKey && aiReformatEnabled && mode === 'card' && !card.guideId) {
       // Precompute boolean flags to avoid Handlebars helper issues
       const isGuarded = card.risk === 'guarded'
       const isLimited = card.answerMode === 'limited'
