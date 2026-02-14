@@ -15,7 +15,8 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { useTranslations } from '@/i18n';
 import { useFirebase } from '@/firebase';
 import { trackUX } from '@/lib/ux/trackUX';
-import { usePathname, useRouter } from 'next/navigation';
+import { usePathname } from 'next/navigation';
+import Link from 'next/link';
 
 // -------------------------------------------------------------------
 // Types
@@ -86,7 +87,6 @@ function resolveUiPathHref(rawPath: string, pathname: string): string | null {
 export function BotSheet({ open, onOpenChange }: BotSheetProps) {
   const { language, tr } = useTranslations();
   const { user } = useFirebase();
-  const router = useRouter();
   const pathname = usePathname();
 
   const [messages, setMessages] = React.useState<BotMessage[]>([]);
@@ -200,14 +200,10 @@ export function BotSheet({ open, onOpenChange }: BotSheetProps) {
     }
   };
 
-  const handleUiPathClick = React.useCallback((path: string) => {
-    const href = resolveUiPathHref(path, pathname)
-    if (!href) return
-
+  const handleUiPathClick = React.useCallback((path: string, href: string) => {
     trackUX('bot.ui_path_click', { path, href, lang: language })
     onOpenChange(false)
-    router.push(href)
-  }, [pathname, language, onOpenChange, router])
+  }, [language, onOpenChange])
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
@@ -242,18 +238,29 @@ export function BotSheet({ open, onOpenChange }: BotSheetProps) {
                   {msg.text}
                   {msg.uiPaths && msg.uiPaths.length > 0 && (
                     <div className="mt-2 flex flex-wrap gap-1">
-                      {msg.uiPaths.map((path, j) => (
-                        <button
-                          key={j}
-                          type="button"
-                          onClick={() => handleUiPathClick(path)}
-                          className="text-left"
-                        >
-                          <Badge variant="secondary" className="text-xs hover:bg-secondary/80 cursor-pointer">
-                            {path}
-                          </Badge>
-                        </button>
-                      ))}
+                      {msg.uiPaths.map((path, j) => {
+                        const href = resolveUiPathHref(path, pathname)
+                        if (!href) {
+                          return (
+                            <Badge key={j} variant="secondary" className="text-xs">
+                              {path}
+                            </Badge>
+                          )
+                        }
+
+                        return (
+                          <Link
+                            key={j}
+                            href={href}
+                            onClick={() => handleUiPathClick(path, href)}
+                            className="inline-flex"
+                          >
+                            <Badge variant="secondary" className="text-xs hover:bg-secondary/80 cursor-pointer">
+                              {path}
+                            </Badge>
+                          </Link>
+                        )
+                      })}
                     </div>
                   )}
                   {msg.role === 'bot' && msg.cardId === 'clarify-disambiguation' && msg.clarifyOptions?.length ? (
