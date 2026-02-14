@@ -12,7 +12,8 @@ import { ai } from '@/ai/genkit'
 import { z } from 'genkit'
 import { verifyIdToken, getAdminDb, validateUserMembership } from '@/lib/api/admin-sdk'
 import { requireOperationalAccess } from '@/lib/api/require-operational-access'
-import { loadAllCards, loadGuideContent, type KBCard } from '@/lib/support/load-kb'
+import { loadGuideContent, type KBCard } from '@/lib/support/load-kb'
+import { loadKbCards } from '@/lib/support/load-kb-runtime'
 import { logBotQuestion } from '@/lib/support/bot-question-log'
 
 // =============================================================================
@@ -144,8 +145,8 @@ function detectFallbackDomain(tokens: string[]): string {
   return 'fallback-no-answer'
 }
 
-function retrieveCard(message: string, lang: 'ca' | 'es'): { card: KBCard; mode: 'card' | 'fallback' } {
-  const cards = loadAllCards()
+async function retrieveCard(message: string, lang: 'ca' | 'es', version: number): Promise<{ card: KBCard; mode: 'card' | 'fallback' }> {
+  const cards = await loadKbCards(version)
   const tokens = normalize(message)
 
   // Score all non-fallback cards
@@ -235,8 +236,12 @@ export async function POST(request: NextRequest): Promise<NextResponse<ApiRespon
       return NextResponse.json({ ok: false, code: 'FORBIDDEN' as const, message: 'Accés denegat' }, { status: 403 })
     }
 
+    // --- Load KB version ---
+    const snap = await db.doc('system/supportKb').get()
+    const version = snap.exists ? (snap.data()?.version ?? 0) : 0
+
     // --- Retrieval ---
-    const { card, mode } = retrieveCard(message, lang)
+    const { card, mode } = await retrieveCard(message, lang, version)
 
     // --- Log question (fire-and-forget) ---
     void logBotQuestion(db, orgId, message, lang, mode, card.id).catch(e =>

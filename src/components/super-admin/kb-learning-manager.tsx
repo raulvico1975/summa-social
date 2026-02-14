@@ -37,10 +37,37 @@ export function KbLearningManager() {
   const [isExporting, setIsExporting] = React.useState(false);
   const [isImporting, setIsImporting] = React.useState(false);
   const [selectedFile, setSelectedFile] = React.useState<File | null>(null);
+  const [currentVersion, setCurrentVersion] = React.useState<number>(0);
+  const [isPublishing, setIsPublishing] = React.useState(false);
 
   React.useEffect(() => {
     setIsMounted(true);
   }, []);
+
+  React.useEffect(() => {
+    if (!isMounted) return;
+
+    const loadVersion = async () => {
+      const { getFirestore, doc, getDoc } = await import('firebase/firestore');
+      const { getAuth } = await import('firebase/auth');
+
+      const auth = getAuth();
+      const user = auth.currentUser;
+      if (!user) return;
+
+      try {
+        const db = getFirestore();
+        const snap = await getDoc(doc(db, 'system', 'supportKb'));
+        if (snap.exists()) {
+          setCurrentVersion(snap.data().version ?? 0);
+        }
+      } catch (error) {
+        console.warn('[KbLearningManager] Error loading version:', error);
+      }
+    };
+
+    loadVersion();
+  }, [isMounted]);
 
   const handleExport = React.useCallback(async () => {
     const auth = getAuth();
@@ -143,6 +170,46 @@ export function KbLearningManager() {
       setIsImporting(false);
     }
   }, [selectedFile, toast]);
+
+  const handlePublish = React.useCallback(async () => {
+    const { getFirestore, doc, setDoc, serverTimestamp } = await import('firebase/firestore');
+    const { getAuth } = await import('firebase/auth');
+
+    const auth = getAuth();
+    const user = auth.currentUser;
+    if (!user) return;
+
+    setIsPublishing(true);
+    try {
+      const db = getFirestore();
+
+      await setDoc(
+        doc(db, 'system', 'supportKb'),
+        {
+          version: currentVersion + 1,
+          updatedAt: serverTimestamp(),
+          updatedBy: user.uid,
+        },
+        { merge: true }
+      );
+
+      setCurrentVersion(v => v + 1);
+
+      toast({
+        title: 'KB publicada',
+        description: `Versió ${currentVersion + 1} activa. Els bots usaran les noves cards.`,
+      });
+    } catch (error) {
+      console.error('[KbLearningManager] publish error:', error);
+      toast({
+        variant: 'destructive',
+        title: 'Error',
+        description: (error as Error).message || 'No s\'ha pogut publicar.',
+      });
+    } finally {
+      setIsPublishing(false);
+    }
+  }, [currentVersion, toast]);
 
   if (!isMounted) {
     return null;
@@ -251,6 +318,38 @@ export function KbLearningManager() {
               )}
               Pujar KB
             </Button>
+          </div>
+        </div>
+
+        <Separator />
+
+        {/* Secció 3 — Publicar KB */}
+        <div className="space-y-3">
+          <div>
+            <h4 className="text-sm font-medium">Publicar KB</h4>
+            <p className="text-xs text-muted-foreground mt-1">
+              Incrementa la versió a Firestore perquè els bots usin les cards actualitzades.
+            </p>
+          </div>
+
+          <div className="flex items-center gap-3">
+            <Button
+              onClick={handlePublish}
+              disabled={isPublishing}
+            >
+              {isPublishing ? (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              ) : (
+                <Upload className="mr-2 h-4 w-4" />
+              )}
+              Publicar nova versió (v{currentVersion + 1})
+            </Button>
+
+            {currentVersion > 0 && (
+              <span className="text-xs text-muted-foreground">
+                Versió actual: v{currentVersion}
+              </span>
+            )}
           </div>
         </div>
       </CardContent>
