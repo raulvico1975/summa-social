@@ -3,6 +3,8 @@
 import * as React from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Separator } from '@/components/ui/separator';
 import {
   Select,
   SelectContent,
@@ -10,7 +12,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { BrainCircuit, Download, Loader2, MessageSquareWarning } from 'lucide-react';
+import { BrainCircuit, Download, Loader2, MessageSquareWarning, Upload } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useFirebase } from '@/firebase';
 
@@ -31,6 +33,8 @@ export function KbLearningManager() {
   const [scope, setScope] = React.useState<ExportScope>('fallbackOnly');
   const [days, setDays] = React.useState<string>('30');
   const [isExporting, setIsExporting] = React.useState(false);
+  const [isImporting, setIsImporting] = React.useState(false);
+  const [selectedFile, setSelectedFile] = React.useState<File | null>(null);
 
   const handleExport = React.useCallback(async () => {
     if (!user) return;
@@ -82,6 +86,47 @@ export function KbLearningManager() {
       setIsExporting(false);
     }
   }, [user, scope, days, toast]);
+
+  const handleImport = React.useCallback(async () => {
+    if (!user || !selectedFile) return;
+
+    setIsImporting(true);
+    try {
+      const idToken = await user.getIdToken();
+      const formData = new FormData();
+      formData.append('file', selectedFile);
+
+      const res = await fetch('/api/support/bot-questions/import', {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${idToken}`,
+        },
+        body: formData,
+      });
+
+      const data = await res.json();
+
+      if (!data.ok) {
+        throw new Error(data.error || 'Error important');
+      }
+
+      toast({
+        title: 'KB importada',
+        description: `${data.imported} cards importades (${data.overwritten} sobreescrites). NO publicades encara.`,
+      });
+
+      setSelectedFile(null);
+    } catch (error) {
+      console.error('[KbLearningManager] import error:', error);
+      toast({
+        variant: 'destructive',
+        title: 'Error',
+        description: (error as Error).message || 'No s\'ha pogut importar.',
+      });
+    } finally {
+      setIsImporting(false);
+    }
+  }, [user, selectedFile, toast]);
 
   return (
     <Card>
@@ -147,6 +192,40 @@ export function KbLearningManager() {
         <p className="text-xs text-muted-foreground">
           Top 500 per freqüència · PII emmascarada · orgId derivat del token
         </p>
+
+        <Separator />
+
+        {/* Secció 2 — Import KB */}
+        <div className="space-y-3">
+          <div>
+            <h4 className="text-sm font-medium">Importar cards (Storage draft)</h4>
+            <p className="text-xs text-muted-foreground mt-1">
+              Puja CSV/XLSX amb noves cards → es guarden a Storage sense publicar.
+            </p>
+          </div>
+
+          <div className="flex items-end gap-3">
+            <div className="flex-1">
+              <Input
+                type="file"
+                accept=".csv,.xlsx"
+                onChange={(e) => setSelectedFile(e.target.files?.[0] || null)}
+                disabled={isImporting}
+              />
+            </div>
+            <Button
+              onClick={handleImport}
+              disabled={!selectedFile || isImporting}
+            >
+              {isImporting ? (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              ) : (
+                <Upload className="mr-2 h-4 w-4" />
+              )}
+              Pujar KB
+            </Button>
+          </div>
+        </div>
       </CardContent>
     </Card>
   );
