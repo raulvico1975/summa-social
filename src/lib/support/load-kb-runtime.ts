@@ -13,6 +13,7 @@ import { loadAllCards } from './load-kb'
 
 type CachedKB = {
   version: number
+  storageVersion: number | null
   cards: KBCard[]
 }
 
@@ -23,11 +24,12 @@ let cached: CachedKB | null = null
  * Cache per version: only reload if version changes.
  *
  * @param version - Current KB version from Firestore (system/supportKb.version)
- * @returns Merged KB cards (Storage overrides filesystem by ID)
+ * @param storageVersion - Published storage version (must match version to use Storage)
+ * @returns Merged KB cards (Storage published overrides filesystem by ID)
  */
-export async function loadKbCards(version: number): Promise<KBCard[]> {
+export async function loadKbCards(version: number, storageVersion: number | null = null): Promise<KBCard[]> {
   // Cache hit: return if version hasn't changed
-  if (cached && cached.version === version) {
+  if (cached && cached.version === version && cached.storageVersion === storageVersion) {
     return cached.cards
   }
 
@@ -35,13 +37,14 @@ export async function loadKbCards(version: number): Promise<KBCard[]> {
   const fsCards = await loadAllCards()
 
   // 2. Storage (override)
-  const storageCards = await loadKbFromStorage()
+  const shouldUseStoragePublished = storageVersion === version
+  const storageCards = shouldUseStoragePublished ? await loadKbFromStorage() : null
 
   // 3. Merge: Storage overrides filesystem by ID
   const merged = mergeKbCards(fsCards, storageCards ?? [])
 
   // 4. Cache per version
-  cached = { version, cards: merged }
+  cached = { version, storageVersion, cards: merged }
   return merged
 }
 

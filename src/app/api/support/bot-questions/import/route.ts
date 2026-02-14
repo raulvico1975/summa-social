@@ -20,7 +20,7 @@ type ApiResponse =
   | { ok: true; imported: number; overwritten: number }
   | { ok: false; error: string; details?: string[] }
 
-const KB_STORAGE_PATH = 'support-kb/kb.json'
+const KB_DRAFT_STORAGE_PATH = 'support-kb/kb-draft.json'
 
 export async function POST(request: NextRequest): Promise<NextResponse<ApiResponse>> {
   try {
@@ -128,7 +128,7 @@ export async function POST(request: NextRequest): Promise<NextResponse<ApiRespon
     }
 
     const bucket = getStorage().bucket(bucketName);
-    const storageFile = bucket.file(KB_STORAGE_PATH)
+    const storageFile = bucket.file(KB_DRAFT_STORAGE_PATH)
 
     let existingCards: KBCard[] = []
     try {
@@ -138,7 +138,7 @@ export async function POST(request: NextRequest): Promise<NextResponse<ApiRespon
         existingCards = JSON.parse(data.toString('utf-8')) as KBCard[]
       }
     } catch (e) {
-      console.warn('[import] Could not load existing kb.json, starting fresh:', e)
+      console.warn('[import] Could not load existing kb-draft.json, starting fresh:', e)
     }
 
     // Merge: new cards override existing by ID
@@ -167,6 +167,17 @@ export async function POST(request: NextRequest): Promise<NextResponse<ApiRespon
         },
       },
     })
+
+    // Save draft metadata for admin diagnostics.
+    const db = getAdminDb()
+    await db.doc('system/supportKb').set(
+      {
+        draftCardCount: merged.length,
+        draftUpdatedAt: new Date().toISOString(),
+        draftUpdatedBy: authResult.uid,
+      },
+      { merge: true }
+    )
 
     return NextResponse.json({
       ok: true,
