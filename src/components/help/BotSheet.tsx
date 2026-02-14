@@ -1,7 +1,7 @@
 'use client';
 
 import * as React from 'react';
-import { Send, Loader2, Bot, User } from 'lucide-react';
+import { Send, Loader2, Bot, User, ThumbsDown, ThumbsUp } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
@@ -28,6 +28,7 @@ interface BotMessage {
   uiPaths?: string[];
   cardId?: string;
   mode?: 'card' | 'fallback';
+  questionText?: string;
   clarifyOptions?: Array<{
     index: 1 | 2;
     cardId: string;
@@ -93,6 +94,7 @@ export function BotSheet({ open, onOpenChange }: BotSheetProps) {
   const [input, setInput] = React.useState('');
   const [loading, setLoading] = React.useState(false);
   const [pendingClarifyOptionIds, setPendingClarifyOptionIds] = React.useState<string[]>([]);
+  const [feedbackByMessage, setFeedbackByMessage] = React.useState<Record<string, 'up' | 'down'>>({});
 
   const scrollRef = React.useRef<HTMLDivElement>(null);
   const inputRef = React.useRef<HTMLInputElement>(null);
@@ -102,6 +104,9 @@ export function BotSheet({ open, onOpenChange }: BotSheetProps) {
   const placeholder = tr('bot.placeholder', language === 'es' ? 'Escribe tu pregunta...' : 'Escriu la teva pregunta...');
   const thinking = tr('bot.thinking', language === 'es' ? 'Pensando...' : 'Pensant...');
   const errorGeneric = tr('bot.errorGeneric', language === 'es' ? 'No he podido procesar la pregunta. Vuelve a intentarlo.' : 'No he pogut processar la pregunta. Torna-ho a provar.');
+  const helpfulQuestion = tr('bot.helpfulQuestion', language === 'es' ? '¿Te ha ayudado esta respuesta?' : 'T’ha ajudat aquesta resposta?');
+  const helpfulYes = tr('bot.helpfulYes', language === 'es' ? 'Sí' : 'Sí');
+  const helpfulNo = tr('bot.helpfulNo', language === 'es' ? 'No' : 'No');
 
   // Auto-scroll to bottom
   React.useEffect(() => {
@@ -155,6 +160,7 @@ export function BotSheet({ open, onOpenChange }: BotSheetProps) {
           uiPaths: data.uiPaths,
           cardId: data.cardId,
           mode: data.mode,
+          questionText: text,
           clarifyOptions,
         }]);
 
@@ -174,11 +180,11 @@ export function BotSheet({ open, onOpenChange }: BotSheetProps) {
         }
       } else {
         setPendingClarifyOptionIds([]);
-        setMessages(prev => [...prev, { role: 'bot', text: errorGeneric }]);
+        setMessages(prev => [...prev, { role: 'bot', text: errorGeneric, questionText: text }]);
       }
     } catch {
       setPendingClarifyOptionIds([]);
-      setMessages(prev => [...prev, { role: 'bot', text: errorGeneric }]);
+      setMessages(prev => [...prev, { role: 'bot', text: errorGeneric, questionText: text }]);
     } finally {
       setLoading(false);
     }
@@ -205,6 +211,33 @@ export function BotSheet({ open, onOpenChange }: BotSheetProps) {
     onOpenChange(false)
   }, [language, onOpenChange])
 
+  const handleFeedback = React.useCallback(async (messageKey: string, msg: BotMessage, helpful: boolean) => {
+    if (!user || !msg.questionText || !msg.cardId) return
+    const vote = helpful ? 'up' : 'down'
+    setFeedbackByMessage(prev => ({ ...prev, [messageKey]: vote }))
+    trackUX('bot.feedback', { helpful, cardId: msg.cardId, lang: language })
+
+    try {
+      const idToken = await user.getIdToken()
+      await fetch('/api/support/bot-feedback', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${idToken}`,
+        },
+        body: JSON.stringify({
+          question: msg.questionText,
+          lang: language,
+          helpful,
+          cardId: msg.cardId,
+          mode: msg.mode ?? 'fallback',
+        }),
+      })
+    } catch {
+      // Ignore network failures: UX must stay smooth.
+    }
+  }, [language, user])
+
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent side="right" className="flex h-[100dvh] flex-col w-[400px] sm:w-[480px]">
@@ -218,9 +251,13 @@ export function BotSheet({ open, onOpenChange }: BotSheetProps) {
         {/* Messages area */}
         <ScrollArea className="flex-1 min-h-0" ref={scrollRef}>
           <div className="space-y-4 pr-2 pb-4">
-            {messages.map((msg, i) => (
+            {messages.map((msg, i) => {
+              const messageKey = String(i)
+              const vote = feedbackByMessage[messageKey]
+              const canVote = msg.role === 'bot' && !!msg.questionText && !!msg.cardId && msg.cardId !== 'clarify-disambiguation'
+              return (
               <div
-                key={i}
+                key={messageKey}
                 className={`flex gap-2 ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
               >
                 {msg.role === 'bot' && (
@@ -279,6 +316,33 @@ export function BotSheet({ open, onOpenChange }: BotSheetProps) {
                       ))}
                     </div>
                   ) : null}
+                  {canVote ? (
+                    <div className="mt-2 flex items-center gap-2">
+                      <span className="text-[11px] text-muted-foreground">{helpfulQuestion}</span>
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant={vote === 'up' ? 'secondary' : 'ghost'}
+                        className="h-6 px-2 text-[11px]"
+                        onClick={() => void handleFeedback(messageKey, msg, true)}
+                        disabled={!!vote}
+                      >
+                        <ThumbsUp className="h-3 w-3 mr-1" />
+                        {helpfulYes}
+                      </Button>
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant={vote === 'down' ? 'secondary' : 'ghost'}
+                        className="h-6 px-2 text-[11px]"
+                        onClick={() => void handleFeedback(messageKey, msg, false)}
+                        disabled={!!vote}
+                      >
+                        <ThumbsDown className="h-3 w-3 mr-1" />
+                        {helpfulNo}
+                      </Button>
+                    </div>
+                  ) : null}
                 </div>
                 {msg.role === 'user' && (
                   <div className="h-7 w-7 rounded-full bg-primary/10 flex items-center justify-center shrink-0 mt-1">
@@ -286,7 +350,8 @@ export function BotSheet({ open, onOpenChange }: BotSheetProps) {
                   </div>
                 )}
               </div>
-            ))}
+              )
+            })}
 
             {loading && (
               <div className="flex gap-2 justify-start">

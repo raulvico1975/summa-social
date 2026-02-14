@@ -28,25 +28,39 @@ const STOPWORDS = new Set([
   'com', 'que', 'quin', 'quina', 'quins', 'quines', 'de', 'del', 'dels', 'la', 'el', 'els', 'les',
   'un', 'una', 'uns', 'unes', 'al', 'als', 'a', 'i', 'o', 'en', 'per', 'amb', 'sense',
   'es', 'mes', 'més', 'entre', 'dun', "d'un", 'sobre', 'fer', 'faig',
+  'tinc', 'problema', 'problemes', 'ajuda', 'necessito', 'vull', 'puc', 'pots', 'sisplau', 'siusplau',
   // ES
   'como', 'qué', 'que', 'cual', 'cuál', 'de', 'del', 'la', 'el', 'los', 'las',
   'un', 'una', 'unos', 'unas', 'al', 'a', 'y', 'o', 'en', 'por', 'con', 'sin',
   'es', 'entre', 'sobre', 'hacer',
+  'tengo', 'problema', 'problemas', 'ayuda', 'necesito', 'quiero', 'puedo', 'puedes', 'porfavor',
 ])
 
 const SYNONYM_GROUPS: Array<{ canon: string; variants: string[] }> = [
-  { canon: 'certificat', variants: ['certificados', 'certificado', 'certificats'] },
+  { canon: 'certificat', variants: ['certificados', 'certificado', 'certificats', 'certficat', 'certificatio', 'certificados'] },
   { canon: 'donacio', variants: ['donacio', 'donacio', 'donacions', 'donacion', 'donaciones', 'donativo', 'donativos'] },
   { canon: 'soci', variants: ['socis', 'socio', 'socios', 'donant', 'donants', 'donante', 'donantes'] },
-  { canon: 'remesa', variants: ['remeses', 'recibo', 'recibos', 'rebut', 'rebuts', 'cuota', 'cuotas'] },
-  { canon: 'dividir', variants: ['divideixo', 'dividir', 'fraccionar', 'fracciono', 'repartir', 'separar'] },
+  { canon: 'remesa', variants: ['remeses', 'remessa', 'remessas', 'remesas', 'recibo', 'recibos', 'rebut', 'rebuts', 'cuota', 'cuotas'] },
+  { canon: 'dividir', variants: ['divideixo', 'dividir', 'fraccionar', 'fracciono', 'repartir', 'separar', 'desglossar', 'desglosar', 'partir'] },
   { canon: 'imputar', variants: ['imputo', 'imputar', 'imputacio', 'imputacion', 'prorratejar', 'prorratear', 'prorrateo', 'distribuir'] },
   { canon: 'projecte', variants: ['projectes', 'proyecto', 'proyectos'] },
-  { canon: 'despesa', variants: ['despeses', 'gasto', 'gastos'] },
+  { canon: 'despesa', variants: ['despeses', 'despesses', 'gasto', 'gastos'] },
   { canon: 'moviment', variants: ['moviments', 'movimiento', 'movimientos'] },
   { canon: 'banc', variants: ['banco', 'compte', 'cuenta', 'iban'] },
   { canon: 'quota', variants: ['quotes', 'cuota', 'cuotas'] },
 ]
+
+const COMMON_TYPO_MAP: Record<string, string> = {
+  remessa: 'remesa',
+  remessas: 'remesa',
+  remeses: 'remeses',
+  remesaa: 'remesa',
+  certficat: 'certificat',
+  certficats: 'certificats',
+  despesses: 'despeses',
+  proytecto: 'proyecto',
+  movimients: 'moviments',
+}
 
 const TOKEN_CANONICAL_MAP: Record<string, string> = (() => {
   const map: Record<string, string> = {}
@@ -143,7 +157,8 @@ export function detectSmallTalkResponse(message: string, lang: KbLang): SmallTal
 }
 
 function canonicalizeToken(token: string): string {
-  const normalized = normalizePlain(token)
+  const normalizedRaw = normalizePlain(token)
+  const normalized = COMMON_TYPO_MAP[normalizedRaw] ?? normalizedRaw
   if (!normalized) return normalized
 
   if (TOKEN_CANONICAL_MAP[normalized]) return TOKEN_CANONICAL_MAP[normalized]
@@ -234,8 +249,9 @@ function levenshteinDistance(a: string, b: string, maxDistance = 1): number {
 function isApproxTokenMatch(token: string, candidate: string): boolean {
   if (token === candidate) return true
   if (token.length < 4 || candidate.length < 4) return false
-  if (Math.abs(token.length - candidate.length) > 1) return false
-  return levenshteinDistance(token, candidate, 1) <= 1
+  const maxDistance = Math.min(2, Math.max(1, Math.floor(Math.max(token.length, candidate.length) / 6)))
+  if (Math.abs(token.length - candidate.length) > maxDistance) return false
+  return levenshteinDistance(token, candidate, maxDistance) <= maxDistance
 }
 
 function collectSearchPhrases(card: KBCard, lang: KbLang): string[] {
@@ -376,7 +392,7 @@ export function inferQuestionDomain(message: string): 'fiscal' | 'sepa' | 'remit
   if (/sepa|pain|pain008|pain001|domiciliacio|xml|banc|banco/.test(joined)) {
     return 'sepa'
   }
-  if (/remesa|remesas|quotes|cuotas|dividir|processar|procesar|desfer|deshacer/.test(joined)) {
+  if (/remesa|remesas|remessa|quotes|cuotas|dividir|desglossar|desglosar|processar|procesar|desfer|deshacer/.test(joined)) {
     return 'remittances'
   }
   if (/esborrar|borrar|eliminar|perill|peligro|irreversible|superadmin/.test(joined)) {
