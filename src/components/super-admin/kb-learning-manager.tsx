@@ -15,6 +15,8 @@ import {
 import { BrainCircuit, Download, Loader2, MessageSquareWarning, Upload } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { getAuth } from 'firebase/auth';
+import * as XLSX from 'xlsx';
+import { buildKbTemplateWorkbook } from '@/lib/support/kb-import-template';
 
 // =============================================================================
 // TYPES
@@ -92,6 +94,12 @@ export function KbLearningManager() {
       setIsExporting(false);
     }
   }, [scope, days, toast]);
+
+  const handleDownloadTemplate = React.useCallback(() => {
+    const wb = buildKbTemplateWorkbook();
+    const filename = `support-kb-template_${new Date().toISOString().slice(0, 10)}.xlsx`;
+    XLSX.writeFile(wb, filename);
+  }, []);
 
   const handleImport = React.useCallback(async () => {
     const auth = getAuth();
@@ -214,6 +222,13 @@ export function KbLearningManager() {
             <p className="text-xs text-muted-foreground mt-1">
               Puja CSV/XLSX amb noves cards → es guarden a Storage sense publicar.
             </p>
+          </div>
+
+          <div className="flex items-end gap-3">
+            <Button variant="outline" onClick={handleDownloadTemplate}>
+              <Download className="mr-2 h-4 w-4" />
+              Descarregar plantilla
+            </Button>
           </div>
 
           <div className="flex items-end gap-3">
