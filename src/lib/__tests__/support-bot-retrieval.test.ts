@@ -17,6 +17,12 @@ test('retrieveCard understands remittance split variants', () => {
   assert.equal(result.mode, 'card')
 })
 
+test('retrieveCard tolerates remittance misspelling', () => {
+  const result = retrieveCard('tinc problemes per dividir una remessa', 'ca', cards)
+  assert.equal(result.card.id, 'guide-split-remittance')
+  assert.equal(result.mode, 'card')
+})
+
 test('retrieveCard understands expense allocation variants', () => {
   const result = retrieveCard('com reparteixo una despesa entre dos projectes?', 'ca', cards)
   assert.equal(result.card.id, 'guide-projects')
@@ -26,6 +32,7 @@ test('retrieveCard understands expense allocation variants', () => {
 test('inferQuestionDomain detects fiscal and remittances', () => {
   assert.equal(inferQuestionDomain('Com envio certificat de donació model 182?'), 'fiscal')
   assert.equal(inferQuestionDomain('Puc desfer una remesa de rebuts?'), 'remittances')
+  assert.equal(inferQuestionDomain('tinc error amb la remessa de quotes'), 'remittances')
 })
 
 test('suggestKeywordsFromMessage returns meaningful canonical keywords', () => {

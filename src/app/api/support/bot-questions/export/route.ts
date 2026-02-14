@@ -73,7 +73,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     const snapshot = await query.get()
 
     // --- Build CSV ---
-    const header = 'question,lang,mode,matchedCardId,bestCardId,bestScore,retrievalConfidence,count,lastSeen,suggestedDomain,suggestedKeywords,suggestedIntentsCa'
+    const header = 'question,lang,mode,matchedCardId,bestCardId,bestScore,retrievalConfidence,count,helpfulYes,helpfulNo,helpfulRate,lastSeen,suggestedDomain,suggestedKeywords,suggestedIntentsCa'
     const rows: string[] = [header]
 
     // Sort by count desc (client-side since Firestore can't order by two fields with inequality)
@@ -87,6 +87,8 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
       bestScore?: number
       retrievalConfidence?: 'high' | 'medium' | 'low'
       count?: number
+      helpfulYes?: number
+      helpfulNo?: number
       lastSeenAt?: { toDate: () => Date }
     }
 
@@ -103,6 +105,10 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
       const bestScore = data.bestScore == null ? '' : String(data.bestScore)
       const retrievalConfidence = escapeCsvField(String(data.retrievalConfidence ?? ''))
       const count = String(data.count ?? 0)
+      const helpfulYes = data.helpfulYes ?? 0
+      const helpfulNo = data.helpfulNo ?? 0
+      const helpfulTotal = helpfulYes + helpfulNo
+      const helpfulRate = helpfulTotal > 0 ? `${Math.round((helpfulYes / helpfulTotal) * 100)}%` : ''
       const lastSeen = data.lastSeenAt?.toDate?.()
         ? data.lastSeenAt.toDate().toISOString().slice(0, 10)
         : ''
@@ -111,7 +117,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
       const suggestedIntentsCa = escapeCsvField(String(data.messageRaw ?? ''))
 
       rows.push(
-        `${question},${lang},${mode},${cardId},${bestCardId},${bestScore},${retrievalConfidence},${count},${lastSeen},${suggestedDomain},${suggestedKeywords},${suggestedIntentsCa}`
+        `${question},${lang},${mode},${cardId},${bestCardId},${bestScore},${retrievalConfidence},${count},${helpfulYes},${helpfulNo},${helpfulRate},${lastSeen},${suggestedDomain},${suggestedKeywords},${suggestedIntentsCa}`
       )
     }
 
