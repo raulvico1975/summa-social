@@ -16,7 +16,9 @@
       "importar moviments",
       "carregar fitxer del banc",
       "importar CSV del banc",
-      "com passo els moviments del banc"
+      "com passo els moviments del banc",
+      "com se quants moviments s'han importat correctament",
+      "resum de la importacio de moviments"
     ],
     "es": [
       "cómo importo el extracto",
@@ -24,14 +26,16 @@
       "importar movimientos",
       "cargar archivo del banco",
       "importar CSV del banco",
-      "cómo paso los movimientos del banco"
+      "cómo paso los movimientos del banco",
+      "como se cuantos movimientos se han importado correctamente",
+      "resumen de la importacion de movimientos"
     ]
   },
   "guideId": "importMovements",
   "answer": null,
   "uiPaths": ["Moviments > Importar"],
   "needsSnapshot": false,
-  "keywords": ["importar", "extracte", "bancari", "CSV", "Excel", "moviments", "banc"],
+  "keywords": ["importar", "extracte", "bancari", "CSV", "Excel", "moviments", "banc", "resum", "importacio", "resultat"],
   "source_faq": ["Q28", "Q29"],
   "source_manual": ["5.1"],
   "source_guides": ["importMovements"],

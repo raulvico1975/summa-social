@@ -1,0 +1,55 @@
+{
+  "id": "manual-closing-package",
+  "type": "concept",
+  "domain": "fiscal",
+  "risk": "guarded",
+  "guardrail": "b1_fiscal",
+  "answerMode": "full",
+  "title": {
+    "ca": "Paquet de tancament: què inclou i quan usar-lo",
+    "es": "Paquete de cierre: qué incluye y cuándo usarlo"
+  },
+  "intents": {
+    "ca": [
+      "preguntes frequents del paquet de tancament",
+      "que es el paquet de tancament",
+      "com genero el paquet de tancament"
+    ],
+    "es": [
+      "preguntas frecuentes del paquete de cierre",
+      "que es el paquete de cierre",
+      "como genero el paquete de cierre"
+    ]
+  },
+  "guideId": null,
+  "answer": {
+    "ca": "El Paquet de Tancament és un ZIP per entregar documentació de tancament a comptabilitat/gestoria.\n\nInclou, segons les dades disponibles, fitxers com moviments i material de suport.\n\nAbans d'enviar-lo:\n1. Revisa que el període sigui correcte.\n2. Verifica que no hi hagi incidències pendents importants.\n3. Comprova el contingut del ZIP (especialment el fitxer principal).\n\nSi falta informació clau, corregeix primer i torna a generar-lo.",
+    "es": "El Paquete de Cierre es un ZIP para entregar documentación de cierre a contabilidad/gestoría.\n\nIncluye, según los datos disponibles, ficheros como movimientos y material de soporte.\n\nAntes de enviarlo:\n1. Revisa que el periodo sea correcto.\n2. Verifica que no haya incidencias pendientes importantes.\n3. Comprueba el contenido del ZIP (especialmente el fichero principal).\n\nSi falta información clave, corrige primero y vuelve a generarlo."
+  },
+  "uiPaths": [
+    "Informes > Paquet de tancament"
+  ],
+  "needsSnapshot": false,
+  "keywords": [
+    "paquet tancament",
+    "cierre",
+    "zip",
+    "moviments",
+    "gestoria"
+  ],
+  "source_faq": [],
+  "source_manual": [
+    "10b.1",
+    "10b.2",
+    "10b.7"
+  ],
+  "source_guides": [],
+  "related": [
+    "guide-reports"
+  ],
+  "error_key": null,
+  "symptom": {
+    "ca": null,
+    "es": null
+  }
+}

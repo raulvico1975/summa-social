@@ -14,22 +14,34 @@
       "com divideixo una remesa",
       "separar remesa en quotes",
       "split de remesa",
-      "dividir pagament de quotes"
+      "dividir pagament de quotes",
+      "dividir rebuts de socis",
+      "he dividit una remesa i m'he equivocat",
+      "es pot desfer una remesa dividida",
+      "desagregar i conciliar una remesa",
+      "vista agrupada de remeses",
+      "remesa out n pagaments"
     ],
     "es": [
       "cómo divido una remesa",
       "separar remesa en cuotas",
       "split de remesa",
-      "dividir pago de cuotas"
+      "dividir pago de cuotas",
+      "dividir recibos de socios",
+      "he dividido una remesa y me he equivocado",
+      "se puede deshacer una remesa dividida",
+      "desagregar y conciliar una remesa",
+      "vista agrupada de remesas",
+      "remesa out n pagos"
     ]
   },
   "guideId": "splitRemittance",
   "answer": null,
   "uiPaths": ["Moviments > Seleccionar remesa > Dividir"],
   "needsSnapshot": false,
-  "keywords": ["dividir", "remesa", "split", "quotes", "individuals"],
+  "keywords": ["dividir", "remesa", "split", "quotes", "individuals", "desfer", "equivocat", "undo", "desagregar", "conciliar", "agrupada"],
   "source_faq": ["Q42", "Q43"],
-  "source_manual": ["6.3"],
+  "source_manual": ["6.3", "6.5", "6b.4"],
   "source_guides": ["splitRemittance"],
   "related": ["guide-remittances", "guide-returns"],
   "error_key": null,

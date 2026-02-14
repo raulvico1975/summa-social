@@ -40,7 +40,7 @@ const SYNONYM_GROUPS: Array<{ canon: string; variants: string[] }> = [
   { canon: 'certificat', variants: ['certificados', 'certificado', 'certificats', 'certficat', 'certificatio', 'certificados'] },
   { canon: 'donacio', variants: ['donacio', 'donacio', 'donacions', 'donacion', 'donaciones', 'donativo', 'donativos'] },
   { canon: 'soci', variants: ['socis', 'socio', 'socios', 'donant', 'donants', 'donante', 'donantes'] },
-  { canon: 'remesa', variants: ['remeses', 'remessa', 'remessas', 'remesas', 'recibo', 'recibos', 'rebut', 'rebuts', 'cuota', 'cuotas'] },
+  { canon: 'remesa', variants: ['remeses', 'remessa', 'remessas', 'remesas', 'cuota', 'cuotas'] },
   { canon: 'dividir', variants: ['divideixo', 'dividir', 'fraccionar', 'fracciono', 'repartir', 'separar', 'desglossar', 'desglosar', 'partir'] },
   { canon: 'imputar', variants: ['imputo', 'imputar', 'imputacio', 'imputacion', 'prorratejar', 'prorratear', 'prorrateo', 'distribuir'] },
   { canon: 'projecte', variants: ['projectes', 'proyecto', 'proyectos'] },
@@ -425,7 +425,7 @@ export function inferQuestionDomain(message: string): 'fiscal' | 'sepa' | 'remit
   if (/sepa|pain|pain008|pain001|domiciliacio|xml|banc|banco/.test(joined)) {
     return 'sepa'
   }
-  if (/remesa|remesas|remessa|quotes|cuotas|dividir|desglossar|desglosar|processar|procesar|desfer|deshacer/.test(joined)) {
+  if (/remesa|remesas|remessa|dividir|desglossar|desglosar|processar|procesar|desfer|deshacer/.test(joined)) {
     return 'remittances'
   }
   if (/esborrar|borrar|eliminar|perill|peligro|irreversible|superadmin/.test(joined)) {

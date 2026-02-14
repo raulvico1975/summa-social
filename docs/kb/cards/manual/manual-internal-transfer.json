@@ -1,0 +1,57 @@
+{
+  "id": "manual-internal-transfer",
+  "type": "howto",
+  "domain": "transactions",
+  "risk": "safe",
+  "guardrail": "none",
+  "answerMode": "full",
+  "title": {
+    "ca": "Categoritzar transferències internes entre comptes",
+    "es": "Categorizar transferencias internas entre cuentas"
+  },
+  "intents": {
+    "ca": [
+      "tinc una transferencia interna entre comptes de l'entitat com la categoritzo",
+      "tinc una transferència interna entre comptes de l'entitat, com la categoritzo",
+      "com categoritzo transferencies internes"
+    ],
+    "es": [
+      "tengo una transferencia interna entre cuentas de la entidad como la categorizo",
+      "tengo una transferencia interna entre cuentas de la entidad, ¿como la categorizo?",
+      "como categorizo transferencias internas"
+    ]
+  },
+  "guideId": null,
+  "answer": {
+    "ca": "Les transferències internes no són ingrés ni despesa real: mouen diners d'un compte propi a un altre.\n\nRecomanació pràctica:\n1. Crea o utilitza una categoria \"Transferències internes\".\n2. Marca la sortida i l'entrada amb el mateix criteri.\n3. Afegeix nota si cal per relacionar-les.\n\nAixò ajuda a filtrar-les i evita confusions als informes.",
+    "es": "Las transferencias internas no son ingreso ni gasto real: mueven dinero de una cuenta propia a otra.\n\nRecomendación práctica:\n1. Crea o usa una categoría \"Transferencias internas\".\n2. Marca la salida y la entrada con el mismo criterio.\n3. Añade nota si hace falta para relacionarlas.\n\nEsto ayuda a filtrarlas y evita confusiones en los informes."
+  },
+  "uiPaths": [
+    "Moviments"
+  ],
+  "needsSnapshot": false,
+  "keywords": [
+    "transferencia interna",
+    "transferencia",
+    "comptes",
+    "categoritzar"
+  ],
+  "source_faq": [
+    "Q35"
+  ],
+  "source_manual": [
+    "5.4"
+  ],
+  "source_guides": [
+    "movements"
+  ],
+  "related": [
+    "guide-edit-movement",
+    "guide-movement-filters"
+  ],
+  "error_key": null,
+  "symptom": {
+    "ca": null,
+    "es": null
+  }
+}

@@ -202,16 +202,20 @@ Summa Social guarda automàticament molts canvis mentre treballes. Si estaves ed
 **Què hi trobaràs:**
 - **Guies pas a pas** per a les funcionalitats principals
 - **Respostes a preguntes freqüents** sobre cada tema
-- **Un cercador intel·ligent** que entén com parles
+- **Un cercador que entén com parles** (sense tecnicismes)
+- **Etiquetes clicables** per anar directament a la pantalla que et recomana
+- **Ajuda per aclarir dubtes ambigus** (si cal, et farà triar entre opció 1 o 2)
 
 **El cercador és molt llest:**
 No cal que sàpigues els termes tècnics. Pots buscar coses com:
 - "no veig els meus moviments" → Et portarà a les guies d'importació
 - "182" → Et mostrarà les guies fiscals
 - "stripe comissions" → Et portarà a les guies de donacions online
+- "vull canviar el logo de l'entitat" → Et portarà a la part correcta del manual/configuració
+- "com puc saber les quotes que un soci ha pagat?" → Et portarà a la guia de detall del donant
 
 **Com funciona el cercador:**
-Escriu el que busques amb les teves paraules. El sistema reconeix sinònims i expressions comunes, així que no et preocupis per encertar el terme exacte.
+Escriu el que busques amb les teves paraules. El sistema reconeix sinònims i expressions comunes, així que no et preocupis per encertar el terme exacte. Si tens un error concret, copia el text literal i normalment et respondrà millor.
 
 **Un consell:** Abans de contactar amb suport, fes una ullada al Hub de Guies. Moltes vegades la resposta ja hi és, i et pot estalviar temps d'espera.
 

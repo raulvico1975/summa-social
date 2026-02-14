@@ -14,13 +14,17 @@
       "format no vàlid",
       "el fitxer no és vàlid",
       "no accepta el meu fitxer",
-      "quin format necessito"
+      "quin format necessito",
+      "excel amb files buides o mal formatejades",
+      "dades mal formatades a l'importador"
     ],
     "es": [
       "formato no válido",
       "el archivo no es válido",
       "no acepta mi archivo",
-      "qué formato necesito"
+      "qué formato necesito",
+      "excel con filas vacias o mal formateadas",
+      "datos mal formateados en el importador"
     ]
   },
   "guideId": null,
@@ -30,8 +34,8 @@
   },
   "uiPaths": ["Moviments > Importar"],
   "needsSnapshot": false,
-  "keywords": ["format", "fitxer", "invàlid", "xlsx", "csv", "extensió"],
-  "source_faq": ["Q8"],
+  "keywords": ["format", "fitxer", "invàlid", "xlsx", "csv", "extensió", "excel", "files buides", "mal formatejat"],
+  "source_faq": ["Q8", "Q13"],
   "source_manual": ["5.1"],
   "source_guides": ["importMovements"],
   "related": ["guide-import-movements", "ts-import-missing-columns"],
