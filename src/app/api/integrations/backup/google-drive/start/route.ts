@@ -12,6 +12,10 @@ import { initializeApp, getApps, applicationDefault } from 'firebase-admin/app';
 import { getFirestore, type Firestore } from 'firebase-admin/firestore';
 import { getAuth, type Auth } from 'firebase-admin/auth';
 import type { BackupOAuthRequest } from '@/lib/backups/types';
+import {
+  verifyAdminMembership,
+  type AdminAuthResult,
+} from '@/lib/fiscal/remittances/admin-auth';
 
 /**
  * Feature flag per activar/desactivar backups al núvol.
@@ -138,53 +142,29 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Buscar membre per ID de document (uid)
-    const memberRef = db.doc(`organizations/${orgId}/members/${authResult.uid}`);
-    const memberSnap = await memberRef.get();
-
-    // Si no existeix per ID, buscar per camp userId (per compatibilitat)
-    let memberData = memberSnap.exists ? memberSnap.data() : null;
-
-    if (!memberData) {
-      // Fallback: buscar per userId field
-      const membersQuery = db.collection(`organizations/${orgId}/members`)
-        .where('userId', '==', authResult.uid)
-        .limit(1);
-      const membersSnap = await membersQuery.get();
-
-      if (!membersSnap.empty) {
-        memberData = membersSnap.docs[0].data();
-        console.log(`[google-drive/start] Member found via userId query for ${authResult.uid}`);
-      }
-    }
-
-    // Comprovar si és SuperAdmin (té document a systemSuperAdmins)
-    const superAdminRef = db.doc(`systemSuperAdmins/${authResult.uid}`);
-    const superAdminSnap = await superAdminRef.get();
-    const isSuperAdmin = superAdminSnap.exists;
-
-    if (isSuperAdmin) {
-      console.log(`[google-drive/start] SuperAdmin ${authResult.uid} authorized for org ${orgId}`);
-    } else {
-      // Si no és SuperAdmin, cal ser membre admin de l'org
-      if (!memberData) {
-        console.error(`[google-drive/start] User ${authResult.uid} not a member of org ${orgId}`);
+    const authCheck = await verifyAdminMembership(request, orgId);
+    if (!authCheck.success) {
+      if (authCheck.code === 'NOT_MEMBER') {
         return NextResponse.json(
           { error: 'Not a member of this organization', code: 'NOT_MEMBER' },
           { status: 403 }
         );
       }
 
-      if (memberData.role !== 'admin') {
-        console.error(`[google-drive/start] User ${authResult.uid} is ${memberData.role}, not admin`);
+      if (authCheck.code === 'NOT_ADMIN') {
         return NextResponse.json(
           { error: 'Only admins can connect backup providers', code: 'NOT_ADMIN' },
           { status: 403 }
         );
       }
 
-      console.log(`[google-drive/start] Auth OK for ${authResult.uid} (${memberData.role}) in org ${orgId}`);
+      return NextResponse.json(
+        { error: authCheck.error, code: authCheck.code },
+        { status: authCheck.status }
+      );
     }
+    const { uid } = authCheck as AdminAuthResult;
+    console.log(`[google-drive/start] Auth OK for ${uid} in org ${orgId}`);
 
     // 4. Verificar secrets
     const GOOGLE_CLIENT_ID = process.env.GOOGLE_DRIVE_CLIENT_ID;
@@ -214,7 +194,7 @@ export async function POST(request: NextRequest) {
       createdAt: now.toISOString(),
       expiresAt: expiresAt.toISOString(),
       usedAt: null,
-      createdByUid: authResult.uid,
+      createdByUid: uid,
     };
 
     await newRequestRef.set(oauthRequest);
