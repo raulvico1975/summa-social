@@ -2,7 +2,7 @@
 
 import * as React from 'react';
 import { cn } from '@/lib/utils';
-import { Shield, Activity, Megaphone, Wrench } from 'lucide-react';
+import { Shield, Building2, BrainCircuit, Megaphone, Settings } from 'lucide-react';
 
 interface NavItem {
   id: string;
@@ -11,19 +11,16 @@ interface NavItem {
 }
 
 const navItems: NavItem[] = [
-  { id: 'govern', label: 'Govern', icon: <Shield className="h-3.5 w-3.5" /> },
-  { id: 'salut', label: 'Salut', icon: <Activity className="h-3.5 w-3.5" /> },
-  { id: 'contingut', label: 'Contingut', icon: <Megaphone className="h-3.5 w-3.5" /> },
-  { id: 'operativa', label: 'Operativa', icon: <Wrench className="h-3.5 w-3.5" /> },
+  { id: 'estat', label: 'Estat', icon: <Shield className="h-3.5 w-3.5" /> },
+  { id: 'entitats', label: 'Entitats', icon: <Building2 className="h-3.5 w-3.5" /> },
+  { id: 'coneixement', label: 'Coneixement', icon: <BrainCircuit className="h-3.5 w-3.5" /> },
+  { id: 'comunicacio', label: 'Comunicació', icon: <Megaphone className="h-3.5 w-3.5" /> },
+  { id: 'configuracio', label: 'Configuració', icon: <Settings className="h-3.5 w-3.5" /> },
 ];
 
-/**
- * AdminNav - Mini-navegació sticky per saltar entre seccions del panell.
- */
 export function AdminNav() {
-  const [activeSection, setActiveSection] = React.useState<string>('govern');
+  const [activeSection, setActiveSection] = React.useState<string>('estat');
 
-  // Observar quina secció és visible
   React.useEffect(() => {
     const observer = new IntersectionObserver(
       (entries) => {
