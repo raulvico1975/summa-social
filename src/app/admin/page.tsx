@@ -70,6 +70,7 @@ import { SystemHealth } from '@/components/admin/system-health';
 import { ProductUpdatesSection } from '@/components/admin/product-updates-section';
 import { I18nManager } from '@/components/super-admin/i18n-manager';
 import { KbLearningManager } from '@/components/super-admin/kb-learning-manager';
+import { KbRuntimeDiagnostics } from '@/components/super-admin/kb-runtime-diagnostics';
 import { HelpAuditSection } from '@/components/admin/help-audit-section';
 import { SuperAdminsManager } from '@/components/admin/super-admins-manager';
 import { AdminSection } from '@/components/admin/admin-section';
@@ -1113,6 +1114,11 @@ export default function AdminPage() {
           {/* Aprenentatge del bot */}
           <div className="mt-6">
             <KbLearningManager />
+          </div>
+
+          {/* Diagnòstic del bot */}
+          <div className="mt-6">
+            <KbRuntimeDiagnostics />
           </div>
         </AdminSection>
 
