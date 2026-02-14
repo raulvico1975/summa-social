@@ -89,7 +89,7 @@ FORMAT:
 1) Secció "Què passa" (o "Qué pasa" en castellà): 1 frase curta.
 2) Secció "Què fer ara" (o "Qué hacer ahora"): passos accionables numerats (màxim 5), només si existeixen al contingut.
 3) Secció "Com comprovar-ho" (o "Cómo comprobarlo"): una comprovació curta.
-4) Si hi ha ubicació, acaba amb: "On anar a Summa: <ubicació>" (o "Dónde ir en Summa: <ubicación>").
+4) NO incloguis línies de navegació ni rutes dins del text (es mostraran fora de la resposta).
 `,
 })
 
@@ -198,22 +198,6 @@ function getCardLabel(card: KBCard, lang: KbLang): string {
 function buildUiPathHint(card: KBCard): string {
   const uniquePaths = Array.from(new Set((card.uiPaths ?? []).map(p => p.trim()).filter(Boolean))).slice(0, 2)
   return uniquePaths.join(' · ')
-}
-
-function withUiPathFooter(answer: string, card: KBCard, lang: KbLang): string {
-  const trimmed = (answer ?? '').trim()
-  if (!trimmed) return trimmed
-
-  const uiPathHint = buildUiPathHint(card)
-  if (!uiPathHint) return trimmed
-
-  const lower = trimmed.toLowerCase()
-  if (lower.includes('on anar a summa:') || lower.includes('donde ir en summa:')) {
-    return trimmed
-  }
-
-  const footerLabel = lang === 'es' ? 'Dónde ir en Summa:' : 'On anar a Summa:'
-  return `${trimmed}\n\n${footerLabel} ${uiPathHint}`
 }
 
 function withWarmOpening(answer: string, lang: KbLang): string {
@@ -587,7 +571,6 @@ export async function POST(request: NextRequest): Promise<NextResponse<ApiRespon
     if (assistantTone === 'warm') {
       finalAnswer = withWarmOpening(finalAnswer, kbLang)
     }
-    finalAnswer = withUiPathFooter(finalAnswer, card, kbLang)
 
     return NextResponse.json({
       ok: true,
