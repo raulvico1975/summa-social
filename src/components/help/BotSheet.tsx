@@ -15,6 +15,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { useTranslations } from '@/i18n';
 import { useFirebase } from '@/firebase';
 import { trackUX } from '@/lib/ux/trackUX';
+import { usePathname, useRouter } from 'next/navigation';
 
 // -------------------------------------------------------------------
 // Types
@@ -38,6 +39,46 @@ interface BotSheetProps {
   onOpenChange: (open: boolean) => void;
 }
 
+function normalizePathText(value: string): string {
+  return value
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/\s+/g, ' ')
+    .trim()
+}
+
+function getDashboardBasePath(pathname: string): string {
+  const clean = (pathname ?? '').split('?')[0]?.split('#')[0] ?? ''
+  const parts = clean.split('/').filter(Boolean)
+  const dashboardIndex = parts.indexOf('dashboard')
+
+  if (dashboardIndex >= 0) {
+    return `/${parts.slice(0, dashboardIndex + 1).join('/')}`
+  }
+
+  return '/dashboard'
+}
+
+function resolveUiPathHref(rawPath: string, pathname: string): string | null {
+  const path = normalizePathText(rawPath)
+  const base = getDashboardBasePath(pathname)
+
+  if (!path) return null
+  if (path.includes('manual')) return `${base}/manual`
+  if (path.includes('hub de guies') || path.includes('hub de guias') || path.includes('guies') || path.includes('guias') || path.includes('guides')) return `${base}/guides`
+  if (path.includes('moviments') || path.includes('movimientos')) return `${base}/movimientos`
+  if (path.includes('donants') || path.includes('donantes')) return `${base}/donants`
+  if (path.includes('informes')) return `${base}/informes`
+  if (path.includes('configuracio') || path.includes('configuracion')) return `${base}/configuracion`
+  if (path.includes('project') || path.includes('projecte')) return `${base}/project-module`
+  if (path.includes('proveidor') || path.includes('proveedor')) return `${base}/proveidors`
+  if (path.includes('treballador') || path.includes('trabajador')) return `${base}/treballadors`
+  if (path.includes('dashboard')) return base
+
+  return null
+}
+
 // -------------------------------------------------------------------
 // Component
 // -------------------------------------------------------------------
@@ -45,6 +86,8 @@ interface BotSheetProps {
 export function BotSheet({ open, onOpenChange }: BotSheetProps) {
   const { language, tr } = useTranslations();
   const { user } = useFirebase();
+  const router = useRouter();
+  const pathname = usePathname();
 
   const [messages, setMessages] = React.useState<BotMessage[]>([]);
   const [input, setInput] = React.useState('');
@@ -157,6 +200,15 @@ export function BotSheet({ open, onOpenChange }: BotSheetProps) {
     }
   };
 
+  const handleUiPathClick = React.useCallback((path: string) => {
+    const href = resolveUiPathHref(path, pathname)
+    if (!href) return
+
+    trackUX('bot.ui_path_click', { path, href, lang: language })
+    onOpenChange(false)
+    router.push(href)
+  }, [pathname, language, onOpenChange, router])
+
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent side="right" className="flex h-[100dvh] flex-col w-[400px] sm:w-[480px]">
@@ -191,9 +243,16 @@ export function BotSheet({ open, onOpenChange }: BotSheetProps) {
                   {msg.uiPaths && msg.uiPaths.length > 0 && (
                     <div className="mt-2 flex flex-wrap gap-1">
                       {msg.uiPaths.map((path, j) => (
-                        <Badge key={j} variant="secondary" className="text-xs">
-                          {path}
-                        </Badge>
+                        <button
+                          key={j}
+                          type="button"
+                          onClick={() => handleUiPathClick(path)}
+                          className="text-left"
+                        >
+                          <Badge variant="secondary" className="text-xs hover:bg-secondary/80 cursor-pointer">
+                            {path}
+                          </Badge>
+                        </button>
                       ))}
                     </div>
                   )}
