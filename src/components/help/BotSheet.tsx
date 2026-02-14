@@ -81,6 +81,20 @@ function resolveUiPathHref(rawPath: string, pathname: string): string | null {
   return null
 }
 
+function stripInlineUiPathFooter(text: string): string {
+  const lines = (text ?? '').split('\n')
+  const cleaned = lines.filter((line) => {
+    const normalized = normalizePathText(line)
+    return (
+      !normalized.startsWith('on anar a summa:') &&
+      !normalized.startsWith('donde ir en summa:') &&
+      !normalized.startsWith('donde ir a summa:')
+    )
+  })
+
+  return cleaned.join('\n').replace(/\n{3,}/g, '\n\n').trim()
+}
+
 // -------------------------------------------------------------------
 // Component
 // -------------------------------------------------------------------
@@ -255,6 +269,7 @@ export function BotSheet({ open, onOpenChange }: BotSheetProps) {
               const messageKey = String(i)
               const vote = feedbackByMessage[messageKey]
               const canVote = msg.role === 'bot' && !!msg.questionText && !!msg.cardId && msg.cardId !== 'clarify-disambiguation'
+              const visibleText = msg.role === 'bot' ? stripInlineUiPathFooter(msg.text) : msg.text
               return (
               <div
                 key={messageKey}
@@ -272,7 +287,7 @@ export function BotSheet({ open, onOpenChange }: BotSheetProps) {
                       : 'bg-muted'
                   }`}
                 >
-                  {msg.text}
+                  {visibleText}
                   {msg.uiPaths && msg.uiPaths.length > 0 && (
                     <div className="mt-2 flex flex-wrap gap-1">
                       {msg.uiPaths.map((path, j) => {
