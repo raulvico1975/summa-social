@@ -2,6 +2,7 @@
 'use client';
 
 import * as React from 'react';
+import dynamic from 'next/dynamic';
 import { useRouter } from 'next/navigation';
 import { useFirebase, useCollection, useMemoFirebase } from '@/firebase';
 import { collection, query, orderBy, doc, updateDoc, getDoc } from 'firebase/firestore';
@@ -69,8 +70,13 @@ import { CreateOrganizationDialog } from '@/components/admin/create-organization
 import { SystemHealth } from '@/components/admin/system-health';
 import { ProductUpdatesSection } from '@/components/admin/product-updates-section';
 import { I18nManager } from '@/components/super-admin/i18n-manager';
-import { KbLearningManager } from '@/components/super-admin/kb-learning-manager';
 import { HelpAuditSection } from '@/components/admin/help-audit-section';
+
+// Client-only import to avoid SSR errors
+const KbLearningManager = dynamic(
+  () => import('@/components/super-admin/kb-learning-manager').then(m => m.KbLearningManager),
+  { ssr: false }
+);
 import { SuperAdminsManager } from '@/components/admin/super-admins-manager';
 import { AdminSection } from '@/components/admin/admin-section';
 import { AdminNav } from '@/components/admin/admin-nav';

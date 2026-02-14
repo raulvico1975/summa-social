@@ -14,7 +14,7 @@ import {
 } from '@/components/ui/select';
 import { BrainCircuit, Download, Loader2, MessageSquareWarning, Upload } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import { useFirebase } from '@/firebase';
+import { getAuth } from 'firebase/auth';
 
 // =============================================================================
 // TYPES
@@ -27,7 +27,6 @@ type ExportScope = 'all' | 'fallbackOnly';
 // =============================================================================
 
 export function KbLearningManager() {
-  const { user } = useFirebase();
   const { toast } = useToast();
 
   const [scope, setScope] = React.useState<ExportScope>('fallbackOnly');
@@ -37,6 +36,8 @@ export function KbLearningManager() {
   const [selectedFile, setSelectedFile] = React.useState<File | null>(null);
 
   const handleExport = React.useCallback(async () => {
+    const auth = getAuth();
+    const user = auth.currentUser;
     if (!user) return;
 
     setIsExporting(true);
@@ -85,9 +86,11 @@ export function KbLearningManager() {
     } finally {
       setIsExporting(false);
     }
-  }, [user, scope, days, toast]);
+  }, [scope, days, toast]);
 
   const handleImport = React.useCallback(async () => {
+    const auth = getAuth();
+    const user = auth.currentUser;
     if (!user || !selectedFile) return;
 
     setIsImporting(true);
@@ -126,7 +129,7 @@ export function KbLearningManager() {
     } finally {
       setIsImporting(false);
     }
-  }, [user, selectedFile, toast]);
+  }, [selectedFile, toast]);
 
   return (
     <Card>
