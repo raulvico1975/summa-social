@@ -3753,6 +3753,23 @@ export const es = {
         description: "Acciones rápidas de soporte.",
       },
     },
+    controlTower: {
+      title: "SUPERADMIN — TORRE DE CONTROL",
+      subtitle: "Gobierno y contenido de Summa Social",
+      sections: {
+        globalStatusTitle: "1. Estado global",
+        globalStatusDescription: "Visión ejecutiva de sistema, incidencias, contenido y traducciones.",
+        entitiesTitle: "2. Entidades",
+        entitiesDescription: "Gobierno ejecutivo de todas las organizaciones.",
+        knowledgeTitle: "3. Conocimiento y Bot",
+        knowledgeDescription: "Salud de la base de conocimiento y fricciones de soporte.",
+        communicationTitle: "4. Comunicación",
+        communicationDescription: "Coherencia editorial y ritmo de publicación.",
+        advancedConfigTitle: "5. Configuración avanzada",
+        advancedConfigDescription: "Acciones sensibles y administración del sistema (plegado por defecto).",
+        technicalDiagnostics: "Diagnóstico técnico",
+      },
+    },
     i18n: {
       initializeStorageTitle: "¿Inicializar Storage?",
       initializeStorageDescription: "Subirá ca/es/fr/pt y activará los cambios. Puedes repetirlo cuando quieras.",
