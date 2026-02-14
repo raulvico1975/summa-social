@@ -18,6 +18,11 @@ export type RetrievalResult = {
   confidence?: RetrievalConfidence
 }
 
+export type SmallTalkResponse = {
+  cardId: string
+  answer: string
+}
+
 const STOPWORDS = new Set([
   // CA
   'com', 'que', 'quin', 'quina', 'quins', 'quines', 'de', 'del', 'dels', 'la', 'el', 'els', 'les',
@@ -61,6 +66,70 @@ function normalizePlain(text: string): string {
     .replace(/[\u0300-\u036f]/g, '')
     .replace(/\s+/g, ' ')
     .trim()
+}
+
+export function detectSmallTalkResponse(message: string, lang: KbLang): SmallTalkResponse | null {
+  const normalized = normalizePlain(message)
+  if (!normalized) return null
+
+  const isGreeting = /^(hola|bon dia|bona tarda|bona nit|hey|hi|hello|ei|buenos dias|buenas tardes|buenas noches)\b/.test(normalized)
+  if (isGreeting && normalized.length <= 60) {
+    return {
+      cardId: 'smalltalk-greeting',
+      answer: lang === 'es'
+        ? 'Hola! Soy el asistente de Summa Social. Te puedo ayudar con dudas de donantes, movimientos, remesas, modelos fiscales y proyectos. ¿Qué quieres hacer ahora?'
+        : 'Hola! Soc l’assistent de Summa Social. Et puc ajudar amb dubtes de donants, moviments, remeses, models fiscals i projectes. Què vols fer ara?',
+    }
+  }
+
+  if (/^(gracies|gracies molt|moltes gracies|merci|gracias|muchas gracias|thanks)\b/.test(normalized)) {
+    return {
+      cardId: 'smalltalk-thanks',
+      answer: lang === 'es'
+        ? 'De nada! Cuando quieras, cuéntame qué estás intentando hacer y te guío paso a paso.'
+        : 'De res! Quan vulguis, explica’m què estàs intentant fer i et guio pas a pas.',
+    }
+  }
+
+  if (/^(ok|d acord|d'acord|vale|perfecte|perfecto|genial|entes|entesos|entendido|entes)$/.test(normalized)) {
+    return {
+      cardId: 'smalltalk-ack',
+      answer: lang === 'es'
+        ? 'Perfecto. Cuando quieras, dime el siguiente paso que necesitas y te ayudo.'
+        : 'Perfecte. Quan vulguis, digue’m el següent pas que necessites i t’ajudo.',
+    }
+  }
+
+  if (/^(adeu|adéu|fins aviat|fins despres|fins després|bye|adios|adiós|hasta luego)\b/.test(normalized)) {
+    return {
+      cardId: 'smalltalk-bye',
+      answer: lang === 'es'
+        ? 'Hasta luego! Si más tarde necesitas ayuda con Summa Social, aquí estaré.'
+        : 'Fins aviat! Si després necessites ajuda amb Summa Social, aquí em tens.',
+    }
+  }
+
+  if (
+    /^(qui ets|que ets|què ets|qui eres|quien eres|quién eres|que puedes hacer|qué puedes hacer|que pots fer|què pots fer)/.test(normalized)
+  ) {
+    return {
+      cardId: 'smalltalk-about',
+      answer: lang === 'es'
+        ? 'Soy el asistente de Summa Social. Te ayudo a resolver dudas de uso de la app y a encontrar el procedimiento correcto dentro de las guías.'
+        : 'Soc l’assistent de Summa Social. T’ajudo a resoldre dubtes d’ús de l’app i a trobar el procediment correcte dins de les guies.',
+    }
+  }
+
+  if (/^(com estas|com estàs|que tal|què tal|como estas|cómo estás)/.test(normalized)) {
+    return {
+      cardId: 'smalltalk-status',
+      answer: lang === 'es'
+        ? 'Muy bien, gracias! Preparado para ayudarte con Summa Social. ¿Qué necesitas?'
+        : 'Molt bé, gràcies! Preparat per ajudar-te amb Summa Social. Què necessites?',
+    }
+  }
+
+  return null
 }
 
 function canonicalizeToken(token: string): string {

@@ -1,7 +1,7 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { loadAllCards } from '../support/load-kb'
-import { inferQuestionDomain, retrieveCard, suggestKeywordsFromMessage } from '../support/bot-retrieval'
+import { detectSmallTalkResponse, inferQuestionDomain, retrieveCard, suggestKeywordsFromMessage } from '../support/bot-retrieval'
 
 const cards = loadAllCards()
 
@@ -31,4 +31,28 @@ test('inferQuestionDomain detects fiscal and remittances', () => {
 test('suggestKeywordsFromMessage returns meaningful canonical keywords', () => {
   const keywords = suggestKeywordsFromMessage('com imputo despeses entre projectes i remeses?', 4)
   assert.deepEqual(keywords, ['imputar', 'despesa', 'projecte', 'remesa'])
+})
+
+test('detectSmallTalkResponse handles greeting', () => {
+  const response = detectSmallTalkResponse('Hola', 'ca')
+  assert.ok(response)
+  assert.equal(response?.cardId, 'smalltalk-greeting')
+})
+
+test('detectSmallTalkResponse handles identity question', () => {
+  const response = detectSmallTalkResponse('qui ets?', 'ca')
+  assert.ok(response)
+  assert.equal(response?.cardId, 'smalltalk-about')
+})
+
+test('detectSmallTalkResponse handles thanks', () => {
+  const response = detectSmallTalkResponse('gràcies', 'ca')
+  assert.ok(response)
+  assert.equal(response?.cardId, 'smalltalk-thanks')
+})
+
+test('detectSmallTalkResponse handles acknowledgements', () => {
+  const response = detectSmallTalkResponse("d'acord", 'ca')
+  assert.ok(response)
+  assert.equal(response?.cardId, 'smalltalk-ack')
 })
