@@ -139,3 +139,33 @@ export async function validateUserMembership(
 
   return { valid: false, role: null };
 }
+
+// =============================================================================
+// SUPERADMIN
+// =============================================================================
+
+/**
+ * Verifica si un UID és SuperAdmin.
+ *
+ * Ordre de verificació:
+ * 1. Comprova env var SUPER_ADMIN_UID (per desenvolupament/testing)
+ * 2. Comprova Firestore systemSuperAdmins/{uid}
+ * 3. Si cap dels dos → retorna false
+ */
+export async function isSuperAdmin(uid: string): Promise<boolean> {
+  // Opció 1: env var (fallback per desenvolupament)
+  const envSuperAdminUid = process.env.SUPER_ADMIN_UID;
+  if (envSuperAdminUid && uid === envSuperAdminUid) {
+    return true;
+  }
+
+  // Opció 2: Firestore (criteri oficial)
+  try {
+    const db = getAdminDb();
+    const superAdminDoc = await db.doc(`systemSuperAdmins/${uid}`).get();
+    return superAdminDoc.exists;
+  } catch (error) {
+    console.warn('[admin-sdk] Error verificant SuperAdmin:', error);
+    return false;
+  }
+}

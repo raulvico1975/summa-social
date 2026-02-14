@@ -11,8 +11,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import * as XLSX from 'xlsx'
 import { getStorage } from 'firebase-admin/storage'
-import { verifyIdToken, getAdminDb, validateUserMembership } from '@/lib/api/admin-sdk'
-import { isAllowlistedSuperAdmin } from '@/lib/admin/superadmin-allowlist'
+import { verifyIdToken, getAdminDb, isSuperAdmin } from '@/lib/api/admin-sdk'
 import { isOfficialKbTemplate, KB_IMPORT_HEADERS } from '@/lib/support/kb-import-template'
 import { validateKbCards } from '@/lib/support/validate-kb-cards'
 import type { KBCard } from '@/lib/support/load-kb'
@@ -31,21 +30,8 @@ export async function POST(request: NextRequest): Promise<NextResponse<ApiRespon
       return NextResponse.json({ ok: false, error: 'Token invàlid o absent' }, { status: 401 })
     }
 
-    const db = getAdminDb()
-    const userDoc = await db.doc(`users/${authResult.uid}`).get()
-    const orgId = userDoc.data()?.organizationId as string | undefined
-
-    if (!orgId) {
-      return NextResponse.json(
-        { ok: false, error: 'Usuari sense organització assignada' },
-        { status: 400 }
-      )
-    }
-
-    const membership = await validateUserMembership(db, authResult.uid, orgId)
-    const isSuperAdmin = await isAllowlistedSuperAdmin(authResult.uid)
-
-    if (!isSuperAdmin) {
+    const superOk = await isSuperAdmin(authResult.uid)
+    if (!superOk) {
       return NextResponse.json(
         { ok: false, error: 'Només SuperAdmin pot importar cards' },
         { status: 403 }
