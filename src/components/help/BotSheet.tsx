@@ -14,7 +14,6 @@ import {
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useTranslations } from '@/i18n';
 import { useFirebase } from '@/firebase';
-import { useCurrentOrganization } from '@/hooks/organization-provider';
 import { trackUX } from '@/lib/ux/trackUX';
 
 // -------------------------------------------------------------------
@@ -41,7 +40,6 @@ interface BotSheetProps {
 export function BotSheet({ open, onOpenChange }: BotSheetProps) {
   const { language, tr } = useTranslations();
   const { user } = useFirebase();
-  const { organizationId } = useCurrentOrganization();
 
   const [messages, setMessages] = React.useState<BotMessage[]>([]);
   const [input, setInput] = React.useState('');
@@ -72,7 +70,7 @@ export function BotSheet({ open, onOpenChange }: BotSheetProps) {
 
   const handleSend = React.useCallback(async () => {
     const text = input.trim();
-    if (!text || loading || !user || !organizationId) return;
+    if (!text || loading || !user) return;
 
     setInput('');
     setMessages(prev => [...prev, { role: 'user', text }]);
@@ -90,7 +88,7 @@ export function BotSheet({ open, onOpenChange }: BotSheetProps) {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${idToken}`,
         },
-        body: JSON.stringify({ message: text, lang, orgId: organizationId }),
+        body: JSON.stringify({ message: text, lang }),
       });
 
       const data = await res.json();
@@ -115,7 +113,7 @@ export function BotSheet({ open, onOpenChange }: BotSheetProps) {
     } finally {
       setLoading(false);
     }
-  }, [input, loading, user, organizationId, language, errorGeneric]);
+  }, [input, loading, user, language, errorGeneric]);
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && !e.shiftKey) {

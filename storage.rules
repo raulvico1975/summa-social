@@ -33,6 +33,17 @@ service firebase.storage {
     }
 
     // ════════════════════════════════════════════════════════════════════════════
+    // Support KB - Bot learning system
+    // ════════════════════════════════════════════════════════════════════════════
+    match /support-kb/{file} {
+      // Lectura: usuaris autenticats (bot route necessita carregar override)
+      allow read: if isSignedIn();
+
+      // Escriptura: només SuperAdmin (import API)
+      allow write: if isSuperAdmin();
+    }
+
+    // ════════════════════════════════════════════════════════════════════════════
     // Organitzacions - Regla unificada per a TOTS els paths d'org
     // Inclou: pendingDocuments, logo, signature, transactions/attachments,
     //         expenseReports, projectExpenses, prebankRemittances
