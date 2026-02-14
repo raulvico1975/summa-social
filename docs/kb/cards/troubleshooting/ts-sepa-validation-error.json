@@ -14,13 +14,19 @@
       "error SEPA",
       "no puc generar el fitxer SEPA",
       "validació SEPA falla",
-      "error al crear la remesa SEPA"
+      "error al crear la remesa SEPA",
+      "el banc rebutja el fitxer xml",
+      "ics no valid",
+      "problemes amb remeses sepa pain 008"
     ],
     "es": [
       "error SEPA",
       "no puedo generar el archivo SEPA",
       "validación SEPA falla",
-      "error al crear la remesa SEPA"
+      "error al crear la remesa SEPA",
+      "el banco rechaza el archivo xml",
+      "ics no valido",
+      "problemas con remesas sepa pain 008"
     ]
   },
   "guideId": null,
@@ -30,9 +36,9 @@
   },
   "uiPaths": ["Moviments > Remeses SEPA"],
   "needsSnapshot": false,
-  "keywords": ["SEPA", "validació", "error", "pain008", "ICS", "IBAN"],
+  "keywords": ["SEPA", "validació", "error", "pain008", "ICS", "IBAN", "xml", "rebutja"],
   "source_faq": ["Q53b"],
-  "source_manual": ["6.a"],
+  "source_manual": ["6.a", "12.3b"],
   "source_guides": [],
   "related": ["guide-remittances", "guide-split-remittance"],
   "error_key": "validationError",

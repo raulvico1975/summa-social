@@ -15,23 +15,31 @@
       "donacions online",
       "dividir pagament de Stripe",
       "Stripe no quadra",
-      "payout de Stripe"
+      "payout de Stripe",
+      "bones practiques stripe",
+      "com processar cada payout",
+      "que es stripe i com funciona",
+      "on descarrego el csv de stripe"
     ],
     "es": [
       "cómo gestiono Stripe",
       "donaciones online",
       "dividir pago de Stripe",
       "Stripe no cuadra",
-      "payout de Stripe"
+      "payout de Stripe",
+      "buenas practicas stripe",
+      "como procesar cada payout",
+      "que es stripe y como funciona",
+      "donde descargo el csv de stripe"
     ]
   },
   "guideId": "stripeDonations",
   "answer": null,
   "uiPaths": ["Moviments > Stripe"],
   "needsSnapshot": false,
-  "keywords": ["stripe", "donacions", "online", "payout", "dividir", "comissions"],
+  "keywords": ["stripe", "donacions", "online", "payout", "dividir", "comissions", "bones practiques", "csv", "exportar", "dashboard stripe"],
   "source_faq": ["Q62", "Q63", "Q64"],
-  "source_manual": ["8.1", "8.2"],
+  "source_manual": ["8.1", "8.2", "8.3"],
   "source_guides": ["stripeDonations"],
   "related": ["guide-movements"],
   "error_key": null,

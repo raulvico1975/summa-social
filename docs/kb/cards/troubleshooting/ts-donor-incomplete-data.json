@@ -15,14 +15,16 @@
       "badge de dades incompletes",
       "donant sense NIF",
       "donant sense codi postal",
-      "el donant no sortirà al 182"
+      "el donant no sortirà al 182",
+      "problemes amb dades"
     ],
     "es": [
       "un donante tiene datos incompletos",
       "badge de datos incompletos",
       "donante sin NIF",
       "donante sin código postal",
-      "el donante no saldrá en el 182"
+      "el donante no saldrá en el 182",
+      "problemas con datos"
     ]
   },
   "guideId": null,

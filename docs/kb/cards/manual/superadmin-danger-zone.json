@@ -15,14 +15,18 @@
       "accions irreversibles",
       "on esborro coses permanentment",
       "esborrar moviments definitiu",
-      "zona de perill què puc fer"
+      "zona de perill què puc fer",
+      "com accedir a la zona de perill",
+      "no veig la zona de perill"
     ],
     "es": [
       "qué es la zona de peligro",
       "acciones irreversibles",
       "dónde borro cosas permanentemente",
       "borrar movimientos definitivo",
-      "zona de peligro qué puedo hacer"
+      "zona de peligro qué puedo hacer",
+      "como acceder a la zona de peligro",
+      "no veo la zona de peligro"
     ]
   },
   "guideId": null,
@@ -32,7 +36,7 @@
   },
   "uiPaths": ["Configuració > Zona de Perill"],
   "needsSnapshot": false,
-  "keywords": ["perill", "esborrar", "irreversible", "superadmin", "eliminar", "danger"],
+  "keywords": ["perill", "esborrar", "irreversible", "superadmin", "eliminar", "danger", "accedir", "rol"],
   "source_faq": ["Q97"],
   "source_manual": ["11.1", "11.2", "11.3"],
   "source_guides": ["dangerDeleteLastRemittance"],

@@ -15,22 +15,26 @@
       "canviar dades d'un soci",
       "actualitzar IBAN d'un donant",
       "modificar donant existent",
-      "reimportar donants amb canvis"
+      "reimportar donants amb canvis",
+      "donant que ha canviat de dni",
+      "actualitzar dni i cognoms del donant"
     ],
     "es": [
       "cómo actualizo donantes",
       "cambiar datos de un socio",
       "actualizar IBAN de un donante",
       "modificar donante existente",
-      "reimportar donantes con cambios"
+      "reimportar donantes con cambios",
+      "donante que ha cambiado de dni",
+      "actualizar dni y apellidos del donante"
     ]
   },
   "guideId": "updateExistingDonors",
   "answer": null,
   "uiPaths": ["Donants > Importar (actualització)"],
   "needsSnapshot": false,
-  "keywords": ["actualitzar", "donants", "canviar", "IBAN", "modificar", "reimportar"],
-  "source_faq": ["Q22"],
+  "keywords": ["actualitzar", "donants", "canviar", "IBAN", "modificar", "reimportar", "dni", "cognoms"],
+  "source_faq": ["Q16", "Q22"],
   "source_manual": ["3.4"],
   "source_guides": ["updateExistingDonors"],
   "related": ["guide-donors", "guide-import-donors"],

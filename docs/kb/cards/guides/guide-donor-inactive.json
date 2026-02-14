@@ -14,22 +14,28 @@
       "com dono de baixa un soci",
       "soci que vol marxar",
       "desactivar donant",
-      "baixa de soci"
+      "baixa de soci",
+      "apareixen socis que haurien d'estar de baixa",
+      "socis de baixa detectats",
+      "no vull perdre l'historial del soci"
     ],
     "es": [
       "cómo doy de baja a un socio",
       "socio que quiere irse",
       "desactivar donante",
-      "baja de socio"
+      "baja de socio",
+      "aparecen socios que deberian estar de baja",
+      "socios de baja detectados",
+      "no quiero perder el historial del socio"
     ]
   },
   "guideId": "donorSetInactive",
   "answer": null,
   "uiPaths": ["Donants > Fitxa donant > Estat"],
   "needsSnapshot": false,
-  "keywords": ["baixa", "inactiu", "desactivar", "soci", "marxar"],
-  "source_faq": ["Q21"],
-  "source_manual": ["3.5"],
+  "keywords": ["baixa", "inactiu", "desactivar", "soci", "marxar", "historial", "detectats"],
+  "source_faq": ["Q17", "Q21", "Q45"],
+  "source_manual": ["3.5", "6.4"],
   "source_guides": ["donorSetInactive"],
   "related": ["guide-donors", "guide-donor-reactivate"],
   "error_key": null,

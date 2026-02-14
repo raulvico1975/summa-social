@@ -15,14 +15,16 @@
       "buscar un moviment concret",
       "trobar una transacció",
       "filtres de moviments",
-      "cercar per data o import"
+      "cercar per data o import",
+      "veure tots els pagaments a un proveidor concret"
     ],
     "es": [
       "cómo filtro movimientos",
       "buscar un movimiento concreto",
       "encontrar una transacción",
       "filtros de movimientos",
-      "buscar por fecha o importe"
+      "buscar por fecha o importe",
+      "ver todos los pagos a un proveedor concreto"
     ]
   },
   "guideId": "movementFilters",
