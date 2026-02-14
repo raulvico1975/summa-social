@@ -1,0 +1,55 @@
+{
+  "id": "manual-dashboard-other-income",
+  "type": "concept",
+  "domain": "general",
+  "risk": "safe",
+  "guardrail": "none",
+  "answerMode": "full",
+  "title": {
+    "ca": "Què són els Altres ingressos al Dashboard",
+    "es": "Qué son los Otros ingresos en el Dashboard"
+  },
+  "intents": {
+    "ca": [
+      "que son els altres ingressos al dashboard",
+      "altres ingressos dashboard",
+      "d on surt altres ingressos"
+    ],
+    "es": [
+      "que son los otros ingresos en el dashboard",
+      "otros ingresos dashboard",
+      "de donde sale otros ingresos"
+    ]
+  },
+  "guideId": null,
+  "answer": {
+    "ca": "\"Altres ingressos\" és el que entra al compte i no prové de quotes ni donacions puntuals de persones.\n\nExemples habituals: subvencions, loteria/rifes, reintegraments, interessos bancaris o ingressos sense contacte assignat.\n\nServeix per quadrar el total: Ingressos totals = Quotes + Donacions puntuals + Altres ingressos.",
+    "es": "\"Otros ingresos\" es lo que entra en la cuenta y no proviene de cuotas ni donaciones puntuales de personas.\n\nEjemplos habituales: subvenciones, lotería/rifas, reintegros, intereses bancarios o ingresos sin contacto asignado.\n\nSirve para cuadrar el total: Ingresos totales = Cuotas + Donaciones puntuales + Otros ingresos."
+  },
+  "uiPaths": [
+    "Dashboard > Bloc Qui ens sosté"
+  ],
+  "needsSnapshot": false,
+  "keywords": [
+    "altres ingressos",
+    "otros ingresos",
+    "dashboard",
+    "subvencio",
+    "loteria"
+  ],
+  "source_faq": [
+    "Q37b"
+  ],
+  "source_manual": [
+    "1.4"
+  ],
+  "source_guides": [],
+  "related": [
+    "guide-reports"
+  ],
+  "error_key": null,
+  "symptom": {
+    "ca": null,
+    "es": null
+  }
+}

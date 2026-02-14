@@ -1976,7 +1976,9 @@ Abans de buscar ajuda externa, prova el **Hub de Guies** integrat a l'aplicació
 
 - **Guies pas a pas** per a les funcionalitats principals
 - **Respostes a preguntes freqüents** sobre cada tema
-- **Un cercador intel·ligent** que entén com parles
+- **Un cercador que entén llenguatge natural** (com ho diries a una companya)
+- **Enllaços directes clicables** per anar a la pantalla correcta sense perdre temps
+- **Ajuda per aclarir dubtes ambigus** (si cal, et demana triar opció 1 o 2)
 
 ### Com usar el cercador
 
@@ -1984,12 +1986,13 @@ No cal que sàpigues els termes tècnics. Pots buscar coses com:
 
 | El que escrius | El que troba |
 |----------------|--------------|
-| "no veig els meus moviments" | Guies d'importació d'extractes |
-| "182" | Guies fiscals del Model 182 |
-| "stripe comissions" | Guies de donacions online |
-| "remesa no quadra" | Guies de divisió de remeses |
+| "vull canviar el logo de l'entitat" | Explicació de com fer-ho des de configuració |
+| "com puc saber les quotes que un soci ha pagat?" | Guia del detall de donants i historial |
+| "com pujo una factura o rebut o nòmina?" | Guia per adjuntar documents i ruta directa |
+| "m'apareix un missatge d'error que no entenc" | Resolució de problemes + passos de comprovació |
+| "remesa no quadra" | Guies de divisió i revisió de remeses |
 
-El sistema reconeix sinònims i expressions comunes, així que no et preocupis per encertar el terme exacte.
+El sistema reconeix sinònims i expressions comunes, així que no et preocupis per encertar el terme exacte. Si tens un error a pantalla, copiar el text exacte sol donar-te una resposta més precisa.
 
 > 💡 **Consell:** Abans de contactar amb suport, fes una ullada al Hub de Guies. Moltes vegades la resposta ja hi és, i et pot estalviar temps d'espera.
 

@@ -1,0 +1,57 @@
+{
+  "id": "manual-movement-no-contact",
+  "type": "concept",
+  "domain": "transactions",
+  "risk": "safe",
+  "guardrail": "none",
+  "answerMode": "full",
+  "title": {
+    "ca": "Què vol dir un moviment sense contacte",
+    "es": "Qué significa un movimiento sin contacto"
+  },
+  "intents": {
+    "ca": [
+      "que vol dir un moviment sense contacte",
+      "moviment sense contacte",
+      "sense contacte al moviment"
+    ],
+    "es": [
+      "que significa un movimiento sin contacto",
+      "movimiento sin contacto",
+      "sin contacto en el movimiento"
+    ]
+  },
+  "guideId": null,
+  "answer": {
+    "ca": "Vol dir que la transacció no té cap donant/proveïdor/treballador assignat.\n\nÉs útil assignar contacte quan necessites traçabilitat i informes per persona o entitat.\nPerò hi ha casos on és normal deixar-lo sense contacte (comissions bancàries, interessos o ajustos).",
+    "es": "Significa que la transacción no tiene ningún donante/proveedor/trabajador asignado.\n\nEs útil asignar contacto cuando necesitas trazabilidad e informes por persona o entidad.\nPero hay casos en los que es normal dejarlo sin contacto (comisiones bancarias, intereses o ajustes)."
+  },
+  "uiPaths": [
+    "Moviments > Filtres"
+  ],
+  "needsSnapshot": false,
+  "keywords": [
+    "sense contacte",
+    "sin contacto",
+    "moviment",
+    "contacte"
+  ],
+  "source_faq": [
+    "Q32"
+  ],
+  "source_manual": [
+    "5.4"
+  ],
+  "source_guides": [
+    "movements"
+  ],
+  "related": [
+    "guide-movement-filters",
+    "guide-edit-movement"
+  ],
+  "error_key": null,
+  "symptom": {
+    "ca": null,
+    "es": null
+  }
+}

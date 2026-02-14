@@ -1,0 +1,57 @@
+{
+  "id": "manual-common-errors",
+  "type": "troubleshooting",
+  "domain": "general",
+  "risk": "safe",
+  "guardrail": "none",
+  "answerMode": "full",
+  "title": {
+    "ca": "M'apareix un missatge d'error que no entenc",
+    "es": "Me aparece un mensaje de error que no entiendo"
+  },
+  "intents": {
+    "ca": [
+      "m apareix un missatge d error que no entenc",
+      "m'apareix un missatge d'error que no entenc",
+      "tinc un error i no se que vol dir"
+    ],
+    "es": [
+      "me aparece un mensaje de error que no entiendo",
+      "tengo un error y no se que significa",
+      "sale un error raro"
+    ]
+  },
+  "guideId": null,
+  "answer": {
+    "ca": "Quan et surt un error i no és clar:\n1. Fes captura del missatge.\n2. Apunta què estaves fent.\n3. Torna-ho a provar per descartar un error puntual.\n4. Si es repeteix, comparteix el text exacte de l'error al suport.\n\nAmb el text literal, la resolució és molt més ràpida.",
+    "es": "Cuando te sale un error y no está claro:\n1. Haz captura del mensaje.\n2. Anota qué estabas haciendo.\n3. Vuelve a intentarlo para descartar un error puntual.\n4. Si se repite, comparte el texto exacto del error con soporte.\n\nCon el texto literal, la resolución es mucho más rápida."
+  },
+  "uiPaths": [
+    "Resolució de problemes",
+    "Hub de Guies"
+  ],
+  "needsSnapshot": false,
+  "keywords": [
+    "error",
+    "missatge",
+    "mensaje",
+    "no entenc",
+    "no entiendo"
+  ],
+  "source_faq": [
+    "Q90"
+  ],
+  "source_manual": [
+    "12.5"
+  ],
+  "source_guides": [],
+  "related": [
+    "manual-guides-hub",
+    "ts-offline-error"
+  ],
+  "error_key": null,
+  "symptom": {
+    "ca": "Veig un error i no entenc què he de fer",
+    "es": "Veo un error y no entiendo qué tengo que hacer"
+  }
+}
