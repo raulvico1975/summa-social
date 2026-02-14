@@ -172,32 +172,32 @@ export function KbLearningManager() {
   }, [selectedFile, toast]);
 
   const handlePublish = React.useCallback(async () => {
-    const { getFirestore, doc, setDoc, serverTimestamp } = await import('firebase/firestore');
-    const { getAuth } = await import('firebase/auth');
-
     const auth = getAuth();
     const user = auth.currentUser;
     if (!user) return;
 
     setIsPublishing(true);
     try {
-      const db = getFirestore();
-
-      await setDoc(
-        doc(db, 'system', 'supportKb'),
-        {
-          version: currentVersion + 1,
-          updatedAt: serverTimestamp(),
-          updatedBy: user.uid,
+      const idToken = await user.getIdToken();
+      const res = await fetch('/api/support/kb/publish', {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${idToken}`,
         },
-        { merge: true }
-      );
+      });
 
-      setCurrentVersion(v => v + 1);
+      const data = await res.json();
+      if (!res.ok || !data.ok) {
+        const details = Array.isArray(data.details) ? data.details.slice(0, 2).join(' · ') : null;
+        const suffix = details ? ` ${details}` : '';
+        throw new Error((data.error || 'No s\'ha pogut publicar (Quality Gate).') + suffix);
+      }
+
+      setCurrentVersion(data.version ?? (currentVersion + 1));
 
       toast({
         title: 'KB publicada',
-        description: `Versió ${currentVersion + 1} activa. Els bots usaran les noves cards.`,
+        description: `Versió ${data.version ?? (currentVersion + 1)} activa. Quality Gate superat.`,
       });
     } catch (error) {
       console.error('[KbLearningManager] publish error:', error);
@@ -328,7 +328,7 @@ export function KbLearningManager() {
           <div>
             <h4 className="text-sm font-medium">Publicar KB</h4>
             <p className="text-xs text-muted-foreground mt-1">
-              Incrementa la versió a Firestore perquè els bots usin les cards actualitzades.
+              Executa Quality Gate (validació + proves de recuperació) i, si passa, publica la nova versió.
             </p>
           </div>
 
