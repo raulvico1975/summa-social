@@ -10,6 +10,7 @@
 import { getStorage } from 'firebase-admin/storage'
 import type { KBCard } from './load-kb'
 import { loadAllCards } from './load-kb'
+import { runKbQualityGate } from './kb-quality-gate'
 
 type CachedKB = {
   version: number
@@ -42,6 +43,30 @@ export async function loadKbCards(version: number, storageVersion: number | null
 
   // 3. Merge: Storage overrides filesystem by ID
   const merged = mergeKbCards(fsCards, storageCards ?? [])
+
+  // Runtime safety net:
+  // if published KB is corrupt, keep serving a safe dataset instead of crashing/derailing answers.
+  if (shouldUseStoragePublished && storageCards) {
+    const mergedGate = runKbQualityGate(merged)
+    if (!mergedGate.ok) {
+      console.error('[load-kb-runtime] Published KB failed quality gate, using fallback dataset', {
+        errors: mergedGate.errors.slice(0, 5),
+        cards: merged.length,
+      })
+
+      const fsGate = fsCards.length > 0 ? runKbQualityGate(fsCards) : null
+      if (fsGate?.ok) {
+        cached = { version, storageVersion, cards: fsCards }
+        return fsCards
+      }
+
+      const storageGate = storageCards.length > 0 ? runKbQualityGate(storageCards) : null
+      if (storageGate?.ok) {
+        cached = { version, storageVersion, cards: storageCards }
+        return storageCards
+      }
+    }
+  }
 
   // 4. Cache per version
   cached = { version, storageVersion, cards: merged }

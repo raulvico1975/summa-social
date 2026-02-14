@@ -46,7 +46,7 @@ function mergeKbCards(fsCards: KBCard[], storageCards: KBCard[]): KBCard[] {
   return Array.from(map.values())
 }
 
-async function loadKbDraftFromStorage(): Promise<KBCard[]> {
+async function loadKbFromStorage(path: string): Promise<KBCard[]> {
   const bucketName =
     process.env.FIREBASE_STORAGE_BUCKET ||
     process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET
@@ -55,7 +55,7 @@ async function loadKbDraftFromStorage(): Promise<KBCard[]> {
 
   try {
     const bucket = getStorage().bucket(bucketName)
-    const file = bucket.file(KB_DRAFT_STORAGE_PATH)
+    const file = bucket.file(path)
     const [exists] = await file.exists()
     if (!exists) return []
 
@@ -109,8 +109,16 @@ export async function POST(request: NextRequest): Promise<NextResponse<ApiRespon
 
     const db = getAdminDb()
     const fsCards = loadAllCards()
-    const storageDraftCards = await loadKbDraftFromStorage()
-    const mergedCards = mergeKbCards(fsCards, storageDraftCards)
+    const storagePublishedCards = await loadKbFromStorage(KB_PUBLISHED_STORAGE_PATH)
+    const storageDraftCards = await loadKbFromStorage(KB_DRAFT_STORAGE_PATH)
+
+    // Merge order:
+    // 1) filesystem defaults (if present)
+    // 2) current published KB (production baseline)
+    // 3) draft updates
+    // This makes publish resilient to partial imports and missing bundled docs.
+    const baseCards = mergeKbCards(fsCards, storagePublishedCards)
+    const mergedCards = mergeKbCards(baseCards, storageDraftCards)
 
     const gate = runKbQualityGate(mergedCards)
 
