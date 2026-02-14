@@ -22,8 +22,8 @@ import { logBotQuestion } from '@/lib/support/bot-question-log'
 const BotInputSchema = z.object({
   userQuestion: z.string().describe('The user question in natural language.'),
   rawAnswer: z.string().describe('The raw KB answer content to reformulate.'),
-  risk: z.string().describe('Risk level: safe or guarded.'),
-  answerMode: z.string().describe('Answer mode: full or limited.'),
+  isGuarded: z.boolean().describe('True if the question is about a sensitive topic (risk=guarded).'),
+  isLimited: z.boolean().describe('True if only general guidance should be given (answerMode=limited).'),
   lang: z.string().describe('Response language: ca or es.'),
 })
 
@@ -48,9 +48,9 @@ REGLES ESTRICTES:
 - NO donis consells fiscals; només mostra els procediments documentats.
 - Pots reordenar, simplificar i fer més llegible el text original.
 - Respon sempre en l'idioma indicat ({{lang}}).
-{{#if (eq risk "guarded")}}
-- IMPORTANT: Aquesta és una consulta sobre un tema sensible ({{risk}}).
-{{#if (eq answerMode "limited")}}
+{{#if isGuarded}}
+- IMPORTANT: Aquesta és una consulta sobre un tema sensible.
+{{#if isLimited}}
 - Dona NOMÉS orientació general. MAI donis passos operatius concrets.
 {{/if}}
 {{/if}}
@@ -267,22 +267,39 @@ export async function POST(request: NextRequest): Promise<NextResponse<ApiRespon
       })
     }
 
-    const { output } = await reformatPrompt({
-      userQuestion: message,
-      rawAnswer,
-      risk: card.risk,
-      answerMode: card.answerMode,
-      lang,
-    })
+    // Precompute boolean flags to avoid Handlebars helper issues
+    const isGuarded = card.risk === 'guarded'
+    const isLimited = card.answerMode === 'limited'
 
-    return NextResponse.json({
-      ok: true,
-      mode,
-      cardId: card.id,
-      answer: output?.answer ?? rawAnswer,
-      guideId: card.guideId ?? null,
-      uiPaths: card.uiPaths,
-    })
+    try {
+      const { output } = await reformatPrompt({
+        userQuestion: message,
+        rawAnswer,
+        isGuarded,
+        isLimited,
+        lang,
+      })
+
+      return NextResponse.json({
+        ok: true,
+        mode,
+        cardId: card.id,
+        answer: output?.answer ?? rawAnswer,
+        guideId: card.guideId ?? null,
+        uiPaths: card.uiPaths,
+      })
+    } catch (reformatError) {
+      // LLM reformatter failed: return raw answer (not a critical error)
+      console.warn('[bot] reformatter failed, returning raw answer:', (reformatError as Error)?.message)
+      return NextResponse.json({
+        ok: true,
+        mode,
+        cardId: card.id,
+        answer: rawAnswer,
+        guideId: card.guideId ?? null,
+        uiPaths: card.uiPaths,
+      })
+    }
   } catch (error: unknown) {
     console.error('[API] support/bot error:', error)
 
