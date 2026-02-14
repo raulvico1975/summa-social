@@ -17,10 +17,35 @@ import { validateKbCards } from '@/lib/support/validate-kb-cards'
 import type { KBCard } from '@/lib/support/load-kb'
 
 type ApiResponse =
-  | { ok: true; imported: number; overwritten: number }
+  | { ok: true; imported: number; overwritten: number; baseSeededFromPublished: boolean }
   | { ok: false; error: string; details?: string[] }
 
-const KB_STORAGE_PATH = 'support-kb/kb.json'
+const KB_DRAFT_STORAGE_PATH = 'support-kb/kb-draft.json'
+const KB_PUBLISHED_STORAGE_PATH = 'support-kb/kb.json'
+
+type StorageBucketLike = {
+  file: (path: string) => {
+    exists: () => Promise<[boolean]>
+    download: () => Promise<[Buffer]>
+  }
+}
+
+async function loadKbFromStoragePath(storage: StorageBucketLike | null, path: string): Promise<KBCard[]> {
+  if (!storage) return []
+
+  try {
+    const file = storage.file(path)
+    const [exists] = await file.exists()
+    if (!exists) return []
+
+    const [data] = await file.download()
+    const parsed = JSON.parse(data.toString('utf-8'))
+    return Array.isArray(parsed) ? (parsed as KBCard[]) : []
+  } catch (e) {
+    console.warn(`[import] Could not load ${path}:`, e)
+    return []
+  }
+}
 
 export async function POST(request: NextRequest): Promise<NextResponse<ApiResponse>> {
   try {
@@ -127,23 +152,19 @@ export async function POST(request: NextRequest): Promise<NextResponse<ApiRespon
       );
     }
 
-    const bucket = getStorage().bucket(bucketName);
-    const storageFile = bucket.file(KB_STORAGE_PATH)
+    const bucket = getStorage().bucket(bucketName)
+    const storageFile = bucket.file(KB_DRAFT_STORAGE_PATH)
 
-    let existingCards: KBCard[] = []
-    try {
-      const [exists] = await storageFile.exists()
-      if (exists) {
-        const [data] = await storageFile.download()
-        existingCards = JSON.parse(data.toString('utf-8')) as KBCard[]
-      }
-    } catch (e) {
-      console.warn('[import] Could not load existing kb.json, starting fresh:', e)
-    }
+    const publishedCards = await loadKbFromStoragePath(bucket, KB_PUBLISHED_STORAGE_PATH)
+    const existingDraftCards = await loadKbFromStoragePath(bucket, KB_DRAFT_STORAGE_PATH)
 
-    // Merge: new cards override existing by ID
+    // Merge order: published base -> existing draft -> newly imported cards.
+    // This prevents partial imports from "shrinking" the draft KB.
     const mergedMap = new Map<string, KBCard>()
-    for (const card of existingCards) {
+    for (const card of publishedCards) {
+      mergedMap.set(card.id, card)
+    }
+    for (const card of existingDraftCards) {
       mergedMap.set(card.id, card)
     }
 
@@ -168,10 +189,22 @@ export async function POST(request: NextRequest): Promise<NextResponse<ApiRespon
       },
     })
 
+    // Save draft metadata for admin diagnostics.
+    const db = getAdminDb()
+    await db.doc('system/supportKb').set(
+      {
+        draftCardCount: merged.length,
+        draftUpdatedAt: new Date().toISOString(),
+        draftUpdatedBy: authResult.uid,
+      },
+      { merge: true }
+    )
+
     return NextResponse.json({
       ok: true,
       imported: newCards.length,
       overwritten,
+      baseSeededFromPublished: publishedCards.length > 0,
     })
   } catch (error: unknown) {
     console.error('[API] support/bot-questions/import error:', error)

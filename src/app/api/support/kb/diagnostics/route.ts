@@ -16,6 +16,7 @@ type ApiResponse =
       ok: true
       storageExists: boolean
       version: number
+      storageVersion: number | null
       aiReformatEnabled: boolean
       reformatTimeoutMs: number | null
     }
@@ -61,6 +62,7 @@ export async function GET(request: NextRequest): Promise<NextResponse<ApiRespons
     // --- Get version ---
     const snap = await db.doc('system/supportKb').get()
     const version = snap.exists ? (snap.data()?.version ?? 0) : 0
+    const storageVersion = snap.exists ? (snap.data()?.storageVersion ?? null) : null
     const aiReformatEnabled = snap.exists ? (snap.data()?.aiReformatEnabled !== false) : true
     const rawTimeout = snap.data()?.reformatTimeoutMs
     const reformatTimeoutMs = Number.isFinite(Number(rawTimeout)) ? Number(rawTimeout) : null
@@ -69,6 +71,7 @@ export async function GET(request: NextRequest): Promise<NextResponse<ApiRespons
       ok: true,
       storageExists,
       version,
+      storageVersion,
       aiReformatEnabled,
       reformatTimeoutMs,
     })

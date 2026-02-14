@@ -14,7 +14,8 @@ import { verifyIdToken, getAdminDb, isSuperAdmin } from '@/lib/api/admin-sdk'
 import { loadAllCards, type KBCard } from '@/lib/support/load-kb'
 import { runKbQualityGate } from '@/lib/support/kb-quality-gate'
 
-const KB_STORAGE_PATH = 'support-kb/kb.json'
+const KB_DRAFT_STORAGE_PATH = 'support-kb/kb-draft.json'
+const KB_PUBLISHED_STORAGE_PATH = 'support-kb/kb.json'
 
 type ApiResponse =
   | {
@@ -45,7 +46,7 @@ function mergeKbCards(fsCards: KBCard[], storageCards: KBCard[]): KBCard[] {
   return Array.from(map.values())
 }
 
-async function loadKbFromStorage(): Promise<KBCard[]> {
+async function loadKbFromStorage(path: string): Promise<KBCard[]> {
   const bucketName =
     process.env.FIREBASE_STORAGE_BUCKET ||
     process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET
@@ -54,7 +55,7 @@ async function loadKbFromStorage(): Promise<KBCard[]> {
 
   try {
     const bucket = getStorage().bucket(bucketName)
-    const file = bucket.file(KB_STORAGE_PATH)
+    const file = bucket.file(path)
     const [exists] = await file.exists()
     if (!exists) return []
 
@@ -65,6 +66,30 @@ async function loadKbFromStorage(): Promise<KBCard[]> {
     console.warn('[kb-publish] Storage draft load error:', error)
     return []
   }
+}
+
+async function saveKbPublishedToStorage(cards: KBCard[], publishedVersion: number, uid: string): Promise<void> {
+  const bucketName =
+    process.env.FIREBASE_STORAGE_BUCKET ||
+    process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET
+
+  if (!bucketName) {
+    throw new Error('Missing FIREBASE_STORAGE_BUCKET or NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET')
+  }
+
+  const bucket = getStorage().bucket(bucketName)
+  const file = bucket.file(KB_PUBLISHED_STORAGE_PATH)
+
+  await file.save(JSON.stringify(cards, null, 2), {
+    contentType: 'application/json',
+    metadata: {
+      customMetadata: {
+        publishedVersion: String(publishedVersion),
+        publishedBy: uid,
+        publishedAt: new Date().toISOString(),
+      },
+    },
+  })
 }
 
 export async function POST(request: NextRequest): Promise<NextResponse<ApiResponse>> {
@@ -84,8 +109,16 @@ export async function POST(request: NextRequest): Promise<NextResponse<ApiRespon
 
     const db = getAdminDb()
     const fsCards = loadAllCards()
-    const storageCards = await loadKbFromStorage()
-    const mergedCards = mergeKbCards(fsCards, storageCards)
+    const storagePublishedCards = await loadKbFromStorage(KB_PUBLISHED_STORAGE_PATH)
+    const storageDraftCards = await loadKbFromStorage(KB_DRAFT_STORAGE_PATH)
+
+    // Merge order:
+    // 1) filesystem defaults (if present)
+    // 2) current published KB (production baseline)
+    // 3) draft updates
+    // This makes publish resilient to partial imports and missing bundled docs.
+    const baseCards = mergeKbCards(fsCards, storagePublishedCards)
+    const mergedCards = mergeKbCards(baseCards, storageDraftCards)
 
     const gate = runKbQualityGate(mergedCards)
 
@@ -110,9 +143,13 @@ export async function POST(request: NextRequest): Promise<NextResponse<ApiRespon
     const currentVersion = currentSnap.exists ? (currentSnap.data()?.version ?? 0) : 0
     const nextVersion = currentVersion + 1
 
+    // Promote current draft to published runtime file atomically before version bump.
+    await saveKbPublishedToStorage(mergedCards, nextVersion, authResult.uid)
+
     await supportKbRef.set(
       {
         version: nextVersion,
+        storageVersion: nextVersion,
         updatedAt: FieldValue.serverTimestamp(),
         updatedBy: authResult.uid,
         lastQualityGateAt: FieldValue.serverTimestamp(),

@@ -259,12 +259,13 @@ export async function POST(request: NextRequest): Promise<NextResponse<ApiRespon
     // --- Load KB version + cards ---
     const snap = await db.doc('system/supportKb').get()
     const version = snap.exists ? (snap.data()?.version ?? 0) : 0
+    const storageVersion = snap.exists ? (snap.data()?.storageVersion ?? null) : null
     const aiReformatEnabled = snap.exists ? (snap.data()?.aiReformatEnabled !== false) : true
     const reformatTimeoutMs = getReformatTimeoutMs(snap.data()?.reformatTimeoutMs)
 
     let cards: KBCard[] = []
     try {
-      cards = await loadKbCards(version)
+      cards = await loadKbCards(version, storageVersion)
     } catch (cardsError) {
       console.error('[bot] loadKbCards error:', cardsError)
     }
