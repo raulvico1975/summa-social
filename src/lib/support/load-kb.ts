@@ -79,6 +79,42 @@ function loadI18n(lang: string): Record<string, string> {
   }
 }
 
+function collectIndexedSection(
+  i18n: Record<string, string>,
+  prefix: string,
+  section: string,
+  max = 30
+): string[] {
+  const items: string[] = []
+  for (let i = 0; i < max; i++) {
+    const value = i18n[`${prefix}.${section}.${i}`]
+    if (!value) break
+    items.push(value.trim())
+  }
+  return items.filter(Boolean)
+}
+
+function uniqueItems(items: string[], max = 8): string[] {
+  return Array.from(new Set(items.map(item => item.trim()).filter(Boolean))).slice(0, max)
+}
+
+function extractStepsFromCardText(cardText: string): string[] {
+  if (!cardText) return []
+  const normalized = cardText.replace(/\r\n/g, '\n')
+  const lines = normalized.split('\n').map(line => line.trim()).filter(Boolean)
+
+  const stepAnchor = lines.findIndex(line => /pas a pas|paso a paso/i.test(line))
+  const targetLine = stepAnchor >= 0 ? lines[stepAnchor + 1] : ''
+  if (!targetLine) return []
+
+  const steps = targetLine
+    .split(/→|->|>/)
+    .map(part => part.trim())
+    .filter(Boolean)
+
+  return uniqueItems(steps, 8)
+}
+
 // -------------------------------------------------------------------
 // Public API
 // -------------------------------------------------------------------
@@ -123,59 +159,84 @@ export function loadGuideContent(guideId: string, lang: string): string {
   const i18n = loadI18n(lang)
   const prefix = `guides.${guideId}`
 
+  const isEs = lang === 'es'
   const title = i18n[`${prefix}.title`] || ''
-  const intro = i18n[`${prefix}.intro`] || i18n[`${prefix}.whatIs`] || ''
+  const intro = i18n[`${prefix}.intro`] || ''
+  const whatIs = i18n[`${prefix}.whatIs`] || ''
   const summary = i18n[`${prefix}.summary`] || ''
   const cardText = i18n[`${prefix}.cardText`] || ''
-
-  // Collect ordered steps (lookFirst, steps, doNext)
-  const sections: { label: string; items: string[] }[] = []
-
-  for (const [section, label] of [
-    ['lookFirst', 'Primer pas'],
-    ['steps', 'Pas a pas'],
-    ['doNext', 'Després'],
-  ] as const) {
-    const items: string[] = []
-    for (let i = 0; i < 20; i++) {
-      const val = i18n[`${prefix}.${section}.${i}`]
-      if (!val) break
-      items.push(val)
-    }
-    if (items.length > 0) sections.push({ label, items })
-  }
-
-  // Avoid
-  const avoidItems: string[] = []
-  for (let i = 0; i < 10; i++) {
-    const val = i18n[`${prefix}.avoid.${i}`]
-    if (!val) break
-    avoidItems.push(val)
-  }
-
-  // Costly error
   const costlyError = i18n[`${prefix}.costlyError`] || ''
 
-  // Build text
+  const lookFirst = collectIndexedSection(i18n, prefix, 'lookFirst')
+  const steps = collectIndexedSection(i18n, prefix, 'steps')
+  const thenItems = collectIndexedSection(i18n, prefix, 'then')
+  const doNext = collectIndexedSection(i18n, prefix, 'doNext')
+  const notResolved = collectIndexedSection(i18n, prefix, 'notResolved')
+  const checkBeforeExport = collectIndexedSection(i18n, prefix, 'checkBeforeExport')
+  const avoid = collectIndexedSection(i18n, prefix, 'avoid')
+  const dontFixYet = collectIndexedSection(i18n, prefix, 'dontFixYet')
+  const tips = collectIndexedSection(i18n, prefix, 'tip')
+
+  let actionable = uniqueItems([...lookFirst, ...steps, ...thenItems, ...doNext], 6)
+  if (actionable.length === 0) {
+    actionable = uniqueItems(notResolved, 6)
+  }
+  if (actionable.length === 0) {
+    actionable = extractStepsFromCardText(cardText)
+  }
+
+  let checks = uniqueItems(checkBeforeExport, 4)
+  if (checks.length === 0 && notResolved.length > 0) {
+    checks = uniqueItems(notResolved, 4)
+  }
+  if (checks.length === 0 && avoid.length > 0) {
+    checks = [avoid[0]]
+  }
+
+  const cautions = uniqueItems([
+    ...dontFixYet,
+    ...tips,
+    ...avoid,
+    costlyError ? (isEs ? `Error costoso: ${costlyError}` : `Error costós: ${costlyError}`) : '',
+  ], 3)
+
+  const whatHappens = [summary, intro, whatIs, title].map(v => v.trim()).find(Boolean) || ''
+  const whatLabel = isEs ? 'Qué pasa' : 'Què passa'
+  const doLabel = isEs ? 'Qué hacer ahora' : 'Què fer ara'
+  const checkLabel = isEs ? 'Cómo comprobarlo' : 'Com comprovar-ho'
+  const cautionLabel = isEs ? 'Antes de continuar' : 'Abans de continuar'
+
   const parts: string[] = []
-  if (title) parts.push(`# ${title}`)
-  if (summary) parts.push(summary)
-  if (intro) parts.push(intro)
-  if (cardText) parts.push(cardText)
-
-  for (const sec of sections) {
-    parts.push(`\n**${sec.label}:**`)
-    sec.items.forEach((item, i) => parts.push(`${i + 1}. ${item}`))
+  if (whatHappens) {
+    parts.push(`${whatLabel}:`)
+    parts.push(whatHappens)
   }
 
-  if (avoidItems.length > 0) {
-    parts.push('\n**Evita:**')
-    avoidItems.forEach(item => parts.push(`- ${item}`))
+  parts.push('')
+  parts.push(`${doLabel}:`)
+  if (actionable.length > 0) {
+    actionable.forEach((item, i) => parts.push(`${i + 1}. ${item}`))
+  } else if (cardText) {
+    parts.push(cardText)
+  } else {
+    parts.push(isEs ? '1. Revisa la guía de este proceso dentro de la app.' : '1. Revisa la guia d’aquest procés dins de l’app.')
   }
 
-  if (costlyError) {
-    parts.push(`\n**Error costós:** ${costlyError}`)
+  parts.push('')
+  parts.push(`${checkLabel}:`)
+  if (checks.length > 0) {
+    checks.forEach(item => parts.push(`- ${item}`))
+  } else {
+    parts.push(isEs
+      ? '- Si completas los pasos sin errores, el proceso debería quedar resuelto.'
+      : '- Si completes els passos sense errors, el procés hauria de quedar resolt.')
   }
 
-  return parts.join('\n')
+  if (cautions.length > 0) {
+    parts.push('')
+    parts.push(`${cautionLabel}:`)
+    cautions.forEach(item => parts.push(`- ${item}`))
+  }
+
+  return parts.join('\n').trim()
 }

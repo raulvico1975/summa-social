@@ -302,7 +302,39 @@ function scorePhraseSimilarity(normalizedMessage: string, phrases: string[]): nu
   return Math.round(best * 30)
 }
 
-function scoreCard(tokens: string[], normalizedMessage: string, card: KBCard, lang: KbLang): number {
+type QuestionDomain = 'fiscal' | 'sepa' | 'remittances' | 'danger' | 'general'
+
+function normalizeCardDomain(domain: string): string {
+  const normalized = normalizePlain(domain)
+  if (!normalized) return 'general'
+  if (normalized === 'superadmin') return 'danger'
+  return normalized
+}
+
+function scoreDomainAlignment(questionDomain: QuestionDomain, cardDomainRaw: string): number {
+  if (questionDomain === 'general') return 0
+
+  const cardDomain = normalizeCardDomain(cardDomainRaw)
+  const preferred: Record<QuestionDomain, string[]> = {
+    fiscal: ['fiscal'],
+    sepa: ['sepa', 'remittances'],
+    remittances: ['remittances', 'sepa'],
+    danger: ['danger'],
+    general: ['general'],
+  }
+
+  if (preferred[questionDomain].includes(cardDomain)) return 26
+  if (cardDomain === 'general') return -10
+  return -32
+}
+
+function scoreCard(
+  tokens: string[],
+  normalizedMessage: string,
+  questionDomain: QuestionDomain,
+  card: KBCard,
+  lang: KbLang
+): number {
   let score = 0
   const intents = (card.intents?.[lang] ?? []).map(normalizePlain).filter(Boolean)
   const title = normalizePlain(card.title?.[lang] ?? '')
@@ -378,6 +410,7 @@ function scoreCard(tokens: string[], normalizedMessage: string, card: KBCard, la
 
   score += scoreTokenOverlap(tokens, searchPhrases)
   score += scorePhraseSimilarity(normalizedMessage, searchPhrases)
+  score += scoreDomainAlignment(questionDomain, card.domain ?? '')
 
   return score
 }
@@ -436,12 +469,13 @@ function isRetrievableCard(card: KBCard): boolean {
 export function retrieveCard(message: string, lang: KbLang, cards: KBCard[]): RetrievalResult {
   const tokens = normalize(message)
   const normalizedMessage = normalizePlain(message)
+  const questionDomain = inferQuestionDomain(message)
 
   const regularCards = cards.filter(isRetrievableCard)
   const ranked = regularCards
     .map(card => ({
       card,
-      score: scoreCard(tokens, normalizedMessage, card, lang),
+      score: scoreCard(tokens, normalizedMessage, questionDomain, card, lang),
     }))
     .sort((a, b) => b.score - a.score)
 
