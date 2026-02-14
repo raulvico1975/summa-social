@@ -38,6 +38,7 @@ const BotInputSchema = z.object({
   isGuarded: z.boolean().describe('True if the question is about a sensitive topic (risk=guarded).'),
   isLimited: z.boolean().describe('True if only general guidance should be given (answerMode=limited).'),
   lang: z.string().describe('Response language: ca or es.'),
+  uiPathHint: z.string().describe('Best UI location hint in Summa for this answer.'),
 })
 
 const BotOutputSchema = z.object({
@@ -53,7 +54,7 @@ const reformatPrompt = ai.definePrompt({
   input: { schema: BotInputSchema },
   output: { schema: BotOutputSchema },
   prompt: `Ets l'assistent de Summa Social, una eina de gestió per a ONGs.
-Reformata la resposta proporcionada per respondre la pregunta de l'usuari.
+Reformata la resposta proporcionada per respondre la pregunta de l'usuari amb claredat i to humà.
 
 REGLES ESTRICTES:
 - NO inventis passos nous, contingut extra ni procediments que no estiguin al text original.
@@ -61,6 +62,7 @@ REGLES ESTRICTES:
 - NO donis consells fiscals; només mostra els procediments documentats.
 - Pots reordenar, simplificar i fer més llegible el text original.
 - Respon sempre en l'idioma indicat ({{lang}}).
+- Prioritza la utilitat pràctica: primer què ha de fer ara mateix l'usuari.
 {{#if isGuarded}}
 - IMPORTANT: Aquesta és una consulta sobre un tema sensible.
 {{#if isLimited}}
@@ -74,7 +76,15 @@ Pregunta de l'usuari:
 Contingut de referència:
 {{{rawAnswer}}}
 
-Respon de forma clara i concisa.`,
+Ubicació útil dins Summa (si aplica):
+{{{uiPathHint}}}
+
+FORMAT:
+1) Una frase inicial breu i clara.
+2) Passos accionables numerats (màxim 5), només si existeixen al contingut.
+3) Frase final curta de verificació.
+4) Si hi ha ubicació, acaba amb: "On anar a Summa: <ubicació>".
+`,
 })
 
 // =============================================================================
@@ -150,6 +160,27 @@ function getCardLabel(card: KBCard, lang: KbLang): string {
     card.title?.es ??
     card.id
   )
+}
+
+function buildUiPathHint(card: KBCard): string {
+  const uniquePaths = Array.from(new Set((card.uiPaths ?? []).map(p => p.trim()).filter(Boolean))).slice(0, 2)
+  return uniquePaths.join(' · ')
+}
+
+function withUiPathFooter(answer: string, card: KBCard, lang: KbLang): string {
+  const trimmed = (answer ?? '').trim()
+  if (!trimmed) return trimmed
+
+  const uiPathHint = buildUiPathHint(card)
+  if (!uiPathHint) return trimmed
+
+  const lower = trimmed.toLowerCase()
+  if (lower.includes('on anar a summa:') || lower.includes('donde ir en summa:')) {
+    return trimmed
+  }
+
+  const footerLabel = lang === 'es' ? 'Dónde ir en Summa:' : 'On anar a Summa:'
+  return `${trimmed}\n\n${footerLabel} ${uiPathHint}`
 }
 
 function buildClarifyAnswer(lang: KbLang, options: KBCard[]): string {
@@ -309,7 +340,13 @@ export async function POST(request: NextRequest): Promise<NextResponse<ApiRespon
       const clarifyAnswer = buildClarifyAnswer(kbLang, result.clarifyOptions)
       const clarifyOptionsPayload = buildClarifyOptionsPayload(kbLang, result.clarifyOptions)
 
-      void logBotQuestion(db, orgId, message, inputLang, 'fallback', clarifyCardId).catch(e =>
+      void logBotQuestion(db, orgId, message, inputLang, 'fallback', clarifyCardId, {
+        bestCardId: result?.bestCardId,
+        bestScore: result?.bestScore,
+        secondCardId: result?.secondCardId,
+        secondScore: result?.secondScore,
+        retrievalConfidence: result?.confidence,
+      }).catch(e =>
         console.error('[bot] log error:', e)
       )
 
@@ -325,7 +362,13 @@ export async function POST(request: NextRequest): Promise<NextResponse<ApiRespon
     }
 
     // --- Log question (fire-and-forget) ---
-    void logBotQuestion(db, orgId, message, inputLang, mode, card.id).catch(e =>
+    void logBotQuestion(db, orgId, message, inputLang, mode, card.id, {
+      bestCardId: result?.bestCardId,
+      bestScore: result?.bestScore,
+      secondCardId: result?.secondCardId,
+      secondScore: result?.secondScore,
+      retrievalConfidence: result?.confidence,
+    }).catch(e =>
       console.error('[bot] log error:', e)
     )
 
@@ -348,6 +391,7 @@ export async function POST(request: NextRequest): Promise<NextResponse<ApiRespon
     const apiKey = process.env.GOOGLE_API_KEY || process.env.GOOGLE_GENAI_API_KEY
 
     let finalAnswer = rawAnswer
+    const uiPathHint = buildUiPathHint(card)
 
     if (apiKey && aiReformatEnabled) {
       // Precompute boolean flags to avoid Handlebars helper issues
@@ -362,6 +406,7 @@ export async function POST(request: NextRequest): Promise<NextResponse<ApiRespon
             isGuarded,
             isLimited,
             lang: kbLang,
+            uiPathHint,
           }),
           reformatTimeoutMs
         )
@@ -372,6 +417,8 @@ export async function POST(request: NextRequest): Promise<NextResponse<ApiRespon
         // finalAnswer = rawAnswer (ja assignat)
       }
     }
+
+    finalAnswer = withUiPathFooter(finalAnswer, card, kbLang)
 
     return NextResponse.json({
       ok: true,
