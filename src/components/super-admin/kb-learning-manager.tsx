@@ -28,12 +28,17 @@ type ExportScope = 'all' | 'fallbackOnly';
 
 export function KbLearningManager() {
   const { toast } = useToast();
+  const [isMounted, setIsMounted] = React.useState(false);
 
   const [scope, setScope] = React.useState<ExportScope>('fallbackOnly');
   const [days, setDays] = React.useState<string>('30');
   const [isExporting, setIsExporting] = React.useState(false);
   const [isImporting, setIsImporting] = React.useState(false);
   const [selectedFile, setSelectedFile] = React.useState<File | null>(null);
+
+  React.useEffect(() => {
+    setIsMounted(true);
+  }, []);
 
   const handleExport = React.useCallback(async () => {
     const auth = getAuth();
@@ -130,6 +135,10 @@ export function KbLearningManager() {
       setIsImporting(false);
     }
   }, [selectedFile, toast]);
+
+  if (!isMounted) {
+    return null;
+  }
 
   return (
     <Card>
