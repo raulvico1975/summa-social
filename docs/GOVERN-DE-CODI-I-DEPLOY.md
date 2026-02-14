@@ -106,18 +106,31 @@ El script (`scripts/deploy.sh`) fa tots els passos de forma seqüencial i bloque
 1. Preflight git (branca=main, working tree net, pull ff-only)
 2. Detectar fitxers canviats (main vs master)
 3. Classificar risc (ALT/MITJÀ/BAIX) per patrons de path
-4. **Verificació fiscal** — si el canvi toca àrea fiscal, exigeix confirmació explícita de la verificació (`docs/QA-FISCAL.md`). Si no s'ha fet, el deploy s'atura.
+4. **Anàlisi fiscal i d'impacte** — detecta si el canvi pot afectar diners, saldos o fiscalitat.
 5. Verificacions locals (`verify-local.sh` + `verify-ci.sh`)
-6. Resum i confirmació final
-7. Merge ritual (main→master→prod + push)
-8. Post-deploy check bloquejant (SHA servit + smoke test)
-9. Registre a `docs/DEPLOY-LOG.md` (staged, commit manual)
+6. Resum
+7. **Decisió humana només si cal**: únicament amb risc ALT residual no demostrable amb verificacions automàtiques.
+8. Merge ritual (main→master→prod + push)
+9. Post-deploy check automàtic (SHA remot + smoke opcional per URL)
+10. Registre a `docs/DEPLOY-LOG.md` (inclou decisió humana si n'hi ha)
 
 ### Autorització
 
 - **Trigger:** El CEO escriu `"Autoritzo deploy"` → Claude executa `npm run deploy`
 - El script detecta el nivell de risc automàticament
-- El script s'atura si les verificacions fallen o la verificació fiscal no es confirma
+- El script s'atura si les verificacions fallen
+
+### Regla de preguntes humanes (no tècniques)
+
+- **BAIX/MITJÀ:** cap pregunta humana.
+- **ALT:** només es pregunta si queda risc residual després de verificacions automàtiques.
+- **Format obligatori de pregunta:** impacte per l'entitat (què pot veure malament, què pot passar si falla, opcions A/B no tècniques).
+- **Prohibit preguntar** sobre comandes, flags, branques, merges o logs tècnics.
+- Si no es pot formular la pregunta en llenguatge de negoci, **no es pregunta** i el deploy queda **`BLOCKED_SAFE`**.
+- Si hi ha pregunta, es registra al deploy log amb:
+  - `human_question_reason`
+  - `business_impact`
+  - `decision_taken`
 
 ### Restriccions Claude Code
 

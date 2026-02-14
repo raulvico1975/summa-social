@@ -221,6 +221,7 @@ Claude Code **NO pot fer preguntes opaques, tècniques o inintel·ligibles**.
   - pipes, redireccions, flags (`|`, `&&`, `2>&1`, etc.)
   - sintaxi de shell
   - detalls d'execució tècnica interna
+  - `git`, `merge`, branques, commits, push, SHA o logs tècnics
 
 ### Obligació abans de qualsevol pregunta
 Si Claude necessita una confirmació, **HA D'EXPRESSAR-HO així**:
@@ -243,6 +244,18 @@ Si **no es pot explicar en llenguatge humà**,
 ➡️ **Claude NO ha de preguntar** i ha de:
 - executar directament (si risc BAIX/MITJÀ), o
 - aturar-se i explicar el problema (si risc ALT)
+
+### Política de preguntes en deploy (obligatòria)
+
+- BAIX/MITJÀ: cap pregunta humana.
+- ALT: només preguntar si queda risc residual després de verificacions automàtiques.
+- La pregunta ha de ser de negoci/impacte, amb aquest format:
+  1) Què s'ha tocat (llenguatge pla)
+  2) Quin risc real pot causar a l'entitat
+  3) Què veuria l'entitat si falla
+  4) Opció A (recomanada): no publicar encara
+  5) Opció B: publicar assumint risc temporal visible
+- Si no es pot formular amb aquest format: **BLOCKED_SAFE** (sense pregunta).
 
 ### Traducció de responsabilitat
 Raül **NO ha de prendre decisions tècniques de terminal**.
