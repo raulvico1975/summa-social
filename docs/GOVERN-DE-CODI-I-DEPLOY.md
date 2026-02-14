@@ -130,6 +130,8 @@ El script (`scripts/deploy.sh`) fa tots els passos de forma seqüencial i bloque
 
 ## 6. Rollback
 
+### Rollback bàsic (emergència)
+
 ```bash
 git checkout prod
 git reset --hard <SHA_BON>
@@ -139,6 +141,19 @@ git push --force-with-lease
 Firebase App Hosting redesplegarà automàticament.
 
 **Regla:** Rollback sempre des de `prod`, mai des de `master`.
+
+### Protocol complet
+
+Per incidents específics (bot, API, Storage, etc.), escenaris detallats i temps estimats:
+
+👉 **Veure [`DEPLOY-ROLLBACK.md`](./DEPLOY-ROLLBACK.md)**
+
+Aquest document conté:
+- Escenaris d'error específics (bot, diagnostics, Storage JSON, etc.)
+- Rollback parcial vs complet
+- Temps estimat per escenari
+- Verificació post-rollback
+- Procediments de documentació d'incidents
 
 ---
 
