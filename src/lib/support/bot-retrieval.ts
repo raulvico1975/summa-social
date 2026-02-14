@@ -1,15 +1,21 @@
 import type { KBCard } from './load-kb'
 
-const DIRECT_MATCH_THRESHOLD = 30
-const CLARIFY_MIN_SCORE = 18
-const CLARIFY_MAX_GAP = 16
+const DIRECT_MATCH_THRESHOLD = 36
+const CLARIFY_MIN_SCORE = 24
+const CLARIFY_MAX_GAP = 14
 
 export type KbLang = 'ca' | 'es'
+export type RetrievalConfidence = 'high' | 'medium' | 'low'
 
 export type RetrievalResult = {
   card: KBCard
   mode: 'card' | 'fallback'
   clarifyOptions?: KBCard[]
+  bestCardId?: string
+  bestScore?: number
+  secondCardId?: string
+  secondScore?: number
+  confidence?: RetrievalConfidence
 }
 
 const STOPWORDS = new Set([
@@ -23,6 +29,31 @@ const STOPWORDS = new Set([
   'es', 'entre', 'sobre', 'hacer',
 ])
 
+const SYNONYM_GROUPS: Array<{ canon: string; variants: string[] }> = [
+  { canon: 'certificat', variants: ['certificados', 'certificado', 'certificats'] },
+  { canon: 'donacio', variants: ['donacio', 'donacio', 'donacions', 'donacion', 'donaciones', 'donativo', 'donativos'] },
+  { canon: 'soci', variants: ['socis', 'socio', 'socios', 'donant', 'donants', 'donante', 'donantes'] },
+  { canon: 'remesa', variants: ['remeses', 'recibo', 'recibos', 'rebut', 'rebuts', 'cuota', 'cuotas'] },
+  { canon: 'dividir', variants: ['divideixo', 'dividir', 'fraccionar', 'fracciono', 'repartir', 'separar'] },
+  { canon: 'imputar', variants: ['imputo', 'imputar', 'imputacio', 'imputacion', 'prorratejar', 'prorratear', 'prorrateo', 'distribuir'] },
+  { canon: 'projecte', variants: ['projectes', 'proyecto', 'proyectos'] },
+  { canon: 'despesa', variants: ['despeses', 'gasto', 'gastos'] },
+  { canon: 'moviment', variants: ['moviments', 'movimiento', 'movimientos'] },
+  { canon: 'banc', variants: ['banco', 'compte', 'cuenta', 'iban'] },
+  { canon: 'quota', variants: ['quotes', 'cuota', 'cuotas'] },
+]
+
+const TOKEN_CANONICAL_MAP: Record<string, string> = (() => {
+  const map: Record<string, string> = {}
+  for (const group of SYNONYM_GROUPS) {
+    map[group.canon] = group.canon
+    for (const variant of group.variants) {
+      map[variant] = group.canon
+    }
+  }
+  return map
+})()
+
 function normalizePlain(text: string): string {
   return text
     .toLowerCase()
@@ -32,10 +63,63 @@ function normalizePlain(text: string): string {
     .trim()
 }
 
+function canonicalizeToken(token: string): string {
+  const normalized = normalizePlain(token)
+  if (!normalized) return normalized
+
+  if (TOKEN_CANONICAL_MAP[normalized]) return TOKEN_CANONICAL_MAP[normalized]
+
+  // Simple singularització (best-effort).
+  if (normalized.length > 4 && normalized.endsWith('es')) {
+    const singular = normalized.slice(0, -2)
+    if (TOKEN_CANONICAL_MAP[singular]) return TOKEN_CANONICAL_MAP[singular]
+  }
+  if (normalized.length > 4 && normalized.endsWith('s')) {
+    const singular = normalized.slice(0, -1)
+    if (TOKEN_CANONICAL_MAP[singular]) return TOKEN_CANONICAL_MAP[singular]
+  }
+
+  return normalized
+}
+
 function normalize(text: string): string[] {
-  return normalizePlain(text)
+  const rawTokens = normalizePlain(text)
     .split(/[\s,;:.!?¿¡()\[\]{}"']+/)
-    .filter(t => t.length > 2 && !STOPWORDS.has(t))
+    .filter(Boolean)
+
+  const normalized: string[] = []
+  for (const rawToken of rawTokens) {
+    if (rawToken.length <= 2 || STOPWORDS.has(rawToken)) continue
+    const canon = canonicalizeToken(rawToken)
+    if (!canon || canon.length <= 2 || STOPWORDS.has(canon)) continue
+    normalized.push(canon)
+    if (canon.length > 4 && canon.endsWith('s')) {
+      normalized.push(canon.slice(0, -1))
+    }
+  }
+
+  return Array.from(new Set(normalized))
+}
+
+function buildTrigrams(text: string): Set<string> {
+  const clean = normalizePlain(text).replace(/\s+/g, ' ')
+  if (!clean) return new Set()
+  if (clean.length < 3) return new Set([clean])
+  const out = new Set<string>()
+  for (let i = 0; i <= clean.length - 3; i++) {
+    out.add(clean.slice(i, i + 3))
+  }
+  return out
+}
+
+function jaccard(a: Set<string>, b: Set<string>): number {
+  if (a.size === 0 || b.size === 0) return 0
+  let intersection = 0
+  for (const item of a) {
+    if (b.has(item)) intersection++
+  }
+  const union = a.size + b.size - intersection
+  return union > 0 ? intersection / union : 0
 }
 
 function levenshteinDistance(a: string, b: string, maxDistance = 1): number {
@@ -75,6 +159,54 @@ function isApproxTokenMatch(token: string, candidate: string): boolean {
   return levenshteinDistance(token, candidate, 1) <= 1
 }
 
+function collectSearchPhrases(card: KBCard, lang: KbLang): string[] {
+  const title = normalizePlain(card.title?.[lang] ?? card.title?.ca ?? card.title?.es ?? '')
+  const errorKey = normalizePlain(card.error_key ?? '')
+  const intents = (card.intents?.[lang] ?? []).map(normalizePlain)
+  const keywords = (card.keywords ?? []).map(normalizePlain)
+  const uiPaths = (card.uiPaths ?? []).map(normalizePlain)
+  const symptom = normalizePlain(card.symptom?.[lang] ?? card.symptom?.ca ?? card.symptom?.es ?? '')
+  const domain = normalizePlain(card.domain ?? '')
+
+  return [
+    title,
+    errorKey,
+    symptom,
+    domain,
+    ...intents,
+    ...keywords,
+    ...uiPaths,
+  ].filter(Boolean)
+}
+
+function scoreTokenOverlap(tokens: string[], phrases: string[]): number {
+  if (!tokens.length || !phrases.length) return 0
+  const tokenSet = new Set(tokens)
+  const phraseTokenSet = new Set(phrases.flatMap(normalize))
+
+  let overlap = 0
+  for (const token of tokenSet) {
+    if (phraseTokenSet.has(token)) overlap++
+  }
+  if (overlap === 0) return 0
+
+  const coverage = overlap / Math.max(1, tokenSet.size)
+  return overlap * 12 + Math.round(coverage * 24)
+}
+
+function scorePhraseSimilarity(normalizedMessage: string, phrases: string[]): number {
+  if (!normalizedMessage || !phrases.length) return 0
+  const messageTrigrams = buildTrigrams(normalizedMessage)
+  let best = 0
+
+  for (const phrase of phrases) {
+    const similarity = jaccard(messageTrigrams, buildTrigrams(phrase))
+    if (similarity > best) best = similarity
+  }
+
+  return Math.round(best * 30)
+}
+
 function scoreCard(tokens: string[], normalizedMessage: string, card: KBCard, lang: KbLang): number {
   let score = 0
   const intents = (card.intents?.[lang] ?? []).map(normalizePlain).filter(Boolean)
@@ -83,6 +215,7 @@ function scoreCard(tokens: string[], normalizedMessage: string, card: KBCard, la
   const errorKey = normalizePlain(card.error_key ?? '')
   const intentTokens = intents.flatMap(intent => intent.split(' ').filter(Boolean))
   const keywordTokens = keywords.flatMap(kw => kw.split(' ').filter(Boolean))
+  const searchPhrases = collectSearchPhrases(card, lang)
 
   for (const intent of intents) {
     if (intent.length > 3 && normalizedMessage.includes(intent)) {
@@ -148,26 +281,50 @@ function scoreCard(tokens: string[], normalizedMessage: string, card: KBCard, la
     }
   }
 
+  score += scoreTokenOverlap(tokens, searchPhrases)
+  score += scorePhraseSimilarity(normalizedMessage, searchPhrases)
+
   return score
 }
 
-function detectFallbackDomain(tokens: string[]): string {
+export function inferQuestionDomain(message: string): 'fiscal' | 'sepa' | 'remittances' | 'danger' | 'general' {
+  const tokens = normalize(message)
   const joined = tokens.join(' ')
 
-  if (/fiscal|182|347|aeat|hisenda|hacienda|certificat|certificado|model|modelo/.test(joined)) {
-    return 'fallback-fiscal-unclear'
+  if (/fiscal|182|347|aeat|hisenda|hacienda|certificat|model|modelo|donacio/.test(joined)) {
+    return 'fiscal'
   }
   if (/sepa|pain|pain008|pain001|domiciliacio|xml|banc|banco/.test(joined)) {
-    return 'fallback-sepa-unclear'
+    return 'sepa'
   }
   if (/remesa|remesas|quotes|cuotas|dividir|processar|procesar|desfer|deshacer/.test(joined)) {
-    return 'fallback-remittances-unclear'
+    return 'remittances'
   }
   if (/esborrar|borrar|eliminar|perill|peligro|irreversible|superadmin/.test(joined)) {
-    return 'fallback-danger-unclear'
+    return 'danger'
   }
 
+  return 'general'
+}
+
+export function suggestKeywordsFromMessage(message: string, max = 6): string[] {
+  return normalize(message).slice(0, max)
+}
+
+function detectFallbackDomain(tokens: string[]): string {
+  const domain = inferQuestionDomain(tokens.join(' '))
+  if (domain === 'fiscal') return 'fallback-fiscal-unclear'
+  if (domain === 'sepa') return 'fallback-sepa-unclear'
+  if (domain === 'remittances') return 'fallback-remittances-unclear'
+  if (domain === 'danger') return 'fallback-danger-unclear'
   return 'fallback-no-answer'
+}
+
+function buildRetrievalConfidence(bestScore = 0, secondScore = 0): RetrievalConfidence {
+  const gap = bestScore - secondScore
+  if (bestScore >= 56 && gap >= 14) return 'high'
+  if (bestScore >= DIRECT_MATCH_THRESHOLD && gap >= 6) return 'medium'
+  return 'low'
 }
 
 function findGenericFallback(cards: KBCard[]): KBCard | null {
@@ -195,17 +352,28 @@ export function retrieveCard(message: string, lang: KbLang, cards: KBCard[]): Re
 
   const best = ranked[0]
   const second = ranked[1]
+  const bestScore = best?.score ?? 0
+  const secondScore = second?.score ?? 0
+  const confidence = buildRetrievalConfidence(bestScore, secondScore)
 
-  if (best && best.score >= DIRECT_MATCH_THRESHOLD) {
-    return { card: best.card, mode: 'card' }
+  if (best && bestScore >= DIRECT_MATCH_THRESHOLD) {
+    return {
+      card: best.card,
+      mode: 'card',
+      bestCardId: best.card.id,
+      bestScore,
+      secondCardId: second?.card.id,
+      secondScore,
+      confidence,
+    }
   }
 
   if (
     best &&
     second &&
-    best.score >= CLARIFY_MIN_SCORE &&
-    second.score >= CLARIFY_MIN_SCORE &&
-    best.score - second.score <= CLARIFY_MAX_GAP
+    bestScore >= CLARIFY_MIN_SCORE &&
+    secondScore >= CLARIFY_MIN_SCORE &&
+    bestScore - secondScore <= CLARIFY_MAX_GAP
   ) {
     const genericFallback = findGenericFallback(cards)
     if (genericFallback) {
@@ -213,6 +381,11 @@ export function retrieveCard(message: string, lang: KbLang, cards: KBCard[]): Re
         card: genericFallback,
         mode: 'fallback',
         clarifyOptions: [best.card, second.card],
+        bestCardId: best.card.id,
+        bestScore,
+        secondCardId: second.card.id,
+        secondScore,
+        confidence,
       }
     }
   }
@@ -220,16 +393,40 @@ export function retrieveCard(message: string, lang: KbLang, cards: KBCard[]): Re
   const fallbackId = detectFallbackDomain(tokens)
   const fallbackCard = cards.find(c => c.id === fallbackId)
   if (fallbackCard) {
-    return { card: fallbackCard, mode: 'fallback' }
+    return {
+      card: fallbackCard,
+      mode: 'fallback',
+      bestCardId: best?.card.id,
+      bestScore,
+      secondCardId: second?.card.id,
+      secondScore,
+      confidence,
+    }
   }
 
   const genericFallback = findGenericFallback(cards)
   if (genericFallback) {
-    return { card: genericFallback, mode: 'fallback' }
+    return {
+      card: genericFallback,
+      mode: 'fallback',
+      bestCardId: best?.card.id,
+      bestScore,
+      secondCardId: second?.card.id,
+      secondScore,
+      confidence,
+    }
   }
 
   if (cards[0]) {
-    return { card: cards[0], mode: 'fallback' }
+    return {
+      card: cards[0],
+      mode: 'fallback',
+      bestCardId: best?.card.id,
+      bestScore,
+      secondCardId: second?.card.id,
+      secondScore,
+      confidence,
+    }
   }
 
   throw new Error('No KB cards available for retrieval')

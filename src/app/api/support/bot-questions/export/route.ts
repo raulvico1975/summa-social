@@ -18,6 +18,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { verifyIdToken, getAdminDb, validateUserMembership } from '@/lib/api/admin-sdk'
 import { requireOperationalAccess } from '@/lib/api/require-operational-access'
+import { inferQuestionDomain, suggestKeywordsFromMessage } from '@/lib/support/bot-retrieval'
 
 // Max results per export (TTL lògic)
 const EXPORT_LIMIT = 500
@@ -72,7 +73,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     const snapshot = await query.get()
 
     // --- Build CSV ---
-    const header = 'question,lang,mode,matchedCardId,count,lastSeen'
+    const header = 'question,lang,mode,matchedCardId,bestCardId,bestScore,retrievalConfidence,count,lastSeen,suggestedDomain,suggestedKeywords,suggestedIntentsCa'
     const rows: string[] = [header]
 
     // Sort by count desc (client-side since Firestore can't order by two fields with inequality)
@@ -82,6 +83,9 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
       lang?: string
       resultMode?: string
       cardIdOrFallbackId?: string
+      bestCardId?: string
+      bestScore?: number
+      retrievalConfidence?: 'high' | 'medium' | 'low'
       count?: number
       lastSeenAt?: { toDate: () => Date }
     }
@@ -95,12 +99,20 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
       const lang = escapeCsvField(String(data.lang ?? ''))
       const mode = escapeCsvField(String(data.resultMode ?? ''))
       const cardId = escapeCsvField(String(data.cardIdOrFallbackId ?? ''))
+      const bestCardId = escapeCsvField(String(data.bestCardId ?? ''))
+      const bestScore = data.bestScore == null ? '' : String(data.bestScore)
+      const retrievalConfidence = escapeCsvField(String(data.retrievalConfidence ?? ''))
       const count = String(data.count ?? 0)
       const lastSeen = data.lastSeenAt?.toDate?.()
         ? data.lastSeenAt.toDate().toISOString().slice(0, 10)
         : ''
+      const suggestedDomain = escapeCsvField(inferQuestionDomain(String(data.messageRaw ?? '')))
+      const suggestedKeywords = escapeCsvField(suggestKeywordsFromMessage(String(data.messageRaw ?? ''), 6).join(';'))
+      const suggestedIntentsCa = escapeCsvField(String(data.messageRaw ?? ''))
 
-      rows.push(`${question},${lang},${mode},${cardId},${count},${lastSeen}`)
+      rows.push(
+        `${question},${lang},${mode},${cardId},${bestCardId},${bestScore},${retrievalConfidence},${count},${lastSeen},${suggestedDomain},${suggestedKeywords},${suggestedIntentsCa}`
+      )
     }
 
     const csv = rows.join('\n')

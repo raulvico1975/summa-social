@@ -65,6 +65,14 @@ export function maskPII(text: string): string {
     .replace(/(?:\+\d{1,3}[\s.-]?)?\(?\d{2,4}\)?[\s.-]?\d{3}[\s.-]?\d{3,4}\b/g, '[PHONE]')
 }
 
+export interface BotQuestionLogMeta {
+  bestCardId?: string
+  bestScore?: number
+  secondCardId?: string
+  secondScore?: number
+  retrievalConfidence?: 'high' | 'medium' | 'low'
+}
+
 // =============================================================================
 // LOG
 // =============================================================================
@@ -90,7 +98,8 @@ export async function logBotQuestion(
   message: string,
   lang: string,
   resultMode: 'card' | 'fallback',
-  cardIdOrFallbackId: string
+  cardIdOrFallbackId: string,
+  meta?: BotQuestionLogMeta
 ): Promise<void> {
   const normalized = normalizeForHash(message)
   const hash = createQuestionHash(lang, normalized)
@@ -109,6 +118,11 @@ export async function logBotQuestion(
       messageNormalized: normalized,
       resultMode,
       cardIdOrFallbackId,
+      bestCardId: meta?.bestCardId ?? null,
+      bestScore: meta?.bestScore ?? null,
+      secondCardId: meta?.secondCardId ?? null,
+      secondScore: meta?.secondScore ?? null,
+      retrievalConfidence: meta?.retrievalConfidence ?? null,
       count: FieldValue.increment(1),
       lastSeenAt: FieldValue.serverTimestamp(),
       createdAt: FieldValue.serverTimestamp(),
