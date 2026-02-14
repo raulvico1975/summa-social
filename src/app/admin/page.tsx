@@ -1,13 +1,11 @@
-
 'use client';
 
 import * as React from 'react';
 import { useRouter } from 'next/navigation';
-import { useFirebase, useCollection, useMemoFirebase } from '@/firebase';
-import { collection, query, orderBy, doc, updateDoc, getDoc } from 'firebase/firestore';
+import { useFirebase } from '@/firebase';
+import { doc, updateDoc } from 'firebase/firestore';
 import { useTranslations } from '@/i18n';
 import { sendPasswordResetEmail, signInWithEmailAndPassword, signOut } from 'firebase/auth';
-import type { Organization } from '@/lib/data';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -37,10 +35,13 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from '@/components/ui/collapsible';
+import {
   Shield,
   Building2,
-  Users,
-  Plus,
   MoreHorizontal,
   LogIn,
   Pause,
@@ -53,12 +54,16 @@ import {
   FileText,
   Lock,
   History,
-  CheckCircle2,
-  XCircle,
   ArrowUpRight,
   Settings,
-  Info,
   Download,
+  RefreshCw,
+  Copy,
+  ChevronDown,
+  Bot,
+  Megaphone,
+  Database,
+  Wrench,
 } from 'lucide-react';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
@@ -80,6 +85,26 @@ import { logAdminAction, getRecentAuditLogs, formatAuditAction, type AdminAuditL
 import { isDemoEnv } from '@/lib/demo/isDemoOrg';
 import { isAllowlistedSuperAdmin } from '@/lib/admin/superadmin-allowlist';
 import { ensureSuperAdminRegistry } from '@/lib/admin/ensure-superadmin-registry';
+import {
+  formatDateForAdmin,
+  formatRelativeActivity,
+} from '@/lib/admin/control-tower-format';
+import type {
+  AdminControlTowerSummary,
+  ControlStatus,
+} from '@/lib/admin/control-tower-summary';
+
+function statusClasses(status: ControlStatus): string {
+  if (status === 'critical') return 'border-red-300 bg-red-50'
+  if (status === 'warning') return 'border-amber-300 bg-amber-50'
+  return 'border-green-300 bg-green-50'
+}
+
+function statusBadgeVariant(status: ControlStatus): 'default' | 'secondary' | 'destructive' | 'outline' {
+  if (status === 'critical') return 'destructive'
+  if (status === 'warning') return 'secondary'
+  return 'default'
+}
 
 export default function AdminPage() {
   const router = useRouter();
@@ -88,16 +113,39 @@ export default function AdminPage() {
   const isMobile = useIsMobile();
   const { t } = useTranslations();
 
-  // ─────────────────────────────────────────────────────────────────────────────
-  // GUARD: Verificació SuperAdmin via allowlist d'emails
-  // Si és allowlisted, autoalinea el registre Firestore
-  // ─────────────────────────────────────────────────────────────────────────────
   const [isSuperAdmin, setIsSuperAdmin] = React.useState<boolean | null>(null);
   const [superAdminCheckDone, setSuperAdminCheckDone] = React.useState(false);
   const [registryError, setRegistryError] = React.useState<string | null>(null);
 
+  const [summary, setSummary] = React.useState<AdminControlTowerSummary | null>(null);
+  const [isSummaryLoading, setIsSummaryLoading] = React.useState(false);
+  const [summaryError, setSummaryError] = React.useState<string | null>(null);
+  const [summaryRefreshToken, setSummaryRefreshToken] = React.useState(0);
+
+  const [isCreateDialogOpen, setIsCreateDialogOpen] = React.useState(false);
+  const [suspendDialogOrg, setSuspendDialogOrg] = React.useState<AdminControlTowerSummary['entities'][number] | null>(null);
+  const [isProcessing, setIsProcessing] = React.useState(false);
+  const [isMigrating, setIsMigrating] = React.useState(false);
+
+  const [resetEmail, setResetEmail] = React.useState('');
+  const [isResetting, setIsResetting] = React.useState(false);
+
+  const [loginEmail, setLoginEmail] = React.useState('');
+  const [loginPassword, setLoginPassword] = React.useState('');
+  const [isLoggingIn, setIsLoggingIn] = React.useState(false);
+  const [loginError, setLoginError] = React.useState('');
+
+  const [auditLogs, setAuditLogs] = React.useState<AdminAuditLog[]>([]);
+  const [isLoadingAudit, setIsLoadingAudit] = React.useState(false);
+
+  const [isSeedingDemo, setIsSeedingDemo] = React.useState(false);
+  const [seedResult, setSeedResult] = React.useState<{ ok: boolean; demoMode?: string; counts?: Record<string, number>; error?: string } | null>(null);
+  const [showSeedConfirm, setShowSeedConfirm] = React.useState(false);
+  const [selectedDemoMode, setSelectedDemoMode] = React.useState<'short' | 'work'>('short');
+
+  const [backupOrgId, setBackupOrgId] = React.useState<string | null>(null);
+
   React.useEffect(() => {
-    // Reset quan canvia l'usuari
     if (!user) {
       setIsSuperAdmin(null);
       setSuperAdminCheckDone(false);
@@ -105,31 +153,25 @@ export default function AdminPage() {
       return;
     }
 
-    // Verificar allowlist per email
     const isAllowed = isAllowlistedSuperAdmin(user.email);
 
     if (!isAllowed) {
-      // No és allowlisted → accés denegat
       setIsSuperAdmin(false);
       setSuperAdminCheckDone(true);
       return;
     }
 
-    // És allowlisted → assegurar registre Firestore i donar accés
     const setupAccess = async () => {
       try {
         const result = await ensureSuperAdminRegistry(firestore, user.uid, user.email!);
         if (!result.success) {
-          // Error creant/verificant registre (pot ser permisos)
           setRegistryError(result.error || 'No s\'ha pogut preparar l\'accés');
-          // Encara donem accés UI perquè és allowlisted
           console.warn('[admin] Error alineant registre, però allowlisted:', result.error);
         }
         setIsSuperAdmin(true);
       } catch (error) {
         console.error('[admin] Error inesperat:', error);
         setRegistryError((error as Error).message);
-        // Donem accés UI igualment perquè és allowlisted
         setIsSuperAdmin(true);
       } finally {
         setSuperAdminCheckDone(true);
@@ -139,58 +181,54 @@ export default function AdminPage() {
     setupAccess();
   }, [user, firestore]);
 
-  // ─────────────────────────────────────────────────────────────────────────────
-  // Estats locals (només s'usen si isSuperAdmin === true)
-  // ─────────────────────────────────────────────────────────────────────────────
-  const [isCreateDialogOpen, setIsCreateDialogOpen] = React.useState(false);
-  const [suspendDialogOrg, setSuspendDialogOrg] = React.useState<Organization | null>(null);
-  const [isProcessing, setIsProcessing] = React.useState(false);
-  const [isMigrating, setIsMigrating] = React.useState(false);
+  const refreshSummary = React.useCallback(() => {
+    setSummaryRefreshToken((prev) => prev + 1)
+  }, [])
 
-  // Reset contrasenya
-  const [resetEmail, setResetEmail] = React.useState('');
-  const [isResetting, setIsResetting] = React.useState(false);
+  React.useEffect(() => {
+    if (isSuperAdmin !== true || !user) return
 
-  // Login local
-  const [loginEmail, setLoginEmail] = React.useState('');
-  const [loginPassword, setLoginPassword] = React.useState('');
-  const [isLoggingIn, setIsLoggingIn] = React.useState(false);
-  const [loginError, setLoginError] = React.useState('');
+    let active = true
 
-  // Audit logs
-  const [auditLogs, setAuditLogs] = React.useState<AdminAuditLog[]>([]);
-  const [isLoadingAudit, setIsLoadingAudit] = React.useState(false);
+    const loadSummary = async () => {
+      setIsSummaryLoading(true)
+      setSummaryError(null)
 
-  // Demo seed
-  const [isSeedingDemo, setIsSeedingDemo] = React.useState(false);
-  const [seedResult, setSeedResult] = React.useState<{ ok: boolean; demoMode?: string; counts?: Record<string, number>; error?: string } | null>(null);
-  const [showSeedConfirm, setShowSeedConfirm] = React.useState(false);
-  const [selectedDemoMode, setSelectedDemoMode] = React.useState<'short' | 'work'>('short');
+      try {
+        const idToken = await user.getIdToken()
+        const response = await fetch('/api/admin/control-tower/summary', {
+          method: 'GET',
+          headers: {
+            Authorization: `Bearer ${idToken}`,
+          },
+        })
 
-  // Backup local
-  const [backupOrgId, setBackupOrgId] = React.useState<string | null>(null);
+        const data = await response.json()
+        if (!response.ok || !data.ok) {
+          throw new Error(data.error || 'No s\'ha pogut carregar el resum')
+        }
 
-  // ─────────────────────────────────────────────────────────────────────────────
-  // Carregar dades (només si és SuperAdmin confirmat)
-  // ─────────────────────────────────────────────────────────────────────────────
-  const canLoadData = isSuperAdmin === true;
-  const orgsQuery = useMemoFirebase(
-    () => canLoadData ? query(collection(firestore, 'organizations'), orderBy('createdAt', 'desc')) : null,
-    [firestore, canLoadData]
-  );
-  const { data: organizations, isLoading: orgsLoading } = useCollection<Organization>(orgsQuery);
+        if (!active) return
+        setSummary(data.summary)
+      } catch (error) {
+        if (!active) return
+        const message = (error as Error).message
+        setSummaryError(message)
+        console.error('[admin] control tower summary error:', error)
+      } finally {
+        if (active) {
+          setIsSummaryLoading(false)
+        }
+      }
+    }
 
-  // Estadístiques
-  const stats = React.useMemo(() => {
-    if (!organizations) return { total: 0, active: 0, suspended: 0 };
-    return {
-      total: organizations.length,
-      active: organizations.filter(o => o.status === 'active').length,
-      suspended: organizations.filter(o => o.status === 'suspended').length,
-    };
-  }, [organizations]);
+    loadSummary()
 
-  // Carregar audit logs quan l'usuari és SuperAdmin confirmat
+    return () => {
+      active = false
+    }
+  }, [isSuperAdmin, user, summaryRefreshToken])
+
   React.useEffect(() => {
     if (isSuperAdmin !== true) return;
     setIsLoadingAudit(true);
@@ -198,9 +236,14 @@ export default function AdminPage() {
       .then(setAuditLogs)
       .catch(console.error)
       .finally(() => setIsLoadingAudit(false));
-  }, [firestore, isSuperAdmin]);
+  }, [firestore, isSuperAdmin, summaryRefreshToken]);
 
-  // Handler login
+  React.useEffect(() => {
+    if (!isCreateDialogOpen && isSuperAdmin === true) {
+      refreshSummary()
+    }
+  }, [isCreateDialogOpen, isSuperAdmin, refreshSummary])
+
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!loginEmail.trim() || !loginPassword) return;
@@ -208,7 +251,6 @@ export default function AdminPage() {
     setLoginError('');
     try {
       await signInWithEmailAndPassword(auth, loginEmail.trim(), loginPassword);
-      // El component es re-renderitzarà automàticament amb el nou user
     } catch (error: unknown) {
       console.error('Login error:', error);
       setLoginError(t.admin?.shell?.loginError ?? 'Credencials incorrectes');
@@ -217,13 +259,30 @@ export default function AdminPage() {
     }
   };
 
-  const handleEnterOrganization = (org: Organization) => {
-    // Guardar l'organització seleccionada a sessionStorage per "impersonar"
+  const handleEnterOrganization = (org: AdminControlTowerSummary['entities'][number]) => {
     sessionStorage.setItem('adminViewingOrgId', org.id);
     router.push('/dashboard');
   };
 
-  const handleToggleSuspend = async (org: Organization) => {
+  const handleCopyOrganization = async (org: AdminControlTowerSummary['entities'][number]) => {
+    try {
+      const base = typeof window !== 'undefined' ? window.location.origin : 'https://summasocial.app'
+      await navigator.clipboard.writeText(`${base}/${org.slug}`)
+      toast({
+        title: 'Enllaç copiat',
+        description: `S\'ha copiat /${org.slug}`,
+      })
+    } catch (error) {
+      console.error('Copy error:', error)
+      toast({
+        variant: 'destructive',
+        title: t.common?.error ?? 'Error',
+        description: 'No s\'ha pogut copiar l\'enllaç',
+      })
+    }
+  }
+
+  const handleToggleSuspend = async (org: AdminControlTowerSummary['entities'][number]) => {
     setIsProcessing(true);
     try {
       const newStatus = org.status === 'suspended' ? 'active' : 'suspended';
@@ -232,7 +291,7 @@ export default function AdminPage() {
         ...(newStatus === 'suspended' ? { suspendedAt: new Date().toISOString() } : { suspendedAt: null, suspendedReason: null }),
         updatedAt: new Date().toISOString(),
       });
-      // Audit log (best-effort)
+
       logAdminAction(
         firestore,
         newStatus === 'suspended' ? 'SUSPEND_ORG' : 'REACTIVATE_ORG',
@@ -249,8 +308,7 @@ export default function AdminPage() {
           : t.admin?.shell?.orgNowActive?.({ org: org.name }) ?? `${org.name} ara està activa.`,
       });
 
-      // Refrescar audit logs
-      getRecentAuditLogs(firestore, 15).then(setAuditLogs).catch(console.error);
+      refreshSummary()
     } catch (error) {
       console.error('Error updating organization:', error);
       toast({ variant: 'destructive', title: t.common?.error ?? 'Error', description: t.admin?.shell?.updateError ?? 'No s\'ha pogut actualitzar l\'organització.' });
@@ -271,6 +329,7 @@ export default function AdminPage() {
       if (result.errors.length > 0) {
         console.error('Errors de migració:', result.errors);
       }
+      refreshSummary()
     } catch (error) {
       console.error('Error durant la migració:', error);
       toast({
@@ -288,15 +347,11 @@ export default function AdminPage() {
     setIsResetting(true);
     try {
       await sendPasswordResetEmail(auth, resetEmail.trim());
-      // Audit log (best-effort, sempre, no revela si email existeix)
       logAdminAction(firestore, 'RESET_PASSWORD_SENT', user!.uid, resetEmail.trim());
-      // Refrescar audit logs
-      getRecentAuditLogs(firestore, 15).then(setAuditLogs).catch(console.error);
+      refreshSummary()
     } catch (error) {
-      // Silenciós: no revelar si l'email existeix o no
       console.error('Password reset error (silenced):', error);
     } finally {
-      // Sempre mostrar missatge genèric d'èxit
       toast({
         title: t.admin?.resetPassword?.sent ?? 'Correu enviat',
         description: t.admin?.resetPassword?.sentDescription ?? 'Si l\'adreça existeix, rebrà un correu per restablir la contrasenya.',
@@ -306,15 +361,6 @@ export default function AdminPage() {
     }
   };
 
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('ca-ES', {
-      day: '2-digit',
-      month: '2-digit',
-      year: 'numeric',
-    });
-  };
-
-  // Handler regenerar demo (executa després de confirmació)
   const executeRegenerateDemo = async () => {
     if (!user) return;
     setShowSeedConfirm(false);
@@ -322,7 +368,6 @@ export default function AdminPage() {
     setSeedResult(null);
 
     try {
-      // Obtenir ID Token per auth segura (no header falsificable)
       const idToken = await user.getIdToken();
 
       const response = await fetch('/api/internal/demo/seed', {
@@ -351,6 +396,7 @@ export default function AdminPage() {
           description: data.error || (t.admin?.health?.demoError ?? 'No s\'ha pogut regenerar la demo'),
         });
       }
+      refreshSummary()
     } catch (error) {
       console.error('Error regenerant demo:', error);
       setSeedResult({ ok: false, error: (error as Error).message });
@@ -364,12 +410,10 @@ export default function AdminPage() {
     }
   };
 
-  // Obre diàleg de confirmació
   const handleRegenerateDemo = () => {
     setShowSeedConfirm(true);
   };
 
-  // Handler per descarregar backup local d'una org
   const handleDownloadBackup = async (orgId: string, orgName: string) => {
     if (!user) return;
     setBackupOrgId(orgId);
@@ -389,12 +433,10 @@ export default function AdminPage() {
         throw new Error(errorData.error || 'Error descarregant backup');
       }
 
-      // Obtenir filename del header Content-Disposition
       const contentDisposition = response.headers.get('Content-Disposition');
       const filenameMatch = contentDisposition?.match(/filename="(.+)"/);
       const filename = filenameMatch ? filenameMatch[1] : `backup_${orgId}.json`;
 
-      // Crear blob i descarregar
       const blob = await response.blob();
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
@@ -421,7 +463,7 @@ export default function AdminPage() {
     }
   };
 
-  const getStatusBadge = (status: Organization['status']) => {
+  const getStatusBadge = (status: AdminControlTowerSummary['entities'][number]['status']) => {
     switch (status) {
       case 'active':
         return <Badge className="bg-green-100 text-green-800 border-green-300">{t.admin?.orgStatus?.active ?? 'Activa'}</Badge>;
@@ -434,7 +476,6 @@ export default function AdminPage() {
     }
   };
 
-  // Handler logout
   const handleLogout = async () => {
     try {
       await signOut(auth);
@@ -443,11 +484,6 @@ export default function AdminPage() {
     }
   };
 
-  // ─────────────────────────────────────────────────────────────────────────────
-  // RENDERS CONDICIONALS (ordre important: loading → login → denied → content)
-  // ─────────────────────────────────────────────────────────────────────────────
-
-  // 1. Loading auth
   if (isUserLoading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
@@ -456,7 +492,6 @@ export default function AdminPage() {
     );
   }
 
-  // 2. No autenticat → mostrar login
   if (!user) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-background">
@@ -515,7 +550,6 @@ export default function AdminPage() {
     );
   }
 
-  // 3. Verificant SuperAdmin (després de login, abans de decidir)
   if (!superAdminCheckDone) {
     return (
       <div className="flex items-center justify-center min-h-screen">
@@ -524,7 +558,6 @@ export default function AdminPage() {
     );
   }
 
-  // 4. Autenticat però NO és SuperAdmin → Accés denegat + logout
   if (isSuperAdmin !== true) {
     return (
       <div className="flex flex-col items-center justify-center min-h-screen gap-4">
@@ -544,22 +577,13 @@ export default function AdminPage() {
     );
   }
 
-  // 5. SuperAdmin confirmat, carregant orgs
-  if (orgsLoading) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
-      </div>
-    );
-  }
-
-  // ─────────────────────────────────────────────────────────────────────────────
-  // 6. SuperAdmin confirmat → Panell complet
-  // ─────────────────────────────────────────────────────────────────────────────
+  const cards = summary?.globalStatus.cards ?? []
+  const entities = summary?.entities ?? []
+  const kbSummary = summary?.kbBotSummary
+  const communication = summary?.communicationSummary
 
   return (
     <div className="min-h-screen bg-background">
-      {/* Banner d'error de registre (només si hi ha error però s'ha donat accés) */}
       {registryError && (
         <div className="bg-amber-500 text-white px-4 py-3">
           <div className="container mx-auto flex items-center gap-3">
@@ -574,111 +598,138 @@ export default function AdminPage() {
         </div>
       )}
 
-      {/* Header */}
       <header className="border-b bg-card">
         <div className="container mx-auto px-4 py-4">
-          <div className="flex items-center justify-between">
+          <div className="flex items-center justify-between gap-3">
             <div className="flex items-center gap-3">
               <Shield className="h-8 w-8 text-primary" />
               <div>
-                <h1 className="text-xl font-bold">{t.admin?.shell?.title ?? 'Panell de Super Admin'}</h1>
-                <p className="text-sm text-muted-foreground">{t.admin?.shell?.subtitle ?? 'Gestió de Summa Social'}</p>
-              </div>
-              {/* Estat del sistema */}
-              <div className="ml-6 flex items-center gap-3 text-xs text-muted-foreground border-l pl-4">
-                <span className="flex items-center gap-1">
-                  <Info className="h-3 w-3" />
-                  v1.20
-                </span>
-                <span>·</span>
-                <span>{process.env.NODE_ENV === 'production' ? 'prod' : 'dev'}</span>
-                <span>·</span>
-                <span className="font-mono">summa-social</span>
+                <h1 className="text-xl font-bold">{t.admin?.controlTower?.title ?? 'SUPERADMIN — TORRE DE CONTROL'}</h1>
+                <p className="text-sm text-muted-foreground">{t.admin?.controlTower?.subtitle ?? 'Govern i contingut de Summa Social'}</p>
               </div>
             </div>
-            <div className="flex gap-2">
-              <Button variant="outline" onClick={handleMigrateSlugs} disabled={isMigrating}>
-                {isMigrating && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                {t.admin?.migrations?.slugs ?? 'Migrar slugs'}
-              </Button>
-              <Button onClick={() => setIsCreateDialogOpen(true)}>
-                <Plus className="mr-2 h-4 w-4" />
-                {t.admin?.shell?.newOrg ?? 'Nova organització'}
-              </Button>
-            </div>
+            <Button variant="outline" onClick={refreshSummary} disabled={isSummaryLoading}>
+              {isSummaryLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <RefreshCw className="mr-2 h-4 w-4" />}
+              Actualitzar
+            </Button>
           </div>
         </div>
       </header>
 
-      {/* Mini-navegació sticky */}
       <AdminNav />
 
       <main className="container mx-auto px-4 py-8 space-y-8">
-        {/* ═══════════════════════════════════════════════════════════════════════
-            A) GOVERN DEL SISTEMA
-            Organitzacions, superadmins i estat global.
-        ═══════════════════════════════════════════════════════════════════════ */}
+        {summaryError && (
+          <Card className="border-red-300 bg-red-50">
+            <CardContent className="pt-6 text-sm text-red-700">
+              {summaryError}
+            </CardContent>
+          </Card>
+        )}
+
         <AdminSection
-          id="govern"
-          title={t.admin?.sections?.govern?.title ?? "Govern del sistema"}
-          description={t.admin?.sections?.govern?.description ?? "Organitzacions, superadmins i estat global."}
+          id="estat"
+          title={t.admin?.controlTower?.sections?.globalStatusTitle ?? '1. Estat global'}
+          description={t.admin?.controlTower?.sections?.globalStatusDescription ?? 'Visió executiva de sistema, incidències, contingut i traduccions.'}
           tone="neutral"
         >
-          {/* Estadístiques globals */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between pb-2">
-                <CardTitle className="text-sm font-medium">{t.admin?.shell?.totalOrgs ?? 'Total Organitzacions'}</CardTitle>
-                <Building2 className="h-4 w-4 text-muted-foreground" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">{stats.total}</div>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between pb-2">
-                <CardTitle className="text-sm font-medium">{t.admin?.shell?.activeOrgs ?? 'Actives'}</CardTitle>
-                <Play className="h-4 w-4 text-green-600" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold text-green-600">{stats.active}</div>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between pb-2">
-                <CardTitle className="text-sm font-medium">{t.admin?.shell?.suspendedOrgs ?? 'Suspeses'}</CardTitle>
-                <Pause className="h-4 w-4 text-destructive" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold text-destructive">{stats.suspended}</div>
-              </CardContent>
-            </Card>
-          </div>
+          {isSummaryLoading && !summary ? (
+            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+              <Loader2 className="h-4 w-4 animate-spin" />
+              Carregant resum...
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+              {cards.map((card) => (
+                <Card key={card.id} className={statusClasses(card.status)}>
+                  <CardHeader className="pb-2">
+                    <div className="flex items-center justify-between gap-2">
+                      <CardTitle className="text-sm">{card.title}</CardTitle>
+                      <Badge variant={statusBadgeVariant(card.status)} className="capitalize">{card.status}</Badge>
+                    </div>
+                  </CardHeader>
+                  <CardContent>
+                    <p className="font-semibold text-sm">{card.headline}</p>
+                    {card.detail && <p className="text-xs text-muted-foreground mt-1">{card.detail}</p>}
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          )}
 
-          {/* Llista d'organitzacions */}
-          <Card className="mb-6">
-            <CardHeader>
-              <CardTitle>{t.admin?.shell?.orgsTitle ?? 'Organitzacions'}</CardTitle>
-              <CardDescription>
-                {t.admin?.shell?.orgsDescription ?? 'Gestiona totes les organitzacions registrades a Summa Social'}
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              {/* Mobile: MobileListItem */}
+          <Collapsible className="mt-6">
+            <CollapsibleTrigger asChild>
+              <Button variant="outline" className="w-full justify-between">
+                <span className="flex items-center gap-2">
+                  <Wrench className="h-4 w-4" />
+                  {t.admin?.controlTower?.sections?.technicalDiagnostics ?? 'Diagnòstic tècnic'}
+                </span>
+                <ChevronDown className="h-4 w-4" />
+              </Button>
+            </CollapsibleTrigger>
+            <CollapsibleContent className="mt-4 space-y-4">
+              <SystemHealth />
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-base">{t.admin?.health?.diagTitle ?? 'Diagnòstic'}</CardTitle>
+                  <CardDescription>{t.admin?.health?.diagDescription ?? 'Si estàs perdut o hi ha una incidència, comença pel manual.'}</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-2 text-sm">
+                  <a
+                    href="https://console.firebase.google.com/project/summa-social/overview"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-2 text-primary hover:underline"
+                  >
+                    <ExternalLink className="h-4 w-4" />
+                    Firebase Console
+                  </a>
+                  <a
+                    href="https://console.cloud.google.com/logs/query?project=summa-social"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-2 text-primary hover:underline"
+                  >
+                    <ExternalLink className="h-4 w-4" />
+                    Cloud Logging
+                  </a>
+                  <span
+                    className="flex items-center gap-2 cursor-pointer hover:text-foreground text-muted-foreground"
+                    onClick={() => {
+                      navigator.clipboard.writeText('docs/DEV-SOLO-MANUAL.md');
+                      toast({ title: t.admin?.health?.copiedToClipboard ?? 'Copiat al porta-retalls' });
+                    }}
+                  >
+                    <FileText className="h-4 w-4" />
+                    <code className="text-xs bg-muted px-1 rounded">docs/DEV-SOLO-MANUAL.md</code>
+                  </span>
+                </CardContent>
+              </Card>
+            </CollapsibleContent>
+          </Collapsible>
+        </AdminSection>
+
+        <AdminSection
+          id="entitats"
+          title={t.admin?.controlTower?.sections?.entitiesTitle ?? '2. Entitats'}
+          description={t.admin?.controlTower?.sections?.entitiesDescription ?? 'Govern executiu de totes les organitzacions.'}
+          tone="neutral"
+        >
+          <Card>
+            <CardContent className="pt-6">
               {isMobile ? (
                 <div className="flex flex-col gap-2">
-                  {organizations && organizations.length > 0 ? (
-                    organizations.map((org) => (
+                  {entities.length > 0 ? (
+                    entities.map((org) => (
                       <MobileListItem
                         key={org.id}
                         title={org.name}
                         leadingIcon={<Building2 className="h-4 w-4" />}
                         badges={[getStatusBadge(org.status)]}
                         meta={[
-                          { value: org.slug },
-                          org.taxId && { label: 'CIF', value: org.taxId },
-                          { value: formatDate(org.createdAt) },
-                        ].filter(Boolean) as { label?: string; value: React.ReactNode }[]}
+                          { label: 'Alta', value: formatDateForAdmin(org.createdAt) },
+                          { label: 'Activitat', value: formatRelativeActivity(org.lastActivityAt) },
+                        ]}
                         actions={
                           <DropdownMenu>
                             <DropdownMenuTrigger asChild>
@@ -689,21 +740,25 @@ export default function AdminPage() {
                             <DropdownMenuContent align="end">
                               <DropdownMenuItem onClick={() => handleEnterOrganization(org)}>
                                 <LogIn className="mr-2 h-4 w-4" />
-                                {t.admin?.shell?.enter ?? 'Entrar'}
+                                Entrar
                               </DropdownMenuItem>
                               <DropdownMenuItem onClick={() => {
                                 sessionStorage.setItem('adminViewingOrgId', org.id);
                                 router.push(`/${org.slug}/dashboard/movimientos`);
                               }}>
                                 <ArrowUpRight className="mr-2 h-4 w-4" />
-                                {t.admin?.shell?.movements ?? 'Moviments'}
+                                Moviments
                               </DropdownMenuItem>
                               <DropdownMenuItem onClick={() => {
                                 sessionStorage.setItem('adminViewingOrgId', org.id);
                                 router.push(`/${org.slug}/dashboard/configuracion`);
                               }}>
                                 <Settings className="mr-2 h-4 w-4" />
-                                {t.admin?.shell?.config ?? 'Configuració'}
+                                Configuració
+                              </DropdownMenuItem>
+                              <DropdownMenuItem onClick={() => handleCopyOrganization(org)}>
+                                <Copy className="mr-2 h-4 w-4" />
+                                Còpia
                               </DropdownMenuItem>
                               <DropdownMenuItem
                                 onClick={() => handleDownloadBackup(org.id, org.name)}
@@ -714,7 +769,7 @@ export default function AdminPage() {
                                 ) : (
                                   <Download className="mr-2 h-4 w-4" />
                                 )}
-                                {t.admin?.shell?.backupLocal ?? 'Backup local'}
+                                Backup
                               </DropdownMenuItem>
                               <DropdownMenuSeparator />
                               <DropdownMenuItem
@@ -724,12 +779,12 @@ export default function AdminPage() {
                                 {org.status === 'suspended' ? (
                                   <>
                                     <Play className="mr-2 h-4 w-4" />
-                                    {t.admin?.shell?.reactivate ?? 'Reactivar'}
+                                    Reactivar
                                   </>
                                 ) : (
                                   <>
                                     <Pause className="mr-2 h-4 w-4" />
-                                    {t.admin?.shell?.suspend ?? 'Suspendre'}
+                                    Suspendre
                                   </>
                                 )}
                               </DropdownMenuItem>
@@ -740,64 +795,41 @@ export default function AdminPage() {
                       />
                     ))
                   ) : (
-                    <div className="text-center text-muted-foreground py-12">
-                      {t.admin?.shell?.noOrgs ?? 'No hi ha organitzacions. Crea\'n una per començar.'}
-                    </div>
+                    <p className="text-center text-muted-foreground py-12">Sense entitats disponibles.</p>
                   )}
                 </div>
               ) : (
-                /* Desktop: Table */
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>{t.admin?.shell?.orgColumn ?? 'Organització'}</TableHead>
-                      <TableHead>{t.admin?.shell?.cifColumn ?? 'CIF'}</TableHead>
-                      <TableHead>{t.admin?.shell?.statusColumn ?? 'Estat'}</TableHead>
-                      <TableHead>{t.admin?.shell?.indicatorsColumn ?? 'Indicadors'}</TableHead>
-                      <TableHead>{t.admin?.shell?.createdColumn ?? 'Creada'}</TableHead>
-                      <TableHead>{t.admin?.shell?.accessColumn ?? 'Accessos'}</TableHead>
-                      <TableHead className="w-[80px]"></TableHead>
+                      <TableHead>Nom</TableHead>
+                      <TableHead>Estat</TableHead>
+                      <TableHead>Alta</TableHead>
+                      <TableHead>Última activitat</TableHead>
+                      <TableHead>Accions</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {organizations && organizations.length > 0 ? (
-                      organizations.map((org) => (
+                    {entities.length > 0 ? (
+                      entities.map((org) => (
                         <TableRow key={org.id}>
                           <TableCell>
                             <div className="flex items-center gap-2">
                               <Building2 className="h-4 w-4 text-muted-foreground" />
                               <div>
                                 <div className="font-medium">{org.name}</div>
-                                <div className="text-xs text-muted-foreground">{org.slug}</div>
+                                <div className="text-xs text-muted-foreground">/{org.slug}</div>
                               </div>
                             </div>
                           </TableCell>
-                          <TableCell className="font-mono text-sm">{org.taxId}</TableCell>
                           <TableCell>{getStatusBadge(org.status)}</TableCell>
+                          <TableCell>{formatDateForAdmin(org.createdAt)}</TableCell>
+                          <TableCell>{formatRelativeActivity(org.lastActivityAt)}</TableCell>
                           <TableCell>
-                            <div className="flex items-center gap-2">
-                              <span
-                                className="flex items-center gap-1"
-                                title={org.onboarding?.welcomeSeenAt ? `Onboarding vist: ${org.onboarding.welcomeSeenAt}` : 'Onboarding pendent'}
-                              >
-                                {org.onboarding?.welcomeSeenAt ? (
-                                  <CheckCircle2 className="h-4 w-4 text-green-600" />
-                                ) : (
-                                  <XCircle className="h-4 w-4 text-muted-foreground" />
-                                )}
-                              </span>
-                              {org.updatedAt && (
-                                <span className="text-xs text-muted-foreground" title={`Última activitat: ${org.updatedAt}`}>
-                                  {formatDate(org.updatedAt)}
-                                </span>
-                              )}
-                            </div>
-                          </TableCell>
-                          <TableCell className="text-sm text-muted-foreground">
-                            {formatDate(org.createdAt)}
-                          </TableCell>
-                          <TableCell>
-                            <div className="flex items-center gap-1">
+                            <div className="flex flex-wrap items-center gap-1">
+                              <Button variant="ghost" size="sm" className="h-7 px-2 text-xs" onClick={() => handleEnterOrganization(org)}>
+                                Entrar
+                              </Button>
                               <Button
                                 variant="ghost"
                                 size="sm"
@@ -806,10 +838,8 @@ export default function AdminPage() {
                                   sessionStorage.setItem('adminViewingOrgId', org.id);
                                   router.push(`/${org.slug}/dashboard/movimientos`);
                                 }}
-                                title={t.admin?.shell?.movements ?? 'Moviments'}
                               >
-                                <ArrowUpRight className="h-3 w-3 mr-1" />
-                                Mov
+                                Moviments
                               </Button>
                               <Button
                                 variant="ghost"
@@ -819,61 +849,28 @@ export default function AdminPage() {
                                   sessionStorage.setItem('adminViewingOrgId', org.id);
                                   router.push(`/${org.slug}/dashboard/configuracion`);
                                 }}
-                                title={t.admin?.shell?.config ?? 'Configuració'}
                               >
-                                <Settings className="h-3 w-3" />
+                                Configuració
+                              </Button>
+                              <Button variant="ghost" size="sm" className="h-7 px-2 text-xs" onClick={() => handleCopyOrganization(org)}>
+                                Còpia
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className={org.status === 'suspended' ? 'h-7 px-2 text-xs text-green-600' : 'h-7 px-2 text-xs text-destructive'}
+                                onClick={() => setSuspendDialogOrg(org)}
+                              >
+                                {org.status === 'suspended' ? 'Reactivar' : 'Suspendre'}
                               </Button>
                             </div>
-                          </TableCell>
-                          <TableCell>
-                            <DropdownMenu>
-                              <DropdownMenuTrigger asChild>
-                                <Button variant="ghost" size="sm">
-                                  <MoreHorizontal className="h-4 w-4" />
-                                </Button>
-                              </DropdownMenuTrigger>
-                              <DropdownMenuContent align="end">
-                                <DropdownMenuItem onClick={() => handleEnterOrganization(org)}>
-                                  <LogIn className="mr-2 h-4 w-4" />
-                                  {t.admin?.shell?.enter ?? 'Entrar'}
-                                </DropdownMenuItem>
-                                <DropdownMenuItem
-                                  onClick={() => handleDownloadBackup(org.id, org.name)}
-                                  disabled={backupOrgId === org.id}
-                                >
-                                  {backupOrgId === org.id ? (
-                                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                                  ) : (
-                                    <Download className="mr-2 h-4 w-4" />
-                                  )}
-                                  {t.admin?.shell?.backupLocal ?? 'Backup local'}
-                                </DropdownMenuItem>
-                                <DropdownMenuSeparator />
-                                <DropdownMenuItem
-                                  onClick={() => setSuspendDialogOrg(org)}
-                                  className={org.status === 'suspended' ? 'text-green-600' : 'text-destructive'}
-                                >
-                                  {org.status === 'suspended' ? (
-                                    <>
-                                      <Play className="mr-2 h-4 w-4" />
-                                      {t.admin?.shell?.reactivate ?? 'Reactivar'}
-                                    </>
-                                  ) : (
-                                    <>
-                                      <Pause className="mr-2 h-4 w-4" />
-                                      {t.admin?.shell?.suspend ?? 'Suspendre'}
-                                    </>
-                                  )}
-                                </DropdownMenuItem>
-                              </DropdownMenuContent>
-                            </DropdownMenu>
                           </TableCell>
                         </TableRow>
                       ))
                     ) : (
                       <TableRow>
-                        <TableCell colSpan={7} className="text-center text-muted-foreground h-24">
-                          {t.admin?.shell?.noOrgs ?? 'No hi ha organitzacions. Crea\'n una per començar.'}
+                        <TableCell colSpan={5} className="text-center text-muted-foreground h-24">
+                          Sense entitats disponibles.
                         </TableCell>
                       </TableRow>
                     )}
@@ -882,99 +879,192 @@ export default function AdminPage() {
               )}
             </CardContent>
           </Card>
-
-          {/* SuperAdmins */}
-          <SuperAdminsManager />
-
-          {/* Audit logs */}
-          <Card className="mt-6">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-base">
-                <History className="h-4 w-4" />
-                {t.admin?.updates?.title ?? 'Activitat SuperAdmin'}
-              </CardTitle>
-              <CardDescription>
-                {t.admin?.updates?.description ?? 'Últimes accions registrades'}
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              {isLoadingAudit ? (
-                <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                  {t.common?.loading ?? 'Carregant...'}
-                </div>
-              ) : auditLogs.length === 0 ? (
-                <p className="text-sm text-muted-foreground">{t.admin?.updates?.noActions ?? 'Cap acció registrada encara.'}</p>
-              ) : (
-                <div className="space-y-2">
-                  {auditLogs.map((log) => (
-                    <div key={log.id} className="flex items-center justify-between text-sm border-b pb-2 last:border-0">
-                      <div className="flex items-center gap-2">
-                        <Badge variant="outline" className="text-xs font-mono">
-                          {formatAuditAction(log.action)}
-                        </Badge>
-                        {log.target && (
-                          <span className="text-muted-foreground font-mono text-xs">
-                            {log.target}
-                          </span>
-                        )}
-                      </div>
-                      <span className="text-xs text-muted-foreground">
-                        {log.timestamp.toLocaleDateString('ca-ES', {
-                          day: '2-digit',
-                          month: '2-digit',
-                          hour: '2-digit',
-                          minute: '2-digit',
-                        })}
-                      </span>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </CardContent>
-          </Card>
         </AdminSection>
 
-        {/* ═══════════════════════════════════════════════════════════════════════
-            B) SALUT I DIAGNÒSTIC
-            Detecció d'incidències i verificacions de producció.
-        ═══════════════════════════════════════════════════════════════════════ */}
         <AdminSection
-          id="salut"
-          title={t.admin?.sections?.health?.title ?? "Salut i diagnòstic"}
-          description={t.admin?.sections?.health?.description ?? "Detecció d'incidències i verificacions de producció."}
+          id="coneixement"
+          title={t.admin?.controlTower?.sections?.knowledgeTitle ?? '3. Coneixement i Bot'}
+          description={t.admin?.controlTower?.sections?.knowledgeDescription ?? 'Salut de la base de coneixement i friccions de suport.'}
+          tone="content"
+        >
+          <Card>
+            <CardContent className="pt-6 grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div>
+                <p className="text-xs uppercase tracking-wide text-muted-foreground">Base de coneixement</p>
+                <p className="text-sm font-semibold mt-1">
+                  Darrera actualització: {formatDateForAdmin(kbSummary?.kbUpdatedAt ?? null)}
+                </p>
+              </div>
+              <div>
+                <p className="text-xs uppercase tracking-wide text-muted-foreground">Activitat del bot</p>
+                <p className="text-sm font-semibold mt-1">{kbSummary?.botTotalQuestions ?? 0} preguntes totals</p>
+                <p className="text-sm text-muted-foreground">{kbSummary?.botTodayQuestions ?? 0} avui (estimació operativa)</p>
+              </div>
+              <div>
+                <p className="text-xs uppercase tracking-wide text-muted-foreground">Temes més freqüents</p>
+                <ul className="mt-1 text-sm space-y-1">
+                  {(kbSummary?.topTopics ?? []).length > 0 ? (
+                    (kbSummary?.topTopics ?? []).map((topic) => (
+                      <li key={topic.topic}>• {topic.topic}</li>
+                    ))
+                  ) : (
+                    <li className="text-muted-foreground">Sense dades</li>
+                  )}
+                </ul>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Collapsible className="mt-6">
+            <CollapsibleTrigger asChild>
+              <Button variant="outline" className="w-full justify-between">
+                <span className="flex items-center gap-2">
+                  <Bot className="h-4 w-4" />
+                  Gestió avançada KB i bot
+                </span>
+                <ChevronDown className="h-4 w-4" />
+              </Button>
+            </CollapsibleTrigger>
+            <CollapsibleContent className="mt-4 space-y-4">
+              <KbLearningManager />
+              <KbRuntimeDiagnostics />
+            </CollapsibleContent>
+          </Collapsible>
+        </AdminSection>
+
+        <AdminSection
+          id="comunicacio"
+          title={t.admin?.controlTower?.sections?.communicationTitle ?? '4. Comunicació'}
+          description={t.admin?.controlTower?.sections?.communicationDescription ?? 'Coherència editorial i ritme de publicació.'}
           tone="info"
         >
-          {/* Sentinelles + Semàfor */}
-          <SystemHealth />
-
-          {/* Demo Management - només visible en entorn demo */}
-          {isDemoEnv() && (
-            <Card className="mt-6 border-amber-300 bg-amber-50/50">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2 text-base">
-                  <AlertCircle className="h-4 w-4 text-amber-600" />
-                  <span className="text-amber-800">{t.admin?.health?.demoEnv ?? 'Entorn DEMO'}</span>
-                  <Badge variant="outline" className="ml-2 bg-amber-100 text-amber-800 border-amber-300">
-                    demo
+          <Card className={communication ? statusClasses(communication.status) : ''}>
+            <CardContent className="pt-6 grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div>
+                <p className="text-sm font-semibold">Darreres novetats publicades</p>
+                <ul className="mt-2 space-y-2 text-sm">
+                  {(communication?.latestPublished ?? []).length > 0 ? (
+                    (communication?.latestPublished ?? []).map((item) => (
+                      <li key={item.id} className="flex items-center justify-between gap-3">
+                        <span>{item.title}</span>
+                        <span className="text-muted-foreground text-xs">{formatDateForAdmin(item.publishedAt)}</span>
+                      </li>
+                    ))
+                  ) : (
+                    <li className="text-muted-foreground">No hi ha publicacions actives.</li>
+                  )}
+                </ul>
+              </div>
+              <div>
+                <p className="text-sm font-semibold">Esborranys pendents</p>
+                <p className="text-2xl font-bold mt-1">{communication?.pendingDrafts ?? 0}</p>
+                <p className="text-xs text-muted-foreground mt-1">Controla si hi ha novetats encallades abans de publicar.</p>
+                <div className="mt-3 flex items-center gap-2 text-xs">
+                  <Badge variant={statusBadgeVariant(communication?.status ?? 'ok')} className="capitalize">
+                    {communication?.status ?? 'ok'}
                   </Badge>
-                </CardTitle>
-                <CardDescription className="text-amber-700">
-                  {t.admin?.health?.demoDescription ?? 'Estàs treballant amb dades de demostració. Les accions aquí no afecten producció.'}
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="flex flex-col gap-4">
-                  {/* Selector de mode */}
-                  <div className="flex items-center gap-3">
-                    <span className="text-sm text-amber-800 font-medium">{t.admin?.health?.demoMode ?? 'Mode:'}</span>
-                    <div className="flex gap-2">
+                  <span className="text-muted-foreground">Estat editorial</span>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Collapsible className="mt-6">
+            <CollapsibleTrigger asChild>
+              <Button variant="outline" className="w-full justify-between">
+                <span className="flex items-center gap-2">
+                  <Megaphone className="h-4 w-4" />
+                  Gestió editorial avançada
+                </span>
+                <ChevronDown className="h-4 w-4" />
+              </Button>
+            </CollapsibleTrigger>
+            <CollapsibleContent className="mt-4 space-y-4">
+              <ProductUpdatesSection isSuperAdmin={isSuperAdmin === true} />
+              <HelpAuditSection />
+              <I18nManager />
+            </CollapsibleContent>
+          </Collapsible>
+        </AdminSection>
+
+        <AdminSection
+          id="configuracio"
+          title={t.admin?.controlTower?.sections?.advancedConfigTitle ?? '5. Configuració avançada'}
+          description={t.admin?.controlTower?.sections?.advancedConfigDescription ?? 'Accions sensibles i administració del sistema (plegat per defecte).'}
+          tone="warn"
+        >
+          <Collapsible>
+            <CollapsibleTrigger asChild>
+              <Button variant="outline" className="w-full justify-between">
+                <span className="flex items-center gap-2">
+                  <Database className="h-4 w-4" />
+                  Obrir configuració avançada
+                </span>
+                <ChevronDown className="h-4 w-4" />
+              </Button>
+            </CollapsibleTrigger>
+            <CollapsibleContent className="mt-4 space-y-4">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-base">Operacions SuperAdmin</CardTitle>
+                  <CardDescription>Alta d\'organitzacions i migracions.</CardDescription>
+                </CardHeader>
+                <CardContent className="flex flex-wrap gap-2">
+                  <Button onClick={() => setIsCreateDialogOpen(true)}>
+                    Nova organització
+                  </Button>
+                  <Button variant="outline" onClick={handleMigrateSlugs} disabled={isMigrating}>
+                    {isMigrating && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                    Migrar slugs
+                  </Button>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2 text-base">
+                    <Mail className="h-4 w-4" />
+                    {t.admin?.resetPassword?.title ?? 'Reset contrasenya'}
+                  </CardTitle>
+                  <CardDescription>
+                    {t.admin?.resetPassword?.description ?? 'Envia un correu per restablir la contrasenya d\'un usuari'}
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="flex gap-2">
+                    <Input
+                      type="email"
+                      placeholder={t.admin?.resetPassword?.placeholder ?? 'email@exemple.com'}
+                      value={resetEmail}
+                      onChange={(e) => setResetEmail(e.target.value)}
+                      disabled={isResetting}
+                    />
+                    <Button
+                      onClick={handlePasswordReset}
+                      disabled={isResetting || !resetEmail.trim()}
+                    >
+                      {isResetting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                      {t.admin?.resetPassword?.send ?? 'Enviar correu'}
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {isDemoEnv() && (
+                <Card className="border-amber-300 bg-amber-50/50">
+                  <CardHeader>
+                    <CardTitle className="text-base text-amber-900">{t.admin?.health?.demoEnv ?? 'Entorn DEMO'}</CardTitle>
+                    <CardDescription className="text-amber-700">
+                      {t.admin?.health?.demoDescription ?? 'Estàs treballant amb dades de demostració. Les accions aquí no afecten producció.'}
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div className="flex flex-wrap items-center gap-2">
                       <Button
                         variant={selectedDemoMode === 'short' ? 'default' : 'outline'}
                         size="sm"
                         onClick={() => setSelectedDemoMode('short')}
                         disabled={isSeedingDemo}
-                        className={selectedDemoMode === 'short' ? 'bg-amber-600 hover:bg-amber-700' : 'border-amber-400'}
                       >
                         Short
                       </Button>
@@ -983,25 +1073,16 @@ export default function AdminPage() {
                         size="sm"
                         onClick={() => setSelectedDemoMode('work')}
                         disabled={isSeedingDemo}
-                        className={selectedDemoMode === 'work' ? 'bg-amber-600 hover:bg-amber-700' : 'border-amber-400'}
                       >
                         Work
                       </Button>
+                      <span className="text-xs text-amber-700">
+                        {selectedDemoMode === 'short'
+                          ? (t.admin?.health?.demoShort ?? 'Dades netes per vídeos/pitch')
+                          : (t.admin?.health?.demoWork ?? 'Dades amb anomalies per validar workflows')}
+                      </span>
                     </div>
-                    <span className="text-xs text-amber-600">
-                      {selectedDemoMode === 'short'
-                        ? (t.admin?.health?.demoShort ?? 'Dades netes per vídeos/pitch')
-                        : (t.admin?.health?.demoWork ?? 'Dades amb anomalies per validar workflows')}
-                    </span>
-                  </div>
-
-                  <div className="flex items-center gap-4">
-                    <Button
-                      onClick={handleRegenerateDemo}
-                      disabled={isSeedingDemo}
-                      variant="outline"
-                      className="border-amber-400 hover:bg-amber-100"
-                    >
+                    <Button onClick={handleRegenerateDemo} disabled={isSeedingDemo} variant="outline">
                       {isSeedingDemo ? (
                         <>
                           <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -1014,164 +1095,77 @@ export default function AdminPage() {
                         </>
                       )}
                     </Button>
-                    <span className="text-sm text-amber-700">
-                      {t.admin?.health?.purgeInfo ?? 'Purga i recrea totes les dades sintètiques'}
-                    </span>
-                  </div>
+                    {seedResult && (
+                      <div className={`p-3 rounded-lg text-sm ${seedResult.ok ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
+                        {seedResult.ok ? (
+                          <span>Seed completat ({seedResult.demoMode})</span>
+                        ) : (
+                          <span>Error: {seedResult.error}</span>
+                        )}
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              )}
 
-                  {seedResult && (
-                    <div className={`p-3 rounded-lg text-sm ${seedResult.ok ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
-                      {seedResult.ok ? (
-                        <div>
-                          <span className="font-medium">{t.admin?.health?.seedCompleted?.({ mode: seedResult.demoMode ?? '' }) ?? `Seed completat (${seedResult.demoMode})`}</span>
-                          {seedResult.counts && (
-                            <div className="mt-1 grid grid-cols-3 gap-2 text-xs">
-                              {Object.entries(seedResult.counts).map(([key, value]) => (
-                                <span key={key}>{key}: {value}</span>
-                              ))}
-                            </div>
-                          )}
+              <SuperAdminsManager />
+
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2 text-base">
+                    <History className="h-4 w-4" />
+                    {t.admin?.updates?.title ?? 'Activitat SuperAdmin'}
+                  </CardTitle>
+                  <CardDescription>
+                    {t.admin?.updates?.description ?? 'Últimes accions registrades'}
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  {isLoadingAudit ? (
+                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      {t.common?.loading ?? 'Carregant...'}
+                    </div>
+                  ) : auditLogs.length === 0 ? (
+                    <p className="text-sm text-muted-foreground">{t.admin?.updates?.noActions ?? 'Cap acció registrada encara.'}</p>
+                  ) : (
+                    <div className="space-y-2">
+                      {auditLogs.map((log) => (
+                        <div key={log.id} className="flex items-center justify-between text-sm border-b pb-2 last:border-0">
+                          <div className="flex items-center gap-2">
+                            <Badge variant="outline" className="text-xs font-mono">
+                              {formatAuditAction(log.action)}
+                            </Badge>
+                            {log.target && (
+                              <span className="text-muted-foreground font-mono text-xs">
+                                {log.target}
+                              </span>
+                            )}
+                          </div>
+                          <span className="text-xs text-muted-foreground">
+                            {log.timestamp.toLocaleDateString('ca-ES', {
+                              day: '2-digit',
+                              month: '2-digit',
+                              hour: '2-digit',
+                              minute: '2-digit',
+                            })}
+                          </span>
                         </div>
-                      ) : (
-                        <span>Error: {seedResult.error}</span>
-                      )}
+                      ))}
                     </div>
                   )}
-                </div>
-              </CardContent>
-            </Card>
-          )}
-
-          {/* Diagnòstic links */}
-          <Card className="mt-6">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-base">
-                <FileText className="h-4 w-4" />
-                {t.admin?.health?.diagTitle ?? 'Diagnòstic'}
-              </CardTitle>
-              <CardDescription>
-                {t.admin?.health?.diagDescription ?? 'Si estàs perdut o hi ha una incidència, comença pel manual.'}
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="flex flex-col gap-2">
-                <a
-                  href="https://console.firebase.google.com/project/summa-social/overview"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex items-center gap-2 text-sm text-primary hover:underline"
-                >
-                  <ExternalLink className="h-4 w-4" />
-                  Firebase Console
-                </a>
-                <a
-                  href="https://console.cloud.google.com/logs/query?project=summa-social"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex items-center gap-2 text-sm text-primary hover:underline"
-                >
-                  <ExternalLink className="h-4 w-4" />
-                  Cloud Logging
-                </a>
-                <span
-                  className="flex items-center gap-2 text-sm text-muted-foreground cursor-pointer hover:text-foreground"
-                  onClick={() => {
-                    navigator.clipboard.writeText('docs/DEV-SOLO-MANUAL.md');
-                    toast({ title: t.admin?.health?.copiedToClipboard ?? 'Copiat al porta-retalls' });
-                  }}
-                >
-                  <FileText className="h-4 w-4" />
-                  <code className="text-xs bg-muted px-1 rounded">docs/DEV-SOLO-MANUAL.md</code>
-                </span>
-              </div>
-            </CardContent>
-          </Card>
-        </AdminSection>
-
-        {/* ═══════════════════════════════════════════════════════════════════════
-            C) CONTINGUT I COMUNICACIÓ
-            Novetats, web i traduccions.
-        ═══════════════════════════════════════════════════════════════════════ */}
-        <AdminSection
-          id="contingut"
-          title={t.admin?.sections?.content?.title ?? "Contingut i comunicació"}
-          description={t.admin?.sections?.content?.description ?? "Novetats, web i traduccions."}
-          tone="content"
-        >
-          {/* Novetats del producte */}
-          <ProductUpdatesSection isSuperAdmin={isSuperAdmin} />
-
-          {/* Ajudes contextuals */}
-          <div className="mt-6">
-            <HelpAuditSection />
-          </div>
-
-          {/* Traduccions (i18n) */}
-          <div className="mt-6">
-            <I18nManager />
-          </div>
-
-          {/* Aprenentatge del bot */}
-          <div className="mt-6">
-            <KbLearningManager />
-          </div>
-
-          {/* Diagnòstic del bot */}
-          <div className="mt-6">
-            <KbRuntimeDiagnostics />
-          </div>
-        </AdminSection>
-
-        {/* ═══════════════════════════════════════════════════════════════════════
-            D) OPERATIVA PUNTUAL
-            Accions ràpides de suport.
-        ═══════════════════════════════════════════════════════════════════════ */}
-        <AdminSection
-          id="operativa"
-          title={t.admin?.sections?.ops?.title ?? "Operativa puntual"}
-          description={t.admin?.sections?.ops?.description ?? "Accions ràpides de suport."}
-          tone="warn"
-        >
-          {/* Reset contrasenya */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-base">
-                <Mail className="h-4 w-4" />
-                {t.admin?.resetPassword?.title ?? 'Reset contrasenya'}
-              </CardTitle>
-              <CardDescription>
-                {t.admin?.resetPassword?.description ?? 'Envia un correu per restablir la contrasenya d\'un usuari'}
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="flex gap-2">
-                <Input
-                  type="email"
-                  placeholder={t.admin?.resetPassword?.placeholder ?? "email@exemple.com"}
-                  value={resetEmail}
-                  onChange={(e) => setResetEmail(e.target.value)}
-                  disabled={isResetting}
-                />
-                <Button
-                  onClick={handlePasswordReset}
-                  disabled={isResetting || !resetEmail.trim()}
-                >
-                  {isResetting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                  {t.admin?.resetPassword?.send ?? 'Enviar correu'}
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
+                </CardContent>
+              </Card>
+            </CollapsibleContent>
+          </Collapsible>
         </AdminSection>
       </main>
 
-      {/* Diàleg crear organització */}
-      <CreateOrganizationDialog 
-        open={isCreateDialogOpen} 
-        onOpenChange={setIsCreateDialogOpen} 
+      <CreateOrganizationDialog
+        open={isCreateDialogOpen}
+        onOpenChange={setIsCreateDialogOpen}
       />
 
-      {/* Diàleg confirmar suspensió */}
       <AlertDialog open={!!suspendDialogOrg} onOpenChange={() => setSuspendDialogOrg(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
@@ -1201,7 +1195,6 @@ export default function AdminPage() {
         </AlertDialogContent>
       </AlertDialog>
 
-      {/* Diàleg confirmar regenerar demo */}
       <AlertDialog open={showSeedConfirm} onOpenChange={setShowSeedConfirm}>
         <AlertDialogContent>
           <AlertDialogHeader>
