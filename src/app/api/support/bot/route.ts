@@ -136,6 +136,29 @@ function normalizeAssistantTone(rawTone: unknown): AssistantTone {
   return rawTone === 'neutral' ? 'neutral' : 'warm'
 }
 
+function detectGreetingFallback(message: string, lang: KbLang): string | null {
+  const normalized = message
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-z0-9\s]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+
+  if (!normalized) return null
+  const padded = ` ${normalized} `
+  const greetingPhrases = [
+    'hola', 'bon dia', 'bona tarda', 'bona nit', 'hey', 'hi', 'hello', 'ei',
+    'buenos dias', 'buenas tardes', 'buenas noches',
+  ]
+  const isGreeting = greetingPhrases.some(phrase => padded.includes(` ${phrase} `))
+  if (!isGreeting) return null
+
+  return lang === 'es'
+    ? 'Hola! Soy el asistente de Summa Social. ¿Qué quieres hacer ahora?'
+    : 'Hola! Soc l’assistent de Summa Social. Què vols fer ara?'
+}
+
 async function withTimeout<T>(promise: Promise<T>, timeoutMs: number): Promise<T> {
   let timeoutId: ReturnType<typeof setTimeout> | null = null
 
@@ -332,6 +355,24 @@ export async function POST(request: NextRequest): Promise<NextResponse<ApiRespon
         mode: 'fallback',
         cardId: smallTalk.cardId,
         answer: smallTalk.answer,
+        guideId: null,
+        uiPaths: [],
+      })
+    }
+
+    const greetingFallback = detectGreetingFallback(message, kbLang)
+    if (greetingFallback) {
+      void logBotQuestion(db, orgId, message, inputLang, 'fallback', 'smalltalk-greeting', {
+        retrievalConfidence: 'high',
+      }).catch(e =>
+        console.error('[bot] log error:', e)
+      )
+
+      return NextResponse.json({
+        ok: true,
+        mode: 'fallback',
+        cardId: 'smalltalk-greeting',
+        answer: greetingFallback,
         guideId: null,
         uiPaths: [],
       })
