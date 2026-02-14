@@ -212,16 +212,23 @@ export async function POST(request: NextRequest): Promise<NextResponse<ApiRespon
     }
 
     const body = await request.json()
-    const { message, lang: rawLang, orgId } = body as { message?: string; lang?: string; orgId?: string }
+    const { message, lang: rawLang } = body as { message?: string; lang?: string }
 
-    if (!message || typeof message !== 'string' || !orgId || typeof orgId !== 'string') {
-      return NextResponse.json({ ok: false, code: 'INVALID_INPUT', message: 'message i orgId obligatoris' }, { status: 400 })
+    if (!message || typeof message !== 'string') {
+      return NextResponse.json({ ok: false, code: 'INVALID_INPUT', message: 'message obligatori' }, { status: 400 })
     }
 
     const lang = (rawLang === 'es' ? 'es' : 'ca') as 'ca' | 'es'
 
-    // Validate membership
+    // Derive orgId from user profile (INVARIANT: never from client input)
     const db = getAdminDb()
+    const userDoc = await db.doc(`users/${authResult.uid}`).get()
+    const orgId = userDoc.data()?.organizationId as string | undefined
+    if (!orgId) {
+      return NextResponse.json({ ok: false, code: 'INVALID_INPUT', message: 'Usuari sense organització assignada' }, { status: 400 })
+    }
+
+    // Validate membership
     const membership = await validateUserMembership(db, authResult.uid, orgId)
     const accessDenied = requireOperationalAccess(membership)
     if (accessDenied) {
