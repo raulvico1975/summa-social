@@ -72,8 +72,20 @@ export function detectSmallTalkResponse(message: string, lang: KbLang): SmallTal
   const normalized = normalizePlain(message)
   if (!normalized) return null
 
-  const isGreeting = /^(hola|bon dia|bona tarda|bona nit|hey|hi|hello|ei|buenos dias|buenas tardes|buenas noches)\b/.test(normalized)
-  if (isGreeting && normalized.length <= 60) {
+  const cleaned = normalized.replace(/[^a-z0-9\s]/g, ' ').replace(/\s+/g, ' ').trim()
+  if (!cleaned) return null
+  const tokens = cleaned.split(' ').filter(Boolean)
+  if (!tokens.length) return null
+  const padded = ` ${cleaned} `
+
+  const hasAnyPhrase = (phrases: string[]): boolean =>
+    phrases.some(phrase => padded.includes(` ${phrase} `))
+
+  const greetingPhrases = [
+    'hola', 'bon dia', 'bona tarda', 'bona nit', 'hey', 'hi', 'hello', 'ei',
+    'buenos dias', 'buenas tardes', 'buenas noches',
+  ]
+  if (tokens.length <= 10 && hasAnyPhrase(greetingPhrases)) {
     return {
       cardId: 'smalltalk-greeting',
       answer: lang === 'es'
@@ -82,7 +94,7 @@ export function detectSmallTalkResponse(message: string, lang: KbLang): SmallTal
     }
   }
 
-  if (/^(gracies|gracies molt|moltes gracies|merci|gracias|muchas gracias|thanks)\b/.test(normalized)) {
+  if (hasAnyPhrase(['gracies', 'gracies molt', 'moltes gracies', 'merci', 'gracias', 'muchas gracias', 'thanks'])) {
     return {
       cardId: 'smalltalk-thanks',
       answer: lang === 'es'
@@ -91,7 +103,7 @@ export function detectSmallTalkResponse(message: string, lang: KbLang): SmallTal
     }
   }
 
-  if (/^(ok|d acord|d'acord|vale|perfecte|perfecto|genial|entes|entesos|entendido|entes)$/.test(normalized)) {
+  if (tokens.length <= 6 && hasAnyPhrase(['ok', 'd acord', 'vale', 'perfecte', 'perfecto', 'genial', 'entes', 'entesos', 'entendido'])) {
     return {
       cardId: 'smalltalk-ack',
       answer: lang === 'es'
@@ -100,7 +112,7 @@ export function detectSmallTalkResponse(message: string, lang: KbLang): SmallTal
     }
   }
 
-  if (/^(adeu|adéu|fins aviat|fins despres|fins després|bye|adios|adiós|hasta luego)\b/.test(normalized)) {
+  if (hasAnyPhrase(['adeu', 'fins aviat', 'fins despres', 'bye', 'adios', 'hasta luego'])) {
     return {
       cardId: 'smalltalk-bye',
       answer: lang === 'es'
@@ -109,9 +121,7 @@ export function detectSmallTalkResponse(message: string, lang: KbLang): SmallTal
     }
   }
 
-  if (
-    /^(qui ets|que ets|què ets|qui eres|quien eres|quién eres|que puedes hacer|qué puedes hacer|que pots fer|què pots fer)/.test(normalized)
-  ) {
+  if (hasAnyPhrase(['qui ets', 'que ets', 'qui eres', 'quien eres', 'que puedes hacer', 'que pots fer'])) {
     return {
       cardId: 'smalltalk-about',
       answer: lang === 'es'
@@ -120,7 +130,7 @@ export function detectSmallTalkResponse(message: string, lang: KbLang): SmallTal
     }
   }
 
-  if (/^(com estas|com estàs|que tal|què tal|como estas|cómo estás)/.test(normalized)) {
+  if (hasAnyPhrase(['com estas', 'que tal', 'como estas'])) {
     return {
       cardId: 'smalltalk-status',
       answer: lang === 'es'

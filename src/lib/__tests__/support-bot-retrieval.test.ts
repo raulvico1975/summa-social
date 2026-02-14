@@ -39,6 +39,12 @@ test('detectSmallTalkResponse handles greeting', () => {
   assert.equal(response?.cardId, 'smalltalk-greeting')
 })
 
+test('detectSmallTalkResponse handles greeting with punctuation', () => {
+  const response = detectSmallTalkResponse('Hola!!!', 'ca')
+  assert.ok(response)
+  assert.equal(response?.cardId, 'smalltalk-greeting')
+})
+
 test('detectSmallTalkResponse handles identity question', () => {
   const response = detectSmallTalkResponse('qui ets?', 'ca')
   assert.ok(response)
@@ -47,6 +53,12 @@ test('detectSmallTalkResponse handles identity question', () => {
 
 test('detectSmallTalkResponse handles thanks', () => {
   const response = detectSmallTalkResponse('gràcies', 'ca')
+  assert.ok(response)
+  assert.equal(response?.cardId, 'smalltalk-thanks')
+})
+
+test('detectSmallTalkResponse handles thanks with punctuation', () => {
+  const response = detectSmallTalkResponse('gràcies!', 'ca')
   assert.ok(response)
   assert.equal(response?.cardId, 'smalltalk-thanks')
 })
