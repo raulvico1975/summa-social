@@ -18,3 +18,4 @@ Registre cronologic de desplegaments a produccio.
 | 2026-02-13 15:10 | 89cae4e | MITJA | Si | 7 | OK |
 | 2026-02-13 15:43 | 9af3eec | MITJA | No | 9 | OK |
 | 2026-02-13 17:13 | 650c2c9 | MITJA | Si | 5 | OK |
+| 2026-02-14 12:47 | a15c138 | ALT | No | 21 | OK |
