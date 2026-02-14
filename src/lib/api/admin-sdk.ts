@@ -35,9 +35,20 @@ export function getAdminApp(): App {
       throw new Error('Firebase config incompleta per Admin SDK');
     }
 
+    const storageBucket =
+      process.env.FIREBASE_STORAGE_BUCKET ||
+      process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET;
+
+    if (!storageBucket) {
+      throw new Error(
+        'Missing FIREBASE_STORAGE_BUCKET or NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET'
+      );
+    }
+
     cachedApp = initializeApp({
       credential: applicationDefault(),
       projectId,
+      storageBucket,
     });
   } else {
     cachedApp = getApps()[0];

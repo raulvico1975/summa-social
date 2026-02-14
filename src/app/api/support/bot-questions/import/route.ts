@@ -117,7 +117,17 @@ export async function POST(request: NextRequest): Promise<NextResponse<ApiRespon
     }
 
     // --- Merge with existing Storage KB ---
-    const bucket = getStorage().bucket()
+    const bucketName =
+      process.env.FIREBASE_STORAGE_BUCKET ||
+      process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET;
+
+    if (!bucketName) {
+      throw new Error(
+        'Missing FIREBASE_STORAGE_BUCKET or NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET'
+      );
+    }
+
+    const bucket = getStorage().bucket(bucketName);
     const storageFile = bucket.file(KB_STORAGE_PATH)
 
     let existingCards: KBCard[] = []
