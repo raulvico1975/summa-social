@@ -20,6 +20,84 @@ type CachedKB = {
 
 let cached: CachedKB | null = null
 
+function buildEmergencyFallbackCards(): KBCard[] {
+  const base = {
+    type: 'fallback',
+    domain: 'general',
+    risk: 'safe',
+    guardrail: 'none',
+    answerMode: 'full',
+    title: { ca: 'Fallback d’emergència', es: 'Fallback de emergencia' },
+    intents: { ca: ['fallback'], es: ['fallback'] },
+    guideId: null,
+    uiPaths: ['Dashboard > ? (Hub de Guies)'],
+    needsSnapshot: false,
+    keywords: [],
+    related: [],
+    error_key: null,
+    symptom: { ca: null, es: null },
+  } as const satisfies Omit<KBCard, 'id' | 'answer'>
+
+  return [
+    {
+      ...base,
+      id: 'fallback-no-answer',
+      answer: {
+        ca: 'No he trobat informació exacta. Consulta el Hub de Guies (icona ?).',
+        es: 'No he encontrado información exacta. Consulta el Hub de Guías (icono ?).',
+      },
+    },
+    {
+      ...base,
+      id: 'fallback-fiscal-unclear',
+      domain: 'fiscal',
+      risk: 'guarded',
+      guardrail: 'b1_fiscal',
+      answerMode: 'limited',
+      answer: {
+        ca: 'Consulta fiscal detectada. Revisa Informes i la guia corresponent abans de continuar.',
+        es: 'Consulta fiscal detectada. Revisa Informes y la guía correspondiente antes de continuar.',
+      },
+    },
+    {
+      ...base,
+      id: 'fallback-sepa-unclear',
+      domain: 'sepa',
+      risk: 'guarded',
+      guardrail: 'b1_sepa',
+      answerMode: 'limited',
+      answer: {
+        ca: 'Consulta SEPA detectada. Revisa la guia de remeses abans de generar cap fitxer.',
+        es: 'Consulta SEPA detectada. Revisa la guía de remesas antes de generar ningún fichero.',
+      },
+    },
+    {
+      ...base,
+      id: 'fallback-remittances-unclear',
+      domain: 'remittances',
+      risk: 'guarded',
+      guardrail: 'b1_remittances',
+      answerMode: 'limited',
+      answer: {
+        ca: 'Consulta de remeses detectada. Revisa l’estat i la guia de remeses.',
+        es: 'Consulta de remesas detectada. Revisa el estado y la guía de remesas.',
+      },
+    },
+    {
+      ...base,
+      id: 'fallback-danger-unclear',
+      domain: 'superadmin',
+      risk: 'guarded',
+      guardrail: 'b1_danger',
+      answerMode: 'limited',
+      answer: {
+        ca: 'Acció sensible detectada. No facis canvis irreversibles sense revisar la guia.',
+        es: 'Acción sensible detectada. No hagas cambios irreversibles sin revisar la guía.',
+      },
+    },
+  ]
+}
+
 /**
  * Load KB cards with filesystem + Storage merge.
  * Cache per version: only reload if version changes.
@@ -65,6 +143,10 @@ export async function loadKbCards(version: number, storageVersion: number | null
         cached = { version, storageVersion, cards: storageCards }
         return storageCards
       }
+
+      const emergencyCards = buildEmergencyFallbackCards()
+      cached = { version, storageVersion, cards: emergencyCards }
+      return emergencyCards
     }
   }
 
