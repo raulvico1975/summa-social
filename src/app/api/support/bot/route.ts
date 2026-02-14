@@ -15,7 +15,7 @@ import { requireOperationalAccess } from '@/lib/api/require-operational-access'
 import { loadGuideContent, type KBCard } from '@/lib/support/load-kb'
 import { loadKbCards } from '@/lib/support/load-kb-runtime'
 import { logBotQuestion } from '@/lib/support/bot-question-log'
-import { retrieveCard, type KbLang, type RetrievalResult } from '@/lib/support/bot-retrieval'
+import { detectSmallTalkResponse, retrieveCard, type KbLang, type RetrievalResult } from '@/lib/support/bot-retrieval'
 
 const DEFAULT_REFORMAT_TIMEOUT_MS = 3500
 const MIN_REFORMAT_TIMEOUT_MS = 1500
@@ -317,6 +317,25 @@ export async function POST(request: NextRequest): Promise<NextResponse<ApiRespon
       return NextResponse.json({ ok: false, code: 'FORBIDDEN' as const, message: 'Accés denegat' }, { status: 403 })
     }
     hasOperationalAccess = true
+
+    // --- Small talk (salutacions, agraïments, etc.) ---
+    const smallTalk = detectSmallTalkResponse(message, kbLang)
+    if (smallTalk) {
+      void logBotQuestion(db, orgId, message, inputLang, 'fallback', smallTalk.cardId, {
+        retrievalConfidence: 'high',
+      }).catch(e =>
+        console.error('[bot] log error:', e)
+      )
+
+      return NextResponse.json({
+        ok: true,
+        mode: 'fallback',
+        cardId: smallTalk.cardId,
+        answer: smallTalk.answer,
+        guideId: null,
+        uiPaths: [],
+      })
+    }
 
     // --- Load KB version + cards ---
     const snap = await db.doc('system/supportKb').get()
