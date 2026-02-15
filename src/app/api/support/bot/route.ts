@@ -20,6 +20,10 @@ import { detectSmallTalkResponse, inferQuestionDomain, retrieveCard, suggestKeyw
 const DEFAULT_REFORMAT_TIMEOUT_MS = 3500
 const MIN_REFORMAT_TIMEOUT_MS = 1500
 const MAX_REFORMAT_TIMEOUT_MS = 8000
+const DEFAULT_INTENT_TIMEOUT_MS = 1800
+const MIN_INTENT_TIMEOUT_MS = 800
+const MAX_INTENT_TIMEOUT_MS = 4000
+const MAX_INTENT_CANDIDATES = 14
 
 type InputLang = 'ca' | 'es' | 'fr' | 'pt'
 type AssistantTone = 'neutral' | 'warm'
@@ -27,6 +31,18 @@ type ClarifyOption = {
   index: 1 | 2
   cardId: string
   label: string
+}
+
+type IntentCandidate = {
+  id: string
+  title: string
+  hints: string
+}
+
+type CriticalProcedureResponse = {
+  cardId: string
+  answer: string
+  uiPaths: string[]
 }
 
 // =============================================================================
@@ -45,6 +61,23 @@ const BotInputSchema = z.object({
 
 const BotOutputSchema = z.object({
   answer: z.string().describe('The reformulated answer for the user.'),
+})
+
+const IntentCandidateSchema = z.object({
+  id: z.string(),
+  title: z.string(),
+  hints: z.string(),
+})
+
+const IntentInputSchema = z.object({
+  userQuestion: z.string().describe('The original user question.'),
+  lang: z.string().describe('Language hint: ca or es.'),
+  candidates: z.array(IntentCandidateSchema).describe('Shortlisted KB card candidates.'),
+})
+
+const IntentOutputSchema = z.object({
+  cardId: z.string().describe('Exact candidate id, or empty string if no reliable match.'),
+  confidence: z.enum(['high', 'medium', 'low']).describe('Confidence for the selected card.'),
 })
 
 // =============================================================================
@@ -93,6 +126,31 @@ FORMAT:
 `,
 })
 
+const classifyIntentPrompt = ai.definePrompt({
+  name: 'supportBotClassifyIntent',
+  input: { schema: IntentInputSchema },
+  output: { schema: IntentOutputSchema },
+  prompt: `You classify user intent for a support bot.
+
+RULES:
+- You MUST select exactly one cardId from candidates, or return empty cardId if no clear fit.
+- Never invent IDs.
+- Use semantic meaning, not exact wording.
+- Prefer operational "how-to" cards over generic fallback behavior.
+- If two cards are close, choose the more actionable one.
+- confidence must be: high, medium, or low.
+
+User language: {{lang}}
+User question:
+{{{userQuestion}}}
+
+Candidates:
+{{#each candidates}}
+- {{id}} | {{title}} | {{hints}}
+{{/each}}
+`,
+})
+
 // =============================================================================
 // RESPONSE TYPES
 // =============================================================================
@@ -136,6 +194,159 @@ function normalizeAssistantTone(rawTone: unknown): AssistantTone {
   return rawTone === 'neutral' ? 'neutral' : 'warm'
 }
 
+function getIntentTimeoutMs(rawValue: unknown): number {
+  const parsed = Number(rawValue)
+  if (!Number.isFinite(parsed)) return DEFAULT_INTENT_TIMEOUT_MS
+  return Math.min(MAX_INTENT_TIMEOUT_MS, Math.max(MIN_INTENT_TIMEOUT_MS, Math.round(parsed)))
+}
+
+const INTENT_STOPWORDS = new Set([
+  'com', 'que', 'què', 'quin', 'quina', 'quins', 'quines', 'como', 'como', 'qué', 'cual', 'cuál',
+  'de', 'del', 'dels', 'des', 'la', 'el', 'els', 'les', 'los', 'las', 'un', 'una', 'uns', 'unes',
+  'a', 'al', 'als', 'en', 'per', 'por', 'amb', 'con', 'i', 'y', 'o', 'u',
+  'es', 'son', 'se', 'me', 'mi', 'my', 'ha', 'he', 'sóc', 'soc', 'soy',
+  'puc', 'puedo', 'vull', 'quiero', 'necessito', 'necesito',
+  'summa', 'social',
+])
+
+function tokenizeIntentText(text: string): string[] {
+  return text
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-z0-9\s]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .split(' ')
+    .map(token => token.trim())
+    .filter(token => token.length > 2 && !INTENT_STOPWORDS.has(token))
+}
+
+function buildIntentCandidates(message: string, lang: KbLang, cards: KBCard[]): IntentCandidate[] {
+  const messageTokens = tokenizeIntentText(message)
+  if (messageTokens.length === 0) return []
+
+  const messageSet = new Set(messageTokens)
+  const scored = cards
+    .filter(card => card.type !== 'fallback')
+    .map(card => {
+      const title = card.title?.[lang] ?? card.title?.ca ?? card.title?.es ?? card.id
+      const intents = (card.intents?.[lang] ?? card.intents?.ca ?? card.intents?.es ?? []).slice(0, 6)
+      const keywords = (card.keywords ?? []).slice(0, 8)
+      const domain = card.domain ?? ''
+      const uiPath = (card.uiPaths ?? []).slice(0, 2).join(' · ')
+
+      const bag = [title, ...intents, ...keywords, domain, uiPath].join(' ')
+      const cardTokens = new Set(tokenizeIntentText(bag))
+
+      let overlap = 0
+      for (const token of messageSet) {
+        if (cardTokens.has(token)) {
+          overlap += 4
+          continue
+        }
+        let fuzzy = false
+        for (const cardToken of cardTokens) {
+          if (cardToken.startsWith(token) || token.startsWith(cardToken)) {
+            overlap += 1
+            fuzzy = true
+            break
+          }
+        }
+        if (fuzzy) continue
+      }
+
+      const normalizedTitle = title
+        .toLowerCase()
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+      const normalizedMessage = message
+        .toLowerCase()
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+      if (normalizedTitle && normalizedMessage.includes(normalizedTitle)) {
+        overlap += 8
+      }
+
+      const hints = [
+        intents.slice(0, 3).join(' | '),
+        keywords.slice(0, 4).join(' | '),
+        uiPath,
+      ].filter(Boolean).join(' | ')
+
+      return {
+        id: card.id,
+        title,
+        hints,
+        score: overlap,
+      }
+    })
+    .filter(item => item.score > 0)
+    .sort((a, b) => b.score - a.score)
+
+  const strategicIds = [
+    'guide-projects',
+    'guide-attach-document',
+    'manual-member-paid-quotas',
+    'guide-split-remittance',
+    'guide-donor-certificate',
+  ]
+
+  const byId = new Map(scored.map(item => [item.id, item]))
+  for (const strategicId of strategicIds) {
+    if (!byId.has(strategicId)) {
+      const card = cards.find(c => c.id === strategicId && c.type !== 'fallback')
+      if (!card) continue
+      byId.set(strategicId, {
+        id: card.id,
+        title: card.title?.[lang] ?? card.title?.ca ?? card.title?.es ?? card.id,
+        hints: [
+          (card.intents?.[lang] ?? card.intents?.ca ?? card.intents?.es ?? []).slice(0, 2).join(' | '),
+          (card.keywords ?? []).slice(0, 4).join(' | '),
+        ].filter(Boolean).join(' | '),
+        score: 1,
+      })
+    }
+  }
+
+  return Array.from(byId.values())
+    .sort((a, b) => b.score - a.score)
+    .slice(0, MAX_INTENT_CANDIDATES)
+    .map(({ id, title, hints }) => ({ id, title, hints }))
+}
+
+async function classifyIntentCard(
+  message: string,
+  lang: KbLang,
+  cards: KBCard[],
+  timeoutMs: number
+): Promise<{ card: KBCard; confidence: 'high' | 'medium' | 'low' } | null> {
+  const candidates = buildIntentCandidates(message, lang, cards)
+  if (candidates.length < 2) return null
+
+  const { output } = await withTimeout(
+    classifyIntentPrompt({
+      userQuestion: message,
+      lang,
+      candidates,
+    }),
+    timeoutMs
+  )
+
+  const selectedId = output?.cardId?.trim()
+  const confidence = output?.confidence ?? 'low'
+  if (!selectedId || confidence === 'low') return null
+  if (!candidates.some(c => c.id === selectedId)) return null
+
+  const selectedCard = cards.find(card => card.id === selectedId && card.type !== 'fallback')
+  if (!selectedCard) return null
+
+  return {
+    card: selectedCard,
+    confidence,
+  }
+}
+
 function detectGreetingFallback(message: string, lang: KbLang): string | null {
   const normalized = message
     .toLowerCase()
@@ -157,6 +368,74 @@ function detectGreetingFallback(message: string, lang: KbLang): string | null {
   return lang === 'es'
     ? 'Hola! Soy el asistente de Summa Social. ¿Qué quieres hacer ahora?'
     : 'Hola! Soc l’assistent de Summa Social. Què vols fer ara?'
+}
+
+function normalizeIntentText(message: string): string[] {
+  return message
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-z0-9\s]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .split(' ')
+    .filter(Boolean)
+}
+
+function hasAnyToken(tokens: Set<string>, values: string[]): boolean {
+  return values.some(value => tokens.has(value))
+}
+
+function detectCriticalProcedureResponse(message: string, lang: KbLang): CriticalProcedureResponse | null {
+  const tokens = new Set(normalizeIntentText(message))
+
+  // 1) Imputar despesa a diversos projectes
+  const asksProjectAllocation =
+    hasAnyToken(tokens, ['imputo', 'imputar', 'reparto', 'repartir', 'distribuir', 'prorratejar', 'prorratear']) &&
+    hasAnyToken(tokens, ['despesa', 'despeses', 'gasto', 'gastos']) &&
+    hasAnyToken(tokens, ['projecte', 'projectes', 'proyecto', 'proyectos'])
+
+  if (asksProjectAllocation) {
+    return {
+      cardId: 'critical-project-allocation',
+      answer: lang === 'es'
+        ? 'Para imputar un gasto a varios proyectos:\n\n1. Ve a Movimientos y abre el gasto.\n2. Activa la imputación por proyectos.\n3. Añade los proyectos que corresponden.\n4. Reparte el importe (por porcentaje o por importe).\n5. Guarda y verifica que el total imputado coincide con el gasto original.'
+        : 'Per imputar una despesa a diversos projectes:\n\n1. Ves a Moviments i obre la despesa.\n2. Activa la imputació per projectes.\n3. Afegeix els projectes que pertoquen.\n4. Reparteix l’import (per percentatge o per import).\n5. Desa i comprova que el total imputat coincideix amb la despesa original.',
+      uiPaths: ['Moviments > Detall moviment > Projectes'],
+    }
+  }
+
+  // 2) Pujar factura/rebut/nomina
+  const asksDocumentUpload =
+    hasAnyToken(tokens, ['pujo', 'pujar', 'subo', 'subir', 'adjunto', 'adjuntar']) &&
+    hasAnyToken(tokens, ['factura', 'rebut', 'rebut', 'recibo', 'nomina', 'document', 'documento'])
+
+  if (asksDocumentUpload) {
+    return {
+      cardId: 'critical-document-upload',
+      answer: lang === 'es'
+        ? 'Para subir una factura, recibo o nómina:\n\n1. Ve a Movimientos.\n2. Opción rápida: arrastra el archivo encima del movimiento.\n3. Opción alternativa: abre el movimiento y pulsa “Adjuntar documento”.\n4. Si aún no existe movimiento bancario, usa “Movimientos > Pendientes > Subir documentos”.\n5. Revisa que el archivo quede vinculado correctamente.'
+        : 'Per pujar una factura, rebut o nòmina:\n\n1. Ves a Moviments.\n2. Opció ràpida: arrossega el fitxer damunt del moviment.\n3. Opció alternativa: obre el moviment i clica “Adjuntar document”.\n4. Si encara no hi ha moviment bancari, usa “Moviments > Pendents > Pujar documents”.\n5. Revisa que el fitxer quedi vinculat correctament.',
+      uiPaths: ['Moviments > Adjuntar document', 'Moviments > Pendents > Pujar documents'],
+    }
+  }
+
+  // 3) Quotes pagades per soci
+  const asksMemberPaidQuotas =
+    hasAnyToken(tokens, ['quota', 'quotes', 'cuota', 'cuotas', 'pagat', 'pagats', 'pagado', 'pagados', 'historial']) &&
+    hasAnyToken(tokens, ['soci', 'socis', 'socio', 'socios', 'donant', 'donants', 'donante', 'donantes'])
+
+  if (asksMemberPaidQuotas) {
+    return {
+      cardId: 'critical-member-paid-quotas',
+      answer: lang === 'es'
+        ? 'Para ver las cuotas pagadas de un socio:\n\n1. Ve a Donantes.\n2. Busca el socio por nombre o DNI.\n3. Abre su ficha.\n4. Revisa el historial de aportaciones (cuotas y donaciones).\n5. Si quieres acotar, cambia el período para ver solo el año o mes que te interesa.'
+        : 'Per veure les quotes pagades d’un soci:\n\n1. Ves a Donants.\n2. Cerca el soci per nom o DNI.\n3. Obre la seva fitxa.\n4. Revisa l’historial d’aportacions (quotes i donacions).\n5. Si vols acotar-ho, canvia el període per veure només l’any o mes que t’interessa.',
+      uiPaths: ['Donants > Fitxa donant'],
+    }
+  }
+
+  return null
 }
 
 async function withTimeout<T>(promise: Promise<T>, timeoutMs: number): Promise<T> {
@@ -430,10 +709,35 @@ export async function POST(request: NextRequest): Promise<NextResponse<ApiRespon
       })
     }
 
+    // --- Critical natural-language intents (hard route guard) ---
+    // This bypasses KB/runtime drift for strategic, high-frequency queries.
+    const criticalProcedure = detectCriticalProcedureResponse(message, kbLang)
+    if (criticalProcedure) {
+      void logBotQuestion(db, orgId, message, inputLang, 'card', criticalProcedure.cardId, {
+        retrievalConfidence: 'high',
+      }).catch(e =>
+        console.error('[bot] log error:', e)
+      )
+
+      return NextResponse.json({
+        ok: true,
+        mode: 'card',
+        cardId: criticalProcedure.cardId,
+        answer: assistantTone === 'warm'
+          ? withWarmOpening(criticalProcedure.answer, kbLang)
+          : criticalProcedure.answer,
+        guideId: null,
+        uiPaths: criticalProcedure.uiPaths,
+      })
+    }
+
     // --- Load KB version + cards ---
     const snap = await db.doc('system/supportKb').get()
     const version = snap.exists ? (snap.data()?.version ?? 0) : 0
     const storageVersion = snap.exists ? (snap.data()?.storageVersion ?? null) : null
+    const apiKey = process.env.GOOGLE_API_KEY || process.env.GOOGLE_GENAI_API_KEY
+    const aiIntentEnabled = snap.exists ? (snap.data()?.aiIntentEnabled !== false) : true
+    const intentTimeoutMs = getIntentTimeoutMs(snap.data()?.intentTimeoutMs)
     const aiReformatEnabled = snap.exists ? (snap.data()?.aiReformatEnabled !== false) : true
     const reformatTimeoutMs = getReformatTimeoutMs(snap.data()?.reformatTimeoutMs)
     assistantTone = normalizeAssistantTone(snap.data()?.assistantTone)
@@ -458,6 +762,39 @@ export async function POST(request: NextRequest): Promise<NextResponse<ApiRespon
     } catch (err) {
       console.error('[bot] retrieveCard error:', err)
       result = null
+    }
+
+    // Second-pass AI intent classification (only for weak retrieval cases).
+    // Improves natural-language understanding while keeping deterministic fallback safety.
+    if (
+      apiKey &&
+      aiIntentEnabled &&
+      cards.length > 0 &&
+      (!result || result.mode === 'fallback' || result.confidence === 'low')
+    ) {
+      try {
+        const aiIntent = await classifyIntentCard(message, kbLang, cards, intentTimeoutMs)
+        if (aiIntent?.card) {
+          console.info('[bot] intent classifier override:', {
+            selectedCardId: aiIntent.card.id,
+            confidence: aiIntent.confidence,
+            previousMode: result?.mode ?? null,
+            previousCardId: result?.card?.id ?? null,
+          })
+
+          result = {
+            card: aiIntent.card,
+            mode: 'card',
+            bestCardId: aiIntent.card.id,
+            bestScore: Math.max(result?.bestScore ?? 0, 60),
+            secondCardId: result?.bestCardId,
+            secondScore: result?.bestScore ?? 0,
+            confidence: aiIntent.confidence,
+          }
+        }
+      } catch (intentError) {
+        console.warn('[bot] intent classifier failed, keeping retrieval result:', (intentError as Error)?.message)
+      }
     }
 
     let card: KBCard
@@ -536,8 +873,6 @@ export async function POST(request: NextRequest): Promise<NextResponse<ApiRespon
     }
 
     // --- LLM Reformat with hard fallback ---
-    const apiKey = process.env.GOOGLE_API_KEY || process.env.GOOGLE_GENAI_API_KEY
-
     let finalAnswer = rawAnswer
     const uiPathHint = buildUiPathHint(card)
 
