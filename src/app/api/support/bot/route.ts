@@ -39,12 +39,6 @@ type IntentCandidate = {
   hints: string
 }
 
-type CriticalProcedureResponse = {
-  cardId: string
-  answer: string
-  uiPaths: string[]
-}
-
 // =============================================================================
 // SCHEMAS
 // =============================================================================
@@ -370,74 +364,6 @@ function detectGreetingFallback(message: string, lang: KbLang): string | null {
     : 'Hola! Soc l’assistent de Summa Social. Què vols fer ara?'
 }
 
-function normalizeIntentText(message: string): string[] {
-  return message
-    .toLowerCase()
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .replace(/[^a-z0-9\s]/g, ' ')
-    .replace(/\s+/g, ' ')
-    .trim()
-    .split(' ')
-    .filter(Boolean)
-}
-
-function hasAnyToken(tokens: Set<string>, values: string[]): boolean {
-  return values.some(value => tokens.has(value))
-}
-
-function detectCriticalProcedureResponse(message: string, lang: KbLang): CriticalProcedureResponse | null {
-  const tokens = new Set(normalizeIntentText(message))
-
-  // 1) Imputar despesa a diversos projectes
-  const asksProjectAllocation =
-    hasAnyToken(tokens, ['imputo', 'imputar', 'reparto', 'repartir', 'distribuir', 'prorratejar', 'prorratear']) &&
-    hasAnyToken(tokens, ['despesa', 'despeses', 'gasto', 'gastos']) &&
-    hasAnyToken(tokens, ['projecte', 'projectes', 'proyecto', 'proyectos'])
-
-  if (asksProjectAllocation) {
-    return {
-      cardId: 'critical-project-allocation',
-      answer: lang === 'es'
-        ? 'Para imputar un gasto a varios proyectos:\n\n1. Ve a Movimientos y abre el gasto.\n2. Activa la imputación por proyectos.\n3. Añade los proyectos que corresponden.\n4. Reparte el importe (por porcentaje o por importe).\n5. Guarda y verifica que el total imputado coincide con el gasto original.'
-        : 'Per imputar una despesa a diversos projectes:\n\n1. Ves a Moviments i obre la despesa.\n2. Activa la imputació per projectes.\n3. Afegeix els projectes que pertoquen.\n4. Reparteix l’import (per percentatge o per import).\n5. Desa i comprova que el total imputat coincideix amb la despesa original.',
-      uiPaths: ['Moviments > Detall moviment > Projectes'],
-    }
-  }
-
-  // 2) Pujar factura/rebut/nomina
-  const asksDocumentUpload =
-    hasAnyToken(tokens, ['pujo', 'pujar', 'subo', 'subir', 'adjunto', 'adjuntar']) &&
-    hasAnyToken(tokens, ['factura', 'rebut', 'rebut', 'recibo', 'nomina', 'document', 'documento'])
-
-  if (asksDocumentUpload) {
-    return {
-      cardId: 'critical-document-upload',
-      answer: lang === 'es'
-        ? 'Para subir una factura, recibo o nómina:\n\n1. Ve a Movimientos.\n2. Opción rápida: arrastra el archivo encima del movimiento.\n3. Opción alternativa: abre el movimiento y pulsa “Adjuntar documento”.\n4. Si aún no existe movimiento bancario, usa “Movimientos > Pendientes > Subir documentos”.\n5. Revisa que el archivo quede vinculado correctamente.'
-        : 'Per pujar una factura, rebut o nòmina:\n\n1. Ves a Moviments.\n2. Opció ràpida: arrossega el fitxer damunt del moviment.\n3. Opció alternativa: obre el moviment i clica “Adjuntar document”.\n4. Si encara no hi ha moviment bancari, usa “Moviments > Pendents > Pujar documents”.\n5. Revisa que el fitxer quedi vinculat correctament.',
-      uiPaths: ['Moviments > Adjuntar document', 'Moviments > Pendents > Pujar documents'],
-    }
-  }
-
-  // 3) Quotes pagades per soci
-  const asksMemberPaidQuotas =
-    hasAnyToken(tokens, ['quota', 'quotes', 'cuota', 'cuotas', 'pagat', 'pagats', 'pagado', 'pagados', 'historial']) &&
-    hasAnyToken(tokens, ['soci', 'socis', 'socio', 'socios', 'donant', 'donants', 'donante', 'donantes'])
-
-  if (asksMemberPaidQuotas) {
-    return {
-      cardId: 'critical-member-paid-quotas',
-      answer: lang === 'es'
-        ? 'Para ver las cuotas pagadas de un socio:\n\n1. Ve a Donantes.\n2. Busca el socio por nombre o DNI.\n3. Abre su ficha.\n4. Revisa el historial de aportaciones (cuotas y donaciones).\n5. Si quieres acotar, cambia el período para ver solo el año o mes que te interesa.'
-        : 'Per veure les quotes pagades d’un soci:\n\n1. Ves a Donants.\n2. Cerca el soci per nom o DNI.\n3. Obre la seva fitxa.\n4. Revisa l’historial d’aportacions (quotes i donacions).\n5. Si vols acotar-ho, canvia el període per veure només l’any o mes que t’interessa.',
-      uiPaths: ['Donants > Fitxa donant'],
-    }
-  }
-
-  return null
-}
-
 async function withTimeout<T>(promise: Promise<T>, timeoutMs: number): Promise<T> {
   let timeoutId: ReturnType<typeof setTimeout> | null = null
 
@@ -709,28 +635,7 @@ export async function POST(request: NextRequest): Promise<NextResponse<ApiRespon
       })
     }
 
-    // --- Critical natural-language intents (hard route guard) ---
-    // This bypasses KB/runtime drift for strategic, high-frequency queries.
-    const criticalProcedure = detectCriticalProcedureResponse(message, kbLang)
-    if (criticalProcedure) {
-      void logBotQuestion(db, orgId, message, inputLang, 'card', criticalProcedure.cardId, {
-        retrievalConfidence: 'high',
-      }).catch(e =>
-        console.error('[bot] log error:', e)
-      )
-
-      return NextResponse.json({
-        ok: true,
-        mode: 'card',
-        cardId: criticalProcedure.cardId,
-        answer: assistantTone === 'warm'
-          ? withWarmOpening(criticalProcedure.answer, kbLang)
-          : criticalProcedure.answer,
-        guideId: null,
-        uiPaths: criticalProcedure.uiPaths,
-      })
-    }
-
+    // Invariant: operational procedures must come from KB cards/guides, not hardcoded text.
     // --- Load KB version + cards ---
     const snap = await db.doc('system/supportKb').get()
     const version = snap.exists ? (snap.data()?.version ?? 0) : 0
