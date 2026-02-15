@@ -206,6 +206,8 @@ Això llança `scripts/workflow.sh acabat`, que:
 Després de completar aquesta fase, Claude:
 - escriu literalment `Acabat`
 - entrega un resum en 3 línies en llenguatge no tècnic (què s'ha fet, implicació, impacte usuari/seguretat/rendiment/solidesa)
+- acaba sempre amb aquesta frase de següent pas:
+  `Ara pots dir autoritzo deploy per passar a producció.`
 
 Quan Raül escriu literalment:
 
@@ -229,6 +231,12 @@ Claude Code **NO pot** saltar cap pas del script ni usar `--no-verify`.
 
 Si el deploy passa sense errors, Claude respon només:
 `Ja a producció.`
+
+### Missatge de commit (obligatori)
+
+- El commit no pot ser genèric.
+- Ha d'incloure un nom representatiu del canvi (àrea i impacte funcional).
+- Si no hi ha missatge explícit del CEO, Claude genera automàticament un missatge representatiu a partir dels fitxers canviats.
 
 ────────────────────────────────────────────────────────────
 ## 4. Regla d'or
