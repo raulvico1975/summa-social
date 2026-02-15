@@ -117,7 +117,7 @@ npm run publica   # publica main -> prod (deploy verificat)
 8. **Decisió humana només si cal**: únicament amb risc ALT residual no demostrable amb verificacions automàtiques.
 9. **Pla de rollback automàtic** guardat a `docs/DEPLOY-ROLLBACK-LATEST.md`
 10. Merge ritual (main→prod + push)
-11. Post-deploy check automàtic (SHA remot + smoke opcional per URL)
+11. Post-deploy check automàtic (SHA remot + smoke amb URLs resoltes automàticament)
 12. **Check post-producció automàtic de 3 minuts** (login, flux principal, informe/export)
 13. Registre a `docs/DEPLOY-LOG.md` + incidències a `docs/DEPLOY-INCIDENTS.md` si hi ha bloqueig
 
@@ -153,6 +153,7 @@ npm run publica   # publica main -> prod (deploy verificat)
 - Rollback preparat automàticament abans de publicar.
 - Check post-producció de 3 minuts automatitzat.
 - Mini-registre d'incidència quan un deploy queda bloquejat.
+- Si no hi ha URLs de smoke definides, el sistema prova automàticament amb `DEPLOY_BASE_URL` o amb la URL publicada detectada a `firebase.json`.
 
 ### Missatge de commit
 

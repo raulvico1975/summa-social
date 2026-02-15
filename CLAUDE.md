@@ -242,6 +242,7 @@ Això llança `scripts/deploy.sh`, que és un script determinista i bloquejant q
 - força post-deploy check (SHA + smoke test + check 3 minuts)
 - registra el deploy a `docs/DEPLOY-LOG.md`
 - registra bloquejos a `docs/DEPLOY-INCIDENTS.md`
+- si no hi ha URLs de smoke definides, intenta resoldre-les automàticament amb `DEPLOY_BASE_URL` o `firebase.json`
 
 Claude Code **NO pot** saltar cap pas del script ni usar `--no-verify`.
 
