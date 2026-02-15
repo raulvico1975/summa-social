@@ -78,6 +78,7 @@ import { KbLearningManager } from '@/components/super-admin/kb-learning-manager'
 import { KbRuntimeDiagnostics } from '@/components/super-admin/kb-runtime-diagnostics';
 import { HelpAuditSection } from '@/components/admin/help-audit-section';
 import { SuperAdminsManager } from '@/components/admin/super-admins-manager';
+import { EditorialCenter } from '@/components/admin/editorial-center';
 import { AdminSection } from '@/components/admin/admin-section';
 import { AdminNav } from '@/components/admin/admin-nav';
 import { migrateExistingSlugs } from '@/lib/slugs';
@@ -928,6 +929,8 @@ function AdminPageContent() {
               </div>
             </CardContent>
           </Card>
+
+          <EditorialCenter />
 
           <Collapsible className="mt-6">
             <CollapsibleTrigger asChild>
