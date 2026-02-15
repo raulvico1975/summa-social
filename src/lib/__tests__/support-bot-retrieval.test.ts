@@ -96,6 +96,13 @@ test('retrieveCard direct-intent maps project allocation question reliably', () 
   assert.equal(result.confidence, 'high')
 })
 
+test('retrieveCard direct-intent maps project allocation variant with "diferents"', () => {
+  const result = retrieveCard('com imputo una despesa entre diferents projectes?', 'ca', cards)
+  assert.equal(result.card.id, 'guide-projects')
+  assert.equal(result.mode, 'card')
+  assert.equal(result.confidence, 'high')
+})
+
 test('retrieveCard direct-intent maps document upload question reliably', () => {
   const result = retrieveCard('com pujo una factura o rebut o nomina?', 'ca', cards)
   assert.equal(result.card.id, 'guide-attach-document')
