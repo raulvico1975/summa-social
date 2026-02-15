@@ -49,6 +49,7 @@ import type {
   FxTransferFormData,
   OffBankAttachment,
 } from '@/lib/project-module-types';
+import { safeSet, safeUpdate } from '@/lib/safe-write';
 
 const PAGE_SIZE = 50;
 
@@ -867,7 +868,18 @@ export function useSaveOffBankExpense(): UseSaveOffBankExpenseResult {
         expenseData.needsReview = true;
       }
 
-      await setDoc(newRef, expenseData);
+      await safeSet({
+        data: expenseData,
+        context: {
+          updatedBy: user.uid,
+          source: 'user',
+          updatedAtFactory: () => serverTimestamp(),
+          requiredFields: ['orgId', 'source', 'date', 'concept', 'createdBy'],
+        },
+        write: async (payload) => {
+          await setDoc(newRef, payload);
+        },
+      });
 
       return newRef.id;
 
@@ -1019,7 +1031,17 @@ export function useUpdateOffBankExpense(): UseUpdateOffBankExpenseResult {
         updateData.needsReview = data.needsReview || null;
       }
 
-      await updateDoc(expenseRef, updateData);
+      await safeUpdate({
+        data: updateData as Record<string, unknown>,
+        context: {
+          updatedBy: user.uid,
+          source: 'user',
+          updatedAtFactory: () => serverTimestamp(),
+        },
+        write: async (payload) => {
+          await updateDoc(expenseRef, payload as UpdateData<DocumentData>);
+        },
+      });
 
     } catch (err) {
       console.error('Error updating off-bank expense:', err);

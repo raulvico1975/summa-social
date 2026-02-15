@@ -29,7 +29,12 @@
     "check": "bash scripts/check.sh",
     "prepush": "bash scripts/prepush.sh",
     "verify:ci": "bash scripts/verify-ci.sh",
-    "deploy": "bash scripts/deploy.sh"
+    "deploy": "bash scripts/deploy.sh",
+    "inicia": "bash scripts/workflow.sh inicia",
+    "inicia:main": "bash scripts/workflow.sh inicia main",
+    "acabat": "bash scripts/workflow.sh acabat",
+    "publica": "bash scripts/workflow.sh publica",
+    "estat": "bash scripts/workflow.sh estat"
   },
   "dependencies": {
     "@genkit-ai/googleai": "^1.14.1",

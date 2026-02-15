@@ -14,6 +14,7 @@ import { useCollection, useFirebase, useMemoFirebase } from '@/firebase';
 import { collection } from 'firebase/firestore';
 import { useTranslations } from '@/i18n';
 import { useCurrentOrganization, useOrgUrl } from '@/hooks/organization-provider';
+import { useNightlyHealthSnapshots } from '@/hooks/use-nightly-health';
 import { formatCurrencyEU } from '@/lib/normalize';
 import { DateFilter, type DateFilterValue } from '@/components/date-filter';
 import { useTransactionFilters } from '@/hooks/use-transaction-filters';
@@ -549,6 +550,11 @@ export default function DashboardPage() {
     [firestore, organizationId]
   );
   const { data: categories } = useCollection<Category>(categoriesQuery);
+  const {
+    snapshots: nightlyHealthSnapshots,
+    latest: latestNightlyHealthSnapshot,
+    isLoading: isLoadingNightlyHealth,
+  } = useNightlyHealthSnapshots(30);
 
   const [dateFilter, setDateFilter] = React.useState<DateFilterValue>({ type: 'all' });
   const dateFilteredTransactions = useTransactionFilters(transactions || undefined, dateFilter);
@@ -748,6 +754,17 @@ export default function DashboardPage() {
   const [orphanRemittanceResults, setOrphanRemittanceResults] = React.useState<OrphanRemittanceCheckResult | null>(null);
   const isAdmin = userRole === 'admin';
   const isMobile = useIsMobile();
+  const recentNightlyTrend = React.useMemo(
+    () => nightlyHealthSnapshots.slice(0, 30),
+    [nightlyHealthSnapshots]
+  );
+  const worsenedCriticalChecks = React.useMemo(() => {
+    if (!latestNightlyHealthSnapshot) return [];
+    return Object.values(latestNightlyHealthSnapshot.checks)
+      .filter((check) => check.severity === 'CRITICAL')
+      .filter((check) => latestNightlyHealthSnapshot.deltaVsPrevious?.[check.id]?.worsened)
+      .map((check) => `${check.id} · ${check.title}`);
+  }, [latestNightlyHealthSnapshot]);
   const periodQuery = React.useMemo(() => toPeriodQuery(dateFilter), [dateFilter]);
   const createMovementsLink = React.useCallback(
     (filter: string) => {
@@ -1294,7 +1311,7 @@ ${tr("dashboard.generatedWith")}`;
         label: tr("dashboard.movementsWithoutContact"),
         variant: 'secondary' as const,
         href: buildUrl('/dashboard/movimientos') + '?filter=noContact',
-        info: threshold > 0 ? tri("dashboard.onlyMovementsAbove", { amount: threshold }) : undefined,
+        info: threshold > 0 ? tri("dashboard.onlyMovementsAbove", { amount: threshold }) : void 0,
       });
     }
 
@@ -1845,6 +1862,50 @@ ${tr("dashboard.generatedWith")}`;
             </p>
           </CardHeader>
           <CardContent>
+            <div className="mb-4 space-y-2">
+              {isLoadingNightlyHealth ? (
+                <p className="text-sm text-muted-foreground">Carregant snapshot nocturn...</p>
+              ) : latestNightlyHealthSnapshot ? (
+                <>
+                  <div className="flex flex-wrap items-center gap-2 text-sm">
+                    <span className="font-medium">Últim health check nocturn: {latestNightlyHealthSnapshot.runDate}</span>
+                    <Badge
+                      variant={
+                        latestNightlyHealthSnapshot.status === 'failed'
+                          ? 'destructive'
+                          : latestNightlyHealthSnapshot.totals.criticalCount > 0
+                          ? 'outline'
+                          : 'secondary'
+                      }
+                    >
+                      {latestNightlyHealthSnapshot.status === 'failed'
+                        ? 'Fallit'
+                        : `Crítics ${latestNightlyHealthSnapshot.totals.criticalCount} · Avisos ${latestNightlyHealthSnapshot.totals.warningCount}`}
+                    </Badge>
+                  </div>
+                  {worsenedCriticalChecks.length > 0 && (
+                    <p className="text-xs text-amber-700">
+                      Empitjorament detectat: {worsenedCriticalChecks.join(', ')}
+                    </p>
+                  )}
+                  {recentNightlyTrend.length > 0 && (
+                    <div className="rounded-md border p-2">
+                      <p className="mb-1 text-xs font-medium text-muted-foreground">Tendència (últims 30 dies)</p>
+                      <div className="max-h-48 space-y-1 overflow-y-auto pr-1">
+                        {recentNightlyTrend.map((item) => (
+                          <div key={item.id} className="flex items-center justify-between text-xs">
+                            <span>{item.runDate}</span>
+                            <span className="tabular-nums">C {item.totals.criticalCount} · W {item.totals.warningCount}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </>
+              ) : (
+                <p className="text-sm text-muted-foreground">Encara no hi ha snapshots nocturns.</p>
+              )}
+            </div>
             <Button
               variant="outline"
               size="sm"

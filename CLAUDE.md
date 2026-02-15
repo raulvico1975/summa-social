@@ -140,7 +140,7 @@ Claude Code HA de classificar el risc segons els **fitxers modificats**.
 - **RISC:** BAIX | MITJÀ | ALT
 - **Paths tocats:** (llista curta)
 - **Checks executats:** build / test / verify
-- **Estat:** DONE o STOP + motiu
+- **Estat:** `No en producció` | `Preparat per producció` | `A producció`
 
 ────────────────────────────────────────────────────────────
 ## 3. Deploy
@@ -174,14 +174,47 @@ IMPACTE DEL CANVI
 
 ### 3.2 Autorització i execució
 
-Només pot fer deploy quan Raül escriu literalment:
+Quan Raül escriu literalment:
+
+> "Inicia"
+
+Claude Code executa:
+
+```bash
+npm run inicia
+```
+
+Aquesta ordre prepara el desenvolupament:
+- per defecte crea branca `codex/...` abans de tocar codi
+- si Claude ha classificat el canvi com a trivial, pot usar `npm run inicia:main`
+
+Quan Raül escriu literalment:
+
+> "Acabat"
+
+Claude Code executa:
+
+```bash
+npm run acabat
+```
+
+Això llança `scripts/workflow.sh acabat`, que:
+- executa verificacions locals i CI (`verify-local.sh`, `verify-ci.sh`)
+- commiteja i fa push
+- integra a `main` quan és segur
+
+Després de completar aquesta fase, Claude:
+- escriu literalment `Acabat`
+- entrega un resum en 3 línies en llenguatge no tècnic (què s'ha fet, implicació, impacte usuari/seguretat/rendiment/solidesa)
+
+Quan Raül escriu literalment:
 
 > "Autoritzo deploy"
 
-Quan ho fa, Claude Code executa:
+Claude Code executa:
 
 ```bash
-npm run deploy
+npm run publica
 ```
 
 Això llança `scripts/deploy.sh`, que és un script determinista i bloquejant que:
@@ -193,6 +226,9 @@ Això llança `scripts/deploy.sh`, que és un script determinista i bloquejant q
 - registra el deploy a `docs/DEPLOY-LOG.md`
 
 Claude Code **NO pot** saltar cap pas del script ni usar `--no-verify`.
+
+Si el deploy passa sense errors, Claude respon només:
+`Ja a producció.`
 
 ────────────────────────────────────────────────────────────
 ## 4. Regla d'or

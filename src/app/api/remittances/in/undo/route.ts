@@ -25,6 +25,7 @@ import {
   type LockState,
 } from '../../../../../lib/fiscal/remittances/locks';
 import { BATCH_SIZE, PARENT_REMITTANCE_FIELDS } from '../../../../../lib/fiscal/remittances/constants';
+import { safeUpdate, SafeWriteValidationError } from '../../../../../lib/safe-write';
 
 // =============================================================================
 // TIPUS
@@ -125,6 +126,11 @@ export async function POST(request: NextRequest): Promise<NextResponse<UndoRemit
     }
 
     const { uid, db } = authResult as AdminAuthResult;
+    const writeContextBase = {
+      updatedBy: uid,
+      source: 'user' as const,
+      updatedAtFactory: () => FieldValue.serverTimestamp(),
+    };
 
     // ─────────────────────────────────────────────────────────────────────────
     // 3. Carregar transacció pare
@@ -239,11 +245,17 @@ export async function POST(request: NextRequest): Promise<NextResponse<UndoRemit
 
       for (const txId of chunk) {
         const childRef = db.doc(`organizations/${orgId}/transactions/${txId}`);
-        batch.update(childRef, {
-          archivedAt: now,
-          archivedByUid: uid,
-          archivedReason: 'undo_remittance',
-          archivedFromAction: 'undo_remittance_in',
+        await safeUpdate({
+          data: {
+            archivedAt: now,
+            archivedByUid: uid,
+            archivedReason: 'undo_remittance',
+            archivedFromAction: 'undo_remittance_in',
+          },
+          context: writeContextBase,
+          write: (payload) => {
+            batch.update(childRef, payload);
+          },
         });
         archivedCount++;
       }
@@ -276,11 +288,17 @@ export async function POST(request: NextRequest): Promise<NextResponse<UndoRemit
 
         for (const txId of chunk) {
           const childRef = db.doc(`organizations/${orgId}/transactions/${txId}`);
-          batch.update(childRef, {
-            archivedAt: now,
-            archivedByUid: uid,
-            archivedReason: 'undo_remittance',
-            archivedFromAction: 'undo_remittance_in_legacy_fallback',
+          await safeUpdate({
+            data: {
+              archivedAt: now,
+              archivedByUid: uid,
+              archivedReason: 'undo_remittance',
+              archivedFromAction: 'undo_remittance_in_legacy_fallback',
+            },
+            context: writeContextBase,
+            write: (payload) => {
+              batch.update(childRef, payload);
+            },
           });
           archivedCount++;
         }
@@ -342,10 +360,16 @@ export async function POST(request: NextRequest): Promise<NextResponse<UndoRemit
     // 8. Marcar remesa com a 'undone'
     // ─────────────────────────────────────────────────────────────────────────
     if (remittanceSnap.exists) {
-      await remittanceRef.update({
-        status: 'undone',
-        undoneAt: now,
-        undoneByUid: uid,
+      await safeUpdate({
+        data: {
+          status: 'undone',
+          undoneAt: now,
+          undoneByUid: uid,
+        },
+        context: writeContextBase,
+        write: async (payload) => {
+          await remittanceRef.update(payload);
+        },
       });
     }
 
@@ -357,7 +381,13 @@ export async function POST(request: NextRequest): Promise<NextResponse<UndoRemit
       parentResetFields[field] = FieldValue.delete();
     }
 
-    await parentRef.update(parentResetFields);
+    await safeUpdate({
+      data: parentResetFields,
+      context: writeContextBase,
+      write: async (payload) => {
+        await parentRef.update(payload);
+      },
+    });
 
     // ─────────────────────────────────────────────────────────────────────────
     // 10. Tot OK
@@ -375,6 +405,18 @@ export async function POST(request: NextRequest): Promise<NextResponse<UndoRemit
       pendingDeletedCount,
     });
   } catch (error) {
+    if (error instanceof SafeWriteValidationError) {
+      return NextResponse.json(
+        {
+          success: false,
+          idempotent: false,
+          error: error.message,
+          code: error.code,
+        },
+        { status: 400 }
+      );
+    }
+
     console.error('[remittances/in/undo] Unexpected error:', error);
     return NextResponse.json(
       {
