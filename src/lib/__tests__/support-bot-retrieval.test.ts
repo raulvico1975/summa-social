@@ -89,6 +89,20 @@ test('retrieveCard resolves member paid fees history question', () => {
   assert.equal(result.mode, 'card')
 })
 
+test('retrieveCard direct-intent maps project allocation question reliably', () => {
+  const result = retrieveCard('com imputo una despesa a diversos projectes?', 'ca', cards)
+  assert.equal(result.card.id, 'guide-projects')
+  assert.equal(result.mode, 'card')
+  assert.equal(result.confidence, 'high')
+})
+
+test('retrieveCard direct-intent maps document upload question reliably', () => {
+  const result = retrieveCard('com pujo una factura o rebut o nomina?', 'ca', cards)
+  assert.equal(result.card.id, 'guide-attach-document')
+  assert.equal(result.mode, 'card')
+  assert.equal(result.confidence, 'high')
+})
+
 test('inferQuestionDomain detects fiscal and remittances', () => {
   assert.equal(inferQuestionDomain('Com envio certificat de donació model 182?'), 'fiscal')
   assert.equal(inferQuestionDomain('Puc desfer una remesa de rebuts?'), 'remittances')

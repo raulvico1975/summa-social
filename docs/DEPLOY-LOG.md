@@ -35,3 +35,10 @@ Registre cronologic de desplegaments a produccio.
 | 2026-02-14 20:45 | c2e28ec | ALT | No | 11 | PENDENT |
 | 2026-02-14 21:19 | 9138509 | MITJA | No | 5 | PENDENT |
 | 2026-02-14 21:38 | acb114a | MITJA | No | 46 | PENDENT |
+| 2026-02-15 08:34 | 1fce5f3 | ALT | Si | 18 | PENDENT |
+
+## Decisions humanes (negoci)
+
+| Data | SHA | human_question_reason | business_impact | decision_taken |
+|------|-----|-----------------------|-----------------|----------------|
+| 2026-02-15 08:34 | 1fce5f3 | Risc ALT residual després de verificacions automàtiques. | podria alterar imports de donacions o devolucions, i l'entitat podria veure totals incorrectes en certificats o informes fiscals. | B_DEPLOY_WITH_VISIBLE_RISK |
