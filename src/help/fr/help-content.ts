@@ -576,6 +576,7 @@ export const HELP_CONTENT_FR: Partial<Record<HelpRouteKey, HelpContent>> = {
     tips: [
       'Quand une ligne est sur-exécutée, le split partiel est la manière réaliste de rééquilibrer sans inventer des dépenses.',
       'Si une dépense ne correspond à aucun projet, mieux vaut la laisser à 0% que forcer une affectation incorrecte.',
+      'Vous ne verrez pas automatiquement toutes les dépenses bancaires : seules celles déjà catégorisées dans Mouvements entrent ici.',
       'Les dépenses terrain sont souvent saisies d\'abord puis affectées ensuite : privilégiez la cohérence de l\'imputation plutôt que la vitesse.',
     ],
     extra: {

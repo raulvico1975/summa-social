@@ -30,31 +30,24 @@ import {
 import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
 import { useCollection, useFirebase, useMemoFirebase } from '@/firebase';
-import { collection, writeBatch, doc, serverTimestamp, setDoc, query, where, orderBy, limit, startAfter, getDocs } from 'firebase/firestore';
+import { collection, query, where, orderBy, limit, startAfter, getDocs } from 'firebase/firestore';
 import { useCurrentOrganization, useOrgUrl } from '@/hooks/organization-provider';
-import { createImportRunDoc, type ImportRun } from '@/lib/import-runs';
 import { useTranslations } from '@/i18n';
 import { useBankAccounts } from '@/hooks/use-bank-accounts';
-import { useAuth } from '@/hooks/use-auth';
 import Link from 'next/link';
 import { suggestPendingDocumentMatches } from '@/lib/pending-documents';
 import { classifyTransactions, type ClassifiedRow } from '@/lib/transaction-dedupe';
 import { DedupeCandidateResolver } from '@/components/dedupe-candidate-resolver';
 
-
-
-// Firestore batch limit: max 50 operacions per batch
-const BATCH_LIMIT = 50;
-
-/**
- * Divideix un array en chunks de mida màxima
- */
-function chunk<T>(arr: T[], size: number): T[][] {
-  const out: T[][] = [];
-  for (let i = 0; i < arr.length; i += size) {
-    out.push(arr.slice(i, i + size));
-  }
-  return out;
+interface ImportTransactionsApiResponse {
+  success: boolean;
+  idempotent?: boolean;
+  createdCount?: number;
+  importRunId?: string;
+  inputHash?: string;
+  createdTransactions?: Transaction[];
+  error?: string;
+  code?: string;
 }
 
 interface TransactionImporterProps {
@@ -196,11 +189,10 @@ export function TransactionImporter({ availableCategories }: TransactionImporter
     rawData: any[];
   } | null>(null);
   const { toast } = useToast();
-  const { firestore } = useFirebase();
+  const { firestore, auth } = useFirebase();
   const { organizationId } = useCurrentOrganization();
   const { buildUrl } = useOrgUrl();
   const { t } = useTranslations();
-  const { user } = useAuth();
 
   // Bank accounts
   const { bankAccounts, defaultAccountId, isLoading: isLoadingBankAccounts } = useBankAccounts();
@@ -836,55 +828,55 @@ export function TransactionImporter({ availableCategories }: TransactionImporter
         // RESUM FINAL
         // ═══════════════════════════════════════════════════════════════════
 
-        const transactionsCollectionRef = collection(firestore, 'organizations', organizationId, 'transactions');
+        const authUser = auth.currentUser;
+        if (!authUser) {
+          throw new Error('Sessió no vàlida. Torna a iniciar sessió.');
+        }
 
-        // ═══════════════════════════════════════════════════════════════════
-        // CHUNKING: Dividir operacions en lots de màxim 50
-        // ═══════════════════════════════════════════════════════════════════
-
-        const newTransactions: Transaction[] = [];
-        const createOperations: { ref: ReturnType<typeof doc>; data: ReturnType<typeof normalizeTransaction> }[] = [];
-
-        transactionsWithContacts.forEach(tx => {
-            const newDocRef = doc(transactionsCollectionRef);
-            const normalizedTx = normalizeTransaction(tx);
-            createOperations.push({ ref: newDocRef, data: normalizedTx });
-            newTransactions.push({ ...tx, id: newDocRef.id } as Transaction);
+        const idToken = await authUser.getIdToken();
+        const normalizedTransactions = transactionsWithContacts.map((tx) => {
+          const normalizedTx = normalizeTransaction(tx) as Record<string, unknown>;
+          const { id: _ignored, ...withoutId } = normalizedTx as { id?: string } & Record<string, unknown>;
+          return withoutId;
         });
 
-        const totalChunks = Math.ceil(createOperations.length / BATCH_LIMIT);
-        let operationsProcessed = 0;
-        let chunksCompleted = 0;
+        const source: 'csv' | 'xlsx' = fileName?.endsWith('.xlsx') ? 'xlsx' : 'csv';
 
+        const apiResponse = await fetch('/api/transactions/import', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${idToken}`,
+          },
+          body: JSON.stringify({
+            orgId: organizationId,
+            bankAccountId,
+            fileName,
+            source,
+            totalRows: totalRawRows,
+            stats,
+            transactions: normalizedTransactions,
+          }),
+        });
+
+        let result: ImportTransactionsApiResponse | null = null;
         try {
-            const createChunks = chunk(createOperations, BATCH_LIMIT);
-            for (let i = 0; i < createChunks.length; i++) {
-                const fbBatch = writeBatch(firestore);
-                createChunks[i].forEach(op => {
-                    fbBatch.set(op.ref, op.data);
-                });
-                await fbBatch.commit();
-                operationsProcessed += createChunks[i].length;
-                chunksCompleted++;
-            }
-
-        } catch (batchError: any) {
-            console.error('Error during batch commit:', batchError);
-            const errorMessage = `Error al lot ${chunksCompleted + 1}/${totalChunks}. S'han processat ${operationsProcessed} operacions. No repeteixis sense revisar si s'han creat moviments parcials.`;
-
-            toast({
-                variant: 'destructive',
-                title: t.importers.transaction.errors.processingError,
-                description: errorMessage,
-                duration: 15000,
-            });
-            throw batchError;
+          result = await apiResponse.json() as ImportTransactionsApiResponse;
+        } catch {
+          result = null;
         }
+
+        if (!apiResponse.ok || !result?.success) {
+          const errorMessage = result?.error || `Error importació (${apiResponse.status})`;
+          throw new Error(errorMessage);
+        }
+
+        const newTransactions = (result.createdTransactions || []) as Transaction[];
 
         // Post-import: suggerir conciliació amb documents pendents
         if (newTransactions.length > 0 && availableContacts) {
           try {
-            const result = await suggestPendingDocumentMatches(
+            await suggestPendingDocumentMatches(
               firestore,
               organizationId,
               newTransactions,
@@ -897,45 +889,18 @@ export function TransactionImporter({ availableCategories }: TransactionImporter
 
         // Missatge d'èxit
         const totalDuplicatesSkipped = stats.duplicateSkippedCount + (stats.candidateUserSkippedCount ?? 0);
-        toast({
+        const createdCount = result.createdCount ?? transactionsToProcess.length;
+
+        if (result.idempotent) {
+          toast({
+            title: t.importers.transaction.noNewTransactions,
+            description: 'Aquest fitxer ja s’havia importat prèviament (idempotent).',
+          });
+        } else {
+          toast({
             title: t.importers.transaction.importSuccess,
-            description: t.importers.transaction.importSuccessDescription(transactionsToProcess.length, totalDuplicatesSkipped),
-        });
-
-        // Escriure importRun
-        try {
-          if (transactionsToProcess.length > 0) {
-            const dates = transactionsToProcess.map(tx => tx.date).sort();
-            const dateMin = dates[0];
-            const dateMax = dates[dates.length - 1];
-
-            const source: 'csv' | 'xlsx' = fileName?.endsWith('.xlsx') ? 'xlsx' : 'csv';
-
-            const importRunData = createImportRunDoc({
-              type: 'bankTransactions',
-              source,
-              fileName,
-              dateMin,
-              dateMax,
-              totalRows: totalRawRows,
-              createdCount: transactionsToProcess.length,
-              duplicateSkippedCount: stats.duplicateSkippedCount,
-              createdBy: user?.uid || 'unknown',
-              bankAccountId,
-              candidateCount: stats.candidateCount,
-              candidateUserImportedCount: stats.candidateUserImportedCount,
-              candidateUserSkippedCount: stats.candidateUserSkippedCount,
-            });
-
-            const importRunRef = doc(collection(firestore, 'organizations', organizationId, 'importRuns'));
-            await setDoc(importRunRef, {
-              ...importRunData,
-              createdAt: serverTimestamp(),
-            });
-
-          }
-        } catch (importRunError) {
-          console.error('Error escrivint importRun (no crític):', importRunError);
+            description: t.importers.transaction.importSuccessDescription(createdCount, totalDuplicatesSkipped),
+          });
         }
 
     } catch (error: any) {

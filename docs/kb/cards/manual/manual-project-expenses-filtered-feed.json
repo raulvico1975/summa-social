@@ -1,0 +1,64 @@
+{
+  "id": "manual-project-expenses-filtered-feed",
+  "type": "concept",
+  "domain": "projects",
+  "risk": "safe",
+  "guardrail": "none",
+  "answerMode": "full",
+  "title": {
+    "ca": "Per què no surten totes les despeses a Projectes",
+    "es": "Por qué no salen todos los gastos en Proyectos"
+  },
+  "intents": {
+    "ca": [
+      "per que no em surten totes les despeses de la seu al llistat de despeses per imputar a projectes",
+      "no em surten totes les despeses a projectes",
+      "per que falten despeses al modul de projectes",
+      "nomes em surten despeses categoritzades a projectes",
+      "nomes em surten despeses categortizades a projectes"
+    ],
+    "es": [
+      "por que no me salen todos los gastos en el listado para imputar a proyectos",
+      "no me salen todos los gastos en proyectos",
+      "por que faltan gastos en el modulo de proyectos",
+      "solo me salen gastos categorizados en proyectos"
+    ]
+  },
+  "guideId": null,
+  "answer": {
+    "ca": "És normal: la safata de Projectes no mostra totes les despeses bancàries de Moviments.\n\nNomés hi entren les despeses elegibles, i una condició clau és que el moviment tingui categoria assignada.\nPer això, si una despesa de la seu no apareix, primer categoritza-la a Moviments i després torna a Projectes.\n\nEn resum: a Projectes veus un feed filtrat de despeses ja preparades per imputar, no el total brut de Moviments.",
+    "es": "Es normal: la bandeja de Proyectos no muestra todos los gastos bancarios de Movimientos.\n\nSolo entran los gastos elegibles, y una condición clave es que el movimiento tenga categoría asignada.\nPor eso, si un gasto de la sede no aparece, primero categorizalo en Movimientos y luego vuelve a Proyectos.\n\nEn resumen: en Proyectos ves un feed filtrado de gastos ya preparados para imputar, no el total bruto de Movimientos."
+  },
+  "uiPaths": [
+    "Moviments > Categoritzar",
+    "Projectes > Assignació de despeses"
+  ],
+  "needsSnapshot": false,
+  "keywords": [
+    "projectes",
+    "imputar",
+    "despeses",
+    "no surten",
+    "categoritzades",
+    "categorizados",
+    "moviments",
+    "seu"
+  ],
+  "source_faq": [],
+  "source_manual": [
+    "6.1"
+  ],
+  "source_guides": [
+    "projects",
+    "movements"
+  ],
+  "related": [
+    "guide-projects",
+    "guide-movements"
+  ],
+  "error_key": null,
+  "symptom": {
+    "ca": "A Projectes no veig totes les despeses que sí que veig a Moviments",
+    "es": "En Proyectos no veo todos los gastos que sí veo en Movimientos"
+  }
+}
