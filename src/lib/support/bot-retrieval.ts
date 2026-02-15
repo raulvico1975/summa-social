@@ -23,6 +23,11 @@ export type SmallTalkResponse = {
   answer: string
 }
 
+type DirectIntentMatch = {
+  cardId: string
+  minScore?: number
+}
+
 const STOPWORDS = new Set([
   // CA
   'com', 'que', 'quin', 'quina', 'quins', 'quines', 'de', 'del', 'dels', 'la', 'el', 'els', 'les',
@@ -448,6 +453,43 @@ function detectFallbackDomain(tokens: string[]): string {
   return 'fallback-no-answer'
 }
 
+function hasToken(tokens: Set<string>, ...candidates: string[]): boolean {
+  return candidates.some(candidate => tokens.has(candidate))
+}
+
+function detectDirectIntentMatch(tokens: string[]): DirectIntentMatch | null {
+  const set = new Set(tokens)
+
+  // "Com imputo una despesa a diversos projectes?"
+  if (
+    hasToken(set, 'imputar', 'repartir', 'distribuir') &&
+    hasToken(set, 'despesa', 'gasto') &&
+    hasToken(set, 'projecte', 'proyecto') &&
+    hasToken(set, 'diversos', 'varios', 'entre') &&
+    !hasToken(set, 'llistat', 'falten', 'surten', 'filtre')
+  ) {
+    return { cardId: 'guide-projects', minScore: 600 }
+  }
+
+  // "Com pujo una factura o rebut o nomina?"
+  if (
+    hasToken(set, 'pujar', 'adjuntar', 'vincular') &&
+    hasToken(set, 'factura', 'document', 'rebut', 'recibo', 'nomina')
+  ) {
+    return { cardId: 'guide-attach-document', minScore: 600 }
+  }
+
+  // "Com puc saber les quotes que un soci ha pagat?"
+  if (
+    hasToken(set, 'quote', 'quota', 'pagat', 'pagar', 'historial', 'aportacio') &&
+    hasToken(set, 'soci', 'donant')
+  ) {
+    return { cardId: 'manual-member-paid-quotas', minScore: 500 }
+  }
+
+  return null
+}
+
 function buildRetrievalConfidence(bestScore = 0, secondScore = 0): RetrievalConfidence {
   const gap = bestScore - secondScore
   if (bestScore >= 56 && gap >= 14) return 'high'
@@ -470,6 +512,22 @@ export function retrieveCard(message: string, lang: KbLang, cards: KBCard[]): Re
   const tokens = normalize(message)
   const normalizedMessage = normalizePlain(message)
   const questionDomain = inferQuestionDomain(message)
+
+  const directIntent = detectDirectIntentMatch(tokens)
+  if (directIntent) {
+    const directCard = cards.find(card => card.id === directIntent.cardId)
+    if (directCard) {
+      return {
+        card: directCard,
+        mode: 'card',
+        bestCardId: directCard.id,
+        bestScore: directIntent.minScore ?? 999,
+        secondCardId: undefined,
+        secondScore: 0,
+        confidence: 'high',
+      }
+    }
+  }
 
   const regularCards = cards.filter(isRetrievableCard)
   const ranked = regularCards
