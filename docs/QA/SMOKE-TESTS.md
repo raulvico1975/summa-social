@@ -6,7 +6,7 @@
 
 ---
 
-## Checklist ràpid (15 checks)
+## Checklist ràpid (18 checks)
 
 ### Autenticació (3 checks)
 - [ ] **S1** Login: `/{orgSlug}/login` carrega sense errors
@@ -33,6 +33,19 @@
 - [ ] **S13** Consola neta: DevTools Console no mostra errors greus (vermells) en navegació normal
 - [ ] **S14** 404 controlat: Anar a ruta inexistent mostra pàgina d'error (no pantalla blanca)
 
+### Editorial (3 checks)
+- [ ] **S15** Draft invisible: guardar una guia en `guidesDraft.*` NO la fa visible al Hub ni al bot
+- [ ] **S16** Publish visible + version bump: publicar guia actualitza Hub/bot i incrementa `system/i18n.version`
+- [ ] **S17** Checklist: una tasca marcada com `ajornat/descartat` (omesa) requereix motiu i no permet tancar setmana sense aquest motiu
+
+---
+
+## Pre-deploy Editorial (manual, 10 min)
+
+- [ ] **E1** Guia nova: crear draft només en CA i verificar que no apareix al Hub/bot
+- [ ] **E2** Publicar la guia i verificar reflex immediat al Hub i resposta del bot amb `cardText` esperat
+- [ ] **E3** Forçar doble publish ràpid per obtenir `409 CONCURRENT_EDIT` i verificar que la UI mostra error i no queda publicació parcial
+
 ---
 
 ## Resultat
@@ -54,8 +67,11 @@
 | S12b | Export moviments filtrats | ☐ |
 | S13 | Consola neta | ☐ |
 | S14 | 404 controlat | ☐ |
+| S15 | Draft invisible | ☐ |
+| S16 | Publish visible + version bump | ☐ |
+| S17 | Checklist: omesa amb motiu obligatori | ☐ |
 
-**Total:** ___/15
+**Total:** ___/18
 
 **Data:** _______________
 **Entorn:** ☐ Local / ☐ Producció
