@@ -18,6 +18,21 @@ const REQUIRED_FALLBACK_IDS = [
   'fallback-danger-unclear',
 ] as const
 
+const REQUIRED_CRITICAL_CARD_IDS = [
+  'guide-projects',
+  'guide-attach-document',
+  'manual-member-paid-quotas',
+] as const
+
+const REQUIRED_CRITICAL_QUERIES: Array<{ lang: 'ca' | 'es'; q: string; expectedCardId: string }> = [
+  { lang: 'ca', q: 'com imputo una despesa a diversos projectes?', expectedCardId: 'guide-projects' },
+  { lang: 'ca', q: 'com pujo una factura o rebut o nòmina?', expectedCardId: 'guide-attach-document' },
+  { lang: 'ca', q: 'com puc saber les quotes que un soci ha pagat?', expectedCardId: 'manual-member-paid-quotas' },
+  { lang: 'es', q: 'como imputo un gasto a varios proyectos?', expectedCardId: 'guide-projects' },
+  { lang: 'es', q: 'como subo una factura o recibo o nomina?', expectedCardId: 'guide-attach-document' },
+  { lang: 'es', q: 'como puedo saber las cuotas que un socio ha pagado?', expectedCardId: 'manual-member-paid-quotas' },
+]
+
 const MAX_MISMATCH_ERRORS = 30
 const MIN_EVAL_ACCURACY = 0.78
 
@@ -38,6 +53,28 @@ export type KbQualityGateResult = {
     evalCa: EvalStats
     evalEs: EvalStats
   }
+}
+
+function evaluateRequiredCriticalQueries(cards: KBCard[]): string[] {
+  const errors: string[] = []
+
+  for (const check of REQUIRED_CRITICAL_QUERIES) {
+    try {
+      const result = retrieveCard(check.q, check.lang, cards)
+      const actualId = result.clarifyOptions?.length ? 'clarify-disambiguation' : result.card.id
+      if (actualId !== check.expectedCardId) {
+        errors.push(
+          `[critical][${check.lang}] "${check.q}" -> expected "${check.expectedCardId}" but got "${actualId}" (${result.mode})`
+        )
+      }
+    } catch (error) {
+      errors.push(
+        `[critical][${check.lang}] "${check.q}" -> retrieval error: ${(error as Error)?.message || String(error)}`
+      )
+    }
+  }
+
+  return errors
 }
 
 function toExpectedRows(raw: unknown): ExpectedRow[] {
@@ -107,6 +144,11 @@ export function runKbQualityGate(cards: KBCard[]): KbQualityGateResult {
       errors.push(`Missing required fallback card: ${fallbackId}`)
     }
   }
+  for (const criticalId of REQUIRED_CRITICAL_CARD_IDS) {
+    if (!cardIds.has(criticalId)) {
+      errors.push(`Missing required critical card: ${criticalId}`)
+    }
+  }
 
   const expectedCa = toExpectedRows(expectedCaRaw)
   const expectedEs = toExpectedRows(expectedEsRaw)
@@ -131,6 +173,9 @@ export function runKbQualityGate(cards: KBCard[]): KbQualityGateResult {
 
   // Keep detailed mismatches as warnings for operator visibility.
   warnings.push(...evalCa.errors, ...evalEs.errors)
+
+  const criticalQueryErrors = evaluateRequiredCriticalQueries(cards)
+  errors.push(...criticalQueryErrors)
 
   return {
     ok: errors.length === 0,
