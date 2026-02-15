@@ -930,8 +930,6 @@ function AdminPageContent() {
             </CardContent>
           </Card>
 
-          <EditorialCenter />
-
           <Collapsible className="mt-6">
             <CollapsibleTrigger asChild>
               <Button variant="outline" className="w-full justify-between">
@@ -950,9 +948,18 @@ function AdminPageContent() {
         </AdminSection>
 
         <AdminSection
+          id="editorial"
+          title="4. Centre editorial"
+          description="Cobertura de guies, editor guiat i checklist setmanal."
+          tone="content"
+        >
+          <EditorialCenter />
+        </AdminSection>
+
+        <AdminSection
           id="comunicacio"
-          title={t.admin?.controlTower?.sections?.communicationTitle ?? '4. Comunicació'}
-          description={t.admin?.controlTower?.sections?.communicationDescription ?? 'Coherència editorial i ritme de publicació.'}
+          title={t.admin?.controlTower?.sections?.communicationTitle ?? '5. Comunicació'}
+          description={t.admin?.controlTower?.sections?.communicationDescription ?? 'Coherència de novetats i ritme de publicació.'}
           tone="info"
         >
           <Card className={communication ? statusClasses(communication.status) : ''}>
@@ -1006,7 +1013,7 @@ function AdminPageContent() {
 
         <AdminSection
           id="configuracio"
-          title={t.admin?.controlTower?.sections?.advancedConfigTitle ?? '5. Configuració avançada'}
+          title={t.admin?.controlTower?.sections?.advancedConfigTitle ?? '6. Configuració avançada'}
           description={t.admin?.controlTower?.sections?.advancedConfigDescription ?? 'Accions sensibles i administració del sistema (plegat per defecte).'}
           tone="warn"
         >

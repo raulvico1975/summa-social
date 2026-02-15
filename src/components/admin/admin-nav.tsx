@@ -2,7 +2,7 @@
 
 import * as React from 'react';
 import { cn } from '@/lib/utils';
-import { Shield, Building2, BrainCircuit, Megaphone, Settings } from 'lucide-react';
+import { Shield, Building2, BrainCircuit, FileText, Megaphone, Settings } from 'lucide-react';
 
 interface NavItem {
   id: string;
@@ -14,6 +14,7 @@ const navItems: NavItem[] = [
   { id: 'estat', label: 'Estat', icon: <Shield className="h-3.5 w-3.5" /> },
   { id: 'entitats', label: 'Entitats', icon: <Building2 className="h-3.5 w-3.5" /> },
   { id: 'coneixement', label: 'Coneixement', icon: <BrainCircuit className="h-3.5 w-3.5" /> },
+  { id: 'editorial', label: 'Editorial', icon: <FileText className="h-3.5 w-3.5" /> },
   { id: 'comunicacio', label: 'Comunicació', icon: <Megaphone className="h-3.5 w-3.5" /> },
   { id: 'configuracio', label: 'Configuració', icon: <Settings className="h-3.5 w-3.5" /> },
 ];
