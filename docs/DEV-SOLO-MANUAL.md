@@ -112,7 +112,7 @@ No llegeixis tot. Consulta el que necessitis.
 □ git status → branca neta, sense canvis pendents
 □ git pull → tinc l'última versió
 □ npm run build → compila sense errors
-□ Estic a la branca correcta (master o feature branch)
+□ Estic a la branca correcta (`main` o feature branch)
 □ He llegit el que vaig a tocar (no codi a cegues)
 □ Tinc backup mental del que faré (puc desfer-ho)
 ```
@@ -121,19 +121,19 @@ No llegeixis tot. Consulta el que necessitis.
 
 ---
 
-### 4.1b Hook: bloqueig de commits a master/prod
+### 4.1b Hook: bloqueig de commits a prod
 
-El hook Husky (`.husky/pre-commit`) bloqueja `git commit` si estàs a la branca `master` o `prod`. Això s'aplica automàticament perquè el projecte ja usa Husky (`core.hooksPath = .husky/_`).
+El hook Husky (`.husky/pre-commit`) bloqueja `git commit` si estàs a la branca `prod`. Això s'aplica automàticament perquè el projecte ja usa Husky (`core.hooksPath = .husky/_`).
 
 **Desactivar temporalment:** `git commit --no-verify` — NOMÉS per emergències amb autorització explícita del CEO.
 
-**Per què no s'hauria de desactivar:** El model de branques `main → master → prod` és invariant. Commits directes a `master` o `prod` salten el ritual de govern i poden corrompre l'historial.
+**Per què no s'hauria de desactivar:** El model de branques `main → prod` és invariant. Un commit directe a `prod` salta el ritual de govern i pot corrompre l'historial.
 
 ---
 
 ### 4.2 Gate de producció (obligatori)
 
-**Abans de push a master**, si el canvi toca Moviments, Remeses, Devolucions, Donants, Certificats, Imports o Permisos:
+**Abans de push a prod** (via deploy des de `main`), si el canvi toca Moviments, Remeses, Devolucions, Donants, Certificats, Imports o Permisos:
 
 ```
 □ scripts/verify-ci.sh ✅ (typecheck + tests + build)
@@ -157,13 +157,13 @@ Això executa `scripts/deploy.sh`, un script que fa tot el ritual de deploy de f
 
 **Què fa el script (en ordre):**
 1. Comprova que estàs a `main` i que no hi ha canvis pendents
-2. Actualitza totes les branques (`main`, `master`, `prod`)
+2. Actualitza totes les branques (`main`, `prod`)
 3. Mostra els fitxers canviats i el nivell de risc
 4. Analitza impacte fiscal/econòmic del canvi
 5. Executa verificacions (i18n, typecheck, tests, build)
 6. Si el risc és BAIX/MITJÀ: continua automàticament
 7. Si el risc és ALT residual: pot demanar **decisió de negoci** (mai tècnica)
-8. Fa els merges i push (main→master→prod)
+8. Fa el merge i push (main→prod)
 9. Fa post-check automàtic (SHA remot + smoke opcional per URL)
 10. Registra el deploy a `docs/DEPLOY-LOG.md` (inclou decisió humana si n'hi ha)
 

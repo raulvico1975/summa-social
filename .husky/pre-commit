@@ -1,6 +1,6 @@
-# Bloqueig de commits directes a master/prod
+# Bloqueig de commits directes a prod
 branch=$(git rev-parse --abbrev-ref HEAD)
-if [ "$branch" = "master" ] || [ "$branch" = "prod" ]; then
+if [ "$branch" = "prod" ]; then
   echo "ERROR: Commits directes a '$branch' estan prohibits."
   echo "Treballa a 'main' o una branca WIP (ui/*, fix/*, feat/*)."
   exit 1

@@ -71,6 +71,12 @@ test('retrieveCard resolves expense split across projects question', () => {
   assert.equal(result.mode, 'card')
 })
 
+test('retrieveCard resolves missing project expenses due to uncategorized movements', () => {
+  const result = retrieveCard('Per què no em surten totes les despeses de la seu al llistat de despeses per imputar a projectes?', 'ca', cards)
+  assert.equal(result.card.id, 'manual-project-expenses-filtered-feed')
+  assert.equal(result.mode, 'card')
+})
+
 test('retrieveCard resolves upload invoice/receipt/payroll question', () => {
   const result = retrieveCard('Com pujo una factura o rebut o nòmina?', 'ca', cards)
   assert.equal(result.card.id, 'guide-attach-document')

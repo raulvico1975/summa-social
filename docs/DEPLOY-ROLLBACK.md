@@ -29,7 +29,7 @@ git revert <commit-sha> --no-edit
 # 3. Push segons ritual
 git push origin main
 
-# 4. Deploy segons ritual (main → master → prod)
+# 4. Deploy segons ritual (main → prod)
 # Veure GOVERN-DE-CODI-I-DEPLOY.md
 ```
 
@@ -42,16 +42,10 @@ git push origin main
 ```bash
 # Si npm run deploy falla, executar passos manualment:
 
-# 1. main → master
-git checkout master
-git pull --ff-only
-git merge --no-ff main
-git push origin master
-
-# 2. master → prod
+# 1. main → prod
 git checkout prod
 git pull --ff-only
-git merge master
+git merge --no-ff main
 git push origin prod
 ```
 

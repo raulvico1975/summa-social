@@ -615,6 +615,7 @@ export const HELP_CONTENT_CA: Record<HelpRouteKey, HelpContent> = {
     tips: [
       'Quan un projecte està sobreexecutat en una partida, el split parcial és la manera realista de quadrar sense inventar despeses.',
       'Si una despesa no encaixa en cap projecte, és millor deixar-la a 0% que no pas forçar una assignació incorrecta.',
+      'No hi veuràs totes les despeses bancàries automàticament: només entren les que a Moviments ja tenen categoria assignada.',
       'Les despeses de terreny sovint es pengen primer i s\'assignen després: prioritza la coherència de l\'assignació, no la velocitat d\'entrada.',
     ],
     extra: {

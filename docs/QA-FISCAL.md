@@ -1,6 +1,6 @@
 # Verificació Fiscal Pre-Deploy
 
-> **Obligatori** abans de qualsevol push a master que toqui:
+> **Obligatori** abans de qualsevol push a prod (via deploy des de main) que toqui:
 > Moviments, Remeses, Devolucions, Donants, Certificats, Imports, Permisos
 
 ---
@@ -10,7 +10,7 @@
 Aquest checklist assegura que els fluxos fiscals crítics no tenen regressions abans d'anar a producció.
 
 **Quan executar-lo:**
-- Abans de qualsevol push a master que toqui codi fiscal
+- Abans de qualsevol push a prod (via `npm run deploy`) que toqui codi fiscal
 - Després de canvis a `ReturnImporter`, `RemittanceProcessor`, `fiscal-*.ts`, `certificate-*.ts`
 - Abans de deploy que afecti moviments o donants
 
@@ -257,7 +257,7 @@ No existeix "Reparar" com a operació separada. El flux de recuperació és semp
 
 ## 4. Què fer si hi ha FAIL
 
-1. **NO fer push** a master
+1. **NO fer push** directe a prod
 2. Documentar el FAIL amb detall (passos, error, screenshot)
 3. Obrir issue o fix directe
 4. Tornar a executar tot el checklist després del fix

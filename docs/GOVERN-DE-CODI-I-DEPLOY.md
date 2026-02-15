@@ -1,17 +1,17 @@
 # Govern de Codi i Deploy — Summa Social
 
-**Versió:** 3.0
-**Data:** 2026-01-29
+**Versió:** 3.1
+**Data:** 2026-02-14
 **Autor:** Raül Vico (CEO/CTO)
 
 ---
 
 ## 0. Principis no negociables
 
-1. **Model de branques:** `main → master → prod` (invariant)
+1. **Model de branques:** `main → prod` (invariant)
 2. **Autoritat final:** CEO decideix quan es desplega
 3. **Cap dependència nova** sense aprovació explícita
-4. **Cap commit directe** a `prod` ni a `master`
+4. **Cap commit directe** a `prod`
 
 ---
 
@@ -20,12 +20,11 @@
 | Branca | Funció | Qui hi treballa |
 |--------|--------|-----------------|
 | `main` | Integració i desenvolupament | Desenvolupador |
-| `master` | Branca intermèdia / historial net | Només merge des de main |
-| `prod` | Producció (App Hosting) | Només sync des de master |
+| `prod` | Producció (App Hosting) | Només merge des de main |
 | `ui/*`, `fix/*`, `feat/*` | Branques WIP específiques | Desenvolupador |
 
 ```
-[WIP] → [main] → [master] → [prod] → Deploy automàtic
+[WIP] → [main] → [prod] → Deploy automàtic
 ```
 
 **Firebase App Hosting desplega automàticament només des de `prod`.**
@@ -58,7 +57,7 @@ Aquesta classificació determina els requisits de validació (secció 4).
 
 ## 4. Ritual de deploy per nivell de risc
 
-### Requisits abans de `master → prod`
+### Requisits abans de `main → prod`
 
 | Risc | Requisits mínims |
 |------|------------------|
@@ -75,16 +74,10 @@ Si el deploy toca `donor-manager`, `supplier-manager`, `employee-manager` o `src
 ### Comandes de deploy (invariants)
 
 ```bash
-# 1) main → master
-git checkout master
-git pull --ff-only
-git merge --no-ff main
-git push origin master
-
-# 2) master → prod
+# 1) main → prod
 git checkout prod
 git pull --ff-only
-git merge master
+git merge --no-ff main
 git push origin prod
 ```
 
@@ -92,7 +85,7 @@ git push origin prod
 
 ## 5. Punt de control i autorització
 
-**Un sol punt de decisió humana:** abans de `master → prod`.
+**Un sol punt de decisió humana:** abans de `main → prod`.
 
 ### Execució
 
@@ -104,13 +97,13 @@ npm run deploy    # o: bash scripts/deploy.sh
 
 El script (`scripts/deploy.sh`) fa tots els passos de forma seqüencial i bloquejant:
 1. Preflight git (branca=main, working tree net, pull ff-only)
-2. Detectar fitxers canviats (main vs master)
+2. Detectar fitxers canviats (main vs prod)
 3. Classificar risc (ALT/MITJÀ/BAIX) per patrons de path
 4. **Anàlisi fiscal i d'impacte** — detecta si el canvi pot afectar diners, saldos o fiscalitat.
 5. Verificacions locals (`verify-local.sh` + `verify-ci.sh`)
 6. Resum
 7. **Decisió humana només si cal**: únicament amb risc ALT residual no demostrable amb verificacions automàtiques.
-8. Merge ritual (main→master→prod + push)
+8. Merge ritual (main→prod + push)
 9. Post-deploy check automàtic (SHA remot + smoke opcional per URL)
 10. Registre a `docs/DEPLOY-LOG.md` (inclou decisió humana si n'hi ha)
 
@@ -137,7 +130,7 @@ El script (`scripts/deploy.sh`) fa tots els passos de forma seqüencial i bloque
 - **NO pot** decidir quan desplegar
 - **NO pot** fer canvis fora del ritual establert
 - **NO pot** usar `--no-verify` en cap cas
-- **Treballa sempre** a `main` (o branques WIP), mai a `prod` ni `master`
+- **Treballa sempre** a `main` (o branques WIP), mai a `prod`
 
 ---
 
@@ -153,7 +146,7 @@ git push --force-with-lease
 
 Firebase App Hosting redesplegarà automàticament.
 
-**Regla:** Rollback sempre des de `prod`, mai des de `master`.
+**Regla:** Rollback sempre des de `prod`.
 
 ### Protocol complet
 
@@ -172,7 +165,7 @@ Aquest document conté:
 
 ## 7. Regles d'or
 
-1. Mai commit directe a `prod` o `master`
+1. Mai commit directe a `prod`
 2. Treballar sempre a `main` o branques WIP
 3. Un commit = un propòsit clar
 4. Build + test abans de merge
@@ -199,7 +192,7 @@ Aquest document conté:
 Només si:
 - **Equip 3+ devs** → afegir PRs obligatoris
 - **CI/CD automatitzat** → afegir protecció de branques
-- **Staging necessari** → afegir branca `staging` entre `main` i `master`
+- **Staging necessari** → afegir branca `staging` entre `main` i `prod`
 
 Fins llavors: **simplicitat i disciplina > automatització**.
 

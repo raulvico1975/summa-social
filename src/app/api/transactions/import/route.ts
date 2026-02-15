@@ -1,0 +1,462 @@
+/**
+ * POST /api/transactions/import
+ *
+ * Importació bancària backend amb idempotència.
+ *
+ * Objectius:
+ * - Escriure transaccions al backend (Admin SDK), no al client.
+ * - Idempotència per inputHash (reintents segurs).
+ * - Batching <= 50 operacions.
+ * - Bloqueig temporal per evitar processaments concurrents del mateix payload.
+ */
+
+import { NextRequest, NextResponse } from 'next/server';
+import { FieldValue, Timestamp } from 'firebase-admin/firestore';
+import {
+  getAdminDb,
+  verifyIdToken,
+  validateUserMembership,
+  BATCH_SIZE,
+} from '@/lib/api/admin-sdk';
+import { requireOperationalAccess } from '@/lib/api/require-operational-access';
+import { normalizeBankDescription } from '@/lib/normalize';
+import {
+  computeBankImportHash,
+  prepareDeterministicTransactions,
+  type CanonicalBankImportTx,
+} from '@/lib/bank-import/idempotency';
+
+const LOCK_TTL_MS = 10 * 60 * 1000; // 10 minuts
+const MAX_TRANSACTIONS_PER_REQUEST = 2000;
+
+type ImportSource = 'csv' | 'xlsx';
+type ContactType = 'donor' | 'supplier' | 'employee';
+type TransactionType = 'normal' | 'return' | 'return_fee' | 'donation' | 'fee';
+
+interface ImportRequestStats {
+  duplicateSkippedCount: number;
+  candidateCount?: number;
+  candidateUserImportedCount?: number;
+  candidateUserSkippedCount?: number;
+}
+
+interface ImportTransactionInput {
+  date: string;
+  description: string;
+  amount: number;
+  category?: string | null;
+  document?: string | null;
+  contactId?: string | null;
+  contactType?: ContactType | null;
+  transactionType?: TransactionType;
+  bankAccountId?: string | null;
+  source?: 'bank' | 'manual' | 'remittance' | 'stripe';
+}
+
+interface ImportTransactionsRequest {
+  orgId: string;
+  bankAccountId: string;
+  fileName: string | null;
+  source: ImportSource;
+  totalRows: number;
+  stats: ImportRequestStats;
+  transactions: ImportTransactionInput[];
+}
+
+interface CreatedTransaction {
+  id: string;
+  date: string;
+  description: string;
+  amount: number;
+  category: string | null;
+  document: string | null;
+  contactId: string | null;
+  contactType: ContactType | null;
+  transactionType: TransactionType;
+  bankAccountId: string;
+  source: 'bank';
+}
+
+interface ImportTransactionsResponse {
+  success: boolean;
+  idempotent?: boolean;
+  createdCount?: number;
+  importRunId?: string;
+  inputHash?: string;
+  createdTransactions?: CreatedTransaction[];
+  error?: string;
+  code?: string;
+}
+
+interface ImportJobDoc {
+  status: 'processing' | 'completed' | 'error';
+  type: 'bankTransactions';
+  inputHash: string;
+  orgId: string;
+  bankAccountId: string;
+  source: ImportSource;
+  fileName: string | null;
+  totalRows: number;
+  startedAt: FirebaseFirestore.Timestamp;
+  lockExpiresAt: FirebaseFirestore.Timestamp | null;
+  requestedByUid: string;
+  importRunId?: string;
+  createdCount?: number;
+  lastError?: string;
+  finishedAt?: FirebaseFirestore.Timestamp;
+}
+
+function stripUndefinedDeep<T>(value: T): T {
+  if (value === null || value === undefined) return value;
+  if (Array.isArray(value)) {
+    return value.map((item) => stripUndefinedDeep(item)) as T;
+  }
+  if (typeof value === 'object') {
+    const out: Record<string, unknown> = {};
+    for (const [k, v] of Object.entries(value as Record<string, unknown>)) {
+      if (v !== undefined) {
+        out[k] = stripUndefinedDeep(v);
+      }
+    }
+    return out as T;
+  }
+  return value;
+}
+
+function sanitizeErrorMessage(error: unknown): string {
+  if (!(error instanceof Error)) {
+    return 'Error desconegut durant la importació';
+  }
+  return error.message.slice(0, 300);
+}
+
+function validateBody(body: unknown): {
+  ok: true;
+  data: ImportTransactionsRequest;
+} | {
+  ok: false;
+  error: string;
+  code: string;
+} {
+  if (!body || typeof body !== 'object') {
+    return { ok: false, error: 'Body invàlid', code: 'INVALID_BODY' };
+  }
+
+  const req = body as Record<string, unknown>;
+
+  if (typeof req.orgId !== 'string' || !req.orgId.trim()) {
+    return { ok: false, error: 'orgId obligatori', code: 'MISSING_ORG_ID' };
+  }
+  if (typeof req.bankAccountId !== 'string' || !req.bankAccountId.trim()) {
+    return { ok: false, error: 'bankAccountId obligatori', code: 'MISSING_BANK_ACCOUNT_ID' };
+  }
+  if (req.fileName !== null && req.fileName !== undefined && typeof req.fileName !== 'string') {
+    return { ok: false, error: 'fileName invàlid', code: 'INVALID_FILE_NAME' };
+  }
+  if (req.source !== 'csv' && req.source !== 'xlsx') {
+    return { ok: false, error: 'source invàlid', code: 'INVALID_SOURCE' };
+  }
+  if (typeof req.totalRows !== 'number' || !Number.isFinite(req.totalRows) || req.totalRows < 0) {
+    return { ok: false, error: 'totalRows invàlid', code: 'INVALID_TOTAL_ROWS' };
+  }
+  if (!req.stats || typeof req.stats !== 'object') {
+    return { ok: false, error: 'stats invàlid', code: 'INVALID_STATS' };
+  }
+  if (!Array.isArray(req.transactions) || req.transactions.length === 0) {
+    return { ok: false, error: 'transactions obligatori', code: 'MISSING_TRANSACTIONS' };
+  }
+  if (req.transactions.length > MAX_TRANSACTIONS_PER_REQUEST) {
+    return {
+      ok: false,
+      error: `Màxim ${MAX_TRANSACTIONS_PER_REQUEST} transaccions per request`,
+      code: 'TOO_MANY_TRANSACTIONS',
+    };
+  }
+
+  const stats = req.stats as Record<string, unknown>;
+  if (
+    typeof stats.duplicateSkippedCount !== 'number' ||
+    !Number.isFinite(stats.duplicateSkippedCount) ||
+    stats.duplicateSkippedCount < 0
+  ) {
+    return {
+      ok: false,
+      error: 'stats.duplicateSkippedCount invàlid',
+      code: 'INVALID_STATS_DUPLICATE_COUNT',
+    };
+  }
+
+  return {
+    ok: true,
+    data: {
+      orgId: req.orgId as string,
+      bankAccountId: req.bankAccountId as string,
+      fileName: (req.fileName as string | null | undefined) ?? null,
+      source: req.source as ImportSource,
+      totalRows: req.totalRows as number,
+      stats: {
+        duplicateSkippedCount: stats.duplicateSkippedCount as number,
+        candidateCount: typeof stats.candidateCount === 'number' ? stats.candidateCount : undefined,
+        candidateUserImportedCount:
+          typeof stats.candidateUserImportedCount === 'number'
+            ? stats.candidateUserImportedCount
+            : undefined,
+        candidateUserSkippedCount:
+          typeof stats.candidateUserSkippedCount === 'number'
+            ? stats.candidateUserSkippedCount
+            : undefined,
+      },
+      transactions: req.transactions as ImportTransactionInput[],
+    },
+  };
+}
+
+function normalizeTransactionInput(
+  tx: ImportTransactionInput,
+  bankAccountId: string
+): CanonicalBankImportTx | null {
+  if (!tx || typeof tx !== 'object') return null;
+  if (typeof tx.date !== 'string' || !tx.date.trim()) return null;
+  if (typeof tx.description !== 'string' || !tx.description.trim()) return null;
+  if (typeof tx.amount !== 'number' || !Number.isFinite(tx.amount)) return null;
+
+  const dateObj = new Date(tx.date);
+  if (Number.isNaN(dateObj.getTime())) {
+    return null;
+  }
+
+  const transactionType: TransactionType = tx.transactionType ?? 'normal';
+  const contactType: ContactType | null = tx.contactType ?? null;
+
+  return {
+    date: dateObj.toISOString(),
+    description: normalizeBankDescription(tx.description),
+    amount: tx.amount,
+    category: tx.category ?? null,
+    document: null,
+    contactId: tx.contactId ?? null,
+    contactType,
+    transactionType,
+    bankAccountId,
+    source: 'bank',
+  };
+}
+
+export async function POST(
+  request: NextRequest
+): Promise<NextResponse<ImportTransactionsResponse>> {
+  const authResult = await verifyIdToken(request);
+  if (!authResult) {
+    return NextResponse.json(
+      { success: false, error: 'No autenticat', code: 'UNAUTHORIZED' },
+      { status: 401 }
+    );
+  }
+
+  let parsedBody: ImportTransactionsRequest;
+  try {
+    const rawBody = await request.json();
+    const validation = validateBody(rawBody);
+    if (!validation.ok) {
+      return NextResponse.json(
+        { success: false, error: validation.error, code: validation.code },
+        { status: 400 }
+      );
+    }
+    parsedBody = validation.data;
+  } catch {
+    return NextResponse.json(
+      { success: false, error: 'Body invàlid', code: 'INVALID_BODY' },
+      { status: 400 }
+    );
+  }
+
+  const db = getAdminDb();
+  const membership = await validateUserMembership(db, authResult.uid, parsedBody.orgId);
+  const accessError = requireOperationalAccess(membership);
+  if (accessError) return accessError as NextResponse<ImportTransactionsResponse>;
+
+  const normalizedTransactions = parsedBody.transactions
+    .map((tx) => normalizeTransactionInput(tx, parsedBody.bankAccountId))
+    .filter((tx): tx is CanonicalBankImportTx => tx !== null);
+
+  if (normalizedTransactions.length === 0) {
+    return NextResponse.json(
+      { success: false, error: 'No hi ha transaccions vàlides', code: 'NO_VALID_TRANSACTIONS' },
+      { status: 400 }
+    );
+  }
+
+  const inputHash = computeBankImportHash({
+    orgId: parsedBody.orgId,
+    bankAccountId: parsedBody.bankAccountId,
+    source: parsedBody.source,
+    fileName: parsedBody.fileName,
+    totalRows: parsedBody.totalRows,
+    transactions: normalizedTransactions,
+  });
+
+  const importJobRef = db.doc(`organizations/${parsedBody.orgId}/importJobs/${inputHash}`);
+  const now = Timestamp.now();
+  const lockExpiresAt = Timestamp.fromMillis(now.toMillis() + LOCK_TTL_MS);
+
+  const lockResult = await db.runTransaction(async (tx) => {
+    const snap = await tx.get(importJobRef);
+    const existing = snap.data() as ImportJobDoc | undefined;
+
+    if (existing) {
+      if (existing.status === 'completed') {
+        return {
+          mode: 'idempotent' as const,
+          importRunId: existing.importRunId ?? inputHash,
+          createdCount: existing.createdCount ?? 0,
+        };
+      }
+
+      if (
+        existing.status === 'processing' &&
+        existing.lockExpiresAt &&
+        existing.lockExpiresAt.toMillis() > now.toMillis()
+      ) {
+        return {
+          mode: 'locked' as const,
+          lockedByUid: existing.requestedByUid,
+        };
+      }
+    }
+
+    const jobData: ImportJobDoc = {
+      status: 'processing',
+      type: 'bankTransactions',
+      inputHash,
+      orgId: parsedBody.orgId,
+      bankAccountId: parsedBody.bankAccountId,
+      source: parsedBody.source,
+      fileName: parsedBody.fileName,
+      totalRows: parsedBody.totalRows,
+      startedAt: now,
+      lockExpiresAt,
+      requestedByUid: authResult.uid,
+    };
+
+    tx.set(importJobRef, jobData, { merge: true });
+    return { mode: 'process' as const };
+  });
+
+  if (lockResult.mode === 'idempotent') {
+    return NextResponse.json({
+      success: true,
+      idempotent: true,
+      createdCount: lockResult.createdCount,
+      importRunId: lockResult.importRunId,
+      inputHash,
+      createdTransactions: [],
+    });
+  }
+
+  if (lockResult.mode === 'locked') {
+    return NextResponse.json(
+      {
+        success: false,
+        error: `Importació en curs per ${lockResult.lockedByUid}. Torna-ho a provar en uns segons.`,
+        code: 'IMPORT_LOCKED',
+      },
+      { status: 409 }
+    );
+  }
+
+  try {
+    const prepared = prepareDeterministicTransactions(normalizedTransactions, inputHash);
+
+    for (let i = 0; i < prepared.length; i += BATCH_SIZE) {
+      const chunk = prepared.slice(i, i + BATCH_SIZE);
+      const batch = db.batch();
+
+      for (const item of chunk) {
+        const txRef = db.doc(`organizations/${parsedBody.orgId}/transactions/${item.id}`);
+        batch.set(txRef, stripUndefinedDeep(item.tx), { merge: true });
+      }
+
+      await batch.commit();
+    }
+
+    const dates = prepared.map((p) => p.tx.date).sort((a, b) => a.localeCompare(b));
+    const importRunRef = db.doc(`organizations/${parsedBody.orgId}/importRuns/${inputHash}`);
+    const importRunPayload = stripUndefinedDeep({
+      type: 'bankTransactions',
+      source: parsedBody.source,
+      fileName: parsedBody.fileName,
+      dateMin: dates[0],
+      dateMax: dates[dates.length - 1],
+      totalRows: parsedBody.totalRows,
+      createdCount: prepared.length,
+      duplicateSkippedCount: parsedBody.stats.duplicateSkippedCount,
+      createdBy: authResult.uid,
+      bankAccountId: parsedBody.bankAccountId,
+      candidateCount: parsedBody.stats.candidateCount,
+      candidateUserImportedCount: parsedBody.stats.candidateUserImportedCount,
+      candidateUserSkippedCount: parsedBody.stats.candidateUserSkippedCount,
+      inputHash,
+      createdAt: FieldValue.serverTimestamp(),
+    });
+
+    await importRunRef.set(importRunPayload, { merge: true });
+
+    await importJobRef.set(
+      {
+        status: 'completed',
+        importRunId: importRunRef.id,
+        createdCount: prepared.length,
+        finishedAt: FieldValue.serverTimestamp(),
+        lockExpiresAt: null,
+        lastError: FieldValue.delete(),
+      },
+      { merge: true }
+    );
+
+    const createdTransactions: CreatedTransaction[] = prepared.map((item) => ({
+      id: item.id,
+      date: item.tx.date,
+      description: item.tx.description,
+      amount: item.tx.amount,
+      category: item.tx.category,
+      document: item.tx.document,
+      contactId: item.tx.contactId,
+      contactType: item.tx.contactType,
+      transactionType: item.tx.transactionType,
+      bankAccountId: item.tx.bankAccountId,
+      source: item.tx.source,
+    }));
+
+    return NextResponse.json({
+      success: true,
+      idempotent: false,
+      createdCount: prepared.length,
+      importRunId: importRunRef.id,
+      inputHash,
+      createdTransactions,
+    });
+  } catch (error) {
+    const sanitizedError = sanitizeErrorMessage(error);
+    console.error('[transactions/import] Error processant import:', error);
+
+    await importJobRef.set(
+      {
+        status: 'error',
+        lastError: sanitizedError,
+        finishedAt: FieldValue.serverTimestamp(),
+        lockExpiresAt: null,
+      },
+      { merge: true }
+    );
+
+    return NextResponse.json(
+      {
+        success: false,
+        error: sanitizedError,
+        code: 'IMPORT_FAILED',
+      },
+      { status: 500 }
+    );
+  }
+}

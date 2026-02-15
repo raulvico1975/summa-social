@@ -576,6 +576,7 @@ export const HELP_CONTENT_ES: Partial<Record<HelpRouteKey, HelpContent>> = {
     tips: [
       'Cuando un proyecto está sobreejecutado en una partida, el split parcial es la forma realista de cuadrar sin inventar gastos.',
       'Si un gasto no encaja en ningún proyecto, es mejor dejarlo a 0% que forzar una asignación incorrecta.',
+      'No verás automáticamente todos los gastos bancarios: solo entran los que en Movimientos ya tienen categoría asignada.',
       'Los gastos de terreno suelen subirse primero y asignarse después: prioriza la coherencia de la imputación, no la velocidad de entrada.',
     ],
     extra: {
