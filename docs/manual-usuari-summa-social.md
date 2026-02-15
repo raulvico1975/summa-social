@@ -72,6 +72,8 @@ Per protegir les dades de l'entitat, hem configurat algunes mesures de seguretat
 
 - ✅ **La sessió es tanca** quan tanques el navegador
 - ✅ **La sessió es tanca** després de **30 minuts sense activitat** (rebràs un avís 1 minut abans per si vols continuar)
+- ✅ **Reautenticació cada 12 hores** encara que hi hagi activitat (per seguretat)
+- ✅ Al panell **SuperAdmin (`/admin`)** el timeout d'inactivitat és de **15 minuts** (avís 1 minut abans)
 - ✅ Si uses un **ordinador compartit**, recorda tancar sessió manualment quan acabis
 
 **Com tancar sessió:** Clica el teu nom (a dalt a la dreta) → "Tancar sessió"
