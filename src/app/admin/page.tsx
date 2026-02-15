@@ -1,11 +1,11 @@
 'use client';
 
 import * as React from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useFirebase } from '@/firebase';
 import { doc, updateDoc } from 'firebase/firestore';
 import { useTranslations } from '@/i18n';
-import { sendPasswordResetEmail, signInWithEmailAndPassword, signOut } from 'firebase/auth';
+import { browserSessionPersistence, sendPasswordResetEmail, setPersistence, signInWithEmailAndPassword, signOut } from 'firebase/auth';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -106,12 +106,14 @@ function statusBadgeVariant(status: ControlStatus): 'default' | 'secondary' | 'd
   return 'default'
 }
 
-export default function AdminPage() {
+function AdminPageContent() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { user, firestore, auth, isUserLoading } = useFirebase();
   const { toast } = useToast();
   const isMobile = useIsMobile();
   const { t } = useTranslations();
+  const reason = searchParams.get('reason');
 
   const [isSuperAdmin, setIsSuperAdmin] = React.useState<boolean | null>(null);
   const [superAdminCheckDone, setSuperAdminCheckDone] = React.useState(false);
@@ -250,6 +252,8 @@ export default function AdminPage() {
     setIsLoggingIn(true);
     setLoginError('');
     try {
+      // Sessió de navegador: es tanca en tancar el navegador
+      await setPersistence(auth, browserSessionPersistence);
       await signInWithEmailAndPassword(auth, loginEmail.trim(), loginPassword);
     } catch (error: unknown) {
       console.error('Login error:', error);
@@ -505,6 +509,16 @@ export default function AdminPage() {
           </CardHeader>
           <CardContent>
             <form onSubmit={handleLogin} className="space-y-4">
+              {reason === 'idle' && (
+                <p className="text-sm rounded-md px-3 py-2 bg-amber-50 text-amber-700 border border-amber-200">
+                  Sessió tancada per inactivitat. Torna a iniciar sessió.
+                </p>
+              )}
+              {reason === 'max_session' && (
+                <p className="text-sm rounded-md px-3 py-2 bg-amber-50 text-amber-700 border border-amber-200">
+                  Per seguretat, cal tornar a iniciar sessió cada 12 hores.
+                </p>
+              )}
               <div className="space-y-2">
                 <Label htmlFor="email">Email</Label>
                 <Input
@@ -1224,5 +1238,13 @@ export default function AdminPage() {
         </AlertDialogContent>
       </AlertDialog>
     </div>
+  );
+}
+
+export default function AdminPage() {
+  return (
+    <React.Suspense fallback={<div className="p-6 text-sm text-muted-foreground">Carregant...</div>}>
+      <AdminPageContent />
+    </React.Suspense>
   );
 }

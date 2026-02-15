@@ -2054,6 +2054,8 @@ Pots arrossegar fitxers (PDF, JPG, PNG) directament sobre la secció de Tiquets 
 **Quan es tanca la sessió:**
 - Quan tanques el navegador completament
 - Després de **30 minuts sense activitat** (rebràs un avís 1 minut abans perquè puguis continuar si vols)
+- Al panell **SuperAdmin (`/admin`)**, després de **15 minuts sense activitat** (amb avís 1 minut abans)
+- Després de **12 hores de sessió contínua**, encara que hi hagi activitat (cal tornar a iniciar sessió)
 
 **Per què ho fem així:**
 - Protegim les dades financeres de l'entitat

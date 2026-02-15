@@ -625,14 +625,16 @@ El SuperAdmin **no és un rol d'organització**. Es gestiona globalment:
 
 - **Tipus**: `browserSessionPersistence`
 - La sessió caduca automàticament en tancar el navegador
-- Implementat a v1.7 per seguretat
+- **Sessió màxima**: 12 hores contínues (`auth_time`), després força re-login (`reason=max_session`)
+- **Limitació acceptada (fase actual)**: sense `BroadcastChannel`, el logout pot no propagar-se de forma instantània entre pestanyes
+- Implementat per seguretat
 
 ### Logout per inactivitat
 
-- **IdleLogoutProvider**: Component que tanca la sessió després de 30 minuts d'inactivitat
+- **IdleLogoutProvider**: Component que tanca la sessió després de 30 minuts d'inactivitat (15 minuts a `/admin`)
 - Avís 1 minut abans del logout
 - Events monitoritzats: mouse, teclat, scroll, touch, click, canvi de visibilitat
-- Redirecció a `/{slug}/login?reason=idle` (si l'usuari està dins una org) o `/login?reason=idle` (rutes globals)
+- Redirecció a `/{slug}/login?reason=idle` (si l'usuari està dins una org), `/admin?reason=idle` (panell admin) o `/login?reason=idle` (rutes globals)
 - Segments reservats (no són slugs): `login`, `registre`, `redirect-to-org`, `admin`, `dashboard`, `privacy`, `api`, `q`, `quick`, `quick-expense`
 - Implementat a `src/components/IdleLogoutProvider.tsx`
 

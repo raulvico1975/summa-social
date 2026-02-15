@@ -9,7 +9,7 @@ import { Label } from '@/components/ui/label';
 import { Logo } from '@/components/logo';
 import { useFirebase } from '@/firebase';
 import { useToast } from '@/hooks/use-toast';
-import { signInWithEmailAndPassword, setPersistence, browserLocalPersistence } from 'firebase/auth';
+import { signInWithEmailAndPassword, setPersistence, browserSessionPersistence } from 'firebase/auth';
 import { doc, getDoc, setDoc, updateDoc, collection, query, where, getDocs } from 'firebase/firestore';
 import { Loader2, Building2, AlertCircle, Clock } from 'lucide-react';
 import { isDemoEnv } from '@/lib/demo/isDemoOrg';
@@ -98,8 +98,8 @@ function OrgLoginContent() {
     setIsLoggingIn(true);
 
     try {
-      // Configurar persistència local per mantenir sessió entre pestanyes
-      await setPersistence(auth, browserLocalPersistence);
+      // Sessió de navegador: es tanca en tancar el navegador
+      await setPersistence(auth, browserSessionPersistence);
       const userCredential = await signInWithEmailAndPassword(auth, email, password);
       const loggedInUser = userCredential.user;
 
@@ -296,6 +296,14 @@ function OrgLoginContent() {
             <Clock className="h-5 w-5 shrink-0" />
             <span className="text-sm">
               Sessió tancada per inactivitat. Torna a iniciar sessió per continuar.
+            </span>
+          </div>
+        )}
+        {reason === 'max_session' && (
+          <div className="flex items-center gap-2 bg-amber-50 dark:bg-amber-950/30 text-amber-700 dark:text-amber-400 rounded-lg px-4 py-3 w-full">
+            <Clock className="h-5 w-5 shrink-0" />
+            <span className="text-sm">
+              Per seguretat, cal tornar a iniciar sessió cada 12 hores.
             </span>
           </div>
         )}
