@@ -109,13 +109,16 @@ npm run publica   # publica main -> prod (deploy verificat)
 1. Preflight git (branca=main, working tree net, pull ff-only)
 2. Detectar fitxers canviats (main vs prod)
 3. Classificar risc (ALT/MITJÀ/BAIX) per patrons de path
-4. **Anàlisi fiscal i d'impacte** — detecta si el canvi pot afectar diners, saldos o fiscalitat.
-5. Verificacions locals (`verify-local.sh` + `verify-ci.sh`)
-6. Resum
-7. **Decisió humana només si cal**: únicament amb risc ALT residual no demostrable amb verificacions automàtiques.
-8. Merge ritual (main→prod + push)
-9. Post-deploy check automàtic (SHA remot + smoke opcional per URL)
-10. Registre a `docs/DEPLOY-LOG.md` (inclou decisió humana si n'hi ha)
+4. **Backup curt automàtic** quan el risc és ALT fiscal (si l'entorn està configurat)
+5. **Anàlisi fiscal i d'impacte** — detecta si el canvi pot afectar diners, saldos o fiscalitat.
+6. Verificacions locals (`verify-local.sh` + `verify-ci.sh`)
+7. Resum
+8. **Decisió humana només si cal**: únicament amb risc ALT residual no demostrable amb verificacions automàtiques.
+9. **Pla de rollback automàtic** guardat a `docs/DEPLOY-ROLLBACK-LATEST.md`
+10. Merge ritual (main→prod + push)
+11. Post-deploy check automàtic (SHA remot + smoke opcional per URL)
+12. **Check post-producció automàtic de 3 minuts** (login, flux principal, informe/export)
+13. Registre a `docs/DEPLOY-LOG.md` + incidències a `docs/DEPLOY-INCIDENTS.md` si hi ha bloqueig
 
 ### Autorització
 
@@ -128,9 +131,23 @@ npm run publica   # publica main -> prod (deploy verificat)
 ### Sortida esperada cap al CEO
 
 - Quan Claude tanca desenvolupament, respon amb `Acabat` + resum de 3 línies en llenguatge no tècnic.
+- Després del resum, Claude afegeix sempre:
+  `Ara pots dir autoritzo deploy per passar a producció.`
 - Quan el CEO respon `Autoritzo deploy`, Claude executa publicació en silenci.
 - Si tot va bé, la resposta final és només: `Ja a producció.`
 - Si alguna verificació falla, no es publica i Claude explica el bloqueig en una frase clara.
+
+### Pràctiques operatives automàtiques (sense passos manuals del CEO)
+
+- Backup curt selectiu abans de deploy en risc ALT fiscal (si hi ha configuració d'entorn).
+- Rollback preparat automàticament abans de publicar.
+- Check post-producció de 3 minuts automatitzat.
+- Mini-registre d'incidència quan un deploy queda bloquejat.
+
+### Missatge de commit
+
+- El commit ha de tenir un nom representatiu del canvi.
+- Si el CEO no dicta un text concret, el sistema genera automàticament un missatge representatiu segons fitxers i impacte.
 
 ### Estat operatiu (frases obligatòries)
 
