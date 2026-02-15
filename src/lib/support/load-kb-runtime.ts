@@ -15,6 +15,7 @@ import { runKbQualityGate } from './kb-quality-gate'
 type CachedKB = {
   version: number
   storageVersion: number | null
+  deletedSignature: string
   cards: KBCard[]
 }
 
@@ -106,9 +107,19 @@ function buildEmergencyFallbackCards(): KBCard[] {
  * @param storageVersion - Published storage version (must match version to use Storage)
  * @returns Merged KB cards (Storage published overrides filesystem by ID)
  */
-export async function loadKbCards(version: number, storageVersion: number | null = null): Promise<KBCard[]> {
+export async function loadKbCards(
+  version: number,
+  storageVersion: number | null = null,
+  deletedCardIds: string[] = []
+): Promise<KBCard[]> {
+  const deletedSignature = deletedCardIds.slice().sort().join('|')
   // Cache hit: return if version hasn't changed
-  if (cached && cached.version === version && cached.storageVersion === storageVersion) {
+  if (
+    cached &&
+    cached.version === version &&
+    cached.storageVersion === storageVersion &&
+    cached.deletedSignature === deletedSignature
+  ) {
     return cached.cards
   }
 
@@ -121,38 +132,42 @@ export async function loadKbCards(version: number, storageVersion: number | null
 
   // 3. Merge: Storage overrides filesystem by ID
   const merged = mergeKbCards(fsCards, storageCards ?? [])
+  const deletedSet = new Set(deletedCardIds)
+  const filtered = merged.filter(card => !deletedSet.has(card.id))
 
   // Runtime safety net:
   // if published KB is corrupt, keep serving a safe dataset instead of crashing/derailing answers.
   if (shouldUseStoragePublished && storageCards) {
-    const mergedGate = runKbQualityGate(merged)
+    const mergedGate = runKbQualityGate(filtered)
     if (!mergedGate.ok) {
       console.error('[load-kb-runtime] Published KB failed quality gate, using fallback dataset', {
         errors: mergedGate.errors.slice(0, 5),
-        cards: merged.length,
+        cards: filtered.length,
       })
 
-      const fsGate = fsCards.length > 0 ? runKbQualityGate(fsCards) : null
+      const fsFiltered = fsCards.filter(card => !deletedSet.has(card.id))
+      const fsGate = fsFiltered.length > 0 ? runKbQualityGate(fsFiltered) : null
       if (fsGate?.ok) {
-        cached = { version, storageVersion, cards: fsCards }
-        return fsCards
+        cached = { version, storageVersion, deletedSignature, cards: fsFiltered }
+        return fsFiltered
       }
 
-      const storageGate = storageCards.length > 0 ? runKbQualityGate(storageCards) : null
+      const storageFiltered = (storageCards ?? []).filter(card => !deletedSet.has(card.id))
+      const storageGate = storageFiltered.length > 0 ? runKbQualityGate(storageFiltered) : null
       if (storageGate?.ok) {
-        cached = { version, storageVersion, cards: storageCards }
-        return storageCards
+        cached = { version, storageVersion, deletedSignature, cards: storageFiltered }
+        return storageFiltered
       }
 
       const emergencyCards = buildEmergencyFallbackCards()
-      cached = { version, storageVersion, cards: emergencyCards }
+      cached = { version, storageVersion, deletedSignature, cards: emergencyCards }
       return emergencyCards
     }
   }
 
   // 4. Cache per version
-  cached = { version, storageVersion, cards: merged }
-  return merged
+  cached = { version, storageVersion, deletedSignature, cards: filtered }
+  return filtered
 }
 
 /**

@@ -353,6 +353,9 @@ export async function POST(request: NextRequest): Promise<NextResponse<ApiRespon
     const supportSnap = await db.doc('system/supportKb').get()
     const version = supportSnap.exists ? (supportSnap.data()?.version ?? 0) : 0
     const storageVersion = supportSnap.exists ? (supportSnap.data()?.storageVersion ?? null) : null
+    const deletedCardIds = supportSnap.exists && Array.isArray(supportSnap.data()?.deletedCardIds)
+      ? (supportSnap.data()?.deletedCardIds as string[]).filter(item => typeof item === 'string')
+      : []
     const aiIntentEnabled = supportSnap.exists ? (supportSnap.data()?.aiIntentEnabled !== false) : true
     const aiReformatEnabled = supportSnap.exists ? (supportSnap.data()?.aiReformatEnabled !== false) : true
     const assistantTone: AssistantTone = normalizeAssistantTone(supportSnap.data()?.assistantTone)
@@ -373,7 +376,7 @@ export async function POST(request: NextRequest): Promise<NextResponse<ApiRespon
 
     let cards: KBCard[] = []
     try {
-      cards = await loadKbCards(version, storageVersion)
+      cards = await loadKbCards(version, storageVersion, deletedCardIds)
     } catch (cardsError) {
       console.error('[bot] loadKbCards error:', cardsError)
     }

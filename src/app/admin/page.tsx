@@ -937,22 +937,22 @@ function AdminPageContent() {
             <CardContent>
               <ol className="list-decimal pl-5 space-y-2 text-sm">
                 <li>
-                  Mira quines preguntes queden sense bona resposta descarregant el CSV del període (el pots escollir) amb les preguntes no resoltes. Al desplegable, tria <code>Sense resposta (fallback)</code>.
+                  Fes clic a <code>Afegir noves preguntes i respostes al bot</code>.
                 </li>
                 <li>
-                  Per respondre-les i que formin part del cervell del bot, descarrega la plantilla d&apos;<code>Importar Cards</code>.
+                  Tria si vols començar des de <code>Preguntes sense resposta</code> o des de <code>Nova pregunta</code>.
                 </li>
                 <li>
-                  Omple la plantilla amb preguntes i respostes clares (una pregunta per fila).
+                  Escriu la pregunta i la resposta en català. El castellà es copia automàticament i el pots ajustar.
                 </li>
                 <li>
-                  Puja el fitxer a <code>Importar Cards</code> (<code>Pujar KB</code>).
+                  Revisa el resum del tema detectat i el nivell de seguretat.
                 </li>
                 <li>
-                  Fes clic a <code>Publicar nova versió</code> de la KB.
+                  Fes clic a <code>Comprovar i publicar</code>.
                 </li>
                 <li>
-                  Revisa <code>KB Runtime</code> per confirmar que la nova versió està activa.
+                  Al llistat de targetes pots <code>Editar</code> o <code>Esborrar</code> una resposta existent.
                 </li>
               </ol>
             </CardContent>
@@ -988,16 +988,16 @@ function AdminPageContent() {
             <CardContent>
               <ol className="list-decimal pl-5 space-y-2 text-sm">
                 <li>
-                  A la pestanya <code>Cobertura</code> veuràs quines guies falten o estan incompletes.
+                  Fes clic a <code>Afegir nova guia</code> per obrir una guia pendent, o tria <code>Editar</code> al llistat de guies publicades.
                 </li>
                 <li>
-                  Ves a <code>Editor guiat</code> i selecciona la guia que vols crear o millorar.
+                  Omple cada idioma amb 3 camps: <code>Títol</code>, <code>Mini-intro</code> i <code>Pas a pas</code>.
                 </li>
                 <li>
-                  Omple els blocs obligatoris (pots dictar per veu) en els idiomes requerits.
+                  Si vols, pots usar el botó <code>Dictar</code> per escriure per veu.
                 </li>
                 <li>
-                  Fes <code>Guardar</code> per deixar-la en esborrany (encara no es publica).
+                  Fes <code>Guardar Esborrany</code> per deixar-la preparada (encara no es publica).
                 </li>
                 <li>
                   Fes <code>Publicar</code> quan estigui revisada.
