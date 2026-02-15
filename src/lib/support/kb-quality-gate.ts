@@ -3,6 +3,7 @@ import expectedEsRaw from '../../../docs/kb/_eval/expected-es.json'
 import type { KBCard } from './load-kb'
 import { validateKbCards } from './validate-kb-cards'
 import { retrieveCard } from './bot-retrieval'
+import { evaluateGoldenSet, GOLDEN_SET_MIN_CRITICAL_TOP1 } from './eval/golden-set'
 
 type ExpectedRow = {
   q: string
@@ -52,6 +53,17 @@ export type KbQualityGateResult = {
     structuralWarnings: number
     evalCa: EvalStats
     evalEs: EvalStats
+    golden: {
+      total: number
+      top1Hits: number
+      top1Accuracy: number
+      criticalTotal: number
+      criticalTop1Hits: number
+      criticalTop1Accuracy: number
+      fallbackCount: number
+      fallbackRate: number
+      operationalWithoutCard: number
+    }
   }
 }
 
@@ -176,6 +188,21 @@ export function runKbQualityGate(cards: KBCard[]): KbQualityGateResult {
 
   const criticalQueryErrors = evaluateRequiredCriticalQueries(cards)
   errors.push(...criticalQueryErrors)
+  const golden = evaluateGoldenSet(cards)
+
+  if (golden.metrics.criticalTop1Accuracy < GOLDEN_SET_MIN_CRITICAL_TOP1) {
+    errors.push(
+      `Golden critical Top1 sota mínim (${(golden.metrics.criticalTop1Accuracy * 100).toFixed(1)}% < ${(GOLDEN_SET_MIN_CRITICAL_TOP1 * 100).toFixed(0)}%)`
+    )
+  }
+
+  if (golden.metrics.operationalWithoutCard > 0) {
+    warnings.push(
+      `Golden: ${golden.metrics.operationalWithoutCard} consultes operatives han caigut a fallback (sense card)`
+    )
+  }
+
+  warnings.push(...golden.errors.slice(0, 30))
 
   return {
     ok: errors.length === 0,
@@ -187,6 +214,7 @@ export function runKbQualityGate(cards: KBCard[]): KbQualityGateResult {
       structuralWarnings: validation.warnings.length,
       evalCa: evalCa.stats,
       evalEs: evalEs.stats,
+      golden: golden.metrics,
     },
   }
 }

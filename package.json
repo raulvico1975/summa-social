@@ -34,7 +34,8 @@
     "inicia:main": "bash scripts/workflow.sh inicia main",
     "acabat": "bash scripts/workflow.sh acabat",
     "publica": "bash scripts/workflow.sh publica",
-    "estat": "bash scripts/workflow.sh estat"
+    "estat": "bash scripts/workflow.sh estat",
+    "support:eval": "node --import tsx scripts/support-eval.mjs"
   },
   "dependencies": {
     "@genkit-ai/googleai": "^1.14.1",
