@@ -678,7 +678,7 @@ display_deploy_summary() {
 
 prepare_rollback_plan() {
   CURRENT_PHASE="Preparar rollback"
-  echo "[6c/9] Preparant rollback..."
+  echo "[8c/9] Preparant rollback..."
   echo ""
 
   local date current_prod_sha target_main_sha
@@ -713,7 +713,6 @@ git push origin prod --force-with-lease
 \`\`\`
 EOF
 
-  git add "$PROJECT_DIR/$ROLLBACK_PLAN_FILE"
   echo "  Rollback preparat a $ROLLBACK_PLAN_FILE"
   echo ""
 }
@@ -920,6 +919,9 @@ BACKUP_HEADER
 
   # Stage (no commit)
   git add "$PROJECT_DIR/$DEPLOY_LOG"
+  if [ -f "$PROJECT_DIR/$ROLLBACK_PLAN_FILE" ]; then
+    git add "$PROJECT_DIR/$ROLLBACK_PLAN_FILE"
+  fi
 
   echo "  Registrat a $DEPLOY_LOG"
   echo "  $log_line"
@@ -946,10 +948,10 @@ main() {
   run_verifications          # Pas 5
   display_deploy_summary     # Pas 6
   handle_business_decision_for_residual_risk
-  prepare_rollback_plan
   execute_merge_ritual       # Pas 7
   post_deploy_check          # Pas 8
   post_production_3min_check
+  prepare_rollback_plan
   append_deploy_log          # Pas 9
 
   echo "  DEPLOY COMPLETAT ($DEPLOY_RESULT)."
