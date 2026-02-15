@@ -93,11 +93,12 @@ El ritual complet d'"acabar feina" i publicar s'executa via scripts deterministe
 
 ```bash
 npm run inicia    # crea branca segura abans de començar
+npm run implementa # equivalent a inicia
 npm run acabat    # tanca tasca (checks + commit + push + integració a main)
 npm run publica   # publica main -> prod (deploy verificat)
 ```
 
-`npm run inicia` (`scripts/workflow.sh inicia`) crea una branca `codex/...` segura abans de tocar codi.
+`npm run inicia` i `npm run implementa` (`scripts/workflow.sh inicia|implementa`) creen una branca `codex/...` segura abans de tocar codi.
 
 `npm run acabat` (`scripts/workflow.sh acabat`) fa aquests passos de forma seqüencial:
 1. Detectar canvis pendents i classificar risc (ALT/MITJÀ/BAIX)
@@ -122,17 +123,26 @@ npm run publica   # publica main -> prod (deploy verificat)
 
 ### Autorització
 
-- **Trigger d'inici:** el CEO escriu `"Comença"` o `"Inicia"` → Claude executa `npm run inicia`
+- **Trigger d'inici:** el CEO escriu `"Comença"`, `"Inicia"` o `"Implementa"` → Claude executa `npm run inicia` o `npm run implementa` (mateix efecte)
 - **Trigger de tancament:** el CEO escriu `"Acabat"` → Claude executa `npm run acabat`
 - **Trigger de publicació:** el CEO escriu `"Autoritzo deploy"` → Claude executa `npm run publica`
 - El script detecta el nivell de risc automàticament
 - El script s'atura si les verificacions fallen
+- `Inicia` i `Implementa` serveixen igual.
 
 ### Sortida esperada cap al CEO
 
-- Quan Claude tanca desenvolupament, respon amb `Acabat` + resum de 3 línies en llenguatge no tècnic.
-- Després del resum, Claude afegeix sempre:
-  `Ara pots dir autoritzo deploy per passar a producció.`
+- Quan hi ha canvis locals, el sistema mostra sempre:
+  - bloc `RESUM NO TÈCNIC` (què s'ha fet, implicació, què pot notar l'entitat)
+  - bloc `SEGÜENT PAS RECOMANAT` indicant quan dir `Acabat`
+- Després d'`acabat` amb estat `Preparat per producció`, el sistema mostra:
+  - bloc `QUÈ VOL DIR AUTORITZO DEPLOY`
+  - bloc `SEGÜENT PAS RECOMANAT` indicant quan dir `Autoritzo deploy`
+- Text obligatori del bloc `QUÈ VOL DIR AUTORITZO DEPLOY`:
+  - Dir `Autoritzo deploy` vol dir publicar els canvis preparats a producció.
+  - Es faran comprovacions automàtiques abans i després.
+  - Si alguna comprovació falla, no es publica.
+  - L'entitat podria notar canvis immediatament després de publicar.
 - Quan el CEO respon `Autoritzo deploy`, Claude executa publicació en silenci.
 - Si tot va bé, la resposta final és només: `Ja a producció.`
 - Si alguna verificació falla, no es publica i Claude explica el bloqueig en una frase clara.

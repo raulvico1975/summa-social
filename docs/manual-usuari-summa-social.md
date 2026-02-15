@@ -2103,6 +2103,6 @@ Molta sort! 🍀
 
 ---
 
-**Summa Social v1.40** — Febrer 2026
+**Summa Social v1.41** — Febrer 2026
 
 *Gestió financera pensada per a entitats que volen dedicar el seu temps al que realment importa.*

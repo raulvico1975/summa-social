@@ -6199,5 +6199,5 @@ Les següents regles han de ser certes en tot moment. Si es trenca alguna, cal c
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # FI DEL DOCUMENT
-# Última actualització: 10 Febrer 2026 - Versió 1.40
+# Última actualització: 15 Febrer 2026 - Versió 1.41
 # ═══════════════════════════════════════════════════════════════════════════════

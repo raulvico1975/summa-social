@@ -38,6 +38,132 @@ say() {
   printf '%s\n' "$1"
 }
 
+contains_forbidden_guidance_terms() {
+  local text_lower
+  text_lower=$(printf '%s' "$1" | tr '[:upper:]' '[:lower:]')
+  local banned=(
+    "git"
+    "merge"
+    "flag"
+    "--no-verify"
+    "commit"
+    "push"
+    "sha"
+  )
+  local term
+  for term in "${banned[@]}"; do
+    if printf '%s' "$text_lower" | grep -q -- "$term"; then
+      return 0
+    fi
+  done
+  return 1
+}
+
+emit_next_step_block() {
+  local message="$1"
+  say ""
+  say "SEGÜENT PAS RECOMANAT"
+  say "- $message"
+}
+
+infer_non_technical_summary_lines() {
+  local files="$1"
+  local risk="$2"
+
+  local done_line implication_line visible_line
+
+  if printf '%s\n' "$files" | grep -Eq '^scripts/|^docs/|^CLAUDE\.md$|^package\.json$'; then
+    done_line="s'ha ajustat el procés guiat de treball i publicació per fer-lo més clar."
+    implication_line="ara el recorregut és més assistit i redueix errors de coordinació."
+    visible_line="rebràs indicacions més clares sobre quan tancar i quan publicar."
+  elif printf '%s\n' "$files" | grep -Eq '^src/lib/fiscal/|^src/lib/remittances/|^src/lib/sepa/|^src/app/api/remittances/'; then
+    done_line="s'ha reforçat el tractament de moviments i fiscalitat."
+    implication_line="es redueix el risc d'inconsistències econòmiques."
+    visible_line="es poden veure validacions més estrictes en fluxos sensibles."
+  elif printf '%s\n' "$files" | grep -Eq '^src/app/api/|^firestore\.rules$|^storage\.rules$'; then
+    done_line="s'ha ajustat el control d'accés i el tractament intern de dades."
+    implication_line="es protegeix millor la informació sensible."
+    visible_line="es poden veure missatges de bloqueig més clars quan falta informació."
+  elif printf '%s\n' "$files" | grep -Eq '^src/components/|^src/app/|^src/hooks/'; then
+    done_line="s'ha millorat el flux d'ús a pantalles clau."
+    implication_line="l'operativa diària és més clara i consistent."
+    visible_line="es poden notar canvis en recorreguts, textos o validacions visuals."
+  elif printf '%s\n' "$files" | grep -Eq '^src/i18n/|^public/|^docs/'; then
+    done_line="s'han actualitzat textos i guies de suport."
+    implication_line="la comunicació és més clara i coherent."
+    visible_line="es notaran millores en missatges i documentació."
+  else
+    done_line="s'han aplicat millores de funcionament."
+    implication_line="el sistema queda més robust i coherent."
+    visible_line="es poden notar ajustos puntuals en alguns fluxos."
+  fi
+
+  if [ "$risk" = "ALT" ]; then
+    implication_line="$implication_line El risc funcional és sensible i està sota control amb comprovacions."
+  elif [ "$risk" = "MITJA" ]; then
+    implication_line="$implication_line L'impacte és moderat i controlat."
+  else
+    implication_line="$implication_line L'impacte és baix."
+  fi
+
+  printf '%s\n%s\n%s\n' "$done_line" "$implication_line" "$visible_line"
+}
+
+emit_pre_acabat_summary() {
+  local files="$1"
+  local risk="$2"
+  local summary
+  summary="$(infer_non_technical_summary_lines "$files" "$risk")"
+
+  local done_line implication_line visible_line
+  done_line=$(printf '%s\n' "$summary" | sed -n '1p')
+  implication_line=$(printf '%s\n' "$summary" | sed -n '2p')
+  visible_line=$(printf '%s\n' "$summary" | sed -n '3p')
+
+  if contains_forbidden_guidance_terms "$done_line $implication_line $visible_line"; then
+    say ""
+    say "RESUM NO TÈCNIC"
+    say "- Què s'ha fet: cal concretar millor l'impacte abans de tancar."
+    say "- Implicació: encara no queda prou clar què canvia per a l'entitat."
+    say "- Què pot notar l'entitat: pendent de concretar."
+    emit_next_step_block "Continua implementació fins que l'impacte sigui clar."
+    return 1
+  fi
+
+  say ""
+  say "RESUM NO TÈCNIC"
+  say "- Què s'ha fet: $done_line"
+  say "- Implicació: $implication_line"
+  say "- Què pot notar l'entitat: $visible_line"
+  return 0
+}
+
+emit_authoritzo_deploy_meaning() {
+  say ""
+  say "QUÈ VOL DIR AUTORITZO DEPLOY"
+  say "- Dir \"Autoritzo deploy\" vol dir publicar els canvis preparats a producció."
+  say "- Es faran comprovacions automàtiques abans i després de publicar."
+  say "- Si alguna comprovació falla, no es publica."
+  say "- L'entitat podria notar els canvis immediatament."
+}
+
+emit_guidance_for_status() {
+  local status="$1"
+
+  if [ "$status" = "$STATUS_READY" ]; then
+    emit_authoritzo_deploy_meaning
+    emit_next_step_block "Si vols publicar ara, pots dir: Autoritzo deploy"
+    return
+  fi
+
+  if [ "$status" = "$STATUS_PROD" ]; then
+    emit_next_step_block "El procés està complet. No cal cap acció obligatòria."
+    return
+  fi
+
+  emit_next_step_block "Pots començar dient: Inicia o Implementa"
+}
+
 current_branch() {
   git rev-parse --abbrev-ref HEAD
 }
@@ -219,6 +345,7 @@ run_inicia() {
   if [ "$branch" != "main" ]; then
     say "$STATUS_NO"
     say "Ja estem treballant en una branca segura: $branch"
+    emit_next_step_block "Continua implementació. Quan estigui llest, et suggeriré quan dir Acabat."
     return
   fi
 
@@ -226,6 +353,7 @@ run_inicia() {
     WORK_BRANCH="main"
     say "$STATUS_NO"
     say "Feina iniciada a main per canvi trivial."
+    emit_next_step_block "Continua implementació. Quan estigui llest, et suggeriré quan dir Acabat."
     return
   fi
 
@@ -233,6 +361,7 @@ run_inicia() {
   git checkout -b "$WORK_BRANCH" >/dev/null
   say "$STATUS_NO"
   say "Feina iniciada en branca segura: $WORK_BRANCH"
+  emit_next_step_block "Continua implementació. Quan estigui llest, et suggeriré quan dir Acabat."
 }
 
 stage_changes() {
@@ -429,10 +558,17 @@ run_acabat() {
     final_status="$(compute_repo_status)"
     say "$final_status"
     say "No hi ha canvis nous per tancar."
+    emit_guidance_for_status "$final_status"
     return
   fi
 
   risk="$(classify_risk "$changed_files")"
+  emit_pre_acabat_summary "$changed_files" "$risk" || {
+    say "$STATUS_NO"
+    return
+  }
+  emit_next_step_block "Si aquest resum és correcte, pots dir: Acabat"
+
   # Fallback segur: si no s'ha fet 'inicia', rescatem els canvis en una branca.
   decide_work_branch "$risk"
   say "Risc detectat: $risk"
@@ -441,6 +577,7 @@ run_acabat() {
     final_status="$(compute_repo_status)"
     say "$final_status"
     say "No hi ha canvis per commitejar."
+    emit_guidance_for_status "$final_status"
     return
   fi
 
@@ -451,9 +588,7 @@ run_acabat() {
 
   final_status="$(compute_repo_status)"
   say "$final_status"
-  if [ "$final_status" = "$STATUS_READY" ]; then
-    say 'Ara pots dir autoritzo deploy per passar a producció.'
-  fi
+  emit_guidance_for_status "$final_status"
 }
 
 run_publica() {
@@ -473,16 +608,41 @@ run_publica() {
   if ! bash "$SCRIPT_DIR/deploy.sh"; then
     final_status="$(compute_repo_status)"
     say "$final_status"
+    emit_guidance_for_status "$final_status"
     exit 1
   fi
 
   say "$STATUS_PROD"
+  emit_guidance_for_status "$STATUS_PROD"
 }
 
 run_estat() {
-  local final_status
+  local final_status changed_files risk
   final_status="$(compute_repo_status)"
   say "$final_status"
+
+  if has_local_changes; then
+    changed_files="$(collect_changed_files)"
+    risk="$(classify_risk "$changed_files")"
+    if emit_pre_acabat_summary "$changed_files" "$risk"; then
+      emit_next_step_block "Si aquest resum és correcte, pots dir: Acabat"
+    else
+      emit_next_step_block "Continua implementació fins que l'impacte sigui clar."
+    fi
+    return
+  fi
+
+  if [ "$final_status" = "$STATUS_READY" ]; then
+    emit_guidance_for_status "$final_status"
+    return
+  fi
+
+  if [ "$final_status" = "$STATUS_PROD" ]; then
+    emit_guidance_for_status "$final_status"
+    return
+  fi
+
+  emit_guidance_for_status "$final_status"
 }
 
 main() {
@@ -490,7 +650,7 @@ main() {
   local arg1="${2:-}"
 
   if [ -z "$cmd" ]; then
-    say "Us: bash scripts/workflow.sh [inicia|acabat|publica|estat]"
+    say "Us: bash scripts/workflow.sh [inicia|implementa|acabat|publica|estat]"
     exit 1
   fi
 
@@ -498,6 +658,9 @@ main() {
 
   case "$cmd" in
     inicia)
+      run_inicia "$arg1"
+      ;;
+    implementa)
       run_inicia "$arg1"
       ;;
     acabat)
@@ -511,7 +674,7 @@ main() {
       ;;
     *)
       say "Comanda desconeguda: $cmd"
-      say "Us: bash scripts/workflow.sh [inicia|acabat|publica|estat]"
+      say "Us: bash scripts/workflow.sh [inicia|implementa|acabat|publica|estat]"
       exit 1
       ;;
   esac

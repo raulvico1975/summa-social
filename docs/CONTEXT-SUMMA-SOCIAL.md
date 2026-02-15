@@ -20,7 +20,7 @@ El producte se centra en:
 - Exports nets per a gestories
 
 ### Stack Tecnològic
-- **Frontend:** Next.js 15 (App Router), React 19, TypeScript
+- **Frontend:** Next.js 15 (App Router), React 18, TypeScript
 - **UI:** Tailwind CSS + shadcn/ui
 - **Backend:** Firebase (Firestore, Auth, Storage, Functions)
 - **Hosting:** Firebase Hosting / App Hosting
@@ -1086,7 +1086,7 @@ Modal de crear/editar despeses. Consultable a:
 
 ### 15.10 SUPER ADMIN
 
-- **Ruta**: `/dashboard/super-admin`
+- **Ruta**: `/{orgSlug}/dashboard/super-admin`
 - **Descripció**: Panell d'administració global (només SuperAdmins)
 - **Funcionalitats**:
   - Gestió d'organitzacions
@@ -2050,8 +2050,8 @@ const { donors, isLoading, refresh, create, update, remove } = useDonors();
 
 ### 18.9 SUPER ADMIN
 
-**Ruta:** `/super-admin`
-**Fitxer:** `src/app/super-admin/page.tsx`
+**Ruta:** `/{orgSlug}/dashboard/super-admin`
+**Fitxer:** `src/app/[orgSlug]/dashboard/super-admin/page.tsx`
 
 **Funcionalitats:**
 - Llistat totes les organitzacions
@@ -2081,7 +2081,7 @@ const { buildUrl, orgSlug } = useOrgUrl();
 ### 19.2 TRANSACCIONS
 
 ```typescript
-// src/hooks/use-transactions.ts
+// src/hooks/use-transaction-filters.ts
 
 interface UseTransactionsOptions {
   year?: number;
@@ -2111,20 +2111,20 @@ const {
 ### 19.3 CONTACTES
 
 ```typescript
-// src/hooks/use-donors.ts
+// src/services/contacts.ts
 const { donors, isLoading, create, update, remove, refresh } = useDonors();
 
-// src/hooks/use-suppliers.ts
+// src/services/contacts.ts
 const { suppliers, isLoading, create, update, remove } = useSuppliers();
 
-// src/hooks/use-employees.ts
+// src/services/contacts.ts
 const { employees, isLoading, create, update, remove } = useEmployees();
 ```
 
 ### 19.4 CATEGORIES
 
 ```typescript
-// src/hooks/use-categories.ts
+// src/components/category-manager.tsx
 const {
   categories,
   incomeCategories,
@@ -2167,7 +2167,7 @@ const { update, isUpdating } = useUpdateOffBankExpense();
 ### 19.6 AUTENTICACIÓ
 
 ```typescript
-// src/hooks/use-auth.ts
+// src/hooks/use-auth.tsx
 const {
   user,           // Firebase User
   isLoading,
@@ -2210,7 +2210,7 @@ t.categories.transport  // "Transport"
 ### 20.1 LAYOUTS
 
 ```typescript
-// src/components/dashboard-layout.tsx
+// src/app/[orgSlug]/dashboard/layout.tsx
 <DashboardLayout>
   <DashboardHeader />
   <DashboardSidebar />
@@ -2230,7 +2230,7 @@ t.categories.transport  // "Transport"
 ### 20.2 CERCADORS
 
 ```typescript
-// src/components/contact-search-combobox.tsx
+// src/components/donor-manager.tsx
 <ContactSearchCombobox
   type="donor" // | "supplier" | "employee"
   value={selectedId}
@@ -2238,7 +2238,7 @@ t.categories.transport  // "Transport"
   placeholder="Cerca contacte..."
 />
 
-// src/components/category-select.tsx
+// src/components/category-manager.tsx
 <CategorySelect
   type="expense" // | "income"
   value={categoryId}
@@ -2347,7 +2347,7 @@ slugify('Flores Kiskeya')       // 'flores-kiskeya'
 ### 21.2 VALIDACIÓ
 
 ```typescript
-// src/lib/validators.ts
+// src/lib/storage-upload-guard.ts
 
 isValidDNI('12345678Z')         // true
 isValidNIE('X1234567L')         // true
@@ -2359,7 +2359,7 @@ isValidEmail('a@b.com')         // true
 ### 21.3 FIRESTORE
 
 ```typescript
-// src/lib/firebase/firestore.ts
+// src/firebase/firestore/use-collection.tsx
 
 // Refs
 const txRef = doc(db, `organizations/${orgId}/transactions/${txId}`);
@@ -2378,7 +2378,7 @@ const snapshot = await getDocs(q);
 ### 21.4 STORAGE
 
 ```typescript
-// src/lib/firebase/storage.ts
+// src/lib/files/attach-document.ts
 
 // Upload
 const url = await uploadFile(file, `organizations/${orgId}/documents/${filename}`);
@@ -2505,11 +2505,11 @@ export default function DashboardLayout({ children }) {
 // Trigger: onWrite a /transactions/{txId}
 // Acció: Sincronitza a /exports/projectExpenses/items/{txId}
 
-// functions/src/ai/categorize.ts
+// src/app/api/ai/categorize-transaction/route.ts
 // Trigger: callable o onWrite
 // Acció: Categoritza amb OpenAI/Anthropic
 
-// functions/src/notifications/email.ts
+// src/lib/email/buildCertificateEmail.ts
 // Trigger: onCreate a certes col·leccions
 // Acció: Envia emails via SendGrid
 ```
@@ -2590,11 +2590,11 @@ STRIPE_SECRET_KEY=...
 | Page Components | React + Next.js | `src/app/[orgSlug]/` |
 | Business Logic | Custom Hooks | `src/hooks/` |
 | Data Types | TypeScript | `src/lib/*-types.ts` |
-| API | Firebase SDK | `src/lib/firebase/` |
+| API | Firebase SDK | `src/firebase/` |
 | Backend | Cloud Functions | `functions/src/` |
 | Database | Firestore | Consola Firebase |
-| Auth | Firebase Auth | `src/hooks/use-auth.ts` |
-| Storage | Firebase Storage | `src/lib/firebase/storage.ts` |
+| Auth | Firebase Auth | `src/hooks/use-auth.tsx` |
+| Storage | Firebase Storage | `src/lib/files/attach-document.ts` |
 | i18n | Custom | `src/i18n/` |
 
 ---
