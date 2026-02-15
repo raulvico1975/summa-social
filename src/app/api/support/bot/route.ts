@@ -16,6 +16,9 @@ import { loadGuideContent, type KBCard } from '@/lib/support/load-kb'
 import { loadKbCards } from '@/lib/support/load-kb-runtime'
 import { logBotQuestion } from '@/lib/support/bot-question-log'
 import { detectSmallTalkResponse, inferQuestionDomain, retrieveCard, suggestKeywordsFromMessage, type KbLang, type RetrievalResult } from '@/lib/support/bot-retrieval'
+import guideProjectsCardRaw from '../../../../../docs/kb/cards/guides/guide-projects.json'
+import guideAttachDocumentCardRaw from '../../../../../docs/kb/cards/guides/guide-attach-document.json'
+import manualMemberPaidQuotasCardRaw from '../../../../../docs/kb/cards/manual/manual-member-paid-quotas.json'
 
 const DEFAULT_REFORMAT_TIMEOUT_MS = 3500
 const MIN_REFORMAT_TIMEOUT_MS = 1500
@@ -24,6 +27,12 @@ const DEFAULT_INTENT_TIMEOUT_MS = 1800
 const MIN_INTENT_TIMEOUT_MS = 800
 const MAX_INTENT_TIMEOUT_MS = 4000
 const MAX_INTENT_CANDIDATES = 14
+
+const CRITICAL_BUNDLED_CARDS = [
+  guideProjectsCardRaw as KBCard,
+  guideAttachDocumentCardRaw as KBCard,
+  manualMemberPaidQuotasCardRaw as KBCard,
+]
 
 type InputLang = 'ca' | 'es' | 'fr' | 'pt'
 type AssistantTone = 'neutral' | 'warm'
@@ -186,6 +195,22 @@ function getReformatTimeoutMs(rawValue: unknown): number {
 
 function normalizeAssistantTone(rawTone: unknown): AssistantTone {
   return rawTone === 'neutral' ? 'neutral' : 'warm'
+}
+
+function ensureCriticalCardsPresent(cards: KBCard[]): KBCard[] {
+  const map = new Map<string, KBCard>()
+
+  // Seed with bundled canonical cards so strategic queries always have a valid KB target.
+  for (const bundled of CRITICAL_BUNDLED_CARDS) {
+    map.set(bundled.id, bundled)
+  }
+
+  // Runtime cards override bundled defaults when available.
+  for (const card of cards) {
+    map.set(card.id, card)
+  }
+
+  return Array.from(map.values())
 }
 
 function getIntentTimeoutMs(rawValue: unknown): number {
@@ -653,16 +678,26 @@ export async function POST(request: NextRequest): Promise<NextResponse<ApiRespon
     } catch (cardsError) {
       console.error('[bot] loadKbCards error:', cardsError)
     }
+    const retrievableCards = ensureCriticalCardsPresent(cards)
+    if (retrievableCards.length > cards.length) {
+      const runtimeIds = new Set(cards.map(card => card.id))
+      const injected = CRITICAL_BUNDLED_CARDS
+        .map(card => card.id)
+        .filter(id => !runtimeIds.has(id))
+      if (injected.length > 0) {
+        console.warn('[bot] injected bundled critical cards:', injected)
+      }
+    }
 
     // --- Retrieval with hard fallback ---
     let result: RetrievalResult | null = null
 
     try {
-      const selectedByClarify = resolveClarifyChoice(message, clarifyOptionIds, cards)
+      const selectedByClarify = resolveClarifyChoice(message, clarifyOptionIds, retrievableCards)
       if (selectedByClarify) {
         result = { card: selectedByClarify, mode: 'card' }
       } else {
-        result = retrieveCard(message, kbLang, cards)
+        result = retrieveCard(message, kbLang, retrievableCards)
       }
     } catch (err) {
       console.error('[bot] retrieveCard error:', err)
@@ -674,11 +709,11 @@ export async function POST(request: NextRequest): Promise<NextResponse<ApiRespon
     if (
       apiKey &&
       aiIntentEnabled &&
-      cards.length > 0 &&
+      retrievableCards.length > 0 &&
       (!result || result.mode === 'fallback' || result.confidence === 'low')
     ) {
       try {
-        const aiIntent = await classifyIntentCard(message, kbLang, cards, intentTimeoutMs)
+        const aiIntent = await classifyIntentCard(message, kbLang, retrievableCards, intentTimeoutMs)
         if (aiIntent?.card) {
           console.info('[bot] intent classifier override:', {
             selectedCardId: aiIntent.card.id,
@@ -707,7 +742,7 @@ export async function POST(request: NextRequest): Promise<NextResponse<ApiRespon
 
     if (!result || !result.card) {
       // Hard fallback: si retrieveCard falla o retorna null
-      const fallback = cards.find(c => c.id === 'fallback-no-answer')
+      const fallback = retrievableCards.find(c => c.id === 'fallback-no-answer')
 
       if (!fallback) {
         return NextResponse.json(buildEmergencyFallbackResponse(kbLang))
