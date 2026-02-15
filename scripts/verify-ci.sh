@@ -7,6 +7,9 @@ npm run typecheck
 echo "[verify-ci] Tests..."
 npm test
 
+echo "[verify-ci] Support golden set eval..."
+npm run support:eval
+
 echo "[verify-ci] Build..."
 npm run build
 

@@ -25,6 +25,17 @@ type ApiResponse =
         cards: number
         evalCa: { total: number; passed: number; failed: number }
         evalEs: { total: number; passed: number; failed: number }
+        golden: {
+          total: number
+          top1Hits: number
+          top1Accuracy: number
+          criticalTotal: number
+          criticalTop1Hits: number
+          criticalTop1Accuracy: number
+          fallbackCount: number
+          fallbackRate: number
+          operationalWithoutCard: number
+        }
       }
       warnings: string[]
     }
@@ -36,6 +47,17 @@ type ApiResponse =
         cards: number
         evalCa: { total: number; passed: number; failed: number }
         evalEs: { total: number; passed: number; failed: number }
+        golden: {
+          total: number
+          top1Hits: number
+          top1Accuracy: number
+          criticalTotal: number
+          criticalTop1Hits: number
+          criticalTop1Accuracy: number
+          fallbackCount: number
+          fallbackRate: number
+          operationalWithoutCard: number
+        }
       }
     }
 
@@ -132,6 +154,7 @@ export async function POST(request: NextRequest): Promise<NextResponse<ApiRespon
             cards: gate.stats.cards,
             evalCa: gate.stats.evalCa,
             evalEs: gate.stats.evalEs,
+            golden: gate.stats.golden,
           },
         },
         { status: 400 }
@@ -158,6 +181,7 @@ export async function POST(request: NextRequest): Promise<NextResponse<ApiRespon
           cards: gate.stats.cards,
           evalCa: gate.stats.evalCa,
           evalEs: gate.stats.evalEs,
+          golden: gate.stats.golden,
         },
       },
       { merge: true }
@@ -170,6 +194,7 @@ export async function POST(request: NextRequest): Promise<NextResponse<ApiRespon
         cards: gate.stats.cards,
         evalCa: gate.stats.evalCa,
         evalEs: gate.stats.evalEs,
+        golden: gate.stats.golden,
       },
       warnings: gate.warnings.slice(0, 10),
     })
