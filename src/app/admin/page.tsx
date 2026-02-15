@@ -898,8 +898,8 @@ function AdminPageContent() {
 
         <AdminSection
           id="coneixement"
-          title={t.admin?.controlTower?.sections?.knowledgeTitle ?? '3. Coneixement i Bot'}
-          description={t.admin?.controlTower?.sections?.knowledgeDescription ?? 'Salut de la base de coneixement i friccions de suport.'}
+          title="3. Bot"
+          description="Aquí alimentes les respostes del bot que no surten a les guies. Poden ser preguntes dels usuaris o orientacions no tan formals com les guies."
           tone="content"
         >
           <Card>
@@ -930,6 +930,34 @@ function AdminPageContent() {
             </CardContent>
           </Card>
 
+          <Card className="mt-4">
+            <CardHeader>
+              <CardTitle className="text-base">Com fer-ho (pas a pas)</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <ol className="list-decimal pl-5 space-y-2 text-sm">
+                <li>
+                  Mira quines preguntes queden sense bona resposta descarregant el CSV del període (el pots escollir) amb les preguntes no resoltes. Al desplegable, tria <code>Sense resposta (fallback)</code>.
+                </li>
+                <li>
+                  Per respondre-les i que formin part del cervell del bot, descarrega la plantilla d&apos;<code>Importar Cards</code>.
+                </li>
+                <li>
+                  Omple la plantilla amb preguntes i respostes clares (una pregunta per fila).
+                </li>
+                <li>
+                  Puja el fitxer a <code>Importar Cards</code> (<code>Pujar KB</code>).
+                </li>
+                <li>
+                  Fes clic a <code>Publicar nova versió</code> de la KB.
+                </li>
+                <li>
+                  Revisa <code>KB Runtime</code> per confirmar que la nova versió està activa.
+                </li>
+              </ol>
+            </CardContent>
+          </Card>
+
           <Collapsible className="mt-6">
             <CollapsibleTrigger asChild>
               <Button variant="outline" className="w-full justify-between">
@@ -949,10 +977,38 @@ function AdminPageContent() {
 
         <AdminSection
           id="editorial"
-          title="4. Centre editorial"
-          description="Cobertura de guies, editor guiat i checklist setmanal."
+          title="4. Cervell de l'ajuda"
+          description="Aquí gestiones les guies que apareixen a la secció de guies, a les ajudes textuals (icona ?) i que també alimenten el bot. Quan actualitzes o crees una guia, es propaga a aquests 3 llocs."
           tone="content"
         >
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base">Com fer-ho (pas a pas)</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <ol className="list-decimal pl-5 space-y-2 text-sm">
+                <li>
+                  A la pestanya <code>Cobertura</code> veuràs quines guies falten o estan incompletes.
+                </li>
+                <li>
+                  Ves a <code>Editor guiat</code> i selecciona la guia que vols crear o millorar.
+                </li>
+                <li>
+                  Omple els blocs obligatoris (pots dictar per veu) en els idiomes requerits.
+                </li>
+                <li>
+                  Fes <code>Guardar</code> per deixar-la en esborrany (encara no es publica).
+                </li>
+                <li>
+                  Fes <code>Publicar</code> quan estigui revisada.
+                </li>
+                <li>
+                  En publicar, la guia es propaga a la secció de guies, a les ajudes textuals (icona <code>?</code>) i també al bot.
+                </li>
+              </ol>
+            </CardContent>
+          </Card>
+
           <EditorialCenter />
         </AdminSection>
 
