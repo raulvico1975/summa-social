@@ -10,12 +10,13 @@ import { ai } from '@/ai/genkit'
 import { z } from 'genkit'
 import { verifyIdToken, getAdminDb, validateUserMembership } from '@/lib/api/admin-sdk'
 import { requireOperationalAccess } from '@/lib/api/require-operational-access'
-import { type KBCard } from '@/lib/support/load-kb'
+import { loadGuideContent, type KBCard } from '@/lib/support/load-kb'
 import { loadKbCards } from '@/lib/support/load-kb-runtime'
 import { logBotQuestion } from '@/lib/support/bot-question-log'
 import { detectSmallTalkResponse, type KbLang } from '@/lib/support/bot-retrieval'
 import { orchestrator } from '@/lib/support/engine/orchestrator'
 import { buildEmergencyFallback } from '@/lib/support/engine/renderer'
+import { extractOperationalSteps } from '@/lib/support/engine/policy'
 import { clampTimeout, normalizeAssistantTone, normalizeLang, parseClarifyOptionIds, withTimeout } from '@/lib/support/engine/normalize'
 import type { ApiResponse, AssistantTone, InputLang } from '@/lib/support/engine/types'
 import guideProjectsCardRaw from '../../../../../docs/kb/cards/guides/guide-projects.json'
@@ -255,15 +256,26 @@ function ensureCriticalCardsPresent(cards: KBCard[]): KBCard[] {
     map.set(card.id, card)
   }
 
+  const hasRenderableSteps = (card: KBCard): boolean => {
+    const rawCa = card.guideId
+      ? loadGuideContent(card.guideId, 'ca')
+      : (card.answer?.ca ?? card.answer?.es ?? '')
+    const rawEs = card.guideId
+      ? loadGuideContent(card.guideId, 'es')
+      : (card.answer?.es ?? card.answer?.ca ?? '')
+
+    return extractOperationalSteps(rawCa).length > 0 || extractOperationalSteps(rawEs).length > 0
+  }
+
   const isUsableCriticalCard = (card: KBCard): boolean => {
     const hasGuide = Boolean(card.guideId && String(card.guideId).trim())
     const hasAnswer = Boolean(card.answer?.ca || card.answer?.es)
 
     if (card.id.startsWith('guide-')) {
-      return hasGuide && !hasAnswer
+      return hasGuide && !hasAnswer && hasRenderableSteps(card)
     }
 
-    return hasGuide || hasAnswer
+    return (hasGuide || hasAnswer) && hasRenderableSteps(card)
   }
 
   for (const bundled of CRITICAL_BUNDLED_CARDS) {

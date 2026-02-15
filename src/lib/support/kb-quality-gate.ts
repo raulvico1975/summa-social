@@ -1,9 +1,10 @@
 import expectedCaRaw from '../../../docs/kb/_eval/expected.json'
 import expectedEsRaw from '../../../docs/kb/_eval/expected-es.json'
-import type { KBCard } from './load-kb'
+import { loadGuideContent, type KBCard } from './load-kb'
 import { validateKbCards } from './validate-kb-cards'
 import { retrieveCard } from './bot-retrieval'
 import { evaluateGoldenSet, GOLDEN_SET_MIN_CRITICAL_TOP1 } from './eval/golden-set'
+import { extractOperationalSteps } from './engine/policy'
 
 type ExpectedRow = {
   q: string
@@ -83,6 +84,32 @@ function evaluateRequiredCriticalQueries(cards: KBCard[]): string[] {
       errors.push(
         `[critical][${check.lang}] "${check.q}" -> retrieval error: ${(error as Error)?.message || String(error)}`
       )
+    }
+  }
+
+  return errors
+}
+
+function hasRenderableOperationalSteps(card: KBCard): boolean {
+  const rawCa = card.guideId
+    ? loadGuideContent(card.guideId, 'ca')
+    : (card.answer?.ca ?? card.answer?.es ?? '')
+  const rawEs = card.guideId
+    ? loadGuideContent(card.guideId, 'es')
+    : (card.answer?.es ?? card.answer?.ca ?? '')
+
+  return extractOperationalSteps(rawCa).length > 0 || extractOperationalSteps(rawEs).length > 0
+}
+
+function evaluateCriticalOperationalCards(cards: KBCard[]): string[] {
+  const errors: string[] = []
+
+  for (const criticalId of REQUIRED_CRITICAL_CARD_IDS) {
+    const card = cards.find(c => c.id === criticalId)
+    if (!card) continue
+
+    if (!hasRenderableOperationalSteps(card)) {
+      errors.push(`Critical card has no renderable operational steps: ${criticalId}`)
     }
   }
 
@@ -188,6 +215,7 @@ export function runKbQualityGate(cards: KBCard[]): KbQualityGateResult {
 
   const criticalQueryErrors = evaluateRequiredCriticalQueries(cards)
   errors.push(...criticalQueryErrors)
+  errors.push(...evaluateCriticalOperationalCards(cards))
   const golden = evaluateGoldenSet(cards)
 
   if (golden.metrics.criticalTop1Accuracy < GOLDEN_SET_MIN_CRITICAL_TOP1) {
