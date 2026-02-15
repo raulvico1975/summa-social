@@ -32,6 +32,7 @@ HIGH_RISK_PATTERNS=(
 
 WORK_BRANCH=""
 LAST_FETCH_OK=true
+LAST_COMMIT_MESSAGE=""
 
 say() {
   printf '%s\n' "$1"
@@ -247,11 +248,93 @@ run_checks() {
   bash "$SCRIPT_DIR/verify-ci.sh"
 }
 
+collect_staged_files() {
+  git diff --cached --name-only --diff-filter=ACMRT | awk 'NF'
+}
+
+all_files_match_patterns() {
+  local files="$1"
+  shift
+  local file pattern matched
+
+  while IFS= read -r file; do
+    [ -z "$file" ] && continue
+    matched=false
+    for pattern in "$@"; do
+      if printf '%s\n' "$file" | grep -Eq "$pattern"; then
+        matched=true
+        break
+      fi
+    done
+    if [ "$matched" = false ]; then
+      return 1
+    fi
+  done <<EOF
+$files
+EOF
+
+  return 0
+}
+
+infer_commit_message() {
+  local risk="$1"
+  local files file_count type scope summary
+  files="$(collect_staged_files)"
+  file_count=$(printf '%s\n' "$files" | awk 'NF' | wc -l | tr -d ' ')
+
+  if [ -n "${COMMIT_MESSAGE:-}" ]; then
+    printf '%s' "$COMMIT_MESSAGE"
+    return
+  fi
+
+  if [ -z "$files" ]; then
+    printf '%s' "chore(app): actualitza canvis pendents [risc $risk]"
+    return
+  fi
+
+  if all_files_match_patterns "$files" '^docs/' '\.md$' '\.txt$'; then
+    type="docs"
+    scope="docs"
+    summary="actualitza documentacio funcional"
+  elif all_files_match_patterns "$files" '^src/i18n/' '^public/' '^docs/' '\.md$' '\.txt$'; then
+    type="chore"
+    scope="i18n"
+    summary="actualitza textos i contingut public"
+  elif printf '%s\n' "$files" | grep -Eq '^src/app/api/'; then
+    type="feat"
+    scope="api"
+    summary="actualitza fluxos de dades i validacions"
+  elif printf '%s\n' "$files" | grep -Eq '^src/components/|^src/app/'; then
+    type="feat"
+    scope="ui"
+    summary="actualitza comportament visible de l aplicacio"
+  elif printf '%s\n' "$files" | grep -Eq '^src/lib/|^functions/'; then
+    type="feat"
+    scope="core"
+    summary="actualitza logica interna i robustesa"
+  elif printf '%s\n' "$files" | grep -Eq '^scripts/'; then
+    type="chore"
+    scope="ops"
+    summary="actualitza automatitzacions i guardrails"
+  elif printf '%s\n' "$files" | grep -Eq '^firestore.rules$|^storage.rules$'; then
+    type="chore"
+    scope="rules"
+    summary="actualitza regles de seguretat"
+  else
+    type="chore"
+    scope="app"
+    summary="actualitza funcionalitat del projecte"
+  fi
+
+  printf '%s' "$type($scope): $summary [$file_count fitxers, risc $risk]"
+}
+
 commit_changes() {
   local risk="$1"
-  local stamp
-  stamp=$(TZ="Europe/Madrid" date '+%Y-%m-%d %H:%M')
-  git commit -m "chore(workflow): acabat $stamp (risc $risk)"
+  local commit_message
+  commit_message="$(infer_commit_message "$risk")"
+  LAST_COMMIT_MESSAGE="$commit_message"
+  git commit -m "$commit_message"
 }
 
 push_branch() {
@@ -368,6 +451,9 @@ run_acabat() {
 
   final_status="$(compute_repo_status)"
   say "$final_status"
+  if [ "$final_status" = "$STATUS_READY" ]; then
+    say 'Ara pots dir autoritzo deploy per passar a producció.'
+  fi
 }
 
 run_publica() {

@@ -128,9 +128,16 @@ npm run publica   # publica main -> prod (deploy verificat)
 ### Sortida esperada cap al CEO
 
 - Quan Claude tanca desenvolupament, respon amb `Acabat` + resum de 3 línies en llenguatge no tècnic.
+- Després del resum, Claude afegeix sempre:
+  `Ara pots dir autoritzo deploy per passar a producció.`
 - Quan el CEO respon `Autoritzo deploy`, Claude executa publicació en silenci.
 - Si tot va bé, la resposta final és només: `Ja a producció.`
 - Si alguna verificació falla, no es publica i Claude explica el bloqueig en una frase clara.
+
+### Missatge de commit
+
+- El commit ha de tenir un nom representatiu del canvi.
+- Si el CEO no dicta un text concret, el sistema genera automàticament un missatge representatiu segons fitxers i impacte.
 
 ### Estat operatiu (frases obligatòries)
 
