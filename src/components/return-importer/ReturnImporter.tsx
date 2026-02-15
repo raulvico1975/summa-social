@@ -12,6 +12,13 @@ import {
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -393,19 +400,23 @@ export function ReturnImporter({
             {/* Configuració fila inicial */}
             <div className="space-y-2">
               <label className="text-sm font-medium">{t.returnImporter?.startRowLabel || "Fila inicial de dades:"}</label>
-              <select
-                value={startRow}
-                onChange={(e) => setStartRow(parseInt(e.target.value))}
-                className="w-full h-9 px-3 rounded-md border border-input bg-background text-sm"
+              <Select
+                value={String(startRow)}
+                onValueChange={(value) => setStartRow(parseInt(value, 10))}
               >
-                {Array.from({ length: Math.min(allRows.length, 20) }, (_, i) => (
-                  <option key={i} value={i}>
-                    {(t.returnImporter?.rowPreview || "Fila {n}: {preview}...")
-                      .replace('{n}', String(i + 1))
-                      .replace('{preview}', allRows[i]?.slice(0, 3).join(' | ').substring(0, 60) || '')}
-                  </option>
-                ))}
-              </select>
+                <SelectTrigger className="h-9">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {Array.from({ length: Math.min(allRows.length, 20) }, (_, i) => (
+                    <SelectItem key={i} value={String(i)}>
+                      {(t.returnImporter?.rowPreview || "Fila {n}: {preview}...")
+                        .replace('{n}', String(i + 1))
+                        .replace('{preview}', allRows[i]?.slice(0, 3).join(' | ').substring(0, 60) || '')}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
 
             {/* Mapejat de columnes */}
@@ -416,20 +427,24 @@ export function ReturnImporter({
                   <span className="w-3 h-3 rounded-full bg-green-500"></span>
                   {t.returnImporter?.ibanColumn || "Columna IBAN"} *
                 </label>
-                <select
-                  value={mapping.ibanColumn ?? ''}
-                  onChange={(e) => setMapping({ ...mapping, ibanColumn: e.target.value ? parseInt(e.target.value) : null })}
-                  className="w-full h-9 px-3 rounded-md border border-input bg-background text-sm"
+                <Select
+                  value={mapping.ibanColumn !== null ? String(mapping.ibanColumn) : 'none'}
+                  onValueChange={(value) => setMapping({ ...mapping, ibanColumn: value === 'none' ? null : parseInt(value, 10) })}
                 >
-                  <option value="">{t.returnImporter?.selectPlaceholder || "-- Selecciona --"}</option>
-                  {Array.from({ length: numColumns }, (_, i) => (
-                    <option key={i} value={i}>
-                      {(t.returnImporter?.columnPreview || "Col {n}: {preview}")
-                        .replace('{n}', String(i + 1))
-                        .replace('{preview}', previewRows[0]?.[i]?.substring(0, 25) || '-')}
-                    </option>
-                  ))}
-                </select>
+                  <SelectTrigger className="h-9">
+                    <SelectValue placeholder={t.returnImporter?.selectPlaceholder || "-- Selecciona --"} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">{t.returnImporter?.selectPlaceholder || "-- Selecciona --"}</SelectItem>
+                    {Array.from({ length: numColumns }, (_, i) => (
+                      <SelectItem key={i} value={String(i)}>
+                        {(t.returnImporter?.columnPreview || "Col {n}: {preview}")
+                          .replace('{n}', String(i + 1))
+                          .replace('{preview}', previewRows[0]?.[i]?.substring(0, 25) || '-')}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
 
               {/* Import */}
@@ -438,20 +453,24 @@ export function ReturnImporter({
                   <span className="w-3 h-3 rounded-full bg-blue-500"></span>
                   {t.returnImporter?.amountColumn || "Columna Import"} *
                 </label>
-                <select
-                  value={mapping.amountColumn ?? ''}
-                  onChange={(e) => setMapping({ ...mapping, amountColumn: e.target.value ? parseInt(e.target.value) : null })}
-                  className="w-full h-9 px-3 rounded-md border border-input bg-background text-sm"
+                <Select
+                  value={mapping.amountColumn !== null ? String(mapping.amountColumn) : 'none'}
+                  onValueChange={(value) => setMapping({ ...mapping, amountColumn: value === 'none' ? null : parseInt(value, 10) })}
                 >
-                  <option value="">{t.returnImporter?.selectPlaceholder || "-- Selecciona --"}</option>
-                  {Array.from({ length: numColumns }, (_, i) => (
-                    <option key={i} value={i}>
-                      {(t.returnImporter?.columnPreview || "Col {n}: {preview}")
-                        .replace('{n}', String(i + 1))
-                        .replace('{preview}', previewRows[0]?.[i]?.substring(0, 25) || '-')}
-                    </option>
-                  ))}
-                </select>
+                  <SelectTrigger className="h-9">
+                    <SelectValue placeholder={t.returnImporter?.selectPlaceholder || "-- Selecciona --"} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">{t.returnImporter?.selectPlaceholder || "-- Selecciona --"}</SelectItem>
+                    {Array.from({ length: numColumns }, (_, i) => (
+                      <SelectItem key={i} value={String(i)}>
+                        {(t.returnImporter?.columnPreview || "Col {n}: {preview}")
+                          .replace('{n}', String(i + 1))
+                          .replace('{preview}', previewRows[0]?.[i]?.substring(0, 25) || '-')}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
 
               {/* Data */}
@@ -460,20 +479,24 @@ export function ReturnImporter({
                   <span className="w-3 h-3 rounded-full bg-purple-500"></span>
                   {t.returnImporter?.dateColumn || "Columna Data"} (opcional)
                 </label>
-                <select
-                  value={mapping.dateColumn ?? ''}
-                  onChange={(e) => setMapping({ ...mapping, dateColumn: e.target.value ? parseInt(e.target.value) : null })}
-                  className="w-full h-9 px-3 rounded-md border border-input bg-background text-sm"
+                <Select
+                  value={mapping.dateColumn !== null ? String(mapping.dateColumn) : 'none'}
+                  onValueChange={(value) => setMapping({ ...mapping, dateColumn: value === 'none' ? null : parseInt(value, 10) })}
                 >
-                  <option value="">{t.returnImporter?.notAvailable || "-- No disponible --"}</option>
-                  {Array.from({ length: numColumns }, (_, i) => (
-                    <option key={i} value={i}>
-                      {(t.returnImporter?.columnPreview || "Col {n}: {preview}")
-                        .replace('{n}', String(i + 1))
-                        .replace('{preview}', previewRows[0]?.[i]?.substring(0, 25) || '-')}
-                    </option>
-                  ))}
-                </select>
+                  <SelectTrigger className="h-9">
+                    <SelectValue placeholder={t.returnImporter?.notAvailable || "-- No disponible --"} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">{t.returnImporter?.notAvailable || "-- No disponible --"}</SelectItem>
+                    {Array.from({ length: numColumns }, (_, i) => (
+                      <SelectItem key={i} value={String(i)}>
+                        {(t.returnImporter?.columnPreview || "Col {n}: {preview}")
+                          .replace('{n}', String(i + 1))
+                          .replace('{preview}', previewRows[0]?.[i]?.substring(0, 25) || '-')}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
 
               {/* DNI */}
@@ -482,20 +505,24 @@ export function ReturnImporter({
                   <span className="w-3 h-3 rounded-full bg-gray-400"></span>
                   {t.returnImporter?.dniColumn || "Columna DNI"} (opcional)
                 </label>
-                <select
-                  value={mapping.dniColumn ?? ''}
-                  onChange={(e) => setMapping({ ...mapping, dniColumn: e.target.value ? parseInt(e.target.value) : null })}
-                  className="w-full h-9 px-3 rounded-md border border-input bg-background text-sm"
+                <Select
+                  value={mapping.dniColumn !== null ? String(mapping.dniColumn) : 'none'}
+                  onValueChange={(value) => setMapping({ ...mapping, dniColumn: value === 'none' ? null : parseInt(value, 10) })}
                 >
-                  <option value="">{t.returnImporter?.notAvailable || "-- No disponible --"}</option>
-                  {Array.from({ length: numColumns }, (_, i) => (
-                    <option key={i} value={i}>
-                      {(t.returnImporter?.columnPreview || "Col {n}: {preview}")
-                        .replace('{n}', String(i + 1))
-                        .replace('{preview}', previewRows[0]?.[i]?.substring(0, 25) || '-')}
-                    </option>
-                  ))}
-                </select>
+                  <SelectTrigger className="h-9">
+                    <SelectValue placeholder={t.returnImporter?.notAvailable || "-- No disponible --"} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">{t.returnImporter?.notAvailable || "-- No disponible --"}</SelectItem>
+                    {Array.from({ length: numColumns }, (_, i) => (
+                      <SelectItem key={i} value={String(i)}>
+                        {(t.returnImporter?.columnPreview || "Col {n}: {preview}")
+                          .replace('{n}', String(i + 1))
+                          .replace('{preview}', previewRows[0]?.[i]?.substring(0, 25) || '-')}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
             </div>
 
