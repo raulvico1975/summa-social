@@ -16,7 +16,7 @@
 ### Navegació bàsica (4 checks)
 - [ ] **S4** Dashboard: `/dashboard` mostra cards de resum (saldo, moviments recents)
 - [ ] **S5** Moviments: `/dashboard/movimientos` carrega llista de transaccions
-- [ ] **S6** Donants: `/dashboard/donantes` carrega llista (o empty state)
+- [ ] **S6** Donants: `/dashboard/donants` carrega llista (o empty state)
 - [ ] **S7** Configuració: `/dashboard/configuracion` carrega sense error
 
 ### Funcionalitat core (4 checks)

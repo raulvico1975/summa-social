@@ -137,7 +137,7 @@ Historial de canvis del projecte, ordenat de més recent a més antic.
 ### SEPA pain.008 — Pre-selecció automàtica per periodicitat
 
 - **Pre-selecció automàtica** de donants al wizard SEPA basada en períodes naturals del calendari
-- Nou mòdul `src/lib/sepa/donor-collection-status.ts` amb `isDueForCollection()` que determina si un donant "toca cobrar" segons la seva periodicitat i `lastSepaRunDate`
+- Nou mòdul `src/lib/sepa/pain008/donor-collection-status.ts` amb `isDueForCollection()` que determina si un donant "toca cobrar" segons la seva periodicitat i `lastSepaRunDate`
 - Períodes naturals: mes, trimestre (Q1-Q4), semestre (H1-H2), any
 - Eliminat el concepte "overdue" (vençut) — simplificació: si no s'ha cobrat al període actual, es marca
 
@@ -180,7 +180,7 @@ Historial de canvis del projecte, ordenat de més recent a més antic.
 - `src/lib/api/admin-sdk.ts` (NOU)
 - `src/app/api/invitations/resolve/route.ts` (NOU)
 - `src/app/api/invitations/accept/route.ts` (NOU)
-- `src/lib/sepa/donor-collection-status.ts` (NOU)
+- `src/lib/sepa/pain008/donor-collection-status.ts` (NOU)
 - `src/lib/ui/safe-select-options.ts` (NOU)
 - `src/lib/donor-dynamics.ts` (redisseny)
 - `src/components/donor-manager.tsx` (dinàmica + periodicitat)

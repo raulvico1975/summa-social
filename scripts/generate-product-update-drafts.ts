@@ -4,7 +4,7 @@
  * Execució: npx tsx scripts/generate-product-update-drafts.ts
  *           npm run updates:drafts
  *
- * Output: ./product-updates-drafts.json (arrel repo)
+ * Output: ./docs/product-updates/product-updates-drafts.json
  *
  * Filtres:
  * - Només commits amb prefixos: feat:, fix:, perf:, refactor:
@@ -248,18 +248,14 @@ function main() {
     drafts,
   };
 
-  const outputPath = join(process.cwd(), 'product-updates-drafts.json');
-  writeFileSync(outputPath, JSON.stringify(output, null, 2), 'utf-8');
-  console.log(`\n✅ Fitxer generat: ${outputPath}`);
-
-  // També escriure a docs/product-updates/ si existeix o crear-lo
+  // Escriure a docs/product-updates/ (font única)
   const docsDir = join(process.cwd(), 'docs', 'product-updates');
   if (!existsSync(docsDir)) {
     mkdirSync(docsDir, { recursive: true });
   }
   const docsOutputPath = join(docsDir, 'product-updates-drafts.json');
   writeFileSync(docsOutputPath, JSON.stringify(output, null, 2), 'utf-8');
-  console.log(`✅ Còpia a docs: ${docsOutputPath}`);
+  console.log(`\n✅ Fitxer generat: ${docsOutputPath}`);
 
   // 6. Mostrar resum
   console.log('\n═══════════════════════════════════════════════════════════════');

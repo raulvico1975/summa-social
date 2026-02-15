@@ -77,7 +77,7 @@ Gestors, administradors i tresorers d'entitats sense ànim de lucre que necessit
 
 | Component | Tecnologia |
 |-----------|------------|
-| Frontend | Next.js 14 (App Router) |
+| Frontend | Next.js 15 (App Router) + React 18 |
 | Llenguatge | TypeScript |
 | UI | shadcn/ui + Tailwind CSS |
 | Base de dades | Firebase Firestore |

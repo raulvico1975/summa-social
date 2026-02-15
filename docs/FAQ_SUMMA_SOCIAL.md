@@ -2229,6 +2229,6 @@ Molta sort! 🍀
 
 ---
 
-**Summa Social v1.40** — Febrer 2026
+**Summa Social v1.42** — Febrer 2026
 
 *Si tens dubtes, contacta amb el suport de l'app.*

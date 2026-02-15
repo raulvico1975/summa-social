@@ -199,7 +199,7 @@ git push origin prod --force-with-lease
 
 ### 4.1. Documentar incident
 
-Crear/actualitzar `docs/INCIDENTS.md`:
+Crear/actualitzar `docs/DEPLOY-INCIDENTS.md`:
 
 ```markdown
 ## [Data] — [Títol breu incident]

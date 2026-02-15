@@ -37,7 +37,7 @@ No llegeixis tot. Consulta el que necessitis.
 
 | Capa | Tecnologia |
 |------|------------|
-| Frontend | Next.js 14 (App Router), React 18, TypeScript |
+| Frontend | Next.js 15 (App Router), React 18, TypeScript |
 | Estils | Tailwind CSS, shadcn/ui |
 | Backend | Firebase (Firestore, Auth, Storage, Functions) |
 | Hosting | Firebase Hosting / App Hosting |
@@ -149,6 +149,19 @@ Guia ràpida d'execució: [scripts/verify-fiscal.md](../scripts/verify-fiscal.md
 
 ### 4.3 Desplegament
 
+Flux guiat recomanat:
+
+```bash
+npm run inicia        # o: npm run implementa
+npm run estat         # et suggereix quan dir "Acabat" amb resum no tècnic
+npm run acabat
+npm run estat         # et suggereix quan dir "Autoritzo deploy" i què vol dir
+npm run publica
+```
+
+`inicia` i `implementa` són equivalents.
+`Inicia` i `Implementa` serveixen igual.
+
 ```bash
 npm run deploy
 ```
@@ -175,6 +188,16 @@ Això executa `scripts/deploy.sh`, un script que fa tot el ritual de deploy de f
 **Important (preguntes humanes):**
 - MAI preguntes tècniques (comandes, flags, branques, merge, logs).
 - Sempre en format impacte d'entitat: què pot veure malament i quina decisió de negoci cal prendre.
+
+**Guia obligatòria al CEO:**
+- Bloc `RESUM NO TÈCNIC` abans de recomanar `Acabat`.
+- Bloc `QUÈ VOL DIR AUTORITZO DEPLOY` abans de recomanar publicació.
+- Bloc `SEGÜENT PAS RECOMANAT` en cada estat del procés.
+- Text obligatori de `QUÈ VOL DIR AUTORITZO DEPLOY`:
+  - Dir `Autoritzo deploy` vol dir publicar els canvis preparats a producció.
+  - Es faran comprovacions automàtiques abans i després.
+  - Si alguna comprovació falla, no es publica.
+  - L'entitat podria notar canvis immediatament després de publicar.
 
 ---
 
@@ -222,9 +245,9 @@ src/
 |--------|-------|
 | `src/lib/data.ts` | Tots els tipus TypeScript del sistema |
 | `src/lib/normalize.ts` | Funcions de format (moneda, dates, NIF) |
-| `src/firebase/index.tsx` | Hooks Firebase (`useCollection`, `useDocument`) |
+| `src/firebase/index.ts` | Hooks Firebase (`useCollection`, `useDocument`) |
 | `src/hooks/organization-provider.tsx` | Context de l'organització actual |
-| `src/i18n/index.tsx` | Hook `useTranslations()` |
+| `src/i18n/index.ts` | Hook `useTranslations()` |
 
 ### Patrons que si es trenquen fan mal
 

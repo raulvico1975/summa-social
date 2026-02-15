@@ -7,6 +7,7 @@ if [ "$branch" = "prod" ]; then
 fi
 
 npm test
+npm run docs:check
 npm run i18n:validate-guides
 npm run i18n:validate-help
 npm run i18n:check
