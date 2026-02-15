@@ -251,12 +251,33 @@ async function classifyIntentCard(
 
 function ensureCriticalCardsPresent(cards: KBCard[]): KBCard[] {
   const map = new Map<string, KBCard>()
-  for (const bundled of CRITICAL_BUNDLED_CARDS) {
-    map.set(bundled.id, bundled)
-  }
   for (const card of cards) {
     map.set(card.id, card)
   }
+
+  const isUsableCriticalCard = (card: KBCard): boolean => {
+    const hasGuide = Boolean(card.guideId && String(card.guideId).trim())
+    const hasAnswer = Boolean(card.answer?.ca || card.answer?.es)
+
+    if (card.id.startsWith('guide-')) {
+      return hasGuide && !hasAnswer
+    }
+
+    return hasGuide || hasAnswer
+  }
+
+  for (const bundled of CRITICAL_BUNDLED_CARDS) {
+    const existing = map.get(bundled.id)
+    if (!existing || !isUsableCriticalCard(existing)) {
+      if (existing) {
+        console.warn('[bot] critical card invalid in runtime KB, using bundled fallback', {
+          cardId: bundled.id,
+        })
+      }
+      map.set(bundled.id, bundled)
+    }
+  }
+
   return Array.from(map.values())
 }
 

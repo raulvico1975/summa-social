@@ -33,6 +33,7 @@ export const GOLDEN_SET_MIN_CRITICAL_TOP1 = 0.98
 
 const CRITICAL_CASES: GoldenCase[] = [
   { lang: 'ca', question: 'com imputo una despesa a diversos projectes?', expectedCardId: 'guide-projects', critical: true },
+  { lang: 'ca', question: 'com imputo una despesa entre diferents projectes?', expectedCardId: 'guide-projects', critical: true },
   { lang: 'ca', question: 'com pujo una factura o rebut o nòmina?', expectedCardId: 'guide-attach-document', critical: true },
   { lang: 'ca', question: 'com puc saber les quotes que un soci ha pagat?', expectedCardId: 'manual-member-paid-quotas', critical: true },
   { lang: 'ca', question: 'com faig arribar el certificat de donatius a un soci?', expectedCardId: 'guide-donor-certificate', critical: true },

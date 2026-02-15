@@ -460,12 +460,11 @@ function hasToken(tokens: Set<string>, ...candidates: string[]): boolean {
 function detectDirectIntentMatch(tokens: string[]): DirectIntentMatch | null {
   const set = new Set(tokens)
 
-  // "Com imputo una despesa a diversos projectes?"
+  // "Com imputo una despesa a diferents projectes?"
   if (
     hasToken(set, 'imputar', 'repartir', 'distribuir') &&
     hasToken(set, 'despesa', 'gasto') &&
     hasToken(set, 'projecte', 'proyecto') &&
-    hasToken(set, 'diversos', 'varios', 'entre') &&
     !hasToken(set, 'llistat', 'falten', 'surten', 'filtre')
   ) {
     return { cardId: 'guide-projects', minScore: 600 }
