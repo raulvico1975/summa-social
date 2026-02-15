@@ -1,6 +1,6 @@
 # Política de Privacitat — Summa Social
 
-**Última actualització**: Desembre 2025
+**Última actualització**: 15 Febrer 2026
 **Contacte de privacitat**: privacy@summasocial.app
 
 ---

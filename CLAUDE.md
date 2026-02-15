@@ -190,6 +190,19 @@ Aquesta ordre prepara el desenvolupament:
 
 Quan Raül escriu literalment:
 
+> "Implementa"
+
+Claude Code executa:
+
+```bash
+npm run implementa
+```
+
+`Implementa` és equivalent a `Inicia`.
+`Inicia` i `Implementa` serveixen igual.
+
+Quan Raül escriu literalment:
+
 > "Acabat"
 
 Claude Code executa:
@@ -205,9 +218,9 @@ Això llança `scripts/workflow.sh acabat`, que:
 
 Després de completar aquesta fase, Claude:
 - escriu literalment `Acabat`
-- entrega un resum en 3 línies en llenguatge no tècnic (què s'ha fet, implicació, impacte usuari/seguretat/rendiment/solidesa)
-- acaba sempre amb aquesta frase de següent pas:
-  `Ara pots dir autoritzo deploy per passar a producció.`
+- mostra bloc `RESUM NO TÈCNIC` (què s'ha fet, implicació, què pot notar l'entitat)
+- mostra bloc `SEGÜENT PAS RECOMANAT`
+- si queda `Preparat per producció`, mostra també bloc `QUÈ VOL DIR AUTORITZO DEPLOY`
 
 Quan Raül escriu literalment:
 
@@ -236,6 +249,18 @@ Si el deploy passa sense errors, Claude respon només:
 `Ja a producció.`
 
 Si hi ha bloqueig, Claude explica en llenguatge no tècnic què ha fallat i quin és el següent pas.
+
+### Guia del procés (obligatòria)
+
+- El sistema ha de guiar sempre el següent pas en llenguatge no tècnic.
+- Amb canvis locals: mostrar `RESUM NO TÈCNIC` + `SEGÜENT PAS RECOMANAT` per indicar quan dir `Acabat`.
+- Després d'`acabat` amb estat `Preparat per producció`: mostrar `QUÈ VOL DIR AUTORITZO DEPLOY` + `SEGÜENT PAS RECOMANAT`.
+- Text obligatori del bloc `QUÈ VOL DIR AUTORITZO DEPLOY`:
+  - Dir `Autoritzo deploy` vol dir publicar els canvis preparats a producció.
+  - Es faran comprovacions automàtiques abans i després.
+  - Si alguna comprovació falla, no es publica.
+  - L'entitat podria notar canvis immediatament després de publicar.
+- Si no es pot fer un resum clar, no recomanar `Acabat` i indicar que cal concretar millor l'impacte.
 
 ### Missatge de commit (obligatori)
 
