@@ -177,8 +177,10 @@ Això executa `scripts/deploy.sh`, un script que fa tot el ritual de deploy de f
 6. Si el risc és BAIX/MITJÀ: continua automàticament
 7. Si el risc és ALT residual: pot demanar **decisió de negoci** (mai tècnica)
 8. Fa el merge i push (main→prod)
-9. Fa post-check automàtic (SHA remot + smoke opcional per URL)
+9. Fa post-check automàtic (SHA remot + smoke amb URL auto-resolta)
 10. Registra el deploy a `docs/DEPLOY-LOG.md` (inclou decisió humana si n'hi ha)
+
+Per defecte, si no es defineixen URLs de comprovació, el sistema intenta deduir-les automàticament a partir de `DEPLOY_BASE_URL` o de la URL publicada detectada a `firebase.json`.
 
 **Si falla:**
 - Conflicte de merge → el script aborta i torna a `main`. Resol el conflicte manualment.

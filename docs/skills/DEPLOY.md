@@ -22,7 +22,7 @@ Això executa `scripts/deploy.sh`, un script determinista que fa tot el ritual:
 4. Verificacions locals (verify-local.sh + verify-ci.sh)
 5. Confirmació final
 6. Merge main→prod + push
-7. Post-deploy check bloquejant (SHA + smoke test)
+7. Post-deploy check automàtic (SHA + smoke test amb URL auto-resolta)
 8. Registre a `docs/DEPLOY-LOG.md`
 
 El script gestiona conflictes de merge, verificacions fallides i abort net.

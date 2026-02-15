@@ -30,6 +30,13 @@ BACKUP_EXPORT_PATH=""
 DEPLOY_BLOCK_REASON=""
 CURRENT_PHASE="Inicialitzacio"
 INCIDENT_RECORDED=false
+POSTDEPLOY_URLS_READY=false
+RESOLVED_DEPLOY_BASE_URL=""
+RESOLVED_SMOKE_PUBLIC_URL=""
+RESOLVED_SMOKE_DASHBOARD_URL=""
+RESOLVED_CHECK_LOGIN_URL=""
+RESOLVED_CHECK_CORE_URL=""
+RESOLVED_CHECK_REPORT_URL=""
 
 append_incident_log() {
   if [ "$INCIDENT_RECORDED" = true ]; then
@@ -75,6 +82,132 @@ on_script_exit() {
 }
 
 trap 'on_script_exit $?' EXIT
+
+normalize_url() {
+  local url="$1"
+  if [ -z "$url" ]; then
+    printf '%s' ""
+    return
+  fi
+  printf '%s' "$url" | sed 's#/*$##'
+}
+
+extract_base_url_from_full_url() {
+  local full_url="$1"
+  if [ -z "$full_url" ]; then
+    printf '%s' ""
+    return
+  fi
+  printf '%s' "$full_url" | sed -E 's#(https?://[^/]+).*#\1#'
+}
+
+read_base_url_from_firebase_json() {
+  local config_path="$PROJECT_DIR/firebase.json"
+  if [ ! -f "$config_path" ]; then
+    printf '%s' ""
+    return
+  fi
+
+  if ! command -v node >/dev/null 2>&1; then
+    printf '%s' ""
+    return
+  fi
+
+  node -e '
+    const fs = require("fs");
+    const path = process.argv[1];
+    if (!fs.existsSync(path)) process.exit(0);
+    try {
+      const json = JSON.parse(fs.readFileSync(path, "utf8"));
+      const hosting = json && json.hosting;
+      const redirects = hosting && Array.isArray(hosting.redirects) ? hosting.redirects : [];
+      const rootRedirect = redirects.find(
+        (r) => r && r.source === "/" && typeof r.destination === "string" && /^https?:\/\//.test(r.destination)
+      );
+      if (rootRedirect) process.stdout.write(rootRedirect.destination);
+    } catch (_) {}
+  ' "$config_path" 2>/dev/null || true
+}
+
+read_auth_domain_from_apphosting() {
+  local cfg="$PROJECT_DIR/apphosting.yaml"
+  if [ ! -f "$cfg" ]; then
+    printf '%s' ""
+    return
+  fi
+
+  awk '
+    $0 ~ /variable:[[:space:]]*NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN/ { seen=1; next }
+    seen==1 && $0 ~ /value:/ {
+      gsub(/"/, "", $2)
+      print $2
+      exit
+    }
+  ' "$cfg"
+}
+
+resolve_postdeploy_urls() {
+  if [ "$POSTDEPLOY_URLS_READY" = true ]; then
+    return
+  fi
+
+  local base_url=""
+
+  if [ -n "${DEPLOY_BASE_URL:-}" ]; then
+    base_url=$(normalize_url "$DEPLOY_BASE_URL")
+  fi
+
+  if [ -z "$base_url" ] && [ -n "${DEPLOY_SMOKE_PUBLIC_URL:-}" ]; then
+    base_url=$(normalize_url "$(extract_base_url_from_full_url "$DEPLOY_SMOKE_PUBLIC_URL")")
+  fi
+
+  if [ -z "$base_url" ]; then
+    base_url=$(normalize_url "$(read_base_url_from_firebase_json)")
+  fi
+
+  if [ -z "$base_url" ] && [ -n "${NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN:-}" ]; then
+    base_url=$(normalize_url "https://${NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN}")
+  fi
+
+  if [ -z "$base_url" ]; then
+    local auth_domain
+    auth_domain=$(read_auth_domain_from_apphosting)
+    if [ -n "$auth_domain" ]; then
+      base_url=$(normalize_url "https://${auth_domain}")
+    fi
+  fi
+
+  RESOLVED_DEPLOY_BASE_URL="$base_url"
+
+  RESOLVED_SMOKE_PUBLIC_URL="${DEPLOY_SMOKE_PUBLIC_URL:-}"
+  RESOLVED_SMOKE_DASHBOARD_URL="${DEPLOY_SMOKE_DASHBOARD_URL:-}"
+
+  if [ -z "$RESOLVED_SMOKE_PUBLIC_URL" ] && [ -n "$RESOLVED_DEPLOY_BASE_URL" ]; then
+    RESOLVED_SMOKE_PUBLIC_URL="${RESOLVED_DEPLOY_BASE_URL}/public/ca"
+  fi
+
+  if [ -z "$RESOLVED_SMOKE_DASHBOARD_URL" ] && [ -n "$RESOLVED_DEPLOY_BASE_URL" ]; then
+    RESOLVED_SMOKE_DASHBOARD_URL="${RESOLVED_DEPLOY_BASE_URL}/login"
+  fi
+
+  RESOLVED_CHECK_LOGIN_URL="${DEPLOY_CHECK_LOGIN_URL:-$RESOLVED_SMOKE_DASHBOARD_URL}"
+  RESOLVED_CHECK_CORE_URL="${DEPLOY_CHECK_CORE_URL:-}"
+  RESOLVED_CHECK_REPORT_URL="${DEPLOY_CHECK_REPORT_URL:-}"
+
+  if [ -z "$RESOLVED_CHECK_CORE_URL" ] && [ -n "$RESOLVED_DEPLOY_BASE_URL" ]; then
+    RESOLVED_CHECK_CORE_URL="${RESOLVED_DEPLOY_BASE_URL}/redirect-to-org"
+  elif [ -z "$RESOLVED_CHECK_CORE_URL" ]; then
+    RESOLVED_CHECK_CORE_URL="$RESOLVED_SMOKE_DASHBOARD_URL"
+  fi
+
+  if [ -z "$RESOLVED_CHECK_REPORT_URL" ] && [ -n "$RESOLVED_DEPLOY_BASE_URL" ]; then
+    RESOLVED_CHECK_REPORT_URL="${RESOLVED_DEPLOY_BASE_URL}/public/ca/funcionalitats"
+  elif [ -z "$RESOLVED_CHECK_REPORT_URL" ]; then
+    RESOLVED_CHECK_REPORT_URL="$RESOLVED_SMOKE_PUBLIC_URL"
+  fi
+
+  POSTDEPLOY_URLS_READY=true
+}
 
 # Patrons area fiscal (gate bloquejant)
 FISCAL_PATTERNS=(
@@ -766,19 +899,24 @@ post_deploy_check() {
   fi
   echo ""
 
-  if [ -n "${DEPLOY_SMOKE_PUBLIC_URL:-}" ] && [ -n "${DEPLOY_SMOKE_DASHBOARD_URL:-}" ]; then
+  resolve_postdeploy_urls
+
+  if [ -n "$RESOLVED_SMOKE_PUBLIC_URL" ] && [ -n "$RESOLVED_SMOKE_DASHBOARD_URL" ]; then
     echo "  Executant smoke checks automatitzats..."
-    if ! curl -fsS --max-time 20 "$DEPLOY_SMOKE_PUBLIC_URL" >/dev/null; then
+    echo "    URL publica: $RESOLVED_SMOKE_PUBLIC_URL"
+    echo "    URL accés:   $RESOLVED_SMOKE_DASHBOARD_URL"
+    if ! curl -fsS --max-time 20 "$RESOLVED_SMOKE_PUBLIC_URL" >/dev/null; then
       DEPLOY_RESULT="PENDENT"
       echo "  Smoke públic no confirmat. Estat: PENDENT."
     fi
-    if ! curl -fsS --max-time 20 "$DEPLOY_SMOKE_DASHBOARD_URL" >/dev/null; then
+    if ! curl -fsS --max-time 20 "$RESOLVED_SMOKE_DASHBOARD_URL" >/dev/null; then
       DEPLOY_RESULT="PENDENT"
       echo "  Smoke dashboard no confirmat. Estat: PENDENT."
     fi
   else
     DEPLOY_RESULT="PENDENT"
-    echo "  Smoke automàtic no configurat (DEPLOY_SMOKE_PUBLIC_URL / DEPLOY_SMOKE_DASHBOARD_URL)."
+    echo "  Smoke automàtic no disponible: no s'han pogut deduir URLs de comprovació."
+    echo "  Pots definir DEPLOY_BASE_URL o DEPLOY_SMOKE_PUBLIC_URL/DEPLOY_SMOKE_DASHBOARD_URL."
     echo "  Estat del deploy: PENDENT."
   fi
   echo ""
@@ -796,14 +934,17 @@ post_production_3min_check() {
   echo "[8b/9] Check post-produccio (3 minuts)..."
   echo ""
 
+  resolve_postdeploy_urls
+
   local login_url core_url report_url
-  login_url="${DEPLOY_CHECK_LOGIN_URL:-${DEPLOY_SMOKE_PUBLIC_URL:-}}"
-  core_url="${DEPLOY_CHECK_CORE_URL:-${DEPLOY_SMOKE_DASHBOARD_URL:-}}"
-  report_url="${DEPLOY_CHECK_REPORT_URL:-${DEPLOY_SMOKE_PUBLIC_URL:-}}"
+  login_url="$RESOLVED_CHECK_LOGIN_URL"
+  core_url="$RESOLVED_CHECK_CORE_URL"
+  report_url="$RESOLVED_CHECK_REPORT_URL"
 
   if [ -z "$login_url" ] || [ -z "$core_url" ] || [ -z "$report_url" ]; then
     DEPLOY_RESULT="PENDENT"
-    echo "  Check de 3 minuts no complet: cal configurar URLs de comprovacio."
+    echo "  Check de 3 minuts no complet: no s'han pogut deduir URLs de comprovació."
+    echo "  Pots definir DEPLOY_BASE_URL o DEPLOY_CHECK_LOGIN_URL / DEPLOY_CHECK_CORE_URL / DEPLOY_CHECK_REPORT_URL."
     echo ""
     return
   fi
