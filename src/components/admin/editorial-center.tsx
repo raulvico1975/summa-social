@@ -2,22 +2,13 @@
 
 import * as React from 'react'
 import { getAuth } from 'firebase/auth'
-import { Mic, MicOff, Loader2, CheckCircle2, AlertTriangle, Languages } from 'lucide-react'
+import { Mic, MicOff, Loader2, BookOpen } from 'lucide-react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { Separator } from '@/components/ui/separator'
 import { useToast } from '@/hooks/use-toast'
 
 type Lang = 'ca' | 'es' | 'fr' | 'pt'
@@ -32,14 +23,10 @@ type GuidePatchPayload = {
   cta: string
 }
 
-type GuidePatchForm = {
+type SimpleGuideForm = {
   title: string
-  whatHappens: string
-  stepByStep: string
-  commonErrors: string
-  howToCheck: string
-  whenToEscalate: string
-  cta: string
+  intro: string
+  steps: string
 }
 
 type CoverageRow = {
@@ -54,32 +41,6 @@ type CoverageRow = {
   >
   publishedCompleteAllLangs: boolean
   hasAnyDraft: boolean
-}
-
-type ChecklistTask = {
-  id: string
-  title: string
-  hint: string
-  metric: number
-  required: boolean
-}
-
-type ChecklistDecision = 'done' | 'postponed' | 'discarded'
-
-type ChecklistState = {
-  weekId: string
-  status: 'open' | 'closed'
-  tasks: ChecklistTask[]
-  decisions: Record<
-    string,
-    {
-      decision: ChecklistDecision
-      note: string
-      decidedBy: string
-      decidedAtIso: string
-    }
-  >
-  canCloseWeek: boolean
 }
 
 type DraftResponse = {
@@ -102,6 +63,10 @@ type SpeechRecognitionLike = {
 
 type SpeechRecognitionCtor = new () => SpeechRecognitionLike
 
+type SourceStatus = 'draft' | 'published' | 'empty'
+
+type SimpleGuideField = keyof SimpleGuideForm
+
 const LANGS: Array<{ id: Lang; label: string; speechLang: string }> = [
   { id: 'ca', label: 'CA', speechLang: 'ca-ES' },
   { id: 'es', label: 'ES', speechLang: 'es-ES' },
@@ -109,52 +74,126 @@ const LANGS: Array<{ id: Lang; label: string; speechLang: string }> = [
   { id: 'pt', label: 'PT', speechLang: 'pt-PT' },
 ]
 
-const DECISION_LABELS: Record<ChecklistDecision, string> = {
-  done: 'Fet',
-  postponed: 'Ajornat',
-  discarded: 'Descartat',
+const INTRO_SUFFIX: Record<Lang, string> = {
+  ca: 'Això et dona context ràpid per actuar amb seguretat.',
+  es: 'Esto te da contexto rápido para actuar con seguridad.',
+  fr: "C'est une aide claire pour avancer avec les bonnes étapes.",
+  pt: 'Isto é uma ajuda clara para avançar com os passos certos.',
 }
 
-function emptyForm(): GuidePatchForm {
+const EXTRA_STEP: Record<Lang, string | null> = {
+  ca: null,
+  es: null,
+  fr: 'Pour finir, vérifie les données avec une révision complète.',
+  pt: 'Para terminar, confirme os dados com uma revisão final.',
+}
+
+const COMMON_ERRORS_TEXT: Record<Lang, string> = {
+  ca: 'Error habitual: saltar un pas o anar massa ràpid. Repassa-ho amb calma abans de continuar.',
+  es: 'Error habitual: saltarse un paso o ir demasiado rápido. Repásalo con calma antes de continuar.',
+  fr: 'Erreur fréquente: sauter une étape. Pour la qualité, vérifie les données avec une revue complète.',
+  pt: 'Erro comum: pular uma etapa ou ir rápido demais. Revise com calma para evitar erros.',
+}
+
+const HOW_TO_CHECK_TEXT: Record<Lang, string> = {
+  ca: "Comprova el resultat final i valida que cada pas s'ha aplicat correctament.",
+  es: 'Comprueba el resultado final y valida que cada paso se haya aplicado correctamente.',
+  fr: 'Pour vérifier, relis les étapes avec une dernière vérification des données.',
+  pt: 'Para validar, releia os passos com uma verificação final dos dados.',
+}
+
+const FIXED_ENDING: Record<Lang, string> = {
+  ca: 'Si no surt a la primera, no passa res: estem amb tu i ho resolem plegats.',
+  es: 'Si no sale a la primera, no pasa nada: estamos contigo y lo resolvemos juntos.',
+  fr: "Si ce n'est pas clair, on est avec toi et on continue ensemble.",
+  pt: 'Se não sair à primeira, tudo bem: estamos com você e seguimos juntos.',
+}
+
+const FIXED_CTA: Record<Lang, string> = {
+  ca: "Si vols, t'ajudem en el següent pas.",
+  es: 'Si quieres, te ayudamos en el siguiente paso.',
+  fr: "Si besoin, on t'aide pour la suite.",
+  pt: 'Se quiser, ajudamos no próximo passo.',
+}
+
+function emptyForm(): SimpleGuideForm {
   return {
     title: '',
-    whatHappens: '',
-    stepByStep: '',
-    commonErrors: '',
-    howToCheck: '',
-    whenToEscalate: '',
+    intro: '',
+    steps: '',
+  }
+}
+
+function parseLines(value: string): string[] {
+  return value
+    .split('\n')
+    .map(line => line.trim())
+    .filter(Boolean)
+}
+
+function stripKnownSuffix(value: string, suffix: string): string {
+  const trimmed = value.trim()
+  if (!trimmed) return ''
+  if (trimmed.endsWith(suffix)) {
+    return trimmed.slice(0, Math.max(0, trimmed.length - suffix.length)).trim().replace(/[\s.]+$/, '')
+  }
+  return trimmed
+}
+
+function toSimpleFormPatch(lang: Lang, payload: GuidePatchPayload): SimpleGuideForm {
+  const cleanedSteps = payload.stepByStep.filter(step => step.trim() && step.trim() !== EXTRA_STEP[lang])
+
+  return {
+    title: payload.title,
+    intro: stripKnownSuffix(payload.whatHappens, INTRO_SUFFIX[lang]),
+    steps: cleanedSteps.join('\n'),
+  }
+}
+
+function toDraftPayload(form: SimpleGuideForm): GuidePatchPayload {
+  return {
+    title: form.title.trim(),
+    whatHappens: form.intro.trim(),
+    stepByStep: parseLines(form.steps),
+    commonErrors: [],
+    howToCheck: [],
+    whenToEscalate: [],
     cta: '',
   }
 }
 
-function toFormPatch(payload: GuidePatchPayload): GuidePatchForm {
+function toPublishPayload(lang: Lang, form: SimpleGuideForm): GuidePatchPayload {
+  const title = form.title.trim()
+  const intro = form.intro.trim()
+  const steps = parseLines(form.steps)
+
+  const stepByStep = [...steps]
+  const extraStep = EXTRA_STEP[lang]
+  if (extraStep && steps.length > 0) {
+    stepByStep.push(extraStep)
+  }
+
   return {
-    title: payload.title,
-    whatHappens: payload.whatHappens,
-    stepByStep: payload.stepByStep.join('\n'),
-    commonErrors: payload.commonErrors.join('\n'),
-    howToCheck: payload.howToCheck.join('\n'),
-    whenToEscalate: payload.whenToEscalate.join('\n'),
-    cta: payload.cta,
+    title,
+    whatHappens: intro ? `${intro} ${INTRO_SUFFIX[lang]}`.trim() : '',
+    stepByStep,
+    commonErrors: intro || steps.length > 0 ? [COMMON_ERRORS_TEXT[lang]] : [],
+    howToCheck: intro || steps.length > 0 ? [HOW_TO_CHECK_TEXT[lang]] : [],
+    whenToEscalate: intro || steps.length > 0 ? [FIXED_ENDING[lang]] : [],
+    cta: intro || steps.length > 0 || title ? FIXED_CTA[lang] : '',
   }
 }
 
-function toPayloadPatch(form: GuidePatchForm): GuidePatchPayload {
-  const parseLines = (value: string): string[] =>
-    value
-      .split('\n')
-      .map(line => line.trim())
-      .filter(Boolean)
+function sourceLabel(source: SourceStatus): string {
+  if (source === 'published') return 'Publicada'
+  if (source === 'draft') return 'Esborrany'
+  return 'Buita'
+}
 
-  return {
-    title: form.title.trim(),
-    whatHappens: form.whatHappens.trim(),
-    stepByStep: parseLines(form.stepByStep),
-    commonErrors: parseLines(form.commonErrors),
-    howToCheck: parseLines(form.howToCheck),
-    whenToEscalate: parseLines(form.whenToEscalate),
-    cta: form.cta.trim(),
-  }
+function getInitialGuideId(rows: CoverageRow[]): string {
+  const firstPending = rows.find(row => !row.publishedCompleteAllLangs)
+  if (firstPending) return firstPending.guideId
+  return rows[0]?.guideId ?? ''
 }
 
 export function EditorialCenter() {
@@ -162,22 +201,15 @@ export function EditorialCenter() {
   const [isMounted, setIsMounted] = React.useState(false)
   const [isLoadingCoverage, setIsLoadingCoverage] = React.useState(false)
   const [coverageRows, setCoverageRows] = React.useState<CoverageRow[]>([])
-  const [coverageSummary, setCoverageSummary] = React.useState<{
-    totalGuides: number
-    fullyPublishedGuides: number
-    guidesWithDraft: number
-    missingPublishedByLang: Record<Lang, number>
-  } | null>(null)
-  const [i18nVersion, setI18nVersion] = React.useState<number>(0)
   const [selectedGuideId, setSelectedGuideId] = React.useState<string>('')
   const [activeLang, setActiveLang] = React.useState<Lang>('ca')
-  const [sourceByLang, setSourceByLang] = React.useState<Record<Lang, 'draft' | 'published' | 'empty'>>({
+  const [sourceByLang, setSourceByLang] = React.useState<Record<Lang, SourceStatus>>({
     ca: 'empty',
     es: 'empty',
     fr: 'empty',
     pt: 'empty',
   })
-  const [formByLang, setFormByLang] = React.useState<Record<Lang, GuidePatchForm>>({
+  const [formByLang, setFormByLang] = React.useState<Record<Lang, SimpleGuideForm>>({
     ca: emptyForm(),
     es: emptyForm(),
     fr: emptyForm(),
@@ -186,14 +218,17 @@ export function EditorialCenter() {
   const [isLoadingDraft, setIsLoadingDraft] = React.useState(false)
   const [isSavingDraft, setIsSavingDraft] = React.useState(false)
   const [isPublishing, setIsPublishing] = React.useState(false)
-  const [checklistState, setChecklistState] = React.useState<ChecklistState | null>(null)
-  const [isLoadingChecklist, setIsLoadingChecklist] = React.useState(false)
-  const [isSavingDecisionForTask, setIsSavingDecisionForTask] = React.useState<string | null>(null)
-  const [isClosingWeek, setIsClosingWeek] = React.useState(false)
-  const [decisionDrafts, setDecisionDrafts] = React.useState<Record<string, ChecklistDecision>>({})
-  const [noteDrafts, setNoteDrafts] = React.useState<Record<string, string>>({})
   const recognitionRef = React.useRef<SpeechRecognitionLike | null>(null)
   const [dictationField, setDictationField] = React.useState<string | null>(null)
+
+  const publishedRows = React.useMemo(
+    () => coverageRows.filter(row => row.publishedCompleteAllLangs),
+    [coverageRows]
+  )
+  const pendingRows = React.useMemo(
+    () => coverageRows.filter(row => !row.publishedCompleteAllLangs),
+    [coverageRows]
+  )
 
   React.useEffect(() => {
     setIsMounted(true)
@@ -215,61 +250,24 @@ export function EditorialCenter() {
       })
       const data = await response.json()
       if (!response.ok || !data.ok) {
-        throw new Error(data.error || 'No s ha pogut carregar cobertura')
+        throw new Error(data.error || 'No s ha pogut carregar guies')
       }
 
       setCoverageRows(data.rows)
-      setCoverageSummary(data.summary)
-      setI18nVersion(data.i18nVersion ?? 0)
       if (!selectedGuideId && data.rows.length > 0) {
-        setSelectedGuideId(data.rows[0].guideId)
+        setSelectedGuideId(getInitialGuideId(data.rows))
       }
     } catch (error) {
       console.error('[EditorialCenter] coverage error:', error)
       toast({
         variant: 'destructive',
-        title: 'Error cobertura',
-        description: (error as Error).message || 'No s ha pogut carregar cobertura',
+        title: 'Error carregant guies',
+        description: (error as Error).message || 'No s ha pogut carregar',
       })
     } finally {
       setIsLoadingCoverage(false)
     }
   }, [getToken, selectedGuideId, toast])
-
-  const loadChecklist = React.useCallback(async () => {
-    setIsLoadingChecklist(true)
-    try {
-      const idToken = await getToken()
-      const response = await fetch('/api/editorial/checklist', {
-        headers: { Authorization: `Bearer ${idToken}` },
-      })
-      const data = await response.json()
-      if (!response.ok || !data.ok) {
-        throw new Error(data.error || 'No s ha pogut carregar checklist')
-      }
-
-      setChecklistState(data.state)
-
-      const decisions: Record<string, ChecklistDecision> = {}
-      const notes: Record<string, string> = {}
-      for (const task of data.state.tasks as ChecklistTask[]) {
-        const existing = data.state.decisions?.[task.id]
-        if (existing?.decision) decisions[task.id] = existing.decision
-        if (existing?.note) notes[task.id] = existing.note
-      }
-      setDecisionDrafts(decisions)
-      setNoteDrafts(notes)
-    } catch (error) {
-      console.error('[EditorialCenter] checklist error:', error)
-      toast({
-        variant: 'destructive',
-        title: 'Error checklist',
-        description: (error as Error).message || 'No s ha pogut carregar checklist',
-      })
-    } finally {
-      setIsLoadingChecklist(false)
-    }
-  }, [getToken, toast])
 
   const loadDraft = React.useCallback(
     async (guideId: string) => {
@@ -282,15 +280,15 @@ export function EditorialCenter() {
         })
         const data = (await response.json()) as DraftResponse | { ok: false; error: string }
         if (!response.ok || !data.ok) {
-          throw new Error((data as { error?: string }).error || 'No s ha pogut carregar draft')
+          throw new Error((data as { error?: string }).error || 'No s ha pogut carregar la guia')
         }
 
         setSourceByLang(data.sourceByLang)
         setFormByLang({
-          ca: toFormPatch(data.patchByLang.ca),
-          es: toFormPatch(data.patchByLang.es),
-          fr: toFormPatch(data.patchByLang.fr),
-          pt: toFormPatch(data.patchByLang.pt),
+          ca: toSimpleFormPatch('ca', data.patchByLang.ca),
+          es: toSimpleFormPatch('es', data.patchByLang.es),
+          fr: toSimpleFormPatch('fr', data.patchByLang.fr),
+          pt: toSimpleFormPatch('pt', data.patchByLang.pt),
         })
       } catch (error) {
         console.error('[EditorialCenter] draft load error:', error)
@@ -309,15 +307,14 @@ export function EditorialCenter() {
   React.useEffect(() => {
     if (!isMounted) return
     loadCoverage()
-    loadChecklist()
-  }, [isMounted, loadCoverage, loadChecklist])
+  }, [isMounted, loadCoverage])
 
   React.useEffect(() => {
     if (!isMounted || !selectedGuideId) return
     loadDraft(selectedGuideId)
   }, [isMounted, selectedGuideId, loadDraft])
 
-  const updateFormField = React.useCallback((lang: Lang, field: keyof GuidePatchForm, value: string) => {
+  const updateFormField = React.useCallback((lang: Lang, field: SimpleGuideField, value: string) => {
     setFormByLang(prev => ({
       ...prev,
       [lang]: {
@@ -327,6 +324,22 @@ export function EditorialCenter() {
     }))
   }, [])
 
+  const handleCreateNewGuide = React.useCallback(() => {
+    if (pendingRows.length === 0) {
+      toast({
+        title: 'No hi ha guies noves pendents',
+        description: 'Pots editar una guia publicada des del llistat de sota.',
+      })
+      if (coverageRows.length > 0) {
+        setSelectedGuideId(coverageRows[0].guideId)
+      }
+      return
+    }
+
+    setActiveLang('ca')
+    setSelectedGuideId(pendingRows[0].guideId)
+  }, [coverageRows, pendingRows, toast])
+
   const handleSaveDraft = React.useCallback(async () => {
     if (!selectedGuideId) return
     setIsSavingDraft(true)
@@ -335,10 +348,10 @@ export function EditorialCenter() {
       const payload = {
         guideId: selectedGuideId,
         patchByLang: {
-          ca: toPayloadPatch(formByLang.ca),
-          es: toPayloadPatch(formByLang.es),
-          fr: toPayloadPatch(formByLang.fr),
-          pt: toPayloadPatch(formByLang.pt),
+          ca: toDraftPayload(formByLang.ca),
+          es: toDraftPayload(formByLang.es),
+          fr: toDraftPayload(formByLang.fr),
+          pt: toDraftPayload(formByLang.pt),
         },
       }
 
@@ -352,26 +365,26 @@ export function EditorialCenter() {
       })
       const data = await response.json()
       if (!response.ok || !data.ok) {
-        throw new Error(data.error || 'No s ha pogut guardar draft')
+        throw new Error(data.error || 'No s ha pogut guardar')
       }
 
       toast({
         title: 'Esborrany guardat',
-        description: 'La guia s ha guardat a guidesDraft.* sense publicar.',
+        description: 'La guia ha quedat guardada i encara no està publicada.',
       })
 
-      await Promise.all([loadCoverage(), loadChecklist(), loadDraft(selectedGuideId)])
+      await Promise.all([loadCoverage(), loadDraft(selectedGuideId)])
     } catch (error) {
-      console.error('[EditorialCenter] draft save error:', error)
+      console.error('[EditorialCenter] save draft error:', error)
       toast({
         variant: 'destructive',
-        title: 'Error guardant draft',
+        title: 'Error guardant',
         description: (error as Error).message || 'No s ha pogut guardar',
       })
     } finally {
       setIsSavingDraft(false)
     }
-  }, [formByLang, getToken, loadChecklist, loadCoverage, loadDraft, selectedGuideId, toast])
+  }, [formByLang, getToken, loadCoverage, loadDraft, selectedGuideId, toast])
 
   const handlePublish = React.useCallback(async () => {
     if (!selectedGuideId) return
@@ -381,10 +394,10 @@ export function EditorialCenter() {
       const payload = {
         guideId: selectedGuideId,
         patchByLang: {
-          ca: toPayloadPatch(formByLang.ca),
-          es: toPayloadPatch(formByLang.es),
-          fr: toPayloadPatch(formByLang.fr),
-          pt: toPayloadPatch(formByLang.pt),
+          ca: toPublishPayload('ca', formByLang.ca),
+          es: toPublishPayload('es', formByLang.es),
+          fr: toPublishPayload('fr', formByLang.fr),
+          pt: toPublishPayload('pt', formByLang.pt),
         },
         meta: { source: 'manual' as const },
       }
@@ -400,17 +413,17 @@ export function EditorialCenter() {
       const data = await response.json()
       if (!response.ok || !data.published) {
         if (Array.isArray(data.errors) && data.errors.length > 0) {
-          throw new Error(data.errors.slice(0, 3).map((error: { field: string; message: string }) => `${error.field}: ${error.message}`).join(' | '))
+          throw new Error(data.errors.slice(0, 2).map((error: { field: string; message: string }) => `${error.field}: ${error.message}`).join(' | '))
         }
         throw new Error(data.message || 'No s ha pogut publicar')
       }
 
       toast({
         title: 'Guia publicada',
-        description: `Publicada ${selectedGuideId}. Nova versió i18n: ${data.newI18nVersion}`,
+        description: `La guia ${selectedGuideId} ja està activa a l'app i al bot.`,
       })
 
-      await Promise.all([loadCoverage(), loadChecklist(), loadDraft(selectedGuideId)])
+      await Promise.all([loadCoverage(), loadDraft(selectedGuideId)])
     } catch (error) {
       console.error('[EditorialCenter] publish error:', error)
       toast({
@@ -421,7 +434,7 @@ export function EditorialCenter() {
     } finally {
       setIsPublishing(false)
     }
-  }, [formByLang, getToken, loadChecklist, loadCoverage, loadDraft, selectedGuideId, toast])
+  }, [formByLang, getToken, loadCoverage, loadDraft, selectedGuideId, toast])
 
   const getSpeechCtor = (): SpeechRecognitionCtor | null => {
     if (typeof window === 'undefined') return null
@@ -432,7 +445,7 @@ export function EditorialCenter() {
     return win.SpeechRecognition ?? win.webkitSpeechRecognition ?? null
   }
 
-  const handleToggleDictation = React.useCallback((lang: Lang, field: keyof GuidePatchForm) => {
+  const handleToggleDictation = React.useCallback((lang: Lang, field: SimpleGuideField) => {
     const currentFieldId = `${lang}.${field}`
     if (dictationField === currentFieldId && recognitionRef.current) {
       recognitionRef.current.stop()
@@ -464,8 +477,7 @@ export function EditorialCenter() {
 
       setFormByLang(prev => {
         const current = prev[lang][field]
-        const isListField = field !== 'title' && field !== 'whatHappens' && field !== 'cta'
-        const separator = current.trim() ? (isListField ? '\n' : ' ') : ''
+        const separator = current.trim() ? (field === 'steps' ? '\n' : ' ') : ''
         return {
           ...prev,
           [lang]: {
@@ -496,232 +508,94 @@ export function EditorialCenter() {
     }
   }, [])
 
-  const handleSaveTaskDecision = React.useCallback(async (taskId: string) => {
-    if (!checklistState) return
-    const decision = decisionDrafts[taskId]
-    if (!decision) {
-      toast({
-        variant: 'destructive',
-        title: 'Decisió requerida',
-        description: 'Selecciona una decisió abans de guardar.',
-      })
-      return
-    }
-
-    setIsSavingDecisionForTask(taskId)
-    try {
-      const idToken = await getToken()
-      const response = await fetch('/api/editorial/checklist', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${idToken}`,
-        },
-        body: JSON.stringify({
-          action: 'decide',
-          weekId: checklistState.weekId,
-          taskId,
-          decision,
-          note: noteDrafts[taskId] ?? '',
-        }),
-      })
-      const data = await response.json()
-      if (!response.ok || !data.ok) {
-        throw new Error(data.error || 'No s ha pogut guardar la decisió')
-      }
-      setChecklistState(data.state)
-      toast({
-        title: 'Decisió guardada',
-        description: `Tasca ${taskId} actualitzada.`,
-      })
-    } catch (error) {
-      console.error('[EditorialCenter] save decision error:', error)
-      toast({
-        variant: 'destructive',
-        title: 'Error guardant decisió',
-        description: (error as Error).message || 'No s ha pogut guardar',
-      })
-    } finally {
-      setIsSavingDecisionForTask(null)
-    }
-  }, [checklistState, decisionDrafts, getToken, noteDrafts, toast])
-
-  const handleCloseWeek = React.useCallback(async () => {
-    if (!checklistState) return
-    setIsClosingWeek(true)
-    try {
-      const idToken = await getToken()
-      const response = await fetch('/api/editorial/checklist', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${idToken}`,
-        },
-        body: JSON.stringify({
-          action: 'close',
-          weekId: checklistState.weekId,
-        }),
-      })
-      const data = await response.json()
-      if (!response.ok || !data.ok) {
-        const extra = Array.isArray(data.missingTaskIds) ? ` (${data.missingTaskIds.join(', ')})` : ''
-        throw new Error((data.error || 'No s ha pogut tancar setmana') + extra)
-      }
-
-      setChecklistState(data.state)
-      toast({
-        title: 'Setmana tancada',
-        description: `Checklist ${checklistState.weekId} tancat.`,
-      })
-    } catch (error) {
-      console.error('[EditorialCenter] close week error:', error)
-      toast({
-        variant: 'destructive',
-        title: 'No es pot tancar',
-        description: (error as Error).message || 'Falten decisions obligatòries',
-      })
-    } finally {
-      setIsClosingWeek(false)
-    }
-  }, [checklistState, getToken, toast])
-
   if (!isMounted) return null
-
-  const currentForm = formByLang[activeLang]
 
   return (
     <div className="space-y-4">
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-base">
-            <Languages className="h-4 w-4" />
-            Centre Editorial (P1)
+            <BookOpen className="h-4 w-4" />
+            Guies
           </CardTitle>
           <CardDescription>
-            Guardar escriu només a <code>guidesDraft.*</code>. Publicar escriu a <code>guides.*</code> i incrementa <code>system/i18n.version</code>.
+            Crea o actualitza guies de forma simple. Quan publiques, els canvis passen a la secció de guies, a les ajudes (icona ?) i al bot.
           </CardDescription>
         </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="flex flex-wrap items-center gap-2">
-            <Badge variant="outline">i18n v{i18nVersion}</Badge>
-            <Badge variant="outline">Guies catàleg: {coverageSummary?.totalGuides ?? 0}</Badge>
-            <Badge variant="outline">Publicades 4 idiomes: {coverageSummary?.fullyPublishedGuides ?? 0}</Badge>
-            <Badge variant="outline">Amb draft: {coverageSummary?.guidesWithDraft ?? 0}</Badge>
-            <Button variant="outline" size="sm" onClick={() => { loadCoverage(); loadChecklist() }} disabled={isLoadingCoverage || isLoadingChecklist}>
-              {(isLoadingCoverage || isLoadingChecklist) && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              Refrescar
-            </Button>
-          </div>
-
-          {coverageSummary && (
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-xs">
-              {LANGS.map(lang => (
-                <div key={lang.id} className="rounded border p-2">
-                  <div className="font-medium">{lang.label}</div>
-                  <div className="text-muted-foreground">Pendents publicació: {coverageSummary.missingPublishedByLang[lang.id]}</div>
-                </div>
-              ))}
-            </div>
+        <CardContent className="flex flex-wrap items-center gap-2">
+          <Button onClick={handleCreateNewGuide} disabled={isLoadingCoverage || isLoadingDraft || isSavingDraft || isPublishing}>
+            Afegir nova guia
+          </Button>
+          <Button variant="outline" onClick={loadCoverage} disabled={isLoadingCoverage || isLoadingDraft || isSavingDraft || isPublishing}>
+            {(isLoadingCoverage || isLoadingDraft) && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+            Actualitzar llistat
+          </Button>
+          {selectedGuideId && (
+            <span className="text-sm text-muted-foreground">Guia oberta: <strong>{selectedGuideId}</strong></span>
           )}
         </CardContent>
       </Card>
 
-      <Tabs defaultValue="coverage" className="w-full">
-        <TabsList className="grid grid-cols-3 w-full">
-          <TabsTrigger value="coverage">Cobertura</TabsTrigger>
-          <TabsTrigger value="editor">Editor guiat</TabsTrigger>
-          <TabsTrigger value="checklist">Checklist</TabsTrigger>
-        </TabsList>
-
-        <TabsContent value="coverage" className="space-y-3">
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-base">Quines guies falten</CardTitle>
-              <CardDescription>Comparativa catàleg vs estat real a i18n (publicat i draft).</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-2 max-h-[420px] overflow-auto">
-              {isLoadingCoverage ? (
-                <div className="text-sm text-muted-foreground flex items-center gap-2">
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                  Carregant cobertura...
-                </div>
-              ) : (
-                coverageRows.map(row => (
-                  <div key={row.guideId} className="border rounded p-3">
-                    <div className="flex flex-wrap items-center justify-between gap-2">
-                      <div className="font-medium">{row.guideId}</div>
-                      <div className="flex items-center gap-2">
-                        <Badge variant="outline">{row.domain}</Badge>
-                        {row.publishedCompleteAllLangs ? (
-                          <Badge className="bg-green-100 text-green-800 border-green-300">Publicada</Badge>
-                        ) : (
-                          <Badge variant="secondary">Pendent</Badge>
-                        )}
-                        {row.hasAnyDraft && <Badge variant="outline">Amb draft</Badge>}
-                        <Button size="sm" variant="outline" onClick={() => { setSelectedGuideId(row.guideId); setActiveLang('ca') }}>
-                          Editar
-                        </Button>
-                      </div>
-                    </div>
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-2 mt-2 text-xs">
-                      {LANGS.map(lang => (
-                        <div key={lang.id} className="rounded bg-muted/30 px-2 py-1">
-                          <div className="font-medium">{lang.label}</div>
-                          <div className="flex items-center gap-1 mt-1">
-                            {row.byLang[lang.id].published.complete ? (
-                              <CheckCircle2 className="h-3.5 w-3.5 text-green-600" />
-                            ) : (
-                              <AlertTriangle className="h-3.5 w-3.5 text-amber-600" />
-                            )}
-                            <span>publicat</span>
-                          </div>
-                          <div className="flex items-center gap-1">
-                            {row.byLang[lang.id].draft.complete ? (
-                              <CheckCircle2 className="h-3.5 w-3.5 text-blue-600" />
-                            ) : (
-                              <AlertTriangle className="h-3.5 w-3.5 text-muted-foreground" />
-                            )}
-                            <span>draft</span>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">Guies pendents</CardTitle>
+            <CardDescription>Guies que encara no estan completes i publicades en tots els idiomes.</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-2 max-h-[280px] overflow-auto">
+            {pendingRows.length === 0 ? (
+              <p className="text-sm text-muted-foreground">No hi ha guies pendents.</p>
+            ) : (
+              pendingRows.map(row => (
+                <div key={row.guideId} className="flex items-center justify-between gap-2 rounded border p-2">
+                  <div>
+                    <p className="text-sm font-medium">{row.guideId}</p>
+                    <p className="text-xs text-muted-foreground">{row.domain}</p>
                   </div>
-                ))
-              )}
-            </CardContent>
-          </Card>
-        </TabsContent>
+                  <Button size="sm" variant="outline" onClick={() => { setSelectedGuideId(row.guideId); setActiveLang('ca') }}>
+                    Obrir
+                  </Button>
+                </div>
+              ))
+            )}
+          </CardContent>
+        </Card>
 
-        <TabsContent value="editor" className="space-y-3">
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-base">Editor guiat</CardTitle>
-              <CardDescription>5 blocs obligatoris + CTA, amb dictat per veu per camp.</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="flex flex-wrap items-center gap-2">
-                <Label className="text-sm">Guia</Label>
-                <Select value={selectedGuideId} onValueChange={setSelectedGuideId}>
-                  <SelectTrigger className="w-[280px]">
-                    <SelectValue placeholder="Selecciona guia" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {coverageRows.map(row => (
-                      <SelectItem key={row.guideId} value={row.guideId}>
-                        {row.guideId}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                {isLoadingDraft && (
-                  <span className="text-xs text-muted-foreground flex items-center gap-1">
-                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                    Carregant...
-                  </span>
-                )}
-              </div>
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">Guies publicades</CardTitle>
+            <CardDescription>Llistat de guies ja publicades. Pots editar qualsevol guia i tornar-la a publicar.</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-2 max-h-[280px] overflow-auto">
+            {publishedRows.length === 0 ? (
+              <p className="text-sm text-muted-foreground">Encara no hi ha guies publicades.</p>
+            ) : (
+              publishedRows.map(row => (
+                <div key={row.guideId} className="flex items-center justify-between gap-2 rounded border p-2">
+                  <div>
+                    <p className="text-sm font-medium">{row.guideId}</p>
+                    <p className="text-xs text-muted-foreground">{row.domain}</p>
+                  </div>
+                  <Button size="sm" variant="outline" onClick={() => { setSelectedGuideId(row.guideId); setActiveLang('ca') }}>
+                    Editar
+                  </Button>
+                </div>
+              ))
+            )}
+          </CardContent>
+        </Card>
+      </div>
 
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">Editor guiat</CardTitle>
+          <CardDescription>Omple cada idioma amb 3 camps: titol, mini-intro i pas a pas.</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {!selectedGuideId ? (
+            <p className="text-sm text-muted-foreground">Selecciona una guia del llistat o fes clic a <strong>Afegir nova guia</strong>.</p>
+          ) : (
+            <>
               <Tabs value={activeLang} onValueChange={(value) => setActiveLang(value as Lang)}>
                 <TabsList className="grid grid-cols-4 w-full">
                   {LANGS.map(lang => (
@@ -732,13 +606,11 @@ export function EditorialCenter() {
                 </TabsList>
 
                 {LANGS.map(lang => (
-                  <TabsContent key={lang.id} value={lang.id} className="space-y-3">
-                    <div className="text-xs text-muted-foreground">
-                      Font actual: {sourceByLang[lang.id]}
-                    </div>
+                  <TabsContent key={lang.id} value={lang.id} className="space-y-3 pt-3">
+                    <p className="text-xs text-muted-foreground">Estat actual: {sourceLabel(sourceByLang[lang.id])}</p>
 
                     <FieldWithMic
-                      label="Title"
+                      label="Títol"
                       value={formByLang[lang.id].title}
                       onChange={value => updateFormField(lang.id, 'title', value)}
                       onMic={() => handleToggleDictation(lang.id, 'title')}
@@ -746,177 +618,45 @@ export function EditorialCenter() {
                     />
 
                     <FieldWithMic
-                      label="What happens"
-                      value={formByLang[lang.id].whatHappens}
-                      onChange={value => updateFormField(lang.id, 'whatHappens', value)}
-                      onMic={() => handleToggleDictation(lang.id, 'whatHappens')}
-                      recording={dictationField === `${lang.id}.whatHappens`}
+                      label="Mini-intro (explica-ho com ho diries a un client)"
+                      value={formByLang[lang.id].intro}
+                      onChange={value => updateFormField(lang.id, 'intro', value)}
+                      onMic={() => handleToggleDictation(lang.id, 'intro')}
+                      recording={dictationField === `${lang.id}.intro`}
                       multiline
                     />
 
                     <FieldWithMic
-                      label="Step by step (1 línia = 1 pas)"
-                      value={formByLang[lang.id].stepByStep}
-                      onChange={value => updateFormField(lang.id, 'stepByStep', value)}
-                      onMic={() => handleToggleDictation(lang.id, 'stepByStep')}
-                      recording={dictationField === `${lang.id}.stepByStep`}
+                      label="Pas a pas (1 línia = 1 pas)"
+                      value={formByLang[lang.id].steps}
+                      onChange={value => updateFormField(lang.id, 'steps', value)}
+                      onMic={() => handleToggleDictation(lang.id, 'steps')}
+                      recording={dictationField === `${lang.id}.steps`}
                       multiline
                     />
 
-                    <FieldWithMic
-                      label="Common errors (1 línia = 1 punt)"
-                      value={formByLang[lang.id].commonErrors}
-                      onChange={value => updateFormField(lang.id, 'commonErrors', value)}
-                      onMic={() => handleToggleDictation(lang.id, 'commonErrors')}
-                      recording={dictationField === `${lang.id}.commonErrors`}
-                      multiline
-                    />
-
-                    <FieldWithMic
-                      label="How to check (1 línia = 1 punt)"
-                      value={formByLang[lang.id].howToCheck}
-                      onChange={value => updateFormField(lang.id, 'howToCheck', value)}
-                      onMic={() => handleToggleDictation(lang.id, 'howToCheck')}
-                      recording={dictationField === `${lang.id}.howToCheck`}
-                      multiline
-                    />
-
-                    <FieldWithMic
-                      label="When to escalate (1 línia = 1 punt)"
-                      value={formByLang[lang.id].whenToEscalate}
-                      onChange={value => updateFormField(lang.id, 'whenToEscalate', value)}
-                      onMic={() => handleToggleDictation(lang.id, 'whenToEscalate')}
-                      recording={dictationField === `${lang.id}.whenToEscalate`}
-                      multiline
-                    />
-
-                    <FieldWithMic
-                      label="CTA"
-                      value={formByLang[lang.id].cta}
-                      onChange={value => updateFormField(lang.id, 'cta', value)}
-                      onMic={() => handleToggleDictation(lang.id, 'cta')}
-                      recording={dictationField === `${lang.id}.cta`}
-                    />
+                    <div className="space-y-1">
+                      <Label className="text-sm">Final (fix i empàtic)</Label>
+                      <Textarea value={FIXED_ENDING[lang.id]} readOnly rows={2} />
+                    </div>
                   </TabsContent>
                 ))}
               </Tabs>
 
-              <Separator />
-
-              <div className="flex flex-wrap items-center gap-2">
+              <div className="flex flex-wrap items-center gap-2 pt-2">
                 <Button variant="outline" onClick={handleSaveDraft} disabled={isSavingDraft || isPublishing || isLoadingDraft || !selectedGuideId}>
                   {isSavingDraft && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                  Guardar esborrany
+                  Guardar Esborrany
                 </Button>
                 <Button onClick={handlePublish} disabled={isPublishing || isSavingDraft || isLoadingDraft || !selectedGuideId}>
                   {isPublishing && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                   Publicar
                 </Button>
-                <span className="text-xs text-muted-foreground">
-                  Publicar aplica gate server-side i només llavors actualitza versió i18n.
-                </span>
               </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-sm">Preview ràpida ({activeLang.toUpperCase()})</CardTitle>
-            </CardHeader>
-            <CardContent className="text-sm space-y-2">
-              <div><strong>Títol:</strong> {currentForm.title || '—'}</div>
-              <div><strong>Què passa:</strong> {currentForm.whatHappens || '—'}</div>
-              <div><strong>Pas a pas:</strong> {currentForm.stepByStep || '—'}</div>
-              <div><strong>Errors comuns:</strong> {currentForm.commonErrors || '—'}</div>
-              <div><strong>Com comprovar:</strong> {currentForm.howToCheck || '—'}</div>
-              <div><strong>Quan escalar:</strong> {currentForm.whenToEscalate || '—'}</div>
-              <div><strong>CTA:</strong> {currentForm.cta || '—'}</div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="checklist" className="space-y-3">
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-base">Checklist setmanal</CardTitle>
-              <CardDescription>No es pot tancar setmana si falta decisió en qualsevol tasca.</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              {isLoadingChecklist || !checklistState ? (
-                <div className="text-sm text-muted-foreground flex items-center gap-2">
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                  Carregant checklist...
-                </div>
-              ) : (
-                <>
-                  <div className="flex items-center gap-2">
-                    <Badge variant="outline">Setmana: {checklistState.weekId}</Badge>
-                    <Badge variant={checklistState.status === 'closed' ? 'default' : 'secondary'}>
-                      {checklistState.status === 'closed' ? 'Tancada' : 'Oberta'}
-                    </Badge>
-                    <Badge variant={checklistState.canCloseWeek ? 'default' : 'outline'}>
-                      {checklistState.canCloseWeek ? 'Llesta per tancar' : 'Falten decisions'}
-                    </Badge>
-                  </div>
-
-                  {checklistState.tasks.map(task => (
-                    <div key={task.id} className="border rounded p-3 space-y-2">
-                      <div className="flex items-center justify-between gap-2">
-                        <div>
-                          <div className="font-medium text-sm">{task.title}</div>
-                          <div className="text-xs text-muted-foreground">{task.hint}</div>
-                        </div>
-                        <Badge variant="outline">metric: {task.metric}</Badge>
-                      </div>
-
-                      <div className="grid grid-cols-1 md:grid-cols-[220px_1fr_auto] gap-2">
-                        <Select
-                          value={decisionDrafts[task.id] ?? ''}
-                          onValueChange={(value) => setDecisionDrafts(prev => ({ ...prev, [task.id]: value as ChecklistDecision }))}
-                        >
-                          <SelectTrigger>
-                            <SelectValue placeholder="Decisió" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="done">{DECISION_LABELS.done}</SelectItem>
-                            <SelectItem value="postponed">{DECISION_LABELS.postponed}</SelectItem>
-                            <SelectItem value="discarded">{DECISION_LABELS.discarded}</SelectItem>
-                          </SelectContent>
-                        </Select>
-
-                        <Input
-                          value={noteDrafts[task.id] ?? ''}
-                          onChange={(event) => setNoteDrafts(prev => ({ ...prev, [task.id]: event.target.value }))}
-                          placeholder="Motiu (obligatori per ajornat/descartat)"
-                        />
-
-                        <Button
-                          variant="outline"
-                          onClick={() => handleSaveTaskDecision(task.id)}
-                          disabled={isSavingDecisionForTask === task.id || checklistState.status === 'closed'}
-                        >
-                          {isSavingDecisionForTask === task.id && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                          Guardar
-                        </Button>
-                      </div>
-                    </div>
-                  ))}
-
-                  <div className="pt-2">
-                    <Button
-                      onClick={handleCloseWeek}
-                      disabled={!checklistState.canCloseWeek || checklistState.status === 'closed' || isClosingWeek}
-                    >
-                      {isClosingWeek && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                      Tancar setmana
-                    </Button>
-                  </div>
-                </>
-              )}
-            </CardContent>
-          </Card>
-        </TabsContent>
-      </Tabs>
+            </>
+          )}
+        </CardContent>
+      </Card>
     </div>
   )
 }

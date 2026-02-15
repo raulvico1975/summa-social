@@ -1,21 +1,13 @@
 /**
  * API Route: Publish KB Version (with Quality Gate)
  *
- * Runs structural + retrieval quality checks before incrementing
- * system/supportKb.version.
- *
- * Auth: SuperAdmin only.
+ * Keeps compatibility with legacy publish button, now honoring deletedCardIds.
  */
 
 import { NextRequest, NextResponse } from 'next/server'
-import { getStorage } from 'firebase-admin/storage'
-import { FieldValue } from 'firebase-admin/firestore'
 import { verifyIdToken, getAdminDb, isSuperAdmin } from '@/lib/api/admin-sdk'
-import { loadAllCards, type KBCard } from '@/lib/support/load-kb'
 import { runKbQualityGate } from '@/lib/support/kb-quality-gate'
-
-const KB_DRAFT_STORAGE_PATH = 'support-kb/kb-draft.json'
-const KB_PUBLISHED_STORAGE_PATH = 'support-kb/kb.json'
+import { loadKbStorageState, mergeKbCardsWithMetadata, publishCards } from '@/lib/support/kb-draft-store'
 
 type ApiResponse =
   | {
@@ -61,59 +53,6 @@ type ApiResponse =
       }
     }
 
-function mergeKbCards(fsCards: KBCard[], storageCards: KBCard[]): KBCard[] {
-  const map = new Map<string, KBCard>()
-  for (const card of fsCards) map.set(card.id, card)
-  for (const card of storageCards) map.set(card.id, card)
-  return Array.from(map.values())
-}
-
-async function loadKbFromStorage(path: string): Promise<KBCard[]> {
-  const bucketName =
-    process.env.FIREBASE_STORAGE_BUCKET ||
-    process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET
-
-  if (!bucketName) return []
-
-  try {
-    const bucket = getStorage().bucket(bucketName)
-    const file = bucket.file(path)
-    const [exists] = await file.exists()
-    if (!exists) return []
-
-    const [data] = await file.download()
-    const parsed = JSON.parse(data.toString('utf-8'))
-    return Array.isArray(parsed) ? (parsed as KBCard[]) : []
-  } catch (error) {
-    console.warn('[kb-publish] Storage draft load error:', error)
-    return []
-  }
-}
-
-async function saveKbPublishedToStorage(cards: KBCard[], publishedVersion: number, uid: string): Promise<void> {
-  const bucketName =
-    process.env.FIREBASE_STORAGE_BUCKET ||
-    process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET
-
-  if (!bucketName) {
-    throw new Error('Missing FIREBASE_STORAGE_BUCKET or NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET')
-  }
-
-  const bucket = getStorage().bucket(bucketName)
-  const file = bucket.file(KB_PUBLISHED_STORAGE_PATH)
-
-  await file.save(JSON.stringify(cards, null, 2), {
-    contentType: 'application/json',
-    metadata: {
-      customMetadata: {
-        publishedVersion: String(publishedVersion),
-        publishedBy: uid,
-        publishedAt: new Date().toISOString(),
-      },
-    },
-  })
-}
-
 export async function POST(request: NextRequest): Promise<NextResponse<ApiResponse>> {
   try {
     const authResult = await verifyIdToken(request)
@@ -130,19 +69,16 @@ export async function POST(request: NextRequest): Promise<NextResponse<ApiRespon
     }
 
     const db = getAdminDb()
-    const fsCards = loadAllCards()
-    const storagePublishedCards = await loadKbFromStorage(KB_PUBLISHED_STORAGE_PATH)
-    const storageDraftCards = await loadKbFromStorage(KB_DRAFT_STORAGE_PATH)
+    const state = await loadKbStorageState(db)
 
-    // Merge order:
-    // 1) filesystem defaults (if present)
-    // 2) current published KB (production baseline)
-    // 3) draft updates
-    // This makes publish resilient to partial imports and missing bundled docs.
-    const baseCards = mergeKbCards(fsCards, storagePublishedCards)
-    const mergedCards = mergeKbCards(baseCards, storageDraftCards)
+    const merged = mergeKbCardsWithMetadata({
+      baseCards: state.baseCards,
+      publishedCards: state.publishedCards,
+      draftCards: state.draftCards,
+      deletedCardIds: state.settings.deletedCardIds,
+    })
 
-    const gate = runKbQualityGate(mergedCards)
+    const gate = runKbQualityGate(merged.activeCards)
 
     if (!gate.ok) {
       return NextResponse.json(
@@ -161,35 +97,22 @@ export async function POST(request: NextRequest): Promise<NextResponse<ApiRespon
       )
     }
 
-    const supportKbRef = db.doc('system/supportKb')
-    const currentSnap = await supportKbRef.get()
-    const currentVersion = currentSnap.exists ? (currentSnap.data()?.version ?? 0) : 0
-    const nextVersion = currentVersion + 1
-
-    // Promote current draft to published runtime file atomically before version bump.
-    await saveKbPublishedToStorage(mergedCards, nextVersion, authResult.uid)
-
-    await supportKbRef.set(
-      {
-        version: nextVersion,
-        storageVersion: nextVersion,
-        updatedAt: FieldValue.serverTimestamp(),
-        updatedBy: authResult.uid,
-        lastQualityGateAt: FieldValue.serverTimestamp(),
-        lastQualityGateBy: authResult.uid,
-        lastQualityGateStats: {
-          cards: gate.stats.cards,
-          evalCa: gate.stats.evalCa,
-          evalEs: gate.stats.evalEs,
-          golden: gate.stats.golden,
-        },
+    const version = await publishCards({
+      db,
+      cards: merged.activeCards,
+      uid: authResult.uid,
+      deletedCardIds: state.settings.deletedCardIds,
+      stats: {
+        cards: gate.stats.cards,
+        evalCa: gate.stats.evalCa,
+        evalEs: gate.stats.evalEs,
+        golden: gate.stats.golden,
       },
-      { merge: true }
-    )
+    })
 
     return NextResponse.json({
       ok: true,
-      version: nextVersion,
+      version,
       stats: {
         cards: gate.stats.cards,
         evalCa: gate.stats.evalCa,
