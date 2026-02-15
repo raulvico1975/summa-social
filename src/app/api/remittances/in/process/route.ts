@@ -34,6 +34,7 @@ import {
   type HashableItem,
 } from '../../../../../lib/fiscal/remittance-invariants';
 import { verifyAdminMembership } from '../../../../../lib/fiscal/remittances/admin-auth';
+import { safeSet, safeUpdate, SafeWriteValidationError } from '../../../../../lib/safe-write';
 
 // =============================================================================
 // CONSTANTS
@@ -361,11 +362,21 @@ async function rollbackChildren(
 
     for (const childId of chunk) {
       const childRef = db.doc(`organizations/${orgId}/transactions/${childId}`);
-      batch.update(childRef, {
-        archivedAt: now,
-        archivedByUid: uid,
-        archivedReason: 'rollback_invariant_failure',
-        archivedFromAction: 'process_rollback',
+      await safeUpdate({
+        data: {
+          archivedAt: now,
+          archivedByUid: uid,
+          archivedReason: 'rollback_invariant_failure',
+          archivedFromAction: 'process_rollback',
+        },
+        context: {
+          updatedBy: uid,
+          source: 'user',
+          updatedAtFactory: () => FieldValue.serverTimestamp(),
+        },
+        write: (payload) => {
+          batch.update(childRef, payload);
+        },
       });
     }
 
@@ -559,6 +570,11 @@ export async function POST(request: NextRequest): Promise<NextResponse<ProcessRe
     }
 
     lockState = lockResult;
+    const writeContextBase = {
+      updatedBy: authResult.uid,
+      source: 'user' as const,
+      updatedAtFactory: () => FieldValue.serverTimestamp(),
+    };
 
     // ─────────────────────────────────────────────────────────────────────────
     // 8. Pre-validar R-SUM-1 (BLOQUEJANT)
@@ -633,7 +649,17 @@ export async function POST(request: NextRequest): Promise<NextResponse<ProcessRe
           archivedAt: null,
         };
 
-        batch.set(childRef, childDoc);
+        await safeSet({
+          data: childDoc,
+          context: {
+            ...writeContextBase,
+            requiredFields: ['id', 'date', 'description', 'amount', 'parentTransactionId', 'source'],
+            amountFields: ['amount'],
+          },
+          write: (payload) => {
+            batch.set(childRef, payload);
+          },
+        });
       }
 
       await batch.commit();
@@ -649,16 +675,26 @@ export async function POST(request: NextRequest): Promise<NextResponse<ProcessRe
 
         for (const pending of chunk) {
           const pendingRef = db.collection(`organizations/${orgId}/remittances/${remittanceId}/pending`).doc();
-          batch.set(pendingRef, {
-            id: pendingRef.id,
-            nameRaw: pending.nameRaw,
-            taxId: pending.taxId ?? null,
-            iban: pending.iban ?? null,
-            amountCents: pending.amountCents,
-            reason: pending.reason,
-            sourceRowIndex: pending.sourceRowIndex,
-            ambiguousDonorIds: pending.ambiguousDonorIds || [],
-            createdAt: now,
+          await safeSet({
+            data: {
+              id: pendingRef.id,
+              nameRaw: pending.nameRaw,
+              taxId: pending.taxId ?? null,
+              iban: pending.iban ?? null,
+              amountCents: pending.amountCents,
+              reason: pending.reason,
+              sourceRowIndex: pending.sourceRowIndex,
+              ambiguousDonorIds: pending.ambiguousDonorIds || [],
+              createdAt: now,
+            },
+            context: {
+              ...writeContextBase,
+              requiredFields: ['id', 'amountCents', 'reason', 'sourceRowIndex'],
+              amountFields: ['amountCents'],
+            },
+            write: (payload) => {
+              batch.set(pendingRef, payload);
+            },
           });
         }
 
@@ -703,23 +739,38 @@ export async function POST(request: NextRequest): Promise<NextResponse<ProcessRe
       bankAccountId: bankAccountId || parentData.bankAccountId || null,
     };
 
-    await db.doc(`organizations/${orgId}/remittances/${remittanceId}`).set(remittanceDoc);
+    await safeSet({
+      data: remittanceDoc,
+      context: {
+        ...writeContextBase,
+        requiredFields: ['id', 'direction', 'type', 'parentTransactionId', 'status', 'inputHash'],
+      },
+      write: async (payload) => {
+        await db.doc(`organizations/${orgId}/remittances/${remittanceId}`).set(payload);
+      },
+    });
 
     // ─────────────────────────────────────────────────────────────────────────
     // 12. Actualitzar transacció pare
     // ─────────────────────────────────────────────────────────────────────────
-    await parentRef.update({
-      isRemittance: true,
-      remittanceId,
-      remittanceType: 'donations',
-      remittanceDirection: 'IN',
-      remittanceStatus: status,
-      remittanceItemCount: items.length + pendingCount,
-      remittanceResolvedCount: items.length,
-      remittancePendingCount: pendingCount,
-      remittanceExpectedTotalCents: totalSumCents,
-      remittanceResolvedTotalCents: itemsSumCents,
-      remittancePendingTotalCents: pendingSumCents,
+    await safeUpdate({
+      data: {
+        isRemittance: true,
+        remittanceId,
+        remittanceType: 'donations',
+        remittanceDirection: 'IN',
+        remittanceStatus: status,
+        remittanceItemCount: items.length + pendingCount,
+        remittanceResolvedCount: items.length,
+        remittancePendingCount: pendingCount,
+        remittanceExpectedTotalCents: totalSumCents,
+        remittanceResolvedTotalCents: itemsSumCents,
+        remittancePendingTotalCents: pendingSumCents,
+      },
+      context: writeContextBase,
+      write: async (payload) => {
+        await parentRef.update(payload);
+      },
     });
 
     // ─────────────────────────────────────────────────────────────────────────
@@ -733,18 +784,24 @@ export async function POST(request: NextRequest): Promise<NextResponse<ProcessRe
       await rollbackChildren(db, orgId, createdChildIds, authResult.uid);
 
       // Reset pare
-      await parentRef.update({
-        isRemittance: FieldValue.delete(),
-        remittanceId: FieldValue.delete(),
-        remittanceType: FieldValue.delete(),
-        remittanceDirection: FieldValue.delete(),
-        remittanceStatus: FieldValue.delete(),
-        remittanceItemCount: FieldValue.delete(),
-        remittanceResolvedCount: FieldValue.delete(),
-        remittancePendingCount: FieldValue.delete(),
-        remittanceExpectedTotalCents: FieldValue.delete(),
-        remittanceResolvedTotalCents: FieldValue.delete(),
-        remittancePendingTotalCents: FieldValue.delete(),
+      await safeUpdate({
+        data: {
+          isRemittance: FieldValue.delete(),
+          remittanceId: FieldValue.delete(),
+          remittanceType: FieldValue.delete(),
+          remittanceDirection: FieldValue.delete(),
+          remittanceStatus: FieldValue.delete(),
+          remittanceItemCount: FieldValue.delete(),
+          remittanceResolvedCount: FieldValue.delete(),
+          remittancePendingCount: FieldValue.delete(),
+          remittanceExpectedTotalCents: FieldValue.delete(),
+          remittanceResolvedTotalCents: FieldValue.delete(),
+          remittancePendingTotalCents: FieldValue.delete(),
+        },
+        context: writeContextBase,
+        write: async (payload) => {
+          await parentRef.update(payload);
+        },
       });
 
       // Eliminar doc remesa
@@ -780,6 +837,18 @@ export async function POST(request: NextRequest): Promise<NextResponse<ProcessRe
       pendingCount,
     });
   } catch (error) {
+    if (error instanceof SafeWriteValidationError) {
+      return NextResponse.json(
+        {
+          success: false,
+          idempotent: false,
+          error: error.message,
+          code: error.code,
+        },
+        { status: 400 }
+      );
+    }
+
     console.error('[remittances/in/process] Unexpected error:', error);
     return NextResponse.json(
       {

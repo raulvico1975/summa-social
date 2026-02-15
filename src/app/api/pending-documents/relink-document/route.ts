@@ -18,6 +18,7 @@ import { getFirestore, FieldValue, type Firestore } from 'firebase-admin/firesto
 import { getStorage } from 'firebase-admin/storage';
 import { getAuth, type Auth } from 'firebase-admin/auth';
 import type { Bucket } from '@google-cloud/storage';
+import { safeUpdate, SafeWriteValidationError } from '@/lib/safe-write';
 
 // =============================================================================
 // FIREBASE ADMIN INITIALIZATION
@@ -283,6 +284,11 @@ export async function POST(
 
   let sourceStoragePath: string | null = null;
   let alreadyAtDestination = false;
+  const writeContextBase = {
+    updatedBy: uid,
+    source: 'user' as const,
+    updatedAtFactory: () => FieldValue.serverTimestamp(),
+  };
 
   try {
     // 1. Primer comprovar si el fitxer ja existeix al destí final (ruta estable)
@@ -362,15 +368,27 @@ export async function POST(
     });
 
     // 12. Actualitzar la transacció amb el document
-    await txRef.update({
-      document: signedUrl,
-      updatedAt: FieldValue.serverTimestamp(),
+    await safeUpdate({
+      data: {
+        document: signedUrl,
+        updatedAt: FieldValue.serverTimestamp(),
+      },
+      context: writeContextBase,
+      write: async (payload) => {
+        await txRef.update(payload);
+      },
     });
 
     // 13. Guardar finalStoragePath al pending document (font estable per futures operacions)
     if (!alreadyAtDestination || !pendingData?.file?.finalStoragePath) {
-      await pendingRef.update({
-        'file.finalStoragePath': destPath,
+      await safeUpdate({
+        data: {
+          'file.finalStoragePath': destPath,
+        },
+        context: writeContextBase,
+        write: async (payload) => {
+          await pendingRef.update(payload);
+        },
       });
       console.log(`${logPrefix} Guardat file.finalStoragePath: ${destPath}`);
     }
@@ -381,6 +399,13 @@ export async function POST(
       success: true,
     });
   } catch (error) {
+    if (error instanceof SafeWriteValidationError) {
+      return NextResponse.json(
+        { success: false, error: error.message, code: error.code },
+        { status: 400 }
+      );
+    }
+
     console.error(`${logPrefix} Error copiant fitxer:`, error);
     return NextResponse.json(
       { success: false, error: 'Error copiant el document', code: 'COPY_ERROR' },

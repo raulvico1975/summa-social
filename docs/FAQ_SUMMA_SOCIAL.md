@@ -1958,6 +1958,21 @@ També pots veure el detall de les despeses assignades i exportar-les si cal.
 
 ---
 
+### 81½. Per què no em surten totes les despeses de la seu al llistat de despeses per imputar a projectes?
+
+**És normal.** A la safata de Projectes no surten totes les despeses bancàries de Moviments.
+
+**Només surten les despeses que han estat prèviament categoritzades** a la secció de Moviments (i que compleixen els criteris d'elegibilitat del feed de Projectes).
+
+Si una despesa de la seu no et surt:
+1. Ves a **Moviments**
+2. Assigna-li la **categoria**
+3. Torna a **Projectes > Assignació de despeses** i refresca
+
+Pensa-ho així: Projectes mostra una safata de despeses **preparades per imputar**, no el total brut de moviments.
+
+---
+
 ### 82. He d'entregar una justificació econòmica d'una subvenció. Summa Social m'ajuda?
 
 **Sí, i força!** El mòdul de projectes està pensat precisament per facilitar les justificacions.

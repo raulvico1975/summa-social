@@ -89,13 +89,23 @@ git push origin prod
 
 ### Execució
 
-El ritual de deploy s'executa via script determinista:
+El ritual complet d'"acabar feina" i publicar s'executa via scripts deterministes:
 
 ```bash
-npm run deploy    # o: bash scripts/deploy.sh
+npm run inicia    # crea branca segura abans de començar
+npm run acabat    # tanca tasca (checks + commit + push + integració a main)
+npm run publica   # publica main -> prod (deploy verificat)
 ```
 
-El script (`scripts/deploy.sh`) fa tots els passos de forma seqüencial i bloquejant:
+`npm run inicia` (`scripts/workflow.sh inicia`) crea una branca `codex/...` segura abans de tocar codi.
+
+`npm run acabat` (`scripts/workflow.sh acabat`) fa aquests passos de forma seqüencial:
+1. Detectar canvis pendents i classificar risc (ALT/MITJÀ/BAIX)
+2. Verificacions (`verify-local.sh`, `verify-ci.sh`)
+3. Commit i push de la branca de treball
+4. Integració automàtica a `main` (si no hi ha conflictes)
+
+`npm run publica` executa `scripts/deploy.sh`, que fa:
 1. Preflight git (branca=main, working tree net, pull ff-only)
 2. Detectar fitxers canviats (main vs prod)
 3. Classificar risc (ALT/MITJÀ/BAIX) per patrons de path
@@ -109,9 +119,25 @@ El script (`scripts/deploy.sh`) fa tots els passos de forma seqüencial i bloque
 
 ### Autorització
 
-- **Trigger:** El CEO escriu `"Autoritzo deploy"` → Claude executa `npm run deploy`
+- **Trigger d'inici:** el CEO escriu `"Comença"` o `"Inicia"` → Claude executa `npm run inicia`
+- **Trigger de tancament:** el CEO escriu `"Acabat"` → Claude executa `npm run acabat`
+- **Trigger de publicació:** el CEO escriu `"Autoritzo deploy"` → Claude executa `npm run publica`
 - El script detecta el nivell de risc automàticament
 - El script s'atura si les verificacions fallen
+
+### Sortida esperada cap al CEO
+
+- Quan Claude tanca desenvolupament, respon amb `Acabat` + resum de 3 línies en llenguatge no tècnic.
+- Quan el CEO respon `Autoritzo deploy`, Claude executa publicació en silenci.
+- Si tot va bé, la resposta final és només: `Ja a producció.`
+- Si alguna verificació falla, no es publica i Claude explica el bloqueig en una frase clara.
+
+### Estat operatiu (frases obligatòries)
+
+Claude només pot reportar un d'aquests tres estats:
+- `No en producció`
+- `Preparat per producció`
+- `A producció`
 
 ### Regla de preguntes humanes (no tècniques)
 
