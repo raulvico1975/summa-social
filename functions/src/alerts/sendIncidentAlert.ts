@@ -42,6 +42,7 @@ const CORE_ROUTES = [
   "/project-module",
   "/projectes",
   "/proyectos",
+  "/health-check",
 ];
 
 // Finestra de cooldown: no reenviar si alertSentAt < 24h
@@ -329,7 +330,7 @@ export const sendIncidentAlert = onDocumentWritten(
     const incident = { id: incidentId, ...event.data.after.data() } as SystemIncident;
     const previousData = event.data.before.exists
       ? (event.data.before.data() as SystemIncident)
-      : undefined;
+      : void 0;
 
     // Decidir si cal enviar alerta
     const decision = shouldSendAlert(incident, previousData);

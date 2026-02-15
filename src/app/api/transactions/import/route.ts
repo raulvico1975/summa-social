@@ -25,6 +25,7 @@ import {
   prepareDeterministicTransactions,
   type CanonicalBankImportTx,
 } from '@/lib/bank-import/idempotency';
+import { safeSet, safeUpdate, SafeWriteValidationError } from '@/lib/safe-write';
 
 const LOCK_TTL_MS = 10 * 60 * 1000; // 10 minuts
 const MAX_TRANSACTIONS_PER_REQUEST = 2000;
@@ -106,23 +107,6 @@ interface ImportJobDoc {
   finishedAt?: FirebaseFirestore.Timestamp;
 }
 
-function stripUndefinedDeep<T>(value: T): T {
-  if (value === null || value === undefined) return value;
-  if (Array.isArray(value)) {
-    return value.map((item) => stripUndefinedDeep(item)) as T;
-  }
-  if (typeof value === 'object') {
-    const out: Record<string, unknown> = {};
-    for (const [k, v] of Object.entries(value as Record<string, unknown>)) {
-      if (v !== undefined) {
-        out[k] = stripUndefinedDeep(v);
-      }
-    }
-    return out as T;
-  }
-  return value;
-}
-
 function sanitizeErrorMessage(error: unknown): string {
   if (!(error instanceof Error)) {
     return 'Error desconegut durant la importació';
@@ -186,6 +170,19 @@ function validateBody(body: unknown): {
     };
   }
 
+  const parsedStats: ImportRequestStats = {
+    duplicateSkippedCount: stats.duplicateSkippedCount as number,
+  };
+  if (typeof stats.candidateCount === 'number') {
+    parsedStats.candidateCount = stats.candidateCount;
+  }
+  if (typeof stats.candidateUserImportedCount === 'number') {
+    parsedStats.candidateUserImportedCount = stats.candidateUserImportedCount;
+  }
+  if (typeof stats.candidateUserSkippedCount === 'number') {
+    parsedStats.candidateUserSkippedCount = stats.candidateUserSkippedCount;
+  }
+
   return {
     ok: true,
     data: {
@@ -194,18 +191,7 @@ function validateBody(body: unknown): {
       fileName: (req.fileName as string | null | undefined) ?? null,
       source: req.source as ImportSource,
       totalRows: req.totalRows as number,
-      stats: {
-        duplicateSkippedCount: stats.duplicateSkippedCount as number,
-        candidateCount: typeof stats.candidateCount === 'number' ? stats.candidateCount : undefined,
-        candidateUserImportedCount:
-          typeof stats.candidateUserImportedCount === 'number'
-            ? stats.candidateUserImportedCount
-            : undefined,
-        candidateUserSkippedCount:
-          typeof stats.candidateUserSkippedCount === 'number'
-            ? stats.candidateUserSkippedCount
-            : undefined,
-      },
+      stats: parsedStats,
       transactions: req.transactions as ImportTransactionInput[],
     },
   };
@@ -300,48 +286,86 @@ export async function POST(
   const now = Timestamp.now();
   const lockExpiresAt = Timestamp.fromMillis(now.toMillis() + LOCK_TTL_MS);
 
-  const lockResult = await db.runTransaction(async (tx) => {
-    const snap = await tx.get(importJobRef);
-    const existing = snap.data() as ImportJobDoc | undefined;
+  let lockResult:
+    | { mode: 'idempotent'; importRunId: string; createdCount: number }
+    | { mode: 'locked'; lockedByUid: string }
+    | { mode: 'process' };
 
-    if (existing) {
-      if (existing.status === 'completed') {
-        return {
-          mode: 'idempotent' as const,
-          importRunId: existing.importRunId ?? inputHash,
-          createdCount: existing.createdCount ?? 0,
-        };
+  try {
+    lockResult = await db.runTransaction(async (tx) => {
+      const snap = await tx.get(importJobRef);
+      const existing = snap.data() as ImportJobDoc | undefined;
+
+      if (existing) {
+        if (existing.status === 'completed') {
+          return {
+            mode: 'idempotent' as const,
+            importRunId: existing.importRunId ?? inputHash,
+            createdCount: existing.createdCount ?? 0,
+          };
+        }
+
+        if (
+          existing.status === 'processing' &&
+          existing.lockExpiresAt &&
+          existing.lockExpiresAt.toMillis() > now.toMillis()
+        ) {
+          return {
+            mode: 'locked' as const,
+            lockedByUid: existing.requestedByUid,
+          };
+        }
       }
 
-      if (
-        existing.status === 'processing' &&
-        existing.lockExpiresAt &&
-        existing.lockExpiresAt.toMillis() > now.toMillis()
-      ) {
-        return {
-          mode: 'locked' as const,
-          lockedByUid: existing.requestedByUid,
-        };
-      }
+      const jobData: ImportJobDoc = {
+        status: 'processing',
+        type: 'bankTransactions',
+        inputHash,
+        orgId: parsedBody.orgId,
+        bankAccountId: parsedBody.bankAccountId,
+        source: parsedBody.source,
+        fileName: parsedBody.fileName,
+        totalRows: parsedBody.totalRows,
+        startedAt: now,
+        lockExpiresAt,
+        requestedByUid: authResult.uid,
+      };
+
+      await safeSet({
+        data: jobData as unknown as Record<string, unknown>,
+        context: {
+          updatedBy: authResult.uid,
+          source: 'import',
+          updatedAtFactory: () => FieldValue.serverTimestamp(),
+          requiredFields: ['status', 'type', 'inputHash', 'orgId', 'bankAccountId', 'requestedByUid'],
+        },
+        write: (payload) => {
+          tx.set(importJobRef, payload, { merge: true });
+        },
+      });
+      return { mode: 'process' as const };
+    });
+  } catch (error) {
+    if (error instanceof SafeWriteValidationError) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: error.message,
+          code: error.code,
+        },
+        { status: 400 }
+      );
     }
-
-    const jobData: ImportJobDoc = {
-      status: 'processing',
-      type: 'bankTransactions',
-      inputHash,
-      orgId: parsedBody.orgId,
-      bankAccountId: parsedBody.bankAccountId,
-      source: parsedBody.source,
-      fileName: parsedBody.fileName,
-      totalRows: parsedBody.totalRows,
-      startedAt: now,
-      lockExpiresAt,
-      requestedByUid: authResult.uid,
-    };
-
-    tx.set(importJobRef, jobData, { merge: true });
-    return { mode: 'process' as const };
-  });
+    console.error('[transactions/import] Error preparant lock d\'import:', error);
+    return NextResponse.json(
+      {
+        success: false,
+        error: 'Error intern del servidor',
+        code: 'IMPORT_LOCK_ERROR',
+      },
+      { status: 500 }
+    );
+  }
 
   if (lockResult.mode === 'idempotent') {
     return NextResponse.json({
@@ -366,6 +390,12 @@ export async function POST(
   }
 
   try {
+    const writeContextBase = {
+      updatedBy: authResult.uid,
+      source: 'import' as const,
+      updatedAtFactory: () => FieldValue.serverTimestamp(),
+    };
+
     const prepared = prepareDeterministicTransactions(normalizedTransactions, inputHash);
 
     for (let i = 0; i < prepared.length; i += BATCH_SIZE) {
@@ -374,7 +404,17 @@ export async function POST(
 
       for (const item of chunk) {
         const txRef = db.doc(`organizations/${parsedBody.orgId}/transactions/${item.id}`);
-        batch.set(txRef, stripUndefinedDeep(item.tx), { merge: true });
+        await safeSet({
+          data: item.tx as unknown as Record<string, unknown>,
+          context: {
+            ...writeContextBase,
+            requiredFields: ['date', 'description', 'amount', 'bankAccountId', 'source'],
+            amountFields: ['amount'],
+          },
+          write: (payload) => {
+            batch.set(txRef, payload, { merge: true });
+          },
+        });
       }
 
       await batch.commit();
@@ -382,7 +422,7 @@ export async function POST(
 
     const dates = prepared.map((p) => p.tx.date).sort((a, b) => a.localeCompare(b));
     const importRunRef = db.doc(`organizations/${parsedBody.orgId}/importRuns/${inputHash}`);
-    const importRunPayload = stripUndefinedDeep({
+    const importRunPayload = {
       type: 'bankTransactions',
       source: parsedBody.source,
       fileName: parsedBody.fileName,
@@ -398,12 +438,21 @@ export async function POST(
       candidateUserSkippedCount: parsedBody.stats.candidateUserSkippedCount,
       inputHash,
       createdAt: FieldValue.serverTimestamp(),
+    };
+
+    await safeSet({
+      data: importRunPayload,
+      context: {
+        ...writeContextBase,
+        requiredFields: ['type', 'source', 'createdBy', 'bankAccountId', 'inputHash'],
+      },
+      write: async (payload) => {
+        await importRunRef.set(payload, { merge: true });
+      },
     });
 
-    await importRunRef.set(importRunPayload, { merge: true });
-
-    await importJobRef.set(
-      {
+    await safeUpdate({
+      data: {
         status: 'completed',
         importRunId: importRunRef.id,
         createdCount: prepared.length,
@@ -411,8 +460,14 @@ export async function POST(
         lockExpiresAt: null,
         lastError: FieldValue.delete(),
       },
-      { merge: true }
-    );
+      context: {
+        ...writeContextBase,
+        requiredFields: ['status'],
+      },
+      write: async (payload) => {
+        await importJobRef.set(payload, { merge: true });
+      },
+    });
 
     const createdTransactions: CreatedTransaction[] = prepared.map((item) => ({
       id: item.id,
@@ -440,15 +495,34 @@ export async function POST(
     const sanitizedError = sanitizeErrorMessage(error);
     console.error('[transactions/import] Error processant import:', error);
 
-    await importJobRef.set(
-      {
+    await safeUpdate({
+      data: {
         status: 'error',
         lastError: sanitizedError,
         finishedAt: FieldValue.serverTimestamp(),
         lockExpiresAt: null,
       },
-      { merge: true }
-    );
+      context: {
+        updatedBy: authResult.uid,
+        source: 'import',
+        updatedAtFactory: () => FieldValue.serverTimestamp(),
+        requiredFields: ['status'],
+      },
+      write: async (payload) => {
+        await importJobRef.set(payload, { merge: true });
+      },
+    });
+
+    if (error instanceof SafeWriteValidationError) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: error.message,
+          code: error.code,
+        },
+        { status: 400 }
+      );
+    }
 
     return NextResponse.json(
       {

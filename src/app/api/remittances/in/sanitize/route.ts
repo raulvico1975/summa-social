@@ -27,6 +27,7 @@ import {
   type LockState,
 } from '../../../../../lib/fiscal/remittances/locks';
 import { PARENT_REMITTANCE_FIELDS } from '../../../../../lib/fiscal/remittances/constants';
+import { safeSet, safeUpdate, SafeWriteValidationError } from '../../../../../lib/safe-write';
 
 // =============================================================================
 // TIPUS
@@ -232,6 +233,11 @@ export async function POST(request: NextRequest): Promise<NextResponse<SanitizeR
     }
 
     const now = new Date().toISOString();
+    const writeContextBase = {
+      updatedBy: uid,
+      source: 'user' as const,
+      updatedAtFactory: () => FieldValue.serverTimestamp(),
+    };
 
     // ─────────────────────────────────────────────────────────────────────────
     // 7. Decidir acció
@@ -247,25 +253,37 @@ export async function POST(request: NextRequest): Promise<NextResponse<SanitizeR
       const newItemCount = activeCount + pendingCount;
 
       // Actualitzar document remesa
-      await remittanceRef.set({
-        transactionIds: activeIds,
-        itemCount: newItemCount,
-        resolvedCount: activeCount,
-        pendingCount: pendingCount,
-        resolvedTotalCents: childrenSumCents,
-        status: newStatus,
-        sanitizedAt: now,
-        sanitizedByUid: uid,
-        sanitizedReason: 'DOC_TXIDS_OUT_OF_SYNC',
-      }, { merge: true });
+      await safeSet({
+        data: {
+          transactionIds: activeIds,
+          itemCount: newItemCount,
+          resolvedCount: activeCount,
+          pendingCount: pendingCount,
+          resolvedTotalCents: childrenSumCents,
+          status: newStatus,
+          sanitizedAt: now,
+          sanitizedByUid: uid,
+          sanitizedReason: 'DOC_TXIDS_OUT_OF_SYNC',
+        },
+        context: writeContextBase,
+        write: async (payload) => {
+          await remittanceRef.set(payload, { merge: true });
+        },
+      });
 
       // Actualitzar comptadors del pare
-      await parentRef.update({
-        remittanceItemCount: newItemCount,
-        remittanceResolvedCount: activeCount,
-        remittancePendingCount: pendingCount,
-        remittanceResolvedTotalCents: childrenSumCents,
-        remittanceStatus: newStatus,
+      await safeUpdate({
+        data: {
+          remittanceItemCount: newItemCount,
+          remittanceResolvedCount: activeCount,
+          remittancePendingCount: pendingCount,
+          remittanceResolvedTotalCents: childrenSumCents,
+          remittanceStatus: newStatus,
+        },
+        context: writeContextBase,
+        write: async (payload) => {
+          await parentRef.update(payload);
+        },
       });
 
       // Log estructurat
@@ -298,19 +316,31 @@ export async function POST(request: NextRequest): Promise<NextResponse<SanitizeR
       // ═══════════════════════════════════════════════════════════════════════
 
       // Marcar doc remesa com undone_legacy
-      await remittanceRef.set({
-        status: 'undone_legacy',
-        sanitizedAt: now,
-        sanitizedByUid: uid,
-        sanitizedReason: 'NO_ACTIVE_CHILDREN',
-      }, { merge: true });
+      await safeSet({
+        data: {
+          status: 'undone_legacy',
+          sanitizedAt: now,
+          sanitizedByUid: uid,
+          sanitizedReason: 'NO_ACTIVE_CHILDREN',
+        },
+        context: writeContextBase,
+        write: async (payload) => {
+          await remittanceRef.set(payload, { merge: true });
+        },
+      });
 
       // Reset camps remesa del pare (com a undo)
       const parentResetFields: Record<string, ReturnType<typeof FieldValue.delete>> = {};
       for (const field of PARENT_REMITTANCE_FIELDS) {
         parentResetFields[field] = FieldValue.delete();
       }
-      await parentRef.update(parentResetFields);
+      await safeUpdate({
+        data: parentResetFields,
+        context: writeContextBase,
+        write: async (payload) => {
+          await parentRef.update(payload);
+        },
+      });
 
       // Log estructurat
       console.log(JSON.stringify({
@@ -335,6 +365,18 @@ export async function POST(request: NextRequest): Promise<NextResponse<SanitizeR
     }
 
   } catch (error) {
+    if (error instanceof SafeWriteValidationError) {
+      return NextResponse.json(
+        {
+          success: false,
+          action: 'NOOP',
+          error: error.message,
+          code: error.code,
+        },
+        { status: 400 }
+      );
+    }
+
     console.error('[remittances/in/sanitize] Unexpected error:', error);
     return NextResponse.json(
       {
