@@ -8,6 +8,8 @@ set -euo pipefail
 # ============================================================
 
 DEPLOY_LOG="docs/DEPLOY-LOG.md"
+INCIDENT_LOG="docs/DEPLOY-INCIDENTS.md"
+ROLLBACK_PLAN_FILE="docs/DEPLOY-ROLLBACK-LATEST.md"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 
@@ -23,6 +25,56 @@ DEPLOY_RESULT="OK"
 HUMAN_QUESTION_REASON=""
 BUSINESS_IMPACT=""
 DECISION_TAKEN="NONE"
+BACKUP_RESULT="NO_REQUIRED"
+BACKUP_EXPORT_PATH=""
+DEPLOY_BLOCK_REASON=""
+CURRENT_PHASE="Inicialitzacio"
+INCIDENT_RECORDED=false
+
+append_incident_log() {
+  if [ "$INCIDENT_RECORDED" = true ]; then
+    return
+  fi
+
+  local log_path="$PROJECT_DIR/$INCIDENT_LOG"
+  local date
+  date=$(TZ="Europe/Madrid" date '+%Y-%m-%d %H:%M')
+  local main_sha_short prod_sha_short
+  main_sha_short=$(git rev-parse --short main 2>/dev/null || echo "-")
+  prod_sha_short=$(git rev-parse --short prod 2>/dev/null || echo "-")
+  local reason
+  reason=${DEPLOY_BLOCK_REASON:-"Bloqueig de seguretat a la fase: $CURRENT_PHASE"}
+
+  if [ ! -f "$log_path" ]; then
+    mkdir -p "$(dirname "$log_path")"
+    cat > "$log_path" << 'HEADER'
+# Deploy Incidents — Summa Social
+
+Registre curt d'incidències de deploy bloquejat o incomplet.
+
+| Data | Fase | Risc | main | prod | Resultat | Què ha fallat | Com s'ha resolt |
+|------|------|------|------|------|----------|---------------|------------------|
+HEADER
+  fi
+
+  echo "| $date | $CURRENT_PHASE | $RISK_LEVEL | $main_sha_short | $prod_sha_short | $DEPLOY_RESULT | $reason | Pendent |" >> "$log_path"
+  INCIDENT_RECORDED=true
+}
+
+on_script_exit() {
+  local exit_code="$1"
+  if [ "$exit_code" -ne 0 ]; then
+    if [ -z "$DEPLOY_BLOCK_REASON" ]; then
+      DEPLOY_BLOCK_REASON="Comprovacio no superada a la fase: $CURRENT_PHASE"
+    fi
+    if [ -z "$DEPLOY_RESULT" ] || [ "$DEPLOY_RESULT" = "OK" ]; then
+      DEPLOY_RESULT="BLOCKED_SAFE"
+    fi
+    append_incident_log
+  fi
+}
+
+trap 'on_script_exit $?' EXIT
 
 # Patrons area fiscal (gate bloquejant)
 FISCAL_PATTERNS=(
@@ -64,6 +116,7 @@ LOW_RISK_PATTERNS=(
 # PAS 1 — Preflight git (BLOQUEJANT)
 # ============================================================
 preflight_git_checks() {
+  CURRENT_PHASE="Preflight git"
   echo ""
   echo "[1/9] Comprovacions previes de git..."
 
@@ -71,6 +124,7 @@ preflight_git_checks() {
   local branch
   branch=$(git rev-parse --abbrev-ref HEAD)
   if [ "$branch" != "main" ]; then
+    DEPLOY_BLOCK_REASON="El deploy nomes es pot fer des de main."
     echo "ERROR: Has d'estar a la branca 'main' per desplegar."
     echo "  Branca actual: $branch"
     echo "  Executa: git checkout main"
@@ -79,6 +133,7 @@ preflight_git_checks() {
 
   # 1b. Working tree net
   if [ -n "$(git status --porcelain)" ]; then
+    DEPLOY_BLOCK_REASON="Hi ha canvis pendents sense tancar abans de publicar."
     echo "ERROR: Hi ha canvis sense commitejar o fitxers sense seguiment."
     echo "  Fes commit o stash dels canvis abans de desplegar."
     git status --short
@@ -92,6 +147,7 @@ preflight_git_checks() {
   # 1d. Pull ff-only a main
   echo "  Actualitzant main..."
   if ! git pull --ff-only origin main 2>/dev/null; then
+    DEPLOY_BLOCK_REASON="Main no esta sincronitzada amb remot."
     echo "ERROR: La branca 'main' ha divergit del remot."
     echo "  Cal resoldre manualment abans de desplegar."
     exit 1
@@ -101,6 +157,7 @@ preflight_git_checks() {
   echo "  Actualitzant prod..."
   git checkout prod --quiet
   if ! git pull --ff-only origin prod 2>/dev/null; then
+    DEPLOY_BLOCK_REASON="Prod no esta sincronitzada amb remot."
     echo "ERROR: La branca 'prod' ha divergit del remot."
     echo "  Cal resoldre manualment abans de desplegar."
     git checkout main --quiet
@@ -121,6 +178,7 @@ preflight_git_checks() {
 # PAS 2 — Detectar canvis (BLOQUEJANT si 0)
 # ============================================================
 detect_changed_files() {
+  CURRENT_PHASE="Detectar canvis"
   echo "[2/9] Detectant fitxers canviats (main vs prod)..."
 
   CHANGED_FILES=$(git diff --name-only prod..main --diff-filter=ACMRT)
@@ -146,6 +204,7 @@ detect_changed_files() {
 # PAS 3 — Classificar risc (INFORMATIU)
 # ============================================================
 classify_risk() {
+  CURRENT_PHASE="Classificar risc"
   echo "[3/9] Classificant nivell de risc..."
 
   # Detectar area fiscal i guardar fitxers que la disparen
@@ -203,6 +262,53 @@ classify_risk() {
 
   echo "  Risc detectat: $RISK_LEVEL"
   echo "  Area fiscal: $([ "$IS_FISCAL" = true ] && echo "Si" || echo "No")"
+  echo ""
+}
+
+auto_predeploy_backup() {
+  CURRENT_PHASE="Backup curt predeploy"
+  echo "[3b/9] Backup curt predeploy..."
+  echo ""
+
+  if [ "$RISK_LEVEL" != "ALT" ] || [ "$IS_FISCAL" != true ]; then
+    BACKUP_RESULT="NO_REQUIRED"
+    echo "  No cal backup extra (nomes s'activa amb risc ALT fiscal)."
+    echo ""
+    return
+  fi
+
+  if [ -z "${FIRESTORE_BACKUP_BUCKET:-}" ]; then
+    BACKUP_RESULT="SKIPPED_NO_BUCKET"
+    echo "  Backup no executat: bucket no configurat (FIRESTORE_BACKUP_BUCKET)."
+    echo ""
+    return
+  fi
+
+  if ! command -v firebase >/dev/null 2>&1; then
+    BACKUP_RESULT="SKIPPED_NO_FIREBASE_CLI"
+    echo "  Backup no executat: falta Firebase CLI en aquest entorn."
+    echo ""
+    return
+  fi
+
+  local export_suffix
+  export_suffix=$(TZ="Europe/Madrid" date '+%Y%m%d-%H%M%S')
+  BACKUP_EXPORT_PATH="gs://${FIRESTORE_BACKUP_BUCKET}/summa-social/predeploy/${export_suffix}-main-${MAIN_SHA}"
+
+  local backup_cmd=(firebase firestore:export "$BACKUP_EXPORT_PATH")
+  if [ -n "${FIREBASE_PROJECT_ID:-}" ]; then
+    backup_cmd+=(--project "$FIREBASE_PROJECT_ID")
+  fi
+
+  if "${backup_cmd[@]}" >/dev/null 2>&1; then
+    BACKUP_RESULT="OK"
+    echo "  Backup curt completat correctament."
+    echo ""
+    return
+  fi
+
+  BACKUP_RESULT="FAILED_NON_BLOCKING"
+  echo "  Backup curt no completat. Continuo igualment per no bloquejar un deploy urgent."
   echo ""
 }
 
@@ -473,6 +579,7 @@ classify_fiscal_impact() {
 }
 
 fiscal_impact_gate() {
+  CURRENT_PHASE="Analisi fiscal"
   if [ "$IS_FISCAL" != true ]; then
     return 0
   fi
@@ -519,11 +626,13 @@ fiscal_impact_gate() {
 # PAS 5 — Verificacions (BLOQUEJANT)
 # ============================================================
 run_verifications() {
+  CURRENT_PHASE="Verificacions"
   echo "[5/9] Executant verificacions..."
   echo ""
 
   echo "  --- verify-local.sh ---"
   if ! bash "$SCRIPT_DIR/verify-local.sh"; then
+    DEPLOY_BLOCK_REASON="La verificacio local no ha passat."
     echo ""
     echo "ERROR: verify-local.sh ha fallat."
     echo "  Corregeix els errors i torna a executar el deploy."
@@ -534,6 +643,7 @@ run_verifications() {
   if [ -f "$SCRIPT_DIR/verify-ci.sh" ]; then
     echo "  --- verify-ci.sh ---"
     if ! bash "$SCRIPT_DIR/verify-ci.sh"; then
+      DEPLOY_BLOCK_REASON="La verificacio de CI no ha passat."
       echo ""
       echo "ERROR: verify-ci.sh ha fallat."
       echo "  Corregeix els errors i torna a executar el deploy."
@@ -552,6 +662,7 @@ run_verifications() {
 # PAS 6 — Resum + decisio de negoci si hi ha risc ALT residual
 # ============================================================
 display_deploy_summary() {
+  CURRENT_PHASE="Resum predeploy"
   echo "[6/9] Resum del deploy..."
   echo ""
   echo "  Branques:"
@@ -561,6 +672,49 @@ display_deploy_summary() {
   echo "  Risc:     $RISK_LEVEL"
   echo "  Fiscal:   $([ "$IS_FISCAL" = true ] && echo "Si" || echo "No")"
   echo "  Fitxers:  $CHANGED_COUNT"
+  echo "  Backup:   $BACKUP_RESULT"
+  echo ""
+}
+
+prepare_rollback_plan() {
+  CURRENT_PHASE="Preparar rollback"
+  echo "[6c/9] Preparant rollback..."
+  echo ""
+
+  local date current_prod_sha target_main_sha
+  date=$(TZ="Europe/Madrid" date '+%Y-%m-%d %H:%M')
+  current_prod_sha=$(git rev-parse --short prod)
+  target_main_sha=$(git rev-parse --short main)
+
+  cat > "$PROJECT_DIR/$ROLLBACK_PLAN_FILE" <<EOF
+# Rollback Plan (auto) — Summa Social
+
+Generat: $date
+Risc: $RISK_LEVEL
+Backup curt: $BACKUP_RESULT
+SHA prod abans de publicar: $current_prod_sha
+SHA main a publicar: $target_main_sha
+
+## Si cal marxa enrere rapida
+
+Opcio recomanada (preserva historial):
+\`\`\`bash
+git checkout main
+git revert $target_main_sha --no-edit
+git push origin main
+bash scripts/deploy.sh
+\`\`\`
+
+Emergencia critica (nomes si la produccio cau i no hi ha alternativa):
+\`\`\`bash
+git checkout prod
+git reset --hard $current_prod_sha
+git push origin prod --force-with-lease
+\`\`\`
+EOF
+
+  git add "$PROJECT_DIR/$ROLLBACK_PLAN_FILE"
+  echo "  Rollback preparat a $ROLLBACK_PLAN_FILE"
   echo ""
 }
 
@@ -568,12 +722,14 @@ display_deploy_summary() {
 # PAS 7 — Merge ritual + push (BLOQUEJANT)
 # ============================================================
 execute_merge_ritual() {
+  CURRENT_PHASE="Merge i push a prod"
   echo "[7/9] Executant merge ritual..."
 
   # main -> prod
   echo "  main -> prod..."
   git checkout prod --quiet
   if ! git merge --no-ff main -m "chore(deploy): merge main -> prod"; then
+    DEPLOY_BLOCK_REASON="Hi ha conflicte d'integracio entre main i prod."
     echo ""
     echo "ERROR: Conflicte de merge a prod."
     git merge --abort || true
@@ -594,6 +750,7 @@ execute_merge_ritual() {
 # PAS 8 — Post-deploy check (automatic; sense preguntes tecniques)
 # ============================================================
 post_deploy_check() {
+  CURRENT_PHASE="Post-check automatic"
   local prod_sha
   local remote_sha
   prod_sha=$(git rev-parse --short prod)
@@ -635,10 +792,59 @@ post_deploy_check() {
   echo ""
 }
 
+post_production_3min_check() {
+  CURRENT_PHASE="Post-check 3 minuts"
+  echo "[8b/9] Check post-produccio (3 minuts)..."
+  echo ""
+
+  local login_url core_url report_url
+  login_url="${DEPLOY_CHECK_LOGIN_URL:-${DEPLOY_SMOKE_PUBLIC_URL:-}}"
+  core_url="${DEPLOY_CHECK_CORE_URL:-${DEPLOY_SMOKE_DASHBOARD_URL:-}}"
+  report_url="${DEPLOY_CHECK_REPORT_URL:-${DEPLOY_SMOKE_PUBLIC_URL:-}}"
+
+  if [ -z "$login_url" ] || [ -z "$core_url" ] || [ -z "$report_url" ]; then
+    DEPLOY_RESULT="PENDENT"
+    echo "  Check de 3 minuts no complet: cal configurar URLs de comprovacio."
+    echo ""
+    return
+  fi
+
+  wait_for_url() {
+    local label="$1"
+    local url="$2"
+    local i
+    for i in $(seq 1 18); do
+      if curl -fsS --max-time 20 "$url" >/dev/null 2>&1; then
+        echo "  OK: $label"
+        return 0
+      fi
+      sleep 10
+    done
+    echo "  PENDENT: $label"
+    return 1
+  }
+
+  local ok_all=true
+  if ! wait_for_url "Login" "$login_url"; then ok_all=false; fi
+  if ! wait_for_url "Flux principal" "$core_url"; then ok_all=false; fi
+  if ! wait_for_url "Informes/export" "$report_url"; then ok_all=false; fi
+
+  if [ "$ok_all" = false ]; then
+    DEPLOY_RESULT="PENDENT"
+    echo ""
+    echo "  Cal revisio curta: alguna comprovacio post-produccio no s'ha confirmat."
+  else
+    echo ""
+    echo "  Check post-produccio completat correctament."
+  fi
+  echo ""
+}
+
 # ============================================================
 # PAS 9 — Deploy log (NO commit automatic)
 # ============================================================
 append_deploy_log() {
+  CURRENT_PHASE="Registrar deploy"
   echo "[9/9] Registrant al deploy log..."
 
   local deploy_date
@@ -699,6 +905,19 @@ HUMAN_HEADER
     echo "$human_line" >> "$PROJECT_DIR/$DEPLOY_LOG"
   fi
 
+  if [ "$BACKUP_RESULT" != "NO_REQUIRED" ] || [ -n "$BACKUP_EXPORT_PATH" ]; then
+    if ! grep -q "^## Backup curt predeploy" "$PROJECT_DIR/$DEPLOY_LOG"; then
+      cat >> "$PROJECT_DIR/$DEPLOY_LOG" << 'BACKUP_HEADER'
+
+## Backup curt predeploy
+
+| Data | SHA | resultat | export_path |
+|------|-----|----------|-------------|
+BACKUP_HEADER
+    fi
+    echo "| $deploy_date | $deploy_sha | $BACKUP_RESULT | ${BACKUP_EXPORT_PATH:--} |" >> "$PROJECT_DIR/$DEPLOY_LOG"
+  fi
+
   # Stage (no commit)
   git add "$PROJECT_DIR/$DEPLOY_LOG"
 
@@ -722,12 +941,15 @@ main() {
   preflight_git_checks      # Pas 1
   detect_changed_files       # Pas 2
   classify_risk              # Pas 3
+  auto_predeploy_backup
   fiscal_impact_gate         # Pas 4
   run_verifications          # Pas 5
   display_deploy_summary     # Pas 6
   handle_business_decision_for_residual_risk
+  prepare_rollback_plan
   execute_merge_ritual       # Pas 7
   post_deploy_check          # Pas 8
+  post_production_3min_check
   append_deploy_log          # Pas 9
 
   echo "  DEPLOY COMPLETAT ($DEPLOY_RESULT)."

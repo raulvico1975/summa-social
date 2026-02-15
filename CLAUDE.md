@@ -221,16 +221,21 @@ npm run publica
 
 Això llança `scripts/deploy.sh`, que és un script determinista i bloquejant que:
 - verifica git, detecta canvis
+- executa backup curt automàtic en risc ALT fiscal (si està configurat)
 - si toca àrea fiscal, demana confirmació de la verificació manual (`docs/QA-FISCAL.md`)
 - executa verificacions locals
+- prepara rollback automàtic a `docs/DEPLOY-ROLLBACK-LATEST.md`
 - fa el merge ritual (main→prod) i push
-- força post-deploy check (SHA + smoke test)
+- força post-deploy check (SHA + smoke test + check 3 minuts)
 - registra el deploy a `docs/DEPLOY-LOG.md`
+- registra bloquejos a `docs/DEPLOY-INCIDENTS.md`
 
 Claude Code **NO pot** saltar cap pas del script ni usar `--no-verify`.
 
 Si el deploy passa sense errors, Claude respon només:
 `Ja a producció.`
+
+Si hi ha bloqueig, Claude explica en llenguatge no tècnic què ha fallat i quin és el següent pas.
 
 ### Missatge de commit (obligatori)
 
