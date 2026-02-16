@@ -1542,6 +1542,17 @@ export const ca = {
     model347ExportAnyway: "Exportar igualment",
     model347CancelToFix: "Cancel·lar i revisar dades",
     model347NoIncomeAboveThreshold: "No hi ha ingressos de proveïdors per sobre del llindar.",
+    model347EmailAction: "Generar email",
+    model347EmailDialogTitle: "Text d'email de confirmació (Model 347)",
+    model347EmailDialogDescription: (supplierName: string) => `Revisa i copia el text per enviar-lo a ${supplierName}.`,
+    model347EmailDialogDescriptionFallback: "Revisa i copia el text per enviar-lo al proveïdor.",
+    model347EmailSubjectLabel: "Assumpte",
+    model347EmailBodyLabel: "Cos de l'email",
+    model347EmailCopyButton: "Copiar text",
+    model347EmailCopiedTitle: "Text copiat",
+    model347EmailCopiedDescription: "Ja pots enganxar l'email al teu gestor de correu.",
+    model347EmailCopyErrorTitle: "No s'ha pogut copiar",
+    model347EmailCopyErrorDescription: "Copia manualment el text de l'email.",
     // Paquet de tancament
     closingBundle: {
       title: "Paquet de tancament",

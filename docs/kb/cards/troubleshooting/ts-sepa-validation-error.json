@@ -38,7 +38,7 @@
   "needsSnapshot": false,
   "keywords": ["SEPA", "validació", "error", "pain008", "ICS", "IBAN", "xml", "rebutja"],
   "source_faq": ["Q53b"],
-  "source_manual": ["6.a", "12.3b"],
+  "source_manual": ["6.a", "11.3b"],
   "source_guides": [],
   "related": ["guide-remittances", "guide-split-remittance"],
   "error_key": "validationError",
