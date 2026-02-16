@@ -2175,6 +2175,8 @@
   "login.prompt": "Identifiez-vous pour continuer.",
   "login.resetEmailSentNeutral": "Si l'adresse e-mail existe, vous recevrez un e-mail avec les instructions pour réinitialiser le mot de passe.",
   "login.resetRequiresEmail": "Saisissez d'abord votre adresse e-mail.",
+  "login.resetUseLatestEmail": "Par sécurité, seul le dernier e-mail de réinitialisation envoyé est valide.",
+  "login.resetWaitBeforeRetry": "Un e-mail vient d'être envoyé. Vérifiez le dernier message reçu avant d'en demander un nouveau.",
   "login.tooManyRequests": "Trop de tentatives. Réessayez plus tard.",
   "login.userNotFound": "Aucun compte avec cet e-mail",
   "login.verifyingSession": "Vérification de la session...",
