@@ -266,35 +266,11 @@ function OrgLoginContent() {
 
     setIsSendingReset(true);
     try {
-      await sendPasswordResetEmail(auth, trimmedEmail, {
-        url: `${window.location.origin}/${orgSlug}/login`,
-        handleCodeInApp: false,
-      });
+      // Sense continueUrl: evita el bug del widget hosted de Firebase
+      // en entorns App Hosting on /__/firebase/init.json no està disponible.
+      await sendPasswordResetEmail(auth, trimmedEmail);
     } catch (resetError) {
       console.error('Password reset error (silenced):', resetError);
-
-      const resetErrorCode = (
-        typeof resetError === 'object' &&
-        resetError !== null &&
-        'code' in resetError
-      )
-        ? String((resetError as { code?: unknown }).code)
-        : '';
-
-      // Fallback segur: si la continue URL no està autoritzada,
-      // enviem igual el correu sense ActionCodeSettings.
-      if (
-        resetErrorCode === 'auth/unauthorized-continue-uri' ||
-        resetErrorCode === 'auth/invalid-continue-uri' ||
-        resetErrorCode === 'auth/missing-continue-uri'
-      ) {
-        try {
-          await sendPasswordResetEmail(auth, trimmedEmail);
-          console.warn('Password reset fallback used without continue URL.');
-        } catch (retryError) {
-          console.error('Password reset retry error (silenced):', retryError);
-        }
-      }
     } finally {
       // Sempre missatge neutre per evitar enumeració d'usuaris.
       setResetInfo(`${neutralMessage} ${latestEmailMessage}`);
