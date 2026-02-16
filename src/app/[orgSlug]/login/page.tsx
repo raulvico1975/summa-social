@@ -22,6 +22,11 @@ interface OrgInfo {
   slug: string;
 }
 
+function resolveAuthLanguage(language: string): string {
+  const supported = new Set(['ca', 'es', 'fr', 'pt', 'en']);
+  return supported.has(language) ? language : 'en';
+}
+
 function OrgLoginContent() {
   const router = useRouter();
   const params = useParams();
@@ -31,7 +36,7 @@ function OrgLoginContent() {
   const nextPath = searchParams.get('next');
   const inviteToken = searchParams.get('inviteToken');
   const { auth, firestore, user, isUserLoading } = useFirebase();
-  const { tr } = useTranslations();
+  const { tr, language } = useTranslations();
   const { toast } = useToast();
 
   const [email, setEmail] = React.useState('');
@@ -266,6 +271,7 @@ function OrgLoginContent() {
 
     setIsSendingReset(true);
     try {
+      auth.languageCode = resolveAuthLanguage(language);
       // Sense continueUrl: evita el bug del widget hosted de Firebase
       // en entorns App Hosting on /__/firebase/init.json no està disponible.
       await sendPasswordResetEmail(auth, trimmedEmail);
