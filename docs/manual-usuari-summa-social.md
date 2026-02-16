@@ -28,15 +28,14 @@ Endavant!
 5. [Gestió de Moviments](#5-gestió-de-moviments)
 6. [Divisor de Remeses](#6-divisor-de-remeses)
 6b. [Documents Pendents i Remeses SEPA OUT](#6b-documents-pendents-i-remeses-sepa-out)
-6c. [Liquidacions de Despeses de Viatge](#107-liquidacions-de-despeses-de-viatge-v128)
+6c. [Liquidacions de Despeses de Viatge](#6c-liquidacions-de-despeses-de-viatge-v128)
 7. [Gestió de Devolucions Bancàries](#7-gestió-de-devolucions-bancàries)
 8. [Donacions via Stripe](#8-donacions-via-stripe)
 9. [Informes Fiscals](#9-informes-fiscals)
 10. [Projectes i Justificació de Subvencions](#10-projectes-i-justificació-de-subvencions)
 10b. [Paquet de Tancament](#10b-paquet-de-tancament)
-11. [Zona de Perill](#11-zona-de-perill)
-12. [Resolució de Problemes](#12-resolució-de-problemes)
-13. [Glossari](#13-glossari)
+11. [Resolució de Problemes](#11-resolució-de-problemes)
+12. [Glossari](#12-glossari)
 
 ---
 
@@ -73,7 +72,6 @@ Per protegir les dades de l'entitat, hem configurat algunes mesures de seguretat
 - ✅ **La sessió es tanca** quan tanques el navegador
 - ✅ **La sessió es tanca** després de **30 minuts sense activitat** (rebràs un avís 1 minut abans per si vols continuar)
 - ✅ **Reautenticació cada 12 hores** encara que hi hagi activitat (per seguretat)
-- ✅ Al panell **SuperAdmin (`/admin`)** el timeout d'inactivitat és de **15 minuts** (avís 1 minut abans)
 - ✅ Si uses un **ordinador compartit**, recorda tancar sessió manualment quan acabis
 
 **Com tancar sessió:** Clica el teu nom (a dalt a la dreta) → "Tancar sessió"
@@ -316,7 +314,7 @@ Les categories serveixen per classificar els moviments (ingressos i despeses). S
 
 Quan elimines una categoria, els moviments que la tenien assignada **no s'esborren**, simplement perden la categoria. Veuràs un avís amb el nombre de moviments afectats.
 
-> ⚠️ **Zona de perill:** Si necessites esborrar TOTES les categories i tornar a començar, hi ha un botó especial a "Configuració > Zona de Perill". Les categories per defecte es regeneraran automàticament.
+> ⚠️ Si necessites esborrar TOTES les categories i tornar a començar, demana-ho a l'administració de la teva entitat.
 
 ---
 
@@ -352,8 +350,7 @@ Si altres persones de l'entitat necessiten accedir a Summa Social, pots convidar
 
 | Rol | Què pot fer |
 |-----|-------------|
-| **SuperAdmin** | Tot, inclosa la Zona de Perill |
-| **Admin** | Configurar, però no esborrar massivament |
+| **Admin** | Gestió completa de l'organització (configuració, membres i operativa) |
 | **User** | Gestió diària (importar, categoritzar) |
 | **Viewer** | Només veure, no modificar res |
 
@@ -977,10 +974,6 @@ Si has processat una remesa incorrectament (fitxer equivocat, matching incorrect
 
 > 💡 **Consell de seguretat:** El sistema no permet processar una remesa que ja està processada. Si intentes dividir-la de nou, veuràs el missatge "Aquesta remesa ja està processada. Desfés-la abans de tornar-la a processar."
 
-### Mètode alternatiu (Zona de Perill)
-
-Si no pots accedir al modal de detall, els SuperAdmin també poden desfer remeses des de **Configuració → Zona de Perill → Esborrar última remesa**.
-
 ---
 
 ## 6.a Remeses SEPA de cobrament (domiciliacions)
@@ -1219,6 +1212,73 @@ Si el banc rebutja algun pagament, cal gestionar-ho manualment. La remesa SEPA e
 ### Arxivar documents
 
 Si decideixes no pagar un document, pots arxivar-lo per treure'l de circulació sense esborrar-lo.
+
+---
+
+# 6c. Liquidacions de Despeses de Viatge (v1.28)
+
+**Aquesta secció t'ajudarà a...**
+
+Agrupar tiquets i quilometratge d'un viatge en una sola liquidació, generar el PDF i deixar el reemborsament ben documentat.
+
+> **Nota:** La pantalla de **Liquidacions** forma part del mòdul de **Documents pendents**. Si no et surt al menú, un administrador la pot activar/desactivar a **Configuració > Mòduls opcionals**.
+
+---
+
+## 6c.1 Dues maneres de treballar
+
+**Opció A: Primer tiquets, després liquidació**
+1. Ves a **Moviments > Pendents** i puja els tiquets (mòbil o drag & drop)
+2. Ves a **Moviments > Liquidacions**
+3. Crea una nova liquidació
+4. Assigna-hi els tiquets i afegeix quilometratge si cal
+5. Genera el PDF
+
+**Opció B: Liquidació directa**
+1. Ves a **Moviments > Liquidacions**
+2. Crea una nova liquidació
+3. Arrossega els tiquets directament dins la liquidació
+4. Afegeix quilometratge si cal
+5. Genera el PDF
+
+## 6c.2 Com s'organitza la pantalla
+
+A dalt tens 3 pestanyes principals:
+- **Liquidacions**: llistat de liquidacions creades
+- **Tiquets**: safata de tiquets pendents d'assignar
+- **Quilometratge**: accés ràpid per editar km dins de liquidacions obertes
+
+Dins de **Liquidacions**, cada registre passa per aquests estats:
+- **Esborrany**: encara l'estàs preparant
+- **Enviada**: llesta per tramitar el reemborsament
+- **Conciliada**: ja vinculada al moviment bancari
+- **Arxivada**: tancada i fora del circuit operatiu
+
+## 6c.3 Afegir tiquets amb drag & drop
+
+Dins la liquidació, la card de **Tiquets** accepta arrossegar fitxers:
+1. Arrossega els fitxers sobre la card
+2. Veuràs un overlay blau
+3. Deixa anar i s'obrirà el modal de pujada
+4. Els tiquets nous quedaran vinculats automàticament a la liquidació
+
+**Formats admesos:** PDF, XML, JPG, JPEG, PNG
+
+## 6c.4 Quilometratge
+
+Pots afegir múltiples línies de quilometratge amb:
+- Data del desplaçament
+- Quilòmetres
+- Tarifa €/km (**configurable per la teva entitat**)
+- Notes (ruta o motiu)
+
+## 6c.5 Generar PDF
+
+El PDF inclou:
+- Dades de la liquidació i beneficiari
+- Llista de tiquets amb imports
+- Línies de quilometratge
+- Total desglossat
 
 ---
 
@@ -1625,21 +1685,142 @@ Edita un moviment → Columna "Projecte" → Selecciona
 
 ## 10.2 Mòdul de Projectes (avançat)
 
-Per a qui justifica subvencions (ACCD, Fons Català, Ajuntaments...).
+Per a entitats que necessiten justificar subvencions amb traçabilitat econòmica real (ACCD, Fons Català, ajuntaments, etc.).
+
+> Aquesta part del manual correspon a la ruta `project-module/expenses` (**Assignació de despeses**), no a la pantalla d'**Eixos d'actuació**.
+
+### Abans de començar
+
+Per veure aquesta pantalla, l'entitat ha de tenir activat el **Mòdul Projectes** a:
+**Configuració > Mòduls opcionals**.
 
 ### Navegació
 
-Al menú lateral, **Projectes** té un submenú:
-- Gestió de projectes
-- Assignació de despeses
+Al menú lateral:
+1. Entra a **Projectes** (mòdul)
+2. Clica **Assignació de despeses**
 
-### Pantalla de Gestió Econòmica
+### Què hi trobaràs en aquesta pantalla
 
-| Targeta | Descripció |
-|---------|------------|
-| **Pressupostat** | Import previst |
-| **Executat** | Suma de despeses assignades |
-| **Pendent** | Pressupostat − Executat |
+La safata barreja dues fonts de despesa:
+- **Seu**: despeses bancàries elegibles per projectes
+- **Terreny**: despeses pujades manualment (off-bank)
+
+Per cada despesa, veuràs:
+- Data, concepte, contrapart i import
+- Estat d'imputació:
+  - **No imputada**
+  - **Parcial**
+  - **Imputada**
+- Accions ràpides d'assignació i edició
+
+### Cercador i filtres (per anar de pressa)
+
+Pots filtrar per:
+- **Tots**
+- **Sense document**
+- **No assignades**
+- **Terreny**
+- **Seu**
+- **Pendents de revisió** (botó superior)
+
+També pots cercar per text (concepte, contrapart, categoria...).
+
+### Imputar una despesa a projecte
+
+Tens 3 maneres de treballar:
+
+**Opció A: Assignació ràpida (100%)**
+1. Clica la icona d'assignar a la fila
+2. Selecciona el projecte
+3. (Opcional) selecciona partida pressupostària
+4. La despesa queda imputada
+
+**Opció B: Assignació múltiple (dividir despesa)**
+1. Obre **Assignació múltiple**
+2. Reparteix imports o percentatges entre projectes
+3. Desa els canvis
+
+**Opció C: Assignació massiva**
+1. Selecciona diverses files (checkbox)
+2. Clica **Assignar a projecte...**
+3. Tria el projecte
+4. El sistema aplica assignació 100% a totes les seleccionades
+
+> 💡 Si una despesa està en moneda local i el projecte encara no té tipus de canvi operatiu, la imputació pot quedar parcial/pendent en EUR fins que es configuri.
+
+### Quan una despesa va a diversos projectes
+
+Si divideixes una despesa entre 2 o més projectes:
+- es guarda una assignació per a cada projecte
+- cada assignació pot tenir la seva partida pressupostària
+- l'import imputat a cada projecte queda separat (no es duplica)
+
+### Com es veu al llistat general (Assignació de despeses)
+
+A la fila de la despesa veuràs:
+- estat **Imputada** o **Parcial**
+- un resum del repartiment (projectes i percentatges)
+
+Exemples habituals:
+- `1 proj. (100%)`
+- `2 proj. (70/30%)`
+
+Si passes el cursor pel resum, veuràs el detall per projecte.
+
+Si entres amb filtre d'un projecte concret (`?projectId=...`), el resum indica el percentatge **dins d'aquell projecte**.
+
+### Com es veu a cada projecte
+
+En cada projecte només computa la seva part:
+- a la targeta de projecte (Pressupost / Executat / Pendent) suma només l'import imputat a aquell projecte
+- a la pantalla de pressupost del projecte, l'execució per partida també compta només la part imputada
+
+Per tant, una mateixa despesa repartida no infla imports: cada projecte veu només el seu tros.
+
+### Què passa si canvies el % d'imputació
+
+> En despeses en EUR, el mateix efecte s'aconsegueix canviant **imports** (no percentatges).
+
+Quan edites el repartiment:
+- el llistat general s'actualitza amb el nou resum
+- es recalculen els imports imputats de cada projecte
+- es recalculen també els totals de cada projecte (executat i pendent)
+
+Regles importants:
+- no es pot guardar per sobre del **100%**
+- si deixes el total per sota del 100%, la despesa queda en estat **Parcial** (queda part pendent d'imputar)
+
+### Crear i editar despeses de terreny (off-bank)
+
+Des de **Assignació de despeses** pots clicar **Afegir despesa**.
+
+Camps principals:
+- Data
+- Concepte
+- Import (EUR o moneda local)
+- Origen/destinatari
+- Comprovants
+- Dades de justificació (opcional)
+
+Quan treballes en moneda local:
+- pots informar moneda + import local
+- l'EUR es pot deixar buit perquè es resolgui en imputar al projecte
+
+### Gestió de documents a la mateixa taula
+
+Pots arrossegar un fitxer directament sobre la fila d'una despesa per adjuntar-lo.
+
+També pots:
+- Obrir un comprovant ja pujat
+- En despeses de terreny, eliminar el comprovant si t'has equivocat
+
+### Detall d'una despesa bancària
+
+A les files de **Seu**, el botó de detall obre una pantalla específica on pots:
+- revisar la informació original de la despesa
+- editar l'assignació a projectes
+- completar dades de justificació (núm. factura, NIF emissor, dates, núm. justificant)
 
 ---
 
@@ -1669,18 +1850,21 @@ El sistema suggereix despeses ordenades per rellevància. Els canvis es fan en m
 
 ## 10.5 Captura de despeses de terreny
 
-Per al personal de camp que genera despeses petites.
+Pensada per al personal de camp: pujar comprovants al moment i deixar la revisió per després.
 
-### Des del mòbil
+### Com funciona (flux recomanat)
 
-1. Ves a **Projectes > Despeses > Captura**
-2. Fes foto del tiquet
-3. Introdueix import i data
-4. Clica **"Enviar"**
+1. Des d'**Assignació de despeses**, clica la icona de càmera (**Despesa ràpida**)
+2. Fes foto del tiquet o puja un PDF/imatge
+3. Revisa els camps suggerits (si cal)
+4. Desa la despesa
 
-**Temps objectiu:** < 10 segons
+Resultat:
+- La despesa entra com a **Terreny**
+- Queda marcada com a **pendent de revisió**
+- L'equip d'oficina la pot completar i imputar des de `project-module/expenses`
 
-L'administració revisa i categoritza després.
+> 💡 No cal tenir-ho tot perfecte en el moment de pujar. L'important és no perdre el comprovant.
 
 ---
 
@@ -1728,55 +1912,15 @@ Al final del document hi ha una fila de **totals**.
 
 ## 10.7 Drag & Drop de documents
 
-A la pantalla d'assignació de despeses, pots arrossegar fitxers directament sobre cada fila per adjuntar justificants.
+A **Assignació de despeses**, pots arrossegar fitxers directament sobre una fila per adjuntar justificants.
 
----
+### Què és útil saber
 
-## 10.8 Liquidacions de Despeses de Viatge (v1.28)
+- Funciona tant per despeses de **Seu** com de **Terreny**
+- Si la pujada va bé, el document queda vinculat a la despesa
+- El comprovant es pot obrir des de la mateixa taula
 
-Per gestionar despeses de viatge: tiquets, quilometratge i reemborsaments.
-
-### Dues maneres de treballar
-
-**Opció A: Des del terreny (viatge)**
-1. Puja els tiquets a **Moviments > Pendents** (via mòbil o drag & drop)
-2. Quan tornis, ves a **Moviments > Liquidacions**
-3. Crea una nova liquidació
-4. Selecciona els tiquets pujats i afegeix quilometratge
-5. Genera el PDF
-
-**Opció B: Des de l'oficina (directe)**
-1. Ves a **Moviments > Liquidacions**
-2. Crea una nova liquidació
-3. Arrossega els tiquets directament sobre la card de "Tiquets"
-4. Afegeix quilometratge si cal
-5. Genera el PDF
-
-### Afegir tiquets amb drag & drop (v1.28)
-
-Dins la liquidació, la card de "Tiquets" accepta drag & drop:
-1. Arrossega els fitxers sobre la card
-2. Veuràs un overlay blau
-3. Deixa anar i s'obrirà el modal d'upload
-4. Els tiquets nous es vinculen automàticament a la liquidació
-
-**Formats admesos:** PDF, XML, JPG, JPEG, PNG
-
-### Quilometratge
-
-Pots afegir múltiples línies de quilometratge amb:
-- Data del desplaçament
-- Quilòmetres
-- Tarifa (per defecte 0,26 €/km)
-- Notes (ruta o motiu)
-
-### Generar PDF
-
-El PDF inclou:
-- Dades de la liquidació i beneficiari
-- Llista de tiquets amb imports
-- Línies de quilometratge
-- Total desglossat
+Aquest gest és especialment pràctic quan estàs revisant moltes despeses seguides.
 
 ---
 
@@ -1921,48 +2065,7 @@ El format europeu (coma decimal) pot fer que Excel no els reconegui com a númer
 
 ---
 
-# 11. Zona de Perill
-
-**Aquesta secció t'ajudarà a...**
-
-Entendre les accions destructives que només pot fer el SuperAdmin. Aquestes accions són irreversibles, però a vegades necessàries per corregir errors greus o reiniciar dades.
-
-Pensa-hi com el "reset" definitiu. Usa-ho amb precaució.
-
----
-
-## 11.1 Com accedir
-
-1. Ves a ⚙️ **Configuració**
-2. Baixa fins al final
-3. Veuràs la secció "Zona de Perill" en vermell
-
-> 💡 Si no la veus, és perquè no tens rol de SuperAdmin.
-
----
-
-## 11.2 Accions disponibles
-
-| Acció | Descripció |
-|-------|------------|
-| **Esborrar tots els donants** | Elimina tots |
-| **Esborrar tots els proveïdors** | Elimina tots |
-| **Esborrar tots els treballadors** | Elimina tots |
-| **Esborrar tots els moviments** | Elimina tots |
-| **Esborrar última remesa** | Desfà l'última remesa processada |
-
----
-
-## 11.3 Com esborrar l'última remesa
-
-1. Clica **"Esborrar última remesa processada"**
-2. Revisa la informació mostrada
-3. Escriu **"BORRAR"** per confirmar
-4. La remesa es restaura
-
----
-
-# 12. Resolució de Problemes
+# 11. Resolució de Problemes
 
 **Aquesta secció t'ajudarà a...**
 
@@ -1970,7 +2073,7 @@ Trobar respostes ràpides als problemes més comuns. Si et trobes encallat, mira
 
 ---
 
-## 12.0 El Hub de Guies: el teu primer recurs
+## 11.0 El Hub de Guies: el teu primer recurs
 
 Abans de buscar ajuda externa, prova el **Hub de Guies** integrat a l'aplicació. El trobaràs clicant la icona **?** (interrogant) que apareix a la cantonada superior dreta de qualsevol pantalla.
 
@@ -2000,7 +2103,7 @@ El sistema reconeix sinònims i expressions comunes, així que no et preocupis p
 
 ---
 
-## 12.1 Problemes d'accés
+## 11.1 Problemes d'accés
 
 | Problema | Solució |
 |----------|---------|
@@ -2011,7 +2114,7 @@ El sistema reconeix sinònims i expressions comunes, així que no et preocupis p
 
 ---
 
-## 12.2 Problemes amb dades
+## 11.2 Problemes amb dades
 
 | Problema | Solució |
 |----------|---------|
@@ -2021,15 +2124,15 @@ El sistema reconeix sinònims i expressions comunes, així que no et preocupis p
 
 ---
 
-## 12.3 Problemes amb remeses
+## 11.3 Problemes amb remeses
 
 | Problema | Solució |
 |----------|---------|
 | La remesa no es divideix correctament | Comprova que el fitxer correspon a la remesa |
 | No troba socis | Actualitza IBAN o DNI dels donants |
-| He processat malament | Zona de Perill → Esborrar última remesa |
+| He processat malament | Obre el detall de la remesa i desfés el processat abans de tornar-la a dividir |
 
-## 12.3b Problemes amb remeses SEPA (pain.008)
+## 11.3b Problemes amb remeses SEPA (pain.008)
 
 | Problema | Solució |
 |----------|---------|
@@ -2041,7 +2144,7 @@ El sistema reconeix sinònims i expressions comunes, així que no et preocupis p
 
 ---
 
-## 12.4 Problemes amb informes
+## 11.4 Problemes amb informes
 
 | Problema | Solució |
 |----------|---------|
@@ -2051,7 +2154,7 @@ El sistema reconeix sinònims i expressions comunes, així que no et preocupis p
 
 ---
 
-## 12.5 Missatges d'error habituals
+## 11.5 Missatges d'error habituals
 
 | Missatge | Solució |
 |----------|---------|
@@ -2062,7 +2165,7 @@ El sistema reconeix sinònims i expressions comunes, així que no et preocupis p
 
 ---
 
-# 13. Glossari
+# 12. Glossari
 
 | Terme | Definició |
 |-------|-----------|
@@ -2074,7 +2177,7 @@ El sistema reconeix sinònims i expressions comunes, així que no et preocupis p
 | **Soci** | Donant recurrent |
 | **Donant puntual** | Donant esporàdic |
 | **Contrapart** | Entitat sòcia internacional |
-| **SuperAdmin** | Rol amb accés total |
+| **Admin** | Rol d'administració de l'organització |
 | **Matching** | Identificació automàtica de contactes |
 | **Recurrència** | Ha donat 3 anys seguits |
 | **Partida** | Línia del pressupost |

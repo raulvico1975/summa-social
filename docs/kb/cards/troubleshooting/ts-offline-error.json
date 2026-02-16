@@ -34,7 +34,7 @@
   "needsSnapshot": false,
   "keywords": ["connexió", "offline", "xarxa", "internet", "carrega"],
   "source_faq": ["Q87"],
-  "source_manual": ["12.1"],
+  "source_manual": ["11.1"],
   "source_guides": [],
   "related": [],
   "error_key": "errorOffline",

@@ -149,7 +149,7 @@ const loadImageAsBase64 = (url: string, signal?: AbortSignal): Promise<string | 
 };
 
 export function DonationCertificateGenerator() {
-  const { firestore } = useFirebase();
+  const { firestore, user } = useFirebase();
   const { organizationId, organization } = useCurrentOrganization();
   const { toast } = useToast();
   const { t, language } = useTranslations();
@@ -687,11 +687,20 @@ export function DonationCertificateGenerator() {
 
     setIsSendingEmails(true);
     try {
+      const idToken = await user?.getIdToken();
+      if (!idToken) {
+        toast({ variant: 'destructive', title: t.common.error, description: t.certificates.email.errorSending });
+        return;
+      }
+
       const pdfBase64 = generatePDFBase64(summary);
 
       const response = await fetch('/api/certificates/send-email', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${idToken}`,
+        },
         body: JSON.stringify({
           organizationId,
           organizationName: orgData?.name || organization?.name || '',
@@ -708,12 +717,15 @@ export function DonationCertificateGenerator() {
       });
 
       const result = await response.json();
+      const sentCount = Number(result?.totals?.sent ?? result?.sent ?? 0);
 
-      if (response.ok && result.sent > 0) {
+      if (response.ok && sentCount > 0) {
         toast({
           title: t.certificates.email.successOne,
           description: t.certificates.email.successOneDescription(cleanName(summary.donor.name)),
         });
+      } else if (response.status === 429) {
+        toast({ variant: 'destructive', title: t.common.error, description: "S'ha assolit el límit diari d'enviaments de certificats." });
       } else {
         toast({ variant: 'destructive', title: t.common.error, description: t.certificates.email.errorSending });
       }
@@ -738,34 +750,68 @@ export function DonationCertificateGenerator() {
 
     setIsSendingEmails(true);
     try {
-      const donorsData = withEmail.map(summary => ({
-        id: summary.donor.id,
-        name: cleanName(summary.donor.name),
-        email: summary.donor.email!,
-        pdfBase64: generatePDFBase64(summary),
-      }));
+      const idToken = await user?.getIdToken();
+      if (!idToken) {
+        toast({ variant: 'destructive', title: t.common.error, description: t.certificates.email.errorSending });
+        return;
+      }
 
-      const response = await fetch('/api/certificates/send-email', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          organizationId,
-          organizationName: orgData?.name || organization?.name || '',
-          organizationEmail: orgData?.email,
-          organizationLanguage: orgData?.language ?? 'es',
-          donors: donorsData,
-          year: selectedYear,
-        }),
-      });
+      const MAX_RECIPIENTS_PER_REQUEST = 20;
+      let totalSent = 0;
+      let totalErrors = 0;
+      let quotaExceeded = false;
 
-      const result = await response.json();
+      for (let i = 0; i < withEmail.length; i += MAX_RECIPIENTS_PER_REQUEST) {
+        const chunk = withEmail.slice(i, i + MAX_RECIPIENTS_PER_REQUEST);
+        const donorsData = chunk.map(summary => ({
+          id: summary.donor.id,
+          name: cleanName(summary.donor.name),
+          email: summary.donor.email!,
+          pdfBase64: generatePDFBase64(summary),
+        }));
 
-      if (response.ok) {
+        const response = await fetch('/api/certificates/send-email', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${idToken}`,
+          },
+          body: JSON.stringify({
+            organizationId,
+            organizationName: orgData?.name || organization?.name || '',
+            organizationEmail: orgData?.email,
+            organizationLanguage: orgData?.language ?? 'es',
+            donors: donorsData,
+            year: selectedYear,
+          }),
+        });
+
+        const result = await response.json().catch(() => ({}));
+
+        if (response.ok) {
+          totalSent += Number(result?.totals?.sent ?? result?.sent ?? 0);
+          totalErrors += Number(result?.totals?.failed ?? result?.errors ?? 0);
+          continue;
+        }
+
+        if (response.status === 429) {
+          quotaExceeded = true;
+          break;
+        }
+
+        totalErrors += chunk.length;
+      }
+
+      if (totalSent > 0) {
         toast({
           title: t.certificates.email.successMany,
-          description: t.certificates.email.successManyDescription(result.sent, withoutEmail.length),
+          description: t.certificates.email.successManyDescription(totalSent, withoutEmail.length),
         });
-      } else {
+      }
+
+      if (quotaExceeded) {
+        toast({ variant: 'destructive', title: t.common.error, description: "S'ha assolit el límit diari d'enviaments de certificats." });
+      } else if (totalErrors > 0 && totalSent === 0) {
         toast({ variant: 'destructive', title: t.common.error, description: t.certificates.email.errorSending });
       }
     } catch (error) {
