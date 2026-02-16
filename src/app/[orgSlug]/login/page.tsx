@@ -39,6 +39,8 @@ function OrgLoginContent() {
   const [error, setError] = React.useState('');
   const [resetInfo, setResetInfo] = React.useState('');
   const [isLoggingIn, setIsLoggingIn] = React.useState(false);
+  const [isSendingReset, setIsSendingReset] = React.useState(false);
+  const [nextResetAllowedAt, setNextResetAllowedAt] = React.useState(0);
   // DEMO: Bypass per /demo/login — no cal carregar org abans de login
   const isDemoLogin = isDemoEnv() && orgSlug === 'demo';
 
@@ -232,6 +234,19 @@ function OrgLoginContent() {
   };
 
   const handlePasswordReset = async () => {
+    if (isSendingReset) return;
+
+    if (Date.now() < nextResetAllowedAt) {
+      setResetInfo('');
+      setError(
+        tr(
+          'login.resetWaitBeforeRetry',
+          "Ja hem enviat un correu fa poc. Revisa l'ultim missatge rebut abans de demanar-ne un de nou."
+        )
+      );
+      return;
+    }
+
     if (!email.trim()) {
       setResetInfo('');
       setError(tr('login.resetRequiresEmail', 'Introdueix el teu correu electrònic primer.'));
@@ -244,7 +259,12 @@ function OrgLoginContent() {
       'login.resetEmailSentNeutral',
       'Si el correu existeix, rebràs un email amb instruccions per restablir la contrasenya.'
     );
+    const latestEmailMessage = tr(
+      'login.resetUseLatestEmail',
+      "Per seguretat, nomes es valid l'ultim correu de restabliment enviat."
+    );
 
+    setIsSendingReset(true);
     try {
       await sendPasswordResetEmail(auth, trimmedEmail, {
         url: `${window.location.origin}/${orgSlug}/login`,
@@ -277,7 +297,9 @@ function OrgLoginContent() {
       }
     } finally {
       // Sempre missatge neutre per evitar enumeració d'usuaris.
-      setResetInfo(neutralMessage);
+      setResetInfo(`${neutralMessage} ${latestEmailMessage}`);
+      setNextResetAllowedAt(Date.now() + 60_000);
+      setIsSendingReset(false);
     }
   };
 
@@ -379,6 +401,7 @@ function OrgLoginContent() {
                 setEmail(e.target.value);
                 setError('');
                 setResetInfo('');
+                setNextResetAllowedAt(0);
               }}
               onKeyPress={handleKeyPress}
               placeholder="nombre@ejemplo.com"
@@ -421,7 +444,7 @@ function OrgLoginContent() {
             type="button"
             onClick={handlePasswordReset}
             className="text-sm text-primary underline"
-            disabled={isLoggingIn}
+            disabled={isLoggingIn || isSendingReset}
           >
             {tr('login.forgotPassword', 'Has oblidat la contrasenya?')}
           </button>

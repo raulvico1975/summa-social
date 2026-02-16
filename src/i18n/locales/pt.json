@@ -2214,6 +2214,8 @@
   "login.prompt": "Introdueix les teves credencials per accedir.",
   "login.resetEmailSentNeutral": "Se o e-mail existir, receberá uma mensagem com instruções para redefinir a palavra-passe.",
   "login.resetRequiresEmail": "Introduza primeiro o seu e-mail.",
+  "login.resetUseLatestEmail": "Por segurança, só é válido o último e-mail de redefinição enviado.",
+  "login.resetWaitBeforeRetry": "Já enviámos um e-mail há pouco. Verifique a última mensagem recebida antes de pedir outro.",
   "login.tooManyRequests": "Massa intents. Prova-ho de nou més tard.",
   "login.userNotFound": "No existeix cap compte amb aquest correu",
   "login.verifyingSession": "Verificant sessió...",
