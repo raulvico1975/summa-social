@@ -33,7 +33,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import { Download, Loader2, Building2, AlertTriangle, Ban, FileText, Eye } from 'lucide-react';
+import { Download, Loader2, Building2, AlertTriangle, Ban, FileText, Eye, Mail, Copy } from 'lucide-react';
 import type { Supplier, Transaction, AnyContact, Category } from '@/lib/data';
 import { formatCurrencyEU } from '@/lib/normalize';
 import { useToast } from '@/hooks/use-toast';
@@ -103,9 +103,15 @@ export function SuppliersReportGenerator() {
   const [excludedSupplierKeys, setExcludedSupplierKeys] = React.useState<Set<string>>(new Set());
   const [detailAggregate, setDetailAggregate] = React.useState<SupplierAggregate | null>(null);
   const [detailDialogOpen, setDetailDialogOpen] = React.useState(false);
+  const [emailAggregate, setEmailAggregate] = React.useState<SupplierAggregate | null>(null);
+  const [emailDialogOpen, setEmailDialogOpen] = React.useState(false);
   const [aeatExcludedDialogOpen, setAeatExcludedDialogOpen] = React.useState(false);
   const [aeatPendingExport, setAeatPendingExport] = React.useState<AEAT347ExportResult | null>(null);
   const { toast } = useToast();
+
+  const formatCurrencyNoBreak = React.useCallback((value: number | string | null | undefined) => {
+    return formatCurrencyEU(value).replace(' €', '\u00A0€');
+  }, []);
 
   // ── Anys disponibles ──
   const availableYears = React.useMemo(() => {
@@ -185,6 +191,65 @@ export function SuppliersReportGenerator() {
     setDetailAggregate(aggregate);
     setDetailDialogOpen(true);
   };
+
+  const openEmailDraft = (aggregate: SupplierAggregate) => {
+    setEmailAggregate(aggregate);
+    setEmailDialogOpen(true);
+  };
+
+  const emailDraft = React.useMemo(() => {
+    if (!emailAggregate) return null;
+
+    const reportYear = Number.parseInt(selectedYear, 10);
+    const validYear = Number.isFinite(reportYear) ? reportYear : new Date().getFullYear() - 1;
+    const deadline = `24/02/${validYear + 1}`;
+
+    const subject = `Coordinació Model 347 exercici ${validYear} · ${emailAggregate.name}`;
+    const body = [
+      'Benvolguts,',
+      '',
+      `Amb motiu de la preparació del Model 347 (declaració anual d’operacions amb terceres persones) corresponent a l’exercici ${validYear}, ens posem en contacte amb vosaltres per tal de verificar i coordinar les dades de facturació entre les nostres entitats.`,
+      '',
+      'Com sabeu, aquesta declaració informativa inclou el volum anual d’operacions que superen els 3.005,06 €, desglossades per trimestres naturals. Per aquest motiu, és important que les dades declarades per ambdues parts siguin coincidents.',
+      '',
+      'Us facilitem a continuació el resum de les operacions registrades a la nostra comptabilitat:',
+      '',
+      `• 1r trimestre: ${formatCurrencyEU(emailAggregate.quarters.q1)}`,
+      `• 2n trimestre: ${formatCurrencyEU(emailAggregate.quarters.q2)}`,
+      `• 3r trimestre: ${formatCurrencyEU(emailAggregate.quarters.q3)}`,
+      `• 4t trimestre: ${formatCurrencyEU(emailAggregate.quarters.q4)}`,
+      `• Total anual: ${formatCurrencyEU(emailAggregate.quarters.total)}`,
+      '',
+      `Us agrairem que reviseu aquestes dades i ens confirmeu si coincideixen amb els vostres registres, o bé que ens indiqueu qualsevol diferència detectada abans del dia ${deadline} per tal de poder fer les comprovacions necessàries amb antelació a la presentació del model.`,
+      '',
+      'Aquesta coordinació té com a únic objectiu evitar discrepàncies en la informació declarada davant l’Agència Tributària.',
+      '',
+      'Restem a la vostra disposició per a qualsevol aclariment.',
+      '',
+      'Moltes gràcies per la col·laboració,',
+    ].join('\n');
+
+    return { subject, body };
+  }, [emailAggregate, selectedYear]);
+
+  const handleCopyEmailDraft = React.useCallback(async () => {
+    if (!emailDraft) return;
+    const payload = `Assumpte: ${emailDraft.subject}\n\n${emailDraft.body}`;
+
+    try {
+      await navigator.clipboard.writeText(payload);
+      toast({
+        title: t.reports.model347EmailCopiedTitle,
+        description: t.reports.model347EmailCopiedDescription,
+      });
+    } catch {
+      toast({
+        variant: 'destructive',
+        title: t.reports.model347EmailCopyErrorTitle,
+        description: t.reports.model347EmailCopyErrorDescription,
+      });
+    }
+  }, [emailDraft, t.reports.model347EmailCopiedDescription, t.reports.model347EmailCopiedTitle, t.reports.model347EmailCopyErrorDescription, t.reports.model347EmailCopyErrorTitle, toast]);
 
   // ── Export CSV ──
   const handleExportCSV = () => {
@@ -391,12 +456,12 @@ export function SuppliersReportGenerator() {
             </div>
             <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
               <p className="text-xs text-blue-600 font-medium">{t.reports.totalAmount}</p>
-              <p className="text-2xl font-bold text-blue-700">{formatCurrencyEU(stats.expenseTotal)}</p>
+              <p className="text-2xl font-bold text-blue-700 whitespace-nowrap">{formatCurrencyNoBreak(stats.expenseTotal)}</p>
             </div>
             {stats.incomeSuppliers > 0 && (
               <div className="bg-green-50 border border-green-200 rounded-lg p-3">
                 <p className="text-xs text-green-600 font-medium">{t.reports.model347SectionIncome}</p>
-                <p className="text-2xl font-bold text-green-700">{stats.incomeSuppliers} — {formatCurrencyEU(stats.incomeTotal)}</p>
+                <p className="text-2xl font-bold text-green-700 whitespace-nowrap">{stats.incomeSuppliers} — {formatCurrencyNoBreak(stats.incomeTotal)}</p>
               </div>
             )}
             {stats.excludedCount > 0 && (
@@ -407,7 +472,7 @@ export function SuppliersReportGenerator() {
             )}
             <div className="bg-gray-50 border border-gray-200 rounded-lg p-3">
               <p className="text-xs text-gray-600 font-medium">{t.reports.threshold347}</p>
-              <p className="text-2xl font-bold text-gray-700">{formatCurrencyEU(THRESHOLD_347)}</p>
+              <p className="text-2xl font-bold text-gray-700 whitespace-nowrap">{formatCurrencyNoBreak(THRESHOLD_347)}</p>
             </div>
           </div>
         )}
@@ -422,8 +487,10 @@ export function SuppliersReportGenerator() {
             excludedKeys={excludedSupplierKeys}
             toggleExclusion={toggleSupplierExclusion}
             onOpenDetail={openDetail}
+            onOpenEmailDraft={openEmailDraft}
             isMobile={isMobile}
             t={t}
+            formatCurrencyNoBreak={formatCurrencyNoBreak}
           />
         )}
 
@@ -437,8 +504,10 @@ export function SuppliersReportGenerator() {
             excludedKeys={excludedSupplierKeys}
             toggleExclusion={toggleSupplierExclusion}
             onOpenDetail={openDetail}
+            onOpenEmailDraft={openEmailDraft}
             isMobile={isMobile}
             t={t}
+            formatCurrencyNoBreak={formatCurrencyNoBreak}
           />
         )}
 
@@ -504,8 +573,8 @@ export function SuppliersReportGenerator() {
                           {new Date(tx.date).toLocaleDateString('ca-ES', { day: '2-digit', month: '2-digit', year: '2-digit' })}
                         </TableCell>
                         <TableCell className="text-sm max-w-[200px] truncate">{tx.description}</TableCell>
-                        <TableCell className={cn('text-right font-mono text-sm', isExcluded && 'line-through')}>
-                          {formatCurrencyEU(tx.amount)}
+                        <TableCell className={cn('text-right font-mono text-sm whitespace-nowrap', isExcluded && 'line-through')}>
+                          {formatCurrencyNoBreak(tx.amount)}
                         </TableCell>
                         <TableCell>
                           <Badge variant="outline" className="text-xs">
@@ -519,6 +588,52 @@ export function SuppliersReportGenerator() {
               </Table>
             </div>
           )}
+        </DialogContent>
+      </Dialog>
+
+      {/* ═══════════════════════════════════════════════════════════════════════
+          DIALOG EMAIL CONFIRMACIÓ 347
+          ═══════════════════════════════════════════════════════════════════════ */}
+      <Dialog open={emailDialogOpen} onOpenChange={setEmailDialogOpen}>
+        <DialogContent className="w-[calc(100vw-2rem)] max-w-3xl sm:max-w-3xl max-h-[85vh] overflow-hidden">
+          <DialogHeader>
+            <DialogTitle>{t.reports.model347EmailDialogTitle}</DialogTitle>
+            <DialogDescription>
+              {emailAggregate
+                ? t.reports.model347EmailDialogDescription(emailAggregate.name)
+                : t.reports.model347EmailDialogDescriptionFallback}
+            </DialogDescription>
+          </DialogHeader>
+
+          {emailDraft && (
+            <div className="space-y-3 overflow-auto max-h-[55vh]">
+              <div className="rounded-md border bg-muted/20 p-3">
+                <p className="text-xs uppercase tracking-wide text-muted-foreground">
+                  {t.reports.model347EmailSubjectLabel}
+                </p>
+                <p className="text-sm font-medium break-words">{emailDraft.subject}</p>
+              </div>
+
+              <div className="rounded-md border bg-muted/20 p-3">
+                <p className="text-xs uppercase tracking-wide text-muted-foreground mb-2">
+                  {t.reports.model347EmailBodyLabel}
+                </p>
+                <pre className="text-sm whitespace-pre-wrap break-words font-sans leading-relaxed">
+                  {emailDraft.body}
+                </pre>
+              </div>
+            </div>
+          )}
+
+          <DialogFooter className="flex-col sm:flex-row gap-2">
+            <Button variant="outline" onClick={handleCopyEmailDraft} className="w-full sm:w-auto">
+              <Copy className="mr-2 h-4 w-4" />
+              {t.reports.model347EmailCopyButton}
+            </Button>
+            <Button variant="ghost" onClick={() => setEmailDialogOpen(false)} className="w-full sm:w-auto">
+              {t.common.close}
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
 
@@ -600,8 +715,10 @@ function SupplierSection({
   excludedKeys,
   toggleExclusion,
   onOpenDetail,
+  onOpenEmailDraft,
   isMobile,
   t,
+  formatCurrencyNoBreak,
 }: {
   title: string;
   aggregates: SupplierAggregate[];
@@ -610,8 +727,10 @@ function SupplierSection({
   excludedKeys: Set<string>;
   toggleExclusion: (contactId: string, direction: string) => void;
   onOpenDetail: (aggregate: SupplierAggregate) => void;
+  onOpenEmailDraft: (aggregate: SupplierAggregate) => void;
   isMobile: boolean;
   t: ReturnType<typeof useTranslations>['t'];
+  formatCurrencyNoBreak: (value: number | string | null | undefined) => string;
 }) {
   if (aggregates.length === 0) return null;
 
@@ -654,16 +773,21 @@ function SupplierSection({
                   },
                   {
                     value: (
-                      <span className={cn('font-mono font-medium', isExcluded ? 'text-muted-foreground line-through' : 'text-blue-600')}>
-                        {formatCurrencyEU(agg.quarters.total)}
+                      <span className={cn('font-mono font-medium whitespace-nowrap', isExcluded ? 'text-muted-foreground line-through' : 'text-blue-600')}>
+                        {formatCurrencyNoBreak(agg.quarters.total)}
                       </span>
                     ),
                   },
                 ]}
                 actions={
-                  <Button variant="ghost" size="icon" onClick={() => onOpenDetail(agg)} className="h-8 w-8">
-                    <Eye className="h-4 w-4" />
-                  </Button>
+                  <div className="flex items-center gap-1">
+                    <Button variant="ghost" size="icon" onClick={() => onOpenEmailDraft(agg)} className="h-8 w-8" title={t.reports.model347EmailAction}>
+                      <Mail className="h-4 w-4" />
+                    </Button>
+                    <Button variant="ghost" size="icon" onClick={() => onOpenDetail(agg)} className="h-8 w-8">
+                      <Eye className="h-4 w-4" />
+                    </Button>
+                  </div>
                 }
               />
             );
@@ -709,25 +833,30 @@ function SupplierSection({
                       {agg.name}
                       {isExcluded && <Ban className="inline ml-2 h-3 w-3 text-orange-500" />}
                     </TableCell>
-                    <TableCell className={cn('text-right font-mono text-sm', isExcluded && 'line-through text-muted-foreground')}>
-                      {agg.quarters.q1 > 0 ? formatCurrencyEU(agg.quarters.q1) : '—'}
+                    <TableCell className={cn('text-right font-mono text-sm whitespace-nowrap', isExcluded && 'line-through text-muted-foreground')}>
+                      {agg.quarters.q1 > 0 ? formatCurrencyNoBreak(agg.quarters.q1) : '—'}
                     </TableCell>
-                    <TableCell className={cn('text-right font-mono text-sm', isExcluded && 'line-through text-muted-foreground')}>
-                      {agg.quarters.q2 > 0 ? formatCurrencyEU(agg.quarters.q2) : '—'}
+                    <TableCell className={cn('text-right font-mono text-sm whitespace-nowrap', isExcluded && 'line-through text-muted-foreground')}>
+                      {agg.quarters.q2 > 0 ? formatCurrencyNoBreak(agg.quarters.q2) : '—'}
                     </TableCell>
-                    <TableCell className={cn('text-right font-mono text-sm', isExcluded && 'line-through text-muted-foreground')}>
-                      {agg.quarters.q3 > 0 ? formatCurrencyEU(agg.quarters.q3) : '—'}
+                    <TableCell className={cn('text-right font-mono text-sm whitespace-nowrap', isExcluded && 'line-through text-muted-foreground')}>
+                      {agg.quarters.q3 > 0 ? formatCurrencyNoBreak(agg.quarters.q3) : '—'}
                     </TableCell>
-                    <TableCell className={cn('text-right font-mono text-sm', isExcluded && 'line-through text-muted-foreground')}>
-                      {agg.quarters.q4 > 0 ? formatCurrencyEU(agg.quarters.q4) : '—'}
+                    <TableCell className={cn('text-right font-mono text-sm whitespace-nowrap', isExcluded && 'line-through text-muted-foreground')}>
+                      {agg.quarters.q4 > 0 ? formatCurrencyNoBreak(agg.quarters.q4) : '—'}
                     </TableCell>
-                    <TableCell className={cn('text-right font-mono font-medium', isExcluded ? 'text-muted-foreground line-through' : 'text-blue-600')}>
-                      {formatCurrencyEU(agg.quarters.total)}
+                    <TableCell className={cn('text-right font-mono font-medium whitespace-nowrap', isExcluded ? 'text-muted-foreground line-through' : 'text-blue-600')}>
+                      {formatCurrencyNoBreak(agg.quarters.total)}
                     </TableCell>
                     <TableCell>
-                      <Button variant="ghost" size="icon" onClick={() => onOpenDetail(agg)} className="h-8 w-8">
-                        <Eye className="h-4 w-4" />
-                      </Button>
+                      <div className="flex items-center gap-1">
+                        <Button variant="ghost" size="icon" onClick={() => onOpenEmailDraft(agg)} className="h-8 w-8" title={t.reports.model347EmailAction}>
+                          <Mail className="h-4 w-4" />
+                        </Button>
+                        <Button variant="ghost" size="icon" onClick={() => onOpenDetail(agg)} className="h-8 w-8">
+                          <Eye className="h-4 w-4" />
+                        </Button>
+                      </div>
                     </TableCell>
                   </TableRow>
                 );

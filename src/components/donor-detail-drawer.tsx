@@ -122,7 +122,7 @@ interface DonationSummary {
 // ════════════════════════════════════════════════════════════════════════════
 
 export function DonorDetailDrawer({ donor, open, onOpenChange, onEdit }: DonorDetailDrawerProps) {
-  const { firestore } = useFirebase();
+  const { firestore, user } = useFirebase();
   const { organizationId, organization, orgSlug } = useCurrentOrganization();
   const { t, language } = useTranslations();
   const { toast } = useToast();
@@ -135,6 +135,22 @@ export function DonorDetailDrawer({ donor, open, onOpenChange, onEdit }: DonorDe
   const [isGeneratingPdf, setIsGeneratingPdf] = React.useState(false);
   const [isSendingEmail, setIsSendingEmail] = React.useState(false);
   const itemsPerPage = 10;
+
+  const getAuthHeaders = async (): Promise<Record<string, string> | null> => {
+    const idToken = await user?.getIdToken();
+    if (!idToken) {
+      toast({
+        variant: 'destructive',
+        title: t.common.error,
+        description: t.certificates.email.errorSending,
+      });
+      return null;
+    }
+    return {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${idToken}`,
+    };
+  };
 
   // Transaccions del donant - usar onSnapshot per gestionar errors de permisos
   const [transactions, setTransactions] = React.useState<Transaction[] | null>(null);
@@ -1065,10 +1081,13 @@ export function DonorDetailDrawer({ donor, open, onOpenChange, onEdit }: DonorDe
       const pdfBase64 = generatePDFBase64(doc);
       const txYear = tx.date.substring(0, 4);
 
+      const authHeaders = await getAuthHeaders();
+      if (!authHeaders) return;
+
       // Enviar via API (amb informació de donació individual)
       const response = await fetch('/api/certificates/send-email', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: authHeaders,
         body: JSON.stringify({
           organizationId,
           organizationName: organization.name || '',
@@ -1089,12 +1108,15 @@ export function DonorDetailDrawer({ donor, open, onOpenChange, onEdit }: DonorDe
       });
 
       const result = await response.json();
+      const sentCount = Number(result?.totals?.sent ?? result?.sent ?? 0);
 
-      if (response.ok && result.sent > 0) {
+      if (response.ok && sentCount > 0) {
         toast({
           title: t.certificates.email.successOne,
           description: t.certificates.email.successOneDescription(donor.name),
         });
+      } else if (response.status === 429) {
+        toast({ variant: 'destructive', title: t.common.error, description: "S'ha assolit el límit diari d'enviaments de certificats." });
       } else {
         toast({ variant: 'destructive', title: t.common.error, description: t.certificates.email.errorSending });
       }
@@ -1317,10 +1339,13 @@ export function DonorDetailDrawer({ donor, open, onOpenChange, onEdit }: DonorDe
       // Obtenir base64 del PDF
       const pdfBase64 = generatePDFBase64(doc);
 
+      const authHeaders = await getAuthHeaders();
+      if (!authHeaders) return;
+
       // Enviar via API
       const response = await fetch('/api/certificates/send-email', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: authHeaders,
         body: JSON.stringify({
           organizationId,
           organizationName: organization.name || '',
@@ -1337,12 +1362,15 @@ export function DonorDetailDrawer({ donor, open, onOpenChange, onEdit }: DonorDe
       });
 
       const result = await response.json();
+      const sentCount = Number(result?.totals?.sent ?? result?.sent ?? 0);
 
-      if (response.ok && result.sent > 0) {
+      if (response.ok && sentCount > 0) {
         toast({
           title: t.certificates.email.successOne,
           description: t.certificates.email.successOneDescription(donor.name),
         });
+      } else if (response.status === 429) {
+        toast({ variant: 'destructive', title: t.common.error, description: "S'ha assolit el límit diari d'enviaments de certificats." });
       } else {
         toast({ variant: 'destructive', title: t.common.error, description: t.certificates.email.errorSending });
       }
@@ -1618,7 +1646,7 @@ export function DonorDetailDrawer({ donor, open, onOpenChange, onEdit }: DonorDe
                         variant="outline"
                         size="sm"
                         disabled={!donor.taxId || !donor.email || isSendingEmail}
-                        title={!donor.email ? t.certificates.email.errorNoEmail : undefined}
+                        {...(!donor.email ? { title: t.certificates.email.errorNoEmail } : {})}
                       >
                         {isSendingEmail ? (
                           <Loader2 className="h-4 w-4 mr-1 animate-spin" />

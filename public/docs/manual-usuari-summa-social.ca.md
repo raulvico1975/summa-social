@@ -32,9 +32,8 @@ Endavant!
 8. [Donacions via Stripe](#8-donacions-via-stripe)
 9. [Informes Fiscals](#9-informes-fiscals)
 10. [Projectes i Justificació de Subvencions](#10-projectes-i-justificació-de-subvencions)
-11. [Zona de Perill](#11-zona-de-perill)
-12. [Resolució de Problemes](#12-resolució-de-problemes)
-13. [Glossari](#13-glossari)
+11. [Resolució de Problemes](#11-resolució-de-problemes)
+12. [Glossari](#12-glossari)
 
 ---
 
@@ -331,8 +330,7 @@ Si altres persones de l'entitat necessiten accedir a Summa Social, pots convidar
 
 | Rol | Què pot fer |
 |-----|-------------|
-| **SuperAdmin** | Tot, inclosa la Zona de Perill |
-| **Admin** | Configurar, però no esborrar massivament |
+| **Admin** | Gestió completa de l'organització (configuració, membres i operativa) |
 | **User** | Gestió diària (importar, categoritzar) |
 | **Viewer** | Només veure, no modificar res |
 
@@ -830,9 +828,9 @@ La propera vegada es detectarà automàticament.
 
 Si has processat una remesa incorrectament:
 
-1. Ves a ⚙️ **Configuració > Zona de Perill** (cal ser SuperAdmin)
-2. Clica **"Esborrar última remesa processada"**
-3. Escriu "BORRAR" per confirmar
+1. Obre el moviment pare de la remesa
+2. Clica **"Desfer remesa processada"**
+3. Revisa la informació mostrada i confirma
 4. La remesa es restaura i pots tornar-la a processar
 
 ---
@@ -1368,48 +1366,7 @@ A la pantalla d'assignació de despeses, pots arrossegar fitxers directament sob
 
 ---
 
-# 11. Zona de Perill [id:11-zona-de-perill]
-
-**Aquesta secció t'ajudarà a...**
-
-Entendre les accions destructives que només pot fer el SuperAdmin. Aquestes accions són irreversibles, però a vegades necessàries per corregir errors greus o reiniciar dades.
-
-Pensa-hi com el "reset" definitiu. Usa-ho amb precaució.
-
----
-
-## 11.1 Com accedir
-
-1. Ves a ⚙️ **Configuració**
-2. Baixa fins al final
-3. Veuràs la secció "Zona de Perill" en vermell
-
-> 💡 Si no la veus, és perquè no tens rol de SuperAdmin.
-
----
-
-## 11.2 Accions disponibles
-
-| Acció | Descripció |
-|-------|------------|
-| **Esborrar tots els donants** | Elimina tots |
-| **Esborrar tots els proveïdors** | Elimina tots |
-| **Esborrar tots els treballadors** | Elimina tots |
-| **Esborrar tots els moviments** | Elimina tots |
-| **Esborrar última remesa** | Desfà l'última remesa processada |
-
----
-
-## 11.3 Com esborrar l'última remesa
-
-1. Clica **"Esborrar última remesa processada"**
-2. Revisa la informació mostrada
-3. Escriu **"BORRAR"** per confirmar
-4. La remesa es restaura
-
----
-
-# 12. Resolució de Problemes [id:12-resolucio-de-problemes]
+# 11. Resolució de Problemes [id:11-resolucio-de-problemes]
 
 **Aquesta secció t'ajudarà a...**
 
@@ -1417,7 +1374,7 @@ Trobar respostes ràpides als problemes més comuns. Si et trobes encallat, mira
 
 ---
 
-## 12.1 Problemes d'accés
+## 11.1 Problemes d'accés
 
 | Problema | Solució |
 |----------|---------|
@@ -1428,7 +1385,7 @@ Trobar respostes ràpides als problemes més comuns. Si et trobes encallat, mira
 
 ---
 
-## 12.2 Problemes amb dades
+## 11.2 Problemes amb dades
 
 | Problema | Solució |
 |----------|---------|
@@ -1438,17 +1395,17 @@ Trobar respostes ràpides als problemes més comuns. Si et trobes encallat, mira
 
 ---
 
-## 12.3 Problemes amb remeses
+## 11.3 Problemes amb remeses
 
 | Problema | Solució |
 |----------|---------|
 | La remesa no es divideix correctament | Comprova que el fitxer correspon a la remesa |
 | No troba socis | Actualitza IBAN o DNI dels donants |
-| He processat malament | Zona de Perill → Esborrar última remesa |
+| He processat malament | Obre el detall de la remesa i desfés el processat abans de tornar-la a dividir |
 
 ---
 
-## 12.4 Problemes amb informes
+## 11.4 Problemes amb informes
 
 | Problema | Solució |
 |----------|---------|
@@ -1458,7 +1415,7 @@ Trobar respostes ràpides als problemes més comuns. Si et trobes encallat, mira
 
 ---
 
-## 12.5 Missatges d'error habituals
+## 11.5 Missatges d'error habituals
 
 | Missatge | Solució |
 |----------|---------|
@@ -1469,7 +1426,7 @@ Trobar respostes ràpides als problemes més comuns. Si et trobes encallat, mira
 
 ---
 
-# 13. Glossari [id:13-glossari]
+# 12. Glossari [id:12-glossari]
 
 | Terme | Definició |
 |-------|-----------|
@@ -1481,7 +1438,7 @@ Trobar respostes ràpides als problemes més comuns. Si et trobes encallat, mira
 | **Soci** | Donant recurrent |
 | **Donant puntual** | Donant esporàdic |
 | **Contrapart** | Entitat sòcia internacional |
-| **SuperAdmin** | Rol amb accés total |
+| **Admin** | Rol d'administració de l'organització |
 | **Matching** | Identificació automàtica de contactes |
 | **Recurrència** | Ha donat 3 anys seguits |
 | **Partida** | Línia del pressupost |
