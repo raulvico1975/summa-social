@@ -195,6 +195,19 @@ Claude només pot reportar un d'aquests tres estats:
 - **Implementa sempre** en worktrees de tasca (`codex/*`), mai directament al repositori de control
 - **Publica només** des del repositori de control a `main`
 
+### Protecció contra artefactes de build i dependències
+
+El workflow bloqueja explícitament qualsevol fitxer staged sota:
+- `node_modules/`
+- `functions/node_modules/`
+- `.next/`
+- `dist/`
+- `build/`
+- `.turbo/`
+
+Encara que `.gitignore` ja els exclou, el workflow aplica un segon nivell de protecció.  
+Nota: per provar el bloqueig de forma controlada (smoke test), pot ser necessari utilitzar `git add -f`.
+
 ---
 
 ## 6. Rollback

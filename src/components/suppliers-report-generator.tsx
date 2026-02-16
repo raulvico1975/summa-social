@@ -158,15 +158,15 @@ export function SuppliersReportGenerator() {
       toast({ variant: 'destructive', title: t.reports.dataNotAvailable, description: t.reports.dataNotAvailableDescription });
       return;
     }
+    const year = parseInt(selectedYear, 10);
+    const preview = computeModel347(activeTxs, suppliers, categories || [], year, new Set());
+    const previewCount = preview.expenses.length + preview.income.length;
     setExcludedTxIds(new Set());
     setExcludedSupplierKeys(new Set());
     setIsGenerated(true);
     toast({
       title: t.reports.reportGenerated,
-      description: t.reports.suppliersReportGeneratedDescription(
-        selectedYear,
-        (model347?.expenses.length || 0) + (model347?.income.length || 0)
-      ),
+      description: t.reports.suppliersReportGeneratedDescription(selectedYear, previewCount),
     });
   };
 
@@ -342,7 +342,10 @@ export function SuppliersReportGenerator() {
 
     toast({
       title: t.reports.exportComplete,
-      description: t.reports.model347AEATExcludedTitle(aeatPendingExport?.includedCount ?? 0),
+      description: t.reports.model347AEATExcludedDesc(
+        aeatPendingExport?.includedCount ?? 0,
+        aeatPendingExport?.excludedCount ?? 0
+      ),
     });
 
     setAeatExcludedDialogOpen(false);

@@ -302,6 +302,34 @@ collect_staged_files() {
   git diff --cached --name-only --diff-filter=ACMRT | awk 'NF'
 }
 
+guard_no_prohibited_staged_paths() {
+  local staged blocked first_path
+  staged="$(collect_staged_files)"
+
+  if [ -z "$staged" ]; then
+    return 0
+  fi
+
+  blocked="$(printf '%s\n' "$staged" | grep -E '(^|/)node_modules/|^functions/node_modules/|(^|/)\.next/|(^|/)dist/' || true)"
+
+  if [ -z "$blocked" ]; then
+    return 0
+  fi
+
+  first_path="$(printf '%s\n' "$blocked" | sed -n '1p')"
+  say "$STATUS_NO"
+  say "S'han detectat fitxers staged prohibits (deps/build/cache)."
+  say "Treure'ls de staging abans de continuar:"
+  while IFS= read -r path; do
+    [ -z "$path" ] && continue
+    say "- $path"
+  done <<EOF2
+$blocked
+EOF2
+  say "Comanda recomanada: git reset $first_path"
+  exit 1
+}
+
 all_files_match_patterns() {
   local files="$1"
   shift
@@ -553,6 +581,7 @@ run_acabat() {
     return
   fi
 
+  guard_no_prohibited_staged_paths
   run_checks
   commit_changes "$risk"
   push_branch "$branch"
@@ -581,6 +610,7 @@ run_publica() {
     exit 1
   fi
 
+  guard_no_prohibited_staged_paths
   require_clean_tree_for_publica
   ensure_control_repo_for_deploy_or_merge
 

@@ -207,7 +207,8 @@ function generateType2Record(
     // 283: Op. béns vinculats (blanc)
     .setRange(284, ' ')                                        // Signe criteri caixa
     .setRange(285, '000000000000000')                          // Import criteri caixa
-    // 300-500: Blancs/reservat (ja inicialitzats)
+    .setRange(300, '000000')                                   // N. convocatòria BDNS (2025+)
+    // 306-500: Blancs/reservat (ja inicialitzats)
     ;
 
   return builder.build();
