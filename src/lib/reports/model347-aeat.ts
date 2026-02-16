@@ -24,13 +24,14 @@ import type { SupplierAggregate } from './model347';
 export type AEAT347SupplierIssueCode =
   | 'TAXID_EMPTY'
   | 'TAXID_INVALID_CHARS'
-  | 'TAXID_INVALID_LENGTH';
+  | 'TAXID_INVALID_LENGTH'
+  | 'PROVINCE_CODE_MISSING';
 
 export interface AEAT347ExcludedSupplier {
   name: string;
   taxIdRaw: string;
   issueCodes: AEAT347SupplierIssueCode[];
-  issueMeta?: { taxIdLength?: number };
+  issueMeta?: { taxIdLength?: number; zipDigitsLength?: number };
 }
 
 export interface AEAT347ExportResult {
@@ -59,6 +60,28 @@ const CRLF = '\r\n';
  */
 function formatSign(amount: number): string {
   return amount < 0 ? 'N' : ' ';
+}
+
+/**
+ * Resol codi de província AEAT (2 dígits) a partir de CP o província.
+ * Prioritza CP (primers 2 dígits). Si no és usable, accepta província
+ * ja informada com a codi de 2 dígits.
+ */
+function resolveProvinceCode(zipCode?: string, province?: string): string | null {
+  const zipDigits = (zipCode || '').replace(/\D/g, '');
+  if (zipDigits.length >= 2) {
+    const prefix = zipDigits.substring(0, 2);
+    const code = parseInt(prefix, 10);
+    if (code >= 1 && code <= 52) return prefix;
+  }
+
+  const rawProvince = (province || '').trim();
+  if (/^\d{2}$/.test(rawProvince)) {
+    const code = parseInt(rawProvince, 10);
+    if (code >= 1 && code <= 52) return rawProvince;
+  }
+
+  return null;
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -154,6 +177,7 @@ function generateType2Record(
   year: number,
   supplierNIF: string,
   supplierName: string,
+  provinceCode: string,
   claveOperacion: 'A' | 'B',
   q1: number,
   q2: number,
@@ -172,7 +196,7 @@ function generateType2Record(
     // 27-35: NIF representant (blancs)
     .setRange(36, sanitizeAlpha(supplierName, 40))             // Nom declarat
     .setRange(76, 'D')                                         // Tipus full (D = declarat)
-    .setRange(77, '00')                                        // Codi província (no disponible)
+    .setRange(77, provinceCode)                                // Codi província (01-52)
     // 79-80: País (blancs — operacions nacionals)
     // 81: Blanc
     .setRange(82, claveOperacion)                              // Clau operació: A o B
@@ -268,6 +292,7 @@ export function generateModel347AEATFile(
   const validatedRecords: {
     aggregate: SupplierAggregate;
     nif: string;
+    provinceCode: string;
     clave: 'A' | 'B';
   }[] = [];
 
@@ -283,7 +308,7 @@ export function generateModel347AEATFile(
         excludedContactIds.add(item.contactId);
 
         const issueCodes: AEAT347SupplierIssueCode[] = [];
-        const issueMeta: { taxIdLength?: number } = {};
+        const issueMeta: { taxIdLength?: number; zipDigitsLength?: number } = {};
 
         if (!item.taxId || !item.taxId.trim()) {
           issueCodes.push('TAXID_EMPTY');
@@ -307,9 +332,25 @@ export function generateModel347AEATFile(
       continue;
     }
 
+    const provinceCode = resolveProvinceCode(item.zipCode, item.province);
+    if (!provinceCode) {
+      if (!excludedContactIds.has(item.contactId)) {
+        excludedContactIds.add(item.contactId);
+        const zipDigitsLength = (item.zipCode || '').replace(/\D/g, '').length;
+        excluded.push({
+          name: item.name || 'Sense nom',
+          taxIdRaw: item.taxId ?? '',
+          issueCodes: ['PROVINCE_CODE_MISSING'],
+          issueMeta: { zipDigitsLength },
+        });
+      }
+      continue;
+    }
+
     validatedRecords.push({
       aggregate: item,
       nif: nifResult.value,
+      provinceCode,
       clave: item.clave,
     });
   }
@@ -357,13 +398,14 @@ export function generateModel347AEATFile(
   );
 
   // Registres Tipus 2 (Declarats)
-  for (const { aggregate, nif, clave } of validatedRecords) {
+  for (const { aggregate, nif, provinceCode, clave } of validatedRecords) {
     lines.push(
       generateType2Record(
         orgNIFResult.value,
         year,
         nif,
         aggregate.name,
+        provinceCode,
         clave,
         aggregate.quarters.q1,
         aggregate.quarters.q2,

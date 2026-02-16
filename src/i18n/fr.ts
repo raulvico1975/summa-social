@@ -1534,6 +1534,7 @@ export const fr = {
         case 'TAXID_EMPTY': return 'NIF/CIF vide';
         case 'TAXID_INVALID_CHARS': return 'NIF/CIF avec caractères invalides';
         case 'TAXID_INVALID_LENGTH': return `NIF/CIF avec longueur incorrecte (${meta?.taxIdLength ?? '?'})`;
+        case 'PROVINCE_CODE_MISSING': return 'Code province indisponible (code postal valide requis)';
         default: return 'donnée invalide';
       }
     },
