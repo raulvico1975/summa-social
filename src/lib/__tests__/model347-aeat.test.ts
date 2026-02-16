@@ -98,6 +98,7 @@ describe('computeModel347', () => {
     assert.strictEqual(result.income.length, 1);
 
     assert.strictEqual(result.expenses[0].contactId, 's1');
+    assert.strictEqual(result.expenses[0].zipCode, '08001');
     assert.strictEqual(result.expenses[0].quarters.q1, 2000);
     assert.strictEqual(result.expenses[0].quarters.q2, 1200);
     assert.strictEqual(result.expenses[0].quarters.total, 3200);
@@ -167,6 +168,8 @@ describe('generateModel347AEATFile', () => {
       name: string;
       taxId: string;
       direction: 'expense' | 'income';
+      zipCode?: string;
+      province?: string;
       q1?: number;
       q2?: number;
       q3?: number;
@@ -181,6 +184,8 @@ describe('generateModel347AEATFile', () => {
       contactId: args.contactId,
       name: args.name,
       taxId: args.taxId,
+      zipCode: args.zipCode ?? '08001',
+      province: args.province,
       direction: args.direction,
       quarters: {
         q1,
@@ -233,6 +238,9 @@ describe('generateModel347AEATFile', () => {
     // Posicio 82 (1-indexed) = index 81: clau operacio A/B
     assert.strictEqual(lines[1][81], 'A');
     assert.strictEqual(lines[2][81], 'B');
+    // Posicions 77-78 (1-indexed): codi província (des de CP)
+    assert.strictEqual(lines[1].slice(76, 78), '08');
+    assert.strictEqual(lines[2].slice(76, 78), '08');
     // Posicions 300-305 (1-indexed): Número de convocatoria BDNS (numèric)
     assert.strictEqual(lines[1].slice(299, 305), '000000');
     assert.strictEqual(lines[2].slice(299, 305), '000000');
@@ -270,6 +278,40 @@ describe('generateModel347AEATFile', () => {
 
     const lines = result.content.split('\r\n').filter(Boolean);
     assert.strictEqual(lines.length, 2);
+  });
+
+  it('exclou proveidors sense codi de provincia valid per evitar error AEAT 20903', () => {
+    const expenses = [
+      mkAggregate({
+        contactId: 's1',
+        name: 'Sense CP',
+        taxId: 'B12345678',
+        zipCode: '',
+        direction: 'expense',
+        q1: 4000,
+      }),
+      mkAggregate({
+        contactId: 's2',
+        name: 'Amb CP',
+        taxId: 'B87654321',
+        zipCode: '17001',
+        direction: 'expense',
+        q2: 5000,
+      }),
+    ];
+
+    const result = generateModel347AEATFile(org, expenses, [], 2025);
+
+    assert.deepStrictEqual(result.errors, []);
+    assert.strictEqual(result.includedCount, 1);
+    assert.strictEqual(result.excludedCount, 1);
+    assert.strictEqual(result.excluded[0].name, 'Sense CP');
+    assert.ok(result.excluded[0].issueCodes.includes('PROVINCE_CODE_MISSING'));
+
+    const lines = result.content.split('\r\n').filter(Boolean);
+    assert.strictEqual(lines.length, 2);
+    // Registre del proveïdor vàlid amb codi província Girona
+    assert.strictEqual(lines[1].slice(76, 78), '17');
   });
 
   it('retorna error bloquejant si dades de l organitzacio son invalides', () => {

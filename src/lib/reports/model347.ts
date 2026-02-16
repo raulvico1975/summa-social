@@ -41,6 +41,8 @@ export interface SupplierAggregate {
   contactId: string;
   name: string;
   taxId: string;
+  zipCode: string;
+  province?: string;
   direction: Direction;
   quarters: QuarterTotals;
   transactions: CandidateTransaction[];
@@ -173,6 +175,8 @@ export function computeModel347(
       contactId: bucket.supplier.id,
       name: bucket.supplier.name,
       taxId: bucket.supplier.taxId || '',
+      zipCode: bucket.supplier.zipCode || '',
+      province: bucket.supplier.province,
       direction: bucket.direction,
       quarters,
       transactions: bucket.transactions.sort(

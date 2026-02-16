@@ -1534,6 +1534,7 @@ export const ca = {
         case 'TAXID_EMPTY': return 'NIF/CIF buit';
         case 'TAXID_INVALID_CHARS': return 'NIF/CIF amb caràcters invàlids';
         case 'TAXID_INVALID_LENGTH': return `NIF/CIF amb longitud incorrecta (${meta?.taxIdLength ?? '?'})`;
+        case 'PROVINCE_CODE_MISSING': return 'Codi de província no disponible (cal CP vàlid)';
         default: return 'dada invàlida';
       }
     },
