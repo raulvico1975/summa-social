@@ -484,15 +484,6 @@ export default function PendingDocsPage() {
     }
   }, [canOperate, firestore, organizationId, toast]);
 
-  // Si encara no tenim l'organització o el flag no està actiu, mostrar loading
-  if (!organization || !isPendingDocsEnabled) {
-    return (
-      <div className="w-full flex items-center justify-center p-8">
-        <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-      </div>
-    );
-  }
-
   // Helper per determinar si un filtre està actiu
   const isFilterActive = (filter: typeof statusFilter) => {
     if (Array.isArray(filter) && Array.isArray(statusFilter)) {
@@ -668,6 +659,15 @@ export default function PendingDocsPage() {
     setReconcileTx(null);
     // La subscripció refrescarà automàticament
   }, []);
+
+  // Si encara no tenim l'organització o el flag no està actiu, mostrar loading
+  if (!organization || !isPendingDocsEnabled) {
+    return (
+      <div className="w-full flex items-center justify-center p-8">
+        <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
 
   // Path per navegar a moviments (per link a transacció conciliada)
   const movimentsPath = `../movimientos`;

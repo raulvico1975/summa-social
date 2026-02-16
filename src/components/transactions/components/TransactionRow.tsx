@@ -46,7 +46,6 @@ import {
   FolderKanban,
   GitMerge,
   Link,
-  Circle,
   AlertTriangle,
   Undo2,
   Ban,
@@ -177,7 +176,6 @@ interface TransactionRowProps {
 export const TransactionRow = React.memo(function TransactionRow({
   transaction: tx,
   contactName,
-  contactType,
   projectName,
   relevantCategories,
   isLegacyCategory,
@@ -191,7 +189,6 @@ export const TransactionRow = React.memo(function TransactionRow({
   onToggleSelect,
   onDropFile,
   dropHint,
-  onSetNote,
   onSetCategory,
   onSetContact,
   onSetProject,
@@ -264,10 +261,6 @@ export const TransactionRow = React.memo(function TransactionRow({
   const handleCreateNewContact = React.useCallback((type: 'donor' | 'supplier') => {
     onCreateNewContact(tx.id, type);
   }, [tx.id, onCreateNewContact]);
-
-  const handleSetNote = React.useCallback((note: string) => {
-    onSetNote(tx.id, note);
-  }, [tx.id, onSetNote]);
 
   const handleCategorySelect = React.useCallback((categoryId: string) => {
     onSetCategory(tx.id, categoryId);

@@ -30,12 +30,36 @@ HIGH_RISK_PATTERNS=(
   "^scripts/"
 )
 
-WORK_BRANCH=""
 LAST_FETCH_OK=true
 LAST_COMMIT_MESSAGE=""
 
+cd "$PROJECT_DIR"
+
+GIT_COMMON_DIR="$(git rev-parse --path-format=absolute --git-common-dir 2>/dev/null || true)"
+if [ -z "$GIT_COMMON_DIR" ]; then
+  echo "No s'ha pogut detectar el repositori git." >&2
+  exit 1
+fi
+CONTROL_REPO_DIR="${WORKFLOW_CONTROL_REPO_DIR:-$(cd "$GIT_COMMON_DIR/.." && pwd)}"
+
 say() {
   printf '%s\n' "$1"
+}
+
+git_control() {
+  git -C "$CONTROL_REPO_DIR" "$@"
+}
+
+is_control_repo() {
+  [ "$(pwd)" = "$CONTROL_REPO_DIR" ]
+}
+
+has_changes_in_repo() {
+  local repo_dir="$1"
+  if [ -n "$(git -C "$repo_dir" status --porcelain --untracked-files=normal)" ]; then
+    return 0
+  fi
+  return 1
 }
 
 contains_forbidden_guidance_terms() {
@@ -215,9 +239,9 @@ has_local_changes() {
   while IFS= read -r file; do
     [ -z "$file" ] && continue
     return 0
-  done <<EOF
+  done <<EOF2
 $files
-EOF
+EOF2
 
   return 1
 }
@@ -244,9 +268,9 @@ classify_risk() {
     if ! matches_any_pattern "$file" "${LOW_RISK_PATTERNS[@]}"; then
       all_low=false
     fi
-  done <<EOF
+  done <<EOF2
 $files
-EOF
+EOF2
 
   if [ "$has_high" = true ]; then
     printf '%s' "ALT"
@@ -259,109 +283,6 @@ EOF
   fi
 
   printf '%s' "MITJA"
-}
-
-main_has_remote_changes() {
-  refresh_origin
-  if [ "$LAST_FETCH_OK" != true ]; then
-    # Sense remot no es pot garantir estat de main; triem el cami segur.
-    return 0
-  fi
-
-  if ! git show-ref --verify --quiet refs/remotes/origin/main; then
-    return 1
-  fi
-
-  if git merge-base --is-ancestor refs/remotes/origin/main HEAD; then
-    return 1
-  fi
-
-  return 0
-}
-
-build_auto_branch_name() {
-  local base candidate counter
-  base="codex/work-$(date '+%Y%m%d-%H%M%S')"
-  candidate="$base"
-  counter=1
-
-  while git show-ref --verify --quiet "refs/heads/$candidate"; do
-    candidate="${base}-${counter}"
-    counter=$((counter + 1))
-  done
-
-  printf '%s' "$candidate"
-}
-
-decide_work_branch() {
-  local risk="$1"
-  local branch
-  branch="$(current_branch)"
-
-  if [ "$branch" = "HEAD" ]; then
-    say "$STATUS_NO"
-    say "No puc continuar en estat detached HEAD."
-    exit 1
-  fi
-
-  if [ "$branch" = "prod" ]; then
-    say "$STATUS_NO"
-    say "No treballo mai directament a prod."
-    exit 1
-  fi
-
-  if [ "$branch" = "main" ]; then
-    if [ "$risk" = "BAIX" ] && ! main_has_remote_changes; then
-      WORK_BRANCH="main"
-      return
-    fi
-
-    WORK_BRANCH="$(build_auto_branch_name)"
-    git checkout -b "$WORK_BRANCH" >/dev/null
-    say "S'ha creat una branca segura: $WORK_BRANCH"
-    return
-  fi
-
-  WORK_BRANCH="$branch"
-}
-
-run_inicia() {
-  local mode="${1:-auto}"
-  local branch
-  branch="$(current_branch)"
-
-  if [ "$branch" = "HEAD" ]; then
-    say "$STATUS_NO"
-    say "No puc començar en estat detached HEAD."
-    exit 1
-  fi
-
-  if [ "$branch" = "prod" ]; then
-    say "$STATUS_NO"
-    say "No es pot començar feina directament a prod."
-    exit 1
-  fi
-
-  if [ "$branch" != "main" ]; then
-    say "$STATUS_NO"
-    say "Ja estem treballant en una branca segura: $branch"
-    emit_next_step_block "Continua implementació. Quan estigui llest, et suggeriré quan dir Acabat."
-    return
-  fi
-
-  if [ "$mode" = "main" ]; then
-    WORK_BRANCH="main"
-    say "$STATUS_NO"
-    say "Feina iniciada a main per canvi trivial."
-    emit_next_step_block "Continua implementació. Quan estigui llest, et suggeriré quan dir Acabat."
-    return
-  fi
-
-  WORK_BRANCH="$(build_auto_branch_name)"
-  git checkout -b "$WORK_BRANCH" >/dev/null
-  say "$STATUS_NO"
-  say "Feina iniciada en branca segura: $WORK_BRANCH"
-  emit_next_step_block "Continua implementació. Quan estigui llest, et suggeriré quan dir Acabat."
 }
 
 stage_changes() {
@@ -398,9 +319,9 @@ all_files_match_patterns() {
     if [ "$matched" = false ]; then
       return 1
     fi
-  done <<EOF
+  done <<EOF2
 $files
-EOF
+EOF2
 
   return 0
 }
@@ -421,11 +342,11 @@ infer_commit_message() {
     return
   fi
 
-  if all_files_match_patterns "$files" '^docs/' '\.md$' '\.txt$'; then
+  if all_files_match_patterns "$files" '^docs/' '\\.md$' '\\.txt$'; then
     type="docs"
     scope="docs"
     summary="actualitza documentacio funcional"
-  elif all_files_match_patterns "$files" '^src/i18n/' '^public/' '^docs/' '\.md$' '\.txt$'; then
+  elif all_files_match_patterns "$files" '^src/i18n/' '^public/' '^docs/' '\\.md$' '\\.txt$'; then
     type="chore"
     scope="i18n"
     summary="actualitza textos i contingut public"
@@ -471,38 +392,50 @@ push_branch() {
   git push -u origin "$branch"
 }
 
+ensure_control_repo_for_deploy_or_merge() {
+  local control_branch
+  control_branch="$(git_control rev-parse --abbrev-ref HEAD)"
+
+  if [ "$control_branch" != "main" ]; then
+    say "$STATUS_NO"
+    say "El repositori de control ha d'estar a main abans d'integrar o publicar."
+    exit 1
+  fi
+
+  if has_changes_in_repo "$CONTROL_REPO_DIR"; then
+    say "$STATUS_NO"
+    say "El repositori de control ha d'estar net abans d'integrar o publicar."
+    exit 1
+  fi
+}
+
 integrate_to_main() {
   local branch="$1"
 
   if [ "$branch" = "main" ]; then
-    if ! git push origin main; then
-      say "$STATUS_NO"
-      say "No s'ha pogut pujar main. Mantinc el canvi segurament guardat en local."
-      exit 1
-    fi
-    return
-  fi
-
-  git checkout main >/dev/null
-  if ! git pull --ff-only origin main; then
     say "$STATUS_NO"
-    say "No puc actualitzar main automàticament. El canvi queda guardat a $branch."
-    git checkout "$branch" >/dev/null || true
+    say "No es pot tancar una tasca directament des de main."
     exit 1
   fi
 
-  if ! git merge --no-ff "$branch" -m "chore(merge): integra $branch"; then
-    git merge --abort || true
+  ensure_control_repo_for_deploy_or_merge
+
+  if ! git_control pull --ff-only origin main; then
+    say "$STATUS_NO"
+    say "No s'ha pogut actualitzar main al repositori de control."
+    exit 1
+  fi
+
+  if ! git_control merge --no-ff "$branch" -m "chore(merge): integra $branch"; then
+    git_control merge --abort || true
     say "$STATUS_NO"
     say "Hi ha conflicte d'integració. El canvi queda guardat a $branch."
-    git checkout "$branch" >/dev/null || true
     exit 1
   fi
 
-  if ! git push origin main; then
+  if ! git_control push origin main; then
     say "$STATUS_NO"
     say "No s'ha pogut pujar main després de la integració."
-    git checkout "$branch" >/dev/null || true
     exit 1
   fi
 }
@@ -550,9 +483,50 @@ require_clean_tree_for_publica() {
   fi
 }
 
+run_inicia() {
+  local mode="${1:-auto}"
+
+  if [ "$mode" = "main" ]; then
+    say "El mode 'main' queda substituït per worktree-first."
+  fi
+
+  say "$STATUS_NO"
+  if ! bash "$SCRIPT_DIR/worktree.sh" create; then
+    exit 1
+  fi
+
+  emit_next_step_block "Continua implementació dins del worktree creat. Quan estigui llest, digues Acabat des d'allà."
+}
+
 run_acabat() {
-  local changed_files risk final_status
+  local changed_files risk final_status branch
+  branch="$(current_branch)"
   changed_files="$(collect_changed_files)"
+
+  if [ "$branch" = "HEAD" ]; then
+    say "$STATUS_NO"
+    say "No puc continuar en estat detached HEAD."
+    exit 1
+  fi
+
+  if [ "$branch" = "prod" ]; then
+    say "$STATUS_NO"
+    say "No treballo mai directament a prod."
+    exit 1
+  fi
+
+  if is_control_repo && [ -n "$changed_files" ]; then
+    say "$STATUS_NO"
+    say "Els canvis d'implementació no es tanquen des del repositori de control."
+    say "Inicia una tasca nova amb worktree i implementa allà."
+    exit 1
+  fi
+
+  if [ "$branch" = "main" ] && ! is_control_repo; then
+    say "$STATUS_NO"
+    say "Aquest worktree no pot treballar directament a main."
+    exit 1
+  fi
 
   if [ -z "$changed_files" ]; then
     final_status="$(compute_repo_status)"
@@ -569,8 +543,6 @@ run_acabat() {
   }
   emit_next_step_block "Si aquest resum és correcte, pots dir: Acabat"
 
-  # Fallback segur: si no s'ha fet 'inicia', rescatem els canvis en una branca.
-  decide_work_branch "$risk"
   say "Risc detectat: $risk"
 
   if ! stage_changes; then
@@ -583,21 +555,34 @@ run_acabat() {
 
   run_checks
   commit_changes "$risk"
-  push_branch "$WORK_BRANCH"
-  integrate_to_main "$WORK_BRANCH"
+  push_branch "$branch"
+  integrate_to_main "$branch"
 
   final_status="$(compute_repo_status)"
   say "$final_status"
   emit_guidance_for_status "$final_status"
+  say ""
+  say "PREGUNTA OPERATIVA"
+  say "- Vols tancar aquest worktree de tasca ara? (recomanat: npm run worktree:close)"
 }
 
 run_publica() {
   local final_status
-  require_clean_tree_for_publica
+
+  if ! is_control_repo; then
+    say "$STATUS_NO"
+    say "La publicació només es pot executar des del repositori de control: $CONTROL_REPO_DIR"
+    exit 1
+  fi
 
   if [ "$(current_branch)" != "main" ]; then
-    git checkout main >/dev/null
+    say "$STATUS_NO"
+    say "La publicació només es pot executar des de main al repositori de control."
+    exit 1
   fi
+
+  require_clean_tree_for_publica
+  ensure_control_repo_for_deploy_or_merge
 
   if ! git pull --ff-only origin main; then
     say "$STATUS_NO"
@@ -632,16 +617,6 @@ run_estat() {
     return
   fi
 
-  if [ "$final_status" = "$STATUS_READY" ]; then
-    emit_guidance_for_status "$final_status"
-    return
-  fi
-
-  if [ "$final_status" = "$STATUS_PROD" ]; then
-    emit_guidance_for_status "$final_status"
-    return
-  fi
-
   emit_guidance_for_status "$final_status"
 }
 
@@ -653,8 +628,6 @@ main() {
     say "Us: bash scripts/workflow.sh [inicia|implementa|acabat|publica|estat]"
     exit 1
   fi
-
-  cd "$PROJECT_DIR"
 
   case "$cmd" in
     inicia)

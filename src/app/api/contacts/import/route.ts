@@ -33,7 +33,7 @@ const MAX_UPDATES = 500;
 
 interface ContactUpdate {
   docId: string;
-  data: Record<string, any>;
+  data: Record<string, unknown>;
 }
 
 interface ImportContactsRequest {
@@ -50,16 +50,19 @@ interface ImportContactsResponse {
 
 interface PreparedWrite {
   ref: DocumentReference;
-  dataToWrite: Record<string, any>;
+  dataToWrite: Record<string, unknown>;
 }
 
 // =============================================================================
 // HELPERS
 // =============================================================================
 
-function stripArchiveFields(data: Record<string, any>): Record<string, any> {
-  const { archivedAt, archivedByUid, archivedFromAction, ...rest } = data;
-  return rest;
+function stripArchiveFields(data: Record<string, unknown>): Record<string, unknown> {
+  const sanitized = { ...data };
+  delete sanitized.archivedAt;
+  delete sanitized.archivedByUid;
+  delete sanitized.archivedFromAction;
+  return sanitized;
 }
 
 // =============================================================================
@@ -141,15 +144,15 @@ export async function POST(
     const data = stripArchiveFields(item.data);
 
     // Preservar camps d'arxivat existents
-    const existing = snap.data() || {};
+    const existing = (snap.data() || {}) as Record<string, unknown>;
     if (Object.prototype.hasOwnProperty.call(existing, 'archivedAt')) {
-      (data as any).archivedAt = (existing as any).archivedAt;
+      data.archivedAt = existing.archivedAt;
     }
     if (Object.prototype.hasOwnProperty.call(existing, 'archivedByUid')) {
-      (data as any).archivedByUid = (existing as any).archivedByUid;
+      data.archivedByUid = existing.archivedByUid;
     }
     if (Object.prototype.hasOwnProperty.call(existing, 'archivedFromAction')) {
-      (data as any).archivedFromAction = (existing as any).archivedFromAction;
+      data.archivedFromAction = existing.archivedFromAction;
     }
 
     prepared.push({ ref: docRef, dataToWrite: data });

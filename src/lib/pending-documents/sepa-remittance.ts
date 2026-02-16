@@ -4,8 +4,6 @@
 import {
   doc,
   collection,
-  setDoc,
-  updateDoc,
   serverTimestamp,
   writeBatch,
   type Firestore,
@@ -231,7 +229,7 @@ export async function createSepaRemittance(
   input: CreateSepaRemittanceInput
 ): Promise<CreateSepaRemittanceResult> {
   // 1. Validar documents
-  const { valid, invalid } = validateDocsForSepa(input.documents, input.contacts);
+  const { valid } = validateDocsForSepa(input.documents, input.contacts);
 
   if (valid.length === 0) {
     throw new Error('Cap document vàlid per generar la remesa');

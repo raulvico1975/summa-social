@@ -33,6 +33,14 @@ const MAX_TRANSACTIONS_PER_REQUEST = 2000;
 type ImportSource = 'csv' | 'xlsx';
 type ContactType = 'donor' | 'supplier' | 'employee';
 type TransactionType = 'normal' | 'return' | 'return_fee' | 'donation' | 'fee';
+const ALLOWED_CONTACT_TYPES: readonly ContactType[] = ['donor', 'supplier', 'employee'];
+const ALLOWED_TRANSACTION_TYPES: readonly TransactionType[] = [
+  'normal',
+  'return',
+  'return_fee',
+  'donation',
+  'fee',
+];
 
 interface ImportRequestStats {
   duplicateSkippedCount: number;
@@ -228,6 +236,87 @@ function normalizeTransactionInput(
   };
 }
 
+function validateRuntimeAndFiscalInvariants(
+  tx: CanonicalBankImportTx,
+  index: number
+): { ok: true } | { ok: false; error: string; code: string } {
+  if (!ALLOWED_TRANSACTION_TYPES.includes(tx.transactionType)) {
+    return {
+      ok: false,
+      error: `transactions[${index}].transactionType invàlid`,
+      code: 'INVALID_TRANSACTION_TYPE',
+    };
+  }
+
+  if (tx.contactType !== null && !ALLOWED_CONTACT_TYPES.includes(tx.contactType)) {
+    return {
+      ok: false,
+      error: `transactions[${index}].contactType invàlid`,
+      code: 'INVALID_CONTACT_TYPE',
+    };
+  }
+
+  if (tx.contactType !== null && !tx.contactId) {
+    return {
+      ok: false,
+      error: `transactions[${index}] té contactType però no contactId`,
+      code: 'CONTACT_TYPE_WITHOUT_CONTACT',
+    };
+  }
+
+  if (tx.contactId && tx.contactType === null) {
+    return {
+      ok: false,
+      error: `transactions[${index}] té contactId però no contactType`,
+      code: 'CONTACT_ID_WITHOUT_TYPE',
+    };
+  }
+
+  // Invariant A1: contactId segons tipus
+  if (tx.transactionType === 'return' && !tx.contactId) {
+    return {
+      ok: false,
+      error: `transactions[${index}] (return) requereix contactId`,
+      code: 'A1_RETURN_REQUIRES_CONTACT',
+    };
+  }
+
+  if (tx.transactionType === 'fee' && !!tx.contactId) {
+    return {
+      ok: false,
+      error: `transactions[${index}] (fee) no pot tenir contactId`,
+      code: 'A1_FEE_FORBIDS_CONTACT',
+    };
+  }
+
+  // Invariant A2: coherència de signe segons tipus
+  if (tx.transactionType === 'return' && tx.amount >= 0) {
+    return {
+      ok: false,
+      error: `transactions[${index}] (return) ha de tenir import negatiu`,
+      code: 'A2_RETURN_SIGN_INVALID',
+    };
+  }
+
+  if (tx.transactionType === 'donation' && tx.amount <= 0) {
+    return {
+      ok: false,
+      error: `transactions[${index}] (donation) ha de tenir import positiu`,
+      code: 'A2_DONATION_SIGN_INVALID',
+    };
+  }
+
+  if (tx.transactionType === 'fee' && tx.amount >= 0) {
+    return {
+      ok: false,
+      error: `transactions[${index}] (fee) ha de tenir import negatiu`,
+      code: 'A2_FEE_SIGN_INVALID',
+    };
+  }
+
+  return { ok: true };
+}
+
 export async function POST(
   request: NextRequest
 ): Promise<NextResponse<ImportTransactionsResponse>> {
@@ -271,6 +360,20 @@ export async function POST(
       { success: false, error: 'No hi ha transaccions vàlides', code: 'NO_VALID_TRANSACTIONS' },
       { status: 400 }
     );
+  }
+
+  for (let i = 0; i < normalizedTransactions.length; i++) {
+    const runtimeValidation = validateRuntimeAndFiscalInvariants(normalizedTransactions[i], i);
+    if (!runtimeValidation.ok) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: runtimeValidation.error,
+          code: runtimeValidation.code,
+        },
+        { status: 400 }
+      );
+    }
   }
 
   const inputHash = computeBankImportHash({

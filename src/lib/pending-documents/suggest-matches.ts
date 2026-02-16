@@ -2,7 +2,6 @@
 // Servei de suggeriment de conciliació entre transaccions i documents pendents
 
 import {
-  collection,
   query,
   where,
   getDocs,

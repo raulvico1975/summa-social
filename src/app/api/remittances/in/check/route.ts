@@ -60,6 +60,14 @@ interface RemittanceCheckResponse {
 /** Tolerància per R-SUM-1 (2 cèntims) */
 const SUM_TOLERANCE_CENTS = 2;
 
+/**
+ * Considerem "activa" una transacció si NO està arxivada.
+ * Legacy-safe: cobreix null, undefined i cadena buida.
+ */
+function isActiveChildTransaction(data: FirebaseFirestore.DocumentData | undefined): boolean {
+  return !data?.archivedAt;
+}
+
 // =============================================================================
 // GET HANDLER
 // =============================================================================
@@ -157,18 +165,16 @@ export async function GET(request: NextRequest): Promise<NextResponse<Remittance
     if (remittanceId) {
       const byRemittanceId = await txCollection
         .where('remittanceId', '==', remittanceId)
-        .where('archivedAt', '==', null)
         .get();
-      activeChildren = byRemittanceId.docs;
+      activeChildren = byRemittanceId.docs.filter((doc) => isActiveChildTransaction(doc.data()));
     }
 
     // Fallback: buscar per parentTransactionId
     if (activeChildren.length === 0) {
       const byParentTxId = await txCollection
         .where('parentTransactionId', '==', parentTxId)
-        .where('archivedAt', '==', null)
         .get();
-      activeChildren = byParentTxId.docs;
+      activeChildren = byParentTxId.docs.filter((doc) => isActiveChildTransaction(doc.data()));
     }
 
     const activeCount = activeChildren.length;

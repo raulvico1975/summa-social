@@ -319,7 +319,6 @@ export function useTransactionActions({
           console.error('FIREBASE_UPLOAD_ERROR_DIAGNOSTIC', error);
           const firebaseError = error as { code?: string; message?: string };
           const errorCode = firebaseError.code || 'UNKNOWN_CODE';
-          const errorMessage = firebaseError.message || 'Error desconocido.';
 
           let description = t.movements.table.unexpectedError(errorCode);
           if (errorCode === 'storage/unauthorized' || errorCode === 'storage/object-not-found') {

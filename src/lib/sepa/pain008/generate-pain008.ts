@@ -85,48 +85,6 @@ function ensureMax35(id: string): string {
 }
 
 /**
- * Normalitza un string per usar com EndToEndId SEPA
- * Només permet: A-Z, 0-9, - (guió)
- * Màxim 35 caràcters
- */
-function normalizeEndToEndId(str: string): string {
-  return str
-    .toUpperCase()
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '') // Elimina accents
-    .replace(/[^A-Z0-9-]/g, '')      // Només A-Z, 0-9, -
-    .slice(0, 35);
-}
-
-/**
- * Genera EndToEndId determinista i únic per cada transacció
- * Format: UMR-COLLECTIONDATE (normalitzat, màx 35 chars)
- */
-function generateEndToEndId(
-  item: SepaCollectionItem,
-  collectionDate: string,
-  fallbackSuffix: string
-): string {
-  // Si ja té un endToEndId vàlid (no NOTPROVIDED), el fem servir
-  if (item.endToEndId && item.endToEndId !== 'NOTPROVIDED') {
-    return normalizeEndToEndId(item.endToEndId);
-  }
-
-  // Generar EndToEndId determinista: UMR + data cobrament
-  if (item.umr) {
-    const dateCompact = collectionDate.replace(/-/g, '');
-    const base = `${item.umr}-${dateCompact}`;
-    const normalized = normalizeEndToEndId(base);
-    if (normalized.length > 0) {
-      return normalized;
-    }
-  }
-
-  // Fallback si UMR és buit o només caràcters invàlids
-  return `E2E-${fallbackSuffix}`.slice(0, 35);
-}
-
-/**
  * Obté el BIC d'un IBAN espanyol (simplificat)
  * En producció caldria una taula de lookup completa
  */
@@ -275,7 +233,7 @@ function buildPaymentInfoBlock(
   includeBic: boolean
 ): string {
   const transactions = items
-    .map((item, idx) => buildTransaction(item, run.requestedCollectionDate, run.creditorName, includeBic))
+    .map((item) => buildTransaction(item, run.requestedCollectionDate, run.creditorName, includeBic))
     .join('\n      ');
 
   return `<PmtInf>

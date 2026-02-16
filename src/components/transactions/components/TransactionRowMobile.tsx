@@ -69,7 +69,6 @@ interface TransactionRowMobileProps {
 export const TransactionRowMobile = React.memo(function TransactionRowMobile({
   transaction: tx,
   contactName,
-  contactType,
   categoryDisplayName,
   onEdit,
   onDelete,

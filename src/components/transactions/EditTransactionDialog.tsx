@@ -49,7 +49,6 @@ export const EditTransactionDialog = React.memo(function EditTransactionDialog({
   donors,
   suppliers,
   projects,
-  availableContacts,
   onSave,
   onClose,
 }: EditTransactionDialogProps) {
