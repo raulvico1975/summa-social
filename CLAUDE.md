@@ -284,6 +284,49 @@ Si un canvi:
 ➡️ **STOP automàtic i preguntar**
 
 ────────────────────────────────────────────────────────────
+## 5. WORKTREE-FIRST (OBLIGATORI)
+
+Si el missatge de l'usuari demana implementar codi, **sempre**:
+1. executa `npm run inicia -- <slug>` des de `/Users/raulvico/Documents/summa-social` (control)
+2. treballa només dins del worktree creat
+3. integra amb `npm run acabat`
+4. ofereix tancament i executa `npm run worktree:close -- <slug>` si l'usuari diu `OK`
+5. `npm run publica` només des del control i només amb gate explícit (`Autoritzo deploy`)
+
+### Intenció d'implementació (detecció automàtica)
+Si el missatge conté qualsevol d'aquests intents, s'activa el flux worktree-first:
+- `implementa`
+- `fes el canvi`
+- `aplica`
+- `codi`
+- `refactor`
+- `afegeix`
+- `treu`
+- `fix`
+- `hotfix`
+- `PR`
+- `merge`
+- `test nou`
+
+### Precondició obligatòria al control
+Abans de crear worktree:
+- validar que el repositori de control està a `main` i net
+- si no està net o no és `main`, aturar i demanar neteja o autorització explícita per stash/reset segons governança
+
+### Regles de context
+- No crear worktree per consultes o anàlisi.
+- Si Claude està dins d'un worktree actiu i arriba un nou tema:
+  - no començar el tema nou fins tancar o pausar explícitament el tema actual
+  - només canviar de tema si l'usuari diu explícitament: `Pausa aquest i obre un nou worktree per <slug>`
+- Mai executar `publica` fora del control.
+- Si algú intenta publicar fora del control, mostrar missatge de bloqueig:
+  - `BLOQUEIG: npm run publica només es pot executar des del repositori de control a main.`
+
+### Format de petició recomanat (detecció robusta)
+- `Implementa: <slug> — <objectiu en 1 frase>`
+- Opcional: `Risc esperat: BAIX/MITJÀ/ALT`
+
+────────────────────────────────────────────────────────────
 ## 6. Regla de comunicació amb Raül (obligatòria)
 
 Claude Code **NO pot fer preguntes opaques, tècniques o inintel·ligibles**.
