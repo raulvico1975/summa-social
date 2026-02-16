@@ -97,8 +97,8 @@ export default function PendingDocsPage() {
   // Feature flag check - redirect if not enabled
   const isPendingDocsEnabled = organization?.features?.pendingDocs ?? false;
 
-  // Només admins poden operar (generar SEPA, conciliar, etc.)
-  const canOperate = userRole === 'admin';
+  // Admin i user poden operar (superadmin es resol com admin). Viewer: només lectura.
+  const canOperate = userRole === 'admin' || userRole === 'user';
 
   // Estat del filtre (per defecte: Per revisar = drafts)
   const [statusFilter, setStatusFilter] = React.useState<PendingDocumentStatus[] | 'all' | 'matched' | 'archived'>(DRAFTS_FILTER);
@@ -226,7 +226,7 @@ export default function PendingDocsPage() {
     field: string,
     value: string | number | null
   ) => {
-    if (!firestore || !organizationId) return;
+    if (!canOperate || !firestore || !organizationId) return;
 
     try {
       await updatePendingDocument(firestore, organizationId, docId, {
@@ -241,11 +241,11 @@ export default function PendingDocsPage() {
         description: t.pendingDocs.toasts.errorConfirm,
       });
     }
-  }, [firestore, organizationId, toast]);
+  }, [canOperate, firestore, organizationId, toast]);
 
   // Handler per confirmar un document
   const handleConfirm = React.useCallback(async (doc: PendingDocument) => {
-    if (!firestore || !organizationId) return;
+    if (!canOperate || !firestore || !organizationId) return;
 
     setConfirmingDocId(doc.id);
     try {
@@ -264,11 +264,11 @@ export default function PendingDocsPage() {
     } finally {
       setConfirmingDocId(null);
     }
-  }, [firestore, organizationId, toast]);
+  }, [canOperate, firestore, organizationId, toast]);
 
   // Handler per confirmar tots els documents vàlids
   const handleBulkConfirm = React.useCallback(async () => {
-    if (!firestore || !organizationId || !pendingDocs) return;
+    if (!canOperate || !firestore || !organizationId || !pendingDocs) return;
 
     const drafts = pendingDocs.filter(d => d.status === 'draft');
     if (drafts.length === 0) return;
@@ -301,11 +301,11 @@ export default function PendingDocsPage() {
     } finally {
       setIsBulkConfirming(false);
     }
-  }, [firestore, organizationId, pendingDocs, toast]);
+  }, [canOperate, firestore, organizationId, pendingDocs, toast]);
 
   // Handler per arxivar un document
   const handleArchive = React.useCallback(async (doc: PendingDocument) => {
-    if (!firestore || !organizationId) return;
+    if (!canOperate || !firestore || !organizationId) return;
 
     setArchivingDocId(doc.id);
     try {
@@ -324,11 +324,11 @@ export default function PendingDocsPage() {
     } finally {
       setArchivingDocId(null);
     }
-  }, [firestore, organizationId, toast]);
+  }, [canOperate, firestore, organizationId, toast]);
 
   // Handler per restaurar un document arxivat
   const handleRestore = React.useCallback(async (doc: PendingDocument) => {
-    if (!firestore || !organizationId) return;
+    if (!canOperate || !firestore || !organizationId) return;
 
     setArchivingDocId(doc.id);
     try {
@@ -347,11 +347,11 @@ export default function PendingDocsPage() {
     } finally {
       setArchivingDocId(null);
     }
-  }, [firestore, organizationId, toast]);
+  }, [canOperate, firestore, organizationId, toast]);
 
   // Handler per eliminar un document
   const handleDelete = React.useCallback(async (doc: PendingDocument) => {
-    if (!firestore || !storage || !organizationId) return;
+    if (!canOperate || !firestore || !storage || !organizationId) return;
 
     setDeletingDocId(doc.id);
     try {
@@ -376,11 +376,11 @@ export default function PendingDocsPage() {
     } finally {
       setDeletingDocId(null);
     }
-  }, [firestore, storage, organizationId, toast, expandedDocId]);
+  }, [canOperate, firestore, storage, organizationId, toast, expandedDocId]);
 
   // Handler per eliminar un document matched (desfer conciliació)
   const handleDeleteMatched = React.useCallback(async (doc: PendingDocument) => {
-    if (!firestore || !storage || !organizationId) return;
+    if (!canOperate || !firestore || !storage || !organizationId) return;
 
     if (doc.status !== 'matched') {
       toast({
@@ -414,11 +414,11 @@ export default function PendingDocsPage() {
     } finally {
       setDeletingMatchedDocId(null);
     }
-  }, [firestore, storage, organizationId, toast, expandedDocId, t]);
+  }, [canOperate, firestore, storage, organizationId, toast, expandedDocId, t]);
 
   // Handler per re-vincular document a transacció
   const handleRelinkDocument = React.useCallback(async (doc: PendingDocument) => {
-    if (!organizationId) return;
+    if (!canOperate || !organizationId) return;
 
     setRelinkingDocId(doc.id);
     try {
@@ -463,11 +463,11 @@ export default function PendingDocsPage() {
     } finally {
       setRelinkingDocId(null);
     }
-  }, [organizationId, toast, t]);
+  }, [canOperate, organizationId, toast, t]);
 
   // Handler per renombrar un document (cosmètic, Firestore only)
   const handleRename = React.useCallback(async (docId: string, newFilename: string) => {
-    if (!firestore || !organizationId) return;
+    if (!canOperate || !firestore || !organizationId) return;
 
     try {
       await renamePendingDocument(firestore, organizationId, docId, newFilename);
@@ -482,7 +482,7 @@ export default function PendingDocsPage() {
         description: error instanceof Error ? error.message : t.pendingDocs.toasts.errorUnknown,
       });
     }
-  }, [firestore, organizationId, toast]);
+  }, [canOperate, firestore, organizationId, toast]);
 
   // Si encara no tenim l'organització o el flag no està actiu, mostrar loading
   if (!organization || !isPendingDocsEnabled) {
@@ -520,20 +520,23 @@ export default function PendingDocsPage() {
   // Handlers de drag & drop extern (zona de la pàgina)
   // Usem dragCounter ref per evitar falsos dragLeave de fills interns
   const handlePageDragEnter = React.useCallback((e: React.DragEvent) => {
+    if (!canOperate) return;
     e.preventDefault();
     e.stopPropagation();
     dragCounter.current++;
     if (e.dataTransfer.types.includes('Files')) {
       setIsDraggingOver(true);
     }
-  }, []);
+  }, [canOperate]);
 
   const handlePageDragOver = React.useCallback((e: React.DragEvent) => {
+    if (!canOperate) return;
     e.preventDefault();
     e.stopPropagation();
-  }, []);
+  }, [canOperate]);
 
   const handlePageDragLeave = React.useCallback((e: React.DragEvent) => {
+    if (!canOperate) return;
     e.preventDefault();
     e.stopPropagation();
     dragCounter.current--;
@@ -541,9 +544,10 @@ export default function PendingDocsPage() {
       dragCounter.current = 0;
       setIsDraggingOver(false);
     }
-  }, []);
+  }, [canOperate]);
 
   const handlePageDrop = React.useCallback((e: React.DragEvent) => {
+    if (!canOperate) return;
     e.preventDefault();
     e.stopPropagation();
     dragCounter.current = 0;
@@ -570,7 +574,7 @@ export default function PendingDocsPage() {
       setInitialUploadFiles(validFiles);
       setIsUploadModalOpen(true);
     }
-  }, [toast, t]);
+  }, [canOperate, toast, t]);
 
   // Aplicar filtres client-side
   const filteredDocs = React.useMemo(() => {
@@ -585,10 +589,14 @@ export default function PendingDocsPage() {
   );
 
   // Documents seleccionables: només confirmed (per generar SEPA)
-  const selectableDocs = filteredDocs.filter(d => d.status === 'confirmed');
+  const selectableDocs = React.useMemo(() => {
+    if (!canOperate) return [];
+    return filteredDocs.filter(d => d.status === 'confirmed');
+  }, [canOperate, filteredDocs]);
 
   // Handlers de selecció
   const handleSelectDoc = React.useCallback((docId: string, selected: boolean) => {
+    if (!canOperate) return;
     setSelectedDocIds(prev => {
       const next = new Set(prev);
       if (selected) {
@@ -598,20 +606,22 @@ export default function PendingDocsPage() {
       }
       return next;
     });
-  }, []);
+  }, [canOperate]);
 
   const handleSelectAll = React.useCallback((selected: boolean) => {
+    if (!canOperate) return;
     if (selected) {
       setSelectedDocIds(new Set(selectableDocs.map(d => d.id)));
     } else {
       setSelectedDocIds(new Set());
     }
-  }, [selectableDocs]);
+  }, [canOperate, selectableDocs]);
 
   // Documents seleccionats
   const selectedDocs = React.useMemo(() => {
+    if (!canOperate) return [];
     return filteredDocs.filter(d => selectedDocIds.has(d.id));
-  }, [filteredDocs, selectedDocIds]);
+  }, [canOperate, filteredDocs, selectedDocIds]);
 
   // Netejar selecció quan canvia el filtre
   React.useEffect(() => {
@@ -626,6 +636,7 @@ export default function PendingDocsPage() {
 
   // Handler per obrir el modal de conciliació
   const handleReconcile = React.useCallback((doc: PendingDocument) => {
+    if (!canOperate) return;
     // Buscar la primera transacció suggerida
     const suggestedId = doc.suggestedTransactionIds?.[0];
     if (!suggestedId || !transactions) {
@@ -649,7 +660,7 @@ export default function PendingDocsPage() {
 
     setReconcileDoc(doc);
     setReconcileTx(tx);
-  }, [transactions, toast]);
+  }, [canOperate, transactions, toast]);
 
   // Handler quan es completa la conciliació
   const handleReconcileComplete = React.useCallback(() => {
@@ -947,6 +958,7 @@ export default function PendingDocsPage() {
                     doc={doc}
                     contacts={contacts || []}
                     categories={categories || []}
+                    canOperate={canOperate}
                     onUpdate={handleFieldUpdate}
                     onConfirm={handleConfirm}
                     onArchive={handleArchive}
@@ -969,7 +981,7 @@ export default function PendingDocsPage() {
                     <TableHeader>
                       <TableRow>
                         {/* Checkbox per selecció múltiple */}
-                        {selectableDocs.length > 0 && (
+                        {canOperate && selectableDocs.length > 0 && (
                           <TableHead className="w-[40px] pr-0">
                             <Checkbox
                               checked={selectedDocIds.size > 0 && selectedDocIds.size === selectableDocs.length}
@@ -996,6 +1008,7 @@ export default function PendingDocsPage() {
                           doc={doc}
                           contacts={contacts || []}
                           categories={categories || []}
+                          canOperate={canOperate}
                           onUpdate={handleFieldUpdate}
                           onConfirm={handleConfirm}
                           onArchive={handleArchive}
