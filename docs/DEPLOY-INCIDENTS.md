@@ -10,3 +10,4 @@ Registre curt d'incidències de deploy bloquejat o incomplet.
 | 2026-02-15 23:24 | Preflight git | BAIX | 92fcdca | 0a404c8 | BLOCKED_SAFE | Hi ha canvis pendents sense tancar abans de publicar. | Pendent |
 | 2026-02-16 13:02 | Verificacions | MITJA | 565dc3a | 397ca22 | BLOCKED_SAFE | La verificacio local no ha passat. | Pendent |
 | 2026-02-16 13:02 | Preflight git | BAIX | 565dc3a | 397ca22 | BLOCKED_SAFE | Hi ha canvis pendents sense tancar abans de publicar. | Pendent |
+| 2026-02-16 13:04 | Verificacions | MITJA | 3e84bd9 | 397ca22 | BLOCKED_SAFE | La verificacio de CI no ha passat. | Pendent |
