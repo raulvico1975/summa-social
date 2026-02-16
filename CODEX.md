@@ -27,6 +27,25 @@ Abans de tocar codi:
 - Llistar fitxers afectats
 - Confirmar abast
 
+## WORKTREE-FIRST (OBLIGATORI)
+Aquesta regla és equivalent a `CLAUDE.md` (secció 5) i és vinculant també per Codex.
+
+Activació explícita:
+- només si el missatge comença per `Implementa:`, `Inicia:`, `Hotfix:` o `Refactor:`
+- no activar per paraules soltes dins d'una frase
+
+Flux:
+- validar control a `main` i net
+- executar `npm run inicia -- <slug>` des del control
+- treballar i commitejar només dins del worktree creat
+- integrar sempre amb `npm run acabat`
+- oferir i executar tancament amb `npm run worktree:close -- <slug>` quan l'usuari digui `OK`
+- executar `npm run publica` només des del control i amb gate explícit
+
+Si hi ha una tasca activa i arriba una nova ordre d'implementació:
+- aturar i demanar decisió explícita A/B abans d'obrir un nou worktree
+- no obrir un segon worktree automàticament sense aquesta decisió
+
 Després:
 - Build
 - QA mínim
