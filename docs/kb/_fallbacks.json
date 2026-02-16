@@ -131,15 +131,15 @@
       "es": "Acción irreversible sin respuesta exacta"
     },
     "intents": {
-      "ca": ["tema zona de perill sense fitxa exacta"],
-      "es": ["tema zona de peligro sin ficha exacta"]
+      "ca": ["tema superadmin sensible sense fitxa exacta"],
+      "es": ["tema superadmin sensible sin ficha exacta"]
     },
     "guideId": null,
     "answer": {
-      "ca": "Aquesta consulta implica accions potencialment irreversibles i no puc donar instruccions sense estar completament segur.\n\nImportant:\n1. La Zona de Perill conté accions que NO es poden desfer.\n2. No facis cap acció a la Zona de Perill si no estàs segur del que farà.\n3. Consulta el Hub de Guies (icona ?) per instruccions específiques.\n4. Consulta el Manual (/dashboard/manual) per documentació completa.",
-      "es": "Esta consulta implica acciones potencialmente irreversibles y no puedo dar instrucciones sin estar completamente seguro.\n\nImportante:\n1. La Zona de Peligro contiene acciones que NO se pueden deshacer.\n2. No hagas ninguna acción en la Zona de Peligro si no estás seguro de lo que hará.\n3. Consulta el Hub de Guías (icono ?) para instrucciones específicas.\n4. Consulta el Manual (/dashboard/manual) para documentación completa."
+      "ca": "Aquesta consulta implica accions potencialment irreversibles i no puc donar instruccions sense estar completament segur.\n\nImportant:\n1. Aquestes accions avançades poden ser destructives.\n2. No executis cap canvi irreversible sense verificar-lo abans.\n3. Consulta el Hub de Guies (icona ?) per instruccions específiques.\n4. Consulta el Manual (/dashboard/manual) per documentació completa.",
+      "es": "Esta consulta implica acciones potencialmente irreversibles y no puedo dar instrucciones sin estar completamente seguro.\n\nImportante:\n1. Estas acciones avanzadas pueden ser destructivas.\n2. No ejecutes ningún cambio irreversible sin verificarlo antes.\n3. Consulta el Hub de Guías (icono ?) para instrucciones específicas.\n4. Consulta el Manual (/dashboard/manual) para documentación completa."
     },
-    "uiPaths": ["Configuració > Zona de Perill"],
+    "uiPaths": ["Configuració > Accions avançades (SuperAdmin Summa)"],
     "needsSnapshot": false,
     "keywords": ["esborrar", "eliminar", "perill", "irreversible", "superadmin"],
     "source_faq": [],

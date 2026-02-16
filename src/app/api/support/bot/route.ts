@@ -8,7 +8,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { ai } from '@/ai/genkit'
 import { z } from 'genkit'
-import { verifyIdToken, getAdminDb, validateUserMembership } from '@/lib/api/admin-sdk'
+import { verifyIdToken, getAdminDb, validateUserMembership, isSuperAdmin } from '@/lib/api/admin-sdk'
 import { requireOperationalAccess } from '@/lib/api/require-operational-access'
 import { loadGuideContent, type KBCard } from '@/lib/support/load-kb'
 import { loadKbCards } from '@/lib/support/load-kb-runtime'
@@ -36,6 +36,12 @@ const CRITICAL_BUNDLED_CARDS = [
   guideAttachDocumentCardRaw as KBCard,
   manualMemberPaidQuotasCardRaw as KBCard,
 ]
+
+const HIDDEN_FOR_ORG_CARD_IDS = new Set([
+  'fallback-danger-unclear',
+  'manual-danger-zone',
+  'guide-danger-delete-remittance',
+])
 
 type IntentCandidate = {
   id: string
@@ -293,6 +299,18 @@ function ensureCriticalCardsPresent(cards: KBCard[]): KBCard[] {
   return Array.from(map.values())
 }
 
+function filterCardsForSupportAccess(cards: KBCard[], isSuperAdminUser: boolean): KBCard[] {
+  if (isSuperAdminUser) return cards
+
+  return cards.filter(card => {
+    if (!card?.id) return false
+    if (HIDDEN_FOR_ORG_CARD_IDS.has(card.id)) return false
+    if ((card.domain ?? '').toLowerCase() === 'superadmin') return false
+    if ((card.guardrail ?? '').toLowerCase() === 'b1_danger') return false
+    return true
+  })
+}
+
 export async function POST(request: NextRequest): Promise<NextResponse<ApiResponse>> {
   let kbLang: KbLang = 'ca'
   let inputLang: InputLang = 'ca'
@@ -333,6 +351,7 @@ export async function POST(request: NextRequest): Promise<NextResponse<ApiRespon
       return NextResponse.json({ ok: false, code: 'FORBIDDEN', message: 'Accés denegat' }, { status: 403 })
     }
     hasOperationalAccess = true
+    const superAdminUser = await isSuperAdmin(authResult.uid)
 
     const smallTalk = detectSmallTalkResponse(message, kbLang)
     if (smallTalk) {
@@ -381,7 +400,10 @@ export async function POST(request: NextRequest): Promise<NextResponse<ApiRespon
       console.error('[bot] loadKbCards error:', cardsError)
     }
 
-    const retrievableCards = ensureCriticalCardsPresent(cards)
+    const retrievableCards = filterCardsForSupportAccess(
+      ensureCriticalCardsPresent(cards),
+      superAdminUser
+    )
 
     const apiKey = process.env.GOOGLE_API_KEY || process.env.GOOGLE_GENAI_API_KEY
     const allowAiIntent = Boolean(apiKey) && aiIntentEnabled

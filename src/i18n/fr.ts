@@ -1541,6 +1541,17 @@ export const fr = {
     model347ExportAnyway: "Exporter quand même",
     model347CancelToFix: "Annuler et vérifier les données",
     model347NoIncomeAboveThreshold: "Pas de revenus de fournisseurs au-dessus du seuil.",
+    model347EmailAction: "Générer e-mail",
+    model347EmailDialogTitle: "Texte d'e-mail de confirmation (Modèle 347)",
+    model347EmailDialogDescription: (supplierName: string) => `Vérifiez et copiez le texte pour l'envoyer à ${supplierName}.`,
+    model347EmailDialogDescriptionFallback: "Vérifiez et copiez le texte pour l'envoyer au fournisseur.",
+    model347EmailSubjectLabel: "Objet",
+    model347EmailBodyLabel: "Corps de l'e-mail",
+    model347EmailCopyButton: "Copier le texte",
+    model347EmailCopiedTitle: "Texte copié",
+    model347EmailCopiedDescription: "Vous pouvez maintenant coller l'e-mail dans votre client de messagerie.",
+    model347EmailCopyErrorTitle: "Impossible de copier",
+    model347EmailCopyErrorDescription: "Copiez manuellement le texte de l'e-mail.",
     // Paquet de clôture
     closingBundle: {
       title: "Paquet de clôture",

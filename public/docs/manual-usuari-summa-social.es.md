@@ -28,9 +28,8 @@ Mientras tanto, puedes:
 8. **Donaciones via Stripe**: Conciliación con pagos online
 9. **Informes Fiscales**: Modelo 182, certificados, exports
 10. **Proyectos y Justificación de Subvenciones**: Módulo de proyectos
-11. **Zona de Peligro**: Acciones irreversibles
-12. **Resolución de Problemas**: FAQ y soluciones comunes
-13. **Glosario**: Definiciones de términos
+11. **Resolución de Problemas**: FAQ y soluciones comunes
+12. **Glosario**: Definiciones de términos
 
 ---
 

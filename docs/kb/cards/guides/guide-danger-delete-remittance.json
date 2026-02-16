@@ -6,30 +6,28 @@
   "guardrail": "b1_danger",
   "answerMode": "full",
   "title": {
-    "ca": "Esborrar l'última remesa (Zona de Perill)",
-    "es": "Borrar la última remesa (Zona de Peligro)"
+    "ca": "Esborrar l'última remesa (SuperAdmin Summa)",
+    "es": "Borrar la última remesa (SuperAdmin Summa)"
   },
   "intents": {
     "ca": [
-      "com esborro l'última remesa",
-      "desfer la remesa completament",
-      "eliminar remesa de la zona de perill",
-      "zona de perill remesa"
+      "acció avançada de remesa superadmin",
+      "esborrat avançat de remesa superadmin",
+      "manteniment avançat de remeses superadmin"
     ],
     "es": [
-      "cómo borro la última remesa",
-      "deshacer la remesa completamente",
-      "eliminar remesa de la zona de peligro",
-      "zona de peligro remesa"
+      "acción avanzada de remesa superadmin",
+      "borrado avanzado de remesa superadmin",
+      "mantenimiento avanzado de remesas superadmin"
     ]
   },
   "guideId": "dangerDeleteLastRemittance",
   "answer": null,
-  "uiPaths": ["Configuració > Zona de Perill"],
+  "uiPaths": ["Configuració > Accions avançades (SuperAdmin Summa)"],
   "needsSnapshot": false,
-  "keywords": ["esborrar", "remesa", "perill", "zona", "eliminar", "última"],
+  "keywords": ["superadmin", "manteniment", "remesa", "esborrar", "eliminar"],
   "source_faq": [],
-  "source_manual": ["11.3"],
+  "source_manual": [],
   "source_guides": ["dangerDeleteLastRemittance"],
   "related": ["guide-remittances", "guide-split-remittance"],
   "error_key": null,
